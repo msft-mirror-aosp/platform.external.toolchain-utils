@@ -1,0 +1,16 @@
+# Use this experiment whenever the toolchain is upgraded.
+
+benchmark: bvt {
+  autotest_name: suite:bvt
+}
+
+benchmark: suite_Smoke {
+  autotest_name: suite:smoke
+}
+
+benchmark: PyAutoPerfTests {
+}
+
+benchmark: BootPerfServer {
+  autotest_name: ^server/site_tests/platform_BootPerfServer/control$
+}
