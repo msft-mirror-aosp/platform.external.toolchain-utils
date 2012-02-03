@@ -11,6 +11,8 @@ import utils
 class Logger(object):
   """Logging helper class."""
 
+  MAX_LOG_FILES = 10
+
   def __init__ (self, rootdir, basefilename, print_console, subdir="logs"):
     logdir = os.path.join(rootdir, subdir)
     basename = os.path.join(logdir, basefilename)
@@ -18,12 +20,60 @@ class Logger(object):
     try:
       os.makedirs(logdir)
     except OSError:
-      print "Warning: Logs directory '%s' already exists." % logdir
+      pass
+      # print "Warning: Logs directory '%s' already exists." % logdir
 
-    self.cmdfd = open("%s.cmd" % basename, "w", 0755)
-    self.stdout = open("%s.out" % basename, "w")
-    self.stderr = open("%s.err" % basename, "w")
     self.print_console = print_console
+
+    self._CreateLogFileHandles(basename)
+
+    self._WriteTo(self.cmdfd, " ".join(sys.argv), True)
+
+  def _AddSuffix(self, basename, suffix):
+    return "%s%s" % (basename, suffix)
+
+  def _FindSuffix(self, basename):
+    timestamps = []
+    found_suffix = None
+    for i in range(self.MAX_LOG_FILES):
+      suffix = str(i)
+      suffixed_basename = self._AddSuffix(basename, suffix)
+      cmd_file = "%s.cmd" % suffixed_basename
+      if not os.path.exists(cmd_file):
+        found_suffix = suffix
+        break
+      timestamps.append(os.stat(cmd_file).st_mtime)
+
+    if found_suffix:
+      return found_suffix
+
+    # Try to pick the oldest file with the suffix and return that one.
+    suffix = str(timestamps.index(min(timestamps)))
+    # print ("Warning: Overwriting log file: %s" %
+    #       self._AddSuffix(basename, suffix))
+    return suffix
+
+  def _CreateLogFileHandles(self, basename):
+    suffix = self._FindSuffix(basename)
+    suffixed_basename = self._AddSuffix(basename, suffix)
+
+    self.cmdfd = open("%s.cmd" % suffixed_basename, "w", 0755)
+    self.stdout = open("%s.out" % suffixed_basename, "w")
+    self.stderr = open("%s.err" % suffixed_basename, "w")
+
+    self._CreateLogFileSymlinks(basename, suffixed_basename)
+
+  # Symlink unsuffixed basename to currently suffixed one.
+  def _CreateLogFileSymlinks(self, basename, suffixed_basename):
+    try:
+      for extension in ["cmd", "out", "err"]:
+        src_file = "%s.%s" % (os.path.basename(suffixed_basename), extension)
+        dest_file = "%s.%s" % (basename, extension)
+        if os.path.exists(dest_file):
+          os.remove(dest_file)
+        os.symlink(src_file, dest_file)
+    except IOError as ex:
+      self.LogFatal(str(ex))
 
   def _WriteTo(self, fd, msg, flush):
     fd.write(msg)
@@ -95,3 +145,15 @@ def GetLogger():
   if not main_logger:
     InitLogger(sys.argv[0])
   return main_logger
+
+
+def HandleUncaughtExceptions(fun):
+  """Catches all exceptions that would go outside decorated fun scope."""
+
+  def _Interceptor(*args, **kwargs):
+    try:
+      return fun(*args, **kwargs)
+    except StandardError:
+      GetLogger().LogFatal("Uncaught exception:\n%s" % traceback.format_exc())
+
+  return _Interceptor

@@ -16,12 +16,11 @@ import os
 import shutil
 import sys
 import tempfile
-import tc_enter_chroot
 from utils import command_executer
 from utils import logger
-from utils import utils
+from utils.file_utils import FileUtils
 
-checksum_file = "/home/chronos/osimage_checksum_file"
+checksum_file = "/usr/local/osimage_checksum_file"
 
 
 def Usage(parser, message):
@@ -48,6 +47,10 @@ def Main(argv):
                     action="store_true",
                     default=False,
                     help="Force an image even if it is non-test.")
+  parser.add_option("-a",
+                    "--image_to_live_args",
+                    dest="image_to_live_args")
+
 
   options = parser.parse_args(argv[1:])[0]
 
@@ -78,7 +81,7 @@ def Main(argv):
   if not os.path.exists(image):
     Usage(parser, "Image file: " + image + " does not exist!")
 
-  image_checksum = utils.Md5File(image)
+  image_checksum = FileUtils().Md5File(image)
 
   command = "cat " + checksum_file
   retval, device_checksum, err = cmd_executer.CrosRunCommand(command,
@@ -116,6 +119,8 @@ def Main(argv):
                "/src/scripts/image_to_live.sh --remote=" +
                options.remote +
                " --image=" + located_image)
+    if options.image_to_live_args:
+      command += " %s" % options.image_to_live_args
 
     retval = cmd_executer.RunCommand(command)
 
@@ -125,8 +130,8 @@ def Main(argv):
       shutil.rmtree(temp_dir)
 
     logger.GetLogger().LogFatalIf(retval, "Image command failed")
-    command = "'echo " + image_checksum + " > " + checksum_file
-    command += "&& chmod -w " + checksum_file + "'"
+    command = "echo %s > %s && chmod -w %s" % (image_checksum, checksum_file,
+                                               checksum_file)
     retval = cmd_executer.CrosRunCommand(command,
                                          chromeos_root=options.chromeos_root,
                                          machine=options.remote)
@@ -152,7 +157,7 @@ def LocateOrCopyImage(chromeos_root, image, board=None):
 
   chromeos_root_realpath = os.path.realpath(chromeos_root)
   image = os.path.realpath(image)
-  
+
   if image.startswith("%s/" % chromeos_root_realpath):
     return [True, image]
 
@@ -181,20 +186,22 @@ def LocateOrCopyImage(chromeos_root, image, board=None):
   return [False, new_image]
 
 
-def GetImageMountCommand(chromeos_root, image, mount_point):
+def GetImageMountCommand(chromeos_root, image, rootfs_mp, stateful_mp):
   image_dir = os.path.dirname(image)
   image_file = os.path.basename(image)
   mount_command = ("cd %s/src/scripts &&"
                    "./mount_gpt_image.sh --from=%s --image=%s"
                    " --safe --read_only"
-                   " --rootfs_mountpt=%s" %
-                   (chromeos_root, image_dir, image_file, mount_point))
+                   " --rootfs_mountpt=%s"
+                   " --stateful_mountpt=%s" %
+                   (chromeos_root, image_dir, image_file, rootfs_mp,
+                    stateful_mp))
   return mount_command
 
 
-def MountImage(chromeos_root, image, mount_point, unmount=False):
+def MountImage(chromeos_root, image, rootfs_mp, stateful_mp, unmount=False):
   cmd_executer = command_executer.GetCommandExecuter()
-  command = GetImageMountCommand(chromeos_root, image, mount_point)
+  command = GetImageMountCommand(chromeos_root, image, rootfs_mp, stateful_mp)
   if unmount:
     command = "%s --unmount" % command
   retval = cmd_executer.RunCommand(command)
@@ -203,21 +210,23 @@ def MountImage(chromeos_root, image, mount_point, unmount=False):
 
 
 def IsImageModdedForTest(chromeos_root, image):
-  mount_point = tempfile.mkdtemp()
-  MountImage(chromeos_root, image, mount_point)
-  signature_file = "/usr/local/lib/python2.6/test/autotest.py"
-  is_test_image = os.path.isfile("%s/%s" % (mount_point, signature_file))
-  MountImage(chromeos_root, image, mount_point, unmount=True)
+  rootfs_mp = tempfile.mkdtemp()
+  stateful_mp = tempfile.mkdtemp()
+  MountImage(chromeos_root, image, rootfs_mp, stateful_mp)
+  lsb_release_file = os.path.join(rootfs_mp, "etc/lsb-release")
+  is_test_image = "Test Build" in open(lsb_release_file).read()
+  MountImage(chromeos_root, image, rootfs_mp, stateful_mp, unmount=True)
   return is_test_image
 
 
 def VerifyChromeChecksum(chromeos_root, image, remote):
   cmd_executer = command_executer.GetCommandExecuter()
-  mount_point = tempfile.mkdtemp()
-  MountImage(chromeos_root, image, mount_point)
-  image_chrome_checksum = utils.Md5File("%s/opt/google/chrome/chrome" %
-                                        mount_point)
-  MountImage(chromeos_root, image, mount_point, unmount=True)
+  rootfs_mp = tempfile.mkdtemp()
+  stateful_mp = tempfile.mkdtemp()
+  MountImage(chromeos_root, image, rootfs_mp, stateful_mp)
+  image_chrome_checksum = FileUtils().Md5File("%s/opt/google/chrome/chrome" %
+                                              rootfs_mp)
+  MountImage(chromeos_root, image, rootfs_mp, stateful_mp, unmount=True)
 
   command = "md5sum /opt/google/chrome/chrome"
   [r, o, e] = cmd_executer.CrosRunCommand(command,

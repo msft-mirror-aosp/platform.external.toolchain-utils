@@ -6,6 +6,7 @@ import re
 import select
 import subprocess
 import sys
+import tempfile
 import time
 import utils
 
@@ -39,17 +40,21 @@ class CommandExecuter:
                  terminated_timeout=10):
     """Run a command."""
 
+    cmd = str(cmd)
+
     self.logger.LogCmd(cmd, machine, username)
     if command_terminator and command_terminator.IsTerminated():
       self.logger.LogError("Command was terminated!")
-      return 1
+      if return_output:
+        return [1, "", ""]
+      else:
+        return 1
 
     if machine is not None:
       user = ""
       if username is not None:
         user = username + "@"
       cmd = "ssh -t -t %s%s -- '%s'" % (user, machine, cmd)
-
 
     pty_fds = pty.openpty()
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -72,7 +77,10 @@ class CommandExecuter:
         self.RunCommand("sudo kill -9 " + str(p.pid))
         wait = p.wait()
         self.logger.LogError("Command was terminated!")
-        return wait
+        if return_output:
+          return (p.wait, full_stdout, full_stderr)
+        else:
+          return wait
       for fd in fds[0]:
         if fd == p.stdout:
           out = os.read(p.stdout.fileno(), 16384)
@@ -128,6 +136,14 @@ class CommandExecuter:
     command += "\nremote_access_init"
     return command
 
+  def WriteToTempShFile(self, contents):
+    handle, command_file = tempfile.mkstemp(prefix=os.uname()[1],
+                                            suffix=".sh")
+    os.write(handle, "#!/bin/bash\n")
+    os.write(handle, contents)
+    os.close(handle)
+    return command_file
+
 
   def CrosLearnBoard(self, chromeos_root, machine):
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
@@ -138,15 +154,29 @@ class CommandExecuter:
     return output.split()[-1]
 
   def CrosRunCommand(self, cmd, return_output=False, machine=None,
-      username=None, command_terminator=None, chromeos_root=None):
+      username=None, command_terminator=None, chromeos_root=None,
+                     command_timeout=None):
     """Run a command on a chromeos box"""
+    self.logger.LogCmd(cmd)
     self.logger.LogFatalIf(not machine, "No machine provided!")
     self.logger.LogFatalIf(not chromeos_root, "chromeos_root not given!")
     chromeos_root = os.path.expanduser(chromeos_root)
+
+    # Write all commands to a file.
+    command_file = self.WriteToTempShFile(cmd)
+    self.CopyFiles(command_file, command_file,
+                   dest_machine=machine,
+                   command_terminator=command_terminator,
+                   chromeos_root=chromeos_root,
+                   dest_cros=True,
+                   recursive=False)
+
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
-    command += "\nremote_sh " + cmd
+    command += "\nremote_sh bash %s" % command_file
     command += "\necho \"$REMOTE_OUT\""
-    retval = self.RunCommand(command, return_output)
+    retval = self.RunCommand(command, return_output,
+                             command_terminator=command_terminator,
+                             command_timeout=command_timeout)
     if return_output:
       connect_signature = ("Initiating first contact with remote host\n" +
                            "Connection OK\n")
@@ -157,6 +187,28 @@ class CommandExecuter:
       modded_return[1] = connect_signature_re.sub("", modded_return[1])
       return modded_return
     return retval
+
+  def ChrootRunCommand(self, chromeos_root, command, return_output=False,
+                       command_terminator=None):
+    self.logger.LogCmd(command)
+
+    handle, command_file = tempfile.mkstemp(dir=os.path.join(chromeos_root,
+                                                           "src/scripts"),
+                                          suffix=".sh",
+                                          prefix="in_chroot_cmd")
+    os.write(handle, "#!/bin/bash\n")
+    os.write(handle, command)
+    os.close(handle)
+
+    os.chmod(command_file, 0777)
+
+    command = "cd %s; cros_sdk -- ./%s" % (chromeos_root,
+                                           os.path.basename(command_file))
+    ret = self.RunCommand(command, return_output,
+                          command_terminator=command_terminator)
+    os.remove(command_file)
+    return ret
+
 
   def RunCommands(self, cmdlist, return_output=False, machine=None,
                   username=None, command_terminator=None):
@@ -232,6 +284,7 @@ class MockCommandExecuter(CommandExecuter):
 
   def RunCommand(self, cmd, return_output=False, machine=None, username=None,
                  command_terminator=None):
+    cmd = str(cmd)
     if machine is None:
       machine = "localhost"
     if username is None:
