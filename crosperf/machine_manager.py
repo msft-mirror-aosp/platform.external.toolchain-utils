@@ -6,6 +6,7 @@ import image_chromeos
 import lock_machine
 from utils import command_executer
 from utils import logger
+from utils.file_utils import FileUtils
 
 CHECKSUM_FILE = "/usr/local/osimage_checksum_file"
 
@@ -45,8 +46,11 @@ class MachineManager(object):
     checksum = ImageChecksummer().Checksum(chromeos_image)
     if machine.checksum == checksum:
       return
+    chromeos_root = FileUtils().ChromeOSRootFromImage(chromeos_image)
+    if not chromeos_root:
+      chromeos_root = self.chromeos_root
     image_args = [image_chromeos.__file__,
-                  "--chromeos_root=%s" % self.chromeos_root,
+                  "--chromeos_root=%s" % chromeos_root,
                   "--image=%s" % chromeos_image,
                   "--remote=%s" % machine.name]
     if board:
