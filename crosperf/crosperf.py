@@ -79,6 +79,9 @@ def Main(argv):
   working_directory = os.getcwd()
   experiment_file = ExperimentFile(open(experiment_filename, "rb"),
                                    option_settings)
+  if not experiment_file.GetGlobalSettings().GetField("name"):
+    experiment_name = os.path.basename(experiment_filename)
+    experiment_file.GetGlobalSettings().SetField("name", experiment_name)
   experiment = ExperimentFactory().GetExperiment(experiment_file,
                                                  working_directory)
 
