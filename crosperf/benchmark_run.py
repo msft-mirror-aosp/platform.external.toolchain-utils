@@ -10,6 +10,7 @@ import time
 import traceback
 from results_cache import Result
 from utils import logger
+from utils import command_executer
 
 STATUS_FAILED = "FAILED"
 STATUS_SUCCEEDED = "SUCCEEDED"
@@ -55,6 +56,7 @@ class BenchmarkRun(threading.Thread):
     self.cache_hit = False
     self.perf_results = None
     self.failure_reason = ""
+    self._ce = command_executer.GetCommandExecuter(self._logger)
 
   def MeanExcludingOutliers(self, array, outlier_range):
     """Return the arithmetic mean excluding outliers."""
@@ -92,7 +94,7 @@ class BenchmarkRun(threading.Thread):
     # Generate results from the output file.
     results_dir = self._GetResultsDir(result.out)
     self.full_name = os.path.basename(results_dir)
-    self.results = self.ParseResults(result.out)
+    self.results = result.keyvals
 
     # Store the autotest output in the cache also.
     if not cache_hit:
@@ -212,9 +214,37 @@ class BenchmarkRun(threading.Thread):
                                                   self.profile_counters,
                                                   self.profile_type)
     self.run_completed = True
-    result = Result(out, err, retval)
+
+    # Include the keyvals in the result.
+    results_dir = self._GetResultsDir(out)
+    keyvals = self._GetKeyvals(results_dir)
+    keyvals["retval"] = retval
+
+    result = Result(out, err, retval, keyvals)
 
     return result
+
+  def _GetKeyvals(self, results_dir):
+    full_results_dir = os.path.join(self.chromeos_root,
+                                    "chroot",
+                                    results_dir.lstrip("/"))
+    command = "find %s -regex .*results/keyval$" % full_results_dir
+    [ret, out, err] = self._ce.RunCommand(command, return_output=True)
+    keyvals_dict = {}
+    for f in out.splitlines():
+      keyvals = open(f, "r").read()
+      keyvals_dict.update(self._ParseKeyvals(keyvals))
+
+    return keyvals_dict
+
+  def _ParseKeyvals(self, keyvals):
+    keyval_dict = {}
+    for l in keyvals.splitlines():
+      l = l.strip()
+      if l:
+        key, val = l.split("=")
+        keyval_dict[key] = val
+    return keyval_dict
 
   def SetCacheConditions(self, cache_conditions):
     self.cache_conditions = cache_conditions
