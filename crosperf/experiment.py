@@ -66,9 +66,6 @@ class Experiment(object):
           logger_to_use = logger.Logger(os.path.dirname(__file__),
                                         "run.%s" % (full_name),
                                         True)
-          ar = AutotestRunner(logger_to_use=logger_to_use)
-          rc = ResultsCache()
-          pp = PerfProcessor(logger_to_use=logger_to_use)
           benchmark_run = BenchmarkRun(benchmark_run_name,
                                        benchmark.name,
                                        benchmark.autotest_name,
@@ -83,9 +80,6 @@ class Experiment(object):
                                        benchmark.profile_counters,
                                        benchmark.profile_type,
                                        self.machine_manager,
-                                       rc,
-                                       ar,
-                                       pp,
                                        logger_to_use)
 
           benchmark_runs.append(benchmark_run)

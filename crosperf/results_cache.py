@@ -1,5 +1,5 @@
 #!/usr/bin/python
-
+#
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 import getpass
@@ -8,11 +8,12 @@ import hashlib
 import os
 import pickle
 import re
+
 from image_checksummer import ImageChecksummer
 from perf_processor import PerfProcessor
 from utils import command_executer
 from utils import logger
-from utils import utils
+
 
 SCRATCH_DIR = "/home/%s/cros_scratch" % getpass.getuser()
 RESULTS_FILE = "results.txt"
@@ -43,6 +44,9 @@ class CacheConditions(object):
 
   # Never a cache hit.
   FALSE = 4
+
+  # Cache hit if the image path matches the cached image path.
+  IMAGE_PATH_MATCH = 5
 
 
 class ResultsCache(object):
@@ -92,9 +96,18 @@ class ResultsCache(object):
       checksum = "*"
     else:
       checksum = ImageChecksummer().Checksum(self.chromeos_image)
-    return (hashlib.md5(self.chromeos_image).hexdigest(),
+
+    if read and CacheConditions.IMAGE_PATH_MATCH not in self.cache_conditions:
+      image_path_checksum = "*"
+    else:
+      image_path_checksum = hashlib.md5(self.chromeos_image).hexdigest()
+
+    autotest_args_checksum = hashlib.md5(
+                             "".join(self.autotest_args)).hexdigest()
+
+    return (image_path_checksum,
             self.autotest_name, str(self.iteration),
-            ",".join(self.autotest_args),
+            autotest_args_checksum,
             checksum,
             remote,
             str(self.CACHE_VERSION))

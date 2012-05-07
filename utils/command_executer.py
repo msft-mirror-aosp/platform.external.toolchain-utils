@@ -1,14 +1,19 @@
+#!/usr/bin/python
+#
+# Copyright 2011 Google Inc. All Rights Reserved.
+#
+
 import getpass
-import logger
 import os
 import pty
 import re
 import select
 import subprocess
-import sys
 import tempfile
 import time
-import utils
+
+import logger
+import misc
 
 mock_default = False
 
@@ -155,7 +160,8 @@ class CommandExecuter:
 
   def CrosRunCommand(self, cmd, return_output=False, machine=None,
       username=None, command_terminator=None, chromeos_root=None,
-                     command_timeout=None):
+                     command_timeout=None,
+                     terminated_timeout=10):
     """Run a command on a chromeos box"""
     self.logger.LogCmd(cmd)
     self.logger.LogFatalIf(not machine, "No machine provided!")
@@ -176,7 +182,8 @@ class CommandExecuter:
     command += "\necho \"$REMOTE_OUT\""
     retval = self.RunCommand(command, return_output,
                              command_terminator=command_terminator,
-                             command_timeout=command_timeout)
+                             command_timeout=command_timeout,
+                             terminated_timeout=terminated_timeout)
     if return_output:
       connect_signature = ("Initiating first contact with remote host\n" +
                            "Connection OK\n")
@@ -189,7 +196,8 @@ class CommandExecuter:
     return retval
 
   def ChrootRunCommand(self, chromeos_root, command, return_output=False,
-                       command_terminator=None):
+                       command_terminator=None, command_timeout=None,
+                       terminated_timeout=10):
     self.logger.LogCmd(command)
 
     handle, command_file = tempfile.mkstemp(dir=os.path.join(chromeos_root,
@@ -205,7 +213,9 @@ class CommandExecuter:
     command = "cd %s; cros_sdk -- ./%s" % (chromeos_root,
                                            os.path.basename(command_file))
     ret = self.RunCommand(command, return_output,
-                          command_terminator=command_terminator)
+                          command_terminator=command_terminator,
+                          command_timeout=command_timeout,
+                          terminated_timeout=terminated_timeout)
     os.remove(command_file)
     return ret
 
@@ -237,8 +247,8 @@ class CommandExecuter:
         cros_machine = dest_machine
 
       command = self.RemoteAccessInitCommand(chromeos_root, cros_machine)
-      src_parent, src_child = utils.GetRoot(src)
-      dest_parent, dest_child = utils.GetRoot(dest)
+      src_parent, src_child = misc.GetRoot(src)
+      dest_parent, dest_child = misc.GetRoot(dest)
       ssh_command = ("ssh -p ${FLAGS_ssh_port}" +
                      " -o StrictHostKeyChecking=no" +
                      " -o UserKnownHostsFile=$(mktemp)" +

@@ -8,6 +8,7 @@ import time
 from experiment_status import ExperimentStatus
 from results_report import HTMLResultsReport
 from results_report import TextResultsReport
+from utils import command_executer
 from utils import logger
 from utils.email_sender import EmailSender
 from utils.file_utils import FileUtils
@@ -20,6 +21,7 @@ class ExperimentRunner(object):
   def __init__(self, experiment):
     self._experiment = experiment
     self.l = logger.GetLogger()
+    self._ce = command_executer.GetCommandExecuter(self.l)
     self._terminated = False
 
   def _Run(self, experiment):
@@ -97,6 +99,11 @@ class ExperimentRunner(object):
                                 benchmark_run.perf_results.report)
           FileUtils().WriteFile(os.path.join(benchmark_run_path, "perf.out"),
                                 benchmark_run.perf_results.output)
+          if os.path.isfile(benchmark_run.perf_processor.host_data_file):
+            self._ce.RunCommand("cp %s %s" %
+                                (benchmark_run.perf_processor.host_data_file,
+                                 os.path.join(benchmark_run_path, "perf.data")))
+
       except Exception, e:
         self.l.LogError(e)
 
