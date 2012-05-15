@@ -20,7 +20,7 @@ class BenchmarkSettings(Settings):
     self.AddField(TextField("autotest_args",
                             description="Arguments to be passed to the "
                             "autotest."))
-    self.AddField(IntegerField("iterations", default=3,
+    self.AddField(IntegerField("iterations", default=1,
                                description="Number of iterations to run the "
                                "autotest."))
     self.AddField(FloatField("outlier_range", default=0.2,
@@ -71,7 +71,7 @@ class GlobalSettings(Settings):
     self.AddField(BooleanField("exact_remote", default=False,
                                description="Ensure cached runs are run on the "
                                "same device that is specified as a remote."))
-    self.AddField(IntegerField("iterations", default=3,
+    self.AddField(IntegerField("iterations", default=1,
                                description="Number of iterations to run all "
                                "autotests."))
     self.AddField(TextField("chromeos_root",
