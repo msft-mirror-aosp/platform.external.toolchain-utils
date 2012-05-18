@@ -35,14 +35,12 @@ class BenchmarkRun(threading.Thread):
     self._logger = logger_to_use
     self.benchmark_name = benchmark_name
     self.autotest_name = autotest_name
-    self.autotest_args = autotest_args
     self.label_name = label_name
     self.chromeos_root = chromeos_root
     self.chromeos_image = os.path.expanduser(chromeos_image)
     self.board = board
     self.iteration = iteration
     self.result = None
-    self.results = {}
     self.terminated = False
     self.retval = None
     self.status = STATUS_PENDING
@@ -61,42 +59,8 @@ class BenchmarkRun(threading.Thread):
     self.cache_hit = False
     self.perf_results = None
     self.failure_reason = ""
+    self.autotest_args = "%s %s" % (autotest_args, self._GetExtraAutotestArgs())
     self._ce = command_executer.GetCommandExecuter(self._logger)
-
-  def ProcessResults(self):
-    # Generate results from the output file.
-    self.full_name = os.path.basename(self.results_dir)
-    self.results = self.result.keyvals
-
-    # Store the autotest output in the cache also.
-    if not self.cache_hit:
-      self.cache.StoreResult(self.result)
-      self.cache.StoreAutotestOutput(self.results_dir)
-
-    self.perf_processor = PerfProcessor(self.results_dir,
-                                        self.chromeos_root,
-                                        self.board,
-                                        self._logger)
-    # Generate a perf report and cache it.
-    if self.profile_type:
-      if self.cache_hit:
-        self.perf_results = self.cache.ReadPerfResults()
-      else:
-        self.perf_results = self.perf_processor.GeneratePerfResults()
-        self.cache.StorePerfResults(self.perf_results)
-
-    # If there are valid results from perf stat, combine them with the
-    # autotest results.
-    if self.perf_results:
-      stat_results = self.perf_processor.ParseStatResults(self.perf_results)
-      self.results = dict(self.results.items() + stat_results.items())
-
-  def _GetResultsDir(self, output):
-    mo = re.search("Results placed in (\S+)", output)
-    if mo:
-      result = mo.group(1)
-      return result
-    raise Exception("Could not find results directory.")
 
   def run(self):
     try:
@@ -118,7 +82,6 @@ class BenchmarkRun(threading.Thread):
       if self.result:
         self._logger.LogOutput("%s: Cache hit." % self.name)
         self._logger.LogOutput(self.result.out + "\n" + self.result.err)
-        self.results_dir = self._GetResultsDir(self.result.out)
       else:
         self._logger.LogOutput("%s: No cache hit." % self.name)
         self.status = STATUS_WAITING
@@ -126,6 +89,7 @@ class BenchmarkRun(threading.Thread):
         self.machine = self.AcquireMachine()
         self.cache.remote = self.machine.name
         self.result = self.RunTest(self.machine)
+        self.cache.StoreResult(self.result)
 
       if self.terminated:
         return
@@ -136,8 +100,6 @@ class BenchmarkRun(threading.Thread):
         if self.status != STATUS_FAILED:
           self.status = STATUS_FAILED
           self.failure_reason = "Return value of autotest was non-zero."
-
-      self.ProcessResults()
 
     except Exception, e:
       self._logger.LogError("Benchmark run: '%s' failed: %s" % (self.name, e))
@@ -174,6 +136,21 @@ class BenchmarkRun(threading.Thread):
         time.sleep(sleep_duration)
     return machine
 
+  def _GetExtraAutotestArgs(self):
+    if self.profile_type:
+      if self.profile_type == "record":
+        perf_args = "record -a -e %s" % ",".join(self.profile_counters)
+      elif self.profile_type == "stat":
+        perf_args = "stat -a"
+      else:
+        raise Exception("profile_type must be either record or stat")
+      extra_autotest_args = ["--profiler=custom_perf",
+                             ("--profiler_args='perf_options=\"%s\"'" %
+                              perf_args)]
+      return " ".join(extra_autotest_args)
+    else:
+      return ""
+
   def RunTest(self, machine):
     self.status = STATUS_IMAGING
     self.machine_manager.ImageMachine(machine,
@@ -184,41 +161,15 @@ class BenchmarkRun(threading.Thread):
                                                   self.chromeos_root,
                                                   self.board,
                                                   self.autotest_name,
-                                                  self.autotest_args,
-                                                  self.profile_counters,
-                                                  self.profile_type)
+                                                  self.autotest_args)
     self.run_completed = True
 
-    # Include the keyvals in the result.
-    self.results_dir = self._GetResultsDir(out)
-    keyvals = self._GetKeyvals()
-    keyvals["retval"] = retval
-
-    result = Result(out, err, retval, keyvals)
-
-    return result
-
-  def _GetKeyvals(self):
-    full_results_dir = os.path.join(self.chromeos_root,
-                                    "chroot",
-                                    self.results_dir.lstrip("/"))
-    command = "find %s -regex .*results/keyval$" % full_results_dir
-    [ret, out, err] = self._ce.RunCommand(command, return_output=True)
-    keyvals_dict = {}
-    for f in out.splitlines():
-      keyvals = open(f, "r").read()
-      keyvals_dict.update(self._ParseKeyvals(keyvals))
-
-    return keyvals_dict
-
-  def _ParseKeyvals(self, keyvals):
-    keyval_dict = {}
-    for l in keyvals.splitlines():
-      l = l.strip()
-      if l:
-        key, val = l.split("=")
-        keyval_dict[key] = val
-    return keyval_dict
+    return Result.CreateFromRun(self._logger,
+                                self.chromeos_root,
+                                self.board,
+                                out,
+                                err,
+                                retval)
 
   def SetCacheConditions(self, cache_conditions):
     self.cache_conditions = cache_conditions

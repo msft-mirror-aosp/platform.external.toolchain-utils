@@ -9,7 +9,7 @@ class ResultSorter(object):
     for benchmark_run in benchmark_runs:
       benchmark_name = benchmark_run.benchmark_name
       label_name = benchmark_run.label_name
-      for autotest_key in benchmark_run.results:
+      for autotest_key in benchmark_run.result.keyvals:
         result_tuple = (benchmark_name, autotest_key, label_name)
         if result_tuple not in self.table:
           self.table[result_tuple] = []
@@ -19,7 +19,7 @@ class ResultSorter(object):
         while index >= len(cell):
           cell.append(None)
 
-        result_value = benchmark_run.results[autotest_key]
+        result_value = benchmark_run.result.keyvals[autotest_key]
         try:
           result_value = float(result_value)
         except ValueError:
@@ -32,7 +32,7 @@ class ResultSorter(object):
       benchmark_name = benchmark_run.benchmark_name
       if benchmark_name not in self.autotest_keys:
         self.autotest_keys[benchmark_name] = {}
-      for autotest_key in benchmark_run.results:
+      for autotest_key in benchmark_run.result.keyvals:
         self.autotest_keys[benchmark_name][autotest_key] = True
 
   def GetAutotestKeys(self, benchmark_name):

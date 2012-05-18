@@ -6,18 +6,15 @@ from utils import command_executer
 
 
 class AutotestRunner(object):
+  """ This defines the interface from crosperf to ./run_remote_tests.sh.
+  """
   def __init__(self, logger_to_use=None):
     self._logger = logger_to_use
     self._ce = command_executer.GetCommandExecuter(self._logger)
     self._ct = command_executer.CommandTerminator()
 
   def Run(self, machine_name, chromeos_root, board, autotest_name,
-          autotest_args, profile_counters, profile_type):
-    if profile_counters and profile_type:
-      profiler_args = "-e " + " -e ".join(profile_counters)
-      # TODO(asharif): Add an option to do -g.
-      autotest_args += (" --profile --profiler_args='%s' --profile_type='%s'"
-                        % (profiler_args, profile_type))
+          autotest_args):
     options = ""
     if board:
       options += " --board=%s" % board

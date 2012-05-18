@@ -8,6 +8,7 @@ import hashlib
 import os
 import pickle
 import re
+import tempfile
 
 from image_checksummer import ImageChecksummer
 from perf_processor import PerfProcessor
@@ -23,11 +24,202 @@ PERF_RESULTS_FILE = "perf-results.txt"
 
 
 class Result(object):
-  def __init__(self, out, err, retval, keyvals):
+  """ This class manages what exactly is stored inside the cache without knowing
+  what the key of the cache is. For runs with perf, it stores perf.data,
+  perf.report, etc. The key generation is handled by the ResultsCache class.
+  """
+  def __init__(self, logger):
+    self._logger = logger
+    self._ce = command_executer.GetCommandExecuter(self._logger)
+    self._temp_dir = None
+
+  def _CopyFilesTo(self, dest_dir, files_to_copy):
+    file_index = 0
+    for file_to_copy in files_to_copy:
+      if not os.path.isdir(dest_dir):
+        command = "mkdir -p %s" % dest_dir
+        self._ce.RunCommand(command)
+      dest_file = os.path.join(dest_dir,
+                               ("%s.%s" % (os.path.basename(file_to_copy),
+                                           file_index)))
+      ret = self._ce.CopyFiles(file_to_copy,
+                               dest_file,
+                               recursive=False)
+      if ret:
+        raise Exception("Could not copy results file: %s" % file_to_copy)
+
+  def CopyResultsTo(self, dest_dir):
+    self._CopyFilesTo(dest_dir, self.perf_data_files)
+    self._CopyFilesTo(dest_dir, self.perf_report_files)
+
+  def _GetKeyvals(self):
+    command = "find %s -regex .*results/keyval$" % self.results_dir
+    [ret, out, err] = self._ce.RunCommand(command, return_output=True)
+    keyvals_dict = {}
+    for f in out.splitlines():
+      keyvals = open(f, "r").read()
+      keyvals_dict.update(self._ParseKeyvals(keyvals))
+
+    return keyvals_dict
+
+  def _ParseKeyvals(self, keyvals):
+    keyval_dict = {}
+    for l in keyvals.splitlines():
+      l = l.strip()
+      if l:
+        key, val = l.split("=")
+        keyval_dict[key] = val
+    return keyval_dict
+
+  def _GetResultsDir(self):
+    mo = re.search("Results placed in (\S+)", self.out)
+    if mo:
+      result = mo.group(1)
+      return result
+    raise Exception("Could not find results directory.")
+
+  def _FindFilesInResultsDir(self, find_args):
+    command = "find %s %s" % (self.results_dir,
+                              find_args)
+    ret, out, err = self._ce.RunCommand(command, return_output=True)
+    if ret:
+      raise Exception("Could not run find command!")
+    return out
+
+  def _GetPerfDataFiles(self):
+    return self._FindFilesInResultsDir("-name perf.data").splitlines()
+
+  def _GetPerfReportFiles(self):
+    return self._FindFilesInResultsDir("-name perf.data.report").splitlines()
+
+  def _GeneratePerfReportFiles(self):
+    perf_report_files = []
+    for perf_data_file in self.perf_data_files:
+      # Generate a perf.report and store it side-by-side with the perf.data
+      # file.
+      chroot_perf_data_file = misc.GetInsideChrootPath(self._chromeos_root,
+                                                       perf_data_file)
+      perf_report_file = "%s.report" % perf_data_file
+      if os.path.exists(perf_report_file):
+        raise Exception("Perf report file already exists: %s" %
+                        perf_report_file)
+      chroot_perf_report_file = misc.GetInsideChrootPath(self._chromeos_root,
+                                                   perf_report_file)
+      command = ("/usr/sbin/perf report "
+                 "--symfs /build/%s "
+                 "-i %s --stdio "
+                 "| head -n1000 "
+                 "| tee %s" %
+                 (self._board,
+                  chroot_perf_data_file,
+                  chroot_perf_report_file))
+      ret, out, err = self._ce.ChrootRunCommand(self._chromeos_root,
+                                                command,
+                                                return_output=True)
+      # Add a keyval to the dictionary for the events captured.
+      perf_report_files.append(
+          misc.GetOutsideChrootPath(self._chromeos_root,
+                                    chroot_perf_report_file))
+    return perf_report_files
+
+  def _GatherPerfResults(self):
+    report_id = 0
+    for perf_report_file in self.perf_report_files:
+      with open(perf_report_file, "r") as f:
+        report_contents = f.read()
+        for group in re.findall("Events: (\S+) (\S+)", report_contents):
+          num_events = group[0]
+          event_name = group[1]
+          key = "perf_%s_%s" % (report_id, event_name)
+          value = str(misc.UnitToNumber(num_events))
+          self.keyvals[key] = value
+
+  def _PopulateFromRun(self, chromeos_root, board, out, err, retval):
+    self._chromeos_root = chromeos_root
+    self._board = board
     self.out = out
     self.err = err
     self.retval = retval
-    self.keyvals = keyvals
+    self.chroot_results_dir = self._GetResultsDir()
+    self.results_dir = misc.GetOutsideChrootPath(self._chromeos_root,
+                                                 self.chroot_results_dir)
+    self.perf_data_files = self._GetPerfDataFiles()
+    # Include all perf.report data in table.
+    self.perf_report_files = self._GeneratePerfReportFiles()
+    # TODO(asharif): Do something similar with perf stat.
+
+    # Grab keyvals from the directory.
+    self._ProcessResults()
+
+  def _ProcessResults(self):
+    # Note that this function doesn't know anything about whether there is a
+    # cache hit or miss. It should process results agnostic of the cache hit
+    # state.
+    self.keyvals = self._GetKeyvals()
+    self.keyvals["retval"] = self.retval
+    # Generate report from all perf.data files.
+    # Now parse all perf report files and include them in keyvals.
+    self._GatherPerfResults()
+
+  def _PopulateFromCacheDir(self, cache_dir):
+    # Read in everything from the cache directory.
+    with open(os.path.join(cache_dir, RESULTS_FILE), "r") as f:
+      self.out = pickle.load(f)
+      self.err = pickle.load(f)
+      self.retval = pickle.load(f)
+
+    # Untar the tarball to a temporary directory
+    self._temp_dir = tempfile.mkdtemp()
+    command = ("cd %s && tar xf %s" %
+               (self._temp_dir,
+                os.path.join(cache_dir, AUTOTEST_TARBALL)))
+    ret = self._ce.RunCommand(command)
+    if ret:
+      raise Exception("Could not untar cached tarball")
+    self.results_dir = self._temp_dir
+    self.perf_data_files = self._GetPerfDataFiles()
+    self.perf_report_files = self._GetPerfReportFiles()
+    self._ProcessResults()
+
+  def CleanUp(self):
+    if self._temp_dir:
+      command = "rm -rf %s" % self._temp_dir
+      self._ce.RunCommand(command)
+
+
+  def StoreToCacheDir(self, cache_dir):
+    # Create the dir if it doesn't exist.
+    command = "mkdir -p %s" % cache_dir
+    ret = self._ce.RunCommand(command)
+    if ret:
+      raise Exception("Could not create cache dir: %s" % cache_dir)
+    # Store to the cache directory.
+    with open(os.path.join(cache_dir, RESULTS_FILE), "w") as f:
+      pickle.dump(self.out, f)
+      pickle.dump(self.err, f)
+      pickle.dump(self.retval, f)
+
+    tarball = os.path.join(cache_dir, AUTOTEST_TARBALL)
+    command = ("cd %s && tar cjf %s ." % (self.results_dir, tarball))
+    ret = self._ce.RunCommand(command)
+    if ret:
+      raise Exception("Couldn't store autotest output directory.")
+
+  @classmethod
+  def CreateFromRun(cls, logger, chromeos_root, board, out, err, retval):
+    result = cls(logger)
+    result._PopulateFromRun(chromeos_root, board, out, err, retval)
+    return result
+
+  @classmethod
+  def CreateFromCacheHit(cls, logger, cache_dir):
+    result = cls(logger)
+    try:
+      result._PopulateFromCacheDir(cache_dir)
+    except Exception as e:
+      logger.LogError("Exception while using cache: %s" % e)
+      return None
+    return result
 
 
 class CacheConditions(object):
@@ -51,7 +243,11 @@ class CacheConditions(object):
 
 
 class ResultsCache(object):
-  CACHE_VERSION = 2
+  """ This class manages the key of the cached runs without worrying about what
+  is exactly stored (value). The value generation is handled by the Results
+  class.
+  """
+  CACHE_VERSION = 3
   def Init(self, chromeos_image, chromeos_root, autotest_name, iteration,
            autotest_args, remote, board, cache_conditions,
            logger_to_use):
@@ -121,67 +317,25 @@ class ResultsCache(object):
     if not cache_dir:
       return None
 
-    try:
-      cache_file = os.path.join(cache_dir, RESULTS_FILE)
+    if not os.path.isdir(cache_dir):
+      return None
 
-      self._logger.LogOutput("Trying to read from cache file: %s" % cache_file)
+    self._logger.LogOutput("Trying to read from cache dir: %s" % cache_dir)
 
-      with open(cache_file, "rb") as f:
-        result = pickle.load(f)
+    result = Result.CreateFromCacheHit(self._logger, cache_dir)
 
-        if (result.retval == 0 or
-            CacheConditions.RUN_SUCCEEDED not in self.cache_conditions):
-          return result
+    if not result:
+      return None
 
-    except Exception, e:
-      if CacheConditions.CACHE_FILE_EXISTS not in self.cache_conditions:
-        # Cache file not found but just return a failure.
-        return Result("", "", 1, {})
-      raise e
+    if (result.retval == 0 or
+        CacheConditions.RUN_SUCCEEDED not in self.cache_conditions):
+      return result
+
+    return None
 
   def StoreResult(self, result):
     cache_dir = self._GetCacheDirForWrite()
-    cache_file = os.path.join(cache_dir, RESULTS_FILE)
-    command = "mkdir -p %s" % cache_dir
-    ret = self._ce.RunCommand(command)
-    assert ret == 0, "Couldn't create cache dir"
-    with open(cache_file, "wb") as f:
-      pickle.dump(result, f)
-
-  def StoreAutotestOutput(self, results_dir):
-    host_results_dir = os.path.join(self.chromeos_root, "chroot",
-                                    results_dir[1:])
-    tarball = os.path.join(self._GetCacheDirForWrite(), AUTOTEST_TARBALL)
-    command = ("cd %s && tar cjf %s ." % (host_results_dir, tarball))
-    ret = self._ce.RunCommand(command)
-    if ret:
-      raise Exception("Couldn't store autotest output directory.")
-
-  def ReadAutotestOutput(self, destination):
-    cache_dir = self._GetCacheDirForRead()
-    tarball = os.path.join(cache_dir, AUTOTEST_TARBALL)
-    if not os.path.exists(tarball):
-      raise Exception("Cached autotest tarball does not exist at '%s'." %
-                      tarball)
-    command = ("cd %s && tar xjf %s ." % (destination, tarball))
-    ret = self._ce.RunCommand(command)
-    if ret:
-      raise Exception("Couldn't read autotest output directory.")
-
-  def StorePerfResults(self, perf):
-    perf_path = os.path.join(self._GetCacheDirForWrite(), PERF_RESULTS_FILE)
-    with open(perf_path, "wb") as f:
-      pickle.dump(perf.report, f)
-      pickle.dump(perf.output, f)
-
-  def ReadPerfResults(self):
-    cache_dir = self._GetCacheDirForRead()
-    perf_path = os.path.join(cache_dir, PERF_RESULTS_FILE)
-    with open(perf_path, "rb") as f:
-      report = pickle.load(f)
-      output = pickle.load(f)
-
-    return PerfProcessor.PerfResults(report, output)
+    result.StoreToCacheDir(cache_dir)
 
 
 class MockResultsCache(object):
@@ -193,15 +347,3 @@ class MockResultsCache(object):
 
   def StoreResult(self, result):
     pass
-
-  def StoreAutotestOutput(self, results_dir):
-    pass
-
-  def ReadAutotestOutput(self, destination):
-    pass
-
-  def StorePerfResults(self, perf):
-    pass
-
-  def ReadPerfResults(self):
-    return PerfProcessor.PerfResults("", "")
