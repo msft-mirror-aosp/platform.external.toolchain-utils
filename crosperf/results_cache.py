@@ -107,10 +107,14 @@ class Result(object):
                                                    perf_report_file)
       command = ("/usr/sbin/perf report "
                  "--symfs /build/%s "
+                 "--vmlinux /build/%s/usr/lib/debug/boot/vmlinux "
+                 "--kallsyms /build/%s/boot/System.map-* "
                  "-i %s --stdio "
                  "| head -n1000 "
                  "| tee %s" %
                  (self._board,
+                  self._board,
+                  self._board,
                   chroot_perf_data_file,
                   chroot_perf_report_file))
       ret, out, err = self._ce.ChrootRunCommand(self._chromeos_root,
