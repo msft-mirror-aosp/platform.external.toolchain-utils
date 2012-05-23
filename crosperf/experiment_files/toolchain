@@ -1,0 +1,15 @@
+# Use this experiment whenever the toolchain is upgraded.
+
+benchmark: bvt {
+  autotest_name: suite:bvt
+}
+
+benchmark: suite_Smoke {
+  auotest_name: suite:smoke
+}
+
+benchmark: PyAutoPerfTests {
+}
+
+benchmark: AndroidBench {
+}

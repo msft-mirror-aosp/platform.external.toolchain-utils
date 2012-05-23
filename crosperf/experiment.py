@@ -7,7 +7,6 @@ import time
 from autotest_runner import AutotestRunner
 from benchmark_run import BenchmarkRun
 from machine_manager import MachineManager
-from perf_processor import PerfProcessor
 from results_cache import ResultsCache
 from results_report import HTMLResultsReport
 from utils import logger
