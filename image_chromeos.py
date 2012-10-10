@@ -9,10 +9,12 @@ This script images a remote ChromeOS device with a specific image."
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
+import fcntl
 import filecmp
 import glob
 import optparse
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -22,15 +24,25 @@ from utils import misc
 from utils.file_utils import FileUtils
 
 checksum_file = "/usr/local/osimage_checksum_file"
-
+lock_file = "/tmp/lock_image_chromeos"
 
 def Usage(parser, message):
   print "ERROR: " + message
   parser.print_help()
   sys.exit(0)
 
+
 def Main(argv):
   """Build ChromeOS."""
+  #Get lock for the host
+  f = open(lock_file, "w+a")
+  try:
+    fcntl.lockf(f, fcntl.LOCK_EX|fcntl.LOCK_NB)
+  except IOError:
+    f.close()
+    print ("You can not run two instances of image_chromes at the same time."
+           "\nTry again. Exiting ....")
+    exit(0)
   # Common initializations
   cmd_executer = command_executer.GetCommandExecuter()
   l = logger.GetLogger()
@@ -150,6 +162,8 @@ def Main(argv):
   else:
     l.LogOutput("Checksums match. Skipping reimage")
 
+  fcntl.lockf(f, fcntl.LOCK_UN)
+  f.close()
   return retval
 
 
@@ -219,7 +233,8 @@ def IsImageModdedForTest(chromeos_root, image):
   stateful_mp = tempfile.mkdtemp()
   MountImage(chromeos_root, image, rootfs_mp, stateful_mp)
   lsb_release_file = os.path.join(rootfs_mp, "etc/lsb-release")
-  is_test_image = "Test Build" in open(lsb_release_file).read()
+  lsb_release_contents = open(lsb_release_file).read()
+  is_test_image = re.search("test", lsb_release_contents, re.IGNORECASE)
   MountImage(chromeos_root, image, rootfs_mp, stateful_mp, unmount=True)
   return is_test_image
 

@@ -33,7 +33,7 @@ class ExperimentFactory(object):
     if global_settings.GetField("rerun"):
       cache_conditions.append(CacheConditions.FALSE)
     if global_settings.GetField("exact_remote"):
-      cache_conditions.append(CacheConditions.REMOTES_MATCH)
+      cache_conditions.append(CacheConditions.MACHINES_MATCH)
 
     # Construct benchmarks.
     benchmarks = []
@@ -46,11 +46,9 @@ class ExperimentFactory(object):
       autotest_args = benchmark_settings.GetField("autotest_args")
       iterations = benchmark_settings.GetField("iterations")
       outlier_range = benchmark_settings.GetField("outlier_range")
-      profile_counters = benchmark_settings.GetField("profile_counters")
-      profile_type = benchmark_settings.GetField("profile_type")
+      perf_args = benchmark_settings.GetField("perf_args")
       benchmark = Benchmark(benchmark_name, autotest_name, autotest_args,
-                            iterations, outlier_range, profile_counters,
-                            profile_type)
+                            iterations, outlier_range, perf_args)
       benchmarks.append(benchmark)
 
     # Construct labels.
@@ -64,9 +62,12 @@ class ExperimentFactory(object):
       label = Label(label_name, image, chromeos_root, board)
       labels.append(label)
 
+    email = global_settings.GetField("email")
+
     experiment = Experiment(experiment_name, remote, rerun_if_failed,
                             working_directory, chromeos_root,
                             cache_conditions, labels, benchmarks,
-                            experiment_file.Canonicalize())
+                            experiment_file.Canonicalize(),
+                            email)
 
     return experiment

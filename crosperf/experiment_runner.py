@@ -53,7 +53,7 @@ class ExperimentRunner(object):
       if not benchmark_run.cache_hit:
         send_mail = True
         break
-    if not send_mail:
+    if not send_mail and not experiment.email_to:
       return
 
     label_names = []
@@ -61,11 +61,12 @@ class ExperimentRunner(object):
       label_names.append(label.name)
     subject = "%s: %s" % (experiment.name, " vs. ".join(label_names))
 
-    text_report = TextResultsReport(experiment).GetReport()
+    text_report = TextResultsReport(experiment, True).GetReport()
     text_report = "<pre style='font-size: 13px'>%s</pre>" % text_report
     html_report = HTMLResultsReport(experiment).GetReport()
     attachment = EmailSender.Attachment("report.html", html_report)
-    EmailSender().SendEmail([getpass.getuser()],
+    email_to = [getpass.getuser()] + experiment.email_to
+    EmailSender().SendEmail(email_to,
                             subject,
                             text_report,
                             attachments=[attachment],
@@ -89,10 +90,11 @@ class ExperimentRunner(object):
 
     self.l.LogOutput("Storing results of each benchmark run.")
     for benchmark_run in experiment.benchmark_runs:
-      benchmark_run_name = filter(str.isalnum, benchmark_run.name)
-      benchmark_run_path = os.path.join(results_directory,
-                                        benchmark_run_name)
-      benchmark_run.result.CopyResultsTo(benchmark_run_path)
+      if benchmark_run.result:
+        benchmark_run_name = filter(str.isalnum, benchmark_run.name)
+        benchmark_run_path = os.path.join(results_directory,
+                                          benchmark_run_name)
+        benchmark_run.result.CopyResultsTo(benchmark_run_path)
 
   def Run(self):
     self._Run(self._experiment)

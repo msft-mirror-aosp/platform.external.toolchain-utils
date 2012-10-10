@@ -1,9 +1,12 @@
+import hashlib
+import image_chromeos
+import lock_machine
+import math
+import os.path
 import sys
 import threading
 import time
 from image_checksummer import ImageChecksummer
-import image_chromeos
-import lock_machine
 from utils import command_executer
 from utils import logger
 from utils.file_utils import FileUtils
@@ -12,13 +15,90 @@ CHECKSUM_FILE = "/usr/local/osimage_checksum_file"
 
 
 class CrosMachine(object):
-  def __init__(self, name):
+  def __init__(self, name, chromeos_root):
     self.name = name
     self.image = None
     self.checksum = None
     self.locked = False
     self.released_time = time.time()
     self.autotest_run = None
+    self.chromeos_root = chromeos_root
+    self._GetMemoryInfo()
+    self._GetCPUInfo()
+    self._ComputeMachineChecksumString()
+    self._ComputeMachineChecksum()
+
+  def _ParseMemoryInfo(self):
+    line = self.meminfo.splitlines()[0]
+    usable_kbytes = int(line.split()[1])
+    # This code is from src/third_party/autotest/files/client/bin/base_utils.py
+    # usable_kbytes is system's usable DRAM in kbytes,
+    #   as reported by memtotal() from device /proc/meminfo memtotal
+    #   after Linux deducts 1.5% to 9.5% for system table overhead
+    # Undo the unknown actual deduction by rounding up
+    #   to next small multiple of a big power-of-two
+    #   eg  12GB - 5.1% gets rounded back up to 12GB
+    mindeduct = 0.005  # 0.5 percent
+    maxdeduct = 0.095  # 9.5 percent
+    # deduction range 1.5% .. 9.5% supports physical mem sizes
+    #    6GB .. 12GB in steps of .5GB
+    #   12GB .. 24GB in steps of 1 GB
+    #   24GB .. 48GB in steps of 2 GB ...
+    # Finer granularity in physical mem sizes would require
+    #   tighter spread between min and max possible deductions
+
+    # increase mem size by at least min deduction, without rounding
+    min_kbytes = int(usable_kbytes / (1.0 - mindeduct))
+    # increase mem size further by 2**n rounding, by 0..roundKb or more
+    round_kbytes = int(usable_kbytes / (1.0 - maxdeduct)) - min_kbytes
+    # find least binary roundup 2**n that covers worst-cast roundKb
+    mod2n = 1 << int(math.ceil(math.log(round_kbytes, 2)))
+    # have round_kbytes <= mod2n < round_kbytes*2
+    # round min_kbytes up to next multiple of mod2n
+    phys_kbytes = min_kbytes + mod2n - 1
+    phys_kbytes -= phys_kbytes % mod2n  # clear low bits
+    self.phys_kbytes = phys_kbytes
+
+  def _GetMemoryInfo(self):
+    #TODO yunlian: when the machine in rebooting, it will not return 
+    #meminfo, the assert does not catch it either
+    ce = command_executer.GetCommandExecuter()
+    command = "cat /proc/meminfo"
+    ret, self.meminfo, _ = ce.CrosRunCommand(
+        command, return_output=True,
+        machine=self.name, username="root", chromeos_root=self.chromeos_root)
+    assert ret == 0, "Could not get meminfo from machine: %s" % self.name
+    if ret == 0:
+      self._ParseMemoryInfo()
+
+  #cpuinfo format is different across architecture
+  #need to find a better way to parse it.
+  def _ParseCPUInfo(self,cpuinfo):
+    return 0
+
+  def _GetCPUInfo(self):
+    ce = command_executer.GetCommandExecuter()
+    command = "cat /proc/cpuinfo"
+    ret, self.cpuinfo, _ = ce.CrosRunCommand(
+        command, return_output=True,
+        machine=self.name, username="root", chromeos_root=self.chromeos_root)
+    assert ret == 0, "Could not get cpuinfo from machine: %s" % self.name
+    if ret == 0:
+      self._ParseCPUInfo(self.cpuinfo)
+
+  def _ComputeMachineChecksumString(self):
+    self.checksum_string = ""
+    exclude_lines_list = ["MHz", "BogoMIPS", "bogomips"]
+    for line in self.cpuinfo.splitlines():
+      if not any([e in line for e in exclude_lines_list]):
+        self.checksum_string += line
+    self.checksum_string += " " + str(self.phys_kbytes)
+
+  def _ComputeMachineChecksum(self):
+    if self.checksum_string:
+      self.machine_checksum = hashlib.md5(self.checksum_string).hexdigest()
+    else:
+      self.machine_checksum = ""
 
   def __str__(self):
     l = []
@@ -38,7 +118,10 @@ class MachineManager(object):
     self.image_lock = threading.Lock()
     self.num_reimages = 0
     self.chromeos_root = None
-    self.no_lock = False
+    if os.path.isdir(lock_machine.FileLock.LOCKS_DIR):
+      self.no_lock = False
+    else:
+      self.no_lock = True
     self.initialized = False
     self.chromeos_root = chromeos_root
 
@@ -69,6 +152,20 @@ class MachineManager(object):
 
     return retval
 
+  def ComputeCommonCheckSum(self):
+    self.machine_checksum = ""
+    for machine in self.GetMachines():
+      if machine.machine_checksum:
+        self.machine_checksum = machine.machine_checksum
+        break
+
+  def ComputeCommonCheckSumString(self):
+    self.machine_checksum_string = ""
+    for machine in self.GetMachines():
+      if machine.checksum_string:
+        self.machine_checksum_string = machine.checksum_string
+        break
+
   def _TryToLockMachine(self, cros_machine):
     with self._lock:
       assert cros_machine, "Machine can't be None"
@@ -96,7 +193,14 @@ class MachineManager(object):
     with self._lock:
       for m in self._all_machines:
         assert m.name != machine_name, "Tried to double-add %s" % machine_name
-      self._all_machines.append(CrosMachine(machine_name))
+      cm = CrosMachine(machine_name, self.chromeos_root)
+      assert cm.machine_checksum, ("Could not find checksum for machine %s" %
+                           machine_name)
+      self._all_machines.append(cm)
+
+  def AreAllMachineSame(self):
+    checksums = [m.machine_checksum for m in self.GetMachines()]
+    return len(set(checksums)) == 1
 
   def AcquireMachine(self, chromeos_image):
     image_checksum = ImageChecksummer().Checksum(chromeos_image)
@@ -109,12 +213,15 @@ class MachineManager(object):
         for m in self._all_machines:
           m.released_time = time.time()
 
+      if not self.AreAllMachineSame():
+        logger.GetLogger().LogFatal("-- not all the machine are identical")
       if not self._machines:
         machine_names = []
         for machine in self._all_machines:
           machine_names.append(machine.name)
-        raise Exception("Could not acquire any of the following machines: '%s'"
-                        % ", ".join(machine_names))
+        logger.GetLogger().LogFatal("Could not acquire any of the"
+                                  "following machines: '%s'"
+                                  % ", ".join(machine_names))
 
 ###      for m in self._machines:
 ###        if (m.locked and time.time() - m.released_time < 10 and

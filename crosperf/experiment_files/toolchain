@@ -5,11 +5,12 @@ benchmark: bvt {
 }
 
 benchmark: suite_Smoke {
-  auotest_name: suite:smoke
+  autotest_name: suite:smoke
 }
 
 benchmark: PyAutoPerfTests {
 }
 
-benchmark: AndroidBench {
+benchmark: BootPerfServer {
+  autotest_name: ^server/site_tests/platform_BootPerfServer/control$
 }

@@ -2,20 +2,14 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+import math
 from column_chart import ColumnChart
-from results_columns import IterationColumn
-from results_columns import IterationsCompleteColumn
-from results_columns import MaxColumn
-from results_columns import MeanColumn
-from results_columns import MinColumn
-from results_columns import RatioColumn
-from results_columns import StandardDeviationColumn
 from results_sorter import ResultSorter
-from table import Table
-
+from results_organizer import ResultOrganizer
+from utils.tabulator import *
 
 class ResultsReport(object):
-  DELTA_COLUMN_NAME = "Change"
+  MAX_COLOR_CODE = 255
 
   def __init__(self, experiment):
     self.experiment = experiment
@@ -32,85 +26,106 @@ class ResultsReport(object):
       labels[benchmark_run.label_name].append(benchmark_run)
     return labels
 
-  def GetFullTable(self):
-    full_columns = []
-    max_iterations = 0
-    for benchmark in self.benchmarks:
-      if benchmark.iterations > max_iterations:
-        max_iterations = benchmark.iterations
+  def GetFullTables(self):
+    columns = [Column(NonEmptyCountResult(),
+                      Format(),
+                      "Completed"),
+               Column(RawResult(),
+                      Format()),
+               Column(MinResult(),
+                      Format()),
+               Column(MaxResult(),
+                      Format()),
+               Column(AmeanResult(),
+                      Format()),
+               Column(StdResult(),
+                      Format())
+              ]
+    return self._GetTables(self.labels, self.benchmark_runs, columns)
 
-    for i in range(1, max_iterations + 1):
-      full_columns.append(IterationColumn(str(i), i))
+  def GetSummaryTables(self):
+    columns = [Column(AmeanResult(),
+                      Format()),
+               Column(StdResult(),
+                      Format(), "StdDev"),
+               Column(CoeffVarResult(),
+                      CoeffVarFormat(), "Mean/StdDev"),
+               Column(GmeanRatioResult(),
+                      RatioFormat(), "GmeanSpeedup"),
+               Column(GmeanRatioResult(),
+                      ColorBoxFormat(), " "),
+               Column(StatsSignificant(),
+                      Format(), "p-value")
+              ]
+    return self._GetTables(self.labels, self.benchmark_runs, columns)
 
-    full_columns.append(IterationsCompleteColumn("Completed"))
-    full_columns.append(MinColumn("Min"))
-    full_columns.append(MaxColumn("Max"))
-    full_columns.append(MeanColumn("Avg"))
-    full_columns.append(StandardDeviationColumn("Std Dev"))
-    full_columns.append(RatioColumn(self.DELTA_COLUMN_NAME))
-    return self._GetTable(self.labels, self.benchmarks, self.benchmark_runs,
-                          full_columns)
+  def _ParseColumn(self, columns, iteration):
+    new_column = []
+    for column in columns:
+      if column.result.__class__.__name__ != "RawResult":
+      #TODO(asharif): tabulator should support full table natively.
+        new_column.append(column)
+      else:
+        for i in range(iteration):
+          cc = Column(LiteralResult(i), Format(), str(i+1))
+          new_column.append(cc)
+    return new_column
 
-  def GetSummaryTable(self):
-    summary_columns = [MeanColumn("Average"),
-                       RatioColumn(self.DELTA_COLUMN_NAME)]
-    return self._GetTable(self.labels, self.benchmarks, self.benchmark_runs,
-                          summary_columns)
+  def _AreAllRunsEmpty(self, runs):
+    for label in runs:
+      for dictionary in label:
+        if dictionary:
+          return False
+    return True
 
-  def _GetTable(self, labels, benchmarks, benchmark_runs, columns):
-    table = Table("box-table-a")
-    label_headings = [Table.Cell("", hidden=True, colspan=2, header=True)]
-    for label in labels:
-      colspan = len(columns)
-      if label.name == self.baseline.name:
-        colspan -= 1
-      label_headings.append(Table.Cell(label.name, colspan=colspan,
-                                       header=True))
+  def _GetTables(self, labels, benchmark_runs, columns):
+    tables = []
+    ro = ResultOrganizer(benchmark_runs, labels)
+    result = ro.result
+    label_name = ro.labels
+    for item in result:
+      runs = result[item]
+      for benchmark in self.benchmarks:
+        if benchmark.name == item:
+          break
+      benchmark_info = ("Benchmark:  {0};  Iterations: {1}"
+                         .format(benchmark.name, benchmark.iterations))
+      cell = Cell()
+      cell.string_value = benchmark_info
+      ben_table = [[cell]]
 
-    table.AddRow(label_headings)
+      if  self._AreAllRunsEmpty(runs):
+        cell = Cell()
+        cell.string_value = ("This benchmark contains no result."
+                             " Is the benchmark name valid?")
+        cell_table = [[cell]]
+      else:
+        tg = TableGenerator(runs, label_name)
+        table = tg.GetTable()
+        parsed_columns = self._ParseColumn(columns, benchmark.iterations)
+        tf = TableFormatter(table, parsed_columns)
+        cell_table = tf.GetCellTable()
+      tables.append(ben_table)
+      tables.append(cell_table)
+    return tables
 
-    column_headings = [Table.Cell("Autotest Key", header=True),
-                       Table.Cell("Iterations", header=True)]
-    for label in labels:
-      for column in columns:
-        if (label.name == self.baseline.name and
-            column.name == self.DELTA_COLUMN_NAME):
-          continue
-        column_headings.append(Table.Cell(column.name, header=True))
-
-    table.AddRow(column_headings)
-
-    sorter = ResultSorter(benchmark_runs)
-
-    for benchmark in benchmarks:
-      table.AddRow([Table.Cell(benchmark.name)])
-      autotest_keys = sorter.GetAutotestKeys(benchmark.name)
-      for autotest_key in autotest_keys:
-        row = [Table.Cell(autotest_key),
-               Table.Cell(benchmark.iterations)]
-        for label in labels:
-          for column in columns:
-            if (label.name == self.baseline.name and
-                column.name == self.DELTA_COLUMN_NAME):
-              continue
-            results = sorter.GetResults(benchmark.name,
-                                        autotest_key, label.name)
-            baseline_results = sorter.GetResults(benchmark.name,
-                                                 autotest_key,
-                                                 self.baseline.name)
-            value = column.Compute(results, baseline_results)
-            if isinstance(value, float):
-              value_string = "%.2f" % value
-            else:
-              value_string = value
-
-            row.append(Table.Cell(value_string))
-
-        table.AddRow(row)
-
-    return table
-
-
+  def PrintTables(self, tables, out_to):
+    output = ""
+    for table in tables:
+      if out_to == "HTML":
+        tp = TablePrinter(table, TablePrinter.HTML)
+      elif out_to == "PLAIN":
+        tp = TablePrinter(table, TablePrinter.PLAIN)
+      elif out_to == "CONSOLE":
+        tp = TablePrinter(table, TablePrinter.CONSOLE)
+      elif out_to == "TSV":
+        tp = TablePrinter(table, TablePrinter.TSV)
+      elif out_to == "EMAIL":
+        tp = TablePrinter(table, TablePrinter.EMAIL)
+      else:
+        pass
+      output += tp.Print()
+    return output
 class TextResultsReport(ResultsReport):
   TEXT = """
 ===========================================
@@ -118,19 +133,7 @@ Results report for: '%s'
 ===========================================
 
 -------------------------------------------
-Benchmark Run Status
--------------------------------------------
-%s
-
-Number re-images: %s
-
--------------------------------------------
 Summary
--------------------------------------------
-%s
-
--------------------------------------------
-Full Table
 -------------------------------------------
 %s
 
@@ -141,27 +144,25 @@ Experiment File
 ===========================================
 """
 
-  def __init__(self, experiment):
+  def __init__(self, experiment, email=False):
     super(TextResultsReport, self).__init__(experiment)
-
-  def GetStatusTable(self):
-    status_table = Table("status")
-    for benchmark_run in self.benchmark_runs:
-      status_table.AddRow([Table.Cell(benchmark_run.name),
-                           Table.Cell(benchmark_run.status),
-                           Table.Cell(benchmark_run.failure_reason)])
-    return status_table
+    self.email = email
 
   def GetReport(self):
+    summary_table = self.GetSummaryTables()
+    full_table = self.GetFullTables()
+    if not self.email:
+      return self.TEXT % (self.experiment.name,
+                          self.PrintTables(summary_table, "CONSOLE"),
+                          self.experiment.experiment_file)
+
     return self.TEXT % (self.experiment.name,
-                        self.GetStatusTable().ToText(),
-                        self.experiment.machine_manager.num_reimages,
-                        self.GetSummaryTable().ToText(80),
-                        self.GetFullTable().ToText(80),
+                        self.PrintTables(summary_table, "EMAIL"),
                         self.experiment.experiment_file)
 
 
 class HTMLResultsReport(ResultsReport):
+
   HTML = """
 <html>
   <head>
@@ -303,36 +304,49 @@ pre {
 
   def GetReport(self):
     chart_javascript = ""
-    charts = self._GetCharts(self.labels, self.benchmarks, self.benchmark_runs)
+    charts = self._GetCharts(self.labels, self.benchmark_runs)
     for chart in charts:
       chart_javascript += chart.GetJavascript()
     chart_divs = ""
     for chart in charts:
       chart_divs += chart.GetDiv()
 
-    summary_table = self.GetSummaryTable()
-    full_table = self.GetFullTable()
+    summary_table = self.GetSummaryTables()
+    full_table = self.GetFullTables()
     return self.HTML % (chart_javascript,
-                        summary_table.ToHTML(),
-                        summary_table.ToText(),
-                        summary_table.ToTSV(),
+                        self.PrintTables(summary_table, "HTML"),
+                        self.PrintTables(summary_table, "PLAIN"),
+                        self.PrintTables(summary_table, "TSV"),
                         self._GetTabMenuHTML("summary"),
                         chart_divs,
-                        full_table.ToHTML(),
-                        full_table.ToText(),
-                        full_table.ToTSV(),
+                        self.PrintTables(full_table, "HTML"),
+                        self.PrintTables(full_table, "PLAIN"),
+                        self.PrintTables(full_table, "TSV"),
                         self._GetTabMenuHTML("full"),
                         self.experiment.experiment_file)
 
-  def _GetCharts(self, labels, benchmarks, benchmark_runs):
+  def _GetCharts(self, labels, benchmark_runs):
     charts = []
-    sorter = ResultSorter(benchmark_runs)
+    ro = ResultOrganizer(benchmark_runs, labels)
+    result = ro.result
+    for item in result:
+      runs = result[item]
+      tg = TableGenerator(runs, ro.labels)
+      table = tg.GetTable()
+      columns = [Column(AmeanResult(),
+                        Format()),
+                 Column(MinResult(),
+                        Format()),
+                 Column(MaxResult(),
+                        Format())
+                ]
+      tf = TableFormatter(table, columns)
+      data_table = tf.GetCellTable()
 
-    for benchmark in benchmarks:
-      autotest_keys = sorter.GetAutotestKeys(benchmark.name)
-
-      for autotest_key in autotest_keys:
-        title = "%s: %s" % (benchmark.name, autotest_key.replace("/", " "))
+      for i in range(2, len(data_table)):
+        cur_row_data = data_table[i]
+        autotest_key = cur_row_data[0].string_value
+        title = "{0}: {1}".format(item, autotest_key.replace("/", ""))
         chart = ColumnChart(title, 300, 200)
         chart.AddColumn("Label", "string")
         chart.AddColumn("Average", "number")
@@ -340,17 +354,15 @@ pre {
         chart.AddColumn("Max", "number")
         chart.AddSeries("Min", "line", "black")
         chart.AddSeries("Max", "line", "black")
-
-        for label in labels:
-          res = sorter.GetResults(benchmark.name, autotest_key, label.name)
-          avg_val = MeanColumn("").Compute(res, None)
-          min_val = MinColumn("").Compute(res, None)
-          max_val = MaxColumn("").Compute(res, None)
-          chart.AddRow([label.name, avg_val, min_val, max_val])
-          if isinstance(avg_val, str):
+        cur_index = 1
+        for label in ro.labels:
+          chart.AddRow([label, cur_row_data[cur_index].value,
+                        cur_row_data[cur_index + 1].value,
+                        cur_row_data[cur_index + 2].value])
+          if isinstance(cur_row_data[cur_index].value, str):
             chart = None
             break
-
+          cur_index += 3
         if chart:
           charts.append(chart)
     return charts

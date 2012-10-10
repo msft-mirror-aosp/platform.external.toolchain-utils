@@ -10,14 +10,15 @@ import pickle
 import re
 import tempfile
 
-from image_checksummer import ImageChecksummer
 from utils import command_executer
 from utils import logger
 from utils import misc
 
+from image_checksummer import ImageChecksummer
 
 SCRATCH_DIR = "/home/%s/cros_scratch" % getpass.getuser()
 RESULTS_FILE = "results.txt"
+MACHINE_FILE = "machine.txt"
 AUTOTEST_TARBALL = "autotest.tbz2"
 PERF_RESULTS_FILE = "perf-results.txt"
 
@@ -65,7 +66,7 @@ class Result(object):
     [ret, out, err] = self._ce.RunCommand(command, return_output=True)
     keyvals_dict = {}
     for line in out.splitlines():
-      tokens = line.split(",")
+      tokens = re.split("=|,", line)
       key = tokens[-2]
       if key.startswith(self.results_dir):
         key = key[len(self.results_dir) + 1:]
@@ -109,6 +110,7 @@ class Result(object):
       chroot_perf_report_file = misc.GetInsideChrootPath(self._chromeos_root,
                                                    perf_report_file)
       command = ("/usr/sbin/perf report "
+                 "-n "
                  "--symfs /build/%s "
                  "--vmlinux /build/%s/usr/lib/debug/boot/vmlinux "
                  "--kallsyms /build/%s/boot/System.map-* "
@@ -186,6 +188,7 @@ class Result(object):
     self.perf_data_files = self._GetPerfDataFiles()
     self.perf_report_files = self._GetPerfReportFiles()
     self._ProcessResults()
+    self.CleanUp()
 
   def CleanUp(self):
     if self._temp_dir:
@@ -193,7 +196,7 @@ class Result(object):
       self._ce.RunCommand(command)
 
 
-  def StoreToCacheDir(self, cache_dir):
+  def StoreToCacheDir(self, cache_dir, machine_manager):
     # Create the dir if it doesn't exist.
     command = "mkdir -p %s" % cache_dir
     ret = self._ce.RunCommand(command)
@@ -206,10 +209,19 @@ class Result(object):
       pickle.dump(self.retval, f)
 
     tarball = os.path.join(cache_dir, AUTOTEST_TARBALL)
-    command = ("cd %s && tar cjf %s ." % (self.results_dir, tarball))
+    command = ("cd %s && "
+               "tar "
+               "--exclude=var/spool "
+               "--exclude=var/log "
+               "-cjf %s ." % (self.results_dir, tarball))
     ret = self._ce.RunCommand(command)
     if ret:
       raise Exception("Couldn't store autotest output directory.")
+    # Store machine info.
+    # TODO(asharif): Make machine_manager a singleton, and don't pass it into
+    # this function.
+    with open(os.path.join(cache_dir, MACHINE_FILE), "w") as f:
+      f.write(machine_manager.machine_checksum_string)
 
   @classmethod
   def CreateFromRun(cls, logger, chromeos_root, board, out, err, retval):
@@ -232,8 +244,9 @@ class CacheConditions(object):
   # Cache hit only if the result file exists.
   CACHE_FILE_EXISTS = 0
 
-  # Cache hit if the ip address of the cached result and the new run match.
-  REMOTES_MATCH = 1
+  # Cache hit if the checksum of cpuinfo and totalmem of
+  # the cached result and the new run match.
+  MACHINES_MATCH = 1
 
   # Cache hit if the image checksum of the cached result and the new run match.
   CHECKSUMS_MATCH = 2
@@ -253,18 +266,19 @@ class ResultsCache(object):
   is exactly stored (value). The value generation is handled by the Results
   class.
   """
-  CACHE_VERSION = 3
+  CACHE_VERSION = 5
+
   def Init(self, chromeos_image, chromeos_root, autotest_name, iteration,
-           autotest_args, remote, board, cache_conditions,
+           autotest_args, machine_manager, board, cache_conditions,
            logger_to_use):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.autotest_name = autotest_name
     self.iteration = iteration
     self.autotest_args = autotest_args,
-    self.remote = remote
     self.board = board
     self.cache_conditions = cache_conditions
+    self.machine_manager = machine_manager
     self._logger = logger_to_use
     self._ce = command_executer.GetCommandExecuter(self._logger)
 
@@ -291,10 +305,10 @@ class ResultsCache(object):
     return cache_path
 
   def _GetCacheKeyList(self, read):
-    if read and CacheConditions.REMOTES_MATCH not in self.cache_conditions:
-      remote = "*"
+    if read and CacheConditions.MACHINES_MATCH not in self.cache_conditions:
+      machine_checksum = "*"
     else:
-      remote = self.remote
+      machine_checksum = self.machine_manager.machine_checksum
     if read and CacheConditions.CHECKSUMS_MATCH not in self.cache_conditions:
       checksum = "*"
     else:
@@ -307,12 +321,11 @@ class ResultsCache(object):
 
     autotest_args_checksum = hashlib.md5(
                              "".join(self.autotest_args)).hexdigest()
-
     return (image_path_checksum,
             self.autotest_name, str(self.iteration),
             autotest_args_checksum,
             checksum,
-            remote,
+            machine_checksum,
             str(self.CACHE_VERSION))
 
   def ReadResult(self):
@@ -342,7 +355,7 @@ class ResultsCache(object):
 
   def StoreResult(self, result):
     cache_dir = self._GetCacheDirForWrite()
-    result.StoreToCacheDir(cache_dir)
+    result.StoreToCacheDir(cache_dir, self.machine_manager)
 
 
 class MockResultsCache(object):

@@ -26,15 +26,11 @@ class BenchmarkSettings(Settings):
     self.AddField(FloatField("outlier_range", default=0.2,
                              description="The percentage of highest/lowest "
                              "values to omit when computing the average."))
-    self.AddField(ListField("profile_counters",
-                            default=["cycles"],
-                            description="A list of profile counters to "
-                            "collect."))
-    self.AddField(EnumField("profile_type",
-                            description="The type of profile to collect. "
-                            "Either 'stat', 'record' or ''.",
-                            options=["stat", "record", ""],
-                            default=""))
+    self.AddField(TextField("perf_args", default="",
+                            description="The optional profile command. It "
+                            "enables perf commands to record perforamance "
+                            "related counters. It  must start with perf "
+                            "command record or stat followed by arguments."))
 
 
 class LabelSettings(Settings):
@@ -66,10 +62,12 @@ class GlobalSettings(Settings):
     self.AddField(BooleanField("rerun_if_failed", description="Whether to "
                                "re-run failed autotest runs or not.",
                                default=False))
+    self.AddField(ListField("email", description="Space-seperated"
+                               "list of email addresses to send email to."))
     self.AddField(BooleanField("rerun", description="Whether to ignore the "
                                "cache and for autotests to be re-run.",
                                default=False))
-    self.AddField(BooleanField("exact_remote", default=False,
+    self.AddField(BooleanField("exact_remote", default=True,
                                description="Ensure cached runs are run on the "
                                "same device that is specified as a remote."))
     self.AddField(IntegerField("iterations", default=1,
@@ -80,14 +78,11 @@ class GlobalSettings(Settings):
                             "contains a src/scripts directory. Defaults to "
                             "the chromeos checkout which contains the "
                             "chromeos_image."))
-    self.AddField(ListField("profile_counters",
-                            default=["cycles"],
-                            description="A list of profile counters to "
-                            "collect."))
-    self.AddField(EnumField("profile_type",
-                            description="The type of profile to collect. "
-                            "Either 'stat', 'record' or ''.",
-                            options=["stat", "record", ""]))
+    self.AddField(TextField("perf_args", default="",
+                            description="The optional profile command. It "
+                            "enables perf commands to record perforamance "
+                            "related counters. It must start with perf "
+                            "command record or stat followed by arguments."))
 
 
 class SettingsFactory(object):

@@ -9,6 +9,8 @@ class ResultSorter(object):
     for benchmark_run in benchmark_runs:
       benchmark_name = benchmark_run.benchmark_name
       label_name = benchmark_run.label_name
+      if not benchmark_run.result:
+        continue
       for autotest_key in benchmark_run.result.keyvals:
         result_tuple = (benchmark_name, autotest_key, label_name)
         if result_tuple not in self.table:
@@ -32,6 +34,8 @@ class ResultSorter(object):
       benchmark_name = benchmark_run.benchmark_name
       if benchmark_name not in self.autotest_keys:
         self.autotest_keys[benchmark_name] = {}
+      if not benchmark_run.result:
+        continue
       for autotest_key in benchmark_run.result.keyvals:
         self.autotest_keys[benchmark_name][autotest_key] = True
 

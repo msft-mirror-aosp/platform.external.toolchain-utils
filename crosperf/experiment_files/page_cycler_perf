@@ -1,7 +1,6 @@
 # This experiment profiles all page cyclers.
 
-profile_type: record
-profile_counters: cycles
+perf_args: record -e cycles
 
 benchmark: morejs {
 	autotest_name: desktopui_PyAutoPerfTests

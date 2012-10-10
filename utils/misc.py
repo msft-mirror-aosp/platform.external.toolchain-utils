@@ -6,14 +6,34 @@
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
-import hashlib
+from contextlib import contextmanager
 import os
 import re
-import stat
+
 import command_executer
 import logger
-import tempfile
-from contextlib import contextmanager
+
+
+def GetChromeOSVersionFromLSBVersion(lsb_version):
+  ce = command_executer.GetCommandExecuter()
+  command = "git ls-remote http://git.chromium.org/chromiumos/manifest.git"
+  ret, out, _ = ce.RunCommand(command, return_output=True,
+                              print_to_console=False)
+  assert ret == 0, "Command %s failed" % command
+  lower = []
+  for line in out.splitlines():
+    mo = re.search("refs/heads/release-R(\d+)-(\d+)\.B", line)
+    if mo:
+      revision = int(mo.group(1))
+      build = int(mo.group(2))
+      lsb_build = int(lsb_version.split(".")[0])
+      if lsb_build > build:
+        lower.append(revision)
+  lower = sorted(lower)
+  if lower:
+    return "R%d-%s" % (lower[-1] + 1, lsb_version)
+  else:
+    return "Unknown"
 
 
 def ApplySubs(string, *substitutions):
@@ -27,9 +47,11 @@ def UnitToNumber(string, base=1000):
                "mega": base**2,
                "giga": base**3}
   string = string.lower()
-  mo = re.search("(\d*)(.+)", string)
+  mo = re.search("(\d*)(.+)?", string)
   number = mo.group(1)
   unit = mo.group(2)
+  if not unit:
+    return float(number)
   for k, v in unit_dict.items():
     if k.startswith(unit):
       return float(number) * v
@@ -42,8 +64,8 @@ def GetFilenameFromString(string):
   return ApplySubs(string,
                    ("/", "__"),
                    ("\s", "_"),
-                   ("=", ""),
-                   ("\"", ""))
+                   ("[\^\$=\"\\\?]", ""),
+                   )
 
 
 def GetRoot(scr_name):
@@ -154,12 +176,19 @@ def GetCtargetFromBoard(board, chromeos_root):
              "../platform/dev/toolchain_utils.sh; get_ctarget_from_board %s" %
              base_board)
   ce = command_executer.GetCommandExecuter()
-  ret, out, err = ce.ChrootRunCommand(chromeos_root,
-                                      command,
-                                      return_output=True)
+  ret, out, _ = ce.ChrootRunCommand(chromeos_root,
+                                    command,
+                                    return_output=True)
   if ret != 0:
     raise ValueError("Board %s is invalid!" % board)
+  # Remove ANSI escape sequences.
+  out = StripANSIEscapeSequences(out)
   return out.strip()
+
+
+def StripANSIEscapeSequences(string):
+  string = re.sub("\x1b\[[0-9]*[a-zA-Z]", "", string)
+  return string
 
 
 def GetChromeSrcDir():
@@ -170,11 +199,30 @@ def GetEnvStringFromDict(env_dict):
   return " ".join(["%s=\"%s\"" % var for var in env_dict.items()])
 
 
+def MergeEnvStringWithDict(env_string, env_dict, prepend=True):
+  if not env_string.strip():
+    return GetEnvStringFromDict(env_dict)
+  override_env_list = []
+  ce = command_executer.GetCommandExecuter()
+  for k, v in env_dict.items():
+    v = v.strip("\"'")
+    if prepend:
+      new_env = "%s=\"%s $%s\"" % (k, v, k)
+    else:
+      new_env = "%s=\"$%s %s\"" % (k, k, v)
+    command = "; ".join([env_string, new_env, "echo $%s" % k])
+    ret, out, _ = ce.RunCommand(command, return_output=True)
+    override_env_list.append("%s=%r" % (k, out.strip()))
+  ret = env_string + " " + " ".join(override_env_list)
+  return ret.strip()
+
+
 def GetAllImages(chromeos_root, board):
   ce = command_executer.GetCommandExecuter()
   command = ("find %s/src/build/images/%s -name chromiumos_test_image.bin" %
              (chromeos_root, board))
-  ret, out, err = ce.RunCommand(command, return_output=True)
+  ret, out, _ = ce.RunCommand(command, return_output=True)
+  assert ret == 0, "Could not run command: %s" % command
   return out.splitlines()
 
 
