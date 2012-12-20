@@ -2,15 +2,20 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+"""The experiment setting module."""
+
 import os
 import time
+
+from utils import logger
+
 from autotest_runner import AutotestRunner
 from benchmark_run import BenchmarkRun
 from machine_manager import MachineManager
+from machine_manager import MockMachineManager
 from results_cache import ResultsCache
 from results_report import HTMLResultsReport
-from utils import logger
-from utils.file_utils import FileUtils
+import test_flag
 
 
 class Experiment(object):
@@ -33,6 +38,7 @@ class Experiment(object):
     self.labels = labels
     self.benchmarks = benchmarks
     self.num_complete = 0
+    self.num_run_complete = 0
 
     # We need one chromeos_root to run the benchmarks in, but it doesn't
     # matter where it is, unless the ABIs are different.
@@ -44,13 +50,17 @@ class Experiment(object):
       raise Exception("No chromeos_root given and could not determine one from "
                       "the image path.")
 
-    self.machine_manager = MachineManager(chromeos_root)
+    if test_flag.GetTestMode():
+      self.machine_manager = MockMachineManager(chromeos_root)
+    else:
+      self.machine_manager = MachineManager(chromeos_root)
     self.l = logger.GetLogger()
 
     for machine in remote:
       self.machine_manager.AddMachine(machine)
-    self.machine_manager.ComputeCommonCheckSum()
-    self.machine_manager.ComputeCommonCheckSumString()
+    for label in labels:
+      self.machine_manager.ComputeCommonCheckSum(label)
+      self.machine_manager.ComputeCommonCheckSumString(label)
 
     self.start_time = None
     self.benchmark_runs = self._GenerateBenchmarkRuns()
@@ -69,17 +79,10 @@ class Experiment(object):
                                         "run.%s" % (full_name),
                                         True)
           benchmark_run = BenchmarkRun(benchmark_run_name,
-                                       benchmark.name,
-                                       benchmark.autotest_name,
-                                       benchmark.autotest_args,
-                                       label.name,
-                                       label.chromeos_root,
-                                       label.chromeos_image,
-                                       label.board,
+                                       benchmark,
+                                       label,
                                        iteration,
                                        self.cache_conditions,
-                                       benchmark.outlier_range,
-                                       benchmark.perf_args,
                                        self.machine_manager,
                                        logger_to_use)
 
@@ -102,6 +105,8 @@ class Experiment(object):
           t.join(0)
         if not t.isAlive():
           self.num_complete += 1
+          if not t.cache_hit:
+            self.num_run_complete += 1
           self.active_threads.remove(t)
       return False
     return True

@@ -2,7 +2,7 @@
 
 """Tests for misc."""
 
-__author__ = 'asharif@google.com (Ahmad Sharif)'
+__author__ = "asharif@google.com (Ahmad Sharif)"
 
 # System modules
 import unittest
@@ -61,6 +61,11 @@ class TabulatorTest(unittest.TestCase):
     c3.Round()
     self.assertTrue(c3.r == 127)
 
+  def testGmean(self):
+    a = [1.0e+308] * 3
+    b = tabulator.Result()._GetGmean(a)
+    self.assertTrue(b >= 0.99e+308 and b <= 1.01e+308)
+
   def testTableGenerator(self):
     runs = [[{"k1": "10", "k2": "12"},
              {"k1": "13", "k2": "14", "k3": "15"}],
@@ -91,6 +96,40 @@ class TabulatorTest(unittest.TestCase):
     table = tf.GetCellTable()
     self.assertTrue(table)
 
+  def testColspan(self):
+    simple_table = [
+        ["binary", "b1", "b2", "b3"],
+        ["size", 100, 105, 108],
+        ["rodata", 100, 80, 70],
+        ["data", 100, 100, 100],
+        ["debug", 100, 140, 60],
+        ]
+    columns = [
+        tabulator.Column(tabulator.AmeanResult(),
+                         tabulator.Format()),
+        tabulator.Column(tabulator.MinResult(),
+                         tabulator.Format()),
+        tabulator.Column(tabulator.AmeanRatioResult(),
+                         tabulator.PercentFormat()),
+        tabulator.Column(tabulator.AmeanRatioResult(),
+                         tabulator.ColorBoxFormat()),
+        ]
+    our_table = [simple_table[0]]
+    for row in simple_table[1:]:
+      our_row = [row[0]]
+      for v in row[1:]:
+        our_row.append([v])
+      our_table.append(our_row)
 
-if __name__ == '__main__':
+    tf = tabulator.TableFormatter(our_table, columns)
+    cell_table = tf.GetCellTable()
+    self.assertTrue(cell_table[0][0].colspan == 1)
+    self.assertTrue(cell_table[0][1].colspan == 2)
+    self.assertTrue(cell_table[0][2].colspan == 4)
+    self.assertTrue(cell_table[0][3].colspan == 4)
+    for row in cell_table[1:]:
+      for cell in row:
+        self.assertTrue(cell.colspan == 1)
+
+if __name__ == "__main__":
   unittest.main()

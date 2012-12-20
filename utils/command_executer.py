@@ -80,7 +80,8 @@ class CommandExecuter:
     while len(pipes):
       fds = select.select(pipes, [], [], 0.1)
       if command_terminator and command_terminator.IsTerminated():
-        self.RunCommand("sudo kill -9 " + str(p.pid))
+        self.RunCommand("sudo kill -9 " + str(p.pid),
+                        print_to_console=print_to_console)
         wait = p.wait()
         self.logger.LogError("Command was terminated!", print_to_console)
         if return_output:
@@ -119,7 +120,8 @@ class CommandExecuter:
              % command_timeout)
         self.logger.LogWarning(m, print_to_console)
         self.RunCommand("kill %d || sudo kill %d || sudo kill -9 %d" %
-                        (p.pid, p.pid, p.pid))
+                        (p.pid, p.pid, p.pid),
+                        print_to_console=print_to_console)
         break
 
       if out == err == "":
@@ -172,12 +174,17 @@ class CommandExecuter:
 
     # Write all commands to a file.
     command_file = self.WriteToTempShFile(cmd)
-    self.CopyFiles(command_file, command_file,
-                   dest_machine=machine,
-                   command_terminator=command_terminator,
-                   chromeos_root=chromeos_root,
-                   dest_cros=True,
-                   recursive=False)
+    retval = self.CopyFiles(command_file, command_file,
+                            dest_machine=machine,
+                            command_terminator=command_terminator,
+                            chromeos_root=chromeos_root,
+                            dest_cros=True,
+                            recursive=False,
+                            print_to_console=print_to_console)
+    if retval:
+      self.logger.LogError("Could not run remote command on machine."
+                           " Is the machine up?")
+      return retval
 
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
     command += "\nremote_sh bash %s" % command_file
@@ -185,7 +192,8 @@ class CommandExecuter:
     retval = self.RunCommand(command, return_output,
                              command_terminator=command_terminator,
                              command_timeout=command_timeout,
-                             terminated_timeout=terminated_timeout)
+                             terminated_timeout=terminated_timeout,
+                             print_to_console=print_to_console)
     if return_output:
       connect_signature = ("Initiating first contact with remote host\n" +
                            "Connection OK\n")
@@ -200,7 +208,8 @@ class CommandExecuter:
   def ChrootRunCommand(self, chromeos_root, command, return_output=False,
                        command_terminator=None, command_timeout=None,
                        terminated_timeout=10,
-                       print_to_console=True):
+                       print_to_console=True,
+                       cros_sdk_options=""):
     self.logger.LogCmd(command, print_to_console)
 
     handle, command_file = tempfile.mkstemp(dir=os.path.join(chromeos_root,
@@ -213,12 +222,13 @@ class CommandExecuter:
 
     os.chmod(command_file, 0777)
 
-    command = "cd %s; cros_sdk -- ./%s" % (chromeos_root,
-                                           os.path.basename(command_file))
+    command = "cd %s; cros_sdk %s -- ./%s" % (chromeos_root, cros_sdk_options,
+                                              os.path.basename(command_file))
     ret = self.RunCommand(command, return_output,
                           command_terminator=command_terminator,
                           command_timeout=command_timeout,
-                          terminated_timeout=terminated_timeout)
+                          terminated_timeout=terminated_timeout,
+                          print_to_console=print_to_console)
     os.remove(command_file)
     return ret
 
@@ -232,7 +242,8 @@ class CommandExecuter:
   def CopyFiles(self, src, dest, src_machine=None, dest_machine=None,
                 src_user=None, dest_user=None, recursive=True,
                 command_terminator=None,
-                chromeos_root=None, src_cros=False, dest_cros=False):
+                chromeos_root=None, src_cros=False, dest_cros=False,
+                print_to_console=True):
     src = os.path.expanduser(src)
     dest = os.path.expanduser(dest)
 
@@ -262,13 +273,15 @@ class CommandExecuter:
         return self.RunCommand(command,
                                machine=src_machine,
                                username=src_user,
-                               command_terminator=command_terminator)
+                               command_terminator=command_terminator,
+                               print_to_console=print_to_console)
       else:
         command += rsync_prefix + "root@%s:%s %s" % (src_machine, src, dest)
         return self.RunCommand(command,
                                machine=dest_machine,
                                username=dest_user,
-                               command_terminator=command_terminator)
+                               command_terminator=command_terminator,
+                               print_to_console=print_to_console)
 
 
     if dest_machine == src_machine:
@@ -285,7 +298,8 @@ class CommandExecuter:
     return self.RunCommand(command,
                            machine=dest_machine,
                            username=dest_user,
-                           command_terminator=command_terminator)
+                           command_terminator=command_terminator,
+                           print_to_console=print_to_console)
 
 
 class MockCommandExecuter(CommandExecuter):

@@ -4,16 +4,16 @@
 
 import datetime
 import os
-import re
 import threading
 import time
 import traceback
 
+from utils import command_executer
+from utils import timeline
+
 from autotest_runner import AutotestRunner
 from results_cache import Result
 from results_cache import ResultsCache
-from utils import command_executer
-from utils import logger
 
 STATUS_FAILED = "FAILED"
 STATUS_SUCCEEDED = "SUCCEEDED"
@@ -24,53 +24,50 @@ STATUS_PENDING = "PENDING"
 
 
 class BenchmarkRun(threading.Thread):
-  def __init__(self, name, benchmark_name, autotest_name, autotest_args,
-               label_name, chromeos_root, chromeos_image, board, iteration,
-               cache_conditions, outlier_range, perf_args,
+  def __init__(self, name, benchmark,
+               label,
+               iteration,
+               cache_conditions,
                machine_manager,
                logger_to_use):
     threading.Thread.__init__(self)
     self.name = name
     self._logger = logger_to_use
-    self.benchmark_name = benchmark_name
-    self.autotest_name = autotest_name
-    self.label_name = label_name
-    self.chromeos_root = chromeos_root
-    self.chromeos_image = os.path.expanduser(chromeos_image)
-    self.board = board
+    self.benchmark = benchmark
     self.iteration = iteration
+    self.label = label
     self.result = None
     self.terminated = False
     self.retval = None
-    self.status = STATUS_PENDING
     self.run_completed = False
-    self.outlier_range = outlier_range
-    self.perf_args = perf_args
     self.machine_manager = machine_manager
     self.cache = ResultsCache()
     self.autotest_runner = AutotestRunner(self._logger)
     self.machine = None
-    self.full_name = self.autotest_name
     self.cache_conditions = cache_conditions
     self.runs_complete = 0
     self.cache_hit = False
     self.failure_reason = ""
-    self.autotest_args = "%s %s" % (autotest_args, self._GetExtraAutotestArgs())
+    self.autotest_args = "%s %s" % (benchmark.autotest_args,
+                                    self._GetExtraAutotestArgs())
     self._ce = command_executer.GetCommandExecuter(self._logger)
+    self.timeline = timeline.Timeline()
+    self.timeline.Record(STATUS_PENDING)
 
   def run(self):
     try:
       # Just use the first machine for running the cached version,
       # without locking it.
-      self.cache.Init(self.chromeos_image,
-                      self.chromeos_root,
-                      self.autotest_name,
+      self.cache.Init(self.label.chromeos_image,
+                      self.label.chromeos_root,
+                      self.benchmark.autotest_name,
                       self.iteration,
                       self.autotest_args,
                       self.machine_manager,
-                      self.board,
+                      self.label.board,
                       self.cache_conditions,
                       self._logger,
+                      self.label
                      )
 
       self.result = self.cache.ReadResult()
@@ -78,10 +75,12 @@ class BenchmarkRun(threading.Thread):
 
       if self.result:
         self._logger.LogOutput("%s: Cache hit." % self.name)
-        self._logger.LogOutput(self.result.out + "\n" + self.result.err)
+        self._logger.LogOutput(self.result.out, print_to_console=False)
+        self._logger.LogError(self.result.err, print_to_console=False)
+
       else:
         self._logger.LogOutput("%s: No cache hit." % self.name)
-        self.status = STATUS_WAITING
+        self.timeline.Record(STATUS_WAITING)
         # Try to acquire a machine now.
         self.machine = self.AcquireMachine()
         self.cache.remote = self.machine.name
@@ -92,17 +91,17 @@ class BenchmarkRun(threading.Thread):
         return
 
       if not self.result.retval:
-        self.status = STATUS_SUCCEEDED
+        self.timeline.Record(STATUS_SUCCEEDED)
       else:
-        if self.status != STATUS_FAILED:
-          self.status = STATUS_FAILED
+        if self.timeline.GetLastEvent() != STATUS_FAILED:
           self.failure_reason = "Return value of autotest was non-zero."
+          self.timeline.Record(STATUS_FAILED)
 
     except Exception, e:
       self._logger.LogError("Benchmark run: '%s' failed: %s" % (self.name, e))
       traceback.print_exc()
-      if self.status != STATUS_FAILED:
-        self.status = STATUS_FAILED
+      if self.timeline.GetLastEvent() != STATUS_FAILED:
+        self.timeline.Record(STATUS_FAILED)
         self.failure_reason = str(e)
     finally:
       if self.machine:
@@ -113,15 +112,17 @@ class BenchmarkRun(threading.Thread):
   def Terminate(self):
     self.terminated = True
     self.autotest_runner.Terminate()
-    if self.status != STATUS_FAILED:
-      self.status = STATUS_FAILED
+    if self.timeline.GetLastEvent() != STATUS_FAILED:
+      self.timeline.Record(STATUS_FAILED)
       self.failure_reason = "Thread terminated."
 
   def AcquireMachine(self):
     while True:
       if self.terminated:
         raise Exception("Thread terminated while trying to acquire machine.")
-      machine = self.machine_manager.AcquireMachine(self.chromeos_image)
+      machine = self.machine_manager.AcquireMachine(self.label.chromeos_image,
+                                                    self.label)
+
       if machine:
         self._logger.LogOutput("%s: Machine %s acquired at %s" %
                                (self.name,
@@ -134,8 +135,8 @@ class BenchmarkRun(threading.Thread):
     return machine
 
   def _GetExtraAutotestArgs(self):
-    if self.perf_args:
-      perf_args_list = self.perf_args.split(" ")
+    if self.benchmark.perf_args:
+      perf_args_list = self.benchmark.perf_args.split(" ")
       perf_args_list = [perf_args_list[0]] + ["-a"] + perf_args_list[1:]
       perf_args = " ".join(perf_args_list)
       if not perf_args_list[0] in ["record", "stat"]:
@@ -148,24 +149,47 @@ class BenchmarkRun(threading.Thread):
       return ""
 
   def RunTest(self, machine):
-    self.status = STATUS_IMAGING
+    self.timeline.Record(STATUS_IMAGING)
     self.machine_manager.ImageMachine(machine,
-                                      self.chromeos_image,
-                                      self.board)
-    self.status = "%s %s" % (STATUS_RUNNING, self.autotest_name)
+                                      self.label)
+    self.timeline.Record(STATUS_RUNNING)
     [retval, out, err] = self.autotest_runner.Run(machine.name,
-                                                  self.chromeos_root,
-                                                  self.board,
-                                                  self.autotest_name,
+                                                  self.label.chromeos_root,
+                                                  self.label.board,
+                                                  self.benchmark.autotest_name,
                                                   self.autotest_args)
     self.run_completed = True
 
     return Result.CreateFromRun(self._logger,
-                                self.chromeos_root,
-                                self.board,
+                                self.label.chromeos_root,
+                                self.label.board,
+                                self.label.name,
                                 out,
                                 err,
                                 retval)
 
   def SetCacheConditions(self, cache_conditions):
     self.cache_conditions = cache_conditions
+
+
+class MockBenchmarkRun(BenchmarkRun):
+  """Inherited from BenchmarkRun, just overide RunTest for testing."""
+
+  def RunTest(self, machine):
+    """Remove Result.CreateFromRun for testing."""
+    self.timeline.Record(STATUS_IMAGING)
+    self.machine_manager.ImageMachine(machine,
+                                      self.label)
+    self.timeline.Record(STATUS_RUNNING)
+    [retval, out, err] = self.autotest_runner.Run(machine.name,
+                                                  self.label.chromeos_root,
+                                                  self.label.board,
+                                                  self.benchmark.autotest_name,
+                                                  self.autotest_args)
+    self.run_completed = True
+    rr = Result("Results placed in /tmp/test", "", 0)
+    rr.out = out
+    rr.err = err
+    rr.retval = retval
+    return rr
+

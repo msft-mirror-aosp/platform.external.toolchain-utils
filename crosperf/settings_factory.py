@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
 # Copyright 2011 Google Inc. All Rights Reserved.
+"""Setting files for global, benchmark and labels."""
 
 from field import BooleanField
-from field import EnumField
 from field import FloatField
 from field import IntegerField
 from field import ListField
@@ -46,6 +46,13 @@ class LabelSettings(Settings):
                             "chromeos_image."))
     self.AddField(TextField("board", required=True, description="The target "
                             "board for running experiments on, e.g. x86-alex."))
+    self.AddField(ListField("remote", description=
+                            "A comma-separated list of ip's of chromeos"
+                            "devices to run experiments on."))
+    self.AddField(TextField("image_args", required=False,
+                            default="",
+                            description="Extra arguments to pass to "
+                            "image_chromeos.py."))
 
 
 class GlobalSettings(Settings):
@@ -56,20 +63,24 @@ class GlobalSettings(Settings):
                             "identifier."))
     self.AddField(TextField("board", description="The target "
                             "board for running experiments on, e.g. x86-alex."))
-    self.AddField(ListField("remote", required=True,
+    self.AddField(ListField("remote",
                             description="A comma-separated list of ip's of "
                             "chromeos devices to run experiments on."))
     self.AddField(BooleanField("rerun_if_failed", description="Whether to "
                                "re-run failed autotest runs or not.",
                                default=False))
     self.AddField(ListField("email", description="Space-seperated"
-                               "list of email addresses to send email to."))
+                            "list of email addresses to send email to."))
     self.AddField(BooleanField("rerun", description="Whether to ignore the "
                                "cache and for autotests to be re-run.",
                                default=False))
-    self.AddField(BooleanField("exact_remote", default=True,
+    self.AddField(BooleanField("same_specs", default=True,
                                description="Ensure cached runs are run on the "
-                               "same device that is specified as a remote."))
+                               "same kind of devices which are specified as a "
+                               "remote."))
+    self.AddField(BooleanField("same_machine", default=False,
+                               description="Ensure cached runs are run on the "
+                               "exact the same remote"))
     self.AddField(IntegerField("iterations", default=1,
                                description="Number of iterations to run all "
                                "autotests."))

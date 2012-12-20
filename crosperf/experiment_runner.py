@@ -2,19 +2,24 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+"""The experiment runner module."""
 import getpass
 import os
 import time
-from experiment_status import ExperimentStatus
-from results_report import HTMLResultsReport
-from results_report import TextResultsReport
+
 from utils import command_executer
 from utils import logger
 from utils.email_sender import EmailSender
 from utils.file_utils import FileUtils
 
+from experiment_status import ExperimentStatus
+from results_report import HTMLResultsReport
+from results_report import TextResultsReport
+
 
 class ExperimentRunner(object):
+  """ExperimentRunner Class."""
+
   STATUS_TIME_DELAY = 30
   THREAD_MONITOR_DELAY = 2
 
@@ -95,6 +100,7 @@ class ExperimentRunner(object):
         benchmark_run_path = os.path.join(results_directory,
                                           benchmark_run_name)
         benchmark_run.result.CopyResultsTo(benchmark_run_path)
+        benchmark_run.result.CleanUp()
 
   def Run(self):
     self._Run(self._experiment)
@@ -105,6 +111,8 @@ class ExperimentRunner(object):
 
 
 class MockExperimentRunner(ExperimentRunner):
+  """Mocked ExperimentRunner for testing."""
+
   def __init__(self, experiment):
     super(MockExperimentRunner, self).__init__(experiment)
 

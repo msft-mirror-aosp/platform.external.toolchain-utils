@@ -5,20 +5,14 @@
 import getpass
 import math
 import numpy
+
 import colortrans
 from email_sender import EmailSender
-
-
-def _IsFloat(v):
-  try:
-    float(v)
-    return True
-  except ValueError:
-    return False
+import misc
 
 
 def _AllFloat(values):
-  return all([_IsFloat(v) for v in values])
+  return all([misc.IsFloat(v) for v in values])
 
 
 def _GetFloats(values):
@@ -45,10 +39,11 @@ class TableGenerator(object):
 
   MISSING_VALUE = "x"
 
-  def __init__(self, d, l, sort=SORT_BY_KEYS):
+  def __init__(self, d, l, sort=SORT_BY_KEYS, key_name="keys"):
     self._runs = d
     self._labels = l
     self._sort = sort
+    self._key_name = key_name
 
   def _AggregateKeys(self):
     keys = set([])
@@ -116,7 +111,7 @@ class TableGenerator(object):
       module.
     """
     keys = self._GetKeys()
-    header = ["keys"] + self._labels
+    header = [self._key_name] + self._labels
     table = [header]
     for k in keys:
       row = [k]
@@ -164,7 +159,13 @@ class Result(object):
   def _GetGmean(self, values):
     if not values:
       return float("nan")
-    return (reduce(lambda x, y: x*y, values))**(1.0/len(values))
+    if any([v < 0 for v in values]):
+      return float ("nan")
+    if any([v == 0 for v in values]):
+      return 0.0
+    log_list = [math.log(v) for v in values]
+    gmean_log = sum(log_list)/len(log_list)
+    return math.exp(gmean_log)
 
   def Compute(self, cell, values, baseline_values):
     """Compute the result given a list of values and baseline values.
@@ -221,6 +222,19 @@ class LiteralResult(Result):
 class NonEmptyCountResult(Result):
   def Compute(self, cell, values, baseline_values):
     cell.value = len(_StripNone(values))
+    if not baseline_values:
+      return
+    base_value = len(_StripNone(baseline_values))
+    if cell.value == base_value:
+      return
+    f = ColorBoxFormat()
+    len_values = len(values)
+    len_baseline_values = len(baseline_values)
+    tmp_cell = Cell()
+    tmp_cell.value= 1.0 + (float(cell.value - base_value) /
+                         (max(len_values, len_baseline_values)))
+    f.Compute(tmp_cell)
+    cell.bgcolor = tmp_cell.bgcolor
 
 
 class StringMeanResult(Result):
@@ -273,7 +287,7 @@ class StdResult(NumericalResult):
 
 class CoeffVarResult(NumericalResult):
   def _ComputeFloat(self, cell, values, baseline_values):
-    noise = numpy.std(values)/numpy.mean(values)
+    noise = numpy.abs(numpy.std(values)/numpy.mean(values))
     cell.value = noise
 
 
@@ -297,7 +311,7 @@ class ComparisonResult(Result):
       cell.value = "?"
 
 
-class StatsSignificant(ComparisonResult):
+class PValueResult(ComparisonResult):
   def _ComputeFloat(self, cell, values, baseline_values):
     if len(values) < 2 or len(baseline_values) < 2:
       cell.value = float("nan")
@@ -307,6 +321,7 @@ class StatsSignificant(ComparisonResult):
 
   def _ComputeString(self, cell, values, baseline_values):
     return float("nan")
+
 
 class KeyAwareComparisonResult(ComparisonResult):
   def _IsLowerBetter(self, key):
@@ -442,6 +457,19 @@ class Format(object):
     return ret
 
 
+class PValueFormat(Format):
+  def _ComputeFloat(self, cell):
+    cell.string_value = "%0.2f" % float(cell.value)
+    if float(cell.value) < 0.05:
+      cell.bgcolor = self._GetColor(cell.value,
+                                  Color(255, 255, 0, 0),
+                                  Color(255, 255, 255, 0),
+                                  Color(255, 255, 255, 0),
+                                  mid_value=0.05,
+                                  power=1)
+      cell.bgcolor_row = True
+
+
 class StorageFormat(Format):
   """Format the cell as a storage number.
 
@@ -549,6 +577,7 @@ class Cell(object):
     colspan: Set the colspan of the cell in the HTML table, this is used for
     table headers. Default value is 1.
     name: the test name of the cell.
+    header: Whether this is a header in html.
   """
 
   def __init__(self):
@@ -564,6 +593,7 @@ class Cell(object):
     self.width = None
     self.colspan = 1
     self.name = None
+    self.header = False
 
   def __str__(self):
     l = []
@@ -614,7 +644,7 @@ class TableFormatter(object):
     self._table_columns = []
     self._out_table = []
 
-  def _GenerateCellTable(self):
+  def GenerateCellTable(self):
     row_index = 0
 
     for row in self._table[1:]:
@@ -645,13 +675,15 @@ class TableFormatter(object):
       self._out_table.append(out_row)
       row_index += 1
 
-    # TODO(asharif): refactor this.
-    # Now generate header
+  def AddColumnName(self):
+    """Generate Column name at the top of table."""
     key = Cell()
+    key.header = True
     key.string_value = "Keys"
     header = [key]
     for column in self._table_columns:
       cell = Cell()
+      cell.header = True
       if column.name:
         cell.string_value = column.name
       else:
@@ -665,21 +697,36 @@ class TableFormatter(object):
 
     self._out_table = [header] + self._out_table
 
+  def AddHeader(self, s):
+    """Put additional string on the top of the table."""
+    cell = Cell()
+    cell.header = True
+    cell.string_value = str(s)
+    header = [cell]
+    colspan = max(1, max(len(row) for row in self._table))
+    cell.colspan = colspan
+    self._out_table = [header] + self._out_table
+
+  def AddLabelName(self):
+    """Put label on the top of the table."""
     top_header = []
-    colspan = 0
-    for column in self._columns:
-      if not column.result.NeedsBaseline():
-        colspan += 1
+    base_colspan = len([c for c in self._columns
+                        if not c.result.NeedsBaseline()])
+    compare_colspan = len(self._columns)
+    # The label is organized as follows
+    # "keys" label_base, label_comparison1, label_comparison2
+    # The first cell has colspan 1, the second is base_colspan
+    # The others are compare_colspan
     for label in self._table[0]:
       cell = Cell()
+      cell.header = True
       cell.string_value = str(label)
-      if cell.string_value != "keys":
-        cell.colspan = colspan
+      if top_header:
+        cell.colspan = base_colspan
+      if len(top_header) > 1:
+        cell.colspan = compare_colspan
       top_header.append(cell)
-
     self._out_table = [top_header] + self._out_table
-
-    return self._out_table
 
   def _PrintOutTable(self):
     o = ""
@@ -689,18 +736,25 @@ class TableFormatter(object):
       o += "\n"
     print o
 
-  def GetCellTable(self):
+  def GetCellTable(self, headers=True):
     """Function to return a table of cells.
 
     The table (list of lists) is converted into a table of cells by this
     function.
+    Args:
+      headers: A boolean saying whether we want default headers
 
     Returns:
       A table of cells with each cell having the properties and string values as
       requiested by the columns passed in the constructor.
     """
     # Generate the cell table, creating a list of dynamic columns on the fly.
-    return self._GenerateCellTable()
+    if not self._out_table:
+      self.GenerateCellTable()
+    if headers:
+      self.AddColumnName()
+      self.AddLabelName()
+    return self._out_table
 
 
 class TablePrinter(object):
@@ -726,16 +780,22 @@ class TablePrinter(object):
           assert cell.color, "Cell color not set but color_row set!"
           assert not row_style.color, "Multiple row_style.colors found!"
           row_style.color = cell.color
+        if cell.bgcolor_row:
+          assert cell.bgcolor, "Cell bgcolor not set but bgcolor_row set!"
+          assert not row_style.bgcolor, "Multiple row_style.bgcolors found!"
+          row_style.bgcolor = cell.bgcolor
       self._row_styles.append(row_style)
 
     self._column_styles = []
     if len(self._table) < 2:
       return
-    for i in range(len(self._table[1])):
+
+    for i in range(max(len(row) for row in self._table)):
       column_style = Cell()
-      for row in self._table[1:]:
-        column_style.width = max(column_style.width,
-                                 len(row[i].string_value))
+      for row in self._table:
+        if not any([cell.colspan != 1 for cell in row]):
+          column_style.width = max(column_style.width,
+                                   len(row[i].string_value))
       self._column_styles.append(column_style)
 
   def _GetBGColorFix(self, color):
@@ -746,7 +806,7 @@ class TablePrinter(object):
       suffix = "\033[0m"
     elif self._output_type in [self.EMAIL, self.HTML]:
       rgb = color.GetRGB()
-      prefix = ("<FONT style=\"BACKGROUND-COLOR:#{0}\" color =#{0}>"
+      prefix = ("<FONT style=\"BACKGROUND-COLOR:#{0}\">"
                 .format(rgb))
       suffix = "</FONT>"
     elif self._output_type in [self.PLAIN, self.TSV]:
@@ -780,26 +840,15 @@ class TablePrinter(object):
 
   def _GetCellValue(self, i, j):
     cell = self._table[i][j]
-    color = None
     out = cell.string_value
-    if self._row_styles[i].color:
-      color = self._row_styles[i].color
-    elif cell.color:
-      color = cell.color
-
-    if self._row_styles[i].bgcolor:
-      bgcolor = self._row_styles[i].bgcolor
-    else:
-      bgcolor = cell.bgcolor
-
     raw_width = len(out)
 
-    if color:
-      p, s = self._GetColorFix(color)
+    if cell.color:
+      p, s = self._GetColorFix(cell.color)
       out = "%s%s%s" % (p, out, s)
 
-    if bgcolor:
-      p, s = self._GetBGColorFix(bgcolor)
+    if cell.bgcolor:
+      p, s = self._GetBGColorFix(cell.bgcolor)
       out = "%s%s%s" % (p, out, s)
 
     if self._output_type in [self.PLAIN, self.CONSOLE, self.EMAIL]:
@@ -812,14 +861,17 @@ class TablePrinter(object):
           width = len(cell.string_value)
       if cell.colspan > 1:
         width = 0
+        start = 0
+        for k in range(j):
+          start += self._table[i][k].colspan
         for k in range(cell.colspan):
-          width += self._column_styles[1 + (j-1) * cell.colspan + k].width
+          width += self._column_styles[start + k].width
       if width > raw_width:
         padding = ("%" + str(width - raw_width) + "s") % ""
         out = padding + out
 
     if self._output_type == self.HTML:
-      if i < 2:
+      if cell.header:
         tag = "th"
       else:
         tag = "td"
@@ -831,7 +883,7 @@ class TablePrinter(object):
     if self._output_type in [self.CONSOLE, self.PLAIN, self.EMAIL]:
       return " "
     if self._output_type == self.HTML:
-      return "&nbsp;"
+      return ""
     if self._output_type == self.TSV:
       return "\t"
 
@@ -858,9 +910,17 @@ class TablePrinter(object):
     o += self._GetPrefix()
     for i in range(len(self._table)):
       row = self._table[i]
+      # Apply row color and bgcolor.
+      p = s = bgp = bgs = ""
+      if self._row_styles[i].bgcolor:
+        bgp, bgs = self._GetBGColorFix(self._row_styles[i].bgcolor)
+      if self._row_styles[i].color:
+        p, s = self._GetColorFix(self._row_styles[i].color)
+      o += p + bgp
       for j in range(len(row)):
         out = self._GetCellValue(i, j)
         o += out + self._GetHorizontalSeparator()
+      o += s + bgs
       o += self._GetVerticalSeparator()
     o += self._GetSuffix()
     return o
@@ -925,6 +985,8 @@ def GetComplexTable(runs, labels, out_to=TablePrinter.CONSOLE):
                     RatioFormat()),
              Column(GmeanRatioResult(),
                     RatioFormat()),
+             Column(PValueResult(),
+                    PValueFormat()),
             ]
   tf = TableFormatter(table, columns)
   cell_table = tf.GetCellTable()
@@ -952,6 +1014,17 @@ if __name__ == "__main__":
   print t
   email = GetComplexTable(runs, labels, TablePrinter.EMAIL)
 
+  runs = [
+      [
+          {"k1": "1",}, {"k1": "1.1"}, {"k1": "1.2"},
+          ],
+      [
+          {"k1": "5",}, {"k1": "5.1"}, {"k1": "5.2"},
+          ],
+      ]
+  t = GetComplexTable(runs, labels, TablePrinter.CONSOLE)
+  print t
+
   simple_table = [
       ["binary", "b1", "b2", "b3"],
       ["size", 100, 105, 108],
@@ -961,7 +1034,7 @@ if __name__ == "__main__":
       ]
   t = GetSimpleTable(simple_table)
   print t
-  email += GetSimpleTable(simple_table, TablePrinter.PLAIN)
+  email += GetSimpleTable(simple_table, TablePrinter.HTML)
   email_to = [getpass.getuser()]
   email = "<pre style='font-size: 13px'>%s</pre>" % email
   EmailSender().SendEmail(email_to, "SimpleTableTest", email, msg_type="html")

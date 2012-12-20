@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
@@ -9,12 +9,18 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 from contextlib import contextmanager
 import os
 import re
+import shutil
+import sys
+import time
+
+import lock_machine
 
 import command_executer
 import logger
 
 
 def GetChromeOSVersionFromLSBVersion(lsb_version):
+  """Get Chromeos version from Lsb version."""
   ce = command_executer.GetCommandExecuter()
   command = "git ls-remote http://git.chromium.org/chromiumos/manifest.git"
   ret, out, _ = ce.RunCommand(command, return_output=True,
@@ -22,7 +28,7 @@ def GetChromeOSVersionFromLSBVersion(lsb_version):
   assert ret == 0, "Command %s failed" % command
   lower = []
   for line in out.splitlines():
-    mo = re.search("refs/heads/release-R(\d+)-(\d+)\.B", line)
+    mo = re.search(r"refs/heads/release-R(\d+)-(\d+)\.B", line)
     if mo:
       revision = int(mo.group(1))
       build = int(mo.group(2))
@@ -42,12 +48,13 @@ def ApplySubs(string, *substitutions):
   return string
 
 
-def UnitToNumber(string, base=1000):
+def UnitToNumber(unit_num, base=1000):
+  """Convert a number with unit to float."""
   unit_dict = {"kilo": base,
                "mega": base**2,
                "giga": base**3}
-  string = string.lower()
-  mo = re.search("(\d*)(.+)?", string)
+  unit_num = unit_num.lower()
+  mo = re.search(r"(\d*)(.+)?", unit_num)
   number = mo.group(1)
   unit = mo.group(2)
   if not unit:
@@ -57,21 +64,30 @@ def UnitToNumber(string, base=1000):
       return float(number) * v
   raise Exception("Unit: %s not found in byte: %s!" %
                   (unit,
-                   string))
+                   unit_num))
 
 
 def GetFilenameFromString(string):
   return ApplySubs(string,
-                   ("/", "__"),
-                   ("\s", "_"),
-                   ("[\^\$=\"\\\?]", ""),
-                   )
+                   (r"/", "__"),
+                   (r"\s", "_"),
+                   (r"[\^\$=\"\\\?]", ""),
+                  )
 
 
 def GetRoot(scr_name):
   """Break up pathname into (dir+name)."""
   abs_path = os.path.abspath(scr_name)
   return (os.path.dirname(abs_path), os.path.basename(abs_path))
+
+
+def GetChromeOSKeyFile(chromeos_root):
+  return os.path.join(chromeos_root,
+                      "src",
+                      "scripts",
+                      "mod_for_test_scripts",
+                      "ssh_keys",
+                      "testing_rsa")
 
 
 def GetChrootPath(chromeos_root):
@@ -101,7 +117,7 @@ def FormatCommands(commands):
   return ApplySubs(str(commands),
                    ("&&", "&&\n"),
                    (";", ";\n"),
-                   ("\n+\s*", "\n"))
+                   (r"\n+\s*", "\n"))
 
 
 def GetImageDir(chromeos_root, board):
@@ -145,6 +161,7 @@ def GetBuildImageCommand(board):
 
 def GetSetupBoardCommand(board, gcc_version=None, binutils_version=None,
                          usepkg=None, force=None):
+  """Get setup_board command."""
   options = []
 
   if gcc_version:
@@ -171,6 +188,7 @@ def CanonicalizePath(path):
 
 
 def GetCtargetFromBoard(board, chromeos_root):
+  """Get Ctarget from board."""
   base_board = board.split("_")[0]
   command = ("source "
              "../platform/dev/toolchain_utils.sh; get_ctarget_from_board %s" %
@@ -187,7 +205,7 @@ def GetCtargetFromBoard(board, chromeos_root):
 
 
 def StripANSIEscapeSequences(string):
-  string = re.sub("\x1b\[[0-9]*[a-zA-Z]", "", string)
+  string = re.sub(r"\x1b\[[0-9]*[a-zA-Z]", "", string)
   return string
 
 
@@ -200,6 +218,7 @@ def GetEnvStringFromDict(env_dict):
 
 
 def MergeEnvStringWithDict(env_string, env_dict, prepend=True):
+  """Merge env string with dict."""
   if not env_string.strip():
     return GetEnvStringFromDict(env_dict)
   override_env_list = []
@@ -226,8 +245,67 @@ def GetAllImages(chromeos_root, board):
   return out.splitlines()
 
 
+def AcquireLock(lock_file, timeout=1200):
+  """Acquire a lock with timeout."""
+  start_time = time.time()
+  locked = False
+  abs_path = os.path.abspath(lock_file)
+  dir_path = os.path.dirname(abs_path)
+  sleep_time = min(10, timeout/10.0)
+  if not os.path.exists(dir_path):
+    try:
+      os.makedirs(dir_path)
+    except OSError:
+      print "Cannot create dir {0}, exiting...".format(dir_path)
+      exit(0)
+  while True:
+    locked = (lock_machine.Lock(lock_file).NonBlockingLock(True, sys.argv[0]))
+    if locked:
+      break
+    time.sleep(sleep_time)
+    if time.time() - start_time > timeout:
+      logger.GetLogger().LogWarning(
+          "Could not acquire lock on this file: {0} within {1} seconds."
+          "Manually remove the file if you think the lock is stale"
+          .format(abs_path, timeout))
+      break
+  return locked
+
+
+def ReleaseLock(lock_file):
+  lock_file = os.path.abspath(lock_file)
+  ret = lock_machine.Lock(lock_file).Unlock(True)
+  assert ret, ("Could not unlock {0},"
+               "Please remove it manually".format(lock_file))
+
+
+def IsFloat(text):
+  if text is None:
+    return False
+  try:
+    float(text)
+    return True
+  except ValueError:
+    return False
+
+def RemoveChromeBrowserObjectFiles(chromeos_root, board):
+  """ Remove any object files from all the posible locations """
+  out_dir = os.path.join(
+      GetChrootPath(chromeos_root),
+      "var/cache/chromeos-chrome/chrome-src/src/out_%s" % board)
+  if os.path.exists(out_dir):
+    shutil.rmtree(out_dir)
+    logger.GetLogger().LogCmd("rm -rf %s" % out_dir)
+  out_dir = os.path.join(
+      GetChrootPath(chromeos_root),
+      "var/cache/chromeos-chrome/chrome-src-internal/src/out_%s" % board)
+  if os.path.exists(out_dir):
+    shutil.rmtree(out_dir)
+    logger.GetLogger().LogCmd("rm -rf %s" % out_dir)
+
 @contextmanager
 def WorkingDirectory(new_dir):
+  """Get the working directory."""
   old_dir = os.getcwd()
   if old_dir != new_dir:
     msg = "cd %s" % new_dir

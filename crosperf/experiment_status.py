@@ -2,14 +2,20 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+"""The class to show the banner."""
+
 import datetime
 import time
 
 
 class ExperimentStatus(object):
+  """The status class."""
+
   def __init__(self, experiment):
     self.experiment = experiment
     self.num_total = len(self.experiment.benchmark_runs)
+    self.completed = 0
+    self.new_job_start_time = time.time()
 
   def _GetProgressBar(self, num_complete, num_total):
     ret = "Done: %s%%" % int(100.0 * num_complete / num_total)
@@ -23,14 +29,23 @@ class ExperimentStatus(object):
     return ret
 
   def GetProgressString(self):
+    """Get the elapsed_time, ETA."""
     current_time = time.time()
     if self.experiment.start_time:
       elapsed_time = current_time - self.experiment.start_time
     else:
       elapsed_time = 0
     try:
-      eta_seconds = (float(self.num_total - self.experiment.num_complete) *
-                     elapsed_time / self.experiment.num_complete)
+      if self.completed != self.experiment.num_complete:
+        self.completed = self.experiment.num_complete
+        self.new_job_start_time = current_time
+      time_completed_jobs = (elapsed_time -
+                             (current_time - self.new_job_start_time))
+      eta_seconds = (float(self.num_total - self.experiment.num_complete -1) *
+                     time_completed_jobs / self.experiment.num_run_complete
+                     + (time_completed_jobs / self.experiment.num_run_complete
+                        - (current_time - self.new_job_start_time)))
+
       eta_seconds = int(eta_seconds)
       eta = datetime.timedelta(seconds=eta_seconds)
     except ZeroDivisionError:
@@ -45,11 +60,12 @@ class ExperimentStatus(object):
     return "\n".join(strings)
 
   def GetStatusString(self):
+    """Get the status string of all the benchmark_runs."""
     status_bins = {}
     for benchmark_run in self.experiment.benchmark_runs:
-      if benchmark_run.status not in status_bins:
-        status_bins[benchmark_run.status] = []
-      status_bins[benchmark_run.status].append(benchmark_run)
+      if benchmark_run.timeline.GetLastEvent() not in status_bins:
+        status_bins[benchmark_run.timeline.GetLastEvent()] = []
+      status_bins[benchmark_run.timeline.GetLastEvent()].append(benchmark_run)
 
     status_strings = []
     for key, val in status_bins.items():
@@ -64,6 +80,9 @@ class ExperimentStatus(object):
 
   def _GetNamesAndIterations(self, benchmark_runs):
     strings = []
+    t = time.time()
     for benchmark_run in benchmark_runs:
-      strings.append("'%s'" % benchmark_run.name)
+      t_last = benchmark_run.timeline.GetLastEventTime()
+      elapsed = str(datetime.timedelta(seconds=int(t-t_last)))
+      strings.append("'{0}' {1}".format(benchmark_run.name, elapsed))
     return " %s (%s)" % (len(strings), ", ".join(strings))
