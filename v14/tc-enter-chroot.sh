@@ -20,11 +20,11 @@ toolchain_setup_env()
       TC_MOUNTED_PATH="$TC_CHROOT/$FLAGS_TC_ROOT_MOUNT/$TC_LAST_DIR"
       if [[ -z "$TC_PATH" ]]
       then
-        die "$TC_PATH is not a valid directory."
+        die "$FLAGS_TC_ROOT/$TC_DIR is not a valid directory."
       fi
       if [[ -z "$TC_MOUNTED_PATH" ]]
       then
-        die "$TC_MOUNTED_PATH is not a valid directory."
+        die "$TC_CHROOT/$FLAGS_TC_ROOT_MOUNT/$TC_LAST_DIR is not a valid directory."
       fi
       info "Mounting $TC_PATH at $TC_MOUNTED_PATH."
       mkdir -p $TC_MOUNTED_PATH
@@ -80,7 +80,6 @@ then
 fi
 
 # Enter the scripts directory.
-cd $FLAGS_CHROMEOS_DIR/src/scripts
 
 # Source the ChromeOS common.sh script.
 . $FLAGS_CHROMEOS_DIR/src/scripts/common.sh
@@ -92,5 +91,5 @@ assert_not_root_user
 
 toolchain_setup_env
 set -- $newargs
-echo $newargs
+cd $FLAGS_CHROMEOS_DIR/src/scripts
 $FLAGS_CHROMEOS_DIR/src/scripts/enter_chroot.sh $newargs
