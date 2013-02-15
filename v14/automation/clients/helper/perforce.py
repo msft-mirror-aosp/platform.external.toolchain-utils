@@ -25,6 +25,22 @@ class PathMapping(object):
 
     return mappings
 
+  @classmethod
+  def ListFromPathTuples(cls, tuple_list):
+    """Takes a list of tuples and returns a list of mappings.
+
+    Args:
+      tuple_list: [('remote_path1', 'local_path1'), ...]
+
+    Returns:
+      a list of mapping objects
+    """
+    mappings = []
+    for remote_path, local_path in tuple_list:
+      mappings.append(cls(remote_path, local_path))
+
+    return mappings
+
   def __init__(self, remote, local=None):
     self.remote = remote
     self.local = local or remote
