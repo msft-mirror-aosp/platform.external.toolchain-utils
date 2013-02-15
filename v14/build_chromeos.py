@@ -18,7 +18,7 @@ from utils import command_executer
 from utils import logger
 from utils import utils
 
-cmd_executer = command_executer.GetCommandExecuter()
+cmd_executer = None
 
 
 def Usage(parser, message):
@@ -60,6 +60,8 @@ def MakeChroot(chromeos_root, clobber_chroot=False):
 def Main():
   """Build ChromeOS."""
   # Common initializations
+  global cmd_executer
+  cmd_executer = command_executer.GetCommandExecuter()
 
   parser = optparse.OptionParser()
   parser.add_option("--chromeos_root", dest="chromeos_root",

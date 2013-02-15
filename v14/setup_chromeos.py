@@ -30,7 +30,7 @@ GCLIENT_FILE = """solutions = [
 """
 
 # Common initializations
-cmd_executer = command_executer.GetCommandExecuter()
+cmd_executer = None
 
 GIT_TAGS_CMD = ("git ls-remote --tags "
                 "ssh://git@gitrw.chromium.org:9222/chromiumos-overlay.git | "
@@ -71,6 +71,8 @@ def GetLatestTag(tags):
 
 def Main(argv):
   """Checkout the ChromeOS source."""
+  global cmd_executer
+  cmd_executer = command_executer.GetCommandExecuter()
   parser = optparse.OptionParser()
   parser.add_option("--dir", dest="directory",
                     help="Target directory for ChromeOS installation.")

@@ -2,8 +2,10 @@ import sys
 from utils import utils
 import xmlrpclib
 from automation.common import job
+from automation.common import job_group
 from automation.common import jobs_helper
 import optparse
+import os
 
 
 def Main(argv):
@@ -42,7 +44,8 @@ def Main(argv):
         tc_job))
   all_jobs.append(build_chromeos_job)
 
-  server.ExecuteJobGroup(utils.Serialize(all_jobs))
+  group = job_group.JobGroup(os.uname()[1], "/tmp/", all_jobs, False, False)
+  server.ExecuteJobGroup(utils.Serialize(group))
 
 if __name__ == "__main__":
   Main(sys.argv)

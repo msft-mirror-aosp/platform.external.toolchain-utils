@@ -20,12 +20,15 @@ from utils import command_executer
 from utils import utils
 from utils import logger
 
-# Common initializations
-cmd_executer = command_executer.GetCommandExecuter()
+
+cmd_executer = None
 
 
 def Main(argv):
   """The main function."""
+  # Common initializations
+  global cmd_executer
+  cmd_executer = command_executer.GetCommandExecuter()
   rootdir = utils.GetRoot(sys.argv[0])[0]
 
   parser = optparse.OptionParser()
