@@ -13,6 +13,7 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 import machine_description
 import machine_filters
 import machine_manager
+import machine_pool
 import unittest
 
 
@@ -44,7 +45,9 @@ class MachineManagerTest(unittest.TestCase):
     descriptions.append(description)
     machines = self.machine_manager.GetMachines(descriptions)
     self.assertTrue(len(machines) != 0)
-    print machines
+    
+    pool = machine_pool.MachinePool(machines)
+    print pool
 
 
 if __name__ == "__main__":

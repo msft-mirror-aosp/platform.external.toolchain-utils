@@ -10,7 +10,6 @@ A machine object is an instance of this class.
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
 
-import random
 import re
 import sys
 from utils import utils

@@ -46,7 +46,7 @@ class MachinePool:
     ret = ""
     for m in self.machine_list:
       machine_string = str(m)
-      machine_string.replace("\n", "  \n")
+      machine_string = machine_string.replace("\n", "\n  ")
       ret += machine_string
     return ret
 
@@ -56,6 +56,4 @@ class MachinePool:
     while current < self.Size():
       yield self.machine_list[current]
       current += 1
-
-
 
