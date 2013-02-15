@@ -27,11 +27,15 @@ def MakeDir(*dirs):
   return cmd.Shell("mkdir", "-p", *dirs)
 
 
-def SyncDir(from_dir, to_dir):
+def SyncDir(from_dir, to_dir, src_host=''):
+  if src_host:
+    from_dir = '%s:%s' % (src_host, from_dir)
   return cmd.Shell("rsync", "-a",
                    from_dir.rstrip("/") + "/",
                    to_dir.rstrip("/") + "/")
 
+def SyncFile(from_file, to_dir):
+  return cmd.Shell("rsync", "-a", from_file, to_dir.rstrip("/") + "/")
 
 def UnTar(tar_file, dest_dir):
   return cmd.Chain(

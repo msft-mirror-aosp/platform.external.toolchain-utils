@@ -7,7 +7,7 @@
 Does the following jobs:
   1. Checkout android toolchain sources
   2. Build Android toolchain
-  3. Build Android tree (TODO)
+  3. Build Android tree
   4. Checkout/build/run Android benchmarks (TODO)
   5. Generate size/performance dashboard ? (TODO)
 """
@@ -47,7 +47,9 @@ class AndroidToolchainNightlyClient(object):
     tc_build_job, tc_prefix_dep = factory.BuildAndroidToolchain(
         checkout_dir_dep)
 
-    all_jobs = [p4_androidtc_job, tc_build_job]
+    tree_build_job = factory.GetBuildAndroidTree(tc_prefix_dep)
+
+    all_jobs = [p4_androidtc_job, tc_build_job, tree_build_job]
 
     return job_group.JobGroup('androidtoolchain_nightly', all_jobs, True, False)
 

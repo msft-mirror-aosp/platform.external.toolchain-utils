@@ -7,7 +7,7 @@
 Provides following Android toolchain test jobs and commands.
 . Checkout Android toolchain source code
 . Build Android toolchain
-. Checkout and build Android tree (TODO)
+. Checkout and build Android tree
 . Checkout/build/run Android benchmarks (TODO)
 . Generate size dashboard (TODO)
 """
@@ -36,8 +36,7 @@ class JobsFactory(object):
     command = self.commands.CheckoutAndroidToolchain()
     new_job = jobs.CreateLinuxJob('AndroidCheckoutToolchain(%s)' % self.tc_tag,
                                   command)
-    checkout_dir_dep = job.FolderDependency(
-        new_job, self.commands.CHECKOUT_DIR)
+    checkout_dir_dep = job.FolderDependency(new_job, self.commands.CHECKOUT_DIR)
     return new_job, checkout_dir_dep
 
   def BuildAndroidToolchain(self, checkout_dir_dep):
@@ -50,11 +49,22 @@ class JobsFactory(object):
         new_job, self.commands.toolchain_prefix_dir)
     return new_job, tc_prefix_dep
 
+  def GetBuildAndroidTree(self, tc_prefix_dep, product='stingray',
+                          branch='honeycomb-release'):
+    assert product in ['stingray', 'passion', 'trygon', 'soju']
+    # We may have multiple trees in the future. Reserve the assert here.
+    assert branch in ['honeycomb-release']
+    command = self.commands.GetBuildAndroidTree(product, branch)
+    new_job = jobs.CreateLinuxJob('AndroidGetBuildTree(%s)' % self.tc_tag,
+                                  command)
+    new_job.DependsOnFolder(tc_prefix_dep)
+    return new_job
 
 class CommandsFactory(object):
   CHECKOUT_DIR = 'androidtc-checkout-dir'
   ANDROIDTC_SRC_DIR = os.path.join(CHECKOUT_DIR, 'src')
   TOOLCHAIN_BUILD_DIR = 'obj'
+  ANDROID_TREES_DIR = 'android_trees'
 
   def __init__(self, gcc_version, build_type):
     assert gcc_version in ['4.4.3', '4.6', 'google_main', 'fsf_trunk']
@@ -162,6 +172,40 @@ class CommandsFactory(object):
                                          self.CHECKOUT_DIR,
                                          self.TOOLCHAIN_BUILD_DIR,
                                          self.ANDROIDTC_SRC_DIR)
+
+  def _BuildAndroidTree(self, local_android_branch_dir, product):
+    target_tools_prefix = os.path.join('$JOB_TMP', self.toolchain_prefix_dir,
+                                       'bin', 'arm-linux-androideabi-')
+    java_path = '/usr/lib/jvm/java-6-sun/bin'
+    build_cmd = cmd.Shell('make', '-j8',
+                          'PRODUCT-%s-userdebug' % product,
+                          'TARGET_TOOLS_PREFIX=%s' % target_tools_prefix,
+                          'PATH=%s:$PATH' % java_path)
+    return cmd.Wrapper(build_cmd, cwd=local_android_branch_dir)
+
+  def GetBuildAndroidTree(self, product, branch):
+    assert product in ['stingray', 'passion', 'trygon', 'soju']
+
+    # Copy the tree from atree.mtv.corp to ANDROID_TREES_DIR/branch
+    androidtrees_host = 'atree.mtv.corp.google.com'
+    androidtrees_path = ('/usr/local/google2/home/mobiletc-prebuild/'
+                         'android_trees')
+    remote_android_branch_path = os.path.join(androidtrees_path, branch)
+    local_android_branch_dir = os.path.join(self.ANDROID_TREES_DIR, branch)
+    gettree_cmd = cmd.Chain(jobs.MakeDir(local_android_branch_dir),
+                            jobs.SyncDir(remote_android_branch_path,
+                                         local_android_branch_dir,
+                                         src_host=androidtrees_host))
+
+    # Configure and build the tree
+    buildtree_cmd = self._BuildAndroidTree(local_android_branch_dir, product)
+
+    # Copy system.img to result
+    result_system_img = os.path.join(local_android_branch_dir, 'out', 'target',
+                                     'product', product, 'system.img')
+    copy_img = jobs.SyncFile(result_system_img, 'results')
+
+    return cmd.Chain(gettree_cmd, buildtree_cmd, copy_img)
 
 
 class ScriptsFactory(object):
