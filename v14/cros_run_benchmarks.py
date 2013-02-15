@@ -140,6 +140,7 @@ import numpy
 import hashlib
 import image_chromeos
 import pickle
+import lock_machine
 
 
 def IsFloat(text):
@@ -759,20 +760,13 @@ def Main(argv):
 
   ags = {}
   try:
-    # Lock the machine if it is of this style: chromeos-test\d+
-    match = re.search("chromeos-test(\d+)$", remote)
-    if match:
-      index = match.group(1)
-      perflab_machine = "chromeos_%s_%s" % (options.board, index)
-      lock_reason = ("Automatically locked by %s@%s for testing new toolchain using %s" %
-                     (getpass.getuser(),
-                      os.uname()[1],
-                      sys.argv[0]))
-      lock_reason = "Automatically locked by %s" % os.path.basename(sys.argv[0])
-      command = ("perflab --machines=%s --lock_reason=%r --lock_duration=1d lock" %
-                 (perflab_machine, lock_reason))
-      retval = ce.RunCommand(command)
-      l.LogFatalIf(retval, "Could not lock machine %s through perflab" % perflab_machine)
+    # Lock the machine before running the tests
+    locked = lock_machine.LockMachine(remote,
+                                      reason="Locked by %s" %
+                                      os.path.basename(sys.argv[0]))
+    if locked:
+      l.LogError("Could not lock machine: %s" % remote)
+      return 1
 
     for image in options.images.split(","):
       if image == "":
@@ -817,11 +811,17 @@ def Main(argv):
 
   except (KeyboardInterrupt, SystemExit):
     print "C-c pressed"
-  if match:
-    command = ("perflab --machines=%s --lock_reason=%r unlock" %
-               (perflab_machine, lock_reason))
-    retval = ce.RunCommand(command)
+  finally:
+    # Lock the machine before running the tests
+    unlocked = lock_machine.LockMachine(remote,
+                                        unlock=True,
+                                        reason="Locked by %s" %
+                                        os.path.basename(sys.argv[0]))
 
+    if unlocked:
+      l.LogError("Could not unlock machine: %s" % remote)
+      return 1
+  return 0
 
 if __name__ == "__main__":
   Main(sys.argv)
