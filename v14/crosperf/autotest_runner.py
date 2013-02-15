@@ -16,9 +16,8 @@ class AutotestRunner(object):
           autotest_args, profile_counters, profile_type):
     if profile_counters and profile_type:
       profiler_args = "-e " + " -e ".join(profile_counters)
-      if profile_type == "record":
-        profiler_args += "-g"
-      autotest_args += ("--profile --profiler_args='%s' --profile_type='%s'"
+      # TODO(asharif): Add an option to do -g.
+      autotest_args += (" --profile --profiler_args='%s' --profile_type='%s'"
                         % (profiler_args, profile_type))
     options = ""
     if board:
