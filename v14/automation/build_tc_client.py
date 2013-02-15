@@ -19,10 +19,10 @@ p4_job = jobs.p4_job.P4Job(p4_port, p4_paths, p4_revision, p4_checkoutdir)
 setup_chromeos_job = jobs.setup_chromeos_job.SetupChromeOSJob(p4_job, "latest")
 
 build_tc_commands = []
-build_tc_commands.append("cd chromeos/src/scripts")
-build_tc_commands.append("../../../" + p4_checkoutdir +
-                         "/gcctools/chromeos/v14/build_tc.py" +
-                         " --toolchain_root=../../../" + p4_checkoutdir + "/gcctools")
+build_tc_commands.append(p4_checkoutdir + 
+                         "/gcctools/chromeos/v14/build_tc.py" + 
+                         " --toolchain_root=" + p4_checkoutdir + "/gcctools" +
+                         " --chromeos_root=" + "chromeos")
 tc_job = generic_job.GenericJob(build_tc_commands)
 tc_job.AddDependency(p4_job)
 tc_job.AddRequiredFolder(p4_job, "perforce2/gcctools/", "gcctools")
