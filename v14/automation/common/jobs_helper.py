@@ -3,6 +3,7 @@ from automation.common import machine_description
 import os
 import re
 import sys
+import time
 
 p4_checkout_dir = "perforce2"
 version_dir = "/gcctools/chromeos/v14/"
@@ -90,16 +91,27 @@ def GetP4VersionDirCommand(p4_snapshot=""):
 
 def CreateBuildTCJob(chromeos_version="top",
                      board="x86-generic",
-                     p4_snapshot=""):
+                     p4_snapshot="",
+                     toolchain="trunk"):
   p4_port = "perforce2:2666"
   p4_paths = []
   p4_paths.append(("//depot2/gcctools/chromeos/v14/...", "gcctools/chromeos/v14/..."))
-  p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/...",
-                   "gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/..."))
-  p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/...",
-                   "gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/..."))
-  p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/binutils/binutils-20100303/...",
-                   "gcctools/google_vendor_src_branch/binutils/binutils-20100303/..."))
+  if toolchain == "trunk":
+    toolchain_root = p4_checkout_dir + "/gcctools"
+    p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/...",
+                     "gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/..."))
+    p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/...",
+                     "gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/..."))
+    p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/binutils/binutils-20100303/...",
+                     "gcctools/google_vendor_src_branch/binutils/binutils-20100303/..."))
+  elif toolchain == "branch":
+    toolchain_root = p4_checkout_dir + "/branches/chromeos_toolchain_v1_release_branch/gcctools"
+    p4_paths.append(("//depot2/branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/...",
+                     "branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/..."))
+    p4_paths.append(("//depot2/branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/...",
+                     "branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/..."))
+    p4_paths.append(("//depot2/branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/binutils/binutils-20100303/...",
+                     "branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/binutils/binutils-20100303/..."))
   p4_revision = 1
 
   command = GetInitialCommand()
@@ -107,9 +119,9 @@ def CreateBuildTCJob(chromeos_version="top",
                                  p4_revision, p4_checkout_dir, p4_snapshot)
 
   if chromeos_version == "weekly":
-    command += "; sudo cp -rp " + GetWeeklyChromeOSLocation() + " chromeos"
+    command += "; cp -rp " + GetWeeklyChromeOSLocation() + " chromeos"
   elif chromeos_version == "quarterly":
-    command += " ; sudo cp -rp " + GetQuarterlyChromeOSLocation() + " chromeos"
+    command += " ; cp -rp " + GetQuarterlyChromeOSLocation() + " chromeos"
   elif (chromeos_version == "top" or chromeos_version == "latest" or
         re.match("^\d\.\d\.\d\.\d$", chromeos_version)):
     command += ("; " + p4_version_dir + "/setup_chromeos.py" +
@@ -117,10 +129,11 @@ def CreateBuildTCJob(chromeos_version="top",
                 " --version=" + chromeos_version +
                 " --minilayout")
   else:
-    command += "; sudo cp -rp " + chromeos_version + " chromeos"
+    command += "; cp -rp " + chromeos_version + " chromeos"
+
 
   command += ("; " + p4_version_dir + "/build_tc.py" +
-                      " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
+                      " --toolchain_root=" + toolchain_root +
                       " --chromeos_root=" + chromeos_root +
                       " --board=" + board +
                       " -f")
@@ -136,16 +149,16 @@ def CreateBuildAndTestChromeOSJob(tc_job, chromeos_version="latest",
   command += "; " + GetP4VersionDirCommand(p4_snapshot)
 
   if chromeos_version == "weekly":
-    command += "; sudo cp -rp " + GetWeeklyChromeOSLocation() + " chromeos"
+    command += "; cp -rp " + GetWeeklyChromeOSLocation() + " chromeos"
   elif chromeos_version == "quarterly":
-    command += " sudo cp -rp " + GetQuarterlyChromeOSLocation() + " chromeos"
+    command += " cp -rp " + GetQuarterlyChromeOSLocation() + " chromeos"
   elif (chromeos_version == "top" or chromeos_version == "latest" or
         re.match("^\d\.\d\.\d\.\d$", chromeos_version)):
     command += ("; " + p4_version_dir + "/setup_chromeos.py" +
                 " --dir=" + chromeos_root +
                 " --version=" + chromeos_version)
   else:
-    command += "; sudo cp -rp " + chromeos_version + " chromeos"
+    command += "; cp -rp " + chromeos_version + " chromeos"
 
   command += ("; " + p4_version_dir + "/build_tc.py" +
                       " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
@@ -163,7 +176,8 @@ def CreateBuildAndTestChromeOSJob(tc_job, chromeos_version="latest",
   command += ("; " + p4_version_dir + "/run_tests.py" + 
               " --remote=$SECONDARY_MACHINES[0] " +
               " --chromeos_root=" + chromeos_root +
-              " --board=" + board)
+              " --board=" + board +
+              " bvt Page")
 
   to_return = CreateLinuxJob(command)
   to_return.AddRequiredFolder(tc_job, p4_pkgs_dir, p4_pkgs_dir)
@@ -178,5 +192,21 @@ def CreateTestJob(build_chromeos_job):
   command = "&& ./run_remote_tests.sh --remote=" + hostname + " BuildVerify"
   to_return = CreateLinuxJob(command)
   to_return.AddRequiredFolder(p4_job, p4_version_dir, p4_version_dir)
+  return to_return
+
+def CreateUpdateJob(chromeos_version="weekly",
+                    location="/home/asharif/chromeos_checkouts/",
+                    p4_snapshot=""):
+  command = GetInitialCommand()
+  dirname = time.asctime()
+  dirname = dirname.replace(" ", "-")
+  command += "; " + GetP4VersionDirCommand(p4_snapshot)
+  command += "; mkdir -p " + location
+  command += ("; " + p4_version_dir + "/setup_chromeos.py" +
+              " --dir=" + location + "/chromeos." + dirname +
+              " --version=latest")
+  command += (" && ln -s -T chromeos." + dirname + " " +
+              location + "/weekly")
+  to_return = CreateLinuxJob(command)
   return to_return
 

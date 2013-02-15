@@ -25,7 +25,7 @@ def Main():
   parser.add_option("-b", "--board", dest="board",
                     help="The board of the target.")
 
-  tests = "BuildVerify"
+  tests = "bvt"
 
   (options, args) = parser.parse_args()
 
@@ -36,7 +36,8 @@ def Main():
   if options.chromeos_root is None:
     options.chromeos_root = "../.."
 
-  tests += " " + " ".join(args)
+  if args:
+    tests = " " + " ".join(args)
   return RunRemoteTests(options.chromeos_root, options.remote,
                         options.board, tests)
 
