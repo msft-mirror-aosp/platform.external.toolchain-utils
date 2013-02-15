@@ -4,12 +4,12 @@
 
 """Script to build ChromeOS benchmarks
 
-Inputs: 
+Inputs:
     chromeos_root
     toolchain_root
     board
     [chromeos/cpu/<benchname>|chromeos/browser/[pagecycler|sunspider]|chromeos/startup]
-    
+
     This script assumes toolchain has already been built in toolchain_root.
 
     chromeos/cpu/<benchname>
@@ -17,9 +17,9 @@ Inputs:
        - Copy build results to perflab-bin
 
     chromeos/startup
-       - Call build_chromeos to build image. 
+       - Call build_chromeos to build image.
        - Copy image to perflab-bin
-       
+
     chromeos/browser/*
        - Call build_chromebrowser to build image with new browser
        - Copy image to perflab-bin
@@ -45,7 +45,7 @@ KNOWN_BENCHMARKS = [
   'chromeos/browser/sunspider',
   'chromeos/cpu/bikjmp' ]
 
-# Commands to build CPU benchmarks. 
+# Commands to build CPU benchmarks.
 
 CPU_BUILDCMD_CLEAN = "cd /usr/local/toolchain_root/v14/third_party/android_bench/v2_0/CLOSED_SOURCE/%s;\
 python ../../scripts/bench.py --toolchain=/usr/bin --action=clean;"
@@ -64,26 +64,35 @@ def Usage(parser, message):
   sys.exit(0)
 
 
+def CreateRunsh(destdir, benchmark):
+  """Create run.sh script to run benchmark.  Perflab needs a run.sh that runs the benchmark."""
+  run_cmd = os.path.dirname(os.path.abspath(__file__)) + "/run_benchmarks.py"
+  contents = "#!/bin/sh\n%s $@ %s\n" % (run_cmd, benchmark)
+  runshfile = destdir + '/run.sh'
+  f = open(runshfile, 'w')
+  f.write(contents)
+  f.close()
+  cmd_executer.RunCommand('chmod +x %s' % runshfile)
+
+
 def CreateBinaryCopy(sourcedir, destdir):
-  """Create link in perflab-bin for now, instead of copies"""
+  """Create links in perflab-bin/destdir/* to sourcedir/* for now, instead of copies"""
 
   # check if sourcedir exists
   if not os.path.exists(sourcedir):
     utils.AssertError(False, "benchmark results %s does not exist." % sourcedir)
-    return
+    return 1
 
   # Deal with old copies - save off old ones for now.
-  # Note - if its a link, it doesn't do anything.
+  # Note - if its a link, it doesn't save anything.
   if os.path.exists(destdir):
+    command = 'rm -rf %s.old' % destdir
+    cmd_executer.RunCommand(command)
     command = 'mv %s %s.old' % (destdir, destdir)
     cmd_executer.RunCommand(command)
-  parentdir = os.path.dirname(destdir)
-
-  # create new directory if needed and link to absolute path
-  if not os.path.exists(parentdir):
-    os.makedirs(parentdir)
+  os.makedirs(destdir)
   sourcedir = os.path.abspath(sourcedir)
-  command = 'ln -s %s %s' % (sourcedir, destdir)
+  command = 'ln -s %s/* %s' % (sourcedir, destdir)
   cmd_executer.RunCommand(command)
 
 
@@ -98,10 +107,12 @@ def Main(argv):
                     help="The gcctools directory of your P4 checkout.")
   parser.add_option("-C", "--clean", dest="clean", action="store_true",
                     default=False, help="Clean up build."),
-  parser.add_option("-B", "--build", dest="build", action="store_true", 
+  parser.add_option("-B", "--build", dest="build", action="store_true",
                     default=False, help="Build benchmark."),
-  parser.add_option("-O", "--only_copy", dest="only_copy", action="store_true", 
+  parser.add_option("-O", "--only_copy", dest="only_copy", action="store_true",
                     default=False, help="Only copy to perflab-bin - no builds."),
+  parser.add_option("--workdir", dest="workdir", default=".",
+                    help="Work directory for perflab outputs.")
   parser.add_option("--clobber_chroot", dest="clobber_chroot",
                     action="store_true", help=
                     "Delete the chroot and start fresh", default=False)
@@ -126,7 +137,7 @@ def Main(argv):
     if arg not in KNOWN_BENCHMARKS:
      utils.AssertExit(False, "Bad benchmark %s specified" % arg)
 
-       
+
   if options.chromeos_root is None:
     Usage(parser, "--chromeos_root must be set")
 
@@ -146,16 +157,17 @@ def Main(argv):
       if options.clean:
         retval = build_chromeos.ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
                                               CPU_BUILDCMD_CLEAN % benchname)
-	utils.AssertError(retval == 0, "clean of benchmark %s failed." % arg)
+        utils.AssertError(retval == 0, "clean of benchmark %s failed." % arg)
       if options.build:
         retval = build_chromeos.ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                                              CPU_BUILDCMD_BUILD % (benchname, options.cflags, 
+                                              CPU_BUILDCMD_BUILD % (benchname, options.cflags,
                                               options.ldflags, options.makeopts))
-	utils.AssertError(retval == 0, "Build of benchmark %s failed." % arg)
+        utils.AssertError(retval == 0, "Build of benchmark %s failed." % arg)
       if retval == 0 and (options.build or options.only_copy):
         benchdir = 'third_party/android_bench/v2_0/CLOSED_SOURCE/%s' % benchname
-	linkdir = 'perflab-bin/%s' % benchdir
-	CreateBinaryCopy(benchdir, linkdir)
+        linkdir = '%s/perflab-bin/%s' % (options.workdir, arg)
+        CreateBinaryCopy(benchdir, linkdir)
+        CreateRunsh(linkdir, arg)
       if not found_err:
         found_err = retval
     elif re.match('chromeos/startup', arg):
@@ -171,16 +183,17 @@ def Main(argv):
                       "--clobber_board"
                      ]
         retval = build_chromeos.Main(build_args)
-	utils.AssertError(retval == 0, "Build of ChromeOS failed.")
+        utils.AssertError(retval == 0, "Build of ChromeOS failed.")
       if retval == 0 and (options.build or options.only_copy):
         benchdir = '%s/src/build/images/%s/latest' % (options.chromeos_root, options.board)
-	linkdir = 'perflab-bin/startup/latest'
-	CreateBinaryCopy(benchdir, linkdir)
+        linkdir = '%s/perflab-bin/startup/latest' % options.workdir
+        CreateBinaryCopy(benchdir, linkdir)
+        CreateRunsh(linkdir, arg)
       if not found_err:
         found_err = retval
     elif re.match('chromeos/browser', arg):
       if options.build:
-        # For now, re-build os. TBD: Change to call build_browser 
+        # For now, re-build os. TBD: Change to call build_browser
         build_args = [os.path.dirname(os.path.abspath(__file__)) + "/build_chrome_browser.py",
                       "--chromeos_root=" + options.chromeos_root,
                       "--toolchain_root=" + options.toolchain_root,
@@ -190,11 +203,12 @@ def Main(argv):
                       "--ldflags=" + options.ldflags
                      ]
         retval = build_chromeos.Main(build_args)
-	utils.AssertError(retval == 0, "Build of ChromeOS failed.")
+        utils.AssertError(retval == 0, "Build of ChromeOS failed.")
       if retval == 0 and (options.build or options.only_copy):
         benchdir = '%s/src/build/images/%s/latest' % (options.chromeos_root, options.board)
-	linkdir = 'perflab-bin/browser/latest'
-	CreateBinaryCopy(benchdir,linkdir)
+        linkdir = '%s/perflab-bin/browser/latest' % options.workdir
+        CreateBinaryCopy(benchdir,linkdir)
+        CreateRunsh(linkdir, arg)
       if not found_err:
         found_err = retval
 

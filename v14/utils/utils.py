@@ -56,3 +56,17 @@ def Deserialize(argument):
 def FormatQuotedCommand(command):
   return command.replace("\"", "\\\"")
 
+
+EXPECTCMD = '/usr/bin/expect -c "spawn %s %s; expect *Password:*; send -- \\"test0000\n\\"; interact;"'
+
+def ssh_cmd(sshargs):
+  """Guts of ssh_cmd"""
+
+  cmd = EXPECTCMD % ('ssh', sshargs)
+  return os.system(cmd)
+
+def scp_cmd(scpargs):
+  """Guts of scp_cmd"""
+
+  cmd = EXPECTCMD % ('scp', scpargs)
+  return os.system(cmd)
