@@ -57,7 +57,7 @@ class JobExecuter(threading.Thread):
       utils.RunCommand("ssh %s@%s -- mkdir -p %s" %
                                 (primary_machine.username, primary_machine.name,
                                  self.job.GetWorkDir()))
-      result = utils.RunCommand("ssh %s@%s -- cd %s ; %s" %
+      result = utils.RunCommand("ssh %s@%s -- \"cd %s && %s\"" %
                                 (primary_machine.username, primary_machine.name,
                                  self.job.GetWorkDir(),
                                  self.job.GetCommand()), True)
