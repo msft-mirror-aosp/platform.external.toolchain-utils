@@ -136,7 +136,7 @@ class CommandsFactory(object):
   def Setup(self):
     return cmd.Chain(
         'mkdir -p %s' % self.checkout_dir,
-        'cp ${HOME}/.p4config %s' % self.checkout_dir,
+        'cp ~/.p4config %s' % self.checkout_dir,
         'chmod u+w %s' % self.p4config_path,
         'echo "P4PORT=%s" >> %s' % (self.port, self.p4config_path),
         'echo "P4CLIENT=%s" >> %s' % (self.view.client, self.p4config_path))
@@ -146,7 +146,15 @@ class CommandsFactory(object):
     mappings = ['-a \"%s %s\"' % mapping for mapping in
                 self.view.AbsoluteMappings()]
 
-    return cmd.Shell('g4', 'client', *mappings)
+    # First command will create client with default mappings.  Second one will
+    # replace default mapping with desired.  Unfortunately, it seems that it
+    # cannot be done in one step.  P4EDITOR is defined to /bin/true because we
+    # don't want "g4 client" to enter real editor and wait for user actions.
+    return cmd.Wrapper(
+        cmd.Chain(
+            cmd.Shell('g4', 'client'),
+            cmd.Shell('g4', 'client', '--replace', *mappings)),
+        env={'P4EDITOR': '/bin/true'})
 
   def Sync(self):
     return cmd.Shell('g4', 'sync', '...')
@@ -162,8 +170,7 @@ class CommandsFactory(object):
                 self.Create(),
                 self.Sync(),
                 self.Remove()),
-            cwd=self.checkout_dir,
-            env={'P4CONFIG': '.p4config'}))
+            cwd=self.checkout_dir))
 
   def CheckoutFromSnapshot(self, snapshot):
     cmds = cmd.Chain()
