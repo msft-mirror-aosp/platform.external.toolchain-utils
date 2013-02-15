@@ -8,21 +8,22 @@ import signal
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 import sys
 
-from automation.common import command_executer
 from automation.common import logger
-from automation.server import job_group_manager
-from automation.server import job_manager
+from automation.common.command_executer import CommandExecuter
 from automation.server import machine_manager
+from automation.server.job_group_manager import JobGroupManager
+from automation.server.job_manager import JobManager
 
 
 class Server(object):
-  def __init__(self, machines_file=machine_manager.DEFAULT_MACHINES_FILE,
-               dry_run=False):
-    command_executer.InitCommandExecuter(dry_run)
+  def __init__(self, machines_file=None, dry_run=False):
+    CommandExecuter.Configure(dry_run)
 
-    self.job_manager = job_manager.JobManager(
-        machine_manager.MachineManager.FromMachineListFile(machines_file))
-    self.job_group_manager = job_group_manager.JobGroupManager(self.job_manager)
+    self.job_manager = JobManager(
+        machine_manager.MachineManager.FromMachineListFile(
+            machines_file or machine_manager.DEFAULT_MACHINES_FILE))
+
+    self.job_group_manager = JobGroupManager(self.job_manager)
 
   def ExecuteJobGroup(self, job_group, dry_run=False):
     job_group = pickle.loads(job_group)

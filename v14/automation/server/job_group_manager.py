@@ -7,9 +7,9 @@ import copy
 import os
 import threading
 
-from automation.common import command_executer
-from automation.common import logger
 from automation.common import command as cmd
+from automation.common import logger
+from automation.common.command_executer import CommandExecuter
 import automation.common.job_group
 from automation.server import job_manager
 
@@ -61,7 +61,7 @@ class JobGroupManager(object):
     self._configurator.Prepare(job_group)
 
     # Re/Create home directory for logs, etc.
-    command_executer.GetCommandExecuter().RunCommand(
+    CommandExecuter().RunCommand(
         cmd.Chain(cmd.RmTree(job_group.home_dir),
                   cmd.MakeDir(job_group.home_dir)))
 

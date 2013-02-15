@@ -4,12 +4,12 @@
 #
 
 import os.path
-import re
 import threading
 
 from automation.common import command as cmd
-from automation.common import command_executer
 from automation.common import job
+from automation.common.command_executer import CommandExecuter
+from automation.common.command_executer import CommandTerminator
 
 
 class JobExecuter(threading.Thread):
@@ -22,9 +22,8 @@ class JobExecuter(threading.Thread):
     self.listeners = listeners
     self.machines = machines
 
-    self._executer = command_executer.GetCommandExecuter(
-        self.job.logger, self.job.dry_run)
-    self._terminator = command_executer.CommandTerminator()
+    self._executer = CommandExecuter(self.job.logger, self.job.dry_run)
+    self._terminator = CommandTerminator()
 
   def _RunRemotely(self, command, fail_msg):
     exit_code = self._executer.RunCommand(command,

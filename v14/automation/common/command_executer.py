@@ -3,6 +3,8 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
 
+__author__ = "kbaclawski@google.com (Krystian Baclawski)"
+
 import fcntl
 import os
 import select
@@ -11,23 +13,17 @@ import time
 
 from automation.common import logger
 
-mock_default = False
-
-
-def InitCommandExecuter(mock=False):
-  global mock_default
-  # Whether to default to a mock command executer or not
-  mock_default = mock
-
-
-def GetCommandExecuter(logger_to_set=None, mock=False):
-  return CommandExecuter(logger_to_set, mock_default or mock)
-
 
 class CommandExecuter(object):
-  def __init__(self, logger_to_set=None, mock=False):
+  DRY_RUN = False
+
+  def __init__(self, logger_to_set=None, dry_run=False):
     self.logger = logger_to_set or logger.GetLogger()
-    self._mock = mock
+    self._dry_run = dry_run or self.DRY_RUN
+
+  @classmethod
+  def Configure(cls, dry_run):
+    cls.DRY_RUN = dry_run
 
   def RunCommand(self, cmd, machine=None, username=None,
                  command_terminator=None, command_timeout=None):
@@ -35,7 +31,7 @@ class CommandExecuter(object):
 
     cmd = str(cmd)
 
-    if self._mock:
+    if self._dry_run:
       logger.GetLogger().LogCmd(
           "(Mock) %s" % cmd, machine or "localhost", username or os.getlogin())
       return 0
