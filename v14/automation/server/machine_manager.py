@@ -11,55 +11,47 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 
 import csv
-from automation.common import machine
 import threading
+from automation.common import machine
 from utils import utils
 
-DEFAULT_MACHINES_FILE = utils.GetRoot(__file__)[0] + "/test_pool.csv"
+DEFAULT_MACHINES_FILE = "%s/test_pool.csv" % utils.GetRoot(__file__)[0]
 
 
-class MachineManager:
+class MachineManager(object):
   def __init__(self, machines_file=DEFAULT_MACHINES_FILE):
     self.ConstructMachineList(machines_file)
     self.reenterant_lock = threading.RLock()
 
-
   def __str__(self):
-    return str(self.global_pool)
-
+    return "%s" % self.global_pool
 
   def ConstructMachineList(self, machines_file):
-    csv_file = csv.reader(open(machines_file, 'rb'),
-                          delimiter=",", quotechar="\"")
-    machines = []
-    # Header
+    csv_file = csv.reader(open(machines_file, "rb"), delimiter=",",
+                          quotechar="\"")
+    # Skip header
     csv_file.next()
-    for line in csv_file:
-      machines.append(machine.Machine(line[0], line[1],
-                                      int(line[2]), line[3], line[4]))
-
     # First populate the global pool.
-    self.global_pool = machines
+    self.global_pool = [machine.Machine(host, arch, int(cores), os, user)
+                        for host, arch, cores, os, user in csv_file]
 
-  def _GetMachine(self, machine_description):
-    output_pool = []
+  def _GetMachine(self, mach_spec):
+    output_pool = [m for m in self.global_pool if mach_spec.IsMatch(m)]
 
-    for m in self.global_pool:
-      if machine_description.IsMatch(m):
-        output_pool.append(m)
-
-    if len(output_pool) == 0:
+    if not output_pool:
       return None
 
     result = output_pool[0]
-    for machine in output_pool:
-      if machine.name in machine_description.preferred_machines:
-        result = machine
-        break
-      elif machine.uses < result.uses:
-        result = machine
 
-    if machine_description.lock_required:
+    for mach in output_pool:
+      if mach.name in mach_spec.preferred_machines:
+        result = mach
+        break
+      elif mach.uses < result.uses:
+        # get a machine with minimum uses
+        result = mach
+
+    if mach_spec.lock_required:
       result.locked = True
     result.uses += 1
 
@@ -69,29 +61,27 @@ class MachineManager:
     self.reenterant_lock.acquire(True)
     acquired_machines = []
 
-    for machine_description in required_machines:
+    for mach_spec in required_machines:
+      mach = self._GetMachine(mach_spec)
 
-      machine = self._GetMachine(machine_description)
-
-      if machine == None:
+      if not mach:
         # Roll back acquires
         self.ReturnMachines(acquired_machines)
         acquired_machines = None
         break
 
-      acquired_machines.append(machine)
+      acquired_machines.append(mach)
 
     self.reenterant_lock.release()
 
     return acquired_machines
 
-
   def ReturnMachines(self, machines):
     # lock here (re-entrant)
     self.reenterant_lock.acquire(True)
-    for machine in machines:
-      machine.uses -= 1
-      if machine.uses == 0:
-        machine.locked = False
+    for mach in machines:
+      mach.uses -= 1
+      if mach.uses == 0:
+        mach.locked = False
     self.reenterant_lock.release()
     # unlock

@@ -1,6 +1,6 @@
 import getpass
 from automation.common import job
-from automation.common.machine_description import MachineSpecification
+from automation.common.machine import MachineSpecification
 import os
 import re
 import sys
