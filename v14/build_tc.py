@@ -81,8 +81,7 @@ def Main():
 
   if options.incremental is None and not options.clean:
     install_dir = rootdir + "/install"
-    package_dir = (rootdir + "/pkgs/" + target + "/" +
-                   "cross-" + target + "/")
+    package_dir = (rootdir + "/pkgs/")
     retval = InstallTC(package_dir, install_dir)
     utils.AssertTrue(retval == 0, "Installation of the toolchain failed!")
 
@@ -107,9 +106,10 @@ def EscapeQuoteString(string):
 
 
 def InstallTC(package_dir, install_dir):
-  command = ("mkdir -p " + install_dir + ";")
-  command += ("for f in " + package_dir + "*; do tar xvf $f -C " + install_dir +
-              "; done")
+  command = ("mkdir -p " + install_dir)
+  command += ("&& for f in $(find " + package_dir +
+              " -name \\*.tbz2); do tar xvf $f -C " +
+              install_dir + "; done")
   retval = utils.RunCommand(command)
   return retval
 
