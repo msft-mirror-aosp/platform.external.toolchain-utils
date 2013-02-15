@@ -15,33 +15,26 @@ class Column(object):
         return True
       return False
 
-  def _CountValues(self, results):
-    count = 0
-    for _ in range(len(results)):
-      if count is not None:
-        count += 1
-    return count
-
-  def _Average(self, results):
-    total = 0
+  def _StripNone(self, results):
+    res = []
     for result in results:
       if result is not None:
-        total += result
-    return total / self._CountValues(results)
+        res.append(result)
+    return res
 
 
 class MinColumn(Column):
   def Compute(self, results, baseline_results):
     if self._ContainsString(results):
       return "-"
-    return min(results)
+    return min(self._StripNone(results))
 
 
 class MaxColumn(Column):
   def Compute(self, results, baseline_results):
     if self._ContainsString(results):
       return "-"
-    return max(results)
+    return max(self._StripNone(results))
 
 
 class MeanColumn(Column):
@@ -62,6 +55,7 @@ class MeanColumn(Column):
       else:
         return "SOME FAIL"
 
+    results = self._StripNone(results)
     return float(sum(results)) / len(results)
 
 
@@ -73,17 +67,14 @@ class StandardDeviationColumn(Column):
     if self._ContainsString(results):
       return "-"
 
-    n = self._CountValues(results)
-    average = self._Average(results)
+    results = self._StripNone(results)
+    n = len(results)
+    average = sum(results) / n
     total = 0
     for result in results:
-      if not result:
-        continue
       total += (result - average) ** 2
 
-    result = math.sqrt(total / n)
-
-    return result
+    return math.sqrt(total / n)
 
 
 class RatioColumn(Column):
@@ -94,8 +85,10 @@ class RatioColumn(Column):
     if self._ContainsString(results) or self._ContainsString(baseline_results):
       return "-"
 
-    result_mean = self._Average(results)
-    baseline_mean = self._Average(baseline_results)
+    results = self._StripNone(results)
+    baseline_results = self._StripNone(baseline_results)
+    result_mean = sum(results) / len(results)
+    baseline_mean = sum(baseline_results) / len(baseline_results)
 
     return result_mean / baseline_mean
 
@@ -108,8 +101,10 @@ class DeltaColumn(Column):
     if self._ContainsString(results) or self._ContainsString(baseline_results):
       return "-"
 
-    result_mean = self._Average(results)
-    baseline_mean = self._Average(baseline_results)
+    results = self._StripNone(results)
+    baseline_results = self._StripNone(baseline_results)
+    result_mean = sum(results) / len(results)
+    baseline_mean = sum(baseline_results) / len(baseline_results)
 
     res = 100 * (result_mean - baseline_mean) / baseline_mean
     return res
@@ -120,7 +115,7 @@ class IterationsCompleteColumn(Column):
     super(IterationsCompleteColumn, self).__init__(name)
 
   def Compute(self, results, baseline_results):
-    return self._CountValues(results)
+    return len(self._StripNone(results))
 
 
 class IterationColumn(Column):
