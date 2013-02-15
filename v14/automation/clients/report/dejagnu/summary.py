@@ -7,6 +7,7 @@
 from collections import namedtuple
 from datetime import datetime
 from itertools import groupby
+import logging
 import os.path
 import re
 
@@ -119,6 +120,8 @@ class Summary(object):
     return 'BODY'
 
   def Analyse(self):
+    logging.info('Reading "%s" DejaGNU report file.', self._filename)
+
     with open(self._filename, 'r') as report:
       lines = [line.strip() for line in report.readlines() if line.strip()]
 
@@ -129,6 +132,8 @@ class Summary(object):
         part = self._ParseHeader(line)
       elif part is 'BODY':
         part = self._ParseBody(line)
+
+    logging.info('DejaGNU report file parsed successfully.')
 
   @transaction.commit_manually
   def Save(self):
@@ -141,6 +146,9 @@ class Summary(object):
                                           host=self._test_run['host'],
                                           target=self._test_run['target'])
     test_run_obj.save()
+
+    logging.info('Storing report for: %s, %s @%s, %s', test_run_obj.build,
+                 test_run_obj.name, test_run_obj.board, test_run_obj.date)
 
     type_key = lambda v: v.result
     test_results_by_type = sorted(self._test_results, key=type_key)
@@ -175,3 +183,5 @@ class Summary(object):
                                     result=res.result).save()
 
     transaction.commit()
+
+    logging.info('Report stored successfully.')
