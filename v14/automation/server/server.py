@@ -33,7 +33,7 @@ class Server:
     return utils.Serialize(self.job_group_manager.GetAllJobGroups())
 
   def KillJobGroup(self, job_group_id):
-    self.job_manager.KillJobGroup(utils.Deserialize(job_group_id))
+    self.job_group_manager.KillJobGroup(utils.Deserialize(job_group_id))
 
   def GetJobGroup(self, job_group_id):
     job_group = self.job_group_manager.GetJobGroup(job_group_id)

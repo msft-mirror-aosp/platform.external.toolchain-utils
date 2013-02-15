@@ -20,7 +20,7 @@ def Main(argv):
   parser.add_option("-b",
                     "--board",
                     dest="board",
-                    default="x86-agz",
+                    default="x86-generic",
                     help="Board to use for the nightly job."
                     )
   parser.add_option("-l",
