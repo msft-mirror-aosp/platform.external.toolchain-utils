@@ -78,12 +78,16 @@ class JobManager(threading.Thread):
         ready_job = self.ready_jobs.pop()
 
         required_machines = ready_job.GetRequiredMachines()
+        for child in ready_job.GetChildren():
+          required_machines[0].AddPreferredMachine(child.GetMachine().name)
+
         machines = self.machine_manager.GetMachines(required_machines)
         if machines is None:
+          # If we can't get the necessary machines right now, simply wait
+          # for some jobs to complete
           self.ready_jobs.insert(0, ready_job)
         else:
-          executer = job_executer.JobExecuter(ready_job,
-                                              machines, self)
+          executer = job_executer.JobExecuter(ready_job, machines, self)
           executer.start()
 
 

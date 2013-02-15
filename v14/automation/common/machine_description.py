@@ -3,6 +3,7 @@ class MachineDescription:
     self.name = name
     self.os = os
     self.lock_required = lock_required
+    self.preferred_machines = []
 
   def SetLockRequired(self, lock_required):
     self.lock_required = lock_required
@@ -17,3 +18,9 @@ class MachineDescription:
       return True
     if self.os and machine.os == self.os:
       return True
+
+  def GetPreferredMachines(self):
+    return self.preferred_machines
+
+  def AddPreferredMachine(self, name):
+    self.preferred_machines.append(name)

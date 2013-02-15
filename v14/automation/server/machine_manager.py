@@ -40,41 +40,49 @@ class MachineManager:
                                       int(line[2]), line[3], line[4]))
 
     # First populate the global pool.
-    self.global_pool = machine_pool.MachinePool(machines)
+    self.global_pool = machines
 
   def _GetMachine(self, machine_description):
-    output_pool = machine_pool.MachinePool()
+    output_pool = []
 
     for m in self.global_pool:
       if machine_description.IsMatch(m):
-        output_pool.AddMachine(m)
+        output_pool.append(m)
 
-    if output_pool.Size() == 0:
+    if len(output_pool) == 0:
       return None
 
-    result = output_pool.GetMachine(0)
+    result = output_pool[0]
+    for machine in output_pool:
+      if machine.name in machine_description.GetPreferredMachines():
+        result = machine
+        break
+      elif machine.uses < result.uses:
+        result = machine
+
     if machine_description.IsLockRequired() == True:
       result.locked = True
     result.uses += 1
 
     return result
 
-  def GetMachines(self, machine_descriptions):
-    # lock here (re-entrant)
-    if self.reenterant_lock.acquire(False) == False:
-      return []
+  def GetMachines(self, required_machines):
+    self.reenterant_lock.acquire(True)
     acquired_machines = []
-    for machine_description in machine_descriptions:
+
+    for machine_description in required_machines:
+
       machine = self._GetMachine(machine_description)
+      acquired_machines.append(machine)
+
       if machine == None:
         # Roll back acquires
         self.ReturnMachines(acquired_machines)
-        self.reenterant_lock.release()
-        return None
-      acquired_machines.append(machine)
+        acquired_machines = None
+        break
 
-    # unlock here
     self.reenterant_lock.release()
+
     return acquired_machines
 
 

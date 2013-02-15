@@ -25,37 +25,37 @@ class MockCommandExecuter:
   def __init__(self):
     self.logger = logger.GetLogger()
 
-  def RunCommand(self, cmd, return_output=False):
-    pass
+  def RunCommand(self, cmd, return_output=False, machine=None, username=None):
+    logger.GetLogger().Logcmd("(Mock) Executing: '%s' on machine '%s@%s'"
+                              % (cmd, username, machine))
 
-  def RunCommands(self, cmdlist, return_output=False):
-    cmd = " ; " .join(cmdlist)
-    return self.RunCommand(cmd, return_output)
+  def RunCommands(self, cmdlist, return_output=False, machine=None,
+                  username=None):
+    cmd = " ;\n" .join(cmdlist)
+    return self.RunCommand(cmd, return_output, machine, username)
 
-  def CopyFiles(self, src, dest, src_machine="", dest_machine="", recursive=True):
-    pass
-
-  def RunCommandOverSSH(self, cmd, machine):
-    pass
-
-  def RunCommandsOverSSH(self, cmds, machine):
-    pass
-
-  def AtomicMkdir(self, newdir):
-    pass
-
+  def CopyFiles(self, src, dest, src_machine=None, dest_machine=None,
+                username=None, recursive=True):
+    logger.GetLogger().LogOutput("(Mock) Doing copy from '%s:%s' to '%s:%s'" %
+                                 (src_machine, src, dest_machine, dest))
 
 class CommandExecuter:
   def __init__(self):
     self.logger = logger.GetLogger()
 
-  def RunCommand(self, cmd, return_output=False):
+  def RunCommand(self, cmd, return_output=False, machine=None,
+                 username=None):
     """Run a command."""
-    cmdlist = ["bash", "-c", cmd]
-    self.logger.Logcmd(cmdlist)
+    if machine is not None:
+      user = ""
+      if username is not None:
+        user = username + "@"
+      cmd = "ssh %s%s -- bash <<\EOF\n%s\nEOF" % (user, machine, cmd)
 
-    p = subprocess.Popen(cmdlist, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, stdin=sys.stdin)
+    self.logger.Logcmd(cmd)
+
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, stdin=sys.stdin, shell=True)
 
     full_stdout = ""
     full_stderr = ""
@@ -84,16 +84,12 @@ class CommandExecuter:
       return (p.returncode, full_stdout, full_stderr)
     return p.returncode
 
-  def RunCommands(self, cmdlist, return_output=False):
-    cmd = " ; " .join(cmdlist)
-    return self.RunCommand(cmd, return_output)
+  def RunCommands(self, cmdlist, return_output=False, machine=None,
+                  username=None):
+    cmd = " ;\n" .join(cmdlist)
+    return self.RunCommand(cmd, return_output, machine, username)
 
   def CopyFiles(self, src, dest, src_machine="", dest_machine="", recursive=True):
     pass
 
-  def RunCommandOverSSH(self, cmd, machine):
-    pass
-
-  def RunCommandsOverSSH(self, cmds, machine):
-    pass
 
