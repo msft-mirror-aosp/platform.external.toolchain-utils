@@ -14,8 +14,9 @@ class PerfProcessor(object):
       self.report = report
       self.output = output
 
-  def __init__(self):
-    self._ce = command_executer.GetCommandExecuter()
+  def __init__(self, logger_to_use=None):
+    self._logger = logger_to_use
+    self._ce = command_executer.GetCommandExecuter(self._logger)
 
   def GeneratePerfResults(self, results_dir, chromeos_root, board):
     perf_location = os.path.join(results_dir,

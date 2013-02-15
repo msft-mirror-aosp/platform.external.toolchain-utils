@@ -47,7 +47,7 @@ class CacheConditions(object):
 class ResultsCache(object):
   def Init(self, chromeos_image, chromeos_root, autotest_name, iteration,
            autotest_args, remote, board, cache_conditions,
-           cache_logger=None):
+           logger_to_use):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.autotest_name = autotest_name
@@ -56,10 +56,7 @@ class ResultsCache(object):
     self.remote = remote
     self.board = board
     self.cache_conditions = cache_conditions
-    if cache_logger:
-      self._logger = cache_logger
-    else:
-      self._logger = logger.GetLogger()
+    self._logger = logger_to_use
     self._ce = command_executer.GetCommandExecuter(self._logger)
 
   def _GetCacheDirForRead(self):
@@ -147,7 +144,7 @@ class ResultsCache(object):
       raise Exception("Couldn't store autotest output directory.")
 
   def ReadAutotestOutput(self, destination):
-    cache_dir = self._GetCacheDirForWrite()
+    cache_dir = self._GetCacheDirForRead()
     tarball = os.path.join(cache_dir, AUTOTEST_TARBALL)
     if not os.path.exists(tarball):
       raise Exception("Cached autotest tarball does not exist at '%s'." %

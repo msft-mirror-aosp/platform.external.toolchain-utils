@@ -23,12 +23,11 @@ class BenchmarkRun(threading.Thread):
   def __init__(self, name, benchmark_name, autotest_name, autotest_args,
                label_name, chromeos_root, chromeos_image, board, iteration,
                cache_conditions, outlier_range, profile_counters, profile_type,
-               machine_manager, cache, autotest_runner, perf_processor):
+               machine_manager, cache, autotest_runner, perf_processor,
+               logger_to_use):
     threading.Thread.__init__(self)
     self.name = name
-    self._logger = logger.Logger(os.path.dirname(__file__),
-                                 "%s.%s" % (os.path.basename(__file__),
-                                            self.name), True)
+    self._logger = logger_to_use
     self.benchmark_name = benchmark_name
     self.autotest_name = autotest_name
     self.autotest_args = autotest_args

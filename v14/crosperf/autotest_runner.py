@@ -7,8 +7,9 @@ from utils import utils
 
 
 class AutotestRunner(object):
-  def __init__(self):
-    self._ce = command_executer.GetCommandExecuter()
+  def __init__(self, logger_to_use=None):
+    self._logger = logger_to_use
+    self._ce = command_executer.GetCommandExecuter(self._logger)
     self._ct = command_executer.CommandTerminator()
 
   def Run(self, machine_name, chromeos_root, board, autotest_name,
