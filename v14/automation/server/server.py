@@ -4,6 +4,14 @@ import SimpleXMLRPCServer
 import optparse
 from utils import command_executer
 import machine_manager
+import signal
+from utils import logger
+import sys
+import socket
+
+def HandleKeyboardInterrupt(signalNumber, frame) :
+  server.StopServer()
+  sys.exit(1)
 
 class Server:
 
@@ -18,26 +26,30 @@ class Server:
     #TODO(raymes): Verify that the job graph is valid. I.e. every
     # dependency has been transmitted to the server.
     # Check that all jobs have a required machine
+    ids = []
     job_group = utils.Deserialize(job_group)
     for current_job in job_group:
-      self.job_manager.AddJob(current_job)
-
+      id = self.job_manager.AddJob(current_job)
+      ids.append(id)
+    return ids
 
   def GetAllJobs(self):
     jobs_dict = {}
     jobs_dict["all"] = self.job_manager.all_jobs
     jobs_dict["ready"] = self.job_manager.ready_jobs
-    jobs_dict["pending"] = self.job_manager.pending_jobs
-    jobs_dict["executing"] = self.job_manager.executing_jobs
-    jobs_dict["completed"] = self.job_manager.completed_jobs
 
+  def KillJob(self, job_id):
+    self.job_manager.KillJob(utils.Deserialize(job_id))
 
   def StartServer(self):
-    print "Started server thread."
+    logger.GetLogger().LogOutput("Starting server...")
     self.job_manager.StartJobManager()
 
   def StopServer(self):
+    logger.GetLogger().LogOutput("Stopping server...")
     self.job_manager.StopJobManager()
+    self.job_manager.join()
+    logger.GetLogger().LogOutput("Stopped server.")
 
 if __name__ == "__main__":
   parser = optparse.OptionParser()
@@ -50,16 +62,17 @@ if __name__ == "__main__":
                     "not actually be executed.",
                     action="store_true", default=False)
   options = parser.parse_args()[0]
+  global server
   server = Server(options.machines_file, options.dry_run)
+  signal.signal(signal.SIGINT, HandleKeyboardInterrupt)
   server.StartServer()
-  xmlserver = SimpleXMLRPCServer.SimpleXMLRPCServer(("localhost", 8000),
-                                                  allow_none=True)
-  xmlserver.register_instance(server)
   try:
-    xmlserver.serve_forever()
-  except (KeyboardInterrupt, SystemExit):
-    print "Caught exception... Cleaning up."
+    xmlserver = SimpleXMLRPCServer.SimpleXMLRPCServer(("localhost", 8000),
+                                                      allow_none=True)
+  except StandardError as e:
+    logger.GetLogger().LogError(str(e))
     server.StopServer()
-    raise
-
+    sys.exit(1)
+  xmlserver.register_instance(server)
+  xmlserver.serve_forever()
 

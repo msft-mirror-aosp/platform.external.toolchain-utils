@@ -1,5 +1,7 @@
 import threading
 import job_executer
+import automation.common.job
+from utils import logger
 
 JOB_MANAGER_STARTED = 1
 JOB_MANAGER_STOPPING = 2
@@ -11,9 +13,7 @@ class JobManager(threading.Thread):
     threading.Thread.__init__(self)
     self.all_jobs = []
     self.ready_jobs = []
-    self.pending_jobs = []
-    self.executing_jobs = []
-    self.completed_jobs = []
+    self.job_executer_mapping = {}
 
     self.machine_manager = machine_manager
 
@@ -34,34 +34,55 @@ class JobManager(threading.Thread):
 
   def StopJobManager(self):
     self.job_lock.acquire()
+    for job in self.all_jobs:
+      self._KillJob(job.GetID())
+
     if self.status == JOB_MANAGER_STARTED:
       self.status = JOB_MANAGER_STOPPING
     self.job_lock.release()
     self.job_ready_event.set()
 
+  def KillJob(self, job_id):
+    self.job_lock.acquire()
+    self._KillJob(job_id)
+    self.job_lock.release()
+
+
+  def _KillJob(self, job_id):
+    logger.GetLogger().LogOutput("Killing job with ID '%s'." % str(job_id))
+    if job_id in self.job_executer_mapping:
+      self.job_executer_mapping[job_id].Kill()
+    for job in self.ready_jobs:
+      if job.GetID() == job_id:
+        self.ready_jobs.remove(job)
+
   def AddJob(self, current_job):
     self.job_lock.acquire()
 
-    current_job.SetID(self.job_counter)
+    current_job_id = self.job_counter
+    current_job.SetID(current_job_id)
     self.job_counter += 1
 
     self.all_jobs.append(current_job)
     # Only queue a job as ready if it has no dependencies
     if current_job.IsReady():
       self.ready_jobs.append(current_job)
-    else:
-      self.pending_jobs.append(current_job)
+
 
     self.job_lock.release()
     self.job_ready_event.set()
+    return current_job_id
 
 
-  def NotifyJobComplete(self, job):
+  def NotifyJobComplete(self, job, status):
     self.job_lock.acquire()
-    for parent in job.GetParents():
-      if parent.IsReady():
-        self.ready_jobs.append(parent)
-        self.pending_jobs.remove(parent)
+    job.SetStatus(status)
+    if status == automation.common.job.STATUS_COMPLETED:
+      for parent in job.GetParents():
+        if parent.IsReady():
+          self.ready_jobs.append(parent)
+
+    del self.job_executer_mapping[job.GetID()]
 
     self.job_lock.release()
     self.job_ready_event.set()
@@ -87,11 +108,14 @@ class JobManager(threading.Thread):
           # for some jobs to complete
           self.ready_jobs.insert(0, ready_job)
         else:
+          # Mark as executing 
+          ready_job.SetStatus(automation.common.job.STATUS_EXECUTING)
           executer = job_executer.JobExecuter(ready_job, machines, self)
           executer.start()
+          self.job_executer_mapping[ready_job.GetID()] = executer
 
-
-      if self.status == JOB_MANAGER_STOPPING:
+      if (self.status == JOB_MANAGER_STOPPING and
+          len(self.job_executer_mapping) == 0):
         self.status = JOB_MANAGER_STOPPED
         return
 

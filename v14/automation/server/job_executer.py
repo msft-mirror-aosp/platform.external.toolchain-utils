@@ -1,8 +1,7 @@
 import threading
 from automation.common import job
-import machine_manager
-import re
 from utils import utils
+import re
 from utils import logger
 from utils import command_executer
 
@@ -16,16 +15,21 @@ class JobExecuter(threading.Thread):
     self.job = job
     self.job_manager = job_manager
     self.machines = machines
+    self.command_terminator = command_executer.CommandTerminator()
 
 
-  def FinishJobIfFailed(self, return_value, fail_message):
+  def _IsJobFailed(self, return_value, fail_message):
     if return_value == 0:
-      return
+      return False
     else:
       logger.GetLogger().LogError("Job failed. Exit code %s. %s"
                                   % (return_value, fail_message))
-      self.job.SetStatus(job.STATUS_FAILED)
-      self.job_manager.NotifyJobComplete(self.job)
+      if self.command_terminator.IsTerminated():
+        logger.GetLogger().LogOutput("Job '%s' was killed"
+                                     % str(self.job.GetID()))
+      self.job_manager.NotifyJobComplete(self.job, job.STATUS_FAILED)
+      return True
+
 
   def _FormatCommand(self, command):
     ret = command
@@ -38,10 +42,11 @@ class JobExecuter(threading.Thread):
 ###             ret[mo.end():])
     return ret
 
-  def run(self):
-    # Mark as executing 
-    self.job.SetStatus(job.STATUS_EXECUTING)
+  def Kill(self):
+    self.command_terminator.Terminate()
 
+
+  def run(self):
     # Set job directory
     job_dir = JOBDIR_PREFIX + str(self.job.GetID())
     self.job.SetJobDir(job_dir)
@@ -57,14 +62,18 @@ class JobExecuter(threading.Thread):
     rm_success = self.cmd_executer.RunCommand("sudo rm -rf %s" %
                                               self.job.GetJobDir(),
                                               False, primary_machine.name,
-                                              primary_machine.username)
-    self.FinishJobIfFailed(rm_success, "rm of old job directory Failed.")
+                                              primary_machine.username,
+                                              self.command_terminator)
+    if self._IsJobFailed(rm_success, "rm of old job directory Failed."):
+      return
 
     mkdir_success = self.cmd_executer.RunCommand("mkdir -p %s" %
                                                  self.job.GetWorkDir(),
                                                  False, primary_machine.name,
-                                                 primary_machine.username)
-    self.FinishJobIfFailed(mkdir_success, "mkdir of new job directory Failed.")
+                                                 primary_machine.username,
+                                                 self.command_terminator)
+    if self._IsJobFailed(mkdir_success, "mkdir of new job directory Failed."):
+      return
 
     for required_folder in self.job.GetRequiredFolders():
       to_folder = self.job.GetWorkDir() + "/" + required_folder.dest
@@ -80,14 +89,17 @@ class JobExecuter(threading.Thread):
         symlink_success = self.cmd_executer.RunCommand("ln -sf %s %s" %
                                                        (from_folder, to_folder),
                                                        False,
-                                                       from_machine, from_user)
-        self.FinishJobIfFailed(symlink_success, "Failed to create symlink to "
-                               "required directory.")
+                                                       from_machine, from_user,
+                                                       self.command_terminator)
+        if self._IsJobFailed(symlink_success, "Failed to create symlink to "
+                             "required directory."):
+          return
       else:
         copy_success = self.cmd_executer.CopyFiles(from_folder, to_folder,
                                                    from_machine, to_machine,
                                                    from_user, to_user, True)
-        self.FinishJobIfFailed(copy_success, "Failed to copy required files.")
+        if self._IsJobFailed(copy_success, "Failed to copy required files."):
+          return
 
     command = self.job.GetCommand()
 
@@ -98,15 +110,16 @@ class JobExecuter(threading.Thread):
                                   "source ~/.bashrc ; cd %s && %s"
                                   % (self.job.GetWorkDir(), command), False,
                                   primary_machine.name,
-                                  primary_machine.username))
+                                  primary_machine.username,
+                                  self.command_terminator))
 
-    self.FinishJobIfFailed(command_success, "Command failed to execute: '%s'."
-                           % command)
+    if self._IsJobFailed(command_success,
+                         "Command failed to execute: '%s'." % command):
+      return
 
     # If we get here, the job succeeded. 
     logger.GetLogger().LogOutput("Job completed successfully.")
-    self.job.SetStatus(job.STATUS_COMPLETED)
-    self.job_manager.NotifyJobComplete(self.job)
+    self.job_manager.NotifyJobComplete(self.job, job.STATUS_COMPLETED)
 
 
 
