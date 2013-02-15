@@ -31,7 +31,7 @@ def Usage(parser):
 
 
 def GetTags():
-  res = utils.DoCommand(GIT_TAGS_CMD)
+  res = utils.RunCommand(GIT_TAGS_CMD, True)
   return res[1].strip().split("\n")
 
 
