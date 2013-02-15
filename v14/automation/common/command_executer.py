@@ -3,8 +3,8 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
 
+import fcntl
 import os
-import pty
 import select
 import subprocess
 import time
@@ -21,142 +21,102 @@ def InitCommandExecuter(mock=False):
 
 
 def GetCommandExecuter(logger_to_set=None, mock=False):
-  # If the default is a mock executer, always return one.
-  if mock_default or mock:
-    return MockCommandExecuter(logger_to_set)
-  else:
-    return CommandExecuter(logger_to_set)
+  return CommandExecuter(logger_to_set, mock_default or mock)
 
 
 class CommandExecuter(object):
-  def __init__(self, logger_to_set=None):
-    if logger_to_set is not None:
-      self.logger = logger_to_set
-    else:
-      self.logger = logger.GetLogger()
+  def __init__(self, logger_to_set=None, mock=False):
+    self.logger = logger_to_set or logger.GetLogger()
+    self._mock = mock
 
-  def RunCommand(self, cmd, return_output=False, machine=None,
-                 username=None, command_terminator=None,
-                 command_timeout=None,
-                 terminated_timeout=10):
+  def RunCommand(self, cmd, machine=None, username=None,
+                 command_terminator=None, command_timeout=None):
     """Run a command."""
 
     cmd = str(cmd)
 
+    if self._mock:
+      logger.GetLogger().LogCmd(
+          "(Mock) %s" % cmd, machine or "localhost", username or os.getlogin())
+      return 0
+
     self.logger.LogCmd(cmd, machine, username)
+
     if command_terminator and command_terminator.IsTerminated():
       self.logger.LogError("Command was terminated!")
       return 1
 
-    if machine is not None:
-      user = ""
-      if username is not None:
-        user = username + "@"
-      cmd = "ssh -t -t %s%s -- '%s'" % (user, machine, cmd)
+    # Rewrite command for remote execution.
+    if machine:
+      if username:
+        login = "%s@%s" % (username, machine)
+      else:
+        login = machine
 
-    pty_fds = pty.openpty()
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE,
-                         stdin=pty_fds[0], shell=True)
+      cmd = "ssh -T -n %s -- '%s'" % (login, cmd)
 
-    full_stdout = ""
-    full_stderr = ""
+    return self._SpawnProcess(cmd, command_terminator, command_timeout)
 
-    # Pull output from pipes, send it to file/stdout/string
-    out = err = None
-    pipes = [p.stdout, p.stderr]
+  def _SpawnProcess(self, cmd, command_terminator, command_timeout):
+    # Create command's process.
+    child = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
-    terminated_time = None
     started_time = time.time()
 
+    # Watch for data on process stdout, stderr.
+    pipes = [child.stdout, child.stderr]
+
+    # Put pipes into non-blocking mode.
+    for pipe in pipes:
+      fd = pipe.fileno()
+      fd_flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+      fcntl.fcntl(fd, fcntl.F_SETFL, fd_flags | os.O_NONBLOCK)
+
     while pipes:
-      fds = select.select(pipes, [], [], 0.1)
+      # Wait for pipes to become ready.
+      ready_pipes, _, _ = select.select(pipes, [], [], 0.1)
+
+      # Maybe termination request was received?
       if command_terminator and command_terminator.IsTerminated():
-        self.RunCommand("sudo kill -9 " + str(p.pid))
-        wait = p.wait()
-        self.logger.LogError("Command was terminated!")
-        return wait
-      for fd in fds[0]:
-        if fd == p.stdout:
-          out = os.read(p.stdout.fileno(), 16384)
-          if return_output:
-            full_stdout += out
-          self.logger.LogCommandOutput(out)
-          if not out:
-            pipes.remove(p.stdout)
-        if fd == p.stderr:
-          err = os.read(p.stderr.fileno(), 16384)
-          if return_output:
-            full_stderr += err
-          self.logger.LogCommandError(err)
-          if not err:
-            pipes.remove(p.stderr)
-
-      if p.poll() is not None:
-        if terminated_time is None:
-          terminated_time = time.time()
-        elif (terminated_timeout is not None and
-              time.time() - terminated_time > terminated_timeout):
-          m = ("Timeout of %s seconds reached since process termination."
-               % terminated_timeout)
-          self.logger.LogWarning(m)
-          break
-
-      if (command_timeout is not None and
-          time.time() - started_time > command_timeout):
-        m = ("Timeout of %s seconds reached since process started."
-             % command_timeout)
-        self.logger.LogWarning(m)
-        self.RunCommand("kill %d || sudo kill %d || sudo kill -9 %d" %
-                        (p.pid, p.pid, p.pid))
+        self.logger.LogError("Killing command!")
+        self.RunCommand("kill -9 %d" % child.pid)
         break
 
-      if not out and not err:
+      # Handle file descriptors ready to be read.
+      for pipe in ready_pipes:
+        fd = pipe.fileno()
+
+        data = os.read(fd, 4096)
+
+        # check for end-of-file
+        if not data:
+          pipes.remove(pipe)
+          continue
+
+        # read all data that's available
+        while data:
+          if pipe == child.stdout:
+            self.logger.LogCommandOutput(data)
+          elif pipe == child.stderr:
+            self.logger.LogCommandError(data)
+
+          try:
+            data = os.read(fd, 4096)
+          except OSError:
+            # terminate loop if EWOULDBLOCK (EAGAIN) is received
+            data = ""
+
+      if command_timeout and time.time() - started_time > command_timeout:
+        self.logger.LogWarning("Timeout of %s seconds reached since process "
+                               "started." % command_timeout)
+        self.RunCommand("kill %d || kill -9 %d" % (child.pid, child.pid))
         break
 
-    p.wait()
-    os.close(pty_fds[0])
-    os.close(pty_fds[1])
-    if return_output:
-      return (p.returncode, full_stdout, full_stderr)
-    return p.returncode
+    self.logger.LogOutput("Waiting for command to finish.")
+    child.wait()
 
-  def CopyFiles(self, src, dest, src_machine=None, dest_machine=None,
-                src_user=None, dest_user=None, recursive=True,
-                command_terminator=None):
-    src = os.path.expanduser(src)
-    dest = os.path.expanduser(dest)
-
-    if recursive:
-      src += "/"
-      dest += "/"
-
-    if dest_machine == src_machine:
-      command = "rsync -a %s %s" % (src, dest)
-    else:
-      if not src_machine:
-        src_machine = os.uname()[1]
-        src_user = os.getlogin()
-      command = "rsync -a %s@%s:%s %s" % (src_user, src_machine, src, dest)
-
-    return self.RunCommand(command,
-                           machine=dest_machine,
-                           username=dest_user,
-                           command_terminator=command_terminator)
-
-
-class MockCommandExecuter(CommandExecuter):
-  def RunCommand(self, cmd, return_output=False, machine=None,
-                 username=None, command_terminator=None,
-                 command_timeout=None,
-                 terminated_timeout=10):
-    cmd = str(cmd)
-    if machine is None:
-      machine = "localhost"
-    if username is None:
-      username = "current"
-    logger.GetLogger().LogCmd("(Mock) " + cmd, machine, username)
-    return 0
+    return child.returncode
 
 
 class CommandTerminator(object):

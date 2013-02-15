@@ -131,6 +131,10 @@ class Job(object):
   def log_err_filename(self):
     return os.path.join(self.logs_dir, 'job-%s.log.err' % self.id)
 
+  @property
+  def machine(self):
+    return self.machines[0]
+
   def DependsOn(self, job):
     """Specifies Jobs to be finished before this job can be launched."""
     if job not in self.children:
