@@ -54,7 +54,7 @@ class Server:
         return utils.Serialize((num_executed, num_passes, num_failures,
                                num_regressions))
     except IOError as (errno, strerror):
-      logger.GetLogger.LogError("I/O error({0}): {1}".format(errno, strerror))
+      logger.GetLogger().LogError("I/O error({0}): {1}".format(errno, strerror))
       return utils.Serialize("")
 
 

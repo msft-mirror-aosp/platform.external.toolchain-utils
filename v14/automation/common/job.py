@@ -160,16 +160,22 @@ class Job:
     return self.GetTestResultsDir() + "/" + TEST_RESULTS_FILE
 
   def GetTestResultsDirSrc(self):
-    assert(len(self.work_dir) > 0)
-    return self.work_dir + "/" + TEST_RESULTS_DIR
+    if self.work_dir:
+      return self.work_dir + "/" + TEST_RESULTS_DIR
+    else:
+      return ""
 
   def GetTestResultsDir(self):
-    assert(len(self.home_dir) > 0)
-    return self.home_dir + "/" + TEST_RESULTS_DIR
+    if self.home_dir:
+      return self.home_dir + "/" + TEST_RESULTS_DIR
+    else:
+      return ""
 
   def GetLogsDir(self):
-    assert(len(self.home_dir) > 0)
-    return self.home_dir + "/" + LOGS_SUBDIR
+    if self.home_dir:
+      return self.home_dir + "/" + LOGS_SUBDIR
+    else:
+      return ""
 
   def AddChild(self, job):
     if job not in self.children:
