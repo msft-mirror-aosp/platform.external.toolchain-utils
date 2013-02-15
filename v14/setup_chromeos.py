@@ -83,11 +83,11 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
   directory = options.directory.strip()
 
   if version == "top" or version == "latest":
-    init = "repo init -u ssh://git@gitrw.chromium.org:9222/manifest-internal"
+    init = "repo init -u ssh://gerrit-int.chromium.org:29419/chromeos/manifest-internal.git"
     if options.minilayout ==  True:
       init += " -m minilayout.xml"
   else:
-    init = ("repo init -u ssh://git@gitrw.chromium.org:9222/manifest-versions "
+    init = ("repo init -u ssh://gerrit-int.chromium.org:29419/chromeos/manifest-versions.git "
             "-m buildspecs/%s/%s.xml" % (version[0:4], version))
 
   commands = []
