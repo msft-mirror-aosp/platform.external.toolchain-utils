@@ -3,13 +3,14 @@
 # Copyright 2010 Google Inc. All Rights Reserved.
 
 import optparse
+import os.path
 import pickle
 import sys
 import xmlrpclib
 
 from automation.common import job
 from automation.common import job_group
-from automation.clients import jobs_helper
+from automation.clients.helper import jobs
 
 
 def Main(argv):
@@ -49,7 +50,7 @@ def Main(argv):
 
   server = xmlrpclib.Server("http://localhost:8000")
 
-  tc_job = jobs_helper.CreateBuildTCJob(**kwargs)
+  tc_job = jobs.CreateBuildTCJob(**kwargs)
   all_jobs = [tc_job]
 
   if not options.chromeos_versions:
@@ -63,24 +64,23 @@ def Main(argv):
     perflab_benchmarks += options.perflab_benchmarks.split(",")
 
   for version in versions.split(","):
-    tc_root = jobs_helper.GetTCRootDir(options.toolchain)[1]
-    tc_pkgs_dir = job.FolderDependency(tc_job,
-                                       tc_root + jobs_helper.tc_pkgs_dir)
-    tc_objects_dir = job.FolderDependency(tc_job,
-                                          tc_root + jobs_helper.tc_objects_dir)
+    tc_root = jobs.GetTCRootDir(options.toolchain)[1]
+    tc_pkgs_dir = job.FolderDependency(
+        tc_job, os.path.join(tc_root, jobs.tc_pkgs_dir))
+    tc_objects_dir = job.FolderDependency(
+        tc_job, os.path.join(tc_root, jobs.tc_objects_dir))
 
-    build_chromeos_job = jobs_helper.CreateBuildAndTestChromeOSJob(version,
-                                                                   **kwargs)
+    build_chromeos_job = jobs.CreateBuildAndTestChromeOSJob(version, **kwargs)
     build_chromeos_job.DependsOnFolder(tc_pkgs_dir)
     all_jobs.append(build_chromeos_job)
 
     for pb in perflab_benchmarks:
-      perflab_job = jobs_helper.CreatePerflabJob(version, pb, **kwargs)
+      perflab_job = jobs.CreatePerflabJob(version, pb, **kwargs)
       perflab_job.DependsOnFolder(tc_pkgs_dir)
       all_jobs.append(perflab_job)
 
   if options.dejagnu:
-    dejagnu_job = jobs_helper.CreateDejaGNUJob(**kwargs)
+    dejagnu_job = jobs.CreateDejaGNUJob(**kwargs)
     dejagnu_job.DependsOnFolder(tc_objects_dir)
     dejagnu_job.DependsOnFolder(tc_pkgs_dir)
     all_jobs.append(dejagnu_job)

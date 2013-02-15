@@ -2,36 +2,38 @@
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
+import os.path
 import pickle
 import xmlrpclib
-import sys
 
-from automation.clients import jobs_helper
+from automation.common import command as cmd
 from automation.common import job
+from automation.clients.helper import jobs
 
 
-def Main(argv):
+def Main():
   server = xmlrpclib.Server("http://localhost:8000")
 
-  # TODO: add a setup_chromeos job here.
+  # TODO(asharif): add a setup_chromeos job here.
   p4_port = "perforce2:2666"
-  p4_paths = []
-  p4_paths.append(("//depot2/gcctools/chromeos/v14/...", "gcctools/chromeos/v14/..."))
-  p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/...",
-                   "gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/..."))
+  p4_paths = [("//depot2/gcctools/chromeos/v14/...",
+               "gcctools/chromeos/v14/..."),
+              ("//depot2/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/...",
+               "gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/...")]
   p4_revision = 1
   p4_checkoutdir = "perforce2"
 
-  p4_job = jobs_helper.CreateP4Job(p4_port, p4_paths, p4_revision, p4_checkoutdir)
+  p4_job = jobs.CreateP4Job(p4_port, p4_paths, p4_revision, p4_checkoutdir)
   p4_output = job.FolderDependency(p4_job, "perforce2")
-  setup_chromeos_job = jobs_helper.CreateSetupChromeOSJob(p4_job, "latest")
+  setup_chromeos_job = jobs.CreateSetupChromeOSJob(p4_job, "latest")
   setup_chromeos_output = job.FolderDependency(setup_chromeos_job, "chromeos")
 
-  build_tc_commands = []
-  build_tc_commands.append("%s/gcctools/chromeos/v14/build_tc.py "
-                           "--toolchain_root=%s/gcctools --chromeos_root=%s" %
-                           (p4_checkoutdir, p4_checkoutdir, "chromeos"))
-  tc_job = job(build_tc_commands)
+  build_tc = cmd.Shell(
+      "build_tc.py",
+      path=os.path.join(p4_checkoutdir, "gcctools/chromeos/v14"),
+      opts=["--toolchain_root=%s" % os.path.join(p4_checkoutdir, "gcctools"),
+            "--chromeos_root=%s" % "chromeos"])
+  tc_job = job.Job("build_tc", build_tc)
   tc_job.DependsOnFolder(p4_output)
   tc_job.DependsOnFolder(setup_chromeos_output)
 
@@ -39,4 +41,4 @@ def Main(argv):
 
 
 if __name__ == "__main__":
-  Main(sys.argv)
+  Main()

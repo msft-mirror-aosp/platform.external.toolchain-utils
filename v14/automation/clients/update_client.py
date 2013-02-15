@@ -8,7 +8,7 @@ import sys
 import xmlrpclib
 
 from automation.common import job_group
-from automation.clients import jobs_helper
+from automation.clients.helper import jobs
 
 
 def Main(argv):
@@ -27,8 +27,8 @@ def Main(argv):
 
   server = xmlrpclib.Server("http://localhost:8000")
 
-  update_job = jobs_helper.CreateUpdateJob(options.chromeos_version,
-                                           boards=options.board)
+  update_job = jobs.CreateUpdateJob(options.chromeos_version,
+                                    boards=options.board)
 
   group = job_group.JobGroup("update_client", [update_job], False, False)
 
