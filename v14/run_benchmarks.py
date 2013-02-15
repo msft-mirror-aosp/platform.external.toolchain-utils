@@ -42,11 +42,13 @@ KNOWN_BENCHMARKS = [
     "chromeos/startup",
     "chromeos/browser/pagecycler",
     "chromeos/browser/sunspider",
+    "chromeos/browser/v8bench",
     "chromeos/cpu/bikjmp"]
 
 name_map = {
     "pagecycler" : "Page",
     "sunspider" : "SunSpider",
+    "v8bench" : "V8Bench",
     "startup" : "BootPerfServer"}
 
 

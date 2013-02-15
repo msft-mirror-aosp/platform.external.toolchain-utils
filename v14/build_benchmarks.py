@@ -43,6 +43,7 @@ KNOWN_BENCHMARKS = [
   'chromeos/startup',
   'chromeos/browser/pagecycler',
   'chromeos/browser/sunspider',
+  'chromeos/browser/v8bench',
   'chromeos/cpu/bikjmp' ]
 
 # Commands to build CPU benchmarks.
@@ -79,6 +80,7 @@ def CreateRunsh(destdir, benchmark):
 def CreateBinaryCopy(sourcedir, destdir):
   """Create links in perflab-bin/destdir/* to sourcedir/* for now, instead of copies"""
 
+  retval = 0
   # check if sourcedir exists
   if not os.path.exists(sourcedir):
     utils.AssertError(False, "benchmark results %s does not exist." % sourcedir)
@@ -88,9 +90,13 @@ def CreateBinaryCopy(sourcedir, destdir):
   # Note - if its a link, it doesn't save anything.
   if os.path.exists(destdir):
     command = 'rm -rf %s.old' % destdir
-    cmd_executer.RunCommand(command)
+    retval = cmd_executer.RunCommand(command)
+    if retval != 0:
+      return retval
     command = 'mv %s %s.old' % (destdir, destdir)
-    cmd_executer.RunCommand(command)
+    retval = cmd_executer.RunCommand(command)
+    if retval != 0:
+      return retval
   os.makedirs(destdir)
   sourcedir = os.path.abspath(sourcedir)
   command = 'ln -s %s/* %s' % (sourcedir, destdir)
