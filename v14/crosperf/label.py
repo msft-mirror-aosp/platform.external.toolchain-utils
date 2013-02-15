@@ -23,7 +23,3 @@ class Label(object):
                         % (name, chromeos_root))
 
     self.chromeos_root = chromeos_root
-
-
-
-

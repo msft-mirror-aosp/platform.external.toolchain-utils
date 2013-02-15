@@ -17,7 +17,7 @@ class Experiment(threading.Thread):
   """Class representing an Experiment to be run."""
 
   def __init__(self, name, board, remote, rerun_if_failed, working_directory,
-               parallel, chromeos_root, labels, benchmarks):
+               parallel, chromeos_root, cache_conditions, labels, benchmarks):
     threading.Thread.__init__(self)
     self.name = name
     self.board = board
@@ -25,9 +25,11 @@ class Experiment(threading.Thread):
     self.working_directory = working_directory
     self.remote = remote
     self.chromeos_root = chromeos_root
+    self.cache_conditions = cache_conditions
     self.parallel = parallel
     self.complete = False
     self.terminate = False
+    self.table = None
 
     self.labels = labels
     self.benchmarks = benchmarks
@@ -62,15 +64,15 @@ class Experiment(threading.Thread):
           benchmark_run_name = "%s: %s (%s)" % (label.name, benchmark.name,
                                                 iteration)
           benchmark_run = BenchmarkRun(benchmark_run_name,
+                                       benchmark.name,
                                        benchmark.autotest_name,
                                        benchmark.autotest_args,
+                                       label.name,
                                        label.chromeos_root,
                                        label.chromeos_image,
                                        self.board,
                                        iteration,
-                                       False,
-                                       False,
-                                       False,
+                                       self.cache_conditions,
                                        benchmark.outlier_range,
                                        self.machine_manager,
                                        ResultsCache(),
@@ -117,7 +119,7 @@ class Experiment(threading.Thread):
 
     self.l.LogOutput("Benchmark runs complete. Final status:")
     for benchmark_run in self.benchmark_runs:
-      self.l.LogOutput("'%s\t\t%s'" % (benchmark_run.name,
+      self.l.LogOutput("'%s'\t\t%s" % (benchmark_run.name,
                                        benchmark_run.status))
 
   def run(self):
@@ -151,6 +153,10 @@ class Experiment(threading.Thread):
                self.machine_manager.num_reimages)
 
     self.table = output
+
+  def SetCacheConditions(self, cache_conditions):
+    for benchmark_run in self.benchmark_runs:
+      benchmark_run.SetCacheConditions(cache_conditions)
 
   def Cleanup(self):
     self.machine_manager.Cleanup()

@@ -10,10 +10,10 @@ class PerfProcessor(object):
   def __init__(self):
     self._ce = command_executer.GetCommandExecuter()
 
-  def StorePerf(self, location, cache_hit, result, autotest_args,
+  def StorePerf(self, location, result, autotest_args,
                 chromeos_root, board, results_dir):
     # Copy results directory to the scratch dir
-    if (not cache_hit and not result.retval and autotest_args and
+    if (not result.retval and autotest_args and
         "--profile" in autotest_args):
       tarball = os.path.join(location,
                              os.path.basename(os.path.dirname(results_dir)))

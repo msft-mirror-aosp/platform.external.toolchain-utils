@@ -142,7 +142,7 @@ class ExperimentFileReader(object):
   def _StripComment(self, line):
     """Strip comments starting with # from a line."""
     if "#" in line:
-      line = line[:line.find("#")]
+      line = line[:line.find("#")] + line[-1]
     return line
 
   def LineNo(self):

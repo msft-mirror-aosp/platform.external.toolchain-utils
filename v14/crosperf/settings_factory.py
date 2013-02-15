@@ -33,6 +33,8 @@ class GlobalSettings(Settings):
     self.AddField(TextField("board", required=True))
     self.AddField(ListField("remote", required=True))
     self.AddField(BooleanField("rerun_if_failed"))
+    self.AddField(BooleanField("rerun"))
+    self.AddField(BooleanField("exact_remote"))
     self.AddField(IntegerField("iterations"))
     self.AddField(TextField("chromeos_root"))
 

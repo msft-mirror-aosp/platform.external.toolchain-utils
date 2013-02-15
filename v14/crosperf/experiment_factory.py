@@ -5,6 +5,7 @@
 from benchmark import Benchmark
 from experiment import Experiment
 from label import Label
+from results_cache import CacheConditions
 
 
 class ExperimentFactory(object):
@@ -23,6 +24,17 @@ class ExperimentFactory(object):
     remote = global_settings.GetField("remote")
     rerun_if_failed = global_settings.GetField("rerun_if_failed")
     chromeos_root = global_settings.GetField("chromeos_root")
+
+    # Default cache hit conditions. The image checksum in the cache and the
+    # computed checksum of the image must match. Also a cache file must exist.
+    cache_conditions = [CacheConditions.CACHE_FILE_EXISTS,
+                        CacheConditions.CHECKSUMS_MATCH]
+    if global_settings.GetField("rerun_if_failed"):
+      cache_conditions.append(CacheConditions.RUN_SUCCEEDED)
+    if global_settings.GetField("rerun"):
+      cache_conditions.append(CacheConditions.FALSE)
+    if global_settings.GetField("exact_remote"):
+      cache_conditions.append(CacheConditions.REMOTES_MATCH)
 
     # Construct benchmarks.
     benchmarks = []
@@ -50,7 +62,7 @@ class ExperimentFactory(object):
       labels.append(label)
 
     experiment = Experiment(experiment_name, board, remote, rerun_if_failed,
-                            working_directory, False, chromeos_root, labels,
-                            benchmarks)
+                            working_directory, False, chromeos_root,
+                            cache_conditions, labels, benchmarks)
 
     return experiment

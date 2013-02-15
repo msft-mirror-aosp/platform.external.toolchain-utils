@@ -7,7 +7,7 @@ import lock_machine
 from utils import command_executer
 from utils import logger
 
-CHECKSUM_FILE = "/usr/local/osimage_CHECKSUM_FILE"
+CHECKSUM_FILE = "/usr/local/osimage_checksum_file"
 
 
 class CrosMachine(object):
@@ -130,6 +130,9 @@ class MachineManager(object):
           return m
     return None
 
+  def GetMachines(self):
+    return self._all_machines
+
   def ReleaseMachine(self, machine):
     with self._lock:
       for m in self._machines:
@@ -202,4 +205,7 @@ class MockMachineManager(object):
 
   def ReleaseMachine(self, machine):
     machine.locked = False
+
+  def GetMachines(self):
+    return self.machines
 

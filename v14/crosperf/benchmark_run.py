@@ -8,7 +8,6 @@ import re
 import threading
 import time
 import traceback
-from image_checksummer import ImageChecksummer
 from results_cache import Result
 from utils import logger
 
@@ -21,15 +20,16 @@ STATUS_PENDING = "PENDING"
 
 
 class BenchmarkRun(threading.Thread):
-  def __init__(self, name, autotest_name, autotest_args,
-               chromeos_root, chromeos_image, board, iteration,
-               exact_remote, rerun, rerun_if_failed,
-               outlier_range, machine_manager, cache, autotest_runner,
-               perf_processor):
+  def __init__(self, name, benchmark_name, autotest_name, autotest_args,
+               label_name, chromeos_root, chromeos_image, board, iteration,
+               cache_conditions, outlier_range, machine_manager, cache,
+               autotest_runner, perf_processor):
     threading.Thread.__init__(self)
     self.name = name
+    self.benchmark_name = benchmark_name
     self.autotest_name = autotest_name
     self.autotest_args = autotest_args
+    self.label_name = label_name
     self.chromeos_root = chromeos_root
     self.chromeos_image = chromeos_image
     self.board = board
@@ -39,9 +39,6 @@ class BenchmarkRun(threading.Thread):
     self.retval = None
     self.status = STATUS_PENDING
     self.run_completed = False
-    self.exact_remote = exact_remote
-    self.rerun = rerun
-    self.rerun_if_failed = rerun_if_failed
     self.outlier_range = outlier_range
     self.machine_manager = machine_manager
     self.cache = cache
@@ -49,6 +46,9 @@ class BenchmarkRun(threading.Thread):
     self.perf_processor = perf_processor
     self.machine = None
     self.full_name = self.autotest_name
+    self.cache_conditions = cache_conditions
+    self.runs_complete = 0
+    self.cache_hit = False
 
   def MeanExcludingOutliers(self, array, outlier_range):
     """Return the arithmetic mean excluding outliers."""
@@ -83,29 +83,10 @@ class BenchmarkRun(threading.Thread):
     return {}
 
   def GetLabel(self):
-    ret = "%s %s" % (self.chromeos_image, self.autotest_name)
+    ret = "%s %s" % (self.label_name, self.benchmark_name)
     if self.machine:
       ret += " machine: %s" % self.machine.name
     return ret
-
-  def RunCached(self):
-    if self.rerun:
-      self._logger.LogOutput("rerun set. Not using cached results.")
-      return None
-
-    result = self.cache.Read()
-
-    if not result:
-      self._logger.LogOutput("Cache miss. AM going to run: %s for: %s" %
-                             (self.autotest_name, self.chromeos_image))
-      return None
-
-    self._logger.LogOutput(result.out)
-
-    if self.rerun_if_failed and result.retval:
-      self._logger.LogOutput("rerun_if_failed set and existing test "
-                             "failed. Rerunning...")
-    return result
 
   def _GetResultsDir(self, output, chromeos_root):
     mo = re.search("Results placed in (\S+)", output)
@@ -121,21 +102,25 @@ class BenchmarkRun(threading.Thread):
                                             self.name), True)
 
     try:
-      self.machine = self.AcquireMachine()
+      # Just use the first machine for running the cached version,
+      # without locking it.
+      self.machine = self.machine_manager.GetMachines()[0]
 
       self.cache.Init(self.chromeos_image,
                       self.autotest_name,
-                      self.iteration, self.autotest_args,
-                      self.machine.name, self.exact_remote, self._logger)
+                      self.iteration, self.autotest_args, self.machine.name,
+                      self._logger)
 
-      self.status = STATUS_WAITING
+      result = self.cache.Read(self.cache_conditions)
+      self.cache_hit = (result is not None)
 
-      result = self.RunCached()
-      if not result:
-        result = self.RunTest(self.machine)
-        cache_hit = False
+      if result:
+        self._logger.LogOutput(result.out + "\n" + result.err)
       else:
-        cache_hit = True
+        self.status = STATUS_WAITING
+        self.machine = self.AcquireMachine()
+        self.cache.remote = self.machine.name
+        result = self.RunTest(self.machine)
 
       if not result.retval:
         self.status = STATUS_SUCCEEDED
@@ -147,9 +132,11 @@ class BenchmarkRun(threading.Thread):
 
       self.results = self.ParseResults(result.out)
 
-      self.perf_processor.StorePerf(self.cache.GetCacheDir(), cache_hit, result,
-                                    self.autotest_args, self.chromeos_root,
-                                    self.board, results_dir)
+      if not self.cache_hit:
+        self.perf_processor.StorePerf(self.cache.GetCacheDir(self.machine.name),
+                                      result,
+                                      self.autotest_args, self.chromeos_root,
+                                      self.board, results_dir)
 
       return result.retval
     except Exception, e:
@@ -195,3 +182,5 @@ class BenchmarkRun(threading.Thread):
     self.cache.Store(result)
     return result
 
+  def SetCacheConditions(self, cache_conditions):
+    self.cache_conditions = cache_conditions

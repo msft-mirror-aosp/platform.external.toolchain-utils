@@ -2,7 +2,6 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
-import time
 from experiment_status import ExperimentStatus
 from utils import logger
 from utils.email_sender import EmailSender
@@ -29,20 +28,24 @@ class ActionRunner(object):
       experiment.terminate = True
 
   def Table(self, experiment):
-    if experiment.success:
+    if not experiment.complete:
+      # Run the experiment but only load the cached values.
+      experiment.SetCacheConditions([])
+      self.Run(experiment)
+    if experiment.table and experiment.complete:
       self.l.LogOutput(experiment.table)
-    else:
-      self.l.LogError("Experiment did not complete successfully.")
 
   def Email(self, experiment):
-    if experiment.success:
+    if not experiment.complete:
+      # Run the experiment but only load the cached values.
+      experiment.SetCacheConditions([])
+      self.Run(experiment)
+    if experiment.table and experiment.complete:
       benchmark_names = []
       for benchmark_run in experiment.benchmark_runs:
         benchmark_names.append(benchmark_run.full_name)
       subject = "%s: %s" % (experiment.board, ", ".join(benchmark_names))
       EmailSender().SendEmailToUser(subject, experiment.table)
-    else:
-      self.l.LogError("Experiment did not complete successfully.")
 
   def RunAction(self, action):
     action = action.lower()
@@ -55,7 +58,10 @@ class ActionRunner(object):
     elif action == "do":
       self.Run(self._experiment)
       self.Table(self._experiment)
-      self.Email(self._experiment)
+      # Only email by default if a new run was completed.
+      for benchmark_run in self._experiment.benchmark_runs:
+        if not benchmark_run.cache_hit:
+          self.Email(self._experiment)
     else:
       raise Exception("Invalid action.")
 
