@@ -86,11 +86,13 @@ class DejaGnuTestRun(object):
   __slots__ = ('board', 'date', 'target', 'host', 'tool', 'results')
 
   def __init__(self, **kwargs):
-    self.results = set()
+    assert all(name in self.__slots__ for name in kwargs)
 
-    for name, value in kwargs.items():
-      assert name in self.__slots__
-      setattr(self, name, value)
+    self.results = set()
+    self.date = kwargs.get('date', datetime.now())
+
+    for name in ('board', 'target', 'tool', 'host'):
+      setattr(self, name, kwargs.get(name, 'unknown'))
 
   @classmethod
   def FromFile(cls, filename):
