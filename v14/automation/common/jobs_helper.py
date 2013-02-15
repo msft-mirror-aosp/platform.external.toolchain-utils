@@ -99,7 +99,7 @@ def CreateBuildTCJob(chromeos_snapshot="", p4_snapshot=""):
   tc_job = CreateLinuxJob(command)
   return tc_job
 
-def CreateBuildChromeOSJob(tc_job, chromeos_snapshot="", p4_snapshot=""):
+def CreateBuildAndTestChromeOSJob(tc_job, chromeos_snapshot="", p4_snapshot=""):
   command = GetInitialCommand()
   # TODO(asharif): Get rid of this hack at some point.
   command += "&& mkdir -p perforce2/gcctools/google_vendor_src_branch/gcc"
@@ -124,6 +124,9 @@ def CreateBuildChromeOSJob(tc_job, chromeos_snapshot="", p4_snapshot=""):
   command += ("; " + p4_version_dir + "/build_chromeos.py" +
               " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
               " --chromeos_root=" + chromeos_root +
+              " --board=x86-generic")
+  command += ("; " + p4_version_dir + "/run_tests.py" + 
+              " --remote=$SECONDARY_MACHINES[0] " +
               " --board=x86-generic")
   to_return = CreateLinuxJob(command)
   to_return.AddRequiredFolder(tc_job, p4_pkgs_dir, p4_pkgs_dir)

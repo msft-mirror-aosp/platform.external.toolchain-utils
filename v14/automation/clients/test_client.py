@@ -38,11 +38,9 @@ def Main(argv):
   all_jobs.append(tc_job)
 
   build_chromeos_job = (
-      jobs_helper.CreateBuildChromeOSJob(
+      jobs_helper.CreateBuildAndTestChromeOSJob(
         tc_job))
   all_jobs.append(build_chromeos_job)
-###  run_test_job = jobs_helper.CreateTestJob(p4_job, "cros1")
-###  all_jobs.append(run_test_job)
 
   server.ExecuteJobGroup(utils.Serialize(all_jobs))
 

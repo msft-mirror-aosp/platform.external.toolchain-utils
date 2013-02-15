@@ -40,7 +40,7 @@ class Job:
     self.required_folders = []
     self.id = 0
     self.job_dir = ""
-    self.machine = None
+    self.machines = []
     self.command = command
     self._primary_done = False
     self.start_time = 0
@@ -61,11 +61,11 @@ class Job:
   def GetID(self):
     return self.id
 
-  def SetMachine(self, machine):
-    self.machine = machine
+  def SetMachines(self, machine):
+    self.machines = machine
 
-  def GetMachine(self):
-    return self.machine
+  def GetMachines(self):
+    return self.machines
 
   def SetStatus(self, status):
     if status == STATUS_EXECUTING:

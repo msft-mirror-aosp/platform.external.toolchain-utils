@@ -34,12 +34,12 @@ class JobExecuter(threading.Thread):
   def _FormatCommand(self, command):
     ret = command
     ret.replace("$JOB_ID", str(self.job.GetID()))
-###    ret.replace("$PRIMARY_MACHINE", self.job.machines[0].name)
-###    mo = re.search("SECONDARY_MACHINES\[(\d+)\]", ret)
-###    if mo is not None:
-###      index = int(mo.group(1))
-###      ret = (ret[0:mo.start()] + self.job.machines[1+index] +
-###             ret[mo.end():])
+    ret.replace("$PRIMARY_MACHINE", self.job.machines[0].name)
+    mo = re.search("SECONDARY_MACHINES\[(\d+)\]", ret)
+    if mo is not None:
+      index = int(mo.group(1))
+      ret = (ret[0:mo.start()] + self.job.machines[1+index] +
+             ret[mo.end():])
     return ret
 
   def Kill(self):
@@ -52,7 +52,7 @@ class JobExecuter(threading.Thread):
     self.job.SetJobDir(job_dir)
 
     primary_machine = self.machines[0]
-    self.job.SetMachine(primary_machine)
+    self.job.SetMachines(self.machines)
 
     logger.GetLogger().LogOutput("Executing job with ID '%s' on machine '%s' "
                                  "in directory '%s'" %
@@ -79,6 +79,13 @@ class JobExecuter(threading.Thread):
       to_folder = self.job.GetWorkDir() + "/" + required_folder.dest
       from_folder = (required_folder.job.GetWorkDir() + "/" +
                      required_folder.src)
+
+      to_folder_parent = utils.GetRoot(to_folder)[0]
+      self.cmd_executer.RunCommand("mkdir -p %s"  %
+                                   to_folder_parent,
+                                   False, primary_machine.name,
+                                   primary_machine.username,
+                                   self.command_terminator)
 
       from_machine = required_folder.job.GetMachine().name
       from_user = required_folder.job.GetMachine().username
