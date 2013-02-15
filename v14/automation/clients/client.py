@@ -5,7 +5,7 @@ from automation.common import job_group
 
 server = xmlrpclib.Server("http://localhost:8000")
 
-blah_job = job.Job("""/usr/local/google/home/raymes/crosstool/chromeos-toolchain/gcctools/chromeos/v14/summarize_results.py /tmp/gcc.log && 
+blah_job = job.Job("""echo "executing" && /usr/local/google/home/raymes/crosstool/chromeos-toolchain/gcctools/chromeos/v14/summarize_results.py /tmp/gcc.log &&
                   /usr/local/google/home/raymes/crosstool/chromeos-toolchain/gcctools/chromeos/v14/summarize_results.py /tmp/g++.log""")
 blah_job.AddRequiredMachine("", "linux", False)
 #blah_job2 = job.Job("mkdir results ; echo \"Installing autotest on\nMYTEST3 FAIL\nMYTEST4 PASS\" > results/results.csv")

@@ -115,26 +115,34 @@ def print_job_row(job):
   print_table_cell(deps)
   full_status = "%s\n%s" % (job.GetStatus(), job.GetTotalTime())
   print_table_cell(full_status)
-  components = job.GetLogsDir().split("/")
-  if len(components) > 3:
-    link = ("http://www.corp.google.com/~" + components[2] + "/" +
-            "/".join(components[4:]))
-  else:
-    link = ""
-  print_table_cell(get_link(link, job.GetLogsDir()))
+  log_link = "index.py?log=%s" % job.GetID()
+  out_link = log_link + "&type=out"
+  err_link = log_link + "&type=err"
+  cmd_link = log_link + "&type=cmd"
+  print_table_cell("%s %s %s" %
+                   (get_link(out_link, "[out]"), get_link(err_link, "[err]"),
+                   get_link(cmd_link, "[cmd]")))
   print "</tr>"
 
 def get_test_summary(group):
   if (group.GetStatus() != job_group.STATUS_SUCCEEDED and
       group.GetStatus() != job_group.STATUS_FAILED):
       return ""
-  results = utils.Deserialize(server.GetReport(group.GetID(), True))
-  (num_executed, num_passes, num_failures, num_regressions) = results
-  return "Passes: %s Failures: %s Regressions: %s" % (num_passes,
+
+  try:
+    report = open(group.GetTestReport(), 'rb')
+    report.readline()
+    report.readline()
+    num_passes = report.readline().split(":")[1].strip()
+    num_failures = report.readline().split(":")[1].strip()
+    num_regressions = report.readline().split(":")[1].strip()
+    report.close()
+    return "Passes: %s Failures: %s Regressions: %s" % (num_passes,
                                                       num_failures,
                                                       num_regressions)
-
-
+  except StandardError:
+    return "Report not found"
+    
 def get_report_link(group):
   return get_link("index.py?report=%s" % group.GetID(), get_test_summary(group))
 
@@ -145,26 +153,55 @@ groups = utils.Deserialize(server.GetAllJobGroups())
 
 
 form = cgi.FieldStorage()
-if "report" in form:
-  current_id = int(form["report"].value)
-  report = utils.Deserialize(server.GetReport(current_id))
-  print "<pre>"
-  print report
-  print "</pre>"
-  exit(0)
 
-print_header("Automated build.")
-print_table_header(["ID", "Description", "Time Submitted", "Status", "Tests", "Show/Hide Jobs"])
-for group in groups[::-1]:
-  print_group_row(group)
-  print "<tr id='group_%s' style='display: none;'><td colspan=5 style='padding-left: 10px;'>" % group.GetID()
-  print_table_header(["ID", "Command", "Machines",
-                      "Job Directory", "Dependencies", "Status", "Logs"])
-  for job in group.GetJobs():
-    print_job_row(job)
+if "report" in form:
+  try:
+    current_id = int(form["report"].value)
+    job_group = utils.Deserialize(server.GetJobGroup(current_id))
+    if job_group is not None:
+      report = open(job_group.GetTestReport(), 'rb')
+
+      print "<pre>"
+      for line in report:
+        print line[:-1]
+      print "</pre>"
+      report.close()
+  except StandardError, e:
+    print e
+elif "log" in form:
+  try:
+    current_id = int(form["log"].value)
+    type = str(form["type"].value)
+    job = utils.Deserialize(server.GetJob(current_id))
+    if job is not None:
+      if type == "out":
+        report = open(job.GetLogOut(), 'rb')
+      elif type == "cmd":
+        report = open(job.GetLogCmd(), 'rb')
+      elif type == "err":
+        report = open(job.GetLogErr(), 'rb')
+      else:
+        print "Invalid log type"
+      print "<pre>"
+      for line in report:
+        print line[:-1]
+      print "</pre>"
+      report.close()
+  except StandardError, e:
+    print e
+else:
+  print_header("Automated build.")
+  print_table_header(["ID", "Description", "Time Submitted", "Status", "Tests", "Show/Hide Jobs"])
+  for group in groups[::-1]:
+    print_group_row(group)
+    print "<tr id='group_%s' style='display: none;'><td colspan=5 style='padding-left: 10px;'>" % group.GetID()
+    print_table_header(["ID", "Command", "Machines",
+                        "Job Directory", "Dependencies", "Status", "Logs"])
+    for job in group.GetJobs():
+      print_job_row(job)
+    print_table_footer()
+    print "</td></tr>"
   print_table_footer()
-  print "</td></tr>"
-print_table_footer()
 
 #    for machine in job.GetMachines():
 #      print machine

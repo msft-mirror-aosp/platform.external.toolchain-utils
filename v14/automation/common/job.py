@@ -177,6 +177,15 @@ class Job:
     else:
       return ""
 
+  def GetLogOut(self):
+    return self.GetLogsDir() + "/job-" + str(self.id) + ".log.out"
+
+  def GetLogCmd(self):
+    return self.GetLogsDir() + "/job-" + str(self.id) + ".log.cmd"
+
+  def GetLogErr(self):
+    return self.GetLogsDir() + "/job-" + str(self.id) + ".log.err"
+
   def AddChild(self, job):
     if job not in self.children:
       self.children.append(job)

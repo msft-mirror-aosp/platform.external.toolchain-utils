@@ -62,6 +62,11 @@ class Logger(object):
     if self.print_console:
       sys.stderr.write(msg)
 
+  def Flush(self):
+    self.cmdfd.flush()
+    self.stdout.flush()
+    self.stderr.flush()
+
   def __del__ (self):
     self.cmdfd.close()
     self.stdout.close()

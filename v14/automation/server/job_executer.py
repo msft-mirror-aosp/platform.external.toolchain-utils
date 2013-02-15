@@ -181,6 +181,7 @@ class JobExecuter(threading.Thread):
 
     # If we get here, the job succeeded. 
     self.job.SetStatus(job.STATUS_SUCCEEDED)
+    self.job_logger.Flush()
 
     for listener in self.listeners:
       listener.NotifyJobComplete(self.job)

@@ -48,6 +48,12 @@ class JobManager(threading.Thread):
     self._KillJob(job_id)
     self.job_condition.release()
 
+  def GetJob(self, job_id):
+    for job in self.all_jobs:
+      if job.GetID() == job_id:
+        return job
+    return None
+
   def _KillJob(self, job_id):
     logger.GetLogger().LogOutput("Killing job with ID '%s'." % str(job_id))
     if job_id in self.job_executer_mapping:

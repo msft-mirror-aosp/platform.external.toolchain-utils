@@ -35,28 +35,13 @@ class Server:
   def KillJobGroup(self, job_group_id):
     self.job_manager.KillJobGroup(utils.Deserialize(job_group_id))
 
-  def GetReport(self, job_group_id, summary=False):
+  def GetJobGroup(self, job_group_id):
     job_group = self.job_group_manager.GetJobGroup(job_group_id)
-    try:
-      if summary == False:
-        report = open(job_group.GetTestReport(), 'rb')
-        result = "".join(report.readlines())
-        report.close()
-        return utils.Serialize(result)
-      else:
-        report = open(job_group.GetTestReport(), 'rb')
-        report.readline()
-        num_executed = report.readline().split(":")[1].strip()
-        num_passes = report.readline().split(":")[1].strip()
-        num_failures = report.readline().split(":")[1].strip()
-        num_regressions = report.readline().split(":")[1].strip()
-        report.close()
-        return utils.Serialize((num_executed, num_passes, num_failures,
-                               num_regressions))
-    except IOError as (errno, strerror):
-      logger.GetLogger().LogError("I/O error({0}): {1}".format(errno, strerror))
-      return utils.Serialize("")
+    return utils.Serialize(job_group)
 
+  def GetJob(self, job_id):
+    job = self.job_manager.GetJob(job_id)
+    return utils.Serialize(job)
 
   def StartServer(self):
     logger.GetLogger().LogOutput("Starting server...")
