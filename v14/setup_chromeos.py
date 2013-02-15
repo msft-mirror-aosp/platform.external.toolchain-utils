@@ -135,11 +135,6 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
                     % (branch, version))
   cmd_executer.RunCommands(commands)
 
-  commands = []
-  commands.append("cd " + directory + "/src/scripts")
-  commands.append("./get_svn_repos.sh")
-  cmd_executer.RunCommands(commands)
-
   # Setup svn credentials for use inside the chroot
   if getpass.getuser() == "mobiletc-prebuild":
     chromium_username = "raymes"
