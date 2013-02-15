@@ -14,6 +14,8 @@ urlpatterns = patterns(
     (r'^machine$', 'MachineListPageHandler'),
     (r'^job/(?P<job_id>\d+)/log/(?P<log_type>\w+)$', 'LogPageHandler'),
     (r'^job/(?P<job_id>\d+)$', 'JobPageHandler'),
+    (r'^job-group/(?P<job_group_id>\d+)/files/(?P<path>.*)$',
+     'JobGroupFilesPageHandler'),
     (r'^job-group/(?P<job_group_id>\d+)$', 'JobGroupPageHandler'),
     (r'^$', 'DefaultPageHandler'))
 

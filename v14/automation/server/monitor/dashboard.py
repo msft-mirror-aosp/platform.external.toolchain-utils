@@ -15,6 +15,7 @@ from django import forms
 from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response
 from django.template import Context
+from django.views import static
 
 
 def GetServerConnection():
@@ -95,12 +96,15 @@ class JobGroupInfo(object):
   def GetAttributes(self):
     group = self._job_group
 
+    home_dir = [{'href': '/job-group/%d/files/' % group.id,
+                 'name': group.home_dir}]
+
     return {'text': [('Label', group.label),
                      ('Time submitted', time.ctime(group.time_submitted)),
                      ('State', group.status.split('_', 1)[1]),
-                     ('Directory', group.home_dir),
                      ('Cleanup on completion', group.cleanup_on_completion),
-                     ('Cleanup on failure', group.cleanup_on_failure)]}
+                     ('Cleanup on failure', group.cleanup_on_failure)],
+            'link': [('Directory', home_dir)]}
 
   def _GetJobStatus(self, job):
     status_map = {'SUCCEEDED': 'success', 'FAILED': 'failure'}
@@ -113,6 +117,9 @@ class JobGroupInfo(object):
              'status': self._GetJobStatus(job),
              'elapsed': job.timeline.GetTotalTime()}
             for job in self._job_group.jobs]
+
+  def GetHomeDirectory(self):
+    return self._job_group.home_dir
 
   def GetReportList(self):
     filenames = glob.glob(
@@ -186,6 +193,13 @@ def JobGroupPageHandler(request, job_group_id):
       'reports': group.GetReportList()})
 
   return render_to_response('job_group.html', ctx)
+
+
+def JobGroupFilesPageHandler(request, job_group_id, path):
+  group = JobGroupInfo(int(job_group_id))
+
+  return static.serve(
+      request, path, document_root=group.GetHomeDirectory(), show_indexes=True)
 
 
 class FilterJobGroupsForm(forms.Form):
