@@ -157,7 +157,8 @@ class CommandExecuter:
       dest_parent, dest_child = utils.GetRoot(dest)
       ssh_command = ("ssh -p ${FLAGS_ssh_port}" +
                      " -o StrictHostKeyChecking=no" +
-                     " -o UserKnownHostsFile=$TMP_KNOWN_HOSTS")
+                     " -o UserKnownHostsFile=$TMP_KNOWN_HOSTS" +
+                     " -i $TMP_PRIVATE_KEY")
       rsync_prefix = "\nrsync -r -e \"%s\" " % ssh_command
       if dest_cros == True:
         command += rsync_prefix + "%s root@%s:%s" % (src, dest_machine, dest)
