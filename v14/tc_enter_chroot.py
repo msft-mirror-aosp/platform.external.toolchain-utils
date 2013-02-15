@@ -86,7 +86,7 @@ def Main(argv, return_output=False):
   parser.add_option("-o", "--output", dest="output",
                     help="Toolchain output directory")
   parser.add_option("-m", "--other_mounts", dest="other_mounts",
-                    help="Other mount points in the form: " + 
+                    help="Other mount points in the form: " +
                          "dir:mounted_dir:options")
   parser.add_option("-s", "--mount-scripts-only",
                     dest="mount_scripts_only",
@@ -128,7 +128,7 @@ def Main(argv, return_output=False):
     sys.exit(1)
 
   if not os.path.exists(chromeos_root + "/src/scripts/enter_chroot.sh"):
-    logger.GetLogger().LogError(options.chromeos_root + 
+    logger.GetLogger().LogError(options.chromeos_root +
                                  "/src/scripts/enter_chroot.sh"
                                  " not found!")
     parser.print_help()
@@ -140,7 +140,7 @@ def Main(argv, return_output=False):
   mounted_tc_root = "/usr/local/toolchain_root"
   full_mounted_tc_root = chromeos_root + "/chroot/" + mounted_tc_root
   full_mounted_tc_root = os.path.abspath(full_mounted_tc_root)
- 
+
   mount_points = []
   if options.mount_scripts_only == False:
     for tc_dir in tc_dirs:
@@ -154,7 +154,7 @@ def Main(argv, return_output=False):
     output = version_dir + "/output"
   mount_points.append(MountPoint(output, full_mounted_tc_root + "/output",
                                  getpass.getuser()))
-  mount_points += CreateMountPointsFromString(options.other_mounts, 
+  mount_points += CreateMountPointsFromString(options.other_mounts,
                                               chromeos_root + "/chroot/")
 
   last_dir = utils.GetRoot(version_dir)[1]
@@ -193,6 +193,7 @@ def Main(argv, return_output=False):
     f = open(command_file_path, "w")
     f.write(inner_command)
     f.close()
+    logger.GetLogger().LogCmd(inner_command)
     retval = cmd_executer.RunCommand("chmod +x " + command_file_path)
     if retval != 0:
       return retval
@@ -213,11 +214,11 @@ def CreateMountPointsFromString(mount_strings, chroot_dir):
     mount_values = mount_string.split(":")
     external_dir = mount_values[0]
     mount_dir = mount_values[1]
-    if len(mount_values)>2:
+    if len(mount_values) > 2:
       options = mount_values[2]
     else:
       options = None
-    mount_point = MountPoint(external_dir, chroot_dir + "/" + mount_dir, 
+    mount_point = MountPoint(external_dir, chroot_dir + "/" + mount_dir,
                              getpass.getuser(), options)
     mount_points.append(mount_point)
   return mount_points
