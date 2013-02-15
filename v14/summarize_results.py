@@ -6,7 +6,12 @@
 
 __author__ = "raymes@google.com (Raymes Khoury)"
 
+from utils import command_executer
+import os
 import sys
+
+RESULTS_DIR = "results"
+RESULTS_FILE = RESULTS_DIR + "/results.csv"
 
 class DejaGNUSummarizer:
   def Matches(self, log_file):
@@ -15,7 +20,7 @@ class DejaGNUSummarizer:
         return True
     return False
 
-  def Summarize(self, log_file):
+  def Summarize(self, log_file, filename):
     result = ""
     pass_statuses = ["PASS", "XPASS"]
     fail_statuses = ["FAIL", "XFAIL", "UNSUPPORTED"]
@@ -32,7 +37,7 @@ class DejaGNUSummarizer:
           test_result = "pass"
         else:
           test_result = "fail"
-        result += "%s\t%s\n" % (test_name, test_result)
+        result += "%s\t%s\t%s\n" % (test_name, test_result, filename)
     return result
 
 class AutoTestSummarizer:
@@ -42,7 +47,7 @@ class AutoTestSummarizer:
         return True
     return False
 
-  def Summarize(self, log_file):
+  def Summarize(self, log_file, filename):
     result = ""
     pass_statuses = ["PASS"]
     fail_statuses = ["FAIL"]
@@ -55,7 +60,7 @@ class AutoTestSummarizer:
           test_result = "pass"
         else:
           test_result = "fail"
-        result += "%s\t%s\n" % (test_name, test_result)
+        result += "%s\t%s\t%s\n" % (test_name, test_result, filename)
     return result
 
 def Usage():
@@ -65,15 +70,17 @@ def Usage():
 
 def SummarizeFile(filename):
   summarizers = [DejaGNUSummarizer(), AutoTestSummarizer()]
-  f = open(filename, 'rb')
+  input = open(filename, 'rb')
+  executer = command_executer.GetCommandExecuter()
   for summarizer in summarizers:
-    f.seek(0)
-    if summarizer.Matches(f):
-      f.seek(0)
-      result = summarizer.Summarize(f)
-      f.close()
+    input.seek(0)
+    if summarizer.Matches(input):
+      executer.CopyFiles(filename, RESULTS_DIR, recursive=False)
+      input.seek(0)
+      result = summarizer.Summarize(input, os.path.basename(filename))
+      input.close()
       return result
-  f.close()
+  input.close()
   return None
 
 
@@ -82,7 +89,12 @@ def Main(argv):
     Usage()
   filename = argv[1]
 
-  print SummarizeFile(filename)
+  executer = command_executer.GetCommandExecuter()
+  executer.RunCommand("mkdir -p %s" % RESULTS_DIR)
+  summary = SummarizeFile(filename)
+  output = open(RESULTS_FILE, "a")
+  output.write(summary.strip() + "\n")
+  output.close()
 
 if __name__ == "__main__":
   Main(sys.argv)

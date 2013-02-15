@@ -183,9 +183,11 @@ def CreateDejaGNUJob(chromeos_version="top",
               " --toolchain_root=" + local_path +
               " --remote=$SECONDARY_MACHINES[0]" +
               " --board=" + board)
+  command += ("&& " + p4_version_dir + "/summarize_results.py " + local_path +
+              "/output/dejagnu/gcc.log")
+  command += ("&& " + p4_version_dir + "/summarize_results.py " + local_path +
+              "/output/dejagnu/g++.log")
   to_return = CreateLinuxJob(command)
-  to_return.AddLowLevelLog(local_path + "/output/dejagnu/gcc.log")
-  to_return.AddLowLevelLog(local_path + "/output/dejagnu/g++.log")
   to_return.AddRequiredMachine("", "chromeos", True, False)
   return to_return
 
@@ -213,11 +215,12 @@ def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
               " --chromeos_root=" + chromeos_root +
               " --board=" + board +
               " " + autotests)
+  command += ("&& " + p4_version_dir + "/summarize_results.py " + p4_version_dir
+              + "logs/run_tests.py.out")
 
   to_return = CreateLinuxJob(command)
 
   to_return.AddRequiredMachine("", "chromeos", True, False)
-  to_return.AddLowLevelLog(p4_version_dir + "logs/run_tests.py.out")
 
   return to_return
 
@@ -286,17 +289,11 @@ def CreatePerflabJob(chromeos_version, benchmark, board="x86-generic",
   command += ("&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s"
               " --machines=chromeos_x86-agz_1 run %s" %
               (perflab_command, toolchain_root, chromeos_root, benchmark))
+  command += ("&& " + p4_version_dir + "/summarize_results.py " + p4_version_dir
+              + "logs/run_benchmarks.py.out")
   to_return = CreateLinuxJob(command)
-  to_return.AddLowLevelLog(p4_version_dir + "logs/run_benchmarks.py.out")
   return to_return
 
-def CreateTestJob(build_chromeos_job):
-  command = GetInitialCommand()
-  command += " && cd " + chromeos_scripts_dir
-  command = "&& ./run_remote_tests.sh --remote=" + hostname + " BuildVerify"
-  to_return = CreateLinuxJob(command)
-  to_return.AddRequiredFolder(p4_job, p4_version_dir, p4_version_dir)
-  return to_return
 
 def CreateUpdateJob(chromeos_versions,
                     create_image=True,
