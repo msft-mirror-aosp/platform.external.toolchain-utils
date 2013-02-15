@@ -78,21 +78,21 @@ def Main(argv):
                                  options.board, options.ldflags, options.board,
                                  options.cxxflags, options.board)))
 
-  utils.AssertTrue(ret == 0, "build_packages failed")
+  logger.GetLogger().LogFatalIf(ret, "build_packages failed")
 
   # Build image
   ret = (build_chromeos.
          ExecuteCommandInChroot(options.chromeos_root,
                                 utils.GetBuildImageCommand(options.board)))
 
-  utils.AssertTrue(ret == 0, "build_image failed")
+  logger.GetLogger().LogFatalIf(ret, "build_image failed")
 
   # Mod image for test
   ret = (build_chromeos.
          ExecuteCommandInChroot(options.chromeos_root,
            utils.GetModImageForTestCommand(options.board)))
 
-  utils.AssertTrue(ret == 0, "mod_image_for_test failed")
+  logger.GetLogger().LogFatalIf(ret, "mod_image_for_test failed")
 
   flags_file_name = "chrome_flags.txt"
   flags_file_path = ("%s/src/build/images/%s/latest/%s" %
@@ -117,8 +117,8 @@ def Main(argv):
                 options.label))
 
     ret = cmd_executer.RunCommand(command)
-    utils.AssertExit(ret == 0,
-                     "Failed to apply symlink label %s" % options.label)
+    logger.GetLogger().LogFatalIf(ret, "Failed to apply symlink label %s" %
+                                  options.label)
 
   return ret
 

@@ -171,8 +171,7 @@ def Main(argv):
   # validate args
   for arg in args:
     if arg not in KNOWN_BENCHMARKS:
-      utils.AssertExit(False, "Bad benchmark %s specified" % arg)
-
+      logger.GetLogger().LogFatal("Bad benchmark %s specified" % arg)
 
   if options.chromeos_root is None:
     Usage(parser, "--chromeos_root must be set")

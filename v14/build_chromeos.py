@@ -56,7 +56,7 @@ def MakeChroot(chromeos_root, clobber_chroot=False):
       clobber_chroot = "--replace"
     commands.append("./make_chroot --fast " + clobber_chroot)
     ret = command_executer.GetCommandExecuter().RunCommands(commands)
-    utils.AssertTrue(ret == 0, "make_chroot failed")
+    logger.GetLogger().LogFatalIf(ret, "make_chroot failed")
   else:
     logger.GetLogger().LogOutput("Did not make_chroot because it already exists")
 
@@ -135,7 +135,7 @@ def Main(argv):
                                    gcc_version="9999",
                                    binutils_version="9999",
                                    force=options.clobber_board))
-    utils.AssertTrue(ret == 0, "setup_board failed")
+    logger.GetLogger().LogFatalIf(ret, "setup_board failed")
   else:
     logger.GetLogger().LogOutput("Did not setup_board "
                                  "because it already exists")
@@ -154,19 +154,18 @@ def Main(argv):
                                   build_packages_env,
                                   build_packages_command))
 
-  utils.AssertTrue(ret == 0, "build_packages failed")
+  logger.GetLogger().LogFatalIf(ret, "build_packages failed")
 
   # Build image
   ret = ExecuteCommandInChroot(options.chromeos_root,
                                build_image_command)
 
-  utils.AssertTrue(ret == 0, "build_image failed")
+  logger.GetLogger().LogFatalIf(ret, "build_image failed")
 
   # Mod image for test
-  ret = ExecuteCommandInChroot(options.chromeos_root,
-                               mod_image_command)
+  ret = ExecuteCommandInChroot(options.chromeos_root, mod_image_command)
 
-  utils.AssertTrue(ret == 0, "mod_image_for_test failed")
+  logger.GetLogger().LogFatalIf(ret, "mod_image_for_test failed")
 
   flags_file_name = "flags.txt"
   flags_file_path = ("%s/src/build/images/%s/latest/%s" %
@@ -190,8 +189,8 @@ def Main(argv):
                 options.label))
 
     ret = cmd_executer.RunCommand(command)
-    utils.AssertExit(ret == 0,
-                     "Failed to apply symlink label %s" % options.label)
+    logger.GetLogger().LogFatalIf(ret, "Failed to apply symlink label %s" %
+                                  options.label)
 
   return ret
 

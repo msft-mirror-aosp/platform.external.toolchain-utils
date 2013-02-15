@@ -83,7 +83,8 @@ def CreateBinaryCopy(sourcedir, destdir):
   retval = 0
   # check if sourcedir exists
   if not os.path.exists(sourcedir):
-    utils.AssertError(False, "benchmark results %s does not exist." % sourcedir)
+    logger.GetLogger().LogError("benchmark results %s does not exist." %
+                                sourcedir)
     return 1
 
   # Deal with old copies - save off old ones for now.
@@ -145,7 +146,7 @@ def Main(argv):
   # validate args
   for arg in args:
     if arg not in KNOWN_BENCHMARKS:
-     utils.AssertExit(False, "Bad benchmark %s specified" % arg)
+     logger.GetLogger().LogFatal("Bad benchmark %s specified" % arg)
 
 
   if options.chromeos_root is None:
@@ -180,13 +181,15 @@ def Main(argv):
                                               CPU_BUILDCMD_CLEAN % benchname,
                                               tec_options=tec_options
                                               )
-        utils.AssertError(retval == 0, "clean of benchmark %s failed." % arg)
+        logger.GetLogger().LogErrorIf(retval,
+                                      "clean of benchmark %s failed." % arg)
       if options.build:
         retval = build_chromeos.ExecuteCommandInChroot(options.chromeos_root,
                                               CPU_BUILDCMD_BUILD % (benchname, options.cflags,
                                               options.ldflags, options.makeopts),
                                               tec_options=tec_options)
-        utils.AssertError(retval == 0, "Build of benchmark %s failed." % arg)
+        logger.GetLogger().LogErrorIf(retval,
+                                      "Build of benchmark %s failed." % arg)
       if retval == 0 and (options.build or options.only_copy):
         benchdir = ('%s/android_bench/v2_0/CLOSED_SOURCE/%s' %
                     (third_party, benchname))
@@ -208,7 +211,7 @@ def Main(argv):
                       "--clobber_board"
                      ]
         retval = build_chromeos.Main(build_args)
-        utils.AssertError(retval == 0, "Build of ChromeOS failed.")
+        logger.GetLogger().LogErrorIf(retval, "Build of ChromeOS failed.")
       if retval == 0 and (options.build or options.only_copy):
         benchdir = '%s/src/build/images/%s/latest' % (options.chromeos_root, options.board)
         linkdir = '%s/perflab-bin/%s' % (options.workdir, arg)
@@ -227,7 +230,7 @@ def Main(argv):
                       "--ldflags=" + options.ldflags
                      ]
         retval = build_chromeos.Main(build_args)
-        utils.AssertError(retval == 0, "Build of ChromeOS failed.")
+        logger.GetLogger().LogErrorIf(retval, "Build of ChromeOS failed.")
       if retval == 0 and (options.build or options.only_copy):
         benchdir = '%s/src/build/images/%s/latest' % (options.chromeos_root, options.board)
         linkdir = '%s/perflab-bin/%s' % (options.workdir, arg)

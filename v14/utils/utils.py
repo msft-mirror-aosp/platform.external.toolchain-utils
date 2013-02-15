@@ -4,47 +4,18 @@
 
 """Utilities for toolchain build."""
 
-
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
-import os
-import pickle
-import re
-import sys
-import logger
 import hashlib
-import traceback
+import os
+import re
+import logger
 
 
 def GetRoot(scr_name):
   """Break up pathname into (dir+name)."""
   abs_path = os.path.abspath(scr_name)
   return (os.path.dirname(abs_path), os.path.basename(abs_path))
-
-
-# deprecated. Use AssertExit()
-def AssertTrue(condition, msg=""):
-  if not condition:
-    logger.GetLogger().LogError(msg)
-    sys.exit(1)
-
-
-def AssertExit(condition, msg=""):
-  if not condition:
-    logger.GetLogger().LogError(msg)
-    print "\n".join(traceback.format_stack())
-    sys.exit(1)
-
-
-def AssertError(condition, msg=""):
-  if not condition:
-    print "\n".join(traceback.format_stack())
-    logger.GetLogger().LogError(msg)
-
-
-def AssertWarning(condition, msg=""):
-  if not condition:
-    logger.GetLogger().LogWarning(msg)
 
 
 def FormatQuotedCommand(command):
@@ -57,6 +28,7 @@ def FormatCommands(commands):
   output = re.sub(";", ";\n", output)
   output = re.sub("\n+\s*", "\n", output)
   return output
+
 
 def GetBuildPackagesCommand(board):
   return "./build_packages --nousepkg --withdev --withtest --withautotest " \
@@ -103,7 +75,7 @@ def Md5File(filename, block_size=2**10):
           break
         md5.update(data)
   except IOError as ex:
-    AssertExit(False, str(ex))
+    logger.GetLogger().LogFatal(ex)
 
   return md5.hexdigest()
 
@@ -154,4 +126,3 @@ def GetP4DeleteCommand(client_name, checkout_dir=None):
     command += "cd %s &&" % checkout_dir
   command = "g4 client -d %s" % client_name
   return command
-

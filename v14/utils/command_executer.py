@@ -134,14 +134,14 @@ class CommandExecuter:
     command += "\nlearn_board"
     command += "\necho ${FLAGS_board}"
     retval, output, err = self.RunCommand(command, True)
-    utils.AssertTrue(retval == 0)
+    self.logger.LogFatalIf(retval, "learn_board command failed")
     return output.split()[-1]
 
   def CrosRunCommand(self, cmd, return_output=False, machine=None,
       username=None, command_terminator=None, chromeos_root=None):
     """Run a command on a chromeos box"""
-    utils.AssertTrue(machine is not None, "Machine was none!")
-    utils.AssertTrue(chromeos_root is not None, "chromeos_root not given!")
+    self.logger.LogFatalIf(not machine, "No machine provided!")
+    self.logger.LogFatalIf(not chromeos_root, "chromeos_root not given!")
     chromeos_root = os.path.expanduser(chromeos_root)
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
     command += "\nremote_sh " + cmd
@@ -176,8 +176,9 @@ class CommandExecuter:
       dest = dest + "/"
 
     if src_cros == True or dest_cros == True:
-      utils.AssertTrue(src_cros ^ dest_cros)
-      utils.AssertTrue(chromeos_root is not None)
+      self.logger.LogFatalIf(not (src_cros ^ dest_cros), "Only one of src_cros "
+                             "and desc_cros can be non-null.")
+      self.logger.LogFatalIf(not chromeos_root, "chromeos_root not given!")
       if src_cros == True:
         cros_machine = src_machine
       else:

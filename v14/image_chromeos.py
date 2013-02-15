@@ -103,7 +103,8 @@ def Main(argv):
                                          located_image)
 
     if not is_test_image and not options.force:
-      utils.AssertExit(0, "Have to pass --force to image a non-test image")
+      logger.GetLogger().LogFatal("Have to pass --force to image a non-test "
+                                  "image!")
 
     # If the device has /tmp mounted as noexec, image_to_live.sh can fail.
     command = "mount -o remount,rw,exec /tmp"
@@ -123,19 +124,19 @@ def Main(argv):
       l.LogOutput("Deleting temp image dir: %s" % temp_dir)
       shutil.rmtree(temp_dir)
 
-    utils.AssertExit(retval == 0, "Image command failed")
+    logger.GetLogger().LogFatalIf(retval, "Image command failed")
     command = "'echo " + image_checksum + " > " + checksum_file
     command += "&& chmod -w " + checksum_file + "'"
-    retval = cmd_executer.CrosRunCommand(command, 
-                                chromeos_root=options.chromeos_root,
-                                machine=options.remote)
-    utils.AssertExit(retval == 0, "Writing checksum failed.")
+    retval = cmd_executer.CrosRunCommand(command,
+                                         chromeos_root=options.chromeos_root,
+                                         machine=options.remote)
+    logger.GetLogger().LogFatalIf(retval, "Writing checksum failed.")
 
     successfully_imaged = VerifyChromeChecksum(options.chromeos_root,
                                                image,
                                                options.remote)
-    utils.AssertExit(successfully_imaged == True,
-                     "Image verification failed!")
+    logger.GetLogger().LogFatalIf(not successfully_imaged,
+                                  "Image verification failed!")
   else:
     l.LogOutput("Checksums match. Skipping reimage")
 
@@ -197,7 +198,7 @@ def MountImage(chromeos_root, image, mount_point, unmount=False):
   if unmount:
     command = "%s --unmount" % command
   retval = cmd_executer.RunCommand(command)
-  utils.AssertExit(retval == 0, "Mount/unmount command failed!")
+  logger.GetLogger().LogFatalIf(retval, "Mount/unmount command failed!")
   return retval
 
 

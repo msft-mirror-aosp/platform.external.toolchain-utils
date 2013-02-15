@@ -116,8 +116,8 @@ class GitRepo(Repo):
     command = "mkdir -p %s && cd %s" % (root_dir, root_dir)
     command += "&& git clone -v %s ." % self.address
     retval = ce.RunCommand(command)
-    utils.AssertExit(retval == 0,
-                     "Could not clone git repo %s." % self.address)
+    logger.GetLogger().LogFatalIf(retval, "Could not clone git repo %s." %
+                                  self.address)
 
     command = "cd %s" % root_dir
     command += "&& git branch -a | grep -wq %s" % self.branch
@@ -175,7 +175,7 @@ class RepoReader():
         elif key == "output":
           self.output_repos.append(repo)
         else:
-          utils.AssertExit("Unknown key: %s found" % key)
+          logger.GetLogger().LogFatal("Unknown key: %s found" % key)
 
 
   def GetDictValue(self, dictionary, key):
@@ -203,7 +203,7 @@ class RepoReader():
                      repo_branch,
                      ignores=repo_ignores)
     else:
-      utils.AssertExit("Unknown repo type: %s" % repo_type)
+      logger.GetLogger().LogFatal("Unknown repo type: %s" % repo_type)
     return repo
 
 
@@ -246,4 +246,3 @@ def Main(argv):
 if __name__ == "__main__":
   retval = Main(sys.argv)
   sys.exit(retval)
-

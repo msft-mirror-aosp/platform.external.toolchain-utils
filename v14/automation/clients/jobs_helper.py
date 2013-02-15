@@ -1,11 +1,16 @@
+#!/usr/bin/python2.6
+#
+# Copyright 2010 Google Inc. All Rights Reserved.
+
 import getpass
 from automation.common import job
 from automation.common.machine import MachineSpecification
-import os
+import os.path
 import re
 import sys
 import time
 from utils import utils
+from utils import logger
 
 depot2_dir = "//depot2/"
 p4_checkout_dir = "perforce2/"
@@ -113,7 +118,7 @@ def GetTCRootDir(toolchain="trunk"):
   elif toolchain == "v2":
     gcctools_prefix = "branches/mobile_toolchain_v14_release_branch/"
   else:
-    utils.AssertExit(False, "Wrong value for toolchain %s" % toolchain)
+    logger.GetLogger().LogFatal("Wrong value for toolchain %s" % toolchain)
   local_path = p4_checkout_dir + gcctools_prefix + "gcctools/"
   depot_path = depot2_dir + gcctools_prefix + "gcctools/"
   return depot_path, local_path
@@ -237,9 +242,9 @@ def _GetSetupChromeOSCommand(version, use_minilayout=False):
   version_re = "^\d+\.\d+\.\d+\.[a-zA-Z0-9]+$"
   tarred_re = "(bz2|gz)$"
   if version == "weekly" or version == "quarterly":
-    location = _GetChromeOSGoldenBuildLocation() + "/" + version
-    utils.AssertExit(os.path.islink(location) == True,
-                     "Symlink: " + location + " does not exist.")
+    location = os.path.join(_GetChromeOSGoldenBuildLocation(), version)
+    logger.GetLogger().LogFatalIf(not os.path.islink(location),
+                                  "Symlink %s does not exist." % location)
     location_expanded = os.path.realpath(location)
     version = utils.GetRoot(location_expanded)[1]
   if (version == "top" or version == "latest" or
@@ -253,7 +258,9 @@ def _GetSetupChromeOSCommand(version, use_minilayout=False):
     signature_file = "/src/scripts/enter_chroot.sh"
     signature_file_location = ("/home/mobiletc-prebuild/www/chromeos_builds/"
                                + version + signature_file)
-    utils.AssertExit(os.path.exists(signature_file_location))
+    logger.GetLogger().LogFatalIf(not os.path.exists(signature_file_location),
+                                  "Signature file %s does not exist." %
+                                  signature_file_location)
     command += "rsync -a " + version + "/ chromeos/"
     return command
 

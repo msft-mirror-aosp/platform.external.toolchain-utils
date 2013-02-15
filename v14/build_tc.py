@@ -161,13 +161,14 @@ def Main(argv):
   retval = BuildTC(options.chromeos_root, options.toolchain_root, env,
                    target, options.clean, options.incremental, portage_flags,
                    tc_enter_chroot_options)
-  utils.AssertTrue(retval == 0, "Build toolchain failed!")
+  logger.GetLogger().LogFatalIf(retval, "Build toolchain failed!")
   command = "sudo chown -R " + getpass.getuser() + " " + package_dir
 
   if options.incremental is None and not options.clean:
     install_dir = output + installdir
     retval = InstallTC(package_dir, install_dir)
-    utils.AssertTrue(retval == 0, "Installation of the toolchain failed!")
+    logger.GetLogger().LogFatalIf(retval,
+                                  "Installation of the toolchain failed!")
 
   return retval
 

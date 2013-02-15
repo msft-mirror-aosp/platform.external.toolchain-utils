@@ -44,11 +44,11 @@ class MountPoint:
 
   def DoMount(self):
     retval = self.CreateAndOwnDir(self.mount_dir)
-    utils.AssertTrue(retval == 0)
+    logger.GetLogger().LogFatalIf(retval, "Cannot create mount_dir!")
     retval = self.CreateAndOwnDir(self.external_dir)
-    utils.AssertTrue(retval == 0)
+    logger.GetLogger().LogFatalIf(retval, "Cannot create external_dir!")
     retval = self.MountDir()
-    utils.AssertTrue(retval == 0)
+    logger.GetLogger().LogFatalIf(retval, "Cannot mount!")
     return retval
 
 
@@ -148,8 +148,8 @@ def Main(argv, return_output=False):
   # Add the third_party mount point if it exists
   if options.third_party:
     third_party_dir = options.third_party
-    utils.AssertExit(os.path.isdir(third_party_dir),
-                     "--third_party option is not a valid dir.")
+    logger.GetLogger().LogFatalIf(not os.path.isdir(third_party_dir),
+                                  "--third_party option is not a valid dir.")
   else:
     third_party_dir = os.path.abspath("%s/../../../third_party" %
                                       os.path.dirname(__file__))
@@ -161,7 +161,7 @@ def Main(argv, return_output=False):
                                os.path.basename(third_party_dir))),
                                getpass.getuser())
     mount_points.append(mount_point)
-            
+
   output = options.output
   if output is None and options.toolchain_root:
     # Mount the output directory at /usr/local/toolchain_root/output
@@ -245,7 +245,8 @@ def CreateMountPointsFromString(mount_strings, chroot_dir):
 
 
 def CreateSymlink(target, link_name):
-  utils.AssertExit(target.startswith("/") == False)
+  logger.GetLogger().LogFatalIf(target.startswith("/"),
+                                "Can't create symlink to absolute path!")
   real_from_file = utils.GetRoot(link_name)[0] + "/" + target
   if os.path.realpath(real_from_file) != os.path.realpath(link_name):
     if os.path.exists(link_name):
@@ -257,4 +258,3 @@ def CreateSymlink(target, link_name):
 if __name__ == "__main__":
   retval = Main(sys.argv)
   sys.exit(retval)
-

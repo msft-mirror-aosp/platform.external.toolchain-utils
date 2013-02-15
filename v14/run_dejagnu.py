@@ -62,7 +62,7 @@ def Main(argv):
   if os.path.exists(options.chromeos_root) == False:
     logger.GetLogger().LogOutput("chroot not found. Creating one.")
     ret = build_chromeos.MakeChroot(options.chromeos_root)
-    utils.AssertExit(ret == 0, "Failed to make chroot!")
+    logger.GetLogger().LogFatalIf(ret, "Failed to make chroot!")
 
   # Emerge DejaGNU
   # Remove the dev-tcltk manifest which is currently incorrect
@@ -71,13 +71,13 @@ def Main(argv):
                                 "rm -f ~/trunk/src/third_party/portage/"
                                 "dev-tcltk/expect/Manifest",
                                 options.toolchain_root))
-  utils.AssertExit(ret == 0, "Failed to remove incorrect manifest")
+  logger.GetLogger().LogFatalIf(ret, "Failed to remove incorrect manifest")
 
   ret = (build_chromeos.
          ExecuteCommandInChroot(options.chromeos_root,
                                 "sudo emerge -u dejagnu",
                                 options.toolchain_root))
-  utils.AssertExit(ret == 0, "Failed to emerge dejagnu")
+  logger.GetLogger().LogFatalIf(ret, "Failed to emerge dejagnu")
 
   # Find the toolchain objects directory
   f = open(options.chromeos_root + "/src/overlays/overlay-" +
@@ -118,7 +118,8 @@ def Main(argv):
                                  dejagnu_run, cleanup),
                                 options.toolchain_root,
                                 full_mount=True))
-  utils.AssertWarning(ret == 0, "Failed to run DejaGNU tests successfully")
+  logger.GetLogger().LogWarningIf(ret, "Failed to run DejaGNU tests "
+                                  "successfully")
 
   # Copy results to a not-so-deep location
   results_dir = "%s/gcc/testsuite/" % gcc_build_dir
@@ -131,7 +132,8 @@ def Main(argv):
                                  results_dir, new_results_dir),
                                 options.toolchain_root))
 
-  utils.AssertWarning(ret == 0, "Failed to copy results to final destination.")
+  logger.GetLogger().LogWarningIf(ret, "Failed to copy results to final "
+                                  "destination.")
   return ret
 
 
