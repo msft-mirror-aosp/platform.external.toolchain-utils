@@ -42,7 +42,7 @@ class CommandExecuter:
       user = ""
       if username is not None:
         user = username + "@"
-      cmd = "ssh -t %s%s -- bash \"<<EOF\n%s\nEOF\"" % (user, machine, cmd)
+      cmd = "ssh -t %s%s -- bash '<<EOF\n%s\nEOF'" % (user, machine, cmd)
 
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, stdin=sys.stdin, shell=True)
