@@ -1,18 +1,21 @@
 #!/usr/bin/python2.6
 #
-# Copyright 2010 Google Inc. All Rights Reserved.
+# Copyright 2011 Google Inc. All Rights Reserved.
 
-"""Script to checkout the ChromeOS source.
+"""Script to image a ChromeOS device.
 
-This script sets up the ChromeOS source in the given directory, matching a
-particular release of ChromeOS.
+This script images a remote ChromeOS device with a specific image."
 """
 
-__author__ = "raymes@google.com (Raymes Khoury)"
+__author__ = "asharif@google.com (Ahmad Sharif)"
 
+import filecmp
+import glob
 import optparse
 import os
+import shutil
 import sys
+import tempfile
 import tc_enter_chroot
 from utils import command_executer
 from utils import logger
@@ -30,6 +33,7 @@ def ImageChromeOS(argv):
   """Build ChromeOS."""
   # Common initializations
   cmd_executer = command_executer.GetCommandExecuter()
+  l = logger.GetLogger()
 
   parser = optparse.OptionParser()
   parser.add_option("-c", "--chromeos_root", dest="chromeos_root",
@@ -80,17 +84,27 @@ def ImageChromeOS(argv):
   device_checksum = device_checksum.strip()
   image_checksum = str(image_checksum)
 
-  logger.GetLogger().LogOutput("Image checksum: " + image_checksum)
-  logger.GetLogger().LogOutput("Device checksum: " + device_checksum)
+  l.LogOutput("Image checksum: " + image_checksum)
+  l.LogOutput("Device checksum: " + device_checksum)
 
   if image_checksum != device_checksum:
-    logger.GetLogger().LogOutput("Checksums do not match. Re-imaging...")
+    [found, located_image] = LocateOrCopyImage(options.chromeos_root,
+                                               image,
+                                               board=board)
+
+    l.LogOutput("Checksums do not match. Re-imaging...")
     command = (options.chromeos_root +
                "/src/scripts/image_to_live.sh --remote=" +
                options.remote +
-               " --image=" + image)
+               " --image=" + located_image)
 
     retval = cmd_executer.RunCommand(command)
+
+    if found == False:
+      temp_dir = os.path.dirname(located_image)
+      l.LogOutput("Deleting temp image dir: %s" % temp_dir)
+      shutil.rmtree(temp_dir)
+
     utils.AssertExit(retval == 0, "Image command failed")
     command = "'echo " + image_checksum + " > " + checksum_file
     command += "&& chmod -w " + checksum_file + "'"
@@ -99,9 +113,45 @@ def ImageChromeOS(argv):
                                 machine=options.remote)
     utils.AssertExit(retval == 0, "Writing checksum failed.")
   else:
-    logger.GetLogger().LogOutput("Checksums match. Skipping reimage")
+    l.LogOutput("Checksums match. Skipping reimage")
 
   return retval
+
+
+def LocateOrCopyImage(chromeos_root, image, board=None):
+  l = logger.GetLogger()
+  if board is None:
+    board_glob = "*"
+  else:
+    board_glob = board
+
+  chromeos_root_realpath = os.path.realpath(chromeos_root)
+
+  
+  if image.startswith(chromeos_root_realpath):
+    return [True, image]
+
+  # First search within the existing build dirs for any matching files.
+  images_glob = ("%s/src/build/images/%s/*/*.bin" %
+                 (chromeos_root_realpath,
+                  board_glob))
+  images_list = glob.glob(images_glob)
+  for potential_image in images_list:
+    if filecmp.cmp(potential_image, image):
+      l.LogOutput("Found matching image %s in chromeos_root." % potential_image)
+      return [True, potential_image]
+  # We did not find an image. Copy it in the src dir and return the copied file.
+  if board is None:
+    board = ""
+  temp_dir = tempfile.mkdtemp(prefix="%s/src/build/images/%s/tmp" %
+                   (chromeos_root_realpath,
+                    board))
+  new_image = "%s/%s" % (temp_dir, os.path.basename(image))
+  l.LogOutput("No matching image found. Copying %s to %s" %
+              (image, new_image))
+  shutil.copyfile(image, new_image)
+  return [True, new_image]
+    
 
 if __name__ == "__main__":
   ImageChromeOS(sys.argv)
