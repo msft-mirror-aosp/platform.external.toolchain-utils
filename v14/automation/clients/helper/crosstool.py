@@ -5,6 +5,7 @@
 __author__ = 'kbaclawski@google.com (Krystian Baclawski)'
 
 import os.path
+import time
 
 from automation.clients.helper import jobs
 from automation.clients.helper import perforce
@@ -84,19 +85,42 @@ class CommandsFactory(object):
                                p4client.Remove())
 
   def BuildRelease(self, target):
-    buildit_cmd = cmd.Shell(
-        'buildit',
-        '--keep-work-dir',
-        '--build-type=release',
-        '--work-dir=%s' % self.buildit_work_dir_path,
-        '--results-dir=%s' % self.buildit_results_path,
-        '--force-release=$(< %s)' % os.path.join(
-            '$JOB_TMP', self.CHECKOUT_DIR, 'CLNUM'),
-        path='.')
+    build_toolchain = cmd.Wrapper(
+        cmd.Shell(
+            'buildit',
+            '--keep-work-dir',
+            '--build-type=release',
+            '--work-dir=%s' % self.buildit_work_dir_path,
+            '--results-dir=%s' % self.buildit_results_path,
+            '--force-release=$(< %s)' % os.path.join(
+                '$JOB_TMP', self.CHECKOUT_DIR, 'CLNUM'),
+            target,
+            path='.'),
+        cwd=self.buildit_path)
 
-    buildit_cmd.AddOption(target)
+    timestamp = time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())
 
-    return cmd.Wrapper(buildit_cmd, cwd=self.buildit_path)
+    toolchain_root = os.path.join(
+        '/google/data/rw/projects/toolchains', target, 'unstable')
+    toolchain_path = os.path.join(toolchain_root, timestamp)
+
+    copy_new_toolchain_to_x20 = cmd.Chain(
+        cmd.MakeDir(toolchain_path),
+        cmd.Copy(self.buildit_results_path + '/', to_dir=toolchain_path,
+                 recursive=True))
+
+    # remove all but 20 most recent directories
+    remove_old_toolchains_from_x20 = cmd.Wrapper(
+        cmd.Pipe(
+            cmd.Shell('ls', '-1', '-r'),
+            cmd.Shell('sed', '-e', '"1,20d"'),
+            cmd.Shell('xargs', 'rm', '-r', '-f')),
+        cwd=toolchain_root)
+
+    return cmd.Chain(
+        build_toolchain,
+        copy_new_toolchain_to_x20,
+        remove_old_toolchains_from_x20)
 
   def RunTests(self, target, board):
     dejagnu_output_path = os.path.join(self.buildit_work_dir_path,
