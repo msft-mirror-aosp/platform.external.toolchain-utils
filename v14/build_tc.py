@@ -165,7 +165,7 @@ def CreateCrossdevPortageFlags(portage_flags):
 
 
 def CreateEnvVarString(variable, value):
-  return variable + "=" + EscapeQuoteString(value)
+  return "export " + variable + "=\"" + value + "\"; "
 
 
 def EscapeQuoteString(string):
@@ -225,6 +225,7 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
                 " --gcc " + gcc_version +
                 " --kernel " + kernel_version +
                 crossdev_flags)
+    command = (" " + env + " cp -r $(portageq envvar PKGDIR)/* /var/lib/portage/pkgs/")
 
   argv = [rootdir + "/tc_enter_chroot.py",
           "--chromeos_root=" + chromeos_root,

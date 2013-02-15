@@ -180,9 +180,13 @@ def Main(argv, return_output=False):
   command = chromeos_root + "/src/scripts/enter_chroot.sh"
 
   if len(passthrough_argv) > 1:
-    command += " <<EC_EOF"
-    command += " " + " ".join(passthrough_argv[1:])
-    command += "\nEC_EOF"
+    command += " '"
+    inner_command = " ".join(passthrough_argv[1:])
+    inner_command = inner_command.strip()
+    if inner_command.startswith("-- "):
+      inner_command = inner_command[3:]
+    command += " " + inner_command
+    command += "'"
     retval = cmd_executer.RunCommand(command, return_output)
     return retval
   else:
