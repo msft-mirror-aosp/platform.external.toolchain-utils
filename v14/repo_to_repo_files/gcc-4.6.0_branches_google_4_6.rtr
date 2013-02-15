@@ -2,12 +2,12 @@
   "input": [{
     "type": "svn",
     "address": "svn://gcc.gnu.org/svn/gcc",
-    "mappings": ["branches/google/main gcc/gcc-4.6.0"],
+    "mappings": ["branches/google/gcc-4_6 gcc/gcc-4.6.0"],
   },],
   "output": [{
     "type": "git",
     "address": "ssh://gerrit.chromium.org:29418/chromiumos/third_party/gcc.git",
-    "branch": "mobile_toolchain_v15_release_branch",
+    "branch": "branches/google/gcc-4_6",
     "ignores": [".svn", ".git"],
   },],
 }
