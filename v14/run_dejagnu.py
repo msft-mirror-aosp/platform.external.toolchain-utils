@@ -69,14 +69,14 @@ def Main(argv):
   ret = (build_chromeos.
          ExecuteCommandInChroot(options.chromeos_root,
                                 "rm -f ~/trunk/src/third_party/portage/"
-                                "dev-tcltk/expect/Manifest"),
-                                options.toolchain_root)
+                                "dev-tcltk/expect/Manifest",
+                                options.toolchain_root))
   utils.AssertExit(ret == 0, "Failed to remove incorrect manifest")
 
   ret = (build_chromeos.
          ExecuteCommandInChroot(options.chromeos_root,
-                                "sudo emerge -u dejagnu"),
-                                options.toolchain_root)
+                                "sudo emerge -u dejagnu",
+                                options.toolchain_root))
   utils.AssertExit(ret == 0, "Failed to emerge dejagnu")
 
   # Find the toolchain objects directory
@@ -115,8 +115,9 @@ def Main(argv):
          ExecuteCommandInChroot(options.chromeos_root,
                                 "%s ; %s ; %s && cd %s && %s ; %s" %
                                 (common, cleanup, init, gcc_build_dir,
-                                 dejagnu_run, cleanup), full_mount=True),
-                                options.toolchain_root)
+                                 dejagnu_run, cleanup),
+                                options.toolchain_root,
+                                full_mount=True))
   utils.AssertWarning(ret == 0, "Failed to run DejaGNU tests successfully")
 
   # Copy results to a not-so-deep location
