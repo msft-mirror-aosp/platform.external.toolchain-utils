@@ -69,6 +69,7 @@ def Main(argv, return_output=False):
   """The main function."""
   parser = optparse.OptionParser()
   parser.add_option("-c", "--chromeos_root", dest="chromeos_root",
+                    default="../..",
                     help="ChromeOS root checkout directory.")
   parser.add_option("-t", "--toolchain_root", dest="toolchain_root",
                     help="Toolchain root directory.")
@@ -100,10 +101,7 @@ def Main(argv, return_output=False):
 
   options = parser.parse_args(relevant_argv)[0]
 
-  if options.chromeos_root is None:
-    chromeos_root = "../.."
-  else:
-    chromeos_root = options.chromeos_root
+  chromeos_root = options.chromeos_root
 
   chromeos_root = os.path.expanduser(chromeos_root)
   if options.toolchain_root:
@@ -111,13 +109,33 @@ def Main(argv, return_output=False):
 
   chromeos_root = os.path.abspath(chromeos_root)
 
-  if (options.toolchain_root is None or
-      not os.path.exists(options.toolchain_root) or
-      not os.path.exists(chromeos_root)):
+  if options.toolchain_root is None:
+    logger.GetLogger().LogError("--toolchain_root not specified")
     parser.print_help()
     sys.exit(1)
 
   tc_dirs = [options.toolchain_root + "/google_vendor_src_branch/gcc"]
+
+  for tc_dir in tc_dirs:
+    if not os.path.exists(tc_dir):
+      logger.GetLogger().LogError("toolchain path " + options.toolchain_root + 
+                                 tc_dir + " does not exist!")
+      parser.print_help()
+      sys.exit(1)
+
+  if not os.path.exists(chromeos_root):
+    logger.GetLogger().LogError("chromeos_root " + options.chromeos_root +
+                                 " does not exist!")
+    parser.print_help()
+    sys.exit(1)
+
+  if not os.path.exists(chromeos_root + "/src/scripts/enter_chroot.sh"):
+    logger.GetLogger().LogError(options.chromeos_root + 
+                                 "/src/scripts/enter_chroot.sh"
+                                 " not found!")
+    parser.print_help()
+    sys.exit(1)
+
   rootdir = utils.GetRoot(sys.argv[0])[0]
   version_dir = rootdir
 
@@ -150,7 +168,7 @@ def Main(argv, return_output=False):
   try:
     os.symlink(last_dir + "/build-gcc", full_mounted_tc_root + "/build-gcc")
   except Exception as e:
-    logger.GetLogger().LogOutput(str(e))
+    logger.GetLogger().LogError(str(e))
 
   # Now call enter_chroot with the rest of the arguments.
   command = chromeos_root + "/src/scripts/enter_chroot.sh"
