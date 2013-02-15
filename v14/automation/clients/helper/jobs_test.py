@@ -15,7 +15,7 @@ class JobsHelperTest(unittest.TestCase):
   def setUp(self):
     pass
 
-  def testCreateP4Job(self):
+  def testGetP4Command(self):
     p4_port = "perforce2:2666"
     p4_paths = [("//depot2/gcctools/chromeos/v14/...",
                  "gcctools/chromeos/v14/..."),
@@ -24,9 +24,9 @@ class JobsHelperTest(unittest.TestCase):
     p4_revision = 1
     p4_checkoutdir = "perforce2"
 
-    test_job = jobs.CreateP4Job(p4_port, p4_paths, p4_revision, p4_checkoutdir)
+    test_cmd = jobs.GetP4Command(p4_port, p4_paths, p4_revision, p4_checkoutdir)
 
-    self.assertTrue("g4" in test_job.command)
+    self.assertTrue("g4" in str(test_cmd))
 
 
 if __name__ == "__main__":

@@ -8,9 +8,8 @@ import pickle
 import sys
 import xmlrpclib
 
-from automation.common import job
 from automation.common import job_group
-from automation.clients.helper import jobs
+from automation.clients.helper import chromeos
 
 
 def Main(argv):
@@ -34,36 +33,23 @@ def Main(argv):
                     help="Comma-separated perflab benchmarks to run")
   options = parser.parse_args(argv)[0]
 
-  server = xmlrpclib.Server("http://localhost:8000")
+  jobs = chromeos.JobsFactory(toolchain=options.toolchain,
+                              board=options.board)
 
-  tc_job = jobs.CreateBuildTCJob(toolchain=options.toolchain,
-                                 board=options.board)
-
-  tc_root = jobs.GetTCRootDir(options.toolchain)[1]
-  tc_pkgs_dir = job.FolderDependency(
-      tc_job, os.path.join(tc_root, jobs.tc_pkgs_dir))
-  tc_objects_dir = job.FolderDependency(
-      tc_job, os.path.join(tc_root, jobs.tc_objects_dir))
+  # Build toolchain
+  tc_job, tc_pkgs_dep, tc_objs_dep = jobs.BuildToolchain()
 
   # Perform the correctness tests
-  build_chromeos_job = jobs.CreateBuildAndTestChromeOSJob(
-      "weekly", toolchain=options.toolchain, board=options.board)
-  build_chromeos_job.DependsOnFolder(tc_pkgs_dir)
-
-  dejagnu_job = jobs.CreateDejaGNUJob(toolchain=options.toolchain,
-                                      board=options.board)
-  dejagnu_job.DependsOnFolder(tc_pkgs_dir)
-  dejagnu_job.DependsOnFolder(tc_objects_dir)
+  build_chromeos_job = jobs.BuildAndTestChromeOS("weekly", tc_pkgs_dep)
+  dejagnu_job = jobs.RunDejaGNU(tc_pkgs_dep, tc_objs_dep)
 
   # Perform the performance tests
-  perflab_job = jobs.CreatePerflabJob("quarterly",
-                                      options.perflab_benchmarks,
-                                      toolchain=options.toolchain,
-                                      board=options.board)
-  perflab_job.DependsOnFolder(tc_pkgs_dir)
+  perflab_job = jobs.RunPerflab("top", options.perflab_benchmarks, tc_pkgs_dep)
 
   all_jobs = [tc_job, build_chromeos_job, dejagnu_job, perflab_job]
   group = job_group.JobGroup("nightly_client", all_jobs, True, False)
+
+  server = xmlrpclib.Server("http://localhost:8000")
   server.ExecuteJobGroup(pickle.dumps(group))
 
 

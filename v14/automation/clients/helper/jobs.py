@@ -19,10 +19,6 @@ CHROMEOS_ROOT = "chromeos"
 CHROMEOS_SCRIPTS_DIR = os.path.join(CHROMEOS_ROOT, "src/scripts")
 CHROMEOS_BUILDS_DIR = "/home/mobiletc-prebuild/www/chromeos_builds"
 
-# TODO(kbaclawski): Fix later - external dependencies.
-tc_pkgs_dir = "output/pkgs"
-tc_objects_dir = "output/objects"
-
 
 def _GetP4ClientSpec(client_name, p4_paths):
   mappings = [(remote, os.path.join(client_name, local))
@@ -75,11 +71,6 @@ def CreateLinuxJob(label, command, lock=False):
   to_return = job.Job(label, command)
   to_return.DependsOnMachine(machine.MachineSpecification("*", "linux", lock))
   return to_return
-
-
-def CreateP4Job(p4_port, p4_paths, revision, checkoutdir):
-  return CreateLinuxJob("p4_job", GetP4Command(p4_port, p4_paths,
-                                               revision, checkoutdir))
 
 
 def GetInitialCommand():
@@ -149,12 +140,12 @@ def _GetToolchainCheckoutCommand(toolchain="trunk", p4_snapshot=""):
                       p4_snapshot)
 
 
-def CreateBuildTCJob(chromeos_version="top", board="x86-generic",
-                     p4_snapshot="", toolchain="trunk"):
+def GetBuildToolchainCommand(chromeos_version="top", board="x86-generic",
+                             p4_snapshot="", toolchain="trunk"):
 
   _, local_path = GetTCRootDir(toolchain)
 
-  cmds = cmd.Chain(
+  return cmd.Chain(
       GetInitialCommand(),
       _GetToolchainCheckoutCommand(toolchain, p4_snapshot),
       # When g4 syncs this file, often times the timestamp of this file is
@@ -171,8 +162,6 @@ def CreateBuildTCJob(chromeos_version="top", board="x86-generic",
       _GetSetupChromeOSCommand(chromeos_version),
       _GetBuildTCCommand(toolchain, board, False, True))
 
-  return CreateLinuxJob("build_tc_job", cmds)
-
 
 def _GetMakeChrootCommand(delete=False):
   make_chroot = cmd.Shell("make_chroot", path=".", opts=["--fast"])
@@ -183,13 +172,12 @@ def _GetMakeChrootCommand(delete=False):
   return cmd.Chain("cd %s" % CHROMEOS_SCRIPTS_DIR, make_chroot, "cd -")
 
 
-def CreateDejaGNUJob(chromeos_version="top", board="x86-generic",
-                     p4_snapshot="", toolchain="trunk"):
-
+def GetDejaGNUCommand(chromeos_version="top", board="x86-generic",
+                      p4_snapshot="", toolchain="trunk"):
   local_path = GetTCRootDir(toolchain)[1]
   dejagnu_logs = os.path.join(local_path, "output/dejagnu")
 
-  cmds = cmd.Chain(
+  return cmd.Chain(
       GetInitialCommand(),
       _GetToolchainCheckoutCommand(toolchain),
       _GetSetupChromeOSCommand(chromeos_version),
@@ -206,19 +194,14 @@ def CreateDejaGNUJob(chromeos_version="top", board="x86-generic",
       cmd.Shell("summarize_results.py", os.path.join(dejagnu_logs, "g++.log"),
                 path=P4_VERSION_DIR))
 
-  dejagnu_job = CreateLinuxJob("dejagnu_job", cmds)
-  dejagnu_job.DependsOnMachine(
-      machine.MachineSpecification("*", "chromeos", True), False)
-  return dejagnu_job
 
-
-def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
-                                  board="x86-generic", p4_snapshot="",
-                                  toolchain="trunk", tests=None):
+def GetBuildAndTestChromeOSCommand(chromeos_version="latest",
+                                   board="x86-generic", p4_snapshot="",
+                                   toolchain="trunk", tests=None):
 
   test_list = tests or []
 
-  cmds = cmd.Chain(
+  return cmd.Chain(
       GetInitialCommand(),
       # TODO(asharif): Get rid of this hack at some point.
       "mkdir -p perforce2/gcctools/google_vendor_src_branch/gcc",
@@ -232,14 +215,9 @@ def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
                 opts=["--remote=$SECONDARY_MACHINES[0]",
                       "--chromeos_root=%s" % CHROMEOS_ROOT,
                       "--board=%s" % board]),
-      cmd.Shell("summarize_results.py", os.path.join(P4_VERSION_DIR,
-                                                     "logs/run_tests.py.out"),
+      cmd.Shell("summarize_results.py",
+                os.path.join(P4_VERSION_DIR, "logs/run_tests.py.out"),
                 path=P4_VERSION_DIR))
-
-  cros_job = CreateLinuxJob("build_test_chromeos_job", cmds, lock=True)
-  cros_job.DependsOnMachine(
-      machine.MachineSpecification("*", "chromeos", True), False)
-  return cros_job
 
 
 def _GetImageChromeOSCommand(board):
@@ -314,8 +292,8 @@ def _GetBuildTCCommand(toolchain, board, use_binary=True, rebuild=False):
   return build_tc
 
 
-def CreatePerflabJob(chromeos_version, benchmark, board="x86-agz",
-                     p4_snapshot="", toolchain="trunk"):
+def GetPerflabCommand(chromeos_version, benchmark, board="x86-agz",
+                      p4_snapshot="", toolchain="trunk"):
   toolchain_root = GetTCRootDir("trunk")[1]
 
   perflab_output_dir = "perflab-output"
@@ -349,7 +327,8 @@ def CreatePerflabJob(chromeos_version, benchmark, board="x86-agz",
             "--arch=chromeos_%s" % board,
             "--workdir=$(readlink -f %s)" % P4_VERSION_DIR])
 
-  cmds = cmd.Chain(
+  # TODO(asharif): Compare this to a golden baseline dir.
+  return cmd.Chain(
       GetInitialCommand(),
       GetP4VersionDirCommand(p4_snapshot),
       GetP4BenchmarksDirCommand(p4_snapshot),
@@ -362,12 +341,9 @@ def CreatePerflabJob(chromeos_version, benchmark, board="x86-agz",
                                        perflab_output_dir,
                                        perflab_output_dir))
 
-  # TODO(asharif): Compare this to a golden baseline dir.
-  return CreateLinuxJob("perflab_job", cmds, lock=True)
 
-
-def CreateUpdateJob(chromeos_versions, create_image=True, p4_snapshot="",
-                    boards="x86-generic"):
+def GetUpdateCommand(chromeos_versions, create_image=True, p4_snapshot="",
+                     boards="x86-generic"):
   cmds = cmd.Chain(GetInitialCommand(),
                    GetP4VersionDirCommand(p4_snapshot),
                    _GetSetupChromeOSScriptCommand())
@@ -393,4 +369,4 @@ def CreateUpdateJob(chromeos_versions, create_image=True, p4_snapshot="",
 
     cmds.append("ln -fs -T %s %s" % (dirname, build_link))
 
-  return CreateLinuxJob("update_job", cmds)
+  return cmds

@@ -8,7 +8,7 @@ import sys
 import xmlrpclib
 
 from automation.common import job_group
-from automation.clients.helper import jobs
+from automation.clients.helper import chromeos
 
 
 def Main(argv):
@@ -25,13 +25,12 @@ def Main(argv):
                     help="The board(s) (for updating binary builds).")
   options = parser.parse_args(argv)[0]
 
-  server = xmlrpclib.Server("http://localhost:8000")
+  jobs = chromeos.JobsFactory(board=options.board)
 
-  update_job = jobs.CreateUpdateJob(options.chromeos_version,
-                                    boards=options.board)
-
+  update_job = jobs.RunUpdate(options.chromeos_version)
   group = job_group.JobGroup("update_client", [update_job], False, False)
 
+  server = xmlrpclib.Server("http://localhost:8000")
   server.ExecuteJobGroup(pickle.dumps(group))
 
 

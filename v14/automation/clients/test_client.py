@@ -8,9 +8,8 @@ import pickle
 import sys
 import xmlrpclib
 
-from automation.common import job
 from automation.common import job_group
-from automation.clients.helper import jobs
+from automation.clients.helper import chromeos
 
 
 def Main(argv):
@@ -46,46 +45,34 @@ def Main(argv):
                     dest="perflab_benchmarks",
                     help="Comma-separated perflab benchmarks to run")
   options = parser.parse_args(argv)[0]
-  kwargs = dict(p4_snapshot=options.p4_snapshot, toolchain=options.toolchain)
 
-  server = xmlrpclib.Server("http://localhost:8000")
-
-  tc_job = jobs.CreateBuildTCJob(**kwargs)
-  all_jobs = [tc_job]
+  if not len(options.board.split(",")) == 1:
+    sys.exit("Exactly one board accepted.")
 
   if not options.chromeos_versions:
     sys.exit("No ChromeOS version list provided")
 
+  jobs = chromeos.JobsFactory(toolchain=options.toolchain,
+                              board=options.board,
+                              p4_snapshot=options.p4_snapshot)
+
+  tc_job, tc_pkgs_dep, tc_objs_dep = jobs.BuildToolchain()
+  all_jobs = [tc_job]
+
   versions = options.chromeos_versions.strip()
 
-  perflab_benchmarks = []
-
-  if options.perflab_benchmarks:
-    perflab_benchmarks += options.perflab_benchmarks.split(",")
-
   for version in versions.split(","):
-    tc_root = jobs.GetTCRootDir(options.toolchain)[1]
-    tc_pkgs_dir = job.FolderDependency(
-        tc_job, os.path.join(tc_root, jobs.tc_pkgs_dir))
-    tc_objects_dir = job.FolderDependency(
-        tc_job, os.path.join(tc_root, jobs.tc_objects_dir))
+    all_jobs.append(jobs.BuildAndTestChromeOS(version, tc_pkgs_dep))
 
-    build_chromeos_job = jobs.CreateBuildAndTestChromeOSJob(version, **kwargs)
-    build_chromeos_job.DependsOnFolder(tc_pkgs_dir)
-    all_jobs.append(build_chromeos_job)
-
-    for pb in perflab_benchmarks:
-      perflab_job = jobs.CreatePerflabJob(version, pb, **kwargs)
-      perflab_job.DependsOnFolder(tc_pkgs_dir)
-      all_jobs.append(perflab_job)
+    for benchmark in options.perflab_benchmarks.split(","):
+      all_jobs.append(jobs.RunPerflab(version, benchmark, tc_pkgs_dep))
 
   if options.dejagnu:
-    dejagnu_job = jobs.CreateDejaGNUJob(**kwargs)
-    dejagnu_job.DependsOnFolder(tc_objects_dir)
-    dejagnu_job.DependsOnFolder(tc_pkgs_dir)
-    all_jobs.append(dejagnu_job)
+    all_jobs.append(jobs.RunDejaGNU(tc_pkgs_dep, tc_objs_dep))
 
   group = job_group.JobGroup("test_client", all_jobs, False, False)
+
+  server = xmlrpclib.Server("http://localhost:8000")
   server.ExecuteJobGroup(pickle.dumps(group))
 
 
