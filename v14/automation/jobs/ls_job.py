@@ -1,10 +1,10 @@
 import job
 
 class LSJob(job.Job):
-  def __init__(self, text):
+  def __init__(self, dir):
     job.Job.__init__(self)
-    self.text = text
+    self.dir = dir
 
   def GetCommand(self):
-    return "echo " + self.text
+    return "ls " + self.dir
 

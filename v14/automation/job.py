@@ -1,12 +1,24 @@
+#!/usr/bin/python2.6
+#
+# Copyright 2010 Google Inc. All Rights Reserved.
+
+"""A module for a job in the infrastructure."""
+
+
+__author__ = "raymes@google.com (Raymes Khoury)"
+
 STATUS_NOT_EXECUTED = 0
 STATUS_EXECUTING = 1
 STATUS_COMPLETED = 2
 
+
 class Job:
+  """A class representing a job whose commands will be executed."""
 
   def __init__(self):
     self.status = STATUS_NOT_EXECUTED
     self.dependencies = []
+    self.dependents = []
 
   def SetStatus(self, status):
     self.status = status
@@ -16,21 +28,25 @@ class Job:
 
   def AddDependency(self, dep):
     self.dependencies.append(dep)
+    dep.dependents.append(self)
 
   def GetDependencies(self):
     return self.dependencies
 
   def GetNumDependencies(self):
-    return len(self.GetDependencies())
+    return len(self.dependencies)
+
+  def GetDependents(self):
+    return self.dependents
+
+  def GetNumDependents(self):
+    return len(self.dependents)
 
   def IsReady(self):
-    # If we have already started executing, we aren't ready
-    if self.GetStatus() != STATUS_NOT_EXECUTED:
-      return False
-
     # Check that all our dependencies have been executed
     for dependency in self.GetDependencies():
       if dependency.GetStatus() != STATUS_COMPLETED:
         return False
 
     return True
+
