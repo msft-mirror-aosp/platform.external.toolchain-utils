@@ -13,17 +13,21 @@ import re
 
 from django.db import transaction
 
+from models import Build
 from models import RESULT_REVMAP
-from models import Test, TestFile, TestRun, TestResult, TestResultSummary
-from models import TestSuite
-
-_Test = namedtuple('_Test', ('suite', 'filename', 'variant', 'result'))
+from models import Test
+from models import TestResult
+from models import TestResultSummary
+from models import TestRun
 
 
 class Summary(object):
+  Result = namedtuple('Result', 'name variant result')
+
   def __init__(self, build_name, filename):
-    self._build_name = build_name
     self._filename = filename
+    self._build = {'name': build_name,
+                   'tool': os.path.basename(filename).rstrip('.sum')}
     self._test_run = {}
     self._test_results = []
 
@@ -32,7 +36,7 @@ class Summary(object):
   def _ParseHeader(self, line):
     fields = re.match(r'Running target (.*)', line)
     if fields:
-      self._test_run['board'] = fields.group(1).strip()
+      self._build['board'] = fields.group(1).strip()
       return 'BODY'
 
     fields = re.match(r'Test Run By (.*) on (.*)', line)
@@ -57,9 +61,7 @@ class Summary(object):
     fields = self._test_output_re.match(line)
 
     if fields:
-      result = RESULT_REVMAP[fields.group(1)]
-      path = fields.group(2)
-      variant = fields.group(3)
+      result, path, variant = fields.groups()
 
       # some of the tests are generated in build dir and are issued from there,
       # because every test run is performed in randomly named tmp directory we
@@ -105,17 +107,14 @@ class Summary(object):
         variant = '%s %s' % (path, variant)
         path = ''
 
-      # split path into test filename and test suite
-      filename = os.path.basename(path)
-      suite = os.path.dirname(path)
-
-      # Some tests are picked up from current directory. They're assigned to
-      # no-name test suite.
-      if suite == '.':
-        suite = ''
+      # Some tests are picked up from current directory (presumably DejaGNU
+      # generates some test files). Remove the prefix for these files.
+      if path.startswith('./'):
+        path = path[2:]
 
       # Save the result.
-      self._test_results.append(_Test(suite, filename, variant, result))
+      self._test_results.append(
+          self.Result(path, variant or None, RESULT_REVMAP[result]))
 
     return 'BODY'
 
@@ -137,19 +136,23 @@ class Summary(object):
 
   @transaction.commit_manually
   def Save(self):
-    test_run_name = os.path.basename(self._filename).rstrip('.sum')
+    # Create and store new test run
+    build = self._build
+    build_obj, is_new = Build.objects.get_or_create(
+        name=build['name'], tool=build['tool'], board=build['board'])
 
-    test_run_obj = TestRun.objects.create(name=test_run_name,
-                                          build=self._build_name,
-                                          board=self._test_run['board'],
-                                          date=self._test_run['date'],
-                                          host=self._test_run['host'],
-                                          target=self._test_run['target'])
+    if is_new:
+      build_obj.save()
+      logging.info('Stored new build: %s.', build_obj)
+
+    test_run = self._test_run
+    test_run_obj = TestRun(build=build_obj, date=test_run['date'],
+                           host=test_run['host'], target=test_run['target'])
     test_run_obj.save()
 
-    logging.info('Storing report for: %s, %s @%s, %s', test_run_obj.build,
-                 test_run_obj.name, test_run_obj.board, test_run_obj.date)
+    transaction.commit()
 
+    # Create and store test result summary
     type_key = lambda v: v.result
     test_results_by_type = sorted(self._test_results, key=type_key)
 
@@ -157,30 +160,38 @@ class Summary(object):
       TestResultSummary(test_run=test_run_obj, result=res,
                         count=len(list(res_list))).save()
 
-    suite_key = lambda v: v.suite
-    test_results_by_suite = sorted(self._test_results, key=suite_key)
+    transaction.commit()
 
-    for suite, res_list in groupby(test_results_by_suite, key=suite_key):
-      suite_obj, is_new = TestSuite.objects.get_or_create(name=suite)
+    # Complete the list of test names.
+    tests = dict(((test.name, test.variant), test)
+                 for test in Test.objects.all())
 
-      if is_new:
-        suite_obj.save()
+    missing_tests = [res for res in self._test_results
+                     if (res.name, res.variant) not in tests]
 
-      for res in res_list:
-        file_obj, is_new = TestFile.objects.get_or_create(name=res.filename)
+    if missing_tests:
+      logging.info('Storing missing test names for: %s.', test_run_obj)
 
-        if is_new:
-          file_obj.save()
+      for test in missing_tests:
+        test_name_obj = Test(name=test.name, variant=test.variant)
+        test_name_obj.save()
 
-        test_obj, is_new = Test.objects.get_or_create(
-            suite=suite_obj, file=file_obj, variant=res.variant)
+        logging.debug('Saved test name: %s.', test_name_obj)
 
-        if is_new:
-          test_obj.save()
+        tests[(test.name, test.variant)] = test_name_obj
 
-        if res.result != RESULT_REVMAP['PASS']:
-          TestResult.objects.create(test_run=test_run_obj, test=test_obj,
-                                    result=res.result).save()
+      transaction.commit()
+
+    # Create and store test results
+    logging.info('Storing test results for: %s.', test_run_obj)
+
+    for res in self._test_results:
+      if res.result != RESULT_REVMAP['PASS']:
+        test_res_obj = TestResult(test_run=test_run_obj,
+                                  test=tests[(res.name, res.variant)],
+                                  result=res.result)
+        logging.debug('Storing: %s.', test_res_obj)
+        test_res_obj.save()
 
     transaction.commit()
 

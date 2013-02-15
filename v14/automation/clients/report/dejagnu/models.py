@@ -40,57 +40,91 @@ RESULT_GROUPS = {
     'framework': ['UNTESTED', 'UNSUPPORTED', 'ERROR', 'WARNING', 'NOTE']}
 
 
-class TestRun(models.Model):
-  name = models.TextField()
-  build = models.TextField()
-  board = models.TextField()
-  date = models.DateTimeField()
-  host = models.TextField()
-  target = models.TextField()
+class Build(models.Model):
+  name = models.TextField(
+      help_text=('Target triplet or any other identifier (e.g. '
+                 'gcc-4.6.x-ubuntu_lucid-x86_64).'))
+  tool = models.TextField(
+      help_text='Tool under test (e.g. gcc, g++, libstdc++).')
+  # Board is included here and not in TestRun, because test results might be
+  # different for two boards and TestResultFilterRule cannot refer to TestRun.
+  board = models.TextField(
+      help_text='Board used to execute test binaries (e.g. unix, qemu).')
 
-  def __str__(self):
-    return ', '.join([self.name, self.build, self.board, str(self.date),
-                      self.host, self.target])
+  def __unicode__(self):
+    return '{0}, {1} @{2}'.format(self.name, self.tool, self.board)
+
+
+class TestRun(models.Model):
+  build = models.ForeignKey(Build)
+  date = models.DateTimeField(
+      help_text='When the test run was started.')
+  host = models.TextField(
+      help_text='Triplet describing host machine.')
+  target = models.TextField(
+      help_text='Triplet describing target machine.')
+
+  def __unicode__(self):
+    return '{0} on {1}'.format(self.build, self.date)
 
 
 class TestResultSummary(models.Model):
   test_run = models.ForeignKey(TestRun)
-  result = models.CharField(max_length=1, choices=RESULT_CHOICES)
-  count = models.IntegerField()
+  result = models.CharField(max_length=1, choices=RESULT_CHOICES,
+                            help_text='Test result (abbreviated).')
+  count = models.IntegerField(help_text='Number of tests with the same result.')
 
-  def __str__(self):
-    return ', '.join([
-        str(self.test_run), RESULT_MAP[self.result], str(self.count)])
-
-
-class TestSuite(models.Model):
-  name = models.TextField()
-
-  def __str__(self):
-    return self.name
-
-
-class TestFile(models.Model):
-  name = models.TextField()
-
-  def __str__(self):
-    return self.name
+  def __unicode__(self):
+    return '{0}, {1}, {2}'.format(
+        self.test_run, self.get_result_display(), self.count)
 
 
 class Test(models.Model):
-  suite = models.ForeignKey(TestSuite)
-  file = models.ForeignKey(TestFile)
-  variant = models.TextField()
+  name = models.TextField(
+      help_text='Test suite name (eg. gcc.c-torture/compile/981001-2.c).')
+  variant = models.TextField(
+      null=True,
+      help_text=('Several tests can be performed on a single file. This field '
+                 'makes such tests distinguishable.'))
 
-  def __str__(self):
-    return ', '.join([str(self.suite), str(self.file), self.variant])
+  def __unicode__(self):
+    if not self.variant:
+      return self.name
+    else:
+      return '{0} ({1})'.format(self.name, self.variant)
 
 
 class TestResult(models.Model):
   test_run = models.ForeignKey(TestRun)
   test = models.ForeignKey(Test)
-  result = models.CharField(max_length=1, choices=RESULT_CHOICES)
+  result = models.CharField(max_length=1, choices=RESULT_CHOICES,
+                            help_text='Test result (abbreviated).')
 
-  def __str__(self):
-    return ', '.join([
-        str(self.test_run), str(self.test), RESULT_MAP[self.result]])
+  def __unicode__(self):
+    return '{0}: [{1}] {2}'.format(
+        self.test_run, self.get_result_display(), self.test)
+
+
+class TestResultRewriteRule(models.Model):
+  build = models.ForeignKey(Build)
+  test = models.ForeignKey(Test)
+  old_result = models.CharField(
+      max_length=1, choices=RESULT_CHOICES, default='F',
+      help_text='If a test result has this value, the rule will be applied.')
+  new_result = models.CharField(
+      max_length=1, choices=RESULT_CHOICES, default='f',
+      help_text='Value that will replace original test result value.')
+  expires = models.DateTimeField(
+      null=True,
+      help_text='After this date the rule will not be applied.')
+  owner = models.EmailField(
+      help_text='Who added this rule.')
+  reason = models.TextField(
+      help_text='The reason for which this rule was added.')
+
+  def __unicode__(self):
+    expires = 'before {0} '.format(self.expires) if self.expires else ''
+
+    return '{0}: [{1}] replace {2} with {3} {4}(by {5}: "{6}")'.format(
+        self.build, self.test, self.get_old_result_display(),
+        self.get_new_result_display(), expires, self.owner, self.reason)

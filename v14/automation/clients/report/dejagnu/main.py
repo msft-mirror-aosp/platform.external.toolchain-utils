@@ -13,6 +13,8 @@ import optparse
 import os.path
 import sys
 
+from dejagnu import settings
+
 from report import Report
 from summary import Summary
 
@@ -26,11 +28,13 @@ def SummaryCommand(argv):
       '-B', dest='build', type='string',
       help='Name of the build for which tests were run.')
 
-  opts, args = parser.parse_args(argv)
+  opts, args = parser.parse_args(argv[2:])
 
   if not opts.build:
     parser.print_help()
     sys.exit('\nERROR: Build option is mandatory.')
+
+  logging.info('Using "%s" database.', settings.DATABASE_NAME)
 
   for filename in chain.from_iterable(map(glob.glob, args)):
     summary = Summary(opts.build, filename)
@@ -57,7 +61,7 @@ def HtmlReportCommand(argv):
             'specific date in MM/DD/YYYY format (default: %s)' %
             date.today().strftime('%m/%d/%Y')))
 
-  opts, args = parser.parse_args(argv)
+  opts, args = parser.parse_args(argv[2:])
 
   try:
     if opts.day:
@@ -76,33 +80,36 @@ def HtmlReportCommand(argv):
     print ''
     raise
 
-  report = Report(opts.build, opts.boards, opts.day)
+  logging.info('Using "%s" database.', settings.DATABASE_NAME)
 
-  with open(args[0], 'w') as html_file:
-    html_file.write(report.Generate())
-    logging.info('Wrote report to "%s" file.', args[0])
+  report = Report(opts.build, opts.boards, opts.day).Generate()
+
+  if report:
+    with open(args[0], 'w') as html_file:
+      html_file.write(report)
+      logging.info('Wrote report to "%s" file.', args[0])
+
+
+def HelpCommand(argv):
+  sys.exit('\n'.join([
+      'Usage: %s command [options]' % os.path.basename(argv[0]),
+      '',
+      'Commands:',
+      '  summary - to put dejagnu results into database',
+      '  html-report - to generate html report.']))
 
 
 def Main(argv):
-  progname = argv.pop(0)
+  try:
+    cmd_name = argv[1]
+  except IndexError:
+    cmd_name = None
 
-  if not argv or argv[0] not in ['summary', 'html-report']:
-    sys.exit('\n'.join([
-        'Usage: %s command [options]' % os.path.basename(progname),
-        '',
-        'Commands:',
-        '  summary - to put dejagnu results into database',
-        '  html-report - to generate html report.']))
-
-  command = argv.pop(0)
-
-  if command == 'summary':
-    SummaryCommand(argv)
-  elif command == 'html-report':
-    HtmlReportCommand(argv)
+  cmd_map = {'summary': SummaryCommand, 'html-report': HtmlReportCommand}
+  cmd_map.get(cmd_name, HelpCommand)(argv)
 
 if __name__ == '__main__':
   FORMAT = '%(asctime)-15s %(levelname)s %(message)s'
-  logging.basicConfig(format=FORMAT, level=logging.DEBUG)
+  logging.basicConfig(format=FORMAT, level=logging.INFO)
 
   Main(sys.argv)
