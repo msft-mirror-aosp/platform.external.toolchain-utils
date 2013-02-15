@@ -18,12 +18,16 @@ class DejaGNUSummarizer:
   def Summarize(self, log_file):
     result = ""
     pass_statuses = ["PASS", "XPASS"]
-    fail_statuses = ["FAIL", "XFAIL", "UNSUPPORTED", "ERROR", "WARNING"]
+    fail_statuses = ["FAIL", "XFAIL", "UNSUPPORTED"]
+    name_count = {}
     for line in log_file:
       line = line.strip().split(":")
       if len(line) > 1 and (line[0] in pass_statuses or
                             line[0] in fail_statuses):
         test_name = (":".join(line[1:])).replace("\t", " ").strip()
+        count = name_count.get(test_name, 0) + 1
+        name_count[test_name] = count
+        test_name = "%s (%s)" % (test_name, str(count))
         if line[0] in pass_statuses:
           test_result = "pass"
         else:
