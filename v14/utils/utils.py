@@ -31,13 +31,25 @@ class Logger(object):
     if self.print_console:
       print "CMD: " + str(cmd)
 
+  def LogOutput(self, msg):
+    msg = "OUTPUT: " + msg + "\n"
+    self.stdout.write(msg)
+    if self.print_console:
+      sys.stderr.write(msg)
+
+  def LogError(self, msg):
+    msg = "ERROR: " + msg + "\n"
+    self.stderr.write(msg)
+    if self.print_console:
+      sys.stderr.write(msg)
+
   def RunLoggedCommand(self, cmd, return_output=False):
     """Run a command and log the output."""
     cmdlist = ["bash", "-c", cmd]
     self.Logcmd(cmdlist)
 
     p = subprocess.Popen(cmdlist, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
+                         stderr=subprocess.PIPE, stdin=sys.stdin)
 
     full_stdout = ""
     full_stderr = ""
@@ -45,8 +57,8 @@ class Logger(object):
     # Pull output from pipes, send it to file/stdout/string
     out = err = None
     while True:
-      fds = select.select([p.stdout, p.stderr], [], [], 0.1)[0]
-      for fd in fds:
+      fds = select.select([p.stdout, p.stderr], [], [], 0.1)
+      for fd in fds[0]:
         if fd == p.stdout:
           out = os.read(p.stdout.fileno(), 4096)
           if return_output:
@@ -82,6 +94,12 @@ class Logger(object):
 
 
 main_logger = None
+
+
+def AssertTrue(condition, msg=""):
+  if not condition:
+    main_logger.LogError(msg)
+    sys.exit(1)
 
 
 def InitLogger(rootdir, basefilename):

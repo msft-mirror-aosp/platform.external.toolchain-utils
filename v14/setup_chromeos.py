@@ -11,8 +11,23 @@ particular release of ChromeOS.
 __author__ = "raymes@google.com (Raymes Khoury)"
 
 import optparse
+import os
 import sys
 from utils import utils
+
+GCLIENT_FILE = """solutions = [
+  { "name"        : "CHROME_DEPS",
+    "url"         :
+    "svn://svn.chromium.org/chrome-internal/trunk/tools/buildspec/releases/%s",
+    "custom_deps" : {
+      "src/third_party/WebKit/LayoutTests": None,
+      "src-pdf": None,
+      "src/pdf": None,
+    },
+    "safesync_url": "",
+   },
+]
+"""
 
 # Common initializations
 (rootdir, basename) = utils.GetRoot(sys.argv[0])
@@ -23,6 +38,12 @@ GIT_TAGS_CMD = ("git ls-remote --tags "
                 "ssh://git@gitrw.chromium.org:9222/chromiumos-overlay.git | "
                 "grep refs/tags/ | grep '[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*' | "
                 "cut -d '/' -f 3 | sort -nr")
+
+
+def StoreFile(filename, contents):
+  f = open(filename, "w")
+  f.write(contents)
+  f.close()
 
 
 def Usage(parser):
@@ -85,6 +106,27 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
   commands = []
   commands.append("cd " + directory + "/src/scripts")
   commands.append("./get_svn_repos.sh")
+  utils.RunCommands(commands)
+
+  # Find Chrome browser version
+  chrome_version = utils.RunCommand("%s/src/scripts/chromeos_version.sh | "
+                                    "grep CHROME_BUILD" % directory, True)
+
+  chrome_version = chrome_version[1].strip().split("=")
+  if len(chrome_version) == 2:
+    chrome_version = chrome_version[1]
+  else:
+    chrome_version = ""
+
+  # Checkout chrome
+  utils.RunCommand("mkdir -p %s/chrome_browser/" % directory)
+  gclient_file = GCLIENT_FILE % chrome_version
+  StoreFile(os.path.expanduser("%s/chrome_browser/.gclient"
+                               % directory), gclient_file)
+  commands = []
+  commands.append("cd " + options.directory)
+  commands.append("cd chrome_browser")
+  commands.append("gclient sync -v --nohooks --delete_unversioned_trees")
   utils.RunCommands(commands)
 
   print "Done"
