@@ -12,6 +12,7 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 import getpass
 import optparse
 import os
+import pwd
 import sys
 from utils import command_executer
 from utils import logger
@@ -29,21 +30,29 @@ class MountPoint:
     self.options = options
 
 
-  def CreateMountPoint(self):
-    if not os.path.exists(self.mount_dir):
-      command = "mkdir -p " + self.mount_dir
-      command += " || sudo mkdir -p " + self.mount_dir
+  def CreateAndOwnDir(self, dir_name):
+    retval = 0
+    if not os.path.exists(dir_name):
+      command = "mkdir -p " + dir_name
+      command += " || sudo mkdir -p " + dir_name
       retval = cmd_executer.RunCommand(command)
-      if retval != 0:
-        return retval
-    command = "sudo chown " + self.owner + " " + self.mount_dir
-    retval = cmd_executer.RunCommand(command)
+    if retval != 0:
+      return retval
+    pw = pwd.getpwnam(self.owner)
+    if os.stat(dir_name).st_uid != pw.pw_uid:
+      command = "sudo chown -f " + self.owner + " " + dir_name
+      retval = cmd_executer.RunCommand(command)
     return retval
 
 
   def DoMount(self):
-    self.CreateMountPoint()
-    self.MountDir()
+    retval = self.CreateAndOwnDir(self.mount_dir)
+    utils.AssertTrue(retval == 0)
+    retval = self.CreateAndOwnDir(self.external_dir)
+    utils.AssertTrue(retval == 0)
+    retval = self.MountDir()
+    utils.AssertTrue(retval == 0)
+    return retval
 
 
   def MountDir(self):
@@ -159,7 +168,9 @@ def Main(argv, return_output=False):
   mount_points.append(mount_point)
 
   for mount_point in mount_points:
-    mount_point.DoMount()
+    retval = mount_point.DoMount()
+    if retval != 0:
+      return retval
 
   # Finally, create the symlink to build-gcc.
   command = "sudo chown " + getpass.getuser() + " " + full_mounted_tc_root
@@ -178,7 +189,7 @@ def Main(argv, return_output=False):
     retval = cmd_executer.RunCommand(command, return_output)
     return retval
   else:
-    os.execv(command, [""])
+    return os.execv(command, [""])
 
 
 def CreateMountPointsFromString(mount_strings, chroot_dir):
