@@ -5,8 +5,8 @@
 # found in the LICENSE file.
 
 import re
-from settings import Field
 from settings import Settings
+from settings_factory import SettingsFactory
 
 
 class ExperimentFile(object):
@@ -46,10 +46,14 @@ class ExperimentFile(object):
       Exception: if invalid build type or description is invalid.
     """
     self.all_settings = []
-    self.global_settings = Settings("global", "global")
+    self.global_settings = SettingsFactory().GetSettings("global", "global")
     self.all_settings.append(self.global_settings)
 
     self._Parse(experiment_file)
+
+    for settings in self.all_settings:
+      settings.Inherit()
+      settings.Validate()
 
   def GetSettings(self, settings_type):
     """Return nested fields from the experiment file."""
@@ -64,19 +68,21 @@ class ExperimentFile(object):
     return self.global_settings
 
   def _ParseField(self, reader):
+    """Parse a key/value field."""
     line = reader.CurrentLine().strip()
     match = ExperimentFile._FIELD_VALUE_RE.match(line)
-    append, field, type_filter, text_value = match.groups()
-    return Field(field, text_value, append, type_filter)
+    append, name, _, text_value = match.groups()
+    return (name, text_value, append)
 
   def _ParseSettings(self, reader):
+    """Parse a settings block."""
     line = reader.CurrentLine().strip()
     match = ExperimentFile._OPEN_SETTINGS_RE.match(line)
     settings_type = match.group(1)
     if settings_type is None:
       settings_type = ""
     settings_name = match.group(2)
-    settings = Settings(settings_name, settings_type)
+    settings = SettingsFactory().GetSettings(settings_name, settings_type)
     settings.SetParentSettings(self.global_settings)
 
     while reader.NextLine():
@@ -85,7 +91,8 @@ class ExperimentFile(object):
       if not line:
         continue
       elif ExperimentFile._FIELD_VALUE_RE.match(line):
-        settings.AddField(self._ParseField(reader))
+        field = self._ParseField(reader)
+        settings.SetField(field[0], field[1], field[2])
       elif ExperimentFile._CLOSE_SETTINGS_RE.match(line):
         return settings
 
@@ -103,7 +110,8 @@ class ExperimentFile(object):
         elif ExperimentFile._OPEN_SETTINGS_RE.match(line):
           self.all_settings.append(self._ParseSettings(reader))
         elif ExperimentFile._FIELD_VALUE_RE.match(line):
-          self.global_settings.AddField(self._ParseField(reader))
+          field = self._ParseField(reader)
+          self.global_settings.SetField(field[0], field[1], field[2])
         else:
           raise Exception("Unexpected line.")
     except Exception, err:

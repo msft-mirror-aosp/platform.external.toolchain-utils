@@ -28,14 +28,12 @@ EXPERIMENT_FILE_1 = """
 EXPERIMENT_FILE_2 = """
   board: x86-alex
   remote: chromeos-alex3
-
+  iterations: 3
+  
   benchmark: PageCycler {
-    remote: chromeos-alex1
-    iterations: 3
   }
 
   benchmark: AndroidBench {
-    remote: chromeos-alex3
     iterations: 2
   }
 
@@ -60,9 +58,9 @@ class ExperimentFileTest(unittest.TestCase):
     benchmark_settings = experiment_file.GetSettings("benchmark")
     self.assertEqual(len(benchmark_settings), 1)
     self.assertEqual(benchmark_settings[0].name, "PageCycler")
-    self.assertEqual(benchmark_settings[0].GetField("iterations"), "3")
+    self.assertEqual(benchmark_settings[0].GetField("iterations"), 3)
 
-    label_settings = experiment_file.GetSettings("")
+    label_settings = experiment_file.GetSettings("label")
     self.assertEqual(len(label_settings), 2)
     self.assertEqual(label_settings[0].name, "image1")
     self.assertEqual(label_settings[0].GetField("image"),
@@ -78,9 +76,9 @@ class ExperimentFileTest(unittest.TestCase):
     benchmark_settings = experiment_file.GetSettings("benchmark")
     self.assertEqual(len(benchmark_settings), 2)
     self.assertEqual(benchmark_settings[0].name, "PageCycler")
-    self.assertEqual(benchmark_settings[0].GetField("remote"), "chromeos-alex1")
+    self.assertEqual(benchmark_settings[0].GetField("iterations"), 3)
     self.assertEqual(benchmark_settings[1].name, "AndroidBench")
-    self.assertEqual(benchmark_settings[1].GetField("remote"), "chromeos-alex3")
+    self.assertEqual(benchmark_settings[1].GetField("iterations"), 2)
 
 if __name__ == "__main__":
   unittest.main()
