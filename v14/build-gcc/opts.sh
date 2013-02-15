@@ -14,12 +14,6 @@ get_gcc_configure_options()
 				[[ ${arm_arch} == *eb ]] && arm_arch=${arm_arch%eb}
 				confgcc="${confgcc} --with-arch=${arm_arch}"
 			fi
-
-			# Enable hardvfp
-			if [[ ${CTARGET##*-} == *eabi ]] && [[ $(tc-is-hardfloat) == yes ]] && \
-			    tc_version_is_at_least "4.5" ; then
-			        confgcc="${confgcc} --with-float=hard"
-			fi
 			;;
 		i?86*)
 			confgcc="${confgcc} --with-arch=atom"
