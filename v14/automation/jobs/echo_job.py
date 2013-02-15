@@ -7,7 +7,7 @@ class EchoJob(job.Job):
     job.Job.__init__(self)
     self.msg = msg
 
-    self.machine_descriptions.append(MachineDescription([LinuxFilter()]))
+    self.machine_descriptions.append(MachineDescription([OSFilter("linux")]))
 
   def GetCommand(self):
     return "echo " + self.msg

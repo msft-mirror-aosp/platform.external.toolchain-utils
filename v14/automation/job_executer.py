@@ -24,12 +24,12 @@ class JobExecuter(threading.Thread):
                 (self.job.GetMachineDescriptions()))
     if not machines:
       print "Could not acquire machines for the job"
-
-    primary_machine = machines[0]
-    result = utils.RunCommand("ssh %s -- %s" %
-                              (primary_machine.name,
-                               self.job.GetCommand()), True)
-    print result
+    else:
+      primary_machine = machines[0]
+      result = utils.RunCommand("ssh %s@%s -- %s" %
+                                (primary_machine.username, primary_machine.name,
+                                 self.job.GetCommand()), True)
+      print "OUTPUT: " + str(result)
 
     # Mark as complete
     self.job.SetStatus(jobs.job.STATUS_COMPLETED)

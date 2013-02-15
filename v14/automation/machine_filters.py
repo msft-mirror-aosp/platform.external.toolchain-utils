@@ -16,22 +16,17 @@ class LightestLoadFilter(MachinePoolFilter):
     return ret
 
 
-class ChromeOSFilter(MachinePoolFilter):
+class OSFilter(MachinePoolFilter):
+  def __init__(self, os_name):
+    self.os_name = os_name
+
   def FilterPool(self, machine_pool):
     ret = MachinePool()
     for machine in machine_pool.machine_list:
-      if machine.os == "chromeos":
+      if machine.os == self.os_name:
         ret.AddMachine(machine)
     return ret
 
-
-class LinuxFilter(MachinePoolFilter):
-  def FilterPool(self, machine_pool):
-    ret = MachinePool()
-    for machine in machine_pool.machine_list:
-      if machine.os == "linux":
-        ret.AddMachine(machine)
-    return ret
 
 class UnlockedFilter(MachinePoolFilter):
   def FilterPool(self, machine_pool):

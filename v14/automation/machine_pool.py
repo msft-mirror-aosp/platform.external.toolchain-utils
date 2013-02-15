@@ -13,8 +13,8 @@ import machine
 
 
 class MachinePool:
-  def __init__(self):
-    self.machine_list = []
+  def __init__(self, initial_list=[]):
+    self.machine_list = initial_list
     self.name = ""
 
 

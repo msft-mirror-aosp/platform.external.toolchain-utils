@@ -36,22 +36,7 @@ class MachineManager:
     reload(pools)
 
     # First populate the global pool.
-    self.global_pool = machine_pool.MachinePool()
-    for key, value in pools.machines.iteritems():
-      m = machine.Machine(key,
-                          value[0],
-                          value[1],
-                          value[2])
-      self.global_pool.AddMachine(m)
-
-    # Then populate the named pools.
-    self.named_pools = []
-    for key, value in pools.named_pools.iteritems():
-      name_list_filter = machine_filters.NameListFilter(value)
-      named_pool = name_list_filter.FilterPool(self.global_pool)
-      named_pool.SetName(key)
-      self.named_pools.append(named_pool)
-
+    self.global_pool = machine_pool.MachinePool(pools.machines)
 
   def _GetMachine(self, machine_description):
     filters = machine_description.GetFilters()

@@ -21,7 +21,7 @@ utils.InitLogger(rootdir, basename)
 
 
 class Machine:
-  def __init__(self, name, cpu, num_cores, os):
+  def __init__(self, name, cpu, num_cores, os, username):
     self.name = name
     self.cpu = cpu
     self.num_cores = num_cores
@@ -32,6 +32,7 @@ class Machine:
     self.dead = False
     self.uses = 0
     self.locked = False
+    self.username = username
 
 
   def __str__(self):
@@ -58,9 +59,10 @@ class Machine:
 
   def UpdateDynamicInfo(self):
     """Attempt to acquire information about uptime, load, etc."""
-    command = "ssh " + self.name + " -- uptime"
-    (retval, stdout, stderr) = utils.RunCommand(command, True)
-    self.ParseUptime(stdout)
+#    command = "ssh " + self.name + " -- uptime"
+#    (retval, stdout, stderr) = utils.RunCommand(command, True)
+#    self.ParseUptime(stdout)
+    pass
 
 
 def Main(argv):
