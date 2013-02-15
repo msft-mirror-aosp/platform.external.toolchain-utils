@@ -31,6 +31,13 @@ class CyclerProfiler:
     self._ce = command_executer.GetCommandExecuter()
     self._l = logger.GetLogger()
 
+    self._gcov_prefix = os.path.join(self.REMOTE_TMP_DIR,
+                                     self._GetProfileDir())
+
+  def _GetProfileDir(self):
+    profile_dir = self._cycler
+    return profile_dir.replace(",", ".")
+
   def _CopyTestData(self):
     tarball = os.path.join(self._chromeos_root,
                            "chroot",
@@ -69,10 +76,10 @@ class CyclerProfiler:
 
   def _GetRendererPID(self):
     # First get the renderer's pid.
-    command = ("ps -ef | "
-               "grep root | "
+    command = ("ps -f -u root --sort time | "
                "grep renderer | "
-               "grep -v grep | "
+               # Filter out disowned processes.
+               r"grep -v '\b1\b' | "
                "tail -n1 |"
                "awk '{print $2}'")
 
@@ -83,7 +90,15 @@ class CyclerProfiler:
     pid = out.strip()
     return pid
 
+  def _KillRemoteGDBServer(self):
+    command = "pkill gdbserver"
+    self._ce.CrosRunCommand(command,
+                            chromeos_root=self._chromeos_root,
+                            machine=self._remote)
+
   def _DumpRendererProfile(self):
+    # Kill the remote GDB server if it is running.
+    self._KillRemoteGDBServer()
     pid = self._GetRendererPID()
     # Copy the gdb_remote.dump file to the chromeos_root.
     gdb_file = "gdb_remote.dump"
@@ -103,6 +118,14 @@ class CyclerProfiler:
                 self._board))
     self._ce.ChrootRunCommand(self._chromeos_root,
                               command)
+    # Kill the renderer now.
+    self._KillRemotePID(pid)
+
+  def _KillRemotePID(self, pid):
+    command = "kill %s || kill -9 %s" % (pid, pid)
+    self._ce.CrosRunCommand(command,
+                            chromeos_root=self._chromeos_root,
+                            machine=self._remote)
 
   def _CopyProfileToHost(self):
     dest_dir = os.path.join(self._profiles_dir,
@@ -126,9 +149,7 @@ class CyclerProfiler:
                        recursive=True,
                        src_cros=True)
 
-  def _LaunchCycler(self):
-    self._gcov_prefix = os.path.join(self.REMOTE_TMP_DIR,
-                                     "chrome_fdo.%s" % self._cycler)
+  def _LaunchCycler(self, cycler):
     # Remove the profile directory before launching Chrome.
     command = "rm -rf %s" % self._gcov_prefix
     self._ce.CrosRunCommand(command, chromeos_root=self._chromeos_root,
@@ -147,7 +168,7 @@ class CyclerProfiler:
                "--js-flags=expose_gc &" %
                (self._gcov_prefix,
                 self.REMOTE_TMP_DIR,
-                self._cycler))
+                cycler))
 
     self._ce.CrosRunCommand(command, chromeos_root=self._chromeos_root,
                             machine=self._remote,
@@ -157,17 +178,22 @@ class CyclerProfiler:
     # Copy the page cycler data to the remote
     self._CopyTestData()
     self._PrepareTestData()
+
+    for cycler in self._cycler.split(","):
+      self._ProfileOneCycler(cycler)
+
+    # Copy the profile back
+    self._CopyProfileToHost()
+
+  def _ProfileOneCycler(self, cycler):
     # Get past the login screen of the remote
     cros_login.LoginAsGuest(self._remote, self._chromeos_root)
     # Run the cycler
-    self._LaunchCycler()
+    self._LaunchCycler(cycler)
     # Sleep for 60 seconds
     time.sleep(60)
     # Get the renderer pid, and force dump its profile
     self._DumpRendererProfile()
-    # Copy the profile back
-    self._CopyProfileToHost()
-    pass
 
 
 def Main(argv):
@@ -181,7 +207,9 @@ def Main(argv):
   parser.add_option("--cycler",
                     dest="cycler",
                     default="alexa_us",
-                    help="Name of the cycler (ex: alexa_us).")
+                    help=("Comma-separated cyclers to profile. "
+                          "Example: alexa_us,moz,moz2"
+                          "Use all to profile all cyclers."))
   parser.add_option("--chromeos_root",
                     dest="chromeos_root",
                     default="../../",
@@ -200,6 +228,13 @@ def Main(argv):
                     help="Store profiles in this directory.")
 
   options, _ = parser.parse_args(argv)
+
+  all_cyclers = ["alexa_us", "bloat", "dhtml", "dom",
+                 "intl1", "intl2", "morejs", "morejsnp",
+                 "moz", "moz2"]
+
+  if options.cycler == "all":
+    options.cycler = ",".join(all_cyclers)
 
   try:
     cp = CyclerProfiler(options.chromeos_root,
