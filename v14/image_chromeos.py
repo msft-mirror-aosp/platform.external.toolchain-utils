@@ -44,6 +44,10 @@ def Main(argv):
                     help="Image binary file.")
   parser.add_option("-b", "--board", dest="board",
                     help="Target board override.")
+  parser.add_option("-f", "--force", dest="force",
+                    action="store_true",
+                    default=False,
+                    help="Force an image even if it is non-test.")
 
   options = parser.parse_args(argv[1:])[0]
 
@@ -94,6 +98,19 @@ def Main(argv):
                                                board=board)
 
     l.LogOutput("Checksums do not match. Re-imaging...")
+
+    is_test_image = IsImageModdedForTest(options.chromeos_root,
+                                         located_image)
+
+    if not is_test_image and not options.force:
+      utils.AssertExit(0, "Have to pass --force to image a non-test image")
+
+    # If the device has /tmp mounted as noexec, image_to_live.sh can fail.
+    command = "mount -o remount,rw,exec /tmp"
+    cmd_executer.CrosRunCommand(command,
+                                chromeos_root=options.chromeos_root,
+                                machine=options.remote)
+
     command = (options.chromeos_root +
                "/src/scripts/image_to_live.sh --remote=" +
                options.remote +
@@ -155,7 +172,28 @@ def LocateOrCopyImage(chromeos_root, image, board=None):
               (image, new_image))
   shutil.copyfile(image, new_image)
   return [False, new_image]
-    
+
+
+def IsImageModdedForTest(chromeos_root, image):
+  cmd_executer = command_executer.GetCommandExecuter()
+  image_dir = os.path.dirname(image)
+  image_file = os.path.basename(image)
+  mount_point = tempfile.mkdtemp()
+  mount_command = ("cd %s/src/scripts &&"
+                   "./mount_gpt_image.sh --from=%s --image=%s"
+                   " --safe --read_only"
+                   " --rootfs_mountpt=%s" %
+                   (chromeos_root, image_dir, image_file, mount_point))
+  unmount_command = "%s --unmount" % mount_command
+
+  retval = cmd_executer.RunCommand(mount_command)
+  utils.AssertExit(retval == 0, "Mount command failed!")
+  signature_file = "/usr/local/lib/python2.6/test/autotest.py"
+  is_test_image = os.path.isfile("%s/%s" % (mount_point, signature_file))
+  retval = cmd_executer.RunCommand(unmount_command)
+  utils.AssertExit(retval == 0, "Unmount command failed!")
+  return is_test_image
+
 
 if __name__ == "__main__":
   retval = Main(sys.argv)
