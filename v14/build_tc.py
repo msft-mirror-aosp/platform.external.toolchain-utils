@@ -96,7 +96,7 @@ def Main(argv):
   chroot_output = chroot_mount + chroot_base
 
   tc_enter_chroot_options = []
-  output_mount = ("-o %s:%s/%s" % (output, chroot_mount, chroot_base))
+  output_mount = ("--output=" + output)
   tc_enter_chroot_options.append(output_mount)
 
   build_chromeos.MakeChroot(options.chromeos_root)

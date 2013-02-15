@@ -37,8 +37,7 @@ def ExecuteCommandInChroot(chromeos_root, toolchain_root, command,
           "--chromeos_root=" + chromeos_root,
           "--toolchain_root=" + toolchain_root,
           chrome_mount,
-          "--",
-          command]
+          "\n" + command]
   return tc_enter_chroot.Main(argv)
 
 
@@ -109,7 +108,7 @@ def Main():
                                      options.toolchain_root, options.board))
     utils.AssertTrue(ret == 0, "build_tc.py failed")
     version_number = utils.GetRoot(rootdir)[1]
-    pkgdir = "/usr/local/toolchain_root/" + version_number + "/pkgs"
+    pkgdir = "/usr/local/toolchain_root/" + version_number + "/output/pkgs"
     ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
                                  "PKGDIR=%s ./setup_board --board=%s "
                                  " --gcc_version=9999 "
@@ -125,21 +124,21 @@ def Main():
                                 "sudo mv /build/%s/etc/make.conf "
                                 "/build/%s/etc/make.conf.orig"
                                 % (options.board, options.board, options.board))
-  makeconf = ("source make.conf.orig\\\n")
+  makeconf = ("source make.conf.orig\n")
               #"CFLAGS='%s'\\\nCXXFLAGS='%s'\\\nLDFLAGS='%s'\\\n" %
               #(options.cflags, options.cxxflags, options.ldflags))
   ret2 = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                                "\"if [ -e /build/%s/etc/make.conf.orig ] ; "
-                                "then sudo echo -e \\\"%s\\\" | sudo tee "
+                                "if [ -e /build/%s/etc/make.conf.orig ] ; "
+                                "then sudo echo -e \"%s\" | sudo tee "
                                 "/build/%s/etc/make.conf > /dev/null ;"
-                                "else exit 1 ; fi\""
+                                "else exit 1 ; fi"
                                 % (options.board, makeconf, options.board))
 
   utils.AssertTrue(ret1 == 0 and ret2 == 0, "Could not modify make.conf")
 
   # Find Chrome browser version
   chrome_version = cmd_executer.RunCommand("%s/src/scripts/chromeos_version.sh "
-                                           "| grep CHROME_BUILD"
+                                           "| grep CHROME_VERSION"
                                            % options.chromeos_root, True)
 
   ret = chrome_version[0]

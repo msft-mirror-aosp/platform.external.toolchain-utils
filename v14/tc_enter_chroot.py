@@ -82,7 +82,9 @@ def Main(argv, return_output=False):
                     help="ChromeOS root checkout directory.")
   parser.add_option("-t", "--toolchain_root", dest="toolchain_root",
                     help="Toolchain root directory.")
-  parser.add_option("-o", "--other_mounts", dest="other_mounts",
+  parser.add_option("-o", "--output", dest="output",
+                    help="Toolchain output directory")
+  parser.add_option("-m", "--other_mounts", dest="other_mounts",
                     help="Other mount points in the form: " + 
                          "dir:mounted_dir:options")
 
@@ -159,6 +161,11 @@ def Main(argv, return_output=False):
                              getpass.getuser(), "ro")
     mount_points.append(mount_point)
 
+  output = options.output
+  if output is None:
+    output = version_dir + "/output"
+  mount_points.append(MountPoint(output, full_mounted_tc_root + "/output",
+                                 getpass.getuser()))
   mount_points += CreateMountPointsFromString(options.other_mounts, 
                                               chromeos_root + "/chroot/")
 
@@ -185,7 +192,9 @@ def Main(argv, return_output=False):
   command = chromeos_root + "/src/scripts/enter_chroot.sh"
 
   if len(passthrough_argv) > 1:
+    command += " <<EC_EOF"
     command += " " + " ".join(passthrough_argv[1:])
+    command += "\nEC_EOF"
     retval = cmd_executer.RunCommand(command, return_output)
     return retval
   else:
