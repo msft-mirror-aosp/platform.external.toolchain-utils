@@ -59,7 +59,7 @@ def FormatCommands(commands):
   return output
 
 def GetBuildPackagesCommand(board):
-  return "./build_packages --nousepkg --withdev --withtest --withautotest" \
+  return "./build_packages --nousepkg --withdev --withtest --withautotest " \
          "--board=%s" % board
 
 
