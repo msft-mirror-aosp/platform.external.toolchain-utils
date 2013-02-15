@@ -103,7 +103,7 @@ class JobGroupInfo(object):
                      ('Cleanup on failure', group.cleanup_on_failure)]}
 
   def _GetJobStatus(self, job):
-    status_map = {'SUCCEEDED': 'success', 'FAILED': 'failed'}
+    status_map = {'SUCCEEDED': 'success', 'FAILED': 'failure'}
     return status_map.get(str(job.status), None)
 
   def GetJobList(self):
@@ -139,7 +139,7 @@ class JobGroupListInfo(object):
     return group.status.split('_', 1)[1]
 
   def _GetJobGroupStatus(self, group):
-    status_map = {'SUCCEEDED': 'success', 'FAILED': 'failed'}
+    status_map = {'SUCCEEDED': 'success', 'FAILED': 'failure'}
     return status_map.get(self._GetJobGroupState(group), None)
 
   def GetList(self):
