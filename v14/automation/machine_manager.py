@@ -11,7 +11,8 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 
 import machine
-import machine_pools
+import machine_filters
+import machine_pool
 import os
 import pools
 import sys
@@ -42,7 +43,7 @@ class MachineManager:
     reload(pools)
 
     # First populate the global pool.
-    self.global_pool = machine_pools.MachinePool()
+    self.global_pool = machine_pool.MachinePool()
     for key, value in pools.machines.iteritems():
       m = machine.Machine(key,
                           value[0],
@@ -53,7 +54,7 @@ class MachineManager:
     # Then populate the named pools.
     self.named_pools = []
     for key, value in pools.named_pools.iteritems():
-      name_list_filter = machine_pools.NameListFilter(value)
+      name_list_filter = machine_filters.NameListFilter(value)
       named_pool = name_list_filter.FilterPool(self.global_pool)
       named_pool.SetName(key)
       self.named_pools.append(named_pool)
@@ -81,10 +82,10 @@ class MachineManager:
 
   def GetMachine(self, filters, lock, key, timeout):
     machine_pool = self.global_pool
-    if lock == True:
-      filters.append(machine_pools.UnlockedFilter())
 
-    filters.append(machine_pools.LightestLoadFilter())
+    filters.append(machine_filters.UnlockedFilter())
+
+    filters.append(machine_filters.LightestLoadFilter())
 
     for f in filters:
       machine_pool = f.FilterPool(machine_pool)
@@ -99,41 +100,4 @@ class MachineManager:
     return machine_pool.GetMachine(0)
 
 
-  def GetChromeOSMachine(self, lock=False, key="", timeout=200):
-    filters = []
-    cros_filter = machine_pools.ChromeOSFilter()
-    filters.append(cros_filter)
-
-    return self.GetMachine(filters, lock, key, timeout)
-
-
-  def GetLinuxMachine(self, lock=False, key="", timeout=200):
-    filters = []
-    linux_filter = machine_pools.LinuxFilter()
-    filters.append(linux_filter)
-
-    return self.GetMachine(filters, lock, key, timeout)
-
-
-def Main(argv):
-  print "In MachineManager."
-  mm = MachineManager()
-  print mm
-  cros_machine = mm.GetChromeOSMachine()
-  print cros_machine.name
-  cros_machine = mm.GetChromeOSMachine()
-  print cros_machine.name
-  cros_machine = mm.GetChromeOSMachine(lock=True, key="123")
-  print cros_machine.name
-  cros_machine = mm.GetChromeOSMachine(lock=True, key="333")
-  print cros_machine.name
-  cros_machine = mm.GetChromeOSMachine()
-  print cros_machine.name
-  cros_machine = mm.GetChromeOSMachine()
-  print cros_machine.name
-  print mm
-
-
-if __name__ == "__main__":
-  Main(sys.argv)
 

@@ -1,5 +1,6 @@
 import threading
 import jobs.job
+import machine_manager
 
 class JobExecuter(threading.Thread):
 
@@ -8,6 +9,7 @@ class JobExecuter(threading.Thread):
     self.job = job
     self.machine = machine
     self.job_manager = job_manager
+    self.machine_manager = machine_manager.MachineManager()
 
   def run(self):
     # Mark as executing and execute
@@ -15,7 +17,7 @@ class JobExecuter(threading.Thread):
 
     # Do execute here
     print "EXECUTING: " + self.job.GetCommand()
-    machine = "localhost"
+
 
     # Mark as complete
     self.job.SetStatus(jobs.job.STATUS_COMPLETED)

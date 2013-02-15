@@ -1,13 +1,13 @@
 import job
-from automation import MachineDescription
-from automation import MachineFilters
+from automation.machine_description import MachineDescription
+from automation.machine_filters import *
 
 class EchoJob(job.Job):
   def __init__(self, msg):
     job.Job.__init__(self)
     self.msg = msg
 
-    self.machine_descriptions.append(MachineDescription([]))
+    self.machine_descriptions.append(MachineDescription([LinuxFilter()]))
 
   def GetCommand(self):
     return "echo " + self.msg
