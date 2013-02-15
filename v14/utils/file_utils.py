@@ -64,6 +64,10 @@ class FileUtils(object):
   def RmDir(self, path):
     shutil.rmtree(path, ignore_errors=True)
 
+  def WriteFile(self, path, contents):
+    with open(path, "wb") as f:
+      f.write(contents)
+
 
 class MockFileUtils(FileUtils):
   """Mock class for file utilities."""
@@ -81,4 +85,7 @@ class MockFileUtils(FileUtils):
     pass
 
   def MkDirP(self, path):
+    pass
+
+  def WriteFile(self, path, contents):
     pass

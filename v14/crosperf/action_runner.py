@@ -76,8 +76,11 @@ class MockActionRunner(ActionRunner):
     self.l.LogOutput("Would run the following experiment: '%s'." %
                      experiment.name)
 
-  def Table(self, experiment):
+  def PrintTable(self, experiment):
     self.l.LogOutput("Would print the experiment table.")
 
   def Email(self, experiment):
     self.l.LogOutput("Would send result email.")
+
+  def StoreResults(self, experiment):
+    self.l.LogOutput("Would store the results.")

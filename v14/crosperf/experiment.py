@@ -19,7 +19,7 @@ class Experiment(threading.Thread):
   """Class representing an Experiment to be run."""
 
   def __init__(self, name, remote, rerun_if_failed, working_directory,
-               parallel, chromeos_root, cache_conditions, labels, benchmarks,
+               chromeos_root, cache_conditions, labels, benchmarks,
                experiment_file):
     threading.Thread.__init__(self)
     self.name = name
@@ -28,7 +28,6 @@ class Experiment(threading.Thread):
     self.remote = remote
     self.chromeos_root = chromeos_root
     self.cache_conditions = cache_conditions
-    self.parallel = parallel
     self.complete = False
     self.terminate = False
     self.experiment_file = experiment_file
@@ -79,6 +78,7 @@ class Experiment(threading.Thread):
                                        self.cache_conditions,
                                        benchmark.outlier_range,
                                        benchmark.profile_counters,
+                                       benchmark.profile_type,
                                        self.machine_manager,
                                        ResultsCache(),
                                        AutotestRunner(),
@@ -136,13 +136,11 @@ class Experiment(threading.Thread):
     FileUtils().MkDirP(self.results_directory)
     experiment_file_path = os.path.join(self.results_directory,
                                         "experiment.exp")
-    with open(experiment_file_path, "wb") as f:
-      f.write(self.experiment_file)
+    FileUtils().WriteFile(experiment_file_path, self.experiment_file)
 
     results_table_path = os.path.join(self.results_directory, "results.html")
     report = HTMLResultsReport(self).GetReport()
-    with open(results_table_path, "wb") as f:
-      f.write(report)
+    FileUtils().WriteFile(results_table_path, report)
 
     for benchmark_run in self.benchmark_runs:
       benchmark_run_name = filter(str.isalnum, benchmark_run.name)

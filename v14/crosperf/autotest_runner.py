@@ -3,6 +3,7 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 from utils import command_executer
+from utils import utils
 
 
 class AutotestRunner(object):
@@ -10,21 +11,21 @@ class AutotestRunner(object):
     self._ce = command_executer.GetCommandExecuter()
 
   def Run(self, machine_name, chromeos_root, board, autotest_name,
-          autotest_args, profile_counters):
-    if profile_counters:
-      counters_string = "-e" + " -e ".join(profile_counters)
-      autotest_args += "--profile --profiler_args='-a -g %s'" % counters_string
-    command = "cd %s/src/scripts" % chromeos_root
+          autotest_args, profile_counters, profile_type):
+    if profile_counters and profile_type != "none":
+      profiler_args = "-e " + " -e ".join(profile_counters)
+      if profile_type == "record":
+        profiler_args += "-g"
+      autotest_args += ("--profile --profiler_args='%s' --profile_type='%s'"
+                        % (profiler_args, profile_type))
     options = ""
     if board:
       options += " --board=%s" % board
     if autotest_args:
       options += " %s" % autotest_args
-    command += ("&& cros_sdk -- ./run_remote_tests.sh --remote=%s %s %s" %
-                (machine_name,
-                 options,
-                 autotest_name))
-    return self._ce.RunCommand(command, True)
+    command = ("./run_remote_tests.sh --remote=%s %s %s" %
+               (machine_name, options, autotest_name))
+    return utils.ExecuteCommandInChroot(chromeos_root, command, True)
 
 
 class MockAutotestRunner(object):

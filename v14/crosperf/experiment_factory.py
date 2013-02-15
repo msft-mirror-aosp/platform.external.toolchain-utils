@@ -47,8 +47,10 @@ class ExperimentFactory(object):
       iterations = benchmark_settings.GetField("iterations")
       outlier_range = benchmark_settings.GetField("outlier_range")
       profile_counters = benchmark_settings.GetField("profile_counters")
+      profile_type = benchmark_settings.GetField("profile_type")
       benchmark = Benchmark(benchmark_name, autotest_name, autotest_args,
-                            iterations, outlier_range, profile_counters)
+                            iterations, outlier_range, profile_counters,
+                            profile_type)
       benchmarks.append(benchmark)
 
     # Construct labels.
@@ -63,7 +65,7 @@ class ExperimentFactory(object):
       labels.append(label)
 
     experiment = Experiment(experiment_name, remote, rerun_if_failed,
-                            working_directory, False, chromeos_root,
+                            working_directory, chromeos_root,
                             cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize())
 

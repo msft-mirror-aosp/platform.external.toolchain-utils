@@ -14,10 +14,11 @@ class Benchmark(object):
   """
 
   def __init__(self, name, autotest_name, autotest_args, iterations,
-               outlier_range, profile_counters):
+               outlier_range, profile_counters, profile_type):
     self.name = name
     self.autotest_name = autotest_name
     self.autotest_args = autotest_args
     self.iterations = iterations
     self.outlier_range = outlier_range
     self.profile_counters = profile_counters
+    self.profile_type = profile_type

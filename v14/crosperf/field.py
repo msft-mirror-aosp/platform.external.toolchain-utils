@@ -87,3 +87,17 @@ class ListField(Field):
 
   def GetString(self):
     return " ".join(self._value)
+
+
+class EnumField(Field):
+  def __init__(self, name, options, required=False, default="",
+               inheritable=False, description=""):
+    super(EnumField, self).__init__(name, required, default, inheritable,
+                                    description)
+    self.options = options
+
+  def _Parse(self, value):
+    if value not in self.options:
+      raise Exception("Invalid enum value for field '%s'. Must be one of (%s)"
+                      % (self.name, ", ".join(self.options)))
+    return str(value)

@@ -9,14 +9,15 @@ import os
 import pickle
 import re
 from image_checksummer import ImageChecksummer
+from perf_processor import PerfProcessor
 from utils import command_executer
 from utils import logger
 from utils import utils
 
 SCRATCH_DIR = "/home/%s/cros_scratch" % getpass.getuser()
-PICKLE_FILE = "pickle.txt"
+RESULTS_FILE = "results.txt"
 AUTOTEST_TARBALL = "autotest.tbz2"
-PERF_REPORT = "perf.report"
+PERF_RESULTS_FILE = "perf-results.txt"
 
 
 class Result(object):
@@ -90,7 +91,7 @@ class ResultsCache(object):
         self._logger.LogError("Multiple compatible cache files: %s." %
                               " ".join(matching_dirs))
       matching_dir = matching_dirs[0]
-      cache_file = os.path.join(matching_dir, PICKLE_FILE)
+      cache_file = os.path.join(matching_dir, RESULTS_FILE)
 
       self._logger.LogOutput("Trying to read from cache file: %s" % cache_file)
 
@@ -111,7 +112,7 @@ class ResultsCache(object):
 
   def StoreResult(self, result):
     cache_dir = self._GetCacheDir()
-    cache_file = os.path.join(cache_dir, PICKLE_FILE)
+    cache_file = os.path.join(cache_dir, RESULTS_FILE)
     command = "mkdir -p %s" % os.path.dirname(cache_file)
     ret = self._ce.RunCommand(command)
     assert ret == 0, "Couldn't create cache dir"
@@ -125,20 +126,30 @@ class ResultsCache(object):
                                     results_dir[1:])
     tarball = os.path.join(self._GetCacheDir(), AUTOTEST_TARBALL)
     command = ("cd %s && tar cjf %s ." % (host_results_dir, tarball))
-    self._ce.RunCommand(command)
+    ret = self._ce.RunCommand(command)
+    if ret:
+      raise Exception("Couldn't store autotest output directory.")
 
   def ReadAutotestOutput(self, destination):
     tarball = os.path.join(self._GetCacheDir(True), AUTOTEST_TARBALL)
     command = ("cd %s && tar xjf %s ." % (destination, tarball))
-    self._ce.RunCommand(command)
+    ret = self._ce.RunCommand(command)
+    if ret:
+      raise Exception("Couldn't read autotest output directory.")
 
-  def StorePerfReport(self, perf_report):
-    with open(os.path.join(self._GetCacheDir(), PERF_REPORT), "wb") as f:
-      f.write(perf_report)
+  def StorePerfResults(self, perf):
+    perf_path = os.path.join(self._GetCacheDir(), PERF_RESULTS_FILE)
+    with open(perf_path, "wb") as f:
+      pickle.dump(perf.report, f)
+      pickle.dump(perf.output, f)
 
-  def ReadPerfReport(self):
-    with open(os.path.join(self._GetCacheDir(True), PERF_REPORT), "rb") as f:
-      return f.readlines()
+  def ReadPerfResults(self):
+    perf_path = os.path.join(self._GetCacheDir(), PERF_RESULTS_FILE)
+    with open(perf_path, "rb") as f:
+      report = pickle.load(f)
+      output = pickle.load(f)
+
+    return PerfProcessor.PerfResults(report, output)
 
   def _ConvertToFilename(self, text):
     ret = text
@@ -153,11 +164,20 @@ class MockResultsCache(object):
   def Init(self, *args):
     pass
 
-  def GetCacheDir(self, *args):
-    return ""
+  def ReadResult(self):
+    return Result("Results placed in /tmp/test", "", 0)
 
-  def Read(self, *args):
-    return None
-
-  def Store(self, *args):
+  def StoreResult(self, result):
     pass
+
+  def StoreAutotestOutput(self, results_dir):
+    pass
+
+  def ReadAutotestOutput(self, destination):
+    pass
+
+  def StorePerfResults(self, perf):
+    pass
+
+  def ReadPerfResults(self):
+    return PerfProcessor.PerfResults("", "")

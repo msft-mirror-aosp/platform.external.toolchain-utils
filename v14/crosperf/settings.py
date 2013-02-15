@@ -40,14 +40,13 @@ class Settings(object):
     if not field.assigned and field.required:
       raise Exception("Required field '%s' not defined in '%s' settings." %
                       (name, self.name))
-
     return self.fields[name].Get()
 
   def Inherit(self):
     """Inherit any unset values from the parent settings."""
     for name in self.fields:
-      if (not self.fields[name].assigned and self.fields[name].inheritable
-          and self.parent and self.parent.fields[name].assigned):
+      if (not self.fields[name].assigned and self.parent and
+          name in self.parent.fields and self.parent.fields[name].assigned):
         self.fields[name].Set(self.parent.GetField(name), parse=False)
 
   def Override(self, settings):

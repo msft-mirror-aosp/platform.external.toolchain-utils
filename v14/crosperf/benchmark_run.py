@@ -10,6 +10,7 @@ import time
 import traceback
 from results_cache import Result
 from utils import logger
+from utils.file_utils import FileUtils
 
 STATUS_FAILED = "FAILED"
 STATUS_SUCCEEDED = "SUCCEEDED"
@@ -22,10 +23,13 @@ STATUS_PENDING = "PENDING"
 class BenchmarkRun(threading.Thread):
   def __init__(self, name, benchmark_name, autotest_name, autotest_args,
                label_name, chromeos_root, chromeos_image, board, iteration,
-               cache_conditions, outlier_range, profile_counters,
+               cache_conditions, outlier_range, profile_counters, profile_type,
                machine_manager, cache, autotest_runner, perf_processor):
     threading.Thread.__init__(self)
     self.name = name
+    self._logger = logger.Logger(os.path.dirname(__file__),
+                                 "%s.%s" % (os.path.basename(__file__),
+                                            self.name), True)
     self.benchmark_name = benchmark_name
     self.autotest_name = autotest_name
     self.autotest_args = autotest_args
@@ -41,6 +45,7 @@ class BenchmarkRun(threading.Thread):
     self.run_completed = False
     self.outlier_range = outlier_range
     self.profile_counters = profile_counters
+    self.profile_type = profile_type
     self.machine_manager = machine_manager
     self.cache = cache
     self.autotest_runner = autotest_runner
@@ -50,6 +55,7 @@ class BenchmarkRun(threading.Thread):
     self.cache_conditions = cache_conditions
     self.runs_complete = 0
     self.cache_hit = False
+    self.perf_results = None
 
   def MeanExcludingOutliers(self, array, outlier_range):
     """Return the arithmetic mean excluding outliers."""
@@ -83,24 +89,55 @@ class BenchmarkRun(threading.Thread):
       return results_dict
     return {}
 
+  def ProcessResults(self, result, cache_hit):
+    # Generate results from the output file.
+    results_dir = self._GetResultsDir(result.out)
+    self.full_name = os.path.basename(results_dir)
+    self.results = self.ParseResults(result.out)
+
+    # Store the autotest output in the cache also.
+    if not cache_hit:
+      self.cache.StoreAutotestOutput(results_dir)
+
+    # Generate a perf report and cache it.
+    if cache_hit:
+      self.perf_results = self.cache.ReadPerfResults()
+    else:
+      self.perf_results = (self.perf_processor.
+                           GeneratePerfResults(results_dir,
+                                               self.chromeos_root,
+                                               self.board))
+      self.cache.StorePerfResults(self.perf_results)
+
+    # If there are valid results from perf stat, combine them with the
+    # autotest results.
+    if self.perf_results:
+      stat_results = self.perf_processor.ParseStatResults(self.perf_results)
+      self.results = dict(self.results.items() + stat_results.items())
+
+  def StoreResults(self, results_dir):
+    # Store perf_report and autotest output locally.
+    try:
+      self.cache.ReadAutotestOutput(results_dir)
+    except Exception, e:
+      self._logger.LogError(e)
+    try:
+      if self.perf_results:
+        FileUtils().WriteFile(os.path.join(results_dir, "perf.report"),
+                              self.perf_results.report)
+        FileUtils().WriteFile(os.path.join(results_dir, "perf.out"),
+                              self.perf_results.output)
+    except Exception, e:
+      self._logger.LogError(e)
+
   def _GetResultsDir(self, output):
     mo = re.search("Results placed in (\S+)", output)
     if mo:
       result = mo.group(1)
       return result
-    return ""
-
-  def StoreResults(self, results_dir):
-    # Store perf_report and autotest output locally.
-    self.cache.ReadAutotestOutput(results_dir)
-    with open(os.path.join(results_dir, "perf.report"), "wb") as f:
-      f.write(self.perf_report)
+    raise Exception("Could not find results directory.")
 
   def run(self):
-    self._logger = logger.Logger(os.path.dirname(__file__),
-                                 "%s.%s" % (os.path.basename(__file__),
-                                            self.name), True)
-
     try:
       # Just use the first machine for running the cached version,
       # without locking it.
@@ -134,27 +171,8 @@ class BenchmarkRun(threading.Thread):
       else:
         self.status = STATUS_FAILED
 
-      results_dir = self._GetResultsDir(result.out)
-      self.full_name = os.path.basename(results_dir)
+      self.ProcessResults(result, self.cache_hit)
 
-      self.results = self.ParseResults(result.out)
-
-      if not self.cache_hit:
-        self.cache.StoreAutotestOutput(results_dir)
-
-      if self.profile_counters:
-        if not self.cache_hit:
-          self.perf_report = (self.perf_processor.
-                              GeneratePerfReport(results_dir,
-                                                 self.chromeos_root,
-                                                 self.board))
-          self.cache.StorePerfReport(self.perf_report)
-        else:
-          self.perf_report = self.cache.ReadPerfReport()
-      else:
-        self.perf_report = ""
-
-      return result.retval
     except Exception, e:
       self._logger.LogError("Benchmark run: '%s' failed: %s." % (self.name, e))
       traceback.print_exc()
@@ -192,7 +210,8 @@ class BenchmarkRun(threading.Thread):
                                                   self.board,
                                                   self.autotest_name,
                                                   self.autotest_args,
-                                                  self.profile_counters)
+                                                  self.profile_counters,
+                                                  self.profile_type)
     self.run_completed = True
     result = Result(out, err, retval)
 

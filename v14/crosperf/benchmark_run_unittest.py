@@ -28,6 +28,7 @@ class BenchmarkRunTest(unittest.TestCase):
                      [],
                      0.2,
                      "",
+                     "none",
                      m,
                      MockResultsCache(),
                      MockAutotestRunner(),

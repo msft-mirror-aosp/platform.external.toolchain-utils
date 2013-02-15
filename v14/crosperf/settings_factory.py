@@ -3,6 +3,7 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 from field import BooleanField
+from field import EnumField
 from field import FloatField
 from field import IntegerField
 from field import ListField
@@ -19,7 +20,7 @@ class BenchmarkSettings(Settings):
     self.AddField(TextField("autotest_args",
                             description="Arguments to be passed to the "
                             "autotest."))
-    self.AddField(IntegerField("iterations", default=3, inheritable=True,
+    self.AddField(IntegerField("iterations", default=3,
                                description="Number of iterations to run the "
                                "autotest."))
     self.AddField(FloatField("outlier_range", default=0.2,
@@ -27,8 +28,12 @@ class BenchmarkSettings(Settings):
                              "values to omit when computing the average."))
     self.AddField(ListField("profile_counters",
                             description="A list of profile counters to "
-                            "collect.",
-                            inheritable=True))
+                            "collect."))
+    self.AddField(EnumField("profile_type",
+                            description="The type of profile to collect. "
+                            "Either 'stat', 'record' or 'none'.",
+                            options=["stat", "record", "none"],
+                            default="none"))
 
 
 class LabelSettings(Settings):
@@ -37,14 +42,13 @@ class LabelSettings(Settings):
     self.AddField(TextField("chromeos_image", required=True,
                             description="The path to the image to run tests "
                             "on."))
-    self.AddField(TextField("chromeos_root", inheritable=True,
+    self.AddField(TextField("chromeos_root",
                             description="The path to a chromeos checkout which "
                             "contains a src/scripts directory. Defaults to "
                             "the chromeos checkout which contains the "
                             "chromeos_image."))
     self.AddField(TextField("board", required=True, description="The target "
-                            "board for running experiments on, e.g. x86-alex.",
-                            inheritable=True))
+                            "board for running experiments on, e.g. x86-alex."))
 
 
 class GlobalSettings(Settings):
@@ -78,6 +82,10 @@ class GlobalSettings(Settings):
     self.AddField(ListField("profile_counters",
                             description="A list of profile counters to "
                             "collect."))
+    self.AddField(EnumField("profile_type",
+                            description="The type of profile to collect. "
+                            "Either 'stat', 'record' or 'none'.",
+                            options=["stat", "record", "none"]))
 
 
 class SettingsFactory(object):

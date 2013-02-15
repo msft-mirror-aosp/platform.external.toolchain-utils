@@ -39,4 +39,7 @@ class ResultSorter(object):
     return self.autotest_keys[benchmark_name].keys()
 
   def GetResults(self, benchmark_name, autotest_key, label_name):
-    return self.table[(benchmark_name, autotest_key, label_name)]
+    try:
+      return self.table[(benchmark_name, autotest_key, label_name)]
+    except KeyError:
+      return []
