@@ -220,7 +220,8 @@ class AutotestRun:
     self.iteration = iteration
     self.output = ""
     self.results = {}
-    logger.GetLogger().LogFatalIf(not image_checksum)
+    logger.GetLogger().LogFatalIf(not image_checksum,
+                                  "Checksum shouldn't be None")
     self.image_checksum = image_checksum
 
 
@@ -614,7 +615,8 @@ class AutotestRunner:
       else:
         if reimaged == False:
           retval = image_chromeos.Main(image_args)
-          logger.GetLogger().LogFatalIf(retval, "Could not re-image!")
+          logger.GetLogger().LogFatalIf(retval,
+                                        "Could not re-image!")
           reimaged = True
         command = "cd %s/src/scripts" % self.chromeos_root
         command += ("&& ./enter_chroot.sh -- ./run_remote_tests.sh --remote=%s %s %s" %
@@ -660,7 +662,7 @@ def Main(argv):
                     help="The remote chromeos machine.")
   parser.add_option("-b", "--board", dest="board",
                     help="The remote board.",
-                    default="x86-agz")
+                    default="x86-mario")
   parser.add_option("--full_table", dest="full_table",
                     help="Print full tables.",
                     action="store_true",
@@ -686,7 +688,9 @@ def Main(argv):
     benchmark_strings = options.tests.split(",")
     for benchmark_string in benchmark_strings:
       fields = benchmark_string.split(":")
-      logger.GetLogger().LogFatalIf(len(fields)>2)
+      l = logger.GetLogger()
+      l.LogFatalIf(len(fields)>2,
+                   "Benchmark string: %s flawed" % benchmark_string)
       name = fields[0]
       if len(fields) == 2:
         iterations = int(fields[1])

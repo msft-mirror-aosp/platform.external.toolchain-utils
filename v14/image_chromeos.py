@@ -151,9 +151,9 @@ def LocateOrCopyImage(chromeos_root, image, board=None):
     board_glob = board
 
   chromeos_root_realpath = os.path.realpath(chromeos_root)
-
+  image = os.path.realpath(image)
   
-  if image.startswith(chromeos_root_realpath):
+  if image.startswith("%s/" % chromeos_root_realpath):
     return [True, image]
 
   # First search within the existing build dirs for any matching files.
