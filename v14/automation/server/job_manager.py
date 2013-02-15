@@ -167,7 +167,7 @@ class JobManager(threading.Thread):
       self.job_condition.acquire()
       self.job_condition.wait()
 
-      while len(self.ready_jobs) > 0:
+      while self.ready_jobs:
         ready_job = self.ready_jobs.pop()
         if ready_job is None:
           # Time to die
@@ -179,7 +179,7 @@ class JobManager(threading.Thread):
           required_machines[0].AddPreferredMachine(child.machines[0].hostname)
 
         machines = self.machine_manager.GetMachines(required_machines)
-        if machines is None:
+        if not machines:
           # If we can't get the necessary machines right now, simply wait
           # for some jobs to complete
           self.ready_jobs.insert(0, ready_job)
