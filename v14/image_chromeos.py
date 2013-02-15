@@ -20,6 +20,7 @@ import tc_enter_chroot
 from utils import command_executer
 from utils import logger
 from utils import utils
+from utils.file_utils import FileUtils
 
 checksum_file = "/usr/local/osimage_checksum_file"
 
@@ -82,7 +83,7 @@ def Main(argv):
   if not os.path.exists(image):
     Usage(parser, "Image file: " + image + " does not exist!")
 
-  image_checksum = utils.Md5File(image)
+  image_checksum = FileUtils().Md5File(image)
 
   command = "cat " + checksum_file
   retval, device_checksum, err = cmd_executer.CrosRunCommand(command,
@@ -158,7 +159,7 @@ def LocateOrCopyImage(chromeos_root, image, board=None):
 
   chromeos_root_realpath = os.path.realpath(chromeos_root)
   image = os.path.realpath(image)
-  
+
   if image.startswith("%s/" % chromeos_root_realpath):
     return [True, image]
 

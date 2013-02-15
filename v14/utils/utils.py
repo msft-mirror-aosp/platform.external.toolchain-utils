@@ -65,21 +65,6 @@ def GetSetupBoardCommand(board, gcc_version=None, binutils_version=None,
   return "./setup_board --board=%s %s" % (board, " ".join(options))
 
 
-def Md5File(filename, block_size=2**10):
-  md5 = hashlib.md5()
-
-  try:
-    with open(filename) as f:
-      while True:
-        data = f.read(block_size)
-        if not data:
-          break
-        md5.update(data)
-  except IOError as ex:
-    logger.GetLogger().LogFatal(ex)
-
-  return md5.hexdigest()
-
 @contextmanager
 def WorkingDirectory(new_dir):
   old_dir = os.getcwd()

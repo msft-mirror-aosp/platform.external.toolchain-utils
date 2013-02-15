@@ -10,6 +10,7 @@ from autotest_run import AutotestRun as AutotestRun
 from machine_manager_singleton import MachineManagerSingleton as MachineManagerSingleton
 from utils import logger
 from utils import utils
+from utils.file_utils import FileUtils
 
 def CanonicalizeChromeOSRoot(chromeos_root):
   chromeos_root = os.path.expanduser(chromeos_root)
@@ -56,7 +57,7 @@ def CreateAutotestRuns(images, autotests, remote, board, exact_remote,
   autotest_runs = []
   for image in images:
     logger.GetLogger().LogOutput("Computing md5sum of: %s" % image)
-    image_checksum = utils.Md5File(image)
+    image_checksum = FileUtils().Md5File(image)
     logger.GetLogger().LogOutput("md5sum %s: %s" % (image, image_checksum))
 ###    image_checksum = "abcdefghi"
 
@@ -114,7 +115,7 @@ def GetStatusString(autotest_runs):
 
 
 def GetProgressBar(num_done, num_total):
-  ret = "Done: %s%%" % int(100.0 * num_done/num_total)
+  ret = "Done: %s%%" % int(100.0 * num_done / num_total)
   bar_length = 50
   done_char = ">"
   undone_char = " "
