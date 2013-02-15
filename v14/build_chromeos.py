@@ -100,13 +100,13 @@ def Main():
     if options.clobber_board:
       force = "--force"
     # Run build_tc.py from binary package
-    ret = utils.RunCommand("./build_tc.py --chromeos_root=%s "
+    ret = utils.RunCommand(rootdir + "/build_tc.py --chromeos_root=%s "
                            "--toolchain_root=%s --board=%s -B"
                            % (options.chromeos_root, options.toolchain_root,
                               options.board))
     utils.AssertTrue(ret == 0, "build_tc.py failed")
     version_number = utils.GetRoot(rootdir)[1]
-    pkgdir = "/home/${USER}/toolchain_root/" + version_number + "/pkgs"
+    pkgdir = "/usr/local/toolchain_root/" + version_number + "/pkgs"
     ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
                                  "PKGDIR=%s ./setup_board --board=%s "
                                  " --gcc_version=9999 "
