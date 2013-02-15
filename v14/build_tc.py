@@ -11,6 +11,7 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import getpass
 import optparse
+import os
 import sys
 import tc_enter_chroot
 import build_chromeos
@@ -46,6 +47,8 @@ def Main():
                     "the install/ directory.")
 
   options = parser.parse_args()[0]
+
+  options.chromeos_root = os.path.expanduser(options.chromeos_root)
 
   if options.toolchain_root is None or options.board is None:
     parser.print_help()
@@ -127,7 +130,7 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
 
   binutils_version = "2.20.1-r1"
   gcc_version = "9999"
-  libc_version = "2.10.1-r1"
+  libc_version = "2.10.1-r2"
   kernel_version = "2.6.30-r1"
 
   argv = [rootdir + "tc_enter_chroot.py",

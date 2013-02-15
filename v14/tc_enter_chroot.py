@@ -56,6 +56,10 @@ def Main(argv):
     chromeos_root = "../.."
   else:
     chromeos_root = options.chromeos_root
+
+  chromeos_root = os.path.expanduser(chromeos_root)
+  options.toolchain_root = os.path.expanduser(options.toolchain_root)
+
   chromeos_root = os.path.abspath(chromeos_root)
 
   if (options.toolchain_root is None or
