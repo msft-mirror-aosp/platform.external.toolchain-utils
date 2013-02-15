@@ -36,5 +36,11 @@ if __name__ == "__main__":
   xmlserver = SimpleXMLRPCServer.SimpleXMLRPCServer(("localhost", 8000),
                                                   allow_none=True)
   xmlserver.register_instance(server)
-  xmlserver.serve_forever()
+  try:
+    xmlserver.serve_forever()
+  except (KeyboardInterrupt, SystemExit):
+    print "Caught exception... Cleaning up."
+    server.StopServer()
+    raise
+    
 

@@ -13,11 +13,10 @@ class P4Job(job.Job):
     self.machine_descriptions.append(MachineDescription([OSFilter("linux")]))
 
 
-  def _GetP4PathString(self, client_name, p4_paths):
-    p4_string = "\""
+  def _GetP4ClientSpec(self, client_name, p4_paths):
+    p4_string = ""
     for p4_path in p4_paths:
-      p4_string += (" //" + client_name + "/").join(p4_path)
-    p4_string += "\""
+      p4_string += " -a \"" + (" //" + client_name + "/").join(p4_path) + "\""
     return p4_string
 
 
@@ -31,9 +30,9 @@ class P4Job(job.Job):
     command += " && cp ${HOME}/.p4config ."
     command += " && echo \"P4PORT=" + self.p4_port + "\" >> .p4config"
     command += " && echo \"P4CLIENT=" + client_name + "\" >> .p4config"
-    command += (" && g4 client -a " +
-                self._GetP4PathString(client_name, self.p4_paths))
+    command += (" && g4 client " +
+                self._GetP4ClientSpec(client_name, self.p4_paths))
     command += " && g4 sync ..."
-    command += " && g4 client -d " + client_name
+###    command += " && g4 client -d " + client_name
     return command
 
