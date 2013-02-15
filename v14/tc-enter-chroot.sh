@@ -8,27 +8,24 @@ toolchain_setup_env()
   then
     return 0
   fi
-  GVSB=google_vendor_src_branch
-  full_dir=$(dirname "$0")
+  GVSB=$FLAGS_TC_ROOT/google_vendor_src_branch
+  full_dir=$(dirname $(readlink -e $0))
   parent_dir="${full_dir##*/}"
-  version_dir="$FLAGS_TC_ROOT/chromeos/$parent_dir"
-  # Make sure the v14 or equivalent directory exists.
-  if [[ ! -d "$version_dir" ]]
-  then
-    mkdir -p "$version_dir" || die "Could not create $version_dir."
-  fi
-  TC_DIRS=( $GVSB/gcc chromeos/${parent_dir} )
+  # TC_DIRS should contain the full path to the directories you wish to mount.
+  # The following code will extract out the last dir and use that mount point
+  # inside the chroot.
+  TC_DIRS=( $GVSB/gcc ${full_dir} )
   for TC_DIR in ${TC_DIRS[@]}
   do
     TC_LAST_DIR=${TC_DIR##*/}
     TC_MOUNTED_PATH="$(eval readlink -f "$CROS_CHROOT/$FLAGS_TC_ROOT_MOUNT/$TC_LAST_DIR")"
     if [[ -z "$(mount | grep -F "on $TC_MOUNTED_PATH ")" ]]
     then
-      ! TC_PATH="$(eval readlink -e "$FLAGS_TC_ROOT/$TC_DIR")"
+      ! TC_PATH="$(eval readlink -e "$TC_DIR")"
       TC_MOUNTED_PATH="$CROS_CHROOT/$FLAGS_TC_ROOT_MOUNT/$TC_LAST_DIR"
       if [[ -z "$TC_PATH" ]]
       then
-        die "$FLAGS_TC_ROOT/$TC_DIR is not a valid toolchain directory."
+        die "$TC_DIR is not a valid toolchain directory."
       fi
       if [[ -z "$TC_MOUNTED_PATH" ]]
       then
