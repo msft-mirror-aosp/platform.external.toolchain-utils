@@ -135,8 +135,7 @@ def Main(argv, return_output=False):
     parser.print_help()
     sys.exit(1)
 
-  rootdir = utils.GetRoot(__file__)[0]
-  version_dir = rootdir
+  version_dir = os.path.realpath(os.path.expanduser(os.path.dirname(__file__)))
 
   mounted_tc_root = "/usr/local/toolchain_root"
   full_mounted_tc_root = chromeos_root + "/chroot/" + mounted_tc_root
