@@ -37,7 +37,7 @@ utils.InitLogger(rootdir, basename)
 GIT_TAGS_CMD = ("git ls-remote --tags "
                 "ssh://git@gitrw.chromium.org:9222/chromiumos-overlay.git | "
                 "grep refs/tags/ | grep '[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*' | "
-                "cut -d '/' -f 3 | sort -nr")
+                "cut -d '/' -f 3")
 
 
 def StoreFile(filename, contents):
@@ -56,26 +56,42 @@ def GetTags():
   return res[1].strip().split("\n")
 
 
+def GetLatestTag(tags):
+  latest = tags[0]
+  for tag in tags:
+    current_components = tag.split(".")
+    latest_components = latest.split(".")
+    for i in range(len(current_components)):
+      if int(current_components[i]) > int(latest_components[i]):
+        latest = tag
+        break
+      elif int(current_components[i]) < int(latest_components[i]):
+        break
+
+  return latest
+
+
 def Main():
   """Checkout the ChromeOS source."""
   parser = optparse.OptionParser()
   parser.add_option("--dir", dest="directory",
                     help="Target directory for ChromeOS installation.")
-  parser.add_option("--version", dest="version",
+  parser.add_option("--version", dest="version", default="latest",
                     help="""ChromeOS version. Can be: (1) A release version
 in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
 'top' for top of trunk. Default is 'latest'""")
 
-  tags = GetTags()
-
   options = parser.parse_args()[0]
 
+  tags = GetTags()
+
   if options.version == "latest":
-    version = tags[0]
+    version = GetLatestTag(tags)
     print version
   elif options.version == "top":
     version = "top"
   elif options.version is None:
+    print "No version specified"
     Usage(parser)
   else:
     version = options.version.strip()

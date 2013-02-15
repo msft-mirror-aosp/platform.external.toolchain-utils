@@ -60,7 +60,7 @@ class Logger(object):
       fds = select.select([p.stdout, p.stderr], [], [], 0.1)
       for fd in fds[0]:
         if fd == p.stdout:
-          out = os.read(p.stdout.fileno(), 4096)
+          out = os.read(p.stdout.fileno(), 1)
           if return_output:
             full_stdout += out
           if self.print_console:
@@ -69,7 +69,7 @@ class Logger(object):
           self.stdout.write(out)
           self.stdout.flush()
         if fd == p.stderr:
-          err = os.read(p.stderr.fileno(), 4096)
+          err = os.read(p.stderr.fileno(), 1)
           if return_output:
             full_stderr += err
           if self.print_console:
