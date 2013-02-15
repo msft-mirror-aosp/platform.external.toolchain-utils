@@ -17,6 +17,12 @@ def Main(argv):
                     default="v2",
                     help="Toolchain to use {trunk|branch}"
                     )
+  parser.add_option("-b",
+                    "--board",
+                    dest="board",
+                    default="x86-agz",
+                    help="Board to use for the nightly job."
+                    )
   parser.add_option("-l",
                     "--perflab-benchmarks",
                     dest="perflab_benchmarks",
@@ -29,7 +35,8 @@ def Main(argv):
   server = xmlrpclib.Server("http://localhost:8000")
 
   all_jobs = []
-  tc_job = jobs_helper.CreateBuildTCJob(toolchain=options.toolchain)
+  tc_job = jobs_helper.CreateBuildTCJob(toolchain=options.toolchain,
+                                        board=options.board)
   all_jobs.append(tc_job)
 
   tc_root = jobs_helper.GetTCRootDir(options.toolchain)[1]
@@ -37,14 +44,16 @@ def Main(argv):
   # Perform the correctness tests
   build_chromeos_job = jobs_helper.CreateBuildAndTestChromeOSJob(
       "weekly",
-      toolchain=options.toolchain)
+      toolchain=options.toolchain,
+      board=options.board)
   build_chromeos_job.AddRequiredFolder(tc_job,
       tc_root + jobs_helper.tc_pkgs_dir,
       tc_root + jobs_helper.tc_pkgs_dir)
   all_jobs.append(build_chromeos_job)
 
   dejagnu_job = jobs_helper.CreateDejaGNUJob(
-      toolchain=options.toolchain)
+      toolchain=options.toolchain,
+      board=options.board)
   dejagnu_job.AddRequiredFolder(tc_job,
       tc_root + jobs_helper.tc_pkgs_dir,
       tc_root + jobs_helper.tc_pkgs_dir)
@@ -58,7 +67,8 @@ def Main(argv):
   perflab_job = jobs_helper.CreatePerflabJob(
       "quarterly",
       options.perflab_benchmarks,
-      toolchain=options.toolchain)
+      toolchain=options.toolchain,
+      board=options.board)
   perflab_job.AddRequiredFolder(tc_job,
       tc_root + jobs_helper.tc_pkgs_dir,
       tc_root + jobs_helper.tc_pkgs_dir)

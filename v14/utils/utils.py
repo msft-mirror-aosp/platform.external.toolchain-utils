@@ -134,3 +134,9 @@ def Md5File(filename, block_size=2**10):
   f.close()
   return md5.hexdigest()
 
+
+def ExitWithCode(code):
+  if code == None:
+    AssertExit("Exit code should not be None!")
+  sys.exit(code)
+

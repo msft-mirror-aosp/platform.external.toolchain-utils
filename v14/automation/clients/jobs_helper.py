@@ -281,12 +281,22 @@ def CreatePerflabJob(chromeos_version, benchmark, board="x86-agz",
 
   command += "&& " + _GetSetupChromeOSCommand(chromeos_version)
   command += "&& " + _GetBuildTCCommand(toolchain, board)
-  command += ("&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s"
-              " --machines=chromeos_x86-agz_1 build %s" %
-              (perflab_command, toolchain_root, chromeos_root, benchmark))
-  command += ("&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s"
-              " --machines=chromeos_x86-agz_1 run %s" %
-              (perflab_command, toolchain_root, chromeos_root, benchmark))
+  full_perflab_command = ("%s"
+                          " --noenable_loas_kerberos_checks_at_startup"
+                          " --stubby_server_host=$(hostname)"
+                          " --crosstool=$PWD/%s"
+                          " --chromeos_root=$PWD/%s"
+                          " --arch=chromeos_%s"
+                          " --workdir=$(readlink -f %s)"
+                          %
+                          (perflab_command,
+                           toolchain_root,
+                           chromeos_root,
+                           board,
+                           p4_version_dir))
+
+  command += ("&& %s build %s" % (full_perflab_command, benchmark))
+  command += ("&& %s run %s" % (full_perflab_command, benchmark))
   for b in benchmark.split(","):
     benchmark_log = b.replace("/", "__")
     benchmark_log += "/results.txt"

@@ -72,7 +72,8 @@ def CreateRunsh(destdir, benchmark):
   f = open(runshfile, 'w')
   f.write(contents)
   f.close()
-  cmd_executer.RunCommand('chmod +x %s' % runshfile)
+  retval = cmd_executer.RunCommand('chmod +x %s' % runshfile)
+  return retval
 
 
 def CreateBinaryCopy(sourcedir, destdir):
@@ -93,7 +94,8 @@ def CreateBinaryCopy(sourcedir, destdir):
   os.makedirs(destdir)
   sourcedir = os.path.abspath(sourcedir)
   command = 'ln -s %s/* %s' % (sourcedir, destdir)
-  cmd_executer.RunCommand(command)
+  retval = cmd_executer.RunCommand(command)
+  return retval
 
 
 def Main(argv):
@@ -232,4 +234,4 @@ def Main(argv):
 
 if __name__ == "__main__":
   retval = Main(sys.argv)
-  sys.exit(retval)
+  utils.ExitWithCode(retval)

@@ -123,7 +123,7 @@ class CommandExecuter:
     command += "\nset -- --remote=" + machine
     command += "\n. " + chromeos_root + "/src/scripts/common.sh"
     command += "\n. " + chromeos_root + "/src/scripts/remote_access.sh"
-    command += "\nTMP=/tmp"
+    command += "\nTMP=$(mktemp -d)"
     command += "\nFLAGS \"$@\" || exit 1"
     command += "\nremote_access_init"
     return command
@@ -188,7 +188,7 @@ class CommandExecuter:
       dest_parent, dest_child = utils.GetRoot(dest)
       ssh_command = ("ssh -p ${FLAGS_ssh_port}" +
                      " -o StrictHostKeyChecking=no" +
-                     " -o UserKnownHostsFile=$TMP_KNOWN_HOSTS" +
+                     " -o UserKnownHostsFile=$(mktemp)" +
                      " -i $TMP_PRIVATE_KEY")
       rsync_prefix = "\nrsync -r -e \"%s\" " % ssh_command
       if dest_cros == True:
