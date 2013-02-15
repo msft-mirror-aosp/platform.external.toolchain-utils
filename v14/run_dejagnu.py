@@ -12,6 +12,7 @@ import os
 import sys
 import build_chromeos
 from utils import utils
+from utils import logger
 
 DEJAGNU_DIR = "/usr/local/toolchain_root/v14/dejagnu"
 
@@ -49,6 +50,11 @@ def Main(argv):
     Usage(parser, "--remote must be set")
 
   options.chromeos_root = os.path.expanduser(options.chromeos_root)
+
+  if os.path.exists(options.chromeos_root) == False:
+    logger.GetLogger().LogOutput("chroot not found. Creating one.")
+    ret = build_chromeos.MakeChroot(options.chromeos_root)
+    utils.AssertExit(ret == 0, "Failed to make chroot!")
 
   # Emerge DejaGNU
   # Remove the dev-tcltk manifest which is currently incorrect

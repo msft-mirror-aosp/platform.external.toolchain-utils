@@ -36,6 +36,12 @@ def Main(argv):
                     default="",
                     help="An existing perforce checkout for debugging."
                     )
+  parser.add_option("-d",
+                    "--deja-gnu",
+                    dest="dejagnu",
+                    default=False,
+                    action="store_true",
+                    help="Should the deja-gnu tests be run?")
   options = parser.parse_args(argv)[0]
 
   server = xmlrpclib.Server("http://localhost:8000")
@@ -56,7 +62,12 @@ def Main(argv):
           p4_snapshot=options.p4_snapshot))
     all_jobs.append(build_chromeos_job)
 
-  group = job_group.JobGroup(os.uname()[1], "/tmp/", all_jobs, False, False)
+  if options.dejagnu == True:
+    dejagnu_job = jobs_helper.CreateDejaGNUJob(tc_job,
+                                               p4_snapshot=options.p4_snapshot)
+    all_jobs.append(dejagnu_job)
+
+  group = job_group.JobGroup(all_jobs, False, False)
   server.ExecuteJobGroup(utils.Serialize(group))
 
 if __name__ == "__main__":

@@ -121,7 +121,7 @@ def Main(argv):
     command = "./setup_board --nousepkg --board=" + options.board
     command += "&& ./build_packages --nousepkg --board=" + options.board
     command += "&& ./build_image --nousepkg --board=" + options.board
-    command += "&& ./mod_image_for_test.sh --board=" + options.board
+    command += "&& ./mod_image_for_test.sh --yes --board=" + options.board
     ret = ExecuteCommandInChroot(options.chromeos_root, None, command)
     return ret
 
@@ -169,7 +169,7 @@ def Main(argv):
 
   # Mod image for test
   ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                               "./mod_image_for_test.sh --board=%s"
+                               "./mod_image_for_test.sh --yes --board=%s"
                                % options.board)
 
   utils.AssertTrue(ret == 0, "mod_image_for_test failed")

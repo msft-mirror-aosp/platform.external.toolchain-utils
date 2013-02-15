@@ -10,9 +10,11 @@ from utils import utils
 p4_checkout_dir = "perforce2"
 version_dir = "/gcctools/chromeos/v14/"
 install_dir = "/output/install"
+objects_dir = "/output/objects"
 pkgs_dir = "/output/pkgs"
 p4_version_dir = p4_checkout_dir + version_dir
 p4_install_dir = p4_checkout_dir + version_dir + install_dir
+p4_objects_dir = p4_checkout_dir + version_dir + objects_dir
 p4_pkgs_dir = p4_checkout_dir + version_dir + pkgs_dir
 
 chromeos_root = "chromeos"
@@ -142,6 +144,19 @@ def CreateBuildTCJob(chromeos_version="top",
   tc_job = CreateLinuxJob(command)
   return tc_job
 
+def CreateDejaGNUJob(tc_job, board="x86-generic", p4_snapshot=""):
+  command = GetInitialCommand()
+  command += "; " + GetP4VersionDirCommand(p4_snapshot)
+  command += ("&& " + p4_version_dir + "/run_dejagnu.py" +
+              " --chromeos_root=chromeos"
+              " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
+              " --remote=$SECONDARY_MACHINES[0]" +
+              " --board=" + board)
+  to_return = CreateLinuxJob(command)
+  to_return.AddRequiredFolder(tc_job, p4_objects_dir, p4_objects_dir)
+  to_return.AddRequiredMachine("", "chromeos", False, False)
+  return to_return
+
 def CreateBuildAndTestChromeOSJob(tc_job, chromeos_version="latest",
                                   board="x86-generic",
                                   p4_snapshot=""):
@@ -184,7 +199,7 @@ def CreateBuildAndTestChromeOSJob(tc_job, chromeos_version="latest",
   to_return = CreateLinuxJob(command)
   to_return.AddRequiredFolder(tc_job, p4_pkgs_dir, p4_pkgs_dir)
 
-  to_return.AddRequiredMachine("", "chromeos", False, False);
+  to_return.AddRequiredMachine("", "chromeos", False, False)
 
   return to_return
 
