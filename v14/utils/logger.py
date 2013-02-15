@@ -2,9 +2,7 @@
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
-import glob
 import os.path
-import subprocess
 import sys
 import traceback
 import utils
@@ -24,52 +22,57 @@ class Logger(object):
     except OSError:
       print "Warning: Logs directory '%s' already exists." % logdir
 
-    suffix = self._FindSuffix(basename)
-    suffixed_basename = "%s%s" % (basename, suffix)
+    self.print_console = print_console
 
-    self.cmdfd = open("%s.cmd" % suffixed_basename, "w", 0755)
-    self.stdout = open("%s.out" % suffixed_basename, "w")
-    self.stderr = open("%s.err" % suffixed_basename, "w")
-
-    # Symlink unsuffixed basename to currently suffixed one.
-    try:
-      for extension in ["cmd", "out", "err"]:
-        src_file = "%s.%s" % (suffixed_basename, extension)
-        dest_file = "%s.%s" % (basename, extension)
-        command = ["ln", "-sf", "-T",
-                   src_file,
-                   dest_file]
-        link_created = subprocess.call(command)
-        fail_msg = "Couldn't create symlink using: %s" % " ".join(command)
-        assert link_created == 0, fail_msg
-    except Exception as e:
-      print e
-      raise e
+    self._CreateLogFileHandles(basename)
 
     self._WriteTo(self.cmdfd, " ".join(sys.argv), True)
 
-    self.print_console = print_console
+  def _AddSuffix(self, basename, suffix):
+    return "%s%s" % (basename, suffix)
 
   def _FindSuffix(self, basename):
     timestamps = []
     found_suffix = None
     for i in range(self.MAX_LOG_FILES):
       suffix = str(i)
-      suffixed_basename = "%s%s" % (basename, suffix)
+      suffixed_basename = self._AddSuffix(basename, suffix)
       cmd_file = "%s.cmd" % suffixed_basename
       if not os.path.exists(cmd_file):
         found_suffix = suffix
         break
       timestamps.append(os.stat(cmd_file).st_mtime)
 
-    if found_suffix is not None:
+    if found_suffix:
       return found_suffix
 
     # Try to pick the oldest file with the suffix and return that one.
-    index = timestamps.index(min(timestamps))
-    suffix = str(index)
-    print "Warning: Overwriting log file: %s%s.cmd" % (basename, suffix)
+    suffix = str(timestamps.index(min(timestamps)))
+    print ("Warning: Overwriting log file: %s" %
+           self._AddSuffix(basename, suffix))
     return suffix
+
+  def _CreateLogFileHandles(self, basename):
+    suffix = self._FindSuffix(basename)
+    suffixed_basename = self._AddSuffix(basename, suffix)
+
+    self.cmdfd = open("%s.cmd" % suffixed_basename, "w", 0755)
+    self.stdout = open("%s.out" % suffixed_basename, "w")
+    self.stderr = open("%s.err" % suffixed_basename, "w")
+
+    self._CreateLogFileSymlinks(basename, suffixed_basename)
+
+  # Symlink unsuffixed basename to currently suffixed one.
+  def _CreateLogFileSymlinks(self, basename, suffixed_basename):
+    try:
+      for extension in ["cmd", "out", "err"]:
+        src_file = "%s.%s" % (os.path.basename(suffixed_basename), extension)
+        dest_file = "%s.%s" % (basename, extension)
+        if os.path.exists(dest_file):
+          os.remove(dest_file)
+        os.symlink(src_file, dest_file)
+    except IOError as ex:
+      self.LogFatal(str(ex))
 
   def _WriteTo(self, fd, msg, flush):
     fd.write(msg)
@@ -150,6 +153,6 @@ def HandleUncaughtExceptions(fun):
     try:
       return fun(*args, **kwargs)
     except StandardError:
-      GetLogger().LogFatal('Uncaught exception:\n%s' % traceback.format_exc())
+      GetLogger().LogFatal("Uncaught exception:\n%s" % traceback.format_exc())
 
   return _Interceptor
