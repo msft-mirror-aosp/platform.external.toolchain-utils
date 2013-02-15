@@ -152,7 +152,7 @@ def GetRemoteAccessInitCommand(remote):
 def GetRemoteAccessCleanupCommand():
   command = ("echo \"Cleaning up access\""
              " && set +e "
-             " && kill -9 `cat ${TMP}/master-pid`"
+             " && kill $(cat ${TMP}/master-pid)"
              " && set -e"
              " && cleanup_remote_access"
              " && rm -rf ${TMP}")

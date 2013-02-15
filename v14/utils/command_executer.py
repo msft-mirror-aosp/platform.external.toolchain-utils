@@ -6,6 +6,7 @@ import re
 import select
 import subprocess
 import sys
+import time
 import utils
 
 mock_default = False
@@ -33,7 +34,9 @@ class CommandExecuter:
       self.logger = logger.GetLogger()
 
   def RunCommand(self, cmd, return_output=False, machine=None,
-                 username=None, command_terminator=None):
+                 username=None, command_terminator=None,
+                 command_timeout=None,
+                 terminated_timeout=10):
     """Run a command."""
 
     self.logger.LogCmd(cmd, machine, username)
@@ -58,8 +61,13 @@ class CommandExecuter:
 
     # Pull output from pipes, send it to file/stdout/string
     out = err = None
-    while True:
-      fds = select.select([p.stdout, p.stderr], [], [], 0.1)
+    pipes = [p.stdout, p.stderr]
+
+    terminated_time = None
+    started_time = time.time()
+
+    while len(pipes):
+      fds = select.select(pipes, [], [], 0.1)
       if command_terminator and command_terminator.IsTerminated():
         self.RunCommand("sudo kill -9 " + str(p.pid))
         wait = p.wait()
@@ -71,11 +79,34 @@ class CommandExecuter:
           if return_output:
             full_stdout += out
           self.logger.LogCommandOutput(out)
+          if out == "":
+            pipes.remove(p.stdout)
         if fd == p.stderr:
           err = os.read(p.stderr.fileno(), 16384)
           if return_output:
             full_stderr += err
           self.logger.LogCommandError(err)
+          if err == "":
+            pipes.remove(p.stderr)
+
+      if p.poll() is not None:
+        if terminated_time is None:
+          terminated_time = time.time()
+        elif (terminated_timeout is not None and
+              time.time() - terminated_time > terminated_timeout):
+          m = ("Timeout of %s seconds reached since process termination."
+               % terminated_timeout)
+          self.logger.LogWarning(m)
+          break
+
+      if (command_timeout is not None and
+          time.time() - started_time > command_timeout):
+        m = ("Timeout of %s seconds reached since process started."
+             % command_timeout)
+        self.logger.LogWarning(m)
+        self.RunCommand("kill %d || sudo kill %d || sudo kill -9 %d" %
+                        (p.pid, p.pid, p.pid))
+        break
 
       if out == err == "":
         break

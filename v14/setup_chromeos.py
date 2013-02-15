@@ -125,7 +125,7 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
   commands.append("repo init -u "
                   "ssh://git@gitrw.chromium.org:9222/manifest-internal"
                   + minilayout)
-  commands.append("repo sync -j" + str(multiprocessing.cpu_count() + 1))
+  commands.append("repo sync ")
   if version != "top":
     commands.append("repo forall -c 'git checkout -f %s'" % version)
   cmd_executer.RunCommands(commands)
