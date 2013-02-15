@@ -2,6 +2,7 @@
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
+from itertools import chain
 import gzip
 import logging
 import logging.handlers
@@ -9,15 +10,15 @@ import time
 import traceback
 
 
-def SetUpRootLogger(filename=None, level=None):
+def SetUpRootLogger(filename=None, level=None, display_flags={}):
   console_handler = logging.StreamHandler()
-  console_handler.setFormatter(CustomFormatter(AnsiColorCoder()))
+  console_handler.setFormatter(CustomFormatter(AnsiColorCoder(), display_flags))
   logging.root.addHandler(console_handler)
 
   if filename:
     file_handler = logging.handlers.RotatingFileHandler(
         filename, maxBytes=10*1024*1024, backupCount=9, delay=True)
-    file_handler.setFormatter(CustomFormatter(NullColorCoder()))
+    file_handler.setFormatter(CustomFormatter(NullColorCoder(), display_flags))
     logging.root.addHandler(file_handler)
 
   if level:
@@ -64,10 +65,18 @@ class CustomFormatter(logging.Formatter):
             'ERROR': ('red', 'bold'),
             'CRIT': ('red', 'inverse', 'bold')}
 
-  def __init__(self, coder):
-    logging.Formatter.__init__(self, fmt=(
-            '%(asctime)s %(levelname)s ' + coder('cyan') +
-            '[%(threadName)s:%(name)s]' + coder('reset') + ' %(message)s'))
+  def __init__(self, coder, display_flags={}):
+    items = []
+
+    if display_flags.get('datetime', True):
+      items.append('%(asctime)s')
+    if display_flags.get('level', True):
+      items.append('%(levelname)s')
+    if display_flags.get('name', True):
+      items.append(coder('cyan') + '[%(threadName)s:%(name)s]' + coder('reset'))
+    items.append('%(prefix)s%(message)s')
+
+    logging.Formatter.__init__(self, fmt=' '.join(items))
 
     self._coder = coder
 
@@ -76,27 +85,39 @@ class CustomFormatter(logging.Formatter):
     t = time.strftime("%Y-%m-%d %H:%M:%S", ct)
     return "%s.%02d" % (t, record.msecs / 10)
 
-  def format(self, record):
+  def formatLevelName(self, record):
     if record.levelname in ['WARNING', 'CRITICAL']:
       levelname = record.levelname[:4]
     else:
       levelname = record.levelname
 
+    return ''.join([self._coder(*self.COLORS[levelname]), levelname,
+                    self._coder('reset')])
+
+  def formatMessagePrefix(self, record):
+    try:
+      return ' %s%s:%s ' % (
+          self._coder('black', 'bold'), record.prefix, self._coder('reset'))
+    except AttributeError:
+      return ''
+
+  def format(self, record):
+    if record.exc_info:
+      if not record.exc_text:
+        record.exc_text = self.formatException(record.exc_info)
+    else:
+      record.exc_text = ''
+
     fmt = record.__dict__.copy()
-    fmt.update({
-        'levelname': '%s%s%s' % (self._coder(*self.COLORS[levelname]),
-                                 levelname, self._coder('reset')),
-        'asctime': self.formatTime(record)})
+    fmt.update({'levelname': self.formatLevelName(record),
+                'asctime': self.formatTime(record),
+                'prefix': self.formatMessagePrefix(record)})
 
     s = []
 
-    for line in record.getMessage().splitlines():
-      try:
-        fmt['message'] = (
-            '%s%s:%s %s' % (self._coder('black', 'bold'), record.prefix,
-                            self._coder('reset'), line))
-      except AttributeError:
-        fmt['message'] = line
+    for line in chain(record.getMessage().splitlines(),
+                      record.exc_text.splitlines()):
+      fmt['message'] = line
 
       s.append(self._fmt % fmt)
 
@@ -114,8 +135,7 @@ def HandleUncaughtExceptions(fun):
   def _Interceptor(*args, **kwargs):
     try:
       return fun(*args, **kwargs)
-    except StandardError as ex:
-      logging.error("Uncaught exception:")
-      logging.error(ex)
+    except StandardError:
+      logging.exception("Uncaught exception:")
 
   return _Interceptor
