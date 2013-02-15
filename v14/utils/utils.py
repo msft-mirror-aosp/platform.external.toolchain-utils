@@ -68,6 +68,12 @@ def GetSetupBoardCommand(board, gcc_version=None, binutils_version=None,
 @contextmanager
 def WorkingDirectory(new_dir):
   old_dir = os.getcwd()
+  if old_dir != new_dir:
+    msg = "cd %s" % new_dir
+    logger.GetLogger().LogCmd(msg)
   os.chdir(new_dir)
   yield new_dir
+  if old_dir != new_dir:
+    msg = "cd %s" % old_dir
+    logger.GetLogger().LogCmd(msg)
   os.chdir(old_dir)
