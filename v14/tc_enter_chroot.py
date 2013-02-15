@@ -61,7 +61,7 @@ class MountPoint:
 
   def UnMount(self):
     ce = command_executer.GetCommandExecuter()
-    return ce.RunCommand("sudo umount " % self.mount_dir)
+    return ce.RunCommand("sudo umount %s" % self.mount_dir)
 
 
   def MountDir(self):
