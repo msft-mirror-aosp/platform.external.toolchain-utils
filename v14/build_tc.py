@@ -136,7 +136,8 @@ def Main(argv):
   env += CreateEnvVarString(" PORT_LOGDIR", portage_logdir)
   env += CreateEnvVarString(" PKGDIR", portage_pkgdir)
   env += CreateEnvVarString(" PORTAGE_BINHOST", portage_pkgdir)
-  env += CreateEnvVarString(" PORTAGE_TMPDIR", portage_tmpdir)
+  if options.binary == False:
+    env += CreateEnvVarString(" PORTAGE_TMPDIR", portage_tmpdir)
   env += CreateEnvVarString(" USE", "mounted_sources")
 
   retval = 0
