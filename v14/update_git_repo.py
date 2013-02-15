@@ -252,9 +252,11 @@ def Main():
     raise
   status = DeleteP4Client(client_name, temp_dir)
   utils.AssertTrue(status == 0, "Could not delete p4 client")
+  return status
 
 
 if __name__ == "__main__":
-  Main()
+  retval = Main()
+  sys.exit(retval)
 
 

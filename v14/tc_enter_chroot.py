@@ -255,5 +255,6 @@ def CreateSymlink(target, link_name):
 
 
 if __name__ == "__main__":
-  Main(sys.argv)
+  retval = Main(sys.argv)
+  sys.exit(retval)
 

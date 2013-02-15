@@ -251,5 +251,6 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
   return retval
 
 if __name__ == "__main__":
-  Main(sys.argv)
+  retval = Main(sys.argv)
+  sys.exit(retval)
 

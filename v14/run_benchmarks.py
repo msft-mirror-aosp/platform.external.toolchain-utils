@@ -233,4 +233,5 @@ def Main(argv):
   return found_err
 
 if __name__ == "__main__":
-  Main(sys.argv)
+  retval = Main(sys.argv)
+  sys.exit(retval)

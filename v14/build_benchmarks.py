@@ -152,9 +152,12 @@ def Main(argv):
   options.chromeos_root = os.path.expanduser(options.chromeos_root)
   options.workdir = os.path.expanduser(options.workdir)
 
-  found_err = 0
   retval = 0
-  version_dir = utils.GetRoot(argv[0])[0]
+  if options.third_party:
+    third_party = options.third_party
+  else:
+    third_party = "%s/../../../third_party" % os.path.dirname(__file__)
+    third_party = os.path.realpath(third_party)
   for arg in args:
     # CPU benchmarks
     if re.match('chromeos/cpu', arg):
@@ -162,8 +165,8 @@ def Main(argv):
       benchname = comps[2]
 
       tec_options = []
-      if options.third_party:
-        tec_options.append("--third_party=%s" % options.third_party)
+      if third_party:
+        tec_options.append("--third_party=%s" % third_party)
       if options.clean:
         retval = build_chromeos.ExecuteCommandInChroot(options.chromeos_root,
                                               CPU_BUILDCMD_CLEAN % benchname,
@@ -177,13 +180,14 @@ def Main(argv):
                                               tec_options=tec_options)
         utils.AssertError(retval == 0, "Build of benchmark %s failed." % arg)
       if retval == 0 and (options.build or options.only_copy):
-        benchdir = ('%s/third_party/android_bench/v2_0/CLOSED_SOURCE/%s' %
-                    (version_dir, benchname))
+        benchdir = ('%s/android_bench/v2_0/CLOSED_SOURCE/%s' %
+                    (third_party, benchname))
         linkdir = '%s/perflab-bin/%s' % (options.workdir, arg)
-        CreateBinaryCopy(benchdir, linkdir)
-        CreateRunsh(linkdir, arg)
-      if not found_err:
-        found_err = retval
+
+        retval = CreateBinaryCopy(benchdir, linkdir)
+        if retval != 0: return retval
+        retval = CreateRunsh(linkdir, arg)
+        if retval != 0: return retval
     elif re.match('chromeos/startup', arg):
       if options.build:
       # Clean for chromeos/browser and chromeos/startup is a Nop since builds are always from scratch.
@@ -200,10 +204,10 @@ def Main(argv):
       if retval == 0 and (options.build or options.only_copy):
         benchdir = '%s/src/build/images/%s/latest' % (options.chromeos_root, options.board)
         linkdir = '%s/perflab-bin/%s' % (options.workdir, arg)
-        CreateBinaryCopy(benchdir, linkdir)
+        retval = CreateBinaryCopy(benchdir, linkdir)
+        if retval != 0: return retval
         CreateRunsh(linkdir, arg)
-      if not found_err:
-        found_err = retval
+        if retval != 0: return retval
     elif re.match('chromeos/browser', arg):
       if options.build:
         # For now, re-build os. TBD: Change to call build_browser
@@ -219,12 +223,13 @@ def Main(argv):
       if retval == 0 and (options.build or options.only_copy):
         benchdir = '%s/src/build/images/%s/latest' % (options.chromeos_root, options.board)
         linkdir = '%s/perflab-bin/%s' % (options.workdir, arg)
-        CreateBinaryCopy(benchdir,linkdir)
-        CreateRunsh(linkdir, arg)
-      if not found_err:
-        found_err = retval
+        retval = CreateBinaryCopy(benchdir,linkdir)
+        if retval != 0: return retval
+        retval = CreateRunsh(linkdir, arg)
+        if retval != 0: return retval
 
-  return found_err
+  return 0
 
 if __name__ == "__main__":
-  Main(sys.argv)
+  retval = Main(sys.argv)
+  sys.exit(retval)

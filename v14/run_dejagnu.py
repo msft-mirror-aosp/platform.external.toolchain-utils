@@ -131,6 +131,7 @@ def Main(argv):
                                 options.toolchain_root))
 
   utils.AssertWarning(ret == 0, "Failed to copy results to final destination.")
+  return ret
 
 
 def GetRemoteAccessCommonCommands(remote):
@@ -164,4 +165,5 @@ def GetRemoteAccessCleanupCommand():
 
 
 if __name__ == "__main__":
-  Main(sys.argv)
+  retval = Main(sys.argv)
+  sys.exit(retval)

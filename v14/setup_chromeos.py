@@ -168,7 +168,9 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
     cmd_executer.RunCommands(commands)
 
   print "Done"
+  return 0
 
 
 if __name__ == "__main__":
-  Main(sys.argv)
+  retval = Main(sys.argv)
+  sys.exit(retval)

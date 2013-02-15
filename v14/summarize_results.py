@@ -118,7 +118,9 @@ def Main(argv):
     output = open(RESULTS_FILE, "a")
     output.write(summary.strip() + "\n")
     output.close()
+  return 0
 
 if __name__ == "__main__":
-  Main(sys.argv)
+  retval = Main(sys.argv)
+  sys.exit(retval)
 

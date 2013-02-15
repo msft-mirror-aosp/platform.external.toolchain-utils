@@ -162,7 +162,9 @@ def Main(argv):
     else:
       print "%15.15s%15.15s%15.15s%14.2f%%" % ('Geomean', '', '',  prod)
       print
+  return 0
 
 
 if __name__ == "__main__":
-  Main(sys.argv)
+  retval = Main(sys.argv)
+  sys.exit(retval)
