@@ -90,25 +90,29 @@ def Main(argv, return_output=False):
 
   relevant_argv = []
   passthrough_argv = []
-  for i in xrange(len(argv)):
+  i = 0
+  while i < len(argv):
     found = False
     for option in parser.option_list:
       for long_opt in option._long_opts:
         if argv[i].startswith(long_opt):
+          relevant_argv.append(argv[i])
           found = True
           break
       for short_opt in option._short_opts:
         if argv[i].startswith(short_opt):
+          relevant_argv.append(argv[i])
+          relevant_argv.append(argv[i+1])
+	  i = i + 1
           found = True
           break
 
       if found == True:
         break
 
-    if found == True:
-      relevant_argv.append(argv[i])
-    else:
+    if found == False:
       passthrough_argv.append(argv[i])
+    i = i + 1
 
   options = parser.parse_args(relevant_argv)[0]
 
