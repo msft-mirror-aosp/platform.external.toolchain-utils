@@ -59,7 +59,7 @@ def Main():
   target = f.read()
   f.close()
   target = target.strip()
-  features = "noclean userfetch userpriv usersandbox"
+  features = "noclean userfetch userpriv usersandbox -strict"
   if options.incremental is not None and options.incremental:
     features += " keepwork"
   env = CreateEnvVarString(" FEATURES", features)
@@ -68,21 +68,20 @@ def Main():
   version_dir = "/home/${USER}/toolchain_root/" + version_number
   env += CreateEnvVarString(" PORT_LOGDIR", version_dir + "/logs")
   env += CreateEnvVarString(" PKGDIR", version_dir + "/pkgs")
-  env += CreateEnvVarString(" PORTAGE_BINHOST", version_dir +
-                            "/cross/" + target)
+  env += CreateEnvVarString(" PORTAGE_BINHOST", version_dir + "/pkgs")
   env += CreateEnvVarString(" PORTAGE_TMPDIR", version_dir + "/objects")
+
   retval = 0
   if options.force == True:
     retval = BuildTC(options.chromeos_root, options.toolchain_root, env,
                      target, True, options.incremental, portage_flags)
-    utils.AssertTrue(retval == 0, "Build toolchain failed!")
   retval = BuildTC(options.chromeos_root, options.toolchain_root, env,
                    target, options.clean, options.incremental, portage_flags)
   utils.AssertTrue(retval == 0, "Build toolchain failed!")
 
   if options.incremental is None and not options.clean:
     install_dir = rootdir + "/install"
-    package_dir = (rootdir + "/pkgs/cross/" + target + "/" +
+    package_dir = (rootdir + "/pkgs/" + target + "/" +
                    "cross-" + target + "/")
     retval = InstallTC(package_dir, install_dir)
     utils.AssertTrue(retval == 0, "Installation of the toolchain failed!")
@@ -91,6 +90,7 @@ def Main():
 
 
 def CreateCrossdevPortageFlags(portage_flags):
+  portage_flags = portage_flags.strip()
   if not portage_flags:
     return ""
   crossdev_flags = " --portage "
@@ -117,10 +117,15 @@ def InstallTC(package_dir, install_dir):
 def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
             incremental_component, portage_flags):
   """Build the toolchain."""
+  portage_flags = portage_flags.strip()
+  portage_flags += " -b "
+
   binutils_version = "2.20.1-r1"
   gcc_version = "9999"
   libc_version = "2.10.1-r1"
   kernel_version = "2.6.30-r1"
+
+  env += " "
 
   if uninstall == True:
     tflag = " -C "
@@ -132,7 +137,13 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
     command += " --chromeos_root=" + chromeos_root
   if toolchain_root is not None:
     command += " --toolchain_root=" + toolchain_root
-  command += " -- sudo " + env
+  command += " -- \"sudo " + env
+
+  if uninstall == True:
+    command += " crossdev " + tflag + target
+    command += "\""
+    retval = utils.RunCommand(command)
+    return retval
 
   if incremental_component == "binutils":
     command += (" emerge =cross-" + target + "/binutils-" + binutils_version +
@@ -144,15 +155,15 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
     command += (" emerge =cross-" + target + "/glibc-" + libc_version +
                 portage_flags)
   else:
+    crossdev_flags = CreateCrossdevPortageFlags(portage_flags)
     command += (" crossdev -v " + tflag + target +
                 " --binutils " + binutils_version +
                 " --libc " + libc_version +
                 " --gcc " + gcc_version +
                 " --kernel " + kernel_version +
-                " --portage -b --portage --newuse")
-    crossdev_flags = CreateCrossdevPortageFlags(portage_flags)
-    command += crossdev_flags
+                crossdev_flags)
 
+  command += "\""
   retval = utils.RunCommand(command)
   return retval
 
