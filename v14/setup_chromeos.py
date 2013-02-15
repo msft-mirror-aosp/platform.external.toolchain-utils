@@ -69,7 +69,7 @@ def GetLatestTag(tags):
   return latest
 
 
-def Main():
+def Main(argv):
   """Checkout the ChromeOS source."""
   parser = optparse.OptionParser()
   parser.add_option("--dir", dest="directory",
@@ -82,7 +82,7 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
                     help="""Whether to checkout the minilayout 
 (smaller checkout).'""")
 
-  options = parser.parse_args()[0]
+  options = parser.parse_args(argv)[0]
 
   tags = GetTags()
 
@@ -173,4 +173,4 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
 
 
 if __name__ == "__main__":
-  Main()
+  Main(sys.argv)
