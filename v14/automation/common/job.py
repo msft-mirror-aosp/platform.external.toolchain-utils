@@ -72,6 +72,20 @@ class Job:
       ret += str(machine)
     ret += utils.FormatCommands(self.command) + "\n"
     ret += self.status + "\n"
+    ret += self.GetTimeline()
+    return ret
+
+  def GetTotalTime(self):
+    ret = ""
+    if len(self.status_events) > 0:
+      time_diff = time.time() - self.status_events[0].event_time
+      time_string = time.strftime("%H:%M:%S",
+                                  time.gmtime(time_diff))
+      ret += "Total time: %s\n" % time_string
+    return ret
+
+  def GetTimeline(self):
+    ret = ""
     ret += "Timeline of status events:\n"
     timeline = ""
     total_time = 0
@@ -88,6 +102,14 @@ class Job:
                                  time.gmtime(time_diff))
         timeline += ("%s: %s\n" % (s.old_status,
                                      time_string))
+    if (self.status != STATUS_SUCCEEDED and self.status != STATUS_FAILED
+        and len(self.status_events) > 0):
+      time_diff = time.time() - self.status_events[-1].event_time
+      total_time += time_diff
+      time_string = time.strftime("%H hours %M minutes %S seconds",
+                               time.gmtime(time_diff))
+      timeline += ("%s - NOW: %s\n" % (self.status,
+                                 time_string))
     time_string = time.strftime("%H hours %M minutes %S seconds",
                                 time.gmtime(total_time))
     timeline += ("Total time: %s\n" % time_string)

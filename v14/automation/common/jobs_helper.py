@@ -108,8 +108,10 @@ def GetTCRootDir(toolchain="trunk"):
     gcctools_prefix = ""
   elif toolchain == "v1":
     gcctools_prefix = "branches/chromeos_toolchain_v1_release_branch/"
+  elif toolchain == "v2":
+    gcctools_prefix = "branches/mobile_toolchain_v14_release_branch/"
   else:
-    utils.AssertExit(False, "Toolchain can only be trunk or branch")
+    utils.AssertExit(False, "Wrong value for toolchain %s" % toolchain)
   local_path = p4_checkout_dir + gcctools_prefix + "gcctools/"
   depot_path = depot2_dir + gcctools_prefix + "gcctools/"
   return depot_path, local_path
@@ -118,7 +120,6 @@ def _GetToolchainCheckoutCommand(toolchain="trunk", p4_snapshot=""):
   p4_port = "perforce2:2666"
   p4_paths = []
   p4_paths.append(("//depot2/gcctools/chromeos/v14/...", "gcctools/chromeos/v14/..."))
-  utils.AssertExit(toolchain == "v1" or toolchain == "trunk")
   depot_path, local_path = GetTCRootDir(toolchain)
   short_local_path = "/".join(local_path.split("/")[1:])
   p4_paths.append((depot_path + "google_vendor_src_branch/gcc/gcc-4.4.3/...",
@@ -177,7 +178,7 @@ def CreateDejaGNUJob(chromeos_version="top",
   command += "&& " + _GetSetupChromeOSCommand(chromeos_version, True)
   command += "&& " + _GetBuildTCCommand(toolchain, board)
   command += ("&& " + p4_version_dir + "/run_dejagnu.py" +
-              " --testflags=\"-v -v -v -v\"" +
+              " --testflags=\"\"" +
               " --chromeos_root=chromeos" +
               " --toolchain_root=" + local_path +
               " --remote=$SECONDARY_MACHINES[0]" +
@@ -227,8 +228,8 @@ def _GetImageChromeOSCommand():
   return command
 
 def _GetSetupChromeOSCommand(version, use_minilayout=False, board="x86-generic"):
-  command = ""
   version_re = "^\d+\.\d+\.\d+\.[a-zA-Z0-9]+$"
+  tarred_re = "(bz2|gz)$"
   if version == "weekly" or version == "quarterly":
     location = _GetChromeOSGoldenBuildLocation() + "/" + version
     utils.AssertExit(os.path.islink(location) == True,
@@ -238,11 +239,19 @@ def _GetSetupChromeOSCommand(version, use_minilayout=False, board="x86-generic")
   if (version == "top" or version == "latest" or
         re.match(version_re, version)):
     chromeos_version = version
+  elif re.search(tarred_re, version):
+    command = "mkdir " + chromeos_root
+    command += "&& tar xf " + location_expanded + " -C " + chromeos_root
+    return command
   else:
-    command += "rsync -a " + version + " chromeos"
+    signature_file = "/src/scripts/enter_chroot.sh"
+    signature_file_location = ("/home/mobiletc-prebuild/www/chromeos_builds/"
+                               + version + signature_file)
+    utils.AssertExit(os.path.exists(signature_file_location))
+    command += "rsync -a " + version + "/ chromeos/"
     return command
 
-  command += (p4_version_dir + "/setup_chromeos.py" +
+  command = (p4_version_dir + "/setup_chromeos.py" +
               " --dir=" + chromeos_root +
               " --version=" + chromeos_version)
   if use_minilayout == True:

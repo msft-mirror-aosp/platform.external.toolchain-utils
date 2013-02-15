@@ -73,8 +73,14 @@ def print_table_header(columns):
 def print_table_footer():
   print "</table>"
 
+def format_linebreaks(text):
+  ret = text
+  ret = ret.replace("\n", "<br>")
+  return ret
+
 def print_table_cell(text):
-  print "<td>%s</td>" % str(text)
+  text = format_linebreaks(str(text))
+  print "<td>%s</td>" % text
 
 def print_group_row(group):
   print "<tr>"
@@ -95,7 +101,7 @@ def get_link(link, text):
 def print_job_row(job):
   print "<tr>"
   print_table_cell(job.GetID())
-  print_table_cell(job.GetCommand())
+  print_table_cell(utils.FormatCommands(job.GetCommand()))
   machines = ""
   if job.GetMachines():
     machines = "<b>%s</b>" % job.GetMachines()[0].name
@@ -107,7 +113,8 @@ def print_job_row(job):
   for child in job.GetChildren():
     deps += str(child.GetID()) + " "
   print_table_cell(deps)
-  print_table_cell(job.GetStatus())
+  full_status = "%s\n%s" % (job.GetStatus(), job.GetTotalTime())
+  print_table_cell(full_status)
   components = job.GetLogsDir().split("/")
   if len(components) > 3:
     link = ("http://www.corp.google.com/~" + components[2] + "/" +

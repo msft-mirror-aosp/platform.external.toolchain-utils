@@ -142,7 +142,7 @@ def CreateGitClient(git_repo, checkoutdir, branch_name):
 
 def GetLatestCL(client_name, checkoutdir):
   command = "cd " + checkoutdir
-  command += " && g4 changes -m1 @" + client_name
+  command += " && g4 changes -m1 ...#have"
   (status, stdout, stderr) = cmd_executer.RunCommand(command, True)
   if status != 0:
     return -1

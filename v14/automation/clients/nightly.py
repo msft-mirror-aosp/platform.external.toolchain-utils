@@ -14,7 +14,7 @@ def Main(argv):
   parser.add_option("-t",
                     "--toolchain",
                     dest="toolchain",
-                    default="v1",
+                    default="v2",
                     help="Toolchain to use {trunk|branch}"
                     )
   parser.add_option("-l",
