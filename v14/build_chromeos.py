@@ -24,19 +24,28 @@ def Usage(parser, message):
   parser.print_help()
   sys.exit(0)
 
-
+#TODO(raymes): move this to a common utils file.
 def ExecuteCommandInChroot(chromeos_root, toolchain_root, command,
                            return_output=False, chrome_root=""):
   """Executes a command in the chroot."""
+  global cmd_executer
+  cmd_executer = command_executer.GetCommandExecuter()
+
   chrome_mount = ""
   if chrome_root:
     chrome_mount = "--chrome_root=" + chromeos_root + "/" + chrome_root
-  argv = [os.path.dirname(os.path.abspath(__file__)) + "/tc_enter_chroot.py",
-          "--chromeos_root=" + chromeos_root,
-          "--toolchain_root=" + toolchain_root,
-          chrome_mount,
-          "\n" + command]
-  return tc_enter_chroot.Main(argv)
+  if toolchain_root is None:
+    return cmd_executer.RunCommand(chromeos_root +
+                                   "/src/scripts/enter_chroot.sh %s -- %s"
+                                   % ("chrome_root=" + chrome_root,
+                                      command))
+  else:
+    argv = [os.path.dirname(os.path.abspath(__file__)) + "/tc_enter_chroot.py",
+            "--chromeos_root=" + chromeos_root,
+            "--toolchain_root=" + toolchain_root,
+            chrome_mount,
+            "\n" + command]
+    return tc_enter_chroot.Main(argv)
 
 
 def MakeChroot(chromeos_root, clobber_chroot=False):
