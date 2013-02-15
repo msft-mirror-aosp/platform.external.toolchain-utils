@@ -12,6 +12,7 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 import getpass
 import optparse
 import sys
+import tc_enter_chroot
 from utils import utils
 
 # Common initializations
@@ -65,11 +66,12 @@ def Main():
   env = CreateEnvVarString(" FEATURES", features)
   env += CreateEnvVarString(" PORTAGE_USERNAME", getpass.getuser())
   version_number = utils.GetRoot(rootdir)[1]
-  version_dir = "/home/${USER}/toolchain_root/" + version_number
+  version_dir = "/usr/local/toolchain_root/" + version_number
   env += CreateEnvVarString(" PORT_LOGDIR", version_dir + "/logs")
   env += CreateEnvVarString(" PKGDIR", version_dir + "/pkgs")
   env += CreateEnvVarString(" PORTAGE_BINHOST", version_dir + "/pkgs")
   env += CreateEnvVarString(" PORTAGE_TMPDIR", version_dir + "/objects")
+  env += CreateEnvVarString(" USE", "mounted_sources")
 
   retval = 0
   if options.force == True:
@@ -125,6 +127,9 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
   libc_version = "2.10.1-r1"
   kernel_version = "2.6.30-r1"
 
+  sys.argv = ["--chromeos_root=" + chromeos_root,
+              "--toolchain_root=" + toolchain_root]
+
   env += " "
 
   if uninstall == True:
@@ -132,17 +137,12 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
   else:
     tflag = " -t "
 
-  command = (rootdir + "/tc-enter-chroot.sh")
-  if chromeos_root is not None:
-    command += " --chromeos_root=" + chromeos_root
-  if toolchain_root is not None:
-    command += " --toolchain_root=" + toolchain_root
-  command += " -- \"sudo " + env
+  command = "sudo " + env
 
   if uninstall == True:
     command += " crossdev " + tflag + target
-    command += "\""
-    retval = utils.RunCommand(command)
+    sys.argv.append(command)
+    retval = tc_enter_chroot.Main()
     return retval
 
   if incremental_component == "binutils":
@@ -163,8 +163,8 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
                 " --kernel " + kernel_version +
                 crossdev_flags)
 
-  command += "\""
-  retval = utils.RunCommand(command)
+  sys.argv.append(command)
+  retval = tc_enter_chroot.Main()
   return retval
 
 if __name__ == "__main__":

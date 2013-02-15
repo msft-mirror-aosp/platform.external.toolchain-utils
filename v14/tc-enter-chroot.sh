@@ -14,9 +14,12 @@ toolchain_setup_env()
   # TC_DIRS should contain the full path to the directories you wish to mount.
   # The following code will extract out the last dir and use that mount point
   # inside the chroot.
+  # The last element in TC_DIRS should be the v${version} directory.
   TC_DIRS=( $GVSB/gcc ${full_dir} )
+  i=0
   for TC_DIR in ${TC_DIRS[@]}
   do
+    let i++
     TC_LAST_DIR=${TC_DIR##*/}
     TC_MOUNTED_PATH="$(eval readlink -f "$CROS_CHROOT/$FLAGS_TC_ROOT_MOUNT/$TC_LAST_DIR")"
     if [[ -z "$(mount | grep -F "on $TC_MOUNTED_PATH ")" ]]
@@ -33,17 +36,23 @@ toolchain_setup_env()
         valid mount directory."
       fi
       info "Mounting $TC_PATH at $TC_MOUNTED_PATH."
-      mkdir -p $TC_MOUNTED_PATH
+      sudo mkdir -p $TC_MOUNTED_PATH
       sudo mount --bind "$TC_PATH" "$TC_MOUNTED_PATH" || \
         die "Could not mount $TC_PATH at $TC_MOUNTED_PATH"
+      # Remount the gcc and binutils directories as read-only.
+      if [[ $i != ${#TC_DIRS[@]} ]]
+      then
+        sudo mount --bind -oremount,ro "$TC_MOUNTED_PATH" || \
+          die "Could not remount $TC_MOUNTED_PATH as read-only"
+      fi
     fi
   done
   # Setup symlinks to build-gcc and build-binutils.
-  ln -fs -t $CROS_CHROOT/$FLAGS_TC_ROOT_MOUNT $parent_dir/build-gcc
+  sudo ln -fs -t $CROS_CHROOT/$FLAGS_TC_ROOT_MOUNT $parent_dir/build-gcc
 }
 
 FLAGS_TC_ROOT=""
-FLAGS_TC_ROOT_MOUNT="/home/$USER/toolchain_root"
+FLAGS_TC_ROOT_MOUNT="/usr/local/toolchain_root"
 FLAGS_CHROMEOS_DIR=""
 
 # Parse command line arguments.
