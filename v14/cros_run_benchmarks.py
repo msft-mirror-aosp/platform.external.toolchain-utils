@@ -220,7 +220,8 @@ class AutotestRun:
     self.iteration = iteration
     self.output = ""
     self.results = {}
-    logger.GetLogger().LogFatalIf(not image_checksum, "Checksum shouldn't be None")
+    l = logger.GetLogger()
+    l.LogFatalIf(not image_checksum, "Checksum shouldn't be None")
     self.image_checksum = image_checksum
 
 
@@ -681,12 +682,14 @@ def Main(argv):
 
   benchmarks = []
 
-  iterations = int(options.iterations)
   if options.tests:
     benchmark_strings = options.tests.split(",")
     for benchmark_string in benchmark_strings:
+      iterations = int(options.iterations)
       fields = benchmark_string.split(":")
-      logger.GetLogger().LogFatalIf(len(fields)>2, "Benchmark string: %s flawed" % benchmark_string)
+      l = logger.GetLogger()
+      l.LogFatalIf(len(fields)>2,
+                   "Benchmark string: %s flawed" % benchmark_string)
       name = fields[0]
       if len(fields) == 2:
         iterations = int(fields[1])
