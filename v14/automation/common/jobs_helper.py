@@ -107,15 +107,14 @@ def GetP4BenchmarksDirCommand(p4_snapshot=""):
   return command
 
 def GetTCRootDir(toolchain="trunk"):
-  gcctools_dir = "gcctools/"
   if toolchain == "trunk":
-    local_path = p4_checkout_dir + gcctools_dir
-    depot_path = depot2_dir + gcctools_dir
-  elif toolchain == "branch":
-    local_path = p4_checkout_dir + gcctools_dir
-    depot_path = depot2_dir + gcctools_dir
+    gcctools_prefix = ""
+  elif toolchain == "v1":
+    gcctools_prefix = "branches/chromeos_toolchain_v1_release_branch/"
   else:
     utils.AssertExit(False, "Toolchain can only be trunk or branch")
+  local_path = p4_checkout_dir + gcctools_prefix + "gcctools/"
+  depot_path = depot2_dir + gcctools_prefix + "gcctools/"
   return depot_path, local_path
 
 
@@ -126,7 +125,7 @@ def CreateBuildTCJob(chromeos_version="top",
   p4_port = "perforce2:2666"
   p4_paths = []
   p4_paths.append(("//depot2/gcctools/chromeos/v14/...", "gcctools/chromeos/v14/..."))
-  utils.AssertExit(toolchain == "branch" or toolchain == "trunk")
+  utils.AssertExit(toolchain == "v1" or toolchain == "trunk")
   depot_path, local_path = GetTCRootDir(toolchain)
   short_local_path = "/".join(local_path.split("/")[1:])
   p4_paths.append((depot_path + "google_vendor_src_branch/gcc/gcc-4.4.3/...",

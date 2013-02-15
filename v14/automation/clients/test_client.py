@@ -28,7 +28,7 @@ def Main(argv):
                     "--board",
                     dest="board",
                     default="x86-generic",
-                    help="Toolchain to use {trunk|branch}"
+                    help="Toolchain to use {trunk|v1}"
                     )
   parser.add_option("-p",
                     "--p4-snapshot",
