@@ -41,6 +41,8 @@ class JobExecuter(threading.Thread):
   def _FormatCommand(self, command):
     ret = str(command)
     ret = ret.replace("$JOB_ID", "%s" % self.job.id)
+    ret = ret.replace("$JOB_TMP", self.job.work_dir)
+    ret = ret.replace("$JOB_HOME", self.job.home_dir)
     ret = ret.replace("$PRIMARY_MACHINE", self.job.machines[0].name)
     while True:
       mo = re.search("\$SECONDARY_MACHINES\[(\d+)\]", ret)
