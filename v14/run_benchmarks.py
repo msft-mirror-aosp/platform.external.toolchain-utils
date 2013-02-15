@@ -122,7 +122,7 @@ def RunCpuBenchmark(chromeos_root, bench, workdir, machine):
     return retval
 
   # Copy benchmark directory.
-  retval = cmd_executer.CopyFiles(benchdir, "/tmp",
+  retval = cmd_executer.CopyFiles(benchdir, "/tmp/" + benchname,
       chromeos_root=chromeos_root,
       dest_machine=machine,
       dest_cros=True)

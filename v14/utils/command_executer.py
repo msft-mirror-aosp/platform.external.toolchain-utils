@@ -132,6 +132,10 @@ class CommandExecuter:
     src = os.path.expanduser(src)
     dest = os.path.expanduser(dest)
 
+    if recursive:
+      src = src + "/"
+      dest = dest + "/"
+
     if src_cros == True or dest_cros == True:
       utils.AssertTrue(src_cros ^ dest_cros)
       utils.AssertTrue(chromeos_root is not None)
@@ -143,23 +147,24 @@ class CommandExecuter:
       command = self.RemoteAccessInitCommand(chromeos_root, cros_machine)
       src_parent, src_child = utils.GetRoot(src)
       dest_parent, dest_child = utils.GetRoot(dest)
+      ssh_command = ("ssh -p ${FLAGS_ssh_port}" +
+                     " -o StrictHostKeyChecking=no" +
+                     " -o UserKnownHostsFile=$TMP_KNOWN_HOSTS")
+      rsync_prefix = "\nrsync -r -e \"%s\" " % ssh_command
       if dest_cros == True:
-        if recursive:
-          dest_parent = dest
-        command += "\ncd " + src_parent
-        command += ("\ntar zcvf - " + src_child +
-                    " | remote_sh 'cd " + dest_parent + "; tar zxvf - '")
+        command += rsync_prefix + "%s root@%s:%s" % (src, dest_machine, dest)
+        return self.RunCommand(command,
+                               machine=src_machine,
+                               username=src_user,
+                               command_terminator=command_terminator)
       else:
-        command += ("\nremote_sh (cd " + src_parent + "; tar zcvf - " +
-                    src_child + ") | (cd " + dest_parent + "; tar zxvf -)")
+        command += rsync_prefix + "root@%s:%s %s" % (src_machine, src, dest)
+        return self.RunCommand(command,
+                               machine=dest_machine,
+                               username=dest_user,
+                               command_terminator=command_terminator)
 
-      command += "\necho $REMOTE_OUT"
-      return self.RunCommand(command, command_terminator=command_terminator)
 
-    if recursive:
-      src = src + "/"
-      dest = dest + "/"
- 
     if dest_machine == src_machine:
       command = ("rsync -a %s %s" %
                      (src,

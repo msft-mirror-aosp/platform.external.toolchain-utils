@@ -43,14 +43,49 @@ def Main(argv):
                     chromeos_root=options.chromeos_root,
                     machine=options.remote)
 
-  version_dir = utils.GetRoot(sys.argv[0])[0]
-  ce.CopyFiles(version_dir,
-               "/tmp",
+  version_dir_path, script_name = utils.GetRoot(sys.argv[0])
+  version_dir = utils.GetRoot(version_dir_path)[1]
+
+  # Tests to copy directories and files to the chromeos box.
+  ce.CopyFiles(version_dir_path,
+               "/tmp/" + version_dir,
                dest_machine=options.remote,
                dest_cros=True,
                chromeos_root=options.chromeos_root)
+  ce.CopyFiles(version_dir_path,
+               "/tmp/" + version_dir + "1",
+               dest_machine=options.remote,
+               dest_cros=True,
+               chromeos_root=options.chromeos_root)
+  ce.CopyFiles(sys.argv[0],
+               "/tmp/" + script_name,
+               recursive=False,
+               dest_machine=options.remote,
+               dest_cros=True,
+               chromeos_root=options.chromeos_root)
+  ce.CopyFiles(sys.argv[0],
+               "/tmp/" + script_name + "1",
+               recursive=False,
+               dest_machine=options.remote,
+               dest_cros=True,
+               chromeos_root=options.chromeos_root)
+
+  # Test to copy directories and files from the chromeos box.
+  ce.CopyFiles("/tmp/" + script_name,
+               "/tmp/hello",
+               recursive=False,
+               src_machine=options.remote,
+               src_cros=True,
+               chromeos_root=options.chromeos_root)
+  ce.CopyFiles("/tmp/" + script_name,
+               "/tmp/" + script_name,
+               recursive=False,
+               src_machine=options.remote,
+               src_cros=True,
+               chromeos_root=options.chromeos_root)
   board = ce.CrosLearnBoard(options.chromeos_root, "172.18.117.239")
   print board
+  return 0
 
 
 if __name__ == "__main__":

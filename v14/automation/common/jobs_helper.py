@@ -117,11 +117,7 @@ def GetTCRootDir(toolchain="trunk"):
   depot_path = depot2_dir + gcctools_prefix + "gcctools/"
   return depot_path, local_path
 
-
-def CreateBuildTCJob(chromeos_version="top",
-                     board="x86-generic",
-                     p4_snapshot="",
-                     toolchain="trunk"):
+def _GetToolchainCheckoutCommand(toolchain="trunk", p4_snapshot=""):
   p4_port = "perforce2:2666"
   p4_paths = []
   p4_paths.append(("//depot2/gcctools/chromeos/v14/...", "gcctools/chromeos/v14/..."))
@@ -136,9 +132,20 @@ def CreateBuildTCJob(chromeos_version="top",
                    short_local_path + "google_vendor_src_branch/binutils/binutils-20100303/..."))
   p4_revision = 1
 
-  command = GetInitialCommand()
-  command += "&& " + GetP4Command(p4_port, p4_paths,
+  command = GetP4Command(p4_port, p4_paths,
                                  p4_revision, p4_checkout_dir, p4_snapshot)
+  return command
+
+
+
+def CreateBuildTCJob(chromeos_version="top",
+                     board="x86-generic",
+                     p4_snapshot="",
+                     toolchain="trunk"):
+
+  depot_path, local_path = GetTCRootDir(toolchain)
+  command = GetInitialCommand()
+  command += "&& " + _GetToolchainCheckoutCommand(toolchain, p4_snapshot)
 
   # When g4 syncs this file, often times the timestamp of this file is earlier
   # than that of the file that is its dependency (ldlex.l).
@@ -156,10 +163,22 @@ def CreateBuildTCJob(chromeos_version="top",
   tc_job = CreateLinuxJob(command)
   return tc_job
 
-def CreateDejaGNUJob(board="x86-generic", p4_snapshot="", toolchain="trunk"):
+def _GetMakeChrootCommand(delete=False):
+  make_chroot_args = ""
+  if delete==True:
+    make_chroot_args = " --delete"
+  command = "cd " + chromeos_scripts_dir
+  command += "&& ./make_chroot --fast " + make_chroot_args
+  command += "&& cd -"
+  return command
+
+def CreateDejaGNUJob(chromeos_version="latest",
+    board="x86-generic", p4_snapshot="", toolchain="trunk"):
   local_path = GetTCRootDir(toolchain)[1]
   command = GetInitialCommand()
-  command += "&& " + GetP4VersionDirCommand(p4_snapshot)
+  command += "&& " + _GetToolchainCheckoutCommand(toolchain)
+  command += "&& " + _GetSetupChromeOSCommand(chromeos_version, True)
+  command += "&& " + _GetMakeChrootCommand()
   command += ("&& " + p4_version_dir + "/run_dejagnu.py" +
               " --chromeos_root=chromeos"
               " --toolchain_root=" + local_path +
@@ -280,9 +299,7 @@ def CreateUpdateJob(chromeos_versions,
   command += ("&& " + p4_version_dir + "/build_chromeos.py" +
               " --chromeos_root=" + chromeos_root +
               " --vanilla --board=" + board)
-  command += ("&& cd chromeos/src/scripts " +
-              "&& ./make_chroot --delete" +
-              "&& cd -")
+  command += "&& " + _GetMakeChrootCommand(True)
 
   image_location = GetChromeOSImageLocation() + board
   src_location = GetChromeOSCheckoutLocation() + board
