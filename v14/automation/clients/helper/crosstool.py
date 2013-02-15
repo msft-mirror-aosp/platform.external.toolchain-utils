@@ -30,7 +30,9 @@ class JobsFactory(object):
     new_job.DependsOnFolder(checkout_dir)
     build_tree_dep = job.FolderDependency(
         new_job, self.commands.buildit_work_dir_path)
-    return new_job, build_tree_dep
+    target_dir_dep = job.FolderDependency(
+        new_job, os.path.join(self.commands.buildit_path, target), target)
+    return new_job, build_tree_dep, target_dir_dep
 
   def RunTests(self, checkout_dir, build_tree_dir, target, board):
     command = self.commands.RunTests(target, board)
@@ -39,11 +41,12 @@ class JobsFactory(object):
     new_job.DependsOnFolder(build_tree_dir)
     return new_job
 
-  def GenerateReport(self, test_jobs, target):
+  def GenerateReport(self, test_jobs, target_dir_dep, target):
     command = self.commands.GenerateReport(target)
     new_job = jobs.CreateLinuxJob('GenerateReport(%s)' % target, command)
     for test_job in test_jobs:
       new_job.DependsOn(test_job)
+    new_job.DependsOnFolder(target_dir_dep)
     return new_job
 
 
@@ -154,6 +157,7 @@ class CommandsFactory(object):
   def GenerateReport(self, target):
     return cmd.Wrapper(
         cmd.Shell('dejagnu.sh', 'report', '-B', target,
+                  '-m', os.path.join(target, '*.xfail'),
                   '$JOB_TMP/results/report.html',
                   path='.'),
         cwd='$HOME/automation/clients/report')

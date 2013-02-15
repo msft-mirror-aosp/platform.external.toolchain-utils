@@ -39,7 +39,7 @@ class CrosstoolNightlyClient(object):
     all_jobs = [checkout_crosstool_job]
 
     # Build crosstool target
-    build_release_job, build_tree_dir = factory.BuildRelease(
+    build_release_job, build_tree_dir, target_dir_dep = factory.BuildRelease(
         checkout_dir, self._target)
     all_jobs.append(build_release_job)
 
@@ -52,7 +52,8 @@ class CrosstoolNightlyClient(object):
 
     if test_jobs:
       all_jobs.extend(test_jobs)
-      all_jobs.append(factory.GenerateReport(test_jobs, self._target))
+      all_jobs.append(
+          factory.GenerateReport(test_jobs, target_dir_dep, self._target))
 
     return job_group.JobGroup('Crosstool Nightly Build', all_jobs, True, False)
 
