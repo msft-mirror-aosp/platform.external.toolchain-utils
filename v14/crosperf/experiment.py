@@ -16,11 +16,10 @@ from utils import logger
 class Experiment(threading.Thread):
   """Class representing an Experiment to be run."""
 
-  def __init__(self, name, board, remote, rerun_if_failed, working_directory,
+  def __init__(self, name, remote, rerun_if_failed, working_directory,
                parallel, chromeos_root, cache_conditions, labels, benchmarks):
     threading.Thread.__init__(self)
     self.name = name
-    self.board = board
     self.rerun_if_failed = rerun_if_failed
     self.working_directory = working_directory
     self.remote = remote
@@ -70,7 +69,7 @@ class Experiment(threading.Thread):
                                        label.name,
                                        label.chromeos_root,
                                        label.chromeos_image,
-                                       self.board,
+                                       label.board,
                                        iteration,
                                        self.cache_conditions,
                                        benchmark.outlier_range,

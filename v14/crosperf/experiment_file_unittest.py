@@ -52,7 +52,6 @@ class ExperimentFileTest(unittest.TestCase):
     input_file = StringIO.StringIO(EXPERIMENT_FILE_1)
     experiment_file = ExperimentFile(input_file)
     global_settings = experiment_file.GetGlobalSettings()
-    self.assertEqual(global_settings.GetField("board"), "x86-alex")
     self.assertEqual(global_settings.GetField("remote"), ["chromeos-alex3"])
 
     benchmark_settings = experiment_file.GetSettings("benchmark")
@@ -63,6 +62,7 @@ class ExperimentFileTest(unittest.TestCase):
     label_settings = experiment_file.GetSettings("label")
     self.assertEqual(len(label_settings), 2)
     self.assertEqual(label_settings[0].name, "image1")
+    self.assertEqual(label_settings[0].GetField("board"), "x86-alex")
     self.assertEqual(label_settings[0].GetField("chromeos_image"),
                      "/usr/local/google/cros_image1.bin")
 
@@ -70,7 +70,6 @@ class ExperimentFileTest(unittest.TestCase):
     input_file = StringIO.StringIO(EXPERIMENT_FILE_2)
     experiment_file = ExperimentFile(input_file)
     global_settings = experiment_file.GetGlobalSettings()
-    self.assertEqual(global_settings.GetField("board"), "x86-alex")
     self.assertEqual(global_settings.GetField("remote"), ["chromeos-alex3"])
 
     benchmark_settings = experiment_file.GetSettings("benchmark")

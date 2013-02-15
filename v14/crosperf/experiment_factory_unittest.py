@@ -34,7 +34,6 @@ class ExperimentFactoryTest(unittest.TestCase):
     experiment = ExperimentFactory().GetExperiment(experiment_file,
                                                    GlobalSettings(""),
                                                    "/tmp/")
-    self.assertEqual(experiment.board, "x86-alex")
     self.assertEqual(experiment.remote, ["chromeos-alex3"])
 
     self.assertEqual(len(experiment.benchmarks), 1)
@@ -45,6 +44,8 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertEqual(len(experiment.labels), 2)
     self.assertEqual(experiment.labels[0].chromeos_image,
                      "/usr/local/google/cros_image1.bin")
+    self.assertEqual(experiment.labels[0].board,
+                     "x86-alex")
 
 
 if __name__ == "__main__":

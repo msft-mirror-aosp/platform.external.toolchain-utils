@@ -23,7 +23,6 @@ class ExperimentFactory(object):
     # Override settings which are passed in as arguments.
     global_settings.Override(option_settings)
     experiment_name = global_settings.GetField("name")
-    board = global_settings.GetField("board")
     remote = global_settings.GetField("remote")
     rerun_if_failed = global_settings.GetField("rerun_if_failed")
     chromeos_root = global_settings.GetField("chromeos_root")
@@ -64,10 +63,11 @@ class ExperimentFactory(object):
       label_name = label_settings.name
       image = label_settings.GetField("chromeos_image")
       chromeos_root = label_settings.GetField("chromeos_root")
-      label = Label(label_name, image, chromeos_root)
+      board = label_settings.GetField("board")
+      label = Label(label_name, image, chromeos_root, board)
       labels.append(label)
 
-    experiment = Experiment(experiment_name, board, remote, rerun_if_failed,
+    experiment = Experiment(experiment_name, remote, rerun_if_failed,
                             working_directory, False, chromeos_root,
                             cache_conditions, labels, benchmarks)
 

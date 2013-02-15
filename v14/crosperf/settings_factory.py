@@ -42,6 +42,9 @@ class LabelSettings(Settings):
                             "contains a src/scripts directory. Defaults to "
                             "the chromeos checkout which contains the "
                             "chromeos_image."))
+    self.AddField(TextField("board", required=True, description="The target "
+                            "board for running experiments on, e.g. x86-alex.",
+                            inheritable=True))
 
 
 class GlobalSettings(Settings):
@@ -50,7 +53,7 @@ class GlobalSettings(Settings):
     self.AddField(TextField("name", default="Experiment",
                             description="The name of the experiment. Just an "
                             "identifier."))
-    self.AddField(TextField("board", required=True, description="The target "
+    self.AddField(TextField("board", description="The target "
                             "board for running experiments on, e.g. x86-alex."))
     self.AddField(ListField("remote", required=True,
                             description="A comma-separated list of ip's of "

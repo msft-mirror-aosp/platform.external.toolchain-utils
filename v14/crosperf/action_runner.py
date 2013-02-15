@@ -44,7 +44,7 @@ class ActionRunner(object):
       benchmark_names = []
       for benchmark_run in experiment.benchmark_runs:
         benchmark_names.append(benchmark_run.full_name)
-      subject = "%s: %s" % (experiment.board, ", ".join(benchmark_names))
+      subject = "%s: %s" % (experiment.name, ", ".join(benchmark_names))
       EmailSender().SendEmailToUser(subject, experiment.table)
 
   def RunAction(self, action):
