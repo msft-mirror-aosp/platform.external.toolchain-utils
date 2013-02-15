@@ -62,10 +62,11 @@ class ExperimentRunner(object):
     text_report = "<pre style='font-size: 13px'>%s</pre>" % text_report
     html_report = HTMLResultsReport(experiment).GetReport()
     attachment = EmailSender.Attachment("report.html", html_report)
-    EmailSender().SendEmailToUser(subject,
-                                  text_report,
-                                  attachments=[attachment],
-                                  msg_type="html")
+    EmailSender().SendEmail([getpass.getuser()],
+                            subject,
+                            text_report,
+                            attachments=[attachment],
+                            msg_type="html")
 
   def _StoreResults (self, experiment):
     if self._terminated:

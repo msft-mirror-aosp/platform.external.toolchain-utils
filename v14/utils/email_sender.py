@@ -7,6 +7,7 @@ from email.MIMEBase import MIMEBase
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 import getpass
+import os
 import smtplib
 import sys
 
@@ -17,18 +18,30 @@ class EmailSender(object):
       self.name = name
       self.content = content
 
-  def SendEmailToUser(self, subject, text_to_send, msg_type="plain",
-                      attachments=None):
+  def SendEmail(self,
+                email_to,
+                subject,
+                text_to_send,
+                email_cc=None,
+                email_bcc=None,
+                email_from=None,
+                msg_type="plain",
+                attachments=None):
     # Email summary to the current user.
     msg = MIMEMultipart()
 
-    # me == the sender's email address
-    # you == the recipient's email address
-    me = sys.argv[0]
-    you = getpass.getuser()
-    msg["Subject"] = "[%s] %s" % (me, subject)
-    msg["From"] = me
-    msg["To"] = you
+    if not email_from:
+      email_from = os.path.basename(__file__)
+
+    msg["To"] = ",".join(email_to)
+    msg["Subject"] = subject
+
+    if email_from:
+      msg["From"] = email_from
+    if email_cc:
+      msg["CC"] = ",".join(email_cc)
+    if email_bcc:
+      msg["BCC"] = ",".join(email_bcc)
 
     msg.attach(MIMEText(text_to_send, msg_type))
     if attachments:
@@ -43,5 +56,5 @@ class EmailSender(object):
     # Send the message via our own SMTP server, but don't include the
     # envelope header.
     s = smtplib.SMTP("localhost")
-    s.sendmail(me, [you], msg.as_string())
+    s.sendmail(email_from, email_to, msg.as_string())
     s.quit()
