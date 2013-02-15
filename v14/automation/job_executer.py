@@ -3,6 +3,8 @@ import jobs.job
 import machine_manager
 from utils import utils
 
+JOBDIR_PREFIX = "/usr/local/google/home/automation"
+
 class JobExecuter(threading.Thread):
 
   def __init__(self, job, machine, job_manager):
@@ -19,6 +21,10 @@ class JobExecuter(threading.Thread):
     # Do execute here
     print "EXECUTING: " + self.job.GetCommand()
 
+    # Set job directory
+    job_dir = JOBDIR_PREFIX + str(self.job.GetID())
+    self.job.SetJobDir(job_dir)
+
     # Get the machines required
     machines = (self.machine_manager.GetMachines
                 (self.job.GetMachineDescriptions()))
@@ -26,10 +32,33 @@ class JobExecuter(threading.Thread):
       print "Could not acquire machines for the job"
     else:
       primary_machine = machines[0]
+      self.job.set_machine(primary_machine)
+
+      utils.RunCommand("mkdir -p " + self.job.GetJobDir())
+      utils.RunCommand("mkdir -p " + self.job.GetWorkDir())
+      print "mkdir -p" + job_dir
+      for required_folder in self.job.GetRequiredFolders():
+        to_folder = self.job.GetWorkDirectory() + "/" + required_folder.folder
+        from_folder = (required_folder.job.GetWorkDirectory() + "/" +
+                         required_folder.folder)
+        if required_folder.job.GetMachine().name == primary_machine.name:
+          # Same machine, do cp
+          utils.RunCommand("cp %s %s", from_folder, to_folder)
+        else:
+          # Different machine, do scp
+          from_machine = required_folder.job.GetMachine().name
+          from_user = required_folder.job.GetMachine.username
+          to_machine = self.job.GetMachine().name
+          to_user = self.job.GetMachine().username
+          utils.RunCommand("scp %s@%s:%s %s@%s:%s"
+                           % (from_user, from_machine, from_folder, to_user,
+                              to_machine, to_folder))
+
       result = utils.RunCommand("ssh %s@%s -- %s" %
                                 (primary_machine.username, primary_machine.name,
                                  self.job.GetCommand()), True)
       print "OUTPUT: " + str(result)
+
 
     # Mark as complete
     self.job.SetStatus(jobs.job.STATUS_COMPLETED)

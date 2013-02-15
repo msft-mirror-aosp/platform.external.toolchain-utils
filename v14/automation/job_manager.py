@@ -1,6 +1,9 @@
 import threading
 import job_executer
 
+JOB_MANAGER_STARTED = 1
+JOB_MANAGER_STOPPING = 2
+JOB_MANAGER_STOPPED = 3
 
 class JobManager(threading.Thread):
 
@@ -15,8 +18,28 @@ class JobManager(threading.Thread):
     self.job_lock = threading.Lock()
     self.job_ready_event = threading.Event()
 
+    self.job_counter = 0
+
+    self.status = JOB_MANAGER_STOPPED
+
+  def StartJobManager(self):
+    self.job_lock.acquire()
+    if self.status == JOB_MANAGER_STOPPED:
+      self.start()
+      self.status = JOB_MANAGER_STARTED
+    self.job_lock.release()
+
+  def StopJobManager(self):
+    self.job_lock.acquire()
+    if self.status == JOB_MANAGER_STARTED:
+      self.status = JOB_MANAGER_STOPPING
+    self.job_lock.release()
+
   def AddJob(self, current_job):
     self.job_lock.acquire()
+
+    current_job.SetID(self.job_counter)
+    self.job_counter += 1
 
     self.all_jobs.append(current_job)
     # Only queue a job as ready if it has no dependencies
@@ -53,4 +76,12 @@ class JobManager(threading.Thread):
         executer = job_executer.JobExecuter(ready_job, None, self)
         executer.start()
 
+
+      if self.status == JOB_MANAGER_STOPPING:
+        self.status = JOB_MANAGER_STOPPED
+      return
+
+
       self.job_lock.release()
+
+
