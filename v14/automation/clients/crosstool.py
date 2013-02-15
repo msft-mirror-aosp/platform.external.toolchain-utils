@@ -51,10 +51,9 @@ class CrosstoolNightlyClient(object):
       test_jobs.append(factory.RunTests(
           checkout_dir, build_tree_dir, self._target, board))
 
-    all_jobs.extend(test_jobs)
-
-    generate_report_job = factory.GenerateReport(test_jobs, self._target)
-    all_jobs.append(generate_report_job)
+    if test_jobs:
+      all_jobs.extend(test_jobs)
+      all_jobs.append(factory.GenerateReport(test_jobs, self._target))
 
     return job_group.JobGroup('Crosstool Nightly Build', all_jobs, True, False)
 
