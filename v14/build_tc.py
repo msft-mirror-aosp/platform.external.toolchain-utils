@@ -79,6 +79,7 @@ def Main(argv):
     logger.GetLogger().LogOutput("Creating a chromeos checkout at: %s" %
                                  options.chromeos_root)
     sc_args = []
+    sc_args.append("--minilayout")
     sc_args.append("--dir=%s" % options.chromeos_root)
     if options.setup_chromeos_options:
       sc_args.append(options.setup_chromeos_options)

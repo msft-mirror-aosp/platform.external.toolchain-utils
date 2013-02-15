@@ -8,13 +8,14 @@
 __author__ = "raymes@google.com (Raymes Khoury)"
 
 
+import time
 import machine_description
 
 
-STATUS_NOT_EXECUTED = 0
-STATUS_EXECUTING = 1
-STATUS_COMPLETED = 2
-STATUS_FAILED = 3
+STATUS_NOT_EXECUTED = "STATUS_NOT_EXECUTED"
+STATUS_EXECUTING = "STATUS_EXECUTING"
+STATUS_COMPLETED = "STATUS_COMPLETED"
+STATUS_FAILED = "STATUS_FAILED"
 
 SUBDIR_WORK = "/work"
 SUBDIR_LOGS = "/logs"
@@ -42,6 +43,17 @@ class Job:
     self.machine = None
     self.command = command
     self._primary_done = False
+    self.start_time = 0
+    self.finish_time = 0
+
+  def __str__(self):
+    ret = ""
+    ret += str(self.id) + "\n"
+    ret += self.command + "\n"
+    ret += self.status + "\n"
+    ret += ("start_time: %s\nfinish_time: %s\n" %
+            (self.start_time, self.finish_time))
+    return ret
 
   def SetID(self, id):
     self.id = id
@@ -56,6 +68,11 @@ class Job:
     return self.machine
 
   def SetStatus(self, status):
+    if status == STATUS_EXECUTING:
+      self.start_time = time.time()
+    if (status == STATUS_COMPLETED or
+        status == STATUS_FAILED):
+      self.finish_time = time.time()
     self.status = status
 
   def GetStatus(self):

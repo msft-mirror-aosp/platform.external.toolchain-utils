@@ -1,6 +1,7 @@
 import threading
 from automation.common import job
 import machine_manager
+import re
 from utils import utils
 from utils import logger
 from utils import command_executer
@@ -26,6 +27,16 @@ class JobExecuter(threading.Thread):
       self.job.SetStatus(job.STATUS_FAILED)
       self.job_manager.NotifyJobComplete(self.job)
 
+  def _FormatCommand(self, command):
+    ret = command
+    ret.replace("$JOB_ID", str(self.job.GetID()))
+###    ret.replace("$PRIMARY_MACHINE", self.job.machines[0].name)
+###    mo = re.search("SECONDARY_MACHINES\[(\d+)\]", ret)
+###    if mo is not None:
+###      index = int(mo.group(1))
+###      ret = (ret[0:mo.start()] + self.job.machines[1+index] +
+###             ret[mo.end():])
+    return ret
 
   def run(self):
     # Mark as executing 
@@ -80,7 +91,7 @@ class JobExecuter(threading.Thread):
 
     command = self.job.GetCommand()
 
-    command.replace("$JOB_ID", str(self.job.GetID()))
+    command = self._FormatCommand(command)
 
     command_success = (self.cmd_executer.
                        RunCommand("PS1=. TERM=linux "
