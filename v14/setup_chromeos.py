@@ -85,7 +85,7 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
   if version == "top" or version == "latest":
     init = "repo init -u ssh://git@gitrw.chromium.org:9222/manifest-internal"
     if options.minilayout ==  True:
-      init += "-m minilayout.xml"
+      init += " -m minilayout.xml"
   else:
     init = ("repo init -u ssh://git@gitrw.chromium.org:9222/manifest-versions "
             "-m buildspecs/%s/%s.xml" % (version[0:4], version))
