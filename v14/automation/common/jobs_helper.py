@@ -1,5 +1,7 @@
 import job
 from automation.common import machine_description
+import os
+import sys
 
 p4_checkout_dir = "perforce2"
 version_dir = "/gcctools/chromeos/v14/"
@@ -21,9 +23,22 @@ def _GetP4ClientSpec(client_name, p4_paths):
   return p4_string
 
 
-def GetP4Command(p4_port, p4_paths, revision, checkoutdir):
-  client_name = "p4-automation-$JOB_ID"
+def GetP4Command(p4_port, p4_paths, revision, checkoutdir, p4_snapshot=""):
   command = ""
+
+  if p4_snapshot:
+    command += "mkdir -p " + checkoutdir
+    for p4_path in p4_paths:
+      real_path = p4_path[1]
+      if real_path.endswith("..."):
+        real_path = real_path.replace("/...", "")
+        command += ("&& mkdir -p " + checkoutdir + "/" +
+                    os.path.dirname(real_path))
+        command += ("&& ln -s " + p4_snapshot + "/" + real_path +
+                  " " + checkoutdir + "/" + real_path)
+    return command
+
+  client_name = "p4-automation-$JOB_ID"
   command += " export P4CONFIG=.p4config"
   command += " && mkdir -p " + checkoutdir
   command += " && cd " + checkoutdir
@@ -63,12 +78,12 @@ def GetCopyTreeCommand(source, dest):
   command += "&& cp -pr " + source + "/* " + dest
   return command
 
-def GetP4VersionDirCommand():
+def GetP4VersionDirCommand(p4_snapshot=""):
   p4_port = "perforce2:2666"
   p4_paths = []
   p4_paths.append(("//depot2/gcctools/chromeos/v14/...", "gcctools/chromeos/v14/..."))
   p4_revision = 1
-  command = GetP4Command(p4_port, p4_paths, p4_revision, p4_checkout_dir)
+  command = GetP4Command(p4_port, p4_paths, p4_revision, p4_checkout_dir, p4_snapshot)
   return command
 
 
@@ -81,11 +96,8 @@ def CreateBuildTCJob(chromeos_snapshot="", p4_snapshot=""):
   p4_revision = 1
 
   command = GetInitialCommand()
-  if p4_snapshot:
-    command += "; cp -rp " + p4_snapshot + " " + p4_checkout_dir
-  else:
-    command += "; " + GetP4Command(p4_port, p4_paths,
-                                    p4_revision, p4_checkout_dir)
+  command += "; " + GetP4Command(p4_port, p4_paths,
+                                 p4_revision, p4_checkout_dir, p4_snapshot)
 
   if chromeos_snapshot == "weekly":
     command += "; sudo cp -rp " + GetWeeklyChromeOSLocation() + " chromeos"
@@ -103,11 +115,7 @@ def CreateBuildAndTestChromeOSJob(tc_job, chromeos_snapshot="", p4_snapshot=""):
   command = GetInitialCommand()
   # TODO(asharif): Get rid of this hack at some point.
   command += "&& mkdir -p perforce2/gcctools/google_vendor_src_branch/gcc"
-  if p4_snapshot:
-    command += "&& " + GetCopyTreeCommand(p4_snapshot + version_dir,
-                                       p4_version_dir)
-  else:
-    command += "; " + GetP4VersionDirCommand()
+  command += "; " + GetP4VersionDirCommand(p4_snapshot)
 
   if chromeos_snapshot == "weekly":
     command += "; sudo cp -rp " + GetWeeklyChromeOSLocation() + " chromeos"

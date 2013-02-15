@@ -31,17 +31,23 @@ def Main(argv):
                     default="trunk",
                     help="Toolchain to use {trunk|branch|custom}"
                     )
+  parser.add_option("-p",
+                    "--p4-snapshot",
+                    default="",
+                    help="An existing perforce checkout for debugging."
+                    )
   options = parser.parse_args(argv)[0]
 
   server = xmlrpclib.Server("http://localhost:8000")
 
   all_jobs = []
-  tc_job = jobs_helper.CreateBuildTCJob()
+  tc_job = jobs_helper.CreateBuildTCJob(p4_snapshot=options.p4_snapshot)
   all_jobs.append(tc_job)
 
   build_chromeos_job = (
       jobs_helper.CreateBuildAndTestChromeOSJob(
-        tc_job))
+        tc_job,
+        p4_snapshot=options.p4_snapshot))
   all_jobs.append(build_chromeos_job)
 
   group = job_group.JobGroup(os.uname()[1], "/tmp/", all_jobs, False, False)

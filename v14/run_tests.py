@@ -14,9 +14,6 @@ import os
 import sys
 from utils import command_executer
 
-# Common initializations
-cmd_executer = command_executer.GetCommandExecuter()
-
 
 def Main():
   """The main function."""
@@ -51,7 +48,7 @@ def RunRemoteTests(chromeos_root, remote, board, tests):
              " --board=" + board +
              " " + tests)
 
-  retval = cmd_executer.RunCommand(command)
+  retval = command_executer.GetCommandExecuter().RunCommand(command)
   return retval
 
 if __name__ == "__main__":

@@ -18,8 +18,6 @@ from utils import command_executer
 from utils import logger
 from utils import utils
 
-cmd_executer = None
-
 
 def Usage(parser, message):
   print "ERROR: " + message
@@ -51,7 +49,7 @@ def MakeChroot(chromeos_root, clobber_chroot=False):
     if clobber_chroot:
       clobber_chroot = "--replace"
     commands.append("./make_chroot --fast " + clobber_chroot)
-    ret = cmd_executer.RunCommands(commands)
+    ret = command_executer.GetCommandExecuter().RunCommands(commands)
     utils.AssertTrue(ret == 0, "make_chroot failed")
   else:
     logger.GetLogger().LogOutput("Did not make_chroot because it already exists")
@@ -60,7 +58,6 @@ def MakeChroot(chromeos_root, clobber_chroot=False):
 def Main(argv):
   """Build ChromeOS."""
   # Common initializations
-  global cmd_executer
   cmd_executer = command_executer.GetCommandExecuter()
 
   parser = optparse.OptionParser()
