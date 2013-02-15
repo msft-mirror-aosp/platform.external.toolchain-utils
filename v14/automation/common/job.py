@@ -105,8 +105,7 @@ class Job(object):
     if not self.status_events:
       return ""
     time_diff = time.time() - self.status_events[0].event_time
-    time_string = time.strftime("%H:%M:%S", time.gmtime(time_diff))
-    return "Total time: %s" % time_string
+    return time.strftime("%H:%M:%S", time.gmtime(time_diff))
 
   def GetTimeline(self):
     total_time = 0

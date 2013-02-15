@@ -97,7 +97,7 @@ class AbstractCommandContainer(collections.MutableSequence):
     cmds = []
 
     for cmd in self:
-      if type(cmd) > AbstractCommandContainer and len(cmd) > 1:
+      if isinstance(cmd, AbstractCommandContainer) and len(cmd) > 1:
         cmds.append('(%s)' % cmd)
       else:
         cmds.append(str(cmd))
