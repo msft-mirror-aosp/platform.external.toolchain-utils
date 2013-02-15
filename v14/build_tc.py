@@ -116,7 +116,7 @@ def Main(argv):
   portage_flags = "--oneshot"
   if options.binary == True:
     # FIXME(asharif): This should be using --usepkg but that was not working.
-    portage_flags = "--usepkgonly"
+    portage_flags += " --usepkgonly"
     tc_enter_chroot_options.append("-s")
 
   f = open(options.chromeos_root + "/src/overlays/overlay-" +
@@ -258,4 +258,3 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
 if __name__ == "__main__":
   retval = Main(sys.argv)
   sys.exit(retval)
-
