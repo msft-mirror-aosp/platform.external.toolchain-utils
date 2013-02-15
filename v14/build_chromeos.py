@@ -153,7 +153,7 @@ def Main(argv):
 
   # Build image
   ret = ExecuteCommandInChroot(options.chromeos_root, None,
-                               "./build_image --yes --board=%s" % options.board)
+                               "./build_image --board=%s" % options.board)
 
   utils.AssertTrue(ret == 0, "build_image failed")
 

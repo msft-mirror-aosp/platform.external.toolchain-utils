@@ -7,19 +7,17 @@ import sys
 import time
 from utils import utils
 
-p4_checkout_dir = "perforce2"
+depot2_dir = "//depot2/"
+p4_checkout_dir = "perforce2/"
 version_dir = "/gcctools/chromeos/v14/"
-install_dir = "/output/install"
-objects_dir = "/output/objects"
-pkgs_dir = "/output/pkgs"
 p4_version_dir = p4_checkout_dir + version_dir
-p4_install_dir = p4_checkout_dir + version_dir + install_dir
-p4_objects_dir = p4_checkout_dir + version_dir + objects_dir
-p4_pkgs_dir = p4_checkout_dir + version_dir + pkgs_dir
 
 chromeos_root = "chromeos"
 scripts_dir = "src/scripts"
 chromeos_scripts_dir = chromeos_root + "/" + scripts_dir
+
+tc_pkgs_dir = "output/pkgs"
+tc_objects_dir = "output/objects"
 
 def _GetP4ClientSpec(client_name, p4_paths):
   p4_string = ""
@@ -93,6 +91,19 @@ def GetP4VersionDirCommand(p4_snapshot=""):
   return command
 
 
+def GetTCRootDir(toolchain="trunk"):
+  gcctools_dir = "gcctools/"
+  if toolchain == "trunk":
+    local_path = p4_checkout_dir + gcctools_dir
+    depot_path = depot2_dir + gcctools_dir
+  elif toolchain == "branch":
+    local_path = p4_checkout_dir + gcctools_dir
+    depot_path = depot2_dir + gcctools_dir
+  else:
+    utils.AssertExit(False, "Toolchain can only be trunk or branch")
+  return depot_path, local_path
+
+
 def CreateBuildTCJob(chromeos_version="top",
                      board="x86-generic",
                      p4_snapshot="",
@@ -100,24 +111,15 @@ def CreateBuildTCJob(chromeos_version="top",
   p4_port = "perforce2:2666"
   p4_paths = []
   p4_paths.append(("//depot2/gcctools/chromeos/v14/...", "gcctools/chromeos/v14/..."))
-  if toolchain == "trunk":
-    toolchain_root = p4_checkout_dir + "/gcctools"
-    p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/...",
-                     "gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/..."))
-    p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/...",
-                     "gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/..."))
-    p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/binutils/binutils-20100303/...",
-                     "gcctools/google_vendor_src_branch/binutils/binutils-20100303/..."))
-  elif toolchain == "branch":
-    toolchain_root = p4_checkout_dir + "/branches/chromeos_toolchain_v1_release_branch/gcctools"
-    p4_paths.append(("//depot2/branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/...",
-                     "branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/..."))
-    p4_paths.append(("//depot2/branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/...",
-                     "branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/..."))
-    p4_paths.append(("//depot2/branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/binutils/binutils-20100303/...",
-                     "branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/binutils/binutils-20100303/..."))
-  else:
-    utils.AssertExit(False, "Invalid toolchain value")
+  utils.AssertExit(toolchain == "branch" or toolchain == "trunk")
+  depot_path, local_path = GetTCRootDir(toolchain)
+  short_local_path = "/".join(local_path.split("/")[1:])
+  p4_paths.append((depot_path + "google_vendor_src_branch/gcc/gcc-4.4.3/...",
+                   short_local_path + "google_vendor_src_branch/gcc/gcc-4.4.3/..."))
+  p4_paths.append((depot_path + "google_vendor_src_branch/binutils/binutils-2.20.1-mobile/...",
+                   short_local_path + "google_vendor_src_branch/binutils/binutils-2.20.1-mobile/..."))
+  p4_paths.append((depot_path + "google_vendor_src_branch/binutils/binutils-20100303/...",
+                   short_local_path + "google_vendor_src_branch/binutils/binutils-20100303/..."))
   p4_revision = 1
 
   command = GetInitialCommand()
@@ -139,7 +141,7 @@ def CreateBuildTCJob(chromeos_version="top",
 
 
   command += ("; " + p4_version_dir + "/build_tc.py" +
-                      " --toolchain_root=" + toolchain_root +
+                      " --toolchain_root=" + local_path +
                       " --chromeos_root=" + chromeos_root +
                       " --board=" + board +
                       " -f")
@@ -155,7 +157,6 @@ def CreateDejaGNUJob(tc_job, board="x86-generic", p4_snapshot=""):
               " --remote=$SECONDARY_MACHINES[0]" +
               " --board=" + board)
   to_return = CreateLinuxJob(command)
-  to_return.AddRequiredFolder(tc_job, p4_objects_dir, p4_objects_dir)
   to_return.AddRequiredMachine("", "chromeos", False, False)
   return to_return
 
@@ -184,7 +185,6 @@ def CreateBuildAndTestChromeOSJob(tc_job, chromeos_version="latest",
                       " --chromeos_root=" + chromeos_root +
                       " -B")
   command += ("; " + p4_version_dir + "/build_chromeos.py" +
-              " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
               " --chromeos_root=" + chromeos_root +
               " --board=" + board)
 
@@ -199,7 +199,6 @@ def CreateBuildAndTestChromeOSJob(tc_job, chromeos_version="latest",
               " bvt Page")
 
   to_return = CreateLinuxJob(command)
-  to_return.AddRequiredFolder(tc_job, p4_pkgs_dir, p4_pkgs_dir)
 
   to_return.AddRequiredMachine("", "chromeos", False, False)
 

@@ -60,11 +60,20 @@ def Main(argv):
           tc_job,
           version,
           p4_snapshot=options.p4_snapshot))
+    tc_root = jobs_helper.GetTCRootDir(options.toolchain)[1]
+    build_chromeos_job.AddRequiredFolder(tc_job,
+        tc_root + jobs_helper.tc_pkgs_dir,
+        tc_root + jobs_helper.tc_pkgs_dir)
     all_jobs.append(build_chromeos_job)
 
   if options.dejagnu == True:
     dejagnu_job = jobs_helper.CreateDejaGNUJob(tc_job,
                                                p4_snapshot=options.p4_snapshot)
+    tc_root = jobs_helper.GetTCRootDir(options.toolchain)[1]
+    dejagnu_job.AddRequiredFolder(tc_job,
+        tc_root + jobs_helper.tc_objects_dir,
+        tc_root + jobs_helper.tc_objects_dir)
+
     all_jobs.append(dejagnu_job)
 
   group = job_group.JobGroup(all_jobs, False, False)
