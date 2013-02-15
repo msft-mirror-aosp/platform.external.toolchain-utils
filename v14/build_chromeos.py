@@ -85,6 +85,10 @@ def Main(argv):
   parser.add_option("--clobber_board", dest="clobber_board",
                     action="store_true",
                     help="Delete the board and start fresh", default=False)
+  parser.add_option("--rebuild", dest="rebuild",
+                    action="store_true",
+                    help="Rebuild all board packages except the toolchain.",
+                    default=False)
   parser.add_option("--cflags", dest="cflags", default="",
                     help="CFLAGS for the ChromeOS packages")
   parser.add_option("--cxxflags", dest="cxxflags", default="",
@@ -106,6 +110,10 @@ def Main(argv):
   if options.board is None:
     Usage(parser, "--board must be set")
 
+  build_packages_env = ""
+  if options.rebuild == True:
+    build_packages_env = "EXTRA_BOARD_FLAGS=-e"
+
   options.chromeos_root = os.path.expanduser(options.chromeos_root)
 
   MakeChroot(options.chromeos_root, options.clobber_chroot)
@@ -118,7 +126,7 @@ def Main(argv):
     command = utils.GetSetupBoardCommand(options.board,
                                          usepkg=False,
                                          force=options.clobber_board)
-    command += "&& " + build_packages_command
+    command += "&& " + build_packages_env + " " + build_packages_command
     command += "&& " + build_image_command
     command += "&& " + mod_image_command
     ret = ExecuteCommandInChroot(options.chromeos_root, None, command)
@@ -146,10 +154,12 @@ def Main(argv):
                                "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
                                "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
                                "CHROME_ORIGIN=SERVER_SOURCE "
+                               "%s "
                                "%s"
                                % (options.board, options.cflags,
                                   options.board, options.cxxflags,
                                   options.board, options.ldflags,
+                                  build_packages_env,
                                   build_packages_command))
 
   utils.AssertTrue(ret == 0, "build_packages failed")
