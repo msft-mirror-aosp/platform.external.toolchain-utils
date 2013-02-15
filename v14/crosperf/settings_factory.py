@@ -3,6 +3,7 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 from field import BooleanField
+from field import FloatField
 from field import IntegerField
 from field import ListField
 from field import TextField
@@ -15,6 +16,7 @@ class BenchmarkSettings(Settings):
     self.AddField(TextField("autotest_name"))
     self.AddField(TextField("autotest_args"))
     self.AddField(IntegerField("iterations", default=3, overridable=True))
+    self.AddField(FloatField("outlier_range", default=0.2))
 
 
 class LabelSettings(Settings):
@@ -41,13 +43,6 @@ class SettingsFactory(object):
   experiment files. The idea is that in the future, other types
   of settings could be produced.
   """
-  _instance = None
-
-  def __new__(cls, *args, **kwargs):
-    if not cls._instance:
-      cls._instance = super(SettingsFactory, cls).__new__(cls, *args,
-                                                          **kwargs)
-    return cls._instance
 
   def GetSettings(self, name, settings_type):
     if settings_type == "label" or not settings_type:

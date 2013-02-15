@@ -13,8 +13,10 @@ class Benchmark(object):
   arguments.
   """
 
-  def __init__(self, name, autotest_name, autotest_args, iterations):
+  def __init__(self, name, autotest_name, autotest_args, iterations,
+               outlier_range):
     self.name = name
     self.autotest_name = autotest_name
     self.autotest_args = autotest_args
     self.iterations = iterations
+    self.outlier_range = outlier_range

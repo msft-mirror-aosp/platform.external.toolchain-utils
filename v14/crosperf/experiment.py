@@ -37,15 +37,17 @@ class Experiment(object):
     for label in self.labels:
       for benchmark in self.benchmarks:
         benchmark_run = BenchmarkRun(benchmark.autotest_name,
+                                     benchmark.autotest_args,
                                      label.chromeos_root,
                                      label.chromeos_image,
-                                     "",
                                      self.board,
                                      benchmark.iterations,
                                      label.image_checksum,
                                      False,
                                      False,
-                                     False)
+                                     False,
+                                     benchmark.outlier_range,
+                                     self.machine_manager)
 
         self.benchmark_runs.append(benchmark_run)
 

@@ -54,6 +54,14 @@ class IntegerField(Field):
     return int(value)
 
 
+class FloatField(Field):
+  def __init__(self, name, required=False, default=0, overridable=False):
+    super(FloatField, self).__init__(name, required, default, overridable)
+
+  def _Parse(self, value):
+    return float(value)
+
+
 class ListField(Field):
   def __init__(self, name, required=False, default=[], overridable=False):
     super(ListField, self).__init__(name, required, default, overridable)

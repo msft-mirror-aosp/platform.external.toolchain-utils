@@ -14,13 +14,6 @@ class ExperimentFactory(object):
   ChromeOS benchmarks, but the idea is that in the future, other types
   of experiments could be produced.
   """
-  _instance = None
-
-  def __new__(cls, *args, **kwargs):
-    if not cls._instance:
-      cls._instance = super(ExperimentFactory, cls).__new__(cls, *args,
-                                                            **kwargs)
-    return cls._instance
 
   def GetExperiment(self, experiment_file, working_directory):
     """Construct an experiment from an experiment file."""
@@ -41,8 +34,9 @@ class ExperimentFactory(object):
         autotest_name = benchmark_name
       autotest_args = benchmark_settings.GetField("autotest_args")
       iterations = benchmark_settings.GetField("iterations")
+      outlier_range = benchmark_settings.GetField("outlier_range")
       benchmark = Benchmark(benchmark_name, autotest_name, autotest_args,
-                            iterations)
+                            iterations, outlier_range)
       experiment.AddBenchmark(benchmark)
 
     # Construct labels.
