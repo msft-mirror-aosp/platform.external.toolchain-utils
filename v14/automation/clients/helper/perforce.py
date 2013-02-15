@@ -116,6 +116,9 @@ class View(collections.MutableSet):
     return len(self._mappings)
 
   def __iter__(self):
+    return iter(mapping for mapping in self._mappings)
+
+  def AbsoluteMappings(self):
     return iter(mapping.GetAbsolute(self.depot, self.client)
                 for mapping in self._mappings)
 
@@ -140,7 +143,8 @@ class CommandsFactory(object):
 
   def Create(self):
     # TODO(kbaclawski): Could we support value list for options consistently?
-    mappings = ['-a \"%s %s\"' % mapping for mapping in self.view]
+    mappings = ['-a \"%s %s\"' % mapping for mapping in
+                self.view.AbsoluteMappings()]
 
     return cmd.Shell('g4', 'client', *mappings)
 
