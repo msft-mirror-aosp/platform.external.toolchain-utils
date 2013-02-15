@@ -8,7 +8,6 @@ import machine_manager
 import signal
 from utils import logger
 import sys
-import socket
 
 def HandleKeyboardInterrupt(signalNumber, frame) :
   server.StopServer()
@@ -28,10 +27,8 @@ class Server:
     job_group_id = self.job_group_manager.AddJobGroup(job_group)
     return job_group_id
 
-  def GetAllJobs(self):
-    jobs_dict = {}
-    jobs_dict["all"] = self.job_manager.all_jobs
-    jobs_dict["ready"] = self.job_manager.ready_jobs
+  def GetAllJobGroups(self):
+    return utils.Serialize(self.job_group_manager.GetAllJobGroups())
 
   def KillJobGroup(self, job_group_id):
     self.job_manager.KillJobGroup(utils.Deserialize(job_group_id))

@@ -3,10 +3,6 @@ import job_executer
 import automation.common.job
 from utils import logger
 
-JOB_MANAGER_STARTED = 1
-JOB_MANAGER_STOPPING = 2
-JOB_MANAGER_STOPPED = 3
-
 class JobManager(threading.Thread):
 
   def __init__(self, machine_manager):
@@ -21,17 +17,13 @@ class JobManager(threading.Thread):
 
     self.job_counter = 0
 
-    self.status = JOB_MANAGER_STOPPED
-
     self.listeners = []
     self.listeners.append(self)
 
 
   def StartJobManager(self):
     self.job_condition.acquire()
-    if self.status == JOB_MANAGER_STOPPED:
-      self.start()
-      self.status = JOB_MANAGER_STARTED
+    self.start()
     self.job_condition.notifyAll()
     self.job_condition.release()
 
@@ -41,8 +33,8 @@ class JobManager(threading.Thread):
     for job in self.all_jobs:
       self._KillJob(job.GetID())
 
-    if self.status == JOB_MANAGER_STARTED:
-      self.status = JOB_MANAGER_STOPPING
+    # Signal to die
+    self.ready_jobs.insert(0, None)
     self.job_condition.notifyAll()
     self.job_condition.release()
 
@@ -69,10 +61,6 @@ class JobManager(threading.Thread):
 
   def AddJob(self, current_job):
     self.job_condition.acquire()
-    # Don't add job if we are about to die.
-    if self.status != JOB_MANAGER_STARTED:
-      self.job_condition.release()
-      return
 
     current_job_id = self.job_counter
     current_job.SetID(current_job_id)
@@ -119,6 +107,11 @@ class JobManager(threading.Thread):
       while len(self.ready_jobs) > 0:
 
         ready_job = self.ready_jobs.pop()
+        if ready_job is None:
+          # Time to die
+          self.job_condition.release()
+          return
+
 
         required_machines = ready_job.GetRequiredMachines()
         for child in ready_job.GetChildren():
@@ -136,10 +129,6 @@ class JobManager(threading.Thread):
           executer.start()
           self.job_executer_mapping[ready_job.GetID()] = executer
 
-      if self.status == JOB_MANAGER_STOPPING:
-        self.status = JOB_MANAGER_STOPPED
-        self.job_condition.release()
-        return
 
 
       self.job_condition.release()

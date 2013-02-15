@@ -15,6 +15,11 @@ class JobGroupManager:
     self.job_group_counter = 0
     self.job_condition = threading.Condition()
 
+  def GetAllJobGroups(self):
+    self.job_condition.acquire()
+    return self.all_job_groups
+    self.job_condition.release()
+
   def AddJobGroup(self, job_group):
     self.job_condition.acquire()
     job_group.SetID(self.job_group_counter)
