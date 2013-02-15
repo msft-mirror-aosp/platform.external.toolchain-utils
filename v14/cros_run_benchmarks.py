@@ -379,6 +379,21 @@ class TableFormatter:
     return summary_table
 
 
+  # Drop N% slowest and M% fastest numbers, and return arithmean of
+  # the remaining.
+  @staticmethod
+  def AverageWithDrops(numbers, slow_percent=20, fast_percent=20):
+    sorted_numbers = list(numbers)
+    sorted_numbers.sort()
+    num_slow = int(slow_percent/100.0 * len(sorted_numbers))
+    num_fast = int(fast_percent/100.0 * len(sorted_numbers))
+    sorted_numbers = sorted_numbers[num_slow:]
+    if num_fast:
+      sorted_numbers = sorted_numbers[:-num_fast]
+    return numpy.average(sorted_numbers)
+
+
+
   @staticmethod
   def AggregateResults(group_results):
     ret = ""
@@ -396,7 +411,7 @@ class TableFormatter:
         all_fails = False
     if all_floats == True:
       float_results = [float(v) for v in group_results]
-      ret = "%f" % numpy.average(float_results)
+      ret = "%f" % TableFormatter.AverageWithDrops(float_results)
       # Add this line for standard deviation.
 ###      ret += " %f" % numpy.std(float_results)
     elif all_passes == True:
@@ -633,6 +648,15 @@ class AutotestRunner:
       self.ag.ParseOutput(run)
 
 
+def CanonicalizeChromeOSRoot(chromeos_root):
+  chromeos_root = os.path.expanduser(chromeos_root)
+  if os.path.isfile(os.path.join(chromeos_root,
+                                 "src/scripts/enter_chroot.sh")):
+    return chromeos_root
+  else:
+    return None
+
+
 class Benchmark:
   def __init__(self, name, iterations, args=None):
     self.name = name
@@ -645,6 +669,7 @@ def Main(argv):
   # Common initializations
 ###  command_executer.InitCommandExecuter(True)
   ce = command_executer.GetCommandExecuter()
+  l = logger.GetLogger()
 
   parser = optparse.OptionParser()
   parser.add_option("-t", "--tests", dest="tests",
@@ -670,11 +695,16 @@ def Main(argv):
                     help="Fit strings to fixed sizes.",
                     action="store_true",
                     default=False)
-  logger.GetLogger().LogOutput(" ".join(argv))
+  parser.add_option("--image_chromeos_root",
+                    dest="image_chromeos_root",
+                    help="Use the chromeos_root of the image, when available.",
+                    action="store_true",
+                    default=False)
+  l.LogOutput(" ".join(argv))
   [options, args] = parser.parse_args(argv)
 
   if options.remote is None:
-    logger.GetLogger().LogError("No remote machine specified.")
+    l.LogError("No remote machine specified.")
     parser.print_help()
     sys.exit(1)
 
@@ -687,7 +717,6 @@ def Main(argv):
     for benchmark_string in benchmark_strings:
       iterations = int(options.iterations)
       fields = benchmark_string.split(":")
-      l = logger.GetLogger()
       l.LogFatalIf(len(fields)>2,
                    "Benchmark string: %s flawed" % benchmark_string)
       name = fields[0]
@@ -695,6 +724,7 @@ def Main(argv):
         iterations = int(fields[1])
       benchmarks.append(Benchmark(name, iterations))
   else:
+    iterations = int(options.iterations)
 ###    benchmarks.append(Benchmark("BootPerfServer/control", iterations))
 ###    benchmarks.append(Benchmark("Page --args=\"--page-cycler-gtest-filters=PageCyclerTest.BloatFile\"", iterations))
     benchmarks.append(Benchmark("Page", iterations))
@@ -711,21 +741,19 @@ def Main(argv):
 ###    benchmarks.append(Benchmark("dbench", iterations))
 
 
-  if not options.chromeos_root:
-    logger.GetLogger().LogError("No chromeos root specified.")
-    parser.print_help()
-    sys.exit(1)
-  else:
-    chromeos_root = options.chromeos_root
-    chromeos_root = os.path.expanduser(chromeos_root)
-    sig_file = "%s/src/scripts/enter_chroot.sh" % chromeos_root
-    if (not os.path.isdir(chromeos_root)) or (not os.path.isfile(sig_file)):
-      message = "chromeos_root: %s not valid." % chromeos_root
-      logger.GetLogger().LogError(message)
+  main_chromeos_root = options.chromeos_root
+  if main_chromeos_root:
+    main_chromeos_root = CanonicalizeChromeOSRoot(main_chromeos_root)
+    if not main_chromeos_root:
+      message = "chromeos_root: %s not valid." % options.chromeos_root
+      l.LogError(message)
       sys.exit(1)
+  else:
+    message = "Using image-derived chromeos_root."
+    l.LogOutput(message)
 
   if not options.images:
-    logger.GetLogger().LogError("No images specified.")
+    l.LogError("No images specified.")
     parser.print_help()
     sys.exit(1)
 
@@ -744,11 +772,11 @@ def Main(argv):
       command = ("perflab --machines=%s --lock_reason=%r --lock_duration=1d lock" %
                  (perflab_machine, lock_reason))
       retval = ce.RunCommand(command)
-      logger.GetLogger().LogFatalIf(retval, "Could not lock machine %s through perflab" % perflab_machine)
+      l.LogFatalIf(retval, "Could not lock machine %s through perflab" % perflab_machine)
 
     for image in options.images.split(","):
       if image == "":
-        logger.GetLogger().LogWarning("Empty image specified!")
+        l.LogWarning("Empty image specified!")
         continue
       image = os.path.expanduser(image)
       for b in benchmarks:
@@ -757,6 +785,20 @@ def Main(argv):
         else:
           ag = AutotestGatherer()
           ags[b] = ag
+
+        image_chromeos_root = os.path.join(os.path.dirname(image),
+                                           "../../../../..")
+        image_chromeos_root = CanonicalizeChromeOSRoot(image_chromeos_root)
+
+        chromeos_root = main_chromeos_root
+
+        if options.image_chromeos_root:
+          l.LogFatalIf(not image_chromeos_root,
+                       "image chromeos_root not valid.")
+          m = "Using image chromeos root: %s" % image_chromeos_root
+          chromeos_root = image_chromeos_root
+          l.LogOutput(m)
+
         ar = AutotestRunner(chromeos_root, b.name, options.board, image=image, ag=ag)
         ar.RunTest(remote, b.iterations)
 
@@ -770,7 +812,7 @@ def Main(argv):
       output += ag.GetFormattedSummaryTable(percents_only=not options.full_table,
                                             fit_string=options.fit_string)
       output += "\n"
-    logger.GetLogger().LogOutput(output)
+    l.LogOutput(output)
 
 
   except (KeyboardInterrupt, SystemExit):
