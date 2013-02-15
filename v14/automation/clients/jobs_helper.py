@@ -5,8 +5,9 @@
 import os.path
 import re
 
+from automation.common import command as cmd
 from automation.common import job
-from automation.common.machine import MachineSpecification
+from automation.common import machine
 from utils import logger
 from utils import utils
 
@@ -23,38 +24,6 @@ tc_pkgs_dir = "output/pkgs"
 tc_objects_dir = "output/objects"
 
 
-def _BuildCmd(cmd, *args, **kwargs):
-  """Function used to build a string representation of shell command."""
-  assert all(key in ["opts", "path"] for key in kwargs)
-
-  path = kwargs.get("path", "")
-  opts = kwargs.get("opts", [])
-
-  cmdline = [os.path.join(path, cmd)]
-  cmdline.extend(opts)
-  cmdline.extend(args)
-
-  return " ".join(cmdline)
-
-
-# TODO(kbaclawski): This is an old way to implement a class with
-# collections.MutableSequence interface. It's shorter but AFAIK strongly
-# discouraged starting with Python 2.3.
-class _CmdChain(list):
-  """Container that chains shell commands using && operator."""
-
-  def __init__(self, *args):
-    list.__init__(self)
-    self.add(*args)
-
-  def add(self, *args):
-    for arg in args:
-      self.append(arg)
-
-  def __str__(self):
-    return " && ".join(str(cmd) for cmd in self)
-
-
 def _GetP4ClientSpec(client_name, p4_paths):
   mappings = [(remote, os.path.join(client_name, local))
               for remote, local in p4_paths]
@@ -68,7 +37,7 @@ def GetP4Command(p4_port, p4_paths, revision, checkoutdir, p4_snapshot=""):
 
   client_name = "p4-automation-$HOSTNAME-$JOB_ID"
 
-  return str(_CmdChain(
+  return cmd.Chain(
       "export P4CONFIG=.p4config",
       "mkdir -p %s" % checkoutdir,
       "cd %s" % checkoutdir,
@@ -79,7 +48,7 @@ def GetP4Command(p4_port, p4_paths, revision, checkoutdir, p4_snapshot=""):
       "g4 client %s" % _GetP4ClientSpec(client_name, p4_paths),
       "g4 sync ...",
       "g4 client -d %s" % client_name,
-      "cd -"))
+      "cd -")
 
 
 def _GetP4SnapshotCommand(p4_paths, checkoutdir, p4_snapshot):
@@ -95,7 +64,7 @@ def _GetP4SnapshotCommand(p4_paths, checkoutdir, p4_snapshot):
       local_checkout_dir = os.path.join(checkoutdir,
                                         os.path.dirname(local_path))
 
-      command.append(_CmdChain(
+      command.append(cmd.Chain(
           "mkdir -p %s" % local_checkout_dir,
           "rsync -lr %s %s" % (remote_checkout_dir, local_checkout_dir)))
 
@@ -104,7 +73,7 @@ def _GetP4SnapshotCommand(p4_paths, checkoutdir, p4_snapshot):
 
 def CreateLinuxJob(label, command, lock=False):
   to_return = job.Job(label, command)
-  to_return.DependsOnMachine(MachineSpecification("*", "linux", lock))
+  to_return.DependsOnMachine(machine.MachineSpecification("*", "linux", lock))
   return to_return
 
 
@@ -114,13 +83,13 @@ def CreateP4Job(p4_port, p4_paths, revision, checkoutdir):
 
 
 def GetInitialCommand():
-  return _CmdChain("pwd", "uname -a")
+  return cmd.Chain("pwd", "uname -a")
 
 
 def GetCopyTreeCommand(source, dest):
-  return str(_CmdChain(
+  return cmd.Chain(
       "mkdir -p %s" % dest,
-      "cp -pr %s/* %s" % (source, dest)))
+      "cp -pr %s/* %s" % (source, dest))
 
 
 def GetP4VersionDirCommand(p4_snapshot=""):
@@ -185,7 +154,7 @@ def CreateBuildTCJob(chromeos_version="top", board="x86-generic",
 
   _, local_path = GetTCRootDir(toolchain)
 
-  cmds = _CmdChain(
+  cmds = cmd.Chain(
       GetInitialCommand(),
       _GetToolchainCheckoutCommand(toolchain, p4_snapshot),
       # When g4 syncs this file, often times the timestamp of this file is
@@ -202,19 +171,16 @@ def CreateBuildTCJob(chromeos_version="top", board="x86-generic",
       _GetSetupChromeOSCommand(chromeos_version),
       _GetBuildTCCommand(toolchain, board, False, True))
 
-  return CreateLinuxJob("build_tc_job", str(cmds))
+  return CreateLinuxJob("build_tc_job", cmds)
 
 
 def _GetMakeChrootCommand(delete=False):
-  make_chroot_opts = ["--fast"]
+  make_chroot = cmd.Shell("make_chroot", path=".", opts=["--fast"])
 
   if delete:
-    make_chroot_opts.append("--delete")
+    make_chroot.AddOption("--delete")
 
-  return str(_CmdChain(
-      "cd %s" % CHROMEOS_SCRIPTS_DIR,
-      _BuildCmd("make_chroot", path=".", opts=make_chroot_opts),
-      "cd -"))
+  return cmd.Chain("cd %s" % CHROMEOS_SCRIPTS_DIR, make_chroot, "cd -")
 
 
 def CreateDejaGNUJob(chromeos_version="top", board="x86-generic",
@@ -223,26 +189,26 @@ def CreateDejaGNUJob(chromeos_version="top", board="x86-generic",
   local_path = GetTCRootDir(toolchain)[1]
   dejagnu_logs = os.path.join(local_path, "output/dejagnu")
 
-  cmds = _CmdChain(
+  cmds = cmd.Chain(
       GetInitialCommand(),
       _GetToolchainCheckoutCommand(toolchain),
       _GetSetupChromeOSCommand(chromeos_version),
       _GetBuildTCCommand(toolchain, board),
-      _BuildCmd("run_dejagnu.py",
+      cmd.Shell("run_dejagnu.py",
                 path=P4_VERSION_DIR,
                 opts=["--testflags=\"\"",
                       "--chromeos_root=%s" % CHROMEOS_ROOT,
                       "--toolchain_root=%s" % local_path,
                       "--remote=$SECONDARY_MACHINES[0]",
                       "--board=%s" % board]),
-      _BuildCmd("summarize_results.py", os.path.join(dejagnu_logs, "gcc.log"),
+      cmd.Shell("summarize_results.py", os.path.join(dejagnu_logs, "gcc.log"),
                 path=P4_VERSION_DIR),
-      _BuildCmd("summarize_results.py", os.path.join(dejagnu_logs, "g++.log"),
+      cmd.Shell("summarize_results.py", os.path.join(dejagnu_logs, "g++.log"),
                 path=P4_VERSION_DIR))
 
-  dejagnu_job = CreateLinuxJob("dejagnu_job", str(cmds))
-  dejagnu_job.DependsOnMachine(MachineSpecification("*", "chromeos", True),
-                               False)
+  dejagnu_job = CreateLinuxJob("dejagnu_job", cmds)
+  dejagnu_job.DependsOnMachine(
+      machine.MachineSpecification("*", "chromeos", True), False)
   return dejagnu_job
 
 
@@ -252,7 +218,7 @@ def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
 
   test_list = tests or []
 
-  cmds = _CmdChain(
+  cmds = cmd.Chain(
       GetInitialCommand(),
       # TODO(asharif): Get rid of this hack at some point.
       "mkdir -p perforce2/gcctools/google_vendor_src_branch/gcc",
@@ -261,22 +227,23 @@ def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
       _GetBuildTCCommand(toolchain, board),
       _GetBuildChromeOSCommand(board),
       _GetImageChromeOSCommand(board),
-      _BuildCmd("run_tests.py", "bvt", *test_list,
+      cmd.Shell("run_tests.py", "bvt", *test_list,
                 path=P4_VERSION_DIR,
                 opts=["--remote=$SECONDARY_MACHINES[0]",
                       "--chromeos_root=%s" % CHROMEOS_ROOT,
                       "--board=%s" % board]),
-      _BuildCmd("summarize_results.py", os.path.join(P4_VERSION_DIR,
+      cmd.Shell("summarize_results.py", os.path.join(P4_VERSION_DIR,
                                                      "logs/run_tests.py.out"),
                 path=P4_VERSION_DIR))
 
-  cros_job = CreateLinuxJob("build_test_chromeos_job", str(cmds), lock=True)
-  cros_job.DependsOnMachine(MachineSpecification("*", "chromeos", True), False)
+  cros_job = CreateLinuxJob("build_test_chromeos_job", cmds, lock=True)
+  cros_job.DependsOnMachine(
+      machine.MachineSpecification("*", "chromeos", True), False)
   return cros_job
 
 
 def _GetImageChromeOSCommand(board):
-  return _BuildCmd("image_chromeos.py",
+  return cmd.Shell("image_chromeos.py",
                    path=P4_VERSION_DIR,
                    opts=["--chromeos_root=%s" % CHROMEOS_ROOT,
                          "--remote=$SECONDARY_MACHINES[0]",
@@ -284,27 +251,27 @@ def _GetImageChromeOSCommand(board):
 
 
 def _GetSetupChromeOSScriptCommand(version="latest", use_minilayout=False):
-  setup_chromeos_opts = ["--dir=%s" % CHROMEOS_ROOT,
-                         "--version=%s" % version]
+  setup_chromeos = cmd.Shell("setup_chromeos.py",
+                             path=P4_VERSION_DIR,
+                             opts=["--dir=%s" % CHROMEOS_ROOT,
+                                   "--version=%s" % version])
 
   if use_minilayout:
-    setup_chromeos_opts.append("--minilayout")
+    setup_chromeos.AddOption("--minilayout")
 
-  return _BuildCmd("setup_chromeos.py",
-                   path=P4_VERSION_DIR,
-                   opts=setup_chromeos_opts)
+  return setup_chromeos
 
 
 def _GetBuildChromeOSCommand(board, vanilla=False):
-  build_chromeos_opts = ["--chromeos_root=%s" % CHROMEOS_ROOT,
-                         "--board=%s" % board]
+  build_chromeos = cmd.Shell("build_chromeos.py",
+                             path=P4_VERSION_DIR,
+                             opts=["--chromeos_root=%s" % CHROMEOS_ROOT,
+                                   "--board=%s" % board])
 
   if vanilla:
-    build_chromeos_opts.append("--vanilla")
+    build_chromeos.AddOption("--vanilla")
 
-  return _BuildCmd("build_chromeos.py",
-                   path=P4_VERSION_DIR,
-                   opts=build_chromeos_opts)
+  return build_chromeos
 
 
 def _GetSetupChromeOSCommand(version, use_minilayout=False):
@@ -321,9 +288,9 @@ def _GetSetupChromeOSCommand(version, use_minilayout=False):
   if version in ["top", "latest"] or re.match(version_re, version):
     return _GetSetupChromeOSScriptCommand(version, use_minilayout)
   elif version.endswith("bz2") or version.endswith("gz"):
-    return str(_CmdChain(
+    return cmd.Chain(
         "mkdir %s" % CHROMEOS_ROOT,
-        "tar -xf %s -C %s" % (location_expanded, CHROMEOS_ROOT)))
+        "tar -xf %s -C %s" % (location_expanded, CHROMEOS_ROOT))
   else:
     signature_file_location = os.path.join(location,
                                            "src/scripts/enter_chroot.sh")
@@ -336,14 +303,15 @@ def _GetSetupChromeOSCommand(version, use_minilayout=False):
 def _GetBuildTCCommand(toolchain, board, use_binary=True, rebuild=False):
   local_path = GetTCRootDir(toolchain)[1]
 
-  build_tc_opts = ["--toolchain_root=%s" % local_path,
-                   "--chromeos_root=%s" % CHROMEOS_ROOT,
-                   "--board=%s" % board]
+  build_tc = cmd.Shell("build_tc.py", path=P4_VERSION_DIR,
+                       opts=["--toolchain_root=%s" % local_path,
+                             "--chromeos_root=%s" % CHROMEOS_ROOT,
+                             "--board=%s" % board])
 
   if use_binary:
-    build_tc_opts.append("-B")
+    build_tc.AddOption("-B")
 
-  return _BuildCmd("build_tc.py", path=P4_VERSION_DIR, opts=build_tc_opts)
+  return build_tc
 
 
 def CreatePerflabJob(chromeos_version, benchmark, board="x86-agz",
@@ -368,7 +336,7 @@ def CreatePerflabJob(chromeos_version, benchmark, board="x86-agz",
                                           perflab_bbrd_src_path,
                                           "perflab/util/perflab.cfg")
 
-  perflab_command = _BuildCmd(
+  perflab_command = cmd.Shell(
       "perflab",
       path=perflab_binary_path,
       opts=["--perflab_interpreter=%s" % perflab_interpreter_path,
@@ -381,7 +349,7 @@ def CreatePerflabJob(chromeos_version, benchmark, board="x86-agz",
             "--arch=chromeos_%s" % board,
             "--workdir=$(readlink -f %s)" % P4_VERSION_DIR])
 
-  cmds = _CmdChain(
+  cmds = cmd.Chain(
       GetInitialCommand(),
       GetP4VersionDirCommand(p4_snapshot),
       GetP4BenchmarksDirCommand(p4_snapshot),
@@ -395,19 +363,19 @@ def CreatePerflabJob(chromeos_version, benchmark, board="x86-agz",
                                        perflab_output_dir))
 
   # TODO(asharif): Compare this to a golden baseline dir.
-  return CreateLinuxJob("perflab_job", str(cmds), lock=True)
+  return CreateLinuxJob("perflab_job", cmds, lock=True)
 
 
 def CreateUpdateJob(chromeos_versions, create_image=True, p4_snapshot="",
                     boards="x86-generic"):
-  cmds = _CmdChain(GetInitialCommand(),
+  cmds = cmd.Chain(GetInitialCommand(),
                    GetP4VersionDirCommand(p4_snapshot),
                    _GetSetupChromeOSScriptCommand())
 
   board_list = boards.split(",")
 
   for board in board_list:
-    cmds.add(_GetBuildChromeOSCommand(board, True))
+    cmds.append(_GetBuildChromeOSCommand(board, True))
 
   dirname = "$(cd chromeos/src/scripts; git describe --tags --always HEAD)"
 
@@ -417,12 +385,12 @@ def CreateUpdateJob(chromeos_versions, create_image=True, p4_snapshot="",
     board_build = os.path.join(build_location, board)
     board_source = os.path.join("chromeos/src/build/images", board)
 
-    cmds.add("mkdir -p %s" % board_build,
-             "rsync -a %s/ %s/" % (board_source, board_build))
+    cmds.extend(["mkdir -p %s" % board_build,
+                 "rsync -a %s/ %s/" % (board_source, board_build)])
 
   for chromeos_version in chromeos_versions.split(","):
     build_link = os.path.join(CHROMEOS_BUILDS_DIR, chromeos_version)
 
-    cmds.add("ln -fs -T %s %s" % (dirname, build_link))
+    cmds.append("ln -fs -T %s %s" % (dirname, build_link))
 
-  return CreateLinuxJob("update_job", str(cmds))
+  return CreateLinuxJob("update_job", cmds)

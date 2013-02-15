@@ -23,7 +23,7 @@ def FormatQuotedCommand(command):
 
 
 def FormatCommands(commands):
-  output = commands
+  output = str(commands)
   output = re.sub("&&", "&&\n", output)
   output = re.sub(";", ";\n", output)
   output = re.sub("\n+\s*", "\n", output)

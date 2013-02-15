@@ -39,7 +39,7 @@ class JobExecuter(threading.Thread):
     self._terminator = command_executer.CommandTerminator()
 
   def _FormatCommand(self, command):
-    ret = command
+    ret = str(command)
     ret = ret.replace("$JOB_ID", "%s" % self.job.id)
     ret = ret.replace("$PRIMARY_MACHINE", self.job.machines[0].name)
     while True:
