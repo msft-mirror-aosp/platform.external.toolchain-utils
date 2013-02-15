@@ -125,10 +125,10 @@ def Main():
               #"CFLAGS='%s'\\\nCXXFLAGS='%s'\\\nLDFLAGS='%s'\\\n" %
               #(options.cflags, options.cxxflags, options.ldflags))
   ret2 = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                                "if [ -e /build/%s/etc/make.conf.orig ] ; then "
+                                "\"if [ -e /build/%s/etc/make.conf.orig ] ; then "
                                 "sudo echo -e \\\"%s\\\" | sudo tee "
                                 "/build/%s/etc/make.conf > /dev/null ;"
-                                "else exit 1 ; fi"
+                                "else exit 1 ; fi\""
                                 % (options.board, makeconf, options.board))
 
   utils.AssertTrue(ret1 == 0 and ret2 == 0, "Could not modify make.conf")

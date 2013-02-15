@@ -28,7 +28,29 @@ def Main(argv):
   parser.add_option("-t", "--toolchain_root", dest="toolchain_root",
                     help="Toolchain root directory.")
 
-  (options, args) = parser.parse_args(argv)
+  relevant_argv=[]
+  passthrough_argv=[]
+  for i in xrange(len(argv)):
+    found = False
+    for option in parser.option_list:
+      for long_opt in option._long_opts:
+        if argv[i].startswith(long_opt):
+          found = True
+          break
+      for short_opt in option._short_opts:
+        if argv[i].startswith(short_opt):
+          found = True
+          break
+
+      if found == True:
+        break
+
+    if found == True:
+      relevant_argv.append(argv[i])
+    else:
+      passthrough_argv.append(argv[i])
+
+  options = parser.parse_args(relevant_argv)[0]
 
   if options.chromeos_root is None:
     chromeos_root = "../.."
@@ -77,8 +99,8 @@ def Main(argv):
   # Now call enter_chroot with the rest of the arguments.
   command = "./enter_chroot.sh"
 
-  if len(args) > 1:
-    command += " -- " + " ".join(args[1:])
+  if len(passthrough_argv) > 1:
+    command += " " + " ".join(passthrough_argv[1:])
     retval = utils.RunCommand(command)
     return retval
   else:

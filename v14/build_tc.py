@@ -141,7 +141,7 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
   else:
     tflag = " -t "
 
-  command = "sudo " + env
+  command = " -- sudo " + env
 
   if uninstall == True:
     command += " crossdev " + tflag + target
