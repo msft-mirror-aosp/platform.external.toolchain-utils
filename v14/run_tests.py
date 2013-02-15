@@ -11,6 +11,7 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import optparse
 import os
+import re
 import sys
 from utils import command_executer
 
@@ -38,6 +39,10 @@ def Main():
 
   if args:
     tests = " " + " ".join(args)
+
+  case_insensitive_page = re.compile("page", re.IGNORECASE)
+  tests = case_insensitive_page.sub("Page", tests)
+
   return RunRemoteTests(options.chromeos_root, options.remote,
                         options.board, tests)
 
