@@ -67,7 +67,7 @@ def RunRemoteTests(chromeos_root, remote, board, tests):
              (remote,
               board,
               tests))
-  retval = build_chromeos.ExecuteCommandInChroot(chromeos_root, command)
+  retval = utils.ExecuteCommandInChroot(chromeos_root, command)
   return retval
 
 if __name__ == "__main__":

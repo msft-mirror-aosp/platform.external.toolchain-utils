@@ -185,14 +185,14 @@ def Main(argv):
       if third_party:
         tec_options.append("--third_party=%s" % third_party)
       if options.clean:
-        retval = build_chromeos.ExecuteCommandInChroot(options.chromeos_root,
+        retval = utils.ExecuteCommandInChroot(options.chromeos_root,
                                               CPU_BUILDCMD_CLEAN % benchname,
                                               tec_options=tec_options
                                               )
         logger.GetLogger().LogErrorIf(retval,
                                       "clean of benchmark %s failed." % arg)
       if options.build:
-        retval = build_chromeos.ExecuteCommandInChroot(options.chromeos_root,
+        retval = utils.ExecuteCommandInChroot(options.chromeos_root,
                                               CPU_BUILDCMD_BUILD % (benchname, options.cflags,
                                               options.ldflags, options.makeopts),
                                               tec_options=tec_options)

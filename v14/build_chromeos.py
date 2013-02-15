@@ -24,26 +24,6 @@ def Usage(parser, message):
   parser.print_help()
   sys.exit(0)
 
-#TODO(raymes): move this to a common utils file.
-def ExecuteCommandInChroot(chromeos_root, command, toolchain_root=None,
-                           return_output=False, full_mount=False,
-                           tec_options=[]):
-  """Executes a command in the chroot."""
-  global cmd_executer
-  cmd_executer = command_executer.GetCommandExecuter()
-  chromeos_root = os.path.expanduser(chromeos_root)
-
-  argv = [os.path.dirname(os.path.abspath(__file__)) + "/tc_enter_chroot.py",
-          "--chromeos_root=" + chromeos_root,
-          command]
-  if toolchain_root:
-    toolchain_root = os.path.expanduser(toolchain_root)
-    argv.append("--toolchain_root=" + toolchain_root)
-  if not full_mount:
-    argv.append("-s")
-  argv += tec_options
-  return tc_enter_chroot.Main(argv, return_output)
-
 
 def MakeChroot(chromeos_root, clobber_chroot=False):
   """Make a chroot given a chromeos checkout."""
@@ -121,7 +101,7 @@ def Main(argv):
     command += "; " + build_packages_env + " " + build_packages_command
     command += "&& " + build_image_command
     command += "&& " + mod_image_command
-    ret = ExecuteCommandInChroot(options.chromeos_root, command)
+    ret = utils.ExecuteCommandInChroot(options.chromeos_root, command)
     return ret
 
   # Setup board
@@ -130,7 +110,7 @@ def Main(argv):
     # Run build_tc.py from binary package
     rootdir = utils.GetRoot(argv[0])[0]
     version_number = utils.GetRoot(rootdir)[1]
-    ret = ExecuteCommandInChroot(options.chromeos_root,
+    ret = utils.ExecuteCommandInChroot(options.chromeos_root,
                                  utils.GetSetupBoardCommand(options.board,
                                    gcc_version="9999",
                                    binutils_version="9999",
@@ -141,7 +121,7 @@ def Main(argv):
                                  "because it already exists")
 
   # Build packages
-  ret = ExecuteCommandInChroot(options.chromeos_root,
+  ret = utils.ExecuteCommandInChroot(options.chromeos_root,
                                "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
                                "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
                                "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
@@ -157,13 +137,13 @@ def Main(argv):
   logger.GetLogger().LogFatalIf(ret, "build_packages failed")
 
   # Build image
-  ret = ExecuteCommandInChroot(options.chromeos_root,
+  ret = utils.ExecuteCommandInChroot(options.chromeos_root,
                                build_image_command)
 
   logger.GetLogger().LogFatalIf(ret, "build_image failed")
 
   # Mod image for test
-  ret = ExecuteCommandInChroot(options.chromeos_root, mod_image_command)
+  ret = utils.ExecuteCommandInChroot(options.chromeos_root, mod_image_command)
 
   logger.GetLogger().LogFatalIf(ret, "mod_image_for_test failed")
 

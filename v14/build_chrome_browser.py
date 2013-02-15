@@ -67,7 +67,7 @@ def Main(argv):
     chrome_version = "CHROME_VERSION=%s" % options.version
 
   # Emerge the browser
-  ret = (build_chromeos.
+  ret = (utils.
          ExecuteCommandInChroot(options.chromeos_root,
                                 "CHROME_ORIGIN=SERVER_SOURCE %s "
                                 "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
@@ -81,14 +81,14 @@ def Main(argv):
   logger.GetLogger().LogFatalIf(ret, "build_packages failed")
 
   # Build image
-  ret = (build_chromeos.
+  ret = (utils.
          ExecuteCommandInChroot(options.chromeos_root,
                                 utils.GetBuildImageCommand(options.board)))
 
   logger.GetLogger().LogFatalIf(ret, "build_image failed")
 
   # Mod image for test
-  ret = (build_chromeos.
+  ret = (utils.
          ExecuteCommandInChroot(options.chromeos_root,
            utils.GetModImageForTestCommand(options.board)))
 
