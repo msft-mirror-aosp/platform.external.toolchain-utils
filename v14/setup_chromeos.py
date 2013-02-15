@@ -11,6 +11,7 @@ particular release of ChromeOS.
 __author__ = "raymes@google.com (Raymes Khoury)"
 
 import getpass
+import multiprocessing
 import optparse
 import os
 import sys
@@ -111,11 +112,6 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
 
   directory = options.directory.strip()
 
-  if version == "top":
-    branch = "master"
-  else:
-    branch = ".".join(version.split(".")[0:-1]) + ".B"
-
   # Don't checkout chrome sources outside the chroot at the moment.
   # If we check them out outside, we can't do some things, like build tests.
   checkout_chrome_outside_chroot = False
@@ -127,12 +123,11 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
   commands.append("mkdir -p " + directory)
   commands.append("cd " + directory)
   commands.append("repo init -u "
-                  "ssh://git@gitrw.chromium.org:9222/manifest-internal -b "
-                  + branch + minilayout)
-  commands.append("repo sync -j10")
-  if branch != "master":
-    commands.append("repo forall -c 'git checkout -f -b %s %s'"
-                    % (branch, version))
+                  "ssh://git@gitrw.chromium.org:9222/manifest-internal"
+                  + minilayout)
+  commands.append("repo sync -j" + str(multiprocessing.cpu_count() + 1))
+  if version != "top":
+    commands.append("repo forall -c 'git checkout -f %s'" % version)
   cmd_executer.RunCommands(commands)
 
   # Setup svn credentials for use inside the chroot
