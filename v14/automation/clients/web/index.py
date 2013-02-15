@@ -7,7 +7,6 @@ DEBUG = True
 import xmlrpclib
 import sys
 import time
-import getpass
 import cgi
 
 if DEBUG:
@@ -15,138 +14,134 @@ if DEBUG:
   cgitb.enable()
   sys.stderr = sys.stdout
 
-sys.path.append("../../../../chromeos-toolchain")
-sys.path.append("../../common")
+sys.path.append("../../..")
+
 from utils import utils
-import machine
-import job_group
-import report_generator
+from utils import html_tools
+from automation.common import machine
+import automation.common.job
 
 global server
 
-print "Content-Type: text/html\n"
-print
+def PrintAutomationHeader():
+  print html_tools.GetHeader("Automated Build")
+  home_link = html_tools.GetLink("index.py", "Job Groups")
+  results_link = html_tools.GetLink("index.py?results=1", "Results")
+  print html_tools.GetParagraph(home_link + " | " + results_link)
+
+def PrintJobGroupView(group):
+  PrintAutomationHeader()
+  print html_tools.GetHeader("Job Group %s (%s)" % (str(group.GetID()), group.GetLabel()), 2)
+  print html_tools.GetTableHeader(["ID", "Label", "Time Submitted", "Status"])
+  PrintGroupRow(group, False)
+  print html_tools.GetTableFooter()
+  print html_tools.GetHeader("Jobs", 2)
+  print html_tools.GetTableHeader(["ID", "Label", "Command", "Machines",
+                                     "Job Directory", "Dependencies", "Status", "Logs", "Test Report"])
+  for job in group.GetJobs():
+    PrintJobRow(job)
+  print html_tools.GetTableFooter()
 
 
-def print_page_header(page_title):
-  print """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html>
-<head>
-<style type="text/css">
-table
-{
-border-collapse:collapse;
-}
-table, td, th
-{
-border:1px solid black;
-}
-</style>
-<script type="text/javascript">
-function displayRow(id){
-  var row = document.getElementById("group_"+id);
-  if (row.style.display == '')  row.style.display = 'none';
-    else row.style.display = '';
-  }
-</script>
-<title>%s</title>
-</head>
-<body>
+def PrintResultsView(groups, label):
+  PrintAutomationHeader()
+  print html_tools.GetHeader("Results (%s)" % label, 2)
+  tests = []
+  for group in groups:
+    if (group.GetLabel() == label):
+      for job in group.GetJobs():
+        if not job.GetLabel() in tests:
+          tests.append(job.GetLabel())
 
-""" % page_title
+  print html_tools.GetTableHeader(["Group ID", "Time Submitted"] + tests)
 
-def print_footer():
-  print """</body> 
-</html>"""
+  for group in groups:
+    if (group.GetLabel() == label):
+      PrintResultRow(group, tests)
+  print html_tools.GetTableFooter()
 
-def print_header(text):
-  print "<h1>%s</h1>" % text
-
-def print_table_header(columns):
-  print "<table>"
+def PrintResultRow(group, tests):
   print "<tr>"
-  for column in columns:
-    print "<th>% s </th>" % str(column)
+  print html_tools.GetTableCell(GetJobsLink(group.GetID(), group.GetID()))
+  print html_tools.GetTableCell(time.ctime(group.GetTimeSubmitted()))
+  for test in tests:
+    found = False
+    for job in group.GetJobs():
+      if job.GetLabel() == test:
+        print html_tools.GetTableCell(GetTestSummary(job))
+        found = True
+    if not found:
+      print html_tools.GetTableCell("")
   print "</tr>"
 
-def print_table_footer():
-  print "</table>"
 
-def format_linebreaks(text):
-  ret = text
-  ret = ret.replace("\n", "<br>")
-  return ret
-
-def print_table_cell(text):
-  text = format_linebreaks(str(text))
-  print "<td>%s</td>" % text
-
-def print_group_row(group):
+def PrintGroupRow(group, details=True):
   print "<tr>"
-  print_table_cell(group.GetID())
-  print_table_cell(group.GetDescription())
-  print_table_cell(time.ctime(group.GetTimeSubmitted()))
-  print_table_cell(group.GetStatus())
-  print_table_cell(get_report_link(group))
-  print_table_cell(get_display_button(group.GetID()))
+  print html_tools.GetTableCell(group.GetID())
+  print html_tools.GetTableCell(group.GetLabel())
+  print html_tools.GetTableCell(time.ctime(group.GetTimeSubmitted()))
+  print html_tools.GetTableCell(group.GetStatus())
+  if details:
+    print html_tools.GetTableCell(GetJobsLink(group.GetID(), "Details..."))
   print "</tr>"
 
-def get_display_button(id):
-  return "<button onclick='displayRow(%s)' >Show/Hide Jobs</button>" % id
+def GetJobsLink(id, text):
+  return html_tools.GetLink("index.py?job_group=%s" % id, text)
 
-def get_link(link, text):
-  return "<a href='%s'>%s</a>" % (link, text)
-
-def print_job_row(job):
+def PrintJobRow(job):
   print "<tr>"
-  print_table_cell(job.GetID())
-  print_table_cell(utils.FormatCommands(job.GetCommand()))
+  print html_tools.GetTableCell(job.GetID())
+  print html_tools.GetTableCell(job.GetLabel())
+  print html_tools.GetTableCell(utils.FormatCommands(job.GetCommand()))
   machines = ""
   if job.GetMachines():
-    machines = "<b>%s</b>" % job.GetMachines()[0].name
+    machines = job.GetMachines()[0].name
     for machine in job.GetMachines()[1:]:
       machines += " %s" % machine.name
-  print_table_cell(machines)
-  print_table_cell(job.GetWorkDir())
+  print html_tools.GetTableCell(machines)
+  print html_tools.GetTableCell(job.GetWorkDir())
   deps = ""
   for child in job.GetChildren():
     deps += str(child.GetID()) + " "
-  print_table_cell(deps)
+  print html_tools.GetTableCell(deps)
   full_status = "%s\n%s" % (job.GetStatus(), job.GetTotalTime())
-  print_table_cell(full_status)
+  print html_tools.GetTableCell(full_status)
   log_link = "index.py?log=%s" % job.GetID()
   out_link = log_link + "&type=out"
   err_link = log_link + "&type=err"
   cmd_link = log_link + "&type=cmd"
-  print_table_cell("%s %s %s" %
-                   (get_link(out_link, "[out]"), get_link(err_link, "[err]"),
-                   get_link(cmd_link, "[cmd]")))
+  print html_tools.GetTableCell("%s %s %s" %
+                   (html_tools.GetLink(out_link, "[out]"), html_tools.GetLink(err_link, "[err]"),
+                   html_tools.GetLink(cmd_link, "[cmd]")))
+  print html_tools.GetTableCell(GetTestSummary(job))
   print "</tr>"
 
-def get_test_summary(group):
-  if (group.GetStatus() != job_group.STATUS_SUCCEEDED and
-      group.GetStatus() != job_group.STATUS_FAILED):
-      return ""
+def GetTestSummary(job):
+  if (job.GetStatus() != automation.common.job.STATUS_SUCCEEDED and
+      job.GetStatus() != automation.common.job.STATUS_FAILED):
+      return "Running job..."
 
   try:
-    report = open(group.GetTestReport(), 'rb')
-    report.readline()
-    report.readline()
-    num_passes = report.readline().split(":")[1].strip()
-    num_failures = report.readline().split(":")[1].strip()
-    num_regressions = report.readline().split(":")[1].strip()
+    report = open(job.GetTestReportSummaryFile(), 'rb')
+    stats = {}
+    for line in report:
+      (name, val) = line.split(":")
+      stats[name.lower().strip()] = val.lower().strip()
     report.close()
-    return "Passes: %s Failures: %s Regressions: %s" % (num_passes,
-                                                      num_failures,
-                                                      num_regressions)
-  except StandardError:
-    return "Report not found"
-    
-def get_report_link(group):
-  return get_link("index.py?report=%s" % group.GetID(), get_test_summary(group))
+    text = "Passes: %s Failures: %s Regressions: %s" % (stats["tests passing"],
+                                                        stats["tests failing"],
+                                                        stats["regressions"])
+    return html_tools.GetLink("index.py?report=%s" % job.GetID(), text)
 
-print_page_header("Automated build.")
+  except IOError:
+    return "Summary not found"
+  except KeyError:
+    return "Summary corrupt"
+
+
+print html_tools.GetContentType()
+
+print html_tools.GetPageHeader("Automated build.")
 
 server = xmlrpclib.Server("http://localhost:8000")
 groups = utils.Deserialize(server.GetAllJobGroups())
@@ -154,17 +149,19 @@ groups = utils.Deserialize(server.GetAllJobGroups())
 
 form = cgi.FieldStorage()
 
-if "report" in form:
+if "results" in form:
+  PrintResultsView(groups, "test_group")
+elif "job_group" in form:
+  current_id = int(form["job_group"].value)
+  job_group = utils.Deserialize(server.GetJobGroup(current_id))
+  PrintJobGroupView(job_group)
+elif "report" in form:
   try:
     current_id = int(form["report"].value)
-    job_group = utils.Deserialize(server.GetJobGroup(current_id))
-    if job_group is not None:
-      report = open(job_group.GetTestReport(), 'rb')
-
-      print "<pre>"
-      for line in report:
-        print line[:-1]
-      print "</pre>"
+    job = utils.Deserialize(server.GetJob(current_id))
+    if job is not None:
+      report = open(job.GetTestReportFile(), 'rb')
+      print report.read()
       report.close()
   except StandardError, e:
     print e
@@ -190,21 +187,12 @@ elif "log" in form:
   except StandardError, e:
     print e
 else:
-  print_header("Automated build.")
-  print_table_header(["ID", "Description", "Time Submitted", "Status", "Tests", "Show/Hide Jobs"])
+  PrintAutomationHeader()
+  print html_tools.GetHeader("Job Groups", 2)
+  print html_tools.GetTableHeader(["ID", "Label", "Time Submitted", "Status", "Details"])
   for group in groups[::-1]:
-    print_group_row(group)
-    print "<tr id='group_%s' style='display: none;'><td colspan=5 style='padding-left: 10px;'>" % group.GetID()
-    print_table_header(["ID", "Command", "Machines",
-                        "Job Directory", "Dependencies", "Status", "Logs"])
-    for job in group.GetJobs():
-      print_job_row(job)
-    print_table_footer()
-    print "</td></tr>"
-  print_table_footer()
-
-#    for machine in job.GetMachines():
-#      print machine
+    PrintGroupRow(group)
+  print html_tools.GetTableFooter()
 
 
-print_footer()
+print html_tools.GetFooter()

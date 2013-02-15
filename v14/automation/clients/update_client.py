@@ -33,7 +33,7 @@ def Main(argv):
                                              boards=options.board)
   all_jobs.append(update_job)
 
-  group = job_group.JobGroup(all_jobs, False, False)
+  group = job_group.JobGroup("update_client", all_jobs, False, False)
   server.ExecuteJobGroup(utils.Serialize(group))
 
 if __name__ == "__main__":

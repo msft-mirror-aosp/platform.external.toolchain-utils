@@ -105,7 +105,7 @@ def Main(argv):
 
     all_jobs.append(dejagnu_job)
 
-  group = job_group.JobGroup(all_jobs, False, False)
+  group = job_group.JobGroup("test_client", all_jobs, False, False)
   server.ExecuteJobGroup(utils.Serialize(group))
 
 if __name__ == "__main__":

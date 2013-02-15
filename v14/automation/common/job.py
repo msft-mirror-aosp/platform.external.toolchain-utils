@@ -12,7 +12,6 @@ import time
 import machine_description
 from utils import utils
 
-
 STATUS_NOT_EXECUTED = "STATUS_NOT_EXECUTED"
 STATUS_SETUP = "STATUS_SETUP"
 STATUS_COPYING = "STATUS_COPYING"
@@ -23,6 +22,8 @@ STATUS_FAILED = "STATUS_FAILED"
 LOGS_SUBDIR = "logs"
 TEST_RESULTS_DIR = "results"
 TEST_RESULTS_FILE = "results.csv"
+TEST_REPORT_FILE = "report.html"
+TEST_REPORT_SUMMARY_FILE = "summary.txt"
 
 class RequiredFolder:
   def __init__(self, job, src, dest, read_only):
@@ -42,7 +43,7 @@ class StatusEvent:
 class Job:
   """A class representing a job whose commands will be executed."""
 
-  def __init__(self, command):
+  def __init__(self, label, command, baseline=""):
     self.status = STATUS_NOT_EXECUTED
     self.children = []
     self.parents = []
@@ -57,6 +58,8 @@ class Job:
     self.status_events = []
     self.group = None
     self.dry_run = None
+    self.label = label
+    self.baseline = baseline
 
   def __str__(self):
     ret = ""
@@ -156,9 +159,6 @@ class Job:
   def GetHomeDir(self):
     return self.home_dir
 
-  def GetTestResults(self):
-    return self.GetTestResultsDir() + "/" + TEST_RESULTS_FILE
-
   def GetTestResultsDirSrc(self):
     if self.work_dir:
       return self.work_dir + "/" + TEST_RESULTS_DIR
@@ -245,5 +245,23 @@ class Job:
 
   def GetDryRun(self):
     return self.dry_run
-
-
+  
+  def GetBaselineDir(self):
+    return self.baseline
+  
+  def GetBaselineFile(self):
+    if not self.baseline:
+      return ""
+    return self.baseline + "/" + TEST_RESULTS_FILE
+  
+  def GetTestReportFile(self):
+    return self.GetTestResultsDir() + "/" + TEST_REPORT_FILE
+  
+  def GetTestReportSummaryFile(self):
+    return self.GetTestResultsDir() + "/" + TEST_REPORT_SUMMARY_FILE
+  
+  def GetTestResultsFile(self):
+    return self.GetTestResultsDir() + "/" + TEST_RESULTS_FILE
+  
+  def GetLabel(self):
+    return self.label

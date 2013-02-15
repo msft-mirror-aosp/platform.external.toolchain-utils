@@ -65,13 +65,13 @@ def GetP4Command(p4_port, p4_paths, revision, checkoutdir, p4_snapshot=""):
   command += " && cd -"
   return command
 
-def CreateLinuxJob(command, lock=False):
-  to_return = job.Job(command)
+def CreateLinuxJob(label, command, lock=False):
+  to_return = job.Job(label, command)
   to_return.AddRequiredMachine("", "linux", lock)
   return to_return
 
 def CreateP4Job(p4_port, p4_paths, revision, checkoutdir):
-  to_return = CreateLinuxJob(GetP4Command(p4_port, p4_paths,
+  to_return = CreateLinuxJob("p4_job", GetP4Command(p4_port, p4_paths,
                              revision, checkoutdir))
   return to_return
 
@@ -159,7 +159,7 @@ def CreateBuildTCJob(chromeos_version="top",
   command += "&& " + _GetSetupChromeOSCommand(chromeos_version)
 
   command += "&& " + _GetBuildTCCommand(toolchain, board, False, True)
-  tc_job = CreateLinuxJob(command)
+  tc_job = CreateLinuxJob("build_tc_job", command)
   return tc_job
 
 def _GetMakeChrootCommand(delete=False):
@@ -188,7 +188,7 @@ def CreateDejaGNUJob(chromeos_version="top",
               "/output/dejagnu/gcc.log")
   command += ("&& " + p4_version_dir + "/summarize_results.py " + local_path +
               "/output/dejagnu/g++.log")
-  to_return = CreateLinuxJob(command)
+  to_return = CreateLinuxJob("dejagnu_job", command)
   to_return.AddRequiredMachine("", "chromeos", True, False)
   return to_return
 
@@ -219,7 +219,7 @@ def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
   command += ("&& " + p4_version_dir + "/summarize_results.py " + p4_version_dir
               + "logs/run_tests.py.out")
 
-  to_return = CreateLinuxJob(command, lock=True)
+  to_return = CreateLinuxJob("build_test_chromeos_job", command, lock=True)
 
   to_return.AddRequiredMachine("", "chromeos", True, False)
 
@@ -306,7 +306,7 @@ def CreatePerflabJob(chromeos_version, benchmark, board="x86-agz",
 
     command += ("&& " + p4_version_dir + "/summarize_results.py " +
                 benchmark_log_path)
-  to_return = CreateLinuxJob(command, lock=True)
+  to_return = CreateLinuxJob("perflab_job", command, lock=True)
   return to_return
 
 
@@ -337,6 +337,6 @@ def CreateUpdateJob(chromeos_versions,
     build_link = chromeos_version
     command += ("&& ln -fs -T " + dirname + " " +
                 _GetChromeOSGoldenBuildLocation() + chromeos_version)
-  to_return = CreateLinuxJob(command)
+  to_return = CreateLinuxJob("update_job", command)
   return to_return
 

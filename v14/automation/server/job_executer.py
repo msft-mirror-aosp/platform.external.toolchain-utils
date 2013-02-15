@@ -1,6 +1,6 @@
 import threading
 from automation.common import job
-import getpass
+import report_generator
 from utils import utils
 import re
 from utils import logger
@@ -166,7 +166,7 @@ class JobExecuter(threading.Thread):
     if self._IsJobFailed(command_success,
                          "Command failed to execute: '%s'." % command):
       return
-
+    
     # Copy test results back to directory
     to_folder = self.job.GetHomeDir()
     from_folder = self.job.GetTestResultsDirSrc()
@@ -178,6 +178,33 @@ class JobExecuter(threading.Thread):
     if self._IsJobFailed(copy_success, "Failed to copy results."):
       return
 
+    # Generate diff of baseline and results.csv
+    report = None
+    try:
+      results_filename = self.job.GetTestResultsFile()
+      baseline_filename = self.job.GetBaselineFile()
+      if not baseline_filename:
+        logger.GetLogger().LogWarning("Baseline not specified.")
+      else:
+        report = report_generator.GenerateResultsReport(baseline_filename,
+                                                        results_filename)
+    except StandardError, e:
+      logger.GetLogger().LogWarning("Couldn't generate report")
+    
+    if report:
+      try:
+        report_file = open(self.job.GetTestReportFile(), "w")
+        report_file.write(report.GetReport())
+        
+        summary_file = open(self.job.GetTestReportSummaryFile(), "w")
+        summary_file.write(report.GetSummary())
+      except IOError, e:
+        logger.GetLogger().LogWarning("Could not write results report")
+      finally:
+        if report_file:
+          report_file.close()
+        if summary_file:
+          summary_file.close()
 
     # If we get here, the job succeeded. 
     self.job.SetStatus(job.STATUS_SUCCEEDED)

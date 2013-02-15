@@ -5,7 +5,6 @@ from utils import logger
 import getpass
 import time
 import copy
-import report_generator
 
 HOMEDIR_PREFIX = "/home/" + getpass.getuser() + "/www/automation"
 
@@ -43,15 +42,6 @@ class JobGroupManager:
     command_executer.GetCommandExecuter().RunCommand("rm -rf %s ; mkdir -p %s" %
                                                      (job_group.GetHomeDir(),
                                                       job_group.GetHomeDir()))
-    # Copy baseline csv
-    if job_group.GetTestBaselineSrc() is not None:
-      res = (command_executer.GetCommandExecuter().
-             CopyFiles(job_group.GetTestBaselineSrc(),
-                       job_group.GetTestBaseline(), recursive=False))
-      if res != 0:
-        logger.GetLogger().LogWarning("Could not copy baseline.csv")
-    else:
-      logger.GetLogger().LogWarning("No baseline.csv specified")
 
     job_group.SetTimeSubmitted(time.time())
     job_group.SetStatus(automation.common.job_group.STATUS_EXECUTING)
@@ -95,7 +85,6 @@ class JobGroupManager:
         for job in job_group.GetJobs():
           self.job_manager.KillJob(job)
           self.job_manager.CleanUpJob(job)
-      self.FinishedJobGroup(job_group)
     else:
       # The job succeeded successfully -- lets check to see if we are done.
       assert job.GetStatus() == automation.common.job.STATUS_SUCCEEDED
@@ -111,36 +100,7 @@ class JobGroupManager:
         if job_group.CleanupOnCompletion():
           for job in job_group.GetJobs():
             self.job_manager.CleanUpJob(job)
-        self.FinishedJobGroup(job_group)
 
     self.job_condition.notifyAll()
     self.job_condition.release()
-
-  def FinishedJobGroup(self, job_group):
-    # Read all results files and compress into a single csv that can be used
-    # as the next baseline.
-    if job_group.GetStatus() == automation.common.job.STATUS_FAILED:
-      return
-    summary_file = open(job_group.GetTestResults(), "w")
-    for job in job_group.GetJobs():
-      path = job.GetTestResults()
-      try:
-        file = open(path, "rb")
-        for line in file:
-          summary_file.write(line.strip() + "\t" + str(job.GetID()) + "\n")
-      except IOError, e:
-        logger.GetLogger().LogWarning(e)
-    summary_file.close()
-    try:
-      report_file = open(job_group.GetTestReport(), "w")
-      baseline_filename = job_group.GetTestBaseline()
-      results_filename = job_group.GetTestResults()
-      report = report_generator.GenerateResultsReport(baseline_filename,
-                                                      [results_filename])
-      report_file.write(report)
-      report_file.close
-    except IOError, e:
-      logger.GetLogger().LogWarning(e)
-
-
 

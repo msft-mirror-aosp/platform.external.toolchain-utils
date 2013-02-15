@@ -4,14 +4,9 @@ STATUS_EXECUTING = "STATUS_EXECUTING"
 STATUS_SUCCEEDED = "STATUS_SUCCEEDED"
 STATUS_FAILED = "STATUS_FAILED"
 
-BASELINE_FILE = "baseline.csv"
-RESULTS_FILE = "results.csv"
-REPORT_FILE = "report.txt"
-
 class JobGroup:
-  def __init__(self, jobs=[],
-               cleanup_on_complete=True, cleanup_on_fail=False, description="",
-               baseline_file_src=None):
+  def __init__(self, label, jobs=[],
+               cleanup_on_complete=True, cleanup_on_fail=False, description=""):
     self.id = 0
     self.jobs = jobs
     self.cleanup_on_complete = cleanup_on_complete
@@ -22,7 +17,7 @@ class JobGroup:
     self.description = description
     self.time_submitted = 0
     self.homedir = None
-    self.baseline_file_src = baseline_file_src
+    self.label = label
 
   def __str__(self):
     ret = ""
@@ -67,15 +62,6 @@ class JobGroup:
 
   def GetHomeDir(self):
     return self.homedir
-
-  def GetTestBaselineSrc(self):
-    return self.baseline_file_src
-
-  def GetTestBaseline(self):
-    return self.homedir + "/" + BASELINE_FILE
-
-  def GetTestResults(self):
-    return self.homedir + "/" + RESULTS_FILE
-
-  def GetTestReport(self):
-    return self.homedir + "/" + REPORT_FILE
+  
+  def GetLabel(self):
+    return self.label
