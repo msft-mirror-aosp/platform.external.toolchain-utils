@@ -75,7 +75,7 @@ def Main(argv):
   target = f.read()
   f.close()
   target = target.strip()
-  gcc_build_dir = ("/usr/local/toolchain_root/v14/output/objects/cross/"
+  gcc_build_dir = ("/usr/local/toolchain_root/output/objects/cross/"
                    "%s/portage/cross-%s/gcc-9999/work/build"
                    % (target, target))
 

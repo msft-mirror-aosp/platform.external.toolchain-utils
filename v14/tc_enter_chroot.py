@@ -147,7 +147,7 @@ def Main(argv, return_output=False):
 
   output = options.output
   if output is None:
-    output = version_dir + "/output"
+    output = options.toolchain_root + "/output"
   mount_points.append(MountPoint(output, full_mounted_tc_root + "/output",
                                  getpass.getuser()))
   mount_points += CreateMountPointsFromString(options.other_mounts,
