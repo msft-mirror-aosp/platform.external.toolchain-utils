@@ -17,7 +17,6 @@ from settings_factory import GlobalSettings
 from utils import logger
 
 
-DEFAULT_ACTION = "do"
 l = logger.GetLogger()
 
 
@@ -73,26 +72,23 @@ def Main(argv):
   option_settings = ConvertOptionsToSettings(options)
 
   if len(args) == 2:
-    action = DEFAULT_ACTION
     experiment_filename = args[1]
-  elif len(args) == 3:
-    action = args[1]
-    experiment_filename = args[2]
   else:
     parser.error("Invalid number arguments.")
 
   working_directory = os.getcwd()
-  experiment_file = ExperimentFile(open(experiment_filename, "rb"))
+  experiment_file = ExperimentFile(open(experiment_filename, "rb"),
+                                   option_settings)
   experiment = ExperimentFactory().GetExperiment(experiment_file,
-                                                 option_settings,
                                                  working_directory)
+
   atexit.register(Cleanup, experiment)
 
   if options.dry_run:
     runner = MockActionRunner(experiment)
   else:
     runner = ActionRunner(experiment)
-  runner.RunAction(action)
+  runner.RunActions()
 
 if __name__ == "__main__":
   Main(sys.argv)

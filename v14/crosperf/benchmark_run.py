@@ -83,18 +83,18 @@ class BenchmarkRun(threading.Thread):
       return results_dict
     return {}
 
-  def GetLabel(self):
-    ret = "%s %s" % (self.label_name, self.benchmark_name)
-    if self.machine:
-      ret += " machine: %s" % self.machine.name
-    return ret
-
   def _GetResultsDir(self, output):
     mo = re.search("Results placed in (\S+)", output)
     if mo:
       result = mo.group(1)
       return result
     return ""
+
+  def StoreResults(self, results_dir):
+    # Store perf_report and autotest output locally.
+    self.cache.ReadAutotestOutput(results_dir)
+    with open(os.path.join(results_dir, "perf.report"), "wb") as f:
+      f.write(self.perf_report)
 
   def run(self):
     self._logger = logger.Logger(os.path.dirname(__file__),
@@ -107,17 +107,24 @@ class BenchmarkRun(threading.Thread):
       self.machine = self.machine_manager.GetMachines()[0]
 
       self.cache.Init(self.chromeos_image,
+                      self.chromeos_root,
                       self.autotest_name,
-                      self.iteration, self.autotest_args, self.machine.name,
+                      self.iteration,
+                      self.autotest_args,
+                      self.machine.name,
+                      self.board,
+                      self.cache_conditions,
                       self._logger)
 
-      result = self.cache.Read(self.cache_conditions)
+      result = self.cache.ReadResult()
       self.cache_hit = (result is not None)
 
       if result:
         self._logger.LogOutput(result.out + "\n" + result.err)
       else:
         self.status = STATUS_WAITING
+        # Try to acquire a machine now.
+        self.machine = None
         self.machine = self.AcquireMachine()
         self.cache.remote = self.machine.name
         result = self.RunTest(self.machine)
@@ -133,11 +140,19 @@ class BenchmarkRun(threading.Thread):
       self.results = self.ParseResults(result.out)
 
       if not self.cache_hit:
-        self.perf_processor.StorePerf(self.cache.GetCacheDir(self.machine.name),
-                                      result,
-                                      self.chromeos_root,
-                                      self.board, results_dir,
-                                      self.profile_counters)
+        self.cache.StoreAutotestOutput(results_dir)
+
+      if self.profile_counters:
+        if not self.cache_hit:
+          self.perf_report = (self.perf_processor.
+                              GeneratePerfReport(results_dir,
+                                                 self.chromeos_root,
+                                                 self.board))
+          self.cache.StorePerfReport(self.perf_report)
+        else:
+          self.perf_report = self.cache.ReadPerfReport()
+      else:
+        self.perf_report = ""
 
       return result.retval
     except Exception, e:
@@ -181,7 +196,7 @@ class BenchmarkRun(threading.Thread):
     self.run_completed = True
     result = Result(out, err, retval)
 
-    self.cache.Store(result)
+    self.cache.StoreResult(result)
     return result
 
   def SetCacheConditions(self, cache_conditions):

@@ -59,7 +59,7 @@ class ResultsReport(object):
 
   def _GetTable(self, labels, benchmarks, benchmark_runs, columns):
     table = Table("box-table-a")
-    label_headings = [Table.Cell("", hidden=True, colspan=3, header=True)]
+    label_headings = [Table.Cell("", hidden=True, colspan=2, header=True)]
     for label in labels:
       colspan = len(columns)
       if label.name == self.baseline.name:
@@ -69,8 +69,7 @@ class ResultsReport(object):
 
     table.AddRow(label_headings)
 
-    column_headings = [Table.Cell("Benchmark", header=True),
-                       Table.Cell("Autotest Key", header=True),
+    column_headings = [Table.Cell("Autotest Key", header=True),
                        Table.Cell("Iterations", header=True)]
     for label in labels:
       for column in columns:
@@ -84,9 +83,10 @@ class ResultsReport(object):
     sorter = ResultSorter(benchmark_runs)
 
     for benchmark in benchmarks:
+      table.AddRow([Table.Cell(benchmark.name)])
       autotest_keys = sorter.GetAutotestKeys(benchmark.name)
       for autotest_key in autotest_keys:
-        row = [Table.Cell(benchmark.name), Table.Cell(autotest_key),
+        row = [Table.Cell(autotest_key),
                Table.Cell(benchmark.iterations)]
         for label in labels:
           for column in columns:
@@ -109,6 +109,39 @@ class ResultsReport(object):
         table.AddRow(row)
 
     return table
+
+
+class TextResultsReport(ResultsReport):
+  TEXT = """
+===========================================
+Results report for: '%s'
+===========================================
+
+-------------------------------------------
+Summary
+-------------------------------------------
+%s
+
+-------------------------------------------
+Full Table
+-------------------------------------------
+%s
+
+-------------------------------------------
+Experiment File
+-------------------------------------------
+%s
+===========================================
+"""
+
+  def __init__(self, experiment):
+    super(TextResultsReport, self).__init__(experiment)
+
+  def GetReport(self):
+    return self.TEXT % (self.experiment.name,
+                        self.GetSummaryTable().ToText(30),
+                        self.GetFullTable().ToText(30),
+                        self.experiment.experiment_file)
 
 
 class HTMLResultsReport(ResultsReport):

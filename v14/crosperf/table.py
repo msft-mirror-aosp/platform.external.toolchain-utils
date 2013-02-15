@@ -38,7 +38,7 @@ class Table(object):
     res += "</table>"
     return res
 
-  def ToText(self):
+  def ToText(self, max_column_width=None):
     col_spacing = 2
     max_widths = []
     for row in self.rows:
@@ -46,6 +46,8 @@ class Table(object):
       for cell in row:
         text_width = len(str(cell.value))
         per_column_width = int(math.ceil(float(text_width) / cell.colspan))
+        if max_column_width:
+          per_column_width = min(max_column_width, per_column_width)
         for i in range(column, column + cell.colspan):
           while i >= len(max_widths):
             max_widths.append(0)
@@ -56,10 +58,14 @@ class Table(object):
     for row in self.rows:
       column = 0
       for cell in row:
-        res += str(cell.value)
+        val = str(cell.value)
+        if max_column_width:
+          if len(val) > max_column_width:
+            val = val[:2] + ".." + val[len(val) - (max_column_width - 4):]
+        res += val
         space_to_use = (sum(max_widths[column:column + cell.colspan]) +
                         (cell.colspan * col_spacing))
-        whitespace_length = space_to_use - len(str(cell.value))
+        whitespace_length = space_to_use - len(val)
         res += " " * whitespace_length
         # Add space b/w columns
         column += cell.colspan

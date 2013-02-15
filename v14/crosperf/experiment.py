@@ -2,22 +2,25 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+import os
 import threading
 import time
-from autotest_gatherer import AutotestGatherer
 from autotest_runner import AutotestRunner
 from benchmark_run import BenchmarkRun
 from machine_manager import MachineManager
 from perf_processor import PerfProcessor
 from results_cache import ResultsCache
+from results_report import HTMLResultsReport
 from utils import logger
+from utils.file_utils import FileUtils
 
 
 class Experiment(threading.Thread):
   """Class representing an Experiment to be run."""
 
   def __init__(self, name, remote, rerun_if_failed, working_directory,
-               parallel, chromeos_root, cache_conditions, labels, benchmarks):
+               parallel, chromeos_root, cache_conditions, labels, benchmarks,
+               experiment_file):
     threading.Thread.__init__(self)
     self.name = name
     self.rerun_if_failed = rerun_if_failed
@@ -28,7 +31,9 @@ class Experiment(threading.Thread):
     self.parallel = parallel
     self.complete = False
     self.terminate = False
-    self.table = None
+    self.experiment_file = experiment_file
+    self.results_directory = os.path.join(self.working_directory,
+                                          self.name + "_results")
 
     self.labels = labels
     self.benchmarks = benchmarks
@@ -125,34 +130,26 @@ class Experiment(threading.Thread):
   def run(self):
     self.start_time = time.time()
     self.RunAutotestRunsInParallel()
-    self.GenerateTable()
 
-  def GenerateTable(self):
-    ags_dict = {}
+  def StoreResults(self):
+    FileUtils().RmDir(self.results_directory)
+    FileUtils().MkDirP(self.results_directory)
+    experiment_file_path = os.path.join(self.results_directory,
+                                        "experiment.exp")
+    with open(experiment_file_path, "wb") as f:
+      f.write(self.experiment_file)
+
+    results_table_path = os.path.join(self.results_directory, "results.html")
+    report = HTMLResultsReport(self).GetReport()
+    with open(results_table_path, "wb") as f:
+      f.write(report)
+
     for benchmark_run in self.benchmark_runs:
-      name = benchmark_run.benchmark_name
-      if name not in ags_dict:
-        ags_dict[name] = AutotestGatherer()
-      ags_dict[name].runs.append(benchmark_run)
-      output = ""
-    for b, ag in ags_dict.items():
-      output += "Benchmark: %s\n" % b
-      output += ag.GetFormattedMainTable(percents_only=False,
-                                         fit_string=False)
-      output += "\n"
-
-    summary = ""
-    for b, ag in ags_dict.items():
-      summary += "Benchmark Summary Table: %s\n" % b
-      summary += ag.GetFormattedSummaryTable(percents_only=False,
-                                             fit_string=False)
-      summary += "\n"
-
-    output += summary
-    output += ("Number of re-images performed: %s" %
-               self.machine_manager.num_reimages)
-
-    self.table = output
+      benchmark_run_name = filter(str.isalnum, benchmark_run.name)
+      benchmark_run_path = os.path.join(self.results_directory,
+                                        benchmark_run_name)
+      FileUtils().MkDirP(benchmark_run_path)
+      benchmark_run.StoreResults(benchmark_run_path)
 
   def SetCacheConditions(self, cache_conditions):
     for benchmark_run in self.benchmark_runs:

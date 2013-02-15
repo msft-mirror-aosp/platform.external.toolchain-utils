@@ -11,9 +11,12 @@ import re
 from image_checksummer import ImageChecksummer
 from utils import command_executer
 from utils import logger
+from utils import utils
 
 SCRATCH_DIR = "/home/%s/cros_scratch" % getpass.getuser()
 PICKLE_FILE = "pickle.txt"
+AUTOTEST_TARBALL = "autotest.tbz2"
+PERF_REPORT = "perf.report"
 
 
 class Result(object):
@@ -41,45 +44,44 @@ class CacheConditions(object):
 
 
 class ResultsCache(object):
-  def Init(self, chromeos_image, autotest_name, iteration,
-           autotest_args, remote, cache_logger=None):
+  def Init(self, chromeos_image, chromeos_root, autotest_name, iteration,
+           autotest_args, remote, board, cache_conditions,
+           cache_logger=None):
     self.chromeos_image = chromeos_image
+    self.chromeos_root = chromeos_root
     self.autotest_name = autotest_name
     self.iteration = iteration
     self.autotest_args = autotest_args,
     self.remote = remote
+    self.board = board
+    self.cache_conditions = cache_conditions
     if cache_logger:
       self._logger = cache_logger
     else:
       self._logger = logger.GetLogger()
     self._ce = command_executer.GetCommandExecuter(self._logger)
 
-  def GetCacheDir(self, remote=None, image_checksum=None):
-    if not remote:
-      remote = self.remote
-    if not image_checksum:
-      image_checksum = ImageChecksummer().Checksum(self.chromeos_image)
-    ret = ("%s %s %s %s %s %s" %
-           (hashlib.md5(self.chromeos_image).hexdigest(),
-            self.autotest_name, self.iteration, ",".join(self.autotest_args),
-            image_checksum, remote))
-
-    return os.path.join(SCRATCH_DIR, self._ConvertToFilename(ret))
-
-  def Read(self, cache_conditions):
-    if CacheConditions.FALSE in cache_conditions:
-      self._logger.LogOutput("Cache condition FALSE passed. Not using cache.")
-      return None
-    # Determine the path of the cached result.
-    if not CacheConditions.REMOTES_MATCH in cache_conditions:
+  def _GetCacheDir(self, read=False):
+    if read and CacheConditions.REMOTES_MATCH not in self.cache_conditions:
       remote = "*"
     else:
       remote = self.remote
-    if not CacheConditions.CHECKSUMS_MATCH in cache_conditions:
+    if read and CacheConditions.CHECKSUMS_MATCH not in self.cache_conditions:
       checksum = "*"
     else:
       checksum = ImageChecksummer().Checksum(self.chromeos_image)
-    cache_dir = self.GetCacheDir(remote, checksum)
+    ret = ("%s %s %s %s %s %s" %
+           (hashlib.md5(self.chromeos_image).hexdigest(),
+            self.autotest_name, self.iteration, ",".join(self.autotest_args),
+            checksum, remote))
+
+    return os.path.join(SCRATCH_DIR, self._ConvertToFilename(ret))
+
+  def ReadResult(self):
+    if CacheConditions.FALSE in self.cache_conditions:
+      self._logger.LogOutput("Cache condition FALSE passed. Not using cache.")
+      return None
+    cache_dir = self._GetCacheDir(True)
     matching_dirs = glob.glob(cache_dir)
 
     if matching_dirs:
@@ -98,17 +100,17 @@ class ResultsCache(object):
         err = pickle.load(f)
 
         if (retval == 0 and
-            CacheConditions.RUN_SUCCEEDED not in cache_conditions):
+            CacheConditions.RUN_SUCCEEDED not in self.cache_conditions):
           return Result(out, err, retval)
 
     else:
-      if CacheConditions.CACHE_FILE_EXISTS not in cache_conditions:
+      if CacheConditions.CACHE_FILE_EXISTS not in self.cache_conditions:
         # Cache file not found but just return a failure.
         return Result("", "", 1)
       return None
 
-  def Store(self, result):
-    cache_dir = self.GetCacheDir()
+  def StoreResult(self, result):
+    cache_dir = self._GetCacheDir()
     cache_file = os.path.join(cache_dir, PICKLE_FILE)
     command = "mkdir -p %s" % os.path.dirname(cache_file)
     ret = self._ce.RunCommand(command)
@@ -117,6 +119,26 @@ class ResultsCache(object):
       pickle.dump(result.retval, f)
       pickle.dump(result.out, f)
       pickle.dump(result.err, f)
+
+  def StoreAutotestOutput(self, results_dir):
+    host_results_dir = os.path.join(self.chromeos_root, "chroot",
+                                    results_dir[1:])
+    tarball = os.path.join(self._GetCacheDir(), AUTOTEST_TARBALL)
+    command = ("cd %s && tar cjf %s ." % (host_results_dir, tarball))
+    self._ce.RunCommand(command)
+
+  def ReadAutotestOutput(self, destination):
+    tarball = os.path.join(self._GetCacheDir(True), AUTOTEST_TARBALL)
+    command = ("cd %s && tar xjf %s ." % (destination, tarball))
+    self._ce.RunCommand(command)
+
+  def StorePerfReport(self, perf_report):
+    with open(os.path.join(self._GetCacheDir(), PERF_REPORT), "wb") as f:
+      f.write(perf_report)
+
+  def ReadPerfReport(self):
+    with open(os.path.join(self._GetCacheDir(True), PERF_REPORT), "rb") as f:
+      return f.readlines()
 
   def _ConvertToFilename(self, text):
     ret = text

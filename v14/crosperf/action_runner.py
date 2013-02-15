@@ -3,6 +3,8 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 from experiment_status import ExperimentStatus
+from results_report import HTMLResultsReport
+from results_report import TextResultsReport
 from utils import logger
 from utils.email_sender import EmailSender
 
@@ -27,43 +29,43 @@ class ActionRunner(object):
       self.l.LogError("Ctrl-c pressed. Cleaning up...")
       experiment.terminate = True
 
-  def Table(self, experiment):
-    if not experiment.complete:
-      # Run the experiment but only load the cached values.
-      experiment.SetCacheConditions([])
-      self.Run(experiment)
-    if experiment.table and experiment.complete:
-      self.l.LogOutput(experiment.table)
+  def PrintTable(self, experiment):
+    if experiment.complete:
+      self.l.LogOutput(TextResultsReport(experiment).GetReport())
 
   def Email(self, experiment):
-    if not experiment.complete:
-      # Run the experiment but only load the cached values.
-      experiment.SetCacheConditions([])
-      self.Run(experiment)
-    if experiment.table and experiment.complete:
-      benchmark_names = []
-      for benchmark_run in experiment.benchmark_runs:
-        benchmark_names.append(benchmark_run.full_name)
-      subject = "%s: %s" % (experiment.name, ", ".join(benchmark_names))
-      EmailSender().SendEmailToUser(subject, experiment.table)
+    # Only email by default if a new run was completed.
+    send_mail = False
+    for benchmark_run in experiment.benchmark_runs:
+      if not benchmark_run.cache_hit:
+        send_mail = True
+        break
+    if not send_mail:
+      return
 
-  def RunAction(self, action):
-    action = action.lower()
-    if action == "run":
-      self.Run(self._experiment)
-    elif action == "table":
-      self.Table(self._experiment)
-    elif action == "email":
-      self.Email(self._experiment)
-    elif action == "do":
-      self.Run(self._experiment)
-      self.Table(self._experiment)
-      # Only email by default if a new run was completed.
-      for benchmark_run in self._experiment.benchmark_runs:
-        if not benchmark_run.cache_hit:
-          self.Email(self._experiment)
-    else:
-      raise Exception("Invalid action.")
+    if experiment.complete:
+      label_names = []
+      for label in experiment.labels:
+        label_names.append(label.name)
+      subject = "%s: %s" % (experiment.name, " vs. ".join(label_names))
+
+      text_report = TextResultsReport(experiment).GetReport()
+      text_report = "<pre style='font-size: 13px'>%s</pre>" % text_report
+      html_report = HTMLResultsReport(experiment).GetReport()
+      attachment = EmailSender.Attachment("report.html", html_report)
+      EmailSender().SendEmailToUser(subject,
+                                    text_report,
+                                    attachments=[attachment],
+                                    msg_type="html")
+
+  def StoreResults (self, experiment):
+    experiment.StoreResults()
+
+  def RunActions(self):
+    self.Run(self._experiment)
+    self.PrintTable(self._experiment)
+    self.Email(self._experiment)
+    self.StoreResults(self._experiment)
 
 
 class MockActionRunner(ActionRunner):

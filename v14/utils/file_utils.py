@@ -2,8 +2,10 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+import errno
 import hashlib
 import os
+import shutil
 
 
 class FileUtils(object):
@@ -50,6 +52,18 @@ class FileUtils(object):
                                  "../../../../..")
     return self.CanonicalizeChromeOSRoot(chromeos_root)
 
+  def MkDirP(self, path):
+    try:
+      os.makedirs(path)
+    except OSError as exc:
+      if exc.errno == errno.EEXIST:
+        pass
+      else:
+        raise
+
+  def RmDir(self, path):
+    shutil.rmtree(path, ignore_errors=True)
+
 
 class MockFileUtils(FileUtils):
   """Mock class for file utilities."""
@@ -62,3 +76,9 @@ class MockFileUtils(FileUtils):
 
   def ChromeOSRootFromImage(self, chromeos_image):
     return "/tmp/chromeos_root"
+
+  def RmDir(self, path):
+    pass
+
+  def MkDirP(self, path):
+    pass

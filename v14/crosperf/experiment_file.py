@@ -36,11 +36,12 @@ class ExperimentFile(object):
   # Close settings regex.
   _CLOSE_SETTINGS_RE = re.compile("}")
 
-  def __init__(self, experiment_file):
+  def __init__(self, experiment_file, overrides=None):
     """Construct object from file-like experiment_file.
 
     Args:
       experiment_file: file-like object with text description of experiment.
+      overrides: A settings object that will override fields in other settings.
 
     Raises:
       Exception: if invalid build type or description is invalid.
@@ -54,6 +55,8 @@ class ExperimentFile(object):
     for settings in self.all_settings:
       settings.Inherit()
       settings.Validate()
+      if overrides:
+        settings.Override(overrides)
 
   def GetSettings(self, settings_type):
     """Return nested fields from the experiment file."""
@@ -117,6 +120,26 @@ class ExperimentFile(object):
     except Exception, err:
       raise Exception("Line %d: %s\n==> %s" % (reader.LineNo(), str(err),
                                                reader.CurrentLine(False)))
+
+  def Canonicalize(self):
+    """Convert parsed experiment file back into an experiment file."""
+    res = ""
+    for field_name in self.global_settings.fields:
+      field = self.global_settings.fields[field_name]
+      if field.assigned:
+        res += "%s: %s\n" % (field.name, field.GetString())
+    res += "\n"
+
+    for settings in self.all_settings:
+      if settings.settings_type != "global":
+        res += "%s: %s {\n" % (settings.settings_type, settings.name)
+        for field_name in settings.fields:
+          field = settings.fields[field_name]
+          if field.assigned:
+            res += "\t%s: %s\n" % (field.name, field.GetString())
+        res += "}\n\n"
+
+    return res
 
 
 class ExperimentFileReader(object):

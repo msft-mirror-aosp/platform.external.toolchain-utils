@@ -32,6 +32,9 @@ class Field(object):
   def Get(self):
     return self._value
 
+  def GetString(self):
+    return str(self._value)
+
 
 class TextField(Field):
   def __init__(self, name, required=False, default="", inheritable=False,
@@ -81,3 +84,6 @@ class ListField(Field):
 
   def _Parse(self, value):
     return value.split()
+
+  def GetString(self):
+    return " ".join(self._value)
