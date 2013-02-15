@@ -215,8 +215,8 @@ def IsImageModdedForTest(chromeos_root, image):
   rootfs_mp = tempfile.mkdtemp()
   stateful_mp = tempfile.mkdtemp()
   MountImage(chromeos_root, image, rootfs_mp, stateful_mp)
-  signature_file = "/usr/local/lib/python2.6/test/autotest.py"
-  is_test_image = os.path.isfile("%s/%s" % (rootfs_mp, signature_file))
+  lsb_release_file = os.path.join(rootfs_mp, "etc/lsb-release")
+  is_test_image = "Test Build" in open(lsb_release_file).read()
   MountImage(chromeos_root, image, rootfs_mp, stateful_mp, unmount=True)
   return is_test_image
 
