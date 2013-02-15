@@ -1,0 +1,17 @@
+{
+  "input": [{
+    "type": "p4",
+    "address": "perforce2:2666",
+    "mappings": [
+      "//depot2/branches/mobile_toolchain_v14_release_branch/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/... binutils/binutils-2.20.1-mobile/...",
+      "//depot2/branches/mobile_toolchain_v14_release_branch/gcctools/google_vendor_src_branch/binutils/binutils-20100303/... binutils/binutils-20100303/...",
+    ],
+  },],
+  "output": [{
+    "type": "git",
+    "address": "ssh://gerrit.chromium.org:29418/chromiumos/third_party/binutils.git",
+    "branch": "mobile_toolchain_v14_release_branch",
+    "ignores": [".svn", ".git"],
+  },],
+}
+

@@ -1,0 +1,13 @@
+{
+  "input": [{
+    "type": "p4",
+    "address": "perforce2:2666",
+    "mappings": ["//depot2/branches/mobile_toolchain_v14_release_branch/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/... gcc/gcc-4.4.3/..."],
+  },],
+  "output": [{
+    "type": "git",
+    "address": "ssh://gerrit.chromium.org:29418/chromiumos/third_party/gcc.git",
+    "branch": "mobile_toolchain_v14_release_branch",
+    "ignores": [".svn", ".git"],
+  },],
+}
