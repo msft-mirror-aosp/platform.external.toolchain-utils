@@ -11,9 +11,7 @@ particular release of ChromeOS.
 __author__ = "raymes@google.com (Raymes Khoury)"
 
 import getpass
-import multiprocessing
 import optparse
-import os
 import sys
 from utils import command_executer
 from utils import logger
@@ -32,15 +30,6 @@ GCLIENT_FILE = """solutions = [
 ]
 """
 
-# Common initializations
-cmd_executer = None
-
-def StoreFile(filename, contents):
-  f = open(filename, "w")
-  f.write(contents)
-  f.close()
-
-
 def Usage(parser):
   parser.print_help()
   sys.exit(0)
@@ -48,8 +37,6 @@ def Usage(parser):
 
 def Main(argv):
   """Checkout the ChromeOS source."""
-  global cmd_executer
-  cmd_executer = command_executer.GetCommandExecuter()
   parser = optparse.OptionParser()
   parser.add_option("--dir", dest="directory",
                     help="Target directory for ChromeOS installation.")
@@ -63,55 +50,65 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
 (smaller checkout).'""")
   parser.add_option("--jobs", "-j", dest="jobs", default="1",
                     help="Number of repo sync threads to use.")
+  parser.add_option("--public", "-p", dest="public", default=False,
+                    action="store_true",
+                    help="Use the public checkout instead of the private one.")
 
   options = parser.parse_args(argv)[0]
 
-  if options.version == "latest":
-    version = "latest"
-  elif options.version == "top":
-    version = "top"
-  elif options.version is None:
-    logger.GetLogger().LogError("No version specified.")
-    Usage(parser)
+  if not options.version:
+    parser.print_help()
+    logger.GetLogger().LogFatal("No version specified.")
   else:
     version = options.version.strip()
 
-  if options.directory is None:
-    logger.GetLogger().LogError("No directory specified.")
-    Usage(parser)
+  if not options.directory:
+    parser.print_help()
+    logger.GetLogger().LogFatal("No directory specified.")
 
   directory = options.directory.strip()
 
-  if version == "top" or version == "latest":
-    init = "repo init -u ssh://gerrit-int.chromium.org:29419/chromeos/manifest-internal.git"
-    if options.minilayout ==  True:
+  if options.public:
+    manifest_repo = "http://git.chromium.org/chromiumos/manifest.git"
+    versions_repo = "http://git.chromium.org/chromiumos/manifest-versions.git"
+  else:
+    manifest_repo = (
+        "ssh://gerrit-int.chromium.org:29419/chromeos/manifest-internal.git")
+    versions_repo = (
+        "ssh://gerrit-int.chromium.org:29419/chromeos/manifest-versions.git")
+
+  if version in ["top", "latest"]:
+    init = "repo init -u %s" % manifest_repo
+    if options.minilayout:
       init += " -m minilayout.xml"
   else:
-    init = ("repo init -u ssh://gerrit-int.chromium.org:29419/chromeos/manifest-versions.git "
-            "-m buildspecs/%s/%s.xml" % (version[0:4], version))
+    init = ("repo init -u %s "
+            "-m buildspecs/%s/%s.xml" % (versions_repo, version[0:4], version))
   init += " --repo-url=http://git.chromium.org/external/repo.git"
 
-  commands = []
-  commands.append("mkdir -p " + directory)
-  commands.append("cd " + directory)
-  commands.append(init)
-  commands.append("repo sync -j %s" % options.jobs)
-  cmd_executer.RunCommands(commands)
+  commands = ["mkdir -p %s" % directory,
+              "cd %s" % directory,
+              init,
+              "repo sync -j %s" % options.jobs]
+  cmd_executer = command_executer.GetCommandExecuter()
+  ret = cmd_executer.RunCommands(commands)
+  if ret:
+    return ret
 
   # Setup svn credentials for use inside the chroot
   if getpass.getuser() == "mobiletc-prebuild":
     chromium_username = "raymes"
   else:
     chromium_username = "$USER"
-  cmd_executer.RunCommand("svn ls --config-option config:auth:password-stores= "
-                          "--config-option "
-                          "servers:global:store-plaintext-passwords=yes "
-                          "--username " + chromium_username + "@google.com "
-                          "svn://svn.chromium.org/leapfrog-internal "
-                          "svn://svn.chromium.org/chrome "
-                          "svn://svn.chromium.org/chrome-internal > /dev/null")
 
-  return 0
+  return cmd_executer.RunCommand(
+      "svn ls --config-option config:auth:password-stores= "
+      "--config-option "
+      "servers:global:store-plaintext-passwords=yes "
+      "--username " + chromium_username + "@google.com "
+      "svn://svn.chromium.org/leapfrog-internal "
+      "svn://svn.chromium.org/chrome "
+      "svn://svn.chromium.org/chrome-internal > /dev/null")
 
 
 if __name__ == "__main__":

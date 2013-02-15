@@ -54,6 +54,7 @@ class ScriptsFactory(object):
 
   def SetupChromeOS(self, version="latest", use_minilayout=False):
     setup_chromeos = cmd.Shell("setup_chromeos.py",
+                               "--public",
                                "--dir=%s" % self._chromeos_root,
                                "--version=%s" % version,
                                path=self._scripts_path)
