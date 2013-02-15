@@ -228,9 +228,9 @@ class TableFormatter(object):
     for group_result in group_results:
       if not IsFloat(group_result):
         all_floats = False
-      if group_result != "PASS":
+      if group_result != "PASSED":
         all_passes = False
-      if group_result != "FAIL":
+      if group_result != "FAILED":
         all_fails = False
     if all_floats == True:
       float_results = [float(v) for v in group_results]

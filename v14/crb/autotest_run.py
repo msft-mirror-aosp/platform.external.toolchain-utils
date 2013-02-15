@@ -96,12 +96,15 @@ class AutotestRun(threading.Thread):
     matches = p.findall(self.out)
     for i in range(len(matches)):
       results = matches[i]
-      keyvals = results.split()[1:-1]
       results_dict = {}
-      for j in range(len(keyvals)/2):
-        # Eanble this to compare only numerical results.
-###        if table_formatter.IsFloat(keyvals[j*2+1]):
-        results_dict[keyvals[j*2]] = keyvals[j*2+1]
+      for line in results.splitlines()[1:-1]:
+        mo = re.match("(.*\S)\s+\[\s+(PASSED|FAILED)\s+\]", line)
+        if mo:
+          results_dict[mo.group(1)] = mo.group(2)
+          continue
+        mo = re.match("(.*\S)\s+(.*)", line)
+        if mo:
+          results_dict[mo.group(1)] = mo.group(2)
 
       # Add a composite keyval for tests like startup.
       results_dict = AutotestRun.AddComposite(results_dict)
