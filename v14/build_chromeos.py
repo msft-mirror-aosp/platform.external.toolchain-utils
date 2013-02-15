@@ -93,19 +93,31 @@ def Main(argv):
                     help="LDFLAGS for the ChromeOS packages")
   parser.add_option("--board", dest="board",
                     help="ChromeOS target board, e.g. x86-generic")
+  parser.add_option("--binary", dest="binary",
+                    default=False,
+                    action="store_true",
+                    help="Use binary packages while building ChromeOS")
 
   options = parser.parse_args(argv[1:])[0]
 
   if options.chromeos_root is None:
     Usage(parser, "--chromeos_root must be set")
 
-  if options.toolchain_root is None:
+  if options.toolchain_root is None and options.binary == False:
     Usage(parser, "--toolchain_root must be set")
 
   if options.board is None:
     Usage(parser, "--board must be set")
 
   MakeChroot(options.chromeos_root, options.clobber_chroot)
+
+  if options.binary == True:
+    command = "./setup_board --board=" + options.board
+    command += "&& ./build_packages --board=" + options.board
+    command += "&& ./build_image --board=" + options.board
+    command += "&& ./mod_image_for_test.sh --board=" + options.board
+    ret = ExecuteCommandInChroot(options.chromeos_root, None, command)
+    return ret
 
   # Setup board
   if not os.path.isdir(options.chromeos_root + "/chroot/build/"
@@ -136,7 +148,7 @@ def Main(argv):
   ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
                                "CFLAGS='%s' CXXFLAGS='%s' LDFLAGS='%s' "
                                "CHROME_ORIGIN=SERVER_SOURCE "
-                               "./build_packages --withdev "
+                               "./build_packages --withdev --nousepkg "
                                "--board=%s --withtest --withautotest"
                                % (options.cflags, options.cxxflags,
                                   options.ldflags, options.board))

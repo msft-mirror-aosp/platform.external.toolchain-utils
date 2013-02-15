@@ -1,9 +1,11 @@
+import getpass
 import job
 from automation.common import machine_description
 import os
 import re
 import sys
 import time
+from utils import utils
 
 p4_checkout_dir = "perforce2"
 version_dir = "/gcctools/chromeos/v14/"
@@ -66,10 +68,10 @@ def CreateP4Job(p4_port, p4_paths, revision, checkoutdir):
   return to_return
 
 def GetWeeklyChromeOSLocation():
-  return "/usr/local/google/home/chromeos"
+  return "/home/" + getpass.getuser() + "/www/chromeos_checkout/weekly"
 
 def GetQuarterlyChromeOSLocation():
-  return "/usr/local/google/home/chromeos"
+  return "/home/" + getpass.getuser() + "/www/chromeos_checkout/quarterly"
 
 def GetInitialCommand():
   return "pwd && uname -a"
@@ -194,19 +196,31 @@ def CreateTestJob(build_chromeos_job):
   to_return.AddRequiredFolder(p4_job, p4_version_dir, p4_version_dir)
   return to_return
 
-def CreateUpdateJob(chromeos_version="weekly",
-                    location="/home/asharif/chromeos_checkouts/",
-                    p4_snapshot=""):
+def CreateUpdateJob(chromeos_version,
+                    location=None,
+                    create_image=True,
+                    p4_snapshot="",
+                    board="x86-generic"):
   command = GetInitialCommand()
   dirname = time.asctime()
   dirname = dirname.replace(" ", "-")
   command += "; " + GetP4VersionDirCommand(p4_snapshot)
-  command += "; mkdir -p " + location
   command += ("; " + p4_version_dir + "/setup_chromeos.py" +
-              " --dir=" + location + "/chromeos." + dirname +
+              " --dir=" + chromeos_root +
               " --version=latest")
-  command += (" && ln -s -T chromeos." + dirname + " " +
-              location + "/weekly")
+  command += ("; " + p4_version_dir + "/build_chromeos.py" + 
+              " --chromeos_root=" + chromeos_root +
+              " --binary --board=" + board)
+  command += ("&& cd chromeos/src/scripts " +
+              "&& ./make_chroot --delete" +
+              "&& cd -")
+
+  if location is None:
+    location = utils.GetRoot(GetWeeklyChromeOSLocation())[0]
+  command += "&& mkdir -p " + location
+  command += "&& cp -pr chromeos " + location + "/chromeos." + dirname
+  command += (" && ln -fs -T chromeos." + dirname + " " +
+              location + "/" + chromeos_version)
   to_return = CreateLinuxJob(command)
   return to_return
 
