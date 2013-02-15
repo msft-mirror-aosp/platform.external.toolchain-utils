@@ -24,7 +24,10 @@ class ExperimentStatus(object):
 
   def GetProgressString(self):
     current_time = time.time()
-    elapsed_time = current_time - self.experiment.start_time
+    if self.experiment.start_time:
+      elapsed_time = current_time - self.experiment.start_time
+    else:
+      elapsed_time = 0
     try:
       eta_seconds = (float(self.num_total - self.experiment.num_complete) *
                      elapsed_time / self.experiment.num_complete)
