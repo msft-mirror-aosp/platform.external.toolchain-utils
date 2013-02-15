@@ -63,10 +63,7 @@ class CommandsFactory(object):
             'scripts/...'],
         'gcctools/google_vendor_src_branch': [
             'binutils/binutils-2.21/...',
-            'gcc/gcc-4.4.3/...',
             'gdb/gdb-7.2.x/...',
-            'glibc/eglibc-2.11.1/...',
-            'linux-headers/linux-headers-2.6.32.3/...',
             'zlib/zlib-1.2.3/...'],
         'gcctools/vendor_src': [
             'gcc/google/gcc-4_6/...']}
@@ -147,7 +144,7 @@ class CommandsFactory(object):
         cmd.Chain(
             cmd.Copy(dejagnu_output_path, to_dir='$JOB_TMP/results',
                      recursive=True),
-            cmd.Shell('dejagnu.sh', 'summary', '-B', target,
+            cmd.Shell('dejagnu.sh', 'import', '-B', target,
                       os.path.join(dejagnu_output_path, '*.sum'),
                       path='.')),
         cwd='$HOME/automation/clients/report')
@@ -156,7 +153,7 @@ class CommandsFactory(object):
 
   def GenerateReport(self, target):
     return cmd.Wrapper(
-        cmd.Shell('dejagnu.sh', 'html-report', '-B', target,
+        cmd.Shell('dejagnu.sh', 'report', '-B', target,
                   '$JOB_TMP/results/report.html',
                   path='.'),
         cwd='$HOME/automation/clients/report')
