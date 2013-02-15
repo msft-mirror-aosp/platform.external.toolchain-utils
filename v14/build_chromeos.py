@@ -26,7 +26,7 @@ def Usage(parser, message):
 
 #TODO(raymes): move this to a common utils file.
 def ExecuteCommandInChroot(chromeos_root, toolchain_root, command,
-                           return_output=False):
+                           return_output=False, full_mount=False):
   """Executes a command in the chroot."""
   global cmd_executer
   cmd_executer = command_executer.GetCommandExecuter()
@@ -47,8 +47,9 @@ def ExecuteCommandInChroot(chromeos_root, toolchain_root, command,
     argv = [os.path.dirname(os.path.abspath(__file__)) + "/tc_enter_chroot.py",
             "--chromeos_root=" + chromeos_root,
             "--toolchain_root=" + toolchain_root,
-            "-s",
             "\n" + command]
+    if not full_mount:
+      argv.append("-s")
     return tc_enter_chroot.Main(argv)
 
 
@@ -160,7 +161,7 @@ def Main(argv):
 
   # Build image
   ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                               "./build_image --board=%s" % options.board)
+                               "./build_image --yes --board=%s" % options.board)
 
   utils.AssertTrue(ret == 0, "build_image failed")
 

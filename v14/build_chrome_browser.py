@@ -100,7 +100,7 @@ def Main():
   # Build image
   ret = (build_chromeos.
          ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                                "./build_image --board=%s" % options.board))
+                                "./build_image --yes --board=%s" % options.board))
 
   utils.AssertTrue(ret == 0, "build_image failed")
 
