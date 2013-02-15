@@ -57,8 +57,8 @@ def Main(argv):
                     help="Additional options that should be passed on to"
                     "the setup_chromeos script.")
   parser.add_option("-o", "--output", dest="output",
-                    default=rootdir + "/output",
-                    help="The output directory where logs,pkgs, etc. go.")
+                    help="The output directory where logs,pkgs, etc. go. "
+                    "The default is the toolchain_root/output")
 
   options = parser.parse_args(argv)[0]
 
@@ -89,7 +89,10 @@ def Main(argv):
       sc_args.append(options.setup_chromeos_options)
     setup_chromeos.Main(sc_args)
 
-  output = options.output
+  if options.output is None:
+    output = options.toolchain_root + "/output"
+  else:
+    output = options.output
 
   if output.startswith("/") == False:
     output = os.getcwd() + "/" + output
