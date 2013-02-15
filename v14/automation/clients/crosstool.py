@@ -35,20 +35,26 @@ class CrosstoolNightlyClient(object):
   def CreateJobGroup(self):
     factory = crosstool.JobsFactory()
 
-    p4_crosstool_job, checkout_dir = factory.CheckoutCrosstool()
+    checkout_crosstool_job, checkout_dir = factory.CheckoutCrosstool()
 
-    all_jobs = [p4_crosstool_job]
+    all_jobs = [checkout_crosstool_job]
 
     # Build crosstool target
-    release_job, build_tree_dir = factory.BuildRelease(
+    build_release_job, build_tree_dir = factory.BuildRelease(
         checkout_dir, self._target)
+    all_jobs.append(build_release_job)
 
-    all_jobs.append(release_job)
+    test_jobs = []
 
     # Perform crosstool tests
     for board in self._boards:
-      all_jobs.append(factory.RunTests(
+      test_jobs.append(factory.RunTests(
           checkout_dir, build_tree_dir, self._target, board))
+
+    all_jobs.extend(test_jobs)
+
+    generate_report_job = factory.GenerateReport(test_jobs, self._target)
+    all_jobs.append(generate_report_job)
 
     return job_group.JobGroup('Crosstool Nightly Build', all_jobs, True, False)
 

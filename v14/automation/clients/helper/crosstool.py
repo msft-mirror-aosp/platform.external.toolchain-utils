@@ -33,11 +33,17 @@ class JobsFactory(object):
 
   def RunTests(self, checkout_dir, build_tree_dir, target, board):
     command = self.commands.RunTests(target, board)
-    new_job = jobs.CreateLinuxJob('RunTests(%s,%s)' % (target, board), command)
+    new_job = jobs.CreateLinuxJob('RunTests(%s, %s)' % (target, board), command)
     new_job.DependsOnFolder(checkout_dir)
     new_job.DependsOnFolder(build_tree_dir)
     return new_job
 
+  def GenerateReport(self, test_jobs, target):
+    command = self.commands.GenerateReport(target)
+    new_job = jobs.CreateLinuxJob('GenerateReport(%s)' % target, command)
+    for test_job in test_jobs:
+      new_job.DependsOn(test_job)
+    return new_job
 
 class CommandsFactory(object):
   CHECKOUT_DIR = 'crosstool-checkout-dir'
@@ -117,7 +123,7 @@ class CommandsFactory(object):
                     ignore_error=True)),
         cwd=os.path.join(self.buildit_work_dir_path, gcc_build_dir_path))
 
-    gen_report = cmd.Wrapper(
+    save_results = cmd.Wrapper(
         cmd.Chain(
             cmd.Shell('cp', '-r',
                       dejagnu_output_path + '/',
@@ -125,10 +131,14 @@ class CommandsFactory(object):
             cmd.Shell('dejagnu.sh', 'summary', '-B', target,
                       os.path.join(dejagnu_output_path, 'gcc.sum'),
                       os.path.join(dejagnu_output_path, 'g++.sum'),
-                      path='.'),
-            cmd.Shell('dejagnu.sh', 'html-report', '-B', target,
-                      '$JOB_TMP/results/report.html',
                       path='.')),
         cwd='$HOME/automation/clients/report')
 
-    return cmd.Chain(run_dejagnu, gen_report)
+    return cmd.Chain(run_dejagnu, save_results)
+
+  def GenerateReport(self, target):
+    return cmd.Wrapper(
+        cmd.Shell('dejagnu.sh', 'html-report', '-B', target,
+                  '$JOB_TMP/results/report.html',
+                  path='.'),
+        cwd='$HOME/automation/clients/report')
