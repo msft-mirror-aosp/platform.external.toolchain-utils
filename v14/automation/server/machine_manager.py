@@ -32,8 +32,8 @@ class MachineManager(object):
     # Skip header
     csv_file.next()
     # First populate the global pool.
-    self.global_pool = [machine.Machine(host, arch, int(cores), os, user)
-                        for host, arch, cores, os, user in csv_file]
+    self.global_pool = [machine.Machine(name, label, cpu, int(cores), os, user)
+                        for name, label, cpu, cores, os, user in csv_file]
 
   def _GetMachine(self, mach_spec):
     output_pool = [m for m in self.global_pool if mach_spec.IsMatch(m)]
@@ -44,7 +44,7 @@ class MachineManager(object):
     result = output_pool[0]
 
     for mach in output_pool:
-      if mach.name in mach_spec.preferred_machines:
+      if mach.hostname in mach_spec.preferred_machines:
         result = mach
         break
       elif mach.uses < result.uses:

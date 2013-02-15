@@ -42,13 +42,14 @@ class JobExecuter(threading.Thread):
     ret = ret.replace("$JOB_ID", "%s" % self.job.id)
     ret = ret.replace("$JOB_TMP", self.job.work_dir)
     ret = ret.replace("$JOB_HOME", self.job.home_dir)
-    ret = ret.replace("$PRIMARY_MACHINE", self.job.machines[0].name)
+    ret = ret.replace("$PRIMARY_MACHINE", self.job.machines[0].hostname)
     while True:
       mo = re.search("\$SECONDARY_MACHINES\[(\d+)\]", ret)
-      if mo is not None:
+      if mo:
         index = int(mo.group(1))
-        ret = (ret[0:mo.start()] + self.job.machines[1 + index].name +
-               ret[mo.end():])
+        ret = "%s%s%s" % (ret[0:mo.start()],
+                          self.job.machines[1 + index].hostname,
+                          ret[mo.end():])
       else:
         break
     return ret
@@ -60,7 +61,7 @@ class JobExecuter(threading.Thread):
     command = "sudo rm -rf %s" % self.job.work_dir
 
     exit_code = self._executer.RunCommand(command, False,
-                                          self.machines[0].name,
+                                          self.machines[0].hostname,
                                           self.machines[0].username,
                                           command_terminator=ct)
     if exit_code:
@@ -75,7 +76,7 @@ class JobExecuter(threading.Thread):
       raise job.JobFailure("Cleanup homedir failed.", exit_code)
 
   def _RunCommand(self, command, machine, fail_msg):
-    exit_code = self._executer.RunCommand(command, False, machine.name,
+    exit_code = self._executer.RunCommand(command, False, machine.hostname,
                                           machine.username, self._terminator)
     if exit_code:
       raise job.JobFailure(fail_msg, exit_code)
@@ -107,8 +108,8 @@ class JobExecuter(threading.Thread):
                          "required directory.")
       else:
         exit_code = self._executer.CopyFiles(from_folder, to_folder,
-                                             from_machine.name,
-                                             to_machine.name,
+                                             from_machine.hostname,
+                                             to_machine.hostname,
                                              from_machine.username,
                                              to_machine.username,
                                              recursive=True)
@@ -129,7 +130,7 @@ class JobExecuter(threading.Thread):
     to_folder = self.job.home_dir
     from_folder = self.job.test_results_dir_src
     from_user = machine.username
-    from_machine = machine.name
+    from_machine = machine.hostname
 
     exit_code = self._executer.CopyFiles(from_folder, to_folder, from_machine,
                                          None, from_user, recursive=False)
@@ -169,7 +170,7 @@ class JobExecuter(threading.Thread):
 
     self.job_logger.LogOutput("Executing job with ID '%s' on machine '%s' in "
                               "directory '%s'" % (self.job.id,
-                                                  primary_machine.name,
+                                                  primary_machine.hostname,
                                                   self.job.work_dir))
 
     try:

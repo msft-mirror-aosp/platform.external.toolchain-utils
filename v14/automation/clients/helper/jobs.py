@@ -85,7 +85,8 @@ class ScriptsFactory(object):
 
 def CreateLinuxJob(label, command, lock=False):
   to_return = job.Job(label, command)
-  to_return.DependsOnMachine(machine.MachineSpecification("*", "linux", lock))
+  to_return.DependsOnMachine(
+      machine.MachineSpecification(os="linux", lock_required=lock))
   return to_return
 
 

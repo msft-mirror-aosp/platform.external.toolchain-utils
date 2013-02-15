@@ -103,7 +103,7 @@ class JobGroupPageHandler(BasePageHandler):
     out.write(html_tools.GetTableCell(job.id))
     out.write(html_tools.GetTableCell(job.label))
     out.write(html_tools.GetTableCell(job.PrettyFormatCommand()))
-    machines = ' '.join([machine.name for machine in job.machines])
+    machines = ' '.join([machine.hostname for machine in job.machines])
     out.write(html_tools.GetTableCell(machines))
     out.write(html_tools.GetTableCell(job.work_dir))
     deps = ' '.join([str(child.id) for child in job.children])

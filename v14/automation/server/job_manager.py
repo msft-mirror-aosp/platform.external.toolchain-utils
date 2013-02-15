@@ -122,7 +122,7 @@ class JobManager(threading.Thread):
 
         required_machines = ready_job.machine_dependencies
         for child in ready_job.children:
-          required_machines[0].AddPreferredMachine(child.machines[0].name)
+          required_machines[0].AddPreferredMachine(child.machines[0].hostname)
 
         machines = self.machine_manager.GetMachines(required_machines)
         if machines is None:

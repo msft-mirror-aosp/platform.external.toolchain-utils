@@ -10,41 +10,44 @@ from fnmatch import fnmatch
 class Machine(object):
   """Stores information related to machine and its state."""
 
-  def __init__(self, name, cpu, num_cores, os, username):
-    self.name = name
+  def __init__(self, hostname, label, cpu, cores, os, username):
+    self.hostname = hostname
+    self.label = label
     self.cpu = cpu
-    self.num_cores = num_cores
+    self.cores = cores
     self.os = os
     self.username = username
-    self.last_updated = 0
-    self.load = 0
+    # TODO(kbaclawski): Two attributes below should be probably stored in
+    # MachineManager.
     self.uses = 0
     self.locked = False
 
   def __str__(self):
     return "\n".join(["Machine Information:",
-                      "Name: %s" % self.name,
+                      "Hostname: %s" % self.hostname,
+                      "Label: %s" % self.label,
                       "CPU: %s" % self.cpu,
-                      "NumCores: %d" % self.num_cores,
+                      "Cores: %d" % self.cores,
                       "OS: %s" % self.os,
-                      "load: %d" % self.load,
-                      "uses: %d" % self.uses])
+                      "Uses: %d" % self.uses])
 
 
 class MachineSpecification(object):
   """Helper class used to find a machine matching your requirements."""
 
-  def __init__(self, name="*", os="*", lock_required=False):
-    self.name = name
+  def __init__(self, hostname="*", label="*", os="*", lock_required=False):
+    self.hostname = hostname
+    self.label = label
     self.os = os
     self.lock_required = lock_required
     self.preferred_machines = []
 
   def IsMatch(self, machine):
-    if machine.locked:
-      return False
-    return fnmatch(machine.name, self.name) and fnmatch(machine.os, self.os)
+    return all([not machine.locked,
+                fnmatch(machine.hostname, self.hostname),
+                fnmatch(machine.label, self.label),
+                fnmatch(machine.os, self.os)])
 
-  def AddPreferredMachine(self, name):
-    if name not in self.preferred_machines:
-      self.preferred_machines.append(name)
+  def AddPreferredMachine(self, hostname):
+    if hostname not in self.preferred_machines:
+      self.preferred_machines.append(hostname)

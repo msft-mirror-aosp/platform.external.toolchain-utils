@@ -24,10 +24,10 @@ class JobsFactory(object):
     self.tc_objs_path = os.path.join(toolchain_path, "output/objects")
 
   @staticmethod
-  def CreateChromeOSJob(label, command, lock=True):
+  def CreateChromeOSJob(label, command, lock=True, machine_label="*"):
     new_job = jobs.CreateLinuxJob(label, command, lock)
-    new_job.DependsOnMachine(
-        machine.MachineSpecification("*", "chromeos", lock), False)
+    new_job.DependsOnMachine(machine.MachineSpecification(
+            label=machine_label, os="chromeos", lock_required=lock), False)
     return new_job
 
   def BuildToolchain(self):
