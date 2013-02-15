@@ -17,47 +17,61 @@ class JobManager(threading.Thread):
 
     self.machine_manager = machine_manager
 
-    self.job_lock = threading.Lock()
-    self.job_ready_event = threading.Event()
+    self.job_condition = threading.Condition()
 
     self.job_counter = 0
 
     self.status = JOB_MANAGER_STOPPED
 
+    self.listeners = []
+    self.listeners.append(self)
+
+
   def StartJobManager(self):
-    self.job_lock.acquire()
+    self.job_condition.acquire()
     if self.status == JOB_MANAGER_STOPPED:
       self.start()
       self.status = JOB_MANAGER_STARTED
-    self.job_lock.release()
-    self.job_ready_event.set()
+    self.job_condition.notifyAll()
+    self.job_condition.release()
+
 
   def StopJobManager(self):
-    self.job_lock.acquire()
+    self.job_condition.acquire()
     for job in self.all_jobs:
       self._KillJob(job.GetID())
 
     if self.status == JOB_MANAGER_STARTED:
       self.status = JOB_MANAGER_STOPPING
-    self.job_lock.release()
-    self.job_ready_event.set()
+    self.job_condition.notifyAll()
+    self.job_condition.release()
+
+    # Wait for all job threads to finish
+    for executer in self.job_executer_mapping.values():
+      executer.join()
 
   def KillJob(self, job_id):
-    self.job_lock.acquire()
+    self.job_condition.acquire()
     self._KillJob(job_id)
-    self.job_lock.release()
-
+    self.job_condition.release()
 
   def _KillJob(self, job_id):
     logger.GetLogger().LogOutput("Killing job with ID '%s'." % str(job_id))
     if job_id in self.job_executer_mapping:
       self.job_executer_mapping[job_id].Kill()
+    killed_job = None
     for job in self.ready_jobs:
       if job.GetID() == job_id:
-        self.ready_jobs.remove(job)
+        killed_job = job
+        self.ready_jobs.remove(killed_job)
+        break
 
   def AddJob(self, current_job):
-    self.job_lock.acquire()
+    self.job_condition.acquire()
+    # Don't add job if we are about to die.
+    if self.status != JOB_MANAGER_STARTED:
+      self.job_condition.release()
+      return
 
     current_job_id = self.job_counter
     current_job.SetID(current_job_id)
@@ -68,32 +82,35 @@ class JobManager(threading.Thread):
     if current_job.IsReady():
       self.ready_jobs.append(current_job)
 
-
-    self.job_lock.release()
-    self.job_ready_event.set()
+    self.job_condition.notifyAll()
+    self.job_condition.release()
     return current_job_id
+
+  def CleanUpJob(self, job):
+    self.job_executer_mapping[job.GetID()].CleanUp()
+    del self.job_executer_mapping[job.GetID()]
 
 
   def NotifyJobComplete(self, job, status):
-    self.job_lock.acquire()
+    self.job_condition.acquire()
     job.SetStatus(status)
     if status == automation.common.job.STATUS_COMPLETED:
       for parent in job.GetParents():
         if parent.IsReady():
-          self.ready_jobs.append(parent)
+          if parent not in self.ready_jobs:
+            self.ready_jobs.append(parent)
 
-    del self.job_executer_mapping[job.GetID()]
+    self.job_condition.notifyAll()
+    self.job_condition.release()
 
-    self.job_lock.release()
-    self.job_ready_event.set()
+  def AddListener(self, listener):
+    self.listeners.append(listener)
 
   def run(self):
     while True:
       # Get the next ready job, block if there are none
-      self.job_ready_event.wait()
-      self.job_ready_event.clear()
-
-      self.job_lock.acquire()
+      self.job_condition.acquire()
+      self.job_condition.wait()
       while len(self.ready_jobs) > 0:
 
         ready_job = self.ready_jobs.pop()
@@ -110,16 +127,17 @@ class JobManager(threading.Thread):
         else:
           # Mark as executing 
           ready_job.SetStatus(automation.common.job.STATUS_SETUP)
-          executer = job_executer.JobExecuter(ready_job, machines, self)
+          executer = job_executer.JobExecuter(ready_job, machines,
+                                              self.listeners)
           executer.start()
           self.job_executer_mapping[ready_job.GetID()] = executer
 
-      if (self.status == JOB_MANAGER_STOPPING and
-          len(self.job_executer_mapping) == 0):
+      if self.status == JOB_MANAGER_STOPPING:
         self.status = JOB_MANAGER_STOPPED
+        self.job_condition.release()
         return
 
 
-      self.job_lock.release()
+      self.job_condition.release()
 
 

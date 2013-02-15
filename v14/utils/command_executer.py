@@ -52,8 +52,6 @@ class CommandExecuter:
       fds = select.select([p.stdout, p.stderr], [], [], 0.1)
       if command_terminator and command_terminator.IsTerminated():
         p.kill()
-        p.stdout.close()
-        p.stderr.close()
         wait = p.wait()
         self.logger.LogError("Command was terminated!")
         return wait

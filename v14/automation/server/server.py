@@ -1,4 +1,5 @@
 import job_manager
+import job_group_manager
 from utils import utils
 import SimpleXMLRPCServer
 import optparse
@@ -20,26 +21,20 @@ class Server:
     command_executer.InitCommandExecuter(dry_run)
     mm = machine_manager.MachineManager(machines_file)
     self.job_manager = job_manager.JobManager(mm)
-
+    self.job_group_manager = job_group_manager.JobGroupManager(self.job_manager)
 
   def ExecuteJobGroup(self, job_group):
-    #TODO(raymes): Verify that the job graph is valid. I.e. every
-    # dependency has been transmitted to the server.
-    # Check that all jobs have a required machine
-    ids = []
     job_group = utils.Deserialize(job_group)
-    for current_job in job_group:
-      id = self.job_manager.AddJob(current_job)
-      ids.append(id)
-    return ids
+    job_group_id = self.job_group_manager.AddJobGroup(job_group)
+    return job_group_id
 
   def GetAllJobs(self):
     jobs_dict = {}
     jobs_dict["all"] = self.job_manager.all_jobs
     jobs_dict["ready"] = self.job_manager.ready_jobs
 
-  def KillJob(self, job_id):
-    self.job_manager.KillJob(utils.Deserialize(job_id))
+  def KillJobGroup(self, job_group_id):
+    self.job_manager.KillJobGroup(utils.Deserialize(job_group_id))
 
   def StartServer(self):
     logger.GetLogger().LogOutput("Starting server...")
