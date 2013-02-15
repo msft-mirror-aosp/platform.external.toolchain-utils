@@ -28,7 +28,8 @@ class JobExecuter(threading.Thread):
     self.job_logger = logger.Logger(self.job_log_root,
                                self.job_log_file_name,
                                True, subdir="")
-    self.cmd_executer = command_executer.GetCommandExecuter(self.job_logger)
+    self.cmd_executer = (command_executer.GetCommandExecuter
+                         (self.job_logger, self.job.GetDryRun()))
     self.command_terminator = command_executer.CommandTerminator()
 
 

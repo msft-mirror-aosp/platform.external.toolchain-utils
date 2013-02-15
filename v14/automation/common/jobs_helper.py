@@ -216,6 +216,7 @@ def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
   to_return = CreateLinuxJob(command)
 
   to_return.AddRequiredMachine("", "chromeos", True, False)
+  to_return.AddLowLevelLog(p4_version_dir + "logs/run_tests.py.out")
 
   return to_return
 
@@ -257,11 +258,8 @@ def _GetBuildTCCommand(toolchain, board, use_binary=True, rebuild=False):
     command += " -B"
   return command
 
-def CreatePerflabJob(chromeos_version,
-                                  benchmark,
-                                  board="x86-generic",
-                                  p4_snapshot="",
-                                  toolchain="trunk"):
+def CreatePerflabJob(chromeos_version, benchmark, board="x86-generic",
+                     p4_snapshot="", toolchain="trunk"):
   toolchain_root = GetTCRootDir("trunk")[1]
   if "cpu" in benchmark:
     use_minilayout = True
@@ -280,6 +278,7 @@ def CreatePerflabJob(chromeos_version,
               " --machines=chromeos_x86-agz_1 run %s" %
               (perflab_command, toolchain_root, chromeos_root, benchmark))
   to_return = CreateLinuxJob(command)
+  to_return.AddLowLevelLog(p4_version_dir + "logs/run_benchmarks.py.out")
   return to_return
 
 def CreateTestJob(build_chromeos_job):

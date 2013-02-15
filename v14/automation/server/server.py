@@ -22,8 +22,10 @@ class Server:
     self.job_manager = job_manager.JobManager(mm)
     self.job_group_manager = job_group_manager.JobGroupManager(self.job_manager)
 
-  def ExecuteJobGroup(self, job_group):
+  def ExecuteJobGroup(self, job_group, dry_run=False):
     job_group = utils.Deserialize(job_group)
+    for job in job_group.GetJobs():
+      job.SetDryRun(dry_run)
     job_group_id = self.job_group_manager.AddJobGroup(job_group)
     return job_group_id
 

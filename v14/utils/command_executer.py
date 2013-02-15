@@ -1,23 +1,24 @@
 import getpass
+import logger
+import os
+import pty
+import re
 import select
 import subprocess
 import sys
-import os
-import logger
 import utils
-import re
-import pty
 
-dry_run = False
+mock_default = False
 
 
 def InitCommandExecuter(mock=False):
-  global dry_run
-  dry_run = mock
+  global mock_default
+  # Whether to default to a mock command executer or not
+  mock_default = mock
 
 
-def GetCommandExecuter(logger_to_set=None):
-  if dry_run:
+def GetCommandExecuter(logger_to_set=None, mock=mock_default):
+  if mock:
     return MockCommandExecuter(logger_to_set)
   else:
     return CommandExecuter(logger_to_set)
@@ -201,7 +202,7 @@ class MockCommandExecuter(CommandExecuter):
       machine = "localhost"
     if username is None:
       username = "current"
-    logger.GetLogger().LogCmd("(Mock)" + cmd, machine, username)
+    logger.GetLogger().LogCmd("(Mock) " + cmd, machine, username)
     return 0
 
 

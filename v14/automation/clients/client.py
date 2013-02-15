@@ -25,5 +25,5 @@ yes_job.AddRequiredMachine("", "linux", False)
 group = job_group.JobGroup([blah_job, blah_job2],
                            False, False, baseline_file_src="/tmp/baseline2.csv")
 
-ids = server.ExecuteJobGroup(utils.Serialize(group))
+ids = server.ExecuteJobGroup(utils.Serialize(group), True)
 

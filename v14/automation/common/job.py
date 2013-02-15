@@ -56,6 +56,7 @@ class Job:
     self.status_events = []
     self.lowlevel_log_files = []
     self.group = None
+    self.dry_run = False
 
   def __str__(self):
     ret = ""
@@ -204,4 +205,11 @@ class Job:
 
   def GetLowLevelLogsSrc(self):
     return self.lowlevel_log_files
+
+  def SetDryRun(self, dry_run):
+    self.dry_run = dry_run
+
+  def GetDryRun(self):
+    return self.dry_run
+
 
