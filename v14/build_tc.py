@@ -131,6 +131,12 @@ def Main(argv):
   pkgdir = "/pkgs"
   tmpdir = "/objects"
   installdir = "/install"
+  for out_dir in [logdir, pkgdir, tmpdir, installdir]:
+    out_dir_path = output + "/" + out_dir
+    if os.path.isdir(out_dir_path):
+      continue
+    else:
+      os.makedirs(out_dir_path)
   package_dir = output + pkgdir
   portage_logdir = chroot_output + logdir
   portage_pkgdir = chroot_output + pkgdir
