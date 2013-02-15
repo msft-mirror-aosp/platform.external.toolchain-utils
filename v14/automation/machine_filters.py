@@ -1,4 +1,4 @@
-from machine_pools import MachinePool
+from machine_pool import MachinePool
 
 class MachinePoolFilter:
   def FilterPool(self, machine_pool):
