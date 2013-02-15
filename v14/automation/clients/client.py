@@ -13,11 +13,12 @@ cat_job.AddRequiredFolder(blah_job, "blah.txt", "hello.txt", True)
 cat_job2 = job.Job("cat hello.txt")
 cat_job2.AddRequiredMachine("", "linux", False)
 cat_job2.AddRequiredFolder(cat_job, "hello.txt", "hello.txt", False)
+cat_job2.AddResultsDir("hello.txt")
 
 yes_job = job.Job("yes > /dev/null")
 yes_job.AddRequiredMachine("", "linux", False)
 
-group = job_group.JobGroup("raymes", "/tmp/", [yes_job],
+group = job_group.JobGroup("raymes", "/tmp/", [blah_job, cat_job, cat_job2],
                            True, True)
 
 ids = server.ExecuteJobGroup(utils.Serialize(group))

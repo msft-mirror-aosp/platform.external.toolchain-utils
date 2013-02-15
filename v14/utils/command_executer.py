@@ -81,21 +81,36 @@ class CommandExecuter:
     return self.RunCommand(cmd, return_output, machine, username,
                            command_terminator)
 
-  def CopyFiles(self, src, dest, src_machine, dest_machine,
+  def CopyFiles(self, src, dest, src_machine=None, dest_machine=None,
                 src_user=None, dest_user=None, recursive=True,
                 command_terminator=None):
     if src_user is None:
       src_user = ""
     else:
-      src_user = src_user + "@"
+      src_user += "@"
     if dest_user is None:
       dest_user = ""
     else:
-      dest_user = dest_user + "@"
+      dest_user += "@"
+
+    if src_machine is None:
+      # Assume local
+      src_machine = ""
+      src_user = ""
+    else:
+      src_machine += ":"
+
+    if dest_machine is None:
+      # Assume local
+      dest_machine = ""
+      dest_user = ""
+    else:
+      dest_machine += ":"
+
     recurse = ""
     if recursive:
       recurse = "-r"
-    return self.RunCommand("sudo scp %s %s%s:%s %s%s:%s"
+    return self.RunCommand("sudo scp %s %s%s%s %s%s%s"
                            % (recurse, src_user, src_machine, src,
                               dest_user, dest_machine, dest),
                            command_terminator=command_terminator)

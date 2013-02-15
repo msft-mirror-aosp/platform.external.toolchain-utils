@@ -50,6 +50,7 @@ class JobManager(threading.Thread):
     for executer in self.job_executer_mapping.values():
       executer.join()
 
+  # Does not block until the job is completed.
   def KillJob(self, job_id):
     self.job_condition.acquire()
     self._KillJob(job_id)
@@ -87,14 +88,17 @@ class JobManager(threading.Thread):
     return current_job_id
 
   def CleanUpJob(self, job):
-    self.job_executer_mapping[job.GetID()].CleanUp()
-    del self.job_executer_mapping[job.GetID()]
-
-
-  def NotifyJobComplete(self, job, status):
     self.job_condition.acquire()
-    job.SetStatus(status)
-    if status == automation.common.job.STATUS_COMPLETED:
+    if job.GetID() in self.job_executer_mapping:
+      self.job_executer_mapping[job.GetID()].CleanUp()
+      del self.job_executer_mapping[job.GetID()]
+    # TODO(raymes): remove job from self.all_jobs
+    self.job_condition.release()
+
+
+  def NotifyJobComplete(self, job):
+    self.job_condition.acquire()
+    if job.GetStatus() == automation.common.job.STATUS_COMPLETED:
       for parent in job.GetParents():
         if parent.IsReady():
           if parent not in self.ready_jobs:
@@ -126,7 +130,6 @@ class JobManager(threading.Thread):
           self.ready_jobs.insert(0, ready_job)
         else:
           # Mark as executing 
-          ready_job.SetStatus(automation.common.job.STATUS_SETUP)
           executer = job_executer.JobExecuter(ready_job, machines,
                                               self.listeners)
           executer.start()

@@ -27,8 +27,9 @@ class JobExecuter(threading.Thread):
       if self.command_terminator.IsTerminated():
         logger.GetLogger().LogOutput("Job '%s' was killed"
                                      % str(self.job.GetID()))
+      self.job.SetStatus(job.STATUS_FAILED)
       for listener in self.listeners:
-        listener.NotifyJobComplete(self.job, job.STATUS_FAILED)
+        listener.NotifyJobComplete(self.job)
       return True
 
 
@@ -57,6 +58,7 @@ class JobExecuter(threading.Thread):
 
 
   def run(self):
+    self.job.SetStatus(job.STATUS_SETUP)
     # Set job directory
     job_dir = JOBDIR_PREFIX + str(self.job.GetID())
     self.job.SetJobDir(job_dir)
@@ -68,7 +70,7 @@ class JobExecuter(threading.Thread):
                                  "in directory '%s'" %
                                  (self.job.GetID(), primary_machine.name,
                                   self.job.GetJobDir()))
-    
+
     rm_success = self.cmd_executer.RunCommand("sudo rm -rf %s" %
                                               self.job.GetJobDir(),
                                               False, primary_machine.name,
@@ -138,9 +140,29 @@ class JobExecuter(threading.Thread):
                          "Command failed to execute: '%s'." % command):
       return
 
+    # Copy results back to results directories.
+    if len(self.job.GetResultsDirs()) > 0 and self.job.GetResultsDestDir():
+      to_folder = self.job.GetResultsDestDir() + "/job-" + str(self.job.GetID())
+      to_machine = self.job.GetResultsDestMachine()
+
+      mkdir_success = (self.cmd_executer.RunCommand
+                       ("mkdir -p %s" % to_folder, False, to_machine,
+                        command_terminator=self.command_terminator))
+
+      if self._IsJobFailed(mkdir_success, "mkdir of results directory Failed."):
+        return
+      for directory in self.job.GetResultsDirs():
+        from_folder = self.job.GetWorkDir() + "/" + directory
+        from_machine = primary_machine.name
+        from_user = primary_machine.username
+        copy_success = self.cmd_executer.CopyFiles(from_folder, to_folder,
+                                                   from_machine, to_machine,
+                                                   from_user, recursive=True)
+        if self._IsJobFailed(copy_success, "Failed to copy result files."):
+          return
+
     # If we get here, the job succeeded. 
-    logger.GetLogger().LogOutput("Job completed successfully.")
-    self.job_manager.NotifyJobComplete(self.job, job.STATUS_COMPLETED)
+    self.job.SetStatus(job.STATUS_COMPLETED)
     logger.GetLogger().LogOutput(str(self.job))
     for listener in self.listeners:
-      listener.NotifyJobComplete(self.job, job.STATUS_COMPLETED)
+      listener.NotifyJobComplete(self.job)

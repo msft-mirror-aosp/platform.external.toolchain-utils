@@ -5,7 +5,7 @@ STATUS_COMPLETED = "STATUS_COMPLETED"
 STATUS_FAILED = "STATUS_FAILED"
 
 class JobGroup:
-  def __init__(self, results_machine, results_dir, jobs=[],
+  def __init__(self, results_machine=None, results_dir=None, jobs=[],
                cleanup_on_complete=True, cleanup_on_fail=False):
     self.id = 0
     self.jobs = jobs
