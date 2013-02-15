@@ -62,9 +62,17 @@ class Repo(object):
     pass
 
   def _RsyncExcludingRepoDirs(self, source_dir, dest_dir):
-    command = 'rsync -a --exclude=.git --exclude=.svn %s/ %s/' % (source_dir,
-                                                                  dest_dir)
-    return self._ce.RunCommand(command)
+    for f in os.listdir(source_dir):
+      if f in [".git", ".svn", ".p4config"]:
+        continue
+      dest_file = os.path.join(dest_dir, f)
+      source_file = os.path.join(source_dir, f)
+      if os.path.exists(dest_file):
+        command = "rm -rf %s" % dest_file
+        self._ce.RunCommand(command)
+      command = "rsync -a %s %s" % (source_file, dest_dir)
+      self._ce.RunCommand(command)
+    return 0
 
   def MapSources(self, dest_dir):
     """Copy sources from the internal dir to root_dir."""
@@ -204,14 +212,15 @@ class GitRepo(Repo):
 
   def MapSources(self, root_dir):
     if not self.mappings:
+      self._RsyncExcludingRepoDirs(self._root_dir, root_dir)
       return
     with utils.WorkingDirectory(self._root_dir):
       for mapping in self.mappings:
         remote_path, local_path = SplitMapping(mapping)
         remote_path.rstrip('...')
         local_path.rstrip('...')
-        ret = self._RsyncExcludingRepoDirs(remote_path,
-                                           os.path.join(root_dir, local_path))
+        full_local_path = os.path.join(root_dir, local_path)
+        ret = self._RsyncExcludingRepoDirs(remote_path, full_local_path)
         if ret: return ret
     return 0
 
