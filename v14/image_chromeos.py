@@ -38,6 +38,8 @@ def ImageChromeOS(argv):
                     help="Target device.")
   parser.add_option("-i", "--image", dest="image",
                     help="Image binary file.")
+  parser.add_option("-b", "--board", dest="board",
+                    help="Target board override.")
 
   options = parser.parse_args(argv[1:])[0]
 
@@ -49,7 +51,10 @@ def ImageChromeOS(argv):
 
   options.chromeos_root = os.path.expanduser(options.chromeos_root)
 
-  board = cmd_executer.CrosLearnBoard(options.chromeos_root, options.remote)
+  if options.board is None:
+    board = cmd_executer.CrosLearnBoard(options.chromeos_root, options.remote)
+  else:
+    board = options.board
 
   if options.image is None:
     image = (options.chromeos_root +
@@ -79,16 +84,20 @@ def ImageChromeOS(argv):
   logger.GetLogger().LogOutput("Device checksum: " + device_checksum)
 
   if image_checksum != device_checksum:
+    logger.GetLogger().LogOutput("Checksums do not match. Re-imaging...")
     command = (options.chromeos_root +
                "/src/scripts/image_to_live.sh --remote=" +
                options.remote +
                " --image=" + image)
 
+    retval = cmd_executer.RunCommand(command)
+    utils.AssertExit(retval == 0, "Image command failed")
     command = "'echo " + image_checksum + " > " + checksum_file
     command += "&& chmod -w " + checksum_file + "'"
-    print command
-    cmd_executer.CrosRunCommand(command, chromeos_root=options.chromeos_root,
+    retval = cmd_executer.CrosRunCommand(command, 
+                                chromeos_root=options.chromeos_root,
                                 machine=options.remote)
+    utils.AssertExit(retval == 0, "Writing checksum failed.")
   else:
     logger.GetLogger().LogOutput("Checksums match. Skipping reimage")
 

@@ -65,9 +65,9 @@ def GetP4Command(p4_port, p4_paths, revision, checkoutdir, p4_snapshot=""):
   command += " && cd -"
   return command
 
-def CreateLinuxJob(command):
+def CreateLinuxJob(command, lock=False):
   to_return = job.Job(command)
-  to_return.AddRequiredMachine("", "linux", False)
+  to_return.AddRequiredMachine("", "linux", lock)
   return to_return
 
 def CreateP4Job(p4_port, p4_paths, revision, checkoutdir):
@@ -155,7 +155,7 @@ def CreateBuildTCJob(chromeos_version="top",
   command += ("&& touch " + local_path + "google_vendor_src_branch/" +
               "binutils/binutils-2.20.1-mobile/ld/ldlex.c")
 
-  command += "&& " + _GetSetupChromeOSCommand(chromeos_version, True)
+  command += "&& " + _GetSetupChromeOSCommand(chromeos_version)
 
   command += "&& " + _GetBuildTCCommand(toolchain, board, False, True)
   tc_job = CreateLinuxJob(command)
@@ -175,7 +175,7 @@ def CreateDejaGNUJob(chromeos_version="top",
   local_path = GetTCRootDir(toolchain)[1]
   command = GetInitialCommand()
   command += "&& " + _GetToolchainCheckoutCommand(toolchain)
-  command += "&& " + _GetSetupChromeOSCommand(chromeos_version, True)
+  command += "&& " + _GetSetupChromeOSCommand(chromeos_version)
   command += "&& " + _GetBuildTCCommand(toolchain, board)
   command += ("&& " + p4_version_dir + "/run_dejagnu.py" +
               " --testflags=\"\"" +
@@ -201,7 +201,7 @@ def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
   command += "&& mkdir -p perforce2/gcctools/google_vendor_src_branch/gcc"
   command += "&& " + GetP4VersionDirCommand(p4_snapshot)
 
-  command += "&& " + _GetSetupChromeOSCommand(chromeos_version, False)
+  command += "&& " + _GetSetupChromeOSCommand(chromeos_version)
   command += "&& " + _GetBuildTCCommand(toolchain, board)
   command += ("&& " + p4_version_dir + "/build_chromeos.py" +
               " --chromeos_root=" + chromeos_root +
@@ -218,7 +218,7 @@ def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
   command += ("&& " + p4_version_dir + "/summarize_results.py " + p4_version_dir
               + "logs/run_tests.py.out")
 
-  to_return = CreateLinuxJob(command)
+  to_return = CreateLinuxJob(command, lock=True)
 
   to_return.AddRequiredMachine("", "chromeos", True, False)
 
@@ -230,7 +230,7 @@ def _GetImageChromeOSCommand():
              " --remote=$SECONDARY_MACHINES[0]")
   return command
 
-def _GetSetupChromeOSCommand(version, use_minilayout=False, board="x86-generic"):
+def _GetSetupChromeOSCommand(version, use_minilayout=True):
   version_re = "^\d+\.\d+\.\d+\.[a-zA-Z0-9]+$"
   tarred_re = "(bz2|gz)$"
   if version == "weekly" or version == "quarterly":
@@ -265,23 +265,20 @@ def _GetBuildTCCommand(toolchain, board, use_binary=True, rebuild=False):
   local_path = GetTCRootDir(toolchain)[1]
   command = (p4_version_dir + "/build_tc.py" +
              " --toolchain_root=" + local_path +
-             " --chromeos_root=" + chromeos_root)
+             " --chromeos_root=" + chromeos_root +
+             " --board=" + board)
   if use_binary:
     command += " -B"
   return command
 
-def CreatePerflabJob(chromeos_version, benchmark, board="x86-generic",
+def CreatePerflabJob(chromeos_version, benchmark, board="x86-agz",
                      p4_snapshot="", toolchain="trunk"):
   toolchain_root = GetTCRootDir("trunk")[1]
-  if "cpu" in benchmark:
-    use_minilayout = True
-  else:
-    use_minilayout = False
   command = GetInitialCommand()
   command += "&& " + GetP4VersionDirCommand(p4_snapshot)
   command += "&& " + GetP4BenchmarksDirCommand(p4_snapshot)
 
-  command += "&& " + _GetSetupChromeOSCommand(chromeos_version, use_minilayout)
+  command += "&& " + _GetSetupChromeOSCommand(chromeos_version)
   command += "&& " + _GetBuildTCCommand(toolchain, board)
   command += ("&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s"
               " --machines=chromeos_x86-agz_1 build %s" %
@@ -291,7 +288,7 @@ def CreatePerflabJob(chromeos_version, benchmark, board="x86-generic",
               (perflab_command, toolchain_root, chromeos_root, benchmark))
   command += ("&& " + p4_version_dir + "/summarize_results.py " + p4_version_dir
               + "logs/run_benchmarks.py.out")
-  to_return = CreateLinuxJob(command)
+  to_return = CreateLinuxJob(command, lock=True)
   return to_return
 
 
