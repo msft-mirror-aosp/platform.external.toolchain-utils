@@ -7,46 +7,40 @@ import pickle
 import sys
 import xmlrpclib
 
-from automation.common import job_group
 from automation.clients.helper import chromeos
+from automation.common import job_group
 
 
 def Main(argv):
   parser = optparse.OptionParser()
+  parser.add_option("-c",
+                    "--chromeos_version",
+                    dest="chromeos_version",
+                    default="quarterly",
+                    help="ChromeOS version to use.")
   parser.add_option("-t",
                     "--toolchain",
                     dest="toolchain",
-                    default="v2",
-                    help="Toolchain to use {trunk|branch}")
+                    default="latest-toolchain",
+                    help="Toolchain to use {latest-toolchain,gcc_46}.")
   parser.add_option("-b",
                     "--board",
                     dest="board",
                     default="x86-generic",
                     help="Board to use for the nightly job.")
-  parser.add_option("-l",
-                    "--perflab-benchmarks",
-                    dest="perflab_benchmarks",
-                    default=",".join(["chromeos/cpu/bikjmp",
-                                      "chromeos/browser/sunspider",
-                                      "chromeos/browser/pagecycler"]),
-                    help="Comma-separated perflab benchmarks to run")
   options = parser.parse_args(argv)[0]
 
-  jobs = chromeos.JobsFactory(toolchain=options.toolchain,
-                              board=options.board)
+  toolchain = options.toolchain
+  board = options.board
+  chromeos_version = options.chromeos_version
 
   # Build toolchain
-  tc_job, tc_pkgs_dep, tc_objs_dep = jobs.BuildToolchain()
+  jobs_factory = chromeos.JobsFactory(chromeos_version=chromeos_version,
+                                      board=board, toolchain=toolchain)
+  benchmark_job = jobs_factory.BuildAndBenchmark()
 
-  # Perform the correctness tests
-  build_chromeos_job = jobs.BuildAndTestChromeOS("weekly", tc_pkgs_dep)
-  dejagnu_job = jobs.RunDejaGNU(tc_pkgs_dep, tc_objs_dep)
-
-  # Perform the performance tests
-  perflab_job = jobs.RunPerflab("top", options.perflab_benchmarks, tc_pkgs_dep)
-
-  all_jobs = [tc_job, build_chromeos_job, dejagnu_job, perflab_job]
-  group = job_group.JobGroup("nightly_client", all_jobs, True, False)
+  group_label = "nightly_client_%s" % board
+  group = job_group.JobGroup(group_label, [benchmark_job], True, False)
 
   server = xmlrpclib.Server("http://localhost:8000")
   server.ExecuteJobGroup(pickle.dumps(group))

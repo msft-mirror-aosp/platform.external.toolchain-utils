@@ -170,6 +170,11 @@ class CommandsFactory(object):
             cmd.Shell('g4', 'client', '--replace', *mappings)),
         env={'P4EDITOR': '/bin/true'})
 
+  def SaveSpecification(self, filename=None):
+    return cmd.Pipe(
+        cmd.Shell('g4', 'client', '-o'),
+        output=filename)
+
   def Sync(self):
     return cmd.Shell('g4', 'sync', '...')
 

@@ -42,6 +42,12 @@ class MachineSpecification(object):
     self.lock_required = lock_required
     self.preferred_machines = []
 
+  def __str__(self):
+    return "\n".join(["Machine Specification:",
+                      "Name: %s" % self.name,
+                      "OS: %s" % self.os,
+                      "Lock required: %s" % self.lock_required])
+
   def IsMatch(self, machine):
     return all([not machine.locked,
                 fnmatch(machine.hostname, self.hostname),
