@@ -40,8 +40,10 @@ class EmailSender(object):
       msg["From"] = email_from
     if email_cc:
       msg["CC"] = ",".join(email_cc)
+      email_to += email_cc
     if email_bcc:
       msg["BCC"] = ",".join(email_bcc)
+      email_to += email_bcc
 
     msg.attach(MIMEText(text_to_send, msg_type))
     if attachments:
