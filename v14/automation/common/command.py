@@ -181,7 +181,9 @@ def RemoteCopyFrom(from_machine, from_path, to_path, username=None):
   else:
     login = '%s@%s' % (username, from_machine)
 
-  return Shell('rsync', '-a', '%s:%s' % (login, from_path), to_path)
+  return Chain(
+      MakeDir(to_path),
+      Shell('rsync', '-a', '%s:%s' % (login, from_path), to_path))
 
 
 def MakeSymlink(to_path, link_name):

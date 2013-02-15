@@ -220,10 +220,9 @@ class CommandsFactory(object):
                          'android_trees')
     remote_android_branch_path = os.path.join(androidtrees_path, branch)
     local_android_branch_dir = os.path.join(self.ANDROID_TREES_DIR, branch)
-    gettree_cmd = cmd.Chain(cmd.MakeDir(local_android_branch_dir),
-                            cmd.RemoteCopyFrom(androidtrees_host,
-                                               remote_android_branch_path,
-                                               local_android_branch_dir))
+    gettree_cmd = cmd.RemoteCopyFrom(androidtrees_host,
+                                     remote_android_branch_path,
+                                     local_android_branch_dir)
 
     # Configure and build the tree
     buildtree_cmd = self._BuildAndroidTree(local_android_branch_dir, product)
@@ -248,10 +247,9 @@ class CommandsFactory(object):
     base_benchbin_path = ('/usr/local/google2/home/mobiletc-prebuild/'
                           'archive/v3binaries/2011-10-18')
     local_basebenchbin_dir = 'base_benchmark_bin'
-    getbase_cmd = cmd.Chain(cmd.MakeDir(local_basebenchbin_dir),
-                            cmd.RemoteCopyFrom(base_benchbin_host,
-                                               base_benchbin_path,
-                                               local_basebenchbin_dir))
+    getbase_cmd = cmd.RemoteCopyFrom(base_benchbin_host,
+                                     base_benchbin_path,
+                                     local_basebenchbin_dir)
 
     # Build and run benchmark.
     android_arch = 'android_%s' % arch
