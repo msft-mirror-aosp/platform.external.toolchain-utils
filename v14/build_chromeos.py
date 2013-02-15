@@ -150,7 +150,9 @@ def Main(argv):
                                "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
                                "CHROME_ORIGIN=SERVER_SOURCE "
                                "%s"
-                               % (options.cflags, options.cxxflags, options.ldflags,
+                               % (options.board, options.cflags,
+                                  options.board, options.cxxflags,
+                                  options.board, options.ldflags,
                                   build_packages_command))
 
   utils.AssertTrue(ret == 0, "build_packages failed")
@@ -166,6 +168,7 @@ def Main(argv):
                                mod_image_command)
 
   utils.AssertTrue(ret == 0, "mod_image_for_test failed")
+  return 0
 
 if __name__ == "__main__":
   Main(sys.argv)

@@ -28,6 +28,7 @@ Inputs:
 __author__ = "bjanakiraman@google.com (Bhaskar Janakiraman)"
 
 import optparse
+import os
 import re
 import sys
 import run_tests
@@ -184,9 +185,9 @@ def Main(argv):
   retval = 0
   for arg in args:
     # CPU benchmarks
+    comps = re.split('/', arg)
+    benchname = comps[2]
     if re.match('chromeos/cpu', arg):
-      comps = re.split('/', arg)
-      benchname = comps[2]
       print "RUNNING %s" % benchname
       retval = RunCpuBenchmark(options.chromeos_root,
                                arg, options.workdir, options.machine)
@@ -195,8 +196,10 @@ def Main(argv):
     elif re.match('chromeos/startup', arg):
       image_args = [os.path.dirname(os.path.abspath(__file__)) +
                     "/image_chromeos.py",
+                    "--chromeos_root=" + options.chromeos_root,
                     "--remote=" + options.machine,
-                    "--image=" + options.workdir + "/chromiumos_image.bin"
+                    "--image=" + options.workdir + "/" +
+                    benchname + "/chromiumos_image.bin"
                    ]
       logger.GetLogger().LogOutput("Reimaging machine %s" % options.machine)
       image_chromeos.ImageChromeOS(image_args)
@@ -210,8 +213,10 @@ def Main(argv):
     elif re.match('chromeos/browser', arg):
       image_args = [os.path.dirname(os.path.abspath(__file__)) +
                     "/image_chromeos.py",
+                    "--chromeos_root=" + options.chromeos_root,
                     "--remote=" + options.machine,
-                    "--image=" + options.workdir + "/chromiumos_image.bin"
+                    "--image=" + options.workdir + "/" +
+                    benchname + "/chromiumos_image.bin"
                    ]
       logger.GetLogger().LogOutput("Reimaging machine %s" % options.machine)
       image_chromeos.ImageChromeOS(image_args)

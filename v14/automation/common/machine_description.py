@@ -14,10 +14,17 @@ class MachineDescription:
   def IsMatch(self, machine):
     if machine.locked == True:
       return False
-    if self.name and machine.name == self.name:
-      return True
-    if self.os and machine.os == self.os:
-      return True
+    if self.name:
+      if machine.name == self.name:
+        return True
+      else:
+        return False
+    if self.os:
+      if machine.os == self.os:
+        return True
+      else:
+        return False
+    return False
 
   def GetPreferredMachines(self):
     return self.preferred_machines

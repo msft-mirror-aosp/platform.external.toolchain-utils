@@ -1,3 +1,4 @@
+import getpass
 import select
 import subprocess
 import sys
@@ -131,10 +132,6 @@ class CommandExecuter:
     src = os.path.expanduser(src)
     dest = os.path.expanduser(dest)
 
-    recurse = ""
-    if recursive:
-      recurse = "-r"
-
     if src_cros == True or dest_cros == True:
       utils.AssertTrue(src_cros ^ dest_cros)
       utils.AssertTrue(chromeos_root is not None)
@@ -159,32 +156,24 @@ class CommandExecuter:
       command += "\necho $REMOTE_OUT"
       return self.RunCommand(command, command_terminator=command_terminator)
 
-    if src_user is None:
-      src_user = ""
+    if recursive:
+      src = src + "/"
+      dest = dest + "/"
+ 
+    if dest_machine == src_machine:
+      command = ("rsync -a %s %s" %
+                     (src,
+                      dest))
     else:
-      src_user += "@"
-    if dest_user is None:
-      dest_user = ""
-    else:
-      dest_user += "@"
-
-    if src_machine is None:
-      # Assume local
-      src_machine = ""
-      src_user = ""
-    else:
-      src_machine += ":"
-
-    if dest_machine is None:
-      # Assume local
-      dest_machine = ""
-      dest_user = ""
-    else:
-      dest_machine += ":"
-
-    return self.RunCommand("scp %s %s%s%s %s%s%s"
-                           % (recurse, src_user, src_machine, src,
-                              dest_user, dest_machine, dest),
+      if src_machine is None:
+        src_machine = os.uname()[1]
+        src_user = getpass.getuser()
+      command = ("rsync -a %s@%s:%s %s" %
+                     (src_user, src_machine, src,
+                      dest))
+    return self.RunCommand(command,
+                           machine=dest_machine,
+                           username=dest_user,
                            command_terminator=command_terminator)
 
 

@@ -68,6 +68,9 @@ class Job:
     ret += "Parents:\n"
     for parent in self.parents:
       ret += str(parent.id) + "\n"
+    ret += "Machines:\n"
+    for machine in self.machines:
+      ret += str(machine)
     ret += utils.FormatCommands(self.command) + "\n"
     ret += self.status + "\n"
     ret += "Timeline of status events:\n"

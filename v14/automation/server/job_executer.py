@@ -24,11 +24,11 @@ class JobExecuter(threading.Thread):
     self.job_log_root = self.job.GetLogsDir()
 
     # Setup log files for the job.
-    job_log_file_name = "job-" + str(self.job.GetID()) + ".log"
-    job_logger = logger.Logger(self.job_log_root,
-                               job_log_file_name,
+    self.job_log_file_name = "job-" + str(self.job.GetID()) + ".log"
+    self.job_logger = logger.Logger(self.job_log_root,
+                               self.job_log_file_name,
                                True, subdir="")
-    self.cmd_executer = command_executer.GetCommandExecuter(job_logger)
+    self.cmd_executer = command_executer.GetCommandExecuter(self.job_logger)
     self.command_terminator = command_executer.CommandTerminator()
     self.cmd_executer.RunCommand("chmod a+rX -R " + HOMEDIR_PREFIX)
 
@@ -37,11 +37,18 @@ class JobExecuter(threading.Thread):
     if return_value == 0:
       return False
     else:
-      logger.GetLogger().LogError("Job failed. Exit code %s. %s"
-                                  % (return_value, fail_message))
+      output_string = ""
+      error_string = ("Job failed. Exit code %s. %s" %
+                      (return_value, fail_message))
       if self.command_terminator.IsTerminated():
-        logger.GetLogger().LogOutput("Job '%s' was killed"
-                                     % str(self.job.GetID()))
+        output_string = ("Job %s was killed"
+                         % str(self.job.GetID()))
+      self.job_logger.LogError(error_string)
+      logger.GetLogger().LogError(error_string)
+
+      self.job_logger.LogOutput(output_string)
+      logger.GetLogger().LogOutput(output_string)
+
       self.job.SetStatus(job.STATUS_FAILED)
       for listener in self.listeners:
         listener.NotifyJobComplete(self.job)
