@@ -173,11 +173,8 @@ class LoggingCommandExecuter(CommandExecuter):
   def __init__(self, *args, **kwargs):
     super(LoggingCommandExecuter, self).__init__(*args, **kwargs)
 
-    # Create a logger for command's stdout/stderr streams.  Set a flag to
-    # prevent log records from being propagated up the logger hierarchy tree.
-    # We don't want for command output messages to appear in the main log.
+    # Create a logger for command's stdout/stderr streams.
     self._output = logging.getLogger('%s.%s' % (self._logger.name, 'Output'))
-    self._output.propagate = 0
 
   def OpenLog(self, log_path):
     """The messages are going to be saved to gzip compressed file."""
@@ -187,9 +184,19 @@ class LoggingCommandExecuter(CommandExecuter):
     handler.setFormatter(formatter)
     self._output.addHandler(handler)
 
+    # Set a flag to prevent log records from being propagated up the logger
+    # hierarchy tree.  We don't want for command output messages to appear in
+    # the main log.
+    self._output.propagate = 0
+
   def CloseLog(self):
-    for handler in self._output.handlers:
+    """Remove handlers and reattach the logger to its parent."""
+    for handler in list(self._output.handlers):
+      self._output.removeHandler(handler)
+      handler.flush()
       handler.close()
+
+    self._output.propagate = 1
 
   def DataReceivedOnOutput(self, data):
     """Invoked when the child process wrote data to stdout."""
