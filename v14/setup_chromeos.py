@@ -79,6 +79,7 @@ def Main(argv):
 in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
 'top' for top of trunk. Default is 'latest'""")
   parser.add_option("--minilayout", dest="minilayout", default=False,
+                    action="store_true",
                     help="""Whether to checkout the minilayout 
 (smaller checkout).'""")
 
