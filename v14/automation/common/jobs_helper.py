@@ -178,7 +178,7 @@ def CreateDejaGNUJob(chromeos_version="latest",
   command = GetInitialCommand()
   command += "&& " + _GetToolchainCheckoutCommand(toolchain)
   command += "&& " + _GetSetupChromeOSCommand(chromeos_version, True)
-  command += "&& " + _GetMakeChrootCommand()
+  command += "&& " + _GetBuildTCCommand(toolchain, board)
   command += ("&& " + p4_version_dir + "/run_dejagnu.py" +
               " --chromeos_root=chromeos"
               " --toolchain_root=" + local_path +
@@ -191,7 +191,8 @@ def CreateDejaGNUJob(chromeos_version="latest",
 def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
                                   board="x86-generic",
                                   p4_snapshot="",
-                                  toolchain="trunk"):
+                                  toolchain="trunk",
+                                  tests=[]):
   command = GetInitialCommand()
   # TODO(asharif): Get rid of this hack at some point.
   command += "&& mkdir -p perforce2/gcctools/google_vendor_src_branch/gcc"
@@ -205,11 +206,12 @@ def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
 
   command += "&& " + _GetImageChromeOSCommand()
 
+  autotests = "bvt" + " ".join(tests)
   command += ("&& " + p4_version_dir + "/run_tests.py" +
               " --remote=$SECONDARY_MACHINES[0] " +
               " --chromeos_root=" + chromeos_root +
               " --board=" + board +
-              " bvt Page")
+              " " + autotests)
 
   to_return = CreateLinuxJob(command)
 
@@ -274,10 +276,10 @@ def CreatePerflabJob(chromeos_version,
 
   command += "&& " + _GetSetupChromeOSCommand(chromeos_version, use_minilayout)
   command += "&& " + _GetBuildTCCommand(toolchain, board)
-  command += ("&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s" +
+  command += ("&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s"
               " --machines=chromeos_x86-agz_1 build %s" %
               (perflab_command, toolchain_root, chromeos_root, benchmark))
-  command += ("&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s" +
+  command += ("&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s"
               " --machines=chromeos_x86-agz_1 run %s" %
               (perflab_command, toolchain_root, chromeos_root, benchmark))
   to_return = CreateLinuxJob(command)

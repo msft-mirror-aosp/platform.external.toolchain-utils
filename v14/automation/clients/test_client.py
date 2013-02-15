@@ -21,14 +21,14 @@ def Main(argv):
   parser.add_option("-t",
                     "--toolchain",
                     dest="toolchain",
-                    default="trunk",
-                    help="Toolchain to use {trunk|branch}"
+                    default="v1",
+                    help="Toolchain to use {trunk|v1}"
                     )
   parser.add_option("-b",
                     "--board",
                     dest="board",
                     default="x86-generic",
-                    help="Toolchain to use {trunk|v1}"
+                    help="Board to build for."
                     )
   parser.add_option("-p",
                     "--p4-snapshot",
@@ -94,6 +94,9 @@ def Main(argv):
     dejagnu_job.AddRequiredFolder(tc_job,
         tc_root + jobs_helper.tc_objects_dir,
         tc_root + jobs_helper.tc_objects_dir)
+    dejagnu_job.AddRequiredFolder(tc_job,
+      tc_root + jobs_helper.tc_pkgs_dir,
+      tc_root + jobs_helper.tc_pkgs_dir)
 
     all_jobs.append(dejagnu_job)
 

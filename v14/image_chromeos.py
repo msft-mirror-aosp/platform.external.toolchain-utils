@@ -52,7 +52,8 @@ def ImageChromeOS(argv):
   board = cmd_executer.CrosLearnBoard(options.chromeos_root, options.remote)
 
   if options.image is None:
-    image = (options.chromeos_root + board +
+    image = (options.chromeos_root +
+             "/src/build/images/" + board +
              "/latest/" +
              "/chromiumos_image.bin")
   else:
