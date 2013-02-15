@@ -36,6 +36,7 @@ class Server:
   def StartServer(self):
     logger.GetLogger().LogOutput("Starting server...")
     self.job_manager.StartJobManager()
+    logger.GetLogger().LogOutput("Started server...")
 
   def StopServer(self):
     logger.GetLogger().LogOutput("Stopping server...")

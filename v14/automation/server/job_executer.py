@@ -8,20 +8,25 @@ import sys
 from utils import logger
 from utils import command_executer
 
-JOBDIR_PREFIX = "/usr/local/google/tmp/automation/job-"
+WORKDIR_PREFIX = "/usr/local/google/tmp/automation/job-"
 
 class JobExecuter(threading.Thread):
 
   def __init__(self, job, machines, listeners):
     threading.Thread.__init__(self)
     self.job = job
-    self.job_log_root = self._GetJobHomeDir()
+
+    # Set job directory
+    work_dir = WORKDIR_PREFIX + str(self.job.GetID())
+    self.job.SetWorkDir(work_dir)
+    self.job.SetHomeDir(self._GetJobHomeDir())
+    self.job_log_root = self.job.GetLogsDir()
 
     # Setup log files for the job.
     job_log_file_name = "job-" + str(self.job.GetID()) + ".log"
     job_logger = logger.Logger(self.job_log_root,
                                job_log_file_name,
-                               True)
+                               True, subdir="")
     self.cmd_executer = command_executer.GetCommandExecuter(job_logger)
     self.listeners = listeners
     self.machines = machines
@@ -45,7 +50,7 @@ class JobExecuter(threading.Thread):
 
   def _GetJobHomeDir(self):
     return ("/home/" + getpass.getuser() + "/automation" +
-            "/job-group-" + str(self.job.GetGroup().GetID()) + 
+            "/job-group-" + str(self.job.GetGroup().GetID()) +
             "/job-" + str(self.job.GetID()))
 
 
@@ -66,20 +71,26 @@ class JobExecuter(threading.Thread):
   def Kill(self):
     self.command_terminator.Terminate()
 
-  def CleanUp(self):
+  def CleanUpWorkDir(self, ct=None):
     rm_success = self.cmd_executer.RunCommand("sudo rm -rf %s" %
-                                              self.job.GetJobDir(),
+                                              self.job.GetWorkDir(),
                                               False, self.machines[0].name,
-                                              self.machines[0].username)
+                                              self.machines[0].username,
+                                              command_terminator=ct)
     if rm_success != 0:
-      logger.GetLogger().LogError("Cleanup failed.");
+      logger.GetLogger().LogError("Cleanup workdir failed.");
+    return rm_success
 
+  def CleanUpHomeDir(self, ct=None):
+    rm_success = self.cmd_executer.RunCommand("rm -rf %s" %
+                                              self.job.GetHomeDir(),
+                                              False, command_terminator=ct)
+    if rm_success != 0:
+      logger.GetLogger().LogError("Cleanup homedir failed.");
+    return rm_success
 
   def run(self):
     self.job.SetStatus(job.STATUS_SETUP)
-    # Set job directory
-    job_dir = JOBDIR_PREFIX + str(self.job.GetID())
-    self.job.SetJobDir(job_dir)
 
     primary_machine = self.machines[0]
     self.job.SetMachines(self.machines)
@@ -87,14 +98,10 @@ class JobExecuter(threading.Thread):
     logger.GetLogger().LogOutput("Executing job with ID '%s' on machine '%s' "
                                  "in directory '%s'" %
                                  (self.job.GetID(), primary_machine.name,
-                                  self.job.GetJobDir()))
+                                  self.job.GetWorkDir()))
 
-    rm_success = (self.cmd_executer.RunCommand
-                  ("sudo rm -rf %s" % self.job.GetJobDir(),
-                    False,
-                    command_terminator = self.command_terminator))
-    if self._IsJobFailed(rm_success, "rm of old job directory Failed."):
-      return
+    self.CleanUpWorkDir(self.command_terminator)
+    self.CleanUpHomeDir(self.command_terminator)
 
     mkdir_command = ("mkdir -p %s && mkdir -p %s" %
                      (self.job.GetWorkDir(),
@@ -161,8 +168,8 @@ class JobExecuter(threading.Thread):
 
     # Copy results back to results directories.
     if len(self.job.GetResultsDirs()) > 0:
-      to_folder = self._GetJobHomeDir() + "/results"
-      command = "mkdir -p " + self._GetJobHomeDir() + "/results"
+      to_folder = self.job.GetResultsDir()
+      command = "mkdir -p " + self.job.GetResultsDir()
       mkdir_status = (self.cmd_executer.RunCommand
                       (command, command_terminator=self.command_terminator))
 
@@ -180,19 +187,6 @@ class JobExecuter(threading.Thread):
     # If we get here, the job succeeded. 
     self.job.SetStatus(job.STATUS_SUCCEEDED)
 
-    self.ShipLogs()
-
     for listener in self.listeners:
       listener.NotifyJobComplete(self.job)
 
-  def ShipLogs(self):
-    job_machine = self.job.GetMachines()[0]
-    from_machine = os.uname()[1]
-    from_folder = "%s/logs/job-%d*" % (self.job_log_root, self.job.GetID())
-    to_machine = job_machine.name
-    to_folder = self.job.GetLogsDir()
-    user = getpass.getuser()
-    copy_status = self.cmd_executer.CopyFiles(from_folder, to_folder,
-                                              from_machine, to_machine,
-                                              user, recursive=True)
-    return copy_status
