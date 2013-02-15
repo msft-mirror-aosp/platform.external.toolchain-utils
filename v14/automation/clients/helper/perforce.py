@@ -41,13 +41,18 @@ class PathMapping(object):
 
     return mappings
 
-  def __init__(self, remote, local=None):
-    self.remote = remote
-    self.local = local or remote
+  def __init__(self, remote, local=None, common_suffix=None):
+    suffix = self._FixPath(common_suffix or '')
+
+    self.remote = os.path.join(remote, suffix)
+    self.local = os.path.join(local or remote, suffix)
 
   @staticmethod
   def _FixPath(path_s):
     parts = [part for part in path_s.strip('/').split('/') if part]
+
+    if not parts:
+      return ''
 
     return os.path.join(*parts)
 
