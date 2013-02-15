@@ -124,5 +124,5 @@ def GetP4DeleteCommand(client_name, checkout_dir=None):
   command = ""
   if checkout_dir:
     command += "cd %s &&" % checkout_dir
-  command = "g4 client -d %s" % client_name
+  command += "g4 client -d %s" % client_name
   return command
