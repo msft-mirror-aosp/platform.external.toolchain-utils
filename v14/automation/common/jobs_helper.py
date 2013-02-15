@@ -75,11 +75,8 @@ def CreateP4Job(p4_port, p4_paths, revision, checkoutdir):
                              revision, checkoutdir))
   return to_return
 
-def GetChromeOSCheckoutLocation():
-  return "/home/mobiletc-prebuild/www/chromeos_golden_sources/"
-
-def GetChromeOSImageLocation():
-  return "/home/mobiletc-prebuild/www/chromeos_golden_images/"
+def _GetChromeOSGoldenBuildLocation():
+  return "/home/mobiletc-prebuild/www/chromeos_builds/"
 
 def GetInitialCommand():
   return "pwd && uname -a"
@@ -229,8 +226,7 @@ def _GetSetupChromeOSCommand(version, use_minilayout=False, board="x86-generic")
   command = ""
   version_re = "^\d+\.\d+\.\d+\.[a-zA-Z0-9]+$"
   if version == "weekly" or version == "quarterly":
-    location = GetChromeOSCheckoutLocation() + board + "/" + version
-    location_dir = utils.GetRoot(location)[0]
+    location = _GetChromeOSGoldenBuildLocation() + "/" + version
     utils.AssertExit(os.path.islink(location) == True,
                      "Symlink: " + location + " does not exist.")
     location_expanded = os.path.realpath(location)
@@ -296,35 +292,30 @@ def CreateTestJob(build_chromeos_job):
 def CreateUpdateJob(chromeos_versions,
                     create_image=True,
                     p4_snapshot="",
-                    board="x86-generic"):
+                    boards="x86-generic"):
   command = GetInitialCommand()
   command += "&& " + GetP4VersionDirCommand(p4_snapshot)
   command += ("&& " + p4_version_dir + "/setup_chromeos.py" +
               " --dir=" + chromeos_root +
               " --version=latest")
-  command += ("&& " + p4_version_dir + "/build_chromeos.py" +
-              " --chromeos_root=" + chromeos_root +
-              " --vanilla --board=" + board)
-  command += "&& " + _GetMakeChrootCommand(True)
+  board_list = boards.split(",")
+  for board in board_list:
+    command += ("&& " + p4_version_dir + "/build_chromeos.py" +
+                " --chromeos_root=" + chromeos_root +
+                " --vanilla --board=" + board)
 
-  image_location = GetChromeOSImageLocation() + board
-  src_location = GetChromeOSCheckoutLocation() + board
-  command += "&& mkdir -p " + image_location
-  command += "&& mkdir -p " + src_location
   dirname = "$(cd chromeos/src/scripts; git branch | cut -d' ' -f 2)"
-  image_dir = dirname + ".image." + board
-  src_dir = dirname
+  build_location = _GetChromeOSGoldenBuildLocation() + "/" + dirname
+  for board in board_list:
+    board_build = build_location + "/" + board
+    command += "&& mkdir -p " + board_build
+    command += ("&& rsync -a chromeos/src/build/images/" + board + "/" +
+                " " + board_build + "/")
 
-  command += " && touch " + src_location + "/" + src_dir
-  command += (" && rsync -a chromeos/src/build/images/" + board + "/ " +
-              image_location + "/" + image_dir)
   for chromeos_version in chromeos_versions.split(","):
-    image_link = chromeos_version + ".image." + board
-    src_link = chromeos_version
-    command += (" && ln -fs -T " + image_dir + " " +
-                image_location + "/" + image_link)
-    command += (" && ln -fs -T " + src_dir + " " +
-                src_location + "/" + src_link)
+    build_link = chromeos_version
+    command += ("&& ln -fs -T " + chromeos_version + " " +
+               build_location)
   to_return = CreateLinuxJob(command)
   return to_return
 

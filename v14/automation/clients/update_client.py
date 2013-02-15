@@ -21,7 +21,7 @@ def Main(argv):
   parser.add_option("-b",
                     "--board",
                     dest="board",
-                    default="x86-generic",
+                    default="x86-generic,x86-agz",
                     help=("The board(s) (for updating binary builds).")
                     )
   options = parser.parse_args(argv)[0]
@@ -29,10 +29,9 @@ def Main(argv):
   server = xmlrpclib.Server("http://localhost:8000")
 
   all_jobs = []
-  for b in options.board.split(","):
-    update_job = jobs_helper.CreateUpdateJob(options.chromeos_version,
-                                             board=b)
-    all_jobs.append(update_job)
+  update_job = jobs_helper.CreateUpdateJob(options.chromeos_version,
+                                             boards=options.board)
+  all_jobs.append(update_job)
 
   group = job_group.JobGroup(all_jobs, False, False)
   server.ExecuteJobGroup(utils.Serialize(group))

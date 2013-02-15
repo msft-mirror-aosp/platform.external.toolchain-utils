@@ -14,7 +14,6 @@ def Main(argv):
   parser.add_option("-c",
                     "--chromeos-versions",
                     dest="chromeos_versions",
-                    default="latest",
                     help=("Use these chromeos versions." +
                           "Example: -c latest,weekly,quarterly")
                     )
@@ -55,7 +54,10 @@ def Main(argv):
                                         toolchain=options.toolchain)
   all_jobs.append(tc_job)
 
-  versions = options.chromeos_versions
+  if options.chromeos_versions:
+    versions = options.chromeos_versions
+  else:
+    versions = ""
   versions = versions.strip()
 
   perflab_benchmarks = []
@@ -63,6 +65,9 @@ def Main(argv):
     perflab_benchmarks += options.perflab_benchmarks.split(",")
 
   for version in versions.split(","):
+    if not version:
+      break
+
     tc_root = jobs_helper.GetTCRootDir(options.toolchain)[1]
 
     build_chromeos_job = (
