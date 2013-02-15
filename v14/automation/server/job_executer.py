@@ -30,8 +30,8 @@ class JobExecuter(threading.Thread):
 
   def _RunRemotely(self, command, fail_msg):
     exit_code = self._executer.RunCommand(command,
-                                          self.job.machine.hostname,
-                                          self.job.machine.username,
+                                          self.job.primary_machine.hostname,
+                                          self.job.primary_machine.username,
                                           command_terminator=self._terminator,
                                           command_timeout=18000)
     if exit_code:
@@ -64,9 +64,9 @@ class JobExecuter(threading.Thread):
     for dependency in self.job.folder_dependencies:
       to_folder = os.path.join(self.job.work_dir, dependency.dest)
       from_folder = os.path.join(dependency.job.work_dir, dependency.src)
-      from_machine = dependency.job.machine
+      from_machine = dependency.job.primary_machine
 
-      if from_machine == self.job.machine and dependency.read_only:
+      if from_machine == self.job.primary_machine and dependency.read_only:
         # No need to make a copy, just symlink it
         self._RunRemotely(
             cmd.MakeSymlink(from_folder, to_folder),
@@ -87,10 +87,10 @@ class JobExecuter(threading.Thread):
   def _CopyJobResults(self):
     """Copy test results back to directory."""
     self._RunLocally(
-        cmd.RemoteCopyFrom(self.job.machine.hostname,
+        cmd.RemoteCopyFrom(self.job.primary_machine.hostname,
                            self.job.results_dir,
                            self.job.home_dir,
-                           username=self.job.machine.username),
+                           username=self.job.primary_machine.username),
         "Failed to copy results.")
 
   def run(self):
@@ -98,7 +98,7 @@ class JobExecuter(threading.Thread):
     self.job.machines = self.machines
     self._logger.LogOutput(
         "Executing job with ID '%s' on machine '%s' in directory '%s'" % (
-            self.job.id, self.job.machine.hostname, self.job.work_dir))
+            self.job.id, self.job.primary_machine.hostname, self.job.work_dir))
 
     try:
       self.CleanUpWorkDir()

@@ -55,10 +55,10 @@ class Job(object):
 
   WORKDIR_PREFIX = '/usr/local/google/tmp/automation'
 
-  def __init__(self, label, command, baseline=''):
+  def __init__(self, label, command):
     self._state = JobStateMachine(STATUS_NOT_EXECUTED)
-    self.children = []
-    self.parents = []
+    self.predecessors = set()
+    self.successors = set()
     self.machine_dependencies = []
     self.folder_dependencies = []
     self.id = 0
@@ -68,7 +68,6 @@ class Job(object):
     self.group = None
     self.dry_run = None
     self.label = label
-    self.baseline = baseline
 
   def _StateGet(self):
     return self._state
@@ -85,10 +84,10 @@ class Job(object):
   def __str__(self):
     res = []
     res.append('%d' % self.id)
-    res.append('Children:')
-    res.extend(['%d' % child.id for child in self.children])
-    res.append('Parents:')
-    res.extend(['%d' % parent.id for parent in self.parents])
+    res.append('Predecessors:')
+    res.extend(['%d' % pred.id for pred in self.predecessors])
+    res.append('Successors:')
+    res.extend(['%d' % succ.id for succ in self.successors])
     res.append('Machines:')
     res.extend(['%s' % machine for machine in self.machines])
     res.append(self.PrettyFormatCommand())
@@ -96,35 +95,33 @@ class Job(object):
     res.append(self.timeline.GetTransitionEventReport())
     return '\n'.join(res)
 
+  @staticmethod
+  def _FormatCommand(cmd, substitutions):
+    for pattern, replacement in substitutions:
+      cmd = re.sub(pattern, replacement, cmd)
+
+    return cmd
+
   def GetCommand(self):
     substitutions = [
         ('$JOB_ID', str(self.id)),
         ('$JOB_TMP', self.work_dir),
         ('$JOB_HOME', self.home_dir),
-        ('$PRIMARY_MACHINE', self.machine.hostname)]
+        ('$PRIMARY_MACHINE', self.primary_machine.hostname)]
 
     if len(self.machines) > 1:
       for num, machine in enumerate(self.machines[1:]):
         substitutions.append(
             ('$SECONDARY_MACHINES[%d]' % num, machine.hostname))
 
-    cmd = str(self.command)
-
-    for pattern, replacement in substitutions:
-      cmd = cmd.replace(pattern, replacement)
-
-    return cmd
+    return self._FormatCommand(str(self.command), substitutions)
 
   def PrettyFormatCommand(self):
     # TODO(kbaclawski): This method doesn't belong here, but rather to
     # non existing Command class. If one is created then PrettyFormatCommand
     # shall become its method.
-    output = self.GetCommand()
-    output = re.sub('\{ ', '', output)
-    output = re.sub('; \}', '', output)
-    output = re.sub('\} ', '\n', output)
-    output = re.sub('\s*&&\s*', '\n', output)
-    return output
+    return self._FormatCommand(self.GetCommand(), [
+        ('\{ ', ''), ('; \}', ''), ('\} ', '\n'), ('\s*&&\s*', '\n')])
 
   def DependsOnFolder(self, dependency):
     self.folder_dependencies.append(dependency)
@@ -151,20 +148,18 @@ class Job(object):
     return os.path.join(self.group.home_dir, 'job-%d' % self.id)
 
   @property
-  def machine(self):
+  def primary_machine(self):
     return self.machines[0]
 
   def DependsOn(self, job):
     """Specifies Jobs to be finished before this job can be launched."""
-    if job not in self.children:
-      self.children.append(job)
-    if self not in job.parents:
-      job.parents.append(self)
+    self.predecessors.add(job)
+    job.successors.add(self)
 
   @property
   def is_ready(self):
     """Check that all our dependencies have been executed."""
-    return all(child.status == STATUS_SUCCEEDED for child in self.children)
+    return all(pred.status == STATUS_SUCCEEDED for pred in self.predecessors)
 
   def DependsOnMachine(self, machine_spec, primary=True):
     # Job will run on arbitrarily chosen machine specified by

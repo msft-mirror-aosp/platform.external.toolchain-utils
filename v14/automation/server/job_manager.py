@@ -141,10 +141,10 @@ class JobManager(threading.Thread):
     with self._lock:
       logger.GetLogger().LogOutput('Job profile:\n%s' % job_)
       if job_.status == job.STATUS_SUCCEEDED:
-        for parent in job_.parents:
-          if parent.is_ready:
-            if parent not in self.ready_jobs:
-              self.ready_jobs.append(parent)
+        for succ in job_.successors:
+          if succ.is_ready:
+            if succ not in self.ready_jobs:
+              self.ready_jobs.append(succ)
 
       self._jobs_available.notifyAll()
 
@@ -162,8 +162,9 @@ class JobManager(threading.Thread):
           ready_job = self.ready_jobs.pop()
 
           required_machines = ready_job.machine_dependencies
-          for child in ready_job.children:
-            required_machines[0].AddPreferredMachine(child.machines[0].hostname)
+          for pred in ready_job.predecessors:
+            required_machines[0].AddPreferredMachine(
+                pred.primary_machine.hostname)
 
           machines = self.machine_manager.GetMachines(required_machines)
           if not machines:

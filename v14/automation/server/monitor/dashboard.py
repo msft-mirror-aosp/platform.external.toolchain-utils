@@ -43,11 +43,11 @@ class JobInfo(object):
 
     group = {'href': '/job-group/%d' % job.group.id, 'name': job.group.label}
 
-    parents = [{'href': '/job/%d' % child.id, 'name': child.label}
-               for child in job.children]
+    predecessors = [{'href': '/job/%d' % pred.id, 'name': pred.label}
+                    for pred in job.predecessors]
 
-    children = [{'href': '/job/%d' % parent.id, 'name': parent.label}
-                for parent in job.parents]
+    successors = [{'href': '/job/%d' % succ.id, 'name': succ.label}
+                  for succ in job.successors]
 
     machines = [{'href': '/machine/%s' % mach.hostname, 'name': mach.hostname}
                 for mach in job.machines]
@@ -60,8 +60,8 @@ class JobInfo(object):
     return {'text': [('Label', job.label),
                      ('Directory', job.work_dir)],
             'link': [('Group', [group]),
-                     ('Parents', parents),
-                     ('Children', children),
+                     ('Predecessors', predecessors),
+                     ('Successors', successors),
                      ('Machines', machines),
                      ('Logs', logs)],
             'code': [('Command', commands)]}
