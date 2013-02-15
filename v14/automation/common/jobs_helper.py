@@ -234,12 +234,12 @@ def CreateUpdateJob(chromeos_version,
 
   location = utils.GetRoot(GetWeeklyChromeOSLocation())[0]
   command += "&& mkdir -p " + location
-  command += ("&& rsync -a" +
-              " --exclude=build --exclude=.repo/ --exlclude=.git/" +
-              " chromeos/ " + location +
-              "/chromeos." + dirname)
-  command += (" && ln -fs -T chromeos." + dirname + " " +
-              location + "/" + chromeos_version)
+###  command += ("&& rsync -a" +
+###              " --exclude=build --exclude=.repo/ --exlclude=.git/" +
+###              " chromeos/ " + location +
+###              "/chromeos." + dirname)
+###  command += (" && ln -fs -T chromeos." + dirname + " " +
+###              location + "/" + chromeos_version)
   command += (" && rsync -a chromeos/build/ " + location +
               "/chormeos." + dirname + ".build")
   command += (" && ln -fs -T chromeos." + dirname + ".build " +
