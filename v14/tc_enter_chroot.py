@@ -128,9 +128,9 @@ def Main(argv, return_output=False):
     parser.print_help()
     sys.exit(1)
 
-  if not os.path.exists(chromeos_root + "/src/scripts/enter_chroot.sh"):
+  if not os.path.exists(chromeos_root + "/src/scripts/build_packages"):
     logger.GetLogger().LogError(options.chromeos_root +
-                                 "/src/scripts/enter_chroot.sh"
+                                 "/src/scripts/build_packages"
                                  " not found!")
     parser.print_help()
     sys.exit(1)
