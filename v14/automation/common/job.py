@@ -65,6 +65,7 @@ class Job:
     ret += self.status + "\n"
     ret += "Timeline of status events:\n"
     timeline = ""
+    total_time = 0
     for i in range(len(self.status_events)):
       s = self.status_events[i]
       ret += ("%s -> %s: %s\n" % (s.old_status,
@@ -73,10 +74,14 @@ class Job:
       if i != 0:
         old_s = self.status_events[i - 1]
         time_diff = s.event_time - old_s.event_time
+        total_time += time_diff
         time_string = time.strftime("%H hours %M minutes %S seconds",
                                  time.gmtime(time_diff))
         timeline += ("%s: %s\n" % (s.old_status,
                                      time_string))
+    time_string = time.strftime("%H hours %M minutes %S seconds",
+                                time.gmtime(total_time))
+    timeline += ("Total time: %s\n" % time_string)
     ret += timeline
 
     return ret

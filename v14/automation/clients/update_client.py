@@ -18,13 +18,21 @@ def Main(argv):
                     default="weekly",
                     help=("Update what version of chromeos.")
                     )
+  parser.add_option("-b",
+                    "--board",
+                    dest="board",
+                    default="x86-generic",
+                    help=("The board(s) (for updating binary builds).")
+                    )
   options = parser.parse_args(argv)[0]
 
   server = xmlrpclib.Server("http://localhost:8000")
 
   all_jobs = []
-  update_job = jobs_helper.CreateUpdateJob(options.chromeos_version)
-  all_jobs.append(update_job)
+  for b in options.board.split(","):
+    update_job = jobs_helper.CreateUpdateJob(options.chromeos_version,
+                                             board=b)
+    all_jobs.append(update_job)
 
   group = job_group.JobGroup(all_jobs, False, False)
   server.ExecuteJobGroup(utils.Serialize(group))

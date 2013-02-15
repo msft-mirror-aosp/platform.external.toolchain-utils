@@ -81,7 +81,7 @@ def Main():
                                 "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
                                 "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
                                 "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
-                                "emerge-%s chromeos-chrome" %
+                                "emerge-%s --buildpkg chromeos-chrome" %
                                 (chrome_version, options.board, options.cflags,
                                  options.board, options.ldflags, options.board,
                                  options.cxxflags, options.board)))
