@@ -4,6 +4,7 @@
 
 __author__ = 'asharif@google.com (Ahmad Sharif)'
 
+import copy
 import csv
 import threading
 import os.path
@@ -55,6 +56,10 @@ class MachineManager(object):
             mach.Release()
 
       return acquired_machines
+
+  def GetMachineList(self):
+    with self._lock:
+      return copy.deepcopy(self._machine_pool)
 
   def ReturnMachines(self, machines):
     with self._lock:

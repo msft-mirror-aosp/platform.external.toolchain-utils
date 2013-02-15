@@ -42,6 +42,9 @@ class Server(object):
   def GetJob(self, job_id):
     return pickle.dumps(self.job_manager.GetJob(job_id))
 
+  def GetMachineList(self):
+    return pickle.dumps(self.job_manager.machine_manager.GetMachineList())
+
   def StartServer(self):
     logger.GetLogger().LogOutput("Starting server...")
     self.job_manager.StartJobManager()
