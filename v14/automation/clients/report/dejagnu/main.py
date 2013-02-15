@@ -6,6 +6,8 @@
 
 from datetime import date
 from datetime import datetime
+import glob
+from itertools import chain
 import logging
 import optparse
 import os.path
@@ -30,7 +32,7 @@ def SummaryCommand(argv):
     parser.print_help()
     sys.exit('\nERROR: Build option is mandatory.')
 
-  for filename in args:
+  for filename in chain.from_iterable(map(glob.glob, args)):
     summary = Summary(opts.build, filename)
     summary.Analyse()
     summary.Save()

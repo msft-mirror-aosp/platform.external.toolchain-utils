@@ -131,8 +131,7 @@ class CommandsFactory(object):
             cmd.Copy(dejagnu_output_path, to_dir='$JOB_TMP/results',
                      recursive=True),
             cmd.Shell('dejagnu.sh', 'summary', '-B', target,
-                      os.path.join(dejagnu_output_path, 'gcc.sum'),
-                      os.path.join(dejagnu_output_path, 'g++.sum'),
+                      os.path.join(dejagnu_output_path, '*.sum'),
                       path='.')),
         cwd='$HOME/automation/clients/report')
 
