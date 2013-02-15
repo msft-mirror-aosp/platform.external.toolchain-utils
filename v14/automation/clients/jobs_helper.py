@@ -1,6 +1,6 @@
 import getpass
 from automation.common import job
-from automation.common import machine_description
+from automation.common.machine_description import MachineSpecification
 import os
 import re
 import sys
@@ -68,7 +68,7 @@ def GetP4Command(p4_port, p4_paths, revision, checkoutdir, p4_snapshot=""):
 
 def CreateLinuxJob(label, command, lock=False):
   to_return = job.Job(label, command)
-  to_return.AddRequiredMachine("", "linux", lock)
+  to_return.DependsOnMachine(MachineSpecification("*", "linux", lock))
   return to_return
 
 def CreateP4Job(p4_port, p4_paths, revision, checkoutdir):
@@ -190,7 +190,7 @@ def CreateDejaGNUJob(chromeos_version="top",
   command += ("&& " + p4_version_dir + "/summarize_results.py " + local_path +
               "/output/dejagnu/g++.log")
   to_return = CreateLinuxJob("dejagnu_job", command)
-  to_return.AddRequiredMachine("", "chromeos", True, False)
+  to_return.DependsOnMachine(MachineSpecification("*", "chromeos", True), False)
   return to_return
 
 def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
@@ -222,7 +222,7 @@ def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
 
   to_return = CreateLinuxJob("build_test_chromeos_job", command, lock=True)
 
-  to_return.AddRequiredMachine("", "chromeos", True, False)
+  to_return.DependsOnMachine(MachineSpecification("*", "chromeos", True), False)
 
   return to_return
 

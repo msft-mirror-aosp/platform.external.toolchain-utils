@@ -98,9 +98,8 @@ class JobExecuter(threading.Thread):
 
     self.CleanUpWorkDir(self.command_terminator)
 
-    mkdir_command = ("mkdir -p %s && mkdir -p %s && mkdir -p %s" %
-                     (self.job.work_dir, self.job.logs_dir,
-                      self.job.GetTestResultsDirSrc()))
+    mkdir_command = "mkdir -p %s && mkdir -p %s && mkdir -p %s" % \
+        (self.job.work_dir, self.job.logs_dir, self.job.test_results_dir_src)
     mkdir_success = self.cmd_executer.RunCommand(mkdir_command,
                                                  False, primary_machine.name,
                                                  primary_machine.username,
@@ -110,7 +109,7 @@ class JobExecuter(threading.Thread):
 
     self.job.status = job.STATUS_COPYING
 
-    for required_folder in self.job.required_folders:
+    for required_folder in self.job.folder_dependencies:
       to_folder = os.path.join(self.job.work_dir, required_folder.dest)
       from_folder = os.path.join(required_folder.job.work_dir,
                                  required_folder.src)
@@ -160,7 +159,7 @@ class JobExecuter(threading.Thread):
 
     # Copy test results back to directory
     to_folder = self.job.home_dir
-    from_folder = self.job.GetTestResultsDirSrc()
+    from_folder = self.job.test_results_dir_src
     from_user = primary_machine.username
     from_machine = primary_machine.name
     copy_success = self.cmd_executer.CopyFiles(from_folder, to_folder,

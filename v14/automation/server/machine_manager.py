@@ -53,13 +53,13 @@ class MachineManager:
 
     result = output_pool[0]
     for machine in output_pool:
-      if machine.name in machine_description.GetPreferredMachines():
+      if machine.name in machine_description.preferred_machines:
         result = machine
         break
       elif machine.uses < result.uses:
         result = machine
 
-    if machine_description.IsLockRequired() == True:
+    if machine_description.lock_required:
       result.locked = True
     result.uses += 1
 
@@ -95,4 +95,3 @@ class MachineManager:
         machine.locked = False
     self.reenterant_lock.release()
     # unlock
-

@@ -20,11 +20,9 @@ class MachineTest(unittest.TestCase):
 
 
   def testPrintMachine(self):
-    m = machine.Machine("ahmad.mtv", "core2duo", 4, "linux", "asharif")
-    machine_string = str(m)
-    self.assertTrue("ahmad.mtv" in machine_string)
+    mach = machine.Machine("ahmad.mtv", "core2duo", 4, "linux", "asharif")
+    self.assertTrue("ahmad.mtv" in str(mach))
 
 
 if __name__ == "__main__":
   unittest.main()
-

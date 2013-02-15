@@ -120,7 +120,7 @@ class JobManager(threading.Thread):
           return
 
 
-        required_machines = ready_job.required_machines
+        required_machines = ready_job.machine_dependencies
         for child in ready_job.children:
           required_machines[0].AddPreferredMachine(child.machines[0].name)
 

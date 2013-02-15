@@ -3,7 +3,7 @@ from utils import utils
 import xmlrpclib
 from automation.common import job
 from automation.common import job_group
-from automation.common import jobs_helper
+from automation.clients import jobs_helper
 import optparse
 import os
 
@@ -52,9 +52,6 @@ def Main(argv):
   all_jobs = []
   tc_job = jobs_helper.CreateBuildTCJob(p4_snapshot=options.p4_snapshot,
                                         toolchain=options.toolchain)
-  tc_pkgs_dir = job.FolderDependency(tc_job, tc_root + jobs_helper.tc_pkgs_dir)
-  tc_objects_dir = job.FolderDependency(tc_job,
-                                        tc_root + jobs_helper.tc_objects_dir)
   all_jobs.append(tc_job)
 
   versions = ""
@@ -72,6 +69,10 @@ def Main(argv):
       break
 
     tc_root = jobs_helper.GetTCRootDir(options.toolchain)[1]
+    tc_pkgs_dir = job.FolderDependency(tc_job,
+                                       tc_root + jobs_helper.tc_pkgs_dir)
+    tc_objects_dir = job.FolderDependency(tc_job,
+                                          tc_root + jobs_helper.tc_objects_dir)
 
     build_chromeos_job = \
         jobs_helper.CreateBuildAndTestChromeOSJob(version,

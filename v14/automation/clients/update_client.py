@@ -4,7 +4,7 @@ from utils import utils
 import xmlrpclib
 from automation.common import job
 from automation.common import job_group
-from automation.common import jobs_helper
+from automation.clients import jobs_helper
 import optparse
 import os
 
@@ -38,4 +38,3 @@ def Main(argv):
 
 if __name__ == "__main__":
   Main(sys.argv)
-

@@ -2,49 +2,37 @@
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
-"""Machine manager unittest.
-
-MachineManagerTest tests MachineManager.
-"""
-
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
 
-from automation.common import machine_description
+from automation.common.machine_description import MachineSpecification
 import machine_manager
 import unittest
 from utils import utils
 
 
 class MachineManagerTest(unittest.TestCase):
+  """ Machine manager tests. """
+
   def setUp(self):
     self.machine_manager = machine_manager.MachineManager()
 
 
   def testPrint(self):
-    print str(self.machine_manager)
+    print self.machine_manager
 
 
   def testGetLinuxBox(self):
-    descriptions = []
-
-    description = machine_description.MachineDescription("", "linux", False)
-
-    descriptions.append(description)
-    machines = self.machine_manager.GetMachines(descriptions)
-    self.assertTrue(len(machines) != 0)
-    print machines
+    mach_spec_list = [ MachineSpecification(os="linux") ]
+    machines = self.machine_manager.GetMachines(mach_spec_list)
+    self.assertTrue(machines)
 
 
   def testGetChromeOSBox(self):
-    descriptions = []
-    description = machine_description.MachineDescription("", "chromeos", False)
-    descriptions.append(description)
-    machines = self.machine_manager.GetMachines(descriptions)
-    self.assertTrue(len(machines) != 0)
-
+    mach_spec_list = [ MachineSpecification(os="chromeos") ]
+    machines = self.machine_manager.GetMachines(mach_spec_list)
+    self.assertTrue(machines)
 
 
 if __name__ == "__main__":
   unittest.main()
-

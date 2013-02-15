@@ -10,7 +10,6 @@ __author__ = "raymes@google.com (Raymes Khoury)"
 
 import os.path
 import time
-import machine_description
 from utils import utils
 
 STATUS_NOT_EXECUTED = "STATUS_NOT_EXECUTED"
@@ -55,16 +54,14 @@ class Job(object):
     self._status = STATUS_NOT_EXECUTED
     self.children = []
     self.parents = []
-    # TODO(kbaclawski): rename to machine_dependencies
-    self.required_machines = []
-    # TODO(kbaclawski): rename to folder_dependencies
-    self.required_folders = []
+    self.machine_dependencies = []
+    self.folder_dependencies = []
     self.id = 0
     self.work_dir = ""
     self.home_dir = ""
     self.machines = []
     self.command = command
-    self._primary_done = False
+    self._has_primary_machine_spec = False
     self.status_events = []
     self.group = None
     self.dry_run = None
@@ -73,11 +70,11 @@ class Job(object):
 
   def __str__(self):
     res = []
-    res.append("%s" % self.id)
+    res.append("%d" % self.id)
     res.append("Children:")
-    res.extend(["%s" % child.id for child in self.children])
+    res.extend(["%d" % child.id for child in self.children])
     res.append("Parents:")
-    res.extend(["%s" % parent.id for parent in self.parents])
+    res.extend(["%d" % parent.id for parent in self.parents])
     res.append("Machines:")
     res.extend(["%s" % machine for machine in self.machines])
     res.append(utils.FormatCommands(self.command))
@@ -131,10 +128,11 @@ class Job(object):
     self._status = status
 
   def DependsOnFolder(self, dependency):
-    self.required_folders.append(dependency)
+    self.folder_dependencies.append(dependency)
     self.DependsOn(dependency.job)
 
-  def GetTestResultsDirSrc(self):
+  @property
+  def test_results_dir_src(self):
     # TODO(kbaclawski): Is it acceptable not to have work_dir?
     if not self.work_dir:
       return ""
@@ -178,6 +176,8 @@ class Job(object):
     return os.path.join(self.logs_dir, "job-%s.log.err" % self.id)
 
   def DependsOn(self, job):
+    """ Specifies Jobs that have to be finished before this job is eligible to
+    be launched. """
     if job not in self.children:
       self.children.append(job)
     if self not in job.parents:
@@ -188,15 +188,16 @@ class Job(object):
     """ Check that all our dependencies have been executed. """
     return all(child.status == STATUS_SUCCEEDED for child in self.children)
 
-  def AddRequiredMachine(self, name, os, lock, primary=True):
-    if primary == True and self._primary_done == True:
-      raise RuntimeError("There can only be one primary machine description.")
-    desc = machine_description.MachineDescription(name, os, lock)
+  def DependsOnMachine(self, machine_spec, primary=True):
+    """ Job will run on arbitrarily chosen machine specified by
+    MachineSpecification class instances passed to this method. """
     if primary:
-      self.required_machines.insert(0, desc)
-      self._primary_done = True
+      if self._has_primary_machine_spec:
+        raise RuntimeError("There can only be one primary machine specification.")
+      self._has_primary_machine_spec = True
+      self.machine_dependencies.insert(0, machine_spec)
     else:
-      self.required_machines.append(desc)
+      self.machine_dependencies.append(machine_spec)
 
   @property
   def baseline_filename(self):
