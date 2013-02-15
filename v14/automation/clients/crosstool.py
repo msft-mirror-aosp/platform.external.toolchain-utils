@@ -16,8 +16,7 @@ from automation.common import logger
 
 
 class CrosstoolNightlyClient(object):
-  VALID_TARGETS = ['gcc-4.4.3-glibc-2.11.1-armv7a-vfpv3.d16-hard',
-                   'gcc-4.4.3-glibc-2.11.1-armv7a-vfpv3.d16-softfp',
+  VALID_TARGETS = ['gcc-4.6.x-ubuntu_lucid-arm',
                    'gcc-4.6.x-ubuntu_lucid-x86_64']
   VALID_BOARDS = ['qemu', 'pandaboard', 'unix']
 
