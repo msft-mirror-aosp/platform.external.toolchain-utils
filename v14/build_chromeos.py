@@ -98,9 +98,12 @@ def Main():
                            % (options.chromeos_root, options.toolchain_root,
                               options.board))
     utils.AssertTrue(ret == 0, "build_tc.py failed")
+    version_number = utils.GetRoot(rootdir)[1]
+    pkgdir = "/home/${USER}/toolchain_root/" + version_number + "/pkgs"
     ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                                 "./setup_board --board=%s --gcc_version=9999 "
-                                 "%s" % (options.board, force))
+                                 "PKGDIR=%s ./setup_board --board=%s "
+                                 " --gcc_version=9999 "
+                                 "%s" % (pkgdir, options.board, force))
     utils.AssertTrue(ret == 0, "setup_board failed")
   else:
     utils.main_logger.LogOutput("Did not setup_board because it already exists")
@@ -116,9 +119,11 @@ def Main():
               #"CFLAGS='%s'\\\nCXXFLAGS='%s'\\\nLDFLAGS='%s'\\\n" %
               #(options.cflags, options.cxxflags, options.ldflags))
   ret2 = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
+                                "if [ -e /build/%s/etc/make.conf.orig ] ; then "
                                 "sudo echo -e \\\"%s\\\" | sudo tee "
                                 "/build/%s/etc/make.conf > /dev/null ;"
-                                % (makeconf, options.board))
+                                "else exit 1 ; fi"
+                                % (options.board, makeconf, options.board))
 
   utils.AssertTrue(ret1 == 0 and ret2 == 0, "Could not modify make.conf")
 
