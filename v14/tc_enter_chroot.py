@@ -201,8 +201,8 @@ def Main(argv, return_output=False):
   except Exception as e:
     logger.GetLogger().LogError(str(e))
 
-  # Now call enter_chroot with the rest of the arguments.
-  command = chromeos_root + "/src/scripts/enter_chroot.sh"
+  # Now call cros_sdk --enter with the rest of the arguments.
+  command = "cd %s/src/scripts && cros_sdk --enter" % chromeos_root
 
   if len(passthrough_argv) > 1:
     inner_command = " ".join(passthrough_argv[1:])
@@ -229,7 +229,11 @@ def Main(argv, return_output=False):
     retval = command_executer.GetCommandExecuter().RunCommand(command, return_output)
     return retval
   else:
-    return os.execv(command, [""])
+    os.chdir("%s/src/scripts" % chromeos_root)
+    ce = command_executer.GetCommandExecuter()
+    [ret, out, err] = ce.RunCommand("which cros_sdk", return_output=True)
+    cros_sdk_binary = out.split()[0]
+    return os.execv(cros_sdk_binary, ["", "--enter"])
 
 
 def CreateMountPointsFromString(mount_strings, chroot_dir):
