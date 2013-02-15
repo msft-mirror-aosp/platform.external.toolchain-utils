@@ -50,7 +50,7 @@ class ScriptsFactory(object):
                      "--tests=%s" % tests,
                      "--full_table",
                      image_path,
-                     path=self._scripts_path)
+                     path="/home/mobiletc-prebuild")
 
   def SetupChromeOS(self, version="latest", use_minilayout=False):
     setup_chromeos = cmd.Shell("setup_chromeos.py",
@@ -118,7 +118,7 @@ class CommandsFactory(object):
         self.CheckoutV14Dir(),
         self.SetupChromeOSCheckout(self.chromeos_version, True),
         self.RunBuildbot(),
-        self.scripts.RunBenchmarks(self.board, "BootPerfServer:10,Page:3"))
+        self.scripts.RunBenchmarks(self.board, "BootPerfServer,10:Page,3"))
 
   def GetP4Snapshot(self, p4view):
     p4client = perforce.CommandsFactory(self.P4_CHECKOUT_DIR, p4view)
