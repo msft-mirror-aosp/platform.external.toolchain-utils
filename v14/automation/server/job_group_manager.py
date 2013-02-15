@@ -119,6 +119,8 @@ class JobGroupManager:
   def FinishedJobGroup(self, job_group):
     # Read all results files and compress into a single csv that can be used
     # as the next baseline.
+    if job_group.GetStatus() == automation.common.job.STATUS_FAILED:
+      return
     summary_file = open(job_group.GetTestResults(), "w")
     for job in job_group.GetJobs():
       path = job.GetTestResults()
