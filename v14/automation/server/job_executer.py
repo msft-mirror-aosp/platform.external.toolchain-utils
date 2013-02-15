@@ -1,7 +1,10 @@
 import threading
 from automation.common import job
+import getpass
 from utils import utils
+import os
 import re
+import sys
 from utils import logger
 from utils import command_executer
 
@@ -11,8 +14,15 @@ class JobExecuter(threading.Thread):
 
   def __init__(self, job, machines, listeners):
     threading.Thread.__init__(self)
-    self.cmd_executer = command_executer.GetCommandExecuter()
     self.job = job
+    self.job_log_root = utils.GetRoot(sys.argv[0])[0]
+
+    # Setup log files for the job.
+    job_log_file_name = "job-" + str(self.job.GetID()) + ".log"
+    job_logger = logger.Logger(self.job_log_root,
+                               job_log_file_name,
+                               True)
+    self.cmd_executer = command_executer.GetCommandExecuter(job_logger)
     self.listeners = listeners
     self.machines = machines
     self.command_terminator = command_executer.CommandTerminator()
@@ -79,8 +89,10 @@ class JobExecuter(threading.Thread):
     if self._IsJobFailed(rm_success, "rm of old job directory Failed."):
       return
 
-    mkdir_success = self.cmd_executer.RunCommand("mkdir -p %s" %
-                                                 self.job.GetWorkDir(),
+    mkdir_command = ("mkdir -p %s && mkdir -p %s" %
+                     (self.job.GetWorkDir(),
+                      self.job.GetLogsDir()))
+    mkdir_success = self.cmd_executer.RunCommand(mkdir_command,
                                                  False, primary_machine.name,
                                                  primary_machine.username,
                                                  self.command_terminator)
@@ -163,6 +175,20 @@ class JobExecuter(threading.Thread):
 
     # If we get here, the job succeeded. 
     self.job.SetStatus(job.STATUS_COMPLETED)
-    logger.GetLogger().LogOutput(str(self.job))
+
+    self.ShipLogs()
+
     for listener in self.listeners:
       listener.NotifyJobComplete(self.job)
+
+  def ShipLogs(self):
+    job_machine = self.job.GetMachines()[0]
+    from_machine = os.uname()[1]
+    from_folder = "%s/logs/job-%d*" % (self.job_log_root, self.job.GetID())
+    to_machine = job_machine.name
+    to_folder = self.job.GetLogsDir()
+    user = getpass.getuser()
+    copy_status = self.cmd_executer.CopyFiles(from_folder, to_folder,
+                                              from_machine, to_machine,
+                                              user, recursive=True)
+    return copy_status

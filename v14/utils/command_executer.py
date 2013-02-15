@@ -4,26 +4,27 @@ import sys
 import os
 import logger
 
-command_executer = None
+dry_run = False
 
 
 def InitCommandExecuter(mock=False):
-  global command_executer
-  if mock:
-    command_executer = MockCommandExecuter()
+  global dry_run
+  dry_run = mock
+
+
+def GetCommandExecuter(logger_to_set=None):
+  if dry_run:
+    return MockCommandExecuter(logger_to_set)
   else:
-    command_executer = CommandExecuter()
-
-
-def GetCommandExecuter():
-  if command_executer is None:
-    InitCommandExecuter()
-  return command_executer
+    return CommandExecuter(logger_to_set)
 
 
 class CommandExecuter:
-  def __init__(self):
-    self.logger = logger.GetLogger()
+  def __init__(self, logger_to_set=None):
+    if logger is not None:
+      self.logger = logger_to_set
+    else:
+      self.logger = logger.GetLogger()
 
   def RunCommand(self, cmd, return_output=False, machine=None,
                  username=None, command_terminator=None):
@@ -117,8 +118,11 @@ class CommandExecuter:
 
 
 class MockCommandExecuter(CommandExecuter):
-  def __init__(self):
-    self.logger = logger.GetLogger()
+  def __init__(self, logger_to_set=None):
+    if logger is not None:
+      self.logger = logger_to_set
+    else:
+      self.logger = logger.GetLogger()
 
   def RunCommand(self, cmd, return_output=False, machine=None, username=None,
                  command_terminator=None):

@@ -72,8 +72,10 @@ class Job:
       if i != 0:
         old_s = self.status_events[i - 1]
         time_diff = s.event_time - old_s.event_time
-        timeline += ("%s: %f s\n" % (s.old_status,
-                                     time_diff))
+        time_string = time.strftime("%H hours %M minutes %S seconds",
+                                 time.gmtime(time_diff))
+        timeline += ("%s: %s\n" % (s.old_status,
+                                     time_string))
     ret += timeline
 
     return ret
