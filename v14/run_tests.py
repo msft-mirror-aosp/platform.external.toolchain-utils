@@ -14,6 +14,7 @@ import os
 import re
 import sys
 from utils import command_executer
+from utils import logger
 
 
 def Main(argv):
@@ -32,13 +33,21 @@ def Main(argv):
 
   if options.board is None or options.remote is None:
     parser.print_help()
-    sys.exit()
+    return -1
 
   if options.chromeos_root is None:
+    m = "--chromeos_root not given. Setting ../../ as chromeos_root"
+    logger.GetLogger().LogWarning(m)
     options.chromeos_root = "../.."
 
+  rrt_file = "%s/src/scripts/run_remote_tests.sh" % options.chromeos_root
+  if not os.path.isfile(rrt_file):
+    m = "File %s not found" % rrt_file
+    logger.GetLogger().LogError(m)
+    return -1
+
   if args:
-    tests = " " + " ".join(args)
+    tests = " " + " ".join(args[1:])
 
   case_insensitive_page = re.compile("page", re.IGNORECASE)
   tests = case_insensitive_page.sub("Page", tests)
