@@ -29,7 +29,7 @@ def ExecuteCommandInChroot(chromeos_root, toolchain_root, command,
   commands = []
   tc_enter_chroot = (os.path.dirname(os.path.abspath(__file__)) +
                      "/tc-enter-chroot.sh")
-  commands.append("%s --chromeos_root=%s --toolchain_root=%s %s -- %s"
+  commands.append("%s --chromeos_root=%s --toolchain_root=%s %s -- \"%s\""
                   % (tc_enter_chroot, chromeos_root, toolchain_root,
                      chrome_mount, command))
   return utils.RunCommands(commands, return_output)
@@ -79,8 +79,8 @@ def Main():
   if options.clobber_chroot:
     clobber_chroot = "--replace"
   commands.append("./make_chroot --fast " + clobber_chroot)
-  ret = utils.RunCommands(commands)
-  utils.AssertTrue(ret == 0, "make_chroot failed")
+#  ret = utils.RunCommands(commands)
+#  utils.AssertTrue(ret == 0, "make_chroot failed")
 
   # Setup board
   force = ""
@@ -90,7 +90,8 @@ def Main():
                                "FEATURES=\\\"keepwork noclean\\\" "
                                "./setup_board --nousepkg --board=%s "
                                "%s" % (options.board, force))
-  utils.main_logger.LogError("setup_board failed")
+  if ret != 0:
+    utils.main_logger.LogError("setup_board failed")
   #utils.AssertTrue(ret == 0, "setup_board failed")
 
   # Modify make.conf to add CFLAGS/CXXFLAGS/LDFLAGS
@@ -103,13 +104,11 @@ def Main():
   makeconf = ("source make.conf.orig\\\n")
               #"CFLAGS='%s'\\\nCXXFLAGS='%s'\\\nLDFLAGS='%s'\\\n" %
               #(options.cflags, options.cxxflags, options.ldflags))
-  ret2 = utils.RunCommand("sudo rm -f %s/chroot/build/%s/etc/make.conf ; "
-                          "echo -e \"%s\" >  /tmp/make.conf; "
-                          "sudo cp /tmp/make.conf "
-                          "%s/chroot/build/%s/etc/make.conf"
-                          % (options.chromeos_root, options.board,
-                             makeconf, options.chromeos_root, options.board))
-
+  ret2 = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
+                                "sudo echo -e \\\"%s\\\" | sudo tee "
+                                "/build/%s/etc/make.conf > /dev/null ;"
+                                % (makeconf, options.board))
+  sys.exit(1)
   utils.AssertTrue(ret1 == 0 and ret2 == 0, "Could not modify make.conf")
 
   # Find Chrome browser version
@@ -128,8 +127,7 @@ def Main():
 
   # Build packages
   ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                               "FEATURES=-usersandbox "
-                               "CHROME_ORIGIN=LOCAL_SOURCE CHROME_VERSION=%s "
+                               "CHROME_ORIGIN=SERVER_SOURCE CHROME_VERSION=%s "
                                "./build_packages --withdev "
                                "--board=%s --withtest --withautotest"
                                % (chrome_version, options.board),

@@ -90,7 +90,14 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
 
   directory = options.directory.strip()
 
-  branch = ".".join(version.split(".")[0:-1]) + ".B"
+  if version == "":
+    branch = "master"
+  else:
+    branch = ".".join(version.split(".")[0:-1]) + ".B"
+
+  # Don't checkout chrome sources outside the chroot at the moment.
+  # If we check them out outside, we can't do some things, like build tests.
+  checkout_chrome_outside_chroot = False
 
   commands = []
   commands.append("mkdir -p " + directory)
@@ -108,26 +115,36 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
   commands.append("./get_svn_repos.sh")
   utils.RunCommands(commands)
 
-  # Find Chrome browser version
-  chrome_version = utils.RunCommand("%s/src/scripts/chromeos_version.sh | "
-                                    "grep CHROME_BUILD" % directory, True)
+  # Setup svn credentials for use inside the chroot
+  utils.RunCommand("svn ls --config-option config:auth:password-stores= "
+                   "--config-option "
+                   "servers:global:store-plaintext-passwords=yes "
+                   "--username $USER@google.com "
+                   "svn://svn.chromium.org/leapfrog-internal "
+                   "svn://svn.chromium.org/chrome "
+                   "svn://svn.chromium.org/chrome-internal > /dev/null")
 
-  chrome_version = chrome_version[1].strip().split("=")
-  if len(chrome_version) == 2:
-    chrome_version = chrome_version[1]
-  else:
-    chrome_version = ""
+  if checkout_chrome_outside_chroot:
+    # Find Chrome browser version
+    chrome_version = utils.RunCommand("%s/src/scripts/chromeos_version.sh | "
+                                      "grep CHROME_BUILD" % directory, True)
 
-  # Checkout chrome
-  utils.RunCommand("mkdir -p %s/chrome_browser/" % directory)
-  gclient_file = GCLIENT_FILE % chrome_version
-  StoreFile(os.path.expanduser("%s/chrome_browser/.gclient"
-                               % directory), gclient_file)
-  commands = []
-  commands.append("cd " + options.directory)
-  commands.append("cd chrome_browser")
-  commands.append("gclient sync -v --nohooks --delete_unversioned_trees")
-  utils.RunCommands(commands)
+    chrome_version = chrome_version[1].strip().split("=")
+    if len(chrome_version) == 2:
+      chrome_version = chrome_version[1]
+    else:
+      chrome_version = ""
+
+    # Checkout chrome
+    utils.RunCommand("mkdir -p %s/chrome_browser/" % directory)
+    gclient_file = GCLIENT_FILE % chrome_version
+    StoreFile(os.path.expanduser("%s/chrome_browser/.gclient"
+                                 % directory), gclient_file)
+    commands = []
+    commands.append("cd " + options.directory)
+    commands.append("cd chrome_browser")
+    commands.append("gclient sync -v --nohooks --delete_unversioned_trees")
+    utils.RunCommands(commands)
 
   print "Done"
 
