@@ -206,7 +206,7 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
 
   binutils_version = "9999"
   gcc_version = "9999"
-  libc_version = "2.10.1-r3"
+  libc_version = "2.10.1-r2"
   kernel_version = "2.6.30-r1"
 
   rootdir = utils.GetRoot(sys.argv[0])[0]

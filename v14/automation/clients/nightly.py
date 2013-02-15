@@ -74,7 +74,7 @@ def Main(argv):
       tc_root + jobs_helper.tc_pkgs_dir)
   all_jobs.append(perflab_job)
 
-  group = job_group.JobGroup("nightly_client", all_jobs, False, False)
+  group = job_group.JobGroup("nightly_client", all_jobs, True, False)
   server.ExecuteJobGroup(utils.Serialize(group))
 
 if __name__ == "__main__":
