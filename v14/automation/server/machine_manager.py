@@ -11,7 +11,7 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 
 import csv
-import machine
+from automation.common import machine
 import threading
 from utils import utils
 

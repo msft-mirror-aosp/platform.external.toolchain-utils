@@ -1,6 +1,8 @@
 import threading
 import automation.common.job_group
 from utils import logger
+import time
+import copy
 
 class JobGroupManager:
 
@@ -16,12 +18,14 @@ class JobGroupManager:
 
   def GetAllJobGroups(self):
     self.job_condition.acquire()
-    return self.all_job_groups
+    res = copy.deepcopy(self.all_job_groups)
     self.job_condition.release()
+    return res
 
   def AddJobGroup(self, job_group):
     self.job_condition.acquire()
     job_group.SetID(self.job_group_counter)
+    job_group.SetTimeSubmitted(time.time())
     job_group.SetStatus(automation.common.job_group.STATUS_EXECUTING)
     self.all_job_groups.append(job_group)
     for job in job_group.GetJobs():
@@ -53,6 +57,8 @@ class JobGroupManager:
     job_group = job.GetGroup()
     if job_group.GetStatus() == automation.common.job_group.STATUS_FAILED:
       # We have already failed, don't need to do anything
+      self.job_condition.notifyAll()
+      self.job_condition.release()
       return
     if job.GetStatus() == automation.common.job.STATUS_FAILED:
       # We have a failed job, abort the job group
