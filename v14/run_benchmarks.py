@@ -31,6 +31,7 @@ __author__ = "bjanakiraman@google.com (Bhaskar Janakiraman)"
 import optparse
 import re
 import sys
+import run_tests
 from utils import command_executer
 from utils import utils
 
@@ -40,6 +41,12 @@ KNOWN_BENCHMARKS = [
     "chromeos/browser/pagecycler",
     "chromeos/browser/sunspider",
     "chromeos/cpu/bikjmp"]
+
+name_map = {
+    "pagecycler" : "Page",
+    "sunspider" : "SunSpider",
+    "startup" : "BootPerfServer"}
+
 
 # Run command template
 
@@ -54,28 +61,38 @@ def Usage(parser, message):
   sys.exit(0)
 
 
-def RunBrowserBenchmark(bench, workdir, machine):
+def RunBrowserBenchmark(chromeos_root, board, bench, workdir, machine):
   """Run browser benchmarks.
 
   Args:
+    chromeos_root: ChromeOS src dir
+    board: Board being tested
     bench: Name of benchmark (chromeos/browser/*)
     workdir: Directory containing benchmark directory
     machine: name of chromeos machine
   """
-  # TODO(bjanakiraman): Implement function
-  return 0
+  benchname = re.split('/', bench)[2]
+  benchdir = '%s/%s' % (workdir, benchname)
+  benchname = name_map[benchname]
+  retval = run_tests.RunRemoteTests(chromeos_root, machine, board, benchname)
+  return retval
 
 
-def RunStartupBenchmark(bench, workdir, machine):
+def RunStartupBenchmark(chromeos_root, board, bench, workdir, machine):
   """Run browser benchmarks.
 
   Args:
+    chromeos_root: ChromeOS src dir
+    board: Board being tested
     bench: Name of benchmark (chromeos/browser/*)
     workdir: Directory containing benchmark directory
     machine: name of chromeos machine
   """
-  # TODO(bjanakiraman): Implement function
-  return 0
+  benchname = 'startup'
+  benchdir = '%s/%s' % (workdir, benchname)
+  benchname = name_map[benchname]
+  retval = run_tests.RunRemoteTests(chromeos_root, machine, board, benchname)
+  return retval
 
 
 def RunCpuBenchmark(bench, workdir, machine):
@@ -180,12 +197,16 @@ def Main(argv):
         found_err = retval
     elif re.match('chromeos/startup', arg):
       print "RUNNING %s" % arg
-      retval = RunStartupBenchmark(arg, options.workdir, options.machine)
+      retval = RunStartupBenchmark(options.chromeos_root,
+                                   options.board,
+                                   arg, options.workdir, options.machine)
       if not found_err:
         found_err = retval
     elif re.match('chromeos/browser', arg):
       print "RUNNING %s" % arg
-      retval = RunBrowserBenchmark(arg, options.workdir, options.machine)
+      retval = RunBrowserBenchmark(options.chromeos_root, 
+                                   options.board,
+                                   arg, options.workdir, options.machine)
       if not found_err:
         found_err = retval
 
