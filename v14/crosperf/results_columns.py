@@ -102,6 +102,9 @@ class RatioColumn(Column):
     result_mean = sum(results) / len(results)
     baseline_mean = sum(baseline_results) / len(baseline_results)
 
+    if not baseline_mean:
+      return "-"
+
     return result_mean / baseline_mean
 
 
@@ -119,6 +122,9 @@ class DeltaColumn(Column):
       return "-"
     result_mean = sum(results) / len(results)
     baseline_mean = sum(baseline_results) / len(baseline_results)
+
+    if not baseline_mean:
+      return "-"
 
     res = 100 * (result_mean - baseline_mean) / baseline_mean
     return res
@@ -141,6 +147,6 @@ class IterationColumn(Column):
     if self.iteration > len(results):
       return ""
     res = results[self.iteration - 1]
-    if res is None:
+    if not res:
       return "-"
     return res
