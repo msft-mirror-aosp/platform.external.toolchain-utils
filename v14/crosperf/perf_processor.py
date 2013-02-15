@@ -47,7 +47,7 @@ class PerfProcessor(object):
     perf_data_file = os.path.join(perf_location, "perf.data")
     # Attempt to build a perf report and keep it with the results.
     command = ("/usr/sbin/perf report --symfs=/build/%s"
-               " -i %s --stdio" % (board, perf_data_file))
+               " -i %s --stdio | head -n1000" % (board, perf_data_file))
     _, out, _ = self._ce.ChrootRunCommand(chromeos_root,
                                           command, return_output=True)
     return out
