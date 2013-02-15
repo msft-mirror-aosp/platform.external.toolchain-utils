@@ -186,14 +186,15 @@ def Main(argv):
   for arg in args:
     # CPU benchmarks
     comps = re.split('/', arg)
-    benchname = comps[2]
     if re.match('chromeos/cpu', arg):
+      benchname = comps[2]
       print "RUNNING %s" % benchname
       retval = RunCpuBenchmark(options.chromeos_root,
                                arg, options.workdir, options.machine)
       if not found_err:
         found_err = retval
     elif re.match('chromeos/startup', arg):
+      benchname = comps[1]
       image_args = [os.path.dirname(os.path.abspath(__file__)) +
                     "/image_chromeos.py",
                     "--chromeos_root=" + options.chromeos_root,
@@ -211,6 +212,7 @@ def Main(argv):
       if not found_err:
         found_err = retval
     elif re.match('chromeos/browser', arg):
+      benchname = comps[2]
       image_args = [os.path.dirname(os.path.abspath(__file__)) +
                     "/image_chromeos.py",
                     "--chromeos_root=" + options.chromeos_root,
