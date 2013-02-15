@@ -80,6 +80,9 @@ class Job(object):
   def timeline(self):
     return self._state.timeline
 
+  def __repr__(self):
+    return '{%s: %s}' % (self.__class__.__name__, self.id)
+
   def __str__(self):
     res = []
     res.append('%d' % self.id)

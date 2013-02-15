@@ -58,6 +58,9 @@ class JobGroup(object):
     except IndexError:
       return None
 
+  def __repr__(self):
+    return '{%s: %s}' % (self.__class__.__name__, self.id)
+
   def __str__(self):
     return "\n".join(["Job-Group:",
                       "ID: %s" % self.id] +

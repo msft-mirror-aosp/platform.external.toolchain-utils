@@ -37,6 +37,10 @@ class Machine(object):
     if not self.uses:
       self.locked = False
 
+  def __repr__(self):
+    return "{%s: %s@%s}" % (
+        self.__class__.__name__, self.username, self.hostname)
+
   def __str__(self):
     return "\n".join(["Machine Information:",
                       "Hostname: %s" % self.hostname,
