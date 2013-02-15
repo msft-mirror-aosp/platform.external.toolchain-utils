@@ -19,6 +19,7 @@ class Job:
     self.status = STATUS_NOT_EXECUTED
     self.dependencies = []
     self.dependents = []
+    self.machine_descriptions = []
 
   def SetStatus(self, status):
     self.status = status
@@ -49,4 +50,8 @@ class Job:
         return False
 
     return True
+
+  def GetMachineDescriptions(self):
+    return self.machine_descriptions
+
 

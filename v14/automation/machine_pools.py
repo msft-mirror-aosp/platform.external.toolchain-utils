@@ -10,7 +10,6 @@ Machine pools can select machines based on filters.
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import machine
-import sys
 
 
 class MachinePool:
@@ -32,20 +31,16 @@ class MachinePool:
 
 
   def RemoveMachine(self, machine):
-    return 0
+    self.machine_list.remove(machine)
+
+
+  def GetMachine(self, index):
+    return self.machine_list[index]
 
 
   def Size(self):
     return len(self.machine_list)
 
-
-  def GetLightestLoad(self):
-    for machine in self.machine_list:
-      machine.UpdateDynamicInfo()
-
-    sorted_list = sorted(self.machine_list, key=lambda m: m.load)
-    return sorted_list[0]
-  
 
   def __str__(self):
     ret = ""
@@ -54,9 +49,27 @@ class MachinePool:
     return ret
 
 
+  def __iter__(self):
+    current = 0
+    while current < self.Size():
+      yield self.machine_list[current]
+      current += 1
+
+
 class MachinePoolFilter:
   def FilterPool(self, machine_pool):
     return machine_pool
+
+
+class LightestLoadFilter(MachinePoolFilter):
+  def FilterPool(self, machine_pool):
+    ret = MachinePool()
+    for machine in machine_pool:
+      machine.UpdateDynamicInfo()
+
+    sorted_list = sorted(machine_pool, key=lambda m: m.load)
+    ret.AddMachine(sorted_list[0])
+    return ret
 
 
 class ChromeOSFilter(MachinePoolFilter):

@@ -1,8 +1,5 @@
-import StringIO
-import job
 import xmlrpclib
-import pickle
-import utils
+from utils import utils
 from jobs import ls_job
 from jobs import echo_job
 

@@ -12,8 +12,10 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import machine
 import machine_pools
+import os
 import pools
 import sys
+from utils import utils
 
 
 class LockInfo:
@@ -58,7 +60,7 @@ class MachineManager:
 
 
   def LockMachine(self, machine, key, timeout):
-    command = ("mkdir %s/%s && mkdir %s/%s/%s" % 
+    command = ("mkdir %s/%s && mkdir %s/%s/%s" %
                (self.lock_path, machine.name,
                 self.lock_path, machine.name, key))
     print command
@@ -70,34 +72,33 @@ class MachineManager:
   def UnlockMachine(self, machine, key, timeout):
     key_path = self.lock_path + "/" + machine.name + "/" + key
     if False == os.path.exists(key_path):
-      raise Error("Could not unlock machine: %s with key: %s"
+      raise StandardError("Could not unlock machine: %s with key: %s"
                   % (machine.name, key))
     command = "rm -rf " + self.lock_path + "/" + machine.name
-    if 0 != RunCommand(command):
-      raise Error("Could not execute command: %s" % command)
+    if 0 != utils.RunCommand(command):
+      raise StandardError("Could not execute command: %s" % command)
 
 
   def GetMachine(self, filters, lock, key, timeout):
     machine_pool = self.global_pool
-    if True == lock:
-      unlocked_filter = machine_pools.UnlockedFilter()
-      filters.append(unlocked_filter)
+    if lock == True:
+      filters.append(machine_pools.UnlockedFilter())
+
+    filters.append(machine_pools.LightestLoadFilter())
 
     for f in filters:
       machine_pool = f.FilterPool(machine_pool)
 
-    if 0 == machine_pool.Size():
+    if machine_pool.Size() == 0:
       return None
 
-    machine = machine_pool.GetLightestLoad()
-
-    if True == lock:
-      if False == self.LockMachine(machine, key, timeout):
+    if lock == True:
+      if self.LockMachine(machine_pool.GetMachine(0), key, timeout) == False:
         return None
 
-    return machine
+    return machine_pool.GetMachine(0)
 
-  
+
   def GetChromeOSMachine(self, lock=False, key="", timeout=200):
     filters = []
     cros_filter = machine_pools.ChromeOSFilter()
@@ -105,7 +106,7 @@ class MachineManager:
 
     return self.GetMachine(filters, lock, key, timeout)
 
-  
+
   def GetLinuxMachine(self, lock=False, key="", timeout=200):
     filters = []
     linux_filter = machine_pools.LinuxFilter()
