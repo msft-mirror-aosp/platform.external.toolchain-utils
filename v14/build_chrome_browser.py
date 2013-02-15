@@ -74,26 +74,17 @@ def Main():
   else:
     chrome_version = "CHROME_VERSION=%s" % options.version
 
-  cflags = ""
-  if options.cflags is not None:
-    cflags = "CFLAGS=\"" + options.cflags + "\""
-
-  cxxflags = ""
-  if options.cxxflags is not None:
-    cxxflags = "CXXFLAGS=\"" + options.cxxflags + "\""
-
-  ldflags = ""
-  if options.ldflags is not None:
-    ldflags = "LDFLAGS=\"" + options.ldflags + "\""
-
   # Emerge the browser
   ret = (build_chromeos.
          ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
                                 "CHROME_ORIGIN=SERVER_SOURCE %s "
-                                "%s %s %s "
+                                "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
+                                "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
+                                "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
                                 "emerge-%s chromeos-chrome" %
-                                (chrome_version, cflags, cxxflags, ldflags,
-                                 options.board)))
+                                (chrome_version, options.board, options.cflags,
+                                 options.board, options.ldflags, options.board,
+                                 options.cxxflags, options.board)))
 
   utils.AssertTrue(ret == 0, "build_packages failed")
 
