@@ -4,6 +4,7 @@
 # Author: kbaclawski@google.com (Krystian Baclawski)
 #
 
+from contextlib import contextmanager
 from datetime import date
 from datetime import datetime
 import glob
@@ -26,6 +27,22 @@ def AddBuildOption(parser):
             '"x86_64-unknown-linux-gnu").'))
 
 
+def ExpandGlobExprList(paths):
+  """Returns an iterator that goes over expanded glob paths."""
+  return chain.from_iterable(map(glob.glob, paths))
+
+
+@contextmanager
+def OptionChecker(parser):
+  """Provides scoped environment for command line option checking."""
+  try:
+    yield
+  except SystemExit as ex:
+    parser.print_help()
+    print ''
+    sys.exit('ERROR: %s' % str(ex))
+
+
 def ManifestCommand(argv):
   parser = optparse.OptionParser(
       description=(
@@ -40,9 +57,12 @@ def ManifestCommand(argv):
 
   opts, args = parser.parse_args(argv[2:])
 
-  if not opts.build:
-    parser.print_help()
-    sys.exit('\nERROR: Build option is mandatory.')
+  with OptionChecker(parser):
+    if not opts.build:
+      sys.exit('Build option is mandatory.')
+
+    if not args:
+      sys.exit('At least one *.sum file required.')
 
   for filename in chain.from_iterable(map(glob.glob, args)):
     test_run = DejaGnuTestRun(opts.build)
@@ -71,13 +91,16 @@ def ImportCommand(argv):
 
   opts, args = parser.parse_args(argv[2:])
 
-  if not opts.build:
-    parser.print_help()
-    sys.exit('\nERROR: Build option is mandatory.')
+  with OptionChecker(parser):
+    if not opts.build:
+      sys.exit('Build option is mandatory.')
+
+    if not args:
+      sys.exit('At least one *.sum file required.')
 
   logging.info('Using "%s" database.', settings.DATABASE_NAME)
 
-  for filename in chain.from_iterable(map(glob.glob, args)):
+  for filename in ExpandGlobExprList(args):
     test_run = DejaGnuTestRun(opts.build)
     test_run.FromDejaGnuOutput(filename)
     test_run.StoreInDb()
@@ -108,28 +131,24 @@ def ReportCommand(argv):
 
   opts, args = parser.parse_args(argv[2:])
 
-  try:
+  with OptionChecker(parser):
     if opts.day:
       try:
         opts.day = datetime.strptime(opts.day, '%m/%d/%Y')
       except ValueError:
-        sys.exit('ERROR: Date expected to be in MM/DD/YYYY format!')
+        sys.exit('Date expected to be in MM/DD/YYYY format!')
 
     if not opts.build:
-      sys.exit('ERROR: Build option is mandatory.')
+      sys.exit('Build option is mandatory.')
 
     if len(args) != 1:
-      sys.exit('ERROR: Exactly one output file expected.')
-  except SystemExit:
-    parser.print_help()
-    print ''
-    raise
+      sys.exit('Exactly one output file expected.')
 
   logging.info('Using "%s" database.', settings.DATABASE_NAME)
 
   manifests = []
 
-  for filename in opts.manifests or []:
+  for filename in ExpandGlobExprList(opts.manifests or []):
     logging.info('Using "%s" manifest.', filename)
     manifests.append(Manifest.FromFile(filename))
 
