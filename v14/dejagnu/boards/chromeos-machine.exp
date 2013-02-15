@@ -1,0 +1,12 @@
+# Base description of a unix machine. This includes remote execution logic
+# through SSH
+load_base_board_description "unix"
+
+# Set hostname and username. # Make sure SSH keys are set up prior to run.
+set_board_info hostname 172.18.118.238
+set_board_info username chronos
+
+set_board_info shell_prompt "dejagnu>"
+set_board_info rsh_prog /usr/bin/ssh
+set_board_info rcp_prog /usr/bin/scp
+
