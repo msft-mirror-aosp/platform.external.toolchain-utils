@@ -18,6 +18,14 @@ class JobGroup:
     self.description = description
     self.time_submitted = 0;
 
+  def __str__(self):
+    ret = ""
+    ret += "Job-Group:\n"
+    ret += "ID: " + str(self.id) + "\n"
+    for j in self.jobs:
+      ret += str(j)
+    return ret
+
   def SetID(self, id):
     self.id = id
 
