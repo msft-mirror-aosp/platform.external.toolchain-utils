@@ -7,8 +7,8 @@ import os
 import re
 import threading
 
+from automation.common import job
 from automation.common import logger
-import automation.common.job
 from automation.server import job_executer
 
 
@@ -36,27 +36,6 @@ class IdProducerPolicy(object):
     return new_id
 
 
-class JobPreparer(object):
-  def __init__(self):
-    self._home_prefix = '/usr/local/google/tmp/automation'
-    self._home_template = 'job-%d'
-
-    self._log_filename_template = 'job-%d.log'
-
-    self._id_producer = IdProducerPolicy()
-    self._id_producer.Initialize(self._home_prefix, 'job-(?P<id>\d+)')
-
-  def Prepare(self, job):
-    # Set job id
-    job.id = self._id_producer.GetNextId()
-
-    home_dir = self._home_template % job.id
-
-    # Set job directories
-    job.work_dir = os.path.join(self._home_prefix, home_dir)
-    job.home_dir = os.path.join(job.group.home_dir, home_dir)
-
-
 class JobManager(threading.Thread):
   def __init__(self, machine_manager):
     threading.Thread.__init__(self)
@@ -71,7 +50,8 @@ class JobManager(threading.Thread):
     self.listeners = []
     self.listeners.append(self)
 
-    self._configurator = JobPreparer()
+    self._id_producer = IdProducerPolicy()
+    self._id_producer.Initialize(job.Job.WORKDIR_PREFIX, 'job-(?P<id>\d+)')
 
   def StartJobManager(self):
     self.job_condition.acquire()
@@ -81,8 +61,8 @@ class JobManager(threading.Thread):
 
   def StopJobManager(self):
     self.job_condition.acquire()
-    for job in self.all_jobs:
-      self._KillJob(job.id)
+    for job_ in self.all_jobs:
+      self._KillJob(job_.id)
 
     # Signal to die
     self.ready_jobs.insert(0, None)
@@ -100,9 +80,9 @@ class JobManager(threading.Thread):
     self.job_condition.release()
 
   def GetJob(self, job_id):
-    for job in self.all_jobs:
-      if job.id == job_id:
-        return job
+    for job_ in self.all_jobs:
+      if job_.id == job_id:
+        return job_
     return None
 
   def _KillJob(self, job_id):
@@ -110,41 +90,41 @@ class JobManager(threading.Thread):
     if job_id in self.job_executer_mapping:
       self.job_executer_mapping[job_id].Kill()
     killed_job = None
-    for job in self.ready_jobs:
-      if job.id == job_id:
-        killed_job = job
+    for job_ in self.ready_jobs:
+      if job_.id == job_id:
+        killed_job = job_
         self.ready_jobs.remove(killed_job)
         break
 
-  def AddJob(self, current_job):
+  def AddJob(self, job_):
     self.job_condition.acquire()
 
-    self._configurator.Prepare(current_job)
+    job_.id = self._id_producer.GetNextId()
 
-    self.all_jobs.append(current_job)
+    self.all_jobs.append(job_)
     # Only queue a job as ready if it has no dependencies
-    if current_job.is_ready:
-      self.ready_jobs.append(current_job)
+    if job_.is_ready:
+      self.ready_jobs.append(job_)
 
     self.job_condition.notifyAll()
     self.job_condition.release()
 
-    return current_job.id
+    return job_.id
 
-  def CleanUpJob(self, job):
+  def CleanUpJob(self, job_):
     self.job_condition.acquire()
-    if job.id in self.job_executer_mapping:
-      self.job_executer_mapping[job.id].CleanUpWorkDir()
-      del self.job_executer_mapping[job.id]
+    if job_.id in self.job_executer_mapping:
+      self.job_executer_mapping[job_.id].CleanUpWorkDir()
+      del self.job_executer_mapping[job_.id]
     # TODO(raymes): remove job from self.all_jobs
     self.job_condition.release()
 
-  def NotifyJobComplete(self, job):
-    self.machine_manager.ReturnMachines(job.machines)
+  def NotifyJobComplete(self, job_):
+    self.machine_manager.ReturnMachines(job_.machines)
     self.job_condition.acquire()
-    logger.GetLogger().LogOutput('Job profile:\n%s' % job)
-    if job.status == automation.common.job.STATUS_SUCCEEDED:
-      for parent in job.parents:
+    logger.GetLogger().LogOutput('Job profile:\n%s' % job_)
+    if job_.status == job.STATUS_SUCCEEDED:
+      for parent in job_.parents:
         if parent.is_ready:
           if parent not in self.ready_jobs:
             self.ready_jobs.append(parent)

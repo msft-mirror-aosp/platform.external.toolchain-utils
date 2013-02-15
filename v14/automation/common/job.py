@@ -53,6 +53,8 @@ class JobFailure(Exception):
 class Job(object):
   """A class representing a job whose commands will be executed."""
 
+  WORKDIR_PREFIX = '/usr/local/google/tmp/automation'
+
   def __init__(self, label, command, baseline=''):
     self._state = JobStateMachine(STATUS_NOT_EXECUTED)
     self.children = []
@@ -60,8 +62,6 @@ class Job(object):
     self.machine_dependencies = []
     self.folder_dependencies = []
     self.id = 0
-    self.work_dir = ''
-    self.home_dir = ''
     self.machines = []
     self.command = command
     self._has_primary_machine_spec = False
@@ -70,13 +70,13 @@ class Job(object):
     self.label = label
     self.baseline = baseline
 
-  def _state_get(self):
+  def _StateGet(self):
     return self._state
 
-  def _state_set(self, new_state):
+  def _StateSet(self, new_state):
     self._state.Change(new_state)
 
-  status = property(_state_get, _state_set)
+  status = property(_StateGet, _StateSet)
 
   @property
   def timeline(self):
@@ -106,7 +106,7 @@ class Job(object):
     if len(self.machines) > 1:
       for num, machine in enumerate(self.machines[1:]):
         substitutions.append(
-            ("$SECONDARY_MACHINES[%d]" % num, machine.hostname))
+            ('$SECONDARY_MACHINES[%d]' % num, machine.hostname))
 
     cmd = str(self.command)
 
@@ -141,6 +141,14 @@ class Job(object):
   @property
   def log_filename_prefix(self):
     return 'job-%d.log' % self.id
+
+  @property
+  def work_dir(self):
+    return os.path.join(self.WORKDIR_PREFIX, 'job-%d' % self.id)
+
+  @property
+  def home_dir(self):
+    return os.path.join(self.group.home_dir, 'job-%d' % self.id)
 
   @property
   def machine(self):
