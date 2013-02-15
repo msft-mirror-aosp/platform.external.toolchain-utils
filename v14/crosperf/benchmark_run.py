@@ -24,8 +24,6 @@ class BenchmarkRun(threading.Thread):
     self.chromeos_image = chromeos_image
     self.board = board
     self.iteration = iteration
-    if not image_checksum:
-      raise Exception("Checksum shouldn't be None")
     self.image_checksum = image_checksum
     self.results = {}
     threading.Thread.__init__(self)
@@ -118,7 +116,7 @@ class BenchmarkRun(threading.Thread):
         raise Exception("Could not acquire machine.")
       self.remote = machine.name
 
-      self.cache.Init(self.image_checksum, self.autotest_name,
+      self.cache.Init(str(self.image_checksum), self.autotest_name,
                       self.iteration, self.autotest_args,
                       machine.name, self.exact_remote, self._logger)
 
@@ -156,7 +154,7 @@ class BenchmarkRun(threading.Thread):
     while True:
       if self.terminate:
         return None
-      machine = self.machine_manager.AcquireMachine(self.image_checksum)
+      machine = self.machine_manager.AcquireMachine(str(self.image_checksum))
       if machine:
         self._logger.LogOutput("%s: Machine %s acquired at %s" %
                                (self.name,
@@ -169,7 +167,7 @@ class BenchmarkRun(threading.Thread):
     return machine
 
   def RunTest(self, machine):
-    if machine.checksum != self.image_checksum:
+    if machine.checksum != str(self.image_checksum):
       self.status = "IMAGING"
       retval = self.machine_manager.ImageMachine(machine.name,
                                                  self.chromeos_root,
@@ -177,7 +175,7 @@ class BenchmarkRun(threading.Thread):
                                                  self.board)
       if retval:
         raise Exception("Could not image machine: '%s'." % machine.name)
-      machine.checksum = self.image_checksum
+      machine.checksum = str(self.image_checksum)
       machine.image = self.chromeos_image
     self.status = "RUNNING: %s" % self.autotest_name
     [retval, out, err] = self.autotest_runner.Run(machine.name,

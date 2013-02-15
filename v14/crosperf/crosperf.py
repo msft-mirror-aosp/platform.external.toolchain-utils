@@ -12,58 +12,34 @@ TABLE: Display a table of performance results.
 import optparse
 import os
 import sys
-import time
+from action_runner import ActionRunner
+from action_runner import MockActionRunner
 from experiment_factory import ExperimentFactory
 from experiment_file import ExperimentFile
-from experiment_status import ExperimentStatus
 from utils import logger
-from utils.email_sender import EmailSender
 
 
 DEFAULT_ACTION = "do"
+USAGE = "%s [OPTIONS] [ACTION] EXPERIMENT_FILE" % sys.argv[0]
+parser = optparse.OptionParser(usage=USAGE)
 l = logger.GetLogger()
 
 
 def Usage(reason):
   """Return script usage."""
   l.LogError(reason)
-  l.LogError("%s [OPTIONS] [ACTION] EXPERIMENT_FILE" % sys.argv[0])
+  parser.get_usage()
   sys.exit(1)
 
 
-def Run(experiment):
-  status = ExperimentStatus(experiment)
-  experiment.start()
-  while not experiment.complete:
-    border = "=============================="
-    l.LogOutput(border)
-    l.LogOutput(status.GetProgressString())
-    l.LogOutput(status.GetStatusString())
-    logger.GetLogger().LogOutput(border)
-    time.sleep(30)
-
-
-def Table(experiment):
-  if experiment.success:
-    l.LogOutput(experiment.table)
-  else:
-    l.LogError("Experiment did not complete successfully.")
-
-
-def Email(experiment):
-  if experiment.success:
-    benchmark_names = []
-    for benchmark_run in experiment.benchmark_runs:
-      benchmark_names.append(benchmark_run.full_name)
-    subject = "%s: %s" % (experiment.board, ", ".join(benchmark_names))
-    EmailSender().SendEmailToUser(subject, experiment.table)
-  else:
-    l.LogError("Experiment did not complete successfully.")
-
-
 def Main(argv):
-  parser = optparse.OptionParser()
-  _, args = parser.parse_args(argv)
+  parser.add_option("--dry_run",
+                    dest="dry_run",
+                    help=("Parse the experiment file and "
+                          "show what will be done"),
+                    action="store_true",
+                    default=False)
+  options, args = parser.parse_args(argv)
 
   if len(args) == 2:
     action = DEFAULT_ACTION
@@ -79,20 +55,12 @@ def Main(argv):
   experiment = ExperimentFactory().GetExperiment(experiment_file,
                                                  working_directory)
 
-  if action == "run":
-    Run(experiment)
-  elif action == "table":
-    Table(experiment)
-  elif action == "email":
-    Email(experiment)
-  elif action == "do":
-    Run(experiment)
-    Table(experiment)
-    Email(experiment)
+  if options.dry_run:
+    runner = MockActionRunner(experiment)
   else:
-    Usage("Invalid action.")
+    runner = ActionRunner(experiment)
+  runner.RunAction(action)
+
 
 if __name__ == "__main__":
   Main(sys.argv)
-
-

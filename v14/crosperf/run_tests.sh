@@ -4,7 +4,8 @@
 # Author: raymes@google.com (Raymes Khoury)
 
 export PYTHONPATH+=":.."
-for test in $(find -name \*unittest.py); do
+for test in $(find -name \*test.py); do
+  echo RUNNING: ${test}
   if ! ./${test} ; then
     echo "Test Failed!"
     exit 1
