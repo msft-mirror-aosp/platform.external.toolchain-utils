@@ -5,6 +5,8 @@
 #
 
 from datetime import date
+from datetime import timedelta
+import logging
 import os.path
 
 from django.template import Template, Context
@@ -59,7 +61,17 @@ class Report(object):
     template = Template(template_content)
     context = Context({'test_runs': []})
 
-    for test_run in TestRun.objects.filter(date__gte=date.today()):
+    test_runs = TestRun.objects.filter(
+        build=self._build_name,
+        date__gte=self._day,
+        date__lt=self._day + timedelta(days=1))
+
+    if self._boards:
+      test_runs = test_runs.filter(board__in=self._boards)
+
+    for test_run in test_runs:
+      logging.info('Generating report for: %s, %s @%s, %s', test_run.build,
+                   test_run.name, test_run.board, test_run.date)
       groups = {}
 
       for res_group, res_types in RESULT_GROUPS.items():
@@ -73,5 +85,7 @@ class Report(object):
           'id': test_run.id,
           'name': '%s @%s' % (test_run.name, test_run.board),
           'groups': groups})
+
+    logging.info('Rendering report in HTML format.')
 
     return template.render(context)

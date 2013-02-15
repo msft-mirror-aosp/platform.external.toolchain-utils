@@ -4,6 +4,8 @@
 # Author: kbaclawski@google.com (Krystian Baclawski)
 #
 
+from datetime import date
+from datetime import datetime
 import logging
 import optparse
 import os.path
@@ -44,17 +46,24 @@ def HtmlReportCommand(argv):
       '-B', dest='build', type='string',
       help='Name of the build for which tests were run.')
   parser.add_option(
-      '-b', dest='boards', type='string', default=None,
-      help=('Extract test results only for specified board (use -b multiple'
-            ' times to specify more than one board).'))
+      '-b', dest='boards', type='string', action='append', default=None,
+      help=('Extract test results only for specified board (use -b multiple '
+            'times to specify more than one board).'))
   parser.add_option(
       '-d', dest='day', default=None,
-      help=('Extract test results for test runs that were performed at'
-            ' specific date (by default latest test runs are considered).'))
+      help=('Extract test results for test runs that were performed at '
+            'specific date in MM/DD/YYYY format (default: %s)' %
+            date.today().strftime('%m/%d/%Y')))
 
   opts, args = parser.parse_args(argv)
 
   try:
+    if opts.day:
+      try:
+        opts.day = datetime.strptime(opts.day, '%m/%d/%Y')
+      except ValueError:
+        sys.exit('ERROR: Date expected to be in MM/DD/YYYY format!')
+
     if not opts.build:
       sys.exit('ERROR: Build option is mandatory.')
 
@@ -69,12 +78,15 @@ def HtmlReportCommand(argv):
 
   with open(args[0], 'w') as html_file:
     html_file.write(report.Generate())
+    logging.info('Wrote report to "%s" file.', args[0])
 
 
 def Main(argv):
+  progname = argv.pop(0)
+
   if not argv or argv[0] not in ['summary', 'html-report']:
     sys.exit('\n'.join([
-        'Usage: %s command [options]' % os.path.basename(sys.argv[0]),
+        'Usage: %s command [options]' % os.path.basename(progname),
         '',
         'Commands:',
         '  summary - to put dejagnu results into database',
@@ -91,4 +103,4 @@ if __name__ == '__main__':
   FORMAT = '%(asctime)-15s %(levelname)s %(message)s'
   logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
-  Main(sys.argv[1:])
+  Main(sys.argv)
