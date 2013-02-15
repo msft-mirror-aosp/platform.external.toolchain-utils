@@ -111,7 +111,7 @@ class CommandExecuter:
     recurse = ""
     if recursive:
       recurse = "-r"
-    return self.RunCommand("sudo scp %s %s%s%s %s%s%s"
+    return self.RunCommand("scp %s %s%s%s %s%s%s"
                            % (recurse, src_user, src_machine, src,
                               dest_user, dest_machine, dest),
                            command_terminator=command_terminator)

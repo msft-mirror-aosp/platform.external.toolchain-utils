@@ -1,3 +1,4 @@
+import getpass
 
 STATUS_NOT_EXECUTED = "STATUS_NOT_EXECUTED"
 STATUS_EXECUTING = "STATUS_EXECUTING"
@@ -14,6 +15,8 @@ class JobGroup:
     self.cleanup_on_complete = cleanup_on_complete
     self.cleanup_on_fail = cleanup_on_fail
     self.status = STATUS_NOT_EXECUTED
+    for j in self.jobs:
+      j.SetGroup(self)
 
   def SetID(self, id):
     self.id = id

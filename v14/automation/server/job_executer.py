@@ -15,7 +15,7 @@ class JobExecuter(threading.Thread):
   def __init__(self, job, machines, listeners):
     threading.Thread.__init__(self)
     self.job = job
-    self.job_log_root = utils.GetRoot(sys.argv[0])[0]
+    self.job_log_root = self._GetJobHomeDir()
 
     # Setup log files for the job.
     job_log_file_name = "job-" + str(self.job.GetID()) + ".log"
@@ -41,6 +41,12 @@ class JobExecuter(threading.Thread):
       for listener in self.listeners:
         listener.NotifyJobComplete(self.job)
       return True
+
+
+  def _GetJobHomeDir(self):
+    return ("/home/" + getpass.getuser() + "/automation" +
+            "/job-group-" + str(self.job.GetGroup().GetID()) + 
+            "/job-" + str(self.job.GetID()))
 
 
   def _FormatCommand(self, command):
@@ -83,11 +89,10 @@ class JobExecuter(threading.Thread):
                                  (self.job.GetID(), primary_machine.name,
                                   self.job.GetJobDir()))
 
-    rm_success = self.cmd_executer.RunCommand("sudo rm -rf %s" %
-                                              self.job.GetJobDir(),
-                                              False, primary_machine.name,
-                                              primary_machine.username,
-                                              self.command_terminator)
+    rm_success = (self.cmd_executer.RunCommand
+                  ("sudo rm -rf %s" % self.job.GetJobDir(),
+                    False,
+                    command_terminator = self.command_terminator))
     if self._IsJobFailed(rm_success, "rm of old job directory Failed."):
       return
 
@@ -155,22 +160,19 @@ class JobExecuter(threading.Thread):
       return
 
     # Copy results back to results directories.
-    if len(self.job.GetResultsDirs()) > 0 and self.job.GetResultsDestDir():
-      to_folder = self.job.GetResultsDestDir() + "/job-" + str(self.job.GetID())
-      to_machine = self.job.GetResultsDestMachine()
+    if len(self.job.GetResultsDirs()) > 0:
+      to_folder = self._GetJobHomeDir() + "/results"
+      command = "mkdir -p " + self._GetJobHomeDir() + "/results"
+      mkdir_status = (self.cmd_executer.RunCommand
+                      (command, command_terminator=self.command_terminator))
 
-      mkdir_success = (self.cmd_executer.RunCommand
-                       ("mkdir -p %s" % to_folder, False, to_machine,
-                        command_terminator=self.command_terminator))
-
-      if self._IsJobFailed(mkdir_success, "mkdir of results directory Failed."):
+      if self._IsJobFailed(mkdir_status, "mkdir of results directory Failed."):
         return
       for directory in self.job.GetResultsDirs():
         from_folder = self.job.GetWorkDir() + "/" + directory
-        from_machine = primary_machine.name
         from_user = primary_machine.username
         copy_success = self.cmd_executer.CopyFiles(from_folder, to_folder,
-                                                   from_machine, to_machine,
+                                                   from_machine, None,
                                                    from_user, recursive=True)
         if self._IsJobFailed(copy_success, "Failed to copy result files."):
           return

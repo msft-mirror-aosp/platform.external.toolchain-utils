@@ -10,7 +10,6 @@ class JobGroupManager:
     self.job_manager = job_manager
     self.job_manager.AddListener(self)
 
-    self.job_group_mapping = {}
 
     self.job_group_counter = 0
     self.job_condition = threading.Condition()
@@ -26,10 +25,7 @@ class JobGroupManager:
     job_group.SetStatus(automation.common.job_group.STATUS_EXECUTING)
     self.all_job_groups.append(job_group)
     for job in job_group.GetJobs():
-      job.SetResultsDestDir(job_group.GetResultsDir())
-      job.SetResultsDestMachine(job_group.GetResultsMachine())
       self.job_manager.AddJob(job)
-      self.job_group_mapping[job] = job_group
     self.job_group_counter += 1
 
     logger.GetLogger().LogOutput("Added JobGroup '%s'."
@@ -54,7 +50,7 @@ class JobGroupManager:
 
   def NotifyJobComplete(self, job):
     self.job_condition.acquire()
-    job_group = self.job_group_mapping[job]
+    job_group = job.GetGroup()
     if job_group.GetStatus() == automation.common.job_group.STATUS_FAILED:
       # We have already failed, don't need to do anything
       return

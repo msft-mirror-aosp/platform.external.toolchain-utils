@@ -56,6 +56,7 @@ class Job:
     self.results_dirs_src = []
     self.results_dest_dir = ""
     self.results_dest_machine = None
+    self.group = None
 
   def __str__(self):
     ret = ""
@@ -148,6 +149,12 @@ class Job:
   def GetRequiredMachines(self):
     return self.machine_descriptions
 
+  def GetGroup(self):
+    return self.group
+
+  def SetGroup(self, group):
+    self.group = group
+
   def GetCommand(self):
     return self.command
 
@@ -172,16 +179,4 @@ class Job:
 
   def GetResultsDirs(self):
     return self.results_dirs_src
-
-  def GetResultsDestMachine(self):
-    return self.results_dest_machine
-
-  def GetResultsDestDir(self):
-    return self.results_dest_dir
-
-  def SetResultsDestMachine(self, machine):
-    self.results_dest_machine = machine
-
-  def SetResultsDestDir(self, directory):
-    self.results_dest_dir = directory
 
