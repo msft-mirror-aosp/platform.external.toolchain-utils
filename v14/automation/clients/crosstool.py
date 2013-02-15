@@ -56,18 +56,7 @@ class CrosstoolNightlyClient(object):
     return job_group.JobGroup('crosstool_nightly', all_jobs, True, False)
 
 
-def InterceptAndLog(fun):
-  def _Interceptor(*args, **kwargs):
-    try:
-      return fun(*args, **kwargs)
-    except StandardError:
-      logger.GetLogger().LogError(
-          'Uncaught exception:\n%s' % traceback.format_exc())
-
-  return _Interceptor
-
-
-@InterceptAndLog
+@logger.HandleUncaughtExceptions
 def Main(argv):
   valid_targets_string = ', '.join(CrosstoolNightlyClient.VALID_TARGETS)
   valid_versions_string = ', '.join(CrosstoolNightlyClient.VALID_VERSIONS)

@@ -95,3 +95,15 @@ def GetLogger():
   if not main_logger:
     InitLogger(sys.argv[0])
   return main_logger
+
+
+def HandleUncaughtExceptions(fun):
+  """Catches all exceptions that would go outside decorated fun scope."""
+
+  def _Interceptor(*args, **kwargs):
+    try:
+      return fun(*args, **kwargs)
+    except StandardError:
+      GetLogger().LogFatal('Uncaught exception:\n%s' % traceback.format_exc())
+
+  return _Interceptor
