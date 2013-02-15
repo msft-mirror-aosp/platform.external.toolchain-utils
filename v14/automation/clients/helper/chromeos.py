@@ -177,7 +177,7 @@ class JobsFactory(object):
 
     machine_label = "chromeos-%s" % self.board
 
-    job = jobs.CreateLinuxJob(label, command, True)
+    job = jobs.CreateLinuxJob(label, command)
     job.DependsOnMachine(
         machine.MachineSpecification(label=machine_label, lock_required=True),
         False)
