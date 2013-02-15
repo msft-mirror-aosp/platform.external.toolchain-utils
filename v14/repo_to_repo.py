@@ -25,6 +25,7 @@ class Repo:
     self.ignores = []
     self.ignores.append(".gitignore")
     self.ignores.append(".p4config")
+    self.ignores.append("README.google")
 
 
   def PullSources(self, root_dir):
