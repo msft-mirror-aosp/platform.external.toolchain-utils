@@ -127,7 +127,7 @@ class JobGroupInfo(object):
     filenames = []
 
     for job_dir in glob.glob(job_dir_pattern):
-      filename = os.path.join(job_dir, 'results', 'report.html')
+      filename = os.path.join(job_dir, 'report.html')
 
       if os.access(filename, os.F_OK):
         filenames.append(filename)
