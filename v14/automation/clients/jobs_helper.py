@@ -26,6 +26,7 @@ perflab_options = "--alsologtostderr"
 perflab_command = ("%s %s %s %s " %
     (perflab_binary, perflab_interpreter_arg,
      perflab_brrd_config_arg, perflab_options))
+perflab_output_dir = "perflab-output"
 
 def _GetP4ClientSpec(client_name, p4_paths):
   p4_string = ""
@@ -298,16 +299,12 @@ def CreatePerflabJob(chromeos_version, benchmark, board="x86-agz",
 
   command += ("&& %s build %s" % (full_perflab_command, benchmark))
   command += ("&& %s run %s" % (full_perflab_command, benchmark))
-  for b in benchmark.split(","):
-    benchmark_log = b.replace("/", "__")
-    benchmark_log += "/results.txt"
-    benchmark_log_path = ("%s/perflab-output/*/*/chromeos_%s/*/*/%s" %
-                          (p4_version_dir,
-                           board,
-                           benchmark_log))
-
-    command += ("&& " + p4_version_dir + "/summarize_results.py " +
-                benchmark_log_path)
+  command += ("&& mkdir -p results"
+              "&& rsync -a %s/%s/ results/%s/"
+              % (p4_version_dir,
+                 perflab_output_dir,
+                 perflab_output_dir))
+  # TODO (asharif): Compare this to a golden baseline dir.
   to_return = CreateLinuxJob("perflab_job", command, lock=True)
   return to_return
 
