@@ -13,7 +13,6 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 import random
 import re
 import sys
-
 from utils import utils
 
 # Common initializations
@@ -30,7 +29,6 @@ class Machine:
     self.last_updated = 0
     self.load = 0
     self.uptime = 0
-    self.locked = False
     self.dead = False
 
 
@@ -42,7 +40,6 @@ class Machine:
     ret += "NumCores: " + str(self.num_cores) + "\n"
     ret += "OS: " + self.os + "\n"
     ret += "load: " + str(self.load) + "\n"
-    ret += "locked: " + str(self.locked) + "\n"
     return ret
 
 

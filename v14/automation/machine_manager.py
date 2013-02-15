@@ -83,7 +83,7 @@ class MachineManager:
   def GetMachine(self, filters, lock, key, timeout):
     machine_pool = self.global_pool
 
-    filters.append(machine_filters.UnlockedFilter())
+    filters.append(machine_filters.UnlockedFilter(self.lock_path))
 
     filters.append(machine_filters.LightestLoadFilter())
 

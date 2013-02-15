@@ -34,10 +34,15 @@ class LinuxFilter(MachinePoolFilter):
     return ret
 
 class UnlockedFilter(MachinePoolFilter):
+  def __init__(self, lock_path):
+    self.lock_path = lock_path
+
+
   def FilterPool(self, machine_pool):
     ret = MachinePool()
     for machine in machine_pool.machine_list:
-      if machine.locked == False:
+      lock_dir = lock_path + "/" + machine_name
+      if os.path.exists(lock_dir) == False:
         ret.AddMachine(machine)
     return ret
 
