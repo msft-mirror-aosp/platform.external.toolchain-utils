@@ -13,246 +13,189 @@ import getpass
 import optparse
 import os
 import sys
+import tempfile
 import tc_enter_chroot
-import build_chromeos
-import setup_chromeos
 from utils import command_executer
 from utils import utils
-from utils import logger
 
 
-cmd_executer = None
+class ToolchainPart(object):
+  def __init__(self, name, source_path, chromeos_root, board, incremental,
+               build_env):
+    self._name = name
+    self._source_path = utils.CanonicalizePath(source_path)
+    self._chromeos_root = chromeos_root
+    self._board = board
+    self._ctarget = utils.GetCtargetFromBoard(self._board)
+    self._ce = command_executer.GetCommandExecuter()
+    self._mask_file = os.path.join(
+        self._chromeos_root,
+        "chroot",
+        "etc/portage/package.mask/cross-%s" % self._ctarget)
+    self._new_mask_file = None
+
+    self._chroot_source_path = "usr/local/toolchain_root/%s" % self._name
+    self._incremental = incremental
+    self._build_env = build_env
+
+  def RunSetupBoardIfNecessary(self):
+    cross_symlink = os.path.join(
+        self._chromeos_root,
+        "chroot",
+        "usr/local/portage/crossdev/cross-%s" % self._ctarget)
+    if not os.path.exists(cross_symlink):
+      command = "./setup_board --board=%s" % self._board
+      utils.ExecuteCommandInChroot(self._chromeos_root, command)
+
+  def Build(self):
+    self.RunSetupBoardIfNecessary()
+
+    try:
+      self.MoveMaskFile()
+      self.SwitchToBFD()
+      self.MountSources()
+      if not self._incremental:
+        self.RemoveCompiledFile()
+      self.BuildTool()
+    finally:
+      self.UnMoveMaskFile()
+      self.SwitchToOriginalLD()
+
+  def RemoveCompiledFile(self):
+    compiled_file = os.path.join(self._chromeos_root,
+                                 "chroot",
+                                 "var/tmp/portage/cross-%s" % self._ctarget,
+                                 "%s-9999" % self._name,
+                                 ".compiled")
+    command = "rm -rf %s" % compiled_file
+    self._ce.RunCommand(command)
+
+  def MountSources(self):
+    mount_points = []
+    mounted_source_path = os.path.join(self._chromeos_root,
+                                       "chroot",
+                                       self._chroot_source_path)
+    src_mp = tc_enter_chroot.MountPoint(
+        self._source_path,
+        mounted_source_path,
+        getpass.getuser(),
+        "ro")
+    mount_points.append(src_mp)
+
+    build_suffix = "build-%s" % self._ctarget
+    build_dir = "%s-%s" % (self._source_path, build_suffix)
+
+    if not self._incremental and os.path.exists(build_dir):
+      command = "rm -rf %s/*" % build_dir
+      self._ce.RunCommand(command)
+
+    # Create a -build directory for the objects.
+    command = "mkdir -p %s" % build_dir
+    self._ce.RunCommand(command)
+
+    mounted_build_dir = os.path.join(
+        self._chromeos_root, "chroot", "%s-%s" %
+        (self._chroot_source_path, build_suffix))
+    build_mp = tc_enter_chroot.MountPoint(
+        build_dir,
+        mounted_build_dir,
+        getpass.getuser())
+    mount_points.append(build_mp)
+
+    mount_statuses = [mp.DoMount() == 0 for mp in mount_points]
+
+    if not all(mount_statuses):
+      mounted = [mp for mp, status in zip(mount_points, mount_statuses) if status]
+      unmount_statuses = [mp.UnMount() == 0 for mp in mounted]
+      assert all(unmount_statuses), "Could not unmount all mount points!"
+
+  def BuildTool(self):
+    env = self._build_env
+    features = "nostrip userpriv userfetch -sandbox noclean"
+    env["FEATURES"] = features
+
+    if self._incremental:
+      env["FEATURES"] += " keepwork"
+
+    env["USE"] = "multislot mounted_%s" % self._name
+    env["%s_SOURCE_PATH" % self._name.upper()] = (
+        os.path.join("/", self._chroot_source_path))
+    env["ACCEPT_KEYWORDS"] = "~*"
+    env_string = " ".join(["%s=\"%s\"" % var for var in env.items()])
+    command = "emerge =cross-%s/%s-9999" % (self._ctarget, self._name)
+    full_command = "sudo %s %s" % (env_string, command)
+    utils.ExecuteCommandInChroot(self._chromeos_root, full_command)
+
+  def SwitchToBFD(self):
+    command = "sudo binutils-config %s-2.21" % self._ctarget
+    utils.ExecuteCommandInChroot(self._chromeos_root, command)
+
+  def SwitchToOriginalLD(self):
+    pass
+
+  def MoveMaskFile(self):
+    self._new_mask_file = None
+    if os.path.isfile(self._mask_file):
+      self._new_mask_file = tempfile.mktemp()
+      command = "sudo mv %s %s" % (self._mask_file, self._new_mask_file)
+      self._ce.RunCommand(command)
+
+  def UnMoveMaskFile(self):
+    if self._new_mask_file:
+      command = "sudo mv %s %s" % (self._new_mask_file, self._mask_file)
+      self._ce.RunCommand(command)
 
 
 def Main(argv):
   """The main function."""
   # Common initializations
-  global cmd_executer
-  cmd_executer = command_executer.GetCommandExecuter()
-  rootdir = utils.GetRoot(sys.argv[0])[0]
-
   parser = optparse.OptionParser()
-  parser.add_option("-c", "--chromeos_root", dest="chromeos_root",
-                    help=("ChromeOS root checkout directory" +
-                           " uses ../.. if none given."))
-  parser.add_option("-t", "--toolchain_root", dest="toolchain_root",
-                    help="Toolchain root directory.")
-  parser.add_option("-b", "--board", dest="board", default="x86-generic",
-                    help="board is the argument to the setup_board command.")
-  parser.add_option("-C", "--clean", dest="clean", default=False,
+  parser.add_option("-c",
+                    "--chromeos_root",
+                    dest="chromeos_root",
+                    help=("ChromeOS root checkout directory"
+                          " uses ../.. if none given."))
+  parser.add_option("-g",
+                    "--gcc_dir",
+                    dest="gcc_dir",
+                    help="The directory where gcc resides.")
+  parser.add_option("-b",
+                    "--board",
+                    dest="board",
+                    default="x86-agz",
+                    help="The target board.")
+  parser.add_option("-n",
+                    "--noincremental",
+                    dest="noincremental",
+                    default=False,
                     action="store_true",
-                    help="Uninstall the toolchain.")
-  parser.add_option("--env", dest="env",
-                    help="Environment to pass to ebuild (use flags, etc.).")
-  parser.add_option("-f", "--force", dest="force", default=False,
+                    help="Use FEATURES=keepwork to do incremental builds.")
+  parser.add_option("-d",
+                    "--debug",
+                    dest="debug",
+                    default=False,
                     action="store_true",
-                    help="Do an uninstall/install cycle.")
-  parser.add_option("-i", "--incremental", dest="incremental",
-                    help="The toolchain component that should be "
-                    "incrementally compiled.")
-  parser.add_option("-B", "--binary", dest="binary",
-                    action="store_true", default=False,
-                    help="The toolchain should use binaries stored in "
-                    "the install/ directory.")
-  parser.add_option("-s", "--setup-chromeos-options",
-                    dest="setup_chromeos_options",
-                    help="Additional options that should be passed on to"
-                    "the setup_chromeos script.")
-  parser.add_option("-o", "--output", dest="output",
-                    help="The output directory where logs,pkgs, etc. go. "
-                    "The default is the toolchain_root/output")
+                    help="Build a compiler with -g3 -O0.")
 
-  options = parser.parse_args(argv)[0]
+  options, _ = parser.parse_args(argv)
 
-  if (options.clean == False and
-      (options.toolchain_root is None or options.board is None)):
-    parser.print_help()
-    sys.exit()
-  else:
-    options.toolchain_root = os.path.expanduser(options.toolchain_root)
+  chromeos_root = utils.CanonicalizePath(options.chromeos_root)
+  gcc_dir = utils.CanonicalizePath(options.gcc_dir)
+  build_env = {}
+  if options.debug:
+    debug_flags = "-g3 -O0"
+    build_env["CFLAGS"] = debug_flags
+    build_env["CXXFLAGS"] = debug_flags
 
-  if options.chromeos_root is None:
-    if os.path.exists("enter_chroot.sh"):
-      options.chromeos_root = "../.."
-    else:
-      logger.GetLogger().LogError("--chromeos_root not given")
-      parser.print_help()
-      sys.exit()
-  else:
-    options.chromeos_root = os.path.expanduser(options.chromeos_root)
+  try:
+    for board in options.board.split(","):
+      tp = ToolchainPart("gcc", gcc_dir, chromeos_root, board,
+                         not options.noincremental, build_env)
+      return tp.Build()
+  finally:
+    print "Exiting..."
+  return 0
 
-  if ((not os.path.exists(options.chromeos_root)) or
-      (not os.path.exists(options.chromeos_root +
-                          "/src/scripts/enter_chroot.sh"))):
-    logger.GetLogger().LogOutput("Creating a chromeos checkout at: %s" %
-                                 options.chromeos_root)
-    sc_args = []
-    sc_args.append("--minilayout")
-    sc_args.append("--dir=%s" % options.chromeos_root)
-    if options.setup_chromeos_options:
-      sc_args.append(options.setup_chromeos_options)
-    setup_chromeos.Main(sc_args)
-
-  if options.output is None:
-    output = options.toolchain_root + "/output"
-  else:
-    output = options.output
-
-  if output.startswith("/") == False:
-    output = os.getcwd() + "/" + output
-  else:
-    output = os.path.expanduser(output)
-
-  chroot_mount = "/usr/local/toolchain_root/"
-  chroot_base = utils.GetRoot(output)[1]
-  chroot_output = chroot_mount + chroot_base
-
-  tc_enter_chroot_options = []
-  output_mount = ("--output=" + output)
-  tc_enter_chroot_options.append(output_mount)
-
-  build_chromeos.MakeChroot(options.chromeos_root)
-
-  portage_flags = "--oneshot"
-  if options.binary == True:
-    # FIXME(asharif): This should be using --usepkg but that was not working.
-    portage_flags += " --usepkgonly"
-    tc_enter_chroot_options.append("-s")
-
-  f = open(options.chromeos_root + "/src/overlays/overlay-" +
-           options.board.split("_")[0] + "/toolchain.conf", "r")
-  target = f.read()
-  f.close()
-  target = target.strip()
-  features = "noclean userfetch userpriv usersandbox -strict splitdebug"
-  if options.incremental is not None and options.incremental:
-    features += " keepwork"
-  env = CreateEnvVarString(" FEATURES", features)
-  env += CreateEnvVarString(" PORTAGE_USERNAME", getpass.getuser())
-  logdir = "/logs"
-  pkgdir = "/pkgs"
-  tmpdir = "/objects"
-  installdir = "/install"
-  for out_dir in [logdir, pkgdir, tmpdir, installdir]:
-    out_dir_path = output + "/" + out_dir
-    if os.path.isdir(out_dir_path):
-      continue
-    else:
-      os.makedirs(out_dir_path)
-  package_dir = output + pkgdir
-  portage_logdir = chroot_output + logdir
-  portage_pkgdir = chroot_output + pkgdir
-  portage_tmpdir = chroot_output + tmpdir
-  env += CreateEnvVarString(" PORT_LOGDIR", portage_logdir)
-  env += CreateEnvVarString(" PKGDIR", portage_pkgdir)
-  env += CreateEnvVarString(" PORTAGE_BINHOST", portage_pkgdir)
-  if options.binary == False:
-    env += CreateEnvVarString(" PORTAGE_TMPDIR", portage_tmpdir)
-  env += CreateEnvVarString(" USE", "mounted_sources multislot")
-
-  if options.env:
-    env += " " + options.env
-
-  retval = 0
-  if options.force == True:
-    retval = BuildTC(options.chromeos_root, options.toolchain_root, env,
-                     target, True, options.incremental, portage_flags,
-                     tc_enter_chroot_options)
-  retval = BuildTC(options.chromeos_root, options.toolchain_root, env,
-                   target, options.clean, options.incremental, portage_flags,
-                   tc_enter_chroot_options)
-  logger.GetLogger().LogFatalIf(retval, "Build toolchain failed!")
-  command = "sudo chown -R " + getpass.getuser() + " " + package_dir
-
-  if options.incremental is None and not options.clean:
-    install_dir = output + installdir
-    retval = InstallTC(package_dir, install_dir)
-    logger.GetLogger().LogFatalIf(retval,
-                                  "Installation of the toolchain failed!")
-
-  return retval
-
-
-def CreateCrossdevPortageFlags(portage_flags):
-  portage_flags = portage_flags.strip()
-  if not portage_flags:
-    return ""
-  crossdev_flags = " --portage "
-  crossdev_flags += " --portage ".join(portage_flags.split(" "))
-  return crossdev_flags
-
-
-def CreateEnvVarString(variable, value):
-  return variable + "=\"" + value + "\""
-
-
-def EscapeQuoteString(string):
-  return "\\\"" + string + "\\\""
-
-
-def InstallTC(package_dir, install_dir):
-  command = ("mkdir -p " + install_dir)
-  command += ("&& for f in $(find " + package_dir +
-              " -name \\*.tbz2); do tar xf $f -C " +
-              install_dir + " ; done")
-  retval = cmd_executer.RunCommand(command)
-  return retval
-
-
-def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
-            incremental_component, portage_flags, tc_enter_chroot_options):
-  """Build the toolchain."""
-  portage_flags = portage_flags.strip()
-  portage_flags += " -b "
-
-  binutils_version = "9999"
-  gcc_version = "9999"
-  libc_version = "2.10.1-r2"
-  kernel_version = "2.6.30-r1"
-
-  rootdir = utils.GetRoot(sys.argv[0])[0]
-  env += " "
-
-  if uninstall == True:
-    uninstall_tec = ["--sudo"]
-    command = "crossdev < $(which yes) -C " + target
-    retval = build_chromeos.ExecuteCommandInChroot(chromeos_root,
-                                                   command,
-                                                   toolchain_root,
-                                                   tec_options=uninstall_tec)
-    return retval
-
-  command = ""
-  if incremental_component == "binutils":
-    command += (" emerge =cross-" + target + "/binutils-" + binutils_version +
-                portage_flags)
-  elif incremental_component == "gcc":
-    command += (" emerge =cross-" + target + "/gcc-" + gcc_version +
-                portage_flags)
-  elif incremental_component == "libc" or incremental_component == "glibc":
-    command += (" emerge =cross-" + target + "/glibc-" + libc_version +
-                portage_flags)
-  else:
-    crossdev_flags = CreateCrossdevPortageFlags(portage_flags)
-    command += (" crossdev -v -t " + target +
-                " --binutils " + binutils_version +
-                " --libc " + libc_version +
-                " --gcc " + gcc_version +
-                " --kernel " + kernel_version +
-                crossdev_flags)
-    command += ("&& cp -r $(" + env + " portageq envvar PKGDIR)/*" +
-                " /var/lib/portage/pkgs/")
-
-  command = "%s %s" % (env, command)
-  argv = [rootdir + "/tc_enter_chroot.py",
-          "--chromeos_root=" + chromeos_root,
-          "--toolchain_root=" + toolchain_root,
-          "--sudo"]
-  argv += tc_enter_chroot_options
-
-  argv.append(command)
-  retval = tc_enter_chroot.Main(argv)
-  return retval
 
 if __name__ == "__main__":
   retval = Main(sys.argv)

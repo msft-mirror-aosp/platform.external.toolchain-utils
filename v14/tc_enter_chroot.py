@@ -59,6 +59,11 @@ class MountPoint:
       return 0
 
 
+  def UnMount(self):
+    ce = command_executer.GetCommandExecuter()
+    return ce.RunCommand("sudo umount " % self.mount_dir)
+
+
   def MountDir(self):
     command = "sudo mount --bind " + self.external_dir + " " + self.mount_dir
     if self.options == "ro":

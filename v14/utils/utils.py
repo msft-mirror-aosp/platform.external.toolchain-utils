@@ -80,6 +80,23 @@ def ExecuteCommandInChroot(chromeos_root, command, return_output=False):
     return ce.RunCommand(command, return_output)
 
 
+def CanonicalizePath(path):
+  path = os.path.expanduser(path)
+  path = os.path.realpath(path)
+  return path
+
+
+def GetCtargetFromBoard(board):
+  if not isinstance(board, str):
+    raise TypeError("Board must be a string.")
+  if "x86" in board:
+    return "i686-pc-linux-gnu"
+  elif "tegra" in board or "arm" in board:
+    return "armv7a-cros-linux-gnueabi"
+  else:
+    raise ValueError("Board should have x86/tegra/arm in it.")
+
+
 @contextmanager
 def WorkingDirectory(new_dir):
   old_dir = os.getcwd()
