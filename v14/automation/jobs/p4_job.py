@@ -17,6 +17,7 @@ class P4Job(job.Job):
     p4_string = ""
     for p4_path in p4_paths:
       p4_string += " -a \"" + (" //" + client_name + "/").join(p4_path) + "\""
+
     return p4_string
 
 
@@ -28,6 +29,7 @@ class P4Job(job.Job):
     command += " && mkdir -p " + self.checkoutdir
     command += " && cd " + self.checkoutdir
     command += " && cp ${HOME}/.p4config ."
+    command += " && chmod u+w .p4config"
     command += " && echo \"P4PORT=" + self.p4_port + "\" >> .p4config"
     command += " && echo \"P4CLIENT=" + client_name + "\" >> .p4config"
     command += (" && g4 client " +

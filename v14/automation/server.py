@@ -10,6 +10,8 @@ class Server:
 
 
   def ExecuteJobGroup(self, job_group):
+    #TODO(raymes): Verify that the job graph is valid. I.e. every
+    # dependency has been transmitted to the server.
     job_group = utils.Deserialize(job_group)
     for current_job in job_group:
       self.job_manager.AddJob(current_job)

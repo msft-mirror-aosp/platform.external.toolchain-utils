@@ -16,9 +16,11 @@ SUBDIR_LOGS = "/logs"
 
 
 class RequiredFolder:
-  def __init__(self, job, folder):
+  def __init__(self, job, src, dest):
     self.job = job
-    self.folder = folder
+    self.src = src
+    self.dest = dest
+
 
 class Job:
   """A class representing a job whose commands will be executed."""
@@ -51,8 +53,8 @@ class Job:
   def GetStatus(self):
     return self.status
 
-  def AddRequiredFolder(self, job, folder):
-    self.required_folders.append(RequiredFolder(job, folder))
+  def AddRequiredFolder(self, job, src, dest):
+    self.required_folders.append(RequiredFolder(job, src, dest))
 
   def GetRequiredFolders(self):
     return self.required_folders

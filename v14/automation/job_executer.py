@@ -35,12 +35,21 @@ class JobExecuter(threading.Thread):
       self.job.SetMachine(primary_machine)
 
       for required_folder in self.job.GetRequiredFolders():
-        to_folder = self.job.GetWorkDirectory() + "/" + required_folder.folder
-        from_folder = (required_folder.job.GetWorkDirectory() + "/" +
-                         required_folder.folder)
+#        utils.RunCommand("ssh %s@%s -- rm -rf %s" %
+#                                (primary_machine.username, primary_machine.name,
+#                                 self.job.GetJobDir()))
+        utils.RunCommand("ssh %s@%s -- mkdir -p %s" %
+                                  (primary_machine.username, primary_machine.name,
+                                   self.job.GetJobDir()))
+        utils.RunCommand("ssh %s@%s -- mkdir -p %s" %
+                                  (primary_machine.username, primary_machine.name,
+                                   self.job.GetWorkDir()))
+        to_folder = self.job.GetWorkDir() + "/" + required_folder.dest
+        from_folder = (required_folder.job.GetWorkDir() + "/" +
+                         required_folder.src)
         if required_folder.job.GetMachine().name == primary_machine.name:
           # Same machine, do cp
-          utils.RunCommand("cp %s %s", from_folder, to_folder)
+          utils.RunCommand("cp -r %s %s" % (from_folder, to_folder))
         else:
           # Different machine, do scp
           from_machine = required_folder.job.GetMachine().name
@@ -51,17 +60,12 @@ class JobExecuter(threading.Thread):
                            % (from_user, from_machine, from_folder, to_user,
                               to_machine, to_folder))
 
-      utils.RunCommand("ssh %s@%s -- mkdir -p %s" %
-                                (primary_machine.username, primary_machine.name,
-                                 self.job.GetJobDir()))
-      utils.RunCommand("ssh %s@%s -- mkdir -p %s" %
-                                (primary_machine.username, primary_machine.name,
-                                 self.job.GetWorkDir()))
+
       command = self.job.GetCommand()
       if command:
         quoted_command = utils.FormatQuotedCommand(command)
         print quoted_command
-        result = utils.RunCommand("ssh %s@%s -- \"cd %s && %s\"" %
+        result = utils.RunCommand("ssh %s@%s -- \"PS1=. TERM=linux source ~/.bashrc ; cd %s && %s\"" %
                                   (primary_machine.username, primary_machine.name,
                                    self.job.GetWorkDir(),
                                    quoted_command),

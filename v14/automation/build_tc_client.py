@@ -1,6 +1,7 @@
 import xmlrpclib
 from utils import utils
-from jobs import p4_job
+import jobs.p4_job
+import jobs.setup_chromeos_job
 from jobs import generic_job
 
 server = xmlrpclib.Server("http://localhost:8000")
@@ -14,15 +15,18 @@ p4_paths.append(("//depot2/gcctools/chromeos/v14/...", "gcctools/chromeos/v14/..
 p4_revision = 1
 p4_checkoutdir = "perforce2"
 
-p4_job = p4_job.P4Job(p4_port, p4_paths, p4_revision, p4_checkoutdir)
+p4_job = jobs.p4_job.P4Job(p4_port, p4_paths, p4_revision, p4_checkoutdir)
+setup_chromeos_job = jobs.setup_chromeos_job.SetupChromeOSJob(p4_job, "latest")
 
 build_tc_commands = []
 build_tc_commands.append("cd chromeos/src/scripts")
-build_tc_commands.append("../../" + p4_checkoutdir + 
+build_tc_commands.append("../../../" + p4_checkoutdir +
                          "/gcctools/chromeos/v14/build_tc.py" +
-                         " --toolchain_root=../../" + p4_checkoutdir + "/gcctools")
+                         " --toolchain_root=../../../" + p4_checkoutdir + "/gcctools")
 tc_job = generic_job.GenericJob(build_tc_commands)
 tc_job.AddDependency(p4_job)
-tc_job.AddRequiredFolders(p4_job, "gcctools")
+tc_job.AddRequiredFolder(p4_job, "perforce2/gcctools/", "gcctools")
+tc_job.AddDependency(setup_chromeos_job)
+tc_job.AddRequiredFolder(setup_chromeos_job, "chromeos", "chromeos")
 
-server.ExecuteJobGroup(utils.Serialize([p4_job, tc_job]))
+server.ExecuteJobGroup(utils.Serialize([p4_job, setup_chromeos_job, tc_job]))
