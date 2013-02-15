@@ -9,7 +9,9 @@ toolchain_setup_env()
     return 0
   fi
   GVSB=google_vendor_src_branch
-  TC_DIRS=( $GVSB/gcc )
+  full_dir=$(dirname "$0")
+  parent_dir="${full_dir##*/}"
+  TC_DIRS=( $GVSB/gcc chromeos/${parent_dir} )
   for TC_DIR in ${TC_DIRS[@]}
   do
     TC_LAST_DIR=${TC_DIR##*/}

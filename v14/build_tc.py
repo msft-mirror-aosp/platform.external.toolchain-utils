@@ -9,6 +9,7 @@ This script sets up the toolchain if you give it the gcctools directory.
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
+import getpass
 import optparse
 import sys
 from utils import utils
@@ -29,6 +30,8 @@ def Main():
                     help="board is the argument to the setup_board command.")
   parser.add_option("-C", "--clean", dest="clean",
                     action="store_true", help="Uninstall the toolchain.")
+  parser.add_option("-f", "--force", dest="force",
+                    action="store_true", help="Do an uninstall/install cycle.")
   parser.add_option("-i", "--incremental", dest="incremental",
                     help="The toolchain component that should be "
                     "incrementally compiled.")
@@ -47,12 +50,17 @@ def Main():
   target = f.read()
   f.close()
   target = target.strip()
-  features = "noclean"
+  features = "noclean userfetch userpriv usersandbox"
   env = CreateEnvVarString(" FEATURES", features)
-  toolchain_root = "/home/${USER}/toolchain_root"
-  env += CreateEnvVarString(" PORT_LOGDIR", toolchain_root + "/log")
-  env += CreateEnvVarString(" PKGDIR", toolchain_root + "/pkgs")
-  env += CreateEnvVarString(" PORTAGE_TMPDIR", toolchain_root + "/tmp")
+  env += CreateEnvVarString(" PORTAGE_USERNAME", getpass.getuser())
+  version_number = utils.GetRoot(rootdir)[1]
+  version_dir = "/home/${USER}/toolchain_root/" + version_number
+  env += CreateEnvVarString(" PORT_LOGDIR", version_dir + "/logs")
+  env += CreateEnvVarString(" PKGDIR", version_dir + "/install")
+  env += CreateEnvVarString(" PORTAGE_TMPDIR", version_dir + "/objects")
+  if options.force == True:
+    BuildTC(options.chromeos_root, options.toolchain_root, env, target,
+            True, options.incremental)
   BuildTC(options.chromeos_root, options.toolchain_root, env, target,
           options.clean, options.incremental)
 
@@ -72,7 +80,7 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
   gcc_version = "9999"
   libc_version = "2.10.1-r1"
   kernel_version = "2.6.30-r1"
-  if incremental_component is not None and len(incremental_component) > 0:
+  if incremental_component is not None and incremental_component:
     env += "FEATURES+=" + EscapeQuoteString("keepwork")
 
   if uninstall == True:
