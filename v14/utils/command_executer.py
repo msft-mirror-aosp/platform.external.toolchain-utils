@@ -107,7 +107,8 @@ class MockCommandExecuter(CommandExecuter):
   def __init__(self):
     self.logger = logger.GetLogger()
 
-  def RunCommand(self, cmd, return_output=False, machine=None, username=None):
+  def RunCommand(self, cmd, return_output=False, machine=None, username=None,
+                 command_terminator=None):
     if machine is None:
       machine = "localhost"
     if username is None:

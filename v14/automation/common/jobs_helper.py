@@ -125,11 +125,15 @@ def CreateBuildAndTestChromeOSJob(tc_job, chromeos_snapshot="", p4_snapshot=""):
               " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
               " --chromeos_root=" + chromeos_root +
               " --board=x86-generic")
+
   command += ("; " + p4_version_dir + "/run_tests.py" + 
               " --remote=$SECONDARY_MACHINES[0] " +
               " --board=x86-generic")
+
   to_return = CreateLinuxJob(command)
   to_return.AddRequiredFolder(tc_job, p4_pkgs_dir, p4_pkgs_dir)
+
+  to_return.AddRequiredMachine("", "chromeos", False, False);
 
   return to_return
 

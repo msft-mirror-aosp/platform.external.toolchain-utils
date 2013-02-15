@@ -33,12 +33,13 @@ class JobExecuter(threading.Thread):
 
   def _FormatCommand(self, command):
     ret = command
-    ret.replace("$JOB_ID", str(self.job.GetID()))
-    ret.replace("$PRIMARY_MACHINE", self.job.machines[0].name)
-    mo = re.search("SECONDARY_MACHINES\[(\d+)\]", ret)
+    ret = ret.replace("$JOB_ID", str(self.job.GetID()))
+    ret = ret.replace("$PRIMARY_MACHINE", self.job.machines[0].name)
+    mo = re.search("\$SECONDARY_MACHINES\[(\d+)\]", ret)
+    logger.GetLogger().LogOutput("command: " + command)
     if mo is not None:
       index = int(mo.group(1))
-      ret = (ret[0:mo.start()] + self.job.machines[1+index] +
+      ret = (ret[0:mo.start()] + self.job.machines[1+index].name +
              ret[mo.end():])
     return ret
 
@@ -58,7 +59,7 @@ class JobExecuter(threading.Thread):
                                  "in directory '%s'" %
                                  (self.job.GetID(), primary_machine.name,
                                   self.job.GetJobDir()))
-
+    
     rm_success = self.cmd_executer.RunCommand("sudo rm -rf %s" %
                                               self.job.GetJobDir(),
                                               False, primary_machine.name,

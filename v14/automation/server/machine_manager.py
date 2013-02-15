@@ -72,13 +72,14 @@ class MachineManager:
     for machine_description in required_machines:
 
       machine = self._GetMachine(machine_description)
-      acquired_machines.append(machine)
 
       if machine == None:
         # Roll back acquires
         self.ReturnMachines(acquired_machines)
         acquired_machines = None
         break
+
+      acquired_machines.append(machine)
 
     self.reenterant_lock.release()
 

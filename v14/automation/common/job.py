@@ -153,7 +153,7 @@ class Job:
     self.command = " ; ".join(commands)
 
   def AddRequiredMachine(self, name, os, lock, primary=True):
-    if self._primary_done == True:
+    if primary == True and self._primary_done == True:
       raise Exception("There can only be one primary machine description.")
     desc = machine_description.MachineDescription(name, os, lock)
     if primary == True:
