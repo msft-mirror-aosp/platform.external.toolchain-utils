@@ -150,9 +150,8 @@ def Main(argv):
                                "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
                                "CHROME_ORIGIN=SERVER_SOURCE "
                                "%s"
-                               % (options.board, options.cflags, options.board,
-                                  options.ldflags, options.board,
-                                  options.cxxflags, build_packages_command))
+                               % (options.cflags, options.cxxflags, options.ldflags,
+                                  build_packages_command))
 
   utils.AssertTrue(ret == 0, "build_packages failed")
 

@@ -18,7 +18,7 @@ from utils import command_executer
 from utils import logger
 from utils import utils
 
-checksum_file = "/home/chronos/checksum_file"
+checksum_file = "/home/chronos/osimage_checksum_file"
 
 
 def Usage(parser, message):
@@ -26,7 +26,7 @@ def Usage(parser, message):
   parser.print_help()
   sys.exit(0)
 
-def Main(argv):
+def ImageChromeOS(argv):
   """Build ChromeOS."""
   # Common initializations
   cmd_executer = command_executer.GetCommandExecuter()
@@ -94,4 +94,4 @@ def Main(argv):
   return retval
 
 if __name__ == "__main__":
-  Main(sys.argv)
+  ImageChromeOS(sys.argv)

@@ -199,7 +199,7 @@ def Main(argv):
                     "--image=" + options.workdir + "/chromiumos_image.bin"
                    ]
       logger.GetLogger().LogOutput("Reimaging machine %s" % options.machine)
-      image_chromeos.Main(image_args)
+      image_chromeos.ImageChromeOS(image_args)
 
       logger.GetLogger().LogOutput("Running %s" % arg)
       retval = RunStartupBenchmark(options.chromeos_root,
@@ -214,7 +214,7 @@ def Main(argv):
                     "--image=" + options.workdir + "/chromiumos_image.bin"
                    ]
       logger.GetLogger().LogOutput("Reimaging machine %s" % options.machine)
-      image_chromeos.Main(image_args)
+      image_chromeos.ImageChromeOS(image_args)
 
       logger.GetLogger().LogOutput("Running %s" % arg)
       retval = RunBrowserBenchmark(options.chromeos_root, 

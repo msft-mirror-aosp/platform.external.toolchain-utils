@@ -10,6 +10,7 @@ __author__ = "raymes@google.com (Raymes Khoury)"
 
 import time
 import machine_description
+from utils import utils
 
 
 STATUS_NOT_EXECUTED = "STATUS_NOT_EXECUTED"
@@ -61,7 +62,7 @@ class Job:
   def __str__(self):
     ret = ""
     ret += str(self.id) + "\n"
-    ret += self.command + "\n"
+    ret += utils.FormatCommands(self.command) + "\n"
     ret += self.status + "\n"
     ret += "Timeline of status events:\n"
     timeline = ""

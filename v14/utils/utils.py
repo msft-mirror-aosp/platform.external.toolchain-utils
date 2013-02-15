@@ -9,6 +9,7 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import os
 import pickle
+import re
 import StringIO
 import sys
 import logger
@@ -59,6 +60,14 @@ def Deserialize(argument):
 
 def FormatQuotedCommand(command):
   return command.replace("\"", "\\\"")
+
+def FormatCommands(commands):
+    output = commands
+    output = re.sub("&&", "&&\n", output)
+    output = re.sub(";", ";\n", output)
+    output = re.sub("\n+\s*", "\n", output)
+    return output
+
 
 def Md5File(filename, block_size=2**10):
   f = open(filename, "r")
