@@ -115,9 +115,13 @@ def Main(argv):
   build_image_command = ("./build_image --withdev --board=%s" % options.board)
   mod_image_command = ("./mod_image_for_test.sh --yes --board=%s" %
                        options.board)
+  setup_board_force= ""
+  if options.clobber_board:
+    setup_board_force = " --force"
 
   if options.vanilla == True:
-    command = "./setup_board --nousepkg --board=" + options.board
+    command = ("./setup_board --nousepkg --board=" + options.board
+               + setup_board_force)
     command += "&& " + build_packages_command
     command += "&& " + build_image_command
     command += "&& " + mod_image_command
@@ -127,9 +131,6 @@ def Main(argv):
   # Setup board
   if not os.path.isdir(options.chromeos_root + "/chroot/build/"
                        + options.board) or options.clobber_board:
-    force = ""
-    if options.clobber_board:
-      force = "--force"
     # Run build_tc.py from binary package
     rootdir = utils.GetRoot(argv[0])[0]
     version_number = utils.GetRoot(rootdir)[1]
@@ -137,7 +138,7 @@ def Main(argv):
                                  "./setup_board --board=%s "
                                  " --gcc_version=9999 "
                                  " --binutils_version=9999 "
-                                 "%s" % (options.board, force))
+                                 "%s" % (options.board, setup_board_force))
     utils.AssertTrue(ret == 0, "setup_board failed")
   else:
     logger.GetLogger().LogOutput("Did not setup_board "

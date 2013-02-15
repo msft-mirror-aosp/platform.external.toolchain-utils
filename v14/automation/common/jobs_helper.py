@@ -230,10 +230,8 @@ def _GetSetupChromeOSCommand(version, use_minilayout=False, board="x86-generic")
     utils.AssertExit(os.path.islink(location) == True,
                      "Symlink: " + location + " does not exist.")
     location_expanded = os.path.realpath(location)
-    chromeos_version = utils.GetRoot(location_expanded)[1]
-    utils.AssertExit(re.match(version_re, chromeos_version) is not None,
-                     "Version " + chromeos_version + " is invalid!")
-  elif (version == "top" or version == "latest" or
+    version = utils.GetRoot(location_expanded)[1]
+  if (version == "top" or version == "latest" or
         re.match(version_re, version)):
     chromeos_version = version
   else:
@@ -304,7 +302,7 @@ def CreateUpdateJob(chromeos_versions,
                 " --chromeos_root=" + chromeos_root +
                 " --vanilla --board=" + board)
 
-  dirname = "$(cd chromeos/src/scripts; git branch | cut -d' ' -f 2)"
+  dirname = "$(cd chromeos/src/scripts; git branch | cut -d\" \" -f 2)"
   build_location = _GetChromeOSGoldenBuildLocation() + "/" + dirname
   for board in board_list:
     board_build = build_location + "/" + board
@@ -314,8 +312,8 @@ def CreateUpdateJob(chromeos_versions,
 
   for chromeos_version in chromeos_versions.split(","):
     build_link = chromeos_version
-    command += ("&& ln -fs -T " + chromeos_version + " " +
-               build_location)
+    command += ("&& ln -fs -T " + dirname + " " +
+                _GetChromeOSGoldenBuildLocation() + chromeos_version)
   to_return = CreateLinuxJob(command)
   return to_return
 
