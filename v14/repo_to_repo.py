@@ -308,6 +308,8 @@ def Main(argv):
   if not options.dry_run:
     for output_repo in output_repos:
       output_repo.CleanupRoot()
+    for input_repo in input_repos:
+      input_repo.CleanupRoot()
 
   return ret
 
