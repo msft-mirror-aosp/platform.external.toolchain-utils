@@ -83,7 +83,7 @@ def Main(argv):
                src_machine=options.remote,
                src_cros=True,
                chromeos_root=options.chromeos_root)
-  board = ce.CrosLearnBoard(options.chromeos_root, "172.18.117.239")
+  board = ce.CrosLearnBoard(options.chromeos_root, options.remote)
   print board
   return 0
 
