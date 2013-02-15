@@ -74,13 +74,13 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
     version = tags[0]
     print version
   elif options.version == "top":
-    version = ""
+    version = "top"
   elif options.version is None:
     Usage(parser)
   else:
     version = options.version.strip()
 
-  if not version in tags:
+  if not version in tags and version != "top":
     print "Version: '" + version + "' does not exist"
     Usage(parser)
 
@@ -90,7 +90,7 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
 
   directory = options.directory.strip()
 
-  if version == "":
+  if version == "top":
     branch = "master"
   else:
     branch = ".".join(version.split(".")[0:-1]) + ".B"
@@ -106,8 +106,9 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
                   "ssh://git@gitrw.chromium.org:9222/manifest-internal -b "
                   + branch)
   commands.append("repo sync -j10")
-  commands.append("repo forall -c 'git checkout -f -b %s %s'"
-                  % (branch, version))
+  if branch != "master":
+    commands.append("repo forall -c 'git checkout -f -b %s %s'"
+                    % (branch, version))
   utils.RunCommands(commands)
 
   commands = []

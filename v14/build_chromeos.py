@@ -87,19 +87,20 @@ def Main():
     utils.main_logger.LogOutput("Did not make_chroot because it already exists")
 
   # Setup board
-  if (not os.path.isdir(options.chromeos_root + "/chroot/" + options.board)
-      or options.clobber_board):
+  if not os.path.isdir(options.chromeos_root + "/chroot/build/"
+                       + options.board) or options.clobber_board:
     force = ""
     if options.clobber_board:
       force = "--force"
-    version_number = utils.GetRoot(rootdir)[1]
-    pkgdir = "/home/${USER}/toolchain_root/" + version_number
+    # Run build_tc.py from binary package
+    ret = utils.RunCommand("./build_tc.py --chromeos_root=%s "
+                           "--toolchain_root=%s --board=%s -B"
+                           % (options.chromeos_root, options.toolchain_root,
+                              options.board))
+    utils.AssertTrue(ret == 0, "build_tc.py failed")
     ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                                 "FEATURES=\\\"keepwork noclean\\\" "
-                                 "PKGDIR=%s ./setup_board --board=%s "
-                                 "%s" % (pkgdir, options.board, force))
-    if ret != 0:
-      utils.main_logger.LogError("setup_board failed")
+                                 "./setup_board --board=%s --gcc_version=9999 "
+                                 "%s" % (options.board, force))
     utils.AssertTrue(ret == 0, "setup_board failed")
   else:
     utils.main_logger.LogOutput("Did not setup_board because it already exists")
