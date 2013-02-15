@@ -13,24 +13,46 @@ from automation.server.job_executer import JobExecuter
 
 
 class IdProducerPolicy(object):
+  """Produces series of unique integer IDs.
+
+  Example:
+      id_producer = IdProducerPolicy()
+      id_a = id_producer.GetNextId()
+      id_b = id_producer.GetNextId()
+      assert id_a != id_b
+  """
+
   def __init__(self):
     self._counter = 1
 
   def Initialize(self, home_prefix, home_pattern):
+    """Find first available ID based on a directory listing.
+
+    Args:
+      home_prefix: A directory to be traversed.
+      home_pattern: A regexp describing all files/directories that will be
+        considered. The regexp must contain exactly one match group with name
+        "id", which must match an integer number.
+
+    Example:
+      id_producer.Initialize(JOBDIR_PREFIX, 'job-(?P<id>\d+)')
+    """
     harvested_ids = []
 
-    for filename in os.listdir(home_prefix):
-      path = os.path.join(home_prefix, filename)
+    if os.path.isdir(home_prefix):
+      for filename in os.listdir(home_prefix):
+        path = os.path.join(home_prefix, filename)
 
-      if os.path.isdir(path):
-        match = re.match(home_pattern, filename)
+        if os.path.isdir(path):
+          match = re.match(home_pattern, filename)
 
-        if match:
-          harvested_ids.append(int(match.group('id')))
+          if match:
+            harvested_ids.append(int(match.group('id')))
 
     self._counter = max(harvested_ids or [0]) + 1
 
   def GetNextId(self):
+    """Calculates another ID considered to be unique."""
     new_id = self._counter
     self._counter += 1
     return new_id
