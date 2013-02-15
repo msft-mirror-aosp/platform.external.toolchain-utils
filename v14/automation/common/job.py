@@ -60,6 +60,10 @@ class Job:
     return self.status
 
   def AddRequiredFolder(self, job, src, dest):
+    if job not in self.dependencies:
+      self.dependencies.append(job)
+    if self not in job.dependents:
+      job.dependents.append(self)
     self.required_folders.append(RequiredFolder(job, src, dest))
 
   def GetRequiredFolders(self):
