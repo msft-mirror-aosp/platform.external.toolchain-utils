@@ -23,16 +23,17 @@ def Main():
   """The main function."""
   parser = optparse.OptionParser()
   parser.add_option("-c", "--chromeos_root", dest="chromeos_root",
+                    default="../..",
                     help="ChromeOS root checkout directory.")
   parser.add_option("-t", "--toolchain_root", dest="toolchain_root",
                     help="Toolchain root directory.")
-  parser.add_option("-b", "--board", dest="board",
+  parser.add_option("-b", "--board", dest="board", default="x86-generic",
                     help="board is the argument to the setup_board command.")
-  parser.add_option("-C", "--clean", dest="clean",
-                    action="store_true", default=False,
+  parser.add_option("-C", "--clean", dest="clean", default=False,
+                    action="store_true",
                     help="Uninstall the toolchain.")
-  parser.add_option("-f", "--force", dest="force",
-                    action="store_true", default=False,
+  parser.add_option("-f", "--force", dest="force", default=False,
+                    action="store_true",
                     help="Do an uninstall/install cycle.")
   parser.add_option("-i", "--incremental", dest="incremental",
                     help="The toolchain component that should be "
@@ -47,9 +48,6 @@ def Main():
   if options.toolchain_root is None or options.board is None:
     parser.print_help()
     sys.exit()
-
-  if options.chromeos_root is None:
-    options.chromeos_root = "../.."
 
   portage_flags = ""
   if options.binary == True:
@@ -69,15 +67,27 @@ def Main():
   version_number = utils.GetRoot(rootdir)[1]
   version_dir = "/home/${USER}/toolchain_root/" + version_number
   env += CreateEnvVarString(" PORT_LOGDIR", version_dir + "/logs")
-  env += CreateEnvVarString(" PKGDIR", version_dir + "/install")
+  env += CreateEnvVarString(" PKGDIR", version_dir + "/pkgs")
   env += CreateEnvVarString(" PORTAGE_BINHOST", version_dir +
                             "/cross/" + target)
   env += CreateEnvVarString(" PORTAGE_TMPDIR", version_dir + "/objects")
+  retval = 0
   if options.force == True:
-    BuildTC(options.chromeos_root, options.toolchain_root, env, target,
-            True, options.incremental, portage_flags)
-  BuildTC(options.chromeos_root, options.toolchain_root, env, target,
-          options.clean, options.incremental, portage_flags)
+    retval = BuildTC(options.chromeos_root, options.toolchain_root, env,
+                     target, True, options.incremental, portage_flags)
+    utils.AssertTrue(retval == 0, "Build toolchain failed!")
+  retval = BuildTC(options.chromeos_root, options.toolchain_root, env,
+                   target, options.clean, options.incremental, portage_flags)
+  utils.AssertTrue(retval == 0, "Build toolchain failed!")
+
+  if options.incremental is None and not options.clean:
+    install_dir = rootdir + "/install"
+    package_dir = (rootdir + "/pkgs/cross/" + target + "/" +
+                   "cross-" + target + "/")
+    retval = InstallTC(package_dir, install_dir)
+    utils.AssertTrue(retval == 0, "Installation of the toolchain failed!")
+
+  return retval
 
 
 def CreateCrossdevPortageFlags(portage_flags):
@@ -94,6 +104,14 @@ def CreateEnvVarString(variable, value):
 
 def EscapeQuoteString(string):
   return "\\\"" + string + "\\\""
+
+
+def InstallTC(package_dir, install_dir):
+  command = ("mkdir -p " + install_dir + ";")
+  command += ("for f in " + package_dir + "*; do tar xvf $f -C " + install_dir +
+              "; done")
+  retval = utils.RunCommand(command)
+  return retval
 
 
 def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
@@ -140,3 +158,4 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
 
 if __name__ == "__main__":
   Main()
+
