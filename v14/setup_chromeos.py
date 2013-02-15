@@ -10,6 +10,7 @@ particular release of ChromeOS.
 
 __author__ = "raymes@google.com (Raymes Khoury)"
 
+import getpass
 import optparse
 import os
 import sys
@@ -140,10 +141,14 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
   cmd_executer.RunCommands(commands)
 
   # Setup svn credentials for use inside the chroot
+  if getpass.getuser() == "mobiletc-prebuild":
+    chromium_username = "raymes"
+  else:
+    chromium_username = "$USER"
   cmd_executer.RunCommand("svn ls --config-option config:auth:password-stores= "
                           "--config-option "
                           "servers:global:store-plaintext-passwords=yes "
-                          "--username $USER@google.com "
+                          "--username " + chromium_username + "@google.com "
                           "svn://svn.chromium.org/leapfrog-internal "
                           "svn://svn.chromium.org/chrome "
                           "svn://svn.chromium.org/chrome-internal > /dev/null")
