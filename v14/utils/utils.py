@@ -12,6 +12,7 @@ import pickle
 import StringIO
 import sys
 import logger
+import hashlib
 
 
 def GetRoot(scr_name):
@@ -56,17 +57,15 @@ def Deserialize(argument):
 def FormatQuotedCommand(command):
   return command.replace("\"", "\\\"")
 
+def Md5File(filename, block_size=2**10):
+  f = open(filename, "r")
+  AssertExit(f is not None)
+  md5 = hashlib.md5()
+  while True:
+    data = f.read(block_size)
+    if not data:
+      break
+    md5.update(data)
+  f.close()
+  return md5.hexdigest()
 
-EXPECTCMD = '/usr/bin/expect -c "spawn %s %s; expect *Password:*; send -- \\"test0000\n\\"; interact;"'
-
-def ssh_cmd(sshargs):
-  """Guts of ssh_cmd"""
-
-  cmd = EXPECTCMD % ('ssh', sshargs)
-  return os.system(cmd)
-
-def scp_cmd(scpargs):
-  """Guts of scp_cmd"""
-
-  cmd = EXPECTCMD % ('scp', scpargs)
-  return os.system(cmd)

@@ -6,7 +6,6 @@
 
 Inputs:
     chromeos_root
-    toolchain_root
     board
     [chromeos/cpu/<benchname>|chromeos/browser/[pagecycler|sunspider]|chromeos/startup]
     hostname/IP of Chromeos machine
@@ -95,7 +94,7 @@ def RunStartupBenchmark(chromeos_root, board, bench, workdir, machine):
   return retval
 
 
-def RunCpuBenchmark(bench, workdir, machine):
+def RunCpuBenchmark(chromeos_root, bench, workdir, machine):
   """Run CPU benchmark.
 
   Args:
@@ -113,16 +112,17 @@ def RunCpuBenchmark(bench, workdir, machine):
   # Delete any existing run directories on machine.
   # Since this has exclusive access to the machine,
   # we do not worry about duplicates.
-  args = 'chronos@%s ' % machine
-  args += 'rm -rf /tmp/%s' % benchname
-  retval = utils.ssh_cmd(args)
+  args = 'rm -rf /tmp/%s' % benchname
+  retval = cmd_executer.CrosRunCommand(args, chromeos_root=chromeos_root,
+                                       machine=machine)
   if retval:
     return retval
 
   # Copy benchmark directory.
-  args = ' -r %s ' % benchdir
-  args += 'chronos@%s:/tmp' % machine
-  retval = utils.scp_cmd(args)
+  retval = cmd_executer.CopyFiles(benchdir, "/tmp",
+      chromeos_root=chromeos_root,
+      dest_machine=machine,
+      dest_cros=True)
   if retval:
     return retval
 
@@ -139,11 +139,10 @@ def RunCpuBenchmark(bench, workdir, machine):
 
   # Execute on remote machine
   # Capture output and process it.
-  sshargs = 'chronos@%s ' % machine
-  sshargs += 'cd /tmp/%s\;' % benchname
-  sshargs += 'time -p %s' % run_cmd
-  print sshargs
-  utils.ssh_cmd(sshargs)
+  sshargs = "'cd /tmp/%s;" % benchname
+  sshargs += "time -p %s'" % run_cmd
+  cmd_executer.CrosRunCommand(sshargs, chromeos_root=chromeos_root,
+                              machine=machine)
 
   return retval
 
@@ -155,8 +154,6 @@ def Main(argv):
   parser = optparse.OptionParser()
   parser.add_option("-c", "--chromeos_root", dest="chromeos_root",
                     help="Target directory for ChromeOS installation.")
-  parser.add_option("-t", "--toolchain_root", dest="toolchain_root",
-                    help="The gcctools directory of your P4 checkout.")
   parser.add_option("-m", "--machine", dest="machine",
                     help="The chromeos host machine.")
   parser.add_option("--workdir", dest="workdir", default="./perflab-bin",
@@ -175,9 +172,6 @@ def Main(argv):
   if options.chromeos_root is None:
     Usage(parser, "--chromeos_root must be set")
 
-  if options.toolchain_root is None:
-    Usage(parser, "--toolchain_root must be set")
-
   if options.board is None:
     Usage(parser, "--board must be set")
 
@@ -192,7 +186,8 @@ def Main(argv):
       comps = re.split('/', arg)
       benchname = comps[2]
       print "RUNNING %s" % benchname
-      retval = RunCpuBenchmark(arg, options.workdir, options.machine)
+      retval = RunCpuBenchmark(options.chromeos_root,
+                               arg, options.workdir, options.machine)
       if not found_err:
         found_err = retval
     elif re.match('chromeos/startup', arg):
