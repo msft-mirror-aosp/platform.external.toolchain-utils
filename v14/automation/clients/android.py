@@ -62,7 +62,7 @@ def Main(argv):
   parser = optparse.OptionParser()
   parser.add_option('--with-gcc-version',
                     dest='gcc_version',
-                    default='4.4.3',
+                    default='4.6',
                     action='store',
                     choices=AndroidToolchainNightlyClient.VALID_GCC_VERSIONS,
                     help='gcc version: %s.' % valid_gcc_versions_string)

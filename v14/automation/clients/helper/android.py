@@ -73,6 +73,8 @@ class CommandsFactory(object):
 
     self.build_type = build_type
     self.gcc_version = gcc_version
+    self.binutils_version = '2.21'
+    self.gold_version = '2.21'
     self.toolchain_prefix_dir = 'results/install-gcc-%s-%s' % (
         gcc_version, build_type)
     self.p4client = self._CreatePerforceClient()
@@ -80,11 +82,11 @@ class CommandsFactory(object):
   def _CreatePerforceClient(self):
     p4_dev_path = 'gcctools/google_vendor_src_branch'
     mobile_rel_branch = ('branches/'
-                         'mobile_toolchain_v14_release_branch/gcctools/'
+                         'mobile_toolchain_v15_release_branch/gcctools/'
                          'google_vendor_src_branch')
-    gcc_443_rel_path = ('branches/'
-                        'android_compiler_v14_release_branch/gcctools/'
-                        'google_vendor_src_branch/gcc/gcc-4.4.3/...')
+    gcc_443_rel_branch = ('branches/'
+                          'android_compiler_v14_release_branch/gcctools/'
+                          'google_vendor_src_branch')
 
     # Common views for tools
     p4view = perforce.View('depot2',
@@ -97,29 +99,29 @@ class CommandsFactory(object):
       p4view.add(mapping)
 
     # Add views for gdb
-    p4view.add(perforce.PathMapping(('%s/gdb/gdb-7.1.x-android/...'
-                                     % p4_dev_path),
-                                    'src/gdb/gdb-7.1.x-android/...'))
+    p4view.add(perforce.PathMapping(p4_dev_path, 'src',
+                                    'gdb/gdb-7.1.x-android/...'))
 
     # Add view for binutils for ld and gold
-    binutils_list = ['binutils/binutils-2.20.1-mobile',
-                     'binutils/binutils-20100303']
     if self.build_type is 'RELEASE':
       binutils_branch = mobile_rel_branch
     else:
       binutils_branch = p4_dev_path
-    for binutils in binutils_list:
-      p4view.add(perforce.PathMapping('%s/%s/...' % (binutils_branch, binutils),
-                                      'src/%s/...' % binutils))
+    p4view.add(perforce.PathMapping(binutils_branch, 'src',
+                                    ('binutils/binutils-%s/...' %
+                                     self.binutils_version)))
+    if self.binutils_version != self.gold_version:
+      p4view.add(perforce.PathMapping(binutils_branch, 'src',
+                                      ('binutils/binutils-%s/...' %
+                                       self.gold_version)))
 
     # Add view for gcc if gcc_version is '4.4.3'.
     if self.gcc_version == '4.4.3':
+      gcc443_path = 'gcc/gcc-4.4.3/...'
       if self.build_type is 'RELEASE':
-        p4view.add(perforce.PathMapping(gcc_443_rel_path,
-                                        'src/gcc/gcc-4.4.3/...'))
+        p4view.add(perforce.PathMapping(gcc_443_rel_branch, 'src', gcc443_path))
       else:
-        p4view.add(perforce.PathMapping('%s/gcc/gcc-4.4.3/...' % p4_dev_path,
-                                        'src/gcc/gcc-4.4.3/...'))
+        p4view.add(perforce.PathMapping(p4_dev_path, 'src', gcc443_path))
 
     return perforce.CommandsFactory(self.CHECKOUT_DIR, p4view)
 
@@ -168,7 +170,8 @@ class CommandsFactory(object):
     return command
 
   def BuildAndroidToolchain(self):
-    scripts = ScriptsFactory(self.gcc_version)
+    scripts = ScriptsFactory(self.gcc_version, self.binutils_version,
+                             self.gold_version)
     return scripts.BuildAndroidToolchain(self.toolchain_prefix_dir,
                                          self.CHECKOUT_DIR,
                                          self.TOOLCHAIN_BUILD_DIR,
@@ -210,19 +213,17 @@ class CommandsFactory(object):
 
 
 class ScriptsFactory(object):
-  def __init__(self, gcc_version):
+  def __init__(self, gcc_version, binutils_version, gold_version):
     self._gcc_version = gcc_version
+    self._binutils_version = binutils_version
+    self._gold_version = gold_version
 
   def BuildAndroidToolchain(self, toolchain_prefix_dir, checkout_dir,
                             toolchain_build_dir, androidtc_src_dir):
     if self._gcc_version == '4.4.3':
-      gold_command = '--enable-gold=both/gold'
+      gold_option = 'both/gold'
     else:
-      # Our binutils does not accept 'default' value. Our toolchain
-      # needs to be modified. Before that happens, we give up
-      # linker for now.
-      #gold_command = '--enable-gold=default'
-      gold_command = '--enable-gold'
+      gold_option = 'default'
 
     return cmd.Shell(
         'build_androidtoolchain.sh',
@@ -230,9 +231,10 @@ class ScriptsFactory(object):
         '--build-path=%s' % os.path.join('$JOB_TMP', toolchain_build_dir),
         '--install-prefix=%s' % os.path.join('$JOB_TMP', toolchain_prefix_dir),
         '--target=arm-linux-androideabi',
-        gold_command,
+        '--enable-gold=%s' % gold_option,
         '--with-gcc-version=%s' % self._gcc_version,
-        '--with-binutils-version=2.20.1-mobile',
+        '--with-binutils-version=%s' % self._binutils_version,
+        '--with-gold-version=%s' % self._gold_version,
         '--with-gdb-version=7.1.x-android',
         '--log-path=%s/logs' % '$JOB_HOME',
         '--android-sysroot=%s' %
