@@ -11,7 +11,6 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import getpass
 import optparse
-import os
 import re
 import socket
 import sys
@@ -43,12 +42,16 @@ def DeleteP4Client(client_name):
 
 def SyncP4Client(client_name, checkoutdir, revision=None):
   command = "cd " + checkoutdir
-  command += "&& g4 sync ..."
+  if revision:
+    command += " && g4 sync ...@" + revision
+  else:
+    command += " && g4 sync ..."
   retval = utils.RunCommand(command)
   return retval
 
 
 def GetP4PathsForTool(client_name, tool, branch_path):
+  """Returns the perforce paths for a tool {gcc|binutils}."""
   p4_paths = []
   if branch_path[-1] == "/":
     branch_path = branch_path[0:-1]
@@ -70,10 +73,13 @@ def GetGitRepoForTool(tool):
   # This should return the correct server repository when the script
   # is fully done.
   if tool == "gcc":
-    return "~/a/gittest/test5"
+    return "ssh://git@gitrw.chromium.org:9222/gcc.git"
+  elif tool == "binutils":
+    return "ssh://git@gitrw.chromium.org:9222/binutils.git"
 
 
 def SetupBranch(checkoutdir, branch_name):
+  """Sets up either the master or another branch in the local repo."""
   if branch_name == "master":
     return 0
   command = "cd " + checkoutdir
@@ -91,6 +97,7 @@ def SetupBranch(checkoutdir, branch_name):
 
 
 def CreateGitClient(git_repo, checkoutdir, branch_name):
+  """Creates a git client with in a dir with a branch."""
   command = "cd " + checkoutdir
   command += " && git clone -v " + git_repo + " ."
   retval = utils.RunCommand(command)
@@ -107,7 +114,7 @@ def CreateGitClient(git_repo, checkoutdir, branch_name):
 
 def GetLatestCL(client_name, checkoutdir):
   command = "cd " + checkoutdir
-  command += " && g4 changes -m1"
+  command += " && g4 changes -m1 @" + client_name
   (status, stdout, stderr) = utils.RunCommand(command, True)
   if status != 0:
     return -1
@@ -132,6 +139,7 @@ def AddGitIgnores(checkoutdir):
 
 
 def PushToRemoteGitRepo(checkoutdir, branch_name, message_file, push_args):
+  """Do the actualy git push to remote repository."""
   # Add the stuff we want git to ignore for the add.
   AddGitIgnores(checkoutdir)
   command = "cd " + checkoutdir
@@ -160,6 +168,8 @@ def Main():
                     help="Path to file containing the commit message.")
   parser.add_option("-r", "--remote", dest="remote",
                     help="Optional location of the remote git repository.")
+  parser.add_option("-c", "--changelist", dest="changelist",
+                    help="Optional changelist to sync to.")
 
   options = parser.parse_args()[0]
 
@@ -190,7 +200,7 @@ def Main():
   utils.AssertTrue(status == 0, "Could not create p4 client")
   # If the user presses Ctrl-C, make sure to clean up p4 client.
   try:
-    status = SyncP4Client(client_name, temp_dir)
+    status = SyncP4Client(client_name, temp_dir, options.changelist)
     utils.AssertTrue(status == 0, "Could not sync p4 client")
     if not options.message_file:
       changelist = GetLatestCL(client_name, temp_dir)
