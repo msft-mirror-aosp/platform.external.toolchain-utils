@@ -7,7 +7,7 @@
 __author__ = "raymes@google.com (Raymes Khoury)"
 
 import sys
-
+from utils import logger
 
 PASS = "pass"
 FAIL = "fail"
@@ -18,19 +18,23 @@ def Usage():
   sys.exit(1)
 
 
-def parse_results(results_filenames):
+def ParseResults(results_filenames):
   results = []
   for filename in results_filenames:
-    results_file = open(filename, 'rb')
-    for line in results_file:
-      if line.strip() != "":
-        results.append(line.strip().split("\t"))
-    results_file.close()
+    try:
+      results_file = open(filename, 'rb')
+      for line in results_file:
+        if line.strip() != "":
+          results.append(line.strip().split("\t"))
+      results_file.close()
+    except IOError:
+      logger.GetLogger().LogWarning("Could not open results file: " +
+                                    filename)
   return results
 
-def ParseResults(baseline_file, new_result_files):
-  baseline_results = parse_results([baseline_file])
-  new_results = parse_results(new_result_files)
+def CompareResults(baseline_file, new_result_files):
+  baseline_results = ParseResults([baseline_file])
+  new_results = ParseResults(new_result_files)
 
   test_status = {}
 
@@ -52,7 +56,7 @@ def ParseResults(baseline_file, new_result_files):
 
 def GenerateResultsStatistics(baseline_file, new_result_files):
   (baseline_results, new_results,
-   test_status, regressions) = ParseResults(baseline_file, new_result_files)
+   test_status, regressions) = CompareResults(baseline_file, new_result_files)
 
   num_tests_executed = len(new_results)
   num_regressions = len(regressions)
@@ -68,7 +72,7 @@ def GenerateResultsStatistics(baseline_file, new_result_files):
 
 def GenerateResultsReport(baseline_file, new_result_files):
   (baseline_results, new_results,
-   test_status, regressions) = ParseResults(baseline_file, new_result_files)
+   test_status, regressions) = CompareResults(baseline_file, new_result_files)
 
   num_tests_executed = len(new_results)
   num_regressions = len(regressions)

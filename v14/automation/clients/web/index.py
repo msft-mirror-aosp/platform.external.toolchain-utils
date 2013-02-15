@@ -8,6 +8,7 @@ import xmlrpclib
 import sys
 import time
 import getpass
+import cgi
 
 if DEBUG:
   import cgitb
@@ -20,6 +21,8 @@ from utils import utils
 import machine
 import job_group
 import report_generator
+
+global server
 
 print "Content-Type: text/html\n"
 print
@@ -118,16 +121,8 @@ def get_test_summary(group):
   if (group.GetStatus() != job_group.STATUS_SUCCEEDED and
       group.GetStatus() != job_group.STATUS_FAILED):
       return ""
-  try:
-    report = open(group.GetReportDest(), 'rb')
-    report.readline()
-    num_executed = report.readline().split(":")[1].strip()
-    num_passes = report.readline().split(":")[1].strip()
-    num_failures = report.readline().split(":")[1].strip()
-    num_regressions = report.readline().split(":")[1].strip()
-  except IOError, e:
-    print e
-    return "Missing baseline.csv or results.csv"
+  results = utils.Deserialize(server.GetReport(group.GetID(), True))
+  (num_executed, num_passes, num_failures, num_regressions) = results
   return "Passes: %s Failures: %s Regressions: %s" % (num_passes,
                                                       num_failures,
                                                       num_regressions)
@@ -137,12 +132,21 @@ def get_report_link(group):
   return get_link("index.py?report=%s" % group.GetID(), get_test_summary(group))
 
 print_page_header("Automated build.")
-print_header("Automated build.")
 
 server = xmlrpclib.Server("http://localhost:8000")
 groups = utils.Deserialize(server.GetAllJobGroups())
 
 
+form = cgi.FieldStorage()
+if "report" in form:
+  current_id = int(form["report"].value)
+  report = utils.Deserialize(server.GetReport(current_id))
+  print "<pre>"
+  print report
+  print "</pre>"
+  exit(0)
+
+print_header("Automated build.")
 print_table_header(["ID", "Description", "Time Submitted", "Status", "Tests", "Show/Hide Jobs"])
 for group in groups[::-1]:
   print_group_row(group)

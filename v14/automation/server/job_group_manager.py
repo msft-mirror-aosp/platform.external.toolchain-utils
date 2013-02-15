@@ -22,6 +22,13 @@ class JobGroupManager:
     self.job_group_counter = 0
     self.job_condition = threading.Condition()
 
+  def GetJobGroup(self, job_group_id):
+    for job_group in self.all_job_groups:
+      if job_group.GetID() == job_group_id:
+        return job_group
+
+    return None
+
   def GetAllJobGroups(self):
     self.job_condition.acquire()
     res = copy.deepcopy(self.all_job_groups)
@@ -38,9 +45,13 @@ class JobGroupManager:
                                                      job_group.GetHomeDir())
     # Copy baseline csv
     if job_group.GetBaselineFileSrc() is not None:
-      (command_executer.GetCommandExecuter().
-       CopyFiles(job_group.GetBaselineFileSrc(),
-                 job_group.GetBaselineFileDest(), recursive=False))
+      res = (command_executer.GetCommandExecuter().
+             CopyFiles(job_group.GetBaselineFileSrc(),
+                       job_group.GetBaselineFileDest(), recursive=False))
+      if res != 0:
+        logger.GetLogger().LogWarning("Could not copy baseline.csv")
+    else:
+      logger.GetLogger().LogWarning("No baseline.csv specified")
 
     job_group.SetTimeSubmitted(time.time())
     job_group.SetStatus(automation.common.job_group.STATUS_EXECUTING)
@@ -108,7 +119,7 @@ class JobGroupManager:
   def FinishedJobGroup(self, job_group):
     # Read all results files and compress into a single csv that can be used
     # as the next baseline.
-    summary_file = open(job_group.GetResultsFileDest(), 'w')
+    summary_file = open(job_group.GetResultsFileDest(), "w")
     for job in job_group.GetJobs():
       for lowlevel_log in job.GetLowLevelLogsSrc():
         filename = lowlevel_log.split("/")[-1]
@@ -120,9 +131,11 @@ class JobGroupManager:
           logger.GetLogger().LogWarning(e)
     summary_file.close()
     try:
-      report_file = open(job_group.GetReportDest(), 'w')
-      report = report_generator.GenerateResultsReport(job_group.GetBaselineFileDest(),
-                                                      [job_group.GetResultsFileDest()])
+      report_file = open(job_group.GetReportDest(), "w")
+      baseline_filename = job_group.GetBaselineFileDest()
+      results_filename = job_group.GetResultsFileDest()
+      report = report_generator.GenerateResultsReport(baseline_filename,
+                                                      [results_filename])
       report_file.write(report)
       report_file.close
     except IOError, e:

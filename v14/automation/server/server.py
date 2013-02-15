@@ -33,6 +33,25 @@ class Server:
   def KillJobGroup(self, job_group_id):
     self.job_manager.KillJobGroup(utils.Deserialize(job_group_id))
 
+  def GetReport(self, job_group_id, summary=False):
+    job_group = self.job_group_manager.GetJobGroup(job_group_id)
+    if summary == False:
+      report = open(job_group.GetReportDest(), 'rb')
+      result = "".join(report.readlines())
+      report.close()
+      return utils.Serialize(result)
+    else:
+      report = open(job_group.GetReportDest(), 'rb')
+      report.readline()
+      num_executed = report.readline().split(":")[1].strip()
+      num_passes = report.readline().split(":")[1].strip()
+      num_failures = report.readline().split(":")[1].strip()
+      num_regressions = report.readline().split(":")[1].strip()
+      report.close()
+      return utils.Serialize((num_executed, num_passes, num_failures,
+                             num_regressions))
+
+
   def StartServer(self):
     logger.GetLogger().LogOutput("Starting server...")
     self.job_manager.StartJobManager()
