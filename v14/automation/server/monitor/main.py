@@ -1,6 +1,7 @@
 #!/usr/bin/python2.6
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
+#
 
 import BaseHTTPServer
 import cStringIO as StringIO
@@ -16,152 +17,225 @@ from automation.common import job as job_const
 from utils import html_tools
 
 
-def PrintAutomationHeader(out):
-  out.write(html_tools.GetHeader('Automated Build'))
-  out.write(html_tools.GetParagraph('%s | %s' % (
-      html_tools.GetLink('/', 'Job Groups'),
-      html_tools.GetLink('/results', 'Results'))))
+class HtmlFactory(object):
 
+  @staticmethod
+  def GetTestSummary(job):
+    if job.status == job_const.STATUS_RUNNING:
+      return '<tt>Running job...</tt>'
+    if job.status == job_const.STATUS_NOT_EXECUTED:
+      return '<tt>Not executed</tt>'
 
-def PrintGroupRow(out, group, details=True):
-  out.write('<tr>')
-  out.write(html_tools.GetTableCell(group.id))
-  out.write(html_tools.GetTableCell(group.label))
-  out.write(html_tools.GetTableCell(time.ctime(group.time_submitted)))
-  out.write(html_tools.GetTableCell(group.status))
+    try:
+      stats = {}
 
-  if details:
-    out.write(html_tools.GetTableCell(GetJobsLink(group.id, 'Details...')))
-  out.write('</tr>')
+      with open(job.test_report_summary_filename, 'rb') as report:
+        for line in report:
+          name, val = [word.lower().strip() for word in line.split(':')]
+          stats[name] = val
 
+      text = ' '.join(['Passes: %s' % stats['tests passing'],
+                       'Failures: %s' % stats['tests failing'],
+                       'Regressions: %s' % stats['regressions']])
 
-def GetJobsLink(job_group_id, text):
-  return html_tools.GetLink('/job-group/%d' % job_group_id, text)
+      return html_tools.GetLink('/job/%d/report' % job.id, text)
+    except IOError:
+      return '<tt>Summary not found</tt>'
+    except KeyError:
+      return '<tt>Summary corrupt</tt>'
+    except ValueError:
+      return '<tt>Summary corrupt</tt>'
 
+  @staticmethod
+  def GetJobInfo(job):
+    machines = ['<tt>%s</tt>' % machine.hostname for machine in job.machines]
+    parents = [html_tools.GetLink('/job/%d' % child.id, '[%d]' % child.id)
+               for child in job.children] or ['None']
 
-def GetTestSummary(job):
-  if job.status == job_const.STATUS_RUNNING:
-    return 'Running job...'
-  if job.status == job_const.STATUS_NOT_EXECUTED:
-    return 'Not executed.'
+    children = [html_tools.GetLink('/job/%d' % parent.id, '[%d]' % parent.id)
+                for parent in job.parents] or ['None']
 
-  try:
-    stats = {}
+    rows = [
+        ['Label', '<tt>%s</tt>' % job.label],
+        ['JobGroup', html_tools.GetLink(
+            '/job-group/%d' % job.group.id, '[%d]' % job.group.id)],
+        ['Parents', ' '.join(parents)],
+        ['Children', ' '.join(children)],
+        ['Total Time', '<tt>%s</tt>' % job.GetTotalTime()],
+        ['Machines', ', '.join(machines)],
+        ['Directory', '<tt>%s</tt>' % job.work_dir],
+        ['Command', '<pre>%s</pre>' % job.PrettyFormatCommand()]]
 
-    with open(job.test_report_summary_filename, 'rb') as report:
-      for line in report:
-        name, val = [word.lower().strip() for word in line.split(':')]
-        stats[name] = val
+    return html_tools.GetTable(['Attribute', 'Value'], rows)
 
-    text = 'Passes: %s Failures: %s Regressions: %s' % (stats['tests passing'],
-                                                        stats['tests failing'],
-                                                        stats['regressions'])
-    return html_tools.GetLink('/job/%d/report' % job.id, text)
-  except IOError:
-    return 'Summary not found'
-  except KeyError:
-    return 'Summary corrupt'
-  except ValueError:
-    return 'Summary corrupt'
+  @staticmethod
+  def GetJobTimeline(job):
+    rows = []
+
+    for event in job.status_events:
+      rows.append(['<tt>%s</tt>' % event.old_status.split('_', 1)[1],
+                   '<tt>%s</tt>' % event.new_status.split('_', 1)[1],
+                   '<tt>%s</tt>' % time.ctime(event.event_time)])
+
+    return html_tools.GetTable(
+        ['From Status', 'To Status', 'Transition Time'], rows)
+
+  @staticmethod
+  def GetJobListReport(jobs):
+    headers = ['Job ID', 'Label', 'Machines', 'Status', 'Total Time',
+               'Test Report']
+    rows = []
+
+    for job in jobs:
+      machines = ['<tt>%s</tt>' % machine.hostname for machine in job.machines]
+
+      rows.append([html_tools.GetLink('/job/%d' % job.id, '[%d]' % job.id),
+                   '<tt>%s</tt>' % job.label,
+                   '<br/>'.join(machines),
+                   '<tt>%s</tt>' % job.status.split('_', 1)[1],
+                   '<tt>%s</tt>' % job.GetTotalTime(),
+                   HtmlFactory.GetTestSummary(job)])
+
+    return html_tools.GetTable(headers, rows)
+
+  @staticmethod
+  def GetJobGroupInfo(group):
+    rows = [
+        ['Label', '<tt>%s</tt>' % group.label],
+        ['Time submitted', '<tt>%s</tt>' % time.ctime(group.time_submitted)],
+        ['Status', '<tt>%s</tt>' % group.status.split('_', 1)[1]],
+        ['Directory', '<tt>%s</tt>' % group.home_dir],
+        ['Cleanup on completion', '<tt>%s</tt>' % group.cleanup_on_completion],
+        ['Cleanup on failure', '<tt>%s</tt>' % group.cleanup_on_failure]]
+
+    return html_tools.GetTable(['Attribute', 'Value'], rows)
+
+  @staticmethod
+  def GetJobGroupListReport(groups):
+    headers = ['Group ID', 'Label', 'Time Submitted', 'Status']
+    rows = []
+
+    for group in groups:
+      rows.append([
+          html_tools.GetLink('/job-group/%d' % group.id, '[%d]' % group.id),
+          '<tt>%s</tt>' % group.label,
+          '<tt>%s</tt>' % time.ctime(group.time_submitted),
+          '<tt>%s</tt>' % group.status.split('_', 1)[1]])
+
+    return html_tools.GetTable(headers, rows)
 
 
 class BasePageHandler(object):
   def __init__(self):
     self._server = xmlrpclib.Server('http://localhost:8000')
 
+  def Render(self):
+    try:
+      output = StringIO.StringIO()
+
+      self._PrintHeader(output, error=False)
+      self._Render(output)
+      self._PrintFooter(output)
+
+      handled_with_success = True
+    except:
+      output = StringIO.StringIO()
+
+      self._PrintHeader(output, error=True)
+      self._PrintTraceback(output)
+      self._PrintFooter(output)
+
+      handled_with_success = False
+
+    response = output.getvalue()
+    output.close()
+
+    return response, handled_with_success
+
+  def _PrintTraceback(self, out):
+    out.write('<pre>')
+    out.write(traceback.format_exc().replace('\n', '<br/>'))
+    out.write('</pre>')
+
+  def _PrintHeader(self, out, error=False):
+    out.write(html_tools.GetPageHeader('Monitor'))
+
+    if not error:
+      out.write(html_tools.GetHeader('Automation Monitor'))
+      out.write(html_tools.GetParagraph('%s | %s | %s' % (
+          html_tools.GetLink('/', 'Job Groups'),
+          html_tools.GetLink('/results', 'Results'),
+          html_tools.GetLink('/filter', 'Filter'))))
+    else:
+      out.write(html_tools.GetHeader('Server error:'))
+
+  def _PrintFooter(self, out):
+    out.write(html_tools.GetFooter())
+
+
+class JobPageHandler(BasePageHandler):
+  def __init__(self, job_id):
+    BasePageHandler.__init__(self)
+
+    self._job_id = int(job_id)
+
+  def _Render(self, out):
+    job = pickle.loads(self._server.GetJob(self._job_id))
+
+    out.write(html_tools.GetHeader('Job %d' % job.id, 2))
+
+    log_link = '/job/%s/log/' % job.id
+
+    out.write(html_tools.GetParagraph('%s | %s | %s | %s' % (
+        html_tools.GetLink('/job/%d/report' % job.id, 'Report'),
+        html_tools.GetLink(log_link + 'out', 'Output Log'),
+        html_tools.GetLink(log_link + 'err', 'Error Log'),
+        html_tools.GetLink(log_link + 'cmd', 'Commands Log'))))
+
+    out.write(HtmlFactory.GetJobInfo(job))
+
+    out.write(html_tools.GetHeader("Timeline of status events:", 3))
+    out.write(HtmlFactory.GetJobTimeline(job))
+
 
 class JobGroupPageHandler(BasePageHandler):
   def __init__(self, job_group_id):
     BasePageHandler.__init__(self)
+
     self._job_group_id = int(job_group_id)
 
-  def __call__(self, out):
+  def _Render(self, out):
     group = pickle.loads(self._server.GetJobGroup(self._job_group_id))
 
-    PrintAutomationHeader(out)
+    out.write(html_tools.GetHeader('Job Group %d' % group.id, 2))
+    out.write(HtmlFactory.GetJobGroupInfo(group))
 
-    out.write(html_tools.GetHeader(
-        'Job Group %s (%s)' % (group.id, group.label), 2))
-    out.write(html_tools.GetTableHeader(
-        ['ID', 'Label', 'Time Submitted', 'Status']))
-
-    PrintGroupRow(out, group, False)
-
-    out.write(html_tools.GetTableFooter())
     out.write(html_tools.GetHeader('Jobs', 2))
-    out.write(html_tools.GetTableHeader(
-        ['ID', 'Label', 'Command', 'Machines', 'Job Directory', 'Dependencies',
-         'Status', 'Logs', 'Test Report']))
-
-    for job in group.jobs:
-      self.PrintJobRow(out, job)
-
-    out.write(html_tools.GetTableFooter())
-
-  def PrintJobRow(self, out, job):
-    out.write('<tr>')
-    out.write(html_tools.GetTableCell(job.id))
-    out.write(html_tools.GetTableCell(job.label))
-    out.write(html_tools.GetTableCell(job.PrettyFormatCommand()))
-    machines = ' '.join([machine.hostname for machine in job.machines])
-    out.write(html_tools.GetTableCell(machines))
-    out.write(html_tools.GetTableCell(job.work_dir))
-    deps = ' '.join([str(child.id) for child in job.children])
-    out.write(html_tools.GetTableCell(deps))
-    out.write(html_tools.GetTableCell('%s\n%s' % (job.status,
-                                                  job.GetTotalTime())))
-    log_link = '/job/%s/log/' % job.id
-    out_link = log_link + 'out'
-    err_link = log_link + 'err'
-    cmd_link = log_link + 'cmd'
-    out.write(html_tools.GetTableCell(
-        '%s %s %s' % (html_tools.GetLink(out_link, '[out]'),
-                      html_tools.GetLink(err_link, '[err]'),
-                      html_tools.GetLink(cmd_link, '[cmd]'))))
-    out.write(html_tools.GetTableCell(GetTestSummary(job)))
-    out.write('</tr>')
+    out.write(HtmlFactory.GetJobListReport(group.jobs))
 
 
 class ResultsPageHandler(BasePageHandler):
-  def __call__(self, out):
+  def _Render(self, out):
     groups = pickle.loads(self._server.GetAllJobGroups())
-    label = 'nightly_client'
 
-    PrintAutomationHeader(out)
+    unique_labels = sorted(set(group.label for group in groups))
 
-    out.write(html_tools.GetHeader('Results (%s)' % label, 2))
+    for label in unique_labels:
+      out.write(html_tools.GetHeader('Results for <tt>%s</tt>' % label, 2))
 
-    tests = ['Group ID', 'Time Submitted']
+      filtered = [group for group in groups if group.label == label]
 
-    for group in groups:
-      if group.label == label:
-        for job in group.jobs:
-          if not job.label in tests:
-            tests.append(job.label)
+      for group in filtered:
+        headers = ['Group ID', 'Time Submitted']
+        headers.extend(job.label for job in group.jobs)
 
-    out.write(html_tools.GetTableHeader(tests))
+        row = [
+            html_tools.GetLink('/job-group/%d' % group.id, '[%d]' % group.id),
+            time.ctime(group.time_submitted)]
+        row.extend([HtmlFactory.GetTestSummary(job) for job in group.jobs])
 
-    for group in groups:
-      if group.label == label:
-        self.PrintResultRow(out, group, tests)
-
-    out.write(html_tools.GetTableFooter())
-
-  def PrintResultRow(self, out, group, tests):
-    out.write('<tr>')
-    out.write(html_tools.GetTableCell(GetJobsLink(group.id, group.id)))
-    out.write(html_tools.GetTableCell(time.ctime(group.time_submitted)))
-
-    for test in tests:
-      found = False
-      for job in group.jobs:
-        if job.label == test:
-          out.write(html_tools.GetTableCell(GetTestSummary(job)))
-          found = True
-      if not found:
-        out.write(html_tools.GetTableCell(''))
-
-    out.write('</tr>')
+        out.write(html_tools.GetTable(headers, [row]))
+        out.write('<br/>')
 
 
 class ReportPageHandler(BasePageHandler):
@@ -170,13 +244,20 @@ class ReportPageHandler(BasePageHandler):
 
     self._job_id = int(job_id)
 
-  def __call__(self):
+  def _Render(self, out):
     job = pickle.loads(self._server.GetJob(self._job_id))
 
     assert job, 'No job with number %d.' % self._job_id
 
-    with open(job.test_report_filename, 'rb') as report:
-      self.write(report.read())
+    out.write(html_tools.GetHeader('Job %d' % job.id, 2))
+    out.write(html_tools.GetHeader('Job report', 3))
+
+    try:
+      with open(job.test_report_filename, 'rb') as report:
+        out.write(report.read())
+    except IOError as ex:
+      out.write('<b>Error:</b> Could not access: <tt>%s</tt> file.' %
+                ex.filename)
 
 
 class LogPageHandler(BasePageHandler):
@@ -188,37 +269,87 @@ class LogPageHandler(BasePageHandler):
 
     assert self._log_type in ['out', 'cmd', 'err']
 
-  def __call__(self, out):
+  def _Render(self, out):
     job = pickle.loads(self._server.GetJob(self._job_id))
 
     assert job, 'No job with number %d.' % self._job_id
 
     filename = getattr(job, 'log_%s_filename' %  self._log_type)
+
+    out.write(html_tools.GetHeader('Job %d' % job.id, 2))
+
+    names = {'out': 'Output', 'cmd': 'Commands', 'err': 'Error'}
+
+    out.write(html_tools.GetHeader('%s Log' % names[self._log_type], 3))
+
     out.write('<pre>')
     with open(filename, 'rb') as report:
       out.write(report.read())
     out.write('</pre>')
 
 
-class DefaultPageHandler(BasePageHandler):
-  def __call__(self, out):
-    PrintAutomationHeader(out)
-    out.write(html_tools.GetHeader('Job Groups', 2))
-    out.write(html_tools.GetTableHeader(
-        ['ID', 'Label', 'Time Submitted', 'Status', 'Details']))
+class FilterPageHandler(BasePageHandler):
+  def __init__(self, filter_by=None, value=None):
+    BasePageHandler.__init__(self)
 
+    self._filter_by = filter_by
+    self._value = value
+
+  def PrintFilterChoices(self, out):
+    out.write(html_tools.GetHeader('Filter by:', 3))
+
+    if self._filter_by == 'client_name':
+      by_client_name = '<b>Client Name</b>'
+    else:
+      by_client_name = html_tools.GetLink('/filter/client_name', 'Client Name')
+
+    out.write(html_tools.GetList([by_client_name]))
+
+  def PrintFilterByClientName(self, out):
     groups = pickle.loads(self._server.GetAllJobGroups())
 
-    for group in reversed(groups):
-      PrintGroupRow(out, group)
-    out.write(html_tools.GetTableFooter())
+    if not self._value:
+      out.write(html_tools.GetHeader('Filter by client name:', 3))
+
+      client_names = []
+
+      for label in sorted(set(group.label for group in groups)):
+        client_names.append(html_tools.GetLink(
+            '/filter/client_name/%s' % label, label))
+
+      out.write(html_tools.GetList(client_names))
+    else:
+      filtered = [group for group in groups if group.label == self._value]
+
+      out.write(html_tools.GetHeader(
+          'Job groups with client name <tt>%s</tt>:' % self._value, 3))
+      out.write(HtmlFactory.GetJobGroupListReport(filtered))
+
+  def _Render(self, out):
+    self.PrintFilterChoices(out)
+
+    if self._filter_by == 'client_name':
+      self.PrintFilterByClientName(out)
+    elif self._filter_by:
+      out.write(
+          html_tools.GetHeader('Unknown filter: "%s"' % self._filter_by, 3))
+
+
+class DefaultPageHandler(BasePageHandler):
+  def _Render(self, out):
+    groups = reversed(pickle.loads(self._server.GetAllJobGroups()))
+
+    out.write(html_tools.GetHeader('Job Groups', 2))
+    out.write(HtmlFactory.GetJobGroupListReport(groups))
 
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
   handlers = [
       ('/job-group/(?P<job_group_id>\d+)', JobGroupPageHandler),
       ('/job/(?P<job_id>\d+)/log/(?P<log_type>\w+)', LogPageHandler),
-      ('/jon/(?P<job_id>\d+)/report', ReportPageHandler),
+      ('/job/(?P<job_id>\d+)/report', ReportPageHandler),
+      ('/job/(?P<job_id>\d+)', JobPageHandler),
+      ('/filter(/(?P<filter_by>\w+)(/(?P<value>\w+))?)?', FilterPageHandler),
       ('/results', ResultsPageHandler),
       ('/', DefaultPageHandler)]
 
@@ -243,17 +374,11 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       else:
         logging.debug('Regexp "%s" not matched', path_re)
 
-    output = StringIO.StringIO()
-    output.write(html_tools.GetPageHeader('Automated build.'))
-    try:
-      handler(output)
-    except:
-      output.write(traceback.format_exc().replace('\n', '<br/>'))
-    output.write(html_tools.GetFooter())
-    response = output.getvalue()
-    output.close()
+    response, handled_with_success = handler.Render()
 
-    self.send_response(200)
+    status_code = (handled_with_success and 200) or 500
+
+    self.send_response(status_code)
     self.send_header('Content-type', 'text/html')
     self.end_headers()
     self.wfile.write(response)

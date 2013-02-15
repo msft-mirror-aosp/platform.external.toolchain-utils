@@ -1,5 +1,8 @@
-def GetContentType():
-  return "Content-Type: text/html\n\n"
+#!/usr/bin/python2.6
+#
+# Copyright 2010 Google Inc. All Rights Reserved.
+#
+
 
 def GetPageHeader(page_title):
   return """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
@@ -29,51 +32,62 @@ function displayRow(id){
 
 """ % page_title
 
+
 def GetListHeader():
   return "<ul>"
+
 
 def GetListItem(text):
   return "<li>%s</li>" % text
 
+
 def GetListFooter():
   return "</ul>"
+
+
+def GetList(items):
+  return "<ul>%s</ul>" % "".join(["<li>%s</li>" % item for item in items])
+
 
 def GetParagraph(text):
   return "<p>%s</p>" % text
 
+
 def GetFooter():
-  return """</body> 
-</html>"""
+  return "</body>\n</html>"
+
 
 def GetHeader(text, h=1):
-  return "<h%s>%s</h%s>" % (str(h), text, str(h))
+  return "<h%s>%s</h%s>" % (h, text, h)
 
-def GetTableHeader(columns):
-  res = "<table>"
-  res += "<tr>"
-  for column in columns:
-    res += "<th>%s</th>" % str(column)
-  res += "</tr>"
-  return res
+
+def GetTableHeader(headers):
+  row = "".join(["<th>%s</th>" % header for header in headers])
+  return "<table><tr>%s</tr>" % row
+
 
 def GetTableFooter():
   return "</table>"
 
+
 def FormatLineBreaks(text):
-  ret = text
-  ret = ret.replace("\n", "<br>")
-  return ret
+  return text.replace("\n", "<br/>")
+
 
 def GetTableCell(text):
-  text = FormatLineBreaks(str(text))
-  return "<td>%s</td>" % text
-  
+  return "<td>%s</td>" % FormatLineBreaks(str(text))
+
+
 def GetTableRow(columns):
-  res = "<tr>"
-  for column in columns:
-    res += GetTableCell(column)
-  res += "<tr/>"
-  return res
-  
+  return "<tr>%s</tr>" % "\n".join([GetTableCell(column) for column in columns])
+
+
+def GetTable(headers, rows):
+  table = [GetTableHeader(headers)]
+  table.extend([GetTableRow(row) for row in rows])
+  table.append(GetTableFooter())
+  return "\n".join(table)
+
+
 def GetLink(link, text):
   return "<a href='%s'>%s</a>" % (link, text)
