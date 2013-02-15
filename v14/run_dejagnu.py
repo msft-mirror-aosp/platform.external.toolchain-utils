@@ -99,6 +99,22 @@ def Main(argv):
                                 full_mount=True))
   utils.AssertWarning(ret == 0, "Failed to run DejaGNU tests successfully")
 
+  # Copy results to a not-so-deep location
+  results_dir = ("/usr/local/toolchain_root/output/objects/cross/"
+                 "%s/portage/cross-%s/gcc-9999/work/build/gcc/testsuite/"
+                   % (target, target))
+  new_results_dir = "/usr/local/toolchain_root/output/dejagnu/"
+  ret = (build_chromeos.
+         ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
+                                "mkdir -p %s ; cp %s/g++/g++.log %s ; "
+                                "cp %s/gcc/gcc.log %s" %
+                                (new_results_dir, results_dir, new_results_dir,
+                                 results_dir, new_results_dir)))
+
+  utils.AssertWarning(ret == 0, "Failed to copy results to final destination.")
+
+
+
 
 
 if __name__ == "__main__":
