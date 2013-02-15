@@ -22,19 +22,20 @@ class Machine(object):
     self.uses = 0
     self.locked = False
 
-  def Acquire(self, lock):
+  def Acquire(self, exclusively):
     assert not self.locked
 
-    if lock:
+    if exclusively:
       self.locked = True
     self.uses += 1
 
   def Release(self):
     assert self.uses > 0
 
-    if self.uses == 0:
-      self.locked = False
     self.uses -= 1
+
+    if not self.uses:
+      self.locked = False
 
   def __str__(self):
     return "\n".join(["Machine Information:",
