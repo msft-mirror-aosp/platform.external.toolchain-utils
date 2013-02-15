@@ -4,10 +4,10 @@
 
 __author__ = 'kbaclawski@google.com (Krystian Baclawski)'
 
+import logging
 import optparse
 import pickle
 import sys
-import traceback
 import xmlrpclib
 
 from automation.clients.helper import crosstool
@@ -17,7 +17,10 @@ from automation.common import logger
 
 class CrosstoolNightlyClient(object):
   VALID_TARGETS = ['gcc-4.6.x-ubuntu_lucid-arm',
-                   'gcc-4.6.x-ubuntu_lucid-x86_64']
+                   'gcc-4.6.x-ubuntu_lucid-x86_64',
+                   'gcc-4.6.x-grtev2-armv7a-vfpv3.d16-hard',
+                   'gcc-4.6.x-glibc-2.11.1-grte',
+                   'gcc-4.6.x-glibc-2.11.1-powerpc']
   VALID_BOARDS = ['qemu', 'pandaboard', 'unix']
 
   def __init__(self, target, boards):
@@ -34,28 +37,31 @@ class CrosstoolNightlyClient(object):
   def CreateJobGroup(self):
     factory = crosstool.JobsFactory()
 
-    checkout_crosstool_job, checkout_dir = factory.CheckoutCrosstool()
+    checkout_crosstool_job, checkout_dir, manifests_dir = \
+        factory.CheckoutCrosstool(self._target)
 
     all_jobs = [checkout_crosstool_job]
 
     # Build crosstool target
-    build_release_job, build_tree_dir, target_dir_dep = factory.BuildRelease(
+    build_release_job, build_tree_dir = factory.BuildRelease(
         checkout_dir, self._target)
     all_jobs.append(build_release_job)
 
-    test_jobs = []
+    testruns = []
 
     # Perform crosstool tests
     for board in self._boards:
-      test_jobs.append(factory.RunTests(
-          checkout_dir, build_tree_dir, self._target, board))
+      test_job, testrun_dir = factory.RunTests(
+          checkout_dir, build_tree_dir, self._target, board)
+      all_jobs.append(test_job)
+      testruns.append(testrun_dir)
 
-    if test_jobs:
-      all_jobs.extend(test_jobs)
-      all_jobs.append(
-          factory.GenerateReport(test_jobs, target_dir_dep, self._target))
+    if testruns:
+      all_jobs.append(factory.GenerateReport(testruns, manifests_dir,
+                                             self._target, self._boards))
 
-    return job_group.JobGroup('Crosstool Nightly Build', all_jobs, True, False)
+    return job_group.JobGroup(
+        'Crosstool Nightly Build (%s)' % self._target, all_jobs, True, False)
 
 
 @logger.HandleUncaughtExceptions
@@ -76,7 +82,11 @@ def Main(argv):
   if len(args) == 2:
     target = args[1]
   else:
-    sys.exit('Exactly one target required as a command line argument!')
+    logging.error('Exactly one target required as a command line argument!')
+    logging.info('List of valid targets:')
+    for pair in enumerate(CrosstoolNightlyClient.VALID_TARGETS, start=1):
+      logging.info('%d) %s' % pair)
+    sys.exit(1)
 
   option_list = [opt.dest for opt in parser.option_list if opt.dest]
 
@@ -87,4 +97,5 @@ def Main(argv):
 
 
 if __name__ == '__main__':
+  logger.SetUpRootLogger(level=logging.DEBUG, display_flags={'name': False})
   Main(sys.argv)
