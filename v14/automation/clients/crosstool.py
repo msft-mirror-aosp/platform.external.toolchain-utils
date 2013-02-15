@@ -51,10 +51,11 @@ class CrosstoolNightlyClient(object):
 
     # Perform crosstool tests
     for board in self._boards:
-      test_job, testrun_dir = factory.RunTests(
-          checkout_dir, build_tree_dir, self._target, board)
-      all_jobs.append(test_job)
-      testruns.append(testrun_dir)
+      for component in ('gcc', 'binutils'):
+        test_job, testrun_dir = factory.RunTests(
+            checkout_dir, build_tree_dir, self._target, board, component)
+        all_jobs.append(test_job)
+        testruns.append(testrun_dir)
 
     if testruns:
       all_jobs.append(factory.GenerateReport(testruns, manifests_dir,

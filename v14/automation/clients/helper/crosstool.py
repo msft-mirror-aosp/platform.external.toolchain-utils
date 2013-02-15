@@ -34,9 +34,10 @@ class JobsFactory(object):
         new_job, self.commands.buildit_work_dir_path)
     return new_job, build_tree_dep
 
-  def RunTests(self, checkout_dir, build_tree_dir, target, board):
-    command = self.commands.RunTests(target, board)
-    new_job = jobs.CreateLinuxJob('RunTests(%s, %s)' % (target, board), command)
+  def RunTests(self, checkout_dir, build_tree_dir, target, board, component):
+    command = self.commands.RunTests(target, board, component)
+    new_job = jobs.CreateLinuxJob(
+        'RunTests(%s, %s, %s)' % (target, component, board), command)
     new_job.DependsOnFolder(checkout_dir)
     new_job.DependsOnFolder(build_tree_dir)
     testrun_dir_dep = job.FolderDependency(
@@ -120,7 +121,7 @@ class CommandsFactory(object):
 
     return cmd.Chain(build_toolchain, remove_old_toolchains_from_x20)
 
-  def RunTests(self, target, board):
+  def RunTests(self, target, board, component='gcc'):
     dejagnu_flags = ['--outdir=%s' % self.dejagnu_output_path,
                      '--target_board=%s' % board]
 
@@ -131,8 +132,8 @@ class CommandsFactory(object):
                                  'experimental/users/kbaclawski',
                                  'dejagnu/site.exp')
 
-    gcc_build_dir_path = os.path.join(
-        target, 'rpmbuild/BUILD/crosstool*-0.0/build-gcc')
+    build_dir_path = os.path.join(
+        target, 'rpmbuild/BUILD/crosstool*-0.0', 'build-%s' % component)
 
     run_dejagnu = cmd.Wrapper(
         cmd.Chain(
@@ -142,7 +143,7 @@ class CommandsFactory(object):
                       'RUNTESTFLAGS="%s"' % ' '.join(dejagnu_flags),
                       'DEJAGNU="%s"' % site_exp_file,
                       ignore_error=True)),
-        cwd=os.path.join(self.buildit_work_dir_path, gcc_build_dir_path),
+        cwd=os.path.join(self.buildit_work_dir_path, build_dir_path),
         env={'REMOTE_TMPDIR': 'job-$JOB_ID'})
 
     save_results = cmd.Copy(
