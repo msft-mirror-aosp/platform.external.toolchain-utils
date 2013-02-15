@@ -61,7 +61,6 @@ class HtmlFactory(object):
             '/job-group/%d' % job.group.id, '[%d]' % job.group.id)],
         ['Parents', ' '.join(parents)],
         ['Children', ' '.join(children)],
-        ['Total Time', '<tt>%s</tt>' % job.GetTotalTime()],
         ['Machines', ', '.join(machines)],
         ['Directory', '<tt>%s</tt>' % job.work_dir],
         ['Command', '<pre>%s</pre>' % job.PrettyFormatCommand()]]
@@ -72,17 +71,18 @@ class HtmlFactory(object):
   def GetJobTimeline(job):
     rows = []
 
-    for event in job.status_events:
-      rows.append(['<tt>%s</tt>' % event.old_status.split('_', 1)[1],
-                   '<tt>%s</tt>' % event.new_status.split('_', 1)[1],
-                   '<tt>%s</tt>' % time.ctime(event.event_time)])
+    for evlog in job.timeline.GetTransitionEventHistory():
+      rows.append(['<tt>%s</tt>' % evlog.GetTimeStartedFormatted(),
+                   '<tt>%s</tt>' % evlog.event.from_,
+                   '<tt>%s</tt>' % evlog.event.to_,
+                   '<tt>%s</tt>' % evlog.GetTimeElapsedRounded()])
 
     return html_tools.GetTable(
-        ['From Status', 'To Status', 'Transition Time'], rows)
+        ['Started', 'From State', 'To State', 'Elapsed'], rows)
 
   @staticmethod
   def GetJobListReport(jobs):
-    headers = ['Job ID', 'Label', 'Machines', 'Status', 'Total Time',
+    headers = ['Job ID', 'Label', 'Machines', 'Status', 'Turnaround Time',
                'Test Report']
     rows = []
 
@@ -92,8 +92,8 @@ class HtmlFactory(object):
       rows.append([html_tools.GetLink('/job/%d' % job.id, '[%d]' % job.id),
                    '<tt>%s</tt>' % job.label,
                    '<br/>'.join(machines),
-                   '<tt>%s</tt>' % job.status.split('_', 1)[1],
-                   '<tt>%s</tt>' % job.GetTotalTime(),
+                   '<tt>%s</tt>' % job.status,
+                   '<tt>%s</tt>' % job.timeline.GetTotalTime(),
                    HtmlFactory.GetTestSummary(job)])
 
     return html_tools.GetTable(headers, rows)
