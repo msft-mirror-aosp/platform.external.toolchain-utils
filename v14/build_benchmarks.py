@@ -239,5 +239,4 @@ def Main(argv):
   return 0
 
 if __name__ == "__main__":
-  retval = Main(sys.argv)
-  utils.ExitWithCode(retval)
+  sys.exit(Main(sys.argv))

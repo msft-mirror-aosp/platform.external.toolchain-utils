@@ -71,5 +71,4 @@ def RunRemoteTests(chromeos_root, remote, board, tests):
   return retval
 
 if __name__ == "__main__":
-  retval = Main(sys.argv)
-  utils.ExitWithCode(retval)
+  sys.exit(Main(sys.argv))

@@ -1,18 +1,29 @@
+#!/usr/bin/python2.6
+#
+# Copyright 2010 Google Inc. All Rights Reserved.
+
+import pickle
 import xmlrpclib
-from utils import utils
+
 from automation.common import job
 from automation.common import job_group
-from automation.common.machine_description import MachineSpecification
+from automation.common import machine_description
 
-server = xmlrpclib.Server("http://localhost:8000")
 
-command = ["echo These following 3 lines should be the same",
-           "pwd",
-           "$(pwd)",
-           "echo ${PWD}"]
+def Main():
+  server = xmlrpclib.Server("http://localhost:8000")
 
-pwd_job = job.Job("pwd_job", " && ".join(command))
-pwd_job.DependsOnMachine(MachineSpecification(os="linux"))
+  command = ["echo These following 3 lines should be the same",
+             "pwd",
+             "$(pwd)",
+             "echo ${PWD}"]
 
-job_group = job_group.JobGroup("pwd_client", [pwd_job])
-ids = server.ExecuteJobGroup(utils.Serialize(job_group))
+  pwd_job = job.Job("pwd_job", " && ".join(command))
+  pwd_job.DependsOnMachine(machine_description.MachineSpecification(os="linux"))
+
+  group = job_group.JobGroup("pwd_client", [pwd_job])
+  server.ExecuteJobGroup(pickle.dumps(group))
+
+
+if __name__ == "__main__":
+  Main()

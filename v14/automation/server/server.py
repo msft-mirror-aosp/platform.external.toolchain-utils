@@ -1,20 +1,21 @@
-import job_manager
-import job_group_manager
-from utils import utils
-import SimpleXMLRPCServer
+#!/usr/bin/python2.6
+#
+# Copyright 2010 Google Inc. All Rights Reserved.
+
 import optparse
-from utils import command_executer
-import machine_manager
+import pickle
 import signal
-from utils import logger
+from SimpleXMLRPCServer import SimpleXMLRPCServer
 import sys
 
-def HandleKeyboardInterrupt(signalNumber, frame) :
-  server.StopServer()
-  sys.exit(1)
+from utils import command_executer
+from utils import logger
+from automation.server import job_group_manager
+from automation.server import job_manager
+from automation.server import machine_manager
 
-class Server:
 
+class Server(object):
   def __init__(self, machines_file=machine_manager.DEFAULT_MACHINES_FILE,
                dry_run=False):
     command_executer.InitCommandExecuter(dry_run)
@@ -23,25 +24,22 @@ class Server:
     self.job_group_manager = job_group_manager.JobGroupManager(self.job_manager)
 
   def ExecuteJobGroup(self, job_group, dry_run=False):
-    job_group = utils.Deserialize(job_group)
+    job_group = pickle.loads(job_group)
     for job in job_group.jobs:
       job.dry_run = dry_run
-    job_group_id = self.job_group_manager.AddJobGroup(job_group)
-    return job_group_id
+    return self.job_group_manager.AddJobGroup(job_group)
 
   def GetAllJobGroups(self):
-    return utils.Serialize(self.job_group_manager.GetAllJobGroups())
+    return pickle.dumps(self.job_group_manager.GetAllJobGroups())
 
   def KillJobGroup(self, job_group_id):
-    self.job_group_manager.KillJobGroup(utils.Deserialize(job_group_id))
+    self.job_group_manager.KillJobGroup(pickle.loads(job_group_id))
 
   def GetJobGroup(self, job_group_id):
-    job_group = self.job_group_manager.GetJobGroup(job_group_id)
-    return utils.Serialize(job_group)
+    return pickle.dumps(self.job_group_manager.GetJobGroup(job_group_id))
 
   def GetJob(self, job_id):
-    job = self.job_manager.GetJob(job_id)
-    return utils.Serialize(job)
+    return pickle.dumps(self.job_manager.GetJob(job_id))
 
   def StartServer(self):
     logger.GetLogger().LogOutput("Starting server...")
@@ -54,27 +52,43 @@ class Server:
     self.job_manager.join()
     logger.GetLogger().LogOutput("Stopped server.")
 
-if __name__ == "__main__":
+
+def Main():
   parser = optparse.OptionParser()
-  parser.add_option("-m", "--machines-file", dest="machines_file",
+  parser.add_option("-m",
+                    "--machines-file",
+                    dest="machines_file",
                     help="The location of the file "
                     "containing the machines database",
                     default=machine_manager.DEFAULT_MACHINES_FILE)
-  parser.add_option("-n", "--dry-run", dest="dry_run",
+  parser.add_option("-n",
+                    "--dry-run",
+                    dest="dry_run",
                     help="Start the server in dry-run mode, where jobs will "
                     "not actually be executed.",
-                    action="store_true", default=False)
+                    action="store_true",
+                    default=False)
   options = parser.parse_args()[0]
-  global server
+
   server = Server(options.machines_file, options.dry_run)
-  signal.signal(signal.SIGINT, HandleKeyboardInterrupt)
   server.StartServer()
+
+  def _HandleKeyboardInterrupt(*_):
+    server.StopServer()
+    sys.exit(1)
+
+  signal.signal(signal.SIGINT, _HandleKeyboardInterrupt)
+
   try:
-    xmlserver = SimpleXMLRPCServer.SimpleXMLRPCServer(("localhost", 8000),
-                                                      allow_none=True)
-  except StandardError as e:
+    xmlserver = SimpleXMLRPCServer(("localhost", 8000), allow_none=True)
+  except Exception as e:
     logger.GetLogger().LogError(str(e))
     server.StopServer()
     sys.exit(1)
+
   xmlserver.register_instance(server)
   xmlserver.serve_forever()
+
+
+if __name__ == "__main__":
+  Main()

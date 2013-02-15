@@ -1,20 +1,25 @@
-import threading
+#!/usr/bin/python2.6
+#
+# Copyright 2010 Google Inc. All Rights Reserved.
+
 import os.path
 import re
+import threading
 
 from automation.common import job
 import report_generator
-from utils import utils
-from utils import logger
 from utils import command_executer
+from utils import logger
+from utils import utils
 
 WORKDIR_PREFIX = "/usr/local/google/tmp/automation"
 
+
 class JobExecuter(threading.Thread):
 
-  def __init__(self, job, machines, listeners):
+  def __init__(self, job_to_execute, machines, listeners):
     threading.Thread.__init__(self)
-    self.job = job
+    self.job = job_to_execute
     self.listeners = listeners
     self.machines = machines
 
@@ -32,7 +37,6 @@ class JobExecuter(threading.Thread):
                          (self.job_logger, self.job.dry_run))
     self.command_terminator = command_executer.CommandTerminator()
 
-
   def _IsJobFailed(self, return_value, fail_message):
     if return_value == 0:
       return False
@@ -49,7 +53,6 @@ class JobExecuter(threading.Thread):
       for listener in self.listeners:
         listener.NotifyJobComplete(self.job)
       return True
-
 
   def _FormatCommand(self, command):
     ret = command
@@ -69,21 +72,21 @@ class JobExecuter(threading.Thread):
     self.command_terminator.Terminate()
 
   def CleanUpWorkDir(self, ct=None):
-    rm_success = self.cmd_executer.RunCommand("sudo rm -rf %s" %
+    rm_failure = self.cmd_executer.RunCommand("sudo rm -rf %s" %
                                               self.job.work_dir, False,
                                               self.machines[0].name,
                                               self.machines[0].username,
                                               command_terminator=ct)
-    if rm_success != 0:
-      self.job_logger.LogError("Cleanup workdir failed.");
-    return rm_success
+    if rm_failure:
+      self.job_logger.LogError("Cleanup workdir failed.")
+    return rm_failure
 
   def CleanUpHomeDir(self, ct=None):
-    rm_success = self.cmd_executer.RunCommand("rm -rf %s" % self.job.home_dir,
+    rm_failure = self.cmd_executer.RunCommand("rm -rf %s" % self.job.home_dir,
                                               False, command_terminator=ct)
-    if rm_success != 0:
-      self.job_logger.LogError("Cleanup homedir failed.");
-    return rm_success
+    if rm_failure:
+      self.job_logger.LogError("Cleanup homedir failed.")
+    return rm_failure
 
   def run(self):
     self.job.status = job.STATUS_SETUP
@@ -98,9 +101,10 @@ class JobExecuter(threading.Thread):
 
     self.CleanUpWorkDir(self.command_terminator)
 
-    mkdir_command = "mkdir -p %s && mkdir -p %s && mkdir -p %s" % \
-        (self.job.work_dir, self.job.logs_dir, self.job.test_results_dir_src)
-    mkdir_success = self.cmd_executer.RunCommand(mkdir_command,
+    mkdir_command = ["mkdir -p %s" % self.job.work_dir,
+                     "mkdir -p %s" % self.job.logs_dir,
+                     "mkdir -p %s" % self.job.test_results_dir_src]
+    mkdir_success = self.cmd_executer.RunCommand(" && ".join(mkdir_command),
                                                  False, primary_machine.name,
                                                  primary_machine.username,
                                                  self.command_terminator)
@@ -170,31 +174,27 @@ class JobExecuter(threading.Thread):
 
     # Generate diff of baseline and results.csv
     report = None
-    try:
-      results_filename = self.job.test_results_filename
-      baseline_filename = self.job.baseline_filename
-      if not baseline_filename:
-        self.job_logger.LogWarning("Baseline not specified.")
-      else:
+
+    results_filename = self.job.test_results_filename
+    baseline_filename = self.job.baseline_filename
+    if not baseline_filename:
+      self.job_logger.LogWarning("Baseline not specified.")
+    else:
+      try:
         report = report_generator.GenerateResultsReport(baseline_filename,
                                                         results_filename)
-    except StandardError, e:
-      self.job_logger.LogWarning("Couldn't generate report")
+      except IOError:
+        self.job_logger.LogWarning("Couldn't generate report")
 
     if report:
       try:
-        report_file = open(self.job.test_report_filename, "w")
-        report_file.write(report.GetReport())
+        with open(self.job.test_report_filename, "w") as report_file:
+          report_file.write(report.GetReport())
 
-        summary_file = open(self.job.test_report_summary_filename, "w")
-        summary_file.write(report.GetSummary())
-      except IOError, e:
+        with open(self.job.test_report_summary_filename, "w") as summary_file:
+          summary_file.write(report.GetSummary())
+      except IOError:
         self.job_logger.LogWarning("Could not write results report")
-      finally:
-        if report_file:
-          report_file.close()
-        if summary_file:
-          summary_file.close()
 
     # If we get here, the job succeeded.
     self.job.status = job.STATUS_SUCCEEDED

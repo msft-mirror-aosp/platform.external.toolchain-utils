@@ -1,40 +1,39 @@
-import getpass
+#!/usr/bin/python2.6
+#
+# Copyright 2010 Google Inc. All Rights Reserved.
+
+import optparse
+import pickle
 import sys
-from utils import utils
 import xmlrpclib
-from automation.common import job
+
 from automation.common import job_group
 from automation.clients import jobs_helper
-import optparse
-import os
 
 
 def Main(argv):
-  """The main function."""
   parser = optparse.OptionParser()
   parser.add_option("-c",
                     "--chromeos-version",
                     dest="chromeos_version",
                     default="weekly",
-                    help=("Update what version of chromeos.")
-                    )
+                    help="Update what version of chromeos.")
   parser.add_option("-b",
                     "--board",
                     dest="board",
                     default="x86-generic,x86-agz",
-                    help=("The board(s) (for updating binary builds).")
-                    )
+                    help="The board(s) (for updating binary builds).")
   options = parser.parse_args(argv)[0]
 
   server = xmlrpclib.Server("http://localhost:8000")
 
-  all_jobs = []
   update_job = jobs_helper.CreateUpdateJob(options.chromeos_version,
-                                             boards=options.board)
-  all_jobs.append(update_job)
+                                           boards=options.board)
 
-  group = job_group.JobGroup("update_client", all_jobs, False, False)
-  server.ExecuteJobGroup(utils.Serialize(group))
+  group = job_group.JobGroup("update_client", [update_job], False, False)
+
+  server.ExecuteJobGroup(pickle.dumps(group))
+
 
 if __name__ == "__main__":
   Main(sys.argv)

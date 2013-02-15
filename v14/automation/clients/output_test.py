@@ -1,16 +1,28 @@
-import xmlrpclib
+#!/usr/bin/python2.6
+#
+# Copyright 2010 Google Inc. All Rights Reserved.
+
+import pickle
 import sys
-from utils import utils
+import xmlrpclib
+
 from automation.common import job
 from automation.common import job_group
-from automation.common.machine_description import MachineSpecification
+from automation.common import machine_description
+from utils import utils
 
-server = xmlrpclib.Server("http://localhost:8000")
 
-command = "%s/../../produce_output.py" % utils.GetRoot(sys.argv[0])[0]
+def Main():
+  server = xmlrpclib.Server("http://localhost:8000")
 
-pwd_job = job.Job("pwd_job", command)
-pwd_job.DependsOnMachine(MachineSpecification(os="linux"))
+  command = "%s/../../produce_output.py" % utils.GetRoot(sys.argv[0])[0]
 
-job_group = job_group.JobGroup("pwd_client", [pwd_job])
-ids = server.ExecuteJobGroup(utils.Serialize(job_group))
+  pwd_job = job.Job("pwd_job", command)
+  pwd_job.DependsOnMachine(machine_description.MachineSpecification(os="linux"))
+
+  group = job_group.JobGroup("pwd_client", [pwd_job])
+  server.ExecuteJobGroup(pickle.dumps(group))
+
+
+if __name__ == "__main__":
+  Main()
