@@ -132,8 +132,8 @@ def Main(argv):
       shutil.rmtree(temp_dir)
 
     logger.GetLogger().LogFatalIf(retval, "Image command failed")
-    command = "'echo " + image_checksum + " > " + checksum_file
-    command += "&& chmod -w " + checksum_file + "'"
+    command = "echo %s > %s && chmod -w %s" % (image_checksum, checksum_file,
+                                               checksum_file)
     retval = cmd_executer.CrosRunCommand(command,
                                          chromeos_root=options.chromeos_root,
                                          machine=options.remote)
