@@ -127,7 +127,6 @@ class GitRepo(Repo):
     command = "cd %s" % root_dir
     command += "&& git branch -a | grep -wq %s" % self.branch
     ret = ce.RunCommand(command)
-    if ret: return ret
 
     command = "cd %s" % root_dir
     if ret == 0:
@@ -139,7 +138,7 @@ class GitRepo(Repo):
       command += "&& git symbolic-ref HEAD refs/heads/%s" % self.branch
     command += "&& rm -rf *"
     ret = ce.RunCommand(command)
-    if ret: return ret
+    return ret
 
 
   def PushSources(self, root_dir, commit_message, dry_run=False):
