@@ -17,12 +17,12 @@ from summary import DejaGnuTestResult
 class Manifest(namedtuple('Manifest', 'build tool board results')):
   """Stores a list of unsuccessful tests.
 
-  Any line that starts with an exclamation mark carries auxiliary data in form
-  of a key-value pair, for example:
+  Any line that starts with '#@' marker carries auxiliary data in form of a
+  key-value pair, for example:
 
-  ! build: gcc-4.6.x-linux-gnu-x86_64
-  ! tool: *
-  ! board: unix
+  #@ build: gcc-4.6.x-linux-gnu-x86_64
+  #@ tool: *
+  #@ board: unix
 
   So far build, tool and board parameters are recognized.  Their value can
   contain arbitrary glob expression.  Based on aforementioned parameters given
@@ -60,24 +60,24 @@ class Manifest(namedtuple('Manifest', 'build tool board results')):
 
     with open(filename, 'r') as manifest_file:
       for line in manifest_file:
-        # remove comment
-        try:
-          line, _ = line.split('#', 1)
-        except ValueError:
-          pass
-
-        line = line.strip()
-
-        if line:
-          if line.startswith('!'):
-            # parse a line with a parameter
-            try:
-              key, value = line[1:].split(':', 1)
-            except ValueError:
-              logging.warning('Malformed parameter line: "%s".', line)
-            else:
-              params[key.strip()] = value.strip()
+        if line.startswith('#@'):
+          # parse a line with a parameter
+          try:
+            key, value = line[2:].split(':', 1)
+          except ValueError:
+            logging.warning('Malformed parameter line: "%s".', line)
           else:
+            params[key.strip()] = value.strip()
+        else:
+          # remove comment
+          try:
+            line, _ = line.split('#', 1)
+          except ValueError:
+            pass
+
+          line = line.strip()
+
+          if line:
             # TODO(kbaclawski): Implement support for flaky tests.
             try:
               flaky, line = line.split('|', 1)
@@ -104,7 +104,7 @@ class Manifest(namedtuple('Manifest', 'build tool board results')):
     text = StringIO()
 
     for name in ['build', 'tool', 'board']:
-      text.write('! {0}: {1}\n'.format(name, getattr(self, name)))
+      text.write('#@ {0}: {1}\n'.format(name, getattr(self, name)))
 
     text.write('\n')
 
