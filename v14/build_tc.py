@@ -116,8 +116,8 @@ def EscapeQuoteString(string):
 def InstallTC(package_dir, install_dir):
   command = ("mkdir -p " + install_dir)
   command += ("&& for f in $(find " + package_dir +
-              " -name \\*.tbz2); do tar xvf $f -C " +
-              install_dir + "; done")
+              " -name \\*.tbz2); do tar xf $f -C " +
+              install_dir + " ; done")
   retval = utils.RunCommand(command)
   return retval
 

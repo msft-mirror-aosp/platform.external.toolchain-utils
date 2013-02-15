@@ -101,7 +101,7 @@ def Main(argv):
     utils.main_logger.LogOutput(str(e))
 
   # Now call enter_chroot with the rest of the arguments.
-  command = "./enter_chroot.sh"
+  command = chromeos_root + "/src/scripts/enter_chroot.sh"
 
   if len(passthrough_argv) > 1:
     command += " " + " ".join(passthrough_argv[1:])
