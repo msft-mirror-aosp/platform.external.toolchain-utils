@@ -14,12 +14,12 @@ class p4Job(job.Job):
 
   def GetCommand(self):
     # TODO: Server must provide an API for getting a system-wide unique string.
-    client_name = "$(uname -a | cut -d' ' -f2)"
+    client_name = "p4-automation-" + str(self.GetID())
     command = "cd " + self.checkoutdir
     command += " && cp ${HOME}/.p4config ."
     command += " && echo \"P4PORT=" + self.p4_port + "\" >> .p4config"
     command += " && echo \"P4CLIENT=" + client_name + "\" >> .p4config"
-    command += " && g4 client -a " + " -a ".join(p4_paths)
+    command += " && g4 client -a " + " -a ".join(self.p4_paths)
     command += " && g4 sync ..."
     command += " && g4 client -d " + client_name
     return  command

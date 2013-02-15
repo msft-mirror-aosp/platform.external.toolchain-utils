@@ -28,12 +28,14 @@ class JobManager(threading.Thread):
       self.start()
       self.status = JOB_MANAGER_STARTED
     self.job_lock.release()
+    self.job_ready_event.set()
 
   def StopJobManager(self):
     self.job_lock.acquire()
     if self.status == JOB_MANAGER_STARTED:
       self.status = JOB_MANAGER_STOPPING
     self.job_lock.release()
+    self.job_ready_event.set()
 
   def AddJob(self, current_job):
     self.job_lock.acquire()
@@ -79,7 +81,7 @@ class JobManager(threading.Thread):
 
       if self.status == JOB_MANAGER_STOPPING:
         self.status = JOB_MANAGER_STOPPED
-      return
+        return
 
 
       self.job_lock.release()

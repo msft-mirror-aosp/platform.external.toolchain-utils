@@ -3,7 +3,7 @@ import jobs.job
 import machine_manager
 from utils import utils
 
-JOBDIR_PREFIX = "/usr/local/google/home/automation"
+JOBDIR_PREFIX = "/usr/local/google/home/automation-"
 
 class JobExecuter(threading.Thread):
 
@@ -32,11 +32,8 @@ class JobExecuter(threading.Thread):
       print "Could not acquire machines for the job"
     else:
       primary_machine = machines[0]
-      self.job.set_machine(primary_machine)
+      self.job.SetMachine(primary_machine)
 
-      utils.RunCommand("mkdir -p " + self.job.GetJobDir())
-      utils.RunCommand("mkdir -p " + self.job.GetWorkDir())
-      print "mkdir -p" + job_dir
       for required_folder in self.job.GetRequiredFolders():
         to_folder = self.job.GetWorkDirectory() + "/" + required_folder.folder
         from_folder = (required_folder.job.GetWorkDirectory() + "/" +
@@ -54,12 +51,19 @@ class JobExecuter(threading.Thread):
                            % (from_user, from_machine, from_folder, to_user,
                               to_machine, to_folder))
 
-      result = utils.RunCommand("ssh %s@%s -- %s" %
+      utils.RunCommand("ssh %s@%s -- mkdir -p %s" %
                                 (primary_machine.username, primary_machine.name,
+                                 self.job.GetJobDir()))
+      utils.RunCommand("ssh %s@%s -- mkdir -p %s" %
+                                (primary_machine.username, primary_machine.name,
+                                 self.job.GetWorkDir()))
+      result = utils.RunCommand("ssh %s@%s -- cd %s ; %s" %
+                                (primary_machine.username, primary_machine.name,
+                                 self.job.GetWorkDir(),
                                  self.job.GetCommand()), True)
       print "OUTPUT: " + str(result)
 
-
+    print "Completed job"
     # Mark as complete
     self.job.SetStatus(jobs.job.STATUS_COMPLETED)
     self.job_manager.NotifyJobComplete(self.job)
