@@ -51,8 +51,5 @@ class Job:
 
     return True
 
-  def GetPrimaryMachineDescription(self):
-    return self.machine_descriptions[0]
-
-  def GetSecondaryMachineDescriptions(self):
-    return self.machine_descriptions[1:]
+  def GetMachineDescriptions(self):
+    return self.machine_descriptions

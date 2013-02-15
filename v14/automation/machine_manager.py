@@ -19,20 +19,13 @@ import sys
 from utils import utils
 
 
-class LockInfo:
-  def __init__(self):
-    self.expires = 0
-
-
 class MachineManager:
   __shared_state = {}
   global_pool = None
-  locks = {}
   def __init__(self):
     self.__dict__ = self.__shared_state
     if self.global_pool == None:
       self.ConstructGlobalPool()
-    self.lock_path = "/home/ahmad/"
 
 
   def __str__(self):
@@ -60,30 +53,11 @@ class MachineManager:
       self.named_pools.append(named_pool)
 
 
-  def LockMachine(self, machine, key, timeout):
-    command = ("mkdir %s/%s && mkdir %s/%s/%s" %
-               (self.lock_path, machine.name,
-                self.lock_path, machine.name, key))
-    print command
-    self.locks[machine.name] = LockInfo()
-    machine.locked = True
-    return True
-
-
-  def UnlockMachine(self, machine, key, timeout):
-    key_path = self.lock_path + "/" + machine.name + "/" + key
-    if False == os.path.exists(key_path):
-      raise StandardError("Could not unlock machine: %s with key: %s"
-                  % (machine.name, key))
-    command = "rm -rf " + self.lock_path + "/" + machine.name
-    if 0 != utils.RunCommand(command):
-      raise StandardError("Could not execute command: %s" % command)
-
-
-  def GetMachine(self, filters, lock, key, timeout):
+  def _GetMachine(self, machine_description):
+    filters = machine_description.GetFilters()
     machine_pool = self.global_pool
 
-    filters.append(machine_filters.UnlockedFilter(self.lock_path))
+    filters.append(machine_filters.UnlockedFilter())
 
     filters.append(machine_filters.LightestLoadFilter())
 
@@ -93,11 +67,33 @@ class MachineManager:
     if machine_pool.Size() == 0:
       return None
 
-    if lock == True:
-      if self.LockMachine(machine_pool.GetMachine(0), key, timeout) == False:
+    result = machine_pool.GetMachine(0)
+    if machine_description.IsLockRequired() == True:
+      result.locked = True
+    result.uses += 1
+
+    return result
+
+  def GetMachines(self, machine_descriptions):
+    # lock here (re-entrant)
+    acquired_machines = []
+    for machine_description in machine_descriptions:
+      machine = self._GetMachine(machine_description)
+      if machine == None:
+        # Roll back acquires
+        self.ReturnMachines(acquired_machines)
         return None
+      acquired_machines.append(machine)
 
-    return machine_pool.GetMachine(0)
+    # unlock here
+    return acquired_machines
 
 
+  def ReturnMachines(self, machines):
+    # lock here (re-entrant)
+    for machine in machines:
+      machine.uses -= 1
+      if machine.uses == 0:
+        machine.locked = False
+    # unlock
 

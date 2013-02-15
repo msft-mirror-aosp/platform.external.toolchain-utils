@@ -30,6 +30,8 @@ class Machine:
     self.load = 0
     self.uptime = 0
     self.dead = False
+    self.uses = 0
+    self.locked = False
 
 
   def __str__(self):
@@ -40,6 +42,7 @@ class Machine:
     ret += "NumCores: " + str(self.num_cores) + "\n"
     ret += "OS: " + self.os + "\n"
     ret += "load: " + str(self.load) + "\n"
+    ret += "uses: " + str(self.uses) + "\n"
     return ret
 
 

@@ -1,6 +1,7 @@
 import threading
 import jobs.job
 import machine_manager
+from utils import utils
 
 class JobExecuter(threading.Thread):
 
@@ -18,6 +19,17 @@ class JobExecuter(threading.Thread):
     # Do execute here
     print "EXECUTING: " + self.job.GetCommand()
 
+    # Get the machines required
+    machines = (self.machine_manager.GetMachines
+                (self.job.GetMachineDescriptions()))
+    if not machines:
+      print "Could not acquire machines for the job"
+
+    primary_machine = machines[0]
+    result = utils.RunCommand("ssh %s -- %s" %
+                              (primary_machine.name,
+                               self.job.GetCommand()), True)
+    print result
 
     # Mark as complete
     self.job.SetStatus(jobs.job.STATUS_COMPLETED)
