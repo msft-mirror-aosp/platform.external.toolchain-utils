@@ -33,6 +33,6 @@ class P4Job(job.Job):
     command += (" && g4 client " +
                 self._GetP4ClientSpec(client_name, self.p4_paths))
     command += " && g4 sync ..."
-###    command += " && g4 client -d " + client_name
+    command += " && g4 client -d " + client_name
     return command
 
