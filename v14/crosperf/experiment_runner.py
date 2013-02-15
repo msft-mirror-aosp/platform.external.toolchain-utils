@@ -86,15 +86,11 @@ class ExperimentRunner(object):
     self.l.LogOutput("Storing results of each benchmark run.")
     for benchmark_run in experiment.benchmark_runs:
       benchmark_run_name = filter(str.isalnum, benchmark_run.name)
-      benchmark_run_path = os.path.join(results_directory,
-                                        benchmark_run_name)
-      FileUtils().MkDirP(benchmark_run_path)
-      try:
-        benchmark_run.cache.ReadAutotestOutput(benchmark_run_path)
-      except Exception, e:
-        self.l.LogError(e)
       try:
         if benchmark_run.perf_results:
+          benchmark_run_path = os.path.join(results_directory,
+                                            benchmark_run_name)
+          FileUtils().MkDirP(benchmark_run_path)
           FileUtils().WriteFile(os.path.join(benchmark_run_path, "perf.report"),
                                 benchmark_run.perf_results.report)
           FileUtils().WriteFile(os.path.join(benchmark_run_path, "perf.out"),
