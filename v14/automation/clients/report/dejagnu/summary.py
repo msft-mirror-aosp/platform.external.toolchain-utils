@@ -1,11 +1,14 @@
-# /usr/bin/python2.6
+#! /usr/bin/python2.6
 #
 # Copyright 2011 Google Inc. All Rights Reserved.
 # Author: kbaclawski@google.com (Krystian Baclawski)
 #
 
+from collections import defaultdict
 from collections import namedtuple
 from datetime import datetime
+from fnmatch import fnmatch
+from itertools import chain
 from itertools import groupby
 import logging
 import os.path
@@ -13,52 +16,17 @@ import re
 
 from django.db import transaction
 
-from models import Build
-from models import RESULT_REVMAP
-from models import Test
-from models import TestResult
-from models import TestResultSummary
-from models import TestRun
+import models
 
 
-class Summary(object):
-  Result = namedtuple('Result', 'name variant result')
+class DejaGnuTestResult(namedtuple('Result', 'name variant result')):
+  __slots__ = ()
 
-  def __init__(self, build_name, filename):
-    self._filename = filename
-    self._build = {'name': build_name,
-                   'tool': os.path.basename(filename).rstrip('.sum')}
-    self._test_run = {}
-    self._test_results = []
+  REGEXP = re.compile(r'([A-Z]+):\s+([\w/+.-]+)(.*)')
 
-    self._test_output_re = re.compile(r'^([A-Z]+):\s+([\w/\+\.\-]+)(.*)$')
-
-  def _ParseHeader(self, line):
-    fields = re.match(r'Running target (.*)', line)
-    if fields:
-      self._build['board'] = fields.group(1).strip()
-      return 'BODY'
-
-    fields = re.match(r'Test Run By (.*) on (.*)', line)
-    if fields:
-      self._test_run['date'] = datetime.strptime(
-          fields.group(2).strip(), '%a %b %d %X %Y')
-
-    fields = re.match(r'Target(\s+)is (.*)', line)
-    if fields:
-      self._test_run['target'] = fields.group(2).strip()
-
-    fields = re.match(r'Host(\s+)is (.*)', line)
-    if fields:
-      self._test_run['host'] = fields.group(2).strip()
-
-    return 'HEADER'
-
-  def _ParseBody(self, line):
-    if re.match(r'=== .* Summary ===', line):
-      return 'END'
-
-    fields = self._test_output_re.match(line)
+  @classmethod
+  def FromLine(cls, line):
+    fields = cls.REGEXP.match(line.strip())
 
     if fields:
       result, path, variant = fields.groups()
@@ -81,8 +49,6 @@ class Summary(object):
       substitutions = [
           # remove include paths - they contain name of tmp directory
           ('-I\S+', ''),
-          # remove extranous comments
-          ('\s*\(test for excess errors\)\s*', ''),
           # compress white spaces
           ('\s+', ' ')]
 
@@ -102,7 +68,7 @@ class Summary(object):
 
       # DejaGNU framework errors don't contain path part at all, so description
       # part has to be reconstructed.
-      if not any(os.path.basename(path).endswith('.%s' %suffix)
+      if not any(os.path.basename(path).endswith('.%s' % suffix)
                  for suffix in ['h', 'c', 'C', 'S', 'H', 'cc', 'i', 'o']):
         variant = '%s %s' % (path, variant)
         path = ''
@@ -112,86 +78,214 @@ class Summary(object):
       if path.startswith('./'):
         path = path[2:]
 
-      # Save the result.
-      self._test_results.append(
-          self.Result(path, variant or None, RESULT_REVMAP[result]))
+      return cls(path, variant or '', result)
 
-    return 'BODY'
+  @classmethod
+  def FromDbObject(cls, test_result):
+    return cls(str(test_result.test.name),
+               str(test_result.test.variant or ''),
+               str(test_result.get_result_display()))
 
-  def Analyse(self):
-    logging.info('Reading "%s" DejaGNU report file.', self._filename)
+  def __str__(self):
+    fmt = '{2}: {0}'
+    if self.variant:
+      fmt += ' {1}'
+    return fmt.format(*self)
 
-    with open(self._filename, 'r') as report:
+
+class DejaGnuTestRun(object):
+  __slots__ = ('build', 'board', 'date', 'target', 'host', 'tool', 'results')
+
+  def __init__(self, build, **kwargs):
+    self.build = build
+    self.results = set()
+
+    for name, value in kwargs.items():
+      assert name != 'build' and name in self.__slots__
+      setattr(self, name, value)
+
+  @property
+  def summary(self):
+    type_key = lambda v: v.result
+    results_by_type = sorted(self.results, key=type_key)
+
+    return defaultdict(int, (
+        (res, len(list(res_list)))
+        for res, res_list in groupby(results_by_type, key=type_key)))
+
+  def _ParseBoard(self, fields):
+    self.board = fields.group(1).strip()
+
+  def _ParseDate(self, fields):
+    self.date = datetime.strptime(fields.group(2).strip(), '%a %b %d %X %Y')
+
+  def _ParseTarget(self, fields):
+    self.target = fields.group(2).strip()
+
+  def _ParseHost(self, fields):
+    self.host = fields.group(2).strip()
+
+  def _ParseTool(self, fields):
+    self.tool = fields.group(1).strip()
+
+  def FromDejaGnuOutput(self, filename):
+    logging.info('Reading "%s" DejaGNU output file.', filename)
+
+    with open(filename, 'r') as report:
       lines = [line.strip() for line in report.readlines() if line.strip()]
 
-    part = 'HEADER'
+    parsers = (
+        (re.compile(r'Running target (.*)'), self._ParseBoard),
+        (re.compile(r'Test Run By (.*) on (.*)'), self._ParseDate),
+        (re.compile(r'=== (.*) tests ==='), self._ParseTool),
+        (re.compile(r'Target(\s+)is (.*)'), self._ParseTarget),
+        (re.compile(r'Host(\s+)is (.*)'), self._ParseHost))
 
     for line in lines:
-      if part is 'HEADER':
-        part = self._ParseHeader(line)
-      elif part is 'BODY':
-        part = self._ParseBody(line)
+      result = DejaGnuTestResult.FromLine(line)
 
-    logging.info('DejaGNU report file parsed successfully.')
+      if result:
+        self.results.add(result)
+      else:
+        for regexp, parser in parsers:
+          fields = regexp.match(line)
+          if fields:
+            parser(fields)
+            break
+
+    logging.info('DejaGNU output file parsed successfully.')
+
+  @classmethod
+  def FromDbObject(cls, test_run):
+    test_results = models.TestResult.objects.filter(test_run=test_run)
+
+    return cls(
+        build=test_run.build.name,
+        board=test_run.build.board,
+        tool=test_run.build.tool,
+        date=test_run.date,
+        target=test_run.target,
+        host=test_run.host,
+        results=set(map(DejaGnuTestResult.FromDbObject, test_results)))
+
+  def CleanUpTestResults(self):
+    """Remove certain test results considered to be spurious.
+
+    1) Large number of test reported as UNSUPPORTED are also marked as
+       UNRESOLVED. If that's the case remove latter result.
+    2) If a test is performed on compiler output and for some reason compiler
+       fails, we don't want to report all failures that depend on the former.
+    """
+    name_key = lambda v: v.name
+    results_by_name = sorted(self.results, key=name_key)
+
+    for name, res_iter in groupby(results_by_name, key=name_key):
+      results = set(res_iter)
+
+      # If DejaGnu was unable to compile a test it will create following result:
+      failed = DejaGnuTestResult(name, '(test for excess errors)', 'FAIL')
+
+      # If a test compilation failed, remove all results that are dependent.
+      if failed in results:
+        dependants = set(filter(lambda r: r.result != 'FAIL', results))
+
+        self.results -= dependants
+
+        for res in dependants:
+          logging.info('Removed {%s} dependance.', res)
+
+      # Remove all UNRESOLVED results that were also marked as UNSUPPORTED.
+      unresolved = [res._replace(result='UNRESOLVED')
+                    for res in results
+                    if res.result == 'UNSUPPORTED']
+
+      for res in unresolved:
+        if res in self.results:
+          self.results.remove(res)
+          logging.info('Removed {%s} duplicate.', res)
+
+  def _IsApplicable(self, manifest):
+    """Checks if test results need to be reconsidered based on the manifest."""
+    check_list = [(self.build, manifest.build),
+                  (self.tool, manifest.tool),
+                  (self.board, manifest.board)]
+
+    return all(fnmatch(text, pattern) for text, pattern in check_list)
+
+  def SuppressTestResults(self, manifests):
+    """Suppresses all test results listed in manifests."""
+
+    # Get a set of tests results that are going to be suppressed if they fail.
+    manifest_results = set()
+
+    for manifest in filter(self._IsApplicable, manifests):
+      manifest_results |= set(manifest.results)
+
+    suppressed_results = self.results & manifest_results
+
+    for result in sorted(suppressed_results):
+      logging.debug('Result suppressed for {%s}.', result)
+
+      new_result = '!' + result.result
+
+      # Mark result suppression as applied.
+      manifest_results.remove(result)
+
+      # Rewrite test result.
+      self.results.remove(result)
+      self.results.add(result._replace(result=new_result))
+
+    for result in sorted(manifest_results):
+      logging.warning(
+          'Result {%s} listed in manifest but not suppressed.', result)
 
   @transaction.commit_manually
-  def Save(self):
+  def StoreInDb(self):
+    """Store whole test run into database."""
+
     # Create and store new test run
-    build = self._build
-    build_obj, is_new = Build.objects.get_or_create(
-        name=build['name'], tool=build['tool'], board=build['board'])
+    build, is_new = models.Build.objects.get_or_create(
+        name=self.build, tool=self.tool, board=self.board)
 
     if is_new:
-      build_obj.save()
-      logging.info('Stored new build: %s.', build_obj)
+      build.save()
+      logging.info('Stored new build: %s.', build)
 
-    test_run = self._test_run
-    test_run_obj = TestRun(build=build_obj, date=test_run['date'],
-                           host=test_run['host'], target=test_run['target'])
-    test_run_obj.save()
-
-    transaction.commit()
-
-    # Create and store test result summary
-    type_key = lambda v: v.result
-    test_results_by_type = sorted(self._test_results, key=type_key)
-
-    for res, res_list in groupby(test_results_by_type, key=type_key):
-      TestResultSummary(test_run=test_run_obj, result=res,
-                        count=len(list(res_list))).save()
+    test_run = models.TestRun(build=build, date=self.date, host=self.host,
+                              target=self.target)
+    test_run.save()
 
     transaction.commit()
 
     # Complete the list of test names.
     tests = dict(((test.name, test.variant), test)
-                 for test in Test.objects.all())
+                 for test in models.Test.objects.all())
 
-    missing_tests = [res for res in self._test_results
+    missing_tests = [res for res in self.results
                      if (res.name, res.variant) not in tests]
 
     if missing_tests:
-      logging.info('Storing missing test names for: %s.', test_run_obj)
+      logging.info('Storing missing test names for: %s.', test_run)
 
       for test in missing_tests:
-        test_name_obj = Test(name=test.name, variant=test.variant)
-        test_name_obj.save()
+        test_name = models.Test(name=test.name, variant=test.variant)
+        test_name.save()
 
-        logging.debug('Saved test name: %s.', test_name_obj)
+        logging.debug('Saved test name: "%s".', test_name)
 
-        tests[(test.name, test.variant)] = test_name_obj
+        tests[(test.name, test.variant)] = test_name
 
       transaction.commit()
 
     # Create and store test results
-    logging.info('Storing test results for: %s.', test_run_obj)
+    logging.info('Storing test results for: %s.', test_run)
 
-    for res in self._test_results:
-      if res.result != RESULT_REVMAP['PASS']:
-        test_res_obj = TestResult(test_run=test_run_obj,
-                                  test=tests[(res.name, res.variant)],
-                                  result=res.result)
-        logging.debug('Storing: %s.', test_res_obj)
-        test_res_obj.save()
+    for res in self.results:
+      test_res = models.TestResult(test_run=test_run,
+                                   test=tests[(res.name, res.variant)],
+                                   result=models.RESULT_REVMAP[res.result])
+      logging.debug('Storing: %s.', test_res)
+      test_res.save()
 
     transaction.commit()
 

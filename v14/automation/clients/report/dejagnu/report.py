@@ -5,23 +5,23 @@
 #
 
 from datetime import date
-from datetime import timedelta
 import logging
 import os.path
 
 from django.template import Context
 from django.template import Template
 
-from models import Build
-from models import RESULT_GROUPS
-from models import RESULT_NAME
-from models import RESULT_REVMAP
-from models import TestResult
-from models import TestResultRewriteRule
-from models import TestResultSummary
+from models import GetResultName
 from models import TestRun
+from summary import DejaGnuTestRun
 
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
+
+RESULT_GROUPS = {
+    'Successes': ['PASS', 'XFAIL'],
+    'Failures': ['FAIL', 'XPASS', 'UNRESOLVED'],
+    'Suppressed': ['!FAIL', '!XPASS', '!UNRESOLVED', '!ERROR'],
+    'Framework': ['UNTESTED', 'UNSUPPORTED', 'ERROR', 'WARNING', 'NOTE']}
 
 
 class Report(object):
@@ -32,79 +32,60 @@ class Report(object):
     self._template_filename = os.path.join(ROOT_PATH, 'report.html')
 
   @staticmethod
-  def PrepareSummary(res_types, summary):
+  def _PrepareSummary(res_types, summary):
     def GetResultCount(res_type):
-      return summary.get(RESULT_REVMAP[res_type], 0)
+      return summary.get(res_type, 0)
 
-    return [(RESULT_NAME[rt], GetResultCount(rt)) for rt in res_types]
+    return [(GetResultName(rt), GetResultCount(rt)) for rt in res_types]
 
   @staticmethod
-  def PrepareTestList(res_types, tests):
+  def _PrepareTestList(res_types, tests):
     def GetTestsByResult(res_type):
       return [(test.name, test.variant or '')
-              for test, result in tests.items()
-              if result == RESULT_REVMAP[res_type]]
+              for test in sorted(tests)
+              if test.result == res_type]
 
-    return [(RESULT_NAME[rt], GetTestsByResult(rt)) for rt in res_types]
+    return [(GetResultName(rt), GetTestsByResult(rt))
+            for rt in res_types if rt != 'PASS']
 
-  def Generate(self):
+  def Generate(self, manifests):
     with open(self._template_filename) as template_file:
       template_content = template_file.read()
 
     template = Template(template_content)
     context = Context({'test_runs': []})
 
-    builds = Build.objects.filter(name=self._build_name)
-
-    if self._boards:
-      builds = builds.filter(board__in=self._boards)
-
-    test_runs = TestRun.objects.filter(
-        build__in=builds,
-        date__gte=self._day,
-        date__lt=self._day + timedelta(days=1))
+    test_runs = [DejaGnuTestRun.FromDbObject(test_run)
+                 for test_run in TestRun.Select(self._build_name, self._day,
+                                                self._boards)]
 
     if not test_runs:
       logging.error('No test run matching your criteria found.')
       return
 
-    for test_run in test_runs:
+    for test_run_id, test_run in enumerate(test_runs):
       logging.info('Generating report for: %s.', test_run)
 
-      # Extract all useful data from database
-      result_summary = TestResultSummary.objects.filter(test_run=test_run)
-      test_results = TestResult.objects.filter(test_run=test_run)
-      rewrite_rules = TestResultRewriteRule.objects.filter(build=test_run.build)
-
-      # Reorganize extracted data for conveniency and performance reasons
-      summary = dict((s.result, s.count) for s in result_summary)
-      tests = dict((r.test, r.result) for r in test_results)
-
-      # Modify test results accordingly to rewrite rules.
-      for rule in rewrite_rules:
-        if rule.expires and test_run.date > rule.expires:
-          continue
-
-        # Check if there's a test result (at most one) for which the rewrite
-        # rule should be applied (i.e. test result should be modified for
-        # reporting purposes). Refer to dejagnu.models.TestResultRewriteRule.
-        if rule.test in tests:
-          if tests[rule.test] == rule.old_result:
-            tests[rule.test] = rule.new_result
-            summary[rule.old_result] -= 1
-            summary[rule.new_result] += 1
+      test_run.CleanUpTestResults()
+      test_run.SuppressTestResults(manifests)
 
       # Generate summary and test list for each result group
       groups = {}
 
       for res_group, res_types in RESULT_GROUPS.items():
-        groups[res_group] = {
-            'summary': Report.PrepareSummary(res_types, summary),
-            'tests': Report.PrepareTestList(res_types, tests)}
+        summary_all = self._PrepareSummary(res_types, test_run.summary)
+        tests_all = self._PrepareTestList(res_types, test_run.results)
+
+        has_2nd = lambda tuple2: bool(tuple2[1])
+        summary = filter(has_2nd, summary_all)
+        tests = filter(has_2nd, tests_all)
+
+        if summary or tests:
+          groups[res_group] = {'summary': summary, 'tests': tests}
 
       context['test_runs'].append({
-          'id': test_run.id,
-          'name': '%s @%s' % (test_run.build.tool, test_run.build.board),
+          'id': test_run_id,
+          'name': '%s @%s' % (test_run.tool, test_run.board),
           'groups': groups})
 
     logging.info('Rendering report in HTML format.')

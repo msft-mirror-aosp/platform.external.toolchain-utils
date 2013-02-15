@@ -14,19 +14,60 @@ import os.path
 import sys
 
 from dejagnu import settings
-
+from manifest import Manifest
 from report import Report
-from summary import Summary
+from summary import DejaGnuTestRun
 
 
-def SummaryCommand(argv):
-  parser = optparse.OptionParser(
-      description=('Process DejaGNU summary files and put test results into '
-                   'the database.'),
-      usage='Usage: %prog summary [-B build] [file.sum] (file2.sum ...)')
+def AddBuildOption(parser):
   parser.add_option(
       '-B', dest='build', type='string',
-      help='Name of the build for which tests were run.')
+      help=('Name of the build for which tests were run (e.g target triplet '
+            '"x86_64-unknown-linux-gnu").'))
+
+
+def ManifestCommand(argv):
+  parser = optparse.OptionParser(
+      description=(
+          'Read in one or more DejaGNU summary files (.sum), parse their '
+          'content and generate manifest files.  Manifest files store a list '
+          'of failed tests that should be ignored.  Generated files are '
+          'stored in current directory under following name: '
+          '${build}-${tool}-${board}.xfail (e.g. '
+          '"gcc-4.6.x-linux-gnu-x86_64-gcc-unix.xfail").'),
+      usage='Usage: %prog manifest [-B build] [file.sum] (file2.sum ...)')
+  AddBuildOption(parser)
+
+  opts, args = parser.parse_args(argv[2:])
+
+  if not opts.build:
+    parser.print_help()
+    sys.exit('\nERROR: Build option is mandatory.')
+
+  for filename in chain.from_iterable(map(glob.glob, args)):
+    test_run = DejaGnuTestRun(opts.build)
+    test_run.FromDejaGnuOutput(filename)
+    test_run.CleanUpTestResults()
+
+    manifest = Manifest.FromDejaGnuTestRun(test_run)
+    manifest_filename = '%s-%s-%s.xfail' % (
+        test_run.build, test_run.tool, test_run.board)
+
+    with open(manifest_filename, 'w') as manifest_file:
+      manifest_file.write(manifest.Generate())
+
+      logging.info('Wrote manifest to "%s" file.', manifest_filename)
+
+
+def ImportCommand(argv):
+  parser = optparse.OptionParser(
+      description=(
+          'Read in one or more DejaGNU summary files (.sum), parse their '
+          'content and put test results into the database.  Besides test '
+          'results the scripts extracts tool name, board name, testrun date, '
+          'target and host triplet.'),
+      usage='Usage: %prog import [-B build] [file.sum] (file2.sum ...)')
+  AddBuildOption(parser)
 
   opts, args = parser.parse_args(argv[2:])
 
@@ -37,20 +78,20 @@ def SummaryCommand(argv):
   logging.info('Using "%s" database.', settings.DATABASE_NAME)
 
   for filename in chain.from_iterable(map(glob.glob, args)):
-    summary = Summary(opts.build, filename)
-    summary.Analyse()
-    summary.Save()
+    test_run = DejaGnuTestRun(opts.build)
+    test_run.FromDejaGnuOutput(filename)
+    test_run.StoreInDb()
 
 
-def HtmlReportCommand(argv):
+def ReportCommand(argv):
   parser = optparse.OptionParser(
-      description=('Extract test results from database for specific BUILD, '
-                   'generate HTML report and write it to the file.'),
+      description=(
+          'For selected test runs, extracts them from the database and '
+          'generate a single report file in selected format (currently only '
+          'HTML).'),
       usage=('Usage: %prog html-report [-B build] (-b board ...) (-d day) '
              '[report.html]'))
-  parser.add_option(
-      '-B', dest='build', type='string',
-      help='Name of the build for which tests were run.')
+  AddBuildOption(parser)
   parser.add_option(
       '-b', dest='boards', type='string', action='append', default=None,
       help=('Extract test results only for specified board (use -b multiple '
@@ -60,6 +101,10 @@ def HtmlReportCommand(argv):
       help=('Extract test results for test runs that were performed at '
             'specific date in MM/DD/YYYY format (default: %s)' %
             date.today().strftime('%m/%d/%Y')))
+  parser.add_option(
+      '-m', dest='manifests', type='string', action='append', default=None,
+      help=('Suppress failures for test listed in provided manifest files. '
+            '(use -m for each manifest file you want to read)'))
 
   opts, args = parser.parse_args(argv[2:])
 
@@ -82,7 +127,13 @@ def HtmlReportCommand(argv):
 
   logging.info('Using "%s" database.', settings.DATABASE_NAME)
 
-  report = Report(opts.build, opts.boards, opts.day).Generate()
+  manifests = []
+
+  for filename in opts.manifests or []:
+    logging.info('Using "%s" manifest.', filename)
+    manifests.append(Manifest.FromFile(filename))
+
+  report = Report(opts.build, opts.boards, opts.day).Generate(manifests)
 
   if report:
     with open(args[0], 'w') as html_file:
@@ -95,8 +146,9 @@ def HelpCommand(argv):
       'Usage: %s command [options]' % os.path.basename(argv[0]),
       '',
       'Commands:',
-      '  summary - to put dejagnu results into database',
-      '  html-report - to generate html report.']))
+      '  import   - read dejagnu test results and store them in database',
+      '  manifest - manage files containing a list of suppressed test failures',
+      '  report   - generate report file for selected test runs']))
 
 
 def Main(argv):
@@ -105,7 +157,10 @@ def Main(argv):
   except IndexError:
     cmd_name = None
 
-  cmd_map = {'summary': SummaryCommand, 'html-report': HtmlReportCommand}
+  cmd_map = {
+      'import': ImportCommand,
+      'manifest': ManifestCommand,
+      'report': ReportCommand}
   cmd_map.get(cmd_name, HelpCommand)(argv)
 
 if __name__ == '__main__':
