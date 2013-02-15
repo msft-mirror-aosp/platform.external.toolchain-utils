@@ -24,7 +24,7 @@ class JobExecuter(threading.Thread):
     self.machines = machines
 
     self._logger = logger.Logger(
-        self.job.logs_dir, "job-%d.log" % self.job.id, True, subdir="")
+        self.job.logs_dir, self.job.log_filename_prefix, True, subdir="")
     self._executer = CommandExecuter(self._logger, self.job.dry_run)
     self._terminator = CommandTerminator()
 

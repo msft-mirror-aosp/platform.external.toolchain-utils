@@ -74,10 +74,11 @@ class JobInfo(object):
             for evlog in self._job.timeline.GetTransitionEventHistory()]
 
   def GetLog(self, log_type):
-    log_name = getattr(self._job, 'log_%s_filename' %  log_type)
+    log_path = os.path.join(
+        self._job.logs_dir, '%s.%s' % (self._job.log_filename_prefix, log_type))
 
     try:
-      with file(log_name, 'r') as log:
+      with file(log_path, 'r') as log:
         return enumerate(log.readlines(), start=1)
     except IOError:
       return []

@@ -139,16 +139,8 @@ class Job(object):
     return os.path.join(self.home_dir, 'logs')
 
   @property
-  def log_out_filename(self):
-    return os.path.join(self.logs_dir, 'job-%s.log.out' % self.id)
-
-  @property
-  def log_cmd_filename(self):
-    return os.path.join(self.logs_dir, 'job-%s.log.cmd' % self.id)
-
-  @property
-  def log_err_filename(self):
-    return os.path.join(self.logs_dir, 'job-%s.log.err' % self.id)
+  def log_filename_prefix(self):
+    return 'job-%d.log' % self.id
 
   @property
   def machine(self):
