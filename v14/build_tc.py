@@ -66,6 +66,8 @@ def Main(argv):
       (options.toolchain_root is None or options.board is None)):
     parser.print_help()
     sys.exit()
+  else:
+    options.toolchain_root = os.path.expanduser(options.toolchain_root)
 
   if options.chromeos_root is None:
     if os.path.exists("enter_chroot.sh"):
