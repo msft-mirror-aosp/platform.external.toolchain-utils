@@ -139,12 +139,15 @@ def Main(argv):
 
   # Build packages
   ret = ExecuteCommandInChroot(options.chromeos_root, None,
-                               "CFLAGS='%s' CXXFLAGS='%s' LDFLAGS='%s' "
+                               "CFLAGS='$(portageq-%s envvar CFLAGS) %s'"
+                               "LDFLAGS='$(portageq-%s envvar LDFLAGS) %s'"
+                               "CXXFLAGS='$(portageq-%s envvar CXXFLAGS) %s'"
                                "CHROME_ORIGIN=SERVER_SOURCE "
                                "./build_packages --withdev --nousepkg "
                                "--board=%s --withtest --withautotest"
-                               % (options.cflags, options.cxxflags,
-                                  options.ldflags, options.board))
+                               % (options.board, options.cflags, options.board,
+                                  options.ldflags, options.board,
+                                  options.cxxflags, options.board))
 
   utils.AssertTrue(ret == 0, "build_packages failed")
 

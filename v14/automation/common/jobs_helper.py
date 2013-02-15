@@ -116,6 +116,8 @@ def CreateBuildTCJob(chromeos_version="top",
                      "branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/..."))
     p4_paths.append(("//depot2/branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/binutils/binutils-20100303/...",
                      "branches/chromeos_toolchain_v1_release_branch/gcctools/google_vendor_src_branch/binutils/binutils-20100303/..."))
+  else:
+    utils.AssertExit(False, "Invalid toolchain value")
   p4_revision = 1
 
   command = GetInitialCommand()
@@ -190,7 +192,7 @@ def CreateBuildAndTestChromeOSJob(tc_job, chromeos_version="latest",
               " --board=" + board +
               " --remote=$SECONDARY_MACHINES[0]")
 
-  command += ("; " + p4_version_dir + "/run_tests.py" + 
+  command += ("; " + p4_version_dir + "/run_tests.py" +
               " --remote=$SECONDARY_MACHINES[0] " +
               " --chromeos_root=" + chromeos_root +
               " --board=" + board +
@@ -222,7 +224,7 @@ def CreateUpdateJob(chromeos_version,
   command += ("; " + p4_version_dir + "/setup_chromeos.py" +
               " --dir=" + chromeos_root +
               " --version=latest")
-  command += ("; " + p4_version_dir + "/build_chromeos.py" + 
+  command += ("; " + p4_version_dir + "/build_chromeos.py" +
               " --chromeos_root=" + chromeos_root +
               " --vanilla --board=" + board)
   command += ("&& cd chromeos/src/scripts " +
