@@ -19,8 +19,9 @@ class Server(object):
   def __init__(self, machines_file=machine_manager.DEFAULT_MACHINES_FILE,
                dry_run=False):
     command_executer.InitCommandExecuter(dry_run)
-    mm = machine_manager.MachineManager(machines_file)
-    self.job_manager = job_manager.JobManager(mm)
+
+    self.job_manager = job_manager.JobManager(
+        machine_manager.MachineManager.FromMachineListFile(machines_file))
     self.job_group_manager = job_group_manager.JobGroupManager(self.job_manager)
 
   def ExecuteJobGroup(self, job_group, dry_run=False):

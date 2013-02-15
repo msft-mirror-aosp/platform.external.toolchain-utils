@@ -17,10 +17,24 @@ class Machine(object):
     self.cores = cores
     self.os = os
     self.username = username
-    # TODO(kbaclawski): Two attributes below should be probably stored in
-    # MachineManager.
+
+    # MachineManager related attributes.
     self.uses = 0
     self.locked = False
+
+  def Acquire(self, lock):
+    assert not self.locked
+
+    if lock:
+      self.locked = True
+    self.uses += 1
+
+  def Release(self):
+    assert self.uses > 0
+
+    if self.uses == 0:
+      self.locked = False
+    self.uses -= 1
 
   def __str__(self):
     return "\n".join(["Machine Information:",
@@ -29,7 +43,8 @@ class Machine(object):
                       "CPU: %s" % self.cpu,
                       "Cores: %d" % self.cores,
                       "OS: %s" % self.os,
-                      "Uses: %d" % self.uses])
+                      "Uses: %d" % self.uses,
+                      "Locked: %s" % self.locked])
 
 
 class MachineSpecification(object):
