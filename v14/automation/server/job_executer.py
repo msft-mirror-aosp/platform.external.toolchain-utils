@@ -65,7 +65,8 @@ class JobExecuter(threading.Thread):
 
   def _RunCommand(self, command, machine, fail_msg):
     exit_code = self._executer.RunCommand(command, False, machine.hostname,
-                                          machine.username, self._terminator)
+                                          machine.username, self._terminator,
+                                          command_timeout=18000)
     if exit_code:
       raise job.JobFailure(fail_msg, exit_code)
 
