@@ -29,12 +29,11 @@ class JobsHelperTest(unittest.TestCase):
     p4_revision = 1
     p4_checkoutdir = "perforce2"
 
-    test_job = jobs_helper.CreateP4Job(p4_port, p4_paths, p4_revision, 
-                                  p4_checkoutdir)
+    test_job = jobs_helper.CreateP4Job(p4_port, p4_paths, p4_revision,
+                                       p4_checkoutdir)
 
-    self.assertTrue("g4" in test_job.GetCommand())
+    self.assertTrue("g4" in test_job.command)
 
 
 if __name__ == "__main__":
   unittest.main()
-

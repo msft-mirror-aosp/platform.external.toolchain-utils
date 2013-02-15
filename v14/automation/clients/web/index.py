@@ -31,14 +31,14 @@ def PrintAutomationHeader():
 
 def PrintJobGroupView(group):
   PrintAutomationHeader()
-  print html_tools.GetHeader("Job Group %s (%s)" % (str(group.GetID()), group.GetLabel()), 2)
+  print html_tools.GetHeader("Job Group %s (%s)" % (group.id, group.label), 2)
   print html_tools.GetTableHeader(["ID", "Label", "Time Submitted", "Status"])
   PrintGroupRow(group, False)
   print html_tools.GetTableFooter()
   print html_tools.GetHeader("Jobs", 2)
   print html_tools.GetTableHeader(["ID", "Label", "Command", "Machines",
                                      "Job Directory", "Dependencies", "Status", "Logs", "Test Report"])
-  for job in group.GetJobs():
+  for job in group.jobs:
     PrintJobRow(job)
   print html_tools.GetTableFooter()
 
@@ -48,26 +48,26 @@ def PrintResultsView(groups, label):
   print html_tools.GetHeader("Results (%s)" % label, 2)
   tests = []
   for group in groups:
-    if (group.GetLabel() == label):
-      for job in group.GetJobs():
-        if not job.GetLabel() in tests:
-          tests.append(job.GetLabel())
+    if group.label == label:
+      for job in group.jobs:
+        if not job.label in tests:
+          tests.append(job.label)
 
   print html_tools.GetTableHeader(["Group ID", "Time Submitted"] + tests)
 
   for group in groups:
-    if (group.GetLabel() == label):
+    if group.label == label:
       PrintResultRow(group, tests)
   print html_tools.GetTableFooter()
 
 def PrintResultRow(group, tests):
   print "<tr>"
-  print html_tools.GetTableCell(GetJobsLink(group.GetID(), group.GetID()))
-  print html_tools.GetTableCell(time.ctime(group.GetTimeSubmitted()))
+  print html_tools.GetTableCell(GetJobsLink(group.id, group.id))
+  print html_tools.GetTableCell(time.ctime(group.time_submitted))
   for test in tests:
     found = False
-    for job in group.GetJobs():
-      if job.GetLabel() == test:
+    for job in group.jobs:
+      if job.label == test:
         print html_tools.GetTableCell(GetTestSummary(job))
         found = True
     if not found:
@@ -77,12 +77,12 @@ def PrintResultRow(group, tests):
 
 def PrintGroupRow(group, details=True):
   print "<tr>"
-  print html_tools.GetTableCell(group.GetID())
-  print html_tools.GetTableCell(group.GetLabel())
-  print html_tools.GetTableCell(time.ctime(group.GetTimeSubmitted()))
-  print html_tools.GetTableCell(group.GetStatus())
+  print html_tools.GetTableCell(group.id)
+  print html_tools.GetTableCell(group.label)
+  print html_tools.GetTableCell(time.ctime(group.time_submitted))
+  print html_tools.GetTableCell(group.status)
   if details:
-    print html_tools.GetTableCell(GetJobsLink(group.GetID(), "Details..."))
+    print html_tools.GetTableCell(GetJobsLink(group.id, "Details..."))
   print "</tr>"
 
 def GetJobsLink(id, text):
@@ -90,23 +90,23 @@ def GetJobsLink(id, text):
 
 def PrintJobRow(job):
   print "<tr>"
-  print html_tools.GetTableCell(job.GetID())
-  print html_tools.GetTableCell(job.GetLabel())
-  print html_tools.GetTableCell(utils.FormatCommands(job.GetCommand()))
+  print html_tools.GetTableCell(job.id)
+  print html_tools.GetTableCell(job.label)
+  print html_tools.GetTableCell(utils.FormatCommands(job.command))
   machines = ""
-  if job.GetMachines():
-    machines = job.GetMachines()[0].name
-    for machine in job.GetMachines()[1:]:
+  if job.machines:
+    machines = job.machines[0].name
+    for machine in job.machines[1:]:
       machines += " %s" % machine.name
   print html_tools.GetTableCell(machines)
-  print html_tools.GetTableCell(job.GetWorkDir())
+  print html_tools.GetTableCell(job.work_dir)
   deps = ""
   for child in job.GetChildren():
-    deps += str(child.GetID()) + " "
+    deps += str(child.id) + " "
   print html_tools.GetTableCell(deps)
-  full_status = "%s\n%s" % (job.GetStatus(), job.GetTotalTime())
+  full_status = "%s\n%s" % (job.status, job.GetTotalTime())
   print html_tools.GetTableCell(full_status)
-  log_link = "index.py?log=%s" % job.GetID()
+  log_link = "index.py?log=%s" % job.id
   out_link = log_link + "&type=out"
   err_link = log_link + "&type=err"
   cmd_link = log_link + "&type=cmd"
@@ -117,9 +117,9 @@ def PrintJobRow(job):
   print "</tr>"
 
 def GetTestSummary(job):
-  if job.GetStatus() == automation.common.job.STATUS_RUNNING:
+  if job.status == automation.common.job.STATUS_RUNNING:
     return "Running job..."
-  if job.GetStatus() == automation.common.job.STATUS_NOT_EXECUTED:
+  if job.status == automation.common.job.STATUS_NOT_EXECUTED:
     return "Not executed."
 
   try:
@@ -132,7 +132,7 @@ def GetTestSummary(job):
     text = "Passes: %s Failures: %s Regressions: %s" % (stats["tests passing"],
                                                         stats["tests failing"],
                                                         stats["regressions"])
-    return html_tools.GetLink("index.py?report=%s" % job.GetID(), text)
+    return html_tools.GetLink("index.py?report=%s" % job.id, text)
 
   except IOError:
     return "Summary not found"
@@ -173,11 +173,11 @@ elif "log" in form:
     job = utils.Deserialize(server.GetJob(current_id))
     if job is not None:
       if type == "out":
-        report = open(job.GetLogOut(), 'rb')
+        report = open(job.log_out_filename, 'rb')
       elif type == "cmd":
-        report = open(job.GetLogCmd(), 'rb')
+        report = open(job.log_cmd_filename, 'rb')
       elif type == "err":
-        report = open(job.GetLogErr(), 'rb')
+        report = open(job.log_err_filename, 'rb')
       else:
         print "Invalid log type"
       print "<pre>"

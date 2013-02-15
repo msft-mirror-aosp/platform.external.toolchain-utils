@@ -24,8 +24,8 @@ class Server:
 
   def ExecuteJobGroup(self, job_group, dry_run=False):
     job_group = utils.Deserialize(job_group)
-    for job in job_group.GetJobs():
-      job.SetDryRun(dry_run)
+    for job in job_group.jobs:
+      job.dry_run = dry_run
     job_group_id = self.job_group_manager.AddJobGroup(job_group)
     return job_group_id
 
@@ -78,4 +78,3 @@ if __name__ == "__main__":
     sys.exit(1)
   xmlserver.register_instance(server)
   xmlserver.serve_forever()
-

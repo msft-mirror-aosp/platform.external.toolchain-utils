@@ -8,6 +8,7 @@
 __author__ = "raymes@google.com (Raymes Khoury)"
 
 
+import os.path
 import time
 import machine_description
 from utils import utils
@@ -25,7 +26,7 @@ TEST_RESULTS_FILE = "results.csv"
 TEST_REPORT_FILE = "report.html"
 TEST_REPORT_SUMMARY_FILE = "summary.txt"
 
-class RequiredFolder:
+class RequiredFolder(object):
   def __init__(self, job, src, dest, read_only):
     self.job = job
     self.src = src
@@ -33,18 +34,21 @@ class RequiredFolder:
     self.read_only = read_only
 
 
-class StatusEvent:
+class StatusEvent(object):
   def __init__(self, old_status, new_status):
     self.old_status = old_status
     self.new_status = new_status
     self.event_time = time.time()
 
+  def __str__(self):
+    return "%s -> %s: %s" % (self.old_status, self.new_status,
+                             time.ctime(self.event_time))
 
-class Job:
+class Job(object):
   """A class representing a job whose commands will be executed."""
 
   def __init__(self, label, command, baseline=""):
-    self.status = STATUS_NOT_EXECUTED
+    self._status = STATUS_NOT_EXECUTED
     self.children = []
     self.parents = []
     self.machine_descriptions = []
@@ -62,83 +66,64 @@ class Job:
     self.baseline = baseline
 
   def __str__(self):
-    ret = ""
-    ret += str(self.id) + "\n"
-    ret += "Children:\n"
-    for child in self.children:
-      ret += str(child.id) + "\n"
-    ret += "Parents:\n"
-    for parent in self.parents:
-      ret += str(parent.id) + "\n"
-    ret += "Machines:\n"
-    for machine in self.machines:
-      ret += str(machine)
-    ret += utils.FormatCommands(self.command) + "\n"
-    ret += self.status + "\n"
-    ret += self.GetTimeline()
-    return ret
+    res = []
+    res.append("%s" % self.id)
+    res.append("Children:")
+    res.extend(["%s" % child.id for child in self.children])
+    res.append("Parents:")
+    res.extend(["%s" % parent.id for parent in self.parents])
+    res.append("Machines:")
+    res.extend(["%s" % machine for machine in self.machines])
+    res.append(utils.FormatCommands(self.command))
+    res.append(self.status)
+    res.append(self.GetTimeline())
+    return "\n".join(res)
 
   def GetTotalTime(self):
-    ret = ""
-    if len(self.status_events) > 0:
-      time_diff = time.time() - self.status_events[0].event_time
-      time_string = time.strftime("%H:%M:%S",
-                                  time.gmtime(time_diff))
-      ret += "Total time: %s\n" % time_string
-    return ret
+    if not self.status_events:
+      return ""
+    time_diff = time.time() - self.status_events[0].event_time
+    time_string = time.strftime("%H:%M:%S", time.gmtime(time_diff))
+    return "Total time: %s" % time_string
 
   def GetTimeline(self):
-    ret = ""
-    ret += "Timeline of status events:\n"
-    timeline = ""
     total_time = 0
+    timeline = []
+    timeline.append("Timeline of status events:")
+
+    def time_to_string(t):
+      return time.strftime("%H hours %M minutes %S seconds", time.gmtime(t))
+
     for i in range(len(self.status_events)):
       s = self.status_events[i]
-      ret += ("%s -> %s: %s\n" % (s.old_status,
-                               s.new_status,
-                               time.ctime(s.event_time)))
+      timeline.append("%s" % s)
       if i != 0:
         old_s = self.status_events[i - 1]
         time_diff = s.event_time - old_s.event_time
         total_time += time_diff
-        time_string = time.strftime("%H hours %M minutes %S seconds",
-                                 time.gmtime(time_diff))
-        timeline += ("%s: %s\n" % (s.old_status,
-                                     time_string))
-    if (self.status != STATUS_SUCCEEDED and self.status != STATUS_FAILED
-        and len(self.status_events) > 0):
+        timeline.append("%s: %s" % (s.old_status, time_to_string(time_diff)))
+
+    if self.status_events and self.status not in [STATUS_SUCCEEDED,
+                                                  STATUS_FAILED]:
       time_diff = time.time() - self.status_events[-1].event_time
       total_time += time_diff
-      time_string = time.strftime("%H hours %M minutes %S seconds",
-                               time.gmtime(time_diff))
-      timeline += ("%s - NOW: %s\n" % (self.status,
-                                 time_string))
-    time_string = time.strftime("%H hours %M minutes %S seconds",
-                                time.gmtime(total_time))
-    timeline += ("Total time: %s\n" % time_string)
-    ret += timeline
+      timeline.append("%s - NOW: %s" % (self.status, time_to_string(time_diff)))
 
-    return ret
+    timeline.append("Total time: %s" % time_to_string(total_time))
 
-  def SetID(self, id):
-    self.id = id
+    return "\n".join(timeline)
 
-  def GetID(self):
-    return self.id
+  @property
+  def status(self):
+    return self._status
 
-  def SetMachines(self, machine):
-    self.machines = machine
-
-  def GetMachines(self):
-    return self.machines
-
-  def SetStatus(self, status):
+  @status.setter
+  def status(self, status):
+    assert status in [STATUS_NOT_EXECUTED, STATUS_SETUP, STATUS_COPYING,
+                      STATUS_RUNNING, STATUS_SUCCEEDED, STATUS_FAILED]
     status_event = StatusEvent(self.status, status)
     self.status_events.append(status_event)
-    self.status = status
-
-  def GetStatus(self):
-    return self.status
+    self._status = status
 
   def AddRequiredFolder(self, job, src, dest, read_only=False):
     self.AddChild(job)
@@ -147,44 +132,48 @@ class Job:
   def GetRequiredFolders(self):
     return self.required_folders
 
-  def SetWorkDir(self, work_dir):
-    self.work_dir = work_dir
-
-  def GetWorkDir(self):
-    return self.work_dir
-
-  def SetHomeDir(self, home_dir):
-    self.home_dir = home_dir
-
-  def GetHomeDir(self):
-    return self.home_dir
-
   def GetTestResultsDirSrc(self):
-    if self.work_dir:
-      return self.work_dir + "/" + TEST_RESULTS_DIR
-    else:
+    # TODO(kbaclawski): Is it acceptable not to have work_dir?
+    if not self.work_dir:
       return ""
+    return os.path.join(self.work_dir, TEST_RESULTS_DIR)
 
-  def GetTestResultsDir(self):
-    if self.home_dir:
-      return self.home_dir + "/" + TEST_RESULTS_DIR
-    else:
+  @property
+  def test_results_dir(self):
+    # TODO(kbaclawski): Is it acceptable not to have home_dir?
+    if not self.home_dir:
       return ""
+    return os.path.join(self.home_dir, TEST_RESULTS_DIR)
 
-  def GetLogsDir(self):
-    if self.home_dir:
-      return self.home_dir + "/" + LOGS_SUBDIR
-    else:
+  @property
+  def test_report_filename(self):
+    return os.path.join(self.test_results_dir, TEST_REPORT_FILE)
+
+  @property
+  def test_report_summary_filename(self):
+    return os.path.join(self.test_results_dir, TEST_REPORT_SUMMARY_FILE)
+
+  @property
+  def test_results_filename(self):
+    return os.path.join(self.test_results_dir, TEST_RESULTS_FILE)
+
+  @property
+  def logs_dir(self):
+    if not self.home_dir:
       return ""
+    return os.path.join(self.home_dir, LOGS_SUBDIR)
 
-  def GetLogOut(self):
-    return self.GetLogsDir() + "/job-" + str(self.id) + ".log.out"
+  @property
+  def log_out_filename(self):
+    return os.path.join(self.logs_dir, "job-%s.log.out" % self.id)
 
-  def GetLogCmd(self):
-    return self.GetLogsDir() + "/job-" + str(self.id) + ".log.cmd"
+  @property
+  def log_cmd_filename(self):
+    return os.path.join(self.logs_dir, "job-%s.log.cmd" % self.id)
 
-  def GetLogErr(self):
-    return self.GetLogsDir() + "/job-" + str(self.id) + ".log.err"
+  @property
+  def log_err_filename(self):
+    return os.path.join(self.logs_dir, "job-%s.log.err" % self.id)
 
   def AddChild(self, job):
     if job not in self.children:
@@ -207,7 +196,7 @@ class Job:
   def IsReady(self):
     # Check that all our dependencies have been executed
     for child in self.children:
-      if child.GetStatus() != STATUS_SUCCEEDED:
+      if child.status != STATUS_SUCCEEDED:
         return False
 
     return True
@@ -215,53 +204,18 @@ class Job:
   def GetRequiredMachines(self):
     return self.machine_descriptions
 
-  def GetGroup(self):
-    return self.group
-
-  def SetGroup(self, group):
-    self.group = group
-
-  def GetCommand(self):
-    return self.command
-
-  def SetCommand(self, command):
-    self.command = command
-
-  def SetCommands(self, commands):
-    self.command = " ; ".join(commands)
-
   def AddRequiredMachine(self, name, os, lock, primary=True):
     if primary == True and self._primary_done == True:
-      raise Exception("There can only be one primary machine description.")
+      raise RuntimeError("There can only be one primary machine description.")
     desc = machine_description.MachineDescription(name, os, lock)
-    if primary == True:
+    if primary:
       self.machine_descriptions.insert(0, desc)
       self._primary_done = True
     else:
       self.machine_descriptions.append(desc)
 
-  def SetDryRun(self, dry_run):
-    self.dry_run = dry_run
-
-  def GetDryRun(self):
-    return self.dry_run
-  
-  def GetBaselineDir(self):
-    return self.baseline
-  
-  def GetBaselineFile(self):
+  @property
+  def baseline_filename(self):
     if not self.baseline:
       return ""
-    return self.baseline + "/" + TEST_RESULTS_FILE
-  
-  def GetTestReportFile(self):
-    return self.GetTestResultsDir() + "/" + TEST_REPORT_FILE
-  
-  def GetTestReportSummaryFile(self):
-    return self.GetTestResultsDir() + "/" + TEST_REPORT_SUMMARY_FILE
-  
-  def GetTestResultsFile(self):
-    return self.GetTestResultsDir() + "/" + TEST_RESULTS_FILE
-  
-  def GetLabel(self):
-    return self.label
+    return os.path.join(self.baseline, TEST_RESULTS_FILE)

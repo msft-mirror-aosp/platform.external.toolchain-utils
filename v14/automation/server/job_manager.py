@@ -31,7 +31,7 @@ class JobManager(threading.Thread):
   def StopJobManager(self):
     self.job_condition.acquire()
     for job in self.all_jobs:
-      self._KillJob(job.GetID())
+      self._KillJob(job.id)
 
     # Signal to die
     self.ready_jobs.insert(0, None)
@@ -50,17 +50,17 @@ class JobManager(threading.Thread):
 
   def GetJob(self, job_id):
     for job in self.all_jobs:
-      if job.GetID() == job_id:
+      if job.id == job_id:
         return job
     return None
 
   def _KillJob(self, job_id):
-    logger.GetLogger().LogOutput("Killing job with ID '%s'." % str(job_id))
+    logger.GetLogger().LogOutput("Killing job with ID '%s'." % job_id)
     if job_id in self.job_executer_mapping:
       self.job_executer_mapping[job_id].Kill()
     killed_job = None
     for job in self.ready_jobs:
-      if job.GetID() == job_id:
+      if job.id == job_id:
         killed_job = job
         self.ready_jobs.remove(killed_job)
         break
@@ -69,7 +69,7 @@ class JobManager(threading.Thread):
     self.job_condition.acquire()
 
     current_job_id = self.job_counter
-    current_job.SetID(current_job_id)
+    current_job.id = current_job_id
     self.job_counter += 1
 
     self.all_jobs.append(current_job)
@@ -83,18 +83,18 @@ class JobManager(threading.Thread):
 
   def CleanUpJob(self, job):
     self.job_condition.acquire()
-    if job.GetID() in self.job_executer_mapping:
-      self.job_executer_mapping[job.GetID()].CleanUpWorkDir()
-      del self.job_executer_mapping[job.GetID()]
+    if job.id in self.job_executer_mapping:
+      self.job_executer_mapping[job.id].CleanUpWorkDir()
+      del self.job_executer_mapping[job.id]
     # TODO(raymes): remove job from self.all_jobs
     self.job_condition.release()
 
 
   def NotifyJobComplete(self, job):
-    self.machine_manager.ReturnMachines(job.GetMachines())
+    self.machine_manager.ReturnMachines(job.machines)
     self.job_condition.acquire()
     logger.GetLogger().LogOutput("Job profile:\n%s" % str(job))
-    if job.GetStatus() == automation.common.job.STATUS_SUCCEEDED:
+    if job.status == automation.common.job.STATUS_SUCCEEDED:
       for parent in job.GetParents():
         if parent.IsReady():
           if parent not in self.ready_jobs:
@@ -122,7 +122,7 @@ class JobManager(threading.Thread):
 
         required_machines = ready_job.GetRequiredMachines()
         for child in ready_job.GetChildren():
-          required_machines[0].AddPreferredMachine(child.GetMachines()[0].name)
+          required_machines[0].AddPreferredMachine(child.machines[0].name)
 
         machines = self.machine_manager.GetMachines(required_machines)
         if machines is None:
@@ -131,14 +131,12 @@ class JobManager(threading.Thread):
           self.ready_jobs.insert(0, ready_job)
           break
         else:
-          # Mark as executing 
+          # Mark as executing
           executer = job_executer.JobExecuter(ready_job, machines,
                                               self.listeners)
           executer.start()
-          self.job_executer_mapping[ready_job.GetID()] = executer
+          self.job_executer_mapping[ready_job.id] = executer
 
 
 
       self.job_condition.release()
-
-
