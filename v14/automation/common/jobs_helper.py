@@ -131,8 +131,6 @@ def CreateBuildAndTestChromeOSJob(tc_job, chromeos_snapshot="", p4_snapshot=""):
   to_return = CreateLinuxJob(command)
   to_return.AddRequiredFolder(tc_job, p4_pkgs_dir, p4_pkgs_dir)
 
-  to_return.AddChild(tc_job)
-
   return to_return
 
 def CreateTestJob(build_chromeos_job):

@@ -109,7 +109,7 @@ class JobManager(threading.Thread):
           self.ready_jobs.insert(0, ready_job)
         else:
           # Mark as executing 
-          ready_job.SetStatus(automation.common.job.STATUS_EXECUTING)
+          ready_job.SetStatus(automation.common.job.STATUS_SETUP)
           executer = job_executer.JobExecuter(ready_job, machines, self)
           executer.start()
           self.job_executer_mapping[ready_job.GetID()] = executer

@@ -13,7 +13,9 @@ import machine_description
 
 
 STATUS_NOT_EXECUTED = "STATUS_NOT_EXECUTED"
-STATUS_EXECUTING = "STATUS_EXECUTING"
+STATUS_SETUP = "STATUS_SETUP"
+STATUS_COPYING = "STATUS_COPYING"
+STATUS_RUNNING = "STATUS_RUNNING"
 STATUS_COMPLETED = "STATUS_COMPLETED"
 STATUS_FAILED = "STATUS_FAILED"
 
@@ -27,6 +29,13 @@ class RequiredFolder:
     self.src = src
     self.dest = dest
     self.read_only = read_only
+
+
+class StatusEvent:
+  def __init__(self, old_status, new_status):
+    self.old_status = old_status
+    self.new_status = new_status
+    self.event_time = time.time()
 
 
 class Job:
@@ -43,16 +52,27 @@ class Job:
     self.machines = []
     self.command = command
     self._primary_done = False
-    self.start_time = 0
-    self.finish_time = 0
+    self.status_events = []
 
   def __str__(self):
     ret = ""
     ret += str(self.id) + "\n"
     ret += self.command + "\n"
     ret += self.status + "\n"
-    ret += ("start_time: %s\nfinish_time: %s\n" %
-            (self.start_time, self.finish_time))
+    ret += "Timeline of status events:\n"
+    timeline = ""
+    for i in range(len(self.status_events)):
+      s = self.status_events[i]
+      ret += ("%s -> %s: %s\n" % (s.old_status,
+                               s.new_status,
+                               time.ctime(s.event_time)))
+      if i != 0:
+        old_s = self.status_events[i-1]
+        time_diff = s.event_time - old_s.event_time
+        timeline += ("%s: %f s\n" % (s.old_status,
+                                     time_diff))
+    ret += timeline
+
     return ret
 
   def SetID(self, id):
@@ -68,21 +88,15 @@ class Job:
     return self.machines
 
   def SetStatus(self, status):
-    if status == STATUS_EXECUTING:
-      self.start_time = time.time()
-    if (status == STATUS_COMPLETED or
-        status == STATUS_FAILED):
-      self.finish_time = time.time()
+    status_event = StatusEvent(self.status, status)
+    self.status_events.append(status_event)
     self.status = status
 
   def GetStatus(self):
     return self.status
 
   def AddRequiredFolder(self, job, src, dest, read_only=False):
-    if job not in self.children:
-      self.children.append(job)
-    if self not in job.parents:
-      job.parents.append(self)
+    self.AddChild(job)
     self.required_folders.append(RequiredFolder(job, src, dest, read_only))
 
   def GetRequiredFolders(self):
@@ -101,8 +115,10 @@ class Job:
     return self.job_dir + SUBDIR_LOGS
 
   def AddChild(self, job):
-    self.children.append(job)
-    job.parents.append(self)
+    if job not in self.children:
+      self.children.append(job)
+    if self not in job.parents:
+      job.parents.append(self)
 
   def GetChildren(self):
     return self.children

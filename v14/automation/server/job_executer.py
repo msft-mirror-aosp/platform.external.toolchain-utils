@@ -75,6 +75,8 @@ class JobExecuter(threading.Thread):
     if self._IsJobFailed(mkdir_success, "mkdir of new job directory Failed."):
       return
 
+    self.job.SetStatus(job.STATUS_COPYING)
+
     for required_folder in self.job.GetRequiredFolders():
       to_folder = self.job.GetWorkDir() + "/" + required_folder.dest
       from_folder = (required_folder.job.GetWorkDir() + "/" +
@@ -112,6 +114,8 @@ class JobExecuter(threading.Thread):
 
     command = self._FormatCommand(command)
 
+    self.job.SetStatus(job.STATUS_RUNNING)
+
     command_success = (self.cmd_executer.
                        RunCommand("PS1=. TERM=linux "
                                   "source ~/.bashrc ; cd %s && %s"
@@ -127,6 +131,7 @@ class JobExecuter(threading.Thread):
     # If we get here, the job succeeded. 
     logger.GetLogger().LogOutput("Job completed successfully.")
     self.job_manager.NotifyJobComplete(self.job, job.STATUS_COMPLETED)
+    logger.GetLogger().LogOutput(str(self.job))
 
 
 
