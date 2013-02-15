@@ -52,7 +52,7 @@ class CommandExecuter:
     while True:
       fds = select.select([p.stdout, p.stderr], [], [], 0.1)
       if command_terminator and command_terminator.IsTerminated():
-        p.kill()
+        self.RunCommand("sudo kill -9 " + str(p.pid))
         wait = p.wait()
         self.logger.LogError("Command was terminated!")
         return wait
