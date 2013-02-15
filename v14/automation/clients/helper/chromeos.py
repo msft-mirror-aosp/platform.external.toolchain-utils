@@ -140,7 +140,7 @@ class CommandsFactory(object):
     if version in ["weekly", "quarterly"]:
       assert os.path.islink(location), "Symlink %s does not exist." % location
 
-      location_expanded = os.path.asbpath(os.path.realpath(location))
+      location_expanded = os.path.abspath(os.path.realpath(location))
       version = os.path.basename(location_expanded)
 
     if version in ["top", "latest"] or re.match(version_re, version):
