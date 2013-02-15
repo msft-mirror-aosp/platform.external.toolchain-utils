@@ -38,7 +38,9 @@ class Shell(object):
 class Wrapper(object):
   """Wraps a command with environment which gets cleaned up after execution."""
 
-  def __init__(self, command, cwd=None, env=None):
+  _counter = 1
+
+  def __init__(self, command, cwd=None, env=None, umask=None):
     # @param cwd: temporary working directory
     # @param env: dictionary of environment variables
     self._command = command
@@ -51,8 +53,21 @@ class Wrapper(object):
 
     if env:
       for env_var, value in env.items():
-        self._prefix.append(Shell('='.join([env_var, value])))
+        self._prefix.append(Shell('%s=%s' % (env_var, value)))
         self._suffix.insert(0, Shell('unset', env_var))
+
+    if umask:
+      umask_save_var = 'OLD_UMASK_%d' % self.counter
+
+      self._prefix.append(Shell('%s=$(umask)' % umask_save_var))
+      self._prefix.append(Shell('umask', umask))
+      self._suffix.insert(0, Shell('umask', '$%s' % umask_save_var))
+
+  @property
+  def counter(self):
+    counter = self._counter
+    self._counter += 1
+    return counter
 
   def __str__(self):
     return str(Chain(self._prefix, self._command, self._suffix))
