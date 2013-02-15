@@ -587,7 +587,7 @@ class AutotestRunner:
     image_checksum = utils.Md5File(self.image)
 
     reimaged = False
- 
+
     for i in range(iterations):
       options = ""
       if self.board:
@@ -612,7 +612,7 @@ class AutotestRunner:
           logger.GetLogger().LogFatalIf(retval, "Could not re-image!")
           reimaged = True
         command = "cd %s/src/scripts" % self.chromeos_root
-        command += ("&& ./enter_chroot.sh -- ./run_remote_tests.sh --remote=%s %s %s" %
+        command += ("&& cros_sdk -- ./run_remote_tests.sh --remote=%s %s %s" %
                     (remote,
                      options,
                      self.test))
@@ -630,7 +630,7 @@ class AutotestRunner:
 def CanonicalizeChromeOSRoot(chromeos_root):
   chromeos_root = os.path.expanduser(chromeos_root)
   if os.path.isfile(os.path.join(chromeos_root,
-                                 "src/scripts/enter_chroot.sh")):
+                                 "src/scripts/setup_board")):
     return chromeos_root
   else:
     return None
@@ -732,12 +732,14 @@ def Main(argv):
     sys.exit(1)
 
   ags = {}
+  m = None
   try:
     # Lock the machine before running the tests
-    locked = lock_machine.LockMachine(remote,
-                                      reason="Locked by %s" %
-                                      os.path.basename(sys.argv[0]))
-    if locked:
+    m = lock_machine.Machine(remote)
+    locked = m.Lock(True,
+                    reason="Locked by %s" %
+                    os.path.basename(sys.argv[0]))
+    if not locked:
       l.LogError("Could not lock machine: %s" % remote)
       return 1
 
@@ -788,12 +790,10 @@ def Main(argv):
     print "C-c pressed"
   finally:
     # Lock the machine before running the tests
-    unlocked = lock_machine.LockMachine(remote,
-                                        unlock=True,
-                                        reason="Locked by %s" %
-                                        os.path.basename(sys.argv[0]))
+    if m:
+      unlocked = m.Unlock(True)
 
-    if unlocked:
+    if not unlocked:
       l.LogError("Could not unlock machine: %s" % remote)
       return 1
   return exitcode
@@ -801,4 +801,3 @@ def Main(argv):
 if __name__ == "__main__":
   exitcode = Main(sys.argv)
   sys.exit(exitcode)
-
