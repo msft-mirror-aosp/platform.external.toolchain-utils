@@ -133,7 +133,7 @@ class CommandsFactory(object):
     self.checkout_dir = checkout_dir
     self.p4config_path = os.path.join(self.checkout_dir, '.p4config')
 
-  def Setup(self):
+  def Initialize(self):
     return cmd.Chain(
         'mkdir -p %s' % self.checkout_dir,
         'cp ~/.p4config %s' % self.checkout_dir,
@@ -159,17 +159,20 @@ class CommandsFactory(object):
   def Sync(self):
     return cmd.Shell('g4', 'sync', '...')
 
+  def SaveCurrentCLNumber(self, filename=None):
+    return cmd.Pipe(
+        cmd.Shell('g4', 'changes', '-m1', '...#have'),
+        cmd.Shell('sed', '-E', '"s,Change ([0-9]+) .*,\\1,"'),
+        output=filename)
+
   def Remove(self):
     return cmd.Shell('g4', 'client', '-d', self.view.client)
 
-  def Checkout(self):
+  def SetupAndDo(self, *commands):
     return cmd.Chain(
-        self.Setup(),
+        self.Initialize(),
         cmd.Wrapper(
-            cmd.Chain(
-                self.Create(),
-                self.Sync(),
-                self.Remove()),
+            cmd.Chain(self.Create(), *commands),
             cwd=self.checkout_dir))
 
   def CheckoutFromSnapshot(self, snapshot):

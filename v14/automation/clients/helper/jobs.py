@@ -96,7 +96,7 @@ def GetP4Snapshot(p4view, p4_snapshot=""):
   if p4_snapshot:
     return p4client.CheckoutFromSnapshot(p4_snapshot)
   else:
-    return p4client.Checkout()
+    return p4client.SetupAndDo(p4client.Sync(), p4client.Remove())
 
 
 def CheckoutBuildHelpers(p4_snapshot=""):

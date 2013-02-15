@@ -84,7 +84,11 @@ class CommandsFactory(object):
     return perforce.CommandsFactory(self.CHECKOUT_DIR, p4view)
 
   def CheckoutCrosstool(self):
-    return self.p4client.Checkout()
+    p4client = self.p4client
+
+    return p4client.SetupAndDo(p4client.Sync(),
+                               p4client.SaveCurrentCLNumber('CLNUM'),
+                               p4client.Remove())
 
   def BuildRelease(self, target):
     return self.BuilditScript(target, 'release', run_tests=False)
@@ -104,6 +108,8 @@ class CommandsFactory(object):
         '--build-type=%s' % build_type,
         '--work-dir=%s' % self.buildit_work_dir_path,
         '--results-dir=%s' % results_path,
+        '--force-release=$(< %s)' % os.path.join(
+            '$JOB_TMP', self.CHECKOUT_DIR, 'CLNUM'),
         path='.')
 
     if run_tests:
