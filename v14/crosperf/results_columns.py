@@ -13,7 +13,7 @@ class Column(object):
     for result in results:
       if isinstance(result, str):
         return True
-      return False
+    return False
 
   def _StripNone(self, results):
     res = []
@@ -27,20 +27,26 @@ class MinColumn(Column):
   def Compute(self, results, baseline_results):
     if self._ContainsString(results):
       return "-"
-    return min(self._StripNone(results))
+    results = self._StripNone(results)
+    if not results:
+      return "-"
+    return min(results)
 
 
 class MaxColumn(Column):
   def Compute(self, results, baseline_results):
     if self._ContainsString(results):
       return "-"
-    return max(self._StripNone(results))
+    results = self._StripNone(results)
+    if not results:
+      return "-"
+    return max(results)
 
 
 class MeanColumn(Column):
   def Compute(self, results, baseline_results):
     all_pass = True
-    all_fail = False
+    all_fail = True
     if self._ContainsString(results):
       for result in results:
         if result != "PASSED":
@@ -53,9 +59,11 @@ class MeanColumn(Column):
       elif all_fail:
         return "ALL FAIL"
       else:
-        return "SOME FAIL"
+        return "-"
 
     results = self._StripNone(results)
+    if not results:
+      return "-"
     return float(sum(results)) / len(results)
 
 
@@ -68,6 +76,8 @@ class StandardDeviationColumn(Column):
       return "-"
 
     results = self._StripNone(results)
+    if not results:
+      return "-"
     n = len(results)
     average = sum(results) / n
     total = 0
@@ -87,6 +97,8 @@ class RatioColumn(Column):
 
     results = self._StripNone(results)
     baseline_results = self._StripNone(baseline_results)
+    if not results or not baseline_results:
+      return "-"
     result_mean = sum(results) / len(results)
     baseline_mean = sum(baseline_results) / len(baseline_results)
 
@@ -103,6 +115,8 @@ class DeltaColumn(Column):
 
     results = self._StripNone(results)
     baseline_results = self._StripNone(baseline_results)
+    if not results or not baseline_results:
+      return "-"
     result_mean = sum(results) / len(results)
     baseline_mean = sum(baseline_results) / len(baseline_results)
 

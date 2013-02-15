@@ -31,9 +31,9 @@ class BenchmarkSettings(Settings):
                             "collect."))
     self.AddField(EnumField("profile_type",
                             description="The type of profile to collect. "
-                            "Either 'stat', 'record' or 'none'.",
-                            options=["stat", "record", "none"],
-                            default="none"))
+                            "Either 'stat', 'record' or ''.",
+                            options=["stat", "record", ""],
+                            default=""))
 
 
 class LabelSettings(Settings):
@@ -84,8 +84,8 @@ class GlobalSettings(Settings):
                             "collect."))
     self.AddField(EnumField("profile_type",
                             description="The type of profile to collect. "
-                            "Either 'stat', 'record' or 'none'.",
-                            options=["stat", "record", "none"]))
+                            "Either 'stat', 'record' or ''.",
+                            options=["stat", "record", ""]))
 
 
 class SettingsFactory(object):

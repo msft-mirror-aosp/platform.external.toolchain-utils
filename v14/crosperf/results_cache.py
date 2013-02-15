@@ -62,7 +62,29 @@ class ResultsCache(object):
       self._logger = logger.GetLogger()
     self._ce = command_executer.GetCommandExecuter(self._logger)
 
-  def _GetCacheDir(self, read=False):
+  def _GetCacheDirForRead(self):
+    glob_path = self._FormCacheDir(self._GetCacheKeyList(True))
+    matching_dirs = glob.glob(glob_path)
+
+    if matching_dirs:
+      # Cache file found.
+      if len(matching_dirs) > 1:
+        self._logger.LogError("Multiple compatible cache files: %s." %
+                              " ".join(matching_dirs))
+      return matching_dirs[0]
+    else:
+      return None
+
+  def _GetCacheDirForWrite(self):
+    return self._FormCacheDir(self._GetCacheKeyList(False))
+
+  def _FormCacheDir(self, list_of_strings):
+    cache_key = " ".join(list_of_strings)
+    cache_dir = self._ConvertToFilename(cache_key)
+    cache_path = os.path.join(SCRATCH_DIR, cache_dir)
+    return cache_path
+
+  def _GetCacheKeyList(self, read):
     if read and CacheConditions.REMOTES_MATCH not in self.cache_conditions:
       remote = "*"
     else:
@@ -71,27 +93,21 @@ class ResultsCache(object):
       checksum = "*"
     else:
       checksum = ImageChecksummer().Checksum(self.chromeos_image)
-    ret = ("%s %s %s %s %s %s" %
-           (hashlib.md5(self.chromeos_image).hexdigest(),
-            self.autotest_name, self.iteration, ",".join(self.autotest_args),
-            checksum, remote))
-
-    return os.path.join(SCRATCH_DIR, self._ConvertToFilename(ret))
+    return (hashlib.md5(self.chromeos_image).hexdigest(),
+            self.autotest_name, str(self.iteration),
+            ",".join(self.autotest_args),
+            checksum, remote)
 
   def ReadResult(self):
     if CacheConditions.FALSE in self.cache_conditions:
-      self._logger.LogOutput("Cache condition FALSE passed. Not using cache.")
       return None
-    cache_dir = self._GetCacheDir(True)
-    matching_dirs = glob.glob(cache_dir)
+    cache_dir = self._GetCacheDirForRead()
 
-    if matching_dirs:
-      # Cache file found.
-      if len(matching_dirs) > 1:
-        self._logger.LogError("Multiple compatible cache files: %s." %
-                              " ".join(matching_dirs))
-      matching_dir = matching_dirs[0]
-      cache_file = os.path.join(matching_dir, RESULTS_FILE)
+    if not cache_dir:
+      return None
+
+    try:
+      cache_file = os.path.join(cache_dir, RESULTS_FILE)
 
       self._logger.LogOutput("Trying to read from cache file: %s" % cache_file)
 
@@ -104,16 +120,16 @@ class ResultsCache(object):
             CacheConditions.RUN_SUCCEEDED not in self.cache_conditions):
           return Result(out, err, retval)
 
-    else:
+    except Exception, e:
       if CacheConditions.CACHE_FILE_EXISTS not in self.cache_conditions:
         # Cache file not found but just return a failure.
         return Result("", "", 1)
-      return None
+      raise e
 
   def StoreResult(self, result):
-    cache_dir = self._GetCacheDir()
+    cache_dir = self._GetCacheDirForWrite()
     cache_file = os.path.join(cache_dir, RESULTS_FILE)
-    command = "mkdir -p %s" % os.path.dirname(cache_file)
+    command = "mkdir -p %s" % cache_dir
     ret = self._ce.RunCommand(command)
     assert ret == 0, "Couldn't create cache dir"
     with open(cache_file, "wb") as f:
@@ -124,27 +140,32 @@ class ResultsCache(object):
   def StoreAutotestOutput(self, results_dir):
     host_results_dir = os.path.join(self.chromeos_root, "chroot",
                                     results_dir[1:])
-    tarball = os.path.join(self._GetCacheDir(), AUTOTEST_TARBALL)
+    tarball = os.path.join(self._GetCacheDirForWrite(), AUTOTEST_TARBALL)
     command = ("cd %s && tar cjf %s ." % (host_results_dir, tarball))
     ret = self._ce.RunCommand(command)
     if ret:
       raise Exception("Couldn't store autotest output directory.")
 
   def ReadAutotestOutput(self, destination):
-    tarball = os.path.join(self._GetCacheDir(True), AUTOTEST_TARBALL)
+    cache_dir = self._GetCacheDirForWrite()
+    tarball = os.path.join(cache_dir, AUTOTEST_TARBALL)
+    if not os.path.exists(tarball):
+      raise Exception("Cached autotest tarball does not exist at '%s'." %
+                      tarball)
     command = ("cd %s && tar xjf %s ." % (destination, tarball))
     ret = self._ce.RunCommand(command)
     if ret:
       raise Exception("Couldn't read autotest output directory.")
 
   def StorePerfResults(self, perf):
-    perf_path = os.path.join(self._GetCacheDir(), PERF_RESULTS_FILE)
+    perf_path = os.path.join(self._GetCacheDirForWrite(), PERF_RESULTS_FILE)
     with open(perf_path, "wb") as f:
       pickle.dump(perf.report, f)
       pickle.dump(perf.output, f)
 
   def ReadPerfResults(self):
-    perf_path = os.path.join(self._GetCacheDir(), PERF_RESULTS_FILE)
+    cache_dir = self._GetCacheDirForRead()
+    perf_path = os.path.join(cache_dir, PERF_RESULTS_FILE)
     with open(perf_path, "rb") as f:
       report = pickle.load(f)
       output = pickle.load(f)

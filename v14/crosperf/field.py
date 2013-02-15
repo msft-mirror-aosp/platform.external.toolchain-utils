@@ -53,7 +53,12 @@ class BooleanField(Field):
                                        description)
 
   def _Parse(self, value):
-    return bool(value)
+    if value.lower() == "true":
+      return True
+    elif value.lower() == "false":
+      return False
+    raise Exception("Invalid value for '%s'. Must be true or false." %
+                    self.name)
 
 
 class IntegerField(Field):

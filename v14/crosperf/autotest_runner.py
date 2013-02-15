@@ -9,10 +9,11 @@ from utils import utils
 class AutotestRunner(object):
   def __init__(self):
     self._ce = command_executer.GetCommandExecuter()
+    self._ct = command_executer.CommandTerminator()
 
   def Run(self, machine_name, chromeos_root, board, autotest_name,
           autotest_args, profile_counters, profile_type):
-    if profile_counters and profile_type != "none":
+    if profile_counters and profile_type:
       profiler_args = "-e " + " -e ".join(profile_counters)
       if profile_type == "record":
         profiler_args += "-g"
@@ -25,7 +26,10 @@ class AutotestRunner(object):
       options += " %s" % autotest_args
     command = ("./run_remote_tests.sh --remote=%s %s %s" %
                (machine_name, options, autotest_name))
-    return utils.ExecuteCommandInChroot(chromeos_root, command, True)
+    return utils.ExecuteCommandInChroot(chromeos_root, command, True, self._ct)
+
+  def Terminate(self):
+    self._ct.Terminate()
 
 
 class MockAutotestRunner(object):

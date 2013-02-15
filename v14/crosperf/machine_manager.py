@@ -102,6 +102,9 @@ class MachineManager(object):
         for m in self._all_machines:
           self._TryToLockMachine(m)
         self.initialized = True
+        for m in self._all_machines:
+          m.released_time = time.time()
+
       if not self._machines:
         machine_names = []
         for machine in self._all_machines:
@@ -123,6 +126,12 @@ class MachineManager(object):
           m.locked = True
           m.autotest_run = threading.current_thread()
           return m
+      # This logic ensures that threads waiting on a machine will get a machine
+      # with a checksum equal to their image over other threads. This saves time
+      # when crosperf initially assigns the machines to threads by minimizing
+      # the number of re-images.
+      # TODO(asharif): If we centralize the thread-scheduler, we wont need this
+      # code and can implement minimal reimaging code more cleanly.
       for m in [machine for machine in self._machines if not machine.locked]:
         if time.time() - m.released_time > 20:
           m.locked = True
@@ -208,4 +217,3 @@ class MockMachineManager(object):
 
   def GetMachines(self):
     return self.machines
-

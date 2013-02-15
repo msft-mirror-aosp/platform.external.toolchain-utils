@@ -8,8 +8,8 @@ import atexit
 import optparse
 import os
 import sys
-from action_runner import ActionRunner
-from action_runner import MockActionRunner
+from experiment_runner import ExperimentRunner
+from experiment_runner import MockExperimentRunner
 from experiment_factory import ExperimentFactory
 from experiment_file import ExperimentFile
 from help import Help
@@ -85,10 +85,10 @@ def Main(argv):
   atexit.register(Cleanup, experiment)
 
   if options.dry_run:
-    runner = MockActionRunner(experiment)
+    runner = MockExperimentRunner(experiment)
   else:
-    runner = ActionRunner(experiment)
-  runner.RunActions()
+    runner = ExperimentRunner(experiment)
+  runner.Run()
 
 if __name__ == "__main__":
   Main(sys.argv)

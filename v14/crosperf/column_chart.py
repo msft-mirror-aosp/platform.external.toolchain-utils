@@ -54,4 +54,4 @@ chart_%s.draw(data, {width: %s, height: %s, title: '%s', legend: 'none',
     return res
 
   def GetDiv(self):
-    return "<div id='%s'></div>" % self.chart_div
+    return "<div id='%s' class='chart'></div>" % self.chart_div

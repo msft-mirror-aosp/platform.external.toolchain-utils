@@ -12,6 +12,7 @@ import re
 import stat
 import command_executer
 import logger
+import tempfile
 from contextlib import contextmanager
 
 
@@ -67,17 +68,26 @@ def GetSetupBoardCommand(board, gcc_version=None, binutils_version=None,
   return "./setup_board --board=%s %s" % (board, " ".join(options))
 
 
-def ExecuteCommandInChroot(chromeos_root, command, return_output=False):
+def ExecuteCommandInChroot(chromeos_root, command, return_output=False,
+                           command_terminator=None):
   ce = command_executer.GetCommandExecuter()
-  command_file = "in_chroot_cmd.sh"
-  command_file_path = os.path.join(chromeos_root, "src/scripts", command_file)
-  with open(command_file_path, "w") as f:
+  handle, command_file = tempfile.mkstemp(dir=os.path.join(chromeos_root,
+                                                           "src/scripts"),
+                                          suffix=".sh",
+                                          prefix="in_chroot_cmd")
+  # Without this, the handle remains open and we get "file busy" when executing
+  # cros_sdk -- ./<file>.
+  os.close(handle)
+  with open(command_file, "w") as f:
     print >> f, "#!/bin/bash"
     print >> f, command
-  os.chmod(command_file_path, 0777)
+  os.chmod(command_file, 0777)
   with WorkingDirectory(chromeos_root):
-    command = "cros_sdk -- ./%s" % command_file
-    return ce.RunCommand(command, return_output)
+    command = "cros_sdk -- ./%s" % os.path.basename(command_file)
+    ret = ce.RunCommand(command, return_output,
+                        command_terminator=command_terminator)
+    os.remove(command_file)
+    return ret
 
 
 def CanonicalizePath(path):
@@ -111,4 +121,3 @@ def WorkingDirectory(new_dir):
     msg = "cd %s" % old_dir
     logger.GetLogger().LogCmd(msg)
   os.chdir(old_dir)
-

@@ -118,6 +118,13 @@ Results report for: '%s'
 ===========================================
 
 -------------------------------------------
+Benchmark Run Status
+-------------------------------------------
+%s
+
+Number re-images: %s
+
+-------------------------------------------
 Summary
 -------------------------------------------
 %s
@@ -137,8 +144,18 @@ Experiment File
   def __init__(self, experiment):
     super(TextResultsReport, self).__init__(experiment)
 
+  def GetStatusTable(self):
+    status_table = Table("status")
+    for benchmark_run in self.benchmark_runs:
+      status_table.AddRow([Table.Cell(benchmark_run.name),
+                           Table.Cell(benchmark_run.status),
+                           Table.Cell(benchmark_run.failure_reason)])
+    return status_table
+
   def GetReport(self):
     return self.TEXT % (self.experiment.name,
+                        self.GetStatusTable().ToText(),
+                        self.experiment.machine_manager.num_reimages,
                         self.GetSummaryTable().ToText(30),
                         self.GetFullTable().ToText(30),
                         self.experiment.experiment_file)
@@ -159,6 +176,10 @@ pre {
   margin: 10px;
   color: #039;
   font-size: 14px;
+}
+
+.chart {
+  display: inline;
 }
 
 .hidden {

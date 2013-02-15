@@ -44,14 +44,16 @@ class CommandExecuter:
     self.logger.LogCmd(cmd, machine, username)
     if command_terminator and command_terminator.IsTerminated():
       self.logger.LogError("Command was terminated!")
-      return 1
+      if return_output:
+        return [1, "", ""]
+      else:
+        return 1
 
     if machine is not None:
       user = ""
       if username is not None:
         user = username + "@"
       cmd = "ssh -t -t %s%s -- '%s'" % (user, machine, cmd)
-
 
     pty_fds = pty.openpty()
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -74,7 +76,10 @@ class CommandExecuter:
         self.RunCommand("sudo kill -9 " + str(p.pid))
         wait = p.wait()
         self.logger.LogError("Command was terminated!")
-        return wait
+        if return_output:
+          return (p.wait, full_stdout, full_stderr)
+        else:
+          return wait
       for fd in fds[0]:
         if fd == p.stdout:
           out = os.read(p.stdout.fileno(), 16384)

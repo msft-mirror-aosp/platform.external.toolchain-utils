@@ -10,7 +10,6 @@ import time
 import traceback
 from results_cache import Result
 from utils import logger
-from utils.file_utils import FileUtils
 
 STATUS_FAILED = "FAILED"
 STATUS_SUCCEEDED = "SUCCEEDED"
@@ -39,7 +38,7 @@ class BenchmarkRun(threading.Thread):
     self.board = board
     self.iteration = iteration
     self.results = {}
-    self.terminate = False
+    self.terminated = False
     self.retval = None
     self.status = STATUS_PENDING
     self.run_completed = False
@@ -56,6 +55,7 @@ class BenchmarkRun(threading.Thread):
     self.runs_complete = 0
     self.cache_hit = False
     self.perf_results = None
+    self.failure_reason = ""
 
   def MeanExcludingOutliers(self, array, outlier_range):
     """Return the arithmetic mean excluding outliers."""
@@ -97,38 +97,25 @@ class BenchmarkRun(threading.Thread):
 
     # Store the autotest output in the cache also.
     if not cache_hit:
+      self.cache.StoreResult(result)
       self.cache.StoreAutotestOutput(results_dir)
 
     # Generate a perf report and cache it.
-    if cache_hit:
-      self.perf_results = self.cache.ReadPerfResults()
-    else:
-      self.perf_results = (self.perf_processor.
-                           GeneratePerfResults(results_dir,
-                                               self.chromeos_root,
-                                               self.board))
-      self.cache.StorePerfResults(self.perf_results)
+    if self.profile_type:
+      if cache_hit:
+        self.perf_results = self.cache.ReadPerfResults()
+      else:
+        self.perf_results = (self.perf_processor.
+                             GeneratePerfResults(results_dir,
+                                                 self.chromeos_root,
+                                                 self.board))
+        self.cache.StorePerfResults(self.perf_results)
 
     # If there are valid results from perf stat, combine them with the
     # autotest results.
     if self.perf_results:
       stat_results = self.perf_processor.ParseStatResults(self.perf_results)
       self.results = dict(self.results.items() + stat_results.items())
-
-  def StoreResults(self, results_dir):
-    # Store perf_report and autotest output locally.
-    try:
-      self.cache.ReadAutotestOutput(results_dir)
-    except Exception, e:
-      self._logger.LogError(e)
-    try:
-      if self.perf_results:
-        FileUtils().WriteFile(os.path.join(results_dir, "perf.report"),
-                              self.perf_results.report)
-        FileUtils().WriteFile(os.path.join(results_dir, "perf.out"),
-                              self.perf_results.output)
-    except Exception, e:
-      self._logger.LogError(e)
 
   def _GetResultsDir(self, output):
     mo = re.search("Results placed in (\S+)", output)
@@ -155,34 +142,50 @@ class BenchmarkRun(threading.Thread):
       self.cache_hit = (result is not None)
 
       if result:
+        self._logger.LogOutput("%s: Cache hit." % self.name)
         self._logger.LogOutput(result.out + "\n" + result.err)
       else:
+        self._logger.LogOutput("%s: No cache hit." % self.name)
         self.status = STATUS_WAITING
         # Try to acquire a machine now.
         self.machine = self.AcquireMachine()
         self.cache.remote = self.machine.name
         result = self.RunTest(self.machine)
 
+      if self.terminated:
+        return
+
       if not result.retval:
         self.status = STATUS_SUCCEEDED
       else:
-        self.status = STATUS_FAILED
+        if self.status != STATUS_FAILED:
+          self.status = STATUS_FAILED
+          self.failure_reason = "Return value of autotest was non-zero."
 
       self.ProcessResults(result, self.cache_hit)
 
     except Exception, e:
-      self._logger.LogError("Benchmark run: '%s' failed: %s." % (self.name, e))
+      self._logger.LogError("Benchmark run: '%s' failed: %s" % (self.name, e))
       traceback.print_exc()
-      self.status = STATUS_FAILED
+      if self.status != STATUS_FAILED:
+        self.status = STATUS_FAILED
+        self.failure_reason = str(e)
     finally:
       if self.machine:
         self._logger.LogOutput("Releasing machine: %s" % self.machine.name)
         self.machine_manager.ReleaseMachine(self.machine)
         self._logger.LogOutput("Released machine: %s" % self.machine.name)
 
+  def Terminate(self):
+    self.terminated = True
+    self.autotest_runner.Terminate()
+    if self.status != STATUS_FAILED:
+      self.status = STATUS_FAILED
+      self.failure_reason = "Thread terminated."
+
   def AcquireMachine(self):
     while True:
-      if self.terminate:
+      if self.terminated:
         raise Exception("Thread terminated while trying to acquire machine.")
       machine = self.machine_manager.AcquireMachine(self.chromeos_image)
       if machine:
@@ -212,7 +215,6 @@ class BenchmarkRun(threading.Thread):
     self.run_completed = True
     result = Result(out, err, retval)
 
-    self.cache.StoreResult(result)
     return result
 
   def SetCacheConditions(self, cache_conditions):

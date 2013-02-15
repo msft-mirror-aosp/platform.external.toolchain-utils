@@ -3,7 +3,6 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 import os
-import threading
 import time
 from autotest_runner import AutotestRunner
 from benchmark_run import BenchmarkRun
@@ -15,21 +14,18 @@ from utils import logger
 from utils.file_utils import FileUtils
 
 
-class Experiment(threading.Thread):
+class Experiment(object):
   """Class representing an Experiment to be run."""
 
   def __init__(self, name, remote, rerun_if_failed, working_directory,
                chromeos_root, cache_conditions, labels, benchmarks,
                experiment_file):
-    threading.Thread.__init__(self)
     self.name = name
     self.rerun_if_failed = rerun_if_failed
     self.working_directory = working_directory
     self.remote = remote
     self.chromeos_root = chromeos_root
     self.cache_conditions = cache_conditions
-    self.complete = False
-    self.terminate = False
     self.experiment_file = experiment_file
     self.results_directory = os.path.join(self.working_directory,
                                           self.name + "_results")
@@ -94,60 +90,27 @@ class Experiment(threading.Thread):
     for t in self.benchmark_runs:
       if t.isAlive():
         self.l.LogError("Terminating run: '%s'." % t.name)
-        t.terminate = True
+        t.Terminate()
 
-  def RunAutotestRunsInParallel(self):
-    active_threads = []
+  def IsComplete(self):
+    if self.active_threads:
+      for t in self.active_threads:
+        if t.isAlive():
+          t.join(0)
+        if not t.isAlive():
+          self.num_complete += 1
+          self.active_threads.remove(t)
+      return False
+    return True
+
+  def Run(self):
+    self.start_time = time.time()
+    self.active_threads = []
     for benchmark_run in self.benchmark_runs:
       # Set threads to daemon so program exits when ctrl-c is pressed.
       benchmark_run.daemon = True
       benchmark_run.start()
-      active_threads.append(benchmark_run)
-
-    try:
-      while active_threads:
-        if self.terminate:
-          self.Terminate()
-          return
-
-        for t in active_threads:
-          if t.isAlive():
-            t.join(1)
-          if not t.isAlive():
-            self.num_complete += 1
-            active_threads.remove(t)
-    except KeyboardInterrupt:
-      self.Terminate()
-      return
-    finally:
-      self.complete = True
-
-    self.l.LogOutput("Benchmark runs complete. Final status:")
-    for benchmark_run in self.benchmark_runs:
-      self.l.LogOutput("'%s'\t\t%s" % (benchmark_run.name,
-                                       benchmark_run.status))
-
-  def run(self):
-    self.start_time = time.time()
-    self.RunAutotestRunsInParallel()
-
-  def StoreResults(self):
-    FileUtils().RmDir(self.results_directory)
-    FileUtils().MkDirP(self.results_directory)
-    experiment_file_path = os.path.join(self.results_directory,
-                                        "experiment.exp")
-    FileUtils().WriteFile(experiment_file_path, self.experiment_file)
-
-    results_table_path = os.path.join(self.results_directory, "results.html")
-    report = HTMLResultsReport(self).GetReport()
-    FileUtils().WriteFile(results_table_path, report)
-
-    for benchmark_run in self.benchmark_runs:
-      benchmark_run_name = filter(str.isalnum, benchmark_run.name)
-      benchmark_run_path = os.path.join(self.results_directory,
-                                        benchmark_run_name)
-      FileUtils().MkDirP(benchmark_run_path)
-      benchmark_run.StoreResults(benchmark_run_path)
+      self.active_threads.append(benchmark_run)
 
   def SetCacheConditions(self, cache_conditions):
     for benchmark_run in self.benchmark_runs:
