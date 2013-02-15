@@ -21,24 +21,6 @@ def GetCommandExecuter():
   return command_executer
 
 
-class MockCommandExecuter:
-  def __init__(self):
-    self.logger = logger.GetLogger()
-
-  def RunCommand(self, cmd, return_output=False, machine=None, username=None):
-    logger.GetLogger().Logcmd("(Mock) Executing: '%s' on machine '%s@%s'"
-                              % (cmd, username, machine))
-
-  def RunCommands(self, cmdlist, return_output=False, machine=None,
-                  username=None):
-    cmd = " ;\n" .join(cmdlist)
-    return self.RunCommand(cmd, return_output, machine, username)
-
-  def CopyFiles(self, src, dest, src_machine=None, dest_machine=None,
-                username=None, recursive=True):
-    logger.GetLogger().LogOutput("(Mock) Doing copy from '%s:%s' to '%s:%s'" %
-                                 (src_machine, src, dest_machine, dest))
-
 class CommandExecuter:
   def __init__(self):
     self.logger = logger.GetLogger()
@@ -46,13 +28,14 @@ class CommandExecuter:
   def RunCommand(self, cmd, return_output=False, machine=None,
                  username=None):
     """Run a command."""
+
+    self.logger.Logcmd(cmd, machine, username)
+
     if machine is not None:
       user = ""
       if username is not None:
         user = username + "@"
       cmd = "ssh %s%s -- bash <<\EOF\n%s\nEOF" % (user, machine, cmd)
-
-    self.logger.Logcmd(cmd)
 
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, stdin=sys.stdin, shell=True)
@@ -66,12 +49,12 @@ class CommandExecuter:
       fds = select.select([p.stdout, p.stderr], [], [], 0.1)
       for fd in fds[0]:
         if fd == p.stdout:
-          out = os.read(p.stdout.fileno(), 256)
+          out = os.read(p.stdout.fileno(), 4096)
           if return_output:
             full_stdout += out
           self.logger.LogCommandOutput(out)
         if fd == p.stderr:
-          err = os.read(p.stderr.fileno(), 256)
+          err = os.read(p.stderr.fileno(), 4096)
           if return_output:
             full_stderr += err
           self.logger.LogCommandError(err)
@@ -89,7 +72,35 @@ class CommandExecuter:
     cmd = " ;\n" .join(cmdlist)
     return self.RunCommand(cmd, return_output, machine, username)
 
-  def CopyFiles(self, src, dest, src_machine="", dest_machine="", recursive=True):
-    pass
+  def CopyFiles(self, src, dest, src_machine, dest_machine,
+                src_user=None, dest_user=None, recursive=True):
+    if src_user is None:
+      src_user = ""
+    else:
+      src_user = src_user + "@"
+    if dest_user is None:
+      dest_user = ""
+    else:
+      dest_user = dest_user + "@"
+    recurse = ""
+    if recursive:
+      recurse = "-r"
+    return self.RunCommand("sudo scp %s %s%s:%s %s%s:%s"
+                           % (recurse, src_user, src_machine, src,
+                              dest_user, dest_machine, dest))
+
+
+class MockCommandExecuter(CommandExecuter):
+  def __init__(self):
+    self.logger = logger.GetLogger()
+
+  def RunCommand(self, cmd, return_output=False, machine=None, username=None):
+    if machine is None:
+      machine = "localhost"
+    if username is None:
+      username = "current"
+    logger.GetLogger().Logcmd("(Mock)" + cmd, machine, username)
+    return 0
+
 
 

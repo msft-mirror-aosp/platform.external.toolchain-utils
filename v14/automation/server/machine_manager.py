@@ -12,7 +12,6 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import csv
 import machine
-import machine_pool
 import threading
 from utils import utils
 

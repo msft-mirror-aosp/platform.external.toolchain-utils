@@ -15,11 +15,18 @@ class Logger(object):
     self.stderr = open(self._logdir + self._basefilename + ".err", "w")
     self.print_console = print_console
 
-  def Logcmd(self, cmd):
-    self.cmdfd.write(str(cmd) + "\n")
+  def Logcmd(self, cmd, machine=None, user=None):
+    machine_string = ""
+    if machine is not None:
+      machine_string = machine
+    if user is not None:
+      machine_string = " (" + user + "@" + machine_string + ")"
+    output = "CMD%s: %s\n" % (machine_string, cmd)
+    self.cmdfd.write(output)
     self.cmdfd.flush()
     if self.print_console:
-      print "CMD: " + str(cmd)
+      sys.stdout.write(output)
+      sys.stdout.flush()
 
   def LogOutput(self, msg):
     msg = "OUTPUT: " + msg + "\n"

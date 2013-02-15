@@ -14,16 +14,18 @@ import machine_description
 STATUS_NOT_EXECUTED = 0
 STATUS_EXECUTING = 1
 STATUS_COMPLETED = 2
+STATUS_FAILED = 3
 
 SUBDIR_WORK = "/work"
 SUBDIR_LOGS = "/logs"
 
 
 class RequiredFolder:
-  def __init__(self, job, src, dest):
+  def __init__(self, job, src, dest, read_only):
     self.job = job
     self.src = src
     self.dest = dest
+    self.read_only = read_only
 
 
 class Job:
@@ -59,12 +61,12 @@ class Job:
   def GetStatus(self):
     return self.status
 
-  def AddRequiredFolder(self, job, src, dest):
+  def AddRequiredFolder(self, job, src, dest, read_only=False):
     if job not in self.children:
       self.children.append(job)
     if self not in job.parents:
       job.parents.append(self)
-    self.required_folders.append(RequiredFolder(job, src, dest))
+    self.required_folders.append(RequiredFolder(job, src, dest, read_only))
 
   def GetRequiredFolders(self):
     return self.required_folders
