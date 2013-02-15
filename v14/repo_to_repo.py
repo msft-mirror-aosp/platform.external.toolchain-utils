@@ -61,7 +61,7 @@ class P4Repo(Repo):
     command = utils.GetP4VersionCommand(client_name, checkout_dir)
     [r, o, e] = ce.RunCommand(command, return_output=True)
     self.revision = o.strip()
-    command = utils.GetP4DeleteCommand(client_name)
+    command = utils.GetP4DeleteCommand(client_name, checkout_dir)
     ret = ce.RunCommand(command)
     return ret
 
