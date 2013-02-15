@@ -76,6 +76,23 @@ class CommandExecuter:
       return (p.returncode, full_stdout, full_stderr)
     return p.returncode
 
+  def RunCrosCommand(self, cmd, return_output=False, machine=None,
+      username=None, command_terminator=None, chromeos_root=None):
+    """Run a command on a chromeos box"""
+    chromeos_root=os.path.expanduser(chromeos_root)
+    command = ""
+    command += "\nset -- --remote=" + machine
+    command += "\n. " + chromeos_root + "/src/scripts/common.sh"
+    command += "\n. " + chromeos_root + "/src/scripts/remote_access.sh"
+    command += "\nTMP=/tmp"
+    command += "\nFLAGS \"$@\" || exit 1"
+    command += "\nremote_access_init"
+    command += "\nremote_sh " + cmd
+    command += "\necho $REMOTE_OUT"
+    retval = self.RunCommand(command, return_output)
+    return retval
+
+
   def RunCommands(self, cmdlist, return_output=False, machine=None,
                   username=None, command_terminator=None):
     cmd = " ;\n" .join(cmdlist)

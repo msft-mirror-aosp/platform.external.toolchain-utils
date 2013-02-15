@@ -42,6 +42,10 @@ def Main(argv):
                     default=False,
                     action="store_true",
                     help="Should the deja-gnu tests be run?")
+  parser.add_option("-l",
+                    "--perflab-benchmarks",
+                    dest="perflab_benchmarks",
+                    help="Comma-separated perflab benchmarks to run")
   options = parser.parse_args(argv)[0]
 
   server = xmlrpclib.Server("http://localhost:8000")
@@ -54,21 +58,35 @@ def Main(argv):
   versions = options.chromeos_versions
   versions = versions.strip()
 
+  perflab_benchmarks = []
+  if options.perflab_benchmarks:
+    perflab_benchmarks += options.perflab_benchmarks.split(",")
+
   for version in versions.split(","):
+    tc_root = jobs_helper.GetTCRootDir(options.toolchain)[1]
+
     build_chromeos_job = (
         jobs_helper.CreateBuildAndTestChromeOSJob(
-          tc_job,
           version,
           p4_snapshot=options.p4_snapshot))
-    tc_root = jobs_helper.GetTCRootDir(options.toolchain)[1]
     build_chromeos_job.AddRequiredFolder(tc_job,
         tc_root + jobs_helper.tc_pkgs_dir,
         tc_root + jobs_helper.tc_pkgs_dir)
     all_jobs.append(build_chromeos_job)
 
+    for pb in perflab_benchmarks:
+      perflab_job = jobs_helper.CreatePerflabJob(
+          version,
+          pb,
+          p4_snapshot=options.p4_snapshot)
+      perflab_job.AddRequiredFolder(tc_job,
+          tc_root + jobs_helper.tc_pkgs_dir,
+          tc_root + jobs_helper.tc_pkgs_dir)
+      all_jobs.append(perflab_job)
+
   if options.dejagnu == True:
-    dejagnu_job = jobs_helper.CreateDejaGNUJob(tc_job,
-                                               p4_snapshot=options.p4_snapshot)
+    dejagnu_job = jobs_helper.CreateDejaGNUJob(
+        p4_snapshot=options.p4_snapshot)
     tc_root = jobs_helper.GetTCRootDir(options.toolchain)[1]
     dejagnu_job.AddRequiredFolder(tc_job,
         tc_root + jobs_helper.tc_objects_dir,

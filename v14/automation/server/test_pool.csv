@@ -1,5 +1,5 @@
 hostname, arch,cores,os,username
-"chrome-dev1.hot","core2duo",4,"linux","mobiletc-prebuild"
-"chrome-dev2.hot","core2duo",4,"linux","mobiletc-prebuild"
+"chrome-dev1.hot.corp.google.com","core2duo",4,"linux","mobiletc-prebuild"
+"chrome-dev2.hot.corp.google.com","core2duo",4,"linux","mobiletc-prebuild"
 "cros1","atom",1,"chromeos","chronos"
 "cros1","atom",1,"chromeos","chronos"

@@ -19,6 +19,12 @@ chromeos_scripts_dir = chromeos_root + "/" + scripts_dir
 tc_pkgs_dir = "output/pkgs"
 tc_objects_dir = "output/objects"
 
+perflab_binary = "/home/mobiletc-prebuild/perflab-checkout/google3/blaze-bin/platforms/performance/brrd/perflab/perflab"
+perflab_interpreter_arg = "--perflab_interpreter=/home/mobiletc-prebuild/perflab-checkout/google3/blaze-bin/platforms/performance/brrd/run_tools/experiment_job_dag"
+perflab_brrd_config_arg = "--brrd_config=/home/mobiletc-prebuild/perflab-checkout/google3/platforms/performance/brrd/perflab/util/perflab.cfg"
+perflab_command = ("%s %s %s" %
+    (perflab_binary, perflab_interpreter_arg, perflab_brrd_config_arg))
+
 def _GetP4ClientSpec(client_name, p4_paths):
   p4_string = ""
   for p4_path in p4_paths:
@@ -42,7 +48,7 @@ def GetP4Command(p4_port, p4_paths, revision, checkoutdir, p4_snapshot=""):
                   " " + checkoutdir + "/" + os.path.dirname(real_path))
     return command
 
-  client_name = "p4-automation-$JOB_ID"
+  client_name = "p4-automation-$HOSTNAME-$JOB_ID"
   command += " export P4CONFIG=.p4config"
   command += " && mkdir -p " + checkoutdir
   command += " && cd " + checkoutdir
@@ -90,6 +96,13 @@ def GetP4VersionDirCommand(p4_snapshot=""):
   command = GetP4Command(p4_port, p4_paths, p4_revision, p4_checkout_dir, p4_snapshot)
   return command
 
+def GetP4BenchmarksDirCommand(p4_snapshot=""):
+  p4_port = "perforce2:2666"
+  p4_paths = []
+  p4_paths.append(("//depot2/third_party/android_bench/v2_0/...", "gcctools/chromeos/v14/third_party/android_bench/v2_0/..."))
+  p4_revision = 1
+  command = GetP4Command(p4_port, p4_paths, p4_revision, p4_checkout_dir, p4_snapshot)
+  return command
 
 def GetTCRootDir(toolchain="trunk"):
   gcctools_dir = "gcctools/"
@@ -126,19 +139,7 @@ def CreateBuildTCJob(chromeos_version="top",
   command += "; " + GetP4Command(p4_port, p4_paths,
                                  p4_revision, p4_checkout_dir, p4_snapshot)
 
-  if chromeos_version == "weekly":
-    command += "; cp -rp " + GetWeeklyChromeOSLocation() + " chromeos"
-  elif chromeos_version == "quarterly":
-    command += " ; cp -rp " + GetQuarterlyChromeOSLocation() + " chromeos"
-  elif (chromeos_version == "top" or chromeos_version == "latest" or
-        re.match("^\d\.\d\.\d\.\d$", chromeos_version)):
-    command += ("; " + p4_version_dir + "/setup_chromeos.py" +
-                " --dir=" + chromeos_root +
-                " --version=" + chromeos_version +
-                " --minilayout")
-  else:
-    command += "; cp -rp " + chromeos_version + " chromeos"
-
+  command += "&& " + _GetSetupChromeOSCommand(chromeos_version, True)
 
   command += ("; " + p4_version_dir + "/build_tc.py" +
                       " --toolchain_root=" + local_path +
@@ -148,7 +149,7 @@ def CreateBuildTCJob(chromeos_version="top",
   tc_job = CreateLinuxJob(command)
   return tc_job
 
-def CreateDejaGNUJob(tc_job, board="x86-generic", p4_snapshot=""):
+def CreateDejaGNUJob(board="x86-generic", p4_snapshot=""):
   command = GetInitialCommand()
   command += "; " + GetP4VersionDirCommand(p4_snapshot)
   command += ("&& " + p4_version_dir + "/run_dejagnu.py" +
@@ -160,7 +161,7 @@ def CreateDejaGNUJob(tc_job, board="x86-generic", p4_snapshot=""):
   to_return.AddRequiredMachine("", "chromeos", False, False)
   return to_return
 
-def CreateBuildAndTestChromeOSJob(tc_job, chromeos_version="latest",
+def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
                                   board="x86-generic",
                                   p4_snapshot=""):
   command = GetInitialCommand()
@@ -168,18 +169,7 @@ def CreateBuildAndTestChromeOSJob(tc_job, chromeos_version="latest",
   command += "&& mkdir -p perforce2/gcctools/google_vendor_src_branch/gcc"
   command += "; " + GetP4VersionDirCommand(p4_snapshot)
 
-  if chromeos_version == "weekly":
-    command += "; cp -rp " + GetWeeklyChromeOSLocation() + " chromeos"
-  elif chromeos_version == "quarterly":
-    command += " cp -rp " + GetQuarterlyChromeOSLocation() + " chromeos"
-  elif (chromeos_version == "top" or chromeos_version == "latest" or
-        re.match("^\d\.\d\.\d\.\d$", chromeos_version)):
-    command += ("; " + p4_version_dir + "/setup_chromeos.py" +
-                " --dir=" + chromeos_root +
-                " --version=" + chromeos_version)
-  else:
-    command += "; cp -rp " + chromeos_version + " chromeos"
-
+  command += "&& " + _GetSetupChromeOSCommand(chromeos_version, False)
   command += ("; " + p4_version_dir + "/build_tc.py" +
                       " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
                       " --chromeos_root=" + chromeos_root +
@@ -204,6 +194,41 @@ def CreateBuildAndTestChromeOSJob(tc_job, chromeos_version="latest",
 
   return to_return
 
+def _GetSetupChromeOSCommand(chromeos_version, use_minilayout=False):
+  command = ""
+  if chromeos_version == "weekly":
+    command += "cp -rp " + GetWeeklyChromeOSLocation() + " chromeos"
+  elif chromeos_version == "quarterly":
+    command += "cp -rp " + GetQuarterlyChromeOSLocation() + " chromeos"
+  elif (chromeos_version == "top" or chromeos_version == "latest" or
+        re.match("^\d\.\d\.\d\.\d$", chromeos_version)):
+    command += (p4_version_dir + "/setup_chromeos.py" +
+                " --dir=" + chromeos_root +
+                " --version=" + chromeos_version)
+    if use_minilayout == True:
+      command += " --minilayout"
+  else:
+    command += "cp -rp " + chromeos_version + " chromeos"
+  return command
+
+def CreatePerflabJob(chromeos_version,
+                                  benchmark,
+                                  board="x86-generic",
+                                  p4_snapshot=""):
+  command = GetInitialCommand()
+  command += "&& " + GetP4VersionDirCommand(p4_snapshot)
+  command += "&& " + GetP4BenchmarksDirCommand(p4_snapshot)
+  command += "&& " + _GetSetupChromeOSCommand(chromeos_version, True)
+  command += ("&& " + p4_version_dir + "/build_tc.py" +
+                      " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
+                      " --chromeos_root=" + chromeos_root +
+                      " -B")
+  toolchain_root = p4_checkout_dir + "gcctools"
+  command += "&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s build %s" % (perflab_command, toolchain_root, chromeos_root, benchmark)
+  command += "&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s --machines=chromeos_x86-agz_1 run %s" % (perflab_command, toolchain_root, chromeos_root, benchmark)
+  to_return = CreateLinuxJob(command)
+  return to_return
+
 def CreateTestJob(build_chromeos_job):
   command = GetInitialCommand()
   command += " && cd " + chromeos_scripts_dir
@@ -217,8 +242,6 @@ def CreateUpdateJob(chromeos_version,
                     p4_snapshot="",
                     board="x86-generic"):
   command = GetInitialCommand()
-  dirname = time.asctime()
-  dirname = dirname.replace(" ", "-")
   command += "; " + GetP4VersionDirCommand(p4_snapshot)
   command += ("; " + p4_version_dir + "/setup_chromeos.py" +
               " --dir=" + chromeos_root +
@@ -232,14 +255,9 @@ def CreateUpdateJob(chromeos_version,
 
   location = utils.GetRoot(GetWeeklyChromeOSLocation())[0]
   command += "&& mkdir -p " + location
-###  command += ("&& rsync -a" +
-###              " --exclude=build --exclude=.repo/ --exlclude=.git/" +
-###              " chromeos/ " + location +
-###              "/chromeos." + dirname)
-###  command += (" && ln -fs -T chromeos." + dirname + " " +
-###              location + "/" + chromeos_version)
-  command += (" && rsync -a chromeos/src/build/ " + location +
-              "/chromeos." + dirname + ".build")
+  dirname = "$(cd chromeos/src/scripts; git branch | cut -d' ' -f 2)"
+  command += (" && rsync -a chromeos/src/build/ " +
+              location + "/chromeos." + dirname + ".build")
   command += (" && ln -fs -T chromeos." + dirname + ".build " +
               location + "/" + chromeos_version + ".build")
   to_return = CreateLinuxJob(command)
