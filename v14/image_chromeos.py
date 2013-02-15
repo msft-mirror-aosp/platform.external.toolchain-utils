@@ -48,6 +48,10 @@ def Main(argv):
                     action="store_true",
                     default=False,
                     help="Force an image even if it is non-test.")
+  parser.add_option("-a",
+                    "--image_to_live_args",
+                    dest="image_to_live_args")
+
 
   options = parser.parse_args(argv[1:])[0]
 
@@ -116,6 +120,8 @@ def Main(argv):
                "/src/scripts/image_to_live.sh --remote=" +
                options.remote +
                " --image=" + located_image)
+    if options.image_to_live_args:
+      command += " %s" % options.image_to_live_args
 
     retval = cmd_executer.RunCommand(command)
 
@@ -181,20 +187,22 @@ def LocateOrCopyImage(chromeos_root, image, board=None):
   return [False, new_image]
 
 
-def GetImageMountCommand(chromeos_root, image, mount_point):
+def GetImageMountCommand(chromeos_root, image, rootfs_mp, stateful_mp):
   image_dir = os.path.dirname(image)
   image_file = os.path.basename(image)
   mount_command = ("cd %s/src/scripts &&"
                    "./mount_gpt_image.sh --from=%s --image=%s"
                    " --safe --read_only"
-                   " --rootfs_mountpt=%s" %
-                   (chromeos_root, image_dir, image_file, mount_point))
+                   " --rootfs_mountpt=%s"
+                   " --stateful_mountpt=%s" %
+                   (chromeos_root, image_dir, image_file, rootfs_mp,
+                    stateful_mp))
   return mount_command
 
 
-def MountImage(chromeos_root, image, mount_point, unmount=False):
+def MountImage(chromeos_root, image, rootfs_mp, stateful_mp, unmount=False):
   cmd_executer = command_executer.GetCommandExecuter()
-  command = GetImageMountCommand(chromeos_root, image, mount_point)
+  command = GetImageMountCommand(chromeos_root, image, rootfs_mp, stateful_mp)
   if unmount:
     command = "%s --unmount" % command
   retval = cmd_executer.RunCommand(command)
@@ -203,21 +211,23 @@ def MountImage(chromeos_root, image, mount_point, unmount=False):
 
 
 def IsImageModdedForTest(chromeos_root, image):
-  mount_point = tempfile.mkdtemp()
-  MountImage(chromeos_root, image, mount_point)
+  rootfs_mp = tempfile.mkdtemp()
+  stateful_mp = tempfile.mkdtemp()
+  MountImage(chromeos_root, image, rootfs_mp, stateful_mp)
   signature_file = "/usr/local/lib/python2.6/test/autotest.py"
-  is_test_image = os.path.isfile("%s/%s" % (mount_point, signature_file))
-  MountImage(chromeos_root, image, mount_point, unmount=True)
+  is_test_image = os.path.isfile("%s/%s" % (rootfs_mp, signature_file))
+  MountImage(chromeos_root, image, rootfs_mp, stateful_mp, unmount=True)
   return is_test_image
 
 
 def VerifyChromeChecksum(chromeos_root, image, remote):
   cmd_executer = command_executer.GetCommandExecuter()
-  mount_point = tempfile.mkdtemp()
-  MountImage(chromeos_root, image, mount_point)
+  rootfs_mp = tempfile.mkdtemp()
+  stateful_mp = tempfile.mkdtemp()
+  MountImage(chromeos_root, image, rootfs_mp, stateful_mp)
   image_chrome_checksum = utils.Md5File("%s/opt/google/chrome/chrome" %
-                                        mount_point)
-  MountImage(chromeos_root, image, mount_point, unmount=True)
+                                        rootfs_mp)
+  MountImage(chromeos_root, image, rootfs_mp, stateful_mp, unmount=True)
 
   command = "md5sum /opt/google/chrome/chrome"
   [r, o, e] = cmd_executer.CrosRunCommand(command,
