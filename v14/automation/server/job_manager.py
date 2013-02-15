@@ -74,7 +74,7 @@ class JobManager(threading.Thread):
 
     self.all_jobs.append(current_job)
     # Only queue a job as ready if it has no dependencies
-    if current_job.IsReady():
+    if current_job.is_ready:
       self.ready_jobs.append(current_job)
 
     self.job_condition.notifyAll()
@@ -95,8 +95,8 @@ class JobManager(threading.Thread):
     self.job_condition.acquire()
     logger.GetLogger().LogOutput("Job profile:\n%s" % str(job))
     if job.status == automation.common.job.STATUS_SUCCEEDED:
-      for parent in job.GetParents():
-        if parent.IsReady():
+      for parent in job.parents:
+        if parent.is_ready:
           if parent not in self.ready_jobs:
             self.ready_jobs.append(parent)
 
@@ -120,8 +120,8 @@ class JobManager(threading.Thread):
           return
 
 
-        required_machines = ready_job.GetRequiredMachines()
-        for child in ready_job.GetChildren():
+        required_machines = ready_job.required_machines
+        for child in ready_job.children:
           required_machines[0].AddPreferredMachine(child.machines[0].name)
 
         machines = self.machine_manager.GetMachines(required_machines)

@@ -15,17 +15,16 @@ p4_revision = 1
 p4_checkoutdir = "perforce2"
 
 p4_job = jobs_helper.CreateP4Job(p4_port, p4_paths, p4_revision, p4_checkoutdir)
+p4_output = job.FolderDependency(p4_job, "perforce2")
 setup_chromeos_job = jobs_helper.CreateSetupChromeOSJob(p4_job, "latest")
+setup_chromeos_output = job.FolderDependency(setup_chromeos_job, "chromeos")
 
 build_tc_commands = []
-build_tc_commands.append(p4_checkoutdir +
-                         "/gcctools/chromeos/v14/build_tc.py" +
-                         " --toolchain_root=" + p4_checkoutdir + "/gcctools" +
-                         " --chromeos_root=" + "chromeos")
+build_tc_commands.append("%s/gcctools/chromeos/v14/build_tc.py "
+                         "--toolchain_root=%s/gcctools --chromeos_root=%s" %
+                         (p4_checkoutdir, p4_checkoutdir, "chromeos"))
 tc_job = job(build_tc_commands)
-tc_job.AddChild(p4_job)
-tc_job.AddRequiredFolder(p4_job, "perforce2", "perforce2")
-tc_job.AddChild(setup_chromeos_job)
-tc_job.AddRequiredFolder(setup_chromeos_job, "chromeos", "chromeos")
+tc_job.DependsOnFolder(p4_output)
+tc_job.DependsOnFolder(setup_chromeos_output)
 
 server.ExecuteJobGroup(utils.Serialize([p4_job, setup_chromeos_job, tc_job]))

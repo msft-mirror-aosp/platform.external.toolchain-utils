@@ -101,7 +101,7 @@ def PrintJobRow(job):
   print html_tools.GetTableCell(machines)
   print html_tools.GetTableCell(job.work_dir)
   deps = ""
-  for child in job.GetChildren():
+  for child in job.children:
     deps += str(child.id) + " "
   print html_tools.GetTableCell(deps)
   full_status = "%s\n%s" % (job.status, job.GetTotalTime())

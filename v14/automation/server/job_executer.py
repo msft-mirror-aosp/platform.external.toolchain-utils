@@ -110,7 +110,7 @@ class JobExecuter(threading.Thread):
 
     self.job.status = job.STATUS_COPYING
 
-    for required_folder in self.job.GetRequiredFolders():
+    for required_folder in self.job.required_folders:
       to_folder = os.path.join(self.job.work_dir, required_folder.dest)
       from_folder = os.path.join(required_folder.job.work_dir,
                                  required_folder.src)

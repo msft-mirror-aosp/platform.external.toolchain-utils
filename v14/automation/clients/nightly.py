@@ -40,38 +40,30 @@ def Main(argv):
   all_jobs.append(tc_job)
 
   tc_root = jobs_helper.GetTCRootDir(options.toolchain)[1]
+  tc_pkgs_dir = job.FolderDependency(tc_job, tc_root + jobs_helper.tc_pkgs_dir)
+  tc_objects_dir = job.FolderDependency(tc_job,
+                                        tc_root + jobs_helper.tc_objects_dir)
 
   # Perform the correctness tests
-  build_chromeos_job = jobs_helper.CreateBuildAndTestChromeOSJob(
-      "weekly",
-      toolchain=options.toolchain,
-      board=options.board)
-  build_chromeos_job.AddRequiredFolder(tc_job,
-      tc_root + jobs_helper.tc_pkgs_dir,
-      tc_root + jobs_helper.tc_pkgs_dir)
+  build_chromeos_job = \
+      jobs_helper.CreateBuildAndTestChromeOSJob("weekly",
+                                                toolchain=options.toolchain,
+                                                board=options.board)
+  build_chromeos_job.DependsOnFolder(tc_pkgs_dir)
   all_jobs.append(build_chromeos_job)
 
-  dejagnu_job = jobs_helper.CreateDejaGNUJob(
-      toolchain=options.toolchain,
-      board=options.board)
-  dejagnu_job.AddRequiredFolder(tc_job,
-      tc_root + jobs_helper.tc_pkgs_dir,
-      tc_root + jobs_helper.tc_pkgs_dir)
-  dejagnu_job.AddRequiredFolder(tc_job,
-      tc_root + jobs_helper.tc_objects_dir,
-      tc_root + jobs_helper.tc_objects_dir)
-
+  dejagnu_job = jobs_helper.CreateDejaGNUJob(toolchain=options.toolchain,
+                                             board=options.board)
+  dejagnu_job.DependsOnFolder(tc_pkgs_dir)
+  dejagnu_job.DependsOnFolder(tc_objects_dir)
   all_jobs.append(dejagnu_job)
 
   # Perform the performance tests
-  perflab_job = jobs_helper.CreatePerflabJob(
-      "quarterly",
-      options.perflab_benchmarks,
-      toolchain=options.toolchain,
-      board=options.board)
-  perflab_job.AddRequiredFolder(tc_job,
-      tc_root + jobs_helper.tc_pkgs_dir,
-      tc_root + jobs_helper.tc_pkgs_dir)
+  perflab_job = jobs_helper.CreatePerflabJob("quarterly",
+                                             options.perflab_benchmarks,
+                                             toolchain=options.toolchain,
+                                             board=options.board)
+  perflab_job.DependsOnFolder(tc_pkgs_dir)
   all_jobs.append(perflab_job)
 
   group = job_group.JobGroup("nightly_client", all_jobs, True, False)

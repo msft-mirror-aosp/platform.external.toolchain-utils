@@ -26,12 +26,16 @@ TEST_RESULTS_FILE = "results.csv"
 TEST_REPORT_FILE = "report.html"
 TEST_REPORT_SUMMARY_FILE = "summary.txt"
 
-class RequiredFolder(object):
-  def __init__(self, job, src, dest, read_only):
+class FolderDependency(object):
+  def __init__(self, job, src, dest=None):
+    if not dest:
+      dest = src
+
+    # TODO(kbaclawski): rename to producer
     self.job = job
     self.src = src
     self.dest = dest
-    self.read_only = read_only
+    self.read_only = dest != src
 
 
 class StatusEvent(object):
@@ -51,7 +55,9 @@ class Job(object):
     self._status = STATUS_NOT_EXECUTED
     self.children = []
     self.parents = []
-    self.machine_descriptions = []
+    # TODO(kbaclawski): rename to machine_dependencies
+    self.required_machines = []
+    # TODO(kbaclawski): rename to folder_dependencies
     self.required_folders = []
     self.id = 0
     self.work_dir = ""
@@ -121,16 +127,12 @@ class Job(object):
   def status(self, status):
     assert status in [STATUS_NOT_EXECUTED, STATUS_SETUP, STATUS_COPYING,
                       STATUS_RUNNING, STATUS_SUCCEEDED, STATUS_FAILED]
-    status_event = StatusEvent(self.status, status)
-    self.status_events.append(status_event)
+    self.status_events.append(StatusEvent(self.status, status))
     self._status = status
 
-  def AddRequiredFolder(self, job, src, dest, read_only=False):
-    self.AddChild(job)
-    self.required_folders.append(RequiredFolder(job, src, dest, read_only))
-
-  def GetRequiredFolders(self):
-    return self.required_folders
+  def DependsOnFolder(self, dependency):
+    self.required_folders.append(dependency)
+    self.DependsOn(dependency.job)
 
   def GetTestResultsDirSrc(self):
     # TODO(kbaclawski): Is it acceptable not to have work_dir?
@@ -175,44 +177,26 @@ class Job(object):
   def log_err_filename(self):
     return os.path.join(self.logs_dir, "job-%s.log.err" % self.id)
 
-  def AddChild(self, job):
+  def DependsOn(self, job):
     if job not in self.children:
       self.children.append(job)
     if self not in job.parents:
       job.parents.append(self)
 
-  def GetChildren(self):
-    return self.children
-
-  def GetNumChildren(self):
-    return len(self.children)
-
-  def GetParents(self):
-    return self.parents
-
-  def GetNumParents(self):
-    return len(self.parents)
-
-  def IsReady(self):
-    # Check that all our dependencies have been executed
-    for child in self.children:
-      if child.status != STATUS_SUCCEEDED:
-        return False
-
-    return True
-
-  def GetRequiredMachines(self):
-    return self.machine_descriptions
+  @property
+  def is_ready(self):
+    """ Check that all our dependencies have been executed. """
+    return all(child.status == STATUS_SUCCEEDED for child in self.children)
 
   def AddRequiredMachine(self, name, os, lock, primary=True):
     if primary == True and self._primary_done == True:
       raise RuntimeError("There can only be one primary machine description.")
     desc = machine_description.MachineDescription(name, os, lock)
     if primary:
-      self.machine_descriptions.insert(0, desc)
+      self.required_machines.insert(0, desc)
       self._primary_done = True
     else:
-      self.machine_descriptions.append(desc)
+      self.required_machines.append(desc)
 
   @property
   def baseline_filename(self):
