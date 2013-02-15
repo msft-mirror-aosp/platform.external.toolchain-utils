@@ -46,6 +46,23 @@ EXPERIMENT_FILE_2 = """
   }
   """
 
+EXPERIMENT_FILE_3 = """
+  board: x86-alex
+  remote: chromeos-alex3
+  iterations: 3
+
+  benchmark: PageCycler {
+  }
+
+  image1 {
+    chromeos_image:/usr/local/google/cros_image1.bin
+  }
+
+  image1 {
+    chromeos_image: /usr/local/google/cros_image2.bin
+  }
+  """
+
 
 class ExperimentFileTest(unittest.TestCase):
   def testLoadExperimentFile1(self):
@@ -78,6 +95,11 @@ class ExperimentFileTest(unittest.TestCase):
     self.assertEqual(benchmark_settings[0].GetField("iterations"), 3)
     self.assertEqual(benchmark_settings[1].name, "AndroidBench")
     self.assertEqual(benchmark_settings[1].GetField("iterations"), 2)
+
+  def testDuplicateLabel(self):
+    input_file = StringIO.StringIO(EXPERIMENT_FILE_3)
+    self.assertRaises(Exception, ExperimentFile, input_file)
+
 
 if __name__ == "__main__":
   unittest.main()

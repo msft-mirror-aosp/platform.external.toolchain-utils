@@ -141,14 +141,12 @@ class BenchmarkRun(threading.Thread):
     try:
       # Just use the first machine for running the cached version,
       # without locking it.
-      self.machine = self.machine_manager.GetMachines()[0]
-
       self.cache.Init(self.chromeos_image,
                       self.chromeos_root,
                       self.autotest_name,
                       self.iteration,
                       self.autotest_args,
-                      self.machine.name,
+                      self.machine_manager.GetMachines()[0].name,
                       self.board,
                       self.cache_conditions,
                       self._logger)
@@ -161,7 +159,6 @@ class BenchmarkRun(threading.Thread):
       else:
         self.status = STATUS_WAITING
         # Try to acquire a machine now.
-        self.machine = None
         self.machine = self.AcquireMachine()
         self.cache.remote = self.machine.name
         result = self.RunTest(self.machine)

@@ -104,6 +104,7 @@ class ExperimentFile(object):
   def _Parse(self, experiment_file):
     """Parse experiment file and create settings."""
     reader = ExperimentFileReader(experiment_file)
+    settings_names = {}
     try:
       while reader.NextLine():
         line = reader.CurrentLine().strip()
@@ -111,7 +112,12 @@ class ExperimentFile(object):
         if not line:
           continue
         elif ExperimentFile._OPEN_SETTINGS_RE.match(line):
-          self.all_settings.append(self._ParseSettings(reader))
+          new_settings = self._ParseSettings(reader)
+          if new_settings.name in settings_names:
+            raise Exception("Duplicate settings name: '%s'." %
+                            new_settings.name)
+          settings_names[new_settings.name] = True
+          self.all_settings.append(new_settings)
         elif ExperimentFile._FIELD_VALUE_RE.match(line):
           field = self._ParseField(reader)
           self.global_settings.SetField(field[0], field[1], field[2])
