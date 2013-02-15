@@ -38,12 +38,12 @@ class Server:
   def GetReport(self, job_group_id, summary=False):
     job_group = self.job_group_manager.GetJobGroup(job_group_id)
     if summary == False:
-      report = open(job_group.GetReportDest(), 'rb')
+      report = open(job_group.GetTestReport(), 'rb')
       result = "".join(report.readlines())
       report.close()
       return utils.Serialize(result)
     else:
-      report = open(job_group.GetReportDest(), 'rb')
+      report = open(job_group.GetTestReport(), 'rb')
       report.readline()
       num_executed = report.readline().split(":")[1].strip()
       num_passes = report.readline().split(":")[1].strip()
