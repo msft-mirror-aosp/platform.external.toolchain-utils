@@ -8,15 +8,10 @@ from collections import defaultdict
 from collections import namedtuple
 from datetime import datetime
 from fnmatch import fnmatch
-from itertools import chain
 from itertools import groupby
 import logging
 import os.path
 import re
-
-from django.db import transaction
-
-import models
 
 
 class DejaGnuTestResult(namedtuple('Result', 'name variant result')):
@@ -80,12 +75,6 @@ class DejaGnuTestResult(namedtuple('Result', 'name variant result')):
 
       return cls(path, variant or '', result)
 
-  @classmethod
-  def FromDbObject(cls, test_result):
-    return cls(str(test_result.test.name),
-               str(test_result.test.variant or ''),
-               str(test_result.get_result_display()))
-
   def __str__(self):
     fmt = '{2}: {0}'
     if self.variant:
@@ -94,15 +83,21 @@ class DejaGnuTestResult(namedtuple('Result', 'name variant result')):
 
 
 class DejaGnuTestRun(object):
-  __slots__ = ('build', 'board', 'date', 'target', 'host', 'tool', 'results')
+  __slots__ = ('board', 'date', 'target', 'host', 'tool', 'results')
 
-  def __init__(self, build, **kwargs):
-    self.build = build
+  def __init__(self, **kwargs):
     self.results = set()
 
     for name, value in kwargs.items():
-      assert name != 'build' and name in self.__slots__
+      assert name in self.__slots__
       setattr(self, name, value)
+
+  @classmethod
+  def FromFile(cls, filename):
+    test_run = cls()
+    test_run.FromDejaGnuOutput(filename)
+    test_run.CleanUpTestResults()
+    return test_run
 
   @property
   def summary(self):
@@ -154,19 +149,7 @@ class DejaGnuTestRun(object):
             break
 
     logging.info('DejaGNU output file parsed successfully.')
-
-  @classmethod
-  def FromDbObject(cls, test_run):
-    test_results = models.TestResult.objects.filter(test_run=test_run)
-
-    return cls(
-        build=test_run.build.name,
-        board=test_run.build.board,
-        tool=test_run.build.tool,
-        date=test_run.date,
-        target=test_run.target,
-        host=test_run.host,
-        results=set(map(DejaGnuTestResult.FromDbObject, test_results)))
+    logging.info(self)
 
   def CleanUpTestResults(self):
     """Remove certain test results considered to be spurious.
@@ -206,9 +189,7 @@ class DejaGnuTestRun(object):
 
   def _IsApplicable(self, manifest):
     """Checks if test results need to be reconsidered based on the manifest."""
-    check_list = [(self.build, manifest.build),
-                  (self.tool, manifest.tool),
-                  (self.board, manifest.board)]
+    check_list = [(self.tool, manifest.tool), (self.board, manifest.board)]
 
     return all(fnmatch(text, pattern) for text, pattern in check_list)
 
@@ -239,54 +220,6 @@ class DejaGnuTestRun(object):
       logging.warning(
           'Result {%s} listed in manifest but not suppressed.', result)
 
-  @transaction.commit_manually
-  def StoreInDb(self):
-    """Store whole test run into database."""
-
-    # Create and store new test run
-    build, is_new = models.Build.objects.get_or_create(
-        name=self.build, tool=self.tool, board=self.board)
-
-    if is_new:
-      build.save()
-      logging.info('Stored new build: %s.', build)
-
-    test_run = models.TestRun(build=build, date=self.date, host=self.host,
-                              target=self.target)
-    test_run.save()
-
-    transaction.commit()
-
-    # Complete the list of test names.
-    tests = dict(((test.name, test.variant), test)
-                 for test in models.Test.objects.all())
-
-    missing_tests = [res for res in self.results
-                     if (res.name, res.variant) not in tests]
-
-    if missing_tests:
-      logging.info('Storing missing test names for: %s.', test_run)
-
-      for test in missing_tests:
-        test_name = models.Test(name=test.name, variant=test.variant)
-        test_name.save()
-
-        logging.debug('Saved test name: "%s".', test_name)
-
-        tests[(test.name, test.variant)] = test_name
-
-      transaction.commit()
-
-    # Create and store test results
-    logging.info('Storing test results for: %s.', test_run)
-
-    for res in self.results:
-      test_res = models.TestResult(test_run=test_run,
-                                   test=tests[(res.name, res.variant)],
-                                   result=models.RESULT_REVMAP[res.result])
-      logging.debug('Storing: %s.', test_res)
-      test_res.save()
-
-    transaction.commit()
-
-    logging.info('Report stored successfully.')
+  def __str__(self):
+    return '{0}, {1} @{2} on {3}'.format(self.target, self.tool, self.board,
+                                         self.date)

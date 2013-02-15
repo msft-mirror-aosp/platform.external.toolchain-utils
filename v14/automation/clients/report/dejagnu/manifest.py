@@ -14,25 +14,23 @@ import re
 from summary import DejaGnuTestResult
 
 
-class Manifest(namedtuple('Manifest', 'build tool board results')):
+class Manifest(namedtuple('Manifest', 'tool board results')):
   """Stores a list of unsuccessful tests.
 
   Any line that starts with '#@' marker carries auxiliary data in form of a
   key-value pair, for example:
 
-  #@ build: gcc-4.6.x-linux-gnu-x86_64
   #@ tool: *
   #@ board: unix
 
-  So far build, tool and board parameters are recognized.  Their value can
-  contain arbitrary glob expression.  Based on aforementioned parameters given
-  manifest will be applied for all test results, but only in selected test runs.
-  Note that only build parameter is mandatory, for the rest default value is '*'
-  (i.e. all tools/boards).
+  So far tool and board parameters are recognized.  Their value can contain
+  arbitrary glob expression.  Based on aforementioned parameters given manifest
+  will be applied for all test results, but only in selected test runs.  Note
+  that all parameters are optional.  Their default value is '*' (i.e. for all
+  tools/boards).
 
-  The meaning of lines above is as follows: test results to follow should only
-  be suppressed for "gcc-4.6.x-linux-gnu-x86_64" build, if tested on "unix"
-  board, test results apply to all tools in the test run (ie. gcc, g++, etc.).
+  The meaning of lines above is as follows: corresponding test results to follow
+  should only be suppressed if test run was performed on "unix" board.
 
   The summary line used to build the test result should have this format:
 
@@ -50,7 +48,7 @@ class Manifest(namedtuple('Manifest', 'build tool board results')):
     results = [result for result in test_run.results
                if result.result in cls.SUPPRESSIBLE_RESULTS]
 
-    return cls(test_run.build, test_run.tool, test_run.board, results)
+    return cls(test_run.tool, test_run.board, results)
 
   @classmethod
   def FromFile(cls, filename):
@@ -92,18 +90,16 @@ class Manifest(namedtuple('Manifest', 'build tool board results')):
             else:
               logging.warning('Malformed test result line: "%s".', line)
 
-    # build is mandatory!
-    build = params.get('build')
     tool = params.get('tool', '*')
     board = params.get('board', '*')
 
-    return cls(build, tool, board, results)
+    return cls(tool, board, results)
 
   def Generate(self):
     """Dumps manifest to string."""
     text = StringIO()
 
-    for name in ['build', 'tool', 'board']:
+    for name in ['tool', 'board']:
       text.write('#@ {0}: {1}\n'.format(name, getattr(self, name)))
 
     text.write('\n')

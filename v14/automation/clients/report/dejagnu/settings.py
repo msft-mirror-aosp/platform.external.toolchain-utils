@@ -4,6 +4,4 @@
 # Author: kbaclawski@google.com (Krystian Baclawski)
 #
 
-DATABASE_ENGINE = 'sqlite3'
-DATABASE_NAME = 'dejagnu.db'
 INSTALLED_APPS = ('dejagnu',)
