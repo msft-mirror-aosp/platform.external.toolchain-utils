@@ -31,7 +31,7 @@ class BenchmarkRun(threading.Thread):
     self.autotest_args = autotest_args
     self.label_name = label_name
     self.chromeos_root = chromeos_root
-    self.chromeos_image = chromeos_image
+    self.chromeos_image = os.path.expanduser(chromeos_image)
     self.board = board
     self.iteration = iteration
     self.results = {}
