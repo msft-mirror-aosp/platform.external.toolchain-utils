@@ -76,15 +76,15 @@ def Main():
 
   cflags = ""
   if options.cflags is not None:
-    cflags = "CFLAGS=" + options.cflags
+    cflags = "CFLAGS=\"" + options.cflags + "\""
 
   cxxflags = ""
   if options.cxxflags is not None:
-    cxxflags = "CXXFLAGS=" + options.cxxflags
+    cxxflags = "CXXFLAGS=\"" + options.cxxflags + "\""
 
   ldflags = ""
   if options.ldflags is not None:
-    ldflags = "LDFLAGS=" + options.ldflags
+    ldflags = "LDFLAGS=\"" + options.ldflags + "\""
 
   # Emerge the browser
   ret = (build_chromeos.

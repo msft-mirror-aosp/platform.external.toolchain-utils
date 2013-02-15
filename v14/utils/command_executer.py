@@ -30,7 +30,7 @@ class CommandExecuter:
                  username=None, command_terminator=None):
     """Run a command."""
 
-    self.logger.Logcmd(cmd, machine, username)
+    self.logger.LogCmd(cmd, machine, username)
     if command_terminator and command_terminator.IsTerminated():
       self.logger.LogError("Command was terminated!")
       return 1
@@ -130,7 +130,7 @@ class MockCommandExecuter(CommandExecuter):
       machine = "localhost"
     if username is None:
       username = "current"
-    logger.GetLogger().Logcmd("(Mock)" + cmd, machine, username)
+    logger.GetLogger().LogCmd("(Mock)" + cmd, machine, username)
     return 0
 
 

@@ -32,9 +32,17 @@ def ExecuteCommandInChroot(chromeos_root, toolchain_root, command,
   cmd_executer = command_executer.GetCommandExecuter()
 
   if toolchain_root is None:
+    cmd_file = "enter_chroot.cmd"
+    cmd_file_path = chromeos_root + "/src/scripts/" + cmd_file
+    f = open(cmd_file_path, "w")
+    f.write(command)
+    logger.GetLogger().LogCmd(command)
+    f.close()
+    retval = cmd_executer.RunCommand("chmod +x " + cmd_file_path)
+    utils.AssertTrue(retval == 0, "chmod +x failed!")
     return cmd_executer.RunCommand(chromeos_root +
-                                   "/src/scripts/enter_chroot.sh -- %s"
-                                      % command)
+                                   "/src/scripts/enter_chroot.sh -- ./%s"
+                                      % cmd_file)
   else:
     argv = [os.path.dirname(os.path.abspath(__file__)) + "/tc_enter_chroot.py",
             "--chromeos_root=" + chromeos_root,

@@ -15,7 +15,7 @@ class Logger(object):
     self.stderr = open(self._logdir + self._basefilename + ".err", "w")
     self.print_console = print_console
 
-  def Logcmd(self, cmd, machine=None, user=None):
+  def LogCmd(self, cmd, machine=None, user=None):
     machine_string = ""
     if machine is not None:
       machine_string = machine
