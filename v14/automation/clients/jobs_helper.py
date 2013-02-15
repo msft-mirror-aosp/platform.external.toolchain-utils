@@ -286,8 +286,15 @@ def CreatePerflabJob(chromeos_version, benchmark, board="x86-agz",
   command += ("&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s"
               " --machines=chromeos_x86-agz_1 run %s" %
               (perflab_command, toolchain_root, chromeos_root, benchmark))
-  command += ("&& " + p4_version_dir + "/summarize_results.py " + p4_version_dir
-              + "logs/run_benchmarks.py.out")
+  for b in benchmark.split(","):
+    benchmark_log = b.replace("/", "__")
+    benchmark_log += "/results.txt"
+    benchmark_log_path = ("perflab-output/*/*/chromeos_%s/*/*/%s" %
+                          (board,
+                           benchmark_log))
+
+    command += ("&& " + p4_version_dir + "/summarize_results.py " +
+                benchmark_log_path)
   to_return = CreateLinuxJob(command, lock=True)
   return to_return
 

@@ -9,6 +9,7 @@ __author__ = "raymes@google.com (Raymes Khoury)"
 from utils import command_executer
 import os
 import sys
+import re
 
 RESULTS_DIR = "results"
 RESULTS_FILE = RESULTS_DIR + "/results.csv"
@@ -40,6 +41,27 @@ class DejaGNUSummarizer:
         result += "%s\t%s\t%s\n" % (test_name, test_result, filename)
     return result
 
+
+class PerflabSummarizer:
+  def Matches(self, log_file):
+    p = re.compile("METRIC isolated \w+")
+    for log_line in log_file:
+      if p.search(log_line):
+        return True
+    return False
+
+  def Summarize(self, log_file, filename):
+    result = ""
+    p = re.compile("METRIC isolated (\w+) .*\['(.*?)'\]")
+    log_file_lines = "\n".join(log_file)
+    matches = p.findall(log_file_lines)
+    for match in matches:
+      if len(match) != 2:
+        continue
+      result += "%s\t%s\n" % (match[0], match[1])
+    return result
+
+
 class AutoTestSummarizer:
   def Matches(self, log_file):
     for log_line in log_file:
@@ -69,7 +91,7 @@ def Usage():
 
 
 def SummarizeFile(filename):
-  summarizers = [DejaGNUSummarizer(), AutoTestSummarizer()]
+  summarizers = [DejaGNUSummarizer(), AutoTestSummarizer(), PerflabSummarizer()]
   input = open(filename, 'rb')
   executer = command_executer.GetCommandExecuter()
   for summarizer in summarizers:
@@ -92,9 +114,10 @@ def Main(argv):
   executer = command_executer.GetCommandExecuter()
   executer.RunCommand("mkdir -p %s" % RESULTS_DIR)
   summary = SummarizeFile(filename)
-  output = open(RESULTS_FILE, "a")
-  output.write(summary.strip() + "\n")
-  output.close()
+  if summary is not None:
+    output = open(RESULTS_FILE, "a")
+    output.write(summary.strip() + "\n")
+    output.close()
 
 if __name__ == "__main__":
   Main(sys.argv)
