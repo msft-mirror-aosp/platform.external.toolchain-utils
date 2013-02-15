@@ -7,21 +7,18 @@ The relevant script here is cros_run_benchmarks.py.
 
 === Pre-requisites ===
 
-1. A chromeos_root where you have a ChromeOS checkout as well a chroot that has
-autotests emerged for the particular board you are testing.
-A chromeos_root will have a src/ and a chroot/ dir.
-2. Multiple ChromeOS images that you want to compare. Make sure these images
-have been modded for test (mod_image_for_test.sh). These images should be of the
-same board as the one that has the autotests (though you can give a board
-override on the command line).
-3. A remote ChromeOS machine on which the tests will be done.
+1. ChromeOS image(s) that you want to run autotests on.
+2. A remote machine on which to run the tests.
+3. (Optional): A ChromeOS root (checkout) that has a chroot and emerged
+autotests that you want to use with all the images. If you don't specify this,
+the script will use the ChromeOS root associated with the image.
 
 === How to run ===
 
 Specify the chromeos_root, the images and the remote machine. Optionally you can
 also specify tests to run, iterations to run, etc. Here is an example:
 
-python cros_scripts/cros_run_benchmarks.py --iterations=1 --tests=AesThroughput --remote=chromeos-test2 --images=/home/asharif/a/chromeos.latest.fdo/src/build/images/x86-generic/0.10.142.2011_01_18_1450-a1/chromiumos_image.bin,/home/asharif/a/chromeos.latest.fdo/src/build/images/x86-generic/0.10.142.2011_01_19_1120-a1/chromiumos_image.bin --chromeos_root=/home/asharif/a/chromeos.latest.fdo/ --board=x86-generic
+python cros_scripts/cros_run_benchmarks.py --iterations=1 --tests=AesThroughput --remote=chromeos-test2 /home/asharif/a/chromeos.latest.fdo/src/build/images/x86-generic/0.10.142.2011_01_18_1450-a1/chromiumos_image.bin /home/asharif/a/chromeos.latest.fdo/src/build/images/x86-generic/0.10.142.2011_01_19_1120-a1/chromiumos_image.bin --board=x86-generic
 
 === Example explanation ===
 
@@ -100,25 +97,6 @@ If you've forgotten the switches this script has a help message that can be
 obtained by invoking the script like this:
 
 python cros_scripts/cros_run_benchmarks.py --help
-
-Warning: Logs directory '/home/asharif/www/cros_scripts/logs/' already exists.
-OUTPUT: cros_scripts/cros_run_benchmarks.py --help
-Usage: cros_run_benchmarks.py [options]
-
-Options:
-  -h, --help            show this help message and exit
-  -t TESTS, --tests=TESTS
-                        Tests to compare.
-  -c CHROMEOS_ROOT, --chromeos_root=CHROMEOS_ROOT
-                        A *single* chromeos_root where scripts can be found.
-  -i IMAGES, --images=IMAGES
-                        Possibly multiple (comma-separated) chromeos images.
-  -n ITERATIONS, --iterations=ITERATIONS
-                        Iterations to run per benchmark.
-  -r REMOTE, --remote=REMOTE
-                        The remote chromeos machine.
-  -b BOARD, --board=BOARD
-                        The remote board.
 
 """
 
@@ -592,7 +570,7 @@ class AutotestRunner:
     self.test = test
     self.ag = ag
     self.ce = command_executer.GetCommandExecuter()
-    self.scratch_dir = "%s/cros_scratch" % os.path.dirname(os.path.realpath(__file__))
+    self.scratch_dir = "/home/%s/cros_scratch" % getpass.getuser()
     if not os.path.isdir(self.scratch_dir):
       os.mkdir(self.scratch_dir)
 
@@ -678,8 +656,6 @@ def Main(argv):
                           "Optionally specify per-test iterations by <test>:<iter>"))
   parser.add_option("-c", "--chromeos_root", dest="chromeos_root",
                     help="A *single* chromeos_root where scripts can be found.")
-  parser.add_option("-i", "--images", dest="images",
-                    help="Possibly multiple (comma-separated) chromeos images.")
   parser.add_option("-n", "--iterations", dest="iterations",
                     help="Iterations to run per benchmark.",
                     default=1)
@@ -694,11 +670,6 @@ def Main(argv):
                     default=False)
   parser.add_option("--fit_string", dest="fit_string",
                     help="Fit strings to fixed sizes.",
-                    action="store_true",
-                    default=False)
-  parser.add_option("--image_chromeos_root",
-                    dest="image_chromeos_root",
-                    help="Use the chromeos_root of the image, when available.",
                     action="store_true",
                     default=False)
   l.LogOutput(" ".join(argv))
@@ -743,6 +714,8 @@ def Main(argv):
 
 
   main_chromeos_root = options.chromeos_root
+  images = args[1:]
+
   if main_chromeos_root:
     main_chromeos_root = CanonicalizeChromeOSRoot(main_chromeos_root)
     if not main_chromeos_root:
@@ -753,7 +726,7 @@ def Main(argv):
     message = "Using image-derived chromeos_root."
     l.LogOutput(message)
 
-  if not options.images:
+  if not images:
     l.LogError("No images specified.")
     parser.print_help()
     sys.exit(1)
@@ -768,7 +741,7 @@ def Main(argv):
       l.LogError("Could not lock machine: %s" % remote)
       return 1
 
-    for image in options.images.split(","):
+    for image in images:
       if image == "":
         l.LogWarning("Empty image specified!")
         continue
@@ -780,18 +753,18 @@ def Main(argv):
           ag = AutotestGatherer()
           ags[b] = ag
 
-        image_chromeos_root = os.path.join(os.path.dirname(image),
-                                           "../../../../..")
-        image_chromeos_root = CanonicalizeChromeOSRoot(image_chromeos_root)
+        if not main_chromeos_root:
+          image_chromeos_root = os.path.join(os.path.dirname(image),
+                                             "../../../../..")
+          image_chromeos_root = CanonicalizeChromeOSRoot(image_chromeos_root)
 
-        chromeos_root = main_chromeos_root
-
-        if options.image_chromeos_root:
           l.LogFatalIf(not image_chromeos_root,
                        "image chromeos_root not valid.")
           m = "Using image chromeos root: %s" % image_chromeos_root
           chromeos_root = image_chromeos_root
           l.LogOutput(m)
+        else:
+          chromeos_root = main_chromeos_root
 
         ar = AutotestRunner(chromeos_root, b.name, options.board, image=image, ag=ag)
         ar.RunTest(remote, b.iterations)
@@ -807,9 +780,11 @@ def Main(argv):
                                             fit_string=options.fit_string)
       output += "\n"
     l.LogOutput(output)
+    exitcode = 0
 
 
   except (KeyboardInterrupt, SystemExit):
+    exitcode = 1
     print "C-c pressed"
   finally:
     # Lock the machine before running the tests
@@ -821,8 +796,9 @@ def Main(argv):
     if unlocked:
       l.LogError("Could not unlock machine: %s" % remote)
       return 1
-  return 0
+  return exitcode
 
 if __name__ == "__main__":
-  Main(sys.argv)
+  exitcode = Main(sys.argv)
+  sys.exit(exitcode)
 
