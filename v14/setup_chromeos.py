@@ -16,6 +16,7 @@ import optparse
 import os
 import sys
 from utils import command_executer
+from utils import logger
 
 GCLIENT_FILE = """solutions = [
   { "name"        : "CHROME_DEPS",
@@ -34,12 +35,6 @@ GCLIENT_FILE = """solutions = [
 # Common initializations
 cmd_executer = None
 
-GIT_TAGS_CMD = ("git ls-remote --tags "
-                "ssh://git@gitrw.chromium.org:9222/chromiumos-overlay.git | "
-                "grep refs/tags/ | grep '[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*' | "
-                "cut -d '/' -f 3")
-
-
 def StoreFile(filename, contents):
   f = open(filename, "w")
   f.write(contents)
@@ -49,26 +44,6 @@ def StoreFile(filename, contents):
 def Usage(parser):
   parser.print_help()
   sys.exit(0)
-
-
-def GetTags():
-  res = cmd_executer.RunCommand(GIT_TAGS_CMD, True)
-  return res[1].strip().split("\n")
-
-
-def GetLatestTag(tags):
-  latest = tags[0]
-  for tag in tags:
-    current_components = tag.split(".")
-    latest_components = latest.split(".")
-    for i in range(len(current_components)):
-      if int(current_components[i]) > int(latest_components[i]):
-        latest = tag
-        break
-      elif int(current_components[i]) < int(latest_components[i]):
-        break
-
-  return latest
 
 
 def Main(argv):
@@ -86,48 +61,40 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
                     action="store_true",
                     help="""Whether to checkout the minilayout 
 (smaller checkout).'""")
+  parser.add_option("--jobs", "-j", dest="jobs", default="1",
+                    help="Number of repo sync threads to use.")
 
   options = parser.parse_args(argv)[0]
 
-  tags = GetTags()
-
   if options.version == "latest":
-    version = GetLatestTag(tags)
-    print version
+    version = "latest"
   elif options.version == "top":
     version = "top"
   elif options.version is None:
-    print "No version specified"
+    logger.GetLogger().LogError("No version specified.")
     Usage(parser)
   else:
     version = options.version.strip()
 
-  if not version in tags and version != "top":
-    print "Version: '" + version + "' does not exist"
-    Usage(parser)
-
   if options.directory is None:
-    print "Please give a valid directory"
+    logger.GetLogger().LogError("No directory specified.")
     Usage(parser)
 
   directory = options.directory.strip()
 
-  # Don't checkout chrome sources outside the chroot at the moment.
-  # If we check them out outside, we can't do some things, like build tests.
-  checkout_chrome_outside_chroot = False
+  if version == "top" or version == "latest":
+    init = "repo init -u ssh://git@gitrw.chromium.org:9222/manifest-internal"
+    if options.minilayout ==  True:
+      init += "-m minilayout.xml"
+  else:
+    init = ("repo init -u ssh://git@gitrw.chromium.org:9222/manifest-versions "
+            "-m buildspecs/%s/%s.xml" % (version[0:4], version))
 
-  minilayout = ""
-  if options.minilayout == True:
-    minilayout = " -m minilayout.xml"
   commands = []
   commands.append("mkdir -p " + directory)
   commands.append("cd " + directory)
-  commands.append("repo init -u "
-                  "ssh://git@gitrw.chromium.org:9222/manifest-internal"
-                  + minilayout)
-  commands.append("repo sync ")
-  if version != "top":
-    commands.append("repo forall -c 'git checkout -f %s'" % version)
+  commands.append(init)
+  commands.append("repo sync -j %s" % options.jobs)
   cmd_executer.RunCommands(commands)
 
   # Setup svn credentials for use inside the chroot
@@ -143,31 +110,6 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
                           "svn://svn.chromium.org/chrome "
                           "svn://svn.chromium.org/chrome-internal > /dev/null")
 
-  if checkout_chrome_outside_chroot:
-    # Find Chrome browser version
-    chrome_version = cmd_executer.RunCommand("%s/src/scripts/"
-                                             "chromeos_version.sh | "
-                                             "grep CHROME_BUILD"
-                                             % directory, True)
-
-    chrome_version = chrome_version[1].strip().split("=")
-    if len(chrome_version) == 2:
-      chrome_version = chrome_version[1]
-    else:
-      chrome_version = ""
-
-    # Checkout chrome
-    cmd_executer.RunCommand("mkdir -p %s/chrome_browser/" % directory)
-    gclient_file = GCLIENT_FILE % chrome_version
-    StoreFile(os.path.expanduser("%s/chrome_browser/.gclient"
-                                 % directory), gclient_file)
-    commands = []
-    commands.append("cd " + options.directory)
-    commands.append("cd chrome_browser")
-    commands.append("gclient sync -v --nohooks --delete_unversioned_trees")
-    cmd_executer.RunCommands(commands)
-
-  print "Done"
   return 0
 
 
