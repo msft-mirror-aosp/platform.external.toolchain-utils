@@ -1,12 +1,16 @@
 import job_manager
 from utils import utils
 import SimpleXMLRPCServer
+import optparse
+from utils import command_executer
+import automation.machine_manager
 
 class Server:
 
-  def __init__(self):
-    self.job_manager = job_manager.JobManager()
-    print "Started server thread."
+  def __init__(self, machines_file, dry_run=False):
+    command_executer.InitCommandExecuter(dry_run)
+    machine_manager = automation.machine_manager.MachineManager(machines_file)
+    self.job_manager = job_manager.JobManager(machine_manager)
 
 
   def ExecuteJobGroup(self, job_group):
@@ -27,13 +31,23 @@ class Server:
 
 
   def StartServer(self):
+    print "Started server thread."
     self.job_manager.StartJobManager()
 
   def StopServer(self):
     self.job_manager.StopJobManager()
 
 if __name__ == "__main__":
-  server = Server()
+  parser = optparse.OptionParser()
+  parser.add_option("-m", "--machines_file", dest="machines_file",
+                    help="The location of the file "
+                    "containing the machines database", default="test_pool.csv")
+  parser.add_option("-n", "--dry_run", dest="dry_run",
+                    help="Start the server in dry-run mode, where jobs will "
+                    "not actually be executed.",
+                    action="store_true", default=False)
+  options = parser.parse_args()[0]
+  server = Server(options.machines_file, options.dry_run)
   server.StartServer()
   xmlserver = SimpleXMLRPCServer.SimpleXMLRPCServer(("localhost", 8000),
                                                   allow_none=True)
@@ -44,5 +58,5 @@ if __name__ == "__main__":
     print "Caught exception... Cleaning up."
     server.StopServer()
     raise
-    
+
 

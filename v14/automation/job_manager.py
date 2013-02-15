@@ -7,13 +7,15 @@ JOB_MANAGER_STOPPED = 3
 
 class JobManager(threading.Thread):
 
-  def __init__(self):
+  def __init__(self, machine_manager):
     threading.Thread.__init__(self)
     self.all_jobs = []
     self.ready_jobs = []
     self.pending_jobs = []
     self.executing_jobs = []
     self.completed_jobs = []
+
+    self.machine_manager = machine_manager
 
     self.job_lock = threading.Lock()
     self.job_ready_event = threading.Event()
@@ -75,7 +77,8 @@ class JobManager(threading.Thread):
 
         ready_job = self.ready_jobs.pop()
 
-        executer = job_executer.JobExecuter(ready_job, None, self)
+        executer = job_executer.JobExecuter(ready_job,
+                                            self.machine_manager, self)
         executer.start()
 
 

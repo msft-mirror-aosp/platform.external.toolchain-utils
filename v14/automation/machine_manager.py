@@ -10,33 +10,33 @@ Machine manager manages machines.
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
 
+import csv
 import machine
 import machine_pool
-import pools
 import threading
 
-
 class MachineManager:
-  __shared_state = {}
-  global_pool = None
-  reenterant_lock = None
-  def __init__(self):
-    self.__dict__ = self.__shared_state
-    if self.global_pool == None:
-      self.ConstructGlobalPool()
-    if self.reenterant_lock == None:
-      self.reenterant_lock = threading.RLock()
+  def __init__(self, machines_file):
+    self.ConstructMachineList(machines_file)
+    self.reenterant_lock = threading.RLock()
 
 
   def __str__(self):
     return str(self.global_pool)
 
 
-  def ConstructGlobalPool(self):
-    reload(pools)
+  def ConstructMachineList(self, machines_file):
+    csv_file = csv.reader(open(machines_file, 'rb'),
+                          delimiter=",", quotechar="\"")
+    machines = []
+    # Header
+    csv_file.next()
+    for line in csv_file:
+      machines.append(machine.Machine(line[0], line[1],
+                                      int(line[2]), line[3], line[4]))
 
     # First populate the global pool.
-    self.global_pool = machine_pool.MachinePool(pools.machines)
+    self.global_pool = machine_pool.MachinePool(machines)
 
   def _GetMachine(self, machine_description):
     output_pool = machine_pool.MachinePool()

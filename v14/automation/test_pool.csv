@@ -1,0 +1,5 @@
+hostname, arch,cores,os,username
+"chrome-dev1.hot","core2duo",4,"linux","raymes"
+"chrome-dev2.hot","core2duo",4,"linux","raymes"
+"cros1","atom",1,"chromeos","chronos"
+"cros1","atom",1,"chromeos","chronos"

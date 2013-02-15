@@ -17,7 +17,7 @@ import unittest
 
 class MachineManagerTest(unittest.TestCase):
   def setUp(self):
-    self.machine_manager = machine_manager.MachineManager()
+    self.machine_manager = machine_manager.MachineManager("test_pool.csv")
 
 
   def testPrint(self):
@@ -26,19 +26,22 @@ class MachineManagerTest(unittest.TestCase):
 
   def testGetLinuxBox(self):
     descriptions = []
+
     description = machine_description.MachineDescription("", "linux", False)
+
     descriptions.append(description)
     machines = self.machine_manager.GetMachines(descriptions)
     self.assertTrue(len(machines) != 0)
     print machines
-    
-    
+
+
   def testGetChromeOSBox(self):
     descriptions = []
-    description = machine_description.MachineDescription("", "linux", False)
+    description = machine_description.MachineDescription("", "chromeos", False)
     descriptions.append(description)
     machines = self.machine_manager.GetMachines(descriptions)
     self.assertTrue(len(machines) != 0)
+
 
 
 if __name__ == "__main__":
