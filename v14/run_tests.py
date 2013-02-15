@@ -15,6 +15,8 @@ import re
 import sys
 from utils import command_executer
 from utils import logger
+from utils import utils
+import build_chromeos
 
 
 def Main(argv):
@@ -27,9 +29,9 @@ def Main(argv):
   parser.add_option("-b", "--board", dest="board",
                     help="The board of the target.")
 
-  tests = "bvt"
-
   (options, args) = parser.parse_args(argv)
+
+  tests = ""
 
   if options.board is None or options.remote is None:
     parser.print_help()
@@ -58,14 +60,16 @@ def Main(argv):
 
 def RunRemoteTests(chromeos_root, remote, board, tests):
   """Run the remote tests."""
-  command = (chromeos_root + "/src/scripts/run_remote_tests.sh" +
-             " --remote=" + remote +
-             " --board=" + board +
-             " " + tests)
-
-  retval = command_executer.GetCommandExecuter().RunCommand(command)
+  command = ("./run_remote_tests.sh"
+             " --remote=%s"
+             " --board=%s"
+             " %s" %
+             (remote,
+              board,
+              tests))
+  retval = build_chromeos.ExecuteCommandInChroot(chromeos_root, command)
   return retval
 
 if __name__ == "__main__":
   retval = Main(sys.argv)
-  sys.exit(retval)
+  utils.ExitWithCode(retval)
