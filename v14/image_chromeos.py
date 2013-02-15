@@ -21,7 +21,7 @@ from utils import command_executer
 from utils import logger
 from utils import utils
 
-checksum_file = "/home/chronos/osimage_checksum_file"
+checksum_file = "/usr/local/osimage_checksum_file"
 
 
 def Usage(parser, message):
