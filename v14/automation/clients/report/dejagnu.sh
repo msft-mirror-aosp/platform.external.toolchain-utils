@@ -5,6 +5,5 @@
 #
 
 export PYTHONPATH="$(pwd)"
-export DJANGO_SETTINGS_MODULE="dejagnu.settings"
 
 python dejagnu/main.py $@

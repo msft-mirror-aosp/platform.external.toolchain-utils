@@ -7,9 +7,6 @@
 import logging
 import os.path
 
-from django.template import Context
-from django.template import Template
-
 
 class Report(object):
   RESULT_DESCRIPTION = {
@@ -35,7 +32,6 @@ class Report(object):
   def __init__(self, test_runs, manifests):
     self._test_runs = test_runs
     self._manifests = manifests
-    self._template_filename = os.path.join(self.ROOT_PATH, 'report.html')
 
   def _GetResultDescription(self, name):
     if name.startswith('!'):
@@ -63,11 +59,7 @@ class Report(object):
             for rt in res_types if rt != 'PASS']
 
   def Generate(self):
-    with open(self._template_filename) as template_file:
-      template_content = template_file.read()
-
-    template = Template(template_content)
-    context = Context({'test_runs': []})
+    test_runs = []
 
     for test_run_id, test_run in enumerate(self._test_runs):
       logging.info('Generating report for: %s.', test_run)
@@ -89,11 +81,26 @@ class Report(object):
         if summary or tests:
           groups[res_group] = {'summary': summary, 'tests': tests}
 
-      context['test_runs'].append({
+      test_runs.append({
           'id': test_run_id,
           'name': '%s @%s' % (test_run.tool, test_run.board),
           'groups': groups})
 
     logging.info('Rendering report in HTML format.')
 
-    return template.render(context)
+    try:
+      from django import template
+      from django.template import loader
+      from django.conf import settings
+    except ImportError:
+      logging.error('Django framework not installed!')
+      logging.error('Failed to generate report in HTML format!')
+      return ''
+
+    settings.configure(DEBUG=True, TEMPLATE_DEBUG=True,
+                       TEMPLATE_DIRS=(self.ROOT_PATH,))
+
+    tmpl = loader.get_template('report.html')
+    ctx = template.Context({'test_runs': test_runs})
+
+    return tmpl.render(ctx)

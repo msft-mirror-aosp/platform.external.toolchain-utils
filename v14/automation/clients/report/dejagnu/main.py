@@ -103,6 +103,8 @@ def ReportCommand(argv):
     with open(opts.output, 'w') as html_file:
       html_file.write(report)
       logging.info('Wrote report to "%s" file.', opts.output)
+  else:
+    sys.exit(1)
 
 
 def HelpCommand(argv):
