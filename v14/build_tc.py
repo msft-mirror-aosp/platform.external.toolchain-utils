@@ -52,6 +52,7 @@ class ToolchainPart(object):
     self.RunSetupBoardIfNecessary()
 
     try:
+      self.UninstallTool()
       self.MoveMaskFile()
       self.SwitchToBFD()
       self.MountSources()
@@ -109,6 +110,10 @@ class ToolchainPart(object):
       mounted = [mp for mp, status in zip(mount_points, mount_statuses) if status]
       unmount_statuses = [mp.UnMount() == 0 for mp in mounted]
       assert all(unmount_statuses), "Could not unmount all mount points!"
+
+  def UninstallTool(self):
+    command = "sudo CLEAN_DELAY=0 emerge -C cross-%s/%s" % (self._ctarget, self._name)
+    utils.ExecuteCommandInChroot(self._chromeos_root, command)
 
   def BuildTool(self):
     env = self._build_env
