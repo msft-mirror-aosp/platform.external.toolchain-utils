@@ -19,10 +19,6 @@ from utils import command_executer
 from utils import logger
 from utils import utils
 
-# Common initializations
-cmd_executer = command_executer.GetCommandExecuter()
-
-
 class MountPoint:
   def __init__(self, external_dir, mount_dir, owner, options=None):
     self.external_dir = external_dir
@@ -36,13 +32,13 @@ class MountPoint:
     if not os.path.exists(dir_name):
       command = "mkdir -p " + dir_name
       command += " || sudo mkdir -p " + dir_name
-      retval = cmd_executer.RunCommand(command)
+      retval = command_executer.GetCommandExecuter().RunCommand(command)
     if retval != 0:
       return retval
     pw = pwd.getpwnam(self.owner)
     if os.stat(dir_name).st_uid != pw.pw_uid:
       command = "sudo chown -f " + self.owner + " " + dir_name
-      retval = cmd_executer.RunCommand(command)
+      retval = command_executer.GetCommandExecuter().RunCommand(command)
     return retval
 
 
@@ -60,7 +56,7 @@ class MountPoint:
     command = "sudo mount --bind " + self.external_dir + " " + self.mount_dir
     if self.options == "ro":
       command += " && sudo mount --bind -oremount,ro " + self.mount_dir
-    retval = cmd_executer.RunCommand(command)
+    retval = command_executer.GetCommandExecuter().RunCommand(command)
     return retval
 
 
@@ -169,11 +165,11 @@ def Main(argv, return_output=False):
 
   # Finally, create the symlink to build-gcc.
   command = "sudo chown " + getpass.getuser() + " " + full_mounted_tc_root
-  retval = cmd_executer.RunCommand(command)
+  retval = command_executer.GetCommandExecuter().RunCommand(command)
 
   try:
-    os.symlink(last_dir + "/build-gcc", full_mounted_tc_root + "/build-gcc")
-    os.symlink(last_dir + "/build-binutils", full_mounted_tc_root + "/build-binutils")
+    CreateSymlink(last_dir + "/build-gcc", full_mounted_tc_root + "/build-gcc")
+    CreateSymlink(last_dir + "/build-binutils", full_mounted_tc_root + "/build-binutils")
   except Exception as e:
     logger.GetLogger().LogError(str(e))
 
@@ -187,18 +183,18 @@ def Main(argv, return_output=False):
       inner_command = inner_command[3:]
     command_file = "tc_enter_chroot.cmd"
     command_file_path = chromeos_root + "/src/scripts/" + command_file
-    retval = cmd_executer.RunCommand("sudo rm -f " + command_file_path)
+    retval = command_executer.GetCommandExecuter().RunCommand("sudo rm -f " + command_file_path)
     if retval != 0:
       return retval
     f = open(command_file_path, "w")
     f.write(inner_command)
     f.close()
     logger.GetLogger().LogCmd(inner_command)
-    retval = cmd_executer.RunCommand("chmod +x " + command_file_path)
+    retval = command_executer.GetCommandExecuter().RunCommand("chmod +x " + command_file_path)
     if retval != 0:
       return retval
     command += " ./" + command_file
-    retval = cmd_executer.RunCommand(command, return_output)
+    retval = command_executer.GetCommandExecuter().RunCommand(command, return_output)
     return retval
   else:
     return os.execv(command, [""])
@@ -222,6 +218,16 @@ def CreateMountPointsFromString(mount_strings, chroot_dir):
                              getpass.getuser(), options)
     mount_points.append(mount_point)
   return mount_points
+
+
+def CreateSymlink(target, link_name):
+  utils.AssertExit(target.startswith("/") == False)
+  real_from_file = utils.GetRoot(link_name)[0] + "/" + target
+  if os.path.realpath(real_from_file) != os.path.realpath(link_name):
+    if os.path.exists(link_name):
+      command = "rm -rf " + link_name
+      command_executer.GetCommandExecuter().RunCommand(command)
+    os.symlink(target, link_name)
 
 
 if __name__ == "__main__":
