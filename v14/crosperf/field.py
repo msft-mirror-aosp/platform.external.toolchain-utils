@@ -15,8 +15,11 @@ class Field(object):
     self.inheritable = inheritable
     self.description = description
 
-  def Set(self, value):
-    self._value = self._Parse(value)
+  def Set(self, value, parse=True):
+    if parse:
+      self._value = self._Parse(value)
+    else:
+      self._value = value
     self.assigned = True
 
   def Append(self, value):

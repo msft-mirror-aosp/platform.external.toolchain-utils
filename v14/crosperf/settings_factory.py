@@ -25,6 +25,10 @@ class BenchmarkSettings(Settings):
     self.AddField(FloatField("outlier_range", default=0.2,
                              description="The percentage of highest/lowest "
                              "values to omit when computing the average."))
+    self.AddField(ListField("profile_counters",
+                            description="A list of profile counters to "
+                            "collect.",
+                            inheritable=True))
 
 
 class LabelSettings(Settings):
@@ -68,6 +72,9 @@ class GlobalSettings(Settings):
                             "contains a src/scripts directory. Defaults to "
                             "the chromeos checkout which contains the "
                             "chromeos_image."))
+    self.AddField(ListField("profile_counters",
+                            description="A list of profile counters to "
+                            "collect."))
 
 
 class SettingsFactory(object):

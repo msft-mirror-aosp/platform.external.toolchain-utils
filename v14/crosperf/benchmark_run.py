@@ -22,8 +22,8 @@ STATUS_PENDING = "PENDING"
 class BenchmarkRun(threading.Thread):
   def __init__(self, name, benchmark_name, autotest_name, autotest_args,
                label_name, chromeos_root, chromeos_image, board, iteration,
-               cache_conditions, outlier_range, machine_manager, cache,
-               autotest_runner, perf_processor):
+               cache_conditions, outlier_range, profile_counters,
+               machine_manager, cache, autotest_runner, perf_processor):
     threading.Thread.__init__(self)
     self.name = name
     self.benchmark_name = benchmark_name
@@ -40,6 +40,7 @@ class BenchmarkRun(threading.Thread):
     self.status = STATUS_PENDING
     self.run_completed = False
     self.outlier_range = outlier_range
+    self.profile_counters = profile_counters
     self.machine_manager = machine_manager
     self.cache = cache
     self.autotest_runner = autotest_runner
@@ -88,12 +89,11 @@ class BenchmarkRun(threading.Thread):
       ret += " machine: %s" % self.machine.name
     return ret
 
-  def _GetResultsDir(self, output, chromeos_root):
+  def _GetResultsDir(self, output):
     mo = re.search("Results placed in (\S+)", output)
     if mo:
       result = mo.group(1)
-      return os.path.join(chromeos_root, "chroot",
-                          result.lstrip("/"))
+      return result
     return ""
 
   def run(self):
@@ -127,7 +127,7 @@ class BenchmarkRun(threading.Thread):
       else:
         self.status = STATUS_FAILED
 
-      results_dir = self._GetResultsDir(result.out, self.chromeos_root)
+      results_dir = self._GetResultsDir(result.out)
       self.full_name = os.path.basename(results_dir)
 
       self.results = self.ParseResults(result.out)
@@ -135,8 +135,9 @@ class BenchmarkRun(threading.Thread):
       if not self.cache_hit:
         self.perf_processor.StorePerf(self.cache.GetCacheDir(self.machine.name),
                                       result,
-                                      self.autotest_args, self.chromeos_root,
-                                      self.board, results_dir)
+                                      self.chromeos_root,
+                                      self.board, results_dir,
+                                      self.profile_counters)
 
       return result.retval
     except Exception, e:
@@ -175,7 +176,8 @@ class BenchmarkRun(threading.Thread):
                                                   self.chromeos_root,
                                                   self.board,
                                                   self.autotest_name,
-                                                  self.autotest_args)
+                                                  self.autotest_args,
+                                                  self.profile_counters)
     self.run_completed = True
     result = Result(out, err, retval)
 

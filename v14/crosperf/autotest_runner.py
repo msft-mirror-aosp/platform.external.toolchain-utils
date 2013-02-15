@@ -10,7 +10,10 @@ class AutotestRunner(object):
     self._ce = command_executer.GetCommandExecuter()
 
   def Run(self, machine_name, chromeos_root, board, autotest_name,
-          autotest_args):
+          autotest_args, profile_counters):
+    if profile_counters:
+      counters_string = "-e" + " -e ".join(profile_counters)
+      autotest_args += "--profile --profiler_args='-a -g %s'" % counters_string
     command = "cd %s/src/scripts" % chromeos_root
     options = ""
     if board:
@@ -28,6 +31,5 @@ class MockAutotestRunner(object):
   def __init__(self):
     pass
 
-  def Run(self, machine_name, chromeos_root, board, autotest_name,
-          autotest_args):
+  def Run(self, *args):
     return ["", "", 0]

@@ -108,8 +108,7 @@ class ResultsCache(object):
       return None
 
   def Store(self, result):
-    checksum = ImageChecksummer().Checksum(self.chromeos_image)
-    cache_dir = self.GetCacheDir(checksum)
+    cache_dir = self.GetCacheDir()
     cache_file = os.path.join(cache_dir, PICKLE_FILE)
     command = "mkdir -p %s" % os.path.dirname(cache_file)
     ret = self._ce.RunCommand(command)

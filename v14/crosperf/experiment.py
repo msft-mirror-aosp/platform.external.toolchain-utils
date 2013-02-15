@@ -74,6 +74,7 @@ class Experiment(threading.Thread):
                                        iteration,
                                        self.cache_conditions,
                                        benchmark.outlier_range,
+                                       benchmark.profile_counters,
                                        self.machine_manager,
                                        ResultsCache(),
                                        AutotestRunner(),

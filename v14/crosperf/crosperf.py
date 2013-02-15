@@ -2,12 +2,7 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
-"""The driver script for running performance benchmarks on ChromeOS.
-
-Current actions:
-RUN: Run the benchmark on the device.
-TABLE: Display a table of performance results.
-"""
+"""The driver script for running performance benchmarks on ChromeOS."""
 
 import atexit
 import optparse
@@ -26,13 +21,13 @@ DEFAULT_ACTION = "do"
 l = logger.GetLogger()
 
 
+class MyIndentedHelpFormatter(optparse.IndentedHelpFormatter):
+  def format_description(self, description):
+    return description
+
+
 def SetupParserOptions(parser):
   """Add all options to the parser."""
-  parser.add_option("--full_help",
-                    dest="full_help",
-                    help=("Display full help instructions."),
-                    action="store_true",
-                    default=False)
   parser.add_option("--dry_run",
                     dest="dry_run",
                     help=("Parse the experiment file and "
@@ -60,26 +55,18 @@ def ConvertOptionsToSettings(options):
   return option_settings
 
 
-def Usage(parser, reason):
-  """Return script usage and exit with the given reason."""
-  l.LogError(reason)
-  parser.print_help()
-  sys.exit(1)
-
-
 def Cleanup(experiment):
   """Handler function which is registered to the atexit handler."""
   experiment.Cleanup()
 
 
 def Main(argv):
-  parser = optparse.OptionParser(usage=Help().GetUsage())
+  parser = optparse.OptionParser(usage=Help().GetUsage(),
+                                 description=Help().GetHelp(),
+                                 formatter=MyIndentedHelpFormatter(),
+                                 version="%prog 0.1")
   SetupParserOptions(parser)
   options, args = parser.parse_args(argv)
-  if options.full_help:
-    parser.usage = Help().GetHelp()
-    parser.print_help()
-    sys.exit(0)
 
   # Convert the relevant options that are passed in into a settings
   # object which will override settings in the experiment file.
@@ -92,7 +79,7 @@ def Main(argv):
     action = args[1]
     experiment_filename = args[2]
   else:
-    Usage(parser, "Invalid number arguments.")
+    parser.error("Invalid number arguments.")
 
   working_directory = os.getcwd()
   experiment_file = ExperimentFile(open(experiment_filename, "rb"))
