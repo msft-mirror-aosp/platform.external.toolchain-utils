@@ -7,6 +7,7 @@ __author__ = 'kbaclawski@google.com (Krystian Baclawski)'
 import os.path
 
 from automation.common import job
+from automation.common import machine
 from automation.clients.helper import jobs
 
 
@@ -23,7 +24,7 @@ class JobsFactory(object):
 
   @staticmethod
   def CreateChromeOSJob(label, command, lock=True):
-    new_job = CreateLinuxJob(label, command, lock)
+    new_job = jobs.CreateLinuxJob(label, command, lock)
     new_job.DependsOnMachine(
         machine.MachineSpecification("*", "chromeos", lock), False)
     return new_job

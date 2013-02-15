@@ -3,7 +3,6 @@
 # Copyright 2010 Google Inc. All Rights Reserved.
 
 import optparse
-import os.path
 import pickle
 import sys
 import xmlrpclib

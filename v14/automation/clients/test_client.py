@@ -3,7 +3,6 @@
 # Copyright 2010 Google Inc. All Rights Reserved.
 
 import optparse
-import os.path
 import pickle
 import sys
 import xmlrpclib
@@ -60,11 +59,12 @@ def Main(argv):
   all_jobs = [tc_job]
 
   versions = options.chromeos_versions.strip()
+  benchmarks = options.perflab_benchmarks or ""
 
   for version in versions.split(","):
     all_jobs.append(jobs.BuildAndTestChromeOS(version, tc_pkgs_dep))
 
-    for benchmark in options.perflab_benchmarks.split(","):
+    for benchmark in benchmarks.split(","):
       all_jobs.append(jobs.RunPerflab(version, benchmark, tc_pkgs_dep))
 
   if options.dejagnu:
