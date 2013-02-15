@@ -73,26 +73,36 @@ def Main():
     Usage(parser, "--board must be set")
 
   # Make chroot
-  commands = []
-  commands.append("cd " + options.chromeos_root + "/src/scripts")
-  clobber_chroot = ""
-  if options.clobber_chroot:
-    clobber_chroot = "--replace"
-  commands.append("./make_chroot --fast " + clobber_chroot)
-#  ret = utils.RunCommands(commands)
-#  utils.AssertTrue(ret == 0, "make_chroot failed")
+  if (not os.path.isdir(options.chromeos_root + "/chroot")
+      or options.clobber_chroot):
+    commands = []
+    commands.append("cd " + options.chromeos_root + "/src/scripts")
+    clobber_chroot = ""
+    if options.clobber_chroot:
+      clobber_chroot = "--replace"
+    commands.append("./make_chroot --fast " + clobber_chroot)
+    ret = utils.RunCommands(commands)
+    utils.AssertTrue(ret == 0, "make_chroot failed")
+  else:
+    utils.main_logger.LogOutput("Did not make_chroot because it already exists")
 
   # Setup board
-  force = ""
-  if options.clobber_board:
-    force = "--force"
-  ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                               "FEATURES=\\\"keepwork noclean\\\" "
-                               "./setup_board --nousepkg --board=%s "
-                               "%s" % (options.board, force))
-  if ret != 0:
-    utils.main_logger.LogError("setup_board failed")
-  #utils.AssertTrue(ret == 0, "setup_board failed")
+  if (not os.path.isdir(options.chromeos_root + "/chroot/" + options.board)
+      or options.clobber_board):
+    force = ""
+    if options.clobber_board:
+      force = "--force"
+    version_number = utils.GetRoot(rootdir)[1]
+    pkgdir = "/home/${USER}/toolchain_root/" + version_number
+    ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
+                                 "FEATURES=\\\"keepwork noclean\\\" "
+                                 "PKGDIR=%s ./setup_board --board=%s "
+                                 "%s" % (pkgdir, options.board, force))
+    if ret != 0:
+      utils.main_logger.LogError("setup_board failed")
+    utils.AssertTrue(ret == 0, "setup_board failed")
+  else:
+    utils.main_logger.LogOutput("Did not setup_board because it already exists")
 
   # Modify make.conf to add CFLAGS/CXXFLAGS/LDFLAGS
   commands = []
@@ -108,7 +118,7 @@ def Main():
                                 "sudo echo -e \\\"%s\\\" | sudo tee "
                                 "/build/%s/etc/make.conf > /dev/null ;"
                                 % (makeconf, options.board))
-  sys.exit(1)
+
   utils.AssertTrue(ret1 == 0 and ret2 == 0, "Could not modify make.conf")
 
   # Find Chrome browser version
