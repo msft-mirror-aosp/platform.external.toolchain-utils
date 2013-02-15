@@ -73,11 +73,15 @@ def Main(argv):
   else:
     options.chromeos_root = os.path.expanduser(options.chromeos_root)
 
-  if not os.path.exists(options.chromeos_root):
+  if ((not os.path.exists(options.chromeos_root)) or
+      (not os.path.exists(options.chromeos_root +
+                          "/src/scripts/enter_chroot.sh"))):
     logger.GetLogger().LogOutput("Creating a chromeos checkout at: %s" %
                                  options.chromeos_root)
-    sc_args = ("--dir=\"%s\" %s" % (options.chromeos_root,
-                                   options.setup_chromeos_options))
+    sc_args = []
+    sc_args.append("--dir=%s" % options.chromeos_root)
+    if options.setup_chromeos_options:
+      sc_args.append(options.setup_chromeos_options)
     setup_chromeos.Main(sc_args)
 
   output = options.output
