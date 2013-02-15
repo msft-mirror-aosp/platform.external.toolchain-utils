@@ -7,6 +7,10 @@
 
 __author__ = "raymes@google.com (Raymes Khoury)"
 
+
+import machine_description
+
+
 STATUS_NOT_EXECUTED = 0
 STATUS_EXECUTING = 1
 STATUS_COMPLETED = 2
@@ -25,7 +29,7 @@ class RequiredFolder:
 class Job:
   """A class representing a job whose commands will be executed."""
 
-  def __init__(self):
+  def __init__(self, command):
     self.status = STATUS_NOT_EXECUTED
     self.dependencies = []
     self.dependents = []
@@ -34,6 +38,8 @@ class Job:
     self.id = 0
     self.job_dir = ""
     self.machine = None
+    self.command = command
+    self._primary_done = False
 
   def SetID(self, id):
     self.id = id
@@ -97,3 +103,23 @@ class Job:
 
   def GetMachineDescriptions(self):
     return self.machine_descriptions
+
+  def GetCommand(self):
+    return self.command
+
+  def SetCommand(self, command):
+    self.command = command
+
+  def SetCommands(self, commands):
+    self.command = " ; ".join(commands)
+
+  def AddRequiredMachine(self, name, os, lock, primary=True):
+    if self._primary_done == True:
+      raise Exception("There can only be one primary machine description.")
+    desc = machine_description.MachineDescription(name, os, lock)
+    if primary == True:
+      self.machine_descriptions.insert(0, desc)
+      self._primary_done = True
+    else:
+      self.machine_descriptions.append(desc)
+

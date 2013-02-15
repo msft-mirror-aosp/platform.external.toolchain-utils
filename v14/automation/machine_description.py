@@ -1,24 +1,25 @@
+import machine_filters
 
 class MachineDescription:
-  def __init__(self, filters=[], lock_required=False):
-    self.filters = filters
+  def __init__(self, name, os, lock_required):
+    self.name = name
+    self.os = os
     self.lock_required = lock_required
-
-  def AddFilter(self, filter):
-    self.filters.append(filter)
-
-  def GetFilters(self):
-    return self.filters
-
-  def __iter__(self):
-    current = 0
-    while current < len(self.filters):
-      yield self.filters[current]
-      current += 1
 
   def SetLockRequired(self, lock_required):
     self.lock_required = lock_required
 
   def IsLockRequired(self):
     return self.lock_required
+
+  def IsMatch(self, machine):
+    if machine.locked == True:
+      return False
+    if self.name and machine.name == self.name:
+      return True
+    if self.os and machine.os == self.os:
+      return True
+
+  def GetFilter(self):
+    return machine_filters.MachineDescriptionFilter(self)
 

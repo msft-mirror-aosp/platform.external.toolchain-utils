@@ -64,6 +64,7 @@ class JobExecuter(threading.Thread):
 
       command = self.job.GetCommand()
       if command:
+        command.replace("$JOB_ID", str(self.job.GetID()))
         quoted_command = utils.FormatQuotedCommand(command)
         print quoted_command
         result = cmd_executer.RunCommand("ssh %s@%s -- \"PS1=. TERM=linux "

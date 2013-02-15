@@ -11,7 +11,6 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 
 import machine
-import machine_filters
 import machine_pool
 import pools
 import threading
@@ -40,20 +39,16 @@ class MachineManager:
     self.global_pool = machine_pool.MachinePool(pools.machines)
 
   def _GetMachine(self, machine_description):
-    filters = machine_description.GetFilters()
-    machine_pool = self.global_pool
+    output_pool = machine_pool.MachinePool()
 
-    filters.append(machine_filters.UnlockedFilter())
+    for m in self.global_pool:
+      if machine_description.IsMatch(m):
+        output_pool.AddMachine(m)
 
-    filters.append(machine_filters.LightestLoadFilter())
-
-    for f in filters:
-      machine_pool = f.FilterPool(machine_pool)
-
-    if machine_pool.Size() == 0:
+    if output_pool.Size() == 0:
       return None
 
-    result = machine_pool.GetMachine(0)
+    result = output_pool.GetMachine(0)
     if machine_description.IsLockRequired() == True:
       result.locked = True
     result.uses += 1
