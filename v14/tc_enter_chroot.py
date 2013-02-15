@@ -129,7 +129,8 @@ def Main(argv, return_output=False):
     parser.print_help()
     sys.exit(1)
 
-  tc_dirs = [options.toolchain_root + "/google_vendor_src_branch/gcc"]
+  tc_dirs = [options.toolchain_root + "/google_vendor_src_branch/gcc",
+             options.toolchain_root + "/google_vendor_src_branch/binutils"]
 
   for tc_dir in tc_dirs:
     if not os.path.exists(tc_dir):
@@ -189,6 +190,7 @@ def Main(argv, return_output=False):
 
   try:
     os.symlink(last_dir + "/build-gcc", full_mounted_tc_root + "/build-gcc")
+    os.symlink(last_dir + "/build-binutils", full_mounted_tc_root + "/build-binutils")
   except Exception as e:
     logger.GetLogger().LogError(str(e))
 

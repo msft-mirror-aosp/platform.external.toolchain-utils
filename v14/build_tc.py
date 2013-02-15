@@ -185,7 +185,7 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
   portage_flags = portage_flags.strip()
   portage_flags += " -b "
 
-  binutils_version = "2.20.1-r1"
+  binutils_version = "9999"
   gcc_version = "9999"
   libc_version = "2.10.1-r2"
   kernel_version = "2.6.30-r1"
