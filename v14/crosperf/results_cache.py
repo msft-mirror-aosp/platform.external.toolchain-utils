@@ -100,7 +100,7 @@ class ResultsCache(object):
         out = pickle.load(f)
         err = pickle.load(f)
 
-        if (retval == 0 and
+        if (retval == 0 or
             CacheConditions.RUN_SUCCEEDED not in self.cache_conditions):
           return Result(out, err, retval)
 
