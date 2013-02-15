@@ -26,23 +26,6 @@ class JobExecuter(threading.Thread):
         self.job.logger, self.job.dry_run)
     self._terminator = command_executer.CommandTerminator()
 
-  def _FormatCommand(self, command):
-    ret = str(command)
-    ret = ret.replace("$JOB_ID", "%s" % self.job.id)
-    ret = ret.replace("$JOB_TMP", self.job.work_dir)
-    ret = ret.replace("$JOB_HOME", self.job.home_dir)
-    ret = ret.replace("$PRIMARY_MACHINE", self.job.machine.hostname)
-    while True:
-      mo = re.search("\$SECONDARY_MACHINES\[(\d+)\]", ret)
-      if mo:
-        index = int(mo.group(1))
-        ret = "%s%s%s" % (ret[0:mo.start()],
-                          self.job.machines[1 + index].hostname,
-                          ret[mo.end():])
-      else:
-        break
-    return ret
-
   def _RunRemotely(self, command, fail_msg):
     exit_code = self._executer.RunCommand(command,
                                           self.job.machine.hostname,
@@ -93,7 +76,7 @@ class JobExecuter(threading.Thread):
             "Failed to copy required files.")
 
   def _LaunchJobCommand(self):
-    command = self._FormatCommand(self.job.command)
+    command = self.job.GetCommand()
 
     self._RunRemotely("%s; %s" % ("PS1=. TERM=linux source ~/.bashrc",
                                   cmd.Wrapper(command, cwd=self.job.work_dir)),

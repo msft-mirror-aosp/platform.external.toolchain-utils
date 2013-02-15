@@ -97,14 +97,34 @@ class Job(object):
     res.append(self.timeline.GetTransitionEventReport())
     return '\n'.join(res)
 
+  def GetCommand(self):
+    substitutions = [
+        ('$JOB_ID', str(self.id)),
+        ('$JOB_TMP', self.work_dir),
+        ('$JOB_HOME', self.home_dir),
+        ('$PRIMARY_MACHINE', self.machine.hostname)]
+
+    if len(self.machines) > 1:
+      for num, machine in enumerate(self.machines[1:]):
+        substitutions.append(
+            ("$SECONDARY_MACHINES[%d]" % num, machine.hostname))
+
+    cmd = str(self.command)
+
+    for pattern, replacement in substitutions:
+      cmd = cmd.replace(pattern, replacement)
+
+    return cmd
+
   def PrettyFormatCommand(self):
     # TODO(kbaclawski): This method doesn't belong here, but rather to
     # non existing Command class. If one is created then PrettyFormatCommand
     # shall become its method.
-    output = str(self.command)
-    output = re.sub('&&', '&&\n', output)
-    output = re.sub(';', ';\n', output)
-    output = re.sub('\n+\s*', '\n', output)
+    output = self.GetCommand()
+    output = re.sub('\{ ', '', output)
+    output = re.sub('; \}', '', output)
+    output = re.sub('\} ', '\n', output)
+    output = re.sub('\s*&&\s*', '\n', output)
     return output
 
   def DependsOnFolder(self, dependency):
