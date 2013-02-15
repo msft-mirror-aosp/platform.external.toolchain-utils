@@ -61,7 +61,6 @@ def MakeChroot(chromeos_root, clobber_chroot=False):
 def Main():
   """Build ChromeOS."""
   # Common initializations
-  logger.InitLogger(sys.argv[0])
 
   parser = optparse.OptionParser()
   parser.add_option("--chromeos_root", dest="chromeos_root",
