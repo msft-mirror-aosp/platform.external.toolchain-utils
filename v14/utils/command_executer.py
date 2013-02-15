@@ -39,6 +39,8 @@ class CommandExecuter:
                  terminated_timeout=10):
     """Run a command."""
 
+    cmd = str(cmd)
+
     self.logger.LogCmd(cmd, machine, username)
     if command_terminator and command_terminator.IsTerminated():
       self.logger.LogError("Command was terminated!")
@@ -232,6 +234,7 @@ class MockCommandExecuter(CommandExecuter):
 
   def RunCommand(self, cmd, return_output=False, machine=None, username=None,
                  command_terminator=None):
+    cmd = str(cmd)
     if machine is None:
       machine = "localhost"
     if username is None:
