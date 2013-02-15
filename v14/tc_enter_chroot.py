@@ -104,7 +104,7 @@ def Main(argv, return_output=False):
   chromeos_root = os.path.abspath(chromeos_root)
 
   tc_dirs = []
-  if options.toolchain_root is None:
+  if options.toolchain_root is None or options.mount_scripts_only:
     m = "toolchain_root not specified. Will not mount toolchain dirs."
     logger.GetLogger().LogWarning(m)
   else:

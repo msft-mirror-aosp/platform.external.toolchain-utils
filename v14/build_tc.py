@@ -215,7 +215,7 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
   command = " -- sudo " + env
 
   if uninstall == True:
-    command += "yes | crossdev " + tflag + target
+    command += "crossdev < $(which yes)" + tflag + target
     retval = build_chromeos.ExecuteCommandInChroot(chromeos_root,
                                                    command,
                                                    toolchain_root)
