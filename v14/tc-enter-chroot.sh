@@ -11,6 +11,12 @@ toolchain_setup_env()
   GVSB=google_vendor_src_branch
   full_dir=$(dirname "$0")
   parent_dir="${full_dir##*/}"
+  version_dir="$FLAGS_TC_ROOT/chromeos/$parent_dir"
+  # Make sure the v14 or equivalent directory exists.
+  if [[ ! -d "$version_dir" ]]
+  then
+    mkdir -p "$version_dir" || die "Could not create $version_dir."
+  fi
   TC_DIRS=( $GVSB/gcc chromeos/${parent_dir} )
   for TC_DIR in ${TC_DIRS[@]}
   do
@@ -22,11 +28,12 @@ toolchain_setup_env()
       TC_MOUNTED_PATH="$TC_CHROOT/$FLAGS_TC_ROOT_MOUNT/$TC_LAST_DIR"
       if [[ -z "$TC_PATH" ]]
       then
-        die "$FLAGS_TC_ROOT/$TC_DIR is not a valid directory."
+        die "$FLAGS_TC_ROOT/$TC_DIR is not a valid toolchain directory."
       fi
       if [[ -z "$TC_MOUNTED_PATH" ]]
       then
-        die "$TC_CHROOT/$FLAGS_TC_ROOT_MOUNT/$TC_LAST_DIR is not a valid directory."
+        die "$TC_CHROOT/$FLAGS_TC_ROOT_MOUNT/$TC_LAST_DIR is not a\
+        valid mount directory."
       fi
       info "Mounting $TC_PATH at $TC_MOUNTED_PATH."
       mkdir -p $TC_MOUNTED_PATH
