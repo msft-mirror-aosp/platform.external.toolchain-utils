@@ -9,104 +9,102 @@ import threading
 from automation.common import command as cmd
 from automation.common import logger
 from automation.common.command_executer import CommandExecuter
-import automation.common.job
-import automation.common.job_group
-from automation.server import job_manager
+from automation.common import job
+from automation.common import job_group
+from automation.server.job_manager import IdProducerPolicy
 
 
 class JobGroupManager(object):
-  def __init__(self, _job_manager):
+  def __init__(self, job_manager):
     self.all_job_groups = []
 
-    self.job_manager = _job_manager
+    self.job_manager = job_manager
     self.job_manager.AddListener(self)
 
-    self.job_condition = threading.Condition()
+    self._lock = threading.Lock()
+    self._job_group_finished = threading.Condition(self._lock)
 
-    self._id_producer = job_manager.IdProducerPolicy()
-    self._id_producer.Initialize(
-        automation.common.job_group.JobGroup.HOMEDIR_PREFIX,
-        "job-group-(?P<id>\d+)")
+    self._id_producer = IdProducerPolicy()
+    self._id_producer.Initialize(job_group.JobGroup.HOMEDIR_PREFIX,
+                                 "job-group-(?P<id>\d+)")
 
-  def GetJobGroup(self, job_group_id):
-    for job_group in self.all_job_groups:
-      if job_group.id == job_group_id:
-        return job_group
+  def GetJobGroup(self, group_id):
+    with self._lock:
+      for group in self.all_job_groups:
+        if group.id == group_id:
+          return group
 
-    return None
+      return None
 
   def GetAllJobGroups(self):
-    self.job_condition.acquire()
-    res = copy.deepcopy(self.all_job_groups)
-    self.job_condition.release()
-    return res
+    with self._lock:
+      return copy.deepcopy(self.all_job_groups)
 
-  def AddJobGroup(self, job_group):
-    self.job_condition.acquire()
-
-    job_group.id = self._id_producer.GetNextId()
+  def AddJobGroup(self, group):
+    with self._lock:
+      group.id = self._id_producer.GetNextId()
 
     # Re/Create home directory for logs, etc.
     CommandExecuter().RunCommand(
-        cmd.Chain(cmd.RmTree(job_group.home_dir),
-                  cmd.MakeDir(job_group.home_dir)))
+        cmd.Chain(cmd.RmTree(group.home_dir),
+                  cmd.MakeDir(group.home_dir)))
 
-    self.all_job_groups.append(job_group)
+    with self._lock:
+      self.all_job_groups.append(group)
 
-    for job in job_group.jobs:
-      self.job_manager.AddJob(job)
+      for job_ in group.jobs:
+        self.job_manager.AddJob(job_)
 
-    logger.GetLogger().LogOutput("Added JobGroup '%s'." % job_group.id)
+      logger.GetLogger().LogOutput("Added JobGroup '%s'." % group.id)
 
-    job_group.status = automation.common.job_group.STATUS_EXECUTING
+      group.status = job_group.STATUS_EXECUTING
 
-    self.job_condition.release()
-    return job_group.id
+    return group.id
 
-  def KillJobGroup(self, job_group):
-    self.job_condition.acquire()
-    for job in job_group.jobs:
-      self.job_manager.KillJob(job)
+  def KillJobGroup(self, group):
+    with self._lock:
+      for job_ in group.jobs:
+        self.job_manager.KillJob(job_)
 
-    # Lets block until the job_group is killed so we know it is completed
-    # when we return.
-    while job_group.status not in [automation.common.job_group.STATUS_SUCCEEDED,
-                                   automation.common.job_group.STATUS_FAILED]:
-      self.job_condition.wait()
-    self.job_condition.release()
+      # Lets block until the group is killed so we know it is completed
+      # when we return.
+      while group.status not in [job_group.STATUS_SUCCEEDED,
+                                 job_group.STATUS_FAILED]:
+        self._job_group_finished.wait()
 
-  def NotifyJobComplete(self, job):
-    self.job_condition.acquire()
-    job_group = job.group
-    if job_group.status == automation.common.job_group.STATUS_FAILED:
-      # We have already failed, don't need to do anything
-      self.job_condition.notifyAll()
-      self.job_condition.release()
-      return
-    if job.status == automation.common.job.STATUS_FAILED:
-      # We have a failed job, abort the job group
-      job_group.status = automation.common.job_group.STATUS_FAILED
-      if job_group.cleanup_on_failure:
-        for job in job_group.jobs:
-          # TODO(bjanakiraman): We should probably only kill dependent jobs
-          # instead of the whole job group.
-          self.job_manager.KillJob(job)
-          self.job_manager.CleanUpJob(job)
-    else:
-      # The job succeeded successfully -- lets check to see if we are done.
-      assert job.status == automation.common.job.STATUS_SUCCEEDED
-      finished = True
-      for other_job in job_group.jobs:
-        assert other_job.status != automation.common.job.STATUS_FAILED
-        if other_job.status != automation.common.job.STATUS_SUCCEEDED:
-          finished = False
-          break
+  def NotifyJobComplete(self, job_):
+    group = job_.group
 
-      if finished:
-        job_group.status = automation.common.job_group.STATUS_SUCCEEDED
-        if job_group.cleanup_on_completion:
-          for job in job_group.jobs:
-            self.job_manager.CleanUpJob(job)
+    with self._lock:
+      # We need to perform an action only if the group hasn't already failed.
+      if group.status != job_group.STATUS_FAILED:
+        if job_.status == job.STATUS_FAILED:
+          # We have a failed job, abort the job group
+          group.status = job_group.STATUS_FAILED
+          if group.cleanup_on_failure:
+            for job_ in group.jobs:
+              # TODO(bjanakiraman): We should probably only kill dependent jobs
+              # instead of the whole job group.
+              self.job_manager.KillJob(job_)
+              self.job_manager.CleanUpJob(job_)
+        else:
+          # The job succeeded successfully -- lets check to see if we are done.
+          assert job_.status == job.STATUS_SUCCEEDED
+          finished = True
+          for other_job in group.jobs:
+            assert other_job.status != job.STATUS_FAILED
+            if other_job.status != job.STATUS_SUCCEEDED:
+              finished = False
+              break
 
-    self.job_condition.notifyAll()
-    self.job_condition.release()
+          if finished and group.status != job_group.STATUS_SUCCEEDED:
+            # TODO(kbaclawski): Without check performed above following code
+            # could be called more than once. This would trigger StateMachine
+            # crash, because it cannot transition from STATUS_SUCCEEDED to
+            # STATUS_SUCCEEDED. Need to address that bug in near future.
+            group.status = job_group.STATUS_SUCCEEDED
+            if group.cleanup_on_completion:
+              for job_ in group.jobs:
+                self.job_manager.CleanUpJob(job_)
+
+        self._job_group_finished.notifyAll()
