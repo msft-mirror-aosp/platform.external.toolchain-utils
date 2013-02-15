@@ -21,8 +21,8 @@ from utils import utils
 
 class MountPoint:
   def __init__(self, external_dir, mount_dir, owner, options=None):
-    self.external_dir = external_dir
-    self.mount_dir = mount_dir
+    self.external_dir = os.path.realpath(external_dir)
+    self.mount_dir = os.path.realpath(mount_dir)
     self.owner = owner
     self.options = options
 
@@ -43,13 +43,20 @@ class MountPoint:
 
 
   def DoMount(self):
-    retval = self.CreateAndOwnDir(self.mount_dir)
-    logger.GetLogger().LogFatalIf(retval, "Cannot create mount_dir!")
-    retval = self.CreateAndOwnDir(self.external_dir)
-    logger.GetLogger().LogFatalIf(retval, "Cannot create external_dir!")
-    retval = self.MountDir()
-    logger.GetLogger().LogFatalIf(retval, "Cannot mount!")
-    return retval
+    ce = command_executer.GetCommandExecuter()
+    mount_signature = "%s on %s" % (self.external_dir, self.mount_dir)
+    command = "mount"
+    retval, out, err = ce.RunCommand(command, return_output=True)
+    if mount_signature not in out:
+      retval = self.CreateAndOwnDir(self.mount_dir)
+      logger.GetLogger().LogFatalIf(retval, "Cannot create mount_dir!")
+      retval = self.CreateAndOwnDir(self.external_dir)
+      logger.GetLogger().LogFatalIf(retval, "Cannot create external_dir!")
+      retval = self.MountDir()
+      logger.GetLogger().LogFatalIf(retval, "Cannot mount!")
+      return retval
+    else:
+      return 0
 
 
   def MountDir(self):
