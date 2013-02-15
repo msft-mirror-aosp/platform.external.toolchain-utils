@@ -111,4 +111,4 @@ def Main(argv):
 
 if __name__ == '__main__':
   retval = Main(sys.argv)
-  return retval
+  sys.exit(retval)
