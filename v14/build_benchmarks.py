@@ -175,7 +175,6 @@ def Main(argv):
       # Clean for chromeos/browser and chromeos/startup is a Nop since builds are always from scratch.
         build_args = [os.path.dirname(os.path.abspath(__file__)) + "/build_chromeos.py",
                       "--chromeos_root=" + options.chromeos_root,
-                      "--toolchain_root=" + options.toolchain_root,
                       "--board=" + options.board,
                       "--cflags=" + options.cflags,
                       "--cxxflags=" + options.cxxflags,
@@ -196,7 +195,6 @@ def Main(argv):
         # For now, re-build os. TBD: Change to call build_browser
         build_args = [os.path.dirname(os.path.abspath(__file__)) + "/build_chrome_browser.py",
                       "--chromeos_root=" + options.chromeos_root,
-                      "--toolchain_root=" + options.toolchain_root,
                       "--board=" + options.board,
                       "--cflags=" + options.cflags,
                       "--cxxflags=" + options.cxxflags,

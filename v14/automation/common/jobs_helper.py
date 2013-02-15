@@ -226,10 +226,15 @@ def CreatePerflabJob(chromeos_version,
                                   benchmark,
                                   board="x86-generic",
                                   p4_snapshot=""):
+  if "cpu" in benchmark:
+    use_minilayout = True
+  else:
+    use_minilayout = False
   command = GetInitialCommand()
   command += "&& " + GetP4VersionDirCommand(p4_snapshot)
   command += "&& " + GetP4BenchmarksDirCommand(p4_snapshot)
-  command += "&& " + _GetSetupChromeOSCommand(chromeos_version, True)
+
+  command += "&& " + _GetSetupChromeOSCommand(chromeos_version, use_minilayout)
   command += ("&& " + p4_version_dir + "/build_tc.py" +
                       " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
                       " --chromeos_root=" + chromeos_root +

@@ -31,8 +31,10 @@ import optparse
 import re
 import sys
 import run_tests
+import image_chromeos
 from utils import command_executer
 from utils import utils
+from utils import logger
 
 
 KNOWN_BENCHMARKS = [
@@ -191,14 +193,30 @@ def Main(argv):
       if not found_err:
         found_err = retval
     elif re.match('chromeos/startup', arg):
-      print "RUNNING %s" % arg
+      image_args = [os.path.dirname(os.path.abspath(__file__)) +
+                    "/image_chromeos.py",
+                    "--remote=" + options.machine,
+                    "--image=" + options.workdir + "/chromiumos_image.bin"
+                   ]
+      logger.GetLogger().LogOutput("Reimaging machine %s" % options.machine)
+      image_chromeos.Main(image_args)
+
+      logger.GetLogger().LogOutput("Running %s" % arg)
       retval = RunStartupBenchmark(options.chromeos_root,
                                    options.board,
                                    arg, options.workdir, options.machine)
       if not found_err:
         found_err = retval
     elif re.match('chromeos/browser', arg):
-      print "RUNNING %s" % arg
+      image_args = [os.path.dirname(os.path.abspath(__file__)) +
+                    "/image_chromeos.py",
+                    "--remote=" + options.machine,
+                    "--image=" + options.workdir + "/chromiumos_image.bin"
+                   ]
+      logger.GetLogger().LogOutput("Reimaging machine %s" % options.machine)
+      image_chromeos.Main(image_args)
+
+      logger.GetLogger().LogOutput("Running %s" % arg)
       retval = RunBrowserBenchmark(options.chromeos_root, 
                                    options.board,
                                    arg, options.workdir, options.machine)

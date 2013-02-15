@@ -36,6 +36,8 @@ def Main(argv):
                     help="Target directory for ChromeOS installation.")
   parser.add_option("-r", "--remote", dest="remote",
                     help="Target device.")
+  parser.add_option("-i", "--image", dest="image",
+                    help="Image binary file.")
 
   options = parser.parse_args(argv[1:])[0]
 
@@ -48,10 +50,20 @@ def Main(argv):
   options.chromeos_root = os.path.expanduser(options.chromeos_root)
 
   board = cmd_executer.CrosLearnBoard(options.chromeos_root, options.remote)
-  image_checksum = utils.Md5File(options.chromeos_root +
-                                 "/src/build/images/" + board +
-                                 "/latest/" +
-                                 "/chromiumos_image.bin")
+
+  if options.image is None:
+    image = (options.chromeos_root + board +
+             "/latest/" +
+             "/chromiumos_image.bin")
+  else:
+    image = options.image
+
+  image = os.path.realpath(image)
+
+  if not os.path.exists(image):
+    Usage(parser, "Image file: " + image + " does not exist!")
+
+  image_checksum = utils.Md5File(image)
 
   command = "cat " + checksum_file
   retval, device_checksum, err = cmd_executer.CrosRunCommand(command,
@@ -68,10 +80,8 @@ def Main(argv):
   if image_checksum != device_checksum:
     command = (options.chromeos_root +
                "/src/scripts/image_to_live.sh --remote=" +
-               options.remote)
-###    retval = cmd_executer.RunCommand(command)
-###    utils.AssertTrue(retval == 0)
-
+               options.remote +
+               " --image=" + image)
 
     command = "'echo " + image_checksum + " > " + checksum_file
     command += "&& chmod -w " + checksum_file + "'"
