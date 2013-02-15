@@ -100,7 +100,7 @@ class JobManager(threading.Thread):
 
         required_machines = ready_job.GetRequiredMachines()
         for child in ready_job.GetChildren():
-          required_machines[0].AddPreferredMachine(child.GetMachine().name)
+          required_machines[0].AddPreferredMachine(child.GetMachines()[0].name)
 
         machines = self.machine_manager.GetMachines(required_machines)
         if machines is None:

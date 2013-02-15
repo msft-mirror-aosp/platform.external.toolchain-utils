@@ -56,7 +56,7 @@ class JobExecuter(threading.Thread):
 
     logger.GetLogger().LogOutput("Executing job with ID '%s' on machine '%s' "
                                  "in directory '%s'" %
-                                 (self.job.GetID(), self.job.GetMachine().name,
+                                 (self.job.GetID(), primary_machine.name,
                                   self.job.GetJobDir()))
 
     rm_success = self.cmd_executer.RunCommand("sudo rm -rf %s" %
@@ -87,10 +87,10 @@ class JobExecuter(threading.Thread):
                                    primary_machine.username,
                                    self.command_terminator)
 
-      from_machine = required_folder.job.GetMachine().name
-      from_user = required_folder.job.GetMachine().username
-      to_machine = self.job.GetMachine().name
-      to_user = self.job.GetMachine().username
+      from_machine = required_folder.job.GetMachines()[0].name
+      from_user = required_folder.job.GetMachines()[0].username
+      to_machine = self.job.GetMachines()[0].name
+      to_user = self.job.GetMachines()[0].username
       if from_machine == to_machine and required_folder.read_only:
         # No need to make a copy, just symlink it
         symlink_success = self.cmd_executer.RunCommand("ln -sf %s %s" %
