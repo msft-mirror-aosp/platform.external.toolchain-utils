@@ -58,10 +58,10 @@ class JobManager(threading.Thread):
 
   def NotifyJobComplete(self, job):
     self.job_lock.acquire()
-    for dependent in job.GetDependents():
-      if dependent.IsReady():
-        self.ready_jobs.append(dependent)
-        self.pending_jobs.remove(dependent)
+    for parent in job.GetParents():
+      if parent.IsReady():
+        self.ready_jobs.append(parent)
+        self.pending_jobs.remove(parent)
 
     self.job_lock.release()
     self.job_ready_event.set()
@@ -77,9 +77,14 @@ class JobManager(threading.Thread):
 
         ready_job = self.ready_jobs.pop()
 
-        executer = job_executer.JobExecuter(ready_job,
-                                            self.machine_manager, self)
-        executer.start()
+        required_machines = ready_job.GetRequiredMachines()
+        machines = self.machine_manager.GetMachines(required_machines)
+        if machines is None:
+          self.ready_jobs.insert(0, ready_job)
+        else:
+          executer = job_executer.JobExecuter(ready_job,
+                                              machines, self)
+          executer.start()
 
 
       if self.status == JOB_MANAGER_STOPPING:

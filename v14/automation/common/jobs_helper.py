@@ -30,9 +30,9 @@ def CreateP4Job(p4_port, p4_paths, revision, checkoutdir):
   to_return = job.Job(GetP4Command(p4_port, p4_paths, revision, checkoutdir))
   return to_return
 
-def CreateSetupChromeOSJob():
+def CreateSetupChromeOSJob(chromeos_version):
   to_return = job.Job("v14/setup_chromeos.py --dir=chromeos --version=%s"
-            % (self.chromeos_version))
+            % (chromeos_version))
 
   p4_port = "perforce2:2666"
   p4_paths = []
@@ -40,9 +40,9 @@ def CreateSetupChromeOSJob():
   p4_revision = 1
   p4_checkoutdir = "perforce2"
 
-  p4_job = CreateP4Job(p4_port, p4_paths, p4_revision, 
+  p4_job = CreateP4Job(p4_port, p4_paths, p4_revision,
                                   p4_checkoutdir)
-  to_return.AddDependency(p4_job)
+  to_return.AddChild(p4_job)
   to_return.AddRequiredFolder(p4_job, "perforce2/gcctools/chromeos/v14", "v14")
 
   return to_return

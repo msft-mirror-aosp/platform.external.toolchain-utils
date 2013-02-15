@@ -31,8 +31,8 @@ class Job:
 
   def __init__(self, command):
     self.status = STATUS_NOT_EXECUTED
-    self.dependencies = []
-    self.dependents = []
+    self.children = []
+    self.parents = []
     self.machine_descriptions = []
     self.required_folders = []
     self.id = 0
@@ -60,10 +60,10 @@ class Job:
     return self.status
 
   def AddRequiredFolder(self, job, src, dest):
-    if job not in self.dependencies:
-      self.dependencies.append(job)
-    if self not in job.dependents:
-      job.dependents.append(self)
+    if job not in self.children:
+      self.children.append(job)
+    if self not in job.parents:
+      job.parents.append(self)
     self.required_folders.append(RequiredFolder(job, src, dest))
 
   def GetRequiredFolders(self):
@@ -81,31 +81,31 @@ class Job:
   def GetLogsDir(self):
     return self.job_dir + SUBDIR_LOGS
 
-  def AddDependency(self, job):
-    self.dependencies.append(job)
-    job.dependents.append(self)
+  def AddChild(self, job):
+    self.children.append(job)
+    job.parents.append(self)
 
-  def GetDependencies(self):
-    return self.dependencies
+  def GetChildren(self):
+    return self.children
 
-  def GetNumDependencies(self):
-    return len(self.dependencies)
+  def GetNumChildren(self):
+    return len(self.children)
 
-  def GetDependents(self):
-    return self.dependents
+  def GetParents(self):
+    return self.parents
 
-  def GetNumDependents(self):
-    return len(self.dependents)
+  def GetNumParents(self):
+    return len(self.parents)
 
   def IsReady(self):
     # Check that all our dependencies have been executed
-    for dependency in self.GetDependencies():
-      if dependency.GetStatus() != STATUS_COMPLETED:
+    for child in self.children:
+      if child.GetStatus() != STATUS_COMPLETED:
         return False
 
     return True
 
-  def GetMachineDescriptions(self):
+  def GetRequiredMachines(self):
     return self.machine_descriptions
 
   def GetCommand(self):

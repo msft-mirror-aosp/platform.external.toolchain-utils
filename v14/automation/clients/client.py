@@ -8,6 +8,6 @@ ls_job = job.Job("ls")
 ls_job.AddRequiredMachine("", "linux", False)
 echo_job = job.Job("echo $PATH")
 echo_job.AddRequiredMachine("", "linux", False)
-ls_job.AddDependency(echo_job)
+ls_job.AddChild(echo_job)
 
 server.ExecuteJobGroup(utils.Serialize([ls_job, echo_job]))
