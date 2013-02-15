@@ -3,6 +3,7 @@
 # Copyright 2010 Google Inc. All Rights Reserved.
 #
 
+import logging
 import os.path
 import threading
 
@@ -16,16 +17,18 @@ from automation.common.command_executer import CommandTerminator
 class JobExecuter(threading.Thread):
   def __init__(self, job_to_execute, machines, listeners):
     threading.Thread.__init__(self)
-
+    
     assert machines
 
     self.job = job_to_execute
     self.listeners = listeners
     self.machines = machines
 
-    self._logger = logger.Logger(
-        self.job.logs_dir, self.job.log_filename_prefix, True, subdir="")
-    self._executer = CommandExecuter(self._logger, self.job.dry_run)
+    # Set Thread name.
+    self.name = "%s-%s" % (self.__class__.__name__, self.job.id)
+
+    self._logger = logging.getLogger(self.__class__.__name__)
+    self._executer = CommandExecuter(self.job.dry_run)
     self._terminator = CommandTerminator()
 
   def _RunRemotely(self, command, fail_msg):
@@ -48,17 +51,23 @@ class JobExecuter(threading.Thread):
     self._terminator.Terminate()
 
   def CleanUpWorkDir(self):
+    self._logger.debug('Cleaning up %r work directory.', self.job)
     self._RunRemotely(
         cmd.RmTree(self.job.work_dir), "Cleanup workdir failed.")
 
   def CleanUpHomeDir(self):
+    self._logger.debug('Cleaning up %r home directory.', self.job)
     self._RunLocally(
         cmd.RmTree(self.job.home_dir), "Cleanup homedir failed.")
 
-  def _PrepareJobFolders(self):
+  def _PrepareRuntimeEnvironment(self):
     self._RunRemotely(
         cmd.MakeDir(self.job.work_dir, self.job.logs_dir, self.job.results_dir),
         "Creating new job directory failed.")
+
+    # The log directory is ready, so we can prepare to log command's output.
+    self._executer.SetUpOutputLogger(
+        os.path.join(self.job.logs_dir, self.job.log_filename_prefix))
 
   def _SatisfyFolderDependencies(self):
     for dependency in self.job.folder_dependencies:
@@ -96,14 +105,14 @@ class JobExecuter(threading.Thread):
   def run(self):
     self.job.status = job.STATUS_SETUP
     self.job.machines = self.machines
-    self._logger.LogOutput(
-        "Executing job with ID '%s' on machine '%s' in directory '%s'" % (
-            self.job.id, self.job.primary_machine.hostname, self.job.work_dir))
+    self._logger.debug(
+        "Executing %r on %r in directory %s.",
+        self.job, self.job.primary_machine.hostname, self.job.work_dir)
 
     try:
       self.CleanUpWorkDir()
 
-      self._PrepareJobFolders()
+      self._PrepareRuntimeEnvironment()
 
       self.job.status = job.STATUS_COPYING
 
@@ -117,14 +126,12 @@ class JobExecuter(threading.Thread):
       # If we get here, the job succeeded.
       self.job.status = job.STATUS_SUCCEEDED
     except job.JobFailure as ex:
-      self._logger.LogError(
-          "Job failed. Exit code %s. %s" % (ex.exit_code, ex.message))
+      self._logger.error(
+          "Job failed. Exit code %s. %s", ex.exit_code, ex)
       if self._terminator.IsTerminated():
-        self._logger.LogOutput("Job %s was killed" % self.job.id)
+        self._logger.info("%r was killed", self.job)
 
       self.job.status = job.STATUS_FAILED
-
-    self._logger.Flush()
 
     for listener in self.listeners:
       listener.NotifyJobComplete(self.job)

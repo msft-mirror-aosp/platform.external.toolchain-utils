@@ -2,147 +2,110 @@
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
-import os.path
-import sys
+import gzip
+import logging
+import logging.handlers
+import time
 import traceback
 
 
-class Logger(object):
-  """Logging helper class."""
+def SetUpRootLogger(filename=None, level=None):
+  console_handler = logging.StreamHandler()
+  console_handler.setFormatter(CustomFormatter(AnsiColorCoder()))
+  logging.root.addHandler(console_handler)
 
-  MAX_LOG_FILES = 10
+  if filename:
+    file_handler = logging.handlers.RotatingFileHandler(
+        filename, maxBytes=10*1024*1024, backupCount=9, delay=True)
+    file_handler.setFormatter(CustomFormatter(NullColorCoder()))
+    logging.root.addHandler(file_handler)
 
-  def __init__ (self, rootdir, basefilename, print_console, subdir="logs"):
-    logdir = os.path.join(rootdir, subdir)
-    basename = os.path.join(logdir, basefilename)
+  if level:
+    logging.root.setLevel(level)
 
-    try:
-      os.makedirs(logdir)
-    except OSError:
-      print "Warning: Logs directory '%s' already exists." % logdir
 
-    self.print_console = print_console
+class NullColorCoder(object):
+  def __call__(self, *args):
+    return ''
 
-    self._CreateLogFileHandles(basename)
 
-    self._WriteTo(self.cmdfd, " ".join(sys.argv), True)
+class AnsiColorCoder(object):
+  CODES = {'reset': (0, ),
+           'bold': (1, 22),
+           'italics': (3, 23),
+           'underline': (4, 24),
+           'inverse': (7, 27),
+           'strikethrough': (9, 29),
+           'black': (30, 40),
+           'red': (31, 41),
+           'green': (32, 42),
+           'yellow': (33, 43),
+           'blue': (34, 44),
+           'magenta': (35, 45),
+           'cyan': (36, 46),
+           'white': (37, 47)}
 
-  def _AddSuffix(self, basename, suffix):
-    return "%s%s" % (basename, suffix)
+  def __call__(self, *args):
+    codes = []
 
-  def _FindSuffix(self, basename):
-    timestamps = []
-    found_suffix = None
-    for i in range(self.MAX_LOG_FILES):
-      suffix = str(i)
-      suffixed_basename = self._AddSuffix(basename, suffix)
-      cmd_file = "%s.cmd" % suffixed_basename
-      if not os.path.exists(cmd_file):
-        found_suffix = suffix
-        break
-      timestamps.append(os.stat(cmd_file).st_mtime)
+    for arg in args:
+      if arg.startswith('bg-') or arg.startswith('no-'):
+        codes.append(self.CODES[arg[3:]][1])
+      else:
+        codes.append(self.CODES[arg][0])
 
-    if found_suffix:
-      return found_suffix
+    return '\033[%sm' % ';'.join(map(str, codes))
 
-    # Try to pick the oldest file with the suffix and return that one.
-    suffix = str(timestamps.index(min(timestamps)))
-    print ("Warning: Overwriting log file: %s" %
-           self._AddSuffix(basename, suffix))
-    return suffix
 
-  def _CreateLogFileHandles(self, basename):
-    suffix = self._FindSuffix(basename)
-    suffixed_basename = self._AddSuffix(basename, suffix)
+class CustomFormatter(logging.Formatter):
+  COLORS = {'DEBUG': ('white',),
+            'INFO': ('green',),
+            'WARN': ('yellow', 'bold'),
+            'ERROR': ('red', 'bold'),
+            'CRIT': ('red', 'inverse', 'bold')}
 
-    self.cmdfd = open("%s.cmd" % suffixed_basename, "w", 0755)
-    self.stdout = open("%s.out" % suffixed_basename, "w")
-    self.stderr = open("%s.err" % suffixed_basename, "w")
+  def __init__(self, coder):
+    logging.Formatter.__init__(self, fmt=(
+            '%(asctime)s %(levelname)s ' + coder('cyan') +
+            '[%(threadName)s:%(name)s]' + coder('reset') + ' %(message)s'))
 
-    self._CreateLogFileSymlinks(basename, suffixed_basename)
+    self._coder = coder
 
-  # Symlink unsuffixed basename to currently suffixed one.
-  def _CreateLogFileSymlinks(self, basename, suffixed_basename):
-    try:
-      for extension in ["cmd", "out", "err"]:
-        src_file = "%s.%s" % (os.path.basename(suffixed_basename), extension)
-        dest_file = "%s.%s" % (basename, extension)
-        if os.path.exists(dest_file):
-          os.remove(dest_file)
-        os.symlink(src_file, dest_file)
-    except IOError as ex:
-      self.LogFatal(str(ex))
+  def formatTime(self, record):
+    ct = self.converter(record.created)
+    t = time.strftime("%Y-%m-%d %H:%M:%S", ct)
+    return "%s.%02d" % (t, record.msecs / 10)
 
-  def _WriteTo(self, fd, msg, flush):
-    fd.write(msg)
-    if flush:
-      fd.flush()
-
-  def _LogMsg(self, file_fd, term_fd, msg, flush=True):
-    self._WriteTo(file_fd, msg, flush)
-    if self.print_console:
-      self._WriteTo(term_fd, msg, flush)
-
-  def LogCmd(self, cmd, machine="", user=None):
-    if user:
-      host = "%s@%s" % (user, machine)
+  def format(self, record):
+    if record.levelname in ['WARNING', 'CRITICAL']:
+      levelname = record.levelname[:4]
     else:
-      host = machine
+      levelname = record.levelname
 
-    self._LogMsg(self.cmdfd, sys.stdout, "CMD (%s): %s\n" % (host, cmd))
+    fmt = record.__dict__.copy()
+    fmt.update({
+        'levelname': '%s%s%s' % (self._coder(*self.COLORS[levelname]),
+                                 levelname, self._coder('reset')),
+        'asctime': self.formatTime(record)})
 
-  def LogFatal(self, msg):
-    self._LogMsg(self.stderr, sys.stderr, "FATAL: %s\n" % msg)
-    self._LogMsg(self.stderr, sys.stderr, "\n".join(traceback.format_stack()))
-    sys.exit(1)
+    s = []
 
-  def LogError(self, msg):
-    self._LogMsg(self.stderr, sys.stderr, "ERROR: %s\n" % msg)
+    for line in record.getMessage().splitlines():
+      try:
+        fmt['message'] = (
+            '%s%s:%s %s' % (self._coder('black', 'bold'), record.prefix,
+                            self._coder('reset'), line))
+      except AttributeError:
+        fmt['message'] = line
 
-  def LogWarning(self, msg):
-    self._LogMsg(self.stderr, sys.stderr, "WARNING: %s\n" % msg)
+      s.append(self._fmt % fmt)
 
-  def LogOutput(self, msg):
-    self._LogMsg(self.stdout, sys.stdout, "OUTPUT: %s\n" % msg)
-
-  def LogFatalIf(self, condition, msg):
-    if condition:
-      self.LogFatal(msg)
-
-  def LogErrorIf(self, condition, msg):
-    if condition:
-      self.LogError(msg)
-
-  def LogWarningIf(self, condition, msg):
-    if condition:
-      self.LogWarning(msg)
-
-  def LogCommandOutput(self, msg):
-    self._LogMsg(self.stdout, sys.stdout, msg, flush=False)
-
-  def LogCommandError(self, msg):
-    self._LogMsg(self.stderr, sys.stderr, msg, flush=False)
-
-  def Flush(self):
-    self.cmdfd.flush()
-    self.stdout.flush()
-    self.stderr.flush()
-
-main_logger = None
+    return '\n'.join(s)
 
 
-def InitLogger(script_name, print_console=True):
-  """Initialize a global logger. To be called only once."""
-  global main_logger
-  assert not main_logger, "The logger has already been initialized"
-  rootdir, basefilename = os.path.split(os.path.abspath(script_name))
-  main_logger = Logger(rootdir, basefilename, print_console)
-
-
-def GetLogger():
-  if not main_logger:
-    InitLogger(sys.argv[0])
-  return main_logger
+class CompressedFileHandler(logging.FileHandler):
+  def _open(self):
+    return gzip.open(self.baseFilename + '.gz', self.mode, 9)
 
 
 def HandleUncaughtExceptions(fun):
@@ -151,7 +114,8 @@ def HandleUncaughtExceptions(fun):
   def _Interceptor(*args, **kwargs):
     try:
       return fun(*args, **kwargs)
-    except StandardError:
-      GetLogger().LogFatal("Uncaught exception:\n%s" % traceback.format_exc())
+    except StandardError as ex:
+      logging.error("Uncaught exception:")
+      logging.error(ex)
 
   return _Interceptor

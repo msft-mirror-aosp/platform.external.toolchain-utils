@@ -2,6 +2,7 @@
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
+import logging
 import optparse
 import pickle
 import signal
@@ -25,40 +26,51 @@ class Server(object):
 
     self.job_group_manager = JobGroupManager(self.job_manager)
 
+    self._logger = logging.getLogger(self.__class__.__name__)
+
   def ExecuteJobGroup(self, job_group, dry_run=False):
     job_group = pickle.loads(job_group)
+    self._logger.info("Received ExecuteJobGroup(%r, dry_run=%s) request.",
+                      job_group, dry_run)
+
     for job in job_group.jobs:
       job.dry_run = dry_run
     return self.job_group_manager.AddJobGroup(job_group)
 
   def GetAllJobGroups(self):
+    self._logger.info("Received GetAllJobGroups() request.")
     return pickle.dumps(self.job_group_manager.GetAllJobGroups())
 
   def KillJobGroup(self, job_group_id):
+    self._logger.info("Received KillJobGroup(%d) request.", job_group_id)
     self.job_group_manager.KillJobGroup(pickle.loads(job_group_id))
 
   def GetJobGroup(self, job_group_id):
+    self._logger.info("Received GetJobGroup(%d) request.", job_group_id)
+
     return pickle.dumps(self.job_group_manager.GetJobGroup(job_group_id))
 
   def GetJob(self, job_id):
+    self._logger.info("Received GetJob(%d) request.", job_id)
+
     return pickle.dumps(self.job_manager.GetJob(job_id))
 
   def GetMachineList(self):
+    self._logger.info("Received GetMachineList() request.")
+
     return pickle.dumps(self.job_manager.machine_manager.GetMachineList())
 
   def StartServer(self):
-    logger.GetLogger().LogOutput("Starting server...")
     self.job_manager.StartJobManager()
-    logger.GetLogger().LogOutput("Started server...")
 
   def StopServer(self):
-    logger.GetLogger().LogOutput("Stopping server...")
     self.job_manager.StopJobManager()
     self.job_manager.join()
-    logger.GetLogger().LogOutput("Stopped server.")
 
 
 def Main():
+  logger.SetUpRootLogger(filename='server.log', level=logging.DEBUG)
+
   parser = optparse.OptionParser()
   parser.add_option("-m",
                     "--machines-file",
@@ -85,14 +97,14 @@ def Main():
   signal.signal(signal.SIGINT, _HandleKeyboardInterrupt)
 
   try:
-    xmlserver = SimpleXMLRPCServer(("localhost", 8000), allow_none=True)
-  except Exception as e:
-    logger.GetLogger().LogError(str(e))
+    xmlserver = SimpleXMLRPCServer(
+        ("localhost", 8000), allow_none=True, logRequests=False)
+    xmlserver.register_instance(server)
+    xmlserver.serve_forever()
+  except Exception as ex:
+    logging.error(ex)
     server.StopServer()
     sys.exit(1)
-
-  xmlserver.register_instance(server)
-  xmlserver.serve_forever()
 
 
 if __name__ == "__main__":

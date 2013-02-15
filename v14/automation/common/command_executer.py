@@ -6,6 +6,7 @@
 __author__ = "kbaclawski@google.com (Krystian Baclawski)"
 
 import fcntl
+import logging
 import os
 import select
 import subprocess
@@ -17,21 +18,35 @@ from automation.common import logger
 class CommandExecuter(object):
   DRY_RUN = False
 
-  def __init__(self, logger_to_set=None, dry_run=False):
-    self.logger = logger_to_set or logger.GetLogger()
+  def __init__(self, dry_run=False):
+    self._logger = logging.getLogger(self.__class__.__name__)
     self._dry_run = dry_run or self.DRY_RUN
+
+    # Create a logger for command's stdout/stderr streams.  Set a flag to
+    # prevent log records from being propagated up the logger hierarchy tree.
+    # We don't want for command output messages to appear in the main log.
+    self._output = logging.getLogger('%s.%s' % (self._logger.name, 'Output'))
+    self._output.propagate = 0
 
   @classmethod
   def Configure(cls, dry_run):
     cls.DRY_RUN = dry_run
+
+  def SetUpOutputLogger(self, log_path):
+    """
+    Set up output logger, so the messages are saved to gzip compressed file.
+    """
+    output_formatter = logging.Formatter(
+        '%(asctime)s %(prefix)s: %(message)s', '%Y-%m-%d %H:%M:%S')
+    output_handler = logger.CompressedFileHandler(log_path, delay=True)
+    output_handler.setFormatter(output_formatter)
+    self._output.addHandler(output_handler)
 
   def RunCommand(self, cmd, machine=None, username=None,
                  command_terminator=None, command_timeout=None):
     """Run a command."""
 
     cmd = str(cmd)
-
-    self.logger.LogCmd(cmd, machine, username)
 
     if self._dry_run:
       return 0
@@ -40,7 +55,7 @@ class CommandExecuter(object):
       command_terminator = CommandTerminator()
 
     if command_terminator.IsTerminated():
-      self.logger.LogError("Command has been already terminated!")
+      self._logger.warning("Command has been already terminated!")
       return 1
 
     # Rewrite command for remote execution.
@@ -50,12 +65,16 @@ class CommandExecuter(object):
       else:
         login = machine
 
+      self._logger.debug("Executing '%s' on %s.", cmd, login)
+
       cmd = "ssh %s -- '%s'" % (login, cmd)
+    else:
+      self._logger.debug("Executing: '%s'.", cmd)
 
     child = self._SpawnProcess(cmd, command_terminator, command_timeout)
 
-    self.logger.LogOutput(
-        "[PID: %d] Finished with %d code." % (child.pid, child.returncode))
+    self._logger.debug(
+        "{PID: %d} Finished with %d code.", child.pid, child.returncode)
 
     return child.returncode
 
@@ -63,10 +82,10 @@ class CommandExecuter(object):
     """Gracefully shutdown the child by sending SIGTERM."""
 
     if command_timeout:
-      self.logger.LogWarning("[PID: %d] Timeout of %s seconds reached since "
-                             "process started." % (child.pid, command_timeout))
+      self._logger.warning("{PID: %d} Timeout of %s seconds reached since "
+                           "process started.", child.pid, command_timeout)
 
-    self.logger.LogWarning("[PID: %d] Terminating child." % child.pid)
+    self._logger.warning("{PID: %d} Terminating child.", child.pid)
 
     try:
       child.terminate()
@@ -84,8 +103,8 @@ class CommandExecuter(object):
 
   def _Kill(self, child):
     """Kill the child with immediate result."""
-    self.logger.LogWarning("[PID: %d] Process still alive." % child.pid)
-    self.logger.LogWarning("[PID: %d] Killing child." % child.pid)
+    self._logger.warning("{PID: %d} Process still alive.", child.pid)
+    self._logger.warning("{PID: %d} Killing child.", child.pid)
     child.kill()
     child.wait()
 
@@ -152,18 +171,20 @@ class CommandExecuter(object):
             data = ""
 
     if not already_terminated:
-      self.logger.LogOutput("Waiting for command to finish.")
+      self._logger.debug("Waiting for command to finish.")
       child.wait()
 
     return child
 
   def DataReceivedOnOutput(self, data):
     """Invoked when the child process wrote data to stdout."""
-    self.logger.LogCommandOutput(data)
+    for line in data.splitlines():
+      self._output.info(line, extra={'prefix': 'STDOUT'})
 
   def DataReceivedOnError(self, data):
     """Invoked when the child process wrote data to stderr."""
-    self.logger.LogCommandError(data)
+    for line in data.splitlines():
+      self._output.warning(line, extra={'prefix': 'STDERR'})
 
 
 class CommandTerminator(object):

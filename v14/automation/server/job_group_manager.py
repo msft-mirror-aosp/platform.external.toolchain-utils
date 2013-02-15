@@ -4,6 +4,7 @@
 #
 
 import copy
+import logging
 import threading
 
 from automation.common import command as cmd
@@ -28,6 +29,8 @@ class JobGroupManager(object):
     self._id_producer.Initialize(job_group.JobGroup.HOMEDIR_PREFIX,
                                  "job-group-(?P<id>\d+)")
 
+    self._logger = logging.getLogger(self.__class__.__name__)
+
   def GetJobGroup(self, group_id):
     with self._lock:
       for group in self.all_job_groups:
@@ -44,7 +47,8 @@ class JobGroupManager(object):
     with self._lock:
       group.id = self._id_producer.GetNextId()
 
-    # Re/Create home directory for logs, etc.
+    self._logger.debug('Creating runtime environment for %r.', group)
+
     CommandExecuter().RunCommand(
         cmd.Chain(cmd.RmTree(group.home_dir),
                   cmd.MakeDir(group.home_dir)))
@@ -55,16 +59,20 @@ class JobGroupManager(object):
       for job_ in group.jobs:
         self.job_manager.AddJob(job_)
 
-      logger.GetLogger().LogOutput("Added JobGroup '%s'." % group.id)
-
       group.status = job_group.STATUS_EXECUTING
+
+    self._logger.info("Added %r to queue.", group)
 
     return group.id
 
   def KillJobGroup(self, group):
     with self._lock:
+      self._logger.debug('Killing all jobs that belong to %r.', group)
+
       for job_ in group.jobs:
         self.job_manager.KillJob(job_)
+
+      self._logger.debug('Waiting for jobs to quit.')
 
       # Lets block until the group is killed so we know it is completed
       # when we return.
@@ -73,6 +81,8 @@ class JobGroupManager(object):
         self._job_group_finished.wait()
 
   def NotifyJobComplete(self, job_):
+    self._logger.debug('Handling %r completion event.', job_)
+
     group = job_.group
 
     with self._lock:

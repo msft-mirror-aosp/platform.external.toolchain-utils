@@ -3,6 +3,7 @@
 # Copyright 2010 Google Inc. All Rights Reserved.
 #
 
+import logging
 import os
 import re
 import threading
@@ -60,7 +61,7 @@ class IdProducerPolicy(object):
 
 class JobManager(threading.Thread):
   def __init__(self, machine_manager):
-    threading.Thread.__init__(self)
+    threading.Thread.__init__(self, name=self.__class__.__name__)
     self.all_jobs = []
     self.ready_jobs = []
     self.job_executer_mapping = {}
@@ -77,12 +78,18 @@ class JobManager(threading.Thread):
     self._id_producer = IdProducerPolicy()
     self._id_producer.Initialize(job.Job.WORKDIR_PREFIX, 'job-(?P<id>\d+)')
 
+    self._logger = logging.getLogger(self.__class__.__name__)
+
   def StartJobManager(self):
+    self._logger.info("Starting...")
+
     with self._lock:
       self.start()
       self._jobs_available.notifyAll()
 
   def StopJobManager(self):
+    self._logger.info("Shutdown request received.")
+
     with self._lock:
       for job_ in self.all_jobs:
         self._KillJob(job_.id)
@@ -107,7 +114,8 @@ class JobManager(threading.Thread):
     return None
 
   def _KillJob(self, job_id):
-    logger.GetLogger().LogOutput("Killing job with ID '%s'." % job_id)
+    self._logger.info("Killing [Job: %d].", job_id)
+
     if job_id in self.job_executer_mapping:
       self.job_executer_mapping[job_id].Kill()
     for job_ in self.ready_jobs:
@@ -139,7 +147,8 @@ class JobManager(threading.Thread):
     self.machine_manager.ReturnMachines(job_.machines)
 
     with self._lock:
-      logger.GetLogger().LogOutput('Job profile:\n%s' % job_)
+      self._logger.debug('Handling %r completion event.', job_)
+
       if job_.status == job.STATUS_SUCCEEDED:
         for succ in job_.successors:
           if succ.is_ready:
@@ -153,6 +162,8 @@ class JobManager(threading.Thread):
 
   @logger.HandleUncaughtExceptions
   def run(self):
+    self._logger.info("Started.")
+
     while not self._exit_request:
       with self._lock:
         # Get the next ready job, block if there are none
@@ -177,3 +188,5 @@ class JobManager(threading.Thread):
             executer = JobExecuter(ready_job, machines, self.listeners)
             executer.start()
             self.job_executer_mapping[ready_job.id] = executer
+
+    self._logger.info("Stopped.")
