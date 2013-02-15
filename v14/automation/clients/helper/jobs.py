@@ -156,20 +156,20 @@ def GetBuildToolchainCommand(chromeos_version="top", board="x86-generic",
       # this file in g4 so it syncs the timestamp as well as the file
       # contents.
       # This is a workaround.
-      "touch %s" % os.path.join(local_path, "google_vendor_src_branch",
-                                "binutils/binutils-2.20.1-mobile",
-                                "ld/ldlex.c"),
+      cmd.Shell("touch", os.path.join(
+          local_path, "google_vendor_src_branch", "binutils",
+          "binutils-2.20.1-mobile", "ld", "ldlex.c")),
       _GetSetupChromeOSCommand(chromeos_version),
       _GetBuildTCCommand(toolchain, board, False, True))
 
 
 def _GetMakeChrootCommand(delete=False):
-  make_chroot = cmd.Shell("make_chroot", path=".", opts=["--fast"])
+  make_chroot = cmd.Shell("make_chroot", "--fast", path=".")
 
   if delete:
     make_chroot.AddOption("--delete")
 
-  return cmd.Chain("cd %s" % CHROMEOS_SCRIPTS_DIR, make_chroot, "cd -")
+  return cmd.Wrapper(make_chroot, cwd=CHROMEOS_SCRIPTS_DIR)
 
 
 def GetDejaGNUCommand(chromeos_version="top", board="x86-generic",
@@ -183,12 +183,12 @@ def GetDejaGNUCommand(chromeos_version="top", board="x86-generic",
       _GetSetupChromeOSCommand(chromeos_version),
       _GetBuildTCCommand(toolchain, board),
       cmd.Shell("run_dejagnu.py",
-                path=P4_VERSION_DIR,
-                opts=["--testflags=\"\"",
-                      "--chromeos_root=%s" % CHROMEOS_ROOT,
-                      "--toolchain_root=%s" % local_path,
-                      "--remote=$SECONDARY_MACHINES[0]",
-                      "--board=%s" % board]),
+                "--testflags=\"\"",
+                "--chromeos_root=%s" % CHROMEOS_ROOT,
+                "--toolchain_root=%s" % local_path,
+                "--remote=$SECONDARY_MACHINES[0]",
+                "--board=%s" % board,
+                path=P4_VERSION_DIR),
       cmd.Shell("summarize_results.py", os.path.join(dejagnu_logs, "gcc.log"),
                 path=P4_VERSION_DIR),
       cmd.Shell("summarize_results.py", os.path.join(dejagnu_logs, "g++.log"),
@@ -210,11 +210,12 @@ def GetBuildAndTestChromeOSCommand(chromeos_version="latest",
       _GetBuildTCCommand(toolchain, board),
       _GetBuildChromeOSCommand(board),
       _GetImageChromeOSCommand(board),
-      cmd.Shell("run_tests.py", "bvt", *test_list,
-                path=P4_VERSION_DIR,
-                opts=["--remote=$SECONDARY_MACHINES[0]",
-                      "--chromeos_root=%s" % CHROMEOS_ROOT,
-                      "--board=%s" % board]),
+      cmd.Shell("run_tests.py",
+                "--remote=$SECONDARY_MACHINES[0]",
+                "--chromeos_root=%s" % CHROMEOS_ROOT,
+                "--board=%s" % board,
+                "bvt", *test_list,
+                path=P4_VERSION_DIR),
       cmd.Shell("summarize_results.py",
                 os.path.join(P4_VERSION_DIR, "logs/run_tests.py.out"),
                 path=P4_VERSION_DIR))
@@ -222,17 +223,17 @@ def GetBuildAndTestChromeOSCommand(chromeos_version="latest",
 
 def _GetImageChromeOSCommand(board):
   return cmd.Shell("image_chromeos.py",
-                   path=P4_VERSION_DIR,
-                   opts=["--chromeos_root=%s" % CHROMEOS_ROOT,
-                         "--remote=$SECONDARY_MACHINES[0]",
-                         "--board=%s" % board])
+                   "--chromeos_root=%s" % CHROMEOS_ROOT,
+                   "--remote=$SECONDARY_MACHINES[0]",
+                   "--board=%s" % board,
+                   path=P4_VERSION_DIR)
 
 
 def _GetSetupChromeOSScriptCommand(version="latest", use_minilayout=False):
   setup_chromeos = cmd.Shell("setup_chromeos.py",
-                             path=P4_VERSION_DIR,
-                             opts=["--dir=%s" % CHROMEOS_ROOT,
-                                   "--version=%s" % version])
+                             "--dir=%s" % CHROMEOS_ROOT,
+                             "--version=%s" % version,
+                             path=P4_VERSION_DIR)
 
   if use_minilayout:
     setup_chromeos.AddOption("--minilayout")
@@ -242,9 +243,9 @@ def _GetSetupChromeOSScriptCommand(version="latest", use_minilayout=False):
 
 def _GetBuildChromeOSCommand(board, vanilla=False):
   build_chromeos = cmd.Shell("build_chromeos.py",
-                             path=P4_VERSION_DIR,
-                             opts=["--chromeos_root=%s" % CHROMEOS_ROOT,
-                                   "--board=%s" % board])
+                             "--chromeos_root=%s" % CHROMEOS_ROOT,
+                             "--board=%s" % board,
+                             path=P4_VERSION_DIR)
 
   if vanilla:
     build_chromeos.AddOption("--vanilla")
@@ -279,12 +280,13 @@ def _GetSetupChromeOSCommand(version, use_minilayout=False):
 
 
 def _GetBuildTCCommand(toolchain, board, use_binary=True, rebuild=False):
-  local_path = GetTCRootDir(toolchain)[1]
+  _, local_path = GetTCRootDir(toolchain)
 
-  build_tc = cmd.Shell("build_tc.py", path=P4_VERSION_DIR,
-                       opts=["--toolchain_root=%s" % local_path,
-                             "--chromeos_root=%s" % CHROMEOS_ROOT,
-                             "--board=%s" % board])
+  build_tc = cmd.Shell("build_tc.py",
+                       "--toolchain_root=%s" % local_path,
+                       "--chromeos_root=%s" % CHROMEOS_ROOT,
+                       "--board=%s" % board,
+                       path=P4_VERSION_DIR)
 
   if use_binary:
     build_tc.AddOption("-B")
@@ -316,16 +318,16 @@ def GetPerflabCommand(chromeos_version, benchmark, board="x86-agz",
 
   perflab_command = cmd.Shell(
       "perflab",
-      path=perflab_binary_path,
-      opts=["--perflab_interpreter=%s" % perflab_interpreter_path,
-            "--brrd_config=%s" % perflab_brrd_config_path,
-            "--alsologtostderr",
-            "--noenable_loas_kerberos_checks_at_startup",
-            "--stubby_server_host=$(hostname)",
-            "--crosstool=$PWD/%s" % toolchain_root,
-            "--chromeos_root=$PWD/%s" % CHROMEOS_ROOT,
-            "--arch=chromeos_%s" % board,
-            "--workdir=$(readlink -f %s)" % P4_VERSION_DIR])
+      "--perflab_interpreter=%s" % perflab_interpreter_path,
+      "--brrd_config=%s" % perflab_brrd_config_path,
+      "--alsologtostderr",
+      "--noenable_loas_kerberos_checks_at_startup",
+      "--stubby_server_host=$(hostname)",
+      "--crosstool=%s" % os.path.join("$PWD", toolchain_root),
+      "--chromeos_root=%s" % os.path.join("$PWD", CHROMEOS_ROOT),
+      "--arch=chromeos_%s" % board,
+      "--workdir=$(readlink -f %s)" % P4_VERSION_DIR,
+      path=perflab_binary_path)
 
   # TODO(asharif): Compare this to a golden baseline dir.
   return cmd.Chain(

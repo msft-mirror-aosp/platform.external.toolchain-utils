@@ -12,22 +12,43 @@ class Shell(object):
   """Class used to build a string representation of a shell command."""
 
   def __init__(self, cmd, *args, **kwargs):
-    assert all(key in ['opts', 'path'] for key in kwargs)
+    assert all(key in ['path'] for key in kwargs)
 
-    self._cmd = cmd
+    self._cmd  = cmd
+    self._args = list(args)
     self._path = kwargs.get('path', '')
-    self._opts = kwargs.get('opts', [])
-    self._args = args
 
   def __str__(self):
     cmdline = [os.path.join(self._path, self._cmd)]
-    cmdline.extend(self._opts)
     cmdline.extend(self._args)
 
     return ' '.join(cmdline)
 
   def AddOption(self, option):
-    self._opts.append(option)
+    self._args.append(option)
+
+
+class Wrapper(object):
+  """Wraps a command with environment which gets cleaned up after execution."""
+
+  def __init__(self, command, cwd=None, env=None):
+    # @param cwd: temporary working directory
+    # @param env: dictionary of environment variables
+    self._command = command
+    self._prefix = Chain()
+    self._suffix = Chain()
+
+    if cwd:
+      self._prefix.append(Shell('pushd', cwd))
+      self._suffix.insert(0, Shell('popd'))
+
+    if env:
+      for env_var, value in env.items():
+        self._prefix.append(Shell('='.join([env_var, value])))
+        self._suffix.insert(0, Shell('unset', env_var))
+
+  def __str__(self):
+    return str(Chain(self._prefix, self._command, self._suffix))
 
 
 class Chain(collections.MutableSequence):
