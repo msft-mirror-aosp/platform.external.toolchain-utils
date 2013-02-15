@@ -110,18 +110,14 @@ def Main(argv):
 
   MakeChroot(options.chromeos_root, options.clobber_chroot)
 
-  build_packages_command = ("./build_packages --nousepkg --withdev --withtest"
-                            " --withautotest --board=%s" % options.board)
-  build_image_command = ("./build_image --withdev --board=%s" % options.board)
-  mod_image_command = ("./mod_image_for_test.sh --yes --board=%s" %
-                       options.board)
-  setup_board_force= ""
-  if options.clobber_board:
-    setup_board_force = " --force"
+  build_packages_command = utils.GetBuildPackagesCommand(options.board)
+  build_image_command = utils.GetBuildImageCommand(options.board)
+  mod_image_command = utils.GetModImageForTestCommand(options.board)
 
   if options.vanilla == True:
-    command = ("./setup_board --nousepkg --board=" + options.board
-               + setup_board_force)
+    command = utils.GetSetupBoardCommand(options.board,
+                                         usepkg=False,
+                                         force=options.clobber_board)
     command += "&& " + build_packages_command
     command += "&& " + build_image_command
     command += "&& " + mod_image_command
@@ -135,10 +131,10 @@ def Main(argv):
     rootdir = utils.GetRoot(argv[0])[0]
     version_number = utils.GetRoot(rootdir)[1]
     ret = ExecuteCommandInChroot(options.chromeos_root, None,
-                                 "./setup_board --board=%s "
-                                 " --gcc_version=9999 "
-                                 " --binutils_version=9999 "
-                                 "%s" % (options.board, setup_board_force))
+                                 utils.GetSetupBoardCommand(options.board,
+                                   gcc_version="9999",
+                                   binutils_version="9999",
+                                   force=options.clobber_board))
     utils.AssertTrue(ret == 0, "setup_board failed")
   else:
     logger.GetLogger().LogOutput("Did not setup_board "

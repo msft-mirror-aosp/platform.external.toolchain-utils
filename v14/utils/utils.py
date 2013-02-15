@@ -68,6 +68,59 @@ def FormatCommands(commands):
     output = re.sub("\n+\s*", "\n", output)
     return output
 
+def GetBuildPackagesCommand(board):
+  command = ""
+  command += ("./build_packages --nousepkg --withdev --withtest"
+              " --withautotest --board=%s" %
+              (board))
+  return command
+
+def GetBuildImageCommand(board):
+  command = ""
+  command += ("./build_image --withdev --board=%s" %
+              board)
+  return command
+
+def GetModImageForTestCommand(board):
+  command = ""
+  command += ("./mod_image_for_test.sh --yes --board=%s" %
+              board)
+  return command
+
+def GetSetupBoardCommand(board,
+    gcc_version=None,
+    binutils_version=None,
+    usepkg=None,
+    force=None):
+  if not gcc_version:
+    gcc_version_option = ""
+  else:
+    gcc_version_option = "--gcc_version=" + gcc_version
+  if not binutils_version:
+    binutils_version_option = ""
+  else:
+    binutils_version_option = "--binutils_version=" + binutils_version
+  if not usepkg:
+    usepkg_option = ""
+  elif usepkg == True:
+    usepkg_option = "--usepkg"
+  elif usepkg == False:
+    usepkg_option = "--nousepkg"
+  if not force:
+    force_option = ""
+  elif force == True:
+    force_option = "--force"
+  else:
+    force_option = ""
+  command = ""
+  command += ("./setup_board --board=%s %s %s %s %s" %
+              (board,
+               gcc_version_option,
+               binutils_version_option,
+               usepkg_option,
+               force_option))
+  return command
+
 
 def Md5File(filename, block_size=2**10):
   f = open(filename, "r")

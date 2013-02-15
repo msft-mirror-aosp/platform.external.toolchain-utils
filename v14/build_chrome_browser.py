@@ -80,15 +80,14 @@ def Main():
   # Build image
   ret = (build_chromeos.
          ExecuteCommandInChroot(options.chromeos_root, None,
-                                "./build_image --yes --board=%s" % options.board))
+                                utils.GetBuildImageCommand(options.board)))
 
   utils.AssertTrue(ret == 0, "build_image failed")
 
   # Mod image for test
   ret = (build_chromeos.
          ExecuteCommandInChroot(options.chromeos_root, None,
-                                "./mod_image_for_test.sh --board=%s"
-                                % options.board))
+           utils.GetModImageForTestCommand(options.board)))
 
   utils.AssertTrue(ret == 0, "mod_image_for_test failed")
 
