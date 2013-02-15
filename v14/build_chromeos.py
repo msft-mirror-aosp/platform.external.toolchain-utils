@@ -141,26 +141,12 @@ def Main(argv):
 
   utils.AssertTrue(ret1 == 0 and ret2 == 0, "Could not modify make.conf")
 
-  # Find Chrome browser version
-  chrome_version = cmd_executer.RunCommand("%s/src/scripts/chromeos_version.sh "
-                                           "| grep CHROME_VERSION"
-                                           % options.chromeos_root, True)
-
-  ret = chrome_version[0]
-  utils.AssertTrue(ret == 0, "Could not determine Chrome browser version")
-
-  chrome_version = chrome_version[1].strip().split("=")
-  if len(chrome_version) == 2:
-    chrome_version = chrome_version[1]
-  else:
-    chrome_version = ""
-
-  # Build packages
+ # Build packages
   ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                               "CHROME_ORIGIN=SERVER_SOURCE CHROME_VERSION=%s "
+                               "CHROME_ORIGIN=SERVER_SOURCE "
                                "./build_packages --withdev "
                                "--board=%s --withtest --withautotest"
-                               % (chrome_version, options.board))
+                               % (options.board))
 
   utils.AssertTrue(ret == 0, "build_packages failed")
 

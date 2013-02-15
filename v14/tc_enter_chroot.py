@@ -13,6 +13,7 @@ import getpass
 import optparse
 import os
 import pwd
+import stat
 import sys
 from utils import command_executer
 from utils import logger
@@ -180,13 +181,22 @@ def Main(argv, return_output=False):
   command = chromeos_root + "/src/scripts/enter_chroot.sh"
 
   if len(passthrough_argv) > 1:
-    command += " '"
     inner_command = " ".join(passthrough_argv[1:])
     inner_command = inner_command.strip()
     if inner_command.startswith("-- "):
       inner_command = inner_command[3:]
-    command += " " + inner_command
-    command += "'"
+    command_file = "tc_enter_chroot.cmd"
+    command_file_path = chromeos_root + "/src/scripts/" + command_file
+    retval = cmd_executer.RunCommand("sudo rm -f " + command_file_path)
+    if retval != 0:
+      return retval
+    f = open(command_file_path, "w")
+    f.write(inner_command)
+    f.close()
+    retval = cmd_executer.RunCommand("chmod +x " + command_file_path)
+    if retval != 0:
+      return retval
+    command += " ./" + command_file
     retval = cmd_executer.RunCommand(command, return_output)
     return retval
   else:
