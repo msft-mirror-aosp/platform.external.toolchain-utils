@@ -122,8 +122,15 @@ class JobGroupInfo(object):
     return self._job_group.home_dir
 
   def GetReportList(self):
-    filenames = glob.glob(
-        os.path.join(self._job_group.home_dir, 'report-*.html'))
+    job_dir_pattern = os.path.join(self._job_group.home_dir, 'job-*')
+
+    filenames = []
+
+    for job_dir in glob.glob(job_dir_pattern):
+      filename = os.path.join(job_dir, 'results', 'report.html')
+
+      if os.access(filename, os.F_OK):
+        filenames.append(filename)
 
     reports = []
 

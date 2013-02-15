@@ -8,7 +8,6 @@ import re
 import threading
 
 from automation.common import job
-import report_generator
 from utils import command_executer
 from utils import logger
 
@@ -73,7 +72,7 @@ class JobExecuter(threading.Thread):
   def _PrepareJobFolders(self, machine):
     command = " && ".join(["mkdir -p %s" % self.job.work_dir,
                            "mkdir -p %s" % self.job.logs_dir,
-                           "mkdir -p %s" % self.job.test_results_dir_src])
+                           "mkdir -p %s" % self.job.results_dir])
     self._RunCommand(command, machine, "Creating new job directory failed.")
 
   def _SatisfyFolderDependencies(self, machine):
@@ -117,7 +116,7 @@ class JobExecuter(threading.Thread):
     """Copy test results back to directory."""
 
     to_folder = self.job.home_dir
-    from_folder = self.job.test_results_dir_src
+    from_folder = self.job.results_dir
     from_user = machine.username
     from_machine = machine.hostname
 
@@ -125,30 +124,6 @@ class JobExecuter(threading.Thread):
                                          None, from_user, recursive=False)
     if exit_code:
       raise job.JobFailure("Failed to copy results.", exit_code)
-
-  def _GenerateJobReport(self):
-    """Generate diff of baseline and results.csv."""
-
-    results_filename = self.job.test_results_filename
-    baseline_filename = self.job.baseline_filename
-
-    if not baseline_filename:
-      self.job.logger.LogWarning("Baseline not specified.")
-
-    try:
-      report = report_generator.GenerateResultsReport(baseline_filename,
-                                                      results_filename)
-    except IOError:
-      self.job.logger.LogWarning("Couldn't generate report")
-    else:
-      try:
-        with open(self.job.test_report_filename, "w") as report_file:
-          report_file.write(report.GetReport())
-
-        with open(self.job.test_report_summary_filename, "w") as summary_file:
-          summary_file.write(report.GetSummary())
-      except IOError:
-        self.job.logger.LogWarning("Could not write results report")
 
   def run(self):
     self.job.status = job.STATUS_SETUP
@@ -186,7 +161,6 @@ class JobExecuter(threading.Thread):
 
       self.job.status = job.STATUS_FAILED
 
-    self._GenerateJobReport()
     self.job.logger.Flush()
 
     for listener in self.listeners:

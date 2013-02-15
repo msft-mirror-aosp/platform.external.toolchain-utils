@@ -21,12 +21,6 @@ STATUS_RUNNING = 'RUNNING'
 STATUS_SUCCEEDED = 'SUCCEEDED'
 STATUS_FAILED = 'FAILED'
 
-LOGS_SUBDIR = 'logs'
-TEST_RESULTS_DIR = 'results'
-TEST_RESULTS_FILE = 'results.csv'
-TEST_REPORT_FILE = 'report.html'
-TEST_REPORT_SUMMARY_FILE = 'summary.txt'
-
 
 class FolderDependency(object):
   def __init__(self, job, src, dest=None):
@@ -118,36 +112,12 @@ class Job(object):
     self.DependsOn(dependency.job)
 
   @property
-  def test_results_dir_src(self):
-    # TODO(kbaclawski): Is it acceptable not to have work_dir?
-    if not self.work_dir:
-      return ''
-    return os.path.join(self.work_dir, TEST_RESULTS_DIR)
-
-  @property
-  def test_results_dir(self):
-    # TODO(kbaclawski): Is it acceptable not to have home_dir?
-    if not self.home_dir:
-      return ''
-    return os.path.join(self.home_dir, TEST_RESULTS_DIR)
-
-  @property
-  def test_report_filename(self):
-    return os.path.join(self.test_results_dir, TEST_REPORT_FILE)
-
-  @property
-  def test_report_summary_filename(self):
-    return os.path.join(self.test_results_dir, TEST_REPORT_SUMMARY_FILE)
-
-  @property
-  def test_results_filename(self):
-    return os.path.join(self.test_results_dir, TEST_RESULTS_FILE)
+  def results_dir(self):
+    return os.path.join(self.work_dir, 'results')
 
   @property
   def logs_dir(self):
-    if not self.home_dir:
-      return ''
-    return os.path.join(self.home_dir, LOGS_SUBDIR)
+    return os.path.join(self.home_dir, 'logs')
 
   @property
   def log_out_filename(self):
@@ -183,12 +153,6 @@ class Job(object):
       self.machine_dependencies.insert(0, machine_spec)
     else:
       self.machine_dependencies.append(machine_spec)
-
-  @property
-  def baseline_filename(self):
-    if not self.baseline:
-      return ''
-    return os.path.join(self.baseline, TEST_RESULTS_FILE)
 
   def __getstate__(self):
     # TODO(kbaclawski): This is nasty trick to prevent logger from being
