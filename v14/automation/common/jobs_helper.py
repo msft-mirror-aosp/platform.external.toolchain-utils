@@ -274,8 +274,12 @@ def CreatePerflabJob(chromeos_version,
 
   command += "&& " + _GetSetupChromeOSCommand(chromeos_version, use_minilayout)
   command += "&& " + _GetBuildTCCommand(toolchain, board)
-  command += "&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s build %s" % (perflab_command, toolchain_root, chromeos_root, benchmark)
-  command += "&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s --machines=chromeos_x86-agz_1 run %s" % (perflab_command, toolchain_root, chromeos_root, benchmark)
+  command += ("&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s" +
+              " --machines=chromeos_x86-agz_1 build %s" %
+              (perflab_command, toolchain_root, chromeos_root, benchmark))
+  command += ("&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s" +
+              " --machines=chromeos_x86-agz_1 run %s" %
+              (perflab_command, toolchain_root, chromeos_root, benchmark))
   to_return = CreateLinuxJob(command)
   return to_return
 

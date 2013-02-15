@@ -149,6 +149,7 @@ def Main(argv):
 
   found_err = 0
   retval = 0
+  version_dir = utils.GetRoot(argv[0])[0]
   for arg in args:
     # CPU benchmarks
     if re.match('chromeos/cpu', arg):
@@ -164,7 +165,8 @@ def Main(argv):
                                               options.ldflags, options.makeopts))
         utils.AssertError(retval == 0, "Build of benchmark %s failed." % arg)
       if retval == 0 and (options.build or options.only_copy):
-        benchdir = 'third_party/android_bench/v2_0/CLOSED_SOURCE/%s' % benchname
+        benchdir = ('%s/third_party/android_bench/v2_0/CLOSED_SOURCE/%s' %
+                    (version_dir, benchname))
         linkdir = '%s/perflab-bin/%s' % (options.workdir, arg)
         CreateBinaryCopy(benchdir, linkdir)
         CreateRunsh(linkdir, arg)
