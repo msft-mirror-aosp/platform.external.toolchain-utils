@@ -21,18 +21,18 @@ toolchain_setup_env()
   for TC_DIR in ${TC_DIRS[@]}
   do
     TC_LAST_DIR=${TC_DIR##*/}
-    TC_MOUNTED_PATH="$(eval readlink -f "$TC_CHROOT/$FLAGS_TC_ROOT_MOUNT/$TC_LAST_DIR")"
+    TC_MOUNTED_PATH="$(eval readlink -f "$CROS_CHROOT/$FLAGS_TC_ROOT_MOUNT/$TC_LAST_DIR")"
     if [[ -z "$(mount | grep -F "on $TC_MOUNTED_PATH ")" ]]
     then
       ! TC_PATH="$(eval readlink -e "$FLAGS_TC_ROOT/$TC_DIR")"
-      TC_MOUNTED_PATH="$TC_CHROOT/$FLAGS_TC_ROOT_MOUNT/$TC_LAST_DIR"
+      TC_MOUNTED_PATH="$CROS_CHROOT/$FLAGS_TC_ROOT_MOUNT/$TC_LAST_DIR"
       if [[ -z "$TC_PATH" ]]
       then
         die "$FLAGS_TC_ROOT/$TC_DIR is not a valid toolchain directory."
       fi
       if [[ -z "$TC_MOUNTED_PATH" ]]
       then
-        die "$TC_CHROOT/$FLAGS_TC_ROOT_MOUNT/$TC_LAST_DIR is not a\
+        die "$CROS_CHROOT/$FLAGS_TC_ROOT_MOUNT/$TC_LAST_DIR is not a\
         valid mount directory."
       fi
       info "Mounting $TC_PATH at $TC_MOUNTED_PATH."
@@ -41,6 +41,8 @@ toolchain_setup_env()
         die "Could not mount $TC_PATH at $TC_MOUNTED_PATH"
     fi
   done
+  # Setup symlinks to build-gcc and build-binutils.
+  ln -fs -t $CROS_CHROOT/$FLAGS_TC_ROOT_MOUNT $parent_dir/build-gcc
 }
 
 FLAGS_TC_ROOT=""
@@ -94,7 +96,7 @@ fi
 # Source the ChromeOS common.sh script.
 . $FLAGS_CHROMEOS_DIR/src/scripts/common.sh
 
-TC_CHROOT=$DEFAULT_CHROOT_DIR
+CROS_CHROOT=$DEFAULT_CHROOT_DIR
 
 assert_outside_chroot
 assert_not_root_user
