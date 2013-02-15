@@ -136,6 +136,14 @@ class CommandExecuter:
     command += "\nremote_access_init"
     return command
 
+  def WriteToTempShFile(self, contents):
+    handle, command_file = tempfile.mkstemp(prefix=os.uname()[1],
+                                            suffix=".sh")
+    os.write(handle, "#!/bin/bash\n")
+    os.write(handle, contents)
+    os.close(handle)
+    return command_file
+
 
   def CrosLearnBoard(self, chromeos_root, machine):
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
@@ -146,15 +154,28 @@ class CommandExecuter:
     return output.split()[-1]
 
   def CrosRunCommand(self, cmd, return_output=False, machine=None,
-      username=None, command_terminator=None, chromeos_root=None):
+      username=None, command_terminator=None, chromeos_root=None,
+                     command_timeout=None):
     """Run a command on a chromeos box"""
     self.logger.LogFatalIf(not machine, "No machine provided!")
     self.logger.LogFatalIf(not chromeos_root, "chromeos_root not given!")
     chromeos_root = os.path.expanduser(chromeos_root)
+
+    # Write all commands to a file.
+    command_file = self.WriteToTempShFile(cmd)
+    self.CopyFiles(command_file, command_file,
+                   dest_machine=machine,
+                   command_terminator=command_terminator,
+                   chromeos_root=chromeos_root,
+                   dest_cros=True,
+                   recursive=False)
+
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
-    command += "\nremote_sh " + cmd
+    command += "\nremote_sh bash %s" % command_file
     command += "\necho \"$REMOTE_OUT\""
-    retval = self.RunCommand(command, return_output)
+    retval = self.RunCommand(command, return_output,
+                             command_terminator=command_terminator,
+                             command_timeout=command_timeout)
     if return_output:
       connect_signature = ("Initiating first contact with remote host\n" +
                            "Connection OK\n")
