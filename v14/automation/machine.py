@@ -14,9 +14,7 @@ import random
 import re
 import sys
 
-sys.path.append("..")
 from utils import utils
-
 
 # Common initializations
 (rootdir, basename) = utils.GetRoot(sys.argv[0])
@@ -66,7 +64,7 @@ class Machine:
 
 
 def Main(argv):
-  build_machine_info=Machine("ahmad.mtv", "core2duo", 4, "linux")
+  build_machine_info = Machine("ahmad.mtv", "core2duo", 4, "linux")
   print build_machine_info
 
 

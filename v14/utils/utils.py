@@ -8,7 +8,9 @@
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import os
+import pickle
 import select
+import StringIO
 import subprocess
 import sys
 
@@ -131,3 +133,12 @@ def AtomicMkdir(newdir):
     # Check if it has been created, perhaps by another process
     if os.path.exists(newdir):
       return
+
+
+def Serialize(argument):
+  string = StringIO.StringIO()
+  pickle.dump(argument, string)
+  return string.getvalue()
+
+def Deserialize(argument):
+  return pickle.load(StringIO.StringIO(argument))

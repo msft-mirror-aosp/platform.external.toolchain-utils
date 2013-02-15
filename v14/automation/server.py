@@ -1,11 +1,10 @@
 import job_manager
-import utils
+from utils import utils
 import SimpleXMLRPCServer
 
 class Server:
 
   def __init__(self):
-    #TODO(raymes): Can change to PriorityQueue later for fairness
     self.job_manager = job_manager.JobManager()
     print "Started server thread."
     self.job_manager.start()
