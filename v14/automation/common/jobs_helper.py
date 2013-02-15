@@ -237,7 +237,7 @@ def CreateUpdateJob(chromeos_version,
 ###              "/chromeos." + dirname)
 ###  command += (" && ln -fs -T chromeos." + dirname + " " +
 ###              location + "/" + chromeos_version)
-  command += (" && rsync -r chromeos/build/ " + location +
+  command += (" && rsync -a chromeos/build/ " + location +
               "/chormeos." + dirname + ".build")
   command += (" && ln -fs -T chromeos." + dirname + ".build " +
               location + "/" + chromeos_version + ".build")
