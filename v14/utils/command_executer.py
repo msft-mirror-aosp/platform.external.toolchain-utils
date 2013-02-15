@@ -26,10 +26,13 @@ class CommandExecuter:
     self.logger = logger.GetLogger()
 
   def RunCommand(self, cmd, return_output=False, machine=None,
-                 username=None):
+                 username=None, command_terminator=None):
     """Run a command."""
 
     self.logger.Logcmd(cmd, machine, username)
+    if command_terminator and command_terminator.IsTerminated():
+      self.logger.LogError("Command was terminated!")
+      return 1
 
     if machine is not None:
       user = ""
@@ -47,6 +50,13 @@ class CommandExecuter:
     out = err = None
     while True:
       fds = select.select([p.stdout, p.stderr], [], [], 0.1)
+      if command_terminator and command_terminator.IsTerminated():
+        p.kill()
+        p.stdout.close()
+        p.stderr.close()
+        wait = p.wait()
+        self.logger.LogError("Command was terminated!")
+        return wait
       for fd in fds[0]:
         if fd == p.stdout:
           out = os.read(p.stdout.fileno(), 4096)
@@ -68,12 +78,14 @@ class CommandExecuter:
     return p.returncode
 
   def RunCommands(self, cmdlist, return_output=False, machine=None,
-                  username=None):
+                  username=None, command_terminator=None):
     cmd = " ;\n" .join(cmdlist)
-    return self.RunCommand(cmd, return_output, machine, username)
+    return self.RunCommand(cmd, return_output, machine, username,
+                           command_terminator)
 
   def CopyFiles(self, src, dest, src_machine, dest_machine,
-                src_user=None, dest_user=None, recursive=True):
+                src_user=None, dest_user=None, recursive=True,
+                command_terminator=None):
     if src_user is None:
       src_user = ""
     else:
@@ -87,7 +99,8 @@ class CommandExecuter:
       recurse = "-r"
     return self.RunCommand("sudo scp %s %s%s:%s %s%s:%s"
                            % (recurse, src_user, src_machine, src,
-                              dest_user, dest_machine, dest))
+                              dest_user, dest_machine, dest),
+                           command_terminator=command_terminator)
 
 
 class MockCommandExecuter(CommandExecuter):
@@ -103,4 +116,12 @@ class MockCommandExecuter(CommandExecuter):
     return 0
 
 
+class CommandTerminator:
+  def __init__(self):
+    self.terminated = False
 
+  def Terminate(self):
+    self.terminated = True
+
+  def IsTerminated(self):
+    return self.terminated
