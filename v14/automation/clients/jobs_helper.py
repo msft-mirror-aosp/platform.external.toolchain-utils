@@ -208,7 +208,7 @@ def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
               " --chromeos_root=" + chromeos_root +
               " --board=" + board)
 
-  command += "&& " + _GetImageChromeOSCommand()
+  command += "&& " + _GetImageChromeOSCommand(board)
 
   autotests = "bvt" + " ".join(tests)
   command += ("&& " + p4_version_dir + "/run_tests.py" +
@@ -225,10 +225,11 @@ def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
 
   return to_return
 
-def _GetImageChromeOSCommand():
+def _GetImageChromeOSCommand(board):
   command = (p4_version_dir + "/image_chromeos.py" +
              " --chromeos_root=chromeos" +
-             " --remote=$SECONDARY_MACHINES[0]")
+             " --remote=$SECONDARY_MACHINES[0]"
+             " --board=" + board)
   return command
 
 def _GetSetupChromeOSCommand(version, use_minilayout=False):
