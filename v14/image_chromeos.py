@@ -155,5 +155,5 @@ def LocateOrCopyImage(chromeos_root, image, board=None):
     
 
 if __name__ == "__main__":
-  retval = ImageChromeOS(sys.argv)
+  retval = Main(sys.argv)
   sys.exit(retval)
