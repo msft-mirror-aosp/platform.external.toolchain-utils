@@ -9,7 +9,7 @@ import threading
 
 from automation.common import job
 from automation.common import logger
-from automation.server import job_executer
+from automation.server.job_executer import JobExecuter
 
 
 class IdProducerPolicy(object):
@@ -45,7 +45,9 @@ class JobManager(threading.Thread):
 
     self.machine_manager = machine_manager
 
-    self.job_condition = threading.Condition()
+    self._lock = threading.Lock()
+    self._jobs_available = threading.Condition(self._lock)
+    self._exit_request = False
 
     self.listeners = []
     self.listeners.append(self)
@@ -54,20 +56,18 @@ class JobManager(threading.Thread):
     self._id_producer.Initialize(job.Job.WORKDIR_PREFIX, 'job-(?P<id>\d+)')
 
   def StartJobManager(self):
-    self.job_condition.acquire()
-    self.start()
-    self.job_condition.notifyAll()
-    self.job_condition.release()
+    with self._lock:
+      self.start()
+      self._jobs_available.notifyAll()
 
   def StopJobManager(self):
-    self.job_condition.acquire()
-    for job_ in self.all_jobs:
-      self._KillJob(job_.id)
+    with self._lock:
+      for job_ in self.all_jobs:
+        self._KillJob(job_.id)
 
-    # Signal to die
-    self.ready_jobs.insert(0, None)
-    self.job_condition.notifyAll()
-    self.job_condition.release()
+      # Signal to die
+      self._exit_request = True
+      self._jobs_available.notifyAll()
 
     # Wait for all job threads to finish
     for executer in self.job_executer_mapping.values():
@@ -75,9 +75,8 @@ class JobManager(threading.Thread):
 
   # Does not block until the job is completed.
   def KillJob(self, job_id):
-    self.job_condition.acquire()
-    self._KillJob(job_id)
-    self.job_condition.release()
+    with self._lock:
+      self._KillJob(job_id)
 
   def GetJob(self, job_id):
     for job_ in self.all_jobs:
@@ -89,80 +88,69 @@ class JobManager(threading.Thread):
     logger.GetLogger().LogOutput("Killing job with ID '%s'." % job_id)
     if job_id in self.job_executer_mapping:
       self.job_executer_mapping[job_id].Kill()
-    killed_job = None
     for job_ in self.ready_jobs:
       if job_.id == job_id:
-        killed_job = job_
-        self.ready_jobs.remove(killed_job)
+        self.ready_jobs.remove(job_)
         break
 
   def AddJob(self, job_):
-    self.job_condition.acquire()
+    with self._lock:
+      job_.id = self._id_producer.GetNextId()
 
-    job_.id = self._id_producer.GetNextId()
+      self.all_jobs.append(job_)
+      # Only queue a job as ready if it has no dependencies
+      if job_.is_ready:
+        self.ready_jobs.append(job_)
 
-    self.all_jobs.append(job_)
-    # Only queue a job as ready if it has no dependencies
-    if job_.is_ready:
-      self.ready_jobs.append(job_)
-
-    self.job_condition.notifyAll()
-    self.job_condition.release()
+      self._jobs_available.notifyAll()
 
     return job_.id
 
   def CleanUpJob(self, job_):
-    self.job_condition.acquire()
-    if job_.id in self.job_executer_mapping:
-      self.job_executer_mapping[job_.id].CleanUpWorkDir()
-      del self.job_executer_mapping[job_.id]
-    # TODO(raymes): remove job from self.all_jobs
-    self.job_condition.release()
+    with self._lock:
+      if job_.id in self.job_executer_mapping:
+        self.job_executer_mapping[job_.id].CleanUpWorkDir()
+        del self.job_executer_mapping[job_.id]
+      # TODO(raymes): remove job from self.all_jobs
 
   def NotifyJobComplete(self, job_):
     self.machine_manager.ReturnMachines(job_.machines)
-    self.job_condition.acquire()
-    logger.GetLogger().LogOutput('Job profile:\n%s' % job_)
-    if job_.status == job.STATUS_SUCCEEDED:
-      for parent in job_.parents:
-        if parent.is_ready:
-          if parent not in self.ready_jobs:
-            self.ready_jobs.append(parent)
 
-    self.job_condition.notifyAll()
-    self.job_condition.release()
+    with self._lock:
+      logger.GetLogger().LogOutput('Job profile:\n%s' % job_)
+      if job_.status == job.STATUS_SUCCEEDED:
+        for parent in job_.parents:
+          if parent.is_ready:
+            if parent not in self.ready_jobs:
+              self.ready_jobs.append(parent)
+
+      self._jobs_available.notifyAll()
 
   def AddListener(self, listener):
     self.listeners.append(listener)
 
+  @logger.HandleUncaughtExceptions
   def run(self):
-    while True:
-      # Get the next ready job, block if there are none
-      self.job_condition.acquire()
-      self.job_condition.wait()
+    while not self._exit_request:
+      with self._lock:
+        # Get the next ready job, block if there are none
+        self._jobs_available.wait()
 
-      while self.ready_jobs:
-        ready_job = self.ready_jobs.pop()
-        if ready_job is None:
-          # Time to die
-          self.job_condition.release()
-          return
+        while self.ready_jobs:
+          ready_job = self.ready_jobs.pop()
 
-        required_machines = ready_job.machine_dependencies
-        for child in ready_job.children:
-          required_machines[0].AddPreferredMachine(child.machines[0].hostname)
+          required_machines = ready_job.machine_dependencies
+          for child in ready_job.children:
+            required_machines[0].AddPreferredMachine(child.machines[0].hostname)
 
-        machines = self.machine_manager.GetMachines(required_machines)
-        if not machines:
-          # If we can't get the necessary machines right now, simply wait
-          # for some jobs to complete
-          self.ready_jobs.insert(0, ready_job)
-          break
-        else:
-          # Mark as executing
-          executer = job_executer.JobExecuter(ready_job, machines,
-                                              self.listeners)
-          executer.start()
-          self.job_executer_mapping[ready_job.id] = executer
-
-      self.job_condition.release()
+          machines = self.machine_manager.GetMachines(required_machines)
+          if not machines:
+            # If we can't get the necessary machines right now, simply wait
+            # for some jobs to complete
+            self.ready_jobs.insert(0, ready_job)
+            break
+          else:
+            # Mark as executing
+            executer = JobExecuter(ready_job, machines, self.listeners)
+            executer.start()
+            self.job_executer_mapping[ready_job.id] = executer
