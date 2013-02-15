@@ -62,6 +62,12 @@ class Job:
   def __str__(self):
     ret = ""
     ret += str(self.id) + "\n"
+    ret += "Children:\n"
+    for child in self.children:
+      ret += str(child.id) + "\n"
+    ret += "Parents:\n"
+    for parent in self.parents:
+      ret += str(parent.id) + "\n"
     ret += utils.FormatCommands(self.command) + "\n"
     ret += self.status + "\n"
     ret += "Timeline of status events:\n"

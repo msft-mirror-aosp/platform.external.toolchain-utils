@@ -85,6 +85,7 @@ class JobManager(threading.Thread):
 
 
   def NotifyJobComplete(self, job):
+    self.machine_manager.ReturnMachines(job.GetMachines())
     self.job_condition.acquire()
     logger.GetLogger().LogOutput("Job profile:\n%s" % str(job))
     if job.GetStatus() == automation.common.job.STATUS_SUCCEEDED:
