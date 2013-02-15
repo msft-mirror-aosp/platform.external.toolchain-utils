@@ -182,6 +182,13 @@ def Main(argv):
                     default=False,
                     action="store_true",
                     help="Build a compiler with -g3 -O0.")
+  parser.add_option("-m",
+                    "--mount_only",
+                    dest="mount_only",
+                    default=False,
+                    action="store_true",
+                    help="Just mount the tool directories.")
+
 
   options, _ = parser.parse_args(argv)
 
@@ -193,11 +200,20 @@ def Main(argv):
     build_env["CFLAGS"] = debug_flags
     build_env["CXXFLAGS"] = debug_flags
 
-  try:
-    for board in options.board.split(","):
+  # Create toolchain parts
+  toolchain_parts = []
+  for board in options.board.split(","):
+    if options.gcc_dir:
       tp = ToolchainPart("gcc", gcc_dir, chromeos_root, board,
                          not options.noincremental, build_env)
-      return tp.Build()
+      toolchain_parts.append(tp)
+
+  try:
+    for tp in toolchain_parts:
+      if options.mount_only:
+        tp.MountSources()
+      else:
+        tp.Build()
   finally:
     print "Exiting..."
   return 0
