@@ -151,7 +151,7 @@ def LocateOrCopyImage(chromeos_root, image, board=None):
   l.LogOutput("No matching image found. Copying %s to %s" %
               (image, new_image))
   shutil.copyfile(image, new_image)
-  return [True, new_image]
+  return [False, new_image]
     
 
 if __name__ == "__main__":
