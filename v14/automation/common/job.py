@@ -19,9 +19,8 @@ STATUS_RUNNING = "STATUS_RUNNING"
 STATUS_SUCCEEDED = "STATUS_SUCCEEDED"
 STATUS_FAILED = "STATUS_FAILED"
 
-SUBDIR_WORK = "/work"
-SUBDIR_LOGS = "/logs"
-
+LOGS_SUBDIR = "/logs"
+RESULTS_SUBDIR = "/results"
 
 class RequiredFolder:
   def __init__(self, job, src, dest, read_only):
@@ -48,7 +47,8 @@ class Job:
     self.machine_descriptions = []
     self.required_folders = []
     self.id = 0
-    self.job_dir = ""
+    self.work_dir = ""
+    self.home_dir = ""
     self.machines = []
     self.command = command
     self._primary_done = False
@@ -108,17 +108,23 @@ class Job:
   def GetRequiredFolders(self):
     return self.required_folders
 
-  def SetJobDir(self, job_dir):
-    self.job_dir = job_dir
-
-  def GetJobDir(self):
-    return self.job_dir
+  def SetWorkDir(self, work_dir):
+    self.work_dir = work_dir
 
   def GetWorkDir(self):
-    return self.job_dir + SUBDIR_WORK
+    return self.work_dir
+
+  def SetHomeDir(self, home_dir):
+    self.home_dir = home_dir
+
+  def GetHomeDir(self):
+    return self.home_dir
+
+  def GetResultsDir(self):
+    return self.home_dir + RESULTS_SUBDIR
 
   def GetLogsDir(self):
-    return self.job_dir + SUBDIR_LOGS
+    return self.home_dir + LOGS_SUBDIR
 
   def AddChild(self, job):
     if job not in self.children:

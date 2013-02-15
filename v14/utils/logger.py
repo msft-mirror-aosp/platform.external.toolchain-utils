@@ -6,8 +6,8 @@ class Logger(object):
 
   """Logging helper class."""
 
-  def __init__ (self, rootdir, basefilename, print_console):
-    self._logdir = rootdir + "/logs/"
+  def __init__ (self, rootdir, basefilename, print_console, subdir="logs"):
+    self._logdir = rootdir + "/" + subdir
     self.AtomicMkdir(self._logdir)
     self._basefilename = basefilename
     self.cmdfd = open(self._logdir + self._basefilename + ".cmd", "w", 0755)

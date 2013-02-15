@@ -78,7 +78,7 @@ class JobManager(threading.Thread):
   def CleanUpJob(self, job):
     self.job_condition.acquire()
     if job.GetID() in self.job_executer_mapping:
-      self.job_executer_mapping[job.GetID()].CleanUp()
+      self.job_executer_mapping[job.GetID()].CleanUpWorkDir()
       del self.job_executer_mapping[job.GetID()]
     # TODO(raymes): remove job from self.all_jobs
     self.job_condition.release()

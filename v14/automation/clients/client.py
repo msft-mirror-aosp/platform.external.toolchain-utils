@@ -18,7 +18,7 @@ cat_job2.AddResultsDir("hello.txt")
 yes_job = job.Job("yes > /dev/null")
 yes_job.AddRequiredMachine("", "linux", False)
 
-group = job_group.JobGroup("raymes", "/tmp/", [blah_job, cat_job, cat_job2],
+group = job_group.JobGroup([blah_job, cat_job, cat_job2],
                            True, True)
 
 ids = server.ExecuteJobGroup(utils.Serialize(group))
