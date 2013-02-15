@@ -101,9 +101,9 @@ def GetGitRepoForTool(tool):
   # This should return the correct server repository when the script
   # is fully done.
   if tool == "gcc":
-    return "ssh://git@gitrw.chromium.org:9222/gcc.git"
+    return "ssh://gerrit.chromium.org:29418/chromiumos/third_party/gcc.git"
   elif tool == "binutils":
-    return "ssh://git@gitrw.chromium.org:9222/binutils.git"
+    return "ssh://gerrit.chromium.org:29418/chromiumos/third_party/binutils.git"
 
 
 def SetupBranch(checkoutdir, branch_name):
