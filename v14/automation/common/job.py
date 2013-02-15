@@ -25,6 +25,7 @@ TEST_RESULTS_FILE = "results.csv"
 TEST_REPORT_FILE = "report.html"
 TEST_REPORT_SUMMARY_FILE = "summary.txt"
 
+
 class FolderDependency(object):
   def __init__(self, job, src, dest=None):
     if not dest:
@@ -46,6 +47,13 @@ class StatusEvent(object):
   def __str__(self):
     return "%s -> %s: %s" % (self.old_status, self.new_status,
                              time.ctime(self.event_time))
+
+
+class JobFailure(Exception):
+  def __init__(self, message, exit_code):
+    Exception.__init__(self, message)
+    self.exit_code = exit_code
+
 
 class Job(object):
   """A class representing a job whose commands will be executed."""
@@ -94,7 +102,7 @@ class Job(object):
     timeline = []
     timeline.append("Timeline of status events:")
 
-    def time_to_string(t):
+    def TimeToString(t):
       return time.strftime("%H hours %M minutes %S seconds", time.gmtime(t))
 
     for i in range(len(self.status_events)):
@@ -104,15 +112,15 @@ class Job(object):
         old_s = self.status_events[i - 1]
         time_diff = s.event_time - old_s.event_time
         total_time += time_diff
-        timeline.append("%s: %s" % (s.old_status, time_to_string(time_diff)))
+        timeline.append("%s: %s" % (s.old_status, TimeToString(time_diff)))
 
     if self.status_events and self.status not in [STATUS_SUCCEEDED,
                                                   STATUS_FAILED]:
       time_diff = time.time() - self.status_events[-1].event_time
       total_time += time_diff
-      timeline.append("%s - NOW: %s" % (self.status, time_to_string(time_diff)))
+      timeline.append("%s - NOW: %s" % (self.status, TimeToString(time_diff)))
 
-    timeline.append("Total time: %s" % time_to_string(total_time))
+    timeline.append("Total time: %s" % TimeToString(total_time))
 
     return "\n".join(timeline)
 
@@ -176,8 +184,7 @@ class Job(object):
     return os.path.join(self.logs_dir, "job-%s.log.err" % self.id)
 
   def DependsOn(self, job):
-    """ Specifies Jobs that have to be finished before this job is eligible to
-    be launched. """
+    """Specifies Jobs to be finished before this job can be launched."""
     if job not in self.children:
       self.children.append(job)
     if self not in job.parents:
@@ -185,7 +192,7 @@ class Job(object):
 
   @property
   def is_ready(self):
-    """ Check that all our dependencies have been executed. """
+    """Check that all our dependencies have been executed."""
     return all(child.status == STATUS_SUCCEEDED for child in self.children)
 
   def DependsOnMachine(self, machine_spec, primary=True):
@@ -193,7 +200,7 @@ class Job(object):
     MachineSpecification class instances passed to this method. """
     if primary:
       if self._has_primary_machine_spec:
-        raise RuntimeError("There can only be one primary machine specification.")
+        raise RuntimeError("Only one primary machine specification allowed.")
       self._has_primary_machine_spec = True
       self.machine_dependencies.insert(0, machine_spec)
     else:

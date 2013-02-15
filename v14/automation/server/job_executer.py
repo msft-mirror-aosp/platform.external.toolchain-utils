@@ -16,43 +16,27 @@ WORKDIR_PREFIX = "/usr/local/google/tmp/automation"
 
 
 class JobExecuter(threading.Thread):
-
   def __init__(self, job_to_execute, machines, listeners):
     threading.Thread.__init__(self)
+
     self.job = job_to_execute
     self.listeners = listeners
     self.machines = machines
 
+    job_dir = "job-%d" % self.job.id
+
     # Set job directory
-    self.job.work_dir = os.path.join(WORKDIR_PREFIX, "job-%d" % self.job.id)
-    self.job.home_dir = os.path.join(self.job.group.home_dir, "job-%d" %
-                                     self.job.id)
+    self.job.work_dir = os.path.join(WORKDIR_PREFIX, job_dir)
+    self.job.home_dir = os.path.join(self.job.group.home_dir, job_dir)
     self.job_log_root = self.job.logs_dir
 
     # Setup log files for the job.
     self.job_log_file_name = "job-%s.log" % self.job.id
     self.job_logger = logger.Logger(self.job_log_root, self.job_log_file_name,
                                     True, subdir="")
-    self.cmd_executer = (command_executer.GetCommandExecuter
-                         (self.job_logger, self.job.dry_run))
-    self.command_terminator = command_executer.CommandTerminator()
-
-  def _IsJobFailed(self, return_value, fail_message):
-    if return_value == 0:
-      return False
-    else:
-      output_string = ""
-      error_string = "Job failed. Exit code %s. %s" % (return_value,
-                                                       fail_message)
-      if self.command_terminator.IsTerminated():
-        output_string = "Job %s was killed" % self.job.id
-      self.job_logger.LogError(error_string)
-      self.job_logger.LogOutput(output_string)
-
-      self.job.status = job.STATUS_FAILED
-      for listener in self.listeners:
-        listener.NotifyJobComplete(self.job)
-      return True
+    self._executer = command_executer.GetCommandExecuter(self.job_logger,
+                                                         self.job.dry_run)
+    self._terminator = command_executer.CommandTerminator()
 
   def _FormatCommand(self, command):
     ret = command
@@ -69,124 +53,103 @@ class JobExecuter(threading.Thread):
     return ret
 
   def Kill(self):
-    self.command_terminator.Terminate()
+    self._terminator.Terminate()
 
   def CleanUpWorkDir(self, ct=None):
-    rm_failure = self.cmd_executer.RunCommand("sudo rm -rf %s" %
-                                              self.job.work_dir, False,
-                                              self.machines[0].name,
-                                              self.machines[0].username,
-                                              command_terminator=ct)
-    if rm_failure:
-      self.job_logger.LogError("Cleanup workdir failed.")
-    return rm_failure
+    command = "sudo rm -rf %s" % self.job.work_dir
+
+    exit_code = self._executer.RunCommand(command, False,
+                                          self.machines[0].name,
+                                          self.machines[0].username,
+                                          command_terminator=ct)
+    if exit_code:
+      raise job.JobFailure("Cleanup workdir failed.", exit_code)
 
   def CleanUpHomeDir(self, ct=None):
-    rm_failure = self.cmd_executer.RunCommand("rm -rf %s" % self.job.home_dir,
-                                              False, command_terminator=ct)
-    if rm_failure:
-      self.job_logger.LogError("Cleanup homedir failed.")
-    return rm_failure
+    command = "rm -rf %s" % self.job.home_dir
 
-  def run(self):
-    self.job.status = job.STATUS_SETUP
+    exit_code = self._executer.RunCommand(command, False, command_terminator=ct)
 
-    primary_machine = self.machines[0]
-    self.job.machines = self.machines
+    if exit_code:
+      raise job.JobFailure("Cleanup homedir failed.", exit_code)
 
-    self.job_logger.LogOutput("Executing job with ID '%s' on machine '%s' in "
-                              "directory '%s'" % (self.job.id,
-                                                  primary_machine.name,
-                                                  self.job.work_dir))
+  def _RunCommand(self, command, machine, fail_msg):
+    exit_code = self._executer.RunCommand(command, False, machine.name,
+                                          machine.username, self._terminator)
+    if exit_code:
+      raise job.JobFailure(fail_msg, exit_code)
 
-    self.CleanUpWorkDir(self.command_terminator)
+  def _PrepareJobFolders(self, machine):
+    command = " && ".join(["mkdir -p %s" % self.job.work_dir,
+                           "mkdir -p %s" % self.job.logs_dir,
+                           "mkdir -p %s" % self.job.test_results_dir_src])
+    self._RunCommand(command, machine, "Creating new job directory failed.")
 
-    mkdir_command = ["mkdir -p %s" % self.job.work_dir,
-                     "mkdir -p %s" % self.job.logs_dir,
-                     "mkdir -p %s" % self.job.test_results_dir_src]
-    mkdir_success = self.cmd_executer.RunCommand(" && ".join(mkdir_command),
-                                                 False, primary_machine.name,
-                                                 primary_machine.username,
-                                                 self.command_terminator)
-    if self._IsJobFailed(mkdir_success, "mkdir of new job directory Failed."):
-      return
-
-    self.job.status = job.STATUS_COPYING
-
-    for required_folder in self.job.folder_dependencies:
-      to_folder = os.path.join(self.job.work_dir, required_folder.dest)
-      from_folder = os.path.join(required_folder.job.work_dir,
-                                 required_folder.src)
-
+  def _SatisfyFolderDependencies(self, machine):
+    for dependency in self.job.folder_dependencies:
+      to_folder = os.path.join(self.job.work_dir, dependency.dest)
+      from_folder = os.path.join(dependency.job.work_dir, dependency.src)
       to_folder_parent = utils.GetRoot(to_folder)[0]
-      self.cmd_executer.RunCommand("mkdir -p %s" % to_folder_parent, False,
-                                   primary_machine.name,
-                                   primary_machine.username,
-                                   self.command_terminator)
 
-      from_machine = required_folder.job.machines[0].name
-      from_user = required_folder.job.machines[0].username
-      to_machine = self.job.machines[0].name
-      to_user = self.job.machines[0].username
-      if from_machine == to_machine and required_folder.read_only:
+      command = "mkdir -p %s" % to_folder_parent
+
+      self._RunCommand(command, machine, "Creating directory for results "
+                       "produced by dependencies failed.")
+
+      from_machine = dependency.job.machines[0]
+      to_machine = self.job.machines[0]
+
+      if from_machine == to_machine and dependency.read_only:
         # No need to make a copy, just symlink it
-        symlink_success = self.cmd_executer.RunCommand("ln -sf %s %s" %
-                                                       (from_folder, to_folder),
-                                                       False,
-                                                       from_machine, from_user,
-                                                       self.command_terminator)
-        if self._IsJobFailed(symlink_success, "Failed to create symlink to "
-                             "required directory."):
-          return
+        command = "ln -sf %s %s" % (from_folder, to_folder)
+        self._RunCommand(command, from_machine, "Failed to create symlink to "
+                         "required directory.")
       else:
-        copy_success = self.cmd_executer.CopyFiles(from_folder, to_folder,
-                                                   from_machine, to_machine,
-                                                   from_user, to_user, True)
-        if self._IsJobFailed(copy_success, "Failed to copy required files."):
-          return
+        exit_code = self._executer.CopyFiles(from_folder, to_folder,
+                                             from_machine.name,
+                                             to_machine.name,
+                                             from_machine.username,
+                                             to_machine.username,
+                                             recursive=True)
+        if exit_code:
+          raise job.JobFailure("Failed to copy required files.", exit_code)
 
+  def _LaunchJobCommand(self, machine):
     command = self._FormatCommand(self.job.command)
+    wrapper = " ; ".join(["PS1=. TERM=linux source ~/.bashrc",
+                          "cd %s && %s" % (self.job.work_dir, command)])
 
-    self.job.status = job.STATUS_RUNNING
+    self._RunCommand(wrapper, machine,
+                     "Command failed to execute: '%s'." % command)
 
-    command_success = (self.cmd_executer.
-                       RunCommand("PS1=. TERM=linux "
-                                  "source ~/.bashrc ; cd %s && %s"
-                                  % (self.job.work_dir, command), False,
-                                  primary_machine.name,
-                                  primary_machine.username,
-                                  self.command_terminator))
+  def _CopyJobResults(self, machine):
+    """Copy test results back to directory."""
 
-    if self._IsJobFailed(command_success,
-                         "Command failed to execute: '%s'." % command):
-      return
-
-    # Copy test results back to directory
     to_folder = self.job.home_dir
     from_folder = self.job.test_results_dir_src
-    from_user = primary_machine.username
-    from_machine = primary_machine.name
-    copy_success = self.cmd_executer.CopyFiles(from_folder, to_folder,
-                                               from_machine, None,
-                                               from_user, recursive=False)
-    if self._IsJobFailed(copy_success, "Failed to copy results."):
-      return
+    from_user = machine.username
+    from_machine = machine.name
 
-    # Generate diff of baseline and results.csv
-    report = None
+    exit_code = self._executer.CopyFiles(from_folder, to_folder, from_machine,
+                                         None, from_user, recursive=False)
+    if exit_code:
+      raise job.JobFailure("Failed to copy results.", exit_code)
+
+  def _GenerateJobReport(self):
+    """Generate diff of baseline and results.csv."""
 
     results_filename = self.job.test_results_filename
     baseline_filename = self.job.baseline_filename
+
     if not baseline_filename:
       self.job_logger.LogWarning("Baseline not specified.")
-    else:
-      try:
-        report = report_generator.GenerateResultsReport(baseline_filename,
-                                                        results_filename)
-      except IOError:
-        self.job_logger.LogWarning("Couldn't generate report")
 
-    if report:
+    try:
+      report = report_generator.GenerateResultsReport(baseline_filename,
+                                                      results_filename)
+    except IOError:
+      self.job_logger.LogWarning("Couldn't generate report")
+    else:
       try:
         with open(self.job.test_report_filename, "w") as report_file:
           report_file.write(report.GetReport())
@@ -196,8 +159,43 @@ class JobExecuter(threading.Thread):
       except IOError:
         self.job_logger.LogWarning("Could not write results report")
 
-    # If we get here, the job succeeded.
-    self.job.status = job.STATUS_SUCCEEDED
+  def run(self):
+    self.job.status = job.STATUS_SETUP
+
+    self.job.machines = self.machines
+
+    primary_machine = self.machines[0]
+
+    self.job_logger.LogOutput("Executing job with ID '%s' on machine '%s' in "
+                              "directory '%s'" % (self.job.id,
+                                                  primary_machine.name,
+                                                  self.job.work_dir))
+
+    try:
+      self.CleanUpWorkDir(self._terminator)
+
+      self._PrepareJobFolders(primary_machine)
+
+      self.job.status = job.STATUS_COPYING
+
+      self._SatisfyFolderDependencies(primary_machine)
+
+      self.job.status = job.STATUS_RUNNING
+
+      self._LaunchJobCommand(primary_machine)
+      self._CopyJobResults(primary_machine)
+
+      # If we get here, the job succeeded.
+      self.job.status = job.STATUS_SUCCEEDED
+    except job.JobFailure as ex:
+      self.job_logger.LogError("Job failed. Exit code %s. %s" % (ex.exit_code,
+                                                                 ex.message))
+      if self._terminator.IsTerminated():
+        self.job_logger.LogOutput("Job %s was killed" % self.job.id)
+
+      self.job.status = job.STATUS_FAILED
+
+    self._GenerateJobReport()
     self.job_logger.Flush()
 
     for listener in self.listeners:
