@@ -2,12 +2,19 @@
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
+DEBUG = True
+
 import xmlrpclib
 import sys
 import time
+
+if DEBUG:
+  import cgitb
+  cgitb.enable()
+  sys.stderr = sys.stdout
+
 sys.path.append("../../../../chromeos-toolchain")
 sys.path.append("../../common")
-
 from utils import utils
 import machine
 
@@ -82,8 +89,8 @@ def print_job_row(job):
   machines = ""
   if job.GetMachines():
     machines = "<b>%s</b>" % job.GetMachines()[0].name
-    for i in job.GetMachines()[1:]:
-      machines += " %s" % job.GetMachines()[i + 1].name
+    for machine in job.GetMachines()[1:]:
+      machines += " %s" % machine.name
   print_table_cell(machines)
   print_table_cell(job.GetJobDir())
   deps = ""
@@ -92,6 +99,8 @@ def print_job_row(job):
   print_table_cell(deps)
   print_table_cell(job.GetStatus())
   print "</tr>"
+
+
 
 print_page_header("Automated build.")
 print_header("Automated build.")
