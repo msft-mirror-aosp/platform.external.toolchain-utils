@@ -153,3 +153,30 @@ class CommandsFactory(object):
 
   def Remove(self):
     return cmd.Shell('g4', 'client', '-d', self.view.client)
+
+  def Checkout(self):
+    return cmd.Chain(
+        self.Setup(),
+        cmd.Wrapper(
+            cmd.Chain(
+                self.Create(),
+                self.Sync(),
+                self.Remove()),
+            cwd=self.checkout_dir,
+            env={'P4CONFIG': '.p4config'}))
+
+  def CheckoutFromSnapshot(self, snapshot):
+    cmds = cmd.Chain()
+
+    for mapping in self.view:
+      local_path, file_part = mapping.local.rsplit('/', 1)
+
+      if file_part == '...':
+        remote_dir = os.path.join(snapshot, local_path)
+        local_dir = os.path.join(self.checkout_dir, os.path.dirname(local_path))
+
+        cmds.extend([
+            cmd.Shell('mkdir', '-p', local_dir),
+            cmd.Shell('rsync', '-lr', remote_dir, local_dir)])
+
+    return cmds

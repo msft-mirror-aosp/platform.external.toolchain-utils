@@ -8,7 +8,6 @@ import os.path
 
 from automation.common import command as cmd
 from automation.common import job
-from automation.common import machine
 from automation.clients.helper import jobs
 from automation.clients.helper import perforce
 
@@ -57,9 +56,11 @@ class CommandsFactory(object):
     self.buildit_work_dir_path = os.path.join('$JOB_TMP', self.buildit_work_dir)
     self.buildit_results_path = os.path.join('$JOB_HOME', 'packages')
 
-    self.p4client = self._CreatePerforceClient(crosstool_version)
+    # TODO(kbaclawski): Should take crosstool_version parameter and choose
+    # appropriate set of directories to be checked out.
+    self.p4client = self._CreatePerforceClient()
 
-  def _CreatePerforceClient(self, crosstool_version):
+  def _CreatePerforceClient(self):
     paths = {
         'gcctools': [
             'crosstool/v15/...',
@@ -77,20 +78,13 @@ class CommandsFactory(object):
             'gcc/google/main/...',
             'qemu/qemu-0.14.1/...']}
 
-    p4view = perforce.View('depot2', perforce.PathMapping.ListFromPathDict(paths))
+    p4view = perforce.View('depot2',
+                           perforce.PathMapping.ListFromPathDict(paths))
 
     return perforce.CommandsFactory(self.CHECKOUT_DIR, p4view)
 
   def CheckoutCrosstool(self):
-    return cmd.Chain(
-        self.p4client.Setup(),
-        cmd.Wrapper(
-            cmd.Chain(
-                self.p4client.Create(),
-                self.p4client.Sync(),
-                self.p4client.Remove()),
-            cwd=self.CHECKOUT_DIR,
-            env={'P4CONFIG': '.p4config'}))
+    return self.p4client.Checkout()
 
   def BuildRelease(self, target):
     return self.BuilditScript(target, 'release', run_tests=False)
