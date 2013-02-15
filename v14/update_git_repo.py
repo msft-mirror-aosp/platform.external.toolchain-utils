@@ -5,12 +5,23 @@
 """Script to build the ChromeOS toolchain.
 
 This script sets up the toolchain if you give it the gcctools directory.
+A typical usage scenerio of this script is as follows:
+
+  update_git_repo.py -t gcc
+  update_git_repo.py -t binutils
+
+To set it up for the first time, run the following:
+  update_git_repo.py -t gcc -c <CL#>
+  update_git_repo.py -t gcc -b <Branch name> -c <CL#>
+  update_git_repo.py -t gcc
+  update_git_repo.py -t gcc -b <Branch name>
 """
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import getpass
 import optparse
+import os
 import re
 import socket
 import sys
@@ -36,8 +47,9 @@ def CreateP4Client(client_name, p4_port, p4_paths, checkoutdir):
   return retval
 
 
-def DeleteP4Client(client_name):
-  command = "g4 client -d " + client_name
+def DeleteP4Client(client_name, client_dir):
+  command = "cd " + client_dir
+  command += "&& g4 client -d " + client_name
   retval = cmd_executer.RunCommand(command)
   return retval
 
@@ -66,6 +78,20 @@ def GetP4PathsForTool(client_name, tool, branch_path):
     p4_paths.append("\"//depot2/gcctools/chromeos/" + version_number +
                     "/build-gcc/..." +
                     " //" + client_name + "/build-gcc/..." +
+                    "\"")
+  elif tool == "binutils":
+    p4_paths.append("\"" + branch_path + "/google_vendor_src_branch/" +
+                    "binutils/binutils-2.20.1-mobile/..." +
+                    " //" + client_name + "/binutils/binutils-2.20.1-mobile/..." +
+                    "\"")
+    p4_paths.append("\"" + branch_path + "/google_vendor_src_branch/" +
+                    "binutils/binutils-20100303/..." +
+                    " //" + client_name + "/binutils/binutils-20100303/..." +
+                    "\"")
+    version_number = utils.GetRoot(rootdir)[1]
+    p4_paths.append("\"//depot2/gcctools/chromeos/" + version_number +
+                    "/build-binutils/..." +
+                    " //" + client_name + "/build-binutils/..." +
                     "\"")
 
   return p4_paths
@@ -186,6 +212,10 @@ def Main():
     branch_path = ("//depot2/branches/" + options.branch +
                    "/gcctools")
     branch_name = options.branch
+    utils.AssertTrue(os.path.exists("/google/src/files/p2/head/depot2/" +
+                                    "branches/" + branch_name),
+                     "Branch name: " + branch_name + " not found!")
+
   if options.remote:
     git_repo = options.remote
   else:
@@ -218,9 +248,9 @@ def Main():
     utils.AssertTrue(status == 0, "Could not push to remote repo")
   except (KeyboardInterrupt, SystemExit):
     logger.GetLogger().LogOutput("Caught exception... Cleaning up.")
-    status = DeleteP4Client(client_name)
+    status = DeleteP4Client(client_name, temp_dir)
     raise
-  status = DeleteP4Client(client_name)
+  status = DeleteP4Client(client_name, temp_dir)
   utils.AssertTrue(status == 0, "Could not delete p4 client")
 
 
