@@ -21,7 +21,7 @@ def GetCommandExecuter(logger_to_set=None):
 
 class CommandExecuter:
   def __init__(self, logger_to_set=None):
-    if logger is not None:
+    if logger_to_set is not None:
       self.logger = logger_to_set
     else:
       self.logger = logger.GetLogger()
