@@ -123,6 +123,7 @@ class JobManager(threading.Thread):
           # If we can't get the necessary machines right now, simply wait
           # for some jobs to complete
           self.ready_jobs.insert(0, ready_job)
+          break
         else:
           # Mark as executing 
           executer = job_executer.JobExecuter(ready_job, machines,
