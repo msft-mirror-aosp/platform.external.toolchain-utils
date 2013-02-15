@@ -75,13 +75,12 @@ def ExecuteCommandInChroot(chromeos_root, command, return_output=False,
                                                            "src/scripts"),
                                           suffix=".sh",
                                           prefix="in_chroot_cmd")
-  # Without this, the handle remains open and we get "file busy" when executing
-  # cros_sdk -- ./<file>.
+  os.write(handle, "#!/bin/bash\n")
+  os.write(handle, command)
   os.close(handle)
-  with open(command_file, "w") as f:
-    print >> f, "#!/bin/bash"
-    print >> f, command
+
   os.chmod(command_file, 0777)
+
   with WorkingDirectory(chromeos_root):
     command = "cros_sdk -- ./%s" % os.path.basename(command_file)
     ret = ce.RunCommand(command, return_output,
