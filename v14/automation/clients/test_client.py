@@ -68,7 +68,8 @@ def Main(argv):
     build_chromeos_job = (
         jobs_helper.CreateBuildAndTestChromeOSJob(
           version,
-          p4_snapshot=options.p4_snapshot))
+          p4_snapshot=options.p4_snapshot,
+          toolchain=options.toolchain))
     build_chromeos_job.AddRequiredFolder(tc_job,
         tc_root + jobs_helper.tc_pkgs_dir,
         tc_root + jobs_helper.tc_pkgs_dir)
@@ -78,7 +79,8 @@ def Main(argv):
       perflab_job = jobs_helper.CreatePerflabJob(
           version,
           pb,
-          p4_snapshot=options.p4_snapshot)
+          p4_snapshot=options.p4_snapshot,
+          toolchain=options.toolchain)
       perflab_job.AddRequiredFolder(tc_job,
           tc_root + jobs_helper.tc_pkgs_dir,
           tc_root + jobs_helper.tc_pkgs_dir)
@@ -86,7 +88,8 @@ def Main(argv):
 
   if options.dejagnu == True:
     dejagnu_job = jobs_helper.CreateDejaGNUJob(
-        p4_snapshot=options.p4_snapshot)
+        p4_snapshot=options.p4_snapshot,
+        toolchain=options.toolchain)
     tc_root = jobs_helper.GetTCRootDir(options.toolchain)[1]
     dejagnu_job.AddRequiredFolder(tc_job,
         tc_root + jobs_helper.tc_objects_dir,

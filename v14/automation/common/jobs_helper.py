@@ -137,53 +137,56 @@ def CreateBuildTCJob(chromeos_version="top",
   p4_revision = 1
 
   command = GetInitialCommand()
-  command += "; " + GetP4Command(p4_port, p4_paths,
+  command += "&& " + GetP4Command(p4_port, p4_paths,
                                  p4_revision, p4_checkout_dir, p4_snapshot)
+
+  # When g4 syncs this file, often times the timestamp of this file is earlier
+  # than that of the file that is its dependency (ldlex.l).
+  # Since we mount the filesystem as r/o in the build, we cannot regenerate
+  # this file (we also link instead of copy in the 9999 ebuild).
+  # Longer-term, we would want to change the fileattr of this file in g4
+  # so it syncs the timestamp as well as the file contents.
+  # This is a workaround.
+  command += ("&& touch " + local_path + "google_vendor_src_branch/" +
+              "binutils/binutils-2.20.1-mobile/ld/ldlex.c")
 
   command += "&& " + _GetSetupChromeOSCommand(chromeos_version, True)
 
-  command += ("; " + p4_version_dir + "/build_tc.py" +
-                      " --toolchain_root=" + local_path +
-                      " --chromeos_root=" + chromeos_root +
-                      " --board=" + board +
-                      " -f")
+  command += "&& " + _GetBuildTCCommand(toolchain, board, False, True)
   tc_job = CreateLinuxJob(command)
   return tc_job
 
-def CreateDejaGNUJob(board="x86-generic", p4_snapshot=""):
+def CreateDejaGNUJob(board="x86-generic", p4_snapshot="", toolchain="trunk"):
+  local_path = GetTCRootDir(toolchain)[1]
   command = GetInitialCommand()
-  command += "; " + GetP4VersionDirCommand(p4_snapshot)
+  command += "&& " + GetP4VersionDirCommand(p4_snapshot)
   command += ("&& " + p4_version_dir + "/run_dejagnu.py" +
               " --chromeos_root=chromeos"
-              " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
+              " --toolchain_root=" + local_path +
               " --remote=$SECONDARY_MACHINES[0]" +
               " --board=" + board)
   to_return = CreateLinuxJob(command)
-  to_return.AddRequiredMachine("", "chromeos", False, False)
+  to_return.AddRequiredMachine("", "chromeos", True, False)
   return to_return
 
 def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
                                   board="x86-generic",
-                                  p4_snapshot=""):
+                                  p4_snapshot="",
+                                  toolchain="trunk"):
   command = GetInitialCommand()
   # TODO(asharif): Get rid of this hack at some point.
   command += "&& mkdir -p perforce2/gcctools/google_vendor_src_branch/gcc"
-  command += "; " + GetP4VersionDirCommand(p4_snapshot)
+  command += "&& " + GetP4VersionDirCommand(p4_snapshot)
 
   command += "&& " + _GetSetupChromeOSCommand(chromeos_version, False)
-  command += ("; " + p4_version_dir + "/build_tc.py" +
-                      " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
-                      " --chromeos_root=" + chromeos_root +
-                      " -B")
-  command += ("; " + p4_version_dir + "/build_chromeos.py" +
+  command += "&& " + _GetBuildTCCommand(toolchain, board)
+  command += ("&& " + p4_version_dir + "/build_chromeos.py" +
               " --chromeos_root=" + chromeos_root +
               " --board=" + board)
 
-  command += ("; " + chromeos_scripts_dir + "/image_to_live.sh " +
-              " --board=" + board +
-              " --remote=$SECONDARY_MACHINES[0]")
+  command += "&& " + _GetImageChromeOSCommand()
 
-  command += ("; " + p4_version_dir + "/run_tests.py" +
+  command += ("&& " + p4_version_dir + "/run_tests.py" +
               " --remote=$SECONDARY_MACHINES[0] " +
               " --chromeos_root=" + chromeos_root +
               " --board=" + board +
@@ -191,9 +194,15 @@ def CreateBuildAndTestChromeOSJob(chromeos_version="latest",
 
   to_return = CreateLinuxJob(command)
 
-  to_return.AddRequiredMachine("", "chromeos", False, False)
+  to_return.AddRequiredMachine("", "chromeos", True, False)
 
   return to_return
+
+def _GetImageChromeOSCommand():
+  command = (p4_version_dir + "/image_chromeos.py" +
+             " --chromeos_root=chromeos" +
+             " --remote=$SECONDARY_MACHINES[0]")
+  return command
 
 def _GetSetupChromeOSCommand(version, use_minilayout=False, board="x86-generic"):
   command = ""
@@ -221,10 +230,21 @@ def _GetSetupChromeOSCommand(version, use_minilayout=False, board="x86-generic")
     command += " --minilayout"
   return command
 
+def _GetBuildTCCommand(toolchain, board, use_binary=True, rebuild=False):
+  local_path = GetTCRootDir(toolchain)[1]
+  command = (p4_version_dir + "/build_tc.py" +
+             " --toolchain_root=" + local_path +
+             " --chromeos_root=" + chromeos_root)
+  if use_binary:
+    command += " -B"
+  return command
+
 def CreatePerflabJob(chromeos_version,
                                   benchmark,
                                   board="x86-generic",
-                                  p4_snapshot=""):
+                                  p4_snapshot="",
+                                  toolchain="trunk"):
+  toolchain_root = GetTCRootDir("trunk")[1]
   if "cpu" in benchmark:
     use_minilayout = True
   else:
@@ -234,11 +254,7 @@ def CreatePerflabJob(chromeos_version,
   command += "&& " + GetP4BenchmarksDirCommand(p4_snapshot)
 
   command += "&& " + _GetSetupChromeOSCommand(chromeos_version, use_minilayout)
-  command += ("&& " + p4_version_dir + "/build_tc.py" +
-                      " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
-                      " --chromeos_root=" + chromeos_root +
-                      " -B")
-  toolchain_root = p4_checkout_dir + "gcctools"
+  command += "&& " + _GetBuildTCCommand(toolchain, board)
   command += "&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s build %s" % (perflab_command, toolchain_root, chromeos_root, benchmark)
   command += "&& %s --crosstool=$PWD/%s  --chromeos_root=$PWD/%s --machines=chromeos_x86-agz_1 run %s" % (perflab_command, toolchain_root, chromeos_root, benchmark)
   to_return = CreateLinuxJob(command)
@@ -257,11 +273,11 @@ def CreateUpdateJob(chromeos_versions,
                     p4_snapshot="",
                     board="x86-generic"):
   command = GetInitialCommand()
-  command += "; " + GetP4VersionDirCommand(p4_snapshot)
-  command += ("; " + p4_version_dir + "/setup_chromeos.py" +
+  command += "&& " + GetP4VersionDirCommand(p4_snapshot)
+  command += ("&& " + p4_version_dir + "/setup_chromeos.py" +
               " --dir=" + chromeos_root +
               " --version=latest")
-  command += ("; " + p4_version_dir + "/build_chromeos.py" +
+  command += ("&& " + p4_version_dir + "/build_chromeos.py" +
               " --chromeos_root=" + chromeos_root +
               " --vanilla --board=" + board)
   command += ("&& cd chromeos/src/scripts " +
