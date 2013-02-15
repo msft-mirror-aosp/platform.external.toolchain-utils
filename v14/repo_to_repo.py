@@ -76,7 +76,7 @@ class P4Repo(Repo):
     command = p4client.InCheckoutDir(p4client.SaveCurrentCLNumber())
     ret, o, e = ce.RunCommand(str(command), return_output=True)
     assert ret == 0, "Could not get version from client."
-    self.revision = o.strip()
+    self.revision = re.search("^\d+$", o.strip(), re.MULTILINE).group(0)
     command = p4client.InCheckoutDir(p4client.Remove())
     ret = ce.RunCommand(str(command))
     assert ret == 0, "Could not delete client."
