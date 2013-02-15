@@ -75,9 +75,9 @@ def Main(argv):
   target = f.read()
   f.close()
   target = target.strip()
-  gcc_build_dir = ("/usr/local/toolchain_root/output/objects/cross/"
-                   "%s/portage/cross-%s/gcc-9999/work/build"
-                   % (target, target))
+  gcc_build_dir = ("/usr/local/toolchain_root/output/objects"
+                   "/portage/cross-%s/gcc-9999/work/build"
+                   % target)
 
   # Construct the command to run DejaGNU.
   dejagnu_run = ("DEJAGNU=%s/site.exp DEJAGNU_HOSTNAME=%s make "
@@ -100,9 +100,7 @@ def Main(argv):
   utils.AssertWarning(ret == 0, "Failed to run DejaGNU tests successfully")
 
   # Copy results to a not-so-deep location
-  results_dir = ("/usr/local/toolchain_root/output/objects/cross/"
-                 "%s/portage/cross-%s/gcc-9999/work/build/gcc/testsuite/"
-                   % (target, target))
+  results_dir = "%s/gcc/testsuite/" % gcc_build_dir
   new_results_dir = "/usr/local/toolchain_root/output/dejagnu/"
   ret = (build_chromeos.
          ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
