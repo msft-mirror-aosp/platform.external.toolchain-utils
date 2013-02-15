@@ -214,19 +214,15 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
   env += " "
 
   if uninstall == True:
-    tflag = " -C "
-  else:
-    tflag = " -t "
-
-  command = " -- sudo " + env
-
-  if uninstall == True:
-    command += "crossdev < $(which yes)" + tflag + target
+    uninstall_tec = ["--sudo"]
+    command = "crossdev < $(which yes) -C " + target
     retval = build_chromeos.ExecuteCommandInChroot(chromeos_root,
                                                    command,
-                                                   toolchain_root)
+                                                   toolchain_root,
+                                                   tec_options=uninstall_tec)
     return retval
 
+  command = ""
   if incremental_component == "binutils":
     command += (" emerge =cross-" + target + "/binutils-" + binutils_version +
                 portage_flags)
@@ -238,18 +234,20 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
                 portage_flags)
   else:
     crossdev_flags = CreateCrossdevPortageFlags(portage_flags)
-    command += (" crossdev -v " + tflag + target +
+    command += (" crossdev -v -t " + target +
                 " --binutils " + binutils_version +
                 " --libc " + libc_version +
                 " --gcc " + gcc_version +
                 " --kernel " + kernel_version +
                 crossdev_flags)
-    command += ("&& sudo cp -r $(" + env + " portageq envvar PKGDIR)/*" +
+    command += ("&& cp -r $(" + env + " portageq envvar PKGDIR)/*" +
                 " /var/lib/portage/pkgs/")
 
+  command = "%s %s" % (env, command)
   argv = [rootdir + "/tc_enter_chroot.py",
           "--chromeos_root=" + chromeos_root,
-          "--toolchain_root=" + toolchain_root]
+          "--toolchain_root=" + toolchain_root,
+          "--sudo"]
   argv += tc_enter_chroot_options
 
   argv.append(command)

@@ -81,6 +81,10 @@ def Main(argv, return_output=False):
                     help="Toolchain root directory.")
   parser.add_option("-o", "--output", dest="output",
                     help="Toolchain output directory")
+  parser.add_option("--sudo", dest="sudo",
+                    action="store_true",
+                    default=False,
+                    help="Run the command with sudo.")
   parser.add_option("-r", "--third_party", dest="third_party",
                     help="The third_party directory to mount.")
   parser.add_option("-m", "--other_mounts", dest="other_mounts",
@@ -217,7 +221,11 @@ def Main(argv, return_output=False):
     retval = command_executer.GetCommandExecuter().RunCommand("chmod +x " + command_file_path)
     if retval != 0:
       return retval
-    command += " ./" + command_file
+
+    if options.sudo:
+      command += " sudo ./" + command_file
+    else:
+      command += " ./" + command_file
     retval = command_executer.GetCommandExecuter().RunCommand(command, return_output)
     return retval
   else:
