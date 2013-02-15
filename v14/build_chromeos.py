@@ -110,11 +110,17 @@ def Main(argv):
 
   MakeChroot(options.chromeos_root, options.clobber_chroot)
 
+  build_packages_command = ("./build_packages --nousepkg --withdev --withtest"
+                            " --withautotest --board=%s" % options.board)
+  build_image_command = ("./build_image --withdev --board=%s" % options.board)
+  mod_image_command = ("./mod_image_for_test.sh --yes --board=%s" %
+                       options.board)
+
   if options.vanilla == True:
     command = "./setup_board --nousepkg --board=" + options.board
-    command += "&& ./build_packages --nousepkg --board=" + options.board
-    command += "&& ./build_image --board=" + options.board
-    command += "&& ./mod_image_for_test.sh --yes --board=" + options.board
+    command += "&& " + build_packages_command
+    command += "&& " + build_image_command
+    command += "&& " + mod_image_command
     ret = ExecuteCommandInChroot(options.chromeos_root, None, command)
     return ret
 
@@ -143,24 +149,22 @@ def Main(argv):
                                "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
                                "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
                                "CHROME_ORIGIN=SERVER_SOURCE "
-                               "./build_packages --withdev --nousepkg "
-                               "--board=%s --withtest --withautotest"
+                               "%s"
                                % (options.board, options.cflags, options.board,
                                   options.ldflags, options.board,
-                                  options.cxxflags, options.board))
+                                  options.cxxflags, build_packages_command))
 
   utils.AssertTrue(ret == 0, "build_packages failed")
 
   # Build image
   ret = ExecuteCommandInChroot(options.chromeos_root, None,
-                               "./build_image --board=%s" % options.board)
+                               build_image_command)
 
   utils.AssertTrue(ret == 0, "build_image failed")
 
   # Mod image for test
   ret = ExecuteCommandInChroot(options.chromeos_root, None,
-                               "./mod_image_for_test.sh --yes --board=%s"
-                               % options.board)
+                               mod_image_command)
 
   utils.AssertTrue(ret == 0, "mod_image_for_test failed")
 
