@@ -148,6 +148,13 @@ class Pipe(AbstractCommandContainer):
 
     return ' | '.join(pipe)
 
+# TODO(kbaclawski): Unfortunately we don't have any policy describing which
+# directories can or cannot be touched by a job. Thus, I cannot decide how to
+# protect a system against commands that are considered to be dangerous (like
+# RmTree("${HOME}")). AFAIK we'll have to execute some commands with root access
+# (especially for ChromeOS related jobs, which involve chroot-ing), which is
+# even more scary.
+
 
 def Copy(*args, **kwargs):
   assert all(key in ['to_dir', 'recursive'] for key in kwargs.keys())
@@ -169,7 +176,7 @@ def RemoteCopyFrom(from_machine, from_path, to_path, username=None):
   from_path = os.path.expanduser(from_path) + '/'
   to_path = os.path.expanduser(to_path) + '/'
 
-  if username:
+  if not username:
     login = from_machine
   else:
     login = '%s@%s' % (username, from_machine)
