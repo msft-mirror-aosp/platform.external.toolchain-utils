@@ -98,7 +98,8 @@ class JobManager(threading.Thread):
 
   def NotifyJobComplete(self, job):
     self.job_condition.acquire()
-    if job.GetStatus() == automation.common.job.STATUS_COMPLETED:
+    logger.GetLogger().LogOutput("Job profile:\n%s" % str(job))
+    if job.GetStatus() == automation.common.job.STATUS_SUCCEEDED:
       for parent in job.GetParents():
         if parent.IsReady():
           if parent not in self.ready_jobs:

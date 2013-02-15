@@ -176,7 +176,7 @@ class JobExecuter(threading.Thread):
           return
 
     # If we get here, the job succeeded. 
-    self.job.SetStatus(job.STATUS_COMPLETED)
+    self.job.SetStatus(job.STATUS_SUCCEEDED)
 
     self.ShipLogs()
 

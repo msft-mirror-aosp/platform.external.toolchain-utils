@@ -16,7 +16,7 @@ STATUS_NOT_EXECUTED = "STATUS_NOT_EXECUTED"
 STATUS_SETUP = "STATUS_SETUP"
 STATUS_COPYING = "STATUS_COPYING"
 STATUS_RUNNING = "STATUS_RUNNING"
-STATUS_COMPLETED = "STATUS_COMPLETED"
+STATUS_SUCCEEDED = "STATUS_SUCCEEDED"
 STATUS_FAILED = "STATUS_FAILED"
 
 SUBDIR_WORK = "/work"
@@ -140,7 +140,7 @@ class Job:
   def IsReady(self):
     # Check that all our dependencies have been executed
     for child in self.children:
-      if child.GetStatus() != STATUS_COMPLETED:
+      if child.GetStatus() != STATUS_SUCCEEDED:
         return False
 
     return True

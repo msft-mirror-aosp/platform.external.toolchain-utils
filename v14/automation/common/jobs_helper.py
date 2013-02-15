@@ -1,6 +1,7 @@
 import job
 from automation.common import machine_description
 import os
+import re
 import sys
 
 p4_checkout_dir = "perforce2"
@@ -89,7 +90,7 @@ def GetP4VersionDirCommand(p4_snapshot=""):
 
 def CreateBuildTCJob(chromeos_version="top",
                      board="x86-generic",
-                     chromeos_snapshot="", p4_snapshot=""):
+                     p4_snapshot=""):
   p4_port = "perforce2:2666"
   p4_paths = []
   p4_paths.append(("//depot2/gcctools/chromeos/v14/...", "gcctools/chromeos/v14/..."))
@@ -105,15 +106,18 @@ def CreateBuildTCJob(chromeos_version="top",
   command += "; " + GetP4Command(p4_port, p4_paths,
                                  p4_revision, p4_checkout_dir, p4_snapshot)
 
-  if chromeos_snapshot == "weekly":
+  if chromeos_version == "weekly":
     command += "; sudo cp -rp " + GetWeeklyChromeOSLocation() + " chromeos"
-  elif chromeos_snapshot == "quarterly":
+  elif chromeos_version == "quarterly":
     command += " ; sudo cp -rp " + GetQuarterlyChromeOSLocation() + " chromeos"
-  else:
+  elif (chromeos_version == "top" or chromeos_version == "latest" or
+        re.match("^\d\.\d\.\d\.\d$", chromeos_version)):
     command += ("; " + p4_version_dir + "/setup_chromeos.py" +
                 " --dir=" + chromeos_root +
                 " --version=" + chromeos_version +
                 " --minilayout")
+  else:
+    command += "; sudo cp -rp " + chromeos_version + " chromeos"
 
   command += ("; " + p4_version_dir + "/build_tc.py" +
                       " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
@@ -125,20 +129,23 @@ def CreateBuildTCJob(chromeos_version="top",
 
 def CreateBuildAndTestChromeOSJob(tc_job, chromeos_version="latest",
                                   board="x86-generic",
-                                  chromeos_snapshot="", p4_snapshot=""):
+                                  p4_snapshot=""):
   command = GetInitialCommand()
   # TODO(asharif): Get rid of this hack at some point.
   command += "&& mkdir -p perforce2/gcctools/google_vendor_src_branch/gcc"
   command += "; " + GetP4VersionDirCommand(p4_snapshot)
 
-  if chromeos_snapshot == "weekly":
+  if chromeos_version == "weekly":
     command += "; sudo cp -rp " + GetWeeklyChromeOSLocation() + " chromeos"
-  elif chromeos_snapshot == "quarterly":
+  elif chromeos_version == "quarterly":
     command += " sudo cp -rp " + GetQuarterlyChromeOSLocation() + " chromeos"
-  else:
+  elif (chromeos_version == "top" or chromeos_version == "latest" or
+        re.match("^\d\.\d\.\d\.\d$", chromeos_version)):
     command += ("; " + p4_version_dir + "/setup_chromeos.py" +
                 " --dir=" + chromeos_root +
                 " --version=" + chromeos_version)
+  else:
+    command += "; sudo cp -rp " + chromeos_version + " chromeos"
 
   command += ("; " + p4_version_dir + "/build_tc.py" +
                       " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
@@ -149,12 +156,13 @@ def CreateBuildAndTestChromeOSJob(tc_job, chromeos_version="latest",
               " --chromeos_root=" + chromeos_root +
               " --board=" + board)
 
-  command += ("; " + chromeos_scripts_dir + "/image_to_remote.sh " +
+  command += ("; " + chromeos_scripts_dir + "/image_to_live.sh " +
               " --board=" + board +
               " --remote=$SECONDARY_MACHINES[0]")
 
   command += ("; " + p4_version_dir + "/run_tests.py" + 
               " --remote=$SECONDARY_MACHINES[0] " +
+              " --chromeos_root=" + chromeos_root +
               " --board=" + board)
 
   to_return = CreateLinuxJob(command)

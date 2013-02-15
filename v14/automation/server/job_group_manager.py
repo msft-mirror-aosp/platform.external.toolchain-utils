@@ -41,7 +41,7 @@ class JobGroupManager:
     # Lets block until the job_group is killed so we know it is completed 
     # when we return.
     while not (job_group.GetStatus() ==
-               automation.common.job_group.STATUS_COMPLETED or
+               automation.common.job_group.STATUS_SUCCEEDED or
                job_group.GetStatus() ==
                automation.common.job_group.STATUS_FAILED):
       self.job_condition.wait()
@@ -61,17 +61,17 @@ class JobGroupManager:
           self.job_manager.KillJob(job)
           self.job_manager.CleanUpJob(job)
     else:
-      # The job completed successfully -- lets check to see if we are done.
-      assert job.GetStatus() == automation.common.job.STATUS_COMPLETED
-      completed = True
+      # The job succeeded successfully -- lets check to see if we are done.
+      assert job.GetStatus() == automation.common.job.STATUS_SUCCEEDED
+      succeeded = True
       for other_job in job_group.GetJobs():
         assert other_job.GetStatus() != automation.common.job.STATUS_FAILED
-        if other_job.GetStatus() != automation.common.job.STATUS_COMPLETED:
-          completed = False
+        if other_job.GetStatus() != automation.common.job.STATUS_SUCCEEDED:
+          succeeded = False
           break
 
-      if completed:
-        job_group.SetStatus(automation.common.job_group.STATUS_COMPLETED)
+      if succeeded:
+        job_group.SetStatus(automation.common.job_group.STATUS_SUCCEEDED)
         if job_group.CleanupOnCompletion():
           for job in job_group.GetJobs():
             self.job_manager.CleanUpJob(job)
