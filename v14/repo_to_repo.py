@@ -62,7 +62,8 @@ class P4Repo(Repo):
     [r, o, e] = ce.RunCommand(command, return_output=True)
     self.revision = o.strip()
     command = utils.GetP4DeleteCommand(client_name)
-    ce.RunCommand(command)
+    ret = ce.RunCommand(command)
+    return ret
 
 
 class SvnRepo(Repo):
@@ -84,7 +85,8 @@ class SvnRepo(Repo):
         local_path = "."
         remote_path = mapping
       command += "&& svn co %s/%s %s" % (self.address, remote_path, local_path)
-    ce.RunCommand(command)
+    ret = ce.RunCommand(command)
+    if ret: return ret
 
     command = "cd %s" % (root_dir)
     self.revision = ""
@@ -95,8 +97,10 @@ class SvnRepo(Repo):
         local_path = "."
         remote_path = mapping
       command += "&& cd %s && svnversion ." % (local_path)
-      [r, o, e] = ce.RunCommand(command, return_output=True)
+      [ret, o, e] = ce.RunCommand(command, return_output=True)
       self.revision += o.strip()
+      if ret: return ret
+    return 0
 
 
 class GitRepo(Repo):
@@ -116,22 +120,26 @@ class GitRepo(Repo):
     ce = command_executer.GetCommandExecuter()
     command = "mkdir -p %s && cd %s" % (root_dir, root_dir)
     command += "&& git clone -v %s ." % self.address
-    retval = ce.RunCommand(command)
-    logger.GetLogger().LogFatalIf(retval, "Could not clone git repo %s." %
+    ret = ce.RunCommand(command)
+    logger.GetLogger().LogFatalIf(ret, "Could not clone git repo %s." %
                                   self.address)
 
     command = "cd %s" % root_dir
     command += "&& git branch -a | grep -wq %s" % self.branch
-    retval = ce.RunCommand(command)
+    ret = ce.RunCommand(command)
+    if ret: return ret
 
     command = "cd %s" % root_dir
-    if retval == 0:
-      command += "&& git branch --track %s remotes/origin/%s" % (self.branch, self.branch)
+    if ret == 0:
+      if self.branch != "master":
+        command += ("&& git branch --track %s remotes/origin/%s" %
+                    (self.branch, self.branch))
       command += "&& git checkout %s" % self.branch
     else:
       command += "&& git symbolic-ref HEAD refs/heads/%s" % self.branch
     command += "&& rm -rf *"
-    ce.RunCommand(command)
+    ret = ce.RunCommand(command)
+    if ret: return ret
 
 
   def PushSources(self, root_dir, commit_message, dry_run=False):
@@ -146,8 +154,9 @@ class GitRepo(Repo):
         command += "&& echo \"%s\" >> .gitignore" % ignore
     command += "&& git add -Av ."
     command += "&& git commit -v -m \"%s\"" % commit_message
-    command += "&& git push -v %s origin %s:%s" % (push_args, self.branch, self.branch)
-    ce.RunCommand(command)
+    command += "; git push -v %s origin %s:%s" % (push_args, self.branch, self.branch)
+    ret = ce.RunCommand(command)
+    return ret
 
 
 class RepoReader():
@@ -232,16 +241,26 @@ def Main(argv):
   [input_repos, output_repos] = rr.ParseFile()
 
   for output_repo in output_repos:
-    output_repo.SetupForPush(root_dir)
+    ret = output_repo.SetupForPush(root_dir)
+    if ret: return ret
 
   input_revisions = []
   for input_repo in input_repos:
-    input_repo.PullSources(root_dir)
+    ret = input_repo.PullSources(root_dir)
+    if ret: return ret
     input_revisions.append(input_repo.revision)
 
   commit_message = "Sync'd repos to: %s" % ",".join(input_revisions)
   for output_repo in output_repos:
-    output_repo.PushSources(root_dir, commit_message, dry_run=options.dry_run)
+    ret = output_repo.PushSources(root_dir, commit_message, dry_run=options.dry_run)
+    if ret: return ret
+
+  if not options.dry_run:
+    ce = command_executer.GetCommandExecuter()
+    command = "rm -rf %s" % root_dir
+    ret = ce.RunCommand(command)
+
+  return ret
 
 
 if __name__ == "__main__":
