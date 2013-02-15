@@ -10,7 +10,6 @@ __author__ = 'raymes@google.com (Raymes Khoury)'
 
 
 import os.path
-import re
 
 from automation.common import state_machine
 
@@ -98,7 +97,7 @@ class Job(object):
   @staticmethod
   def _FormatCommand(cmd, substitutions):
     for pattern, replacement in substitutions:
-      cmd = re.sub(pattern, replacement, cmd)
+      cmd = cmd.replace(pattern, replacement)
 
     return cmd
 
