@@ -10,6 +10,7 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import datetime
 import fcntl
+import getpass
 import glob
 import optparse
 import os
@@ -138,7 +139,7 @@ class Lock(object):
           return False
         lock.exclusive = True
         lock.reason = reason
-        lock.owner = os.getlogin()
+        lock.owner = getpass.getuser()
         lock.time = time.time()
       else:
         lock.counter += 1
@@ -156,9 +157,9 @@ class Lock(object):
         return False
 
       if lock.exclusive:
-        if lock.owner != os.getlogin() and not force:
+        if lock.owner != getpass.getuser() and not force:
           self._logger.LogError("%s can't unlock lock owned by: %s" %
-                                (os.getlogin(), lock.owner))
+                                (getpass.getuser(), lock.owner))
           return False
         lock.exclusive = False
         lock.reason = ""

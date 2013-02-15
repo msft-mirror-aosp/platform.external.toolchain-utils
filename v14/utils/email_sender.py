@@ -3,6 +3,7 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 from email.mime.text import MIMEText
+import getpass
 import os
 import smtplib
 
@@ -15,7 +16,7 @@ class EmailSender(object):
     # me == the sender's email address
     # you == the recipient's email address
     me = os.path.basename(__file__)
-    you = os.getlogin()
+    you = getpass.getuser()
     msg["Subject"] = "[%s] %s" % (os.path.basename(__file__), subject)
     msg["From"] = me
     msg["To"] = you
