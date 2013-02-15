@@ -16,7 +16,7 @@ import sys
 from utils import command_executer
 
 
-def Main():
+def Main(argv):
   """The main function."""
   parser = optparse.OptionParser()
   parser.add_option("-c", "--chromeos_root", dest="chromeos_root",
@@ -28,7 +28,7 @@ def Main():
 
   tests = "bvt"
 
-  (options, args) = parser.parse_args()
+  (options, args) = parser.parse_args(argv)
 
   if options.board is None or options.remote is None:
     parser.print_help()
@@ -58,4 +58,4 @@ def RunRemoteTests(chromeos_root, remote, board, tests):
   return retval
 
 if __name__ == "__main__":
-  Main()
+  Main(sys.argv)

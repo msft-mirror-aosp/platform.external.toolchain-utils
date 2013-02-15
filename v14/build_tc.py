@@ -111,7 +111,7 @@ def Main(argv):
 
   build_chromeos.MakeChroot(options.chromeos_root)
 
-  portage_flags = ""
+  portage_flags = "--oneshot"
   if options.binary == True:
     # FIXME(asharif): This should be using --usepkg but that was not working.
     portage_flags = "--usepkgonly"
@@ -215,10 +215,10 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
   command = " -- sudo " + env
 
   if uninstall == True:
-    command += " crossdev " + tflag + target
+    command += "yes | crossdev " + tflag + target
     retval = build_chromeos.ExecuteCommandInChroot(chromeos_root,
-                                                         toolchain_root,
-                                                         command)
+                                                   command,
+                                                   toolchain_root)
     return retval
 
   if incremental_component == "binutils":

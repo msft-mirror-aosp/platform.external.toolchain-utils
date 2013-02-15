@@ -98,7 +98,8 @@ def GetP4VersionDirCommand(p4_snapshot=""):
 def GetP4BenchmarksDirCommand(p4_snapshot=""):
   p4_port = "perforce2:2666"
   p4_paths = []
-  p4_paths.append(("//depot2/third_party/android_bench/v2_0/...", "gcctools/chromeos/v14/third_party/android_bench/v2_0/..."))
+  p4_paths.append(("//depot2/third_party/android_bench/v2_0/...",
+                   "third_party/android_bench/v2_0/..."))
   p4_revision = 1
   command = GetP4Command(p4_port, p4_paths, p4_revision, p4_checkout_dir, p4_snapshot)
   return command

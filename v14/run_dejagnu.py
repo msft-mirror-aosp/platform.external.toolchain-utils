@@ -67,14 +67,16 @@ def Main(argv):
   # Emerge DejaGNU
   # Remove the dev-tcltk manifest which is currently incorrect
   ret = (build_chromeos.
-         ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
+         ExecuteCommandInChroot(options.chromeos_root,
                                 "rm -f ~/trunk/src/third_party/portage/"
-                                "dev-tcltk/expect/Manifest"))
+                                "dev-tcltk/expect/Manifest"),
+                                options.toolchain_root)
   utils.AssertExit(ret == 0, "Failed to remove incorrect manifest")
 
   ret = (build_chromeos.
-         ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                                "sudo emerge -u dejagnu"))
+         ExecuteCommandInChroot(options.chromeos_root,
+                                "sudo emerge -u dejagnu"),
+                                options.toolchain_root)
   utils.AssertExit(ret == 0, "Failed to emerge dejagnu")
 
   # Find the toolchain objects directory
@@ -110,21 +112,23 @@ def Main(argv):
 
   # Run DejaGNU
   ret = (build_chromeos.
-         ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
+         ExecuteCommandInChroot(options.chromeos_root,
                                 "%s ; %s ; %s && cd %s && %s ; %s" %
                                 (common, cleanup, init, gcc_build_dir,
-                                 dejagnu_run, cleanup), full_mount=True))
+                                 dejagnu_run, cleanup), full_mount=True),
+                                options.toolchain_root)
   utils.AssertWarning(ret == 0, "Failed to run DejaGNU tests successfully")
 
   # Copy results to a not-so-deep location
   results_dir = "%s/gcc/testsuite/" % gcc_build_dir
   new_results_dir = "/usr/local/toolchain_root/output/dejagnu/"
   ret = (build_chromeos.
-         ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
+         ExecuteCommandInChroot(options.chromeos_root,
                                 "mkdir -p %s ; cp %s/g++/g++.log %s ; "
                                 "cp %s/gcc/gcc.log %s" %
                                 (new_results_dir, results_dir, new_results_dir,
-                                 results_dir, new_results_dir)))
+                                 results_dir, new_results_dir),
+                                options.toolchain_root))
 
   utils.AssertWarning(ret == 0, "Failed to copy results to final destination.")
 

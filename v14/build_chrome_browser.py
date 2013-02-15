@@ -11,6 +11,7 @@ particular release of ChromeOS.
 __author__ = "raymes@google.com (Raymes Khoury)"
 
 import optparse
+import os
 import sys
 from utils import command_executer
 from utils import logger
@@ -26,7 +27,7 @@ def Usage(parser, message):
   sys.exit(0)
 
 
-def Main():
+def Main(argv):
   """Build Chrome browser."""
   # Common initializations
   global cmd_executer
@@ -47,8 +48,10 @@ def Main():
                     help="LDFLAGS for the ChromeOS packages")
   parser.add_option("--board", dest="board",
                     help="ChromeOS target board, e.g. x86-generic")
+  parser.add_option("--label", dest="label",
+                    help="Optional label to apply to the ChromeOS image.")
 
-  options = parser.parse_args()[0]
+  options = parser.parse_args(argv)[0]
 
   if options.chromeos_root is None:
     Usage(parser, "--chromeos_root must be set")
@@ -65,7 +68,7 @@ def Main():
 
   # Emerge the browser
   ret = (build_chromeos.
-         ExecuteCommandInChroot(options.chromeos_root, None,
+         ExecuteCommandInChroot(options.chromeos_root,
                                 "CHROME_ORIGIN=SERVER_SOURCE %s "
                                 "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
                                 "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
@@ -79,17 +82,45 @@ def Main():
 
   # Build image
   ret = (build_chromeos.
-         ExecuteCommandInChroot(options.chromeos_root, None,
+         ExecuteCommandInChroot(options.chromeos_root,
                                 utils.GetBuildImageCommand(options.board)))
 
   utils.AssertTrue(ret == 0, "build_image failed")
 
   # Mod image for test
   ret = (build_chromeos.
-         ExecuteCommandInChroot(options.chromeos_root, None,
+         ExecuteCommandInChroot(options.chromeos_root,
            utils.GetModImageForTestCommand(options.board)))
 
   utils.AssertTrue(ret == 0, "mod_image_for_test failed")
 
+  flags_file_name = "chrome_flags.txt"
+  flags_file_path = ("%s/src/build/images/%s/latest/%s" %
+                     (options.chromeos_root,
+                      options.board,
+                      flags_file_name))
+  flags_file = open(flags_file_path, "wb")
+  flags_file.write("CFLAGS=%s\n" % options.cflags)
+  flags_file.write("CXXFLAGS=%s\n" % options.cxxflags)
+  flags_file.write("LDFLAGS=%s\n" % options.ldflags)
+  flags_file.close()
+
+
+  if options.label:
+    image_dir_path = ("%s/src/build/images/%s/latest" %
+                  (options.chromeos_root,
+                   options.board))
+    real_image_dir_path = os.path.realpath(image_dir_path)
+    command = ("ln -sf -T %s %s/%s" %
+               (os.path.basename(real_image_dir_path),
+                os.path.dirname(real_image_dir_path),
+                options.label))
+
+    ret = cmd_executer.RunCommand(command)
+    utils.AssertExit(ret == 0,
+                     "Failed to apply symlink label %s" % options.label)
+
+  return ret
+
 if __name__ == "__main__":
-  Main()
+  Main(sys.argv)

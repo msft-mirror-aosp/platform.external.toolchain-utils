@@ -25,34 +25,24 @@ def Usage(parser, message):
   sys.exit(0)
 
 #TODO(raymes): move this to a common utils file.
-def ExecuteCommandInChroot(chromeos_root, toolchain_root, command,
-                           return_output=False, full_mount=False):
+def ExecuteCommandInChroot(chromeos_root, command, toolchain_root=None,
+                           return_output=False, full_mount=False,
+                           tec_options=[]):
   """Executes a command in the chroot."""
   global cmd_executer
   cmd_executer = command_executer.GetCommandExecuter()
   chromeos_root = os.path.expanduser(chromeos_root)
 
-  if toolchain_root is None:
-    cmd_file = "enter_chroot.cmd"
-    cmd_file_path = chromeos_root + "/src/scripts/" + cmd_file
-    f = open(cmd_file_path, "w")
-    f.write(command)
-    logger.GetLogger().LogCmd(command)
-    f.close()
-    retval = cmd_executer.RunCommand("chmod +x " + cmd_file_path)
-    utils.AssertTrue(retval == 0, "chmod +x failed!")
-    return cmd_executer.RunCommand(chromeos_root +
-                                   "/src/scripts/enter_chroot.sh -- ./%s"
-                                      % cmd_file)
-  else:
+  argv = [os.path.dirname(os.path.abspath(__file__)) + "/tc_enter_chroot.py",
+          "--chromeos_root=" + chromeos_root,
+          command]
+  if toolchain_root:
     toolchain_root = os.path.expanduser(toolchain_root)
-    argv = [os.path.dirname(os.path.abspath(__file__)) + "/tc_enter_chroot.py",
-            "--chromeos_root=" + chromeos_root,
-            "--toolchain_root=" + toolchain_root,
-            "\n" + command]
-    if not full_mount:
-      argv.append("-s")
-    return tc_enter_chroot.Main(argv, return_output)
+    argv.append("--toolchain_root=" + toolchain_root)
+  if not full_mount:
+    argv.append("-s")
+  argv += tec_options
+  return tc_enter_chroot.Main(argv, return_output)
 
 
 def MakeChroot(chromeos_root, clobber_chroot=False):
@@ -97,6 +87,8 @@ def Main(argv):
                     help="LDFLAGS for the ChromeOS packages")
   parser.add_option("--board", dest="board",
                     help="ChromeOS target board, e.g. x86-generic")
+  parser.add_option("--label", dest="label",
+                    help="Optional label symlink to point to build dir.")
   parser.add_option("--vanilla", dest="vanilla",
                     default=False,
                     action="store_true",
@@ -129,7 +121,7 @@ def Main(argv):
     command += "; " + build_packages_env + " " + build_packages_command
     command += "&& " + build_image_command
     command += "&& " + mod_image_command
-    ret = ExecuteCommandInChroot(options.chromeos_root, None, command)
+    ret = ExecuteCommandInChroot(options.chromeos_root, command)
     return ret
 
   # Setup board
@@ -138,7 +130,7 @@ def Main(argv):
     # Run build_tc.py from binary package
     rootdir = utils.GetRoot(argv[0])[0]
     version_number = utils.GetRoot(rootdir)[1]
-    ret = ExecuteCommandInChroot(options.chromeos_root, None,
+    ret = ExecuteCommandInChroot(options.chromeos_root,
                                  utils.GetSetupBoardCommand(options.board,
                                    gcc_version="9999",
                                    binutils_version="9999",
@@ -149,7 +141,7 @@ def Main(argv):
                                  "because it already exists")
 
   # Build packages
-  ret = ExecuteCommandInChroot(options.chromeos_root, None,
+  ret = ExecuteCommandInChroot(options.chromeos_root,
                                "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
                                "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
                                "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
@@ -165,17 +157,43 @@ def Main(argv):
   utils.AssertTrue(ret == 0, "build_packages failed")
 
   # Build image
-  ret = ExecuteCommandInChroot(options.chromeos_root, None,
+  ret = ExecuteCommandInChroot(options.chromeos_root,
                                build_image_command)
 
   utils.AssertTrue(ret == 0, "build_image failed")
 
   # Mod image for test
-  ret = ExecuteCommandInChroot(options.chromeos_root, None,
+  ret = ExecuteCommandInChroot(options.chromeos_root,
                                mod_image_command)
 
   utils.AssertTrue(ret == 0, "mod_image_for_test failed")
-  return 0
+
+  flags_file_name = "flags.txt"
+  flags_file_path = ("%s/src/build/images/%s/latest/%s" %
+                     (options.chromeos_root,
+                      options.board,
+                      flags_file_name))
+  flags_file = open(flags_file_path, "wb")
+  flags_file.write("CFLAGS=%s\n" % options.cflags)
+  flags_file.write("CXXFLAGS=%s\n" % options.cxxflags)
+  flags_file.write("LDFLAGS=%s\n" % options.ldflags)
+  flags_file.close()
+
+  if options.label:
+    image_dir_path = ("%s/src/build/images/%s/latest" %
+                  (options.chromeos_root,
+                   options.board))
+    real_image_dir_path = os.path.realpath(image_dir_path)
+    command = ("ln -sf -T %s %s/%s" %
+               (os.path.basename(real_image_dir_path),
+                os.path.dirname(real_image_dir_path),
+                options.label))
+
+    ret = cmd_executer.RunCommand(command)
+    utils.AssertExit(ret == 0,
+                     "Failed to apply symlink label %s" % options.label)
+
+  return ret
 
 if __name__ == "__main__":
   Main(sys.argv)

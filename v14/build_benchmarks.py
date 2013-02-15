@@ -47,10 +47,10 @@ KNOWN_BENCHMARKS = [
 
 # Commands to build CPU benchmarks.
 
-CPU_BUILDCMD_CLEAN = "cd /usr/local/toolchain_root/v14/third_party/android_bench/v2_0/CLOSED_SOURCE/%s;\
+CPU_BUILDCMD_CLEAN = "cd /usr/local/toolchain_root/third_party/android_bench/v2_0/CLOSED_SOURCE/%s;\
 python ../../scripts/bench.py --toolchain=/usr/bin --action=clean;"
 
-CPU_BUILDCMD_BUILD = "cd /usr/local/toolchain_root/v14/third_party/android_bench/v2_0/CLOSED_SOURCE/%s;\
+CPU_BUILDCMD_BUILD = "cd /usr/local/toolchain_root/third_party/android_bench/v2_0/CLOSED_SOURCE/%s;\
 python ../../scripts/bench.py --toolchain=/usr/bin --add_cflags=%s --add_ldflags=%s --makeopts=%s --action=build"
 
 
@@ -104,7 +104,9 @@ def Main(argv):
   parser.add_option("-c", "--chromeos_root", dest="chromeos_root",
                     help="Target directory for ChromeOS installation.")
   parser.add_option("-t", "--toolchain_root", dest="toolchain_root",
-                    help="The gcctools directory of your P4 checkout.")
+                    help="This is obsolete. Do not use.")
+  parser.add_option("-r", "--third_party", dest="third_party",
+                    help="The third_party dir containing android benchmarks.")
   parser.add_option("-C", "--clean", dest="clean", action="store_true",
                     default=False, help="Clean up build."),
   parser.add_option("-B", "--build", dest="build", action="store_true",
@@ -141,11 +143,14 @@ def Main(argv):
   if options.chromeos_root is None:
     Usage(parser, "--chromeos_root must be set")
 
-  if options.toolchain_root is None:
-    Usage(parser, "--toolchain_root must be set")
-
   if options.board is None:
     Usage(parser, "--board must be set")
+
+  if options.toolchain_root:
+    logger.GetLogger().LogWarning("--toolchain_root should not be set")
+
+  options.chromeos_root = os.path.expanduser(options.chromeos_root)
+  options.workdir = os.path.expanduser(options.workdir)
 
   found_err = 0
   retval = 0
@@ -155,14 +160,21 @@ def Main(argv):
     if re.match('chromeos/cpu', arg):
       comps = re.split('/', arg)
       benchname = comps[2]
+
+      tec_options = []
+      if options.third_party:
+        tec_options.append("--third_party=%s" % options.third_party)
       if options.clean:
-        retval = build_chromeos.ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                                              CPU_BUILDCMD_CLEAN % benchname)
+        retval = build_chromeos.ExecuteCommandInChroot(options.chromeos_root,
+                                              CPU_BUILDCMD_CLEAN % benchname,
+                                              tec_options=tec_options
+                                              )
         utils.AssertError(retval == 0, "clean of benchmark %s failed." % arg)
       if options.build:
-        retval = build_chromeos.ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
+        retval = build_chromeos.ExecuteCommandInChroot(options.chromeos_root,
                                               CPU_BUILDCMD_BUILD % (benchname, options.cflags,
-                                              options.ldflags, options.makeopts))
+                                              options.ldflags, options.makeopts),
+                                              tec_options=tec_options)
         utils.AssertError(retval == 0, "Build of benchmark %s failed." % arg)
       if retval == 0 and (options.build or options.only_copy):
         benchdir = ('%s/third_party/android_bench/v2_0/CLOSED_SOURCE/%s' %

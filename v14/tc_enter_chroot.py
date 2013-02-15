@@ -81,6 +81,8 @@ def Main(argv, return_output=False):
                     help="Toolchain root directory.")
   parser.add_option("-o", "--output", dest="output",
                     help="Toolchain output directory")
+  parser.add_option("-r", "--third_party", dest="third_party",
+                    help="The third_party directory to mount.")
   parser.add_option("-m", "--other_mounts", dest="other_mounts",
                     help="Other mount points in the form: " +
                          "dir:mounted_dir:options")
@@ -101,21 +103,20 @@ def Main(argv, return_output=False):
 
   chromeos_root = os.path.abspath(chromeos_root)
 
+  tc_dirs = []
   if options.toolchain_root is None:
-    logger.GetLogger().LogError("--toolchain_root not specified")
-    parser.print_help()
-    sys.exit(1)
+    m = "toolchain_root not specified. Will not mount toolchain dirs."
+    logger.GetLogger().LogWarning(m)
+  else:
+    tc_dirs = [options.toolchain_root + "/google_vendor_src_branch/gcc",
+               options.toolchain_root + "/google_vendor_src_branch/binutils"]
 
-  tc_dirs = [options.toolchain_root + "/google_vendor_src_branch/gcc",
-             options.toolchain_root + "/google_vendor_src_branch/binutils"]
-
-  if options.mount_scripts_only == False:
-    for tc_dir in tc_dirs:
-      if not os.path.exists(tc_dir):
-        logger.GetLogger().LogError("toolchain path " +
-                                   tc_dir + " does not exist!")
-        parser.print_help()
-        sys.exit(1)
+  for tc_dir in tc_dirs:
+    if not os.path.exists(tc_dir):
+      logger.GetLogger().LogError("toolchain path " +
+                                 tc_dir + " does not exist!")
+      parser.print_help()
+      sys.exit(1)
 
   if not os.path.exists(chromeos_root):
     logger.GetLogger().LogError("chromeos_root " + options.chromeos_root +
@@ -130,7 +131,7 @@ def Main(argv, return_output=False):
     parser.print_help()
     sys.exit(1)
 
-  rootdir = utils.GetRoot(sys.argv[0])[0]
+  rootdir = utils.GetRoot(__file__)[0]
   version_dir = rootdir
 
   mounted_tc_root = "/usr/local/toolchain_root"
@@ -138,22 +139,43 @@ def Main(argv, return_output=False):
   full_mounted_tc_root = os.path.abspath(full_mounted_tc_root)
 
   mount_points = []
-  if options.mount_scripts_only == False:
-    for tc_dir in tc_dirs:
-      last_dir = utils.GetRoot(tc_dir)[1]
-      mount_point = MountPoint(tc_dir, full_mounted_tc_root + "/" + last_dir,
-                               getpass.getuser(), "ro")
-      mount_points.append(mount_point)
+  for tc_dir in tc_dirs:
+    last_dir = utils.GetRoot(tc_dir)[1]
+    mount_point = MountPoint(tc_dir, full_mounted_tc_root + "/" + last_dir,
+                             getpass.getuser(), "ro")
+    mount_points.append(mount_point)
 
+  # Add the third_party mount point if it exists
+  if options.third_party:
+    third_party_dir = options.third_party
+    utils.AssertExit(os.path.isdir(third_party_dir),
+                     "--third_party option is not a valid dir.")
+  else:
+    third_party_dir = os.path.abspath("%s/../../../third_party" %
+                                      os.path.dirname(__file__))
+
+  if os.path.isdir(third_party_dir):
+    mount_point = MountPoint(third_party_dir,
+                             ("%s/%s" %
+                              (full_mounted_tc_root,
+                               os.path.basename(third_party_dir))),
+                               getpass.getuser())
+    mount_points.append(mount_point)
+            
   output = options.output
-  if output is None:
+  if output is None and options.toolchain_root:
     output = options.toolchain_root + "/output"
-  mount_points.append(MountPoint(output, full_mounted_tc_root + "/output",
-                                 getpass.getuser()))
+    # Mount the output directory at /usr/local/toolchain_root/output
+    mount_points.append(MountPoint(output, full_mounted_tc_root + "/output",
+                                   getpass.getuser()))
+
+  # Mount the other mount points
   mount_points += CreateMountPointsFromString(options.other_mounts,
                                               chromeos_root + "/chroot/")
 
   last_dir = utils.GetRoot(version_dir)[1]
+
+  # Mount the version dir (v14) at /usr/local/toolchain_root/v14
   mount_point = MountPoint(version_dir, full_mounted_tc_root + "/" + last_dir,
                            getpass.getuser())
   mount_points.append(mount_point)

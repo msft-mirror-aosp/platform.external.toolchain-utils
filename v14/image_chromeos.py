@@ -29,7 +29,7 @@ def Usage(parser, message):
   parser.print_help()
   sys.exit(0)
 
-def ImageChromeOS(argv):
+def Main(argv):
   """Build ChromeOS."""
   # Common initializations
   cmd_executer = command_executer.GetCommandExecuter()
