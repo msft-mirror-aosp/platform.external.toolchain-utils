@@ -10,15 +10,10 @@ MachineManagerTest tests MachineManager.
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
 
-import machine
+import machine_description
 import machine_filters
 import machine_manager
-import machine_pool
-import os
-import pools
-import sys
 import unittest
-from utils import utils
 
 
 class MachineManagerTest(unittest.TestCase):
@@ -28,6 +23,28 @@ class MachineManagerTest(unittest.TestCase):
 
   def testPrint(self):
     print str(self.machine_manager)
+
+
+  def testGetLinuxBox(self):
+    descriptions = []
+    
+    filters = []
+    filters.append(machine_filters.OSFilter("linux"))
+    description = machine_description.MachineDescription(filters)
+    descriptions.append(description)
+    machines = self.machine_manager.GetMachines(descriptions)
+    print machines
+    
+    
+  def testGetChromeOSBox(self):
+    descriptions = []
+    filters = []
+    filters.append(machine_filters.OSFilter("cHrOmEOS"))
+    description = machine_description.MachineDescription(filters)
+    descriptions.append(description)
+    machines = self.machine_manager.GetMachines(descriptions)
+    self.assertTrue(len(machines) != 0)
+    print machines
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ import machine
 
 class MachinePool:
   def __init__(self, initial_list=[]):
-    self.machine_list = initial_list
+    self.machine_list = initial_list[:]
     self.name = ""
 
 
@@ -45,7 +45,9 @@ class MachinePool:
   def __str__(self):
     ret = ""
     for m in self.machine_list:
-      ret += str(m)
+      machine_string = str(m)
+      machine_string.replace("\n", "  \n")
+      ret += machine_string
     return ret
 
 

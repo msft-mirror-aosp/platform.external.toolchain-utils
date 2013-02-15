@@ -13,19 +13,20 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 import machine
 import machine_filters
 import machine_pool
-import os
 import pools
-import sys
-from utils import utils
+import threading
 
 
 class MachineManager:
   __shared_state = {}
   global_pool = None
+  reenterant_lock = None
   def __init__(self):
     self.__dict__ = self.__shared_state
     if self.global_pool == None:
       self.ConstructGlobalPool()
+    if self.reenterant_lock == None:
+      self.reenterant_lock = threading.RLock()
 
 
   def __str__(self):
@@ -61,24 +62,30 @@ class MachineManager:
 
   def GetMachines(self, machine_descriptions):
     # lock here (re-entrant)
+    if self.reenterant_lock.acquire(False) == False:
+      return []
     acquired_machines = []
     for machine_description in machine_descriptions:
       machine = self._GetMachine(machine_description)
       if machine == None:
         # Roll back acquires
         self.ReturnMachines(acquired_machines)
+        self.reenterant_lock.release()
         return None
       acquired_machines.append(machine)
 
     # unlock here
+    self.reenterant_lock.release()
     return acquired_machines
 
 
   def ReturnMachines(self, machines):
     # lock here (re-entrant)
+    self.reenterant_lock.acquire(True)
     for machine in machines:
       machine.uses -= 1
       if machine.uses == 0:
         machine.locked = False
+    self.reenterant_lock.release()
     # unlock
 
