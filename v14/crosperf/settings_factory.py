@@ -4,6 +4,7 @@
 
 from field import BooleanField
 from field import IntegerField
+from field import ListField
 from field import TextField
 from settings import Settings
 
@@ -19,7 +20,7 @@ class BenchmarkSettings(Settings):
 class LabelSettings(Settings):
   def __init__(self, name):
     super(LabelSettings, self).__init__(name, "label")
-    self.AddField(TextField("image", required=True))
+    self.AddField(TextField("chromeos_image", required=True))
     self.AddField(TextField("chromeos_root"))
 
 
@@ -28,7 +29,7 @@ class GlobalSettings(Settings):
     super(GlobalSettings, self).__init__(name, "global")
     self.AddField(TextField("name", default="Experiment"))
     self.AddField(TextField("board", required=True))
-    self.AddField(TextField("remote", required=True))
+    self.AddField(ListField("remote", required=True))
     self.AddField(BooleanField("rerun_if_failed"))
     self.AddField(IntegerField("iterations"))
 

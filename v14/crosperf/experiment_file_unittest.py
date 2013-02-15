@@ -17,11 +17,11 @@ EXPERIMENT_FILE_1 = """
   }
 
   image1 {
-    image: /usr/local/google/cros_image1.bin
+    chromeos_image: /usr/local/google/cros_image1.bin
   }
 
   image2 {
-    image: /usr/local/google/cros_image2.bin
+    chromeos_image: /usr/local/google/cros_image2.bin
   }
   """
 
@@ -29,7 +29,7 @@ EXPERIMENT_FILE_2 = """
   board: x86-alex
   remote: chromeos-alex3
   iterations: 3
-  
+
   benchmark: PageCycler {
   }
 
@@ -38,11 +38,11 @@ EXPERIMENT_FILE_2 = """
   }
 
   image1 {
-    image:/usr/local/google/cros_image1.bin
+    chromeos_image:/usr/local/google/cros_image1.bin
   }
 
   image2 {
-    image: /usr/local/google/cros_image2.bin
+    chromeos_image: /usr/local/google/cros_image2.bin
   }
   """
 
@@ -53,7 +53,7 @@ class ExperimentFileTest(unittest.TestCase):
     experiment_file = ExperimentFile(input_file)
     global_settings = experiment_file.GetGlobalSettings()
     self.assertEqual(global_settings.GetField("board"), "x86-alex")
-    self.assertEqual(global_settings.GetField("remote"), "chromeos-alex3")
+    self.assertEqual(global_settings.GetField("remote"), ["chromeos-alex3"])
 
     benchmark_settings = experiment_file.GetSettings("benchmark")
     self.assertEqual(len(benchmark_settings), 1)
@@ -63,7 +63,7 @@ class ExperimentFileTest(unittest.TestCase):
     label_settings = experiment_file.GetSettings("label")
     self.assertEqual(len(label_settings), 2)
     self.assertEqual(label_settings[0].name, "image1")
-    self.assertEqual(label_settings[0].GetField("image"),
+    self.assertEqual(label_settings[0].GetField("chromeos_image"),
                      "/usr/local/google/cros_image1.bin")
 
   def testOverrideSetting(self):
@@ -71,7 +71,7 @@ class ExperimentFileTest(unittest.TestCase):
     experiment_file = ExperimentFile(input_file)
     global_settings = experiment_file.GetGlobalSettings()
     self.assertEqual(global_settings.GetField("board"), "x86-alex")
-    self.assertEqual(global_settings.GetField("remote"), "chromeos-alex3")
+    self.assertEqual(global_settings.GetField("remote"), ["chromeos-alex3"])
 
     benchmark_settings = experiment_file.GetSettings("benchmark")
     self.assertEqual(len(benchmark_settings), 2)
