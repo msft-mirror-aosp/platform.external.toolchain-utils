@@ -3,6 +3,7 @@
 # Copyright 2010 Google Inc. All Rights Reserved.
 #
 
+import getpass
 import os
 
 from automation.common.state_machine import BasicStateMachine
@@ -22,7 +23,7 @@ class JobGroupStateMachine(BasicStateMachine):
 
 
 class JobGroup(object):
-  HOMEDIR_PREFIX = os.path.join("/home", os.getlogin(), "www", "automation")
+  HOMEDIR_PREFIX = os.path.join("/home", getpass.getuser(), "www", "automation")
 
   def __init__(self, label, jobs=None, cleanup_on_completion=True,
                cleanup_on_failure=False, description=""):
