@@ -17,10 +17,11 @@ class JobsFactory(object):
     self.board = board
     self.p4_snapshot = p4_snapshot
 
-    tc_root = jobs.GetTCRootDir(toolchain)[1]
+    toolchain_path = os.path.join(jobs.P4_CHECKOUT_DIR,
+                                  jobs.GetToolchainPath(toolchain))
 
-    self.tc_pkgs_path = os.path.join(tc_root, "output", "pkgs")
-    self.tc_objs_path = os.path.join(tc_root, "output", "objects")
+    self.tc_pkgs_path = os.path.join(toolchain_path, "output/pkgs")
+    self.tc_objs_path = os.path.join(toolchain_path, "output/objects")
 
   @staticmethod
   def CreateChromeOSJob(label, command, lock=True):
