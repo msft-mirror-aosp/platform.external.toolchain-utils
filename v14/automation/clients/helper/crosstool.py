@@ -105,6 +105,9 @@ class CommandsFactory(object):
     dejagnu_flags = ['--outdir=%s' % dejagnu_output_path,
                      '--target_board=%s' % board]
 
+    # Look for {pandaboard,qemu}.exp files in
+    # //depot/google3/experimental/users/kbaclawski/dejagnu/boards
+
     site_exp_file = os.path.join('/google/src/head/depot/google3',
                                  'experimental/users/kbaclawski',
                                  'dejagnu/site.exp')
@@ -120,7 +123,8 @@ class CommandsFactory(object):
                       'RUNTESTFLAGS="%s"' % ' '.join(dejagnu_flags),
                       'DEJAGNU="%s"' % site_exp_file,
                       ignore_error=True)),
-        cwd=os.path.join(self.buildit_work_dir_path, gcc_build_dir_path))
+        cwd=os.path.join(self.buildit_work_dir_path, gcc_build_dir_path),
+        env={'REMOTE_TMPDIR': 'job-$JOB_ID'})
 
     save_results = cmd.Wrapper(
         cmd.Chain(
@@ -130,8 +134,7 @@ class CommandsFactory(object):
                       os.path.join(dejagnu_output_path, 'gcc.sum'),
                       os.path.join(dejagnu_output_path, 'g++.sum'),
                       path='.')),
-        cwd='$HOME/automation/clients/report',
-        env={'REMOTE_TMPDIR': 'job-$JOB_ID'})
+        cwd='$HOME/automation/clients/report')
 
     return cmd.Chain(run_dejagnu, save_results)
 
