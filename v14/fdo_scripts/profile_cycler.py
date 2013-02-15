@@ -12,6 +12,7 @@ import build_chrome_browser
 import lock_machine
 import run_tests
 import tempfile
+import time
 from utils import command_executer
 from utils import logger
 from utils import utils
@@ -106,9 +107,19 @@ class CyclerProfiler:
   def _CopyProfileToHost(self):
     dest_dir = os.path.join(self._profiles_dir,
                             os.path.basename(self._gcov_prefix))
+    # First remove the dir if it exists already
+    if os.path.exists(dest_dir):
+      command = "rm -rf %s" % dest_dir
+      self._ce.RunCommand(command)
+
+    # Strip out the initial prefix for the Chrome directory before doing the
+    # copy.
+    chrome_dir_prefix = "var/lib/portage/distfiles-target/chrome-src/src"
+
     command = "mkdir -p %s" % dest_dir
     self._ce.RunCommand(command)
-    self._ce.CopyFiles(self._gcov_prefix,
+    self._ce.CopyFiles(os.path.join(self._gcov_prefix,
+                                    chrome_dir_prefix),
                        dest_dir,
                        src_machine=self._remote,
                        chromeos_root=self._chromeos_root,
@@ -118,6 +129,12 @@ class CyclerProfiler:
   def _LaunchCycler(self):
     self._gcov_prefix = os.path.join(self.REMOTE_TMP_DIR,
                                      "chrome_fdo.%s" % self._cycler)
+    # Remove the profile directory before launching Chrome.
+    command = "rm -rf %s" % self._gcov_prefix
+    self._ce.CrosRunCommand(command, chromeos_root=self._chromeos_root,
+                            machine=self._remote)
+
+    # Now run the actual command for profiling.
     command = ("DISPLAY=:0 "
                "XAUTHORITY=/home/chronos/.Xauthority "
                "GCOV_PREFIX=%s "
@@ -192,8 +209,9 @@ def Main(argv):
                         options.remote)
     cp.DoProfile()
     retval = 0
-  except:
+  except Exception as e:
     retval = 1
+    print e
   finally:
     print "Exiting..."
   return retval
