@@ -12,11 +12,10 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 import optparse
 import os
 import sys
-from utils import utils
+from utils import command_executer
 
 # Common initializations
-(rootdir, basename) = utils.GetRoot(sys.argv[0])
-utils.InitLogger(rootdir, basename)
+cmd_executer = command_executer.GetCommandExecuter()
 
 
 def Main():
@@ -52,7 +51,7 @@ def RunRemoteTests(chromeos_root, remote, board, tests):
              " --board=" + board +
              " " + tests)
 
-  retval = utils.RunCommand(command)
+  retval = cmd_executer.RunCommand(command)
   return retval
 
 if __name__ == "__main__":

@@ -12,11 +12,6 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import re
 import sys
-from utils import utils
-
-# Common initializations
-(rootdir, basename) = utils.GetRoot(sys.argv[0])
-utils.InitLogger(rootdir, basename)
 
 
 class Machine:

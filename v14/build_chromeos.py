@@ -14,7 +14,11 @@ import optparse
 import os
 import sys
 import tc_enter_chroot
+from utils import command_executer
+from utils import logger
 from utils import utils
+
+cmd_executer = command_executer.GetCommandExecuter()
 
 
 def Usage(parser, message):
@@ -29,12 +33,12 @@ def ExecuteCommandInChroot(chromeos_root, toolchain_root, command,
   chrome_mount = ""
   if chrome_root:
     chrome_mount = "--chrome_root=" + chromeos_root + "/" + chrome_root
-  argv=[os.path.dirname(os.path.abspath(__file__)) + "/tc_enter_chroot.py",
-        "--chromeos_root=" + chromeos_root,
-        "--toolchain_root=" + toolchain_root,
-        chrome_mount,
-        "--",
-        command]
+  argv = [os.path.dirname(os.path.abspath(__file__)) + "/tc_enter_chroot.py",
+          "--chromeos_root=" + chromeos_root,
+          "--toolchain_root=" + toolchain_root,
+          chrome_mount,
+          "--",
+          command]
   return tc_enter_chroot.Main(argv)
 
 
@@ -48,17 +52,16 @@ def MakeChroot(chromeos_root, clobber_chroot=False):
     if clobber_chroot:
       clobber_chroot = "--replace"
     commands.append("./make_chroot --fast " + clobber_chroot)
-    ret = utils.RunCommands(commands)
+    ret = cmd_executer.RunCommands(commands)
     utils.AssertTrue(ret == 0, "make_chroot failed")
   else:
-    utils.main_logger.LogOutput("Did not make_chroot because it already exists")
+    logger.GetLogger().LogOutput("Did not make_chroot because it already exists")
 
 
 def Main():
   """Build ChromeOS."""
   # Common initializations
-  (rootdir, basename) = utils.GetRoot(sys.argv[0])
-  utils.InitLogger(rootdir, basename)
+  logger.InitLogger(sys.argv[0])
 
   parser = optparse.OptionParser()
   parser.add_option("--chromeos_root", dest="chromeos_root",
@@ -100,10 +103,11 @@ def Main():
     if options.clobber_board:
       force = "--force"
     # Run build_tc.py from binary package
-    ret = utils.RunCommand(rootdir + "/build_tc.py --chromeos_root=%s "
-                           "--toolchain_root=%s --board=%s -B"
-                           % (options.chromeos_root, options.toolchain_root,
-                              options.board))
+    rootdir = utils.GetRoot(sys.argv[0])[0]
+    ret = cmd_executer.RunCommand(rootdir + "/build_tc.py --chromeos_root=%s "
+                                  "--toolchain_root=%s --board=%s -B"
+                                  % (options.chromeos_root,
+                                     options.toolchain_root, options.board))
     utils.AssertTrue(ret == 0, "build_tc.py failed")
     version_number = utils.GetRoot(rootdir)[1]
     pkgdir = "/usr/local/toolchain_root/" + version_number + "/pkgs"
@@ -113,7 +117,8 @@ def Main():
                                  "%s" % (pkgdir, options.board, force))
     utils.AssertTrue(ret == 0, "setup_board failed")
   else:
-    utils.main_logger.LogOutput("Did not setup_board because it already exists")
+    logger.GetLogger().LogOutput("Did not setup_board "
+                                 "because it already exists")
 
   # Modify make.conf to add CFLAGS/CXXFLAGS/LDFLAGS
   ret1 = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
@@ -125,8 +130,8 @@ def Main():
               #"CFLAGS='%s'\\\nCXXFLAGS='%s'\\\nLDFLAGS='%s'\\\n" %
               #(options.cflags, options.cxxflags, options.ldflags))
   ret2 = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                                "\"if [ -e /build/%s/etc/make.conf.orig ] ; then "
-                                "sudo echo -e \\\"%s\\\" | sudo tee "
+                                "\"if [ -e /build/%s/etc/make.conf.orig ] ; "
+                                "then sudo echo -e \\\"%s\\\" | sudo tee "
                                 "/build/%s/etc/make.conf > /dev/null ;"
                                 "else exit 1 ; fi\""
                                 % (options.board, makeconf, options.board))
@@ -134,9 +139,9 @@ def Main():
   utils.AssertTrue(ret1 == 0 and ret2 == 0, "Could not modify make.conf")
 
   # Find Chrome browser version
-  chrome_version = utils.RunCommand("%s/src/scripts/chromeos_version.sh | "
-                                    "grep CHROME_BUILD"
-                                    % options.chromeos_root, True)
+  chrome_version = cmd_executer.RunCommand("%s/src/scripts/chromeos_version.sh "
+                                           "| grep CHROME_BUILD"
+                                           % options.chromeos_root, True)
 
   ret = chrome_version[0]
   utils.AssertTrue(ret == 0, "Could not determine Chrome browser version")

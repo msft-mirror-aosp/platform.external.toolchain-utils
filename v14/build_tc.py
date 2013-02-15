@@ -15,11 +15,13 @@ import os
 import sys
 import tc_enter_chroot
 import build_chromeos
+from utils import command_executer
 from utils import utils
+from utils import logger
 
 # Common initializations
-(rootdir, basename) = utils.GetRoot(sys.argv[0])
-utils.InitLogger(rootdir, basename)
+logger.InitLogger(sys.argv[0])
+cmd_executer = command_executer.GetCommandExecuter()
 
 
 def Main():
@@ -71,6 +73,7 @@ def Main():
     features += " keepwork"
   env = CreateEnvVarString(" FEATURES", features)
   env += CreateEnvVarString(" PORTAGE_USERNAME", getpass.getuser())
+  rootdir = utils.GetRoot(sys.argv[0])[0]
   version_number = utils.GetRoot(rootdir)[1]
   version_dir = "/usr/local/toolchain_root/" + version_number
   env += CreateEnvVarString(" PORT_LOGDIR", version_dir + "/logs")
@@ -118,7 +121,7 @@ def InstallTC(package_dir, install_dir):
   command += ("&& for f in $(find " + package_dir +
               " -name \\*.tbz2); do tar xf $f -C " +
               install_dir + " ; done")
-  retval = utils.RunCommand(command)
+  retval = cmd_executer.RunCommand(command)
   return retval
 
 
@@ -133,6 +136,7 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
   libc_version = "2.10.1-r2"
   kernel_version = "2.6.30-r1"
 
+  rootdir = utils.GetRoot(sys.argv[0])[0]
   argv = [rootdir + "tc_enter_chroot.py",
           "--chromeos_root=" + chromeos_root,
           "--toolchain_root=" + toolchain_root]

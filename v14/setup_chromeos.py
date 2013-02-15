@@ -13,7 +13,7 @@ __author__ = "raymes@google.com (Raymes Khoury)"
 import optparse
 import os
 import sys
-from utils import utils
+from utils import command_executer
 
 GCLIENT_FILE = """solutions = [
   { "name"        : "CHROME_DEPS",
@@ -30,9 +30,7 @@ GCLIENT_FILE = """solutions = [
 """
 
 # Common initializations
-(rootdir, basename) = utils.GetRoot(sys.argv[0])
-utils.InitLogger(rootdir, basename)
-
+cmd_executer = command_executer.GetCommandExecuter()
 
 GIT_TAGS_CMD = ("git ls-remote --tags "
                 "ssh://git@gitrw.chromium.org:9222/chromiumos-overlay.git | "
@@ -52,7 +50,7 @@ def Usage(parser):
 
 
 def GetTags():
-  res = utils.RunCommand(GIT_TAGS_CMD, True)
+  res = cmd_executer.RunCommand(GIT_TAGS_CMD, True)
   return res[1].strip().split("\n")
 
 
@@ -80,6 +78,9 @@ def Main():
                     help="""ChromeOS version. Can be: (1) A release version
 in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
 'top' for top of trunk. Default is 'latest'""")
+  parser.add_option("--minilayout", dest="minilayout", default=False,
+                    help="""Whether to checkout the minilayout 
+(smaller checkout).'""")
 
   options = parser.parse_args()[0]
 
@@ -115,36 +116,41 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
   # If we check them out outside, we can't do some things, like build tests.
   checkout_chrome_outside_chroot = False
 
+  minilayout = ""
+  if options.minilayout == True:
+    minilayout = " -m minilayout.xml"
   commands = []
   commands.append("mkdir -p " + directory)
   commands.append("cd " + directory)
   commands.append("repo init -u "
                   "ssh://git@gitrw.chromium.org:9222/manifest-internal -b "
-                  + branch)
+                  + branch + minilayout)
   commands.append("repo sync -j10")
   if branch != "master":
     commands.append("repo forall -c 'git checkout -f -b %s %s'"
                     % (branch, version))
-  utils.RunCommands(commands)
+  cmd_executer.RunCommands(commands)
 
   commands = []
   commands.append("cd " + directory + "/src/scripts")
   commands.append("./get_svn_repos.sh")
-  utils.RunCommands(commands)
+  cmd_executer.RunCommands(commands)
 
   # Setup svn credentials for use inside the chroot
-  utils.RunCommand("svn ls --config-option config:auth:password-stores= "
-                   "--config-option "
-                   "servers:global:store-plaintext-passwords=yes "
-                   "--username $USER@google.com "
-                   "svn://svn.chromium.org/leapfrog-internal "
-                   "svn://svn.chromium.org/chrome "
-                   "svn://svn.chromium.org/chrome-internal > /dev/null")
+  cmd_executer.RunCommand("svn ls --config-option config:auth:password-stores= "
+                          "--config-option "
+                          "servers:global:store-plaintext-passwords=yes "
+                          "--username $USER@google.com "
+                          "svn://svn.chromium.org/leapfrog-internal "
+                          "svn://svn.chromium.org/chrome "
+                          "svn://svn.chromium.org/chrome-internal > /dev/null")
 
   if checkout_chrome_outside_chroot:
     # Find Chrome browser version
-    chrome_version = utils.RunCommand("%s/src/scripts/chromeos_version.sh | "
-                                      "grep CHROME_BUILD" % directory, True)
+    chrome_version = cmd_executer.RunCommand("%s/src/scripts/"
+                                             "chromeos_version.sh | "
+                                             "grep CHROME_BUILD"
+                                             % directory, True)
 
     chrome_version = chrome_version[1].strip().split("=")
     if len(chrome_version) == 2:
@@ -153,7 +159,7 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
       chrome_version = ""
 
     # Checkout chrome
-    utils.RunCommand("mkdir -p %s/chrome_browser/" % directory)
+    cmd_executer.RunCommand("mkdir -p %s/chrome_browser/" % directory)
     gclient_file = GCLIENT_FILE % chrome_version
     StoreFile(os.path.expanduser("%s/chrome_browser/.gclient"
                                  % directory), gclient_file)
@@ -161,7 +167,7 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
     commands.append("cd " + options.directory)
     commands.append("cd chrome_browser")
     commands.append("gclient sync -v --nohooks --delete_unversioned_trees")
-    utils.RunCommands(commands)
+    cmd_executer.RunCommands(commands)
 
   print "Done"
 

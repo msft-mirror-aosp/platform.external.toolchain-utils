@@ -13,11 +13,12 @@ import getpass
 import optparse
 import os
 import sys
+from utils import command_executer
+from utils import logger
 from utils import utils
 
 # Common initializations
-(rootdir, basename) = utils.GetRoot(sys.argv[0])
-utils.InitLogger(rootdir, basename)
+cmd_executer = command_executer.GetCommandExecuter()
 
 
 def Main(argv):
@@ -28,8 +29,8 @@ def Main(argv):
   parser.add_option("-t", "--toolchain_root", dest="toolchain_root",
                     help="Toolchain root directory.")
 
-  relevant_argv=[]
-  passthrough_argv=[]
+  relevant_argv = []
+  passthrough_argv = []
   for i in xrange(len(argv)):
     found = False
     for option in parser.option_list:
@@ -69,6 +70,7 @@ def Main(argv):
     sys.exit(1)
 
   tc_dirs = [options.toolchain_root + "/google_vendor_src_branch/gcc"]
+  rootdir = utils.GetRoot(sys.argv[0])[0]
   version_dir = rootdir
 
   all_dirs = tc_dirs[:]
@@ -98,14 +100,14 @@ def Main(argv):
   try:
     os.symlink(last_dir + "/build-gcc", full_mounted_tc_root + "/build-gcc")
   except Exception as e:
-    utils.main_logger.LogOutput(str(e))
+    logger.GetLogger().LogOutput(str(e))
 
   # Now call enter_chroot with the rest of the arguments.
   command = chromeos_root + "/src/scripts/enter_chroot.sh"
 
   if len(passthrough_argv) > 1:
     command += " " + " ".join(passthrough_argv[1:])
-    retval = utils.RunCommand(command)
+    retval = cmd_executer.RunCommand(command)
     return retval
   else:
     os.execv(command, [""])
@@ -115,7 +117,7 @@ def MountDir(dir_name, mount_point, options=None):
   command = "sudo mount --bind " + dir_name + " " + mount_point
   if options == "ro":
     command += " && sudo mount --bind -oremount,ro " + mount_point
-  retval = utils.RunCommand(command)
+  retval = cmd_executer.RunCommand(command)
   return retval
 
 
@@ -123,11 +125,11 @@ def CreateDir(dir_name, owner):
   if not os.path.exists(dir_name):
     command = "mkdir -p " + dir_name
     command += " || sudo mkdir -p " + dir_name
-    retval = utils.RunCommand(command)
+    retval = cmd_executer.RunCommand(command)
     if retval != 0:
       return retval
   command = "sudo chown " + owner + " " + dir_name
-  retval = utils.RunCommand(command)
+  retval = cmd_executer.RunCommand(command)
   return retval
 
 

@@ -15,11 +15,13 @@ import re
 import socket
 import sys
 import tempfile
+from utils import command_executer
+from utils import logger
 from utils import utils
 
 # Common initializations
+cmd_executer = command_executer.GetCommandExecuter()
 (rootdir, basename) = utils.GetRoot(sys.argv[0])
-utils.InitLogger(rootdir, basename)
 
 
 def CreateP4Client(client_name, p4_port, p4_paths, checkoutdir):
@@ -30,13 +32,13 @@ def CreateP4Client(client_name, p4_port, p4_paths, checkoutdir):
   command += "; echo \"P4CLIENT=" + client_name + "\" >> .p4config"
   command += "; g4 client -a " + " -a ".join(p4_paths)
   print command
-  retval = utils.RunCommand(command)
+  retval = cmd_executer.RunCommand(command)
   return retval
 
 
 def DeleteP4Client(client_name):
   command = "g4 client -d " + client_name
-  retval = utils.RunCommand(command)
+  retval = cmd_executer.RunCommand(command)
   return retval
 
 
@@ -46,7 +48,7 @@ def SyncP4Client(client_name, checkoutdir, revision=None):
     command += " && g4 sync ...@" + revision
   else:
     command += " && g4 sync ..."
-  retval = utils.RunCommand(command)
+  retval = cmd_executer.RunCommand(command)
   return retval
 
 
@@ -84,7 +86,7 @@ def SetupBranch(checkoutdir, branch_name):
     return 0
   command = "cd " + checkoutdir
   command += " && git branch -a | grep -wq " + branch_name
-  retval = utils.RunCommand(command)
+  retval = cmd_executer.RunCommand(command)
   command = "cd " + checkoutdir
   if retval == 0:
     command += (" && git branch --track " + branch_name +
@@ -92,7 +94,7 @@ def SetupBranch(checkoutdir, branch_name):
     command += " && git checkout " + branch_name
   else:
     command += (" && git checkout -b " + branch_name)
-  retval = utils.RunCommand(command)
+  retval = cmd_executer.RunCommand(command)
   return retval
 
 
@@ -100,7 +102,7 @@ def CreateGitClient(git_repo, checkoutdir, branch_name):
   """Creates a git client with in a dir with a branch."""
   command = "cd " + checkoutdir
   command += " && git clone -v " + git_repo + " ."
-  retval = utils.RunCommand(command)
+  retval = cmd_executer.RunCommand(command)
   if retval != 0:
     return retval
   retval = SetupBranch(checkoutdir, branch_name)
@@ -108,14 +110,14 @@ def CreateGitClient(git_repo, checkoutdir, branch_name):
     return retval
   command = "cd " + checkoutdir
   command += " && rm -rf *"
-  retval = utils.RunCommand(command)
+  retval = cmd_executer.RunCommand(command)
   return retval
 
 
 def GetLatestCL(client_name, checkoutdir):
   command = "cd " + checkoutdir
   command += " && g4 changes -m1 @" + client_name
-  (status, stdout, stderr) = utils.RunCommand(command, True)
+  (status, stdout, stderr) = cmd_executer.RunCommand(command, True)
   if status != 0:
     return -1
   mo = re.match("^Change (\d+)", stdout)
@@ -150,7 +152,7 @@ def PushToRemoteGitRepo(checkoutdir, branch_name, message_file, push_args):
   command += " && git commit -v -F " + message_file
   command += (" && git push -v " + push_args + " origin " +
               branch_name + ":" + branch_name)
-  retval = utils.RunCommand(command)
+  retval = cmd_executer.RunCommand(command)
   return retval
 
 
@@ -215,7 +217,7 @@ def Main():
     status = PushToRemoteGitRepo(temp_dir, branch_name, message_file, push_args)
     utils.AssertTrue(status == 0, "Could not push to remote repo")
   except (KeyboardInterrupt, SystemExit):
-    utils.main_logger.LogOutput("Caught exception... Cleaning up.")
+    logger.GetLogger().LogOutput("Caught exception... Cleaning up.")
     status = DeleteP4Client(client_name)
     raise
   status = DeleteP4Client(client_name)
