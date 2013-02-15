@@ -60,6 +60,7 @@ class JobsFactory(object):
     new_job.DependsOnFolder(tc_prefix_dep)
     return new_job
 
+
 class CommandsFactory(object):
   CHECKOUT_DIR = 'androidtc-checkout-dir'
   ANDROIDTC_SRC_DIR = os.path.join(CHECKOUT_DIR, 'src')
@@ -152,7 +153,7 @@ class CommandsFactory(object):
     gcc_required_dir = os.path.join(self.ANDROIDTC_SRC_DIR, 'gcc',
                                     'gcc-%s' % self.gcc_version)
 
-    return cmd.Chain(jobs.MakeDir(gcc_required_dir),
+    return cmd.Chain(cmd.MakeDir(gcc_required_dir),
                      cmd.Wrapper(cmd.Chain(svn_co_command, svn_get_revision),
                                  cwd=gcc_required_dir))
 
@@ -192,10 +193,10 @@ class CommandsFactory(object):
                          'android_trees')
     remote_android_branch_path = os.path.join(androidtrees_path, branch)
     local_android_branch_dir = os.path.join(self.ANDROID_TREES_DIR, branch)
-    gettree_cmd = cmd.Chain(jobs.MakeDir(local_android_branch_dir),
-                            jobs.SyncDir(remote_android_branch_path,
-                                         local_android_branch_dir,
-                                         src_host=androidtrees_host))
+    gettree_cmd = cmd.Chain(cmd.MakeDir(local_android_branch_dir),
+                            cmd.RemoteCopyFrom(androidtrees_host,
+                                               remote_android_branch_path,
+                                               local_android_branch_dir))
 
     # Configure and build the tree
     buildtree_cmd = self._BuildAndroidTree(local_android_branch_dir, product)
@@ -203,7 +204,7 @@ class CommandsFactory(object):
     # Copy system.img to result
     result_system_img = os.path.join(local_android_branch_dir, 'out', 'target',
                                      'product', product, 'system.img')
-    copy_img = jobs.SyncFile(result_system_img, 'results')
+    copy_img = cmd.Copy(result_system_img, to_dir='results')
 
     return cmd.Chain(gettree_cmd, buildtree_cmd, copy_img)
 

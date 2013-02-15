@@ -110,10 +110,10 @@ class CommandsFactory(object):
     config_list.extend(["internal", "full", "official", str(config_dict)])
 
     add_config_shell = self.AddBuildbotConfig(config_name, config_list)
-    return jobs.NewChain(add_config_shell, self.scripts.Buildbot(config_name))
+    return cmd.Chain(add_config_shell, self.scripts.Buildbot(config_name))
 
   def BuildAndBenchmark(self):
-    return jobs.NewChain(
+    return cmd.Chain(
         self.CheckoutV14Dir(),
         self.SetupChromeOSCheckout(self.chromeos_version, True),
         self.RunBuildbot(),
@@ -147,7 +147,7 @@ class CommandsFactory(object):
       return self.scripts.SetupChromeOS(version, use_minilayout)
 
     elif version.endswith("bz2") or version.endswith("gz"):
-      return jobs.UnTar(location_expanded, self.CHROMEOS_ROOT)
+      return cmd.UnTar(location_expanded, self.CHROMEOS_ROOT)
 
     else:
       signature_file_location = os.path.join(location,
@@ -155,7 +155,7 @@ class CommandsFactory(object):
       assert os.path.exists(signature_file_location), (
           "Signature file %s does not exist." % signature_file_location)
 
-      return jobs.SyncDir(location, self.CHROMEOS_ROOT)
+      return cmd.Copy(location, to_dir=self.CHROMEOS_ROOT, recursive=True)
 
 
 class JobsFactory(object):

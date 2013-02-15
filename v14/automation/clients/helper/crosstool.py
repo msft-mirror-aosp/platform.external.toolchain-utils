@@ -6,10 +6,10 @@ __author__ = 'kbaclawski@google.com (Krystian Baclawski)'
 
 import os.path
 
-from automation.common import command as cmd
-from automation.common import job
 from automation.clients.helper import jobs
 from automation.clients.helper import perforce
+from automation.common import command as cmd
+from automation.common import job
 
 
 class JobsFactory(object):
@@ -45,6 +45,7 @@ class JobsFactory(object):
       new_job.DependsOn(test_job)
     return new_job
 
+
 class CommandsFactory(object):
   CHECKOUT_DIR = 'crosstool-checkout-dir'
 
@@ -54,7 +55,7 @@ class CommandsFactory(object):
 
     self.buildit_work_dir = 'buildit-tmp'
     self.buildit_work_dir_path = os.path.join('$JOB_TMP', self.buildit_work_dir)
-    self.buildit_results_path = os.path.join('$JOB_HOME', 'packages')
+    self.buildit_results_path = os.path.join('$JOB_TMP', 'results', 'packages')
 
     paths = {
         'gcctools': [
@@ -83,14 +84,12 @@ class CommandsFactory(object):
                                p4client.Remove())
 
   def BuildRelease(self, target):
-    results_path = self.buildit_results_path
-
     buildit_cmd = cmd.Shell(
         'buildit',
         '--keep-work-dir',
         '--build-type=release',
         '--work-dir=%s' % self.buildit_work_dir_path,
-        '--results-dir=%s' % '$JOB_TMP/results/packages',
+        '--results-dir=%s' % self.buildit_results_path,
         '--force-release=$(< %s)' % os.path.join(
             '$JOB_TMP', self.CHECKOUT_DIR, 'CLNUM'),
         path='.')
@@ -111,28 +110,28 @@ class CommandsFactory(object):
                                  'dejagnu/site.exp')
 
     gcc_build_dir_path = os.path.join(
-        target, 'rpmbuild/BUILD/crosstool*-%s-0.0/build-gcc' % target)
+        target, 'rpmbuild/BUILD/crosstool*-0.0/build-gcc')
 
     run_dejagnu = cmd.Wrapper(
         cmd.Chain(
-          jobs.MakeDir(dejagnu_output_path),
-          cmd.Shell('make', 'check', '-k',
-                    '-j $(grep -c processor /proc/cpuinfo)',
-                    'RUNTESTFLAGS="%s"' % ' '.join(dejagnu_flags),
-                    'DEJAGNU="%s"' % site_exp_file,
-                    ignore_error=True)),
+            cmd.MakeDir(dejagnu_output_path),
+            cmd.Shell('make', 'check', '-k',
+                      '-j $(grep -c processor /proc/cpuinfo)',
+                      'RUNTESTFLAGS="%s"' % ' '.join(dejagnu_flags),
+                      'DEJAGNU="%s"' % site_exp_file,
+                      ignore_error=True)),
         cwd=os.path.join(self.buildit_work_dir_path, gcc_build_dir_path))
 
     save_results = cmd.Wrapper(
         cmd.Chain(
-            cmd.Shell('cp', '-r',
-                      dejagnu_output_path + '/',
-                      '$JOB_TMP/results/'),
+            cmd.Copy(dejagnu_output_path, to_dir='$JOB_TMP/results',
+                     recursive=True),
             cmd.Shell('dejagnu.sh', 'summary', '-B', target,
                       os.path.join(dejagnu_output_path, 'gcc.sum'),
                       os.path.join(dejagnu_output_path, 'g++.sum'),
                       path='.')),
-        cwd='$HOME/automation/clients/report')
+        cwd='$HOME/automation/clients/report',
+        env={'REMOTE_TMPDIR': 'job-$JOB_ID'})
 
     return cmd.Chain(run_dejagnu, save_results)
 

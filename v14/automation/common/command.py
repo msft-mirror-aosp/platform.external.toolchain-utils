@@ -147,3 +147,49 @@ class Pipe(AbstractCommandContainer):
       pipe.append(str(Shell('tee', self._output)))
 
     return ' | '.join(pipe)
+
+
+def Copy(*args, **kwargs):
+  assert all(key in ['to_dir', 'recursive'] for key in kwargs.keys())
+
+  options = []
+
+  if 'to_dir' in kwargs:
+    options.extend(['-t', kwargs['to_dir']])
+
+  if 'recursive' in kwargs:
+    options.append('-r')
+
+  options.extend(args)
+
+  return Shell('cp', *options)
+
+
+def RemoteCopyFrom(from_machine, from_path, to_path, username=None):
+  from_path = os.path.expanduser(from_path) + '/'
+  to_path = os.path.expanduser(to_path) + '/'
+
+  if username:
+    login = from_machine
+  else:
+    login = '%s@%s' % (username, from_machine)
+
+  return Shell('rsync', '-a', '%s:%s' % (login, from_path), to_path)
+
+
+def MakeSymlink(to_path, link_name):
+  return Shell('ln', '-f', '-s', '-T', to_path, link_name)
+
+
+def MakeDir(*dirs):
+  return Shell('mkdir', '-p', *dirs)
+
+
+def RmTree(*dirs):
+  return Shell('rm', '-r', '-f', *dirs)
+
+
+def UnTar(tar_file, dest_dir):
+  return Chain(
+      MakeDir(dest_dir),
+      Shell('tar', '-x', '-f', tar_file, '-C', dest_dir))
