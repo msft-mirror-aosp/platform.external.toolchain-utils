@@ -22,10 +22,10 @@ class ExperimentFactory(object):
     board = global_settings.GetField("board")
     remote = global_settings.GetField("remote")
     rerun_if_failed = global_settings.GetField("rerun_if_failed")
-    experiment = Experiment(experiment_name, board, remote, rerun_if_failed,
-                            working_directory, False)
+    chromeos_root = global_settings.GetField("chromeos_root")
 
     # Construct benchmarks.
+    benchmarks = []
     all_benchmark_settings = experiment_file.GetSettings("benchmark")
     for benchmark_settings in all_benchmark_settings:
       benchmark_name = benchmark_settings.name
@@ -37,17 +37,20 @@ class ExperimentFactory(object):
       outlier_range = benchmark_settings.GetField("outlier_range")
       benchmark = Benchmark(benchmark_name, autotest_name, autotest_args,
                             iterations, outlier_range)
-      experiment.AddBenchmark(benchmark)
+      benchmarks.append(benchmark)
 
     # Construct labels.
+    labels = []
     all_label_settings = experiment_file.GetSettings("label")
     for label_settings in all_label_settings:
       label_name = label_settings.name
       image = label_settings.GetField("chromeos_image")
       chromeos_root = label_settings.GetField("chromeos_root")
       label = Label(label_name, image, chromeos_root)
-      experiment.AddLabel(label)
+      labels.append(label)
 
-    experiment.GenerateBenchmarkRuns()
+    experiment = Experiment(experiment_name, board, remote, rerun_if_failed,
+                            working_directory, False, chromeos_root, labels,
+                            benchmarks)
 
     return experiment

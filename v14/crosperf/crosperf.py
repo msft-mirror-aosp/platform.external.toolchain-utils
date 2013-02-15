@@ -9,6 +9,7 @@ RUN: Run the benchmark on the device.
 TABLE: Display a table of performance results.
 """
 
+import atexit
 import optparse
 import os
 import sys
@@ -30,6 +31,10 @@ def Usage(reason):
   l.LogError(reason)
   parser.get_usage()
   sys.exit(1)
+
+
+def Cleanup(experiment):
+  experiment.Cleanup()
 
 
 def Main(argv):
@@ -54,13 +59,13 @@ def Main(argv):
   experiment_file = ExperimentFile(open(experiment_filename, "rb"))
   experiment = ExperimentFactory().GetExperiment(experiment_file,
                                                  working_directory)
+  atexit.register(Cleanup, experiment)
 
   if options.dry_run:
     runner = MockActionRunner(experiment)
   else:
     runner = ActionRunner(experiment)
   runner.RunAction(action)
-
 
 if __name__ == "__main__":
   Main(sys.argv)

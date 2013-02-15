@@ -15,7 +15,7 @@ class BenchmarkSettings(Settings):
     super(BenchmarkSettings, self).__init__(name, "benchmark")
     self.AddField(TextField("autotest_name"))
     self.AddField(TextField("autotest_args"))
-    self.AddField(IntegerField("iterations", default=3, overridable=True))
+    self.AddField(IntegerField("iterations", default=3, inheritable=True))
     self.AddField(FloatField("outlier_range", default=0.2))
 
 
@@ -23,7 +23,7 @@ class LabelSettings(Settings):
   def __init__(self, name):
     super(LabelSettings, self).__init__(name, "label")
     self.AddField(TextField("chromeos_image", required=True))
-    self.AddField(TextField("chromeos_root"))
+    self.AddField(TextField("chromeos_root", inheritable=True))
 
 
 class GlobalSettings(Settings):
@@ -34,6 +34,7 @@ class GlobalSettings(Settings):
     self.AddField(ListField("remote", required=True))
     self.AddField(BooleanField("rerun_if_failed"))
     self.AddField(IntegerField("iterations"))
+    self.AddField(TextField("chromeos_root"))
 
 
 class SettingsFactory(object):

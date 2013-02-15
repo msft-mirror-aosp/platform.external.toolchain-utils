@@ -16,13 +16,17 @@ class ActionRunner(object):
   def Run(self, experiment):
     status = ExperimentStatus(experiment)
     experiment.start()
-    while not experiment.complete:
-      border = "=============================="
-      self.l.LogOutput(border)
-      self.l.LogOutput(status.GetProgressString())
-      self.l.LogOutput(status.GetStatusString())
-      logger.GetLogger().LogOutput(border)
-      time.sleep(30)
+    try:
+      while not experiment.complete:
+        border = "=============================="
+        self.l.LogOutput(border)
+        self.l.LogOutput(status.GetProgressString())
+        self.l.LogOutput(status.GetStatusString())
+        logger.GetLogger().LogOutput(border)
+        experiment.join(30)
+    except KeyboardInterrupt:
+      self.l.LogError("Ctrl-c pressed. Cleaning up...")
+      experiment.terminate = True
 
   def Table(self, experiment):
     if experiment.success:

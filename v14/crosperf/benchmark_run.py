@@ -7,29 +7,37 @@ import os
 import re
 import threading
 import time
+import traceback
+from image_checksummer import ImageChecksummer
 from results_cache import Result
-from utils import command_executer
 from utils import logger
+
+STATUS_FAILED = "FAILED"
+STATUS_SUCCEEDED = "SUCCEEDED"
+STATUS_IMAGING = "IMAGING"
+STATUS_RUNNING = "RUNNING"
+STATUS_WAITING = "WAITING"
+STATUS_PENDING = "PENDING"
 
 
 class BenchmarkRun(threading.Thread):
-  def __init__(self, autotest_name, autotest_args, chromeos_root,
-               chromeos_image, board, iteration, image_checksum,
+  def __init__(self, name, autotest_name, autotest_args,
+               chromeos_root, chromeos_image, board, iteration,
                exact_remote, rerun, rerun_if_failed,
                outlier_range, machine_manager, cache, autotest_runner,
                perf_processor):
+    threading.Thread.__init__(self)
+    self.name = name
     self.autotest_name = autotest_name
     self.autotest_args = autotest_args
     self.chromeos_root = chromeos_root
     self.chromeos_image = chromeos_image
     self.board = board
     self.iteration = iteration
-    self.image_checksum = image_checksum
     self.results = {}
-    threading.Thread.__init__(self)
     self.terminate = False
     self.retval = None
-    self.status = "PENDING"
+    self.status = STATUS_PENDING
     self.run_completed = False
     self.exact_remote = exact_remote
     self.rerun = rerun
@@ -39,6 +47,8 @@ class BenchmarkRun(threading.Thread):
     self.cache = cache
     self.autotest_runner = autotest_runner
     self.perf_processor = perf_processor
+    self.machine = None
+    self.full_name = self.autotest_name
 
   def MeanExcludingOutliers(self, array, outlier_range):
     """Return the arithmetic mean excluding outliers."""
@@ -73,8 +83,9 @@ class BenchmarkRun(threading.Thread):
     return {}
 
   def GetLabel(self):
-    ret = "%s %s remote:%s" % (self.chromeos_image, self.autotest_name,
-                               self.remote)
+    ret = "%s %s" % (self.chromeos_image, self.autotest_name)
+    if self.machine:
+      ret += " machine: %s" % self.machine.name
     return ret
 
   def RunCached(self):
@@ -109,30 +120,27 @@ class BenchmarkRun(threading.Thread):
                                  "%s.%s" % (os.path.basename(__file__),
                                             self.name), True)
 
-    machine = None
     try:
-      machine = self.AcquireMachine()
-      if not machine:
-        raise Exception("Could not acquire machine.")
-      self.remote = machine.name
+      self.machine = self.AcquireMachine()
 
-      self.cache.Init(str(self.image_checksum), self.autotest_name,
+      self.cache.Init(self.chromeos_image,
+                      self.autotest_name,
                       self.iteration, self.autotest_args,
-                      machine.name, self.exact_remote, self._logger)
+                      self.machine.name, self.exact_remote, self._logger)
 
-      self.status = "WAITING"
+      self.status = STATUS_WAITING
 
       result = self.RunCached()
       if not result:
-        result = self.RunTest(machine)
+        result = self.RunTest(self.machine)
         cache_hit = False
       else:
         cache_hit = True
 
       if not result.retval:
-        self.status = "SUCCEEDED"
+        self.status = STATUS_SUCCEEDED
       else:
-        self.status = "FAILED"
+        self.status = STATUS_FAILED
 
       results_dir = self._GetResultsDir(result.out, self.chromeos_root)
       self.full_name = os.path.basename(results_dir)
@@ -144,17 +152,21 @@ class BenchmarkRun(threading.Thread):
                                     self.board, results_dir)
 
       return result.retval
+    except Exception, e:
+      self._logger.LogError("Benchmark run: '%s' failed: %s." % (self.name, e))
+      traceback.print_exc()
+      self.status = STATUS_FAILED
     finally:
-      if machine:
-        self._logger.LogOutput("Releasing machine: %s" % machine.name)
-        self.machine_manager.ReleaseMachine(machine)
-        self._logger.LogOutput("Released machine: %s" % machine.name)
+      if self.machine:
+        self._logger.LogOutput("Releasing machine: %s" % self.machine.name)
+        self.machine_manager.ReleaseMachine(self.machine)
+        self._logger.LogOutput("Released machine: %s" % self.machine.name)
 
   def AcquireMachine(self):
     while True:
       if self.terminate:
-        return None
-      machine = self.machine_manager.AcquireMachine(str(self.image_checksum))
+        raise Exception("Thread terminated while trying to acquire machine.")
+      machine = self.machine_manager.AcquireMachine(self.chromeos_image)
       if machine:
         self._logger.LogOutput("%s: Machine %s acquired at %s" %
                                (self.name,
@@ -167,17 +179,11 @@ class BenchmarkRun(threading.Thread):
     return machine
 
   def RunTest(self, machine):
-    if machine.checksum != str(self.image_checksum):
-      self.status = "IMAGING"
-      retval = self.machine_manager.ImageMachine(machine.name,
-                                                 self.chromeos_root,
-                                                 self.chromeos_image,
-                                                 self.board)
-      if retval:
-        raise Exception("Could not image machine: '%s'." % machine.name)
-      machine.checksum = str(self.image_checksum)
-      machine.image = self.chromeos_image
-    self.status = "RUNNING: %s" % self.autotest_name
+    self.status = STATUS_IMAGING
+    self.machine_manager.ImageMachine(machine,
+                                      self.chromeos_image,
+                                      self.board)
+    self.status = "%s %s" % (STATUS_RUNNING, self.autotest_name)
     [retval, out, err] = self.autotest_runner.Run(machine.name,
                                                   self.chromeos_root,
                                                   self.board,

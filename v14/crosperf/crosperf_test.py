@@ -6,6 +6,7 @@ import os
 import tempfile
 import unittest
 import crosperf
+from utils.file_utils import FileUtils
 
 
 EXPERIMENT_FILE_1 = """
@@ -35,4 +36,5 @@ class CrosPerfTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
+  FileUtils.Configure(True)
   unittest.main()

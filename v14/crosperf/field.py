@@ -6,12 +6,12 @@
 class Field(object):
   """Class representing a Field in an experiment file."""
 
-  def __init__(self, name, required, default, overridable):
+  def __init__(self, name, required, default, inheritable):
     self.name = name
     self.required = required
     self.assigned = False
     self._value = default
-    self.overridable = overridable
+    self.inheritable = inheritable
 
   def Set(self, value):
     if self.assigned:
@@ -31,40 +31,40 @@ class Field(object):
 
 
 class TextField(Field):
-  def __init__(self, name, required=False, default="", overridable=False):
-    super(TextField, self).__init__(name, required, default, overridable)
+  def __init__(self, name, required=False, default="", inheritable=False):
+    super(TextField, self).__init__(name, required, default, inheritable)
 
   def _Parse(self, value):
     return str(value)
 
 
 class BooleanField(Field):
-  def __init__(self, name, required=False, default=False, overridable=False):
-    super(BooleanField, self).__init__(name, required, default, overridable)
+  def __init__(self, name, required=False, default=False, inheritable=False):
+    super(BooleanField, self).__init__(name, required, default, inheritable)
 
   def _Parse(self, value):
     return bool(value)
 
 
 class IntegerField(Field):
-  def __init__(self, name, required=False, default=0, overridable=False):
-    super(IntegerField, self).__init__(name, required, default, overridable)
+  def __init__(self, name, required=False, default=0, inheritable=False):
+    super(IntegerField, self).__init__(name, required, default, inheritable)
 
   def _Parse(self, value):
     return int(value)
 
 
 class FloatField(Field):
-  def __init__(self, name, required=False, default=0, overridable=False):
-    super(FloatField, self).__init__(name, required, default, overridable)
+  def __init__(self, name, required=False, default=0, inheritable=False):
+    super(FloatField, self).__init__(name, required, default, inheritable)
 
   def _Parse(self, value):
     return float(value)
 
 
 class ListField(Field):
-  def __init__(self, name, required=False, default=[], overridable=False):
-    super(ListField, self).__init__(name, required, default, overridable)
+  def __init__(self, name, required=False, default=[], inheritable=False):
+    super(ListField, self).__init__(name, required, default, inheritable)
 
   def _Parse(self, value):
     return value.split()

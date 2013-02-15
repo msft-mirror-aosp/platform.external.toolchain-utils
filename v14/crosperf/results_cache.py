@@ -7,6 +7,7 @@ import glob
 import os
 import pickle
 import re
+from image_checksummer import ImageChecksummer
 from utils import command_executer
 from utils import logger
 
@@ -22,11 +23,11 @@ class Result(object):
 
 
 class ResultsCache(object):
-  def Init(self, image_checksum, autotest_name, iteration,
+  def Init(self, chromeos_image, autotest_name, iteration,
            autotest_args, remote, exact_remote, cache_logger=None):
-    self.image_checksum = image_checksum
+    self.chromeos_image = chromeos_image
     self.autotest_name = autotest_name
-    self.iteration = iteration,
+    self.iteration = iteration
     self.autotest_args = autotest_args,
     self.remote = remote
     self.exact_remote = exact_remote
@@ -37,8 +38,10 @@ class ResultsCache(object):
     self._ce = command_executer.GetCommandExecuter(self._logger)
 
   def GetCacheDir(self):
+    assert self.iteration == int(self.iteration)
     ret = ("%s %s %s" %
-           (self.image_checksum, self.autotest_name, self.iteration))
+           (ImageChecksummer().Checksum(self.chromeos_image),
+            self.autotest_name, self.iteration))
     if self.autotest_args:
       ret += " %s" % self.autotest_args
     if self.exact_remote:

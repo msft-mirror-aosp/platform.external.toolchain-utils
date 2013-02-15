@@ -20,7 +20,8 @@ class Logger(object):
     try:
       os.makedirs(logdir)
     except OSError:
-      print "Warning: Logs directory '%s' already exists." % logdir
+      pass
+      # print "Warning: Logs directory '%s' already exists." % logdir
 
     self.print_console = print_console
 
@@ -48,8 +49,8 @@ class Logger(object):
 
     # Try to pick the oldest file with the suffix and return that one.
     suffix = str(timestamps.index(min(timestamps)))
-    print ("Warning: Overwriting log file: %s" %
-           self._AddSuffix(basename, suffix))
+    # print ("Warning: Overwriting log file: %s" %
+    #       self._AddSuffix(basename, suffix))
     return suffix
 
   def _CreateLogFileHandles(self, basename):

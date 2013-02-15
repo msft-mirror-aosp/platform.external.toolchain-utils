@@ -50,17 +50,17 @@ class ExperimentStatus(object):
 
     status_strings = []
     for key, val in status_bins.items():
-      status_strings.append("%s: %s" % (key, self._GetNamesAndIterations(val)))
+      status_strings.append("%s: %s" %
+                            (key, self._GetNamesAndIterations(val)))
     result = "Thread Status:\n%s" % "\n".join(status_strings)
 
     # Add the machine manager status.
-    result += self.experiment.machine_manager.AsString() + "\n"
+    result += "\n" + self.experiment.machine_manager.AsString() + "\n"
 
     return result
 
   def _GetNamesAndIterations(self, benchmark_runs):
     strings = []
     for benchmark_run in benchmark_runs:
-      strings.append("%s:%s" % (benchmark_run.name,
-                                benchmark_run.iteration))
-    return " %s (%s)" % (len(strings), " ".join(strings))
+      strings.append("'%s'" % benchmark_run.name)
+    return " %s (%s)" % (len(strings), ", ".join(strings))

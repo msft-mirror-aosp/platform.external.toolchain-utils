@@ -46,9 +46,9 @@ class Settings(object):
   def Inherit(self):
     """Inherit any unset values from the parent settings."""
     for name in self.fields:
-      if (not self.fields[name].assigned and self.fields[name].required
+      if (not self.fields[name].assigned and self.fields[name].inheritable
           and self.parent):
-        self.fields[name].Set(self.parent.GetFieldValue(name))
+        self.fields[name].Set(self.parent.GetField(name))
 
   def Validate(self):
     """Check that all required fields have been set."""

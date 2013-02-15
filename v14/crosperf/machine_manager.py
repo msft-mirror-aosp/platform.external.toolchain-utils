@@ -1,6 +1,7 @@
 import sys
 import threading
 import time
+from image_checksummer import ImageChecksummer
 import image_chromeos
 import lock_machine
 from utils import command_executer
@@ -29,20 +30,25 @@ class CrosMachine(object):
 
 
 class MachineManager(object):
-  _lock = threading.RLock()
-  _all_machines = []
-  _machines = []
-  image_lock = threading.Lock()
-  num_reimages = 0
-  chromeos_root = None
-  no_lock = False
+  def __init__(self, chromeos_root):
+    self._lock = threading.RLock()
+    self._all_machines = []
+    self._machines = []
+    self.image_lock = threading.Lock()
+    self.num_reimages = 0
+    self.chromeos_root = None
+    self.no_lock = False
+    self.initialized = False
+    self.chromeos_root = chromeos_root
 
-  def ImageMachine(self, machine_name, chromeos_root, chromeos_image,
-                   board=None):
+  def ImageMachine(self, machine, chromeos_image, board=None):
+    checksum = ImageChecksummer().Checksum(chromeos_image)
+    if machine.checksum == checksum:
+      return
     image_args = [image_chromeos.__file__,
-                  "--chromeos_root=%s" % chromeos_root,
+                  "--chromeos_root=%s" % self.chromeos_root,
                   "--image=%s" % chromeos_image,
-                  "--remote=%s" % machine_name]
+                  "--remote=%s" % machine.name]
     if board:
       image_args.append("--board=%s" % board)
 
@@ -52,6 +58,10 @@ class MachineManager(object):
     with self.image_lock:
       retval = ce.RunCommand(" ".join(["python"] + image_args))
       self.num_reimages += 1
+      if retval:
+        raise Exception("Could not image machine: '%s'." % machine.name)
+      machine.checksum = checksum
+      machine.image = chromeos_image
 
     return retval
 
@@ -66,6 +76,7 @@ class MachineManager(object):
       else:
         locked = lock_machine.Machine(cros_machine.name).Lock(True, sys.argv[0])
       if locked:
+        self._machines.append(cros_machine)
         ce = command_executer.GetCommandExecuter()
         command = "cat %s" % CHECKSUM_FILE
         ret, out, _ = ce.CrosRunCommand(
@@ -73,10 +84,8 @@ class MachineManager(object):
             machine=cros_machine.name)
         if ret == 0:
           cros_machine.checksum = out.strip()
-        self._machines.append(cros_machine)
       else:
-        logger.GetLogger().LogOutput("Warning: Couldn't lock: %s" %
-                                     cros_machine.name)
+        logger.GetLogger().LogOutput("Couldn't lock: %s" % cros_machine.name)
 
   # This is called from single threaded mode.
   def AddMachine(self, machine_name):
@@ -85,14 +94,20 @@ class MachineManager(object):
         assert m.name != machine_name, "Tried to double-add %s" % machine_name
       self._all_machines.append(CrosMachine(machine_name))
 
-  def AcquireMachine(self, image_checksum):
+  def AcquireMachine(self, chromeos_image):
+    image_checksum = ImageChecksummer().Checksum(chromeos_image)
     with self._lock:
       # Lazily external lock machines
-      if not self._machines:
+      if not self.initialized:
         for m in self._all_machines:
           self._TryToLockMachine(m)
-      assert self._machines, (
-          "Could not lock any machine in %s" % self._all_machines)
+        self.initialized = True
+      if not self._machines:
+        machine_names = []
+        for machine in self._all_machines:
+          machine_names.append(machine.name)
+        raise Exception("Could not acquire any of the following machines: '%s'"
+                        % ", ".join(machine_names))
 
 ###      for m in self._machines:
 ###        if (m.locked and time.time() - m.released_time < 10 and
@@ -125,13 +140,15 @@ class MachineManager(object):
           m.status = "Available"
           break
 
-  def __del__(self):
+  def Cleanup(self):
     with self._lock:
       # Unlock all machines.
       for m in self._machines:
         if not self.no_lock:
-          assert lock_machine.Machine(m.name).Unlock(True) == True, (
-              "Couldn't unlock machine: %s" % m.name)
+          res = lock_machine.Machine(m.name).Unlock(True)
+          if not res:
+            logger.GetLogger().LogError("Could not unlock machine: '%s'."
+                                        % m.name)
 
   def __str__(self):
     with self._lock:
@@ -170,14 +187,13 @@ class MockMachineManager(object):
   def __init__(self):
     self.machines = []
 
-  def ImageMachine(self, machine_name, chromeos_root, chromeos_image,
-                   board=None):
+  def ImageMachine(self, machine_name, chromeos_image, board=None):
     return 0
 
   def AddMachine(self, machine_name):
     self.machines.append(CrosMachine(machine_name))
 
-  def AcquireMachine(self, image_checksum):
+  def AcquireMachine(self, chromeos_image):
     for machine in self.machines:
       if not machine.locked:
         machine.locked = True

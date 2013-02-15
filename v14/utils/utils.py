@@ -72,8 +72,8 @@ def ExecuteCommandInChroot(chromeos_root, command, return_output=False):
   command_file = "in_chroot_cmd.sh"
   command_file_path = os.path.join(chromeos_root, "src/scripts", command_file)
   with open(command_file_path, "w") as f:
-    print >>f, "#!/bin/bash"
-    print >>f, command
+    print >> f, "#!/bin/bash"
+    print >> f, command
   os.chmod(command_file_path, 0777)
   with WorkingDirectory(chromeos_root):
     command = "cros_sdk -- ./%s" % command_file
@@ -109,3 +109,4 @@ def WorkingDirectory(new_dir):
     msg = "cd %s" % old_dir
     logger.GetLogger().LogCmd(msg)
   os.chdir(old_dir)
+

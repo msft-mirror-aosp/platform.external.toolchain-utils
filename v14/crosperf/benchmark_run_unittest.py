@@ -16,9 +16,20 @@ class BenchmarkRunTest(unittest.TestCase):
   def testDryRun(self):
     m = MockMachineManager()
     m.AddMachine("chromeos-alex1")
-    b = BenchmarkRun("PageCycler", "", "/tmp/test", "/tmp/test/image",
-                     "x86-alex", 0, "aaaaa", False, False, False, 0.2, m,
-                     MockResultsCache(), MockAutotestRunner(),
+    b = BenchmarkRun("test run",
+                     "PageCycler",
+                     "",
+                     "/tmp/test",
+                     "/tmp/test/image",
+                     "x86-alex",
+                     1,
+                     False,
+                     False,
+                     False,
+                     0.2,
+                     m,
+                     MockResultsCache(),
+                     MockAutotestRunner(),
                      MockPerfProcessor())
     b.start()
 
