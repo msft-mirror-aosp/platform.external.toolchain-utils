@@ -9,11 +9,8 @@ MachineManagerTest tests MachineManager.
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
-import sys
 import server
 import unittest
-from utils import utils
-import xmlrpclib
 
 
 class ServerTest(unittest.TestCase):
@@ -28,4 +25,3 @@ class ServerTest(unittest.TestCase):
 
 if __name__ == "__main__":
   unittest.main()
-

@@ -12,10 +12,10 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import csv
 import threading
+import os.path
 from automation.common import machine
-from utils import utils
 
-DEFAULT_MACHINES_FILE = "%s/test_pool.csv" % utils.GetRoot(__file__)[0]
+DEFAULT_MACHINES_FILE = os.path.join(os.path.dirname(__file__), "test_pool.csv")
 
 
 class MachineManager(object):

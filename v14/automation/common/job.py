@@ -9,8 +9,8 @@ __author__ = "raymes@google.com (Raymes Khoury)"
 
 
 import os.path
+import re
 import time
-from utils import utils
 
 STATUS_NOT_EXECUTED = "STATUS_NOT_EXECUTED"
 STATUS_SETUP = "STATUS_SETUP"
@@ -85,10 +85,20 @@ class Job(object):
     res.extend(["%d" % parent.id for parent in self.parents])
     res.append("Machines:")
     res.extend(["%s" % machine for machine in self.machines])
-    res.append(utils.FormatCommands(self.command))
+    res.append(self.PrettyFormatCommand())
     res.append(self.status)
     res.append(self.GetTimeline())
     return "\n".join(res)
+
+  def PrettyFormatCommand(self):
+    # TODO(kbaclawski): This method doesn't belong here, but rather to
+    # non existing Command class. If one is created then PrettyFormatCommand
+    # shall become its method.
+    output = str(self.command)
+    output = re.sub("&&", "&&\n", output)
+    output = re.sub(";", ";\n", output)
+    output = re.sub("\n+\s*", "\n", output)
+    return output
 
   def GetTotalTime(self):
     if not self.status_events:

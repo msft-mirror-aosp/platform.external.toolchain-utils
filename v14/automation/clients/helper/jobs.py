@@ -9,7 +9,6 @@ from automation.common import command as cmd
 from automation.common import job
 from automation.common import machine
 from utils import logger
-from utils import utils
 from automation.clients.helper import perforce
 
 DEPOT2_DIR = "//depot2/"
@@ -174,7 +173,7 @@ def GetChromeOSRootDir(version, use_minilayout=False):
     logger.GetLogger().LogFatalIf(not os.path.islink(location),
                                   "Symlink %s does not exist." % location)
     location_expanded = os.path.realpath(location)
-    version = utils.GetRoot(location_expanded)[1]
+    version = os.path.basename(location_expanded)
 
   if version in ["top", "latest"] or re.match(version_re, version):
     scripts = ScriptsFactory(CHROMEOS_ROOT, P4_VERSION_DIR)

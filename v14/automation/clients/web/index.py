@@ -11,7 +11,6 @@ import xmlrpclib
 
 from automation.common import job as job_const
 from utils import html_tools
-from utils import utils
 
 DEBUG = True
 
@@ -101,7 +100,7 @@ def PrintJobRow(job):
   print "<tr>"
   print html_tools.GetTableCell(job.id)
   print html_tools.GetTableCell(job.label)
-  print html_tools.GetTableCell(utils.FormatCommands(job.command))
+  print html_tools.GetTableCell(job.PrettyFormatCommand())
   machines = " ".join([machine.name for machine in job.machines])
   print html_tools.GetTableCell(machines)
   print html_tools.GetTableCell(job.work_dir)

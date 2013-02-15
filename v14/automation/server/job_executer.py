@@ -10,7 +10,6 @@ from automation.common import job
 import report_generator
 from utils import command_executer
 from utils import logger
-from utils import utils
 
 WORKDIR_PREFIX = "/usr/local/google/tmp/automation"
 
@@ -91,7 +90,7 @@ class JobExecuter(threading.Thread):
     for dependency in self.job.folder_dependencies:
       to_folder = os.path.join(self.job.work_dir, dependency.dest)
       from_folder = os.path.join(dependency.job.work_dir, dependency.src)
-      to_folder_parent = utils.GetRoot(to_folder)[0]
+      to_folder_parent = os.path.dirname(os.path.realpath(to_folder))
 
       command = "mkdir -p %s" % to_folder_parent
 
