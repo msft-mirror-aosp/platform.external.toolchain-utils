@@ -190,8 +190,17 @@ def MakeSymlink(to_path, link_name):
   return Shell('ln', '-f', '-s', '-T', to_path, link_name)
 
 
-def MakeDir(*dirs):
-  return Shell('mkdir', '-p', *dirs)
+def MakeDir(*dirs, **kwargs):
+  options = ['-p']
+
+  mode = kwargs.get('mode', None)
+
+  if mode:
+    options.extend(['-m', str(mode)])
+
+  options.extend(dirs)
+
+  return Shell('mkdir', *options)
 
 
 def RmTree(*dirs):
