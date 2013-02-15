@@ -165,3 +165,25 @@ class MachineManager(object):
         table.append(machine_string)
       return "Machine Status:\n%s" % "\n".join(table)
 
+
+class MockMachineManager(object):
+  def __init__(self):
+    self.machines = []
+
+  def ImageMachine(self, machine_name, chromeos_root, chromeos_image,
+                   board=None):
+    return 0
+
+  def AddMachine(self, machine_name):
+    self.machines.append(CrosMachine(machine_name))
+
+  def AcquireMachine(self, image_checksum):
+    for machine in self.machines:
+      if not machine.locked:
+        machine.locked = True
+        return machine
+    return None
+
+  def ReleaseMachine(self, machine):
+    machine.locked = False
+

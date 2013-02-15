@@ -2,19 +2,23 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+from autotest_runner import AutotestRunner
 from benchmark_run import BenchmarkRun
 from machine_manager import MachineManager
-
+from perf_processor import PerfProcessor
+from results_cache import ResultsCache
 
 class Experiment(object):
   """Class representing an Experiment to be run."""
 
-  def __init__(self, name, board, remote, rerun_if_failed, working_directory):
+  def __init__(self, name, board, remote, rerun_if_failed, working_directory,
+               parallel):
     self.name = name
     self.board = board
     self.rerun_if_failed = rerun_if_failed
     self.working_directory = working_directory
     self.remote = remote
+    self.parallel = parallel
 
     self.labels = []
     self.benchmarks = []
@@ -47,7 +51,9 @@ class Experiment(object):
                                      False,
                                      False,
                                      benchmark.outlier_range,
-                                     self.machine_manager)
+                                     self.machine_manager,
+                                     ResultsCache(), AutotestRunner(),
+                                     PerfProcessor())
 
         self.benchmark_runs.append(benchmark_run)
 

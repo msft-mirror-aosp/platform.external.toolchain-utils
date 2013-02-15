@@ -23,7 +23,7 @@ class ExperimentFactory(object):
     remote = global_settings.GetField("remote")
     rerun_if_failed = global_settings.GetField("rerun_if_failed")
     experiment = Experiment(experiment_name, board, remote, rerun_if_failed,
-                            working_directory)
+                            working_directory, False)
 
     # Construct benchmarks.
     all_benchmark_settings = experiment_file.GetSettings("benchmark")
