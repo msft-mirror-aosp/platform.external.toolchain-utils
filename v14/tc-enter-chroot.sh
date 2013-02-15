@@ -45,15 +45,16 @@ FLAGS_CHROMEOS_DIR=""
 for arg in "$@"
 do
   PARSED=0
-  value=${arg##--toolchain_root=}
-  if [[ $value != $arg ]]
+  key="`echo "$arg" | cut -d '=' -f 1`"
+  value="`echo "$arg" | cut -d '=' -f 2`"
+
+  if [[ "$key" == "--toolchain_root" ]]
   then
     let PARSED++
     FLAGS_TC_ROOT=$value
   fi
 
-  value=${arg##--chromeos_root=}
-  if [[ $value != $arg ]]
+  if [[ "$key" == "--chromeos_root" ]]
   then
     FLAGS_CHROMEOS_DIR=$value
     let PARSED++
