@@ -84,7 +84,7 @@ class CommandsFactory(object):
         '--keep-work-dir',
         '--build-type=release',
         '--work-dir=%s' % self.buildit_work_dir_path,
-        '--results-dir=%s' % '$JOB_HOME/packages',
+        '--results-dir=%s' % '$JOB_TMP/results/packages',
         '--force-release=$(< %s)' % os.path.join(
             '$JOB_TMP', self.CHECKOUT_DIR, 'CLNUM'),
         path='.')
@@ -98,7 +98,7 @@ class CommandsFactory(object):
                                        'dejagnu-output')
 
     dejagnu_flags = ['--outdir=%s' % dejagnu_output_path,
-                     '--target-board=%s' % board]
+                     '--target_board=%s' % board]
 
     site_exp_file = os.path.join('/google/src/head/depot/google3',
                                  'experimental/users/kbaclawski',
@@ -107,7 +107,7 @@ class CommandsFactory(object):
     gcc_build_dir_path = os.path.join(
         target, 'rpmbuild/BUILD/crosstool*-%s-0.0/build-gcc' % target)
 
-    return cmd.Wrapper(
+    run_dejagnu = cmd.Wrapper(
         cmd.Chain(
           jobs.MakeDir(dejagnu_output_path),
           cmd.Shell('make', 'check', '-k',
@@ -116,3 +116,19 @@ class CommandsFactory(object):
                     'DEJAGNU="%s"' % site_exp_file,
                     ignore_error=True)),
         cwd=os.path.join(self.buildit_work_dir_path, gcc_build_dir_path))
+
+    gen_report = cmd.Wrapper(
+        cmd.Chain(
+            cmd.Shell('cp', '-r',
+                      dejagnu_output_path + '/',
+                      '$JOB_TMP/results/'),
+            cmd.Shell('dejagnu.sh', 'summary', '-B', target,
+                      os.path.join(dejagnu_output_path, 'gcc.sum'),
+                      os.path.join(dejagnu_output_path, 'g++.sum'),
+                      path='.'),
+            cmd.Shell('dejagnu.sh', 'html-report', '-B', target,
+                      '$JOB_TMP/results/report.html',
+                      path='.')),
+        cwd='$HOME/automation/clients/report')
+
+    return cmd.Chain(run_dejagnu, gen_report)
