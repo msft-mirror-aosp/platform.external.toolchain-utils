@@ -5,7 +5,9 @@
 
 __author__ = 'kbaclawski@google.com (Krystian Baclawski)'
 
+from collections import namedtuple
 import glob
+import gzip
 import os.path
 import pickle
 import time
@@ -18,14 +20,17 @@ from django.template import Context
 from django.views import static
 
 
+Link = namedtuple('Link', 'href name')
+
+
 def GetServerConnection():
   return xmlrpclib.Server('http://localhost:8000')
 
 
 def MakeDefaultContext(*args):
   context = Context({'links': [
-      {'href': '/job-group', 'name': 'Job Groups'},
-      {'href': '/machine', 'name': 'Machines'}]})
+      Link('/job-group', 'Job Groups'),
+      Link('/machine', 'Machines')]})
 
   for arg in args:
     context.update(arg)
@@ -36,30 +41,28 @@ def MakeDefaultContext(*args):
 class JobInfo(object):
   def __init__(self, job_id):
     self._job = pickle.loads(GetServerConnection().GetJob(job_id))
-    self._log_name = {'out': 'Output', 'cmd': 'Commands', 'err': 'Error'}
 
   def GetAttributes(self):
     job = self._job
 
-    group = {'href': '/job-group/%d' % job.group.id, 'name': job.group.label}
+    group = [Link('/job-group/%d' % job.group.id, job.group.label)]
 
-    predecessors = [{'href': '/job/%d' % pred.id, 'name': pred.label}
+    predecessors = [Link('/job/%d' % pred.id, pred.label)
                     for pred in job.predecessors]
 
-    successors = [{'href': '/job/%d' % succ.id, 'name': succ.label}
+    successors = [Link('/job/%d' % succ.id, succ.label)
                   for succ in job.successors]
 
-    machines = [{'href': '/machine/%s' % mach.hostname, 'name': mach.hostname}
+    machines = [Link('/machine/%s' % mach.hostname, mach.hostname)
                 for mach in job.machines]
 
-    logs = [{'href': '/job/%d/log/%s' % (job.id, name), 'name': '%s Log' % desc}
-            for name, desc in sorted(self._log_name.items())]
+    logs = [Link('/job/%d/log' % job.id, 'Log')]
 
     commands = enumerate(job.PrettyFormatCommand().split('\n'), start=1)
 
     return {'text': [('Label', job.label),
                      ('Directory', job.work_dir)],
-            'link': [('Group', [group]),
+            'link': [('Group', group),
                      ('Predecessors', predecessors),
                      ('Successors', successors),
                      ('Machines', machines),
@@ -73,20 +76,31 @@ class JobInfo(object):
              'elapsed': evlog.GetTimeElapsedRounded()}
             for evlog in self._job.timeline.GetTransitionEventHistory()]
 
-  def GetLog(self, log_type):
+  def GetLog(self):
     log_path = os.path.join(
-        self._job.logs_dir, '%s.%s' % (self._job.log_filename_prefix, log_type))
+        self._job.logs_dir, '%s.gz' % self._job.log_filename_prefix)
 
     try:
-      with file(log_path, 'r') as log:
-        return enumerate(log.readlines(), start=1)
+      log = gzip.open(log_path, 'r')
     except IOError:
-      return []
+      content = []
+    else:
+      # There's a good chance that file is not closed yet, so EOF handling
+      # function and CRC calculation will fail, thus we need to monkey patch the
+      # _read_eof method.
+      log._read_eof = lambda: None
 
-  def GetLogName(self, log_type):
-    assert log_type in ['out', 'cmd', 'err']
+      def SplitLine(line):
+        prefix, msg = line.split(': ', 1)
+        datetime, stream = prefix.rsplit(' ', 1)
 
-    return self._log_name[log_type]
+        return datetime, stream, msg
+
+      content = map(SplitLine, log.readlines())
+    finally:
+      log.close()
+
+    return content
 
 
 class JobGroupInfo(object):
@@ -97,8 +111,7 @@ class JobGroupInfo(object):
   def GetAttributes(self):
     group = self._job_group
 
-    home_dir = [{'href': '/job-group/%d/files/' % group.id,
-                 'name': group.home_dir}]
+    home_dir = [Link('/job-group/%d/files/' % group.id, group.home_dir)]
 
     return {'text': [('Label', group.label),
                      ('Time submitted', time.ctime(group.time_submitted)),
@@ -180,13 +193,12 @@ def JobPageHandler(request, job_id):
   return render_to_response('job.html', ctx)
 
 
-def LogPageHandler(request, job_id, log_type):
+def LogPageHandler(request, job_id):
   job = JobInfo(int(job_id))
 
   ctx = MakeDefaultContext({
       'job_id': job_id,
-      'log_name': job.GetLogName(log_type),
-      'log_lines': job.GetLog(log_type)})
+      'log_lines': job.GetLog()})
 
   return render_to_response('job_log.html', ctx)
 

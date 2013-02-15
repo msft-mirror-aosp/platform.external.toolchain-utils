@@ -12,7 +12,7 @@ urlpatterns = patterns(
     'dashboard',
     (r'^job-group$', 'JobGroupListPageHandler'),
     (r'^machine$', 'MachineListPageHandler'),
-    (r'^job/(?P<job_id>\d+)/log/(?P<log_type>\w+)$', 'LogPageHandler'),
+    (r'^job/(?P<job_id>\d+)/log$', 'LogPageHandler'),
     (r'^job/(?P<job_id>\d+)$', 'JobPageHandler'),
     (r'^job-group/(?P<job_group_id>\d+)/files/(?P<path>.*)$',
      'JobGroupFilesPageHandler'),
