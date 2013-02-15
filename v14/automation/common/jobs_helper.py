@@ -75,9 +75,6 @@ def GetWeeklyChromeOSLocation():
 def GetQuarterlyChromeOSLocation():
   return "/home/" + getpass.getuser() + "/www/chromeos_checkout/quarterly"
 
-def GetFinalCommand():
-  return "&& pwd && uname -a && echo done"
-
 def GetInitialCommand():
   return "pwd && uname -a"
 
@@ -240,11 +237,10 @@ def CreateUpdateJob(chromeos_version,
 ###              "/chromeos." + dirname)
 ###  command += (" && ln -fs -T chromeos." + dirname + " " +
 ###              location + "/" + chromeos_version)
-  command += (" && rsync -a chromeos/build/ " + location +
+  command += (" && rsync -r chromeos/build/ " + location +
               "/chormeos." + dirname + ".build")
   command += (" && ln -fs -T chromeos." + dirname + ".build " +
               location + "/" + chromeos_version + ".build")
-  command += GetFinalCommand()
   to_return = CreateLinuxJob(command)
   return to_return
 

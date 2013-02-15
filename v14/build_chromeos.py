@@ -79,6 +79,8 @@ def Main(argv):
   parser = optparse.OptionParser()
   parser.add_option("--chromeos_root", dest="chromeos_root",
                     help="Target directory for ChromeOS installation.")
+  parser.add_option("--toolchain_root", dest="toolchain_root",
+                    help="The gcctools directory of your P4 checkout.")
   parser.add_option("--clobber_chroot", dest="clobber_chroot",
                     action="store_true", help=
                     "Delete the chroot and start fresh", default=False)
@@ -131,9 +133,14 @@ def Main(argv):
       force = "--force"
     # Run build_tc.py from binary package
     rootdir = utils.GetRoot(argv[0])[0]
+    ret = cmd_executer.RunCommand(rootdir + "/build_tc.py --chromeos_root=%s "
+                                  "--toolchain_root=%s --board=%s -B"
+                                  % (options.chromeos_root,
+                                     options.toolchain_root, options.board))
+    utils.AssertTrue(ret == 0, "build_tc.py failed")
     version_number = utils.GetRoot(rootdir)[1]
     pkgdir = "/usr/local/toolchain_root/" + version_number + "/output/pkgs"
-    ret = ExecuteCommandInChroot(options.chromeos_root, None,
+    ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
                                  "PKGDIR=%s ./setup_board --board=%s "
                                  " --gcc_version=9999 "
                                  " --binutils_version=9999 "
@@ -144,7 +151,7 @@ def Main(argv):
                                  "because it already exists")
 
   # Build packages
-  ret = ExecuteCommandInChroot(options.chromeos_root, None,
+  ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
                                "CFLAGS='%s' CXXFLAGS='%s' LDFLAGS='%s' "
                                "CHROME_ORIGIN=SERVER_SOURCE "
                                "./build_packages --withdev --nousepkg "
@@ -155,13 +162,13 @@ def Main(argv):
   utils.AssertTrue(ret == 0, "build_packages failed")
 
   # Build image
-  ret = ExecuteCommandInChroot(options.chromeos_root, None,
+  ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
                                "./build_image --yes --board=%s" % options.board)
 
   utils.AssertTrue(ret == 0, "build_image failed")
 
   # Mod image for test
-  ret = ExecuteCommandInChroot(options.chromeos_root, None,
+  ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
                                "./mod_image_for_test.sh --yes --board=%s"
                                % options.board)
 
