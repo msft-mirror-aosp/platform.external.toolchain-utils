@@ -35,14 +35,15 @@ def Main():
   parser = optparse.OptionParser()
   parser.add_option("--chromeos_root", dest="chromeos_root",
                     help="Target directory for ChromeOS installation.")
-  parser.add_option("--toolchain_root", dest="toolchain_root",
-                    help="The gcctools directory of your P4 checkout.")
   parser.add_option("--version", dest="version")
   parser.add_option("--cflags", dest="cflags",
+                    default="",
                     help="CFLAGS for the ChromeOS packages")
   parser.add_option("--cxxflags", dest="cxxflags",
+                    default="",
                     help="CXXFLAGS for the ChromeOS packages")
   parser.add_option("--ldflags", dest="ldflags",
+                    default="",
                     help="LDFLAGS for the ChromeOS packages")
   parser.add_option("--board", dest="board",
                     help="ChromeOS target board, e.g. x86-generic")
@@ -55,18 +56,6 @@ def Main():
   if options.board is None:
     Usage(parser, "--board must be set")
 
-    if options.toolchain_root is not None:
-      logger.GetLogger().LogOutput("Installing the toolchain.")
-      rootdir = rootdir = utils.GetRoot(sys.argv[0])[0]
-      ret = cmd_executer.RunCommand(rootdir + "/build_tc.py --chromeos_root=%s "
-                                    "--toolchain_root=%s --board=%s -B"
-                                    % (options.chromeos_root,
-                                       options.toolchain_root, options.board))
-      utils.AssertTrue(ret == 0, "build_tc.py failed")
-    else:
-      logger.GetLogger().LogOutput("--toolchain_root not given, "
-                                   "so just using the existing toolchain")
-
   if options.version is None:
     logger.GetLogger().LogOutput("No Chrome version given so "
                                  "using the default checked in version.")
@@ -76,7 +65,7 @@ def Main():
 
   # Emerge the browser
   ret = (build_chromeos.
-         ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
+         ExecuteCommandInChroot(options.chromeos_root, None,
                                 "CHROME_ORIGIN=SERVER_SOURCE %s "
                                 "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
                                 "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
@@ -90,14 +79,14 @@ def Main():
 
   # Build image
   ret = (build_chromeos.
-         ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
+         ExecuteCommandInChroot(options.chromeos_root, None,
                                 "./build_image --yes --board=%s" % options.board))
 
   utils.AssertTrue(ret == 0, "build_image failed")
 
   # Mod image for test
   ret = (build_chromeos.
-         ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
+         ExecuteCommandInChroot(options.chromeos_root, None,
                                 "./mod_image_for_test.sh --board=%s"
                                 % options.board))
 
