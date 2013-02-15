@@ -44,10 +44,7 @@ class JobExecuter(threading.Thread):
         output_string = ("Job %s was killed"
                          % str(self.job.GetID()))
       self.job_logger.LogError(error_string)
-      logger.GetLogger().LogError(error_string)
-
       self.job_logger.LogOutput(output_string)
-      logger.GetLogger().LogOutput(output_string)
 
       self.job.SetStatus(job.STATUS_FAILED)
       for listener in self.listeners:
@@ -79,7 +76,7 @@ class JobExecuter(threading.Thread):
                                               self.machines[0].username,
                                               command_terminator=ct)
     if rm_success != 0:
-      logger.GetLogger().LogError("Cleanup workdir failed.");
+      self.job_logger.LogError("Cleanup workdir failed.");
     return rm_success
 
   def CleanUpHomeDir(self, ct=None):
@@ -87,7 +84,7 @@ class JobExecuter(threading.Thread):
                                               self.job.GetHomeDir(),
                                               False, command_terminator=ct)
     if rm_success != 0:
-      logger.GetLogger().LogError("Cleanup homedir failed.");
+      self.job_logger.LogError("Cleanup homedir failed.");
     return rm_success
 
   def run(self):
@@ -96,7 +93,7 @@ class JobExecuter(threading.Thread):
     primary_machine = self.machines[0]
     self.job.SetMachines(self.machines)
 
-    logger.GetLogger().LogOutput("Executing job with ID '%s' on machine '%s' "
+    self.job_logger.LogOutput("Executing job with ID '%s' on machine '%s' "
                                  "in directory '%s'" %
                                  (self.job.GetID(), primary_machine.name,
                                   self.job.GetWorkDir()))
@@ -166,7 +163,7 @@ class JobExecuter(threading.Thread):
     if self._IsJobFailed(command_success,
                          "Command failed to execute: '%s'." % command):
       return
-    
+
     # Copy test results back to directory
     to_folder = self.job.GetHomeDir()
     from_folder = self.job.GetTestResultsDirSrc()
@@ -184,22 +181,22 @@ class JobExecuter(threading.Thread):
       results_filename = self.job.GetTestResultsFile()
       baseline_filename = self.job.GetBaselineFile()
       if not baseline_filename:
-        logger.GetLogger().LogWarning("Baseline not specified.")
+        self.job_logger.LogWarning("Baseline not specified.")
       else:
         report = report_generator.GenerateResultsReport(baseline_filename,
                                                         results_filename)
     except StandardError, e:
-      logger.GetLogger().LogWarning("Couldn't generate report")
-    
+      self.job_logger.LogWarning("Couldn't generate report")
+
     if report:
       try:
         report_file = open(self.job.GetTestReportFile(), "w")
         report_file.write(report.GetReport())
-        
+
         summary_file = open(self.job.GetTestReportSummaryFile(), "w")
         summary_file.write(report.GetSummary())
       except IOError, e:
-        logger.GetLogger().LogWarning("Could not write results report")
+        self.job_logger.LogWarning("Could not write results report")
       finally:
         if report_file:
           report_file.close()
