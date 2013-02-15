@@ -62,6 +62,8 @@ def Main():
   f.close()
   target = target.strip()
   features = "noclean userfetch userpriv usersandbox"
+  if options.incremental is not None and options.incremental:
+    features += " keepwork"
   env = CreateEnvVarString(" FEATURES", features)
   env += CreateEnvVarString(" PORTAGE_USERNAME", getpass.getuser())
   version_number = utils.GetRoot(rootdir)[1]
@@ -101,8 +103,6 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
   gcc_version = "9999"
   libc_version = "2.10.1-r1"
   kernel_version = "2.6.30-r1"
-  if incremental_component is not None and incremental_component:
-    env += " FEATURES+=" + EscapeQuoteString("keepwork")
 
   if uninstall == True:
     tflag = " -C "
