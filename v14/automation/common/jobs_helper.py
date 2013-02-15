@@ -1,6 +1,5 @@
 import job
-from automation.machine_description import MachineDescription
-from automation.machine_filters import *
+from automation.common import machine_description
 
 
 def _GetP4ClientSpec(client_name, p4_paths):

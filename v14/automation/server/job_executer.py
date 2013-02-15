@@ -1,5 +1,5 @@
 import threading
-import jobs.job
+from automation.common import job
 import machine_manager
 from utils import utils
 from utils import command_executer
@@ -17,7 +17,7 @@ class JobExecuter(threading.Thread):
 
   def run(self):
     # Mark as executing and execute
-    self.job.SetStatus(jobs.job.STATUS_EXECUTING)
+    self.job.SetStatus(job.STATUS_EXECUTING)
 
     # Do execute here
     print "EXECUTING: " + self.job.GetCommand()
@@ -79,7 +79,7 @@ class JobExecuter(threading.Thread):
 
     print "Completed job"
     # Mark as complete
-    self.job.SetStatus(jobs.job.STATUS_COMPLETED)
+    self.job.SetStatus(job.STATUS_COMPLETED)
     self.job_manager.NotifyJobComplete(self.job)
 
 

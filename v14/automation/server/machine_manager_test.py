@@ -10,14 +10,15 @@ MachineManagerTest tests MachineManager.
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
 
-import machine_description
+from automation.common import machine_description
 import machine_manager
 import unittest
+from utils import utils
 
 
 class MachineManagerTest(unittest.TestCase):
   def setUp(self):
-    self.machine_manager = machine_manager.MachineManager("test_pool.csv")
+    self.machine_manager = machine_manager.MachineManager()
 
 
   def testPrint(self):

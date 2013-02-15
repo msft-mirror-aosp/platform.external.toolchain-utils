@@ -3,14 +3,14 @@ from utils import utils
 import SimpleXMLRPCServer
 import optparse
 from utils import command_executer
-import automation.machine_manager
+import machine_manager
 
 class Server:
 
   def __init__(self, machines_file, dry_run=False):
     command_executer.InitCommandExecuter(dry_run)
-    machine_manager = automation.machine_manager.MachineManager(machines_file)
-    self.job_manager = job_manager.JobManager(machine_manager)
+    mm = machine_manager.MachineManager(machines_file)
+    self.job_manager = job_manager.JobManager(mm)
 
 
   def ExecuteJobGroup(self, job_group):
@@ -41,7 +41,8 @@ if __name__ == "__main__":
   parser = optparse.OptionParser()
   parser.add_option("-m", "--machines_file", dest="machines_file",
                     help="The location of the file "
-                    "containing the machines database", default="test_pool.csv")
+                    "containing the machines database", 
+                    default="test_pool.csv")
   parser.add_option("-n", "--dry_run", dest="dry_run",
                     help="Start the server in dry-run mode, where jobs will "
                     "not actually be executed.",

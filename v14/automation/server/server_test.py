@@ -9,7 +9,7 @@ MachineManagerTest tests MachineManager.
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
-
+import sys
 import server
 import unittest
 from utils import utils
@@ -18,11 +18,12 @@ import xmlrpclib
 
 class ServerTest(unittest.TestCase):
   def setUp(self):
-    self.server = server.Server()
+    pass
 
 
   def testGetAllJobs(self):
-    print server.GetAllJobs()
+    s=server.Server("test_pool.csv")
+    print s.GetAllJobs()
 
 
 if __name__ == "__main__":

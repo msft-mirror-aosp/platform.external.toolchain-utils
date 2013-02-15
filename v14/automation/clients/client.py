@@ -1,6 +1,6 @@
 import xmlrpclib
 from utils import utils
-from jobs import job
+from automation.common import job
 
 server = xmlrpclib.Server("http://localhost:8000")
 
