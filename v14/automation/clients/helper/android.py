@@ -51,10 +51,9 @@ class JobsFactory(object):
     return new_job, tc_prefix_dep
 
   def BuildAndroidImage(self, tc_prefix_dep, product='stingray',
-                        branch='honeycomb-release'):
+                        branch='ics-release'):
     assert product in ['stingray', 'passion', 'trygon', 'soju']
-    # We may have multiple trees in the future. Reserve the assert here.
-    assert branch in ['honeycomb-release']
+    assert branch in ['honeycomb-release', 'ics-release']
     command = self.commands.BuildAndroidImage(product, branch)
     new_job = jobs.CreateLinuxJob('AndroidGetBuildTree(%s)' % self.tc_tag,
                                   command)
