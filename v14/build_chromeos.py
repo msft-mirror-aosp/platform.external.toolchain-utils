@@ -57,7 +57,7 @@ def MakeChroot(chromeos_root, clobber_chroot=False):
     logger.GetLogger().LogOutput("Did not make_chroot because it already exists")
 
 
-def Main():
+def Main(argv):
   """Build ChromeOS."""
   # Common initializations
   global cmd_executer
@@ -83,7 +83,7 @@ def Main():
   parser.add_option("--board", dest="board",
                     help="ChromeOS target board, e.g. x86-generic")
 
-  options = parser.parse_args()[0]
+  options = parser.parse_args(argv[1:])[0]
 
   if options.chromeos_root is None:
     Usage(parser, "--chromeos_root must be set")
@@ -103,7 +103,7 @@ def Main():
     if options.clobber_board:
       force = "--force"
     # Run build_tc.py from binary package
-    rootdir = utils.GetRoot(sys.argv[0])[0]
+    rootdir = utils.GetRoot(argv[0])[0]
     ret = cmd_executer.RunCommand(rootdir + "/build_tc.py --chromeos_root=%s "
                                   "--toolchain_root=%s --board=%s -B"
                                   % (options.chromeos_root,
@@ -176,4 +176,4 @@ def Main():
   utils.AssertTrue(ret == 0, "mod_image_for_test failed")
 
 if __name__ == "__main__":
-  Main()
+  Main(sys.argv)
