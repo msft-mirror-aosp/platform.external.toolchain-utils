@@ -300,8 +300,9 @@ def CreatePerflabJob(chromeos_version, benchmark, board="x86-agz",
   for b in benchmark.split(","):
     benchmark_log = b.replace("/", "__")
     benchmark_log += "/results.txt"
-    benchmark_log_path = ("perflab-output/*/*/chromeos_%s/*/*/%s" %
-                          (board,
+    benchmark_log_path = ("%s/perflab-output/*/*/chromeos_%s/*/*/%s" %
+                          (p4_version_dir,
+                           board,
                            benchmark_log))
 
     command += ("&& " + p4_version_dir + "/summarize_results.py " +
