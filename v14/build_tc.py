@@ -42,6 +42,8 @@ def Main(argv):
   parser.add_option("-C", "--clean", dest="clean", default=False,
                     action="store_true",
                     help="Uninstall the toolchain.")
+  parser.add_option("--env", dest="env",
+                    help="Environment to pass to ebuild (use flags, etc.).")
   parser.add_option("-f", "--force", dest="force", default=False,
                     action="store_true",
                     help="Do an uninstall/install cycle.")
@@ -122,7 +124,7 @@ def Main(argv):
   target = f.read()
   f.close()
   target = target.strip()
-  features = "noclean userfetch userpriv usersandbox -strict"
+  features = "noclean userfetch userpriv usersandbox -strict splitdebug"
   if options.incremental is not None and options.incremental:
     features += " keepwork"
   env = CreateEnvVarString(" FEATURES", features)
@@ -146,7 +148,10 @@ def Main(argv):
   env += CreateEnvVarString(" PORTAGE_BINHOST", portage_pkgdir)
   if options.binary == False:
     env += CreateEnvVarString(" PORTAGE_TMPDIR", portage_tmpdir)
-  env += CreateEnvVarString(" USE", "mounted_sources")
+  env += CreateEnvVarString(" USE", "mounted_sources multislot")
+
+  if options.env:
+    env += " " + options.env
 
   retval = 0
   if options.force == True:
@@ -201,7 +206,7 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
 
   binutils_version = "9999"
   gcc_version = "9999"
-  libc_version = "2.10.1-r2"
+  libc_version = "2.10.1-r3"
   kernel_version = "2.6.30-r1"
 
   rootdir = utils.GetRoot(sys.argv[0])[0]

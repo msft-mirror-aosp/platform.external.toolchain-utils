@@ -34,6 +34,7 @@ get_gcc_common_options()
   confgcc="${confgcc} --disable-libgomp"
   confgcc="${confgcc} --enable-__cxa_atexit"
   confgcc="${confgcc} --enable-checking=release"
+  confgcc="${confgcc} --disable-libquadmath"
   echo ${confgcc}
 }
 
