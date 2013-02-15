@@ -20,7 +20,7 @@ from utils import utils
 utils.InitLogger(rootdir, basename)
 
 
-def Main():
+def Main(argv):
   """The main function."""
   parser = optparse.OptionParser()
   parser.add_option("-c", "--chromeos_root", dest="chromeos_root",
@@ -28,7 +28,7 @@ def Main():
   parser.add_option("-t", "--toolchain_root", dest="toolchain_root",
                     help="Toolchain root directory.")
 
-  (options, args) = parser.parse_args()
+  (options, args) = parser.parse_args(argv)
 
   if options.chromeos_root is None:
     chromeos_root = "../.."
@@ -77,8 +77,8 @@ def Main():
   # Now call enter_chroot with the rest of the arguments.
   command = "./enter_chroot.sh"
 
-  if len(args) != 0:
-    command += " -- " + " ".join(args)
+  if len(args) > 1:
+    command += " -- " + " ".join(args[1:])
     retval = utils.RunCommand(command)
     return retval
   else:
@@ -106,5 +106,5 @@ def CreateDir(dir_name, owner):
 
 
 if __name__ == "__main__":
-  Main()
+  Main(sys.argv)
 

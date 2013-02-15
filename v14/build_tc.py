@@ -13,6 +13,7 @@ import getpass
 import optparse
 import sys
 import tc_enter_chroot
+import build_chromeos
 from utils import utils
 
 # Common initializations
@@ -49,6 +50,8 @@ def Main():
   if options.toolchain_root is None or options.board is None:
     parser.print_help()
     sys.exit()
+
+  build_chromeos.MakeChroot(options.chromeos_root)
 
   portage_flags = ""
   if options.binary == True:
@@ -127,8 +130,9 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
   libc_version = "2.10.1-r1"
   kernel_version = "2.6.30-r1"
 
-  sys.argv = ["--chromeos_root=" + chromeos_root,
-              "--toolchain_root=" + toolchain_root]
+  argv = [rootdir + "tc_enter_chroot.py",
+          "--chromeos_root=" + chromeos_root,
+          "--toolchain_root=" + toolchain_root]
 
   env += " "
 
@@ -141,8 +145,8 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
 
   if uninstall == True:
     command += " crossdev " + tflag + target
-    sys.argv.append(command)
-    retval = tc_enter_chroot.Main()
+    argv.append(command)
+    retval = tc_enter_chroot.Main(argv)
     return retval
 
   if incremental_component == "binutils":
@@ -163,8 +167,8 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
                 " --kernel " + kernel_version +
                 crossdev_flags)
 
-  sys.argv.append(command)
-  retval = tc_enter_chroot.Main()
+  argv.append(command)
+  retval = tc_enter_chroot.Main(argv)
   return retval
 
 if __name__ == "__main__":

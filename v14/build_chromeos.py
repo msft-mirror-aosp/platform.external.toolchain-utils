@@ -13,7 +13,9 @@ __author__ = "raymes@google.com (Raymes Khoury)"
 import optparse
 import os
 import sys
+import tc_enter_chroot
 from utils import utils
+
 
 def Usage(parser, message):
   print "ERROR: " + message
@@ -23,16 +25,33 @@ def Usage(parser, message):
 
 def ExecuteCommandInChroot(chromeos_root, toolchain_root, command,
                            return_output=False, chrome_root=""):
+  """Executes a command in the chroot."""
   chrome_mount = ""
   if chrome_root:
     chrome_mount = "--chrome_root=" + chromeos_root + "/" + chrome_root
-  commands = []
-  tc_enter_chroot = (os.path.dirname(os.path.abspath(__file__)) +
-                     "/tc-enter-chroot.sh")
-  commands.append("%s --chromeos_root=%s --toolchain_root=%s %s -- \"%s\""
-                  % (tc_enter_chroot, chromeos_root, toolchain_root,
-                     chrome_mount, command))
-  return utils.RunCommands(commands, return_output)
+  argv=[os.path.dirname(os.path.abspath(__file__)) + "/tc_enter_chroot.py",
+        "--chromeos_root=" + chromeos_root,
+        "--toolchain_root=" + toolchain_root,
+        chrome_mount,
+        "--",
+        command]
+  return tc_enter_chroot.Main(argv)
+
+
+def MakeChroot(chromeos_root, clobber_chroot=False):
+  """Make a chroot given a chromeos checkout."""
+  if (not os.path.isdir(chromeos_root + "/chroot")
+      or clobber_chroot):
+    commands = []
+    commands.append("cd " + chromeos_root + "/src/scripts")
+    clobber_chroot = ""
+    if clobber_chroot:
+      clobber_chroot = "--replace"
+    commands.append("./make_chroot --fast " + clobber_chroot)
+    ret = utils.RunCommands(commands)
+    utils.AssertTrue(ret == 0, "make_chroot failed")
+  else:
+    utils.main_logger.LogOutput("Did not make_chroot because it already exists")
 
 
 def Main():
@@ -72,19 +91,7 @@ def Main():
   if options.board is None:
     Usage(parser, "--board must be set")
 
-  # Make chroot
-  if (not os.path.isdir(options.chromeos_root + "/chroot")
-      or options.clobber_chroot):
-    commands = []
-    commands.append("cd " + options.chromeos_root + "/src/scripts")
-    clobber_chroot = ""
-    if options.clobber_chroot:
-      clobber_chroot = "--replace"
-    commands.append("./make_chroot --fast " + clobber_chroot)
-    ret = utils.RunCommands(commands)
-    utils.AssertTrue(ret == 0, "make_chroot failed")
-  else:
-    utils.main_logger.LogOutput("Did not make_chroot because it already exists")
+  MakeChroot(options.chromeos_root, options.clobber_chroot)
 
   # Setup board
   if not os.path.isdir(options.chromeos_root + "/chroot/build/"
@@ -109,7 +116,6 @@ def Main():
     utils.main_logger.LogOutput("Did not setup_board because it already exists")
 
   # Modify make.conf to add CFLAGS/CXXFLAGS/LDFLAGS
-  commands = []
   ret1 = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
                                 "[ -e /build/%s/etc/make.conf.orig ] || "
                                 "sudo mv /build/%s/etc/make.conf "
