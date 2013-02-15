@@ -13,6 +13,7 @@ import StringIO
 import sys
 import logger
 import hashlib
+import traceback
 
 
 def GetRoot(scr_name):
@@ -31,11 +32,13 @@ def AssertTrue(condition, msg=""):
 def AssertExit(condition, msg=""):
   if not condition:
     logger.GetLogger().LogError(msg)
+    print "\n".join(traceback.format_stack())
     sys.exit(1)
 
 
 def AssertError(condition, msg=""):
   if not condition:
+    print "\n".join(traceback.format_stack())
     logger.GetLogger().LogError(msg)
 
 

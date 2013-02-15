@@ -100,12 +100,12 @@ class CommandExecuter:
   def CrosRunCommand(self, cmd, return_output=False, machine=None,
       username=None, command_terminator=None, chromeos_root=None):
     """Run a command on a chromeos box"""
-    utils.AssertTrue(machine is not None)
-    utils.AssertTrue(chromeos_root is not None)
+    utils.AssertTrue(machine is not None, "Machine was none!")
+    utils.AssertTrue(chromeos_root is not None, "chromeos_root not given!")
     chromeos_root=os.path.expanduser(chromeos_root)
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
     command += "\nremote_sh " + cmd
-    command += "\necho $REMOTE_OUT"
+    command += "\necho \"$REMOTE_OUT\""
     retval = self.RunCommand(command, return_output)
     if return_output:
       connect_signature = ("Initiating first contact with remote host\n" +
