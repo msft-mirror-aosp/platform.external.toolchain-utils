@@ -60,6 +60,7 @@ def Main(argv):
 
 def RunRemoteTests(chromeos_root, remote, board, tests):
   """Run the remote tests."""
+  ce = command_executer.GetCommandExecuter()
   command = ("./run_remote_tests.sh"
              " --remote=%s"
              " --board=%s"
@@ -67,7 +68,7 @@ def RunRemoteTests(chromeos_root, remote, board, tests):
              (remote,
               board,
               tests))
-  retval = utils.ExecuteCommandInChroot(chromeos_root, command)
+  retval = ce.ChrootRunCommand(chromeos_root, command)
   return retval
 
 if __name__ == "__main__":

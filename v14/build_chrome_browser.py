@@ -67,30 +67,30 @@ def Main(argv):
     chrome_version = "CHROME_VERSION=%s" % options.version
 
   # Emerge the browser
-  ret = (utils.
-         ExecuteCommandInChroot(options.chromeos_root,
-                                "CHROME_ORIGIN=SERVER_SOURCE %s "
-                                "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
-                                "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
-                                "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
-                                "emerge-%s --buildpkg chromeos-chrome" %
-                                (chrome_version, options.board, options.cflags,
-                                 options.board, options.ldflags, options.board,
-                                 options.cxxflags, options.board)))
+  ret = (cmd_executer.
+         ChrootRunCommand(options.chromeos_root,
+                          "CHROME_ORIGIN=SERVER_SOURCE %s "
+                          "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
+                          "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
+                          "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
+                          "emerge-%s --buildpkg chromeos-chrome" %
+                          (chrome_version, options.board, options.cflags,
+                           options.board, options.ldflags, options.board,
+                           options.cxxflags, options.board)))
 
   logger.GetLogger().LogFatalIf(ret, "build_packages failed")
 
   # Build image
-  ret = (utils.
-         ExecuteCommandInChroot(options.chromeos_root,
-                                utils.GetBuildImageCommand(options.board)))
+  ret = (cmd_executer.
+         ChrootRunCommand(options.chromeos_root,
+                          utils.GetBuildImageCommand(options.board)))
 
   logger.GetLogger().LogFatalIf(ret, "build_image failed")
 
   # Mod image for test
-  ret = (utils.
-         ExecuteCommandInChroot(options.chromeos_root,
-           utils.GetModImageForTestCommand(options.board)))
+  ret = (cmd_executer.
+         ChrootRunCommand(options.chromeos_root,
+                          utils.GetModImageForTestCommand(options.board)))
 
   logger.GetLogger().LogFatalIf(ret, "mod_image_for_test failed")
 

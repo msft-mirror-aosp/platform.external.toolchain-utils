@@ -101,7 +101,7 @@ def Main(argv):
     command += "; " + build_packages_env + " " + build_packages_command
     command += "&& " + build_image_command
     command += "&& " + mod_image_command
-    ret = utils.ExecuteCommandInChroot(options.chromeos_root, command)
+    ret = cmd_executer.ChrootRunCommand(options.chromeos_root, command)
     return ret
 
   # Setup board
@@ -110,8 +110,9 @@ def Main(argv):
     # Run build_tc.py from binary package
     rootdir = utils.GetRoot(argv[0])[0]
     version_number = utils.GetRoot(rootdir)[1]
-    ret = utils.ExecuteCommandInChroot(options.chromeos_root,
-                                 utils.GetSetupBoardCommand(options.board,
+    ret = cmd_executer.ChrootRunCommand(
+        options.chromeos_root,
+        utils.GetSetupBoardCommand(options.board,
                                    gcc_version="9999",
                                    binutils_version="9999",
                                    force=options.clobber_board))
@@ -121,29 +122,30 @@ def Main(argv):
                                  "because it already exists")
 
   # Build packages
-  ret = utils.ExecuteCommandInChroot(options.chromeos_root,
-                               "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
-                               "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
-                               "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
-                               "CHROME_ORIGIN=SERVER_SOURCE "
-                               "%s "
-                               "%s"
-                               % (options.board, options.cflags,
-                                  options.board, options.cxxflags,
-                                  options.board, options.ldflags,
-                                  build_packages_env,
-                                  build_packages_command))
+  ret = cmd_executer.ChrootRunCommand(
+      options.chromeos_root,
+      "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
+      "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
+      "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
+      "CHROME_ORIGIN=SERVER_SOURCE "
+      "%s "
+      "%s"
+      % (options.board, options.cflags,
+         options.board, options.cxxflags,
+         options.board, options.ldflags,
+         build_packages_env,
+         build_packages_command))
 
   logger.GetLogger().LogFatalIf(ret, "build_packages failed")
 
   # Build image
-  ret = utils.ExecuteCommandInChroot(options.chromeos_root,
-                               build_image_command)
+  ret = cmd_executer.ChrootRunCommand(options.chromeos_root,
+                                      build_image_command)
 
   logger.GetLogger().LogFatalIf(ret, "build_image failed")
 
   # Mod image for test
-  ret = utils.ExecuteCommandInChroot(options.chromeos_root, mod_image_command)
+  ret = cmd_executer.ChrootRunCommand(options.chromeos_root, mod_image_command)
 
   logger.GetLogger().LogFatalIf(ret, "mod_image_for_test failed")
 

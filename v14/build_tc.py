@@ -46,7 +46,7 @@ class ToolchainPart(object):
         "usr/local/portage/crossdev/cross-%s" % self._ctarget)
     if not os.path.exists(cross_symlink):
       command = "./setup_board --board=%s" % self._board
-      utils.ExecuteCommandInChroot(self._chromeos_root, command)
+      self._ce.ChrootRunCommand(self._chromeos_root, command)
 
   def Build(self):
     self.RunSetupBoardIfNecessary()
@@ -113,7 +113,7 @@ class ToolchainPart(object):
 
   def UninstallTool(self):
     command = "sudo CLEAN_DELAY=0 emerge -C cross-%s/%s" % (self._ctarget, self._name)
-    utils.ExecuteCommandInChroot(self._chromeos_root, command)
+    self._ce.ChrootRunCommand(self._chromeos_root, command)
 
   def BuildTool(self):
     env = self._build_env
@@ -130,11 +130,11 @@ class ToolchainPart(object):
     env_string = " ".join(["%s=\"%s\"" % var for var in env.items()])
     command = "emerge =cross-%s/%s-9999" % (self._ctarget, self._name)
     full_command = "sudo %s %s" % (env_string, command)
-    utils.ExecuteCommandInChroot(self._chromeos_root, full_command)
+    self._ce.ChrootRunCommand(self._chromeos_root, full_command)
 
   def SwitchToBFD(self):
     command = "sudo binutils-config %s-2.21" % self._ctarget
-    utils.ExecuteCommandInChroot(self._chromeos_root, command)
+    self._ce.ChrootRunCommand(self._chromeos_root, command)
 
   def SwitchToOriginalLD(self):
     pass

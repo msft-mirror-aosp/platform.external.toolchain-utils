@@ -6,6 +6,7 @@ import re
 import select
 import subprocess
 import sys
+import tempfile
 import time
 import utils
 
@@ -164,6 +165,26 @@ class CommandExecuter:
       modded_return[1] = connect_signature_re.sub("", modded_return[1])
       return modded_return
     return retval
+
+  def ChrootRunCommand(self, chromeos_root, command, return_output=False,
+                       command_terminator=None):
+    handle, command_file = tempfile.mkstemp(dir=os.path.join(chromeos_root,
+                                                           "src/scripts"),
+                                          suffix=".sh",
+                                          prefix="in_chroot_cmd")
+    os.write(handle, "#!/bin/bash\n")
+    os.write(handle, command)
+    os.close(handle)
+
+    os.chmod(command_file, 0777)
+
+    with utils.WorkingDirectory(chromeos_root):
+      command = "cros_sdk -- ./%s" % os.path.basename(command_file)
+      ret = self.RunCommand(command, return_output,
+                          command_terminator=command_terminator)
+      os.remove(command_file)
+      return ret
+
 
   def RunCommands(self, cmdlist, return_output=False, machine=None,
                   username=None, command_terminator=None):

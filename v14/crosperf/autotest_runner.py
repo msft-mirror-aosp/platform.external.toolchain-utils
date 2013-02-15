@@ -26,7 +26,7 @@ class AutotestRunner(object):
       options += " %s" % autotest_args
     command = ("./run_remote_tests.sh --remote=%s %s %s" %
                (machine_name, options, autotest_name))
-    return utils.ExecuteCommandInChroot(chromeos_root, command, True, self._ct)
+    return self._ce.ChrootRunCommand(chromeos_root, command, True, self._ct)
 
   def Terminate(self):
     self._ct.Terminate()

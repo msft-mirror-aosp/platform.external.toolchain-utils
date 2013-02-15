@@ -47,8 +47,8 @@ class PerfProcessor(object):
     # Attempt to build a perf report and keep it with the results.
     command = ("/usr/sbin/perf report --symfs=/build/%s"
                " -i %s --stdio" % (board, perf_data_file))
-    _, out, _ = utils.ExecuteCommandInChroot(chromeos_root,
-                                             command, return_output=True)
+    _, out, _ = self._ce.ChrootRunCommand(chromeos_root,
+                                          command, return_output=True)
     return out
 
 

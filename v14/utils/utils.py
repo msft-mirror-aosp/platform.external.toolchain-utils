@@ -68,27 +68,6 @@ def GetSetupBoardCommand(board, gcc_version=None, binutils_version=None,
   return "./setup_board --board=%s %s" % (board, " ".join(options))
 
 
-def ExecuteCommandInChroot(chromeos_root, command, return_output=False,
-                           command_terminator=None):
-  ce = command_executer.GetCommandExecuter()
-  handle, command_file = tempfile.mkstemp(dir=os.path.join(chromeos_root,
-                                                           "src/scripts"),
-                                          suffix=".sh",
-                                          prefix="in_chroot_cmd")
-  os.write(handle, "#!/bin/bash\n")
-  os.write(handle, command)
-  os.close(handle)
-
-  os.chmod(command_file, 0777)
-
-  with WorkingDirectory(chromeos_root):
-    command = "cros_sdk -- ./%s" % os.path.basename(command_file)
-    ret = ce.RunCommand(command, return_output,
-                        command_terminator=command_terminator)
-    os.remove(command_file)
-    return ret
-
-
 def CanonicalizePath(path):
   path = os.path.expanduser(path)
   path = os.path.realpath(path)
@@ -100,9 +79,10 @@ def GetCtargetFromBoard(board, chromeos_root):
   command = ("cat"
              " $(cros_overlay_list --board=%s --primary_only)/toolchain.conf" %
              (base_board))
-  ret, out, err = ExecuteCommandInChroot(chromeos_root,
-                                         command,
-                                         return_output=True)
+  ce = command_executer.GetCommandExecuter()
+  ret, out, err = ce.ChrootRunCommand(chromeos_root,
+                                      command,
+                                      return_output=True)
   if ret != 0:
     raise ValueError("Board %s is invalid!" % board)
   return out.strip()
