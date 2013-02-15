@@ -4,8 +4,10 @@ from automation.common import machine_description
 p4_checkout_dir = "perforce2"
 version_dir = "/gcctools/chromeos/v14/"
 install_dir = "/output/install"
+pkgs_dir = "/output/pkgs"
 p4_version_dir = p4_checkout_dir + version_dir
 p4_install_dir = p4_checkout_dir + version_dir + install_dir
+p4_pkgs_dir = p4_checkout_dir + version_dir + pkgs_dir
 
 chromeos_root = "chromeos"
 scripts_dir = "src/scripts"
@@ -99,6 +101,8 @@ def CreateBuildTCJob(chromeos_snapshot="", p4_snapshot=""):
 
 def CreateBuildChromeOSJob(tc_job, chromeos_snapshot="", p4_snapshot=""):
   command = GetInitialCommand()
+  # TODO(asharif): Get rid of this hack at some point.
+  command += "&& mkdir -p perforce2/gcctools/google_vendor_src_branch/gcc"
   if p4_snapshot:
     command += "&& " + GetCopyTreeCommand(p4_snapshot + version_dir,
                                        p4_version_dir)
@@ -122,6 +126,7 @@ def CreateBuildChromeOSJob(tc_job, chromeos_snapshot="", p4_snapshot=""):
               " --chromeos_root=" + chromeos_root +
               " --board=x86-generic")
   to_return = CreateLinuxJob(command)
+  to_return.AddRequiredFolder(tc_job, p4_pkgs_dir, p4_pkgs_dir)
 
   to_return.AddChild(tc_job)
 

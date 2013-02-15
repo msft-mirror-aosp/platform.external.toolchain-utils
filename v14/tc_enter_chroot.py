@@ -129,7 +129,7 @@ def Main(argv, return_output=False):
 
   for tc_dir in tc_dirs:
     if not os.path.exists(tc_dir):
-      logger.GetLogger().LogError("toolchain path " + options.toolchain_root + 
+      logger.GetLogger().LogError("toolchain path " +
                                  tc_dir + " does not exist!")
       parser.print_help()
       sys.exit(1)
