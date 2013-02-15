@@ -89,6 +89,7 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
   else:
     init = ("repo init -u ssh://gerrit-int.chromium.org:29419/chromeos/manifest-versions.git "
             "-m buildspecs/%s/%s.xml" % (version[0:4], version))
+  init += " --repo-url=http://git.chromium.org/external/repo.git"
 
   commands = []
   commands.append("mkdir -p " + directory)
