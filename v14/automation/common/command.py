@@ -13,17 +13,23 @@ class Shell(object):
   """Class used to build a string representation of a shell command."""
 
   def __init__(self, cmd, *args, **kwargs):
-    assert all(key in ['path'] for key in kwargs)
+    assert all(key in ['path', 'ignore_error'] for key in kwargs)
 
     self._cmd = cmd
     self._args = list(args)
     self._path = kwargs.get('path', '')
+    self._ignore_error = bool(kwargs.get('ignore_error', False))
 
   def __str__(self):
     cmdline = [os.path.join(self._path, self._cmd)]
     cmdline.extend(self._args)
 
-    return ' '.join(cmdline)
+    cmd = ' '.join(cmdline)
+
+    if self._ignore_error:
+      cmd = '{ %s; true; }' % cmd
+
+    return cmd
 
   def AddOption(self, option):
     self._args.append(option)
