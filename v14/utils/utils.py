@@ -86,15 +86,17 @@ def CanonicalizePath(path):
   return path
 
 
-def GetCtargetFromBoard(board):
-  if not isinstance(board, str):
-    raise TypeError("Board must be a string.")
-  if "x86" in board:
-    return "i686-pc-linux-gnu"
-  elif "tegra" in board or "arm" in board:
-    return "armv7a-cros-linux-gnueabi"
-  else:
-    raise ValueError("Board should have x86/tegra/arm in it.")
+def GetCtargetFromBoard(board, chromeos_root):
+  base_board = board.split("_")[0]
+  command = ("cat"
+             " $(cros_overlay_list --board=%s --primary_only)/toolchain.conf" %
+             (base_board))
+  ret, out, err = ExecuteCommandInChroot(chromeos_root,
+                                         command,
+                                         return_output=True)
+  if ret != 0:
+    raise ValueError("Board %s is invalid!" % board)
+  return out.strip()
 
 
 @contextmanager

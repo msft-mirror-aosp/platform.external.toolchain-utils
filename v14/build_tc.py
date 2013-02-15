@@ -26,7 +26,8 @@ class ToolchainPart(object):
     self._source_path = utils.CanonicalizePath(source_path)
     self._chromeos_root = chromeos_root
     self._board = board
-    self._ctarget = utils.GetCtargetFromBoard(self._board)
+    self._ctarget = utils.GetCtargetFromBoard(self._board,
+                                              self._chromeos_root)
     self._ce = command_executer.GetCommandExecuter()
     self._mask_file = os.path.join(
         self._chromeos_root,
