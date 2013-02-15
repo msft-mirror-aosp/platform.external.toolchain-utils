@@ -34,8 +34,8 @@ def GetP4Command(p4_port, p4_paths, revision, checkoutdir, p4_snapshot=""):
         real_path = real_path.replace("/...", "")
         command += ("&& mkdir -p " + checkoutdir + "/" +
                     os.path.dirname(real_path))
-        command += ("&& ln -s " + p4_snapshot + "/" + real_path +
-                  " " + checkoutdir + "/" + real_path)
+        command += ("&& cp -r " + p4_snapshot + "/" + real_path +
+                  "* " + checkoutdir + "/" + real_path)
     return command
 
   client_name = "p4-automation-$JOB_ID"
@@ -93,6 +93,10 @@ def CreateBuildTCJob(chromeos_snapshot="", p4_snapshot=""):
   p4_paths.append(("//depot2/gcctools/chromeos/v14/...", "gcctools/chromeos/v14/..."))
   p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/...",
                    "gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/..."))
+  p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/...",
+                   "gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/..."))
+  p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/...",
+                   "gcctools/google_vendor_src_branch/binutils/binutils-20100303/..."))
   p4_revision = 1
 
   command = GetInitialCommand()
