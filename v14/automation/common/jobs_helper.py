@@ -162,14 +162,14 @@ def CreateBuildTCJob(chromeos_version="top",
 
 def _GetMakeChrootCommand(delete=False):
   make_chroot_args = ""
-  if delete==True:
+  if delete == True:
     make_chroot_args = " --delete"
   command = "cd " + chromeos_scripts_dir
   command += "&& ./make_chroot --fast " + make_chroot_args
   command += "&& cd -"
   return command
 
-def CreateDejaGNUJob(chromeos_version="latest",
+def CreateDejaGNUJob(chromeos_version="top",
     board="x86-generic", p4_snapshot="", toolchain="trunk"):
   local_path = GetTCRootDir(toolchain)[1]
   command = GetInitialCommand()
@@ -182,6 +182,8 @@ def CreateDejaGNUJob(chromeos_version="latest",
               " --remote=$SECONDARY_MACHINES[0]" +
               " --board=" + board)
   to_return = CreateLinuxJob(command)
+  to_return.AddLowLevelLog(local_path + "/output/dejagnu/gcc.log")
+  to_return.AddLowLevelLog(local_path + "/output/dejagnu/g++.log")
   to_return.AddRequiredMachine("", "chromeos", True, False)
   return to_return
 

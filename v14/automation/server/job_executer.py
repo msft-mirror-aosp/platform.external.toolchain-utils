@@ -7,7 +7,6 @@ from utils import logger
 from utils import command_executer
 
 WORKDIR_PREFIX = "/usr/local/google/tmp/automation/job-"
-HOMEDIR_PREFIX = "/home/" + getpass.getuser() + "/www/automation"
 
 class JobExecuter(threading.Thread):
 
@@ -20,7 +19,8 @@ class JobExecuter(threading.Thread):
     # Set job directory
     work_dir = WORKDIR_PREFIX + str(self.job.GetID())
     self.job.SetWorkDir(work_dir)
-    self.job.SetHomeDir(self._GetJobHomeDir())
+    self.job.SetHomeDir(self.job.GetGroup().GetHomeDir() +
+                        "/job-" + str(self.job.GetID()))
     self.job_log_root = self.job.GetLogsDir()
 
     # Setup log files for the job.
@@ -30,7 +30,6 @@ class JobExecuter(threading.Thread):
                                True, subdir="")
     self.cmd_executer = command_executer.GetCommandExecuter(self.job_logger)
     self.command_terminator = command_executer.CommandTerminator()
-    self.cmd_executer.RunCommand("chmod a+rX -R " + HOMEDIR_PREFIX)
 
 
   def _IsJobFailed(self, return_value, fail_message):
@@ -53,12 +52,6 @@ class JobExecuter(threading.Thread):
       for listener in self.listeners:
         listener.NotifyJobComplete(self.job)
       return True
-
-
-  def _GetJobHomeDir(self):
-    return (HOMEDIR_PREFIX +
-            "/job-group-" + str(self.job.GetGroup().GetID()) +
-            "/job-" + str(self.job.GetID()))
 
 
   def _FormatCommand(self, command):
@@ -172,23 +165,26 @@ class JobExecuter(threading.Thread):
                          "Command failed to execute: '%s'." % command):
       return
 
-    # Copy results back to results directories.
-    if len(self.job.GetResultsDirs()) > 0:
-      to_folder = self.job.GetResultsDir()
-      command = "mkdir -p " + self.job.GetResultsDir()
+    # Copy low-level-logs back to directory
+    if len(self.job.GetLowLevelLogsSrc()) > 0:
+      to_folder = self.job.GetLowLevelLogsDest()
+      command = "mkdir -p " + to_folder
       mkdir_status = (self.cmd_executer.RunCommand
                       (command, command_terminator=self.command_terminator))
 
-      if self._IsJobFailed(mkdir_status, "mkdir of results directory Failed."):
+      if self._IsJobFailed(mkdir_status, "mkdir of low level logs "
+                           "directory Failed."):
         return
-      for directory in self.job.GetResultsDirs():
-        from_folder = self.job.GetWorkDir() + "/" + directory
+      for file in self.job.GetLowLevelLogsSrc():
+        from_folder = self.job.GetWorkDir() + "/" + file
         from_user = primary_machine.username
+        from_machine = primary_machine.name
         copy_success = self.cmd_executer.CopyFiles(from_folder, to_folder,
                                                    from_machine, None,
-                                                   from_user, recursive=True)
-        if self._IsJobFailed(copy_success, "Failed to copy result files."):
+                                                   from_user, recursive=False)
+        if self._IsJobFailed(copy_success, "Failed to copy low level logs."):
           return
+
 
     # If we get here, the job succeeded. 
     self.job.SetStatus(job.STATUS_SUCCEEDED)

@@ -62,7 +62,7 @@ def Main(argv):
 
   options = parser.parse_args(argv)[0]
 
-  if (options.clean == False and 
+  if (options.clean == False and
       (options.toolchain_root is None or options.board is None)):
     parser.print_help()
     sys.exit()
@@ -210,8 +210,9 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
 
   if uninstall == True:
     command += " crossdev " + tflag + target
-    enter_chroot = chromeos_root + "/src/scripts/enter_chroot.sh"
-    retval = cmd_executer.RunCommand(enter_chroot + command)
+    retval = build_chromeos.ExecuteCommandInChroot(chromeos_root,
+                                                         toolchain_root,
+                                                         command)
     return retval
 
   if incremental_component == "binutils":

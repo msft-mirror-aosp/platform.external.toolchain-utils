@@ -1,13 +1,17 @@
-import getpass
 
 STATUS_NOT_EXECUTED = "STATUS_NOT_EXECUTED"
 STATUS_EXECUTING = "STATUS_EXECUTING"
 STATUS_SUCCEEDED = "STATUS_SUCCEEDED"
 STATUS_FAILED = "STATUS_FAILED"
 
+BASELINE_FILE = "baseline.csv"
+RESULTS_FILE = "results.csv"
+REPORT_FILE = "report.txt"
+
 class JobGroup:
   def __init__(self, jobs=[],
-               cleanup_on_complete=True, cleanup_on_fail=False, description=""):
+               cleanup_on_complete=True, cleanup_on_fail=False, description="",
+               baseline_file_src=None):
     self.id = 0
     self.jobs = jobs
     self.cleanup_on_complete = cleanup_on_complete
@@ -16,7 +20,9 @@ class JobGroup:
     for j in self.jobs:
       j.SetGroup(self)
     self.description = description
-    self.time_submitted = 0;
+    self.time_submitted = 0
+    self.homedir = None
+    self.baseline_file_src = baseline_file_src
 
   def __str__(self):
     ret = ""
@@ -55,3 +61,21 @@ class JobGroup:
 
   def GetTimeSubmitted(self):
     return self.time_submitted
+
+  def SetHomeDir(self, homedir):
+    self.homedir = homedir
+
+  def GetHomeDir(self):
+    return self.homedir
+
+  def GetBaselineFileSrc(self):
+    return self.baseline_file_src
+
+  def GetBaselineFileDest(self):
+    return self.homedir + "/" + BASELINE_FILE
+
+  def GetResultsFileDest(self):
+    return self.homedir + "/" + RESULTS_FILE
+
+  def GetReportDest(self):
+    return self.homedir + "/" + REPORT_FILE

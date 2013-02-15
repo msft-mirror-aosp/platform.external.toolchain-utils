@@ -21,7 +21,7 @@ STATUS_SUCCEEDED = "STATUS_SUCCEEDED"
 STATUS_FAILED = "STATUS_FAILED"
 
 LOGS_SUBDIR = "/logs"
-RESULTS_SUBDIR = "/results"
+LOWLEVEL_LOGS_SUBDIR = "/lowlevel_logs"
 
 class RequiredFolder:
   def __init__(self, job, src, dest, read_only):
@@ -54,9 +54,7 @@ class Job:
     self.command = command
     self._primary_done = False
     self.status_events = []
-    self.results_dirs_src = []
-    self.results_dest_dir = ""
-    self.results_dest_machine = None
+    self.lowlevel_log_files = []
     self.group = None
 
   def __str__(self):
@@ -135,9 +133,9 @@ class Job:
   def GetHomeDir(self):
     return self.home_dir
 
-  def GetResultsDir(self):
+  def GetLowLevelLogsDest(self):
     if len(self.home_dir) > 0:
-      return self.home_dir + RESULTS_SUBDIR
+      return self.home_dir + LOWLEVEL_LOGS_SUBDIR
     else:
       return ""
 
@@ -201,9 +199,9 @@ class Job:
     else:
       self.machine_descriptions.append(desc)
 
-  def AddResultsDir(self, directory):
-    self.results_dirs_src.append(directory)
+  def AddLowLevelLog(self, file):
+    self.lowlevel_log_files.append(file)
 
-  def GetResultsDirs(self):
-    return self.results_dirs_src
+  def GetLowLevelLogsSrc(self):
+    return self.lowlevel_log_files
 

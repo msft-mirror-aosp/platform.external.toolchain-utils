@@ -58,20 +58,27 @@ def Usage():
   print "Usage: %s log_file" % sys.argv[0]
   sys.exit(1)
 
-def Main(argv):
-  if len(argv) != 2:
-    Usage()
-  filename = argv[1]
 
+def SummarizeFile(filename):
   summarizers = [DejaGNUSummarizer(), AutoTestSummarizer()]
   f = open(filename, 'rb')
   for summarizer in summarizers:
     f.seek(0)
     if summarizer.Matches(f):
       f.seek(0)
-      print summarizer.Summarize(f)
-      exit(0)
-  print "Log file not in expected format"
+      result = summarizer.Summarize(f)
+      f.close()
+      return result
+  f.close()
+  return None
+
+
+def Main(argv):
+  if len(argv) != 2:
+    Usage()
+  filename = argv[1]
+
+  print SummarizeFile(filename)
 
 if __name__ == "__main__":
   Main(sys.argv)

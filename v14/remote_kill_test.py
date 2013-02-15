@@ -32,7 +32,7 @@ def Main(argv):
                     help="Remote chromeos device.")
   options = parser.parse_args(argv)[0]
   ce = command_executer.GetCommandExecuter()
-  ce.RunCommand("sleep 10000",
+  ce.RunCommand("ls; sleep 10000",
                 machine=os.uname()[1])
   return 0
 

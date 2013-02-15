@@ -6,6 +6,7 @@ import os
 import logger
 import utils
 import re
+import pty
 
 dry_run = False
 
@@ -42,10 +43,13 @@ class CommandExecuter:
       user = ""
       if username is not None:
         user = username + "@"
-      cmd = "ssh -t %s%s -- '%s'" % (user, machine, cmd)
+      cmd = "ssh -t -t %s%s -- '%s'" % (user, machine, cmd)
 
+
+    pty_fds = pty.openpty()
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, stdin=sys.stdin, shell=True)
+                         stderr=subprocess.PIPE,
+                         stdin=pty_fds[0], shell=True)
 
     full_stdout = ""
     full_stderr = ""
@@ -75,6 +79,8 @@ class CommandExecuter:
         break
 
     p.wait()
+    os.close(pty_fds[0])
+    os.close(pty_fds[1])
     if return_output:
       return (p.returncode, full_stdout, full_stderr)
     return p.returncode
@@ -103,7 +109,7 @@ class CommandExecuter:
     """Run a command on a chromeos box"""
     utils.AssertTrue(machine is not None, "Machine was none!")
     utils.AssertTrue(chromeos_root is not None, "chromeos_root not given!")
-    chromeos_root=os.path.expanduser(chromeos_root)
+    chromeos_root = os.path.expanduser(chromeos_root)
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
     command += "\nremote_sh " + cmd
     command += "\necho \"$REMOTE_OUT\""

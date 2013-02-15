@@ -29,7 +29,7 @@ class Logger(object):
       sys.stdout.flush()
 
   def LogOutput(self, msg):
-    msg = "OUTPUT: " + msg + "\n"
+    msg = "OUTPUT: " + str(msg) + "\n"
     self.stdout.write(msg)
     self.stdout.flush()
     if self.print_console:
@@ -37,7 +37,7 @@ class Logger(object):
       sys.stdout.flush()
 
   def LogError(self, msg):
-    msg = "ERROR: " + msg + "\n"
+    msg = "ERROR: " + str(msg) + "\n"
     self.stderr.write(msg)
     self.stderr.flush()
     if self.print_console:
@@ -45,7 +45,7 @@ class Logger(object):
       sys.stderr.flush()
 
   def LogWarning(self, msg):
-    msg = "WARNING: " + msg + "\n"
+    msg = "WARNING: " + str(msg) + "\n"
     self.stderr.write(msg)
     self.stderr.flush()
     if self.print_console:
