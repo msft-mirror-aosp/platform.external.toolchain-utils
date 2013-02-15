@@ -10,6 +10,7 @@ import hashlib
 import os
 import re
 import logger
+from contextlib import contextmanager
 
 
 def GetRoot(scr_name):
@@ -79,15 +80,9 @@ def Md5File(filename, block_size=2**10):
 
   return md5.hexdigest()
 
-
-class CWDSwitcher:
-  def __init__(self, working_dir):
-    self._working_dir = working_dir
-    self._old_dir = None
-
-  def __enter__(self):
-    self._old_dir = os.getcwd()
-    os.chdir(self._working_dir)
-
-  def __exit__(self, type, value, traceback):
-    os.chdir(self._old_dir)
+@contextmanager
+def WorkingDirectory(new_dir):
+  old_dir = os.getcwd()
+  os.chdir(new_dir)
+  yield new_dir
+  os.chdir(old_dir)
