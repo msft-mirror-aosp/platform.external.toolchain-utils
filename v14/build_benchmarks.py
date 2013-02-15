@@ -77,9 +77,14 @@ def CreateRunsh(destdir, benchmark):
   return retval
 
 
-def CreateBinaryCopy(sourcedir, destdir):
-  """Create links in perflab-bin/destdir/* to sourcedir/* for now, instead of copies"""
-
+def CreateBinaryCopy(sourcedir, destdir, copy = None):
+  """Create links in perflab-bin/destdir/* to sourcedir/* for now, instead of copies
+  Args:
+    copy: when none, make soft links to everything under sourcedir, otherwise
+          copy all to destdir.
+          TODO: remove this parameter if it's determined that CopyFiles can use
+                rsync -L.
+  """
   retval = 0
   # check if sourcedir exists
   if not os.path.exists(sourcedir):
@@ -100,7 +105,10 @@ def CreateBinaryCopy(sourcedir, destdir):
       return retval
   os.makedirs(destdir)
   sourcedir = os.path.abspath(sourcedir)
-  command = 'ln -s %s/* %s' % (sourcedir, destdir)
+  if copy is None:
+    command = 'ln -s %s/* %s' % (sourcedir, destdir)
+  else:
+    command = 'cp -fr %s/* %s' % (sourcedir, destdir)
   retval = cmd_executer.RunCommand(command)
   return retval
 
@@ -195,7 +203,9 @@ def Main(argv):
                     (third_party, benchname))
         linkdir = '%s/perflab-bin/%s' % (options.workdir, arg)
 
-        retval = CreateBinaryCopy(benchdir, linkdir)
+        # For cpu/*, we need to copy (not symlinks) of all the contents,
+        # because they are part of the test fixutre.
+        retval = CreateBinaryCopy(benchdir, linkdir, True)
         if retval != 0: return retval
         retval = CreateRunsh(linkdir, arg)
         if retval != 0: return retval
