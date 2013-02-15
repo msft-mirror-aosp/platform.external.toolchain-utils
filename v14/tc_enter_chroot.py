@@ -164,8 +164,10 @@ def Main(argv, return_output=False):
             
   output = options.output
   if output is None and options.toolchain_root:
-    output = options.toolchain_root + "/output"
     # Mount the output directory at /usr/local/toolchain_root/output
+    output = options.toolchain_root + "/output"
+
+  if output:
     mount_points.append(MountPoint(output, full_mounted_tc_root + "/output",
                                    getpass.getuser()))
 
