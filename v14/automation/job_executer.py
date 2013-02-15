@@ -57,10 +57,18 @@ class JobExecuter(threading.Thread):
       utils.RunCommand("ssh %s@%s -- mkdir -p %s" %
                                 (primary_machine.username, primary_machine.name,
                                  self.job.GetWorkDir()))
-      result = utils.RunCommand("ssh %s@%s -- \"cd %s && %s\"" %
-                                (primary_machine.username, primary_machine.name,
-                                 self.job.GetWorkDir(),
-                                 self.job.GetCommand()), True)
+      command = self.job.GetCommand()
+      if command:
+        quoted_command = utils.FormatQuotedCommand(command)
+        print quoted_command
+        result = utils.RunCommand("ssh %s@%s -- \"cd %s && %s\"" %
+                                  (primary_machine.username, primary_machine.name,
+                                   self.job.GetWorkDir(),
+                                   quoted_command),
+                                   True)
+      else:
+        print "Command is empty!"
+        result = 1
       print "OUTPUT: " + str(result)
 
     print "Completed job"

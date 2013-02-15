@@ -142,3 +142,8 @@ def Serialize(argument):
 
 def Deserialize(argument):
   return pickle.load(StringIO.StringIO(argument))
+
+
+def FormatQuotedCommand(command):
+  return command.replace("\"", "\\\"")
+
