@@ -117,9 +117,10 @@ def PrintJobRow(job):
   print "</tr>"
 
 def GetTestSummary(job):
-  if (job.GetStatus() != automation.common.job.STATUS_SUCCEEDED and
-      job.GetStatus() != automation.common.job.STATUS_FAILED):
-      return "Running job..."
+  if job.GetStatus() == automation.common.job.STATUS_RUNNING:
+    return "Running job..."
+  if job.GetStatus() == automation.common.job.STATUS_NOT_EXECUTED:
+    return "Not executed."
 
   try:
     report = open(job.GetTestReportSummaryFile(), 'rb')
@@ -150,7 +151,7 @@ groups = utils.Deserialize(server.GetAllJobGroups())
 form = cgi.FieldStorage()
 
 if "results" in form:
-  PrintResultsView(groups, "test_group")
+  PrintResultsView(groups, "nightly_client")
 elif "job_group" in form:
   current_id = int(form["job_group"].value)
   job_group = utils.Deserialize(server.GetJobGroup(current_id))

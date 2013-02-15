@@ -231,7 +231,7 @@ def _GetImageChromeOSCommand():
              " --remote=$SECONDARY_MACHINES[0]")
   return command
 
-def _GetSetupChromeOSCommand(version, use_minilayout=True):
+def _GetSetupChromeOSCommand(version, use_minilayout=False):
   version_re = "^\d+\.\d+\.\d+\.[a-zA-Z0-9]+$"
   tarred_re = "(bz2|gz)$"
   if version == "weekly" or version == "quarterly":
@@ -340,4 +340,3 @@ def CreateUpdateJob(chromeos_versions,
                 _GetChromeOSGoldenBuildLocation() + chromeos_version)
   to_return = CreateLinuxJob("update_job", command)
   return to_return
-
