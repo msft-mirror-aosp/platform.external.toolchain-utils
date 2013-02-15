@@ -33,7 +33,7 @@ def FormatCommands(commands):
 
 def GetBuildPackagesCommand(board):
   return "./build_packages --nousepkg --withdev --withtest --withautotest " \
-         "--skip_toolchain_update --board=%s" % board
+         "--skip_toolchain_update --nowithdebug --board=%s" % board
 
 
 def GetBuildImageCommand(board):
