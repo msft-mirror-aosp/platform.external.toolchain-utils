@@ -7,7 +7,8 @@ import machine_manager
 
 class Server:
 
-  def __init__(self, machines_file, dry_run=False):
+  def __init__(self, machines_file=machine_manager.DEFAULT_MACHINES_FILE,
+               dry_run=False):
     command_executer.InitCommandExecuter(dry_run)
     mm = machine_manager.MachineManager(machines_file)
     self.job_manager = job_manager.JobManager(mm)
@@ -39,11 +40,11 @@ class Server:
 
 if __name__ == "__main__":
   parser = optparse.OptionParser()
-  parser.add_option("-m", "--machines_file", dest="machines_file",
+  parser.add_option("-m", "--machines-file", dest="machines_file",
                     help="The location of the file "
-                    "containing the machines database", 
-                    default="test_pool.csv")
-  parser.add_option("-n", "--dry_run", dest="dry_run",
+                    "containing the machines database",
+                    default=machine_manager.DEFAULT_MACHINES_FILE)
+  parser.add_option("-n", "--dry-run", dest="dry_run",
                     help="Start the server in dry-run mode, where jobs will "
                     "not actually be executed.",
                     action="store_true", default=False)

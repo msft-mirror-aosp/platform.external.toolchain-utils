@@ -22,7 +22,7 @@ class ServerTest(unittest.TestCase):
 
 
   def testGetAllJobs(self):
-    s=server.Server("test_pool.csv")
+    s = server.Server()
     print s.GetAllJobs()
 
 

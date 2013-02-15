@@ -16,8 +16,11 @@ import machine_pool
 import threading
 from utils import utils
 
+DEFAULT_MACHINES_FILE = utils.GetRoot(__file__)[0] + "/test_pool.csv"
+
+
 class MachineManager:
-  def __init__(self, machines_file=utils.GetRoot(__file__)[0] + "/test_pool.csv"):
+  def __init__(self, machines_file=DEFAULT_MACHINES_FILE):
     self.ConstructMachineList(machines_file)
     self.reenterant_lock = threading.RLock()
 
