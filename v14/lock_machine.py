@@ -55,8 +55,9 @@ def LockMachine(machine, unlock=False, duration=None, reason=None):
   if not unlock:
     if not reason:
       reason = ""
-    full_reason = ("Locked by: %s on %s: %s" %
+    full_reason = ("Locked by: %s@%s on %s: %s" %
                    (getpass.getuser(),
+                    os.uname()[1],
                     str(datetime.datetime.now()),
                     reason))
     command = ("%s && echo \"%s\" > %s" %
@@ -64,7 +65,6 @@ def LockMachine(machine, unlock=False, duration=None, reason=None):
                 full_reason,
                 reason_file))
     retval = ce.RunCommand(command)
-    if retval: return retval
 
   return 0
 
