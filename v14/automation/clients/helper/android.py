@@ -8,8 +8,9 @@ Provides following Android toolchain test jobs and commands.
 . Checkout Android toolchain source code
 . Build Android toolchain
 . Checkout and build Android tree
-. Checkout/build/run Android benchmarks (TODO)
-. Generate size dashboard (TODO)
+. Checkout/build/run Android benchmarks, generate size dashboard
+. Transform size dashboard to report, send perflab jobid to
+  perflab dashboard server.(TODO)
 """
 
 __author__ = 'jingyu@google.com (Jing Yu)'
@@ -40,7 +41,7 @@ class JobsFactory(object):
     return new_job, checkout_dir_dep
 
   def BuildAndroidToolchain(self, checkout_dir_dep):
-    """Build Android Toolchain into results/."""
+    """Build Android Toolchain."""
     command = self.commands.BuildAndroidToolchain()
     new_job = jobs.CreateLinuxJob('AndroidBuildToolchain(%s)' % self.tc_tag,
                                   command)
@@ -49,13 +50,25 @@ class JobsFactory(object):
         new_job, self.commands.toolchain_prefix_dir)
     return new_job, tc_prefix_dep
 
-  def GetBuildAndroidTree(self, tc_prefix_dep, product='stingray',
-                          branch='honeycomb-release'):
+  def BuildAndroidImage(self, tc_prefix_dep, product='stingray',
+                        branch='honeycomb-release'):
     assert product in ['stingray', 'passion', 'trygon', 'soju']
     # We may have multiple trees in the future. Reserve the assert here.
     assert branch in ['honeycomb-release']
-    command = self.commands.GetBuildAndroidTree(product, branch)
+    command = self.commands.BuildAndroidImage(product, branch)
     new_job = jobs.CreateLinuxJob('AndroidGetBuildTree(%s)' % self.tc_tag,
+                                  command)
+    new_job.DependsOnFolder(tc_prefix_dep)
+    return new_job
+
+  def Benchmark(self, tc_prefix_dep, arch='soju'):
+    assert arch in ['soju', 'stingray']
+    script_cmd = self.commands.CheckoutScripts()
+    experiment_tag = 'android/nightly/%s/%s/$JOB_ID' % (self.tc_tag, arch)
+    build_run_benchmark_cmd = self.commands.BuildRunBenchmark(arch,
+                                                              experiment_tag)
+    command = cmd.Chain(script_cmd, build_run_benchmark_cmd)
+    new_job = jobs.CreateLinuxJob('AndroidBenchmarking(%s)' % self.tc_tag,
                                   command)
     new_job.DependsOnFolder(tc_prefix_dep)
     return new_job
@@ -63,9 +76,11 @@ class JobsFactory(object):
 
 class CommandsFactory(object):
   CHECKOUT_DIR = 'androidtc-checkout-dir'
-  ANDROIDTC_SRC_DIR = os.path.join(CHECKOUT_DIR, 'src')
+  TOOLCHAIN_SRC_DIR = os.path.join(CHECKOUT_DIR, 'src')
   TOOLCHAIN_BUILD_DIR = 'obj'
   ANDROID_TREES_DIR = 'android_trees'
+  TOOLS_DIR = 'android-tools'
+  BENCHMARK_OUT_DIR = 'results'
 
   def __init__(self, gcc_version, build_type):
     assert gcc_version in ['4.4.3', '4.6', 'google_main', 'fsf_trunk']
@@ -75,9 +90,11 @@ class CommandsFactory(object):
     self.gcc_version = gcc_version
     self.binutils_version = '2.21'
     self.gold_version = '2.21'
-    self.toolchain_prefix_dir = 'results/install-gcc-%s-%s' % (
+    self.toolchain_prefix_dir = 'install-gcc-%s-%s' % (
         gcc_version, build_type)
     self.p4client = self._CreatePerforceClient()
+    self.scripts = ScriptsFactory(self.gcc_version, self.binutils_version,
+                                  self.gold_version)
 
   def _CreatePerforceClient(self):
     p4_dev_path = 'gcctools/google_vendor_src_branch'
@@ -129,7 +146,7 @@ class CommandsFactory(object):
     """Check out gcc from fsf svn.
 
        Return the command that check out gcc from svn
-       to gcc_required_dir (=ANDROIDTC_SRC_DIR/src/gcc/gcc-xxx).
+       to gcc_required_dir (=TOOLCHAIN_SRC_DIR/src/gcc/gcc-xxx).
 
        TODO:
          Create a svn class that does these jobs.
@@ -143,16 +160,17 @@ class CommandsFactory(object):
                         'google_main': 'branches/google/main',
                         'fsf_trunk': 'trunk'}
 
+    # Find GCC revision number, output it to TOOLCHAIN_SRC_DIR/CLNUM_GCC
     svn_get_revision = cmd.Pipe(
         cmd.Shell('svn', 'info'),
         cmd.Shell('grep', '"Revision:"'),
         cmd.Shell('sed', '-E', '"s,Revision: ([0-9]+).*,\\1,"'),
-        output='CLNUM')
+        output='../../../CLNUM_GCC')
 
     svn_co_command = 'svn co svn://gcc.gnu.org/svn/gcc/%s .' % (
         gcc_branches_dir[self.gcc_version])
 
-    gcc_required_dir = os.path.join(self.ANDROIDTC_SRC_DIR, 'gcc',
+    gcc_required_dir = os.path.join(self.TOOLCHAIN_SRC_DIR, 'gcc',
                                     'gcc-%s' % self.gcc_version)
 
     return cmd.Chain(cmd.MakeDir(gcc_required_dir),
@@ -170,12 +188,18 @@ class CommandsFactory(object):
     return command
 
   def BuildAndroidToolchain(self):
-    scripts = ScriptsFactory(self.gcc_version, self.binutils_version,
-                             self.gold_version)
-    return scripts.BuildAndroidToolchain(self.toolchain_prefix_dir,
-                                         self.CHECKOUT_DIR,
-                                         self.TOOLCHAIN_BUILD_DIR,
-                                         self.ANDROIDTC_SRC_DIR)
+    script_cmd = self.scripts.BuildAndroidToolchain(self.toolchain_prefix_dir,
+                                                    self.CHECKOUT_DIR,
+                                                    self.TOOLCHAIN_BUILD_DIR,
+                                                    self.TOOLCHAIN_SRC_DIR)
+
+    # Record toolchain and gcc CL number
+    record_cl_cmd = cmd.Copy(os.path.join(self.CHECKOUT_DIR, 'CLNUM*'),
+                             to_dir=self.toolchain_prefix_dir)
+    save_cmd = cmd.Tar(os.path.join('$JOB_TMP', 'results',
+                                    '%s.tar.bz2' % self.toolchain_prefix_dir),
+                       self.toolchain_prefix_dir)
+    return cmd.Chain(script_cmd, record_cl_cmd, save_cmd)
 
   def _BuildAndroidTree(self, local_android_branch_dir, product):
     target_tools_prefix = os.path.join('$JOB_TMP', self.toolchain_prefix_dir,
@@ -187,7 +211,7 @@ class CommandsFactory(object):
                           'PATH=%s:$PATH' % java_path)
     return cmd.Wrapper(build_cmd, cwd=local_android_branch_dir)
 
-  def GetBuildAndroidTree(self, product, branch):
+  def BuildAndroidImage(self, product, branch):
     assert product in ['stingray', 'passion', 'trygon', 'soju']
 
     # Copy the tree from atree.mtv.corp to ANDROID_TREES_DIR/branch
@@ -204,12 +228,46 @@ class CommandsFactory(object):
     # Configure and build the tree
     buildtree_cmd = self._BuildAndroidTree(local_android_branch_dir, product)
 
-    # Copy system.img to result
+    # Compress and copy system.img to result
     result_system_img = os.path.join(local_android_branch_dir, 'out', 'target',
                                      'product', product, 'system.img')
     copy_img = cmd.Copy(result_system_img, to_dir='results')
+    compress_img = cmd.Shell('bzip2', os.path.join('results', 'system.img'))
 
-    return cmd.Chain(gettree_cmd, buildtree_cmd, copy_img)
+    return cmd.Chain(gettree_cmd, buildtree_cmd, copy_img, compress_img)
+
+  def CheckoutScripts(self):
+    p4view = perforce.View('depot2', [perforce.PathMapping(
+        'gcctools/android/tools/...', 'tools/...')])
+    p4client = perforce.CommandsFactory(self.TOOLS_DIR, p4view)
+    return p4client.SetupAndDo(p4client.Sync(), p4client.Remove())
+
+  def BuildRunBenchmark(self, arch, run_experiment):
+    # Copy base benchmark binaries from atree.mtv.corp
+    base_benchbin_host = 'atree.mtv.corp.google.com'
+    base_benchbin_path = ('/usr/local/google2/home/mobiletc-prebuild/'
+                          'archive/v3binaries/2011-10-18')
+    local_basebenchbin_dir = 'base_benchmark_bin'
+    getbase_cmd = cmd.Chain(cmd.MakeDir(local_basebenchbin_dir),
+                            cmd.RemoteCopyFrom(base_benchbin_host,
+                                               base_benchbin_path,
+                                               local_basebenchbin_dir))
+
+    # Build and run benchmark.
+    android_arch = 'android_%s' % arch
+    run_label = 'normal'
+    benchmark_cmd = self.scripts.RunBenchmark(self.toolchain_prefix_dir,
+                                              self.TOOLS_DIR,
+                                              self.BENCHMARK_OUT_DIR,
+                                              run_label, run_experiment,
+                                              android_arch,
+                                              local_basebenchbin_dir)
+
+    # Extract jobid from BENCHMARK_OUT_DIR/log/jobid_normal.log file.
+    # Copy jobid to www server to generate performance dashboard.
+    # TODO(jingyu)
+
+    return cmd.Chain(getbase_cmd, benchmark_cmd)
 
 
 class ScriptsFactory(object):
@@ -242,3 +300,24 @@ class ScriptsFactory(object):
                      'master', 'honeycomb_generic_sysroot'),
         path=os.path.join(checkout_dir, 'gcctools', 'android', 'tools',
                           'scripts'))
+
+  def RunBenchmark(self, toolchain_prefix_dir, checkout_dir, output_dir,
+                   run_label, run_experiment, arch, base_bench_bin=None):
+    if base_bench_bin:
+      base_bench_opt = '--base_benchmark_bin=%s' % base_bench_bin
+    else:
+      base_bench_opt = ''
+
+    return cmd.Shell(
+        'benchmark.sh',
+        '--android_toolchain=%s' % os.path.join('$JOB_TMP',
+                                                toolchain_prefix_dir),
+        '--bench_space=%s' % os.path.join('$JOB_TMP', 'bench'),
+        '--benchmark_bin=%s' % os.path.join('$JOB_TMP', output_dir,
+                                            'bench_bin'),
+        base_bench_opt,
+        '--log_path=%s' % os.path.join('$JOB_TMP', output_dir, 'log'),
+        '--arch=%s' % arch,
+        '--run_label=%s' % run_label,
+        '--run_experiment=%s' % run_experiment,
+        path=os.path.join(checkout_dir, 'tools', 'scripts'))

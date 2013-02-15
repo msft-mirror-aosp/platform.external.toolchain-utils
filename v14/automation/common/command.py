@@ -200,3 +200,21 @@ def UnTar(tar_file, dest_dir):
   return Chain(
       MakeDir(dest_dir),
       Shell('tar', '-x', '-f', tar_file, '-C', dest_dir))
+
+
+def Tar(tar_file, *args):
+  options = ['-c']
+
+  if tar_file.endswith('.tar.bz2'):
+    options.append('-j')
+  elif tar_file.endswith('.tar.gz'):
+    options.append('-z')
+  else:
+    assert tar_file.endswith('.tar')
+
+  options.extend(['-f', tar_file])
+  options.extend(args)
+
+  return Chain(
+      MakeDir(os.path.dirname(tar_file)),
+      Shell('tar', *options))

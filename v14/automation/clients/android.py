@@ -47,9 +47,11 @@ class AndroidToolchainNightlyClient(object):
     tc_build_job, tc_prefix_dep = factory.BuildAndroidToolchain(
         checkout_dir_dep)
 
-    tree_build_job = factory.GetBuildAndroidTree(tc_prefix_dep)
+    tree_build_job = factory.BuildAndroidImage(tc_prefix_dep)
 
-    all_jobs = [p4_androidtc_job, tc_build_job, tree_build_job]
+    benchmark_job = factory.Benchmark(tc_prefix_dep)
+
+    all_jobs = [p4_androidtc_job, tc_build_job, tree_build_job, benchmark_job]
 
     return job_group.JobGroup('androidtoolchain_nightly', all_jobs, True, False)
 
