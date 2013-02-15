@@ -31,15 +31,16 @@ class CommandExecuter(object):
 
     cmd = str(cmd)
 
-    if self._dry_run:
-      logger.GetLogger().LogCmd(
-          "(Mock) %s" % cmd, machine or "localhost", username or os.getlogin())
-      return 0
-
     self.logger.LogCmd(cmd, machine, username)
 
-    if command_terminator and command_terminator.IsTerminated():
-      self.logger.LogError("Command was terminated!")
+    if self._dry_run:
+      return 0
+
+    if not command_terminator:
+      command_terminator = CommandTerminator()
+
+    if command_terminator.IsTerminated():
+      self.logger.LogError("Command has been already terminated!")
       return 1
 
     # Rewrite command for remote execution.
@@ -49,14 +50,53 @@ class CommandExecuter(object):
       else:
         login = machine
 
-      cmd = "ssh -T -n %s -- '%s'" % (login, cmd)
+      cmd = "ssh %s -- '%s'" % (login, cmd)
 
-    return self._SpawnProcess(cmd, command_terminator, command_timeout)
+    child = self._SpawnProcess(cmd, command_terminator, command_timeout)
+
+    self.logger.LogOutput(
+        "[PID: %d] Finished with %d code." % (child.pid, child.returncode))
+
+    return child.returncode
+
+  def _Terminate(self, child, command_timeout, wait_timeout=10):
+    """Gracefully shutdown the child by sending SIGTERM."""
+
+    if command_timeout:
+      self.logger.LogWarning("[PID: %d] Timeout of %s seconds reached since "
+                             "process started." % (child.pid, command_timeout))
+
+    self.logger.LogWarning("[PID: %d] Terminating child." % child.pid)
+
+    try:
+      child.terminate()
+    except OSError:
+      pass
+
+    wait_started = time.time()
+
+    while not child.poll():
+      if time.time() - wait_started >= wait_timeout:
+        break
+      time.sleep(0.1)
+
+    return child.poll()
+
+  def _Kill(self, child):
+    """Kill the child with immediate result."""
+    self.logger.LogWarning("[PID: %d] Process still alive." % child.pid)
+    self.logger.LogWarning("[PID: %d] Killing child." % child.pid)
+    child.kill()
+    child.wait()
 
   def _SpawnProcess(self, cmd, command_terminator, command_timeout):
-    # Create command's process.
+    # Create a child process executing provided command.
     child = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        stdin=subprocess.PIPE, shell=True)
+
+    # Close stdin so the child won't be able to block on read.
+    child.stdin.close()
 
     started_time = time.time()
 
@@ -69,15 +109,23 @@ class CommandExecuter(object):
       fd_flags = fcntl.fcntl(fd, fcntl.F_GETFL)
       fcntl.fcntl(fd, fcntl.F_SETFL, fd_flags | os.O_NONBLOCK)
 
+    already_terminated = False
+
     while pipes:
+      # Maybe timeout reached?
+      if command_timeout and time.time() - started_time > command_timeout:
+        command_terminator.Terminate()
+
+      # Check if terminate request was received.
+      if command_terminator.IsTerminated() and not already_terminated:
+        if not self._Terminate(child, command_timeout):
+          self._Kill(child)
+        # Don't exit the loop immediately. Firstly try to read everything that
+        # was left on stdout and stderr.
+        already_terminated = True
+
       # Wait for pipes to become ready.
       ready_pipes, _, _ = select.select(pipes, [], [], 0.1)
-
-      # Maybe termination request was received?
-      if command_terminator and command_terminator.IsTerminated():
-        self.logger.LogError("Killing command!")
-        self.RunCommand("kill -9 %d" % child.pid)
-        break
 
       # Handle file descriptors ready to be read.
       for pipe in ready_pipes:
@@ -93,9 +141,9 @@ class CommandExecuter(object):
         # read all data that's available
         while data:
           if pipe == child.stdout:
-            self.logger.LogCommandOutput(data)
+            self.DataReceivedOnOutput(data)
           elif pipe == child.stderr:
-            self.logger.LogCommandError(data)
+            self.DataReceivedOnError(data)
 
           try:
             data = os.read(fd, 4096)
@@ -103,16 +151,19 @@ class CommandExecuter(object):
             # terminate loop if EWOULDBLOCK (EAGAIN) is received
             data = ""
 
-      if command_timeout and time.time() - started_time > command_timeout:
-        self.logger.LogWarning("Timeout of %s seconds reached since process "
-                               "started." % command_timeout)
-        self.RunCommand("kill %d || kill -9 %d" % (child.pid, child.pid))
-        break
+    if not already_terminated:
+      self.logger.LogOutput("Waiting for command to finish.")
+      child.wait()
 
-    self.logger.LogOutput("Waiting for command to finish.")
-    child.wait()
+    return child
 
-    return child.returncode
+  def DataReceivedOnOutput(self, data):
+    """Invoked when the child process wrote data to stdout."""
+    self.logger.LogCommandOutput(data)
+
+  def DataReceivedOnError(self, data):
+    """Invoked when the child process wrote data to stderr."""
+    self.logger.LogCommandError(data)
 
 
 class CommandTerminator(object):
