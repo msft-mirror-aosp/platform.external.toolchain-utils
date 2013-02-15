@@ -11,9 +11,7 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 
 import machine_description
-import machine_filters
 import machine_manager
-import machine_pool
 import unittest
 
 
@@ -28,26 +26,19 @@ class MachineManagerTest(unittest.TestCase):
 
   def testGetLinuxBox(self):
     descriptions = []
-    
-    filters = []
-    filters.append(machine_filters.OSFilter("linux"))
-    description = machine_description.MachineDescription(filters)
+    description = machine_description.MachineDescription("", "linux", False)
     descriptions.append(description)
     machines = self.machine_manager.GetMachines(descriptions)
+    self.assertTrue(len(machines) != 0)
     print machines
     
     
   def testGetChromeOSBox(self):
     descriptions = []
-    filters = []
-    filters.append(machine_filters.OSFilter("cHrOmEOS"))
-    description = machine_description.MachineDescription(filters)
+    description = machine_description.MachineDescription("", "linux", False)
     descriptions.append(description)
     machines = self.machine_manager.GetMachines(descriptions)
     self.assertTrue(len(machines) != 0)
-    
-    pool = machine_pool.MachinePool(machines)
-    print pool
 
 
 if __name__ == "__main__":

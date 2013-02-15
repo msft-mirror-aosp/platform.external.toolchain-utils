@@ -1,5 +1,3 @@
-import machine_filters
-
 class MachineDescription:
   def __init__(self, name, os, lock_required):
     self.name = name
@@ -19,7 +17,3 @@ class MachineDescription:
       return True
     if self.os and machine.os == self.os:
       return True
-
-  def GetFilter(self):
-    return machine_filters.MachineDescriptionFilter(self)
-

@@ -9,9 +9,6 @@ Machine pools can select machines based on filters.
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
-import machine
-
-
 class MachinePool:
   def __init__(self, initial_list=[]):
     self.machine_list = initial_list[:]
