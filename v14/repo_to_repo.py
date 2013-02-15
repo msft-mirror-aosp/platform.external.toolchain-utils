@@ -167,7 +167,7 @@ class GitRepo(Repo):
     command = "cd %s" % (root_dir)
     if self.ignores:
       for ignore in self.ignores:
-        command += "&& echo \"%s\" >> .gitignore" % ignore
+        command += "&& echo \"%s\" >> .git/info/exclude" % ignore
     command += "&& git add -Av ."
     command += "&& git commit -v -m \"%s\"" % commit_message
     command += "; git push -v %s origin %s:%s" % (push_args, self.branch, self.branch)
