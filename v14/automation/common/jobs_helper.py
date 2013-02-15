@@ -32,10 +32,10 @@ def GetP4Command(p4_port, p4_paths, revision, checkoutdir, p4_snapshot=""):
       real_path = p4_path[1]
       if real_path.endswith("..."):
         real_path = real_path.replace("/...", "")
-        command += ("&& mkdir -p " + checkoutdir + "/" +
+        command += ("; mkdir -p " + checkoutdir + "/" +
                     os.path.dirname(real_path))
-        command += ("&& cp -r " + p4_snapshot + "/" + real_path +
-                  "* " + checkoutdir + "/" + real_path)
+        command += ("&& rsync -lr " + p4_snapshot + "/" + real_path +
+                  " " + checkoutdir + "/" + os.path.dirname(real_path))
     return command
 
   client_name = "p4-automation-$JOB_ID"
@@ -87,7 +87,9 @@ def GetP4VersionDirCommand(p4_snapshot=""):
   return command
 
 
-def CreateBuildTCJob(chromeos_snapshot="", p4_snapshot=""):
+def CreateBuildTCJob(chromeos_version="top",
+                     board="x86-generic",
+                     chromeos_snapshot="", p4_snapshot=""):
   p4_port = "perforce2:2666"
   p4_paths = []
   p4_paths.append(("//depot2/gcctools/chromeos/v14/...", "gcctools/chromeos/v14/..."))
@@ -95,7 +97,7 @@ def CreateBuildTCJob(chromeos_snapshot="", p4_snapshot=""):
                    "gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/..."))
   p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/...",
                    "gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/..."))
-  p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/...",
+  p4_paths.append(("//depot2/gcctools/google_vendor_src_branch/binutils/binutils-20100303/...",
                    "gcctools/google_vendor_src_branch/binutils/binutils-20100303/..."))
   p4_revision = 1
 
@@ -107,15 +109,23 @@ def CreateBuildTCJob(chromeos_snapshot="", p4_snapshot=""):
     command += "; sudo cp -rp " + GetWeeklyChromeOSLocation() + " chromeos"
   elif chromeos_snapshot == "quarterly":
     command += " ; sudo cp -rp " + GetQuarterlyChromeOSLocation() + " chromeos"
+  else:
+    command += ("; " + p4_version_dir + "/setup_chromeos.py" +
+                " --dir=" + chromeos_root +
+                " --version=" + chromeos_version +
+                " --minilayout")
 
   command += ("; " + p4_version_dir + "/build_tc.py" +
                       " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
                       " --chromeos_root=" + chromeos_root +
+                      " --board=" + board +
                       " -f")
   tc_job = CreateLinuxJob(command)
   return tc_job
 
-def CreateBuildAndTestChromeOSJob(tc_job, chromeos_snapshot="", p4_snapshot=""):
+def CreateBuildAndTestChromeOSJob(tc_job, chromeos_version="latest",
+                                  board="x86-generic",
+                                  chromeos_snapshot="", p4_snapshot=""):
   command = GetInitialCommand()
   # TODO(asharif): Get rid of this hack at some point.
   command += "&& mkdir -p perforce2/gcctools/google_vendor_src_branch/gcc"
@@ -127,7 +137,8 @@ def CreateBuildAndTestChromeOSJob(tc_job, chromeos_snapshot="", p4_snapshot=""):
     command += " sudo cp -rp " + GetQuarterlyChromeOSLocation() + " chromeos"
   else:
     command += ("; " + p4_version_dir + "/setup_chromeos.py" +
-                " --dir=" + chromeos_root)
+                " --dir=" + chromeos_root +
+                " --version=" + chromeos_version)
 
   command += ("; " + p4_version_dir + "/build_tc.py" +
                       " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
@@ -136,11 +147,15 @@ def CreateBuildAndTestChromeOSJob(tc_job, chromeos_snapshot="", p4_snapshot=""):
   command += ("; " + p4_version_dir + "/build_chromeos.py" +
               " --toolchain_root=" + p4_checkout_dir + "/gcctools" +
               " --chromeos_root=" + chromeos_root +
-              " --board=x86-generic")
+              " --board=" + board)
+
+  command += ("; " + chromeos_scripts_dir + "/image_to_remote.sh " +
+              " --board=" + board +
+              " --remote=$SECONDARY_MACHINES[0]")
 
   command += ("; " + p4_version_dir + "/run_tests.py" + 
               " --remote=$SECONDARY_MACHINES[0] " +
-              " --board=x86-generic")
+              " --board=" + board)
 
   to_return = CreateLinuxJob(command)
   to_return.AddRequiredFolder(tc_job, p4_pkgs_dir, p4_pkgs_dir)

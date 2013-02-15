@@ -26,24 +26,20 @@ def Usage(parser, message):
 
 #TODO(raymes): move this to a common utils file.
 def ExecuteCommandInChroot(chromeos_root, toolchain_root, command,
-                           return_output=False, chrome_root=""):
+                           return_output=False):
   """Executes a command in the chroot."""
   global cmd_executer
   cmd_executer = command_executer.GetCommandExecuter()
 
-  chrome_mount = ""
-  if chrome_root:
-    chrome_mount = "--chrome_root=" + chromeos_root + "/" + chrome_root
   if toolchain_root is None:
     return cmd_executer.RunCommand(chromeos_root +
-                                   "/src/scripts/enter_chroot.sh %s -- %s"
-                                   % ("chrome_root=" + chrome_root,
-                                      command))
+                                   "/src/scripts/enter_chroot.sh -- %s"
+                                      % command)
   else:
     argv = [os.path.dirname(os.path.abspath(__file__)) + "/tc_enter_chroot.py",
             "--chromeos_root=" + chromeos_root,
             "--toolchain_root=" + toolchain_root,
-            chrome_mount,
+            "-s",
             "\n" + command]
     return tc_enter_chroot.Main(argv)
 
@@ -120,6 +116,7 @@ def Main(argv):
     ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
                                  "PKGDIR=%s ./setup_board --board=%s "
                                  " --gcc_version=9999 "
+                                 " --binutils_version=9999 "
                                  "%s" % (pkgdir, options.board, force))
     utils.AssertTrue(ret == 0, "setup_board failed")
   else:
@@ -163,8 +160,7 @@ def Main(argv):
                                "CHROME_ORIGIN=SERVER_SOURCE CHROME_VERSION=%s "
                                "./build_packages --withdev "
                                "--board=%s --withtest --withautotest"
-                               % (chrome_version, options.board),
-                               chrome_root="chrome_browser")
+                               % (chrome_version, options.board))
 
   utils.AssertTrue(ret == 0, "build_packages failed")
 

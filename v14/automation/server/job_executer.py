@@ -47,12 +47,14 @@ class JobExecuter(threading.Thread):
     ret = command
     ret = ret.replace("$JOB_ID", str(self.job.GetID()))
     ret = ret.replace("$PRIMARY_MACHINE", self.job.machines[0].name)
-    mo = re.search("\$SECONDARY_MACHINES\[(\d+)\]", ret)
-    logger.GetLogger().LogOutput("command: " + command)
-    if mo is not None:
-      index = int(mo.group(1))
-      ret = (ret[0:mo.start()] + self.job.machines[1 + index].name +
-             ret[mo.end():])
+    while True:
+      mo = re.search("\$SECONDARY_MACHINES\[(\d+)\]", ret)
+      if mo is not None:
+        index = int(mo.group(1))
+        ret = (ret[0:mo.start()] + self.job.machines[1 + index].name +
+               ret[mo.end():])
+      else:
+        break
     return ret
 
   def Kill(self):

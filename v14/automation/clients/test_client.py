@@ -11,19 +11,12 @@ import os
 def Main(argv):
   """The main function."""
   parser = optparse.OptionParser()
-  parser.add_option("-w",
-                    "--weekly",
-                    dest="weekly",
-                    action="store_true",
-                    default=False,
-                    help="Use weekly chromeos checkout."
-                    )
-  parser.add_option("-q",
-                    "--quarterly",
-                    dest="quarterly",
-                    action="store_true",
-                    default=False,
-                    help="Use quarterly chromeos checkout."
+  parser.add_option("-c",
+                    "--chromeos-versions",
+                    dest="chromeos_versions",
+                    default="latest",
+                    help=("Use these chromeos versions." +
+                          "Example: -c latest,weekly,quarterly")
                     )
   parser.add_option("-t",
                     "--toolchain",
@@ -44,11 +37,16 @@ def Main(argv):
   tc_job = jobs_helper.CreateBuildTCJob(p4_snapshot=options.p4_snapshot)
   all_jobs.append(tc_job)
 
-  build_chromeos_job = (
-      jobs_helper.CreateBuildAndTestChromeOSJob(
-        tc_job,
-        p4_snapshot=options.p4_snapshot))
-  all_jobs.append(build_chromeos_job)
+  versions = options.chromeos_versions
+  versions = versions.strip()
+
+  for version in versions.split(","):
+    build_chromeos_job = (
+        jobs_helper.CreateBuildAndTestChromeOSJob(
+          tc_job,
+          version,
+          p4_snapshot=options.p4_snapshot))
+    all_jobs.append(build_chromeos_job)
 
   group = job_group.JobGroup(os.uname()[1], "/tmp/", all_jobs, False, False)
   server.ExecuteJobGroup(utils.Serialize(group))

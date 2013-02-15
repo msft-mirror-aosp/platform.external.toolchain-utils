@@ -87,34 +87,14 @@ def Main(argv, return_output=False):
   parser.add_option("-m", "--other_mounts", dest="other_mounts",
                     help="Other mount points in the form: " + 
                          "dir:mounted_dir:options")
+  parser.add_option("-s", "--mount-scripts-only",
+                    dest="mount_scripts_only",
+                    action="store_true",
+                    default=False,
+                    help="Mount only the scripts dir, and not the sources.")
 
-  relevant_argv = []
   passthrough_argv = []
-  i = 0
-  while i < len(argv):
-    found = False
-    for option in parser.option_list:
-      for long_opt in option._long_opts:
-        if argv[i].startswith(long_opt):
-          relevant_argv.append(argv[i])
-          found = True
-          break
-      for short_opt in option._short_opts:
-        if argv[i].startswith(short_opt):
-          relevant_argv.append(argv[i])
-          relevant_argv.append(argv[i+1])
-	  i = i + 1
-          found = True
-          break
-
-      if found == True:
-        break
-
-    if found == False:
-      passthrough_argv.append(argv[i])
-    i = i + 1
-
-  options = parser.parse_args(relevant_argv)[0]
+  (options, passthrough_argv) = parser.parse_args(argv)
 
   chromeos_root = options.chromeos_root
 
@@ -132,12 +112,13 @@ def Main(argv, return_output=False):
   tc_dirs = [options.toolchain_root + "/google_vendor_src_branch/gcc",
              options.toolchain_root + "/google_vendor_src_branch/binutils"]
 
-  for tc_dir in tc_dirs:
-    if not os.path.exists(tc_dir):
-      logger.GetLogger().LogError("toolchain path " +
-                                 tc_dir + " does not exist!")
-      parser.print_help()
-      sys.exit(1)
+  if options.mount_scripts_only == False:
+    for tc_dir in tc_dirs:
+      if not os.path.exists(tc_dir):
+        logger.GetLogger().LogError("toolchain path " +
+                                   tc_dir + " does not exist!")
+        parser.print_help()
+        sys.exit(1)
 
   if not os.path.exists(chromeos_root):
     logger.GetLogger().LogError("chromeos_root " + options.chromeos_root +
@@ -160,11 +141,12 @@ def Main(argv, return_output=False):
   full_mounted_tc_root = os.path.abspath(full_mounted_tc_root)
  
   mount_points = []
-  for tc_dir in tc_dirs:
-    last_dir = utils.GetRoot(tc_dir)[1]
-    mount_point = MountPoint(tc_dir, full_mounted_tc_root + "/" + last_dir,
-                             getpass.getuser(), "ro")
-    mount_points.append(mount_point)
+  if options.mount_scripts_only == False:
+    for tc_dir in tc_dirs:
+      last_dir = utils.GetRoot(tc_dir)[1]
+      mount_point = MountPoint(tc_dir, full_mounted_tc_root + "/" + last_dir,
+                               getpass.getuser(), "ro")
+      mount_points.append(mount_point)
 
   output = options.output
   if output is None:

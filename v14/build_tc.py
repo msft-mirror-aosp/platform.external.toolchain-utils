@@ -62,7 +62,8 @@ def Main(argv):
 
   options = parser.parse_args(argv)[0]
 
-  if options.toolchain_root is None or options.board is None:
+  if (options.clean == False and 
+      (options.toolchain_root is None or options.board is None)):
     parser.print_help()
     sys.exit()
 
@@ -109,9 +110,10 @@ def Main(argv):
   if options.binary == True:
     # FIXME(asharif): This should be using --usepkg but that was not working.
     portage_flags = "--usepkgonly"
+    tc_enter_chroot_options.append("-s")
 
   f = open(options.chromeos_root + "/src/overlays/overlay-" +
-           options.board + "/toolchain.conf", "r")
+           options.board.split("_")[0] + "/toolchain.conf", "r")
   target = f.read()
   f.close()
   target = target.strip()
@@ -191,11 +193,6 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
   kernel_version = "2.6.30-r1"
 
   rootdir = utils.GetRoot(sys.argv[0])[0]
-  argv = [rootdir + "/tc_enter_chroot.py",
-          "--chromeos_root=" + chromeos_root,
-          "--toolchain_root=" + toolchain_root]
-  argv += tc_enter_chroot_options
-
   env += " "
 
   if uninstall == True:
@@ -207,8 +204,8 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
 
   if uninstall == True:
     command += " crossdev " + tflag + target
-    argv.append(command)
-    retval = tc_enter_chroot.Main(argv)
+    enter_chroot = chromeos_root + "/src/scripts/enter_chroot.sh"
+    retval = cmd_executer.RunCommand(enter_chroot + command)
     return retval
 
   if incremental_component == "binutils":
@@ -228,6 +225,11 @@ def BuildTC(chromeos_root, toolchain_root, env, target, uninstall,
                 " --gcc " + gcc_version +
                 " --kernel " + kernel_version +
                 crossdev_flags)
+
+  argv = [rootdir + "/tc_enter_chroot.py",
+          "--chromeos_root=" + chromeos_root,
+          "--toolchain_root=" + toolchain_root]
+  argv += tc_enter_chroot_options
 
   argv.append(command)
   retval = tc_enter_chroot.Main(argv)
