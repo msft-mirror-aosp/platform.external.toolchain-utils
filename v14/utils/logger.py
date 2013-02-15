@@ -44,6 +44,14 @@ class Logger(object):
       sys.stderr.write(msg)
       sys.stderr.flush()
 
+  def LogWarning(self, msg):
+    msg = "WARNING: " + msg + "\n"
+    self.stderr.write(msg)
+    self.stderr.flush()
+    if self.print_console:
+      sys.stderr.write(msg)
+      sys.stderr.flush()
+
   def LogCommandOutput(self, msg):
     self.stdout.write(msg)
     self.stdout.flush()

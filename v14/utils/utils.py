@@ -20,10 +20,27 @@ def GetRoot(scr_name):
   return (os.path.dirname(abs_path), os.path.basename(abs_path))
 
 
+# deprecated. Use AssertExit()
 def AssertTrue(condition, msg=""):
   if not condition:
     logger.GetLogger().LogError(msg)
     sys.exit(1)
+
+
+def AssertExit(condition, msg=""):
+  if not condition:
+    logger.GetLogger().LogError(msg)
+    sys.exit(1)
+
+
+def AssertError(condition, msg=""):
+  if not condition:
+    logger.GetLogger().LogError(msg)
+
+
+def AssertWarning(condition, msg=""):
+  if not condition:
+    logger.GetLogger().LogWarning(msg)
 
 
 def Serialize(argument):
