@@ -144,9 +144,12 @@ def LocateOrCopyImage(chromeos_root, image, board=None):
   # We did not find an image. Copy it in the src dir and return the copied file.
   if board is None:
     board = ""
-  temp_dir = tempfile.mkdtemp(prefix="%s/src/build/images/%s/tmp" %
-                   (chromeos_root_realpath,
-                    board))
+  base_dir = ("%s/src/build/images/%s" %
+              (chromeos_root_realpath,
+               board))
+  if not os.path.isdir(base_dir):
+    os.makedirs(base_dir)
+  temp_dir = tempfile.mkdtemp(prefix="%s/tmp" % base_dir)
   new_image = "%s/%s" % (temp_dir, os.path.basename(image))
   l.LogOutput("No matching image found. Copying %s to %s" %
               (image, new_image))
