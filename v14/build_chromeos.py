@@ -139,9 +139,9 @@ def Main(argv):
 
   # Build packages
   ret = ExecuteCommandInChroot(options.chromeos_root, None,
-                               "CFLAGS='$(portageq-%s envvar CFLAGS) %s'"
-                               "LDFLAGS='$(portageq-%s envvar LDFLAGS) %s'"
-                               "CXXFLAGS='$(portageq-%s envvar CXXFLAGS) %s'"
+                               "CFLAGS='$(portageq-%s envvar CFLAGS) %s' "
+                               "LDFLAGS='$(portageq-%s envvar LDFLAGS) %s' "
+                               "CXXFLAGS='$(portageq-%s envvar CXXFLAGS) %s' "
                                "CHROME_ORIGIN=SERVER_SOURCE "
                                "./build_packages --withdev --nousepkg "
                                "--board=%s --withtest --withautotest"
