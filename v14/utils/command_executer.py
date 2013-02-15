@@ -17,8 +17,9 @@ def InitCommandExecuter(mock=False):
   mock_default = mock
 
 
-def GetCommandExecuter(logger_to_set=None, mock=mock_default):
-  if mock:
+def GetCommandExecuter(logger_to_set=None, mock=False):
+  # If the default is a mock executer, always return one.
+  if mock_default or mock:
     return MockCommandExecuter(logger_to_set)
   else:
     return CommandExecuter(logger_to_set)
