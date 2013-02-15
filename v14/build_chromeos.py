@@ -30,6 +30,7 @@ def ExecuteCommandInChroot(chromeos_root, toolchain_root, command,
   """Executes a command in the chroot."""
   global cmd_executer
   cmd_executer = command_executer.GetCommandExecuter()
+  chromeos_root = os.path.expanduser(chromeos_root)
 
   if toolchain_root is None:
     cmd_file = "enter_chroot.cmd"
@@ -44,6 +45,7 @@ def ExecuteCommandInChroot(chromeos_root, toolchain_root, command,
                                    "/src/scripts/enter_chroot.sh -- ./%s"
                                       % cmd_file)
   else:
+    toolchain_root = os.path.expanduser(toolchain_root)
     argv = [os.path.dirname(os.path.abspath(__file__)) + "/tc_enter_chroot.py",
             "--chromeos_root=" + chromeos_root,
             "--toolchain_root=" + toolchain_root,
@@ -108,6 +110,10 @@ def Main(argv):
 
   if options.board is None:
     Usage(parser, "--board must be set")
+
+  options.chromeos_root = os.path.expanduser(options.chromeos_root)
+  if options.toolchain_root:
+    options.toolchain_root = os.path.expanduser(options.toolchain_root)
 
   MakeChroot(options.chromeos_root, options.clobber_chroot)
 
