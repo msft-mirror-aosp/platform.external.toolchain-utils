@@ -8,8 +8,8 @@ import signal
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 import sys
 
-from utils import command_executer
-from utils import logger
+from automation.common import command_executer
+from automation.common import logger
 from automation.server import job_group_manager
 from automation.server import job_manager
 from automation.server import machine_manager

@@ -6,11 +6,11 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import os.path
 import re
+
 from automation.clients.helper import jobs
 from automation.clients.helper import perforce
 from automation.common import command as cmd
 from automation.common import machine
-from utils import utils
 
 
 class ScriptsFactory(object):
@@ -138,11 +138,10 @@ class CommandsFactory(object):
     location = os.path.join(self.CHROMEOS_BUILDS_DIR, version)
 
     if version in ["weekly", "quarterly"]:
-      assert os.path.islink(location), \
-             "Symlink %s does not exist." % location
+      assert os.path.islink(location), "Symlink %s does not exist." % location
 
-      location_expanded = os.path.realpath(location)
-      version = utils.GetRoot(location_expanded)[1]
+      location_expanded = os.path.asbpath(os.path.realpath(location))
+      version = os.path.basename(location_expanded)
 
     if version in ["top", "latest"] or re.match(version_re, version):
       return self.scripts.SetupChromeOS(version, use_minilayout)
@@ -153,8 +152,8 @@ class CommandsFactory(object):
     else:
       signature_file_location = os.path.join(location,
                                              "src/scripts/enter_chroot.sh")
-      assert os.path.exists(signature_file_location), \
-             "Signature file %s does not exist." % signature_file_location
+      assert os.path.exists(signature_file_location), (
+          "Signature file %s does not exist." % signature_file_location)
 
       return jobs.SyncDir(location, self.CHROMEOS_ROOT)
 

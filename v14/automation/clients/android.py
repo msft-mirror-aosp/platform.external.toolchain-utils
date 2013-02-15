@@ -21,7 +21,7 @@ import xmlrpclib
 
 from automation.clients.helper import android
 from automation.common import job_group
-from utils import logger
+from automation.common import logger
 
 
 class AndroidToolchainNightlyClient(object):

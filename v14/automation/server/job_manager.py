@@ -4,12 +4,10 @@
 #
 
 import os
-import os.path
 import re
 import threading
 
-from utils import logger
-
+from automation.common import logger
 import automation.common.job
 from automation.server import job_executer
 
@@ -40,13 +38,13 @@ class IdProducerPolicy(object):
 
 class JobPreparer(object):
   def __init__(self):
-    self._home_prefix = "/usr/local/google/tmp/automation"
-    self._home_template = "job-%d"
+    self._home_prefix = '/usr/local/google/tmp/automation'
+    self._home_template = 'job-%d'
 
-    self._log_filename_template = "job-%d.log"
+    self._log_filename_template = 'job-%d.log'
 
     self._id_producer = IdProducerPolicy()
-    self._id_producer.Initialize(self._home_prefix, "job-(?P<id>\d+)")
+    self._id_producer.Initialize(self._home_prefix, 'job-(?P<id>\d+)')
 
   def Prepare(self, job):
     # Set job id
@@ -60,7 +58,7 @@ class JobPreparer(object):
 
     # Set job logger
     job.logger = logger.Logger(
-        job.logs_dir, self._log_filename_template % job.id, True, subdir="")
+        job.logs_dir, self._log_filename_template % job.id, True, subdir='')
 
 
 class JobManager(threading.Thread):
@@ -148,7 +146,7 @@ class JobManager(threading.Thread):
   def NotifyJobComplete(self, job):
     self.machine_manager.ReturnMachines(job.machines)
     self.job_condition.acquire()
-    logger.GetLogger().LogOutput("Job profile:\n%s" % str(job))
+    logger.GetLogger().LogOutput('Job profile:\n%s' % job)
     if job.status == automation.common.job.STATUS_SUCCEEDED:
       for parent in job.parents:
         if parent.is_ready:

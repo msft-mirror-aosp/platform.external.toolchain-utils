@@ -7,9 +7,8 @@ import os.path
 import re
 import threading
 
+from automation.common import command_executer
 from automation.common import job
-from utils import command_executer
-from utils import logger
 
 
 class JobExecuter(threading.Thread):

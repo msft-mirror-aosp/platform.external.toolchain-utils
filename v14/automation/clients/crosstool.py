@@ -10,9 +10,9 @@ import sys
 import traceback
 import xmlrpclib
 
-from automation.common import job_group
-from utils import logger
 from automation.clients.helper import crosstool
+from automation.common import job_group
+from automation.common import logger
 
 
 class CrosstoolNightlyClient(object):

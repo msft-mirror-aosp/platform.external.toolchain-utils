@@ -4,20 +4,18 @@
 #
 
 import copy
-import getpass
-import os.path
+import os
 import threading
 
-from utils import command_executer
-from utils import logger
-
+from automation.common import command_executer
+from automation.common import logger
 import automation.common.job_group
 from automation.server import job_manager
 
 
 class JobGroupPreparer(object):
   def __init__(self):
-    username = getpass.getuser()
+    username = os.getlogin()
 
     self._home_prefix = os.path.join("/home", username, "www", "automation")
     self._home_template = "job-group-%d"
@@ -33,10 +31,10 @@ class JobGroupPreparer(object):
 
 
 class JobGroupManager(object):
-  def __init__(self, job_manager):
+  def __init__(self, _job_manager):
     self.all_job_groups = []
 
-    self.job_manager = job_manager
+    self.job_manager = _job_manager
     self.job_manager.AddListener(self)
 
     self.job_condition = threading.Condition()
