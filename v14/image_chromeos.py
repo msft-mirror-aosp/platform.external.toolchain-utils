@@ -67,6 +67,7 @@ def ImageChromeOS(argv):
              "/chromiumos_image.bin")
   else:
     image = options.image
+    image = os.path.expanduser(image)
 
   image = os.path.realpath(image)
 

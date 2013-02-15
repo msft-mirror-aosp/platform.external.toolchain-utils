@@ -121,7 +121,7 @@ def Main(argv):
   new_results_dir = "/usr/local/toolchain_root/output/dejagnu/"
   ret = (build_chromeos.
          ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                                "sudo mkdir -p %s ; cp %s/g++/g++.log %s ; "
+                                "mkdir -p %s ; cp %s/g++/g++.log %s ; "
                                 "cp %s/gcc/gcc.log %s" %
                                 (new_results_dir, results_dir, new_results_dir,
                                  results_dir, new_results_dir)))

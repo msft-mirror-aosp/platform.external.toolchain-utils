@@ -126,7 +126,7 @@ def Main(argv):
     command = utils.GetSetupBoardCommand(options.board,
                                          usepkg=False,
                                          force=options.clobber_board)
-    command += "&& " + build_packages_env + " " + build_packages_command
+    command += "; " + build_packages_env + " " + build_packages_command
     command += "&& " + build_image_command
     command += "&& " + mod_image_command
     ret = ExecuteCommandInChroot(options.chromeos_root, None, command)
