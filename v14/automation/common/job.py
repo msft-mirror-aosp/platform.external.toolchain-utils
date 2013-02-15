@@ -69,7 +69,6 @@ class Job(object):
     self.dry_run = None
     self.label = label
     self.baseline = baseline
-    self.logger = None
 
   def _state_get(self):
     return self._state
@@ -177,11 +176,3 @@ class Job(object):
       self.machine_dependencies.insert(0, machine_spec)
     else:
       self.machine_dependencies.append(machine_spec)
-
-  def __getstate__(self):
-    # TODO(kbaclawski): This is nasty trick to prevent logger from being
-    # serialized and sent to other machine.  Logger class instance contains file
-    # handlers, which cannot be pickled.  Without this web.monitor crashes.
-    orig_dict = self.__dict__.copy()
-    orig_dict['logger'] = None
-    return orig_dict

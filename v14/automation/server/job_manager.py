@@ -56,10 +56,6 @@ class JobPreparer(object):
     job.work_dir = os.path.join(self._home_prefix, home_dir)
     job.home_dir = os.path.join(job.group.home_dir, home_dir)
 
-    # Set job logger
-    job.logger = logger.Logger(
-        job.logs_dir, self._log_filename_template % job.id, True, subdir='')
-
 
 class JobManager(threading.Thread):
   def __init__(self, machine_manager):
