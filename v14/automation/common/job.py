@@ -75,6 +75,7 @@ class Job(object):
     self.dry_run = None
     self.label = label
     self.baseline = baseline
+    self.logger = None
 
   def __str__(self):
     res = []
@@ -221,3 +222,11 @@ class Job(object):
     if not self.baseline:
       return ""
     return os.path.join(self.baseline, TEST_RESULTS_FILE)
+
+  def __getstate__(self):
+    # TODO(kbaclawski): This is nasty trick to prevent logger from being
+    # serialized and sent to other machine.  Logger class instance contains file
+    # handlers, which cannot be pickled.  Without this web.monitor crashes.
+    orig_dict = self.__dict__.copy()
+    orig_dict['logger'] = None
+    return orig_dict

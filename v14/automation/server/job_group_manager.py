@@ -1,25 +1,47 @@
-import threading
+#!/usr/bin/python2.6
+#
+# Copyright 2010 Google Inc. All Rights Reserved.
+#
+
+import copy
+import getpass
 import os.path
-import automation.common.job_group
+import threading
+
 from utils import command_executer
 from utils import logger
-import getpass
-import time
-import copy
 
-HOMEDIR_PREFIX = "/home/" + getpass.getuser() + "/www/automation"
+import automation.common.job_group
+from automation.server import job_manager
 
-class JobGroupManager:
 
+class JobGroupPreparer(object):
+  def __init__(self):
+    username = getpass.getuser()
+
+    self._home_prefix = os.path.join("/home", username, "www", "automation")
+    self._home_template = "job-group-%d"
+    self._home_pattern = "job-group-(?P<id>\d+)"
+
+    self._id_producer = job_manager.IdProducerPolicy()
+    self._id_producer.Initialize(self._home_prefix, "job-(?P<id>\d+)")
+
+  def Prepare(self, job_group):
+    job_group.id = self._id_producer.GetNextId()
+    job_group.home_dir = os.path.join(
+        self._home_prefix, self._home_template % job_group.id)
+
+
+class JobGroupManager(object):
   def __init__(self, job_manager):
     self.all_job_groups = []
 
     self.job_manager = job_manager
     self.job_manager.AddListener(self)
 
-
-    self.job_group_counter = 0
     self.job_condition = threading.Condition()
+
+    self._configurator = JobGroupPreparer()
 
   def GetJobGroup(self, job_group_id):
     for job_group in self.all_job_groups:
@@ -36,22 +58,21 @@ class JobGroupManager:
 
   def AddJobGroup(self, job_group):
     self.job_condition.acquire()
-    job_group.id = self.job_group_counter
-    job_group.home_dir = os.path.join(HOMEDIR_PREFIX, "job-group-%d" %
-                                      self.job_group_counter)
-    # Re/Create home directory for logs, etc.
-    command_executer.GetCommandExecuter().RunCommand("rm -rf %s ; mkdir -p %s" %
-                                                     (job_group.home_dir,
-                                                      job_group.home_dir))
 
-    job_group.time_submitted = time.time()
-    job_group.status = automation.common.job_group.STATUS_EXECUTING
+    self._configurator.Prepare(job_group)
+
+    # Re/Create home directory for logs, etc.
+    command_executer.GetCommandExecuter().RunCommand(
+        "rm -rf %s ; mkdir -p %s" % (job_group.home_dir, job_group.home_dir))
+
     self.all_job_groups.append(job_group)
+
     for job in job_group.jobs:
       self.job_manager.AddJob(job)
-    self.job_group_counter += 1
 
     logger.GetLogger().LogOutput("Added JobGroup '%s'." % job_group.id)
+
+    job_group.Submit()
 
     self.job_condition.release()
     return job_group.id

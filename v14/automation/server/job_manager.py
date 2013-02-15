@@ -1,10 +1,69 @@
+#!/usr/bin/python2.6
+#
+# Copyright 2010 Google Inc. All Rights Reserved.
+#
+
+import os
+import os.path
+import re
 import threading
-import job_executer
-import automation.common.job
+
 from utils import logger
 
-class JobManager(threading.Thread):
+import automation.common.job
+from automation.server import job_executer
 
+
+class IdProducerPolicy(object):
+  def __init__(self):
+    self._counter = 1
+
+  def Initialize(self, home_prefix, home_pattern):
+    harvested_ids = []
+
+    for filename in os.listdir(home_prefix):
+      path = os.path.join(home_prefix, filename)
+
+      if os.path.isdir(path):
+        match = re.match(home_pattern, filename)
+
+        if match:
+          harvested_ids.append(int(match.group('id')))
+
+    self._counter = max(harvested_ids or [0]) + 1
+
+  def GetNextId(self):
+    new_id = self._counter
+    self._counter += 1
+    return new_id
+
+
+class JobPreparer(object):
+  def __init__(self):
+    self._home_prefix = "/usr/local/google/tmp/automation"
+    self._home_template = "job-%d"
+
+    self._log_filename_template = "job-%d.log"
+
+    self._id_producer = IdProducerPolicy()
+    self._id_producer.Initialize(self._home_prefix, "job-(?P<id>\d+)")
+
+  def Prepare(self, job):
+    # Set job id
+    job.id = self._id_producer.GetNextId()
+
+    home_dir = self._home_template % job.id
+
+    # Set job directories
+    job.work_dir = os.path.join(self._home_prefix, home_dir)
+    job.home_dir = os.path.join(job.group.home_dir, home_dir)
+
+    # Set job logger
+    job.logger = logger.Logger(
+        job.logs_dir, self._log_filename_template % job.id, True, subdir="")
+
+
+class JobManager(threading.Thread):
   def __init__(self, machine_manager):
     threading.Thread.__init__(self)
     self.all_jobs = []
@@ -15,18 +74,16 @@ class JobManager(threading.Thread):
 
     self.job_condition = threading.Condition()
 
-    self.job_counter = 0
-
     self.listeners = []
     self.listeners.append(self)
 
+    self._configurator = JobPreparer()
 
   def StartJobManager(self):
     self.job_condition.acquire()
     self.start()
     self.job_condition.notifyAll()
     self.job_condition.release()
-
 
   def StopJobManager(self):
     self.job_condition.acquire()
@@ -68,9 +125,7 @@ class JobManager(threading.Thread):
   def AddJob(self, current_job):
     self.job_condition.acquire()
 
-    current_job_id = self.job_counter
-    current_job.id = current_job_id
-    self.job_counter += 1
+    self._configurator.Prepare(current_job)
 
     self.all_jobs.append(current_job)
     # Only queue a job as ready if it has no dependencies
@@ -79,7 +134,8 @@ class JobManager(threading.Thread):
 
     self.job_condition.notifyAll()
     self.job_condition.release()
-    return current_job_id
+
+    return current_job.id
 
   def CleanUpJob(self, job):
     self.job_condition.acquire()
@@ -88,7 +144,6 @@ class JobManager(threading.Thread):
       del self.job_executer_mapping[job.id]
     # TODO(raymes): remove job from self.all_jobs
     self.job_condition.release()
-
 
   def NotifyJobComplete(self, job):
     self.machine_manager.ReturnMachines(job.machines)
@@ -111,14 +166,13 @@ class JobManager(threading.Thread):
       # Get the next ready job, block if there are none
       self.job_condition.acquire()
       self.job_condition.wait()
-      while len(self.ready_jobs) > 0:
 
+      while len(self.ready_jobs) > 0:
         ready_job = self.ready_jobs.pop()
         if ready_job is None:
           # Time to die
           self.job_condition.release()
           return
-
 
         required_machines = ready_job.machine_dependencies
         for child in ready_job.children:
@@ -136,7 +190,5 @@ class JobManager(threading.Thread):
                                               self.listeners)
           executer.start()
           self.job_executer_mapping[ready_job.id] = executer
-
-
 
       self.job_condition.release()

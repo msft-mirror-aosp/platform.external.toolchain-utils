@@ -1,6 +1,7 @@
 #!/usr/bin/python2.6
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
+#
 
 import os.path
 import re
@@ -11,8 +12,6 @@ import report_generator
 from utils import command_executer
 from utils import logger
 
-WORKDIR_PREFIX = "/usr/local/google/tmp/automation"
-
 
 class JobExecuter(threading.Thread):
   def __init__(self, job_to_execute, machines, listeners):
@@ -22,19 +21,8 @@ class JobExecuter(threading.Thread):
     self.listeners = listeners
     self.machines = machines
 
-    job_dir = "job-%d" % self.job.id
-
-    # Set job directory
-    self.job.work_dir = os.path.join(WORKDIR_PREFIX, job_dir)
-    self.job.home_dir = os.path.join(self.job.group.home_dir, job_dir)
-    self.job_log_root = self.job.logs_dir
-
-    # Setup log files for the job.
-    self.job_log_file_name = "job-%s.log" % self.job.id
-    self.job_logger = logger.Logger(self.job_log_root, self.job_log_file_name,
-                                    True, subdir="")
-    self._executer = command_executer.GetCommandExecuter(self.job_logger,
-                                                         self.job.dry_run)
+    self._executer = command_executer.GetCommandExecuter(
+        self.job.logger, self.job.dry_run)
     self._terminator = command_executer.CommandTerminator()
 
   def _FormatCommand(self, command):
@@ -144,13 +132,13 @@ class JobExecuter(threading.Thread):
     baseline_filename = self.job.baseline_filename
 
     if not baseline_filename:
-      self.job_logger.LogWarning("Baseline not specified.")
+      self.job.logger.LogWarning("Baseline not specified.")
 
     try:
       report = report_generator.GenerateResultsReport(baseline_filename,
                                                       results_filename)
     except IOError:
-      self.job_logger.LogWarning("Couldn't generate report")
+      self.job.logger.LogWarning("Couldn't generate report")
     else:
       try:
         with open(self.job.test_report_filename, "w") as report_file:
@@ -159,7 +147,7 @@ class JobExecuter(threading.Thread):
         with open(self.job.test_report_summary_filename, "w") as summary_file:
           summary_file.write(report.GetSummary())
       except IOError:
-        self.job_logger.LogWarning("Could not write results report")
+        self.job.logger.LogWarning("Could not write results report")
 
   def run(self):
     self.job.status = job.STATUS_SETUP
@@ -168,7 +156,7 @@ class JobExecuter(threading.Thread):
 
     primary_machine = self.machines[0]
 
-    self.job_logger.LogOutput("Executing job with ID '%s' on machine '%s' in "
+    self.job.logger.LogOutput("Executing job with ID '%s' on machine '%s' in "
                               "directory '%s'" % (self.job.id,
                                                   primary_machine.hostname,
                                                   self.job.work_dir))
@@ -190,15 +178,15 @@ class JobExecuter(threading.Thread):
       # If we get here, the job succeeded.
       self.job.status = job.STATUS_SUCCEEDED
     except job.JobFailure as ex:
-      self.job_logger.LogError("Job failed. Exit code %s. %s" % (ex.exit_code,
+      self.job.logger.LogError("Job failed. Exit code %s. %s" % (ex.exit_code,
                                                                  ex.message))
       if self._terminator.IsTerminated():
-        self.job_logger.LogOutput("Job %s was killed" % self.job.id)
+        self.job.logger.LogOutput("Job %s was killed" % self.job.id)
 
       self.job.status = job.STATUS_FAILED
 
     self._GenerateJobReport()
-    self.job_logger.Flush()
+    self.job.logger.Flush()
 
     for listener in self.listeners:
       listener.NotifyJobComplete(self.job)
