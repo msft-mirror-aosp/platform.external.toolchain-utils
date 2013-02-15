@@ -56,7 +56,6 @@ class CommandsFactory(object):
 
     self.buildit_work_dir = 'buildit-tmp'
     self.buildit_work_dir_path = os.path.join('$JOB_TMP', self.buildit_work_dir)
-    self.buildit_results_path = os.path.join('$JOB_TMP', 'results', 'packages')
 
     paths = {
         'gcctools': [
@@ -85,29 +84,26 @@ class CommandsFactory(object):
                                p4client.Remove())
 
   def BuildRelease(self, target):
-    build_toolchain = cmd.Wrapper(
-        cmd.Shell(
-            'buildit',
-            '--keep-work-dir',
-            '--build-type=release',
-            '--work-dir=%s' % self.buildit_work_dir_path,
-            '--results-dir=%s' % self.buildit_results_path,
-            '--force-release=$(< %s)' % os.path.join(
-                '$JOB_TMP', self.CHECKOUT_DIR, 'CLNUM'),
-            target,
-            path='.'),
-        cwd=self.buildit_path)
-
     timestamp = time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())
 
     toolchain_root = os.path.join(
         '/google/data/rw/projects/toolchains', target, 'unstable')
     toolchain_path = os.path.join(toolchain_root, timestamp)
 
-    copy_new_toolchain_to_x20 = cmd.Chain(
-        cmd.MakeDir(toolchain_path),
-        cmd.Copy(self.buildit_results_path + '/', to_dir=toolchain_path,
-                 recursive=True))
+    build_toolchain = cmd.Wrapper(
+        cmd.Chain(
+          cmd.MakeDir(toolchain_path),
+          cmd.Shell(
+              'buildit',
+              '--keep-work-dir',
+              '--build-type=release',
+              '--work-dir=%s' % self.buildit_work_dir_path,
+              '--results-dir=%s' % toolchain_path,
+              '--force-release=$(< %s)' % os.path.join(
+                  '$JOB_TMP', self.CHECKOUT_DIR, 'CLNUM'),
+              target,
+              path='.')),
+        cwd=self.buildit_path)
 
     # remove all but 20 most recent directories
     remove_old_toolchains_from_x20 = cmd.Wrapper(
@@ -117,10 +113,7 @@ class CommandsFactory(object):
             cmd.Shell('xargs', 'rm', '-r', '-f')),
         cwd=toolchain_root)
 
-    return cmd.Chain(
-        build_toolchain,
-        copy_new_toolchain_to_x20,
-        remove_old_toolchains_from_x20)
+    return cmd.Chain(build_toolchain, remove_old_toolchains_from_x20)
 
   def RunTests(self, target, board):
     dejagnu_output_path = os.path.join(self.buildit_work_dir_path,
