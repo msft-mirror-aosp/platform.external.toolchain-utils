@@ -226,8 +226,8 @@ def VerifyChromeChecksum(chromeos_root, image, remote):
   rootfs_mp = tempfile.mkdtemp()
   stateful_mp = tempfile.mkdtemp()
   MountImage(chromeos_root, image, rootfs_mp, stateful_mp)
-  image_chrome_checksum = utils.Md5File("%s/opt/google/chrome/chrome" %
-                                        rootfs_mp)
+  image_chrome_checksum = FileUtils().Md5File("%s/opt/google/chrome/chrome" %
+                                              rootfs_mp)
   MountImage(chromeos_root, image, rootfs_mp, stateful_mp, unmount=True)
 
   command = "md5sum /opt/google/chrome/chrome"
