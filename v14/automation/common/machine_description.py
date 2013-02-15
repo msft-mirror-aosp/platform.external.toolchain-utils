@@ -30,4 +30,5 @@ class MachineDescription:
     return self.preferred_machines
 
   def AddPreferredMachine(self, name):
-    self.preferred_machines.append(name)
+    if name not in self.preferred_machines:
+      self.preferred_machines.append(name)
