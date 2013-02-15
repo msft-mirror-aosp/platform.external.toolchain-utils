@@ -130,6 +130,12 @@ def Main(argv):
                                 chromeos_root=options.chromeos_root,
                                 machine=options.remote)
     utils.AssertExit(retval == 0, "Writing checksum failed.")
+
+    successfully_imaged = VerifyChromeChecksum(options.chromeos_root,
+                                               image,
+                                               options.remote)
+    utils.AssertExit(successfully_imaged == True,
+                     "Image verification failed!")
   else:
     l.LogOutput("Checksums match. Skipping reimage")
 
@@ -174,25 +180,54 @@ def LocateOrCopyImage(chromeos_root, image, board=None):
   return [False, new_image]
 
 
-def IsImageModdedForTest(chromeos_root, image):
-  cmd_executer = command_executer.GetCommandExecuter()
+def GetImageMountCommand(chromeos_root, image, mount_point):
   image_dir = os.path.dirname(image)
   image_file = os.path.basename(image)
-  mount_point = tempfile.mkdtemp()
   mount_command = ("cd %s/src/scripts &&"
                    "./mount_gpt_image.sh --from=%s --image=%s"
                    " --safe --read_only"
                    " --rootfs_mountpt=%s" %
                    (chromeos_root, image_dir, image_file, mount_point))
-  unmount_command = "%s --unmount" % mount_command
+  return mount_command
 
-  retval = cmd_executer.RunCommand(mount_command)
-  utils.AssertExit(retval == 0, "Mount command failed!")
+
+def MountImage(chromeos_root, image, mount_point, unmount=False):
+  cmd_executer = command_executer.GetCommandExecuter()
+  command = GetImageMountCommand(chromeos_root, image, mount_point)
+  if unmount:
+    command = "%s --unmount" % command
+  retval = cmd_executer.RunCommand(command)
+  utils.AssertExit(retval == 0, "Mount/unmount command failed!")
+  return retval
+
+
+def IsImageModdedForTest(chromeos_root, image):
+  mount_point = tempfile.mkdtemp()
+  MountImage(chromeos_root, image, mount_point)
   signature_file = "/usr/local/lib/python2.6/test/autotest.py"
   is_test_image = os.path.isfile("%s/%s" % (mount_point, signature_file))
-  retval = cmd_executer.RunCommand(unmount_command)
-  utils.AssertExit(retval == 0, "Unmount command failed!")
+  MountImage(chromeos_root, image, mount_point, unmount=True)
   return is_test_image
+
+
+def VerifyChromeChecksum(chromeos_root, image, remote):
+  cmd_executer = command_executer.GetCommandExecuter()
+  mount_point = tempfile.mkdtemp()
+  MountImage(chromeos_root, image, mount_point)
+  image_chrome_checksum = utils.Md5File("%s/opt/google/chrome/chrome" %
+                                        mount_point)
+  MountImage(chromeos_root, image, mount_point, unmount=True)
+
+  command = "md5sum /opt/google/chrome/chrome"
+  [r, o, e] = cmd_executer.CrosRunCommand(command,
+                                          return_output=True,
+                                          chromeos_root=chromeos_root,
+                                          machine=remote)
+  device_chrome_checksum = o.split()[0]
+  if image_chrome_checksum.strip() == device_chrome_checksum.strip():
+    return True
+  else:
+    return False
 
 
 if __name__ == "__main__":
