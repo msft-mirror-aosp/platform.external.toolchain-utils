@@ -20,8 +20,9 @@ STATUS_RUNNING = "STATUS_RUNNING"
 STATUS_SUCCEEDED = "STATUS_SUCCEEDED"
 STATUS_FAILED = "STATUS_FAILED"
 
-LOGS_SUBDIR = "/logs"
-LOWLEVEL_LOGS_SUBDIR = "/lowlevel_logs"
+LOGS_SUBDIR = "logs"
+TEST_RESULTS_DIR = "results"
+TEST_RESULTS_FILE = "results.csv"
 
 class RequiredFolder:
   def __init__(self, job, src, dest, read_only):
@@ -54,9 +55,8 @@ class Job:
     self.command = command
     self._primary_done = False
     self.status_events = []
-    self.lowlevel_log_files = []
     self.group = None
-    self.dry_run = False
+    self.dry_run = None
 
   def __str__(self):
     ret = ""
@@ -156,17 +156,20 @@ class Job:
   def GetHomeDir(self):
     return self.home_dir
 
-  def GetLowLevelLogsDest(self):
-    if len(self.home_dir) > 0:
-      return self.home_dir + LOWLEVEL_LOGS_SUBDIR
-    else:
-      return ""
+  def GetTestResults(self):
+    return self.GetTestResultsDir() + "/" + TEST_RESULTS_FILE
+
+  def GetTestResultsDirSrc(self):
+    assert(len(self.work_dir) > 0)
+    return self.work_dir + "/" + TEST_RESULTS_DIR
+
+  def GetTestResultsDir(self):
+    assert(len(self.home_dir) > 0)
+    return self.home_dir + "/" + TEST_RESULTS_DIR
 
   def GetLogsDir(self):
-    if len(self.home_dir) > 0:
-      return self.home_dir + LOGS_SUBDIR
-    else:
-      return ""
+    assert(len(self.home_dir) > 0)
+    return self.home_dir + "/" + LOGS_SUBDIR
 
   def AddChild(self, job):
     if job not in self.children:
@@ -221,12 +224,6 @@ class Job:
       self._primary_done = True
     else:
       self.machine_descriptions.append(desc)
-
-  def AddLowLevelLog(self, file):
-    self.lowlevel_log_files.append(file)
-
-  def GetLowLevelLogsSrc(self):
-    return self.lowlevel_log_files
 
   def SetDryRun(self, dry_run):
     self.dry_run = dry_run

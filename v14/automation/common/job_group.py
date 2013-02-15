@@ -68,14 +68,14 @@ class JobGroup:
   def GetHomeDir(self):
     return self.homedir
 
-  def GetBaselineFileSrc(self):
+  def GetTestBaselineSrc(self):
     return self.baseline_file_src
 
-  def GetBaselineFileDest(self):
+  def GetTestBaseline(self):
     return self.homedir + "/" + BASELINE_FILE
 
-  def GetResultsFileDest(self):
+  def GetTestResults(self):
     return self.homedir + "/" + RESULTS_FILE
 
-  def GetReportDest(self):
+  def GetTestReport(self):
     return self.homedir + "/" + REPORT_FILE

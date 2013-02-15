@@ -103,9 +103,10 @@ class JobExecuter(threading.Thread):
 
     self.CleanUpWorkDir(self.command_terminator)
 
-    mkdir_command = ("mkdir -p %s && mkdir -p %s" %
+    mkdir_command = ("mkdir -p %s && mkdir -p %s && mkdir -p %s" %
                      (self.job.GetWorkDir(),
-                      self.job.GetLogsDir()))
+                      self.job.GetLogsDir(),
+                      self.job.GetTestResultsDirSrc()))
     mkdir_success = self.cmd_executer.RunCommand(mkdir_command,
                                                  False, primary_machine.name,
                                                  primary_machine.username,
@@ -166,25 +167,16 @@ class JobExecuter(threading.Thread):
                          "Command failed to execute: '%s'." % command):
       return
 
-    # Copy low-level-logs back to directory
-    if len(self.job.GetLowLevelLogsSrc()) > 0:
-      to_folder = self.job.GetLowLevelLogsDest()
-      command = "mkdir -p " + to_folder
-      mkdir_status = (self.cmd_executer.RunCommand
-                      (command, command_terminator=self.command_terminator))
-
-      if self._IsJobFailed(mkdir_status, "mkdir of low level logs "
-                           "directory Failed."):
-        return
-      for file in self.job.GetLowLevelLogsSrc():
-        from_folder = self.job.GetWorkDir() + "/" + file
-        from_user = primary_machine.username
-        from_machine = primary_machine.name
-        copy_success = self.cmd_executer.CopyFiles(from_folder, to_folder,
-                                                   from_machine, None,
-                                                   from_user, recursive=False)
-        if self._IsJobFailed(copy_success, "Failed to copy low level logs."):
-          return
+    # Copy test results back to directory
+    to_folder = self.job.GetHomeDir()
+    from_folder = self.job.GetTestResultsDirSrc()
+    from_user = primary_machine.username
+    from_machine = primary_machine.name
+    copy_success = self.cmd_executer.CopyFiles(from_folder, to_folder,
+                                               from_machine, None,
+                                               from_user, recursive=False)
+    if self._IsJobFailed(copy_success, "Failed to copy results."):
+      return
 
 
     # If we get here, the job succeeded. 

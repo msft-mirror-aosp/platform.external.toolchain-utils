@@ -6,7 +6,6 @@ import getpass
 import time
 import copy
 import report_generator
-import summarize_results
 
 HOMEDIR_PREFIX = "/home/" + getpass.getuser() + "/www/automation"
 
@@ -40,14 +39,15 @@ class JobGroupManager:
     job_group.SetID(self.job_group_counter)
     job_group.SetHomeDir(HOMEDIR_PREFIX + "/job-group-" +
                          str(self.job_group_counter))
-    # Create home directory for logs, etc.
-    command_executer.GetCommandExecuter().RunCommand("mkdir -p " +
-                                                     job_group.GetHomeDir())
+    # Re/Create home directory for logs, etc.
+    command_executer.GetCommandExecuter().RunCommand("rm -rf %s ; mkdir -p %s" %
+                                                     (job_group.GetHomeDir(),
+                                                      job_group.GetHomeDir()))
     # Copy baseline csv
-    if job_group.GetBaselineFileSrc() is not None:
+    if job_group.GetTestBaselineSrc() is not None:
       res = (command_executer.GetCommandExecuter().
-             CopyFiles(job_group.GetBaselineFileSrc(),
-                       job_group.GetBaselineFileDest(), recursive=False))
+             CopyFiles(job_group.GetTestBaselineSrc(),
+                       job_group.GetTestBaseline(), recursive=False))
       if res != 0:
         logger.GetLogger().LogWarning("Could not copy baseline.csv")
     else:
@@ -119,21 +119,20 @@ class JobGroupManager:
   def FinishedJobGroup(self, job_group):
     # Read all results files and compress into a single csv that can be used
     # as the next baseline.
-    summary_file = open(job_group.GetResultsFileDest(), "w")
+    summary_file = open(job_group.GetTestResults(), "w")
     for job in job_group.GetJobs():
-      for lowlevel_log in job.GetLowLevelLogsSrc():
-        filename = lowlevel_log.split("/")[-1]
-        path = job.GetLowLevelLogsDest() + "/" + filename
-        try:
-          summary_file.write(summarize_results.SummarizeFile(path).strip() +
-                             "\n")
-        except IOError, e:
-          logger.GetLogger().LogWarning(e)
+      path = job.GetTestResults()
+      try:
+        file = open(path, "rb")
+        for line in file:
+          summary_file.write(line.strip() + "\t" + str(job.GetID()) + "\n")
+      except IOError, e:
+        logger.GetLogger().LogWarning(e)
     summary_file.close()
     try:
-      report_file = open(job_group.GetReportDest(), "w")
-      baseline_filename = job_group.GetBaselineFileDest()
-      results_filename = job_group.GetResultsFileDest()
+      report_file = open(job_group.GetTestReport(), "w")
+      baseline_filename = job_group.GetTestBaseline()
+      results_filename = job_group.GetTestResults()
       report = report_generator.GenerateResultsReport(baseline_filename,
                                                       [results_filename])
       report_file.write(report)
