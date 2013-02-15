@@ -30,7 +30,10 @@ class FolderDependency(object):
     self.job = job
     self.src = src
     self.dest = dest
-    self.read_only = dest != src
+
+  @property
+  def read_only(self):
+    return self.dest == self.src
 
 
 class JobStateMachine(state_machine.BasicStateMachine):
