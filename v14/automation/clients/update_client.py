@@ -1,3 +1,4 @@
+import getpass
 import sys
 from utils import utils
 import xmlrpclib
@@ -17,22 +18,15 @@ def Main(argv):
                     default="weekly",
                     help=("Update what version of chromeos.")
                     )
-  parser.add_option("-l",
-                    "--location",
-                    dest="location",
-                    default="/home/asharif/chromeos_checkouts/",
-                    help="Location of the checkouts directory."
-                    )
   options = parser.parse_args(argv)[0]
 
   server = xmlrpclib.Server("http://localhost:8000")
 
   all_jobs = []
-  update_job = jobs_helper.CreateUpdateJob(options.chromeos_version,
-                                           options.location)
+  update_job = jobs_helper.CreateUpdateJob(options.chromeos_version)
   all_jobs.append(update_job)
 
-  group = job_group.JobGroup(os.uname()[1], "/tmp/", all_jobs, False, False)
+  group = job_group.JobGroup(all_jobs, False, False)
   server.ExecuteJobGroup(utils.Serialize(group))
 
 if __name__ == "__main__":

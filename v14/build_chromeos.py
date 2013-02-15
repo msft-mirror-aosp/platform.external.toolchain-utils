@@ -93,17 +93,17 @@ def Main(argv):
                     help="LDFLAGS for the ChromeOS packages")
   parser.add_option("--board", dest="board",
                     help="ChromeOS target board, e.g. x86-generic")
-  parser.add_option("--binary", dest="binary",
+  parser.add_option("--vanilla", dest="vanilla",
                     default=False,
                     action="store_true",
-                    help="Use binary packages while building ChromeOS")
+                    help="Use default ChromeOS toolchain.")
 
   options = parser.parse_args(argv[1:])[0]
 
   if options.chromeos_root is None:
     Usage(parser, "--chromeos_root must be set")
 
-  if options.toolchain_root is None and options.binary == False:
+  if options.toolchain_root is None and options.vanilla == False:
     Usage(parser, "--toolchain_root must be set")
 
   if options.board is None:
@@ -111,10 +111,10 @@ def Main(argv):
 
   MakeChroot(options.chromeos_root, options.clobber_chroot)
 
-  if options.binary == True:
-    command = "./setup_board --board=" + options.board
-    command += "&& ./build_packages --board=" + options.board
-    command += "&& ./build_image --board=" + options.board
+  if options.vanilla == True:
+    command = "./setup_board --nousepkg --board=" + options.board
+    command += "&& ./build_packages --nousepkg --board=" + options.board
+    command += "&& ./build_image --nousepkg --board=" + options.board
     command += "&& ./mod_image_for_test.sh --board=" + options.board
     ret = ExecuteCommandInChroot(options.chromeos_root, None, command)
     return ret

@@ -197,7 +197,6 @@ def CreateTestJob(build_chromeos_job):
   return to_return
 
 def CreateUpdateJob(chromeos_version,
-                    location=None,
                     create_image=True,
                     p4_snapshot="",
                     board="x86-generic"):
@@ -210,13 +209,12 @@ def CreateUpdateJob(chromeos_version,
               " --version=latest")
   command += ("; " + p4_version_dir + "/build_chromeos.py" + 
               " --chromeos_root=" + chromeos_root +
-              " --binary --board=" + board)
+              " --vanilla --board=" + board)
   command += ("&& cd chromeos/src/scripts " +
               "&& ./make_chroot --delete" +
               "&& cd -")
 
-  if location is None:
-    location = utils.GetRoot(GetWeeklyChromeOSLocation())[0]
+  location = utils.GetRoot(GetWeeklyChromeOSLocation())[0]
   command += "&& mkdir -p " + location
   command += "&& cp -pr chromeos " + location + "/chromeos." + dirname
   command += (" && ln -fs -T chromeos." + dirname + " " +
