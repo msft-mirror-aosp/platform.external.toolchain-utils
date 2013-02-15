@@ -50,7 +50,7 @@ def ExecuteCommandInChroot(chromeos_root, toolchain_root, command,
             "\n" + command]
     if not full_mount:
       argv.append("-s")
-    return tc_enter_chroot.Main(argv)
+    return tc_enter_chroot.Main(argv, return_output)
 
 
 def MakeChroot(chromeos_root, clobber_chroot=False):
@@ -85,11 +85,11 @@ def Main(argv):
   parser.add_option("--clobber_board", dest="clobber_board",
                     action="store_true",
                     help="Delete the board and start fresh", default=False)
-  parser.add_option("--cflags", dest="cflags",
+  parser.add_option("--cflags", dest="cflags", default="",
                     help="CFLAGS for the ChromeOS packages")
-  parser.add_option("--cxxflags", dest="cxxflags",
+  parser.add_option("--cxxflags", dest="cxxflags", default="",
                     help="CXXFLAGS for the ChromeOS packages")
-  parser.add_option("--ldflags", dest="ldflags",
+  parser.add_option("--ldflags", dest="ldflags", default="",
                     help="LDFLAGS for the ChromeOS packages")
   parser.add_option("--board", dest="board",
                     help="ChromeOS target board, e.g. x86-generic")
@@ -132,30 +132,14 @@ def Main(argv):
     logger.GetLogger().LogOutput("Did not setup_board "
                                  "because it already exists")
 
-  # Modify make.conf to add CFLAGS/CXXFLAGS/LDFLAGS
-  ret1 = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                                "[ -e /build/%s/etc/make.conf.orig ] || "
-                                "sudo mv /build/%s/etc/make.conf "
-                                "/build/%s/etc/make.conf.orig"
-                                % (options.board, options.board, options.board))
-  makeconf = ("source make.conf.orig\n")
-              #"CFLAGS='%s'\\\nCXXFLAGS='%s'\\\nLDFLAGS='%s'\\\n" %
-              #(options.cflags, options.cxxflags, options.ldflags))
-  ret2 = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
-                                "if [ -e /build/%s/etc/make.conf.orig ] ; "
-                                "then sudo echo -e \"%s\" | sudo tee "
-                                "/build/%s/etc/make.conf > /dev/null ;"
-                                "else exit 1 ; fi"
-                                % (options.board, makeconf, options.board))
-
-  utils.AssertTrue(ret1 == 0 and ret2 == 0, "Could not modify make.conf")
-
- # Build packages
+  # Build packages
   ret = ExecuteCommandInChroot(options.chromeos_root, options.toolchain_root,
+                               "CFLAGS='%s' CXXFLAGS='%s' LDFLAGS='%s' "
                                "CHROME_ORIGIN=SERVER_SOURCE "
                                "./build_packages --withdev "
                                "--board=%s --withtest --withautotest"
-                               % (options.board))
+                               % (options.cflags, options.cxxflags,
+                                  options.ldflags, options.board))
 
   utils.AssertTrue(ret == 0, "build_packages failed")
 

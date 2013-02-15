@@ -70,7 +70,7 @@ def Main(argv):
   f.close()
   target = target.strip()
   gcc_build_dir = ("/usr/local/toolchain_root/v14/output/objects/cross/"
-                   "%s/portage/cross-%s/gcc-9999/work/build/gcc"
+                   "%s/portage/cross-%s/gcc-9999/work/build"
                    % (target, target))
 
   # Construct the command to run DejaGNU.

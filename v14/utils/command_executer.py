@@ -58,12 +58,12 @@ class CommandExecuter:
         return wait
       for fd in fds[0]:
         if fd == p.stdout:
-          out = os.read(p.stdout.fileno(), 4096)
+          out = os.read(p.stdout.fileno(), 16384)
           if return_output:
             full_stdout += out
           self.logger.LogCommandOutput(out)
         if fd == p.stderr:
-          err = os.read(p.stderr.fileno(), 4096)
+          err = os.read(p.stderr.fileno(), 16384)
           if return_output:
             full_stderr += err
           self.logger.LogCommandError(err)

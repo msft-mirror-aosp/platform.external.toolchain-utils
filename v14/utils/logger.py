@@ -53,18 +53,22 @@ class Logger(object):
       sys.stderr.flush()
 
   def LogCommandOutput(self, msg):
-    self.stdout.write(msg)
-    self.stdout.flush()
-    if self.print_console:
-      sys.stdout.write(msg)
-      sys.stdout.flush()
+    try:
+      self.stdout.write(msg)
+      if self.print_console:
+        sys.stdout.write(msg)
+    except StandardError as e:
+      print e
+      pass
 
   def LogCommandError(self, msg):
-    self.stderr.write(msg)
-    self.stderr.flush()
-    if self.print_console:
-      sys.stderr.write(msg)
-      sys.stderr.flush()
+    try:
+      self.stderr.write(msg)
+      if self.print_console:
+        sys.stderr.write(msg)
+    except StandardError as e:
+      print e
+      pass
 
   def __del__ (self):
     self.cmdfd.close()
