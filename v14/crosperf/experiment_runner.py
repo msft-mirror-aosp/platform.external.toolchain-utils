@@ -2,6 +2,7 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+import getpass
 import os
 import time
 from experiment_status import ExperimentStatus
