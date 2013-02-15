@@ -55,7 +55,7 @@ class ToolchainPart(object):
       self.UninstallTool()
       self.MoveMaskFile()
       self.SwitchToBFD()
-      self.MountSources()
+      self.MountSources(False)
       if not self._incremental:
         self.RemoveCompiledFile()
       self.BuildTool()
@@ -72,7 +72,7 @@ class ToolchainPart(object):
     command = "rm -rf %s" % compiled_file
     self._ce.RunCommand(command)
 
-  def MountSources(self):
+  def MountSources(self, unmount_source):
     mount_points = []
     mounted_source_path = os.path.join(self._chromeos_root,
                                        "chroot",
@@ -104,12 +104,17 @@ class ToolchainPart(object):
         getpass.getuser())
     mount_points.append(build_mp)
 
-    mount_statuses = [mp.DoMount() == 0 for mp in mount_points]
-
-    if not all(mount_statuses):
-      mounted = [mp for mp, status in zip(mount_points, mount_statuses) if status]
-      unmount_statuses = [mp.UnMount() == 0 for mp in mounted]
+    if unmount_source:
+      unmount_statuses = [mp.UnMount() == 0 for mp in mount_points]
       assert all(unmount_statuses), "Could not unmount all mount points!"
+    else:
+      mount_statuses = [mp.DoMount() == 0 for mp in mount_points]
+
+      if not all(mount_statuses):
+        mounted = [mp for mp, status in zip(mount_points, mount_statuses) if status]
+        unmount_statuses = [mp.UnMount() == 0 for mp in mounted]
+        assert all(unmount_statuses), "Could not unmount all mount points!"
+
 
   def UninstallTool(self):
     command = "sudo CLEAN_DELAY=0 emerge -C cross-%s/%s" % (self._ctarget, self._name)
@@ -165,6 +170,10 @@ def Main(argv):
                     "--gcc_dir",
                     dest="gcc_dir",
                     help="The directory where gcc resides.")
+  parser.add_option("-x",
+                    "--gdb_dir",
+                    dest="gdb_dir",
+                    help="The directory where gdb resides.")
   parser.add_option("-b",
                     "--board",
                     dest="board",
@@ -188,12 +197,25 @@ def Main(argv):
                     default=False,
                     action="store_true",
                     help="Just mount the tool directories.")
+  parser.add_option("-u",
+                    "--unmount_only",
+                    dest="unmount_only",
+                    default=False,
+                    action="store_true",
+                    help="Just unmount the tool directories.")
 
 
   options, _ = parser.parse_args(argv)
 
   chromeos_root = utils.CanonicalizePath(options.chromeos_root)
-  gcc_dir = utils.CanonicalizePath(options.gcc_dir)
+  if options.gcc_dir:
+    gcc_dir = utils.CanonicalizePath(options.gcc_dir)
+  if options.gdb_dir:
+    gdb_dir = utils.CanonicalizePath(options.gdb_dir)
+  if options.unmount_only:
+    options.mount_only = False
+  elif options.mount_only:
+    options.unmount_only = False
   build_env = {}
   if options.debug:
     debug_flags = "-g3 -O0"
@@ -207,11 +229,15 @@ def Main(argv):
       tp = ToolchainPart("gcc", gcc_dir, chromeos_root, board,
                          not options.noincremental, build_env)
       toolchain_parts.append(tp)
+    if options.gdb_dir:
+      tp = ToolchainPart("gdb", gdb_dir, chromeos_root, board,
+                         not options.noincremental, build_env)
+      toolchain_parts.append(tp)
 
   try:
     for tp in toolchain_parts:
-      if options.mount_only:
-        tp.MountSources()
+      if options.mount_only or options.unmount_only:
+        tp.MountSources(options.unmount_only)
       else:
         tp.Build()
   finally:
