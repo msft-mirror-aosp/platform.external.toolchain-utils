@@ -18,81 +18,66 @@ from automation.clients.helper import crosstool
 class CrosstoolNightlyClient(object):
   VALID_TARGETS = ['gcc-4.4.3-glibc-2.11.1-armv7a-vfpv3.d16-hard',
                    'gcc-4.4.3-glibc-2.11.1-armv7a-vfpv3.d16-softfp',
-                   'gcc-4.6.x-glibc-2.11.1-grte',
-                   'gcc-4.6.x-glibc-2.11.1-powerpc']
+                   'gcc-4.6.x-ubuntu_lucid-x86_64']
+  VALID_BOARDS = ['qemu', 'pandaboard']
 
-  VALID_VERSIONS = ['v14', 'v15']
+  def __init__(self, target, boards):
+    assert target in self.VALID_TARGETS
+    assert all(board in self.VALID_BOARDS for board in boards)
 
-  def __init__(self, targets, crosstool_version, run_tests):
-    assert crosstool_version in self.VALID_VERSIONS
-    assert targets
-    assert all(target in self.VALID_TARGETS for target in targets)
-
-    self.targets = targets
-    self.crosstool_version = crosstool_version
-    self.run_tests = run_tests
+    self._target = target
+    self._boards = boards
 
   def Run(self):
     server = xmlrpclib.Server('http://localhost:8000')
     server.ExecuteJobGroup(pickle.dumps(self.CreateJobGroup()))
 
   def CreateJobGroup(self):
-    factory = crosstool.JobsFactory(self.crosstool_version)
+    factory = crosstool.JobsFactory()
 
     p4_crosstool_job, checkout_dir = factory.CheckoutCrosstool()
 
     all_jobs = [p4_crosstool_job]
 
-    for target in self.targets:
-      # Build crosstool target
-      release_job, build_tree_dir = factory.BuildRelease(checkout_dir, target)
+    # Build crosstool target
+    release_job, build_tree_dir = factory.BuildRelease(
+        checkout_dir, self._target)
 
-      all_jobs.append(release_job)
+    all_jobs.append(release_job)
 
-      # Perform crosstool tests
-      if self.run_tests:
-        all_jobs.append(factory.RunTests(checkout_dir, build_tree_dir, target))
+    # Perform crosstool tests
+    for board in self._boards:
+      all_jobs.append(factory.RunTests(
+          checkout_dir, build_tree_dir, self._target, board))
 
-    return job_group.JobGroup('crosstool_nightly', all_jobs, True, False)
+    return job_group.JobGroup('Crosstool Nightly Build', all_jobs, True, False)
 
 
 @logger.HandleUncaughtExceptions
 def Main(argv):
-  valid_targets_string = ', '.join(CrosstoolNightlyClient.VALID_TARGETS)
-  valid_versions_string = ', '.join(CrosstoolNightlyClient.VALID_VERSIONS)
+  valid_boards_string = ', '.join(CrosstoolNightlyClient.VALID_BOARDS)
 
   parser = optparse.OptionParser()
-  parser.add_option('-t',
-                    '--targets',
-                    dest='targets',
+  parser.add_option('-b',
+                    '--board',
+                    dest='boards',
                     action='append',
-                    choices=CrosstoolNightlyClient.VALID_TARGETS,
+                    choices=CrosstoolNightlyClient.VALID_BOARDS,
                     default=[],
-                    help='Target to build: %s.' % valid_targets_string)
-  parser.add_option('-c',
-                    '--crosstool-version',
-                    dest='crosstool_version',
-                    default='v15',
-                    action='store',
-                    choices=CrosstoolNightlyClient.VALID_VERSIONS,
-                    help='Crosstool version: %s.' % valid_versions_string)
-  parser.add_option('-T',
-                    '--run-tests',
-                    dest='run_tests',
-                    default=False,
-                    action='store_true',
-                    help='Run DejaGNU tests against built components?')
-  options, _ = parser.parse_args(argv)
+                    help=('Run DejaGNU tests on selected boards: %s.' %
+                          valid_boards_string))
+  options, args = parser.parse_args(argv)
 
-  if not options.targets:
-    parser.print_help()
-    sys.exit('\nPlease provide at least one target.')
+  if len(args) == 2:
+    target = args[1]
+  else:
+    sys.exit('Exactly one target required as a command line argument!')
 
   option_list = [opt.dest for opt in parser.option_list if opt.dest]
 
   kwargs = dict((option, getattr(options, option)) for option in option_list)
 
-  client = CrosstoolNightlyClient(**kwargs)
+  client = CrosstoolNightlyClient(target, **kwargs)
   client.Run()
 
 

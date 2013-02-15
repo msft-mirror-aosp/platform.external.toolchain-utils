@@ -13,33 +13,27 @@ from automation.clients.helper import perforce
 
 
 class JobsFactory(object):
-  def __init__(self, crosstool_version):
-    assert crosstool_version in ['v14', 'v15']
-
-    self.crosstool_version = crosstool_version
-    self.commands = CommandsFactory(crosstool_version)
+  def __init__(self):
+    self.commands = CommandsFactory()
 
   def CheckoutCrosstool(self):
     command = self.commands.CheckoutCrosstool()
-    new_job = jobs.CreateLinuxJob(
-        'CheckoutCrosstool(%s)' % self.crosstool_version, command)
+    new_job = jobs.CreateLinuxJob('CheckoutCrosstool(v15)', command)
     checkout_dir_dep = job.FolderDependency(
         new_job, CommandsFactory.CHECKOUT_DIR)
     return new_job, checkout_dir_dep
 
   def BuildRelease(self, checkout_dir, target):
     command = self.commands.BuildRelease(target)
-    new_job = jobs.CreateLinuxJob(
-        'BuildRelease(%s,%s)' % (self.crosstool_version, target), command)
+    new_job = jobs.CreateLinuxJob('BuildRelease(%s)' % target, command)
     new_job.DependsOnFolder(checkout_dir)
     build_tree_dep = job.FolderDependency(
         new_job, self.commands.buildit_work_dir_path)
     return new_job, build_tree_dep
 
-  def RunTests(self, checkout_dir, build_tree_dir, target):
-    command = self.commands.RunTests(target)
-    new_job = jobs.CreateLinuxJob(
-        'RunTests(%s,%s)' % (self.crosstool_version, target), command)
+  def RunTests(self, checkout_dir, build_tree_dir, target, board):
+    command = self.commands.RunTests(target, board)
+    new_job = jobs.CreateLinuxJob('RunTests(%s,%s)' % (target, board), command)
     new_job.DependsOnFolder(checkout_dir)
     new_job.DependsOnFolder(build_tree_dir)
     return new_job
@@ -48,19 +42,14 @@ class JobsFactory(object):
 class CommandsFactory(object):
   CHECKOUT_DIR = 'crosstool-checkout-dir'
 
-  def __init__(self, crosstool_version):
+  def __init__(self):
     self.buildit_path = os.path.join(
-        self.CHECKOUT_DIR, 'gcctools', 'crosstool', crosstool_version)
+        self.CHECKOUT_DIR, 'gcctools', 'crosstool', 'v15')
 
-    self.buildit_work_dir = 'buildit-%s-tmp' % crosstool_version
+    self.buildit_work_dir = 'buildit-tmp'
     self.buildit_work_dir_path = os.path.join('$JOB_TMP', self.buildit_work_dir)
     self.buildit_results_path = os.path.join('$JOB_HOME', 'packages')
 
-    # TODO(kbaclawski): Should take crosstool_version parameter and choose
-    # appropriate set of directories to be checked out.
-    self.p4client = self._CreatePerforceClient()
-
-  def _CreatePerforceClient(self):
     paths = {
         'gcctools': [
             'crosstool/v15/...',
@@ -71,17 +60,14 @@ class CommandsFactory(object):
             'gdb/gdb-7.2.x/...',
             'glibc/eglibc-2.11.1/...',
             'linux-headers/linux-headers-2.6.32.3/...',
-            'mao/mao-r725/...',
             'zlib/zlib-1.2.3/...'],
         'gcctools/vendor_src': [
-            'gcc/google/gcc-4_6/...',
-            'gcc/google/main/...',
-            'qemu/qemu-0.14.1/...']}
+            'gcc/google/gcc-4_6/...']}
 
     p4view = perforce.View('depot2',
                            perforce.PathMapping.ListFromPathDict(paths))
 
-    return perforce.CommandsFactory(self.CHECKOUT_DIR, p4view)
+    self.p4client = perforce.CommandsFactory(self.CHECKOUT_DIR, p4view)
 
   def CheckoutCrosstool(self):
     p4client = self.p4client
@@ -91,35 +77,42 @@ class CommandsFactory(object):
                                p4client.Remove())
 
   def BuildRelease(self, target):
-    return self.BuilditScript(target, 'release', run_tests=False)
-
-  def RunTests(self, target):
-    return self.BuilditScript(target, 'release', only_run_tests=True)
-
-  def BuilditScript(self, target, build_type, run_tests=True,
-                    only_run_tests=False):
     results_path = self.buildit_results_path
-
-    if only_run_tests:
-      results_path = None
 
     buildit_cmd = cmd.Shell(
         'buildit',
-        '--build-type=%s' % build_type,
+        '--keep-work-dir',
+        '--build-type=release',
         '--work-dir=%s' % self.buildit_work_dir_path,
-        '--results-dir=%s' % results_path,
+        '--results-dir=%s' % '$JOB_HOME/packages',
         '--force-release=$(< %s)' % os.path.join(
             '$JOB_TMP', self.CHECKOUT_DIR, 'CLNUM'),
         path='.')
 
-    if run_tests:
-      buildit_cmd.AddOption('--run-tests')
-    elif only_run_tests:
-      buildit_cmd.AddOption('--only-run-tests')
-
-    if not only_run_tests:
-      buildit_cmd.AddOption('--keep-work-dir')
-
     buildit_cmd.AddOption(target)
 
     return cmd.Wrapper(buildit_cmd, cwd=self.buildit_path)
+
+  def RunTests(self, target, board):
+    dejagnu_output_path = os.path.join(self.buildit_work_dir_path,
+                                       'dejagnu-output')
+
+    dejagnu_flags = ['--outdir=%s' % dejagnu_output_path,
+                     '--target-board=%s' % board]
+
+    site_exp_file = os.path.join('/google/src/head/depot/google3',
+                                 'experimental/users/kbaclawski',
+                                 'dejagnu/site.exp')
+
+    gcc_build_dir_path = os.path.join(
+        target, 'rpmbuild/BUILD/crosstool*-%s-0.0/build-gcc' % target)
+
+    return cmd.Wrapper(
+        cmd.Chain(
+          jobs.MakeDir(dejagnu_output_path),
+          cmd.Shell('make', 'check', '-k',
+                    '-j $(grep -c processor /proc/cpuinfo)',
+                    'RUNTESTFLAGS="%s"' % ' '.join(dejagnu_flags),
+                    'DEJAGNU="%s"' % site_exp_file,
+                    ignore_error=True)),
+        cwd=os.path.join(self.buildit_work_dir_path, gcc_build_dir_path))
