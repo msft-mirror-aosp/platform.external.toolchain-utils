@@ -101,7 +101,7 @@ class JobGroupInfo(object):
 
     return {'text': [('Label', group.label),
                      ('Time submitted', time.ctime(group.time_submitted)),
-                     ('State', group.status.split('_', 1)[1]),
+                     ('State', group.status),
                      ('Cleanup on completion', group.cleanup_on_completion),
                      ('Cleanup on failure', group.cleanup_on_failure)],
             'link': [('Directory', home_dir)]}
@@ -150,7 +150,7 @@ class JobGroupListInfo(object):
         GetServerConnection().GetAllJobGroups())
 
   def _GetJobGroupState(self, group):
-    return group.status.split('_', 1)[1]
+    return str(group.status)
 
   def _GetJobGroupStatus(self, group):
     status_map = {'SUCCEEDED': 'success', 'FAILED': 'failure'}
