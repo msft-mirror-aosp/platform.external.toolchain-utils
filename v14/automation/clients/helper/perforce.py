@@ -27,9 +27,7 @@ class PathMapping(object):
 
   def __init__(self, remote, local=None):
     self.remote = remote
-
-    if not local:
-      self.local = remote
+    self.local = local or remote
 
   @staticmethod
   def _FixPath(path_s):
@@ -171,9 +169,12 @@ class CommandsFactory(object):
   def SetupAndDo(self, *commands):
     return cmd.Chain(
         self.Initialize(),
-        cmd.Wrapper(
-            cmd.Chain(self.Create(), *commands),
-            cwd=self.checkout_dir))
+        self.InCheckoutDir(self.Create(), *commands))
+
+  def InCheckoutDir(self, *commands):
+    return cmd.Wrapper(
+            cmd.Chain(*commands),
+            cwd=self.checkout_dir)
 
   def CheckoutFromSnapshot(self, snapshot):
     cmds = cmd.Chain()

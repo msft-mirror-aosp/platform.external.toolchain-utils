@@ -14,9 +14,22 @@ import tempfile
 from utils import command_executer
 from utils import logger
 from utils import utils
+from automation.clients.helper import perforce
+from automation.common import command as cmd
 
 
-class Repo:
+def GetCanonicalMappings(mappings):
+  canonical_mappings = []
+  for mapping in mappings:
+    remote_path, local_path = mapping.split()
+    if local_path.endswith("/") and not remote_path.endswith("/"):
+      local_path = os.path.join(local_path, os.path.basename(remote_path))
+    remote_path = remote_path.lstrip('/').split('/', 1)[1]
+    canonical_mappings.append(perforce.PathMapping(remote_path, local_path))
+  return canonical_mappings
+
+
+class Repo(object):
   def __init__(self):
     self.repo_type = None
     self.address = None
@@ -33,10 +46,9 @@ class Repo:
 
 
   def __str__(self):
-    r = str(self.repo_type) + "\n"
-    r += str(self.address) + "\n"
-    r += str(self.mappings) + "\n"
-    return r
+    return "\n".join(str(s) for s in [self.repo_type,
+                                      self.address,
+                                      self.mappings])
 
 
 class P4Repo(Repo):
@@ -55,15 +67,20 @@ class P4Repo(Repo):
     mappings = self.mappings
     port = self.address
     checkout_dir = root_dir
-    command = utils.GetP4SetupCommand(client_name, port, mappings, checkout_dir=checkout_dir)
-    command += "&& %s" % utils.GetP4SyncCommand()
-    ce.RunCommand(command)
-    command = utils.GetP4VersionCommand(client_name, checkout_dir)
-    [r, o, e] = ce.RunCommand(command, return_output=True)
+    p4view = perforce.View("depot2",
+                           GetCanonicalMappings(mappings))
+    p4client = perforce.CommandsFactory(checkout_dir, p4view, name=client_name)
+    command = p4client.SetupAndDo(p4client.Sync())
+    ret = ce.RunCommand(str(command))
+    assert ret == 0, "Could not setup client."
+    command = p4client.InCheckoutDir(p4client.SaveCurrentCLNumber())
+    ret, o, e = ce.RunCommand(str(command), return_output=True)
+    assert ret == 0, "Could not get version from client."
     self.revision = o.strip()
-    command = utils.GetP4DeleteCommand(client_name, checkout_dir)
-    ret = ce.RunCommand(command)
-    return ret
+    command = p4client.InCheckoutDir(p4client.Remove())
+    ret = ce.RunCommand(str(command))
+    assert ret == 0, "Could not delete client."
+    return 0
 
 
 class SvnRepo(Repo):
@@ -80,7 +97,7 @@ class SvnRepo(Repo):
     command = "mkdir -p %s && cd %s" % (root_dir, root_dir)
     for mapping in self.mappings:
       if " " in mapping:
-        [remote_path, local_path] = mapping.split()
+        remote_path, local_path = mapping.split()
       else:
         local_path = "."
         remote_path = mapping
@@ -92,12 +109,12 @@ class SvnRepo(Repo):
     self.revision = ""
     for mapping in self.mappings:
       if " " in mapping:
-        [remote_path, local_path] = mapping.split()
+        remote_path, local_path = mapping.split()
       else:
         local_path = "."
         remote_path = mapping
       command += "&& cd %s && svnversion ." % (local_path)
-      [ret, o, e] = ce.RunCommand(command, return_output=True)
+      ret, o, e = ce.RunCommand(command, return_output=True)
       self.revision += o.strip()
       if ret: return ret
     return 0
@@ -216,6 +233,7 @@ class RepoReader():
     return repo
 
 
+@logger.HandleUncaughtExceptions
 def Main(argv):
   root_dir = tempfile.mkdtemp()
 
