@@ -16,9 +16,12 @@ class ExperimentFactory(object):
   of experiments could be produced.
   """
 
-  def GetExperiment(self, experiment_file, working_directory):
+  def GetExperiment(self, experiment_file, option_settings,
+                    working_directory):
     """Construct an experiment from an experiment file."""
     global_settings = experiment_file.GetGlobalSettings()
+    # Override settings which are passed in as arguments.
+    global_settings.Override(option_settings)
     experiment_name = global_settings.GetField("name")
     board = global_settings.GetField("board")
     remote = global_settings.GetField("remote")
@@ -40,6 +43,7 @@ class ExperimentFactory(object):
     benchmarks = []
     all_benchmark_settings = experiment_file.GetSettings("benchmark")
     for benchmark_settings in all_benchmark_settings:
+      benchmark_settings.Override(option_settings)
       benchmark_name = benchmark_settings.name
       autotest_name = benchmark_settings.GetField("autotest_name")
       if not autotest_name:
@@ -55,6 +59,7 @@ class ExperimentFactory(object):
     labels = []
     all_label_settings = experiment_file.GetSettings("label")
     for label_settings in all_label_settings:
+      label_settings.Override(option_settings)
       label_name = label_settings.name
       image = label_settings.GetField("chromeos_image")
       chromeos_root = label_settings.GetField("chromeos_root")

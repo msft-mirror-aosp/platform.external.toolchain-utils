@@ -50,6 +50,12 @@ class Settings(object):
           and self.parent):
         self.fields[name].Set(self.parent.GetField(name))
 
+  def Override(self, settings):
+    """Override settings with settings from a different object."""
+    for name in settings.fields:
+      if name in self.fields and settings.fields[name].assigned:
+        self.fields[name].Set(settings.GetField(name))
+
   def Validate(self):
     """Check that all required fields have been set."""
     for name in self.fields:

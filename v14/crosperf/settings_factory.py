@@ -13,30 +13,61 @@ from settings import Settings
 class BenchmarkSettings(Settings):
   def __init__(self, name):
     super(BenchmarkSettings, self).__init__(name, "benchmark")
-    self.AddField(TextField("autotest_name"))
-    self.AddField(TextField("autotest_args"))
-    self.AddField(IntegerField("iterations", default=3, inheritable=True))
-    self.AddField(FloatField("outlier_range", default=0.2))
+    self.AddField(TextField("autotest_name",
+                            description="The name of the autotest to run."
+                            "Defaults to the name of the benchmark."))
+    self.AddField(TextField("autotest_args",
+                            description="Arguments to be passed to the "
+                            "autotest."))
+    self.AddField(IntegerField("iterations", default=3, inheritable=True,
+                               description="Number of iterations to run the "
+                               "autotest."))
+    self.AddField(FloatField("outlier_range", default=0.2,
+                             description="The percentage of highest/lowest "
+                             "values to omit when computing the average."))
 
 
 class LabelSettings(Settings):
   def __init__(self, name):
     super(LabelSettings, self).__init__(name, "label")
-    self.AddField(TextField("chromeos_image", required=True))
-    self.AddField(TextField("chromeos_root", inheritable=True))
+    self.AddField(TextField("chromeos_image", required=True,
+                            description="The path to the image to run tests "
+                            "on."))
+    self.AddField(TextField("chromeos_root", inheritable=True,
+                            description="The path to a chromeos checkout which "
+                            "contains a src/scripts directory. Defaults to "
+                            "the chromeos checkout which contains the "
+                            "chromeos_image."))
 
 
 class GlobalSettings(Settings):
   def __init__(self, name):
     super(GlobalSettings, self).__init__(name, "global")
-    self.AddField(TextField("name", default="Experiment"))
-    self.AddField(TextField("board", required=True))
-    self.AddField(ListField("remote", required=True))
-    self.AddField(BooleanField("rerun_if_failed"))
-    self.AddField(BooleanField("rerun"))
-    self.AddField(BooleanField("exact_remote"))
-    self.AddField(IntegerField("iterations"))
-    self.AddField(TextField("chromeos_root"))
+    self.AddField(TextField("name", default="Experiment",
+                            description="The name of the experiment. Just an "
+                            "identifier."))
+    self.AddField(TextField("board", required=True, description="The target "
+                            "board for running experiments on, e.g. x86-alex."))
+    self.AddField(ListField("remote", required=True,
+                            description="A comma-separated list of ip's of "
+                            "chromeos devices to run experiments on."))
+    self.AddField(BooleanField("rerun_if_failed", description="Whether to "
+                               "re-run failed autotest runs or not.",
+                               default=False))
+    self.AddField(BooleanField("rerun", description="Whether to ignore the "
+                               "cache and for autotests to be re-run.",
+                               default=False))
+    self.AddField(BooleanField("exact_remote", default=False,
+                               description="Ensure cached runs are run on the "
+                               "same device that is specified as a remote."))
+    self.AddField(IntegerField("iterations", default=3,
+                               description="Number of iterations to run all "
+                               "autotests."))
+    self.AddField(TextField("chromeos_root",
+                            description="The path to a chromeos checkout which "
+                            "contains a src/scripts directory. Defaults to "
+                            "the chromeos checkout which contains the "
+                            "chromeos_image."))
 
 
 class SettingsFactory(object):

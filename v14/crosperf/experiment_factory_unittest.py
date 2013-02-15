@@ -6,6 +6,7 @@ import StringIO
 import unittest
 from experiment_factory import ExperimentFactory
 from experiment_file import ExperimentFile
+from settings_factory import GlobalSettings
 from utils.file_utils import FileUtils
 
 
@@ -31,6 +32,7 @@ class ExperimentFactoryTest(unittest.TestCase):
   def testLoadExperimentFile1(self):
     experiment_file = ExperimentFile(StringIO.StringIO(EXPERIMENT_FILE_1))
     experiment = ExperimentFactory().GetExperiment(experiment_file,
+                                                   GlobalSettings(""),
                                                    "/tmp/")
     self.assertEqual(experiment.board, "x86-alex")
     self.assertEqual(experiment.remote, ["chromeos-alex3"])
