@@ -157,6 +157,7 @@ class CommandExecuter:
       username=None, command_terminator=None, chromeos_root=None,
                      command_timeout=None):
     """Run a command on a chromeos box"""
+    self.logger.LogCmd(cmd)
     self.logger.LogFatalIf(not machine, "No machine provided!")
     self.logger.LogFatalIf(not chromeos_root, "chromeos_root not given!")
     chromeos_root = os.path.expanduser(chromeos_root)
@@ -189,6 +190,8 @@ class CommandExecuter:
 
   def ChrootRunCommand(self, chromeos_root, command, return_output=False,
                        command_terminator=None):
+    self.logger.LogCmd(command)
+
     handle, command_file = tempfile.mkstemp(dir=os.path.join(chromeos_root,
                                                            "src/scripts"),
                                           suffix=".sh",
