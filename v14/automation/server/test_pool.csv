@@ -1,4 +1,4 @@
 hostname, arch,cores,os,username
-"atree.mtv.corp.google.com","core2duo",8,"linux","mobiletc-prebuild"
+"chrotomation.mtv.corp.google.com","core2duo",8,"linux","mobiletc-prebuild"
 "chromeos-test1.mtv.corp.google.com","atom",1,"chromeos","chromeos"
 "chromeos-test2.mtv.corp.google.com","atom",1,"chromeos","chromeos"

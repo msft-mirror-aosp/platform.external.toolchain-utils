@@ -305,7 +305,7 @@ def CreateUpdateJob(chromeos_versions,
                 " --chromeos_root=" + chromeos_root +
                 " --vanilla --board=" + board)
 
-  dirname = "$(cd chromeos/src/scripts; git branch | cut -d\" \" -f 2)"
+  dirname = "$(cd chromeos/src/scripts; git describe --tags --always HEAD)"
   build_location = _GetChromeOSGoldenBuildLocation() + "/" + dirname
   for board in board_list:
     board_build = build_location + "/" + board
