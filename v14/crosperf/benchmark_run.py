@@ -98,11 +98,18 @@ class BenchmarkRun(threading.Thread):
                              "failed. Rerunning...")
     return result
 
+  def _GetResultsDir(self, output, chromeos_root):
+    mo = re.search("Results placed in (\S+)", output)
+    if mo:
+      result = mo.group(1)
+      return os.path.join(chromeos_root, "chroot",
+                          result.lstrip("/"))
+    return ""
+
   def run(self):
-    self._logger = logger.Logger(
-        os.path.dirname(__file__),
-        "%s.%s" % (os.path.basename(__file__),
-                   self.name), True)
+    self._logger = logger.Logger(os.path.dirname(__file__),
+                                 "%s.%s" % (os.path.basename(__file__),
+                                            self.name), True)
 
     machine = None
     try:
@@ -129,11 +136,14 @@ class BenchmarkRun(threading.Thread):
       else:
         self.status = "FAILED"
 
+      results_dir = self._GetResultsDir(result.out, self.chromeos_root)
+      self.full_name = os.path.basename(results_dir)
+
       self.results = self.ParseResults(result.out)
 
       self.perf_processor.StorePerf(self.cache.GetCacheDir(), cache_hit, result,
                                     self.autotest_args, self.chromeos_root,
-                                    self.board)
+                                    self.board, results_dir)
 
       return result.retval
     finally:

@@ -5,5 +5,8 @@
 
 export PYTHONPATH+=":.."
 for test in $(find -name \*unittest.py); do
-  ./${test} || echo "Test Failed!" && exit 1
+  if ! ./${test} ; then
+    echo "Test Failed!"
+    exit 1
+  fi
 done
