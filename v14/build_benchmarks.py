@@ -186,7 +186,7 @@ def Main(argv):
         utils.AssertError(retval == 0, "Build of ChromeOS failed.")
       if retval == 0 and (options.build or options.only_copy):
         benchdir = '%s/src/build/images/%s/latest' % (options.chromeos_root, options.board)
-        linkdir = '%s/perflab-bin/startup/latest' % options.workdir
+        linkdir = '%s/perflab-bin/%s' % (options.workdir, arg)
         CreateBinaryCopy(benchdir, linkdir)
         CreateRunsh(linkdir, arg)
       if not found_err:
@@ -206,7 +206,7 @@ def Main(argv):
         utils.AssertError(retval == 0, "Build of ChromeOS failed.")
       if retval == 0 and (options.build or options.only_copy):
         benchdir = '%s/src/build/images/%s/latest' % (options.chromeos_root, options.board)
-        linkdir = '%s/perflab-bin/browser/latest' % options.workdir
+        linkdir = '%s/perflab-bin/%s' % (options.workdir, arg)
         CreateBinaryCopy(benchdir,linkdir)
         CreateRunsh(linkdir, arg)
       if not found_err:

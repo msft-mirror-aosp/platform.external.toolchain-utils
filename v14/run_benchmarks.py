@@ -115,7 +115,7 @@ def RunCpuBenchmark(bench, workdir, machine):
   for line in benchmk_file:
     line.rstrip()
     if re.match('^run_cmd', line):
-      line = re.sub('^run_cmd.*\${PERFLAB_PATH}', '.', line)
+      line = re.sub('^run_cmd.*\${PERFLAB_PATH}', './out', line)
       line = re.sub('\${PERFLAB_INPUT}', './data', line)
       run_cmd = line
       break
