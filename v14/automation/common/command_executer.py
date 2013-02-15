@@ -22,25 +22,9 @@ class CommandExecuter(object):
     self._logger = logging.getLogger(self.__class__.__name__)
     self._dry_run = dry_run or self.DRY_RUN
 
-    # Create a logger for command's stdout/stderr streams.  Set a flag to
-    # prevent log records from being propagated up the logger hierarchy tree.
-    # We don't want for command output messages to appear in the main log.
-    self._output = logging.getLogger('%s.%s' % (self._logger.name, 'Output'))
-    self._output.propagate = 0
-
   @classmethod
   def Configure(cls, dry_run):
     cls.DRY_RUN = dry_run
-
-  def SetUpOutputLogger(self, log_path):
-    """
-    Set up output logger, so the messages are saved to gzip compressed file.
-    """
-    output_formatter = logging.Formatter(
-        '%(asctime)s %(prefix)s: %(message)s', '%Y-%m-%d %H:%M:%S')
-    output_handler = logger.CompressedFileHandler(log_path, delay=True)
-    output_handler.setFormatter(output_formatter)
-    self._output.addHandler(output_handler)
 
   def RunCommand(self, cmd, machine=None, username=None,
                  command_terminator=None, command_timeout=None):
@@ -175,6 +159,37 @@ class CommandExecuter(object):
       child.wait()
 
     return child
+
+  def DataReceivedOnOutput(self, data):
+    """Invoked when the child process wrote data to stdout."""
+    sys.stdout.write(data)
+
+  def DataReceivedOnError(self, data):
+    """Invoked when the child process wrote data to stderr."""
+    sys.stderr.write(data)
+
+
+class LoggingCommandExecuter(CommandExecuter):
+  def __init__(self, *args, **kwargs):
+    super(LoggingCommandExecuter, self).__init__(*args, **kwargs)
+
+    # Create a logger for command's stdout/stderr streams.  Set a flag to
+    # prevent log records from being propagated up the logger hierarchy tree.
+    # We don't want for command output messages to appear in the main log.
+    self._output = logging.getLogger('%s.%s' % (self._logger.name, 'Output'))
+    self._output.propagate = 0
+
+  def OpenLog(self, log_path):
+    """The messages are going to be saved to gzip compressed file."""
+    formatter = logging.Formatter(
+        '%(asctime)s %(prefix)s: %(message)s', '%Y-%m-%d %H:%M:%S')
+    handler = logger.CompressedFileHandler(log_path, delay=True)
+    handler.setFormatter(formatter)
+    self._output.addHandler(handler)
+
+  def CloseLog(self):
+    for handler in self._output.handlers:
+      handler.close()
 
   def DataReceivedOnOutput(self, data):
     """Invoked when the child process wrote data to stdout."""

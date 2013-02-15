@@ -10,7 +10,7 @@ import threading
 from automation.common import command as cmd
 from automation.common import job
 from automation.common import logger
-from automation.common.command_executer import CommandExecuter
+from automation.common.command_executer import LoggingCommandExecuter
 from automation.common.command_executer import CommandTerminator
 
 
@@ -28,7 +28,7 @@ class JobExecuter(threading.Thread):
     self.name = "%s-%s" % (self.__class__.__name__, self.job.id)
 
     self._logger = logging.getLogger(self.__class__.__name__)
-    self._executer = CommandExecuter(self.job.dry_run)
+    self._executer = LoggingCommandExecuter(self.job.dry_run)
     self._terminator = CommandTerminator()
 
   def _RunRemotely(self, command, fail_msg):
@@ -66,7 +66,7 @@ class JobExecuter(threading.Thread):
         "Creating new job directory failed.")
 
     # The log directory is ready, so we can prepare to log command's output.
-    self._executer.SetUpOutputLogger(
+    self._executer.OpenLog(
         os.path.join(self.job.logs_dir, self.job.log_filename_prefix))
 
   def _SatisfyFolderDependencies(self):
@@ -132,6 +132,8 @@ class JobExecuter(threading.Thread):
         self._logger.info("%r was killed", self.job)
 
       self.job.status = job.STATUS_FAILED
+
+    self._executer.CloseLog()
 
     for listener in self.listeners:
       listener.NotifyJobComplete(self.job)
