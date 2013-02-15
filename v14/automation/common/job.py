@@ -121,10 +121,16 @@ class Job:
     return self.home_dir
 
   def GetResultsDir(self):
-    return self.home_dir + RESULTS_SUBDIR
+    if len(self.home_dir) > 0:
+      return self.home_dir + RESULTS_SUBDIR
+    else:
+      return ""
 
   def GetLogsDir(self):
-    return self.home_dir + LOGS_SUBDIR
+    if len(self.home_dir) > 0:
+      return self.home_dir + LOGS_SUBDIR
+    else:
+      return ""
 
   def AddChild(self, job):
     if job not in self.children:

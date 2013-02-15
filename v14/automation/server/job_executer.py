@@ -2,19 +2,20 @@ import threading
 from automation.common import job
 import getpass
 from utils import utils
-import os
 import re
-import sys
 from utils import logger
 from utils import command_executer
 
 WORKDIR_PREFIX = "/usr/local/google/tmp/automation/job-"
+HOMEDIR_PREFIX = "/home/" + getpass.getuser() + "/www/automation"
 
 class JobExecuter(threading.Thread):
 
   def __init__(self, job, machines, listeners):
     threading.Thread.__init__(self)
     self.job = job
+    self.listeners = listeners
+    self.machines = machines
 
     # Set job directory
     work_dir = WORKDIR_PREFIX + str(self.job.GetID())
@@ -28,9 +29,8 @@ class JobExecuter(threading.Thread):
                                job_log_file_name,
                                True, subdir="")
     self.cmd_executer = command_executer.GetCommandExecuter(job_logger)
-    self.listeners = listeners
-    self.machines = machines
     self.command_terminator = command_executer.CommandTerminator()
+    self.cmd_executer.RunCommand("chmod a+rX -R " + HOMEDIR_PREFIX)
 
 
   def _IsJobFailed(self, return_value, fail_message):
@@ -49,7 +49,7 @@ class JobExecuter(threading.Thread):
 
 
   def _GetJobHomeDir(self):
-    return ("/home/" + getpass.getuser() + "/automation" +
+    return (HOMEDIR_PREFIX +
             "/job-group-" + str(self.job.GetGroup().GetID()) +
             "/job-" + str(self.job.GetID()))
 
@@ -101,7 +101,6 @@ class JobExecuter(threading.Thread):
                                   self.job.GetWorkDir()))
 
     self.CleanUpWorkDir(self.command_terminator)
-    self.CleanUpHomeDir(self.command_terminator)
 
     mkdir_command = ("mkdir -p %s && mkdir -p %s" %
                      (self.job.GetWorkDir(),

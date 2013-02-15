@@ -82,22 +82,32 @@ def print_job_group_row(job_group):
 def get_display_button(id):
   return "<button onclick='displayRow(%s)' >Show/Hide Jobs</button>" % id
 
+def get_link(link, text):
+  return "<a href='%s'>%s</a>" % (link, text)
+
 def print_job_row(job):
   print "<tr>"
   print_table_cell(job.GetID())
-  print_table_cell(job.GetCommand()[0:20])
+  print_table_cell(job.GetCommand())
   machines = ""
   if job.GetMachines():
     machines = "<b>%s</b>" % job.GetMachines()[0].name
     for machine in job.GetMachines()[1:]:
       machines += " %s" % machine.name
   print_table_cell(machines)
-  print_table_cell(job.GetJobDir())
+  print_table_cell(job.GetWorkDir())
   deps = ""
   for child in job.GetChildren():
     deps += str(child.GetID()) + " "
   print_table_cell(deps)
   print_table_cell(job.GetStatus())
+  components = job.GetLogsDir().split("/")
+  if len(components) > 3:
+    link = ("http://www.corp.google.com/~" + components[2] + "/" +
+            "/".join(components[4:]))
+  else:
+    link = ""
+  print_table_cell(get_link(link, job.GetLogsDir()))
   print "</tr>"
 
 
@@ -114,7 +124,7 @@ for job_group in job_groups[::-1]:
   print_job_group_row(job_group)
   print "<tr id='job_group_%s' style='display: none;'><td colspan=5 style='padding-left: 10px;'>" % job_group.GetID()
   print_table_header(["ID", "Command", "Machines",
-                      "Job Directory", "Dependencies", "Status"])
+                      "Job Directory", "Dependencies", "Status", "Logs"])
   for job in job_group.GetJobs():
     print_job_row(job)
   print_table_footer()
