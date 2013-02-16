@@ -48,6 +48,9 @@ def Main(argv):
                     dest="env",
                     default="",
                     help="Use the following env")
+  parser.add_option("--ebuild_version",
+                    dest="ebuild_version",
+                    help="Use this ebuild instead of the default one.")
   parser.add_option("--cflags", dest="cflags",
                     default="",
                     help="CFLAGS for the ChromeOS packages")
@@ -77,6 +80,8 @@ def Main(argv):
   else:
     chrome_version = "CHROME_VERSION=%s" % options.version
 
+  options.chromeos_root = misc.CanonicalizePath(options.chromeos_root)
+
   if options.clean:
     out_dir = os.path.join(options.chromeos_root,
                            "chroot",
@@ -84,6 +89,12 @@ def Main(argv):
                            % options.board)
     if os.path.exists(out_dir):
       shutil.rmtree(out_dir)
+
+  if options.ebuild_version:
+    ebuild_version = "=%s" % options.ebuild_version
+    options.env += " ACCEPT_KEYWORDS=~*"
+  else:
+    ebuild_version = "chromeos-chrome"
 
   # Emerge the browser
   ret = (cmd_executer.
@@ -93,10 +104,11 @@ def Main(argv):
                           "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
                           "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
                           "%s "
-                          "emerge-%s --buildpkg chromeos-chrome" %
+                          "emerge-%s --buildpkg %s" %
                           (chrome_version, options.board, options.cflags,
                            options.board, options.ldflags, options.board,
-                           options.cxxflags, options.env, options.board)))
+                           options.cxxflags, options.env, options.board,
+                           ebuild_version)))
 
   logger.GetLogger().LogFatalIf(ret, "build_packages failed")
 
