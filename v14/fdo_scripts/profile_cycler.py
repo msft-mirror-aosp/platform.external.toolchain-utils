@@ -42,9 +42,6 @@ class CyclerProfiler:
 
   def _CopyTestData(self):
     page_cycler_dir = os.path.join(self._chromeos_root,
-                                   "chroot",
-                                   "var",
-                                   "cache",
                                    "distfiles",
                                    "target",
                                    "chrome-src-internal",
