@@ -3,6 +3,12 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
 
+"""Classes that help running commands in a subshell.
+
+Commands can be run locally, or remotly using SSH connection.  You may log the
+output of a command to a terminal or a file, or any other destination.
+"""
+
 __author__ = "kbaclawski@google.com (Krystian Baclawski)"
 
 import fcntl
@@ -28,8 +34,6 @@ class CommandExecuter(object):
 
   def RunCommand(self, cmd, machine=None, username=None,
                  command_terminator=None, command_timeout=None):
-    """Run a command."""
-
     cmd = str(cmd)
 
     if self._dry_run:

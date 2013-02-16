@@ -17,7 +17,15 @@ from automation.server.job_manager import JobManager
 
 
 class Server(object):
+  """Plays a role of external interface accessible over XMLRPC."""
+
   def __init__(self, machines_file=None, dry_run=False):
+    """Default constructor.
+
+    Args:
+      machines_file: Path to file storing a list of machines.
+      dry_run: If True, the server only simulates command execution.
+    """
     CommandExecuter.Configure(dry_run)
 
     self.job_manager = JobManager(
@@ -68,9 +76,8 @@ class Server(object):
     self.job_manager.join()
 
 
-def Main():
-  logger.SetUpRootLogger(filename='server.log', level=logging.DEBUG)
-
+def GetServerOptions():
+  """Get server's settings from command line options."""
   parser = optparse.OptionParser()
   parser.add_option("-m",
                     "--machines-file",
@@ -85,8 +92,13 @@ def Main():
                     "not actually be executed.",
                     action="store_true",
                     default=False)
-  options = parser.parse_args()[0]
+  return parser.parse_args()[0]
 
+
+def Main():
+  logger.SetUpRootLogger(filename='server.log', level=logging.DEBUG)
+
+  options = GetServerOptions()
   server = Server(options.machines_file, options.dry_run)
   server.StartServer()
 

@@ -102,8 +102,11 @@ class JobManager(threading.Thread):
     for executer in self.job_executer_mapping.values():
       executer.join()
 
-  # Does not block until the job is completed.
   def KillJob(self, job_id):
+    """Kill a job by id.
+
+    Does not block until the job is completed.
+    """
     with self._lock:
       self._KillJob(job_id)
 

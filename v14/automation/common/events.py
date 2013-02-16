@@ -4,6 +4,11 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
 
+"""Tools for recording and reporting timeline of abstract events.
+
+You can store any events provided that they can be stringified.
+"""
+
 __author__ = 'kbaclawski@google.com (Krystian Baclawski)'
 
 import collections
@@ -12,6 +17,8 @@ import time
 
 
 class _EventRecord(object):
+  """Internal class.  Attaches extra information to an event."""
+
   def __init__(self, event, time_started=None, time_elapsed=None):
     self._event = event
     self._time_started = time_started or time.time()
@@ -61,11 +68,15 @@ class _EventRecord(object):
 
 
 class _Transition(collections.namedtuple('_Transition', ('from_', 'to_'))):
+  """Internal class.  Represents transition point between events / states."""
+
   def __str__(self):
     return '%s => %s' % (self.from_, self.to_)
 
 
 class EventHistory(collections.Sequence):
+  """Records events and provides human readable events timeline."""
+
   def __init__(self, records=None):
     self._records = records or []
 

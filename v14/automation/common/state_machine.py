@@ -10,6 +10,12 @@ from automation.common import events
 
 
 class BasicStateMachine(object):
+  """Generic class for constructing state machines.
+  
+  Keeps all states and possible transition of a state machine. Ensures that
+  transition between two states is always valid. Also stores transition events
+  in a timeline object.
+  """
   state_machine = {}
   final_states = []
 
