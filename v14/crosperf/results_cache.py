@@ -45,6 +45,9 @@ class CacheConditions(object):
   # Never a cache hit.
   FALSE = 4
 
+  # Cache hit if the image path matches the cached image path.
+  IMAGE_PATH_MATCH = 5
+
 
 class ResultsCache(object):
   CACHE_VERSION = 2
@@ -93,7 +96,13 @@ class ResultsCache(object):
       checksum = "*"
     else:
       checksum = ImageChecksummer().Checksum(self.chromeos_image)
-    return (hashlib.md5(self.chromeos_image).hexdigest(),
+
+    if read and CacheConditions.IMAGE_PATH_MATCH not in self.cache_conditions:
+      image_path_checksum = "*"
+    else:
+      image_path_checksum = hashlib.md5(self.chromeos_image).hexdigest()
+
+    return (image_path_checksum,
             self.autotest_name, str(self.iteration),
             ",".join(self.autotest_args),
             checksum,
