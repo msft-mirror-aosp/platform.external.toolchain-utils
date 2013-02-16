@@ -9,5 +9,6 @@
     "address": "ssh://gerrit.chromium.org:29418/chromiumos/third_party/gcc.git",
     "branch": "master",
     "ignores": [".svn", ".git"],
+    "gerrit": True,
   },],
 }

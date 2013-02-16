@@ -145,7 +145,7 @@ class SvnRepo(Repo):
 
 
 class GitRepo(Repo):
-  def __init__(self, address, branch, mappings=None, ignores=None):
+  def __init__(self, address, branch, mappings=None, ignores=None, gerrit=None):
     Repo.__init__(self)
     self.repo_type = 'git'
     self.address = address
@@ -153,6 +153,7 @@ class GitRepo(Repo):
     if ignores:
       self.ignores += ignores
     self.mappings = mappings
+    self.gerrit = gerrit
 
   def _CloneSources(self):
     with utils.WorkingDirectory(self._root_dir):
@@ -206,9 +207,17 @@ class GitRepo(Repo):
         command += '&& echo \'%s\' >> .git/info/exclude' % ignore
       command += '&& git add -Av .'
       command += '&& git commit -v -m \'%s\'' % commit_message
-      command += '; git push -v %s origin %s:%s' % (push_args, self.branch,
-                                                    self.branch)
-      return self._ce.RunCommand(command)
+      ret = self._ce.RunCommand(command)
+      if ret: return ret
+      if self.gerrit:
+        label = 'somelabel'
+        command = 'git remote add %s %s' % (label, self.address)
+        command += ('&& git push %s %s HEAD:refs/for/master' %
+                    (push_args,label))
+      else:
+        command = 'git push -v %s origin %s:%s' % (push_args, self.branch,
+                                                   self.branch)
+      ret = self._ce.RunCommand(command)
 
   def MapSources(self, root_dir):
     if not self.mappings:
@@ -255,6 +264,7 @@ class RepoReader(object):
     repo_mappings = repo_dict.get('mappings', None)
     repo_ignores = repo_dict.get('ignores', None)
     repo_branch = repo_dict.get('branch', None)
+    gerrit = repo_dict.get('gerrit', None)
 
     if repo_type == 'p4':
       repo = P4Repo(repo_address,
@@ -266,7 +276,8 @@ class RepoReader(object):
       repo = GitRepo(repo_address,
                      repo_branch,
                      mappings=repo_mappings,
-                     ignores=repo_ignores)
+                     ignores=repo_ignores,
+                     gerrit=gerrit)
     else:
       logger.GetLogger().LogFatal('Unknown repo type: %s' % repo_type)
     return repo
