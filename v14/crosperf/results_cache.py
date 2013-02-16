@@ -27,7 +27,8 @@ class Result(object):
   what the key of the cache is. For runs with perf, it stores perf.data,
   perf.report, etc. The key generation is handled by the ResultsCache class.
   """
-  def __init__(self, logger):
+  def __init__(self, chromeos_root, logger):
+    self._chromeos_root = chromeos_root
     self._logger = logger
     self._ce = command_executer.GetCommandExecuter(self._logger)
     self._temp_dir = None
@@ -52,23 +53,26 @@ class Result(object):
     self._CopyFilesTo(dest_dir, self.perf_report_files)
 
   def _GetKeyvals(self):
-    command = "find %s -regex .*results/keyval$" % self.results_dir
+    generate_test_report = os.path.join(self._chromeos_root,
+                                        "src",
+                                        "platform",
+                                        "crostestutils",
+                                        "utils_py",
+                                        "generate_test_report.py")
+    command = ("python %s --no-color --csv %s" %
+               (generate_test_report,
+                self.results_dir))
     [ret, out, err] = self._ce.RunCommand(command, return_output=True)
     keyvals_dict = {}
-    for f in out.splitlines():
-      keyvals = open(f, "r").read()
-      keyvals_dict.update(self._ParseKeyvals(keyvals))
+    for line in out.splitlines():
+      tokens = line.split(",")
+      key = tokens[-2]
+      if key.startswith(self.results_dir):
+        key = key[len(self.results_dir) + 1:]
+      value = tokens[-1]
+      keyvals_dict[key] = value
 
     return keyvals_dict
-
-  def _ParseKeyvals(self, keyvals):
-    keyval_dict = {}
-    for l in keyvals.splitlines():
-      l = l.strip()
-      if l:
-        key, val = l.split("=")
-        keyval_dict[key] = val
-    return keyval_dict
 
   def _GetResultsDir(self):
     mo = re.search("Results placed in (\S+)", self.out)
@@ -137,8 +141,7 @@ class Result(object):
           value = str(misc.UnitToNumber(num_events))
           self.keyvals[key] = value
 
-  def _PopulateFromRun(self, chromeos_root, board, out, err, retval):
-    self._chromeos_root = chromeos_root
+  def _PopulateFromRun(self, board, out, err, retval):
     self._board = board
     self.out = out
     self.err = err
@@ -210,13 +213,13 @@ class Result(object):
 
   @classmethod
   def CreateFromRun(cls, logger, chromeos_root, board, out, err, retval):
-    result = cls(logger)
-    result._PopulateFromRun(chromeos_root, board, out, err, retval)
+    result = cls(chromeos_root, logger)
+    result._PopulateFromRun(board, out, err, retval)
     return result
 
   @classmethod
-  def CreateFromCacheHit(cls, logger, cache_dir):
-    result = cls(logger)
+  def CreateFromCacheHit(cls, chromeos_root, logger, cache_dir):
+    result = cls(chromeos_root, logger)
     try:
       result._PopulateFromCacheDir(cache_dir)
     except Exception as e:
@@ -325,7 +328,8 @@ class ResultsCache(object):
 
     self._logger.LogOutput("Trying to read from cache dir: %s" % cache_dir)
 
-    result = Result.CreateFromCacheHit(self._logger, cache_dir)
+    result = Result.CreateFromCacheHit(self.chromeos_root,
+                                       self._logger, cache_dir)
 
     if not result:
       return None
