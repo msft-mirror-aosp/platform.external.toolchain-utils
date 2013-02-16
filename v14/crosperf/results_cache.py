@@ -21,10 +21,11 @@ PERF_RESULTS_FILE = "perf-results.txt"
 
 
 class Result(object):
-  def __init__(self, out, err, retval):
+  def __init__(self, out, err, retval, keyvals):
     self.out = out
     self.err = err
     self.retval = retval
+    self.keyvals = keyvals
 
 
 class CacheConditions(object):
@@ -45,6 +46,7 @@ class CacheConditions(object):
 
 
 class ResultsCache(object):
+  CACHE_VERSION = 2
   def Init(self, chromeos_image, chromeos_root, autotest_name, iteration,
            autotest_args, remote, board, cache_conditions,
            logger_to_use):
@@ -93,7 +95,9 @@ class ResultsCache(object):
     return (hashlib.md5(self.chromeos_image).hexdigest(),
             self.autotest_name, str(self.iteration),
             ",".join(self.autotest_args),
-            checksum, remote)
+            checksum,
+            remote,
+            str(self.CACHE_VERSION))
 
   def ReadResult(self):
     if CacheConditions.FALSE in self.cache_conditions:
@@ -109,18 +113,16 @@ class ResultsCache(object):
       self._logger.LogOutput("Trying to read from cache file: %s" % cache_file)
 
       with open(cache_file, "rb") as f:
-        retval = pickle.load(f)
-        out = pickle.load(f)
-        err = pickle.load(f)
+        result = pickle.load(f)
 
-        if (retval == 0 or
+        if (result.retval == 0 or
             CacheConditions.RUN_SUCCEEDED not in self.cache_conditions):
-          return Result(out, err, retval)
+          return result
 
     except Exception, e:
       if CacheConditions.CACHE_FILE_EXISTS not in self.cache_conditions:
         # Cache file not found but just return a failure.
-        return Result("", "", 1)
+        return Result("", "", 1, {})
       raise e
 
   def StoreResult(self, result):
@@ -130,9 +132,7 @@ class ResultsCache(object):
     ret = self._ce.RunCommand(command)
     assert ret == 0, "Couldn't create cache dir"
     with open(cache_file, "wb") as f:
-      pickle.dump(result.retval, f)
-      pickle.dump(result.out, f)
-      pickle.dump(result.err, f)
+      pickle.dump(result, f)
 
   def StoreAutotestOutput(self, results_dir):
     host_results_dir = os.path.join(self.chromeos_root, "chroot",
