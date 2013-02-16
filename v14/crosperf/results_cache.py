@@ -13,6 +13,7 @@ from image_checksummer import ImageChecksummer
 from perf_processor import PerfProcessor
 from utils import command_executer
 from utils import logger
+from utils import misc
 
 
 SCRATCH_DIR = "/home/%s/cros_scratch" % getpass.getuser()
@@ -83,7 +84,7 @@ class ResultsCache(object):
 
   def _FormCacheDir(self, list_of_strings):
     cache_key = " ".join(list_of_strings)
-    cache_dir = self._ConvertToFilename(cache_key)
+    cache_dir = misc.GetFilenameFromString(cache_key)
     cache_path = os.path.join(SCRATCH_DIR, cache_dir)
     return cache_path
 
@@ -181,14 +182,6 @@ class ResultsCache(object):
       output = pickle.load(f)
 
     return PerfProcessor.PerfResults(report, output)
-
-  def _ConvertToFilename(self, text):
-    ret = text
-    ret = re.sub("/", "__", ret)
-    ret = re.sub(" ", "_", ret)
-    ret = re.sub("=", "", ret)
-    ret = re.sub("\"", "", ret)
-    return ret
 
 
 class MockResultsCache(object):
