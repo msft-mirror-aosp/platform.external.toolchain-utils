@@ -38,6 +38,16 @@ def ProcessArguments():
                     help='Required. Specify remote address/name of the board.')
   parser.add_option('-f', '--flags', dest='flags',
                     help='Optional. Extra run test flags to pass to dejagnu.')
+  parser.add_option('-k', '--keep', dest='keep_intermediate_files',
+                    action='store_true', default=False,
+                    help=('Optional. Default to false. Do not remove dejagnu '
+                          'intermediate files after test run.'))
+  parser.add_option('-t', '--tools', dest='tools', default='gcc,g++',
+                    help=('Optional. Specify which tools to check, using '
+                          '","(comma) as separator. A typical value would be '
+                          '"g++" so that only g++ tests are performed.'
+                          'Defaults to "gcc,g++".'))
+
   options, args = parser.parse_args()
 
   if not options.chromeos_root:
@@ -55,7 +65,8 @@ def ProcessArguments():
 class DejagnuExecuter(object):
   """The class wrapper for dejagnu test executer."""
 
-  def __init__(self, chromeos_root, remote, board, flags):
+  def __init__(self, chromeos_root, remote, board,
+               flags, keep_intermediate_files, tools):
     self._chromeos_root = chromeos_root
     self._remote = remote
     self._board = board
@@ -67,6 +78,8 @@ class DejagnuExecuter(object):
     self._flags = flags or ''
     self._base_dir = misc.GetRoot(sys.argv[0])[0]
     self._tmp_abs = None
+    self._keep_intermediate_files = keep_intermediate_files
+    self._tools = tools.split(',')
 
   def SetupTestingDir(self):
     self._tmp_abs = tempfile.mkdtemp(prefix='dejagnu_', dir=path.join(
@@ -75,9 +88,21 @@ class DejagnuExecuter(object):
     self._tmp_testing_rsa = path.join(self._tmp, 'testing_rsa')
     self._tmp_testing_rsa_abs = path.join(self._tmp_abs, 'testing_rsa')
 
+  def MakeCheckString(self):
+    return ' '.join(['check-{0}'.format(t) for t in self._tools if t])
+
   def CleanupTestingDir(self):
-    if self._tmp_abs:
-      shutil.rmtree(self._tmp_abs)
+    if self._tmp_abs and path.isdir(self._tmp_abs):
+      if self._keep_intermediate_files:
+        print('Your intermediate dejagnu files are kept, you can re-run '
+              'inside chroot the command:')
+        print(('  DEJAGNU={0} make -C {1} {2} '
+               'RUNTESTFLAGS="--target_board={3} {4}"').format(
+                   path.join(self._tmp, 'site.exp'), self.MakeCheckString(),
+                   self._gcc_build_dir, self._board, self._flags))
+      else:
+        print 'Removing temp dir - {0}'.format(self._tmp_abs)
+        shutil.rmtree(self._tmp_abs)
 
   def PrepareTestingRsaKeys(self):
     if not path.isfile(self._tmp_testing_rsa_abs):
@@ -116,7 +141,7 @@ class DejagnuExecuter(object):
     ret = self._executer.ChrootRunCommand(
         self._chromeos_root,
         'equery w cross-%s/gcc' % self._target, return_output=True)[1]
-    ret = path.basename(ret.rstrip('\r\n'))
+    ret = path.basename(ret.strip())
     # ret is expected to be something like 'gcc-4.6.2-r11.ebuild', parse it.
     matcher = re.match('((.*)-r\d+).ebuild', ret)
     if not matcher:
@@ -143,9 +168,9 @@ class DejagnuExecuter(object):
 
   def MakeCheck(self):
     cmd = ('cd %s ; '
-           'DEJAGNU=%s make check RUNTESTFLAGS="--target_board=%s %s"' %
+           'DEJAGNU=%s make %s RUNTESTFLAGS="--target_board=%s %s"' %
            (self._gcc_build_dir, path.join(self._tmp, 'site.exp'),
-            self._board, self._flags))
+            self.MakeCheckString(), self._board, self._flags))
     self._executer.ChrootRunCommand(self._chromeos_root, cmd)
 
   def ValidateFailures(self):
@@ -163,8 +188,9 @@ class DejagnuExecuter(object):
 
 if __name__ == '__main__':
   opts = ProcessArguments()
-  executer = DejagnuExecuter(opts.chromeos_root, opts.remote,
-                             opts.board, opts.flags)
+  executer = DejagnuExecuter(opts.chromeos_root, opts.remote, opts.board,
+                             opts.flags, opts.keep_intermediate_files,
+                             opts.tools)
   try:
     executer.SetupTestingDir()
     executer.PrepareTestingRsaKeys()

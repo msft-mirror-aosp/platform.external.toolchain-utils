@@ -72,10 +72,25 @@ proc __boardname___upload { board file args } {
 }
 
 #
+# Cache program output within different invoking of __boardname___exec.
+# For example, the following command sequence will be executed
+#   > cd /tmp/dejagnu_xxxx/ && ./xxx.x0
+#   <output1 here>
+#   return [0, <output1>]   (a)
+#   > rm /tmp/dejagnu_xxxx/xxxx.x0
+#   <output2 here>
+#   return [0, <output2>]   (b)
+# We need <output1>, not <output2>. What we do here is to keep <output1> in
+# $program_output and in (b) we return [0, <output1>].
+#
+set program_output ""
+
+#
 # Execute a test on remote machine. Log into the target machine using
 # persistent SSH connection and run a command in modified environment.
 #
 proc __boardname___exec { board program args } {
+  global program_output
   if { [llength $args] > 0 } {
     set pargs [lindex $args 0]
   } else {
@@ -106,6 +121,7 @@ proc __boardname___exec { board program args } {
 
   # Check if a file to be executed was copied from host machine.  If so, we
   # need to run it in copied runtimes.
+  set is_program "0"
   if { [string match "$tmpdir/*" $program] } {
     set path [file dirname $program]
     # "$program" would usually be like "/x/y/z.out", set command to be "z.out".
@@ -119,6 +135,7 @@ proc __boardname___exec { board program args } {
     # force generating ".gcda" file under "/x/y" instead of some host path.
     set program "cd $path && GCOV_PREFIX_STRIP=999 GCOV_PREFIX=$tmpdir/ \
                  [file join "." $command]"
+    set is_program "1"
   }
   verbose -log "Exec: $program"
   set ssh_options [board_info $board ssh,options]
@@ -126,6 +143,9 @@ proc __boardname___exec { board program args } {
               "ssh -n $ssh_options root@$hostname sh -c '$program $pargs'" \
               $inp $outp $timeout]
   set status [lindex $retv 0]
+  if { $is_program == "1" } {
+    set program_output [lindex $retv 1]
+  }
 
   # Before returning the execution status, we try to transfer the ".gcda"
   # (and/or other files that have the same base name as the program) file to
@@ -140,7 +160,7 @@ proc __boardname___exec { board program args } {
     }
   }
 
-  return $status
+  return [list $status $program_output]
 }
 
 load_generic_config "unix"
