@@ -18,6 +18,7 @@ import pickle
 import socket
 import sys
 import time
+import tempfile
 from utils import logger
 from utils import command_executer
 
@@ -82,24 +83,28 @@ def RestartUI(remote, chromeos_root, login=True):
   command = 'rm -rf %s && restart ui' % LOGIN_PROMPT_VISIBLE_MAGIC_FILE
   ce.CrosRunCommand(command, machine=remote,
                     chromeos_root=chromeos_root)
-  login_script = '/tmp/login.py'
+  host_login_script = tempfile.mktemp()
+  device_login_script = '/tmp/login.py'
   login_script_list = [script_header, wait_for_login_screen]
   if login:
     login_script_list.append(do_login)
 
   full_login_script_contents = "\n".join(login_script_list)
 
-  with open(login_script, 'w') as f:
+  with open(host_login_script, 'w') as f:
     f.write(full_login_script_contents)
-  ce.CopyFiles(login_script,
-               login_script,
+  ce.CopyFiles(host_login_script,
+               device_login_script,
                dest_machine=remote,
                chromeos_root=chromeos_root,
                recursive=False,
                dest_cros=True)
-  return ce.CrosRunCommand('python %s' % login_script,
-                           chromeos_root=chromeos_root,
-                           machine=remote)
+  ret = ce.CrosRunCommand('python %s' % device_login_script,
+                          chromeos_root=chromeos_root,
+                          machine=remote)
+  if os.path.exists(host_login_script):
+    os.remove(host_login_script)
+  return ret
 
 
 def Main(argv):
@@ -116,7 +121,7 @@ def Main(argv):
 
   options, args = parser.parse_args(argv)
 
-  return LoginAsGuest(options.remote, options.chromeos_root)
+  return RestartUI(options.remote, options.chromeos_root)
 
 if __name__ == '__main__':
   retval = Main(sys.argv)
