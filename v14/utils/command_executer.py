@@ -202,12 +202,12 @@ class CommandExecuter:
 
     os.chmod(command_file, 0777)
 
-    with utils.WorkingDirectory(chromeos_root):
-      command = "cros_sdk -- ./%s" % os.path.basename(command_file)
-      ret = self.RunCommand(command, return_output,
+    command = "cd %s; cros_sdk -- ./%s" % (chromeos_root,
+                                           os.path.basename(command_file))
+    ret = self.RunCommand(command, return_output,
                           command_terminator=command_terminator)
-      os.remove(command_file)
-      return ret
+    os.remove(command_file)
+    return ret
 
 
   def RunCommands(self, cmdlist, return_output=False, machine=None,
