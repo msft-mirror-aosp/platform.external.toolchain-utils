@@ -2,7 +2,7 @@
 #
 # Copyright 2011 Google Inc. All Rights Reserved.
 
-"""Script to profile a page cycler, and get it back to the host."""
+"""Script to build chrome with FDO and compare performance against no FDO."""
 
 import getpass
 import optparse
@@ -47,12 +47,12 @@ class Patcher(object):
 
 class FDOComparator(object):
   def __init__(self, board, remotes, ebuild_version, plus_pgo, minus_pgo,
-               update_pgo):
+               update_pgo, chromeos_root):
     self._board = board
     self._remotes = remotes
     self._ebuild_version = ebuild_version
     self._remote = remotes.split(",")[0]
-    self._chromeos_root = "chromeos"
+    self._chromeos_root = chromeos_root
     self._profile_dir = "profile_dir"
     self._profile_path = os.path.join(self._chromeos_root,
                                       "src",
@@ -302,6 +302,10 @@ def Main(argv):
                     action="store_true",
                     default=False,
                     help="Update pgo and build Chrome with the update.")
+  parser.add_option("--chromeos_root",
+                    dest="chromeos_root",
+                    default=False,
+                    help="The chromeos root directory")
   options, _ = parser.parse_args(argv)
   if not options.board:
     print "Please give a board."
@@ -309,12 +313,19 @@ def Main(argv):
   if not options.remote:
     print "Please give at least one remote machine."
     return 1
+  if not options.chromeos_root:
+    print "Please provide the chromeos root directory."
+    return 1
+  if not any((options.minus_pgo, options.plus_pgo, options.update_pgo)):
+    print "Please provide at least one build option."
+    return 1
   fc = FDOComparator(options.board,
                      options.remote,
                      options.ebuild_version,
                      options.plus_pgo,
                      options.minus_pgo,
-                     options.update_pgo)
+                     options.update_pgo,
+                     os.path.expanduser(options.chromeos_root))
   return fc.DoAll()
 
 
