@@ -222,7 +222,9 @@ class FDOComparator(object):
     cflags = ("-fprofile-use "
               "-fprofile-correction "
               "-Wno-error "
-              "-fopt-info=0 "
+              "-fopt-info=3 "
+              "-fdump-tree-optimized-blocks-lineno "
+              "-fdump-ipa-profile-blocks-lineno "
               "-fno-vpt "
               "-fprofile-dir=%s" %
               chroot_profile_dir)
