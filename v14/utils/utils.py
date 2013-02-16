@@ -76,9 +76,9 @@ def CanonicalizePath(path):
 
 def GetCtargetFromBoard(board, chromeos_root):
   base_board = board.split("_")[0]
-  command = ("cat"
-             " $(cros_overlay_list --board=%s --primary_only)/toolchain.conf" %
-             (base_board))
+  command = ("source "
+             "../platform/dev/toolchain_utils.sh; get_ctarget_from_board %s" %
+             base_board)
   ce = command_executer.GetCommandExecuter()
   ret, out, err = ce.ChrootRunCommand(chromeos_root,
                                       command,
