@@ -77,6 +77,7 @@ class CyclerProfiler:
   def _GetRendererPID(self):
     # First get the renderer's pid.
     command = ("ps -f -u root --sort time | "
+               "grep -v grep | "
                "grep renderer | "
                # Filter out disowned processes.
                r"grep -v '\b1\b' | "
@@ -100,6 +101,9 @@ class CyclerProfiler:
     # Kill the remote GDB server if it is running.
     self._KillRemoteGDBServer()
     pid = self._GetRendererPID()
+    if not pid:
+      self._l.LogError("Could not find PID of renderer!")
+      return
     # Copy the gdb_remote.dump file to the chromeos_root.
     gdb_file = "gdb_remote.dump"
     self._ce.CopyFiles(os.path.join(os.path.dirname(__file__),
@@ -117,7 +121,8 @@ class CyclerProfiler:
                 self._remote,
                 self._board))
     self._ce.ChrootRunCommand(self._chromeos_root,
-                              command)
+                              command,
+                              command_timeout=60)
     # Kill the renderer now.
     self._KillRemotePID(pid)
 
