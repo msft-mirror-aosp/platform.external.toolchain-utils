@@ -56,8 +56,7 @@ class ToolchainPart(object):
       self.UninstallTool()
       self.MoveMaskFile()
       self.MountSources(False)
-      if not self._incremental:
-        self.RemoveCompiledFile()
+      self.RemoveCompiledFile()
       self.BuildTool()
     finally:
       self.UnMoveMaskFile()
@@ -68,7 +67,7 @@ class ToolchainPart(object):
                                  "var/tmp/portage/cross-%s" % self._ctarget,
                                  "%s-9999" % self._name,
                                  ".compiled")
-    command = "rm -rf %s" % compiled_file
+    command = "rm -f %s" % compiled_file
     self._ce.RunCommand(command)
 
   def MountSources(self, unmount_source):
