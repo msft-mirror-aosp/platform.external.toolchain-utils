@@ -58,8 +58,11 @@ def GetImageDir(chromeos_root, board):
 
 def LabelLatestImage(chromeos_root, board, label):
   image_dir = GetImageDir(chromeos_root, board)
+  latest_image_dir = os.path.join(image_dir, "latest")
+  latest_image_dir = os.path.realpath(latest_image_dir)
+  latest_image_dir = os.path.basename(latest_image_dir)
   with WorkingDirectory(image_dir):
-    command = "ln -sf -T $(readlink -f latest) %s" % label
+    command = "ln -sf -T %s %s" % (latest_image_dir, label)
     ce = command_executer.GetCommandExecuter()
     return ce.RunCommand(command)
 
@@ -81,11 +84,7 @@ def GetBuildPackagesCommand(board, usepkg=False):
 
 
 def GetBuildImageCommand(board):
-  return "./build_image --withdev --board=%s" % board
-
-
-def GetModImageForTestCommand(board):
-  return "./mod_image_for_test.sh --yes --board=%s" % board
+  return "./build_image --board=%s test" % board
 
 
 def GetSetupBoardCommand(board, gcc_version=None, binutils_version=None,
@@ -139,7 +138,7 @@ def GetEnvStringFromDict(env_dict):
 
 def GetAllImages(chromeos_root, board):
   ce = command_executer.GetCommandExecuter()
-  command = ("find %s/src/build/images/%s -name chromiumos_image.bin" %
+  command = ("find %s/src/build/images/%s -name chromiumos_test_image.bin" %
              (chromeos_root, board))
   ret, out, err = ce.RunCommand(command, return_output=True)
   return out.splitlines()

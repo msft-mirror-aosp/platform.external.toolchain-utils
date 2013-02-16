@@ -93,7 +93,6 @@ def Main(argv):
 
   build_packages_command = misc.GetBuildPackagesCommand(options.board)
   build_image_command = misc.GetBuildImageCommand(options.board)
-  mod_image_command = misc.GetModImageForTestCommand(options.board)
 
   if options.vanilla == True:
     command = misc.GetSetupBoardCommand(options.board,
@@ -101,7 +100,6 @@ def Main(argv):
                                          force=options.clobber_board)
     command += "; " + build_packages_env + " " + build_packages_command
     command += "&& " + build_image_command
-    command += "&& " + mod_image_command
     ret = cmd_executer.ChrootRunCommand(options.chromeos_root, command)
     return ret
 
@@ -144,11 +142,6 @@ def Main(argv):
                                       build_image_command)
 
   logger.GetLogger().LogFatalIf(ret, "build_image failed")
-
-  # Mod image for test
-  ret = cmd_executer.ChrootRunCommand(options.chromeos_root, mod_image_command)
-
-  logger.GetLogger().LogFatalIf(ret, "mod_image_for_test failed")
 
   flags_file_name = "flags.txt"
   flags_file_path = ("%s/src/build/images/%s/latest/%s" %

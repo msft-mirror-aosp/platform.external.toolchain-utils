@@ -90,9 +90,10 @@ def Main(argv):
     if os.path.exists(out_dir):
       shutil.rmtree(out_dir)
 
+  unmask_env = "ACCEPT_KEYWORDS=~*"
   if options.ebuild_version:
     ebuild_version = "=%s" % options.ebuild_version
-    options.env += " ACCEPT_KEYWORDS=~*"
+    options.env = "%s %s" % (options.env, unmask_env)
   else:
     ebuild_version = "chromeos-chrome"
 
@@ -115,16 +116,12 @@ def Main(argv):
   # Build image
   ret = (cmd_executer.
          ChrootRunCommand(options.chromeos_root,
-                          misc.GetBuildImageCommand(options.board)))
+                          ("%s %s" %
+                           (unmask_env,
+                            misc.GetBuildImageCommand(options.board)))))
 
   logger.GetLogger().LogFatalIf(ret, "build_image failed")
 
-  # Mod image for test
-  ret = (cmd_executer.
-         ChrootRunCommand(options.chromeos_root,
-                          misc.GetModImageForTestCommand(options.board)))
-
-  logger.GetLogger().LogFatalIf(ret, "mod_image_for_test failed")
 
   flags_file_name = "chrome_flags.txt"
   flags_file_path = ("%s/src/build/images/%s/latest/%s" %

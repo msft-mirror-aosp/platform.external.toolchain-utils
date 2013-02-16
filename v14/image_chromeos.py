@@ -68,10 +68,14 @@ def Main(argv):
     board = options.board
 
   if options.image is None:
-    image = (options.chromeos_root +
-             "/src/build/images/" + board +
-             "/latest/" +
-             "/chromiumos_image.bin")
+    images_dir = misc.GetImageDir(options.chromeos_root, board)
+    image = os.path.join(images_dir,
+                         "latest",
+                         "chromiumos_image.bin")
+    if not os.path.exists(image):
+      image = os.path.join(images_dir,
+                           "latest",
+                           "chromiumos_image.bin")
   else:
     image = options.image
     image = os.path.expanduser(image)
