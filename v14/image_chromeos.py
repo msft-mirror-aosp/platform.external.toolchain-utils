@@ -16,10 +16,8 @@ import os
 import shutil
 import sys
 import tempfile
-import tc_enter_chroot
 from utils import command_executer
 from utils import logger
-from utils import utils
 from utils.file_utils import FileUtils
 
 checksum_file = "/usr/local/osimage_checksum_file"
