@@ -11,6 +11,10 @@ import traceback
 from results_cache import Result
 from utils import logger
 from utils import command_executer
+from autotest_runner import AutotestRunner
+from perf_processor import PerfProcessor
+from results_cache import ResultsCache
+
 
 STATUS_FAILED = "FAILED"
 STATUS_SUCCEEDED = "SUCCEEDED"
@@ -24,7 +28,7 @@ class BenchmarkRun(threading.Thread):
   def __init__(self, name, benchmark_name, autotest_name, autotest_args,
                label_name, chromeos_root, chromeos_image, board, iteration,
                cache_conditions, outlier_range, profile_counters, profile_type,
-               machine_manager, cache, autotest_runner, perf_processor,
+               machine_manager,
                logger_to_use):
     threading.Thread.__init__(self)
     self.name = name
@@ -37,6 +41,7 @@ class BenchmarkRun(threading.Thread):
     self.chromeos_image = os.path.expanduser(chromeos_image)
     self.board = board
     self.iteration = iteration
+    self.result = None
     self.results = {}
     self.terminated = False
     self.retval = None
@@ -46,9 +51,9 @@ class BenchmarkRun(threading.Thread):
     self.profile_counters = profile_counters
     self.profile_type = profile_type
     self.machine_manager = machine_manager
-    self.cache = cache
-    self.autotest_runner = autotest_runner
-    self.perf_processor = perf_processor
+    self.cache = ResultsCache()
+    self.autotest_runner = AutotestRunner(self._logger)
+    self.perf_processor = None
     self.machine = None
     self.full_name = self.autotest_name
     self.cache_conditions = cache_conditions
@@ -58,26 +63,26 @@ class BenchmarkRun(threading.Thread):
     self.failure_reason = ""
     self._ce = command_executer.GetCommandExecuter(self._logger)
 
-  def ProcessResults(self, result, cache_hit):
+  def ProcessResults(self):
     # Generate results from the output file.
-    results_dir = self._GetResultsDir(result.out)
-    self.full_name = os.path.basename(results_dir)
-    self.results = result.keyvals
+    self.full_name = os.path.basename(self.results_dir)
+    self.results = self.result.keyvals
 
     # Store the autotest output in the cache also.
-    if not cache_hit:
-      self.cache.StoreResult(result)
-      self.cache.StoreAutotestOutput(results_dir)
+    if not self.cache_hit:
+      self.cache.StoreResult(self.result)
+      self.cache.StoreAutotestOutput(self.results_dir)
 
+    self.perf_processor = PerfProcessor(self.results_dir,
+                                        self.chromeos_root,
+                                        self.board,
+                                        self._logger)
     # Generate a perf report and cache it.
     if self.profile_type:
-      if cache_hit:
+      if self.cache_hit:
         self.perf_results = self.cache.ReadPerfResults()
       else:
-        self.perf_results = (self.perf_processor.
-                             GeneratePerfResults(results_dir,
-                                                 self.chromeos_root,
-                                                 self.board))
+        self.perf_results = self.perf_processor.GeneratePerfResults()
         self.cache.StorePerfResults(self.perf_results)
 
     # If there are valid results from perf stat, combine them with the
@@ -107,31 +112,32 @@ class BenchmarkRun(threading.Thread):
                       self.cache_conditions,
                       self._logger)
 
-      result = self.cache.ReadResult()
-      self.cache_hit = (result is not None)
+      self.result = self.cache.ReadResult()
+      self.cache_hit = (self.result is not None)
 
-      if result:
+      if self.result:
         self._logger.LogOutput("%s: Cache hit." % self.name)
-        self._logger.LogOutput(result.out + "\n" + result.err)
+        self._logger.LogOutput(self.result.out + "\n" + self.result.err)
+        self.results_dir = self._GetResultsDir(self.result.out)
       else:
         self._logger.LogOutput("%s: No cache hit." % self.name)
         self.status = STATUS_WAITING
         # Try to acquire a machine now.
         self.machine = self.AcquireMachine()
         self.cache.remote = self.machine.name
-        result = self.RunTest(self.machine)
+        self.result = self.RunTest(self.machine)
 
       if self.terminated:
         return
 
-      if not result.retval:
+      if not self.result.retval:
         self.status = STATUS_SUCCEEDED
       else:
         if self.status != STATUS_FAILED:
           self.status = STATUS_FAILED
           self.failure_reason = "Return value of autotest was non-zero."
 
-      self.ProcessResults(result, self.cache_hit)
+      self.ProcessResults()
 
     except Exception, e:
       self._logger.LogError("Benchmark run: '%s' failed: %s" % (self.name, e))
@@ -184,18 +190,18 @@ class BenchmarkRun(threading.Thread):
     self.run_completed = True
 
     # Include the keyvals in the result.
-    results_dir = self._GetResultsDir(out)
-    keyvals = self._GetKeyvals(results_dir)
+    self.results_dir = self._GetResultsDir(out)
+    keyvals = self._GetKeyvals()
     keyvals["retval"] = retval
 
     result = Result(out, err, retval, keyvals)
 
     return result
 
-  def _GetKeyvals(self, results_dir):
+  def _GetKeyvals(self):
     full_results_dir = os.path.join(self.chromeos_root,
                                     "chroot",
-                                    results_dir.lstrip("/"))
+                                    self.results_dir.lstrip("/"))
     command = "find %s -regex .*results/keyval$" % full_results_dir
     [ret, out, err] = self._ce.RunCommand(command, return_output=True)
     keyvals_dict = {}
