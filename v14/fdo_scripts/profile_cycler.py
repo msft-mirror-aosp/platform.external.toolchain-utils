@@ -39,7 +39,7 @@ class CyclerProfiler:
                                      self._GetProfileDir())
 
   def _GetProfileDir(self):
-    return utils.GetCtargetFromBoard(self._board, self._chromeos_root)
+    return misc.GetCtargetFromBoard(self._board, self._chromeos_root)
 
   def _CopyTestData(self):
     tarball = os.path.join(self._chromeos_root,
