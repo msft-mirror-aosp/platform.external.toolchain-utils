@@ -1,9 +1,8 @@
 #!/usr/bin/python
-
+#
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 from utils import command_executer
-from utils import utils
 
 
 class AutotestRunner(object):

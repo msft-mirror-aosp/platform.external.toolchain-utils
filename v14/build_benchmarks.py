@@ -32,11 +32,11 @@ import optparse
 import os
 import sys
 import re
-import tc_enter_chroot
+
 import build_chromeos
+import tc_enter_chroot
 from utils import command_executer
 from utils import logger
-from utils import utils
 
 
 KNOWN_BENCHMARKS = [

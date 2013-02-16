@@ -2,19 +2,14 @@
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
-"""Script to wrap run_remote_tests.sh script.
-
-This script can login to the chromeos machine using the test private key.
-"""
-
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import optparse
 import os
 import re
 import sys
+
 from utils import command_executer
-from utils import utils
 
 
 def Usage(parser, message):

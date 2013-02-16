@@ -17,16 +17,16 @@ the results and presents it, along with a geometric mean.
 
 __author__ = "bjanakiraman@google.com (Bhaskar Janakiraman)"
 
+import glob
+import math
 import optparse
 import os
 import re
 import sys
-import glob
-import math
-import run_tests
+
 import image_chromeos
+import run_tests
 from utils import command_executer
-from utils import utils
 from utils import logger
 
 BENCHDIRS = "%s/default/default/*/gcc-4.4.3-glibc-2.11.1-grte-k8-opt/ref/*/results.txt"

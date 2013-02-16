@@ -2,19 +2,14 @@
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
-"""lock_machine.py related unit-tests.
-
-MachineManagerTest tests MachineManager.
-"""
-
 __author__ = "asharif@google.com (Ahmad Sharif)"
-
 
 import os
 import tempfile
 import unittest
+
 from utils import command_executer
-from utils import utils
+from utils import misc
 
 
 class DivideAndMergeProfilesTest(unittest.TestCase):
@@ -24,7 +19,7 @@ class DivideAndMergeProfilesTest(unittest.TestCase):
     print self._program_dir
     self._writeProgram()
     self._writeMakefile()
-    with utils.WorkingDirectory(self._program_dir):
+    with misc.WorkingDirectory(self._program_dir):
       self._ce.RunCommand("make")
     num_profile_dirs = 2
     self._profile_dirs = []
@@ -34,7 +29,7 @@ class DivideAndMergeProfilesTest(unittest.TestCase):
                  " %s/program" %
                  (profile_dir.count("/"),
                   self._program_dir))
-      with utils.WorkingDirectory(profile_dir):
+      with misc.WorkingDirectory(profile_dir):
         self._ce.RunCommand(command)
       self._profile_dirs.append(profile_dir)
     self._merge_program = "/home/build/static/projects/crosstool/profile-merge/v14.5/profile_merge.par"

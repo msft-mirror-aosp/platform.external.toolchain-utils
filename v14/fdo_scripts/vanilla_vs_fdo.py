@@ -1,13 +1,17 @@
-#!/usr/bin/python
+#!/usr/bin/python2.6
+#
+# Copyright 2011 Google Inc. All Rights Reserved.
 
-# Script to profile a page cycler, and get it back to the host.
+"""Script to profile a page cycler, and get it back to the host."""
+
 import optparse
 import os
 import sys
+
 import build_chrome_browser
 import setup_chromeos
 from utils import command_executer
-from utils import utils
+from utils import misc
 
 
 class FDOComparator(object):
@@ -24,13 +28,13 @@ class FDOComparator(object):
       setup_chromeos.Main(setup_chromeos_args)
 
   def _BuildChromeOSUsingBinaries(self):
-    command = utils.GetSetupBoardCommand(self._board,
+    command = misc.GetSetupBoardCommand(self._board,
                                          usepkg=True)
     ret = self._ce.ChrootRunCommand(self._chromeos_root,
                                     command)
     if ret:
       raise Exception("Couldn't run setup_board!")
-    command = utils.GetBuildPackagesCommand(self._board,
+    command = misc.GetBuildPackagesCommand(self._board,
                                             True)
     ret = self._ce.ChrootRunCommand(self._chromeos_root,
                                     command)
@@ -38,9 +42,9 @@ class FDOComparator(object):
       raise Exception("Couldn't run build_packages!")
 
   def _BuildChromeAndImage(self, env_dict):
-    env_string = utils.GetEnvStringFromDict(env_dict)
-    label = utils.GetFilenameFromString(env_string)
-    if not utils.DoesLabelExist(self._chromeos_root, self._board, label):
+    env_string = misc.GetEnvStringFromDict(env_dict)
+    label = misc.GetFilenameFromString(env_string)
+    if not misc.DoesLabelExist(self._chromeos_root, self._board, label):
       build_chrome_browser_args = ["--chromeos_root=%s" % self._chromeos_root,
                                    "--board=%s" % self._board,
                                    "--env=%s" %
@@ -48,7 +52,7 @@ class FDOComparator(object):
       ret = build_chrome_browser.Main(build_chrome_browser_args)
       if ret:
         raise Exception("Couldn't build chrome browser!")
-      utils.LabelLatestImage(self._chromeos_root, self._board, label)
+      misc.LabelLatestImage(self._chromeos_root, self._board, label)
     return label
 
   def _TestLabels(self, labels):
@@ -75,7 +79,7 @@ class FDOComparator(object):
           chromeos_image: %s
         }
         """ % (crosperf_label,
-               os.path.join(utils.GetImageDir(self._chromeos_root, self._board),
+               os.path.join(misc.GetImageDir(self._chromeos_root, self._board),
                             label,
                             "chromiumos_image.bin"))
         print >>f, experiment_image

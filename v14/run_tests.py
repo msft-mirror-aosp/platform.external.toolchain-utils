@@ -13,9 +13,9 @@ import optparse
 import os
 import re
 import sys
+
 from utils import command_executer
 from utils import logger
-from utils import utils
 import build_chromeos
 
 

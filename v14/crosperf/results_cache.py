@@ -1,5 +1,5 @@
 #!/usr/bin/python
-
+#
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 import getpass
@@ -8,11 +8,12 @@ import hashlib
 import os
 import pickle
 import re
+
 from image_checksummer import ImageChecksummer
 from perf_processor import PerfProcessor
 from utils import command_executer
 from utils import logger
-from utils import utils
+
 
 SCRATCH_DIR = "/home/%s/cros_scratch" % getpass.getuser()
 RESULTS_FILE = "results.txt"

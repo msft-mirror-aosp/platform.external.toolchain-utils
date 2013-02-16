@@ -14,19 +14,20 @@ import optparse
 import os
 import sys
 import tempfile
+
 import tc_enter_chroot
 from utils import command_executer
-from utils import utils
+from utils import misc
 
 
 class ToolchainPart(object):
   def __init__(self, name, source_path, chromeos_root, board, incremental,
                build_env):
     self._name = name
-    self._source_path = utils.CanonicalizePath(source_path)
+    self._source_path = misc.CanonicalizePath(source_path)
     self._chromeos_root = chromeos_root
     self._board = board
-    self._ctarget = utils.GetCtargetFromBoard(self._board,
+    self._ctarget = misc.GetCtargetFromBoard(self._board,
                                               self._chromeos_root)
     self._ce = command_executer.GetCommandExecuter()
     self._mask_file = os.path.join(
@@ -199,11 +200,11 @@ def Main(argv):
 
   options, _ = parser.parse_args(argv)
 
-  chromeos_root = utils.CanonicalizePath(options.chromeos_root)
+  chromeos_root = misc.CanonicalizePath(options.chromeos_root)
   if options.gcc_dir:
-    gcc_dir = utils.CanonicalizePath(options.gcc_dir)
+    gcc_dir = misc.CanonicalizePath(options.gcc_dir)
   if options.gdb_dir:
-    gdb_dir = utils.CanonicalizePath(options.gdb_dir)
+    gdb_dir = misc.CanonicalizePath(options.gdb_dir)
   if options.unmount_only:
     options.mount_only = False
   elif options.mount_only:

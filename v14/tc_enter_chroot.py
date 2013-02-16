@@ -15,9 +15,11 @@ import os
 import pwd
 import stat
 import sys
+
 from utils import command_executer
 from utils import logger
-from utils import utils
+from utils import misc
+
 
 class MountPoint:
   def __init__(self, external_dir, mount_dir, owner, options=None):
@@ -155,7 +157,7 @@ def Main(argv, return_output=False):
 
   mount_points = []
   for tc_dir in tc_dirs:
-    last_dir = utils.GetRoot(tc_dir)[1]
+    last_dir = misc.GetRoot(tc_dir)[1]
     mount_point = MountPoint(tc_dir, full_mounted_tc_root + "/" + last_dir,
                              getpass.getuser(), "ro")
     mount_points.append(mount_point)
@@ -190,7 +192,7 @@ def Main(argv, return_output=False):
   mount_points += CreateMountPointsFromString(options.other_mounts,
                                               chromeos_root + "/chroot/")
 
-  last_dir = utils.GetRoot(version_dir)[1]
+  last_dir = misc.GetRoot(version_dir)[1]
 
   # Mount the version dir (v14) at /usr/local/toolchain_root/v14
   mount_point = MountPoint(version_dir, full_mounted_tc_root + "/" + last_dir,
@@ -270,7 +272,7 @@ def CreateMountPointsFromString(mount_strings, chroot_dir):
 def CreateSymlink(target, link_name):
   logger.GetLogger().LogFatalIf(target.startswith("/"),
                                 "Can't create symlink to absolute path!")
-  real_from_file = utils.GetRoot(link_name)[0] + "/" + target
+  real_from_file = misc.GetRoot(link_name)[0] + "/" + target
   if os.path.realpath(real_from_file) != os.path.realpath(link_name):
     if os.path.exists(link_name):
       command = "rm -rf " + link_name

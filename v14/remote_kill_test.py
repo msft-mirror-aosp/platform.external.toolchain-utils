@@ -15,8 +15,8 @@ import os
 import re
 import sys
 import subprocess
+
 from utils import command_executer
-from utils import utils
 
 
 def Usage(parser, message):

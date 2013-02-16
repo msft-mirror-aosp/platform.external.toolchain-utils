@@ -1,11 +1,11 @@
 #!/usr/bin/python
-
+#
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 import os
 import re
+
 from utils import command_executer
-from utils import utils
 
 
 class PerfProcessor(object):

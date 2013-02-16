@@ -13,10 +13,11 @@ __author__ = "raymes@google.com (Raymes Khoury)"
 import optparse
 import os
 import sys
+
 import tc_enter_chroot
 from utils import command_executer
 from utils import logger
-from utils import utils
+from utils import misc
 
 
 def Usage(parser, message):
@@ -90,12 +91,12 @@ def Main(argv):
 
   MakeChroot(options.chromeos_root, options.clobber_chroot)
 
-  build_packages_command = utils.GetBuildPackagesCommand(options.board)
-  build_image_command = utils.GetBuildImageCommand(options.board)
-  mod_image_command = utils.GetModImageForTestCommand(options.board)
+  build_packages_command = misc.GetBuildPackagesCommand(options.board)
+  build_image_command = misc.GetBuildImageCommand(options.board)
+  mod_image_command = misc.GetModImageForTestCommand(options.board)
 
   if options.vanilla == True:
-    command = utils.GetSetupBoardCommand(options.board,
+    command = misc.GetSetupBoardCommand(options.board,
                                          usepkg=False,
                                          force=options.clobber_board)
     command += "; " + build_packages_env + " " + build_packages_command
@@ -108,11 +109,11 @@ def Main(argv):
   if not os.path.isdir(options.chromeos_root + "/chroot/build/"
                        + options.board) or options.clobber_board:
     # Run build_tc.py from binary package
-    rootdir = utils.GetRoot(argv[0])[0]
-    version_number = utils.GetRoot(rootdir)[1]
+    rootdir = misc.GetRoot(argv[0])[0]
+    version_number = misc.GetRoot(rootdir)[1]
     ret = cmd_executer.ChrootRunCommand(
         options.chromeos_root,
-        utils.GetSetupBoardCommand(options.board,
+        misc.GetSetupBoardCommand(options.board,
                                    gcc_version="9999",
                                    binutils_version="9999",
                                    force=options.clobber_board))

@@ -13,8 +13,9 @@ import optparse
 import os
 import re
 import sys
+
 from utils import command_executer
-from utils import utils
+from utils import misc
 
 
 def Usage(parser, message):
@@ -43,8 +44,8 @@ def Main(argv):
                     chromeos_root=options.chromeos_root,
                     machine=options.remote)
 
-  version_dir_path, script_name = utils.GetRoot(sys.argv[0])
-  version_dir = utils.GetRoot(version_dir_path)[1]
+  version_dir_path, script_name = misc.GetRoot(sys.argv[0])
+  version_dir = misc.GetRoot(version_dir_path)[1]
 
   # Tests to copy directories and files to the chromeos box.
   ce.CopyFiles(version_dir_path,

@@ -31,10 +31,10 @@ import optparse
 import os
 import re
 import sys
-import run_tests
+
 import image_chromeos
+import run_tests
 from utils import command_executer
-from utils import utils
 from utils import logger
 
 

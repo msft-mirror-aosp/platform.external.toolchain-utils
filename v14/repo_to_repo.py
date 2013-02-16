@@ -10,10 +10,11 @@ import re
 import socket
 import sys
 import tempfile
+
 from automation.clients.helper import perforce
 from utils import command_executer
 from utils import logger
-from utils import utils
+from utils import misc
 
 
 def GetCanonicalMappings(mappings):
@@ -127,7 +128,7 @@ class SvnRepo(Repo):
     self.mappings = mappings
 
   def PullSources(self):
-    with utils.WorkingDirectory(self._root_dir):
+    with misc.WorkingDirectory(self._root_dir):
       for mapping in self.mappings:
         remote_path, local_path = SplitMapping(mapping)
         command = 'svn co %s/%s %s' % (self.address, remote_path, local_path)
@@ -156,12 +157,12 @@ class GitRepo(Repo):
     self.gerrit = gerrit
 
   def _CloneSources(self):
-    with utils.WorkingDirectory(self._root_dir):
+    with misc.WorkingDirectory(self._root_dir):
       command = 'git clone %s .' % (self.address)
       return self._ce.RunCommand(command)
 
   def PullSources(self):
-    with utils.WorkingDirectory(self._root_dir):
+    with misc.WorkingDirectory(self._root_dir):
       ret = self._CloneSources()
       if ret: return ret
 
@@ -175,7 +176,7 @@ class GitRepo(Repo):
       return ret
 
   def SetupForPush(self):
-    with utils.WorkingDirectory(self._root_dir):
+    with misc.WorkingDirectory(self._root_dir):
       ret = self._CloneSources()
       logger.GetLogger().LogFatalIf(ret, 'Could not clone git repo %s.' %
                                     self.address)
@@ -197,7 +198,7 @@ class GitRepo(Repo):
       return ret
 
   def PushSources(self, commit_message, dry_run=False):
-    with utils.WorkingDirectory(self._root_dir):
+    with misc.WorkingDirectory(self._root_dir):
       push_args = ''
       if dry_run:
         push_args += ' -n '
@@ -223,7 +224,7 @@ class GitRepo(Repo):
     if not self.mappings:
       self._RsyncExcludingRepoDirs(self._root_dir, root_dir)
       return
-    with utils.WorkingDirectory(self._root_dir):
+    with misc.WorkingDirectory(self._root_dir):
       for mapping in self.mappings:
         remote_path, local_path = SplitMapping(mapping)
         remote_path.rstrip('...')

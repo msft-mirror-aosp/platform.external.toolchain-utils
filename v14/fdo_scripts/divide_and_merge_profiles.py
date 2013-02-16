@@ -1,19 +1,22 @@
-#!/usr/bin/python
+#!/usr/bin/python2.6
+#
+# Copyright 2011 Google Inc. All Rights Reserved.
 
-# Script to divide and merge profiles.
+"""Script to divide and merge profiles."""
+
 import copy
 import optparse
 import os
 import pickle
 import re
 import sys
+import tempfile
+
 import build_chrome_browser
 import lock_machine
 import run_tests
-import tempfile
 from utils import command_executer
 from utils import logger
-from utils import utils
 
 
 class ProfileMerger:

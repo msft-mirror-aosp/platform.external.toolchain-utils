@@ -1,21 +1,25 @@
-#!/usr/bin/python
+#!/usr/bin/python2.6
+#
+# Copyright 2011 Google Inc. All Rights Reserved.
 
-# Script to profile a page cycler, and get it back to the host.
+"""Script to profile a page cycler, and get it back to the host."""
+
 import copy
-import cros_login
 import optparse
 import os
 import pickle
 import re
 import sys
-import build_chrome_browser
-import lock_machine
-import run_tests
 import tempfile
 import time
+
+import build_chrome_browser
+import cros_login
+import lock_machine
+import run_tests
 from utils import command_executer
 from utils import logger
-from utils import utils
+from utils import misc
 
 
 class CyclerProfiler:
@@ -141,7 +145,7 @@ class CyclerProfiler:
 
     # Strip out the initial prefix for the Chrome directory before doing the
     # copy.
-    chrome_dir_prefix = utils.GetChromeSrcDir()
+    chrome_dir_prefix = misc.GetChromeSrcDir()
 
     command = "mkdir -p %s" % dest_dir
     self._ce.RunCommand(command)

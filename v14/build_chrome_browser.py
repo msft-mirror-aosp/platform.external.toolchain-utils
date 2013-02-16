@@ -14,10 +14,11 @@ import optparse
 import os
 import shutil
 import sys
+
+import build_chromeos
 from utils import command_executer
 from utils import logger
-from utils import utils
-import build_chromeos
+from utils import misc
 
 cmd_executer = None
 
@@ -102,14 +103,14 @@ def Main(argv):
   # Build image
   ret = (cmd_executer.
          ChrootRunCommand(options.chromeos_root,
-                          utils.GetBuildImageCommand(options.board)))
+                          misc.GetBuildImageCommand(options.board)))
 
   logger.GetLogger().LogFatalIf(ret, "build_image failed")
 
   # Mod image for test
   ret = (cmd_executer.
          ChrootRunCommand(options.chromeos_root,
-                          utils.GetModImageForTestCommand(options.board)))
+                          misc.GetModImageForTestCommand(options.board)))
 
   logger.GetLogger().LogFatalIf(ret, "mod_image_for_test failed")
 

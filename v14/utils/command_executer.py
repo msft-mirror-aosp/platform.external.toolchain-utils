@@ -1,14 +1,19 @@
+#!/usr/bin/python
+#
+# Copyright 2011 Google Inc. All Rights Reserved.
+#
+
 import getpass
-import logger
 import os
 import pty
 import re
 import select
 import subprocess
-import sys
 import tempfile
 import time
-import utils
+
+import logger
+import misc
 
 mock_default = False
 
@@ -242,8 +247,8 @@ class CommandExecuter:
         cros_machine = dest_machine
 
       command = self.RemoteAccessInitCommand(chromeos_root, cros_machine)
-      src_parent, src_child = utils.GetRoot(src)
-      dest_parent, dest_child = utils.GetRoot(dest)
+      src_parent, src_child = misc.GetRoot(src)
+      dest_parent, dest_child = misc.GetRoot(dest)
       ssh_command = ("ssh -p ${FLAGS_ssh_port}" +
                      " -o StrictHostKeyChecking=no" +
                      " -o UserKnownHostsFile=$(mktemp)" +
