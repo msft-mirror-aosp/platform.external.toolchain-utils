@@ -180,8 +180,11 @@ class CommandsFactory(object):
         cmd.Shell('g4', 'client', '-o'),
         output=filename)
 
-  def Sync(self):
-    return cmd.Shell('g4', 'sync', '...')
+  def Sync(self, revision=None):
+    sync_arg = '...'
+    if revision:
+      sync_arg = "%s@%s" % (sync_arg, revision)
+    return cmd.Shell('g4', 'sync', sync_arg)
 
   def SaveCurrentCLNumber(self, filename=None):
     return cmd.Pipe(
