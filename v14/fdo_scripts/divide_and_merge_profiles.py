@@ -108,9 +108,6 @@ def Main(argv):
   parser.add_option("--output",
                     dest="output",
                     help="Output profile directory.")
-  parser.add_option("--profiles_dir",
-                    dest="profiles_dir",
-                    help="Merge all profiles in this dir (optional).")
   parser.add_option("--chunk_size",
                     dest="chunk_size",
                     default="50",
@@ -124,6 +121,11 @@ def Main(argv):
                     help="multipliers to use when merging. (optional)")
 
   options, _ = parser.parse_args(argv)
+
+  if not all([options.inputs,
+              options.output,]):
+    l.LogError("Must supply --inputs and --output")
+    return 1
 
   try:
     pm = ProfileMerger(options.inputs.split(","), options.output,
