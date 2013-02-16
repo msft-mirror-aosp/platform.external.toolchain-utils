@@ -24,7 +24,6 @@ from utils import misc
 
 class CyclerProfiler:
   REMOTE_TMP_DIR = "/tmp"
-  TARBALL_FILE = "page_cycler.tar.gz"
 
   def __init__(self, chromeos_root, board, cycler, profile_dir, remote):
     self._chromeos_root = chromeos_root
@@ -42,32 +41,27 @@ class CyclerProfiler:
     return misc.GetCtargetFromBoard(self._board, self._chromeos_root)
 
   def _CopyTestData(self):
-    tarball = os.path.join(self._chromeos_root,
-                           "chroot",
-                           "build",
-                           self._board,
-                           "usr",
-                           "local",
-                           "autotest",
-                           "client",
-                           "site_tests",
-                           "desktopui_PageCyclerTests",
-                           self.TARBALL_FILE)
-    if not os.path.isfile(tarball):
-      raise Exception("Tarball %s not found!" % tarball)
-    self._ce.CopyFiles(tarball,
-                       os.path.join(self.REMOTE_TMP_DIR, self.TARBALL_FILE),
+    page_cycler_dir = os.path.join(self._chromeos_root,
+                                   "chroot",
+                                   "var",
+                                   "cache",
+                                   "distfiles",
+                                   "target",
+                                   "chrome-src-internal",
+                                   "src",
+                                   "data",
+                                   "page_cycler")
+    if not os.path.isdir(page_cycler_dir):
+      raise Exception("Page cycler dir %s not found!" % page_cycler_dir)
+    self._ce.CopyFiles(page_cycler_dir,
+                       os.path.join(self.REMOTE_TMP_DIR, "page_cycler"),
                        dest_machine=self._remote,
                        chromeos_root=self._chromeos_root,
-                       recursive=False,
+                       recursive=True,
                        dest_cros=True)
 
   def _PrepareTestData(self):
-    # Extract the tarball
-    command = "cd %s && tar xf %s" % (self.REMOTE_TMP_DIR, self.TARBALL_FILE)
-    # chmod it
-    self._ce.CrosRunCommand(command, chromeos_root=self._chromeos_root,
-                            machine=self._remote)
+    # chmod files so everyone can read them.
     command = ("cd %s && find page_cycler -type f | xargs chmod a+r" %
                self.REMOTE_TMP_DIR)
     self._ce.CrosRunCommand(command, chromeos_root=self._chromeos_root,
@@ -149,8 +143,7 @@ class CyclerProfiler:
 
     command = "mkdir -p %s" % dest_dir
     self._ce.RunCommand(command)
-    self._ce.CopyFiles(os.path.join(self._gcov_prefix,
-                                    chrome_dir_prefix),
+    self._ce.CopyFiles(self._gcov_prefix,
                        dest_dir,
                        src_machine=self._remote,
                        chromeos_root=self._chromeos_root,
@@ -166,10 +159,12 @@ class CyclerProfiler:
     command = ("DISPLAY=:0 "
                "XAUTHORITY=/home/chronos/.Xauthority "
                "GCOV_PREFIX=%s "
+               "GCOV_PREFIX_STRIP=3 "
                "/opt/google/chrome/chrome "
                "--no-sandbox "
+               "--renderer-clean-exit "
                "--user-data-dir=$(mktemp -d) "
-               "--url \"file:///%s/page_cycler/data/page_cycler/%s/start.html?iterations=10&auto=1\" "
+               "--url \"file:///%s/page_cycler/%s/start.html?iterations=10&auto=1\" "
                "--enable-file-cookies "
                "--no-first-run "
                "--js-flags=expose_gc &" %

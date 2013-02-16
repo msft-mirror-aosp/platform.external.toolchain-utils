@@ -64,6 +64,10 @@ def Main(argv):
                     help="ChromeOS target board, e.g. x86-generic")
   parser.add_option("--label", dest="label",
                     help="Optional label to apply to the ChromeOS image.")
+  parser.add_option("--build_image_args",
+                    default="",
+                    dest="build_image_args",
+                    help="Optional arguments to build_image.")
 
   options = parser.parse_args(argv)[0]
 
@@ -116,9 +120,11 @@ def Main(argv):
   # Build image
   ret = (cmd_executer.
          ChrootRunCommand(options.chromeos_root,
-                          ("%s %s" %
+                          ("%s %s %s %s" %
                            (unmask_env,
-                            misc.GetBuildImageCommand(options.board)))))
+                            options.env,
+                            misc.GetBuildImageCommand(options.board),
+                            options.build_image_args))))
 
   logger.GetLogger().LogFatalIf(ret, "build_image failed")
 

@@ -102,7 +102,8 @@ class FDOComparator(object):
     self._l.LogOutput("Total stale files: %s" % len(stale_files))
 
   def _BuildChromeAndImage(self, ebuild_version="", env_dict={}, cflags="",
-                           cxxflags="", ldflags="", label=""):
+                           cxxflags="", ldflags="", label="",
+                           build_image_args=""):
     env_string = misc.GetEnvStringFromDict(env_dict)
     if not label:
       label = " ".join([env_string,
@@ -120,7 +121,8 @@ class FDOComparator(object):
                                    "--cflags=%r" % cflags,
                                    "--cxxflags=%r" % cxxflags,
                                    "--ldflags=%r" % ldflags,
-                                   "--ebuild_version=%s" % ebuild_version]
+                                   "--ebuild_version=%s" % ebuild_version,
+                                   "--build_image_args=%s" % build_image_args]
 
       build_chrome_browser = os.path.join(os.path.dirname(__file__),
                                           "..",
@@ -144,8 +146,8 @@ class FDOComparator(object):
     remote: %s
     """ % (self._board, self._remotes)
     experiment_tests = """
-    benchmark: desktopui_PageCyclerTests {
-      iterations: 5
+    benchmark: desktopui_PyAutoPerfTests {
+      iterations: 1
     }
     """
     with open(experiment_file, "w") as f:
@@ -201,22 +203,14 @@ class FDOComparator(object):
 
   def _BuildGenerateImage(self):
     # TODO(asharif): add cflags as well.
-    # TODO(asharif): Should not have to apply this patch...
-    # First patch the tree
-    with Patcher(os.path.join(self._chromeos_root,
-                              "chroot",
-                              misc.GetChromeSrcDir()),
-                 "/home/asharif/fdo_scripts/pgo.patch"):
-      cxxflags = "-fprofile-generate -w"
-      labels_list = ["fprofile-generate", self._ebuild_version]
-      label = "_".join(labels_list)
-      generate_label = self._BuildChromeAndImage(
-          env_dict={"USE": "-pgo"},
-          cxxflags=cxxflags,
-          ldflags="%s -lgcov" % cxxflags,
-          label=label,
-          ebuild_version=self._ebuild_version)
-      return generate_label
+    labels_list = ["fprofile-generate", self._ebuild_version]
+    label = "_".join(labels_list)
+    generate_label = self._BuildChromeAndImage(
+        env_dict={"USE": "chrome_internal -pgo pgo_generate"},
+        label=label,
+        ebuild_version=self._ebuild_version,
+        build_image_args="--rootfs_boost=400")
+    return generate_label
 
   def _BuildUseImage(self):
     ctarget = misc.GetCtargetFromBoard(self._board, self._chromeos_root)
@@ -235,7 +229,7 @@ class FDOComparator(object):
     labels_list = ["updated_pgo", self._ebuild_version]
     label = "_".join(labels_list)
     pgo_use_label = self._BuildChromeAndImage(
-        env_dict={"USE": "-pgo"},
+        env_dict={"USE": "chrome_internal -pgo"},
         cflags=cflags,
         cxxflags=cflags,
         ldflags=cflags,
@@ -249,11 +243,11 @@ class FDOComparator(object):
     labels = []
 
     if self._minus_pgo:
-      minus_pgo = self._BuildChromeAndImage(env_dict={"USE": "-pgo"},
+      minus_pgo = self._BuildChromeAndImage(env_dict={"USE": "chrome_internal -pgo"},
                                             ebuild_version=self._ebuild_version)
       labels.append(minus_pgo)
     if self._plus_pgo:
-      plus_pgo = self._BuildChromeAndImage(env_dict={"USE": "pgo"},
+      plus_pgo = self._BuildChromeAndImage(env_dict={"USE": "chrome_internal pgo"},
                                            ebuild_version=self._ebuild_version)
       labels.append(plus_pgo)
 
