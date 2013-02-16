@@ -58,7 +58,7 @@ class Repo(object):
     """Setup a repository for pushing later."""
     pass
 
-  def PushSources(self, commit_message, dry_run=False):
+  def PushSources(self, commit_message=None, dry_run=False, message_file=None):
     """Push to the external repo with the commit message."""
     pass
 
@@ -197,7 +197,7 @@ class GitRepo(Repo):
       ret = self._ce.RunCommand(command)
       return ret
 
-  def PushSources(self, commit_message, dry_run=False):
+  def PushSources(self, commit_message=None, dry_run=False, message_file=None):
     with misc.WorkingDirectory(self._root_dir):
       push_args = ''
       if dry_run:
@@ -207,7 +207,13 @@ class GitRepo(Repo):
       for ignore in self.ignores:
         command += '&& echo \'%s\' >> .git/info/exclude' % ignore
       command += '&& git add -Av .'
-      command += '&& git commit -v -m \'%s\'' % commit_message
+      if message_file:
+        message_arg = '-F %s' % message_file
+      elif commit_message:
+        message_arg = '-m \'%s\'' % commit_message
+      else:
+        raise Exception("No commit message given!")
+      command += '&& git commit -v %s' % message_arg
       ret = self._ce.RunCommand(command)
       if ret: return ret
       if self.gerrit:
@@ -299,6 +305,12 @@ def Main(argv):
                     default=False,
                     help='Do a dry run of the push.')
 
+  parser.add_option('-F',
+                    '--message_file',
+                    dest='message_file',
+                    default=None,
+                    help='Use contents of the log file as the commit message.')
+
   options = parser.parse_args(argv)[0]
   if not options.input_file:
     parser.print_help()
@@ -323,7 +335,9 @@ def Main(argv):
 
   commit_message = 'Synced repos to: %s' % ','.join(input_revisions)
   for output_repo in output_repos:
-    ret = output_repo.PushSources(commit_message, dry_run=options.dry_run)
+    ret = output_repo.PushSources(commit_message=commit_message,
+                                  dry_run=options.dry_run,
+                                  message_file=options.message_file)
     if ret: return ret
 
   if not options.dry_run:
