@@ -93,11 +93,12 @@ class Repo(object):
 
 
 class P4Repo(Repo):
-  def __init__(self, address, mappings):
+  def __init__(self, address, mappings, revision=None):
     Repo.__init__(self)
     self.repo_type = 'p4'
     self.address = address
     self.mappings = mappings
+    self.revision = revision
 
   def PullSources(self):
     client_name = socket.gethostname()
@@ -107,7 +108,7 @@ class P4Repo(Repo):
                            GetCanonicalMappings(mappings))
     p4client = perforce.CommandsFactory(self._root_dir, p4view,
                                         name=client_name)
-    command = p4client.SetupAndDo(p4client.Sync())
+    command = p4client.SetupAndDo(p4client.Sync(self.revision))
     ret = self._ce.RunCommand(command)
     assert ret == 0, 'Could not setup client.'
     command = p4client.InCheckoutDir(p4client.SaveCurrentCLNumber())
@@ -272,10 +273,12 @@ class RepoReader(object):
     repo_ignores = repo_dict.get('ignores', None)
     repo_branch = repo_dict.get('branch', None)
     gerrit = repo_dict.get('gerrit', None)
+    revision = repo_dict.get('revision', None)
 
     if repo_type == 'p4':
       repo = P4Repo(repo_address,
-                    repo_mappings)
+                    repo_mappings,
+                    revision=revision)
     elif repo_type == 'svn':
       repo = SvnRepo(repo_address,
                      repo_mappings)
