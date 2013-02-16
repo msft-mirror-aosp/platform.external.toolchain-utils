@@ -22,10 +22,10 @@ class CyclerProfiler:
   REMOTE_TMP_DIR = "/tmp"
   TARBALL_FILE = "page_cycler.tar.gz"
 
-  def __init__(self, chromeos_root, board, cycler, profiles_dir, remote):
+  def __init__(self, chromeos_root, board, cycler, profile_dir, remote):
     self._chromeos_root = chromeos_root
     self._cycler = cycler
-    self._profiles_dir = profiles_dir
+    self._profile_dir = profile_dir
     self._remote = remote
     self._board = board
     self._ce = command_executer.GetCommandExecuter()
@@ -35,8 +35,7 @@ class CyclerProfiler:
                                      self._GetProfileDir())
 
   def _GetProfileDir(self):
-    profile_dir = self._cycler
-    return profile_dir.replace(",", ".")
+    return utils.GetCtargetFromBoard(self._board, self._chromeos_root)
 
   def _CopyTestData(self):
     tarball = os.path.join(self._chromeos_root,
@@ -133,7 +132,7 @@ class CyclerProfiler:
                             machine=self._remote)
 
   def _CopyProfileToHost(self):
-    dest_dir = os.path.join(self._profiles_dir,
+    dest_dir = os.path.join(self._profile_dir,
                             os.path.basename(self._gcov_prefix))
     # First remove the dir if it exists already
     if os.path.exists(dest_dir):
@@ -231,9 +230,9 @@ def Main(argv):
                     dest="remote",
                     help=("The remote chromeos machine that"
                           " has the profile image."))
-  parser.add_option("--profiles_dir",
-                    dest="profiles_dir",
-                    default="profiles_dir",
+  parser.add_option("--profile_dir",
+                    dest="profile_dir",
+                    default="profile_dir",
                     help="Store profiles in this directory.")
 
   options, _ = parser.parse_args(argv)
@@ -249,7 +248,7 @@ def Main(argv):
     cp = CyclerProfiler(options.chromeos_root,
                         options.board,
                         options.cycler,
-                        options.profiles_dir,
+                        options.profile_dir,
                         options.remote)
     cp.DoProfile()
     retval = 0
