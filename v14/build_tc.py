@@ -54,14 +54,12 @@ class ToolchainPart(object):
     try:
       self.UninstallTool()
       self.MoveMaskFile()
-      self.SwitchToBFD()
       self.MountSources(False)
       if not self._incremental:
         self.RemoveCompiledFile()
       self.BuildTool()
     finally:
       self.UnMoveMaskFile()
-      self.SwitchToOriginalLD()
 
   def RemoveCompiledFile(self):
     compiled_file = os.path.join(self._chromeos_root,
@@ -137,13 +135,6 @@ class ToolchainPart(object):
     full_command = "sudo %s %s" % (env_string, command)
     self._ce.ChrootRunCommand(self._chromeos_root, full_command)
 
-  def SwitchToBFD(self):
-    command = "sudo binutils-config %s-2.21" % self._ctarget
-    self._ce.ChrootRunCommand(self._chromeos_root, command)
-
-  def SwitchToOriginalLD(self):
-    pass
-
   def MoveMaskFile(self):
     self._new_mask_file = None
     if os.path.isfile(self._mask_file):
@@ -164,6 +155,7 @@ def Main(argv):
   parser.add_option("-c",
                     "--chromeos_root",
                     dest="chromeos_root",
+                    default="../../",
                     help=("ChromeOS root checkout directory"
                           " uses ../.. if none given."))
   parser.add_option("-g",
