@@ -46,7 +46,8 @@ class Patcher(object):
 
 
 class FDOComparator(object):
-  def __init__(self, board, remotes, ebuild_version):
+  def __init__(self, board, remotes, ebuild_version, plus_pgo, minus_pgo,
+               update_pgo):
     self._board = board
     self._remotes = remotes
     self._ebuild_version = ebuild_version
@@ -57,6 +58,9 @@ class FDOComparator(object):
                                       "src",
                                       "scripts",
                                       os.path.basename(self._profile_dir))
+    self._plus_pgo = plus_pgo
+    self._minus_pgo = minus_pgo
+    self._update_pgo = update_pgo
 
     self._ce = command_executer.GetCommandExecuter()
     self._l = logger.GetLogger()
@@ -242,25 +246,32 @@ class FDOComparator(object):
   def DoAll(self):
     self._CheckoutChromeOS()
     self._BuildChromeOSUsingBinaries()
+    labels = []
 
-    vanilla_label = self._BuildChromeAndImage(env_dict={"USE": "-pgo"},
-                                              ebuild_version=self._ebuild_version)
-    pgo_label = self._BuildChromeAndImage(env_dict={"USE": "+pgo"},
-                                          ebuild_version=self._ebuild_version)
-    #self._TestLabels([vanilla_label, pgo_label])
+    if self._minus_pgo:
+      minus_pgo = self._BuildChromeAndImage(env_dict={"USE": "-pgo"},
+                                            ebuild_version=self._ebuild_version)
+      labels.append(minus_pgo)
+    if self._plus_pgo:
+      plus_pgo = self._BuildChromeAndImage(env_dict={"USE": "pgo"},
+                                           ebuild_version=self._ebuild_version)
+      labels.append(plus_pgo)
 
-    if not os.path.exists(self._profile_path):
-      # Build Chrome with -fprofile-generate
-      generate_label = self._BuildGenerateImage()
-      # Image to the remote box.
-      self._ImageRemote(generate_label)
-      # Profile it using all page cyclers.
-      self._ProfileRemote()
+    if self._update_pgo:
+      if not os.path.exists(self._profile_path):
+        # Build Chrome with -fprofile-generate
+        generate_label = self._BuildGenerateImage()
+        # Image to the remote box.
+        self._ImageRemote(generate_label)
+        # Profile it using all page cyclers.
+        self._ProfileRemote()
 
-    # Use the profile directory to rebuild it.
-    updated_pgo_label = self._BuildUseImage()
+      # Use the profile directory to rebuild it.
+      updated_pgo_label = self._BuildUseImage()
+      labels.append(updated_pgo_label)
+
     # Run crosperf on all images now.
-    self._TestLabels([vanilla_label, pgo_label, updated_pgo_label])
+    self._TestLabels(labels)
     return 0
 
 
@@ -281,6 +292,21 @@ def Main(argv):
                     dest="ebuild_version",
                     default="",
                     help="The Chrome ebuild version to use.")
+  parser.add_option("--plus_pgo",
+                    dest="plus_pgo",
+                    action="store_true",
+                    default=False,
+                    help="Build USE=+pgo.")
+  parser.add_option("--minus_pgo",
+                    dest="minus_pgo",
+                    action="store_true",
+                    default=False,
+                    help="Build USE=-pgo.")
+  parser.add_option("--update_pgo",
+                    dest="update_pgo",
+                    action="store_true",
+                    default=False,
+                    help="Update pgo and build Chrome with the update.")
   options, _ = parser.parse_args(argv)
   if not options.board:
     print "Please give a board."
@@ -288,7 +314,12 @@ def Main(argv):
   if not options.remote:
     print "Please give at least one remote machine."
     return 1
-  fc = FDOComparator(options.board, options.remote, options.ebuild_version)
+  fc = FDOComparator(options.board,
+                     options.remote,
+                     options.ebuild_version,
+                     options.plus_pgo,
+                     options.minus_pgo,
+                     options.update_pgo)
   return fc.DoAll()
 
 
