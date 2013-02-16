@@ -137,7 +137,7 @@ class CyclerProfiler:
 
     # Strip out the initial prefix for the Chrome directory before doing the
     # copy.
-    chrome_dir_prefix = "var/lib/portage/distfiles-target/chrome-src/src"
+    chrome_dir_prefix = utils.GetChromeSrcDir()
 
     command = "mkdir -p %s" % dest_dir
     self._ce.RunCommand(command)

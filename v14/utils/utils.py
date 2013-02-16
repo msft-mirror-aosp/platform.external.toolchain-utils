@@ -88,6 +88,10 @@ def GetCtargetFromBoard(board, chromeos_root):
   return out.strip()
 
 
+def GetChromeSrcDir():
+  return "var/cache/chromeos-chrome/chrome-src/src"
+
+
 @contextmanager
 def WorkingDirectory(new_dir):
   old_dir = os.getcwd()
