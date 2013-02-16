@@ -38,8 +38,6 @@ class Manifest(namedtuple('Manifest', 'tool board results')):
   ^^^^^^^^   ^^^^^^^^^^  ^^^^^^^^^^^^^^^^^ ^^^^^^^^^^^^^^^^^^^^^^^^
   optional   result      name              variant
   attributes
-
-  TODO(kbaclawski): Optional attributes are dropped instead of being handled.
   """
   SUPPRESSIBLE_RESULTS = ['FAIL', 'UNRESOLVED', 'XPASS', 'ERROR']
 
@@ -76,12 +74,6 @@ class Manifest(namedtuple('Manifest', 'tool board results')):
           line = line.strip()
 
           if line:
-            # TODO(kbaclawski): Implement support for flaky tests.
-            try:
-              flaky, line = line.split('|', 1)
-            except ValueError:
-              pass
-
             # parse a line with a test result
             result = DejaGnuTestResult.FromLine(line)
 
@@ -108,3 +100,6 @@ class Manifest(namedtuple('Manifest', 'tool board results')):
       text.write('{0}\n'.format(result))
 
     return text.getvalue()
+
+  def __iter__(self):
+    return iter(self.results)

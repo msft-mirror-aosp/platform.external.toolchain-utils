@@ -14,13 +14,24 @@ import os.path
 import re
 
 
-class DejaGnuTestResult(namedtuple('Result', 'name variant result')):
+class DejaGnuTestResult(namedtuple('Result', 'name variant result flaky')):
   __slots__ = ()
 
   REGEXP = re.compile(r'([A-Z]+):\s+([\w/+.-]+)(.*)')
 
   @classmethod
   def FromLine(cls, line):
+    try:
+      attrs, line = line.split('|', 1)
+
+      if attrs.strip() != 'flaky':
+        return None
+
+      line = line.strip()
+      flaky = True
+    except ValueError:
+      flaky = False
+
     fields = cls.REGEXP.match(line.strip())
 
     if fields:
@@ -73,10 +84,14 @@ class DejaGnuTestResult(namedtuple('Result', 'name variant result')):
       if path.startswith('./'):
         path = path[2:]
 
-      return cls(path, variant or '', result)
+      return cls(path, variant or '', result, flaky=flaky)
 
   def __str__(self):
-    fmt = '{2}: {0}'
+    if self.flaky:
+      fmt = 'flaky | '
+    else:
+      fmt = ''
+    fmt += '{2}: {0}'
     if self.variant:
       fmt += ' {1}'
     return fmt.format(*self)
@@ -150,8 +165,8 @@ class DejaGnuTestRun(object):
             parser(fields)
             break
 
-    logging.info('DejaGNU output file parsed successfully.')
-    logging.info(self)
+    logging.debug('DejaGNU output file parsed successfully.')
+    logging.debug(self)
 
   def CleanUpTestResults(self):
     """Remove certain test results considered to be spurious.
@@ -168,7 +183,8 @@ class DejaGnuTestRun(object):
       results = set(res_iter)
 
       # If DejaGnu was unable to compile a test it will create following result:
-      failed = DejaGnuTestResult(name, '(test for excess errors)', 'FAIL')
+      failed = DejaGnuTestResult(name, '(test for excess errors)', 'FAIL',
+                                 False)
 
       # If a test compilation failed, remove all results that are dependent.
       if failed in results:
