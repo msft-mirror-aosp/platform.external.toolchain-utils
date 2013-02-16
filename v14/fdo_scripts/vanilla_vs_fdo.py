@@ -222,7 +222,6 @@ class FDOComparator(object):
     cflags = ("-fprofile-use "
               "-fprofile-correction "
               "-Wno-error "
-              "-fopt-info=3 "
               "-fdump-tree-optimized-blocks-lineno "
               "-fdump-ipa-profile-blocks-lineno "
               "-fno-vpt "
