@@ -31,7 +31,7 @@ class ProfileMerger:
 
   def _GetFilesSetForInputDir(self, input_dir):
     output_file = tempfile.mktemp()
-    command = "find %s -name '*.gcda' > %s" % (input_dir, output_file)
+    command = "find %s -name '*.gcda' -o -name '*.imports' > %s" % (input_dir, output_file)
     self._ce.RunCommand(command)
     files = open(output_file, "r").read()
     files_set = set([])
