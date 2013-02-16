@@ -71,64 +71,6 @@ class CyclerProfiler:
     self._ce.CrosRunCommand(command, chromeos_root=self._chromeos_root,
                             machine=self._remote)
 
-  def _GetRendererPID(self):
-    # First get the renderer's pid.
-    command = ("ps -f -u root --sort time | "
-               "grep -v grep | "
-               "grep renderer | "
-               # Filter out disowned processes.
-               r"grep -v '\b1\b' | "
-               "tail -n1 |"
-               "awk '{print $2}'")
-
-    _, out, _ = self._ce.CrosRunCommand(command,
-                                        chromeos_root=self._chromeos_root,
-                                        machine=self._remote,
-                                        return_output=True)
-    pid = out.strip()
-    return pid
-
-  def _KillRemoteGDBServer(self):
-    command = "pkill gdbserver"
-    self._ce.CrosRunCommand(command,
-                            chromeos_root=self._chromeos_root,
-                            machine=self._remote)
-
-  def _DumpRendererProfile(self):
-    # Kill the remote GDB server if it is running.
-    self._KillRemoteGDBServer()
-    pid = self._GetRendererPID()
-    if not pid:
-      self._l.LogError("Could not find PID of renderer!")
-      return
-    # Copy the gdb_remote.dump file to the chromeos_root.
-    gdb_file = "gdb_remote.dump"
-    self._ce.CopyFiles(os.path.join(os.path.dirname(__file__),
-                                    gdb_file),
-                       os.path.join(self._chromeos_root,
-                                    "src",
-                                    "scripts",
-                                    gdb_file),
-                       recursive=False)
-    command = ("./%s --remote_pid=%s "
-               "--remote=%s "
-               "--board=%s" %
-               (gdb_file,
-                pid,
-                self._remote,
-                self._board))
-    self._ce.ChrootRunCommand(self._chromeos_root,
-                              command,
-                              command_timeout=60)
-    # Kill the renderer now.
-    self._KillRemotePID(pid)
-
-  def _KillRemotePID(self, pid):
-    command = "kill %s || kill -9 %s" % (pid, pid)
-    self._ce.CrosRunCommand(command,
-                            chromeos_root=self._chromeos_root,
-                            machine=self._remote)
-
   def _CopyProfileToHost(self):
     dest_dir = os.path.join(self._profile_dir,
                             os.path.basename(self._gcov_prefix))
@@ -176,8 +118,8 @@ class CyclerProfiler:
                             machine=self._remote,
                             command_timeout=60)
 
-  def _PkillChrome(self):
-    command = "pkill chrome || pkill -9 chrome"
+  def _PkillChrome(self, signal="9"):
+    command = "pkill -%s chrome" % signal
     self._ce.CrosRunCommand(command, chromeos_root=self._chromeos_root,
                             machine=self._remote)
 
@@ -199,8 +141,10 @@ class CyclerProfiler:
     cros_login.RestartUI(self._remote, self._chromeos_root, login=False)
     # Run the cycler
     self._LaunchCycler(cycler)
-    # Get the renderer pid, and force dump its profile
-    self._DumpRendererProfile()
+    self._PkillChrome(signal="INT")
+    # Let libgcov dump the profile.
+    # TODO(asharif): There is a race condition here. Fix it later.
+    time.sleep(30)
 
 
 def Main(argv):
