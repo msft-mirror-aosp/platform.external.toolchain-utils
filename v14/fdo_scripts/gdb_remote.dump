@@ -197,6 +197,7 @@ end
 
 set sysroot $BOARD_ROOT
 set debug-file-directory $BOARD_ROOT/usr/lib/debug
+handle SIGPIPE nostop
 remote_connect
 call gcov_exit()
 disconnect

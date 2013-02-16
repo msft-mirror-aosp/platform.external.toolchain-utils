@@ -149,13 +149,12 @@ class CyclerProfiler:
                        recursive=True,
                        src_cros=True)
 
-  def _LaunchCycler(self, cycler):
-    # Remove the profile directory before launching Chrome.
+  def _RemoveRemoteProfileDir(self):
     command = "rm -rf %s" % self._gcov_prefix
     self._ce.CrosRunCommand(command, chromeos_root=self._chromeos_root,
                             machine=self._remote)
 
-    # Now run the actual command for profiling.
+  def _LaunchCycler(self, cycler):
     command = ("DISPLAY=:0 "
                "XAUTHORITY=/home/chronos/.Xauthority "
                "GCOV_PREFIX=%s "
@@ -172,12 +171,18 @@ class CyclerProfiler:
 
     self._ce.CrosRunCommand(command, chromeos_root=self._chromeos_root,
                             machine=self._remote,
-                            command_timeout=10)
+                            command_timeout=60)
+
+  def _PkillChrome(self):
+    command = "pkill chrome || pkill -9 chrome"
+    self._ce.CrosRunCommand(command, chromeos_root=self._chromeos_root,
+                            machine=self._remote)
 
   def DoProfile(self):
     # Copy the page cycler data to the remote
     self._CopyTestData()
     self._PrepareTestData()
+    self._RemoveRemoteProfileDir()
 
     for cycler in self._cycler.split(","):
       self._ProfileOneCycler(cycler)
@@ -186,12 +191,11 @@ class CyclerProfiler:
     self._CopyProfileToHost()
 
   def _ProfileOneCycler(self, cycler):
-    # Get past the login screen of the remote
-    cros_login.LoginAsGuest(self._remote, self._chromeos_root)
+    # With aura, all that's needed is a stop/start ui.
+    self._PkillChrome()
+    cros_login.RestartUI(self._remote, self._chromeos_root, login=False)
     # Run the cycler
     self._LaunchCycler(cycler)
-    # Sleep for 60 seconds
-    time.sleep(60)
     # Get the renderer pid, and force dump its profile
     self._DumpRendererProfile()
 

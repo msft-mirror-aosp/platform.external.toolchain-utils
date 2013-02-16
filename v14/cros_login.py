@@ -25,10 +25,13 @@ LOGIN_PROMPT_VISIBLE_MAGIC_FILE = '/tmp/uptime-login-prompt-visible'
 LOGGED_IN_MAGIC_FILE = '/var/run/state/logged-in'
 
 
-login_script_contents="""
+script_header="""
 import os
 import autox
 import time
+"""
+
+wait_for_login_screen="""
 
 while True:
   print 'Waiting for login screen to appear...'
@@ -38,7 +41,10 @@ while True:
   print 'Done'
 
 time.sleep(20)
+""" % LOGIN_PROMPT_VISIBLE_MAGIC_FILE
 
+
+do_login="""
 xauth_filename = '/home/chronos/.Xauthority'
 os.environ.setdefault('XAUTHORITY', xauth_filename)
 os.environ.setdefault('DISPLAY', ':0.0')
@@ -67,19 +73,22 @@ while True:
     break
   time.sleep(1)
 print 'Done'
-"""
+""" % LOGGED_IN_MAGIC_FILE
 
-def LoginAsGuest(remote, chromeos_root):
+def RestartUI(remote, chromeos_root, login=True):
   chromeos_root = os.path.expanduser(chromeos_root)
   ce = command_executer.GetCommandExecuter()
   # First, restart ui.
-  command = 'rm -rf %s && stop ui && start ui' % LOGIN_PROMPT_VISIBLE_MAGIC_FILE
+  command = 'rm -rf %s && restart ui' % LOGIN_PROMPT_VISIBLE_MAGIC_FILE
   ce.CrosRunCommand(command, machine=remote,
                     chromeos_root=chromeos_root)
   login_script = '/tmp/login.py'
-  full_login_script_contents = (
-      login_script_contents % (LOGIN_PROMPT_VISIBLE_MAGIC_FILE,
-                               LOGGED_IN_MAGIC_FILE))
+  login_script_list = [script_header, wait_for_login_screen]
+  if login:
+    login_script_list.append(do_login)
+
+  full_login_script_contents = "\n".join(login_script_list)
+
   with open(login_script, 'w') as f:
     f.write(full_login_script_contents)
   ce.CopyFiles(login_script,
