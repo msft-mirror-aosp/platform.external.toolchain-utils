@@ -156,8 +156,8 @@ Experiment File
     return self.TEXT % (self.experiment.name,
                         self.GetStatusTable().ToText(),
                         self.experiment.machine_manager.num_reimages,
-                        self.GetSummaryTable().ToText(30),
-                        self.GetFullTable().ToText(30),
+                        self.GetSummaryTable().ToText(80),
+                        self.GetFullTable().ToText(80),
                         self.experiment.experiment_file)
 
 
@@ -354,4 +354,3 @@ pre {
         if chart:
           charts.append(chart)
     return charts
-
