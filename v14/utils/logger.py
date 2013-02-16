@@ -56,13 +56,21 @@ class Logger(object):
     #       self._AddSuffix(basename, suffix))
     return suffix
 
+  def _CreateLogFileHandle(self, name):
+    fd = None
+    try:
+      fd = open(name, "w")
+    except IOError:
+      print "Warning: could not open %s for writing." % name
+    return fd
+
   def _CreateLogFileHandles(self, basename):
     suffix = self._FindSuffix(basename)
     suffixed_basename = self._AddSuffix(basename, suffix)
 
-    self.cmdfd = open("%s.cmd" % suffixed_basename, "w", 0755)
-    self.stdout = open("%s.out" % suffixed_basename, "w")
-    self.stderr = open("%s.err" % suffixed_basename, "w")
+    self.cmdfd = self._CreateLogFileHandle("%s.cmd" % suffixed_basename)
+    self.stdout = self._CreateLogFileHandle("%s.out" % suffixed_basename)
+    self.stderr = self._CreateLogFileHandle("%s.err" % suffixed_basename)
 
     self._CreateLogFileSymlinks(basename, suffixed_basename)
 
@@ -75,16 +83,18 @@ class Logger(object):
         if os.path.exists(dest_file):
           os.remove(dest_file)
         os.symlink(src_file, dest_file)
-    except IOError as ex:
-      self.LogFatal(str(ex))
+    except Exception as ex:
+      print "Exception while creating symlinks: %s" % str(ex)
 
   def _WriteTo(self, fd, msg, flush):
-    fd.write(msg)
-    if flush:
-      fd.flush()
+    if fd:
+      fd.write(msg)
+      if flush:
+        fd.flush()
 
   def _LogMsg(self, file_fd, term_fd, msg, flush=True):
-    self._WriteTo(file_fd, msg, flush)
+    if file_fd:
+      self._WriteTo(file_fd, msg, flush)
     if self.print_console:
       self._WriteTo(term_fd, msg, flush)
 
