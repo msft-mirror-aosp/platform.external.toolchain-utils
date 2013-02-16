@@ -27,6 +27,7 @@ class BenchmarkSettings(Settings):
                              description="The percentage of highest/lowest "
                              "values to omit when computing the average."))
     self.AddField(ListField("profile_counters",
+                            default=["cycles"],
                             description="A list of profile counters to "
                             "collect."))
     self.AddField(EnumField("profile_type",
@@ -80,6 +81,7 @@ class GlobalSettings(Settings):
                             "the chromeos checkout which contains the "
                             "chromeos_image."))
     self.AddField(ListField("profile_counters",
+                            default=["cycles"],
                             description="A list of profile counters to "
                             "collect."))
     self.AddField(EnumField("profile_type",

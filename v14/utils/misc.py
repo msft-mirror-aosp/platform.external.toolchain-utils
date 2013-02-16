@@ -22,6 +22,22 @@ def ApplySubs(string, *substitutions):
   return string
 
 
+def UnitToNumber(string, base=1000):
+  unit_dict = {"kilo": base,
+               "mega": base**2,
+               "giga": base**3}
+  string = string.lower()
+  mo = re.search("(\d*)(.+)", string)
+  number = mo.group(1)
+  unit = mo.group(2)
+  for k, v in unit_dict.items():
+    if k.startswith(unit):
+      return float(number) * v
+  raise Exception("Unit: %s not found in byte: %s!" %
+                  (unit,
+                   string))
+
+
 def GetFilenameFromString(string):
   return ApplySubs(string,
                    ("/", "__"),
@@ -34,6 +50,24 @@ def GetRoot(scr_name):
   """Break up pathname into (dir+name)."""
   abs_path = os.path.abspath(scr_name)
   return (os.path.dirname(abs_path), os.path.basename(abs_path))
+
+
+def GetChrootPath(chromeos_root):
+  return os.path.join(chromeos_root,
+                      "chroot")
+
+
+def GetInsideChrootPath(chromeos_root, file_path):
+  if not file_path.startswith(GetChrootPath(chromeos_root)):
+    raise Exception("File: %s doesn't seem to be in the chroot: %s" %
+                    (file_path,
+                     chromeos_root))
+  return file_path[len(GetChrootPath(chromeos_root)):]
+
+
+def GetOutsideChrootPath(chromeos_root, file_path):
+  return os.path.join(GetChrootPath(chromeos_root),
+                      file_path.lstrip("/"))
 
 
 def FormatQuotedCommand(command):
