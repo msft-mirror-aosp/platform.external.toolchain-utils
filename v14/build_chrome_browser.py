@@ -12,6 +12,7 @@ __author__ = "raymes@google.com (Raymes Khoury)"
 
 import optparse
 import os
+import shutil
 import sys
 from utils import command_executer
 from utils import logger
@@ -37,6 +38,15 @@ def Main(argv):
   parser.add_option("--chromeos_root", dest="chromeos_root",
                     help="Target directory for ChromeOS installation.")
   parser.add_option("--version", dest="version")
+  parser.add_option("--clean",
+                    dest="clean",
+                    default=False,
+                    action="store_true",
+                    help="Clean the /var/cache/chromeos-chrome/chrome-src/src/out_$board dir")
+  parser.add_option("--env",
+                    dest="env",
+                    default="",
+                    help="Use the following env")
   parser.add_option("--cflags", dest="cflags",
                     default="",
                     help="CFLAGS for the ChromeOS packages")
@@ -66,6 +76,14 @@ def Main(argv):
   else:
     chrome_version = "CHROME_VERSION=%s" % options.version
 
+  if options.clean:
+    out_dir = os.path.join(options.chromeos_root,
+                           "chroot",
+                           "var/cache/chromeos-chrome/chrome-src/src/out_%s"
+                           % options.board)
+    if os.path.exists(out_dir):
+      shutil.rmtree(out_dir)
+
   # Emerge the browser
   ret = (cmd_executer.
          ChrootRunCommand(options.chromeos_root,
@@ -73,10 +91,11 @@ def Main(argv):
                           "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
                           "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
                           "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
+                          "%s "
                           "emerge-%s --buildpkg chromeos-chrome" %
                           (chrome_version, options.board, options.cflags,
                            options.board, options.ldflags, options.board,
-                           options.cxxflags, options.board)))
+                           options.cxxflags, options.env, options.board)))
 
   logger.GetLogger().LogFatalIf(ret, "build_packages failed")
 
