@@ -16,6 +16,20 @@ import tempfile
 from contextlib import contextmanager
 
 
+def ApplySubs(string, *substitutions):
+  for pattern, replacement in substitutions:
+    string = re.sub(pattern, replacement, string)
+  return string
+
+
+def GetFilenameFromString(string):
+  return ApplySubs(string,
+                   ("/", "__"),
+                   ("\s", "_"),
+                   ("=", ""),
+                   ("\"", ""))
+
+
 def GetRoot(scr_name):
   """Break up pathname into (dir+name)."""
   abs_path = os.path.abspath(scr_name)
@@ -23,20 +37,47 @@ def GetRoot(scr_name):
 
 
 def FormatQuotedCommand(command):
-  return command.replace("\"", "\\\"")
+  return ApplySubs(command,
+                   ("\"", "\\\""))
 
 
 def FormatCommands(commands):
-  output = str(commands)
-  output = re.sub("&&", "&&\n", output)
-  output = re.sub(";", ";\n", output)
-  output = re.sub("\n+\s*", "\n", output)
-  return output
+  return ApplySubs(str(commands),
+                   ("&&", "&&\n"),
+                   (";", ";\n"),
+                   ("\n+\s*", "\n"))
 
 
-def GetBuildPackagesCommand(board):
-  return "./build_packages --nousepkg --withdev --withtest --withautotest " \
-         "--skip_toolchain_update --nowithdebug --board=%s" % board
+def GetImageDir(chromeos_root, board):
+  return os.path.join(chromeos_root,
+                      "src",
+                      "build",
+                      "images",
+                      board)
+
+
+def LabelLatestImage(chromeos_root, board, label):
+  image_dir = GetImageDir(chromeos_root, board)
+  with WorkingDirectory(image_dir):
+    command = "ln -sf -T $(readlink -f latest) %s" % label
+    ce = command_executer.GetCommandExecuter()
+    return ce.RunCommand(command)
+
+
+def DoesLabelExist(chromeos_root, board, label):
+  image_label = os.path.join(GetImageDir(chromeos_root, board),
+                             label)
+  return os.path.exists(image_label)
+
+
+def GetBuildPackagesCommand(board, usepkg=False):
+  if usepkg:
+    usepkg_flag = "--usepkg"
+  else:
+    usepkg_flag = "--nousepkg"
+  return ("./build_packages %s --withdev --withtest --withautotest "
+          "--skip_toolchain_update --nowithdebug --board=%s" %
+          (usepkg_flag, board))
 
 
 def GetBuildImageCommand(board):
@@ -90,6 +131,18 @@ def GetCtargetFromBoard(board, chromeos_root):
 
 def GetChromeSrcDir():
   return "var/cache/chromeos-chrome/chrome-src/src"
+
+
+def GetEnvStringFromDict(env_dict):
+  return " ".join(["%s=\"%s\"" % var for var in env_dict.items()])
+
+
+def GetAllImages(chromeos_root, board):
+  ce = command_executer.GetCommandExecuter()
+  command = ("find %s/src/build/images/%s -name chromiumos_image.bin" %
+             (chromeos_root, board))
+  ret, out, err = ce.RunCommand(command, return_output=True)
+  return out.splitlines()
 
 
 @contextmanager
