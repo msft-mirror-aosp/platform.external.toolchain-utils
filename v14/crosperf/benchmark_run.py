@@ -58,38 +58,6 @@ class BenchmarkRun(threading.Thread):
     self.failure_reason = ""
     self._ce = command_executer.GetCommandExecuter(self._logger)
 
-  def MeanExcludingOutliers(self, array, outlier_range):
-    """Return the arithmetic mean excluding outliers."""
-    mean = sum(array) / len(array)
-    array2 = []
-
-    for v in array:
-      if mean != 0 and abs(v - mean) / mean < outlier_range:
-        array2.append(v)
-
-    if array2:
-      return sum(array2) / len(array2)
-    else:
-      return mean
-
-  def ParseResults(self, output):
-    p = re.compile("^-+.*?^-+", re.DOTALL | re.MULTILINE)
-    matches = p.findall(output)
-    for i in range(len(matches)):
-      results = matches[i]
-      results_dict = {}
-      for line in results.splitlines()[1:-1]:
-        mo = re.match("(.*\S)\s+\[\s+(PASSED|FAILED)\s+\]", line)
-        if mo:
-          results_dict[mo.group(1)] = mo.group(2)
-          continue
-        mo = re.match("(.*\S)\s+(.*)", line)
-        if mo:
-          results_dict[mo.group(1)] = mo.group(2)
-
-      return results_dict
-    return {}
-
   def ProcessResults(self, result, cache_hit):
     # Generate results from the output file.
     results_dir = self._GetResultsDir(result.out)
