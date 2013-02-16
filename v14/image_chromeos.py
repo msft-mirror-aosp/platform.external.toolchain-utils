@@ -18,6 +18,7 @@ import sys
 import tempfile
 from utils import command_executer
 from utils import logger
+from utils import misc
 from utils.file_utils import FileUtils
 
 checksum_file = "/usr/local/osimage_checksum_file"
@@ -71,7 +72,7 @@ def Main(argv):
     images_dir = misc.GetImageDir(options.chromeos_root, board)
     image = os.path.join(images_dir,
                          "latest",
-                         "chromiumos_image.bin")
+                         "chromiumos_test_image.bin")
     if not os.path.exists(image):
       image = os.path.join(images_dir,
                            "latest",
