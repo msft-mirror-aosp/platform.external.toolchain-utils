@@ -1,0 +1,100 @@
+#
+# Initialize the board. The function is executed before any test.
+#
+proc __boardname___init { board } {
+  set hostname [board_info $board hostname]
+  set timeout [board_info $board timeout]
+  set ssh_options [board_info $board ssh,options]
+  set runtimes [board_info $board runtimes]
+  set tmpdir [board_info $board tmpdir]
+  verbose -log "Opening persistent connection ..." 1
+  eval "exec ssh -N -f $ssh_options root@$hostname &"
+  local_exec "ssh -n $ssh_options root@$hostname sh -c 'mkdir -p $tmpdir'" {} {}  $timeout
+}
+
+#
+# Remove test run by-products. The function is executed at DejaGNU exit.
+#
+proc __boardname___exit {} {
+  set board "__boardname__"
+  set hostname [board_info $board hostname]
+  set ssh_options [board_info $board ssh,options]
+  set tmpdir [board_info $board tmpdir]
+  verbose -log "Closing persistent connection ..." 1
+  local_exec "ssh $ssh_options -O exit root@$hostname" {} {} 10
+  verbose -log "Cleaning up - executing on board 'rm -fr $tmpdir' ..." 1
+  local_exec "ssh -n $ssh_options root@$hostname sh -c 'rm -fr $tmpdir'" {} {} 10
+}
+
+#
+# Upload a file to the board. Uses scp over persistent SSH connection.
+#
+proc __boardname___download { board file args } {
+  set hostname [board_info $board hostname]
+  set tmpdir [board_info $board tmpdir]
+  set timeout [board_info $board timeout]
+  set ssh_options [board_info $board ssh,options]
+  set destfile [lindex [file split $file] end]
+  verbose -log "scp -q $ssh_options $file root@$hostname:$tmpdir/"
+  set result [local_exec "scp -q $ssh_options $file root@$hostname:$tmpdir/" {} {} $timeout]
+  if { [lindex $result 0] != 0 } {
+    verbose -log "failed to upload \'$file\' to \'$tmpdir/$destfile\'"
+  } else {
+    verbose -log "uploaded \"$file\' to remote board@\'$tmpdir/$destfile\'"
+    return "$tmpdir/$destfile"
+  }
+}
+
+#
+# Execute a test on remote machine. Log into the target machine using
+# persistent SSH connection and run a command in modified environment.
+#
+proc __boardname___exec { board program args } {
+  if { [llength $args] > 0 } {
+    set pargs [lindex $args 0]
+  } else {
+    set pargs ""
+  }
+
+  if { [llength $args] > 1 } {
+    set inp "[lindex $args 1]"
+  } else {
+    set inp ""
+  }
+
+  if { [llength $args] > 2 } {
+    set outp "[lindex $args 2]"
+  } else {
+    set outp ""
+  }
+
+  if { [llength $args] > 3 } {
+    set timeout "[lindex $args 3]"
+  } else {
+    set timeout [board_info $board timeout]
+  }
+
+  set hostname [board_info $board hostname]
+  set tmpdir [board_info $board tmpdir]
+
+  # Check if a file to be executed was copied from host machine.  If so, we
+  # need to run it in copied runtimes.
+  if { [string match "$tmpdir/*" $program] } {
+    set path [file dirname $program]
+    set command [file tail $program]
+    set program "cd $path && [file join "." $command]"
+  }
+
+  set ssh_options [board_info $board ssh,options]
+  return [local_exec "ssh -n $ssh_options root@$hostname sh -c '$program $pargs'" $inp $outp $timeout]
+}
+
+load_generic_config "unix"
+load_base_board_description "linux-libremote"
+
+set_board_info hostname "__board_hostname__"
+set_board_info tmpdir "__tmp_dir__"
+
+set_board_info isremote 1
+set_board_info timeout 60
+set_board_info ssh,options "-i __tmp_testing_rsa__ -o ControlMaster=auto -o ControlPath=__tmp_dir__/%r@%h:%p -o StrictHostKeyChecking=no"
