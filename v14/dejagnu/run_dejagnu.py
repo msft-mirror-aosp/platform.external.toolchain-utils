@@ -16,6 +16,7 @@ import sys
 import tempfile
 
 from utils import command_executer
+from utils import constants
 from utils import misc
 
 
@@ -27,10 +28,18 @@ def ProcessArguments():
                                  usage='run_dejagnu options')
   parser.add_option('-c', '--chromeos_root', dest='chromeos_root',
                     help='Required. Specify chromeos root')
-  parser.add_option('-a', '--auto', dest='auto_mode', action='store_true',
-                    default=True, help=(
-                        'Default. Test using auto mode - '
-                        'gcc are checked out/built automatically.'))
+  parser.add_option('-m', '--mount', dest='mount', action='store_true',
+                    default=False,
+                    help=('Specify testing mode to "mount" instead of "auto"'
+                          '. Under "auto" mode, which is the default - gcc is '
+                          'checked out and built automatically at default '
+                          'directories. Under "mount" mode '
+                          '- the gcc_source_dir is set to "$chromeos_'
+                          'root/chroot/usr/local/toolchain_root/gcc", the '
+                          'gcc-build-dir then is computed as '
+                          '"${gcc_source_dir}-build-${ctarget}". In this mode, '
+                          'a complete gcc build must be performed in the '
+                          'computed gcc-build-dir beforehand.'))
   parser.add_option('-b', '--board', dest='board',
                     help=('Required. Specify board. Currently only support '
                           '\'x86-zgb\' and \'tegra2_kaen\''))
@@ -56,6 +65,7 @@ def ProcessArguments():
     sys.exit('Missing argument for --remote.')
   if not options.board:
     sys.exit('Missing argument for --board.')
+
   if args:
     print 'Warning - discarding useless arguments %s...' % args
 
@@ -65,9 +75,15 @@ def ProcessArguments():
 class DejagnuExecuter(object):
   """The class wrapper for dejagnu test executer."""
 
-  def __init__(self, chromeos_root, remote, board,
+  def __init__(self, mount, chromeos_root, remote, board,
                flags, keep_intermediate_files, tools):
     self._chromeos_root = chromeos_root
+    self._chromeos_chroot = path.join(chromeos_root, 'chroot')
+    if mount:
+      self._gcc_source_dir = path.join(constants.mounted_toolchain_root, 'gcc')
+    else:
+      self._gcc_source_dir = None
+
     self._remote = remote
     self._board = board
     ## Compute target from board
@@ -83,8 +99,8 @@ class DejagnuExecuter(object):
 
   def SetupTestingDir(self):
     self._tmp_abs = tempfile.mkdtemp(prefix='dejagnu_', dir=path.join(
-        self._chromeos_root, 'chroot', 'tmp'))
-    self._tmp = self._tmp_abs[len(path.join(self._chromeos_root, 'chroot')):]
+        self._chromeos_chroot, 'tmp'))
+    self._tmp = self._tmp_abs[len(self._chromeos_chroot):]
     self._tmp_testing_rsa = path.join(self._tmp, 'testing_rsa')
     self._tmp_testing_rsa_abs = path.join(self._tmp_abs, 'testing_rsa')
 
@@ -98,8 +114,8 @@ class DejagnuExecuter(object):
               'inside chroot the command:')
         print(('  DEJAGNU={0} make -C {1} {2} '
                'RUNTESTFLAGS="--target_board={3} {4}"').format(
-                   path.join(self._tmp, 'site.exp'), self.MakeCheckString(),
-                   self._gcc_build_dir, self._board, self._flags))
+                   path.join(self._tmp, 'site.exp'), self._gcc_build_dir,
+                   self.MakeCheckString(), self._board, self._flags))
       else:
         print 'Removing temp dir - {0}'.format(self._tmp_abs)
         shutil.rmtree(self._tmp_abs)
@@ -137,16 +153,48 @@ class DejagnuExecuter(object):
       site_file.write('set target_list "%s"\n' % self._board)
 
   def PrepareGcc(self):
+    if self._gcc_source_dir:
+      self.PrepareGccFromCustomizedPath()
+    else:
+      self.PrepareGccDefault()
+    print 'Gcc source dir - {0}'.format(self._gcc_source_dir)
+    print 'Gcc build dir - {0}'.format(self._gcc_top_build_dir)
+
+  def PrepareGccFromCustomizedPath(self):
+    """Prepare gcc source, build directory from mounted source."""
+    gcc_source_dir_abs = path.join(self._chromeos_chroot,
+                                   self._gcc_source_dir.lstrip('/'))
+    if not (path.islink(gcc_source_dir_abs) or
+            path.ismount(gcc_source_dir_abs) or
+            path.isdir(gcc_source_dir_abs)):
+      sys.exit('Not a valid gcc source dir:  {0}'.format(gcc_source_dir_abs))
+
+    self._gcc_top_build_dir = '{0}-build-{1}'.format(
+        self._gcc_source_dir.rstrip('/'), self._target)
+    self._gcc_build_dir = path.join(self._gcc_top_build_dir, 'gcc')
+
+    gcc_top_build_dir_abs = path.join(self._chromeos_chroot,
+                                      self._gcc_top_build_dir.lstrip('/'))
+    if not path.isdir(gcc_top_build_dir_abs):
+      sys.exit('gcc build dir does not exist:  {0}'.
+               format(gcc_top_build_dir_abs))
+
+  def PrepareGccDefault(self):
     """Auto emerging gcc for building purpose only."""
     ret = self._executer.ChrootRunCommand(
         self._chromeos_root,
         'equery w cross-%s/gcc' % self._target, return_output=True)[1]
     ret = path.basename(ret.strip())
-    # ret is expected to be something like 'gcc-4.6.2-r11.ebuild', parse it.
+    # ret is expected to be something like 'gcc-4.6.2-r11.ebuild' or
+    # 'gcc-9999.ebuild' parse it.
     matcher = re.match('((.*)-r\d+).ebuild', ret)
-    if not matcher:
+    if matcher:
+      gccrevision, gccversion = matcher.group(1, 2)
+    elif ret == 'gcc-9999.ebuild':
+      gccrevision = 'gcc-9999'
+      gccversion = 'gcc-9999'
+    else:
       sys.exit('Failed to get gcc version.')
-    gccrevision, gccversion = matcher.group(1, 2)
 
     gcc_portage_dir = '/var/tmp/portage/cross-%s/%s/work' % (
         self._target, gccrevision)
@@ -161,10 +209,6 @@ class DejagnuExecuter(object):
           self._chromeos_root,
           ('ebuild $(equery w cross-%s/gcc) clean prepare compile' % (
               self._target)))
-    print 'gcc source dir is - "%s"' % self._gcc_source_dir
-    print 'gcc top build dir is - "%s"' % self._gcc_top_build_dir
-    print ('gcc build dir absolute (not inside chroot) is - "%s"' %
-           gcc_build_dir_abs)
 
   def MakeCheck(self):
     cmd = ('cd %s ; '
@@ -188,9 +232,9 @@ class DejagnuExecuter(object):
 
 if __name__ == '__main__':
   opts = ProcessArguments()
-  executer = DejagnuExecuter(opts.chromeos_root, opts.remote, opts.board,
-                             opts.flags, opts.keep_intermediate_files,
-                             opts.tools)
+  executer = DejagnuExecuter(opts.mount, opts.chromeos_root,
+                             opts.remote, opts.board, opts.flags,
+                             opts.keep_intermediate_files, opts.tools)
   try:
     executer.SetupTestingDir()
     executer.PrepareTestingRsaKeys()

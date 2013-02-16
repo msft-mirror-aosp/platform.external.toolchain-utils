@@ -17,6 +17,7 @@ import tempfile
 
 import tc_enter_chroot
 from utils import command_executer
+from utils import constants
 from utils import misc
 
 
@@ -36,7 +37,8 @@ class ToolchainPart(object):
         "etc/portage/package.mask/cross-%s" % self._ctarget)
     self._new_mask_file = None
 
-    self._chroot_source_path = "usr/local/toolchain_root/%s" % self._name
+    self._chroot_source_path = os.path.join(constants.mounted_toolchain_root,
+                                            self._name)
     self._incremental = incremental
     self._build_env = build_env
 
