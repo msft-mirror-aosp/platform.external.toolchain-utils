@@ -129,7 +129,7 @@ def GetCtargetFromBoard(board, chromeos_root):
 
 
 def GetChromeSrcDir():
-  return "var/cache/chromeos-chrome/chrome-src/src"
+  return "var/cache/distfiles/target/chrome-src/src"
 
 
 def GetEnvStringFromDict(env_dict):
