@@ -20,11 +20,12 @@ from utils import logger
 
 
 class ProfileMerger:
-  def __init__(self, inputs, output, chunk_size, merge_program):
+  def __init__(self, inputs, output, chunk_size, merge_program, multipliers):
     self._inputs = inputs
     self._output = output
     self._chunk_size = chunk_size
     self._merge_program = merge_program
+    self._multipliers = multipliers
     self._ce = command_executer.GetCommandExecuter()
     self._l = logger.GetLogger()
 
@@ -75,6 +76,9 @@ class ProfileMerger:
                (self._merge_program,
                 ",".join(temp_dirs),
                 self._output))
+    if self._multipliers:
+      command = ("%s --multipliers=%s" %
+                 (command, self._multipliers))
     ret = self._ce.RunCommand(command)
     assert ret == 0, "%s command failed!" % command
     for temp_dir in temp_dirs:
@@ -115,12 +119,16 @@ def Main(argv):
                     dest="merge_program",
                     default="/home/xur/bin/profile_merge_v15.par",
                     help="Merge program to use to do the actual merge.")
+  parser.add_option("--multipliers",
+                    dest="multipliers",
+                    help="multipliers to use when merging. (optional)")
 
   options, _ = parser.parse_args(argv)
 
   try:
     pm = ProfileMerger(options.inputs.split(","), options.output,
-                       int(options.chunk_size), options.merge_program)
+                       int(options.chunk_size), options.merge_program,
+                       options.multipliers)
     pm.DoMerge()
     retval = 0
   except:

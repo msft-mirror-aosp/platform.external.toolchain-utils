@@ -5,6 +5,8 @@
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import os
+import random
+import shutil
 import tempfile
 import unittest
 
@@ -13,10 +15,14 @@ from utils import misc
 
 
 class DivideAndMergeProfilesTest(unittest.TestCase):
+  def tearDown(self):
+    shutil.rmtree(self._program_dir)
+    for profile_dir in self._profile_dirs:
+      shutil.rmtree(profile_dir)
+
   def setUp(self):
     self._ce = command_executer.GetCommandExecuter()
     self._program_dir = tempfile.mkdtemp()
-    print self._program_dir
     self._writeProgram()
     self._writeMakefile()
     with misc.WorkingDirectory(self._program_dir):
@@ -68,28 +74,58 @@ program: $(OBJS)
           print >> f, "int main(){foo%s(); return 0;}" % i
 
   def testMerge(self):
-    # First do a regular merge.
-    reference_output = tempfile.mkdtemp()
-    command = ("%s --inputs=%s --output=%s" %
-               (self._merge_program,
-                ",".join(self._profile_dirs),
-                reference_output))
-    self._ce.RunCommand(command)
+    reference_output = self._getReferenceOutput()
+    my_output = self._getMyOutput()
 
+    ret = self._diffOutputs(reference_output, my_output)
+    shutil.rmtree(my_output)
+    shutil.rmtree(reference_output)
+    self.assertTrue(ret == 0)
+
+  def _diffOutputs(self, reference, mine):
+    command = "diff -uNr %s %s" % (reference, mine)
+    return self._ce.RunCommand(command)
+
+  def _getMyOutput(self, args=""):
     my_output = tempfile.mkdtemp()
     my_merge_program = os.path.join(os.path.dirname(__file__),
                                     "divide_and_merge_profiles.py")
     command = ("python %s --inputs=%s --output=%s "
                "--chunk_size=10 "
-               "--merge_program=%s" %
+               "--merge_program=%s "
+               "%s" %
                (my_merge_program,
                 ",".join(self._profile_dirs),
                 my_output,
-                self._merge_program))
+                self._merge_program,
+                args))
     self._ce.RunCommand(command)
+    return my_output
 
-    command = "diff -uNr %s %s" % (reference_output, my_output)
-    ret = self._ce.RunCommand(command)
+  def _getReferenceOutput(self, args=""):
+    # First do a regular merge.
+    reference_output = tempfile.mkdtemp()
+    command = ("%s --inputs=%s --output=%s %s" %
+               (self._merge_program,
+                ",".join(self._profile_dirs),
+                reference_output,
+                args))
+    self._ce.RunCommand(command)
+    return reference_output
+
+  def testMergeWithMultipliers(self):
+    num_profiles = len(self._profile_dirs)
+    multipliers = [str(random.randint(0, num_profiles)) \
+                   for _ in range(num_profiles)]
+    args = "--multipliers=%s" % ",".join(multipliers)
+
+    reference_output = self._getReferenceOutput(args)
+    my_output = self._getMyOutput(args)
+
+    ret = self._diffOutputs(reference_output, my_output)
+
+    shutil.rmtree(my_output)
+    shutil.rmtree(reference_output)
     self.assertTrue(ret == 0)
 
 if __name__ == "__main__":
