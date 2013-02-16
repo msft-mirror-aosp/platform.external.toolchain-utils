@@ -15,12 +15,16 @@ import re
 
 
 class DejaGnuTestResult(namedtuple('Result', 'name variant result flaky')):
+  """Stores the result of a single test case."""
+
+  # avoid adding __dict__ to the class
   __slots__ = ()
 
-  REGEXP = re.compile(r'([A-Z]+):\s+([\w/+.-]+)(.*)')
+  LINE_RE = re.compile(r'([A-Z]+):\s+([\w/+.-]+)(.*)')
 
   @classmethod
   def FromLine(cls, line):
+    """Alternate constructor which takes a string and parses it."""
     try:
       attrs, line = line.split('|', 1)
 
@@ -32,7 +36,7 @@ class DejaGnuTestResult(namedtuple('Result', 'name variant result flaky')):
     except ValueError:
       flaky = False
 
-    fields = cls.REGEXP.match(line.strip())
+    fields = cls.LINE_RE.match(line.strip())
 
     if fields:
       result, path, variant = fields.groups()
@@ -87,6 +91,7 @@ class DejaGnuTestResult(namedtuple('Result', 'name variant result flaky')):
       return cls(path, variant or '', result, flaky=flaky)
 
   def __str__(self):
+    """Returns string representation of a test result."""
     if self.flaky:
       fmt = 'flaky | '
     else:
@@ -98,6 +103,19 @@ class DejaGnuTestResult(namedtuple('Result', 'name variant result flaky')):
 
 
 class DejaGnuTestRun(object):
+  """Container for test results that were a part of single test run.
+
+  The class stores also metadata related to the test run.
+
+  Attributes:
+    board: Name of DejaGNU board, which was used to run the tests.
+    date: The date when the test run was started.
+    target: Target triple.
+    host: Host triple.
+    tool: The tool that was tested (e.g. gcc, binutils, g++, etc.)
+    results: a list of DejaGnuTestResult objects.
+  """
+
   __slots__ = ('board', 'date', 'target', 'host', 'tool', 'results')
 
   def __init__(self, **kwargs):
@@ -111,6 +129,7 @@ class DejaGnuTestRun(object):
 
   @classmethod
   def FromFile(cls, filename):
+    """Alternate constructor - reads a DejaGNU output file."""
     test_run = cls()
     test_run.FromDejaGnuOutput(filename)
     test_run.CleanUpTestResults()
@@ -118,12 +137,13 @@ class DejaGnuTestRun(object):
 
   @property
   def summary(self):
-    type_key = lambda v: v.result
-    results_by_type = sorted(self.results, key=type_key)
+    """Returns a summary as {ResultType -> Count} dictionary."""
+    summary = defaultdict(int)
 
-    return defaultdict(int, (
-        (res, len(list(res_list)))
-        for res, res_list in groupby(results_by_type, key=type_key)))
+    for r in self.results:
+      summary[r.result] += 1
+
+    return summary
 
   def _ParseBoard(self, fields):
     self.board = fields.group(1).strip()
@@ -141,6 +161,8 @@ class DejaGnuTestRun(object):
     self.tool = fields.group(1).strip()
 
   def FromDejaGnuOutput(self, filename):
+    """Read in and parse DejaGNU output file."""
+
     logging.info('Reading "%s" DejaGNU output file.', filename)
 
     with open(filename, 'r') as report:

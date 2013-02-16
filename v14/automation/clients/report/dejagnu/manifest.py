@@ -9,7 +9,6 @@ __author__ = 'kbaclawski@google.com (Krystian Baclawski)'
 from collections import namedtuple
 from cStringIO import StringIO
 import logging
-import re
 
 from summary import DejaGnuTestResult
 

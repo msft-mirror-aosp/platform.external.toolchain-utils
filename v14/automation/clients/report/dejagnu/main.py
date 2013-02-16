@@ -13,7 +13,7 @@ import os.path
 import sys
 
 from manifest import Manifest
-from report import Report
+import report
 from summary import DejaGnuTestRun
 
 
@@ -97,11 +97,11 @@ def ReportCommand(argv):
   test_runs = [DejaGnuTestRun.FromFile(filename)
                for filename in chain.from_iterable(map(glob.glob, args))]
 
-  report = Report(test_runs, manifests).Generate()
+  html = report.Generate(test_runs, manifests)
 
-  if report:
+  if html:
     with open(opts.output, 'w') as html_file:
-      html_file.write(report)
+      html_file.write(html)
       logging.info('Wrote report to "%s" file.', opts.output)
   else:
     sys.exit(1)
