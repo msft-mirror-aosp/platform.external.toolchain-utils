@@ -54,7 +54,7 @@ class LabelSettings(Settings):
 class GlobalSettings(Settings):
   def __init__(self, name):
     super(GlobalSettings, self).__init__(name, "global")
-    self.AddField(TextField("name", default="Experiment",
+    self.AddField(TextField("name",
                             description="The name of the experiment. Just an "
                             "identifier."))
     self.AddField(TextField("board", description="The target "
