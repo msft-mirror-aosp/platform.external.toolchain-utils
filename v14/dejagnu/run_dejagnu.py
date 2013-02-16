@@ -143,7 +143,7 @@ class DejagnuExecuter(object):
 
   def MakeCheck(self):
     cmd = ('cd %s ; '
-           'DEJAGNU=%s make check-gcc RUNTESTFLAGS="--target_board=%s %s"' %
+           'DEJAGNU=%s make check RUNTESTFLAGS="--target_board=%s %s"' %
            (self._gcc_build_dir, path.join(self._tmp, 'site.exp'),
             self._board, self._flags))
     self._executer.ChrootRunCommand(self._chromeos_root, cmd)
