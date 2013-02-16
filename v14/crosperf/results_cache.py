@@ -102,9 +102,12 @@ class ResultsCache(object):
     else:
       image_path_checksum = hashlib.md5(self.chromeos_image).hexdigest()
 
+    autotest_args_checksum = hashlib.md5(
+                             "".join(self.autotest_args)).hexdigest()
+
     return (image_path_checksum,
             self.autotest_name, str(self.iteration),
-            ",".join(self.autotest_args),
+            autotest_args_checksum,
             checksum,
             remote,
             str(self.CACHE_VERSION))
