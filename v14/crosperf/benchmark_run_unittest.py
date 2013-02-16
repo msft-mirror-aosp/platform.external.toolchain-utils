@@ -8,7 +8,6 @@ import unittest
 from autotest_runner import MockAutotestRunner
 from benchmark_run import BenchmarkRun
 from machine_manager import MockMachineManager
-from perf_processor import MockPerfProcessor
 from results_cache import MockResultsCache
 from utils import logger
 
@@ -33,7 +32,6 @@ class BenchmarkRunTest(unittest.TestCase):
                      m,
                      MockResultsCache(),
                      MockAutotestRunner(),
-                     MockPerfProcessor(),
                      logger.GetLogger())
     b.start()
 

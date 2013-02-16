@@ -12,7 +12,6 @@ from results_cache import Result
 from utils import logger
 from utils import command_executer
 from autotest_runner import AutotestRunner
-from perf_processor import PerfProcessor
 from results_cache import ResultsCache
 
 
@@ -51,13 +50,11 @@ class BenchmarkRun(threading.Thread):
     self.machine_manager = machine_manager
     self.cache = ResultsCache()
     self.autotest_runner = AutotestRunner(self._logger)
-    self.perf_processor = None
     self.machine = None
     self.full_name = self.autotest_name
     self.cache_conditions = cache_conditions
     self.runs_complete = 0
     self.cache_hit = False
-    self.perf_results = None
     self.failure_reason = ""
     self.autotest_args = "%s %s" % (autotest_args, self._GetExtraAutotestArgs())
     self._ce = command_executer.GetCommandExecuter(self._logger)

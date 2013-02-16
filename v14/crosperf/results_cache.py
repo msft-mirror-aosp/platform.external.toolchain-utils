@@ -11,7 +11,6 @@ import re
 import tempfile
 
 from image_checksummer import ImageChecksummer
-from perf_processor import PerfProcessor
 from utils import command_executer
 from utils import logger
 from utils import misc
