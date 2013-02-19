@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
@@ -52,6 +52,8 @@ def Main(argv):
                     help="LDFLAGS for the ChromeOS packages")
   parser.add_option("--board", dest="board",
                     help="ChromeOS target board, e.g. x86-generic")
+  parser.add_option("--package", dest="package",
+                    help="The package needs to be built")
   parser.add_option("--label", dest="label",
                     help="Optional label symlink to point to build dir.")
   parser.add_option("--env",
@@ -84,6 +86,10 @@ def Main(argv):
   options.chromeos_root = os.path.expanduser(options.chromeos_root)
 
   build_packages_command = misc.GetBuildPackagesCommand(options.board)
+
+  if options.package:
+    build_packages_command += " {0}".format(options.package)
+
   build_image_command = misc.GetBuildImageCommand(options.board)
 
   if options.vanilla == True:
@@ -126,7 +132,8 @@ def Main(argv):
          build_packages_command))
 
   logger.GetLogger().LogFatalIf(ret, "build_packages failed")
-
+  if options.package:
+    return 0
   # Build image
   ret = cmd_executer.ChrootRunCommand(options.chromeos_root,
                                       build_packages_env + " " +
