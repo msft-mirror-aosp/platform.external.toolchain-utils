@@ -122,7 +122,7 @@ class ToolchainComparator(ChromeOSCheckout):
     crosperf = os.path.join(os.path.dirname(__file__),
                             "crosperf",
                             "crosperf")
-    command = "%s %s" % (crosperf, experiment_file)
+    command = "%s --email=c-compiler-chrome %s" % (crosperf, experiment_file)
     ret = self._ce.RunCommand(command)
     if ret:
       raise Exception("Couldn't run crosperf!")
