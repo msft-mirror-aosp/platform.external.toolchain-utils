@@ -8,7 +8,10 @@ This script sets up the ChromeOS source in the given directory, matching a
 particular release of ChromeOS.
 """
 
-__author__ = "raymes@google.com (Raymes Khoury)"
+__author__ = ("asharif@google.com (Ahmad Sharif) "
+              "llozano@google.com (Luis Lozano) "
+              "raymes@google.com (Raymes Khoury) "
+              "shenhan@google.com (Han Shen)")
 
 import optparse
 import os
@@ -56,6 +59,13 @@ def Main(argv):
                     help="The package needs to be built")
   parser.add_option("--label", dest="label",
                     help="Optional label symlink to point to build dir.")
+  parser.add_option("--dev", dest="dev", default=False, action="store_true",
+                    help=("Make the final image in dev mode (eg writable, "
+                          "more space on image). Defaults to False."))
+  parser.add_option("--debug", dest="debug", default=False, action="store_true",
+                    help=("Optional. Build chrome browser with \"-g -O0\". "
+                          "Notice, this also turns on \'--dev\'. "
+                          "Defaults to False."))
   parser.add_option("--env",
                     dest="env",
                     default="",
@@ -73,7 +83,16 @@ def Main(argv):
   if options.board is None:
     Usage(parser, "--board must be set")
 
+  if options.debug:
+    options.dev = True
+
   build_packages_env = options.env
+  if build_packages_env.find('EXTRA_BOARD_FLAGS=') != -1:
+    logger.GetLogger().LogFatal(
+      ('Passing "EXTRA_BOARD_FLAGS" in "--env" is not supported. '
+       'This flags is used internally by this script. '
+       'Contact the author for more detail.'))
+
   if options.rebuild == True:
     build_packages_env += " EXTRA_BOARD_FLAGS=-e"
     # EXTRA_BOARD_FLAGS=-e should clean up the object files for the chrome
@@ -85,12 +104,13 @@ def Main(argv):
 
   options.chromeos_root = os.path.expanduser(options.chromeos_root)
 
-  build_packages_command = misc.GetBuildPackagesCommand(options.board)
+  build_packages_command = misc.GetBuildPackagesCommand(
+    board=options.board, usepkg=False, debug=options.debug)
 
   if options.package:
     build_packages_command += " {0}".format(options.package)
 
-  build_image_command = misc.GetBuildImageCommand(options.board)
+  build_image_command = misc.GetBuildImageCommand(options.board, options.dev)
 
   if options.vanilla == True:
     command = misc.GetSetupBoardCommand(options.board,
@@ -115,6 +135,75 @@ def Main(argv):
   else:
     logger.GetLogger().LogOutput("Did not setup_board "
                                  "because it already exists")
+
+  if options.debug:
+    # Perform 2-step build_packages to build a debug chrome browser.
+
+    # Firstly, build everything that chromeos-chrome depends on normally.
+    if options.rebuild == True:
+      # Give warning about "--rebuild" and "--debug". Under this combination,
+      # only dependencies of "chromeos-chrome" get rebuilt.
+      logger.GetLogger().LogWarning(
+        "\"--rebuild\" does not correctly re-build every package when "
+        "\"--debug\" is enabled. ")
+
+      # Replace EXTRA_BOARD_FLAGS=-e with "-e --onlydeps"
+      build_packages_env = build_packages_env.replace(
+        'EXTRA_BOARD_FLAGS=-e', 'EXTRA_BOARD_FLAGS=\"-e --onlydeps\"')
+    else:
+      build_packages_env += ' EXTRA_BOARD_FLAGS=--onlydeps'
+
+    ret = cmd_executer.ChrootRunCommand(
+      options.chromeos_root,
+      "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
+      "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
+      "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
+      "CHROME_ORIGIN=SERVER_SOURCE "
+      "%s "
+      "%s "
+      "chromeos-chrome"
+      % (options.board, options.cflags,
+         options.board, options.cxxflags,
+         options.board, options.ldflags,
+         build_packages_env,
+         build_packages_command))
+
+    logger.GetLogger().LogFatalIf(\
+      ret, "build_packages failed while trying to build chromeos-chrome deps.")
+
+    # Secondly, build chromeos-chrome using debug mode.
+    # Replace '--onlydeps' with '--nodeps'.
+    if options.rebuild == True:
+      build_packages_env = build_packages_env.replace(
+        'EXTRA_BOARD_FLAGS=\"-e --onlydeps\"', 'EXTRA_BOARD_FLAGS=--nodeps')
+    else:
+      build_packages_env = build_packages_env.replace(
+        'EXTRA_BOARD_FLAGS=--onlydeps', 'EXTRA_BOARD_FLAGS=--nodeps')
+    ret = cmd_executer.ChrootRunCommand(
+      options.chromeos_root,
+      "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
+      "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
+      "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
+      "CHROME_ORIGIN=SERVER_SOURCE BUILDTYPE=Debug "
+      "%s "
+      "%s "
+      "chromeos-chrome"
+      % (options.board, options.cflags,
+         options.board, options.cxxflags,
+         options.board, options.ldflags,
+         build_packages_env,
+         build_packages_command))
+    logger.GetLogger().LogFatalIf(
+      ret, "build_packages failed while trying to build debug chromeos-chrome.")
+
+    # Now, we have built chromeos-chrome and all dependencies.
+    # Finally, remove '-e' from EXTRA_BOARD_FLAGS,
+    # otherwise, chromeos-chrome gets rebuilt.
+    build_packages_env = build_packages_env.replace(\
+      'EXTRA_BOARD_FLAGS=--nodeps', '')
+
+    # Up to now, we have a debug built chromos-chrome browser.
+    # Fall through to build the rest of the world.
 
   # Build packages
   ret = cmd_executer.ChrootRunCommand(

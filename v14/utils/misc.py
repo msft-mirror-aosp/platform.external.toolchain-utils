@@ -145,19 +145,25 @@ def DoesLabelExist(chromeos_root, board, label):
   return os.path.exists(image_label)
 
 
-def GetBuildPackagesCommand(board, usepkg=False):
+def GetBuildPackagesCommand(board, usepkg=False, debug=False):
   if usepkg:
     usepkg_flag = "--usepkg"
   else:
     usepkg_flag = "--nousepkg"
+  if debug:
+    withdebug_flag = '--withdebug'
+  else:
+    withdebug_flag = '--nowithdebug'
   return ("./build_packages %s --withdev --withtest --withautotest "
-          "--skip_toolchain_update --nowithdebug --board=%s" %
-          (usepkg_flag, board))
+          "--skip_toolchain_update %s --board=%s" %
+          (usepkg_flag, withdebug_flag, board))
 
 
-def GetBuildImageCommand(board):
-  return "./build_image --board=%s test" % board
-
+def GetBuildImageCommand(board, dev=False):
+  dev_args = ""
+  if dev:
+    dev_args = "--noenable_rootfs_verification --disk_layout=2gb-rootfs"
+  return "./build_image --board=%s %s test" % (board, dev_args)
 
 def GetSetupBoardCommand(board, gcc_version=None, binutils_version=None,
                          usepkg=None, force=None):

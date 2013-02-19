@@ -171,6 +171,7 @@ def DoImage(argv):
                                                options.remote)
     logger.GetLogger().LogFatalIf(not successfully_imaged,
                                   "Image verification failed!")
+    TryRemountPartitionAsRW(options.chromeos_root, options.remote)
   else:
     l.LogOutput("Checksums match. Skipping reimage")
   return retval
@@ -267,6 +268,23 @@ def VerifyChromeChecksum(chromeos_root, image, remote):
     return True
   else:
     return False
+
+# Remount partition as writable.
+# TODO: auto-detect if an image is built using --noenable_rootfs_verification.
+def TryRemountPartitionAsRW(chromeos_root, remote):
+  l = logger.GetLogger()
+  cmd_executer = command_executer.GetCommandExecuter()
+  command = "sudo mount -o remount,rw /"
+  retval = cmd_executer.CrosRunCommand(\
+    command, chromeos_root=chromeos_root, machine=remote, terminated_timeout=10)
+  if retval:
+    ## Safely ignore.
+    l.LogWarning("Failed to remount partition as rw, "
+                 "probably the image was not built with "
+                 "\"--noenable_rootfs_verification\", "
+                 "you can safely ignore this.")
+  else:
+    l.LogOutput("Re-mounted partition as writable.")
 
 
 def EnsureMachineUp(chromeos_root, remote):
