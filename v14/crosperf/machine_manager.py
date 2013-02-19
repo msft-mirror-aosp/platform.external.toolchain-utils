@@ -69,7 +69,7 @@ class CrosMachine(object):
     self.phys_kbytes = phys_kbytes
 
   def _GetMemoryInfo(self):
-    #TODO yunlian: when the machine in rebooting, it will not return 
+    #TODO yunlian: when the machine in rebooting, it will not return
     #meminfo, the assert does not catch it either
     ce = command_executer.GetCommandExecuter()
     command = "cat /proc/meminfo"
@@ -111,10 +111,13 @@ class CrosMachine(object):
 
   def _GetMachineID(self):
     ce = command_executer.GetCommandExecuter()
-    command = "blkid"
-    ret, self.machine_id, _ = ce.CrosRunCommand(
+    command = "ifconfig"
+    ret, if_out, _ = ce.CrosRunCommand(
         command, return_output=True,
         machine=self.name, chromeos_root=self.chromeos_root)
+    b = if_out.splitlines()
+    a = [l for l in b if "lan" in l]
+    self.machine_id = a[0]
     assert ret == 0, "Could not get machine_id from machine: %s" % self.name
 
   def __str__(self):
