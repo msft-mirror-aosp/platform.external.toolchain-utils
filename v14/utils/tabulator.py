@@ -6,7 +6,6 @@ import getpass
 import math
 import numpy
 import colortrans
-import stats
 from email_sender import EmailSender
 
 
@@ -217,7 +216,7 @@ class NonEmptyCountResult(Result):
 class StringMeanResult(Result):
   def _ComputeString(self, cell, values, baseline_values):
     if self._AllStringsSame(values):
-      cell.value = "ALL_" + values[0]
+      cell.value = str(values[0])
     else:
       cell.value = "?"
 
@@ -286,6 +285,7 @@ class StatsSignificant(ComparisonResult):
     if len(values) < 2 or len(baseline_values) < 2:
       cell.value = float("nan")
       return
+    import stats
     _, cell.value = stats.lttest_ind(values, baseline_values)
 
   def _ComputeString(self, cell, values, baseline_values):
