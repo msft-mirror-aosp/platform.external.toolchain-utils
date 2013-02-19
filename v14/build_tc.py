@@ -182,12 +182,25 @@ def Main(argv):
                     default=False,
                     action="store_true",
                     help="Use FEATURES=keepwork to do incremental builds.")
+  parser.add_option("--cflags",
+                    dest="cflags",
+                    default="",
+                    help="Build a compiler with specified CFLAGS")
+  parser.add_option("--cxxflags",
+                    dest="cxxflags",
+                    default="",
+                    help="Build a compiler with specified CXXFLAGS")
+  parser.add_option("--ldflags",
+                    dest="ldflags",
+                    default="",
+                    help="Build a compiler with specified LDFLAGS")
   parser.add_option("-d",
                     "--debug",
                     dest="debug",
                     default=False,
                     action="store_true",
-                    help="Build a compiler with -g3 -O0.")
+                    help="Build a compiler with -g3 -O0 appended to both"
+                    " CFLAGS and CXXFLAGS.")
   parser.add_option("-m",
                     "--mount_only",
                     dest="mount_only",
@@ -214,10 +227,22 @@ def Main(argv):
   elif options.mount_only:
     options.unmount_only = False
   build_env = {}
+  if options.cflags:
+    build_env["CFLAGS"] = options.cflags
+  if options.cxxflags:
+    build_env["CXXFLAGS"] = options.cxxflags
+  if options.cxxflags:
+    build_env["LDFLAGS"] = options.ldflags
   if options.debug:
     debug_flags = "-g3 -O0"
-    build_env["CFLAGS"] = debug_flags
-    build_env["CXXFLAGS"] = debug_flags
+    if "CFLAGS" in build_env:
+      build_env["CFLAGS"] += " %s" % (debug_flags)
+    else:
+      build_env["CFLAGS"] = debug_flags
+    if "CXXFLAGS" in build_env:
+      build_env["CXXFLAGS"] += " %s" % (debug_flags)
+    else:
+      build_env["CXXFLAGS"] = debug_flags
 
   # Create toolchain parts
   toolchain_parts = []
