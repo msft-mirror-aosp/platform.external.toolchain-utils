@@ -54,6 +54,7 @@ class ChromeOSNightlyClient(object):
         self.CheckoutV14Dir(),
         cmd.Shell('python',
                   os.path.join(self.P4_VERSION_DIR, 'test_toolchains.py'),
+                  '--force-mismatch',
                   '--clean',
                   '--public', # crbug.com/145822
                   '--board=%s' % self._board,

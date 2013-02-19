@@ -108,7 +108,7 @@ class ToolchainComparator(ChromeOSCheckout):
     experiment_file = "toolchain_experiment.txt"
     image_args = ""
     if self._force_mismatch:
-      image_args = "--force_mismatch"
+      image_args = "--force-mismatch"
     experiment_header = """
     board: %s
     remote: %s
