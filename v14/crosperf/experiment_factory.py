@@ -22,7 +22,7 @@ class ExperimentFactory(object):
   of experiments could be produced.
   """
 
-  def GetExperiment(self, experiment_file, working_directory):
+  def GetExperiment(self, experiment_file, working_directory, log_dir):
     """Construct an experiment from an experiment file."""
     global_settings = experiment_file.GetGlobalSettings()
     experiment_name = global_settings.GetField("name")
@@ -104,7 +104,7 @@ class ExperimentFactory(object):
                             working_directory, chromeos_root,
                             cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(),
-                            email, acquire_timeout)
+                            email, acquire_timeout, log_dir)
 
     return experiment
 

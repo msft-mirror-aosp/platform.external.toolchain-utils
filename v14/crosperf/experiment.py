@@ -23,7 +23,7 @@ class Experiment(object):
 
   def __init__(self, name, remote, rerun_if_failed, working_directory,
                chromeos_root, cache_conditions, labels, benchmarks,
-               experiment_file, email_to, acquire_timeout):
+               experiment_file, email_to, acquire_timeout, log_dir):
     self.name = name
     self.rerun_if_failed = rerun_if_failed
     self.working_directory = working_directory
@@ -34,7 +34,7 @@ class Experiment(object):
     self.email_to = email_to
     self.results_directory = os.path.join(self.working_directory,
                                           self.name + "_results")
-
+    self.log_dir = log_dir
     self.labels = labels
     self.benchmarks = benchmarks
     self.num_complete = 0
@@ -54,7 +54,7 @@ class Experiment(object):
       self.machine_manager = MockMachineManager(chromeos_root, acquire_timeout)
     else:
       self.machine_manager = MachineManager(chromeos_root, acquire_timeout)
-    self.l = logger.GetLogger()
+    self.l = logger.GetLogger(log_dir)
 
     for machine in remote:
       self.machine_manager.AddMachine(machine)
@@ -75,7 +75,7 @@ class Experiment(object):
           benchmark_run_name = "%s: %s (%s)" % (label.name, benchmark.name,
                                                 iteration)
           full_name = "%s_%s_%s" % (label.name, benchmark.name, iteration)
-          logger_to_use = logger.Logger(os.path.dirname(__file__),
+          logger_to_use = logger.Logger(self.log_dir,
                                         "run.%s" % (full_name),
                                         True)
           benchmark_run = BenchmarkRun(benchmark_run_name,

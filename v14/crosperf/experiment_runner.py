@@ -25,7 +25,7 @@ class ExperimentRunner(object):
 
   def __init__(self, experiment):
     self._experiment = experiment
-    self.l = logger.GetLogger()
+    self.l = logger.GetLogger(experiment.log_dir)
     self._ce = command_executer.GetCommandExecuter(self.l)
     self._terminated = False
 

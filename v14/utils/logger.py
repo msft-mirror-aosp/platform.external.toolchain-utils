@@ -167,17 +167,19 @@ class Logger(object):
 main_logger = None
 
 
-def InitLogger(script_name, print_console=True):
+def InitLogger(script_name, log_dir, print_console=True):
   """Initialize a global logger. To be called only once."""
   global main_logger
   assert not main_logger, "The logger has already been initialized"
   rootdir, basefilename = GetRoot(script_name)
-  main_logger = Logger(rootdir, basefilename, print_console)
+  if not log_dir:
+    log_dir = rootdir
+  main_logger = Logger(log_dir, basefilename, print_console)
 
 
-def GetLogger():
+def GetLogger(log_dir=""):
   if not main_logger:
-    InitLogger(sys.argv[0])
+    InitLogger(sys.argv[0], log_dir)
   return main_logger
 
 

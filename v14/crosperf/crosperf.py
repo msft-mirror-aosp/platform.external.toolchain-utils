@@ -18,8 +18,6 @@ from utils import logger
 
 import test_flag
 
-l = logger.GetLogger()
-
 
 class MyIndentedHelpFormatter(optparse.IndentedHelpFormatter):
   def format_description(self, description):
@@ -65,12 +63,20 @@ def Main(argv):
                                  description=Help().GetHelp(),
                                  formatter=MyIndentedHelpFormatter(),
                                  version="%prog 0.1")
+
+  parser.add_option("-l", "--log_dir",
+                    dest="log_dir",
+                    default="",
+                    help="The log_dir, default is under <crosperf_logs>/logs")
+
   SetupParserOptions(parser)
   options, args = parser.parse_args(argv)
 
   # Convert the relevant options that are passed in into a settings
   # object which will override settings in the experiment file.
   option_settings = ConvertOptionsToSettings(options)
+  log_dir = os.path.abspath(os.path.expanduser(options.log_dir))
+  logger.GetLogger(log_dir)
 
   if len(args) == 2:
     experiment_filename = args[1]
@@ -87,7 +93,8 @@ def Main(argv):
     experiment_name = os.path.basename(experiment_filename)
     experiment_file.GetGlobalSettings().SetField("name", experiment_name)
   experiment = ExperimentFactory().GetExperiment(experiment_file,
-                                                 working_directory)
+                                                 working_directory,
+                                                 log_dir)
 
   atexit.register(Cleanup, experiment)
 
