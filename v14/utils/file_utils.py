@@ -42,7 +42,7 @@ class FileUtils(object):
   def CanonicalizeChromeOSRoot(self, chromeos_root):
     chromeos_root = os.path.expanduser(chromeos_root)
     if os.path.isfile(os.path.join(chromeos_root,
-                                   "src/scripts/enter_chroot.sh")):
+                                   "src/scripts/cros_workon")):
       return chromeos_root
     else:
       return None
