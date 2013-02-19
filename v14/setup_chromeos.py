@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
@@ -133,7 +133,9 @@ the version option.""")
   commands = ["mkdir -p %s" % directory,
               "cd %s" % directory,
               init,
-              "repo sync -j %s" % options.jobs]
+              # crosbug#31837 - "Sources need to be world-readable to properly
+              # function inside the chroot"
+              "umask 022 && repo sync -j %s" % options.jobs]
   cmd_executer = command_executer.GetCommandExecuter()
   ret = cmd_executer.RunCommands(commands)
   if ret:
