@@ -30,7 +30,7 @@ class ExperimentStatus(object):
       elapsed_time = 0
     try:
       eta_seconds = (float(self.num_total - self.experiment.num_complete) *
-                     elapsed_time / self.experiment.num_complete)
+                     elapsed_time / self.experiment.num_run_complete)
       eta_seconds = int(eta_seconds)
       eta = datetime.timedelta(seconds=eta_seconds)
     except ZeroDivisionError:

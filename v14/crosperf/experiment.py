@@ -33,6 +33,7 @@ class Experiment(object):
     self.labels = labels
     self.benchmarks = benchmarks
     self.num_complete = 0
+    self.num_run_complete = 0
 
     # We need one chromeos_root to run the benchmarks in, but it doesn't
     # matter where it is, unless the ABIs are different.
@@ -102,6 +103,8 @@ class Experiment(object):
           t.join(0)
         if not t.isAlive():
           self.num_complete += 1
+          if not t.cache_hit:
+            self.num_run_complete += 1
           self.active_threads.remove(t)
       return False
     return True
