@@ -27,9 +27,11 @@ def UnitToNumber(string, base=1000):
                "mega": base**2,
                "giga": base**3}
   string = string.lower()
-  mo = re.search("(\d*)(.+)", string)
+  mo = re.search("(\d*)(.+)?", string)
   number = mo.group(1)
   unit = mo.group(2)
+  if not unit:
+    return float(number)
   for k, v in unit_dict.items():
     if k.startswith(unit):
       return float(number) * v
