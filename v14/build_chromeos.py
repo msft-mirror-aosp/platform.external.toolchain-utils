@@ -71,6 +71,9 @@ def Main(argv):
   if options.rebuild == True:
     build_packages_env = "EXTRA_BOARD_FLAGS=-e"
 
+  build_packages_env = misc.MergeEnvStringWithDict(build_packages_env,
+                                                   {"USE": "chrome_internal"})
+
   options.chromeos_root = os.path.expanduser(options.chromeos_root)
 
   build_packages_command = misc.GetBuildPackagesCommand(options.board)
