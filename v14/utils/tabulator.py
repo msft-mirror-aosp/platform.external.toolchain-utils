@@ -242,6 +242,7 @@ class RawResult(Result):
 class MinResult(Result):
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = min(values)
+
   def _ComputeString(self, cell, values, baseline_values):
     if values:
       cell.value = min(values)
@@ -252,6 +253,7 @@ class MinResult(Result):
 class MaxResult(Result):
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = max(values)
+
   def _ComputeString(self, cell, values, baseline_values):
     if values:
       cell.value = max(values)
@@ -259,15 +261,20 @@ class MaxResult(Result):
       cell.value = ""
 
 
-class StdResult(Result):
-  def _ComputeFloat(self, cell, values, baseline_values):
-    if not values:
-      cell.value = ""
-    else:
-      cell.value = numpy.std(values)
-
+class NumericalResult(Result):
   def _ComputeString(self, cell, values, baseline_values):
-    cell.value = ""
+    cell.value = "?"
+
+
+class StdResult(NumericalResult):
+  def _ComputeFloat(self, cell, values, baseline_values):
+    cell.value = numpy.std(values)
+
+
+class CoeffVarResult(NumericalResult):
+  def _ComputeFloat(self, cell, values, baseline_values):
+    noise = numpy.std(values)/numpy.mean(values)
+    cell.value = noise
 
 
 class ComparisonResult(Result):
@@ -405,13 +412,16 @@ class Format(object):
   def _ComputeString(self, cell):
     cell.string_value = str(cell.value)
 
-  def _GetColor(self, value, low, mid, high, power=6):
+  def _GetColor(self, value, low, mid, high, power=6, mid_value=1.0):
+    min_value = 0.0
+    max_value = 2.0
     if math.isnan(value):
       return mid
-    if value > 1:
-      value = 2 - 1.0/value
+    if value > mid_value:
+      value = max_value - mid_value/value
 
-    return self._GetColorBetweenRange(value, 0, 1, 2, low, mid, high, power)
+    return self._GetColorBetweenRange(value, min_value, mid_value, max_value,
+                                      low, mid, high, power)
 
   def _GetColorBetweenRange(self,
                             value,
@@ -452,6 +462,23 @@ class StorageFormat(Format):
       cell.string_value = "%1.1f%s" % ((v/divisor), suffices[current - 1])
     else:
       cell.string_value = str(cell.value)
+
+
+class CoeffVarFormat(Format):
+  """Format the cell as a percent.
+
+  Example:
+    If the cell contains a value of 1.5, the string_value will be +150%.
+  """
+
+  def _ComputeFloat(self, cell):
+    cell.string_value = "%1.1f%%" % (float(cell.value) * 100)
+    cell.color = self._GetColor(cell.value,
+                                Color(0, 255, 0, 0),
+                                Color(0, 0, 0, 0),
+                                Color(255, 0, 0, 0),
+                                mid_value=0.02,
+                                power=1)
 
 
 class PercentFormat(Format):
@@ -840,7 +867,7 @@ class TablePrinter(object):
 
 
 # Some common drivers
-def GetSimpleTable(table, out_to="CONSOLE"):
+def GetSimpleTable(table, out_to=TablePrinter.CONSOLE):
   """Prints a simple table.
 
   This is used by code that has a very simple list-of-lists and wants to produce
@@ -874,25 +901,22 @@ def GetSimpleTable(table, out_to="CONSOLE"):
 
   tf = TableFormatter(our_table, columns)
   cell_table = tf.GetCellTable()
-  if out_to == "HTML":
-    tp = TablePrinter(cell_table, TablePrinter.HTML)
-  elif out_to == "CONSOLE":
-    tp = TablePrinter(cell_table, TablePrinter.CONSOLE)
-  elif out_to == "PLAIN":
-    tp = TablePrinter(cell_table, TablePrinter.PLAIN)
-  elif out_to == "TSV":
-    tp = TablePrinter(cell_table, TablePrinter.TSV)
+  tp = TablePrinter(cell_table, out_to)
   return tp.Print()
 
 
-def GetSimpleTableWithAverage(runs, labels, out_to="CONSOLE"):
+def GetComplexTable(runs, labels, out_to=TablePrinter.CONSOLE):
   tg = TableGenerator(runs, labels, TableGenerator.SORT_BY_VALUES_DESC)
   table = tg.GetTable()
   columns = [Column(LiteralResult(),
                     Format(),
-                    "1"),
+                    "Literal"),
              Column(AmeanResult(),
                     Format()),
+             Column(StdResult(),
+                    Format()),
+             Column(CoeffVarResult(),
+                    CoeffVarFormat()),
              Column(NonEmptyCountResult(),
                     Format()),
              Column(AmeanRatioResult(),
@@ -904,16 +928,7 @@ def GetSimpleTableWithAverage(runs, labels, out_to="CONSOLE"):
             ]
   tf = TableFormatter(table, columns)
   cell_table = tf.GetCellTable()
-  if out_to == "HTML":
-    tp = TablePrinter(cell_table, TablePrinter.HTML)
-  elif out_to == "CONSOLE":
-    tp = TablePrinter(cell_table, TablePrinter.CONSOLE)
-  elif out_to == "PLAIN":
-    tp = TablePrinter(cell_table, TablePrinter.PLAIN)
-  elif out_to == "TSV":
-    tp = TablePrinter(cell_table, TablePrinter.TSV)
-  elif out_to == "EMAIL":
-    tp = TablePrinter(cell_table, TablePrinter.EMAIL)
+  tp = TablePrinter(cell_table, out_to)
   return tp.Print()
 
 if __name__ == "__main__":
@@ -921,9 +936,10 @@ if __name__ == "__main__":
   runs = [
       [
           {"k1": "10", "k2": "12", "k5": "40", "k6": "40",
-           "ms_1": "20", "k7": "FAIL", "k8": "PASS", "k9": "PASS"},
+           "ms_1": "20", "k7": "FAIL", "k8": "PASS", "k9": "PASS",
+           "k10": "0"},
           {"k1": "13", "k2": "14", "k3": "15", "ms_1": "10", "k8": "PASS",
-           "k9": "FAIL"}
+           "k9": "FAIL", "k10": "0"}
           ],
       [
           {"k1": "50", "k2": "51", "k3": "52", "k4": "53", "k5": "35", "k6":
@@ -932,9 +948,9 @@ if __name__ == "__main__":
           ],
       ]
   labels = ["vanilla", "modified"]
-  t = GetSimpleTableWithAverage(runs, labels, "PLAIN")
+  t = GetComplexTable(runs, labels, TablePrinter.CONSOLE)
   print t
-  email = GetSimpleTableWithAverage(runs, labels, "EMAIL")
+  email = GetComplexTable(runs, labels, TablePrinter.EMAIL)
 
   simple_table = [
       ["binary", "b1", "b2", "b3"],
@@ -945,7 +961,7 @@ if __name__ == "__main__":
       ]
   t = GetSimpleTable(simple_table)
   print t
-  email += GetSimpleTable(simple_table, "PLAIN")
+  email += GetSimpleTable(simple_table, TablePrinter.PLAIN)
   email_to = [getpass.getuser()]
   email = "<pre style='font-size: 13px'>%s</pre>" % email
   EmailSender().SendEmail(email_to, "SimpleTableTest", email, msg_type="html")
