@@ -39,10 +39,11 @@ class TableGenerator(object):
 
   MISSING_VALUE = "x"
 
-  def __init__(self, d, l, sort=SORT_BY_KEYS):
+  def __init__(self, d, l, sort=SORT_BY_KEYS, key_name="keys"):
     self._runs = d
     self._labels = l
     self._sort = sort
+    self._key_name = key_name
 
   def _AggregateKeys(self):
     keys = set([])
@@ -110,7 +111,7 @@ class TableGenerator(object):
       module.
     """
     keys = self._GetKeys()
-    header = ["keys"] + self._labels
+    header = [self._key_name] + self._labels
     table = [header]
     for k in keys:
       row = [k]
