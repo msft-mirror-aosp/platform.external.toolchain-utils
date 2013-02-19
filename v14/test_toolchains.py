@@ -117,6 +117,7 @@ class ToolchainComparator(ChromeOSCheckout):
         crosperf_label = label
         crosperf_label = crosperf_label.replace("-", "minus")
         crosperf_label = crosperf_label.replace("+", "plus")
+        crosperf_label = crosperf_label.replace(".", "")
         experiment_image = """
         %s {
           chromeos_image: %s
