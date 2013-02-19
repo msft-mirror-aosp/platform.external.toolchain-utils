@@ -18,6 +18,7 @@ import re
 import shutil
 import sys
 import tempfile
+import time
 from utils import command_executer
 from utils import logger
 from utils import misc
@@ -61,8 +62,8 @@ def Main(argv):
                     default=False,
                     help="Force an image even if it is non-test.")
   parser.add_option("-a",
-                    "--image_to_live_args",
-                    dest="image_to_live_args")
+                    "--image_args",
+                    dest="image_args")
 
 
   options = parser.parse_args(argv[1:])[0]
@@ -132,21 +133,38 @@ def Main(argv):
                                 chromeos_root=options.chromeos_root,
                                 machine=options.remote)
 
-    command = (options.chromeos_root +
-               "/src/scripts/image_to_live.sh --remote=" +
-               options.remote +
-               " --image=" + located_image)
-    if options.image_to_live_args:
-      command += " %s" % options.image_to_live_args
+    real_src_dir = os.path.join(os.path.realpath(options.chromeos_root),
+                                "src")
+    if located_image.find(real_src_dir) != 0:
+      raise Exception("Located image: %s not in chromeos_root: %s" %
+                      (located_image, options.chromeos_root))
+    chroot_image = os.path.join(
+        "..",
+        located_image[len(real_src_dir):].lstrip("/"))
+    cros_image_to_target_args = ["--remote=%s" % options.remote,
+                                 "--board=%s" % board,
+                                 "--from=%s" % os.path.dirname(chroot_image),
+                                 "--image-name=%s" %
+                                 os.path.basename(located_image)]
 
-    retval = cmd_executer.RunCommand(command)
+    command = ("./bin/cros_image_to_target.py %s" %
+               " ".join(cros_image_to_target_args))
+    if options.image_args:
+      command += " %s" % options.image_args
 
+    retval = cmd_executer.ChrootRunCommand(options.chromeos_root,
+                                           command)
     if found == False:
       temp_dir = os.path.dirname(located_image)
       l.LogOutput("Deleting temp image dir: %s" % temp_dir)
       shutil.rmtree(temp_dir)
 
     logger.GetLogger().LogFatalIf(retval, "Image command failed")
+
+    # Unfortunately cros_image_to_target.py sometimes returns early when the
+    # machine isn't fully up yet.
+    retval = EnsureMachineUp(options.chromeos_root, options.remote)
+
     command = "echo %s > %s && chmod -w %s" % (image_checksum, checksum_file,
                                                checksum_file)
     retval = cmd_executer.CrosRunCommand(command,
@@ -258,6 +276,26 @@ def VerifyChromeChecksum(chromeos_root, image, remote):
     return True
   else:
     return False
+
+
+def EnsureMachineUp(chromeos_root, remote):
+  l = logger.GetLogger()
+  cmd_executer = command_executer.GetCommandExecuter()
+  timeout = 600
+  magic = "abcdefghijklmnopqrstuvwxyz"
+  command = "echo %s" % magic
+  start_time = time.time()
+  while True:
+    current_time = time.time()
+    if current_time - start_time > timeout:
+      l.LogError("Timeout of %ss reached. Machine still not up. Aborting." %
+                 timeout)
+      return False
+    retval = cmd_executer.CrosRunCommand(command,
+                                         chromeos_root=chromeos_root,
+                                         machine=remote)
+    if not retval:
+      return True
 
 
 if __name__ == "__main__":
