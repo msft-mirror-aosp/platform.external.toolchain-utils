@@ -2,6 +2,7 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+"""The experiment runner module."""
 import getpass
 import os
 import time
@@ -17,6 +18,8 @@ from results_report import TextResultsReport
 
 
 class ExperimentRunner(object):
+  """ExperimentRunner Class."""
+
   STATUS_TIME_DELAY = 30
   THREAD_MONITOR_DELAY = 2
 
@@ -92,11 +95,12 @@ class ExperimentRunner(object):
 
     self.l.LogOutput("Storing results of each benchmark run.")
     for benchmark_run in experiment.benchmark_runs:
-      if benchmark_run.result and not benchmark_run.cache_hit:
+      if benchmark_run.result:
         benchmark_run_name = filter(str.isalnum, benchmark_run.name)
         benchmark_run_path = os.path.join(results_directory,
                                           benchmark_run_name)
         benchmark_run.result.CopyResultsTo(benchmark_run_path)
+        benchmark_run.result.CleanUp()
 
   def Run(self):
     self._Run(self._experiment)
@@ -107,6 +111,8 @@ class ExperimentRunner(object):
 
 
 class MockExperimentRunner(ExperimentRunner):
+  """Mocked ExperimentRunner for testing."""
+
   def __init__(self, experiment):
     super(MockExperimentRunner, self).__init__(experiment)
 
