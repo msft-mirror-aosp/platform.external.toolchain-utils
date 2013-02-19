@@ -32,6 +32,11 @@ class ChromeOSCheckout(object):
     command = "cd %s; cros_sdk --delete" % self._chromeos_root
     return self._ce.RunCommand(command)
 
+  def _DeleteCcahe(self):
+    # crosbug.com/34956
+    command = "sudo rm -rf %s" % os.path.join(self._chromeos_root, ".cache")
+    return self._ce.RunCommand(command)
+
   def _BuildAndImage(self, label=""):
     if (not label or
         not misc.DoesLabelExist(self._chromeos_root, self._board, label)):
@@ -151,6 +156,8 @@ class ToolchainComparator(ChromeOSCheckout):
     self._TestLabels(labels)
     if self._clean:
       ret = self._DeleteChroot()
+      if ret: return ret
+      ret = self._DeleteCcahe()
       if ret: return ret
     return 0
 
