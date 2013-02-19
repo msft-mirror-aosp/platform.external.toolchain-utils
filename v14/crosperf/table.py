@@ -91,5 +91,5 @@ class Table(object):
   def AddColor(self):
     for row in self.rows:
       for cell in row:
-        if not cell.color:
+        if cell.color:
           cell.Color()
