@@ -35,7 +35,6 @@ class BenchmarkRun(threading.Thread):
     self.benchmark_name = benchmark_name
     self.autotest_name = autotest_name
     self.label = label
-    self.chromeos_image = os.path.expanduser(label.chromeos_image)
     self.iteration = iteration
     self.result = None
     self.terminated = False
@@ -61,7 +60,7 @@ class BenchmarkRun(threading.Thread):
     try:
       # Just use the first machine for running the cached version,
       # without locking it.
-      self.cache.Init(self.chromeos_image,
+      self.cache.Init(self.label.chromeos_image,
                       self.label.chromeos_root,
                       self.autotest_name,
                       self.iteration,
@@ -123,7 +122,7 @@ class BenchmarkRun(threading.Thread):
     while True:
       if self.terminated:
         raise Exception("Thread terminated while trying to acquire machine.")
-      machine = self.machine_manager.AcquireMachine(self.chromeos_image,
+      machine = self.machine_manager.AcquireMachine(self.label.chromeos_image,
                                                     self.label)
 
       if machine:
@@ -154,9 +153,7 @@ class BenchmarkRun(threading.Thread):
   def RunTest(self, machine):
     self.timeline.Record(STATUS_IMAGING)
     self.machine_manager.ImageMachine(machine,
-                                      self.chromeos_image,
-                                      self.label.board,
-                                      self.label.image_args)
+                                      self.label)
     self.timeline.Record(STATUS_RUNNING)
     [retval, out, err] = self.autotest_runner.Run(machine.name,
                                                   self.label.chromeos_root,
@@ -184,8 +181,7 @@ class MockBenchmarkRun(BenchmarkRun):
     """Remove Result.CreateFromRun for testing."""
     self.timeline.Record(STATUS_IMAGING)
     self.machine_manager.ImageMachine(machine,
-                                      self.chromeos_image,
-                                      self.label.board)
+                                      self.label)
     self.timeline.Record(STATUS_RUNNING)
     [retval, out, err] = self.autotest_runner.Run(machine.name,
                                                   self.label.chromeos_root,

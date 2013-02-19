@@ -4,12 +4,17 @@
 
 """The label of benchamrks."""
 
+import os
 from utils.file_utils import FileUtils
 
 
 class Label(object):
   def __init__(self, name, chromeos_image, chromeos_root, board, remote,
                image_args):
+    # Expand ~
+    chromeos_root = os.path.expanduser(chromeos_root)
+    chromeos_image = os.path.expanduser(chromeos_image)
+
     self.name = name
     self.chromeos_image = chromeos_image
     self.board = board
