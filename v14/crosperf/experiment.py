@@ -18,7 +18,7 @@ class Experiment(object):
 
   def __init__(self, name, remote, rerun_if_failed, working_directory,
                chromeos_root, cache_conditions, labels, benchmarks,
-               experiment_file):
+               experiment_file, email_to):
     self.name = name
     self.rerun_if_failed = rerun_if_failed
     self.working_directory = working_directory
@@ -26,6 +26,7 @@ class Experiment(object):
     self.chromeos_root = chromeos_root
     self.cache_conditions = cache_conditions
     self.experiment_file = experiment_file
+    self.email_to = email_to
     self.results_directory = os.path.join(self.working_directory,
                                           self.name + "_results")
 

@@ -53,7 +53,7 @@ class ExperimentRunner(object):
       if not benchmark_run.cache_hit:
         send_mail = True
         break
-    if not send_mail:
+    if not send_mail and not experiment.email_to:
       return
 
     label_names = []
@@ -65,7 +65,8 @@ class ExperimentRunner(object):
     text_report = "<pre style='font-size: 13px'>%s</pre>" % text_report
     html_report = HTMLResultsReport(experiment).GetReport()
     attachment = EmailSender.Attachment("report.html", html_report)
-    EmailSender().SendEmail([getpass.getuser()],
+    email_to = [getpass.getuser()] + experiment.email_to
+    EmailSender().SendEmail(email_to,
                             subject,
                             text_report,
                             attachments=[attachment],

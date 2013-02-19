@@ -63,9 +63,12 @@ class ExperimentFactory(object):
       label = Label(label_name, image, chromeos_root, board)
       labels.append(label)
 
+    email = global_settings.GetField("email")
+
     experiment = Experiment(experiment_name, remote, rerun_if_failed,
                             working_directory, chromeos_root,
                             cache_conditions, labels, benchmarks,
-                            experiment_file.Canonicalize())
+                            experiment_file.Canonicalize(),
+                            email)
 
     return experiment

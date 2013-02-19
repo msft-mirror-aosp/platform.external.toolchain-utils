@@ -62,6 +62,8 @@ class GlobalSettings(Settings):
     self.AddField(BooleanField("rerun_if_failed", description="Whether to "
                                "re-run failed autotest runs or not.",
                                default=False))
+    self.AddField(ListField("email", description="Space-seperated"
+                               "list of email addresses to send email to."))
     self.AddField(BooleanField("rerun", description="Whether to ignore the "
                                "cache and for autotests to be re-run.",
                                default=False))
