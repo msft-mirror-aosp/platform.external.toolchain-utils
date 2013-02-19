@@ -126,7 +126,7 @@ the version option.""")
     init = ("repo init -u %s -m paladin/buildspecs/%s/%s.xml" % (
             versions_repo, version, manifest))
   if options.minilayout:
-    init += " -g minilayout.xml"
+    init += " -g minilayout"
 
   init += " --repo-url=http://git.chromium.org/external/repo.git"
 
