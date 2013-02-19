@@ -6,6 +6,7 @@ import math
 from column_chart import ColumnChart
 from results_columns import *
 from results_sorter import ResultSorter
+from results_organizer import ResultOrganizer
 from table import Table
 from utils.tabulator import *
 
@@ -153,7 +154,40 @@ class ResultsReport(object):
         table.AddRow(row)
 
     return table
+  def GetNewTable(self):
+     return self._GetTables(self.labels, self.benchmark_runs)
 
+  def _GetTables(self, labels, benchmark_runs):
+    out_to = "HTML"
+    ro = ResultOrganizer(benchmark_runs, labels)
+    result = ro.result
+    label_name = ro.labels
+    output = ""
+    for item in result:
+      runs = result[item]
+      tg = TableGenerator(runs, label_name)
+      table = tg.GetTable()
+      columns = [Column(AmeanResult(),
+                    Format()),
+                 Column(AmeanRatioResult(),
+                    RatioFormat()),
+                 Column(AmeanRatioResult(),
+                    ColorBoxFormat()),
+                 Column(GmeanRatioResult(),
+                    RatioFormat()),
+                ]
+      for benchmark in self.benchmarks:
+        if benchmark.name == item:
+          break
+      tf = TableFormatter(table, columns, benchmark)
+      cell_table = tf.GetCellTable()
+      #return cell_table
+      if out_to == "HTML":
+        tp = TablePrinter(cell_table, TablePrinter.HTML)
+      else:
+        tp = TablePrinter(cell_table, TablePrinter.CONSOLE)
+      output += tp.Print()
+      return output
 
 class TextResultsReport(ResultsReport):
   TEXT = """
@@ -213,7 +247,8 @@ Experiment File
     return self.TEXT % (self.experiment.name,
                         self.GetStatusTable().ToText(),
                         self.experiment.machine_manager.num_reimages,
-                        summary_table.ToText(120),
+                        self.GetNewTable(),
+                        #summary_table.ToText(120),
                         full_table.ToText(80),
                         self.experiment.experiment_file)
 
