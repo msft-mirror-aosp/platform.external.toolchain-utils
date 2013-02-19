@@ -178,8 +178,9 @@ class MachineManager(object):
         machine_names = []
         for machine in self._all_machines:
           machine_names.append(machine.name)
-        raise Exception("Could not acquire any of the following machines: '%s'"
-                        % ", ".join(machine_names))
+        logger.GetLogger().LogFatal("Could not acquire any of the"
+                                  "following machines: '%s'"
+                                  % ", ".join(machine_names))
 
 ###      for m in self._machines:
 ###        if (m.locked and time.time() - m.released_time < 10 and
