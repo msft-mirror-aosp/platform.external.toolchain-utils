@@ -274,7 +274,7 @@ class StdResult(NumericalResult):
 
 class CoeffVarResult(NumericalResult):
   def _ComputeFloat(self, cell, values, baseline_values):
-    noise = numpy.std(values)/numpy.mean(values)
+    noise = numpy.abs(numpy.std(values)/numpy.mean(values))
     cell.value = noise
 
 
