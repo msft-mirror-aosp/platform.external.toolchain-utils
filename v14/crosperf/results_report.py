@@ -4,21 +4,15 @@
 
 import math
 from column_chart import ColumnChart
-from results_columns import IterationColumn
-from results_columns import IterationsCompleteColumn
-from results_columns import MaxColumn
-from results_columns import MeanColumn
-from results_columns import MinColumn
-from results_columns import RatioColumn
-from results_columns import StandardDeviationColumn
+from results_columns import *
 from results_sorter import ResultSorter
 from table import Table
 
 
 class ResultsReport(object):
   DELTA_COLUMN_NAME = "Change"
+  CHANGE_COLOR_NAME = ""
   MAX_COLOR_CODE = 255
-  POWER_FACTOR = 4
 
   def __init__(self, experiment):
     self.experiment = experiment
@@ -27,9 +21,15 @@ class ResultsReport(object):
     self.benchmarks = experiment.benchmarks
     self.baseline = self.labels[0]
 
-  def _GetColorCode(self, number):
+  def _ShouldSkipColumn(self, column):
+    if column.name in [self.DELTA_COLUMN_NAME, self.CHANGE_COLOR_NAME]:
+      return True
+    return False
+
+  def _GetColorCode(self, number, power_factor=4):
+    number = round(number, 2)
     if number < 1:
-      color = int(math.pow((1-number), 1.0/self.POWER_FACTOR)
+      color = int(math.pow((1-number), 1.0/power_factor)
                   * self.MAX_COLOR_CODE)
       color_string = ("%x" % color).upper()
       if len(color_string) < 2:
@@ -37,7 +37,7 @@ class ResultsReport(object):
       color_string += "0000"
     if number >= 1:
       number = 2 - 1/number
-      color = int(math.pow((number - 1), 1.0/self.POWER_FACTOR)
+      color = int(math.pow((number - 1), 1.0/power_factor)
                   * self.MAX_COLOR_CODE)
       cc = ("%x" % color).upper()
       if len(cc) < 2:
@@ -83,7 +83,8 @@ class ResultsReport(object):
 
   def GetSummaryTable(self):
     summary_columns = [MeanColumn("Average"),
-                       RatioColumn(self.DELTA_COLUMN_NAME)]
+                       RatioColumn(self.DELTA_COLUMN_NAME),
+                       ColorColumn(self.CHANGE_COLOR_NAME)]
     return self._GetTable(self.labels, self.benchmarks, self.benchmark_runs,
                           summary_columns)
 
@@ -104,7 +105,7 @@ class ResultsReport(object):
     for label in labels:
       for column in columns:
         if (label.name == self.baseline.name and
-            column.name == self.DELTA_COLUMN_NAME):
+            self._ShouldSkipColumn(column)):
           continue
         column_headings.append(Table.Cell(column.name, header=True))
 
@@ -119,9 +120,10 @@ class ResultsReport(object):
         row = [Table.Cell(autotest_key),
                Table.Cell(benchmark.iterations)]
         for label in labels:
+          row_color = ""
           for column in columns:
             if (label.name == self.baseline.name and
-                column.name == self.DELTA_COLUMN_NAME):
+                self._ShouldSkipColumn(column)):
               continue
             results = sorter.GetResults(benchmark.name,
                                         autotest_key, label.name)
@@ -129,17 +131,21 @@ class ResultsReport(object):
                                                  autotest_key,
                                                  self.baseline.name)
             value = column.Compute(results, baseline_results)
-            color = ""
             if isinstance(value, float):
               if self._IsLowerBetter(column, autotest_key):
                 value = 1/value
               value_string = "%.2f" % value
               if column.name == self.DELTA_COLUMN_NAME:
-                color = self. _GetColorCode(value)
+                row_color = self._GetColorCode(value)
             else:
               value_string = value
-            row.append(Table.Cell(value_string, color=color))
-
+            if column.name == self.DELTA_COLUMN_NAME:
+              row.append(Table.Cell(value_string, color=row_color))
+            elif column.name == self.CHANGE_COLOR_NAME:
+              row.append(Table.Cell(value_string, color=row_color,
+                                    color_theme="background"))
+            else:
+              row.append(Table.Cell(value_string))
         table.AddRow(row)
 
     return table
@@ -203,8 +209,8 @@ Experiment File
     return self.TEXT % (self.experiment.name,
                         self.GetStatusTable().ToText(),
                         self.experiment.machine_manager.num_reimages,
-                        summary_table.ToText(80),
-                        full_table.ToText(80),
+                        summary_table.ToText(180),
+                        full_table.ToText(180),
                         self.experiment.experiment_file)
 
 

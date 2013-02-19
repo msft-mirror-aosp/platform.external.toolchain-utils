@@ -7,16 +7,43 @@ import math
 
 class Table(object):
   class Cell(object):
+    """The cell class of table."""
+
     def __init__(self, value, colspan=1, hidden=False,
-                 header=False, color=""):
+                 header=False, color="", color_theme=""):
       self.value = value
       self.colspan = colspan
       self.hidden = hidden
       self.header = header
       self.color = color
+      self.color_theme = color_theme
 
     def Color(self):
-      self.value = "<FONT COLOR=#"+self.color+">"+self.value+"</FONT>"
+      """Add color to number or add a color bar."""
+      if not self.color_theme:
+        self.value = "<FONT COLOR=#"+self.color+">"+self.value+"</FONT>"
+        return None
+      if self.color_theme == "background":
+
+        """The color is represented as RGB code, and each color uses two hex
+           digits. The following code computes the background color code from
+           the original color code(full green 00FF00 or full red FF0000 to
+           dark 000000) to full green 00FF00 or full red FF0000  to white
+           FFFFFF. If first decides whether we should use green or red by
+           checking the first two digit of the color code. If it is 00, we
+           want green backgound. So the color code should be ??FF??, where
+           the ?? is computed by 255 - green number in the original code."""
+
+        if self.color[:2] == "00":
+          ss = 255 - int(self.color[2:4], 16)
+          s1 = ("%x" % ss).upper()
+          bar_color = s1+"FF"+s1
+        else:
+          ss = 255 - int(self.color[:2], 16)
+          s1 = ("%x" % ss).upper()
+          bar_color = "FF"+s1*2
+        self.value = ("<FONT style=\"BACKGROUND-COLOR:#"+bar_color
+                      +"\" color=#"+bar_color+">--</FONT>")
 
   def __init__(self, table_id):
     self.table_id = table_id

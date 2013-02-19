@@ -150,3 +150,13 @@ class IterationColumn(Column):
     if not res:
       return "-"
     return res
+
+
+class ColorColumn(Column):
+  def __init__(self, name):
+    super(ColorColumn, self).__init__(name)
+
+  def Compute(self, results, baseline_results):
+    if len(results) or len(baseline_results):
+      return ""
+    return ""
