@@ -831,7 +831,7 @@ class TablePrinter(object):
     if self._output_type in [self.CONSOLE, self.PLAIN, self.EMAIL]:
       return " "
     if self._output_type == self.HTML:
-      return "&nbsp;"
+      return ""
     if self._output_type == self.TSV:
       return "\t"
 
