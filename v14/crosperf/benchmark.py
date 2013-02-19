@@ -21,3 +21,4 @@ class Benchmark(object):
     self.iterations = iterations
     self.outlier_range = outlier_range
     self.perf_args = perf_args
+    self.iteration_adjusted = False

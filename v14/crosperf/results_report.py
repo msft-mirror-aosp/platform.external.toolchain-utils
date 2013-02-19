@@ -2,11 +2,11 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
-import math
-from column_chart import ColumnChart
-from results_sorter import ResultSorter
-from results_organizer import ResultOrganizer
 from utils.tabulator import *
+
+from column_chart import ColumnChart
+from results_organizer import ResultOrganizer
+
 
 class ResultsReport(object):
   MAX_COLOR_CODE = 255
@@ -83,7 +83,7 @@ class ResultsReport(object):
 
   def _GetTables(self, labels, benchmark_runs, columns):
     tables = []
-    ro = ResultOrganizer(benchmark_runs, labels)
+    ro = ResultOrganizer(benchmark_runs, labels, self.benchmarks)
     result = ro.result
     label_name = ro.labels
     for item in result:
