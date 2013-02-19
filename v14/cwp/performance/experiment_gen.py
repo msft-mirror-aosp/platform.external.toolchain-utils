@@ -102,9 +102,8 @@ def main():
     else:
       current_time = int(round(time.time() * 1000))
       file_name = 'perf_overhead_%s' % str(current_time)
-      f = file(file_name, 'w')
-      f.write(experiment_file)
-      f.close()
+      with open(file_name, "w") as f:
+        f.write(experiment_file)
       try:
         process = subprocess.Popen(['%s/crosperf' % crosperf_root, file_name])
         process.communicate()
