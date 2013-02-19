@@ -5,34 +5,35 @@
 # found in the LICENSE file.
 
 import unittest
+
+from utils import logger
+
 from autotest_runner import MockAutotestRunner
-from benchmark_run import BenchmarkRun
+from benchmark_run import MockBenchmarkRun
+from label import MockLabel
 from machine_manager import MockMachineManager
 from results_cache import MockResultsCache
-from utils import logger
 
 
 class BenchmarkRunTest(unittest.TestCase):
   def testDryRun(self):
+    my_label = MockLabel("test1", "image1", "/tmp/test_benchmark_run",
+                         "x86-alex", "chromeos-alex1")
     m = MockMachineManager()
-    m.AddMachine("chromeos-alex1")
-    b = BenchmarkRun("test run",
-                     "PageCycler",
-                     "PageCycler",
-                     "",
-                     "image1",
-                     "/tmp/test",
-                     "/tmp/test/image",
-                     "x86-alex",
-                     1,
-                     [],
-                     0.2,
-                     "",
-                     "none",
-                     m,
-                     MockResultsCache(),
-                     MockAutotestRunner(),
-                     logger.GetLogger())
+    m.AddMachine("chromeos-alex1", "/tmp/test_benchmark_run")
+    b = MockBenchmarkRun("test run",
+                         "PageCycler",
+                         "Pyautoperf",
+                         "",
+                         my_label,
+                         1,
+                         [],
+                         0.2,
+                         "",
+                         m,
+                         logger.GetLogger())
+    b.cache = MockResultsCache()
+    b.autotest_runner = MockAutotestRunner()
     b.start()
 
 

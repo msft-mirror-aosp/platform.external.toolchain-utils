@@ -361,12 +361,20 @@ class ResultsCache(object):
     result.StoreToCacheDir(cache_dir, self.machine_manager)
 
 
-class MockResultsCache(object):
+class MockResultsCache(ResultsCache):
   def Init(self, *args):
     pass
 
   def ReadResult(self):
-    return Result("Results placed in /tmp/test", "", 0)
+    return None
 
   def StoreResult(self, result):
     pass
+
+
+class MockResult(Result):
+  def _PopulateFromRun(self, out, err, retval):
+    self.out = out
+    self.err = err
+    self.retval = retval
+

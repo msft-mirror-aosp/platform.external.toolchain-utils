@@ -11,7 +11,7 @@ from experiment_file import ExperimentFile
 EXPERIMENT_FILE_1 = """
   board: x86-alex
   remote: chromeos-alex3
-
+  perf_args: record -a -e cycles
   benchmark: PageCycler {
     iterations: 3
   }
@@ -21,6 +21,8 @@ EXPERIMENT_FILE_1 = """
   }
 
   image2 {
+    board: lumpy
+    remote: chromeos-lumpy1
     chromeos_image: /usr/local/google/cros_image2.bin
   }
   """
@@ -70,7 +72,8 @@ class ExperimentFileTest(unittest.TestCase):
     experiment_file = ExperimentFile(input_file)
     global_settings = experiment_file.GetGlobalSettings()
     self.assertEqual(global_settings.GetField("remote"), ["chromeos-alex3"])
-
+    self.assertEqual(global_settings.GetField("perf_args"),
+                     "record -a -e cycles")
     benchmark_settings = experiment_file.GetSettings("benchmark")
     self.assertEqual(len(benchmark_settings), 1)
     self.assertEqual(benchmark_settings[0].name, "PageCycler")
@@ -82,6 +85,8 @@ class ExperimentFileTest(unittest.TestCase):
     self.assertEqual(label_settings[0].GetField("board"), "x86-alex")
     self.assertEqual(label_settings[0].GetField("chromeos_image"),
                      "/usr/local/google/cros_image1.bin")
+    self.assertEqual(label_settings[1].GetField("remote"), ["chromeos-lumpy1"])
+    self.assertEqual(label_settings[0].GetField("remote"), ["chromeos-alex3"])
 
   def testOverrideSetting(self):
     input_file = StringIO.StringIO(EXPERIMENT_FILE_2)

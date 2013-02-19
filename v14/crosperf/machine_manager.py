@@ -3,13 +3,16 @@ import image_chromeos
 import lock_machine
 import math
 import os.path
+import re
 import sys
 import threading
 import time
-from image_checksummer import ImageChecksummer
+
 from utils import command_executer
 from utils import logger
 from utils.file_utils import FileUtils
+
+from image_checksummer import ImageChecksummer
 
 CHECKSUM_FILE = "/usr/local/osimage_checksum_file"
 
@@ -337,17 +340,31 @@ class MachineManager(object):
     return output
 
 
-class MockMachineManager(object):
+class MockCrosMachine(CrosMachine):
+  def __init__(self, name, chromeos_root):
+    self.name = name
+    self.image = None
+    self.checksum = None
+    self.locked = False
+    self.released_time = time.time()
+    self.autotest_run = None
+    self.chromeos_root = chromeos_root
+    self.checksum_string = re.sub("\d", "", name)
+    #In test, we assume "lumpy1", "lumpy2" are the same machine.
+    self.machine_checksum = hashlib.md5(self.checksum_string).hexdigest()
+
+
+class MockMachineManager(MachineManager):
   def __init__(self):
     self.machines = []
 
   def ImageMachine(self, machine_name, chromeos_image, board=None):
     return 0
 
-  def AddMachine(self, machine_name):
-    self.machines.append(CrosMachine(machine_name))
+  def AddMachine(self, machine_name, chromeos_root):
+    self.machines.append(MockCrosMachine(machine_name, chromeos_root))
 
-  def AcquireMachine(self, chromeos_image):
+  def AcquireMachine(self, chromeos_image, label):
     for machine in self.machines:
       if not machine.locked:
         machine.locked = True

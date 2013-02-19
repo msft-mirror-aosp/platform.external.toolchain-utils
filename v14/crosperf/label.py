@@ -25,3 +25,12 @@ class Label(object):
                         % (name, chromeos_root))
 
     self.chromeos_root = chromeos_root
+
+
+class MockLabel(object):
+  def __init__(self, name, chromeos_image, chromeos_root, board, remote):
+    self.name = name
+    self.chromeos_image = chromeos_image
+    self.board = board
+    self.remote = remote
+    self.chromeos_root = chromeos_root

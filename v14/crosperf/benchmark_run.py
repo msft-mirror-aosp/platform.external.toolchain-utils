@@ -176,3 +176,27 @@ class BenchmarkRun(threading.Thread):
 
   def SetCacheConditions(self, cache_conditions):
     self.cache_conditions = cache_conditions
+
+
+class MockBenchmarkRun(BenchmarkRun):
+  """Inherited from BenchmarkRun, just overide RunTest for testing."""
+
+  def RunTest(self, machine):
+    """Remove Result.CreateFromRun for testing."""
+    self.timeline.Record(STATUS_IMAGING)
+    self.machine_manager.ImageMachine(machine,
+                                      self.chromeos_image,
+                                      self.label.board)
+    self.timeline.Record(STATUS_RUNNING)
+    [retval, out, err] = self.autotest_runner.Run(machine.name,
+                                                  self.label.chromeos_root,
+                                                  self.label.board,
+                                                  self.autotest_name,
+                                                  self.autotest_args)
+    self.run_completed = True
+    rr = Result("Results placed in /tmp/test", "", 0)
+    rr.out = out
+    rr.err = err
+    rr.retval = retval
+    return rr
+
