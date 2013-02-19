@@ -75,7 +75,9 @@ class ChromeOSCheckout(object):
                              "--minilayout"]
       if self._public:
         setup_chromeos_args.append("--public")
-      setup_chromeos.Main(setup_chromeos_args)
+      ret = setup_chromeos.Main(setup_chromeos_args)
+      if ret:
+        raise Exception("Couldn't run setup_chromeos!")
 
   def _BuildToolchain(self, config):
     self._UnInstallToolchain()
