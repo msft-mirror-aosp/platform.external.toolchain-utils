@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
@@ -28,11 +28,14 @@ class DejagnuAdapter(object):
 
   _cmd_exec = command_executer.GetCommandExecuter()
 
-  def __init__(self, board, remote, gcc_dir, chromeos_root):
+  def __init__(self, board, remote, gcc_dir, 
+               chromeos_root, runtestflags, cleanup):
     self._board = board
     self._remote = remote
     self._gcc_dir = gcc_dir
     self._chromeos_root = chromeos_root
+    self._runtestflags = runtestflags
+    self._cleanup = cleanup
 
   def SetupChromeOS(self):
     cmd = [setup_chromeos.__file__,
@@ -80,9 +83,13 @@ class DejagnuAdapter(object):
             "--chromeos_root=" + self._chromeos_root,
             "--mount=" + self._gcc_dir,
             "--remote=" + self._remote]
+    if self._cleanup:
+      args.append("--cleanup=" + self._cleanup)
+    if self._runtestflags:
+      args.append("--flags=" + self._runtestflags)
     return run_dejagnu.Main(args)
 
-
+# Do not throw any exception in this function!
 def EmailResult(result):
   email_to = ['c-compiler-chrome@google.com']
   email_from = ['dejagnu-job@google.com']
@@ -134,6 +141,12 @@ def ProcessArguments(argv):
   parser.add_option('-c', '--chromeos_root', dest='chromeos_root',
                     default='chromeos.live',
                     help=('Optional. Specify chromeos checkout directory.'))
+  parser.add_option('--cleanup', dest='cleanup', default=None,
+                    help=('Optional. Do cleanup after the test.'))
+  parser.add_option('--runtestflags', dest='runtestflags', default=None,
+                    help=('Optional. Options to RUNTESTFLAGS env var '
+                          'while invoking make check. '
+                          '(Mainly used for testing purpose.)'))
 
   options, args = parser.parse_args(argv)
 
@@ -142,11 +155,13 @@ def ProcessArguments(argv):
 
   return options
 
+
 def Main(argv):
   opt = ProcessArguments(argv)
+  adapter = DejagnuAdapter(
+    opt.board, opt.remote, opt.gcc_dir, opt.chromeos_root,
+    opt.runtestflags, opt.cleanup)
   try:
-    adapter = DejagnuAdapter(
-      opt.board, opt.remote, opt.gcc_dir, opt.chromeos_root)
     adapter.SetupChromeOS()
     adapter.SetupBoard()
     adapter.CheckoutGCC()

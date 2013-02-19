@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
@@ -21,6 +21,7 @@ import lock_machine
 import tc_enter_chroot
 from utils import command_executer
 from utils import constants
+from utils import logger
 from utils import misc
 
 
@@ -33,13 +34,13 @@ def ProcessArguments(argv):
   parser.add_option('-c', '--chromeos_root', dest='chromeos_root',
                     help='Required. Specify chromeos root')
   parser.add_option('-m', '--mount', dest='mount',
-                    help=('Specify gcc source to "mount" instead of "auto".'
+                    help=('Specify gcc source to mount instead of "auto". '
                           'Under "auto" mode, which is the default - gcc is '
                           'checked out and built automatically at default '
                           'directories. Under "mount" mode '
                           '- the gcc_source is set to "$chromeos_'
                           'root/chroot/usr/local/toolchain_root/gcc", which is '
-                          'a mount point for this option value, the '
+                          'the mount point for this option value, the '
                           'gcc-build-dir then is computed as '
                           '"${gcc_source_dir}-build-${ctarget}". In this mode, '
                           'a complete gcc build must be performed in the '
@@ -54,10 +55,17 @@ def ProcessArguments(argv):
                     action='store_true', default=False,
                     help=('Optional. Default to false. Do not remove dejagnu '
                           'intermediate files after test run.'))
+  parser.add_option('--cleanup', dest='cleanup', default=None,
+                    help=('Optional. Values to this option could be '
+                          '\'mount\' (unmount gcc source and '
+                          'directory directory, '
+                          'only valid when --mount is given), '
+                          '\'chroot\' (delete chroot) and '
+                          '\'chromeos\' (delete the whole chromeos tree).'))
   parser.add_option('-t', '--tools', dest='tools', default='gcc,g++',
                     help=('Optional. Specify which tools to check, using '
                           '","(comma) as separator. A typical value would be '
-                          '"g++" so that only g++ tests are performed.'
+                          '"g++" so that only g++ tests are performed. '
                           'Defaults to "gcc,g++".'))
 
   options, args = parser.parse_args(argv)
@@ -68,9 +76,14 @@ def ProcessArguments(argv):
     raise Exception('Missing argument for --remote.')
   if not options.board:
     raise Exception('Missing argument for --board.')
-
-  if args:
-    print 'Warning - discarding useless arguments %s...' % args
+  if options.cleanup == 'mount' and not options.mount:
+    raise Exception('--cleanup=\'mount\' not valid unless --mount is given.')
+  if options.cleanup and not (
+    options.cleanup == 'mount' or \
+      options.cleanup == 'chroot' or options.cleanup == 'chromeos'):
+    raise Exception('Invalid option value for --cleanup')
+  if options.cleanup and options.keep_intermediate_files:
+    raise Exception('Only one of --keep and --cleanup could be given.')
 
   return options
 
@@ -79,7 +92,8 @@ class DejagnuExecuter(object):
   """The class wrapper for dejagnu test executer."""
 
   def __init__(self, base_dir, mount, chromeos_root, remote, board,
-               flags, keep_intermediate_files, tools):
+               flags, keep_intermediate_files, tools, cleanup):
+    self._l = logger.GetLogger()
     self._chromeos_root = chromeos_root
     self._chromeos_chroot = path.join(chromeos_root, 'chroot')
     if mount:
@@ -100,6 +114,7 @@ class DejagnuExecuter(object):
     self._tmp_abs = None
     self._keep_intermediate_files = keep_intermediate_files
     self._tools = tools.split(',')
+    self._cleanup = cleanup
 
   def SetupTestingDir(self):
     self._tmp_abs = tempfile.mkdtemp(prefix='dejagnu_', dir=path.join(
@@ -111,18 +126,50 @@ class DejagnuExecuter(object):
   def MakeCheckString(self):
     return ' '.join(['check-{0}'.format(t) for t in self._tools if t])
 
-  def CleanupTestingDir(self):
+  def CleanupIntermediateFiles(self):
     if self._tmp_abs and path.isdir(self._tmp_abs):
       if self._keep_intermediate_files:
-        print('Your intermediate dejagnu files are kept, you can re-run '
-              'inside chroot the command:')
-        print(('  DEJAGNU={0} make -C {1} {2} '
-               'RUNTESTFLAGS="--target_board={3} {4}"').format(
-                   path.join(self._tmp, 'site.exp'), self._gcc_build_dir,
-                   self.MakeCheckString(), self._board, self._flags))
+        self._l.LogOutput(
+          'Your intermediate dejagnu files are kept, you can re-run '
+          'inside chroot the command:')
+        self._l.LogOutput(
+          ' DEJAGNU={0} make -C {1} {2} RUNTESTFLAGS="--target_board={3} {4}"' \
+            .format(path.join(self._tmp, 'site.exp'), self._gcc_build_dir,
+                    self.MakeCheckString(), self._board, self._flags))
       else:
-        print 'Removing temp dir - {0}'.format(self._tmp_abs)
+        self._l.LogOutput(
+          '[Cleanup] - Removing temp dir - {0}'.format(self._tmp_abs))
         shutil.rmtree(self._tmp_abs)
+
+  def Cleanup(self):
+    if not self._cleanup:
+      return
+
+    # Optionally cleanup mounted diretory, chroot and chromeos tree.
+    if self._cleanup == 'mount' or self._cleanup == 'chroot' or \
+          self._cleanup == 'chromeos':
+      # No exceptions are allowed from this method.
+      try:
+        self._l.LogOutput('[Cleanup] - Unmounting directories ...')
+        self.MountGccSourceAndBuildDir(unmount=True)
+      except:
+        print 'Warning: failed to unmount gcc source/build directory.'
+
+    if self._cleanup == 'chroot' or self._cleanup == 'chromeos':
+      self._l.LogOutput('[Cleanup]: Deleting chroot inside \'{0}\''.format(
+        self._chromeos_root))
+      command = "cd %s; cros_sdk --delete" % self._chromeos_root
+      rv = self._executer.RunCommand(command)
+      if rv:
+        self._l.LogWarning('Warning - failed to delete chroot.')
+
+    if self._cleanup == 'chromeos':
+      self._l.LogOutput('[Cleanup]: Deleting chromeos tree \'{0}\' ...'.format(
+        self._chromeos_root))
+      command = 'rm -fr {0}'.format(self._chromeos_root)
+      rv = self._executer.RunCommand(command)
+      if rv:
+        self._l.LogWarning('Warning - failed to remove chromeos tree.')
 
   def PrepareTestingRsaKeys(self):
     if not path.isfile(self._tmp_testing_rsa_abs):
@@ -161,33 +208,59 @@ class DejagnuExecuter(object):
       self.PrepareGccFromCustomizedPath()
     else:
       self.PrepareGccDefault()
-    print 'Gcc source dir - {0}'.format(self._gcc_source_dir)
-    print 'Gcc build dir - {0}'.format(self._gcc_top_build_dir)
+    self._l.LogOutput('Gcc source dir - {0}'.format(self._gcc_source_dir))
+    self._l.LogOutput('Gcc build dir - {0}'.format(self._gcc_top_build_dir))
 
   def PrepareGccFromCustomizedPath(self):
     """Prepare gcc source, build directory from mounted source."""
-    gcc_source_dir_abs = path.join(self._chromeos_chroot,
-                                   self._gcc_source_dir.lstrip('/'))
-    if not (path.islink(gcc_source_dir_abs) or
-            path.ismount(gcc_source_dir_abs) or
-            path.isdir(gcc_source_dir_abs)):
-      raise Exception('Not a valid gcc source dir:  {0}'.format(
-          gcc_source_dir_abs))
+    # We have these source directories -
+    #   _gcc_source_dir
+    #     e.g. '/usr/local/toolchain_root/gcc'
+    #   _gcc_source_dir_abs
+    #     e.g. '/somewhere/chromeos.live/chroot/usr/local/toolchain_root/gcc'
+    #   _gcc_source_dir_to_mount
+    #     e.g. '/somewhere/gcc'
+    self._gcc_source_dir_abs = path.join(self._chromeos_chroot,
+                                         self._gcc_source_dir.lstrip('/'))
+    if not path.isdir(self._gcc_source_dir_abs) and \
+          self._executer.RunCommand(
+      'sudo mkdir -p {0}'.format(self._gcc_source_dir_abs)):
+      raise Exception("Failed to create \'{0}\' inside chroot.".format(
+          self._gcc_source_dir))
+    if not (path.isdir(self._gcc_source_dir_to_mount) and path.isdir(
+      path.join(self._gcc_source_dir_to_mount, 'gcc'))):
+      raise Exception("{0} is not a valid gcc source tree.".format(
+          self._gcc_source_dir_to_mount))
 
+    # We have these build directories -
+    #   _gcc_top_build_dir
+    #     e.g. '/usr/local/toolchain_root/gcc-build-x86_64-cros-linux-gnu'
+    #   _gcc_top_build_dir_abs
+    #     e.g. '/somewhere/chromeos.live/chroo/tusr/local/toolchain_root/
+    #                 gcc-build-x86_64-cros-linux-gnu'
+    #   _gcc_build_dir
+    #     e.g. '/usr/local/toolchain_root/gcc-build-x86_64-cros-linux-gnu/gcc'
+    #   _gcc_build_dir_to_mount
+    #     e.g. '/somewhere/gcc-build-x86_64-cros-linux-gnu'
     self._gcc_top_build_dir = '{0}-build-{1}'.format(
         self._gcc_source_dir.rstrip('/'), self._target)
     self._gcc_build_dir = path.join(self._gcc_top_build_dir, 'gcc')
     self._gcc_build_dir_to_mount = '{0}-build-{1}'.format(
         self._gcc_source_dir_to_mount, self._target)
-
-    gcc_top_build_dir_abs = path.join(self._chromeos_chroot,
+    self._gcc_top_build_dir_abs = path.join(self._chromeos_chroot,
                                       self._gcc_top_build_dir.lstrip('/'))
-    if not path.isdir(gcc_top_build_dir_abs):
-      raise Exception('gcc build dir does not exist:  {0}'.
-                      format(gcc_top_build_dir_abs))
+    if not path.isdir(self._gcc_top_build_dir_abs) and \
+          self._executer.RunCommand(
+      'sudo mkdir -p {0}'.format(self._gcc_top_build_dir_abs)):
+      raise Exception('Failed to create \'{0}\' inside chroot.'.format(
+          self._gcc_top_build_dir))
+    if not (path.isdir(self._gcc_build_dir_to_mount) and path.join(
+        self._gcc_build_dir_to_mount, 'gcc')):
+      raise Exception('{0} is not a valid gcc build tree.'.format(
+          self._gcc_build_dir_to_mount))
 
-    self._gcc_source_dir_abs = gcc_source_dir_abs
-    self._gcc_top_build_dir_abs = gcc_top_build_dir_abs
+    # All check passed. Now mount gcc source and build directories.
+    self.MountGccSourceAndBuildDir()
 
   def PrepareGccDefault(self):
     """Auto emerging gcc for building purpose only."""
@@ -240,13 +313,13 @@ class DejagnuExecuter(object):
     ret = self._executer.ChrootRunCommand(
       self._chromeos_root, cmd, return_output=True)
     if ret[0] != 0:
-      print ('*** validate_failures.py exited with non-zero code,'
-             'please run it manually inside chroot - ')
-      print '   ' + cmd
+      self._l.LogWarning('*** validate_failures.py exited with non-zero code,'
+                         'please run it manually inside chroot - \n'
+                         '    ' + cmd)
     return ret
 
   # This method ensures necessary mount points before executing chroot comamnd.
-  def MountGccSourceAndBuildDir(self):
+  def MountGccSourceAndBuildDir(self, unmount=False):
     mount_points = [tc_enter_chroot.MountPoint(
           self._gcc_source_dir_to_mount, self._gcc_source_dir_abs,
           getpass.getuser(), "ro"),
@@ -254,9 +327,16 @@ class DejagnuExecuter(object):
           self._gcc_build_dir_to_mount, self._gcc_top_build_dir_abs,
           getpass.getuser(), "rw"),]
     for mp in mount_points:
-      if mp.DoMount():
+      if unmount:
+        if mp.UnMount():
+          raise Exception('Failed to unmount {0}'.format(mp.mount_dir))
+        else:
+          self._l.LogOutput('{0} unmounted successfully.'.format(mp.mount_dir))
+      elif mp.DoMount():
         raise Exception('Failed to mount {0} onto {1}'.format(
-          mp.external_dir, self.mount_dir))
+          mp.external_dir, mp.mount_dir))
+      else:
+        self._l.LogOutput('{0} mounted successfully.'.format(mp.mount_dir))
 
 
 def Main(argv):
@@ -264,7 +344,8 @@ def Main(argv):
   executer = DejagnuExecuter(misc.GetRoot(argv[0])[0],
                              opts.mount, opts.chromeos_root,
                              opts.remote, opts.board, opts.flags,
-                             opts.keep_intermediate_files, opts.tools)
+                             opts.keep_intermediate_files, opts.tools,
+                             opts.cleanup)
 
   machine = lock_machine.Machine(opts.remote)
 
@@ -293,7 +374,8 @@ def Main(argv):
     ret = (1, '', '', 'Exception happened during execution: \n' + str(e))
   finally:
     machine.Unlock(exclusive=True)
-    executer.CleanupTestingDir()
+    executer.CleanupIntermediateFiles()
+    executer.Cleanup()
     return ret
 
 if __name__ == '__main__':
