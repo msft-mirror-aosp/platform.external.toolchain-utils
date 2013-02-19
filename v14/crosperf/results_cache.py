@@ -55,16 +55,24 @@ class Result(object):
     self._CopyFilesTo(dest_dir, self.perf_report_files)
 
   def _GetKeyvals(self):
-    generate_test_report = os.path.join(self._chromeos_root,
-                                        "src",
-                                        "platform",
-                                        "crostestutils",
-                                        "utils_py",
-                                        "generate_test_report.py")
-    command = ("python %s --no-color --csv %s" %
-               (generate_test_report,
-                self.results_dir))
-    [_, out, _] = self._ce.RunCommand(command, return_output=True)
+    results_in_chroot = os.path.join(self._chromeos_root,
+                                     "src", "scripts")
+    if self._temp_dir:
+      new_temp = os.path.join(results_in_chroot,
+                              os.path.basename(self._temp_dir))
+      command = ("rm -rf {0} && ".format(new_temp))
+      command += ("mv {0} {1}".format(self._temp_dir, results_in_chroot))
+      self._temp_dir = new_temp
+    else:
+      self._temp_dir = tempfile.mkdtemp(dir=results_in_chroot)
+      command = "cp -r {0}/* {1}".format(self.results_dir, self._temp_dir)
+    self._ce.RunCommand(command)
+
+    command = ("python generate_test_report --no-color --csv %s" %
+               (os.path.basename(self._temp_dir)))
+    [_, out, _] = self._ce.ChrootRunCommand(self._chromeos_root,
+                                            command,
+                                            return_output=True)
     keyvals_dict = {}
     for line in out.splitlines():
       tokens = re.split("=|,", line)
