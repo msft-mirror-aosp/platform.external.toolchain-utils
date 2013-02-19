@@ -2,6 +2,7 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+import math
 from column_chart import ColumnChart
 from results_columns import IterationColumn
 from results_columns import IterationsCompleteColumn
@@ -16,6 +17,8 @@ from table import Table
 
 class ResultsReport(object):
   DELTA_COLUMN_NAME = "Change"
+  MAX_COLOR_CODE = 255
+  POWER_FACTOR = 4
 
   def __init__(self, experiment):
     self.experiment = experiment
@@ -23,6 +26,27 @@ class ResultsReport(object):
     self.labels = experiment.labels
     self.benchmarks = experiment.benchmarks
     self.baseline = self.labels[0]
+
+  def _GetColorCode(self, number):
+    if number < 1:
+      color = int(math.pow((1-number), 1.0/self.POWER_FACTOR)
+                  * self.MAX_COLOR_CODE)
+      color_string = ("%x" % color).upper()
+      if len(color_string) < 2:
+        color_string = "0"+color_string
+      color_string += "0000"
+    if number >= 1:
+      number = 2 - 1/number
+      color = int(math.pow((number - 1), 1.0/self.POWER_FACTOR)
+                  * self.MAX_COLOR_CODE)
+      cc = ("%x" % color).upper()
+      if len(cc) < 2:
+        cc = "0" + cc
+      color_string = "00"+cc+"00"
+    return color_string
+
+  def _ColorNumber(self, ss, color):
+    return "<FONT COLOR=#"+self._GetColorCode(float(color))+">"+ss+"</FONT>"
 
   def _IsLowerBetter(self, column, autotest_key):
     if ((autotest_key.find("milliseconds") == 0
@@ -92,7 +116,7 @@ class ResultsReport(object):
     for benchmark in benchmarks:
       table.AddRow([Table.Cell(benchmark.name)])
       autotest_keys = sorter.GetAutotestKeys(benchmark.name)
-      for autotest_key in autotest_keys:
+      for autotest_key in sorted(autotest_keys):
         row = [Table.Cell(autotest_key),
                Table.Cell(benchmark.iterations)]
         for label in labels:
@@ -106,13 +130,15 @@ class ResultsReport(object):
                                                  autotest_key,
                                                  self.baseline.name)
             value = column.Compute(results, baseline_results)
+
             if isinstance(value, float):
               if self._IsLowerBetter(column, autotest_key):
                 value = 1/value
-              value_string = value_string = "%.2f" % value
+              value_string = "%.2f" % value
+              if column.name == self.DELTA_COLUMN_NAME:
+                value_string = self._ColorNumber(value_string, value_string)
             else:
               value_string = value
-
             row.append(Table.Cell(value_string))
 
         table.AddRow(row)
