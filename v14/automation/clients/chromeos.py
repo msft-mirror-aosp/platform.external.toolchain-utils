@@ -60,7 +60,7 @@ class ChromeOSNightlyClient(object):
                   '--remote=%s' % self._remote,
                   '--githashes=%s' % self._gcc_githash))
     label = 'testlabel'
-    job = jobs.CreateLinuxJob(label, chain, timeout=12*60*60)
+    job = jobs.CreateLinuxJob(label, chain, timeout=24*60*60)
 
     return job_group.JobGroup(label, [job], True, False)
 
