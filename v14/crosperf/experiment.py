@@ -48,6 +48,7 @@ class Experiment(object):
 
     for machine in remote:
       self.machine_manager.AddMachine(machine)
+    self.machine_manager.ComputeCommonCheckSum()
 
     self.start_time = None
     self.benchmark_runs = self._GenerateBenchmarkRuns()

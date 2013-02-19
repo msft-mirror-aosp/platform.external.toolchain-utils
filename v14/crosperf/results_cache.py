@@ -258,19 +258,18 @@ class ResultsCache(object):
   CACHE_VERSION = 4
 
   def Init(self, chromeos_image, chromeos_root, autotest_name, iteration,
-           autotest_args, remote, board, cache_conditions,
-           logger_to_use, machine_checksum):
+           autotest_args, machine_manager, board, cache_conditions,
+           logger_to_use):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.autotest_name = autotest_name
     self.iteration = iteration
     self.autotest_args = autotest_args,
-    self.remote = remote
     self.board = board
     self.cache_conditions = cache_conditions
+    self.machine_manager = machine_manager
     self._logger = logger_to_use
     self._ce = command_executer.GetCommandExecuter(self._logger)
-    self.machine_checksum = machine_checksum
 
   def _GetCacheDirForRead(self):
     glob_path = self._FormCacheDir(self._GetCacheKeyList(True))
@@ -298,7 +297,7 @@ class ResultsCache(object):
     if read and CacheConditions.MACHINES_MATCH not in self.cache_conditions:
       machine_checksum = "*"
     else:
-      machine_checksum = self.machine_checksum
+      machine_checksum = self.machine_manager.machine_checksum
     if read and CacheConditions.CHECKSUMS_MATCH not in self.cache_conditions:
       checksum = "*"
     else:

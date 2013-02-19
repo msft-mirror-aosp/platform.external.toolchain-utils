@@ -3,7 +3,6 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 import datetime
-import hashlib
 import os
 import re
 import threading
@@ -64,27 +63,15 @@ class BenchmarkRun(threading.Thread):
     try:
       # Just use the first machine for running the cached version,
       # without locking it.
-      self.machine_checksum = ""
-      for machine in self.machine_manager.GetMachines():
-        if machine.cpuinfo:
-          machine_string = (machine.cpuinfo+
-                            machine.total_memory)
-          self.machine_checksum = hashlib.md5(machine_string).hexdigest()
-          break
-      if not self.machine_checksum:
-        self.machine_checksum = "*"
-        self._logger.LogWarning("No machine available, check cache only")
-
       self.cache.Init(self.chromeos_image,
                       self.chromeos_root,
                       self.autotest_name,
                       self.iteration,
                       self.autotest_args,
-                      self.machine_manager.GetMachines()[0].name,
+                      self.machine_manager,
                       self.board,
                       self.cache_conditions,
                       self._logger,
-                      self.machine_checksum
                      )
 
       self.result = self.cache.ReadResult()

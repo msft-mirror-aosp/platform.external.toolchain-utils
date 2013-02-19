@@ -1,3 +1,4 @@
+import hashlib
 import sys
 import threading
 import time
@@ -22,6 +23,7 @@ class CrosMachine(object):
     self.chromeos_root = chromeos_root
     self._GetMemoryInfo()
     self._GetCPUInfo()
+    self._ComputeChecksum()
 
   def _ParseMemoryInfo(self, meminfo):
     for line in meminfo.splitlines():
@@ -37,6 +39,7 @@ class CrosMachine(object):
     ret, self.meminfo, _ = ce.CrosRunCommand(
         command, return_output=True,
         machine=self.name, username="root", chromeos_root=self.chromeos_root)
+    assert ret == 0, "Could not get meminfo from machine: %s" % self.name
     if ret == 0:
       self._ParseMemoryInfo(self.meminfo)
 
@@ -51,8 +54,21 @@ class CrosMachine(object):
     ret, self.cpuinfo, _ = ce.CrosRunCommand(
         command, return_output=True,
         machine=self.name, username="root", chromeos_root=self.chromeos_root)
+    assert ret == 0, "Could not get cpuinfo from machine: %s" % self.name
     if ret == 0:
       self._ParseCPUInfo(self.cpuinfo)
+
+  def _ComputeChecksum(self):
+    checksum_string = ""
+    exclude_lines_list = ["MHz", "BogoMIPS", "bogomips"]
+    for line in self.cpuinfo.splitlines():
+      if not any([e in line for e in exclude_lines_list]):
+        checksum_string += line
+    checksum_string += self.total_memory
+    if checksum_string:
+      self.checksum = hashlib.md5(checksum_string).hexdigest()
+    else:
+      self.checksum = ""
 
   def __str__(self):
     l = []
@@ -103,6 +119,13 @@ class MachineManager(object):
 
     return retval
 
+  def ComputeCommonCheckSum(self):
+    self.machine_checksum = ""
+    for machine in self.GetMachines():
+      if machine.checksum:
+        self.machine_checksum = machine.checksum
+        break
+
   def _TryToLockMachine(self, cros_machine):
     with self._lock:
       assert cros_machine, "Machine can't be None"
@@ -124,27 +147,20 @@ class MachineManager(object):
           cros_machine.checksum = out.strip()
       else:
         logger.GetLogger().LogOutput("Couldn't lock: %s" % cros_machine.name)
-  
+
   # This is called from single threaded mode.
   def AddMachine(self, machine_name):
     with self._lock:
       for m in self._all_machines:
         assert m.name != machine_name, "Tried to double-add %s" % machine_name
-      self._all_machines.append(CrosMachine(machine_name, self.chromeos_root))
+      cm = CrosMachine(machine_name, self.chromeos_root)
+      assert cm.checksum, ("Could not find checksum for machine %s" %
+                           machine_name)
+      self._all_machines.append(cm)
 
   def AreAllMachineSame(self):
-    machines = self.GetMachines()
-    if len(machines) < 2:
-      return True
-    _total_mem = ""
-    for m in machines:
-      if _total_mem == "":
-        _total_mem = m.total_memory
-        _cpuinfo = m.cpuinfo
-      else:
-        if _total_mem != m.total_memory or _cpuinfo != m.cpuinfo:
-          return False
-    return True
+    checksums = [m.checksum for m in self.GetMachines()]
+    return len(set(checksums)) == 1
 
   def AcquireMachine(self, chromeos_image):
     image_checksum = ImageChecksummer().Checksum(chromeos_image)
@@ -156,7 +172,7 @@ class MachineManager(object):
         self.initialized = True
         for m in self._all_machines:
           m.released_time = time.time()
-       
+
       if not self.AreAllMachineSame():
         logger.GetLogger().LogFatal("-- not all the machine are identical")
       if not self._machines:
