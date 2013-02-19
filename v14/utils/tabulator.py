@@ -677,6 +677,7 @@ class TablePrinter(object):
   CONSOLE = 1
   HTML = 2
   TSV = 3
+  EMAIL = 4
 
   def __init__(self, table, output_type):
     """Constructor that stores the cell table and output type."""
@@ -711,7 +712,7 @@ class TablePrinter(object):
       prefix, _ = colortrans.rgb2short(rgb)
       prefix = "\033[48;5;%sm" % prefix
       suffix = "\033[0m"
-    elif self._output_type == self.HTML:
+    elif self._output_type in [self.EMAIL, self.HTML]:
       rgb = color.GetRGB()
       prefix = ("<FONT style=\"BACKGROUND-COLOR:#{0}\" color =#{0}>"
                 .format(rgb))
@@ -727,7 +728,7 @@ class TablePrinter(object):
       prefix, _ = colortrans.rgb2short(rgb)
       prefix = "\033[38;5;%sm" % prefix
       suffix = "\033[0m"
-    elif self._output_type == self.HTML:
+    elif self._output_type in [self.EMAIL, self.HTML]:
       rgb = color.GetRGB()
       prefix = "<FONT COLOR=#{0}>".format(rgb)
       suffix = "</FONT>"
@@ -769,7 +770,7 @@ class TablePrinter(object):
       p, s = self._GetBGColorFix(bgcolor)
       out = "%s%s%s" % (p, out, s)
 
-    if self._output_type in [self.PLAIN, self.CONSOLE]:
+    if self._output_type in [self.PLAIN, self.CONSOLE, self.EMAIL]:
       if cell.width:
         width = cell.width
       else:
@@ -777,6 +778,10 @@ class TablePrinter(object):
           width = self._column_styles[j].width
         else:
           width = len(cell.string_value)
+      if cell.colspan > 1:
+        width = 0
+        for k in range(cell.colspan):
+          width += self._column_styles[1 + (j-1) * cell.colspan + k].width
       if width > raw_width:
         padding = ("%" + str(width - raw_width) + "s") % ""
         out = padding + out
@@ -791,7 +796,7 @@ class TablePrinter(object):
     return out
 
   def _GetHorizontalSeparator(self):
-    if self._output_type in [self.PLAIN, self.CONSOLE]:
+    if self._output_type in [self.CONSOLE, self.PLAIN, self.EMAIL]:
       return " "
     if self._output_type == self.HTML:
       return "&nbsp;"
@@ -799,19 +804,19 @@ class TablePrinter(object):
       return "\t"
 
   def _GetVerticalSeparator(self):
-    if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV]:
+    if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV, self.EMAIL]:
       return "\n"
     if self._output_type == self.HTML:
       return "</tr>\n<tr>"
 
   def _GetPrefix(self):
-    if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV]:
+    if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV, self.EMAIL]:
       return ""
     if self._output_type == self.HTML:
       return "<p></p><table id=\"box-table-a\">\n<tr>"
 
   def _GetSuffix(self):
-    if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV]:
+    if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV, self.EMAIL]:
       return ""
     if self._output_type == self.HTML:
       return "</tr>\n</table>"
@@ -902,7 +907,8 @@ def GetSimpleTableWithAverage(runs, labels, out_to="CONSOLE"):
     tp = TablePrinter(cell_table, TablePrinter.PLAIN)
   elif out_to == "TSV":
     tp = TablePrinter(cell_table, TablePrinter.TSV)
-
+  elif out_to == "EMAIL":
+    tp = TablePrinter(cell_table, TablePrinter.EMAIL)
   return tp.Print()
 
 if __name__ == "__main__":
@@ -923,7 +929,7 @@ if __name__ == "__main__":
   labels = ["vanilla", "modified"]
   t = GetSimpleTableWithAverage(runs, labels, "PLAIN")
   print t
-  email = GetSimpleTableWithAverage(runs, labels, "HTML")
+  email = GetSimpleTableWithAverage(runs, labels, "EMAIL")
 
   simple_table = [
       ["binary", "b1", "b2", "b3"],

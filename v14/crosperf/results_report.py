@@ -311,8 +311,8 @@ Experiment File
     return self.TEXT % (self.experiment.name,
                         self.GetStatusTable().ToText(),
                         self.experiment.machine_manager.num_reimages,
-                        self.PrintTables(summary_table, "HTML"),
-                        self.PrintTables(full_table, "HTML"),
+                        self.PrintTables(summary_table, "EMAIL"),
+                        self.PrintTables(full_table, "EMAIL"),
                         #full_table.ToText(80),
                         self.experiment.experiment_file)
 
