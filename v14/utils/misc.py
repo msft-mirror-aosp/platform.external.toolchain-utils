@@ -64,8 +64,8 @@ def GetFilenameFromString(string):
   return ApplySubs(string,
                    ("/", "__"),
                    ("\s", "_"),
-                   ("=", ""),
-                   ("\"", ""))
+                   ("[\^\$=\"\\\?]", ""),
+                   )
 
 
 def GetRoot(scr_name):

@@ -14,7 +14,7 @@ import misc
 
 class UtilsTest(unittest.TestCase):
   def testGetFilenameFromString(self):
-    string = 'a /b=c"d'
+    string = 'a /b=c"d^$?\\'
     filename = misc.GetFilenameFromString(string)
     self.assertTrue(filename == 'a___bcd')
 
