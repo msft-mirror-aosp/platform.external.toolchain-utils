@@ -155,48 +155,86 @@ class ResultsReport(object):
 
     return table
 
-  def GetNewTable(self):
-     return self._GetTables(self.labels, self.benchmark_runs)
+  def GetFullTables(self):
+    columns = [Column(NonEmptyCountResult(),
+                      Format(),
+                      "Completed"),
+               Column(RawResult(),
+                      Format()),
+               Column(MinResult(),
+                      Format()),
+               Column(MaxResult(),
+                      Format()),
+               Column(AmeanResult(),
+                      Format()),
+               Column(StdResult(),
+                      Format())
+              ]
+    return self._GetTables(self.labels, self.benchmark_runs, columns)
 
-  def _GetTables(self, labels, benchmark_runs):
-    out_to = "HTML"
+  def GetSummaryTables(self):
+    columns = [Column(AmeanResult(),
+                      Format()),
+               Column(GmeanRatioResult(),
+                      RatioFormat(),"GmeanSpeedup"),
+               Column(GmeanRatioResult(),
+                      ColorBoxFormat(), " "),
+               Column(StatsSignificant(),
+                      Format(), "p-value")
+              ]
+    return self._GetTables(self.labels, self.benchmark_runs, columns)
+
+  def _ParseColumn(self, columns, iteration):
+    new_column = []
+    for column in columns:
+      if column.result.__class__.__name__ != "RawResult":
+      #TODO(asharif): tabulator should support full table natively.
+        new_column.append(column)
+      else:
+        for i in range(iteration):
+          cc = Column(LiteralResult(i), Format(), str(i+1))
+          new_column.append(cc)
+    return new_column
+
+  def _GetTables(self, labels, benchmark_runs, columns):
+    tables = []
     ro = ResultOrganizer(benchmark_runs, labels)
     result = ro.result
     label_name = ro.labels
-    output = ""
     for item in result:
       runs = result[item]
       tg = TableGenerator(runs, label_name)
       table = tg.GetTable()
-      columns = [Column(AmeanResult(),
-                        Format()),
-                 Column(GmeanRatioResult(),
-                        RatioFormat(),"GmeanSpeedup"),
-                 Column(GmeanRatioResult(),
-                        ColorBoxFormat(), " "),
-                 Column(StatsSignificant(),
-                        Format(), "p-value")
-                ]
       for benchmark in self.benchmarks:
         if benchmark.name == item:
           break
       benchmark_info = ("Benchmark:  {0};  Iterations: {1}"
                          .format(benchmark.name, benchmark.iterations))
+      columns = self._ParseColumn(columns, benchmark.iterations)
       tf = TableFormatter(table, columns)
       cell_table = tf.GetCellTable()
       cell = Cell()
       cell.string_value = benchmark_info
       ben_table = [[cell]]
+      tables.append(ben_table)
+      tables.append(cell_table)
+    return tables
+
+  def PrintTables(self, tables, out_to):
+    output = ""
+    for table in tables:
       if out_to == "HTML":
-        bp = TablePrinter(ben_table, TablePrinter.HTML)
-        tp = TablePrinter(cell_table, TablePrinter.HTML)
+        tp = TablePrinter(table, TablePrinter.HTML)
+      elif out_to == "PLAIN":
+        tp = TablePrinter(table, TablePrinter.PLAIN)
+      elif out_to == "CONSOLE":
+        tp = TablePrinter(table, TablePrinter.CONSOLE)
+      elif out_to == "TSV":
+        tp = TablePrinter(table, TablePrinter.TSV)
       else:
-        bp = TablePrinter(ben_table, TablePrinter.HTML)
-        tp = TablePrinter(cell_table, TablePrinter.CONSOLE)
-      output += bp.Print()
+        pass
       output += tp.Print()
     return output
-
 class TextResultsReport(ResultsReport):
   TEXT = """
 ===========================================
@@ -227,9 +265,9 @@ Experiment File
 ===========================================
 """
 
-  def __init__(self, experiment, color=False):
+  def __init__(self, experiment, email=False):
     super(TextResultsReport, self).__init__(experiment)
-    self.color = color
+    self.email = email
 
   def GetStatusTable(self):
     status_table = Table("status")
@@ -240,28 +278,31 @@ Experiment File
     return status_table
 
   def GetReport(self):
-    if not self.color:
+    summary_table = self.GetSummaryTables()
+    full_table = self.GetFullTables()
+    if not self.email:
       return self.TEXT % (self.experiment.name,
                           self.GetStatusTable().ToText(),
                           self.experiment.machine_manager.num_reimages,
-                          self.GetSummaryTable().ToText(80),
-                          self.GetFullTable().ToText(80),
+                          self.PrintTables(summary_table, "CONSOLE"),
+                          self.PrintTables(full_table, "CONSOLE"),
+                          #self.GetFullTable().ToText(80),
                           self.experiment.experiment_file)
 
-    summary_table = self.GetSummaryTable()
-    full_table = self.GetFullTable()
-    summary_table.AddColor()
-    full_table.AddColor()
+    #summary_table = self.GetSummaryTables()
+    #full_table = self.GetFullTable()
+    #full_table.AddColor()
     return self.TEXT % (self.experiment.name,
                         self.GetStatusTable().ToText(),
                         self.experiment.machine_manager.num_reimages,
-                        self.GetNewTable(),
-                        #summary_table.ToText(120),
-                        full_table.ToText(80),
+                        self.PrintTables(summary_table, "HTML"),
+                        self.PrintTables(full_table, "HTML"),
+                        #full_table.ToText(80),
                         self.experiment.experiment_file)
 
 
 class HTMLResultsReport(ResultsReport):
+
   HTML = """
 <html>
   <head>
@@ -410,19 +451,17 @@ pre {
     for chart in charts:
       chart_divs += chart.GetDiv()
 
-    summary_table = self.GetSummaryTable()
-    summary_table.AddColor()
-    full_table = self.GetFullTable()
-    full_table.AddColor()
+    summary_table = self.GetSummaryTables()
+    full_table = self.GetFullTables()
     return self.HTML % (chart_javascript,
-                        summary_table.ToHTML(),
-                        summary_table.ToText(),
-                        summary_table.ToTSV(),
+                        self.PrintTables(summary_table, "HTML"),
+                        self.PrintTables(summary_table, "PLAIN"),
+                        self.PrintTables(summary_table, "TSV"),
                         self._GetTabMenuHTML("summary"),
                         chart_divs,
-                        full_table.ToHTML(),
-                        full_table.ToText(),
-                        full_table.ToTSV(),
+                        self.PrintTables(full_table, "HTML"),
+                        self.PrintTables(full_table, "PLAIN"),
+                        self.PrintTables(full_table, "TSV"),
                         self._GetTabMenuHTML("full"),
                         self.experiment.experiment_file)
 
@@ -456,14 +495,13 @@ pre {
         chart.AddSeries("Min", "line", "black")
         chart.AddSeries("Max", "line", "black")
         cur_index = 1
-        no_chart = False
         for label in ro.labels:
           chart.AddRow([label, cur_row_data[cur_index].value,
                         cur_row_data[cur_index + 1].value,
                         cur_row_data[cur_index + 2].value])
           if isinstance(cur_row_data[cur_index].value, str):
             chart = None
-          break
+            break
           cur_index += 3
         if chart:
           charts.append(chart)
