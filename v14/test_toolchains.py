@@ -29,7 +29,7 @@ class ChromeOSCheckout(object):
     self._l = logger.GetLogger()
 
   def _DeleteChroot(self):
-    command = "cd %s; cros_sdk --delete" % self.chromeos_root
+    command = "cd %s; cros_sdk --delete" % self._chromeos_root
     return self._ce.RunCommand(command)
 
   def _BuildAndImage(self, label=""):
