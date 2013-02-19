@@ -1,2 +1,2 @@
 #!/bin/bash
-PYTHONPATH=$PYTHONPATH:$(dirname $0)/.. python $(dirname $0)/crosperf.py "$@"
+PYTHONPATH=$(dirname $0)/..:$PYTHONPATH python $(dirname $0)/crosperf.py "$@"
