@@ -172,7 +172,7 @@ class FileLock(object):
 
 
 class Lock(object):
-  def __init__(self, lock_file, auto=False):
+  def __init__(self, lock_file, auto=True):
     self._to_lock = os.path.basename(lock_file)
     self._lock_file = lock_file
     self._logger = logger.GetLogger()
@@ -246,7 +246,7 @@ class Lock(object):
 class Machine(object):
   LOCKS_DIR = "/home/mobiletc-prebuild/locks"
 
-  def __init__(self, name, locks_dir=LOCKS_DIR, auto=False):
+  def __init__(self, name, locks_dir=LOCKS_DIR, auto=True):
     self._name = name
     self._auto = auto
     try:
@@ -315,13 +315,6 @@ def Main(argv):
                     action="store",
                     default=Machine.LOCKS_DIR,
                     help="Use this to set different locks_dir")
-  parser.add_option("-a",
-                    "--auto",
-                    dest="auto",
-                    action="store_true",
-                    default=False,
-                    help=("Use this to automatic unlock when"
-                          " the process is gone."))
 
   options, args = parser.parse_args(argv)
 
@@ -334,7 +327,7 @@ def Main(argv):
     return 1
 
   if len(args) > 1:
-    machine = Machine(args[1], options.locks_dir, options.auto)
+    machine = Machine(args[1], options.locks_dir, auto=False)
   else:
     machine = None
 
