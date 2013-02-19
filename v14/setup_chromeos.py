@@ -12,7 +12,10 @@ __author__ = "raymes@google.com (Raymes Khoury)"
 
 import getpass
 import optparse
+import os
 import sys
+import tempfile
+import time
 from utils import command_executer
 from utils import logger
 
@@ -35,6 +38,29 @@ def Usage(parser):
   sys.exit(0)
 
 
+def TimeToVersion(my_time, versions_git):
+  """Convert timestamp to version number."""
+  cur_time = time.mktime(time.gmtime())
+  des_time = float(my_time)
+  if cur_time - des_time > 7000000:
+    logger.GetLogger().LogFatal("The time you specify is too early.")
+  temp = tempfile.mkdtemp()
+  commands = ["cd {0}".format(temp), "git clone {0}".format(versions_git),
+              "cd manifest-versions", "git checkout -f $(git rev-list" +
+              " --max-count=1 --before={0} origin/master)".format(my_time)]
+  cmd_executer = command_executer.GetCommandExecuter()
+  ret = cmd_executer.RunCommands(commands)
+  if ret:
+    return None
+  path = os.path.realpath("{0}/manifest-versions/LKGM/lkgm.xml".format(temp))
+  pp = path.split("/")
+  small = os.path.basename(path).split(".xml")[0]
+  version = pp[-2] + "." + small
+  commands = ["rm -rf {0}".format(temp)]
+  cmd_executer.RunCommands(commands)
+  return version
+
+
 def Main(argv):
   """Checkout the ChromeOS source."""
   parser = optparse.OptionParser()
@@ -44,6 +70,10 @@ def Main(argv):
                     help="""ChromeOS version. Can be: (1) A release version
 in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
 'top' for top of trunk. Default is 'latest'""")
+  parser.add_option("--timestamp", dest="timestamp", default=None,
+                    help="""Timestamps in epoch format. It will check out the
+latest LKGM version of ChromeOS before the timestamp. It will also overide
+the version option.""")
   parser.add_option("--minilayout", dest="minilayout", default=False,
                     action="store_true",
                     help="""Whether to checkout the minilayout 
@@ -62,6 +92,11 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
   else:
     version = options.version.strip()
 
+  if not options.timestamp:
+    timestamp = ""
+  else:
+    timestamp = options.timestamp.strip()
+
   if not options.directory:
     parser.print_help()
     logger.GetLogger().LogFatal("No directory specified.")
@@ -77,14 +112,22 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
     versions_repo = (
         "ssh://gerrit-int.chromium.org:29419/chromeos/manifest-versions.git")
 
-  if version in ["top", "latest"]:
+  if timestamp:
+    my_version = TimeToVersion(timestamp, versions_repo)
+    if my_version:
+      version = my_version
+
+  if version == "top":
     init = "repo init -u %s" % manifest_repo
-    if options.minilayout:
-      init += " -m minilayout.xml"
   else:
+    if version =="latest":
+      version = TimeToVersion(time.mktime(time.gmtime()), versions_repo)
     version, manifest = version.split(".", 1)
     init = ("repo init -u %s -m paladin/buildspecs/%s/%s.xml" % (
-        versions_repo, version, manifest))
+            versions_repo, version, manifest))
+  if options.minilayout:
+    init += " -m minilayout.xml"
+
   init += " --repo-url=http://git.chromium.org/external/repo.git"
 
   commands = ["mkdir -p %s" % directory,
