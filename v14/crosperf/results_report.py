@@ -6,6 +6,7 @@ from utils.tabulator import *
 
 from column_chart import ColumnChart
 from results_organizer import ResultOrganizer
+from perf_table import PerfTable
 
 
 class ResultsReport(object):
@@ -26,7 +27,7 @@ class ResultsReport(object):
       labels[benchmark_run.label_name].append(benchmark_run)
     return labels
 
-  def GetFullTables(self):
+  def GetFullTables(self, perf=False):
     columns = [Column(NonEmptyCountResult(),
                       Format(),
                       "Completed"),
@@ -41,9 +42,11 @@ class ResultsReport(object):
                Column(StdResult(),
                       Format())
               ]
-    return self._GetTables(self.labels, self.benchmark_runs, columns)
+    if not perf:
+      return self._GetTables(self.labels, self.benchmark_runs, columns)
+    return self. _GetPerfTables(self.labels, columns)
 
-  def GetSummaryTables(self):
+  def GetSummaryTables(self, perf=False):
     columns = [Column(NonEmptyCountResult(),
                       Format(),
                       "Completed"),
@@ -60,7 +63,9 @@ class ResultsReport(object):
                Column(PValueResult(),
                       PValueFormat(), "p-value")
               ]
-    return self._GetTables(self.labels, self.benchmark_runs, columns)
+    if not perf:
+      return self._GetTables(self.labels, self.benchmark_runs, columns)
+    return self. _GetPerfTables(self.labels, columns)
 
   def _ParseColumn(self, columns, iteration):
     new_column = []
@@ -81,6 +86,14 @@ class ResultsReport(object):
           return False
     return True
 
+  def _GetTableHeader(self, benchmark):
+    benchmark_info = ("Benchmark:  {0};  Iterations: {1}"
+                      .format(benchmark.name, benchmark.iterations))
+    cell = Cell()
+    cell.string_value = benchmark_info
+    cell.header = True
+    return  [[cell]]
+
   def _GetTables(self, labels, benchmark_runs, columns):
     tables = []
     ro = ResultOrganizer(benchmark_runs, labels, self.benchmarks)
@@ -91,11 +104,7 @@ class ResultsReport(object):
       for benchmark in self.benchmarks:
         if benchmark.name == item:
           break
-      benchmark_info = ("Benchmark:  {0};  Iterations: {1}"
-                         .format(benchmark.name, benchmark.iterations))
-      cell = Cell()
-      cell.string_value = benchmark_info
-      ben_table = [[cell]]
+      ben_table = self._GetTableHeader(benchmark)
 
       if  self._AreAllRunsEmpty(runs):
         cell = Cell()
@@ -112,8 +121,41 @@ class ResultsReport(object):
       tables.append(cell_table)
     return tables
 
+  def _GetPerfTables(self, labels, columns):
+    tables = []
+    label_names = [label.name for label in labels]
+    p_table = PerfTable(self.experiment, label_names)
+
+    if not p_table.perf_data:
+      return tables
+
+    for benchmark in p_table.perf_data:
+      ben = None
+      for ben in self.benchmarks:
+        if ben.name == benchmark:
+          break
+
+      ben_table = self._GetTableHeader(ben)
+      tables.append(ben_table)
+      benchmark_data = p_table.perf_data[benchmark]
+      table = []
+      for event in benchmark_data:
+        tg = TableGenerator(benchmark_data[event], label_names)
+        table = tg.GetTable()
+        parsed_columns = self._ParseColumn(columns, ben.iterations)
+        tf = TableFormatter(table, parsed_columns)
+        tf.GenerateCellTable()
+        tf.AddColumnName()
+        tf.AddLabelName()
+        tf.AddHeader(str(event))
+        table = tf.GetCellTable(headers=False)
+        tables.append(table)
+    return tables
+
   def PrintTables(self, tables, out_to):
     output = ""
+    if not tables:
+      return output
     for table in tables:
       if out_to == "HTML":
         tp = TablePrinter(table, TablePrinter.HTML)
@@ -129,6 +171,8 @@ class ResultsReport(object):
         pass
       output += tp.Print()
     return output
+
+
 class TextResultsReport(ResultsReport):
   TEXT = """
 ===========================================
@@ -147,6 +191,13 @@ Number re-images: %s
 Benchmark Run Status
 -------------------------------------------
 %s
+
+
+-------------------------------------------
+Perf Data
+-------------------------------------------
+%s
+
 
 
 Experiment File
@@ -183,11 +234,15 @@ CPUInfo
     status_table = self.GetStatusTable()
     summary_table = self.GetSummaryTables()
     full_table = self.GetFullTables()
+    perf_table = self.GetSummaryTables(perf=True)
+    if not perf_table:
+      perf_table = None
     if not self.email:
       return self.TEXT % (self.experiment.name,
                           self.PrintTables(summary_table, "CONSOLE"),
                           self.experiment.machine_manager.num_reimages,
                           self.PrintTables(status_table, "CONSOLE"),
+                          self.PrintTables(perf_table, "CONSOLE"),
                           self.experiment.experiment_file,
                           self.experiment.machine_manager.GetAllCPUInfo(
                               self.experiment.labels))
@@ -196,6 +251,7 @@ CPUInfo
                         self.PrintTables(summary_table, "EMAIL"),
                         self.experiment.machine_manager.num_reimages,
                         self.PrintTables(status_table, "EMAIL"),
+                        self.PrintTables(perf_table, "EMAIL"),
                         self.experiment.experiment_file,
                         self.experiment.machine_manager.GetAllCPUInfo(
                             self.experiment.labels))
@@ -283,6 +339,7 @@ pre {
       google.setOnLoadCallback(init);
       function init() {
         switchTab('summary', 'html');
+        %s
         switchTab('full', 'html');
         drawTable();
       }
@@ -308,6 +365,7 @@ pre {
       </div>
       %s
     </div>
+    %s
     <div class='results-section'>
       <div class='results-section-title'>Charts</div>
       <div class='results-section-content'>%s</div>
@@ -329,6 +387,18 @@ pre {
     </div>
   </body>
 </html>
+"""
+
+  PERF_HTML = """
+    <div class='results-section'>
+      <div class='results-section-title'>Perf Table</div>
+      <div class='results-section-content'>
+        <div id='perf-html'>%s</div>
+        <div id='perf-text'><pre>%s</pre></div>
+        <div id='perf-tsv'><pre>%s</pre></div>
+      </div>
+      %s
+    </div>
 """
 
   def __init__(self, experiment):
@@ -353,11 +423,26 @@ pre {
 
     summary_table = self.GetSummaryTables()
     full_table = self.GetFullTables()
-    return self.HTML % (chart_javascript,
+    perf_table = self.GetSummaryTables(perf=True)
+    if perf_table:
+      perf_html = self.PERF_HTML % (
+          self.PrintTables(perf_table, "HTML"),
+          self.PrintTables(perf_table, "PLAIN"),
+          self.PrintTables(perf_table, "TSV"),
+          self._GetTabMenuHTML("perf")
+          )
+      perf_init = "switchTab('perf', 'html');"
+    else:
+      perf_html = ""
+      perf_init = ""
+
+    return self.HTML % (perf_init,
+                        chart_javascript,
                         self.PrintTables(summary_table, "HTML"),
                         self.PrintTables(summary_table, "PLAIN"),
                         self.PrintTables(summary_table, "TSV"),
                         self._GetTabMenuHTML("summary"),
+                        perf_html,
                         chart_divs,
                         self.PrintTables(full_table, "HTML"),
                         self.PrintTables(full_table, "PLAIN"),
