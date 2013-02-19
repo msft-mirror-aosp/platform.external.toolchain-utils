@@ -204,7 +204,8 @@ class CommandExecuter:
   def ChrootRunCommand(self, chromeos_root, command, return_output=False,
                        command_terminator=None, command_timeout=None,
                        terminated_timeout=10,
-                       print_to_console=True):
+                       print_to_console=True,
+                       cros_sdk_options=""):
     self.logger.LogCmd(command, print_to_console)
 
     handle, command_file = tempfile.mkstemp(dir=os.path.join(chromeos_root,
@@ -217,8 +218,8 @@ class CommandExecuter:
 
     os.chmod(command_file, 0777)
 
-    command = "cd %s; cros_sdk -- ./%s" % (chromeos_root,
-                                           os.path.basename(command_file))
+    command = "cd %s; cros_sdk %s -- ./%s" % (chromeos_root, cros_sdk_options,
+                                              os.path.basename(command_file))
     ret = self.RunCommand(command, return_output,
                           command_terminator=command_terminator,
                           command_timeout=command_timeout,

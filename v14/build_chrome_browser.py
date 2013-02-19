@@ -43,7 +43,8 @@ def Main(argv):
                     dest="clean",
                     default=False,
                     action="store_true",
-                    help="Clean the /var/cache/chromeos-chrome/chrome-src/src/out_$board dir")
+                    help=("Clean the /var/cache/chromeos-chrome/"
+                          "chrome-src/src/out_$board dir"))
   parser.add_option("--env",
                     dest="env",
                     default="",
@@ -68,6 +69,8 @@ def Main(argv):
                     default="",
                     dest="build_image_args",
                     help="Optional arguments to build_image.")
+  parser.add_option("--cros_workon", dest="cros_workon",
+                    help="Build using external source tree.")
 
   options = parser.parse_args(argv)[0]
 
@@ -93,6 +96,11 @@ def Main(argv):
   else:
     ebuild_version = "chromeos-chrome"
 
+  if options.cros_workon and not (
+    os.path.isdir(options.cros_workon) and os.path.exists(
+      os.path.join(options.cros_workon, "src/chromeos/chromeos.gyp"))):
+    Usage(parser, "--cros_workon must be a valid chromium browser checkout.")
+
   options.env = misc.MergeEnvStringWithDict(options.env,
                                             {"USE": "chrome_internal"})
   if options.clean:
@@ -105,28 +113,59 @@ def Main(argv):
                            % options.board)
     if os.path.exists(out_dir):
       shutil.rmtree(out_dir)
-    out_dir = os.path.join(options.chromeos_root,
-                           "chroot",
-                           "var/cache/chromeos-chrome/chrome-src-internal/src/out_%s"
-                           % options.board)
+    out_dir = os.path.join(
+      options.chromeos_root, "chroot",
+      "var/cache/chromeos-chrome/chrome-src-internal/src/out_%s".format(
+        options.board))
     if os.path.exists(out_dir):
       shutil.rmtree(out_dir)
 
+  chrome_origin="SERVER_SOURCE"
+  if options.cros_workon:
+    chrome_origin="LOCAL_SOURCE"
+    command = 'cros_workon --board={0} start chromeos-chrome'.format(
+      options.board)
+    ret = cmd_executer.ChrootRunCommand(
+      options.chromeos_root, command, return_output=True)
+
+    # cros_workon start returns non-zero if chromeos-chrome is already a
+    # cros_workon package.
+    if ret[0] and ret[2].find(
+      "WARNING : Already working on chromeos-base/chromeos-chrome") == -1:
+      logger.GetLogger().LogFatal("cros_workon chromeos-chrome failed.")
+
+    # Return value is non-zero means we do find the "Already working on..."
+    # message, keep the information, so later on we do not revert the
+    # cros_workon status.
+    cros_workon_keep = (ret[0] != 0)
+
   # Emerge the browser
-  ret = (cmd_executer.
-         ChrootRunCommand(options.chromeos_root,
-                          "CHROME_ORIGIN=SERVER_SOURCE %s "
-                          "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
-                          "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
-                          "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
-                          "%s "
-                          "emerge-%s --buildpkg %s" %
-                          (chrome_version, options.board, options.cflags,
-                           options.board, options.ldflags, options.board,
-                           options.cxxflags, options.env, options.board,
-                           ebuild_version)))
+  emerge_browser_command = \
+      ("CHROME_ORIGIN={0} {1} "
+       "CFLAGS=\"$(portageq-{2} envvar CFLAGS) {3}\" "
+       "LDFLAGS=\"$(portageq-{2} envvar LDFLAGS) {4}\" "
+       "CXXFLAGS=\"$(portageq-{2} envvar CXXFLAGS) {5}\" "
+       "{6} emerge-{2} --buildpkg {7}").format(
+        chrome_origin, chrome_version, options.board, options.cflags,
+        options.ldflags, options.cxxflags, options.env, ebuild_version)
+
+  cros_sdk_options = ''
+  if options.cros_workon:
+    cros_sdk_options='--chrome_root={0}'.format(options.cros_workon)
+
+  ret = cmd_executer.ChrootRunCommand(options.chromeos_root,
+                                      emerge_browser_command,
+                                      cros_sdk_options=cros_sdk_options)
 
   logger.GetLogger().LogFatalIf(ret, "build_packages failed")
+
+  if options.cros_workon and not cros_workon_keep:
+    command = 'cros_workon --board={0} stop chromeos-chrome'.format(
+      options.board)
+    ret = cmd_executer.ChrootRunCommand(options.chromeos_root, command)
+    # cros_workon failed, not a fatal one, just report it.
+    if ret:
+      print "cros_workon stop chromeos-chrome failed."
 
   # Build image
   ret = (cmd_executer.
