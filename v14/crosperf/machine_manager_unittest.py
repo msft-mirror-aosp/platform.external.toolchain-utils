@@ -12,7 +12,7 @@ import machine_manager
 class MyMachineManager(machine_manager.MachineManager):
 
   def __init__(self, chromeos_root):
-    super(MyMachineManager, self).__init__(chromeos_root)
+    super(MyMachineManager, self).__init__(chromeos_root, 0)
 
   def _TryToLockMachine(self, cros_machine):
     self._machines.append(cros_machine)

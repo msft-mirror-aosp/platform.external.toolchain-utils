@@ -23,7 +23,7 @@ class Experiment(object):
 
   def __init__(self, name, remote, rerun_if_failed, working_directory,
                chromeos_root, cache_conditions, labels, benchmarks,
-               experiment_file, email_to):
+               experiment_file, email_to, acquire_timeout):
     self.name = name
     self.rerun_if_failed = rerun_if_failed
     self.working_directory = working_directory
@@ -51,9 +51,9 @@ class Experiment(object):
                       "the image path.")
 
     if test_flag.GetTestMode():
-      self.machine_manager = MockMachineManager(chromeos_root)
+      self.machine_manager = MockMachineManager(chromeos_root, acquire_timeout)
     else:
-      self.machine_manager = MachineManager(chromeos_root)
+      self.machine_manager = MachineManager(chromeos_root, acquire_timeout)
     self.l = logger.GetLogger()
 
     for machine in remote:

@@ -101,6 +101,11 @@ class GlobalSettings(Settings):
     self.AddField(BooleanField("key_results_only", default=True,
                                description="Whether only show the key results"
                                "of pyautoperf"))
+    self.AddField(IntegerField("acquire_timeout", default=0,
+                               description="Number of seconds to wait for "
+                               "machine before exit if all the machines in "
+                               "the experiment file are busy. Default is 0"))
+
     self.AddField(TextField("perf_args", default="",
                             description="The optional profile command. It "
                             "enables perf commands to record perforamance "

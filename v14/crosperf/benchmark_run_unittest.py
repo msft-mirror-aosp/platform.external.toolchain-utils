@@ -20,7 +20,7 @@ class BenchmarkRunTest(unittest.TestCase):
   def testDryRun(self):
     my_label = MockLabel("test1", "image1", "/tmp/test_benchmark_run",
                          "x86-alex", "chromeos-alex1", "")
-    m = MockMachineManager("/tmp/chromeos_root")
+    m = MockMachineManager("/tmp/chromeos_root", 0)
     m.AddMachine("chromeos-alex1")
     bench = Benchmark("PageCyler",
                       "Pyautoperf",

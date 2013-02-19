@@ -31,6 +31,7 @@ class ExperimentFactory(object):
     chromeos_root = global_settings.GetField("chromeos_root")
     rm_chroot_tmp = global_settings.GetField("rm_chroot_tmp")
     key_results_only = global_settings.GetField("key_results_only")
+    acquire_timeout= global_settings.GetField("acquire_timeout")
 
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.
@@ -102,7 +103,7 @@ class ExperimentFactory(object):
                             working_directory, chromeos_root,
                             cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(),
-                            email)
+                            email, acquire_timeout)
 
     return experiment
 
