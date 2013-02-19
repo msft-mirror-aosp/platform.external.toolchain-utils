@@ -155,7 +155,7 @@ class MachineManager(object):
           m.released_time = time.time()
        
       if not self.AreAllMachineSame():
-        logger.GetLogger().LogWarning("-- not all the machine are identical")
+        logger.GetLogger().LogFatal("-- not all the machine are identical")
       if not self._machines:
         machine_names = []
         for machine in self._all_machines:
