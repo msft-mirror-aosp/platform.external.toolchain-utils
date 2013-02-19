@@ -141,6 +141,11 @@ Summary
 Number re-images: %s
 
 -------------------------------------------
+Benchmark Run Status
+-------------------------------------------
+%s
+
+
 Experiment File
 -------------------------------------------
 %s
@@ -151,18 +156,36 @@ Experiment File
     super(TextResultsReport, self).__init__(experiment)
     self.email = email
 
+  def GetStatusTable(self):
+    """Generate the status table by the tabulator."""
+    table = [["", ""]]
+    columns = [Column(LiteralResult(iteration=0), Format(), "Status"),
+               Column(LiteralResult(iteration=1), Format(), "Failing Reason")]
+
+    for benchmark_run in self.benchmark_runs:
+      status = [benchmark_run.name, [benchmark_run.timeline.GetLastEvent(),
+                                     benchmark_run.failure_reason]]
+      table.append(status)
+    tf = TableFormatter(table, columns)
+    cell_table = tf.GetCellTable()
+    return [cell_table]
+
   def GetReport(self):
+    """Generate the report for email and console."""
+    status_table = self.GetStatusTable()
     summary_table = self.GetSummaryTables()
     full_table = self.GetFullTables()
     if not self.email:
       return self.TEXT % (self.experiment.name,
                           self.PrintTables(summary_table, "CONSOLE"),
                           self.experiment.machine_manager.num_reimages,
+                          self.PrintTables(status_table, "CONSOLE"),
                           self.experiment.experiment_file)
 
     return self.TEXT % (self.experiment.name,
                         self.PrintTables(summary_table, "EMAIL"),
                         self.experiment.machine_manager.num_reimages,
+                        self.PrintTables(status_table, "EMAIL"),
                         self.experiment.experiment_file)
 
 
