@@ -58,8 +58,10 @@ class TableGenerator(object):
       for run in run_list:
         if key in run:
           values.append(run[key])
-    ret = max(_StripNone(values))
-    return ret
+    values = _StripNone(values)
+    if _AllFloat(values):
+      values = _GetFloats(values)
+    return max(values)
 
   def _GetLowestValue(self, key):
     values = []
@@ -67,8 +69,10 @@ class TableGenerator(object):
       for run in run_list:
         if key in run:
           values.append(run[key])
-    ret = min(_StripNone(values))
-    return ret
+    values = _StripNone(values)
+    if _AllFloat(values):
+      values = _GetFloats(values)
+    return min(values)
 
   def _SortKeys(self, keys):
     if self._sort == self.SORT_BY_KEYS:
