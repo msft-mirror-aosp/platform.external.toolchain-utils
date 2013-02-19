@@ -26,6 +26,14 @@ def _GetFloats(values):
   return [float(v) for v in values]
 
 
+def _StripNone(results):
+  res = []
+  for result in results:
+    if result is not None:
+      res.append(result)
+  return res
+
+
 class TableGenerator(object):
   """Creates a table from a list of list of dicts.
 
@@ -56,7 +64,7 @@ class TableGenerator(object):
       for run in run_list:
         if key in run:
           values.append(run[key])
-    ret = max(values)
+    ret = max(_StripNone(values))
     return ret
 
   def _GetLowestValue(self, key):
@@ -65,8 +73,7 @@ class TableGenerator(object):
       for run in run_list:
         if key in run:
           values.append(run[key])
-
-    ret = min(values)
+    ret = min(_StripNone(values))
     return ret
 
   def _SortKeys(self, keys):
@@ -119,6 +126,8 @@ class TableGenerator(object):
         for run in run_list:
           if k in run:
             v.append(run[k])
+          else:
+            v.append(None)
         row.append(v)
       table.append(row)
     return table
@@ -168,23 +177,41 @@ class Result(object):
       baseline itself.
     """
     all_floats = True
+    values = _StripNone(values)
     if _AllFloat(values):
       float_values = _GetFloats(values)
     else:
       all_floats = False
     if baseline_values is not None:
+      baseline_values = _StripNone(baseline_values)
       if _AllFloat(baseline_values):
         float_baseline_values = _GetFloats(baseline_values)
       else:
         all_floats = False
     else:
       float_baseline_values = None
-
     if all_floats:
       self._ComputeFloat(cell, float_values, float_baseline_values)
       self._InvertIfLowerIsBetter(cell)
     else:
       self._ComputeString(cell, values, baseline_values)
+
+
+class LiteralResult(Result):
+  def __init__(self, iteration=0):
+    super(LiteralResult, self).__init__()
+    self.iteration = iteration
+
+  def Compute(self, cell, values, baseline_values):
+    if values[self.iteration]:
+      cell.value = values[self.iteration]
+    else:
+      cell.value = "-"
+
+
+class NonEmptyCountResult(Result):
+  def Compute(self, cell, values, baseline_values):
+    cell.value = len(_StripNone(values))
 
 
 class StringMeanResult(Result):
@@ -199,14 +226,39 @@ class AmeanResult(StringMeanResult):
     cell.value = numpy.mean(values)
 
 
+class RawResult(Result):
+  pass
+
+
 class MinResult(Result):
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = min(values)
+  def _ComputeString(self, cell, values, baseline_values):
+    if values:
+      cell.value = min(values)
+    else:
+      cell.value = ""
 
 
 class MaxResult(Result):
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = max(values)
+  def _ComputeString(self, cell, values, baseline_values):
+    if values:
+      cell.value = max(values)
+    else:
+      cell.value = ""
+
+
+class StdResult(Result):
+  def _ComputeFloat(self, cell, values, baseline_values):
+    if not values:
+      cell.value = ""
+    else:
+      cell.value = numpy.std(v)
+
+  def _ComputeString(self, cell, values, baseline_values):
+    cell.value = ""
 
 
 class ComparisonResult(Result):
@@ -236,6 +288,8 @@ class StatsSignificant(ComparisonResult):
       return
     _, cell.value = stats.lttest_ind(values, baseline_values)
 
+  def _ComputeString(self, cell, values, baseline_values):
+    return float("nan")
 
 class KeyAwareComparisonResult(ComparisonResult):
   def _IsLowerBetter(self, key):
@@ -574,9 +628,15 @@ class TableFormatter(object):
     self._out_table = [header] + self._out_table
 
     top_header = []
+    colspan = 0
+    for column in self._columns:
+      if not column.result.NeedsBaseline():
+        colspan += 1
     for label in self._table[0]:
       cell = Cell()
       cell.string_value = str(label)
+      if cell.string_value != "keys":
+        cell.colspan = colspan
       top_header.append(cell)
 
     self._out_table = [top_header] + self._out_table
@@ -707,7 +767,10 @@ class TablePrinter(object):
       if cell.width:
         width = cell.width
       else:
-        width = self._column_styles[j].width
+        if self._column_styles:
+          width = self._column_styles[j].width
+        else:
+          width = len(cell.string_value)
       if width > raw_width:
         padding = ("%" + str(width - raw_width) + "s") % ""
         out = padding + out
@@ -739,7 +802,7 @@ class TablePrinter(object):
     if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV]:
       return ""
     if self._output_type == self.HTML:
-      return "<table id=\"box-table-a\">\n<tr>"
+      return "<p></p><table id=\"box-table-a\">\n<tr>"
 
   def _GetSuffix(self):
     if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV]:
@@ -809,7 +872,12 @@ def GetSimpleTable(table, out_to="CONSOLE"):
 def GetSimpleTableWithAverage(runs, labels, out_to="CONSOLE"):
   tg = TableGenerator(runs, labels, TableGenerator.SORT_BY_VALUES_DESC)
   table = tg.GetTable()
-  columns = [Column(AmeanResult(),
+  columns = [Column(LiteralResult(),
+                    Format(),
+                    "1"),
+             Column(AmeanResult(),
+                    Format()),
+             Column(NonEmptyCountResult(),
                     Format()),
              Column(AmeanRatioResult(),
                     PercentFormat()),
