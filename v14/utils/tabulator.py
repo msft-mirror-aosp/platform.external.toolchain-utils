@@ -303,7 +303,8 @@ class StatsSignificant(ComparisonResult):
 
 class KeyAwareComparisonResult(ComparisonResult):
   def _IsLowerBetter(self, key):
-    lower_is_better_keys = ["milliseconds", "ms", "seconds", "KB"]
+    lower_is_better_keys = ["milliseconds", "ms", "seconds", "KB",
+                            "rdbytes", "wrbytes"]
     return any([key.startswith(l + "_") for l in lower_is_better_keys])
 
   def _InvertIfLowerIsBetter(self, cell):
