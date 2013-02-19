@@ -35,6 +35,7 @@ class ExperimentFactory(object):
     acquire_timeout= global_settings.GetField("acquire_timeout")
     cache_dir = global_settings.GetField("cache_dir")
     config.AddConfig("no_email", global_settings.GetField("no_email"))
+    share_users = global_settings.GetField("share_users")
 
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.
@@ -108,7 +109,7 @@ class ExperimentFactory(object):
                             working_directory, chromeos_root,
                             cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(),
-                            email, acquire_timeout, log_dir)
+                            email, acquire_timeout, log_dir, share_users)
 
     return experiment
 

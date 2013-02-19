@@ -120,6 +120,9 @@ class GlobalSettings(Settings):
     self.AddField(BooleanField("no_email", default=False,
                                description="Whether to disable the email to "
                                "user after crosperf finishes."))
+    self.AddField(TextField("share_users", default="",
+                            description="Who's cache data you want to "
+                            "use. It accepts multiple users seperated by \",\""))
 
 
 class SettingsFactory(object):

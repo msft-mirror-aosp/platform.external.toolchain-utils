@@ -15,7 +15,8 @@ from utils import misc
 
 from image_checksummer import ImageChecksummer
 
-SCRATCH_DIR = "/home/%s/cros_scratch" % getpass.getuser()
+SCRATCH_BASE = "/home/%s/cros_scratch"
+SCRATCH_DIR = SCRATCH_BASE % getpass.getuser()
 RESULTS_FILE = "results.txt"
 MACHINE_FILE = "machine.txt"
 AUTOTEST_TARBALL = "autotest.tbz2"
@@ -290,7 +291,7 @@ class ResultsCache(object):
 
   def Init(self, chromeos_image, chromeos_root, autotest_name, iteration,
            autotest_args, machine_manager, board, cache_conditions,
-           logger_to_use, label):
+           logger_to_use, label, share_users):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.autotest_name = autotest_name
@@ -302,10 +303,12 @@ class ResultsCache(object):
     self._logger = logger_to_use
     self._ce = command_executer.GetCommandExecuter(self._logger)
     self.label = label
+    self.share_users = share_users
 
   def _GetCacheDirForRead(self):
-    glob_path = self._FormCacheDir(self._GetCacheKeyList(True))
-    matching_dirs = glob.glob(glob_path)
+    matching_dirs = []
+    for glob_path in self._FormCacheDir(self._GetCacheKeyList(True)):
+      matching_dirs += glob.glob(glob_path)
 
     if matching_dirs:
       # Cache file found.
@@ -314,16 +317,21 @@ class ResultsCache(object):
       return None
 
   def _GetCacheDirForWrite(self):
-    return self._FormCacheDir(self._GetCacheKeyList(False))
+    return self._FormCacheDir(self._GetCacheKeyList(False))[0]
 
   def _FormCacheDir(self, list_of_strings):
     cache_key = " ".join(list_of_strings)
     cache_dir = misc.GetFilenameFromString(cache_key)
     if self.label.cache_dir:
       cache_home = os.path.abspath(os.path.expanduser(self.label.cache_dir))
-      cache_path = os.path.join(cache_home, cache_dir)
+      cache_path = [os.path.join(cache_home, cache_dir)]
     else:
-      cache_path = os.path.join(SCRATCH_DIR, cache_dir)
+      cache_path = [os.path.join(SCRATCH_DIR, cache_dir)]
+
+    for i in [x.strip() for x in self.share_users.split(",")]:
+      path = SCRATCH_BASE % i
+      cache_path.append(os.path.join(path, cache_dir))
+
     return cache_path
 
   def _GetCacheKeyList(self, read):

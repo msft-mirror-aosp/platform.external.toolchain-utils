@@ -23,7 +23,8 @@ class Experiment(object):
 
   def __init__(self, name, remote, rerun_if_failed, working_directory,
                chromeos_root, cache_conditions, labels, benchmarks,
-               experiment_file, email_to, acquire_timeout, log_dir):
+               experiment_file, email_to, acquire_timeout, log_dir,
+               share_users):
     self.name = name
     self.rerun_if_failed = rerun_if_failed
     self.working_directory = working_directory
@@ -39,6 +40,7 @@ class Experiment(object):
     self.benchmarks = benchmarks
     self.num_complete = 0
     self.num_run_complete = 0
+    self.share_users = share_users
 
     # We need one chromeos_root to run the benchmarks in, but it doesn't
     # matter where it is, unless the ABIs are different.
@@ -84,7 +86,8 @@ class Experiment(object):
                                        iteration,
                                        self.cache_conditions,
                                        self.machine_manager,
-                                       logger_to_use)
+                                       logger_to_use,
+                                       self.share_users)
 
           benchmark_runs.append(benchmark_run)
     return benchmark_runs
