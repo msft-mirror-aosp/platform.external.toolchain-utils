@@ -23,8 +23,8 @@ class CrosMachine(object):
     self._GetMemoryInfo()
     self._GetCPUInfo()
 
-  def _ParseMemoryInfo(self, memout):
-    for line in memout.splitlines():
+  def _ParseMemoryInfo(self, meminfo):
+    for line in meminfo.splitlines():
       k, v = line.split(":", 1)
       k = k.strip()
       v = v.strip()
@@ -32,16 +32,17 @@ class CrosMachine(object):
         self.total_memory = v
 
   def _GetMemoryInfo(self):
-    ce = command_executer.GetCommandExecuter() 
+    ce = command_executer.GetCommandExecuter()
     command = "cat /proc/meminfo"
-    ret, self.memout, _ = ce.CrosRunCommand(
-        command, return_output=True,   
+    ret, self.meminfo, _ = ce.CrosRunCommand(
+        command, return_output=True,
         machine=self.name, username="root", chromeos_root=self.chromeos_root)
-    self._ParseMemoryInfo(self.memout)
+    if ret == 0:
+      self._ParseMemoryInfo(self.meminfo)
 
   #cpuinfo format is different across architecture
   #need to find a better way to parse it.
-  def _ParseCPUInfo(self,cpuout):
+  def _ParseCPUInfo(self,cpuinfo):
     return 0
 
   def _GetCPUInfo(self):
@@ -50,8 +51,9 @@ class CrosMachine(object):
     ret, self.cpuinfo, _ = ce.CrosRunCommand(
         command, return_output=True,
         machine=self.name, username="root", chromeos_root=self.chromeos_root)
-    self._ParseCPUInfo(self.cpuinfo)
-  
+    if ret == 0:
+      self._ParseCPUInfo(self.cpuinfo)
+
   def __str__(self):
     l = []
     l.append(self.name)
