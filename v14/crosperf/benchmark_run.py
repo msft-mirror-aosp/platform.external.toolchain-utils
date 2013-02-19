@@ -3,17 +3,18 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 import datetime
+import hashlib
 import os
 import re
 import threading
 import time
 import traceback
-from results_cache import Result
-from utils import logger
-from utils import command_executer
-from autotest_runner import AutotestRunner
-from results_cache import ResultsCache
 
+from autotest_runner import AutotestRunner
+from results_cache import Result
+from results_cache import ResultsCache
+from utils import command_executer
+from utils import logger
 
 STATUS_FAILED = "FAILED"
 STATUS_SUCCEEDED = "SUCCEEDED"
@@ -63,6 +64,17 @@ class BenchmarkRun(threading.Thread):
     try:
       # Just use the first machine for running the cached version,
       # without locking it.
+      self.machine_checksum = ""
+      for machine in self.machine_manager.GetMachines():
+        if machine.cpuinfo:
+          machine_string = (machine.cpuinfo+
+                            machine.total_memory)
+          self.machine_checksum = hashlib.md5(machine_string).hexdigest()
+          break
+      if not self.machine_checksum:
+        self.machine_checksum = "*"
+        self._logger.LogWarning("No machine available, check cache only")
+
       self.cache.Init(self.chromeos_image,
                       self.chromeos_root,
                       self.autotest_name,
@@ -71,7 +83,9 @@ class BenchmarkRun(threading.Thread):
                       self.machine_manager.GetMachines()[0].name,
                       self.board,
                       self.cache_conditions,
-                      self._logger)
+                      self._logger,
+                      self.machine_checksum
+                     )
 
       self.result = self.cache.ReadResult()
       self.cache_hit = (self.result is not None)

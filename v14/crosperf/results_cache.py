@@ -233,8 +233,9 @@ class CacheConditions(object):
   # Cache hit only if the result file exists.
   CACHE_FILE_EXISTS = 0
 
-  # Cache hit if the ip address of the cached result and the new run match.
-  REMOTES_MATCH = 1
+  # Cache hit if the checksum of cpuinfo and totalmem of
+  # the cached result and the new run match.
+  MACHINES_MATCH = 1
 
   # Cache hit if the image checksum of the cached result and the new run match.
   CHECKSUMS_MATCH = 2
@@ -255,9 +256,10 @@ class ResultsCache(object):
   class.
   """
   CACHE_VERSION = 4
+
   def Init(self, chromeos_image, chromeos_root, autotest_name, iteration,
            autotest_args, remote, board, cache_conditions,
-           logger_to_use):
+           logger_to_use, machine_checksum):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.autotest_name = autotest_name
@@ -268,6 +270,7 @@ class ResultsCache(object):
     self.cache_conditions = cache_conditions
     self._logger = logger_to_use
     self._ce = command_executer.GetCommandExecuter(self._logger)
+    self.machine_checksum = machine_checksum
 
   def _GetCacheDirForRead(self):
     glob_path = self._FormCacheDir(self._GetCacheKeyList(True))
@@ -292,10 +295,10 @@ class ResultsCache(object):
     return cache_path
 
   def _GetCacheKeyList(self, read):
-    if read and CacheConditions.REMOTES_MATCH not in self.cache_conditions:
-      remote = "*"
+    if read and CacheConditions.MACHINES_MATCH not in self.cache_conditions:
+      machine_checksum = "*"
     else:
-      remote = self.remote
+      machine_checksum = self.machine_checksum
     if read and CacheConditions.CHECKSUMS_MATCH not in self.cache_conditions:
       checksum = "*"
     else:
@@ -308,12 +311,11 @@ class ResultsCache(object):
 
     autotest_args_checksum = hashlib.md5(
                              "".join(self.autotest_args)).hexdigest()
-
     return (image_path_checksum,
             self.autotest_name, str(self.iteration),
             autotest_args_checksum,
             checksum,
-            remote,
+            machine_checksum,
             str(self.CACHE_VERSION))
 
   def ReadResult(self):
