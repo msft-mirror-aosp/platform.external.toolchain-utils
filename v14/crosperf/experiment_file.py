@@ -4,6 +4,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import os.path
 import re
 from settings import Settings
 from settings_factory import SettingsFactory
@@ -143,6 +144,11 @@ class ExperimentFile(object):
           field = settings.fields[field_name]
           if field.assigned:
             res += "\t%s: %s\n" % (field.name, field.GetString())
+            if field.name == "chromeos_image":
+              real_file = (os.path.realpath
+                           (os.path.expanduser(field.GetString())))
+              if real_file != field.GetString():
+                res += "\t#actual_image: %s\n" % real_file
         res += "}\n\n"
 
     return res
