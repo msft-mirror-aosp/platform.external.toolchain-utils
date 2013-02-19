@@ -49,7 +49,7 @@ class ResultsReport(object):
                Column(StdResult(),
                       Format(), "StdDev"),
                Column(CoeffVarResult(),
-                      CoeffVarFormat(), "Mean/StdDev"),
+                      CoeffVarFormat(), "StdDev/Mean"),
                Column(GmeanRatioResult(),
                       RatioFormat(), "GmeanSpeedup"),
                Column(GmeanRatioResult(),
