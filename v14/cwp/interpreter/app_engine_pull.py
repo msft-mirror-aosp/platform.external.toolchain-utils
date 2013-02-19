@@ -198,7 +198,7 @@ def main():
                     help="Path to output perf data files.")
   parser.add_option("--start", dest="start_ind", action="store",
                     default=0, help="Start index.")
-  parser.add_option("--stop", dest="stop_ind", action="st0re",
+  parser.add_option("--stop", dest="stop_ind", action="store",
                     default=-1, help="Stop index.")
   options = parser.parse_args()[0]
   if not options.output_dir:
