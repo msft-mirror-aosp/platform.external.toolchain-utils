@@ -20,7 +20,7 @@ from utils import constants
 from utils import misc
 
 
-def ProcessArguments():
+def ProcessArguments(argv):
   """Processing/validating script arguments."""
   parser = optparse.OptionParser(description=(
       'Launches gcc dejagnu test in chroot for chromeos toolchain, compares '
@@ -57,7 +57,7 @@ def ProcessArguments():
                           '"g++" so that only g++ tests are performed.'
                           'Defaults to "gcc,g++".'))
 
-  options, args = parser.parse_args()
+  options, args = parser.parse_args(argv)
 
   if not options.chromeos_root:
     sys.exit('Missing argument for --chromeos_root.')
@@ -75,7 +75,7 @@ def ProcessArguments():
 class DejagnuExecuter(object):
   """The class wrapper for dejagnu test executer."""
 
-  def __init__(self, mount, chromeos_root, remote, board,
+  def __init__(self, base_dir, mount, chromeos_root, remote, board,
                flags, keep_intermediate_files, tools):
     self._chromeos_root = chromeos_root
     self._chromeos_chroot = path.join(chromeos_root, 'chroot')
@@ -92,7 +92,7 @@ class DejagnuExecuter(object):
       sys.exit('Unsupported board "%s"' % board)
     self._executer = command_executer.GetCommandExecuter()
     self._flags = flags or ''
-    self._base_dir = misc.GetRoot(sys.argv[0])[0]
+    self._base_dir = base_dir
     self._tmp_abs = None
     self._keep_intermediate_files = keep_intermediate_files
     self._tools = tools.split(',')
@@ -205,10 +205,12 @@ class DejagnuExecuter(object):
     gcc_build_dir_abs = path.join(
         self._chromeos_root, 'chroot', self._gcc_build_dir.lstrip('/'))
     if not path.isdir(gcc_build_dir_abs):
-      self._executer.ChrootRunCommand(
-          self._chromeos_root,
-          ('ebuild $(equery w cross-%s/gcc) clean prepare compile' % (
-              self._target)))
+      ret = self._executer.ChrootRunCommand(
+        self._chromeos_root,
+        ('ebuild $(equery w cross-%s/gcc) clean prepare compile' % (
+            self._target)))
+      if ret:
+        raise Exception('ebuild gcc failed.')
 
   def MakeCheck(self):
     cmd = ('cd %s ; '
@@ -228,19 +230,27 @@ class DejagnuExecuter(object):
       print ('*** validate_failures.py exited with non-zero code,'
              'please run it manually inside chroot - ')
       print '   ' + cmd
+    return ret
 
-
-if __name__ == '__main__':
-  opts = ProcessArguments()
-  executer = DejagnuExecuter(opts.mount, opts.chromeos_root,
+def Main(argv):
+  opts = ProcessArguments(argv)
+  executer = DejagnuExecuter(misc.GetRoot(argv[0])[0],
+                             opts.mount, opts.chromeos_root,
                              opts.remote, opts.board, opts.flags,
                              opts.keep_intermediate_files, opts.tools)
+  ret = 1
   try:
     executer.SetupTestingDir()
     executer.PrepareTestingRsaKeys()
     executer.PrepareTestFiles()
     executer.PrepareGcc()
     executer.MakeCheck()
-    executer.ValidateFailures()
+    ret = executer.ValidateFailures()
   finally:
     executer.CleanupTestingDir()
+    return ret
+
+if __name__ == '__main__':
+  retval = Main(sys.argv)
+  sys.exit(retval)
+  
