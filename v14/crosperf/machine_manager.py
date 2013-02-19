@@ -1,3 +1,7 @@
+#!/usr/bin/python
+#
+# Copyright 2012 Google Inc. All Rights Reserved.
+
 import hashlib
 import image_chromeos
 import lock_machine
@@ -356,28 +360,39 @@ class MockCrosMachine(CrosMachine):
 
 
 class MockMachineManager(MachineManager):
-  def __init__(self):
-    self.machines = []
 
-  def ImageMachine(self, machine_name, chromeos_image, board=None,
-                   image_args=""):
-    return 0
+  def __init__(self, chromeos_root):
+    super(MockMachineManager, self).__init__(chromeos_root)
 
-  def AddMachine(self, machine_name, chromeos_root):
-    self.machines.append(MockCrosMachine(machine_name, chromeos_root))
+  def _TryToLockMachine(self, cros_machine):
+    self._machines.append(cros_machine)
+    cros_machine.checksum = ""
+
+  def AddMachine(self, machine_name):
+    with self._lock:
+      for m in self._all_machines:
+        assert m.name != machine_name, "Tried to double-add %s" % machine_name
+      cm = MockCrosMachine(machine_name, self.chromeos_root)
+      assert cm.machine_checksum, ("Could not find checksum for machine %s" %
+                                   machine_name)
+      self._all_machines.append(cm)
 
   def AcquireMachine(self, chromeos_image, label):
-    for machine in self.machines:
+    for machine in self._all_machines:
       if not machine.locked:
         machine.locked = True
         return machine
     return None
 
+  def ImageMachine(self, machine_name, chromeos_image, board=None,
+                   image_args=""):
+    return 0
+
   def ReleaseMachine(self, machine):
     machine.locked = False
 
-  def GetMachines(self):
-    return self.machines
+  def GetMachines(self, label):
+    return self._all_machines
 
-  def GetAvailableMachines(self):
-    return self.machines
+  def GetAvailableMachines(self, label):
+    return self._all_machines

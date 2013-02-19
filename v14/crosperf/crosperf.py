@@ -16,6 +16,7 @@ from help import Help
 from settings_factory import GlobalSettings
 from utils import logger
 
+import test_flag
 
 l = logger.GetLogger()
 
@@ -77,6 +78,9 @@ def Main(argv):
     parser.error("Invalid number arguments.")
 
   working_directory = os.getcwd()
+  if options.dry_run:
+    test_flag.SetTestMode(True)
+
   experiment_file = ExperimentFile(open(experiment_filename, "rb"),
                                    option_settings)
   if not experiment_file.GetGlobalSettings().GetField("name"):

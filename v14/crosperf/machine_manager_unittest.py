@@ -1,3 +1,7 @@
+#!/usr/bin/python
+
+# Copyright 2012 Google Inc. All Rights Reserved.
+
 """Unittest for machine_manager."""
 import unittest
 

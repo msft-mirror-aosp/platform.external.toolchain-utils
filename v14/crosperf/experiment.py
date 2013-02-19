@@ -10,8 +10,10 @@ from utils import logger
 from autotest_runner import AutotestRunner
 from benchmark_run import BenchmarkRun
 from machine_manager import MachineManager
+from machine_manager import MockMachineManager
 from results_cache import ResultsCache
 from results_report import HTMLResultsReport
+import test_flag
 
 
 class Experiment(object):
@@ -46,7 +48,10 @@ class Experiment(object):
       raise Exception("No chromeos_root given and could not determine one from "
                       "the image path.")
 
-    self.machine_manager = MachineManager(chromeos_root)
+    if test_flag.GetTestMode():
+      self.machine_manager = MockMachineManager(chromeos_root)
+    else:
+      self.machine_manager = MachineManager(chromeos_root)
     self.l = logger.GetLogger()
 
     for machine in remote:

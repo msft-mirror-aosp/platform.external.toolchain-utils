@@ -4,10 +4,12 @@
 
 import StringIO
 import unittest
-from experiment_factory import ExperimentFactory
-from experiment_file import ExperimentFile
+
 from utils.file_utils import FileUtils
 
+from experiment_factory import ExperimentFactory
+from experiment_file import ExperimentFile
+import test_flag
 
 EXPERIMENT_FILE_1 = """
   board: x86-alex
@@ -47,4 +49,5 @@ class ExperimentFactoryTest(unittest.TestCase):
 
 if __name__ == "__main__":
   FileUtils.Configure(True)
+  test_flag.SetTestMode(True)
   unittest.main()

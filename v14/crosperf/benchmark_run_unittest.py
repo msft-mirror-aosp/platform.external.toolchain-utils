@@ -19,8 +19,8 @@ class BenchmarkRunTest(unittest.TestCase):
   def testDryRun(self):
     my_label = MockLabel("test1", "image1", "/tmp/test_benchmark_run",
                          "x86-alex", "chromeos-alex1", "")
-    m = MockMachineManager()
-    m.AddMachine("chromeos-alex1", "/tmp/test_benchmark_run")
+    m = MockMachineManager("/tmp/chromeos_root")
+    m.AddMachine("chromeos-alex1")
     b = MockBenchmarkRun("test run",
                          "PageCycler",
                          "Pyautoperf",

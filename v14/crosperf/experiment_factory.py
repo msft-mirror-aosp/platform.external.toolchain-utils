@@ -7,7 +7,9 @@ import socket
 from benchmark import Benchmark
 from experiment import Experiment
 from label import Label
+from label import MockLabel
 from results_cache import CacheConditions
+import test_flag
 
 
 class ExperimentFactory(object):
@@ -72,8 +74,12 @@ class ExperimentFactory(object):
         my_remote = self.GetDefaultRemotes(board)
       all_remote += my_remote
       image_args = label_settings.GetField("image_args")
-      label = Label(label_name, image, chromeos_root, board, my_remote,
-                    image_args)
+      if test_flag.GetTestMode():
+        label = MockLabel(label_name, image, chromeos_root, board, my_remote,
+                          image_args)
+      else:
+        label = Label(label_name, image, chromeos_root, board, my_remote,
+                      image_args)
       labels.append(label)
 
     email = global_settings.GetField("email")
