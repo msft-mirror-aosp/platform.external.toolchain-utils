@@ -116,7 +116,6 @@ class Result(object):
                  "--vmlinux /build/%s/usr/lib/debug/boot/vmlinux "
                  "--kallsyms /build/%s/boot/System.map-* "
                  "-i %s --stdio "
-                 "| head -n1000 "
                  "> %s" %
                  (self._board,
                   self._board,
@@ -125,6 +124,7 @@ class Result(object):
                   chroot_perf_report_file))
       self._ce.ChrootRunCommand(self._chromeos_root,
                                 command)
+
       # Add a keyval to the dictionary for the events captured.
       perf_report_files.append(
           misc.GetOutsideChrootPath(self._chromeos_root,
