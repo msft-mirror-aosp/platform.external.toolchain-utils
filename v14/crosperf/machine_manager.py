@@ -1,6 +1,7 @@
 import hashlib
 import image_chromeos
 import lock_machine
+import math
 import os.path
 import sys
 import threading
@@ -26,18 +27,48 @@ class CrosMachine(object):
     self._GetCPUInfo()
     self._ComputeMachineChecksum()
 
-  def _ParseMemoryInfo(self, meminfo):
-    return 0
+  def _ParseMemoryInfo(self):
+    line = self.meminfo.splitlines()[0]
+    usable_kbytes = int(line.split()[1])
+    # This code is from src/third_party/autotest/files/client/bin/base_utils.py
+    # usable_kbytes is system's usable DRAM in kbytes,
+    #   as reported by memtotal() from device /proc/meminfo memtotal
+    #   after Linux deducts 1.5% to 9.5% for system table overhead
+    # Undo the unknown actual deduction by rounding up
+    #   to next small multiple of a big power-of-two
+    #   eg  12GB - 5.1% gets rounded back up to 12GB
+    mindeduct = 0.015  # 1.5 percent
+    maxdeduct = 0.095  # 9.5 percent
+    # deduction range 1.5% .. 9.5% supports physical mem sizes
+    #    6GB .. 12GB in steps of .5GB
+    #   12GB .. 24GB in steps of 1 GB
+    #   24GB .. 48GB in steps of 2 GB ...
+    # Finer granularity in physical mem sizes would require
+    #   tighter spread between min and max possible deductions
+
+    # increase mem size by at least min deduction, without rounding
+    min_kbytes = int(usable_kbytes / (1.0 - mindeduct))
+    # increase mem size further by 2**n rounding, by 0..roundKb or more
+    round_kbytes = int(usable_kbytes / (1.0 - maxdeduct)) - min_kbytes
+    # find least binary roundup 2**n that covers worst-cast roundKb
+    mod2n = 1 << int(math.ceil(math.log(round_kbytes, 2)))
+    # have round_kbytes <= mod2n < round_kbytes*2
+    # round min_kbytes up to next multiple of mod2n
+    phys_kbytes = min_kbytes + mod2n - 1
+    phys_kbytes -= phys_kbytes % mod2n  # clear low bits
+    self.phys_kbytes = phys_kbytes
 
   def _GetMemoryInfo(self):
+    #TODO yunlian: when the machine in rebooting, it will not return 
+    #meminfo, the assert does not catch it either
     ce = command_executer.GetCommandExecuter()
-    command = "cat /var/log/memory_spd_info.txt"
+    command = "cat /proc/meminfo"
     ret, self.meminfo, _ = ce.CrosRunCommand(
         command, return_output=True,
         machine=self.name, username="root", chromeos_root=self.chromeos_root)
     assert ret == 0, "Could not get meminfo from machine: %s" % self.name
     if ret == 0:
-      self._ParseMemoryInfo(self.meminfo)
+      self._ParseMemoryInfo()
 
   #cpuinfo format is different across architecture
   #need to find a better way to parse it.
@@ -60,7 +91,7 @@ class CrosMachine(object):
     for line in self.cpuinfo.splitlines():
       if not any([e in line for e in exclude_lines_list]):
         checksum_string += line
-    checksum_string += self.meminfo
+    checksum_string += str(self.phys_kbytes)
     if checksum_string:
       self.machine_checksum = hashlib.md5(checksum_string).hexdigest()
     else:
