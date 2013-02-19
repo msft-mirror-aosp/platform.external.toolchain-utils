@@ -61,7 +61,7 @@ class ExperimentRunner(object):
       label_names.append(label.name)
     subject = "%s: %s" % (experiment.name, " vs. ".join(label_names))
 
-    text_report = TextResultsReport(experiment).GetReport()
+    text_report = TextResultsReport(experiment, True).GetReport()
     text_report = "<pre style='font-size: 13px'>%s</pre>" % text_report
     html_report = HTMLResultsReport(experiment).GetReport()
     attachment = EmailSender.Attachment("report.html", html_report)

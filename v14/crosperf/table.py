@@ -7,11 +7,16 @@ import math
 
 class Table(object):
   class Cell(object):
-    def __init__(self, value, colspan=1, hidden=False, header=False):
+    def __init__(self, value, colspan=1, hidden=False,
+                 header=False, color=""):
       self.value = value
       self.colspan = colspan
       self.hidden = hidden
       self.header = header
+      self.color = color
+
+    def Color(self):
+      self.value = "<FONT COLOR=#"+self.color+">"+self.value+"</FONT>"
 
   def __init__(self, table_id):
     self.table_id = table_id
@@ -82,3 +87,9 @@ class Table(object):
           res += "\t"
       res += "\n"
     return res
+
+  def AddColor(self):
+    for row in self.rows:
+      for cell in row:
+        if not cell.color:
+          cell.Color()

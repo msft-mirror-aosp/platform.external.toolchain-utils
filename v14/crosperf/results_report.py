@@ -45,9 +45,6 @@ class ResultsReport(object):
       color_string = "00"+cc+"00"
     return color_string
 
-  def _ColorNumber(self, ss, color):
-    return "<FONT COLOR=#"+self._GetColorCode(float(color))+">"+ss+"</FONT>"
-
   def _IsLowerBetter(self, column, autotest_key):
     if ((autotest_key.find("milliseconds") == 0
          or autotest_key.find("ms_") == 0
@@ -139,7 +136,6 @@ class ResultsReport(object):
               value_string = "%.2f" % value
               if column.name == self.DELTA_COLUMN_NAME:
                 color = self. _GetColorCode(value)
-                #value_string = self._ColorNumber(value_string, value_string)
             else:
               value_string = value
             row.append(Table.Cell(value_string, color=color))
@@ -179,8 +175,9 @@ Experiment File
 ===========================================
 """
 
-  def __init__(self, experiment):
+  def __init__(self, experiment, color=False):
     super(TextResultsReport, self).__init__(experiment)
+    self.color = color
 
   def GetStatusTable(self):
     status_table = Table("status")
@@ -191,11 +188,23 @@ Experiment File
     return status_table
 
   def GetReport(self):
+    if not self.color:
+      return self.TEXT % (self.experiment.name,
+                          self.GetStatusTable().ToText(),
+                          self.experiment.machine_manager.num_reimages,
+                          self.GetSummaryTable().ToText(80),
+                          self.GetFullTable().ToText(80),
+                          self.experiment.experiment_file)
+
+    summary_table = self.GetSummaryTable()
+    full_table = self.GetFullTable()
+    summary_table.AddColor()
+    full_table.AddColor()
     return self.TEXT % (self.experiment.name,
                         self.GetStatusTable().ToText(),
                         self.experiment.machine_manager.num_reimages,
-                        self.GetSummaryTable().ToText(80),
-                        self.GetFullTable().ToText(80),
+                        summary_table.ToText(80),
+                        full_table.ToText(80),
                         self.experiment.experiment_file)
 
 
@@ -349,7 +358,9 @@ pre {
       chart_divs += chart.GetDiv()
 
     summary_table = self.GetSummaryTable()
+    summary_table.AddColor()
     full_table = self.GetFullTable()
+    full_table.AddColor()
     return self.HTML % (chart_javascript,
                         summary_table.ToHTML(),
                         summary_table.ToText(),
