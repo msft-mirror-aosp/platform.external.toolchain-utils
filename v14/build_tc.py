@@ -123,7 +123,9 @@ class ToolchainPart(object):
   def BuildTool(self):
     env = self._build_env
     # FEATURES=buildpkg adds minutes of time so we disable it.
-    features = "nostrip userpriv userfetch -sandbox noclean -buildpkg"
+    # TODO(shenhan): keep '-sandbox' for a while for compatibility, then remove
+    # it after a while.
+    features = "nostrip userpriv userfetch -usersandbox -sandbox noclean -buildpkg"
     env["FEATURES"] = features
 
     if self._incremental:
