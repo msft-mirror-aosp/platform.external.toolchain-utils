@@ -25,6 +25,17 @@ class TabulatorTest(unittest.TestCase):
     result.Compute(cell, table[2], table[1])
     self.assertTrue(cell.value == float(table[2][0]))
 
+  def testStringMean(self):
+    smr = tabulator.StringMeanResult()
+    cell = tabulator.Cell()
+    value = "PASS"
+    values = [value for _ in range(3)]
+    smr.Compute(cell, values, None)
+    self.assertTrue(cell.value == "ALL_" + value)
+    values.append("FAIL")
+    smr.Compute(cell, values, None)
+    self.assertTrue(cell.value == "?")
+
   def testStorageFormat(self):
     sf = tabulator.StorageFormat()
     cell = tabulator.Cell()

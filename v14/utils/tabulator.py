@@ -133,6 +133,10 @@ class Result(object):
   def __init__(self):
     pass
 
+  def _AllStringsSame(self, values):
+    values_set = set(values)
+    return len(values_set) == 1
+
   def NeedsBaseline(self):
     return False
 
@@ -182,7 +186,14 @@ class Result(object):
       self._ComputeString(cell, values, baseline_values)
 
 
-class AmeanResult(Result):
+class StringMeanResult(Result):
+  def _ComputeString(self, cell, values, baseline_values):
+    if self._AllStringsSame(values):
+      cell.value = "ALL_" + values[0]
+    else:
+      cell.value = "?"
+
+class AmeanResult(StringMeanResult):
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = numpy.mean(values)
 
@@ -190,6 +201,21 @@ class AmeanResult(Result):
 class ComparisonResult(Result):
   def NeedsBaseline(self):
     return True
+
+  def _ComputeString(self, cell, values, baseline_values):
+    value = None
+    baseline_value = None
+    if self._AllStringsSame(values):
+      value = values[0]
+    if self._AllStringsSame(baseline_values):
+      baseline_value = baseline_values[0]
+    if value is not None and baseline_value is not None:
+      if value == baseline_value:
+        cell.value = "SAME"
+      else:
+        cell.value = "DIFFERENT"
+    else:
+      cell.value = "?"
 
 
 class KeyAwareComparisonResult(ComparisonResult):
@@ -789,12 +815,14 @@ if __name__ == "__main__":
   runs = [
       [
           {"k1": "10", "k2": "12", "k5": "40", "k6": "40",
-           "ms_1": "20"},
-          {"k1": "13", "k2": "14", "k3": "15", "ms_1": "10"}
+           "ms_1": "20", "k7": "FAIL", "k8": "PASS", "k9": "PASS"},
+          {"k1": "13", "k2": "14", "k3": "15", "ms_1": "10", "k8": "PASS",
+           "k9": "FAIL"}
           ],
       [
           {"k1": "50", "k2": "51", "k3": "52", "k4": "53", "k5": "35", "k6":
-           "45", "ms_1": "200", "ms_2": "20"},
+           "45", "ms_1": "200", "ms_2": "20", "k7": "FAIL", "k8": "PASS", "k9":
+           "PASS"},
           ],
       ]
   labels = ["vanilla", "modified"]
