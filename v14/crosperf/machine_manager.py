@@ -12,17 +12,18 @@ CHECKSUM_FILE = "/usr/local/osimage_checksum_file"
 
 
 class CrosMachine(object):
-  def __init__(self, name):
+  def __init__(self, name, chromeos_root):
     self.name = name
     self.image = None
     self.checksum = None
     self.locked = False
     self.released_time = time.time()
     self.autotest_run = None
-    self._GetMemoryInfo(name)
-    self._GetCPUInfo(name)
+    self.chromeos_root = chromeos_root
+    self._GetMemoryInfo()
+    self._GetCPUInfo()
 
-  def _ParseMemoryInfo(self,memout):
+  def _ParseMemoryInfo(self, memout):
     for line in memout.splitlines():
       k, v = line.split(":", 1)
       k = k.strip()
@@ -30,12 +31,12 @@ class CrosMachine(object):
       if "MemTotal" in line:
         self.total_memory = v
 
-  def _GetMemoryInfo(self,name):
+  def _GetMemoryInfo(self):
     ce = command_executer.GetCommandExecuter() 
     command = "cat /proc/meminfo"
-    ret, self.memout, _ = ce.RunCommand(
-      command, return_output=True,   
-      machine=name, username="root")
+    ret, self.memout, _ = ce.CrosRunCommand(
+        command, return_output=True,   
+        machine=self.name, username="root", chromeos_root=self.chromeos_root)
     self._ParseMemoryInfo(self.memout)
 
   #cpuinfo format is different across architecture
@@ -43,12 +44,12 @@ class CrosMachine(object):
   def _ParseCPUInfo(self,cpuout):
     return 0
 
-  def _GetCPUInfo(self,name):
+  def _GetCPUInfo(self):
     ce = command_executer.GetCommandExecuter()
     command = "cat /proc/cpuinfo"
-    ret, self.cpuinfo, _ = ce.RunCommand(
-      command, return_output=True,
-      machine=name, username="root")
+    ret, self.cpuinfo, _ = ce.CrosRunCommand(
+        command, return_output=True,
+        machine=self.name, username="root", chromeos_root=self.chromeos_root)
     self._ParseCPUInfo(self.cpuinfo)
   
   def __str__(self):
@@ -127,7 +128,7 @@ class MachineManager(object):
     with self._lock:
       for m in self._all_machines:
         assert m.name != machine_name, "Tried to double-add %s" % machine_name
-      self._all_machines.append(CrosMachine(machine_name))
+      self._all_machines.append(CrosMachine(machine_name, self.chromeos_root))
 
   def AreAllMachineSame(self):
     machines = self.GetMachines()
