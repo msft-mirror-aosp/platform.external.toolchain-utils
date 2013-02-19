@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 # Copyright 2012 Google Inc. All Rights Reserved.
 # Author: mrdmnd@ (Matt Redmond)
 """A client to pull data from Bartlett.
@@ -25,6 +25,7 @@ import urllib2
 
 SERVER_NAME = "http://chromeoswideprofiling.appspot.com"
 APP_NAME = "chromeoswideprofiling"
+DELIMITER = "~"
 
 
 def Authenticate(server_name):
@@ -95,56 +96,56 @@ def DownloadSamples(server_name, authtoken, output_dir, start, stop):
     print sample
   for sample in sample_list_subset:
     assert sample, "Sample should be valid."
-    sample_info = [s.strip() for s in sample.split("~")]
-    sample_key = sample_info[0]
-    # sample_time = sample_info[1]
+    sample_info = [s.strip() for s in sample.split(DELIMITER)]
+    key = sample_info[0]
+    time = sample_info[1]
+    time = time.replace(" ", "_") # No space between date and time.
     # sample_md5 = sample_info[2]
-    sample_board = sample_info[3]
-    sample_chromeos_version = sample_info[4]
+    board = sample_info[3]
+    version = sample_info[4]
 
     # Put a compressed copy of the samples in output directory.
-    _DownloadSampleFromServer(server_name, authtoken, sample_key, sample_board,
-                              sample_chromeos_version, output_dir)
-    _UncompressSample(sample_key, sample_board,
-                      sample_chromeos_version, output_dir)
+    _DownloadSampleFromServer(server_name, authtoken, key, time, board,
+                              version, output_dir)
+    _UncompressSample(key, time, board, version, output_dir)
 
 
-def _BuildFilenameFromParams(sample_key, sample_board, sample_chromeos_version):
+def _BuildFilenameFromParams(key, time, board, version):
   """Return the filename for our sample.
   Args:
-    sample_key:  (string) Key indexing our sample in the datastore.
-    sample_board: (string) Board that the sample was taken on.
-    sample_chromeos_version: (string) Version string from /etc/lsb-release
+    key:  (string) Key indexing our sample in the datastore.
+    time: (string) Date that the sample was uploaded.
+    board: (string) Board that the sample was taken on.
+    version: (string) Version string from /etc/lsb-release
   Returns:
     filename (string)
   """
-  delimiter = "~"
-  filename = delimiter.join([sample_key, sample_board, sample_chromeos_version])
+  filename = DELIMITER.join([key, time, board, version])
   return filename
 
 
-def _DownloadSampleFromServer(server_name, authtoken, sample_key, sample_board,
-                              sample_chromeos_version, output_dir):
+def _DownloadSampleFromServer(server_name, authtoken, key, time, board,
+                              version, output_dir):
   """Downloads sample_$(samplekey).gz to current dir.
   Args:
     server_name: (string) URL that the app engine code is living on.
     authtoken:   (string) Authorization token.
-    sample_key:  (string) Key indexing our sample in the datastore.
-    sample_board: (string) Board that the sample was taken on.
-    sample_chromeos_version: (string) Version string from /etc/lsb-release
+    key:  (string) Key indexing our sample in the datastore
+    time: (string) Date that the sample was uploaded.
+    board: (string) Board that the sample was taken on.
+    version: (string) Version string from /etc/lsb-release
     output_dir:  (string) Filepath to write to output to.
   Returns:
     None
   """
-  filename = _BuildFilenameFromParams(sample_key, sample_board,
-                                      sample_chromeos_version)
+  filename = _BuildFilenameFromParams(key, time, board, version)
   compressed_filename = filename+".gz"
 
   if os.path.exists(os.path.join(output_dir, filename)):
     print "Already downloaded %s, skipping." % filename
     return
 
-  serv_uri = server_name + "/serve/" + sample_key
+  serv_uri = server_name + "/serve/" + key
   serv_args = {"continue": serv_uri, "auth": authtoken}
   full_serv_uri = server_name + "/_ah/login?%s" % urllib.urlencode(serv_args)
   serv_req = urllib2.Request(full_serv_uri)
@@ -154,19 +155,18 @@ def _DownloadSampleFromServer(server_name, authtoken, sample_key, sample_board,
   f.close()
 
 
-def _UncompressSample(sample_key, sample_board,
-                      sample_chromeos_version, output_dir):
+def _UncompressSample(key, time, board, version, output_dir):
   """Uncompresses a given sample.gz file and deletes the compressed version.
   Args:
-    sample_key: (string) Sample key to uncompress.
-    sample_board: (string) Board that the sample was taken on.
-    sample_chromeos_version: (string) Version string from /etc/lsb-release
-    outout_dir: (string) Filepath to find sample key in.
+    key: (string) Sample key to uncompress.
+    time: (string) Date that the sample was uploaded.
+    board: (string) Board that the sample was taken on.
+    version: (string) Version string from /etc/lsb-release
+    output_dir: (string) Filepath to find sample key in.
   Returns:
     None
   """
-  filename = _BuildFilenameFromParams(sample_key, sample_board,
-                                      sample_chromeos_version)
+  filename = _BuildFilenameFromParams(key, time, board, version)
   compressed_filename = filename+".gz"
 
   if os.path.exists(os.path.join(output_dir, filename)):
@@ -181,21 +181,21 @@ def _UncompressSample(sample_key, sample_board,
   os.remove(os.path.join(output_dir, compressed_filename))
 
 
-def _DeleteSampleFromServer(server_name, authtoken, sample_key):
+def _DeleteSampleFromServer(server_name, authtoken, key):
   """Opens the /delete page with the specified key
      to delete the sample off the datastore.
     Args:
       server_name: (string) URL that the app engine code is living on.
       authtoken:   (string) Authorization token.
-      sample_key:  (string) Key to delete.
+      key:  (string) Key to delete.
     Returns:
       None
   """
 
-  serv_uri = server_name + "/del/" + sample_key
+  serv_uri = server_name + "/del/" + key
   serv_args = {"continue": serv_uri, "auth": authtoken}
   full_serv_uri = server_name + "/_ah/login?%s" % urllib.urlencode(serv_args)
-  serv_req = urllib2.Reqest(full_serv_uri)
+  serv_req = urllib2.Request(full_serv_uri)
   urllib2.urlopen(serv_req)
 
 

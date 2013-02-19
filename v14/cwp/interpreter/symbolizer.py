@@ -1,5 +1,5 @@
+#!/usr/bin/python
 # Copyright 2012 Google Inc. All Rights Reserved.
-#!/usr/bin/python2.6
 """A script that symbolizes perf.data files."""
 import optparse
 import os
@@ -47,18 +47,18 @@ def _ValidateOpts(opts):
 
 
 def _ParseFilename(filename, canonical=False):
-  """Returns a tuple (database_key, board, lsb_version).
+  """Returns a tuple (key, time, board, lsb_version).
      If canonical is True, instead returns (database_key, board, canonical_vers)
      canonical_vers includes the revision string.
   """
-  [key, board, vers] = filename.split("~")
+  key, time, board, vers = filename.split("~")
   if canonical:
     vers = misc.GetChromeOSVersionFromLSBVersion(vers)
-  return (key, board, vers)
+  return (key, time, board, vers)
 
 
 def _FormReleaseDir(board, version):
-  return "%s-release-%s" % (board, version)
+  return "%s-release~%s" % (board, version)
 
 
 def _DownloadSymbols(filename, cache):
@@ -66,7 +66,7 @@ def _DownloadSymbols(filename, cache):
       We store the downloads in cache, with each set of symbols in a TLD
       named like cache/$board-release~$canonical_vers/usr/lib/debug
   """
-  _, board, vers = _ParseFilename(filename, canonical=True)
+  _, _, board, vers = _ParseFilename(filename, canonical=True)
   tmp_suffix = ".tmp"
 
   tarball_subdir = _FormReleaseDir(board, vers)
@@ -109,9 +109,9 @@ def _DownloadSymbols(filename, cache):
 
 def _PerfReport(filename, in_dir, out_dir, cache):
   """ Call perf report on the file, storing output to the output dir.
-      The output is currently stored as $out_dir/$key_report
+      The output is currently stored as $out_dir/$filename
   """
-  key, board, vers = _ParseFilename(filename, canonical=True)
+  _, _, board, vers = _ParseFilename(filename, canonical=True)
   symbol_cache_tld = _FormReleaseDir(board, vers)
   input_file = os.path.join(in_dir, filename)
   symfs = os.path.join(cache, symbol_cache_tld)
@@ -119,7 +119,7 @@ def _PerfReport(filename, in_dir, out_dir, cache):
   print "Reporting."
   print report_cmd
   report_proc = Popen(report_cmd.split(), stdout=PIPE)
-  outfile = open(os.path.join(out_dir, key+"_report"), "w")
+  outfile = open(os.path.join(out_dir, filename), "w")
   outfile.write(report_proc.stdout.read())
   outfile.close()
 
