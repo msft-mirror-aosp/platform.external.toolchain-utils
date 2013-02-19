@@ -196,6 +196,13 @@ class ResultsReport(object):
           new_column.append(cc)
     return new_column
 
+  def _AreAllRunsEmpty(self, runs):
+    for label in runs:
+      for dictionary in label:
+        if dictionary:
+          return False
+    return True
+
   def _GetTables(self, labels, benchmark_runs, columns):
     tables = []
     ro = ResultOrganizer(benchmark_runs, labels)
@@ -203,19 +210,26 @@ class ResultsReport(object):
     label_name = ro.labels
     for item in result:
       runs = result[item]
-      tg = TableGenerator(runs, label_name)
-      table = tg.GetTable()
       for benchmark in self.benchmarks:
         if benchmark.name == item:
           break
       benchmark_info = ("Benchmark:  {0};  Iterations: {1}"
                          .format(benchmark.name, benchmark.iterations))
-      parsed_columns = self._ParseColumn(columns, benchmark.iterations)
-      tf = TableFormatter(table, parsed_columns)
-      cell_table = tf.GetCellTable()
       cell = Cell()
       cell.string_value = benchmark_info
       ben_table = [[cell]]
+
+      if  self._AreAllRunsEmpty(runs):
+        cell = Cell()
+        cell.string_value = ("This benchmark contains no result."
+                             " Is the benchmark name valid?")
+        cell_table = [[cell]]
+      else:
+        tg = TableGenerator(runs, label_name)
+        table = tg.GetTable()
+        parsed_columns = self._ParseColumn(columns, benchmark.iterations)
+        tf = TableFormatter(table, parsed_columns)
+        cell_table = tf.GetCellTable()
       tables.append(ben_table)
       tables.append(cell_table)
     return tables
@@ -231,6 +245,8 @@ class ResultsReport(object):
         tp = TablePrinter(table, TablePrinter.CONSOLE)
       elif out_to == "TSV":
         tp = TablePrinter(table, TablePrinter.TSV)
+      elif out_to == "EMAIL":
+        tp = TablePrinter(table, TablePrinter.EMAIL)
       else:
         pass
       output += tp.Print()

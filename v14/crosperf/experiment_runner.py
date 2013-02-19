@@ -90,10 +90,11 @@ class ExperimentRunner(object):
 
     self.l.LogOutput("Storing results of each benchmark run.")
     for benchmark_run in experiment.benchmark_runs:
-      benchmark_run_name = filter(str.isalnum, benchmark_run.name)
-      benchmark_run_path = os.path.join(results_directory,
-                                        benchmark_run_name)
-      benchmark_run.result.CopyResultsTo(benchmark_run_path)
+      if benchmark_run.result:
+        benchmark_run_name = filter(str.isalnum, benchmark_run.name)
+        benchmark_run_path = os.path.join(results_directory,
+                                          benchmark_run_name)
+        benchmark_run.result.CopyResultsTo(benchmark_run_path)
 
   def Run(self):
     self._Run(self._experiment)
