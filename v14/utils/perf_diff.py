@@ -16,13 +16,13 @@ import misc
 import tabulator
 
 
-def GetPerfDictFromReport(report_file, num_functions=5):
+def GetPerfDictFromReport(report_file):
   output = {}
   perf_report = PerfReport(report_file)
   for k, v in perf_report.sections.items():
     if k not in output:
       output[k] = {}
-    for function in v.functions[:num_functions]:
+    for function in v.functions:
       out_key = "%s" % (function.name)
       output[k][out_key] = function.count
   return output

@@ -39,9 +39,10 @@ class PerfTable(object):
 
   def ReadPerfReport(self, perf_file, label, benchmark_name, iteration):
     """Add the data from one run to the dict."""
-    if not os.path.isfile(perf_file):
-      return
-    perf_of_run = perf_diff.GetPerfDictFromReport(perf_file)
+    if os.path.isfile(perf_file):
+      perf_of_run = perf_diff.GetPerfDictFromReport(perf_file)
+    else:
+      perf_of_run = {}
     if benchmark_name not in self.perf_data:
       self.perf_data[benchmark_name] = {}
       for event in perf_of_run:
@@ -55,4 +56,7 @@ class PerfTable(object):
       data_for_label = ben_data[event][label_index]
       while len(data_for_label) <= iteration:
         data_for_label.append({})
-      data_for_label[iteration] = perf_of_run[event]
+      if perf_of_run:
+        data_for_label[iteration] = perf_of_run[event]
+      else:
+        data_for_label[iteration] = {}

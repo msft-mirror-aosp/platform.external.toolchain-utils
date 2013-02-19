@@ -11,6 +11,7 @@ from perf_table import PerfTable
 
 class ResultsReport(object):
   MAX_COLOR_CODE = 255
+  PERF_ROWS = 5
 
   def __init__(self, experiment):
     self.experiment = experiment
@@ -140,8 +141,9 @@ class ResultsReport(object):
       benchmark_data = p_table.perf_data[benchmark]
       table = []
       for event in benchmark_data:
-        tg = TableGenerator(benchmark_data[event], label_names)
-        table = tg.GetTable()
+        tg = TableGenerator(benchmark_data[event], label_names,
+                            sort=TableGenerator.SORT_BY_VALUES_DESC)
+        table = tg.GetTable(self.PERF_ROWS)
         parsed_columns = self._ParseColumn(columns, ben.iterations)
         tf = TableFormatter(table, parsed_columns)
         tf.GenerateCellTable()

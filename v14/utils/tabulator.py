@@ -5,6 +5,7 @@
 import getpass
 import math
 import numpy
+import sys
 
 import colortrans
 from email_sender import EmailSender
@@ -88,7 +89,7 @@ class TableGenerator(object):
     keys = self._AggregateKeys()
     return self._SortKeys(keys)
 
-  def GetTable(self):
+  def GetTable(self, number_of_rows=sys.maxint):
     """Returns a table from a list of list of dicts.
 
     The list of list of dicts is passed into the constructor of TableGenerator.
@@ -117,6 +118,7 @@ class TableGenerator(object):
     keys = self._GetKeys()
     header = [self._key_name] + self._labels
     table = [header]
+    rows = 0
     for k in keys:
       row = [k]
       for run_list in self._runs:
@@ -128,6 +130,9 @@ class TableGenerator(object):
             v.append(None)
         row.append(v)
       table.append(row)
+      rows += 1
+      if rows == number_of_rows:
+        break
     return table
 
 
