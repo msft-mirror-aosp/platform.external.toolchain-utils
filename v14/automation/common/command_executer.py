@@ -55,7 +55,8 @@ class CommandExecuter(object):
 
       self._logger.debug("Executing '%s' on %s.", cmd, login)
 
-      cmd = "ssh %s -- '%s'" % (login, cmd)
+      # FIXME(asharif): Remove this after crosbug.com/33007 is fixed.
+      cmd = "ssh -t -t %s -- '%s'" % (login, cmd)
     else:
       self._logger.debug("Executing: '%s'.", cmd)
 
