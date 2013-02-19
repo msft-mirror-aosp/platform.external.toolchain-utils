@@ -54,14 +54,16 @@ class ToolchainPart(object):
   def Build(self):
     self.RunSetupBoardIfNecessary()
 
+    rv = 1
     try:
       self.UninstallTool()
       self.MoveMaskFile()
       self.MountSources(False)
       self.RemoveCompiledFile()
-      self.BuildTool()
+      rv = self.BuildTool()
     finally:
       self.UnMoveMaskFile()
+      return rv
 
   def RemoveCompiledFile(self):
     compiled_file = os.path.join(self._chromeos_root,
@@ -138,7 +140,7 @@ class ToolchainPart(object):
     env_string = " ".join(["%s=\"%s\"" % var for var in env.items()])
     command = "emerge =cross-%s/%s-9999" % (self._ctarget, self._name)
     full_command = "sudo %s %s" % (env_string, command)
-    self._ce.ChrootRunCommand(self._chromeos_root, full_command)
+    return self._ce.ChrootRunCommand(self._chromeos_root, full_command)
 
   def MoveMaskFile(self):
     self._new_mask_file = None
@@ -256,16 +258,16 @@ def Main(argv):
                          not options.noincremental, build_env)
       toolchain_parts.append(tp)
 
+  rv = 0
   try:
     for tp in toolchain_parts:
       if options.mount_only or options.unmount_only:
         tp.MountSources(options.unmount_only)
       else:
-        tp.Build()
+        rv = rv + tp.Build()
   finally:
     print "Exiting..."
-  return 0
-
+    return rv
 
 if __name__ == "__main__":
   retval = Main(sys.argv)
