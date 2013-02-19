@@ -9,6 +9,7 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 from contextlib import contextmanager
 import os
 import re
+import shutil
 import sys
 import time
 
@@ -287,6 +288,20 @@ def IsFloat(text):
   except ValueError:
     return False
 
+def RemoveChromeBrowserObjectFiles(chromeos_root, board):
+  """ Remove any object files from all the posible locations """
+  out_dir = os.path.join(
+      GetChrootPath(chromeos_root),
+      "var/cache/chromeos-chrome/chrome-src/src/out_%s" % board)
+  if os.path.exists(out_dir):
+    shutil.rmtree(out_dir)
+    logger.GetLogger().LogCmd("rm -rf %s" % out_dir)
+  out_dir = os.path.join(
+      GetChrootPath(chromeos_root),
+      "var/cache/chromeos-chrome/chrome-src-internal/src/out_%s" % board)
+  if os.path.exists(out_dir):
+    shutil.rmtree(out_dir)
+    logger.GetLogger().LogCmd("rm -rf %s" % out_dir)
 
 @contextmanager
 def WorkingDirectory(new_dir):

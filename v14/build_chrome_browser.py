@@ -104,21 +104,7 @@ def Main(argv):
   options.env = misc.MergeEnvStringWithDict(options.env,
                                             {"USE": "chrome_internal"})
   if options.clean:
-    # Remove both internal and external output dir.
-    # TODO(asharif): Change it so it only removes the one you're building
-    # currently.
-    out_dir = os.path.join(options.chromeos_root,
-                           "chroot",
-                           "var/cache/chromeos-chrome/chrome-src/src/out_%s"
-                           % options.board)
-    if os.path.exists(out_dir):
-      shutil.rmtree(out_dir)
-    out_dir = os.path.join(
-      options.chromeos_root, "chroot",
-      "var/cache/chromeos-chrome/chrome-src-internal/src/out_%s".format(
-        options.board))
-    if os.path.exists(out_dir):
-      shutil.rmtree(out_dir)
+    misc.RemoveChromeBrowserObjectFiles(options.chromeos_root, options.board)
 
   chrome_origin="SERVER_SOURCE"
   if options.cros_workon:

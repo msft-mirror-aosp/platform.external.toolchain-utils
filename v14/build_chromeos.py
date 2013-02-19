@@ -74,6 +74,9 @@ def Main(argv):
   build_packages_env = options.env
   if options.rebuild == True:
     build_packages_env += " EXTRA_BOARD_FLAGS=-e"
+    # EXTRA_BOARD_FLAGS=-e should clean up the object files for the chrome
+    # browser but it doesn't. So do it here.
+    misc.RemoveChromeBrowserObjectFiles(options.chromeos_root, options.board)
 
   build_packages_env = misc.MergeEnvStringWithDict(build_packages_env,
                                                    {"USE": "chrome_internal"})
@@ -85,8 +88,8 @@ def Main(argv):
 
   if options.vanilla == True:
     command = misc.GetSetupBoardCommand(options.board,
-                                         usepkg=False,
-                                         force=options.clobber_board)
+                                        usepkg=False,
+                                        force=options.clobber_board)
     command += "; " + build_packages_env + " " + build_packages_command
     command += "&& " + build_packages_env + " " + build_image_command
     ret = cmd_executer.ChrootRunCommand(options.chromeos_root, command)
