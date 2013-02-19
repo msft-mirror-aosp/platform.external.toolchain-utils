@@ -1,0 +1,679 @@
+#!/usr/bin/python
+
+# Copyright 2011 Google Inc. All Rights Reserved.
+
+import math
+import numpy
+import colortrans
+
+
+def _IsFloat(v):
+  try:
+    float(v)
+    return True
+  except ValueError:
+    return False
+
+
+def _AllFloat(values):
+  return all([_IsFloat(v) for v in values])
+
+
+def _GetFloats(values):
+  return [float(v) for v in values]
+
+
+class TableGenerator(object):
+  """Creates a table from a list of list of dicts.
+
+  The main public function is called GetTable().
+  """
+  SORT_BY_KEYS = 0
+  SORT_BY_KEYS_DESC = 1
+  SORT_BY_VALUES = 2
+  SORT_BY_VALUES_DESC = 3
+
+  MISSING_VALUE = "x"
+
+  def __init__(self, d, l, sort=SORT_BY_KEYS):
+    self._runs = d
+    self._labels = l
+    self._sort = sort
+
+  def _AggregateKeys(self):
+    keys = set([])
+    for run_list in self._runs:
+      for run in run_list:
+        keys = keys.union(run.keys())
+    return keys
+
+  def _GetHighestValue(self, key):
+    values = []
+    for run_list in self._runs:
+      for run in run_list:
+        if key in run:
+          values.append(run[key])
+    ret = sorted(values)[-1]
+    return ret
+
+  def _GetLowestValue(self, key):
+    values = []
+    for run_list in self._runs:
+      for run in run_list:
+        if key in run:
+          values.append(run[key])
+
+    ret = sorted(values)[0]
+    return ret
+
+  def _SortKeys(self, keys):
+    if self._sort == self.SORT_BY_KEYS:
+      return sorted(keys)
+    elif self._sort == self.SORT_BY_VALUES:
+      return sorted(keys, key=lambda x: self._GetLowestValue(x))
+    elif self._sort == self.SORT_BY_VALUES_DESC:
+      return sorted(keys, key=lambda x: self._GetHighestValue(x), reverse=True)
+    else:
+      assert 0, "Unimplemented sort %s" % self._sort
+
+  def _GetKeys(self):
+    keys = self._AggregateKeys()
+    return self._SortKeys(keys)
+
+  def GetTable(self):
+    """Returns a table from a list of list of dicts.
+
+    The list of list of dicts is passed into the constructor of TableGenerator.
+    This method converts that into a canonical list of lists which represents a
+    table of values.
+
+    Args:
+      None
+    Returns:
+      A list of lists which is the table.
+
+    Example:
+      We have the following runs:
+        [[{"k1": "v1", "k2": "v2"}, {"k1": "v3"}],
+         [{"k1": "v4", "k4": "v5"}]]
+      and the following labels:
+        ["vanilla", "modified"]
+      it will return:
+        [["Key", "vanilla", "modified"]
+         ["k1", ["v1", "v3"], ["v4"]]
+         ["k2", ["v2"], []]
+         ["k4", [], ["v5"]]]
+      The returned table can then be processed further by other classes in this
+      module.
+    """
+    keys = self._GetKeys()
+    header = ["keys"] + self._labels
+    table = [header]
+    for k in keys:
+      row = [k]
+      for run_list in self._runs:
+        v = []
+        for run in run_list:
+          if k in run:
+            v.append(run[k])
+        row.append(v)
+      table.append(row)
+    return table
+
+
+class Result(object):
+  """A class that respresents a single result.
+
+  This single result is obtained by condensing the information from a list of
+  runs and a list of baseline runs.
+  """
+  def __init__(self):
+    pass
+
+  def NeedsBaseline(self):
+    return False
+
+  def _Literal(self, cell, values, baseline_values):
+    cell.value = " ".join([str(v) for v in values])
+
+  def _ComputeFloat(self, cell, values, baseline_values):
+    self._Literal(cell, values, baseline_values)
+
+  def _ComputeString(self, cell, values, baseline_values):
+    self._Literal(cell, values, baseline_values)
+
+  def _GetGmean(self, values):
+    if not values:
+      return float("nan")
+    return (reduce(lambda x, y: x*y, values))**(1.0/len(values))
+
+  def Compute(self, cell, values, baseline_values):
+    """Compute the result given a list of values and baseline values
+
+    Args:
+      cell: A cell data structure to populate.
+      values: List of values.
+      baseline_values: List of baseline values. Can be none if this is the
+      baseline itself.
+    """
+    all_floats = True
+    if _AllFloat(values):
+      float_values = _GetFloats(values)
+    else:
+      all_floats = False
+    if baseline_values is not None:
+      if _AllFloat(baseline_values):
+        float_baseline_values = _GetFloats(baseline_values)
+      else:
+        all_floats = False
+    else:
+      float_baseline_values = None
+
+    if all_floats:
+      self._ComputeFloat(cell, float_values, float_baseline_values)
+    else:
+      self._ComputeString(cell, values, baseline_values)
+
+
+class AmeanResult(Result):
+  def _ComputeFloat(self, cell, values, baseline_values):
+    cell.value = numpy.mean(values)
+
+
+class ComparisonResult(Result):
+  def NeedsBaseline(self):
+    return True
+
+
+class AmeanRatioResult(ComparisonResult):
+  def _ComputeFloat(self, cell, values, baseline_values):
+    cell.value = numpy.mean(values)/numpy.mean(baseline_values)
+
+
+class GmeanRatioResult(ComparisonResult):
+  def _ComputeFloat(self, cell, values, baseline_values):
+    cell.value = self._GetGmean(values)/self._GetGmean(baseline_values)
+
+
+class Color(object):
+  """Class that represents color in RGBA format"""
+  def __init__(self, r=0, g=0, b=0, a=0):
+    self.r = r
+    self.g = g
+    self.b = b
+    self.a = a
+
+  def __str__(self):
+    return "r: %s g: %s: b: %s: a: %s" % (self.r, self.g, self.b, self.a)
+
+  def Round(self):
+    """Round RGBA values to the nearest integer."""
+    self.r = int(self.r)
+    self.g = int(self.g)
+    self.b = int(self.b)
+    self.a = int(self.a)
+
+  def GetRGB(self):
+    """Get a hex representation of the color"""
+    return "%02x%02x%02x" % (self.r, self.g, self.b)
+
+  @classmethod
+  def Lerp(cls, ratio, a, b):
+    """Perform linear interpolation between two colors.
+
+    Args:
+      ratio: The ratio to use for linear polation.
+      a: The first color object (used when ratio is 0).
+      b: The second color object (used when ratio is 1)."""
+    ret = cls()
+    ret.r = (b.r - a.r)*ratio + a.r
+    ret.g = (b.g - a.g)*ratio + a.g
+    ret.b = (b.b - a.b)*ratio + a.b
+    ret.a = (b.a - a.a)*ratio + a.a
+    return ret
+
+
+class Format(object):
+  """A class that represents the format of a column."""
+  def __init__(self):
+    pass
+
+  def Compute(self, cell):
+    """Computes the attributes of a cell based on its value.
+
+    Attributes typically are color, width, etc.
+
+    Args:
+      cell: The cell whose attributes are to be populated"""
+    if cell.value is None:
+      cell.string_value = ""
+    if isinstance(cell.value, float):
+      self._ComputeFloat(cell)
+    else:
+      self._ComputeString(cell)
+
+  def _ComputeFloat(self, cell):
+    cell.string_value = str(cell.value)
+
+  def _ComputeString(self, cell):
+    cell.string_value = str(cell.value)
+
+  def _GetColor(self, value, low, mid, high, power=6):
+    if math.isnan(value):
+      return mid
+    if value > 1:
+      value = 2 - 1.0/value
+
+    return self._GetColorBetweenRange(value, 0, 1, 2, low, mid, high, power)
+
+  def _GetColorBetweenRange(self,
+                            value,
+                            min_value, mid_value, max_value,
+                            low_color, mid_color, high_color,
+                            power):
+    assert value <= max_value
+    assert value >= min_value
+    if value > mid_value:
+      value = (max_value - value)/(max_value - mid_value)
+      value **= power
+      ret = Color.Lerp(value, high_color, mid_color)
+    else:
+      value = (value - min_value)/(mid_value - min_value)
+      value **= power
+      ret = Color.Lerp(value, low_color, mid_color)
+    ret.Round()
+    return ret
+
+
+class PercentFormat(Format):
+  """Format the cell as a percent.
+
+  Example:
+    If the cell contains a value of 1.5, the string_value will be +50%"""
+  def _ComputeFloat(self, cell):
+    cell.string_value = "%+1.1f%%" % ((float(cell.value) - 1) * 100)
+    cell.color = self._GetColor(cell.value,
+                                Color(255, 0, 0, 0),
+                                Color(0, 0, 0, 0),
+                                Color(0, 255, 0, 0))
+
+
+class RatioFormat(Format):
+  """Format the cell as a ratio.
+
+  Example:
+    If the cell contains a value of 1.5642, the string_value will be 1.56"""
+  def _ComputeFloat(self, cell):
+    cell.string_value = "%+1.1f%%" % ((cell.value - 1) * 100)
+    cell.color = self._GetColor(cell.value,
+                                Color(255, 0, 0, 0),
+                                Color(0, 0, 0, 0),
+                                Color(0, 255, 0, 0))
+
+
+class ColorBoxFormat(Format):
+  """Format the cell as a color box.
+
+  Example:
+    If the cell contains a value of 1.5, it will get a green color.
+    If the cell contains a value of 0.5, it will get a red color.
+    The intensity of the green/red will be determined by how much above or below
+    1.0 the value is."""
+  def _ComputeFloat(self, cell):
+    cell.string_value = "--"
+    bgcolor = self._GetColor(cell.value,
+                             Color(255, 0, 0, 0),
+                             Color(255, 255, 255, 0),
+                             Color(0, 255, 0, 0))
+    cell.bgcolor = bgcolor
+    cell.color = bgcolor
+
+
+class Cell(object):
+  """A class to represent a cell in a table.
+
+  Attributes:
+    value: The raw value of the cell.
+    color: The color of the cell.
+    bgcolor: The background color of the cell.
+    string_value: The string value of the cell.
+    suffix: A string suffix to be attached to the value when displaying.
+    prefix: A string prefix to be attached to the value when displaying.
+    color_row: Indicates whether the whole row is to inherit this cell's color.
+    bgcolor_row: Indicates whether the whole row is to inherit this cell's
+    bgcolor.
+    width: Optional specifier to make a column narrower than the usual width.
+    The usual width of a column is the max of all its cells widths."""
+  def __init__(self):
+    self.value = None
+    self.color = None
+    self.bgcolor = None
+    self.string_value = None
+    self.suffix = None
+    self.prefix = None
+    # Entire row inherits this color.
+    self.color_row = False
+    self.bgcolor_row = False
+    self.width = None
+
+  def __str__(self):
+    l = []
+    l.append("value: %s" % self.value)
+    l.append("string_value: %s" % self.string_value)
+    return " ".join(l)
+
+
+class Column(object):
+  """Class representing a column in a table.
+
+  Attributes:
+    result: an object of the Result class.
+    fmt: an object of the Format class."""
+  def __init__(self, result, fmt):
+    self.result = result
+    self.fmt = fmt
+
+
+# Takes in:
+# ["Key", "Label1", "Label2"]
+# ["k", ["v", "v2"], [v3]]
+# etc.
+# Also takes in a format string.
+# Returns a table like:
+# ["Key", "Label1", "Label2"]
+# ["k", avg("v", "v2"), stddev("v", "v2"), etc.]]
+# according to format string
+class TableFormatter(object):
+  """Class to convert a plain table into a cell-table.
+
+  This class takes in a table generated by TableGenerator and a list of column
+  formats to apply to the table and returns a table of cells."""
+  def __init__(self, table, columns):
+    """The constructor takes in a table and a list of columns.
+
+    Args:
+      table: A list of lists of values.
+      columns: A list of column containing what to produce and how to format it.
+    """
+    self._table = table
+    self._columns = columns
+    self._table_columns = []
+    self._out_table = []
+
+  def _GenerateCellTable(self):
+    row_index = 0
+
+    for row in self._table[1:]:
+      key = Cell()
+      key.string_value = str(row[0])
+      out_row = [key]
+      baseline = None
+      for values in row[1:]:
+        for column in self._columns:
+          cell = Cell()
+          if column.result.NeedsBaseline():
+            if baseline is not None:
+              column.result.Compute(cell, values, baseline)
+              column.fmt.Compute(cell)
+              out_row.append(cell)
+              if not row_index:
+                self._table_columns.append(column)
+          else:
+            column.result.Compute(cell, values, baseline)
+            column.fmt.Compute(cell)
+            out_row.append(cell)
+            if not row_index:
+              self._table_columns.append(column)
+
+        if baseline is None:
+          baseline = values
+      self._out_table.append(out_row)
+      row_index += 1
+
+    # TODO(asharif): refactor this.
+    # Now generate header
+    key = Cell()
+    key.string_value = "Keys"
+    header = [key]
+    for column in self._table_columns:
+      cell = Cell()
+      result_name = column.result.__class__.__name__
+      format_name = column.fmt.__class__.__name__
+
+      cell.string_value = "%s %s" % (result_name.replace("Result", ""),
+                                     format_name.replace("Format", ""))
+
+      header.append(cell)
+
+    self._out_table = [header] + self._out_table
+
+    top_header = []
+    for label in self._table[0]:
+      cell = Cell()
+      cell.string_value = str(label)
+      top_header.append(cell)
+
+    self._out_table = [top_header] + self._out_table
+
+    return self._out_table
+
+  def _PrintOutTable(self):
+    o = ""
+    for row in self._out_table:
+      for cell in row:
+        o += str(cell) + " "
+      o += "\n"
+    print o
+
+  def GetCellTable(self):
+    """Function to return a table of cells.
+
+    The table (list of lists) is converted into a table of cells by this
+    function.
+
+    Returns:
+      A table of cells with each cell having the properties and string values as
+      requiested by the columns passed in the constructor."""
+    # Generate the cell table, creating a list of dynamic columns on the fly.
+    return self._GenerateCellTable()
+
+
+class TablePrinter(object):
+  """Class to print a cell table to the console, file or html."""
+  PLAIN = 0
+  CONSOLE = 1
+  HTML = 2
+  CSV = 3
+
+  def __init__(self, table, output_type):
+    """Constructor that stores the cell table and output type."""
+    self._table = table
+    self._output_type = output_type
+
+  # Compute whole-table properties like max-size, etc.
+  def _ComputeStyle(self):
+    self._row_styles = []
+    for row in self._table:
+      row_style = Cell()
+      for cell in row:
+        if cell.color_row:
+          assert cell.color, "Cell color not set but color_row set!"
+          assert not row_style.color, "Multiple row_style.colors found!"
+          row_style.color = cell.color
+      self._row_styles.append(row_style)
+
+    self._column_styles = []
+    for i in range(len(self._table[1])):
+      column_style = Cell()
+      for row in self._table[1:]:
+        column_style.width = max(column_style.width,
+                                     len(row[i].string_value))
+      self._column_styles.append(column_style)
+
+  def _GetBGColorFix(self, color):
+    if self._output_type == self.CONSOLE:
+      rgb = color.GetRGB()
+      prefix, _ = colortrans.rgb2short(rgb)
+      prefix = "\033[48;5;%sm" % prefix
+      suffix = "\033[0m"
+    return prefix, suffix
+
+  def _GetColorFix(self, color):
+    if self._output_type == self.CONSOLE:
+      rgb = color.GetRGB()
+      prefix, _ = colortrans.rgb2short(rgb)
+      prefix = "\033[38;5;%sm" % prefix
+      suffix = "\033[0m"
+    return prefix, suffix
+
+  def Print(self):
+    """Print the table to a console, html, etc.
+
+    Returns:
+      A string that contains the desired representation of the table."""
+    self._ComputeStyle()
+    return self._GetStringValue()
+
+  def _GetCellValue(self, i, j):
+    cell = self._table[i][j]
+    color = None
+    out = cell.string_value
+    if self._row_styles[i].color:
+      color = self._row_styles[i].color
+    elif cell.color:
+      color = cell.color
+
+    if self._row_styles[i].bgcolor:
+      bgcolor = self._row_styles[i].bgcolor
+    else:
+      bgcolor = cell.bgcolor
+
+    raw_width = len(out)
+
+    if color:
+      p, s = self._GetColorFix(color)
+      out = "%s%s%s" % (p, out, s)
+
+    if bgcolor:
+      p, s = self._GetBGColorFix(bgcolor)
+      out = "%s%s%s" % (p, out, s)
+
+    if self._output_type == self.CONSOLE:
+      if cell.width:
+        width = cell.width
+      else:
+        width = self._column_styles[j].width
+      if width > raw_width:
+        padding = ("%" + str(width - raw_width) + "s") % ""
+        out = padding + out
+
+    return out
+
+  def _GetHorizontalSeparator(self):
+    if self._output_type == self.CONSOLE:
+      return " "
+
+  def _GetVerticalSeparator(self):
+    if self._output_type == self.CONSOLE:
+      return "\n"
+
+  def _GetPrefix(self):
+    if self._output_type == self.CONSOLE:
+      return ""
+
+  def _GetSuffix(self):
+    if self._output_type == self.CONSOLE:
+      return ""
+
+  def _GetStringValue(self):
+    o = ""
+    o += self._GetPrefix()
+    for i in range(len(self._table)):
+      row = self._table[i]
+      for j in range(len(row)):
+        out = self._GetCellValue(i, j)
+        o += out + self._GetHorizontalSeparator()
+      o += self._GetVerticalSeparator()
+    o += self._GetSuffix()
+    return o
+
+
+# Some common drivers
+def GetSimpleConsoleTable(table):
+  """Prints a simple table.
+
+  This is used by code that has a very simple list-of-lists and wants to produce
+  a table with ameans, a percentage ratio of ameans and a colorbox.
+
+  Args:
+    table: a list of lists.
+
+  Returns:
+    A string version of the table that can be printed to the console.
+
+  Example:
+    GetSimpleConsoleTable([["binary", "b1", "b2"],["size", "300", "400"]])
+    will produce a colored table that can be printed to the console."""
+  columns = [
+      Column(AmeanResult(),
+             Format()),
+      Column(AmeanRatioResult(),
+             PercentFormat()),
+      Column(AmeanRatioResult(),
+             ColorBoxFormat()),
+      ]
+  our_table = [table[0]]
+  for row in table[1:]:
+    our_row = [row[0]]
+    for v in row[1:]:
+      our_row.append([v])
+    our_table.append(our_row)
+
+  tf = TableFormatter(our_table, columns)
+  cell_table = tf.GetCellTable()
+  tp = TablePrinter(cell_table, TablePrinter.CONSOLE)
+  return tp.Print()
+
+
+def _GetSimpleConsoleTableWithAverage(runs, labels):
+  tg = TableGenerator(runs, labels, TableGenerator.SORT_BY_VALUES_DESC)
+  table = tg.GetTable()
+  columns = [Column(AmeanResult(),
+                    Format()),
+             Column(AmeanRatioResult(),
+                    PercentFormat()),
+             Column(AmeanRatioResult(),
+                    RatioFormat()),
+             Column(GmeanRatioResult(),
+                    RatioFormat()),
+            ]
+  tf = TableFormatter(table, columns)
+  cell_table = tf.GetCellTable()
+  tp = TablePrinter(cell_table, TablePrinter.CONSOLE)
+  return tp.Print()
+
+if __name__ == "__main__":
+  # Run a few small tests here.
+  runs = [
+      [
+          {"k1": "10", "k2": "12", "k5": "40", "k6": "40"},
+          {"k1": "13", "k2": "14", "k3": "15"}
+          ],
+      [
+          {"k1": "50", "k2": "51", "k3": "52", "k4": "53", "k5": "35", "k6":
+           "45"},
+          ],
+      ]
+  labels = ["vanilla", "modified"]
+  t = _GetSimpleConsoleTableWithAverage(runs, labels)
+  print t
+
+  simple_table = [
+      ["binary", "b1", "b2", "b3"],
+      ["size", 100, 105, 108],
+      ["rodata", 100, 80, 70],
+      ["data", 100, 100, 100],
+      ["debug", 100, 140, 60],
+      ]
+  t = GetSimpleConsoleTable(simple_table)
+  print t
