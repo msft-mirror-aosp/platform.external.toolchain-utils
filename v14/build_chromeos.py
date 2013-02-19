@@ -26,22 +26,6 @@ def Usage(parser, message):
   sys.exit(0)
 
 
-def MakeChroot(chromeos_root, clobber_chroot=False):
-  """Make a chroot given a chromeos checkout."""
-  if (not os.path.isdir(chromeos_root + "/chroot")
-      or clobber_chroot):
-    commands = []
-    commands.append("cd " + chromeos_root + "/src/scripts")
-    clobber_chroot = ""
-    if clobber_chroot:
-      clobber_chroot = "--replace"
-    commands.append("./make_chroot --fast " + clobber_chroot)
-    ret = command_executer.GetCommandExecuter().RunCommands(commands)
-    logger.GetLogger().LogFatalIf(ret, "make_chroot failed")
-  else:
-    logger.GetLogger().LogOutput("Did not make_chroot because it already exists")
-
-
 def Main(argv):
   """Build ChromeOS."""
   # Common initializations
@@ -89,8 +73,6 @@ def Main(argv):
 
   options.chromeos_root = os.path.expanduser(options.chromeos_root)
 
-  MakeChroot(options.chromeos_root, options.clobber_chroot)
-
   build_packages_command = misc.GetBuildPackagesCommand(options.board)
   build_image_command = misc.GetBuildImageCommand(options.board)
 
@@ -112,8 +94,6 @@ def Main(argv):
     ret = cmd_executer.ChrootRunCommand(
         options.chromeos_root,
         misc.GetSetupBoardCommand(options.board,
-                                   gcc_version="9999",
-                                   binutils_version="9999",
                                    force=options.clobber_board))
     logger.GetLogger().LogFatalIf(ret, "setup_board failed")
   else:
