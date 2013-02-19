@@ -46,6 +46,9 @@ class LabelSettings(Settings):
                             "chromeos_image."))
     self.AddField(TextField("board", required=True, description="The target "
                             "board for running experiments on, e.g. x86-alex."))
+    self.AddField(ListField("remote", required=True, description=
+                            "A comma-separated list of ip's of chromeos"
+                            "devices to run experiments on."))
 
 
 class GlobalSettings(Settings):
@@ -56,14 +59,14 @@ class GlobalSettings(Settings):
                             "identifier."))
     self.AddField(TextField("board", description="The target "
                             "board for running experiments on, e.g. x86-alex."))
-    self.AddField(ListField("remote", required=True,
+    self.AddField(ListField("remote",
                             description="A comma-separated list of ip's of "
                             "chromeos devices to run experiments on."))
     self.AddField(BooleanField("rerun_if_failed", description="Whether to "
                                "re-run failed autotest runs or not.",
                                default=False))
     self.AddField(ListField("email", description="Space-seperated"
-                               "list of email addresses to send email to."))
+                            "list of email addresses to send email to."))
     self.AddField(BooleanField("rerun", description="Whether to ignore the "
                                "cache and for autotests to be re-run.",
                                default=False))

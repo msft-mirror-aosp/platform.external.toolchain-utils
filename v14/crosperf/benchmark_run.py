@@ -27,7 +27,7 @@ STATUS_PENDING = "PENDING"
 
 class BenchmarkRun(threading.Thread):
   def __init__(self, name, benchmark_name, autotest_name, autotest_args,
-               label_name, chromeos_root, chromeos_image, board, iteration,
+               label, iteration,
                cache_conditions, outlier_range, perf_args,
                machine_manager,
                logger_to_use):
@@ -36,10 +36,8 @@ class BenchmarkRun(threading.Thread):
     self._logger = logger_to_use
     self.benchmark_name = benchmark_name
     self.autotest_name = autotest_name
-    self.label_name = label_name
-    self.chromeos_root = chromeos_root
-    self.chromeos_image = os.path.expanduser(chromeos_image)
-    self.board = board
+    self.label = label
+    self.chromeos_image = os.path.expanduser(label.chromeos_image)
     self.iteration = iteration
     self.result = None
     self.terminated = False
@@ -66,14 +64,15 @@ class BenchmarkRun(threading.Thread):
       # Just use the first machine for running the cached version,
       # without locking it.
       self.cache.Init(self.chromeos_image,
-                      self.chromeos_root,
+                      self.label.chromeos_root,
                       self.autotest_name,
                       self.iteration,
                       self.autotest_args,
                       self.machine_manager,
-                      self.board,
+                      self.label.board,
                       self.cache_conditions,
                       self._logger,
+                      self.label.name
                      )
 
       self.result = self.cache.ReadResult()
@@ -126,7 +125,9 @@ class BenchmarkRun(threading.Thread):
     while True:
       if self.terminated:
         raise Exception("Thread terminated while trying to acquire machine.")
-      machine = self.machine_manager.AcquireMachine(self.chromeos_image)
+      machine = self.machine_manager.AcquireMachine(self.chromeos_image,
+                                                    self.label)
+
       if machine:
         self._logger.LogOutput("%s: Machine %s acquired at %s" %
                                (self.name,
@@ -156,18 +157,19 @@ class BenchmarkRun(threading.Thread):
     self.timeline.Record(STATUS_IMAGING)
     self.machine_manager.ImageMachine(machine,
                                       self.chromeos_image,
-                                      self.board)
+                                      self.label.board)
     self.timeline.Record(STATUS_RUNNING)
     [retval, out, err] = self.autotest_runner.Run(machine.name,
-                                                  self.chromeos_root,
-                                                  self.board,
+                                                  self.label.chromeos_root,
+                                                  self.label.board,
                                                   self.autotest_name,
                                                   self.autotest_args)
     self.run_completed = True
 
     return Result.CreateFromRun(self._logger,
-                                self.chromeos_root,
-                                self.board,
+                                self.label.chromeos_root,
+                                self.label.board,
+                                self.label.name,
                                 out,
                                 err,
                                 retval)

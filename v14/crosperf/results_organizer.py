@@ -29,7 +29,7 @@ class ResultOrganizer(object):
         self.result[benchmark_name] = []
         while len(self.result[benchmark_name]) < len(labels):
           self.result[benchmark_name].append([])
-      label_index = self.labels.index(benchmark_run.label_name)
+      label_index = self.labels.index(benchmark_run.label.name)
       cur_table = self.result[benchmark_name][label_index]
       index = benchmark_run.iteration - 1
       while index >= len(cur_table):

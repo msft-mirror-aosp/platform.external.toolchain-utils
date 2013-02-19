@@ -28,11 +28,12 @@ class Result(object):
   what the key of the cache is. For runs with perf, it stores perf.data,
   perf.report, etc. The key generation is handled by the ResultsCache class.
   """
-  def __init__(self, chromeos_root, logger):
+  def __init__(self, chromeos_root, logger, label_name):
     self._chromeos_root = chromeos_root
     self._logger = logger
     self._ce = command_executer.GetCommandExecuter(self._logger)
     self._temp_dir = None
+    self.label_name = label_name
 
   def _CopyFilesTo(self, dest_dir, files_to_copy):
     file_index = 0
@@ -221,17 +222,18 @@ class Result(object):
     # TODO(asharif): Make machine_manager a singleton, and don't pass it into
     # this function.
     with open(os.path.join(cache_dir, MACHINE_FILE), "w") as f:
-      f.write(machine_manager.machine_checksum_string)
+      f.write(machine_manager.machine_checksum_string[self.label_name])
 
   @classmethod
-  def CreateFromRun(cls, logger, chromeos_root, board, out, err, retval):
-    result = cls(chromeos_root, logger)
+  def CreateFromRun(cls, logger, chromeos_root, board, label_name,
+                    out, err, retval):
+    result = cls(chromeos_root, logger, label_name)
     result._PopulateFromRun(board, out, err, retval)
     return result
 
   @classmethod
-  def CreateFromCacheHit(cls, chromeos_root, logger, cache_dir):
-    result = cls(chromeos_root, logger)
+  def CreateFromCacheHit(cls, chromeos_root, logger, cache_dir, label_name):
+    result = cls(chromeos_root, logger, label_name)
     try:
       result._PopulateFromCacheDir(cache_dir)
     except Exception as e:
@@ -270,7 +272,7 @@ class ResultsCache(object):
 
   def Init(self, chromeos_image, chromeos_root, autotest_name, iteration,
            autotest_args, machine_manager, board, cache_conditions,
-           logger_to_use):
+           logger_to_use, label_name):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.autotest_name = autotest_name
@@ -281,6 +283,7 @@ class ResultsCache(object):
     self.machine_manager = machine_manager
     self._logger = logger_to_use
     self._ce = command_executer.GetCommandExecuter(self._logger)
+    self.label_name = label_name
 
   def _GetCacheDirForRead(self):
     glob_path = self._FormCacheDir(self._GetCacheKeyList(True))
@@ -308,7 +311,7 @@ class ResultsCache(object):
     if read and CacheConditions.MACHINES_MATCH not in self.cache_conditions:
       machine_checksum = "*"
     else:
-      machine_checksum = self.machine_manager.machine_checksum
+      machine_checksum = self.machine_manager.machine_checksum[self.label_name]
     if read and CacheConditions.CHECKSUMS_MATCH not in self.cache_conditions:
       checksum = "*"
     else:
@@ -342,7 +345,7 @@ class ResultsCache(object):
     self._logger.LogOutput("Trying to read from cache dir: %s" % cache_dir)
 
     result = Result.CreateFromCacheHit(self.chromeos_root,
-                                       self._logger, cache_dir)
+                                       self._logger, cache_dir, self.label_name)
 
     if not result:
       return None

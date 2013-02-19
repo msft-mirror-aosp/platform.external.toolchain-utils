@@ -4,13 +4,14 @@
 
 import os
 import time
+
+from utils import logger
+
 from autotest_runner import AutotestRunner
 from benchmark_run import BenchmarkRun
 from machine_manager import MachineManager
 from results_cache import ResultsCache
 from results_report import HTMLResultsReport
-from utils import logger
-from utils.file_utils import FileUtils
 
 
 class Experiment(object):
@@ -50,8 +51,9 @@ class Experiment(object):
 
     for machine in remote:
       self.machine_manager.AddMachine(machine)
-    self.machine_manager.ComputeCommonCheckSum()
-    self.machine_manager.ComputeCommonCheckSumString()
+    for label in labels:
+      self.machine_manager.ComputeCommonCheckSum(label)
+      self.machine_manager.ComputeCommonCheckSumString(label)
 
     self.start_time = None
     self.benchmark_runs = self._GenerateBenchmarkRuns()
@@ -73,10 +75,7 @@ class Experiment(object):
                                        benchmark.name,
                                        benchmark.autotest_name,
                                        benchmark.autotest_args,
-                                       label.name,
-                                       label.chromeos_root,
-                                       label.chromeos_image,
-                                       label.board,
+                                       label,
                                        iteration,
                                        self.cache_conditions,
                                        benchmark.outlier_range,

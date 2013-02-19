@@ -54,17 +54,20 @@ class ExperimentFactory(object):
     # Construct labels.
     labels = []
     all_label_settings = experiment_file.GetSettings("label")
+    all_remote = list(remote)
     for label_settings in all_label_settings:
       label_name = label_settings.name
       image = label_settings.GetField("chromeos_image")
       chromeos_root = label_settings.GetField("chromeos_root")
       board = label_settings.GetField("board")
-      label = Label(label_name, image, chromeos_root, board)
+      my_remote = label_settings.GetField("remote")
+      all_remote += my_remote
+      label = Label(label_name, image, chromeos_root, board, my_remote)
       labels.append(label)
 
     email = global_settings.GetField("email")
-
-    experiment = Experiment(experiment_name, remote, rerun_if_failed,
+    all_remote = list(set(all_remote))
+    experiment = Experiment(experiment_name, all_remote, rerun_if_failed,
                             working_directory, chromeos_root,
                             cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(),
