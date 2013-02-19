@@ -8,7 +8,7 @@
     "//depot2/gcctools/chromeos/v14/image_chromeos.py image_chromeos.py",
     "//depot2/gcctools/chromeos/v14/lock_machine.py lock_machine.py",
     "//depot2/gcctools/chromeos/v14/README README",
-    "//depot2/gcctools/chromeos/v14/.gitignore
+    "//depot2/gcctools/chromeos/v14/.gitignore .gitignore",
     ]
   },],
   "output": [{
