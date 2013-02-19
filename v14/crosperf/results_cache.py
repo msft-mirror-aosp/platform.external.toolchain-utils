@@ -208,7 +208,11 @@ class Result(object):
       pickle.dump(self.retval, f)
 
     tarball = os.path.join(cache_dir, AUTOTEST_TARBALL)
-    command = ("cd %s && tar cjf %s ." % (self.results_dir, tarball))
+    command = ("cd %s && "
+               "tar "
+               "--exclude=var/spool "
+               "--exclude=var/log "
+               "-cjf %s ." % (self.results_dir, tarball))
     ret = self._ce.RunCommand(command)
     if ret:
       raise Exception("Couldn't store autotest output directory.")
@@ -256,7 +260,7 @@ class ResultsCache(object):
   is exactly stored (value). The value generation is handled by the Results
   class.
   """
-  CACHE_VERSION = 4
+  CACHE_VERSION = 5
 
   def Init(self, chromeos_image, chromeos_root, autotest_name, iteration,
            autotest_args, machine_manager, board, cache_conditions,
