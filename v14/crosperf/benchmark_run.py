@@ -81,7 +81,8 @@ class BenchmarkRun(threading.Thread):
 
       if self.result:
         self._logger.LogOutput("%s: Cache hit." % self.name)
-        self._logger.LogOutput(self.result.out + "\n" + self.result.err)
+        self._logger.LogOutput(self.result.out, print_to_console=False)
+        self._logger.LogError(self.result.err, print_to_console=False)
 
       else:
         self._logger.LogOutput("%s: No cache hit." % self.name)
