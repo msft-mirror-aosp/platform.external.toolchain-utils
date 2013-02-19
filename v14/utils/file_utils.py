@@ -6,6 +6,7 @@ import errno
 import hashlib
 import os
 import shutil
+import command_executer
 
 
 class FileUtils(object):
@@ -28,16 +29,13 @@ class FileUtils(object):
     return cls._instance
 
   def Md5File(self, filename, block_size=2 ** 10):
-    md5 = hashlib.md5()
+    command = "md5sum %s" % filename
+    ce = command_executer.GetCommandExecuter()
+    ret, out, err = ce.RunCommand(command, return_output=True)
+    if ret:
+      raise Exception("Could not run md5sum on: %s" % filename)
 
-    with open(filename) as f:
-      while True:
-        data = f.read(block_size)
-        if not data:
-          break
-        md5.update(data)
-
-    return md5.hexdigest()
+    return out.strip().split()[0]
 
   def CanonicalizeChromeOSRoot(self, chromeos_root):
     chromeos_root = os.path.expanduser(chromeos_root)
