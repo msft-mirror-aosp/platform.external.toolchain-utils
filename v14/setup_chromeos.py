@@ -83,7 +83,7 @@ in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
       init += " -m minilayout.xml"
   else:
     version, manifest = version.split(".", 1)
-    init = ("repo init -u %s -m buildspecs/%s/%s.xml" % (
+    init = ("repo init -u %s -m paladin/buildspecs/%s/%s.xml" % (
         versions_repo, version, manifest))
   init += " --repo-url=http://git.chromium.org/external/repo.git"
 
