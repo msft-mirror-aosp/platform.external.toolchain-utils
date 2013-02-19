@@ -289,7 +289,7 @@ class MachineManager(object):
       for m in self._machines:
         if m.autotest_run:
           autotest_name = m.autotest_run.name
-          autotest_status = m.autotest_run.status
+          autotest_status = m.autotest_run.timeline.GetLastEvent()
         else:
           autotest_name = ""
           autotest_status = ""

@@ -47,9 +47,9 @@ class ExperimentStatus(object):
   def GetStatusString(self):
     status_bins = {}
     for benchmark_run in self.experiment.benchmark_runs:
-      if benchmark_run.status not in status_bins:
-        status_bins[benchmark_run.status] = []
-      status_bins[benchmark_run.status].append(benchmark_run)
+      if benchmark_run.timeline.GetLastEvent() not in status_bins:
+        status_bins[benchmark_run.timeline.GetLastEvent()] = []
+      status_bins[benchmark_run.timeline.GetLastEvent()].append(benchmark_run)
 
     status_strings = []
     for key, val in status_bins.items():
@@ -64,6 +64,9 @@ class ExperimentStatus(object):
 
   def _GetNamesAndIterations(self, benchmark_runs):
     strings = []
+    t = time.time()
     for benchmark_run in benchmark_runs:
-      strings.append("'%s'" % benchmark_run.name)
+      t_last = benchmark_run.timeline.GetLastEventTime()
+      elapsed = str(datetime.timedelta(seconds=int(t-t_last)))
+      strings.append("'{0}' {1}".format(benchmark_run.name, elapsed))
     return " %s (%s)" % (len(strings), ", ".join(strings))

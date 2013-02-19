@@ -43,3 +43,9 @@ class Timeline(object):
       if e.name == event:
         return e.timestamp
     raise IndexError, 'The event {0} is not recorded'.format(event)
+
+  def GetLastEventTime(self):
+    return self.events[-1].timestamp
+
+  def GetLastEvent(self):
+    return self.events[-1].name

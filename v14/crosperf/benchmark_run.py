@@ -9,11 +9,13 @@ import threading
 import time
 import traceback
 
+from utils import command_executer
+from utils import logger
+from utils import timeline
+
 from autotest_runner import AutotestRunner
 from results_cache import Result
 from results_cache import ResultsCache
-from utils import command_executer
-from utils import logger
 
 STATUS_FAILED = "FAILED"
 STATUS_SUCCEEDED = "SUCCEEDED"
@@ -42,7 +44,6 @@ class BenchmarkRun(threading.Thread):
     self.result = None
     self.terminated = False
     self.retval = None
-    self.status = STATUS_PENDING
     self.run_completed = False
     self.outlier_range = outlier_range
     self.perf_args = perf_args
@@ -57,6 +58,8 @@ class BenchmarkRun(threading.Thread):
     self.failure_reason = ""
     self.autotest_args = "%s %s" % (autotest_args, self._GetExtraAutotestArgs())
     self._ce = command_executer.GetCommandExecuter(self._logger)
+    self.timeline = timeline.Timeline()
+    self.timeline.Record(STATUS_PENDING)
 
   def run(self):
     try:
@@ -79,9 +82,10 @@ class BenchmarkRun(threading.Thread):
       if self.result:
         self._logger.LogOutput("%s: Cache hit." % self.name)
         self._logger.LogOutput(self.result.out + "\n" + self.result.err)
+
       else:
         self._logger.LogOutput("%s: No cache hit." % self.name)
-        self.status = STATUS_WAITING
+        self.timeline.Record(STATUS_WAITING)
         # Try to acquire a machine now.
         self.machine = self.AcquireMachine()
         self.cache.remote = self.machine.name
@@ -92,17 +96,17 @@ class BenchmarkRun(threading.Thread):
         return
 
       if not self.result.retval:
-        self.status = STATUS_SUCCEEDED
+        self.timeline.Record(STATUS_SUCCEEDED)
       else:
-        if self.status != STATUS_FAILED:
-          self.status = STATUS_FAILED
+        if self.timeline.GetLastEvent() != STATUS_FAILED:
           self.failure_reason = "Return value of autotest was non-zero."
+          self.timeline.Record(STATUS_FAILED)
 
     except Exception, e:
       self._logger.LogError("Benchmark run: '%s' failed: %s" % (self.name, e))
       traceback.print_exc()
-      if self.status != STATUS_FAILED:
-        self.status = STATUS_FAILED
+      if self.timeline.GetLastEvent() != STATUS_FAILED:
+        self.timeline.Record(STATUS_FAILED)
         self.failure_reason = str(e)
     finally:
       if self.machine:
@@ -113,8 +117,8 @@ class BenchmarkRun(threading.Thread):
   def Terminate(self):
     self.terminated = True
     self.autotest_runner.Terminate()
-    if self.status != STATUS_FAILED:
-      self.status = STATUS_FAILED
+    if self.timeline.GetLastEvent() != STATUS_FAILED:
+      self.timeline.Record(STATUS_FAILED)
       self.failure_reason = "Thread terminated."
 
   def AcquireMachine(self):
@@ -148,11 +152,11 @@ class BenchmarkRun(threading.Thread):
       return ""
 
   def RunTest(self, machine):
-    self.status = STATUS_IMAGING
+    self.timeline.Record(STATUS_IMAGING)
     self.machine_manager.ImageMachine(machine,
                                       self.chromeos_image,
                                       self.board)
-    self.status = "%s %s" % (STATUS_RUNNING, self.autotest_name)
+    self.timeline.Record(STATUS_RUNNING)
     [retval, out, err] = self.autotest_runner.Run(machine.name,
                                                   self.chromeos_root,
                                                   self.board,

@@ -37,5 +37,18 @@ class TimeLineTest(unittest.TestCase):
     self.assertEqual(int(t1-t), 0)
     self.assertRaises(IndexError, tl.GetEventTime, 'B')
 
+  def testGetLastEventTime(self):
+    tl = timeline.Timeline()
+    self.assertRaises(IndexError, tl.GetLastEventTime)
+    tl.Record('A')
+    t = time.time()
+    t1 = tl.GetLastEventTime()
+    self.assertEqual(int(t1-t), 0)
+    time.sleep(2)
+    tl.Record('B')
+    t = time.time()
+    t1 = tl.GetLastEventTime()
+    self.assertEqual(int(t1-t), 0)
+
 if __name__ == '__main__':
   unittest.main()
