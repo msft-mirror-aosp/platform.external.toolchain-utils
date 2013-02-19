@@ -1,6 +1,6 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
-# Presubmit script for cc'ing bhaskar-staff on automation related CL's.
+# Presubmit script for cc'ing c-compiler-chrome on automation related CL's.
 #
 # PRESUBMIT METADATA:
 # [
@@ -8,7 +8,7 @@
 #   p4_filespecs = [
 #     "//depot2/gcctools/chromeos/v14/automation/...",
 #     ],
-#   addresses = ["bhaskar-staff"],
-#   owners = ["kbaclawski", "asharif", "raymes"]
+#   addresses = ["c-compiler-chrome"],
+#   owners = ["asharif", "llozano", "bjanakiraman", "yunlian"]
 #   ),
 # ]
