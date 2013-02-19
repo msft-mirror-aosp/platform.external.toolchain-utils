@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
@@ -19,6 +19,7 @@ import logger
 
 
 def GetChromeOSVersionFromLSBVersion(lsb_version):
+  """Get Chromeos version from Lsb version."""
   ce = command_executer.GetCommandExecuter()
   command = "git ls-remote http://git.chromium.org/chromiumos/manifest.git"
   ret, out, _ = ce.RunCommand(command, return_output=True,
@@ -26,7 +27,7 @@ def GetChromeOSVersionFromLSBVersion(lsb_version):
   assert ret == 0, "Command %s failed" % command
   lower = []
   for line in out.splitlines():
-    mo = re.search("refs/heads/release-R(\d+)-(\d+)\.B", line)
+    mo = re.search(r"refs/heads/release-R(\d+)-(\d+)\.B", line)
     if mo:
       revision = int(mo.group(1))
       build = int(mo.group(2))
@@ -46,12 +47,13 @@ def ApplySubs(string, *substitutions):
   return string
 
 
-def UnitToNumber(string, base=1000):
+def UnitToNumber(unit_num, base=1000):
+  """Convert a number with unit to float."""
   unit_dict = {"kilo": base,
                "mega": base**2,
                "giga": base**3}
-  string = string.lower()
-  mo = re.search("(\d*)(.+)?", string)
+  unit_num = unit_num.lower()
+  mo = re.search(r"(\d*)(.+)?", unit_num)
   number = mo.group(1)
   unit = mo.group(2)
   if not unit:
@@ -61,15 +63,15 @@ def UnitToNumber(string, base=1000):
       return float(number) * v
   raise Exception("Unit: %s not found in byte: %s!" %
                   (unit,
-                   string))
+                   unit_num))
 
 
 def GetFilenameFromString(string):
   return ApplySubs(string,
-                   ("/", "__"),
-                   ("\s", "_"),
-                   ("[\^\$=\"\\\?]", ""),
-                   )
+                   (r"/", "__"),
+                   (r"\s", "_"),
+                   (r"[\^\$=\"\\\?]", ""),
+                  )
 
 
 def GetRoot(scr_name):
@@ -114,7 +116,7 @@ def FormatCommands(commands):
   return ApplySubs(str(commands),
                    ("&&", "&&\n"),
                    (";", ";\n"),
-                   ("\n+\s*", "\n"))
+                   (r"\n+\s*", "\n"))
 
 
 def GetImageDir(chromeos_root, board):
@@ -158,6 +160,7 @@ def GetBuildImageCommand(board):
 
 def GetSetupBoardCommand(board, gcc_version=None, binutils_version=None,
                          usepkg=None, force=None):
+  """Get setup_board command."""
   options = []
 
   if gcc_version:
@@ -184,6 +187,7 @@ def CanonicalizePath(path):
 
 
 def GetCtargetFromBoard(board, chromeos_root):
+  """Get Ctarget from board."""
   base_board = board.split("_")[0]
   command = ("source "
              "../platform/dev/toolchain_utils.sh; get_ctarget_from_board %s" %
@@ -200,7 +204,7 @@ def GetCtargetFromBoard(board, chromeos_root):
 
 
 def StripANSIEscapeSequences(string):
-  string = re.sub("\x1b\[[0-9]*[a-zA-Z]", "", string)
+  string = re.sub(r"\x1b\[[0-9]*[a-zA-Z]", "", string)
   return string
 
 
@@ -213,6 +217,7 @@ def GetEnvStringFromDict(env_dict):
 
 
 def MergeEnvStringWithDict(env_string, env_dict, prepend=True):
+  """Merge env string with dict."""
   if not env_string.strip():
     return GetEnvStringFromDict(env_dict)
   override_env_list = []
@@ -240,6 +245,7 @@ def GetAllImages(chromeos_root, board):
 
 
 def AcquireLock(lock_file, timeout=1200):
+  """Acquire a lock with timeout."""
   start_time = time.time()
   locked = False
   abs_path = os.path.abspath(lock_file)
@@ -270,7 +276,16 @@ def ReleaseLock(lock_file):
   ret = lock_machine.Lock(lock_file).Unlock(True)
   assert ret, ("Could not unlock {0},"
                "Please remove it manually".format(lock_file))
-    
+
+
+def IsFloat(text):
+  if text is None:
+    return False
+  try:
+    float(text)
+    return True
+  except ValueError:
+    return False
 
 
 @contextmanager

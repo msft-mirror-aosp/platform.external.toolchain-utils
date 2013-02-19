@@ -5,20 +5,14 @@
 import getpass
 import math
 import numpy
+
 import colortrans
 from email_sender import EmailSender
-
-
-def _IsFloat(v):
-  try:
-    float(v)
-    return True
-  except ValueError:
-    return False
+import misc
 
 
 def _AllFloat(values):
-  return all([_IsFloat(v) for v in values])
+  return all([misc.IsFloat(v) for v in values])
 
 
 def _GetFloats(values):
