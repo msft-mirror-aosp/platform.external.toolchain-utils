@@ -24,6 +24,13 @@ class ResultsReport(object):
     self.benchmarks = experiment.benchmarks
     self.baseline = self.labels[0]
 
+  def _IsLowerBetter(self, column, autotest_key):
+    if ((autotest_key.find("milliseconds") == 0
+         or autotest_key.find("ms_") == 0)
+        and column.name == self.DELTA_COLUMN_NAME):
+      return True
+    return False
+
   def _SortByLabel(self, runs):
     labels = {}
     for benchmark_run in runs:
@@ -100,7 +107,9 @@ class ResultsReport(object):
                                                  self.baseline.name)
             value = column.Compute(results, baseline_results)
             if isinstance(value, float):
-              value_string = "%.2f" % value
+              if self._IsLowerBetter(column, autotest_key):
+                value = 1/value
+              value_string = value_string = "%.2f" % value
             else:
               value_string = value
 
