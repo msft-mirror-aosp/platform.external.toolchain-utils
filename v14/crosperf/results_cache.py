@@ -11,7 +11,6 @@ import re
 import tempfile
 
 from utils import command_executer
-from utils import logger
 from utils import misc
 
 from image_checksummer import ImageChecksummer
@@ -28,6 +27,7 @@ class Result(object):
   what the key of the cache is. For runs with perf, it stores perf.data,
   perf.report, etc. The key generation is handled by the ResultsCache class.
   """
+
   def __init__(self, chromeos_root, logger, label_name):
     self._chromeos_root = chromeos_root
     self._logger = logger
@@ -64,7 +64,7 @@ class Result(object):
     command = ("python %s --no-color --csv %s" %
                (generate_test_report,
                 self.results_dir))
-    [ret, out, err] = self._ce.RunCommand(command, return_output=True)
+    [_, out, _] = self._ce.RunCommand(command, return_output=True)
     keyvals_dict = {}
     for line in out.splitlines():
       tokens = re.split("=|,", line)
@@ -77,7 +77,7 @@ class Result(object):
     return keyvals_dict
 
   def _GetResultsDir(self):
-    mo = re.search("Results placed in (\S+)", self.out)
+    mo = re.search(r"Results placed in (\S+)", self.out)
     if mo:
       result = mo.group(1)
       return result
@@ -86,7 +86,7 @@ class Result(object):
   def _FindFilesInResultsDir(self, find_args):
     command = "find %s %s" % (self.results_dir,
                               find_args)
-    ret, out, err = self._ce.RunCommand(command, return_output=True)
+    ret, out, _ = self._ce.RunCommand(command, return_output=True)
     if ret:
       raise Exception("Could not run find command!")
     return out
@@ -109,7 +109,7 @@ class Result(object):
         raise Exception("Perf report file already exists: %s" %
                         perf_report_file)
       chroot_perf_report_file = misc.GetInsideChrootPath(self._chromeos_root,
-                                                   perf_report_file)
+                                                         perf_report_file)
       command = ("/usr/sbin/perf report "
                  "-n "
                  "--symfs /build/%s "
@@ -117,15 +117,14 @@ class Result(object):
                  "--kallsyms /build/%s/boot/System.map-* "
                  "-i %s --stdio "
                  "| head -n1000 "
-                 "| tee %s" %
+                 "> %s" %
                  (self._board,
                   self._board,
                   self._board,
                   chroot_perf_data_file,
                   chroot_perf_report_file))
-      ret, out, err = self._ce.ChrootRunCommand(self._chromeos_root,
-                                                command,
-                                                return_output=True)
+      self._ce.ChrootRunCommand(self._chromeos_root,
+                                command)
       # Add a keyval to the dictionary for the events captured.
       perf_report_files.append(
           misc.GetOutsideChrootPath(self._chromeos_root,
@@ -137,7 +136,7 @@ class Result(object):
     for perf_report_file in self.perf_report_files:
       with open(perf_report_file, "r") as f:
         report_contents = f.read()
-        for group in re.findall("Events: (\S+) (\S+)", report_contents):
+        for group in re.findall(r"Events: (\S+) (\S+)", report_contents):
           num_events = group[0]
           event_name = group[1]
           key = "perf_%s_%s" % (report_id, event_name)
@@ -195,7 +194,6 @@ class Result(object):
     if self._temp_dir:
       command = "rm -rf %s" % self._temp_dir
       self._ce.RunCommand(command)
-
 
   def StoreToCacheDir(self, cache_dir, machine_manager):
     # Create the dir if it doesn't exist.
@@ -323,7 +321,7 @@ class ResultsCache(object):
       image_path_checksum = hashlib.md5(self.chromeos_image).hexdigest()
 
     autotest_args_checksum = hashlib.md5(
-                             "".join(self.autotest_args)).hexdigest()
+        "".join(self.autotest_args)).hexdigest()
     return (image_path_checksum,
             self.autotest_name, str(self.iteration),
             autotest_args_checksum,
