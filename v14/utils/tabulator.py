@@ -254,7 +254,7 @@ class StdResult(Result):
     if not values:
       cell.value = ""
     else:
-      cell.value = numpy.std(v)
+      cell.value = numpy.std(values)
 
   def _ComputeString(self, cell, values, baseline_values):
     cell.value = ""
