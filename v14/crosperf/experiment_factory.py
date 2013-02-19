@@ -27,14 +27,13 @@ class ExperimentFactory(object):
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.
     cache_conditions = [CacheConditions.CACHE_FILE_EXISTS,
-                        CacheConditions.MACHINES_MATCH,
                         CacheConditions.CHECKSUMS_MATCH]
     if global_settings.GetField("rerun_if_failed"):
       cache_conditions.append(CacheConditions.RUN_SUCCEEDED)
     if global_settings.GetField("rerun"):
       cache_conditions.append(CacheConditions.FALSE)
     if global_settings.GetField("exact_remote"):
-      cache_conditions.append(CacheConditions.REMOTES_MATCH)
+      cache_conditions.append(CacheConditions.MACHINES_MATCH)
 
     # Construct benchmarks.
     benchmarks = []

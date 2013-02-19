@@ -67,7 +67,7 @@ class GlobalSettings(Settings):
     self.AddField(BooleanField("rerun", description="Whether to ignore the "
                                "cache and for autotests to be re-run.",
                                default=False))
-    self.AddField(BooleanField("exact_remote", default=False,
+    self.AddField(BooleanField("exact_remote", default=True,
                                description="Ensure cached runs are run on the "
                                "same device that is specified as a remote."))
     self.AddField(IntegerField("iterations", default=1,
