@@ -31,19 +31,19 @@ class JobExecuter(threading.Thread):
     self._executer = LoggingCommandExecuter(self.job.dry_run)
     self._terminator = CommandTerminator()
 
-  def _RunRemotely(self, command, fail_msg):
+  def _RunRemotely(self, command, fail_msg, command_timeout=1*60*60):
     exit_code = self._executer.RunCommand(command,
                                           self.job.primary_machine.hostname,
                                           self.job.primary_machine.username,
                                           command_terminator=self._terminator,
-                                          command_timeout=18000)
+                                          command_timeout=command_timeout)
     if exit_code:
       raise job.JobFailure(fail_msg, exit_code)
 
-  def _RunLocally(self, command, fail_msg):
+  def _RunLocally(self, command, fail_msg, command_timeout=1*60*60):
     exit_code = self._executer.RunCommand(command,
                                           command_terminator=self._terminator,
-                                          command_timeout=18000)
+                                          command_timeout=command_timeout)
     if exit_code:
       raise job.JobFailure(fail_msg, exit_code)
 
@@ -91,7 +91,8 @@ class JobExecuter(threading.Thread):
 
     self._RunRemotely("%s; %s" % ("PS1=. TERM=linux source ~/.bashrc",
                                   cmd.Wrapper(command, cwd=self.job.work_dir)),
-                      "Command failed to execute: '%s'." % command)
+                      "Command failed to execute: '%s'." % command,
+                      self.job.timeout)
 
   def _CopyJobResults(self):
     """Copy test results back to directory."""

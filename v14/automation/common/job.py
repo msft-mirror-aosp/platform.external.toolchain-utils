@@ -57,7 +57,7 @@ class Job(object):
 
   WORKDIR_PREFIX = '/usr/local/google/tmp/automation'
 
-  def __init__(self, label, command):
+  def __init__(self, label, command, timeout=4*60*60):
     self._state = JobStateMachine(STATUS_NOT_EXECUTED)
     self.predecessors = set()
     self.successors = set()
@@ -70,6 +70,7 @@ class Job(object):
     self.group = None
     self.dry_run = None
     self.label = label
+    self.timeout = timeout
 
   def _StateGet(self):
     return self._state
