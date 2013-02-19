@@ -25,6 +25,7 @@ class CrosMachine(object):
     self.chromeos_root = chromeos_root
     self._GetMemoryInfo()
     self._GetCPUInfo()
+    self._ComputeMachineChecksumString()
     self._ComputeMachineChecksum()
 
   def _ParseMemoryInfo(self):
@@ -37,7 +38,7 @@ class CrosMachine(object):
     # Undo the unknown actual deduction by rounding up
     #   to next small multiple of a big power-of-two
     #   eg  12GB - 5.1% gets rounded back up to 12GB
-    mindeduct = 0.015  # 1.5 percent
+    mindeduct = 0.005  # 0.5 percent
     maxdeduct = 0.095  # 9.5 percent
     # deduction range 1.5% .. 9.5% supports physical mem sizes
     #    6GB .. 12GB in steps of .5GB
@@ -85,15 +86,17 @@ class CrosMachine(object):
     if ret == 0:
       self._ParseCPUInfo(self.cpuinfo)
 
-  def _ComputeMachineChecksum(self):
-    checksum_string = ""
+  def _ComputeMachineChecksumString(self):
+    self.checksum_string = ""
     exclude_lines_list = ["MHz", "BogoMIPS", "bogomips"]
     for line in self.cpuinfo.splitlines():
       if not any([e in line for e in exclude_lines_list]):
-        checksum_string += line
-    checksum_string += str(self.phys_kbytes)
-    if checksum_string:
-      self.machine_checksum = hashlib.md5(checksum_string).hexdigest()
+        self.checksum_string += line
+    self.checksum_string += " " + str(self.phys_kbytes)
+
+  def _ComputeMachineChecksum(self):
+    if self.checksum_string:
+      self.machine_checksum = hashlib.md5(self.checksum_string).hexdigest()
     else:
       self.machine_checksum = ""
 
@@ -154,6 +157,13 @@ class MachineManager(object):
     for machine in self.GetMachines():
       if machine.machine_checksum:
         self.machine_checksum = machine.machine_checksum
+        break
+
+  def ComputeCommonCheckSumString(self):
+    self.machine_checksum_string = ""
+    for machine in self.GetMachines():
+      if machine.checksum_string:
+        self.machine_checksum_string = machine.checksum_string
         break
 
   def _TryToLockMachine(self, cros_machine):

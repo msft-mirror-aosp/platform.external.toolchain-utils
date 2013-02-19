@@ -10,14 +10,15 @@ import pickle
 import re
 import tempfile
 
-from image_checksummer import ImageChecksummer
 from utils import command_executer
 from utils import logger
 from utils import misc
 
+from image_checksummer import ImageChecksummer
 
 SCRATCH_DIR = "/home/%s/cros_scratch" % getpass.getuser()
 RESULTS_FILE = "results.txt"
+MACHINE_FILE = "machine.txt"
 AUTOTEST_TARBALL = "autotest.tbz2"
 PERF_RESULTS_FILE = "perf-results.txt"
 
@@ -195,7 +196,7 @@ class Result(object):
       self._ce.RunCommand(command)
 
 
-  def StoreToCacheDir(self, cache_dir):
+  def StoreToCacheDir(self, cache_dir, machine_manager):
     # Create the dir if it doesn't exist.
     command = "mkdir -p %s" % cache_dir
     ret = self._ce.RunCommand(command)
@@ -216,6 +217,11 @@ class Result(object):
     ret = self._ce.RunCommand(command)
     if ret:
       raise Exception("Couldn't store autotest output directory.")
+    # Store machine info.
+    # TODO(asharif): Make machine_manager a singleton, and don't pass it into
+    # this function.
+    with open(os.path.join(cache_dir, MACHINE_FILE), "w") as f:
+      f.write(machine_manager.machine_checksum_string)
 
   @classmethod
   def CreateFromRun(cls, logger, chromeos_root, board, out, err, retval):
@@ -349,7 +355,7 @@ class ResultsCache(object):
 
   def StoreResult(self, result):
     cache_dir = self._GetCacheDirForWrite()
-    result.StoreToCacheDir(cache_dir)
+    result.StoreToCacheDir(cache_dir, self.machine_manager)
 
 
 class MockResultsCache(object):
