@@ -189,7 +189,10 @@ class Result(object):
     self.perf_report_files = self._GetPerfReportFiles()
     self._ProcessResults()
 
-  def CleanUp(self):
+  def CleanUp(self, rm_chroot_tmp):
+    if rm_chroot_tmp:
+      command = "rm -rf %s" % self.results_dir
+      self._ce.RunCommand(command)
     if self._temp_dir:
       command = "rm -rf %s" % self._temp_dir
       self._ce.RunCommand(command)

@@ -100,7 +100,7 @@ class ExperimentRunner(object):
         benchmark_run_path = os.path.join(results_directory,
                                           benchmark_run_name)
         benchmark_run.result.CopyResultsTo(benchmark_run_path)
-        benchmark_run.result.CleanUp()
+        benchmark_run.result.CleanUp(benchmark_run.benchmark.rm_chroot_tmp)
 
   def Run(self):
     self._Run(self._experiment)

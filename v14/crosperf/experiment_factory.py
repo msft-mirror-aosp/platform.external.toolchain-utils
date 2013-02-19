@@ -29,6 +29,7 @@ class ExperimentFactory(object):
     remote = global_settings.GetField("remote")
     rerun_if_failed = global_settings.GetField("rerun_if_failed")
     chromeos_root = global_settings.GetField("chromeos_root")
+    rm_chroot_tmp = global_settings.GetField("rm_chroot_tmp")
 
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.
@@ -55,8 +56,9 @@ class ExperimentFactory(object):
       iterations = benchmark_settings.GetField("iterations")
       outlier_range = benchmark_settings.GetField("outlier_range")
       perf_args = benchmark_settings.GetField("perf_args")
+      rm_chroot_tmp = benchmark_settings.GetField("rm_chroot_tmp")
       benchmark = Benchmark(benchmark_name, autotest_name, autotest_args,
-                            iterations, outlier_range, perf_args)
+                            iterations, outlier_range, perf_args, rm_chroot_tmp)
       benchmarks.append(benchmark)
 
     # Construct labels.

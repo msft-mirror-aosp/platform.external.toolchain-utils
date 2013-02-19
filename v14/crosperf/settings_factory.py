@@ -26,6 +26,9 @@ class BenchmarkSettings(Settings):
     self.AddField(FloatField("outlier_range", default=0.2,
                              description="The percentage of highest/lowest "
                              "values to omit when computing the average."))
+    self.AddField(BooleanField("rm_chroot_tmp", default=False,
+                               description="Whether remove the run_remote_test"
+                               "result in the chroot"))
     self.AddField(TextField("perf_args", default="",
                             description="The optional profile command. It "
                             "enables perf commands to record perforamance "
@@ -69,6 +72,9 @@ class GlobalSettings(Settings):
     self.AddField(BooleanField("rerun_if_failed", description="Whether to "
                                "re-run failed autotest runs or not.",
                                default=False))
+    self.AddField(BooleanField("rm_chroot_tmp", default=False,
+                               description="Whether remove the run_remote_test"
+                               "result in the chroot"))
     self.AddField(ListField("email", description="Space-seperated"
                             "list of email addresses to send email to."))
     self.AddField(BooleanField("rerun", description="Whether to ignore the "
