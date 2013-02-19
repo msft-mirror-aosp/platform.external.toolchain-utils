@@ -55,6 +55,7 @@ class ChromeOSNightlyClient(object):
         cmd.Shell('python',
                   os.path.join(self.P4_VERSION_DIR, 'test_toolchains.py'),
                   '--clean',
+                  '--public', # crbug.com/145822
                   '--board=%s' % self._board,
                   '--remote=%s' % self._remote,
                   '--githashes=%s' % self._gcc_githash))
