@@ -101,6 +101,8 @@ def Main(argv):
   else:
     ebuild_version = "chromeos-chrome"
 
+  options.env = misc.MergeEnvStringWithDict(options.env,
+                                            {"USE": "chrome_internal"})
   # Emerge the browser
   ret = (cmd_executer.
          ChrootRunCommand(options.chromeos_root,
