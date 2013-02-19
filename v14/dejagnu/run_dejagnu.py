@@ -48,7 +48,8 @@ def ProcessArguments(argv):
   parser.add_option('-b', '--board', dest='board',
                     help=('Required. Specify board.'))
   parser.add_option('-r', '--remote', dest='remote',
-                    help='Required. Specify remote address/name of the board.')
+                    help=('Required. Specify addresses/names of the board, '
+                          'seperate each address/name using comma(\',\').'))
   parser.add_option('-f', '--flags', dest='flags',
                     help='Optional. Extra run test flags to pass to dejagnu.')
   parser.add_option('-k', '--keep', dest='keep_intermediate_files',
@@ -338,21 +339,32 @@ class DejagnuExecuter(object):
       else:
         self._l.LogOutput('{0} mounted successfully.'.format(mp.mount_dir))
 
+# The end of class DejagnuExecuter
+
+def TryAcquireMachine(remotes):
+  available_machine = None
+  for r in remotes.split(','):
+    machine = lock_machine.Machine(r)
+    if machine.TryLock(timeout=300, exclusive=True):
+      available_machine = machine
+      break
+    else:
+      logger.GetLogger().LogWarning(
+        '*** Failed to lock machine \'{0}\'.'.format(r))
+  if not available_machine:
+    raise Exception(
+        "Failed to acquire one machine from \'{0}\'.".format(remotes))
+  return available_machine
 
 def Main(argv):
   opts = ProcessArguments(argv)
+  available_machine = TryAcquireMachine(opts.remote)
   executer = DejagnuExecuter(misc.GetRoot(argv[0])[0],
                              opts.mount, opts.chromeos_root,
-                             opts.remote, opts.board, opts.flags,
+                             available_machine._name,
+                             opts.board, opts.flags,
                              opts.keep_intermediate_files, opts.tools,
                              opts.cleanup)
-
-  machine = lock_machine.Machine(opts.remote)
-
-  if not machine.TryLock(timeout=300, exclusive=True):
-    raise Exception("Timed out to lock machine {0}, aborted".format(
-        opts.remote))
-
   # Return value is a 3- or 4-element tuple
   #   element#1 - exit code
   #   element#2 - stdout
@@ -373,7 +385,7 @@ def Main(argv):
     # The #4 element encodes the runtime exception.
     ret = (1, '', '', 'Exception happened during execution: \n' + str(e))
   finally:
-    machine.Unlock(exclusive=True)
+    available_machine.Unlock(exclusive=True)
     executer.CleanupIntermediateFiles()
     executer.Cleanup()
     return ret
