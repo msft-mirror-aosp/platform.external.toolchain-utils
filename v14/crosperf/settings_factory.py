@@ -61,6 +61,8 @@ class LabelSettings(Settings):
                             default="",
                             description="Extra arguments to pass to "
                             "image_chromeos.py."))
+    self.AddField(TextField("cache_dir", default="",
+                            description="The cache dir for this image."))
 
 
 class GlobalSettings(Settings):

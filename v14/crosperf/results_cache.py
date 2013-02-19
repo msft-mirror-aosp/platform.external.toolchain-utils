@@ -15,8 +15,6 @@ from utils import misc
 
 from image_checksummer import ImageChecksummer
 
-import config
-
 SCRATCH_DIR = "/home/%s/cros_scratch" % getpass.getuser()
 RESULTS_FILE = "results.txt"
 MACHINE_FILE = "machine.txt"
@@ -321,8 +319,9 @@ class ResultsCache(object):
   def _FormCacheDir(self, list_of_strings):
     cache_key = " ".join(list_of_strings)
     cache_dir = misc.GetFilenameFromString(cache_key)
-    if config.GetConfig("cache_dir"):
-      cache_path = os.path.join(config.GetConfig("cache_dir"), cache_dir)
+    if self.label.cache_dir:
+      cache_home = os.path.abspath(os.path.expanduser(self.label.cache_dir))
+      cache_path = os.path.join(cache_home, cache_dir)
     else:
       cache_path = os.path.join(SCRATCH_DIR, cache_dir)
     return cache_path

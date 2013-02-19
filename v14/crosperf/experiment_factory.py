@@ -34,9 +34,6 @@ class ExperimentFactory(object):
     key_results_only = global_settings.GetField("key_results_only")
     acquire_timeout= global_settings.GetField("acquire_timeout")
     cache_dir = global_settings.GetField("cache_dir")
-    if cache_dir:
-      config.AddConfig("cache_dir",
-                       os.path.abspath(os.path.expanduser(cache_dir)))
     config.AddConfig("no_email", global_settings.GetField("no_email"))
 
     # Default cache hit conditions. The image checksum in the cache and the
@@ -84,6 +81,7 @@ class ExperimentFactory(object):
       board = label_settings.GetField("board")
       my_remote = label_settings.GetField("remote")
       image_md5sum = label_settings.GetField("md5sum")
+      cache_dir = label_settings.GetField("cache_dir")
     # TODO(yunlian): We should consolidate code in machine_manager.py
     # to derermine whether we are running from within google or not
       if ("corp.google.com" in socket.gethostname() and
@@ -98,10 +96,10 @@ class ExperimentFactory(object):
       image_args = label_settings.GetField("image_args")
       if test_flag.GetTestMode():
         label = MockLabel(label_name, image, chromeos_root, board, my_remote,
-                          image_args, image_md5sum)
+                          image_args, image_md5sum, cache_dir)
       else:
         label = Label(label_name, image, chromeos_root, board, my_remote,
-                      image_args, image_md5sum)
+                      image_args, image_md5sum, cache_dir)
       labels.append(label)
 
     email = global_settings.GetField("email")
