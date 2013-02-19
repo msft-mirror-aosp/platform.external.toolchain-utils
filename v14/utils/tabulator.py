@@ -467,7 +467,6 @@ class PValueFormat(Format):
                                   Color(255, 255, 255, 0),
                                   mid_value=0.05,
                                   power=1)
-      cell.bgcolor_row = True
 
 
 class StorageFormat(Format):
