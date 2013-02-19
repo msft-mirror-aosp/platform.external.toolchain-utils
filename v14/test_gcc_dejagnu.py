@@ -28,7 +28,7 @@ class DejagnuAdapter(object):
 
   _cmd_exec = command_executer.GetCommandExecuter()
 
-  def __init__(self, board, remote, gcc_dir, 
+  def __init__(self, board, remote, gcc_dir,
                chromeos_root, runtestflags, cleanup):
     self._board = board
     self._remote = remote
@@ -89,6 +89,26 @@ class DejagnuAdapter(object):
       args.append("--flags=" + self._runtestflags)
     return run_dejagnu.Main(args)
 
+
+# Parse the output log to determine how many failures we have.
+# Return -1 if parse output log failed.
+def GetNumNewFailures(str):
+  if not str:
+    return 0
+  start_counting = False
+  n_failures = 0
+  for l in str.splitlines():
+    print l
+    if not start_counting and 'Build results not in the manifest' in l:
+      start_counting = True
+    elif start_counting and l and (
+      l.find('UNRESOLVED:') == 0 or l.find('FAIL:') == 0 or \
+        l.find('XFAIL:') == 0 or l.find('XPASS:') == 0):
+      n_failures = n_failures + 1
+  if not start_counting:
+    return -1
+  return n_failures
+
 # Do not throw any exception in this function!
 def EmailResult(result):
   email_to = ['c-compiler-chrome@google.com']
@@ -99,11 +119,16 @@ def EmailResult(result):
         result[3]
   elif result[0]:
     subject = 'Job finished: dejagnu test failed'
-    email_text = ('At least 1 new fail found. Please check log below.\n'
-                  '\nStdout ====\n'
-                  '{0}\n'
-                  '\nStderr ===\n'
-                  '{1}\n').format(result[1], result[2])
+    num_new_failures = GetNumNewFailures(result[1])
+    if num_new_failures >= 0:
+      summary = '{0} new fail(s), check log below.'.format(num_new_failures)
+    else:
+      summary = 'At least 1 new fail found, check log below.'
+    email_text = summary + \
+        ('\nStdout ====\n'
+         '{0}\n'
+         '\nStderr ===\n'
+         '{1}\n').format(result[1], result[2])
   else:
     subject = 'Job finished: dejagnu test passed'
     email_text = ('Cool! No new fail found.\n'
@@ -111,7 +136,6 @@ def EmailResult(result):
                   '{0}\n'
                   '\nStderr ====\n'
                   '{1}\n').format(result[1], result[2])
-    msg_type = 'plain'
 
   try:
     email_sender.EmailSender().SendEmail(email_to, subject, email_text)
