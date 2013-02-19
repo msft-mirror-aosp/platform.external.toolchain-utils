@@ -111,7 +111,7 @@ class ToolchainComparator(ChromeOSCheckout):
     """ % (self._board, self._remotes)
     experiment_tests = """
     benchmark: desktopui_PyAutoPerfTests {
-      iterations: 6
+      iterations: 1
     }
     """
     with open(experiment_file, "w") as f:
