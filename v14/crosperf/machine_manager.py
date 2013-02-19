@@ -19,7 +19,38 @@ class CrosMachine(object):
     self.locked = False
     self.released_time = time.time()
     self.autotest_run = None
+    self._GetMemoryInfo(name)
+    self._GetCPUInfo(name)
 
+  def _ParseMemoryInfo(self,memout):
+    for line in memout.splitlines():
+      k, v = line.split(":", 1)
+      k = k.strip()
+      v = v.strip()
+      if "MemTotal" in line:
+        self.total_memory = v
+
+  def _GetMemoryInfo(self,name):
+    ce = command_executer.GetCommandExecuter() 
+    command = "cat /proc/meminfo"
+    ret, self.memout, _ = ce.RunCommand(
+      command, return_output=True,   
+      machine=name, username="root")
+    self._ParseMemoryInfo(self.memout)
+
+  #cpuinfo format is different across architecture
+  #need to find a better way to parse it.
+  def _ParseCPUInfo(self,cpuout):
+    return 0
+
+  def _GetCPUInfo(self,name):
+    ce = command_executer.GetCommandExecuter()
+    command = "cat /proc/cpuinfo"
+    ret, self.cpuinfo, _ = ce.RunCommand(
+      command, return_output=True,
+      machine=name, username="root")
+    self._ParseCPUInfo(self.cpuinfo)
+  
   def __str__(self):
     l = []
     l.append(self.name)
@@ -90,13 +121,27 @@ class MachineManager(object):
           cros_machine.checksum = out.strip()
       else:
         logger.GetLogger().LogOutput("Couldn't lock: %s" % cros_machine.name)
-
+  
   # This is called from single threaded mode.
   def AddMachine(self, machine_name):
     with self._lock:
       for m in self._all_machines:
         assert m.name != machine_name, "Tried to double-add %s" % machine_name
       self._all_machines.append(CrosMachine(machine_name))
+
+  def AreAllMachineSame(self):
+    machines = self.GetMachines()
+    if len(machines) < 2:
+      return True
+    _total_mem = ""
+    for m in machines:
+      if _total_mem == "":
+        _total_mem = m.total_memory
+        _cpuinfo = m.cpuinfo
+      else:
+        if _total_mem != m.total_memory or _cpuinfo != m.cpuinfo:
+          return False
+    return True
 
   def AcquireMachine(self, chromeos_image):
     image_checksum = ImageChecksummer().Checksum(chromeos_image)
@@ -108,7 +153,9 @@ class MachineManager(object):
         self.initialized = True
         for m in self._all_machines:
           m.released_time = time.time()
-
+       
+      if not self.AreAllMachineSame():
+        logger.GetLogger().LogWarning("-- not all the machine are identical")
       if not self._machines:
         machine_names = []
         for machine in self._all_machines:
