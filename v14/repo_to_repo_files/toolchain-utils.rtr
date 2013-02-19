@@ -8,11 +8,12 @@
     "//depot2/gcctools/chromeos/v14/image_chromeos.py image_chromeos.py",
     "//depot2/gcctools/chromeos/v14/lock_machine.py lock_machine.py",
     "//depot2/gcctools/chromeos/v14/README README",
+    "//depot2/gcctools/chromeos/v14/.gitignore
     ]
   },],
   "output": [{
     "type": "git",
     "address": "ssh://gerrit-int.chromium.org:29419/chromeos/toolchain-utils.git",
-    "ignores": [".svn", ".git"],
+    "ignores": [".svn", ".git", ".pyc", "logs"],
   },],
 }
