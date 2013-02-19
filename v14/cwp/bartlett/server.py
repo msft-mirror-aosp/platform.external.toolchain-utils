@@ -37,8 +37,6 @@ from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
 
-MAX_FILE_ENTRIES_DISP = 100
-
 logging.getLogger().setLevel(logging.DEBUG)
 
 
@@ -101,15 +99,17 @@ class ListAll(webapp.RequestHandler):
   """Displays all files uploaded. Only accessible by @google.com accounts."""
 
   def get(self):  # pylint: disable-msg=C6409
-    """Dispalys all information in FileEntry for, ~ delimited."""
+    """Displays all information in FileEntry, ~ delimited."""
     if Authenticate(self):
-      query_str = ("SELECT * FROM FileEntry ORDER BY date ASC LIMIT "
-                   + str(MAX_FILE_ENTRIES_DISP))
+      query_str = "SELECT * FROM FileEntry ORDER BY date ASC"
       query = db.GqlQuery(query_str)
+      delimiter = "~"
+
       for item in query:
-        self.response.out.write(
-            "%s ~ %s</br>" % (cgi.escape(str(item.key())), item.date)
-            )
+        display_list = [item.key(), item.date, item.data_md5,
+                        item.board, item.chromeos_version]
+        str_list = [cgi.escape(str(i)) for i in display_list]
+        self.response.out.write(delimiter.join(str_list)+"</br>")
 
 
 class DelEntries(webapp.RequestHandler):
