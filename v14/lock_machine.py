@@ -2,9 +2,7 @@
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
-"""Script to lock/unlock machines.
-
-"""
+"""Script to lock/unlock machines."""
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
@@ -18,6 +16,7 @@ import pickle
 import socket
 import sys
 import time
+
 from utils import logger
 
 
@@ -52,12 +51,12 @@ class LockDescription(object):
 
 
 class FileLock(object):
-  LOCKS_DIR = "/home/mobiletc-prebuild/locks"
 
   def __init__(self, lock_filename):
-    assert os.path.isdir(self.LOCKS_DIR), (
-        "Locks dir: %s doesn't exist!" % self.LOCKS_DIR)
-    self._filepath = os.path.join(self.LOCKS_DIR, lock_filename)
+    self._filepath = lock_filename
+    lock_dir = os.path.dirname(lock_filename)
+    assert os.path.isdir(lock_dir), (
+        "Locks dir: %s doesn't exist!" % lock_dir)
     self._file = None
 
   @classmethod
@@ -82,8 +81,10 @@ class FileLock(object):
     return "\n".join([header, table])
 
   @classmethod
-  def ListLock(cls, pattern):
-    full_pattern = os.path.join(cls.LOCKS_DIR, pattern)
+  def ListLock(cls, pattern, locks_dir):
+    if not locks_dir:
+      locks_dir = Machine.LOCKS_DIR
+    full_pattern = os.path.join(locks_dir, pattern)
     file_locks = []
     for lock_filename in glob.glob(full_pattern):
       file_lock = FileLock(lock_filename)
@@ -121,12 +122,13 @@ class FileLock(object):
 
 
 class Lock(object):
-  def __init__(self, to_lock):
-    self._to_lock = to_lock
+  def __init__(self, lock_file):
+    self._to_lock = os.path.basename(lock_file)
+    self._lock_file = lock_file
     self._logger = logger.GetLogger()
 
   def NonBlockingLock(self, exclusive, reason=""):
-    with FileLock(self._to_lock) as lock:
+    with FileLock(self._lock_file) as lock:
       if lock.exclusive:
         self._logger.LogError(
             "Exclusive lock already acquired by %s. Reason: %s" %
@@ -147,7 +149,7 @@ class Lock(object):
     return True
 
   def Unlock(self, exclusive, force=False):
-    with FileLock(self._to_lock) as lock:
+    with FileLock(self._lock_file) as lock:
       if not lock.IsLocked():
         self._logger.LogError("Can't unlock unlocked machine!")
         return False
@@ -170,12 +172,14 @@ class Lock(object):
 
 
 class Machine(object):
-  def __init__(self, name):
+  LOCKS_DIR = "/home/mobiletc-prebuild/locks"
+  def __init__(self, name, locks_dir=LOCKS_DIR):
     self._name = name
     try:
       self._full_name = socket.gethostbyaddr(name)[0]
     except socket.error:
       self._full_name = self._name
+    self._full_name = os.path.join(locks_dir, self._full_name)
 
   def Lock(self, exclusive=False, reason=""):
     lock = Lock(self._full_name)
@@ -218,9 +222,16 @@ def Main(argv):
                     action="store_true",
                     default=False,
                     help="Use this for a shared (non-exclusive) lock.")
+  parser.add_option("-d",
+                    "--dir",
+                    dest="locks_dir",
+                    action="store",
+                    default=Machine.LOCKS_DIR,
+                    help="Use this to set different locks_dir")
 
   options, args = parser.parse_args(argv)
 
+  options.locks_dir = os.path.abspath(options.locks_dir)
   exclusive = not options.shared
 
   if not options.list_locks and len(args) != 2:
@@ -229,12 +240,12 @@ def Main(argv):
     return 1
 
   if len(args) > 1:
-    machine = Machine(args[1])
+    machine = Machine(args[1], options.locks_dir)
   else:
     machine = None
 
   if options.list_locks:
-    FileLock.ListLock("*")
+    FileLock.ListLock("*", options.locks_dir)
     retval = True
   elif options.unlock:
     retval = machine.Unlock(exclusive, options.ignore_ownership)

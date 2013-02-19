@@ -7,8 +7,11 @@ import os.path
 import sys
 import traceback
 
-# Local modules
-import misc
+#TODO(yunlian@google.com): Use GetRoot from misc
+def GetRoot(scr_name):
+  """Break up pathname into (dir+name)."""
+  abs_path = os.path.abspath(scr_name)
+  return (os.path.dirname(abs_path), os.path.basename(abs_path))
 
 
 class Logger(object):
@@ -168,7 +171,7 @@ def InitLogger(script_name, print_console=True):
   """Initialize a global logger. To be called only once."""
   global main_logger
   assert not main_logger, "The logger has already been initialized"
-  rootdir, basefilename = misc.GetRoot(script_name)
+  rootdir, basefilename = GetRoot(script_name)
   main_logger = Logger(rootdir, basefilename, print_console)
 
 

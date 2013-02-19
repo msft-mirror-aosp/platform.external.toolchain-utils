@@ -118,7 +118,7 @@ class MachineManager(object):
     self.image_lock = threading.Lock()
     self.num_reimages = 0
     self.chromeos_root = None
-    if os.path.isdir(lock_machine.FileLock.LOCKS_DIR):
+    if os.path.isdir(lock_machine.Machine.LOCKS_DIR):
       self.no_lock = False
     else:
       self.no_lock = True

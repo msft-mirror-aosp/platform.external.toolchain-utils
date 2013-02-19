@@ -25,7 +25,7 @@ class MachineTest(unittest.TestCase):
       self.assertFalse(mach.Unlock())
 
   def testLockUnlock(self):
-    mach = lock_machine.Machine("otter.mtv")
+    mach = lock_machine.Machine("otter.mtv", "/tmp")
     for i in range(10):
       self.assertTrue(mach.Lock(exclusive=True))
       self.assertTrue(mach.Unlock(exclusive=True))
