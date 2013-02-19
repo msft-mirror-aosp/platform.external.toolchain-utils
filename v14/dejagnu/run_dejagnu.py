@@ -163,6 +163,11 @@ class DejagnuExecuter(object):
       rv = self._executer.RunCommand(command)
       if rv:
         self._l.LogWarning('Warning - failed to delete chroot.')
+      # Delete .cache - crosbug.com/34956
+      command = "sudo rm -fr %s" % os.path.join(self._chromeos_root, ".cache")
+      rv = self._executer.RunCommand(command)
+      if rv:
+        self._l.LogWarning('Warning - failed to delete \'.cache\'.')
 
     if self._cleanup == 'chromeos':
       self._l.LogOutput('[Cleanup]: Deleting chromeos tree \'{0}\' ...'.format(
