@@ -31,7 +31,7 @@ class TabulatorTest(unittest.TestCase):
     value = "PASS"
     values = [value for _ in range(3)]
     smr.Compute(cell, values, None)
-    self.assertTrue(cell.value == "ALL_" + value)
+    self.assertTrue(cell.value == value)
     values.append("FAIL")
     smr.Compute(cell, values, None)
     self.assertTrue(cell.value == "?")
@@ -76,9 +76,9 @@ class TabulatorTest(unittest.TestCase):
     row = table.pop(0)
     self.assertTrue(row == ["k2", ["12", "14"], ["51"]])
     row = table.pop(0)
-    self.assertTrue(row == ["k3", ["15"], ["52"]])
+    self.assertTrue(row == ["k3", [None, "15"], ["52"]])
     row = table.pop(0)
-    self.assertTrue(row == ["k4", [], ["53"]])
+    self.assertTrue(row == ["k4", [None, None], ["53"]])
 
     table = tg.GetTable()
     columns = [
