@@ -2,6 +2,8 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+"""The experiment setting module."""
+
 import os
 import time
 
@@ -77,14 +79,10 @@ class Experiment(object):
                                         "run.%s" % (full_name),
                                         True)
           benchmark_run = BenchmarkRun(benchmark_run_name,
-                                       benchmark.name,
-                                       benchmark.autotest_name,
-                                       benchmark.autotest_args,
+                                       benchmark,
                                        label,
                                        iteration,
                                        self.cache_conditions,
-                                       benchmark.outlier_range,
-                                       benchmark.perf_args,
                                        self.machine_manager,
                                        logger_to_use)
 

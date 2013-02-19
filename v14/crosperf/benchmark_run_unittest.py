@@ -11,6 +11,7 @@ from utils import logger
 from autotest_runner import MockAutotestRunner
 from benchmark_run import MockBenchmarkRun
 from label import MockLabel
+from benchmark import Benchmark
 from machine_manager import MockMachineManager
 from results_cache import MockResultsCache
 
@@ -21,15 +22,17 @@ class BenchmarkRunTest(unittest.TestCase):
                          "x86-alex", "chromeos-alex1", "")
     m = MockMachineManager("/tmp/chromeos_root")
     m.AddMachine("chromeos-alex1")
+    bench = Benchmark("PageCyler",
+                      "Pyautoperf",
+                      "",
+                      1,
+                      0.2,
+                      "")
     b = MockBenchmarkRun("test run",
-                         "PageCycler",
-                         "Pyautoperf",
-                         "",
+                         bench,
                          my_label,
                          1,
                          [],
-                         0.2,
-                         "",
                          m,
                          logger.GetLogger())
     b.cache = MockResultsCache()

@@ -30,7 +30,7 @@ class ResultOrganizer(object):
     for label in labels:
       self.labels.append(label.name)
     for benchmark_run in benchmark_runs:
-      benchmark_name = benchmark_run.benchmark_name
+      benchmark_name = benchmark_run.benchmark.name
       if benchmark_name not in self.result:
         self.result[benchmark_name] = []
         while len(self.result[benchmark_name]) < len(labels):

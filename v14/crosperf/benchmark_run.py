@@ -24,34 +24,32 @@ STATUS_PENDING = "PENDING"
 
 
 class BenchmarkRun(threading.Thread):
-  def __init__(self, name, benchmark_name, autotest_name, autotest_args,
-               label, iteration,
-               cache_conditions, outlier_range, perf_args,
+  def __init__(self, name, benchmark,
+               label,
+               iteration,
+               cache_conditions,
                machine_manager,
                logger_to_use):
     threading.Thread.__init__(self)
     self.name = name
     self._logger = logger_to_use
-    self.benchmark_name = benchmark_name
-    self.autotest_name = autotest_name
-    self.label = label
+    self.benchmark = benchmark
     self.iteration = iteration
+    self.label = label
     self.result = None
     self.terminated = False
     self.retval = None
     self.run_completed = False
-    self.outlier_range = outlier_range
-    self.perf_args = perf_args
     self.machine_manager = machine_manager
     self.cache = ResultsCache()
     self.autotest_runner = AutotestRunner(self._logger)
     self.machine = None
-    self.full_name = self.autotest_name
     self.cache_conditions = cache_conditions
     self.runs_complete = 0
     self.cache_hit = False
     self.failure_reason = ""
-    self.autotest_args = "%s %s" % (autotest_args, self._GetExtraAutotestArgs())
+    self.autotest_args = "%s %s" % (benchmark.autotest_args,
+                                    self._GetExtraAutotestArgs())
     self._ce = command_executer.GetCommandExecuter(self._logger)
     self.timeline = timeline.Timeline()
     self.timeline.Record(STATUS_PENDING)
@@ -62,7 +60,7 @@ class BenchmarkRun(threading.Thread):
       # without locking it.
       self.cache.Init(self.label.chromeos_image,
                       self.label.chromeos_root,
-                      self.autotest_name,
+                      self.benchmark.autotest_name,
                       self.iteration,
                       self.autotest_args,
                       self.machine_manager,
@@ -137,8 +135,8 @@ class BenchmarkRun(threading.Thread):
     return machine
 
   def _GetExtraAutotestArgs(self):
-    if self.perf_args:
-      perf_args_list = self.perf_args.split(" ")
+    if self.benchmark.perf_args:
+      perf_args_list = self.benchmark.perf_args.split(" ")
       perf_args_list = [perf_args_list[0]] + ["-a"] + perf_args_list[1:]
       perf_args = " ".join(perf_args_list)
       if not perf_args_list[0] in ["record", "stat"]:
@@ -158,7 +156,7 @@ class BenchmarkRun(threading.Thread):
     [retval, out, err] = self.autotest_runner.Run(machine.name,
                                                   self.label.chromeos_root,
                                                   self.label.board,
-                                                  self.autotest_name,
+                                                  self.benchmark.autotest_name,
                                                   self.autotest_args)
     self.run_completed = True
 
@@ -186,7 +184,7 @@ class MockBenchmarkRun(BenchmarkRun):
     [retval, out, err] = self.autotest_runner.Run(machine.name,
                                                   self.label.chromeos_root,
                                                   self.label.board,
-                                                  self.autotest_name,
+                                                  self.benchmark.autotest_name,
                                                   self.autotest_args)
     self.run_completed = True
     rr = Result("Results placed in /tmp/test", "", 0)
