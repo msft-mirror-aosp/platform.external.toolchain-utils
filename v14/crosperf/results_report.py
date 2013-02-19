@@ -175,8 +175,12 @@ class ResultsReport(object):
   def GetSummaryTables(self):
     columns = [Column(AmeanResult(),
                       Format()),
+               Column(StdResult(),
+                      Format(), "StdDev"),
+               Column(CoeffVarResult(),
+                      CoeffVarFormat(), "Mean/StdDev"),
                Column(GmeanRatioResult(),
-                      RatioFormat(),"GmeanSpeedup"),
+                      RatioFormat(), "GmeanSpeedup"),
                Column(GmeanRatioResult(),
                       ColorBoxFormat(), " "),
                Column(StatsSignificant(),
