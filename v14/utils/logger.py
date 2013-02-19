@@ -98,27 +98,43 @@ class Logger(object):
     if self.print_console:
       self._WriteTo(term_fd, msg, flush)
 
-  def LogCmd(self, cmd, machine="", user=None):
+  def _GetStdout(self, print_to_console):
+    if print_to_console:
+      return sys.stdout
+    return None
+
+  def _GetStderr(self, print_to_console):
+    if print_to_console:
+      return sys.stderr
+    return None
+
+  def LogCmd(self, cmd, machine="", user=None, print_to_console=True):
     if user:
       host = "%s@%s" % (user, machine)
     else:
       host = machine
 
-    self._LogMsg(self.cmdfd, sys.stdout, "CMD (%s): %s\n" % (host, cmd))
+    self._LogMsg(self.cmdfd, self._GetStdout(print_to_console),
+                 "CMD (%s): %s\n" % (host, cmd))
 
-  def LogFatal(self, msg):
-    self._LogMsg(self.stderr, sys.stderr, "FATAL: %s\n" % msg)
-    self._LogMsg(self.stderr, sys.stderr, "\n".join(traceback.format_stack()))
+  def LogFatal(self, msg, print_to_console=True):
+    self._LogMsg(self.stderr, self._GetStderr(print_to_console),
+                 "FATAL: %s\n" % msg)
+    self._LogMsg(self.stderr, self._GetStderr(print_to_console),
+                 "\n".join(traceback.format_stack()))
     sys.exit(1)
 
-  def LogError(self, msg):
-    self._LogMsg(self.stderr, sys.stderr, "ERROR: %s\n" % msg)
+  def LogError(self, msg, print_to_console=True):
+    self._LogMsg(self.stderr, self._GetStderr(print_to_console),
+                 "ERROR: %s\n" % msg)
 
-  def LogWarning(self, msg):
-    self._LogMsg(self.stderr, sys.stderr, "WARNING: %s\n" % msg)
+  def LogWarning(self, msg, print_to_console=True):
+    self._LogMsg(self.stderr, self._GetStderr(print_to_console),
+                 "WARNING: %s\n" % msg)
 
-  def LogOutput(self, msg):
-    self._LogMsg(self.stdout, sys.stdout, "OUTPUT: %s\n" % msg)
+  def LogOutput(self, msg, print_to_console=True):
+    self._LogMsg(self.stdout, self._GetStdout(print_to_console),
+                 "OUTPUT: %s\n" % msg)
 
   def LogFatalIf(self, condition, msg):
     if condition:
@@ -132,11 +148,13 @@ class Logger(object):
     if condition:
       self.LogWarning(msg)
 
-  def LogCommandOutput(self, msg):
-    self._LogMsg(self.stdout, sys.stdout, msg, flush=False)
+  def LogCommandOutput(self, msg, print_to_console=True):
+    self._LogMsg(self.stdout, self._GetStdout(print_to_console),
+                 msg, flush=False)
 
-  def LogCommandError(self, msg):
-    self._LogMsg(self.stderr, sys.stderr, msg, flush=False)
+  def LogCommandError(self, msg, print_to_console=True):
+    self._LogMsg(self.stderr, self._GetStderr(print_to_console),
+                 msg, flush=False)
 
   def Flush(self):
     self.cmdfd.flush()

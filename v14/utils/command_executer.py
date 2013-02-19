@@ -42,14 +42,15 @@ class CommandExecuter:
   def RunCommand(self, cmd, return_output=False, machine=None,
                  username=None, command_terminator=None,
                  command_timeout=None,
-                 terminated_timeout=10):
+                 terminated_timeout=10,
+                 print_to_console=True):
     """Run a command."""
 
     cmd = str(cmd)
 
-    self.logger.LogCmd(cmd, machine, username)
+    self.logger.LogCmd(cmd, machine, username, print_to_console)
     if command_terminator and command_terminator.IsTerminated():
-      self.logger.LogError("Command was terminated!")
+      self.logger.LogError("Command was terminated!", print_to_console)
       if return_output:
         return [1, "", ""]
       else:
@@ -81,7 +82,7 @@ class CommandExecuter:
       if command_terminator and command_terminator.IsTerminated():
         self.RunCommand("sudo kill -9 " + str(p.pid))
         wait = p.wait()
-        self.logger.LogError("Command was terminated!")
+        self.logger.LogError("Command was terminated!", print_to_console)
         if return_output:
           return (p.wait, full_stdout, full_stderr)
         else:
@@ -91,14 +92,14 @@ class CommandExecuter:
           out = os.read(p.stdout.fileno(), 16384)
           if return_output:
             full_stdout += out
-          self.logger.LogCommandOutput(out)
+          self.logger.LogCommandOutput(out, print_to_console)
           if out == "":
             pipes.remove(p.stdout)
         if fd == p.stderr:
           err = os.read(p.stderr.fileno(), 16384)
           if return_output:
             full_stderr += err
-          self.logger.LogCommandError(err)
+          self.logger.LogCommandError(err, print_to_console)
           if err == "":
             pipes.remove(p.stderr)
 
@@ -109,14 +110,14 @@ class CommandExecuter:
               time.time() - terminated_time > terminated_timeout):
           m = ("Timeout of %s seconds reached since process termination."
                % terminated_timeout)
-          self.logger.LogWarning(m)
+          self.logger.LogWarning(m, print_to_console)
           break
 
       if (command_timeout is not None and
           time.time() - started_time > command_timeout):
         m = ("Timeout of %s seconds reached since process started."
              % command_timeout)
-        self.logger.LogWarning(m)
+        self.logger.LogWarning(m, print_to_console)
         self.RunCommand("kill %d || sudo kill %d || sudo kill -9 %d" %
                         (p.pid, p.pid, p.pid))
         break
@@ -161,9 +162,10 @@ class CommandExecuter:
   def CrosRunCommand(self, cmd, return_output=False, machine=None,
       username=None, command_terminator=None, chromeos_root=None,
                      command_timeout=None,
-                     terminated_timeout=10):
+                     terminated_timeout=10,
+                     print_to_console=True):
     """Run a command on a chromeos box"""
-    self.logger.LogCmd(cmd)
+    self.logger.LogCmd(cmd, print_to_console)
     self.logger.LogFatalIf(not machine, "No machine provided!")
     self.logger.LogFatalIf(not chromeos_root, "chromeos_root not given!")
     chromeos_root = os.path.expanduser(chromeos_root)
@@ -197,8 +199,9 @@ class CommandExecuter:
 
   def ChrootRunCommand(self, chromeos_root, command, return_output=False,
                        command_terminator=None, command_timeout=None,
-                       terminated_timeout=10):
-    self.logger.LogCmd(command)
+                       terminated_timeout=10,
+                       print_to_console=True):
+    self.logger.LogCmd(command, print_to_console)
 
     handle, command_file = tempfile.mkstemp(dir=os.path.join(chromeos_root,
                                                            "src/scripts"),
