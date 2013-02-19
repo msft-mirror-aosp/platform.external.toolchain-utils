@@ -118,11 +118,14 @@ class MachineManager(object):
     self.image_lock = threading.Lock()
     self.num_reimages = 0
     self.chromeos_root = None
+    self.machine_checksum = {}
+    self.machine_checksum_string = {}
+
     if os.path.isdir(lock_machine.Machine.LOCKS_DIR):
       self.no_lock = False
     else:
       self.no_lock = True
-    self.initialized = False
+    self._initialized_machines = []
     self.chromeos_root = chromeos_root
 
   def ImageMachine(self, machine, chromeos_image, board=None):
@@ -153,18 +156,16 @@ class MachineManager(object):
 
     return retval
 
-  def ComputeCommonCheckSum(self):
-    self.machine_checksum = ""
-    for machine in self.GetMachines():
+  def ComputeCommonCheckSum(self, label):
+    for machine in self.GetMachines(label):
       if machine.machine_checksum:
-        self.machine_checksum = machine.machine_checksum
+        self.machine_checksum[label.name] = machine.machine_checksum
         break
 
-  def ComputeCommonCheckSumString(self):
-    self.machine_checksum_string = ""
-    for machine in self.GetMachines():
+  def ComputeCommonCheckSumString(self, label):
+    for machine in self.GetMachines(label):
       if machine.checksum_string:
-        self.machine_checksum_string = machine.checksum_string
+        self.machine_checksum_string[label.name] = machine.checksum_string
         break
 
   def _TryToLockMachine(self, cros_machine):
@@ -199,28 +200,28 @@ class MachineManager(object):
                            machine_name)
       self._all_machines.append(cm)
 
-  def AreAllMachineSame(self):
-    checksums = [m.machine_checksum for m in self.GetMachines()]
+  def AreAllMachineSame(self, label):
+    checksums = [m.machine_checksum for m in self.GetMachines(label)]
     return len(set(checksums)) == 1
 
-  def AcquireMachine(self, chromeos_image):
+  def AcquireMachine(self, chromeos_image, label):
     image_checksum = ImageChecksummer().Checksum(chromeos_image)
+    machines = self.GetMachines(label)
     with self._lock:
       # Lazily external lock machines
-      if not self.initialized:
-        for m in self._all_machines:
-          self._TryToLockMachine(m)
-        self.initialized = True
-        for m in self._all_machines:
-          m.released_time = time.time()
 
-      if not self.AreAllMachineSame():
+      for m in machines:
+        if m not in self._initialized_machines:
+          self._initialized_machines.append(m)
+          self._TryToLockMachine(m)
+          m.released_time = time.time()
+      if not self.AreAllMachineSame(label):
         logger.GetLogger().LogFatal("-- not all the machine are identical")
-      if not self._machines:
+      if not self.GetAvailableMachines(label):
         machine_names = []
-        for machine in self._all_machines:
+        for machine in machines:
           machine_names.append(machine.name)
-        logger.GetLogger().LogFatal("Could not acquire any of the"
+        logger.GetLogger().LogFatal("Could not acquire any of the "
                                   "following machines: '%s'"
                                   % ", ".join(machine_names))
 
@@ -228,12 +229,14 @@ class MachineManager(object):
 ###        if (m.locked and time.time() - m.released_time < 10 and
 ###            m.checksum == image_checksum):
 ###          return None
-      for m in [machine for machine in self._machines if not machine.locked]:
+      for m in [machine for machine in self.GetAvailableMachines(label)
+                if not machine.locked]:
         if m.checksum == image_checksum:
           m.locked = True
           m.autotest_run = threading.current_thread()
           return m
-      for m in [machine for machine in self._machines if not machine.locked]:
+      for m in [machine for machine in self.GetAvailableMachines(label)
+                if not machine.locked]:
         if not m.checksum:
           m.locked = True
           m.autotest_run = threading.current_thread()
@@ -244,15 +247,23 @@ class MachineManager(object):
       # the number of re-images.
       # TODO(asharif): If we centralize the thread-scheduler, we wont need this
       # code and can implement minimal reimaging code more cleanly.
-      for m in [machine for machine in self._machines if not machine.locked]:
+      for m in [machine for machine in self.GetAvailableMachines(label)
+                if not machine.locked]:
         if time.time() - m.released_time > 20:
           m.locked = True
           m.autotest_run = threading.current_thread()
           return m
     return None
 
-  def GetMachines(self):
-    return self._all_machines
+  def GetAvailableMachines(self, label=None):
+    if not label:
+      return self._machines
+    return [m for m in self._machines if m.name in label.remote]
+
+  def GetMachines(self, label=None):
+    if not label:
+      return self._all_machines
+    return [m for m in self._all_machines if m.name in label.remote]
 
   def ReleaseMachine(self, machine):
     with self._lock:
@@ -306,6 +317,25 @@ class MachineManager(object):
         table.append(machine_string)
       return "Machine Status:\n%s" % "\n".join(table)
 
+  def GetAllCPUInfo(self, labels):
+    """Get cpuinfo for labels, merge them if their cpuinfo are the same."""
+    dic = {}
+    for label in labels:
+      for machine in self._all_machines:
+        if machine.name in label.remote:
+          if machine.cpuinfo not in dic:
+            dic[machine.cpuinfo] = [label.name]
+          else:
+            dic[machine.cpuinfo].append(label.name)
+          break
+    output = ""
+    for key, v in dic.items():
+      output += " ".join(v)
+      output += "\n-------------------\n"
+      output += key
+      output += "\n\n\n"
+    return output
+
 
 class MockMachineManager(object):
   def __init__(self):
@@ -328,4 +358,7 @@ class MockMachineManager(object):
     machine.locked = False
 
   def GetMachines(self):
+    return self.machines
+
+  def GetAvailableMachines(self):
     return self.machines

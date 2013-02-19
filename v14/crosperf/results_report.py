@@ -152,6 +152,11 @@ Benchmark Run Status
 Experiment File
 -------------------------------------------
 %s
+
+
+CPUInfo
+-------------------------------------------
+%s
 ===========================================
 """
 
@@ -183,13 +188,17 @@ Experiment File
                           self.PrintTables(summary_table, "CONSOLE"),
                           self.experiment.machine_manager.num_reimages,
                           self.PrintTables(status_table, "CONSOLE"),
-                          self.experiment.experiment_file)
+                          self.experiment.experiment_file,
+                          self.experiment.machine_manager.GetAllCPUInfo(
+                              self.experiment.labels))
 
     return self.TEXT % (self.experiment.name,
                         self.PrintTables(summary_table, "EMAIL"),
                         self.experiment.machine_manager.num_reimages,
                         self.PrintTables(status_table, "EMAIL"),
-                        self.experiment.experiment_file)
+                        self.experiment.experiment_file,
+                        self.experiment.machine_manager.GetAllCPUInfo(
+                            self.experiment.labels))
 
 
 class HTMLResultsReport(ResultsReport):
