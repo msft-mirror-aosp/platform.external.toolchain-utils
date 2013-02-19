@@ -15,11 +15,15 @@ class AutotestRunner(object):
 
   def Run(self, machine_name, chromeos_root, board, autotest_name,
           autotest_args):
+    """Run the run_remote_test."""
     options = ""
     if board:
       options += " --board=%s" % board
     if autotest_args:
       options += " %s" % autotest_args
+    command = "rm -rf /usr/local/autotest/results/*"
+    self._ce.CrosRunCommand(command, machine=machine_name, username="root",
+                            chromeos_root=chromeos_root)
     command = ("./run_remote_tests.sh --remote=%s %s %s" %
                (machine_name, options, autotest_name))
     return self._ce.ChrootRunCommand(chromeos_root, command, True, self._ct)
