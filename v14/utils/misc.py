@@ -14,6 +14,27 @@ import command_executer
 import logger
 
 
+def GetChromeOSVersionFromLSBVersion(lsb_version):
+  ce = command_executer.GetCommandExecuter()
+  command = "git ls-remote http://git.chromium.org/chromiumos/manifest.git"
+  ret, out, _ = ce.RunCommand(command, return_output=True)
+  assert ret == 0, "Command %s failed" % command
+  lower = []
+  for line in out.splitlines():
+    mo = re.search("refs/heads/release-R(\d+)-(\d+)\.B", line)
+    if mo:
+      revision = int(mo.group(1))
+      build = int(mo.group(2))
+      lsb_build = int(lsb_version.split(".")[0])
+      if lsb_build > build:
+        lower.append(revision)
+  lower = sorted(lower)
+  if lower:
+    return "R%d-%s" % (lower[-1] + 1, lsb_version)
+  else:
+    return "Unknown"
+
+
 def ApplySubs(string, *substitutions):
   for pattern, replacement in substitutions:
     string = re.sub(pattern, replacement, string)

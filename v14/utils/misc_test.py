@@ -28,6 +28,13 @@ class UtilsTest(unittest.TestCase):
     expected_new_env = '%s=%r' % (var, ' '.join([added_use_flags, use_flags]))
     self.assertTrue(new_env_string == ' '.join([env_string, expected_new_env]))
 
+  def testGetChromeOSVersionFromLSBVersion(self):
+    versions_dict = {"2630.0.0": "22",
+                     "2030.0.0": "19"}
+    f = misc.GetChromeOSVersionFromLSBVersion
+    for k, v in versions_dict.items():
+      self.assertTrue(f(k) == "R%s-%s" % (v, k))
+
   def testPostpendMergeEnv(self):
     var = 'USE'
     use_flags = 'hello 123'
