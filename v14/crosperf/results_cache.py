@@ -109,6 +109,7 @@ class Result(object):
       chroot_perf_report_file = misc.GetInsideChrootPath(self._chromeos_root,
                                                    perf_report_file)
       command = ("/usr/sbin/perf report "
+                 "-n "
                  "--symfs /build/%s "
                  "--vmlinux /build/%s/usr/lib/debug/boot/vmlinux "
                  "--kallsyms /build/%s/boot/System.map-* "
@@ -253,7 +254,7 @@ class ResultsCache(object):
   is exactly stored (value). The value generation is handled by the Results
   class.
   """
-  CACHE_VERSION = 3
+  CACHE_VERSION = 4
   def Init(self, chromeos_image, chromeos_root, autotest_name, iteration,
            autotest_args, remote, board, cache_conditions,
            logger_to_use):
