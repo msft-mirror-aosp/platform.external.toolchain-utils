@@ -99,25 +99,45 @@ def DownloadSamples(server_name, authtoken, output_dir, start, stop):
     sample_key = sample_info[0]
     # sample_time = sample_info[1]
     # sample_md5 = sample_info[2]
-    # sample_board = sample_info[3]
-    # sample_chromeos_version = sample_info[4]
+    sample_board = sample_info[3]
+    sample_chromeos_version = sample_info[4]
 
     # Put a compressed copy of the samples in output directory.
-    _DownloadSampleFromServer(server_name, authtoken, sample_key, output_dir)
-    _UncompressSample(sample_key, output_dir)
+    _DownloadSampleFromServer(server_name, authtoken, sample_key, sample_board,
+                              sample_chromeos_version, output_dir)
+    _UncompressSample(sample_key, sample_board,
+                      sample_chromeos_version, output_dir)
 
 
-def _DownloadSampleFromServer(server_name, authtoken, sample_key, output_dir):
+def _BuildFilenameFromParams(sample_key, sample_board, sample_chromeos_version):
+  """Return the filename for our sample.
+  Args:
+    sample_key:  (string) Key indexing our sample in the datastore.
+    sample_board: (string) Board that the sample was taken on.
+    sample_chromeos_version: (string) Version string from /etc/lsb-release
+  Returns:
+    filename (string)
+  """
+  delimiter = "~"
+  filename = delimiter.join([sample_key, sample_board, sample_chromeos_version])
+  return filename
+
+
+def _DownloadSampleFromServer(server_name, authtoken, sample_key, sample_board,
+                              sample_chromeos_version, output_dir):
   """Downloads sample_$(samplekey).gz to current dir.
   Args:
     server_name: (string) URL that the app engine code is living on.
     authtoken:   (string) Authorization token.
     sample_key:  (string) Key indexing our sample in the datastore.
+    sample_board: (string) Board that the sample was taken on.
+    sample_chromeos_version: (string) Version string from /etc/lsb-release
     output_dir:  (string) Filepath to write to output to.
   Returns:
     None
   """
-  filename = "sample_%s" % sample_key
+  filename = _BuildFilenameFromParams(sample_key, sample_board,
+                                      sample_chromeos_version)
   compressed_filename = filename+".gz"
 
   if os.path.exists(os.path.join(output_dir, filename)):
@@ -134,15 +154,19 @@ def _DownloadSampleFromServer(server_name, authtoken, sample_key, output_dir):
   f.close()
 
 
-def _UncompressSample(sample_key, output_dir):
+def _UncompressSample(sample_key, sample_board,
+                      sample_chromeos_version, output_dir):
   """Uncompresses a given sample.gz file and deletes the compressed version.
   Args:
     sample_key: (string) Sample key to uncompress.
+    sample_board: (string) Board that the sample was taken on.
+    sample_chromeos_version: (string) Version string from /etc/lsb-release
     outout_dir: (string) Filepath to find sample key in.
   Returns:
     None
   """
-  filename = "sample_%s" % sample_key
+  filename = _BuildFilenameFromParams(sample_key, sample_board,
+                                      sample_chromeos_version)
   compressed_filename = filename+".gz"
 
   if os.path.exists(os.path.join(output_dir, filename)):
@@ -212,7 +236,8 @@ def main():
   if not authtoken:
     print "Could not obtain authtoken, exiting."
     return 1
-  DownloadSamples(SERVER_NAME, authtoken, options.output_dir, options.start_ind, options.stop_ind)
+  DownloadSamples(SERVER_NAME, authtoken, options.output_dir,
+                  options.start_ind, options.stop_ind)
   print "Downloaded samples."
   return 0
 
