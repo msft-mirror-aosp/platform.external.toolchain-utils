@@ -80,7 +80,8 @@ class CommandExecuter:
     while len(pipes):
       fds = select.select(pipes, [], [], 0.1)
       if command_terminator and command_terminator.IsTerminated():
-        self.RunCommand("sudo kill -9 " + str(p.pid))
+        self.RunCommand("sudo kill -9 " + str(p.pid),
+                        print_to_console=print_to_console)
         wait = p.wait()
         self.logger.LogError("Command was terminated!", print_to_console)
         if return_output:
@@ -119,7 +120,8 @@ class CommandExecuter:
              % command_timeout)
         self.logger.LogWarning(m, print_to_console)
         self.RunCommand("kill %d || sudo kill %d || sudo kill -9 %d" %
-                        (p.pid, p.pid, p.pid))
+                        (p.pid, p.pid, p.pid),
+                        print_to_console=print_to_console)
         break
 
       if out == err == "":
@@ -177,7 +179,8 @@ class CommandExecuter:
                             command_terminator=command_terminator,
                             chromeos_root=chromeos_root,
                             dest_cros=True,
-                            recursive=False)
+                            recursive=False,
+                            print_to_console=print_to_console)
     if retval:
       self.logger.LogError("Could not run remote command on machine."
                            " Is the machine up?")
@@ -189,7 +192,8 @@ class CommandExecuter:
     retval = self.RunCommand(command, return_output,
                              command_terminator=command_terminator,
                              command_timeout=command_timeout,
-                             terminated_timeout=terminated_timeout)
+                             terminated_timeout=terminated_timeout,
+                             print_to_console=print_to_console)
     if return_output:
       connect_signature = ("Initiating first contact with remote host\n" +
                            "Connection OK\n")
@@ -223,7 +227,8 @@ class CommandExecuter:
     ret = self.RunCommand(command, return_output,
                           command_terminator=command_terminator,
                           command_timeout=command_timeout,
-                          terminated_timeout=terminated_timeout)
+                          terminated_timeout=terminated_timeout,
+                          print_to_console=print_to_console)
     os.remove(command_file)
     return ret
 
@@ -237,7 +242,8 @@ class CommandExecuter:
   def CopyFiles(self, src, dest, src_machine=None, dest_machine=None,
                 src_user=None, dest_user=None, recursive=True,
                 command_terminator=None,
-                chromeos_root=None, src_cros=False, dest_cros=False):
+                chromeos_root=None, src_cros=False, dest_cros=False,
+                print_to_console=True):
     src = os.path.expanduser(src)
     dest = os.path.expanduser(dest)
 
@@ -267,13 +273,15 @@ class CommandExecuter:
         return self.RunCommand(command,
                                machine=src_machine,
                                username=src_user,
-                               command_terminator=command_terminator)
+                               command_terminator=command_terminator,
+                               print_to_console=print_to_console)
       else:
         command += rsync_prefix + "root@%s:%s %s" % (src_machine, src, dest)
         return self.RunCommand(command,
                                machine=dest_machine,
                                username=dest_user,
-                               command_terminator=command_terminator)
+                               command_terminator=command_terminator,
+                               print_to_console=print_to_console)
 
 
     if dest_machine == src_machine:
@@ -290,7 +298,8 @@ class CommandExecuter:
     return self.RunCommand(command,
                            machine=dest_machine,
                            username=dest_user,
-                           command_terminator=command_terminator)
+                           command_terminator=command_terminator,
+                           print_to_console=print_to_console)
 
 
 class MockCommandExecuter(CommandExecuter):
