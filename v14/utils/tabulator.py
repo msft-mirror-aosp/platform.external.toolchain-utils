@@ -205,9 +205,12 @@ class LiteralResult(Result):
     self.iteration = iteration
 
   def Compute(self, cell, values, baseline_values):
-    if values[self.iteration]:
-      cell.value = values[self.iteration]
-    else:
+    try:
+      if values[self.iteration]:
+        cell.value = values[self.iteration]
+      else:
+        cell.value = "-"
+    except IndexError:
       cell.value = "-"
 
 
