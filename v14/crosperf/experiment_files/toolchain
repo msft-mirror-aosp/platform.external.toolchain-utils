@@ -12,4 +12,5 @@ benchmark: PyAutoPerfTests {
 }
 
 benchmark: BootPerfServer {
+  autotest_name: ^server/site_tests/platform_BootPerfServer/control$
 }
