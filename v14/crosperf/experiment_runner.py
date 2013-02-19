@@ -5,13 +5,15 @@
 import getpass
 import os
 import time
-from experiment_status import ExperimentStatus
-from results_report import HTMLResultsReport
-from results_report import TextResultsReport
+
 from utils import command_executer
 from utils import logger
 from utils.email_sender import EmailSender
 from utils.file_utils import FileUtils
+
+from experiment_status import ExperimentStatus
+from results_report import HTMLResultsReport
+from results_report import TextResultsReport
 
 
 class ExperimentRunner(object):
@@ -90,7 +92,7 @@ class ExperimentRunner(object):
 
     self.l.LogOutput("Storing results of each benchmark run.")
     for benchmark_run in experiment.benchmark_runs:
-      if benchmark_run.result:
+      if benchmark_run.result and not benchmark_run.cache_hit:
         benchmark_run_name = filter(str.isalnum, benchmark_run.name)
         benchmark_run_path = os.path.join(results_directory,
                                           benchmark_run_name)
