@@ -28,6 +28,10 @@ class ChromeOSCheckout(object):
     self._ce = command_executer.GetCommandExecuter()
     self._l = logger.GetLogger()
 
+  def _DeleteChroot(self):
+    command = "cd %s; cros_sdk --delete" % self.chromeos_root
+    return self._ce.RunCommand(command)
+
   def _BuildAndImage(self, label=""):
     if (not label or
         not misc.DoesLabelExist(self._chromeos_root, self._board, label)):
@@ -77,11 +81,12 @@ class ChromeOSCheckout(object):
 
 
 class ToolchainComparator(ChromeOSCheckout):
-  def __init__(self, board, remotes, configs):
+  def __init__(self, board, remotes, configs, clean):
     self._board = board
     self._remotes = remotes
     self._chromeos_root = "chromeos"
     self._configs = configs
+    self._clean = clean
     self._ce = command_executer.GetCommandExecuter()
     self._l = logger.GetLogger()
     ChromeOSCheckout.__init__(self, board, self._chromeos_root)
@@ -136,6 +141,9 @@ class ToolchainComparator(ChromeOSCheckout):
         label = self._BuildAndImage(label)
       labels.append(label)
     self._TestLabels(labels)
+    if self._clean:
+      ret = self._DeleteChroot()
+      if ret: return ret
     return 0
 
 
@@ -156,6 +164,11 @@ def Main(argv):
                     dest="githashes",
                     default="master",
                     help="The gcc githashes to test.")
+  parser.add_option("--clean",
+                    dest="clean",
+                    default=False,
+                    action="store_true",
+                    help="Clean the chroot after testing.")
   options, _ = parser.parse_args(argv)
   if not options.board:
     print "Please give a board."
@@ -168,7 +181,8 @@ def Main(argv):
     gcc_config = GCCConfig(githash=githash)
     toolchain_config = ToolchainConfig(gcc_config=gcc_config)
     toolchain_configs.append(toolchain_config)
-  fc = ToolchainComparator(options.board, options.remote, toolchain_configs)
+  fc = ToolchainComparator(options.board, options.remote, toolchain_configs,
+                           options.clean)
   return fc.DoAll()
 
 
