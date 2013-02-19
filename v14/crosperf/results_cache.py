@@ -187,6 +187,7 @@ class Result(object):
     self.perf_data_files = self._GetPerfDataFiles()
     self.perf_report_files = self._GetPerfReportFiles()
     self._ProcessResults()
+    self.CleanUp()
 
   def CleanUp(self):
     if self._temp_dir:
