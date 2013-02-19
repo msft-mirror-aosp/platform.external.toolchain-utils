@@ -166,7 +166,11 @@ class Result(object):
       return float("nan")
     if any([v < 0 for v in values]):
       return float ("nan")
-    return (reduce(lambda x, y: x*y, values))**(1.0/len(values))
+    if any([v == 0 for v in values]):
+      return 0.0
+    log_list = [math.log(v) for v in values]
+    gmean_log = sum(log_list)/len(log_list)
+    return math.exp(gmean_log)
 
   def Compute(self, cell, values, baseline_values):
     """Compute the result given a list of values and baseline values.

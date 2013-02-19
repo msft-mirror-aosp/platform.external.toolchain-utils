@@ -61,6 +61,11 @@ class TabulatorTest(unittest.TestCase):
     c3.Round()
     self.assertTrue(c3.r == 127)
 
+  def testGmean(self):
+    a = [1.0e+308] * 3
+    b = tabulator.Result()._GetGmean(a)
+    self.assertTrue(b >= 0.99e+308 and b <= 1.01e+308)
+
   def testTableGenerator(self):
     runs = [[{"k1": "10", "k2": "12"},
              {"k1": "13", "k2": "14", "k3": "15"}],
