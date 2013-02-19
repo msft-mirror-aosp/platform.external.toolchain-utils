@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
@@ -169,6 +169,9 @@ def Main(argv):
                     "--gcc_dir",
                     dest="gcc_dir",
                     help="The directory where gcc resides.")
+  parser.add_option("--binutils_dir",
+                    dest="binutils_dir",
+                    help="The directory where binutils resides.")
   parser.add_option("-x",
                     "--gdb_dir",
                     dest="gdb_dir",
@@ -222,6 +225,8 @@ def Main(argv):
   chromeos_root = misc.CanonicalizePath(options.chromeos_root)
   if options.gcc_dir:
     gcc_dir = misc.CanonicalizePath(options.gcc_dir)
+  if options.binutils_dir:
+    binutils_dir = misc.CanonicalizePath(options.binutils_dir)
   if options.gdb_dir:
     gdb_dir = misc.CanonicalizePath(options.gdb_dir)
   if options.unmount_only:
@@ -251,6 +256,10 @@ def Main(argv):
   for board in options.board.split(","):
     if options.gcc_dir:
       tp = ToolchainPart("gcc", gcc_dir, chromeos_root, board,
+                         not options.noincremental, build_env)
+      toolchain_parts.append(tp)
+    if options.binutils_dir:
+      tp = ToolchainPart("binutils", binutils_dir, chromeos_root, board,
                          not options.noincremental, build_env)
       toolchain_parts.append(tp)
     if options.gdb_dir:
