@@ -71,7 +71,9 @@ class ExperimentFactory(object):
            and global_settings.GetField("board") != board)):
         my_remote = self.GetDefaultRemotes(board)
       all_remote += my_remote
-      label = Label(label_name, image, chromeos_root, board, my_remote)
+      image_args = label_settings.GetField("image_args")
+      label = Label(label_name, image, chromeos_root, board, my_remote,
+                    image_args)
       labels.append(label)
 
     email = global_settings.GetField("email")

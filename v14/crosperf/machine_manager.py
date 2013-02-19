@@ -131,25 +131,26 @@ class MachineManager(object):
     self._initialized_machines = []
     self.chromeos_root = chromeos_root
 
-  def ImageMachine(self, machine, chromeos_image, board=None):
+  def ImageMachine(self, machine, chromeos_image, board=None, image_args=""):
     checksum = ImageChecksummer().Checksum(chromeos_image)
     if machine.checksum == checksum:
       return
     chromeos_root = FileUtils().ChromeOSRootFromImage(chromeos_image)
     if not chromeos_root:
       chromeos_root = self.chromeos_root
-    image_args = [image_chromeos.__file__,
-                  "--chromeos_root=%s" % chromeos_root,
-                  "--image=%s" % chromeos_image,
-                  "--remote=%s" % machine.name]
+    image_chromeos_args = [image_chromeos.__file__,
+                           "--chromeos_root=%s" % chromeos_root,
+                           "--image=%s" % chromeos_image,
+                           "--image_args=%s" % image_args,
+                           "--remote=%s" % machine.name]
     if board:
-      image_args.append("--board=%s" % board)
+      image_chromeos_args.append("--board=%s" % board)
 
     # Currently can't image two machines at once.
     # So have to serialized on this lock.
     ce = command_executer.GetCommandExecuter()
     with self.image_lock:
-      retval = ce.RunCommand(" ".join(["python"] + image_args))
+      retval = ce.RunCommand(" ".join(["python"] + image_chromeos_args))
       if retval:
         raise Exception("Could not image machine: '%s'." % machine.name)
       else:
@@ -358,7 +359,8 @@ class MockMachineManager(MachineManager):
   def __init__(self):
     self.machines = []
 
-  def ImageMachine(self, machine_name, chromeos_image, board=None):
+  def ImageMachine(self, machine_name, chromeos_image, board=None,
+                   image_args=""):
     return 0
 
   def AddMachine(self, machine_name, chromeos_root):

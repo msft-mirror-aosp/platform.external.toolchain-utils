@@ -6,11 +6,13 @@ from utils.file_utils import FileUtils
 
 
 class Label(object):
-  def __init__(self, name, chromeos_image, chromeos_root, board, remote):
+  def __init__(self, name, chromeos_image, chromeos_root, board, remote,
+               image_args):
     self.name = name
     self.chromeos_image = chromeos_image
     self.board = board
     self.remote = remote
+    self.image_args = image_args
 
     if not chromeos_root:
       chromeos_root = FileUtils().ChromeOSRootFromImage(chromeos_image)

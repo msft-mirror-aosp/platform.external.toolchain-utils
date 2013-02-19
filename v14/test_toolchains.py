@@ -92,19 +92,23 @@ class ChromeOSCheckout(object):
 
 
 class ToolchainComparator(ChromeOSCheckout):
-  def __init__(self, board, remotes, configs, clean, public):
+  def __init__(self, board, remotes, configs, clean, public, force_mismatch):
     self._board = board
     self._remotes = remotes
     self._chromeos_root = "chromeos"
     self._configs = configs
     self._clean = clean
     self._public = public
+    self._force_mismatch = force_mismatch
     self._ce = command_executer.GetCommandExecuter()
     self._l = logger.GetLogger()
     ChromeOSCheckout.__init__(self, board, self._chromeos_root)
 
   def _TestLabels(self, labels):
     experiment_file = "toolchain_experiment.txt"
+    image_args = ""
+    if self._force_mismatch:
+      image_args = "--force_mismatch"
     experiment_header = """
     board: %s
     remote: %s
@@ -126,11 +130,13 @@ class ToolchainComparator(ChromeOSCheckout):
         experiment_image = """
         %s {
           chromeos_image: %s
+          image_args: %s
         }
         """ % (crosperf_label,
                os.path.join(misc.GetImageDir(self._chromeos_root, self._board),
                             label,
-                            "chromiumos_test_image.bin"))
+                            "chromiumos_test_image.bin"),
+               image_args)
         print >>f, experiment_image
     crosperf = os.path.join(os.path.dirname(__file__),
                             "crosperf",
@@ -189,6 +195,10 @@ def Main(argv):
                     default=False,
                     action="store_true",
                     help="Use the public checkout/build.")
+  parser.add_option("--force-mismatch",
+                    dest="force_mismatch",
+                    default="",
+                    help="Force the image regardless of board mismatch")
   options, _ = parser.parse_args(argv)
   if not options.board:
     print "Please give a board."
@@ -202,7 +212,8 @@ def Main(argv):
     toolchain_config = ToolchainConfig(gcc_config=gcc_config)
     toolchain_configs.append(toolchain_config)
   fc = ToolchainComparator(options.board, options.remote, toolchain_configs,
-                           options.clean, options.public)
+                           options.clean, options.public,
+                           options.force_mismatch)
   return fc.DoAll()
 
 

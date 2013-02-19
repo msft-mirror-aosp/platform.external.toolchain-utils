@@ -49,6 +49,10 @@ class LabelSettings(Settings):
     self.AddField(ListField("remote", description=
                             "A comma-separated list of ip's of chromeos"
                             "devices to run experiments on."))
+    self.AddField(TextField("image_args", required=False,
+                            default="",
+                            description="Extra arguments to pass to "
+                            "image_chromeos.py."))
 
 
 class GlobalSettings(Settings):

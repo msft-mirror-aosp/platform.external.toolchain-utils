@@ -157,7 +157,8 @@ class BenchmarkRun(threading.Thread):
     self.timeline.Record(STATUS_IMAGING)
     self.machine_manager.ImageMachine(machine,
                                       self.chromeos_image,
-                                      self.label.board)
+                                      self.label.board,
+                                      self.label.image_args)
     self.timeline.Record(STATUS_RUNNING)
     [retval, out, err] = self.autotest_runner.Run(machine.name,
                                                   self.label.chromeos_root,
