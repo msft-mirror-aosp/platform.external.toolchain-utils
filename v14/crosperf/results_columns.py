@@ -3,6 +3,7 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 import math
+from utils import stats
 
 
 class Column(object):
@@ -160,3 +161,19 @@ class ColorColumn(Column):
     if len(results) or len(baseline_results):
       return ""
     return ""
+
+
+class SignificantDiffColumn(Column):
+  def __init__(self, name):
+    super(SignificantDiffColumn, self).__init__(name)
+
+  def Compute(self, results, baseline_results):
+    if self._ContainsString(results) or self._ContainsString(baseline_results):
+      return ""
+
+    results = self._StripNone(results)
+    baseline_results = self._StripNone(baseline_results)
+    if len(results) < 2 or len(baseline_results) < 2:
+      return ""
+    t, p = stats.lttest_ind(baseline_results, results)
+    return p

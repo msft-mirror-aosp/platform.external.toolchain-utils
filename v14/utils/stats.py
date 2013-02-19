@@ -1042,6 +1042,8 @@ Returns: t-value, two-tailed prob
     n2 = len(b)
     df = n1+n2-2
     svar = ((n1-1)*v1+(n2-1)*v2)/float(df)
+    if not svar:
+      svar = 1.0e-26
     t = (x1-x2)/math.sqrt(svar*(1.0/n1 + 1.0/n2))
     prob = betai(0.5*df,0.5,df/(df+t*t))
 

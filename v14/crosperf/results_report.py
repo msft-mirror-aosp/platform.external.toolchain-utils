@@ -7,11 +7,12 @@ from column_chart import ColumnChart
 from results_columns import *
 from results_sorter import ResultSorter
 from table import Table
-
+from utils.tabulator import *
 
 class ResultsReport(object):
   DELTA_COLUMN_NAME = "Change"
   CHANGE_COLOR_NAME = ""
+  STATS_DIFF_NAME = "p value"
   MAX_COLOR_CODE = 255
 
   def __init__(self, experiment):
@@ -22,7 +23,8 @@ class ResultsReport(object):
     self.baseline = self.labels[0]
 
   def _ShouldSkipColumn(self, column):
-    if column.name in [self.DELTA_COLUMN_NAME, self.CHANGE_COLOR_NAME]:
+    if column.name in [self.DELTA_COLUMN_NAME, self.CHANGE_COLOR_NAME,
+                       self.STATS_DIFF_NAME]:
       return True
     return False
 
@@ -84,7 +86,8 @@ class ResultsReport(object):
   def GetSummaryTable(self):
     summary_columns = [MeanColumn("Average"),
                        RatioColumn(self.DELTA_COLUMN_NAME),
-                       ColorColumn(self.CHANGE_COLOR_NAME)]
+                       ColorColumn(self.CHANGE_COLOR_NAME),
+                       SignificantDiffColumn(self.STATS_DIFF_NAME)]
     return self._GetTable(self.labels, self.benchmarks, self.benchmark_runs,
                           summary_columns)
 
@@ -92,7 +95,10 @@ class ResultsReport(object):
     table = Table("box-table-a")
     label_headings = [Table.Cell("", hidden=True, colspan=2, header=True)]
     for label in labels:
-      colspan = len(columns)
+      colspan = len(columns)*2
+      for col in columns:
+        if self._ShouldSkipColumn(col):
+          colspan -= 2
       if label.name == self.baseline.name:
         colspan -= 1
       label_headings.append(Table.Cell(label.name, colspan=colspan,
@@ -209,8 +215,8 @@ Experiment File
     return self.TEXT % (self.experiment.name,
                         self.GetStatusTable().ToText(),
                         self.experiment.machine_manager.num_reimages,
-                        summary_table.ToText(180),
-                        full_table.ToText(180),
+                        summary_table.ToText(120),
+                        full_table.ToText(80),
                         self.experiment.experiment_file)
 
 
