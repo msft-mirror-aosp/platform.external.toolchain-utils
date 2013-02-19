@@ -189,12 +189,24 @@ class ComparisonResult(Result):
 
 class AmeanRatioResult(ComparisonResult):
   def _ComputeFloat(self, cell, values, baseline_values):
-    cell.value = numpy.mean(values)/numpy.mean(baseline_values)
+    if numpy.mean(baseline_values) != 0:
+      cell.value = numpy.mean(values)/numpy.mean(baseline_values)
+    elif numpy.mean(values) != 0:
+      cell.value = 0.00
+      # cell.value = 0 means the values and baseline_values have big difference
+    else:
+      cell.value = 1.00
+      # no difference if both values and baseline_values are 0
 
 
 class GmeanRatioResult(ComparisonResult):
   def _ComputeFloat(self, cell, values, baseline_values):
-    cell.value = self._GetGmean(values)/self._GetGmean(baseline_values)
+    if self._GetGmean(baseline_values) != 0:
+      cell.value = self._GetGmean(values)/self._GetGmean(baseline_values)
+    elif self._GetGmean(values) != 0:
+      cell.value = 0.00
+    else:
+      cell.value = 1.00
 
 
 class Color(object):
