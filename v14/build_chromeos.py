@@ -73,7 +73,7 @@ def Main(argv):
 
   build_packages_env = options.env
   if options.rebuild == True:
-    build_packages_env = "EXTRA_BOARD_FLAGS=-e"
+    build_packages_env += " EXTRA_BOARD_FLAGS=-e"
 
   build_packages_env = misc.MergeEnvStringWithDict(build_packages_env,
                                                    {"USE": "chrome_internal"})
@@ -111,8 +111,8 @@ def Main(argv):
   ret = cmd_executer.ChrootRunCommand(
       options.chromeos_root,
       "CFLAGS=\"$(portageq-%s envvar CFLAGS) %s\" "
-      "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
       "CXXFLAGS=\"$(portageq-%s envvar CXXFLAGS) %s\" "
+      "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
       "CHROME_ORIGIN=SERVER_SOURCE "
       "%s "
       "%s"
