@@ -4,6 +4,7 @@
 import optparse
 import os
 import shutil
+from subprocess import call
 from subprocess import PIPE
 from subprocess import Popen
 from utils import misc
@@ -56,41 +57,54 @@ def _ParseFilename(filename, canonical=False):
   return (key, board, vers)
 
 
+def _FormReleaseDir(board, version):
+  return "%s-release-%s" % (board, version)
+
+
 def _DownloadSymbols(filename, cache):
   """ Incrementally downloads appropriate symbols.
       We store the downloads in cache, with each set of symbols in a TLD
       named like cache/$board-release~$canonical_vers/usr/lib/debug
   """
   _, board, vers = _ParseFilename(filename, canonical=True)
-  symbol_cache_tld = "%s-release~%s" % (board, vers)
-  download_path = os.path.join(cache, symbol_cache_tld, "usr/lib/")
-  symbol_tgz_path = os.path.join(download_path, "debug.tgz")
-  # First, check if the TLD exists already. If it does, then assume we've got
-  # the appropriate symbols.
-  if os.path.exists(download_path):
-    print "Symbol directory exists, skipping download."
+  tmp_suffix = ".tmp"
+
+  tarball_subdir = _FormReleaseDir(board, vers)
+  tarball_dir = os.path.join(cache, tarball_subdir)
+  tarball_path = os.path.join(tarball_dir, "debug.tgz")
+
+  symbol_subdir = os.path.join("usr", "lib")
+  symbol_dir = os.path.join(tarball_dir, symbol_subdir)
+
+  if os.path.isdir(symbol_dir):
+    print "Symbol directory %s exists, skipping download." % symbol_dir
     return
   else:
-    os.makedirs(download_path)
-    download_cmd = GSUTIL_CMD % (board, vers, download_path)
-    print "Downloading symbols for %s" % filename
-    print download_cmd
-    download_proc = Popen(download_cmd.split(), stdout=PIPE)
-    out = download_proc.stdout.read()
-    if "InvalidUriError" in out:
-      print "Attempted to download non-existing symbols."
-      # Clean up the empty directory structures.
-      shutil.rmtree(os.path.join(cache, symbol_cache_tld))
-      raise IOError
-    # Otherwise, assume download proceeded as planned.
-    extract_cmd = TAR_CMD % (symbol_tgz_path, download_path)
+    # First download using gsutil.
+    if not os.path.isfile(tarball_path):
+      download_cmd = GSUTIL_CMD % (board, vers, tarball_path + tmp_suffix)
+      print "Downloading symbols for %s" % filename
+      print download_cmd
+      ret = call(download_cmd.split())
+      if ret != 0:
+        print "gsutil returned non-zero error code: %s." % ret
+        # Clean up the empty directory structures.
+        os.remove(tarball_path + tmp_suffix)
+        raise IOError
+
+      shutil.move(tarball_path + tmp_suffix, tarball_path)
+
+    # Next, untar the tarball.
+    os.makedirs(symbol_dir + tmp_suffix)
+    extract_cmd = TAR_CMD % (tarball_path, symbol_dir + tmp_suffix)
     print "Extracting symbols for %s" % filename
     print extract_cmd
-    process = Popen(extract_cmd.split())
-    # Wait for the unzipping to finish.
-    process.wait()
-    # Clean up the .tgz file.
-    os.remove(symbol_tgz_path)
+    ret = call(extract_cmd.split())
+    if ret != 0:
+      print "tar returned non-zero code: %s." % ret
+      raise IOError
+    shutil.move(symbol_dir + tmp_suffix, symbol_dir)
+    os.remove(tarball_path)
 
 
 def _PerfReport(filename, in_dir, out_dir, cache):
@@ -98,7 +112,7 @@ def _PerfReport(filename, in_dir, out_dir, cache):
       The output is currently stored as $out_dir/$key_report
   """
   key, board, vers = _ParseFilename(filename, canonical=True)
-  symbol_cache_tld = "%s-release~%s" % (board, vers)
+  symbol_cache_tld = _FormReleaseDir(board, vers)
   input_file = os.path.join(in_dir, filename)
   symfs = os.path.join(cache, symbol_cache_tld)
   report_cmd = PERF_CMD % (input_file, symfs)
