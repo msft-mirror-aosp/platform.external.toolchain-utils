@@ -139,9 +139,9 @@ class SvnRepo(Repo):
       self.revision = ''
       for mapping in self.mappings:
         remote_path, local_path = SplitMapping(mapping)
-        command = 'cd %s && svnversion .' % (local_path)
+        command = 'cd %s && svnversion -c .' % (local_path)
         ret, o, _ = self._ce.RunCommand(command, return_output=True)
-        self.revision += o.strip()
+        self.revision += o.strip().split(":")[-1]
         if ret: return ret
     return 0
 
