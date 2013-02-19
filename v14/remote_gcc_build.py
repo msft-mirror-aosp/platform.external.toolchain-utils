@@ -19,7 +19,7 @@ from utils import misc
 branch1 = "not_used_by_others"
 branch2 = "the_actual_branch_used_in_this_script"
 current_branch = "release-R25-3428.B"
-current_version = "'*30474'"
+current_version = "*30474"
 actual_version = "R26-3473.0.0"
 sleep_time = 600
 
@@ -33,19 +33,11 @@ def GetPatchNum(output):
   return patch_num
 
 
-def FindResultIndex(reason):
+def FindResultIndex(reason, time_out=10800):
   """Find the build id of the build at trybot server."""
-  file_dir = os.path.dirname(os.path.realpath(__file__))
-  commands = ("{0}/utils/buildbot_json.py builds "
-              "http://chromegw/p/tryserver.chromiumos/"
-              .format(file_dir))
-  time_out = 10800
   running_time = 0
-  ce = command_executer.GetCommandExecuter()
   while running_time < time_out:
-    _, out, _ = ce.RunCommand(commands, return_output=True,
-                              print_to_console=False)
-    num = GetBuildNumber(out, reason)
+    num = GetBuildNumber(reason)
     if num:
       return num
     logger.GetLogger().LogOutput("{0} minutes passed."
@@ -54,13 +46,20 @@ def FindResultIndex(reason):
     time.sleep(sleep_time)
     running_time += sleep_time
   logger.GetLogger().LogWarning("No results after {0} seconds, time out"
-                               .format(time_out))
+                                .format(time_out))
   return 0
 
 
-def GetBuildNumber(buildinfo, reason):
+def GetBuildNumber(reason):
   """Get the build num from build log."""
-  lines_of_one_build = 17
+  file_dir = os.path.dirname(os.path.realpath(__file__))
+  commands = ("{0}/utils/buildbot_json.py builds "
+              "http://chromegw/p/tryserver.chromiumos/"
+              .format(file_dir))
+  ce = command_executer.GetCommandExecuter()
+  _, buildinfo, _ = ce.RunCommand(commands, return_output=True,
+                                  print_to_console=False)
+
   my_info = buildinfo.splitlines()
   current_line = 1
   while current_line < len(my_info):
@@ -72,8 +71,14 @@ def GetBuildNumber(buildinfo, reason):
       current_line += 1
       if "Build" in key or current_line == len(my_info):
         break
+    change_lists = my_dict["reason"].split()[-1]
+    if reason:
+      change_list_hit = str(reason) in change_lists
+    else:
+      change_list_hit = (current_version in change_lists and
+                         "," not in change_lists)
     if ("True" not in my_dict["completed"] or
-        str(reason) not in my_dict["reason"]):
+        not change_list_hit):
       continue
     number = int(my_dict["number"])
     return number
@@ -101,7 +106,8 @@ def DownloadImage(target, index, dest):
     if any([e in line for e in download_files]):
       cmd = download_cmd.format(line)
       if ce.RunCommand(cmd):
-        logger.GetLogger().LogFatal("Command {0} failed, existing...".format(cmd))
+        logger.GetLogger().LogFatal("Command {0} failed, existing..."
+                                    .format(cmd))
 
 
 def UnpackImage(dest):
@@ -125,9 +131,10 @@ class GccTrybotRunner(object):
                dest_dir, master):
     self.new_gcc_dir = new_gcc_dir
     self.target = target
-    self.chromeos_root = chromeos_root
+    self.chromeos_root = misc.CanonicalizePath(chromeos_root)
     self.local = local
     self.master = master
+
     if self.local and dest_dir:
       self.dest_dir = misc.CanonicalizePath(dest_dir)
     elif self.local:
@@ -137,11 +144,12 @@ class GccTrybotRunner(object):
   def RunCommand(self, commands):
     assert not self.ce.RunCommand(commands), "{0} failed".format(commands)
 
-  def Run(self):
-    """The actual running commands."""
+  def GetCLNumber(self):
+    """Upload local gcc to gerrit and get the CL number."""
     gcc_path = os.path.join(self.chromeos_root, "src/third_party/gcc")
     assert os.path.isdir(gcc_path), ("{0} is not a valid chromeos root"
                                      .format(self.chromeos_root))
+
     assert os.path.isdir(self.new_gcc_dir), ("{0} is not a valid dir for gcc"
                                              "source".format(self.new_gcc_dir))
 
@@ -177,20 +185,35 @@ class GccTrybotRunner(object):
 
     commands = ("yes | repo upload . -d --cbr --no-verify")
     _, _, err = self.ce.RunCommand(commands, return_output=True)
-    patch = GetPatchNum(err)
+    return GetPatchNum(err)
 
+  def Run(self):
+    """The actual running commands."""
+
+    if self.new_gcc_dir:
+      self.new_gcc_dir = misc.CanonicalizePath(self.new_gcc_dir)
+      patch = self.GetCLNumber()
+    else:
+      patch = 0
     if self.local:
       remote_flag = "--local -r {0}".format(self.dest_dir)
     else:
       remote_flag = "--remote"
     cbuildbot_path = os.path.join(self.chromeos_root, "chromite/buildbot")
     os.chdir(cbuildbot_path)
-    commands = ("./cbuildbot -g {0} {1} {2}"
+    if patch:
+      commands = ("./cbuildbot -g {0} {1} {2}"
                   .format(patch, remote_flag, self.target))
+    else:
+      commands = ("./cbuildbot {0} {1}"
+                  .format(remote_flag, self.target))
+    description = "{0}_{1}".format(patch, self.target)
     if not self.master:
       commands += " -b {0} -g{1}".format(current_branch, current_version)
+      description +="_{0}".format(current_version)
+    commands += " --remote-description={0}".format(description)
     self.RunCommand(commands)
-    return patch
+    return description
 
 
 def Main(argv):
@@ -199,7 +222,7 @@ def Main(argv):
   parser = argparse.ArgumentParser()
   parser.add_argument("-c", "--chromeos_root", required=True,
                       dest="chromeos_root", help="The chromeos_root")
-  parser.add_argument("-g", "--gcc_dir", required=True, dest="gcc_dir",
+  parser.add_argument("-g", "--gcc_dir", default="", dest="gcc_dir",
                       help="The gcc dir")
   parser.add_argument("-t", "--type", required=True, dest="target",
                       help=("The target to be build, the list is at"
@@ -214,18 +237,22 @@ def Main(argv):
   script_dir = os.path.dirname(os.path.realpath(__file__))
 
   args = parser.parse_args(argv[1:])
-  new_gcc_dir = misc.CanonicalizePath(args.gcc_dir)
   target = args.target
-  chromeos_root = misc.CanonicalizePath(args.chromeos_root)
-
-  remote_trybot = GccTrybotRunner(chromeos_root, new_gcc_dir, target,
-                                  args.local, args.dest_dir, args.master)
-  patch = remote_trybot.Run()
+  index = 0
+  description = "0_{0}".format(target)
+  if not args.master:
+    description +="_{0}".format(current_version)
+  if not args.gcc_dir:
+    index = GetBuildNumber(description)
+  if not index:
+    remote_trybot = GccTrybotRunner(args.chromeos_root, args.gcc_dir, target,
+                                    args.local, args.dest_dir, args.master)
+    description = remote_trybot.Run()
   if args.local or not args.dest_dir:
     return 0
   os.chdir(script_dir)
   dest_dir = misc.CanonicalizePath(args.dest_dir)
-  index = FindResultIndex(patch)
+  index = FindResultIndex(description)
   if not index:
     logger.GetLogger().LogFatal("Remote trybot timeout")
   DownloadImage(target, index, dest_dir)
