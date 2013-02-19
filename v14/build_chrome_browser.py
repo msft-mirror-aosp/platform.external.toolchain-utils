@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
@@ -63,6 +63,10 @@ def Main(argv):
                     help="LDFLAGS for the ChromeOS packages")
   parser.add_option("--board", dest="board",
                     help="ChromeOS target board, e.g. x86-generic")
+  parser.add_option("--no_build_image", dest="no_build_image", default=False,
+                    action="store_true",
+                    help=("Skip build image after building browser."
+                          "Defaults to False."))
   parser.add_option("--label", dest="label",
                     help="Optional label to apply to the ChromeOS image.")
   parser.add_option("--build_image_args",
@@ -71,6 +75,15 @@ def Main(argv):
                     help="Optional arguments to build_image.")
   parser.add_option("--cros_workon", dest="cros_workon",
                     help="Build using external source tree.")
+  parser.add_option("--dev", dest="dev", default=False, action="store_true",
+                    help=("Build a dev (eg. writable/large) image. "
+                          "Defaults to False."))
+  parser.add_option("--debug", dest="debug", default=False, action="store_true",
+                    help=("Build chrome browser using debug mode. "
+                          "This option implies --dev. Defaults to false."))
+  parser.add_option("--verbose", dest="verbose", default=False,
+                    action="store_true",
+                    help="Build with verbose information.")
 
   options = parser.parse_args(argv)[0]
 
@@ -87,6 +100,13 @@ def Main(argv):
   else:
     chrome_version = "CHROME_VERSION=%s" % options.version
 
+  if options.dev and options.no_build_image:
+    logger.GetLogger().LogOutput(
+      "\"--dev\" is meaningless if \"--no_build_image\" is given.")
+
+  if options.debug:
+    options.dev = True
+
   options.chromeos_root = misc.CanonicalizePath(options.chromeos_root)
 
   unmask_env = "ACCEPT_KEYWORDS=~*"
@@ -101,14 +121,22 @@ def Main(argv):
       os.path.join(options.cros_workon, "src/chromeos/chromeos.gyp"))):
     Usage(parser, "--cros_workon must be a valid chromium browser checkout.")
 
-  options.env = misc.MergeEnvStringWithDict(options.env,
-                                            {"USE": "chrome_internal"})
+  if options.verbose:
+    options.env = misc.MergeEnvStringWithDict(
+      options.env, {"USE": "chrome_internal verbose"})
+  else:
+    options.env = misc.MergeEnvStringWithDict(options.env,
+                                              {"USE": "chrome_internal"})
+  if options.debug:
+    options.env = misc.MergeEnvStringWithDict(options.env,
+                                              {"BUILDTYPE": "Debug"})
+
   if options.clean:
     misc.RemoveChromeBrowserObjectFiles(options.chromeos_root, options.board)
 
-  chrome_origin="SERVER_SOURCE"
+  chrome_origin = "SERVER_SOURCE"
   if options.cros_workon:
-    chrome_origin="LOCAL_SOURCE"
+    chrome_origin = "LOCAL_SOURCE"
     command = 'cros_workon --board={0} start chromeos-chrome'.format(
       options.board)
     ret = cmd_executer.ChrootRunCommand(
@@ -137,7 +165,7 @@ def Main(argv):
 
   cros_sdk_options = ''
   if options.cros_workon:
-    cros_sdk_options='--chrome_root={0}'.format(options.cros_workon)
+    cros_sdk_options = '--chrome_root={0}'.format(options.cros_workon)
 
   ret = cmd_executer.ChrootRunCommand(options.chromeos_root,
                                       emerge_browser_command,
@@ -153,39 +181,36 @@ def Main(argv):
     if ret:
       print "cros_workon stop chromeos-chrome failed."
 
-  # Build image
-  ret = (cmd_executer.
-         ChrootRunCommand(options.chromeos_root,
-                          ("%s %s %s %s" %
-                           (unmask_env,
-                            options.env,
-                            misc.GetBuildImageCommand(options.board),
-                            options.build_image_args))))
+  if options.no_build_image:
+    return ret
+
+  # Finally build the image
+  ret = cmd_executer.ChrootRunCommand(
+    options.chromeos_root, "{0} {1} {2} {3}".format(
+      unmask_env, options.env, misc.GetBuildImageCommand(
+        options.board, dev=options.dev), options.build_image_args))
 
   logger.GetLogger().LogFatalIf(ret, "build_image failed")
 
 
   flags_file_name = "chrome_flags.txt"
-  flags_file_path = ("%s/src/build/images/%s/latest/%s" %
-                     (options.chromeos_root,
-                      options.board,
-                      flags_file_name))
+  flags_file_path = "{0}/src/build/images/{1}/latest/{2}".format(
+    options.chromeos_root, options.board, flags_file_name)
   flags_file = open(flags_file_path, "wb")
-  flags_file.write("CFLAGS=%s\n" % options.cflags)
-  flags_file.write("CXXFLAGS=%s\n" % options.cxxflags)
-  flags_file.write("LDFLAGS=%s\n" % options.ldflags)
+  flags_file.write("CFLAGS={0}\n".format(options.cflags))
+  flags_file.write("CXXFLAGS={0}\n".format(options.cxxflags))
+  flags_file.write("LDFLAGS={0}\n".format(options.ldflags))
   flags_file.close()
 
 
   if options.label:
-    image_dir_path = ("%s/src/build/images/%s/latest" %
-                  (options.chromeos_root,
-                   options.board))
+    image_dir_path = "{0}/src/build/images/{1}/latest".format(
+      options.chromeos_root, options.board)
     real_image_dir_path = os.path.realpath(image_dir_path)
-    command = ("ln -sf -T %s %s/%s" %
-               (os.path.basename(real_image_dir_path),
-                os.path.dirname(real_image_dir_path),
-                options.label))
+    command = "ln -sf -T {0} {1}/{2}".format(
+      os.path.basename(real_image_dir_path),\
+        os.path.dirname(real_image_dir_path),\
+        options.label)
 
     ret = cmd_executer.RunCommand(command)
     logger.GetLogger().LogFatalIf(ret, "Failed to apply symlink label %s" %
