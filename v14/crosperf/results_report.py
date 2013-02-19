@@ -201,9 +201,7 @@ class ResultsReport(object):
     ro = ResultOrganizer(benchmark_runs, labels)
     result = ro.result
     label_name = ro.labels
-    base_columns = columns
     for item in result:
-      columns = base_columns
       runs = result[item]
       tg = TableGenerator(runs, label_name)
       table = tg.GetTable()
@@ -212,8 +210,8 @@ class ResultsReport(object):
           break
       benchmark_info = ("Benchmark:  {0};  Iterations: {1}"
                          .format(benchmark.name, benchmark.iterations))
-      columns = self._ParseColumn(columns, benchmark.iterations)
-      tf = TableFormatter(table, columns)
+      parsed_columns = self._ParseColumn(columns, benchmark.iterations)
+      tf = TableFormatter(table, parsed_columns)
       cell_table = tf.GetCellTable()
       cell = Cell()
       cell.string_value = benchmark_info
