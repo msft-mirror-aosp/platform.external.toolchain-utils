@@ -403,7 +403,7 @@ pre {
 
   def GetReport(self):
     chart_javascript = ""
-    charts = self._GetCharts(self.labels, self.benchmarks, self.benchmark_runs)
+    charts = self._GetCharts(self.labels, self.benchmark_runs)
     for chart in charts:
       chart_javascript += chart.GetJavascript()
     chart_divs = ""
@@ -426,15 +426,28 @@ pre {
                         self._GetTabMenuHTML("full"),
                         self.experiment.experiment_file)
 
-  def _GetCharts(self, labels, benchmarks, benchmark_runs):
+  def _GetCharts(self, labels, benchmark_runs):
     charts = []
-    sorter = ResultSorter(benchmark_runs)
+    ro = ResultOrganizer(benchmark_runs, labels)
+    result = ro.result
+    for item in result:
+      runs = result[item]
+      tg = TableGenerator(runs, ro.labels)
+      table = tg.GetTable()
+      columns = [Column(AmeanResult(),
+                        Format()),
+                 Column(MinResult(),
+                        Format()),
+                 Column(MaxResult(),
+                        Format())
+                ]
+      tf = TableFormatter(table, columns)
+      data_table = tf.GetCellTable()
 
-    for benchmark in benchmarks:
-      autotest_keys = sorter.GetAutotestKeys(benchmark.name)
-
-      for autotest_key in autotest_keys:
-        title = "%s: %s" % (benchmark.name, autotest_key.replace("/", " "))
+      for i in range(2, len(data_table)):
+        cur_row_data = data_table[i]
+        autotest_key = cur_row_data[0].string_value
+        title = "{0}: {1}".format(item, autotest_key.replace("/", ""))
         chart = ColumnChart(title, 300, 200)
         chart.AddColumn("Label", "string")
         chart.AddColumn("Average", "number")
@@ -442,17 +455,16 @@ pre {
         chart.AddColumn("Max", "number")
         chart.AddSeries("Min", "line", "black")
         chart.AddSeries("Max", "line", "black")
-
-        for label in labels:
-          res = sorter.GetResults(benchmark.name, autotest_key, label.name)
-          avg_val = MeanColumn("").Compute(res, None)
-          min_val = MinColumn("").Compute(res, None)
-          max_val = MaxColumn("").Compute(res, None)
-          chart.AddRow([label.name, avg_val, min_val, max_val])
-          if isinstance(avg_val, str):
+        cur_index = 1
+        no_chart = False
+        for label in ro.labels:
+          chart.AddRow([label, cur_row_data[cur_index].value,
+                        cur_row_data[cur_index + 1].value,
+                        cur_row_data[cur_index + 2].value])
+          if isinstance(cur_row_data[cur_index].value, str):
             chart = None
-            break
-
+          break
+          cur_index += 3
         if chart:
           charts.append(chart)
     return charts
