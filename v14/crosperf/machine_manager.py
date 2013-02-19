@@ -1,10 +1,11 @@
 import hashlib
+import image_chromeos
+import lock_machine
+import os.path
 import sys
 import threading
 import time
 from image_checksummer import ImageChecksummer
-import image_chromeos
-import lock_machine
 from utils import command_executer
 from utils import logger
 from utils.file_utils import FileUtils
@@ -83,7 +84,10 @@ class MachineManager(object):
     self.image_lock = threading.Lock()
     self.num_reimages = 0
     self.chromeos_root = None
-    self.no_lock = False
+    if os.path.isdir(lock_machine.FileLock.LOCKS_DIR):
+      self.no_lock = False
+    else:
+      self.no_lock = True
     self.initialized = False
     self.chromeos_root = chromeos_root
 
