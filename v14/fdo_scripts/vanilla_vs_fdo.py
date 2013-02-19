@@ -209,7 +209,7 @@ class FDOComparator(object):
         env_dict={"USE": "chrome_internal -pgo pgo_generate"},
         label=label,
         ebuild_version=self._ebuild_version,
-        build_image_args="--rootfs_boost=400")
+        build_image_args="--rootfs_boost_size=400")
     return generate_label
 
   def _BuildUseImage(self):
