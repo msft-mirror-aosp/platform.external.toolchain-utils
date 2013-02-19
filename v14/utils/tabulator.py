@@ -55,7 +55,7 @@ class TableGenerator(object):
       for run in run_list:
         if key in run:
           values.append(run[key])
-    ret = sorted(values)[-1]
+    ret = max(values)
     return ret
 
   def _GetLowestValue(self, key):
@@ -65,7 +65,7 @@ class TableGenerator(object):
         if key in run:
           values.append(run[key])
 
-    ret = sorted(values)[0]
+    ret = min(values)
     return ret
 
   def _SortKeys(self, keys):
@@ -144,6 +144,9 @@ class Result(object):
   def _ComputeString(self, cell, values, baseline_values):
     self._Literal(cell, values, baseline_values)
 
+  def _InvertIfLowerIsBetter(self, cell):
+    pass
+
   def _GetGmean(self, values):
     if not values:
       return float("nan")
@@ -173,6 +176,7 @@ class Result(object):
 
     if all_floats:
       self._ComputeFloat(cell, float_values, float_baseline_values)
+      self._InvertIfLowerIsBetter(cell)
     else:
       self._ComputeString(cell, values, baseline_values)
 
@@ -187,7 +191,18 @@ class ComparisonResult(Result):
     return True
 
 
-class AmeanRatioResult(ComparisonResult):
+class KeyAwareComparisonResult(ComparisonResult):
+  def _IsLowerBetter(self, key):
+    lower_is_better_keys = ["milliseconds", "ms", "seconds", "KB"]
+    return any([key.startswith(l + "_") for l in lower_is_better_keys])
+
+  def _InvertIfLowerIsBetter(self, cell):
+    if self._IsLowerBetter(cell.name):
+      if cell.value:
+        cell.value = 1.0/cell.value
+
+
+class AmeanRatioResult(KeyAwareComparisonResult):
   def _ComputeFloat(self, cell, values, baseline_values):
     if numpy.mean(baseline_values) != 0:
       cell.value = numpy.mean(values)/numpy.mean(baseline_values)
@@ -199,7 +214,7 @@ class AmeanRatioResult(ComparisonResult):
       # no difference if both values and baseline_values are 0
 
 
-class GmeanRatioResult(ComparisonResult):
+class GmeanRatioResult(KeyAwareComparisonResult):
   def _ComputeFloat(self, cell, values, baseline_values):
     if self._GetGmean(baseline_values) != 0:
       cell.value = self._GetGmean(values)/self._GetGmean(baseline_values)
@@ -357,7 +372,10 @@ class Cell(object):
     bgcolor_row: Indicates whether the whole row is to inherit this cell's
     bgcolor.
     width: Optional specifier to make a column narrower than the usual width.
-    The usual width of a column is the max of all its cells widths."""
+    The usual width of a column is the max of all its cells widths.
+    colspan: Set the colspan of the cell in the HTML table, this is used for
+    table headers. Default value is 1.
+    name: the test name of the cell."""
   def __init__(self):
     self.value = None
     self.color = None
@@ -369,6 +387,8 @@ class Cell(object):
     self.color_row = False
     self.bgcolor_row = False
     self.width = None
+    self.colspan = 1
+    self.name = None
 
   def __str__(self):
     l = []
@@ -383,9 +403,10 @@ class Column(object):
   Attributes:
     result: an object of the Result class.
     fmt: an object of the Format class."""
-  def __init__(self, result, fmt):
+  def __init__(self, result, fmt, name=""):
     self.result = result
     self.fmt = fmt
+    self.name = name
 
 
 # Takes in:
@@ -425,6 +446,7 @@ class TableFormatter(object):
       for values in row[1:]:
         for column in self._columns:
           cell = Cell()
+          cell.name = key.string_value
           if column.result.NeedsBaseline():
             if baseline is not None:
               column.result.Compute(cell, values, baseline)
@@ -451,11 +473,14 @@ class TableFormatter(object):
     header = [key]
     for column in self._table_columns:
       cell = Cell()
-      result_name = column.result.__class__.__name__
-      format_name = column.fmt.__class__.__name__
+      if column.name:
+        cell.string_value = column.name
+      else:
+        result_name = column.result.__class__.__name__
+        format_name = column.fmt.__class__.__name__
 
-      cell.string_value = "%s %s" % (result_name.replace("Result", ""),
-                                     format_name.replace("Format", ""))
+        cell.string_value = "%s %s" % (result_name.replace("Result", ""),
+                                       format_name.replace("Format", ""))
 
       header.append(cell)
 
@@ -497,7 +522,7 @@ class TablePrinter(object):
   PLAIN = 0
   CONSOLE = 1
   HTML = 2
-  CSV = 3
+  TSV = 3
 
   def __init__(self, table, output_type):
     """Constructor that stores the cell table and output type."""
@@ -530,12 +555,14 @@ class TablePrinter(object):
       prefix, _ = colortrans.rgb2short(rgb)
       prefix = "\033[48;5;%sm" % prefix
       suffix = "\033[0m"
-
     elif self._output_type == self.HTML:
       rgb = color.GetRGB()
       prefix = ("<FONT style=\"BACKGROUND-COLOR:#{0}\" color =#{0}>"
                 .format(rgb))
       suffix = "</FONT>"
+    elif self._output_type in [self.PLAIN, self.TSV]:
+      prefix = ""
+      suffix = ""
     return prefix, suffix
 
   def _GetColorFix(self, color):
@@ -548,6 +575,9 @@ class TablePrinter(object):
       rgb = color.GetRGB()
       prefix = "<FONT COLOR=#{0}>".format(rgb)
       suffix = "</FONT>"
+    elif self._output_type in [self.PLAIN, self.TSV]:
+      prefix = ""
+      suffix = ""
     return prefix, suffix
 
   def Print(self):
@@ -582,7 +612,7 @@ class TablePrinter(object):
       p, s = self._GetBGColorFix(bgcolor)
       out = "%s%s%s" % (p, out, s)
 
-    if self._output_type == self.CONSOLE:
+    if self._output_type in [self.PLAIN, self.CONSOLE]:
       if cell.width:
         width = cell.width
       else:
@@ -596,30 +626,32 @@ class TablePrinter(object):
         tag = "th"
       else:
         tag = "td"
-      out = "<{0}> {1} </{0}>".format(tag, out)
+      out = "<{0} colspan = \"{2}\"> {1} </{0}>".format(tag, out, cell.colspan)
 
     return out
 
   def _GetHorizontalSeparator(self):
-    if self._output_type == self.CONSOLE:
+    if self._output_type in [self.PLAIN, self.CONSOLE]:
       return " "
     if self._output_type == self.HTML:
       return "&nbsp;"
+    if self._output_type == self.TSV:
+      return "\t"
 
   def _GetVerticalSeparator(self):
-    if self._output_type == self.CONSOLE:
+    if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV]:
       return "\n"
     if self._output_type == self.HTML:
       return "</tr>\n<tr>"
 
   def _GetPrefix(self):
-    if self._output_type == self.CONSOLE:
+    if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV]:
       return ""
     if self._output_type == self.HTML:
-      return "<table><tr>"
+      return "<table id=\"box-table-a\">\n<tr>"
 
   def _GetSuffix(self):
-    if self._output_type == self.CONSOLE:
+    if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV]:
       return ""
     if self._output_type == self.HTML:
       return "</tr>\n</table>"
@@ -673,8 +705,12 @@ def GetSimpleTable(table, out_to="CONSOLE"):
   cell_table = tf.GetCellTable()
   if out_to == "HTML":
     tp = TablePrinter(cell_table, TablePrinter.HTML)
-  else:
+  elif out_to == "CONSOLE":
     tp = TablePrinter(cell_table, TablePrinter.CONSOLE)
+  elif out_to == "PLAIN":
+    tp = TablePrinter(cell_table, TablePrinter.PLAIN)
+  elif out_to == "TSV":
+    tp = TablePrinter(cell_table, TablePrinter.TSV)
   return tp.Print()
 
 
@@ -694,8 +730,12 @@ def GetSimpleTableWithAverage(runs, labels, out_to="CONSOLE"):
   cell_table = tf.GetCellTable()
   if out_to == "HTML":
     tp = TablePrinter(cell_table, TablePrinter.HTML)
-  else:
+  elif out_to == "CONSOLE":
     tp = TablePrinter(cell_table, TablePrinter.CONSOLE)
+  elif out_to == "PLAIN":
+    tp = TablePrinter(cell_table, TablePrinter.PLAIN)
+  elif out_to == "TSV":
+    tp = TablePrinter(cell_table, TablePrinter.TSV)
 
   return tp.Print()
 
@@ -703,16 +743,17 @@ if __name__ == "__main__":
   # Run a few small tests here.
   runs = [
       [
-          {"k1": "10", "k2": "12", "k5": "40", "k6": "40"},
-          {"k1": "13", "k2": "14", "k3": "15"}
+          {"k1": "10", "k2": "12", "k5": "40", "k6": "40",
+           "ms_1": "20"},
+          {"k1": "13", "k2": "14", "k3": "15", "ms_1": "10"}
           ],
       [
           {"k1": "50", "k2": "51", "k3": "52", "k4": "53", "k5": "35", "k6":
-           "45"},
+           "45", "ms_1": "200", "ms_2": "20"},
           ],
       ]
   labels = ["vanilla", "modified"]
-  t = GetSimpleTableWithAverage(runs, labels)
+  t = GetSimpleTableWithAverage(runs, labels, "PLAIN")
   print t
   email = GetSimpleTableWithAverage(runs, labels, "HTML")
 
@@ -725,6 +766,7 @@ if __name__ == "__main__":
       ]
   t = GetSimpleTable(simple_table)
   print t
-  email += GetSimpleTable(simple_table, "HTML")
+  email += GetSimpleTable(simple_table, "PLAIN")
   email_to = [getpass.getuser()]
+  email = "<pre style='font-size: 13px'>%s</pre>" % email
   EmailSender().SendEmail(email_to, "SimpleTableTest", email, msg_type="html")
