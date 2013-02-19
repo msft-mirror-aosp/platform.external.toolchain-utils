@@ -14,12 +14,13 @@ class Benchmark(object):
   """
 
   def __init__(self, name, autotest_name, autotest_args, iterations,
-               outlier_range, perf_args, rm_chroot_tmp):
+               outlier_range, key_results_only, rm_chroot_tmp, perf_args):
     self.name = name
     self.autotest_name = autotest_name
     self.autotest_args = autotest_args
     self.iterations = iterations
     self.outlier_range = outlier_range
     self.perf_args = perf_args
+    self.key_results_only = key_results_only
     self.rm_chroot_tmp = rm_chroot_tmp
     self.iteration_adjusted = False

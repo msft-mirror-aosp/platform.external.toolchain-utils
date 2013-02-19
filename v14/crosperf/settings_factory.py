@@ -29,6 +29,9 @@ class BenchmarkSettings(Settings):
     self.AddField(BooleanField("rm_chroot_tmp", default=False,
                                description="Whether remove the run_remote_test"
                                "result in the chroot"))
+    self.AddField(BooleanField("key_results_only", default=True,
+                               description="Whether only show the key results"
+                               "of pyautoperf"))
     self.AddField(TextField("perf_args", default="",
                             description="The optional profile command. It "
                             "enables perf commands to record perforamance "
@@ -95,6 +98,9 @@ class GlobalSettings(Settings):
                             "contains a src/scripts directory. Defaults to "
                             "the chromeos checkout which contains the "
                             "chromeos_image."))
+    self.AddField(BooleanField("key_results_only", default=True,
+                               description="Whether only show the key results"
+                               "of pyautoperf"))
     self.AddField(TextField("perf_args", default="",
                             description="The optional profile command. It "
                             "enables perf commands to record perforamance "

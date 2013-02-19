@@ -27,8 +27,9 @@ class BenchmarkRunTest(unittest.TestCase):
                       "",
                       1,
                       0.2,
-                      "",
-                      False)
+                      False,
+                      False,
+                      "")
     b = MockBenchmarkRun("test run",
                          bench,
                          my_label,

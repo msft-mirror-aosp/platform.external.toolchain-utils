@@ -19,6 +19,11 @@ class ResultOrganizer(object):
     [
     ]}.
   """
+  key_filter = ["milliseconds_",
+                "retval",
+                "iterations",
+                "ms_",
+                "score_"]
 
   def __init__(self, benchmark_runs, labels, benchmarks=None):
     self.result = {}
@@ -43,7 +48,15 @@ class ResultOrganizer(object):
       cur_dict = cur_table[index]
       if not benchmark_run.result:
         continue
+      benchmark = benchmark_run.benchmark
+      key_filter_on = (benchmark.key_results_only and
+                       "PyAutoPerfTest" in benchmark.name + benchmark.autotest_name and
+                       "perf." not in benchmark.autotest_args)
       for autotest_key in benchmark_run.result.keyvals:
+        if (key_filter_on and
+            not any([key for key in self.key_filter if key in autotest_key])
+           ):
+          continue
         result_value = benchmark_run.result.keyvals[autotest_key]
         cur_dict[autotest_key] = result_value
     self._DuplicatePass()
