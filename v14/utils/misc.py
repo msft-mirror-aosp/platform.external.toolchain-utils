@@ -6,14 +6,12 @@
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
-import hashlib
+from contextlib import contextmanager
 import os
 import re
-import stat
+
 import command_executer
 import logger
-import tempfile
-from contextlib import contextmanager
 
 
 def ApplySubs(string, *substitutions):
@@ -156,9 +154,9 @@ def GetCtargetFromBoard(board, chromeos_root):
              "../platform/dev/toolchain_utils.sh; get_ctarget_from_board %s" %
              base_board)
   ce = command_executer.GetCommandExecuter()
-  ret, out, err = ce.ChrootRunCommand(chromeos_root,
-                                      command,
-                                      return_output=True)
+  ret, out, _ = ce.ChrootRunCommand(chromeos_root,
+                                    command,
+                                    return_output=True)
   if ret != 0:
     raise ValueError("Board %s is invalid!" % board)
   return out.strip()
@@ -172,11 +170,30 @@ def GetEnvStringFromDict(env_dict):
   return " ".join(["%s=\"%s\"" % var for var in env_dict.items()])
 
 
+def MergeEnvStringWithDict(env_string, env_dict, prepend=True):
+  if not env_string.strip():
+    return GetEnvStringFromDict(env_dict)
+  override_env_list = []
+  ce = command_executer.GetCommandExecuter()
+  for k, v in env_dict.items():
+    v = v.strip("\"'")
+    if prepend:
+      new_env = "%s=\"%s $%s\"" % (k, v, k)
+    else:
+      new_env = "%s=\"$%s %s\"" % (k, k, v)
+    command = "; ".join([env_string, new_env, "echo $%s" % k])
+    ret, out, _ = ce.RunCommand(command, return_output=True)
+    override_env_list.append("%s=%r" % (k, out.strip()))
+  ret = env_string + " " + " ".join(override_env_list)
+  return ret.strip()
+
+
 def GetAllImages(chromeos_root, board):
   ce = command_executer.GetCommandExecuter()
   command = ("find %s/src/build/images/%s -name chromiumos_test_image.bin" %
              (chromeos_root, board))
-  ret, out, err = ce.RunCommand(command, return_output=True)
+  ret, out, _ = ce.RunCommand(command, return_output=True)
+  assert ret == 0, "Could not run command: %s" % command
   return out.splitlines()
 
 
