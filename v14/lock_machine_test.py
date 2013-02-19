@@ -107,5 +107,14 @@ class MachineTest(unittest.TestCase):
     time.sleep(0.6)
     self.assertTrue(mach.Lock(exclusive=True))
 
+  def testUnlockByOthers(self):
+    mach = lock_machine.Machine("other_unlock", auto=True)
+    p = Process(target=LockAndSleep, args=("other_unlock",))
+    p.start()
+    time.sleep(0.5)
+    self.assertTrue(mach.Unlock(exclusive=True))
+    self.assertTrue(mach.Lock(exclusive=True))
+
+
 if __name__ == "__main__":
   unittest.main()

@@ -226,11 +226,17 @@ class Lock(object):
         lock.exclusive = False
         lock.reason = ""
         lock.owner = ""
-        for f in FileLock.FILE_OPS:
-          if f.name == FileCheckName(self._lock_file):
+
+        if self._auto:
+          del_list = [i for i in FileLock.FILE_OPS
+                      if i.name == FileCheckName(self._lock_file)]
+          for i in del_list:
+            FileLock.FILE_OPS.remove(i)
+          for f in del_list:
             fcntl.lockf(f, fcntl.LOCK_UN)
             f.close()
-            FileLock.FILE_OPS.remove(f)
+          del del_list
+          os.remove(FileCheckName(self._lock_file))
 
       else:
         lock.counter -= 1
