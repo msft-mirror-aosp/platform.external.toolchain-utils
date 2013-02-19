@@ -84,8 +84,8 @@ class DejagnuAdapter(object):
 
 
 def EmailResult(result):
-  email_to = ('shenhan@google.com')
-  email_from = ('shenhan@google.com')
+  email_to = ['c-compiler-chrome@google.com']
+  email_from = ['dejagnu-job@google.com']
   if len(result) == 4:
     subject = 'Job failed: dejagnu test didn\'t finish'
     email_text = 'Job failed prematurely, check exception below.\n' + \

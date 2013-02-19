@@ -15,7 +15,9 @@ import shutil
 import stat
 import sys
 import tempfile
+import time
 
+import lock_machine
 import tc_enter_chroot
 from utils import command_executer
 from utils import constants
@@ -43,8 +45,7 @@ def ProcessArguments(argv):
                           'a complete gcc build must be performed in the '
                           'computed gcc-build-dir beforehand.'))
   parser.add_option('-b', '--board', dest='board',
-                    help=('Required. Specify board. Currently only support '
-                          '\'x86-zgb\' and \'tegra2_kaen\''))
+                    help=('Required. Specify board.'))
   parser.add_option('-r', '--remote', dest='remote',
                     help='Required. Specify remote address/name of the board.')
   parser.add_option('-f', '--flags', dest='flags',
@@ -62,11 +63,11 @@ def ProcessArguments(argv):
   options, args = parser.parse_args(argv)
 
   if not options.chromeos_root:
-    sys.exit('Missing argument for --chromeos_root.')
+    raise Exception('Missing argument for --chromeos_root.')
   if not options.remote:
-    sys.exit('Missing argument for --remote.')
+    raise Exception('Missing argument for --remote.')
   if not options.board:
-    sys.exit('Missing argument for --board.')
+    raise Exception('Missing argument for --board.')
 
   if args:
     print 'Warning - discarding useless arguments %s...' % args
@@ -92,7 +93,7 @@ class DejagnuExecuter(object):
     ## Compute target from board
     self._target = misc.GetCtargetFromBoard(board, chromeos_root)
     if not self._target:
-      sys.exit('Unsupported board "%s"' % board)
+      raise Exception('Unsupported board "%s"' % board)
     self._executer = command_executer.GetCommandExecuter()
     self._flags = flags or ''
     self._base_dir = base_dir
@@ -170,7 +171,8 @@ class DejagnuExecuter(object):
     if not (path.islink(gcc_source_dir_abs) or
             path.ismount(gcc_source_dir_abs) or
             path.isdir(gcc_source_dir_abs)):
-      sys.exit('Not a valid gcc source dir:  {0}'.format(gcc_source_dir_abs))
+      raise Exception('Not a valid gcc source dir:  {0}'.format(
+          gcc_source_dir_abs))
 
     self._gcc_top_build_dir = '{0}-build-{1}'.format(
         self._gcc_source_dir.rstrip('/'), self._target)
@@ -181,8 +183,8 @@ class DejagnuExecuter(object):
     gcc_top_build_dir_abs = path.join(self._chromeos_chroot,
                                       self._gcc_top_build_dir.lstrip('/'))
     if not path.isdir(gcc_top_build_dir_abs):
-      sys.exit('gcc build dir does not exist:  {0}'.
-               format(gcc_top_build_dir_abs))
+      raise Exception('gcc build dir does not exist:  {0}'.
+                      format(gcc_top_build_dir_abs))
 
     self._gcc_source_dir_abs = gcc_source_dir_abs
     self._gcc_top_build_dir_abs = gcc_top_build_dir_abs
@@ -202,7 +204,7 @@ class DejagnuExecuter(object):
       gccrevision = 'gcc-9999'
       gccversion = 'gcc-9999'
     else:
-      sys.exit('Failed to get gcc version.')
+      raise Exception('Failed to get gcc version.')
 
     gcc_portage_dir = '/var/tmp/portage/cross-%s/%s/work' % (
         self._target, gccrevision)
@@ -256,12 +258,19 @@ class DejagnuExecuter(object):
         raise Exception('Failed to mount {0} onto {1}'.format(
           mp.external_dir, self.mount_dir))
 
+
 def Main(argv):
   opts = ProcessArguments(argv)
   executer = DejagnuExecuter(misc.GetRoot(argv[0])[0],
                              opts.mount, opts.chromeos_root,
                              opts.remote, opts.board, opts.flags,
                              opts.keep_intermediate_files, opts.tools)
+
+  machine = lock_machine.Machine(opts.remote)
+
+  if not machine.TryLock(timeout=300, exclusive=True):
+    raise Exception("Timed out to lock machine {0}, aborted".format(
+        opts.remote))
 
   # Return value is a 3- or 4-element tuple
   #   element#1 - exit code
@@ -283,6 +292,7 @@ def Main(argv):
     # The #4 element encodes the runtime exception.
     ret = (1, '', '', 'Exception happened during execution: \n' + str(e))
   finally:
+    machine.Unlock(exclusive=True)
     executer.CleanupTestingDir()
     return ret
 

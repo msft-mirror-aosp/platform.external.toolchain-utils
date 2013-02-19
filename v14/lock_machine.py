@@ -185,6 +185,19 @@ class Machine(object):
     lock = Lock(self._full_name)
     return lock.NonBlockingLock(exclusive, reason)
 
+  def TryLock(self, timeout=300, exclusive=False, reason=""):
+    locked = False
+    sleep = timeout / 10;
+    while True:
+      locked = self.Lock(exclusive, reason)
+      if locked or not timeout >= 0:
+        break
+      print "Lock not acquired for {0}, wait {1} seconds ...".format(
+        self._name, sleep)
+      time.sleep(sleep)
+      timeout -= sleep
+    return locked
+
   def Unlock(self, exclusive=False, ignore_ownership=False):
     lock = Lock(self._full_name)
     return lock.Unlock(exclusive, ignore_ownership)

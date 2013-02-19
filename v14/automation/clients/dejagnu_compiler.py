@@ -55,7 +55,7 @@ class DejagnuCompilerNightlyClient:
                   os.path.join(self.P4_VERSION_DIR, 'test_gcc_dejagnu.py'),
                   '--board=%s' % self._board,
                   '--remote=%s' % self._remote))
-    label = 'testlabel'
+    label = 'dejagnu'
     job = jobs.CreateLinuxJob(label, chain, timeout=8*60*60)
     return job_group.JobGroup(label, [job], cleanup_on_completion=False)
 
