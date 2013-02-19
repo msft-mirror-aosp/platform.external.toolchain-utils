@@ -194,6 +194,14 @@ def Main(argv):
                     dest="cxxflags",
                     default="",
                     help="Build a compiler with specified CXXFLAGS")
+  parser.add_option("--cflags_for_target",
+                    dest="cflags_for_target",
+                    default="",
+                    help="Build the target libraries with specified flags")
+  parser.add_option("--cxxflags_for_target",
+                    dest="cxxflags_for_target",
+                    default="",
+                    help="Build the target libraries with specified flags")
   parser.add_option("--ldflags",
                     dest="ldflags",
                     default="",
@@ -237,6 +245,10 @@ def Main(argv):
     build_env["CFLAGS"] = "`portageq envvar CFLAGS` " + options.cflags
   if options.cxxflags:
     build_env["CXXFLAGS"] = "`portageq envvar CXXFLAGS` " + options.cxxflags
+  if options.cflags_for_target:
+    build_env["CFLAGS_FOR_TARGET"] = options.cflags_for_target
+  if options.cxxflags_for_target:
+    build_env["CXXFLAGS_FOR_TARGET"] = options.cxxflags_for_target
   if options.ldflags:
     build_env["LDFLAGS"] = options.ldflags
   if options.debug:
