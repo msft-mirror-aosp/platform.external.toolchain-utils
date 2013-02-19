@@ -177,6 +177,9 @@ class Result(object):
     """
     all_floats = True
     values = _StripNone(values)
+    if not len(values):
+      cell.value = ""
+      return
     if _AllFloat(values):
       float_values = _GetFloats(values)
     else:
