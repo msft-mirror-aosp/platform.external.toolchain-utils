@@ -4,16 +4,11 @@
 
 import math
 from column_chart import ColumnChart
-from results_columns import *
 from results_sorter import ResultSorter
 from results_organizer import ResultOrganizer
-from table import Table
 from utils.tabulator import *
 
 class ResultsReport(object):
-  DELTA_COLUMN_NAME = "Change"
-  CHANGE_COLOR_NAME = ""
-  STATS_DIFF_NAME = "p value"
   MAX_COLOR_CODE = 255
 
   def __init__(self, experiment):
@@ -23,40 +18,6 @@ class ResultsReport(object):
     self.benchmarks = experiment.benchmarks
     self.baseline = self.labels[0]
 
-  def _ShouldSkipColumn(self, column):
-    if column.name in [self.DELTA_COLUMN_NAME, self.CHANGE_COLOR_NAME,
-                       self.STATS_DIFF_NAME]:
-      return True
-    return False
-
-  def _GetColorCode(self, number, power_factor=4):
-    number = round(number, 2)
-    if number < 1:
-      color = int(math.pow((1-number), 1.0/power_factor)
-                  * self.MAX_COLOR_CODE)
-      color_string = ("%x" % color).upper()
-      if len(color_string) < 2:
-        color_string = "0"+color_string
-      color_string += "0000"
-    if number >= 1:
-      number = 2 - 1/number
-      color = int(math.pow((number - 1), 1.0/power_factor)
-                  * self.MAX_COLOR_CODE)
-      cc = ("%x" % color).upper()
-      if len(cc) < 2:
-        cc = "0" + cc
-      color_string = "00"+cc+"00"
-    return color_string
-
-  def _IsLowerBetter(self, column, autotest_key):
-    if ((autotest_key.find("milliseconds") == 0
-         or autotest_key.find("ms_") == 0
-         or autotest_key.find("seconds") == 0
-         or autotest_key.find("KB_") == 0)
-        and column.name == self.DELTA_COLUMN_NAME):
-      return True
-    return False
-
   def _SortByLabel(self, runs):
     labels = {}
     for benchmark_run in runs:
@@ -64,96 +25,6 @@ class ResultsReport(object):
         labels[benchmark_run.label_name] = []
       labels[benchmark_run.label_name].append(benchmark_run)
     return labels
-
-  def GetFullTable(self):
-    full_columns = []
-    max_iterations = 0
-    for benchmark in self.benchmarks:
-      if benchmark.iterations > max_iterations:
-        max_iterations = benchmark.iterations
-
-    for i in range(1, max_iterations + 1):
-      full_columns.append(IterationColumn(str(i), i))
-
-    full_columns.append(IterationsCompleteColumn("Completed"))
-    full_columns.append(MinColumn("Min"))
-    full_columns.append(MaxColumn("Max"))
-    full_columns.append(MeanColumn("Avg"))
-    full_columns.append(StandardDeviationColumn("Std Dev"))
-    full_columns.append(RatioColumn(self.DELTA_COLUMN_NAME))
-    return self._GetTable(self.labels, self.benchmarks, self.benchmark_runs,
-                          full_columns)
-
-  def GetSummaryTable(self):
-    summary_columns = [MeanColumn("Average"),
-                       RatioColumn(self.DELTA_COLUMN_NAME),
-                       ColorColumn(self.CHANGE_COLOR_NAME),
-                       SignificantDiffColumn(self.STATS_DIFF_NAME)]
-    return self._GetTable(self.labels, self.benchmarks, self.benchmark_runs,
-                          summary_columns)
-
-  def _GetTable(self, labels, benchmarks, benchmark_runs, columns):
-    table = Table("box-table-a")
-    label_headings = [Table.Cell("", hidden=True, colspan=2, header=True)]
-    for label in labels:
-      colspan = len(columns)
-      for col in columns:
-        if self._ShouldSkipColumn(col):
-          colspan -= 1
-      label_headings.append(Table.Cell(label.name, colspan=colspan,
-                                       header=True))
-
-    table.AddRow(label_headings)
-
-    column_headings = [Table.Cell("Autotest Key", header=True),
-                       Table.Cell("Iterations", header=True)]
-    for label in labels:
-      for column in columns:
-        if (label.name == self.baseline.name and
-            self._ShouldSkipColumn(column)):
-          continue
-        column_headings.append(Table.Cell(column.name, header=True))
-
-    table.AddRow(column_headings)
-
-    sorter = ResultSorter(benchmark_runs)
-
-    for benchmark in benchmarks:
-      table.AddRow([Table.Cell(benchmark.name)])
-      autotest_keys = sorter.GetAutotestKeys(benchmark.name)
-      for autotest_key in sorted(autotest_keys):
-        row = [Table.Cell(autotest_key),
-               Table.Cell(benchmark.iterations)]
-        for label in labels:
-          row_color = ""
-          for column in columns:
-            if (label.name == self.baseline.name and
-                self._ShouldSkipColumn(column)):
-              continue
-            results = sorter.GetResults(benchmark.name,
-                                        autotest_key, label.name)
-            baseline_results = sorter.GetResults(benchmark.name,
-                                                 autotest_key,
-                                                 self.baseline.name)
-            value = column.Compute(results, baseline_results)
-            if isinstance(value, float):
-              if self._IsLowerBetter(column, autotest_key):
-                value = 1/value
-              value_string = "%.2f" % value
-              if column.name == self.DELTA_COLUMN_NAME:
-                row_color = self._GetColorCode(value)
-            else:
-              value_string = value
-            if column.name == self.DELTA_COLUMN_NAME:
-              row.append(Table.Cell(value_string, color=row_color))
-            elif column.name == self.CHANGE_COLOR_NAME:
-              row.append(Table.Cell(value_string, color=row_color,
-                                    color_theme="background"))
-            else:
-              row.append(Table.Cell(value_string))
-        table.AddRow(row)
-
-    return table
 
   def GetFullTables(self):
     columns = [Column(NonEmptyCountResult(),
@@ -262,19 +133,7 @@ Results report for: '%s'
 ===========================================
 
 -------------------------------------------
-Benchmark Run Status
--------------------------------------------
-%s
-
-Number re-images: %s
-
--------------------------------------------
 Summary
--------------------------------------------
-%s
-
--------------------------------------------
-Full Table
 -------------------------------------------
 %s
 
@@ -289,35 +148,16 @@ Experiment File
     super(TextResultsReport, self).__init__(experiment)
     self.email = email
 
-  def GetStatusTable(self):
-    status_table = Table("status")
-    for benchmark_run in self.benchmark_runs:
-      status_table.AddRow([Table.Cell(benchmark_run.name),
-                           Table.Cell(benchmark_run.status),
-                           Table.Cell(benchmark_run.failure_reason)])
-    return status_table
-
   def GetReport(self):
     summary_table = self.GetSummaryTables()
     full_table = self.GetFullTables()
     if not self.email:
       return self.TEXT % (self.experiment.name,
-                          self.GetStatusTable().ToText(),
-                          self.experiment.machine_manager.num_reimages,
                           self.PrintTables(summary_table, "CONSOLE"),
-                          self.PrintTables(full_table, "CONSOLE"),
-                          #self.GetFullTable().ToText(80),
                           self.experiment.experiment_file)
 
-    #summary_table = self.GetSummaryTables()
-    #full_table = self.GetFullTable()
-    #full_table.AddColor()
     return self.TEXT % (self.experiment.name,
-                        self.GetStatusTable().ToText(),
-                        self.experiment.machine_manager.num_reimages,
                         self.PrintTables(summary_table, "EMAIL"),
-                        self.PrintTables(full_table, "EMAIL"),
-                        #full_table.ToText(80),
                         self.experiment.experiment_file)
 
 
