@@ -3,6 +3,7 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 """A module to generate experments."""
 
+import os
 import socket
 
 from benchmark import Benchmark
@@ -99,7 +100,8 @@ class ExperimentFactory(object):
     return experiment
 
   def GetDefaultRemotes(self, board):
-    default_remotes_file = "default_remotes"
+    default_remotes_file = os.path.join(os.path.dirname(__file__),
+                                        "default_remotes")
     try:
       with open(default_remotes_file) as f:
         for line in f:
