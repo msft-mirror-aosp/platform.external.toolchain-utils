@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
@@ -10,9 +10,9 @@ import datetime
 import fcntl
 import getpass
 import glob
+import json
 import optparse
 import os
-import pickle
 import socket
 import sys
 import time
@@ -32,12 +32,21 @@ class FileCreationMask(object):
 
 
 class LockDescription(object):
-  def __init__(self):
-    self.owner = ""
-    self.exclusive = False
-    self.counter = 0
-    self.time = 0
-    self.reason = ""
+  """The description of the lock."""
+
+  def __init__(self, desc):
+    try:
+      self.owner = desc["owner"]
+      self.exclusive = desc["exclusive"]
+      self.counter = desc["counter"]
+      self.time = desc["time"]
+      self.reason = desc["reason"]
+    except (KeyError, TypeError):
+      self.owner = ""
+      self.exclusive = False
+      self.counter = 0
+      self.time = 0
+      self.reason = ""
 
   def IsLocked(self):
     return self.counter or self.exclusive
@@ -51,6 +60,7 @@ class LockDescription(object):
 
 
 class FileLock(object):
+  """File lock operation class."""
 
   def __init__(self, lock_filename):
     self._filepath = lock_filename
@@ -103,9 +113,11 @@ class FileLock(object):
           raise IOError("flock(%s, LOCK_EX) failed!" % self._filepath)
 
         try:
-          self._description = pickle.load(self._file)
-        except (EOFError, pickle.PickleError):
-          self._description = LockDescription()
+          desc = json.load(self._file)
+        except (EOFError, ValueError):
+          desc = None
+        self._description = LockDescription(desc)
+
         return self._description
       # Check this differently?
       except IOError as ex:
@@ -114,7 +126,7 @@ class FileLock(object):
 
   def __exit__(self, type, value, traceback):
     self._file.truncate(0)
-    self._file.write(pickle.dumps(self._description))
+    self._file.write(json.dumps(self._description.__dict__, skipkeys=True))
     self._file.close()
 
   def __str__(self):
@@ -173,6 +185,7 @@ class Lock(object):
 
 class Machine(object):
   LOCKS_DIR = "/home/mobiletc-prebuild/locks"
+
   def __init__(self, name, locks_dir=LOCKS_DIR):
     self._name = name
     try:
@@ -187,13 +200,13 @@ class Machine(object):
 
   def TryLock(self, timeout=300, exclusive=False, reason=""):
     locked = False
-    sleep = timeout / 10;
+    sleep = timeout / 10
     while True:
       locked = self.Lock(exclusive, reason)
       if locked or not timeout >= 0:
         break
       print "Lock not acquired for {0}, wait {1} seconds ...".format(
-        self._name, sleep)
+          self._name, sleep)
       time.sleep(sleep)
       timeout -= sleep
     return locked
