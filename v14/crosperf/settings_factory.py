@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
 # Copyright 2011 Google Inc. All Rights Reserved.
+"""Setting files for global, benchmark and labels."""
 
 from field import BooleanField
-from field import EnumField
 from field import FloatField
 from field import IntegerField
 from field import ListField
@@ -74,9 +74,13 @@ class GlobalSettings(Settings):
     self.AddField(BooleanField("rerun", description="Whether to ignore the "
                                "cache and for autotests to be re-run.",
                                default=False))
-    self.AddField(BooleanField("exact_remote", default=True,
+    self.AddField(BooleanField("same_specs", default=True,
                                description="Ensure cached runs are run on the "
-                               "same device that is specified as a remote."))
+                               "same kind of devices which are specified as a "
+                               "remote."))
+    self.AddField(BooleanField("same_machine", default=False,
+                               description="Ensure cached runs are run on the "
+                               "exact the same remote"))
     self.AddField(IntegerField("iterations", default=1,
                                description="Number of iterations to run all "
                                "autotests."))

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 # Copyright 2011 Google Inc. All Rights Reserved.
+"""A module to generate experments."""
 
 import socket
 
@@ -36,7 +37,9 @@ class ExperimentFactory(object):
       cache_conditions.append(CacheConditions.RUN_SUCCEEDED)
     if global_settings.GetField("rerun"):
       cache_conditions.append(CacheConditions.FALSE)
-    if global_settings.GetField("exact_remote"):
+    if global_settings.GetField("same_machine"):
+      cache_conditions.append(CacheConditions.SAME_MACHINE_MATCH)
+    if global_settings.GetField("same_specs"):
       cache_conditions.append(CacheConditions.MACHINES_MATCH)
 
     # Construct benchmarks.
@@ -65,13 +68,16 @@ class ExperimentFactory(object):
       chromeos_root = label_settings.GetField("chromeos_root")
       board = label_settings.GetField("board")
       my_remote = label_settings.GetField("remote")
-    #TODO(yunlian): We should consolidate code in machine_manager.py
-    #to derermine whether we are running from within google or not
+    # TODO(yunlian): We should consolidate code in machine_manager.py
+    # to derermine whether we are running from within google or not
       if ("corp.google.com" in socket.gethostname() and
           (not my_remote
            or my_remote == remote
            and global_settings.GetField("board") != board)):
         my_remote = self.GetDefaultRemotes(board)
+      if global_settings.GetField("same_machine") and len(my_remote) > 1:
+        raise Exception("Only one remote is allowed when same_machine "
+                        "is turned on")
       all_remote += my_remote
       image_args = label_settings.GetField("image_args")
       if test_flag.GetTestMode():
@@ -93,7 +99,7 @@ class ExperimentFactory(object):
     return experiment
 
   def GetDefaultRemotes(self, board):
-    default_remotes_file = "default_remote"
+    default_remotes_file = "default_remotes"
     try:
       with open(default_remotes_file) as f:
         for line in f:

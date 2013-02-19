@@ -259,17 +259,21 @@ class CacheConditions(object):
   # Cache hit if the image path matches the cached image path.
   IMAGE_PATH_MATCH = 5
 
+  # Cache hit if the uuid of hard disk mataches the cached one
+
+  SAME_MACHINE_MATCH = 6
+
 
 class ResultsCache(object):
   """ This class manages the key of the cached runs without worrying about what
   is exactly stored (value). The value generation is handled by the Results
   class.
   """
-  CACHE_VERSION = 5
+  CACHE_VERSION = 6
 
   def Init(self, chromeos_image, chromeos_root, autotest_name, iteration,
            autotest_args, machine_manager, board, cache_conditions,
-           logger_to_use, label_name):
+           logger_to_use, label):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.autotest_name = autotest_name
@@ -280,7 +284,7 @@ class ResultsCache(object):
     self.machine_manager = machine_manager
     self._logger = logger_to_use
     self._ce = command_executer.GetCommandExecuter(self._logger)
-    self.label_name = label_name
+    self.label = label
 
   def _GetCacheDirForRead(self):
     glob_path = self._FormCacheDir(self._GetCacheKeyList(True))
@@ -288,9 +292,6 @@ class ResultsCache(object):
 
     if matching_dirs:
       # Cache file found.
-      if len(matching_dirs) > 1:
-        self._logger.LogError("Multiple compatible cache files: %s." %
-                              " ".join(matching_dirs))
       return matching_dirs[0]
     else:
       return None
@@ -308,7 +309,7 @@ class ResultsCache(object):
     if read and CacheConditions.MACHINES_MATCH not in self.cache_conditions:
       machine_checksum = "*"
     else:
-      machine_checksum = self.machine_manager.machine_checksum[self.label_name]
+      machine_checksum = self.machine_manager.machine_checksum[self.label.name]
     if read and CacheConditions.CHECKSUMS_MATCH not in self.cache_conditions:
       checksum = "*"
     else:
@@ -319,6 +320,14 @@ class ResultsCache(object):
     else:
       image_path_checksum = hashlib.md5(self.chromeos_image).hexdigest()
 
+    if read and CacheConditions.SAME_MACHINE_MATCH not in self.cache_conditions:
+      machine_id_checksum = "*"
+    else:
+      for machine in self.machine_manager.GetMachines(self.label):
+        if machine.name == self.label.remote[0]:
+          machine_id_checksum = machine.machine_id_checksum
+          break
+
     autotest_args_checksum = hashlib.md5(
         "".join(self.autotest_args)).hexdigest()
     return (image_path_checksum,
@@ -326,6 +335,7 @@ class ResultsCache(object):
             autotest_args_checksum,
             checksum,
             machine_checksum,
+            machine_id_checksum,
             str(self.CACHE_VERSION))
 
   def ReadResult(self):
@@ -342,7 +352,7 @@ class ResultsCache(object):
     self._logger.LogOutput("Trying to read from cache dir: %s" % cache_dir)
 
     result = Result.CreateFromCacheHit(self.chromeos_root,
-                                       self._logger, cache_dir, self.label_name)
+                                       self._logger, cache_dir, self.label.name)
 
     if not result:
       return None

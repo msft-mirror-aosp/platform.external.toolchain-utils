@@ -4,13 +4,11 @@
 
 import datetime
 import os
-import re
 import threading
 import time
 import traceback
 
 from utils import command_executer
-from utils import logger
 from utils import timeline
 
 from autotest_runner import AutotestRunner
@@ -72,7 +70,7 @@ class BenchmarkRun(threading.Thread):
                       self.label.board,
                       self.cache_conditions,
                       self._logger,
-                      self.label.name
+                      self.label
                      )
 
       self.result = self.cache.ReadResult()

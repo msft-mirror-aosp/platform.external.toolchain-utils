@@ -33,8 +33,9 @@ class CrosMachine(object):
     self._GetMemoryInfo()
     self._GetCPUInfo()
     self._ComputeMachineChecksumString()
-    self._ComputeMachineChecksum()
-
+    self._GetMachineID()
+    self.machine_checksum = self._GetMD5Checksum(self.checksum_string)
+    self.machine_id_checksum = self._GetMD5Checksum(self.machine_id)
   def _ParseMemoryInfo(self):
     line = self.meminfo.splitlines()[0]
     usable_kbytes = int(line.split()[1])
@@ -101,11 +102,21 @@ class CrosMachine(object):
         self.checksum_string += line
     self.checksum_string += " " + str(self.phys_kbytes)
 
-  def _ComputeMachineChecksum(self):
-    if self.checksum_string:
-      self.machine_checksum = hashlib.md5(self.checksum_string).hexdigest()
+  def _GetMD5Checksum(self, ss):
+    if ss:
+      return hashlib.md5(ss).hexdigest()
     else:
-      self.machine_checksum = ""
+      return ""
+
+  def _GetMachineID(self):
+    ce = command_executer.GetCommandExecuter()
+    command = "blkid"
+    ret, self.machine_id, _ = ce.CrosRunCommand(
+        command, return_output=True,
+        machine=self.name, chromeos_root=self.chromeos_root)
+    assert ret == 0, "Could not get machine_id from machine: %s" % self.name
+    if not ret:
+      self._ComputeMachineIDChecksum()
 
   def __str__(self):
     l = []
@@ -356,7 +367,7 @@ class MockCrosMachine(CrosMachine):
     self.chromeos_root = chromeos_root
     self.checksum_string = re.sub("\d", "", name)
     #In test, we assume "lumpy1", "lumpy2" are the same machine.
-    self.machine_checksum = hashlib.md5(self.checksum_string).hexdigest()
+    self.machine_checksum =  self._GetMD5Checksum(self.checksum_string)
 
 
 class MockMachineManager(MachineManager):
