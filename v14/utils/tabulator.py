@@ -322,6 +322,28 @@ class Format(object):
     return ret
 
 
+class StorageFormat(Format):
+  """Format the cell as a storage number.
+
+  Example:
+    If the cell contains a value of 1024, the string_value will be 1.0K.
+  """
+
+  def _ComputeFloat(self, cell):
+    base = 1024
+    suffices = ["K", "M", "G"]
+    v = float(cell.value)
+    current = 0
+    while v >= base**(current + 1) and current < len(suffices):
+      current += 1
+
+    if current:
+      divisor = base**current
+      cell.string_value = "%1.1f%s" % ((v/divisor), suffices[current - 1])
+    else:
+      cell.string_value = str(cell.value)
+
+
 class PercentFormat(Format):
   """Format the cell as a percent.
 

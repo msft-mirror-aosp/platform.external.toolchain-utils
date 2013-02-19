@@ -25,6 +25,20 @@ class TabulatorTest(unittest.TestCase):
     result.Compute(cell, table[2], table[1])
     self.assertTrue(cell.value == float(table[2][0]))
 
+  def testStorageFormat(self):
+    sf = tabulator.StorageFormat()
+    cell = tabulator.Cell()
+    base = 1024.0
+    cell.value = base
+    sf.Compute(cell)
+    self.assertTrue(cell.string_value == "1.0K")
+    cell.value = base**2
+    sf.Compute(cell)
+    self.assertTrue(cell.string_value == "1.0M")
+    cell.value = base**3
+    sf.Compute(cell)
+    self.assertTrue(cell.string_value == "1.0G")
+
   def testLerp(self):
     c1 = tabulator.Color(0, 0, 0, 0)
     c2 = tabulator.Color(255, 0, 0, 0)
