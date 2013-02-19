@@ -6,6 +6,7 @@ import getpass
 import math
 import numpy
 import colortrans
+import stats
 from utils.email_sender import EmailSender
 
 
@@ -198,6 +199,16 @@ class AmeanResult(StringMeanResult):
     cell.value = numpy.mean(values)
 
 
+class MinResult(Result):
+  def _ComputeFloat(self, cell, values, baseline_values):
+    cell.value = min(values)
+
+
+class MaxResult(Result):
+  def _ComputeFloat(self, cell, values, baseline_values):
+    cell.value = max(values)
+
+
 class ComparisonResult(Result):
   def NeedsBaseline(self):
     return True
@@ -216,6 +227,14 @@ class ComparisonResult(Result):
         cell.value = "DIFFERENT"
     else:
       cell.value = "?"
+
+
+class StatsSignificant(ComparisonResult):
+  def _ComputeFloat(self, cell, values, baseline_values):
+    if len(values) < 2 or len(baseline_values) < 2:
+      cell.value = float("nan")
+      return
+    _, cell.value = stats.lttest_ind(values, baseline_values)
 
 
 class KeyAwareComparisonResult(ComparisonResult):
@@ -316,7 +335,7 @@ class Format(object):
       self._ComputeString(cell)
 
   def _ComputeFloat(self, cell):
-    cell.string_value = str(cell.value)
+    cell.string_value = "{0:.2f}".format(cell.value)
 
   def _ComputeString(self, cell):
     cell.string_value = str(cell.value)
@@ -611,6 +630,8 @@ class TablePrinter(object):
       self._row_styles.append(row_style)
 
     self._column_styles = []
+    if len(self._table) < 2:
+      return
     for i in range(len(self._table[1])):
       column_style = Cell()
       for row in self._table[1:]:

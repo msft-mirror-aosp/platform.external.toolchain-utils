@@ -154,6 +154,7 @@ class ResultsReport(object):
         table.AddRow(row)
 
     return table
+
   def GetNewTable(self):
      return self._GetTables(self.labels, self.benchmark_runs)
 
@@ -168,26 +169,33 @@ class ResultsReport(object):
       tg = TableGenerator(runs, label_name)
       table = tg.GetTable()
       columns = [Column(AmeanResult(),
-                    Format()),
-                 Column(AmeanRatioResult(),
-                    RatioFormat()),
-                 Column(AmeanRatioResult(),
-                    ColorBoxFormat()),
+                        Format()),
                  Column(GmeanRatioResult(),
-                    RatioFormat()),
+                        RatioFormat(),"GmeanSpeedup"),
+                 Column(GmeanRatioResult(),
+                        ColorBoxFormat(), " "),
+                 Column(StatsSignificant(),
+                        Format(), "p-value")
                 ]
       for benchmark in self.benchmarks:
         if benchmark.name == item:
           break
-      tf = TableFormatter(table, columns, benchmark)
+      benchmark_info = ("Benchmark:  {0};  Iterations: {1}"
+                         .format(benchmark.name, benchmark.iterations))
+      tf = TableFormatter(table, columns)
       cell_table = tf.GetCellTable()
-      #return cell_table
+      cell = Cell()
+      cell.string_value = benchmark_info
+      ben_table = [[cell]]
       if out_to == "HTML":
+        bp = TablePrinter(ben_table, TablePrinter.HTML)
         tp = TablePrinter(cell_table, TablePrinter.HTML)
       else:
+        bp = TablePrinter(ben_table, TablePrinter.HTML)
         tp = TablePrinter(cell_table, TablePrinter.CONSOLE)
+      output += bp.Print()
       output += tp.Print()
-      return output
+    return output
 
 class TextResultsReport(ResultsReport):
   TEXT = """
