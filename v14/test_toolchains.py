@@ -39,6 +39,8 @@ class ChromeOSCheckout(object):
                              "--chromeos_root=%s" % self._chromeos_root,
                              "--board=%s" % self._board,
                              "--rebuild"]
+      if self._public:
+        build_chromeos_args.append("--env=USE=-chrome_internal")
       ret = build_chromeos.Main(build_chromeos_args)
       if ret:
         raise Exception("Couldn't build ChromeOS!")
@@ -71,6 +73,8 @@ class ChromeOSCheckout(object):
       setup_chromeos_args = [setup_chromeos.__file__,
                              "--dir=%s" % self._chromeos_root,
                              "--minilayout"]
+      if self._public:
+        setup_chromeos_args.append("--public")
       setup_chromeos.Main(setup_chromeos_args)
 
   def _BuildToolchain(self, config):
@@ -81,12 +85,13 @@ class ChromeOSCheckout(object):
 
 
 class ToolchainComparator(ChromeOSCheckout):
-  def __init__(self, board, remotes, configs, clean):
+  def __init__(self, board, remotes, configs, clean, public):
     self._board = board
     self._remotes = remotes
     self._chromeos_root = "chromeos"
     self._configs = configs
     self._clean = clean
+    self._public = public
     self._ce = command_executer.GetCommandExecuter()
     self._l = logger.GetLogger()
     ChromeOSCheckout.__init__(self, board, self._chromeos_root)
@@ -169,6 +174,11 @@ def Main(argv):
                     default=False,
                     action="store_true",
                     help="Clean the chroot after testing.")
+  parser.add_option("--public",
+                    dest="public",
+                    default=False,
+                    action="store_true",
+                    help="Use the public checkout/build.")
   options, _ = parser.parse_args(argv)
   if not options.board:
     print "Please give a board."
@@ -182,7 +192,7 @@ def Main(argv):
     toolchain_config = ToolchainConfig(gcc_config=gcc_config)
     toolchain_configs.append(toolchain_config)
   fc = ToolchainComparator(options.board, options.remote, toolchain_configs,
-                           options.clean)
+                           options.clean, options.public)
   return fc.DoAll()
 
 
