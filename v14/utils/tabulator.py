@@ -184,13 +184,17 @@ class Result(object):
       float_values = _GetFloats(values)
     else:
       all_floats = False
-    if baseline_values is not None:
+    if baseline_values:
       baseline_values = _StripNone(baseline_values)
+    if baseline_values:
       if _AllFloat(baseline_values):
         float_baseline_values = _GetFloats(baseline_values)
       else:
         all_floats = False
     else:
+      if self.NeedsBaseline():
+        cell.value = ""
+        return
       float_baseline_values = None
     if all_floats:
       self._ComputeFloat(cell, float_values, float_baseline_values)
