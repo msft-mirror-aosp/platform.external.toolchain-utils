@@ -26,16 +26,11 @@ class CrosMachine(object):
     self._ComputeMachineChecksum()
 
   def _ParseMemoryInfo(self, meminfo):
-    for line in meminfo.splitlines():
-      k, v = line.split(":", 1)
-      k = k.strip()
-      v = v.strip()
-      if "MemTotal" in line:
-        self.total_memory = v
+    return 0
 
   def _GetMemoryInfo(self):
     ce = command_executer.GetCommandExecuter()
-    command = "cat /proc/meminfo"
+    command = "cat /var/log/memory_spd_info.txt"
     ret, self.meminfo, _ = ce.CrosRunCommand(
         command, return_output=True,
         machine=self.name, username="root", chromeos_root=self.chromeos_root)
@@ -64,7 +59,7 @@ class CrosMachine(object):
     for line in self.cpuinfo.splitlines():
       if not any([e in line for e in exclude_lines_list]):
         checksum_string += line
-    checksum_string += self.total_memory
+    checksum_string += self.meminfo
     if checksum_string:
       self.machine_checksum = hashlib.md5(checksum_string).hexdigest()
     else:
