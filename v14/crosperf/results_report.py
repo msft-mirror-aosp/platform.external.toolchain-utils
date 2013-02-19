@@ -137,6 +137,9 @@ Summary
 -------------------------------------------
 %s
 
+
+Number re-images: %s
+
 -------------------------------------------
 Experiment File
 -------------------------------------------
@@ -154,10 +157,12 @@ Experiment File
     if not self.email:
       return self.TEXT % (self.experiment.name,
                           self.PrintTables(summary_table, "CONSOLE"),
+                          self.experiment.machine_manager.num_reimages,
                           self.experiment.experiment_file)
 
     return self.TEXT % (self.experiment.name,
                         self.PrintTables(summary_table, "EMAIL"),
+                        self.experiment.machine_manager.num_reimages,
                         self.experiment.experiment_file)
 
 
