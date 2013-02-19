@@ -164,6 +164,8 @@ class Result(object):
   def _GetGmean(self, values):
     if not values:
       return float("nan")
+    if any([v < 0 for v in values]):
+      return float ("nan")
     return (reduce(lambda x, y: x*y, values))**(1.0/len(values))
 
   def Compute(self, cell, values, baseline_values):
