@@ -17,7 +17,8 @@ import logger
 def GetChromeOSVersionFromLSBVersion(lsb_version):
   ce = command_executer.GetCommandExecuter()
   command = "git ls-remote http://git.chromium.org/chromiumos/manifest.git"
-  ret, out, _ = ce.RunCommand(command, return_output=True)
+  ret, out, _ = ce.RunCommand(command, return_output=True,
+                              print_to_console=False)
   assert ret == 0, "Command %s failed" % command
   lower = []
   for line in out.splitlines():
