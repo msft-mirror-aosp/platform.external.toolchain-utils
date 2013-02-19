@@ -66,7 +66,7 @@ class Result(object):
     [ret, out, err] = self._ce.RunCommand(command, return_output=True)
     keyvals_dict = {}
     for line in out.splitlines():
-      tokens = line.split(",")
+      tokens = re.split("=|,", line)
       key = tokens[-2]
       if key.startswith(self.results_dir):
         key = key[len(self.results_dir) + 1:]
