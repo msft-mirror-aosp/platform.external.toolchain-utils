@@ -180,7 +180,14 @@ def GetCtargetFromBoard(board, chromeos_root):
                                     return_output=True)
   if ret != 0:
     raise ValueError("Board %s is invalid!" % board)
+  # Remove ANSI escape sequences.
+  out = StripANSIEscapeSequences(out)
   return out.strip()
+
+
+def StripANSIEscapeSequences(string):
+  string = re.sub("\x1b\[[0-9]*[a-zA-Z]", "", string)
+  return string
 
 
 def GetChromeSrcDir():
