@@ -256,7 +256,8 @@ def AcquireLock(lock_file, timeout=1200):
                                           sys.argv[0])
   if not os.path.exists(dir_path):
     try:
-      os.makedirs(dir_path)
+      with lock_machine.FileCreationMask(0002):
+        os.makedirs(dir_path)
     except OSError:
       print "Cannot create dir {0}, exiting...".format(dir_path)
       exit(0)
