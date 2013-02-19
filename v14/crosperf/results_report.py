@@ -57,8 +57,8 @@ class ResultsReport(object):
                       RatioFormat(), "GmeanSpeedup"),
                Column(GmeanRatioResult(),
                       ColorBoxFormat(), " "),
-               Column(StatsSignificant(),
-                      Format(), "p-value")
+               Column(PValueResult(),
+                      PValueFormat(), "p-value")
               ]
     return self._GetTables(self.labels, self.benchmark_runs, columns)
 

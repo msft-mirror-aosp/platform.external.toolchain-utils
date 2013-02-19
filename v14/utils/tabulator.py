@@ -297,7 +297,7 @@ class ComparisonResult(Result):
       cell.value = "?"
 
 
-class StatsSignificant(ComparisonResult):
+class PValueResult(ComparisonResult):
   def _ComputeFloat(self, cell, values, baseline_values):
     if len(values) < 2 or len(baseline_values) < 2:
       cell.value = float("nan")
@@ -307,6 +307,7 @@ class StatsSignificant(ComparisonResult):
 
   def _ComputeString(self, cell, values, baseline_values):
     return float("nan")
+
 
 class KeyAwareComparisonResult(ComparisonResult):
   def _IsLowerBetter(self, key):
@@ -440,6 +441,19 @@ class Format(object):
       ret = Color.Lerp(value, low_color, mid_color)
     ret.Round()
     return ret
+
+
+class PValueFormat(Format):
+  def _ComputeFloat(self, cell):
+    cell.string_value = "%0.2f" % float(cell.value)
+    if float(cell.value) < 0.05:
+      cell.bgcolor = self._GetColor(cell.value,
+                                  Color(255, 255, 0, 0),
+                                  Color(255, 255, 255, 0),
+                                  Color(255, 255, 255, 0),
+                                  mid_value=0.05,
+                                  power=1)
+      cell.bgcolor_row = True
 
 
 class StorageFormat(Format):
@@ -726,6 +740,10 @@ class TablePrinter(object):
           assert cell.color, "Cell color not set but color_row set!"
           assert not row_style.color, "Multiple row_style.colors found!"
           row_style.color = cell.color
+        if cell.bgcolor_row:
+          assert cell.bgcolor, "Cell bgcolor not set but bgcolor_row set!"
+          assert not row_style.bgcolor, "Multiple row_style.bgcolors found!"
+          row_style.bgcolor = cell.bgcolor
       self._row_styles.append(row_style)
 
     self._column_styles = []
@@ -746,7 +764,7 @@ class TablePrinter(object):
       suffix = "\033[0m"
     elif self._output_type in [self.EMAIL, self.HTML]:
       rgb = color.GetRGB()
-      prefix = ("<FONT style=\"BACKGROUND-COLOR:#{0}\" color =#{0}>"
+      prefix = ("<FONT style=\"BACKGROUND-COLOR:#{0}\">"
                 .format(rgb))
       suffix = "</FONT>"
     elif self._output_type in [self.PLAIN, self.TSV]:
@@ -780,26 +798,15 @@ class TablePrinter(object):
 
   def _GetCellValue(self, i, j):
     cell = self._table[i][j]
-    color = None
     out = cell.string_value
-    if self._row_styles[i].color:
-      color = self._row_styles[i].color
-    elif cell.color:
-      color = cell.color
-
-    if self._row_styles[i].bgcolor:
-      bgcolor = self._row_styles[i].bgcolor
-    else:
-      bgcolor = cell.bgcolor
-
     raw_width = len(out)
 
-    if color:
-      p, s = self._GetColorFix(color)
+    if cell.color:
+      p, s = self._GetColorFix(cell.color)
       out = "%s%s%s" % (p, out, s)
 
-    if bgcolor:
-      p, s = self._GetBGColorFix(bgcolor)
+    if cell.bgcolor:
+      p, s = self._GetBGColorFix(cell.bgcolor)
       out = "%s%s%s" % (p, out, s)
 
     if self._output_type in [self.PLAIN, self.CONSOLE, self.EMAIL]:
@@ -858,9 +865,17 @@ class TablePrinter(object):
     o += self._GetPrefix()
     for i in range(len(self._table)):
       row = self._table[i]
+      # Apply row color and bgcolor.
+      p = s = bgp = bgs = ""
+      if self._row_styles[i].bgcolor:
+        bgp, bgs = self._GetBGColorFix(self._row_styles[i].bgcolor)
+      if self._row_styles[i].color:
+        p, s = self._GetColorFix(self._row_styles[i].color)
+      o += p + bgp
       for j in range(len(row)):
         out = self._GetCellValue(i, j)
         o += out + self._GetHorizontalSeparator()
+      o += s + bgs
       o += self._GetVerticalSeparator()
     o += self._GetSuffix()
     return o
@@ -925,6 +940,8 @@ def GetComplexTable(runs, labels, out_to=TablePrinter.CONSOLE):
                     RatioFormat()),
              Column(GmeanRatioResult(),
                     RatioFormat()),
+             Column(PValueResult(),
+                    PValueFormat()),
             ]
   tf = TableFormatter(table, columns)
   cell_table = tf.GetCellTable()
@@ -951,6 +968,17 @@ if __name__ == "__main__":
   t = GetComplexTable(runs, labels, TablePrinter.CONSOLE)
   print t
   email = GetComplexTable(runs, labels, TablePrinter.EMAIL)
+
+  runs = [
+      [
+          {"k1": "1",}, {"k1": "1.1"}, {"k1": "1.2"},
+          ],
+      [
+          {"k1": "5",}, {"k1": "5.1"}, {"k1": "5.2"},
+          ],
+      ]
+  t = GetComplexTable(runs, labels, TablePrinter.CONSOLE)
+  print t
 
   simple_table = [
       ["binary", "b1", "b2", "b3"],
