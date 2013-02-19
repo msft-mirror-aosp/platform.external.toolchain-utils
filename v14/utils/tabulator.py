@@ -577,6 +577,7 @@ class Cell(object):
     colspan: Set the colspan of the cell in the HTML table, this is used for
     table headers. Default value is 1.
     name: the test name of the cell.
+    header: Whether this is a header in html.
   """
 
   def __init__(self):
@@ -592,6 +593,7 @@ class Cell(object):
     self.width = None
     self.colspan = 1
     self.name = None
+    self.header = False
 
   def __str__(self):
     l = []
@@ -642,7 +644,7 @@ class TableFormatter(object):
     self._table_columns = []
     self._out_table = []
 
-  def _GenerateCellTable(self):
+  def GenerateCellTable(self):
     row_index = 0
 
     for row in self._table[1:]:
@@ -673,13 +675,15 @@ class TableFormatter(object):
       self._out_table.append(out_row)
       row_index += 1
 
-    # TODO(asharif): refactor this.
-    # Now generate header
+  def AddColumnName(self):
+    """Generate Column name at the top of table."""
     key = Cell()
+    key.header = True
     key.string_value = "Keys"
     header = [key]
     for column in self._table_columns:
       cell = Cell()
+      cell.header = True
       if column.name:
         cell.string_value = column.name
       else:
@@ -693,21 +697,36 @@ class TableFormatter(object):
 
     self._out_table = [header] + self._out_table
 
+  def AddHeader(self, s):
+    """Put additional string on the top of the table."""
+    cell = Cell()
+    cell.header = True
+    cell.string_value = str(s)
+    header = [cell]
+    colspan = max(1, max(len(row) for row in self._table))
+    cell.colspan = colspan
+    self._out_table = [header] + self._out_table
+
+  def AddLabelName(self):
+    """Put label on the top of the table."""
     top_header = []
-    colspan = 0
-    for column in self._columns:
-      if not column.result.NeedsBaseline():
-        colspan += 1
+    base_colspan = len([c for c in self._columns
+                        if not c.result.NeedsBaseline()])
+    compare_colspan = len(self._columns)
+    # The label is organized as follows
+    # "keys" label_base, label_comparison1, label_comparison2
+    # The first cell has colspan 1, the second is base_colspan
+    # The others are compare_colspan
     for label in self._table[0]:
       cell = Cell()
+      cell.header = True
       cell.string_value = str(label)
-      if cell.string_value != "keys":
-        cell.colspan = colspan
+      if top_header:
+        cell.colspan = base_colspan
+      if len(top_header) > 1:
+        cell.colspan = compare_colspan
       top_header.append(cell)
-
     self._out_table = [top_header] + self._out_table
-
-    return self._out_table
 
   def _PrintOutTable(self):
     o = ""
@@ -717,18 +736,25 @@ class TableFormatter(object):
       o += "\n"
     print o
 
-  def GetCellTable(self):
+  def GetCellTable(self, headers=True):
     """Function to return a table of cells.
 
     The table (list of lists) is converted into a table of cells by this
     function.
+    Args:
+      headers: A boolean saying whether we want default headers
 
     Returns:
       A table of cells with each cell having the properties and string values as
       requiested by the columns passed in the constructor.
     """
     # Generate the cell table, creating a list of dynamic columns on the fly.
-    return self._GenerateCellTable()
+    if not self._out_table:
+      self.GenerateCellTable()
+    if headers:
+      self.AddColumnName()
+      self.AddLabelName()
+    return self._out_table
 
 
 class TablePrinter(object):
@@ -763,11 +789,13 @@ class TablePrinter(object):
     self._column_styles = []
     if len(self._table) < 2:
       return
-    for i in range(len(self._table[1])):
+
+    for i in range(max(len(row) for row in self._table)):
       column_style = Cell()
-      for row in self._table[1:]:
-        column_style.width = max(column_style.width,
-                                 len(row[i].string_value))
+      for row in self._table:
+        if not any([cell.colspan != 1 for cell in row]):
+          column_style.width = max(column_style.width,
+                                   len(row[i].string_value))
       self._column_styles.append(column_style)
 
   def _GetBGColorFix(self, color):
@@ -833,14 +861,17 @@ class TablePrinter(object):
           width = len(cell.string_value)
       if cell.colspan > 1:
         width = 0
+        start = 0
+        for k in range(j):
+          start += self._table[i][k].colspan
         for k in range(cell.colspan):
-          width += self._column_styles[1 + (j-1) * cell.colspan + k].width
+          width += self._column_styles[start + k].width
       if width > raw_width:
         padding = ("%" + str(width - raw_width) + "s") % ""
         out = padding + out
 
     if self._output_type == self.HTML:
-      if i < 2:
+      if cell.header:
         tag = "th"
       else:
         tag = "td"
