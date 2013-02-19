@@ -222,6 +222,19 @@ class LiteralResult(Result):
 class NonEmptyCountResult(Result):
   def Compute(self, cell, values, baseline_values):
     cell.value = len(_StripNone(values))
+    if not baseline_values:
+      return
+    base_value = len(_StripNone(baseline_values))
+    if cell.value == base_value:
+      return
+    f = ColorBoxFormat()
+    len_values = len(values)
+    len_baseline_values = len(baseline_values)
+    tmp_cell = Cell()
+    tmp_cell.value= 1.0 + (float(cell.value - base_value) /
+                         (max(len_values, len_baseline_values)))
+    f.Compute(tmp_cell)
+    cell.bgcolor = tmp_cell.bgcolor
 
 
 class StringMeanResult(Result):
@@ -990,7 +1003,7 @@ if __name__ == "__main__":
       ]
   t = GetSimpleTable(simple_table)
   print t
-  email += GetSimpleTable(simple_table, TablePrinter.PLAIN)
+  email += GetSimpleTable(simple_table, TablePrinter.HTML)
   email_to = [getpass.getuser()]
   email = "<pre style='font-size: 13px'>%s</pre>" % email
   EmailSender().SendEmail(email_to, "SimpleTableTest", email, msg_type="html")
