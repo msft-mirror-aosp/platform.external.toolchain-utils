@@ -9,7 +9,6 @@ This script images a remote ChromeOS device with a specific image."
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
-import fcntl
 import filecmp
 import glob
 import optparse
@@ -19,13 +18,14 @@ import shutil
 import sys
 import tempfile
 import time
+
 from utils import command_executer
 from utils import logger
 from utils import misc
 from utils.file_utils import FileUtils
 
 checksum_file = "/usr/local/osimage_checksum_file"
-lock_file = "/tmp/lock_image_chromeos"
+lock_file = "/tmp/image_chromeos_lock/image_chromeos_lock"
 
 def Usage(parser, message):
   print "ERROR: " + message
@@ -33,17 +33,9 @@ def Usage(parser, message):
   sys.exit(0)
 
 
-def Main(argv):
+def DoImage(argv):
   """Build ChromeOS."""
-  #Get lock for the host
-  f = open(lock_file, "w+a")
-  try:
-    fcntl.lockf(f, fcntl.LOCK_EX|fcntl.LOCK_NB)
-  except IOError:
-    f.close()
-    print ("You can not run two instances of image_chromes at the same time."
-           "\nTry again. Exiting ....")
-    exit(0)
+
   # Common initializations
   cmd_executer = command_executer.GetCommandExecuter()
   l = logger.GetLogger()
@@ -179,9 +171,6 @@ def Main(argv):
                                   "Image verification failed!")
   else:
     l.LogOutput("Checksums match. Skipping reimage")
-
-  fcntl.lockf(f, fcntl.LOCK_UN)
-  f.close()
   return retval
 
 
@@ -296,6 +285,14 @@ def EnsureMachineUp(chromeos_root, remote):
                                          machine=remote)
     if not retval:
       return True
+
+
+def Main(argv):
+  misc.AcquireLock(lock_file)
+  try:
+    return DoImage(argv)
+  finally:
+    misc.ReleaseLock(lock_file)
 
 
 if __name__ == "__main__":
