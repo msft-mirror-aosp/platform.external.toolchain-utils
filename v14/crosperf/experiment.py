@@ -77,8 +77,7 @@ class Experiment(object):
                                        iteration,
                                        self.cache_conditions,
                                        benchmark.outlier_range,
-                                       benchmark.profile_counters,
-                                       benchmark.profile_type,
+                                       benchmark.perf_args,
                                        self.machine_manager,
                                        logger_to_use)
 

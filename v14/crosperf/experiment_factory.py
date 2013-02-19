@@ -47,11 +47,9 @@ class ExperimentFactory(object):
       autotest_args = benchmark_settings.GetField("autotest_args")
       iterations = benchmark_settings.GetField("iterations")
       outlier_range = benchmark_settings.GetField("outlier_range")
-      profile_counters = benchmark_settings.GetField("profile_counters")
-      profile_type = benchmark_settings.GetField("profile_type")
+      perf_args = benchmark_settings.GetField("perf_args")
       benchmark = Benchmark(benchmark_name, autotest_name, autotest_args,
-                            iterations, outlier_range, profile_counters,
-                            profile_type)
+                            iterations, outlier_range, perf_args)
       benchmarks.append(benchmark)
 
     # Construct labels.

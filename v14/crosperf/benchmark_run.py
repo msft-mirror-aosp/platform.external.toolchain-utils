@@ -26,7 +26,7 @@ STATUS_PENDING = "PENDING"
 class BenchmarkRun(threading.Thread):
   def __init__(self, name, benchmark_name, autotest_name, autotest_args,
                label_name, chromeos_root, chromeos_image, board, iteration,
-               cache_conditions, outlier_range, profile_counters, profile_type,
+               cache_conditions, outlier_range, perf_args,
                machine_manager,
                logger_to_use):
     threading.Thread.__init__(self)
@@ -45,8 +45,7 @@ class BenchmarkRun(threading.Thread):
     self.status = STATUS_PENDING
     self.run_completed = False
     self.outlier_range = outlier_range
-    self.profile_counters = profile_counters
-    self.profile_type = profile_type
+    self.perf_args = perf_args
     self.machine_manager = machine_manager
     self.cache = ResultsCache()
     self.autotest_runner = AutotestRunner(self._logger)
@@ -135,13 +134,12 @@ class BenchmarkRun(threading.Thread):
     return machine
 
   def _GetExtraAutotestArgs(self):
-    if self.profile_type:
-      if self.profile_type == "record":
-        perf_args = "record -a -e %s" % ",".join(self.profile_counters)
-      elif self.profile_type == "stat":
-        perf_args = "stat -a"
-      else:
-        raise Exception("profile_type must be either record or stat")
+    if self.perf_args:
+      perf_args_list = self.perf_args.split(" ")
+      perf_args_list = [perf_args_list[0]] + ["-a"] + perf_args_list[1:]
+      perf_args = " ".join(perf_args_list)
+      if not perf_args_list[0] in ["record", "stat"]:
+        raise Exception("perf_args must start with either record or stat")
       extra_autotest_args = ["--profiler=custom_perf",
                              ("--profiler_args='perf_options=\"%s\"'" %
                               perf_args)]

@@ -1,5 +1,4 @@
-profile_type: record
-profile_counters: cycles instructions
+perf_args: record -e cycles
 
 benchmark: morejs {
 	autotest_name: desktopui_PyAutoPerfTests
