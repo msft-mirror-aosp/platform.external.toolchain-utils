@@ -26,10 +26,11 @@ class DejagnuCompilerNightlyClient:
   P4_CHECKOUT_DIR = 'perforce2/'
   P4_VERSION_DIR = os.path.join(P4_CHECKOUT_DIR, 'gcctools/chromeos/v14')
 
-  def __init__(self, board, remote, p4_snapshot):
+  def __init__(self, board, remote, p4_snapshot, cleanup):
     self._board = board
     self._remote = remote
     self._p4_snapshot = p4_snapshot
+    self._cleanup = cleanup
 
   def Run(self):
     server = xmlrpclib.Server('http://localhost:8000')
@@ -54,7 +55,8 @@ class DejagnuCompilerNightlyClient:
         cmd.Shell('python',
                   os.path.join(self.P4_VERSION_DIR, 'test_gcc_dejagnu.py'),
                   '--board=%s' % self._board,
-                  '--remote=%s' % self._remote))
+                  '--remote=%s' % self._remote,
+                  '--cleanup=%s' % self._cleanup))
     label = 'dejagnu'
     job = jobs.CreateLinuxJob(label, chain, timeout=8*60*60)
     return job_group.JobGroup(label, [job], cleanup_on_failure=True,
@@ -64,19 +66,16 @@ class DejagnuCompilerNightlyClient:
 @logger.HandleUncaughtExceptions
 def Main(argv):
   parser = optparse.OptionParser()
-  parser.add_option('-b',
-                    '--board',
-                    dest='board',
+  parser.add_option('-b', '--board', dest='board',
                     help='Run performance tests on these boards')
-  parser.add_option('-r',
-                    '--remote',
-                    dest='remote',
+  parser.add_option('-r', '--remote', dest='remote',
                     help='Run performance tests on these remotes')
-  parser.add_option('-p',
-                    '--p4_snapshot',
-                    dest='p4_snapshot',
+  parser.add_option('-p', '--p4_snapshot', dest='p4_snapshot',
                     help=('For development only. '
                           'Use snapshot instead of checking out.'))
+  parser.add_option('--cleanup', dest='cleanup', default='mount',
+                    help=('Cleanup test directory, values could be one of '
+                          '"mount", "chroot" or "chromeos"'))
   options, _ = parser.parse_args(argv)
 
   if not all([options.board, options.remote]):
@@ -84,7 +83,7 @@ def Main(argv):
     return 1
 
   client = DejagnuCompilerNightlyClient(
-    options.board, options.remote, options.p4_snapshot)
+    options.board, options.remote, options.p4_snapshot, options.cleanup)
   client.Run()
   return 0
 
