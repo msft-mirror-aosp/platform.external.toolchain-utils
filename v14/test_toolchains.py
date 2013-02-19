@@ -28,24 +28,6 @@ class ChromeOSCheckout(object):
     self._ce = command_executer.GetCommandExecuter()
     self._l = logger.GetLogger()
 
-  def _BuildChromeOSUsingBinaries(self):
-    image_dir = misc.GetImageDir(self._chromeos_root, self._board)
-    command = "equery-%s l chromeos" % self._board
-    ret = self._ce.ChrootRunCommand(self._chromeos_root, command)
-    if ret:
-      command = misc.GetSetupBoardCommand(self._board,
-                                           usepkg=True)
-      ret = self._ce.ChrootRunCommand(self._chromeos_root,
-                                      command)
-      if ret:
-        raise Exception("Couldn't run setup_board!")
-      command = misc.GetBuildPackagesCommand(self._board,
-                                              True)
-      ret = self._ce.ChrootRunCommand(self._chromeos_root,
-                                      command)
-      if ret:
-        raise Exception("Couldn't run build_packages!")
-
   def _BuildAndImage(self, label=""):
     if (not label or
         not misc.DoesLabelExist(self._chromeos_root, self._board, label)):
@@ -142,7 +124,6 @@ class ToolchainComparator(ChromeOSCheckout):
 
   def DoAll(self):
     self._CheckoutChromeOS()
-    self._BuildChromeOSUsingBinaries()
     labels = []
     vanilla_label = self._BuildAndImage("vanilla")
     labels.append(vanilla_label)
