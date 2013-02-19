@@ -128,12 +128,13 @@ class GccTrybotRunner(object):
   """Remote try bot class."""
 
   def __init__(self, chromeos_root, new_gcc_dir, target, local,
-               dest_dir, master):
+               dest_dir, master, chrome_version):
     self.new_gcc_dir = new_gcc_dir
     self.target = target
     self.chromeos_root = misc.CanonicalizePath(chromeos_root)
     self.local = local
     self.master = master
+    self.chrome_version = chrome_version
 
     if self.local and dest_dir:
       self.dest_dir = misc.CanonicalizePath(dest_dir)
@@ -176,7 +177,9 @@ class GccTrybotRunner(object):
     commands = ("rsync -az --exclude='*.svn' --exclude='*.git'"
                 " {0}/ .".format(self.new_gcc_dir))
     self.RunCommand(commands)
+    return self.UploadPatch()
 
+  def UploadPatch(self):
     commands = ("git add -A . &&"
                 "git commit -m 'test' -m 'BUG=None' -m 'TEST=None' "
                 "--amend -m 'hostname={0}' -m 'gcc_patch={1}'"
@@ -207,9 +210,13 @@ class GccTrybotRunner(object):
     else:
       commands = ("./cbuildbot {0} {1}"
                   .format(remote_flag, self.target))
+
+    if self.chrome_version:
+      commands += " --chrome_version={0}".format(self.chrome_version)
+
     description = "{0}_{1}".format(patch, self.target)
     if not self.master:
-      commands += " -b {0} -g{1}".format(current_branch, current_version)
+      commands += " -b {0} -g {1}".format(current_branch, current_version)
       description +="_{0}".format(current_version)
     commands += " --remote-description={0}".format(description)
     self.RunCommand(commands)
@@ -233,6 +240,9 @@ def Main(argv):
                       help=("The dir to build the whole chromeos if"
                             " --local is set"))
   parser.add_argument("-m", "--master", action="store_true")
+  parser.add_argument("--chrome_version", dest="chrome_version",
+                      default="", help="The chrome version to use. "
+                      "Default it will use the latest one.")
 
   script_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -246,7 +256,8 @@ def Main(argv):
     index = GetBuildNumber(description)
   if not index:
     remote_trybot = GccTrybotRunner(args.chromeos_root, args.gcc_dir, target,
-                                    args.local, args.dest_dir, args.master)
+                                    args.local, args.dest_dir, args.master,
+                                    args.chrome_version)
     description = remote_trybot.Run()
   if args.local or not args.dest_dir:
     return 0
