@@ -13,6 +13,7 @@ import filecmp
 import glob
 import optparse
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -219,7 +220,8 @@ def IsImageModdedForTest(chromeos_root, image):
   stateful_mp = tempfile.mkdtemp()
   MountImage(chromeos_root, image, rootfs_mp, stateful_mp)
   lsb_release_file = os.path.join(rootfs_mp, "etc/lsb-release")
-  is_test_image = "Test Build" in open(lsb_release_file).read()
+  lsb_release_contents = open(lsb_release_file).read()
+  is_test_image = re.search("test", lsb_release_contents, re.IGNORECASE)
   MountImage(chromeos_root, image, rootfs_mp, stateful_mp, unmount=True)
   return is_test_image
 
