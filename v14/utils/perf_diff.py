@@ -164,7 +164,7 @@ class PerfReport(object):
 
   def _SplitSections(self):
     self._section_contents = []
-    indices = [m.start() for m in re.finditer("Events:", self._perf_contents)]
+    indices = [m.start() for m in re.finditer("# Events:", self._perf_contents)]
     indices.append(len(self._perf_contents))
     for i in range(len(indices) - 1):
       section_content = self._perf_contents[indices[i]:indices[i+1]]
