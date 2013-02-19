@@ -46,7 +46,7 @@ class LabelSettings(Settings):
                             "chromeos_image."))
     self.AddField(TextField("board", required=True, description="The target "
                             "board for running experiments on, e.g. x86-alex."))
-    self.AddField(ListField("remote", required=True, description=
+    self.AddField(ListField("remote", description=
                             "A comma-separated list of ip's of chromeos"
                             "devices to run experiments on."))
 

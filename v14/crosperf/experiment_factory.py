@@ -2,6 +2,8 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+import socket
+
 from benchmark import Benchmark
 from experiment import Experiment
 from label import Label
@@ -61,6 +63,13 @@ class ExperimentFactory(object):
       chromeos_root = label_settings.GetField("chromeos_root")
       board = label_settings.GetField("board")
       my_remote = label_settings.GetField("remote")
+    #TODO(yunlian): We should consolidate code in machine_manager.py
+    #to derermine whether we are running from within google or not
+      if ("corp.google.com" in socket.gethostname() and
+          (not my_remote
+           or my_remote == remote
+           and global_settings.GetField("board") != board)):
+        my_remote = self.GetDefaultRemotes(board)
       all_remote += my_remote
       label = Label(label_name, image, chromeos_root, board, my_remote)
       labels.append(label)
@@ -74,3 +83,24 @@ class ExperimentFactory(object):
                             email)
 
     return experiment
+
+  def GetDefaultRemotes(self, board):
+    default_remotes_file = "default_remote"
+    try:
+      with open(default_remotes_file) as f:
+        for line in f:
+          key, v = line.split(":")
+          if key.strip() == board:
+            remotes = v.strip().split(" ")
+            if remotes:
+              return remotes
+            else:
+              raise Exception("There is not remote for {0}".format(board))
+    except IOError:
+      raise Exception("IOError while reading file {0}"
+                      .format(default_remotes_file))
+    else:
+      raise Exception("There is not remote for {0}".format(board))
+
+
+
