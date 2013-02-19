@@ -50,7 +50,9 @@ class ResultsReport(object):
 
   def _IsLowerBetter(self, column, autotest_key):
     if ((autotest_key.find("milliseconds") == 0
-         or autotest_key.find("ms_") == 0)
+         or autotest_key.find("ms_") == 0
+         or autotest_key.find("seconds") == 0
+         or autotest_key.find("KB_") == 0)
         and column.name == self.DELTA_COLUMN_NAME):
       return True
     return False
@@ -130,16 +132,17 @@ class ResultsReport(object):
                                                  autotest_key,
                                                  self.baseline.name)
             value = column.Compute(results, baseline_results)
-
+            color = ""
             if isinstance(value, float):
               if self._IsLowerBetter(column, autotest_key):
                 value = 1/value
               value_string = "%.2f" % value
               if column.name == self.DELTA_COLUMN_NAME:
-                value_string = self._ColorNumber(value_string, value_string)
+                color = self. _GetColorCode(value)
+                #value_string = self._ColorNumber(value_string, value_string)
             else:
               value_string = value
-            row.append(Table.Cell(value_string))
+            row.append(Table.Cell(value_string, color=color))
 
         table.AddRow(row)
 
