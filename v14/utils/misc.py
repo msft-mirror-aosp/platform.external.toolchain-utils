@@ -78,6 +78,15 @@ def GetRoot(scr_name):
   return (os.path.dirname(abs_path), os.path.basename(abs_path))
 
 
+def GetChromeOSKeyFile(chromeos_root):
+  return os.path.join(chromeos_root,
+                      "src",
+                      "scripts",
+                      "mod_for_test_scripts",
+                      "ssh_keys",
+                      "testing_rsa")
+
+
 def GetChrootPath(chromeos_root):
   return os.path.join(chromeos_root,
                       "chroot")

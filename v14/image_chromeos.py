@@ -144,6 +144,8 @@ def DoImage(argv):
     if options.image_args:
       command += " %s" % options.image_args
 
+    # Workaround for crosbug.com/35684.
+    os.chmod(misc.GetChromeOSKeyFile(options.chromeos_root), 0600)
     retval = cmd_executer.ChrootRunCommand(options.chromeos_root,
                                            command)
     if found == False:
