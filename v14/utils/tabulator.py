@@ -2,9 +2,11 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+import getpass
 import math
 import numpy
 import colortrans
+from utils.email_sender import EmailSender
 
 
 def _IsFloat(v):
@@ -516,6 +518,12 @@ class TablePrinter(object):
       prefix, _ = colortrans.rgb2short(rgb)
       prefix = "\033[48;5;%sm" % prefix
       suffix = "\033[0m"
+
+    elif self._output_type == self.HTML:
+      rgb = color.GetRGB()
+      prefix = ("<FONT style=\"BACKGROUND-COLOR:#{0}\" color =#{0}>"
+                .format(rgb))
+      suffix = "</FONT>"
     return prefix, suffix
 
   def _GetColorFix(self, color):
@@ -524,6 +532,10 @@ class TablePrinter(object):
       prefix, _ = colortrans.rgb2short(rgb)
       prefix = "\033[38;5;%sm" % prefix
       suffix = "\033[0m"
+    elif self._output_type == self.HTML:
+      rgb = color.GetRGB()
+      prefix = "<FONT COLOR=#{0}>".format(rgb)
+      suffix = "</FONT>"
     return prefix, suffix
 
   def Print(self):
@@ -567,23 +579,38 @@ class TablePrinter(object):
         padding = ("%" + str(width - raw_width) + "s") % ""
         out = padding + out
 
+    if self._output_type == self.HTML:
+      if i < 2:
+        tag = "th"
+      else:
+        tag = "td"
+      out = "<{0}> {1} </{0}>".format(tag, out)
+
     return out
 
   def _GetHorizontalSeparator(self):
     if self._output_type == self.CONSOLE:
       return " "
+    if self._output_type == self.HTML:
+      return "&nbsp;"
 
   def _GetVerticalSeparator(self):
     if self._output_type == self.CONSOLE:
       return "\n"
+    if self._output_type == self.HTML:
+      return "</tr>\n<tr>"
 
   def _GetPrefix(self):
     if self._output_type == self.CONSOLE:
       return ""
+    if self._output_type == self.HTML:
+      return "<table><tr>"
 
   def _GetSuffix(self):
     if self._output_type == self.CONSOLE:
       return ""
+    if self._output_type == self.HTML:
+      return "</tr>\n</table>"
 
   def _GetStringValue(self):
     o = ""
@@ -599,7 +626,7 @@ class TablePrinter(object):
 
 
 # Some common drivers
-def GetSimpleConsoleTable(table):
+def GetSimpleTable(table, out_to="CONSOLE"):
   """Prints a simple table.
 
   This is used by code that has a very simple list-of-lists and wants to produce
@@ -607,6 +634,7 @@ def GetSimpleConsoleTable(table):
 
   Args:
     table: a list of lists.
+    out_to: specify the fomat of output. Currently it supports HTML and CONSOLE.
 
   Returns:
     A string version of the table that can be printed to the console.
@@ -631,11 +659,14 @@ def GetSimpleConsoleTable(table):
 
   tf = TableFormatter(our_table, columns)
   cell_table = tf.GetCellTable()
-  tp = TablePrinter(cell_table, TablePrinter.CONSOLE)
+  if out_to == "HTML":
+    tp = TablePrinter(cell_table, TablePrinter.HTML)
+  else:
+    tp = TablePrinter(cell_table, TablePrinter.CONSOLE)
   return tp.Print()
 
 
-def _GetSimpleConsoleTableWithAverage(runs, labels):
+def GetSimpleTableWithAverage(runs, labels, out_to="CONSOLE"):
   tg = TableGenerator(runs, labels, TableGenerator.SORT_BY_VALUES_DESC)
   table = tg.GetTable()
   columns = [Column(AmeanResult(),
@@ -649,7 +680,11 @@ def _GetSimpleConsoleTableWithAverage(runs, labels):
             ]
   tf = TableFormatter(table, columns)
   cell_table = tf.GetCellTable()
-  tp = TablePrinter(cell_table, TablePrinter.CONSOLE)
+  if out_to == "HTML":
+    tp = TablePrinter(cell_table, TablePrinter.HTML)
+  else:
+    tp = TablePrinter(cell_table, TablePrinter.CONSOLE)
+
   return tp.Print()
 
 if __name__ == "__main__":
@@ -665,8 +700,9 @@ if __name__ == "__main__":
           ],
       ]
   labels = ["vanilla", "modified"]
-  t = _GetSimpleConsoleTableWithAverage(runs, labels)
+  t = GetSimpleTableWithAverage(runs, labels)
   print t
+  email = GetSimpleTableWithAverage(runs, labels, "HTML")
 
   simple_table = [
       ["binary", "b1", "b2", "b3"],
@@ -675,5 +711,8 @@ if __name__ == "__main__":
       ["data", 100, 100, 100],
       ["debug", 100, 140, 60],
       ]
-  t = GetSimpleConsoleTable(simple_table)
+  t = GetSimpleTable(simple_table)
   print t
+  email += GetSimpleTable(simple_table, "HTML")
+  email_to = [getpass.getuser()]
+  EmailSender().SendEmail(email_to, "SimpleTableTest", email, msg_type="html")
