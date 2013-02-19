@@ -50,6 +50,8 @@ class LabelSettings(Settings):
                             "contains a src/scripts directory. Defaults to "
                             "the chromeos checkout which contains the "
                             "chromeos_image."))
+    self.AddField(TextField("md5sum", default="",
+                            description="The md5sum of this image"))
     self.AddField(TextField("board", required=True, description="The target "
                             "board for running experiments on, e.g. x86-alex."))
     self.AddField(ListField("remote", description=

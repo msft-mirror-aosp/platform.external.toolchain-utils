@@ -2,24 +2,38 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+import os
 import threading
+
 from utils import logger
 from utils.file_utils import FileUtils
 
 
 class ImageChecksummer(object):
   class PerImageChecksummer(object):
-    def __init__(self, filename):
+    def __init__(self, label):
       self._lock = threading.Lock()
-      self.filename = filename
+      self.label = label
       self._checksum = None
 
     def Checksum(self):
       with self._lock:
         if not self._checksum:
-          logger.GetLogger().LogOutput("Computing checksum for '%s'." %
-                                       self.filename)
-          self._checksum = FileUtils().Md5File(self.filename)
+          logger.GetLogger().LogOutput("Acquiring checksum for '%s'." %
+                                       self.label.name)
+          self._checksum = None
+          if self.label.chromeos_image:
+            if os.path.exists(self.label.chromeos_image):
+              self._checksum = FileUtils().Md5File(self.label.chromeos_image)
+              logger.GetLogger().LogOutput("Computed checksum is "
+                                           ": %s" % self._checksum)
+          if not self._checksum:
+            if self.label.image_md5sum:
+              self._checksum = self.label.image_md5sum
+              logger.GetLogger().LogOutput("Checksum in experiment file is "
+                                           ": %s" % self._checksum)
+            else:
+              raise Exception("Checksum computing error.")
           logger.GetLogger().LogOutput("Checksum is: %s" % self._checksum)
         return self._checksum
 
@@ -34,16 +48,16 @@ class ImageChecksummer(object):
                                                              *args, **kwargs)
       return cls._instance
 
-  def Checksum(self, filename):
+  def Checksum(self, label):
     with self._lock:
-      if filename not in self._per_image_checksummers:
-        self._per_image_checksummers[filename] = (ImageChecksummer.
-                                                  PerImageChecksummer(filename))
-      checksummer = self._per_image_checksummers[filename]
+      if label.name not in self._per_image_checksummers:
+        self._per_image_checksummers[label.name] = (ImageChecksummer.
+                                                    PerImageChecksummer(label))
+      checksummer = self._per_image_checksummers[label.name]
 
     try:
       return checksummer.Checksum()
     except Exception, e:
-      logger.GetLogger().LogError("Could not compute checksum of file '%s'."
-                                  % filename)
+      logger.GetLogger().LogError("Could not compute checksum of image in label"
+                                  " '%s'."% label.name)
       raise e

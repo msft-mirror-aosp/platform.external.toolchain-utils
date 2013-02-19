@@ -77,6 +77,7 @@ class ExperimentFactory(object):
       chromeos_root = label_settings.GetField("chromeos_root")
       board = label_settings.GetField("board")
       my_remote = label_settings.GetField("remote")
+      image_md5sum = label_settings.GetField("md5sum")
     # TODO(yunlian): We should consolidate code in machine_manager.py
     # to derermine whether we are running from within google or not
       if ("corp.google.com" in socket.gethostname() and
@@ -91,10 +92,10 @@ class ExperimentFactory(object):
       image_args = label_settings.GetField("image_args")
       if test_flag.GetTestMode():
         label = MockLabel(label_name, image, chromeos_root, board, my_remote,
-                          image_args)
+                          image_args, image_md5sum)
       else:
         label = Label(label_name, image, chromeos_root, board, my_remote,
-                      image_args)
+                      image_args, image_md5sum)
       labels.append(label)
 
     email = global_settings.GetField("email")
