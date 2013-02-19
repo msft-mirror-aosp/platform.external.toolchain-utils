@@ -95,12 +95,10 @@ class ResultsReport(object):
     table = Table("box-table-a")
     label_headings = [Table.Cell("", hidden=True, colspan=2, header=True)]
     for label in labels:
-      colspan = len(columns)*2
+      colspan = len(columns)
       for col in columns:
         if self._ShouldSkipColumn(col):
-          colspan -= 2
-      if label.name == self.baseline.name:
-        colspan -= 1
+          colspan -= 1
       label_headings.append(Table.Cell(label.name, colspan=colspan,
                                        header=True))
 
