@@ -23,7 +23,7 @@ class CrosMachine(object):
     self.chromeos_root = chromeos_root
     self._GetMemoryInfo()
     self._GetCPUInfo()
-    self._ComputeChecksum()
+    self._ComputeMachineChecksum()
 
   def _ParseMemoryInfo(self, meminfo):
     for line in meminfo.splitlines():
@@ -58,7 +58,7 @@ class CrosMachine(object):
     if ret == 0:
       self._ParseCPUInfo(self.cpuinfo)
 
-  def _ComputeChecksum(self):
+  def _ComputeMachineChecksum(self):
     checksum_string = ""
     exclude_lines_list = ["MHz", "BogoMIPS", "bogomips"]
     for line in self.cpuinfo.splitlines():
@@ -66,9 +66,9 @@ class CrosMachine(object):
         checksum_string += line
     checksum_string += self.total_memory
     if checksum_string:
-      self.checksum = hashlib.md5(checksum_string).hexdigest()
+      self.machine_checksum = hashlib.md5(checksum_string).hexdigest()
     else:
-      self.checksum = ""
+      self.machine_checksum = ""
 
   def __str__(self):
     l = []
@@ -122,8 +122,8 @@ class MachineManager(object):
   def ComputeCommonCheckSum(self):
     self.machine_checksum = ""
     for machine in self.GetMachines():
-      if machine.checksum:
-        self.machine_checksum = machine.checksum
+      if machine.machine_checksum:
+        self.machine_checksum = machine.machine_checksum
         break
 
   def _TryToLockMachine(self, cros_machine):
@@ -154,12 +154,12 @@ class MachineManager(object):
       for m in self._all_machines:
         assert m.name != machine_name, "Tried to double-add %s" % machine_name
       cm = CrosMachine(machine_name, self.chromeos_root)
-      assert cm.checksum, ("Could not find checksum for machine %s" %
+      assert cm.machine_checksum, ("Could not find checksum for machine %s" %
                            machine_name)
       self._all_machines.append(cm)
 
   def AreAllMachineSame(self):
-    checksums = [m.checksum for m in self.GetMachines()]
+    checksums = [m.machine_checksum for m in self.GetMachines()]
     return len(set(checksums)) == 1
 
   def AcquireMachine(self, chromeos_image):
