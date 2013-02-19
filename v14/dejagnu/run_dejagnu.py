@@ -6,6 +6,7 @@
 
 __author__ = 'shenhan@google.com (Han Shen)'
 
+import getpass
 import optparse
 import os
 from os import path
@@ -15,6 +16,7 @@ import stat
 import sys
 import tempfile
 
+import tc_enter_chroot
 from utils import command_executer
 from utils import constants
 from utils import misc
@@ -28,14 +30,14 @@ def ProcessArguments(argv):
                                  usage='run_dejagnu options')
   parser.add_option('-c', '--chromeos_root', dest='chromeos_root',
                     help='Required. Specify chromeos root')
-  parser.add_option('-m', '--mount', dest='mount', action='store_true',
-                    default=False,
-                    help=('Specify testing mode to "mount" instead of "auto"'
-                          '. Under "auto" mode, which is the default - gcc is '
+  parser.add_option('-m', '--mount', dest='mount',
+                    help=('Specify gcc source to "mount" instead of "auto".'
+                          'Under "auto" mode, which is the default - gcc is '
                           'checked out and built automatically at default '
                           'directories. Under "mount" mode '
-                          '- the gcc_source_dir is set to "$chromeos_'
-                          'root/chroot/usr/local/toolchain_root/gcc", the '
+                          '- the gcc_source is set to "$chromeos_'
+                          'root/chroot/usr/local/toolchain_root/gcc", which is '
+                          'a mount point for this option value, the '
                           'gcc-build-dir then is computed as '
                           '"${gcc_source_dir}-build-${ctarget}". In this mode, '
                           'a complete gcc build must be performed in the '
@@ -80,6 +82,7 @@ class DejagnuExecuter(object):
     self._chromeos_root = chromeos_root
     self._chromeos_chroot = path.join(chromeos_root, 'chroot')
     if mount:
+      self._gcc_source_dir_to_mount = mount
       self._gcc_source_dir = path.join(constants.mounted_toolchain_root, 'gcc')
     else:
       self._gcc_source_dir = None
@@ -172,12 +175,17 @@ class DejagnuExecuter(object):
     self._gcc_top_build_dir = '{0}-build-{1}'.format(
         self._gcc_source_dir.rstrip('/'), self._target)
     self._gcc_build_dir = path.join(self._gcc_top_build_dir, 'gcc')
+    self._gcc_build_dir_to_mount = '{0}-build-{1}'.format(
+        self._gcc_source_dir_to_mount, self._target)
 
     gcc_top_build_dir_abs = path.join(self._chromeos_chroot,
                                       self._gcc_top_build_dir.lstrip('/'))
     if not path.isdir(gcc_top_build_dir_abs):
       sys.exit('gcc build dir does not exist:  {0}'.
                format(gcc_top_build_dir_abs))
+
+    self._gcc_source_dir_abs = gcc_source_dir_abs
+    self._gcc_top_build_dir_abs = gcc_top_build_dir_abs
 
   def PrepareGccDefault(self):
     """Auto emerging gcc for building purpose only."""
@@ -213,6 +221,7 @@ class DejagnuExecuter(object):
         raise Exception('ebuild gcc failed.')
 
   def MakeCheck(self):
+    self.MountGccSourceAndBuildDir()
     cmd = ('cd %s ; '
            'DEJAGNU=%s make %s RUNTESTFLAGS="--target_board=%s %s"' %
            (self._gcc_build_dir, path.join(self._tmp, 'site.exp'),
@@ -225,12 +234,27 @@ class DejagnuExecuter(object):
         'contrib/testsuite-management/validate_failures.py')
     cmd = 'cd {0} ; {1} --build_dir={0}'.format(
         self._gcc_top_build_dir, validate_failures_py)
-    ret = self._executer.ChrootRunCommand(self._chromeos_root, cmd)
-    if ret != 0:
+    self.MountGccSourceAndBuildDir()
+    ret = self._executer.ChrootRunCommand(
+      self._chromeos_root, cmd, return_output=True)
+    if ret[0] != 0:
       print ('*** validate_failures.py exited with non-zero code,'
              'please run it manually inside chroot - ')
       print '   ' + cmd
     return ret
+
+  # This method ensures necessary mount points before executing chroot comamnd.
+  def MountGccSourceAndBuildDir(self):
+    mount_points = [tc_enter_chroot.MountPoint(
+          self._gcc_source_dir_to_mount, self._gcc_source_dir_abs,
+          getpass.getuser(), "ro"),
+                    tc_enter_chroot.MountPoint(
+          self._gcc_build_dir_to_mount, self._gcc_top_build_dir_abs,
+          getpass.getuser(), "rw"),]
+    for mp in mount_points:
+      if mp.DoMount():
+        raise Exception('Failed to mount {0} onto {1}'.format(
+          mp.external_dir, self.mount_dir))
 
 def Main(argv):
   opts = ProcessArguments(argv)
@@ -238,7 +262,14 @@ def Main(argv):
                              opts.mount, opts.chromeos_root,
                              opts.remote, opts.board, opts.flags,
                              opts.keep_intermediate_files, opts.tools)
-  ret = 1
+
+  # Return value is a 3- or 4-element tuple
+  #   element#1 - exit code
+  #   element#2 - stdout
+  #   element#3 - stderr
+  #   element#4 - exception infor
+  # Some other scripts need these detailed information.
+  ret = (1, '', '')
   try:
     executer.SetupTestingDir()
     executer.PrepareTestingRsaKeys()
@@ -246,11 +277,15 @@ def Main(argv):
     executer.PrepareGcc()
     executer.MakeCheck()
     ret = executer.ValidateFailures()
+  except Exception as e:
+    # At least log the exception on console.
+    print e
+    # The #4 element encodes the runtime exception.
+    ret = (1, '', '', 'Exception happened during execution: \n' + str(e))
   finally:
     executer.CleanupTestingDir()
     return ret
 
 if __name__ == '__main__':
-  retval = Main(sys.argv)
+  retval = Main(sys.argv)[0]
   sys.exit(retval)
-  
