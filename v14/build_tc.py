@@ -47,7 +47,7 @@ class ToolchainPart(object):
     cross_symlink = os.path.join(
         self._chromeos_root,
         "chroot",
-        "usr/local/portage/crossdev/cross-%s" % self._ctarget)
+        "usr/local/bin/emerge-%s" % self._board)
     if not os.path.exists(cross_symlink):
       command = "./setup_board --board=%s" % self._board
       self._ce.ChrootRunCommand(self._chromeos_root, command)
