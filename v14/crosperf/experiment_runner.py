@@ -12,6 +12,7 @@ from utils import logger
 from utils.email_sender import EmailSender
 from utils.file_utils import FileUtils
 
+import config
 from experiment_status import ExperimentStatus
 from results_report import HTMLResultsReport
 from results_report import TextResultsReport
@@ -58,7 +59,8 @@ class ExperimentRunner(object):
       if not benchmark_run.cache_hit:
         send_mail = True
         break
-    if not send_mail and not experiment.email_to:
+    if (not send_mail and not experiment.email_to
+        or config.GetConfig("no_email")):
       return
 
     label_names = []

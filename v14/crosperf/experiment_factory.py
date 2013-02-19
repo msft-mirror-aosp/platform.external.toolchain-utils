@@ -35,8 +35,9 @@ class ExperimentFactory(object):
     acquire_timeout= global_settings.GetField("acquire_timeout")
     cache_dir = global_settings.GetField("cache_dir")
     if cache_dir:
-      config.AddConfig("cache_dir", 
+      config.AddConfig("cache_dir",
                        os.path.abspath(os.path.expanduser(cache_dir)))
+    config.AddConfig("no_email", global_settings.GetField("no_email"))
 
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.

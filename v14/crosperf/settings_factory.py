@@ -115,6 +115,9 @@ class GlobalSettings(Settings):
     self.AddField(TextField("cache_dir", default="",
                             description="The abs path of cache dir. "
                             "Default is /home/$(whoami)/cros_scratch."))
+    self.AddField(BooleanField("no_email", default=False,
+                               description="Whether to disable the email to "
+                               "user after crosperf finishes."))
 
 
 class SettingsFactory(object):
