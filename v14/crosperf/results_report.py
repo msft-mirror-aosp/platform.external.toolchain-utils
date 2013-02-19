@@ -201,7 +201,9 @@ class ResultsReport(object):
     ro = ResultOrganizer(benchmark_runs, labels)
     result = ro.result
     label_name = ro.labels
+    base_columns = columns
     for item in result:
+      columns = base_columns
       runs = result[item]
       tg = TableGenerator(runs, label_name)
       table = tg.GetTable()
