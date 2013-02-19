@@ -19,6 +19,22 @@ import time
 
 from utils import logger
 
+LOCK_SUFFIX = "_check_lock_liveness"
+
+
+def FileCheckName(name):
+  return name + LOCK_SUFFIX
+
+
+def OpenLiveCheck(file_name):
+  with FileCreationMask(0000):
+    fd = open(file_name, "a+w")
+  try:
+    fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+  except IOError:
+    raise
+  return fd
+
 
 class FileCreationMask(object):
   def __init__(self, mask):
@@ -34,19 +50,21 @@ class FileCreationMask(object):
 class LockDescription(object):
   """The description of the lock."""
 
-  def __init__(self, desc):
+  def __init__(self, desc=None):
     try:
       self.owner = desc["owner"]
       self.exclusive = desc["exclusive"]
       self.counter = desc["counter"]
       self.time = desc["time"]
       self.reason = desc["reason"]
+      self.auto = desc["auto"]
     except (KeyError, TypeError):
       self.owner = ""
       self.exclusive = False
       self.counter = 0
       self.time = 0
       self.reason = ""
+      self.auto = False
 
   def IsLocked(self):
     return self.counter or self.exclusive
@@ -56,11 +74,13 @@ class LockDescription(object):
                      "Exclusive: %s" % self.exclusive,
                      "Counter: %s" % self.counter,
                      "Time: %s" % self.time,
-                     "Reason: %s" % self.reason])
+                     "Reason: %s" % self.reason,
+                     "Auto: %s" % self.auto])
 
 
 class FileLock(object):
   """File lock operation class."""
+  FILE_OPS = []
 
   def __init__(self, lock_filename):
     self._filepath = lock_filename
@@ -71,9 +91,9 @@ class FileLock(object):
 
   @classmethod
   def AsString(cls, file_locks):
-    stringify_fmt = "%-30s %-15s %-4s %-4s %-15s %-40s"
+    stringify_fmt = "%-30s %-15s %-4s %-4s %-15s %-40s %-4s"
     header = stringify_fmt % ("machine", "owner", "excl", "ctr",
-                              "elapsed", "reason")
+                              "elapsed", "reason", "auto")
     lock_strings = []
     for file_lock in file_locks:
 
@@ -86,7 +106,8 @@ class FileLock(object):
                            file_lock._description.exclusive,
                            file_lock._description.counter,
                            elapsed_time,
-                           file_lock._description.reason))
+                           file_lock._description.reason,
+                           file_lock._description.auto))
     table = "\n".join(lock_strings)
     return "\n".join([header, table])
 
@@ -97,6 +118,8 @@ class FileLock(object):
     full_pattern = os.path.join(locks_dir, pattern)
     file_locks = []
     for lock_filename in glob.glob(full_pattern):
+      if LOCK_SUFFIX in lock_filename:
+        continue
       file_lock = FileLock(lock_filename)
       with file_lock as lock:
         if lock.IsLocked():
@@ -118,6 +141,21 @@ class FileLock(object):
           desc = None
         self._description = LockDescription(desc)
 
+        if self._description.exclusive and self._description.auto:
+          locked_byself = False
+          for fd in self.FILE_OPS:
+            if fd.name == FileCheckName(self._filepath):
+              locked_byself = True
+              break
+          if not locked_byself:
+            try:
+              fp = OpenLiveCheck(FileCheckName(self._filepath))
+            except IOError:
+              pass
+            else:
+              self._description = LockDescription()
+              fcntl.lockf(fp, fcntl.LOCK_UN)
+              fp.close()
         return self._description
       # Check this differently?
       except IOError as ex:
@@ -134,10 +172,11 @@ class FileLock(object):
 
 
 class Lock(object):
-  def __init__(self, lock_file):
+  def __init__(self, lock_file, auto=False):
     self._to_lock = os.path.basename(lock_file)
     self._lock_file = lock_file
     self._logger = logger.GetLogger()
+    self._auto = auto
 
   def NonBlockingLock(self, exclusive, reason=""):
     with FileLock(self._lock_file) as lock:
@@ -151,10 +190,15 @@ class Lock(object):
         if lock.counter:
           self._logger.LogError("Shared lock already acquired")
           return False
+        lock_file_check = FileCheckName(self._lock_file)
+        fd = OpenLiveCheck(lock_file_check)
+        FileLock.FILE_OPS.append(fd)
+
         lock.exclusive = True
         lock.reason = reason
         lock.owner = getpass.getuser()
         lock.time = time.time()
+        lock.auto = self._auto
       else:
         lock.counter += 1
     self._logger.LogOutput("Successfully locked: %s" % self._to_lock)
@@ -175,9 +219,19 @@ class Lock(object):
           self._logger.LogError("%s can't unlock lock owned by: %s" %
                                 (getpass.getuser(), lock.owner))
           return False
+        if lock.auto != self._auto:
+          self._logger.LogError("Can't unlock lock with different -a"
+                                " parameter.")
+          return False
         lock.exclusive = False
         lock.reason = ""
         lock.owner = ""
+        for f in FileLock.FILE_OPS:
+          if f.name == FileCheckName(self._lock_file):
+            fcntl.lockf(f, fcntl.LOCK_UN)
+            f.close()
+            FileLock.FILE_OPS.remove(f)
+
       else:
         lock.counter -= 1
     return True
@@ -186,8 +240,9 @@ class Lock(object):
 class Machine(object):
   LOCKS_DIR = "/home/mobiletc-prebuild/locks"
 
-  def __init__(self, name, locks_dir=LOCKS_DIR):
+  def __init__(self, name, locks_dir=LOCKS_DIR, auto=False):
     self._name = name
+    self._auto = auto
     try:
       self._full_name = socket.gethostbyaddr(name)[0]
     except socket.error:
@@ -195,7 +250,7 @@ class Machine(object):
     self._full_name = os.path.join(locks_dir, self._full_name)
 
   def Lock(self, exclusive=False, reason=""):
-    lock = Lock(self._full_name)
+    lock = Lock(self._full_name, self._auto)
     return lock.NonBlockingLock(exclusive, reason)
 
   def TryLock(self, timeout=300, exclusive=False, reason=""):
@@ -212,7 +267,7 @@ class Machine(object):
     return locked
 
   def Unlock(self, exclusive=False, ignore_ownership=False):
-    lock = Lock(self._full_name)
+    lock = Lock(self._full_name, self._auto)
     return lock.Unlock(exclusive, ignore_ownership)
 
 
@@ -254,6 +309,13 @@ def Main(argv):
                     action="store",
                     default=Machine.LOCKS_DIR,
                     help="Use this to set different locks_dir")
+  parser.add_option("-a",
+                    "--auto",
+                    dest="auto",
+                    action="store_true",
+                    default=False,
+                    help=("Use this to automatic unlock when"
+                          " the process is gone."))
 
   options, args = parser.parse_args(argv)
 
@@ -266,7 +328,7 @@ def Main(argv):
     return 1
 
   if len(args) > 1:
-    machine = Machine(args[1], options.locks_dir)
+    machine = Machine(args[1], options.locks_dir, options.auto)
   else:
     machine = None
 
