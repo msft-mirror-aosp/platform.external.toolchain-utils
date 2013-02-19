@@ -1,33 +1,29 @@
-#!/usr/bin/python2.4
-# Copyright 2010 Google Inc. All Rights Reserved.
-"""Code to transport profile data between a user's phone and the GWP servers.
+#!/usr/bin/python2.6
+# Copyright 2012 Google Inc. All Rights Reserved.
+# Author: mrdmnd@ (Matt Redmond)
+# Based off of code in //depot/google3/experimental/mobile_gwp
+"""Code to transport profile data between a user's machine and the CWP servers.
     Pages:
     "/": the main page for the app, left blank so that users cannot access
-         the file upload but left in the code for debuggin purposes
+         the file upload but left in the code for debugging purposes
     "/upload": Updates the datastore with a new file. the upload depends on
-               the for which is templated on the main page ("/")
+               the format which is templated on the main page ("/")
                input includes:
-                    build_num: the build number of the kernel
-                    kernel_ver: the version of the kernel
-                    phone_id: the imei number of the phone if in debug mode or
-                          a random number if not in debug mode
-                    proc_name: name of the processor on the phone.
                     profile_data: the zipped file containing profile data
-                                  and other files from the phone
-    "/serve": Lists all of the files in the datastore. each line is a new entry
-              in the datastore. The format is key~date~build~ver~imei, where
-              key is the entries key in the datastore), date is the file upload
-              time and date, build is the build number, ver is the kernel
-              version, and imei is the imei number of the phone.(Authentication
-              Required)
+                    lsb_release:  the file containing the lsb data
+    "/serve": Lists all of the files in the datastore. Each line is a new entry
+              in the datastore. The format is key~date, where key is the entry's
+              key in the datastore and date is the file upload time and date.
+              (Authentication Required)
     "/serve/([^/]+)?": For downloading a file of profile data, ([^/]+)? means
-                       any character sequence so the to download the file go to
+                       any character sequence so to download the file go to
                        '/serve/$key' where $key is the datastore key of the file
-                       you want to download.(Authentication Required)
+                       you want to download.
+                       (Authentication Required)
     "/del/([^/]+)?": For deleting an entry in the datastore. To use go to
                      '/del/$key' where $key is the datastore key of the entry
-                     you want to be deleted form the datastore. (Authentication
-                     Required)
+                     you want to be deleted form the datastore.
+                     (Authentication Required)
     TODO: Add more extensive logging"""
 
 import cgi
@@ -46,33 +42,26 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 
 class FileEntry(db.Model):
-  ufile = db.BlobProperty()                       #The profile data of the phone
-  date = db.DateTimeProperty(auto_now_add=True)   #date it was uploaded
-  fmd5 = db.ByteStringProperty()                  #fmd5 for error testing
-  build = db.StringProperty()                     #build number fo the phone
-  ver = db.StringProperty()                       #kernel version of the phone
-  proc_info = db.StringProperty()                 #Processor information
-  phone_id = db.StringProperty()                  #imei num. of the phone if in
-                                                  #debug mode else random number
+  profile_data = db.BlobProperty()                # The profile data
+  lsb_release = db.BlobProperty()                 # The machine configuration
+  date = db.DateTimeProperty(auto_now_add=True)   # Date it was uploaded
+  data_md5 = db.ByteStringProperty()              # md5 of the profile data
+  release_md5 = db.ByteStringProperty()           # md5 of the release data
 
 
 class MainPage(webapp.RequestHandler):
   """Main page only used as the form template, not actually displayed."""
 
-  def get(self, response=""):
-    if response is not "" and Authenticate(self):
+  def get(self, response=""):  # pylint: disable-msg=C6409
+    if response:
       self.response.out.write("<html><body>")
       self.response.out.write("""<br>
         <form action="/upload" enctype="multipart/form-data" method="post">
-          <div><label>File:</label></div>
+          <div><label>Profile Data:</label></div>
           <div><input type="file" name="profile_data"/></div>
-          <div><label>Build:</label></div>
-          <div><input type="text" name="build_num"/></div>
-          <div><label>Version Number:</label></div>
-          <div><input type="text" name="kernel_ver"/></div>
-          <div><label>IMEI Number:</label></div>
-          <div><input type="text" name="phone_id"/></div>
-          <div><input type="submit" value="Upload"></div>
+          <div><label>LSB Release:</label></div>
+          <div><input type="file" name="lsb_release"/></div>
+          <div><input type="submit" value="send" name="submit"></div>
         </form>
       </body>
       </html>""")
@@ -81,69 +70,59 @@ class MainPage(webapp.RequestHandler):
 class Upload(webapp.RequestHandler):
   """Handler for uploading data to the datastore, accessible by anyone."""
 
-  def post(self):
+  def post(self):  # pylint: disable-msg=C6409
     """Takes input based on the main page's form."""
     getfile = FileEntry()
-
-    getfile.build = self.request.get("build_num")
-    getfile.ver = self.request.get("kernel_ver")
-    getfile.phone_id = self.request.get("phone_id")
-    getfile.proc_info = self.request.get("proc_info")
-    f = self.request.get("profile_data")
-    getfile.ufile = db.Blob(f)
-
-    m = md5.new(f)
-    getfile.fmd5 = m.hexdigest()
-
+    f1 = self.request.get("profile_data")
+    getfile.profile_data = db.Blob(f1)
+    getfile.data_md5 = md5.new(f1).hexdigest()
+    f2 = self.request.get("lsb_release")
+    getfile.lsb_release = db.Blob(f2)
+    getfile.release_md5 = md5.new(f2).hexdigest()
     getfile.put()
     self.response.out.write(getfile.key())
     #self.redirect('/')
 
 
 class ServeHandler(webapp.RequestHandler):
-  """Given the entry's key in the database, output the profile data file. Only 
+  """Given the entry's key in the database, output the profile data file. Only
       accessible from @google.com accounts."""
 
-  def get(self, resource):
-    auth = Authenticate(self)
-    if auth is True:
-      fkey = str(urllib.unquote(resource))
-      reqent = db.get(fkey)
-      self.response.out.write(reqent.ufile)
+  def get(self, resource):  # pylint: disable-msg=C6409
+    if Authenticate(self):
+      file_key = str(urllib.unquote(resource))
+      request = db.get(file_key)
+      self.response.out.write(request.profile_data)
 
 
-class ListAll (webapp.RequestHandler):
+class ListAll(webapp.RequestHandler):
   """Displays all files uploaded. Only accessible by @google.com accounts."""
 
-  def get (self):
+  def get(self):  # pylint: disable-msg=C6409
     """Dispalys all information in FileEntry for, ~ delimited."""
-    auth = Authenticate(self)
-    if auth is True:
+    if Authenticate(self):
       query_str = ("SELECT * FROM FileEntry ORDER BY date ASC LIMIT "
                    + str(MAX_FILE_ENTRIES_DISP))
       query = db.GqlQuery(query_str)
       for item in query:
         self.response.out.write(
-            "%s<div>%s<div>%s<div>%s<div>%s<div>%s<div>%s</br>"
-            %(cgi.escape(str(item.key())), item.date, cgi.escape(item.build),
-              cgi.escape(item.ver), cgi.escape(str(item.proc_info)),
-              item.phone_id, item.fmd5))
+            "%s ~ %s</br>" % (cgi.escape(str(item.key())), item.date)
+            )
 
 
 class DelEntries(webapp.RequestHandler):
   """Deletes entries. Only accessible from @google.com accounts."""
 
-  def get(self, resource):
+  def get(self, resource):  # pylint: disable-msg=C6409
     """A specific entry is deleted, when the key is given."""
-    auth = Authenticate(self)
-    if auth is True:
+    if Authenticate(self):
       fkey = str(urllib.unquote(resource))
-      reqent = db.get(fkey)
-      if reqent is not None:
+      request = db.get(fkey)
+      if request:
         db.delete(fkey)
 
 
-def Authenticate (webpage):
+def Authenticate(webpage):
   """Some urls are only accessible if logged in with a @google.com account."""
   user = users.get_current_user()
   if user is None:
@@ -162,11 +141,10 @@ def main():
       ("/serve/([^/]+)?", ServeHandler),
       ("/serve", ListAll),
       ("/del/([^/]+)?", DelEntries),
-      #("/([^/]+)?", MainPage)
   ], debug=False)
-
   run_wsgi_app(application)
 
 
 if __name__ == "__main__":
   main()
+
