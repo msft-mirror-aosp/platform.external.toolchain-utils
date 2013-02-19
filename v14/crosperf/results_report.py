@@ -44,7 +44,10 @@ class ResultsReport(object):
     return self._GetTables(self.labels, self.benchmark_runs, columns)
 
   def GetSummaryTables(self):
-    columns = [Column(AmeanResult(),
+    columns = [Column(NonEmptyCountResult(),
+                      Format(),
+                      "Completed"),
+               Column(AmeanResult(),
                       Format()),
                Column(StdResult(),
                       Format(), "StdDev"),
