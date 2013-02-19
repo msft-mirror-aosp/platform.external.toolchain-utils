@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
-# Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
+# Copyright 2011 Google Inc. All Rights Reserved.
+
+"""Testing of benchmark_run."""
 
 import unittest
 
@@ -18,7 +18,7 @@ from results_cache import MockResultsCache
 class BenchmarkRunTest(unittest.TestCase):
   def testDryRun(self):
     my_label = MockLabel("test1", "image1", "/tmp/test_benchmark_run",
-                         "x86-alex", "chromeos-alex1")
+                         "x86-alex", "chromeos-alex1", "")
     m = MockMachineManager()
     m.AddMachine("chromeos-alex1", "/tmp/test_benchmark_run")
     b = MockBenchmarkRun("test run",

@@ -2,6 +2,8 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+"""The label of benchamrks."""
+
 from utils.file_utils import FileUtils
 
 
@@ -30,9 +32,14 @@ class Label(object):
 
 
 class MockLabel(object):
-  def __init__(self, name, chromeos_image, chromeos_root, board, remote):
+  def __init__(self, name, chromeos_image, chromeos_root, board, remote,
+               image_args):
     self.name = name
     self.chromeos_image = chromeos_image
     self.board = board
     self.remote = remote
-    self.chromeos_root = chromeos_root
+    if not chromeos_root:
+      self.chromeos_root = "/tmp/chromeos_root"
+    else:
+      self.chromeos_root = chromeos_root
+    self.image_args = image_args
