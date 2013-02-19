@@ -15,6 +15,8 @@ from utils import misc
 
 from image_checksummer import ImageChecksummer
 
+import config
+
 SCRATCH_DIR = "/home/%s/cros_scratch" % getpass.getuser()
 RESULTS_FILE = "results.txt"
 MACHINE_FILE = "machine.txt"
@@ -56,20 +58,14 @@ class Result(object):
 
   def _GetKeyvals(self):
     results_in_chroot = os.path.join(self._chromeos_root,
-                                     "src", "scripts")
-    if self._temp_dir:
-      new_temp = os.path.join(results_in_chroot,
-                              os.path.basename(self._temp_dir))
-      command = ("rm -rf {0} && ".format(new_temp))
-      command += ("mv {0} {1}".format(self._temp_dir, results_in_chroot))
-      self._temp_dir = new_temp
-    else:
+                                     "chroot", "tmp")
+    if not self._temp_dir:
       self._temp_dir = tempfile.mkdtemp(dir=results_in_chroot)
       command = "cp -r {0}/* {1}".format(self.results_dir, self._temp_dir)
-    self._ce.RunCommand(command)
+      self._ce.RunCommand(command)
 
     command = ("python generate_test_report --no-color --csv %s" %
-               (os.path.basename(self._temp_dir)))
+               (os.path.join("/tmp", os.path.basename(self._temp_dir))))
     [_, out, _] = self._ce.ChrootRunCommand(self._chromeos_root,
                                             command,
                                             return_output=True)
@@ -185,7 +181,9 @@ class Result(object):
       self.retval = pickle.load(f)
 
     # Untar the tarball to a temporary directory
-    self._temp_dir = tempfile.mkdtemp()
+    self._temp_dir = tempfile.mkdtemp(dir=os.path.join(self._chromeos_root,
+                                                       "chroot", "tmp"))
+
     command = ("cd %s && tar xf %s" %
                (self._temp_dir,
                 os.path.join(cache_dir, AUTOTEST_TARBALL)))
@@ -207,17 +205,15 @@ class Result(object):
 
   def StoreToCacheDir(self, cache_dir, machine_manager):
     # Create the dir if it doesn't exist.
-    command = "mkdir -p %s" % cache_dir
-    ret = self._ce.RunCommand(command)
-    if ret:
-      raise Exception("Could not create cache dir: %s" % cache_dir)
-    # Store to the cache directory.
-    with open(os.path.join(cache_dir, RESULTS_FILE), "w") as f:
+    temp_dir = tempfile.mkdtemp()
+
+    # Store to the temp directory.
+    with open(os.path.join(temp_dir, RESULTS_FILE), "w") as f:
       pickle.dump(self.out, f)
       pickle.dump(self.err, f)
       pickle.dump(self.retval, f)
 
-    tarball = os.path.join(cache_dir, AUTOTEST_TARBALL)
+    tarball = os.path.join(temp_dir, AUTOTEST_TARBALL)
     command = ("cd %s && "
                "tar "
                "--exclude=var/spool "
@@ -229,8 +225,20 @@ class Result(object):
     # Store machine info.
     # TODO(asharif): Make machine_manager a singleton, and don't pass it into
     # this function.
-    with open(os.path.join(cache_dir, MACHINE_FILE), "w") as f:
+    with open(os.path.join(temp_dir, MACHINE_FILE), "w") as f:
       f.write(machine_manager.machine_checksum_string[self.label_name])
+
+    if os.path.exists(cache_dir):
+      command = "rm -rf {0}".format(temp_dir)
+    else:
+      command = "mkdir -p {0} && ".format(os.path.dirname(cache_dir))
+      command += "mv {0} {1}".format(temp_dir, cache_dir)
+    ret = self._ce.RunCommand(command)
+    if ret:
+      command = "rm -rf {0}".format(temp_dir)
+      self._ce.RunCommand(command)
+      raise Exception("Could not move dir %s to dir %s" %
+                      (temp_dir, cache_dir))
 
   @classmethod
   def CreateFromRun(cls, logger, chromeos_root, board, label_name,
@@ -313,7 +321,10 @@ class ResultsCache(object):
   def _FormCacheDir(self, list_of_strings):
     cache_key = " ".join(list_of_strings)
     cache_dir = misc.GetFilenameFromString(cache_key)
-    cache_path = os.path.join(SCRATCH_DIR, cache_dir)
+    if config.GetConfig("cache_dir"):
+      cache_path = os.path.join(config.GetConfig("cache_dir"), cache_dir)
+    else:
+      cache_path = os.path.join(SCRATCH_DIR, cache_dir)
     return cache_path
 
   def _GetCacheKeyList(self, read):

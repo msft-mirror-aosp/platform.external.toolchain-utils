@@ -7,6 +7,7 @@ import os
 import socket
 
 from benchmark import Benchmark
+import config
 from experiment import Experiment
 from label import Label
 from label import MockLabel
@@ -32,6 +33,10 @@ class ExperimentFactory(object):
     rm_chroot_tmp = global_settings.GetField("rm_chroot_tmp")
     key_results_only = global_settings.GetField("key_results_only")
     acquire_timeout= global_settings.GetField("acquire_timeout")
+    cache_dir = global_settings.GetField("cache_dir")
+    if cache_dir:
+      config.AddConfig("cache_dir", 
+                       os.path.abspath(os.path.expanduser(cache_dir)))
 
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.

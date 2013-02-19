@@ -107,12 +107,14 @@ class GlobalSettings(Settings):
                                description="Number of seconds to wait for "
                                "machine before exit if all the machines in "
                                "the experiment file are busy. Default is 0"))
-
     self.AddField(TextField("perf_args", default="",
                             description="The optional profile command. It "
                             "enables perf commands to record perforamance "
                             "related counters. It must start with perf "
                             "command record or stat followed by arguments."))
+    self.AddField(TextField("cache_dir", default="",
+                            description="The abs path of cache dir. "
+                            "Default is /home/$(whoami)/cros_scratch."))
 
 
 class SettingsFactory(object):
