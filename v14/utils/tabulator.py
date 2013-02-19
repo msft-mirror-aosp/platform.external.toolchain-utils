@@ -7,7 +7,7 @@ import math
 import numpy
 import colortrans
 import stats
-from utils.email_sender import EmailSender
+from email_sender import EmailSender
 
 
 def _IsFloat(v):
