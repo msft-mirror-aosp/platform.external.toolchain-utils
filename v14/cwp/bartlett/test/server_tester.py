@@ -27,25 +27,21 @@ class ServerTest(unittest.TestCase):
 
   def setUp(self):
     """Instantiate the files and server needed to test upload functionality."""
-    self.server_proc = LaunchLocalServer()
-    self.jar = cookielib.LWPCookieJar()
-    self.opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.jar))
+    self._server_proc = LaunchLocalServer()
+    self._jar = cookielib.LWPCookieJar()
+    self.opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self._jar))
 
     # We need these files to not delete when closed, because we have to reopen
     # them in read mode after we write and close them.
     self.profile_data = tempfile.NamedTemporaryFile(delete=False)
-    self.lsb_release = tempfile.NamedTemporaryFile(delete=False)
 
     size = 16 * 1024
     self.profile_data.write(os.urandom(size))
-    self.lsb_release.write(os.urandom(size / 16))
 
   def tearDown(self):
-    self.lsb_release.close()
     self.profile_data.close()
-    os.remove(self.lsb_release.name)
     os.remove(self.profile_data.name)
-    os.kill(self.server_proc.pid, signal.SIGINT)
+    os.kill(self._server_proc.pid, signal.SIGINT)
 
   def testIntegration(self):  # pylint: disable-msg=C6409
     key = self._testUpload()
@@ -56,7 +52,8 @@ class ServerTest(unittest.TestCase):
   def _testUpload(self):  # pylint: disable-msg=C6409
     register_openers()
     data = {"profile_data": self.profile_data,
-            "lsb_release": self.lsb_release}
+            "board": "x86-zgb",
+            "chromeos_version": "2409.0.2012_06_08_1114"}
     datagen, headers = multipart_encode(data)
     request = urllib2.Request(SERVER_URL + "upload", datagen, headers)
     response = urllib2.urlopen(request).read()
@@ -88,7 +85,7 @@ def LaunchLocalServer():
   proc = subprocess.Popen(["dev_appserver.py", "--clear_datastore", SERVER_DIR],
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
   # Wait for server to come up
-  while 1:
+  while True:
     time.sleep(1)
     try:
       request = urllib2.Request(SERVER_URL + "serve")
