@@ -172,12 +172,16 @@ class CommandExecuter:
 
     # Write all commands to a file.
     command_file = self.WriteToTempShFile(cmd)
-    self.CopyFiles(command_file, command_file,
-                   dest_machine=machine,
-                   command_terminator=command_terminator,
-                   chromeos_root=chromeos_root,
-                   dest_cros=True,
-                   recursive=False)
+    retval = self.CopyFiles(command_file, command_file,
+                            dest_machine=machine,
+                            command_terminator=command_terminator,
+                            chromeos_root=chromeos_root,
+                            dest_cros=True,
+                            recursive=False)
+    if retval:
+      self.logger.LogError("Could not run remote command on machine."
+                           " Is the machine up?")
+      return retval
 
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
     command += "\nremote_sh bash %s" % command_file
