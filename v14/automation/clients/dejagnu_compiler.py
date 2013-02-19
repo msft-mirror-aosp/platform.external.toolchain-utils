@@ -57,7 +57,8 @@ class DejagnuCompilerNightlyClient:
                   '--remote=%s' % self._remote))
     label = 'dejagnu'
     job = jobs.CreateLinuxJob(label, chain, timeout=8*60*60)
-    return job_group.JobGroup(label, [job], cleanup_on_completion=False)
+    return job_group.JobGroup(label, [job], cleanup_on_failure=True,
+                              cleanup_on_completion=True)
 
 
 @logger.HandleUncaughtExceptions
