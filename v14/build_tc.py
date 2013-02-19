@@ -30,6 +30,7 @@ class ToolchainPart(object):
     self._board = board
     self._ctarget = misc.GetCtargetFromBoard(self._board,
                                               self._chromeos_root)
+    self.tag = "%s-%s" % (name, self._ctarget)
     self._ce = command_executer.GetCommandExecuter()
     self._mask_file = os.path.join(
         self._chromeos_root,
@@ -52,8 +53,6 @@ class ToolchainPart(object):
       self._ce.ChrootRunCommand(self._chromeos_root, command)
 
   def Build(self):
-    self.RunSetupBoardIfNecessary()
-
     rv = 1
     try:
       self.UninstallTool()
@@ -252,24 +251,28 @@ def Main(argv):
       build_env["CXXFLAGS"] = debug_flags
 
   # Create toolchain parts
-  toolchain_parts = []
+  toolchain_parts = {}
   for board in options.board.split(","):
     if options.gcc_dir:
       tp = ToolchainPart("gcc", gcc_dir, chromeos_root, board,
                          not options.noincremental, build_env)
-      toolchain_parts.append(tp)
+      toolchain_parts[tp.tag] = tp
+      tp.RunSetupBoardIfNecessary()
     if options.binutils_dir:
       tp = ToolchainPart("binutils", binutils_dir, chromeos_root, board,
                          not options.noincremental, build_env)
-      toolchain_parts.append(tp)
+      toolchain_parts[tp.tag] = tp
+      tp.RunSetupBoardIfNecessary()
     if options.gdb_dir:
       tp = ToolchainPart("gdb", gdb_dir, chromeos_root, board,
                          not options.noincremental, build_env)
-      toolchain_parts.append(tp)
+      toolchain_parts[tp.tag] = tp
+      tp.RunSetupBoardIfNecessary()
 
   rv = 0
   try:
-    for tp in toolchain_parts:
+    for tag in toolchain_parts:
+      tp = toolchain_parts[tag]
       if options.mount_only or options.unmount_only:
         tp.MountSources(options.unmount_only)
       else:
