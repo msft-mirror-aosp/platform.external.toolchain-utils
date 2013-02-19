@@ -36,6 +36,7 @@ class CrosMachine(object):
     self._GetMachineID()
     self.machine_checksum = self._GetMD5Checksum(self.checksum_string)
     self.machine_id_checksum = self._GetMD5Checksum(self.machine_id)
+
   def _ParseMemoryInfo(self):
     line = self.meminfo.splitlines()[0]
     usable_kbytes = int(line.split()[1])
@@ -115,8 +116,6 @@ class CrosMachine(object):
         command, return_output=True,
         machine=self.name, chromeos_root=self.chromeos_root)
     assert ret == 0, "Could not get machine_id from machine: %s" % self.name
-    if not ret:
-      self._ComputeMachineIDChecksum()
 
   def __str__(self):
     l = []
