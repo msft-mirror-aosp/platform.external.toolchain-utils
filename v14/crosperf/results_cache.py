@@ -316,7 +316,7 @@ class ResultsCache(object):
     if read and CacheConditions.CHECKSUMS_MATCH not in self.cache_conditions:
       checksum = "*"
     else:
-      checksum = ImageChecksummer().Checksum(self.chromeos_image)
+      checksum = ImageChecksummer().Checksum(self.label)
 
     if read and CacheConditions.IMAGE_PATH_MATCH not in self.cache_conditions:
       image_path_checksum = "*"

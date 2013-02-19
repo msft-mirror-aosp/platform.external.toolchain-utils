@@ -150,7 +150,7 @@ class MachineManager(object):
     self.chromeos_root = chromeos_root
 
   def ImageMachine(self, machine, label):
-    checksum = ImageChecksummer().Checksum(label.chromeos_image)
+    checksum = ImageChecksummer().Checksum(label)
     if machine.checksum == checksum:
       return
     chromeos_root = label.chromeos_root
@@ -227,7 +227,7 @@ class MachineManager(object):
     return len(set(checksums)) == 1
 
   def AcquireMachine(self, chromeos_image, label):
-    image_checksum = ImageChecksummer().Checksum(chromeos_image)
+    image_checksum = ImageChecksummer().Checksum(label)
     machines = self.GetMachines(label)
     check_interval_time = 120
     with self._lock:
