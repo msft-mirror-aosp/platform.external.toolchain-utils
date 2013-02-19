@@ -74,11 +74,14 @@ class CommandExecuter:
     out = err = None
     pipes = [p.stdout, p.stderr]
 
+    my_poll = select.poll()
+    my_poll.register(p.stdout, select.POLLIN)
+    my_poll.register(p.stderr, select.POLLIN)
+
     terminated_time = None
     started_time = time.time()
 
     while len(pipes):
-      fds = select.select(pipes, [], [], 0.1)
       if command_terminator and command_terminator.IsTerminated():
         self.RunCommand("sudo kill -9 " + str(p.pid),
                         print_to_console=print_to_console)
@@ -88,21 +91,25 @@ class CommandExecuter:
           return (p.wait, full_stdout, full_stderr)
         else:
           return wait
-      for fd in fds[0]:
-        if fd == p.stdout:
+
+      l=my_poll.poll(100)
+      for (fd, evt) in l:
+        if fd == p.stdout.fileno():
           out = os.read(p.stdout.fileno(), 16384)
           if return_output:
             full_stdout += out
           self.logger.LogCommandOutput(out, print_to_console)
           if out == "":
             pipes.remove(p.stdout)
-        if fd == p.stderr:
+            my_poll.unregister(p.stdout)
+        if fd == p.stderr.fileno():
           err = os.read(p.stderr.fileno(), 16384)
           if return_output:
             full_stderr += err
           self.logger.LogCommandError(err, print_to_console)
           if err == "":
             pipes.remove(p.stderr)
+            my_poll.unregister(p.stderr)
 
       if p.poll() is not None:
         if terminated_time is None:
