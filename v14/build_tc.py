@@ -234,10 +234,10 @@ def Main(argv):
     options.unmount_only = False
   build_env = {}
   if options.cflags:
-    build_env["CFLAGS"] = options.cflags
+    build_env["CFLAGS"] = "`portageq envvar CFLAGS` " + options.cflags
   if options.cxxflags:
-    build_env["CXXFLAGS"] = options.cxxflags
-  if options.cxxflags:
+    build_env["CXXFLAGS"] = "`portageq envvar CXXFLAGS` " + options.cxxflags
+  if options.ldflags:
     build_env["LDFLAGS"] = options.ldflags
   if options.debug:
     debug_flags = "-g3 -O0"
