@@ -54,6 +54,10 @@ def Main(argv):
                     help="ChromeOS target board, e.g. x86-generic")
   parser.add_option("--label", dest="label",
                     help="Optional label symlink to point to build dir.")
+  parser.add_option("--env",
+                    dest="env",
+                    default="",
+                    help="Env to pass to build_packages.")
   parser.add_option("--vanilla", dest="vanilla",
                     default=False,
                     action="store_true",
@@ -67,7 +71,7 @@ def Main(argv):
   if options.board is None:
     Usage(parser, "--board must be set")
 
-  build_packages_env = ""
+  build_packages_env = options.env
   if options.rebuild == True:
     build_packages_env = "EXTRA_BOARD_FLAGS=-e"
 
@@ -84,7 +88,7 @@ def Main(argv):
                                          usepkg=False,
                                          force=options.clobber_board)
     command += "; " + build_packages_env + " " + build_packages_command
-    command += "&& " + build_image_command
+    command += "&& " + build_packages_env + " " + build_image_command
     ret = cmd_executer.ChrootRunCommand(options.chromeos_root, command)
     return ret
 
@@ -122,6 +126,7 @@ def Main(argv):
 
   # Build image
   ret = cmd_executer.ChrootRunCommand(options.chromeos_root,
+                                      build_packages_env + " " +
                                       build_image_command)
 
   logger.GetLogger().LogFatalIf(ret, "build_image failed")
