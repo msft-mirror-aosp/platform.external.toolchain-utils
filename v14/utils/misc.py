@@ -252,6 +252,8 @@ def AcquireLock(lock_file, timeout=1200):
   abs_path = os.path.abspath(lock_file)
   dir_path = os.path.dirname(abs_path)
   sleep_time = min(10, timeout/10.0)
+  reason = "pid: {0}, commad: {1}".format(os.getpid(),
+                                          sys.argv[0])
   if not os.path.exists(dir_path):
     try:
       os.makedirs(dir_path)
@@ -259,7 +261,7 @@ def AcquireLock(lock_file, timeout=1200):
       print "Cannot create dir {0}, exiting...".format(dir_path)
       exit(0)
   while True:
-    locked = (lock_machine.Lock(lock_file).NonBlockingLock(True, sys.argv[0]))
+    locked = (lock_machine.Lock(lock_file).NonBlockingLock(True, reason))
     if locked:
       break
     time.sleep(sleep_time)
