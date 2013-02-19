@@ -144,9 +144,10 @@ class MachineManager(object):
     ce = command_executer.GetCommandExecuter()
     with self.image_lock:
       retval = ce.RunCommand(" ".join(["python"] + image_args))
-      self.num_reimages += 1
       if retval:
         raise Exception("Could not image machine: '%s'." % machine.name)
+      else:
+        self.num_reimages += 1
       machine.checksum = checksum
       machine.image = chromeos_image
 
