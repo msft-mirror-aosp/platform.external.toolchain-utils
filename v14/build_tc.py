@@ -132,7 +132,11 @@ class ToolchainPart(object):
     if self._incremental:
       env["FEATURES"] += " keepwork"
 
-    env["USE"] = "multislot mounted_%s" % self._name
+    if "USE" in env:
+      env["USE"] += " multislot mounted_%s" % self._name
+    else:
+      env["USE"] = "multislot mounted_%s" % self._name
+
     env["%s_SOURCE_PATH" % self._name.upper()] = (
         os.path.join("/", self._chroot_source_path))
     env["ACCEPT_KEYWORDS"] = "~*"
@@ -225,6 +229,11 @@ def Main(argv):
                     default=False,
                     action="store_true",
                     help="Just unmount the tool directories.")
+  parser.add_option("--extra_use_flags",
+                    dest="extra_use_flags",
+                    default="",
+                    help="Extra flag for USE, to be passed to the ebuild. "
+                    "('multislot' and 'mounted_<tool>' are always passed.)")
 
 
   options, _ = parser.parse_args(argv)
@@ -261,6 +270,8 @@ def Main(argv):
       build_env["CXXFLAGS"] += " %s" % (debug_flags)
     else:
       build_env["CXXFLAGS"] = debug_flags
+  if options.extra_use_flags:
+    build_env["USE"] = options.extra_use_flags
 
   # Create toolchain parts
   toolchain_parts = {}
