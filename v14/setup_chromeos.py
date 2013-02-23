@@ -10,9 +10,11 @@ particular release of ChromeOS.
 
 __author__ = "raymes@google.com (Raymes Khoury)"
 
+from datetime import datetime
 import getpass
 import optparse
 import os
+import pickle
 import sys
 import tempfile
 import time
@@ -32,6 +34,10 @@ GCLIENT_FILE = """solutions = [
    },
 ]
 """
+
+# List of stable versions used for common team image
+# Sheriff must update this list when a new common version becomes available
+COMMON_VERSIONS = "/home/mobiletc-prebuild/common_images/common_list.txt"
 
 def Usage(parser):
   parser.print_help()
@@ -61,22 +67,42 @@ def TimeToVersion(my_time, versions_git):
   return version
 
 
+def TimeToCommonVersion(timestamp):
+  """Convert timestamp to common image version."""
+  tdt = datetime.fromtimestamp(float(timestamp))
+  with open(COMMON_VERSIONS, "r") as f:
+    common_list = pickle.load(f)
+    for sv in common_list:
+      sdt = datetime.strptime(sv["date"], "%Y-%m-%d %H:%M:%S.%f")
+      if tdt >= sdt:
+        return "%s.%s" % (sv["chrome_major_version"], sv["chromeos_version"])
+    # should never reach here
+    logger.GetLogger().LogFatal("No common version for timestamp")
+  return None
+
+
 def Main(argv):
   """Checkout the ChromeOS source."""
   parser = optparse.OptionParser()
   parser.add_option("--dir", dest="directory",
                     help="Target directory for ChromeOS installation.")
   parser.add_option("--version", dest="version", default="latest",
-                    help="""ChromeOS version. Can be: (1) A release version
-in the format: 'X.X.X.X' (2) 'latest' for the latest release version or (3)
-'top' for top of trunk. Default is 'latest'""")
+                    help="""ChromeOS version. Can be:
+(1) A release version in the format: 'X.X.X.X'
+(2) 'top' for top of trunk
+(3) 'latest_lkgm' for the latest lkgm version
+(4) 'lkgm' for the lkgm release before timestamp
+(5) 'latest_common' for the latest team common stable version
+(6) 'common' for the team common stable version before timestamp
+Default is 'latest_lkgm'.""")
   parser.add_option("--timestamp", dest="timestamp", default=None,
                     help="""Timestamps in epoch format. It will check out the
-latest LKGM version of ChromeOS before the timestamp. It will also overide
-the version option.""")
+latest LKGM or the latest COMMON version of ChromeOS before the timestamp.
+Use in combination with --version=latest or --version=common. Use
+'date -d <date string> +%s' to find epoch time""")
   parser.add_option("--minilayout", dest="minilayout", default=False,
                     action="store_true",
-                    help="""Whether to checkout the minilayout 
+                    help="""Whether to checkout the minilayout
 (smaller checkout).'""")
   parser.add_option("--jobs", "-j", dest="jobs", default="1",
                     help="Number of repo sync threads to use.")
@@ -96,6 +122,10 @@ the version option.""")
     timestamp = ""
   else:
     timestamp = options.timestamp.strip()
+    if version not in ("lkgm", "common"):
+      parser.print_help()
+      logger.GetLogger().LogFatal("timestamp option only applies for "
+                                  "versions \"lkgm\" or \"common\"")
 
   if not options.directory:
     parser.print_help()
@@ -112,19 +142,49 @@ the version option.""")
     versions_repo = (
         "ssh://gerrit-int.chromium.org:29419/chromeos/manifest-versions.git")
 
-  if timestamp:
-    my_version = TimeToVersion(timestamp, versions_repo)
-    if my_version:
-      version = my_version
-
   if version == "top":
     init = "repo init -u %s" % manifest_repo
+  elif version == "latest_lkgm":
+    version = TimeToVersion(time.mktime(time.gmtime()), versions_repo)
+    version, manifest = version.split(".", 1)
+    logger.GetLogger().LogOutput("found version %s.%s for latest LKGM" % (
+        version, manifest))
+    init = ("repo init -u %s -m paladin/buildspecs/%s/%s.xml" % (
+        versions_repo, version, manifest))
+  elif version == "lkgm":
+    if not timestamp:
+      parser.print_help()
+      logger.GetLogger().LogFatal("No timestamp specified for version=lkgm")
+    version = TimeToVersion(timestamp, versions_repo)
+    version, manifest = version.split(".", 1)
+    logger.GetLogger().LogOutput("found version %s.%s for LKGM at timestamp %s"
+                                 % (version, manifest, timestamp))
+    init = ("repo init -u %s -m paladin/buildspecs/%s/%s.xml" % (
+        versions_repo, version, manifest))
+  elif version == "latest_common":
+    version = TimeToCommonVersion(time.mktime(time.gmtime()))
+    version, manifest = version.split(".", 1)
+    logger.GetLogger().LogOutput("found version %s.%s for latest Common image" %
+                                 (version, manifest))
+    init = ("repo init -u %s -m buildspecs/%s/%s.xml" % (
+        versions_repo, version, manifest))
+  elif version == "common":
+    if not timestamp:
+      parser.print_help()
+      logger.GetLogger().LogFatal("No timestamp specified for version=lkgm")
+    version = TimeToCommonVersion(timestamp)
+    version, manifest = version.split(".", 1)
+    logger.GetLogger().LogOutput("found version %s.%s for latest common image "
+                                 "at timestamp %s" % (
+                                     version, manifest, timestamp))
+    init = ("repo init -u %s -m buildspecs/%s/%s.xml" % (
+        versions_repo, version, manifest))
   else:
-    if version =="latest":
-      version = TimeToVersion(time.mktime(time.gmtime()), versions_repo)
+    # user specified a specific version number
     version, manifest = version.split(".", 1)
     init = ("repo init -u %s -m paladin/buildspecs/%s/%s.xml" % (
-            versions_repo, version, manifest))
+        versions_repo, version, manifest))
+
   if options.minilayout:
     init += " -g minilayout"
 
