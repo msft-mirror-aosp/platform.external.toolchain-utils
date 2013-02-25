@@ -228,10 +228,11 @@ class Result(object):
       f.write(machine_manager.machine_checksum_string[self.label_name])
 
     if os.path.exists(cache_dir):
-      command = "rm -rf {0}".format(temp_dir)
-    else:
-      command = "mkdir -p {0} && ".format(os.path.dirname(cache_dir))
-      command += "mv {0} {1}".format(temp_dir, cache_dir)
+      command = "rm -rf {0}".format(cache_dir)
+      self._ce.RunCommand(command)
+
+    command = "mkdir -p {0} && ".format(os.path.dirname(cache_dir))
+    command += "mv {0} {1}".format(temp_dir, cache_dir)
     ret = self._ce.RunCommand(command)
     if ret:
       command = "rm -rf {0}".format(temp_dir)
