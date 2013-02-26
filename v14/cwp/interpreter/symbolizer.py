@@ -13,7 +13,7 @@ from utils import misc
 GSUTIL_CMD = "gsutil cp gs://chromeos-image-archive/%s-release/%s/debug.tgz %s"
 TAR_CMD = "tar -zxvf %s -C %s"
 PERF_BINARY = "/google/data/ro/projects/perf/perf"
-VMLINUX_FLAG = " --vmlinux=/usr/lib/debug/usr/lib/debug/boot/vmlinux.debug"
+VMLINUX_FLAG = " --vmlinux=/usr/lib/debug/boot/vmlinux"
 PERF_CMD = PERF_BINARY +" report -i %s -n --symfs=%s" + VMLINUX_FLAG
 
 
@@ -27,8 +27,11 @@ def main():
     return 1
   else:
     for filename in os.listdir(opts.in_dir):
-      _DownloadSymbols(filename, opts.cache)
-      _PerfReport(filename, opts.in_dir, opts.out_dir, opts.cache)
+      try:
+        _DownloadSymbols(filename, opts.cache)
+        _PerfReport(filename, opts.in_dir, opts.out_dir, opts.cache)
+      except:
+        print "Exception caught. Continuing..."
   return 0
 
 
@@ -38,8 +41,8 @@ def _ValidateOpts(opts):
     print "Input directory doesn't exist."
     return False
   if not os.path.exists(opts.out_dir):
-    print "Output directory doesn't exist."
-    return False
+    print "Output directory doesn't exist. Creating it..."
+    os.makedirs(opts.out_dir)
   if not os.path.exists(opts.cache):
     print "Cache directory doesn't exist."
     return False
