@@ -9,12 +9,9 @@ import time
 
 from utils import logger
 
-from autotest_runner import AutotestRunner
 from benchmark_run import BenchmarkRun
 from machine_manager import MachineManager
 from machine_manager import MockMachineManager
-from results_cache import ResultsCache
-from results_report import HTMLResultsReport
 import test_flag
 
 
