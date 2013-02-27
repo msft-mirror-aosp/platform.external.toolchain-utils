@@ -28,7 +28,6 @@ class ExperimentFactory(object):
     global_settings = experiment_file.GetGlobalSettings()
     experiment_name = global_settings.GetField("name")
     remote = global_settings.GetField("remote")
-    rerun_if_failed = global_settings.GetField("rerun_if_failed")
     chromeos_root = global_settings.GetField("chromeos_root")
     rm_chroot_tmp = global_settings.GetField("rm_chroot_tmp")
     key_results_only = global_settings.GetField("key_results_only")
@@ -105,7 +104,7 @@ class ExperimentFactory(object):
 
     email = global_settings.GetField("email")
     all_remote = list(set(all_remote))
-    experiment = Experiment(experiment_name, all_remote, rerun_if_failed,
+    experiment = Experiment(experiment_name, all_remote,
                             working_directory, chromeos_root,
                             cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(),

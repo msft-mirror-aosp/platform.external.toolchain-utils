@@ -21,12 +21,11 @@ import test_flag
 class Experiment(object):
   """Class representing an Experiment to be run."""
 
-  def __init__(self, name, remote, rerun_if_failed, working_directory,
+  def __init__(self, name, remote, working_directory,
                chromeos_root, cache_conditions, labels, benchmarks,
                experiment_file, email_to, acquire_timeout, log_dir,
                share_users):
     self.name = name
-    self.rerun_if_failed = rerun_if_failed
     self.working_directory = working_directory
     self.remote = remote
     self.chromeos_root = chromeos_root
