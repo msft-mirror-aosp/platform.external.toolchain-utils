@@ -86,7 +86,7 @@ def Main(argv):
   parser = optparse.OptionParser()
   parser.add_option("--dir", dest="directory",
                     help="Target directory for ChromeOS installation.")
-  parser.add_option("--version", dest="version", default="latest",
+  parser.add_option("--version", dest="version", default="latest_lkgm",
                     help="""ChromeOS version. Can be:
 (1) A release version in the format: 'X.X.X.X'
 (2) 'top' for top of trunk
