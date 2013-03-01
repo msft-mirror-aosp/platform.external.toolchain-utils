@@ -57,7 +57,7 @@ def TimeToVersion(my_time, versions_git):
   cmd_executer = command_executer.GetCommandExecuter()
   ret = cmd_executer.RunCommands(commands)
   if ret:
-    return None
+    logger.GetLogger().LogFatal("Failed to checkout manifest-versions.")
   path = os.path.realpath("{0}/manifest-versions/LKGM/lkgm.xml".format(temp))
   pp = path.split("/")
   small = os.path.basename(path).split(".xml")[0]
@@ -66,6 +66,37 @@ def TimeToVersion(my_time, versions_git):
   cmd_executer.RunCommands(commands)
   return version
 
+# Get version spec file, either from "paladin" or "buildspec" directory.
+def GetVersionSpecFile(version, versions_git):
+  temp = tempfile.mkdtemp()
+  commands = ["cd {0}".format(temp), \
+              "git clone {0} versions".format(versions_git)]
+  cmd_executer = command_executer.GetCommandExecuter()
+  ret = cmd_executer.RunCommands(commands)
+  err_msg = None
+  if ret:
+    err_msg = "Failed to checkout versions_git - {0}".format(versions_git)
+    ret = None
+  else:
+    v, m = version.split(".", 1)
+    paladin_spec = "paladin/buildspecs/{0}/{1}.xml".format(v, m)
+    generic_spec = "buildspecs/{0}/{1}.xml".format(v, m)
+    paladin_path = "{0}/versions/{1}".format(temp, paladin_spec)
+    generic_path = "{0}/versions/{1}".format(temp, generic_spec)
+    if os.path.exists(paladin_path):
+      ret = paladin_spec
+    elif os.path.exists(generic_path):
+      ret = generic_spec
+    else:
+      err_msg = "No spec found for version {0}".format(version)
+      ret = None
+    # Fall through to clean up.
+
+  commands = ["rm -rf {0}".format(temp)]
+  cmd_executer.RunCommands(commands)
+  if err_msg:
+    logger.GetLogger().LogFatal(err_msg)
+  return ret
 
 def TimeToCommonVersion(timestamp):
   """Convert timestamp to common image version."""
@@ -181,9 +212,10 @@ Use in combination with --version=latest or --version=common. Use
         versions_repo, version, manifest))
   else:
     # user specified a specific version number
-    version, manifest = version.split(".", 1)
-    init = ("repo init -u %s -m paladin/buildspecs/%s/%s.xml" % (
-        versions_repo, version, manifest))
+    version_spec_file = GetVersionSpecFile(version, versions_repo)
+    if not version_spec_file:
+      return 1
+    init = "repo init -u %s -m %s" % (versions_repo, version_spec_file)
 
   if options.minilayout:
     init += " -g minilayout"
