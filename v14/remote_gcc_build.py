@@ -8,46 +8,49 @@ import argparse
 import glob
 import os
 import re
+import shutil
 import socket
 import sys
+import tempfile
 import time
 
 from utils import command_executer
 from utils import logger
 from utils import misc
 
-branch1 = "not_used_by_others"
-branch2 = "the_actual_branch_used_in_this_script"
-current_branch = "release-R25-3428.B"
-current_version = "*30474"
-actual_version = "R26-3473.0.0"
-sleep_time = 600
+BRANCH = "the_actual_branch_used_in_this_script"
+TMP_BRANCH = "tmp_branch"
+SLEEP_TIME = 600
+checkout_branch = "toolchain-3428.65.B"
 
 
 def GetPatchNum(output):
   lines = output.splitlines()
-  line = [l for l in lines if "DRAFT" in l][0]
+  line = [l for l in lines if "gerrit" in l][0]
   patch_num = re.findall(r"\d+", line)[0]
   if "gerrit-int" in line:
     patch_num = "*" + patch_num
-  return patch_num
+  return str(patch_num)
 
 
-def FindResultIndex(reason, time_out=10800):
+def GetPatchString(patch):
+  if patch:
+    return "+".join(patch)
+  return "NO_PATCH"
+
+
+def FindResultIndex(reason):
   """Find the build id of the build at trybot server."""
   running_time = 0
-  while running_time < time_out:
+  while True:
     num = GetBuildNumber(reason)
-    if num:
+    if num >= 0:
       return num
     logger.GetLogger().LogOutput("{0} minutes passed."
                                  .format(running_time / 60))
-    logger.GetLogger().LogOutput("Sleeping {0} seconds.".format(sleep_time))
-    time.sleep(sleep_time)
-    running_time += sleep_time
-  logger.GetLogger().LogWarning("No results after {0} seconds, time out"
-                                .format(time_out))
-  return 0
+    logger.GetLogger().LogOutput("Sleeping {0} seconds.".format(SLEEP_TIME))
+    time.sleep(SLEEP_TIME)
+    running_time += SLEEP_TIME
 
 
 def GetBuildNumber(reason):
@@ -71,27 +74,29 @@ def GetBuildNumber(reason):
       current_line += 1
       if "Build" in key or current_line == len(my_info):
         break
-    change_lists = my_dict["reason"].split()[-1]
-    if reason:
-      change_list_hit = str(reason) in change_lists
-    else:
-      change_list_hit = (current_version in change_lists and
-                         "," not in change_lists)
     if ("True" not in my_dict["completed"] or
-        not change_list_hit):
+        str(reason) not in my_dict["reason"]):
       continue
-    number = int(my_dict["number"])
+    if my_dict["result"] == "0":
+      number = int(my_dict["number"])
+    else:
+      if current_line == len(my_info):
+        number = -1
+      else:
+        number = 0
     return number
-  return 0
+  return -1
 
 
-def DownloadImage(target, index, dest):
-  """Download files of this run to dest."""
+def DownloadImage(target, index, dest, version):
+  """Download artifacts from cloud."""
+  match = re.search(r"(.*-\d+\.\d+\.\d+)", version)
+  version = match.group(0)
   if not os.path.exists(dest):
     os.makedirs(dest)
 
   ls_cmd = ("gsutil ls gs://chromeos-image-archive/trybot-{0}/{1}-b{2}"
-            .format(target, actual_version, index))
+            .format(target, version, index))
 
   download_cmd = ("$(which gsutil) cp {0} {1}".format("{0}", dest))
   ce = command_executer.GetCommandExecuter()
@@ -124,103 +129,190 @@ def UnpackImage(dest):
   return ce.RunCommand(commands)
 
 
-class GccTrybotRunner(object):
-  """Remote try bot class."""
+def GetManifest(version, to_file):
+  """Get the manifest file from a given chromeos-internal version."""
+  temp_dir = tempfile.mkdtemp()
+  version = version.split("-", 1)[1]
+  os.chdir(temp_dir)
+  command = ("git clone "
+             "ssh://gerrit-int.chromium.org:29419/"
+             "chromeos/manifest-versions.git")
+  ce = command_executer.GetCommandExecuter()
+  ce.RunCommand(command)
+  files = [os.path.join(r, f)
+           for r, _, fs in os.walk(".")
+           for f in fs if version in f]
+  if files:
+    command = "cp {0} {1} && rm -rf {2}".format(files[0], to_file, temp_dir)
+    ret = ce.RunCommand(command)
+    if ret:
+      raise Exception("Cannot copy manifest to {0}".format(to_file))
+  else:
+    command = "rm -rf {0}".format(temp_dir)
+    ce.RunCommand(command)
+    raise Exception("Version {0} is not available.".format(version))
 
-  def __init__(self, chromeos_root, new_gcc_dir, target, local,
-               dest_dir, master, chrome_version):
-    self.new_gcc_dir = new_gcc_dir
-    self.target = target
-    self.chromeos_root = misc.CanonicalizePath(chromeos_root)
-    self.local = local
-    self.master = master
-    self.chrome_version = chrome_version
 
-    if self.local and dest_dir:
-      self.dest_dir = misc.CanonicalizePath(dest_dir)
-    elif self.local:
-      raise Exception("dest_dir is needed when --local is specified")
-    self.ce = command_executer.GetCommandExecuter()
+def RemoveOldBranch():
+  """Remove the branch with name BRANCH."""
+  ce = command_executer.GetCommandExecuter()
+  command = "git rev-parse --abbrev-ref HEAD"
+  _, out, _ = ce.RunCommand(command, return_output=True)
+  if BRANCH in out:
+    command = "git checkout -B {0}".format(TMP_BRANCH)
+    ce.RunCommand(command)
+  command = "git commit -m 'nouse'"
+  ce.RunCommand(command)
+  command = "git branch -D {0}".format(BRANCH)
+  ce.RunCommand(command)
 
-  def RunCommand(self, commands):
-    assert not self.ce.RunCommand(commands), "{0} failed".format(commands)
 
-  def GetCLNumber(self):
-    """Upload local gcc to gerrit and get the CL number."""
-    gcc_path = os.path.join(self.chromeos_root, "src/third_party/gcc")
-    assert os.path.isdir(gcc_path), ("{0} is not a valid chromeos root"
-                                     .format(self.chromeos_root))
+def UploadManifest(manifest, chromeos_root, branch="master"):
+  """Copy the manifest to $chromeos_root/manifest-internal and upload."""
+  chromeos_root = misc.CanonicalizePath(chromeos_root)
+  manifest_dir = os.path.join(chromeos_root, "manifest-internal")
+  os.chdir(manifest_dir)
+  ce = command_executer.GetCommandExecuter()
 
-    assert os.path.isdir(self.new_gcc_dir), ("{0} is not a valid dir for gcc"
-                                             "source".format(self.new_gcc_dir))
+  RemoveOldBranch()
 
-    os.chdir(gcc_path)
+  if branch != "master":
+    branch = "{0}".format(branch)
+  command = "git checkout -b {0} -t cros-internal/{1}".format(BRANCH, branch)
+  ret = ce.RunCommand(command)
+  if ret:
+    raise Exception("Command {0} failed".format(command))
 
-    # These commands make sure we have a fresh branch
-    # "the_actural_branch_used_in_this_script"
-    if self.master:
-      commands = ("git checkout -B {0} &&"
-                  "git branch -D {1} &&"
-                  "git checkout -b {1} -t remotes/cros/master &&"
-                  "git branch -D {0} &&"
-                  "rm -rf *".format(branch1, branch2))
-    else:
-      commands = ("git checkout -B {0} &&"
-                  "git checkout -B {1} &&"
-                  "git checkout {0} &&"
-                  "git branch -D {1} &&"
-                  "git checkout -b {1} -t remotes/cros/{2} &&"
-                  "git branch -D {0} &&"
-                  "rm -rf *".format(branch1, branch2, current_branch))
-    self.RunCommand(commands)
+  # We remove the default.xml, which is the symbolic link of full.xml.
+  # After that, we copy our xml file to default.xml.
+  # We did this because the full.xml might be updated during the
+  # run of the script.
+  os.remove(os.path.join(manifest_dir, "default.xml"))
+  shutil.copyfile(manifest, os.path.join(manifest_dir, "default.xml"))
+  return UploadPatch(manifest)
 
-    commands = ("rsync -az --exclude='*.svn' --exclude='*.git'"
-                " {0}/ .".format(self.new_gcc_dir))
-    self.RunCommand(commands)
-    return self.UploadPatch()
 
-  def UploadPatch(self):
-    commands = ("git add -A . &&"
-                "git commit -m 'test' -m 'BUG=None' -m 'TEST=None' "
-                "--amend -m 'hostname={0}' -m 'gcc_patch={1}'"
-                .format(socket.gethostname(), self.new_gcc_dir))
-    self.RunCommand(commands)
+def GetManifestPatch(version, chromeos_root, branch="master"):
+  """Return a gerrit patch number given a version of manifest file."""
+  temp_dir = tempfile.mkdtemp()
+  to_file = os.path.join(temp_dir, "default.xml")
+  GetManifest(version, to_file)
+  return UploadManifest(to_file, chromeos_root, branch)
 
-    commands = ("yes | repo upload . -d --cbr --no-verify")
-    _, _, err = self.ce.RunCommand(commands, return_output=True)
-    return GetPatchNum(err)
 
-  def Run(self):
-    """The actual running commands."""
+def UploadPatch(source):
+  """Up load patch to gerrit, return patch number."""
+  commands = ("git add -A . &&"
+              "git commit -m 'test' -m 'BUG=None' -m 'TEST=None' "
+              "-m 'hostname={0}' -m 'source={1}'"
+              .format(socket.gethostname(), source))
+  ce = command_executer.GetCommandExecuter()
+  ce.RunCommand(commands)
 
-    if self.new_gcc_dir:
-      self.new_gcc_dir = misc.CanonicalizePath(self.new_gcc_dir)
-      patch = self.GetCLNumber()
-    else:
-      patch = 0
-    if self.local:
-      remote_flag = "--local -r {0}".format(self.dest_dir)
-    else:
-      remote_flag = "--remote"
-    cbuildbot_path = os.path.join(self.chromeos_root, "chromite/buildbot")
-    os.chdir(cbuildbot_path)
-    if patch:
-      commands = ("./cbuildbot -g {0} {1} {2}"
-                  .format(patch, remote_flag, self.target))
-    else:
-      commands = ("./cbuildbot {0} {1}"
-                  .format(remote_flag, self.target))
+  commands = ("yes | repo upload .   --cbr --no-verify")
+  _, _, err = ce.RunCommand(commands, return_output=True)
+  return GetPatchNum(err)
 
-    if self.chrome_version:
-      commands += " --chrome_version={0}".format(self.chrome_version)
 
-    description = "{0}_{1}".format(patch, self.target)
-    if not self.master:
-      commands += " -b {0} -g {1}".format(current_branch, current_version)
-      description +="_{0}".format(current_version)
-    commands += " --remote-description={0}".format(description)
-    self.RunCommand(commands)
-    return description
+def ReplaceSysroot(chromeos_root, dest_dir, target, version):
+  """Copy unpacked sysroot and image to chromeos_root."""
+  ce = command_executer.GetCommandExecuter()
+  board = target.split("-")[0]
+  board_dir = os.path.join(chromeos_root, "chroot", "build", board)
+  command = "sudo rm -rf {0}".format(board_dir)
+  ce.RunCommand(command)
+
+  command = "sudo mv {0} {1}".format(dest_dir, board_dir)
+  ce.RunCommand(command)
+
+  image_dir = os.path.join(chromeos_root, "src", "build", "images",
+                           board, "latest")
+  command = "rm -rf {0} && mkdir -p {0}".format(image_dir)
+  ce.RunCommand(command)
+
+  command = "mv {0}/chromiumos_test_image.bin {1}".format(board_dir, image_dir)
+  return ce.RunCommand(command)
+
+
+def GccBranchForToolchain(branch):
+  if branch == "toolchain-3428.65.B":
+    return "release-R25-3428.B"
+  else:
+    return None
+
+
+def GetGccBranch(branch):
+  """Get the remote branch name from branch or version."""
+  ce = command_executer.GetCommandExecuter()
+  command = "git branch -a | grep {0}".format(branch)
+  _, out, _ = ce.RunCommand(command, return_output=True)
+  if not out:
+    release_num = re.match(r".*(R\d+)-*", branch)
+    if release_num:
+      release_num = release_num.group(0)
+      command = "git branch -a | grep {0}".format(release_num)
+      _, out, _ = ce.RunCommand(command, return_output=True)
+      if not out:
+        GccBranchForToolchain(branch)
+  if not out:
+    logger.GetLogger.LogFatal("The branch/version ${0} "
+                              "is not a valid one".format(branch))
+  new_branch = out.splitlines()[0]
+  return new_branch
+
+
+def UploadGccPatch(chromeos_root, gcc_dir, branch):
+  """Upload local gcc to gerrit and get the CL number."""
+  ce = command_executer.GetCommandExecuter()
+  gcc_dir = misc.CanonicalizePath(gcc_dir)
+  gcc_path = os.path.join(chromeos_root, "src/third_party/gcc")
+  assert os.path.isdir(gcc_path), ("{0} is not a valid chromeos root"
+                                   .format(chromeos_root))
+  assert os.path.isdir(gcc_dir), ("{0} is not a valid dir for gcc"
+                                  "source".format(gcc_dir))
+  os.chdir(gcc_path)
+  RemoveOldBranch()
+
+  if not branch:
+    branch = "master"
+  branch = GetGccBranch(branch)
+  command = ("git checkout -b {0} -t remotes/cros/{1} && "
+             "rm -rf *".format(BRANCH, branch))
+  ce.RunCommand(command, print_to_console=False)
+
+  command = ("rsync -az --exclude='*.svn' --exclude='*.git'"
+             " {0}/ .".format(gcc_dir))
+  ce.RunCommand(command)
+  return UploadPatch(gcc_dir)
+
+
+def RunRemote(chromeos_root, branch, patches, is_local,
+              target, chrome_version, dest_dir):
+  """The actual running commands."""
+  ce = command_executer.GetCommandExecuter()
+
+  if is_local:
+    local_flag = "--local -r {0}".format(dest_dir)
+  else:
+    local_flag = "--remote"
+  patch = ""
+  for p in patches:
+    patch += " -g {0}".format(p)
+  cbuildbot_path = os.path.join(chromeos_root, "chromite/buildbot")
+  os.chdir(cbuildbot_path)
+  branch_flag = ""
+  if branch != "master":
+    branch_flag = " -b {0}".format(branch)
+  chrome_version_flag = ""
+  if chrome_version:
+    chrome_version_flag = " --chrome_version={0}".format(chrome_version)
+  description = "{0}_{1}_{2}".format(branch, GetPatchString(patches), target)
+  command = ("yes | ./cbuildbot {0} {1} {2} {3} {4} {5}"
+             " --remote-description={6}"
+             .format(patch, branch_flag, chrome_version, local_flag,
+                     chrome_version_flag, target, description))
+  ce.RunCommand(command)
+  return description
 
 
 def Main(argv):
@@ -231,7 +323,7 @@ def Main(argv):
                       dest="chromeos_root", help="The chromeos_root")
   parser.add_argument("-g", "--gcc_dir", default="", dest="gcc_dir",
                       help="The gcc dir")
-  parser.add_argument("-t", "--type", required=True, dest="target",
+  parser.add_argument("-t", "--target", required=True, dest="target",
                       help=("The target to be build, the list is at"
                             " $(chromeos_root)/chromite/buildbot/cbuildbot"
                             " --list -all"))
@@ -239,36 +331,71 @@ def Main(argv):
   parser.add_argument("-d", "--dest_dir", dest="dest_dir",
                       help=("The dir to build the whole chromeos if"
                             " --local is set"))
-  parser.add_argument("-m", "--master", action="store_true")
   parser.add_argument("--chrome_version", dest="chrome_version",
                       default="", help="The chrome version to use. "
                       "Default it will use the latest one.")
+  parser.add_argument("--chromeos_version", dest="chromeos_version",
+                      default="", help="The chromeos version to use.")
+
+  parser.add_argument("-r", "--replace_sysroot", action="store_true",
+                      help=("Whether or not to replace the build/$board dir"
+                            "under the chroot of chromeos_root and copy "
+                            "the image to src/build/image/$board/latest."
+                            " Default is False"))
+  parser.add_argument("-b", "--branch", dest="branch", default="master",
+                      help=("The branch to run trybot, default is master"))
+  parser.add_argument("-p", "--patch", dest="patch", default="",
+                      help=("The patches to be applied, the patches numbers "
+                            "be seperated by ','"))
 
   script_dir = os.path.dirname(os.path.realpath(__file__))
 
   args = parser.parse_args(argv[1:])
   target = args.target
+  patch = args.patch.split()
+  chromeos_root = misc.CanonicalizePath(args.chromeos_root)
+  branch = args.branch
+  # descritption is the keyword of the build in build log.
+  # Here we use [{branch)_{patchnumber}_{target}]
+  description = "{0}_{1}_{2}".format(branch, GetPatchString(patch), target)
+  if args.chromeos_version and args.branch:
+    raise Exception("You can not set chromeos_version and branch at the "
+                    "same time.")
+  chromeos_version = args.chromeos_version
+  if args.branch:
+    chromeos_version = 0
+  else:
+    chromeos_version = args.chromeos_version
+  if args.chromeos_version:
+    manifest_patch = GetManifestPatch(args.chromeos_version,
+                                      chromeos_root)
+    patch.append(manifest_patch)
+  if args.gcc_dir:
+    if not branch:
+      branch = chromeos_version
+    patch.append(UploadGccPatch(chromeos_root, args.gcc_dir, branch))
   index = 0
-  description = "0_{0}".format(target)
-  if not args.master:
-    description +="_{0}".format(current_version)
-  if not args.gcc_dir:
-    index = GetBuildNumber(description)
-  if not index:
-    remote_trybot = GccTrybotRunner(args.chromeos_root, args.gcc_dir, target,
-                                    args.local, args.dest_dir, args.master,
-                                    args.chrome_version)
-    description = remote_trybot.Run()
+  description = RunRemote(chromeos_root, branch, patch, args.local,
+                          target, args.chrome_version, args.dest_dir)
   if args.local or not args.dest_dir:
     return 0
   os.chdir(script_dir)
   dest_dir = misc.CanonicalizePath(args.dest_dir)
-  index = FindResultIndex(description)
+  if index <= 0:
+    index = FindResultIndex(description)
   if not index:
-    logger.GetLogger().LogFatal("Remote trybot timeout")
-  DownloadImage(target, index, dest_dir)
-  return UnpackImage(dest_dir)
+    logger.GetLogger().LogFatal("Remote trybot failed.")
+  if branch == checkout_branch:
+    chromeos_version = "R25-3428.65.1"
+  DownloadImage(target, index, dest_dir, chromeos_version)
+  ret = UnpackImage(dest_dir)
+  if not args.replace_sysroot:
+    return ret
+  else:
+    return ReplaceSysroot(chromeos_root, args.dest_dir, target,
+                          chromeos_version)
 
 if __name__ == "__main__":
   retval = Main(sys.argv)
   sys.exit(retval)
+
