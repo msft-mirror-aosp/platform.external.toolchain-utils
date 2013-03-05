@@ -41,7 +41,13 @@ class ResultsReport(object):
                Column(AmeanResult(),
                       Format()),
                Column(StdResult(),
-                      Format())
+                      Format(), "StdDev"),
+               Column(CoeffVarResult(),
+                      CoeffVarFormat(), "StdDev/Mean"),
+               Column(GmeanRatioResult(),
+                      RatioFormat(), "GmeanSpeedup"),
+               Column(PValueResult(),
+                      PValueFormat(), "p-value")
               ]
     if not perf:
       return self._GetTables(self.labels, self.benchmark_runs, columns)
