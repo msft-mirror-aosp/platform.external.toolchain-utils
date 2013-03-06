@@ -7,6 +7,7 @@ import os
 
 from utils import perf_diff
 
+
 def ParsePerfReport(perf_file):
   """It should return a dict."""
 
@@ -22,9 +23,16 @@ class PerfTable(object):
     self._label_names = label_names
     self.perf_data = {}
     self.GenerateData()
-    # {benchmark:{perf_event1:[[{func1:number, func2:number},
-    #                           {func1: number, func2: number}]], ...},
+
+    # {benchmark:{perf_event1:[[{func1:number, func2:number,
+    #                             rows_to_show: number}
+    #                           {func1: number, func2: number
+    #                             rows_to_show: number}]], ...},
     #  benchmark2:...}
+    # The rows_to_show is temp data recording how many
+    # rows have over 1% running time.
+    self.row_info = {}
+    self.GetRowsToShow()
 
   def GenerateData(self):
     for label in self._label_names:
@@ -60,3 +68,18 @@ class PerfTable(object):
         data_for_label[iteration] = perf_of_run[event]
       else:
         data_for_label[iteration] = {}
+
+  def GetRowsToShow(self):
+    for benchmark in self.perf_data:
+      if benchmark not in self.row_info:
+        self.row_info[benchmark] = {}
+      for event in self.perf_data[benchmark]:
+        rows = 0
+        for run in self.perf_data[benchmark][event]:
+          for iteration in run:
+            if perf_diff.ROWS_TO_SHOW in iteration:
+              rows = max(iteration[perf_diff.ROWS_TO_SHOW], rows)
+              # delete the temp data which stores how many rows of
+              # the perf data have over 1% running time.
+              del iteration[perf_diff.ROWS_TO_SHOW]
+        self.row_info[benchmark][event] = rows

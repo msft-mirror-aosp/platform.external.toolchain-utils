@@ -145,11 +145,12 @@ class ResultsReport(object):
       ben_table = self._GetTableHeader(ben)
       tables.append(ben_table)
       benchmark_data = p_table.perf_data[benchmark]
+      row_info = p_table.row_info[benchmark]
       table = []
       for event in benchmark_data:
         tg = TableGenerator(benchmark_data[event], label_names,
                             sort=TableGenerator.SORT_BY_VALUES_DESC)
-        table = tg.GetTable(self.PERF_ROWS)
+        table = tg.GetTable(max(self.PERF_ROWS, row_info[event]))
         parsed_columns = self._ParseColumn(columns, ben.iterations)
         tf = TableFormatter(table, parsed_columns)
         tf.GenerateCellTable()

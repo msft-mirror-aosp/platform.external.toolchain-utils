@@ -15,6 +15,7 @@ import sys
 import misc
 import tabulator
 
+ROWS_TO_SHOW = "Rows_to_show_in_the_perf_table"
 
 def GetPerfDictFromReport(report_file):
   output = {}
@@ -22,9 +23,12 @@ def GetPerfDictFromReport(report_file):
   for k, v in perf_report.sections.items():
     if k not in output:
       output[k] = {}
+    output[k][ROWS_TO_SHOW] = 0
     for function in v.functions:
       out_key = "%s" % (function.name)
       output[k][out_key] = function.count
+      if function.percent > 1:
+        output[k][ROWS_TO_SHOW] += 1
   return output
 
 
@@ -85,6 +89,7 @@ class Function(object):
   def __init__(self):
     self.count = 0
     self.name = ""
+    self.percent = 0
 
 
 class Section(object):
@@ -110,6 +115,7 @@ class Section(object):
       if not line.startswith("#"):
         fields = [f for f in line.split(" ") if f]
         function = Function()
+        function.percent = float(fields[0].strip("%"))
         function.count = int(fields[1])
         function.name = " ".join(fields[2:])
         self.functions.append(function)
