@@ -23,7 +23,7 @@ from utils import misc
 
 class ToolchainPart(object):
   def __init__(self, name, source_path, chromeos_root, board, incremental,
-               build_env):
+               build_env, gcc_enable_ccache=False):
     self._name = name
     self._source_path = misc.CanonicalizePath(source_path)
     self._chromeos_root = chromeos_root
@@ -42,6 +42,7 @@ class ToolchainPart(object):
                                             self._name).lstrip("/")
     self._incremental = incremental
     self._build_env = build_env
+    self._gcc_enable_ccache = gcc_enable_ccache
 
   def RunSetupBoardIfNecessary(self):
     cross_symlink = os.path.join(
@@ -136,6 +137,13 @@ class ToolchainPart(object):
       env["USE"] += " multislot mounted_%s" % self._name
     else:
       env["USE"] = "multislot mounted_%s" % self._name
+
+    # Disable ccache in our compilers. cache may be problematic for us.
+    # It ignores compiler environments settings and it is not clear if
+    # the cache hit algorithm verifies all the compiler binaries or
+    # just the driver.
+    if self._name == "gcc" and not self._gcc_enable_ccache:
+      env["USE"] += " -wrapper_ccache"
 
     env["%s_SOURCE_PATH" % self._name.upper()] = (
         os.path.join("/", self._chroot_source_path))
@@ -234,7 +242,11 @@ def Main(argv):
                     default="",
                     help="Extra flag for USE, to be passed to the ebuild. "
                     "('multislot' and 'mounted_<tool>' are always passed.)")
-
+  parser.add_option("--gcc_enable_ccache",
+                    dest="gcc_enable_ccache",
+                    default=False,
+                    action="store_true",
+                    help="Enable ccache for the gcc invocations")
 
   options, _ = parser.parse_args(argv)
 
@@ -278,7 +290,8 @@ def Main(argv):
   for board in options.board.split(","):
     if options.gcc_dir:
       tp = ToolchainPart("gcc", gcc_dir, chromeos_root, board,
-                         not options.noincremental, build_env)
+                         not options.noincremental, build_env,
+                         options.gcc_enable_ccache)
       toolchain_parts[tp.tag] = tp
       tp.RunSetupBoardIfNecessary()
     if options.binutils_dir:
