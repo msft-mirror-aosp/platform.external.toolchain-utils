@@ -315,7 +315,7 @@ def Main(argv):
         rv = rv + tp.Build()
   finally:
     print "Exiting..."
-    return rv
+  return rv
 
 if __name__ == "__main__":
   retval = Main(sys.argv)
