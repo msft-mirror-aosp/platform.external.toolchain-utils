@@ -55,6 +55,10 @@ def FindResultIndex(reason):
 
 def GetBuildNumber(reason):
   """Get the build num from build log."""
+  # returns 0 if only failed build found.
+  # returns -1 if no finished build found or one build is running.
+  # returns build number is successful build found.
+
   file_dir = os.path.dirname(os.path.realpath(__file__))
   commands = ("{0}/utils/buildbot_json.py builds "
               "http://chromegw/p/tryserver.chromiumos/"
@@ -65,6 +69,11 @@ def GetBuildNumber(reason):
 
   my_info = buildinfo.splitlines()
   current_line = 1
+  running_job = False
+  number = -1
+  # number > 0, we have a successful build.
+  # number = 0, we have a failed build.
+  # number = -1, we do not have a finished build for this description.
   while current_line < len(my_info):
     my_dict = {}
     while True:
@@ -74,17 +83,21 @@ def GetBuildNumber(reason):
       current_line += 1
       if "Build" in key or current_line == len(my_info):
         break
+    if ("True" not in my_dict["completed"] and
+        str(reason) in my_dict["reason"]):
+      running_job = True
     if ("True" not in my_dict["completed"] or
         str(reason) not in my_dict["reason"]):
       continue
     if my_dict["result"] == "0":
       number = int(my_dict["number"])
+      return number
     else:
-      if current_line == len(my_info):
-        number = -1
-      else:
-        number = 0
-    return number
+     # Record found a finished failed build.
+     # Keep searching to find a successful one.
+      number = 0
+  if number == 0 and not running_job:
+    return 0
   return -1
 
 
