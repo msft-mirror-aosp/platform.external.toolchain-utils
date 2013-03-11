@@ -63,7 +63,7 @@ class ToolchainPart(object):
       rv = self.BuildTool()
     finally:
       self.UnMoveMaskFile()
-      return rv
+    return rv
 
   def RemoveCompiledFile(self):
     compiled_file = os.path.join(self._chromeos_root,
