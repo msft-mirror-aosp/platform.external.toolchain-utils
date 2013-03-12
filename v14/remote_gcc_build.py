@@ -21,7 +21,6 @@ from utils import misc
 BRANCH = "the_actual_branch_used_in_this_script"
 TMP_BRANCH = "tmp_branch"
 SLEEP_TIME = 600
-checkout_branch = "toolchain-3428.65.B"
 
 
 def GetPatchNum(output):
@@ -42,7 +41,7 @@ def GetPatchString(patch):
 def FindVersionForToolchain(branch, chromeos_root):
   """Find the version number in artifacts link in the tryserver email."""
   # For example: input:  toolchain-3701.42.B
-  #              output: R26-3701.42.1 
+  #              output: R26-3701.42.1
   digits = branch.split("-")[1].split("B")[0]
   manifest_dir = os.path.join(chromeos_root, "manifest-internal")
   os.chdir(manifest_dir)
@@ -399,8 +398,8 @@ def Main(argv):
     chromeos_version = 0
   else:
     chromeos_version = args.chromeos_version
-  if args.chromeos_version:
-    manifest_patch = GetManifestPatch(args.chromeos_version,
+  if chromeos_version:
+    manifest_patch = GetManifestPatch(chromeos_version,
                                       chromeos_root)
     patch.append(manifest_patch)
   if args.gcc_dir:
