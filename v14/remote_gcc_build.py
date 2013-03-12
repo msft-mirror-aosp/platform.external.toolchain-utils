@@ -39,6 +39,26 @@ def GetPatchString(patch):
   return "NO_PATCH"
 
 
+def FindVersionForToolchain(branch, chromeos_root):
+  """Find the version number in artifacts link in the tryserver email."""
+  # For example: input:  toolchain-3701.42.B
+  #              output: R26-3701.42.1 
+  digits = branch.split("-")[1].split("B")[0]
+  manifest_dir = os.path.join(chromeos_root, "manifest-internal")
+  os.chdir(manifest_dir)
+  major_version = digits.split(".")[0]
+  ce = command_executer.GetCommandExecuter()
+  command = "repo sync . && git branch -a | grep {0}".format(major_version)
+  _, branches, _ = ce.RunCommand(command, return_output=True,
+                                 print_to_console=False)
+  m = re.search(r"(R\d+)", branches)
+  if not m:
+    logger.GetLogger().LogFatal("Cannot find version for branch {0}"
+                                .format(branch))
+  version = m.group(0)+"-"+digits+"1"
+  return version
+
+
 def FindResultIndex(reason):
   """Find the build id of the build at trybot server."""
   running_time = 0
@@ -227,7 +247,7 @@ def UploadPatch(source):
   return GetPatchNum(err)
 
 
-def ReplaceSysroot(chromeos_root, dest_dir, target, version):
+def ReplaceSysroot(chromeos_root, dest_dir, target):
   """Copy unpacked sysroot and image to chromeos_root."""
   ce = command_executer.GetCommandExecuter()
   board = target.split("-")[0]
@@ -398,15 +418,14 @@ def Main(argv):
     index = FindResultIndex(description)
   if not index:
     logger.GetLogger().LogFatal("Remote trybot failed.")
-  if branch == checkout_branch:
-    chromeos_version = "R25-3428.65.1"
+  if "toolchain" in branch:
+    chromeos_version = FindVersionForToolchain(branch, chromeos_root)
   DownloadImage(target, index, dest_dir, chromeos_version)
   ret = UnpackImage(dest_dir)
   if not args.replace_sysroot:
     return ret
   else:
-    return ReplaceSysroot(chromeos_root, args.dest_dir, target,
-                          chromeos_version)
+    return ReplaceSysroot(chromeos_root, args.dest_dir, target)
 
 if __name__ == "__main__":
   retval = Main(sys.argv)
