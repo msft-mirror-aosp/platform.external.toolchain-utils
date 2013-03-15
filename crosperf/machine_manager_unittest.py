@@ -12,7 +12,7 @@ import machine_manager
 class MyMachineManager(machine_manager.MachineManager):
 
   def __init__(self, chromeos_root):
-    super(MyMachineManager, self).__init__(chromeos_root)
+    super(MyMachineManager, self).__init__(chromeos_root, 0)
 
   def _TryToLockMachine(self, cros_machine):
     self._machines.append(cros_machine)
@@ -30,9 +30,11 @@ class MyMachineManager(machine_manager.MachineManager):
 CHROMEOS_ROOT = "/tmp/chromeos-root"
 MACHINE_NAMES = ["lumpy1", "lumpy2", "lumpy3", "daisy1", "daisy2"]
 LABEL_LUMPY = label.MockLabel("lumpy", "image", CHROMEOS_ROOT, "lumpy",
-                              ["lumpy1", "lumpy2", "lumpy3", "lumpy4"], "")
+                              ["lumpy1", "lumpy2", "lumpy3", "lumpy4"],
+                              "", "", "")
 LABEL_MIX = label.MockLabel("mix", "image", CHROMEOS_ROOT, "mix",
-                            ["daisy1", "daisy2", "lumpy3", "lumpy4"], "")
+                            ["daisy1", "daisy2", "lumpy3", "lumpy4"],
+                            "", "", "")
 
 
 class MachineManagerTest(unittest.TestCase):

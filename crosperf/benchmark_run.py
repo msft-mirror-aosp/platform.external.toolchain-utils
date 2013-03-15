@@ -29,7 +29,8 @@ class BenchmarkRun(threading.Thread):
                iteration,
                cache_conditions,
                machine_manager,
-               logger_to_use):
+               logger_to_use,
+               share_users):
     threading.Thread.__init__(self)
     self.name = name
     self._logger = logger_to_use
@@ -53,6 +54,7 @@ class BenchmarkRun(threading.Thread):
     self._ce = command_executer.GetCommandExecuter(self._logger)
     self.timeline = timeline.Timeline()
     self.timeline.Record(STATUS_PENDING)
+    self.share_users = share_users
 
   def run(self):
     try:
@@ -67,7 +69,8 @@ class BenchmarkRun(threading.Thread):
                       self.label.board,
                       self.cache_conditions,
                       self._logger,
-                      self.label
+                      self.label,
+                      self.share_users
                      )
 
       self.result = self.cache.ReadResult()

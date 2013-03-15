@@ -111,12 +111,12 @@ class CrosMachine(object):
 
   def _GetMachineID(self):
     ce = command_executer.GetCommandExecuter()
-    command = "ifconfig"
+    command = "dump_vpd_log --full --stdout"
     ret, if_out, _ = ce.CrosRunCommand(
         command, return_output=True,
         machine=self.name, chromeos_root=self.chromeos_root)
     b = if_out.splitlines()
-    a = [l for l in b if "lan" in l]
+    a = [l for l in b if "Product" in l]
     self.machine_id = a[0]
     assert ret == 0, "Could not get machine_id from machine: %s" % self.name
 
@@ -131,7 +131,7 @@ class CrosMachine(object):
 
 
 class MachineManager(object):
-  def __init__(self, chromeos_root):
+  def __init__(self, chromeos_root, acquire_timeout):
     self._lock = threading.RLock()
     self._all_machines = []
     self._machines = []
@@ -140,6 +140,7 @@ class MachineManager(object):
     self.chromeos_root = None
     self.machine_checksum = {}
     self.machine_checksum_string = {}
+    self.acquire_timeout = acquire_timeout
 
     if os.path.isdir(lock_machine.Machine.LOCKS_DIR):
       self.no_lock = False
@@ -149,7 +150,7 @@ class MachineManager(object):
     self.chromeos_root = chromeos_root
 
   def ImageMachine(self, machine, label):
-    checksum = ImageChecksummer().Checksum(label.chromeos_image)
+    checksum = ImageChecksummer().Checksum(label)
     if machine.checksum == checksum:
       return
     chromeos_root = label.chromeos_root
@@ -193,8 +194,8 @@ class MachineManager(object):
     with self._lock:
       assert cros_machine, "Machine can't be None"
       for m in self._machines:
-        assert m.name != cros_machine.name, (
-            "Tried to double-lock %s" % cros_machine.name)
+        if m.name == cros_machine.name:
+          return
       if self.no_lock:
         locked = True
       else:
@@ -226,25 +227,33 @@ class MachineManager(object):
     return len(set(checksums)) == 1
 
   def AcquireMachine(self, chromeos_image, label):
-    image_checksum = ImageChecksummer().Checksum(chromeos_image)
+    image_checksum = ImageChecksummer().Checksum(label)
     machines = self.GetMachines(label)
+    check_interval_time = 120
     with self._lock:
       # Lazily external lock machines
-
-      for m in machines:
-        if m not in self._initialized_machines:
-          self._initialized_machines.append(m)
+      while self.acquire_timeout >= 0:
+        for m in machines:
+          new_machine = m not in self._all_machines
           self._TryToLockMachine(m)
-          m.released_time = time.time()
-      if not self.AreAllMachineSame(label):
-        logger.GetLogger().LogFatal("-- not all the machine are identical")
-      if not self.GetAvailableMachines(label):
+          if new_machine:
+            m.released_time = time.time()
+        if not self.AreAllMachineSame(label):
+          logger.GetLogger().LogFatal("-- not all the machine are identical")
+        if self.GetAvailableMachines(label):
+          break
+        else:
+          sleep_time = max(1, min(self.acquire_timeout, check_interval_time))
+          time.sleep(sleep_time)
+          self.acquire_timeout -= sleep_time
+
+      if self.acquire_timeout < 0:
         machine_names = []
         for machine in machines:
           machine_names.append(machine.name)
         logger.GetLogger().LogFatal("Could not acquire any of the "
-                                  "following machines: '%s'"
-                                  % ", ".join(machine_names))
+                                    "following machines: '%s'"
+                                    % ", ".join(machine_names))
 
 ###      for m in self._machines:
 ###        if (m.locked and time.time() - m.released_time < 10 and
@@ -374,8 +383,8 @@ class MockCrosMachine(CrosMachine):
 
 class MockMachineManager(MachineManager):
 
-  def __init__(self, chromeos_root):
-    super(MockMachineManager, self).__init__(chromeos_root)
+  def __init__(self, chromeos_root, acquire_timeout):
+    super(MockMachineManager, self).__init__(chromeos_root, acquire_timeout)
 
   def _TryToLockMachine(self, cros_machine):
     self._machines.append(cros_machine)

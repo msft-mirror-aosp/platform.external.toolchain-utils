@@ -1,6 +1,6 @@
 # Copyright 2012 Google Inc. All Rights Reserved.
 
-"""Tests for misc."""
+"""Tests for the tabulator module."""
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 
@@ -69,7 +69,7 @@ class TabulatorTest(unittest.TestCase):
   def testTableGenerator(self):
     runs = [[{"k1": "10", "k2": "12"},
              {"k1": "13", "k2": "14", "k3": "15"}],
-            [{"k1": "50", "k2": "51", "k3": "52", "k4": "53"},]]
+            [{"k1": "50", "k2": "51", "k3": "52", "k4": "53"}]]
     labels = ["vanilla", "modified"]
     tg = tabulator.TableGenerator(runs, labels)
     table = tg.GetTable()

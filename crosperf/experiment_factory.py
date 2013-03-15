@@ -7,6 +7,7 @@ import os
 import socket
 
 from benchmark import Benchmark
+import config
 from experiment import Experiment
 from label import Label
 from label import MockLabel
@@ -22,13 +23,18 @@ class ExperimentFactory(object):
   of experiments could be produced.
   """
 
-  def GetExperiment(self, experiment_file, working_directory):
+  def GetExperiment(self, experiment_file, working_directory, log_dir):
     """Construct an experiment from an experiment file."""
     global_settings = experiment_file.GetGlobalSettings()
     experiment_name = global_settings.GetField("name")
     remote = global_settings.GetField("remote")
-    rerun_if_failed = global_settings.GetField("rerun_if_failed")
     chromeos_root = global_settings.GetField("chromeos_root")
+    rm_chroot_tmp = global_settings.GetField("rm_chroot_tmp")
+    key_results_only = global_settings.GetField("key_results_only")
+    acquire_timeout= global_settings.GetField("acquire_timeout")
+    cache_dir = global_settings.GetField("cache_dir")
+    config.AddConfig("no_email", global_settings.GetField("no_email"))
+    share_users = global_settings.GetField("share_users")
 
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.
@@ -55,8 +61,13 @@ class ExperimentFactory(object):
       iterations = benchmark_settings.GetField("iterations")
       outlier_range = benchmark_settings.GetField("outlier_range")
       perf_args = benchmark_settings.GetField("perf_args")
+      rm_chroot_tmp = benchmark_settings.GetField("rm_chroot_tmp")
+      key_results_only = benchmark_settings.GetField("key_results_only")
+
       benchmark = Benchmark(benchmark_name, autotest_name, autotest_args,
-                            iterations, outlier_range, perf_args)
+                            iterations, outlier_range,
+                            key_results_only, rm_chroot_tmp,
+                            perf_args)
       benchmarks.append(benchmark)
 
     # Construct labels.
@@ -69,6 +80,8 @@ class ExperimentFactory(object):
       chromeos_root = label_settings.GetField("chromeos_root")
       board = label_settings.GetField("board")
       my_remote = label_settings.GetField("remote")
+      image_md5sum = label_settings.GetField("md5sum")
+      cache_dir = label_settings.GetField("cache_dir")
     # TODO(yunlian): We should consolidate code in machine_manager.py
     # to derermine whether we are running from within google or not
       if ("corp.google.com" in socket.gethostname() and
@@ -83,19 +96,19 @@ class ExperimentFactory(object):
       image_args = label_settings.GetField("image_args")
       if test_flag.GetTestMode():
         label = MockLabel(label_name, image, chromeos_root, board, my_remote,
-                          image_args)
+                          image_args, image_md5sum, cache_dir)
       else:
         label = Label(label_name, image, chromeos_root, board, my_remote,
-                      image_args)
+                      image_args, image_md5sum, cache_dir)
       labels.append(label)
 
     email = global_settings.GetField("email")
     all_remote = list(set(all_remote))
-    experiment = Experiment(experiment_name, all_remote, rerun_if_failed,
+    experiment = Experiment(experiment_name, all_remote,
                             working_directory, chromeos_root,
                             cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(),
-                            email)
+                            email, acquire_timeout, log_dir, share_users)
 
     return experiment
 

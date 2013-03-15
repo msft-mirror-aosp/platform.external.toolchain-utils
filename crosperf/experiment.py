@@ -9,23 +9,20 @@ import time
 
 from utils import logger
 
-from autotest_runner import AutotestRunner
 from benchmark_run import BenchmarkRun
 from machine_manager import MachineManager
 from machine_manager import MockMachineManager
-from results_cache import ResultsCache
-from results_report import HTMLResultsReport
 import test_flag
 
 
 class Experiment(object):
   """Class representing an Experiment to be run."""
 
-  def __init__(self, name, remote, rerun_if_failed, working_directory,
+  def __init__(self, name, remote, working_directory,
                chromeos_root, cache_conditions, labels, benchmarks,
-               experiment_file, email_to):
+               experiment_file, email_to, acquire_timeout, log_dir,
+               share_users):
     self.name = name
-    self.rerun_if_failed = rerun_if_failed
     self.working_directory = working_directory
     self.remote = remote
     self.chromeos_root = chromeos_root
@@ -34,11 +31,12 @@ class Experiment(object):
     self.email_to = email_to
     self.results_directory = os.path.join(self.working_directory,
                                           self.name + "_results")
-
+    self.log_dir = log_dir
     self.labels = labels
     self.benchmarks = benchmarks
     self.num_complete = 0
     self.num_run_complete = 0
+    self.share_users = share_users
 
     # We need one chromeos_root to run the benchmarks in, but it doesn't
     # matter where it is, unless the ABIs are different.
@@ -51,10 +49,10 @@ class Experiment(object):
                       "the image path.")
 
     if test_flag.GetTestMode():
-      self.machine_manager = MockMachineManager(chromeos_root)
+      self.machine_manager = MockMachineManager(chromeos_root, acquire_timeout)
     else:
-      self.machine_manager = MachineManager(chromeos_root)
-    self.l = logger.GetLogger()
+      self.machine_manager = MachineManager(chromeos_root, acquire_timeout)
+    self.l = logger.GetLogger(log_dir)
 
     for machine in remote:
       self.machine_manager.AddMachine(machine)
@@ -75,7 +73,7 @@ class Experiment(object):
           benchmark_run_name = "%s: %s (%s)" % (label.name, benchmark.name,
                                                 iteration)
           full_name = "%s_%s_%s" % (label.name, benchmark.name, iteration)
-          logger_to_use = logger.Logger(os.path.dirname(__file__),
+          logger_to_use = logger.Logger(self.log_dir,
                                         "run.%s" % (full_name),
                                         True)
           benchmark_run = BenchmarkRun(benchmark_run_name,
@@ -84,7 +82,8 @@ class Experiment(object):
                                        iteration,
                                        self.cache_conditions,
                                        self.machine_manager,
-                                       logger_to_use)
+                                       logger_to_use,
+                                       self.share_users)
 
           benchmark_runs.append(benchmark_run)
     return benchmark_runs

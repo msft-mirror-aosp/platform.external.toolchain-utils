@@ -32,7 +32,9 @@ EXPERIMENT_FILE_1 = """
 class ExperimentFactoryTest(unittest.TestCase):
   def testLoadExperimentFile1(self):
     experiment_file = ExperimentFile(StringIO.StringIO(EXPERIMENT_FILE_1))
-    experiment = ExperimentFactory().GetExperiment(experiment_file, "")
+    experiment = ExperimentFactory().GetExperiment(experiment_file, 
+                                                   working_directory="",
+                                                   log_dir="")
     self.assertEqual(experiment.remote, ["chromeos-alex3"])
 
     self.assertEqual(len(experiment.benchmarks), 1)

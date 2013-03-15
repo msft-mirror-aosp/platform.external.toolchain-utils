@@ -1,6 +1,0 @@
-# This experiment runs page cycler tests.
-
-benchmark: AllPageCyclers {
-	autotest_name: desktopui_PyAutoPerfTests
-	autotest_args: --args='perf.PageCyclerTest'
-}

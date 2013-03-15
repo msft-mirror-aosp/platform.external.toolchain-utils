@@ -12,6 +12,7 @@ from utils import logger
 from utils.email_sender import EmailSender
 from utils.file_utils import FileUtils
 
+import config
 from experiment_status import ExperimentStatus
 from results_report import HTMLResultsReport
 from results_report import TextResultsReport
@@ -25,7 +26,7 @@ class ExperimentRunner(object):
 
   def __init__(self, experiment):
     self._experiment = experiment
-    self.l = logger.GetLogger()
+    self.l = logger.GetLogger(experiment.log_dir)
     self._ce = command_executer.GetCommandExecuter(self.l)
     self._terminated = False
 
@@ -58,7 +59,8 @@ class ExperimentRunner(object):
       if not benchmark_run.cache_hit:
         send_mail = True
         break
-    if not send_mail and not experiment.email_to:
+    if (not send_mail and not experiment.email_to
+        or config.GetConfig("no_email")):
       return
 
     label_names = []
@@ -100,7 +102,7 @@ class ExperimentRunner(object):
         benchmark_run_path = os.path.join(results_directory,
                                           benchmark_run_name)
         benchmark_run.result.CopyResultsTo(benchmark_run_path)
-        benchmark_run.result.CleanUp()
+        benchmark_run.result.CleanUp(benchmark_run.benchmark.rm_chroot_tmp)
 
   def Run(self):
     self._Run(self._experiment)

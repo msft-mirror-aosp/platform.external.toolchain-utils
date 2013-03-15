@@ -15,7 +15,8 @@ from utils import misc
 
 from image_checksummer import ImageChecksummer
 
-SCRATCH_DIR = "/home/%s/cros_scratch" % getpass.getuser()
+SCRATCH_BASE = "/home/%s/cros_scratch"
+SCRATCH_DIR = SCRATCH_BASE % getpass.getuser()
 RESULTS_FILE = "results.txt"
 MACHINE_FILE = "machine.txt"
 AUTOTEST_TARBALL = "autotest.tbz2"
@@ -55,16 +56,18 @@ class Result(object):
     self._CopyFilesTo(dest_dir, self.perf_report_files)
 
   def _GetKeyvals(self):
-    generate_test_report = os.path.join(self._chromeos_root,
-                                        "src",
-                                        "platform",
-                                        "crostestutils",
-                                        "utils_py",
-                                        "generate_test_report.py")
-    command = ("python %s --no-color --csv %s" %
-               (generate_test_report,
-                self.results_dir))
-    [_, out, _] = self._ce.RunCommand(command, return_output=True)
+    results_in_chroot = os.path.join(self._chromeos_root,
+                                     "chroot", "tmp")
+    if not self._temp_dir:
+      self._temp_dir = tempfile.mkdtemp(dir=results_in_chroot)
+      command = "cp -r {0}/* {1}".format(self.results_dir, self._temp_dir)
+      self._ce.RunCommand(command)
+
+    command = ("python generate_test_report --no-color --csv %s" %
+               (os.path.join("/tmp", os.path.basename(self._temp_dir))))
+    [_, out, _] = self._ce.ChrootRunCommand(self._chromeos_root,
+                                            command,
+                                            return_output=True)
     keyvals_dict = {}
     for line in out.splitlines():
       tokens = re.split("=|,", line)
@@ -177,7 +180,9 @@ class Result(object):
       self.retval = pickle.load(f)
 
     # Untar the tarball to a temporary directory
-    self._temp_dir = tempfile.mkdtemp()
+    self._temp_dir = tempfile.mkdtemp(dir=os.path.join(self._chromeos_root,
+                                                       "chroot", "tmp"))
+
     command = ("cd %s && tar xf %s" %
                (self._temp_dir,
                 os.path.join(cache_dir, AUTOTEST_TARBALL)))
@@ -189,24 +194,25 @@ class Result(object):
     self.perf_report_files = self._GetPerfReportFiles()
     self._ProcessResults()
 
-  def CleanUp(self):
+  def CleanUp(self, rm_chroot_tmp):
+    if rm_chroot_tmp:
+      command = "rm -rf %s" % self.results_dir
+      self._ce.RunCommand(command)
     if self._temp_dir:
       command = "rm -rf %s" % self._temp_dir
       self._ce.RunCommand(command)
 
   def StoreToCacheDir(self, cache_dir, machine_manager):
     # Create the dir if it doesn't exist.
-    command = "mkdir -p %s" % cache_dir
-    ret = self._ce.RunCommand(command)
-    if ret:
-      raise Exception("Could not create cache dir: %s" % cache_dir)
-    # Store to the cache directory.
-    with open(os.path.join(cache_dir, RESULTS_FILE), "w") as f:
+    temp_dir = tempfile.mkdtemp()
+
+    # Store to the temp directory.
+    with open(os.path.join(temp_dir, RESULTS_FILE), "w") as f:
       pickle.dump(self.out, f)
       pickle.dump(self.err, f)
       pickle.dump(self.retval, f)
 
-    tarball = os.path.join(cache_dir, AUTOTEST_TARBALL)
+    tarball = os.path.join(temp_dir, AUTOTEST_TARBALL)
     command = ("cd %s && "
                "tar "
                "--exclude=var/spool "
@@ -218,8 +224,21 @@ class Result(object):
     # Store machine info.
     # TODO(asharif): Make machine_manager a singleton, and don't pass it into
     # this function.
-    with open(os.path.join(cache_dir, MACHINE_FILE), "w") as f:
+    with open(os.path.join(temp_dir, MACHINE_FILE), "w") as f:
       f.write(machine_manager.machine_checksum_string[self.label_name])
+
+    if os.path.exists(cache_dir):
+      command = "rm -rf {0}".format(cache_dir)
+      self._ce.RunCommand(command)
+
+    command = "mkdir -p {0} && ".format(os.path.dirname(cache_dir))
+    command += "mv {0} {1}".format(temp_dir, cache_dir)
+    ret = self._ce.RunCommand(command)
+    if ret:
+      command = "rm -rf {0}".format(temp_dir)
+      self._ce.RunCommand(command)
+      raise Exception("Could not move dir %s to dir %s" %
+                      (temp_dir, cache_dir))
 
   @classmethod
   def CreateFromRun(cls, logger, chromeos_root, board, label_name,
@@ -273,7 +292,7 @@ class ResultsCache(object):
 
   def Init(self, chromeos_image, chromeos_root, autotest_name, iteration,
            autotest_args, machine_manager, board, cache_conditions,
-           logger_to_use, label):
+           logger_to_use, label, share_users):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.autotest_name = autotest_name
@@ -285,10 +304,12 @@ class ResultsCache(object):
     self._logger = logger_to_use
     self._ce = command_executer.GetCommandExecuter(self._logger)
     self.label = label
+    self.share_users = share_users
 
   def _GetCacheDirForRead(self):
-    glob_path = self._FormCacheDir(self._GetCacheKeyList(True))
-    matching_dirs = glob.glob(glob_path)
+    matching_dirs = []
+    for glob_path in self._FormCacheDir(self._GetCacheKeyList(True)):
+      matching_dirs += glob.glob(glob_path)
 
     if matching_dirs:
       # Cache file found.
@@ -297,12 +318,21 @@ class ResultsCache(object):
       return None
 
   def _GetCacheDirForWrite(self):
-    return self._FormCacheDir(self._GetCacheKeyList(False))
+    return self._FormCacheDir(self._GetCacheKeyList(False))[0]
 
   def _FormCacheDir(self, list_of_strings):
     cache_key = " ".join(list_of_strings)
     cache_dir = misc.GetFilenameFromString(cache_key)
-    cache_path = os.path.join(SCRATCH_DIR, cache_dir)
+    if self.label.cache_dir:
+      cache_home = os.path.abspath(os.path.expanduser(self.label.cache_dir))
+      cache_path = [os.path.join(cache_home, cache_dir)]
+    else:
+      cache_path = [os.path.join(SCRATCH_DIR, cache_dir)]
+
+    for i in [x.strip() for x in self.share_users.split(",")]:
+      path = SCRATCH_BASE % i
+      cache_path.append(os.path.join(path, cache_dir))
+
     return cache_path
 
   def _GetCacheKeyList(self, read):
@@ -313,7 +343,7 @@ class ResultsCache(object):
     if read and CacheConditions.CHECKSUMS_MATCH not in self.cache_conditions:
       checksum = "*"
     else:
-      checksum = ImageChecksummer().Checksum(self.chromeos_image)
+      checksum = ImageChecksummer().Checksum(self.label)
 
     if read and CacheConditions.IMAGE_PATH_MATCH not in self.cache_conditions:
       image_path_checksum = "*"

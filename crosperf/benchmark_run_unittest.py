@@ -19,14 +19,19 @@ from results_cache import MockResultsCache
 class BenchmarkRunTest(unittest.TestCase):
   def testDryRun(self):
     my_label = MockLabel("test1", "image1", "/tmp/test_benchmark_run",
-                         "x86-alex", "chromeos-alex1", "")
-    m = MockMachineManager("/tmp/chromeos_root")
+                         "x86-alex", "chromeos-alex1",
+                         image_args="",
+                         image_md5sum="",
+                         cache_dir="")
+    m = MockMachineManager("/tmp/chromeos_root", 0)
     m.AddMachine("chromeos-alex1")
     bench = Benchmark("PageCyler",
                       "Pyautoperf",
                       "",
                       1,
                       0.2,
+                      False,
+                      False,
                       "")
     b = MockBenchmarkRun("test run",
                          bench,
@@ -34,7 +39,8 @@ class BenchmarkRunTest(unittest.TestCase):
                          1,
                          [],
                          m,
-                         logger.GetLogger())
+                         logger.GetLogger(),
+                         "")
     b.cache = MockResultsCache()
     b.autotest_runner = MockAutotestRunner()
     b.start()

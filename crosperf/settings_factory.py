@@ -26,6 +26,12 @@ class BenchmarkSettings(Settings):
     self.AddField(FloatField("outlier_range", default=0.2,
                              description="The percentage of highest/lowest "
                              "values to omit when computing the average."))
+    self.AddField(BooleanField("rm_chroot_tmp", default=False,
+                               description="Whether remove the run_remote_test"
+                               "result in the chroot"))
+    self.AddField(BooleanField("key_results_only", default=True,
+                               description="Whether only show the key results"
+                               "of pyautoperf"))
     self.AddField(TextField("perf_args", default="",
                             description="The optional profile command. It "
                             "enables perf commands to record perforamance "
@@ -44,6 +50,8 @@ class LabelSettings(Settings):
                             "contains a src/scripts directory. Defaults to "
                             "the chromeos checkout which contains the "
                             "chromeos_image."))
+    self.AddField(TextField("md5sum", default="",
+                            description="The md5sum of this image"))
     self.AddField(TextField("board", required=True, description="The target "
                             "board for running experiments on, e.g. x86-alex."))
     self.AddField(ListField("remote", description=
@@ -53,6 +61,8 @@ class LabelSettings(Settings):
                             default="",
                             description="Extra arguments to pass to "
                             "image_chromeos.py."))
+    self.AddField(TextField("cache_dir", default="",
+                            description="The cache dir for this image."))
 
 
 class GlobalSettings(Settings):
@@ -69,6 +79,9 @@ class GlobalSettings(Settings):
     self.AddField(BooleanField("rerun_if_failed", description="Whether to "
                                "re-run failed autotest runs or not.",
                                default=False))
+    self.AddField(BooleanField("rm_chroot_tmp", default=False,
+                               description="Whether remove the run_remote_test"
+                               "result in the chroot"))
     self.AddField(ListField("email", description="Space-seperated"
                             "list of email addresses to send email to."))
     self.AddField(BooleanField("rerun", description="Whether to ignore the "
@@ -89,11 +102,27 @@ class GlobalSettings(Settings):
                             "contains a src/scripts directory. Defaults to "
                             "the chromeos checkout which contains the "
                             "chromeos_image."))
+    self.AddField(BooleanField("key_results_only", default=True,
+                               description="Whether only show the key results"
+                               "of pyautoperf"))
+    self.AddField(IntegerField("acquire_timeout", default=0,
+                               description="Number of seconds to wait for "
+                               "machine before exit if all the machines in "
+                               "the experiment file are busy. Default is 0"))
     self.AddField(TextField("perf_args", default="",
                             description="The optional profile command. It "
                             "enables perf commands to record perforamance "
                             "related counters. It must start with perf "
                             "command record or stat followed by arguments."))
+    self.AddField(TextField("cache_dir", default="",
+                            description="The abs path of cache dir. "
+                            "Default is /home/$(whoami)/cros_scratch."))
+    self.AddField(BooleanField("no_email", default=False,
+                               description="Whether to disable the email to "
+                               "user after crosperf finishes."))
+    self.AddField(TextField("share_users", default="",
+                            description="Who's cache data you want to "
+                            "use. It accepts multiple users seperated by \",\""))
 
 
 class SettingsFactory(object):
