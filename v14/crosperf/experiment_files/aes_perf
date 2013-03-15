@@ -1,0 +1,7 @@
+# This experiment just runs a short autotest which measures the performance of
+# aes encryption. In addition, it profiles
+
+profile_args: record -e cycles -e instructions
+
+benchmark: platform_AesThroughput {
+}

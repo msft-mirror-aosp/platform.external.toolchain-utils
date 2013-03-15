@@ -1,0 +1,6 @@
+perf_args: record -e cycles
+
+benchmark: morejs {
+	autotest_name: desktopui_PyAutoPerfTests
+	autotest_args: --args='--iterations=1 perf.PageCyclerTest.testMoreJSFile'
+}
