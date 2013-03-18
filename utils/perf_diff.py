@@ -16,6 +16,8 @@ import misc
 import tabulator
 
 ROWS_TO_SHOW = "Rows_to_show_in_the_perf_table"
+TOTAL_EVENTS = "Total_events_of_this_profile"
+
 
 def GetPerfDictFromReport(report_file):
   output = {}
@@ -24,9 +26,11 @@ def GetPerfDictFromReport(report_file):
     if k not in output:
       output[k] = {}
     output[k][ROWS_TO_SHOW] = 0
+    output[k][TOTAL_EVENTS] = 0
     for function in v.functions:
       out_key = "%s" % (function.name)
       output[k][out_key] = function.count
+      output[k][TOTAL_EVENTS] += function.count
       if function.percent > 1:
         output[k][ROWS_TO_SHOW] += 1
   return output
