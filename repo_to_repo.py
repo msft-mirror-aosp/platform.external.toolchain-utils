@@ -4,6 +4,7 @@
 
 __author__ = 'asharif@google.com (Ahmad Sharif)'
 
+import datetime
 import optparse
 import os
 import re
@@ -40,13 +41,16 @@ def SplitMapping(mapping):
 
 
 class Repo(object):
-  def __init__(self):
+  def __init__(self, no_create_tmp_dir=False):
     self.repo_type = None
     self.address = None
     self.mappings = None
     self.revision = None
     self.ignores = ['.gitignore', '.p4config', 'README.google']
-    self._root_dir = tempfile.mkdtemp()
+    if no_create_tmp_dir:
+      self._root_dir = None
+    else:
+      self._root_dir = tempfile.mkdtemp()
     self._ce = command_executer.GetCommandExecuter()
     self._logger = logger.GetLogger()
 
@@ -90,6 +94,24 @@ class Repo(object):
     return '\n'.join(str(s) for s in [self.repo_type,
                                       self.address,
                                       self.mappings])
+
+
+# Note - this type of repo is used only for "readonly", in other words, this
+# only serves as a incoming repo.
+class FileRepo(Repo):
+  def __init__(self, address, ignores=None):
+    Repo.__init__(self, no_create_tmp_dir=True)
+    self.repo_type = 'file'
+    self.address = address
+    self.mappings = None
+    self.branch = None
+    self.revision = '{0} (as of "{1}")'.format(address, datetime.datetime.now())
+    self.gerrit = None
+    self._root_dir = self.address
+
+  def CleanupRoot(self):
+    """Override to prevent deletion."""
+    pass
 
 
 class P4Repo(Repo):
@@ -198,12 +220,8 @@ class GitRepo(Repo):
       ret = self._ce.RunCommand(command)
       return ret
 
-  def PushSources(self, commit_message=None, dry_run=False, message_file=None):
+  def CommitLocally(self, commit_message=None, message_file=None):
     with misc.WorkingDirectory(self._root_dir):
-      push_args = ''
-      if dry_run:
-        push_args += ' -n '
-
       command = 'pwd'
       for ignore in self.ignores:
         command += '&& echo \'%s\' >> .git/info/exclude' % ignore
@@ -215,8 +233,15 @@ class GitRepo(Repo):
       else:
         raise Exception("No commit message given!")
       command += '&& git commit -v %s' % message_arg
-      ret = self._ce.RunCommand(command)
-      if ret: return ret
+      return self._ce.RunCommand(command)
+
+  def PushSources(self, commit_message=None, dry_run=False, message_file=None):
+    ret = self.CommitLocally(commit_message, message_file)
+    if ret: return ret
+    push_args = ''
+    if dry_run:
+      push_args += ' -n '
+    with misc.WorkingDirectory(self._root_dir):
       if self.gerrit:
         label = 'somelabel'
         command = 'git remote add %s %s' % (label, self.address)
@@ -226,6 +251,7 @@ class GitRepo(Repo):
         command = 'git push -v %s origin %s:%s' % (push_args, self.branch,
                                                    self.branch)
       ret = self._ce.RunCommand(command)
+    return ret
 
   def MapSources(self, root_dir):
     if not self.mappings:
@@ -288,6 +314,8 @@ class RepoReader(object):
                      mappings=repo_mappings,
                      ignores=repo_ignores,
                      gerrit=gerrit)
+    elif repo_type == 'file':
+      repo = FileRepo(repo_address)
     else:
       logger.GetLogger().LogFatal('Unknown repo type: %s' % repo_type)
     return repo
@@ -320,6 +348,12 @@ def Main(argv):
     return 1
   rr = RepoReader(options.input_file)
   [input_repos, output_repos] = rr.ParseFile()
+
+  # Make sure FileRepo is not used as output destination.
+  for output_repo in output_repos:
+    if output_repo.repo_type == 'file':
+      logger.GetLogger().LogFatal(
+        'FileRepo is only supported as an input repo.')
 
   for output_repo in output_repos:
     ret = output_repo.SetupForPush()
