@@ -325,3 +325,48 @@ def WorkingDirectory(new_dir):
     msg = "cd %s" % old_dir
     logger.GetLogger().LogCmd(msg)
   os.chdir(old_dir)
+
+def HasGitStagedChanges(git_dir):
+  """Return True if git repository has staged changes."""
+  command = 'cd {0} && git diff --quiet --cached --exit-code HEAD'.format(
+    git_dir)
+  return command_executer.GetCommandExecuter().RunCommand(
+    command, print_to_console=False)
+
+def HasGitUnstagedChanges(git_dir):
+  """Return True if git repository has un-staged changes."""
+  command = 'cd {0} && git diff --quiet --exit-code HEAD'.format(git_dir)
+  return command_executer.GetCommandExecuter().RunCommand(
+    command, print_to_console=False)
+
+def HasGitUntrackedChanges(git_dir):
+  """Return True if git repository has un-tracked changes."""
+  command = 'cd {0} && test -z $(git ls-files --exclude-standard --others)' \
+      .format(git_dir)
+  return command_executer.GetCommandExecuter().RunCommand(
+    command,print_to_console=False)
+
+def IsGitTreeClean(git_dir):
+  if HasGitStagedChanges(git_dir):
+    logger.GetLogger().LogWarning("Git tree has staged changes.")
+    return False
+  if HasGitUnstagedChanges(git_dir):
+    logger.GetLogger().LogWarning("Git tree has unstaged changes.")
+    return False
+  if HasGitUntrackedChanges(git_dir):
+    logger.GetLogger().LogWarning("Git tree has un-tracked changes.")
+    return False
+  return True
+
+def GetGitChangesAsList(git_dir, path=None, staged=False):
+  command = 'cd {0} && git diff --name-only'.format(git_dir)
+  if staged:
+    command = command + ' --cached'
+  if path:
+    command = command + ' -- ' + path
+  ec, out, err = command_executer.GetCommandExecuter().RunCommand(
+    command, return_output=True, print_to_console=False)
+  rv = []
+  for line in out.splitlines():
+    rv.append(line)
+  return rv
