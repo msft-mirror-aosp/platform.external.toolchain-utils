@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python
 # Copyright 2012 Google Inc. All Rights Reserved.
 # Author: mrdmnd@ (Matt Redmond)
 """A unit test for sending data to Bartlett. Requires poster module."""
