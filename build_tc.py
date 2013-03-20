@@ -151,7 +151,14 @@ class ToolchainPart(object):
     env_string = " ".join(["%s=\"%s\"" % var for var in env.items()])
     command = "emerge =cross-%s/%s-9999" % (self._ctarget, self._name)
     full_command = "sudo %s %s" % (env_string, command)
-    return self._ce.ChrootRunCommand(self._chromeos_root, full_command)
+    rv = self._ce.ChrootRunCommand(self._chromeos_root, full_command)
+    if rv != 0:
+      return rv
+    if self._name == "gcc":
+      command = ("sudo cp -r /usr/lib/gcc/%s /build/%s/usr/lib/gcc/." %
+                 (self._ctarget, self._board))
+      rv = self._ce.ChrootRunCommand(self._chromeos_root, command)
+    return rv
 
   def MoveMaskFile(self):
     self._new_mask_file = None
@@ -253,10 +260,13 @@ def Main(argv):
   chromeos_root = misc.CanonicalizePath(options.chromeos_root)
   if options.gcc_dir:
     gcc_dir = misc.CanonicalizePath(options.gcc_dir)
+    assert gcc_dir and os.path.isdir(gcc_dir), "gcc_dir does not exist!"
   if options.binutils_dir:
     binutils_dir = misc.CanonicalizePath(options.binutils_dir)
+    assert os.path.isdir(binutils_dir), "binutils_dir does not exist!"
   if options.gdb_dir:
     gdb_dir = misc.CanonicalizePath(options.gdb_dir)
+    assert os.path.isdir(gdb_dir), "gdb_dir does not exist!"
   if options.unmount_only:
     options.mount_only = False
   elif options.mount_only:
