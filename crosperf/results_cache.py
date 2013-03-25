@@ -1,6 +1,8 @@
 #!/usr/bin/python
-#
-# Copyright 2011 Google Inc. All Rights Reserved.
+
+# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
 import getpass
 import glob
@@ -69,11 +71,13 @@ class Result(object):
                                             command,
                                             return_output=True)
     keyvals_dict = {}
+    tmp_dir_in_chroot =  misc.GetInsideChrootPath(self._chromeos_root,
+                                                  self._temp_dir)
     for line in out.splitlines():
       tokens = re.split("=|,", line)
       key = tokens[-2]
-      if key.startswith(self.results_dir):
-        key = key[len(self.results_dir) + 1:]
+      if key.startswith(tmp_dir_in_chroot):
+        key = key[len(tmp_dir_in_chroot) + 1:]
       value = tokens[-1]
       keyvals_dict[key] = value
 
