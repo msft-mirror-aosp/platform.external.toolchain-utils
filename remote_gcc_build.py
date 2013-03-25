@@ -249,7 +249,8 @@ def UploadPatch(source):
 def ReplaceSysroot(chromeos_root, dest_dir, target):
   """Copy unpacked sysroot and image to chromeos_root."""
   ce = command_executer.GetCommandExecuter()
-  board = target.split("-")[0]
+  # get the board name from "board-release". board may contain "-"
+  board = target.rsplit("-", 1)[0]
   board_dir = os.path.join(chromeos_root, "chroot", "build", board)
   command = "sudo rm -rf {0}".format(board_dir)
   ce.RunCommand(command)
@@ -429,4 +430,3 @@ def Main(argv):
 if __name__ == "__main__":
   retval = Main(sys.argv)
   sys.exit(retval)
-
