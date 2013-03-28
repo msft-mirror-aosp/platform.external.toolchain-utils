@@ -1,6 +1,9 @@
 #!/usr/bin/python
 
-# Copyright 2011 Google Inc. All Rights Reserved.
+# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """A module to generate experments."""
 
 import os
@@ -35,7 +38,7 @@ class ExperimentFactory(object):
     cache_dir = global_settings.GetField("cache_dir")
     config.AddConfig("no_email", global_settings.GetField("no_email"))
     share_users = global_settings.GetField("share_users")
-
+    results_dir = global_settings.GetField("results_dir")
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.
     cache_conditions = [CacheConditions.CACHE_FILE_EXISTS,
@@ -108,7 +111,8 @@ class ExperimentFactory(object):
                             working_directory, chromeos_root,
                             cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(),
-                            email, acquire_timeout, log_dir, share_users)
+                            email, acquire_timeout, log_dir, share_users,
+                            results_dir)
 
     return experiment
 

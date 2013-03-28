@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
-# Copyright 2011 Google Inc. All Rights Reserved.
+# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
 """The experiment setting module."""
 
@@ -8,6 +10,7 @@ import os
 import time
 
 from utils import logger
+from utils import misc
 
 from benchmark_run import BenchmarkRun
 from machine_manager import MachineManager
@@ -21,7 +24,7 @@ class Experiment(object):
   def __init__(self, name, remote, working_directory,
                chromeos_root, cache_conditions, labels, benchmarks,
                experiment_file, email_to, acquire_timeout, log_dir,
-               share_users):
+               share_users, results_directory):
     self.name = name
     self.working_directory = working_directory
     self.remote = remote
@@ -29,8 +32,11 @@ class Experiment(object):
     self.cache_conditions = cache_conditions
     self.experiment_file = experiment_file
     self.email_to = email_to
-    self.results_directory = os.path.join(self.working_directory,
-                                          self.name + "_results")
+    if not results_directory:
+      self.results_directory = os.path.join(self.working_directory,
+                                            self.name + "_results")
+    else:
+      self.results_directory = misc.CanonicalizePath(results_directory)
     self.log_dir = log_dir
     self.labels = labels
     self.benchmarks = benchmarks

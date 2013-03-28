@@ -1,6 +1,9 @@
 #!/usr/bin/python
 
-# Copyright 2011 Google Inc. All Rights Reserved.
+# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """Setting files for global, benchmark and labels."""
 
 from field import BooleanField
@@ -123,6 +126,8 @@ class GlobalSettings(Settings):
     self.AddField(TextField("share_users", default="",
                             description="Who's cache data you want to "
                             "use. It accepts multiple users seperated by \",\""))
+    self.AddField(TextField("results_dir", default="",
+                            description="The results dir"))
 
 
 class SettingsFactory(object):
