@@ -71,8 +71,8 @@ class Result(object):
                                             command,
                                             return_output=True)
     keyvals_dict = {}
-    tmp_dir_in_chroot =  misc.GetInsideChrootPath(self._chromeos_root,
-                                                  self._temp_dir)
+    tmp_dir_in_chroot = misc.GetInsideChrootPath(self._chromeos_root,
+                                                 self._temp_dir)
     for line in out.splitlines():
       tokens = re.split("=|,", line)
       key = tokens[-2]
@@ -236,6 +236,7 @@ class Result(object):
       self._ce.RunCommand(command)
 
     command = "mkdir -p {0} && ".format(os.path.dirname(cache_dir))
+    command += "chmod g+x {0} && ".format(temp_dir)
     command += "mv {0} {1}".format(temp_dir, cache_dir)
     ret = self._ce.RunCommand(command)
     if ret:
