@@ -1,6 +1,8 @@
 #!/usr/bin/python
-#
-# Copyright 2012 Google Inc. All Rights Reserved.
+
+# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
 import hashlib
 import image_chromeos
@@ -169,6 +171,12 @@ class MachineManager(object):
     ce = command_executer.GetCommandExecuter()
     with self.image_lock:
       retval = ce.RunCommand(" ".join(["python"] + image_chromeos_args))
+      if retval:
+        cmd ="reboot && exit"
+        ce.CrosRunCommand(cmd, machine=machine.name,
+                          chromeos_root=self.chromeos_root)
+        time.sleep(60)
+        retval = ce.RunCommand(" ".join(["python"] + image_chromeos_args))
       if retval:
         raise Exception("Could not image machine: '%s'." % machine.name)
       else:
