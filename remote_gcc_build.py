@@ -1,6 +1,8 @@
 #!/usr/bin/python
-#
-# Copyright 2012 Google Inc. All Rights Reserved.
+
+# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
 """Script to use remote try-bot build image with local gcc."""
 
@@ -288,8 +290,7 @@ def GetGccBranch(branch):
       if not out:
         GccBranchForToolchain(branch)
   if not out:
-    logger.GetLogger.LogFatal("The branch/version ${0} "
-                              "is not a valid one".format(branch))
+    out = "remotes/m/master"
   new_branch = out.splitlines()[0]
   return new_branch
 
