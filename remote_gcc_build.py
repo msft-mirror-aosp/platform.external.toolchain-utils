@@ -386,13 +386,13 @@ def Main(argv):
 
   args = parser.parse_args(argv[1:])
   target = args.target
-  patch = args.patch.split()
+  patch = args.patch.split(",")
   chromeos_root = misc.CanonicalizePath(args.chromeos_root)
   branch = args.branch
   # descritption is the keyword of the build in build log.
   # Here we use [{branch)_{patchnumber}_{target}]
   description = "{0}_{1}_{2}".format(branch, GetPatchString(patch), target)
-  if args.chromeos_version and args.branch:
+  if args.chromeos_version and args.branch != "master":
     raise Exception("You can not set chromeos_version and branch at the "
                     "same time.")
   chromeos_version = args.chromeos_version
