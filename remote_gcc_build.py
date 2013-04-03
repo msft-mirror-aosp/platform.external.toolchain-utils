@@ -290,7 +290,7 @@ def GetGccBranch(branch):
       if not out:
         GccBranchForToolchain(branch)
   if not out:
-    out = "remotes/m/master"
+    out = "master"
   new_branch = out.splitlines()[0]
   return new_branch
 
@@ -376,8 +376,8 @@ def Main(argv):
                             "under the chroot of chromeos_root and copy "
                             "the image to src/build/image/$board/latest."
                             " Default is False"))
-  parser.add_argument("-b", "--branch", dest="branch", default="master",
-                      help=("The branch to run trybot, default is master"))
+  parser.add_argument("-b", "--branch", dest="branch", default="",
+                      help=("The branch to run trybot, default is None"))
   parser.add_argument("-p", "--patch", dest="patch", default="",
                       help=("The patches to be applied, the patches numbers "
                             "be seperated by ','"))
@@ -392,7 +392,7 @@ def Main(argv):
   # descritption is the keyword of the build in build log.
   # Here we use [{branch)_{patchnumber}_{target}]
   description = "{0}_{1}_{2}".format(branch, GetPatchString(patch), target)
-  if args.chromeos_version and args.branch != "master":
+  if args.chromeos_version and args.branch:
     raise Exception("You can not set chromeos_version and branch at the "
                     "same time.")
   chromeos_version = args.chromeos_version
