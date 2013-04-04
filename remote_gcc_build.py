@@ -290,7 +290,7 @@ def GetGccBranch(branch):
       if not out:
         GccBranchForToolchain(branch)
   if not out:
-    out = "master"
+    out = "remotes/cros/master"
   new_branch = out.splitlines()[0]
   return new_branch
 
@@ -306,11 +306,10 @@ def UploadGccPatch(chromeos_root, gcc_dir, branch):
                                   "source".format(gcc_dir))
   os.chdir(gcc_path)
   RemoveOldBranch()
-
   if not branch:
     branch = "master"
   branch = GetGccBranch(branch)
-  command = ("git checkout -b {0} -t remotes/cros/{1} && "
+  command = ("git checkout -b {0} -t {1} && "
              "rm -rf *".format(BRANCH, branch))
   ce.RunCommand(command, print_to_console=False)
 
