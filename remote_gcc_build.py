@@ -385,7 +385,10 @@ def Main(argv):
 
   args = parser.parse_args(argv[1:])
   target = args.target
-  patch = args.patch.split(",")
+  if args.patch:
+    patch = args.patch.split(",")
+  else:
+    patch = []
   chromeos_root = misc.CanonicalizePath(args.chromeos_root)
   branch = args.branch
   # descritption is the keyword of the build in build log.
