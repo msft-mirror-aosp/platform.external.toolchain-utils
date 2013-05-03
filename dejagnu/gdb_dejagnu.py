@@ -74,7 +74,7 @@ class DejagnuExecuter(object):
   """The class wrapper for dejagnu test executer."""
 
   def __init__(self, base_dir, source_dir, chromeos_root, remote, board,
-               tools, cleanup):
+               cleanup):
     self._l = logger.GetLogger()
     self._chromeos_root = chromeos_root
     self._chromeos_chroot = path.join(chromeos_root, 'chroot')
@@ -88,7 +88,6 @@ class DejagnuExecuter(object):
     self._executer = command_executer.GetCommandExecuter()
     self._base_dir = base_dir
     self._tmp_abs = None
-    self._tools = tools.split(',')
     self._cleanup = cleanup
     self._sshflag = " -o StrictHostKeyChecking=no -o CheckHostIP=no"
 
@@ -140,7 +139,7 @@ class DejagnuExecuter(object):
     with open('%s/site.exp' % self._tmp_abs, 'w') as site_file:
       site_file.write('set target_list "%s"\n' % self._board)
 
-    with open('%s/boards/gdbserver.sh.in' % self._base_dir, 'r')
+    with open('%s/boards/gdbserver.sh.in' % self._base_dir, 'r') \
     as template_file:
       content = template_file.read()
     substitutions = dict({
@@ -279,8 +278,7 @@ def Main(argv):
   executer = DejagnuExecuter(misc.GetRoot(argv[0])[0],
                              opts.mount, opts.chromeos_root,
                              available_machine,
-                             opts.board, opts.flags,
-                             opts.keep_intermediate_files, "",
+                             opts.board,
                              opts.cleanup)
   # Return value is a 3- or 4-element tuple
   #   element#1 - exit code
