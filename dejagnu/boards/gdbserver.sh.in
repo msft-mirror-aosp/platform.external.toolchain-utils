@@ -8,5 +8,5 @@ ssh_cmd="nohup ${gdbserver_cmd} "
 
 echo "Executing: ssh  ${RSA_FILE} ${REMOTE_SSH_FLAGS} root@${FLAGS_remote} \"${ssh_cmd}\"" >&2
 
-ssh ${REMOTE_SSH_FLAGS} root@${FLAGS_remote} "${ssh_cmd}"
+ssh ${REMOTE_SSH_FLAGS} root@${FLAGS_remote} "killall -9 gdbserver; ${ssh_cmd}"
 
