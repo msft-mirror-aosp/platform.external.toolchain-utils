@@ -5,7 +5,6 @@
 
 import getpass
 import os
-import pty
 import re
 import select
 import subprocess
@@ -62,10 +61,9 @@ class CommandExecuter:
         user = username + "@"
       cmd = "ssh -t -t %s%s -- '%s'" % (user, machine, cmd)
 
-    pty_fds = pty.openpty()
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
-                         stdin=pty_fds[0], shell=True)
+                         shell=True)
 
     full_stdout = ""
     full_stderr = ""
@@ -135,8 +133,6 @@ class CommandExecuter:
         break
 
     p.wait()
-    os.close(pty_fds[0])
-    os.close(pty_fds[1])
     if return_output:
       return (p.returncode, full_stdout, full_stderr)
     return p.returncode
