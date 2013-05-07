@@ -23,6 +23,9 @@ from utils import constants
 from utils import logger
 from utils import misc
 
+_VALID_TEST_RESULTS = [ 'FAIL', 'UNRESOLVED', 'XPASS',
+                        'ERROR', 'UNSUPPORTED', 'PASS' ]
+
 
 def ProcessArguments(argv):
   """Processing/validating script arguments."""
@@ -271,6 +274,43 @@ class DejagnuExecuter(object):
                    self._source_dir, self._board,
                    mount))
 
+  def ResultValidate(self):
+    self.PrepareResult()
+    for key, value in self.base_result.items():
+      if 'PASS' not in value:
+        continue
+      test_result = self.test_result[key]
+      if 'PASS' not in test_result:
+        return 1
+    return 0
+
+  def PrepareResult(self):
+    test_output = os.path.join(self._gdb_source_dir, 'gdb',
+                               'testsuite', 'gdb.sum')
+    test_output = misc.GetOutsideChrootPath(self._chromeos_root,
+                                            test_output)
+    base_output = os.path.join(self._base_dir, 'gdb_baseline', self._target)
+
+    self.test_result = self.ParseResult(test_output)
+    self.base_result = self.ParseResult(base_output)
+
+  def ParseResult(self, gdb_sum):
+    result = {}
+    multi_keys = {}
+    with open(gdb_sum) as input_sum:
+      for line in input_sum:
+        line = line.strip()
+        r = line.split(":", 1)
+        if r[0] in _VALID_TEST_RESULTS:
+          key = r[1]
+          if r[1] in result:
+            if r[1] in multi_keys:
+              multi_keys[r[1]] += 1
+            else:
+              multi_keys[r[1]] = 2
+            key = r[1] + "_____{0}_____".format(multi_keys[r[1]])
+          result[key] = r[0]
+    return result
 
 def Main(argv):
   opts = ProcessArguments(argv)
@@ -294,6 +334,7 @@ def Main(argv):
     executer.PrepareGdb()
     executer.PrepareGdbserver()
     executer.MakeCheck()
+    print executer.ResultValidate()
    # ret = executer.ValidateFailures()
   except Exception as e:
     # At least log the exception on console.
@@ -301,12 +342,9 @@ def Main(argv):
     # The #4 element encodes the runtime exception.
     ret = (1, '', '', 'Exception happened during execution: \n' + str(e))
   finally:
-    #available_machine.Unlock(exclusive=True)
-    #executer.CleanupIntermediateFiles()
-    #executer.Cleanup()
+    executer.Cleanup()
     return ret
 
 if __name__ == '__main__':
   retval = Main(sys.argv)[0]
   sys.exit(retval)
-D
