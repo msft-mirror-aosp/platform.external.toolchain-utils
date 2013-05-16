@@ -24,6 +24,12 @@ class AutotestRunner(object):
     command = "rm -rf /usr/local/autotest/results/*"
     self._ce.CrosRunCommand(command, machine=machine_name, username="root",
                             chromeos_root=chromeos_root)
+
+    command ="reboot && exit"
+    self._ce.CrosRunCommand(command, machine=machine_name,
+                      chromeos_root=chromeos_root)
+    time.sleep(60)
+
     command = ("./run_remote_tests.sh --remote=%s %s %s" %
                (machine_name, options, autotest_name))
     return self._ce.ChrootRunCommand(chromeos_root, command, True, self._ct)
