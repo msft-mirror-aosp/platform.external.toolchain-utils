@@ -2,6 +2,8 @@
 #
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+import time
+
 from utils import command_executer
 
 
