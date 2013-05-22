@@ -32,12 +32,25 @@ class CrosMachine(object):
     self.released_time = time.time()
     self.autotest_run = None
     self.chromeos_root = chromeos_root
+    if not self._IsReachable():
+      self.machine_checksum = None
+      return
     self._GetMemoryInfo()
     self._GetCPUInfo()
     self._ComputeMachineChecksumString()
     self._GetMachineID()
     self.machine_checksum = self._GetMD5Checksum(self.checksum_string)
     self.machine_id_checksum = self._GetMD5Checksum(self.machine_id)
+
+  def _IsReachable(self):
+    ce = command_executer.GetCommandExecuter()
+    command = "ls"
+    ret = ce.CrosRunCommand(command,
+                            machine=self.name,
+                            chromeos_root=self.chromeos_root)
+    if ret:
+      return False
+    return True
 
   def _ParseMemoryInfo(self):
     line = self.meminfo.splitlines()[0]
@@ -226,9 +239,8 @@ class MachineManager(object):
       for m in self._all_machines:
         assert m.name != machine_name, "Tried to double-add %s" % machine_name
       cm = CrosMachine(machine_name, self.chromeos_root)
-      assert cm.machine_checksum, ("Could not find checksum for machine %s" %
-                           machine_name)
-      self._all_machines.append(cm)
+      if cm.machine_checksum:
+        self._all_machines.append(cm)
 
   def AreAllMachineSame(self, label):
     checksums = [m.machine_checksum for m in self.GetMachines(label)]
