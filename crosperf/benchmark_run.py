@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
-# Copyright 2011 Google Inc. All Rights Reserved.
+# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
 import datetime
 import os
@@ -108,6 +110,10 @@ class BenchmarkRun(threading.Thread):
         self.failure_reason = str(e)
     finally:
       if self.machine:
+        if not self.machine.IsReachable():
+          self._logger.LogOutput("Machine % is not reachable, removing it."
+                                 % self.machine.name)
+          self.machine_manager.RemoveMachine(self.machine.name)
         self._logger.LogOutput("Releasing machine: %s" % self.machine.name)
         self.machine_manager.ReleaseMachine(self.machine)
         self._logger.LogOutput("Released machine: %s" % self.machine.name)

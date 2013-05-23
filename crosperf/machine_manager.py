@@ -32,7 +32,7 @@ class CrosMachine(object):
     self.released_time = time.time()
     self.autotest_run = None
     self.chromeos_root = chromeos_root
-    if not self._IsReachable():
+    if not self.IsReachable():
       self.machine_checksum = None
       return
     self._GetMemoryInfo()
@@ -42,7 +42,7 @@ class CrosMachine(object):
     self.machine_checksum = self._GetMD5Checksum(self.checksum_string)
     self.machine_id_checksum = self._GetMD5Checksum(self.machine_id)
 
-  def _IsReachable(self):
+  def IsReachable(self):
     ce = command_executer.GetCommandExecuter()
     command = "ls"
     ret = ce.CrosRunCommand(command,
@@ -245,6 +245,15 @@ class MachineManager(object):
   def AreAllMachineSame(self, label):
     checksums = [m.machine_checksum for m in self.GetMachines(label)]
     return len(set(checksums)) == 1
+
+  def RemoveMachine(self, machine_name):
+    with self._lock:
+      self._machines = [m for m in self._machines
+                        if m.name != machine_name]
+      res = lock_machine.Machine(machine_name).Unlock(True)
+      if not res:
+        logger.GetLogger().LogError("Could not unlock machine: '%s'."
+                                    % m.name)
 
   def AcquireMachine(self, chromeos_image, label):
     image_checksum = ImageChecksummer().Checksum(label)
