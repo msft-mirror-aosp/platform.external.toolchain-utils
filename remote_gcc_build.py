@@ -391,6 +391,8 @@ def Main(argv):
     patch = []
   chromeos_root = misc.CanonicalizePath(args.chromeos_root)
   branch = args.branch
+  if not branch:
+    branch = chromeos_version
   # descritption is the keyword of the build in build log.
   # Here we use [{branch)_{patchnumber}_{target}]
   description = "{0}_{1}_{2}".format(branch, GetPatchString(patch), target)
@@ -407,8 +409,6 @@ def Main(argv):
                                       chromeos_root)
     patch.append(manifest_patch)
   if args.gcc_dir:
-    if not branch:
-      branch = chromeos_version
     patch.append(UploadGccPatch(chromeos_root, args.gcc_dir, branch))
   index = 0
   description = RunRemote(chromeos_root, branch, patch, args.local,
