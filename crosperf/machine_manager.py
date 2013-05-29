@@ -132,8 +132,19 @@ class CrosMachine(object):
         machine=self.name, chromeos_root=self.chromeos_root)
     b = if_out.splitlines()
     a = [l for l in b if "Product" in l]
-    self.machine_id = a[0]
-    assert ret == 0, "Could not get machine_id from machine: %s" % self.name
+    if len(a):
+      self.machine_id = a[0]
+      return
+    command = "ifconfig"
+    ret, if_out, _ = ce.CrosRunCommand(
+        command, return_output=True,
+        machine=self.name, chromeos_root=self.chromeos_root)
+    b = if_out.splitlines()
+    a = [l for l in b if "HWaddr" in l]
+    if len(a):
+      self.machine_id = "_".join(a)
+      return
+    assert 0, "Could not get machine_id from machine: %s" % self.name
 
   def __str__(self):
     l = []
