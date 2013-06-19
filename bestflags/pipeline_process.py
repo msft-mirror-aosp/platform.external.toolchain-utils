@@ -81,7 +81,7 @@ class PipelineProcess(multiprocessing.Process):
     """
 
     # the worker pool
-    self._pool = multiprocessing.Pool(self._num_processes)
+    work_pool = multiprocessing.Pool(self._num_processes)
 
     # the helper process
     helper_process = multiprocessing.Process(target=self._helper,
@@ -106,13 +106,13 @@ class PipelineProcess(multiprocessing.Process):
         self._helper_queue.put(task)
       else:
         # Let the workers do the actual work.
-        self._pool.apply_async(self._worker, args=(task, self._work_queue,
+        work_pool.apply_async(self._worker, args=(task, self._work_queue,
                                                    self._result_queue))
         mycache.append(task_key)
 
     # Shutdown the workers pool and the helper process.
-    self._pool.close()
-    self._pool.join()
+    work_pool.close()
+    work_pool.join()
 
     self._helper_queue.put(POISONPILL)
     helper_process.join()
