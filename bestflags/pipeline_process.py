@@ -107,7 +107,7 @@ class PipelineProcess(multiprocessing.Process):
       else:
         # Let the workers do the actual work.
         work_pool.apply_async(self._worker, args=(task, self._work_queue,
-                                                   self._result_queue))
+                                                  self._result_queue))
         mycache.append(task_key)
 
     # Shutdown the workers pool and the helper process.
