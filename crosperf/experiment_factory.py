@@ -7,6 +7,7 @@
 """A module to generate experments."""
 
 import os
+import re
 import socket
 
 from benchmark import Benchmark
@@ -31,6 +32,13 @@ class ExperimentFactory(object):
     global_settings = experiment_file.GetGlobalSettings()
     experiment_name = global_settings.GetField("name")
     remote = global_settings.GetField("remote")
+    # This is used to remove the ",' from the remote if user
+    # add them to the remote string.
+    new_remote = []
+    for i in remote:
+      c = re.sub('["\']', '', i)
+      new_remote.append(c)
+    remote = new_remote
     chromeos_root = global_settings.GetField("chromeos_root")
     rm_chroot_tmp = global_settings.GetField("rm_chroot_tmp")
     key_results_only = global_settings.GetField("key_results_only")
@@ -85,6 +93,12 @@ class ExperimentFactory(object):
       chromeos_root = label_settings.GetField("chromeos_root")
       board = label_settings.GetField("board")
       my_remote = label_settings.GetField("remote")
+      new_remote = []
+      for i in my_remote:
+        c = re.sub('["\']', '', i)
+        new_remote.append(c)
+      my_remote = new_remote
+
       image_md5sum = label_settings.GetField("md5sum")
       cache_dir = label_settings.GetField("cache_dir")
       chrome_src = label_settings.GetField("chrome_src")
