@@ -59,7 +59,7 @@ class SuiteRunner(object):
         "src/scripts/mod_for_test_scripts/ssh_keys/testing_rsa")
 
     cmd = ("cd {0} && "
-           "./tools/perf/run_multipage_benchmarks "
+           "./tools/perf/run_measurement "
            "--browser=cros-chrome "
            "--output-format=csv "
            "--remote={1} "
