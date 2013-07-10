@@ -1,4 +1,7 @@
-"""A Genetic Algorithm implementation for selecting good flags."""
+"""A Genetic Algorithm implementation for selecting good flags.
+
+Part of the Chrome build flags optimization.
+"""
 
 __author__ = 'yuhenglong@google.com (Yuheng Long)'
 

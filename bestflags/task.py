@@ -1,5 +1,7 @@
 """A reproducing entity.
 
+Part of the Chrome build flags optimization.
+
 The Task class is used by different modules. Each module fills in the
 corresponding information into a Task instance. Class Task contains the bit set
 representing the flags selection. The builder module is responsible for filling

@@ -1,4 +1,7 @@
-"""Generation unittest."""
+"""Generation unittest.
+
+Part of the Chrome build flags optimization.
+"""
 
 __author__ = 'yuhenglong@google.com (Yuheng Long)'
 

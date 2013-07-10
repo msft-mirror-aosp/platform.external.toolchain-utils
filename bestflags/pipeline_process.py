@@ -1,5 +1,7 @@
 """Pipeline process that encapsulates the actual content.
 
+Part of the Chrome build flags optimization.
+
 The actual stages include the builder and the executor.
 """
 

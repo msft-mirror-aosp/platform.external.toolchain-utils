@@ -1,6 +1,9 @@
 """A generation of a set of tasks.
 
-This contains the core algorithm of producing the next generation of execution.
+Part of the Chrome build flags optimization.
+
+This module contains the core algorithm of producing the next generation of
+execution.
 """
 
 __author__ = 'yuhenglong@google.com (Yuheng Long)'

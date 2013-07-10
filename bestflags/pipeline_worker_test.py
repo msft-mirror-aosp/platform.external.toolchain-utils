@@ -1,5 +1,7 @@
 """Unittest for the pipeline_worker functions in the build/test stage.
 
+Part of the Chrome build flags optimization.
+
 This module tests the helper method and the worker method.
 """
 

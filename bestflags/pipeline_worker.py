@@ -1,5 +1,7 @@
 """The pipeline_worker functions of the build and test stage of the framework.
 
+Part of the Chrome build flags optimization.
+
 This module defines the helper and the worker. If there are duplicate tasks, for
 example t1 and t2, needs to be built/tested, one of them, for example t1, will
 be built/tested and the helper waits for the result of t1 and set the results of
