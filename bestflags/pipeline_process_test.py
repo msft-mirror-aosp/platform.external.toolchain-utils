@@ -14,7 +14,7 @@ import pipeline_process
 ERROR = -334
 
 
-def MockHelper(done_dict, helper_queue, work_queue, result_queue):
+def MockHelper(done_dict, helper_queue, _, result_queue):
   """This method echos input to the output."""
   while True:
     if not helper_queue.empty():
@@ -27,18 +27,18 @@ def MockHelper(done_dict, helper_queue, work_queue, result_queue):
         # verify that it does not get duplicate "1"s in the test.
         result_queue.put(ERROR)
       else:
-        result_queue.put(('helper', task.get_key(0)))
+        result_queue.put(('helper', task.GetKey(0)))
 
 
-def MockWorker(task, buffer_queue, result_queue):
-  result_queue.put(('worker', task.get_key(0)))
+def MockWorker(task, _, result_queue):
+  result_queue.put(('worker', task.GetKey(0)))
 
 
 class MockTask(object):
   def __init__(self, key):
     self._key = key
 
-  def get_key(self, stage):
+  def GetKey(self, _):
     return self._key
 
 

@@ -18,7 +18,7 @@ class Steering(object):
 
     self._steps = steps
 
-  def run(self, generation):
+  def Run(self, generation):
     """Generate a set of new generations for the next round of execution.
 
     Args:

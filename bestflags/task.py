@@ -27,7 +27,7 @@ class Task(object):
     """
     self._flag_set = flag_set
 
-  def reproduce_with(self, other):
+  def ReproduceWith(self, other):
     """Create a new SolutionCandidate by reproduction with another.
 
     Mix two Tasks together to form a new Task of the same class. This is one of
@@ -40,7 +40,7 @@ class Task(object):
     """
     pass
 
-  def compile(self):
+  def Compile(self):
     """Run a compile.
 
     This method compile an image using the present flags, get the image,
@@ -49,20 +49,20 @@ class Task(object):
     """
     pass
 
-  def get_flags(self):
+  def GetFlags(self):
     pass
 
-  def set_flags(self, flags):
+  def SetFlags(self, flags):
     pass
 
-  def get_checksum(self):
+  def GetChecksum(self):
     pass
 
-  def set_checksum(self, checksum):
+  def SetChecksum(self, checksum):
     pass
 
-  def get_image(self):
+  def GetImage(self):
     pass
 
-  def set_image(self, image):
+  def SetImage(self, image):
     pass

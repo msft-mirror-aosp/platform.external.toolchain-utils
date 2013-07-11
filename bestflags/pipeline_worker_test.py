@@ -45,28 +45,28 @@ class MockTask(object):
     self._identifier = identifier
     self._pre_cost = cost
 
-  def get_identifier(self, stage):
-    assert stage == TESTSTAGE
-    return self._identifier
-
   def __eq__(self, other):
     if isinstance(other, MockTask):
       return self._identifier == other._identifier and self._cost == other._cost
     return False
 
-  def set_result(self, stage, cost):
+  def GetIdentifier(self, stage):
+    assert stage == TESTSTAGE
+    return self._identifier
+
+  def SetResult(self, stage, cost):
     assert stage == TESTSTAGE
     self._cost = cost
 
-  def work(self, stage):
+  def Work(self, stage):
     assert stage == TESTSTAGE
     self._cost = self._pre_cost
 
-  def get_result(self, stage):
+  def GetResult(self, stage):
     assert stage == TESTSTAGE
     return self._cost
 
-  def done(self, stage):
+  def Done(self, stage):
     """Indicates whether the task has been performed."""
 
     assert stage == TESTSTAGE
@@ -94,7 +94,7 @@ class AuxiliaryTest(unittest.TestCase):
     completed_queue = manager.Queue()
 
     # Set up the helper process that holds the helper method.
-    helper_process = multiprocessing.Process(target=pipeline_worker.helper,
+    helper_process = multiprocessing.Process(target=pipeline_worker.Helper,
                                              args=(TESTSTAGE, {}, helper_queue,
                                                    completed_queue,
                                                    result_queue))
@@ -154,7 +154,7 @@ class AuxiliaryTest(unittest.TestCase):
 
     # Submit the mock tasks to the worker.
     for mock_task in mock_tasks:
-      pipeline_worker.worker(TESTSTAGE, mock_task, completed_queue,
+      pipeline_worker.Worker(TESTSTAGE, mock_task, completed_queue,
                              result_queue)
 
     # The tasks, from the output queue, should be the same as the input and
@@ -162,7 +162,7 @@ class AuxiliaryTest(unittest.TestCase):
     for task in mock_tasks:
       output = result_queue.get()
       self.assertEqual(output, task)
-      self.assertTrue(output.done(TESTSTAGE))
+      self.assertTrue(output.Done(TESTSTAGE))
 
     # The tasks, from the completed_queue, should be defined in the
     # mock_work_tasks dictionary.

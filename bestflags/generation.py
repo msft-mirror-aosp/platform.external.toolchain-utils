@@ -23,7 +23,7 @@ class Generation(object):
     """
     self._pool = pool
 
-  def next(self):
+  def Next(self):
     """Calculate the next generation.
 
     This is the core of the framework implementation.
@@ -32,14 +32,14 @@ class Generation(object):
       A new generation.
     """
 
-  def pool(self):
+  def Pool(self):
     """Return the task set of this generation."""
     pass
 
-  def improve(self):
+  def Improve(self):
     """True if this generation has improvement over its parent generation."""
     pass
 
-  def get_best(self):
+  def GetBest(self):
     """Get the best flagset."""
     return self._pool[0]
