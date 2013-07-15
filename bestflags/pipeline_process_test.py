@@ -8,10 +8,13 @@ __author__ = 'yuhenglong@google.com (Yuheng Long)'
 import multiprocessing
 import unittest
 
+from mock_task import MockTask
 import pipeline_process
 
 # Pick an integer at random.
 ERROR = -334
+# Pick an integer at random.
+TESTSTAGE = -8
 
 
 def MockHelper(done_dict, helper_queue, _, result_queue):
@@ -27,19 +30,11 @@ def MockHelper(done_dict, helper_queue, _, result_queue):
         # verify that it does not get duplicate "1"s in the test.
         result_queue.put(ERROR)
       else:
-        result_queue.put(('helper', task.GetKey(0)))
+        result_queue.put(('helper', task.GetIdentifier(TESTSTAGE)))
 
 
 def MockWorker(task, _, result_queue):
-  result_queue.put(('worker', task.GetKey(0)))
-
-
-class MockTask(object):
-  def __init__(self, key):
-    self._key = key
-
-  def GetKey(self, _):
-    return self._key
+  result_queue.put(('worker', task.GetIdentifier(TESTSTAGE)))
 
 
 class PipelineProcessTest(unittest.TestCase):
@@ -63,13 +58,13 @@ class PipelineProcessTest(unittest.TestCase):
     inp = manager.Queue()
     output = manager.Queue()
 
-    process = pipeline_process.PipelineProcess(2, 'testing', {}, 'test', inp,
+    process = pipeline_process.PipelineProcess(2, 'testing', {}, TESTSTAGE, inp,
                                                MockHelper, MockWorker, output)
 
     process.start()
-    inp.put(MockTask(1))
-    inp.put(MockTask(1))
-    inp.put(MockTask(2))
+    inp.put(MockTask(TESTSTAGE, 1))
+    inp.put(MockTask(TESTSTAGE, 1))
+    inp.put(MockTask(TESTSTAGE, 2))
     inp.put(pipeline_process.POISONPILL)
     process.join()
 

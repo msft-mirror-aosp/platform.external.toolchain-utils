@@ -101,7 +101,7 @@ class PipelineProcess(multiprocessing.Process):
         self._result_queue.put(POISONPILL)
         break
 
-      task_key = task.GetKey(self._stage)
+      task_key = task.GetIdentifier(self._stage)
       if task_key in mycache:
         # The task has been encountered before. It will be sent to the helper
         # module for further processing.

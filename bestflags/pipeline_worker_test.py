@@ -12,11 +12,13 @@ import random
 import sys
 import unittest
 
+from mock_task import MockTask
 import pipeline_process
 import pipeline_worker
 
 
-TESTSTAGE = 0
+# Pick an integer at random.
+TESTSTAGE = -3
 
 
 def MockTaskCostGenerator():
@@ -24,56 +26,7 @@ def MockTaskCostGenerator():
   return random.randint(-sys.maxint - 1, -1)
 
 
-class MockTask(object):
-  """This class emulates an actual task.
-
-  It does not do the actual work, but simply returns the result as given when
-  this task is constructed.
-  """
-
-  def __init__(self, identifier, cost):
-    """Set up the results for this task.
-
-    Args:
-      identifier: the identifier of this task.
-      cost: the mock cost of this task.
-
-      The _pre_cost field stores the cost. Once this task is performed, i.e., by
-      calling the work method , the _cost field will have this cost.
-    """
-
-    self._identifier = identifier
-    self._pre_cost = cost
-
-  def __eq__(self, other):
-    if isinstance(other, MockTask):
-      return self._identifier == other._identifier and self._cost == other._cost
-    return False
-
-  def GetIdentifier(self, stage):
-    assert stage == TESTSTAGE
-    return self._identifier
-
-  def SetResult(self, stage, cost):
-    assert stage == TESTSTAGE
-    self._cost = cost
-
-  def Work(self, stage):
-    assert stage == TESTSTAGE
-    self._cost = self._pre_cost
-
-  def GetResult(self, stage):
-    assert stage == TESTSTAGE
-    return self._cost
-
-  def Done(self, stage):
-    """Indicates whether the task has been performed."""
-
-    assert stage == TESTSTAGE
-    return '_cost' in self.__dict__
-
-
-class AuxiliaryTest(unittest.TestCase):
+class PipelineWorkerTest(unittest.TestCase):
   """This class tests the pipeline_worker functions.
 
   Given the same identifier, the cost should result the same from the
@@ -115,7 +68,7 @@ class AuxiliaryTest(unittest.TestCase):
     # Testing the correctness of having tasks having the same identifier, here
     # 1.
     for result in results:
-      helper_queue.put(MockTask(result, MockTaskCostGenerator()))
+      helper_queue.put(MockTask(TESTSTAGE, result, MockTaskCostGenerator()))
 
     completed_queue.put((2, mock_result[2]))
     completed_queue.put((1, mock_result[1]))
@@ -150,7 +103,7 @@ class AuxiliaryTest(unittest.TestCase):
     mock_tasks = []
 
     for flag, cost in mock_work_tasks.iteritems():
-      mock_tasks.append(MockTask(flag, cost))
+      mock_tasks.append(MockTask(TESTSTAGE, flag, cost))
 
     # Submit the mock tasks to the worker.
     for mock_task in mock_tasks:
