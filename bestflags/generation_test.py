@@ -13,7 +13,7 @@ import random
 import unittest
 
 from generation import Generation
-from mock_task import MockTask
+from mock_task import IdentifierMockTask
 
 
 # Pick an integer at random.
@@ -25,24 +25,6 @@ NUMTASKS = 20
 # The stride of permutation used to shuffle the input list of tasks. Should be
 # relatively prime with NUMTASKS.
 STRIDE = 7
-
-
-class GenerationMockTask(MockTask):
-  """This class defines the mock task to test the Generation class.
-
-  The task instances will be inserted into a set. Therefore the hash and the
-  equal methods are overridden. The generation class considers the identifier to
-  set the cost of the task in a set, thus the identifier is used in the
-  overriding methods.
-  """
-
-  def __hash__(self):
-    return self._identifier
-
-  def __eq__(self, other):
-    if isinstance(other, MockTask):
-      return self._identifier == other.GetIdentifier(self._stage)
-    return False
 
 
 class GenerationTest(unittest.TestCase):
@@ -66,7 +48,7 @@ class GenerationTest(unittest.TestCase):
     testing_tasks = range(NUMTASKS)
 
     # The tasks for the generation to be tested.
-    generation_tasks = [GenerationMockTask(TESTSTAGE, t) for t in testing_tasks]
+    generation_tasks = [IdentifierMockTask(TESTSTAGE, t) for t in testing_tasks]
 
     gen = Generation(set(generation_tasks), None)
 
@@ -81,7 +63,7 @@ class GenerationTest(unittest.TestCase):
 
       # Mark a task as done by calling the UpdateTask method of the generation.
       # Send the generation the task as well as its results.
-      gen.UpdateTask(GenerationMockTask(TESTSTAGE, testing_task))
+      gen.UpdateTask(IdentifierMockTask(TESTSTAGE, testing_task))
 
     # The Done method should return true after all the tasks in the permuted
     # list is set.

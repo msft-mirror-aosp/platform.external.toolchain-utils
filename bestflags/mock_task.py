@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""This module defines the common mock task used by varies unit tests.
+"""This module defines the common mock tasks used by various unit tests.
 
 Part of the Chrome build flags optimization.
 """
@@ -66,3 +66,23 @@ class MockTask(object):
 
     assert stage == self._stage
     return '_cost' in self.__dict__
+
+  def CacheSteeringCost(self):
+    pass
+
+
+class IdentifierMockTask(MockTask):
+  """This class defines the mock task that does not consider the cost.
+
+  The task instances will be inserted into a set. Therefore the hash and the
+  equal methods are overridden. The unittests that compares identities of the
+  tasks for equality can use this mock task instead of the base mock tack.
+  """
+
+  def __hash__(self):
+    return self._identifier
+
+  def __eq__(self, other):
+    if isinstance(other, MockTask):
+      return self._identifier == other.GetIdentifier(self._stage)
+    return False

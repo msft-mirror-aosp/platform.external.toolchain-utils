@@ -85,19 +85,26 @@ class Generation(object):
 
     Args:
       task: A task that has its results ready.
+
+    Returns:
+      Whether the input task belongs to this generation.
     """
 
-    # If there is a match.
-    if task in self._exe_pool:
-      # Remove the place holder task in this generation and store the new input
-      # task and its result.
-      self._exe_pool.remove(task)
-      self._exe_pool.add(task)
+    # If there is a match, the input task belongs to this generation.
+    if task not in self._exe_pool:
+      return False
 
-      # The current generation will have one less task to wait on.
-      self._pending -= 1
+    # Remove the place holder task in this generation and store the new input
+    # task and its result.
+    self._exe_pool.remove(task)
+    self._exe_pool.add(task)
 
-      assert self._pending >= 0
+    # The current generation will have one less task to wait on.
+    self._pending -= 1
+
+    assert self._pending >= 0
+
+    return True
 
   def Improve(self):
     """True if this generation has improvement over its parent generation.
