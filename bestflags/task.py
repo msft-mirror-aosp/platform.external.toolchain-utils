@@ -15,6 +15,17 @@ execution output to the execution field.
 
 __author__ = 'yuhenglong@google.com (Yuheng Long)'
 
+import os
+import subprocess
+import sys
+from uuid import uuid4
+
+BUILD_STAGE = 1
+TEST_STAGE = 2
+
+# Message indicating that the build or test failed.
+ERROR_STRING = 'error'
+
 
 class Task(object):
   """A single reproducing entity.
@@ -23,50 +34,339 @@ class Task(object):
   flag set, the image, the check sum of the image and the cost.
   """
 
-  def __init__(self, flag_set):
+  def __init__(self, flag_set, build_command, test_command, log_directory,
+               build_tries, test_tries):
     """Set up the optimization flag selection for this task.
 
+    This framework is generic. It lets the client specify application specific
+    compile and test methods by passing different build_command and
+    test_command.
+
     Args:
-      flag_set: the optimization flag set that is encapsulated by this task.
+      flag_set: The optimization flag set that is encapsulated by this task.
+      build_command: The command that will be used in the build stage to compile
+        this task.
+      test_command: The command that will be used in the test stage to test this
+        task.
+      log_directory: The directory to log the compilation and test results.
+      build_tries: The maximum number of tries a build can have. Some
+        compilations may fail due to unexpected environment circumstance. This
+        variable defines how many tries the build should attempt before giving
+        up.
+      test_tries: The maximum number of tries a build can have. Some tests may
+        fail due to unexpected environment circumstance. This variable defines
+        how many tries the test should attempt before giving up.
     """
+
     self._flag_set = flag_set
+    self._build_command = build_command
+    self._test_command = test_command
+    self._log_directory = log_directory
+    self._build_tries = build_tries
+    self._test_tries = test_tries
 
-  def ReproduceWith(self, other):
-    """Create a new SolutionCandidate by reproduction with another.
+    # A unique identifier that distinguishes this task from other tasks.
+    self.task_identifier = uuid4()
 
-    Mix two Tasks together to form a new Task of the same class. This is one of
-    the core functions of a GA.
+    self._log_path = (self._log_directory, self.task_identifier)
+
+    # Initiate the hash value. The hash value is used so as not to recompute it
+    # every time the hash method is called.
+    self._hash_value = None
+
+    # Indicate that the task has not been compiled/tested.
+    self._build_cost = None
+    self._exe_cost = None
+    self._checksum = None
+    self._image = None
+
+  def __eq__(self, other):
+    """Test whether two tasks are equal.
+
+    Two tasks are equal if their flag_set are equal.
 
     Args:
-      other: The other Task to reproduce with.
-
-    Returns: A Task that is a mix between self and other.
+      other: The other task with which this task is tested equality.
+    Returns:
+      True if the encapsulated flag sets are equal.
     """
-    pass
+    if isinstance(other, Task):
+      return self.GetFlags() == other.GetFlags()
+    return False
 
-  def Compile(self):
+  def __hash__(self):
+    if self._hash_value is None:
+      # Cache the hash value of the flags, so as not to recompute them.
+      self._hash_value = hash(self._flag_set)
+    return self._hash_value
+
+  def GetIdentifier(self, stage):
+    """Get the identifier of the task in the stage.
+
+    The flag set uniquely identifies a task in the build stage. The checksum of
+    the image of the task uniquely identifies the task in the test stage.
+
+    Args:
+      stage: The stage (build/test) in which this method is called.
+    Returns:
+      Return the flag set in build stage and return the checksum in test stage.
+    """
+
+    # Define the dictionary for different stage function lookup.
+    get_identifier_functions = {BUILD_STAGE: self.GetFlags,
+                                TEST_STAGE: self.__GetCheckSum}
+
+    assert stage in get_identifier_functions
+    return get_identifier_functions[stage]()
+
+  def GetResult(self, stage):
+    """Get the performance results of the task in the stage.
+
+    Args:
+      stage: The stage (build/test) in which this method is called.
+    Returns:
+      Performance results.
+    """
+
+    # Define the dictionary for different stage function lookup.
+    get_result_functions = {BUILD_STAGE: self.__GetBuildResult,
+                            TEST_STAGE: self.__GetTestResult}
+
+    assert stage in get_result_functions
+
+    return get_result_functions[stage]()
+
+  def SetResult(self, stage, result):
+    """Set the performance results of the task in the stage.
+
+    This method is called by the pipeling_worker to set the results for
+    duplicated tasks.
+
+    Args:
+      stage: The stage (build/test) in which this method is called.
+      result: The performance results of the stage.
+    """
+
+    # Define the dictionary for different stage function lookup.
+    set_result_functions = {BUILD_STAGE: self.__SetBuildResult,
+                            TEST_STAGE: self.__SetTestResult}
+
+    assert stage in set_result_functions
+
+    set_result_functions[stage](result)
+
+  def Done(self, stage):
+    """Check whether the stage is done.
+
+    Args:
+      stage: The stage to be checked, build or test.
+    Returns:
+      True if the stage is done.
+    """
+
+    # Define the dictionary for different result string lookup.
+    done_string = {BUILD_STAGE: self._build_cost, TEST_STAGE: self._exe_cost}
+
+    assert stage in done_string
+
+    return done_string[stage] is not None
+
+  def Work(self, stage):
+    """Perform the task.
+
+    Args:
+      stage: The stage in which the task is performed, compile or test.
+    """
+
+    # Define the dictionary for different stage function lookup.
+    work_functions = {BUILD_STAGE: self.__Compile(), TEST_STAGE: self.__Test()}
+
+    assert stage in work_functions
+
+    work_functions[stage]()
+
+  def GetFlags(self):
+    """Get the optimization flag set of this task.
+
+    Returns:
+      The optimization flag set that is encapsulated by this task.
+    """
+    return str(self._flag_set.FormattedForUse())
+
+  def __GetCheckSum(self):
+    """Get the compilation image checksum of this task.
+
+    Returns:
+      The compilation image checksum of this task.
+    """
+
+    # The checksum should be computed before this method is called.
+    assert self._checksum is not None
+    return self._checksum
+
+  def __Compile(self):
     """Run a compile.
 
     This method compile an image using the present flags, get the image,
     test the existent of the image and gathers monitoring information, and sets
     the internal cost (fitness) for this set of flags.
     """
-    pass
 
-  def GetFlags(self):
-    pass
+    # Format the flags as a string as input to compile command. The unique
+    # identifier is passed to the compile command. If concurrent processes are
+    # used to compile different tasks, these processes can use the identifier to
+    # write to different file.
+    flags = self._flag_set.FormattedForUse()
+    command = '%s %s %s' % (self._build_command, ' '.join(flags),
+                            self.task_identifier)
 
-  def SetFlags(self, flags):
-    pass
+    # Try build_tries number of times before confirming that the build fails.
+    for _ in range(self._build_tries):
+      # Execute the command and get the execution status/results.
+      p = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+      (out, err) = p.communicate()
 
-  def GetChecksum(self):
-    pass
+      if not err and out != ERROR_STRING:
+        # Each build results contains the checksum of the result image, the
+        # performance cost of the build, the compilation image, the length of
+        # the build, and the length of the text section of the build.
+        (checksum, cost, image, file_length, text_length) = out.split()
+        # Build successfully.
+        break
 
-  def SetChecksum(self, checksum):
-    pass
+      # Build failed.
+      cost = ERROR_STRING
 
-  def GetImage(self):
-    pass
+    # Convert the build cost from String to integer. The build cost is used to
+    # compare a task with another task. Set the build cost of the failing task
+    # to the max integer.
+    self._build_cost = sys.maxint if cost == ERROR_STRING else int(cost)
 
-  def SetImage(self, image):
-    pass
+    self._checksum = checksum
+    self._file_length = file_length
+    self._text_length = text_length
+    self._image = image
+
+    self.__LogBuildCost()
+
+  def __Test(self):
+    """__Test the task against benchmark(s) using the input test command."""
+
+    # Ensure that the task is compiled before being tested.
+    assert self._image is not None
+
+    # If the task does not compile, no need to test.
+    if self._image == ERROR_STRING:
+      self._exe_cost = ERROR_STRING
+      return
+
+    # The unique identifier is passed to the test command. If concurrent
+    # processes are used to compile different tasks, these processes can use the
+    # identifier to write to different file.
+    command = '%s %s %s' % (self._test_command, self._image,
+                            self.task_identifier)
+
+    # Try build_tries number of times before confirming that the build fails.
+    for _ in range(self._test_tries):
+      p = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+      (out, err) = p.communicate()
+
+      if not err and out != ERROR_STRING:
+        # The test results contains the performance cost of the test.
+        cost = out
+        # Test successfully.
+        break
+
+      # Test failed.
+      cost = ERROR_STRING
+
+    self._exe_cost = sys.maxint if (cost == ERROR_STRING) else int(cost)
+
+    self.__LogTestCost()
+
+  def __SetBuildResult(self, (checksum, build_cost, image, file_length,
+                              text_length)):
+    self._checksum = checksum
+    self._build_cost = build_cost
+    self._image = image
+    self._file_length = file_length
+    self._text_length = text_length
+
+  def __GetBuildResult(self):
+    return (self._checksum, self._build_cost, self._image, self._file_length,
+            self._text_length)
+
+  def __GetTestResult(self):
+    return self._exe_cost
+
+  def __SetTestResult(self, exe_cost):
+    self._exe_cost = exe_cost
+
+  def __CreateDirectory(self, file_name):
+    """Create a directory/file if it does not already exist.
+
+    Args:
+      file_name: The path of the directory/file to be created.
+    """
+
+    d = os.path.dirname(file_name)
+    if not os.path.exists(d):
+      os.makedirs(d)
+
+  def LogSteeringCost(self):
+    """Log the performance results for the task.
+
+    This method is called by the steering stage and this method writes the
+    results out to a file. The results include the build and the test results.
+    """
+
+    steering_log = '%s/%s/steering.txt' % self._log_path
+
+    self.create_dir('%s/%s/' % steering_log)
+
+    with open(steering_log, 'w') as out_file:
+      # Include the build and the test results.
+      steering_result = (self._flag_set, self._checksum, self._build_cost,
+                         self._image, self._file_length, self._text_length,
+                         self._exe_cost)
+
+      # Write out the result in the comma-separated format (CSV).
+      out_file.write('%s,%s,%s,%s,%s,%s,%s\n' % steering_result)
+
+  def __LogBuildCost(self):
+    """Log the build results for the task.
+
+    The build results include the compilation time of the build, the result
+    image, the checksum, the file length and the text length of the image.
+    The file length of the image includes the length of the file of the image.
+    The text length only includes the length of the text section of the image.
+    """
+
+    build_log = '%s/%s/build.txt' % self._log_path
+
+    self.__CreateDirectory(build_log)
+
+    with open(build_log, 'w') as out_file:
+      build_result = (self._flag_set, self._build_cost, self._image,
+                      self._checksum, self._file_length, self._text_length)
+
+      # Write out the result in the comma-separated format (CSV).
+      out_file.write('%s,%s,%s,%s,%s,%s\n' % build_result)
+
+  def __LogTestCost(self):
+    """Log the test results for the task.
+
+    The test results include the runtime execution time of the test.
+    """
+
+    test_log = '%s/%s/build.txt' % self._log_path
+
+    self.__CreateDirectory(test_log)
+
+    with open(test_log, 'w') as out_file:
+      test_result = (self._flag_set, self._checksum, self._exe_cost)
+
+      # Write out the result in the comma-separated format (CSV).
+      out_file.write('%s,%s,%s\n' % test_result)

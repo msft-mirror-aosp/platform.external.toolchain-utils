@@ -73,12 +73,13 @@ def Steering(cache, generations, input_queue, result_queue):
 
     # If there is a task whose result is ready from the last stage of the
     # feedback loop, there will be one less pending task.
+
     task = input_queue.get()
 
     # Store the result of this ready task. Intermediate results can be used to
     # generate report for final result or be used to reboot from a crash from
     # the failure of any module of the framework.
-    task.CacheSteeringCost()
+    task.LogSteeringCost()
 
     # Find out which pending generation this ready task belongs to. This pending
     # generation will have one less pending task. The "next" expression iterates

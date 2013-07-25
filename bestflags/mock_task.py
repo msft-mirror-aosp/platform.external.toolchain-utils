@@ -67,7 +67,7 @@ class MockTask(object):
     assert stage == self._stage
     return '_cost' in self.__dict__
 
-  def CacheSteeringCost(self):
+  def LogSteeringCost(self):
     pass
 
 
