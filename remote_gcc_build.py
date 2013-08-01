@@ -18,6 +18,7 @@ import time
 
 from utils import command_executer
 from utils import logger
+from utils import manifest_versions
 from utils import misc
 
 BRANCH = "the_actual_branch_used_in_this_script"
@@ -60,13 +61,13 @@ def FindVersionForToolchain(branch, chromeos_root):
   return version
 
 
-def FindResultIndex(reason):
+def FindBuildId(description):
   """Find the build id of the build at trybot server."""
   running_time = 0
   while True:
-    num = GetBuildNumber(reason)
-    if num >= 0:
-      return num
+    (result, number) = FindBuildIdFromLog(description)
+    if result >= 0:
+      return (result, number)
     logger.GetLogger().LogOutput("{0} minutes passed."
                                  .format(running_time / 60))
     logger.GetLogger().LogOutput("Sleeping {0} seconds.".format(SLEEP_TIME))
@@ -74,11 +75,14 @@ def FindResultIndex(reason):
     running_time += SLEEP_TIME
 
 
-def GetBuildNumber(reason):
-  """Get the build num from build log."""
-  # returns 0 if only failed build found.
-  # returns -1 if no finished build found or one build is running.
-  # returns build number is successful build found.
+def FindBuildIdFromLog(description):
+  """Get the build id from build log."""
+  # returns tuple (result, buildid)
+  # result == 0, buildid > 0, the build was successful and we have a build id
+  # result > 0, buildid > 0,  the whole build failed for some reason but we
+  #                           do have a build id.
+  # result == -1, buildid == -1, we have not found a finished build for this
+  #                              description yet
 
   file_dir = os.path.dirname(os.path.realpath(__file__))
   commands = ("{0}/utils/buildbot_json.py builds "
@@ -91,10 +95,11 @@ def GetBuildNumber(reason):
   my_info = buildinfo.splitlines()
   current_line = 1
   running_job = False
-  number = -1
-  # number > 0, we have a successful build.
-  # number = 0, we have a failed build.
-  # number = -1, we do not have a finished build for this description.
+  result = -1
+
+  # result == 0, we have a successful build
+  # result > 0, we have a failed build but build id may be valid
+  # result == -1, we have not found a finished build for this description
   while current_line < len(my_info):
     my_dict = {}
     while True:
@@ -105,32 +110,35 @@ def GetBuildNumber(reason):
       if "Build" in key or current_line == len(my_info):
         break
     if ("True" not in my_dict["completed"] and
-        str(reason) in my_dict["reason"]):
+        str(description) in my_dict["reason"]):
       running_job = True
     if ("True" not in my_dict["completed"] or
-        str(reason) not in my_dict["reason"]):
+        str(description) not in my_dict["reason"]):
       continue
-    if my_dict["result"] == "0":
-      number = int(my_dict["number"])
-      return number
-    else:
-     # Record found a finished failed build.
-     # Keep searching to find a successful one.
-      number = 0
-  if number == 0 and not running_job:
-    return 0
-  return -1
+    result = int(my_dict["result"])
+    build_id = int(my_dict["number"])
+    if result == 0:
+      return (result, build_id)
+    else
+      # Found a finished failed build.
+      # Keep searching to find a successful one
+      pass
+
+  if result > 0 and not running_job:
+    return (result, build_id)
+  return (-1, -1)
 
 
 def DownloadImage(target, index, dest, version):
   """Download artifacts from cloud."""
-  match = re.search(r"(.*-\d+\.\d+\.\d+)", version)
-  version = match.group(0)
   if not os.path.exists(dest):
     os.makedirs(dest)
 
-  ls_cmd = ("gsutil ls gs://chromeos-image-archive/trybot-{0}/{1}-b{2}"
-            .format(target, version, index))
+  rversion = manifest_versions.RFormatCrosVersion(version)
+#  ls_cmd = ("gsutil ls gs://chromeos-image-archive/trybot-{0}/{1}-b{2}"
+#            .format(target, rversion, index))
+  ls_cmd = ("gsutil ls gs://chromeos-image-archive/trybot-{0}/*-b{2}"
+            .format(target, rversion, index))
 
   download_cmd = ("$(which gsutil) cp {0} {1}".format("{0}", dest))
   ce = command_executer.GetCommandExecuter()
@@ -161,30 +169,6 @@ def UnpackImage(dest):
               .format(dest, chrome_tbz2))
   ce = command_executer.GetCommandExecuter()
   return ce.RunCommand(commands)
-
-
-def GetManifest(version, to_file):
-  """Get the manifest file from a given chromeos-internal version."""
-  temp_dir = tempfile.mkdtemp()
-  version = version.split("-", 1)[1]
-  os.chdir(temp_dir)
-  command = ("git clone "
-             "ssh://gerrit-int.chromium.org:29419/"
-             "chromeos/manifest-versions.git")
-  ce = command_executer.GetCommandExecuter()
-  ce.RunCommand(command)
-  files = [os.path.join(r, f)
-           for r, _, fs in os.walk(".")
-           for f in fs if version in f]
-  if files:
-    command = "cp {0} {1} && rm -rf {2}".format(files[0], to_file, temp_dir)
-    ret = ce.RunCommand(command)
-    if ret:
-      raise Exception("Cannot copy manifest to {0}".format(to_file))
-  else:
-    command = "rm -rf {0}".format(temp_dir)
-    ce.RunCommand(command)
-    raise Exception("Version {0} is not available.".format(version))
 
 
 def RemoveOldBranch():
@@ -226,11 +210,11 @@ def UploadManifest(manifest, chromeos_root, branch="master"):
   return UploadPatch(manifest)
 
 
-def GetManifestPatch(version, chromeos_root, branch="master"):
+def GetManifestPatch(manifests, version, chromeos_root, branch="master"):
   """Return a gerrit patch number given a version of manifest file."""
   temp_dir = tempfile.mkdtemp()
   to_file = os.path.join(temp_dir, "default.xml")
-  GetManifest(version, to_file)
+  manifests.GetManifest(version, to_file)
   return UploadManifest(to_file, chromeos_root, branch)
 
 
@@ -342,9 +326,11 @@ def RunRemote(chromeos_root, branch, patches, is_local,
   description = "{0}_{1}_{2}".format(branch, GetPatchString(patches), target)
   command = ("yes | ./cbuildbot {0} {1} {2} {3} {4} {5}"
              " --remote-description={6}"
+             " --chrome_rev=tot"
              .format(patch, branch_flag, chrome_version, local_flag,
                      chrome_version_flag, target, description))
   ce.RunCommand(command)
+
   return description
 
 
@@ -368,8 +354,11 @@ def Main(argv):
                       default="", help="The chrome version to use. "
                       "Default it will use the latest one.")
   parser.add_argument("--chromeos_version", dest="chromeos_version",
-                      default="", help="The chromeos version to use.")
-
+                      default="",
+                      help=("The chromeos version to use."
+                            "(1) A release version in the format: "
+                                 "'\d+\.\d+\.\d+\.\d+.*'"
+                            "(2) 'latest_lkgm' for the latest lkgm version"))
   parser.add_argument("-r", "--replace_sysroot", action="store_true",
                       help=("Whether or not to replace the build/$board dir"
                             "under the chroot of chromeos_root and copy "
@@ -390,45 +379,72 @@ def Main(argv):
   else:
     patch = []
   chromeos_root = misc.CanonicalizePath(args.chromeos_root)
-  branch = args.branch
-  if not branch:
-    branch = chromeos_version
-  # descritption is the keyword of the build in build log.
-  # Here we use [{branch)_{patchnumber}_{target}]
-  description = "{0}_{1}_{2}".format(branch, GetPatchString(patch), target)
   if args.chromeos_version and args.branch:
     raise Exception("You can not set chromeos_version and branch at the "
                     "same time.")
-  chromeos_version = args.chromeos_version
+
+  manifests = None
   if args.branch:
-    chromeos_version = 0
+    chromeos_version = ""
+    branch = args.branch
   else:
     chromeos_version = args.chromeos_version
+    manifests = manifest_versions.ManifestVersions()
+    if chromeos_version == "latest_lkgm":
+      chromeos_version = manifests.TimeToVersion(time.mktime(time.gmtime()))
+      logger.GetLogger().LogOutput("found version %s for latest LKGM" % (
+          chromeos_version))
+    # TODO: this script currently does not handle the case where the version
+    # is not in the "master" branch
+    branch = "master"
+
   if chromeos_version:
-    manifest_patch = GetManifestPatch(chromeos_version,
+    manifest_patch = GetManifestPatch(manifests, chromeos_version,
                                       chromeos_root)
     patch.append(manifest_patch)
   if args.gcc_dir:
+    # TODO: everytime we invoke this script we are getting a different
+    # patch for GCC even if GCC has not changed. The description should
+    # be based on the MD5 of the GCC patch contents.
     patch.append(UploadGccPatch(chromeos_root, args.gcc_dir, branch))
-  index = 0
   description = RunRemote(chromeos_root, branch, patch, args.local,
                           target, args.chrome_version, args.dest_dir)
   if args.local or not args.dest_dir:
+    # TODO: We are not checktng the result of cbuild_bot in here!
     return 0
+
+  # return value:
+  # 0 => build bot was successful and image was put where requested
+  # 1 => Build bot FAILED but image was put where requested
+  # 2 => Build bot failed or BUild bot was successful but and image was
+  #      not generated or could not be put where expected
+
   os.chdir(script_dir)
   dest_dir = misc.CanonicalizePath(args.dest_dir)
-  if index <= 0:
-    index = FindResultIndex(description)
-  if not index:
-    logger.GetLogger().LogFatal("Remote trybot failed.")
+  (bot_result, build_id) = FindBuildId(description)
+  if bot_result > 0 and build_id > 0:
+    logger.GetLogger().LogError("Remote trybot failed but image was generated")
+    bot_result = 1
+  elif bot_result > 0:
+    logger.GetLogger().LogError("Remote trybot failed. No image was generated")
+    return 2
   if "toolchain" in branch:
     chromeos_version = FindVersionForToolchain(branch, chromeos_root)
-  DownloadImage(target, index, dest_dir, chromeos_version)
+    assert not manifest_versions.IsRFormatCrosVersion(chromeos_version)
+  DownloadImage(target, build_id, dest_dir, chromeos_version)
   ret = UnpackImage(dest_dir)
+  if ret != 0:
+    return 2
+  # todo: return a more inteligent return value
   if not args.replace_sysroot:
-    return ret
-  else:
-    return ReplaceSysroot(chromeos_root, args.dest_dir, target)
+    return bot_result
+
+  ret = ReplaceSysroot(chromeos_root, args.dest_dir, target)
+  if ret != 0:
+    return 2
+
+  # got an image and we were successful in placing it where requested
+  return bot_result
 
 if __name__ == "__main__":
   retval = Main(sys.argv)

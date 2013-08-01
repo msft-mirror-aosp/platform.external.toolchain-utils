@@ -12,6 +12,7 @@ __author__ = "raymes@google.com (Raymes Khoury)"
 
 from datetime import datetime
 import getpass
+
 import optparse
 import os
 import pickle
@@ -20,6 +21,7 @@ import tempfile
 import time
 from utils import command_executer
 from utils import logger
+from utils import manifest_versions
 
 GCLIENT_FILE = """solutions = [
   { "name"        : "CHROME_DEPS",
@@ -42,29 +44,6 @@ COMMON_VERSIONS = "/home/mobiletc-prebuild/common_images/common_list.txt"
 def Usage(parser):
   parser.print_help()
   sys.exit(0)
-
-
-def TimeToVersion(my_time, versions_git):
-  """Convert timestamp to version number."""
-  cur_time = time.mktime(time.gmtime())
-  des_time = float(my_time)
-  if cur_time - des_time > 7000000:
-    logger.GetLogger().LogFatal("The time you specify is too early.")
-  temp = tempfile.mkdtemp()
-  commands = ["cd {0}".format(temp), "git clone {0}".format(versions_git),
-              "cd manifest-versions", "git checkout -f $(git rev-list" +
-              " --max-count=1 --before={0} origin/master)".format(my_time)]
-  cmd_executer = command_executer.GetCommandExecuter()
-  ret = cmd_executer.RunCommands(commands)
-  if ret:
-    logger.GetLogger().LogFatal("Failed to checkout manifest-versions.")
-  path = os.path.realpath("{0}/manifest-versions/LKGM/lkgm.xml".format(temp))
-  pp = path.split("/")
-  small = os.path.basename(path).split(".xml")[0]
-  version = pp[-2] + "." + small
-  commands = ["rm -rf {0}".format(temp)]
-  cmd_executer.RunCommands(commands)
-  return version
 
 # Get version spec file, either from "paladin" or "buildspec" directory.
 def GetVersionSpecFile(version, versions_git):
@@ -176,22 +155,26 @@ Use in combination with --version=latest or --version=common. Use
   if version == "top":
     init = "repo init -u %s" % manifest_repo
   elif version == "latest_lkgm":
-    version = TimeToVersion(time.mktime(time.gmtime()), versions_repo)
+    manifests = manifest_versions.ManifestVersions()
+    version = manifests.TimeToVersion(time.mktime(time.gmtime()))
     version, manifest = version.split(".", 1)
     logger.GetLogger().LogOutput("found version %s.%s for latest LKGM" % (
         version, manifest))
     init = ("repo init -u %s -m paladin/buildspecs/%s/%s.xml" % (
         versions_repo, version, manifest))
+    del manifests
   elif version == "lkgm":
     if not timestamp:
       parser.print_help()
       logger.GetLogger().LogFatal("No timestamp specified for version=lkgm")
-    version = TimeToVersion(timestamp, versions_repo)
+    manifests = manifest_versions.ManifestVersions()
+    version = manifests.TimeToVersion(timestamp)
     version, manifest = version.split(".", 1)
     logger.GetLogger().LogOutput("found version %s.%s for LKGM at timestamp %s"
                                  % (version, manifest, timestamp))
     init = ("repo init -u %s -m paladin/buildspecs/%s/%s.xml" % (
         versions_repo, version, manifest))
+    del manifests
   elif version == "latest_common":
     version = TimeToCommonVersion(time.mktime(time.gmtime()))
     version, manifest = version.split(".", 1)
