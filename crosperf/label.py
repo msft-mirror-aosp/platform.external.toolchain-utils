@@ -8,6 +8,7 @@
 
 import os
 from utils.file_utils import FileUtils
+from utils import misc
 
 
 class Label(object):
@@ -42,7 +43,11 @@ class Label(object):
       self.chrome_src = os.path.join(self.chromeos_root,
           "chroot/var/cache/chromeos-chrome/chrome-src-internal/src")
     else:
-      chromeos_root = FileUtils().CanonicalizeChromeOSRoot(chrome_src)
+      chromeos_src = misc.CanonicalizePath(chrome_src)
+      if not chromeos_src:
+        raise Exception("Invalid Chrome src given for label '%s': '%s'."
+                        % (name, chrome_src))
+      self.chrome_src = chromeos_src
 
 
 class MockLabel(object):
