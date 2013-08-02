@@ -39,6 +39,30 @@ _FLAG_FILLOUT_VALUE_RE = re.compile(r'\[([^\]]*)\]')
 rx = re.compile(r'\[(?P<start>\d+)-(?P<end>\d+)\]')
 
 
+# Search the numeric flag pattern.
+def Search(spec):
+  return rx.search(spec)
+
+
+def ReadConf(file_name):
+  """Parse the configuration file.
+
+  The configuration contains one flag specification in each line.
+
+  Args:
+    file_name: The name of the configuration file.
+
+  Returns:
+    A list of specs in the configuration file.
+  """
+
+  with open(file_name, 'r') as input_file:
+    lines = input_file.readlines()
+
+    return sorted([line.strip() for line in lines if line.strip()])
+  return []
+
+
 class Flag(object):
   """A class representing a particular command line flag argument.
 
@@ -56,6 +80,9 @@ class Flag(object):
     # If the value is not specified, a random value is used.
     if value == -1:
       result = rx.search(spec)
+
+      # The value of a boolean flag is 0.
+      value = 0
 
       # If this is a numeric flag, a value is chosen within start and end, start
       # inclusive and end exclusive.

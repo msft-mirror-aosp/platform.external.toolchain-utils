@@ -107,18 +107,23 @@ class Generation(object):
     return True
 
   def Improve(self):
-    """True if this generation has improvement over its parent generation.
+    """True if this generation has improvement upon its parent generation.
 
     Raises:
       NoneOverridingError: The subclass should override this method.
     """
     raise NoneOverridingError('Must be implemented by child class')
 
-  def Next(self):
+  def Next(self, _):
     """Calculate the next generation.
 
     This is the core of the framework implementation. It must be overridden by
     the concrete subclass to implement algorithm specific generations.
+
+    Args:
+      _: A set of tasks that have been generated before. The overridden method
+        in the subclasses can use this so as not to generate task that has been
+        generated before.
 
     Returns:
       A set of new generations.

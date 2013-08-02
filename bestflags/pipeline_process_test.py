@@ -49,9 +49,6 @@ class PipelineProcessTest(unittest.TestCase):
   also be passed to the next pipeline stage via the output queue.
   """
 
-  def setUp(self):
-    pass
-
   def testRun(self):
     """Test the run method.
 

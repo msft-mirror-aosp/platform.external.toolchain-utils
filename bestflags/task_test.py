@@ -26,11 +26,6 @@ RANDOM_BUILD_RESULT = 100
 RANDOM_TESTRESULT = 100
 
 
-# Create task for unittestings that only uses the flag set field of the task.
-def _IdentifierTask(identifier):
-  return Task(identifier, None, None, None, None, None)
-
-
 class MockFlagSet(object):
   """This class emulates a set of flags.
 
@@ -71,18 +66,14 @@ class TaskTest(unittest.TestCase):
     # Two tasks having the same flag set should be equivalent.
     flag_sets = [MockFlagSet(flag) for flag in flags]
     for flag_set in flag_sets:
-      task0 = _IdentifierTask(flag_set)
-      task1 = _IdentifierTask(flag_set)
-
-      assert task0 == task1
+      assert Task(flag_set) == Task(flag_set)
 
     # Two tasks having different flag set should be different.
     for flag_set in flag_sets:
-      task0 = _IdentifierTask(flag_set)
+      test_task = Task(flag_set)
       other_flag_sets = [flags for flags in flag_sets if flags != flag_set]
       for flag_set1 in other_flag_sets:
-        task1 = _IdentifierTask(flag_set1)
-        assert task0 != task1
+        assert test_task != Task(flag_set1)
 
   def testHash(self):
     """Test the hash method of the task.
@@ -96,13 +87,12 @@ class TaskTest(unittest.TestCase):
     flag_sets = [MockFlagSet(identifier, value) for value in range(NUM_FLAGS)]
     for flag_set in flag_sets:
       # The hash of a task is the same as the hash of its flag set.
-      hash_task = _IdentifierTask(flag_set)
-      h0 = hash(hash_task)
-      assert h0 == flag_set.GetHash()
+      hash_task = Task(flag_set)
+      hash_value = hash(hash_task)
+      assert hash_value == flag_set.GetHash()
 
       # The hash of a task does not change.
-      h1 = hash(hash_task)
-      assert h0 == h1
+      assert hash_value == hash(hash_task)
 
   def testGetIdentifier(self):
     """Test the get identifier method of the task.
@@ -112,7 +102,7 @@ class TaskTest(unittest.TestCase):
 
     flag_sets = [MockFlagSet(flag) for flag in range(NUM_FLAGS)]
     for flag_set in flag_sets:
-      identifier_task = _IdentifierTask(flag_set)
+      identifier_task = Task(flag_set)
 
       identifier = identifier_task.GetIdentifier(task.BUILD_STAGE)
 
@@ -127,7 +117,7 @@ class TaskTest(unittest.TestCase):
 
     flag_sets = [MockFlagSet(flag) for flag in range(NUM_FLAGS)]
     for flag_set in flag_sets:
-      result_task = _IdentifierTask(flag_set)
+      result_task = Task(flag_set)
 
       # The get result method should return the same results as were set, in
       # build stage. Currently, the build result is a 5-element tuple containing
@@ -161,7 +151,7 @@ class TaskTest(unittest.TestCase):
 
     flag_sets = [MockFlagSet(flag) for flag in flags]
     for flag_set in flag_sets:
-      work_task = _IdentifierTask(flag_set)
+      work_task = Task(flag_set)
 
       # The task has not been compiled nor tested.
       assert not work_task.Done(task.TEST_STAGE)

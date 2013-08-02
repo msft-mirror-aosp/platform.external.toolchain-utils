@@ -26,6 +26,23 @@ TEST_STAGE = 2
 # Message indicating that the build or test failed.
 ERROR_STRING = 'error'
 
+# The maximum number of tries a build can have. Some compilations may fail due
+# to unexpected environment circumstance. This variable defines how many tries
+# the build should attempt before giving up.
+BUILD_TRIES = 3
+
+# The maximum number of tries a build can have. Some tests may fail due to
+# unexpected environment circumstance. This variable defines how many tries the
+# test should attempt before giving up.
+TEST_TRIES = 3
+
+
+# Create the file/directory if it does not already exist.
+def _CreateDirectory(file_name):
+  directory = os.path.dirname(file_name)
+  if not os.path.exists(directory):
+    os.makedirs(directory)
+
 
 class Task(object):
   """A single reproducing entity.
@@ -34,41 +51,46 @@ class Task(object):
   flag set, the image, the check sum of the image and the cost.
   """
 
-  def __init__(self, flag_set, build_command, test_command, log_directory,
-               build_tries, test_tries):
-    """Set up the optimization flag selection for this task.
+  # The command that will be used in the build stage to compile the tasks.
+  BUILD_COMMAND = None
+  # The command that will be used in the test stage to test the tasks.
+  TEST_COMMAND = None
+  # The directory to log the compilation and test results.
+  LOG_DIRECTORY = None
+
+  @staticmethod
+  def InitLogCommand(build_command, test_command, log_directory):
+    """Set up the build and test command for the task and the log directory.
 
     This framework is generic. It lets the client specify application specific
     compile and test methods by passing different build_command and
     test_command.
 
     Args:
-      flag_set: The optimization flag set that is encapsulated by this task.
       build_command: The command that will be used in the build stage to compile
         this task.
       test_command: The command that will be used in the test stage to test this
         task.
       log_directory: The directory to log the compilation and test results.
-      build_tries: The maximum number of tries a build can have. Some
-        compilations may fail due to unexpected environment circumstance. This
-        variable defines how many tries the build should attempt before giving
-        up.
-      test_tries: The maximum number of tries a build can have. Some tests may
-        fail due to unexpected environment circumstance. This variable defines
-        how many tries the test should attempt before giving up.
+    """
+
+    Task.BUILD_COMMAND = build_command
+    Task.TEST_COMMAND = test_command
+    Task.LOG_DIRECTORY = log_directory
+
+  def __init__(self, flag_set):
+    """Set up the optimization flag selection for this task.
+
+    Args:
+      flag_set: The optimization flag set that is encapsulated by this task.
     """
 
     self._flag_set = flag_set
-    self._build_command = build_command
-    self._test_command = test_command
-    self._log_directory = log_directory
-    self._build_tries = build_tries
-    self._test_tries = test_tries
 
     # A unique identifier that distinguishes this task from other tasks.
-    self.task_identifier = uuid4()
+    self._task_identifier = uuid4()
 
-    self._log_path = (self._log_directory, self.task_identifier)
+    self._log_path = (Task.LOG_DIRECTORY, self._task_identifier)
 
     # Initiate the hash value. The hash value is used so as not to recompute it
     # every time the hash method is called.
@@ -113,7 +135,7 @@ class Task(object):
     """
 
     # Define the dictionary for different stage function lookup.
-    get_identifier_functions = {BUILD_STAGE: self.GetFlags,
+    get_identifier_functions = {BUILD_STAGE: self.FormattedFlags,
                                 TEST_STAGE: self.__GetCheckSum}
 
     assert stage in get_identifier_functions
@@ -130,7 +152,7 @@ class Task(object):
 
     # Define the dictionary for different stage function lookup.
     get_result_functions = {BUILD_STAGE: self.__GetBuildResult,
-                            TEST_STAGE: self.__GetTestResult}
+                            TEST_STAGE: self.GetTestResult}
 
     assert stage in get_result_functions
 
@@ -185,13 +207,22 @@ class Task(object):
 
     work_functions[stage]()
 
+  def FormattedFlags(self):
+    """Format the optimization flag set of this task.
+
+    Returns:
+      The formatted optimization flag set that is encapsulated by this task.
+    """
+    return str(self._flag_set.FormattedForUse())
+
   def GetFlags(self):
     """Get the optimization flag set of this task.
 
     Returns:
       The optimization flag set that is encapsulated by this task.
     """
-    return str(self._flag_set.FormattedForUse())
+
+    return self._flag_set
 
   def __GetCheckSum(self):
     """Get the compilation image checksum of this task.
@@ -217,11 +248,11 @@ class Task(object):
     # used to compile different tasks, these processes can use the identifier to
     # write to different file.
     flags = self._flag_set.FormattedForUse()
-    command = '%s %s %s' % (self._build_command, ' '.join(flags),
-                            self.task_identifier)
+    command = '%s %s %s' % (Task.BUILD_COMMAND, ' '.join(flags),
+                            self._task_identifier)
 
     # Try build_tries number of times before confirming that the build fails.
-    for _ in range(self._build_tries):
+    for _ in range(BUILD_TRIES):
       # Execute the command and get the execution status/results.
       p = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
@@ -264,11 +295,11 @@ class Task(object):
     # The unique identifier is passed to the test command. If concurrent
     # processes are used to compile different tasks, these processes can use the
     # identifier to write to different file.
-    command = '%s %s %s' % (self._test_command, self._image,
-                            self.task_identifier)
+    command = '%s %s %s' % (Task.TEST_COMMAND, self._image,
+                            self._task_identifier)
 
     # Try build_tries number of times before confirming that the build fails.
-    for _ in range(self._test_tries):
+    for _ in range(TEST_TRIES):
       p = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
       (out, err) = p.communicate()
@@ -298,22 +329,11 @@ class Task(object):
     return (self._checksum, self._build_cost, self._image, self._file_length,
             self._text_length)
 
-  def __GetTestResult(self):
+  def GetTestResult(self):
     return self._exe_cost
 
   def __SetTestResult(self, exe_cost):
     self._exe_cost = exe_cost
-
-  def __CreateDirectory(self, file_name):
-    """Create a directory/file if it does not already exist.
-
-    Args:
-      file_name: The path of the directory/file to be created.
-    """
-
-    d = os.path.dirname(file_name)
-    if not os.path.exists(d):
-      os.makedirs(d)
 
   def LogSteeringCost(self):
     """Log the performance results for the task.
@@ -324,7 +344,7 @@ class Task(object):
 
     steering_log = '%s/%s/steering.txt' % self._log_path
 
-    self.create_dir('%s/%s/' % steering_log)
+    _CreateDirectory(steering_log)
 
     with open(steering_log, 'w') as out_file:
       # Include the build and the test results.
@@ -346,7 +366,7 @@ class Task(object):
 
     build_log = '%s/%s/build.txt' % self._log_path
 
-    self.__CreateDirectory(build_log)
+    _CreateDirectory(build_log)
 
     with open(build_log, 'w') as out_file:
       build_result = (self._flag_set, self._build_cost, self._image,
@@ -363,10 +383,26 @@ class Task(object):
 
     test_log = '%s/%s/build.txt' % self._log_path
 
-    self.__CreateDirectory(test_log)
+    _CreateDirectory(test_log)
 
     with open(test_log, 'w') as out_file:
       test_result = (self._flag_set, self._checksum, self._exe_cost)
 
       # Write out the result in the comma-separated format (CSV).
       out_file.write('%s,%s,%s\n' % test_result)
+
+  def Improve(self, other):
+    """Compare the current task with another task.
+
+    Args:
+      other: The other task against which the current task is compared.
+
+    Returns:
+      True if this task has improvement upon the other task.
+    """
+
+    # The execution costs must have been initiated.
+    assert self._exe_cost is not None
+    assert other.GetTestResult() is not None
+
+    return self._exe_cost < other.GetTestResult()
