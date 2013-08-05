@@ -92,7 +92,9 @@ class DejagnuExecuter(object):
     self._base_dir = base_dir
     self._tmp_abs = None
     self._cleanup = cleanup
-    self._sshflag = " -o StrictHostKeyChecking=no -o CheckHostIP=no"
+    self._sshflag = (" -o StrictHostKeyChecking=no" +
+                     " -o CheckHostIP=no" +
+                     " -o UserKnownHostsFile=$(mktemp)")
 
     if source_dir:
       self._source_dir = source_dir
@@ -276,13 +278,14 @@ class DejagnuExecuter(object):
 
   def ResultValidate(self):
     self.PrepareResult()
+    re = 0;
     for key, value in self.base_result.items():
       if 'PASS' not in value:
         continue
       test_result = self.test_result[key]
       if 'PASS' not in test_result:
-        return 1
-    return 0
+        re = 1
+    return re
 
   def PrepareResult(self):
     test_output = os.path.join(self._gdb_source_dir, 'gdb',

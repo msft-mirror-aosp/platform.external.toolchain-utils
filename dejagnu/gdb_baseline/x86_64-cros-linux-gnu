@@ -1,4 +1,4 @@
-Test Run By yunlian on Mon May  6 11:01:09 2013
+Test Run By yunlian on Mon Aug  5 15:09:21 2013
 Target is x86_64-cros-linux-gnu
 
 		=== gdb tests ===
@@ -231,7 +231,7 @@ PASS: gdb.arch/amd64-byte.exp: check contents of %r13l
 PASS: gdb.arch/amd64-byte.exp: check contents of %r14l
 PASS: gdb.arch/amd64-byte.exp: check contents of %r15l
 Running ./gdb.arch/amd64-disp-step.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: error: /tmp/ccmBuRFg.o: requires unsupported dynamic reloc 11; recompile with -fPIC
+gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: error: /tmp/ccz48Kv2.o: requires unsupported dynamic reloc 11; recompile with -fPIC
 collect2: error: ld returned 1 exit status
 UNTESTED: gdb.arch/amd64-disp-step.exp: amd64-disp-step.exp
 Running ./gdb.arch/amd64-dword.exp ...
@@ -286,7 +286,7 @@ PASS: gdb.arch/amd64-dword.exp: check contents of %r13d
 PASS: gdb.arch/amd64-dword.exp: check contents of %r14d
 PASS: gdb.arch/amd64-dword.exp: check contents of %r15d
 Running ./gdb.arch/amd64-entry-value.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: error: /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r1/work/gdb-7.5.1/gdb/testsuite/gdb.arch/amd64-entry-value0.o: requires dynamic R_X86_64_32 reloc which may overflow at runtime; recompile with -fPIC
+gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: error: /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/gdb.arch/amd64-entry-value0.o: requires dynamic R_X86_64_32 reloc which may overflow at runtime; recompile with -fPIC
 collect2: error: ld returned 1 exit status
 UNTESTED: gdb.arch/amd64-entry-value.exp: amd64-entry-value.exp
 Running ./gdb.arch/amd64-entry-value-param.exp ...
@@ -370,75 +370,6 @@ Running ./gdb.arch/gdb1291.exp ...
 Running ./gdb.arch/gdb1431.exp ...
 Running ./gdb.arch/gdb1558.exp ...
 Running ./gdb.arch/i386-avx.exp ...
-PASS: gdb.arch/i386-avx.exp: check whether processor supports AVX
-PASS: gdb.arch/i386-avx.exp: set first breakpoint in main
-PASS: gdb.arch/i386-avx.exp: continue to breakpoint: continue to first breakpoint in main
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm0
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm0
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm1
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm1
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm2
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm2
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm3
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm3
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm4
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm4
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm5
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm5
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm6
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm6
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm7
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm7
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm8
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm8
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm9
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm9
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm10
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm10
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm11
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm11
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm12
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm12
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm13
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm13
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm14
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm14
-PASS: gdb.arch/i386-avx.exp: check float contents of %ymm15
-PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm15
-PASS: gdb.arch/i386-avx.exp: set %ymm0
-PASS: gdb.arch/i386-avx.exp: set %ymm1
-PASS: gdb.arch/i386-avx.exp: set %ymm2
-PASS: gdb.arch/i386-avx.exp: set %ymm3
-PASS: gdb.arch/i386-avx.exp: set %ymm4
-PASS: gdb.arch/i386-avx.exp: set %ymm5
-PASS: gdb.arch/i386-avx.exp: set %ymm6
-PASS: gdb.arch/i386-avx.exp: set %ymm7
-PASS: gdb.arch/i386-avx.exp: set %ymm8
-PASS: gdb.arch/i386-avx.exp: set %ymm9
-PASS: gdb.arch/i386-avx.exp: set %ymm10
-PASS: gdb.arch/i386-avx.exp: set %ymm11
-PASS: gdb.arch/i386-avx.exp: set %ymm12
-PASS: gdb.arch/i386-avx.exp: set %ymm13
-PASS: gdb.arch/i386-avx.exp: set %ymm14
-PASS: gdb.arch/i386-avx.exp: set %ymm15
-PASS: gdb.arch/i386-avx.exp: set second breakpoint in main
-PASS: gdb.arch/i386-avx.exp: continue to breakpoint: continue to second breakpoint in main
-PASS: gdb.arch/i386-avx.exp: check contents of data[0]
-PASS: gdb.arch/i386-avx.exp: check contents of data[1]
-PASS: gdb.arch/i386-avx.exp: check contents of data[2]
-PASS: gdb.arch/i386-avx.exp: check contents of data[3]
-PASS: gdb.arch/i386-avx.exp: check contents of data[4]
-PASS: gdb.arch/i386-avx.exp: check contents of data[5]
-PASS: gdb.arch/i386-avx.exp: check contents of data[6]
-PASS: gdb.arch/i386-avx.exp: check contents of data[7]
-PASS: gdb.arch/i386-avx.exp: check contents of data[8]
-PASS: gdb.arch/i386-avx.exp: check contents of data[9]
-PASS: gdb.arch/i386-avx.exp: check contents of data[10]
-PASS: gdb.arch/i386-avx.exp: check contents of data[11]
-PASS: gdb.arch/i386-avx.exp: check contents of data[12]
-PASS: gdb.arch/i386-avx.exp: check contents of data[13]
-PASS: gdb.arch/i386-avx.exp: check contents of data[14]
-PASS: gdb.arch/i386-avx.exp: check contents of data[15]
 Running ./gdb.arch/i386-bp_permanent.exp ...
 Running ./gdb.arch/i386-byte.exp ...
 Running ./gdb.arch/i386-disp-step.exp ...
@@ -465,7 +396,7 @@ PASS: gdb.arch/i386-permbkpt.exp: First permanent break
 PASS: gdb.arch/i386-permbkpt.exp: Second permanent break
 Running ./gdb.arch/i386-prologue.exp ...
 Running ./gdb.arch/i386-signal.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: error: /tmp/ccUaPlzy.o: requires unsupported dynamic reloc 11; recompile with -fPIC
+gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: error: /tmp/ccwbEuPt.o: requires unsupported dynamic reloc 11; recompile with -fPIC
 collect2: error: ld returned 1 exit status
 UNTESTED: gdb.arch/i386-signal.exp: i386-signal.exp
 Running ./gdb.arch/i386-size.exp ...
@@ -1977,10 +1908,14 @@ ERROR: internal buffer is full.
 UNRESOLVED: gdb.base/completion.exp: complete (2) 'p no_var_named_this-'
 ERROR: internal buffer is full.
 UNRESOLVED: gdb.base/completion.exp: complete 'p values[0].a'
-FAIL: gdb.base/completion.exp: complete 'p values[0] . a' (timeout)
-FAIL: gdb.base/completion.exp: complete 'p &values[0] -> a' (timeout)
-FAIL: gdb.base/completion.exp: completion of field in anonymous union
-PASS: gdb.base/completion.exp: cd to ${srcdir}
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: complete 'p values[0] . a'
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: complete 'p &values[0] -> a'
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: completion of field in anonymous union
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: cd to ${srcdir}
 PASS: gdb.base/completion.exp: directory completion
 PASS: gdb.base/completion.exp: directory completion 2
 PASS: gdb.base/completion.exp: Glob remaining of directory test
@@ -3135,16 +3070,16 @@ PASS: gdb.base/dump.exp: reload array as memory, srec; capture * (int (*)[32]) 0
 FAIL: gdb.base/dump.exp: reload array as memory, srec; value restored ok
 PASS: gdb.base/dump.exp: reload struct as memory, srec; capture * (struct teststruct *) 0x555555556140
 FAIL: gdb.base/dump.exp: reload struct as memory, srec; value restored ok
-ERROR: couldn't load intarr1.ihex into /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r1/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb.
+ERROR: couldn't load intarr1.ihex into /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb.
 UNRESOLVED: gdb.base/dump.exp: reload array as value, intel hex; capture * (int (*)[32]) 0x555555556040
 FAIL: gdb.base/dump.exp: reload array as value, intel hex; value restored ok
-ERROR: couldn't load intstr1.ihex into /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r1/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb.
+ERROR: couldn't load intstr1.ihex into /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb.
 UNRESOLVED: gdb.base/dump.exp: reload struct as value, intel hex; capture * (struct teststruct *) 0x555555556140
 FAIL: gdb.base/dump.exp: reload struct as value, intel hex; value restored ok
-ERROR: couldn't load intarr2.ihex into /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r1/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb.
+ERROR: couldn't load intarr2.ihex into /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb.
 UNRESOLVED: gdb.base/dump.exp: reload array as memory, intel hex; capture * (int (*)[32]) 0x555555556040
 FAIL: gdb.base/dump.exp: reload array as memory, intel hex; value restored ok
-ERROR: couldn't load intstr2.ihex into /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r1/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb.
+ERROR: couldn't load intstr2.ihex into /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb.
 UNRESOLVED: gdb.base/dump.exp: reload struct as memory, intel hex; capture * (struct teststruct *) 0x555555556140
 FAIL: gdb.base/dump.exp: reload struct as memory, intel hex; value restored ok
 PASS: gdb.base/dump.exp: reload array as value, tekhex; capture * (int (*)[32]) 0x555555556040
@@ -15144,7 +15079,7 @@ PASS: gdb.mi/mi-break.exp: breakpoint commands: set commands
 PASS: gdb.mi/mi-break.exp: breakpoint commands: check that commands are set
 PASS: gdb.mi/mi-break.exp: breakpoint commands: clear commands
 PASS: gdb.mi/mi-break.exp: breakpoint commands: check that commands are cleared
-ERROR: couldn't load /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r1/work/gdb-7.5.1/gdb/testsuite/gdb.mi/mi-break into /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r1/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb (timed out).
+ERROR: couldn't load /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/gdb.mi/mi-break into /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb (timed out).
 UNRESOLVED: gdb.mi/mi-break.exp: breakpoint at main
 FAIL: gdb.mi/mi-break.exp: mi runto main (unknown output after running)
 FAIL: gdb.mi/mi-break.exp: breakpoint commands: insert breakpoint at basics.c:callee2, again
@@ -19028,13 +18963,13 @@ PASS: gdb.xml/tdesc-xinclude.exp: set tdesc filename gdb.xml/loop.xml
 
 		=== gdb Summary ===
 
-# of expected passes		17667
-# of unexpected failures	166
+# of expected passes		17597
+# of unexpected failures	163
 # of unexpected successes	2
 # of expected failures		44
 # of known failures		72
 # of untested testcases		45
-# of unresolved testcases	8
+# of unresolved testcases	12
 # of unsupported tests		100
-/var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r1/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb version  7.5.1 -nw -nx -data-directory /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r1/work/gdb-7.5.1/gdb/testsuite/../data-directory 
+/var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb version  7.5.1 -nw -nx -data-directory /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/../data-directory 
 
