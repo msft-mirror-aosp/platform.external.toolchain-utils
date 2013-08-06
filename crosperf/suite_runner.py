@@ -53,8 +53,8 @@ class SuiteRunner(object):
 
   def Telemetry_Run(self, machine, label, benchmark):
     if not os.path.isdir(label.chrome_src):
-      self._logger.GetLogger().LogFatal("Cannot find chrome src dir to"
-                                        "run telemetry.")
+      self._logger.LogFatal("Cannot find chrome src dir to"
+                                        " run telemetry.")
     rsa_key = os.path.join(label.chromeos_root,
         "src/scripts/mod_for_test_scripts/ssh_keys/testing_rsa")
 
