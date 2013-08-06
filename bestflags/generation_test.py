@@ -17,13 +17,13 @@ from mock_task import IdentifierMockTask
 
 
 # Pick an integer at random.
-TESTSTAGE = -125
+TEST_STAGE = -125
 
 # The number of tasks to be put in a generation to be tested.
-NUMTASKS = 20
+NUM_TASKS = 20
 
 # The stride of permutation used to shuffle the input list of tasks. Should be
-# relatively prime with NUMTASKS.
+# relatively prime with NUM_TASKS.
 STRIDE = 7
 
 
@@ -45,15 +45,15 @@ class GenerationTest(unittest.TestCase):
 
     random.seed(0)
 
-    testing_tasks = range(NUMTASKS)
+    testing_tasks = range(NUM_TASKS)
 
     # The tasks for the generation to be tested.
-    generation_tasks = [IdentifierMockTask(TESTSTAGE, t) for t in testing_tasks]
+    tasks = [IdentifierMockTask(TEST_STAGE, t) for t in testing_tasks]
 
-    gen = Generation(set(generation_tasks), None)
+    gen = Generation(set(tasks), None)
 
     # Permute the list.
-    permutation = [(t * STRIDE) % NUMTASKS for t in range(NUMTASKS)]
+    permutation = [(t * STRIDE) % NUM_TASKS for t in range(NUM_TASKS)]
     permuted_tasks = [testing_tasks[index] for index in permutation]
 
     # The Done method of the Generation should return false before all the tasks
@@ -63,7 +63,7 @@ class GenerationTest(unittest.TestCase):
 
       # Mark a task as done by calling the UpdateTask method of the generation.
       # Send the generation the task as well as its results.
-      gen.UpdateTask(IdentifierMockTask(TESTSTAGE, testing_task))
+      gen.UpdateTask(IdentifierMockTask(TEST_STAGE, testing_task))
 
     # The Done method should return true after all the tasks in the permuted
     # list is set.

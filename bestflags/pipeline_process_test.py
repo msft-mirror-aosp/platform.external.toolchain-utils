@@ -18,7 +18,7 @@ import pipeline_process
 # Pick an integer at random.
 ERROR = -334
 # Pick an integer at random.
-TESTSTAGE = -8
+TEST_STAGE = -8
 
 
 def MockHelper(done_dict, helper_queue, _, result_queue):
@@ -34,11 +34,11 @@ def MockHelper(done_dict, helper_queue, _, result_queue):
         # verify that it does not get duplicate "1"s in the test.
         result_queue.put(ERROR)
       else:
-        result_queue.put(('helper', task.GetIdentifier(TESTSTAGE)))
+        result_queue.put(('helper', task.GetIdentifier(TEST_STAGE)))
 
 
 def MockWorker(task, _, result_queue):
-  result_queue.put(('worker', task.GetIdentifier(TESTSTAGE)))
+  result_queue.put(('worker', task.GetIdentifier(TEST_STAGE)))
 
 
 class PipelineProcessTest(unittest.TestCase):
@@ -59,13 +59,14 @@ class PipelineProcessTest(unittest.TestCase):
     inp = manager.Queue()
     output = manager.Queue()
 
-    process = pipeline_process.PipelineProcess(2, 'testing', {}, TESTSTAGE, inp,
-                                               MockHelper, MockWorker, output)
+    process = pipeline_process.PipelineProcess(2, 'testing', {}, TEST_STAGE,
+                                               inp, MockHelper, MockWorker,
+                                               output)
 
     process.start()
-    inp.put(MockTask(TESTSTAGE, 1))
-    inp.put(MockTask(TESTSTAGE, 1))
-    inp.put(MockTask(TESTSTAGE, 2))
+    inp.put(MockTask(TEST_STAGE, 1))
+    inp.put(MockTask(TEST_STAGE, 1))
+    inp.put(MockTask(TEST_STAGE, 2))
     inp.put(pipeline_process.POISONPILL)
     process.join()
 
