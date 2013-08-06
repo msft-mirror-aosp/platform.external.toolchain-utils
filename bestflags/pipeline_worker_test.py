@@ -22,7 +22,7 @@ import pipeline_worker
 
 
 # Pick an integer at random.
-TESTSTAGE = -3
+TEST_STAGE = -3
 
 
 def MockTaskCostGenerator():
@@ -52,7 +52,7 @@ class PipelineWorkerTest(unittest.TestCase):
 
     # Set up the helper process that holds the helper method.
     helper_process = multiprocessing.Process(target=pipeline_worker.Helper,
-                                             args=(TESTSTAGE, {}, helper_queue,
+                                             args=(TEST_STAGE, {}, helper_queue,
                                                    completed_queue,
                                                    result_queue))
     helper_process.start()
@@ -72,7 +72,7 @@ class PipelineWorkerTest(unittest.TestCase):
     # Testing the correctness of having tasks having the same identifier, here
     # 1.
     for result in results:
-      helper_queue.put(MockTask(TESTSTAGE, result, MockTaskCostGenerator()))
+      helper_queue.put(MockTask(TEST_STAGE, result, MockTaskCostGenerator()))
 
     completed_queue.put((2, mock_result[2]))
     completed_queue.put((1, mock_result[1]))
@@ -83,12 +83,11 @@ class PipelineWorkerTest(unittest.TestCase):
 
     while results:
       task = result_queue.get()
-      identifier = task._identifier
-      cost = task._cost
+      identifier = task.GetIdentifier(TEST_STAGE)
       self.assertTrue(identifier in results)
       if identifier in mock_result:
-        self.assertTrue(cost, mock_result[identifier])
-      results.remove(task._identifier)
+        self.assertTrue(task.GetResult(TEST_STAGE), mock_result[identifier])
+      results.remove(identifier)
 
   def testWorker(self):
     """"Test the worker method.
@@ -107,11 +106,11 @@ class PipelineWorkerTest(unittest.TestCase):
     mock_tasks = []
 
     for flag, cost in mock_work_tasks.iteritems():
-      mock_tasks.append(MockTask(TESTSTAGE, flag, cost))
+      mock_tasks.append(MockTask(TEST_STAGE, flag, cost))
 
     # Submit the mock tasks to the worker.
     for mock_task in mock_tasks:
-      pipeline_worker.Worker(TESTSTAGE, mock_task, completed_queue,
+      pipeline_worker.Worker(TEST_STAGE, mock_task, completed_queue,
                              result_queue)
 
     # The tasks, from the output queue, should be the same as the input and
@@ -119,7 +118,7 @@ class PipelineWorkerTest(unittest.TestCase):
     for task in mock_tasks:
       output = result_queue.get()
       self.assertEqual(output, task)
-      self.assertTrue(output.Done(TESTSTAGE))
+      self.assertTrue(output.Done(TEST_STAGE))
 
     # The tasks, from the completed_queue, should be defined in the
     # mock_work_tasks dictionary.
