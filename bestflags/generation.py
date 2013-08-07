@@ -50,6 +50,11 @@ class Generation(object):
     # generations until all its pending tasks have been executed.
     self._pending = len(exe_pool)
 
+  def CandidatePool(self):
+    """Return the candidate tasks of this generation."""
+
+    return self._candidate_pool
+
   def Pool(self):
     """Return the task set of this generation."""
 
