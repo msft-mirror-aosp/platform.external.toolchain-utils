@@ -207,8 +207,8 @@ class Lock(object):
   def Unlock(self, exclusive, force=False):
     with FileLock(self._lock_file) as lock:
       if not lock.IsLocked():
-        self._logger.LogError("Can't unlock unlocked machine!")
-        return False
+        self._logger.LogWarning("Can't unlock unlocked machine!")
+        return True
 
       if lock.exclusive != exclusive:
         self._logger.LogError("shared locks must be unlocked with --shared")

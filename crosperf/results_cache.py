@@ -412,6 +412,7 @@ class ResultsCache(object):
     else:
       image_path_checksum = hashlib.md5(self.chromeos_image).hexdigest()
 
+    machine_id_checksum = ""
     if read and CacheConditions.SAME_MACHINE_MATCH not in self.cache_conditions:
       machine_id_checksum = "*"
     else:
