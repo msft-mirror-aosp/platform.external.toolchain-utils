@@ -2,4 +2,4 @@ x86-zgb  : chromeos1-rack3-host4.cros chromeos1-rack3-host5.cros chromeos1-rack3
 x86-alex : chromeos2-row1-rack4-host7.cros chromeos2-row1-rack4-host8.cros chromeos2-row1-rack4-host9.cros
 lumpy    : chromeos2-row2-rack4-host10.cros chromeos2-row2-rack4-host11.cros chromeos2-row2-rack4-host12.cros
 stumpy   : chromeos2-row3-rack7-host1.cros chromeos2-row3-rack7-host2.cros chromeos2-row3-rack7-host3.cros
-
+parrot   : chromeos2-row3-rack2-host10.cros chromeos2-row3-rack2-host11.cros chromeos2-row3-rack2-host12.cros
