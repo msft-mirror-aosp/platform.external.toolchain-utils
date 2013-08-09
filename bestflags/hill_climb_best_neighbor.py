@@ -41,7 +41,7 @@ class HillClimbingBestBranch(Generation):
     Generation.__init__(self, exe_pool, parents)
     self._specs = specs
 
-  def Improve(self):
+  def Improved(self):
     """True if this generation has improvement over its parent generation.
 
     Returns:
@@ -51,7 +51,7 @@ class HillClimbingBestBranch(Generation):
     # Find the best neighbor.
     best_task = None
     for task in self._exe_pool:
-      if not best_task or task.Improve(best_task):
+      if not best_task or task.Improved(best_task):
         best_task = task
 
     if not best_task:
@@ -63,7 +63,7 @@ class HillClimbingBestBranch(Generation):
       assert len(parents) == 1
       self._next_task = best_task
       # If the best neighbor improves upon the parent task.
-      return best_task.Improve(parents[0])
+      return best_task.Improved(parents[0])
 
     self._next_task = best_task
     return True

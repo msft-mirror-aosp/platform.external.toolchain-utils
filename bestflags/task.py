@@ -31,7 +31,7 @@ ERROR_STRING = 'error'
 # the build should attempt before giving up.
 BUILD_TRIES = 3
 
-# The maximum number of tries a build can have. Some tests may fail due to
+# The maximum number of tries a test can have. Some tests may fail due to
 # unexpected environment circumstance. This variable defines how many tries the
 # test should attempt before giving up.
 TEST_TRIES = 3
@@ -391,7 +391,7 @@ class Task(object):
       # Write out the result in the comma-separated format (CSV).
       out_file.write('%s,%s,%s\n' % test_result)
 
-  def Improve(self, other):
+  def Improved(self, other):
     """Compare the current task with another task.
 
     Args:

@@ -44,6 +44,11 @@ def Search(spec):
   return rx.search(spec)
 
 
+class NoSuchFileError(Exception):
+  """Define an Exception class for user providing invalid input file."""
+  pass
+
+
 def ReadConf(file_name):
   """Parse the configuration file.
 
@@ -54,24 +59,35 @@ def ReadConf(file_name):
 
   Returns:
     A list of specs in the configuration file.
+
+  Raises:
+    NoSuchFileError: The caller should provide a valid configuration file.
   """
 
   with open(file_name, 'r') as input_file:
     lines = input_file.readlines()
 
     return sorted([line.strip() for line in lines if line.strip()])
-  return []
+
+  raise NoSuchFileError()
 
 
 class Flag(object):
   """A class representing a particular command line flag argument.
 
   The Flag consists of two parts: The spec and the value.
-  The spec is a definition in the little language, a string of the form
-  [<start>-<end>] where start and end is an positive integer for a fillable
-  value.
+  The spec is a definition of the following form: a string with escaped
+  sequences of the form [<start>-<end>] where start and end is an positive
+  integer for a fillable value.
 
   An example of a spec is "foo[0-9]".
+  There are two kinds of flags, boolean flag and numeric flags. Boolean flags
+  can either be turned on or off, which numeric flags can have different
+  positive integer values. For example, -finline-limit=[1-1000] is a numeric
+  flag and -ftree-vectorize is a boolean flag.
+
+  A (boolean/numeric) flag is not turned on if it is not selected in the
+  FlagSet.
   """
 
   def __init__(self, spec, value=-1):

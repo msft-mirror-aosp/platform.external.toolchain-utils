@@ -28,7 +28,7 @@ class Generation(object):
   """A generation of a framework run.
 
   The base class of generation. Concrete subclasses, e.g., GAGeneration should
-  override the Next and Improve method to implement algorithm specific
+  override the Next and Improved method to implement algorithm specific
   applications.
   """
 
@@ -111,7 +111,7 @@ class Generation(object):
 
     return True
 
-  def Improve(self):
+  def Improved(self):
     """True if this generation has improvement upon its parent generation.
 
     Raises:
