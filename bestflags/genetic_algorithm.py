@@ -200,7 +200,7 @@ class GAGeneration(Generation):
     Generation.__init__(self, tasks, parents)
     self._total_stucks = total_stucks
 
-  def Improved(self):
+  def IsImproved(self):
     """True if this generation has improvement upon its parent generation."""
 
     tasks = self.Pool()
@@ -216,7 +216,7 @@ class GAGeneration(Generation):
     best_current = sorted(tasks, key=lambda task: task.GetTestResult())[0]
 
     # At least one task has improvement.
-    if best_current.Improved(best_parent):
+    if best_current.IsImproved(best_parent):
       self._total_stucks = 0
       return True
 

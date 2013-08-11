@@ -99,7 +99,7 @@ def Steering(cache, generations, input_queue, result_queue):
     # A generation may not generate the next generation, e.g., because a
     # fixpoint has been reached, there has not been any improvement for a few
     # generations or a local maxima is reached.
-    if not generation.Improved():
+    if not generation.IsImproved():
       continue
 
     for new_generation in generation.Next(cache):

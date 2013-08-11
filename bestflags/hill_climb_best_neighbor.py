@@ -23,26 +23,30 @@ from task import Task
 class HillClimbingBestBranch(Generation):
   """A variation of the hill climbing algorithm.
 
-  Given a task, it explores all its neighbors. Pick if best neighbor for the
+  Given a task, it explores all its neighbors. Pick the best neighbor for the
   next iteration.
   """
 
-  def __init__(self, exe_pool, parents, specs):
+  def __init__(self, exe_set, parents, specs):
     """Set up the tasks set of this generation.
 
     Args:
-      exe_pool: A set of tasks to be run.
+      exe_set: A set of tasks to be run.
       parents: A set of tasks to be used to check whether their neighbors have
         improved upon them.
       specs: A list of specs to explore. The spec specifies the flags that can
         be changed to find neighbors of a task.
     """
 
-    Generation.__init__(self, exe_pool, parents)
+    Generation.__init__(self, exe_set, parents)
     self._specs = specs
 
-  def Improved(self):
+  def IsImproved(self):
     """True if this generation has improvement over its parent generation.
+
+    If this generation improves upon the previous generation, this method finds
+    out the best task in this generation and sets it to _next_task for the
+    method Next to use.
 
     Returns:
       True if the best neighbor improves upon the parent task.
@@ -50,8 +54,8 @@ class HillClimbingBestBranch(Generation):
 
     # Find the best neighbor.
     best_task = None
-    for task in self._exe_pool:
-      if not best_task or task.Improved(best_task):
+    for task in self._exe_set:
+      if not best_task or task.IsImproved(best_task):
         best_task = task
 
     if not best_task:
@@ -63,7 +67,7 @@ class HillClimbingBestBranch(Generation):
       assert len(parents) == 1
       self._next_task = best_task
       # If the best neighbor improves upon the parent task.
-      return best_task.Improved(parents[0])
+      return best_task.IsImproved(parents[0])
 
     self._next_task = best_task
     return True

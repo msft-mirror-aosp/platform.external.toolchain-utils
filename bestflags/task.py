@@ -391,7 +391,7 @@ class Task(object):
       # Write out the result in the comma-separated format (CSV).
       out_file.write('%s,%s,%s\n' % test_result)
 
-  def Improved(self, other):
+  def IsImproved(self, other):
     """Compare the current task with another task.
 
     Args:

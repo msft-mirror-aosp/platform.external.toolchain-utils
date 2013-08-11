@@ -12,7 +12,7 @@ until all the tasks in this generation are done executing. It also contains a
 set of tasks that could potentially be used to generate the next generation,
 e.g., in the genetic algorithm, a set of good species will be kept to evolve to
 the successive generations. For the hill climbing algorithm example, the
-candidate_pool will contain a current task t being evaluated and the exe_pool
+candidate_pool will contain a current task t being evaluated and the exe_set
 will contains all the task t's neighbor.
 """
 
@@ -28,27 +28,27 @@ class Generation(object):
   """A generation of a framework run.
 
   The base class of generation. Concrete subclasses, e.g., GAGeneration should
-  override the Next and Improved method to implement algorithm specific
+  override the Next and IsImproved method to implement algorithm specific
   applications.
   """
 
-  def __init__(self, exe_pool, candidate_pool):
+  def __init__(self, exe_set, candidate_pool):
     """Set up the tasks set of this generation.
 
     Args:
-      exe_pool: A set of tasks to be run.
+      exe_set: A set of tasks to be run.
       candidate_pool: A set of tasks to be considered to be used to generate the
         next generation.
     """
 
-    self._exe_pool = exe_pool
+    self._exe_set = exe_set
     self._candidate_pool = candidate_pool
 
     # Keeping the record of how many tasks are pending. Pending tasks are the
     # ones that have been sent out to the next stage for execution but have not
     # finished. A generation is not ready for the reproduction of the new
     # generations until all its pending tasks have been executed.
-    self._pending = len(exe_pool)
+    self._pending = len(exe_set)
 
   def CandidatePool(self):
     """Return the candidate tasks of this generation."""
@@ -58,7 +58,7 @@ class Generation(object):
   def Pool(self):
     """Return the task set of this generation."""
 
-    return self._exe_pool
+    return self._exe_set
 
   def Done(self):
     """All the tasks in this generation are done.
@@ -96,13 +96,13 @@ class Generation(object):
     """
 
     # If there is a match, the input task belongs to this generation.
-    if task not in self._exe_pool:
+    if task not in self._exe_set:
       return False
 
     # Remove the place holder task in this generation and store the new input
     # task and its result.
-    self._exe_pool.remove(task)
-    self._exe_pool.add(task)
+    self._exe_set.remove(task)
+    self._exe_set.add(task)
 
     # The current generation will have one less task to wait on.
     self._pending -= 1
@@ -111,7 +111,7 @@ class Generation(object):
 
     return True
 
-  def Improved(self):
+  def IsImproved(self):
     """True if this generation has improvement upon its parent generation.
 
     Raises:

@@ -53,7 +53,7 @@ class MockGeneration(Generation):
   def Next(self, _):
     return self._next_generations
 
-  def Improved(self):
+  def IsImproved(self):
     if self._next_generations:
       return True
     return False
