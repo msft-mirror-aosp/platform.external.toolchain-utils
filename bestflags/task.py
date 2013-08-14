@@ -101,6 +101,8 @@ class Task(object):
     self._exe_cost = None
     self._checksum = None
     self._image = None
+    self._file_length = None
+    self._text_length = None
 
   def __eq__(self, other):
     """Test whether two tasks are equal.

@@ -41,6 +41,12 @@ class HillClimbingBestBranch(Generation):
     Generation.__init__(self, exe_set, parents)
     self._specs = specs
 
+    # This variable will be used, by the Next method, to generate the tasks for
+    # the next iteration. This self._next_task contains the best task in the
+    # current iteration and it will be set by the IsImproved method. The tasks
+    # of the next iteration are the neighbor of self._next_task.
+    self._next_task = None
+
   def IsImproved(self):
     """True if this generation has improvement over its parent generation.
 

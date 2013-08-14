@@ -28,16 +28,20 @@ class MockTask(object):
       identifier: the identifier of this task.
       cost: the mock cost of this task.
 
-      The _pre_cost field stored the cost. Once this task is performed, i.e., by
-      calling the work method, the _cost field will have this cost. The stage
-      field verifies that the module being tested and the unitest are in the
-      same stage. If the unitest does not care about cost of this task, the cost
-      parameter should be leaved blank.
+      The _cost field stored the cost. Once this task is performed, i.e., by
+      calling the work method or by setting the result from other task, the
+      _cost field will have this cost. The stage field verifies that the module
+      being tested and the unitest are in the same stage. If the unitest does
+      not care about cost of this task, the cost parameter should be leaved
+      blank.
     """
 
     self._identifier = identifier
-    self._pre_cost = cost
+    self._cost = cost
     self._stage = stage
+
+    # Indicate that this method has not been performed yet.
+    self._performed = False
 
   def __eq__(self, other):
     if isinstance(other, MockTask):
@@ -52,10 +56,11 @@ class MockTask(object):
   def SetResult(self, stage, cost):
     assert stage == self._stage
     self._cost = cost
+    self._performed = True
 
   def Work(self, stage):
     assert stage == self._stage
-    self._cost = self._pre_cost
+    self._performed = True
 
   def GetResult(self, stage):
     assert stage == self._stage
@@ -65,7 +70,7 @@ class MockTask(object):
     """Indicates whether the task has been performed."""
 
     assert stage == self._stage
-    return '_cost' in self.__dict__
+    return self._performed
 
   def LogSteeringCost(self):
     pass
