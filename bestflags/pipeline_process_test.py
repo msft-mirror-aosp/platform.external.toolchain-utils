@@ -21,8 +21,10 @@ ERROR = -334
 TEST_STAGE = -8
 
 
-def MockHelper(done_dict, helper_queue, _, result_queue):
+def MockHelper(stage, done_dict, helper_queue, _, result_queue):
   """This method echos input to the output."""
+
+  assert stage == TEST_STAGE
   while True:
     if not helper_queue.empty():
       task = helper_queue.get()
@@ -37,7 +39,8 @@ def MockHelper(done_dict, helper_queue, _, result_queue):
         result_queue.put(('helper', task.GetIdentifier(TEST_STAGE)))
 
 
-def MockWorker(task, _, result_queue):
+def MockWorker(stage, task, _, result_queue):
+  assert stage == TEST_STAGE
   result_queue.put(('worker', task.GetIdentifier(TEST_STAGE)))
 
 

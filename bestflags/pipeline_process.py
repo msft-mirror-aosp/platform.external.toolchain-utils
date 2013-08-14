@@ -91,7 +91,7 @@ class PipelineProcess(multiprocessing.Process):
 
     # the helper process
     helper_process = multiprocessing.Process(target=self._helper,
-                                             args=(self._cache,
+                                             args=(self._stage, self._cache,
                                                    self._helper_queue,
                                                    self._work_queue,
                                                    self._result_queue))
@@ -112,7 +112,8 @@ class PipelineProcess(multiprocessing.Process):
         self._helper_queue.put(task)
       else:
         # Let the workers do the actual work.
-        work_pool.apply_async(self._worker, args=(task, self._work_queue,
+        work_pool.apply_async(self._worker, args=(self._stage, task,
+                                                  self._work_queue,
                                                   self._result_queue))
         mycache.append(task_key)
 

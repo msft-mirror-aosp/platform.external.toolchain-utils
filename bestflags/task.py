@@ -203,7 +203,7 @@ class Task(object):
     """
 
     # Define the dictionary for different stage function lookup.
-    work_functions = {BUILD_STAGE: self.__Compile(), TEST_STAGE: self.__Test()}
+    work_functions = {BUILD_STAGE: self.__Compile, TEST_STAGE: self.__Test}
 
     assert stage in work_functions
 
@@ -253,35 +253,43 @@ class Task(object):
     command = '%s %s %s' % (Task.BUILD_COMMAND, ' '.join(flags),
                             self._task_identifier)
 
-    # Try build_tries number of times before confirming that the build fails.
+    # Try BUILD_TRIES number of times before confirming that the build fails.
     for _ in range(BUILD_TRIES):
-      # Execute the command and get the execution status/results.
-      p = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
-      (out, err) = p.communicate()
+      try:
+        # Execute the command and get the execution status/results.
+        p = subprocess.Popen(command.split(), stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        (out, err) = p.communicate()
 
-      if not err and out != ERROR_STRING:
-        # Each build results contains the checksum of the result image, the
-        # performance cost of the build, the compilation image, the length of
-        # the build, and the length of the text section of the build.
-        (checksum, cost, image, file_length, text_length) = out.split()
-        # Build successfully.
-        break
+        if out:
+          out = out.strip()
+          if out != ERROR_STRING:
+            # Each build results contains the checksum of the result image, the
+            # performance cost of the build, the compilation image, the length
+            # of the build, and the length of the text section of the build.
+            (checksum, cost, image, file_length, text_length) = out.split()
+            # Build successfully.
+            break
 
-      # Build failed.
-      cost = ERROR_STRING
+        # Build failed.
+        cost = ERROR_STRING
+      except _:
+        # If there is exception getting the cost information of the build, the
+        # build failed.
+        cost = ERROR_STRING
 
     # Convert the build cost from String to integer. The build cost is used to
     # compare a task with another task. Set the build cost of the failing task
-    # to the max integer.
-    self._build_cost = sys.maxint if cost == ERROR_STRING else int(cost)
+    # to the max integer. The for loop will keep trying until either there is a
+    # success or BUILD_TRIES number of tries have been conducted.
+    self._build_cost = sys.maxint if cost == ERROR_STRING else float(cost)
 
     self._checksum = checksum
     self._file_length = file_length
     self._text_length = text_length
     self._image = image
 
-    self.__LogBuildCost()
+    self.__LogBuildCost(err)
 
   def __Test(self):
     """__Test the task against benchmark(s) using the input test command."""
@@ -300,24 +308,32 @@ class Task(object):
     command = '%s %s %s' % (Task.TEST_COMMAND, self._image,
                             self._task_identifier)
 
-    # Try build_tries number of times before confirming that the build fails.
+    # Try TEST_TRIES number of times before confirming that the build fails.
     for _ in range(TEST_TRIES):
-      p = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
-      (out, err) = p.communicate()
+      try:
+        p = subprocess.Popen(command.split(), stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        (out, err) = p.communicate()
 
-      if not err and out != ERROR_STRING:
-        # The test results contains the performance cost of the test.
-        cost = out
-        # Test successfully.
-        break
+        if out:
+          out = out.strip()
+          if out != ERROR_STRING:
+            # The test results contains the performance cost of the test.
+            cost = out
+            # Test successfully.
+            break
 
-      # Test failed.
-      cost = ERROR_STRING
+        # Test failed.
+        cost = ERROR_STRING
+      except _:
+        # If there is exception getting the cost information of the test, the
+        # test failed. The for loop will keep trying until either there is a
+        # success or TEST_TRIES number of tries have been conducted.
+        cost = ERROR_STRING
 
-    self._exe_cost = sys.maxint if (cost == ERROR_STRING) else int(cost)
+    self._exe_cost = sys.maxint if (cost == ERROR_STRING) else float(cost)
 
-    self.__LogTestCost()
+    self.__LogTestCost(err)
 
   def __SetBuildResult(self, (checksum, build_cost, image, file_length,
                               text_length)):
@@ -357,33 +373,47 @@ class Task(object):
       # Write out the result in the comma-separated format (CSV).
       out_file.write('%s,%s,%s,%s,%s,%s,%s\n' % steering_result)
 
-  def __LogBuildCost(self):
+  def __LogBuildCost(self, log):
     """Log the build results for the task.
 
     The build results include the compilation time of the build, the result
     image, the checksum, the file length and the text length of the image.
     The file length of the image includes the length of the file of the image.
     The text length only includes the length of the text section of the image.
+
+    Args:
+      log: The build log of this task.
     """
 
-    build_log = '%s/%s/build.txt' % self._log_path
+    build_result_log = '%s/%s/build.txt' % self._log_path
 
-    _CreateDirectory(build_log)
+    _CreateDirectory(build_result_log)
 
-    with open(build_log, 'w') as out_file:
+    with open(build_result_log, 'w') as out_file:
       build_result = (self._flag_set, self._build_cost, self._image,
                       self._checksum, self._file_length, self._text_length)
 
       # Write out the result in the comma-separated format (CSV).
       out_file.write('%s,%s,%s,%s,%s,%s\n' % build_result)
 
-  def __LogTestCost(self):
+    # The build information about running the build.
+    build_run_log = '%s/%s/build_log.txt' % self._log_path
+    _CreateDirectory(build_run_log)
+
+    with open(build_run_log, 'w') as out_log_file:
+      # Write out the execution information.
+      out_log_file.write('%s' % log)
+
+  def __LogTestCost(self, log):
     """Log the test results for the task.
 
     The test results include the runtime execution time of the test.
+
+    Args:
+      log: The test log of this task.
     """
 
-    test_log = '%s/%s/build.txt' % self._log_path
+    test_log = '%s/%s/test.txt' % self._log_path
 
     _CreateDirectory(test_log)
 
@@ -392,6 +422,15 @@ class Task(object):
 
       # Write out the result in the comma-separated format (CSV).
       out_file.write('%s,%s,%s\n' % test_result)
+
+    # The execution information about running the test.
+    test_run_log = '%s/%s/test_log.txt' % self._log_path
+
+    _CreateDirectory(test_run_log)
+
+    with open(test_run_log, 'w') as out_log_file:
+      # Append the test log information.
+      out_log_file.write('%s' % log)
 
   def IsImproved(self, other):
     """Compare the current task with another task.

@@ -104,7 +104,7 @@ def _GenerateNoFlagTask():
   return set([Task(FlagSet([]))])
 
 
-def _GenerateRandomGATasks(specs, num_tasks, num_trials):
+def GenerateRandomGATasks(specs, num_tasks, num_trials):
   """Generate a set of tasks for the Genetic Algorithm.
 
   Args:
@@ -233,8 +233,14 @@ def _TestAlgorithm(cost_func, specs, generations, best_result):
     assert best_result == result
 
 
-class FlagAlgorithms(unittest.TestCase):
-  """This class test the FlagSet class."""
+class MockAlgorithmsTest(unittest.TestCase):
+  """This class mock tests different steering algorithms.
+
+  The steering algorithms are responsible for generating the next set of tasks
+  to run in each iteration. This class does a functional testing on the
+  algorithms. It mocks out the computation of the fitness function from the
+  build and test phases by letting the user define the fitness function.
+  """
 
   def testBestHillClimb(self):
     """Test the best hill climb algorithm.
@@ -279,7 +285,7 @@ class FlagAlgorithms(unittest.TestCase):
   def testGeneticAlgorithm(self):
     """Test the Genetic Algorithm.
 
-    Do a function testing here and see how well it scales.
+    Do a functional testing here and see how well it scales.
     """
 
     # Initiate the build/test command and the log directory.
@@ -295,8 +301,8 @@ class FlagAlgorithms(unittest.TestCase):
                               specs, MUTATION_RATE)
 
     # Generate the initial generations.
-    generation_tasks = _GenerateRandomGATasks(specs, NUM_CHROMOSOMES,
-                                              NUM_TRIALS)
+    generation_tasks = GenerateRandomGATasks(specs, NUM_CHROMOSOMES,
+                                             NUM_TRIALS)
     generations = [GAGeneration(generation_tasks, set([]), 0)]
 
     # Test the algorithm.
