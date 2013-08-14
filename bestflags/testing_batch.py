@@ -6,7 +6,8 @@
 
 Part of the Chrome build flags optimization.
 
-Test the variations of the hill climbing algorithms.
+Test the best branching hill climbing algorithms, genetic algorithm and
+iterative elimination algorithm.
 """
 
 __author__ = 'yuhenglong@google.com (Yuheng Long)'
@@ -22,6 +23,7 @@ from flags import FlagSet
 from genetic_algorithm import GAGeneration
 from genetic_algorithm import GATask
 from hill_climb_best_neighbor import HillClimbingBestBranch
+from iterative_elimination import IterativeEliminationFirstGeneration
 import pipeline_process
 from steering import Steering
 from task import BUILD_STAGE
@@ -133,6 +135,102 @@ def GenerateRandomGATasks(specs, num_tasks, num_trials):
   return tasks
 
 
+def _GenerateInitialFlags(specs, spec):
+  """Generate the flag_set of a task in the flag elimination algorithm.
+
+  Set the value of all the flags to the largest value, except for the flag that
+  contains spec.
+
+  For example, if the specs are [-finline-limit=[1-1000], -fstrict-aliasing] and
+  the spec is -finline-limit=[1-1000], then the result is
+  [-finline-limit=[1-1000]:-finline-limit=998,
+   -fstrict-aliasing:-fstrict-aliasing]
+
+  Args:
+    specs: an array of specifications from which the result flag_set is created.
+      The flag_set contains one and only one flag that contain the specification
+      spec.
+    spec: The flag containing this spec should have a value that is smaller than
+      the highest value the flag can have.
+
+  Returns:
+    An array of flags, each of which contains one spec in specs. All the values
+    of the flags are the largest values in specs, expect the one that contains
+    spec.
+  """
+
+  flag_set = []
+  for other_spec in specs:
+    numeric_flag_match = flags.Search(other_spec)
+    # Found the spec in the array specs.
+    if other_spec == spec:
+      # Numeric flag will have a value that is smaller than the largest value
+      # and Boolean flag will be deleted.
+      if numeric_flag_match:
+        end = int(numeric_flag_match.group('end'))
+        flag_set.append(flags.Flag(other_spec, end - 2))
+
+      continue
+
+    # other_spec != spec
+    if numeric_flag_match:
+      # numeric flag
+      end = int(numeric_flag_match.group('end'))
+      flag_set.append(flags.Flag(other_spec, end - 1))
+      continue
+
+    # boolean flag
+    flag_set.append(flags.Flag(other_spec))
+
+  return flag_set
+
+
+def _GenerateAllIterativeEliminationTasks(specs):
+  """Generate the initial tasks for the negative flag elimination algorithm.
+
+  Generate the base line task that turns on all the boolean flags and sets the
+  value to be the largest value for the numeric flag.
+
+  For example, if the specs are [-finline-limit=[1-1000], -fstrict-aliasing],
+  the base line is [-finline-limit=[1-1000]:-finline-limit=999,
+  -fstrict-aliasing:-fstrict-aliasing]
+
+  Generate a set of task, each turns off one of the flag or sets a value that is
+  smaller than the largest value for the flag.
+
+  Args:
+    specs: an array of specifications from which the result flag_set is created.
+
+  Returns:
+    An array containing one generation of the initial tasks for the negative
+    flag elimination algorithm.
+  """
+
+  # The set of tasks to be generated.
+  results = set([])
+  flag_set = []
+
+  for spec in specs:
+    numeric_flag_match = flags.Search(spec)
+    if numeric_flag_match:
+      # Numeric flag.
+      end_value = int(numeric_flag_match.group('end'))
+      flag_set.append(flags.Flag(spec, end_value - 1))
+      continue
+
+    # Boolean flag.
+    flag_set.append(flags.Flag(spec))
+
+  # The base line task that set all the flags to their largest values.
+  parent_task = Task(flags.FlagSet(flag_set))
+  results.add(parent_task)
+
+  for spec in specs:
+    results.add(Task(flags.FlagSet(_GenerateInitialFlags(specs, spec))))
+
+  return [IterativeEliminationFirstGeneration(results, parent_task)]
+
+
 def _ComputeCost(cost_func, specs, flag_set):
   """Compute the mock cost of the flag_set using the input cost function.
 
@@ -242,6 +340,13 @@ class MockAlgorithmsTest(unittest.TestCase):
   build and test phases by letting the user define the fitness function.
   """
 
+  def _GenerateFlagSpecifications(self):
+    """Generate the testing specifications."""
+
+    mock_test_file = 'scale_mock_test'
+    _GenerateTestFlags(NUM_FLAGS, FLAG_RANGES, mock_test_file)
+    return flags.ReadConf(mock_test_file)
+
   def testBestHillClimb(self):
     """Test the best hill climb algorithm.
 
@@ -252,9 +357,7 @@ class MockAlgorithmsTest(unittest.TestCase):
     Task.InitLogCommand(None, None, 'output')
 
     # Generate the testing specs.
-    mock_test_file = 'scale_mock_test'
-    _GenerateTestFlags(NUM_FLAGS, FLAG_RANGES, mock_test_file)
-    specs = flags.ReadConf(mock_test_file)
+    specs = self._GenerateFlagSpecifications()
 
     # Generate the initial generations for a test whose cost function is the
     # summation of the values of all the flags.
@@ -292,10 +395,7 @@ class MockAlgorithmsTest(unittest.TestCase):
     Task.InitLogCommand(None, None, 'output')
 
     # Generate the testing specs.
-    mock_test_file = 'scale_mock_test'
-    _GenerateTestFlags(NUM_FLAGS, FLAG_RANGES, mock_test_file)
-    specs = flags.ReadConf(mock_test_file)
-
+    specs = self._GenerateFlagSpecifications()
     # Initiate the build/test command and the log directory.
     GAGeneration.InitMetaData(STOP_THRESHOLD, NUM_CHROMOSOMES, NUM_TRIALS,
                               specs, MUTATION_RATE)
@@ -310,6 +410,43 @@ class MockAlgorithmsTest(unittest.TestCase):
     cost_func = 'sys.maxint - sum(values[0:len(values)])'
     _TestAlgorithm(cost_func, specs, generations, -1)
 
+  def testIterativeElimination(self):
+    """Test the iterative elimination algorithm.
+
+    Test whether it finds the best results as expected.
+    """
+
+    # Initiate the build/test command and the log directory.
+    Task.InitLogCommand(None, None, 'output')
+
+    # Generate the testing specs.
+    specs = self._GenerateFlagSpecifications()
+
+    # Generate the initial generations. The generation contains the base line
+    # task that turns on all the flags and tasks that each turn off one of the
+    # flags.
+    generations = _GenerateAllIterativeEliminationTasks(specs)
+
+    # Test the algorithm. The cost function is the summation of all the values
+    # of all the flags. Therefore, the best value is supposed to be 0, i.e.,
+    # when all the flags are disabled.
+    _TestAlgorithm('sum(values[0:len(values)])', specs, generations, 0)
+
+    # This test uses a cost function that is the negative of the previous cost
+    # function. Therefore, the best result should be found in task with all the
+    # flags enabled.
+    all_flags_tasks = _GenerateAllFlagsTasks(specs)
+    cost_function = 'sys.maxint - sum(values[0:len(values)])'
+    # Compute the cost of the task that turns on all the flags.
+    all_flags = list(all_flags_tasks)[0].GetFlags()
+    cost = _ComputeCost(cost_function, specs, all_flags)
+
+    # Test the algorithm. The cost function is negative of the summation of all
+    # the values of all the flags. Therefore, the best value is supposed to be
+    # 0, i.e., when all the flags are disabled.
+    # The concrete type of the generation decides how the next generation will
+    # be generated.
+    _TestAlgorithm(cost_function, specs, generations, cost)
 
 if __name__ == '__main__':
   unittest.main()
