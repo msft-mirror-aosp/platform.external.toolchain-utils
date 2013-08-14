@@ -55,11 +55,11 @@ def _GenerateRandomRasks(specs):
   flag_set = []
 
   for spec in specs:
-    result = flags.Search(spec)
-    if result:
+    numeric_flag_match = flags.Search(spec)
+    if numeric_flag_match:
       # Numeric flags.
-      start = int(result.group('start'))
-      end = int(result.group('end'))
+      start = int(numeric_flag_match.group('start'))
+      end = int(numeric_flag_match.group('end'))
 
       value = random.randint(start - 1, end - 1)
       if value != start - 1:
@@ -89,8 +89,12 @@ def _GenerateAllFlagsTasks(specs):
   flag_set = []
 
   for spec in specs:
-    result = flags.Search(spec)
-    value = (int(result.group('end')) - 1) if result else -1
+    numeric_flag_match = flags.Search(spec)
+
+    if numeric_flag_match:
+      value = (int(numeric_flag_match.group('end')) - 1)
+    else:
+      value = -1
     flag_set.append(Flag(spec, value))
 
   return set([Task(FlagSet(flag_set))])

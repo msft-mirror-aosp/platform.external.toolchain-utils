@@ -61,18 +61,18 @@ def RandomMutate(specs, flag_set, mutation_rate):
       continue
 
     # If the flag is already in the flag set, it is mutated.
-    result = flags.Search(spec)
+    numeric_flag_match = flags.Search(spec)
 
     # The value of a numeric flag will be changed, and a boolean flag will be
     # dropped.
-    if not result:
+    if not numeric_flag_match:
       continue
 
     value = flag_set[spec].GetValue()
 
     # Randomly select a nearby value of the current value of the flag.
     rand_arr = [value]
-    if value + 1 < int(result.group('end')):
+    if value + 1 < int(numeric_flag_match.group('end')):
       rand_arr.append(value + 1)
 
     rand_arr.append(value - 1)
@@ -80,7 +80,7 @@ def RandomMutate(specs, flag_set, mutation_rate):
 
     # If the value is smaller than the start of the spec, this flag will be
     # dropped.
-    if value != int(result.group('start')) - 1:
+    if value != int(numeric_flag_match.group('start')) - 1:
       results_flags.append(Flag(spec, value))
 
   return GATask(FlagSet(results_flags))

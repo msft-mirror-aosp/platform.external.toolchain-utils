@@ -15,7 +15,10 @@ from flags import Flag
 
 
 def ClimbNext(flags_dict, climb_spec):
-  """Get the flags who are different from flags_dict by climb_spec.
+  """Get the flags that are different from |flags_dict| by |climb_spec|.
+
+  Given a set of flags, |flags_dict|, return a new set of flags that are
+  adjacent along the flag spec |climb_spec|.
 
   An example flags_dict is {foo=[1-9]:foo=5, bar=[1-5]:bar=2} and climb_spec is
   bar=[1-5]. This method changes the flag that contains the spec bar=[1-5]. The
@@ -31,7 +34,7 @@ def ClimbNext(flags_dict, climb_spec):
       fillable value. An example of a spec is "foo[0-9]".
 
   Returns:
-    Dictionaries of neighbor flags.
+    List of dictionaries of neighbor flags.
   """
 
   # This method searches for a pattern [start-end] in the spec. If the spec

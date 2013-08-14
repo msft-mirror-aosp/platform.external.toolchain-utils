@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Flag unittest.
+"""Unit tests for the classes in module 'flags'.
 
 Part of the Chrome build flags optimization.
 """
@@ -46,7 +46,7 @@ class FlagTest(unittest.TestCase):
       assert start <= value and value < end
 
   def testEqual(self):
-    """Test the equal method of the flag.
+    """Test the equal operator (==) of the flag.
 
     Two flags are equal if and only if their spec and value are equal.
     """
@@ -59,11 +59,10 @@ class FlagTest(unittest.TestCase):
 
     # Two tasks having different flag set should be different.
     for test in tests:
-      flag0 = Flag(str(test), test)
+      flag = Flag(str(test), test)
       other_flag_sets = [other for other in tests if test != other]
-      for test1 in other_flag_sets:
-        flag1 = Flag(str(test1), test1)
-        assert flag0 != flag1
+      for other_test in other_flag_sets:
+        assert flag != Flag(str(other_test), other_test)
 
   def testFormattedForUse(self):
     """Test the FormattedForUse method of the flag.
@@ -153,7 +152,7 @@ class FlagSetTest(unittest.TestCase):
     """
 
     true_tests = range(NUM_TESTS)
-    false_tests = range(NUM_TESTS, NUM_TESTS + NUM_TESTS)
+    false_tests = range(NUM_TESTS, NUM_TESTS * 2)
 
     specs = [str(spec) for spec in true_tests]
 

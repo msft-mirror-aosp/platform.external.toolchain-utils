@@ -93,18 +93,19 @@ class Flag(object):
   def __init__(self, spec, value=-1):
     self._spec = spec
 
-    # If the value is not specified, a random value is used.
+    # If the value is not specified, generate a random value to use.
     if value == -1:
-      result = rx.search(spec)
-
-      # The value of a boolean flag is 0.
+      # If creating a boolean flag, the value will be 0.
       value = 0
+
+      # Parse the spec's expression for the flag value's numeric range.
+      numeric_flag_match = Search(spec)
 
       # If this is a numeric flag, a value is chosen within start and end, start
       # inclusive and end exclusive.
-      if result:
-        start = int(result.group('start'))
-        end = int(result.group('end'))
+      if numeric_flag_match:
+        start = int(numeric_flag_match.group('start'))
+        end = int(numeric_flag_match.group('end'))
 
         assert start < end
         value = random.randint(start, end)
