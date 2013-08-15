@@ -294,9 +294,17 @@ class TelemetryResult(Result):
     # We need to convert to this format:
     # {"www.google.com:average_commit_time (ms)": "33.4",
     #  "www.google.com:...": "21.2"}
+    # Added note:  Occasionally the output comes back
+    # with "JSON.stringify(window.automation.GetResults())" on
+    # the first line, and then the rest of the output as
+    # described above.
 
     lines = self.out.splitlines()
     self.keyvals = {}
+
+    if lines:
+      if lines[0].startswith("JSON.stringify"):
+        lines = lines[1:]
 
     if not lines:
       return
