@@ -1,0 +1,24 @@
+{
+"GA":{
+
+"BUILD_CMD": "./bikjmp/build_bikjmp",
+
+"TEST_CMD": "./bikjmp/test_bikjmp",
+
+"OUTPUT": "output",
+
+"CONF": "bikjmp/conf",
+
+"NUM_BUILDER": 3,
+
+"NUM_TESTER": 2,
+
+"STOP_THRESHOLD": 20,
+
+"NUM_CHROMOSOMES": 10,
+
+"NUM_TRIALS": 20,
+
+"MUTATION_RATE": 0.03
+}
+}

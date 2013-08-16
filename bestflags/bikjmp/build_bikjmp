@@ -1,0 +1,61 @@
+#!/bin/bash -ux
+
+cd bikjmp
+
+# Contains the optimization flags.
+flags=''
+
+# The index of the parameter.
+i=1
+
+# Indicate whether it is parsing the gcc param.
+in_gcc_param=false
+
+for parameter in "$@"
+  do
+    #  The last parameter is the file name.
+    if [ "$i" == "$#" ]; then
+      file=$parameter
+      break
+    fi
+
+    # The param is not a flag, it combines with the flag that comes right after.
+    # For example, --param max-inline-insns-single 
+    if [ "$parameter" == "-param" ]; then
+      in_gcc_param=true
+      flags+=-$parameter' '
+      let i++
+      continue
+    fi
+
+    # In in_gcc_param section, this flag follows the key word '--param'.
+    if [ $in_gcc_param == true ]; then
+      flags+=$parameter' '
+      let i++
+      in_gcc_param=false
+      continue
+    fi
+
+    # Normal flags.
+    flags+=-$parameter' '
+    let i++
+  done
+
+/usr/bin/time -o build_timer$file gcc -O2 $flags -o bikjmp$file bikjmp_bench.cpp
+
+state=$?
+if [ $state -eq 0 ];then
+  user_time=$(cat build_timer$file | grep "user" | cut -d "u" -f 1)
+  output_file="$file"
+  checksum=$(readelf -x .text bikjmp$file | md5sum | cut -d " " -f 1)
+  file_size=$(ls -l bikjmp$file | cut -d " " -f 5)
+  text_section=$(readelf -SW bikjmp$file | grep ".text")
+  size_hex=$(echo $text_section | sed "s/\s\{1,\}/\ /g" | cut -d ' ' -f 6)
+  size=$(echo $size_hex | ( echo "ibase=16" ; tr '[:lower:]' '[:upper:]') | bc)
+
+  echo $checksum $user_time $output_file $file_size $size
+else
+  echo "error" "error" "error" "error" "error"
+fi
+
+return $state

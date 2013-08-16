@@ -1,0 +1,15 @@
+#!/bin/bash -ux
+
+cd bikjmp
+
+/usr/bin/time -o test_timer$1 ./bikjmp$1 < fen.txt >logbikjmp$1
+
+state=$?
+
+if [ $state -eq 0 ];then
+  cat test_timer$1 | grep "user" | cut -d "u" -f 1
+else
+  echo "error"
+fi
+
+return $state
