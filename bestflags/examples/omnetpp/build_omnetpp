@@ -1,6 +1,6 @@
-#!/bin/bash -ux
+#!/bin/bash -x
 
-cd bikjmp
+cd examples/omnetpp/cpu2006-redhat-ia32
 
 # Contains the optimization flags.
 flags=''
@@ -41,15 +41,23 @@ for parameter in "$@"
     let i++
   done
 
-/usr/bin/time -o build_timer$file gcc -O2 $flags -o bikjmp$file bikjmp_bench.cpp
+# Change the configuration file.
+content=$(sed s/amd64-m64-gcc41-kk/test$file/ config/linux64-amd64-pgi.cfg)
+echo "$content" | sed s/-O2/-O1\ "$flags"/ >config/linux64-amd64-pgi$file.cfg
+. ./shrc
+/usr/bin/time -o temp$file runspec --config linux64-amd64-pgi$file -D --action=build  471.omnetpp
 
 state=$?
+
+outfile="./benchspec/CPU2006/471.omnetpp/run/build_base_test$file.0000/omnetpp"
+
 if [ $state -eq 0 ];then
   user_time=$(cat build_timer$file | grep "user" | cut -d "u" -f 1)
   output_file="$file"
-  checksum=$(readelf -x .text bikjmp$file | md5sum | cut -d " " -f 1)
-  file_size=$(ls -l bikjmp$file | cut -d " " -f 5)
-  text_section=$(readelf -SW bikjmp$file | grep ".text")
+
+  checksum=$(readelf -x .text $outfile | md5sum | cut -d " " -f 1)
+  file_size=$(ls -l $outfile | cut -d " " -f 5)
+  text_section=$(readelf -SW $outfile | grep ".text")
   size_hex=$(echo $text_section | sed "s/\s\{1,\}/\ /g" | cut -d ' ' -f 6)
   size=$(echo $size_hex | ( echo "ibase=16" ; tr '[:lower:]' '[:upper:]') | bc)
 

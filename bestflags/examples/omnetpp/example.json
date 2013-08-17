@@ -1,13 +1,13 @@
 {
 "GA":{
 
-"BUILD_CMD": "./bikjmp/build_bikjmp",
+"BUILD_CMD": "./examples/omnetpp/build_omnetpp",
 
-"TEST_CMD": "./bikjmp/test_bikjmp",
+"TEST_CMD": "./examples/omnetpp/test_omnetpp",
 
 "OUTPUT": "output",
 
-"CONF": "bikjmp/conf",
+"CONF": "examples/omnetpp/conf",
 
 "NUM_BUILDER": 3,
 
