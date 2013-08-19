@@ -153,6 +153,9 @@ class BenchmarkRun(threading.Thread):
     if self.benchmark.perf_args and self.benchmark.suite == "telemetry":
       self._logger.LogError("Telemetry benchmark does not support profiler.")
 
+    if self.benchmark.perf_args and self.benchmark.suite == "test_that":
+      self._logger.LogError("test_that does not support profiler.")
+
     if self.benchmark.perf_args:
       perf_args_list = self.benchmark.perf_args.split(" ")
       perf_args_list = [perf_args_list[0]] + ["-a"] + perf_args_list[1:]

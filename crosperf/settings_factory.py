@@ -42,6 +42,9 @@ class BenchmarkSettings(Settings):
                             "command record or stat followed by arguments."))
     self.AddField(TextField("suite", default="pyauto",
                                description="The type of the benchmark"))
+    self.AddField(BooleanField("use_test_that", default=False,
+                               description="(experimental) Whether to use the"
+                               " new test_that script for running the test."))
 
 
 class LabelSettings(Settings):
@@ -130,6 +133,9 @@ class GlobalSettings(Settings):
     self.AddField(BooleanField("no_email", default=False,
                                description="Whether to disable the email to "
                                "user after crosperf finishes."))
+    self.AddField(BooleanField("use_test_that", default=False,
+                               description="(experimental) Whether to use the "
+                               "new test_that script for running the test."))
     self.AddField(TextField("share_users", default="",
                             description="Who's cache data you want to "
                             "use. It accepts multiple users seperated by \",\""))

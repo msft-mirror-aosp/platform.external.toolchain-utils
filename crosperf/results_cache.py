@@ -96,6 +96,7 @@ class Result(object):
   def _FindFilesInResultsDir(self, find_args):
     if not self.results_dir:
       return None
+
     command = "find %s %s" % (self.results_dir,
                               find_args)
     ret, out, _ = self._ce.RunCommand(command, return_output=True)

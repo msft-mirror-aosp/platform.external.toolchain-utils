@@ -48,6 +48,7 @@ class ExperimentFactory(object):
     share_users = global_settings.GetField("share_users")
     results_dir = global_settings.GetField("results_dir")
     chrome_src = global_settings.GetField("chrome_src")
+    use_test_that = global_settings.GetField("use_test_that")
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.
     cache_conditions = [CacheConditions.CACHE_FILE_EXISTS,
@@ -76,11 +77,12 @@ class ExperimentFactory(object):
       rm_chroot_tmp = benchmark_settings.GetField("rm_chroot_tmp")
       key_results_only = benchmark_settings.GetField("key_results_only")
       suite = benchmark_settings.GetField("suite")
+      use_test_that = benchmark_settings.GetField("use_test_that")
 
       benchmark = Benchmark(benchmark_name, test_name, test_args,
                             iterations, outlier_range,
                             key_results_only, rm_chroot_tmp,
-                            perf_args, suite)
+                            perf_args, suite, use_test_that)
       benchmarks.append(benchmark)
 
     # Construct labels.

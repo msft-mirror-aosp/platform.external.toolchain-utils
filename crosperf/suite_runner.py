@@ -21,6 +21,8 @@ class SuiteRunner(object):
   def Run(self, machine, label, benchmark, test_args):
     if benchmark.suite == "telemetry":
       return self.Telemetry_Run(machine, label, benchmark)
+    elif benchmark.use_test_that:
+      return self.Test_That_Run(machine, label, benchmark, test_args)
     else:
       return self.Pyauto_Run(machine, label, benchmark, test_args)
 
@@ -46,6 +48,26 @@ class SuiteRunner(object):
 
     command = ("./run_remote_tests.sh --remote=%s %s %s" %
                (machine, options, benchmark.test_name))
+    return self._ce.ChrootRunCommand(label.chromeos_root,
+                                     command,
+                                     True,
+                                     self._ct)
+
+  def Test_That_Run(self, machine, label, benchmark, test_args):
+    """Run the test_that test.."""
+    options = ""
+    if label.board:
+      options += " --board=%s" % label.board
+    if test_args:
+      options += " %s" % test_args
+    command = "rm -rf /usr/local/autotest/results/*"
+    self._ce.CrosRunCommand(command, machine=machine, username="root",
+                            chromeos_root=label.chromeos_root)
+
+    self.RebootMachine(machine, label.chromeos_root)
+
+    command = ("/usr/bin/test_that %s %s %s" %
+               (options, machine, benchmark.test_name))
     return self._ce.ChrootRunCommand(label.chromeos_root,
                                      command,
                                      True,
