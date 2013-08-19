@@ -119,7 +119,7 @@ def FindBuildIdFromLog(description):
     build_id = int(my_dict["number"])
     if result == 0:
       return (result, build_id)
-    else
+    else:
       # Found a finished failed build.
       # Keep searching to find a successful one
       pass
