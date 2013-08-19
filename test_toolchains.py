@@ -46,6 +46,8 @@ class ChromeOSCheckout(object):
                              "--rebuild"]
       if self._public:
         build_chromeos_args.append("--env=USE=-chrome_internal")
+      if label == "vanilla":
+        build_chromeos_args.append("--vanilla_image")
       ret = build_chromeos.Main(build_chromeos_args)
       if ret:
         raise Exception("Couldn't build ChromeOS!")

@@ -74,6 +74,11 @@ def Main(argv):
                     default=False,
                     action="store_true",
                     help="Use default ChromeOS toolchain.")
+  parser.add_option("--vanilla_image", dest="vanilla_image",
+                    default=False,
+                    action="store_true",
+                    help=("Use prebuild packages for building the image. "
+                          "It also implies the --vanilla option is set."))
 
   options = parser.parse_args(argv[1:])[0]
 
@@ -105,16 +110,16 @@ def Main(argv):
   options.chromeos_root = os.path.expanduser(options.chromeos_root)
 
   build_packages_command = misc.GetBuildPackagesCommand(
-    board=options.board, usepkg=False, debug=options.debug)
+    board=options.board, usepkg=options.vanilla_image, debug=options.debug)
 
   if options.package:
     build_packages_command += " {0}".format(options.package)
 
   build_image_command = misc.GetBuildImageCommand(options.board, options.dev)
 
-  if options.vanilla == True:
+  if options.vanilla or options.vanilla_image:
     command = misc.GetSetupBoardCommand(options.board,
-                                        usepkg=False,
+                                        usepkg=options.vanilla_image,
                                         force=options.clobber_board)
     command += "; " + build_packages_env + " " + build_packages_command
     command += "&& " + build_packages_env + " " + build_image_command
