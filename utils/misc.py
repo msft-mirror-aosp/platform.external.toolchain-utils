@@ -1,6 +1,8 @@
 #!/usr/bin/python
-#
-# Copyright 2010 Google Inc. All Rights Reserved.
+
+# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
 """Utilities for toolchain build."""
 
@@ -155,7 +157,8 @@ def GetBuildPackagesCommand(board, usepkg=False, debug=False):
   else:
     withdebug_flag = '--nowithdebug'
   return ("./build_packages %s --withdev --withtest --withautotest "
-          "--skip_toolchain_update %s --board=%s" %
+          "--skip_toolchain_update %s --board=%s "
+          "--accept_licenses=@CHROMEOS" %
           (usepkg_flag, withdebug_flag, board))
 
 
@@ -183,6 +186,8 @@ def GetSetupBoardCommand(board, gcc_version=None, binutils_version=None,
 
   if force:
     options.append("--force")
+
+  options.append("--accept_licenses=@CHROMEOS")
 
   return "./setup_board --board=%s %s" % (board, " ".join(options))
 
