@@ -144,13 +144,14 @@ Use in combination with --version=latest or --version=common. Use
   directory = options.directory.strip()
 
   if options.public:
-    manifest_repo = "http://git.chromium.org/chromiumos/manifest.git"
-    versions_repo = "http://git.chromium.org/chromiumos/manifest-versions.git"
+    manifest_repo = "http://chromium.googlesource.com/chromiumos/manifest.git"
+    versions_repo = ("http://chromium.googlesource.com/"
+                     "chromiumos/manifest-versions.git")
   else:
     manifest_repo = (
-        "ssh://gerrit-int.chromium.org:29419/chromeos/manifest-internal.git")
+        "ssh://chrome-internal.googlesource.com/chromeos/manifest-internal.git")
     versions_repo = (
-        "ssh://gerrit-int.chromium.org:29419/chromeos/manifest-versions.git")
+        "ssh://chrome-internal.googlesource.com/chromeos/manifest-versions.git")
 
   if version == "top":
     init = "repo init -u %s" % manifest_repo
@@ -203,7 +204,7 @@ Use in combination with --version=latest or --version=common. Use
   if options.minilayout:
     init += " -g minilayout"
 
-  init += " --repo-url=http://git.chromium.org/external/repo.git"
+  init += " --repo-url=http://chromium.googlesource.com/external/repo.git"
 
   commands = ["mkdir -p %s" % directory,
               "cd %s" % directory,

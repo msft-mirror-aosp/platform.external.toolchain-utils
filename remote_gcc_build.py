@@ -28,9 +28,9 @@ SLEEP_TIME = 600
 
 def GetPatchNum(output):
   lines = output.splitlines()
-  line = [l for l in lines if "gerrit" in l][0]
+  line = [l for l in lines if "googlesource" in l][0]
   patch_num = re.findall(r"\d+", line)[0]
-  if "gerrit-int" in line:
+  if "chrome-internal" in line:
     patch_num = "*" + patch_num
   return str(patch_num)
 

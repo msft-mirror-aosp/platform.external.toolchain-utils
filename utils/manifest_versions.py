@@ -45,10 +45,11 @@ class ManifestVersions(object):
     self.ce = command_executer.GetCommandExecuter()
     if internal:
       versions_git = (
-          "ssh://gerrit-int.chromium.org:29419/chromeos/manifest-versions.git")
+          "ssh://chrome-internal.googlesource.com/"
+          "chromeos/manifest-versions.git")
     else:
       versions_git = (
-          "http://git.chromium.org/chromiumos/manifest-versions.git")
+          "http://chromium.googlesource.com/chromiumos/manifest-versions.git")
     commands = ["cd {0}".format(self.clone_location),
                 "git clone {0}".format(versions_git)]
     ret = self.ce.RunCommands(commands)

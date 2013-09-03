@@ -24,7 +24,8 @@ import logger
 def GetChromeOSVersionFromLSBVersion(lsb_version):
   """Get Chromeos version from Lsb version."""
   ce = command_executer.GetCommandExecuter()
-  command = "git ls-remote http://git.chromium.org/chromiumos/manifest.git"
+  command = ("git ls-remote "
+             "http://chromium.googlesource.com/chromiumos/manifest.git")
   ret, out, _ = ce.RunCommand(command, return_output=True,
                               print_to_console=False)
   assert ret == 0, "Command %s failed" % command
@@ -369,7 +370,7 @@ def GetGitChangesAsList(git_dir, path=None, staged=False):
     command = command + ' --cached'
   if path:
     command = command + ' -- ' + path
-  ec, out, err = command_executer.GetCommandExecuter().RunCommand(
+  _, out, _ = command_executer.GetCommandExecuter().RunCommand(
     command, return_output=True, print_to_console=False)
   rv = []
   for line in out.splitlines():
