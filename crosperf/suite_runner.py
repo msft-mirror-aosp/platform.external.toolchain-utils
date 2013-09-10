@@ -9,10 +9,28 @@ import time
 
 from utils import command_executer
 
+TEST_THAT_PATH = '/usr/bin/test_that'
+CHROME_MOUNT_DIR = '/tmp/chrome_root'
+
+def GetProfilerArgs (benchmark):
+  if benchmark.perf_args:
+    perf_args_list = benchmark.perf_args.split(" ")
+    perf_args_list = [perf_args_list[0]] + ["-a"] + perf_args_list[1:]
+    perf_args = " ".join(perf_args_list)
+    if not perf_args_list[0] in ["record", "stat"]:
+      raise Exception("perf_args must start with either record or stat")
+    extra_test_args = ["profiler=custom_perf",
+                       ("profiler_args=\"'%s'\"" %
+                        perf_args)]
+    return " ".join(extra_test_args)
+  else:
+    return ""
+
 
 class SuiteRunner(object):
   """ This defines the interface from crosperf to test script.
   """
+
   def __init__(self, logger_to_use=None):
     self._logger = logger_to_use
     self._ce = command_executer.GetCommandExecuter(self._logger)
@@ -21,13 +39,15 @@ class SuiteRunner(object):
   def Run(self, machine, label, benchmark, test_args):
     if benchmark.suite == "telemetry":
       return self.Telemetry_Run(machine, label, benchmark)
+    elif benchmark.suite == "telemetry_Crosperf":
+      return self.Telemetry_Crosperf_Run(machine, label, benchmark)
     elif benchmark.use_test_that:
       return self.Test_That_Run(machine, label, benchmark, test_args)
     else:
       return self.Pyauto_Run(machine, label, benchmark, test_args)
 
   def RebootMachine(self, machine_name, chromeos_root):
-    command ="reboot && exit"
+    command = "reboot && exit"
     self._ce.CrosRunCommand(command, machine=machine_name,
                       chromeos_root=chromeos_root)
     time.sleep(60)
@@ -66,12 +86,44 @@ class SuiteRunner(object):
 
     self.RebootMachine(machine, label.chromeos_root)
 
-    command = ("/usr/bin/test_that %s %s %s" %
-               (options, machine, benchmark.test_name))
+    command = ("%s %s %s %s" %
+               (TEST_THAT_PATH, options, machine, benchmark.test_name))
     return self._ce.ChrootRunCommand(label.chromeos_root,
                                      command,
                                      True,
                                      self._ct)
+
+
+  def Telemetry_Crosperf_Run (self, machine, label, benchmark):
+    if not os.path.isdir(label.chrome_src):
+      self._logger.LogFatal("Cannot find chrome src dir to"
+                            " run telemetry.")
+
+    profiler_args = GetProfilerArgs (benchmark)
+    chrome_root_options = ""
+
+    # If chrome_src is outside the chroot, mount it when entering the
+    # chroot.
+    if label.chrome_src.find(label.chromeos_root) == -1:
+      chrome_root_options = (" --chrome_root={0} --chrome_root_mount={1} "
+                             " FEATURES=\"-usersandbox\" "
+                             "CHROME_ROOT={2}".format(label.chrome_src,
+                                                      CHROME_MOUNT_DIR,
+                                                      CHROME_MOUNT_DIR))
+
+    cmd = ('{0} --board={1} --args="iterations={2} test={3} '
+           '{4}" {5} telemetry_Crosperf'.format(TEST_THAT_PATH,
+                                                label.board,
+                                                benchmark.iterations,
+                                                benchmark.test_name,
+                                                profiler_args,
+                                                machine))
+    return self._ce.ChrootRunCommand (label.chromeos_root,
+                                      cmd,
+                                      return_output=True,
+                                      command_terminator=self._ct,
+                                      cros_sdk_options=chrome_root_options)
+
 
   def Telemetry_Run(self, machine, label, benchmark):
     if not os.path.isdir(label.chrome_src):
@@ -99,7 +151,10 @@ class SuiteRunner(object):
 
 class MockSuiteRunner(object):
   def __init__(self):
-    pass
+    self._true = True
 
-  def Run(self, *args):
-    return ["", "", 0]
+  def Run(self, *_args):
+    if self._true:
+      return ["", "", 0]
+    else:
+      return ["", "", 0]

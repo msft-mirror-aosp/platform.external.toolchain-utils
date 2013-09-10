@@ -18,6 +18,23 @@ from label import MockLabel
 from results_cache import CacheConditions
 import test_flag
 
+# Note:  Telemetry benchmark test names sometimes include a ".", causes
+# difficulties in the argument parsing stage.  Therefore we use the
+# translation dictionary below, so we can translate from a name the
+# argument parser will accept to the actual correct benchmark name.
+
+telemetry_perf_tests = {
+    'dromaeo_domcoreattr'     : 'dromaeo.domcoreattr',
+    'dromaeo_domcoremodify'   : 'dromaeo.domcoremodify',
+    'dromaeo_domcorequery'    : 'dromaeo.domcorequery',
+    'dromaeo_domcoretraverse' : 'dromaeo.domcoretraverse',
+    'kraken'                  : 'kraken',
+    'memory_top25'            : 'memory.top25',
+    'octane'                  : 'octane',
+    'robohornet_pro'          : 'robohornet_pro',
+    'smoothness_top25'        : 'smoothness.top25',
+    'sunspider'               : 'sunspider'
+  }
 
 class ExperimentFactory(object):
   """Factory class for building an Experiment, given an ExperimentFile as input.
@@ -79,11 +96,33 @@ class ExperimentFactory(object):
       suite = benchmark_settings.GetField("suite")
       use_test_that = benchmark_settings.GetField("use_test_that")
 
-      benchmark = Benchmark(benchmark_name, test_name, test_args,
-                            iterations, outlier_range,
-                            key_results_only, rm_chroot_tmp,
-                            perf_args, suite, use_test_that)
-      benchmarks.append(benchmark)
+      if suite == 'telemetry_Crosperf':
+        if test_name == 'all':
+          # Create and add one benchmark for each telemetry perf test.
+          for test in telemetry_perf_tests.keys():
+            telemetry_test_name = telemetry_perf_tests[test]
+            telemetry_benchmark = Benchmark (telemetry_test_name,
+                                             telemetry_test_name,
+                                             test_args, iterations,
+                                             outlier_range, key_results_only,
+                                             rm_chroot_tmp, perf_args, suite,
+                                             use_test_that)
+            benchmarks.append(telemetry_benchmark)
+        else:
+          # Get correct name of Telemetry benchmark test.
+          test_name = telemetry_perf_tests[test_name]
+          benchmark = Benchmark(test_name, test_name, test_args,
+                                iterations, outlier_range,
+                                key_results_only, rm_chroot_tmp,
+                                perf_args, suite, use_test_that)
+          benchmarks.append(benchmark)
+      else:
+        # Add the single benchmark.
+        benchmark = Benchmark(benchmark_name, test_name, test_args,
+                              iterations, outlier_range,
+                              key_results_only, rm_chroot_tmp,
+                              perf_args, suite, use_test_that)
+        benchmarks.append(benchmark)
 
     # Construct labels.
     labels = []
@@ -154,6 +193,3 @@ class ExperimentFactory(object):
                       .format(default_remotes_file))
     else:
       raise Exception("There is not remote for {0}".format(board))
-
-
-
