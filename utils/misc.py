@@ -25,7 +25,7 @@ def GetChromeOSVersionFromLSBVersion(lsb_version):
   """Get Chromeos version from Lsb version."""
   ce = command_executer.GetCommandExecuter()
   command = ("git ls-remote "
-             "http://chromium.googlesource.com/chromiumos/manifest.git")
+             "https://chromium.googlesource.com/chromiumos/manifest.git")
   ret, out, _ = ce.RunCommand(command, return_output=True,
                               print_to_console=False)
   assert ret == 0, "Command %s failed" % command

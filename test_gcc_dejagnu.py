@@ -23,7 +23,7 @@ from utils import email_sender
 class DejagnuAdapter(object):
 
   # TODO(shenhan): move these to constants.py.
-  _CHROMIUM_GCC_GIT = ("http://chromium.googlesource.com/"
+  _CHROMIUM_GCC_GIT = ("https://chromium.googlesource.com/"
                        "chromiumos/third_party/gcc.git")
   _CHROMIUM_GCC_BRANCH = "gcc.gnu.org/branches/google/gcc-4_7-mobile"
 
