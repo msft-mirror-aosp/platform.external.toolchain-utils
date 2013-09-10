@@ -4,7 +4,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import getpass
+"""The gdb dejagnu test wrapper."""
 import optparse
 import os
 from os import path
@@ -15,16 +15,14 @@ import sys
 import tempfile
 import time
 
-import lock_machine
-import tc_enter_chroot
-
 from utils import command_executer
-from utils import constants
 from utils import logger
 from utils import misc
 
-_VALID_TEST_RESULTS = [ 'FAIL', 'UNRESOLVED', 'XPASS',
-                        'ERROR', 'UNSUPPORTED', 'PASS' ]
+from run_dejagnu import TryAcquireMachine
+
+_VALID_TEST_RESULTS = ['FAIL', 'UNRESOLVED', 'XPASS',
+                       'ERROR', 'UNSUPPORTED', 'PASS']
 
 
 def ProcessArguments(argv):
@@ -64,7 +62,7 @@ def ProcessArguments(argv):
   if options.cleanup == 'mount' and not options.mount:
     raise Exception('--cleanup=\'mount\' not valid unless --mount is given.')
   if options.cleanup and not (
-    options.cleanup == 'mount' or \
+      options.cleanup == 'mount' or
       options.cleanup == 'chroot' or options.cleanup == 'chromeos'):
     raise Exception('Invalid option value for --cleanup')
   if options.cleanup and options.keep_intermediate_files:
@@ -92,9 +90,9 @@ class DejagnuExecuter(object):
     self._base_dir = base_dir
     self._tmp_abs = None
     self._cleanup = cleanup
-    self._sshflag = (" -o StrictHostKeyChecking=no" +
-                     " -o CheckHostIP=no" +
-                     " -o UserKnownHostsFile=$(mktemp)")
+    self._sshflag = ('-o StrictHostKeyChecking=no' +
+                     '-o CheckHostIP=no' +
+                     '-o UserKnownHostsFile=$(mktemp)')
 
     if source_dir:
       self._source_dir = source_dir
@@ -103,7 +101,6 @@ class DejagnuExecuter(object):
     else:
       self._source_dir = None
       self._mount_flag = ''
-
 
   def SetupTestingDir(self):
     self._tmp_abs = tempfile.mkdtemp(prefix='dejagnu_', dir=path.join(
@@ -145,12 +142,12 @@ class DejagnuExecuter(object):
       site_file.write('set target_list "%s"\n' % self._board)
 
     with open('%s/boards/gdbserver.sh.in' % self._base_dir, 'r') \
-    as template_file:
+        as template_file:
       content = template_file.read()
     substitutions = dict({
         '__board_hostname__': self._remote,
         '__tmp_testing_rsa__': self._tmp_testing_rsa,
-         '__tmp_dir__': self._tmp})
+        '__tmp_dir__': self._tmp})
     for pat, sub in substitutions.items():
       content = content.replace(pat, sub)
 
@@ -175,7 +172,7 @@ class DejagnuExecuter(object):
       gdb_reversion = matcher.group(1)
     else:
       raise Exception('Failed to get gdb reversion.')
-    gdb_version=gdb_reversion.split('-r')[0]
+    gdb_version = gdb_reversion.split('-r')[0]
     gdb_portage_dir = '/var/tmp/portage/cross-%s/%s/work' % (
         self._target, gdb_reversion)
     self._gdb_source_dir = path.join(gdb_portage_dir, gdb_version)
@@ -212,27 +209,26 @@ class DejagnuExecuter(object):
     if self._mount_flag:
       self.MountSource(unmount=False)
 
-
   def Cleanup(self):
     if not self._cleanup:
       return
 
     if self._cleanup == 'chroot' or self._cleanup == 'chromeos':
       self._l.LogOutput('[Cleanup]: Deleting chroot inside \'{0}\''.format(
-        self._chromeos_root))
-      command = "cd %s; cros_sdk --delete" % self._chromeos_root
+          self._chromeos_root))
+      command = 'cd %s; cros_sdk --delete' % self._chromeos_root
       rv = self._executer.RunCommand(command)
       if rv:
         self._l.LogWarning('Warning - failed to delete chroot.')
       # Delete .cache - crosbug.com/34956
-      command = "sudo rm -fr %s" % os.path.join(self._chromeos_root, ".cache")
+      command = 'sudo rm -fr %s' % os.path.join(self._chromeos_root, '.cache')
       rv = self._executer.RunCommand(command)
       if rv:
         self._l.LogWarning('Warning - failed to delete \'.cache\'.')
 
     if self._cleanup == 'chromeos':
       self._l.LogOutput('[Cleanup]: Deleting chromeos tree \'{0}\' ...'.format(
-        self._chromeos_root))
+          self._chromeos_root))
       command = 'rm -fr {0}'.format(self._chromeos_root)
       rv = self._executer.RunCommand(command)
       if rv:
@@ -249,8 +245,7 @@ class DejagnuExecuter(object):
     cmd = ('ssh -i {0} {1}  root@{2} '
            '"iptables -A INPUT -p tcp --dport 1234 -j ACCEPT"'
            .format(self._tmp_testing_rsa, self._sshflag,
-                   self._remote
-                   ))
+                   self._remote))
     self._executer.ChrootRunCommand(
         self._chromeos_root, cmd)
 
@@ -275,17 +270,20 @@ class DejagnuExecuter(object):
            .format(script, self._chromeos_root,
                    self._source_dir, self._board,
                    mount))
+    rv = self._executer.RunCommand(cmd)
+    if rv:
+      raise Exception('Mount source failed.')
 
   def ResultValidate(self):
     self.PrepareResult()
-    re = 0;
+    result = 0
     for key, value in self.base_result.items():
       if 'PASS' not in value:
         continue
       test_result = self.test_result[key]
       if 'PASS' not in test_result:
-        re = 1
-    return re
+        result = 1
+    return result
 
   def PrepareResult(self):
     test_output = os.path.join(self._gdb_source_dir, 'gdb',
@@ -303,7 +301,7 @@ class DejagnuExecuter(object):
     with open(gdb_sum) as input_sum:
       for line in input_sum:
         line = line.strip()
-        r = line.split(":", 1)
+        r = line.split(':', 1)
         if r[0] in _VALID_TEST_RESULTS:
           key = r[1]
           if r[1] in result:
@@ -311,13 +309,14 @@ class DejagnuExecuter(object):
               multi_keys[r[1]] += 1
             else:
               multi_keys[r[1]] = 2
-            key = r[1] + "_____{0}_____".format(multi_keys[r[1]])
+            key = r[1] + '_____{0}_____'.format(multi_keys[r[1]])
           result[key] = r[0]
     return result
 
+
 def Main(argv):
   opts = ProcessArguments(argv)
-  available_machine = opts.remote
+  available_machine = TryAcquireMachine(opts.remote)
   executer = DejagnuExecuter(misc.GetRoot(argv[0])[0],
                              opts.mount, opts.chromeos_root,
                              available_machine,
