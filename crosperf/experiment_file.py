@@ -31,11 +31,11 @@ class ExperimentFile(object):
   """
 
   # Field regex, e.g. "iterations: 3"
-  _FIELD_VALUE_RE = re.compile("(\+)?\s*(\w+?)(?:\.(\S+))?\s*:\s*(.*)")
+  _FIELD_VALUE_RE = re.compile(r"(\+)?\s*(\w+?)(?:\.(\S+))?\s*:\s*(.*)")
   # Open settings regex, e.g. "label {"
-  _OPEN_SETTINGS_RE = re.compile("(?:(\w+):)?\s*(\w+)\s*{")
+  _OPEN_SETTINGS_RE = re.compile(r"(?:([\w.]+):)?\s*([\w.]+)\s*{")
   # Close settings regex.
-  _CLOSE_SETTINGS_RE = re.compile("}")
+  _CLOSE_SETTINGS_RE = re.compile(r"}")
 
   def __init__(self, experiment_file, overrides=None):
     """Construct object from file-like experiment_file.

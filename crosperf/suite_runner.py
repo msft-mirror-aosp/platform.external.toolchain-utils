@@ -66,7 +66,7 @@ class SuiteRunner(object):
 
     self.RebootMachine(machine, label.chromeos_root)
 
-    command = ("./run_remote_tests.sh --remote=%s %s %s" %
+    command = ("./run_remote_tests.sh --use_emerged --remote=%s %s %s" %
                (machine, options, benchmark.test_name))
     return self._ce.ChrootRunCommand(label.chromeos_root,
                                      command,

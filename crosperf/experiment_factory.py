@@ -18,23 +18,36 @@ from label import MockLabel
 from results_cache import CacheConditions
 import test_flag
 
-# Note:  Telemetry benchmark test names sometimes include a ".", causes
-# difficulties in the argument parsing stage.  Therefore we use the
-# translation dictionary below, so we can translate from a name the
-# argument parser will accept to the actual correct benchmark name.
+# Users may want to run Telemetry tests either individually, or in
+# specified sets.  Here we define sets of tests that users may want
+# to run together.
 
-telemetry_perf_tests = {
-    'dromaeo_domcoreattr'     : 'dromaeo.domcoreattr',
-    'dromaeo_domcoremodify'   : 'dromaeo.domcoremodify',
-    'dromaeo_domcorequery'    : 'dromaeo.domcorequery',
-    'dromaeo_domcoretraverse' : 'dromaeo.domcoretraverse',
-    'kraken'                  : 'kraken',
-    'memory_top25'            : 'memory.top25',
-    'octane'                  : 'octane',
-    'robohornet_pro'          : 'robohornet_pro',
-    'smoothness_top25'        : 'smoothness.top25',
-    'sunspider'               : 'sunspider'
-  }
+telemetry_perfv2_tests = [ 'dromaeo.domcoreattr',
+                           'dromaeo.domcoremodify',
+                           'dromaeo.domcorequery',
+                           'dromaeo.domcoretraverse',
+                           'kraken',
+                           'memory.top_25',
+                           'octane',
+                           'robohornet_pro',
+                           'smoothness.top_25',
+                           'sunspider',
+                           ]
+
+telemetry_pagecycler_tests = [ 'page_cycler.basic_insert',
+                               'page_cycler.bloat',
+                               'page_cycler.dhtml',
+                               'page_cycler.intl_ar_fa_he',
+                               'page_cycler.intl_es_fr_pt-BR',
+                               'page_cycler.intl_hi_ru',
+                               'page_cycler.intl_ja_zh',
+                               'page_cycler.intl_ko_th_vi',
+                               'page_cycler.morejs',
+                               'page_cycler.moz',
+                               'page_cycler.netsim.top_10',
+                               'page_cycler.tough_layout_cases',
+                               'page_cycler.typical_25',
+                               ]
 
 class ExperimentFactory(object):
   """Factory class for building an Experiment, given an ExperimentFile as input.
@@ -43,6 +56,18 @@ class ExperimentFactory(object):
   ChromeOS benchmarks, but the idea is that in the future, other types
   of experiments could be produced.
   """
+
+  def _AppendBenchmarkSet(self, benchmarks, benchmark_list, test_args,
+                          iterations, outlier_range, key_results_only,
+                          rm_chroot_tmp, perf_args, suite, use_test_that):
+    """Add all the tests in a set to the benchmarks list."""
+    for test_name in benchmark_list:
+      telemetry_benchmark = Benchmark (test_name, test_name, test_args,
+                                       iterations, outlier_range,
+                                       key_results_only, rm_chroot_tmp,
+                                       perf_args, suite, use_test_that)
+      benchmarks.append(telemetry_benchmark)
+
 
   def GetExperiment(self, experiment_file, working_directory, log_dir):
     """Construct an experiment from an experiment file."""
@@ -97,20 +122,17 @@ class ExperimentFactory(object):
       use_test_that = benchmark_settings.GetField("use_test_that")
 
       if suite == 'telemetry_Crosperf':
-        if test_name == 'all':
-          # Create and add one benchmark for each telemetry perf test.
-          for test in telemetry_perf_tests.keys():
-            telemetry_test_name = telemetry_perf_tests[test]
-            telemetry_benchmark = Benchmark (telemetry_test_name,
-                                             telemetry_test_name,
-                                             test_args, iterations,
-                                             outlier_range, key_results_only,
-                                             rm_chroot_tmp, perf_args, suite,
-                                             use_test_that)
-            benchmarks.append(telemetry_benchmark)
+        if test_name == 'all_perfv2':
+          self._AppendBenchmarkSet (benchmarks, telemetry_perfv2_tests,
+                                    test_args, iterations, outlier_range,
+                                    key_results_only, rm_chroot_tmp,
+                                    perf_args, suite, use_test_that)
+        elif test_name == 'all_pagecyclers':
+          self._AppendBenchmarkSet (benchmarks, telemetry_pagecycler_tests,
+                                    test_args, iterations, outlier_range,
+                                    key_results_only, rm_chroot_tmp,
+                                    perf_args, suite, use_test_that)
         else:
-          # Get correct name of Telemetry benchmark test.
-          test_name = telemetry_perf_tests[test_name]
           benchmark = Benchmark(test_name, test_name, test_args,
                                 iterations, outlier_range,
                                 key_results_only, rm_chroot_tmp,
