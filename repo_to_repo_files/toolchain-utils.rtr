@@ -13,7 +13,7 @@
   },],
   "output": [{
     "type": "git",
-    "address": "ssh://gerrit-int.chromium.org:29419/chromeos/toolchain-utils.git",
+    "address": "https://chrome-internal.googlesource.com/chromeos/toolchain-utils.git",
     "ignores": [".svn", ".git", ".pyc", "logs"],
   },],
 }
