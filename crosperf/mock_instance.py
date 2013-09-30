@@ -6,10 +6,9 @@
 
 """This contains some mock instances for testing."""
 
-from autotest_runner import MockAutotestRunner
+from benchmark import Benchmark
 from benchmark_run import MockBenchmarkRun
 from label import MockLabel
-from benchmark import Benchmark
 from machine_manager import MockMachineManager
 from results_cache import MockResultsCache
 

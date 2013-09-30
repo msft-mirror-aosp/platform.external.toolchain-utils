@@ -14,6 +14,8 @@ from utils import command_executer
 from utils import timeline
 
 from suite_runner import SuiteRunner
+from results_cache import MockResult
+from results_cache import MockResultsCache
 from results_cache import Result
 from results_cache import ResultsCache
 from results_cache import TelemetryResult
@@ -117,7 +119,7 @@ class BenchmarkRun(threading.Thread):
     finally:
       if self.machine:
         if not self.machine.IsReachable():
-          self._logger.LogOutput("Machine % is not reachable, removing it."
+          self._logger.LogOutput("Machine %s is not reachable, removing it."
                                  % self.machine.name)
           self.machine_manager.RemoveMachine(self.machine.name)
         self._logger.LogOutput("Releasing machine: %s" % self.machine.name)
@@ -191,7 +193,29 @@ class BenchmarkRun(threading.Thread):
 
 
 class MockBenchmarkRun(BenchmarkRun):
-  """Inherited from BenchmarkRun, just overide RunTest for testing."""
+  """Inherited from BenchmarkRuna."""
+
+  def ReadCache(self):
+    # Just use the first machine for running the cached version,
+    # without locking it.
+    self.cache = MockResultsCache()
+    self.cache.Init(self.label.chromeos_image,
+                    self.label.chromeos_root,
+                    self.benchmark.test_name,
+                    self.iteration,
+                    self.test_args,
+                    self.machine_manager,
+                    self.label.board,
+                    self.cache_conditions,
+                    self._logger,
+                    self.label,
+                    self.share_users,
+                    self.benchmark.suite
+                   )
+
+    self.result = self.cache.ReadResult()
+    self.cache_hit = (self.result is not None)
+
 
   def RunTest(self, machine):
     """Remove Result.CreateFromRun for testing."""
@@ -205,7 +229,7 @@ class MockBenchmarkRun(BenchmarkRun):
                                                   self.benchmark.test_name,
                                                   self.test_args)
     self.run_completed = True
-    rr = Result("Results placed in /tmp/test", "", 0)
+    rr = MockResult("logger", self.label)
     rr.out = out
     rr.err = err
     rr.retval = retval

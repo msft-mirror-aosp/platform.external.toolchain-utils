@@ -106,7 +106,7 @@ class ResultOrganizerTest(unittest.TestCase):
 
     i = 0
     for b in benchmark_runs:
-      b.result = Result(b.label.chromeos_root, "", b.label.name)
+      b.result = Result("",  b.label)
       b.result.keyvals = mock_instance.keyval[i]
       i += 1
 

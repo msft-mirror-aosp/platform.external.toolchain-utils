@@ -52,7 +52,7 @@ class Label(object):
 
 class MockLabel(object):
   def __init__(self, name, chromeos_image, chromeos_root, board, remote,
-               image_args, image_md5sum, cache_dir):
+               image_args, image_md5sum, cache_dir, chrome_src=None):
     self.name = name
     self.chromeos_image = chromeos_image
     self.board = board

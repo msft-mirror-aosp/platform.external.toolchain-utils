@@ -44,7 +44,7 @@ class BenchmarkRunTest(unittest.TestCase):
                          logger.GetLogger(),
                          "")
     b.cache = MockResultsCache()
-    b.autotest_runner = MockAutotestRunner()
+    b.suite_runner = MockSuiteRunner()
     b.start()
 
 

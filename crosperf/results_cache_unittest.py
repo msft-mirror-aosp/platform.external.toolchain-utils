@@ -10,6 +10,7 @@ from utils import logger
 
 from results_cache import Result
 from results_cache import ResultsCache
+from label import MockLabel
 import mock_instance
 
 output = """CMD (True): ./run_remote_tests.sh --remote=172.17.128.241  --board=lumpy   LibCBench
@@ -113,8 +114,8 @@ keyvals = {'': 'PASS', 'b_stdio_putcgetc__0_': '0.100005711667', 'b_string_strst
 
 class MockResult(Result):
 
-  def __init__(self, chromeos_root, logger, label_name):
-    super(MockResult, self).__init__(chromeos_root, logger, label_name)
+  def __init__(self, logger, label):
+    super(MockResult, self).__init__(logger, label)
 
   def _FindFilesInResultsDir(self, find_args):
     return ""
@@ -124,12 +125,16 @@ class MockResult(Result):
 
 
 class ResultTest(unittest.TestCase):
+  mock_label = MockLabel("mock_label", "chromeos_image", "/tmp", "lumpy",
+                         "remote", "image_args", "image_md5sum", "cache_dir")
   def testCreateFromRun(self):
-    result = MockResult.CreateFromRun(logger.GetLogger(), "/tmp", "lumpy",
-                                  "test1", output, error, 0)
+    result = MockResult.CreateFromRun(logger.GetLogger(), self.mock_label,
+                                      output, error, 0)
     self.assertEqual(result.keyvals, keyvals)
-    self.assertEqual(result.chroot_results_dir, "/tmp/run_remote_tests.PO1234567/platform_LibCBench")
-    self.assertEqual(result.results_dir, "/tmp/chroot/tmp/run_remote_tests.PO1234567/platform_LibCBench")
+    self.assertEqual(result.chroot_results_dir,
+                     "/tmp/run_remote_tests.PO1234567/platform_LibCBench")
+    self.assertEqual(result.results_dir,
+        "/tmp/chroot/tmp/run_remote_tests.PO1234567/platform_LibCBench")
     self.assertEqual(result.retval, 0)
 
 if __name__ == "__main__":
