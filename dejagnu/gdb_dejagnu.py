@@ -90,9 +90,9 @@ class DejagnuExecuter(object):
     self._base_dir = base_dir
     self._tmp_abs = None
     self._cleanup = cleanup
-    self._sshflag = ('-o StrictHostKeyChecking=no' +
-                     '-o CheckHostIP=no' +
-                     '-o UserKnownHostsFile=$(mktemp)')
+    self._sshflag = ('-o StrictHostKeyChecking=no ' +
+                     '-o CheckHostIP=no ' +
+                     '-o UserKnownHostsFile=$(mktemp) ')
 
     if source_dir:
       self._source_dir = source_dir
