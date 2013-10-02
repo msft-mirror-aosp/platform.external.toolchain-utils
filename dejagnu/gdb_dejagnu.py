@@ -277,13 +277,15 @@ class DejagnuExecuter(object):
 
   def ResultValidate(self):
     self.PrepareResult()
-    result = 0
+    result = []
     for key, value in self.base_result.items():
       if 'PASS' not in value:
         continue
+      if key not in self.test_result:
+        continue
       test_result = self.test_result[key]
       if 'PASS' not in test_result:
-        result = 1
+        result.append(key)
     return result
 
   def PrepareResult(self):
