@@ -125,6 +125,7 @@ class DejagnuExecuter(object):
     # Generate the chromeos.exp file.
     with open('%s/boards/gdb.exp.in' % self._base_dir, 'r') as template_file:
       content = template_file.read()
+
     substitutions = dict({
         '__boardname__': self._board,
         '__board_hostname__': self._remote,
@@ -319,7 +320,7 @@ def Main(argv):
   available_machine = TryAcquireMachine(opts.remote)
   executer = DejagnuExecuter(misc.GetRoot(argv[0])[0],
                              opts.mount, opts.chromeos_root,
-                             available_machine,
+                             available_machine._name,
                              opts.board,
                              opts.cleanup)
   # Return value is a 3- or 4-element tuple
