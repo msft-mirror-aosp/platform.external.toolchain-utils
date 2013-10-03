@@ -1,4 +1,4 @@
-Test Run By yunlian on Mon Sep  9 10:31:42 2013
+Test Run By yunlian on Wed Oct  2 17:22:01 2013
 Target is armv7a-cros-linux-gnueabi
 
 		=== gdb tests ===
@@ -1169,7 +1169,7 @@ PASS: gdb.base/call-sc.exp: advance to fun for return; return call-sc-tf
 PASS: gdb.base/call-sc.exp: zed L for return; return call-sc-tf
 PASS: gdb.base/call-sc.exp: return foo; return call-sc-tf
 PASS: gdb.base/call-sc.exp: return foo; synchronize pc to main()
-PASS: gdb.base/call-sc.exp: value foo returned; return call-sc-tf
+FAIL: gdb.base/call-sc.exp: value foo returned; return call-sc-tf
 PASS: gdb.base/call-sc.exp: advance to fun for finish; return call-sc-tf
 PASS: gdb.base/call-sc.exp: zed L for finish; return call-sc-tf
 PASS: gdb.base/call-sc.exp: finish foo; return call-sc-tf
@@ -1786,14 +1786,10 @@ ERROR: internal buffer is full.
 UNRESOLVED: gdb.base/completion.exp: complete (2) 'p no_var_named_this-'
 ERROR: internal buffer is full.
 UNRESOLVED: gdb.base/completion.exp: complete 'p values[0].a'
-ERROR: internal buffer is full.
-UNRESOLVED: gdb.base/completion.exp: complete 'p values[0] . a'
-ERROR: internal buffer is full.
-UNRESOLVED: gdb.base/completion.exp: complete 'p &values[0] -> a'
-ERROR: internal buffer is full.
-UNRESOLVED: gdb.base/completion.exp: completion of field in anonymous union
-ERROR: internal buffer is full.
-UNRESOLVED: gdb.base/completion.exp: cd to ${srcdir}
+FAIL: gdb.base/completion.exp: complete 'p values[0] . a' (timeout)
+FAIL: gdb.base/completion.exp: complete 'p &values[0] -> a' (timeout)
+FAIL: gdb.base/completion.exp: completion of field in anonymous union
+PASS: gdb.base/completion.exp: cd to ${srcdir}
 PASS: gdb.base/completion.exp: directory completion
 PASS: gdb.base/completion.exp: directory completion 2
 PASS: gdb.base/completion.exp: Glob remaining of directory test
@@ -2860,7 +2856,7 @@ PASS: gdb.base/ending-run.exp: all set to continue
 PASS: gdb.base/ending-run.exp: cont
 FAIL: gdb.base/ending-run.exp: step out of main
 Running ./gdb.base/enum_cond.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/armv7a-cros-linux-gnueabi/binutils-bin/2.22/ld.bfd.real: warning: /tmp/ccDwD7sC.o uses variable-size enums yet the output is to use 32-bit enums; use of enum values across objects may fail
+gdb compile failed, /usr/x86_64-pc-linux-gnu/armv7a-cros-linux-gnueabi/binutils-bin/2.22/ld.bfd.real: warning: /tmp/cctcuJpU.o uses variable-size enums yet the output is to use 32-bit enums; use of enum values across objects may fail
 UNTESTED: gdb.base/enum_cond.exp: Could not compile enum_cond.c
 Running ./gdb.base/enumval.exp ...
 PASS: gdb.base/enumval.exp: print e
@@ -3526,8 +3522,8 @@ PASS: gdb.base/gdbvars.exp: Print contents of uninitialized convenience variable
 PASS: gdb.base/gdbvars.exp: Set a new convenience variable to a program variable
 PASS: gdb.base/gdbvars.exp: Print contents of new convenience variable of program variable
 Running ./gdb.base/gnu-ifunc.exp ...
-gdb compile failed, /tmp/ccISN6TI.s: Assembler messages:
-/tmp/ccISN6TI.s:42: Error: unrecognized symbol type ""
+gdb compile failed, /tmp/ccbeciMz.s: Assembler messages:
+/tmp/ccbeciMz.s:42: Error: unrecognized symbol type ""
 UNTESTED: gdb.base/gnu-ifunc.exp: Could not compile dynamic executable /var/tmp/portage/cross-armv7a-cros-linux-gnueabi/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/gdb.base/gnu-ifunc.
 Running ./gdb.base/gnu_vector.exp ...
 PASS: gdb.base/gnu_vector.exp: print c4
@@ -6434,7 +6430,7 @@ PASS: gdb.base/return2.exp: validate result value not equal to program return va
 PASS: gdb.base/return2.exp: set break on double_func
 PASS: gdb.base/return2.exp: continue to double_func
 PASS: gdb.base/return2.exp: return from double_func
-PASS: gdb.base/return2.exp: double value returned successfully
+FAIL: gdb.base/return2.exp: double value returned successfully
 PASS: gdb.base/return2.exp: validate result value not equal to program return value
 Running ./gdb.base/return.exp ...
 PASS: gdb.base/return.exp: simple return
@@ -6474,7 +6470,7 @@ PASS: gdb.base/return-nodebug.exp: float: full width of the returned result
 PASS: gdb.base/return-nodebug.exp: double: return from function with no debug info without a cast
 PASS: gdb.base/return-nodebug.exp: double: return from function with no debug info with a cast
 PASS: gdb.base/return-nodebug.exp: double: advance to marker
-PASS: gdb.base/return-nodebug.exp: double: full width of the returned result
+FAIL: gdb.base/return-nodebug.exp: double: full width of the returned result
 Running ./gdb.base/save-bp.exp ...
 PASS: gdb.base/save-bp.exp: add breakpoint commands
 PASS: gdb.base/save-bp.exp: save breakpoint bps
@@ -18754,13 +18750,13 @@ PASS: gdb.xml/tdesc-xinclude.exp: set tdesc filename gdb.xml/loop.xml
 
 		=== gdb Summary ===
 
-# of expected passes		17211
-# of unexpected failures	308
+# of expected passes		17209
+# of unexpected failures	314
 # of unexpected successes	2
 # of expected failures		42
 # of known failures		62
 # of untested testcases		49
-# of unresolved testcases	8
+# of unresolved testcases	4
 # of unsupported tests		115
 /var/tmp/portage/cross-armv7a-cros-linux-gnueabi/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb version  7.5.1 -nw -nx -data-directory /var/tmp/portage/cross-armv7a-cros-linux-gnueabi/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/../data-directory 
 

@@ -1,4 +1,4 @@
-Test Run By yunlian on Mon May  6 17:20:15 2013
+Test Run By yunlian on Wed Oct  2 16:11:20 2013
 Target is i686-pc-linux-gnu
 
 		=== gdb tests ===
@@ -221,7 +221,7 @@ PASS: gdb.arch/i386-disp-step.exp: break test_int3
 PASS: gdb.arch/i386-disp-step.exp: break test_int3_end
 PASS: gdb.arch/i386-disp-step.exp: continue to test_int3
 PASS: gdb.arch/i386-disp-step.exp: continue to test_int3_end
-FAIL: gdb.arch/i386-disp-step.exp: setting breakpoint at exit
+FAIL: gdb.arch/i386-disp-step.exp: continue until exit at i386-disp-step (the program exited)
 Running ./gdb.arch/i386-dr3-watch.exp ...
 PASS: gdb.arch/i386-dr3-watch.exp: set breakpoint always-inserted on
 PASS: gdb.arch/i386-dr3-watch.exp: watch i1
@@ -848,7 +848,7 @@ PASS: gdb.base/break.exp: backtrace from factorial(5)
 FAIL: gdb.base/break.exp: next to recursive call
 FAIL: gdb.base/break.exp: next over recursive call
 FAIL: gdb.base/break.exp: backtrace from factorial(5.1)
-FAIL: gdb.base/break.exp: setting breakpoint at exit
+FAIL: gdb.base/break.exp: continue until exit at recursive next test (the program exited)
 PASS: gdb.base/break.exp: breakpoint function, optimized file
 PASS: gdb.base/break.exp: breakpoint small function, optimized file
 PASS: gdb.base/break.exp: run until function breakpoint, optimized file (code motion)
@@ -958,14 +958,14 @@ PASS: gdb.base/callfuncs.exp: p t_long_double_complex_many_args(ldc1, ldc2, ldc3
 PASS: gdb.base/callfuncs.exp: p t_long_double_complex_many_args(ldc1, ldc1, ldc1, ldc1, ldc1, ldc1, ldc1,ldc1, ldc1, ldc1, ldc1, ldc1, ldc1, ldc1, ldc1, ldc1)
 PASS: gdb.base/callfuncs.exp: p t_string_values(string_val2,string_val1)
 PASS: gdb.base/callfuncs.exp: p t_string_values(string_val1,string_val2)
-FAIL: gdb.base/callfuncs.exp: p t_string_values("string 1","string 2")
-FAIL: gdb.base/callfuncs.exp: p t_string_values("string 1",string_val2)
-FAIL: gdb.base/callfuncs.exp: p t_string_values(string_val1,"string 2")
+PASS: gdb.base/callfuncs.exp: p t_string_values("string 1","string 2")
+PASS: gdb.base/callfuncs.exp: p t_string_values("string 1",string_val2)
+PASS: gdb.base/callfuncs.exp: p t_string_values(string_val1,"string 2")
 PASS: gdb.base/callfuncs.exp: p t_char_array_values(char_array_val2,char_array_val1)
 PASS: gdb.base/callfuncs.exp: p t_char_array_values(char_array_val1,char_array_val2)
-FAIL: gdb.base/callfuncs.exp: p t_char_array_values("carray 1","carray 2")
-FAIL: gdb.base/callfuncs.exp: p t_char_array_values("carray 1",char_array_val2)
-FAIL: gdb.base/callfuncs.exp: p t_char_array_values(char_array_val1,"carray 2")
+PASS: gdb.base/callfuncs.exp: p t_char_array_values("carray 1","carray 2")
+PASS: gdb.base/callfuncs.exp: p t_char_array_values("carray 1",char_array_val2)
+PASS: gdb.base/callfuncs.exp: p t_char_array_values(char_array_val1,"carray 2")
 PASS: gdb.base/callfuncs.exp: p doubleit(4)
 PASS: gdb.base/callfuncs.exp: p add(4,5)
 PASS: gdb.base/callfuncs.exp: p t_func_values(func_val2,func_val1)
@@ -982,10 +982,10 @@ PASS: gdb.base/callfuncs.exp: p t_enum_value1(enum_val2)
 PASS: gdb.base/callfuncs.exp: p t_enum_value2(enumval2)
 PASS: gdb.base/callfuncs.exp: p t_enum_value2(enum_val2)
 PASS: gdb.base/callfuncs.exp: p t_enum_value2(enum_val1)
-FAIL: gdb.base/callfuncs.exp: p sum_args(1,{2})
-FAIL: gdb.base/callfuncs.exp: p sum_args(2,{2,3})
-FAIL: gdb.base/callfuncs.exp: p sum_args(3,{2,3,4})
-FAIL: gdb.base/callfuncs.exp: p sum_args(4,{2,3,4,5})
+PASS: gdb.base/callfuncs.exp: p sum_args(1,{2})
+PASS: gdb.base/callfuncs.exp: p sum_args(2,{2,3})
+PASS: gdb.base/callfuncs.exp: p sum_args(3,{2,3,4})
+PASS: gdb.base/callfuncs.exp: p sum_args(4,{2,3,4,5})
 PASS: gdb.base/callfuncs.exp: p sum10 (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
 PASS: gdb.base/callfuncs.exp: p cmp10 (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
 PASS: gdb.base/callfuncs.exp: call inferior func with struct - returns char
@@ -1237,54 +1237,54 @@ PASS: gdb.base/call-strs.exp: next over strcpy
 PASS: gdb.base/call-strs.exp: print buf
 PASS: gdb.base/call-strs.exp: print s
 Running ./gdb.base/catch-load.exp ...
-FAIL: gdb.base/catch-load.exp: plain load: set var libname = "catch-load-so.so"
+PASS: gdb.base/catch-load.exp: plain load: set var libname = "catch-load-so.so"
 PASS: gdb.base/catch-load.exp: plain load: set stop-on-solib-events 0
 PASS: gdb.base/catch-load.exp: plain load: catch load
-FAIL: gdb.base/catch-load.exp: plain load: continue
-FAIL: gdb.base/catch-load.exp: plain load with stop-on-solib-events: set var libname = "catch-load-so.so"
+PASS: gdb.base/catch-load.exp: plain load: continue
+PASS: gdb.base/catch-load.exp: plain load with stop-on-solib-events: set var libname = "catch-load-so.so"
 PASS: gdb.base/catch-load.exp: plain load with stop-on-solib-events: set stop-on-solib-events 1
 PASS: gdb.base/catch-load.exp: plain load with stop-on-solib-events: catch load
-FAIL: gdb.base/catch-load.exp: plain load with stop-on-solib-events: continue
-FAIL: gdb.base/catch-load.exp: rx load: set var libname = "catch-load-so.so"
+PASS: gdb.base/catch-load.exp: plain load with stop-on-solib-events: continue
+PASS: gdb.base/catch-load.exp: rx load: set var libname = "catch-load-so.so"
 PASS: gdb.base/catch-load.exp: rx load: set stop-on-solib-events 0
 PASS: gdb.base/catch-load.exp: rx load: catch load catch-load-so
-FAIL: gdb.base/catch-load.exp: rx load: continue
-FAIL: gdb.base/catch-load.exp: rx load with stop-on-solib-events: set var libname = "catch-load-so.so"
+PASS: gdb.base/catch-load.exp: rx load: continue
+PASS: gdb.base/catch-load.exp: rx load with stop-on-solib-events: set var libname = "catch-load-so.so"
 PASS: gdb.base/catch-load.exp: rx load with stop-on-solib-events: set stop-on-solib-events 1
 PASS: gdb.base/catch-load.exp: rx load with stop-on-solib-events: catch load catch-load-so
-FAIL: gdb.base/catch-load.exp: rx load with stop-on-solib-events: continue
-FAIL: gdb.base/catch-load.exp: non-matching load: set var libname = "catch-load-so.so"
+PASS: gdb.base/catch-load.exp: rx load with stop-on-solib-events: continue
+PASS: gdb.base/catch-load.exp: non-matching load: set var libname = "catch-load-so.so"
 PASS: gdb.base/catch-load.exp: non-matching load: set stop-on-solib-events 0
 PASS: gdb.base/catch-load.exp: non-matching load: catch load zardoz
-FAIL: gdb.base/catch-load.exp: non-matching load: continue
-FAIL: gdb.base/catch-load.exp: non-matching load with stop-on-solib-events: set var libname = "catch-load-so.so"
+PASS: gdb.base/catch-load.exp: non-matching load: continue
+PASS: gdb.base/catch-load.exp: non-matching load with stop-on-solib-events: set var libname = "catch-load-so.so"
 PASS: gdb.base/catch-load.exp: non-matching load with stop-on-solib-events: set stop-on-solib-events 1
 PASS: gdb.base/catch-load.exp: non-matching load with stop-on-solib-events: catch load zardoz
-FAIL: gdb.base/catch-load.exp: non-matching load with stop-on-solib-events: continue
-FAIL: gdb.base/catch-load.exp: plain unload: set var libname = "catch-load-so.so"
+PASS: gdb.base/catch-load.exp: non-matching load with stop-on-solib-events: continue
+PASS: gdb.base/catch-load.exp: plain unload: set var libname = "catch-load-so.so"
 PASS: gdb.base/catch-load.exp: plain unload: set stop-on-solib-events 0
 PASS: gdb.base/catch-load.exp: plain unload: catch unload
-FAIL: gdb.base/catch-load.exp: plain unload: continue
-FAIL: gdb.base/catch-load.exp: plain unload with stop-on-solib-events: set var libname = "catch-load-so.so"
+PASS: gdb.base/catch-load.exp: plain unload: continue
+PASS: gdb.base/catch-load.exp: plain unload with stop-on-solib-events: set var libname = "catch-load-so.so"
 PASS: gdb.base/catch-load.exp: plain unload with stop-on-solib-events: set stop-on-solib-events 1
 PASS: gdb.base/catch-load.exp: plain unload with stop-on-solib-events: catch unload
-FAIL: gdb.base/catch-load.exp: plain unload with stop-on-solib-events: continue
-FAIL: gdb.base/catch-load.exp: rx unload: set var libname = "catch-load-so.so"
+PASS: gdb.base/catch-load.exp: plain unload with stop-on-solib-events: continue
+PASS: gdb.base/catch-load.exp: rx unload: set var libname = "catch-load-so.so"
 PASS: gdb.base/catch-load.exp: rx unload: set stop-on-solib-events 0
 PASS: gdb.base/catch-load.exp: rx unload: catch unload catch-load-so
-FAIL: gdb.base/catch-load.exp: rx unload: continue
-FAIL: gdb.base/catch-load.exp: rx unload with stop-on-solib-events: set var libname = "catch-load-so.so"
+PASS: gdb.base/catch-load.exp: rx unload: continue
+PASS: gdb.base/catch-load.exp: rx unload with stop-on-solib-events: set var libname = "catch-load-so.so"
 PASS: gdb.base/catch-load.exp: rx unload with stop-on-solib-events: set stop-on-solib-events 1
 PASS: gdb.base/catch-load.exp: rx unload with stop-on-solib-events: catch unload catch-load-so
-FAIL: gdb.base/catch-load.exp: rx unload with stop-on-solib-events: continue
-FAIL: gdb.base/catch-load.exp: non-matching unload: set var libname = "catch-load-so.so"
+PASS: gdb.base/catch-load.exp: rx unload with stop-on-solib-events: continue
+PASS: gdb.base/catch-load.exp: non-matching unload: set var libname = "catch-load-so.so"
 PASS: gdb.base/catch-load.exp: non-matching unload: set stop-on-solib-events 0
 PASS: gdb.base/catch-load.exp: non-matching unload: catch unload zardoz
-FAIL: gdb.base/catch-load.exp: non-matching unload: continue
-FAIL: gdb.base/catch-load.exp: non-matching unload with stop-on-solib-events: set var libname = "catch-load-so.so"
+PASS: gdb.base/catch-load.exp: non-matching unload: continue
+PASS: gdb.base/catch-load.exp: non-matching unload with stop-on-solib-events: set var libname = "catch-load-so.so"
 PASS: gdb.base/catch-load.exp: non-matching unload with stop-on-solib-events: set stop-on-solib-events 1
 PASS: gdb.base/catch-load.exp: non-matching unload with stop-on-solib-events: catch unload zardoz
-FAIL: gdb.base/catch-load.exp: non-matching unload with stop-on-solib-events: continue
+PASS: gdb.base/catch-load.exp: non-matching unload with stop-on-solib-events: continue
 Running ./gdb.base/catch-syscall.exp ...
 Running ./gdb.base/charset.exp ...
 PASS: gdb.base/charset.exp: show charset
@@ -1544,20 +1544,20 @@ PASS: gdb.base/charset.exp: undefined concatenation of UTF-16 and UTF-32
 PASS: gdb.base/charset.exp: set up for python printing of utf-16 string
 PASS: gdb.base/charset.exp: extract utf-16 string using python
 PASS: gdb.base/charset.exp: EVAL_SKIP cleanup handling regression test
-FAIL: gdb.base/charset.exp: Assign String16 with prefix u
-FAIL: gdb.base/charset.exp: Display String String16 with x/hs
-FAIL: gdb.base/charset.exp: Assign String32 with prefix U
-FAIL: gdb.base/charset.exp: Display String String32 with x/ws
-FAIL: gdb.base/charset.exp: Assign String32 with prefix L
-FAIL: gdb.base/charset.exp: Display String String32 with x/ws
+PASS: gdb.base/charset.exp: Assign String16 with prefix u
+PASS: gdb.base/charset.exp: Display String String16 with x/hs
+PASS: gdb.base/charset.exp: Assign String32 with prefix U
+PASS: gdb.base/charset.exp: Display String String32 with x/ws
+PASS: gdb.base/charset.exp: Assign String32 with prefix L
+PASS: gdb.base/charset.exp: Display String String32 with x/ws
 PASS: gdb.base/charset.exp: assign string to short array
 PASS: gdb.base/charset.exp: assign string to int array
 PASS: gdb.base/charset.exp: assign string to long array
 Running ./gdb.base/checkpoint.exp ...
 Running ./gdb.base/chng-syms.exp ...
 PASS: gdb.base/chng-syms.exp: setting conditional breakpoint on function
-PASS: gdb.base/chng-syms.exp: continue until exit at breakpoint first time through
-FAIL: gdb.base/chng-syms.exp: running with invalidated bpt condition after executable changes
+FAIL: gdb.base/chng-syms.exp: continue until exit at breakpoint first time through (the program exited)
+PASS: gdb.base/chng-syms.exp: running with invalidated bpt condition after executable changes
 Running ./gdb.base/code_elim.exp ...
 PASS: gdb.base/code_elim.exp: symbol-file code_elim1
 PASS: gdb.base/code_elim.exp: single psymtabs: test eliminated var my_global_symbol
@@ -1779,12 +1779,18 @@ PASS: gdb.base/completion.exp: complete 'p 'arg'
 PASS: gdb.base/completion.exp: complete (2) 'p 'arg'
 PASS: gdb.base/completion.exp: complete 'p no_var_named_this-arg'
 PASS: gdb.base/completion.exp: complete (2) 'p no_var_named_this-arg'
-FAIL: gdb.base/completion.exp: complete (2) 'p no_var_named_this-' (timeout)
-FAIL: gdb.base/completion.exp: complete 'p values[0].a' (timeout)
-FAIL: gdb.base/completion.exp: complete 'p values[0] . a' (timeout)
-FAIL: gdb.base/completion.exp: complete 'p &values[0] -> a' (timeout)
-FAIL: gdb.base/completion.exp: completion of field in anonymous union
-PASS: gdb.base/completion.exp: cd to ${srcdir}
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: complete (2) 'p no_var_named_this-'
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: complete 'p values[0].a'
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: complete 'p values[0] . a'
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: complete 'p &values[0] -> a'
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: completion of field in anonymous union
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: cd to ${srcdir}
 PASS: gdb.base/completion.exp: directory completion
 PASS: gdb.base/completion.exp: directory completion 2
 PASS: gdb.base/completion.exp: Glob remaining of directory test
@@ -1961,13 +1967,13 @@ PASS: gdb.base/constvars.exp: ptype crass
 PASS: gdb.base/constvars.exp: ptype crisp
 Running ./gdb.base/corefile.exp ...
 Running ./gdb.base/ctxobj.exp ...
-FAIL: gdb.base/ctxobj.exp: break in get_version functions (got interactive prompt)
-FAIL: gdb.base/ctxobj.exp: continue to get_version_1 (the program exited)
-FAIL: gdb.base/ctxobj.exp: print libctxobj1's this_version_num from partial symtab
-FAIL: gdb.base/ctxobj.exp: print libctxobj1's this_version_num from symtab
-FAIL: gdb.base/ctxobj.exp: continue to get_version_2 (the program is no longer running)
-FAIL: gdb.base/ctxobj.exp: print libctxobj2's this_version_num from partial symtab
-FAIL: gdb.base/ctxobj.exp: print libctxobj2's this_version_num from symtab
+PASS: gdb.base/ctxobj.exp: break in get_version functions
+PASS: gdb.base/ctxobj.exp: continue to get_version_1
+PASS: gdb.base/ctxobj.exp: print libctxobj1's this_version_num from partial symtab
+PASS: gdb.base/ctxobj.exp: print libctxobj1's this_version_num from symtab
+PASS: gdb.base/ctxobj.exp: continue to get_version_2
+PASS: gdb.base/ctxobj.exp: print libctxobj2's this_version_num from partial symtab
+PASS: gdb.base/ctxobj.exp: print libctxobj2's this_version_num from symtab
 Running ./gdb.base/cursal.exp ...
 PASS: gdb.base/cursal.exp: set listsize 1
 FAIL: gdb.base/cursal.exp: list before run
@@ -2720,41 +2726,17 @@ PASS: gdb.base/disp-step-syscall.exp: fork: break marker
 PASS: gdb.base/disp-step-syscall.exp: fork: set displaced-stepping off
 PASS: gdb.base/disp-step-syscall.exp: fork: break fork
 FAIL: gdb.base/disp-step-syscall.exp: fork: continue to fork (1st time)
-FAIL: gdb.base/disp-step-syscall.exp: fork: continue to fork (2nd time)
+FAIL: gdb.base/disp-step-syscall.exp: fork: continue to fork (2nd time) (the program exited)
 PASS: gdb.base/disp-step-syscall.exp: fork: display/i $pc
-PASS: gdb.base/disp-step-syscall.exp: fork: get hexadecimal valueof "$pc"
-PASS: gdb.base/disp-step-syscall.exp: fork: stepi fork insn
-PASS: gdb.base/disp-step-syscall.exp: fork: get hexadecimal valueof "$pc"
-FAIL: gdb.base/disp-step-syscall.exp: fork: continue to fork (3rd time)
-PASS: gdb.base/disp-step-syscall.exp: fork: break on syscall insns
-PASS: gdb.base/disp-step-syscall.exp: fork: delete break fork
-PASS: gdb.base/disp-step-syscall.exp: fork: continue to syscall insn fork
-PASS: gdb.base/disp-step-syscall.exp: fork: set displaced-stepping on
-PASS: gdb.base/disp-step-syscall.exp: fork: single step over fork
-PASS: gdb.base/disp-step-syscall.exp: fork: get hexadecimal valueof "$pc"
-PASS: gdb.base/disp-step-syscall.exp: fork: single step over fork final pc
-PASS: gdb.base/disp-step-syscall.exp: fork: delete break fork insn
-PASS: gdb.base/disp-step-syscall.exp: fork: continue to marker (fork)
+FAIL: gdb.base/disp-step-syscall.exp: fork: find syscall insn in fork
 PASS: gdb.base/disp-step-syscall.exp: vfork: delete break 1
 PASS: gdb.base/disp-step-syscall.exp: vfork: break marker
 PASS: gdb.base/disp-step-syscall.exp: vfork: set displaced-stepping off
 PASS: gdb.base/disp-step-syscall.exp: vfork: break vfork
 FAIL: gdb.base/disp-step-syscall.exp: vfork: continue to vfork (1st time)
-FAIL: gdb.base/disp-step-syscall.exp: vfork: continue to vfork (2nd time)
+FAIL: gdb.base/disp-step-syscall.exp: vfork: continue to vfork (2nd time) (the program exited)
 PASS: gdb.base/disp-step-syscall.exp: vfork: display/i $pc
-PASS: gdb.base/disp-step-syscall.exp: vfork: get hexadecimal valueof "$pc"
-PASS: gdb.base/disp-step-syscall.exp: vfork: stepi vfork insn
-PASS: gdb.base/disp-step-syscall.exp: vfork: get hexadecimal valueof "$pc"
-FAIL: gdb.base/disp-step-syscall.exp: vfork: continue to vfork (3rd time)
-PASS: gdb.base/disp-step-syscall.exp: vfork: break on syscall insns
-PASS: gdb.base/disp-step-syscall.exp: vfork: delete break vfork
-PASS: gdb.base/disp-step-syscall.exp: vfork: continue to syscall insn vfork
-PASS: gdb.base/disp-step-syscall.exp: vfork: set displaced-stepping on
-KPASS: gdb.base/disp-step-syscall.exp: vfork: single step over vfork (PRMS server/13796)
-FAIL: gdb.base/disp-step-syscall.exp: vfork: get hexadecimal valueof "$pc" (timeout)
-FAIL: gdb.base/disp-step-syscall.exp: vfork: single step over vfork final pc
-FAIL: gdb.base/disp-step-syscall.exp: vfork: delete break vfork insn
-FAIL: gdb.base/disp-step-syscall.exp: vfork: continue to marker (vfork) (the program is no longer running)
+FAIL: gdb.base/disp-step-syscall.exp: vfork: find syscall insn in vfork
 Running ./gdb.base/dmsym.exp ...
 PASS: gdb.base/dmsym.exp: set lang ada
 PASS: gdb.base/dmsym.exp: break pck__foo__bar__minsym
@@ -2977,9 +2959,9 @@ PASS: gdb.base/ena-dis-br.exp: enable once break marker2
 PASS: gdb.base/ena-dis-br.exp: info auto-disabled break marker2
 PASS: gdb.base/ena-dis-br.exp: continue to auto-disabled break marker2
 PASS: gdb.base/ena-dis-br.exp: info auto-disabled break marker2
-FAIL: gdb.base/ena-dis-br.exp: setting breakpoint at exit
+FAIL: gdb.base/ena-dis-br.exp: continue until exit at no stop (the program exited)
 PASS: gdb.base/ena-dis-br.exp: rerun to main
-FAIL: gdb.base/ena-dis-br.exp: setting breakpoint at exit
+FAIL: gdb.base/ena-dis-br.exp: continue until exit at no stop at auto-disabled break marker2 (the program exited)
 PASS: gdb.base/ena-dis-br.exp: break marker3
 PASS: gdb.base/ena-dis-br.exp: enable del break marker3
 PASS: gdb.base/ena-dis-br.exp: info auto-deleted break marker2
@@ -3001,20 +2983,20 @@ PASS: gdb.base/ena-dis-br.exp: ignore break marker1 -1
 PASS: gdb.base/ena-dis-br.exp: ignore break marker1 0
 PASS: gdb.base/ena-dis-br.exp: ignore break marker1
 PASS: gdb.base/ena-dis-br.exp: info ignored break marker1
-FAIL: gdb.base/ena-dis-br.exp: setting breakpoint at exit
+FAIL: gdb.base/ena-dis-br.exp: continue until exit at no stop at ignored break marker1 (the program exited)
 PASS: gdb.base/ena-dis-br.exp: rerun to main
-FAIL: gdb.base/ena-dis-br.exp: continue to break marker1, 2nd time (the program exited)
+PASS: gdb.base/ena-dis-br.exp: continue to break marker1, 2nd time
 PASS: gdb.base/ena-dis-br.exp: break marker1
 PASS: gdb.base/ena-dis-br.exp: ignore break marker1
 PASS: gdb.base/ena-dis-br.exp: enable del break marker1
 PASS: gdb.base/ena-dis-br.exp: info break marker1
-FAIL: gdb.base/ena-dis-br.exp: setting breakpoint at exit
+FAIL: gdb.base/ena-dis-br.exp: continue until exit at no stop at ignored & auto-deleted break marker1 (the program exited)
 PASS: gdb.base/ena-dis-br.exp: rerun to main
-FAIL: gdb.base/ena-dis-br.exp: continue to ignored & auto-deleted break marker1 (the program exited)
+PASS: gdb.base/ena-dis-br.exp: continue to ignored & auto-deleted break marker1
 PASS: gdb.base/ena-dis-br.exp: break marker1
 PASS: gdb.base/ena-dis-br.exp: ignore break marker1
 PASS: gdb.base/ena-dis-br.exp: disable break marker1
-FAIL: gdb.base/ena-dis-br.exp: setting breakpoint at exit
+FAIL: gdb.base/ena-dis-br.exp: continue until exit at no stop at ignored & disabled break marker1 (the program exited)
 PASS: gdb.base/ena-dis-br.exp: rerun to main
 PASS: gdb.base/ena-dis-br.exp: info ignored & disabled break marker1
 PASS: gdb.base/ena-dis-br.exp: prepare to continue with ignore count
@@ -3085,7 +3067,7 @@ PASS: gdb.base/eval-skip.exp: print value of (0 && (--x))
 PASS: gdb.base/eval-skip.exp: print value of (0 && (x+=7))
 PASS: gdb.base/eval-skip.exp: print value of (0 && (x=y))
 Running ./gdb.base/exe-lock.exp ...
-FAIL: gdb.base/exe-lock.exp: setting breakpoint at exit
+FAIL: gdb.base/exe-lock.exp: continue until exit (the program exited)
 Running ./gdb.base/expand-psymtabs.exp ...
 PASS: gdb.base/expand-psymtabs.exp: Expand psymtabs
 Running ./gdb.base/exprs.exp ...
@@ -3658,10 +3640,9 @@ PASS: gdb.base/gdb11531.exp: Set watchpoint
 PASS: gdb.base/gdb11531.exp: watchpoint variable triggers at next
 PASS: gdb.base/gdb11531.exp: watchpoint variable triggers at continue
 Running ./gdb.base/gdb1250.exp ...
-PASS: gdb.base/gdb1250.exp: backtrace from abort
 Running ./gdb.base/gdb1555.exp ...
-FAIL: gdb.base/gdb1555.exp: Step into shared lib function (the program exited)
-FAIL: gdb.base/gdb1555.exp: Next while in a shared lib function (the program is no longer running)
+FAIL: gdb.base/gdb1555.exp: Step into shared lib function
+FAIL: gdb.base/gdb1555.exp: Next while in a shared lib function
 Running ./gdb.base/gdb1821.exp ...
 PASS: gdb.base/gdb1821.exp: print /x bar
 Running ./gdb.base/gdbindex-stabs.exp ...
@@ -3701,10 +3682,10 @@ FAIL: gdb.base/gnu-ifunc.exp: step
 FAIL: gdb.base/gnu-ifunc.exp: continue to break-at-nextcall
 FAIL: gdb.base/gnu-ifunc.exp: continue to breakpoint: nextcall gnu_ifunc
 FAIL: gdb.base/gnu-ifunc.exp: nextcall gnu_ifunc skipped
-FAIL: gdb.base/gnu-ifunc.exp: p gnu_ifunc executing
-FAIL: gdb.base/gnu-ifunc.exp: info sym gnu_ifunc executing
+PASS: gdb.base/gnu-ifunc.exp: p gnu_ifunc executing
+PASS: gdb.base/gnu-ifunc.exp: info sym gnu_ifunc executing
 PASS: gdb.base/gnu-ifunc.exp: info addr gnu_ifunc
-FAIL: gdb.base/gnu-ifunc.exp: info sym <gnu_ifunc-address>
+PASS: gdb.base/gnu-ifunc.exp: info sym <gnu_ifunc-address>
 PASS: gdb.base/gnu-ifunc.exp: static gnu_ifunc
 Running ./gdb.base/gnu_vector.exp ...
 PASS: gdb.base/gnu_vector.exp: print c4
@@ -4135,22 +4116,22 @@ PASS: gdb.base/info-macros.exp: info macros 7
 KFAIL: gdb.base/info-macros.exp: info macros info-macros.c:42 (PRMS: gdb/NNNN)
 Running ./gdb.base/info-os.exp ...
 FAIL: gdb.base/info-os.exp: get inferior process ID
-PASS: gdb.base/info-os.exp: continue to breakpoint: Set breakpoint here
-PASS: gdb.base/info-os.exp: get shared memory key
-PASS: gdb.base/info-os.exp: get shared memory ID
-PASS: gdb.base/info-os.exp: get semaphore key
-PASS: gdb.base/info-os.exp: get semaphore ID
-PASS: gdb.base/info-os.exp: get message queue key
-PASS: gdb.base/info-os.exp: get message queue ID
-PASS: gdb.base/info-os.exp: get socket port number
+FAIL: gdb.base/info-os.exp: continue to breakpoint: Set breakpoint here
+FAIL: gdb.base/info-os.exp: get shared memory key
+FAIL: gdb.base/info-os.exp: get shared memory ID
+FAIL: gdb.base/info-os.exp: get semaphore key
+FAIL: gdb.base/info-os.exp: get semaphore ID
+FAIL: gdb.base/info-os.exp: get message queue key
+FAIL: gdb.base/info-os.exp: get message queue ID
+FAIL: gdb.base/info-os.exp: get socket port number
 FAIL: gdb.base/info-os.exp: get process list
 FAIL: gdb.base/info-os.exp: get process groups
 FAIL: gdb.base/info-os.exp: get threads
 FAIL: gdb.base/info-os.exp: get file descriptors
-PASS: gdb.base/info-os.exp: get internet-domain sockets
-PASS: gdb.base/info-os.exp: get shared-memory regions
-PASS: gdb.base/info-os.exp: get semaphores
-PASS: gdb.base/info-os.exp: get message queues
+FAIL: gdb.base/info-os.exp: get internet-domain sockets
+FAIL: gdb.base/info-os.exp: get shared-memory regions
+FAIL: gdb.base/info-os.exp: get semaphores
+FAIL: gdb.base/info-os.exp: get message queues
 Running ./gdb.base/info-proc.exp ...
 PASS: gdb.base/info-proc.exp: help info proc
 PASS: gdb.base/info-proc.exp: info proc without a process
@@ -4190,32 +4171,26 @@ PASS: gdb.base/jit-simple.exp: recompile jit-simple.c
 PASS: gdb.base/jit-simple.exp: blah 1
 Running ./gdb.base/jit-so.exp ...
 PASS: gdb.base/jit-so.exp: one_jit_test-1: continue to breakpoint: break here before-dlopen
-FAIL: gdb.base/jit-so.exp: one_jit_test-1: set var jit_libname = "jit-main.so"
-FAIL: gdb.base/jit-so.exp: one_jit_test-1: continue to breakpoint: break here after-dlopen
-FAIL: gdb.base/jit-so.exp: one_jit_test-1: setting breakpoint at jit-main.c:131
-FAIL: gdb.base/jit-so.exp: one_jit_test-1: continue to breakpoint: break here 0
-FAIL: gdb.base/jit-so.exp: one_jit_test-1: set var argc = 2
-FAIL: gdb.base/jit-so.exp: one_jit_test-1: set var libname = "SHLIBDIR/jit-solib.so"
-FAIL: gdb.base/jit-so.exp: one_jit_test-1: set var count = 1
-FAIL: gdb.base/jit-so.exp: one_jit_test-1: setting breakpoint at jit-main.c:194
-FAIL: gdb.base/jit-so.exp: one_jit_test-1: continue to breakpoint: break here 1
-FAIL: gdb.base/jit-so.exp: one_jit_test-1: info function jit_function
-FAIL: gdb.base/jit-so.exp: one_jit_test-1: setting breakpoint at jit-main.c:219
-FAIL: gdb.base/jit-so.exp: one_jit_test-1: continue to breakpoint: break here 2
+PASS: gdb.base/jit-so.exp: one_jit_test-1: set var jit_libname = "jit-main.so"
+PASS: gdb.base/jit-so.exp: one_jit_test-1: continue to breakpoint: break here after-dlopen
+PASS: gdb.base/jit-so.exp: one_jit_test-1: continue to breakpoint: break here 0
+PASS: gdb.base/jit-so.exp: one_jit_test-1: set var argc = 2
+PASS: gdb.base/jit-so.exp: one_jit_test-1: set var libname = "SHLIBDIR/jit-solib.so"
+PASS: gdb.base/jit-so.exp: one_jit_test-1: set var count = 1
+PASS: gdb.base/jit-so.exp: one_jit_test-1: continue to breakpoint: break here 1
+PASS: gdb.base/jit-so.exp: one_jit_test-1: info function jit_function
+PASS: gdb.base/jit-so.exp: one_jit_test-1: continue to breakpoint: break here 2
 PASS: gdb.base/jit-so.exp: one_jit_test-1: info function jit_function
 PASS: gdb.base/jit-so.exp: one_jit_test-2: continue to breakpoint: break here before-dlopen
-FAIL: gdb.base/jit-so.exp: one_jit_test-2: set var jit_libname = "jit-main.so"
-FAIL: gdb.base/jit-so.exp: one_jit_test-2: continue to breakpoint: break here after-dlopen
-FAIL: gdb.base/jit-so.exp: one_jit_test-2: setting breakpoint at jit-main.c:131
-FAIL: gdb.base/jit-so.exp: one_jit_test-2: continue to breakpoint: break here 0
-FAIL: gdb.base/jit-so.exp: one_jit_test-2: set var argc = 2
-FAIL: gdb.base/jit-so.exp: one_jit_test-2: set var libname = "SHLIBDIR/jit-solib.so"
-FAIL: gdb.base/jit-so.exp: one_jit_test-2: set var count = 2
-FAIL: gdb.base/jit-so.exp: one_jit_test-2: setting breakpoint at jit-main.c:194
-FAIL: gdb.base/jit-so.exp: one_jit_test-2: continue to breakpoint: break here 1
-FAIL: gdb.base/jit-so.exp: one_jit_test-2: info function jit_function
-FAIL: gdb.base/jit-so.exp: one_jit_test-2: setting breakpoint at jit-main.c:219
-FAIL: gdb.base/jit-so.exp: one_jit_test-2: continue to breakpoint: break here 2
+PASS: gdb.base/jit-so.exp: one_jit_test-2: set var jit_libname = "jit-main.so"
+PASS: gdb.base/jit-so.exp: one_jit_test-2: continue to breakpoint: break here after-dlopen
+PASS: gdb.base/jit-so.exp: one_jit_test-2: continue to breakpoint: break here 0
+PASS: gdb.base/jit-so.exp: one_jit_test-2: set var argc = 2
+PASS: gdb.base/jit-so.exp: one_jit_test-2: set var libname = "SHLIBDIR/jit-solib.so"
+PASS: gdb.base/jit-so.exp: one_jit_test-2: set var count = 2
+PASS: gdb.base/jit-so.exp: one_jit_test-2: continue to breakpoint: break here 1
+PASS: gdb.base/jit-so.exp: one_jit_test-2: info function jit_function
+PASS: gdb.base/jit-so.exp: one_jit_test-2: continue to breakpoint: break here 2
 PASS: gdb.base/jit-so.exp: one_jit_test-2: info function jit_function
 Running ./gdb.base/jump.exp ...
 PASS: gdb.base/jump.exp: break before jump to non-call
@@ -4248,7 +4223,7 @@ PASS: gdb.base/langs.exp: up to langs0__2do in langs.exp
 PASS: gdb.base/langs.exp: show language at langs0__2do in langs.exp
 PASS: gdb.base/langs.exp: up to main in langs.exp
 PASS: gdb.base/langs.exp: show language at main in langs.exp
-FAIL: gdb.base/langs.exp: setting breakpoint at exit
+FAIL: gdb.base/langs.exp: continue until exit at langs.exp (the program exited)
 PASS: gdb.base/langs.exp: set lang to minimal
 PASS: gdb.base/langs.exp: print parameter value
 Running ./gdb.base/lineinc.exp ...
@@ -5053,7 +5028,7 @@ PASS: gdb.base/nodebug.exp: p bsslocal
 PASS: gdb.base/nodebug.exp: whatis bsslocal
 PASS: gdb.base/nodebug.exp: ptype bsslocal
 FAIL: gdb.base/nodebug.exp: backtrace from inner in nodebug.exp
-FAIL: gdb.base/nodebug.exp: p/c array_index("abcdef",2)
+PASS: gdb.base/nodebug.exp: p/c array_index("abcdef",2)
 FAIL: gdb.base/nodebug.exp: backtrace from middle in nodebug.exp
 Running ./gdb.base/nofield.exp ...
 PASS: gdb.base/nofield.exp: ptype struct not_empty
@@ -5098,7 +5073,7 @@ PASS: gdb.base/pc-fp.exp: info register pc fp
 Running ./gdb.base/pending.exp ...
 PASS: gdb.base/pending.exp: set pending breakpoint (without symbols)
 PASS: gdb.base/pending.exp: single pending breakpoint info (without symbols)
-FAIL: gdb.base/pending.exp: run to resolved breakpoint 1 (without symbols) (the program exited)
+PASS: gdb.base/pending.exp: run to resolved breakpoint 1 (without symbols)
 PASS: gdb.base/pending.exp: set pending breakpoint
 PASS: gdb.base/pending.exp: single pending breakpoint info
 PASS: gdb.base/pending.exp: breakpoint function
@@ -5117,11 +5092,11 @@ PASS: gdb.base/pending.exp: set ignore count on pending breakpoint 3
 PASS: gdb.base/pending.exp: multiple pending breakpoints 2
 PASS: gdb.base/pending.exp: running to main
 PASS: gdb.base/pending.exp: re-enabling pending breakpoint that can resolve instantly
-FAIL: gdb.base/pending.exp: continue to resolved breakpoint 2 (the program exited)
-FAIL: gdb.base/pending.exp: continue to resolved breakpoint 1 (the program is no longer running)
+PASS: gdb.base/pending.exp: continue to resolved breakpoint 2
+PASS: gdb.base/pending.exp: continue to resolved breakpoint 1
 PASS: gdb.base/pending.exp: Disable other breakpoints
 PASS: gdb.base/pending.exp: Disable other breakpoints
-FAIL: gdb.base/pending.exp: continue to resolved breakpoint 3 (the program is no longer running)
+PASS: gdb.base/pending.exp: continue to resolved breakpoint 3
 PASS: gdb.base/pending.exp: set imaginary pending breakpoint
 PASS: gdb.base/pending.exp: rerun to main
 PASS: gdb.base/pending.exp: verify pending breakpoint after restart
@@ -5886,11 +5861,11 @@ PASS: gdb.base/printcmds.exp: p "embedded \000 null"
 PASS: gdb.base/printcmds.exp: p "abcd"[2]
 PASS: gdb.base/printcmds.exp: p sizeof ("abcdef")
 PASS: gdb.base/printcmds.exp: ptype "foo"
-FAIL: gdb.base/printcmds.exp: p *"foo"
+PASS: gdb.base/printcmds.exp: p *"foo"
 PASS: gdb.base/printcmds.exp: ptype *"foo"
-FAIL: gdb.base/printcmds.exp: p &*"foo"
-FAIL: gdb.base/printcmds.exp: ptype &*"foo"
-FAIL: gdb.base/printcmds.exp: p (char *)"foo"
+PASS: gdb.base/printcmds.exp: p &*"foo"
+PASS: gdb.base/printcmds.exp: ptype &*"foo"
+PASS: gdb.base/printcmds.exp: p (char *)"foo"
 PASS: gdb.base/printcmds.exp: print {'a','b','c'}
 PASS: gdb.base/printcmds.exp: print {4,5,6}[2]
 PASS: gdb.base/printcmds.exp: print *&{4,5,6}[1]
@@ -5941,8 +5916,8 @@ PASS: gdb.base/printcmds.exp: set print symbol off
 Running ./gdb.base/print-file-var.exp ...
 PASS: gdb.base/print-file-var.exp: breapoint past v1 & v2 initialization
 PASS: gdb.base/print-file-var.exp: continue to STOP marker
-FAIL: gdb.base/print-file-var.exp: print 'print-file-var-lib1.c'::this_version_id == v1
-FAIL: gdb.base/print-file-var.exp: print 'print-file-var-lib2.c'::this_version_id == v2
+PASS: gdb.base/print-file-var.exp: print 'print-file-var-lib1.c'::this_version_id == v1
+PASS: gdb.base/print-file-var.exp: print 'print-file-var-lib2.c'::this_version_id == v2
 Running ./gdb.base/prologue.exp ...
 PASS: gdb.base/prologue.exp: setting breakpoint at marker
 PASS: gdb.base/prologue.exp: continue to marker
@@ -6774,7 +6749,7 @@ PASS: gdb.base/sepdebug.exp: backtrace from factorial(5)
 FAIL: gdb.base/sepdebug.exp: next to recursive call
 FAIL: gdb.base/sepdebug.exp: next over recursive call
 FAIL: gdb.base/sepdebug.exp: backtrace from factorial(5.1)
-FAIL: gdb.base/sepdebug.exp: setting breakpoint at exit
+FAIL: gdb.base/sepdebug.exp: continue until exit at recursive next test (the program exited)
 PASS: gdb.base/sepdebug.exp: debuglink: set separate debug location
 PASS: gdb.base/sepdebug.exp: debuglink: breakpoint function, optimized file
 PASS: gdb.base/sepdebug.exp: debuglink: breakpoint small function, optimized file
@@ -7020,29 +6995,29 @@ PASS: gdb.base/shlib-call.exp: set width 0
 PASS: gdb.base/shlib-call.exp: next to shr1
 PASS: gdb.base/shlib-call.exp: print g
 PASS: gdb.base/shlib-call.exp: print g
-FAIL: gdb.base/shlib-call.exp: breakpoint function shr2
+PASS: gdb.base/shlib-call.exp: breakpoint function shr2
 FAIL: gdb.base/shlib-call.exp: run until breakpoint set at a function
 PASS: gdb.base/shlib-call.exp: print mainshr1(1) from shlib func
-FAIL: gdb.base/shlib-call.exp: step out of shr2 to main (the program exited)
-FAIL: gdb.base/shlib-call.exp: print mainshr1(1)
-FAIL: gdb.base/shlib-call.exp: step into mainshr1 (the program is no longer running)
+FAIL: gdb.base/shlib-call.exp: step out of shr2 to main
+PASS: gdb.base/shlib-call.exp: print mainshr1(1)
+FAIL: gdb.base/shlib-call.exp: step into mainshr1
 PASS: gdb.base/shlib-call.exp: set print sevenbit-strings
 PASS: gdb.base/shlib-call.exp: set print address off
 PASS: gdb.base/shlib-call.exp: set width 0
 Running ./gdb.base/shreloc.exp ...
-FAIL: gdb.base/shreloc.exp: get address of fn_1
-FAIL: gdb.base/shreloc.exp: get address of fn_2
-FAIL: gdb.base/shreloc.exp: relocated extern functions have different addresses
-FAIL: gdb.base/shreloc.exp: get address of extern_var_1
-FAIL: gdb.base/shreloc.exp: get address of extern_var_2
-FAIL: gdb.base/shreloc.exp: relocated extern variables have different addresses
-FAIL: gdb.base/shreloc.exp: get address of static_var_1
-FAIL: gdb.base/shreloc.exp: get address of static_var_2
-FAIL: gdb.base/shreloc.exp: relocated static variables have different addresses
+PASS: gdb.base/shreloc.exp: get address of fn_1
+PASS: gdb.base/shreloc.exp: get address of fn_2
+PASS: gdb.base/shreloc.exp: relocated extern functions have different addresses
+PASS: gdb.base/shreloc.exp: get address of extern_var_1
+PASS: gdb.base/shreloc.exp: get address of extern_var_2
+PASS: gdb.base/shreloc.exp: relocated extern variables have different addresses
+PASS: gdb.base/shreloc.exp: get address of static_var_1
+PASS: gdb.base/shreloc.exp: get address of static_var_2
+PASS: gdb.base/shreloc.exp: relocated static variables have different addresses
 PASS: gdb.base/shreloc.exp: get_msym_addrs static_var_[12]
-FAIL: gdb.base/shreloc.exp: (msymbol) relocated static vars have different addresses
+PASS: gdb.base/shreloc.exp: (msymbol) relocated static vars have different addresses
 PASS: gdb.base/shreloc.exp: get_msym_addrs extern_var_[12]
-FAIL: gdb.base/shreloc.exp: (msymbol) relocated extern vars have different addresses
+PASS: gdb.base/shreloc.exp: (msymbol) relocated extern vars have different addresses
 PASS: gdb.base/shreloc.exp: get_msym_addrs fn_[12]
 PASS: gdb.base/shreloc.exp: (msymbol) relocated functions have different addresses
 Running ./gdb.base/sigall.exp ...
@@ -7425,7 +7400,7 @@ PASS: gdb.base/sigall.exp: handle SIGTERM stop print
 PASS: gdb.base/sigall.exp: b handle_TERM
 PASS: gdb.base/sigall.exp: get signal TERM
 PASS: gdb.base/sigall.exp: send signal TERM
-FAIL: gdb.base/sigall.exp: setting breakpoint at exit
+FAIL: gdb.base/sigall.exp: continue until exit at continue to sigall exit (the program exited)
 Running ./gdb.base/sigaltstack.exp ...
 PASS: gdb.base/sigaltstack.exp: handle SIGALRM print pass nostop
 PASS: gdb.base/sigaltstack.exp: handle SIGVTALRM print pass nostop
@@ -7786,43 +7761,41 @@ PASS: gdb.base/skip.exp: info skip after deleting all
 Running ./gdb.base/skip-solib.exp ...
 Running ./gdb.base/so-impl-ld.exp ...
 PASS: gdb.base/so-impl-ld.exp: step over solib call
-FAIL: gdb.base/so-impl-ld.exp: step into solib call (the program exited)
-FAIL: gdb.base/so-impl-ld.exp: step in solib call (the program is no longer running)
-FAIL: gdb.base/so-impl-ld.exp: step out of solib call (the program is no longer running)
+FAIL: gdb.base/so-impl-ld.exp: step into solib call
+FAIL: gdb.base/so-impl-ld.exp: step in solib call
+FAIL: gdb.base/so-impl-ld.exp: step out of solib call
 Running ./gdb.base/so-indr-cl.exp ...
 Running ./gdb.base/solib-corrupted.exp ...
 Running ./gdb.base/solib-disc.exp ...
 PASS: gdb.base/solib-disc.exp: set stop-on-solib-events 1
-FAIL: gdb.base/solib-disc.exp: continue to load (the program exited)
-FAIL: gdb.base/solib-disc.exp: save $pc after load
-FAIL: gdb.base/solib-disc.exp: disconnect after load
-FAIL: gdb.base/solib-disc.exp: reconnect after load
+PASS: gdb.base/solib-disc.exp: continue to load
+PASS: gdb.base/solib-disc.exp: save $pc after load
+PASS: gdb.base/solib-disc.exp: disconnect after load
+PASS: gdb.base/solib-disc.exp: reconnect after load
+PASS: gdb.base/solib-disc.exp: check $pc after load
+PASS: gdb.base/solib-disc.exp: continue to unload
+PASS: gdb.base/solib-disc.exp: save $pc after unload
+PASS: gdb.base/solib-disc.exp: disconnect after unload
+PASS: gdb.base/solib-disc.exp: reconnect after unload
+PASS: gdb.base/solib-disc.exp: check $pc after unload
 Running ./gdb.base/solib-display.exp ...
 Running ./gdb.base/solib.exp ...
 Running ./gdb.base/solib-nodir.exp ...
 Running ./gdb.base/solib-overlap.exp ...
 Running ./gdb.base/solib-symbol.exp ...
 PASS: gdb.base/solib-symbol.exp: foo2 in main
-FAIL: gdb.base/solib-symbol.exp: foo in libmd
+PASS: gdb.base/solib-symbol.exp: foo in libmd
 PASS: gdb.base/solib-symbol.exp: continue
-FAIL: gdb.base/solib-symbol.exp: foo2 in mdlib
+PASS: gdb.base/solib-symbol.exp: foo2 in mdlib
 Running ./gdb.base/solib-weak.exp ...
-FAIL: gdb.base/solib-weak.exp: setting breakpoint at bar
-FAIL: gdb.base/solib-weak.exp: run to breakpoint - lib1 nodebug, lib2 nodebug, lib1 first (the program exited)
-FAIL: gdb.base/solib-weak.exp: setting breakpoint at bar
-FAIL: gdb.base/solib-weak.exp: run to breakpoint - lib1 nodebug, lib2 nodebug, lib2 first (the program exited)
-FAIL: gdb.base/solib-weak.exp: setting breakpoint at bar
-FAIL: gdb.base/solib-weak.exp: run to breakpoint - lib1 nodebug, lib2 debug, lib1 first (the program exited)
-FAIL: gdb.base/solib-weak.exp: setting breakpoint at bar
-FAIL: gdb.base/solib-weak.exp: run to breakpoint - lib1 nodebug, lib2 debug, lib2 first (the program exited)
-FAIL: gdb.base/solib-weak.exp: setting breakpoint at bar
-FAIL: gdb.base/solib-weak.exp: run to breakpoint - lib1 debug, lib2 nodebug, lib1 first (the program exited)
-FAIL: gdb.base/solib-weak.exp: setting breakpoint at bar
-FAIL: gdb.base/solib-weak.exp: run to breakpoint - lib1 debug, lib2 nodebug, lib2 first (the program exited)
-FAIL: gdb.base/solib-weak.exp: setting breakpoint at bar
-FAIL: gdb.base/solib-weak.exp: run to breakpoint - lib1 debug, lib2 debug, lib1 first (the program exited)
-FAIL: gdb.base/solib-weak.exp: setting breakpoint at bar
-FAIL: gdb.base/solib-weak.exp: run to breakpoint - lib1 debug, lib2 debug, lib2 first (the program exited)
+PASS: gdb.base/solib-weak.exp: run to breakpoint - lib1 nodebug, lib2 nodebug, lib1 first
+PASS: gdb.base/solib-weak.exp: run to breakpoint - lib1 nodebug, lib2 nodebug, lib2 first
+PASS: gdb.base/solib-weak.exp: run to breakpoint - lib1 nodebug, lib2 debug, lib1 first
+PASS: gdb.base/solib-weak.exp: run to breakpoint - lib1 nodebug, lib2 debug, lib2 first
+PASS: gdb.base/solib-weak.exp: run to breakpoint - lib1 debug, lib2 nodebug, lib1 first
+PASS: gdb.base/solib-weak.exp: run to breakpoint - lib1 debug, lib2 nodebug, lib2 first
+PASS: gdb.base/solib-weak.exp: run to breakpoint - lib1 debug, lib2 debug, lib1 first
+PASS: gdb.base/solib-weak.exp: run to breakpoint - lib1 debug, lib2 debug, lib2 first
 Running ./gdb.base/source.exp ...
 FAIL: gdb.base/source.exp: script contains error
 FAIL: gdb.base/source.exp: source -v
@@ -7912,7 +7885,7 @@ FAIL: gdb.base/step-test.exp: nexti over function
 PASS: gdb.base/step-test.exp: set breakpoint at call to large_struct_by_value
 PASS: gdb.base/step-test.exp: run to pass large struct
 FAIL: gdb.base/step-test.exp: large struct by value
-PASS: gdb.base/step-test.exp: continue until exit at step-test.exp
+FAIL: gdb.base/step-test.exp: continue until exit at step-test.exp (the program exited)
 Running ./gdb.base/store.exp ...
 PASS: gdb.base/store.exp: tbreak wack_charest
 PASS: gdb.base/store.exp: continue to wack_charest
@@ -8854,10 +8827,10 @@ PASS: gdb.base/tui-layout.exp: layout asm
 Running ./gdb.base/twice.exp ...
 PASS: gdb.base/twice.exp: step
 Running ./gdb.base/type-opaque.exp ...
-FAIL: gdb.base/type-opaque.exp: opaque struct type resolving
+PASS: gdb.base/type-opaque.exp: opaque struct type resolving
 PASS: gdb.base/type-opaque.exp: empty struct type resolving
 PASS: gdb.base/type-opaque.exp: filled struct type resolving
-FAIL: gdb.base/type-opaque.exp: opaque union type resolving
+PASS: gdb.base/type-opaque.exp: opaque union type resolving
 PASS: gdb.base/type-opaque.exp: empty union type resolving
 PASS: gdb.base/type-opaque.exp: filled union type resolving
 Running ./gdb.base/ui-redirect.exp ...
@@ -8871,17 +8844,17 @@ PASS: gdb.base/ui-redirect.exp: set logging off
 PASS: gdb.base/ui-redirect.exp: help
 Running ./gdb.base/unload.exp ...
 PASS: gdb.base/unload.exp: pending breakpoint info before run
-FAIL: gdb.base/unload.exp: running program (the program exited)
-FAIL: gdb.base/unload.exp: pending breakpoint info on first run at shrfunc1
-FAIL: gdb.base/unload.exp: continuing to unloaded libfile (the program is no longer running)
-FAIL: gdb.base/unload.exp: print y from libfile
+FAIL: gdb.base/unload.exp: running program
+PASS: gdb.base/unload.exp: pending breakpoint info on first run at shrfunc1
+PASS: gdb.base/unload.exp: continuing to unloaded libfile
+PASS: gdb.base/unload.exp: print y from libfile
 FAIL: gdb.base/unload.exp: rerun to shared library breakpoint
-FAIL: gdb.base/unload.exp: pending breakpoint info on second run at shrfunc1
-FAIL: gdb.base/unload.exp: continuing to unloaded libfile (the program exited)
-FAIL: gdb.base/unload.exp: continue to shrfunc2 (the program is no longer running)
-FAIL: gdb.base/unload.exp: pending breakpoint info on second run at shrfunc2
-FAIL: gdb.base/unload.exp: continuing to unloaded libfile2 (the program is no longer running)
-FAIL: gdb.base/unload.exp: print y from libfile2
+PASS: gdb.base/unload.exp: pending breakpoint info on second run at shrfunc1
+PASS: gdb.base/unload.exp: continuing to unloaded libfile
+FAIL: gdb.base/unload.exp: continue to shrfunc2
+PASS: gdb.base/unload.exp: pending breakpoint info on second run at shrfunc2
+PASS: gdb.base/unload.exp: continuing to unloaded libfile2
+PASS: gdb.base/unload.exp: print y from libfile2
 Running ./gdb.base/until.exp ...
 PASS: gdb.base/until.exp: until line number
 PASS: gdb.base/until.exp: malformed until
@@ -9005,7 +8978,7 @@ PASS: gdb.base/watchpoint.exp: watchpoint hit, fifth time
 PASS: gdb.base/watchpoint.exp: Watchpoint hit count is 5
 PASS: gdb.base/watchpoint.exp: continue to marker2
 PASS: gdb.base/watchpoint.exp: watchpoint disabled
-FAIL: gdb.base/watchpoint.exp: setting breakpoint at exit
+FAIL: gdb.base/watchpoint.exp: continue until exit at continue to exit in test_simple_watchpoint (the program exited)
 PASS: gdb.base/watchpoint.exp: watchpoints found in watchpoint/breakpoint table
 PASS: gdb.base/watchpoint.exp: disable watchpoint in test_disabling_watchpoints
 PASS: gdb.base/watchpoint.exp: run to marker1 in test_disabling_watchpoints
@@ -9015,7 +8988,7 @@ PASS: gdb.base/watchpoint.exp: watchpoint hit in test_disabling_watchpoints, sec
 PASS: gdb.base/watchpoint.exp: disable watchpoint #2 in test_disabling_watchpoints
 PASS: gdb.base/watchpoint.exp: watchpoint disabled in table
 PASS: gdb.base/watchpoint.exp: disabled watchpoint skipped
-FAIL: gdb.base/watchpoint.exp: setting breakpoint at exit
+FAIL: gdb.base/watchpoint.exp: continue until exit at continue to exit in test_disabling_watchpoints (the program exited)
 PASS: gdb.base/watchpoint.exp: watch ival2
 PASS: gdb.base/watchpoint.exp: break func2 if 0
 PASS: gdb.base/watchpoint.exp: p $func2_breakpoint_number = $bpnum
@@ -9062,7 +9035,7 @@ PASS: gdb.base/watchpoint.exp: set local watch in recursive call with explicit s
 FAIL: gdb.base/watchpoint.exp: trigger local watch with explicit scope in recursive call
 FAIL: gdb.base/watchpoint.exp: self-delete local watch with explicit scope in recursive call (2)
 PASS: gdb.base/watchpoint.exp: disable in test_complex_watchpoint
-FAIL: gdb.base/watchpoint.exp: setting breakpoint at exit
+FAIL: gdb.base/watchpoint.exp: continue until exit at continue to exit in test_complex_watchpoint (the program exited)
 PASS: gdb.base/watchpoint.exp: watchpoint refused to insert on nonexistent struct member
 PASS: gdb.base/watchpoint.exp: watch global_ptr
 PASS: gdb.base/watchpoint.exp: watch *(int *) 0
@@ -9131,12 +9104,12 @@ PASS: gdb.base/watchpoints.exp: watchpoint hit, fifth time
 PASS: gdb.base/watchpoints.exp: Watchpoint hit count is 5
 Running ./gdb.base/watchpoint-solib.exp ...
 PASS: gdb.base/watchpoint-solib.exp: set pending breakpoint
-FAIL: gdb.base/watchpoint-solib.exp: continue to foo (the program exited)
-FAIL: gdb.base/watchpoint-solib.exp: set watchpoint on g
-FAIL: gdb.base/watchpoint-solib.exp: continue to watchpoint hit (the program is no longer running)
+PASS: gdb.base/watchpoint-solib.exp: continue to foo
+PASS: gdb.base/watchpoint-solib.exp: set watchpoint on g
+PASS: gdb.base/watchpoint-solib.exp: continue to watchpoint hit
 PASS: gdb.base/watchpoint-solib.exp: rerun to main
-FAIL: gdb.base/watchpoint-solib.exp: continue to foo again (the program exited)
-FAIL: gdb.base/watchpoint-solib.exp: continue to watchpoint hit again (the program is no longer running)
+PASS: gdb.base/watchpoint-solib.exp: continue to foo again
+PASS: gdb.base/watchpoint-solib.exp: continue to watchpoint hit again
 Running ./gdb.base/watch-read.exp ...
 Running ./gdb.base/watch_thread_num.exp ...
 Running ./gdb.base/watch-vfork.exp ...
@@ -11127,13 +11100,13 @@ PASS: gdb.cp/gdb1355.exp: ptype s1
 PASS: gdb.cp/gdb1355.exp: print s1
 Running ./gdb.cp/gdb2384.exp ...
 PASS: gdb.cp/gdb2384.exp: continue to breakpoint: set breakpoint here
-FAIL: gdb.cp/gdb2384.exp: print d1.meth ()
+PASS: gdb.cp/gdb2384.exp: print d1.meth ()
 PASS: gdb.cp/gdb2384.exp: continue to breakpoint: set breakpoint here
-FAIL: gdb.cp/gdb2384.exp: gdb2384
+PASS: gdb.cp/gdb2384.exp: gdb2384
 PASS: gdb.cp/gdb2384.exp: continue to breakpoint: set breakpoint here (second)
-FAIL: gdb.cp/gdb2384.exp: print d2.meth()
+PASS: gdb.cp/gdb2384.exp: print d2.meth()
 PASS: gdb.cp/gdb2384.exp: continue to breakpoint: set breakpoint here (second)
-FAIL: gdb.cp/gdb2384.exp: gdb2384 (second)
+PASS: gdb.cp/gdb2384.exp: gdb2384 (second)
 Running ./gdb.cp/gdb2495.exp ...
 PASS: gdb.cp/gdb2495.exp: p exceptions.no_throw_function()
 PASS: gdb.cp/gdb2495.exp: p exceptions.throw_function_with_handler()
@@ -11153,34 +11126,34 @@ Running ./gdb.cp/hang.exp ...
 PASS: gdb.cp/hang.exp: doesn't overwrite struct type
 PASS: gdb.cp/hang.exp: doesn't corrupt cv_type chain
 Running ./gdb.cp/infcall-dlopen.exp ...
-FAIL: gdb.cp/infcall-dlopen.exp: test 0
+PASS: gdb.cp/infcall-dlopen.exp: test 0
 PASS: gdb.cp/infcall-dlopen.exp: test 0 stub 1
 PASS: gdb.cp/infcall-dlopen.exp: test 0 stub 2
-FAIL: gdb.cp/infcall-dlopen.exp: test 1
+PASS: gdb.cp/infcall-dlopen.exp: test 1
 PASS: gdb.cp/infcall-dlopen.exp: test 1 stub 1
 PASS: gdb.cp/infcall-dlopen.exp: test 1 stub 2
-FAIL: gdb.cp/infcall-dlopen.exp: test 2
+PASS: gdb.cp/infcall-dlopen.exp: test 2
 PASS: gdb.cp/infcall-dlopen.exp: test 2 stub 1
 PASS: gdb.cp/infcall-dlopen.exp: test 2 stub 2
-FAIL: gdb.cp/infcall-dlopen.exp: test 3
+PASS: gdb.cp/infcall-dlopen.exp: test 3
 PASS: gdb.cp/infcall-dlopen.exp: test 3 stub 1
 PASS: gdb.cp/infcall-dlopen.exp: test 3 stub 2
-FAIL: gdb.cp/infcall-dlopen.exp: test 4
+PASS: gdb.cp/infcall-dlopen.exp: test 4
 PASS: gdb.cp/infcall-dlopen.exp: test 4 stub 1
 PASS: gdb.cp/infcall-dlopen.exp: test 4 stub 2
-FAIL: gdb.cp/infcall-dlopen.exp: test 5
+PASS: gdb.cp/infcall-dlopen.exp: test 5
 PASS: gdb.cp/infcall-dlopen.exp: test 5 stub 1
 PASS: gdb.cp/infcall-dlopen.exp: test 5 stub 2
-FAIL: gdb.cp/infcall-dlopen.exp: test 6
+PASS: gdb.cp/infcall-dlopen.exp: test 6
 PASS: gdb.cp/infcall-dlopen.exp: test 6 stub 1
 PASS: gdb.cp/infcall-dlopen.exp: test 6 stub 2
-FAIL: gdb.cp/infcall-dlopen.exp: test 7
+PASS: gdb.cp/infcall-dlopen.exp: test 7
 PASS: gdb.cp/infcall-dlopen.exp: test 7 stub 1
 PASS: gdb.cp/infcall-dlopen.exp: test 7 stub 2
-FAIL: gdb.cp/infcall-dlopen.exp: test 8
+PASS: gdb.cp/infcall-dlopen.exp: test 8
 PASS: gdb.cp/infcall-dlopen.exp: test 8 stub 1
 PASS: gdb.cp/infcall-dlopen.exp: test 8 stub 2
-FAIL: gdb.cp/infcall-dlopen.exp: test 9
+PASS: gdb.cp/infcall-dlopen.exp: test 9
 PASS: gdb.cp/infcall-dlopen.exp: test 9 stub 1
 PASS: gdb.cp/infcall-dlopen.exp: test 9 stub 2
 Running ./gdb.cp/inherit.exp ...
@@ -11558,7 +11531,7 @@ PASS: gdb.cp/method2.exp: setting language c
 PASS: gdb.cp/method2.exp: breaking in method (c)
 PASS: gdb.cp/method2.exp: setting language c++
 PASS: gdb.cp/method2.exp: breaking in method (c++)
-FAIL: gdb.cp/method2.exp: setting breakpoint at exit
+FAIL: gdb.cp/method2.exp: continue until exit at continue to end (the program exited)
 Running ./gdb.cp/method.exp ...
 FAIL: gdb.cp/method.exp: break A::foo
 FAIL: gdb.cp/method.exp: continue to A::foo
@@ -12767,7 +12740,7 @@ PASS: gdb.cp/ovldbreak.exp: set multiple-symbols cancel
 PASS: gdb.cp/ovldbreak.exp: break foo::foofunc
 PASS: gdb.cp/ovldbreak.exp: set multiple-symbols all
 PASS: gdb.cp/ovldbreak.exp: break foo::foofunc
-FAIL: gdb.cp/ovldbreak.exp: setting breakpoint at exit
+FAIL: gdb.cp/ovldbreak.exp: continue until exit at finish program (the program exited)
 Running ./gdb.cp/ovsrch.exp ...
 PASS: gdb.cp/ovsrch.exp: break A::stop_here
 PASS: gdb.cp/ovsrch.exp: break 'A::stop_here'
@@ -12964,7 +12937,7 @@ PASS: gdb.cp/re-set-overloaded.exp: set breakpoint pending yes
 PASS: gdb.cp/re-set-overloaded.exp: break C::C
 PASS: gdb.cp/re-set-overloaded.exp: set variable $brk = $bpnum
 PASS: gdb.cp/re-set-overloaded.exp: start
-KFAIL: gdb.cp/re-set-overloaded.exp: breakpoint resolved (PRMS: breakpoints/11657)
+PASS: gdb.cp/re-set-overloaded.exp: breakpoint resolved
 Running ./gdb.cp/rtti.exp ...
 PASS: gdb.cp/rtti.exp: continue to breakpoint: end of constructors in main
 PASS: gdb.cp/rtti.exp: print *e1
@@ -13385,7 +13358,7 @@ PASS: gdb.dwarf2/dw2-ranges.exp: info line func2
 KFAIL: gdb.dwarf2/dw2-ranges.exp: info line main3 (PRMS: symtab/12497)
 Running ./gdb.dwarf2/dw2-ref-missing-frame.exp ...
 PASS: gdb.dwarf2/dw2-ref-missing-frame.exp: func_nofb print
-PASS: gdb.dwarf2/dw2-ref-missing-frame.exp: func_nofb backtrace
+FAIL: gdb.dwarf2/dw2-ref-missing-frame.exp: func_nofb backtrace
 PASS: gdb.dwarf2/dw2-ref-missing-frame.exp: func_loopfb print
 PASS: gdb.dwarf2/dw2-ref-missing-frame.exp: func_loopfb backtrace
 Running ./gdb.dwarf2/dw2-restore.exp ...
@@ -14906,7 +14879,7 @@ PASS: gdb.mi/mi-break.exp: breakpoint commands: set commands
 FAIL: gdb.mi/mi-break.exp: breakpoint commands: check that commands are set
 PASS: gdb.mi/mi-break.exp: breakpoint commands: clear commands
 FAIL: gdb.mi/mi-break.exp: breakpoint commands: check that commands are cleared
-ERROR: couldn't load /var/tmp/portage/cross-i686-pc-linux-gnu/gdb-7.5.1-r1/work/gdb-7.5.1/gdb/testsuite/gdb.mi/mi-break into /var/tmp/portage/cross-i686-pc-linux-gnu/gdb-7.5.1-r1/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb (timed out).
+ERROR: couldn't load /var/tmp/portage/cross-i686-pc-linux-gnu/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/gdb.mi/mi-break into /var/tmp/portage/cross-i686-pc-linux-gnu/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb (timed out).
 UNRESOLVED: gdb.mi/mi-break.exp: breakpoint at main
 PASS: gdb.mi/mi-break.exp: mi runto main
 FAIL: gdb.mi/mi-break.exp: breakpoint commands: insert breakpoint at basics.c:callee2, again
@@ -15108,7 +15081,7 @@ PASS: gdb.mi/mi-ns-stale-regcache.exp: main thread still running
 Running ./gdb.mi/mi-nsthrexec.exp ...
 Running ./gdb.mi/mi-pending.exp ...
 PASS: gdb.mi/mi-pending.exp: MI pending breakpoint on pendfunc1
-FAIL: gdb.mi/mi-pending.exp: Run till MI pending breakpoint on pendfunc1 (unknown output after running)
+PASS: gdb.mi/mi-pending.exp: Run till MI pending breakpoint on pendfunc1
 Running ./gdb.mi/mi-pthreads.exp ...
 PASS: gdb.mi/mi-pthreads.exp: successfully compiled posix threads test case
 PASS: gdb.mi/mi-pthreads.exp: breakpoint at done_making_threads
@@ -17192,7 +17165,7 @@ PASS: gdb.python/py-prettyprint.exp: print c
 PASS: gdb.python/py-prettyprint.exp: print nstype
 PASS: gdb.python/py-prettyprint.exp: set print pretty off
 PASS: gdb.python/py-prettyprint.exp: print nstype on one line
-FAIL: gdb.python/py-prettyprint.exp: setting breakpoint at exit
+FAIL: gdb.python/py-prettyprint.exp: continue until exit (the program exited)
 PASS: gdb.python/py-prettyprint.exp: set print pretty on
 PASS: gdb.python/py-prettyprint.exp: b 335
 PASS: gdb.python/py-prettyprint.exp: continue
@@ -17227,7 +17200,7 @@ PASS: gdb.python/py-prettyprint.exp: print c
 PASS: gdb.python/py-prettyprint.exp: print nstype
 PASS: gdb.python/py-prettyprint.exp: set print pretty off
 PASS: gdb.python/py-prettyprint.exp: print nstype on one line
-FAIL: gdb.python/py-prettyprint.exp: setting breakpoint at exit
+FAIL: gdb.python/py-prettyprint.exp: continue until exit (the program exited)
 PASS: gdb.python/py-prettyprint.exp: python execfile ('py-prettyprint.py')
 PASS: gdb.python/py-prettyprint.exp: continue to breakpoint: eval-break
 PASS: gdb.python/py-prettyprint.exp: info locals
@@ -17254,7 +17227,7 @@ PASS: gdb.python/py-section-script.exp: print ss
 Running ./gdb.python/py-shared.exp ...
 PASS: gdb.python/py-shared.exp: func1 address
 PASS: gdb.python/py-shared.exp: Aquire func1 address
-FAIL: gdb.python/py-shared.exp: test func1 solib location
+PASS: gdb.python/py-shared.exp: test func1 solib location
 PASS: gdb.python/py-shared.exp: main address
 PASS: gdb.python/py-shared.exp: Aquire main address
 PASS: gdb.python/py-shared.exp: test main solib location
@@ -17821,8 +17794,8 @@ Running ./gdb.reverse/i387-env-reverse.exp ...
 PASS: gdb.reverse/i387-env-reverse.exp: Turn on process record
 FAIL: gdb.reverse/i387-env-reverse.exp: record to end of main (timeout)
 FAIL: gdb.reverse/i387-env-reverse.exp: set reverse direction
-FAIL: gdb.reverse/i387-env-reverse.exp: rewind to beginning of main
-FAIL: gdb.reverse/i387-env-reverse.exp: set forward direction
+PASS: gdb.reverse/i387-env-reverse.exp: rewind to beginning of main
+PASS: gdb.reverse/i387-env-reverse.exp: set forward direction
 PASS: gdb.reverse/i387-env-reverse.exp: begin testing fpu env
 PASS: gdb.reverse/i387-env-reverse.exp: save FPU env in memory
 PASS: gdb.reverse/i387-env-reverse.exp: restore FPU env
@@ -18309,7 +18282,7 @@ PASS: gdb.threads/interrupted-hand-call.exp: hand-call interrupted by signal in 
 PASS: gdb.threads/interrupted-hand-call.exp: dummy stack frame present
 PASS: gdb.threads/interrupted-hand-call.exp: finish hand-call
 PASS: gdb.threads/interrupted-hand-call.exp: dummy frame popped
-FAIL: gdb.threads/interrupted-hand-call.exp: setting breakpoint at exit
+FAIL: gdb.threads/interrupted-hand-call.exp: continue until exit (the program exited)
 Running ./gdb.threads/killed.exp ...
 PASS: gdb.threads/killed.exp: successfully compiled posix threads test case
 PASS: gdb.threads/killed.exp: run program to completion
@@ -18451,7 +18424,6 @@ PASS: gdb.threads/print-threads.exp: program exited normally
 PASS: gdb.threads/print-threads.exp: all threads ran once (slow)
 PASS: gdb.threads/print-threads.exp: break thread_function (3)
 PASS: gdb.threads/print-threads.exp: set var slow = 1 (2)
-FAIL: gdb.threads/print-threads.exp: setting breakpoint at kill
 PASS: gdb.threads/print-threads.exp: Hit thread_function breakpoint, 1 (slow with kill breakpoint)
 PASS: gdb.threads/print-threads.exp: Hit thread_function breakpoint, 2 (slow with kill breakpoint)
 PASS: gdb.threads/print-threads.exp: Hit thread_function breakpoint, 3 (slow with kill breakpoint)
@@ -18463,7 +18435,7 @@ Running ./gdb.threads/pthread_cond_wait.exp ...
 PASS: gdb.threads/pthread_cond_wait.exp: successfully compiled posix threads test case
 PASS: gdb.threads/pthread_cond_wait.exp: breakpoint on break_me
 PASS: gdb.threads/pthread_cond_wait.exp: run to break_me
-FAIL: gdb.threads/pthread_cond_wait.exp: backtrace in blocked thread
+PASS: gdb.threads/pthread_cond_wait.exp: backtrace in blocked thread
 Running ./gdb.threads/pthreads.exp ...
 PASS: gdb.threads/pthreads.exp: successfully compiled posix threads test case
 PASS: gdb.threads/pthreads.exp: set print sevenbit-strings
@@ -18497,9 +18469,9 @@ PASS: gdb.threads/pthreads.exp: tbreak common_routine if hits >= 15
 PASS: gdb.threads/pthreads.exp: stopped before calling common_routine 15 times
 PASS: gdb.threads/pthreads.exp: All threads running after continuing from ^C stop
 PASS: gdb.threads/pthreads.exp: check backtrace from main thread
-PASS: gdb.threads/pthreads.exp: check backtrace from thread 1
-PASS: gdb.threads/pthreads.exp: check backtrace from thread 2
-PASS: gdb.threads/pthreads.exp: apply backtrace command to all three threads
+FAIL: gdb.threads/pthreads.exp: check backtrace from thread 1
+FAIL: gdb.threads/pthreads.exp: check backtrace from thread 2
+FAIL: gdb.threads/pthreads.exp: apply backtrace command to all three threads
 PASS: gdb.threads/pthreads.exp: set break at common_routine in thread 2
 PASS: gdb.threads/pthreads.exp: continue to bkpt at common_routine in thread 2
 PASS: gdb.threads/pthreads.exp: backtrace from thread 2 bkpt in common_routine
@@ -18562,37 +18534,7 @@ PASS: gdb.threads/siginfo-threads.exp: successfully compiled posix threads test 
 PASS: gdb.threads/siginfo-threads.exp: handle SIGUSR1 stop print pass
 PASS: gdb.threads/siginfo-threads.exp: handle SIGUSR2 stop print pass
 FAIL: gdb.threads/siginfo-threads.exp: get pid
-PASS: gdb.threads/siginfo-threads.exp: catch signal 0
-PASS: gdb.threads/siginfo-threads.exp: signal 0 si_signo
-PASS: gdb.threads/siginfo-threads.exp: signal 0 si_code is SI_TKILL
-ERROR: tcl error sourcing ./gdb.threads/siginfo-threads.exp.
-ERROR: can't read "pid": no such variable
-    while executing
-"list -re " = $pid\r\n$gdb_prompt $" { 	    pass $test 	} 	-re "Attempt to extract a component of a value that is not a structure\\.\r\n$gdb_prompt $" ..."
-    ("uplevel" body line 1)
-    invoked from within
-"uplevel list $subst_code"
-    (procedure "gdb_test_multiple" line 49)
-    invoked from within
-"gdb_test_multiple {p $_siginfo._sifields._kill.si_pid} $test {
-	-re " = $pid\r\n$gdb_prompt $" {
-	    pass $test
-	}
-	-re "Attempt to extract a compone..."
-    ("for" body line 40)
-    invoked from within
-"for {set sigcount 0} {$sigcount < 4} {incr sigcount} {
-    set test "catch signal $sigcount"
-    set sigusr ""
-    gdb_test_multiple "continue" $test ..."
-    (file "./gdb.threads/siginfo-threads.exp" line 50)
-    invoked from within
-"source ./gdb.threads/siginfo-threads.exp"
-    ("uplevel" body line 1)
-    invoked from within
-"uplevel #0 source ./gdb.threads/siginfo-threads.exp"
-    invoked from within
-"catch "uplevel #0 source $test_file_name""
+FAIL: gdb.threads/siginfo-threads.exp: catch signal 0
 Running ./gdb.threads/sigstep-threads.exp ...
 PASS: gdb.threads/sigstep-threads.exp: successfully compiled posix threads test case
 PASS: gdb.threads/sigstep-threads.exp: handle SIGUSR1 nostop print pass
@@ -18698,7 +18640,7 @@ PASS: gdb.threads/thread-unwindonsignal.exp: dummy stack frame present
 PASS: gdb.threads/thread-unwindonsignal.exp: wrong thread not unwound
 PASS: gdb.threads/thread-unwindonsignal.exp: finish hand-call
 PASS: gdb.threads/thread-unwindonsignal.exp: dummy frame popped
-FAIL: gdb.threads/thread-unwindonsignal.exp: setting breakpoint at exit
+FAIL: gdb.threads/thread-unwindonsignal.exp: continue until exit (the program exited)
 Running ./gdb.threads/threxit-hop-specific.exp ...
 PASS: gdb.threads/threxit-hop-specific.exp: successfully compiled posix threads test case
 PASS: gdb.threads/threxit-hop-specific.exp: continue to thread start
@@ -18765,10 +18707,10 @@ PASS: gdb.threads/tls.exp: threads exited
 PASS: gdb.threads/tls.exp: Expect only base thread at end
 PASS: gdb.threads/tls.exp: info address a_global
 PASS: gdb.threads/tls.exp: info address me
-FAIL: gdb.threads/tls.exp: p a_thread_local
+PASS: gdb.threads/tls.exp: p a_thread_local
 FAIL: gdb.threads/tls.exp: p file2_thread_local
 PASS: gdb.threads/tls.exp: info address file2_thread_local
-FAIL: gdb.threads/tls.exp: p a_thread_local second time
+PASS: gdb.threads/tls.exp: p a_thread_local second time
 PASS: gdb.threads/tls.exp: info address a_thread_local
 Running ./gdb.threads/tls-nodebug.exp ...
 PASS: gdb.threads/tls-nodebug.exp: successfully compiled posix threads test case
@@ -18972,13 +18914,13 @@ PASS: gdb.xml/tdesc-xinclude.exp: set tdesc filename gdb.xml/loop.xml
 
 		=== gdb Summary ===
 
-# of expected passes		17149
-# of unexpected failures	607
+# of expected passes		17259
+# of unexpected failures	457
 # of unexpected successes	2
 # of expected failures		42
-# of known failures		68
+# of known failures		67
 # of untested testcases		47
-# of unresolved testcases	7
+# of unresolved testcases	13
 # of unsupported tests		100
-/var/tmp/portage/cross-i686-pc-linux-gnu/gdb-7.5.1-r1/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb version  7.5.1 -nw -nx -data-directory /var/tmp/portage/cross-i686-pc-linux-gnu/gdb-7.5.1-r1/work/gdb-7.5.1/gdb/testsuite/../data-directory 
+/var/tmp/portage/cross-i686-pc-linux-gnu/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/../../gdb/gdb version  7.5.1 -nw -nx -data-directory /var/tmp/portage/cross-i686-pc-linux-gnu/gdb-7.5.1-r5/work/gdb-7.5.1/gdb/testsuite/../data-directory 
 
