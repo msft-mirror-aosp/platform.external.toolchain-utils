@@ -4,6 +4,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+"""Module to deal with result cache."""
+
 import getpass
 import glob
 import hashlib
@@ -276,6 +278,7 @@ class Result(object):
       return None
     return result
 
+
 class TelemetryResult(Result):
 
   def __init__(self, logger, label):
@@ -312,7 +315,7 @@ class TelemetryResult(Result):
     labels = lines[0].split(",")
     for line in lines[1:]:
       fields = line.split(",")
-      if (len(fields) != len(labels)):
+      if len(fields) != len(labels):
         continue
       for i in range(1, len(labels)):
         key = "%s %s" % (fields[0], labels[i])
@@ -354,6 +357,7 @@ class CacheConditions(object):
 
 
 class ResultsCache(object):
+
   """ This class manages the key of the cached runs without worrying about what
   is exactly stored (value). The value generation is handled by the Results
   class.
@@ -442,6 +446,9 @@ class ResultsCache(object):
 
   def ReadResult(self):
     if CacheConditions.FALSE in self.cache_conditions:
+      cache_dir = self._GetCacheDirForWrite()
+      command = "rm -rf {0}".format(cache_dir)
+      self._ce.RunCommand(command)
       return None
     cache_dir = self._GetCacheDirForRead()
 
