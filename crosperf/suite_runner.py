@@ -37,6 +37,7 @@ class SuiteRunner(object):
     self._ct = command_executer.CommandTerminator()
 
   def Run(self, machine, label, benchmark, test_args):
+    self.PinGovernorExecutionFrequencies(machine, label.chromeos_root)
     if benchmark.suite == "telemetry":
       return self.Telemetry_Run(machine, label, benchmark)
     elif benchmark.suite == "telemetry_Crosperf":
@@ -46,12 +47,51 @@ class SuiteRunner(object):
     else:
       return self.Pyauto_Run(machine, label, benchmark, test_args)
 
+  def GetHighestStaticFrequency(self, machine_name, chromeos_root):
+    """ Gets the highest static frequency for the specified machine
+    """
+    get_avail_freqs = ("cat /sys/devices/system/cpu/cpu0/cpufreq/"
+                       "scaling_available_frequencies")
+    ret, freqs_str, _ = self._ce.CrosRunCommand(
+        get_avail_freqs, return_output=True, machine=machine_name,
+        chromeos_root=chromeos_root)
+    self._logger.LogFatalIf(ret, "Could not get available frequencies "
+                            "from machine: %s" % machine_name)
+    freqs = freqs_str.split()
+    # The dynamic frequency ends with a "1000". So, ignore it if found.
+    if freqs[0].endswith("1000"):
+      return freqs[1]
+    else:
+      return freqs[0]
+
+  def PinGovernorExecutionFrequencies(self, machine_name, chromeos_root):
+    """ Set min and max frequencies to max static frequency
+    """
+    highest_freq = self.GetHighestStaticFrequency(machine_name, chromeos_root)
+    BASH_FOR = "for f in {list}; do {body}; done"
+    CPUFREQ_DIRS = "/sys/devices/system/cpu/cpu*/cpufreq/"
+    change_max_freq = BASH_FOR.format(list=CPUFREQ_DIRS + "scaling_max_freq",
+                                      body="echo %s > $f" % highest_freq)
+    change_min_freq = BASH_FOR.format(list=CPUFREQ_DIRS + "scaling_min_freq",
+                                      body="echo %s > $f" % highest_freq)
+    change_perf_gov = BASH_FOR.format(list=CPUFREQ_DIRS + "scaling_governor",
+                                      body="echo performance > $f")
+    ret = self._ce.CrosRunCommand(" && ".join(("set -e ",
+                                               change_max_freq,
+                                               change_min_freq,
+                                               change_perf_gov)),
+                                  machine=machine_name,
+                                  chromeos_root=chromeos_root)
+    self._logger.LogFatalIf(ret, "Could not pin frequencies on machine: %s"
+                            % machine_name)
+
   def RebootMachine(self, machine_name, chromeos_root):
     command = "reboot && exit"
     self._ce.CrosRunCommand(command, machine=machine_name,
                       chromeos_root=chromeos_root)
     time.sleep(60)
-
+    # Whenever we reboot the machine, we need to restore the governor settings.
+    self.PinGovernorExecutionFrequencies(machine_name, chromeos_root)
 
   def Pyauto_Run(self, machine, label, benchmark, test_args):
     """Run the run_remote_test."""
@@ -64,6 +104,8 @@ class SuiteRunner(object):
     self._ce.CrosRunCommand(command, machine=machine, username="root",
                             chromeos_root=label.chromeos_root)
 
+    # We do this because PyAuto tests leave the machine in weird states.
+    # Rebooting between iterations has proven to help with this.
     self.RebootMachine(machine, label.chromeos_root)
 
     command = ("./run_remote_tests.sh --use_emerged --remote=%s %s %s" %
@@ -84,6 +126,8 @@ class SuiteRunner(object):
     self._ce.CrosRunCommand(command, machine=machine, username="root",
                             chromeos_root=label.chromeos_root)
 
+    # We do this because PyAuto tests leave the machine in weird states.
+    # Rebooting between iterations has proven to help with this.
     self.RebootMachine(machine, label.chromeos_root)
 
     command = ("%s %s %s %s" %
