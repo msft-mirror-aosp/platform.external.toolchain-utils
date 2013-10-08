@@ -234,7 +234,7 @@ class Result(object):
     if not values:
       return float("nan")
     if any([v < 0 for v in values]):
-      return float ("nan")
+      return float("nan")
     if any([v == 0 for v in values]):
       return 0.0
     log_list = [math.log(v) for v in values]
@@ -409,9 +409,36 @@ class PValueResult(ComparisonResult):
 
 class KeyAwareComparisonResult(ComparisonResult):
   def _IsLowerBetter(self, key):
+    # TODO(llozano): Trying to guess direction by looking at the name of the
+    # test does not seem like a good idea. Test frameworks should provide this
+    # info explicitly. I believe Telemetry has this info. Need to find it out.
+    #
+    # Below are some test names for which we are not sure what the
+    # direction is.
+    #
+    # For these we dont know what the direction is. But, since we dont
+    # specify anything, crosperf will assume higher is better:
+    # --percent_impl_scrolled--percent_impl_scrolled--percent
+    # --solid_color_tiles_analyzed--solid_color_tiles_analyzed--count
+    # --total_image_cache_hit_count--total_image_cache_hit_count--count
+    # --total_texture_upload_time_by_url
+    #
+    # About these we are doubtful but we made a guess:
+    # --average_num_missing_tiles_by_url--*--units (low is good)
+    # --experimental_mean_frame_time_by_url--*--units (low is good)
+    # --experimental_median_frame_time_by_url--*--units (low is good)
+    # --texture_upload_count--texture_upload_count--count (high is good)
+    # --total_deferred_image_decode_count--count (low is good)
+    # --total_tiles_analyzed--total_tiles_analyzed--count (high is good)
     lower_is_better_keys = ["milliseconds", "ms_", "seconds_", "KB",
                             "rdbytes", "wrbytes", "dropped_percent",
-                            "(ms)", "(seconds)"]
+                            "(ms)", "(seconds)",
+                            "--ms", "--average_num_missing_tiles",
+                            "--experimental_jank", "--experimental_mean_frame",
+                            "--experimental_median_frame_time",
+                            "--total_deferred_image_decode_count",
+                            "--seconds"]
+
     return any([l in key for l in lower_is_better_keys])
 
   def _InvertIfLowerIsBetter(self, cell):
