@@ -34,7 +34,7 @@ telemetry_perfv2_tests = [ 'dromaeo.domcoreattr',
                            'sunspider',
                            ]
 
-telemetry_pagecycler_tests = [ 'page_cycler.basic_insert',
+telemetry_pagecycler_tests = [ 'page_cycler.indexed_db.basic_insert',
                                'page_cycler.bloat',
                                'page_cycler.dhtml',
                                'page_cycler.intl_ar_fa_he',
