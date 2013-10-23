@@ -20,7 +20,7 @@ def GetProfilerArgs (benchmark):
     if not perf_args_list[0] in ["record", "stat"]:
       raise Exception("perf_args must start with either record or stat")
     extra_test_args = ["profiler=custom_perf",
-                       ("profiler_args=\"'%s'\"" %
+                       ("profiler_args='%s'" %
                         perf_args)]
     return " ".join(extra_test_args)
   else:
