@@ -217,20 +217,12 @@ Use in combination with --version=latest or --version=common. Use
   if ret:
     return ret
 
-  # Setup svn credentials for use inside the chroot
-  if getpass.getuser() == "mobiletc-prebuild":
-    chromium_username = "raymes"
-  else:
-    chromium_username = "$USER"
-
   return cmd_executer.RunCommand(
-      "svn ls --config-option config:auth:password-stores= "
-      "--config-option "
-      "servers:global:store-plaintext-passwords=yes "
-      "--username " + chromium_username + "@google.com "
+      "svn ls "
       "svn://svn.chromium.org/leapfrog-internal "
       "svn://svn.chromium.org/chrome "
-      "svn://svn.chromium.org/chrome-internal > /dev/null")
+      "svn://svn.chromium.org/chrome-internal "
+      "svn://svn.chromium.org/blink > /dev/null")
 
 
 if __name__ == "__main__":

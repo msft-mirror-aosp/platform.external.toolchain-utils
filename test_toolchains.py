@@ -77,9 +77,6 @@ class ChromeOSCheckout(object):
   def _CheckoutChromeOS(self):
     # TODO(asharif): Setup a fixed ChromeOS version (quarterly snapshot).
     if not os.path.exists(self._chromeos_root):
-      #setup_chromeos_args = [setup_chromeos.__file__,
-      #                       "--dir=%s" % self._chromeos_root,
-      #                       "--minilayout"]
       setup_chromeos_args = [setup_chromeos.__file__,
                              "--dir=%s" % self._chromeos_root]
       if self._public:
@@ -119,7 +116,8 @@ class ToolchainComparator(ChromeOSCheckout):
     remote: %s
     """ % (self._board, self._remotes)
     experiment_tests = """
-    benchmark: desktopui_PyAutoPerfTests {
+    benchmark: all_perfv2 {
+      suite: telemetry_Crosperf
       iterations: 1
     }
     """
