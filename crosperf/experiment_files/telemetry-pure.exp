@@ -1,0 +1,28 @@
+# This is an example experiment file for Crosperf, showing how to run
+# a "pure" Telemetry test, i.e. bypassing run_remote_tests, test_that
+# and autotest.  This runs the "run_measurement" script directly.  You
+# need to supply both the name of the Telemetry test and the page_set
+# (via the test_args argument).
+
+name: pure_telemetry_example
+# Replace board and remote values below appropriately. e.g. "lumpy" and
+# "123.45.678.901"  or "my-machine.blah.com".
+board: <your-board-goes-here>
+remote: <your-remote-ip-address-here>
+
+# Replace "page_cycler_dhtml" below with the name of the Telemetry test
+# that you wnat run_measurement to run.  Also replace the page set below
+# (in the test_args field) with the appropriate page set for your test.
+benchmark: page_cycler_dhtml {
+    suite: telemetry
+    iterations: 1
+    test_args: ./page_sets/page_cycler/dhtml.json
+}
+
+# Replace <path-to-your-chroot-goes-here> and <board-goes-here> below.
+# You can optionally add "chrome_src:" followed by the path to a Chrome
+# source tree outside your chroot that you wish to use for running
+# Telemetry.
+vanilla_image {
+  chromeos_image:<path-to-your-chroot-goes-here>/src/build/images/<board-goes-here>/latest/chromiumos_test_image.bin
+}

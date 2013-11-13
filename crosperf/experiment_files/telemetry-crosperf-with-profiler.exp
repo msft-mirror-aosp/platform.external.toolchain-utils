@@ -1,0 +1,36 @@
+# This is an example experiment file for Crosperf, showing how to run
+# a Telemetry test, using test_that and autotest.  This is similar to
+# the basic_telemetry_crosperf_example (in telemetry-crosperf.exp),
+# except that it shows how to invoke the profiler (via the perf_args
+# above the benchmark).
+
+name: telemetry_crosperf_profiler_example
+# Replace board and remote values below appropriately. e.g. "lumpy" and
+# "123.45.678.901"  or "my-machine.blah.com".
+board: <your-board-goes-here>
+remote: <your-remote-ip-address-here>
+
+# Below is the line that causes the profiler to run.  Currently the
+# only profiler option is running 'perf' on the DUT.  If you want you
+# can replace 'record' with 'stat', to get 'perf' on the DUT to do
+# something different.  You would also need to change the other args
+# accordingly.  Crosperf automatically inserts a '-a' if you use
+# 'record' for you perf_args.  The results of the perf run (perf.data
+# file) will be put in the normal test_that/autotest output directory.
+perf_args: record -e cycles,instructions
+
+# Replace "page_cycler.dhtml" with whatever benchmark you want to
+# profile.
+benchmark: page_cycler.dhtml {
+    suite: telemetry_Crosperf
+    iterations: 1
+}
+
+# Replace <path-to-your-chroot-goes-here> and <board-goes-here> below.
+# You can optionally add "chrome_src:" followed by the path to a Chrome
+# source tree outside your chroot that you wish to use for running
+# Telemetry.
+vanilla_image {
+  chromeos_image:<path-to-your-chroot-goes-here>/src/build/images/<board-goes-here>/latest/chromiumos_test_image.bin
+}
+

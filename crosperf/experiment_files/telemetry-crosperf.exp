@@ -1,0 +1,26 @@
+# This is an example experiment file for Crosperf, showing how to run
+# a Telemetry test, using test_that and autotest.  This runs the 
+# "run_benchmark" script directly (via the telemetry_Crosperf autotest). 
+# You do not need to supply both the page_set, as that is automatically
+# supplied by run_benchmark.
+
+name: basic_telemetry_crosperf_example
+# Replace board and remote values below appropriately. e.g. "lumpy" and
+# "123.45.678.901"  or "my-machine.blah.com".
+board: <your-board-goes-here>
+remote: <your-remote-ip-address-here>
+
+# Replace "octane" below with the name of the Telemetry benchmark you 
+# want to run.
+benchmark: octane {
+    suite: telemetry_Crosperf
+    iterations: 1
+}
+
+# Replace <path-to-your-chroot-goes-here> and <board-goes-here> below.
+# You can optionally add "chrome_src:" followed by the path to a Chrome
+# source tree outside your chroot that you wish to use for running
+# Telemetry.
+vanilla_image {
+  chromeos_image:<path-to-your-chroot-goes-here>/src/build/images/<board-goes-here>/latest/chromiumos_test_image.bin
+}

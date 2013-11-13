@@ -1,0 +1,40 @@
+# This is an example experiment file for Crosperf, showing how to run
+# a basic test, using test_that and autotest.  You can explicitly invoke
+# test_that (or not) for a particular benchmark, using the use_test_that
+# field, as shown below.  Alternatively, you can pass --use_test_that=True
+# or --use_test_that=False to the command line args you pass to crosperf.
+
+name: test_that_example
+# Replace board and remote values below appropriately. e.g. "lumpy" and
+# "123.45.678.901"  or "my-machine.blah.com".
+board: <your-board-goes-here>
+remote: <your-remote-ip-address-here>
+
+# Replace "BootPerfServer" below with the name of the Telemetry benchmark you
+# want to run.
+benchmark: BootPerfServer {
+  test_name: BootPerfServer
+  iterations: 1
+  use_test_that: True
+}
+
+# Replace "bvt" below with the name of the test you  want to run.
+benchmark: bvt {
+  test_name: suite:bvt
+  use_test_that: True
+}
+
+# Replace "login_LoginSuccess" below with the name of the test you
+# want to run.
+benchmark: login_LoginSuccess {
+  test_name: login_LoginSuccess
+  use_test_that: True
+}
+
+# Replace <path-to-your-chroot-goes-here> and <board-goes-here> below.
+# You can optionally add "chrome_src:" followed by the path to a Chrome
+# source tree outside your chroot that you wish to use for running
+# Telemetry.
+vanilla_image {
+  chromeos_image:<path-to-your-chroot-goes-here>/src/build/images/<board-goes-here>/latest/chromiumos_test_image.bin
+}
