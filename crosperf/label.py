@@ -41,10 +41,10 @@ class Label(object):
     self.chromeos_root = chromeos_root
     if not chrome_src:
       self.chrome_src = os.path.join(self.chromeos_root,
-          "chroot/var/cache/chromeos-chrome/chrome-src-internal/src")
+          ".cache/distfiles/target/chrome-src-internal/src")
       if not os.path.exists(self.chrome_src):
         self.chrome_src = os.path.join(self.chromeos_root,
-          "chroot/var/cache/chromeos-chrome/chrome-src/src")
+          ".cache/distfiles/target/chrome-src/src")
     else:
       chromeos_src = misc.CanonicalizePath(chrome_src)
       if not chromeos_src:

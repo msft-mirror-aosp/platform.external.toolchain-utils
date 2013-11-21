@@ -13,6 +13,7 @@ import os
 import pickle
 import re
 import tempfile
+import json
 
 from utils import command_executer
 from utils import misc
@@ -62,6 +63,23 @@ class Result(object):
     self._CopyFilesTo(dest_dir, self.perf_data_files)
     self._CopyFilesTo(dest_dir, self.perf_report_files)
 
+  def _GetNewKeyvals(self, keyvals_dict):
+    results_files = self._GetDataMeasurementsFiles()
+    for f in results_files:
+      data_filename = os.path.join(self._chromeos_root, "/tmp",
+                                  self._temp_dir, f)
+      if os.path.exists(data_filename):
+        with open(data_filename, "r") as data_file:
+          lines = data_file.readlines()
+          for line in lines:
+            tmp_dict = json.loads(line)
+            key = tmp_dict['description']
+            val = tmp_dict['value']
+            keyvals_dict[key] = val
+
+    return keyvals_dict
+
+
   def _GetKeyvals(self):
     results_in_chroot = os.path.join(self._chromeos_root,
                                      "chroot", "tmp")
@@ -86,7 +104,9 @@ class Result(object):
       value = tokens[-1]
       keyvals_dict[key] = value
 
-    return keyvals_dict
+    # Check to see if there is a perf_measurements file and get the
+    # data from it if so.
+    return self._GetNewKeyvals(keyvals_dict)
 
   def _GetResultsDir(self):
     mo = re.search(r"Results placed in (\S+)", self.out)
@@ -111,6 +131,9 @@ class Result(object):
 
   def _GetPerfReportFiles(self):
     return self._FindFilesInResultsDir("-name perf.data.report").splitlines()
+
+  def _GetDataMeasurementsFiles(self):
+    return self._FindFilesInResultsDir("-name perf_measurements").splitlines()
 
   def _GeneratePerfReportFiles(self):
     perf_report_files = []
@@ -493,4 +516,3 @@ class MockResult(Result):
     self.out = out
     self.err = err
     self.retval = retval
-

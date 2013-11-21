@@ -141,7 +141,7 @@ class SuiteRunner(object):
   def Telemetry_Crosperf_Run (self, machine, label, benchmark):
     if not os.path.isdir(label.chrome_src):
       self._logger.LogFatal("Cannot find chrome src dir to"
-                            " run telemetry.")
+                            " run telemetry: %s" % label.chrome_src)
 
     profiler_args = GetProfilerArgs (benchmark)
     chrome_root_options = ""
