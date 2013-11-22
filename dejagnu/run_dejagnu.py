@@ -99,7 +99,7 @@ class DejagnuExecuter(object):
     self._chromeos_chroot = path.join(chromeos_root, 'chroot')
     if mount:
       self._gcc_source_dir_to_mount = mount
-      self._gcc_source_dir = path.join(constants.mounted_toolchain_root, 'gcc')
+      self._gcc_source_dir = path.join(constants.MOUNTED_TOOLCHAIN_ROOT, 'gcc')
     else:
       self._gcc_source_dir = None
 

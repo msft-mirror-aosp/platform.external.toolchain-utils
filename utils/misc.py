@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
+# Copyright 2013 Google Inc. All Rights Reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -154,9 +154,9 @@ def GetBuildPackagesCommand(board, usepkg=False, debug=False):
   else:
     usepkg_flag = "--nousepkg"
   if debug:
-    withdebug_flag = '--withdebug'
+    withdebug_flag = "--withdebug"
   else:
-    withdebug_flag = '--nowithdebug'
+    withdebug_flag = "--nowithdebug"
   return ("./build_packages %s --withdev --withtest --withautotest "
           "--skip_toolchain_update %s --board=%s "
           "--accept_licenses=@CHROMEOS" %
@@ -168,6 +168,7 @@ def GetBuildImageCommand(board, dev=False):
   if dev:
     dev_args = "--noenable_rootfs_verification --disk_layout=2gb-rootfs"
   return "./build_image --board=%s %s test" % (board, dev_args)
+
 
 def GetSetupBoardCommand(board, gcc_version=None, binutils_version=None,
                          usepkg=None, force=None):
@@ -303,8 +304,9 @@ def IsFloat(text):
   except ValueError:
     return False
 
+
 def RemoveChromeBrowserObjectFiles(chromeos_root, board):
-  """ Remove any object files from all the posible locations """
+  """Remove any object files from all the posible locations."""
   out_dir = os.path.join(
       GetChrootPath(chromeos_root),
       "var/cache/chromeos-chrome/chrome-src/src/out_%s" % board)
@@ -317,6 +319,7 @@ def RemoveChromeBrowserObjectFiles(chromeos_root, board):
   if os.path.exists(out_dir):
     shutil.rmtree(out_dir)
     logger.GetLogger().LogCmd("rm -rf %s" % out_dir)
+
 
 @contextmanager
 def WorkingDirectory(new_dir):
@@ -332,27 +335,38 @@ def WorkingDirectory(new_dir):
     logger.GetLogger().LogCmd(msg)
   os.chdir(old_dir)
 
+
 def HasGitStagedChanges(git_dir):
   """Return True if git repository has staged changes."""
-  command = 'cd {0} && git diff --quiet --cached --exit-code HEAD'.format(
-    git_dir)
+  command = "cd {0} && git diff --quiet --cached --exit-code HEAD".format(
+      git_dir)
   return command_executer.GetCommandExecuter().RunCommand(
-    command, print_to_console=False)
+      command, print_to_console=False)
+
 
 def HasGitUnstagedChanges(git_dir):
   """Return True if git repository has un-staged changes."""
-  command = 'cd {0} && git diff --quiet --exit-code HEAD'.format(git_dir)
+  command = "cd {0} && git diff --quiet --exit-code HEAD".format(git_dir)
   return command_executer.GetCommandExecuter().RunCommand(
-    command, print_to_console=False)
+      command, print_to_console=False)
+
 
 def HasGitUntrackedChanges(git_dir):
   """Return True if git repository has un-tracked changes."""
-  command = 'cd {0} && test -z $(git ls-files --exclude-standard --others)' \
-      .format(git_dir)
+  command = ("cd {0} && test -z "
+             "$(git ls-files --exclude-standard --others)").format(git_dir)
   return command_executer.GetCommandExecuter().RunCommand(
-    command,print_to_console=False)
+      command, print_to_console=False)
+
 
 def IsGitTreeClean(git_dir):
+  """Test if git tree has no local changes.
+
+  Args:
+    git_dir: git tree directory.
+  Returns:
+    True if git dir is clean.
+  """
   if HasGitStagedChanges(git_dir):
     logger.GetLogger().LogWarning("Git tree has staged changes.")
     return False
@@ -364,15 +378,67 @@ def IsGitTreeClean(git_dir):
     return False
   return True
 
+
 def GetGitChangesAsList(git_dir, path=None, staged=False):
-  command = 'cd {0} && git diff --name-only'.format(git_dir)
+  """Get changed files as a list.
+
+  Args:
+    git_dir: git tree directory.
+    path: a relative path that is part of the tree directory, could be null.
+    staged: whether to include staged files as well.
+  Returns:
+    A list containing all the changed files.
+  """
+  command = "cd {0} && git diff --name-only".format(git_dir)
   if staged:
-    command = command + ' --cached'
+    command += " --cached"
   if path:
-    command = command + ' -- ' + path
+    command += " -- " + path
   _, out, _ = command_executer.GetCommandExecuter().RunCommand(
-    command, return_output=True, print_to_console=False)
+      command, return_output=True, print_to_console=False)
   rv = []
   for line in out.splitlines():
     rv.append(line)
   return rv
+
+
+def IsChromeOsTree(chromeos_root):
+  return (os.path.isdir(os.path.join(
+      chromeos_root, "src/third_party/chromiumos-overlay")) and
+          os.path.isdir(os.path.join(
+              chromeos_root, "manifest")))
+
+
+def DeleteChromeOsTree(chromeos_root, dry_run=False):
+  """Delete a ChromeOs tree *safely*.
+
+  Args:
+    chromeos_root: dir of the tree, could be a relative one (but be careful)
+    dry_run: only prints out the command if True
+
+  Returns:
+    True if everything is ok.
+  """
+  if not IsChromeOsTree(chromeos_root):
+    logger.GetLogger().LogWarning(
+        '"{0}" does not seem to be a valid chromeos tree, do nothing.'.format(
+            chromeos_root))
+    return False
+  cmd0 = "cd {0} && cros_sdk --delete".format(chromeos_root)
+  if dry_run:
+    print cmd0
+  else:
+    if command_executer.GetCommandExecuter().RunCommand(
+        cmd0, return_output=False, print_to_console=True) != 0:
+      return False
+
+  cmd1 = ('export CHROMEOSDIRNAME="$(dirname $(cd {0} && pwd))" && '
+          'export CHROMEOSBASENAME="$(basename $(cd {0} && pwd))" && '
+          'cd $CHROMEOSDIRNAME && sudo rm -fr $CHROMEOSBASENAME').format(
+              chromeos_root)
+  if dry_run:
+    print cmd1
+    return True
+
+  return command_executer.GetCommandExecuter().RunCommand(
+      cmd1, return_output=False, print_to_console=True) == 0

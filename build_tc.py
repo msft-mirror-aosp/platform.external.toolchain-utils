@@ -38,7 +38,7 @@ class ToolchainPart(object):
         "etc/portage/package.mask/cross-%s" % self._ctarget)
     self._new_mask_file = None
 
-    self._chroot_source_path = os.path.join(constants.mounted_toolchain_root,
+    self._chroot_source_path = os.path.join(constants.MOUNTED_TOOLCHAIN_ROOT,
                                             self._name).lstrip("/")
     self._incremental = incremental
     self._build_env = build_env
