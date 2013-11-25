@@ -6,25 +6,37 @@
 
 import os
 import time
+import shlex
 
 from utils import command_executer
 
 TEST_THAT_PATH = '/usr/bin/test_that'
 CHROME_MOUNT_DIR = '/tmp/chrome_root'
 
-def GetProfilerArgs (benchmark):
-  if benchmark.perf_args:
-    perf_args_list = benchmark.perf_args.split(" ")
-    perf_args_list = [perf_args_list[0]] + ["-a"] + perf_args_list[1:]
-    perf_args = " ".join(perf_args_list)
-    if not perf_args_list[0] in ["record", "stat"]:
-      raise Exception("perf_args must start with either record or stat")
-    extra_test_args = ["profiler=custom_perf",
-                       ("profiler_args='%s'" %
-                        perf_args)]
-    return " ".join(extra_test_args)
-  else:
-    return ""
+def GetProfilerArgs (benchmark, profiler_args):
+  # Remove "--" from in front of profiler args.
+  args_list = shlex.split(profiler_args)
+  new_list = []
+  for arg in args_list:
+    if arg[0:2] == '--':
+      arg = arg[2:]
+    new_list.append(arg)
+  args_list = new_list
+
+  # Remove "perf_options=" from middle of profiler args.
+  new_list = []
+  for arg in args_list:
+    idx = arg.find("perf_options=")
+    if idx != -1:
+      prefix = arg[0:idx]
+      suffix = arg[idx + len("perf_options=") + 1 : -1]
+      new_arg = prefix + "'" + suffix + "'"
+      new_list.append(new_arg)
+    else:
+      new_list.append(arg)
+  args_list = new_list
+
+  return " ".join(args_list)
 
 
 class SuiteRunner(object):
@@ -36,16 +48,19 @@ class SuiteRunner(object):
     self._ce = command_executer.GetCommandExecuter(self._logger)
     self._ct = command_executer.CommandTerminator()
 
-  def Run(self, machine, label, benchmark, test_args):
+  def Run(self, machine, label, benchmark, test_args, profiler_args):
     self.PinGovernorExecutionFrequencies(machine, label.chromeos_root)
     if benchmark.suite == "telemetry":
       return self.Telemetry_Run(machine, label, benchmark)
     elif benchmark.suite == "telemetry_Crosperf":
-      return self.Telemetry_Crosperf_Run(machine, label, benchmark)
+      return self.Telemetry_Crosperf_Run(machine, label, benchmark,
+                                         test_args, profiler_args)
     elif benchmark.use_test_that:
-      return self.Test_That_Run(machine, label, benchmark, test_args)
+      return self.Test_That_Run(machine, label, benchmark, test_args,
+                                profiler_args)
     else:
-      return self.Pyauto_Run(machine, label, benchmark, test_args)
+      return self.Pyauto_Run(machine, label, benchmark, test_args,
+                             profiler_args)
 
   def GetHighestStaticFrequency(self, machine_name, chromeos_root):
     """ Gets the highest static frequency for the specified machine
@@ -93,13 +108,15 @@ class SuiteRunner(object):
     # Whenever we reboot the machine, we need to restore the governor settings.
     self.PinGovernorExecutionFrequencies(machine_name, chromeos_root)
 
-  def Pyauto_Run(self, machine, label, benchmark, test_args):
+  def Pyauto_Run(self, machine, label, benchmark, test_args, profiler_args):
     """Run the run_remote_test."""
     options = ""
     if label.board:
       options += " --board=%s" % label.board
     if test_args:
       options += " %s" % test_args
+    if profiler_args:
+      options += " %s" % profiler_args
     command = "rm -rf /usr/local/autotest/results/*"
     self._ce.CrosRunCommand(command, machine=machine, username="root",
                             chromeos_root=label.chromeos_root)
@@ -115,13 +132,15 @@ class SuiteRunner(object):
                                      True,
                                      self._ct)
 
-  def Test_That_Run(self, machine, label, benchmark, test_args):
+  def Test_That_Run(self, machine, label, benchmark, test_args, profiler_args):
     """Run the test_that test.."""
     options = ""
     if label.board:
       options += " --board=%s" % label.board
     if test_args:
       options += " %s" % test_args
+    if profiler_args:
+      self._logger.LogError("test_that does not support profiler.")
     command = "rm -rf /usr/local/autotest/results/*"
     self._ce.CrosRunCommand(command, machine=machine, username="root",
                             chromeos_root=label.chromeos_root)
@@ -138,12 +157,13 @@ class SuiteRunner(object):
                                      self._ct)
 
 
-  def Telemetry_Crosperf_Run (self, machine, label, benchmark):
+  def Telemetry_Crosperf_Run (self, machine, label, benchmark, test_args,
+                              profiler_args):
     if not os.path.isdir(label.chrome_src):
       self._logger.LogFatal("Cannot find chrome src dir to"
                             " run telemetry: %s" % label.chrome_src)
 
-    profiler_args = GetProfilerArgs (benchmark)
+    profiler_args = GetProfilerArgs (benchmark, profiler_args)
     chrome_root_options = ""
 
     # If chrome_src is outside the chroot, mount it when entering the
@@ -155,10 +175,17 @@ class SuiteRunner(object):
                                                       CHROME_MOUNT_DIR,
                                                       CHROME_MOUNT_DIR))
 
-    cmd = ('{0} --board={1} --args="iterations={2} test={3} '
+    args_string = ""
+    if test_args:
+      # Strip double quotes off args (so we can wrap them in single
+      # quotes, to pass through to Telemetry).
+      if test_args[0] == '"' and test_args[-1] == '"':
+        test_args = test_args[1:-1]
+      args_string = "test_args='%s'" % test_args
+    cmd = ('{0} --board={1} --args="{2} test={3} '
            '{4}" {5} telemetry_Crosperf'.format(TEST_THAT_PATH,
                                                 label.board,
-                                                benchmark.iterations,
+                                                args_string,
                                                 benchmark.test_name,
                                                 profiler_args,
                                                 machine))

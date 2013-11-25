@@ -388,13 +388,14 @@ class ResultsCache(object):
   CACHE_VERSION = 6
 
   def Init(self, chromeos_image, chromeos_root, test_name, iteration,
-           test_args, machine_manager, board, cache_conditions,
+           test_args, profiler_args, machine_manager, board, cache_conditions,
            logger_to_use, label, share_users, suite):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.test_name = test_name
     self.iteration = iteration
-    self.test_args = test_args,
+    self.test_args = test_args
+    self.profiler_args = profiler_args
     self.board = board
     self.cache_conditions = cache_conditions
     self.machine_manager = machine_manager
@@ -457,8 +458,9 @@ class ResultsCache(object):
           machine_id_checksum = machine.machine_id_checksum
           break
 
+    temp_test_args = "%s %s" % (self.test_args, self.profiler_args)
     test_args_checksum = hashlib.md5(
-        "".join(self.test_args)).hexdigest()
+        "".join(temp_test_args)).hexdigest()
     return (image_path_checksum,
             self.test_name, str(self.iteration),
             test_args_checksum,

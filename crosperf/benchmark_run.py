@@ -53,8 +53,8 @@ class BenchmarkRun(threading.Thread):
     self.runs_complete = 0
     self.cache_hit = False
     self.failure_reason = ""
-    self.test_args = "%s %s" % (benchmark.test_args,
-                                    self._GetExtraAutotestArgs())
+    self.test_args = benchmark.test_args
+    self.profiler_args = self._GetExtraAutotestArgs()
     self._ce = command_executer.GetCommandExecuter(self._logger)
     self.timeline = timeline.Timeline()
     self.timeline.Record(STATUS_PENDING)
@@ -69,6 +69,7 @@ class BenchmarkRun(threading.Thread):
                     self.benchmark.test_name,
                     self.iteration,
                     self.test_args,
+                    self.profiler_args,
                     self.machine_manager,
                     self.label.board,
                     self.cache_conditions,
@@ -179,7 +180,8 @@ class BenchmarkRun(threading.Thread):
     [retval, out, err] = self.suite_runner.Run(machine.name,
                                                   self.label,
                                                   self.benchmark,
-                                                  self.test_args)
+                                                  self.test_args,
+                                                  self.profiler_args)
     self.run_completed = True
     return Result.CreateFromRun(self._logger,
                                 self.label,
@@ -204,6 +206,7 @@ class MockBenchmarkRun(BenchmarkRun):
                     self.benchmark.test_name,
                     self.iteration,
                     self.test_args,
+                    self.profiler_args,
                     self.machine_manager,
                     self.label.board,
                     self.cache_conditions,
@@ -227,7 +230,8 @@ class MockBenchmarkRun(BenchmarkRun):
                                                   self.label.chromeos_root,
                                                   self.label.board,
                                                   self.benchmark.test_name,
-                                                  self.test_args)
+                                                  self.test_args,
+                                                  self.profiler_args)
     self.run_completed = True
     rr = MockResult("logger", self.label)
     rr.out = out
