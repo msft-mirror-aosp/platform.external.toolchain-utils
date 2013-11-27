@@ -144,6 +144,10 @@ class CrosMachine(object):
     if len(a):
       self.machine_id = "_".join(a)
       return
+    a = [l for l in b if "ether" in l]
+    if len(a):
+      self.machine_id = "_".join(a)
+      return
     assert 0, "Could not get machine_id from machine: %s" % self.name
 
   def __str__(self):
