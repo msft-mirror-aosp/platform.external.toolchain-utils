@@ -66,8 +66,15 @@ class Result(object):
   def _GetNewKeyvals(self, keyvals_dict):
     results_files = self._GetDataMeasurementsFiles()
     for f in results_files:
-      data_filename = os.path.join(self._chromeos_root, "/tmp",
-                                  self._temp_dir, f)
+      # Make sure we can find the results file
+      if os.path.exists(f):
+        data_filename = f
+      else:
+        # Otherwise get the base filename and create the correct
+        # path for it.
+        f_dir, f_base = misc.GetRoot(f)
+        data_filename = os.path.join(self._chromeos_root, "/tmp",
+                                     self._temp_dir, f_base)
       if os.path.exists(data_filename):
         with open(data_filename, "r") as data_file:
           lines = data_file.readlines()
