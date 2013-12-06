@@ -60,13 +60,15 @@ class ExperimentFactory(object):
 
   def _AppendBenchmarkSet(self, benchmarks, benchmark_list, test_args,
                           iterations, outlier_range, key_results_only,
-                          rm_chroot_tmp, perf_args, suite, use_test_that):
+                          rm_chroot_tmp, perf_args, suite, use_test_that,
+                          show_all_results):
     """Add all the tests in a set to the benchmarks list."""
     for test_name in benchmark_list:
       telemetry_benchmark = Benchmark (test_name, test_name, test_args,
                                        iterations, outlier_range,
                                        key_results_only, rm_chroot_tmp,
-                                       perf_args, suite, use_test_that)
+                                       perf_args, suite, use_test_that,
+                                       show_all_results)
       benchmarks.append(telemetry_benchmark)
 
 
@@ -92,6 +94,7 @@ class ExperimentFactory(object):
     results_dir = global_settings.GetField("results_dir")
     chrome_src = global_settings.GetField("chrome_src")
     use_test_that = global_settings.GetField("use_test_that")
+    show_all_results = global_settings.GetField("show_all_results")
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.
     cache_conditions = [CacheConditions.CACHE_FILE_EXISTS,
@@ -121,30 +124,35 @@ class ExperimentFactory(object):
       key_results_only = benchmark_settings.GetField("key_results_only")
       suite = benchmark_settings.GetField("suite")
       use_test_that = benchmark_settings.GetField("use_test_that")
+      show_all_results = benchmark_settings.GetField("show_all_results")
 
       if suite == 'telemetry_Crosperf':
         if test_name == 'all_perfv2':
           self._AppendBenchmarkSet (benchmarks, telemetry_perfv2_tests,
                                     test_args, iterations, outlier_range,
                                     key_results_only, rm_chroot_tmp,
-                                    perf_args, suite, use_test_that)
+                                    perf_args, suite, use_test_that,
+                                    show_all_results)
         elif test_name == 'all_pagecyclers':
           self._AppendBenchmarkSet (benchmarks, telemetry_pagecycler_tests,
                                     test_args, iterations, outlier_range,
                                     key_results_only, rm_chroot_tmp,
-                                    perf_args, suite, use_test_that)
+                                    perf_args, suite, use_test_that,
+                                    show_all_results)
         else:
           benchmark = Benchmark(test_name, test_name, test_args,
                                 iterations, outlier_range,
                                 key_results_only, rm_chroot_tmp,
-                                perf_args, suite, use_test_that)
+                                perf_args, suite, use_test_that,
+                                show_all_results)
           benchmarks.append(benchmark)
       else:
         # Add the single benchmark.
         benchmark = Benchmark(benchmark_name, test_name, test_args,
                               iterations, outlier_range,
                               key_results_only, rm_chroot_tmp,
-                              perf_args, suite, use_test_that)
+                              perf_args, suite, use_test_that,
+                              show_all_results)
         benchmarks.append(benchmark)
 
     # Construct labels.

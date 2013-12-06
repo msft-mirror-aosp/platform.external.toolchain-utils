@@ -43,8 +43,12 @@ class BenchmarkSettings(Settings):
     self.AddField(TextField("suite", default="pyauto",
                                description="The type of the benchmark"))
     self.AddField(BooleanField("use_test_that", default=False,
-                               description="(experimental) Whether to use the"
+                               description="Whether to use the"
                                " new test_that script for running the test."))
+    self.AddField(BooleanField("show_all_results", default=False,
+                               description="When running Telemetry tests, "
+                               "whether to all the results, instead of just "
+                               "the default (summary) results."))
 
 
 class LabelSettings(Settings):
@@ -134,8 +138,12 @@ class GlobalSettings(Settings):
                                description="Whether to disable the email to "
                                "user after crosperf finishes."))
     self.AddField(BooleanField("use_test_that", default=False,
-                               description="(experimental) Whether to use the "
+                               description="Whether to use the "
                                "new test_that script for running the test."))
+    self.AddField(BooleanField("show_all_results", default=False,
+                               description="When running Telemetry tests, "
+                               "whether to all the results, instead of just "
+                               "the default (summary) results."))
     self.AddField(TextField("share_users", default="",
                             description="Who's cache data you want to "
                             "use. It accepts multiple users seperated by \",\""))

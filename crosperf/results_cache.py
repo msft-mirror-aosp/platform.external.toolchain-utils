@@ -14,6 +14,7 @@ import pickle
 import re
 import tempfile
 import json
+import sys
 
 from utils import command_executer
 from utils import misc
@@ -26,7 +27,7 @@ RESULTS_FILE = "results.txt"
 MACHINE_FILE = "machine.txt"
 AUTOTEST_TARBALL = "autotest.tbz2"
 PERF_RESULTS_FILE = "perf-results.txt"
-
+TELEMETRY_RESULT_DEFAULTS_FILE = "default-telemetry-results.json"
 
 class Result(object):
   """ This class manages what exactly is stored inside the cache without knowing
@@ -87,7 +88,56 @@ class Result(object):
     return keyvals_dict
 
 
-  def _GetKeyvals(self):
+  def _GetTelemetryResultsKeyvals(self, keyvals_dict):
+    """
+    keyvals_dict is the dictionary of key-value pairs that is used for
+    generating Crosperf reports.
+
+    Telemetry tests return many values (fields) that are not of
+    interest, so we have created a json file that indicates, for each
+    Telemetry benchmark, what the default return fields of interest
+    are.
+
+    This function reads that file into a dictionary, and finds the
+    entry for the current benchmark (if it exists).  The entry
+    contains a list of return fields to use in the report.  For each
+    field in the default list, we look for the field in the input
+    keyvals_dict, and if we find it we copy the entry into our results
+    dictionary. We then return the results dictionary, which gets used
+    for actually generating the report.
+    """
+
+    # Find the Crosperf directory, and look there for the telemetry
+    # results defaults file, if it exists.
+    dirname, basename = misc.GetRoot(sys.argv[0])
+    fullname = os.path.join(dirname, TELEMETRY_RESULT_DEFAULTS_FILE)
+    if os.path.exists (fullname):
+      # Slurp the file into a dictionary.  The keys in the dictionary are
+      # the benchmark names.  The value for a key is a list containing the
+      # names of all the result fields that should be returned in a 'default'
+      # report.
+      result_defaults = json.load(open(fullname))
+      # Check to see if the current benchmark test actually has an entry in
+      # the dictionary.
+      if self.test_name and self.test_name in result_defaults:
+        result_list = result_defaults[self.test_name]
+        # We have the default results list.  Make sure it's not empty...
+        if len(result_list) > 0:
+          results_dict = {}
+          # ...look for each default result in the dictionary of actual
+          # result fields returned. If found, add the field and its value
+          # to our final results dictionary.
+          for r in result_list:
+            v = keyvals_dict[r]
+            results_dict[r] = v
+          # If we actually found some of our default values, return the
+          # abbreviated results dictionary, to be used in generating the
+          # final report.
+          if len(results_dict) > 0:
+            keyvals_dict = results_dict
+    return keyvals_dict
+
+  def _GetKeyvals(self, show_all):
     results_in_chroot = os.path.join(self._chromeos_root,
                                      "chroot", "tmp")
     if not self._temp_dir:
@@ -113,7 +163,13 @@ class Result(object):
 
     # Check to see if there is a perf_measurements file and get the
     # data from it if so.
-    return self._GetNewKeyvals(keyvals_dict)
+    keyvals_dict = self._GetNewKeyvals(keyvals_dict)
+    if not show_all and self.suite == "telemetry_Crosperf":
+      # We're running telemetry tests and the user did not ask to
+      # see all the results, so get the default results, to be used
+      # for generating the report.
+      keyvals_dict = self._GetTelemetryResultsKeyvals(keyvals_dict)
+    return keyvals_dict
 
   def _GetResultsDir(self):
     mo = re.search(r"Results placed in (\S+)", self.out)
@@ -188,11 +244,13 @@ class Result(object):
           value = str(misc.UnitToNumber(num_events))
           self.keyvals[key] = value
 
-  def _PopulateFromRun(self, out, err, retval):
+  def _PopulateFromRun(self, out, err, retval, show_all, test, suite):
     self._board = self.label.board
     self.out = out
     self.err = err
     self.retval = retval
+    self.test_name = test
+    self.suite = suite
     self.chroot_results_dir = self._GetResultsDir()
     self.results_dir = misc.GetOutsideChrootPath(self._chromeos_root,
                                                  self.chroot_results_dir)
@@ -202,13 +260,13 @@ class Result(object):
     # TODO(asharif): Do something similar with perf stat.
 
     # Grab keyvals from the directory.
-    self._ProcessResults()
+    self._ProcessResults(show_all)
 
-  def _ProcessResults(self):
+  def _ProcessResults(self, show_all):
     # Note that this function doesn't know anything about whether there is a
     # cache hit or miss. It should process results agnostic of the cache hit
     # state.
-    self.keyvals = self._GetKeyvals()
+    self.keyvals = self._GetKeyvals(show_all)
     self.keyvals["retval"] = self.retval
     # Generate report from all perf.data files.
     # Now parse all perf report files and include them in keyvals.
@@ -285,12 +343,13 @@ class Result(object):
                       (temp_dir, cache_dir))
 
   @classmethod
-  def CreateFromRun(cls, logger, label, out, err, retval, suite="pyauto"):
+  def CreateFromRun(cls, logger, label, out, err, retval, show_all, test,
+                    suite="pyauto"):
     if suite == "telemetry":
       result = TelemetryResult(logger, label)
     else:
       result = cls(logger, label)
-    result._PopulateFromRun(out, err, retval)
+    result._PopulateFromRun(out, err, retval, show_all, test, suite)
     return result
 
   @classmethod
@@ -314,7 +373,7 @@ class TelemetryResult(Result):
   def __init__(self, logger, label):
     super(TelemetryResult, self).__init__(logger, label)
 
-  def _PopulateFromRun(self, out, err, retval):
+  def _PopulateFromRun(self, out, err, retval, show_all, test, suite):
     self.out = out
     self.err = err
     self.retval = retval
@@ -521,7 +580,7 @@ class MockResultsCache(ResultsCache):
 
 
 class MockResult(Result):
-  def _PopulateFromRun(self, out, err, retval):
+  def _PopulateFromRun(self, out, err, retval, show_all, test, suite):
     self.out = out
     self.err = err
     self.retval = retval

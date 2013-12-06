@@ -129,7 +129,7 @@ class ResultTest(unittest.TestCase):
                          "remote", "image_args", "image_md5sum", "cache_dir")
   def testCreateFromRun(self):
     result = MockResult.CreateFromRun(logger.GetLogger(), self.mock_label,
-                                      output, error, 0)
+                                      output, error, 0, 0)
     self.assertEqual(result.keyvals, keyvals)
     self.assertEqual(result.chroot_results_dir,
                      "/tmp/run_remote_tests.PO1234567/platform_LibCBench")

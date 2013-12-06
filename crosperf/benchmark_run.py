@@ -188,6 +188,8 @@ class BenchmarkRun(threading.Thread):
                                 out,
                                 err,
                                 retval,
+                                self.benchmark.show_all_results,
+                                self.benchmark.test_name,
                                 self.benchmark.suite)
 
   def SetCacheConditions(self, cache_conditions):
@@ -238,4 +240,3 @@ class MockBenchmarkRun(BenchmarkRun):
     rr.err = err
     rr.retval = retval
     return rr
-
