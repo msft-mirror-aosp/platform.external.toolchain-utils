@@ -81,8 +81,8 @@ class Result(object):
           lines = data_file.readlines()
           for line in lines:
             tmp_dict = json.loads(line)
-            key = tmp_dict['description']
-            val = tmp_dict['value']
+            key = tmp_dict["graph"] + "__" + tmp_dict["description"]
+            val = tmp_dict["value"]
             keyvals_dict[key] = val
 
     return keyvals_dict
