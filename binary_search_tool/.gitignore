@@ -1,0 +1,5 @@
+log
+*.pyc
+working_set.txt
+objects.txt
+
