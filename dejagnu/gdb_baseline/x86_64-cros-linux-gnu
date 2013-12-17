@@ -1,4 +1,4 @@
-Test Run By yunlian on Tue Oct  8 10:56:21 2013
+Test Run By yunlian on Mon Dec 16 14:52:38 2013
 Target is x86_64-cros-linux-gnu
 
 		=== gdb tests ===
@@ -245,7 +245,7 @@ PASS: gdb.arch/amd64-byte.exp: check contents of %r13l
 PASS: gdb.arch/amd64-byte.exp: check contents of %r14l
 PASS: gdb.arch/amd64-byte.exp: check contents of %r15l
 Running ./gdb.arch/amd64-disp-step.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: error: /tmp/cc9AWAbA.o: requires unsupported dynamic reloc 11; recompile with -fPIC
+gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: error: /tmp/ccQtpEfb.o: requires unsupported dynamic reloc 11; recompile with -fPIC
 collect2: error: ld returned 1 exit status
 UNTESTED: gdb.arch/amd64-disp-step.exp: amd64-disp-step.exp
 Running ./gdb.arch/amd64-dword.exp ...
@@ -394,6 +394,75 @@ Running ./gdb.arch/gdb1291.exp ...
 Running ./gdb.arch/gdb1431.exp ...
 Running ./gdb.arch/gdb1558.exp ...
 Running ./gdb.arch/i386-avx.exp ...
+PASS: gdb.arch/i386-avx.exp: check whether processor supports AVX
+PASS: gdb.arch/i386-avx.exp: set first breakpoint in main
+PASS: gdb.arch/i386-avx.exp: continue to breakpoint: continue to first breakpoint in main
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm0
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm0
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm1
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm1
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm2
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm2
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm3
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm3
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm4
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm4
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm5
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm5
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm6
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm6
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm7
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm7
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm8
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm8
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm9
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm9
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm10
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm10
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm11
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm11
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm12
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm12
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm13
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm13
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm14
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm14
+PASS: gdb.arch/i386-avx.exp: check float contents of %ymm15
+PASS: gdb.arch/i386-avx.exp: check int8 contents of %ymm15
+PASS: gdb.arch/i386-avx.exp: set %ymm0
+PASS: gdb.arch/i386-avx.exp: set %ymm1
+PASS: gdb.arch/i386-avx.exp: set %ymm2
+PASS: gdb.arch/i386-avx.exp: set %ymm3
+PASS: gdb.arch/i386-avx.exp: set %ymm4
+PASS: gdb.arch/i386-avx.exp: set %ymm5
+PASS: gdb.arch/i386-avx.exp: set %ymm6
+PASS: gdb.arch/i386-avx.exp: set %ymm7
+PASS: gdb.arch/i386-avx.exp: set %ymm8
+PASS: gdb.arch/i386-avx.exp: set %ymm9
+PASS: gdb.arch/i386-avx.exp: set %ymm10
+PASS: gdb.arch/i386-avx.exp: set %ymm11
+PASS: gdb.arch/i386-avx.exp: set %ymm12
+PASS: gdb.arch/i386-avx.exp: set %ymm13
+PASS: gdb.arch/i386-avx.exp: set %ymm14
+PASS: gdb.arch/i386-avx.exp: set %ymm15
+PASS: gdb.arch/i386-avx.exp: set second breakpoint in main
+PASS: gdb.arch/i386-avx.exp: continue to breakpoint: continue to second breakpoint in main
+PASS: gdb.arch/i386-avx.exp: check contents of data[0]
+PASS: gdb.arch/i386-avx.exp: check contents of data[1]
+PASS: gdb.arch/i386-avx.exp: check contents of data[2]
+PASS: gdb.arch/i386-avx.exp: check contents of data[3]
+PASS: gdb.arch/i386-avx.exp: check contents of data[4]
+PASS: gdb.arch/i386-avx.exp: check contents of data[5]
+PASS: gdb.arch/i386-avx.exp: check contents of data[6]
+PASS: gdb.arch/i386-avx.exp: check contents of data[7]
+PASS: gdb.arch/i386-avx.exp: check contents of data[8]
+PASS: gdb.arch/i386-avx.exp: check contents of data[9]
+PASS: gdb.arch/i386-avx.exp: check contents of data[10]
+PASS: gdb.arch/i386-avx.exp: check contents of data[11]
+PASS: gdb.arch/i386-avx.exp: check contents of data[12]
+PASS: gdb.arch/i386-avx.exp: check contents of data[13]
+PASS: gdb.arch/i386-avx.exp: check contents of data[14]
+PASS: gdb.arch/i386-avx.exp: check contents of data[15]
 Running ./gdb.arch/i386-bp_permanent.exp ...
 Running ./gdb.arch/i386-byte.exp ...
 PASS: gdb.arch/i386-byte.exp: set first breakpoint in main
@@ -453,7 +522,7 @@ PASS: gdb.arch/i386-permbkpt.exp: First permanent break
 PASS: gdb.arch/i386-permbkpt.exp: Second permanent break
 Running ./gdb.arch/i386-prologue.exp ...
 Running ./gdb.arch/i386-signal.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: error: /tmp/cc104kAN.o: requires unsupported dynamic reloc 11; recompile with -fPIC
+gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: error: /tmp/ccAjQh8y.o: requires unsupported dynamic reloc 11; recompile with -fPIC
 collect2: error: ld returned 1 exit status
 UNTESTED: gdb.arch/i386-signal.exp: i386-signal.exp
 Running ./gdb.arch/i386-size.exp ...
@@ -972,7 +1041,7 @@ PASS: gdb.base/break-always.exp: write 0 to breakpoint's address
 PASS: gdb.base/break-always.exp: read back 0 from the breakpoint's address
 PASS: gdb.base/break-always.exp: write 1 to breakpoint's address
 PASS: gdb.base/break-always.exp: read back 1 from the breakpoint's address
-PASS: gdb.base/break-always.exp: p /x *(char *) 0x5555555546f4 = $shadow
+PASS: gdb.base/break-always.exp: p /x *(char *) 0x55555555470c = $shadow
 PASS: gdb.base/break-always.exp: continue to breakpoint: bar
 Running ./gdb.base/break-caller-line.exp ...
 PASS: gdb.base/break-caller-line.exp: up
@@ -1070,7 +1139,7 @@ PASS: gdb.base/break.exp: backtrace from factorial(5)
 PASS: gdb.base/break.exp: next to recursive call
 PASS: gdb.base/break.exp: next over recursive call
 PASS: gdb.base/break.exp: backtrace from factorial(5.1)
-FAIL: gdb.base/break.exp: continue until exit at recursive next test (the program exited)
+PASS: gdb.base/break.exp: continue until exit at recursive next test
 PASS: gdb.base/break.exp: breakpoint function, optimized file
 PASS: gdb.base/break.exp: breakpoint small function, optimized file
 PASS: gdb.base/break.exp: run until function breakpoint, optimized file (code motion)
@@ -1840,7 +1909,7 @@ PASS: gdb.base/charset.exp: assign string to long array
 Running ./gdb.base/checkpoint.exp ...
 Running ./gdb.base/chng-syms.exp ...
 PASS: gdb.base/chng-syms.exp: setting conditional breakpoint on function
-FAIL: gdb.base/chng-syms.exp: continue until exit at breakpoint first time through (the program exited)
+PASS: gdb.base/chng-syms.exp: continue until exit at breakpoint first time through
 PASS: gdb.base/chng-syms.exp: running with invalidated bpt condition after executable changes
 Running ./gdb.base/code_elim.exp ...
 PASS: gdb.base/code_elim.exp: symbol-file code_elim1
@@ -2070,11 +2139,16 @@ ERROR: internal buffer is full.
 UNRESOLVED: gdb.base/completion.exp: complete (2) 'p no_var_named_this-'
 ERROR: internal buffer is full.
 UNRESOLVED: gdb.base/completion.exp: complete 'p values[0].a'
-FAIL: gdb.base/completion.exp: complete 'p values[0] . a' (timeout)
-FAIL: gdb.base/completion.exp: complete 'p &values[0] -> a' (timeout)
-FAIL: gdb.base/completion.exp: completion of field in anonymous union
-PASS: gdb.base/completion.exp: ptype completion of field in anonymous union
-PASS: gdb.base/completion.exp: whatis completion of field in anonymous union
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: complete 'p values[0] . a'
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: complete 'p &values[0] -> a'
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: completion of field in anonymous union
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: ptype completion of field in anonymous union
+ERROR: internal buffer is full.
+UNRESOLVED: gdb.base/completion.exp: whatis completion of field in anonymous union
 PASS: gdb.base/completion.exp: cd to ${srcdir}
 PASS: gdb.base/completion.exp: directory completion
 PASS: gdb.base/completion.exp: directory completion 2
@@ -3029,18 +3103,38 @@ PASS: gdb.base/disp-step-syscall.exp: fork: delete break 1
 PASS: gdb.base/disp-step-syscall.exp: fork: break marker
 PASS: gdb.base/disp-step-syscall.exp: fork: set displaced-stepping off
 PASS: gdb.base/disp-step-syscall.exp: fork: break fork
-FAIL: gdb.base/disp-step-syscall.exp: fork: continue to fork (1st time)
-FAIL: gdb.base/disp-step-syscall.exp: fork: continue to fork (2nd time) (the program exited)
+PASS: gdb.base/disp-step-syscall.exp: fork: continue to fork (1st time)
+PASS: gdb.base/disp-step-syscall.exp: fork: continue to fork (2nd time)
 PASS: gdb.base/disp-step-syscall.exp: fork: display/i $pc
-FAIL: gdb.base/disp-step-syscall.exp: fork: find syscall insn in fork
+PASS: gdb.base/disp-step-syscall.exp: fork: get hexadecimal valueof "$pc"
+PASS: gdb.base/disp-step-syscall.exp: fork: stepi fork insn
+PASS: gdb.base/disp-step-syscall.exp: fork: get hexadecimal valueof "$pc"
+PASS: gdb.base/disp-step-syscall.exp: fork: continue to fork (3rd time)
+PASS: gdb.base/disp-step-syscall.exp: fork: break on syscall insns
+PASS: gdb.base/disp-step-syscall.exp: fork: delete break fork
+PASS: gdb.base/disp-step-syscall.exp: fork: continue to syscall insn fork
+PASS: gdb.base/disp-step-syscall.exp: fork: set displaced-stepping on
+PASS: gdb.base/disp-step-syscall.exp: fork: single step over fork
+PASS: gdb.base/disp-step-syscall.exp: fork: get hexadecimal valueof "$pc"
+PASS: gdb.base/disp-step-syscall.exp: fork: single step over fork final pc
+PASS: gdb.base/disp-step-syscall.exp: fork: delete break fork insn
+PASS: gdb.base/disp-step-syscall.exp: fork: continue to marker (fork)
 PASS: gdb.base/disp-step-syscall.exp: vfork: delete break 1
 PASS: gdb.base/disp-step-syscall.exp: vfork: break marker
 PASS: gdb.base/disp-step-syscall.exp: vfork: set displaced-stepping off
 PASS: gdb.base/disp-step-syscall.exp: vfork: break vfork
-FAIL: gdb.base/disp-step-syscall.exp: vfork: continue to vfork (1st time)
-FAIL: gdb.base/disp-step-syscall.exp: vfork: continue to vfork (2nd time) (the program exited)
+PASS: gdb.base/disp-step-syscall.exp: vfork: continue to vfork (1st time)
+PASS: gdb.base/disp-step-syscall.exp: vfork: continue to vfork (2nd time)
 PASS: gdb.base/disp-step-syscall.exp: vfork: display/i $pc
-FAIL: gdb.base/disp-step-syscall.exp: vfork: find syscall insn in vfork
+PASS: gdb.base/disp-step-syscall.exp: vfork: get hexadecimal valueof "$pc"
+PASS: gdb.base/disp-step-syscall.exp: vfork: stepi vfork insn
+PASS: gdb.base/disp-step-syscall.exp: vfork: get hexadecimal valueof "$pc"
+PASS: gdb.base/disp-step-syscall.exp: vfork: continue to vfork (3rd time)
+PASS: gdb.base/disp-step-syscall.exp: vfork: break on syscall insns
+PASS: gdb.base/disp-step-syscall.exp: vfork: delete break vfork
+PASS: gdb.base/disp-step-syscall.exp: vfork: continue to syscall insn vfork
+PASS: gdb.base/disp-step-syscall.exp: vfork: set displaced-stepping on
+KFAIL: gdb.base/disp-step-syscall.exp: vfork: single step over vfork (PRMS: server/13796)
 Running ./gdb.base/dmsym.exp ...
 PASS: gdb.base/dmsym.exp: set lang ada
 PASS: gdb.base/dmsym.exp: break pck__foo__bar__minsym
@@ -3347,9 +3441,9 @@ PASS: gdb.base/ena-dis-br.exp: enable once break marker2
 PASS: gdb.base/ena-dis-br.exp: info auto-disabled break marker2
 PASS: gdb.base/ena-dis-br.exp: continue to auto-disabled break marker2
 PASS: gdb.base/ena-dis-br.exp: info auto-disabled break marker2
-FAIL: gdb.base/ena-dis-br.exp: continue until exit at no stop (the program exited)
+PASS: gdb.base/ena-dis-br.exp: continue until exit at no stop
 PASS: gdb.base/ena-dis-br.exp: rerun to main
-FAIL: gdb.base/ena-dis-br.exp: continue until exit at no stop at auto-disabled break marker2 (the program exited)
+PASS: gdb.base/ena-dis-br.exp: continue until exit at no stop at auto-disabled break marker2
 PASS: gdb.base/ena-dis-br.exp: break marker3
 PASS: gdb.base/ena-dis-br.exp: enable del break marker3
 PASS: gdb.base/ena-dis-br.exp: info auto-deleted break marker2
@@ -3371,20 +3465,20 @@ PASS: gdb.base/ena-dis-br.exp: ignore break marker1 -1
 PASS: gdb.base/ena-dis-br.exp: ignore break marker1 0
 PASS: gdb.base/ena-dis-br.exp: ignore break marker1
 PASS: gdb.base/ena-dis-br.exp: info ignored break marker1
-FAIL: gdb.base/ena-dis-br.exp: continue until exit at no stop at ignored break marker1 (the program exited)
+PASS: gdb.base/ena-dis-br.exp: continue until exit at no stop at ignored break marker1
 PASS: gdb.base/ena-dis-br.exp: rerun to main
 PASS: gdb.base/ena-dis-br.exp: continue to break marker1, 2nd time
 PASS: gdb.base/ena-dis-br.exp: break marker1
 PASS: gdb.base/ena-dis-br.exp: ignore break marker1
 PASS: gdb.base/ena-dis-br.exp: enable del break marker1
 PASS: gdb.base/ena-dis-br.exp: info break marker1
-FAIL: gdb.base/ena-dis-br.exp: continue until exit at no stop at ignored & auto-deleted break marker1 (the program exited)
+PASS: gdb.base/ena-dis-br.exp: continue until exit at no stop at ignored & auto-deleted break marker1
 PASS: gdb.base/ena-dis-br.exp: rerun to main
 PASS: gdb.base/ena-dis-br.exp: continue to ignored & auto-deleted break marker1
 PASS: gdb.base/ena-dis-br.exp: break marker1
 PASS: gdb.base/ena-dis-br.exp: ignore break marker1
 PASS: gdb.base/ena-dis-br.exp: disable break marker1
-FAIL: gdb.base/ena-dis-br.exp: continue until exit at no stop at ignored & disabled break marker1 (the program exited)
+PASS: gdb.base/ena-dis-br.exp: continue until exit at no stop at ignored & disabled break marker1
 PASS: gdb.base/ena-dis-br.exp: rerun to main
 PASS: gdb.base/ena-dis-br.exp: info ignored & disabled break marker1
 PASS: gdb.base/ena-dis-br.exp: prepare to continue with ignore count
@@ -3406,7 +3500,7 @@ PASS: gdb.base/ending-run.exp: Breakpoint 7 at *ending-run.c:14
 PASS: gdb.base/ending-run.exp: Clear 2 by default
 PASS: gdb.base/ending-run.exp: all set to continue
 PASS: gdb.base/ending-run.exp: cont
-FAIL: gdb.base/ending-run.exp: step out of main
+PASS: gdb.base/ending-run.exp: step out of main
 Running ./gdb.base/enum_cond.exp ...
 PASS: gdb.base/enum_cond.exp: break call_me if param.e == 1
 PASS: gdb.base/enum_cond.exp: continue to conditional breakpoint in call_me
@@ -3455,7 +3549,7 @@ PASS: gdb.base/eval-skip.exp: print value of (0 && (--x))
 PASS: gdb.base/eval-skip.exp: print value of (0 && (x+=7))
 PASS: gdb.base/eval-skip.exp: print value of (0 && (x=y))
 Running ./gdb.base/exe-lock.exp ...
-FAIL: gdb.base/exe-lock.exp: continue until exit (the program exited)
+PASS: gdb.base/exe-lock.exp: continue until exit
 Running ./gdb.base/expand-psymtabs.exp ...
 PASS: gdb.base/expand-psymtabs.exp: Expand psymtabs
 Running ./gdb.base/exprs.exp ...
@@ -4043,6 +4137,7 @@ PASS: gdb.base/gdb11531.exp: Set watchpoint
 PASS: gdb.base/gdb11531.exp: watchpoint variable triggers at next
 PASS: gdb.base/gdb11531.exp: watchpoint variable triggers at continue
 Running ./gdb.base/gdb1250.exp ...
+PASS: gdb.base/gdb1250.exp: backtrace from abort
 Running ./gdb.base/gdb1555.exp ...
 PASS: gdb.base/gdb1555.exp: Step into shared lib function
 PASS: gdb.base/gdb1555.exp: Next while in a shared lib function
@@ -4093,7 +4188,7 @@ PASS: gdb.base/gnu-debugdata.exp: addlink
 PASS: gdb.base/gnu-debugdata.exp: xz
 PASS: gdb.base/gnu-debugdata.exp: objcopy 2
 PASS: gdb.base/gnu-debugdata.exp: no symtab
-UNSUPPORTED: gdb.base/gnu-debugdata.exp: LZMA support not available in this gdb
+PASS: gdb.base/gnu-debugdata.exp: have symtab
 PASS: gdb.base/gnu-debugdata.exp: unload MiniDebugInfo
 Running ./gdb.base/gnu-ifunc.exp ...
 PASS: gdb.base/gnu-ifunc.exp: continue to breakpoint: break-at-call
@@ -4281,7 +4376,7 @@ PASS: gdb.base/hbreak2.exp: backtrace from factorial(5)
 PASS: gdb.base/hbreak2.exp: next to recursive call
 PASS: gdb.base/hbreak2.exp: next over recursive call
 PASS: gdb.base/hbreak2.exp: backtrace from factorial(5.1)
-FAIL: gdb.base/hbreak2.exp: continue until exit at recursive next test (the program exited)
+PASS: gdb.base/hbreak2.exp: continue until exit at recursive next test
 PASS: gdb.base/hbreak2.exp: hardware breakpoint function, optimized file
 PASS: gdb.base/hbreak2.exp: run until hardware function breakpoint, optimized file (code motion)
 PASS: gdb.base/hbreak2.exp: hardware breakpoint small function, optimized file
@@ -4361,8 +4456,8 @@ Running ./gdb.base/info-fun.exp ...
 Running ./gdb.base/infoline.exp ...
 PASS: gdb.base/infoline.exp: info line infoline.c:18
 Running ./gdb.base/info-macros.exp ...
-PASS: gdb.base/info-macros.exp: info macro -- -all
-PASS: gdb.base/info-macros.exp: info macro  -- -all
+FAIL: gdb.base/info-macros.exp: info macro -- -all
+FAIL: gdb.base/info-macros.exp: info macro  -- -all
 PASS: gdb.base/info-macros.exp: info macro -all --
 PASS: gdb.base/info-macros.exp: info macro -all  --
 PASS: gdb.base/info-macros.exp: info macro  -all  --
@@ -4373,43 +4468,44 @@ PASS: gdb.base/info-macros.exp: info macro -invalid-option 1
 PASS: gdb.base/info-macros.exp: info macro  -invalid-option
 PASS: gdb.base/info-macros.exp: info macro -invalid-option FOO
 PASS: gdb.base/info-macros.exp: info macro  -invalid-option FOO
-PASS: gdb.base/info-macros.exp: info macro -- FOO
-PASS: gdb.base/info-macros.exp: info macro  -- FOO
-PASS: gdb.base/info-macros.exp: info macro --  FOO
-PASS: gdb.base/info-macros.exp: info macro FOO
-PASS: gdb.base/info-macros.exp: info macro  FOO
-PASS: gdb.base/info-macros.exp: info macro -a FOO 1
-PASS: gdb.base/info-macros.exp: info macro -a -- FOO 1
-PASS: gdb.base/info-macros.exp: info macro -all -- FOO 1
-PASS: gdb.base/info-macros.exp: info macro -a  --  FOO
-PASS: gdb.base/info-macros.exp: info macro  -a  --  FOO
-PASS: gdb.base/info-macros.exp: info macros 2
-PASS: gdb.base/info-macros.exp: info macros 3
-PASS: gdb.base/info-macros.exp: info macros 4
-PASS: gdb.base/info-macros.exp: info macros *$pc
-PASS: gdb.base/info-macros.exp: info macros 5
-PASS: gdb.base/info-macros.exp: info macros 6
-PASS: gdb.base/info-macros.exp: info macros 7
+FAIL: gdb.base/info-macros.exp: info macro -- FOO
+FAIL: gdb.base/info-macros.exp: info macro  -- FOO
+FAIL: gdb.base/info-macros.exp: info macro --  FOO
+FAIL: gdb.base/info-macros.exp: info macro FOO
+FAIL: gdb.base/info-macros.exp: info macro  FOO
+FAIL: gdb.base/info-macros.exp: info macro -a FOO 1
+FAIL: gdb.base/info-macros.exp: info macro -a -- FOO 1
+FAIL: gdb.base/info-macros.exp: info macro -all -- FOO 1
+FAIL: gdb.base/info-macros.exp: info macro -a  --  FOO
+FAIL: gdb.base/info-macros.exp: info macro  -a  --  FOO
+FAIL: gdb.base/info-macros.exp: info macros 2
+FAIL: gdb.base/info-macros.exp: info macros 3
+FAIL: gdb.base/info-macros.exp: info macros 4
+FAIL: gdb.base/info-macros.exp: info macros *$pc
+FAIL: gdb.base/info-macros.exp: info macros
+FAIL: gdb.base/info-macros.exp: info macros 6
+FAIL: gdb.base/info-macros.exp: info macros 7
 KFAIL: gdb.base/info-macros.exp: info macros info-macros.c:42 (PRMS: gdb/NNNN)
 Running ./gdb.base/info-os.exp ...
-FAIL: gdb.base/info-os.exp: get inferior process ID
-FAIL: gdb.base/info-os.exp: continue to breakpoint: Set breakpoint here
-FAIL: gdb.base/info-os.exp: get shared memory key
-FAIL: gdb.base/info-os.exp: get shared memory ID
-FAIL: gdb.base/info-os.exp: get semaphore key
-FAIL: gdb.base/info-os.exp: get semaphore ID
-FAIL: gdb.base/info-os.exp: get message queue key
-FAIL: gdb.base/info-os.exp: get message queue ID
-FAIL: gdb.base/info-os.exp: get socket port number
-FAIL: gdb.base/info-os.exp: get process list
-FAIL: gdb.base/info-os.exp: get process groups
-FAIL: gdb.base/info-os.exp: get threads
-FAIL: gdb.base/info-os.exp: get file descriptors
-FAIL: gdb.base/info-os.exp: get internet-domain sockets
-FAIL: gdb.base/info-os.exp: get shared-memory regions
-FAIL: gdb.base/info-os.exp: get semaphores
-FAIL: gdb.base/info-os.exp: get message queues
-FAIL: gdb.base/info-os.exp: continue (the program is no longer running)
+PASS: gdb.base/info-os.exp: get inferior process ID
+PASS: gdb.base/info-os.exp: continue to breakpoint: Set breakpoint here
+PASS: gdb.base/info-os.exp: get shared memory key
+PASS: gdb.base/info-os.exp: get shared memory ID
+PASS: gdb.base/info-os.exp: get semaphore key
+PASS: gdb.base/info-os.exp: get semaphore ID
+PASS: gdb.base/info-os.exp: get message queue key
+PASS: gdb.base/info-os.exp: get message queue ID
+PASS: gdb.base/info-os.exp: get socket port number
+PASS: gdb.base/info-os.exp: get process list
+PASS: gdb.base/info-os.exp: get process groups
+PASS: gdb.base/info-os.exp: get threads
+PASS: gdb.base/info-os.exp: get threads
+PASS: gdb.base/info-os.exp: get file descriptors
+PASS: gdb.base/info-os.exp: get internet-domain sockets
+PASS: gdb.base/info-os.exp: get shared-memory regions
+PASS: gdb.base/info-os.exp: get semaphores
+PASS: gdb.base/info-os.exp: get message queues
+PASS: gdb.base/info-os.exp: continue
 Running ./gdb.base/info-proc.exp ...
 PASS: gdb.base/info-proc.exp: help info proc
 PASS: gdb.base/info-proc.exp: info proc without a process
@@ -4526,7 +4622,7 @@ PASS: gdb.base/langs.exp: up to langs0__2do in langs.exp
 PASS: gdb.base/langs.exp: show language at langs0__2do in langs.exp
 PASS: gdb.base/langs.exp: up to main in langs.exp
 PASS: gdb.base/langs.exp: show language at main in langs.exp
-FAIL: gdb.base/langs.exp: continue until exit at langs.exp (the program exited)
+PASS: gdb.base/langs.exp: continue until exit at langs.exp
 PASS: gdb.base/langs.exp: set lang to minimal
 PASS: gdb.base/langs.exp: print parameter value
 Running ./gdb.base/ldbl_e308.exp ...
@@ -4864,327 +4960,7 @@ PASS: gdb.base/long_long.exp: x/2gc g
 PASS: gdb.base/long_long.exp: x/2gf g
 Running ./gdb.base/macscp.exp ...
 PASS: gdb.base/macscp.exp: list main for support check
-PASS: gdb.base/macscp.exp: list main for WHERE
-PASS: gdb.base/macscp.exp: info macro WHERE after `list main'
-PASS: gdb.base/macscp.exp: list macscp2_2 for WHERE
-PASS: gdb.base/macscp.exp: info macro WHERE after `list macscp2_2'
-PASS: gdb.base/macscp.exp: list macscp3_2 for WHERE
-PASS: gdb.base/macscp.exp: info macro WHERE after `list macscp3_2'
-PASS: gdb.base/macscp.exp: info macro FROM_COMMANDLINE
-PASS: gdb.base/macscp.exp: info macro __FILE__ before running
-PASS: gdb.base/macscp.exp: info macro __LINE__ before running
-PASS: gdb.base/macscp.exp: list macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: info macro WHERE after `list macscp_4_2_from_macscp2'
-PASS: gdb.base/macscp.exp: list macscp4_2_from_macscp3
-KFAIL: gdb.base/macscp.exp: info macro WHERE after `list macscp_4_2_from_macscp3' (gdb/555) (PRMS: gdb/555)
-PASS: gdb.base/macscp.exp: break macscp1_1
-PASS: gdb.base/macscp.exp: break macscp2_1
-PASS: gdb.base/macscp.exp: break macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: break macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: break macscp2_2
-PASS: gdb.base/macscp.exp: break macscp1_2
-PASS: gdb.base/macscp.exp: break macscp3_1
-PASS: gdb.base/macscp.exp: break macscp4_1_from_macscp3
-PASS: gdb.base/macscp.exp: break macscp4_2_from_macscp3
-PASS: gdb.base/macscp.exp: break macscp3_2
-PASS: gdb.base/macscp.exp: break macscp1_3
-PASS: gdb.base/macscp.exp: continue to macscp1_1
-PASS: gdb.base/macscp.exp: info macro WHERE stopped in macscp1_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_1 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_1 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_2 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_2 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_2 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_2 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_1 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_1 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_2 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_2 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_3 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_3 defined/undefined when stopped at macscp1_1
-PASS: gdb.base/macscp.exp: continue to macscp2_1
-PASS: gdb.base/macscp.exp: info macro WHERE stopped in macscp2_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_1 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_1 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_2 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_2 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_2 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_2 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_1 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_1 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_2 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_2 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_3 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_3 defined/undefined when stopped at macscp2_1
-PASS: gdb.base/macscp.exp: continue to macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: info macro WHERE stopped in macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_1 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_1 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_1 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_1 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_2 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_2 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_2 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_2 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_1 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_1 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_2 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_2 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_3 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_3 defined/undefined when stopped at macscp4_1_from_macscp2
-PASS: gdb.base/macscp.exp: continue to macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: info macro WHERE stopped in macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_1 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_1 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_1 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_1 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_2 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_2 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_2 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_2 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_1 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_1 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_2 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_2 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_3 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_3 defined/undefined when stopped at macscp4_2_from_macscp2
-PASS: gdb.base/macscp.exp: continue to macscp2_2
-PASS: gdb.base/macscp.exp: info macro WHERE stopped in macscp2_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_1 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_1 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_1 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_1 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_2 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_2 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_1 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_1 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_2 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_2 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_3 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_3 defined/undefined when stopped at macscp2_2
-PASS: gdb.base/macscp.exp: continue to macscp1_2
-PASS: gdb.base/macscp.exp: info macro WHERE stopped in macscp1_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_1 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_1 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_1 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_1 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_2 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_2 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_1 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_1 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_2 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_2 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_3 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_3 defined/undefined when stopped at macscp1_2
-PASS: gdb.base/macscp.exp: continue to macscp3_1
-PASS: gdb.base/macscp.exp: info macro WHERE stopped in macscp3_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_1 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_1 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_1 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_1 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_2 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_2 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_2 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_2 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_2 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_2 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_3 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_3 defined/undefined when stopped at macscp3_1
-PASS: gdb.base/macscp.exp: continue to macscp4_1_from_macscp3
-KFAIL: gdb.base/macscp.exp: info macro WHERE stopped in macscp4_1_from_macscp3 (gdb/555) (PRMS: gdb/555)
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_1 defined/undefined when stopped at macscp4_1_from_macscp3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_1 defined/undefined when stopped at macscp4_1_from_macscp3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_1 defined/undefined when stopped at macscp4_1_from_macscp3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_1 defined/undefined when stopped at macscp4_1_from_macscp3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp4_1_from_macscp3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp4_1_from_macscp3
-KFAIL: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp4_1_from_macscp3 (PRMS: gdb/555)
-KFAIL: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp4_1_from_macscp3 (PRMS: gdb/555)
-KFAIL: gdb.base/macscp.exp: BEFORE_MACSCP2_2 defined/undefined when stopped at macscp4_1_from_macscp3 (PRMS: gdb/555)
-KFAIL: gdb.base/macscp.exp: UNTIL_MACSCP2_2 defined/undefined when stopped at macscp4_1_from_macscp3 (PRMS: gdb/555)
-KFAIL: gdb.base/macscp.exp: BEFORE_MACSCP1_2 defined/undefined when stopped at macscp4_1_from_macscp3 (PRMS: gdb/555)
-KFAIL: gdb.base/macscp.exp: UNTIL_MACSCP1_2 defined/undefined when stopped at macscp4_1_from_macscp3 (PRMS: gdb/555)
-KFAIL: gdb.base/macscp.exp: BEFORE_MACSCP3_1 defined/undefined when stopped at macscp4_1_from_macscp3 (PRMS: gdb/555)
-KFAIL: gdb.base/macscp.exp: UNTIL_MACSCP3_1 defined/undefined when stopped at macscp4_1_from_macscp3 (PRMS: gdb/555)
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp4_1_from_macscp3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp4_1_from_macscp3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_2 defined/undefined when stopped at macscp4_1_from_macscp3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_2 defined/undefined when stopped at macscp4_1_from_macscp3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_3 defined/undefined when stopped at macscp4_1_from_macscp3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_3 defined/undefined when stopped at macscp4_1_from_macscp3
-PASS: gdb.base/macscp.exp: continue to macscp4_2_from_macscp3
-KFAIL: gdb.base/macscp.exp: info macro WHERE stopped in macscp4_2_from_macscp3 (gdb/555) (PRMS: gdb/555)
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_1 defined/undefined when stopped at macscp4_2_from_macscp3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_1 defined/undefined when stopped at macscp4_2_from_macscp3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_1 defined/undefined when stopped at macscp4_2_from_macscp3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_1 defined/undefined when stopped at macscp4_2_from_macscp3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp4_2_from_macscp3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp4_2_from_macscp3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp4_2_from_macscp3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp4_2_from_macscp3
-KFAIL: gdb.base/macscp.exp: BEFORE_MACSCP2_2 defined/undefined when stopped at macscp4_2_from_macscp3 (PRMS: gdb/555)
-KFAIL: gdb.base/macscp.exp: UNTIL_MACSCP2_2 defined/undefined when stopped at macscp4_2_from_macscp3 (PRMS: gdb/555)
-KFAIL: gdb.base/macscp.exp: BEFORE_MACSCP1_2 defined/undefined when stopped at macscp4_2_from_macscp3 (PRMS: gdb/555)
-KFAIL: gdb.base/macscp.exp: UNTIL_MACSCP1_2 defined/undefined when stopped at macscp4_2_from_macscp3 (PRMS: gdb/555)
-KFAIL: gdb.base/macscp.exp: BEFORE_MACSCP3_1 defined/undefined when stopped at macscp4_2_from_macscp3 (PRMS: gdb/555)
-KFAIL: gdb.base/macscp.exp: UNTIL_MACSCP3_1 defined/undefined when stopped at macscp4_2_from_macscp3 (PRMS: gdb/555)
-KFAIL: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp4_2_from_macscp3 (PRMS: gdb/555)
-KFAIL: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp4_2_from_macscp3 (PRMS: gdb/555)
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_2 defined/undefined when stopped at macscp4_2_from_macscp3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_2 defined/undefined when stopped at macscp4_2_from_macscp3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_3 defined/undefined when stopped at macscp4_2_from_macscp3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_3 defined/undefined when stopped at macscp4_2_from_macscp3
-PASS: gdb.base/macscp.exp: continue to macscp3_2
-PASS: gdb.base/macscp.exp: info macro WHERE stopped in macscp3_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_1 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_1 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_1 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_1 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_2 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_2 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_2 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_2 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_1 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_1 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_3 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_3 defined/undefined when stopped at macscp3_2
-PASS: gdb.base/macscp.exp: continue to macscp1_3
-PASS: gdb.base/macscp.exp: info macro WHERE stopped in macscp1_3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_1 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_1 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_1 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_1 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP2 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP2 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP2_2 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP2_2 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP1_2 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP1_2 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_1 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_1 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_1_FROM_MACSCP3 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP4_2_FROM_MACSCP3 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: BEFORE_MACSCP3_2 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: UNTIL_MACSCP3_2 defined/undefined when stopped at macscp1_3
-PASS: gdb.base/macscp.exp: breakpoint macscp_expr
-PASS: gdb.base/macscp.exp: macro MACRO_TO_EXPAND not in scope at breakpoint
-PASS: gdb.base/macscp.exp: breakpoint macscp_expr using MACRO_TO_EXPAND
-PASS: gdb.base/macscp.exp: continue to macsp_expr
-PASS: gdb.base/macscp.exp: print address.addr
-PASS: gdb.base/macscp.exp: print expression with macro before define.
-PASS: gdb.base/macscp.exp: next to definition 1
-PASS: gdb.base/macscp.exp: print expression with macro in scope.
-PASS: gdb.base/macscp.exp: user macro override
-PASS: gdb.base/macscp.exp: choose user macro
-PASS: gdb.base/macscp.exp: remove user override
-PASS: gdb.base/macscp.exp: print expression with macro after removing override
-PASS: gdb.base/macscp.exp: next to definition 2
-PASS: gdb.base/macscp.exp: print expression with macro after undef.
-PASS: gdb.base/macscp.exp: basic macro define
-PASS: gdb.base/macscp.exp: expansion of defined macro
-PASS: gdb.base/macscp.exp: basic macro list
-PASS: gdb.base/macscp.exp: basic redefine, macro with args
-PASS: gdb.base/macscp.exp: expansion of macro with arguments
-PASS: gdb.base/macscp.exp: basic macro undef
-PASS: gdb.base/macscp.exp: print expression with macro after user undef.
-PASS: gdb.base/macscp.exp: macro define with no arguments
-PASS: gdb.base/macscp.exp: macro undef with no arguments
-PASS: gdb.base/macscp.exp: complete 'p FIFTY_SEVEN'
-PASS: gdb.base/macscp.exp: complete 'p TWENTY_'
-PASS: gdb.base/macscp.exp: complete 'p FORTY_'
-PASS: gdb.base/macscp.exp: defining TWENTY_THREE
-PASS: gdb.base/macscp.exp: complete 'p TWENTY_THREE'
-PASS: gdb.base/macscp.exp: basic macro splicing
-PASS: gdb.base/macscp.exp: define splice helper
-PASS: gdb.base/macscp.exp: splicing plus expansion
-PASS: gdb.base/macscp.exp: define first varargs helper
-PASS: gdb.base/macscp.exp: define second varargs helper
-PASS: gdb.base/macscp.exp: define third varargs helper
-PASS: gdb.base/macscp.exp: define fourth varargs helper
-PASS: gdb.base/macscp.exp: c99 varargs expansion
-PASS: gdb.base/macscp.exp: c99 varargs expansion without an argument
-PASS: gdb.base/macscp.exp: c99 varargs expansion, multiple formal arguments
-PASS: gdb.base/macscp.exp: gnu varargs expansion
-PASS: gdb.base/macscp.exp: gnu varargs expansion without an argument
-PASS: gdb.base/macscp.exp: gnu varargs expansion special splicing without an argument
-PASS: gdb.base/macscp.exp: define stringification macro
-PASS: gdb.base/macscp.exp: define first stringification helper
-PASS: gdb.base/macscp.exp: define second stringification helper
-PASS: gdb.base/macscp.exp: simple stringify
-PASS: gdb.base/macscp.exp: stringify with one space
-PASS: gdb.base/macscp.exp: stringify with many spaces
-PASS: gdb.base/macscp.exp: stringify with quotes
-PASS: gdb.base/macscp.exp: stringify with backslashes
-PASS: gdb.base/macscp.exp: stringify without substitution
-PASS: gdb.base/macscp.exp: stringify with substitution
-PASS: gdb.base/macscp.exp: define si_addr macro
-PASS: gdb.base/macscp.exp: macro expand siginfo.si_addr
-PASS: gdb.base/macscp.exp: print __FILE__
-PASS: gdb.base/macscp.exp: print __LINE__
+UNSUPPORTED: gdb.base/macscp.exp: Skipping test because debug information does not include macro information.
 Running ./gdb.base/maint.exp ...
 PASS: gdb.base/maint.exp: set height 0
 PASS: gdb.base/maint.exp: maint print registers
@@ -6520,7 +6296,7 @@ Running ./gdb.base/random-signal.exp ...
 PASS: gdb.base/random-signal.exp: set can-use-hw-watchpoints 0
 PASS: gdb.base/random-signal.exp: watch v
 PASS: gdb.base/random-signal.exp: continue
-FAIL: gdb.base/random-signal.exp: stop with control-c (timeout)
+FAIL: gdb.base/random-signal.exp: stop with control-c
 Running ./gdb.base/readline-ask.exp ...
 PASS: gdb.base/readline-ask.exp: set width 50
 PASS: gdb.base/readline-ask.exp: set height 3
@@ -6664,7 +6440,7 @@ PASS: gdb.base/relational.exp: set variable z
 PASS: gdb.base/relational.exp: print value of (x==y)<z
 Running ./gdb.base/relativedebug.exp ...
 PASS: gdb.base/relativedebug.exp: continue
-FAIL: gdb.base/relativedebug.exp: pause found in backtrace
+PASS: gdb.base/relativedebug.exp: pause found in backtrace
 Running ./gdb.base/relocate.exp ...
 PASS: gdb.base/relocate.exp: add-symbol-file relocate.o 0
 PASS: gdb.base/relocate.exp: get address of static_foo
@@ -6841,7 +6617,7 @@ PASS: gdb.base/restore.exp: run to caller5
 PASS: gdb.base/restore.exp: caller5 calls callee1; tbreak callee
 PASS: gdb.base/restore.exp: caller5 calls callee1; continue to callee
 PASS: gdb.base/restore.exp: caller5 calls callee1; return callee now
-PASS: gdb.base/restore.exp: caller5 calls callee1; return restored l1 to 32492
+FAIL: gdb.base/restore.exp: caller5 calls callee1; return restored l1 to 32492
 PASS: gdb.base/restore.exp: caller5 calls callee1; return restored l2 to 32493
 PASS: gdb.base/restore.exp: caller5 calls callee1; return restored l3 to 32494
 PASS: gdb.base/restore.exp: caller5 calls callee1; return restored l4 to 32495
@@ -6849,7 +6625,7 @@ PASS: gdb.base/restore.exp: caller5 calls callee1; return restored l5 to 32496
 PASS: gdb.base/restore.exp: caller5 calls callee2; tbreak callee
 PASS: gdb.base/restore.exp: caller5 calls callee2; continue to callee
 PASS: gdb.base/restore.exp: caller5 calls callee2; return callee now
-PASS: gdb.base/restore.exp: caller5 calls callee2; return restored l1 to 32492
+FAIL: gdb.base/restore.exp: caller5 calls callee2; return restored l1 to 32492
 PASS: gdb.base/restore.exp: caller5 calls callee2; return restored l2 to 32493
 PASS: gdb.base/restore.exp: caller5 calls callee2; return restored l3 to 32494
 PASS: gdb.base/restore.exp: caller5 calls callee2; return restored l4 to 32495
@@ -6857,7 +6633,7 @@ PASS: gdb.base/restore.exp: caller5 calls callee2; return restored l5 to 32496
 PASS: gdb.base/restore.exp: caller5 calls callee3; tbreak callee
 PASS: gdb.base/restore.exp: caller5 calls callee3; continue to callee
 PASS: gdb.base/restore.exp: caller5 calls callee3; return callee now
-PASS: gdb.base/restore.exp: caller5 calls callee3; return restored l1 to 32492
+FAIL: gdb.base/restore.exp: caller5 calls callee3; return restored l1 to 32492
 PASS: gdb.base/restore.exp: caller5 calls callee3; return restored l2 to 32493
 PASS: gdb.base/restore.exp: caller5 calls callee3; return restored l3 to 32494
 PASS: gdb.base/restore.exp: caller5 calls callee3; return restored l4 to 32495
@@ -6865,7 +6641,7 @@ PASS: gdb.base/restore.exp: caller5 calls callee3; return restored l5 to 32496
 PASS: gdb.base/restore.exp: caller5 calls callee4; tbreak callee
 PASS: gdb.base/restore.exp: caller5 calls callee4; continue to callee
 PASS: gdb.base/restore.exp: caller5 calls callee4; return callee now
-PASS: gdb.base/restore.exp: caller5 calls callee4; return restored l1 to 32492
+FAIL: gdb.base/restore.exp: caller5 calls callee4; return restored l1 to 32492
 PASS: gdb.base/restore.exp: caller5 calls callee4; return restored l2 to 32493
 PASS: gdb.base/restore.exp: caller5 calls callee4; return restored l3 to 32494
 PASS: gdb.base/restore.exp: caller5 calls callee4; return restored l4 to 32495
@@ -6873,7 +6649,7 @@ PASS: gdb.base/restore.exp: caller5 calls callee4; return restored l5 to 32496
 PASS: gdb.base/restore.exp: caller5 calls callee5; tbreak callee
 PASS: gdb.base/restore.exp: caller5 calls callee5; continue to callee
 PASS: gdb.base/restore.exp: caller5 calls callee5; return callee now
-PASS: gdb.base/restore.exp: caller5 calls callee5; return restored l1 to 32492
+FAIL: gdb.base/restore.exp: caller5 calls callee5; return restored l1 to 32492
 PASS: gdb.base/restore.exp: caller5 calls callee5; return restored l2 to 32493
 PASS: gdb.base/restore.exp: caller5 calls callee5; return restored l3 to 32494
 PASS: gdb.base/restore.exp: caller5 calls callee5; return restored l4 to 32495
@@ -6970,22 +6746,22 @@ PASS: gdb.base/savedregs.exp: handle SIGSEGV pass print nostop
 PASS: gdb.base/savedregs.exp: handle SIGILL pass print nostop
 PASS: gdb.base/savedregs.exp: advance catcher
 PASS: gdb.base/savedregs.exp: Get sigtramp info frame
-FAIL: gdb.base/savedregs.exp: Get thrower info frame
-FAIL: gdb.base/savedregs.exp: Check main info frame; stack contains catcher sigtramp thrower main
+PASS: gdb.base/savedregs.exp: Get thrower info frame
+PASS: gdb.base/savedregs.exp: Check main info frame; stack contains catcher sigtramp thrower main
 PASS: gdb.base/savedregs.exp: break caller
 PASS: gdb.base/savedregs.exp: call caller (1,2,3,4,5,6,7,8)
 PASS: gdb.base/savedregs.exp: Get dummy info frame
 PASS: gdb.base/savedregs.exp: Get catcher info frame
 PASS: gdb.base/savedregs.exp: Check sigtramp info frame; stack contains caller dummy catcher sigtramp thrower main
 PASS: gdb.base/savedregs.exp: Check thrower info frame; stack contains caller dummy catcher sigtramp thrower main
-FAIL: gdb.base/savedregs.exp: Check main info frame; stack contains caller dummy catcher sigtramp thrower main
+PASS: gdb.base/savedregs.exp: Check main info frame; stack contains caller dummy catcher sigtramp thrower main
 PASS: gdb.base/savedregs.exp: advance callee
 PASS: gdb.base/savedregs.exp: Get caller info frame
 PASS: gdb.base/savedregs.exp: Check dummy info frame; stack contains callee caller dummy catcher sigtramp thrower main
 PASS: gdb.base/savedregs.exp: Check catcher info frame; stack contains callee caller dummy catcher sigtramp thrower main
 PASS: gdb.base/savedregs.exp: Check sigtramp info frame; stack contains callee caller dummy catcher sigtramp thrower main
 PASS: gdb.base/savedregs.exp: Check thrower info frame; stack contains callee caller dummy catcher sigtramp thrower main
-FAIL: gdb.base/savedregs.exp: Check main info frame; stack contains callee caller dummy catcher sigtramp thrower main
+PASS: gdb.base/savedregs.exp: Check main info frame; stack contains callee caller dummy catcher sigtramp thrower main
 Running ./gdb.base/scope.exp ...
 PASS: gdb.base/scope.exp: print 'scope0.c'::filelocal_ro
 UNSUPPORTED: gdb.base/scope.exp: print 'scope0.c'::filelocal_bss before run
@@ -7142,7 +6918,7 @@ PASS: gdb.base/sepdebug.exp: backtrace from factorial(5)
 PASS: gdb.base/sepdebug.exp: next to recursive call
 PASS: gdb.base/sepdebug.exp: next over recursive call
 PASS: gdb.base/sepdebug.exp: backtrace from factorial(5.1)
-FAIL: gdb.base/sepdebug.exp: continue until exit at recursive next test (the program exited)
+PASS: gdb.base/sepdebug.exp: continue until exit at recursive next test
 PASS: gdb.base/sepdebug.exp: debuglink: set separate debug location
 PASS: gdb.base/sepdebug.exp: debuglink: breakpoint function, optimized file
 PASS: gdb.base/sepdebug.exp: debuglink: breakpoint small function, optimized file
@@ -7795,7 +7571,7 @@ PASS: gdb.base/sigall.exp: handle SIGTERM stop print
 PASS: gdb.base/sigall.exp: b handle_TERM
 PASS: gdb.base/sigall.exp: get signal TERM
 PASS: gdb.base/sigall.exp: send signal TERM
-FAIL: gdb.base/sigall.exp: continue until exit at continue to sigall exit (the program exited)
+PASS: gdb.base/sigall.exp: continue until exit at continue to sigall exit
 Running ./gdb.base/sigaltstack.exp ...
 PASS: gdb.base/sigaltstack.exp: handle SIGALRM print pass nostop
 PASS: gdb.base/sigaltstack.exp: handle SIGVTALRM print pass nostop
@@ -7803,14 +7579,14 @@ PASS: gdb.base/sigaltstack.exp: handle SIGPROF print pass nostop
 PASS: gdb.base/sigaltstack.exp: break catcher if level == INNER
 PASS: gdb.base/sigaltstack.exp: continue to catch
 PASS: gdb.base/sigaltstack.exp: next
-FAIL: gdb.base/sigaltstack.exp: backtrace (pattern 2)
-FAIL: gdb.base/sigaltstack.exp: finish from catch LEAF
-FAIL: gdb.base/sigaltstack.exp: finish to throw INNER
+PASS: gdb.base/sigaltstack.exp: backtrace
+PASS: gdb.base/sigaltstack.exp: finish from catch LEAF
+PASS: gdb.base/sigaltstack.exp: finish to throw INNER
 PASS: gdb.base/sigaltstack.exp: finish to catch INNER
-FAIL: gdb.base/sigaltstack.exp: finish from catch INNER
-FAIL: gdb.base/sigaltstack.exp: finish to OUTER
-FAIL: gdb.base/sigaltstack.exp: finish to catch MAIN
-FAIL: gdb.base/sigaltstack.exp: finish to MAIN
+PASS: gdb.base/sigaltstack.exp: finish from catch INNER
+PASS: gdb.base/sigaltstack.exp: finish to OUTER
+PASS: gdb.base/sigaltstack.exp: finish to catch MAIN
+PASS: gdb.base/sigaltstack.exp: finish to MAIN
 Running ./gdb.base/sigbpt.exp ...
 PASS: gdb.base/sigbpt.exp: break keeper
 PASS: gdb.base/sigbpt.exp: display/i $pc
@@ -7822,20 +7598,20 @@ PASS: gdb.base/sigbpt.exp: rerun to main
 PASS: gdb.base/sigbpt.exp: stepi; pass SIGSEGV
 PASS: gdb.base/sigbpt.exp: stepi; continue to keeper
 PASS: gdb.base/sigbpt.exp: stepi; nopass SIGSEGV
-FAIL: gdb.base/sigbpt.exp: stepi; stepi out of handler
+KFAIL: gdb.base/sigbpt.exp: stepi; stepi out of handler (corrupt pc) (PRMS: gdb/1702)
 PASS: gdb.base/sigbpt.exp: rerun to main
 PASS: gdb.base/sigbpt.exp: stepi bp before segv; pass SIGSEGV
 PASS: gdb.base/sigbpt.exp: stepi bp before segv; continue to keeper
 PASS: gdb.base/sigbpt.exp: stepi bp before segv; nopass SIGSEGV
 PASS: gdb.base/sigbpt.exp: stepi bp before segv; set breakpoint 0 of 1
-FAIL: gdb.base/sigbpt.exp: stepi bp before segv; stepi out of handler
+KFAIL: gdb.base/sigbpt.exp: stepi bp before segv; stepi out of handler (corrupt pc) (PRMS: gdb/1702)
 PASS: gdb.base/sigbpt.exp: stepi bp before segv; clear breakpoint 0 of 1
 PASS: gdb.base/sigbpt.exp: rerun to main
 PASS: gdb.base/sigbpt.exp: stepi bp at segv; pass SIGSEGV
 PASS: gdb.base/sigbpt.exp: stepi bp at segv; continue to keeper
 PASS: gdb.base/sigbpt.exp: stepi bp at segv; nopass SIGSEGV
 PASS: gdb.base/sigbpt.exp: stepi bp at segv; set breakpoint 0 of 1
-FAIL: gdb.base/sigbpt.exp: stepi bp at segv; stepi out of handler
+KFAIL: gdb.base/sigbpt.exp: stepi bp at segv; stepi out of handler (corrupt pc) (PRMS: gdb/1702)
 PASS: gdb.base/sigbpt.exp: stepi bp at segv; clear breakpoint 0 of 1
 PASS: gdb.base/sigbpt.exp: rerun to main
 PASS: gdb.base/sigbpt.exp: stepi bp before and at segv; pass SIGSEGV
@@ -7843,7 +7619,7 @@ PASS: gdb.base/sigbpt.exp: stepi bp before and at segv; continue to keeper
 PASS: gdb.base/sigbpt.exp: stepi bp before and at segv; nopass SIGSEGV
 PASS: gdb.base/sigbpt.exp: stepi bp before and at segv; set breakpoint 0 of 2
 PASS: gdb.base/sigbpt.exp: stepi bp before and at segv; set breakpoint 1 of 2
-FAIL: gdb.base/sigbpt.exp: stepi bp before and at segv; stepi out of handler
+KFAIL: gdb.base/sigbpt.exp: stepi bp before and at segv; stepi out of handler (corrupt pc) (PRMS: gdb/1702)
 PASS: gdb.base/sigbpt.exp: stepi bp before and at segv; clear breakpoint 0 of 2
 PASS: gdb.base/sigbpt.exp: stepi bp before and at segv; clear breakpoint 1 of 2
 PASS: gdb.base/sigbpt.exp: rerun to main
@@ -7885,7 +7661,7 @@ Running ./gdb.base/siginfo.exp ...
 PASS: gdb.base/siginfo.exp: display/i $pc
 PASS: gdb.base/siginfo.exp: break handler
 PASS: gdb.base/siginfo.exp: continue to stepi handler
-FAIL: gdb.base/siginfo.exp: backtrace for nexti (pattern 2)
+PASS: gdb.base/siginfo.exp: backtrace for nexti
 PASS: gdb.base/siginfo.exp: step out of handler
 Running ./gdb.base/siginfo-infcall.exp ...
 PASS: gdb.base/siginfo-infcall.exp: continue to SIGUSR1
@@ -7961,7 +7737,7 @@ PASS: gdb.base/signals.exp: condition $handler_breakpoint_number
 PASS: gdb.base/signals.exp: next to alarm #2
 PASS: gdb.base/signals.exp: next to ++count #2
 PASS: gdb.base/signals.exp: p func1 () #2
-FAIL: gdb.base/signals.exp: backtrace from handler when calling func1
+PASS: gdb.base/signals.exp: backtrace from handler when calling func1
 PASS: gdb.base/signals.exp: continue
 PASS: gdb.base/signals.exp: p count #2
 PASS: gdb.base/signals.exp: info signals
@@ -7980,7 +7756,7 @@ PASS: gdb.base/signals.exp: handle multiple SIGs via reverse integer range
 PASS: gdb.base/signals.exp: override SIGINT
 PASS: gdb.base/signals.exp: signal without arguments disallowed
 PASS: gdb.base/signals.exp: signal SIGUSR1
-FAIL: gdb.base/signals.exp: backtrace for SIGUSR1
+PASS: gdb.base/signals.exp: backtrace for SIGUSR1
 Running ./gdb.base/signest.exp ...
 PASS: gdb.base/signest.exp: continue to fault
 PASS: gdb.base/signest.exp: set conditional breakpoint
@@ -8000,19 +7776,19 @@ PASS: gdb.base/signull.exp: data read; select the pointer type
 PASS: gdb.base/signull.exp: data read; take the SIGSEGV
 PASS: gdb.base/signull.exp: data read; backtrace from SIGSEGV
 PASS: gdb.base/signull.exp: data read; continue to the keeper
-FAIL: gdb.base/signull.exp: data read; backtrace from keeper through SIGSEGV
+PASS: gdb.base/signull.exp: data read; backtrace from keeper through SIGSEGV
 PASS: gdb.base/signull.exp: data write; start with the bowler
 PASS: gdb.base/signull.exp: data write; select the pointer type
 PASS: gdb.base/signull.exp: data write; take the SIGSEGV
 PASS: gdb.base/signull.exp: data write; backtrace from SIGSEGV
 PASS: gdb.base/signull.exp: data write; continue to the keeper
-FAIL: gdb.base/signull.exp: data write; backtrace from keeper through SIGSEGV
+PASS: gdb.base/signull.exp: data write; backtrace from keeper through SIGSEGV
 PASS: gdb.base/signull.exp: code; start with the bowler
 PASS: gdb.base/signull.exp: code; select the pointer type
 PASS: gdb.base/signull.exp: code; take the SIGSEGV
 PASS: gdb.base/signull.exp: code; backtrace from SIGSEGV
 PASS: gdb.base/signull.exp: code; continue to the keeper
-FAIL: gdb.base/signull.exp: code; backtrace from keeper through SIGSEGV
+PASS: gdb.base/signull.exp: code; backtrace from keeper through SIGSEGV
 Running ./gdb.base/sigrepeat.exp ...
 PASS: gdb.base/sigrepeat.exp: advance to infinite loop
 PASS: gdb.base/sigrepeat.exp: next
@@ -8020,122 +7796,122 @@ Running ./gdb.base/sigstep.exp ...
 PASS: gdb.base/sigstep.exp: display/i $pc
 PASS: gdb.base/sigstep.exp: break handler
 PASS: gdb.base/sigstep.exp: continue to stepi handler
-FAIL: gdb.base/sigstep.exp: backtrace for nexti (pattern 2)
+PASS: gdb.base/sigstep.exp: backtrace for nexti
 PASS: gdb.base/sigstep.exp: step from handler; continue to handler
 PASS: gdb.base/sigstep.exp: step from handler; leave handler
 PASS: gdb.base/sigstep.exp: stepi from handleri; continue to handler
-FAIL: gdb.base/sigstep.exp: stepi from handleri; leave handler
-FAIL: gdb.base/sigstep.exp: stepi from handleri; leave signal trampoline
+PASS: gdb.base/sigstep.exp: stepi from handleri; leave handler
+PASS: gdb.base/sigstep.exp: stepi from handleri; leave signal trampoline (in main)
 PASS: gdb.base/sigstep.exp: next from handler; continue to handler
 PASS: gdb.base/sigstep.exp: next from handler; leave handler
 PASS: gdb.base/sigstep.exp: nexti from handleri; continue to handler
-FAIL: gdb.base/sigstep.exp: nexti from handleri; leave handler
-FAIL: gdb.base/sigstep.exp: nexti from handleri; leave signal trampoline
+PASS: gdb.base/sigstep.exp: nexti from handleri; leave handler
+PASS: gdb.base/sigstep.exp: nexti from handleri; leave signal trampoline (in main)
 PASS: gdb.base/sigstep.exp: finish from handleri; continue to handler
-FAIL: gdb.base/sigstep.exp: finish from handleri; leave handler
-FAIL: gdb.base/sigstep.exp: finish from handleri; leave signal trampoline
+PASS: gdb.base/sigstep.exp: finish from handleri; leave handler
+PASS: gdb.base/sigstep.exp: finish from handleri; leave signal trampoline (in main)
 PASS: gdb.base/sigstep.exp: return from handleri; continue to handler
-FAIL: gdb.base/sigstep.exp: return from handleri; leave handler
-FAIL: gdb.base/sigstep.exp: return from handleri; leave signal trampoline (got interactive prompt)
+PASS: gdb.base/sigstep.exp: return from handleri; leave handler
+PASS: gdb.base/sigstep.exp: return from handleri; leave signal trampoline (in main)
 PASS: gdb.base/sigstep.exp: Set done as return will have skipped it
 PASS: gdb.base/sigstep.exp: set itimer = itimer_real
 PASS: gdb.base/sigstep.exp: break 79
-FAIL: gdb.base/sigstep.exp: step to handler; resync (timeout)
-FAIL: gdb.base/sigstep.exp: step to handler; advance to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: step to handler; break handler (timeout)
-FAIL: gdb.base/sigstep.exp: step to handler; performing step (timeout)
-FAIL: gdb.base/sigstep.exp: step to handler; clear handler (timeout)
-FAIL: gdb.base/sigstep.exp: next to handler; resync (timeout)
-FAIL: gdb.base/sigstep.exp: next to handler; advance to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: next to handler; break handler (timeout)
-FAIL: gdb.base/sigstep.exp: next to handler; performing next (timeout)
-FAIL: gdb.base/sigstep.exp: next to handler; clear handler (timeout)
-FAIL: gdb.base/sigstep.exp: continue to handler; resync (timeout)
-FAIL: gdb.base/sigstep.exp: continue to handler; advance to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: continue to handler; break handler (timeout)
-FAIL: gdb.base/sigstep.exp: continue to handler; performing continue (timeout)
-FAIL: gdb.base/sigstep.exp: continue to handler; clear handler (timeout)
-FAIL: gdb.base/sigstep.exp: step to handler entry; resync (timeout)
-FAIL: gdb.base/sigstep.exp: step to handler entry; advance to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: step to handler entry; break handler (timeout)
-FAIL: gdb.base/sigstep.exp: step to handler entry; performing step (timeout)
-FAIL: gdb.base/sigstep.exp: step to handler entry; clear handler (timeout)
-FAIL: gdb.base/sigstep.exp: next to handler entry; resync (timeout)
-FAIL: gdb.base/sigstep.exp: next to handler entry; advance to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: next to handler entry; break handler (timeout)
-FAIL: gdb.base/sigstep.exp: next to handler entry; performing next (timeout)
-FAIL: gdb.base/sigstep.exp: next to handler entry; clear handler (timeout)
-FAIL: gdb.base/sigstep.exp: continue to handler entry; resync (timeout)
-FAIL: gdb.base/sigstep.exp: continue to handler entry; advance to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: continue to handler entry; break handler (timeout)
-FAIL: gdb.base/sigstep.exp: continue to handler entry; performing continue (timeout)
-FAIL: gdb.base/sigstep.exp: continue to handler entry; clear handler (timeout)
-FAIL: gdb.base/sigstep.exp: step over handler; resync (timeout)
-FAIL: gdb.base/sigstep.exp: step over handler; advance to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: step over handler; performing step (timeout)
-FAIL: gdb.base/sigstep.exp: next over handler; resync (timeout)
-FAIL: gdb.base/sigstep.exp: next over handler; advance to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: next over handler; performing next (timeout)
-FAIL: gdb.base/sigstep.exp: continue over handler; resync (timeout)
-FAIL: gdb.base/sigstep.exp: continue over handler; advance to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: continue over handler; performing continue (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, to handler; resync (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, to handler; break infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, to handler; break handler (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, to handler; continue to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, to handler; performing step (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, to handler; clear infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, to handler; clear handler (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, to handler; resync (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, to handler; break infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, to handler; break handler (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, to handler; continue to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, to handler; performing next (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, to handler; clear infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, to handler; clear handler (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, to handler; resync (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, to handler; break infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, to handler; break handler (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, to handler; continue to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, to handler; performing continue (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, to handler; clear infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, to handler; clear handler (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, to handler entry; resync (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, to handler entry; break infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, to handler entry; break handler (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, to handler entry; continue to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, to handler entry; performing step (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, to handler entry; clear infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, to handler entry; clear handler (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, to handler entry; resync (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, to handler entry; break infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, to handler entry; break handler (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, to handler entry; continue to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, to handler entry; performing next (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, to handler entry; clear infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, to handler entry; clear handler (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, to handler entry; resync (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, to handler entry; break infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, to handler entry; break handler (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, to handler entry; continue to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, to handler entry; performing continue (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, to handler entry; clear infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, to handler entry; clear handler (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, skip handler; resync (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, skip handler; break infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, skip handler; continue to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, skip handler; performing step (timeout)
-FAIL: gdb.base/sigstep.exp: step on breakpoint, skip handler; clear infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, skip handler; resync (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, skip handler; break infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, skip handler; continue to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, skip handler; performing next (timeout)
-FAIL: gdb.base/sigstep.exp: next on breakpoint, skip handler; clear infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, skip handler; resync (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, skip handler; break infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, skip handler; continue to infinite loop (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, skip handler; performing continue (timeout)
-FAIL: gdb.base/sigstep.exp: continue on breakpoint, skip handler; clear infinite loop (timeout)
+PASS: gdb.base/sigstep.exp: step to handler; resync
+PASS: gdb.base/sigstep.exp: step to handler; advance to infinite loop
+PASS: gdb.base/sigstep.exp: step to handler; break handler
+PASS: gdb.base/sigstep.exp: step to handler; performing step
+PASS: gdb.base/sigstep.exp: step to handler; clear handler
+PASS: gdb.base/sigstep.exp: next to handler; resync
+PASS: gdb.base/sigstep.exp: next to handler; advance to infinite loop
+PASS: gdb.base/sigstep.exp: next to handler; break handler
+PASS: gdb.base/sigstep.exp: next to handler; performing next
+PASS: gdb.base/sigstep.exp: next to handler; clear handler
+PASS: gdb.base/sigstep.exp: continue to handler; resync
+PASS: gdb.base/sigstep.exp: continue to handler; advance to infinite loop
+PASS: gdb.base/sigstep.exp: continue to handler; break handler
+PASS: gdb.base/sigstep.exp: continue to handler; performing continue
+PASS: gdb.base/sigstep.exp: continue to handler; clear handler
+PASS: gdb.base/sigstep.exp: step to handler entry; resync
+PASS: gdb.base/sigstep.exp: step to handler entry; advance to infinite loop
+PASS: gdb.base/sigstep.exp: step to handler entry; break handler
+PASS: gdb.base/sigstep.exp: step to handler entry; performing step
+PASS: gdb.base/sigstep.exp: step to handler entry; clear handler
+PASS: gdb.base/sigstep.exp: next to handler entry; resync
+PASS: gdb.base/sigstep.exp: next to handler entry; advance to infinite loop
+PASS: gdb.base/sigstep.exp: next to handler entry; break handler
+PASS: gdb.base/sigstep.exp: next to handler entry; performing next
+PASS: gdb.base/sigstep.exp: next to handler entry; clear handler
+PASS: gdb.base/sigstep.exp: continue to handler entry; resync
+PASS: gdb.base/sigstep.exp: continue to handler entry; advance to infinite loop
+PASS: gdb.base/sigstep.exp: continue to handler entry; break handler
+PASS: gdb.base/sigstep.exp: continue to handler entry; performing continue
+PASS: gdb.base/sigstep.exp: continue to handler entry; clear handler
+PASS: gdb.base/sigstep.exp: step over handler; resync
+PASS: gdb.base/sigstep.exp: step over handler; advance to infinite loop
+PASS: gdb.base/sigstep.exp: step over handler; performing step
+PASS: gdb.base/sigstep.exp: next over handler; resync
+PASS: gdb.base/sigstep.exp: next over handler; advance to infinite loop
+PASS: gdb.base/sigstep.exp: next over handler; performing next
+PASS: gdb.base/sigstep.exp: continue over handler; resync
+PASS: gdb.base/sigstep.exp: continue over handler; advance to infinite loop
+PASS: gdb.base/sigstep.exp: continue over handler; performing continue
+PASS: gdb.base/sigstep.exp: step on breakpoint, to handler; resync
+PASS: gdb.base/sigstep.exp: step on breakpoint, to handler; break infinite loop
+PASS: gdb.base/sigstep.exp: step on breakpoint, to handler; break handler
+PASS: gdb.base/sigstep.exp: step on breakpoint, to handler; continue to infinite loop
+PASS: gdb.base/sigstep.exp: step on breakpoint, to handler; performing step
+PASS: gdb.base/sigstep.exp: step on breakpoint, to handler; clear infinite loop
+PASS: gdb.base/sigstep.exp: step on breakpoint, to handler; clear handler
+PASS: gdb.base/sigstep.exp: next on breakpoint, to handler; resync
+PASS: gdb.base/sigstep.exp: next on breakpoint, to handler; break infinite loop
+PASS: gdb.base/sigstep.exp: next on breakpoint, to handler; break handler
+PASS: gdb.base/sigstep.exp: next on breakpoint, to handler; continue to infinite loop
+PASS: gdb.base/sigstep.exp: next on breakpoint, to handler; performing next
+PASS: gdb.base/sigstep.exp: next on breakpoint, to handler; clear infinite loop
+PASS: gdb.base/sigstep.exp: next on breakpoint, to handler; clear handler
+PASS: gdb.base/sigstep.exp: continue on breakpoint, to handler; resync
+PASS: gdb.base/sigstep.exp: continue on breakpoint, to handler; break infinite loop
+PASS: gdb.base/sigstep.exp: continue on breakpoint, to handler; break handler
+PASS: gdb.base/sigstep.exp: continue on breakpoint, to handler; continue to infinite loop
+PASS: gdb.base/sigstep.exp: continue on breakpoint, to handler; performing continue
+PASS: gdb.base/sigstep.exp: continue on breakpoint, to handler; clear infinite loop
+PASS: gdb.base/sigstep.exp: continue on breakpoint, to handler; clear handler
+PASS: gdb.base/sigstep.exp: step on breakpoint, to handler entry; resync
+PASS: gdb.base/sigstep.exp: step on breakpoint, to handler entry; break infinite loop
+PASS: gdb.base/sigstep.exp: step on breakpoint, to handler entry; break handler
+PASS: gdb.base/sigstep.exp: step on breakpoint, to handler entry; continue to infinite loop
+PASS: gdb.base/sigstep.exp: step on breakpoint, to handler entry; performing step
+PASS: gdb.base/sigstep.exp: step on breakpoint, to handler entry; clear infinite loop
+PASS: gdb.base/sigstep.exp: step on breakpoint, to handler entry; clear handler
+PASS: gdb.base/sigstep.exp: next on breakpoint, to handler entry; resync
+PASS: gdb.base/sigstep.exp: next on breakpoint, to handler entry; break infinite loop
+PASS: gdb.base/sigstep.exp: next on breakpoint, to handler entry; break handler
+PASS: gdb.base/sigstep.exp: next on breakpoint, to handler entry; continue to infinite loop
+PASS: gdb.base/sigstep.exp: next on breakpoint, to handler entry; performing next
+PASS: gdb.base/sigstep.exp: next on breakpoint, to handler entry; clear infinite loop
+PASS: gdb.base/sigstep.exp: next on breakpoint, to handler entry; clear handler
+PASS: gdb.base/sigstep.exp: continue on breakpoint, to handler entry; resync
+PASS: gdb.base/sigstep.exp: continue on breakpoint, to handler entry; break infinite loop
+PASS: gdb.base/sigstep.exp: continue on breakpoint, to handler entry; break handler
+PASS: gdb.base/sigstep.exp: continue on breakpoint, to handler entry; continue to infinite loop
+PASS: gdb.base/sigstep.exp: continue on breakpoint, to handler entry; performing continue
+PASS: gdb.base/sigstep.exp: continue on breakpoint, to handler entry; clear infinite loop
+PASS: gdb.base/sigstep.exp: continue on breakpoint, to handler entry; clear handler
+PASS: gdb.base/sigstep.exp: step on breakpoint, skip handler; resync
+PASS: gdb.base/sigstep.exp: step on breakpoint, skip handler; break infinite loop
+PASS: gdb.base/sigstep.exp: step on breakpoint, skip handler; continue to infinite loop
+PASS: gdb.base/sigstep.exp: step on breakpoint, skip handler; performing step
+PASS: gdb.base/sigstep.exp: step on breakpoint, skip handler; clear infinite loop
+PASS: gdb.base/sigstep.exp: next on breakpoint, skip handler; resync
+PASS: gdb.base/sigstep.exp: next on breakpoint, skip handler; break infinite loop
+PASS: gdb.base/sigstep.exp: next on breakpoint, skip handler; continue to infinite loop
+PASS: gdb.base/sigstep.exp: next on breakpoint, skip handler; performing next
+PASS: gdb.base/sigstep.exp: next on breakpoint, skip handler; clear infinite loop
+PASS: gdb.base/sigstep.exp: continue on breakpoint, skip handler; resync
+PASS: gdb.base/sigstep.exp: continue on breakpoint, skip handler; break infinite loop
+PASS: gdb.base/sigstep.exp: continue on breakpoint, skip handler; continue to infinite loop
+PASS: gdb.base/sigstep.exp: continue on breakpoint, skip handler; performing continue
+PASS: gdb.base/sigstep.exp: continue on breakpoint, skip handler; clear infinite loop
 Running ./gdb.base/sizeof.exp ...
 Running ./gdb.base/skip.exp ...
 PASS: gdb.base/skip.exp: skip file (no default file)
@@ -8246,6 +8022,8 @@ XFAIL: gdb.base/stale-infcall.exp: test system longjmp tracking support
 UNTESTED: gdb.base/stale-infcall.exp: System lacks support for tracking longjmps
 Running ./gdb.base/stap-probe.exp ...
 gdb compile failed, ./gdb.base/stap-probe.c:39:21: fatal error: sys/sdt.h: No such file or directory
+ #include <sys/sdt.h>
+                     ^
 compilation terminated.
 UNTESTED: gdb.base/stap-probe.exp: without semaphore, not optimized: stap-probe.exp
 UNTESTED: gdb.base/stap-probe.exp: without semaphore, not optimized: stap-probe.exp
@@ -8313,7 +8091,7 @@ PASS: gdb.base/step-test.exp: nexti over function
 PASS: gdb.base/step-test.exp: set breakpoint at call to large_struct_by_value
 PASS: gdb.base/step-test.exp: run to pass large struct
 PASS: gdb.base/step-test.exp: large struct by value
-FAIL: gdb.base/step-test.exp: continue until exit at step-test.exp (the program exited)
+PASS: gdb.base/step-test.exp: continue until exit at step-test.exp
 Running ./gdb.base/store.exp ...
 PASS: gdb.base/store.exp: tbreak wack_charest
 PASS: gdb.base/store.exp: continue to wack_charest
@@ -8373,12 +8151,12 @@ PASS: gdb.base/store.exp: var double l; next over add call
 PASS: gdb.base/store.exp: var double l; print incremented l, expecting 2
 PASS: gdb.base/store.exp: tbreak wack_doublest
 PASS: gdb.base/store.exp: continue to wack_doublest
-PASS: gdb.base/store.exp: var doublest l; print old l, expecting -1
-PASS: gdb.base/store.exp: var doublest l; print old r, expecting -2
-PASS: gdb.base/store.exp: var doublest l; setting l to 4
-PASS: gdb.base/store.exp: var doublest l; print new l, expecting 4
+FAIL: gdb.base/store.exp: var doublest l; print old l, expecting -1
+FAIL: gdb.base/store.exp: var doublest l; print old r, expecting -2
+FAIL: gdb.base/store.exp: var doublest l; setting l to 4
+FAIL: gdb.base/store.exp: var doublest l; print new l, expecting 4
 PASS: gdb.base/store.exp: var doublest l; next over add call
-PASS: gdb.base/store.exp: var doublest l; print incremented l, expecting 2
+FAIL: gdb.base/store.exp: var doublest l; print incremented l, expecting 2
 PASS: gdb.base/store.exp: tbreak add_charest
 PASS: gdb.base/store.exp: continue to add_charest
 PASS: gdb.base/store.exp: upvar charest l; up
@@ -8431,10 +8209,10 @@ PASS: gdb.base/store.exp: upvar double l; print new l, expecting 4
 PASS: gdb.base/store.exp: tbreak add_doublest
 PASS: gdb.base/store.exp: continue to add_doublest
 PASS: gdb.base/store.exp: upvar doublest l; up
-PASS: gdb.base/store.exp: upvar doublest l; print old l, expecting -1
-PASS: gdb.base/store.exp: upvar doublest l; print old r, expecting -2
-PASS: gdb.base/store.exp: upvar doublest l; set l to 4
-PASS: gdb.base/store.exp: upvar doublest l; print new l, expecting 4
+FAIL: gdb.base/store.exp: upvar doublest l; print old l, expecting -1
+FAIL: gdb.base/store.exp: upvar doublest l; print old r, expecting -2
+FAIL: gdb.base/store.exp: upvar doublest l; set l to 4
+FAIL: gdb.base/store.exp: upvar doublest l; print new l, expecting 4
 PASS: gdb.base/store.exp: tbreak wack_struct_1
 PASS: gdb.base/store.exp: continue to wack_struct_1
 PASS: gdb.base/store.exp: var struct 1 u; next to add_struct_1 call
@@ -9407,7 +9185,7 @@ PASS: gdb.base/watchpoint.exp: watchpoint hit, fifth time
 PASS: gdb.base/watchpoint.exp: Watchpoint hit count is 5
 PASS: gdb.base/watchpoint.exp: continue to marker2
 PASS: gdb.base/watchpoint.exp: watchpoint disabled
-FAIL: gdb.base/watchpoint.exp: continue until exit at continue to exit in test_simple_watchpoint (the program exited)
+PASS: gdb.base/watchpoint.exp: continue until exit at continue to exit in test_simple_watchpoint
 PASS: gdb.base/watchpoint.exp: watchpoints found in watchpoint/breakpoint table
 PASS: gdb.base/watchpoint.exp: disable watchpoint in test_disabling_watchpoints
 PASS: gdb.base/watchpoint.exp: run to marker1 in test_disabling_watchpoints
@@ -9417,7 +9195,7 @@ PASS: gdb.base/watchpoint.exp: watchpoint hit in test_disabling_watchpoints, sec
 PASS: gdb.base/watchpoint.exp: disable watchpoint #2 in test_disabling_watchpoints
 PASS: gdb.base/watchpoint.exp: watchpoint disabled in table
 PASS: gdb.base/watchpoint.exp: disabled watchpoint skipped
-FAIL: gdb.base/watchpoint.exp: continue until exit at continue to exit in test_disabling_watchpoints (the program exited)
+PASS: gdb.base/watchpoint.exp: continue until exit at continue to exit in test_disabling_watchpoints
 PASS: gdb.base/watchpoint.exp: watch ival2
 PASS: gdb.base/watchpoint.exp: break func2 if 0
 PASS: gdb.base/watchpoint.exp: p $func2_breakpoint_number = $bpnum
@@ -9464,7 +9242,7 @@ PASS: gdb.base/watchpoint.exp: set local watch in recursive call with explicit s
 PASS: gdb.base/watchpoint.exp: trigger local watch with explicit scope in recursive call
 PASS: gdb.base/watchpoint.exp: self-delete local watch with explicit scope in recursive call (2)
 PASS: gdb.base/watchpoint.exp: disable in test_complex_watchpoint
-FAIL: gdb.base/watchpoint.exp: continue until exit at continue to exit in test_complex_watchpoint (the program exited)
+PASS: gdb.base/watchpoint.exp: continue until exit at continue to exit in test_complex_watchpoint
 PASS: gdb.base/watchpoint.exp: watchpoint refused to insert on nonexistent struct member
 PASS: gdb.base/watchpoint.exp: watch global_ptr
 PASS: gdb.base/watchpoint.exp: watch *(int *) 0
@@ -9782,10 +9560,10 @@ PASS: gdb.cp/anon-ns.exp: list '(anonymous namespace)::A::(anonymous namespace):
 PASS: gdb.cp/anon-ns.exp: break (anonymous namespace)::A::(anonymous namespace)::(anonymous namespace)::three::doit(void)
 PASS: gdb.cp/anon-ns.exp: break '(anonymous namespace)::A::(anonymous namespace)::(anonymous namespace)::three::doit(void)'
 Running ./gdb.cp/anon-struct.exp ...
-PASS: gdb.cp/anon-struct.exp: print type of t::t
+FAIL: gdb.cp/anon-struct.exp: print type of t::t
 PASS: gdb.cp/anon-struct.exp: print type of X::t2
-PASS: gdb.cp/anon-struct.exp: print type of X::t2::t2
-PASS: gdb.cp/anon-struct.exp: print type of t3::~t3
+FAIL: gdb.cp/anon-struct.exp: print type of X::t2::t2
+FAIL: gdb.cp/anon-struct.exp: print type of t3::~t3
 Running ./gdb.cp/anon-union.exp ...
 PASS: gdb.cp/anon-union.exp: set width 0
 PASS: gdb.cp/anon-union.exp: next 1
@@ -9987,8 +9765,8 @@ PASS: gdb.cp/classes.exp: print csi with static members
 PASS: gdb.cp/classes.exp: print cnsi with static members
 PASS: gdb.cp/classes.exp: finish from marker_reg1
 PASS: gdb.cp/classes.exp: calling method for small class
-PASS: gdb.cp/classes.exp: print ctor of typedef class
-PASS: gdb.cp/classes.exp: print dtor of typedef class
+FAIL: gdb.cp/classes.exp: print ctor of typedef class
+FAIL: gdb.cp/classes.exp: print dtor of typedef class
 PASS: gdb.cp/classes.exp: list ByAnyOtherName::times
 Running ./gdb.cp/cmpd-minsyms.exp ...
 PASS: gdb.cp/cmpd-minsyms.exp: setting breakpoint at 'GDB<int>::a() const'
@@ -10072,12 +9850,12 @@ PASS: gdb.cp/cpcompletion.exp: complete p a.g
 Running ./gdb.cp/cpexprs.exp ...
 PASS: gdb.cp/cpexprs.exp: set listsize 1
 PASS: gdb.cp/cpexprs.exp: print base1::a_function
-PASS: gdb.cp/cpexprs.exp: print base1::base1(int)
-PASS: gdb.cp/cpexprs.exp: print base1::base1(void)
+FAIL: gdb.cp/cpexprs.exp: print base1::base1(int)
+FAIL: gdb.cp/cpexprs.exp: print base1::base1(void)
 PASS: gdb.cp/cpexprs.exp: print base2::a_function
-PASS: gdb.cp/cpexprs.exp: print base2::base2
-PASS: gdb.cp/cpexprs.exp: print base::base(int)
-PASS: gdb.cp/cpexprs.exp: print base::base(void)
+FAIL: gdb.cp/cpexprs.exp: print base2::base2
+FAIL: gdb.cp/cpexprs.exp: print base::base(int)
+FAIL: gdb.cp/cpexprs.exp: print base::base(void)
 PASS: gdb.cp/cpexprs.exp: print base::operator char*
 PASS: gdb.cp/cpexprs.exp: print base::operator delete
 PASS: gdb.cp/cpexprs.exp: print base::operator delete[]
@@ -10127,9 +9905,9 @@ PASS: gdb.cp/cpexprs.exp: print base::overload(int) const
 PASS: gdb.cp/cpexprs.exp: print base::overload(long) const
 PASS: gdb.cp/cpexprs.exp: print base::overload(short) const
 PASS: gdb.cp/cpexprs.exp: print base::overload(void) const
-PASS: gdb.cp/cpexprs.exp: print base::~base
+FAIL: gdb.cp/cpexprs.exp: print base::~base
 PASS: gdb.cp/cpexprs.exp: print derived::a_function
-PASS: gdb.cp/cpexprs.exp: print derived::derived
+FAIL: gdb.cp/cpexprs.exp: print derived::derived
 PASS: gdb.cp/cpexprs.exp: print flubber<int, int, int, char, char>
 PASS: gdb.cp/cpexprs.exp: print flubber<int, int, int, char, int>
 PASS: gdb.cp/cpexprs.exp: print flubber<int, int, int, char, long>
@@ -10154,42 +9932,42 @@ PASS: gdb.cp/cpexprs.exp: print flubber<int, int, short, short, int>
 PASS: gdb.cp/cpexprs.exp: print flubber<long, short, long, short, long>
 PASS: gdb.cp/cpexprs.exp: print flubber<short, int, short, int, short>
 PASS: gdb.cp/cpexprs.exp: print policy1::function
-PASS: gdb.cp/cpexprs.exp: print policy1::policy
+FAIL: gdb.cp/cpexprs.exp: print policy1::policy
 PASS: gdb.cp/cpexprs.exp: print policy2::function
-PASS: gdb.cp/cpexprs.exp: print policy2::policy
+FAIL: gdb.cp/cpexprs.exp: print policy2::policy
 PASS: gdb.cp/cpexprs.exp: print policy3::function
-PASS: gdb.cp/cpexprs.exp: print policy3::policy
+FAIL: gdb.cp/cpexprs.exp: print policy3::policy
 PASS: gdb.cp/cpexprs.exp: print policy4::function
-PASS: gdb.cp/cpexprs.exp: print policy4::policy
+FAIL: gdb.cp/cpexprs.exp: print policy4::policy
 PASS: gdb.cp/cpexprs.exp: print policyd1::function
-PASS: gdb.cp/cpexprs.exp: print policyd1::policyd
-PASS: gdb.cp/cpexprs.exp: print policyd1::~policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd1::policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd1::~policyd
 PASS: gdb.cp/cpexprs.exp: print policyd2::function
-PASS: gdb.cp/cpexprs.exp: print policyd2::policyd
-PASS: gdb.cp/cpexprs.exp: print policyd2::~policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd2::policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd2::~policyd
 PASS: gdb.cp/cpexprs.exp: print policyd3::function
-PASS: gdb.cp/cpexprs.exp: print policyd3::policyd
-PASS: gdb.cp/cpexprs.exp: print policyd3::~policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd3::policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd3::~policyd
 PASS: gdb.cp/cpexprs.exp: print policyd4::function
-PASS: gdb.cp/cpexprs.exp: print policyd4::policyd
-PASS: gdb.cp/cpexprs.exp: print policyd4::~policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd4::policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd4::~policyd
 PASS: gdb.cp/cpexprs.exp: print policyd5::function
-PASS: gdb.cp/cpexprs.exp: print policyd5::policyd
-PASS: gdb.cp/cpexprs.exp: print policyd5::~policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd5::policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd5::~policyd
 PASS: gdb.cp/cpexprs.exp: print policyd<base, operation_1<base> >::function
-PASS: gdb.cp/cpexprs.exp: print policyd<base, operation_1<base> >::policyd
-PASS: gdb.cp/cpexprs.exp: print policyd<base, operation_1<base> >::~policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd<base, operation_1<base> >::policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd<base, operation_1<base> >::~policyd
 PASS: gdb.cp/cpexprs.exp: print policyd<char, operation_1<char> >::function
-PASS: gdb.cp/cpexprs.exp: print policyd<char, operation_1<char> >::policyd
-PASS: gdb.cp/cpexprs.exp: print policyd<char, operation_1<char> >::~policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd<char, operation_1<char> >::policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd<char, operation_1<char> >::~policyd
 PASS: gdb.cp/cpexprs.exp: print policyd<int, operation_1<int> >::function
-PASS: gdb.cp/cpexprs.exp: print policyd<int, operation_1<int> >::policyd
-PASS: gdb.cp/cpexprs.exp: print policyd<int, operation_1<int> >::~policyd
-PASS: gdb.cp/cpexprs.exp: print policyd<long, operation_1<long> >::policyd
-PASS: gdb.cp/cpexprs.exp: print policyd<long, operation_1<long> >::~policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd<int, operation_1<int> >::policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd<int, operation_1<int> >::~policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd<long, operation_1<long> >::policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd<long, operation_1<long> >::~policyd
 PASS: gdb.cp/cpexprs.exp: print policyd<tclass<int>, operation_1<tclass<int> > >::function
-PASS: gdb.cp/cpexprs.exp: print policyd<tclass<int>, operation_1<tclass<int> > >::policyd
-PASS: gdb.cp/cpexprs.exp: print policyd<tclass<int>, operation_1<tclass<int> > >::~policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd<tclass<int>, operation_1<tclass<int> > >::policyd
+FAIL: gdb.cp/cpexprs.exp: print policyd<tclass<int>, operation_1<tclass<int> > >::~policyd
 PASS: gdb.cp/cpexprs.exp: print tclass<base>::do_something
 PASS: gdb.cp/cpexprs.exp: print tclass<char>::do_something
 PASS: gdb.cp/cpexprs.exp: print tclass<int>::do_something
@@ -10288,19 +10066,19 @@ PASS: gdb.cp/cpexprs.exp: list policy4::function
 PASS: gdb.cp/cpexprs.exp: list policy4::policy
 PASS: gdb.cp/cpexprs.exp: list policyd1::function
 PASS: gdb.cp/cpexprs.exp: list policyd1::policyd
-PASS: gdb.cp/cpexprs.exp: list policyd1::~policyd
+FAIL: gdb.cp/cpexprs.exp: list policyd1::~policyd
 PASS: gdb.cp/cpexprs.exp: list policyd2::function
 PASS: gdb.cp/cpexprs.exp: list policyd2::policyd
-PASS: gdb.cp/cpexprs.exp: list policyd2::~policyd
+FAIL: gdb.cp/cpexprs.exp: list policyd2::~policyd
 PASS: gdb.cp/cpexprs.exp: list policyd3::function
 PASS: gdb.cp/cpexprs.exp: list policyd3::policyd
-PASS: gdb.cp/cpexprs.exp: list policyd3::~policyd
+FAIL: gdb.cp/cpexprs.exp: list policyd3::~policyd
 PASS: gdb.cp/cpexprs.exp: list policyd4::function
 PASS: gdb.cp/cpexprs.exp: list policyd4::policyd
-PASS: gdb.cp/cpexprs.exp: list policyd4::~policyd
+FAIL: gdb.cp/cpexprs.exp: list policyd4::~policyd
 PASS: gdb.cp/cpexprs.exp: list policyd5::function
 PASS: gdb.cp/cpexprs.exp: list policyd5::policyd
-PASS: gdb.cp/cpexprs.exp: list policyd5::~policyd
+FAIL: gdb.cp/cpexprs.exp: list policyd5::~policyd
 PASS: gdb.cp/cpexprs.exp: list policyd<base, operation_1<base> >::function
 PASS: gdb.cp/cpexprs.exp: list policyd<base, operation_1<base> >::policyd
 PASS: gdb.cp/cpexprs.exp: list policyd<base, operation_1<base> >::~policyd
@@ -10413,19 +10191,24 @@ PASS: gdb.cp/cpexprs.exp: continue to policy4::function
 PASS: gdb.cp/cpexprs.exp: continue to policy4::policy
 PASS: gdb.cp/cpexprs.exp: continue to policyd1::function
 PASS: gdb.cp/cpexprs.exp: continue to policyd1::policyd
-PASS: gdb.cp/cpexprs.exp: continue to policyd1::~policyd
+FAIL: gdb.cp/cpexprs.exp: setting breakpoint at policyd1::~policyd
+FAIL: gdb.cp/cpexprs.exp: continue to policyd1::~policyd
 PASS: gdb.cp/cpexprs.exp: continue to policyd2::function
 PASS: gdb.cp/cpexprs.exp: continue to policyd2::policyd
-PASS: gdb.cp/cpexprs.exp: continue to policyd2::~policyd
+FAIL: gdb.cp/cpexprs.exp: setting breakpoint at policyd2::~policyd
+FAIL: gdb.cp/cpexprs.exp: continue to policyd2::~policyd
 PASS: gdb.cp/cpexprs.exp: continue to policyd3::function
 PASS: gdb.cp/cpexprs.exp: continue to policyd3::policyd
-PASS: gdb.cp/cpexprs.exp: continue to policyd3::~policyd
+FAIL: gdb.cp/cpexprs.exp: setting breakpoint at policyd3::~policyd
+FAIL: gdb.cp/cpexprs.exp: continue to policyd3::~policyd
 PASS: gdb.cp/cpexprs.exp: continue to policyd4::function
 PASS: gdb.cp/cpexprs.exp: continue to policyd4::policyd
-PASS: gdb.cp/cpexprs.exp: continue to policyd4::~policyd
+FAIL: gdb.cp/cpexprs.exp: setting breakpoint at policyd4::~policyd
+FAIL: gdb.cp/cpexprs.exp: continue to policyd4::~policyd
 PASS: gdb.cp/cpexprs.exp: continue to policyd5::function
 PASS: gdb.cp/cpexprs.exp: continue to policyd5::policyd
-PASS: gdb.cp/cpexprs.exp: continue to policyd5::~policyd
+FAIL: gdb.cp/cpexprs.exp: setting breakpoint at policyd5::~policyd
+FAIL: gdb.cp/cpexprs.exp: continue to policyd5::~policyd
 PASS: gdb.cp/cpexprs.exp: continue to policyd<base, operation_1<base> >::function
 PASS: gdb.cp/cpexprs.exp: continue to policyd<base, operation_1<base> >::policyd
 PASS: gdb.cp/cpexprs.exp: continue to policyd<base, operation_1<base> >::~policyd
@@ -12112,7 +11895,7 @@ PASS: gdb.cp/method2.exp: setting language c
 PASS: gdb.cp/method2.exp: breaking in method (c)
 PASS: gdb.cp/method2.exp: setting language c++
 PASS: gdb.cp/method2.exp: breaking in method (c++)
-FAIL: gdb.cp/method2.exp: continue until exit at continue to end (the program exited)
+PASS: gdb.cp/method2.exp: continue until exit at continue to end
 Running ./gdb.cp/method.exp ...
 PASS: gdb.cp/method.exp: break A::foo
 PASS: gdb.cp/method.exp: continue to A::foo
@@ -12962,8 +12745,8 @@ PASS: gdb.cp/m-static.exp: simple object, static const bool
 PASS: gdb.cp/m-static.exp: simple object, static const int
 PASS: gdb.cp/m-static.exp: simple object, static long
 PASS: gdb.cp/m-static.exp: simple object, static enum
-PASS: gdb.cp/m-static.exp: simple object instance, print quoted destructor
-PASS: gdb.cp/m-static.exp: simple object class, ptype quoted destructor
+FAIL: gdb.cp/m-static.exp: simple object instance, print quoted destructor
+FAIL: gdb.cp/m-static.exp: simple object class, ptype quoted destructor
 PASS: gdb.cp/m-static.exp: derived template object, base static const bool
 PASS: gdb.cp/m-static.exp: derived template object, base static const int
 PASS: gdb.cp/m-static.exp: derived template object, base static long
@@ -13318,7 +13101,7 @@ PASS: gdb.cp/ovldbreak.exp: set multiple-symbols cancel
 PASS: gdb.cp/ovldbreak.exp: break foo::foofunc
 PASS: gdb.cp/ovldbreak.exp: set multiple-symbols all
 PASS: gdb.cp/ovldbreak.exp: break foo::foofunc
-FAIL: gdb.cp/ovldbreak.exp: continue until exit at finish program (the program exited)
+PASS: gdb.cp/ovldbreak.exp: continue until exit at finish program
 Running ./gdb.cp/ovsrch.exp ...
 PASS: gdb.cp/ovsrch.exp: break A::stop_here
 PASS: gdb.cp/ovsrch.exp: break 'A::stop_here'
@@ -13883,7 +13666,7 @@ Running ./gdb.dwarf2/dw2-const.exp ...
 PASS: gdb.dwarf2/dw2-const.exp: print twelve
 PASS: gdb.dwarf2/dw2-const.exp: print/x val8
 Running ./gdb.dwarf2/dw2-cp-infcall-ref-static.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r17/work/binutils-2.22/gold/output.cc:3019
+gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r20/work/binutils-2.22/gold/output.cc:3019
 collect2: error: ld returned 1 exit status
 UNTESTED: gdb.dwarf2/dw2-cp-infcall-ref-static.exp: dw2-cp-infcall-ref-static.exp
 Running ./gdb.dwarf2/dw2-cu-size.exp ...
@@ -14128,7 +13911,7 @@ PASS: gdb.dwarf2/dw2-empty-pc-range.exp: empty range before CU load
 PASS: gdb.dwarf2/dw2-empty-pc-range.exp: valid range after CU load
 PASS: gdb.dwarf2/dw2-empty-pc-range.exp: empty range after CU load
 Running ./gdb.dwarf2/dw2-entry-value.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r17/work/binutils-2.22/gold/output.cc:3019
+gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r20/work/binutils-2.22/gold/output.cc:3019
 collect2: error: ld returned 1 exit status
 UNTESTED: gdb.dwarf2/dw2-entry-value.exp: dw2-entry-value.exp
 Running ./gdb.dwarf2/dw2-error.exp ...
@@ -14156,7 +13939,7 @@ PASS: gdb.dwarf2/dw2-inline-break.exp: break func8b
 PASS: gdb.dwarf2/dw2-inline-break.exp: print func1
 PASS: gdb.dwarf2/dw2-inline-break.exp: print func2
 Running ./gdb.dwarf2/dw2-inline-param.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r17/work/binutils-2.22/gold/output.cc:3019
+gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r20/work/binutils-2.22/gold/output.cc:3019
 collect2: error: ld returned 1 exit status
 UNTESTED: gdb.dwarf2/dw2-inline-param.exp: dw2-inline-param.exp
 Running ./gdb.dwarf2/dw2-intercu.exp ...
@@ -14183,7 +13966,7 @@ Running ./gdb.dwarf2/dw2-namespaceless-anonymous.exp ...
 PASS: gdb.dwarf2/dw2-namespaceless-anonymous.exp: ptype '(anonymous namespace)::v'
 PASS: gdb.dwarf2/dw2-namespaceless-anonymous.exp: p '(anonymous namespace)::v'
 Running ./gdb.dwarf2/dw2-noloc.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r17/work/binutils-2.22/gold/output.cc:3019
+gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r20/work/binutils-2.22/gold/output.cc:3019
 collect2: error: ld returned 1 exit status
 UNTESTED: gdb.dwarf2/dw2-noloc.exp: dw2-noloc.exp
 Running ./gdb.dwarf2/dw2-objfile-overlap.exp ...
@@ -14214,7 +13997,7 @@ PASS: gdb.dwarf2/dw2-op-stack-value.exp: x/wx &aa551234
 PASS: gdb.dwarf2/dw2-op-stack-value.exp: p/x implicit4to2
 PASS: gdb.dwarf2/dw2-op-stack-value.exp: p/x implicit4to4
 Running ./gdb.dwarf2/dw2-param-error.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r17/work/binutils-2.22/gold/output.cc:3019
+gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r20/work/binutils-2.22/gold/output.cc:3019
 collect2: error: ld returned 1 exit status
 UNTESTED: gdb.dwarf2/dw2-param-error.exp: dw2-param-error.exp
 Running ./gdb.dwarf2/dw2-producer.exp ...
@@ -14242,7 +14025,7 @@ Running ./gdb.dwarf2/dw2-simple-locdesc.exp ...
 KFAIL: gdb.dwarf2/dw2-simple-locdesc.exp: p &s.shl (PRMS: symtab/13307)
 PASS: gdb.dwarf2/dw2-simple-locdesc.exp: p &s.data4
 Running ./gdb.dwarf2/dw2-skip-prologue.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r17/work/binutils-2.22/gold/output.cc:3019
+gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r20/work/binutils-2.22/gold/output.cc:3019
 collect2: error: ld returned 1 exit status
 UNTESTED: gdb.dwarf2/dw2-skip-prologue.exp: dw2-skip-prologue.exp
 Running ./gdb.dwarf2/dw2-stack-boundary.exp ...
@@ -14256,7 +14039,7 @@ PASS: gdb.dwarf2/dw2-strp.exp: ptype a_string
 PASS: gdb.dwarf2/dw2-strp.exp: p a_string2
 PASS: gdb.dwarf2/dw2-strp.exp: ptype a_string2
 Running ./gdb.dwarf2/dw2-unresolved.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r17/work/binutils-2.22/gold/output.cc:3019
+gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r20/work/binutils-2.22/gold/output.cc:3019
 collect2: error: ld returned 1 exit status
 UNTESTED: gdb.dwarf2/dw2-unresolved.exp: dw2-unresolved.exp
 Running ./gdb.dwarf2/dw2-var-zero-addr.exp ...
@@ -14862,7 +14645,7 @@ PASS: gdb.linespec/ls-errs.exp: break 'main.c'+3
 PASS: gdb.linespec/ls-errs.exp: break $zippo
 PASS: gdb.linespec/ls-errs.exp: break ls-errs.c:$zippo
 Running ./gdb.linespec/macro-relative.exp ...
-PASS: gdb.linespec/macro-relative.exp: info macro HEADER
+FAIL: gdb.linespec/macro-relative.exp: info macro HEADER
 Running ./gdb.linespec/skip-two.exp ...
 PASS: gdb.linespec/skip-two.exp: skip function dupname
 PASS: gdb.linespec/skip-two.exp: dupname ignored from main
@@ -14879,7 +14662,7 @@ PASS: gdb.linespec/thread.exp: continue to breakpoint: 29
 PASS: gdb.linespec/thread.exp: setting breakpoint at thread
 PASS: gdb.linespec/thread.exp: continue to breakpoint: thread function
 Running ./gdb.mi/dw2-ref-missing-frame.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r17/work/binutils-2.22/gold/output.cc:3019
+gdb compile failed, /usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/binutils-bin/2.22/ld.gold.real: internal error in output_address, at /var/tmp/portage/cross-x86_64-cros-linux-gnu/binutils-2.22-r20/work/binutils-2.22/gold/output.cc:3019
 collect2: error: ld returned 1 exit status
 Running ./gdb.mi/gdb2549.exp ...
 PASS: gdb.mi/gdb2549.exp: wrong arguments
@@ -15814,7 +15597,7 @@ PASS: gdb.mi/mi-syn-frame.exp: finished exec continue
 PASS: gdb.mi/mi-syn-frame.exp: list stack frames
 PASS: gdb.mi/mi-syn-frame.exp: insert breakpoint subroutine
 PASS: gdb.mi/mi-syn-frame.exp: data evaluate expression
-FAIL: gdb.mi/mi-syn-frame.exp: list stack frames
+PASS: gdb.mi/mi-syn-frame.exp: list stack frames
 PASS: gdb.mi/mi-syn-frame.exp: finished exec continue
 PASS: gdb.mi/mi-syn-frame.exp: list stack frames
 PASS: gdb.mi/mi-syn-frame.exp: call inferior function which raises exception
@@ -17779,7 +17562,7 @@ PASS: gdb.python/py-prettyprint.exp: print c
 PASS: gdb.python/py-prettyprint.exp: print nstype
 PASS: gdb.python/py-prettyprint.exp: set print pretty off
 PASS: gdb.python/py-prettyprint.exp: print nstype on one line
-FAIL: gdb.python/py-prettyprint.exp: continue until exit (the program exited)
+PASS: gdb.python/py-prettyprint.exp: continue until exit
 PASS: gdb.python/py-prettyprint.exp: set print pretty on
 PASS: gdb.python/py-prettyprint.exp: b 351
 PASS: gdb.python/py-prettyprint.exp: continue
@@ -17814,7 +17597,7 @@ PASS: gdb.python/py-prettyprint.exp: print c
 PASS: gdb.python/py-prettyprint.exp: print nstype
 PASS: gdb.python/py-prettyprint.exp: set print pretty off
 PASS: gdb.python/py-prettyprint.exp: print nstype on one line
-FAIL: gdb.python/py-prettyprint.exp: continue until exit (the program exited)
+PASS: gdb.python/py-prettyprint.exp: continue until exit
 PASS: gdb.python/py-prettyprint.exp: python exec (open ('py-prettyprint.py').read ())
 PASS: gdb.python/py-prettyprint.exp: continue to breakpoint: eval-break
 PASS: gdb.python/py-prettyprint.exp: info locals
@@ -18843,7 +18626,7 @@ PASS: gdb.threads/interrupted-hand-call.exp: hand-call interrupted by signal in 
 PASS: gdb.threads/interrupted-hand-call.exp: dummy stack frame present
 PASS: gdb.threads/interrupted-hand-call.exp: finish hand-call
 PASS: gdb.threads/interrupted-hand-call.exp: dummy frame popped
-FAIL: gdb.threads/interrupted-hand-call.exp: continue until exit (the program exited)
+PASS: gdb.threads/interrupted-hand-call.exp: continue until exit
 Running ./gdb.threads/killed.exp ...
 PASS: gdb.threads/killed.exp: successfully compiled posix threads test case
 PASS: gdb.threads/killed.exp: run program to completion
@@ -18887,7 +18670,7 @@ PASS: gdb.threads/linux-dp.exp: continue to breakpoint: thread 5's print, pass: 
 PASS: gdb.threads/linux-dp.exp: continue to breakpoint: thread 5's print, pass: 9
 PASS: gdb.threads/linux-dp.exp: thread-specific breakpoint is thread-specific
 PASS: gdb.threads/linux-dp.exp: selected thread: 1
-FAIL: gdb.threads/linux-dp.exp: philosopher is distinct: 1
+PASS: gdb.threads/linux-dp.exp: main is distinct: 1
 PASS: gdb.threads/linux-dp.exp: selected thread: 2
 PASS: gdb.threads/linux-dp.exp: philosopher is distinct: 2
 PASS: gdb.threads/linux-dp.exp: selected thread: 3
@@ -19038,9 +18821,9 @@ PASS: gdb.threads/pthreads.exp: tbreak common_routine if hits >= 15
 PASS: gdb.threads/pthreads.exp: stopped before calling common_routine 15 times
 PASS: gdb.threads/pthreads.exp: All threads running after continuing from ^C stop
 PASS: gdb.threads/pthreads.exp: check backtrace from main thread
-FAIL: gdb.threads/pthreads.exp: check backtrace from thread 1
-FAIL: gdb.threads/pthreads.exp: check backtrace from thread 2
-FAIL: gdb.threads/pthreads.exp: apply backtrace command to all three threads
+PASS: gdb.threads/pthreads.exp: check backtrace from thread 1
+PASS: gdb.threads/pthreads.exp: check backtrace from thread 2
+PASS: gdb.threads/pthreads.exp: apply backtrace command to all three threads
 PASS: gdb.threads/pthreads.exp: set break at common_routine in thread 2
 PASS: gdb.threads/pthreads.exp: continue to bkpt at common_routine in thread 2
 PASS: gdb.threads/pthreads.exp: backtrace from thread 2 bkpt in common_routine
@@ -19102,8 +18885,24 @@ Running ./gdb.threads/siginfo-threads.exp ...
 PASS: gdb.threads/siginfo-threads.exp: successfully compiled posix threads test case
 PASS: gdb.threads/siginfo-threads.exp: handle SIGUSR1 stop print pass
 PASS: gdb.threads/siginfo-threads.exp: handle SIGUSR2 stop print pass
-FAIL: gdb.threads/siginfo-threads.exp: get pid
-FAIL: gdb.threads/siginfo-threads.exp: catch signal 0
+PASS: gdb.threads/siginfo-threads.exp: get pid
+PASS: gdb.threads/siginfo-threads.exp: catch signal 0
+PASS: gdb.threads/siginfo-threads.exp: signal 0 si_signo
+PASS: gdb.threads/siginfo-threads.exp: signal 0 si_code is SI_TKILL
+PASS: gdb.threads/siginfo-threads.exp: signal 0 si_pid
+PASS: gdb.threads/siginfo-threads.exp: catch signal 1
+PASS: gdb.threads/siginfo-threads.exp: signal 1 si_signo
+PASS: gdb.threads/siginfo-threads.exp: signal 1 si_code is SI_TKILL
+PASS: gdb.threads/siginfo-threads.exp: signal 1 si_pid
+PASS: gdb.threads/siginfo-threads.exp: catch signal 2
+PASS: gdb.threads/siginfo-threads.exp: signal 2 si_signo
+PASS: gdb.threads/siginfo-threads.exp: signal 2 si_code is SI_TKILL
+PASS: gdb.threads/siginfo-threads.exp: signal 2 si_pid
+PASS: gdb.threads/siginfo-threads.exp: catch signal 3
+PASS: gdb.threads/siginfo-threads.exp: signal 3 si_signo
+PASS: gdb.threads/siginfo-threads.exp: signal 3 si_code is SI_TKILL
+PASS: gdb.threads/siginfo-threads.exp: signal 3 si_pid
+PASS: gdb.threads/siginfo-threads.exp: continue to breakpoint: break-at-exit
 Running ./gdb.threads/sigstep-threads.exp ...
 PASS: gdb.threads/sigstep-threads.exp: successfully compiled posix threads test case
 PASS: gdb.threads/sigstep-threads.exp: handle SIGUSR1 nostop print pass
@@ -19209,7 +19008,7 @@ PASS: gdb.threads/thread-unwindonsignal.exp: dummy stack frame present
 PASS: gdb.threads/thread-unwindonsignal.exp: wrong thread not unwound
 PASS: gdb.threads/thread-unwindonsignal.exp: finish hand-call
 PASS: gdb.threads/thread-unwindonsignal.exp: dummy frame popped
-FAIL: gdb.threads/thread-unwindonsignal.exp: continue until exit (the program exited)
+PASS: gdb.threads/thread-unwindonsignal.exp: continue until exit
 Running ./gdb.threads/threxit-hop-specific.exp ...
 PASS: gdb.threads/threxit-hop-specific.exp: successfully compiled posix threads test case
 PASS: gdb.threads/threxit-hop-specific.exp: continue to thread start
@@ -19483,13 +19282,13 @@ PASS: gdb.xml/tdesc-xinclude.exp: set tdesc filename gdb.xml/loop.xml
 
 		=== gdb Summary ===
 
-# of expected passes		17862
-# of unexpected failures	373
+# of expected passes		17760
+# of unexpected failures	276
 # of unexpected successes	1
 # of expected failures		32
-# of known failures		58
+# of known failures		44
 # of untested testcases		50
-# of unresolved testcases	8
+# of unresolved testcases	13
 # of unsupported tests		106
 /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.6.1/work/gdb-7.6.1/gdb/testsuite/../../gdb/gdb version  7.6.1 -nw -nx -data-directory /var/tmp/portage/cross-x86_64-cros-linux-gnu/gdb-7.6.1/work/gdb-7.6.1/gdb/testsuite/../data-directory 
 
