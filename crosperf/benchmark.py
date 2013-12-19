@@ -17,7 +17,7 @@ class Benchmark(object):
 
   def __init__(self, name, test_name, test_args, iterations,
                outlier_range, key_results_only, rm_chroot_tmp, perf_args,
-               suite="pyauto", use_test_that=False, show_all_results=False):
+               suite="pyauto", use_test_that=True, show_all_results=False):
     self.name = name
     #For telemetry, this is the benchmark name.
     self.test_name = test_name
