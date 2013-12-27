@@ -339,8 +339,12 @@ def Main(argv):
     executer.PrepareGdb()
     executer.PrepareGdbserver()
     executer.MakeCheck()
-    print executer.ResultValidate()
-    ret = executer.ResultValidate()
+    result = executer.ResultValidate()
+    print result
+    if result:
+      ret = (1, result, '')
+    else:
+      ret = (0, '', '')
 
   except Exception as e:
     # At least log the exception on console.

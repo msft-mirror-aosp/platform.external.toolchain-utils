@@ -1,4 +1,4 @@
-Test Run By yunlian on Mon Dec 16 15:46:27 2013
+Test Run By yunlian on Fri Dec 27 10:26:50 2013
 Target is armv7a-cros-linux-gnueabi
 
 		=== gdb tests ===
@@ -1216,7 +1216,7 @@ PASS: gdb.base/call-sc.exp: advance to fun for return; return call-sc-tf
 PASS: gdb.base/call-sc.exp: zed L for return; return call-sc-tf
 PASS: gdb.base/call-sc.exp: return foo; return call-sc-tf
 PASS: gdb.base/call-sc.exp: return foo; synchronize pc to main()
-PASS: gdb.base/call-sc.exp: value foo returned; return call-sc-tf
+FAIL: gdb.base/call-sc.exp: value foo returned; return call-sc-tf
 PASS: gdb.base/call-sc.exp: advance to fun for finish; return call-sc-tf
 PASS: gdb.base/call-sc.exp: zed L for finish; return call-sc-tf
 PASS: gdb.base/call-sc.exp: finish foo; return call-sc-tf
@@ -3070,7 +3070,7 @@ PASS: gdb.base/ending-run.exp: all set to continue
 PASS: gdb.base/ending-run.exp: cont
 PASS: gdb.base/ending-run.exp: step out of main
 Running ./gdb.base/enum_cond.exp ...
-gdb compile failed, /usr/x86_64-pc-linux-gnu/armv7a-cros-linux-gnueabi/binutils-bin/2.22/ld.bfd.real: warning: /tmp/cclThVne.o uses variable-size enums yet the output is to use 32-bit enums; use of enum values across objects may fail
+gdb compile failed, /usr/x86_64-pc-linux-gnu/armv7a-cros-linux-gnueabi/binutils-bin/2.22/ld.bfd.real: warning: /tmp/ccbtGOPr.o uses variable-size enums yet the output is to use 32-bit enums; use of enum values across objects may fail
 UNTESTED: gdb.base/enum_cond.exp: Could not compile enum_cond.c
 Running ./gdb.base/enumval.exp ...
 PASS: gdb.base/enumval.exp: print e
@@ -3765,8 +3765,8 @@ PASS: gdb.base/gnu-debugdata.exp: no symtab
 PASS: gdb.base/gnu-debugdata.exp: have symtab
 PASS: gdb.base/gnu-debugdata.exp: unload MiniDebugInfo
 Running ./gdb.base/gnu-ifunc.exp ...
-gdb compile failed, /tmp/ccno1FCY.s: Assembler messages:
-/tmp/ccno1FCY.s:42: Error: unrecognized symbol type ""
+gdb compile failed, /tmp/ccKhNwLn.s: Assembler messages:
+/tmp/ccKhNwLn.s:42: Error: unrecognized symbol type ""
 UNTESTED: gdb.base/gnu-ifunc.exp: Could not compile dynamic executable /var/tmp/portage/cross-armv7a-cros-linux-gnueabi/gdb-7.6.1/work/gdb-7.6.1/gdb/testsuite/gdb.base/gnu-ifunc.
 Running ./gdb.base/gnu_vector.exp ...
 PASS: gdb.base/gnu_vector.exp: print c4
@@ -7357,8 +7357,16 @@ PASS: gdb.base/signull.exp: code; backtrace from SIGSEGV
 PASS: gdb.base/signull.exp: code; continue to the keeper
 PASS: gdb.base/signull.exp: code; backtrace from keeper through SIGSEGV
 Running ./gdb.base/sigrepeat.exp ...
-PASS: gdb.base/sigrepeat.exp: advance to infinite loop
-PASS: gdb.base/sigrepeat.exp: next
+WARNING: Couldn't set the height to 0
+WARNING: Couldn't set the width to 0.
+WARNING: remote_expect statement without a default case?!
+WARNING: remote_expect statement without a default case?!
+ERROR: Couldn't load /var/tmp/portage/cross-armv7a-cros-linux-gnueabi/gdb-7.6.1/work/gdb-7.6.1/gdb/testsuite/gdb.base/sigrepeat into /var/tmp/portage/cross-armv7a-cros-linux-gnueabi/gdb-7.6.1/work/gdb-7.6.1/gdb/testsuite/../../gdb/gdb (eof).
+ERROR: Delete all breakpoints in delete_breakpoints (timeout)
+ERROR: Couldn't send advance 103 to GDB.
+UNRESOLVED: gdb.base/sigrepeat.exp: advance to infinite loop
+ERROR: Couldn't send next to GDB.
+UNRESOLVED: gdb.base/sigrepeat.exp: next
 Running ./gdb.base/sigstep.exp ...
 PASS: gdb.base/sigstep.exp: display/i $pc
 PASS: gdb.base/sigstep.exp: break handler
@@ -7713,7 +7721,7 @@ PASS: gdb.base/store.exp: var float l; print old r, expecting -2
 PASS: gdb.base/store.exp: var float l; setting l to 4
 PASS: gdb.base/store.exp: var float l; print new l, expecting 4
 PASS: gdb.base/store.exp: var float l; next over add call
-PASS: gdb.base/store.exp: var float l; print incremented l, expecting 2
+FAIL: gdb.base/store.exp: var float l; print incremented l, expecting 2
 PASS: gdb.base/store.exp: tbreak wack_double
 PASS: gdb.base/store.exp: continue to wack_double
 PASS: gdb.base/store.exp: var double l; print old l, expecting -1
@@ -8205,7 +8213,7 @@ PASS: gdb.base/structs.exp: p/c L<n>; call 3 structs-tf
 PASS: gdb.base/structs.exp: advance to fun<n> for return; return 1 structs-tf
 PASS: gdb.base/structs.exp: zed L<n> for return; return 1 structs-tf
 PASS: gdb.base/structs.exp: return foo<n>; return 1 structs-tf
-PASS: gdb.base/structs.exp: value foo<n> returned; return 1 structs-tf
+FAIL: gdb.base/structs.exp: value foo<n> returned; return 1 structs-tf
 PASS: gdb.base/structs.exp: advance to fun<n> for finish; return 1 structs-tf
 PASS: gdb.base/structs.exp: zed L<n> for finish; return 1 structs-tf
 PASS: gdb.base/structs.exp: finish foo<n>; return 1 structs-tf
@@ -8214,7 +8222,7 @@ PASS: gdb.base/structs.exp: return value known implies finish value known; retur
 PASS: gdb.base/structs.exp: advance to fun<n> for return; return 2 structs-tf
 PASS: gdb.base/structs.exp: zed L<n> for return; return 2 structs-tf
 PASS: gdb.base/structs.exp: return foo<n>; return 2 structs-tf
-PASS: gdb.base/structs.exp: value foo<n> returned; return 2 structs-tf
+FAIL: gdb.base/structs.exp: value foo<n> returned; return 2 structs-tf
 PASS: gdb.base/structs.exp: advance to fun<n> for finish; return 2 structs-tf
 PASS: gdb.base/structs.exp: zed L<n> for finish; return 2 structs-tf
 PASS: gdb.base/structs.exp: finish foo<n>; return 2 structs-tf
@@ -8234,7 +8242,7 @@ PASS: gdb.base/structs.exp: p/c L<n>; call 2 structs-td
 PASS: gdb.base/structs.exp: advance to fun<n> for return; return 1 structs-td
 PASS: gdb.base/structs.exp: zed L<n> for return; return 1 structs-td
 PASS: gdb.base/structs.exp: return foo<n>; return 1 structs-td
-PASS: gdb.base/structs.exp: value foo<n> returned; return 1 structs-td
+FAIL: gdb.base/structs.exp: value foo<n> returned; return 1 structs-td
 PASS: gdb.base/structs.exp: advance to fun<n> for finish; return 1 structs-td
 PASS: gdb.base/structs.exp: zed L<n> for finish; return 1 structs-td
 PASS: gdb.base/structs.exp: finish foo<n>; return 1 structs-td
@@ -8254,7 +8262,7 @@ PASS: gdb.base/structs.exp: p/c L<n>; call 2 structs-tld
 PASS: gdb.base/structs.exp: advance to fun<n> for return; return 1 structs-tld
 PASS: gdb.base/structs.exp: zed L<n> for return; return 1 structs-tld
 PASS: gdb.base/structs.exp: return foo<n>; return 1 structs-tld
-PASS: gdb.base/structs.exp: value foo<n> returned; return 1 structs-tld
+FAIL: gdb.base/structs.exp: value foo<n> returned; return 1 structs-tld
 PASS: gdb.base/structs.exp: advance to fun<n> for finish; return 1 structs-tld
 PASS: gdb.base/structs.exp: zed L<n> for finish; return 1 structs-tld
 PASS: gdb.base/structs.exp: finish foo<n>; return 1 structs-tld
@@ -19035,13 +19043,13 @@ PASS: gdb.xml/tdesc-xinclude.exp: set tdesc filename gdb.xml/loop.xml
 
 		=== gdb Summary ===
 
-# of expected passes		17391
-# of unexpected failures	255
+# of expected passes		17383
+# of unexpected failures	261
 # of unexpected successes	1
 # of expected failures		29
 # of known failures		40
 # of untested testcases		55
-# of unresolved testcases	10
+# of unresolved testcases	12
 # of unsupported tests		131
 /var/tmp/portage/cross-armv7a-cros-linux-gnueabi/gdb-7.6.1/work/gdb-7.6.1/gdb/testsuite/../../gdb/gdb version  7.6.1 -nw -nx -data-directory /var/tmp/portage/cross-armv7a-cros-linux-gnueabi/gdb-7.6.1/work/gdb-7.6.1/gdb/testsuite/../data-directory 
 

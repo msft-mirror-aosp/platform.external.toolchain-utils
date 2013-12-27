@@ -1,4 +1,4 @@
-Test Run By yunlian on Mon Dec 16 16:26:33 2013
+Test Run By yunlian on Fri Dec 27 14:14:24 2013
 Target is i686-pc-linux-gnu
 
 		=== gdb tests ===
@@ -1915,7 +1915,7 @@ ERROR: internal buffer is full.
 UNRESOLVED: gdb.base/completion.exp: ptype completion of field in anonymous union
 ERROR: internal buffer is full.
 UNRESOLVED: gdb.base/completion.exp: whatis completion of field in anonymous union
-FAIL: gdb.base/completion.exp: cd to ${srcdir}
+PASS: gdb.base/completion.exp: cd to ${srcdir}
 PASS: gdb.base/completion.exp: directory completion
 PASS: gdb.base/completion.exp: directory completion 2
 PASS: gdb.base/completion.exp: Glob remaining of directory test
@@ -17984,8 +17984,8 @@ Running ./gdb.reverse/i387-env-reverse.exp ...
 PASS: gdb.reverse/i387-env-reverse.exp: Turn on process record
 FAIL: gdb.reverse/i387-env-reverse.exp: record to end of main (timeout)
 FAIL: gdb.reverse/i387-env-reverse.exp: set reverse direction
-PASS: gdb.reverse/i387-env-reverse.exp: rewind to beginning of main
-PASS: gdb.reverse/i387-env-reverse.exp: set forward direction
+FAIL: gdb.reverse/i387-env-reverse.exp: rewind to beginning of main
+FAIL: gdb.reverse/i387-env-reverse.exp: set forward direction
 PASS: gdb.reverse/i387-env-reverse.exp: begin testing fpu env
 PASS: gdb.reverse/i387-env-reverse.exp: save FPU env in memory
 PASS: gdb.reverse/i387-env-reverse.exp: restore FPU env
@@ -19154,8 +19154,8 @@ PASS: gdb.xml/tdesc-xinclude.exp: set tdesc filename gdb.xml/loop.xml
 
 		=== gdb Summary ===
 
-# of expected passes		17664
-# of unexpected failures	250
+# of expected passes		17663
+# of unexpected failures	251
 # of unexpected successes	1
 # of expected failures		30
 # of unknown successes		1
