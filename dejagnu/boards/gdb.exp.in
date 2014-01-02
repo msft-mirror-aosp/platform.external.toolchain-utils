@@ -67,8 +67,8 @@ set_board_info gdb,use_precord 0
 set_board_info gdb,can_reverse 0
 
 
-set gdb_test_timeout 60
-set_board_info timeout 60
+set gdb_test_timeout 100
+set_board_info timeout 100
 
 set_board_info ssh,options "-i __tmp_testing_rsa__ -o ControlMaster=auto -o ControlPath=__tmp_dir__/%r@%h:%p -o StrictHostKeyChecking=no"
 

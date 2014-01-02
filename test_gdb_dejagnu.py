@@ -52,10 +52,10 @@ class DejagnuAdapter(object):
 
 # Parse the output log to determine how many failures we have.
 # Return -1 if parse output log failed.
-def GetNumNewFailures(string):
-  if not string:
+def GetNumNewFailures(result):
+  if not result:
     return 0
-  return len(string.splitlines())
+  return len(result)
 
 
 # Do not throw any exception in this function!

@@ -65,8 +65,6 @@ def ProcessArguments(argv):
       options.cleanup == 'mount' or
       options.cleanup == 'chroot' or options.cleanup == 'chromeos'):
     raise Exception('Invalid option value for --cleanup')
-  if options.cleanup and options.keep_intermediate_files:
-    raise Exception('Only one of --keep and --cleanup could be given.')
 
   return options
 
