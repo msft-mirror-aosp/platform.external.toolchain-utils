@@ -14,6 +14,7 @@ import re
 import shutil
 import sys
 import time
+import traceback
 
 import lock_machine
 
@@ -442,3 +443,46 @@ def DeleteChromeOsTree(chromeos_root, dry_run=False):
 
   return command_executer.GetCommandExecuter().RunCommand(
       cmd1, return_output=False, print_to_console=True) == 0
+
+
+def ApplyGerritPatches(chromeos_root,
+                       gerrit_patch_string, branch='cros/master'):
+  """Apply gerrit patches on a chromeos tree.
+
+  Args:
+    chromeos_root: chromeos tree path
+    gerrit_patch_string: a patch string just like the one gives to cbuildbot,
+    'id1 id2 *id3 ... idn'. A prefix of '* means this is an internal patch.
+    branch: the tree based on which to apply the patches.
+  Returns:
+    True if success.
+  """
+
+  ### First of all, we need chromite libs
+  sys.path.append(os.path.join(chromeos_root, 'chromite'))
+  from lib import git
+  from lib import gerrit
+  manifest = git.ManifestCheckout(chromeos_root)
+  patch_list = gerrit_patch_string.split(' ')
+  ### This takes time, print log information.
+  logger.GetLogger().LogOutput('Retrieving patch information from server ...')
+  patch_info_list = gerrit.GetGerritPatchInfo(patch_list)
+  for pi in patch_info_list:
+    project_checkout = manifest.FindCheckout(pi.project, strict=False)
+    if not project_checkout:
+      logger.GetLogger().LogError(
+          'Failed to find patch project "{project}" in manifest.'.format(
+              project=pi.project))
+      return False
+
+    pi_str = '{project}:{ref}'.format(project=pi.project, ref=pi.ref)
+    try:
+      project_git_path = project_checkout.GetPath(absolute=True)
+      logger.GetLogger().LogOutput('Applying patch "{0}" in "{1}" ...'.format(
+          pi_str, project_git_path))
+      pi.Apply(project_git_path, branch, trivial=False)
+    except Exception:
+      traceback.print_exc(file=sys.stdout)
+      logger.GetLogger().LogError('Failed to apply patch "{0}"'.format(pi_str))
+      return False
+  return True
