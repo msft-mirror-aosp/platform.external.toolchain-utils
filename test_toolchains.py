@@ -106,6 +106,28 @@ class ToolchainComparator(ChromeOSCheckout):
     self._l = logger.GetLogger()
     ChromeOSCheckout.__init__(self, board, self._chromeos_root)
 
+
+  def _FinishSetup(self):
+    # Get correct .boto file
+    current_dir = os.getcwd()
+    src = "/home/mobiletc-prebuild/.boto"
+    dest = os.path.join(current_dir, self._chromeos_root,
+                        "src/private-overlays/chromeos-overlay/"
+                        "googlestorage_account.boto")
+    # Copy the file to the correct place
+    copy_cmd = "cp %s %s" % (src, dest)
+    retval = self._ce.RunCommand(copy_cmd)
+    if retval:
+      raise Exception("Couldn't copy .boto file for google storage.")
+
+    # Fix protections on ssh key
+    command = ("chmod 600 /var/cache/chromeos-cache/distfiles/target"
+               "/chrome-src-internal/src/third_party/chromite/ssh_keys"
+               "/testing_rsa")
+    retval = self._ce.ChrootRunCommand(self._chromeos_root, command)
+    if retval:
+      raise Exception("chmod for testing_rsa failed")
+
   def _TestLabels(self, labels):
     experiment_file = "toolchain_experiment.txt"
     image_args = ""
@@ -162,6 +184,7 @@ class ToolchainComparator(ChromeOSCheckout):
         self._BuildToolchain(config)
         label = self._BuildAndImage(label)
       labels.append(label)
+    self._FinishSetup()
     self._TestLabels(labels)
     if self._clean:
       ret = self._DeleteChroot()
