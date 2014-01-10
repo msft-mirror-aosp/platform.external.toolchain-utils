@@ -50,6 +50,21 @@ telemetry_pagecycler_tests = [ 'page_cycler.indexed_db.basic_insert',
                                'page_cycler.typical_25',
                                ]
 
+telemetry_toolchain_perf_tests = [ 'canvasmark',
+                               'jsgamebench',
+                               'dromaeo.domcoremodify',
+                               'page_cycler.intl_es_fr_pt-BR',
+                               'page_cycler.intl_hi_ru',
+                               'page_cycler.intl_ja_zh',
+                               'page_cycler.intl_ko_th_vi',
+                               'page_cycler.netsim.top_10',
+                               'page_cycler.typical_25',
+                               'peacekeeper.html',
+                               'robohornet_pro',
+                               'spaceport',
+                               'tab_switching.top_10',
+                               ]
+
 class ExperimentFactory(object):
   """Factory class for building an Experiment, given an ExperimentFile as input.
 
@@ -135,6 +150,12 @@ class ExperimentFactory(object):
                                     show_all_results)
         elif test_name == 'all_pagecyclers':
           self._AppendBenchmarkSet (benchmarks, telemetry_pagecycler_tests,
+                                    test_args, iterations, outlier_range,
+                                    key_results_only, rm_chroot_tmp,
+                                    perf_args, suite, use_test_that,
+                                    show_all_results)
+        elif test_name == 'all_toolchain_perf':
+          self._AppendBenchmarkSet (benchmarks, telemetry_toolchain_perf_tests,
                                     test_args, iterations, outlier_range,
                                     key_results_only, rm_chroot_tmp,
                                     perf_args, suite, use_test_that,
