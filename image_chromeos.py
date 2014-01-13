@@ -147,7 +147,14 @@ def DoImage(argv):
     # Workaround for crosbug.com/35684.
     os.chmod(misc.GetChromeOSKeyFile(options.chromeos_root), 0600)
     retval = cmd_executer.ChrootRunCommand(options.chromeos_root,
-                                           command)
+                                           command, command_timeout=600)
+
+    retries = 0
+    while retval != 0 and retries < 2:
+      retries += 1
+      retval = cmd_executer.ChrootRunCommand(options.chromeos_root,
+                                             command, command_timeout=600)
+
     if found == False:
       temp_dir = os.path.dirname(located_image)
       l.LogOutput("Deleting temp image dir: %s" % temp_dir)
