@@ -539,6 +539,10 @@ class ResultsCache(object):
       machine_checksum = self.machine_manager.machine_checksum[self.label.name]
     if read and CacheConditions.CHECKSUMS_MATCH not in self.cache_conditions:
       checksum = "*"
+    elif self.label.image_type == "trybot":
+      checksum = hashlib.md5(self.label.chromeos_image).hexdigest()
+    elif self.label.image_type == "official":
+      checksum = "*"
     else:
       checksum = ImageChecksummer().Checksum(self.label)
 

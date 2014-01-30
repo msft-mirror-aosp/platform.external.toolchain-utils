@@ -1,0 +1,31 @@
+# This is an example experiment file for Crosperf, showing how to run
+# a basic test, using a (previously made) trybot image.
+
+name: trybot_example
+# Replace board and remote values below appropriately. e.g. "lumpy" and
+# "123.45.678.901"  or "my-machine.blah.com".
+board: <your-board-goes-here>
+remote: <your-remote-ip-address-here>
+
+# You can replace 'canvasmark' below with the name of the Telemetry
+# benchmakr you want to run.
+benchmark: canvasmark {
+  suite:telemetry_Crosperf
+  iterations: 1
+}
+
+
+# Replace <path-to-your-chroot-goes-here> with the actual directory path
+# to the top of your ChromimumOS chroot.
+trybot_image {
+  chromeos_root:<path-to-your-chroot-goes-here>
+  # Replace <xbuddy-official-image-designation> with the xbuddy syntax
+  # for the official image you want to use (see
+  # http://www.chromium.org/chromium-os/how-tos-and-troubleshooting/using-the-dev-server/xbuddy-for-devserver#TOC-XBuddy-Paths
+  # for xbuddy syntax).  Omit the "http://xbuddy/remote/<board>/" prefix.
+  # For example, if you want to use the "latest-dev" official image,
+  # your build field would look like:
+  # build:latest-dev
+  build:<xbuddy-official-image-designation>
+}
+

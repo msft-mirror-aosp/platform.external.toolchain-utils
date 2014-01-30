@@ -54,9 +54,10 @@ class BenchmarkSettings(Settings):
 class LabelSettings(Settings):
   def __init__(self, name):
     super(LabelSettings, self).__init__(name, "label")
-    self.AddField(TextField("chromeos_image", required=True,
+    self.AddField(TextField("chromeos_image", required=False,
                             description="The path to the image to run tests "
-                            "on."))
+                            "on, for local/custom-built images. See 'build' "
+                            "option for official or trybot images."))
     self.AddField(TextField("chromeos_root",
                             description="The path to a chromeos checkout which "
                             "contains a src/scripts directory. Defaults to "
@@ -79,6 +80,13 @@ class LabelSettings(Settings):
                             description="The path to the source of chrome. "
                             "This is used to run telemetry benchmarks. "
                             "The default one is the src inside chroot.",
+                            required=False, default=""))
+    self.AddField(TextField("build",
+                            description="The xbuddy specification for an "
+                            "official or trybot image to use for tests. "
+                            "'/remote' is assumed, and the board is given "
+                            "elsewhere, so omit the '/remote/<board>/' xbuddy"
+                            "prefix.",
                             required=False, default=""))
 
 
@@ -153,7 +161,13 @@ class GlobalSettings(Settings):
                             description="The path to the source of chrome. "
                             "This is used to run telemetry benchmarks. "
                             "The default one is the src inside chroot.",
-
+                            required=False, default=""))
+    self.AddField(TextField("build",
+                            description="The xbuddy specification for an "
+                            "official or trybot image to use for tests. "
+                            "'/remote' is assumed, and the board is given "
+                            "elsewhere, so omit the '/remote/<board>/' xbuddy"
+                            "prefix.",
                             required=False, default=""))
 
 

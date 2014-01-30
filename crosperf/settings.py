@@ -60,3 +60,11 @@ class Settings(object):
     for name in self.fields:
       if not self.fields[name].assigned and self.fields[name].required:
         raise Exception("Field %s is invalid." % name)
+
+  def GetXbuddyPath(self, path_str, board):
+    prefix = "xbuddy://remote"
+    if path_str.find("trybot") < 0:
+      xbuddy_path = "%s/%s/%s" % (prefix, board, path_str)
+    else:
+      xbuddy_path = "%s/%s" % (prefix, path_str)
+    return xbuddy_path

@@ -131,10 +131,13 @@ class ExperimentFile(object):
   def Canonicalize(self):
     """Convert parsed experiment file back into an experiment file."""
     res = ""
+    board = ""
     for field_name in self.global_settings.fields:
       field = self.global_settings.fields[field_name]
       if field.assigned:
         res += "%s: %s\n" % (field.name, field.GetString())
+      if field.name == "board":
+        board = field.GetString()
     res += "\n"
 
     for settings in self.all_settings:
@@ -149,6 +152,10 @@ class ExperimentFile(object):
                            (os.path.expanduser(field.GetString())))
               if real_file != field.GetString():
                 res += "\t#actual_image: %s\n" % real_file
+            if field.name == "build":
+              value = field.GetString()
+              xbuddy_path = settings.GetXbuddyPath (value, board)
+              res +=  "\t#actual_image: %s\n" % xbuddy_path
         res += "}\n\n"
 
     return res

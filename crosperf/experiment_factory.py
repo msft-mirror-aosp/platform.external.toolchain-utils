@@ -108,6 +108,7 @@ class ExperimentFactory(object):
     share_users = global_settings.GetField("share_users")
     results_dir = global_settings.GetField("results_dir")
     chrome_src = global_settings.GetField("chrome_src")
+    build = global_settings.GetField("build")
     use_test_that = global_settings.GetField("use_test_that")
     show_all_results = global_settings.GetField("show_all_results")
     # Default cache hit conditions. The image checksum in the cache and the
@@ -182,9 +183,12 @@ class ExperimentFactory(object):
     all_remote = list(remote)
     for label_settings in all_label_settings:
       label_name = label_settings.name
-      image = label_settings.GetField("chromeos_image")
-      chromeos_root = label_settings.GetField("chromeos_root")
       board = label_settings.GetField("board")
+      image = label_settings.GetField("chromeos_image")
+      if image == "":
+        build = label_settings.GetField("build")
+        image = label_settings.GetXbuddyPath (build, board)
+      chromeos_root = label_settings.GetField("chromeos_root")
       my_remote = label_settings.GetField("remote")
       new_remote = []
       for i in my_remote:

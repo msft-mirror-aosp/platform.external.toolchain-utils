@@ -180,8 +180,14 @@ class MachineManager(object):
     self.chromeos_root = chromeos_root
 
   def ImageMachine(self, machine, label):
-    checksum = ImageChecksummer().Checksum(label)
-    if machine.checksum == checksum:
+    if label.image_type == "local":
+      checksum = ImageChecksummer().Checksum(label)
+    elif label.image_type == "trybot":
+      checksum = machine._GetMD5Checksum(label.chromeos_image)
+    else:
+      checksum = None
+
+    if checksum and (machine.checksum == checksum):
       return
     chromeos_root = label.chromeos_root
     if not chromeos_root:
@@ -271,7 +277,12 @@ class MachineManager(object):
                                     % m.name)
 
   def AcquireMachine(self, chromeos_image, label):
-    image_checksum = ImageChecksummer().Checksum(label)
+    if label.image_type == "local":
+      image_checksum = ImageChecksummer().Checksum(label)
+    elif label.image_type == "trybot":
+      image_checksum = hashlib.md5(chromeos_image).hexdigest()
+    else:
+      image_checksum = None
     machines = self.GetMachines(label)
     check_interval_time = 120
     with self._lock:
@@ -305,7 +316,7 @@ class MachineManager(object):
 ###          return None
       for m in [machine for machine in self.GetAvailableMachines(label)
                 if not machine.locked]:
-        if m.checksum == image_checksum:
+        if image_checksum and (m.checksum == image_checksum):
           m.locked = True
           m.test_run = threading.current_thread()
           return m
