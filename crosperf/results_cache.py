@@ -65,6 +65,10 @@ class Result(object):
     self._CopyFilesTo(dest_dir, self.perf_report_files)
 
   def _GetNewKeyvals(self, keyvals_dict):
+    # Initialize 'units' dictionary.
+    units_dict = {}
+    for k in keyvals_dict:
+      units_dict[k] = ""
     results_files = self._GetDataMeasurementsFiles()
     for f in results_files:
       # Make sure we can find the results file
@@ -82,13 +86,13 @@ class Result(object):
           for line in lines:
             tmp_dict = json.loads(line)
             key = tmp_dict["graph"] + "__" + tmp_dict["description"]
-            val = tmp_dict["value"]
-            keyvals_dict[key] = val
+            keyvals_dict[key] = tmp_dict["value"]
+            units_dict[key] = tmp_dict["units"]
 
-    return keyvals_dict
+    return keyvals_dict, units_dict
 
 
-  def _GetTelemetryResultsKeyvals(self, keyvals_dict):
+  def _GetTelemetryResultsKeyvals(self, keyvals_dict, units_dict):
     """
     keyvals_dict is the dictionary of key-value pairs that is used for
     generating Crosperf reports.
@@ -97,6 +101,13 @@ class Result(object):
     interest, so we have created a json file that indicates, for each
     Telemetry benchmark, what the default return fields of interest
     are.
+
+    units_dict is a dictionary of the units for the return values in
+    keyvals_dict.  After looking for the keys in the keyvals_dict in
+    the json file of "interesting" default return fields, we append
+    the units to the name of the field, to make the report easier to
+    understand.  We don't append the units to the results name earlier,
+    because the units are not part of the field names in the json file.
 
     This function reads that file into a dictionary, and finds the
     entry for the current benchmark (if it exists).  The entry
@@ -107,8 +118,21 @@ class Result(object):
     for actually generating the report.
     """
 
+
+    # Check to see if telemetry_Crosperf succeeded; if not, there's no point
+    # in going further...
+
+    succeeded = False
+    if "telemetry_Crosperf" in keyvals_dict:
+      if keyvals_dict["telemetry_Crosperf"] == "PASS":
+        succeeded = True
+
+    if not succeeded:
+      return keyvals_dict
+
     # Find the Crosperf directory, and look there for the telemetry
     # results defaults file, if it exists.
+    results_dict = {}
     dirname, basename = misc.GetRoot(sys.argv[0])
     fullname = os.path.join(dirname, TELEMETRY_RESULT_DEFAULTS_FILE)
     if os.path.exists (fullname):
@@ -123,18 +147,25 @@ class Result(object):
         result_list = result_defaults[self.test_name]
         # We have the default results list.  Make sure it's not empty...
         if len(result_list) > 0:
-          results_dict = {}
           # ...look for each default result in the dictionary of actual
           # result fields returned. If found, add the field and its value
           # to our final results dictionary.
           for r in result_list:
-            v = keyvals_dict[r]
-            results_dict[r] = v
-          # If we actually found some of our default values, return the
-          # abbreviated results dictionary, to be used in generating the
-          # final report.
-          if len(results_dict) > 0:
-            keyvals_dict = results_dict
+            if r in keyvals_dict:
+              val = keyvals_dict[r]
+              units = units_dict[r]
+              # Add the units to the key name, for the report.
+              newkey = r + " (" + units + ")"
+              results_dict[newkey] = val
+    if len(results_dict) == 0:
+      # We did not find/create any new entries.  Therefore use the keyvals_dict
+      # that was passed in, but update the entry names to have the units.
+      for k in keyvals_dict:
+        val = keyvals_dict[k]
+        units = units_dict[k]
+        newkey = k + " (" + units + ")"
+        results_dict[newkey] = val
+    keyvals_dict = results_dict
     return keyvals_dict
 
   def _GetKeyvals(self, show_all):
@@ -163,12 +194,13 @@ class Result(object):
 
     # Check to see if there is a perf_measurements file and get the
     # data from it if so.
-    keyvals_dict = self._GetNewKeyvals(keyvals_dict)
+    keyvals_dict, units_dict = self._GetNewKeyvals(keyvals_dict)
     if not show_all and self.suite == "telemetry_Crosperf":
       # We're running telemetry tests and the user did not ask to
       # see all the results, so get the default results, to be used
       # for generating the report.
-      keyvals_dict = self._GetTelemetryResultsKeyvals(keyvals_dict)
+      keyvals_dict = self._GetTelemetryResultsKeyvals(keyvals_dict,
+                                                      units_dict)
     return keyvals_dict
 
   def _GetResultsDir(self):
