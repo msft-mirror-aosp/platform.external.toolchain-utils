@@ -65,14 +65,22 @@ class SuiteRunner(object):
   def GetHighestStaticFrequency(self, machine_name, chromeos_root):
     """ Gets the highest static frequency for the specified machine
     """
-    get_avail_freqs = ("cat /sys/devices/system/cpu/cpu0/cpufreq/"
-                       "scaling_available_frequencies")
+    get_avail_freqs = ("cd /sys/devices/system/cpu/cpu0/cpufreq/; "
+                       "if [[ -e scaling_available_frequencies ]]; then "
+                       "  cat scaling_available_frequencies; "
+                       "else "
+                       "  cat scaling_max_freq ; "
+                       "fi")
     ret, freqs_str, _ = self._ce.CrosRunCommand(
         get_avail_freqs, return_output=True, machine=machine_name,
         chromeos_root=chromeos_root)
     self._logger.LogFatalIf(ret, "Could not get available frequencies "
                             "from machine: %s" % machine_name)
     freqs = freqs_str.split()
+    ## When there is no scaling_available_frequencies file,
+    ## we have only 1 choice.
+    if len(freqs) == 1:
+      return freqs[0]
     # The dynamic frequency ends with a "1000". So, ignore it if found.
     if freqs[0].endswith("1000"):
       return freqs[1]
