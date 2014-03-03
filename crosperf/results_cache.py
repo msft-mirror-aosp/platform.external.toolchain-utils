@@ -243,14 +243,23 @@ class Result(object):
                         perf_report_file)
       chroot_perf_report_file = misc.GetInsideChrootPath(self._chromeos_root,
                                                          perf_report_file)
-      command = ("/usr/sbin/perf report "
+      perf_path = os.path.join (self._chromeos_root,
+                                "chroot",
+                                "usr/bin/perf")
+
+      perf_file = "/usr/sbin/perf"
+      if os.path.exists(perf_path):
+        perf_file = "/usr/bin/perf"
+
+      command = ("%s report "
                  "-n "
                  "--symfs /build/%s "
                  "--vmlinux /build/%s/usr/lib/debug/boot/vmlinux "
                  "--kallsyms /build/%s/boot/System.map-* "
                  "-i %s --stdio "
                  "> %s" %
-                 (self._board,
+                 (perf_file,
+                  self._board,
                   self._board,
                   self._board,
                   chroot_perf_data_file,
