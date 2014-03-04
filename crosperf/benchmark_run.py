@@ -76,7 +76,8 @@ class BenchmarkRun(threading.Thread):
                     self._logger,
                     self.label,
                     self.share_users,
-                    self.benchmark.suite
+                    self.benchmark.suite,
+                    self.benchmark.show_all_results
                    )
 
     self.result = self.cache.ReadResult()
@@ -215,7 +216,8 @@ class MockBenchmarkRun(BenchmarkRun):
                     self._logger,
                     self.label,
                     self.share_users,
-                    self.benchmark.suite
+                    self.benchmark.suite,
+                    self.benchmark.show_all_results
                    )
 
     self.result = self.cache.ReadResult()

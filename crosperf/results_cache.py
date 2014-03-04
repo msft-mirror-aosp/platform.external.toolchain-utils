@@ -313,7 +313,9 @@ class Result(object):
     # Now parse all perf report files and include them in keyvals.
     self._GatherPerfResults()
 
-  def _PopulateFromCacheDir(self, cache_dir):
+  def _PopulateFromCacheDir(self, cache_dir, show_all, test, suite):
+    self.test_name = test
+    self.suite = suite
     # Read in everything from the cache directory.
     with open(os.path.join(cache_dir, RESULTS_FILE), "r") as f:
       self.out = pickle.load(f)
@@ -333,7 +335,7 @@ class Result(object):
     self.results_dir = self._temp_dir
     self.perf_data_files = self._GetPerfDataFiles()
     self.perf_report_files = self._GetPerfReportFiles()
-    self._ProcessResults()
+    self._ProcessResults(show_all)
 
   def CleanUp(self, rm_chroot_tmp):
     if rm_chroot_tmp and self.results_dir:
@@ -394,14 +396,14 @@ class Result(object):
     return result
 
   @classmethod
-  def CreateFromCacheHit(cls, logger, label, cache_dir,
+  def CreateFromCacheHit(cls, logger, label, cache_dir, show_all, test,
                          suite="pyauto"):
     if suite == "telemetry":
       result = TelemetryResult(logger, label)
     else:
       result = cls(logger, label)
     try:
-      result._PopulateFromCacheDir(cache_dir)
+      result._PopulateFromCacheDir(cache_dir, show_all, test, suite)
 
     except Exception as e:
       logger.LogError("Exception while using cache: %s" % e)
@@ -496,7 +498,7 @@ class ResultsCache(object):
 
   def Init(self, chromeos_image, chromeos_root, test_name, iteration,
            test_args, profiler_args, machine_manager, board, cache_conditions,
-           logger_to_use, label, share_users, suite):
+           logger_to_use, label, share_users, suite, show_all_results):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.test_name = test_name
@@ -511,6 +513,7 @@ class ResultsCache(object):
     self.label = label
     self.share_users = share_users
     self.suite = suite
+    self.show_all = show_all_results
 
   def _GetCacheDirForRead(self):
     matching_dirs = []
@@ -598,6 +601,8 @@ class ResultsCache(object):
     result = Result.CreateFromCacheHit(self._logger,
                                        self.label,
                                        cache_dir,
+                                       self.show_all,
+                                       self.test_name,
                                        self.suite)
     if not result:
       return None
