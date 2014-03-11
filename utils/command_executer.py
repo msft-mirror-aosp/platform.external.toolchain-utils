@@ -16,6 +16,7 @@ import misc
 
 mock_default = False
 
+LOG_LEVEL=("quiet", "average", "verbose")
 
 def InitCommandExecuter(mock=False):
   global mock_default
@@ -23,20 +24,27 @@ def InitCommandExecuter(mock=False):
   mock_default = mock
 
 
-def GetCommandExecuter(logger_to_set=None, mock=False):
+def GetCommandExecuter(logger_to_set=None, mock=False, log_level="verbose"):
   # If the default is a mock executer, always return one.
   if mock_default or mock:
     return MockCommandExecuter(logger_to_set)
   else:
-    return CommandExecuter(logger_to_set)
+    return CommandExecuter(log_level, logger_to_set)
 
 
 class CommandExecuter:
-  def __init__(self, logger_to_set=None):
+  def __init__(self, log_level, logger_to_set=None):
+    self.log_level = log_level
     if logger_to_set is not None:
       self.logger = logger_to_set
     else:
       self.logger = logger.GetLogger()
+
+  def GetLogLevel(self):
+    return self.log_level
+
+  def SetLogLevel(self, log_level):
+    self.log_level = log_level
 
   def RunCommand(self, cmd, return_output=False, machine=None,
                  username=None, command_terminator=None,
@@ -47,7 +55,11 @@ class CommandExecuter:
 
     cmd = str(cmd)
 
-    self.logger.LogCmd(cmd, machine, username, print_to_console)
+    if self.log_level == "quiet":
+      print_to_console=False
+
+    if self.log_level == "verbose":
+      self.logger.LogCmd(cmd, machine, username, print_to_console)
     if command_terminator and command_terminator.IsTerminated():
       self.logger.LogError("Command was terminated!", print_to_console)
       if return_output:
@@ -170,7 +182,11 @@ class CommandExecuter:
                      terminated_timeout=10,
                      print_to_console=True):
     """Run a command on a chromeos box"""
-    self.logger.LogCmd(cmd, print_to_console)
+
+    if self.log_level != "verbose":
+      print_to_console=False
+
+    self.logger.LogCmd(cmd, print_to_console=print_to_console)
     self.logger.LogFatalIf(not machine, "No machine provided!")
     self.logger.LogFatalIf(not chromeos_root, "chromeos_root not given!")
     chromeos_root = os.path.expanduser(chromeos_root)
@@ -213,7 +229,11 @@ class CommandExecuter:
                        terminated_timeout=10,
                        print_to_console=True,
                        cros_sdk_options=""):
-    self.logger.LogCmd(command, print_to_console)
+
+    if self.log_level != "verbose":
+      print_to_console = False
+
+    self.logger.LogCmd(command, print_to_console=print_to_console)
 
     handle, command_file = tempfile.mkstemp(dir=os.path.join(chromeos_root,
                                                            "src/scripts"),

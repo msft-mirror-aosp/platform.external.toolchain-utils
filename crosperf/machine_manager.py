@@ -24,7 +24,7 @@ CHECKSUM_FILE = "/usr/local/osimage_checksum_file"
 
 
 class CrosMachine(object):
-  def __init__(self, name, chromeos_root):
+  def __init__(self, name, chromeos_root, log_level):
     self.name = name
     self.image = None
     self.checksum = None
@@ -32,6 +32,7 @@ class CrosMachine(object):
     self.released_time = time.time()
     self.test_run = None
     self.chromeos_root = chromeos_root
+    self.log_level = log_level
     if not self.IsReachable():
       self.machine_checksum = None
       return
@@ -43,7 +44,7 @@ class CrosMachine(object):
     self.machine_id_checksum = self._GetMD5Checksum(self.machine_id)
 
   def IsReachable(self):
-    ce = command_executer.GetCommandExecuter()
+    ce = command_executer.GetCommandExecuter(log_level=self.log_level)
     command = "ls"
     ret = ce.CrosRunCommand(command,
                             machine=self.name,
@@ -86,7 +87,7 @@ class CrosMachine(object):
   def _GetMemoryInfo(self):
     #TODO yunlian: when the machine in rebooting, it will not return
     #meminfo, the assert does not catch it either
-    ce = command_executer.GetCommandExecuter()
+    ce = command_executer.GetCommandExecuter(log_level=self.log_level)
     command = "cat /proc/meminfo"
     ret, self.meminfo, _ = ce.CrosRunCommand(
         command, return_output=True,
@@ -101,7 +102,7 @@ class CrosMachine(object):
     return 0
 
   def _GetCPUInfo(self):
-    ce = command_executer.GetCommandExecuter()
+    ce = command_executer.GetCommandExecuter(log_level=self.log_level)
     command = "cat /proc/cpuinfo"
     ret, self.cpuinfo, _ = ce.CrosRunCommand(
         command, return_output=True,
@@ -125,7 +126,7 @@ class CrosMachine(object):
       return ""
 
   def _GetMachineID(self):
-    ce = command_executer.GetCommandExecuter()
+    ce = command_executer.GetCommandExecuter(log_level=self.log_level)
     command = "dump_vpd_log --full --stdout"
     ret, if_out, _ = ce.CrosRunCommand(
         command, return_output=True,
@@ -161,7 +162,7 @@ class CrosMachine(object):
 
 
 class MachineManager(object):
-  def __init__(self, chromeos_root, acquire_timeout):
+  def __init__(self, chromeos_root, acquire_timeout, log_level):
     self._lock = threading.RLock()
     self._all_machines = []
     self._machines = []
@@ -171,6 +172,7 @@ class MachineManager(object):
     self.machine_checksum = {}
     self.machine_checksum_string = {}
     self.acquire_timeout = acquire_timeout
+    self.log_level = log_level
 
     if os.path.isdir(lock_machine.Machine.LOCKS_DIR):
       self.no_lock = False
@@ -181,7 +183,7 @@ class MachineManager(object):
 
   def ImageMachine(self, machine, label):
     if label.image_type == "local":
-      checksum = ImageChecksummer().Checksum(label)
+      checksum = ImageChecksummer().Checksum(label, self.log_level)
     elif label.image_type == "trybot":
       checksum = machine._GetMD5Checksum(label.chromeos_image)
     else:
@@ -196,20 +198,34 @@ class MachineManager(object):
                            "--chromeos_root=%s" % chromeos_root,
                            "--image=%s" % label.chromeos_image,
                            "--image_args=%s" % label.image_args,
-                           "--remote=%s" % machine.name]
+                           "--remote=%s" % machine.name,
+                           "--logging_level=%s" % self.log_level]
     if label.board:
       image_chromeos_args.append("--board=%s" % label.board)
 
     # Currently can't image two machines at once.
     # So have to serialized on this lock.
-    ce = command_executer.GetCommandExecuter()
+    if self.log_level != "verbose":
+      ce = command_executer.GetCommandExecuter(log_level="average")
+    else:
+      ce = command_executer.GetCommandExecuter()
     with self.image_lock:
+      if self.log_level != "verbose":
+        logger.GetLogger().LogOutput("Pushing image onto machine.")
+        logger.GetLogger().LogOutput("CMD : python %s "
+                                 % " ".join(image_chromeos_args))
       retval = ce.RunCommand(" ".join(["python"] + image_chromeos_args))
       if retval:
         cmd ="reboot && exit"
+        if self.log_level != "verbose":
+          logger.GetLogger().LogOutput("reboot & exit.")
         ce.CrosRunCommand(cmd, machine=machine.name,
                           chromeos_root=self.chromeos_root)
         time.sleep(60)
+        if self.log_level != "verbose":
+          logger.GetLogger().LogOutput("Pushing image onto machine.")
+          logger.GetLogger().LogOutput("CMD : python %s "
+                                     % " ".join(image_chromeos_args))
         retval = ce.RunCommand(" ".join(["python"] + image_chromeos_args))
       if retval:
         raise Exception("Could not image machine: '%s'." % machine.name)
@@ -244,7 +260,7 @@ class MachineManager(object):
         locked = lock_machine.Machine(cros_machine.name).Lock(True, sys.argv[0])
       if locked:
         self._machines.append(cros_machine)
-        ce = command_executer.GetCommandExecuter()
+        ce = command_executer.GetCommandExecuter(log_level=self.log_level)
         command = "cat %s" % CHECKSUM_FILE
         ret, out, _ = ce.CrosRunCommand(
             command, return_output=True, chromeos_root=self.chromeos_root,
@@ -259,7 +275,12 @@ class MachineManager(object):
     with self._lock:
       for m in self._all_machines:
         assert m.name != machine_name, "Tried to double-add %s" % machine_name
-      cm = CrosMachine(machine_name, self.chromeos_root)
+      if self.log_level != "verbose":
+        logger.GetLogger().LogOutput("Setting up remote access to %s"
+                                   % machine_name)
+        logger.GetLogger().LogOutput("Checking machine characteristics for %s"
+                                   % machine_name)
+      cm = CrosMachine(machine_name, self.chromeos_root, self.log_level)
       if cm.machine_checksum:
         self._all_machines.append(cm)
 
@@ -278,7 +299,7 @@ class MachineManager(object):
 
   def AcquireMachine(self, chromeos_image, label):
     if label.image_type == "local":
-      image_checksum = ImageChecksummer().Checksum(label)
+      image_checksum = ImageChecksummer().Checksum(label, self.log_level)
     elif label.image_type == "trybot":
       image_checksum = hashlib.md5(chromeos_image).hexdigest()
     else:
@@ -423,7 +444,7 @@ class MachineManager(object):
 
 
 class MockCrosMachine(CrosMachine):
-  def __init__(self, name, chromeos_root):
+  def __init__(self, name, chromeos_root, log_level):
     self.name = name
     self.image = None
     self.checksum = None
@@ -434,12 +455,14 @@ class MockCrosMachine(CrosMachine):
     self.checksum_string = re.sub("\d", "", name)
     #In test, we assume "lumpy1", "lumpy2" are the same machine.
     self.machine_checksum =  self._GetMD5Checksum(self.checksum_string)
+    self.log_level = log_level
 
 
 class MockMachineManager(MachineManager):
 
-  def __init__(self, chromeos_root, acquire_timeout):
-    super(MockMachineManager, self).__init__(chromeos_root, acquire_timeout)
+  def __init__(self, chromeos_root, acquire_timeout, log_level):
+    super(MockMachineManager, self).__init__(chromeos_root, acquire_timeout,
+                                             log_level)
 
   def _TryToLockMachine(self, cros_machine):
     self._machines.append(cros_machine)
@@ -449,7 +472,7 @@ class MockMachineManager(MachineManager):
     with self._lock:
       for m in self._all_machines:
         assert m.name != machine_name, "Tried to double-add %s" % machine_name
-      cm = MockCrosMachine(machine_name, self.chromeos_root)
+      cm = MockCrosMachine(machine_name, self.chromeos_root, self.log_level)
       assert cm.machine_checksum, ("Could not find checksum for machine %s" %
                                    machine_name)
       self._all_machines.append(cm)

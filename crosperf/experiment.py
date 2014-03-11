@@ -24,7 +24,7 @@ class Experiment(object):
   def __init__(self, name, remote, working_directory,
                chromeos_root, cache_conditions, labels, benchmarks,
                experiment_file, email_to, acquire_timeout, log_dir,
-               share_users, results_directory):
+               log_level, share_users, results_directory):
     self.name = name
     self.working_directory = working_directory
     self.remote = remote
@@ -38,6 +38,7 @@ class Experiment(object):
     else:
       self.results_directory = misc.CanonicalizePath(results_directory)
     self.log_dir = log_dir
+    self.log_level = log_level
     self.labels = labels
     self.benchmarks = benchmarks
     self.num_complete = 0
@@ -55,9 +56,11 @@ class Experiment(object):
                       "the image path.")
 
     if test_flag.GetTestMode():
-      self.machine_manager = MockMachineManager(chromeos_root, acquire_timeout)
+      self.machine_manager = MockMachineManager(chromeos_root, acquire_timeout,
+                                                log_level)
     else:
-      self.machine_manager = MachineManager(chromeos_root, acquire_timeout)
+      self.machine_manager = MachineManager(chromeos_root, acquire_timeout,
+                                            log_level)
     self.l = logger.GetLogger(log_dir)
 
     for machine in remote:
@@ -81,7 +84,8 @@ class Experiment(object):
           full_name = "%s_%s_%s" % (label.name, benchmark.name, iteration)
           logger_to_use = logger.Logger(self.log_dir,
                                         "run.%s" % (full_name),
-                                        True)
+                                        True,
+                                        self.log_level)
           benchmark_run = BenchmarkRun(benchmark_run_name,
                                        benchmark,
                                        label,
@@ -89,6 +93,7 @@ class Experiment(object):
                                        self.cache_conditions,
                                        self.machine_manager,
                                        logger_to_use,
+                                       self.log_level,
                                        self.share_users)
 
           benchmark_runs.append(benchmark_run)

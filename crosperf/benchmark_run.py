@@ -35,10 +35,12 @@ class BenchmarkRun(threading.Thread):
                cache_conditions,
                machine_manager,
                logger_to_use,
+               log_level,
                share_users):
     threading.Thread.__init__(self)
     self.name = name
     self._logger = logger_to_use
+    self.log_level = log_level
     self.benchmark = benchmark
     self.iteration = iteration
     self.label = label
@@ -47,7 +49,7 @@ class BenchmarkRun(threading.Thread):
     self.retval = None
     self.run_completed = False
     self.machine_manager = machine_manager
-    self.suite_runner = SuiteRunner(self._logger)
+    self.suite_runner = SuiteRunner(self._logger, self.log_level)
     self.machine = None
     self.cache_conditions = cache_conditions
     self.runs_complete = 0
@@ -55,7 +57,8 @@ class BenchmarkRun(threading.Thread):
     self.failure_reason = ""
     self.test_args = benchmark.test_args
     self.profiler_args = self._GetExtraAutotestArgs()
-    self._ce = command_executer.GetCommandExecuter(self._logger)
+    self._ce = command_executer.GetCommandExecuter(self._logger,
+                                                   log_level=self.log_level)
     self.timeline = timeline.Timeline()
     self.timeline.Record(STATUS_PENDING)
     self.share_users = share_users
@@ -74,6 +77,7 @@ class BenchmarkRun(threading.Thread):
                     self.label.board,
                     self.cache_conditions,
                     self._logger,
+                    self.log_level,
                     self.label,
                     self.share_users,
                     self.benchmark.suite,
@@ -185,6 +189,7 @@ class BenchmarkRun(threading.Thread):
                                                   self.profiler_args)
     self.run_completed = True
     return Result.CreateFromRun(self._logger,
+                                self.log_level,
                                 self.label,
                                 out,
                                 err,
@@ -214,6 +219,7 @@ class MockBenchmarkRun(BenchmarkRun):
                     self.label.board,
                     self.cache_conditions,
                     self._logger,
+                    self.log_level,
                     self.label,
                     self.share_users,
                     self.benchmark.suite,

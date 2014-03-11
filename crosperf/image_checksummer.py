@@ -11,10 +11,11 @@ from utils.file_utils import FileUtils
 
 class ImageChecksummer(object):
   class PerImageChecksummer(object):
-    def __init__(self, label):
+    def __init__(self, label, log_level):
       self._lock = threading.Lock()
       self.label = label
       self._checksum = None
+      self.log_level = log_level
 
     def Checksum(self):
       with self._lock:
@@ -26,7 +27,8 @@ class ImageChecksummer(object):
             raise Exception("Called Checksum on non-local image!")
           if self.label.chromeos_image:
             if os.path.exists(self.label.chromeos_image):
-              self._checksum = FileUtils().Md5File(self.label.chromeos_image)
+              self._checksum = FileUtils().Md5File(self.label.chromeos_image,
+                                                   log_level=self.log_level)
               logger.GetLogger().LogOutput("Computed checksum is "
                                            ": %s" % self._checksum)
           if not self._checksum:
@@ -50,13 +52,14 @@ class ImageChecksummer(object):
                                                              *args, **kwargs)
       return cls._instance
 
-  def Checksum(self, label):
+  def Checksum(self, label, log_level):
     if label.image_type != "local":
       raise Exception("Attempt to call Checksum on non-local image.")
     with self._lock:
       if label.name not in self._per_image_checksummers:
         self._per_image_checksummers[label.name] = (ImageChecksummer.
-                                                    PerImageChecksummer(label))
+                                                    PerImageChecksummer(label,
+                                                                        log_level))
       checksummer = self._per_image_checksummers[label.name]
 
     try:

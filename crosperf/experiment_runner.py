@@ -29,21 +29,39 @@ class ExperimentRunner(object):
     self.l = logger.GetLogger(experiment.log_dir)
     self._ce = command_executer.GetCommandExecuter(self.l)
     self._terminated = False
+    if experiment.log_level != "verbose":
+      self.STATUS_TIME_DELAY = 10
 
   def _Run(self, experiment):
     status = ExperimentStatus(experiment)
     experiment.Run()
     last_status_time = 0
+    last_status_string = ""
     try:
+      if experiment.log_level == "quiet":
+        self.l.LogStartDots()
       while not experiment.IsComplete():
         if last_status_time + self.STATUS_TIME_DELAY < time.time():
           last_status_time = time.time()
           border = "=============================="
-          self.l.LogOutput(border)
-          self.l.LogOutput(status.GetProgressString())
-          self.l.LogOutput(status.GetStatusString())
-          logger.GetLogger().LogOutput(border)
+          if experiment.log_level == "verbose":
+            self.l.LogOutput(border)
+            self.l.LogOutput(status.GetProgressString())
+            self.l.LogOutput(status.GetStatusString())
+            self.l.LogOutput(border)
+          else:
+            current_status_string = status.GetStatusString()
+            if (current_status_string != last_status_string):
+              self.l.LogEndDots()
+              self.l.LogOutput(border)
+              self.l.LogOutput(current_status_string)
+              self.l.LogOutput(border)
+              last_status_string = current_status_string
+            else:
+              self.l.LogAppendDot()
         time.sleep(self.THREAD_MONITOR_DELAY)
+      if experiment.log_level != "verbose":
+        self.l.LogEndDots()
     except KeyboardInterrupt:
       self._terminated = True
       self.l.LogError("Ctrl-c pressed. Cleaning up...")

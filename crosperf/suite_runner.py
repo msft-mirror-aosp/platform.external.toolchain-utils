@@ -43,9 +43,11 @@ class SuiteRunner(object):
   """ This defines the interface from crosperf to test script.
   """
 
-  def __init__(self, logger_to_use=None):
+  def __init__(self, logger_to_use=None, log_level="verbose"):
     self._logger = logger_to_use
-    self._ce = command_executer.GetCommandExecuter(self._logger)
+    self.log_level = log_level
+    self._ce = command_executer.GetCommandExecuter(self._logger,
+                                                   log_level=self.log_level)
     self._ct = command_executer.CommandTerminator()
 
   def Run(self, machine, label, benchmark, test_args, profiler_args):
@@ -99,6 +101,9 @@ class SuiteRunner(object):
                                       body="echo %s > $f" % highest_freq)
     change_perf_gov = BASH_FOR.format(list=CPUFREQ_DIRS + "scaling_governor",
                                       body="echo performance > $f")
+    if self.log_level == "average":
+      self._logger.LogOutput("Pinning governor execution frequencies for %s"
+                           % machine_name)
     ret = self._ce.CrosRunCommand(" && ".join(("set -e ",
                                                change_max_freq,
                                                change_min_freq,
@@ -135,6 +140,9 @@ class SuiteRunner(object):
 
     command = ("./run_remote_tests.sh --use_emerged --remote=%s %s %s" %
                (machine, options, benchmark.test_name))
+    if self.log_level != "verbose":
+      self._logger.LogOutput("Running test.")
+      self._logger.LogOutput("CMD: %s" % command)
     return self._ce.ChrootRunCommand(label.chromeos_root,
                                      command,
                                      True,
@@ -159,6 +167,9 @@ class SuiteRunner(object):
 
     command = ("%s %s %s %s" %
                (TEST_THAT_PATH, options, machine, benchmark.test_name))
+    if self.log_level != "verbose":
+      self._logger.LogOutput("Running test.")
+      self._logger.LogOutput("CMD: %s" % command)
     return self._ce.ChrootRunCommand(label.chromeos_root,
                                      command,
                                      True,
@@ -197,6 +208,9 @@ class SuiteRunner(object):
                                                 benchmark.test_name,
                                                 profiler_args,
                                                 machine))
+    if self.log_level != "verbose":
+      self._logger.LogOutput("Running test.")
+      self._logger.LogOutput("CMD: %s" % cmd)
     return self._ce.ChrootRunCommand (label.chromeos_root,
                                       cmd,
                                       return_output=True,
@@ -221,6 +235,9 @@ class SuiteRunner(object):
                             rsa_key,
                             benchmark.test_name,
                             benchmark.test_args))
+    if self.log_level != "verbose":
+      self._logger.LogOutput("Running test.")
+      self._logger.LogOutput("CMD: %s" % cmd)
     return self._ce.RunCommand(cmd, return_output=True,
                                print_to_console=False)
 

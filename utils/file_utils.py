@@ -28,9 +28,9 @@ class FileUtils(object):
                                                       **kwargs)
     return cls._instance
 
-  def Md5File(self, filename, block_size=2 ** 10):
+  def Md5File(self, filename, log_level="verbose", block_size=2 ** 10):
     command = "md5sum %s" % filename
-    ce = command_executer.GetCommandExecuter()
+    ce = command_executer.GetCommandExecuter(log_level=log_level)
     ret, out, err = ce.RunCommand(command, return_output=True)
     if ret:
       raise Exception("Could not run md5sum on: %s" % filename)

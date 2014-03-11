@@ -33,8 +33,8 @@ def Usage(parser, message):
   sys.exit(0)
 
 
-def CheckForCrosFlash (chromeos_root, remote):
-  cmd_executer = command_executer.GetCommandExecuter()
+def CheckForCrosFlash(chromeos_root, remote, log_level):
+  cmd_executer = command_executer.GetCommandExecuter(log_level=log_level)
 
   chroot_has_cros_flash = False
   remote_has_cherrypy = False
@@ -48,7 +48,8 @@ def CheckForCrosFlash (chromeos_root, remote):
 
   # Check to see if remote machine has cherrypy.
   keypath = os.path.join (os.path.realpath(chromeos_root),
-                          "src/scripts/mod_for_test_scripts/ssh_keys/testing_rsa")
+                          "src/scripts/mod_for_test_scripts/ssh_keys/"
+                          "testing_rsa")
 
   command = ("ssh -i %s -o StrictHostKeyChecking=no -o CheckHostIP=no "
              "-o BatchMode=yes root@%s \"python -c 'import cherrypy'\" " %
@@ -61,10 +62,6 @@ def CheckForCrosFlash (chromeos_root, remote):
 
 def DoImage(argv):
   """Build ChromeOS."""
-
-  # Common initializations
-  cmd_executer = command_executer.GetCommandExecuter()
-  l = logger.GetLogger()
 
   parser = optparse.OptionParser()
   parser.add_option("-c", "--chromeos_root", dest="chromeos_root",
@@ -79,12 +76,25 @@ def DoImage(argv):
                     action="store_true",
                     default=False,
                     help="Force an image even if it is non-test.")
+  parser.add_option("-l", "--logging_level", dest="log_level",
+                    default="verbose",
+                    help="Amount of logging to be used. Valid levels are "
+                    "'quiet', 'average', and 'verbose'.")
   parser.add_option("-a",
                     "--image_args",
                     dest="image_args")
 
 
   options = parser.parse_args(argv[1:])[0]
+
+  if not options.log_level in command_executer.LOG_LEVEL:
+    Usage(parser, "--logging_level must be 'quiet', 'average' or 'verbose'")
+  else:
+    log_level = options.log_level
+
+  # Common initializations
+  cmd_executer = command_executer.GetCommandExecuter(log_level=log_level)
+  l = logger.GetLogger()
 
   if options.chromeos_root is None:
     Usage(parser, "--chromeos_root must be set")
@@ -123,7 +133,7 @@ def DoImage(argv):
   local_image = False
   if image.find("xbuddy://") < 0:
     local_image = True
-    image_checksum = FileUtils().Md5File(image)
+    image_checksum = FileUtils().Md5File(image, log_level=log_level)
 
     command = "cat " + checksum_file
     retval, device_checksum, err = cmd_executer.CrosRunCommand(command,
@@ -146,7 +156,7 @@ def DoImage(argv):
       l.LogOutput("Checksums do not match. Re-imaging...")
 
       is_test_image = IsImageModdedForTest(options.chromeos_root,
-                                           located_image)
+                                           located_image, log_level)
 
       if not is_test_image and not options.force:
         logger.GetLogger().LogFatal("Have to pass --force to image a non-test "
@@ -176,7 +186,7 @@ def DoImage(argv):
 
     # Check to see if cros flash is in the chroot or not.
     use_cros_flash = CheckForCrosFlash (options.chromeos_root,
-                                        options.remote)
+                                        options.remote, log_level)
 
     if use_cros_flash:
       # Use 'cros flash'
@@ -212,14 +222,24 @@ def DoImage(argv):
 
     # Workaround for crosbug.com/35684.
     os.chmod(misc.GetChromeOSKeyFile(options.chromeos_root), 0600)
+    if log_level == "quiet":
+      l.LogOutput("CMD : %s" % command)
+    elif log_level == "average":
+      cmd_executer.SetLogLevel("verbose");
     retval = cmd_executer.ChrootRunCommand(options.chromeos_root,
                                            command, command_timeout=600)
 
     retries = 0
     while retval != 0 and retries < 2:
       retries += 1
+      if log_level == "quiet":
+        l.LogOutput("Imaging failed. Retry # %d." % retries)
+        l.LogOutput("CMD : %s" % command)
       retval = cmd_executer.ChrootRunCommand(options.chromeos_root,
                                              command, command_timeout=600)
+
+    if log_level == "average":
+      cmd_executer.SetLogLevel(log_level)
 
     if found == False:
       temp_dir = os.path.dirname(located_image)
@@ -230,7 +250,8 @@ def DoImage(argv):
 
     # Unfortunately cros_image_to_target.py sometimes returns early when the
     # machine isn't fully up yet.
-    retval = EnsureMachineUp(options.chromeos_root, options.remote)
+    retval = EnsureMachineUp(options.chromeos_root, options.remote,
+                             log_level)
 
     # If this is a non-local image, then the retval returned from
     # EnsureMachineUp is the one that will be returned by this function;
@@ -241,6 +262,8 @@ def DoImage(argv):
       retval = 1
 
     if local_image:
+      if log_level == "average":
+        l.LogOutput("Verifying image.")
       command = "echo %s > %s && chmod -w %s" % (image_checksum,
                                                  checksum_file,
                                                  checksum_file)
@@ -251,10 +274,11 @@ def DoImage(argv):
 
       successfully_imaged = VerifyChromeChecksum(options.chromeos_root,
                                                  image,
-                                                 options.remote)
+                                                 options.remote, log_level)
       logger.GetLogger().LogFatalIf(not successfully_imaged,
                                     "Image verification failed!")
-      TryRemountPartitionAsRW(options.chromeos_root, options.remote)
+      TryRemountPartitionAsRW(options.chromeos_root, options.remote,
+                              log_level)
   else:
     l.LogOutput("Checksums match. Skipping reimage")
   return retval
@@ -282,7 +306,8 @@ def LocateOrCopyImage(chromeos_root, image, board=None):
     if filecmp.cmp(potential_image, image):
       l.LogOutput("Found matching image %s in chromeos_root." % potential_image)
       return [True, potential_image]
-  # We did not find an image. Copy it in the src dir and return the copied file.
+  # We did not find an image. Copy it in the src dir and return the copied
+  # file.
   if board is None:
     board = ""
   base_dir = ("%s/src/build/images/%s" %
@@ -311,8 +336,9 @@ def GetImageMountCommand(chromeos_root, image, rootfs_mp, stateful_mp):
   return mount_command
 
 
-def MountImage(chromeos_root, image, rootfs_mp, stateful_mp, unmount=False):
-  cmd_executer = command_executer.GetCommandExecuter()
+def MountImage(chromeos_root, image, rootfs_mp, stateful_mp, log_level,
+               unmount=False):
+  cmd_executer = command_executer.GetCommandExecuter(log_level=log_level)
   command = GetImageMountCommand(chromeos_root, image, rootfs_mp, stateful_mp)
   if unmount:
     command = "%s --unmount" % command
@@ -321,25 +347,30 @@ def MountImage(chromeos_root, image, rootfs_mp, stateful_mp, unmount=False):
   return retval
 
 
-def IsImageModdedForTest(chromeos_root, image):
+def IsImageModdedForTest(chromeos_root, image, log_level):
+  if log_level != "verbose":
+    log_level = "quiet"
   rootfs_mp = tempfile.mkdtemp()
   stateful_mp = tempfile.mkdtemp()
-  MountImage(chromeos_root, image, rootfs_mp, stateful_mp)
+  MountImage(chromeos_root, image, rootfs_mp, stateful_mp, log_level)
   lsb_release_file = os.path.join(rootfs_mp, "etc/lsb-release")
   lsb_release_contents = open(lsb_release_file).read()
   is_test_image = re.search("test", lsb_release_contents, re.IGNORECASE)
-  MountImage(chromeos_root, image, rootfs_mp, stateful_mp, unmount=True)
+  MountImage(chromeos_root, image, rootfs_mp, stateful_mp, log_level,
+             unmount=True)
   return is_test_image
 
 
-def VerifyChromeChecksum(chromeos_root, image, remote):
-  cmd_executer = command_executer.GetCommandExecuter()
+def VerifyChromeChecksum(chromeos_root, image, remote, log_level):
+  cmd_executer = command_executer.GetCommandExecuter(log_level=log_level)
   rootfs_mp = tempfile.mkdtemp()
   stateful_mp = tempfile.mkdtemp()
-  MountImage(chromeos_root, image, rootfs_mp, stateful_mp)
+  MountImage(chromeos_root, image, rootfs_mp, stateful_mp, log_level)
   image_chrome_checksum = FileUtils().Md5File("%s/opt/google/chrome/chrome" %
-                                              rootfs_mp)
-  MountImage(chromeos_root, image, rootfs_mp, stateful_mp, unmount=True)
+                                              rootfs_mp,
+                                              log_level=log_level)
+  MountImage(chromeos_root, image, rootfs_mp, stateful_mp, log_level,
+             unmount=True)
 
   command = "md5sum /opt/google/chrome/chrome"
   [r, o, e] = cmd_executer.CrosRunCommand(command,
@@ -354,9 +385,9 @@ def VerifyChromeChecksum(chromeos_root, image, remote):
 
 # Remount partition as writable.
 # TODO: auto-detect if an image is built using --noenable_rootfs_verification.
-def TryRemountPartitionAsRW(chromeos_root, remote):
+def TryRemountPartitionAsRW(chromeos_root, remote, log_level):
   l = logger.GetLogger()
-  cmd_executer = command_executer.GetCommandExecuter()
+  cmd_executer = command_executer.GetCommandExecuter(log_level=log_level)
   command = "sudo mount -o remount,rw /"
   retval = cmd_executer.CrosRunCommand(\
     command, chromeos_root=chromeos_root, machine=remote, terminated_timeout=10)
@@ -370,9 +401,9 @@ def TryRemountPartitionAsRW(chromeos_root, remote):
     l.LogOutput("Re-mounted partition as writable.")
 
 
-def EnsureMachineUp(chromeos_root, remote):
+def EnsureMachineUp(chromeos_root, remote, log_level):
   l = logger.GetLogger()
-  cmd_executer = command_executer.GetCommandExecuter()
+  cmd_executer = command_executer.GetCommandExecuter(log_level=log_level)
   timeout = 600
   magic = "abcdefghijklmnopqrstuvwxyz"
   command = "echo %s" % magic

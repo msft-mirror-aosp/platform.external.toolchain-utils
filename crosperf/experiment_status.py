@@ -16,6 +16,7 @@ class ExperimentStatus(object):
     self.num_total = len(self.experiment.benchmark_runs)
     self.completed = 0
     self.new_job_start_time = time.time()
+    self.log_level = experiment.log_level
 
   def _GetProgressBar(self, num_complete, num_total):
     ret = "Done: %s%%" % int(100.0 * num_complete / num_total)
@@ -96,8 +97,9 @@ class ExperimentStatus(object):
                             (key, self._GetNamesAndIterations(val)))
     result = "Thread Status:\n%s" % "\n".join(status_strings)
 
-    # Add the machine manager status.
-    result += "\n" + self.experiment.machine_manager.AsString() + "\n"
+    if self.experiment.log_level == "verbose":
+      # Add the machine manager status.
+      result += "\n" + self.experiment.machine_manager.AsString() + "\n"
 
     return result
 
@@ -107,5 +109,8 @@ class ExperimentStatus(object):
     for benchmark_run in benchmark_runs:
       t_last = benchmark_run.timeline.GetLastEventTime()
       elapsed = str(datetime.timedelta(seconds=int(t-t_last)))
-      strings.append("'{0}' {1}".format(benchmark_run.name, elapsed))
+      if self.experiment.log_level == "verbose":
+        strings.append("'{0}' {1}".format(benchmark_run.name, elapsed))
+      else:
+        strings.append("'{0}'".format(benchmark_run.name))
     return " %s (%s)" % (len(strings), ", ".join(strings))

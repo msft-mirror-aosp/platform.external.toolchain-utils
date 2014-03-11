@@ -141,6 +141,9 @@ class ExperimentFactory(object):
       suite = benchmark_settings.GetField("suite")
       use_test_that = benchmark_settings.GetField("use_test_that")
       show_all_results = benchmark_settings.GetField("show_all_results")
+      log_level = benchmark_settings.GetField("logging_level")
+      if log_level not in ("quiet", "average", "verbose"):
+        log_level = "verbose"
 
       if suite == 'telemetry_Crosperf':
         if test_name == 'all_perfv2':
@@ -226,7 +229,8 @@ class ExperimentFactory(object):
                             working_directory, chromeos_root,
                             cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(),
-                            email, acquire_timeout, log_dir, share_users,
+                            email, acquire_timeout, log_dir, log_level,
+                            share_users,
                             results_dir)
 
     return experiment

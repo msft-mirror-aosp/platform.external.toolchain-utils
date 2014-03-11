@@ -35,13 +35,15 @@ class Result(object):
   perf.report, etc. The key generation is handled by the ResultsCache class.
   """
 
-  def __init__(self, logger, label):
+  def __init__(self, logger, label, log_level):
     self._chromeos_root = label.chromeos_root
     self._logger = logger
-    self._ce = command_executer.GetCommandExecuter(self._logger)
+    self._ce = command_executer.GetCommandExecuter(self._logger,
+                                                   log_level=log_level)
     self._temp_dir = None
     self.label = label
     self.results_dir = None
+    self.log_level = log_level
     self.perf_data_files = []
     self.perf_report_files = []
 
@@ -386,22 +388,22 @@ class Result(object):
                       (temp_dir, cache_dir))
 
   @classmethod
-  def CreateFromRun(cls, logger, label, out, err, retval, show_all, test,
-                    suite="pyauto"):
+  def CreateFromRun(cls, logger, log_level, label, out, err, retval, show_all,
+                    test, suite="pyauto"):
     if suite == "telemetry":
       result = TelemetryResult(logger, label)
     else:
-      result = cls(logger, label)
+      result = cls(logger, label, log_level)
     result._PopulateFromRun(out, err, retval, show_all, test, suite)
     return result
 
   @classmethod
-  def CreateFromCacheHit(cls, logger, label, cache_dir, show_all, test,
-                         suite="pyauto"):
+  def CreateFromCacheHit(cls, logger, log_level, label, cache_dir,
+                         show_all, test, suite="pyauto"):
     if suite == "telemetry":
       result = TelemetryResult(logger, label)
     else:
-      result = cls(logger, label)
+      result = cls(logger, label, log_level)
     try:
       result._PopulateFromCacheDir(cache_dir, show_all, test, suite)
 
@@ -498,7 +500,8 @@ class ResultsCache(object):
 
   def Init(self, chromeos_image, chromeos_root, test_name, iteration,
            test_args, profiler_args, machine_manager, board, cache_conditions,
-           logger_to_use, label, share_users, suite, show_all_results):
+           logger_to_use, log_level, label, share_users, suite,
+           show_all_results):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.test_name = test_name
@@ -509,10 +512,12 @@ class ResultsCache(object):
     self.cache_conditions = cache_conditions
     self.machine_manager = machine_manager
     self._logger = logger_to_use
-    self._ce = command_executer.GetCommandExecuter(self._logger)
+    self._ce = command_executer.GetCommandExecuter(self._logger,
+                                                   log_level=log_level)
     self.label = label
     self.share_users = share_users
     self.suite = suite
+    self.log_level = log_level
     self.show_all = show_all_results
 
   def _GetCacheDirForRead(self):
@@ -556,7 +561,7 @@ class ResultsCache(object):
     elif self.label.image_type == "official":
       checksum = "*"
     else:
-      checksum = ImageChecksummer().Checksum(self.label)
+      checksum = ImageChecksummer().Checksum(self.label, self.log_level)
 
     if read and CacheConditions.IMAGE_PATH_MATCH not in self.cache_conditions:
       image_path_checksum = "*"
@@ -599,6 +604,7 @@ class ResultsCache(object):
 
     self._logger.LogOutput("Trying to read from cache dir: %s" % cache_dir)
     result = Result.CreateFromCacheHit(self._logger,
+                                       self.log_level,
                                        self.label,
                                        cache_dir,
                                        self.show_all,
