@@ -41,13 +41,36 @@ class ExperimentStatus(object):
         self.new_job_start_time = current_time
       time_completed_jobs = (elapsed_time -
                              (current_time - self.new_job_start_time))
+      # eta is calculated as:
+      #   ETA = (num_jobs_not_yet_started * estimated_time_per_job)
+      #          + time_left_for_current_job
+      #
+      #   where
+      #        num_jobs_not_yet_started = (num_total - num_complete - 1)
+      #
+      #        estimated_time_per_job = time_completed_jobs / num_run_complete
+      #
+      #        time_left_for_current_job = estimated_time_per_job -
+      #                                    time_spent_so_far_on_current_job
+      #
+      #  The biggest problem with this calculation is its assumption that
+      #  all jobs have roughly the same running time (blatantly false!).
+      #
+      #  ETA can come out negative if the time spent on the current job is
+      #  greater than the estimated time per job (e.g. you're running the
+      #  first long job, after a series of short jobs).  For now, if that
+      #  happens, we set the ETA to "Unknown."
+      #
       eta_seconds = (float(self.num_total - self.experiment.num_complete -1) *
                      time_completed_jobs / self.experiment.num_run_complete
                      + (time_completed_jobs / self.experiment.num_run_complete
                         - (current_time - self.new_job_start_time)))
 
       eta_seconds = int(eta_seconds)
-      eta = datetime.timedelta(seconds=eta_seconds)
+      if eta_seconds > 0:
+        eta = datetime.timedelta(seconds=eta_seconds)
+      else:
+        eta = "Unknown"
     except ZeroDivisionError:
       eta = "Unknown"
     strings = []
