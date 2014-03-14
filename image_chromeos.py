@@ -227,7 +227,7 @@ def DoImage(argv):
     elif log_level == "average":
       cmd_executer.SetLogLevel("verbose");
     retval = cmd_executer.ChrootRunCommand(options.chromeos_root,
-                                           command, command_timeout=600)
+                                           command, command_timeout=1800)
 
     retries = 0
     while retval != 0 and retries < 2:
@@ -236,7 +236,7 @@ def DoImage(argv):
         l.LogOutput("Imaging failed. Retry # %d." % retries)
         l.LogOutput("CMD : %s" % command)
       retval = cmd_executer.ChrootRunCommand(options.chromeos_root,
-                                             command, command_timeout=600)
+                                             command, command_timeout=1800)
 
     if log_level == "average":
       cmd_executer.SetLogLevel(log_level)

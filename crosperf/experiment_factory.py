@@ -31,7 +31,8 @@ telemetry_perfv2_tests = [ 'dromaeo.domcoreattr',
 #                           'memory.top_25',
                            'octane',
                            'robohornet_pro',
-                           'smoothness.top_25',
+# The following benchmark is broken (and hanging) for now, so omit it.
+#                           'smoothness.top_25',
                            'sunspider',
                            ]
 

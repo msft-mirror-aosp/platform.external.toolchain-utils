@@ -140,7 +140,7 @@ class ToolchainComparator(ChromeOSCheckout):
     experiment_tests = """
     benchmark: all_perfv2 {
       suite: telemetry_Crosperf
-      iterations: 1
+      iterations: 3
     }
     """
     with open(experiment_file, "w") as f:
