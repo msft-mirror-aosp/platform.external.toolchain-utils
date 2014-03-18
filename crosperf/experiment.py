@@ -84,8 +84,7 @@ class Experiment(object):
           full_name = "%s_%s_%s" % (label.name, benchmark.name, iteration)
           logger_to_use = logger.Logger(self.log_dir,
                                         "run.%s" % (full_name),
-                                        True,
-                                        self.log_level)
+                                        True)
           benchmark_run = BenchmarkRun(benchmark_run_name,
                                        benchmark,
                                        label,
