@@ -253,6 +253,21 @@ class Result(object):
       if os.path.exists(perf_path):
         perf_file = "/usr/bin/perf"
 
+      # The following is a hack, to use the perf.static binary that
+      # was given to us by Stephane Eranian, until he can figure out
+      # why "normal" perf cannot properly symbolize ChromeOS perf.data files.
+      # Get the directory containing the 'crosperf' script.
+      dirname, _ = misc.GetRoot(sys.argv[0])
+      perf_path = os.path.join (dirname, "..", "perf.static")
+      if os.path.exists(perf_path):
+        # copy the executable into the chroot so that it can be found.
+        src_path = perf_path
+        dst_path = os.path.join (self._chromeos_root, "chroot",
+                                 "tmp/perf.static")
+        command = "cp %s %s" % (src_path,dst_path)
+        self._ce.RunCommand (command)
+        perf_file = "/tmp/perf.static"
+
       command = ("%s report "
                  "-n "
                  "--symfs /build/%s "
