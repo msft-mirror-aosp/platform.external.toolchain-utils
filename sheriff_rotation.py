@@ -19,7 +19,7 @@ from utils import email_sender
 class SheriffHandler(object):
   SHERIFF_FILE = "/home/mobiletc-prebuild/sheriffs.txt"
   SUBJECT = "You (%s) are the sheriff for the week: %s - %s"
-  BODY = "Please see instructions here: https://sites.google.com/a/google.com/compiler-chromeos-workflows/sheriff-corner/sheriff-duties."
+  BODY = "Please see instructions here: https://sites.google.com/a/google.com/chromeos-toolchain-team-home2/home/sheriff-s-corner/sheriff-duties"
 
   def GetWeekInfo(self, day=datetime.datetime.today()):
     """Return week_start, week_end."""
