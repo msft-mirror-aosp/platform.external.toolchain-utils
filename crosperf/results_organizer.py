@@ -5,8 +5,14 @@
 # found in the LICENSE file.
 
 """Parse data from benchmark_runs for tabulator."""
+import json
+import os
 import re
+import sys
 
+from utils import misc
+
+TELEMETRY_RESULT_DEFAULTS_FILE = "default-telemetry-results.json"
 
 class ResultOrganizer(object):
   """Create a dict from benchmark_runs.
@@ -39,6 +45,7 @@ class ResultOrganizer(object):
       self.labels.append(label.name)
     for benchmark_run in benchmark_runs:
       benchmark_name = benchmark_run.benchmark.name
+      show_all_results = benchmark_run.benchmark.show_all_results
       if benchmark_name not in self.result:
         self.result[benchmark_name] = []
         while len(self.result[benchmark_name]) < len(labels):
@@ -55,14 +62,39 @@ class ResultOrganizer(object):
       key_filter_on = (benchmark.key_results_only and
                        "PyAutoPerfTest" in benchmark.name + benchmark.test_name
                        and "perf." not in benchmark.test_args)
+      if not show_all_results:
+        summary_list = self._GetSummaryResults(benchmark.test_name)
+        if len(summary_list) > 0:
+          summary_list.append ("retval")
+        else:
+          # Did not find test_name in json file; therefore show everything.
+          show_all_results = True
       for test_key in benchmark_run.result.keyvals:
         if (key_filter_on and
             not any([key for key in self.key_filter if key in test_key])
            ):
           continue
+        if not show_all_results and not test_key in summary_list:
+          continue
         result_value = benchmark_run.result.keyvals[test_key]
         cur_dict[test_key] = result_value
     self._DuplicatePass()
+
+  def _GetSummaryResults (self, test_name):
+    dirname, _ = misc.GetRoot(sys.argv[0])
+    fullname = os.path.join(dirname, TELEMETRY_RESULT_DEFAULTS_FILE)
+    if os.path.exists (fullname):
+      # Slurp the file into a dictionary.  The keys in the dictionary are
+      # the benchmark names.  The value for a key is a list containing the
+      # names of all the result fields that should be returned in a 'default'
+      # report.
+      result_defaults = json.load(open(fullname))
+      # Check to see if the current benchmark test actually has an entry in
+      # the dictionary.
+      if test_name in result_defaults:
+        return result_defaults[test_name]
+      else:
+        return []
 
   def _DuplicatePass(self):
     for bench, data in self.result.items():

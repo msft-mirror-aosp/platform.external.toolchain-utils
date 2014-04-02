@@ -185,14 +185,24 @@ class TableGenerator(object):
     rows = 0
     for k in keys:
       row = [k]
+      unit = None
       for run_list in self._runs:
         v = []
         for run in run_list:
           if k in run:
-            v.append(run[k])
+            if type(run[k]) is list:
+              val = run[k][0]
+              unit = run[k][1]
+            else:
+              val = run[k]
+            v.append(val)
           else:
             v.append(None)
         row.append(v)
+      # If we got a 'unit' value, append the units name to the key name.
+      if unit:
+        keyname = row[0] + " (%s) " % unit
+        row[0] = keyname
       table.append(row)
       rows += 1
       if rows == number_of_rows:
