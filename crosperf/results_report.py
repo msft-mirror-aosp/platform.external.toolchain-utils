@@ -31,10 +31,7 @@ class ResultsReport(object):
     return labels
 
   def GetFullTables(self, perf=False):
-    columns = [Column(NonEmptyCountResult(),
-                      Format(),
-                      "Completed"),
-               Column(RawResult(),
+    columns = [Column(RawResult(),
                       Format()),
                Column(MinResult(),
                       Format()),
@@ -52,14 +49,12 @@ class ResultsReport(object):
                       PValueFormat(), "p-value")
               ]
     if not perf:
-      return self._GetTables(self.labels, self.benchmark_runs, columns)
-    return self. _GetPerfTables(self.labels, columns)
+      return self._GetTables(self.labels, self.benchmark_runs, columns,
+                             "full")
+    return self._GetPerfTables(self.labels, columns, "full")
 
   def GetSummaryTables(self, perf=False):
-    columns = [Column(NonEmptyCountResult(),
-                      Format(),
-                      "Completed"),
-               Column(AmeanResult(),
+    columns = [Column(AmeanResult(),
                       Format()),
                Column(StdResult(),
                       Format(), "StdDev"),
@@ -73,8 +68,9 @@ class ResultsReport(object):
                       PValueFormat(), "p-value")
               ]
     if not perf:
-      return self._GetTables(self.labels, self.benchmark_runs, columns)
-    return self. _GetPerfTables(self.labels, columns)
+      return self._GetTables(self.labels, self.benchmark_runs, columns,
+                             "summary")
+    return self._GetPerfTables(self.labels, columns, "summary")
 
   def _ParseColumn(self, columns, iteration):
     new_column = []
@@ -103,7 +99,7 @@ class ResultsReport(object):
     cell.header = True
     return  [[cell]]
 
-  def _GetTables(self, labels, benchmark_runs, columns):
+  def _GetTables(self, labels, benchmark_runs, columns, table_type):
     tables = []
     ro = ResultOrganizer(benchmark_runs, labels, self.benchmarks)
     result = ro.result
@@ -125,12 +121,12 @@ class ResultsReport(object):
         table = tg.GetTable()
         parsed_columns = self._ParseColumn(columns, benchmark.iterations)
         tf = TableFormatter(table, parsed_columns)
-        cell_table = tf.GetCellTable()
+        cell_table = tf.GetCellTable(table_type)
       tables.append(ben_table)
       tables.append(cell_table)
     return tables
 
-  def _GetPerfTables(self, labels, columns):
+  def _GetPerfTables(self, labels, columns, table_type):
     tables = []
     label_names = [label.name for label in labels]
     p_table = PerfTable(self.experiment, label_names)
@@ -159,7 +155,7 @@ class ResultsReport(object):
         tf.AddColumnName()
         tf.AddLabelName()
         tf.AddHeader(str(event))
-        table = tf.GetCellTable(headers=False)
+        table = tf.GetCellTable(table_type, headers=False)
         tables.append(table)
     return tables
 
@@ -237,7 +233,7 @@ CPUInfo
                                      benchmark_run.failure_reason]]
       table.append(status)
     tf = TableFormatter(table, columns)
-    cell_table = tf.GetCellTable()
+    cell_table = tf.GetCellTable("status")
     return [cell_table]
 
   def GetReport(self):
@@ -477,7 +473,7 @@ pre {
                         Format())
                 ]
       tf = TableFormatter(table, columns)
-      data_table = tf.GetCellTable()
+      data_table = tf.GetCellTable("full")
 
       for i in range(2, len(data_table)):
         cur_row_data = data_table[i]

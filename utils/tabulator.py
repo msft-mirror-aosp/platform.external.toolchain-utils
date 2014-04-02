@@ -768,10 +768,13 @@ class TableFormatter(object):
     self._table_columns = []
     self._out_table = []
 
-  def GenerateCellTable(self):
+  def GenerateCellTable(self, table_type):
     row_index = 0
 
     for row in self._table[1:]:
+      # It does not make sense to put retval in the summary table.
+      if str(row[0]) == "retval" and table_type == "summary":
+        continue
       key = Cell()
       key.string_value = str(row[0])
       out_row = [key]
@@ -831,25 +834,54 @@ class TableFormatter(object):
     cell.colspan = colspan
     self._out_table = [header] + self._out_table
 
+  def GetPassesAndFails(self, values):
+    passes = 0
+    fails = 0
+    for val in values:
+      if val == 0:
+        passes = passes + 1
+      else:
+        fails = fails + 1
+    return passes, fails
+
   def AddLabelName(self):
     """Put label on the top of the table."""
     top_header = []
     base_colspan = len([c for c in self._columns
                         if not c.result.NeedsBaseline()])
     compare_colspan = len(self._columns)
+    # Find the row with the key 'retval', if it exists.  This
+    # will be used to calculate the number of iterations that passed and
+    # failed for each image label.
+    retval_row = None
+    for row in self._table:
+      if row[0] == "retval":
+        retval_row = row
     # The label is organized as follows
     # "keys" label_base, label_comparison1, label_comparison2
     # The first cell has colspan 1, the second is base_colspan
     # The others are compare_colspan
+    column_position = 0
     for label in self._table[0]:
       cell = Cell()
       cell.header = True
-      cell.string_value = str(label)
+      # Put the number of pass/fail iterations in the image label header.
+      if column_position > 0 and retval_row:
+        retval_values = retval_row[column_position]
+        if type(retval_values) is list:
+          passes, fails = self.GetPassesAndFails(retval_values)
+          cell.string_value = str(label) + "  (pass:%d fail:%d)" % (passes,
+                                                                    fails)
+        else:
+          cell.string_value = str(label)
+      else:
+        cell.string_value = str(label)
       if top_header:
         cell.colspan = base_colspan
       if len(top_header) > 1:
         cell.colspan = compare_colspan
       top_header.append(cell)
+      column_position = column_position + 1
     self._out_table = [top_header] + self._out_table
 
   def _PrintOutTable(self):
@@ -860,7 +892,7 @@ class TableFormatter(object):
       o += "\n"
     print o
 
-  def GetCellTable(self, headers=True):
+  def GetCellTable(self, table_type, headers=True):
     """Function to return a table of cells.
 
     The table (list of lists) is converted into a table of cells by this
@@ -874,7 +906,7 @@ class TableFormatter(object):
     """
     # Generate the cell table, creating a list of dynamic columns on the fly.
     if not self._out_table:
-      self.GenerateCellTable()
+      self.GenerateCellTable(table_type)
     if headers:
       self.AddColumnName()
       self.AddLabelName()
