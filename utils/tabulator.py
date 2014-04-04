@@ -770,10 +770,16 @@ class TableFormatter(object):
 
   def GenerateCellTable(self, table_type):
     row_index = 0
+    all_failed = False
 
     for row in self._table[1:]:
       # It does not make sense to put retval in the summary table.
       if str(row[0]) == "retval" and table_type == "summary":
+        # Check to see if any runs passed, and update all_failed.
+        all_failed = True
+        for values in row[1:]:
+          if 0 in values:
+            all_failed = False
         continue
       key = Cell()
       key.string_value = str(row[0])
@@ -801,6 +807,26 @@ class TableFormatter(object):
           baseline = values
       self._out_table.append(out_row)
       row_index += 1
+
+    # If this is a summary table, and the only row in it is 'retval', and
+    # all the test runs failed, we need to a 'Results' row to the output
+    # table.
+    if table_type == "summary" and all_failed and len(self._table) == 2:
+      labels_row = self._table[0]
+      key = Cell()
+      key.string_value = "Results"
+      out_row = [key]
+      baseline = None
+      for value in labels_row[1:]:
+        for column in self._columns:
+          cell = Cell()
+          cell.name = key.string_value
+          column.result.Compute(cell, ["Fail"], baseline)
+          column.fmt.Compute(cell)
+          out_row.append(cell)
+          if not row_index:
+            self._table_columns.append(column)
+      self._out_table.append(out_row)
 
   def AddColumnName(self):
     """Generate Column name at the top of table."""

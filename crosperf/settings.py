@@ -2,6 +2,8 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+from utils import logger
+from download_images import *
 
 class Settings(object):
   """Class representing settings (a set of fields) from an experiment file."""
@@ -61,10 +63,15 @@ class Settings(object):
       if not self.fields[name].assigned and self.fields[name].required:
         raise Exception("Field %s is invalid." % name)
 
-  def GetXbuddyPath(self, path_str, board):
-    prefix = "xbuddy://remote"
+  def GetXbuddyPath(self, path_str, board, chromeos_root, log_level):
+    prefix = "remote"
+    l = logger.GetLogger()
     if path_str.find("trybot") < 0 and path_str.find(board) < 0:
       xbuddy_path = "%s/%s/%s" % (prefix, board, path_str)
     else:
       xbuddy_path = "%s/%s" % (prefix, path_str)
-    return xbuddy_path
+    image_downloader = ImageDownloader(l, log_level)
+    retval, image_path = image_downloader.Run(chromeos_root, xbuddy_path)
+    if retval != 0:
+      raise Exception("Unable to find/download xbuddy image.")
+    return image_path

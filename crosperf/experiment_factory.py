@@ -190,10 +190,11 @@ class ExperimentFactory(object):
       label_name = label_settings.name
       board = label_settings.GetField("board")
       image = label_settings.GetField("chromeos_image")
+      chromeos_root = label_settings.GetField("chromeos_root")
       if image == "":
         build = label_settings.GetField("build")
-        image = label_settings.GetXbuddyPath (build, board)
-      chromeos_root = label_settings.GetField("chromeos_root")
+        image = label_settings.GetXbuddyPath (build, board, chromeos_root,
+                                              log_level)
       my_remote = label_settings.GetField("remote")
       new_remote = []
       for i in my_remote:

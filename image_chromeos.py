@@ -176,13 +176,19 @@ def DoImage(argv):
 
     real_src_dir = os.path.join(os.path.realpath(options.chromeos_root),
                                 "src")
+    real_chroot_dir = os.path.join(os.path.realpath(options.chromeos_root),
+                                   "chroot")
     if local_image:
       if located_image.find(real_src_dir) != 0:
-        raise Exception("Located image: %s not in chromeos_root: %s" %
-                        (located_image, options.chromeos_root))
-      chroot_image = os.path.join(
-          "..",
-          located_image[len(real_src_dir):].lstrip("/"))
+        if located_image.find(real_chroot_dir) != 0:
+          raise Exception("Located image: %s not in chromeos_root: %s" %
+                          (located_image, options.chromeos_root))
+        else:
+          chroot_image = located_image[len(real_chroot_dir):]
+      else:
+        chroot_image = os.path.join(
+            "..",
+            located_image[len(real_src_dir):].lstrip("/"))
 
     # Check to see if cros flash is in the chroot or not.
     use_cros_flash = CheckForCrosFlash (options.chromeos_root,

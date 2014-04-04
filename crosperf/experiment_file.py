@@ -153,8 +153,12 @@ class ExperimentFile(object):
               if real_file != field.GetString():
                 res += "\t#actual_image: %s\n" % real_file
             if field.name == "build":
+              chromeos_root_field = settings.fields["chromeos_root"]
+              if chromeos_root_field:
+                chromeos_root = chromeos_root_field.GetString()
               value = field.GetString()
-              xbuddy_path = settings.GetXbuddyPath (value, board)
+              xbuddy_path = settings.GetXbuddyPath (value, board, chromeos_root,
+                                                    "quiet")
               res +=  "\t#actual_image: %s\n" % xbuddy_path
         res += "}\n\n"
 
