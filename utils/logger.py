@@ -130,6 +130,15 @@ class Logger(object):
       return sys.stderr
     return None
 
+  def LogCmdToFileOnly (self, cmd, machine="", user=None):
+    if not self.cmdfd:
+      return
+
+    host = ("%s@%s" % (user, machine)) if user else machine
+    flush = True
+    cmd_string = "CMD (%s): %s\n" % (host, cmd)
+    self._WriteTo(self.cmdfd, cmd_string, flush)
+
   def LogCmd(self, cmd, machine="", user=None, print_to_console=True):
     if user:
       host = "%s@%s" % (user, machine)

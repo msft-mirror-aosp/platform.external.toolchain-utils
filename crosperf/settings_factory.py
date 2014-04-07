@@ -42,7 +42,7 @@ class BenchmarkSettings(Settings):
                             "command record or stat followed by arguments."))
     self.AddField(TextField("suite", default="pyauto",
                                description="The type of the benchmark"))
-    self.AddField(TextField("logging_level", default="verbose",
+    self.AddField(TextField("logging_level", default="average",
                                description="The level of logging desired. "
                             "Options are 'quiet', 'average', and 'verbose'."))
     self.AddField(BooleanField("use_test_that", default=True,
@@ -130,7 +130,7 @@ class GlobalSettings(Settings):
                             "contains a src/scripts directory. Defaults to "
                             "the chromeos checkout which contains the "
                             "chromeos_image."))
-    self.AddField(TextField("logging_level", default="verbose",
+    self.AddField(TextField("logging_level", default="average",
                                description="The level of logging desired. "
                             "Options are 'quiet', 'average', and 'verbose'."))
     self.AddField(BooleanField("key_results_only", default=True,

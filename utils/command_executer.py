@@ -60,6 +60,8 @@ class CommandExecuter:
 
     if self.log_level == "verbose":
       self.logger.LogCmd(cmd, machine, username, print_to_console)
+    else:
+      self.logger.LogCmdToFileOnly(cmd, machine, username)
     if command_terminator and command_terminator.IsTerminated():
       self.logger.LogError("Command was terminated!", print_to_console)
       if return_output:
