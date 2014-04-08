@@ -360,6 +360,29 @@ def HasGitUntrackedChanges(git_dir):
       command, print_to_console=False)
 
 
+def GitGetCommitHash(git_dir, commit_symbolic_name):
+  """Return githash for the symbolic git commit.
+
+  For example, commit_symbolic_name could be
+  "cros/gcc.gnu.org/branches/gcc/gcc-4_8-mobile, this function returns the git
+  hash for this symbolic name.
+
+  Args:
+    git_dir: a git working tree.
+    commit_symbolic_name: a symbolic name for a particular git commit.
+  Returns:
+    The git hash for the symbolic name or None if fails.
+  """
+
+  command = ('cd {0} && git log -n 1 --pretty="format:%H" {1}').format(
+      git_dir, commit_symbolic_name)
+  rv, out, _ = command_executer.GetCommandExecuter().RunCommand(
+      command, return_output=True, print_to_console=False)
+  if rv == 0:
+    return out.strip()
+  return None
+
+
 def IsGitTreeClean(git_dir):
   """Test if git tree has no local changes.
 
