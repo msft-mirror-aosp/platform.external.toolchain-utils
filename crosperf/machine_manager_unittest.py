@@ -12,7 +12,7 @@ import machine_manager
 class MyMachineManager(machine_manager.MachineManager):
 
   def __init__(self, chromeos_root):
-    super(MyMachineManager, self).__init__(chromeos_root, 0)
+    super(MyMachineManager, self).__init__(chromeos_root, 0, "average")
 
   def _TryToLockMachine(self, cros_machine):
     self._machines.append(cros_machine)
@@ -22,7 +22,8 @@ class MyMachineManager(machine_manager.MachineManager):
     with self._lock:
       for m in self._all_machines:
         assert m.name != machine_name, "Tried to double-add %s" % machine_name
-      cm = machine_manager.MockCrosMachine(machine_name, self.chromeos_root)
+      cm = machine_manager.MockCrosMachine(machine_name, self.chromeos_root,
+                                           "average")
       assert cm.machine_checksum, ("Could not find checksum for machine %s" %
                                    machine_name)
       self._all_machines.append(cm)

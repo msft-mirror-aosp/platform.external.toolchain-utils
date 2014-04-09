@@ -88,25 +88,25 @@ class ResultOrganizerTest(unittest.TestCase):
     benchmarks = [mock_instance.benchmark1, mock_instance.benchmark2]
     benchmark_runs = [None]*8
     benchmark_runs[0] = BenchmarkRun("b1", benchmarks[0],
-                                     labels[0], 1, "", "", "", "")
+                                     labels[0], 1, "", "", "", "average", "")
     benchmark_runs[1] = BenchmarkRun("b2", benchmarks[0],
-                                     labels[0], 2, "", "", "", "")
+                                     labels[0], 2, "", "", "", "average", "")
     benchmark_runs[2] = BenchmarkRun("b3", benchmarks[0],
-                                     labels[1], 1, "", "", "", "")
+                                     labels[1], 1, "", "", "", "average", "")
     benchmark_runs[3] = BenchmarkRun("b4", benchmarks[0],
-                                     labels[1], 2, "", "", "", "")
+                                     labels[1], 2, "", "", "", "average", "")
     benchmark_runs[4] = BenchmarkRun("b5", benchmarks[1],
-                                     labels[0], 1, "", "", "", "")
+                                     labels[0], 1, "", "", "", "average", "")
     benchmark_runs[5] = BenchmarkRun("b6", benchmarks[1],
-                                     labels[0], 2, "", "", "", "")
+                                     labels[0], 2, "", "", "", "average", "")
     benchmark_runs[6] = BenchmarkRun("b7", benchmarks[1],
-                                     labels[1], 1, "", "", "", "")
+                                     labels[1], 1, "", "", "", "average", "")
     benchmark_runs[7] = BenchmarkRun("b8", benchmarks[1],
-                                     labels[1], 2, "", "", "", "")
+                                     labels[1], 2, "", "", "", "average", "")
 
     i = 0
     for b in benchmark_runs:
-      b.result = Result("",  b.label)
+      b.result = Result("",  b.label, "average")
       b.result.keyvals = mock_instance.keyval[i]
       i += 1
 

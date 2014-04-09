@@ -243,7 +243,7 @@ class MockBenchmarkRun(BenchmarkRun):
                                                   self.test_args,
                                                   self.profiler_args)
     self.run_completed = True
-    rr = MockResult("logger", self.label)
+    rr = MockResult("logger", self.label, self.log_level)
     rr.out = out
     rr.err = err
     rr.retval = retval

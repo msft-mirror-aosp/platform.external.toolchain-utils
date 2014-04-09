@@ -457,6 +457,9 @@ class MockCrosMachine(CrosMachine):
     self.machine_checksum =  self._GetMD5Checksum(self.checksum_string)
     self.log_level = log_level
 
+  def IsReachable(self):
+    return True
+
 
 class MockMachineManager(MachineManager):
 

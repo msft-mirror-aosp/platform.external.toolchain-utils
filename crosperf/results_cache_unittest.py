@@ -114,13 +114,13 @@ keyvals = {'': 'PASS', 'b_stdio_putcgetc__0_': '0.100005711667', 'b_string_strst
 
 class MockResult(Result):
 
-  def __init__(self, logger, label):
-    super(MockResult, self).__init__(logger, label)
+  def __init__(self, logger, label, logging_level):
+    super(MockResult, self).__init__(logger, label, logging_level)
 
   def _FindFilesInResultsDir(self, find_args):
     return ""
 
-  def _GetKeyvals(self):
+  def _GetKeyvals(self, show_all_results):
     return keyvals
 
 
@@ -128,8 +128,9 @@ class ResultTest(unittest.TestCase):
   mock_label = MockLabel("mock_label", "chromeos_image", "/tmp", "lumpy",
                          "remote", "image_args", "image_md5sum", "cache_dir")
   def testCreateFromRun(self):
-    result = MockResult.CreateFromRun(logger.GetLogger(), self.mock_label,
-                                      output, error, 0, 0)
+    result = MockResult.CreateFromRun(logger.GetLogger(), "average",
+                                      self.mock_label,
+                                      output, error, 0, True, 0)
     self.assertEqual(result.keyvals, keyvals)
     self.assertEqual(result.chroot_results_dir,
                      "/tmp/run_remote_tests.PO1234567/platform_LibCBench")

@@ -21,20 +21,22 @@ from results_cache import MockResultsCache
 class BenchmarkRunTest(unittest.TestCase):
   def testDryRun(self):
     my_label = MockLabel("test1", "image1", "/tmp/test_benchmark_run",
-                         "x86-alex", "chromeos-alex1",
+                         "x86-alex", "chromeos2-row1-rack4-host9.cros",
                          image_args="",
                          image_md5sum="",
                          cache_dir="")
-    m = MockMachineManager("/tmp/chromeos_root", 0)
-    m.AddMachine("chromeos-alex1")
-    bench = Benchmark("PageCyler",
-                      "Pyautoperf",
-                      "",
-                      1,
-                      0.2,
-                      False,
-                      False,
-                      "")
+    logging_level="average"
+    m = MockMachineManager("/tmp/chromeos_root", 0, logging_level)
+    m.AddMachine("chromeos2-row1-rack4-host9.cros")
+    bench = Benchmark("page_cycler.netsim.top_10",    # name
+                      "page_cycler.netsim.top_10",    # test_name
+                      "",             # test_args
+                      1,              # iteratins
+                      0.2,            # outlier_range
+                      False,          # key_results_only
+                      False,          # rm_chroot_tmp
+                      "",             # perf_args
+                      suite="telemetry_Crosperf")     # suite
     b = MockBenchmarkRun("test run",
                          bench,
                          my_label,
@@ -42,6 +44,7 @@ class BenchmarkRunTest(unittest.TestCase):
                          [],
                          m,
                          logger.GetLogger(),
+                         logging_level,
                          "")
     b.cache = MockResultsCache()
     b.suite_runner = MockSuiteRunner()
