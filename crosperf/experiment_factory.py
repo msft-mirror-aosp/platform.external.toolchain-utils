@@ -76,16 +76,13 @@ class ExperimentFactory(object):
   """
 
   def _AppendBenchmarkSet(self, benchmarks, benchmark_list, test_args,
-                          iterations, outlier_range, key_results_only,
-                          rm_chroot_tmp, perf_args, suite, use_test_that,
+                          iterations, rm_chroot_tmp, perf_args, suite,
                           show_all_results):
     """Add all the tests in a set to the benchmarks list."""
     for test_name in benchmark_list:
       telemetry_benchmark = Benchmark (test_name, test_name, test_args,
-                                       iterations, outlier_range,
-                                       key_results_only, rm_chroot_tmp,
-                                       perf_args, suite, use_test_that,
-                                       show_all_results)
+                                       iterations, rm_chroot_tmp, perf_args,
+                                       suite, show_all_results)
       benchmarks.append(telemetry_benchmark)
 
 
@@ -93,6 +90,7 @@ class ExperimentFactory(object):
     """Construct an experiment from an experiment file."""
     global_settings = experiment_file.GetGlobalSettings()
     experiment_name = global_settings.GetField("name")
+    board = global_settings.GetField("board")
     remote = global_settings.GetField("remote")
     # This is used to remove the ",' from the remote if user
     # add them to the remote string.
@@ -103,16 +101,17 @@ class ExperimentFactory(object):
     remote = new_remote
     chromeos_root = global_settings.GetField("chromeos_root")
     rm_chroot_tmp = global_settings.GetField("rm_chroot_tmp")
-    key_results_only = global_settings.GetField("key_results_only")
+    perf_args = global_settings.GetField("perf_args")
     acquire_timeout= global_settings.GetField("acquire_timeout")
     cache_dir = global_settings.GetField("cache_dir")
     config.AddConfig("no_email", global_settings.GetField("no_email"))
     share_users = global_settings.GetField("share_users")
     results_dir = global_settings.GetField("results_dir")
     chrome_src = global_settings.GetField("chrome_src")
-    build = global_settings.GetField("build")
-    use_test_that = global_settings.GetField("use_test_that")
     show_all_results = global_settings.GetField("show_all_results")
+    log_level = global_settings.GetField("logging_level")
+    if log_level not in ("quiet", "average", "verbose"):
+      log_level = "verbose"
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.
     cache_conditions = [CacheConditions.CACHE_FILE_EXISTS,
@@ -136,49 +135,30 @@ class ExperimentFactory(object):
         test_name = benchmark_name
       test_args = benchmark_settings.GetField("test_args")
       iterations = benchmark_settings.GetField("iterations")
-      outlier_range = benchmark_settings.GetField("outlier_range")
-      perf_args = benchmark_settings.GetField("perf_args")
-      rm_chroot_tmp = benchmark_settings.GetField("rm_chroot_tmp")
-      key_results_only = benchmark_settings.GetField("key_results_only")
       suite = benchmark_settings.GetField("suite")
-      use_test_that = benchmark_settings.GetField("use_test_that")
-      show_all_results = benchmark_settings.GetField("show_all_results")
-      log_level = benchmark_settings.GetField("logging_level")
-      if log_level not in ("quiet", "average", "verbose"):
-        log_level = "verbose"
 
       if suite == 'telemetry_Crosperf':
         if test_name == 'all_perfv2':
           self._AppendBenchmarkSet (benchmarks, telemetry_perfv2_tests,
-                                    test_args, iterations, outlier_range,
-                                    key_results_only, rm_chroot_tmp,
-                                    perf_args, suite, use_test_that,
-                                    show_all_results)
+                                    test_args, iterations, rm_chroot_tmp,
+                                    perf_args, suite, show_all_results)
         elif test_name == 'all_pagecyclers':
           self._AppendBenchmarkSet (benchmarks, telemetry_pagecycler_tests,
-                                    test_args, iterations, outlier_range,
-                                    key_results_only, rm_chroot_tmp,
-                                    perf_args, suite, use_test_that,
-                                    show_all_results)
+                                    test_args, iterations, rm_chroot_tmp,
+                                    perf_args, suite, show_all_results)
         elif test_name == 'all_toolchain_perf':
           self._AppendBenchmarkSet (benchmarks, telemetry_toolchain_perf_tests,
-                                    test_args, iterations, outlier_range,
-                                    key_results_only, rm_chroot_tmp,
-                                    perf_args, suite, use_test_that,
-                                    show_all_results)
+                                    test_args, iterations, rm_chroot_tmp,
+                                    perf_args, suite, show_all_results)
         else:
           benchmark = Benchmark(test_name, test_name, test_args,
-                                iterations, outlier_range,
-                                key_results_only, rm_chroot_tmp,
-                                perf_args, suite, use_test_that,
+                                iterations, rm_chroot_tmp, perf_args, suite,
                                 show_all_results)
           benchmarks.append(benchmark)
       else:
         # Add the single benchmark.
         benchmark = Benchmark(benchmark_name, test_name, test_args,
-                              iterations, outlier_range,
-                              key_results_only, rm_chroot_tmp,
-                              perf_args, suite, use_test_that,
+                              iterations, rm_chroot_tmp, perf_args, suite,
                               show_all_results)
         benchmarks.append(benchmark)
 
@@ -188,21 +168,19 @@ class ExperimentFactory(object):
     all_remote = list(remote)
     for label_settings in all_label_settings:
       label_name = label_settings.name
-      board = label_settings.GetField("board")
       image = label_settings.GetField("chromeos_image")
       chromeos_root = label_settings.GetField("chromeos_root")
-      if image == "":
-        build = label_settings.GetField("build")
-        image = label_settings.GetXbuddyPath (build, board, chromeos_root,
-                                              log_level)
       my_remote = label_settings.GetField("remote")
       new_remote = []
       for i in my_remote:
         c = re.sub('["\']', '', i)
         new_remote.append(c)
       my_remote = new_remote
+      if image == "":
+        build = label_settings.GetField("build")
+        image = label_settings.GetXbuddyPath (build, board, chromeos_root,
+                                              log_level)
 
-      image_md5sum = label_settings.GetField("md5sum")
       cache_dir = label_settings.GetField("cache_dir")
       chrome_src = label_settings.GetField("chrome_src")
 
@@ -220,14 +198,15 @@ class ExperimentFactory(object):
       image_args = label_settings.GetField("image_args")
       if test_flag.GetTestMode():
         label = MockLabel(label_name, image, chromeos_root, board, my_remote,
-                          image_args, image_md5sum, cache_dir, chrome_src)
+                          image_args, cache_dir, chrome_src)
       else:
         label = Label(label_name, image, chromeos_root, board, my_remote,
-                      image_args, image_md5sum, cache_dir, chrome_src)
+                      image_args, cache_dir, chrome_src)
       labels.append(label)
 
     email = global_settings.GetField("email")
     all_remote = list(set(all_remote))
+    all_remote = list(set(my_remote))
     experiment = Experiment(experiment_name, all_remote,
                             working_directory, chromeos_root,
                             cache_conditions, labels, benchmarks,

@@ -16,19 +16,16 @@ class Benchmark(object):
   """
 
   def __init__(self, name, test_name, test_args, iterations,
-               outlier_range, key_results_only, rm_chroot_tmp, perf_args,
-               suite="pyauto", use_test_that=True, show_all_results=False):
+               rm_chroot_tmp, perf_args, suite="",
+               show_all_results=False):
     self.name = name
     #For telemetry, this is the benchmark name.
     self.test_name = test_name
     #For telemetry, this is the data.
     self.test_args = test_args
     self.iterations = iterations
-    self.outlier_range = outlier_range
     self.perf_args = perf_args
-    self.key_results_only = key_results_only
     self.rm_chroot_tmp = rm_chroot_tmp
     self.iteration_adjusted = False
     self.suite = suite
-    self.use_test_that = use_test_that
     self.show_all_results = show_all_results

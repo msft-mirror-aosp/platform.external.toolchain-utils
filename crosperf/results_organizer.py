@@ -28,11 +28,6 @@ class ResultOrganizer(object):
     [
     ]}.
   """
-  key_filter = ["milliseconds_",
-                "retval",
-                "iterations",
-                "ms_",
-                "score_"]
 
   def __init__(self, benchmark_runs, labels, benchmarks=None):
     self.result = {}
@@ -59,9 +54,6 @@ class ResultOrganizer(object):
       if not benchmark_run.result:
         continue
       benchmark = benchmark_run.benchmark
-      key_filter_on = (benchmark.key_results_only and
-                       "PyAutoPerfTest" in benchmark.name + benchmark.test_name
-                       and "perf." not in benchmark.test_args)
       if not show_all_results:
         summary_list = self._GetSummaryResults(benchmark.test_name)
         if len(summary_list) > 0:
@@ -70,10 +62,6 @@ class ResultOrganizer(object):
           # Did not find test_name in json file; therefore show everything.
           show_all_results = True
       for test_key in benchmark_run.result.keyvals:
-        if (key_filter_on and
-            not any([key for key in self.key_filter if key in test_key])
-           ):
-          continue
         if not show_all_results and not test_key in summary_list:
           continue
         result_value = benchmark_run.result.keyvals[test_key]

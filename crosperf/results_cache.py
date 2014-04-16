@@ -304,7 +304,11 @@ class Result(object):
 
   def CleanUp(self, rm_chroot_tmp):
     if rm_chroot_tmp and self.results_dir:
-      command = "rm -rf %s" % self.results_dir
+      dirname, basename = misc.GetRoot(self.results_dir)
+      if basename.find("test_that_results_") != -1:
+        command = "rm -rf %s" % self.results_dir
+      else:
+        command = "rm -rf %s" % dirname
       self._ce.RunCommand(command)
     if self._temp_dir:
       command = "rm -rf %s" % self._temp_dir
@@ -352,9 +356,9 @@ class Result(object):
 
   @classmethod
   def CreateFromRun(cls, logger, log_level, label, out, err, retval, show_all,
-                    test, suite="pyauto"):
+                    test, suite="telemetry_Crosperf"):
     if suite == "telemetry":
-      result = TelemetryResult(logger, label)
+      result = TelemetryResult(logger, label, log_level)
     else:
       result = cls(logger, label, log_level)
     result._PopulateFromRun(out, err, retval, show_all, test, suite)
@@ -362,7 +366,7 @@ class Result(object):
 
   @classmethod
   def CreateFromCacheHit(cls, logger, log_level, label, cache_dir,
-                         show_all, test, suite="pyauto"):
+                         show_all, test, suite="telemetry_Crosperf"):
     if suite == "telemetry":
       result = TelemetryResult(logger, label)
     else:
@@ -378,8 +382,8 @@ class Result(object):
 
 class TelemetryResult(Result):
 
-  def __init__(self, logger, label):
-    super(TelemetryResult, self).__init__(logger, label)
+  def __init__(self, logger, label, log_level):
+    super(TelemetryResult, self).__init__(logger, label, log_level)
 
   def _PopulateFromRun(self, out, err, retval, show_all, test, suite):
     self.out = out

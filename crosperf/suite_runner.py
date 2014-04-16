@@ -57,12 +57,9 @@ class SuiteRunner(object):
     elif benchmark.suite == "telemetry_Crosperf":
       return self.Telemetry_Crosperf_Run(machine, label, benchmark,
                                          test_args, profiler_args)
-    elif benchmark.use_test_that:
+    else:
       return self.Test_That_Run(machine, label, benchmark, test_args,
                                 profiler_args)
-    else:
-      return self.Pyauto_Run(machine, label, benchmark, test_args,
-                             profiler_args)
 
   def GetHighestStaticFrequency(self, machine_name, chromeos_root):
     """ Gets the highest static frequency for the specified machine
@@ -121,33 +118,6 @@ class SuiteRunner(object):
     # Whenever we reboot the machine, we need to restore the governor settings.
     self.PinGovernorExecutionFrequencies(machine_name, chromeos_root)
 
-  def Pyauto_Run(self, machine, label, benchmark, test_args, profiler_args):
-    """Run the run_remote_test."""
-    options = ""
-    if label.board:
-      options += " --board=%s" % label.board
-    if test_args:
-      options += " %s" % test_args
-    if profiler_args:
-      options += " %s" % profiler_args
-    command = "rm -rf /usr/local/autotest/results/*"
-    self._ce.CrosRunCommand(command, machine=machine, username="root",
-                            chromeos_root=label.chromeos_root)
-
-    # We do this because PyAuto tests leave the machine in weird states.
-    # Rebooting between iterations has proven to help with this.
-    self.RebootMachine(machine, label.chromeos_root)
-
-    command = ("./run_remote_tests.sh --use_emerged --remote=%s %s %s" %
-               (machine, options, benchmark.test_name))
-    if self.log_level != "verbose":
-      self._logger.LogOutput("Running test.")
-      self._logger.LogOutput("CMD: %s" % command)
-    return self._ce.ChrootRunCommand(label.chromeos_root,
-                                     command,
-                                     True,
-                                     self._ct)
-
   def Test_That_Run(self, machine, label, benchmark, test_args, profiler_args):
     """Run the test_that test.."""
     options = ""
@@ -161,7 +131,7 @@ class SuiteRunner(object):
     self._ce.CrosRunCommand(command, machine=machine, username="root",
                             chromeos_root=label.chromeos_root)
 
-    # We do this because PyAuto tests leave the machine in weird states.
+    # We do this because some tests leave the machine in weird states.
     # Rebooting between iterations has proven to help with this.
     self.RebootMachine(machine, label.chromeos_root)
 
@@ -219,19 +189,25 @@ class SuiteRunner(object):
 
 
   def Telemetry_Run(self, machine, label, benchmark):
+    telemetry_run_path = ""
     if not os.path.isdir(label.chrome_src):
       self._logger.LogFatal("Cannot find chrome src dir to"
-                                        " run telemetry.")
+                            " run telemetry.")
+    else:
+      telemetry_run_path = os.path.join(label.chrome_src, "src/tools/perf")
+      if not os.path.exists(telemetry_run_path):
+        self._logger.LogFatal("Cannot find %s directory." % telemetry_run_path)
+
     rsa_key = os.path.join(label.chromeos_root,
         "src/scripts/mod_for_test_scripts/ssh_keys/testing_rsa")
 
     cmd = ("cd {0} && "
-           "./tools/perf/run_measurement "
+           "./run_measurement "
            "--browser=cros-chrome "
            "--output-format=csv "
            "--remote={1} "
            "--identity {2} "
-           "{3} {4}".format(label.chrome_src, machine,
+           "{3} {4}".format(telemetry_run_path, machine,
                             rsa_key,
                             benchmark.test_name,
                             benchmark.test_args))

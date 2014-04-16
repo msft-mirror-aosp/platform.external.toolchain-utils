@@ -32,12 +32,7 @@ class ImageChecksummer(object):
               logger.GetLogger().LogOutput("Computed checksum is "
                                            ": %s" % self._checksum)
           if not self._checksum:
-            if self.label.image_md5sum:
-              self._checksum = self.label.image_md5sum
-              logger.GetLogger().LogOutput("Checksum in experiment file is "
-                                           ": %s" % self._checksum)
-            else:
-              raise Exception("Checksum computing error.")
+            raise Exception("Checksum computing error.")
           logger.GetLogger().LogOutput("Checksum is: %s" % self._checksum)
         return self._checksum
 

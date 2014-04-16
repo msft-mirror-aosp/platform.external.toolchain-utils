@@ -21,7 +21,6 @@ EXPERIMENT_FILE_1 = """
   }
 
   image2 {
-    board: lumpy
     remote: chromeos-lumpy1
     chromeos_image: /usr/local/google/cros_image2.bin
   }
@@ -82,7 +81,6 @@ class ExperimentFileTest(unittest.TestCase):
     label_settings = experiment_file.GetSettings("label")
     self.assertEqual(len(label_settings), 2)
     self.assertEqual(label_settings[0].name, "image1")
-    self.assertEqual(label_settings[0].GetField("board"), "x86-alex")
     self.assertEqual(label_settings[0].GetField("chromeos_image"),
                      "/usr/local/google/cros_image1.bin")
     self.assertEqual(label_settings[1].GetField("remote"), ["chromeos-lumpy1"])

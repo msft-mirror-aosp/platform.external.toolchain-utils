@@ -26,32 +26,8 @@ class BenchmarkSettings(Settings):
     self.AddField(IntegerField("iterations", default=1,
                                description="Number of iterations to run the "
                                "test."))
-    self.AddField(FloatField("outlier_range", default=0.2,
-                             description="The percentage of highest/lowest "
-                             "values to omit when computing the average."))
-    self.AddField(BooleanField("rm_chroot_tmp", default=False,
-                               description="Whether remove the run_remote_test"
-                               "result in the chroot"))
-    self.AddField(BooleanField("key_results_only", default=True,
-                               description="Whether only show the key results"
-                               "of pyautoperf"))
-    self.AddField(TextField("perf_args", default="",
-                            description="The optional profile command. It "
-                            "enables perf commands to record perforamance "
-                            "related counters. It  must start with perf "
-                            "command record or stat followed by arguments."))
-    self.AddField(TextField("suite", default="pyauto",
+    self.AddField(TextField("suite", default="",
                                description="The type of the benchmark"))
-    self.AddField(TextField("logging_level", default="average",
-                               description="The level of logging desired. "
-                            "Options are 'quiet', 'average', and 'verbose'."))
-    self.AddField(BooleanField("use_test_that", default=True,
-                               description="Whether to use the"
-                               " new test_that script for running the test."))
-    self.AddField(BooleanField("show_all_results", default=False,
-                               description="When running Telemetry tests, "
-                               "whether to all the results, instead of just "
-                               "the default (summary) results."))
 
 
 class LabelSettings(Settings):
@@ -66,10 +42,6 @@ class LabelSettings(Settings):
                             "contains a src/scripts directory. Defaults to "
                             "the chromeos checkout which contains the "
                             "chromeos_image."))
-    self.AddField(TextField("md5sum", default="",
-                            description="The md5sum of this image"))
-    self.AddField(TextField("board", required=True, description="The target "
-                            "board for running experiments on, e.g. x86-alex."))
     self.AddField(ListField("remote", description=
                             "A comma-separated list of ip's of chromeos"
                             "devices to run experiments on."))
@@ -133,9 +105,6 @@ class GlobalSettings(Settings):
     self.AddField(TextField("logging_level", default="average",
                                description="The level of logging desired. "
                             "Options are 'quiet', 'average', and 'verbose'."))
-    self.AddField(BooleanField("key_results_only", default=True,
-                               description="Whether only show the key results"
-                               "of pyautoperf"))
     self.AddField(IntegerField("acquire_timeout", default=0,
                                description="Number of seconds to wait for "
                                "machine before exit if all the machines in "
@@ -151,9 +120,6 @@ class GlobalSettings(Settings):
     self.AddField(BooleanField("no_email", default=False,
                                description="Whether to disable the email to "
                                "user after crosperf finishes."))
-    self.AddField(BooleanField("use_test_that", default=True,
-                               description="Whether to use the "
-                               "new test_that script for running the test."))
     self.AddField(BooleanField("show_all_results", default=False,
                                description="When running Telemetry tests, "
                                "whether to all the results, instead of just "
@@ -167,13 +133,6 @@ class GlobalSettings(Settings):
                             description="The path to the source of chrome. "
                             "This is used to run telemetry benchmarks. "
                             "The default one is the src inside chroot.",
-                            required=False, default=""))
-    self.AddField(TextField("build",
-                            description="The xbuddy specification for an "
-                            "official or trybot image to use for tests. "
-                            "'/remote' is assumed, and the board is given "
-                            "elsewhere, so omit the '/remote/<board>/' xbuddy"
-                            "prefix.",
                             required=False, default=""))
 
 

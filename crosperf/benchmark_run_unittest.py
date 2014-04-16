@@ -23,7 +23,6 @@ class BenchmarkRunTest(unittest.TestCase):
     my_label = MockLabel("test1", "image1", "/tmp/test_benchmark_run",
                          "x86-alex", "chromeos2-row1-rack4-host9.cros",
                          image_args="",
-                         image_md5sum="",
                          cache_dir="")
     logging_level="average"
     m = MockMachineManager("/tmp/chromeos_root", 0, logging_level)
@@ -32,8 +31,6 @@ class BenchmarkRunTest(unittest.TestCase):
                       "page_cycler.netsim.top_10",    # test_name
                       "",             # test_args
                       1,              # iteratins
-                      0.2,            # outlier_range
-                      False,          # key_results_only
                       False,          # rm_chroot_tmp
                       "",             # perf_args
                       suite="telemetry_Crosperf")     # suite

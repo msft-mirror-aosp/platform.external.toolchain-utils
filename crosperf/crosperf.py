@@ -62,7 +62,7 @@ def Main(argv):
   parser = optparse.OptionParser(usage=Help().GetUsage(),
                                  description=Help().GetHelp(),
                                  formatter=MyIndentedHelpFormatter(),
-                                 version="%prog 0.1")
+                                 version="%prog 3.0")
 
   parser.add_option("-l", "--log_dir",
                     dest="log_dir",

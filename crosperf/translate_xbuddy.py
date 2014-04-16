@@ -22,7 +22,7 @@ def Main(xbuddy_string):
         os.symlink (config_path, './xbuddy_config.ini')
     x = xbuddy.XBuddy(manage_builds=False, static_dir='/tmp/devserver/static')
     build_id = x.Translate(os.path.split(xbuddy_string))
-    return build_id    
+    return build_id
 
 if __name__ == "__main__":
     build_id = Main(sys.argv[1])
