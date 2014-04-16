@@ -51,7 +51,7 @@ def CheckForCrosFlash(chromeos_root, remote, log_level):
                           "src/scripts/mod_for_test_scripts/ssh_keys/"
                           "testing_rsa")
 
-  command = ("ssh -i %s -o StrictHostKeyChecking=no -o CheckHostIP=no "
+  command = ("ssh -q -i %s -o StrictHostKeyChecking=no -o CheckHostIP=no "
              "-o BatchMode=yes root@%s \"python -c 'import cherrypy'\" " %
              (keypath,remote) )
   retval = cmd_executer.RunCommand (command)
