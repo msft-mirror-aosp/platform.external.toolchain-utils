@@ -62,8 +62,6 @@ class ResultsReport(object):
                       CoeffVarFormat(), "StdDev/Mean"),
                Column(GmeanRatioResult(),
                       RatioFormat(), "GmeanSpeedup"),
-               Column(GmeanRatioResult(),
-                      ColorBoxFormat(), " "),
                Column(PValueResult(),
                       PValueFormat(), "p-value")
               ]

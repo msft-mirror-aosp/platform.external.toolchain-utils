@@ -43,7 +43,8 @@ class PerfTable(object):
           perf_file = os.path.join(self._experiment.results_directory,
                                    dir_name,
                                    "perf.data.report.0")
-          self.ReadPerfReport(perf_file, label, benchmark.name, i - 1)
+          if os.path.exists(perf_file):
+            self.ReadPerfReport(perf_file, label, benchmark.name, i - 1)
 
   def ReadPerfReport(self, perf_file, label, benchmark_name, iteration):
     """Add the data from one run to the dict."""
