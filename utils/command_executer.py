@@ -209,7 +209,7 @@ class CommandExecuter:
 
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
     command += "\nremote_sh bash %s" % command_file
-    command += "\necho \"$REMOTE_OUT\""
+    command += "\nl_retval=$?; echo \"$REMOTE_OUT\"; exit $l_retval"
     retval = self.RunCommand(command, return_output,
                              command_terminator=command_terminator,
                              command_timeout=command_timeout,
