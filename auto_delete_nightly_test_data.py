@@ -6,6 +6,7 @@ __author__ = 'shenhan@google.com (Han Shen)'
 import datetime
 import optparse
 import os
+import re
 import sys
 
 from utils import command_executer
@@ -20,29 +21,50 @@ def CleanNumberedDir(s, dry_run=False):
   chromeos_dirs = [os.path.join(s, x) for x in os.listdir(s)
                    if misc.IsChromeOsTree(os.path.join(s, x))]
   ce = command_executer.GetCommandExecuter()
+  all_succeeded = True
   for cd in chromeos_dirs:
-    misc.DeleteChromeOsTree(cd, dry_run=dry_run)
-  ## Now delete the numbered dir
+    if misc.DeleteChromeOsTree(cd, dry_run=dry_run):
+      print 'Successfully removed chromeos tree "{0}".'.format(cd)
+    else:
+      all_succeeded = False
+      print 'Failed to remove chromeos tree "{0}", please check.'.format(cd)
+
+  ## Now delete the numbered dir Before forcibly removing the directory, just
+  ## check 's' to make sure it is sane.
+  if not re.search('^' + constants.CROSTC_WORKSPACE + '/(' +
+                   '|'.join(DIR_BY_WEEKDAY) + ')', s):
+    print 'Trying to delete an invalid dir, please check.'
+    return False
+
   cmd = 'rm -fr {0}'.format(s)
   if dry_run:
     print cmd
   else:
-    ce.RunCommand(cmd, return_output=True, terminated_timeout=480)
+    if ce.RunCommand(cmd, return_output=False, print_to_console=True,
+                     terminated_timeout=480) == 0:
+      print 'Successfully removed "{0}".'.format(s)
+    else:
+      all_succeeded = False
+      print 'Failed to remove "{0}", please check.'.format(s)
+  return all_succeeded
 
 
 def CleanDatedDir(dated_dir, dry_run=False):
   # List subdirs under dir
   subdirs = [os.path.join(dated_dir, x) for x in os.listdir(dated_dir)
              if os.path.isdir(os.path.join(dated_dir, x))]
+  all_succeeded = True
   for s in subdirs:
-    CleanNumberedDir(s, dry_run)
+    if not CleanNumberedDir(s, dry_run):
+      all_succeeded = False
+  return all_succeeded
 
 
 def ProcessArguments(argv):
   """Process arguments."""
   parser = optparse.OptionParser(
       description='Automatically delete nightly test data directories.',
-      usage='auto_delete.py options')
+      usage='auto_delete_nightly_test_data.py options')
   parser.add_option('-d', '--dry_run', dest='dry_run',
                     default=False, action='store_true',
                     help='Only print command line, do not execute anything.')
@@ -63,6 +85,7 @@ def Main(argv):
   # options.days_to_preserve away from today.
   s = d - 7
   e = d - options.days_to_preserve
+  rv = 0
   for i in range(s + 1, e):
     if i <= 0:
       ## Wrap around if index is negative.  6 is from i + 7 - 1, because
@@ -70,9 +93,9 @@ def Main(argv):
       dated_dir = DIR_BY_WEEKDAY[i+6]
     else:
       dated_dir = DIR_BY_WEEKDAY[i-1]
-    CleanDatedDir(os.path.join(
-        constants.CROSTC_WORKSPACE, dated_dir), options.dry_run)
-  return 0
+    rv += 0 if CleanDatedDir(os.path.join(
+        constants.CROSTC_WORKSPACE, dated_dir), options.dry_run) else 1
+  return rv
 
 
 if __name__ == '__main__':
