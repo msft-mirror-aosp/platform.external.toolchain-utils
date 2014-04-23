@@ -1,13 +1,10 @@
-# This example experiment file showings how to specify an external
-# chrome source tree (rather than using the one inside the chroot).
-# The Telemetry tests will be run from the external Chrome source
-# tree.
+# This example experiment file showa how to run some basic non-Telemetry
+# autotest tests.
 #
 # You should replace all the placeholders, marked by angle-brackets,
 # with the appropriate actual values.
 
-name: telemetry_crosperf_external_src_example
-
+name: non_telemetry_tests_example
 board: <your-board-goes-here>
 
 # Note:  You can specify multiple remotes, to run your tests in parallel on
@@ -15,13 +12,20 @@ board: <your-board-goes-here>
 # test-machine3.com"
 remote: <your-remote-goes-here>
 
-benchmark: octane {
-    suite: telemetry_Crosperf
-    iterations: 1
+benchmark: BootPerfServer {
+  test_name: BootPerfServer
+  iterations: 1
 }
 
-# Replace the chromeos image below with the actual path to your test imnage.
+benchmark: bvt {
+  test_name: suite:bvt
+}
+
+benchmark: login_LoginSuccess {
+  test_name: login_LoginSuccess
+}
+
+# Replace the chromeos image below with the actual path to your test image.
 test_image {
   chromeos_image:<path-to-your-chroot>/src/build/images/<board>/test-image/chromiumos_test_image.bin
 }
-

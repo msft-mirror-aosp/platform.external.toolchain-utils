@@ -1,14 +1,17 @@
-# This is an example experiment file for Crosperf, showing how to run
-# a Telemetry test, using test_that and autotest.  This runs the 
-# "run_benchmark" script directly (via the telemetry_Crosperf autotest). 
-# You do not need to supply both the page_set, as that is automatically
-# supplied by run_benchmark.
+# This example experiment file shows how to run a Telemetry test,
+# using autotest (via "suite: telemetry_Crosperf").  This runs the
+# Telemetry's "run_benchmark" for the specified test.
+#
+# You should replace all the placeholders, marked by angle-brackets,
+# with the appropriate actual values.
 
 name: basic_telemetry_crosperf_example
-# Replace board and remote values below appropriately. e.g. "lumpy" and
-# "123.45.678.901"  or "my-machine.blah.com".
 board: <your-board-goes-here>
-remote: <your-remote-ip-address-here>
+
+# Note:  You can specify multiple remotes, to run your tests in parallel on
+# multiple machines. e.g. "remote: test-machine-1.com test-machine2.come
+# test-machine3.com"
+remote: <your-remote-goes-here>
 
 # Replace "octane" below with the name of the Telemetry benchmark you 
 # want to run.
@@ -17,10 +20,13 @@ benchmark: octane {
     iterations: 1
 }
 
+# NOTE: You must specify at least one image; you may specify more than one.
 # Replace <path-to-your-chroot-goes-here> and <board-goes-here> below.
-# You can optionally add "chrome_src:" followed by the path to a Chrome
-# source tree outside your chroot that you wish to use for running
-# Telemetry.
 vanilla_image {
-  chromeos_image:<path-to-your-chroot-goes-here>/src/build/images/<board-goes-here>/latest/chromiumos_test_image.bin
+  chromeos_image:<path-to-your-chroot>/src/build/images/<board>/vanilla-image/chromiumos_test_image.bin
+}
+
+# Replace the chromeos image below with the actual path to your test image.
+test_image {
+  chromeos_image:<path-to-your-chroot>/src/build/images/<board>/test-image/chromiumos_test_image.bin
 }

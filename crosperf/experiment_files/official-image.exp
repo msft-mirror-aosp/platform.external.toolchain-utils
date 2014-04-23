@@ -1,14 +1,18 @@
-# This is an example experiment file for Crosperf, showing how to run
-# a basic test, using a (previously made) trybot image.
+# This example experiment file shows how to run a basic test, using
+# official images.
+#
+# You should replace all the placeholders, marked by angle-brackets,
+# with the appropriate actual values.
 
-name: trybot_example
-# Replace board and remote values below appropriately. e.g. "lumpy" and
-# "123.45.678.901"  or "my-machine.blah.com".
+name: official_image_example
+
 board: <your-board-goes-here>
-remote: <your-remote-ip-address-here>
 
-# You can replace 'canvasmark' below with the name of the Telemetry
-# benchmakr you want to run.
+# Note:  You can specify multiple remotes, to run your tests in parallel on
+# multiple machines. e.g. "remote: test-machine-1.com test-machine2.come
+# test-machine3.com"
+remote: <your-remote-goes-here>
+
 benchmark: canvasmark {
   suite:telemetry_Crosperf
   iterations: 1
@@ -17,15 +21,21 @@ benchmark: canvasmark {
 
 # Replace <path-to-your-chroot-goes-here> with the actual directory path
 # to the top of your ChromimumOS chroot.
-trybot_image {
+first_official_image {
   chromeos_root:<path-to-your-chroot-goes-here>
-  # Replace <xbuddy-official-image-designation> with the xbuddy syntax
+  # Replace "latest-official" with the appropriate xbuddy version alias
   # for the official image you want to use (see
   # http://www.chromium.org/chromium-os/how-tos-and-troubleshooting/using-the-dev-server/xbuddy-for-devserver#TOC-XBuddy-Paths
-  # for xbuddy syntax).  Omit the "http://xbuddy/remote/<board>/" prefix.
-  # For example, if you want to use the "latest-dev" official image,
-  # your build field would look like:
-  # build:latest-dev
-  build:<xbuddy-official-image-designation>
+  # for xbuddy syntax).  
+  build: latest-official
 }
+
+second_official_image {
+  # Replace <path-to-your-chroot-goes-here> with actual path.
+  chromeos_root:<path-to-your-chroot-goes-here>
+  # Replace "lumpy-release/R35-5672.0.0" with the official image you want
+  # to use.
+  build:lumpy-release/R35-5672.0.0
+}
+
 
