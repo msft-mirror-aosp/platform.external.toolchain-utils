@@ -103,12 +103,12 @@ class ExperimentRunner(object):
     results_directory = experiment.results_directory
     FileUtils().RmDir(results_directory)
     FileUtils().MkDirP(results_directory)
-    self.l.LogOutput("Storing experiment file.")
+    self.l.LogOutput("Storing experiment file in %s." % results_directory)
     experiment_file_path = os.path.join(results_directory,
                                         "experiment.exp")
     FileUtils().WriteFile(experiment_file_path, experiment.experiment_file)
 
-    self.l.LogOutput("Storing results report.")
+    self.l.LogOutput("Storing results report in %s." % results_directory)
     results_table_path = os.path.join(results_directory, "results.html")
     report = HTMLResultsReport(experiment).GetReport()
     FileUtils().WriteFile(results_table_path, report)

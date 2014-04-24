@@ -64,6 +64,8 @@ class Result(object):
   def CopyResultsTo(self, dest_dir):
     self._CopyFilesTo(dest_dir, self.perf_data_files)
     self._CopyFilesTo(dest_dir, self.perf_report_files)
+    if len(self.perf_data_files) or len(self.perf_report_files):
+      self._logger.LogOutput("Perf results files stored in %s." % dest_dir)
 
   def _GetNewKeyvals(self, keyvals_dict):
     # Initialize 'units' dictionary.
