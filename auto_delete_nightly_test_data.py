@@ -29,11 +29,18 @@ def CleanNumberedDir(s, dry_run=False):
       all_succeeded = False
       print 'Failed to remove chromeos tree "{0}", please check.'.format(cd)
 
+  if not all_succeeded:
+    print 'Failed to delete at least one chromeos tree, please check.'
+    return False
+
   ## Now delete the numbered dir Before forcibly removing the directory, just
-  ## check 's' to make sure it is sane.
-  if not re.search('^' + constants.CROSTC_WORKSPACE + '/(' +
-                   '|'.join(DIR_BY_WEEKDAY) + ')', s):
-    print 'Trying to delete an invalid dir, please check.'
+  ## check 's' to make sure it is sane.  A valid dir to be removed must be
+  ## '/usr/local/google/crostc/(SUN|MON|TUE...|SAT)'.
+  valid_dir_pattern = ('^' + constants.CROSTC_WORKSPACE + '/(' +
+                       '|'.join(DIR_BY_WEEKDAY) + ')')
+  if not re.search(valid_dir_pattern, s):
+    print ('Trying to delete an invalid dir "{0}" (must match "{1}"), '
+           'please check.'.format(s, valid_dir_pattern))
     return False
 
   cmd = 'rm -fr {0}'.format(s)
