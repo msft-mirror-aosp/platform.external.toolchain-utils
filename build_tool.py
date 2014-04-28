@@ -403,24 +403,37 @@ class Bootstrapper(object):
       True if operation succeeds.
     """
 
-    if self._board == 'host':
-      command = 'sudo emerge sys-devel/{0}'.format(tool_name)
-    else:
-      target = misc.GetCtargetFromBoard(self._board, self._chromeos_root)
-      if not target:
-        self._logger.LogError('Unsupported board "{0}", aborted.'.format(
-            self._board))
-        return False
-      command = 'sudo emerge cross-{0}/{1}'.format(target, tool_name)
+    boards_to_build = self._board.split(',')
 
-    rv = self._ce.ChrootRunCommand(
-        self._chromeos_root,
-        command, return_output=False,
-        print_to_console=True)
-    if rv:
+    failed = []
+    for board in boards_to_build:
+      if board == 'host':
+        command = 'sudo emerge sys-devel/{0}'.format(tool_name)
+      else:
+        target = misc.GetCtargetFromBoard(board, self._chromeos_root)
+        if not target:
+          self._logger.LogError(
+              'Unsupported board "{0}", skip.'.format(board))
+          failed.append(board)
+          continue
+        command = 'sudo emerge cross-{0}/{1}'.format(target, tool_name)
+
+      rv = self._ce.ChrootRunCommand(self._chromeos_root, command,
+                                     return_output=False, print_to_console=True)
+      if rv:
+        self._logger.LogError(
+            'Build "{0}" failed for "{1}", aborted.'.format(tool_name, board))
+        failed.append(board)
+      else:
+        self._logger.LogOutput(
+            'Successfully built "{0}" for board "{1}".'.format(tool_name, board))
+
+    if not failed:
       self._logger.LogError(
-          'Build {0} failed for "{1}", aborted.'.format(tool_name, self._board))
+          'Failed to build {0} for the following board(s): "{1}"'.format(
+              tool_name, ' '.join(failed)))
       return False
+    # All boards build successfully
     return True
 
   def DoBootstrapping(self):
@@ -521,8 +534,9 @@ def Main(argv):
                           'and exit. This should not be used with -- '
                           'gcc/binutils_dir/branch options.'))
   parser.add_option('--board', dest='board', default=None,
-                    help=('Only build toolchain for a specific board. '
+                    help=('Only build toolchain for specific board(s). '
                           'Use "host" to build for host. '
+                          'Use "," to seperate multiple boards. '
                           'This does not perform a chroot bootstrap.'))
   parser.add_option('--bootstrap', dest='bootstrap',
                     default=False, action='store_true',
