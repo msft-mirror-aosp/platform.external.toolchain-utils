@@ -53,7 +53,7 @@ class SuiteRunner(object):
   def Run(self, machine, label, benchmark, test_args, profiler_args):
     self.PinGovernorExecutionFrequencies(machine, label.chromeos_root)
     if benchmark.suite == "telemetry":
-      return self.Telemetry_Run(machine, label, benchmark)
+      return self.Telemetry_Run(machine, label, benchmark, profiler_args)
     elif benchmark.suite == "telemetry_Crosperf":
       return self.Telemetry_Crosperf_Run(machine, label, benchmark,
                                          test_args, profiler_args)
@@ -126,7 +126,7 @@ class SuiteRunner(object):
     if test_args:
       options += " %s" % test_args
     if profiler_args:
-      self._logger.LogError("test_that does not support profiler.")
+      self._logger.LogFatal("test_that does not support profiler.")
     command = "rm -rf /usr/local/autotest/results/*"
     self._ce.CrosRunCommand(command, machine=machine, username="root",
                             chromeos_root=label.chromeos_root)
@@ -188,7 +188,7 @@ class SuiteRunner(object):
                                       cros_sdk_options=chrome_root_options)
 
 
-  def Telemetry_Run(self, machine, label, benchmark):
+  def Telemetry_Run(self, machine, label, benchmark, profiler_args):
     telemetry_run_path = ""
     if not os.path.isdir(label.chrome_src):
       self._logger.LogFatal("Cannot find chrome src dir to"
@@ -197,6 +197,9 @@ class SuiteRunner(object):
       telemetry_run_path = os.path.join(label.chrome_src, "src/tools/perf")
       if not os.path.exists(telemetry_run_path):
         self._logger.LogFatal("Cannot find %s directory." % telemetry_run_path)
+
+    if profiler_args:
+      self._logger.LogFatal("Telemetry does not support the perf profiler.")
 
     rsa_key = os.path.join(label.chromeos_root,
         "src/scripts/mod_for_test_scripts/ssh_keys/testing_rsa")

@@ -29,3 +29,5 @@ class Benchmark(object):
     self.iteration_adjusted = False
     self.suite = suite
     self.show_all_results = show_all_results
+    if self.suite == "telemetry":
+      self.show_all_results = True

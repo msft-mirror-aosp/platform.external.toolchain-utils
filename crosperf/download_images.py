@@ -26,6 +26,9 @@ class ImageDownloader(object):
     build_id_tuple = eval(build_id_tuple_str)
     build_id = build_id_tuple[0]
 
+    if self.log_level == "average":
+      self._logger.LogOutput ("Preparing to download %s image to local directory." % build_id)
+
     # Make sure the directory for downloading the image exists.
     download_path = os.path.join(chromeos_root, "chroot/tmp",
                                  build_id)
@@ -42,11 +45,20 @@ class ImageDownloader(object):
                  "/chromiumos_test_image.tar.xz /tmp/%s" % (build_id,
                                                             build_id))
 
+      if self.log_level != "verbose":
+        self._logger.LogOutput ("CMD: %s" % command)
       retval = self._ce.ChrootRunCommand(chromeos_root, command)
 
       # Uncompress and untar the downloaded image.
       command = ("cd /tmp/%s ;unxz chromiumos_test_image.tar.xz; "
                  "tar -xvf chromiumos_test_image.tar" % build_id)
+      if self.log_level != "verbose":
+        self._logger.LogOutput("CMD: %s" % command)
+        print("(Uncompressing and un-tarring may take a couple of minutes..."
+              "please be patient.)")
       retval = self._ce.ChrootRunCommand(chromeos_root, command)
+
+    if retval == 0 and self.log_level != "quiet":
+      self._logger.LogOutput("Using image from %s." % image_path)
 
     return retval, image_path

@@ -23,5 +23,9 @@ benchmark: octane {
 # Replace the chromeos image below with the actual path to your test imnage.
 test_image {
   chromeos_image:<path-to-your-chroot>/src/build/images/<board>/test-image/chromiumos_test_image.bin
+  # Replace '/usr/local/google/chrome-top' with the path to the
+  # top of your Chrome source tree. From that directory
+  # "./src/tools/perf/run_benchmark" should be a valid file path.
+  chrome_src:/usr/local/google/chrome-top
 }
 
