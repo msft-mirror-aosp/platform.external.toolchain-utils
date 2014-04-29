@@ -155,14 +155,11 @@ class SuiteRunner(object):
     profiler_args = GetProfilerArgs (benchmark, profiler_args)
     chrome_root_options = ""
 
-    # If chrome_src is outside the chroot, mount it when entering the
-    # chroot.
-    if label.chrome_src.find(label.chromeos_root) == -1:
-      chrome_root_options = (" --chrome_root={0} --chrome_root_mount={1} "
-                             " FEATURES=\"-usersandbox\" "
-                             "CHROME_ROOT={2}".format(label.chrome_src,
-                                                      CHROME_MOUNT_DIR,
-                                                      CHROME_MOUNT_DIR))
+    chrome_root_options = (" --chrome_root={0} --chrome_root_mount={1} "
+                           " FEATURES=\"-usersandbox\" "
+                           "CHROME_ROOT={2}".format(label.chrome_src,
+                                                    CHROME_MOUNT_DIR,
+                                                    CHROME_MOUNT_DIR))
 
     args_string = ""
     if test_args:
