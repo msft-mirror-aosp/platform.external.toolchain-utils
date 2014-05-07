@@ -1,0 +1,162 @@
+#!/usr/bin/python
+#
+# Copyright 2014 Google Inc.  All Rights Reserved
+
+import download_images
+from utils import command_executer
+from utils import logger
+
+import os
+import mock
+import unittest
+
+MOCK_LOGGER = logger.GetLogger(log_dir="", mock=True)
+
+class ImageDownloaderTestcast(unittest.TestCase):
+
+
+  @mock.patch.object(os, 'makedirs')
+  @mock.patch.object(os.path, 'exists')
+  def test_download_image(self, mock_path_exists, mock_mkdirs):
+
+    # Set mock and test values.
+    mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
+    test_chroot = "/usr/local/home/chromeos"
+    test_build_id = "lumpy-release/R36-5814.0.0"
+
+    downloader = download_images.ImageDownloader(logger_to_use=MOCK_LOGGER,
+                                                 cmd_exec=mock_cmd_exec)
+
+    # Set os.path.exists to always return False and run downloader
+    mock_path_exists.return_value = False
+    downloader._DownloadImage(test_chroot, test_build_id)
+
+    # Verify os.path.exists was called twice, with proper arguments.
+    self.assertEqual(mock_path_exists.call_count, 2)
+    mock_path_exists.assert_called_with('/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0/chromiumos_test_image.bin')
+    mock_path_exists.assert_any_call('/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0')
+
+    # Verify we called os.mkdirs
+    self.assertEqual(mock_mkdirs.call_count, 1)
+    mock_mkdirs.assert_called_with('/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0')
+
+    # Verify we called ChrootRunCommand once, with proper arguments.
+    self.assertEqual (mock_cmd_exec.ChrootRunCommand.call_count, 1)
+    mock_cmd_exec.ChrootRunCommand.assert_called_with('/usr/local/home/chromeos', 'gsutil cp gs://chromeos-image-archive/lumpy-release/R36-5814.0.0/chromiumos_test_image.tar.xz /tmp/lumpy-release/R36-5814.0.0')
+
+    # Reset the velues in the mocks; set os.path.exists to always return True.
+    mock_path_exists.reset_mock()
+    mock_cmd_exec.reset_mock()
+    mock_path_exists.return_value = True
+
+    # Run downloader
+    downloader._DownloadImage(test_chroot, test_build_id)
+
+    # Verify os.path.exists was called twice, with proper arguments.
+    self.assertEqual(mock_path_exists.call_count, 2)
+    mock_path_exists.assert_called_with('/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0/chromiumos_test_image.bin')
+    mock_path_exists.assert_any_call('/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0')
+
+    # Verify we made no RunCommand or ChrootRunCommand calls (since
+    # os.path.exists returned True, there was no work do be done).
+    self.assertEqual (mock_cmd_exec.RunCommand.call_count, 0)
+    self.assertEqual (mock_cmd_exec.ChrootRunCommand.call_count, 0)
+
+
+
+  @mock.patch.object(os.path, 'exists')
+  def test_uncompress_image(self, mock_path_exists):
+
+    # set mock and test values.
+    mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
+    test_chroot = '/usr/local/home/chromeos'
+    test_build_id = 'lumpy-release/R36-5814.0.0'
+
+    downloader = download_images.ImageDownloader(logger_to_use=MOCK_LOGGER,
+                                                 cmd_exec=mock_cmd_exec)
+
+    # Set os.path.exists to always return False and run uncompress.
+    mock_path_exists.return_value = False
+    downloader._UncompressImage(test_chroot, test_build_id)
+
+    # Verify os.path.exists was called once, with correct arguments.
+    self.assertEqual (mock_path_exists.call_count, 1)
+    mock_path_exists.assert_called_with('/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0/chromiumos_test_image.bin')
+
+    # Verify ChrootRunCommand was called, with correct arguments.
+    self.assertEqual (mock_cmd_exec.ChrootRunCommand.call_count, 1)
+    mock_cmd_exec.ChrootRunCommand.assert_called_with('/usr/local/home/chromeos', 'cd /tmp/lumpy-release/R36-5814.0.0 ;unxz chromiumos_test_image.tar.xz; tar -xvf chromiumos_test_image.tar')
+
+    # Set os.path.exists to always return False and run uncompress.
+    mock_path_exists.reset_mock()
+    mock_cmd_exec.reset_mock()
+    mock_path_exists.return_value = True
+    downloader._UncompressImage(test_chroot, test_build_id)
+
+    # Verify os.path.exists was called once, with correct arguments.
+    self.assertEqual (mock_path_exists.call_count, 1)
+    mock_path_exists.assert_called_with('/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0/chromiumos_test_image.bin')
+
+    # Verify ChrootRunCommand was not called.
+    self.assertEqual (mock_cmd_exec.ChrootRunCommand.call_count, 0)
+
+
+
+  def test_run(self):
+
+    # Set test arguments
+    test_chroot = "/usr/local/home/chromeos"
+    test_build_id = "remote/lumpy/latest-dev"
+
+    # Set values to test/check.
+    self.called_download_image = False
+    self.called_uncompress_image = False
+    self.called_get_build_id = False
+
+    # Define fake stub functions for Run to call
+    def FakeGetBuildID(unused_root, unused_xbuddy_label):
+      self.called_get_build_id = True
+      return 'lumpy-release/R36-5814.0.0'
+
+    def GoodDownloadImage(root, build_id):
+      self.called_download_image = True
+      return "chromiumos_test_image.bin"
+
+    def BadDownloadImage(root, build_id):
+      self.called_download_image = True
+      return None
+
+    def FakeUncompressImage(root, build_id):
+      self.called_uncompress_image = True
+      return 0
+
+    # Initialize downloader
+    downloader = download_images.ImageDownloader(logger_to_use=MOCK_LOGGER)
+
+    # Set downloader to call fake stubs.
+    downloader._GetBuildID = FakeGetBuildID
+    downloader._UncompressImage = FakeUncompressImage
+    downloader._DownloadImage = GoodDownloadImage
+
+    # Call Run.
+    downloader.Run(test_chroot, test_build_id)
+
+    # Make sure it called both _DownloadImage and _UncompressImage
+    self.assertTrue (self.called_download_image)
+    self.assertTrue (self.called_uncompress_image)
+
+    # Reset values; Now use fake stub that simulates DownloadImage failing.
+    self.called_download_image = False
+    self.called_uncompress_image = False
+    downloader._DownloadImage = BadDownloadImage
+
+    # Call Run again.
+    downloader.Run (test_chroot, test_build_id)
+
+    # Verify that UncompressImage was not called, since _DownloadImage "failed"
+    self.assertTrue (self.called_download_image)
+    self.assertFalse (self.called_uncompress_image)
+
+
+if __name__ == '__main__':
+  unittest.main()
