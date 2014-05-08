@@ -428,7 +428,7 @@ class Bootstrapper(object):
         self._logger.LogOutput(
             'Successfully built "{0}" for board "{1}".'.format(tool_name, board))
 
-    if not failed:
+    if failed:
       self._logger.LogError(
           'Failed to build {0} for the following board(s): "{1}"'.format(
               tool_name, ' '.join(failed)))
