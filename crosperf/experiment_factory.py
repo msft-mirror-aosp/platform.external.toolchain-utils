@@ -205,8 +205,8 @@ class ExperimentFactory(object):
       labels.append(label)
 
     email = global_settings.GetField("email")
+    all_remote += list(set(my_remote))
     all_remote = list(set(all_remote))
-    all_remote = list(set(my_remote))
     experiment = Experiment(experiment_name, all_remote,
                             working_directory, chromeos_root,
                             cache_conditions, labels, benchmarks,
