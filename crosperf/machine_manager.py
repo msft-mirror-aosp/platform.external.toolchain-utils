@@ -22,6 +22,8 @@ from image_checksummer import ImageChecksummer
 
 CHECKSUM_FILE = "/usr/local/osimage_checksum_file"
 
+class NonMatchingMachines(Exception):
+  pass
 
 class CrosMachine(object):
   def __init__(self, name, chromeos_root, log_level):
@@ -33,6 +35,9 @@ class CrosMachine(object):
     self.test_run = None
     self.chromeos_root = chromeos_root
     self.log_level = log_level
+    self.SetUpChecksumInfo()
+
+  def SetUpChecksumInfo(self):
     if not self.IsReachable():
       self.machine_checksum = None
       return
@@ -288,6 +293,7 @@ class MachineManager(object):
     checksums = [m.machine_checksum for m in self.GetMachines(label)]
     return len(set(checksums)) == 1
 
+
   def RemoveMachine(self, machine_name):
     with self._lock:
       self._machines = [m for m in self._machines
@@ -297,7 +303,14 @@ class MachineManager(object):
         logger.GetLogger().LogError("Could not unlock machine: '%s'."
                                     % m.name)
 
-  def AcquireMachine(self, chromeos_image, label):
+  def ForceSameImageToAllMachines(self, label):
+    machines = self.GetMachines(label)
+    chromeos_image = label.chromeos_image
+    for m in machines:
+      self.ImageMachine(m, label)
+      m.SetUpChecksumInfo()
+
+  def AcquireMachine(self, chromeos_image, label, throw=False):
     if label.image_type == "local":
       image_checksum = ImageChecksummer().Checksum(label, self.log_level)
     elif label.image_type == "trybot":
@@ -315,7 +328,13 @@ class MachineManager(object):
           if new_machine:
             m.released_time = time.time()
         if not self.AreAllMachineSame(label):
-          logger.GetLogger().LogFatal("-- not all the machine are identical")
+          if not throw:
+            # Log fatal message, which calls sys.exit.  Default behavior.
+            logger.GetLogger().LogFatal("-- not all the machines are identical")
+          else:
+            # Raise an exception, which can be caught and handled by calling
+            # function.
+            raise NonMatchingMachines("Not all the machines are identical")
         if self.GetAvailableMachines(label):
           break
         else:

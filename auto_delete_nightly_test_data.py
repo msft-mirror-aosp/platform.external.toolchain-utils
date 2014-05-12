@@ -91,7 +91,7 @@ def Main(argv):
   # We go back 1 week, delete from that day till we are
   # options.days_to_preserve away from today.
   s = d - 7
-  e = d - options.days_to_preserve
+  e = d - int(options.days_to_preserve)
   rv = 0
   for i in range(s + 1, e):
     if i <= 0:
