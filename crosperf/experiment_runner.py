@@ -24,10 +24,10 @@ class ExperimentRunner(object):
   STATUS_TIME_DELAY = 30
   THREAD_MONITOR_DELAY = 2
 
-  def __init__(self, experiment):
+  def __init__(self, experiment, logger=None, cmd_exec=None):
     self._experiment = experiment
-    self.l = logger.GetLogger(experiment.log_dir)
-    self._ce = command_executer.GetCommandExecuter(self.l)
+    self.l = logger or logger.GetLogger(experiment.log_dir)
+    self._ce = cmd_exec or command_executer.GetCommandExecuter(self.l)
     self._terminated = False
     if experiment.log_level != "verbose":
       self.STATUS_TIME_DELAY = 10
@@ -38,7 +38,7 @@ class ExperimentRunner(object):
     last_status_time = 0
     last_status_string = ""
     try:
-      if experiment.log_level == "quiet":
+      if experiment.log_level != "verbose":
         self.l.LogStartDots()
       while not experiment.IsComplete():
         if last_status_time + self.STATUS_TIME_DELAY < time.time():
@@ -60,8 +60,6 @@ class ExperimentRunner(object):
             else:
               self.l.LogAppendDot()
         time.sleep(self.THREAD_MONITOR_DELAY)
-      if experiment.log_level != "verbose":
-        self.l.LogEndDots()
     except KeyboardInterrupt:
       self._terminated = True
       self.l.LogError("Ctrl-c pressed. Cleaning up...")

@@ -80,7 +80,7 @@ class GlobalSettings(Settings):
                                "re-run failed test runs or not.",
                                default=False))
     self.AddField(BooleanField("rm_chroot_tmp", default=False,
-                               description="Whether remove the run_remote_test"
+                               description="Whether to remove the test_that"
                                "result in the chroot"))
     self.AddField(ListField("email", description="Space-seperated"
                             "list of email addresses to send email to."))
