@@ -315,7 +315,7 @@ def RunRemote(chromeos_root, branch, patches, is_local,
   patch = ""
   for p in patches:
     patch += " -g {0}".format(p)
-  cbuildbot_path = os.path.join(chromeos_root, "chromite/buildbot")
+  cbuildbot_path = os.path.join(chromeos_root, "chromite/cbuildbot")
   os.chdir(cbuildbot_path)
   branch_flag = ""
   if branch != "master":

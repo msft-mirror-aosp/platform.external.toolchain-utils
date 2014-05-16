@@ -25,7 +25,7 @@ class ScriptsFactory(object):
 
   def Buildbot(self, config_name):
     buildbot = os.path.join(self._chromeos_root,
-                            "chromite/buildbot/cbuildbot.py")
+                            "chromite/cbuildbot/cbuildbot.py")
 
     return cmd.Shell(buildbot,
                      "--buildroot=%s" % self._chromeos_root,
@@ -85,7 +85,7 @@ class CommandsFactory(object):
     config_header = "add_config(%r, [%s])" % (config_name,
                                               ", ".join(config_list))
     config_file = os.path.join(self.CHROMEOS_ROOT,
-                               "chromite/buildbot/cbuildbot_config.py")
+                               "chromite/cbuildbot/cbuildbot_config.py")
     quoted_config_header = "%r" % config_header
     quoted_config_header = re.sub("'", "\\\"", quoted_config_header)
 
