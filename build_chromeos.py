@@ -165,7 +165,7 @@ def Main(argv):
       "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
       "CHROME_ORIGIN=SERVER_SOURCE "
       "%s "
-      "%s "
+      "%s --skip_chroot_upgrade"
       "chromeos-chrome"
       % (options.board, options.cflags,
          options.board, options.cxxflags,
@@ -191,7 +191,7 @@ def Main(argv):
       "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
       "CHROME_ORIGIN=SERVER_SOURCE BUILDTYPE=Debug "
       "%s "
-      "%s "
+      "%s --skip_chroot_upgrade"
       "chromeos-chrome"
       % (options.board, options.cflags,
          options.board, options.cxxflags,
@@ -218,7 +218,7 @@ def Main(argv):
       "LDFLAGS=\"$(portageq-%s envvar LDFLAGS) %s\" "
       "CHROME_ORIGIN=SERVER_SOURCE "
       "%s "
-      "%s"
+      "%s --skip_chroot_upgrade"
       % (options.board, options.cflags,
          options.board, options.cxxflags,
          options.board, options.ldflags,
