@@ -24,9 +24,9 @@ class ExperimentRunner(object):
   STATUS_TIME_DELAY = 30
   THREAD_MONITOR_DELAY = 2
 
-  def __init__(self, experiment, logger=None, cmd_exec=None):
+  def __init__(self, experiment, log=None, cmd_exec=None):
     self._experiment = experiment
-    self.l = logger or logger.GetLogger(experiment.log_dir)
+    self.l = log or logger.GetLogger(experiment.log_dir)
     self._ce = cmd_exec or command_executer.GetCommandExecuter(self.l)
     self._terminated = False
     if experiment.log_level != "verbose":
