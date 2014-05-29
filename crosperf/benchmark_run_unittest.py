@@ -44,7 +44,7 @@ class BenchmarkRunTest(unittest.TestCase):
     self.test_label = MockLabel("test1", "image1", "/tmp/test_benchmark_run",
                                 "x86-alex", "chromeos2-row1-rack4-host9.cros",
                                 image_args="",
-                                cache_dir="")
+                                cache_dir="", cache_only=False)
 
     self.test_cache_conditions =  [CacheConditions.CACHE_FILE_EXISTS,
                                    CacheConditions.CHECKSUMS_MATCH]
@@ -57,7 +57,7 @@ class BenchmarkRunTest(unittest.TestCase):
     my_label = MockLabel("test1", "image1", "/tmp/test_benchmark_run",
                          "x86-alex", "chromeos2-row1-rack4-host9.cros",
                          image_args="",
-                         cache_dir="")
+                         cache_dir="", cache_only=False)
     logging_level = "average"
     m = MockMachineManager("/tmp/chromeos_root", 0, logging_level)
     m.AddMachine("chromeos2-row1-rack4-host9.cros")

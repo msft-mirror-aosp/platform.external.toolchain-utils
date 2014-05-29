@@ -126,7 +126,7 @@ class MockResult(Result):
 
 class ResultTest(unittest.TestCase):
   mock_label = MockLabel("mock_label", "chromeos_image", "/tmp", "lumpy",
-                         "remote", "image_args", "cache_dir")
+                         "remote", "image_args", "cache_dir", False)
   def testCreateFromRun(self):
     result = MockResult.CreateFromRun(logger.GetLogger(), "average",
                                       self.mock_label,

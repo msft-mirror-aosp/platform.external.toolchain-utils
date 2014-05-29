@@ -104,6 +104,7 @@ class ExperimentFactory(object):
     perf_args = global_settings.GetField("perf_args")
     acquire_timeout= global_settings.GetField("acquire_timeout")
     cache_dir = global_settings.GetField("cache_dir")
+    cache_only = global_settings.GetField("cache_only")
     config.AddConfig("no_email", global_settings.GetField("no_email"))
     share_users = global_settings.GetField("share_users")
     results_dir = global_settings.GetField("results_dir")
@@ -198,10 +199,10 @@ class ExperimentFactory(object):
       image_args = label_settings.GetField("image_args")
       if test_flag.GetTestMode():
         label = MockLabel(label_name, image, chromeos_root, board, my_remote,
-                          image_args, cache_dir, chrome_src)
+                          image_args, cache_dir, cache_only, chrome_src)
       else:
         label = Label(label_name, image, chromeos_root, board, my_remote,
-                      image_args, cache_dir, chrome_src)
+                      image_args, cache_dir, cache_only, chrome_src)
       labels.append(label)
 
     email = global_settings.GetField("email")

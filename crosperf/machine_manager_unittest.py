@@ -32,10 +32,10 @@ CHROMEOS_ROOT = "/tmp/chromeos-root"
 MACHINE_NAMES = ["lumpy1", "lumpy2", "lumpy3", "daisy1", "daisy2"]
 LABEL_LUMPY = label.MockLabel("lumpy", "image", CHROMEOS_ROOT, "lumpy",
                               ["lumpy1", "lumpy2", "lumpy3", "lumpy4"],
-                              "", "", "")
+                              "", "", False, "")
 LABEL_MIX = label.MockLabel("mix", "image", CHROMEOS_ROOT, "mix",
                             ["daisy1", "daisy2", "lumpy3", "lumpy4"],
-                            "", "", "")
+                            "", "", False, "")
 
 
 class MachineManagerTest(unittest.TestCase):

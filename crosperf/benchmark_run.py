@@ -97,6 +97,18 @@ class BenchmarkRun(threading.Thread):
         self._logger.LogOutput(self.result.out, print_to_console=False)
         self._logger.LogError(self.result.err, print_to_console=False)
 
+      elif self.label.cache_only:
+        self._logger.LogOutput("%s: No cache hit." % self.name)
+        output = "%s: No Cache hit." % self.name
+        retval = 1
+        err = "No cache hit."
+        self.result = Result.CreateFromRun(self._logger, self.log_level,
+                                           self.label,
+                                           output, err, retval,
+                                           self.benchmark.show_all_results,
+                                           self.benchmark.test_name,
+                                           self.benchmark.suite)
+
       else:
         self._logger.LogOutput("%s: No cache hit." % self.name)
         self.timeline.Record(STATUS_WAITING)

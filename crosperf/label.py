@@ -13,7 +13,7 @@ from utils import misc
 
 class Label(object):
   def __init__(self, name, chromeos_image, chromeos_root, board, remote,
-               image_args, cache_dir, chrome_src=None):
+               image_args, cache_dir, cache_only, chrome_src=None):
 
     self.image_type = self._GetImageType(chromeos_image)
 
@@ -28,6 +28,7 @@ class Label(object):
     self.remote = remote
     self.image_args = image_args
     self.cache_dir = cache_dir
+    self.cache_only = cache_only
 
     if not chromeos_root:
       if self.image_type == "local":
@@ -68,12 +69,13 @@ class Label(object):
 
 class MockLabel(object):
   def __init__(self, name, chromeos_image, chromeos_root, board, remote,
-               image_args, cache_dir, chrome_src=None):
+               image_args, cache_dir, cache_only, chrome_src=None):
     self.name = name
     self.chromeos_image = chromeos_image
     self.board = board
     self.remote = remote
     self.cache_dir = cache_dir
+    self.cache_only = cache_only
     if not chromeos_root:
       self.chromeos_root = "/tmp/chromeos_root"
     else:
