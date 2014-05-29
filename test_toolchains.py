@@ -6,10 +6,13 @@ import os
 import sys
 import build_chromeos
 import setup_chromeos
+import time
 from utils import command_executer
 from utils import misc
 from utils import logger
 
+
+WEEKLY_REPORTS_ROOT="/usr/local/google/crostc/weekly_test_data"
 
 class GCCConfig(object):
   def __init__(self, githash):
@@ -163,6 +166,28 @@ class ToolchainComparator(ChromeOSCheckout):
                             "chromiumos_test_image.bin"),
                image_args)
         print >>f, experiment_image
+    images_path = os.path.join(os.path.realpath(self._chromeos_root),
+                               "src/build/images", self._board)
+    weekday = time.strftime("%a")
+    for l in labels:
+      test_path = os.path.join(images_path, l)
+      if os.path.exists(test_path):
+        data_dir = os.path.join(WEEKLY_REPORTS_ROOT, self._board)
+        if l == "vanilla":
+          label_name = l
+        else:
+          label_name = "test"
+        tar_file_name = "%s_%s_image.tar" % (weekday, label_name)
+        dest_dir = os.path.join (data_dir, weekday)
+        if not os.path.exists(dest_dir):
+          os.makedirs(dest_dir)
+        cmd="cd %s; tar -cvf %s %s/*; cp %s %s/." % (images_path,tar_file_name,
+                                                     l, tar_file_name,
+                                                     dest_dir)
+        tar_ret = self._ce.RunCommand(cmd)
+        if tar_ret:
+          self._l.LogOutput("Error while creating/copying test tar file (%s)."
+                            % tar_file_name)
     crosperf = os.path.join(os.path.dirname(__file__),
                             "crosperf",
                             "crosperf")
