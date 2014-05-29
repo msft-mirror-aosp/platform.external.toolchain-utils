@@ -499,7 +499,7 @@ class MockMachineManager(MachineManager):
                                    machine_name)
       self._all_machines.append(cm)
 
-  def AcquireMachine(self, chromeos_image, label):
+  def AcquireMachine(self, chromeos_image, label, throw=False):
     for machine in self._all_machines:
       if not machine.locked:
         machine.locked = True
