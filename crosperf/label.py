@@ -82,3 +82,14 @@ class MockLabel(object):
       self.chromeos_root = chromeos_root
     self.image_args = image_args
     self.chrome_src = chrome_src
+    self.image_type = self._GetImageType(chromeos_image)
+
+  def _GetImageType(self, chromeos_image):
+    image_type = None
+    if chromeos_image.find("xbuddy://") < 0:
+      image_type = "local"
+    elif chromeos_image.find("trybot") >= 0:
+      image_type = "trybot"
+    else:
+      image_type = "official"
+    return image_type

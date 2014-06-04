@@ -14,6 +14,7 @@ import sys
 import threading
 import time
 
+
 from utils import command_executer
 from utils import logger
 from utils.file_utils import FileUtils
@@ -26,7 +27,7 @@ class NonMatchingMachines(Exception):
   pass
 
 class CrosMachine(object):
-  def __init__(self, name, chromeos_root, log_level):
+  def __init__(self, name, chromeos_root, log_level, cmd_exec=None):
     self.name = name
     self.image = None
     self.checksum = None
@@ -35,6 +36,8 @@ class CrosMachine(object):
     self.test_run = None
     self.chromeos_root = chromeos_root
     self.log_level = log_level
+    self.ce = cmd_exec or command_executer.GetCommandExecuter(
+        log_level=self.log_level)
     self.SetUpChecksumInfo()
 
   def SetUpChecksumInfo(self):
@@ -49,11 +52,10 @@ class CrosMachine(object):
     self.machine_id_checksum = self._GetMD5Checksum(self.machine_id)
 
   def IsReachable(self):
-    ce = command_executer.GetCommandExecuter(log_level=self.log_level)
     command = "ls"
-    ret = ce.CrosRunCommand(command,
-                            machine=self.name,
-                            chromeos_root=self.chromeos_root)
+    ret = self.ce.CrosRunCommand(command,
+                                 machine=self.name,
+                                 chromeos_root=self.chromeos_root)
     if ret:
       return False
     return True
@@ -92,26 +94,26 @@ class CrosMachine(object):
   def _GetMemoryInfo(self):
     #TODO yunlian: when the machine in rebooting, it will not return
     #meminfo, the assert does not catch it either
-    ce = command_executer.GetCommandExecuter(log_level=self.log_level)
     command = "cat /proc/meminfo"
-    ret, self.meminfo, _ = ce.CrosRunCommand(
-        command, return_output=True,
-        machine=self.name, username="root", chromeos_root=self.chromeos_root)
+    ret, self.meminfo, _ = self.ce.CrosRunCommand(command, return_output=True,
+                                              machine=self.name,
+                                              username="root",
+                                              chromeos_root=self.chromeos_root)
     assert ret == 0, "Could not get meminfo from machine: %s" % self.name
     if ret == 0:
       self._ParseMemoryInfo()
 
   #cpuinfo format is different across architecture
   #need to find a better way to parse it.
-  def _ParseCPUInfo(self,cpuinfo):
+  def _ParseCPUInfo(self, cpuinfo):
     return 0
 
   def _GetCPUInfo(self):
-    ce = command_executer.GetCommandExecuter(log_level=self.log_level)
     command = "cat /proc/cpuinfo"
-    ret, self.cpuinfo, _ = ce.CrosRunCommand(
-        command, return_output=True,
-        machine=self.name, username="root", chromeos_root=self.chromeos_root)
+    ret, self.cpuinfo, _ = self.ce.CrosRunCommand(command, return_output=True,
+                                              machine=self.name,
+                                              username="root",
+                                              chromeos_root=self.chromeos_root)
     assert ret == 0, "Could not get cpuinfo from machine: %s" % self.name
     if ret == 0:
       self._ParseCPUInfo(self.cpuinfo)
@@ -131,20 +133,19 @@ class CrosMachine(object):
       return ""
 
   def _GetMachineID(self):
-    ce = command_executer.GetCommandExecuter(log_level=self.log_level)
     command = "dump_vpd_log --full --stdout"
-    ret, if_out, _ = ce.CrosRunCommand(
-        command, return_output=True,
-        machine=self.name, chromeos_root=self.chromeos_root)
+    ret, if_out, _ = self.ce.CrosRunCommand(command, return_output=True,
+                                            machine=self.name,
+                                            chromeos_root=self.chromeos_root)
     b = if_out.splitlines()
     a = [l for l in b if "Product" in l]
     if len(a):
       self.machine_id = a[0]
       return
     command = "ifconfig"
-    ret, if_out, _ = ce.CrosRunCommand(
-        command, return_output=True,
-        machine=self.name, chromeos_root=self.chromeos_root)
+    ret, if_out, _ = self.ce.CrosRunCommand(command, return_output=True,
+                                            machine=self.name,
+                                            chromeos_root=self.chromeos_root)
     b = if_out.splitlines()
     a = [l for l in b if "HWaddr" in l]
     if len(a):
@@ -167,7 +168,8 @@ class CrosMachine(object):
 
 
 class MachineManager(object):
-  def __init__(self, chromeos_root, acquire_timeout, log_level):
+  def __init__(self, chromeos_root, acquire_timeout, log_level, cmd_exec=None,
+               lgr=None):
     self._lock = threading.RLock()
     self._all_machines = []
     self._machines = []
@@ -178,6 +180,9 @@ class MachineManager(object):
     self.machine_checksum_string = {}
     self.acquire_timeout = acquire_timeout
     self.log_level = log_level
+    self.ce = cmd_exec or command_executer.GetCommandExecuter(
+        log_level=self.log_level)
+    self.logger = lgr or logger.GetLogger()
 
     if os.path.isdir(lock_machine.Machine.LOCKS_DIR):
       self.no_lock = False
@@ -210,28 +215,28 @@ class MachineManager(object):
 
     # Currently can't image two machines at once.
     # So have to serialized on this lock.
+    save_ce_log_level = self.ce.log_level
     if self.log_level != "verbose":
-      ce = command_executer.GetCommandExecuter(log_level="average")
-    else:
-      ce = command_executer.GetCommandExecuter()
+      self.ce.log_level = "average"
+
     with self.image_lock:
       if self.log_level != "verbose":
-        logger.GetLogger().LogOutput("Pushing image onto machine.")
-        logger.GetLogger().LogOutput("CMD : python %s "
+        self.logger.LogOutput("Pushing image onto machine.")
+        self.logger.LogOutput("CMD : python %s "
                                  % " ".join(image_chromeos_args))
-      retval = ce.RunCommand(" ".join(["python"] + image_chromeos_args))
+      retval = self.ce.RunCommand(" ".join(["python"] + image_chromeos_args))
       if retval:
-        cmd ="reboot && exit"
+        cmd = "reboot && exit"
         if self.log_level != "verbose":
-          logger.GetLogger().LogOutput("reboot & exit.")
-        ce.CrosRunCommand(cmd, machine=machine.name,
-                          chromeos_root=self.chromeos_root)
+          self.logger.LogOutput("reboot & exit.")
+        self.ce.CrosRunCommand(cmd, machine=machine.name,
+                               chromeos_root=self.chromeos_root)
         time.sleep(60)
         if self.log_level != "verbose":
-          logger.GetLogger().LogOutput("Pushing image onto machine.")
-          logger.GetLogger().LogOutput("CMD : python %s "
+          self.logger.LogOutput("Pushing image onto machine.")
+          self.logger.LogOutput("CMD : python %s "
                                      % " ".join(image_chromeos_args))
-        retval = ce.RunCommand(" ".join(["python"] + image_chromeos_args))
+        retval = self.ce.RunCommand(" ".join(["python"] + image_chromeos_args))
       if retval:
         raise Exception("Could not image machine: '%s'." % machine.name)
       else:
@@ -239,6 +244,7 @@ class MachineManager(object):
       machine.checksum = checksum
       machine.image = label.chromeos_image
 
+    self.ce.log_level = save_ce_log_level
     return retval
 
   def ComputeCommonCheckSum(self, label):
@@ -265,29 +271,29 @@ class MachineManager(object):
         locked = lock_machine.Machine(cros_machine.name).Lock(True, sys.argv[0])
       if locked:
         self._machines.append(cros_machine)
-        ce = command_executer.GetCommandExecuter(log_level=self.log_level)
         command = "cat %s" % CHECKSUM_FILE
-        ret, out, _ = ce.CrosRunCommand(
+        ret, out, _ = self.ce.CrosRunCommand(
             command, return_output=True, chromeos_root=self.chromeos_root,
             machine=cros_machine.name)
         if ret == 0:
           cros_machine.checksum = out.strip()
       else:
-        logger.GetLogger().LogOutput("Couldn't lock: %s" % cros_machine.name)
+        self.logger.LogOutput("Couldn't lock: %s" % cros_machine.name)
 
   # This is called from single threaded mode.
   def AddMachine(self, machine_name):
     with self._lock:
       for m in self._all_machines:
         assert m.name != machine_name, "Tried to double-add %s" % machine_name
-      if self.log_level != "verbose":
-        logger.GetLogger().LogOutput("Setting up remote access to %s"
-                                   % machine_name)
-        logger.GetLogger().LogOutput("Checking machine characteristics for %s"
-                                   % machine_name)
+        if self.log_level != "verbose":
+          self.logger.LogOutput("Setting up remote access to %s"
+                              % machine_name)
+          self.logger.LogOutput("Checking machine characteristics for %s"
+                              % machine_name)
       cm = CrosMachine(machine_name, self.chromeos_root, self.log_level)
       if cm.machine_checksum:
         self._all_machines.append(cm)
+
 
   def AreAllMachineSame(self, label):
     checksums = [m.machine_checksum for m in self.GetMachines(label)]
@@ -300,12 +306,11 @@ class MachineManager(object):
                         if m.name != machine_name]
       res = lock_machine.Machine(machine_name).Unlock(True)
       if not res:
-        logger.GetLogger().LogError("Could not unlock machine: '%s'."
-                                    % m.name)
+        self.logger.LogError("Could not unlock machine: '%s'."
+                             % m.name)
 
   def ForceSameImageToAllMachines(self, label):
     machines = self.GetMachines(label)
-    chromeos_image = label.chromeos_image
     for m in machines:
       self.ImageMachine(m, label)
       m.SetUpChecksumInfo()
@@ -330,7 +335,7 @@ class MachineManager(object):
         if not self.AreAllMachineSame(label):
           if not throw:
             # Log fatal message, which calls sys.exit.  Default behavior.
-            logger.GetLogger().LogFatal("-- not all the machines are identical")
+            self.logger.LogFatal("-- not all the machines are identical")
           else:
             # Raise an exception, which can be caught and handled by calling
             # function.
@@ -346,9 +351,9 @@ class MachineManager(object):
         machine_names = []
         for machine in machines:
           machine_names.append(machine.name)
-        logger.GetLogger().LogFatal("Could not acquire any of the "
-                                    "following machines: '%s'"
-                                    % ", ".join(machine_names))
+        self.logger.LogFatal("Could not acquire any of the "
+                             "following machines: '%s'"
+                             % ", ".join(machine_names))
 
 ###      for m in self._machines:
 ###        if (m.locked and time.time() - m.released_time < 10 and
@@ -407,8 +412,8 @@ class MachineManager(object):
         if not self.no_lock:
           res = lock_machine.Machine(m.name).Unlock(True)
           if not res:
-            logger.GetLogger().LogError("Could not unlock machine: '%s'."
-                                        % m.name)
+            self.logger.LogError("Could not unlock machine: '%s'."
+                                 % m.name)
 
   def __str__(self):
     with self._lock:
