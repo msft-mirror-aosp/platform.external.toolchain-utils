@@ -48,7 +48,8 @@ class Bootstrapper(object):
 
   def __init__(self, chromeos_root, gcc_branch=None, gcc_dir=None,
                binutils_branch=None, binutils_dir=None,
-               board=None, setup_tool_ebuild_file_only=False):
+               board=None, disable_2nd_bootstrap=False,
+               setup_tool_ebuild_file_only=False):
     self._chromeos_root = chromeos_root
 
     self._gcc_branch = gcc_branch
@@ -68,6 +69,7 @@ class Bootstrapper(object):
     self._ce = command_executer.GetCommandExecuter()
     self._logger = logger.GetLogger()
     self._board = board
+    self._disable_2nd_bootstrap = disable_2nd_bootstrap
 
   def IsTreeSame(self, t1, t2):
     diff = 'diff -qr -x .git -x .svn "{0}" "{1}"'.format(t1, t2)
@@ -131,8 +133,12 @@ class Bootstrapper(object):
     local_tool_repo = repo_to_repo.FileRepo(tool_dir)
     chrome_tool_repo = repo_to_repo.GitRepo(chrome_tool_dir, TEMP_BRANCH_NAME)
     chrome_tool_repo._root_dir = chrome_tool_dir
-    # Delete all stuff before start mapping.
-    self._ce.RunCommand('cd {0} && rm -rf *'.format(chrome_tool_dir))
+    # Delete all stuff except '.git' before start mapping.
+    self._ce.RunCommand(
+        'cd {0} && find . -maxdepth 1 -not -name ".git" -not -name "." '
+        r'\( -type f -exec rm {{}} \; -o '
+        r'   -type d -exec rm -fr {{}} \; \)'.format(
+            chrome_tool_dir))
     local_tool_repo.MapSources(chrome_tool_repo.GetRoot())
 
     # 3. Ensure after sync tree is the same.
@@ -143,9 +149,17 @@ class Bootstrapper(object):
       return False
 
     # 4. Commit all changes.
-    ret = chrome_tool_repo.CommitLocally(
-        'Synced with tool source tree at - "{0}".'.format(tool_dir))
-    if ret:
+    # 4.1 Try to get some information about the tool dir we are using.
+    cmd = 'cd {0} && git log -1 --pretty=oneline'.format(tool_dir)
+    tool_dir_extra_info = None
+    ret, tool_dir_extra_info, _ = self._ce.RunCommand(
+        cmd, return_output=True, print_to_console=False)
+    commit_message = 'Synced with tool source tree at - "{0}".'.format(tool_dir)
+    if not ret:
+      commit_message += '\nGit log for {0}:\n{1}'.format(
+          tool_dir, tool_dir_extra_info)
+
+    if chrome_tool_repo.CommitLocally(commit_message):
       self._logger.LogError('Commit to local branch "{0}" failed, aborted.'.
                             format(TEMP_BRANCH_NAME))
       return False
@@ -422,11 +436,11 @@ class Bootstrapper(object):
                                      return_output=False, print_to_console=True)
       if rv:
         self._logger.LogError(
-            'Build "{0}" failed for "{1}", aborted.'.format(tool_name, board))
+            'Build {0} failed for {1}, aborted.'.format(tool_name, board))
         failed.append(board)
       else:
         self._logger.LogOutput(
-            'Successfully built "{0}" for board "{1}".'.format(tool_name, board))
+            'Successfully built {0} for board {1}.'.format(tool_name, board))
 
     if failed:
       self._logger.LogError(
@@ -438,6 +452,9 @@ class Bootstrapper(object):
 
   def DoBootstrapping(self):
     """Do bootstrapping the chroot.
+
+    This step firstly downloads a prestine sdk, then use this sdk to build the
+    new sdk, finally use the new sdk to build every host package.
 
     Returns:
       True if operation succeeds.
@@ -453,14 +470,61 @@ class Bootstrapper(object):
           logfile))
       return False
 
-    ## Workaround for - crbug/331713.
-    ## We do not test for success, failure is not important at this step.
-    self._ce.ChrootRunCommand(
-        self._chromeos_root, 'sudo emerge dev-util/pkgconfig',
-        return_output=False, print_to_console=True)
-
     self._logger.LogOutput('Bootstrap succeeded.')
     return True
+
+  def BuildAndInstallAmd64Host(self):
+    """Build amd64-host (host) packages.
+
+    Build all host packages in the newly-bootstrapped 'chroot' using *NEW*
+    toolchain.
+
+    So actually we perform 2 builds of all host packages -
+      1. build new toolchain using old toolchain and build all host packages
+         using the newly built toolchain
+      2. build the new toolchain again but using new toolchain built in step 1,
+         and build all host packages using the newly built toolchain
+
+    Returns:
+      True if operation succeeds.
+    """
+
+    cmd = ('cd {0} && cros_sdk -- -- ./setup_board --board=amd64-host '
+           '--accept_licenses=@CHROMEOS --skip_chroot_upgrade --nousepkg '
+           '--reuse_pkgs_from_local_boards').format(self._chromeos_root)
+    rv = self._ce.RunCommand(cmd, return_output=False, print_to_console=True)
+    if rv:
+      self._logger.LogError('Build amd64-host failed.')
+      return False
+
+    # Package amd64-host into 'built-sdk.tar.xz'.
+    sdk_package = os.path.join(self._chromeos_root, 'built-sdk.tar.xz')
+    cmd = ('cd {0}/chroot/build/amd64-host && sudo XZ_OPT="-e9" '
+           'tar --exclude="usr/lib/debug/*" --exclude="packages/*" '
+           '--exclude="tmp/*" --exclude="usr/local/build/autotest/*" '
+           '--sparse -I xz -vcf {1} . && sudo chmod a+r {1}').format(
+               self._chromeos_root, sdk_package)
+    rv = self._ce.RunCommand(cmd, return_output=False, print_to_console=True)
+    if rv:
+      self._logger.LogError('Failed to create "built-sdk.tar.xz".')
+      return False
+
+    # Install amd64-host into a new chroot.
+    cmd = ('cd {0} && cros_sdk --chroot new-sdk-chroot --download --replace '
+           '--nousepkg --url file://{1}').format(
+               self._chromeos_root, sdk_package)
+    rv = self._ce.RunCommand(cmd, return_output=False, print_to_console=True)
+    if rv:
+      self._logger.LogError('Failed to install "built-sdk.tar.xz".')
+      return False
+    self._logger.LogOutput(
+        'Successfully installed built-sdk.tar.xz into a new chroot.\nAll done.')
+
+    # Rename the newly created new-sdk-chroot to chroot.
+    cmd = ('cd {0} && sudo mv chroot chroot-old && '
+           'sudo mv new-sdk-chroot chroot').format(self._chromeos_root)
+    rv = self._ce.RunCommand(cmd, return_output=False, print_to_console=True)
+    return rv == 0
 
   def Do(self):
     """Entrance of the class.
@@ -481,7 +545,9 @@ class Bootstrapper(object):
           ret = self.DoBuildForBoard()
         else:
           # This implies '--bootstrap'.
-          ret = self.DoBootstrapping()
+          ret = (self.DoBootstrapping() and
+                 (self._disable_2nd_bootstrap or
+                  self.BuildAndInstallAmd64Host()))
     else:
       ret = False
     return ret
@@ -542,6 +608,10 @@ def Main(argv):
                     default=False, action='store_true',
                     help=('Performs a chroot bootstrap. '
                           'Note, this will *destroy* your current chroot.'))
+  parser.add_option('--disable-2nd-bootstrap', dest='disable_2nd_bootstrap',
+                    default=False, action='store_true',
+                    help=('Disable a second bootstrap '
+                          '(build of amd64-host stage).'))
 
   options = parser.parse_args(argv)[0]
   # Trying to deduce chromeos root from current directory.
@@ -627,8 +697,14 @@ def Main(argv):
     parser.error('You must specify either "--board" or "--bootstrap".')
     return 1
 
-  if options.board and options.bootstrap:
+  if (options.board and options.bootstrap and
+      not options.setup_tool_ebuild_file_only):
     parser.error('You must specify only one of "--board" and "--bootstrap".')
+    return 1
+
+  if not options.bootstrap and options.disable_2nd_bootstrap:
+    parser.error('"--disable-2nd-bootstrap" has no effect '
+                 'without specifying "--bootstrap".')
     return 1
 
   if Bootstrapper(
@@ -637,6 +713,7 @@ def Main(argv):
       binutils_branch=options.binutils_branch,
       binutils_dir=options.binutils_dir,
       board=options.board,
+      disable_2nd_bootstrap=options.disable_2nd_bootstrap,
       setup_tool_ebuild_file_only=options.setup_tool_ebuild_file_only).Do():
     return 0
   return 1
