@@ -34,10 +34,10 @@ class Result(object):
   perf.report, etc. The key generation is handled by the ResultsCache class.
   """
 
-  def __init__(self, logger, label, log_level):
+  def __init__(self, logger, label, log_level, cmd_exec=None):
     self._chromeos_root = label.chromeos_root
     self._logger = logger
-    self._ce = command_executer.GetCommandExecuter(self._logger,
+    self._ce = cmd_exec or command_executer.GetCommandExecuter(self._logger,
                                                    log_level=log_level)
     self._temp_dir = None
     self.label = label
@@ -81,7 +81,7 @@ class Result(object):
         # Otherwise get the base filename and create the correct
         # path for it.
         f_dir, f_base = misc.GetRoot(f)
-        data_filename = os.path.join(self._chromeos_root, "/tmp",
+        data_filename = os.path.join(self._chromeos_root, "chroot/tmp",
                                      self._temp_dir, f_base)
       if os.path.exists(data_filename):
         with open(data_filename, "r") as data_file:
@@ -384,8 +384,8 @@ class Result(object):
 
 class TelemetryResult(Result):
 
-  def __init__(self, logger, label, log_level):
-    super(TelemetryResult, self).__init__(logger, label, log_level)
+  def __init__(self, logger, label, log_level, cmd_exec=None):
+    super(TelemetryResult, self).__init__(logger, label, log_level, cmd_exec)
 
   def _PopulateFromRun(self, out, err, retval, show_all, test, suite):
     self.out = out
@@ -512,9 +512,10 @@ class ResultsCache(object):
     else:
       cache_path = [os.path.join(SCRATCH_DIR, cache_dir)]
 
-    for i in [x.strip() for x in self.share_users.split(",")]:
-      path = SCRATCH_BASE % i
-      cache_path.append(os.path.join(path, cache_dir))
+    if len(self.share_users):
+      for i in [x.strip() for x in self.share_users.split(",")]:
+        path = SCRATCH_BASE % i
+        cache_path.append(os.path.join(path, cache_dir))
 
     return cache_path
 
