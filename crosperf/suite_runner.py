@@ -13,7 +13,7 @@ from utils import command_executer
 TEST_THAT_PATH = '/usr/bin/test_that'
 CHROME_MOUNT_DIR = '/tmp/chrome_root'
 
-def GetProfilerArgs (benchmark, profiler_args):
+def GetProfilerArgs (profiler_args):
   # Remove "--" from in front of profiler args.
   args_list = shlex.split(profiler_args)
   new_list = []
@@ -43,12 +43,13 @@ class SuiteRunner(object):
   """ This defines the interface from crosperf to test script.
   """
 
-  def __init__(self, logger_to_use=None, log_level="verbose"):
+  def __init__(self, logger_to_use=None, log_level="verbose", cmd_exec=None,
+               cmd_term=None):
     self._logger = logger_to_use
     self.log_level = log_level
-    self._ce = command_executer.GetCommandExecuter(self._logger,
+    self._ce = cmd_exec or command_executer.GetCommandExecuter(self._logger,
                                                    log_level=self.log_level)
-    self._ct = command_executer.CommandTerminator()
+    self._ct = cmd_term or command_executer.CommandTerminator()
 
   def Run(self, machine, label, benchmark, test_args, profiler_args):
     self.PinGovernorExecutionFrequencies(machine, label.chromeos_root)
@@ -152,7 +153,7 @@ class SuiteRunner(object):
       self._logger.LogFatal("Cannot find chrome src dir to"
                             " run telemetry: %s" % label.chrome_src)
 
-    profiler_args = GetProfilerArgs (benchmark, profiler_args)
+    profiler_args = GetProfilerArgs (profiler_args)
     chrome_root_options = ""
 
     chrome_root_options = (" --chrome_root={0} --chrome_root_mount={1} "
