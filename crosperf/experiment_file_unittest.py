@@ -64,6 +64,23 @@ EXPERIMENT_FILE_3 = """
   }
   """
 
+OUTPUT_FILE="""remote: chromeos-alex3
+board: x86-alex
+perf_args: record -a -e cycles
+
+benchmark: PageCycler {
+\titerations: 3
+}
+
+label: image1 {
+\tremote: chromeos-alex3
+\tchromeos_image: /usr/local/google/cros_image1.bin
+}
+
+label: image2 {
+\tremote: chromeos-lumpy1
+\tchromeos_image: /usr/local/google/cros_image2.bin
+}\n\n"""
 
 class ExperimentFileTest(unittest.TestCase):
   def testLoadExperimentFile1(self):
@@ -103,6 +120,11 @@ class ExperimentFileTest(unittest.TestCase):
     input_file = StringIO.StringIO(EXPERIMENT_FILE_3)
     self.assertRaises(Exception, ExperimentFile, input_file)
 
+  def testCanonicalize(self):
+    input_file = StringIO.StringIO(EXPERIMENT_FILE_1)
+    experiment_file = ExperimentFile(input_file)
+    res = experiment_file.Canonicalize()
+    self.assertEqual(res, OUTPUT_FILE)
 
 if __name__ == "__main__":
   unittest.main()
