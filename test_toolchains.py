@@ -30,6 +30,7 @@ class ChromeOSCheckout(object):
     self._chromeos_root = chromeos_root
     self._ce = command_executer.GetCommandExecuter()
     self._l = logger.GetLogger()
+    self._build_num = None
 
   def _DeleteChroot(self):
     command = "cd %s; cros_sdk --delete" % self._chromeos_root
@@ -40,6 +41,31 @@ class ChromeOSCheckout(object):
     command = "sudo rm -rf %s" % os.path.join(self._chromeos_root, ".cache")
     return self._ce.RunCommand(command)
 
+  def _GetBuildNumber(self):
+    """ This function assumes a ChromeOS image has been built in the chroot.
+    It translates the 'latest' symlink in the
+    <chroot>/src/build/images/<board> directory, to find the actual
+    ChromeOS build number for the image that was built.  For example, if
+    src/build/image/lumpy/latest ->  R37-5982.0.2014_06_23_0454-a1, then
+    This function would parse it out and assign 'R37-5982' to self._build_num.
+    This is used to determine the official, vanilla build to use for
+    comparison tests.
+    """
+    # Get the path to 'latest'
+    sym_path = os.path.join (misc.GetImageDir(self._chromeos_root,
+                                              self._board),
+                             "latest")
+    # Translate the symlink to its 'real' path.
+    real_path = os.path.realpath(sym_path)
+    # Break up the path and get the last piece
+    # (e.g. 'R37-5982.0.2014_06_23_0454-a1"
+    path_pieces = real_path.split("/")
+    last_piece = path_pieces[-1]
+    # Break this piece into the image number + other pieces, and get the
+    # image number [ 'R37-5982', '0', '2014_06_23_0454-a1']
+    image_parts = last_piece.split(".")
+    self._build_num = image_parts[0]
+
   def _BuildAndImage(self, label=""):
     if (not label or
         not misc.DoesLabelExist(self._chromeos_root, self._board, label)):
@@ -49,24 +75,36 @@ class ChromeOSCheckout(object):
                              "--rebuild"]
       if self._public:
         build_chromeos_args.append("--env=USE=-chrome_internal")
-      if label == "vanilla":
-        build_chromeos_args.append("--vanilla_image")
+
       ret = build_chromeos.Main(build_chromeos_args)
       if ret:
         raise Exception("Couldn't build ChromeOS!")
-      if label:
+
+      if not  self._build_num:
+        self._GetBuildNumber()
+      # Check to see if we need to create the symbolic link for the vanilla
+      # image, and do so if appropriate.
+      if not misc.DoesLabelExist(self._chromeos_root, self._board, "vanilla"):
+        build_name = "%s-release/%s.0.0" % (self._board, self._build_num)
+        full_vanilla_path = os.path.join (os.getcwd(), self._chromeos_root,
+                                          'chroot/tmp', build_name)
+        misc.LabelLatestImage(self._chromeos_root, self._board, label,
+                              full_vanilla_path)
+      else:
         misc.LabelLatestImage(self._chromeos_root, self._board, label)
     return label
 
-  def _SetupBoard(self, env_dict):
+  def _SetupBoard(self, env_dict, usepkg_flag, clobber_flag):
     env_string = misc.GetEnvStringFromDict(env_dict)
     command = ("%s %s" %
                (env_string,
                 misc.GetSetupBoardCommand(self._board,
-                                          usepkg=False)))
+                                          usepkg=usepkg_flag,
+                                          force=clobber_flag)))
     ret = self._ce.ChrootRunCommand(self._chromeos_root,
                                     command)
-    assert ret == 0, "Could not setup board with new toolchain."
+    error_str = "Could not setup board: '%s'" % command
+    assert ret == 0, error_str
 
   def _UnInstallToolchain(self):
     command = ("sudo CLEAN_DELAY=0 emerge -C cross-%s/gcc" %
@@ -90,10 +128,15 @@ class ChromeOSCheckout(object):
 
 
   def _BuildToolchain(self, config):
+    # Call setup_board for basic, vanilla setup.
+    self._SetupBoard({}, usepkg_flag=True, clobber_flag=False)
+    # Now uninstall the vanilla compiler and setup/build our custom
+    # compiler.
     self._UnInstallToolchain()
-    self._SetupBoard({"USE": "git_gcc",
-                      "GCC_GITHASH": config.gcc_config.githash,
-                      "EMERGE_DEFAULT_OPTS": "--exclude=gcc"})
+    envdict = {"USE": "git_gcc",
+               "GCC_GITHASH": config.gcc_config.githash,
+               "EMERGE_DEFAULT_OPTS": "--exclude=gcc"}
+    self._SetupBoard(envdict, usepkg_flag=False, clobber_flag=False)
 
 
 class ToolchainComparator(ChromeOSCheckout):
@@ -155,39 +198,33 @@ class ToolchainComparator(ChromeOSCheckout):
         crosperf_label = crosperf_label.replace("-", "minus")
         crosperf_label = crosperf_label.replace("+", "plus")
         crosperf_label = crosperf_label.replace(".", "")
-        experiment_image = """
-        %s {
-          chromeos_image: %s
-          image_args: %s
-        }
-        """ % (crosperf_label,
-               os.path.join(misc.GetImageDir(self._chromeos_root, self._board),
-                            label,
-                            "chromiumos_test_image.bin"),
-               image_args)
-        print >>f, experiment_image
-    images_path = os.path.join(os.path.realpath(self._chromeos_root),
-                               "src/build/images", self._board)
-    weekday = time.strftime("%a")
-    for l in labels:
-      test_path = os.path.join(images_path, l)
-      if os.path.exists(test_path):
-        data_dir = os.path.join(WEEKLY_REPORTS_ROOT, self._board)
-        if l == "vanilla":
-          label_name = l
+
+        # Use the official build instead of building vanilla ourselves.
+        if label == "vanilla":
+          build_name = '%s-release/%s.0.0' % (self._board, self._build_num)
+
+          # Now add 'official build' to test file.
+          official_image = """
+          official_image {
+            chromeos_root: %s
+            build: %s
+          }
+          """ % (self._chromeos_root, build_name)
+          print >>f, official_image
+
         else:
-          label_name = "test"
-        tar_file_name = "%s_%s_image.tar" % (weekday, label_name)
-        dest_dir = os.path.join (data_dir, weekday)
-        if not os.path.exists(dest_dir):
-          os.makedirs(dest_dir)
-        cmd="cd %s; tar -cvf %s %s/*; cp %s %s/." % (images_path,tar_file_name,
-                                                     l, tar_file_name,
-                                                     dest_dir)
-        tar_ret = self._ce.RunCommand(cmd)
-        if tar_ret:
-          self._l.LogOutput("Error while creating/copying test tar file (%s)."
-                            % tar_file_name)
+          experiment_image = """
+          %s {
+            chromeos_image: %s
+            image_args: %s
+          }
+          """ % (crosperf_label,
+                 os.path.join(misc.GetImageDir(self._chromeos_root,
+                                               self._board),
+                              label, "chromiumos_test_image.bin"),
+                 image_args)
+          print >>f, experiment_image
+
     crosperf = os.path.join(os.path.dirname(__file__),
                             "crosperf",
                             "crosperf")
@@ -195,12 +232,44 @@ class ToolchainComparator(ChromeOSCheckout):
     ret = self._ce.RunCommand(command)
     if ret:
       raise Exception("Couldn't run crosperf!")
+    return ret
+
+
+  def _CopyWeeklyReportFiles(self, labels):
+    """Create tar files of the custom and official images and copy them
+    to the weekly reports directory, so they exist when the weekly report
+    gets generated.  IMPORTANT NOTE: This function must run *after*
+    crosperf has been run; otherwise the vanilla images will not be there.
+    """
+    images_path = os.path.join(os.path.realpath(self._chromeos_root),
+                               "src/build/images", self._board)
+    weekday = time.strftime("%a")
+    data_dir = os.path.join(WEEKLY_REPORTS_ROOT, self._board)
+    dest_dir = os.path.join (data_dir, weekday)
+    if not os.path.exists(dest_dir):
+      os.makedirs(dest_dir)
+    for l in labels:
+      test_path = os.path.join(images_path, l)
+      if os.path.exists(test_path):
+        if l != "vanilla":
+          label_name = "test"
+        else:
+          label_name = "vanilla"
+        tar_file_name = "%s_%s_image.tar" % (weekday, label_name)
+        cmd = "cd %s; tar -cvf %s %s/*; cp %s %s/." % (images_path,
+                                                       tar_file_name,
+                                                       l, tar_file_name,
+                                                       dest_dir)
+        tar_ret = self._ce.RunCommand(cmd)
+        if tar_ret:
+          self._l.LogOutput("Error while creating/copying test tar file(%s)."
+                            % tar_file_name)
+
 
   def DoAll(self):
     self._CheckoutChromeOS()
     labels = []
-    vanilla_label = self._BuildAndImage("vanilla")
-    labels.append(vanilla_label)
+    labels.append("vanilla")
     for config in self._configs:
       label = misc.GetFilenameFromString(config.gcc_config.githash)
       if (not misc.DoesLabelExist(self._chromeos_root,
@@ -210,7 +279,9 @@ class ToolchainComparator(ChromeOSCheckout):
         label = self._BuildAndImage(label)
       labels.append(label)
     self._FinishSetup()
-    self._TestLabels(labels)
+    if not self._TestLabels(labels):
+      # Only try to copy the image files if the test runs ran successfully.
+      self._CopyWeeklyReportFiles(labels)
     if self._clean:
       ret = self._DeleteChroot()
       if ret: return ret

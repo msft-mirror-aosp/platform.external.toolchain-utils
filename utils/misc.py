@@ -132,15 +132,23 @@ def GetImageDir(chromeos_root, board):
                       board)
 
 
-def LabelLatestImage(chromeos_root, board, label):
+def LabelLatestImage(chromeos_root, board, label, vanilla_path=None):
   image_dir = GetImageDir(chromeos_root, board)
   latest_image_dir = os.path.join(image_dir, "latest")
   latest_image_dir = os.path.realpath(latest_image_dir)
   latest_image_dir = os.path.basename(latest_image_dir)
+  retval = 0
   with WorkingDirectory(image_dir):
     command = "ln -sf -T %s %s" % (latest_image_dir, label)
     ce = command_executer.GetCommandExecuter()
-    return ce.RunCommand(command)
+    retval = ce.RunCommand(command)
+    if retval:
+      return retval
+    if vanilla_path:
+      command = "ln -sf -T %s %s" % (vanilla_path, "vanilla")
+      retval2 = ce.RunCommand(command)
+      return retval2
+  return retval
 
 
 def DoesLabelExist(chromeos_root, board, label):
