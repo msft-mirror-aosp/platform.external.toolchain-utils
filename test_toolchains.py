@@ -248,6 +248,10 @@ class ToolchainComparator(ChromeOSCheckout):
     dest_dir = os.path.join (data_dir, weekday)
     if not os.path.exists(dest_dir):
       os.makedirs(dest_dir)
+    # Make sure dest_dir is empty (clean out last week's data).
+    cmd = "cd %s; rm -Rf %s_*_image*" % (dest_dir, weekday)
+    self._ce.RunCommand(cmd)
+    # Now create new tar files and copy them over.
     for l in labels:
       test_path = os.path.join(images_path, l)
       if os.path.exists(test_path):

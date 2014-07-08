@@ -2,15 +2,16 @@
 #
 # Copyright Google Inc. 2014
 
-import sys
-import time
+import datetime
 import optparse
 import os
+import sys
+import time
 
 from utils import constants
 from utils import command_executer
 
-WEEKDAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 DATA_ROOT_DIR = os.path.join(constants.CROSTC_WORKSPACE,
                              'weekly_test_data')
@@ -134,13 +135,28 @@ def Main(argv):
 
     cmd_executer = command_executer.GetCommandExecuter(log_level="average")
 
+    # Find starting index, for cycling through days of week, generating
+    # reports starting 6 days ago from today. Generate list of indices for
+    # order in which to look at weekdays for report:
+    todays_index = datetime.datetime.today().isoweekday()
+    indices = []
+    start = todays_index + 1
+    end = start + 7
+    for i in range(start,end):
+      indices.append(i % 7)
+    # E.g. if today is Sunday, then start report with last Monday, so
+    # indices = [1, 2, 3, 4, 5, 6, 0].
+
+
+
     # Find all the test image tar files, untar them and add them to
     # the list. Also find and untar vanilla image tar files, and keep
     # track of the first vanilla image.
     report_image_paths = []
     vanilla_image_paths = []
     first_vanilla_image = None
-    for day in WEEKDAYS:
+    for i in indices:
+        day = WEEKDAYS[i]
         data_path = os.path.join(DATA_ROOT_DIR, options.board, day)
         if os.path.exists(data_path):
             # First, untar the test image.
