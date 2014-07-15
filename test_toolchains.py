@@ -13,6 +13,7 @@ from utils import logger
 
 
 WEEKLY_REPORTS_ROOT="/usr/local/google/crostc/weekly_test_data"
+AFDO_BOARDS = ["butterfly", "lumpy", "stumpy", "stout", "parrot", "parrot_ivb"]
 
 class GCCConfig(object):
   def __init__(self, githash):
@@ -75,6 +76,9 @@ class ChromeOSCheckout(object):
                              "--rebuild"]
       if self._public:
         build_chromeos_args.append("--env=USE=-chrome_internal")
+
+      if self._board in AFDO_BOARDS:
+        build_chromeos_args.append("--env=USE=afdo_use")
 
       ret = build_chromeos.Main(build_chromeos_args)
       if ret:
