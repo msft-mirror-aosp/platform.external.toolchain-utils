@@ -21,8 +21,7 @@ from utils import misc
 
 from image_checksummer import ImageChecksummer
 
-SCRATCH_BASE = "/home/%s/cros_scratch"
-SCRATCH_DIR = SCRATCH_BASE % getpass.getuser()
+SCRATCH_DIR = os.path.expanduser("~/cros_scratch")
 RESULTS_FILE = "results.txt"
 MACHINE_FILE = "machine.txt"
 AUTOTEST_TARBALL = "autotest.tbz2"
@@ -471,7 +470,7 @@ class ResultsCache(object):
 
   def Init(self, chromeos_image, chromeos_root, test_name, iteration,
            test_args, profiler_args, machine_manager, board, cache_conditions,
-           logger_to_use, log_level, label, share_users, suite,
+           logger_to_use, log_level, label, share_cache, suite,
            show_all_results):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
@@ -486,7 +485,7 @@ class ResultsCache(object):
     self._ce = command_executer.GetCommandExecuter(self._logger,
                                                    log_level=log_level)
     self.label = label
-    self.share_users = share_users
+    self.share_cache = share_cache
     self.suite = suite
     self.log_level = log_level
     self.show_all = show_all_results
@@ -514,10 +513,12 @@ class ResultsCache(object):
     else:
       cache_path = [os.path.join(SCRATCH_DIR, cache_dir)]
 
-    if len(self.share_users):
-      for i in [x.strip() for x in self.share_users.split(",")]:
-        path = SCRATCH_BASE % i
-        cache_path.append(os.path.join(path, cache_dir))
+    if len(self.share_cache):
+      for path in [x.strip() for x in self.share_cache.split(",")]:
+        if os.path.exists(path):
+          cache_path.append(os.path.join(path, cache_dir))
+        else:
+          self._logger.LogFatal("Unable to find shared cache: %s" % path)
 
     return cache_path
 

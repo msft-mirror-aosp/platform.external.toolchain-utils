@@ -64,7 +64,7 @@ class GlobalSettingsTest(unittest.TestCase):
     self.assertEqual(res.GetField('cache_only'), False)
     self.assertEqual(res.GetField('no_email'), False)
     self.assertEqual(res.GetField('show_all_results'), False)
-    self.assertEqual(res.GetField('share_users'), '')
+    self.assertEqual(res.GetField('share_cache'), '')
     self.assertEqual(res.GetField('results_dir'), '')
     self.assertEqual(res.GetField('chrome_src'), '')
 

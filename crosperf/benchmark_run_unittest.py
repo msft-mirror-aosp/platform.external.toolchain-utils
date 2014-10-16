@@ -85,7 +85,7 @@ class BenchmarkRunTest(unittest.TestCase):
     # since the last time this test was updated:
     args_list = ['self', 'name', 'benchmark', 'label', 'iteration',
                  'cache_conditions', 'machine_manager', 'logger_to_use',
-                 'log_level', 'share_users']
+                 'log_level', 'share_cache']
     arg_spec = inspect.getargspec(benchmark_run.BenchmarkRun.__init__)
     self.assertEqual(len(arg_spec.args), len(args_list))
     self.assertEqual (arg_spec.args, args_list)

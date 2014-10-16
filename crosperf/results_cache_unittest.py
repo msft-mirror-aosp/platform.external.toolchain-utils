@@ -792,7 +792,7 @@ class ResultsCacheTest(unittest.TestCase):
                             self.mock_logger,
                             'average',
                             self.mock_label,
-                            '',         # benchmark_run.share_users
+                            '',         # benchmark_run.share_cache
                             'telemetry_Crosperf',
                             True)       # benchmark_run.show_all_results
 

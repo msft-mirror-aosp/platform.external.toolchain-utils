@@ -127,9 +127,10 @@ class GlobalSettings(Settings):
                                description="When running Telemetry tests, "
                                "whether to all the results, instead of just "
                                "the default (summary) results."))
-    self.AddField(TextField("share_users", default="",
-                            description="Who's cache data you want to "
-                            "use. It accepts multiple users seperated by \",\""))
+    self.AddField(TextField("share_cache", default="",
+                            description="Path to alternat cache whose data "
+                            "you want to use. It accepts multiples directories"
+                            " se[arated bu a \",\""))
     self.AddField(TextField("results_dir", default="",
                             description="The results dir"))
     self.AddField(TextField("chrome_src",

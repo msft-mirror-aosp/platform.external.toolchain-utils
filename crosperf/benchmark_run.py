@@ -37,7 +37,7 @@ class BenchmarkRun(threading.Thread):
                machine_manager,
                logger_to_use,
                log_level,
-               share_users):
+               share_cache):
     threading.Thread.__init__(self)
     self.name = name
     self._logger = logger_to_use
@@ -62,7 +62,7 @@ class BenchmarkRun(threading.Thread):
                                                    log_level=self.log_level)
     self.timeline = timeline.Timeline()
     self.timeline.Record(STATUS_PENDING)
-    self.share_users = share_users
+    self.share_cache = share_cache
 
   def ReadCache(self):
     # Just use the first machine for running the cached version,
@@ -80,7 +80,7 @@ class BenchmarkRun(threading.Thread):
                     self._logger,
                     self.log_level,
                     self.label,
-                    self.share_users,
+                    self.share_cache,
                     self.benchmark.suite,
                     self.benchmark.show_all_results
                    )
@@ -245,7 +245,7 @@ class MockBenchmarkRun(BenchmarkRun):
                     self._logger,
                     self.log_level,
                     self.label,
-                    self.share_users,
+                    self.share_cache,
                     self.benchmark.suite,
                     self.benchmark.show_all_results
                    )

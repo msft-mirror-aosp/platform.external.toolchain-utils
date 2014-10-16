@@ -106,7 +106,7 @@ class ExperimentFactory(object):
     cache_dir = global_settings.GetField("cache_dir")
     cache_only = global_settings.GetField("cache_only")
     config.AddConfig("no_email", global_settings.GetField("no_email"))
-    share_users = global_settings.GetField("share_users")
+    share_cache = global_settings.GetField("share_cache")
     results_dir = global_settings.GetField("results_dir")
     chrome_src = global_settings.GetField("chrome_src")
     show_all_results = global_settings.GetField("show_all_results")
@@ -213,7 +213,7 @@ class ExperimentFactory(object):
                             cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(),
                             email, acquire_timeout, log_dir, log_level,
-                            share_users,
+                            share_cache,
                             results_dir)
 
     return experiment
