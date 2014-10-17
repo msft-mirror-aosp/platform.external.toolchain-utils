@@ -88,7 +88,9 @@ class Result(object):
           lines = data_file.readlines()
           for line in lines:
             tmp_dict = json.loads(line)
-            key = tmp_dict["graph"] + "__" + tmp_dict["description"]
+            graph_name = tmp_dict["graph"]
+            graph_str = (graph_name + "__") if graph_name else ""
+            key = graph_str + tmp_dict["description"]
             keyvals_dict[key] = tmp_dict["value"]
             units_dict[key] = tmp_dict["units"]
 
