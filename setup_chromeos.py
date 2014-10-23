@@ -218,11 +218,9 @@ Use in combination with --version=latest or --version=common. Use
     return ret
 
   return cmd_executer.RunCommand(
-      "svn ls "
-      "svn://svn.chromium.org/leapfrog-internal "
-      "svn://svn.chromium.org/chrome "
-      "svn://svn.chromium.org/chrome-internal "
-      "svn://svn.chromium.org/blink > /dev/null")
+      "git ls-remote "
+      "https://chrome-internal.googlesource.com/chrome/src-internal.git "
+      "> /dev/null")
 
 
 if __name__ == "__main__":
