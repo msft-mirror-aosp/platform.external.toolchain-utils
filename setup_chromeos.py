@@ -1,6 +1,8 @@
 #!/usr/bin/python
 #
-# Copyright 2010 Google Inc. All Rights Reserved.
+# Copyright 2010 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
 """Script to checkout the ChromeOS source.
 
@@ -114,7 +116,7 @@ Use in combination with --version=latest or --version=common. Use
                     action="store_true",
                     help="""Whether to checkout the minilayout
 (smaller checkout).'""")
-  parser.add_option("--jobs", "-j", dest="jobs", default="1",
+  parser.add_option("--jobs", "-j", dest="jobs",
                     help="Number of repo sync threads to use.")
   parser.add_option("--public", "-p", dest="public", default=False,
                     action="store_true",
@@ -206,12 +208,16 @@ Use in combination with --version=latest or --version=common. Use
 
   init += " --repo-url=https://chromium.googlesource.com/external/repo.git"
 
+  # crosbug#31837 - "Sources need to be world-readable to properly
+  # function inside the chroot"
+  sync = "umask 022 && repo sync"
+  if options.jobs:
+    sync += " -j %s" % options.jobs
+
   commands = ["mkdir -p %s" % directory,
               "cd %s" % directory,
               init,
-              # crosbug#31837 - "Sources need to be world-readable to properly
-              # function inside the chroot"
-              "umask 022 && repo sync -j %s" % options.jobs]
+              sync]
   cmd_executer = command_executer.GetCommandExecuter()
   ret = cmd_executer.RunCommands(commands)
   if ret:
