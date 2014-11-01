@@ -1,6 +1,8 @@
 #!/usr/bin/python
 #
-# Copyright 2010 Google Inc. All Rights Reserved.
+# Copyright 2010 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
 """Script to build the ChromeOS toolchain.
 
@@ -50,7 +52,8 @@ class ToolchainPart(object):
         "chroot",
         "usr/local/bin/emerge-%s" % self._board)
     if not os.path.exists(cross_symlink):
-      command = "./setup_board --board=%s" % self._board
+      command = ("%s/setup_board --board=%s" %
+                 (misc.CHROMEOS_SCRIPTS_DIR, self._board))
       self._ce.ChrootRunCommand(self._chromeos_root, command)
 
   def Build(self):

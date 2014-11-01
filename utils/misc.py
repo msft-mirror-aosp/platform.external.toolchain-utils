@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright 2013 Google Inc. All Rights Reserved.
+# Copyright 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -20,6 +20,10 @@ import lock_machine
 
 import command_executer
 import logger
+
+
+CHROMEOS_SCRIPTS_DIR = "~/trunk/src/scripts"
+TOOLCHAIN_UTILS_PATH = "~/trunk/src/platform/dev/toolchain_utils.sh"
 
 
 def GetChromeOSVersionFromLSBVersion(lsb_version):
@@ -166,17 +170,18 @@ def GetBuildPackagesCommand(board, usepkg=False, debug=False):
     withdebug_flag = "--withdebug"
   else:
     withdebug_flag = "--nowithdebug"
-  return ("./build_packages %s --withdev --withtest --withautotest "
+  return ("%s/build_packages %s --withdev --withtest --withautotest "
           "--skip_toolchain_update %s --board=%s "
           "--accept_licenses=@CHROMEOS" %
-          (usepkg_flag, withdebug_flag, board))
+          (CHROMEOS_SCRIPTS_DIR, usepkg_flag, withdebug_flag, board))
 
 
 def GetBuildImageCommand(board, dev=False):
   dev_args = ""
   if dev:
     dev_args = "--noenable_rootfs_verification --disk_layout=2gb-rootfs"
-  return "./build_image --board=%s %s test" % (board, dev_args)
+  return ("%s/build_image --board=%s %s test" %
+          (CHROMEOS_SCRIPTS_DIR, board, dev_args))
 
 
 def GetSetupBoardCommand(board, gcc_version=None, binutils_version=None,
@@ -200,7 +205,8 @@ def GetSetupBoardCommand(board, gcc_version=None, binutils_version=None,
 
   options.append("--accept_licenses=@CHROMEOS")
 
-  return "./setup_board --board=%s %s" % (board, " ".join(options))
+  return ("%s/setup_board --board=%s %s" %
+          (CHROMEOS_SCRIPTS_DIR, board, " ".join(options)))
 
 
 def CanonicalizePath(path):
@@ -212,9 +218,8 @@ def CanonicalizePath(path):
 def GetCtargetFromBoard(board, chromeos_root):
   """Get Ctarget from board."""
   base_board = board.split("_")[0]
-  command = ("source "
-             "../platform/dev/toolchain_utils.sh; get_ctarget_from_board %s" %
-             base_board)
+  command = ("source %s; get_ctarget_from_board %s" %
+             (TOOLCHAIN_UTILS_PATH, base_board))
   ce = command_executer.GetCommandExecuter()
   ret, out, _ = ce.ChrootRunCommand(chromeos_root,
                                     command,

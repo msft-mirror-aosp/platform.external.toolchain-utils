@@ -1,7 +1,8 @@
 #!/usr/bin/python
 #
-# Copyright 2011 Google Inc. All Rights Reserved.
-#
+# Copyright 2011 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
 import getpass
 import os
@@ -243,12 +244,18 @@ class CommandExecuter:
                                           prefix="in_chroot_cmd")
     os.write(handle, "#!/bin/bash\n")
     os.write(handle, command)
+    os.write(handle, "\n")
     os.close(handle)
 
     os.chmod(command_file, 0777)
 
-    command = "cd %s; cros_sdk %s -- ./%s" % (chromeos_root, cros_sdk_options,
-                                              os.path.basename(command_file))
+    # Run command_file inside the chroot, making sure that any "~" is expanded
+    # by the shell inside the chroot, not outside.
+    command = ("cd %s; cros_sdk %s -- bash -c '%s/%s'" %
+               (chromeos_root,
+                cros_sdk_options,
+                misc.CHROMEOS_SCRIPTS_DIR,
+                os.path.basename(command_file)))
     ret = self.RunCommand(command, return_output,
                           command_terminator=command_terminator,
                           command_timeout=command_timeout,
