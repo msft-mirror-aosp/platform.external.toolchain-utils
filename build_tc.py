@@ -32,6 +32,8 @@ class ToolchainPart(object):
     self._board = board
     self._ctarget = misc.GetCtargetFromBoard(self._board,
                                               self._chromeos_root)
+    self._gcc_libs_dest = misc.GetGccLibsDestForBoard(self._board,
+                                                       self._chromeos_root)
     self.tag = "%s-%s" % (name, self._ctarget)
     self._ce = command_executer.GetCommandExecuter()
     self._mask_file = os.path.join(
@@ -158,8 +160,8 @@ class ToolchainPart(object):
     if rv != 0:
       return rv
     if self._name == "gcc":
-      command = ("sudo cp -r /usr/lib/gcc/%s /build/%s/usr/lib/gcc/." %
-                 (self._ctarget, self._board))
+      command = ("sudo cp -r /usr/lib/gcc/%s %s" %
+                 (self._ctarget, self._gcc_libs_dest))
       rv = self._ce.ChrootRunCommand(self._chromeos_root, command)
     return rv
 

@@ -231,6 +231,34 @@ def GetCtargetFromBoard(board, chromeos_root):
   return out.strip()
 
 
+def GetArchFromBoard(board, chromeos_root):
+  """Get Arch from board."""
+  base_board = board.split("_")[0]
+  command = ("source %s; get_board_arch %s" %
+             (TOOLCHAIN_UTILS_PATH, base_board))
+  ce = command_executer.GetCommandExecuter()
+  ret, out, _ = ce.ChrootRunCommand(chromeos_root,
+                                    command,
+                                    return_output=True)
+  if ret != 0:
+    raise ValueError("Board %s is invalid!" % board)
+  # Remove ANSI escape sequences.
+  out = StripANSIEscapeSequences(out)
+  return out.strip()
+
+
+def GetGccLibsDestForBoard(board, chromeos_root):
+  """Get gcc libs destination from board."""
+  arch = GetArchFromBoard(board, chromeos_root)
+  if arch == "x86":
+    return "/build/%s/usr/lib/gcc/" % board
+  if arch == "amd64":
+    return "/build/%s/usr/lib64/gcc/" % board
+  if arch == "arm":
+    return "/build/%s/usr/lib/gcc/" % board
+  raise ValueError("Arch %s is invalid!" % arch)
+
+
 def StripANSIEscapeSequences(string):
   string = re.sub(r"\x1b\[[0-9]*[a-zA-Z]", "", string)
   return string
