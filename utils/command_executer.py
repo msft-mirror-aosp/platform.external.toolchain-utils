@@ -249,6 +249,15 @@ class CommandExecuter:
 
     os.chmod(command_file, 0777)
 
+    # if return_output is set, run a dummy command first to make sure that
+    # the chroot already exists. We want the final returned output to skip
+    # the output from chroot creation steps.
+    if return_output:
+      ret = self.RunCommand("cd %s; cros_sdk %s -- true" %
+                            (chromeos_root, cros_sdk_options))
+      if ret:
+        return (ret, "", "")
+
     # Run command_file inside the chroot, making sure that any "~" is expanded
     # by the shell inside the chroot, not outside.
     command = ("cd %s; cros_sdk %s -- bash -c '%s/%s'" %
