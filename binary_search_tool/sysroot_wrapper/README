@@ -1,0 +1,16 @@
+This is a set of scripts to use when triaging compiler problem by using
+the bisecting functionality included in the sysroot_wrapper.hardened.
+The only script that you need to create for your triaging problem is the
+test_script.sh (The ones in this directory are here only as an example).
+
+To run the binary searcher tool with these scripts, execute it like this:
+
+./binary_search_state.py --get_initial_items=./sysroot_wrapper/get_initial_items.sh --switch_to_good=./sysroot_wrapper/switch_to_good.sh --switch_to_bad=./sysroot_wrapper/switch_to_bad.sh --test_script=./sysroot_wrapper/test_script.sh --noincremental --file_args 2>&1 | tee /tmp/binary_search.log
+
+For more information on how to use the sysroot_wrapper to do object file
+triaging see:
+
+https://sites.google.com/a/google.com/chromeos-toolchain-team-home2/home/team-tools-and-scripts/bisecting-compiler-problems
+
+
+
