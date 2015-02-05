@@ -179,6 +179,8 @@ class ExperimentFactory(object):
       my_remote = new_remote
       if image == "":
         build = label_settings.GetField("build")
+        if len(build) == 0:
+            raise Exception("Can not have empty 'build' field!")
         image = label_settings.GetXbuddyPath (build, board, chromeos_root,
                                               log_level)
 
