@@ -198,6 +198,12 @@ class ToolchainComparator():
 
     print ("trybot_image: %s" % trybot_image)
     print ("vanilla_image: %s" % vanilla_image)
+    if len(trybot_image) == 0:
+        self._l.LogError("Unable to find trybot_image for %s!" % description)
+        return 1
+    if len(vanilla_image) == 0:
+        self._l.LogError("Unable to find vanilla image for %s!" % description)
+        return 1
     if os.getlogin() == ROLE_ACCOUNT:
       self._FinishSetup()
 

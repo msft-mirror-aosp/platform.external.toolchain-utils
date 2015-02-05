@@ -160,6 +160,7 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag):
     os.chdir(base_dir)
 
     build_id = 0
+    build_status = None
     # Wait for  buildbot to finish running (check every 10 minutes)
     done = False
     running_time = 0
@@ -177,6 +178,7 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag):
 
       if "True" in data_dict["completed"]:
         build_id = data_dict["number"]
+        build_status = data_dict["result"]
       else:
         done = False
 
@@ -189,11 +191,18 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag):
         if running_time > TIME_OUT:
             done = True
 
-    trybot_image = ""
-    # Buildbot has finished. Look for the log and the trybot image.
-    if build_id:
-      log_name = GetBuildData(build, build_id)
-      if log_name:
-        trybot_image = ParseReportLog(log_name, build)
+    if done and build_status != 0:
+        logger.GetLogger().LogError("Trybot job %s failed with status %s."
+                                    % (description, repr(build_status)))
+        return ""
+    else:
+        trybot_image = ""
+        # Buildbot has finished. Look for the log and the trybot image.
+        if build_id:
+            log_name = GetBuildData(build, build_id)
+            if log_name:
+                trybot_image = ParseReportLog(log_name, build)
 
-    return trybot_image
+        print "trybot_image is '%s'" % trybot_image
+        print "build_status is %s" % repr(build_status)
+        return trybot_image
