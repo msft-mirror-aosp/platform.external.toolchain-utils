@@ -17,7 +17,7 @@ import misc
 
 mock_default = False
 
-LOG_LEVEL=("quiet", "average", "verbose")
+LOG_LEVEL=("none", "quiet", "average", "verbose")
 
 def InitCommandExecuter(mock=False):
   global mock_default
@@ -36,10 +36,13 @@ def GetCommandExecuter(logger_to_set=None, mock=False, log_level="verbose"):
 class CommandExecuter:
   def __init__(self, log_level, logger_to_set=None):
     self.log_level = log_level
-    if logger_to_set is not None:
-      self.logger = logger_to_set
+    if log_level == "none":
+      self.logger = None
     else:
-      self.logger = logger.GetLogger()
+      if logger_to_set is not None:
+        self.logger = logger_to_set
+      else:
+        self.logger = logger.GetLogger()
 
   def GetLogLevel(self):
     return self.log_level
@@ -61,10 +64,11 @@ class CommandExecuter:
 
     if self.log_level == "verbose":
       self.logger.LogCmd(cmd, machine, username, print_to_console)
-    else:
+    elif self.logger:
       self.logger.LogCmdToFileOnly(cmd, machine, username)
     if command_terminator and command_terminator.IsTerminated():
-      self.logger.LogError("Command was terminated!", print_to_console)
+      if self.logger:
+        self.logger.LogError("Command was terminated!", print_to_console)
       if return_output:
         return [1, "", ""]
       else:
@@ -99,7 +103,8 @@ class CommandExecuter:
         self.RunCommand("sudo kill -9 " + str(p.pid),
                         print_to_console=print_to_console)
         wait = p.wait()
-        self.logger.LogError("Command was terminated!", print_to_console)
+        if self.logger:
+          self.logger.LogError("Command was terminated!", print_to_console)
         if return_output:
           return (p.wait, full_stdout, full_stderr)
         else:
@@ -111,7 +116,8 @@ class CommandExecuter:
           out = os.read(p.stdout.fileno(), 16384)
           if return_output:
             full_stdout += out
-          self.logger.LogCommandOutput(out, print_to_console)
+          if self.logger:
+            self.logger.LogCommandOutput(out, print_to_console)
           if out == "":
             pipes.remove(p.stdout)
             my_poll.unregister(p.stdout)
@@ -119,7 +125,8 @@ class CommandExecuter:
           err = os.read(p.stderr.fileno(), 16384)
           if return_output:
             full_stderr += err
-          self.logger.LogCommandError(err, print_to_console)
+          if self.logger:
+            self.logger.LogCommandError(err, print_to_console)
           if err == "":
             pipes.remove(p.stderr)
             my_poll.unregister(p.stderr)
@@ -131,14 +138,16 @@ class CommandExecuter:
               time.time() - terminated_time > terminated_timeout):
           m = ("Timeout of %s seconds reached since process termination."
                % terminated_timeout)
-          self.logger.LogWarning(m, print_to_console)
+          if self.logger:
+            self.logger.LogWarning(m, print_to_console)
           break
 
       if (command_timeout is not None and
           time.time() - started_time > command_timeout):
         m = ("Timeout of %s seconds reached since process started."
              % command_timeout)
-        self.logger.LogWarning(m, print_to_console)
+        if self.logger:
+          self.logger.LogWarning(m, print_to_console)
         self.RunCommand("kill %d || sudo kill %d || sudo kill -9 %d" %
                         (p.pid, p.pid, p.pid),
                         print_to_console=print_to_console)
@@ -176,7 +185,10 @@ class CommandExecuter:
     command += "\nlearn_board"
     command += "\necho ${FLAGS_board}"
     retval, output, err = self.RunCommand(command, True)
-    self.logger.LogFatalIf(retval, "learn_board command failed")
+    if self.logger:
+      self.logger.LogFatalIf(retval, "learn_board command failed")
+    else if retval:
+      sys.exit(1)
     return output.split()[-1]
 
   def CrosRunCommand(self, cmd, return_output=False, machine=None,
@@ -189,9 +201,13 @@ class CommandExecuter:
     if self.log_level != "verbose":
       print_to_console=False
 
-    self.logger.LogCmd(cmd, print_to_console=print_to_console)
-    self.logger.LogFatalIf(not machine, "No machine provided!")
-    self.logger.LogFatalIf(not chromeos_root, "chromeos_root not given!")
+    if self.logger:
+      self.logger.LogCmd(cmd, print_to_console=print_to_console)
+      self.logger.LogFatalIf(not machine, "No machine provided!")
+      self.logger.LogFatalIf(not chromeos_root, "chromeos_root not given!")
+    else:
+      if not chromeos_root or not machine:
+        sys.exit(1)
     chromeos_root = os.path.expanduser(chromeos_root)
 
     # Write all commands to a file.
@@ -204,8 +220,9 @@ class CommandExecuter:
                             recursive=False,
                             print_to_console=print_to_console)
     if retval:
-      self.logger.LogError("Could not run remote command on machine."
-                           " Is the machine up?")
+      if self.logger:
+        self.logger.LogError("Could not run remote command on machine."
+                            " Is the machine up?")
       return retval
 
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
@@ -236,7 +253,8 @@ class CommandExecuter:
     if self.log_level != "verbose":
       print_to_console = False
 
-    self.logger.LogCmd(command, print_to_console=print_to_console)
+    if self.logger:
+      self.logger.LogCmd(command, print_to_console=print_to_console)
 
     handle, command_file = tempfile.mkstemp(dir=os.path.join(chromeos_root,
                                                            "src/scripts"),
@@ -293,9 +311,12 @@ class CommandExecuter:
       dest = dest + "/"
 
     if src_cros == True or dest_cros == True:
-      self.logger.LogFatalIf(not (src_cros ^ dest_cros), "Only one of src_cros "
-                             "and desc_cros can be non-null.")
-      self.logger.LogFatalIf(not chromeos_root, "chromeos_root not given!")
+      if self.logger:
+        self.logger.LogFatalIf(not (src_cros ^ dest_cros), "Only one of src_cros "
+                              "and desc_cros can be non-null.")
+        self.logger.LogFatalIf(not chromeos_root, "chromeos_root not given!")
+      else if (not (src_cros ^ dest_cros)) or (not chromeos_root):
+        sys.exit(1)
       if src_cros == True:
         cros_machine = src_machine
       else:

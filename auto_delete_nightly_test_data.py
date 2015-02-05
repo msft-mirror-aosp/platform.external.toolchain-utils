@@ -20,7 +20,7 @@ def CleanNumberedDir(s, dry_run=False):
   """Deleted directories under each dated_dir."""
   chromeos_dirs = [os.path.join(s, x) for x in os.listdir(s)
                    if misc.IsChromeOsTree(os.path.join(s, x))]
-  ce = command_executer.GetCommandExecuter()
+  ce = command_executer.GetCommandExecuter(log_level="none")
   all_succeeded = True
   for cd in chromeos_dirs:
     if misc.DeleteChromeOsTree(cd, dry_run=dry_run):
@@ -76,9 +76,9 @@ def ProcessArguments(argv):
                     default=False, action='store_true',
                     help='Only print command line, do not execute anything.')
   parser.add_option('--days_to_perserve', dest='days_to_preserve', default=3,
-                    help=('Specify the number of days, test data generated '
-                          'on these days will *NOT* be deleted. '
-                          'Defaults to 3.'))
+                    help=('Specify the number of days (not including today), '
+                          'test data generated on these days will *NOT* be '
+                          'deleted. Defaults to 3.'))
   options, _ = parser.parse_args(argv)
   return options
 
