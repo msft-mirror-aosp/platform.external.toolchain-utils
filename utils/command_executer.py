@@ -187,7 +187,7 @@ class CommandExecuter:
     retval, output, err = self.RunCommand(command, True)
     if self.logger:
       self.logger.LogFatalIf(retval, "learn_board command failed")
-    else if retval:
+    elif retval:
       sys.exit(1)
     return output.split()[-1]
 
@@ -315,7 +315,7 @@ class CommandExecuter:
         self.logger.LogFatalIf(not (src_cros ^ dest_cros), "Only one of src_cros "
                               "and desc_cros can be non-null.")
         self.logger.LogFatalIf(not chromeos_root, "chromeos_root not given!")
-      else if (not (src_cros ^ dest_cros)) or (not chromeos_root):
+      elif (not (src_cros ^ dest_cros)) or (not chromeos_root):
         sys.exit(1)
       if src_cros == True:
         cros_machine = src_machine
