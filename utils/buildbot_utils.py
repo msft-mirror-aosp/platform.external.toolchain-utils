@@ -36,14 +36,13 @@ def ParseReportLog (url, build):
     data = webpage.read()
     lines = data.split('\n')
     for l in lines:
-      if l.find("Artifacts") and l.find("trybot"):
+      if l.find("Artifacts") > 0 and l.find("trybot") > 0:
         trybot_name = "trybot-%s" % build
         start_pos = l.find(trybot_name)
         end_pos = l.find("@https://storage")
         trybot_image = l[start_pos:end_pos]
 
     return trybot_image
-
 
 def GetBuildData (buildbot_queue, build_id):
     """
@@ -118,6 +117,27 @@ def GetBuildInfo(file_dir):
     return build_log
 
 
+def FindArchiveImage(chromeos_root, build, build_id):
+    """
+    Given a build_id, search Google Storage for a trybot artifact
+    for the correct board with the correct build_id.  Return the
+    name of the artifact, if found.
+    """
+    ce = command_executer.GetCommandExecuter()
+    command = ("gsutil ls gs://chromeos-image-archive/trybot-%s/*b%s"
+               "/chromiumos_test_image.tar.xz" % (build, build_id))
+    retval, out, err = ce.ChrootRunCommand(chromeos_root, command, return_output=True,
+                                           print_to_console=False)
+
+    trybot_image = ""
+    trybot_name = "trybot-%s" % build
+    if out and out.find(trybot_name) > 0:
+        start_pos = out.find(trybot_name)
+        end_pos = out.find("/chromiumos_test_image")
+        trybot_image = out[start_pos:end_pos]
+
+    return trybot_image
+
 def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag):
     """
     Launch buildbot and get resulting trybot artifact name.
@@ -155,7 +175,7 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag):
     description = build_tag
     command = ("./cbuildbot --remote --nochromesdk --notests %s %s"
                " --remote-description=%s"
-               " --chrome_rev=tot" % (patch_arg, build, description))
+               % (patch_arg, build, description))
     ce.RunCommand(command)
     os.chdir(base_dir)
 
@@ -178,7 +198,7 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag):
 
       if "True" in data_dict["completed"]:
         build_id = data_dict["number"]
-        build_status = data_dict["result"]
+        build_status = int(data_dict["result"])
       else:
         done = False
 
@@ -191,18 +211,12 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag):
         if running_time > TIME_OUT:
             done = True
 
-    if done and build_status != 0:
-        logger.GetLogger().LogError("Trybot job %s failed with status %s."
-                                    % (description, repr(build_status)))
-        return ""
-    else:
-        trybot_image = ""
-        # Buildbot has finished. Look for the log and the trybot image.
-        if build_id:
-            log_name = GetBuildData(build, build_id)
-            if log_name:
-                trybot_image = ParseReportLog(log_name, build)
+    trybot_image = FindArchiveImage(chromeos_root, build, build_id)
+    if not trybot_image:
+        logger.GetLogger().LogError("Trybot job %s failed with status %d;"
+                                    " no trybot image generated."
+                                    % (description, build_status))
 
-        print "trybot_image is '%s'" % trybot_image
-        print "build_status is %s" % repr(build_status)
-        return trybot_image
+    logger.GetLogger().LogOutput("trybot_image is '%s'" % trybot_image)
+    logger.GetLogger().LogOutput( "build_status is %d" % build_status)
+    return trybot_image
