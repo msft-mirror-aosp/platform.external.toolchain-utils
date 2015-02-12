@@ -13,11 +13,12 @@ import datetime
 import os
 import optparse
 import sys
+from utils import constants
 from utils import email_sender
 
 
 class SheriffHandler(object):
-  SHERIFF_FILE = "/home/mobiletc-prebuild/sheriffs.txt"
+  SHERIFF_FILE = os.path.join(constants.CROSTC_WORKSPACE, "sheriffs.txt")
   SUBJECT = "You (%s) are the sheriff for the week: %s - %s"
   BODY = "Please see instructions here: https://sites.google.com/a/google.com/chromeos-toolchain-team-home2/home/sheriff-s-corner/sheriff-duties"
 
