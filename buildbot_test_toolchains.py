@@ -10,6 +10,7 @@ well as copying the images into the seven-day reports directory.
 """
 
 # Script to test different toolchains against ChromeOS benchmarks.
+import datetime
 import optparse
 import os
 import sys
@@ -187,8 +188,8 @@ class ToolchainComparator():
     Launch trybot, get image names, create crosperf experiment file, run
     crosperf, and copy images into seven-day report directories.
     """
-
-    description = "master_%s_%s" % (USE_NEXT_GCC_PATCH, self._build)
+    date_str = datetime.date.today()
+    description = "master_%s_%s_%s" % (USE_NEXT_GCC_PATCH, self._build, date_str)
     trybot_image = buildbot_utils.GetTrybotImage(self._chromeos_root,
                                                  self._build,
                                                  [ USE_NEXT_GCC_PATCH ],

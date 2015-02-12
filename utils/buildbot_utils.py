@@ -184,6 +184,7 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag):
     # Wait for  buildbot to finish running (check every 10 minutes)
     done = False
     running_time = 0
+    pending_time = 0
     while not done:
       done = True
       build_info = GetBuildInfo(base_dir)
@@ -193,22 +194,33 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag):
 
       data_dict = FindBuildRecordFromLog(description, build_info)
       if not data_dict:
-        logger.GetLogger().LogFatal("Unable to find build record for trybot %s"
-                                    % description)
+        # Trybot job may be pending.
+        if pending_time > TIME_OUT:
+          logger.GetLogger().LogFatal("Unable to find build record for trybot %s"
+                                      % description)
+        else:
+          logger.GetLogger().LogOutput("Unable to find build record; job may be pending.")
+          logger.GetLogger().LogOutput("Current pending time: {0} minutes.".format(
+                                       pending_time / 60))
+          logger.GetLogger().LogOutput("Sleeping {0} seconds.".format(SLEEP_TIME))
+          time.sleep(SLEEP_TIME)
+          pending_time += SLEEP_TIME
+          done = False
 
-      if "True" in data_dict["completed"]:
-        build_id = data_dict["number"]
-        build_status = int(data_dict["result"])
       else:
-        done = False
+        if "True" in data_dict["completed"]:
+          build_id = data_dict["number"]
+          build_status = int(data_dict["result"])
+        else:
+          done = False
 
-      if not done:
-        logger.GetLogger().LogOutput("{0} minutes passed.".format(
-          running_time / 60))
-        logger.GetLogger().LogOutput("Sleeping {0} seconds.".format(SLEEP_TIME))
-        time.sleep(SLEEP_TIME)
-        running_time += SLEEP_TIME
-        if running_time > TIME_OUT:
+        if not done:
+          logger.GetLogger().LogOutput("{0} minutes passed.".format(
+            running_time / 60))
+          logger.GetLogger().LogOutput("Sleeping {0} seconds.".format(SLEEP_TIME))
+          time.sleep(SLEEP_TIME)
+          running_time += SLEEP_TIME
+          if running_time > TIME_OUT:
             done = True
 
     trybot_image = FindArchiveImage(chromeos_root, build, build_id)
