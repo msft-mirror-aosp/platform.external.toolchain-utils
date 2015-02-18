@@ -166,11 +166,12 @@ class ToolchainComparator():
       else:
         test_path = vanilla_image
       tar_file_name = "%s_%s_image.tar" % (self._weekday, label_name)
-      cmd = "cd %s; tar -cvf %s %s/*; cp %s %s/." % (images_path,
-                                                     tar_file_name,
-                                                     test_path,
-                                                     tar_file_name,
-                                                     dest_dir)
+      cmd = ("cd %s; tar -cvf %s %s/chromiumos_test_image.bin; "
+             "cp %s %s/.") % (images_path,
+                              tar_file_name,
+                              test_path,
+                              tar_file_name,
+                              dest_dir)
       if dry_run:
         print "CMD: %s" % cmd
         tar_ret = 0
@@ -189,7 +190,9 @@ class ToolchainComparator():
     crosperf, and copy images into seven-day report directories.
     """
     date_str = datetime.date.today()
-    description = "master_%s_%s_%s" % (USE_NEXT_GCC_PATCH, self._build, date_str)
+    description = "master_%s_%s_%s" % (USE_NEXT_GCC_PATCH,
+                                       self._build,
+                                       date_str)
     trybot_image = buildbot_utils.GetTrybotImage(self._chromeos_root,
                                                  self._build,
                                                  [ USE_NEXT_GCC_PATCH ],

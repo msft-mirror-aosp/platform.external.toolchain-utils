@@ -264,10 +264,11 @@ class ToolchainComparator(ChromeOSCheckout):
         else:
           label_name = "vanilla"
         tar_file_name = "%s_%s_image.tar" % (weekday, label_name)
-        cmd = "cd %s; tar -cvf %s %s/*; cp %s %s/." % (images_path,
-                                                       tar_file_name,
-                                                       l, tar_file_name,
-                                                       dest_dir)
+        cmd = ("cd %s; tar -cvf %s %s/chromiumos_test_image.bin; "
+               "cp %s %s/.") % (images_path,
+                                tar_file_name,
+                                l, tar_file_name,
+                                dest_dir)
         tar_ret = self._ce.RunCommand(cmd)
         if tar_ret:
           self._l.LogOutput("Error while creating/copying test tar file(%s)."
