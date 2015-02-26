@@ -379,7 +379,11 @@ class MachineManager(object):
       # code and can implement minimal reimaging code more cleanly.
       for m in [machine for machine in self.GetAvailableMachines(label)
                 if not machine.locked]:
-        if time.time() - m.released_time > 20:
+        if time.time() - m.released_time > 15:
+          # The release time gap is too large, so it is probably in the start
+          # stage, we need to reset the released_time.
+          m.released_time = time.time()
+        elif time.time() - m.released_time > 8:
           m.locked = True
           m.test_run = threading.current_thread()
           return m
