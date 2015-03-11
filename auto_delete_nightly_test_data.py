@@ -110,7 +110,7 @@ def CleanChromeOsTmpAndImages():
   cmd = ('find {0}/*-release -type f '
          r'\( -name "chromiumos_test_image.tar"    -amin +60 -o '
          r'   -name "chromiumos_test_image.tar.xz" -amin +60 -o '
-         r'   -name "chromiumos_test_image.bin     -amin +1440" \) '
+         r'   -name "chromiumos_test_image.bin"    -amin +1440 \) '
          r'-exec bash -c "echo rm -f {{}}" \; '
          r'-exec bash -c "rm -f {{}}" \;').format(chromeos_chroot_tmp)
   rv2 = ce.RunCommand(cmd, return_output=False, print_to_console=True)
