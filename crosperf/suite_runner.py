@@ -153,6 +153,10 @@ class SuiteRunner(object):
       self._logger.LogFatal("Cannot find chrome src dir to"
                             " run telemetry: %s" % label.chrome_src)
 
+    # For telemetry runs, we can use the autotest copy from the source
+    # location. No need to have one under /build/<board>.
+    autotest_dir_arg = '--autotest_dir ~/trunk/src/third_party/autotest/files'
+
     profiler_args = GetProfilerArgs (profiler_args)
     fast_arg = ""
     if not profiler_args:
@@ -166,8 +170,10 @@ class SuiteRunner(object):
       if test_args[0] == '"' and test_args[-1] == '"':
         test_args = test_args[1:-1]
       args_string = "test_args='%s'" % test_args
-    cmd = ('{} {} --board={} --args="{} test={} '
+
+    cmd = ('{} {} {} --board={} --args="{} test={} '
            '{}" {} telemetry_Crosperf'.format(TEST_THAT_PATH,
+                                              autotest_dir_arg,
                                               fast_arg,
                                               label.board,
                                               args_string,
