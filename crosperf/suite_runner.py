@@ -154,14 +154,11 @@ class SuiteRunner(object):
                             " run telemetry: %s" % label.chrome_src)
 
     profiler_args = GetProfilerArgs (profiler_args)
-    chrome_root_options = ""
-
-    chrome_root_options = (" --chrome_root={0} --chrome_root_mount={1} "
-                           " FEATURES=\"-usersandbox\" "
-                           "CHROME_ROOT={2}".format(label.chrome_src,
-                                                    CHROME_MOUNT_DIR,
-                                                    CHROME_MOUNT_DIR))
-
+    fast_arg = ""
+    if not profiler_args:
+      # --fast works unless we are doing profiling (autotest limitation).
+      # --fast avoids unnecessary copies of syslogs.
+      fast_arg = "--fast"
     args_string = ""
     if test_args:
       # Strip double quotes off args (so we can wrap them in single
@@ -169,13 +166,21 @@ class SuiteRunner(object):
       if test_args[0] == '"' and test_args[-1] == '"':
         test_args = test_args[1:-1]
       args_string = "test_args='%s'" % test_args
-    cmd = ('{0} --board={1} --args="{2} test={3} '
-           '{4}" {5} telemetry_Crosperf'.format(TEST_THAT_PATH,
-                                                label.board,
-                                                args_string,
-                                                benchmark.test_name,
-                                                profiler_args,
-                                                machine))
+    cmd = ('{} {} --board={} --args="{} test={} '
+           '{}" {} telemetry_Crosperf'.format(TEST_THAT_PATH,
+                                              fast_arg,
+                                              label.board,
+                                              args_string,
+                                              benchmark.test_name,
+                                              profiler_args,
+                                              machine))
+
+    chrome_root_options = ""
+    chrome_root_options = (" --chrome_root={} --chrome_root_mount={} "
+                           " FEATURES=\"-usersandbox\" "
+                           "CHROME_ROOT={}".format(label.chrome_src,
+                                                    CHROME_MOUNT_DIR,
+                                                    CHROME_MOUNT_DIR))
     if self.log_level != "verbose":
       self._logger.LogOutput("Running test.")
       self._logger.LogOutput("CMD: %s" % cmd)
