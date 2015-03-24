@@ -199,29 +199,15 @@ def DoImage(argv):
                            options.remote,
                            chroot_image]
       else:
-
         cros_flash_args = ["--board=%s" % board,
                            "--clobber-stateful",
                            options.remote,
                            image]
 
       command = ("cros flash %s" % " ".join(cros_flash_args))
-    elif local_image:
-      # Use 'cros_image_to_target.py'
-      cros_image_to_target_args = ["--remote=%s" % options.remote,
-                                   "--board=%s" % board,
-                                   "--from=%s" % os.path.dirname(chroot_image),
-                                   "--image-name=%s" %
-                                   os.path.basename(located_image)]
-
-      command = ("./bin/cros_image_to_target.py %s" %
-                 " ".join(cros_image_to_target_args))
-      if options.image_args:
-        command += " %s" % options.image_args
     else:
-      raise Exception("Unable to find 'cros flash' in chroot; cannot use "
-                      "non-local image (%s) with cros_image_to_target.py" %
-                      image)
+      raise Exception(("Unable to find 'cros flash' in chroot;"
+                       "chromeos tree is too old."))
 
     # Workaround for crosbug.com/35684.
     os.chmod(misc.GetChromeOSKeyFile(options.chromeos_root), 0600)
