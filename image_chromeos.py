@@ -36,26 +36,21 @@ def Usage(parser, message):
 def CheckForCrosFlash(chromeos_root, remote, log_level):
   cmd_executer = command_executer.GetCommandExecuter(log_level=log_level)
 
-  chroot_has_cros_flash = False
   remote_has_cherrypy = False
-
-  # Check to see if chroot contains cros flash.
-  cros_flash_path = os.path.join(os.path.realpath(chromeos_root),
-                                 "chromite/cros/commands/cros_flash.py")
-
-  if os.path.exists(cros_flash_path):
-    chroot_has_cros_flash = True
 
   # Check to see if remote machine has cherrypy.
   command = "python -c 'import cherrypy'"
   retval = cmd_executer.CrosRunCommand (command,
                                         chromeos_root=chromeos_root,
                                         machine=remote)
-  logger.GetLogger().LogFatalIf(retval == 255, "Failed ssh to %s" % remote)
+  logger.GetLogger().LogFatalIf(
+      retval == 255, "Failed ssh to %s (for checking cherrypy)" % remote)
   if retval == 0:
     remote_has_cherrypy = True
-
-  return (chroot_has_cros_flash and remote_has_cherrypy)
+  else:
+    logger.GetLogger().LogWarning(("Failed to find cherrypy on remote '{}', "
+                                    "cros flash will fail.").format(remote))
+  return remote_has_cherrypy
 
 def DoImage(argv):
   """Build ChromeOS."""
