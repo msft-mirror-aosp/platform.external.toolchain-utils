@@ -364,6 +364,116 @@ class CommandExecuter:
                            print_to_console=print_to_console)
 
 
+  def RunCommand2(self, cmd, cwd=None, line_consumer=None,
+                  timeout=None, shell=True, join_stderr=True, env=None):
+    """Run the command with an extra feature line_consumer.
+
+    This version allow developers to provide a line_consumer which will be
+    fed execution output lines.
+
+    A line_consumer is a callback, which is given a chance to run for each
+    line the execution outputs (either to stdout or stderr). The
+    line_consumer must accept one and exactly one dict argument, the dict
+    argument has these items -
+      'line'   -  The line output by the binary. Notice, this string includes
+                  the trailing '\n'.
+      'output' -  Whether this is a stdout or stderr output, values are either
+                  'stdout' or 'stderr'. When join_stderr is True, this value
+                  will always be 'output'.
+      'pobject' - The object used to control execution, for example, call
+                  pobject.kill().
+
+    Args:
+      cmd:           Command in a single string.
+      cwd:           Working directory for execution.
+      shell:         Whether to use a shell for execution.
+      join_stderr:   Whether join stderr to stdout stream.
+      env:           Execution environment.
+      line_consumer: A function that will ba called by this function. See above
+                     for details.
+
+    Returns:
+      Execution return code.
+
+    Raises:
+      child_exception: if fails to start the command process (missing
+                       permission, no such file, etc)
+    """
+
+    class StreamHandler(object):
+        """Internal utility class."""
+
+        def __init__(self, pobject, fd, name, line_consumer):
+            self._pobject = pobject
+            self._fd = fd
+            self._name = name
+            self._buf = ''
+            self._line_consumer = line_consumer
+
+        def read_and_notify_line(self):
+            t = os.read(fd, 1024)
+            self._buf = self._buf + t
+            self.notify_line()
+
+        def notify_line(self):
+            p = self._buf.find('\n')
+            while p >= 0:
+                self._line_consumer(line=self._buf[:p+1], output=self._name,
+                                    pobject=self._pobject)
+                if p < len(self._buf) - 1:
+                    self._buf = self._buf[p+1:]
+                    p = self._buf.find('\n')
+                else:
+                    self._buf = ''
+                    p = -1
+                    break
+
+        def notify_eos(self):
+            # Notify end of stream. The last line may not end with a '\n'.
+            if self._buf != '':
+                self._line_consumer(line=self._buf, output=self._name,
+                                    pobject=self._pobject)
+                self._buf = ''
+
+    if self.log_level == "verbose":
+      self.logger.LogCmd(cmd)
+    elif self.logger:
+      self.logger.LogCmdToFileOnly(cmd)
+    pobject = subprocess.Popen(
+        cmd, cwd=cwd, bufsize=1024, env=env, shell=shell,
+        universal_newlines=True, stdin=None, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT if join_stderr else subprocess.PIPE)
+    # We provide a default line_consumer
+    if line_consumer is None:
+        line_consumer = lambda **d: None
+    start_time = time.time()
+    poll = select.poll()
+    outfd = pobject.stdout.fileno()
+    poll.register(outfd, select.POLLIN | select.POLLPRI)
+    handlermap = {outfd: StreamHandler(pobject, outfd, 'stdout', line_consumer)}
+    if not join_stderr:
+        errfd = pobject.stderr.fileno()
+        poll.register(errfd, select.POLLIN | select.POLLPRI)
+        handlermap[errfd] = StreamHandler(
+            pobject, errfd, 'stderr', line_consumer)
+    while len(handlermap):
+        readables = poll.poll(300)
+        for (fd, evt) in readables:
+            handler = handlermap[fd]
+            if evt & (select.POLLPRI | select.POLLIN):
+                handler.read_and_notify_line()
+            elif (evt &
+                  (select.POLLHUP | select.POLLERR | select.POLLNVAL)):
+                handler.notify_eos()
+                poll.unregister(fd)
+                del handlermap[fd]
+
+        if timeout is not None and (time.time() - start_time > timeout):
+            pobject.kill()
+
+    return pobject.wait()
+
+
 class MockCommandExecuter(CommandExecuter):
   def __init__(self, logger_to_set=None):
     if logger is not None:
