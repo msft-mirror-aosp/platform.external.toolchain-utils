@@ -4,7 +4,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""A module to generate experments."""
+"""A module to generate experiments."""
 
 import os
 import re
@@ -36,8 +36,7 @@ telemetry_perfv2_tests = [ 'dromaeo.domcoreattr',
                            'sunspider',
                            ]
 
-telemetry_pagecycler_tests = [ 'page_cycler.indexed_db.basic_insert',
-                               'page_cycler.bloat',
+telemetry_pagecycler_tests = [
                                'page_cycler.dhtml',
                                'page_cycler.intl_ar_fa_he',
                                'page_cycler.intl_es_fr_pt-BR',
@@ -49,22 +48,27 @@ telemetry_pagecycler_tests = [ 'page_cycler.indexed_db.basic_insert',
                                'page_cycler.netsim.top_10',
                                'page_cycler.tough_layout_cases',
                                'page_cycler.typical_25',
+# Following benchmarks are now deprecated in Telemetry:
+#                               'page_cycler.indexed_db.basic_insert',
+#                               'page_cycler.bloat',
                                ]
 
-telemetry_toolchain_perf_tests = [ 'canvasmark',
-                               'jsgamebench',
+telemetry_toolchain_perf_tests = [
                                'dromaeo.domcoremodify',
-                               'page_cycler.bloat',
                                'page_cycler.intl_es_fr_pt-BR',
                                'page_cycler.intl_hi_ru',
                                'page_cycler.intl_ja_zh',
                                'page_cycler.intl_ko_th_vi',
                                'page_cycler.netsim.top_10',
                                'page_cycler.typical_25',
-                               'peacekeeper.html',
                                'robohornet_pro',
                                'spaceport',
                                'tab_switching.top_10',
+# Following benchmarks are now deprecated in Telemetry:
+#                               'canvasmark',
+#                               'jsgamebench',
+#                               'page_cycler.bloat',
+#                               'peacekeeper.html',
                                ]
 
 class ExperimentFactory(object):
