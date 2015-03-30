@@ -84,6 +84,10 @@ def Main(argv):
 
   if options.chromeos_root is None:
     Usage(parser, "--chromeos_root must be set")
+  options.chromeos_root = os.path.expanduser(options.chromeos_root)
+  scripts_dir = os.path.join(options.chromeos_root, 'src', 'scripts')
+  if not os.path.isdir(scripts_dir):
+    Usage(parser, "--chromeos_root must be set up first. Use setup_chromeos.py")
 
   if options.board is None:
     Usage(parser, "--board must be set")
@@ -104,10 +108,11 @@ def Main(argv):
     # browser but it doesn't. So do it here.
     misc.RemoveChromeBrowserObjectFiles(options.chromeos_root, options.board)
 
-  build_packages_env = misc.MergeEnvStringWithDict(build_packages_env,
-                                                   {"USE": "chrome_internal"})
-
-  options.chromeos_root = os.path.expanduser(options.chromeos_root)
+  # Build with afdo_use by default.
+  # To change the default use --env="USE=-afdo_use".
+  build_packages_env = misc.MergeEnvStringWithDict(
+    build_packages_env,
+    {"USE": "chrome_internal afdo_use"})
 
   build_packages_command = misc.GetBuildPackagesCommand(
     board=options.board, usepkg=options.vanilla_image, debug=options.debug)
