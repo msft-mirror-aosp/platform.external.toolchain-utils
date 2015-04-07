@@ -1,7 +1,7 @@
 x86-alex : chromeos2-row1-rack4-host7.cros chromeos2-row1-rack4-host8.cros chromeos2-row1-rack4-host9.cros
 lumpy    : chromeos2-row2-rack4-host10.cros chromeos2-row2-rack4-host11.cros chromeos2-row2-rack4-host12.cros
 stumpy   : chromeos2-row3-rack7-host1.cros chromeos2-row3-rack7-host2.cros chromeos2-row3-rack7-host3.cros
-parrot   : chromeos2-row3-rack2-host11.cros chromeos2-row3-rack2-host12.cros
+parrot   : chromeos2-row3-rack2-host10.cros chromeos2-row3-rack2-host11.cros chromeos2-row3-rack2-host12.cros 
 daisy    : chromeos2-row5-rack5-host10.cros chromeos2-row5-rack4-host6.cros chromeos2-row5-rack5-host12.cros
 peach_pit : chromeos2-row4-rack9-host8.cros chromeos2-row4-rack9-host9.cros chromeos2-row4-rack9-host10.cros
 peppy    : chromeos2-row4-rack9-host11.cros chromeos2-row4-rack9-host12.cros chromeos2-row4-rack8-host12.cros
