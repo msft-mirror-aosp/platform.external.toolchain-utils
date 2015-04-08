@@ -24,6 +24,8 @@ def Generate_Vanilla_Report_File(vanilla_image_paths, board, remote,
 
     experiment_header = """
 name: weekly_vanilla_report
+cache_only: True
+same_specs: False
 board: %s
 remote: %s
 """ % (board, remote)
@@ -64,6 +66,8 @@ def Generate_Test_File(test_image_paths, vanilla_image_path, board, remote,
 
     experiment_header = """
 name: weekly_report
+cache_only: True
+same_specs: False
 board: %s
 remote: %s
 """ % (board, remote)
@@ -223,7 +227,7 @@ def Main(argv):
 
     # Run Crosperf on the file to generate the weekly report.
     cmd = ("%s/toolchain-utils/crosperf/crosperf "
-           "%s  --cache_only=True --email=c-compiler-chrome@google.com" %
+           "%s --email=c-compiler-chrome@google.com" %
            (constants.CROSTC_WORKSPACE, filename))
     retval = cmd_executer.RunCommand(cmd)
     return retval
