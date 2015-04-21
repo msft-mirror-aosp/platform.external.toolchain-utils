@@ -181,10 +181,13 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag):
 
     build_id = 0
     build_status = None
-    # Wait for  buildbot to finish running (check every 10 minutes)
+    # Wait for  buildbot to finish running (check every 10 minutes).  Wait
+    # 10 minutes before the first check to give the buildbot time to launch
+    # (so we don't start looking for build data before it's out there).
+    time.sleep(SLEEP_TIME)
     done = False
     running_time = 0
-    pending_time = 0
+    pending_time = SLEEP_TIME
     while not done:
       done = True
       build_info = GetBuildInfo(base_dir)
