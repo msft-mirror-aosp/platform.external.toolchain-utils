@@ -194,7 +194,7 @@ class ExperimentFactoryTest(unittest.TestCase):
 
     label_settings_2 = settings_factory.LabelSettings("official_image_label")
     label_settings_2.SetField("chromeos_root", "chromeos")
-    label_settings.SetField("build", "official-dev")
+    label_settings_2.SetField("build", "official-dev")
     label_settings_2.GetXbuddyPath = FakeGetXbuddyPath
 
     mock_experiment_file.all_settings.append (label_settings_2)
@@ -207,7 +207,8 @@ class ExperimentFactoryTest(unittest.TestCase):
 
 
   def test_get_default_remotes(self):
-    board_list = ['x86-zgb', 'x86-alex', 'lumpy', 'stumpy', 'parrot', 'daisy']
+    board_list = ['x86-alex', 'lumpy', 'stumpy', 'parrot', 'daisy', 'peach_pit',
+                  'peppy', 'squawks']
 
     ef = ExperimentFactory()
     self.assertRaises(Exception, ef.GetDefaultRemotes, 'bad-board')

@@ -60,7 +60,7 @@ class CrosperfTest(unittest.TestCase):
     self.assertEqual(len(options_before), 3)
     crosperf.SetupParserOptions(parser)
     options_after = parser._get_all_options()
-    self.assertEqual(len(options_after), 25)
+    self.assertEqual(len(options_after), 26)
 
 
   def test_convert_options_to_settings(self):
@@ -78,7 +78,7 @@ class CrosperfTest(unittest.TestCase):
     settings = crosperf.ConvertOptionsToSettings(options)
     self.assertIsNotNone(settings)
     self.assertIsInstance(settings, settings_factory.GlobalSettings)
-    self.assertEqual(len(settings.fields), 21)
+    self.assertEqual(len(settings.fields), 22)
     self.assertTrue(settings.GetField('rerun'))
     argv = ['crosperf/crosperf.py', 'temp.exp']
     options, args = parser.parse_args(argv)

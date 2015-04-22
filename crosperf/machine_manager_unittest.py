@@ -65,7 +65,7 @@ class MachineManagerTest(unittest.TestCase):
 
     mock_isdir.return_value = True
     self.mm = machine_manager.MachineManager("/usr/local/chromeos", 0,
-                                             "average", self.mock_cmd_exec,
+                                             "average", None, self.mock_cmd_exec,
                                              self.mock_logger)
 
     self.mock_lumpy1.name = 'lumpy1'
@@ -393,7 +393,7 @@ class MachineManagerTest(unittest.TestCase):
     #   - current time minus release time is > 20.
     self.mock_lumpy1.locked = False
     self.mock_lumpy1.checksum = "123"
-    self.mock_lumpy1.released_time = 0
+    self.mock_lumpy1.released_time = time.time() - 8
     m = self.mm.AcquireMachine(LABEL_LUMPY.chromeos_image, LABEL_LUMPY, True)
     self.assertEqual(m, self.mock_lumpy1)
     self.assertTrue(self.mock_lumpy1.locked)

@@ -64,8 +64,8 @@ EXPERIMENT_FILE_3 = """
   }
   """
 
-OUTPUT_FILE="""remote: chromeos-alex3
-board: x86-alex
+OUTPUT_FILE="""board: x86-alex
+remote: chromeos-alex3
 perf_args: record -a -e cycles
 
 benchmark: PageCycler {

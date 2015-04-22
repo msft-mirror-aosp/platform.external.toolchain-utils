@@ -259,7 +259,9 @@ class SuiteRunnerTest(unittest.TestCase):
     args_dict = mock_chroot_runcmd.call_args_list[0][1]
     self.assertEqual(args_list[0], '/tmp/chromeos')
     self.assertEqual(args_list[1],
-                     ('/usr/bin/test_that --board=lumpy --args=" test=octane '
+                     ('/usr/bin/test_that --autotest_dir '
+                      '~/trunk/src/third_party/autotest/files '
+                      ' --board=lumpy --args=" test=octane '
                       'profiler=custom_perf profiler_args=\'record -a -e '
                       'cycles,instructions\'" lumpy1.cros telemetry_Crosperf'))
     self.assertEqual(args_dict['cros_sdk_options'],
