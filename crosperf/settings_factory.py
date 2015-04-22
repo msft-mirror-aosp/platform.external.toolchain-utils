@@ -6,6 +6,8 @@
 
 """Setting files for global, benchmark and labels."""
 
+import lock_machine
+
 from field import BooleanField
 from field import FloatField
 from field import IntegerField
@@ -133,6 +135,14 @@ class GlobalSettings(Settings):
                             " se[arated bu a \",\""))
     self.AddField(TextField("results_dir", default="",
                             description="The results dir"))
+    default_locks_dir = lock_machine.Machine.LOCKS_DIR
+    self.AddField(TextField("locks_dir", default=default_locks_dir,
+                            description="An alternate directory to use for "
+                            "storing/checking machine locks.\n"
+                            "WARNING:  If you use your own locks directory, "
+                            "there is no guarantee that someone else might not "
+                            "hold a lock on the same machine in a different "
+                            "locks directory."))
     self.AddField(TextField("chrome_src",
                             description="The path to the source of chrome. "
                             "This is used to run telemetry benchmarks. "

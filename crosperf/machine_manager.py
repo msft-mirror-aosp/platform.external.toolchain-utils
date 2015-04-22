@@ -17,6 +17,7 @@ import time
 
 from utils import command_executer
 from utils import logger
+from utils import misc
 from utils.file_utils import FileUtils
 
 from image_checksummer import ImageChecksummer
@@ -25,6 +26,9 @@ CHECKSUM_FILE = "/usr/local/osimage_checksum_file"
 
 class NonMatchingMachines(Exception):
   pass
+
+class MissingLocksDirectory(Exception):
+    """Raised when cannot find/access the machine locks directory."""
 
 class CrosMachine(object):
   def __init__(self, name, chromeos_root, log_level, cmd_exec=None):
@@ -168,8 +172,8 @@ class CrosMachine(object):
 
 
 class MachineManager(object):
-  def __init__(self, chromeos_root, acquire_timeout, log_level, cmd_exec=None,
-               lgr=None):
+  def __init__(self, chromeos_root, acquire_timeout, log_level, locks_dir,
+               cmd_exec=None, lgr=None):
     self._lock = threading.RLock()
     self._all_machines = []
     self._machines = []
@@ -180,14 +184,20 @@ class MachineManager(object):
     self.machine_checksum_string = {}
     self.acquire_timeout = acquire_timeout
     self.log_level = log_level
+    self.locks_dir = locks_dir
     self.ce = cmd_exec or command_executer.GetCommandExecuter(
         log_level=self.log_level)
     self.logger = lgr or logger.GetLogger()
 
-    if os.path.isdir(lock_machine.Machine.LOCKS_DIR):
-      self.no_lock = False
-    else:
-      self.no_lock = True
+    if self.locks_dir != lock_machine.Machine.LOCKS_DIR:
+      msg = ("WARNING:  If you use your own locks directory, there is no"
+             " guarantee that someone else might not hold a lock on the same"
+             " machine in a different locks directory.")
+      self.logger.LogOutput(msg)
+
+    if not os.path.isdir(self.locks_dir):
+      raise MissingLocksDirectory ("Cannot access locks directory: %s"
+                                   % self.locks_dir)
     self._initialized_machines = []
     self.chromeos_root = chromeos_root
 
@@ -265,10 +275,9 @@ class MachineManager(object):
       for m in self._machines:
         if m.name == cros_machine.name:
           return
-      if self.no_lock:
-        locked = True
-      else:
-        locked = lock_machine.Machine(cros_machine.name).Lock(True, sys.argv[0])
+      locked = lock_machine.Machine(cros_machine.name,
+                                    self.locks_dir).Lock(True,
+                                                         sys.argv[0])
       if locked:
         self._machines.append(cros_machine)
         command = "cat %s" % CHECKSUM_FILE
@@ -304,7 +313,9 @@ class MachineManager(object):
     with self._lock:
       self._machines = [m for m in self._machines
                         if m.name != machine_name]
-      res = lock_machine.Machine(machine_name).Unlock(True)
+      res = lock_machine.Machine(machine_name,
+                                 self.locks_dir).Unlock(True)
+
       if not res:
         self.logger.LogError("Could not unlock machine: '%s'."
                              % m.name)
@@ -413,11 +424,11 @@ class MachineManager(object):
     with self._lock:
       # Unlock all machines.
       for m in self._machines:
-        if not self.no_lock:
-          res = lock_machine.Machine(m.name).Unlock(True)
-          if not res:
-            self.logger.LogError("Could not unlock machine: '%s'."
-                                 % m.name)
+        res = lock_machine.Machine(m.name, self.locks_dir).Unlock(True)
+
+        if not res:
+          self.logger.LogError("Could not unlock machine: '%s'."
+                               % m.name)
 
   def __str__(self):
     with self._lock:

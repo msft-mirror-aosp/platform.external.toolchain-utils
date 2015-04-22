@@ -24,7 +24,7 @@ class Experiment(object):
   def __init__(self, name, remote, working_directory,
                chromeos_root, cache_conditions, labels, benchmarks,
                experiment_file, email_to, acquire_timeout, log_dir,
-               log_level, share_cache, results_directory):
+               log_level, share_cache, results_directory, locks_directory):
     self.name = name
     self.working_directory = working_directory
     self.remote = remote
@@ -60,7 +60,7 @@ class Experiment(object):
                                                 log_level)
     else:
       self.machine_manager = MachineManager(chromeos_root, acquire_timeout,
-                                            log_level)
+                                            log_level, locks_directory)
     self.l = logger.GetLogger(log_dir)
 
     for machine in remote:

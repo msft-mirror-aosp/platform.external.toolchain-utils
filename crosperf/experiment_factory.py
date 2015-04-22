@@ -112,6 +112,7 @@ class ExperimentFactory(object):
     config.AddConfig("no_email", global_settings.GetField("no_email"))
     share_cache = global_settings.GetField("share_cache")
     results_dir = global_settings.GetField("results_dir")
+    locks_dir = global_settings.GetField("locks_dir")
     chrome_src = global_settings.GetField("chrome_src")
     show_all_results = global_settings.GetField("show_all_results")
     log_level = global_settings.GetField("logging_level")
@@ -220,7 +221,7 @@ class ExperimentFactory(object):
                             experiment_file.Canonicalize(),
                             email, acquire_timeout, log_dir, log_level,
                             share_cache,
-                            results_dir)
+                            results_dir, locks_dir)
 
     return experiment
 
