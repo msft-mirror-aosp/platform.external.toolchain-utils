@@ -196,7 +196,8 @@ class ToolchainComparator():
     trybot_image = buildbot_utils.GetTrybotImage(self._chromeos_root,
                                                  self._build,
                                                  [ USE_NEXT_GCC_PATCH ],
-                                                 description)
+                                                 description,
+                                                 build_toolchain=True)
 
     vanilla_image = self._ParseVanillaImage(trybot_image)
 

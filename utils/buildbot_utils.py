@@ -138,7 +138,8 @@ def FindArchiveImage(chromeos_root, build, build_id):
 
     return trybot_image
 
-def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag):
+def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag,
+                   build_toolchain=False):
     """
     Launch buildbot and get resulting trybot artifact name.
 
@@ -167,15 +168,18 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag):
       patch_arg = "-g "
       for p in patch_list:
         patch_arg = patch_arg + " " + repr(p)
+    toolchain_flags=""
+    if build_toolchain:
+      toolchain_flags += "--latest_toolchain"
     branch = "master"
     os.chdir(cbuildbot_path)
 
     # Launch buildbot with appropriate flags.
     build = buildbot_name
     description = build_tag
-    command = ("./cbuildbot --remote --nochromesdk --notests %s %s"
-               " --remote-description=%s"
-               % (patch_arg, build, description))
+    command = ("./cbuildbot --remote --nochromesdk --notests"
+               " --remote-description=%s %s %s %s"
+               % (description, toolchain_flags, patch_arg, build))
     ce.RunCommand(command)
     os.chdir(base_dir)
 

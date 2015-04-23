@@ -56,7 +56,8 @@ benchmark: all_perfv2 {
   chromeos_root: %s
   chromeos_image: %s
 }
-""" % (test_name, chromeos_root, os.path.join (test_path, "chromiumos_test_image.bin"))
+""" % (test_name, chromeos_root, os.path.join (test_path,
+                                               "chromiumos_test_image.bin"))
             print >>f, test_image
 
     return filename
@@ -91,11 +92,13 @@ benchmark: all_perfv2 {
 
         # Add vanilla image (first)
         vanilla_image = """
-vanilla_image {
+%s {
   chromeos_root: %s
   chromeos_image: %s
 }
-""" % (chromeos_root, os.path.join(vanilla_image_path, "chromiumos_test_image.bin"))
+""" % (vanilla_image_path.split("/")[-1],
+       chromeos_root, os.path.join(vanilla_image_path,
+                                   "chromiumos_test_image.bin"))
 
         print >>f, vanilla_image
 
@@ -108,7 +111,8 @@ vanilla_image {
   chromeos_root: %s
   chromeos_image: %s
 }
-""" % (test_name, chromeos_root, os.path.join (test_path, "chromiumos_test_image.bin"))
+""" % (test_name, chromeos_root, os.path.join (test_path,
+                                               "chromiumos_test_image.bin"))
             print >>f, test_image
 
     return filename
