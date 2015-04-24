@@ -170,7 +170,7 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag,
         patch_arg = patch_arg + " " + repr(p)
     toolchain_flags=""
     if build_toolchain:
-      toolchain_flags += "--latest_toolchain"
+      toolchain_flags += "--latest-toolchain"
     branch = "master"
     os.chdir(cbuildbot_path)
 
