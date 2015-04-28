@@ -108,7 +108,7 @@ def GetBuildInfo(file_dir):
     """
     ce = command_executer.GetCommandExecuter()
     commands = ("{0}/utils/buildbot_json.py builds "
-                "http://chromegw/p/tryserver.chromiumos/"
+                "http://chromegw/i/tryserver.chromiumos/"
                 .format(file_dir))
 
     _, buildinfo, _ = ce.RunCommand(commands, return_output=True,
