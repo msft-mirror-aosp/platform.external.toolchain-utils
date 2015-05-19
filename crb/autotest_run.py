@@ -302,11 +302,11 @@ class AutotestRun(threading.Thread):
     if self.board:
       options += " --board=%s" % self.board
     if self.autotest.args:
-      options += " %s" % self.autotest.args
+      options += " --args='%s'" % self.autotest.args
     if "tegra2" in self.board:
       self.DoPowerdHack()
-    command += ("&& cros_sdk -- ./run_remote_tests.sh --remote=%s %s %s" %
-                (machine_name,
-                 options,
+    command += ("&& cros_sdk -- /usr/bin/test_that %s %s %s" %
+                (options,
+                 machine_name,
                  self.autotest.name))
     return self._ce.RunCommand(command, True)

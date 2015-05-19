@@ -2,7 +2,7 @@
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
-"""Script to wrap run_remote_tests.sh script.
+"""Script to wrap test_that script.
 
 Run this script and kill it. Then run ps -ef to see if sleep
 is still running,. 

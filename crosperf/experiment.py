@@ -57,7 +57,7 @@ class Experiment(object):
 
     if test_flag.GetTestMode():
       self.machine_manager = MockMachineManager(chromeos_root, acquire_timeout,
-                                                log_level)
+                                                log_level, locks_directory)
     else:
       self.machine_manager = MachineManager(chromeos_root, acquire_timeout,
                                             log_level, locks_directory)

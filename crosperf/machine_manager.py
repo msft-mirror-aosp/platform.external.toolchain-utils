@@ -502,9 +502,10 @@ class MockCrosMachine(CrosMachine):
 
 class MockMachineManager(MachineManager):
 
-  def __init__(self, chromeos_root, acquire_timeout, log_level):
+  def __init__(self, chromeos_root, acquire_timeout, log_level, dummy_locks_dir):
     super(MockMachineManager, self).__init__(chromeos_root, acquire_timeout,
-                                             log_level)
+                                             log_level,
+                                             lock_machine.Machine.LOCKS_DIR)
 
   def _TryToLockMachine(self, cros_machine):
     self._machines.append(cros_machine)

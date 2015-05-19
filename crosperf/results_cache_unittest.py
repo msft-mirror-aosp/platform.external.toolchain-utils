@@ -23,18 +23,18 @@ from utils import command_executer
 from utils import logger
 from utils import misc
 
-OUTPUT = """CMD (True): ./run_remote_tests.sh --remote=172.17.128.241  --board=lumpy   LibCBench
+OUTPUT = """CMD (True): ./test_that.sh --remote=172.17.128.241  --board=lumpy   LibCBench
 CMD (None): cd /usr/local/google/home/yunlian/gd/src/build/images/lumpy/latest/../../../../..; cros_sdk  -- ./in_chroot_cmd6X7Cxu.sh
-Identity added: /tmp/run_remote_tests.PO1234567/autotest_key (/tmp/run_remote_tests.PO1234567/autotest_key)
+Identity added: /tmp/test_that.PO1234567/autotest_key (/tmp/test_that.PO1234567/autotest_key)
 INFO    : Using emerged autotests already installed at /build/lumpy/usr/local/autotest.
 
 INFO    : Running the following control files 1 times:
 INFO    :  * 'client/site_tests/platform_LibCBench/control'
 
 INFO    : Running client test client/site_tests/platform_LibCBench/control
-./server/autoserv -m 172.17.128.241 --ssh-port 22 -c client/site_tests/platform_LibCBench/control -r /tmp/run_remote_tests.PO1234567/platform_LibCBench --test-retry=0 --args 
+./server/autoserv -m 172.17.128.241 --ssh-port 22 -c client/site_tests/platform_LibCBench/control -r /tmp/test_that.PO1234567/platform_LibCBench --test-retry=0 --args 
 ERROR:root:import statsd failed, no stats will be reported.
-14:20:22 INFO | Results placed in /tmp/run_remote_tests.PO1234567/platform_LibCBench
+14:20:22 INFO | Results placed in /tmp/test_that.PO1234567/platform_LibCBench
 14:20:22 INFO | Processing control file
 14:20:23 INFO | Starting master ssh connection '/usr/bin/ssh -a -x -N -o ControlMaster=yes -o ControlPath=/tmp/_autotmp_VIIP67ssh-master/socket -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=180 -o ServerAliveCountMax=3 -o ConnectionAttempts=4 -o Protocol=2 -l root -p 22 172.17.128.241'
 14:20:23 ERROR| [stderr] Warning: Permanently added '172.17.128.241' (RSA) to the list of known hosts.
@@ -110,7 +110,7 @@ INFO    : Elapsed time: 0m16s
 """
 
 error = """
-ERROR: Identity added: /tmp/run_remote_tests.Z4Ld/autotest_key (/tmp/run_remote_tests.Z4Ld/autotest_key)
+ERROR: Identity added: /tmp/test_that.Z4Ld/autotest_key (/tmp/test_that.Z4Ld/autotest_key)
 INFO    : Using emerged autotests already installed at /build/lumpy/usr/local/autotest.
 INFO    : Running the following control files 1 times:
 INFO    :  * 'client/site_tests/platform_LibCBench/control'
@@ -150,9 +150,9 @@ class ResultTest(unittest.TestCase):
                                       OUTPUT, error, 0, True, 0)
     self.assertEqual(result.keyvals, keyvals)
     self.assertEqual(result.chroot_results_dir,
-                     '/tmp/run_remote_tests.PO1234567/platform_LibCBench')
+                     '/tmp/test_that.PO1234567/platform_LibCBench')
     self.assertEqual(result.results_dir,
-        '/tmp/chroot/tmp/run_remote_tests.PO1234567/platform_LibCBench')
+        '/tmp/chroot/tmp/test_that.PO1234567/platform_LibCBench')
     self.assertEqual(result.retval, 0)
 
 
@@ -401,7 +401,7 @@ class ResultTest(unittest.TestCase):
     self.result.out = OUTPUT
     resdir = self.result._GetResultsDir()
     self.assertEqual(resdir,
-                     '/tmp/run_remote_tests.PO1234567/platform_LibCBench')
+                     '/tmp/test_that.PO1234567/platform_LibCBench')
 
 
   @mock.patch.object (command_executer.CommandExecuter, 'RunCommand')
@@ -694,7 +694,7 @@ class ResultTest(unittest.TestCase):
     tempfile.mkdtemp = FakeMkdtemp
 
     mock_mm = machine_manager.MockMachineManager('/tmp/chromeos_root', 0,
-                                                 'average')
+                                                 'average', '')
     mock_mm.machine_checksum_string['mock_label'] = 'fake_machine_checksum123'
 
     self.result.StoreToCacheDir(cache_dir, mock_mm)
@@ -776,7 +776,7 @@ class ResultsCacheTest(unittest.TestCase):
 
 
     mock_mm = machine_manager.MockMachineManager('/tmp/chromeos_root', 0,
-                                                 'average')
+                                                 'average', '')
     mock_mm.machine_checksum_string['mock_label'] = 'fake_machine_checksum123'
 
     self.results_cache.Init(self.mock_label.chromeos_image,

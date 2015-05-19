@@ -11,6 +11,7 @@ import mock
 import unittest
 
 import label
+import lock_machine
 import machine_manager
 import image_checksummer
 
@@ -22,7 +23,8 @@ from utils import logger
 class MyMachineManager(machine_manager.MachineManager):
 
   def __init__(self, chromeos_root):
-    super(MyMachineManager, self).__init__(chromeos_root, 0, "average")
+    super(MyMachineManager, self).__init__(chromeos_root, 0, "average",
+                                           lock_machine.Machine.LOCKS_DIR)
 
   def _TryToLockMachine(self, cros_machine):
     self._machines.append(cros_machine)
@@ -65,7 +67,9 @@ class MachineManagerTest(unittest.TestCase):
 
     mock_isdir.return_value = True
     self.mm = machine_manager.MachineManager("/usr/local/chromeos", 0,
-                                             "average", None, self.mock_cmd_exec,
+                                             "average",
+                                             lock_machine.Machine.LOCKS_DIR,
+                                             self.mock_cmd_exec,
                                              self.mock_logger)
 
     self.mock_lumpy1.name = 'lumpy1'
