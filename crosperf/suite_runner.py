@@ -52,15 +52,28 @@ class SuiteRunner(object):
     self._ct = cmd_term or command_executer.CommandTerminator()
 
   def Run(self, machine, label, benchmark, test_args, profiler_args):
-    self.PinGovernorExecutionFrequencies(machine, label.chromeos_root)
-    if benchmark.suite == "telemetry":
-      return self.Telemetry_Run(machine, label, benchmark, profiler_args)
-    elif benchmark.suite == "telemetry_Crosperf":
-      return self.Telemetry_Crosperf_Run(machine, label, benchmark,
-                                         test_args, profiler_args)
-    else:
-      return self.Test_That_Run(machine, label, benchmark, test_args,
-                                profiler_args)
+    for i in range(0, benchmark.retries + 1):
+      self.PinGovernorExecutionFrequencies(machine, label.chromeos_root)
+      if benchmark.suite == "telemetry":
+        ret_tup = self.Telemetry_Run(machine, label, benchmark, profiler_args)
+      elif benchmark.suite == "telemetry_Crosperf":
+        ret_tup = self.Telemetry_Crosperf_Run(machine, label, benchmark,
+                                              test_args, profiler_args)
+      else:
+        ret_tup = self.Test_That_Run(machine, label, benchmark, test_args,
+                                     profiler_args)
+      if ret_tup[0] != 0:
+        self._logger.LogOutput("benchmark %s failed. Retries left: %s"
+                               % (benchmark.name, benchmark.retries - i))
+      elif i > 0:
+        self._logger.LogOutput("benchmark %s succeded after %s retries"
+                                % (benchmark.name, i))
+        break
+      else:
+        self._logger.LogOutput("benchmark %s succeded on first try"
+                                % benchmark.name)
+        break
+    return ret_tup
 
   def GetHighestStaticFrequency(self, machine_name, chromeos_root):
     """ Gets the highest static frequency for the specified machine
@@ -239,6 +252,6 @@ class MockSuiteRunner(object):
 
   def Run(self, *_args):
     if self._true:
-      return ["", "", 0]
+      return [0, "", ""]
     else:
-      return ["", "", 0]
+      return [0, "", ""]

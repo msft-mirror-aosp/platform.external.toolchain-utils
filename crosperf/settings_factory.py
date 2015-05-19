@@ -30,6 +30,9 @@ class BenchmarkSettings(Settings):
                                "test."))
     self.AddField(TextField("suite", default="",
                                description="The type of the benchmark"))
+    self.AddField(IntegerField("retries", default=0,
+                                description="Number of times to retry a "
+                                "benchmark run."))
 
 
 class LabelSettings(Settings):
@@ -130,9 +133,9 @@ class GlobalSettings(Settings):
                                "whether to all the results, instead of just "
                                "the default (summary) results."))
     self.AddField(TextField("share_cache", default="",
-                            description="Path to alternat cache whose data "
+                            description="Path to alternate cache whose data "
                             "you want to use. It accepts multiples directories"
-                            " se[arated bu a \",\""))
+                            " separated by a \",\""))
     self.AddField(TextField("results_dir", default="",
                             description="The results dir"))
     default_locks_dir = lock_machine.Machine.LOCKS_DIR
@@ -148,7 +151,9 @@ class GlobalSettings(Settings):
                             "This is used to run telemetry benchmarks. "
                             "The default one is the src inside chroot.",
                             required=False, default=""))
-
+    self.AddField(IntegerField("retries", default=0,
+                                description="Number of times to retry a "
+                                "benchmark run."))
 
 class SettingsFactory(object):
   """Factory class for building different types of Settings objects.

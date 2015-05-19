@@ -17,7 +17,7 @@ class Benchmark(object):
 
   def __init__(self, name, test_name, test_args, iterations,
                rm_chroot_tmp, perf_args, suite="",
-               show_all_results=False):
+               show_all_results=False, retries=0):
     self.name = name
     #For telemetry, this is the benchmark name.
     self.test_name = test_name
@@ -29,5 +29,6 @@ class Benchmark(object):
     self.iteration_adjusted = False
     self.suite = suite
     self.show_all_results = show_all_results
+    self.retries = retries
     if self.suite == "telemetry":
       self.show_all_results = True

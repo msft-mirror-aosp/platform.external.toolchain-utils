@@ -81,12 +81,12 @@ class ExperimentFactory(object):
 
   def _AppendBenchmarkSet(self, benchmarks, benchmark_list, test_args,
                           iterations, rm_chroot_tmp, perf_args, suite,
-                          show_all_results):
+                          show_all_results, retries):
     """Add all the tests in a set to the benchmarks list."""
     for test_name in benchmark_list:
       telemetry_benchmark = Benchmark (test_name, test_name, test_args,
                                        iterations, rm_chroot_tmp, perf_args,
-                                       suite, show_all_results)
+                                       suite, show_all_results, retries)
       benchmarks.append(telemetry_benchmark)
 
 
@@ -132,6 +132,8 @@ class ExperimentFactory(object):
       cache_conditions.append(CacheConditions.MACHINES_MATCH)
 
     # Construct benchmarks.
+    # Some fields are common with global settings. The values are
+    # inherited and/or merged with the global settings values.
     benchmarks = []
     all_benchmark_settings = experiment_file.GetSettings("benchmark")
     for benchmark_settings in all_benchmark_settings:
@@ -142,24 +144,25 @@ class ExperimentFactory(object):
       test_args = benchmark_settings.GetField("test_args")
       iterations = benchmark_settings.GetField("iterations")
       suite = benchmark_settings.GetField("suite")
+      retries = benchmark_settings.GetField("retries")
 
       if suite == 'telemetry_Crosperf':
         if test_name == 'all_perfv2':
           self._AppendBenchmarkSet (benchmarks, telemetry_perfv2_tests,
                                     test_args, iterations, rm_chroot_tmp,
-                                    perf_args, suite, show_all_results)
+                                    perf_args, suite, show_all_results, retries)
         elif test_name == 'all_pagecyclers':
           self._AppendBenchmarkSet (benchmarks, telemetry_pagecycler_tests,
                                     test_args, iterations, rm_chroot_tmp,
-                                    perf_args, suite, show_all_results)
+                                    perf_args, suite, show_all_results, retries)
         elif test_name == 'all_toolchain_perf':
           self._AppendBenchmarkSet (benchmarks, telemetry_toolchain_perf_tests,
                                     test_args, iterations, rm_chroot_tmp,
-                                    perf_args, suite, show_all_results)
+                                    perf_args, suite, show_all_results, retries)
         else:
           benchmark = Benchmark(test_name, test_name, test_args,
                                 iterations, rm_chroot_tmp, perf_args, suite,
-                                show_all_results)
+                                show_all_results, retries)
           benchmarks.append(benchmark)
       else:
         # Add the single benchmark.
@@ -169,6 +172,8 @@ class ExperimentFactory(object):
         benchmarks.append(benchmark)
 
     # Construct labels.
+    # Some fields are common with global settings. The values are
+    # inherited and/or merged with the global settings values.
     labels = []
     all_label_settings = experiment_file.GetSettings("label")
     all_remote = list(remote)
