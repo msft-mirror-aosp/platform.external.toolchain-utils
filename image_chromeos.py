@@ -36,21 +36,17 @@ def Usage(parser, message):
 def CheckForCrosFlash(chromeos_root, remote, log_level):
   cmd_executer = command_executer.GetCommandExecuter(log_level=log_level)
 
-  remote_has_cherrypy = False
-
-  # Check to see if remote machine has cherrypy.
-  command = "python -c 'import cherrypy'"
-  retval = cmd_executer.CrosRunCommand (command,
-                                        chromeos_root=chromeos_root,
-                                        machine=remote)
+  # Check to see if remote machine has cherrypy, ctypes
+  command = "python -c 'import cherrypy, ctypes'"
+  retval = cmd_executer.CrosRunCommand(command,
+                                       chromeos_root=chromeos_root,
+                                       machine=remote)
   logger.GetLogger().LogFatalIf(
       retval == 255, "Failed ssh to %s (for checking cherrypy)" % remote)
-  if retval == 0:
-    remote_has_cherrypy = True
-  else:
-    logger.GetLogger().LogWarning(("Failed to find cherrypy on remote '{}', "
-                                    "cros flash will fail.").format(remote))
-  return remote_has_cherrypy
+  logger.GetLogger().LogFatalIf(
+      retval != 0, "Failed to find cherrypy or ctypes on remote '{}', "
+      "cros flash cannot work.".format(remote))
+
 
 def DoImage(argv):
   """Build ChromeOS."""
@@ -128,10 +124,11 @@ def DoImage(argv):
     image_checksum = FileUtils().Md5File(image, log_level=log_level)
 
     command = "cat " + checksum_file
-    retval, device_checksum, err = cmd_executer.CrosRunCommand(command,
-                                         return_output=True,
-                                         chromeos_root=options.chromeos_root,
-                                         machine=options.remote)
+    retval, device_checksum, _ = cmd_executer.CrosRunCommand(
+        command,
+        return_output=True,
+        chromeos_root=options.chromeos_root,
+        machine=options.remote)
 
     device_checksum = device_checksum.strip()
     image_checksum = str(image_checksum)
@@ -182,27 +179,21 @@ def DoImage(argv):
             "..",
             located_image[len(real_src_dir):].lstrip("/"))
 
-    # Check to see if cros flash is in the chroot or not.
-    use_cros_flash = CheckForCrosFlash (options.chromeos_root,
-                                        options.remote, log_level)
+    # Check to see if cros flash will work for the remote machine.
+    CheckForCrosFlash(options.chromeos_root, options.remote, log_level)
 
-    if use_cros_flash:
-      # Use 'cros flash'
-      if local_image:
-        cros_flash_args = ["--board=%s" % board,
-                           "--clobber-stateful",
-                           options.remote,
-                           chroot_image]
-      else:
-        cros_flash_args = ["--board=%s" % board,
-                           "--clobber-stateful",
-                           options.remote,
-                           image]
-
-      command = ("cros flash %s" % " ".join(cros_flash_args))
+    if local_image:
+      cros_flash_args = ["--board=%s" % board,
+                         "--clobber-stateful",
+                         options.remote,
+                         chroot_image]
     else:
-      raise Exception(("Unable to find 'cros flash' in chroot;"
-                       "chromeos tree is too old."))
+      cros_flash_args = ["--board=%s" % board,
+                         "--clobber-stateful",
+                         options.remote,
+                         image]
+
+    command = ("cros flash %s" % " ".join(cros_flash_args))
 
     # Workaround for crosbug.com/35684.
     os.chmod(misc.GetChromeOSKeyFile(options.chromeos_root), 0600)
@@ -357,7 +348,7 @@ def VerifyChromeChecksum(chromeos_root, image, remote, log_level):
              unmount=True)
 
   command = "md5sum /opt/google/chrome/chrome"
-  [r, o, e] = cmd_executer.CrosRunCommand(command,
+  [_, o, _] = cmd_executer.CrosRunCommand(command,
                                           return_output=True,
                                           chromeos_root=chromeos_root,
                                           machine=remote)
@@ -414,5 +405,4 @@ def Main(argv):
 
 
 if __name__ == "__main__":
-  retval = Main(sys.argv)
-  sys.exit(retval)
+  sys.exit(Main(sys.argv))

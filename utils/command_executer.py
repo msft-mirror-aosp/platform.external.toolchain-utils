@@ -237,11 +237,9 @@ class CommandExecuter:
       connect_signature = ("Initiating first contact with remote host\n" +
                            "Connection OK\n")
       connect_signature_re = re.compile(connect_signature)
-      modded_return = []
-      for r in retval:
-        modded_return.append(r)
-      modded_return[1] = connect_signature_re.sub("", modded_return[1])
-      return modded_return
+      modded_retval = list(retval)
+      modded_retval[1] = connect_signature_re.sub("", retval[1])
+      return modded_retval
     return retval
 
   def ChrootRunCommand(self, chromeos_root, command, return_output=False,
