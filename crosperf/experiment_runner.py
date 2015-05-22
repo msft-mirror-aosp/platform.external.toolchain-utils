@@ -85,6 +85,8 @@ class ExperimentRunner(object):
     subject = "%s: %s" % (experiment.name, " vs. ".join(label_names))
 
     text_report = TextResultsReport(experiment, True).GetReport()
+    text_report += ("\nResults are stored in %s.\n" %
+                    experiment.results_directory)
     text_report = "<pre style='font-size: 13px'>%s</pre>" % text_report
     html_report = HTMLResultsReport(experiment).GetReport()
     attachment = EmailSender.Attachment("report.html", html_report)
@@ -110,6 +112,14 @@ class ExperimentRunner(object):
     results_table_path = os.path.join(results_directory, "results.html")
     report = HTMLResultsReport(experiment).GetReport()
     FileUtils().WriteFile(results_table_path, report)
+
+    self.l.LogOutput("Storing email message body in %s." % results_directory)
+    msg_file_path = os.path.join(results_directory, "msg_body.html")
+    text_report = TextResultsReport(experiment, True).GetReport()
+    text_report += ("\nResults are stored in %s.\n" %
+                    experiment.results_directory)
+    msg_body = "<pre style='font-size: 13px'>%s</pre>" % text_report
+    FileUtils().WriteFile(msg_file_path, msg_body)
 
     self.l.LogOutput("Storing results of each benchmark run.")
     for benchmark_run in experiment.benchmark_runs:

@@ -269,7 +269,7 @@ class ExperimentRunnerTest(unittest.TestCase):
                      (['john.smith@google.com', 'jane.doe@google.com'],
                       ': image1 vs. image2',
                       "<pre style='font-size: 13px'>This is a fake text "
-                      "report.</pre>"))
+                      "report.\nResults are stored in _results.\n</pre>"))
     self.assertTrue(type(mock_emailer.call_args[1]) is dict)
     self.assertEqual(len(mock_emailer.call_args[1]), 2)
     self.assertTrue('attachments' in mock_emailer.call_args[1].keys())
@@ -299,7 +299,7 @@ class ExperimentRunnerTest(unittest.TestCase):
                      (['john.smith@google.com', 'jane.doe@google.com'],
                       ': image1 vs. image2',
                       "<pre style='font-size: 13px'>This is a fake text "
-                      "report.</pre>"))
+                      "report.\nResults are stored in _results.\n</pre>"))
     self.assertTrue(type(mock_emailer.call_args[1]) is dict)
     self.assertEqual(len(mock_emailer.call_args[1]), 2)
     self.assertTrue('attachments' in mock_emailer.call_args[1].keys())
@@ -327,7 +327,7 @@ class ExperimentRunnerTest(unittest.TestCase):
                      (['john.smith@google.com'],
                       ': image1 vs. image2',
                       "<pre style='font-size: 13px'>This is a fake text "
-                      "report.</pre>"))
+                      "report.\nResults are stored in _results.\n</pre>"))
     self.assertTrue(type(mock_emailer.call_args[1]) is dict)
     self.assertEqual(len(mock_emailer.call_args[1]), 2)
     self.assertTrue('attachments' in mock_emailer.call_args[1].keys())
@@ -392,8 +392,8 @@ class ExperimentRunnerTest(unittest.TestCase):
     mock_cleanup.called_with(bench_run.benchmark.rm_chroot_tmp)
     self.assertEqual(mock_copy.call_count, 6)
     mock_copy.called_with(bench_path)
-    self.assertEqual(mock_writefile.call_count, 2)
-    self.assertEqual (len(mock_writefile.call_args_list), 2)
+    self.assertEqual(mock_writefile.call_count, 3)
+    self.assertEqual (len(mock_writefile.call_args_list), 3)
     first_args = mock_writefile.call_args_list[0]
     second_args = mock_writefile.call_args_list[1]
     self.assertEqual(first_args[0][0],
@@ -404,10 +404,11 @@ class ExperimentRunnerTest(unittest.TestCase):
     mock_mkdir.called_with('/usr/local/crosperf-results')
     self.assertEqual(mock_rmdir.call_count, 1)
     mock_rmdir.called_with('/usr/local/crosperf-results')
-    self.assertEqual(self.mock_logger.LogOutputCount, 3)
+    self.assertEqual(self.mock_logger.LogOutputCount, 4)
     self.assertEqual(self.mock_logger.output_msgs,
                      [ 'Storing experiment file in /usr/local/crosperf-results.',
                        'Storing results report in /usr/local/crosperf-results.',
+                       'Storing email message body in /usr/local/crosperf-results.',
                        'Storing results of each benchmark run.' ])
 
 
