@@ -304,7 +304,7 @@ class ToolchainComparator(ChromeOSCheckout):
         label = self._BuildAndImage(label)
       labels.append(label)
     self._FinishSetup()
-    self._TestLabels(labels):
+    self._TestLabels(labels)
     self._SendEmail()
     # Only try to copy the image files if the test runs ran successfully.
     self._CopyWeeklyReportFiles(labels)
