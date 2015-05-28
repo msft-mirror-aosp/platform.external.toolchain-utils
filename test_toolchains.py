@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 # Script to test different toolchains against ChromeOS benchmarks.
+import datetime
 import optparse
 import os
 import sys
