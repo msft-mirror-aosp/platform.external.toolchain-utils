@@ -288,8 +288,8 @@ class ToolchainComparator(ChromeOSCheckout):
     filename = os.path.join(self._reports_dir, "msg_body.html")
     if (os.path.exists(filename) and
         os.path.exists(os.path.expanduser(MAIL_PROGRAM))):
-      commmand = ('cat %s | %s -s "Nightly test results, %s" -team -html'
-                  % (filename, MAIL_PROGRAM, self._board))
+      command = ('cat %s | %s -s "Nightly test results, %s" -team -html'
+                 % (filename, MAIL_PROGRAM, self._board))
       self._ce.RunCommand(command)
 
   def DoAll(self):
