@@ -178,7 +178,8 @@ class AFELockManager(object):
     Returns:
       A list of names of the toolchain machines in the ChromeOS HW lab.
     """
-    machines_file = os.path.join(os.getcwd(), 'crosperf', 'default_remotes')
+    machines_file = os.path.join(os.path.dirname(__file__),
+                                 'crosperf', 'default_remotes')
     machine_list = []
     with open(machines_file, 'r') as input_file:
       lines = input_file.readlines()
