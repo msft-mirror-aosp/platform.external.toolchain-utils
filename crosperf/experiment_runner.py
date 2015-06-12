@@ -86,7 +86,8 @@ class ExperimentRunner(object):
 
   def _Run(self, experiment):
     try:
-      self._LockAllMachines(experiment)
+      if not experiment.locks_dir:
+        self._LockAllMachines(experiment)
       status = ExperimentStatus(experiment)
       experiment.Run()
       last_status_time = 0
@@ -119,7 +120,8 @@ class ExperimentRunner(object):
         self.l.LogError("Ctrl-c pressed. Cleaning up...")
         experiment.Terminate()
     finally:
-      self._UnlockAllMachines(experiment)
+      if not experiment.locks_dir:
+        self._UnlockAllMachines(experiment)
 
   def _PrintTable(self, experiment):
     self.l.LogOutput(TextResultsReport(experiment).GetReport())

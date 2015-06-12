@@ -17,6 +17,7 @@ from label import Label
 from label import MockLabel
 from results_cache import CacheConditions
 import test_flag
+import file_lock_machine
 
 # Users may want to run Telemetry tests either individually, or in
 # specified sets.  Here we define sets of tests that users may want
@@ -112,7 +113,14 @@ class ExperimentFactory(object):
     config.AddConfig("no_email", global_settings.GetField("no_email"))
     share_cache = global_settings.GetField("share_cache")
     results_dir = global_settings.GetField("results_dir")
+    use_file_locks = global_settings.GetField("use_file_locks")
     locks_dir = global_settings.GetField("locks_dir")
+    # If we pass a blank locks_dir to the Experiment, it will use the AFE server
+    # lock mechanism.  So if the user specified use_file_locks, but did not
+    # specify a locks dir, set the locks  dir to the default locks dir in
+    # file_lock_machine.
+    if use_file_locks and not locks_dir:
+      locks_dir = file_lock_machine.Machine.LOCKS_DIR
     chrome_src = global_settings.GetField("chrome_src")
     show_all_results = global_settings.GetField("show_all_results")
     log_level = global_settings.GetField("logging_level")

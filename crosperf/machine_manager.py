@@ -6,6 +6,7 @@
 
 import hashlib
 import image_chromeos
+import file_lock_machine
 import math
 import os.path
 import re
@@ -193,10 +194,14 @@ class MachineManager(object):
     self.machine_checksum_string = {}
     self.acquire_timeout = acquire_timeout
     self.log_level = log_level
-    self.locks_dir = None
+    self.locks_dir = locks_dir
     self.ce = cmd_exec or command_executer.GetCommandExecuter(
         log_level=self.log_level)
     self.logger = lgr or logger.GetLogger()
+
+    if self.locks_dir and not os.path.isdir(self.locks_dir):
+      raise MissingLocksDirectory("Cannot access locks directory: %s"
+                                   % self.locks_dir)
 
     self._initialized_machines = []
     self.chromeos_root = chromeos_root
@@ -276,14 +281,21 @@ class MachineManager(object):
       for m in self._machines:
         if m.name == cros_machine.name:
           return
-
-      self._machines.append(cros_machine)
-      command = "cat %s" % CHECKSUM_FILE
-      ret, out, _ = self.ce.CrosRunCommand(
-          command, return_output=True, chromeos_root=self.chromeos_root,
-          machine=cros_machine.name)
-      if ret == 0:
-        cros_machine.checksum = out.strip()
+      locked = True
+      if self.locks_dir:
+        locked = file_lock_machine.Machine(cros_machine.name,
+                                           self.locks_dir).Lock(True,
+                                                                sys.argv[0])
+      if locked:
+        self._machines.append(cros_machine)
+        command = "cat %s" % CHECKSUM_FILE
+        ret, out, _ = self.ce.CrosRunCommand(
+            command, return_output=True, chromeos_root=self.chromeos_root,
+            machine=cros_machine.name)
+        if ret == 0:
+          cros_machine.checksum = out.strip()
+      elif self.locks_dir:
+        self.logger.LogOutput("Couldn't lock: %s" % cros_machine.name)
 
   # This is called from single threaded mode.
   def AddMachine(self, machine_name):
@@ -309,6 +321,12 @@ class MachineManager(object):
     with self._lock:
       self._machines = [m for m in self._machines
                         if m.name != machine_name]
+      if self.locks_dir:
+        res = file_lock_machine.Machine(machine_name,
+                                        self.locks_dir).Unlock(True)
+        if not res:
+          self.logger.LogError("Could not unlock machine: '%s'."
+                               % machine_name)
 
   def ForceSameImageToAllMachines(self, label):
     machines = self.GetMachines(label)
@@ -409,6 +427,16 @@ class MachineManager(object):
           m.locked = False
           m.status = "Available"
           break
+
+  def Cleanup(self):
+    with self._lock:
+      # Unlock all machines (via file lock)
+      for m in self._machines:
+        res = file_lock_machine.Machine(m.name, self.locks_dir).Unlock(True)
+
+        if not res:
+          self.logger.LogError("Could not unlock machine: '%s'."
+                               % m.name)
 
   def __str__(self):
     with self._lock:

@@ -99,6 +99,10 @@ class GlobalSettings(Settings):
     self.AddField(BooleanField("same_machine", default=False,
                                description="Ensure cached runs are run on the "
                                "exact the same remote"))
+    self.AddField(BooleanField("use_file_locks", default=False,
+                               description="Whether to use the file locks  "
+                               "mechanism (deprecated) instead of the AFE "
+                               "server lock mechanism."))
     self.AddField(IntegerField("iterations", default=1,
                                description="Number of iterations to run all "
                                "tests."))
@@ -140,7 +144,8 @@ class GlobalSettings(Settings):
                             description="The results dir"))
     self.AddField(TextField("locks_dir", default="",
                             description="An alternate directory to use for "
-                            "storing/checking machine locks.\n"
+                            "storing/checking machine locks. Using this field "
+                            "automatically sets use_file_locks to True.\n"
                             "WARNING:  If you use your own locks directory, "
                             "there is no guarantee that someone else might not "
                             "hold a lock on the same machine in a different "
