@@ -125,9 +125,9 @@ class ToolchainComparator():
     crosperf = os.path.join(TOOLCHAIN_DIR,
                             "crosperf",
                             "crosperf")
-    command = ("%s --no_email=True --results_dir=%s %s" % (crosperf,
-                                                           self._reports_dir,
-                                                           experiment_file))
+    command = ("%s --no_email=True --use_file_locks=True --results_dir=%s %s" %
+               (crosperf, self._reports_dir, experiment_file))
+
     ret = self._ce.RunCommand(command)
     if ret != 0:
       raise RuntimeError("Couldn't run crosperf!")
