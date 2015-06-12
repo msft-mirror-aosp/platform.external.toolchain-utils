@@ -108,6 +108,7 @@ class AFELockManager(object):
     autotest_path = os.path.join(chromeos_root,
                                  'src/third_party/autotest/files')
 
+    sys.path.append(chromeos_root)
     sys.path.append(autotest_path)
     sys.path.append(os.path.join(autotest_path, 'server', 'cros'))
 
@@ -121,7 +122,8 @@ class AFELockManager(object):
 
     self.afe = frontend_wrappers.RetryingAFE(timeout_min=30,
                                              delay_sec=10,
-                                             debug=False)
+                                             debug=False,
+                                             server='cautotest')
     if not local:
       self.local_afe = None
     else:
