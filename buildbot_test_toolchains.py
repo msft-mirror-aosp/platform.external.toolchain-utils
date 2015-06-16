@@ -94,6 +94,7 @@ class ToolchainComparator():
     experiment_header = """
     board: %s
     remote: %s
+    retries: 1
     """ % (self._board, self._remotes)
     experiment_tests = """
     benchmark: all_perfv2 {
