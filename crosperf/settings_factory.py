@@ -6,8 +6,6 @@
 
 """Setting files for global, benchmark and labels."""
 
-import lock_machine
-
 from field import BooleanField
 from field import FloatField
 from field import IntegerField
