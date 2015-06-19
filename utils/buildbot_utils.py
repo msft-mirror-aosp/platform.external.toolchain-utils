@@ -180,7 +180,10 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag,
     command = ("./cbuildbot --remote --nochromesdk --notests"
                " --remote-description=%s %s %s %s"
                % (description, toolchain_flags, patch_arg, build))
-    ce.RunCommand(command)
+    _, out, _ = ce.RunCommand(command, return_output=True)
+    if "Tryjob submitted!" not in out:
+      logger.GetLogger().LogFatal("Error occurred while launching trybot job: "
+                                  "%s" % command)
     os.chdir(base_dir)
 
     build_id = 0
@@ -190,43 +193,63 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag,
     # (so we don't start looking for build data before it's out there).
     time.sleep(SLEEP_TIME)
     done = False
-    running_time = 0
+    pending = True
+    # pending_time is the time between when we submit the job and when the
+    # buildbot actually launches the build.  running_time is the time between
+    # when the buildbot job launches and when it finishes.  The job is
+    # considered 'pending' until we can find an entry for it in the buildbot
+    # logs.
     pending_time = SLEEP_TIME
+    running_time = 0
     while not done:
       done = True
       build_info = GetBuildInfo(base_dir)
       if not build_info:
-        logger.GetLogger().LogFatal("Unable to get build logs for target %s"
-                                    % build)
-
-      data_dict = FindBuildRecordFromLog(description, build_info)
-      if not data_dict:
-        # Trybot job may be pending.
         if pending_time > TIME_OUT:
-          logger.GetLogger().LogFatal("Unable to find build record for trybot %s"
-                                      % description)
+          logger.GetLogger().LogFatal("Unable to get build logs for target %s."
+                                      % build)
         else:
-          logger.GetLogger().LogOutput("Unable to find build record; job may be pending.")
-          logger.GetLogger().LogOutput("Current pending time: {0} minutes.".format(
-                                       pending_time / 60))
-          logger.GetLogger().LogOutput("Sleeping {0} seconds.".format(SLEEP_TIME))
-          time.sleep(SLEEP_TIME)
-          pending_time += SLEEP_TIME
+          pending_message = "Unable to find build log; job may be pending."
           done = False
 
-      else:
-        if "True" in data_dict["completed"]:
-          build_id = data_dict["number"]
-          build_status = int(data_dict["result"])
+      if done:
+        data_dict = FindBuildRecordFromLog(description, build_info)
+        if not data_dict:
+          # Trybot job may be pending (not actually launched yet).
+          if pending_time > TIME_OUT:
+            logger.GetLogger().LogFatal("Unable to find build record for trybot"
+                                        " %s." % description)
+          else:
+            pending_message = "Unable to find build record; job may be pending."
+            done = False
+
         else:
-          done = False
+          # Now that we have actually found the entry for the build
+          # job in the build log, we know the job is actually
+          # runnning, not pending, so we flip the 'pending' flag.  We
+          # still have to wait for the buildbot job to finish running
+          # however.
+          pending = False
+          if "True" in data_dict["completed"]:
+            build_id = data_dict["number"]
+            build_status = int(data_dict["result"])
+          else:
+            done = False
 
         if not done:
-          logger.GetLogger().LogOutput("{0} minutes passed.".format(
-            running_time / 60))
-          logger.GetLogger().LogOutput("Sleeping {0} seconds.".format(SLEEP_TIME))
+          if pending:
+            logger.GetLogger().LogOutput(pending_message)
+            logger.GetLogger().LogOutput("Current pending time: %d minutes." %
+                                         (pending_time / 60))
+            pending_time  += SLEEP_TIME
+          else:
+            logger.GetLogger().LogOutput("{0} minutes passed.".format(
+                running_time / 60))
+            logger.GetLogger().LogOutput("Sleeping {0} seconds.".format(
+                SLEEP_TIME))
+            running_time += SLEEP_TIME
+
           time.sleep(SLEEP_TIME)
-          running_time += SLEEP_TIME
           if running_time > TIME_OUT:
             done = True
 
@@ -237,5 +260,5 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag,
                                     % (description, build_status))
 
     logger.GetLogger().LogOutput("trybot_image is '%s'" % trybot_image)
-    logger.GetLogger().LogOutput( "build_status is %d" % build_status)
+    logger.GetLogger().LogOutput("build_status is %d" % build_status)
     return trybot_image
