@@ -241,7 +241,7 @@ class ToolchainComparator(ChromeOSCheckout):
                             "crosperf",
                             "crosperf")
     command = ("%s --no_email=True --use_file_locks=True --results_dir=%s %s" %
-               (crosperf, self._reports_dir, experiment_file)
+               (crosperf, self._reports_dir, experiment_file))
 
     ret = self._ce.RunCommand(command)
     if ret != 0:
