@@ -193,7 +193,7 @@ def DoImage(argv):
             chroot_image = located_image[len(real_chroot_dir):]
         else:
           chroot_image = os.path.join(
-              "..",
+              "~/trunk/src",
               located_image[len(real_src_dir):].lstrip("/"))
 
       # Check to see if cros flash will work for the remote machine.
