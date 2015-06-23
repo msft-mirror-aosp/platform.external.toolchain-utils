@@ -240,7 +240,7 @@ class ToolchainComparator(ChromeOSCheckout):
     crosperf = os.path.join(os.path.dirname(__file__),
                             "crosperf",
                             "crosperf")
-    command = ("%s --no_email=True --use_file_locks=True --results_dir=%s %s" %
+    command = ("%s --no_email=True --results_dir=%s %s" %
                (crosperf, self._reports_dir, experiment_file))
 
     ret = self._ce.RunCommand(command)
