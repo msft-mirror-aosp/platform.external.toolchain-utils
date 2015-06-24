@@ -12,11 +12,10 @@ from utils import constants
 from utils import command_executer
 
 WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
 DATA_ROOT_DIR = os.path.join(constants.CROSTC_WORKSPACE,
                              'weekly_test_data')
-
 EXPERIMENT_FILE = os.path.join(DATA_ROOT_DIR, 'weekly_report')
+MAIL_PROGRAM = "~/var/bin/mail-sheriff"
 
 
 def Generate_Vanilla_Report_File(vanilla_image_paths, board, remote,
@@ -201,6 +200,12 @@ def Main(argv):
     # only be created if both images built successfully, i.e. the chroot is
     # good).
     chromeos_root = None
+    timestamp = datetime.datetime.strftime(datetime.datetime.now(),
+                                           "%Y-%m-%d_%H:%M:%S")
+    results_dir = os.path.join(os.path.expanduser("~/nightly_test_reports"),
+                                                  "%s.%s" % (timestamp, board),
+                                                  "weekly_tests")
+
     for day in WEEKDAYS:
         startdir = os.path.join(constants.CROSTC_WORKSPACE, day)
         num_dirs = os.listdir(startdir)
@@ -231,9 +236,21 @@ def Main(argv):
 
     # Run Crosperf on the file to generate the weekly report.
     cmd = ("%s/toolchain-utils/crosperf/crosperf "
-           "%s --email=c-compiler-chrome@google.com" %
-           (constants.CROSTC_WORKSPACE, filename))
+           "%s --no_email=True --results_dir=%s" %
+           (constants.CROSTC_WORKSPACE, filename, results_dir))
     retval = cmd_executer.RunCommand(cmd)
+    if retval == 0:
+      # Send the email, if the crosperf command worked.
+      filename = os.path.join(results_dir, "msg_body.html")
+      if (os.path.exists(filename) and
+          os.path.exists(os.path.expanduser(MAIL_PROGRAM))):
+        vanilla_string = " "
+        if options.vanilla_only:
+          vanilla_string = " Vanilla "
+        command = ('cat %s | %s -s "Weekly%sReport results, %s" -team -html'
+                  % (filename, MAIL_PROGRAM, vanilla_string, options.board))
+      retval = cmd_executer.RunCommand(command)
+
     return retval
 
 
