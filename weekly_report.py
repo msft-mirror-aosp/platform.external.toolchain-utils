@@ -203,7 +203,8 @@ def Main(argv):
     timestamp = datetime.datetime.strftime(datetime.datetime.now(),
                                            "%Y-%m-%d_%H:%M:%S")
     results_dir = os.path.join(os.path.expanduser("~/nightly_test_reports"),
-                                                  "%s.%s" % (timestamp, board),
+                                                  "%s.%s" % (timestamp,
+                                                             options.board),
                                                   "weekly_tests")
 
     for day in WEEKDAYS:
