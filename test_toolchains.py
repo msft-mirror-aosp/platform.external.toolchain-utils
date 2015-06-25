@@ -196,7 +196,7 @@ class ToolchainComparator(ChromeOSCheckout):
     remote: %s
     """ % (self._board, self._remotes)
     experiment_tests = """
-    benchmark: all_perfv2 {
+    benchmark: all_toolchain_perf {
       suite: telemetry_Crosperf
       iterations: 3
     }

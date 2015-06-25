@@ -54,7 +54,7 @@ telemetry_pagecycler_tests = [
 #                               'page_cycler.bloat',
                                ]
 
-telemetry_toolchain_perf_tests = [
+telemetry_toolchain_old_perf_tests = [
                                'dromaeo.domcoremodify',
                                'page_cycler.intl_es_fr_pt-BR',
                                'page_cycler.intl_hi_ru',
@@ -70,6 +70,16 @@ telemetry_toolchain_perf_tests = [
 #                               'jsgamebench',
 #                               'page_cycler.bloat',
 #                               'peacekeeper.html',
+                               ]
+telemetry_toolchain_perf_tests = [
+                               'octane',
+                               'kraken',
+                               'speedometer',
+                               'dromaeo.domcoreattr',
+                               'dromaeo.domcoremodify',
+                               'smoothness.tough_webgl_cases',
+                               'page_cycler.typical_25',
+                               'media.tough_video_cases',
                                ]
 
 class ExperimentFactory(object):
@@ -165,6 +175,16 @@ class ExperimentFactory(object):
                                     perf_args, suite, show_all_results, retries)
         elif test_name == 'all_toolchain_perf':
           self._AppendBenchmarkSet (benchmarks, telemetry_toolchain_perf_tests,
+                                    test_args, iterations, rm_chroot_tmp,
+                                    perf_args, suite, show_all_results, retries)
+          # Add non-telemetry toolchain-perf benchmarks:
+          benchmarks.append(Benchmark('graphics_WebGLAquarium',
+                                      'graphics_WebGLAquarium', '', iterations,
+                                      rm_chroot_tmp, perf_args, '',
+                                      show_all_results, retries))
+        elif test_name == 'all_toolchain_perf_old':
+          self._AppendBenchmarkSet (benchmarks,
+                                    telemetry_toolchain_old_perf_tests,
                                     test_args, iterations, rm_chroot_tmp,
                                     perf_args, suite, show_all_results, retries)
         else:
