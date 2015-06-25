@@ -100,7 +100,7 @@ def FindBuildRecordFromLog(description, log_info):
     return {}
 
 
-def GetBuildInfo(file_dir):
+def GetBuildInfo(file_dir, builder):
     """
     Get all the build records for the trybot builds.
 
@@ -111,6 +111,8 @@ def GetBuildInfo(file_dir):
                 "http://chromegw/i/tryserver.chromiumos/"
                 .format(file_dir))
 
+    if builder:
+      commands += " -b %s" % builder
     _, buildinfo, _ = ce.RunCommand(commands, return_output=True,
                                     print_to_console=False)
     build_log = buildinfo.splitlines()
@@ -126,7 +128,8 @@ def FindArchiveImage(chromeos_root, build, build_id):
     ce = command_executer.GetCommandExecuter()
     command = ("gsutil ls gs://chromeos-image-archive/trybot-%s/*b%s"
                "/chromiumos_test_image.tar.xz" % (build, build_id))
-    retval, out, err = ce.ChrootRunCommand(chromeos_root, command, return_output=True,
+    retval, out, err = ce.ChrootRunCommand(chromeos_root, command,
+                                           return_output=True,
                                            print_to_console=False)
 
     trybot_image = ""
@@ -203,7 +206,7 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag,
     running_time = 0
     while not done:
       done = True
-      build_info = GetBuildInfo(base_dir)
+      build_info = GetBuildInfo(base_dir, build)
       if not build_info:
         if pending_time > TIME_OUT:
           logger.GetLogger().LogFatal("Unable to get build logs for target %s."
