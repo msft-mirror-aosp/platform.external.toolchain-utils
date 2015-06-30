@@ -40,7 +40,7 @@ class TelemetryDefaults(object):
 
   def WriteDefaultsFile (self):
     with open(self._filename, "w") as fp:
-      json.dump(self._defaults, fp)
+      json.dump(self._defaults, fp, indent=2)
 
 
   def ListCurrentDefaults (self, benchmark=all):

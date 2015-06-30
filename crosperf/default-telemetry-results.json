@@ -1,1 +1,139 @@
-{"peacekeeper.html": ["Total__Score", "workerContrast01__Score", "workerContrast02__Score"], "page_cycler.intl_hi_ru": ["cold_times__page_load_time", "warm_times__page_load_time"], "page_cycler.intl_es_fr_pt-BR": ["cold_times__page_load_time", "warm_times__page_load_time"], "dromaeo.jslibeventjquery": ["jslib_event_jquery__jslib_event_jquery"], "browsermark": ["Score__Score"], "smoothness.top_25": ["frame_times__frame_times", "mean_frame_time__mean_frame_time"], "page_cycler.morejs": ["warm_times__page_load_time", "cold_times__page_load_time"], "page_cycler.dhtml": ["warm_times__page_load_time", "cold_times__page_load_time"], "page_cycler.bloat": ["warm_times__page_load_time", "cold_times__page_load_time"], "dromaeo.jslibstyleprototype": ["jslib_style_prototype__jslib_style_prototype"], "dromaeo.jslibstylejquery": ["jslib_style_jquery__jslib_style_jquery"], "dromaeo.jslibeventprototype": ["jslib_event_prototype__jslib_event_prototype"], "page_cycler.moz": ["warm_times__page_load_time", "cold_times__page_load_time"], "speedometer": ["Total__Total"], "octane": ["Total__Score"], "jsgamebench": ["Score__Score"], "page_cycler.indexed_db.basic_insert": ["warm_times__page_load_time", "cold_times__page_load_time"], "spaceport": ["Score__Score"], "dromaeo.jslibtraverseprototype": ["jslib_traverse_prototype__jslib_traverse_prototype"], "page_cycler.netsim.top_10": ["cold_times__page_load_time", "warm_times__page_load_time"], "robohornet_pro": ["Total__Total"], "dromaeo.domcoreattr": ["dom_attr__dom_attr"], "dromaeo.jslibattrprototype": ["jslib_attr_prototype__jslib_attr_prototype"], "sunspider": ["Total__Total"], "dromaeo.jslibattrjquery": ["jslib_attr_jquery__jslib_attr_jquery"], "page_cycler.typical_25": ["warm_times__page_load_time", "cold_times__page_load_time"], "dromaeo.domcoretraverse": ["dom_traverse__dom_traverse"], "dromaeo.domcoremodify": ["dom_modify__dom_modify"], "page_cycler.intl_ar_fa_he": ["warm_times__page_load_time", "cold_times__page_load_time"], "page_cycler.intl_ja_zh": ["warm_times__page_load_time", "cold_times__page_load_time"], "graphics_WebGLAquarium": ["avg_fps_1000_fishes"], "page_cycler.intl_ko_th_vi": ["warm_times__page_load_time", "cold_times__page_load_time"], "canvasmark": ["Score__Score"], "dromaeo.domcorequery": ["dom_query__dom_query"], "dromaeo.jslibtraversejquery": ["jslib_traverse_jquery__jslib_traverse_jquery"], "dromaeo.jslibmodifyprototype": ["jslib_modify_prototype__jslib_modify_prototype"], "page_cycler.tough_layout_cases": ["warm_times__page_load_time", "cold_times__page_load_time"], "kraken": ["Total__Total"], "media.tough_video_cases": ["avg_loop_time__mixed_audio", "avg_loop_time__single_audio"], "dromaeo.jslibmodifyjquery": ["jslib_modify_jquery__jslib_modify_jquery"]}
+{
+  "peacekeeper.html": [
+    "Total__Score", 
+    "workerContrast01__Score", 
+    "workerContrast02__Score"
+  ], 
+  "page_cycler.intl_hi_ru": [
+    "cold_times__page_load_time", 
+    "warm_times__page_load_time"
+  ], 
+  "page_cycler.intl_es_fr_pt-BR": [
+    "cold_times__page_load_time", 
+    "warm_times__page_load_time"
+  ], 
+  "dromaeo.jslibeventjquery": [
+    "jslib_event_jquery__jslib_event_jquery"
+  ], 
+  "browsermark": [
+    "Score__Score"
+  ], 
+  "smoothness.top_25": [
+    "frame_times__frame_times", 
+    "mean_frame_time__mean_frame_time"
+  ], 
+  "page_cycler.morejs": [
+    "warm_times__page_load_time", 
+    "cold_times__page_load_time"
+  ], 
+  "page_cycler.dhtml": [
+    "warm_times__page_load_time", 
+    "cold_times__page_load_time"
+  ], 
+  "page_cycler.bloat": [
+    "warm_times__page_load_time", 
+    "cold_times__page_load_time"
+  ], 
+  "dromaeo.jslibstyleprototype": [
+    "jslib_style_prototype__jslib_style_prototype"
+  ], 
+  "dromaeo.jslibstylejquery": [
+    "jslib_style_jquery__jslib_style_jquery"
+  ], 
+  "dromaeo.jslibeventprototype": [
+    "jslib_event_prototype__jslib_event_prototype"
+  ], 
+  "page_cycler.moz": [
+    "warm_times__page_load_time", 
+    "cold_times__page_load_time"
+  ], 
+  "speedometer": [
+    "Total__Total"
+  ], 
+  "octane": [
+    "Total__Score"
+  ], 
+  "jsgamebench": [
+    "Score__Score"
+  ], 
+  "page_cycler.indexed_db.basic_insert": [
+    "warm_times__page_load_time", 
+    "cold_times__page_load_time"
+  ], 
+  "spaceport": [
+    "Score__Score"
+  ], 
+  "dromaeo.jslibtraverseprototype": [
+    "jslib_traverse_prototype__jslib_traverse_prototype"
+  ], 
+  "page_cycler.netsim.top_10": [
+    "cold_times__page_load_time", 
+    "warm_times__page_load_time"
+  ], 
+  "dromaeo.jslibmodifyjquery": [
+    "jslib_modify_jquery__jslib_modify_jquery"
+  ], 
+  "dromaeo.domcoreattr": [
+    "dom_attr__dom_attr"
+  ], 
+  "dromaeo.jslibattrprototype": [
+    "jslib_attr_prototype__jslib_attr_prototype"
+  ], 
+  "sunspider": [
+    "Total__Total"
+  ], 
+  "dromaeo.jslibattrjquery": [
+    "jslib_attr_jquery__jslib_attr_jquery"
+  ], 
+  "page_cycler.typical_25": [
+    "warm_times__page_load_time", 
+    "cold_times__page_load_time"
+  ], 
+  "dromaeo.domcoretraverse": [
+    "dom_traverse__dom_traverse"
+  ], 
+  "dromaeo.domcoremodify": [
+    "dom_modify__dom_modify"
+  ], 
+  "page_cycler.intl_ar_fa_he": [
+    "warm_times__page_load_time", 
+    "cold_times__page_load_time"
+  ], 
+  "page_cycler.intl_ja_zh": [
+    "warm_times__page_load_time", 
+    "cold_times__page_load_time"
+  ], 
+  "graphics_WebGLAquarium": [
+    "avg_fps_1000_fishes"
+  ], 
+  "dromaeo.domcorequery": [
+    "dom_query__dom_query"
+  ], 
+  "canvasmark": [
+    "Score__Score"
+  ], 
+  "page_cycler.intl_ko_th_vi": [
+    "warm_times__page_load_time", 
+    "cold_times__page_load_time"
+  ], 
+  "dromaeo.jslibtraversejquery": [
+    "jslib_traverse_jquery__jslib_traverse_jquery"
+  ], 
+  "dromaeo.jslibmodifyprototype": [
+    "jslib_modify_prototype__jslib_modify_prototype"
+  ], 
+  "page_cycler.tough_layout_cases": [
+    "warm_times__page_load_time", 
+    "cold_times__page_load_time"
+  ], 
+  "kraken": [
+    "Total__Total"
+  ], 
+  "media.tough_video_cases": [
+    "avg_loop_time__mixed_audio", 
+    "avg_loop_time__single_audio"
+  ], 
+  "robohornet_pro": [
+    "Total__Total"
+  ]
+}
