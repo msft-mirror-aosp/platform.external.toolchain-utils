@@ -471,7 +471,7 @@ class ResultsCache(object):
   def Init(self, chromeos_image, chromeos_root, test_name, iteration,
            test_args, profiler_args, machine_manager, board, cache_conditions,
            logger_to_use, log_level, label, share_cache, suite,
-           show_all_results):
+           show_all_results, run_local):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.test_name = test_name
@@ -489,6 +489,7 @@ class ResultsCache(object):
     self.suite = suite
     self.log_level = log_level
     self.show_all = show_all_results
+    self.run_local = run_local
 
   def _GetCacheDirForRead(self):
     matching_dirs = []
@@ -550,7 +551,7 @@ class ResultsCache(object):
           machine_id_checksum = machine.machine_id_checksum
           break
 
-    temp_test_args = "%s %s" % (self.test_args, self.profiler_args)
+    temp_test_args = "%s %s %s" % (self.test_args, self.profiler_args, self.run_local)
     test_args_checksum = hashlib.md5(
         "".join(temp_test_args)).hexdigest()
     return (image_path_checksum,

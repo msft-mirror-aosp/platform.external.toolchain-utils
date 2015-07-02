@@ -794,7 +794,8 @@ class ResultsCacheTest(unittest.TestCase):
                             self.mock_label,
                             '',         # benchmark_run.share_cache
                             'telemetry_Crosperf',
-                            True)       # benchmark_run.show_all_results
+                            True,       # benchmark_run.show_all_results
+                            False)      # benchmark_run.run_local
 
 
   @mock.patch.object (image_checksummer.ImageChecksummer, 'Checksum')

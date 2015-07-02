@@ -31,6 +31,11 @@ class BenchmarkSettings(Settings):
     self.AddField(IntegerField("retries", default=0,
                                 description="Number of times to retry a "
                                 "benchmark run."))
+    self.AddField(BooleanField("run_local",
+                               description="Run benchmark harness locally. "
+                               "Currently only compatible with the suite: "
+                               "telemetry_Crosperf.",
+                               required=False, default=False))
 
 
 class LabelSettings(Settings):

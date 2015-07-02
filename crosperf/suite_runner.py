@@ -184,12 +184,13 @@ class SuiteRunner(object):
         test_args = test_args[1:-1]
       args_string = "test_args='%s'" % test_args
 
-    cmd = ('{} {} {} --board={} --args="{} test={} '
+    cmd = ('{} {} {} --board={} --args="{} run_local={} test={} '
            '{}" {} telemetry_Crosperf'.format(TEST_THAT_PATH,
                                               autotest_dir_arg,
                                               fast_arg,
                                               label.board,
                                               args_string,
+                                              benchmark.run_local,
                                               benchmark.test_name,
                                               profiler_args,
                                               machine))
