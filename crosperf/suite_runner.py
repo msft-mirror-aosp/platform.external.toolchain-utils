@@ -159,12 +159,25 @@ class SuiteRunner(object):
                                      True,
                                      self._ct)
 
+  def RemoveTelemetryTempFile (self, machine, chromeos_root):
+    filename = "telemetry@%s" % machine
+    fullname = os.path.join (chromeos_root,
+                             "chroot",
+                             "tmp",
+                             filename)
+    if os.path.exists(fullname):
+        os.remove(fullname)
 
   def Telemetry_Crosperf_Run (self, machine, label, benchmark, test_args,
                               profiler_args):
     if not os.path.isdir(label.chrome_src):
       self._logger.LogFatal("Cannot find chrome src dir to"
                             " run telemetry: %s" % label.chrome_src)
+
+    # Check for and remove temporary file that may have been left by
+    # previous telemetry runs (and which might prevent this run from
+    # working).
+    self.RemoveTelemetryTempFile (machine, label.chromeos_root)
 
     # For telemetry runs, we can use the autotest copy from the source
     # location. No need to have one under /build/<board>.
@@ -223,6 +236,11 @@ class SuiteRunner(object):
 
     if profiler_args:
       self._logger.LogFatal("Telemetry does not support the perf profiler.")
+
+    # Check for and remove temporary file that may have been left by
+    # previous telemetry runs (and which might prevent this run from
+    # working).
+    self.RemoveTelemetryTempFile (machine, label.chromeos_root)
 
     rsa_key = os.path.join(label.chromeos_root,
         "src/scripts/mod_for_test_scripts/ssh_keys/testing_rsa")
