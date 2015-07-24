@@ -352,10 +352,10 @@ class AFELockManager(object):
     if not should_lock_machine:
       action = 'unlock'
     kwargs = {'locked': should_lock_machine}
+    kwargs['lock_reason'] = 'toolchain user request (%s)' % self.user
 
     if machine in self.toolchain_lab_machines:
       m = machine.split('.')[0]
-      kwargs['lock_reason'] = 'toolchain user request (%s)' % self.user
       afe_server = self.afe
     else:
       m = machine
