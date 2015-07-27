@@ -31,6 +31,7 @@ class ExperimentRunner(object):
     self.l = log or logger.GetLogger(experiment.log_dir)
     self._ce = cmd_exec or command_executer.GetCommandExecuter(self.l)
     self._terminated = False
+    self.locked_machines = []
     if experiment.log_level != "verbose":
       self.STATUS_TIME_DELAY = 10
 
@@ -45,6 +46,25 @@ class ExperimentRunner(object):
       if l.remote:
         machines += l.remote
     return machines
+
+  def _UpdateMachineList(self, locked_machines):
+    """Update machines lists to contain only locked machines.
+
+    Go through all the lists of requested machines, both global and
+    label-specific requests, and remove any machine that we were not
+    able to lock.
+
+    Args:
+      locked_machines: A list of the machines we successfully locked.
+    """
+    for m in self._experiment.remote:
+      if m not in locked_machines:
+        self._experiment.remote.remove(m)
+
+    for l in self._experiment.labels:
+      for m in l.remote:
+        if m not in locked_machines:
+          l.remote.remove(m)
 
   def _LockAllMachines(self, experiment):
     """Attempt to globally lock all of the machines requested for run.
@@ -65,7 +85,12 @@ class ExperimentRunner(object):
         lock_mgr.AddLocalMachine(m)
     machine_states = lock_mgr.GetMachineStates("lock")
     lock_mgr.CheckMachineLocks(machine_states, "lock")
-    lock_mgr.UpdateMachines(True)
+    self.locked_machines = lock_mgr.UpdateMachines(True)
+    self._experiment.locked_machines = self.locked_machines
+    self._UpdateMachineList(self.locked_machines)
+    self._experiment.machine_manager.RemoveNonLockedMachines(self.locked_machines)
+    if len(self.locked_machines) == 0:
+        raise RuntimeError("Unable to lock any machines.")
 
   def _UnlockAllMachines(self, experiment):
     """Attempt to globally unlock all of the machines requested for run.
@@ -73,8 +98,11 @@ class ExperimentRunner(object):
     The method will use the AFE server to globally unlock all of the machines
     requested for this crosperf run.
     """
+    if not self.locked_machines:
+        return
+
     lock_mgr = afe_lock_machine.AFELockManager(
-        self._GetMachineList(),
+        self.locked_machines,
         "",
         experiment.labels[0].chromeos_root,
         None,

@@ -41,14 +41,6 @@ class LockingError(AFELockException):
   """Raised when server fails to lock/unlock machine as requested."""
 
 
-class DuplicateLock(AFELockException):
-  """Raised when user attempts to lock an already locked machine."""
-
-
-class DuplicateUnlock(AFELockException):
-  """Raised when user attempts to unlock an already unlocked machine."""
-
-
 class DontOwnLock(AFELockException):
   """Raised when user attmepts to unlock machine locked by someone else."""
   # This should not be raised if the user specified '--force'
@@ -378,7 +370,11 @@ class AFELockManager(object):
     Args:
       lock_machines:  Boolean indicating whether to lock the machines (True) or
         unlock the machines (False).
+
+    Returns:
+      A list of the machines whose state was successfully updated.
     """
+    updated_machines = []
     for m in self.machines:
       self.UpdateLockInAFE(lock_machines, m)
 
@@ -388,6 +384,25 @@ class AFELockManager(object):
         self.logger.LogOutput('Locked machine(s) %s.' % m)
       else:
         self.logger.LogOutput('Unlocked machine(s) %s.' % m)
+      updated_machines.append(m)
+
+    return updated_machines
+
+  def _InternalRemoveMachine(self, machine):
+    """Remove machine from internal list of machines.
+
+    Args:
+      machine: Name of machine to be removed from internal list.
+    """
+    # Check to see if machine is lab machine and if so, make sure it has
+    # ".cros" on the end.
+    cros_machine = machine
+    if machine.find('rack') > 0 and machine.find('row') > 0:
+      if machine.find('.cros') == -1:
+        cros_machine = cros_machine + '.cros'
+
+    self.machines = [m for m in self.machines if m != cros_machine and
+                     m != machine]
 
   def CheckMachineLocks(self, machine_states, cmd):
     """Check that every machine in requested list is in the proper state.
@@ -402,22 +417,22 @@ class AFELockManager(object):
       cmd:  'lock' or 'unlock'.  The user-requested action for the machines.
 
     Raises:
-      DuplicateLock: A machine requested to be locked is already locked.
-      DuplicateUnlock: A machine requested to be unlocked is already unlocked.
       DontOwnLock: The lock on a requested machine is owned by someone else.
     """
     for k, state in machine_states.iteritems():
       if cmd == 'unlock':
         if not state['locked']:
-          raise DuplicateUnlock('Attempt to unlock already unlocked machine '
-                                '(%s).' % k)
+          self.logger.LogWarning('Attempt to unlock already unlocked machine '
+                                 '(%s).' % k)
+          self._InternalRemoveMachine(k)
 
-        if state['locked_by'] != self.user:
+        if state['locked'] and state['locked_by'] != self.user:
           raise DontOwnLock('Attempt to unlock machine (%s) locked by someone '
                             'else (%s).' % (k, state['locked_by']))
       elif cmd == 'lock':
         if state['locked']:
-          raise DuplicateLock('Attempt to lock already locked machine (%s)' % k)
+          self.logger.LogWarning('Attempt to lock already locked machine (%s)' % k)
+          self._InternalRemoveMachine(k)
 
   def HasAFEServer(self, local):
     """Verifies that the AFELockManager has appropriate AFE server.

@@ -206,6 +206,15 @@ class MachineManager(object):
     self._initialized_machines = []
     self.chromeos_root = chromeos_root
 
+  def RemoveNonLockedMachines(self, locked_machines):
+    for m in self._all_machines:
+      if m.name not in locked_machines:
+        self._all_machines.remove(m)
+
+    for m in self._machines:
+      if m.name not in locked_machines:
+        self._machines.remove(m)
+
   def ImageMachine(self, machine, label):
     if label.image_type == "local":
       checksum = ImageChecksummer().Checksum(label, self.log_level)

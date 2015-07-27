@@ -50,6 +50,7 @@ class Experiment(object):
     # locking mechanism; if it is blank then we will use the AFE server
     # locking mechanism.
     self.locks_dir = locks_directory
+    self.locked_machines = []
 
     # We need one chromeos_root to run the benchmarks in, but it doesn't
     # matter where it is, unless the ABIs are different.
@@ -146,9 +147,11 @@ class Experiment(object):
       # to unlock everything.
       self.machine_manager.Cleanup()
     else:
-      all_machines = self.remote
-      for l in self.labels:
-        all_machines += l.remote
+      all_machines = self.locked_machines
+      if not all_machines:
+        return
+
+      # If we locked any machines earlier, make sure we unlock them now.
       lock_mgr = afe_lock_machine.AFELockManager(all_machines, "",
                                                  self.labels[0].chromeos_root,
                                                  None)
