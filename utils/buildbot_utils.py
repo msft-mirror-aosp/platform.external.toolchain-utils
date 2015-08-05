@@ -239,22 +239,22 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag,
           else:
             done = False
 
-        if not done:
-          if pending:
-            logger.GetLogger().LogOutput(pending_message)
-            logger.GetLogger().LogOutput("Current pending time: %d minutes." %
-                                         (pending_time / 60))
-            pending_time  += SLEEP_TIME
-          else:
-            logger.GetLogger().LogOutput("{0} minutes passed.".format(
-                running_time / 60))
-            logger.GetLogger().LogOutput("Sleeping {0} seconds.".format(
-                SLEEP_TIME))
-            running_time += SLEEP_TIME
+      if not done:
+        if pending:
+          logger.GetLogger().LogOutput(pending_message)
+          logger.GetLogger().LogOutput("Current pending time: %d minutes." %
+                                       (pending_time / 60))
+          pending_time  += SLEEP_TIME
+        else:
+          logger.GetLogger().LogOutput("{0} minutes passed.".format(
+              running_time / 60))
+          logger.GetLogger().LogOutput("Sleeping {0} seconds.".format(
+              SLEEP_TIME))
+          running_time += SLEEP_TIME
 
-          time.sleep(SLEEP_TIME)
-          if running_time > TIME_OUT:
-            done = True
+        time.sleep(SLEEP_TIME)
+        if running_time > TIME_OUT:
+          done = True
 
     trybot_image = FindArchiveImage(chromeos_root, build, build_id)
     if not trybot_image:
