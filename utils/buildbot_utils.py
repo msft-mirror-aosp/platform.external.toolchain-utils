@@ -112,7 +112,11 @@ def GetBuildInfo(file_dir, builder):
                 .format(file_dir))
 
     if builder:
-      commands += " -b %s" % builder
+      # For release builds, get logs from the 'release' builder.
+      if builder.endswith('-release'):
+        commands += " -b release"
+      else:
+        commands += " -b %s" % builder
     _, buildinfo, _ = ce.RunCommand(commands, return_output=True,
                                     print_to_console=False)
     build_log = buildinfo.splitlines()
