@@ -95,11 +95,19 @@ class ExperimentStatus(object):
     for key, val in status_bins.items():
       status_strings.append("%s: %s" %
                             (key, self._GetNamesAndIterations(val)))
-    result = "Thread Status:\n%s" % "\n".join(status_strings)
 
+    thread_status = ""
     if self.experiment.log_level == "verbose":
-      # Add the machine manager status.
-      result += "\n" + self.experiment.machine_manager.AsString() + "\n"
+      thread_status_format = "Thread Status: \n{}\n"
+      if self.experiment.schedv2() is None:
+        # Add the machine manager status.
+        thread_status = thread_status_format.format(
+          self.experiment.machine_manager.AsString())
+      else:
+        thread_status = thread_status_format.format(
+          self.experiment.schedv2().threads_status_as_string())
+
+    result = "{}{}".format(thread_status, "\n".join(status_strings))
 
     return result
 

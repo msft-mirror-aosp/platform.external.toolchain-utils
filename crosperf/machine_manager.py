@@ -20,8 +20,6 @@ from utils import logger
 from utils import misc
 from utils.file_utils import FileUtils
 
-from image_checksummer import ImageChecksummer
-
 CHECKSUM_FILE = "/usr/local/osimage_checksum_file"
 
 class NonMatchingMachines(Exception):
@@ -34,6 +32,9 @@ class CrosMachine(object):
   def __init__(self, name, chromeos_root, log_level, cmd_exec=None):
     self.name = name
     self.image = None
+    # We relate a dut with a label if we reimage the dut using label or we
+    # detect at the very beginning that the dut is running this label.
+    self.label = None
     self.checksum = None
     self.locked = False
     self.released_time = time.time()
@@ -216,12 +217,7 @@ class MachineManager(object):
         self._machines.remove(m)
 
   def ImageMachine(self, machine, label):
-    if label.image_type == "local":
-      checksum = ImageChecksummer().Checksum(label, self.log_level)
-    elif label.image_type == "trybot":
-      checksum = machine._GetMD5Checksum(label.chromeos_image)
-    else:
-      checksum = None
+    checksum = label.checksum
 
     if checksum and (machine.checksum == checksum):
       return
@@ -247,9 +243,9 @@ class MachineManager(object):
     with self.image_lock:
       if self.log_level != "verbose":
         self.logger.LogOutput("Pushing image onto machine.")
-        self.logger.LogOutput("CMD : python %s "
+        self.logger.LogOutput("Running image_chromeos.DoImage with %s"
                                  % " ".join(image_chromeos_args))
-      retval = self.ce.RunCommand(" ".join(["python"] + image_chromeos_args))
+      retval = image_chromeos.DoImage(image_chromeos_args)
       if retval:
         cmd = "reboot && exit"
         if self.log_level != "verbose":
@@ -259,15 +255,16 @@ class MachineManager(object):
         time.sleep(60)
         if self.log_level != "verbose":
           self.logger.LogOutput("Pushing image onto machine.")
-          self.logger.LogOutput("CMD : python %s "
+          self.logger.LogOutput("Running image_chromeos.DoImage with %s"
                                      % " ".join(image_chromeos_args))
-        retval = self.ce.RunCommand(" ".join(["python"] + image_chromeos_args))
+        retval = image_chromeos.DoImage(image_chromeos_args)
       if retval:
         raise Exception("Could not image machine: '%s'." % machine.name)
       else:
         self.num_reimages += 1
       machine.checksum = checksum
       machine.image = label.chromeos_image
+      machine.label = label
 
     self.ce.log_level = save_ce_log_level
     return retval
@@ -344,12 +341,7 @@ class MachineManager(object):
       m.SetUpChecksumInfo()
 
   def AcquireMachine(self, chromeos_image, label, throw=False):
-    if label.image_type == "local":
-      image_checksum = ImageChecksummer().Checksum(label, self.log_level)
-    elif label.image_type == "trybot":
-      image_checksum = hashlib.md5(chromeos_image).hexdigest()
-    else:
-      image_checksum = None
+    image_checksum = label.checksum
     machines = self.GetMachines(label)
     check_interval_time = 120
     with self._lock:

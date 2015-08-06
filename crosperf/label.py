@@ -7,13 +7,15 @@
 """The label of benchamrks."""
 
 import os
+
+from image_checksummer import ImageChecksummer
 from utils.file_utils import FileUtils
 from utils import misc
 
 
 class Label(object):
   def __init__(self, name, chromeos_image, chromeos_root, board, remote,
-               image_args, cache_dir, cache_only, chrome_src=None):
+               image_args, cache_dir, cache_only, log_level, chrome_src=None):
 
     self.image_type = self._GetImageType(chromeos_image)
 
@@ -29,6 +31,7 @@ class Label(object):
     self.image_args = image_args
     self.cache_dir = cache_dir
     self.cache_only = cache_only
+    self.log_level = log_level
 
     if not chromeos_root:
       if self.image_type == "local":
@@ -57,6 +60,17 @@ class Label(object):
                         % (name, chrome_src))
       self.chrome_src = chromeos_src
 
+    self._SetupChecksum()
+
+  def _SetupChecksum(self):
+    """Compute label checksum only once."""
+
+    self.checksum = None
+    if self.image_type == "local":
+      self.checksum = ImageChecksummer().Checksum(self, self.log_level)
+    elif self.image_type == "trybot":
+      self.checksum = hashlib.md5(self.chromeos_image).hexdigest()
+
   def _GetImageType(self, chromeos_image):
     image_type = None
     if chromeos_image.find("xbuddy://") < 0:
@@ -66,6 +80,21 @@ class Label(object):
     else:
       image_type = "official"
     return image_type
+
+  def __hash__(self):
+      """Label objects are used in a map, so provide "hash" and "equal"."""
+
+      return hash(self.name)
+
+  def __eq__(self, other):
+      """Label objects are used in a map, so provide "hash" and "equal"."""
+
+      return isinstance(other, Label) and other.name == self.name
+
+  def __str__(self):
+      """For better debugging."""
+
+      return 'label[name="{}"]'.format(self.name)
 
 class MockLabel(object):
   def __init__(self, name, chromeos_image, chromeos_root, board, remote,

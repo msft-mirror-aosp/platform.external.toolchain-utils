@@ -64,6 +64,9 @@ class BenchmarkRun(threading.Thread):
     self.timeline.Record(STATUS_PENDING)
     self.share_cache = share_cache
 
+    # This is used by schedv2.
+    self.owner_thread = None
+
   def ReadCache(self):
     # Just use the first machine for running the cached version,
     # without locking it.
@@ -137,7 +140,10 @@ class BenchmarkRun(threading.Thread):
         self.timeline.Record(STATUS_FAILED)
         self.failure_reason = str(e)
     finally:
-      if self.machine:
+      if self.owner_thread is not None:
+        # In schedv2 mode, we do not lock machine locally. So noop here.
+        pass
+      elif self.machine:
         if not self.machine.IsReachable():
           self._logger.LogOutput("Machine %s is not reachable, removing it."
                                  % self.machine.name)
@@ -154,6 +160,10 @@ class BenchmarkRun(threading.Thread):
       self.failure_reason = "Thread terminated."
 
   def AcquireMachine(self):
+    if self.owner_thread is not None:
+      # No need to lock machine locally, DutWorker, which is a thread, is
+      # responsible for running br.
+      return self.owner_thread.dut()
     while True:
       machine = None
       if self.terminated:
@@ -204,8 +214,13 @@ class BenchmarkRun(threading.Thread):
 
   def RunTest(self, machine):
     self.timeline.Record(STATUS_IMAGING)
-    self.machine_manager.ImageMachine(machine,
-                                      self.label)
+    if self.owner_thread is not None:
+      # In schedv2 mode, do not even call ImageMachine. Machine image is
+      # guarenteed.
+      pass
+    else:
+      self.machine_manager.ImageMachine(machine,
+                                        self.label)
     self.timeline.Record(STATUS_RUNNING)
     [retval, out, err] = self.suite_runner.Run(machine.name,
                                                   self.label,
@@ -225,6 +240,11 @@ class BenchmarkRun(threading.Thread):
 
   def SetCacheConditions(self, cache_conditions):
     self.cache_conditions = cache_conditions
+
+  def __str__(self):
+    """For better debugging."""
+
+    return 'BenchmarkRun[name="{}"]'.format(self.name)
 
 
 class MockBenchmarkRun(BenchmarkRun):

@@ -64,6 +64,10 @@ def Main(argv):
                                  formatter=MyIndentedHelpFormatter(),
                                  version="%prog 3.0")
 
+  parser.add_option("--schedv2",
+                    dest="schedv2",
+                    action="store_true",
+                    help="Use crosperf scheduler v2 (feature in progress).")
   parser.add_option("-l", "--log_dir",
                     dest="log_dir",
                     default="",
@@ -101,7 +105,8 @@ def Main(argv):
   if options.dry_run:
     runner = MockExperimentRunner(experiment)
   else:
-    runner = ExperimentRunner(experiment)
+    runner = ExperimentRunner(experiment, using_schedv2=options.schedv2)
+
   runner.Run()
 
 if __name__ == "__main__":

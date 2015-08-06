@@ -248,7 +248,7 @@ class ExperimentFactory(object):
                           image_args, cache_dir, cache_only, chrome_src)
       else:
         label = Label(label_name, image, chromeos_root, board, my_remote,
-                      image_args, cache_dir, cache_only, chrome_src)
+                      image_args, cache_dir, cache_only, log_level, chrome_src)
       labels.append(label)
 
     email = global_settings.GetField("email")

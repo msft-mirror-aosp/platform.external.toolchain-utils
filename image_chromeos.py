@@ -50,7 +50,7 @@ def CheckForCrosFlash(chromeos_root, remote, log_level):
 
 
 def DoImage(argv):
-  """Build ChromeOS."""
+  """Image ChromeOS."""
 
   parser = optparse.OptionParser()
   parser.add_option("-c", "--chromeos_root", dest="chromeos_root",

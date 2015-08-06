@@ -10,6 +10,7 @@ import os
 import time
 
 import afe_lock_machine
+from threading import Lock
 
 from utils import logger
 from utils import misc
@@ -79,6 +80,15 @@ class Experiment(object):
     self.start_time = None
     self.benchmark_runs = self._GenerateBenchmarkRuns()
 
+    self._schedv2 = None
+    self._internal_counter_lock = Lock()
+
+  def set_schedv2(self, schedv2):
+      self._schedv2 = schedv2
+
+  def schedv2(self):
+      return self._schedv2
+
   def _GenerateBenchmarkRuns(self):
     """Generate benchmark runs from labels and benchmark defintions."""
     benchmark_runs = []
@@ -109,12 +119,17 @@ class Experiment(object):
     pass
 
   def Terminate(self):
-    for t in self.benchmark_runs:
-      if t.isAlive():
-        self.l.LogError("Terminating run: '%s'." % t.name)
-        t.Terminate()
+    if self._schedv2 is not None:
+      self._schedv2.terminate()
+    else:
+      for t in self.benchmark_runs:
+        if t.isAlive():
+          self.l.LogError("Terminating run: '%s'." % t.name)
+          t.Terminate()
 
   def IsComplete(self):
+    if self._schedv2:
+      return self._schedv2.is_complete()
     if self.active_threads:
       for t in self.active_threads:
         if t.isAlive():
@@ -127,14 +142,30 @@ class Experiment(object):
       return False
     return True
 
+  def BenchmarkRunFinished(self, br):
+      """Update internal counters after br finishes.
+
+      Note this is only used by schedv2 and is called by multiple threads.
+      Never throw any exception here.
+      """
+
+      assert self._schedv2 is not None
+      with self._internal_counter_lock:
+          self.num_complete += 1
+          if not br.cache_hit:
+            self.num_run_complete += 1
+
   def Run(self):
     self.start_time = time.time()
-    self.active_threads = []
-    for benchmark_run in self.benchmark_runs:
-      # Set threads to daemon so program exits when ctrl-c is pressed.
-      benchmark_run.daemon = True
-      benchmark_run.start()
-      self.active_threads.append(benchmark_run)
+    if self._schedv2 is not None:
+      self._schedv2.run_sched()
+    else:
+      self.active_threads = []
+      for benchmark_run in self.benchmark_runs:
+        # Set threads to daemon so program exits when ctrl-c is pressed.
+        benchmark_run.daemon = True
+        benchmark_run.start()
+        self.active_threads.append(benchmark_run)
 
   def SetCacheConditions(self, cache_conditions):
     for benchmark_run in self.benchmark_runs:
