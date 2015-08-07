@@ -15,6 +15,12 @@ from utils import buildbot_json
 SLEEP_TIME = 600  # 10 minutes; time between polling of buildbot.
 TIME_OUT =  18000 # Decide the build is dead or will never finish
                   # after this time (5 hours).
+OK_STATUS = [     # List of result status values that are 'ok'.
+                  # This was obtained from: https://chromium.googlesource.com/chromium/tools/build/+/master/third_party/buildbot_8_4p1/buildbot/status/results.py
+    0, # "success"
+    1, # "warnings"
+    6, # "retry"
+    ]
 
 """Utilities for launching and accessing ChromeOS buildbots."""
 
@@ -135,6 +141,28 @@ def FindArchiveImage(chromeos_root, build, build_id):
     retval, out, err = ce.ChrootRunCommand(chromeos_root, command,
                                            return_output=True,
                                            print_to_console=False)
+    #
+    # If build_id is not unique, there may be multiple archive images
+    # to choose from; sort them & pick the first (newest).
+    #
+    # If there are multiple archive images found, out will look something
+    # like this:
+    #
+    # 'gs://chromeos-image-archive/trybot-peppy-release/R35-5692.0.0-b105/chromiumos_test_image.tar.xz\ngs://chromeos-image-archive/trybot-peppy-release/R46-7339.0.0-b105/chromiumos_test_image.tar.xz\n'
+    #
+    out = out.rstrip('\n')
+    tmp_list = out.split('\n')
+    # After stripping the final '\n' and splitting on any other '\n', we get
+    # something like this:
+    #  tmp_list = [ 'gs://chromeos-image-archive/trybot-peppy-release/R35-5692.0.0-b105/chromiumos_test_image.tar.xz' ,
+    #               'gs://chromeos-image-archive/trybot-peppy-release/R46-7339.0.0-b105/chromiumos_test_image.tar.xz' ]
+    #
+    #  If we sort this in descending order, we should end up with the most
+    #  recent test image first, so that's what we do here.
+    #
+    if len(tmp_list) > 1:
+        tmp_list = sorted(tmp_list, reverse=True)
+    out = tmp_list[0]
 
     trybot_image = ""
     trybot_name = "trybot-%s" % build
@@ -260,7 +288,10 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag,
         if running_time > TIME_OUT:
           done = True
 
-    trybot_image = FindArchiveImage(chromeos_root, build, build_id)
+    trybot_image = ""
+
+    if build_status in OK_STATUS:
+        trybot_image = FindArchiveImage(chromeos_root, build, build_id)
     if not trybot_image:
         logger.GetLogger().LogError("Trybot job %s failed with status %d;"
                                     " no trybot image generated."
