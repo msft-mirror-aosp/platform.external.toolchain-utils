@@ -220,7 +220,6 @@ class ToolchainComparator(ChromeOSCheckout):
           official_image = """
           official_image {
             chromeos_root: %s
-            chrome_src: /usr/local/google/crostc/new-chrome-src
             build: %s
           }
           """ % (self._chromeos_root, build_name)
@@ -230,7 +229,6 @@ class ToolchainComparator(ChromeOSCheckout):
           experiment_image = """
           %s {
             chromeos_image: %s
-            chrome_src: /usr/local/google/crostc/new-chrome-src
             image_args: %s
           }
           """ % (crosperf_label,
