@@ -110,7 +110,6 @@ class ToolchainComparator():
       official_image = """
           vanilla_image {
             chromeos_root: %s
-            chrome_src: /usr/local/google/crostc/new-chrome-src
             build: %s
           }
           """ % (self._chromeos_root, vanilla_image)
@@ -119,7 +118,6 @@ class ToolchainComparator():
       experiment_image = """
           test_image {
             chromeos_root: %s
-            chrome_src: /usr/local/google/crostc/new-chrome-src
             build: %s
           }
           """ % (self._chromeos_root, trybot_image)
