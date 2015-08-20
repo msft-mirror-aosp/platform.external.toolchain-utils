@@ -23,7 +23,7 @@ from utils import logger
 from utils import buildbot_utils
 
 # CL that updated GCC ebuilds to use 'next_gcc'.
-USE_NEXT_GCC_PATCH ="230260"
+USE_NEXT_GCC_PATCH = [230260]
 
 WEEKLY_REPORTS_ROOT = "/usr/local/google/crostc/weekly_test_data"
 ROLE_ACCOUNT = "mobiletc-prebuild"
@@ -206,12 +206,12 @@ class ToolchainComparator():
     crosperf, and copy images into seven-day report directories.
     """
     date_str = datetime.date.today()
-    description = "master_%s_%s_%s" % (USE_NEXT_GCC_PATCH,
+    description = "master_%s_%s_%s" % ('_'.join(USE_NEXT_GCC_PATCH),
                                        self._build,
                                        date_str)
     trybot_image = buildbot_utils.GetTrybotImage(self._chromeos_root,
                                                  self._build,
-                                                 [ USE_NEXT_GCC_PATCH ],
+                                                 USE_NEXT_GCC_PATCH,
                                                  description,
                                                  build_toolchain=True)
 
@@ -254,6 +254,11 @@ def Main(argv):
   parser.add_option("--weekday", default="",
                     dest="weekday",
                     help="The day of the week for which to run tests.")
+  parser.add_option("--patch",
+                    dest="patches",
+                    help="The patches to use for the testing, "
+                    "seprate the patch numbers with ',' "
+                    "for more than one patches.")
   options, _ = parser.parse_args(argv)
   if not options.board:
     print "Please give a board."
@@ -264,6 +269,9 @@ def Main(argv):
   if not options.chromeos_root:
     print "Please specify the ChromeOS root directory."
     return 1
+
+  if options.patch:
+    global USE_NEXT_GCC_PATCH = options.patch.split(',')
 
   fc = ToolchainComparator(options.board, options.remote,
                            options.chromeos_root, options.weekday)
