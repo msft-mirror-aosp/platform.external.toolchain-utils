@@ -206,7 +206,8 @@ class ToolchainComparator():
     crosperf, and copy images into seven-day report directories.
     """
     date_str = datetime.date.today()
-    description = "master_%s_%s_%s" % ('_'.join(USE_NEXT_GCC_PATCH),
+    patch_string = '_'.join(str(p) for p in USE_NEXT_GCC_PATCH)
+    description = "master_%s_%s_%s" % (patch_string,
                                        self._build,
                                        date_str)
     trybot_image = buildbot_utils.GetTrybotImage(self._chromeos_root,
@@ -270,8 +271,9 @@ def Main(argv):
     print "Please specify the ChromeOS root directory."
     return 1
 
-  if options.patch:
-    global USE_NEXT_GCC_PATCH = options.patch.split(',')
+  if options.patches:
+    global USE_NEXT_GCC_PATCH
+    USE_NEXT_GCC_PATCH = options.patch.split(',')
 
   fc = ToolchainComparator(options.board, options.remote,
                            options.chromeos_root, options.weekday)
