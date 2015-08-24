@@ -273,7 +273,7 @@ def Main(argv):
 
   if options.patches:
     global USE_NEXT_GCC_PATCH
-    USE_NEXT_GCC_PATCH = options.patch.split(',')
+    USE_NEXT_GCC_PATCH = options.patches.split(',')
 
   fc = ToolchainComparator(options.board, options.remote,
                            options.chromeos_root, options.weekday)
