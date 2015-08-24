@@ -23,7 +23,10 @@ from utils import logger
 from utils import buildbot_utils
 
 # CL that updated GCC ebuilds to use 'next_gcc'.
-USE_NEXT_GCC_PATCH = [230260]
+USE_NEXT_GCC_PATCH = "230260"
+
+# The boards on which we run weekly reports
+WEEKLY_REPORT_BOARDS = ["lumpy"]
 
 WEEKLY_REPORTS_ROOT = "/usr/local/google/crostc/weekly_test_data"
 ROLE_ACCOUNT = "mobiletc-prebuild"
@@ -35,7 +38,7 @@ class ToolchainComparator():
   Class for doing the nightly tests work.
   """
 
-  def __init__(self, board, remotes, chromeos_root, weekday):
+  def __init__(self, board, remotes, chromeos_root, weekday, patches):
     self._board = board
     self._remotes = remotes
     self._chromeos_root = chromeos_root
@@ -43,6 +46,9 @@ class ToolchainComparator():
     self._ce = command_executer.GetCommandExecuter()
     self._l = logger.GetLogger()
     self._build = "%s-release" % board
+    self._patches = patches.split(',')
+    self._patches_string = '_'.join(str(p) for p in self._patches)
+
     if not weekday:
       self._weekday = time.strftime("%a")
     else:
@@ -206,13 +212,12 @@ class ToolchainComparator():
     crosperf, and copy images into seven-day report directories.
     """
     date_str = datetime.date.today()
-    patch_string = '_'.join(str(p) for p in USE_NEXT_GCC_PATCH)
-    description = "master_%s_%s_%s" % (patch_string,
+    description = "master_%s_%s_%s" % (self._patches_string,
                                        self._build,
                                        date_str)
     trybot_image = buildbot_utils.GetTrybotImage(self._chromeos_root,
                                                  self._build,
-                                                 USE_NEXT_GCC_PATCH,
+                                                 self._patches,
                                                  description,
                                                  build_toolchain=True)
 
@@ -231,8 +236,10 @@ class ToolchainComparator():
 
     self._TestImages(trybot_image, vanilla_image)
     self._SendEmail()
-    # Only try to copy the image files if the test runs ran successfully.
-    self._CopyWeeklyReportFiles(trybot_image, vanilla_image)
+    if (self._patches_string == USE_NEXT_GCC_PATCH and
+        self._board in WEEKLY_REPORT_BOARDS):
+        # Only try to copy the image files if the test runs ran successfully.
+        self._CopyWeeklyReportFiles(trybot_image, vanilla_image)
     return 0
 
 
@@ -270,13 +277,13 @@ def Main(argv):
   if not options.chromeos_root:
     print "Please specify the ChromeOS root directory."
     return 1
-
   if options.patches:
-    global USE_NEXT_GCC_PATCH
-    USE_NEXT_GCC_PATCH = options.patches.split(',')
+    patches = options.patches
+  else:
+    patches = USE_NEXT_GCC_PATCH
 
   fc = ToolchainComparator(options.board, options.remote,
-                           options.chromeos_root, options.weekday)
+                           options.chromeos_root, options.weekday, patches)
   return fc.DoAll()
 
 
