@@ -25,6 +25,7 @@ import config
 from experiment_status import ExperimentStatus
 from results_report import HTMLResultsReport
 from results_report import TextResultsReport
+from results_report import JSONResultsReport
 
 
 class ExperimentRunner(object):
@@ -33,11 +34,13 @@ class ExperimentRunner(object):
   STATUS_TIME_DELAY = 30
   THREAD_MONITOR_DELAY = 2
 
-  def __init__(self, experiment, using_schedv2=False, log=None, cmd_exec=None):
+  def __init__(self, experiment, json_report, using_schedv2=False, log=None,
+               cmd_exec=None):
     self._experiment = experiment
     self.l = log or logger.GetLogger(experiment.log_dir)
     self._ce = cmd_exec or command_executer.GetCommandExecuter(self.l)
     self._terminated = False
+    self.json_report = json_report
     self.locked_machines = []
     if experiment.log_level != "verbose":
       self.STATUS_TIME_DELAY = 10
@@ -211,6 +214,8 @@ class ExperimentRunner(object):
     self.l.LogOutput("Storing results report in %s." % results_directory)
     results_table_path = os.path.join(results_directory, "results.html")
     report = HTMLResultsReport(experiment).GetReport()
+    if self.json_report:
+      JSONResultsReport(experiment).GetReport(results_directory)
     FileUtils().WriteFile(results_table_path, report)
 
     self.l.LogOutput("Storing email message body in %s." % results_directory)

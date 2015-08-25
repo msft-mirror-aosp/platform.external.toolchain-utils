@@ -20,15 +20,16 @@ from utils import misc
 
 Defaults = {}
 
-DEFAULTS_FILE_NAME = 'crosperf/default-telemetry-results.json'
 
 class TelemetryDefaults(object):
+
+  DEFAULTS_FILE_NAME = 'crosperf/default-telemetry-results.json'
 
   def __init__(self):
     # Get the Crosperf directory; that is where the defaults
     # file should be.
-    dirname, __ = misc.GetRoot(sys.argv[0])
-    fullname = os.path.join(dirname, DEFAULTS_FILE_NAME)
+    dirname, __ = misc.GetRoot(__file__)
+    fullname = os.path.join(dirname, self.DEFAULTS_FILE_NAME)
     self._filename = fullname
     self._defaults = {}
 
@@ -37,11 +38,9 @@ class TelemetryDefaults(object):
       with open(self._filename, "r") as fp:
         self._defaults = json.load(fp)
 
-
   def WriteDefaultsFile (self):
     with open(self._filename, "w") as fp:
       json.dump(self._defaults, fp, indent=2)
-
 
   def ListCurrentDefaults (self, benchmark=all):
     # Show user current defaults. By default, show all.  The user

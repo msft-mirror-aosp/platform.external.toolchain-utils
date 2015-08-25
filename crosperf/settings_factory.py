@@ -135,6 +135,9 @@ class GlobalSettings(Settings):
     self.AddField(BooleanField("no_email", default=False,
                                description="Whether to disable the email to "
                                "user after crosperf finishes."))
+    self.AddField(BooleanField("json_report", default=False,
+                               description="Whether to generate a json version"
+                               " of the report, for archiving."))
     self.AddField(BooleanField("show_all_results", default=False,
                                description="When running Telemetry tests, "
                                "whether to all the results, instead of just "

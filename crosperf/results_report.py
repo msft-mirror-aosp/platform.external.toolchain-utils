@@ -4,8 +4,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import datetime
+import json
+import os
+
 from utils.tabulator import *
 
+from update_telemetry_defaults import TelemetryDefaults
 from column_chart import ColumnChart
 from results_organizer import ResultOrganizer
 from perf_table import PerfTable
@@ -511,3 +516,112 @@ pre {
         if chart:
           charts.append(chart)
     return charts
+
+class JSONResultsReport(ResultsReport):
+
+  def __init__(self, experiment, date=None, time=None):
+    super(JSONResultsReport, self).__init__(experiment)
+    self.ro = ResultOrganizer(experiment.benchmark_runs,
+                              experiment.labels,
+                              experiment.benchmarks)
+    self.date = date
+    self.time = time
+    self.defaults = TelemetryDefaults()
+    if not self.date:
+      timestamp = datetime.datetime.strftime(datetime.datetime.now(),
+                                           "%Y-%m-%d %H:%M:%S")
+      date, time = timestamp.split(" ")
+      self.date = date
+      self.time = time
+
+
+  def _ParseChromeosImage(self, chromeos_image):
+    """Parse the chromeos_image string for the image and version.
+
+    The chromeos_image string will probably be in one of two formats:
+    1:  <path-to-chroot>/src/build/images/<board>/<ChromeOS-version>.<datetime>/chromiumos_test_image.bin
+    2: <path-to-chroot>/chroot/tmp/<buildbot-build>/<ChromeOS-version>/chromiumos_test_image.bin
+
+    We parse these strings to find the 'chromeos_version' to store in the
+    json archive (without the .datatime bit in the first case); and also
+    the 'chromeos_image', which would be all of the first case, but only the
+    part after '/chroot/tmp' in the second case.
+
+    Args:
+      chromeos_image:  String containing the path to the chromeos_image that
+        crosperf used for the test.
+
+    Returns:
+      version, image:  The results of parsing the input string, as explained
+        above.
+    """
+    version = ''
+    real_file = os.path.realpath(os.path.expanduser(chromeos_image))
+    pieces = real_file.split('/')
+    # Find the Chromeos Version, e.g. R45-2345.0.0.....
+    # chromeos_image should have been something like:
+    # <path>/<board-trybot-release>/<chromeos-version>/chromiumos_test_image.bin"
+    num_pieces = len(pieces)
+    if pieces[num_pieces-1] == "chromiumos_test_image.bin":
+      version = pieces[num_pieces-2]
+      # Find last '.' in the version and chop it off (removing the .datatime
+      # piece from local builds).
+      loc = version.rfind('.')
+      version = version[:loc]
+    # Find the chromeos image.  If it's somewhere in .../chroot/tmp/..., then
+    # it's an official image that got downloaded, so chop off the download path
+    # to make the official image name more clear.
+    loc = real_file.find('/chroot/tmp')
+    if loc != -1:
+      loc += len('/chroot/tmp')
+      real_file = real_file[loc:]
+    image = real_file
+    return version,image
+
+  def GetReport(self, results_dir):
+    self.defaults.ReadDefaultsFile()
+    final_results = []
+    board = self.experiment.labels[0].board
+    for test, test_results in self.ro.result.iteritems():
+      for i, label in enumerate(self.ro.labels):
+        label_results = test_results[i]
+        for j, iter_Results in enumerate(label_results):
+          iter_results = label_results[j]
+          json_results = dict()
+          json_results['date'] = self.date
+          json_results['time'] = self.time
+          json_results['board'] = board
+          for l in self.experiment.labels:
+            if l.name == label:
+              ver, img = self._ParseChromeosImage(l.chromeos_image)
+              json_results['chromeos_image'] = img
+              json_results['chromeos_version'] = ver
+              break
+          json_results['test_name'] = test
+          if iter_results['retval'] != 0:
+            json_results['pass'] = False
+          else:
+            json_results['pass'] = True
+            # Get overall results.
+            if test in self.defaults._defaults:
+              default_result_fields = self.defaults._defaults[test]
+              value = []
+              for f in default_result_fields:
+                item = (f, float(iter_results[f][0]))
+                value.append(item)
+              json_results['overall_result'] = value
+            # Get detailed results.
+            detail_results = dict()
+            for k in iter_results.keys():
+              if k != 'retval' and type(iter_results[k]) == list:
+                v_list = iter_results[k]
+                v = v_list[0]
+                detail_results[k] = float(v)
+            json_results['detailed_results'] = detail_results
+          final_results.append(json_results)
+
+    filename = "report_%s_%s_%s.json" % (board, self.date,
+                                         self.time.replace(':','.'))
+    fullname = os.path.join(results_dir, filename)
+    with open(fullname, "w") as fp:
+      json.dump(final_results, fp, indent=2)

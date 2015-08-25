@@ -100,12 +100,15 @@ def Main(argv):
                                                  working_directory,
                                                  log_dir)
 
+  json_report = experiment_file.GetGlobalSettings().GetField("json_report")
+
   atexit.register(Cleanup, experiment)
 
   if options.dry_run:
     runner = MockExperimentRunner(experiment)
   else:
-    runner = ExperimentRunner(experiment, using_schedv2=options.schedv2)
+    runner = ExperimentRunner(experiment, json_report,
+                              using_schedv2=options.schedv2)
 
   runner.Run()
 
