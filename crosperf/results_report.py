@@ -607,16 +607,21 @@ class JSONResultsReport(ResultsReport):
               default_result_fields = self.defaults._defaults[test]
               value = []
               for f in default_result_fields:
-                item = (f, float(iter_results[f][0]))
+                v = iter_results[f]
+                if type(v) == list:
+                    v = v[0]
+                item = (f, float(v))
                 value.append(item)
               json_results['overall_result'] = value
             # Get detailed results.
             detail_results = dict()
             for k in iter_results.keys():
-              if k != 'retval' and type(iter_results[k]) == list:
-                v_list = iter_results[k]
-                v = v_list[0]
-                detail_results[k] = float(v)
+              if k != 'retval':
+                v = iter_results[k]
+                if type(v) == list:
+                  v = v[0]
+                if v != 'PASS':
+                  detail_results[k] = float(v)
             json_results['detailed_results'] = detail_results
           final_results.append(json_results)
 
