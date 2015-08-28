@@ -38,7 +38,7 @@ class ToolchainComparator():
   Class for doing the nightly tests work.
   """
 
-  def __init__(self, board, remotes, chromeos_root, weekday, patches):
+  def __init__(self, board, remotes, chromeos_root, weekday, patches, schedv2=False):
     self._board = board
     self._remotes = remotes
     self._chromeos_root = chromeos_root
@@ -48,6 +48,7 @@ class ToolchainComparator():
     self._build = "%s-release" % board
     self._patches = patches.split(',')
     self._patches_string = '_'.join(str(p) for p in self._patches)
+    self._schedv2 = schedv2
 
     if not weekday:
       self._weekday = time.strftime("%a")
@@ -132,8 +133,13 @@ class ToolchainComparator():
     crosperf = os.path.join(TOOLCHAIN_DIR,
                             "crosperf",
                             "crosperf")
-    command = ("%s --no_email=True --results_dir=%s %s" %
-               (crosperf, self._reports_dir, experiment_file))
+    schedv2_opts = '--schedv2 --logging_level=verbose' if self._schedv2 else ''
+    command = ("{crosperf} --no_email=True --results_dir={r_dir} "
+               "{schedv2_opts} {exp_file}").format(
+                crosperf=crosperf,
+                r_dir=self._reports_dir,
+                schedv2_opts=schedv2_opts,
+                exp_file=experiment_file)
 
     ret = self._ce.RunCommand(command)
     if ret != 0:
@@ -267,6 +273,12 @@ def Main(argv):
                     help="The patches to use for the testing, "
                     "seprate the patch numbers with ',' "
                     "for more than one patches.")
+  parser.add_option("--schedv2",
+                    dest="schedv2",
+                    action="store_true",
+                    default=False,
+                    help="Pass --schedv2 to crosperf.")
+
   options, _ = parser.parse_args(argv)
   if not options.board:
     print "Please give a board."
@@ -283,7 +295,8 @@ def Main(argv):
     patches = USE_NEXT_GCC_PATCH
 
   fc = ToolchainComparator(options.board, options.remote,
-                           options.chromeos_root, options.weekday, patches)
+                           options.chromeos_root, options.weekday, patches,
+                           options.schedv2)
   return fc.DoAll()
 
 
