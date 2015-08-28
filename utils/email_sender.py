@@ -2,20 +2,22 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+"""Utilities to send email either through SMTP or SendGMR."""
+
 from email import Encoders
 from email.MIMEBase import MIMEBase
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
-import getpass
 import os
 import smtplib
-import sys
 import tempfile
 
 from utils import command_executer
 
 class EmailSender(object):
+  """Utility class to send email through SMTP or SendGMR."""
   class Attachment(object):
+    """Small class to keep track of attachment info."""
     def __init__(self, name, content):
       self.name = name
       self.content = content
@@ -31,11 +33,11 @@ class EmailSender(object):
                 attachments=None):
     """Choose appropriate email method and call it."""
     if os.path.exists("/usr/bin/sendgmr"):
-        self.SendGMREmail(email_to, subject, text_to_send, email_cc, email_bcc,
-                          email_from, msg_type, attachments)
+      self.SendGMREmail(email_to, subject, text_to_send, email_cc, email_bcc,
+                        email_from, msg_type, attachments)
     else:
-        self.SendSMTPEmail(email_to, subject, text_to_send, email_cc, email_bcc,
-                           email_from, msg_type, attachments)
+      self.SendSMTPEmail(email_to, subject, text_to_send, email_cc, email_bcc,
+                         email_from, msg_type, attachments)
 
   def SendSMTPEmail(self,
                     email_to,
@@ -99,13 +101,13 @@ class EmailSender(object):
     to_list = ",".join(email_to)
 
     if not text_to_send:
-        text_to_send = "Empty message body."
+      text_to_send = "Empty message body."
     body_fd, body_filename = tempfile.mkstemp()
+    to_be_deleted = [body_filename]
 
     try:
       os.write(body_fd, text_to_send)
       os.close(body_fd)
-      to_be_deleted = [body_filename]
 
       # Fix single-quotes inside the subject. In bash, to escape a single quote
       # (e.g 'don't') you need to replace it with '\'' (e.g. 'don'\''t'). To
@@ -137,8 +139,8 @@ class EmailSender(object):
           else:
             report_suffix = "_report.txt"
           fd, fname = tempfile.mkstemp(suffix=report_suffix)
-          os.write (fd, attachment.content)
-          os.close (fd)
+          os.write(fd, attachment.content)
+          os.close(fd)
           attachment_files.append(fname)
         files = ",".join(attachment_files)
         command += " --attachment_files='%s'" % files
