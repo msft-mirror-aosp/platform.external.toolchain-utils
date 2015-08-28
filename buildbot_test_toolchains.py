@@ -25,6 +25,9 @@ from utils import buildbot_utils
 # CL that updated GCC ebuilds to use 'next_gcc'.
 USE_NEXT_GCC_PATCH = "230260"
 
+# CL that uses LLVM to build the peppy image.
+USE_LLVM_PATCH = "295217"
+
 # The boards on which we run weekly reports
 WEEKLY_REPORT_BOARDS = ["lumpy"]
 
@@ -96,6 +99,10 @@ class ToolchainComparator():
     experiment_file_dir = os.path.join (self._chromeos_root, "..",
                                         self._weekday)
     experiment_file_name = "%s_toolchain_experiment.txt" % self._board
+
+    if self._patches_string == USE_LLVM_PATCH:
+      experiment_file_name = "%s_llvm_experiment.txt" % self._board
+
     experiment_file = os.path.join (experiment_file_dir,
                                     experiment_file_name)
     experiment_header = """
@@ -206,8 +213,11 @@ class ToolchainComparator():
                             "msg_body.html")
     if (os.path.exists(filename) and
         os.path.exists(os.path.expanduser(MAIL_PROGRAM))):
-      command = ('cat %s | %s -s "buildbot test results, %s" -team -html'
-                 % (filename, MAIL_PROGRAM, self._board))
+      email_title = "buildbot test results"
+      if self._patches_string == USE_LLVM_PATCH:
+        email_title = "buildbot llvm test results"
+      command = ('cat %s | %s -s "%s, %s" -team -html'
+                 % (filename, MAIL_PROGRAM, email_title, self._board))
       self._ce.RunCommand(command)
 
   def DoAll(self):
