@@ -16,6 +16,51 @@ from results_organizer import ResultOrganizer
 from perf_table import PerfTable
 
 
+def ParseChromeosImage(chromeos_image):
+  """Parse the chromeos_image string for the image and version.
+
+  The chromeos_image string will probably be in one of two formats:
+  1: <path-to-chroot>/src/build/images/<board>/<ChromeOS-version>.<datetime>/ \
+     chromiumos_test_image.bin
+  2: <path-to-chroot>/chroot/tmp/<buildbot-build>/<ChromeOS-version>/ \
+      chromiumos_test_image.bin
+
+  We parse these strings to find the 'chromeos_version' to store in the
+  json archive (without the .datatime bit in the first case); and also
+  the 'chromeos_image', which would be all of the first case, but only the
+  part after '/chroot/tmp' in the second case.
+
+  Args:
+    chromeos_image:  String containing the path to the chromeos_image that
+      crosperf used for the test.
+
+  Returns:
+    version, image:  The results of parsing the input string, as explained
+      above.
+  """
+  version = ''
+  real_file = os.path.realpath(os.path.expanduser(chromeos_image))
+  pieces = real_file.split('/')
+  # Find the Chromeos Version, e.g. R45-2345.0.0.....
+  # chromeos_image should have been something like:
+  # <path>/<board-trybot-release>/<chromeos-version>/chromiumos_test_image.bin"
+  num_pieces = len(pieces)
+  if pieces[num_pieces-1] == "chromiumos_test_image.bin":
+    version = pieces[num_pieces-2]
+    # Find last '.' in the version and chop it off (removing the .datatime
+    # piece from local builds).
+    loc = version.rfind('.')
+    version = version[:loc]
+  # Find the chromeos image.  If it's somewhere in .../chroot/tmp/..., then
+  # it's an official image that got downloaded, so chop off the download path
+  # to make the official image name more clear.
+  loc = real_file.find('/chroot/tmp')
+  if loc != -1:
+    loc += len('/chroot/tmp')
+    real_file = real_file[loc:]
+  image = real_file
+  return version,image
+
 class ResultsReport(object):
   MAX_COLOR_CODE = 255
   PERF_ROWS = 5
@@ -534,50 +579,6 @@ class JSONResultsReport(ResultsReport):
       self.date = date
       self.time = time
 
-
-  def _ParseChromeosImage(self, chromeos_image):
-    """Parse the chromeos_image string for the image and version.
-
-    The chromeos_image string will probably be in one of two formats:
-    1:  <path-to-chroot>/src/build/images/<board>/<ChromeOS-version>.<datetime>/chromiumos_test_image.bin
-    2: <path-to-chroot>/chroot/tmp/<buildbot-build>/<ChromeOS-version>/chromiumos_test_image.bin
-
-    We parse these strings to find the 'chromeos_version' to store in the
-    json archive (without the .datatime bit in the first case); and also
-    the 'chromeos_image', which would be all of the first case, but only the
-    part after '/chroot/tmp' in the second case.
-
-    Args:
-      chromeos_image:  String containing the path to the chromeos_image that
-        crosperf used for the test.
-
-    Returns:
-      version, image:  The results of parsing the input string, as explained
-        above.
-    """
-    version = ''
-    real_file = os.path.realpath(os.path.expanduser(chromeos_image))
-    pieces = real_file.split('/')
-    # Find the Chromeos Version, e.g. R45-2345.0.0.....
-    # chromeos_image should have been something like:
-    # <path>/<board-trybot-release>/<chromeos-version>/chromiumos_test_image.bin"
-    num_pieces = len(pieces)
-    if pieces[num_pieces-1] == "chromiumos_test_image.bin":
-      version = pieces[num_pieces-2]
-      # Find last '.' in the version and chop it off (removing the .datatime
-      # piece from local builds).
-      loc = version.rfind('.')
-      version = version[:loc]
-    # Find the chromeos image.  If it's somewhere in .../chroot/tmp/..., then
-    # it's an official image that got downloaded, so chop off the download path
-    # to make the official image name more clear.
-    loc = real_file.find('/chroot/tmp')
-    if loc != -1:
-      loc += len('/chroot/tmp')
-      real_file = real_file[loc:]
-    image = real_file
-    return version,image
-
   def GetReport(self, results_dir):
     self.defaults.ReadDefaultsFile()
     final_results = []
@@ -593,7 +594,7 @@ class JSONResultsReport(ResultsReport):
           json_results['board'] = board
           for l in self.experiment.labels:
             if l.name == label:
-              ver, img = self._ParseChromeosImage(l.chromeos_image)
+              ver, img = ParseChromeosImage(l.chromeos_image)
               json_results['chromeos_image'] = img
               json_results['chromeos_version'] = ver
               break
