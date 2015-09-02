@@ -78,6 +78,7 @@ class BenchmarkRun(threading.Thread):
                     self.test_args,
                     self.profiler_args,
                     self.machine_manager,
+                    self.machine,
                     self.label.board,
                     self.cache_conditions,
                     self._logger,
@@ -118,6 +119,7 @@ class BenchmarkRun(threading.Thread):
         self.timeline.Record(STATUS_WAITING)
         # Try to acquire a machine now.
         self.machine = self.AcquireMachine()
+        self.cache.machine = self.machine
         self.result = self.RunTest(self.machine)
 
         self.cache.remote = self.machine.name
@@ -261,6 +263,7 @@ class MockBenchmarkRun(BenchmarkRun):
                     self.test_args,
                     self.profiler_args,
                     self.machine_manager,
+                    self.machine,
                     self.label.board,
                     self.cache_conditions,
                     self._logger,

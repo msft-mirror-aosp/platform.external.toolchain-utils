@@ -99,13 +99,6 @@ class MachineManagerTest(unittest.TestCase):
     self.mm._all_machines.append(self.mock_lumpy3)
 
 
-  def testAreAllMachineSame(self):
-    manager = MyMachineManager(CHROMEOS_ROOT)
-    for m in MACHINE_NAMES:
-      manager.AddMachine(m)
-    self.assertEqual(manager.AreAllMachineSame(LABEL_LUMPY), True)
-    self.assertEqual(manager.AreAllMachineSame(LABEL_MIX), False)
-
   def testGetMachines(self):
     manager = MyMachineManager(CHROMEOS_ROOT)
     for m in MACHINE_NAMES:
@@ -290,14 +283,6 @@ class MachineManagerTest(unittest.TestCase):
     self.assertEqual (len(self.mm._all_machines), 6)
 
     self.assertRaises(Exception, self.mm.AddMachine, 'lumpy1')
-
-
-  def test_are_all_machines_same(self):
-    result = self.mm.AreAllMachineSame(LABEL_LUMPY)
-    self.assertTrue(result)
-
-    result = self.mm.AreAllMachineSame(LABEL_MIX)
-    self.assertFalse(result)
 
 
   def test_remove_machine(self):

@@ -22,7 +22,12 @@ from utils.file_utils import FileUtils
 
 CHECKSUM_FILE = "/usr/local/osimage_checksum_file"
 
-class NonMatchingMachines(Exception):
+class BadChecksum(Exception):
+  """Raised if all machines for a label don't have the same checksum."""
+  pass
+
+class BadChecksumString(Exception):
+  """Raised if all machines for a label don't have the same checksum string."""
   pass
 
 class MissingLocksDirectory(Exception):
@@ -270,12 +275,30 @@ class MachineManager(object):
     return retval
 
   def ComputeCommonCheckSum(self, label):
+    # Since this is used for cache lookups before the machines have been
+    # compared/verified, check here to make sure they all have the same
+    # checksum (otherwise the cache lookup may not be valid).
+    common_checksum = None
     for machine in self.GetMachines(label):
-      if machine.machine_checksum:
-        self.machine_checksum[label.name] = machine.machine_checksum
-        break
+      # Make sure the machine's checksums are calculated.
+      if not machine.machine_checksum:
+        machine.SetUpChecksumInfo()
+      cs = machine.machine_checksum
+      # If this is the first machine we've examined, initialize
+      # common_checksum.
+      if not common_checksum:
+        common_checksum = cs
+      # Make sure this machine's checksum matches our 'common' checksum.
+      if cs != common_checksum:
+        raise BadChecksum("Machine checksums do not match!")
+    self.machine_checksum[label.name] = common_checksum
 
   def ComputeCommonCheckSumString(self, label):
+    # The assumption is that this function is only called AFTER
+    # ComputeCommonCheckSum, so there is no need to verify the machines
+    # are the same here.  If this is ever changed, this function should be
+    # modified to verify that all the machines for a given label are the
+    # same.
     for machine in self.GetMachines(label):
       if machine.checksum_string:
         self.machine_checksum_string[label.name] = machine.checksum_string
@@ -318,11 +341,6 @@ class MachineManager(object):
         self._all_machines.append(cm)
 
 
-  def AreAllMachineSame(self, label):
-    checksums = [m.machine_checksum for m in self.GetMachines(label)]
-    return len(set(checksums)) == 1
-
-
   def RemoveMachine(self, machine_name):
     with self._lock:
       self._machines = [m for m in self._machines
@@ -352,14 +370,6 @@ class MachineManager(object):
           self._TryToLockMachine(m)
           if new_machine:
             m.released_time = time.time()
-        if not self.AreAllMachineSame(label):
-          if not throw:
-            # Log fatal message, which calls sys.exit.  Default behavior.
-            self.logger.LogFatal("-- not all the machines are identical")
-          else:
-            # Raise an exception, which can be caught and handled by calling
-            # function.
-            raise NonMatchingMachines("Not all the machines are identical")
         if self.GetAvailableMachines(label):
           break
         else:

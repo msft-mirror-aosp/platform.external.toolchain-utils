@@ -21,11 +21,14 @@ from utils import misc
 
 from image_checksummer import ImageChecksummer
 
+import results_report
+
 SCRATCH_DIR = os.path.expanduser("~/cros_scratch")
 RESULTS_FILE = "results.txt"
 MACHINE_FILE = "machine.txt"
 AUTOTEST_TARBALL = "autotest.tbz2"
 PERF_RESULTS_FILE = "perf-results.txt"
+CACHE_KEYS_FILE = "cache_keys.txt"
 
 class Result(object):
   """ This class manages what exactly is stored inside the cache without knowing
@@ -317,7 +320,7 @@ class Result(object):
       command = "rm -rf %s" % self._temp_dir
       self._ce.RunCommand(command)
 
-  def StoreToCacheDir(self, cache_dir, machine_manager):
+  def StoreToCacheDir(self, cache_dir, machine_manager, key_list):
     # Create the dir if it doesn't exist.
     temp_dir = tempfile.mkdtemp()
 
@@ -326,6 +329,11 @@ class Result(object):
       pickle.dump(self.out, f)
       pickle.dump(self.err, f)
       pickle.dump(self.retval, f)
+
+    with open(os.path.join(temp_dir, CACHE_KEYS_FILE), "w") as f:
+      for k in key_list:
+        f.write(k)
+        f.write("\n")
 
     if self.results_dir:
       tarball = os.path.join(temp_dir, AUTOTEST_TARBALL)
@@ -469,9 +477,9 @@ class ResultsCache(object):
   CACHE_VERSION = 6
 
   def Init(self, chromeos_image, chromeos_root, test_name, iteration,
-           test_args, profiler_args, machine_manager, board, cache_conditions,
-           logger_to_use, log_level, label, share_cache, suite,
-           show_all_results, run_local):
+           test_args, profiler_args, machine_manager, machine, board,
+           cache_conditions, logger_to_use, log_level, label, share_cache,
+           suite, show_all_results, run_local):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.test_name = test_name
@@ -481,6 +489,7 @@ class ResultsCache(object):
     self.board = board
     self.cache_conditions = cache_conditions
     self.machine_manager = machine_manager
+    self.machine = machine
     self._logger = logger_to_use
     self._ce = command_executer.GetCommandExecuter(self._logger,
                                                    log_level=log_level)
@@ -502,8 +511,16 @@ class ResultsCache(object):
     else:
       return None
 
-  def _GetCacheDirForWrite(self):
-    return self._FormCacheDir(self._GetCacheKeyList(False))[0]
+  def _GetCacheDirForWrite(self, get_keylist=False):
+    cache_path = self._FormCacheDir(self._GetCacheKeyList(False))[0]
+    if get_keylist:
+      args_str = "%s_%s_%s" % (self.test_args, self.profiler_args, self.run_local)
+      version, image = results_report.ParseChromeosImage(self.label.chromeos_image)
+      keylist = [ version, image, self.label.board,
+                  self.machine.name, self.test_name, str(self.iteration),
+                  args_str]
+      return cache_path, keylist
+    return cache_path
 
   def _FormCacheDir(self, list_of_strings):
     cache_key = " ".join(list_of_strings)
@@ -546,10 +563,13 @@ class ResultsCache(object):
     if read and CacheConditions.SAME_MACHINE_MATCH not in self.cache_conditions:
       machine_id_checksum = "*"
     else:
-      for machine in self.machine_manager.GetMachines(self.label):
-        if machine.name == self.label.remote[0]:
-          machine_id_checksum = machine.machine_id_checksum
-          break
+      if self.machine and self.machine.name in self.label.remote:
+        machine_id_checksum = self.machine.machine_id_checksum
+      else:
+        for machine in self.machine_manager.GetMachines(self.label):
+          if machine.name == self.label.remote[0]:
+            machine_id_checksum = machine.machine_id_checksum
+            break
 
     temp_test_args = "%s %s %s" % (self.test_args, self.profiler_args, self.run_local)
     test_args_checksum = hashlib.md5(
@@ -594,8 +614,8 @@ class ResultsCache(object):
     return None
 
   def StoreResult(self, result):
-    cache_dir = self._GetCacheDirForWrite()
-    result.StoreToCacheDir(cache_dir, self.machine_manager)
+    cache_dir, keylist = self._GetCacheDirForWrite(get_keylist=True)
+    result.StoreToCacheDir(cache_dir, self.machine_manager, keylist)
 
 
 class MockResultsCache(ResultsCache):

@@ -455,24 +455,8 @@ class Schedv2(object):
         # Termination flag.
         self._terminated = False
 
-    def _check_machines_are_same(self):
-        """Check if all machines are the same."""
-
-        for l in self._labels:
-            if not self._experiment.machine_manager.AreAllMachineSame(l):
-                self._l.LogError('All machines are NOT same for '
-                                'label "{}" ...'.format(l.name))
-                return False
-            self._l.LogOutput('Machines are same for '
-                              'label "{}" ...'.format(l.name))
-        return True
-
     def run_sched(self):
         """Start all dut worker threads and return immediately."""
-
-        if not self._check_machines_are_same():
-            raise RuntimeError("All machines are not same.")
-
         [w.start() for w in self._active_workers]
 
     def get_benchmark_run(self, dut):
