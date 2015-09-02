@@ -6,6 +6,7 @@
 import getpass
 import os
 import random
+import shutil
 import sys
 import time
 import traceback
@@ -23,6 +24,8 @@ from threading import Thread
 
 import config
 from experiment_status import ExperimentStatus
+from results_cache import CacheConditions
+from results_cache import ResultsCache
 from results_report import HTMLResultsReport
 from results_report import TextResultsReport
 from results_report import JSONResultsReport
@@ -126,6 +129,19 @@ class ExperimentRunner(object):
     lock_mgr.CheckMachineLocks(machine_states, "unlock")
     lock_mgr.UpdateMachines(False)
 
+  def _ClearCacheEntries(self, experiment):
+    for br in experiment.benchmark_runs:
+      cache = ResultsCache()
+      cache.Init (br.label.chromeos_image, br.label.chromeos_root,
+                  br.benchmark.test_name, br.iteration, br.test_args,
+                  br.profiler_args, br.machine_manager, br.label.board,
+                  br.cache_conditions, br._logger, br.log_level, br.label,
+                  br.share_cache, br.benchmark.suite,
+                  br.benchmark.show_all_results, br.benchmark.run_local)
+      cache_dir = cache._GetCacheDirForWrite()
+      self.l.LogOutput("Removing cache dir: %s" % cache_dir)
+      shutil.rmtree(cache_dir)
+
   def _Run(self, experiment):
     try:
       if not experiment.locks_dir:
@@ -133,6 +149,8 @@ class ExperimentRunner(object):
       if self._using_schedv2:
         schedv2 = Schedv2(experiment)
         experiment.set_schedv2(schedv2)
+      if CacheConditions.FALSE in experiment.cache_conditions:
+        self._ClearCacheEntries(experiment)
       status = ExperimentStatus(experiment)
       experiment.Run()
       last_status_time = 0
