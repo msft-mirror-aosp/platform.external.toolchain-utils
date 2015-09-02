@@ -522,7 +522,7 @@ class Schedv2(object):
         if self._terminated:
             return None
 
-        return self._mim.allocate(dut)
+        return self._mim.allocate(dut, self)
 
     def dut_worker_finished(self, dut_worker):
         """Notify schedv2 that the dut_worker thread finished.

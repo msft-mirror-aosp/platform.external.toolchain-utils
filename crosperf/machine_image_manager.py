@@ -190,43 +190,69 @@ class MachineImageManager(object):
         self.allocate_log_.append((label_i, dut_j))
         self.label_duts_[label_i].append(dut_j)
 
-    def allocate(self, dut):
+    def allocate(self, dut, schedv2):
         """Allocate a label for dut.
 
         Arguments:
           dut: the dut that asks for a new image.
+          schedv2: the scheduling instance, we need the benchmark run
+                   information with schedv2 for a better allocation.
 
         Returns:
           a label to image onto the dut or None if no more available images for
           the dut.
         """
         j = self.dut_name_ordinal_[dut.name]
-        min_reimage_number = 999
-        min_i = 999
-        min_label = None
+        # 'can_' prefix means candidate label's.
+        can_reimage_number = 999
+        can_i = 999
+        can_label = None
+        can_pending_br_num = 0
         for i, v in self.matrix_vertical_generator(j):
             label = self.labels_[i]
+
+            # 2 optimizations here regarding allocating label to dut.
+            pending_br_num = len(schedv2._label_brl_map[label])
+            if pending_br_num == 0:
+                # (A) - we have finished all br of this label, apparently, we do
+                # not want to reimaeg dut to this label.
+                continue
+
+            # For this time being, I just comment this out until we have a
+            # better estimation how long each benchmarkrun takes.
+            # if (pending_br_num <= 5 and
+            #     len(self.label_duts_[i]) >= 1):
+            #     # (B) this is heuristic - if there are just a few test cases
+            #     # (say <5) left undone for this label, and there is at least 1
+            #     # other machine working on this lable, we probably not want to
+            #     # bother to reimage this dut to help with these 5 test cases.
+            #     continue
+
             if v == 'Y':
                 self.matrix_[i][j] = '_'
                 self._record_allocate_log(i, j)
                 return label
             if v == ' ':
                 label_reimage_number = len(self.label_duts_[i])
-                if label_reimage_number < min_reimage_number:
-                    min_reimage_number = label_reimage_number
-                    min_i = i
-                    min_label = self.labels_[min_i]
+                if ((can_label is None) or
+                    (label_reimage_number < can_reimage_number or
+                        (label_reimage_number == can_reimage_number and
+                            pending_br_num >= can_pending_br_num))):
+                    can_reimage_number = label_reimage_number
+                    can_i = i
+                    can_label = label
+                    can_pending_br_num = pending_br_num
 
         # All labels are marked either '_' (already taken) or 'X' (not
         # compatible), so return None to notify machine thread to quit.
-        if min_label is None:
+        if can_label is None:
             return None
 
         # At this point, we don't find any 'Y' for the machine, so we go the
         # 'min' approach.
-        self.matrix_[min_i][j] = '_'
-        self._record_allocate_log(min_i, j)
-        return min_label
+        self.matrix_[can_i][j] = '_'
+        self._record_allocate_log(can_i, j)
+        return can_label
 
     def matrix_vertical_generator(self, col):
         """Iterate matrix vertically at column 'col'.
