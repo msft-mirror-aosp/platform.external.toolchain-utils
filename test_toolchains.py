@@ -13,9 +13,12 @@ from utils import misc
 from utils import logger
 
 
-WEEKLY_REPORTS_ROOT="/usr/local/google/crostc/weekly_test_data"
+CROSTC_ROOT = "/usr/local/google/crostc"
 AFDO_BOARDS = ["butterfly", "lumpy", "stumpy", "stout", "parrot", "parrot_ivb"]
 MAIL_PROGRAM = "~/var/bin/mail-sheriff"
+WEEKLY_REPORTS_ROOT = os.path.join(CROSTC_ROOT, "weekly_test_data")
+PENDING_ARCHIVES_DIR = os.path.join(CROSTC_ROOT, "pending_archives")
+NIGHTLY_TESTS_DIR = os.path.join(CROSTC_ROOT, "nightly_test_reports")
 
 class GCCConfig(object):
   def __init__(self, githash):
@@ -159,8 +162,7 @@ class ToolchainComparator(ChromeOSCheckout):
     self._l = logger.GetLogger()
     timestamp = datetime.datetime.strftime(datetime.datetime.now(),
                                            "%Y-%m-%d_%H:%M:%S")
-    self._reports_dir = os.path.join(
-        os.path.expanduser("~/nightly_test_reports"),
+    self._reports_dir = os.path.join(NIGHTLY_TESTS_DIR,
         "%s.%s" % (timestamp, board),
         )
     self._schedv2 = schedv2
@@ -170,7 +172,7 @@ class ToolchainComparator(ChromeOSCheckout):
   def _FinishSetup(self):
     # Get correct .boto file
     current_dir = os.getcwd()
-    src = "/home/mobiletc-prebuild/.boto"
+    src = "/usr/local/google/home/mobiletc-prebuild/.boto"
     dest = os.path.join(current_dir, self._chromeos_root,
                         "src/private-overlays/chromeos-overlay/"
                         "googlestorage_account.boto")
@@ -245,7 +247,7 @@ class ToolchainComparator(ChromeOSCheckout):
                             "crosperf")
     schedv2_opts = '--schedv2 --logging_level=verbose' if self._schedv2 else ''
     command = ("{crosperf} --no_email=True --results_dir={r_dir} "
-               "{schedv2_opts} {exp_file}").format(
+               "--json_report=True {schedv2_opts} {exp_file}").format(
                 crosperf=crosperf,
                 r_dir=self._reports_dir,
                 schedv2_opts=schedv2_opts,
@@ -254,6 +256,10 @@ class ToolchainComparator(ChromeOSCheckout):
     ret = self._ce.RunCommand(command)
     if ret != 0:
       raise RuntimeError("Couldn't run crosperf!")
+    else:
+      # Copy json report to pending archives directory.
+      command = "cp %s/*.json %s/." % (self._reports_dir, PENDING_ARCHIVES_DIR)
+      ret = self._ce.RunCommand(command)
     return
 
 

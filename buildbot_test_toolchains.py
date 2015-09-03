@@ -31,10 +31,13 @@ USE_LLVM_PATCH = "295217"
 # The boards on which we run weekly reports
 WEEKLY_REPORT_BOARDS = ["lumpy"]
 
-WEEKLY_REPORTS_ROOT = "/usr/local/google/crostc/weekly_test_data"
+CROSTC_ROOT = "/usr/local/google/crostc"
 ROLE_ACCOUNT = "mobiletc-prebuild"
 TOOLCHAIN_DIR = os.path.dirname(os.path.realpath(__file__))
 MAIL_PROGRAM = "~/var/bin/mail-sheriff"
+WEEKLY_REPORTS_ROOT = os.path.join(CROSTC_ROOT, "weekly_test_data")
+PENDING_ARCHIVES_DIR = os.path.join(CROSTC_ROOT, "pending_archives")
+NIGHTLY_TESTS_DIR = os.path.join(CROSTC_ROOT, "nightly_test_reports")
 
 class ToolchainComparator():
   """
@@ -59,8 +62,7 @@ class ToolchainComparator():
       self._weekday = weekday
     timestamp = datetime.datetime.strftime(datetime.datetime.now(),
                                            "%Y-%m-%d_%H:%M:%S")
-    self._reports_dir = os.path.join(
-        os.path.expanduser("~/nightly_test_reports"),
+    self._reports_dir = os.path.join(NIGHTLY_TESTS_DIR,
         "%s.%s" % (timestamp, board),
         )
 
@@ -142,7 +144,7 @@ class ToolchainComparator():
                             "crosperf")
     schedv2_opts = '--schedv2 --logging_level=verbose' if self._schedv2 else ''
     command = ("{crosperf} --no_email=True --results_dir={r_dir} "
-               "{schedv2_opts} {exp_file}").format(
+               "--json_report=True {schedv2_opts} {exp_file}").format(
                 crosperf=crosperf,
                 r_dir=self._reports_dir,
                 schedv2_opts=schedv2_opts,
@@ -151,6 +153,10 @@ class ToolchainComparator():
     ret = self._ce.RunCommand(command)
     if ret != 0:
       raise RuntimeError("Couldn't run crosperf!")
+    else:
+      # Copy json report to pending archives directory.
+      command = "cp %s/*.json %s/." % (self._reports_dir, PENDING_ARCHIVES_DIR)
+      ret = self._ce.RunCommand(command)
     return
 
   def _CopyWeeklyReportFiles(self, trybot_image, vanilla_image):
