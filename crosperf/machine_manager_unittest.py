@@ -356,11 +356,6 @@ class MachineManagerTest(unittest.TestCase):
                                  'Tried to lock lumpy2',
                                  'Tried to lock lumpy3'])
 
-    # Test: Not all machines are the same, throw = True
-    self.assertRaises (machine_manager.NonMatchingMachines,
-                       self.mm.AcquireMachine,
-                       LABEL_MIX.chromeos_image, LABEL_MIX, True)
-
     # Test 3. Not all machines are the same, throw = False
     self.assertEqual(len(self.log_fatal_msgs), 0)
     m = self.mm.AcquireMachine(LABEL_MIX.chromeos_image, LABEL_MIX, False)

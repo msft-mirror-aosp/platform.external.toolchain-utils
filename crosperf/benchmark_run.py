@@ -13,7 +13,6 @@ import traceback
 from utils import command_executer
 from utils import timeline
 
-from machine_manager import NonMatchingMachines
 from suite_runner import SuiteRunner
 from results_cache import MockResult
 from results_cache import MockResultsCache
@@ -170,16 +169,9 @@ class BenchmarkRun(threading.Thread):
       machine = None
       if self.terminated:
         raise Exception("Thread terminated while trying to acquire machine.")
-      try:
-        machine = self.machine_manager.AcquireMachine(self.label.chromeos_image,
-                                                      self.label,
-                                                      throw=True)
 
-      except NonMatchingMachines:
-        self.machine_manager.ForceSameImageToAllMachines(self.label)
-        machine = self.machine_manager.AcquireMachine(self.label.chromeos_image,
-                                                      self.label,
-                                                      throw=False)
+      machine = self.machine_manager.AcquireMachine(self.label.chromeos_image,
+                                                    self.label, throw=False)
 
       if machine:
         self._logger.LogOutput("%s: Machine %s acquired at %s" %
