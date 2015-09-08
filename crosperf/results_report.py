@@ -568,7 +568,8 @@ class JSONResultsReport(ResultsReport):
     super(JSONResultsReport, self).__init__(experiment)
     self.ro = ResultOrganizer(experiment.benchmark_runs,
                               experiment.labels,
-                              experiment.benchmarks)
+                              experiment.benchmarks,
+                              json_report=True)
     self.date = date
     self.time = time
     self.defaults = TelemetryDefaults()
@@ -592,11 +593,18 @@ class JSONResultsReport(ResultsReport):
           json_results['date'] = self.date
           json_results['time'] = self.time
           json_results['board'] = board
+          json_results['label'] = label
+          common_checksum = ''
+          common_string = ''
           for l in self.experiment.labels:
             if l.name == label:
               ver, img = ParseChromeosImage(l.chromeos_image)
               json_results['chromeos_image'] = img
               json_results['chromeos_version'] = ver
+              common_checksum = \
+                self.experiment.machine_manager.machine_checksum[l.name]
+              common_string = \
+                self.experiment.machine_manager.machine_checksum_string[l.name]
               break
           json_results['test_name'] = test
           if not iter_results or iter_results['retval'] != 0:
@@ -622,7 +630,14 @@ class JSONResultsReport(ResultsReport):
                 if type(v) == list:
                   v = v[0]
                 if v != 'PASS':
-                  detail_results[k] = float(v)
+                  if k.find('machine') == -1:
+                    detail_results[k] = float(v)
+                  else:
+                    json_results[k] = v
+            if 'machine_checksum' not in json_results.keys():
+              json_results['machine_checksum'] = common_checksum
+            if 'machine_string' not in json_results.keys():
+              json_results['machine_string'] = common_string
             json_results['detailed_results'] = detail_results
           final_results.append(json_results)
 

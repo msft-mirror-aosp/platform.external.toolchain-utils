@@ -139,8 +139,9 @@ class ExperimentRunner(object):
                   br.label, br.share_cache, br.benchmark.suite,
                   br.benchmark.show_all_results, br.benchmark.run_local)
       cache_dir = cache._GetCacheDirForWrite()
-      self.l.LogOutput("Removing cache dir: %s" % cache_dir)
-      shutil.rmtree(cache_dir)
+      if os.path.exists(cache_dir):
+        self.l.LogOutput("Removing cache dir: %s" % cache_dir)
+        shutil.rmtree(cache_dir)
 
   def _Run(self, experiment):
     try:

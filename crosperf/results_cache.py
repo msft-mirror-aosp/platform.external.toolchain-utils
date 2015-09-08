@@ -36,7 +36,7 @@ class Result(object):
   perf.report, etc. The key generation is handled by the ResultsCache class.
   """
 
-  def __init__(self, logger, label, log_level, cmd_exec=None):
+  def __init__(self, logger, label, log_level, machine, cmd_exec=None):
     self._chromeos_root = label.chromeos_root
     self._logger = logger
     self._ce = cmd_exec or command_executer.GetCommandExecuter(self._logger,
@@ -45,6 +45,7 @@ class Result(object):
     self.label = label
     self.results_dir = None
     self.log_level = log_level
+    self.machine = machine
     self.perf_data_files = []
     self.perf_report_files = []
 
@@ -331,6 +332,7 @@ class Result(object):
       pickle.dump(self.retval, f)
 
     with open(os.path.join(temp_dir, CACHE_KEYS_FILE), "w") as f:
+      f.write("%s\n" % self.machine.checksum_string)
       for k in key_list:
         f.write(k)
         f.write("\n")
@@ -366,22 +368,22 @@ class Result(object):
                       (temp_dir, cache_dir))
 
   @classmethod
-  def CreateFromRun(cls, logger, log_level, label, out, err, retval, show_all,
-                    test, suite="telemetry_Crosperf"):
+  def CreateFromRun(cls, logger, log_level, label, machine, out, err, retval,
+                    show_all, test, suite="telemetry_Crosperf"):
     if suite == "telemetry":
-      result = TelemetryResult(logger, label, log_level)
+      result = TelemetryResult(logger, label, log_level, machine)
     else:
-      result = cls(logger, label, log_level)
+      result = cls(logger, label, log_level, machine)
     result._PopulateFromRun(out, err, retval, show_all, test, suite)
     return result
 
   @classmethod
-  def CreateFromCacheHit(cls, logger, log_level, label, cache_dir,
+  def CreateFromCacheHit(cls, logger, log_level, label, machine, cache_dir,
                          show_all, test, suite="telemetry_Crosperf"):
     if suite == "telemetry":
-      result = TelemetryResult(logger, label)
+      result = TelemetryResult(logger, label, log_level, machine)
     else:
-      result = cls(logger, label, log_level)
+      result = cls(logger, label, log_level, machine)
     try:
       result._PopulateFromCacheDir(cache_dir, show_all, test, suite)
 
@@ -393,8 +395,9 @@ class Result(object):
 
 class TelemetryResult(Result):
 
-  def __init__(self, logger, label, log_level, cmd_exec=None):
-    super(TelemetryResult, self).__init__(logger, label, log_level, cmd_exec)
+  def __init__(self, logger, label, log_level, machine, cmd_exec=None):
+    super(TelemetryResult, self).__init__(logger, label, log_level, machine,
+                                          cmd_exec)
 
   def _PopulateFromRun(self, out, err, retval, show_all, test, suite):
     self.out = out
@@ -600,6 +603,7 @@ class ResultsCache(object):
     result = Result.CreateFromCacheHit(self._logger,
                                        self.log_level,
                                        self.label,
+                                       self.machine,
                                        cache_dir,
                                        self.show_all,
                                        self.test_name,

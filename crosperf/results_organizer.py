@@ -29,7 +29,8 @@ class ResultOrganizer(object):
     ]}.
   """
 
-  def __init__(self, benchmark_runs, labels, benchmarks=None):
+  def __init__(self, benchmark_runs, labels, benchmarks=None,
+               json_report=False):
     self.result = {}
     self.labels = []
     self.prog = re.compile(r"(\w+)\{(\d+)\}")
@@ -40,7 +41,10 @@ class ResultOrganizer(object):
       self.labels.append(label.name)
     for benchmark_run in benchmark_runs:
       benchmark_name = benchmark_run.benchmark.name
-      show_all_results = benchmark_run.benchmark.show_all_results
+      if json_report:
+        show_all_results = True
+      else:
+        show_all_results = benchmark_run.benchmark.show_all_results
       if benchmark_name not in self.result:
         self.result[benchmark_name] = []
         while len(self.result[benchmark_name]) < len(labels):
@@ -66,6 +70,10 @@ class ResultOrganizer(object):
           continue
         result_value = benchmark_run.result.keyvals[test_key]
         cur_dict[test_key] = result_value
+      if json_report and benchmark_run.machine:
+        cur_dict['machine'] = benchmark_run.machine.name
+        cur_dict['machine_checksum'] = benchmark_run.machine.checksum
+        cur_dict['machine_string'] = benchmark_run.machine.checksum_string
     self._DuplicatePass()
 
   def _GetSummaryResults (self, test_name):
