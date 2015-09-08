@@ -134,9 +134,9 @@ class ExperimentRunner(object):
       cache = ResultsCache()
       cache.Init (br.label.chromeos_image, br.label.chromeos_root,
                   br.benchmark.test_name, br.iteration, br.test_args,
-                  br.profiler_args, br.machine_manager, br.label.board,
-                  br.cache_conditions, br._logger, br.log_level, br.label,
-                  br.share_cache, br.benchmark.suite,
+                  br.profiler_args, br.machine_manager, br.machine,
+                  br.label.board, br.cache_conditions, br._logger, br.log_level,
+                  br.label, br.share_cache, br.benchmark.suite,
                   br.benchmark.show_all_results, br.benchmark.run_local)
       cache_dir = cache._GetCacheDirForWrite()
       self.l.LogOutput("Removing cache dir: %s" % cache_dir)
