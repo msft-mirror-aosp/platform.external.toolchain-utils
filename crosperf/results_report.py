@@ -599,7 +599,7 @@ class JSONResultsReport(ResultsReport):
               json_results['chromeos_version'] = ver
               break
           json_results['test_name'] = test
-          if iter_results['retval'] != 0:
+          if not iter_results or iter_results['retval'] != 0:
             json_results['pass'] = False
           else:
             json_results['pass'] = True
