@@ -150,7 +150,7 @@ class ChromeOSCheckout(object):
 
 class ToolchainComparator(ChromeOSCheckout):
   def __init__(self, board, remotes, configs, clean,
-               public, force_mismatch, schedv2=False):
+               public, force_mismatch, noschedv2=False):
     self._board = board
     self._remotes = remotes
     self._chromeos_root = "chromeos"
@@ -165,7 +165,7 @@ class ToolchainComparator(ChromeOSCheckout):
     self._reports_dir = os.path.join(NIGHTLY_TESTS_DIR,
         "%s.%s" % (timestamp, board),
         )
-    self._schedv2 = schedv2
+    self._noschedv2 = noschedv2
     ChromeOSCheckout.__init__(self, board, self._chromeos_root)
 
 
@@ -245,12 +245,12 @@ class ToolchainComparator(ChromeOSCheckout):
     crosperf = os.path.join(os.path.dirname(__file__),
                             "crosperf",
                             "crosperf")
-    schedv2_opts = '--schedv2 --logging_level=verbose' if self._schedv2 else ''
+    noschedv2_opts = '--noschedv2' if self._noschedv2 else ''
     command = ("{crosperf} --no_email=True --results_dir={r_dir} "
-               "--json_report=True {schedv2_opts} {exp_file}").format(
+               "--json_report=True {noschedv2_opts} {exp_file}").format(
                 crosperf=crosperf,
                 r_dir=self._reports_dir,
-                schedv2_opts=schedv2_opts,
+                noschedv2_opts=noschedv2_opts,
                 exp_file=experiment_file)
 
     ret = self._ce.RunCommand(command)
@@ -365,11 +365,11 @@ def Main(argv):
                     dest="force_mismatch",
                     default="",
                     help="Force the image regardless of board mismatch")
-  parser.add_option("--schedv2",
-                    dest="schedv2",
+  parser.add_option("--noschedv2",
+                    dest="noschedv2",
                     action="store_true",
                     default=False,
-                    help="Pass --schedv2 to crosperf.")
+                    help="Pass --noschedv2 to crosperf.")
   options, _ = parser.parse_args(argv)
   if not options.board:
     print "Please give a board."
@@ -385,7 +385,7 @@ def Main(argv):
   fc = ToolchainComparator(options.board, options.remote, toolchain_configs,
                            options.clean, options.public,
                            options.force_mismatch,
-                           options.schedv2)
+                           options.noschedv2)
   return fc.DoAll()
 
 
