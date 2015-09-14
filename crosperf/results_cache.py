@@ -332,6 +332,8 @@ class Result(object):
       pickle.dump(self.retval, f)
 
     with open(os.path.join(temp_dir, CACHE_KEYS_FILE), "w") as f:
+      f.write("%s\n" % self.label.name)
+      f.write("%s\n" % self.label.chrome_version)
       f.write("%s\n" % self.machine.checksum_string)
       for k in key_list:
         f.write(k)

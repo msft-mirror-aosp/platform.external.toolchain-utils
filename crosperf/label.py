@@ -32,6 +32,7 @@ class Label(object):
     self.cache_dir = cache_dir
     self.cache_only = cache_only
     self.log_level = log_level
+    self.chrome_version = ""
 
     if not chromeos_root:
       if self.image_type == "local":

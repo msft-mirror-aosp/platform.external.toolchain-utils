@@ -122,7 +122,13 @@ class BenchmarkRun(threading.Thread):
         self.result = self.RunTest(self.machine)
 
         self.cache.remote = self.machine.name
+        self.label.chrome_version = self.machine_manager.GetChromeVersion(
+            self.machine)
         self.cache.StoreResult(self.result)
+
+      if self.machine and not self.label.chrome_version:
+        self.label.chrome_version = self.machine_manager.GetChromeVersion(
+          self.machine)
 
       if self.terminated:
         return

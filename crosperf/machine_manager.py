@@ -33,6 +33,9 @@ class BadChecksumString(Exception):
 class MissingLocksDirectory(Exception):
     """Raised when cannot find/access the machine locks directory."""
 
+class CrosCommandError(Exception):
+    """Raised when an error occurs running command on DUT."""
+
 class CrosMachine(object):
   def __init__(self, name, chromeos_root, log_level, cmd_exec=None):
     self.name = name
@@ -221,6 +224,22 @@ class MachineManager(object):
       if m.name not in locked_machines:
         self._machines.remove(m)
 
+  def GetChromeVersion(self, machine):
+    """Get the version of Chrome running on the DUT."""
+
+    cmd = "/opt/google/chrome/chrome --version"
+    ret, version, _ = self.ce.CrosRunCommand(cmd, return_output=True,
+                                             machine=machine.name,
+                                             username="root",
+                                             chromeos_root=self.chromeos_root)
+    if ret != 0:
+      raise CrosCommandError("Couldn't get Chrome version from %s."
+                             % machine.name)
+
+    if ret != 0:
+      version = ""
+    return version.rstrip()
+
   def ImageMachine(self, machine, label):
     checksum = label.checksum
 
@@ -270,6 +289,9 @@ class MachineManager(object):
       machine.checksum = checksum
       machine.image = label.chromeos_image
       machine.label = label
+
+    if not label.chrome_version:
+      label.chrome_version = self.GetChromeVersion(machine)
 
     self.ce.log_level = save_ce_log_level
     return retval

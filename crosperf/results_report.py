@@ -601,6 +601,7 @@ class JSONResultsReport(ResultsReport):
               ver, img = ParseChromeosImage(l.chromeos_image)
               json_results['chromeos_image'] = img
               json_results['chromeos_version'] = ver
+              json_results['chrome_version'] = l.chrome_version
               common_checksum = \
                 self.experiment.machine_manager.machine_checksum[l.name]
               common_string = \
