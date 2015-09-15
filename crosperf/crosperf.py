@@ -110,7 +110,7 @@ def Main(argv):
     runner = MockExperimentRunner(experiment)
   else:
     runner = ExperimentRunner(experiment, json_report,
-                              using_schedv2=!options.noschedv2)
+                              using_schedv2=(not options.noschedv2))
 
   runner.Run()
 
