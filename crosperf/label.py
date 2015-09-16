@@ -113,6 +113,7 @@ class MockLabel(object):
     self.image_args = image_args
     self.chrome_src = chrome_src
     self.image_type = self._GetImageType(chromeos_image)
+    self.checksum = ''
 
   def _GetImageType(self, chromeos_image):
     image_type = None
