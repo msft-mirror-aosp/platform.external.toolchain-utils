@@ -559,7 +559,12 @@ class MockMachineManager(MachineManager):
       cm = MockCrosMachine(machine_name, self.chromeos_root, self.log_level)
       assert cm.machine_checksum, ("Could not find checksum for machine %s" %
                                    machine_name)
-      self._all_machines.append(cm)
+      # In Original MachineManager, the test is 'if cm.machine_checksum:' - if a
+      # machine is unreachable, then its machine_checksum is None. Here we
+      # cannot do this, because machine_checksum is always faked, so we directly
+      # test cm.IsReachable, which is properly mocked.
+      if cm.IsReachable():
+        self._all_machines.append(cm)
 
   def AcquireMachine(self, chromeos_image, label, throw=False):
     for machine in self._all_machines:
