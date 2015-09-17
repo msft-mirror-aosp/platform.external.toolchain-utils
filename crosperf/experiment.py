@@ -71,9 +71,17 @@ class Experiment(object):
                                             log_level, locks_directory)
     self.l = logger.GetLogger(log_dir)
 
-    for machine in remote:
+    for machine in self.remote:
+      # machine_manager.AddMachine only adds reachable machines.
       self.machine_manager.AddMachine(machine)
+    # Now machine_manager._all_machines contains a list of reachable
+    # machines. This is a subset of self.remote. We make both lists the same.
+    self.remote = [m.name for m in self.machine_manager._all_machines]
+
     for label in labels:
+      # We filter out label remotes that are not reachable (not in
+      # self.remote). So each label.remote is a sublist of experiment.remote.
+      label.remote = filter(lambda x: x in self.remote, label.remote)
       self.machine_manager.ComputeCommonCheckSum(label)
       self.machine_manager.ComputeCommonCheckSumString(label)
 

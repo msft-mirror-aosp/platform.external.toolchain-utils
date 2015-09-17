@@ -54,9 +54,10 @@ class ExperimentRunner(object):
     label-specific requests, and return the list.
     """
     machines = self._experiment.remote
+    # All Label.remote is a sublist of experiment.remote.
     for l in self._experiment.labels:
-      if l.remote:
-        machines += l.remote
+      for r in l.remote:
+        assert r in machines
     return machines
 
   def _UpdateMachineList(self, locked_machines):
