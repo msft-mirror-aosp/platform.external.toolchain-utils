@@ -10,6 +10,7 @@ from collections import defaultdict
 from machine_image_manager import MachineImageManager
 from threading import Lock
 from threading import Thread
+from utils import command_executer
 from utils import logger
 
 

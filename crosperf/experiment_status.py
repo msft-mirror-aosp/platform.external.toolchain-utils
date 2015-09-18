@@ -97,15 +97,16 @@ class ExperimentStatus(object):
                             (key, self._GetNamesAndIterations(val)))
 
     thread_status = ""
-    if self.experiment.log_level == "verbose":
-      thread_status_format = "Thread Status: \n{}\n"
-      if self.experiment.schedv2() is None:
+    thread_status_format = "Thread Status: \n{}\n"
+    if (self.experiment.schedv2() is None and
+        self.experiment.log_level == "verbose"):
         # Add the machine manager status.
         thread_status = thread_status_format.format(
           self.experiment.machine_manager.AsString())
-      else:
+    elif self.experiment.schedv2():
+        # In schedv2 mode, we always print out thread status.
         thread_status = thread_status_format.format(
-          self.experiment.schedv2().threads_status_as_string())
+            self.experiment.schedv2().threads_status_as_string())
 
     result = "{}{}".format(thread_status, "\n".join(status_strings))
 
