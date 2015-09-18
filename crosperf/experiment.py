@@ -15,7 +15,7 @@ from threading import Lock
 from utils import logger
 from utils import misc
 
-from benchmark_run import BenchmarkRun
+import benchmark_run
 from machine_manager import MachineManager
 from machine_manager import MockMachineManager
 import test_flag
@@ -110,17 +110,17 @@ class Experiment(object):
           logger_to_use = logger.Logger(self.log_dir,
                                         "run.%s" % (full_name),
                                         True)
-          benchmark_run = BenchmarkRun(benchmark_run_name,
-                                       benchmark,
-                                       label,
-                                       iteration,
-                                       self.cache_conditions,
-                                       self.machine_manager,
-                                       logger_to_use,
-                                       self.log_level,
-                                       self.share_cache)
+          benchmark_runs.append(benchmark_run.BenchmarkRun(
+              benchmark_run_name,
+              benchmark,
+              label,
+              iteration,
+              self.cache_conditions,
+              self.machine_manager,
+              logger_to_use,
+              self.log_level,
+              self.share_cache))
 
-          benchmark_runs.append(benchmark_run)
     return benchmark_runs
 
   def Build(self):

@@ -94,7 +94,6 @@ class BenchmarkRun(threading.Thread):
 
   def run(self):
     try:
-      self.ReadCache()
 
       if self.result:
         self._logger.LogOutput("%s: Cache hit." % self.name)
@@ -285,11 +284,10 @@ class MockBenchmarkRun(BenchmarkRun):
                                       self.label)
     self.timeline.Record(STATUS_RUNNING)
     [retval, out, err] = self.suite_runner.Run(machine.name,
-                                                  self.label.chromeos_root,
-                                                  self.label.board,
-                                                  self.benchmark.test_name,
-                                                  self.test_args,
-                                                  self.profiler_args)
+                                               self.label,
+                                               self.benchmark,
+                                               self.test_args,
+                                               self.profiler_args)
     self.run_completed = True
     rr = MockResult("logger", self.label, self.log_level)
     rr.out = out

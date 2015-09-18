@@ -132,13 +132,14 @@ class Result(object):
     if not self._temp_dir:
       self._temp_dir = tempfile.mkdtemp(dir=results_in_chroot)
       command = "cp -r {0}/* {1}".format(self.results_dir, self._temp_dir)
-      self._ce.RunCommand(command)
+      self._ce.RunCommand(command, print_to_console=False)
 
     command = ("python generate_test_report --no-color --csv %s" %
                (os.path.join("/tmp", os.path.basename(self._temp_dir))))
     [_, out, _] = self._ce.ChrootRunCommand(self._chromeos_root,
                                             command,
-                                            return_output=True)
+                                            return_output=True,
+                                            print_to_console=False)
     keyvals_dict = {}
     tmp_dir_in_chroot = misc.GetInsideChrootPath(self._chromeos_root,
                                                  self._temp_dir)
@@ -173,7 +174,8 @@ class Result(object):
 
     command = "find %s %s" % (self.results_dir,
                               find_args)
-    ret, out, _ = self._ce.RunCommand(command, return_output=True)
+    ret, out, _ = self._ce.RunCommand(command, return_output=True,
+                                      print_to_console=False)
     if ret:
       raise Exception("Could not run find command!")
     return out
@@ -301,7 +303,7 @@ class Result(object):
     command = ("cd %s && tar xf %s" %
                (self._temp_dir,
                 os.path.join(cache_dir, AUTOTEST_TARBALL)))
-    ret = self._ce.RunCommand(command)
+    ret = self._ce.RunCommand(command, print_to_console=False)
     if ret:
       raise Exception("Could not untar cached tarball")
     self.results_dir = self._temp_dir
@@ -519,11 +521,14 @@ class ResultsCache(object):
   def _GetCacheDirForWrite(self, get_keylist=False):
     cache_path = self._FormCacheDir(self._GetCacheKeyList(False))[0]
     if get_keylist:
-      args_str = "%s_%s_%s" % (self.test_args, self.profiler_args, self.run_local)
-      version, image = results_report.ParseChromeosImage(self.label.chromeos_image)
-      keylist = [ version, image, self.label.board,
-                  self.machine.name, self.test_name, str(self.iteration),
-                  args_str]
+      args_str = "%s_%s_%s" % (self.test_args,
+                               self.profiler_args,
+                               self.run_local)
+      version, image = results_report.ParseChromeosImage(
+          self.label.chromeos_image)
+      keylist = [version, image, self.label.board,
+                 self.machine.name, self.test_name, str(self.iteration),
+                 args_str]
       return cache_path, keylist
     return cache_path
 
@@ -576,7 +581,9 @@ class ResultsCache(object):
             machine_id_checksum = machine.machine_id_checksum
             break
 
-    temp_test_args = "%s %s %s" % (self.test_args, self.profiler_args, self.run_local)
+    temp_test_args = "%s %s %s" % (self.test_args,
+                                   self.profiler_args,
+                                   self.run_local)
     test_args_checksum = hashlib.md5(
         "".join(temp_test_args)).hexdigest()
     return (image_path_checksum,
@@ -601,7 +608,8 @@ class ResultsCache(object):
     if not os.path.isdir(cache_dir):
       return None
 
-    self._logger.LogOutput("Trying to read from cache dir: %s" % cache_dir)
+    if self.log_level == 'verbose':
+      self._logger.LogOutput("Trying to read from cache dir: %s" % cache_dir)
     result = Result.CreateFromCacheHit(self._logger,
                                        self.log_level,
                                        self.label,

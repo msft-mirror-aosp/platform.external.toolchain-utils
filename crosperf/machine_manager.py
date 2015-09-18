@@ -536,6 +536,7 @@ class MockCrosMachine(CrosMachine):
     #In test, we assume "lumpy1", "lumpy2" are the same machine.
     self.machine_checksum =  self._GetMD5Checksum(self.checksum_string)
     self.log_level = log_level
+    self.label = None
 
   def IsReachable(self):
     return True
