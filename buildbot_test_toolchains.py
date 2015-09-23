@@ -102,8 +102,10 @@ class ToolchainComparator():
                                         self._weekday)
     experiment_file_name = "%s_toolchain_experiment.txt" % self._board
 
+    compiler_string = "gcc"
     if self._patches_string == USE_LLVM_PATCH:
       experiment_file_name = "%s_llvm_experiment.txt" % self._board
+      compiler_string = "llvm"
 
     experiment_file = os.path.join (experiment_file_dir,
                                     experiment_file_name)
@@ -127,6 +129,7 @@ class ToolchainComparator():
           vanilla_image {
             chromeos_root: %s
             build: %s
+            compiler: gcc
           }
           """ % (self._chromeos_root, vanilla_image)
       print >> f, official_image
@@ -135,8 +138,9 @@ class ToolchainComparator():
           test_image {
             chromeos_root: %s
             build: %s
+            compiler: %s
           }
-          """ % (self._chromeos_root, trybot_image)
+          """ % (self._chromeos_root, trybot_image, compiler_string)
       print >> f, experiment_image
 
     crosperf = os.path.join(TOOLCHAIN_DIR,

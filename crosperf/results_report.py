@@ -596,12 +596,18 @@ class JSONResultsReport(ResultsReport):
           json_results['label'] = label
           common_checksum = ''
           common_string = ''
+          compiler_string = 'gcc'
           for l in self.experiment.labels:
             if l.name == label:
               ver, img = ParseChromeosImage(l.chromeos_image)
               json_results['chromeos_image'] = img
               json_results['chromeos_version'] = ver
               json_results['chrome_version'] = l.chrome_version
+              json_results['compiler'] = l.compiler
+              # If any of the labels used the LLVM compiler, we will add
+              # ".llvm" to the json report filename. (Otherwise we use .gcc).
+              if 'llvm' in l.compiler:
+                compiler_string = 'llvm'
               common_checksum = \
                 self.experiment.machine_manager.machine_checksum[l.name]
               common_string = \
@@ -642,8 +648,9 @@ class JSONResultsReport(ResultsReport):
             json_results['detailed_results'] = detail_results
           final_results.append(json_results)
 
-    filename = "report_%s_%s_%s.json" % (board, self.date,
-                                         self.time.replace(':','.'))
+    filename = "report_%s_%s_%s.%s.json" % (board, self.date,
+                                           self.time.replace(':','.'),
+                                           compiler_string)
     fullname = os.path.join(results_dir, filename)
     with open(fullname, "w") as fp:
       json.dump(final_results, fp, indent=2)

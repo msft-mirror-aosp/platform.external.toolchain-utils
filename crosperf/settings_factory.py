@@ -59,6 +59,9 @@ class LabelSettings(Settings):
                             "image_chromeos.py."))
     self.AddField(TextField("cache_dir", default="",
                             description="The cache dir for this image."))
+    self.AddField(TextField("compiler", default="gcc",
+                            description="The compiler used to build the "
+                            "ChromeOS image (gcc or llvm)."))
     self.AddField(TextField("chrome_src",
                             description="The path to the source of chrome. "
                             "This is used to run telemetry benchmarks. "

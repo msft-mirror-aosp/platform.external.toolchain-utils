@@ -216,6 +216,7 @@ class ExperimentFactory(object):
       image = label_settings.GetField("chromeos_image")
       chromeos_root = label_settings.GetField("chromeos_root")
       my_remote = label_settings.GetField("remote")
+      compiler = label_settings.GetField("compiler")
       new_remote = []
       for i in my_remote:
         c = re.sub('["\']', '', i)
@@ -245,10 +246,11 @@ class ExperimentFactory(object):
       image_args = label_settings.GetField("image_args")
       if test_flag.GetTestMode():
         label = MockLabel(label_name, image, chromeos_root, board, my_remote,
-                          image_args, cache_dir, cache_only, chrome_src)
+                          image_args, cache_dir, cache_only, compiler, chrome_src)
       else:
         label = Label(label_name, image, chromeos_root, board, my_remote,
-                      image_args, cache_dir, cache_only, log_level, chrome_src)
+                      image_args, cache_dir, cache_only, log_level, compiler,
+                      chrome_src)
       labels.append(label)
 
     email = global_settings.GetField("email")

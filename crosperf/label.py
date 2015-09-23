@@ -15,7 +15,8 @@ from utils import misc
 
 class Label(object):
   def __init__(self, name, chromeos_image, chromeos_root, board, remote,
-               image_args, cache_dir, cache_only, log_level, chrome_src=None):
+               image_args, cache_dir, cache_only, log_level, compiler,
+               chrome_src=None):
 
     self.image_type = self._GetImageType(chromeos_image)
 
@@ -33,6 +34,7 @@ class Label(object):
     self.cache_only = cache_only
     self.log_level = log_level
     self.chrome_version = ""
+    self.compiler = compiler
 
     if not chromeos_root:
       if self.image_type == "local":

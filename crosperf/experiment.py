@@ -92,10 +92,10 @@ class Experiment(object):
     self._internal_counter_lock = Lock()
 
   def set_schedv2(self, schedv2):
-      self._schedv2 = schedv2
+    self._schedv2 = schedv2
 
   def schedv2(self):
-      return self._schedv2
+    return self._schedv2
 
   def _GenerateBenchmarkRuns(self):
     """Generate benchmark runs from labels and benchmark defintions."""
