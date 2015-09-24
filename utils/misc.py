@@ -254,6 +254,8 @@ def GetGccLibsDestForBoard(board, chromeos_root):
     return "/build/%s/usr/lib64/gcc/" % board
   if arch == "arm":
     return "/build/%s/usr/lib/gcc/" % board
+  if arch == "arm64":
+    return "/build/%s/usr/lib/gcc/" % board
   raise ValueError("Arch %s is invalid!" % arch)
 
 
