@@ -55,7 +55,11 @@ class CommandExecuter:
                  command_timeout=None,
                  terminated_timeout=10,
                  print_to_console=True):
-    """Run a command."""
+    """Run a command.
+
+    Note: As this is written, the stdin for the process executed is
+    not associated with the stdin of the caller of this routine.
+    """
 
     cmd = str(cmd)
 
@@ -80,9 +84,13 @@ class CommandExecuter:
         user = username + "@"
       cmd = "ssh -t -t %s%s -- '%s'" % (user, machine, cmd)
 
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE,
-                         shell=True)
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, shell=True)
+
+    # We explicitly disconect the client stdin from the command to
+    # execute by explicitly requesting a new pipe. Now, let's close it
+    # so that the executed process does not try to read from it.
+    p.stdin.close()
 
     full_stdout = ""
     full_stderr = ""
@@ -381,6 +389,9 @@ class CommandExecuter:
       'pobject' - The object used to control execution, for example, call
                   pobject.kill().
 
+    Note: As this is written, the stdin for the process executed is
+    not associated with the stdin of the caller of this routine.
+
     Args:
       cmd:           Command in a single string.
       cwd:           Working directory for execution.
@@ -439,8 +450,14 @@ class CommandExecuter:
       self.logger.LogCmdToFileOnly(cmd)
     pobject = subprocess.Popen(
         cmd, cwd=cwd, bufsize=1024, env=env, shell=shell,
-        universal_newlines=True, stdin=None, stdout=subprocess.PIPE,
+        universal_newlines=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT if join_stderr else subprocess.PIPE)
+
+    # We explicitly disconect the client stdin from the command to
+    # execute by explicitly requesting a new pipe. Now, let's close it
+    # so that the executed process does not try to read from it.
+    pobject.stdin.close()
+
     # We provide a default line_consumer
     if line_consumer is None:
         line_consumer = lambda **d: None
