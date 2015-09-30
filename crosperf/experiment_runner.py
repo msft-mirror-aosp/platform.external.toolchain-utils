@@ -180,6 +180,12 @@ class ExperimentRunner(object):
         self._terminated = True
         self.l.LogError("Ctrl-c pressed. Cleaning up...")
         experiment.Terminate()
+        raise
+      except SystemExit:
+        self._terminate = True
+        self.l.LogError("Unexpected exit. Cleaning up...")
+        experiment.Terminate()
+        raise
     finally:
       if not experiment.locks_dir:
         self._UnlockAllMachines(experiment)
@@ -252,11 +258,14 @@ class ExperimentRunner(object):
         benchmark_run.result.CleanUp(benchmark_run.benchmark.rm_chroot_tmp)
 
   def Run(self):
-    self._Run(self._experiment)
-    self._PrintTable(self._experiment)
-    if not self._terminated:
-      self._StoreResults(self._experiment)
-      self._Email(self._experiment)
+    try:
+      self._Run(self._experiment)
+    finally:
+      # Always print the report at the end of the run.
+      self._PrintTable(self._experiment)
+      if not self._terminated:
+        self._StoreResults(self._experiment)
+        self._Email(self._experiment)
 
 
 class MockExperimentRunner(ExperimentRunner):

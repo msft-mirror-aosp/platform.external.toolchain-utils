@@ -7,6 +7,7 @@
 import atexit
 import optparse
 import os
+import signal
 import sys
 from experiment_runner import ExperimentRunner
 from experiment_runner import MockExperimentRunner
@@ -58,6 +59,16 @@ def Cleanup(experiment):
   experiment.Cleanup()
 
 
+def CallExitHandler(signum, _):
+  """Signal handler that transforms a signal into a call to exit.
+
+  This is useful because functionality registered by "atexit" will
+  be called. It also means you can "catch" the signal by catching
+  the SystemExit exception.
+  """
+  sys.exit(128 + signum)
+
+
 def Main(argv):
   parser = optparse.OptionParser(usage=Help().GetUsage(),
                                  description=Help().GetHelp(),
@@ -104,6 +115,7 @@ def Main(argv):
 
   json_report = experiment_file.GetGlobalSettings().GetField("json_report")
 
+  signal.signal(signal.SIGTERM, CallExitHandler)
   atexit.register(Cleanup, experiment)
 
   if options.dry_run:

@@ -154,10 +154,14 @@ class SuiteRunner(object):
     if self.log_level != "verbose":
       self._logger.LogOutput("Running test.")
       self._logger.LogOutput("CMD: %s" % command)
+    # Use --no-ns-pid so that cros_sdk does not create a different
+    # process namespace and we can kill process created easily by
+    # their process group.
     return self._ce.ChrootRunCommand(label.chromeos_root,
                                      command,
                                      True,
-                                     self._ct)
+                                     self._ct,
+                                     cros_sdk_options="--no-ns-pid")
 
   def RemoveTelemetryTempFile (self, machine, chromeos_root):
     filename = "telemetry@%s" % machine
@@ -208,20 +212,23 @@ class SuiteRunner(object):
                                               profiler_args,
                                               machine))
 
-    chrome_root_options = ""
-    chrome_root_options = (" --chrome_root={} --chrome_root_mount={} "
-                           " FEATURES=\"-usersandbox\" "
+    # Use --no-ns-pid so that cros_sdk does not create a different
+    # process namespace and we can kill process created easily by their
+    # process group.
+    chrome_root_options = ("--no-ns-pid "
+                           "--chrome_root={} --chrome_root_mount={} "
+                           "FEATURES=\"-usersandbox\" "
                            "CHROME_ROOT={}".format(label.chrome_src,
                                                     CHROME_MOUNT_DIR,
                                                     CHROME_MOUNT_DIR))
     if self.log_level != "verbose":
       self._logger.LogOutput("Running test.")
       self._logger.LogOutput("CMD: %s" % cmd)
-    return self._ce.ChrootRunCommand (label.chromeos_root,
-                                      cmd,
-                                      return_output=True,
-                                      command_terminator=self._ct,
-                                      cros_sdk_options=chrome_root_options)
+    return self._ce.ChrootRunCommand(label.chromeos_root,
+                                     cmd,
+                                     return_output=True,
+                                     command_terminator=self._ct,
+                                     cros_sdk_options=chrome_root_options)
 
 
   def Telemetry_Run(self, machine, label, benchmark, profiler_args):

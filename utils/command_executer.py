@@ -8,6 +8,7 @@ import getpass
 import os
 import re
 import select
+import signal
 import subprocess
 import tempfile
 import time
@@ -55,11 +56,7 @@ class CommandExecuter:
                  command_timeout=None,
                  terminated_timeout=10,
                  print_to_console=True):
-    """Run a command.
-
-    Note: As this is written, the stdin for the process executed is
-    not associated with the stdin of the caller of this routine.
-    """
+    """Run a command."""
 
     cmd = str(cmd)
 
@@ -84,13 +81,13 @@ class CommandExecuter:
         user = username + "@"
       cmd = "ssh -t -t %s%s -- '%s'" % (user, machine, cmd)
 
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, shell=True)
-
-    # We explicitly disconect the client stdin from the command to
-    # execute by explicitly requesting a new pipe. Now, let's close it
-    # so that the executed process does not try to read from it.
-    p.stdin.close()
+    # We use setsid so that the child will have a different session id
+    # and we can easily kill the process group. This is also important
+    # because the child will be disassociated from the parent terminal.
+    # In this way the child cannot mess the parent's terminal.
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, shell=True,
+                         preexec_fn=os.setsid)
 
     full_stdout = ""
     full_stderr = ""
@@ -108,15 +105,12 @@ class CommandExecuter:
 
     while len(pipes):
       if command_terminator and command_terminator.IsTerminated():
-        self.RunCommand("sudo kill -9 " + str(p.pid),
-                        print_to_console=print_to_console)
-        wait = p.wait()
+        os.killpg(os.getpgid(p.pid), signal.SIGTERM)
         if self.logger:
-          self.logger.LogError("Command was terminated!", print_to_console)
-        if return_output:
-          return (p.wait, full_stdout, full_stderr)
-        else:
-          return wait
+          self.logger.LogError("Command received termination request. "
+                               "Killed child process group.",
+                               print_to_console)
+        break
 
       l=my_poll.poll(100)
       for (fd, evt) in l:
@@ -144,21 +138,19 @@ class CommandExecuter:
           terminated_time = time.time()
         elif (terminated_timeout is not None and
               time.time() - terminated_time > terminated_timeout):
-          m = ("Timeout of %s seconds reached since process termination."
-               % terminated_timeout)
           if self.logger:
-            self.logger.LogWarning(m, print_to_console)
+            self.logger.LogWarning("Timeout of %s seconds reached since "
+                                   "process termination."
+                                   % terminated_timeout, print_to_console)
           break
 
       if (command_timeout is not None and
           time.time() - started_time > command_timeout):
-        m = ("Timeout of %s seconds reached since process started."
-             % command_timeout)
+        os.killpg(os.getpgid(p.pid), signal.SIGTERM)
         if self.logger:
-          self.logger.LogWarning(m, print_to_console)
-        self.RunCommand("kill %d || sudo kill %d || sudo kill -9 %d" %
-                        (p.pid, p.pid, p.pid),
-                        print_to_console=print_to_console)
+          self.logger.LogWarning("Timeout of %s seconds reached since process"
+                                 "started. Killed child process group."
+                                 % command_timeout, print_to_console)
         break
 
       if out == err == "":
@@ -448,15 +440,16 @@ class CommandExecuter:
       self.logger.LogCmd(cmd)
     elif self.logger:
       self.logger.LogCmdToFileOnly(cmd)
+
+    # We use setsid so that the child will have a different session id
+    # and we can easily kill the process group. This is also important
+    # because the child will be disassociated from the parent terminal.
+    # In this way the child cannot mess the parent's terminal.
     pobject = subprocess.Popen(
         cmd, cwd=cwd, bufsize=1024, env=env, shell=shell,
-        universal_newlines=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT if join_stderr else subprocess.PIPE)
-
-    # We explicitly disconect the client stdin from the command to
-    # execute by explicitly requesting a new pipe. Now, let's close it
-    # so that the executed process does not try to read from it.
-    pobject.stdin.close()
+        universal_newlines=True, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT if join_stderr else subprocess.PIPE,
+        preexec_fn=os.setsid)
 
     # We provide a default line_consumer
     if line_consumer is None:
@@ -484,7 +477,7 @@ class CommandExecuter:
                 del handlermap[fd]
 
         if timeout is not None and (time.time() - start_time > timeout):
-            pobject.kill()
+            os.killpg(os.getpgid(pobject.pid), signal.SIGTERM)
 
     return pobject.wait()
 
