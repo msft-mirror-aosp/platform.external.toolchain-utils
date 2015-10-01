@@ -142,7 +142,7 @@ class SuiteRunner(object):
     if profiler_args:
       self._logger.LogFatal("test_that does not support profiler.")
     command = "rm -rf /usr/local/autotest/results/*"
-    self._ce.CrosRunCommand(command, machine=machine, username="root",
+    self._ce.CrosRunCommand(command, machine=machine,
                             chromeos_root=label.chromeos_root)
 
     # We do this because some tests leave the machine in weird states.

@@ -1,8 +1,8 @@
-#!/usr/bin/python
-#
 # Copyright 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
+"""Utilities to run commands in outside/inside chroot and on the board."""
 
 import getpass
 import os
@@ -10,6 +10,7 @@ import re
 import select
 import signal
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -18,7 +19,7 @@ import misc
 
 mock_default = False
 
-LOG_LEVEL=("none", "quiet", "average", "verbose")
+LOG_LEVEL = ("none", "quiet", "average", "verbose")
 
 def InitCommandExecuter(mock=False):
   global mock_default
@@ -29,12 +30,14 @@ def InitCommandExecuter(mock=False):
 def GetCommandExecuter(logger_to_set=None, mock=False, log_level="verbose"):
   # If the default is a mock executer, always return one.
   if mock_default or mock:
-    return MockCommandExecuter(logger_to_set)
+    return MockCommandExecuter(log_level, logger_to_set)
   else:
     return CommandExecuter(log_level, logger_to_set)
 
 
-class CommandExecuter:
+class CommandExecuter(object):
+  """Provides several methods to execute commands on several environments."""
+
   def __init__(self, log_level, logger_to_set=None):
     self.log_level = log_level
     if log_level == "none":
@@ -61,7 +64,7 @@ class CommandExecuter:
     cmd = str(cmd)
 
     if self.log_level == "quiet":
-      print_to_console=False
+      print_to_console = False
 
     if self.log_level == "verbose":
       self.logger.LogCmd(cmd, machine, username, print_to_console)
@@ -112,8 +115,8 @@ class CommandExecuter:
                                print_to_console)
         break
 
-      l=my_poll.poll(100)
-      for (fd, evt) in l:
+      l = my_poll.poll(100)
+      for (fd, _) in l:
         if fd == p.stdout.fileno():
           out = os.read(p.stdout.fileno(), 16384)
           if return_output:
@@ -184,7 +187,7 @@ class CommandExecuter:
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
     command += "\nlearn_board"
     command += "\necho ${FLAGS_board}"
-    retval, output, err = self.RunCommand(command, True)
+    retval, output, _ = self.RunCommand(command, True)
     if self.logger:
       self.logger.LogFatalIf(retval, "learn_board command failed")
     elif retval:
@@ -192,14 +195,13 @@ class CommandExecuter:
     return output.split()[-1]
 
   def CrosRunCommand(self, cmd, return_output=False, machine=None,
-      username=None, command_terminator=None, chromeos_root=None,
-                     command_timeout=None,
-                     terminated_timeout=10,
-                     print_to_console=True):
+                     command_terminator=None,
+                     chromeos_root=None, command_timeout=None,
+                     terminated_timeout=10, print_to_console=True):
     """Run a command on a chromeos box"""
 
     if self.log_level != "verbose":
-      print_to_console=False
+      print_to_console = False
 
     if self.logger:
       self.logger.LogCmd(cmd, print_to_console=print_to_console)
@@ -222,7 +224,7 @@ class CommandExecuter:
     if retval:
       if self.logger:
         self.logger.LogError("Could not run remote command on machine."
-                            " Is the machine up?")
+                             " Is the machine up?")
       return retval
 
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
@@ -255,9 +257,9 @@ class CommandExecuter:
       self.logger.LogCmd(command, print_to_console=print_to_console)
 
     handle, command_file = tempfile.mkstemp(dir=os.path.join(chromeos_root,
-                                                           "src/scripts"),
-                                          suffix=".sh",
-                                          prefix="in_chroot_cmd")
+                                                             "src/scripts"),
+                                            suffix=".sh",
+                                            prefix="in_chroot_cmd")
     os.write(handle, "#!/bin/bash\n")
     os.write(handle, command)
     os.write(handle, "\n")
@@ -310,10 +312,11 @@ class CommandExecuter:
 
     if src_cros == True or dest_cros == True:
       if self.logger:
-        self.logger.LogFatalIf(not (src_cros ^ dest_cros), "Only one of src_cros "
-                              "and desc_cros can be non-null.")
+        self.logger.LogFatalIf(src_cros == dest_cros,
+                               "Only one of src_cros and desc_cros can "
+                               "be True.")
         self.logger.LogFatalIf(not chromeos_root, "chromeos_root not given!")
-      elif (not (src_cros ^ dest_cros)) or (not chromeos_root):
+      elif src_cros == dest_cros or not chromeos_root:
         sys.exit(1)
       if src_cros == True:
         cros_machine = src_machine
@@ -321,8 +324,6 @@ class CommandExecuter:
         cros_machine = dest_machine
 
       command = self.RemoteAccessInitCommand(chromeos_root, cros_machine)
-      src_parent, src_child = misc.GetRoot(src)
-      dest_parent, dest_child = misc.GetRoot(dest)
       ssh_command = ("ssh -p ${FLAGS_ssh_port}" +
                      " -o StrictHostKeyChecking=no" +
                      " -o UserKnownHostsFile=$(mktemp)" +
@@ -345,16 +346,12 @@ class CommandExecuter:
 
 
     if dest_machine == src_machine:
-      command = ("rsync -a %s %s" %
-                     (src,
-                      dest))
+      command = "rsync -a %s %s" % (src, dest)
     else:
       if src_machine is None:
         src_machine = os.uname()[1]
         src_user = getpass.getuser()
-      command = ("rsync -a %s@%s:%s %s" %
-                     (src_user, src_machine, src,
-                      dest))
+      command = "rsync -a %s@%s:%s %s" % (src_user, src_machine, src, dest)
     return self.RunCommand(command,
                            machine=dest_machine,
                            username=dest_user,
@@ -385,13 +382,14 @@ class CommandExecuter:
     not associated with the stdin of the caller of this routine.
 
     Args:
-      cmd:           Command in a single string.
-      cwd:           Working directory for execution.
-      shell:         Whether to use a shell for execution.
-      join_stderr:   Whether join stderr to stdout stream.
-      env:           Execution environment.
+      cmd: Command in a single string.
+      cwd: Working directory for execution.
       line_consumer: A function that will ba called by this function. See above
-                     for details.
+        for details.
+      timeout: terminate command after this timeout.
+      shell: Whether to use a shell for execution.
+      join_stderr: Whether join stderr to stdout stream.
+      env: Execution environment.
 
     Returns:
       Execution return code.
@@ -402,39 +400,39 @@ class CommandExecuter:
     """
 
     class StreamHandler(object):
-        """Internal utility class."""
+      """Internal utility class."""
 
-        def __init__(self, pobject, fd, name, line_consumer):
-            self._pobject = pobject
-            self._fd = fd
-            self._name = name
-            self._buf = ''
-            self._line_consumer = line_consumer
+      def __init__(self, pobject, fd, name, line_consumer):
+        self._pobject = pobject
+        self._fd = fd
+        self._name = name
+        self._buf = ''
+        self._line_consumer = line_consumer
 
-        def read_and_notify_line(self):
-            t = os.read(fd, 1024)
-            self._buf = self._buf + t
-            self.notify_line()
+      def read_and_notify_line(self):
+        t = os.read(fd, 1024)
+        self._buf = self._buf + t
+        self.notify_line()
 
-        def notify_line(self):
+      def notify_line(self):
+        p = self._buf.find('\n')
+        while p >= 0:
+          self._line_consumer(line=self._buf[:p+1], output=self._name,
+                              pobject=self._pobject)
+          if p < len(self._buf) - 1:
+            self._buf = self._buf[p+1:]
             p = self._buf.find('\n')
-            while p >= 0:
-                self._line_consumer(line=self._buf[:p+1], output=self._name,
-                                    pobject=self._pobject)
-                if p < len(self._buf) - 1:
-                    self._buf = self._buf[p+1:]
-                    p = self._buf.find('\n')
-                else:
-                    self._buf = ''
-                    p = -1
-                    break
+          else:
+            self._buf = ''
+            p = -1
+            break
 
-        def notify_eos(self):
-            # Notify end of stream. The last line may not end with a '\n'.
-            if self._buf != '':
-                self._line_consumer(line=self._buf, output=self._name,
-                                    pobject=self._pobject)
-                self._buf = ''
+      def notify_eos(self):
+        # Notify end of stream. The last line may not end with a '\n'.
+        if self._buf != '':
+          self._line_consumer(line=self._buf, output=self._name,
+                              pobject=self._pobject)
+          self._buf = ''
 
     if self.log_level == "verbose":
       self.logger.LogCmd(cmd)
@@ -453,54 +451,56 @@ class CommandExecuter:
 
     # We provide a default line_consumer
     if line_consumer is None:
-        line_consumer = lambda **d: None
+      line_consumer = lambda **d: None
     start_time = time.time()
     poll = select.poll()
     outfd = pobject.stdout.fileno()
     poll.register(outfd, select.POLLIN | select.POLLPRI)
     handlermap = {outfd: StreamHandler(pobject, outfd, 'stdout', line_consumer)}
     if not join_stderr:
-        errfd = pobject.stderr.fileno()
-        poll.register(errfd, select.POLLIN | select.POLLPRI)
-        handlermap[errfd] = StreamHandler(
-            pobject, errfd, 'stderr', line_consumer)
+      errfd = pobject.stderr.fileno()
+      poll.register(errfd, select.POLLIN | select.POLLPRI)
+      handlermap[errfd] = StreamHandler(
+          pobject, errfd, 'stderr', line_consumer)
     while len(handlermap):
-        readables = poll.poll(300)
-        for (fd, evt) in readables:
-            handler = handlermap[fd]
-            if evt & (select.POLLPRI | select.POLLIN):
-                handler.read_and_notify_line()
-            elif (evt &
-                  (select.POLLHUP | select.POLLERR | select.POLLNVAL)):
-                handler.notify_eos()
-                poll.unregister(fd)
-                del handlermap[fd]
+      readables = poll.poll(300)
+      for (fd, evt) in readables:
+        handler = handlermap[fd]
+        if evt & (select.POLLPRI | select.POLLIN):
+          handler.read_and_notify_line()
+        elif evt & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
+          handler.notify_eos()
+          poll.unregister(fd)
+          del handlermap[fd]
 
-        if timeout is not None and (time.time() - start_time > timeout):
-            os.killpg(os.getpgid(pobject.pid), signal.SIGTERM)
+      if timeout is not None and (time.time() - start_time > timeout):
+        os.killpg(os.getpgid(pobject.pid), signal.SIGTERM)
 
     return pobject.wait()
 
 
 class MockCommandExecuter(CommandExecuter):
-  def __init__(self, logger_to_set=None):
-    if logger is not None:
-      self.logger = logger_to_set
-    else:
-      self.logger = logger.GetLogger()
+  """Mock class for class CommandExecuter."""
+  def __init__(self, log_level, logger_to_set=None):
+    super(MockCommandExecuter, self).__init__(log_level, logger_to_set)
 
-  def RunCommand(self, cmd, return_output=False, machine=None, username=None,
-                 command_terminator=None):
+  def RunCommand(self, cmd, return_output=False, machine=None,
+                 username=None, command_terminator=None,
+                 command_timeout=None, terminated_timeout=10,
+                 print_to_console=True):
+    assert not command_timeout
     cmd = str(cmd)
     if machine is None:
       machine = "localhost"
     if username is None:
       username = "current"
-    logger.GetLogger().LogCmd("(Mock) " + cmd, machine, username)
+    logger.GetLogger().LogCmd("(Mock) " + cmd, machine,
+                              username, print_to_console)
     return 0
 
 
-class CommandTerminator:
+class CommandTerminator(object):
+  """Object to request termination of a command in execution."""
   def __init__(self):
     self.terminated = False
 

@@ -110,7 +110,6 @@ class CrosMachine(object):
     command = "cat /proc/meminfo"
     ret, self.meminfo, _ = self.ce.CrosRunCommand(command, return_output=True,
                                               machine=self.name,
-                                              username="root",
                                               chromeos_root=self.chromeos_root)
     assert ret == 0, "Could not get meminfo from machine: %s" % self.name
     if ret == 0:
@@ -125,7 +124,6 @@ class CrosMachine(object):
     command = "cat /proc/cpuinfo"
     ret, self.cpuinfo, _ = self.ce.CrosRunCommand(command, return_output=True,
                                               machine=self.name,
-                                              username="root",
                                               chromeos_root=self.chromeos_root)
     assert ret == 0, "Could not get cpuinfo from machine: %s" % self.name
     if ret == 0:
@@ -230,7 +228,6 @@ class MachineManager(object):
     cmd = "/opt/google/chrome/chrome --version"
     ret, version, _ = self.ce.CrosRunCommand(cmd, return_output=True,
                                              machine=machine.name,
-                                             username="root",
                                              chromeos_root=self.chromeos_root)
     if ret != 0:
       raise CrosCommandError("Couldn't get Chrome version from %s."
