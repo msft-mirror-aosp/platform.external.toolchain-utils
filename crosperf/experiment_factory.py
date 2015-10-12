@@ -38,7 +38,6 @@ telemetry_perfv2_tests = [ 'dromaeo.domcoreattr',
                            ]
 
 telemetry_pagecycler_tests = [
-                               'page_cycler.dhtml',
                                'page_cycler.intl_ar_fa_he',
                                'page_cycler.intl_es_fr_pt-BR',
                                'page_cycler.intl_hi_ru',
