@@ -21,13 +21,17 @@ from utils import logger
 
 LOCK_SUFFIX = "_check_lock_liveness"
 
+# The locks file directory REQUIRES that 'group' only has read/write
+# privileges and 'world' has no privileges.  So the mask must be
+# '0027': 0777 - 0027 = 0750.
+LOCK_MASK = 0027
 
 def FileCheckName(name):
   return name + LOCK_SUFFIX
 
 
 def OpenLiveCheck(file_name):
-  with FileCreationMask(0000):
+  with FileCreationMask(LOCK_MASK):
     fd = open(file_name, "a+w")
   try:
     fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -127,7 +131,7 @@ class FileLock(object):
     logger.GetLogger().LogOutput("\n%s" % cls.AsString(file_locks))
 
   def __enter__(self):
-    with FileCreationMask(0000):
+    with FileCreationMask(LOCK_MASK):
       try:
         self._file = open(self._filepath, "a+")
         self._file.seek(0, os.SEEK_SET)
@@ -244,7 +248,7 @@ class Lock(object):
 
 
 class Machine(object):
-  LOCKS_DIR = "/home/mobiletc-prebuild/locks"
+  LOCKS_DIR = "/google/data/rw/users/mo/mobiletc-prebuild/locks"
 
   def __init__(self, name, locks_dir=LOCKS_DIR, auto=True):
     self._name = name
