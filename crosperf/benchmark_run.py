@@ -62,6 +62,7 @@ class BenchmarkRun(threading.Thread):
     self.timeline = timeline.Timeline()
     self.timeline.Record(STATUS_PENDING)
     self.share_cache = share_cache
+    self.cache_has_been_read = False
 
     # This is used by schedv2.
     self.owner_thread = None
@@ -91,9 +92,12 @@ class BenchmarkRun(threading.Thread):
 
     self.result = self.cache.ReadResult()
     self.cache_hit = (self.result is not None)
+    self.cache_has_been_read = True
 
   def run(self):
     try:
+      if not self.cache_has_been_read:
+        self.ReadCache()
 
       if self.result:
         self._logger.LogOutput("%s: Cache hit." % self.name)
