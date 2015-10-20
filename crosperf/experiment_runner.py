@@ -1,13 +1,9 @@
-#!/usr/bin/python
-
 # Copyright 2011-2015 Google Inc. All Rights Reserved.
 
 """The experiment runner module."""
 import getpass
 import os
-import random
 import shutil
-import sys
 import time
 
 import afe_lock_machine
@@ -104,7 +100,7 @@ class ExperimentRunner(object):
     self._experiment.machine_manager.RemoveNonLockedMachines(
         self.locked_machines)
     if len(self.locked_machines) == 0:
-        raise RuntimeError("Unable to lock any machines.")
+      raise RuntimeError("Unable to lock any machines.")
 
   def _UnlockAllMachines(self, experiment):
     """Attempt to globally unlock all of the machines requested for run.
@@ -113,7 +109,7 @@ class ExperimentRunner(object):
     requested for this crosperf run.
     """
     if not self.locked_machines:
-        return
+      return
 
     lock_mgr = afe_lock_machine.AFELockManager(
         self.locked_machines,
@@ -129,12 +125,12 @@ class ExperimentRunner(object):
   def _ClearCacheEntries(self, experiment):
     for br in experiment.benchmark_runs:
       cache = ResultsCache()
-      cache.Init (br.label.chromeos_image, br.label.chromeos_root,
-                  br.benchmark.test_name, br.iteration, br.test_args,
-                  br.profiler_args, br.machine_manager, br.machine,
-                  br.label.board, br.cache_conditions, br._logger, br.log_level,
-                  br.label, br.share_cache, br.benchmark.suite,
-                  br.benchmark.show_all_results, br.benchmark.run_local)
+      cache.Init(br.label.chromeos_image, br.label.chromeos_root,
+                 br.benchmark.test_name, br.iteration, br.test_args,
+                 br.profiler_args, br.machine_manager, br.machine,
+                 br.label.board, br.cache_conditions, br._logger, br.log_level,
+                 br.label, br.share_cache, br.benchmark.suite,
+                 br.benchmark.show_all_results, br.benchmark.run_local)
       cache_dir = cache._GetCacheDirForWrite()
       if os.path.exists(cache_dir):
         self.l.LogOutput("Removing cache dir: %s" % cache_dir)
@@ -167,7 +163,7 @@ class ExperimentRunner(object):
               self.l.LogOutput(border)
             else:
               current_status_string = status.GetStatusString()
-              if (current_status_string != last_status_string):
+              if current_status_string != last_status_string:
                 self.l.LogEndDots()
                 self.l.LogOutput(border)
                 self.l.LogOutput(current_status_string)
@@ -182,7 +178,7 @@ class ExperimentRunner(object):
         experiment.Terminate()
         raise
       except SystemExit:
-        self._terminate = True
+        self._terminated = True
         self.l.LogError("Unexpected exit. Cleaning up...")
         experiment.Terminate()
         raise
@@ -222,7 +218,7 @@ class ExperimentRunner(object):
                             attachments=[attachment],
                             msg_type="html")
 
-  def _StoreResults (self, experiment):
+  def _StoreResults(self, experiment):
     if self._terminated:
       return
     results_directory = experiment.results_directory
