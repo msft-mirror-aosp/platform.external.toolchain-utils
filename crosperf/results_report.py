@@ -147,26 +147,11 @@ class ResultsReport(object):
     cell.header = True
     return  [[cell]]
 
-  def _FixFalsePositiveTests(self, result, table_type):
-    # Occasionally Telemetry tests will not fail but they will not return a
-    # result, either.  Look for those cases, and force them to be a fail.
-    # (This can happen if, for example, the test has been disabled.)
-    for k in result:
-      for run in result[k]:
-        run_dict = run[0]
-        if len(run_dict) != 1 or run_dict['retval'] != 0:
-          continue
-        run_dict['retval'] = 1
-        if table_type == 'summary':
-          print ("WARNING:  Test '%s' appears to have succeeded but returned"
-                 " no results." % k)
-
   def _GetTables(self, labels, benchmark_runs, columns, table_type):
     tables = []
     ro = ResultOrganizer(benchmark_runs, labels, self.benchmarks)
     result = ro.result
     label_name = ro.labels
-    self._FixFalsePositiveTests(result, table_type)
     for item in result:
       runs = result[item]
       for benchmark in self.benchmarks:

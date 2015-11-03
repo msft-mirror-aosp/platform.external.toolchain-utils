@@ -5,6 +5,9 @@
 # found in the LICENSE file.
 
 """Parse data from benchmark_runs for tabulator."""
+
+from __future__ import print_function
+
 import json
 import os
 import re
@@ -68,8 +71,15 @@ class ResultOrganizer(object):
       for test_key in benchmark_run.result.keyvals:
         if not show_all_results and not test_key in summary_list:
           continue
-        result_value = benchmark_run.result.keyvals[test_key]
-        cur_dict[test_key] = result_value
+        cur_dict[test_key] = benchmark_run.result.keyvals[test_key]
+      # Occasionally Telemetry tests will not fail but they will not return a
+      # result, either.  Look for those cases, and force them to be a fail.
+      # (This can happen if, for example, the test has been disabled.)
+      if len(cur_dict) == 1 and cur_dict['retval'] == 0:
+        cur_dict['retval'] = 1
+        # TODO: This output should be sent via logger.
+        print("WARNING: Test '%s' appears to have succeeded but returned"
+              " no results." % benchmark_name, file=sys.stderr)
       if json_report and benchmark_run.machine:
         cur_dict['machine'] = benchmark_run.machine.name
         cur_dict['machine_checksum'] = benchmark_run.machine.checksum
