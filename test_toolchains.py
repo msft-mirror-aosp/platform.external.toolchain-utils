@@ -4,6 +4,7 @@
 import datetime
 import optparse
 import os
+import string
 import sys
 import build_chromeos
 import setup_chromeos
@@ -14,7 +15,6 @@ from utils import logger
 
 
 CROSTC_ROOT = "/usr/local/google/crostc"
-AFDO_BOARDS = ["butterfly", "lumpy", "stumpy", "stout", "parrot", "parrot_ivb"]
 MAIL_PROGRAM = "~/var/bin/mail-sheriff"
 WEEKLY_REPORTS_ROOT = os.path.join(CROSTC_ROOT, "weekly_test_data")
 PENDING_ARCHIVES_DIR = os.path.join(CROSTC_ROOT, "pending_archives")
@@ -72,6 +72,12 @@ class ChromeOSCheckout(object):
     image_parts = last_piece.split(".")
     self._build_num = image_parts[0]
 
+  def _BuildLabelName(self, config, board):
+    pieces = config.split("/")
+    compiler_version = pieces[-1]
+    label = compiler_version +  "_tot_afdo"
+    return label
+
   def _BuildAndImage(self, label=""):
     if (not label or
         not misc.DoesLabelExist(self._chromeos_root, self._board, label)):
@@ -81,9 +87,6 @@ class ChromeOSCheckout(object):
                              "--rebuild"]
       if self._public:
         build_chromeos_args.append("--env=USE=-chrome_internal")
-
-      if self._board in AFDO_BOARDS:
-        build_chromeos_args.append("--env=USE=afdo_use")
 
       ret = build_chromeos.Main(build_chromeos_args)
       if ret != 0:
@@ -212,8 +215,8 @@ class ToolchainComparator(ChromeOSCheckout):
       for label in labels:
         # TODO(asharif): Fix crosperf so it accepts labels with symbols
         crosperf_label = label
-        crosperf_label = crosperf_label.replace("-", "minus")
-        crosperf_label = crosperf_label.replace("+", "plus")
+        crosperf_label = crosperf_label.replace("-", "_")
+        crosperf_label = crosperf_label.replace("+", "_")
         crosperf_label = crosperf_label.replace(".", "")
 
         # Use the official build instead of building vanilla ourselves.
@@ -312,7 +315,7 @@ class ToolchainComparator(ChromeOSCheckout):
     labels = []
     labels.append("vanilla")
     for config in self._configs:
-      label = misc.GetFilenameFromString(config.gcc_config.githash)
+      label = self._BuildLabelName(config.gcc_config.githash, self._board)
       if (not misc.DoesLabelExist(self._chromeos_root,
                                   self._board,
                                   label)):

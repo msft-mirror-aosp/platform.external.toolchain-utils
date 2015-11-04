@@ -134,13 +134,18 @@ class ToolchainComparator():
           """ % (self._chromeos_root, vanilla_image)
       print >> f, official_image
 
+      label_string = "%s_trybot_image" % compiler_string
+      if USE_NEXT_GCC_PATCH in self._patches:
+        label_string = "gcc_next_trybot_image"
+
       experiment_image = """
-          test_image {
+          %s {
             chromeos_root: %s
             build: %s
             compiler: %s
           }
-          """ % (self._chromeos_root, trybot_image, compiler_string)
+          """ % (label_string, self._chromeos_root, trybot_image,
+                 compiler_string)
       print >> f, experiment_image
 
     crosperf = os.path.join(TOOLCHAIN_DIR,
