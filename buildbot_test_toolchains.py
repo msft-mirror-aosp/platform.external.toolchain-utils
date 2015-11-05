@@ -15,7 +15,6 @@ import optparse
 import os
 import sys
 import time
-import urllib2
 
 from utils import command_executer
 from utils import logger
@@ -115,7 +114,7 @@ class ToolchainComparator():
     retries: 1
     """ % (self._board, self._remotes)
     experiment_tests = """
-    benchmark: all_toolchain_perf {
+    benchmark: all_toolchain_perf_pure_telemetry {
       suite: telemetry_Crosperf
       iterations: 3
     }
@@ -257,11 +256,11 @@ class ToolchainComparator():
     print ("trybot_image: %s" % trybot_image)
     print ("vanilla_image: %s" % vanilla_image)
     if len(trybot_image) == 0:
-        self._l.LogError("Unable to find trybot_image for %s!" % description)
-        return 1
+      self._l.LogError("Unable to find trybot_image for %s!" % description)
+      return 1
     if len(vanilla_image) == 0:
-        self._l.LogError("Unable to find vanilla image for %s!" % description)
-        return 1
+      self._l.LogError("Unable to find vanilla image for %s!" % description)
+      return 1
     if os.getlogin() == ROLE_ACCOUNT:
       self._FinishSetup()
 
@@ -269,8 +268,8 @@ class ToolchainComparator():
     self._SendEmail()
     if (self._patches_string == USE_NEXT_GCC_PATCH and
         self._board in WEEKLY_REPORT_BOARDS):
-        # Only try to copy the image files if the test runs ran successfully.
-        self._CopyWeeklyReportFiles(trybot_image, vanilla_image)
+      # Only try to copy the image files if the test runs ran successfully.
+      self._CopyWeeklyReportFiles(trybot_image, vanilla_image)
     return 0
 
 
