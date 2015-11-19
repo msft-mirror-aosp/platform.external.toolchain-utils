@@ -32,10 +32,10 @@ class BenchmarkSettings(Settings):
                                 description="Number of times to retry a "
                                 "benchmark run."))
     self.AddField(BooleanField("run_local",
-                               description="Run benchmark harness locally. "
+                               description="Run benchmark harness on the DUT. "
                                "Currently only compatible with the suite: "
                                "telemetry_Crosperf.",
-                               required=False, default=False))
+                               required=False, default=True))
 
 
 class LabelSettings(Settings):
