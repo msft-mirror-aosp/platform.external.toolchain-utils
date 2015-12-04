@@ -206,7 +206,7 @@ class ExperimentFactory(object):
         # Add the single benchmark.
         benchmark = Benchmark(benchmark_name, test_name, test_args,
                               iterations, rm_chroot_tmp, perf_args, suite,
-                              show_all_results, run_local)
+                              show_all_results, retries, run_local=False)
         benchmarks.append(benchmark)
 
     # Construct labels.
