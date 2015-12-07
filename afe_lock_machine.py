@@ -147,7 +147,9 @@ class AFELockManager(object):
       MachineNotPingable:  If machine is not responding to 'ping'
     """
     if not machines.MachineIsPingable(machine, logging_level='none'):
-        raise MachineNotPingable(error_msg)
+        cros_machine = machine + '.cros'
+        if not machines.MachineIsPingable(cros_machine, logging_level='none'):
+            raise MachineNotPingable(error_msg)
 
   def MachineIsKnown(self, machine):
     """Checks to see if either AFE server knows the given machine.
@@ -202,8 +204,8 @@ class AFELockManager(object):
       machine header (different spacing).
     """
     if is_lab_machine:
-      print '\nMachine (Board)\t\t\t\tStatus'
-      print '---------------\t\t\t\t------\n'
+      print '\nMachine (Board)\t\t\t\t\tStatus'
+      print '---------------\t\t\t\t\t------\n'
     else:
       print '\nMachine (Board)\t\tStatus'
       print '---------------\t\t------\n'
@@ -250,9 +252,11 @@ class AFELockManager(object):
         machine.
     """
     for m in self.machines:
-      if m in self.toolchain_lab_machines:
-        raise UpdateNonLocalMachine('Machine %s is already in the ChromeOS HW '
-                                    'Lab.  Cannot add it to local server.' % m)
+      for cros_name in [m, m + '.cros']:
+        if cros_name in self.toolchain_lab_machines:
+          raise UpdateNonLocalMachine('Machine %s is already in the ChromeOS HW'
+                                      'Lab.  Cannot add it to local server.'
+                                      % cros_name)
       host_info = self.local_afe.get_hosts(hostname=m)
       if host_info:
         raise DuplicateAdd('Machine %s is already on the local server.' % m)
@@ -276,10 +280,11 @@ class AFELockManager(object):
         machine.
     """
     for m in self.machines:
-      if m in self.toolchain_lab_machines:
-        raise UpdateNonLocalMachine('Machine %s is in the ChromeOS HW Lab. '
-                                    'This script cannot remove lab machines.'
-                                    % m)
+      for cros_name in [m, m + '.cros']:
+        if cros_name in self.toolchain_lab_machines:
+          raise UpdateNonLocalMachine('Machine %s is in the ChromeOS HW Lab. '
+                                      'This script cannot remove lab machines.'
+                                      % cros_name)
       try:
         self.RemoveLocalMachine(m)
         self.logger.LogOutput('Successfully removed %s from local server.' % m)
@@ -305,15 +310,16 @@ class AFELockManager(object):
       cros_name = m + '.cros'
       if (m in self.toolchain_lab_machines or
           cros_name in self.toolchain_lab_machines):
+        name = m if m in self.toolchain_lab_machines else cros_name
         if not printed_hdr:
           self.PrintStatusHeader(True)
           printed_hdr = True
         state = machine_states[m]
         if state['locked']:
           print ('%s (%s)\tlocked by %s since %s' %
-                 (m, state['board'], state['locked_by'], state['lock_time']))
+                 (name, state['board'], state['locked_by'], state['lock_time']))
         else:
-          print '%s (%s)\tunlocked' % (m, state['board'])
+          print '%s (%s)\tunlocked' % (name, state['board'])
       else:
         local_machines.append(m)
 
@@ -346,6 +352,9 @@ class AFELockManager(object):
     kwargs = {'locked': should_lock_machine}
     kwargs['lock_reason'] = 'toolchain user request (%s)' % self.user
 
+    cros_name = machine + '.cros'
+    if cros_name in self.toolchain_lab_machines:
+        machine = cros_name
     if machine in self.toolchain_lab_machines:
       m = machine.split('.')[0]
       afe_server = self.afe
@@ -479,7 +488,9 @@ class AFELockManager(object):
     machines = {}
     for m in self.machines:
       host_info = None
-      if m in self.toolchain_lab_machines:
+      cros_name = m + '.cros'
+      if (m in self.toolchain_lab_machines or
+          cros_name in self.toolchain_lab_machines):
         mod_host = m.split('.')[0]
         host_info = self.afe.get_hosts(hostname=mod_host)
         if not host_info:
