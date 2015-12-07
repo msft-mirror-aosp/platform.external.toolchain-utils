@@ -495,7 +495,7 @@ class MachineManager(object):
                                             m.locked,
                                             test_status,
                                             m.checksum)
-        except Exception:
+        except ValueError:
           machine_string = ""
         table.append(machine_string)
       return "Machine Status:\n%s" % "\n".join(table)
