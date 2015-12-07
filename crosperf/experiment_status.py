@@ -118,7 +118,8 @@ class ExperimentStatus(object):
     for benchmark_run in benchmark_runs:
       t_last = benchmark_run.timeline.GetLastEventTime()
       elapsed = str(datetime.timedelta(seconds=int(t-t_last)))
-      if self.experiment.log_level == "verbose":
+      if (self.experiment.log_level == "verbose" or
+          benchmark_run.timeline.GetLastEvent() == "RUNNING"):
         strings.append("'{0}' {1}".format(benchmark_run.name, elapsed))
       else:
         strings.append("'{0}'".format(benchmark_run.name))
