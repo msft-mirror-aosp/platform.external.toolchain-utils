@@ -90,6 +90,10 @@ class SuiteRunner(object):
     self._logger.LogFatalIf(ret, "Could not get available frequencies "
                             "from machine: %s" % machine_name)
     freqs = freqs_str.split()
+    # We need to make sure that the frequencies are sorted in decreasing
+    # order
+    freqs.sort(key=int, reverse=True)
+
     ## When there is no scaling_available_frequencies file,
     ## we have only 1 choice.
     if len(freqs) == 1:
