@@ -282,7 +282,7 @@ class ExperimentFactory(object):
             if remotes:
               return remotes
             else:
-              raise Exception("There is not remote for {0}".format(board))
+              raise Exception("There is no remote for {0}".format(board))
     except IOError:
       raise Exception("IOError while reading file {0}"
                       .format(default_remotes_file))
