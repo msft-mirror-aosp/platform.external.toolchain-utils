@@ -16,6 +16,7 @@ from utils import logger
 from utils import misc
 
 import benchmark_run
+from machine_manager import BadChecksum
 from machine_manager import MachineManager
 from machine_manager import MockMachineManager
 import test_flag
@@ -82,7 +83,14 @@ class Experiment(object):
       # We filter out label remotes that are not reachable (not in
       # self.remote). So each label.remote is a sublist of experiment.remote.
       label.remote = filter(lambda x: x in self.remote, label.remote)
-      self.machine_manager.ComputeCommonCheckSum(label)
+      try:
+        self.machine_manager.ComputeCommonCheckSum(label)
+      except BadChecksum:
+        # Force same image on all machines, then we do checksum again. No
+        # bailout if checksums still do not match.
+        self.machine_manager.ForceSameImageToAllMachines(label)
+        self.machine_manager.ComputeCommonCheckSum(label)
+
       self.machine_manager.ComputeCommonCheckSumString(label)
 
     self.start_time = None
