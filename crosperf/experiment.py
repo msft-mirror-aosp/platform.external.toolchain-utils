@@ -54,15 +54,23 @@ class Experiment(object):
     self.locks_dir = locks_directory
     self.locked_machines = []
 
+    if not remote:
+      raise RuntimeError("No remote hosts specified")
+    if not self.benchmarks:
+      raise RuntimeError("No benchmarks specified")
+    if not self.labels:
+      raise RuntimeError("No labels specified")
+
     # We need one chromeos_root to run the benchmarks in, but it doesn't
     # matter where it is, unless the ABIs are different.
     if not chromeos_root:
       for label in self.labels:
         if label.chromeos_root:
           chromeos_root = label.chromeos_root
+          break
     if not chromeos_root:
-      raise Exception("No chromeos_root given and could not determine one from "
-                      "the image path.")
+      raise RuntimeError("No chromeos_root given and could not determine "
+                         "one from the image path.")
 
     if test_flag.GetTestMode():
       self.machine_manager = MockMachineManager(chromeos_root, acquire_timeout,

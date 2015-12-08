@@ -204,6 +204,9 @@ class ExperimentFactory(object):
                               show_all_results, retries, run_local=False)
         benchmarks.append(benchmark)
 
+    if not benchmarks:
+      raise RuntimeError("No benchmarks specified")
+
     # Construct labels.
     # Some fields are common with global settings. The values are
     # inherited and/or merged with the global settings values.
@@ -224,7 +227,7 @@ class ExperimentFactory(object):
       if image == "":
         build = label_settings.GetField("build")
         if len(build) == 0:
-          raise Exception("Can not have empty 'build' field!")
+          raise RuntimeError("Can not have empty 'build' field!")
         image = label_settings.GetXbuddyPath (build, board, chromeos_root,
                                               log_level)
 
@@ -239,8 +242,8 @@ class ExperimentFactory(object):
            and global_settings.GetField("board") != board)):
         my_remote = self.GetDefaultRemotes(board)
       if global_settings.GetField("same_machine") and len(my_remote) > 1:
-        raise Exception("Only one remote is allowed when same_machine "
-                        "is turned on")
+        raise RuntimeError("Only one remote is allowed when same_machine "
+                           "is turned on")
       all_remote += my_remote
       image_args = label_settings.GetField("image_args")
       if test_flag.GetTestMode():
@@ -251,6 +254,9 @@ class ExperimentFactory(object):
                       image_args, cache_dir, cache_only, log_level, compiler,
                       chrome_src)
       labels.append(label)
+
+    if not labels:
+      raise RuntimeError("No labels specified")
 
     email = global_settings.GetField("email")
     all_remote += list(set(my_remote))
@@ -277,9 +283,10 @@ class ExperimentFactory(object):
             if remotes:
               return remotes
             else:
-              raise Exception("There is no remote for {0}".format(board))
+              raise RuntimeError("There is no remote for {0}".format(board))
     except IOError:
-      raise Exception("IOError while reading file {0}"
+      # TODO: rethrow instead of throwing different exception.
+      raise RuntimeError("IOError while reading file {0}"
                       .format(default_remotes_file))
     else:
-      raise Exception("There is not remote for {0}".format(board))
+      raise RuntimeError("There is not remote for {0}".format(board))
