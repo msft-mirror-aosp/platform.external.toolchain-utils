@@ -114,7 +114,7 @@ class ToolchainComparator():
     retries: 1
     """ % (self._board, self._remotes)
     experiment_tests = """
-    benchmark: all_toolchain_perf_pure_telemetry {
+    benchmark: all_toolchain_perf {
       suite: telemetry_Crosperf
       iterations: 3
     }

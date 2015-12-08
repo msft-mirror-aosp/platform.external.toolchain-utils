@@ -186,11 +186,6 @@ class ExperimentFactory(object):
                                       rm_chroot_tmp, perf_args, '',
                                       show_all_results, retries,
                                       run_local=False))
-        elif test_name == 'all_toolchain_perf_pure_telemetry':
-          self._AppendBenchmarkSet(benchmarks, telemetry_toolchain_perf_tests,
-                                   test_args, iterations, rm_chroot_tmp,
-                                   perf_args, suite, show_all_results, retries,
-                                   run_local)
         elif test_name == 'all_toolchain_perf_old':
           self._AppendBenchmarkSet(benchmarks,
                                    telemetry_toolchain_old_perf_tests,
