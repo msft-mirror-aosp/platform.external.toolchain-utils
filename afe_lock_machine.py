@@ -1,6 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2015 Google INc.  All Rights Reserved.
+
+"""This module controls locking and unlocking of test machines."""
+
+from __future__ import print_function
 
 import argparse
 import getpass
@@ -10,8 +14,6 @@ import traceback
 
 from utils import logger
 from utils import machines
-from utils import misc
-
 
 class AFELockException(Exception):
   """Base class for exceptions in this module."""
@@ -80,12 +82,12 @@ class AFELockManager(object):
 
     Args:
       remotes: A list of machine names or ip addresses to be managed.  Names
-        and ip addresses should be represented as strings.  If the list is empty,
-        the lock manager will get all known machines.
-      force_option:  A Boolean indicating whether or not to force an unlock of
+        and ip addresses should be represented as strings.  If the list is
+        empty, the lock manager will get all known machines.
+      force_option: A Boolean indicating whether or not to force an unlock of
         a machine that was locked by someone else.
       chromeos_root: The ChromeOS chroot to use for the autotest scripts.
-      local_server:  A string containing the name or ip address of the machine
+      local_server: A string containing the name or ip address of the machine
         that is running an AFE server, which is to be used for managing
         machines that are not in the ChromeOS HW lab.
       local: A Boolean indicating whether or not to use/allow a local AFE
@@ -123,7 +125,7 @@ class AFELockManager(object):
       dargs['server'] = local_server or AFELockManager.LOCAL_SERVER
       # Make sure local server is pingable.
       error_msg = ('Local autotest server machine %s not responding to ping.'
-                 % dargs['server'])
+                   % dargs['server'])
       self.CheckMachine(dargs['server'], error_msg)
       self.local_afe = frontend_wrappers.RetryingAFE(timeout_min=30,
                                                      delay_sec=10,
@@ -147,9 +149,9 @@ class AFELockManager(object):
       MachineNotPingable:  If machine is not responding to 'ping'
     """
     if not machines.MachineIsPingable(machine, logging_level='none'):
-        cros_machine = machine + '.cros'
-        if not machines.MachineIsPingable(cros_machine, logging_level='none'):
-            raise MachineNotPingable(error_msg)
+      cros_machine = machine + '.cros'
+      if not machines.MachineIsPingable(cros_machine, logging_level='none'):
+        raise MachineNotPingable(error_msg)
 
   def MachineIsKnown(self, machine):
     """Checks to see if either AFE server knows the given machine.
@@ -180,7 +182,7 @@ class AFELockManager(object):
     with open(machines_file, 'r') as input_file:
       lines = input_file.readlines()
       for line in lines:
-        board, remotes = line.split(':')
+        _, remotes = line.split(':')
         remotes = remotes.strip()
         for r in remotes.split():
           machine_list.append(r.strip())
@@ -200,15 +202,16 @@ class AFELockManager(object):
   def PrintStatusHeader(self, is_lab_machine):
     """Prints the status header lines for machines.
 
-    Args: Boolean indicating whether to print HW Lab header or local
-      machine header (different spacing).
+    Args:
+      is_lab_machine: Boolean indicating whether to print HW Lab header or
+        local machine header (different spacing).
     """
     if is_lab_machine:
-      print '\nMachine (Board)\t\t\t\t\tStatus'
-      print '---------------\t\t\t\t\t------\n'
+      print('\nMachine (Board)\t\t\t\t\tStatus')
+      print('---------------\t\t\t\t\t------\n')
     else:
-      print '\nMachine (Board)\t\tStatus'
-      print '---------------\t\t------\n'
+      print('\nMachine (Board)\t\tStatus')
+      print('---------------\t\t------\n')
 
   def RemoveLocalMachine(self, m):
     """Removes a machine from the local AFE server.
@@ -236,7 +239,7 @@ class AFELockManager(object):
     if self.local_afe:
       error_msg = 'Machine %s is not responding to ping.' % m
       self.CheckMachine(m, error_msg)
-      host = self.local_afe.create_host(m)
+      self.local_afe.create_host(m)
 
   def AddMachinesToLocalServer(self):
     """Adds one or more machines to the local AFE server.
@@ -316,10 +319,10 @@ class AFELockManager(object):
           printed_hdr = True
         state = machine_states[m]
         if state['locked']:
-          print ('%s (%s)\tlocked by %s since %s' %
-                 (name, state['board'], state['locked_by'], state['lock_time']))
+          print('%s (%s)\tlocked by %s since %s' %
+                (name, state['board'], state['locked_by'], state['lock_time']))
         else:
-          print '%s (%s)\tunlocked' % (name, state['board'])
+          print('%s (%s)\tunlocked' % (name, state['board']))
       else:
         local_machines.append(m)
 
@@ -328,10 +331,10 @@ class AFELockManager(object):
       for m in local_machines:
         state = machine_states[m]
         if state['locked']:
-          print ('%s (%s)\tlocked by %s since %s' %
-                 (m, state['board'], state['locked_by'], state['lock_time']))
+          print('%s (%s)\tlocked by %s since %s' %
+                (m, state['board'], state['locked_by'], state['lock_time']))
         else:
-          print '%s (%s)\tunlocked' % (m, state['board'])
+          print('%s (%s)\tunlocked' % (m, state['board']))
 
 
   def UpdateLockInAFE(self, should_lock_machine, machine):
@@ -354,7 +357,7 @@ class AFELockManager(object):
 
     cros_name = machine + '.cros'
     if cros_name in self.toolchain_lab_machines:
-        machine = cros_name
+      machine = cros_name
     if machine in self.toolchain_lab_machines:
       m = machine.split('.')[0]
       afe_server = self.afe
@@ -364,8 +367,8 @@ class AFELockManager(object):
 
     try:
       afe_server.run('modify_hosts',
-                      host_filter_data={'hostname__in': [m]},
-                      update_data=kwargs)
+                     host_filter_data={'hostname__in': [m]},
+                     update_data=kwargs)
     except Exception as e:
       traceback.print_exc()
       raise LockingError('Unable to %s machine %s. %s' % (action, m, str(e)))
@@ -377,7 +380,7 @@ class AFELockManager(object):
     class object was intialized).
 
     Args:
-      lock_machines:  Boolean indicating whether to lock the machines (True) or
+      lock_machines: Boolean indicating whether to lock the machines (True) or
         unlock the machines (False).
 
     Returns:
@@ -386,7 +389,6 @@ class AFELockManager(object):
     updated_machines = []
     for m in self.machines:
       self.UpdateLockInAFE(lock_machines, m)
-
       # Since we returned from self.UpdateLockInAFE we assume the request
       # succeeded.
       if lock_machines:
@@ -423,7 +425,7 @@ class AFELockManager(object):
       machine_states: A dictionary of the current state of every machine in
         the current AFELockManager's list of machines.  Normally obtained by
         calling AFELockManager::GetMachineStates.
-      cmd:  'lock' or 'unlock'.  The user-requested action for the machines.
+      cmd: The user-requested action for the machines: 'lock' or 'unlock'.
 
     Raises:
       DontOwnLock: The lock on a requested machine is owned by someone else.
@@ -440,7 +442,8 @@ class AFELockManager(object):
                             'else (%s).' % (k, state['locked_by']))
       elif cmd == 'lock':
         if state['locked']:
-          self.logger.LogWarning('Attempt to lock already locked machine (%s)' % k)
+          self.logger.LogWarning('Attempt to lock already locked machine (%s)'
+                                 % k)
           self._InternalRemoveMachine(k)
 
   def HasAFEServer(self, local):
@@ -485,7 +488,7 @@ class AFELockManager(object):
     if self.local and not self.HasAFEServer(True):
       raise NoAFEServer('Error: Cannot connect to local AFE server.')
 
-    machines = {}
+    machine_list = {}
     for m in self.machines:
       host_info = None
       cros_name = m + '.cros'
@@ -508,103 +511,102 @@ class AFELockManager(object):
         values['board'] = host_info.platform if host_info.platform else '??'
         values['locked'] = host_info.locked
         if host_info.locked:
-            values['locked_by'] = host_info.locked_by
-            values['lock_time'] = host_info.lock_time
+          values['locked_by'] = host_info.locked_by
+          values['lock_time'] = host_info.lock_time
         else:
-            values['locked_by'] = ''
-            values['lock_time'] = ''
-        machines[name] = values
+          values['locked_by'] = ''
+          values['lock_time'] = ''
+        machine_list[name] = values
       else:
-        machines[m] = {}
-    return machines
+        machine_list[m] = {}
+    return machine_list
 
 
 def Main(argv):
-    """
-    Parse the options, initialize lock manager and dispatch proper method.
+  """Parse the options, initialize lock manager and dispatch proper method.
 
-    Args:
-      argv:  The options with which this script was invoked.
+  Args:
+    argv: The options with which this script was invoked.
 
-    Returns:
-      0 unless an exception is raised.
-    """
-    parser = argparse.ArgumentParser()
+  Returns:
+    0 unless an exception is raised.
+  """
+  parser = argparse.ArgumentParser()
 
-    parser.add_argument('--list', dest='cmd', action='store_const',
-                        const='status',
-                        help='List current status of all known machines.')
-    parser.add_argument('--lock', dest='cmd', action='store_const',
-                        const='lock', help='Lock given machine(s).')
-    parser.add_argument('--unlock', dest='cmd', action='store_const',
-                        const='unlock', help='Unlock given machine(s).')
-    parser.add_argument('--status', dest='cmd', action='store_const',
-                        const='status',
-                        help='List current status of given machine(s).')
-    parser.add_argument('--add_machine', dest='cmd', action='store_const',
-                        const='add',
-                        help='Add machine to local machine server.')
-    parser.add_argument('--remove_machine', dest='cmd',
-                        action='store_const', const='remove',
-                        help='Remove machine from the local machine server.')
-    parser.add_argument('--nolocal', dest='local',
-                        action='store_false', default=True,
-                        help='Do not try to use local machine server.')
-    parser.add_argument('--remote', dest='remote',
-                        help='machines on which to operate')
-    parser.add_argument('--chromeos_root', dest='chromeos_root', required=True,
-                        help='ChromeOS root to use for autotest scripts.')
-    parser.add_argument('--local_server', dest='local_server', default=None,
-                        help='Alternate local autotest server to use.')
-    parser.add_argument('--force', dest='force', action='store_true',
-                        default=False,
-                        help='Force lock/unlock of machines, even if not'
-                        ' current lock owner.')
+  parser.add_argument('--list', dest='cmd', action='store_const',
+                      const='status',
+                      help='List current status of all known machines.')
+  parser.add_argument('--lock', dest='cmd', action='store_const',
+                      const='lock', help='Lock given machine(s).')
+  parser.add_argument('--unlock', dest='cmd', action='store_const',
+                      const='unlock', help='Unlock given machine(s).')
+  parser.add_argument('--status', dest='cmd', action='store_const',
+                      const='status',
+                      help='List current status of given machine(s).')
+  parser.add_argument('--add_machine', dest='cmd', action='store_const',
+                      const='add',
+                      help='Add machine to local machine server.')
+  parser.add_argument('--remove_machine', dest='cmd',
+                      action='store_const', const='remove',
+                      help='Remove machine from the local machine server.')
+  parser.add_argument('--nolocal', dest='local',
+                      action='store_false', default=True,
+                      help='Do not try to use local machine server.')
+  parser.add_argument('--remote', dest='remote',
+                      help='machines on which to operate')
+  parser.add_argument('--chromeos_root', dest='chromeos_root', required=True,
+                      help='ChromeOS root to use for autotest scripts.')
+  parser.add_argument('--local_server', dest='local_server', default=None,
+                      help='Alternate local autotest server to use.')
+  parser.add_argument('--force', dest='force', action='store_true',
+                      default=False,
+                      help='Force lock/unlock of machines, even if not'
+                      ' current lock owner.')
 
-    options = parser.parse_args(argv)
+  options = parser.parse_args(argv)
 
-    if not options.remote and options.cmd != 'status':
-      parser.error('No machines specified for operation.')
+  if not options.remote and options.cmd != 'status':
+    parser.error('No machines specified for operation.')
 
-    if not os.path.isdir(options.chromeos_root):
-      parser.error('Cannot find chromeos_root: %s.' % options.chromeos_root)
+  if not os.path.isdir(options.chromeos_root):
+    parser.error('Cannot find chromeos_root: %s.' % options.chromeos_root)
 
-    if not options.cmd:
-      parser.error('No operation selected (--list, --status, --lock, --unlock,'
-                   ' --add_machine, --remove_machine).')
+  if not options.cmd:
+    parser.error('No operation selected (--list, --status, --lock, --unlock,'
+                 ' --add_machine, --remove_machine).')
 
-    machine_list = []
-    if options.remote:
-      machine_list = options.remote.split()
+  machine_list = []
+  if options.remote:
+    machine_list = options.remote.split()
 
-    lock_manager = AFELockManager(machine_list, options.force,
-                                  options.chromeos_root, options.local_server,
-                                  options.local)
+  lock_manager = AFELockManager(machine_list, options.force,
+                                options.chromeos_root, options.local_server,
+                                options.local)
 
-    machine_states = lock_manager.GetMachineStates(cmd=options.cmd)
-    cmd = options.cmd
+  machine_states = lock_manager.GetMachineStates(cmd=options.cmd)
+  cmd = options.cmd
 
-    if cmd == 'status':
-      lock_manager.ListMachineStates(machine_states)
+  if cmd == 'status':
+    lock_manager.ListMachineStates(machine_states)
 
-    elif cmd == 'lock':
-      if not lock_manager.force:
-        lock_manager.CheckMachineLocks(machine_states, cmd)
-        lock_manager.UpdateMachines(True)
+  elif cmd == 'lock':
+    if not lock_manager.force:
+      lock_manager.CheckMachineLocks(machine_states, cmd)
+      lock_manager.UpdateMachines(True)
 
-    elif cmd == 'unlock':
-      if not lock_manager.force:
-        lock_manager.CheckMachineLocks(machine_states, cmd)
-        lock_manager.UpdateMachines(False)
+  elif cmd == 'unlock':
+    if not lock_manager.force:
+      lock_manager.CheckMachineLocks(machine_states, cmd)
+      lock_manager.UpdateMachines(False)
 
-    elif cmd == 'add':
-      lock_manager.AddMachinesToLocalServer()
+  elif cmd == 'add':
+    lock_manager.AddMachinesToLocalServer()
 
-    elif cmd == 'remove':
-      lock_manager.RemoveMachinesFromLocalServer()
+  elif cmd == 'remove':
+    lock_manager.RemoveMachinesFromLocalServer()
 
-    return 0
+  return 0
 
 
 if __name__ == '__main__':
-    sys.exit(Main(sys.argv[1:]))
+  sys.exit(Main(sys.argv[1:]))
