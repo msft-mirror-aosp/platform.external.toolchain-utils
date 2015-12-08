@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
+# Copyright (c) 2014, 2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -8,6 +8,9 @@ import ast
 import os
 
 from utils import command_executer
+
+class MissingImage(Exception):
+  """Raised when the requested image does not exist in gs://"""
 
 class ImageDownloader(object):
 
@@ -25,14 +28,18 @@ class ImageDownloader(object):
                "python translate_xbuddy.py '%s'" % xbuddy_label)
     retval, build_id_tuple_str, _ = self._ce.ChrootRunCommand(chromeos_root,
                                                           command, True)
+    if not build_id_tuple_str:
+      raise MissingImage ("Unable to find image for '%s'" % xbuddy_label)
+
     build_id_tuple = ast.literal_eval(build_id_tuple_str)
     build_id = build_id_tuple[0]
 
     return build_id
 
-  def _DownloadImage(self, chromeos_root, build_id):
+  def _DownloadImage(self, chromeos_root, build_id, image_name):
     if self.log_level == "average":
-      self._logger.LogOutput ("Preparing to download %s image to local directory." % build_id)
+      self._logger.LogOutput ("Preparing to download %s image to local "
+                              "directory." % build_id)
 
     # Make sure the directory for downloading the image exists.
     download_path = os.path.join(chromeos_root, "chroot/tmp",
@@ -45,9 +52,7 @@ class ImageDownloader(object):
     # download the image.
     status = 0
     if not os.path.exists(image_path):
-      command = ("gsutil cp gs://chromeos-image-archive/%s"
-                 "/chromiumos_test_image.tar.xz /tmp/%s" % (build_id,
-                                                            build_id))
+      command = "gsutil cp %s /tmp/%s" % (image_name, build_id)
 
       if self.log_level != "verbose":
         self._logger.LogOutput ("CMD: %s" % command)
@@ -77,10 +82,17 @@ class ImageDownloader(object):
 
   def Run(self, chromeos_root, xbuddy_label):
     build_id = self._GetBuildID(chromeos_root, xbuddy_label)
+    image_name = ("gs://chromeos-image-archive/%s/chromiumos_test_image.tar.xz"
+                  % build_id)
 
-
+    # Verify that image exists for build_id, before attempting to
+    # download it.
+    cmd = "gsutil ls %s" % image_name
+    status = self._ce.ChrootRunCommand(chromeos_root, cmd)
+    if status != 0:
+      raise MissingImage("Cannot find official image: %s." % image_name)
+    image_path = self._DownloadImage(chromeos_root, build_id, image_name)
     retval = 0
-    image_path = self._DownloadImage(chromeos_root, build_id)
     if image_path:
       retval = self._UncompressImage(chromeos_root, build_id)
     else:
