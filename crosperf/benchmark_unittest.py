@@ -45,7 +45,8 @@ class BenchmarkTestCase(unittest.TestCase):
     # Check to see if the args to Benchmark have changed since the last time
     # this test was updated.
     args_list = ['self', 'name', 'test_name', 'test_args', 'iterations',
-                 'rm_chroot_tmp', 'perf_args', 'suite', 'show_all_results']
+                 'rm_chroot_tmp', 'perf_args', 'suite', 'show_all_results',
+                 'retries', 'run_local']
     arg_spec = inspect.getargspec(Benchmark.__init__)
     self.assertEqual(len(arg_spec.args), len(args_list))
     for arg in args_list:

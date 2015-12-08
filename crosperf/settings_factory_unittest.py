@@ -19,7 +19,7 @@ class BenchmarkSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.BenchmarkSettings("b_settings")
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 4)
+    self.assertEqual(len(res.fields), 6)
     self.assertEqual(res.GetField('test_name'), '')
     self.assertEqual(res.GetField('test_args'), '')
     self.assertEqual(res.GetField('iterations'), 1)
@@ -30,7 +30,7 @@ class LabelSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.LabelSettings("l_settings")
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 7)
+    self.assertEqual(len(res.fields), 8)
     self.assertEqual(res.GetField('chromeos_image'), '')
     self.assertEqual(res.GetField('chromeos_root'), '')
     self.assertEqual(res.GetField('remote'), [])
@@ -45,7 +45,7 @@ class GlobalSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.GlobalSettings("g_settings")
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 22)
+    self.assertEqual(len(res.fields), 25)
     self.assertEqual(res.GetField('name'), '')
     self.assertEqual(res.GetField('board'), '')
     self.assertEqual(res.GetField('remote'), [])
@@ -78,17 +78,17 @@ class SettingsFactoryTest(unittest.TestCase):
 
     l_settings = settings_factory.SettingsFactory().GetSettings ('label', 'label')
     self.assertIsInstance(l_settings, settings_factory.LabelSettings)
-    self.assertEqual(len(l_settings.fields), 7)
+    self.assertEqual(len(l_settings.fields), 8)
 
     b_settings = settings_factory.SettingsFactory().GetSettings ('benchmark',
                                                                  'benchmark')
     self.assertIsInstance(b_settings, settings_factory.BenchmarkSettings)
-    self.assertEqual(len(b_settings.fields), 4)
+    self.assertEqual(len(b_settings.fields), 6)
 
     g_settings = settings_factory.SettingsFactory().GetSettings ('global',
                                                                  'global')
     self.assertIsInstance(g_settings, settings_factory.GlobalSettings)
-    self.assertEqual(len(g_settings.fields), 22)
+    self.assertEqual(len(g_settings.fields), 25)
 
 
 if __name__ == "__main__":

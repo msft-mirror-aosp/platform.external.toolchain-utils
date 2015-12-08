@@ -106,7 +106,7 @@ class ResultOrganizerTest(unittest.TestCase):
 
     i = 0
     for b in benchmark_runs:
-      b.result = Result("",  b.label, "average")
+      b.result = Result("",  b.label, "average", "machine")
       b.result.keyvals = mock_instance.keyval[i]
       i += 1
 
