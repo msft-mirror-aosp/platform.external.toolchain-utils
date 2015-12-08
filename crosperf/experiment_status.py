@@ -93,8 +93,12 @@ class ExperimentStatus(object):
 
     status_strings = []
     for key, val in status_bins.items():
-      status_strings.append("%s: %s" %
-                            (key, self._GetNamesAndIterations(val)))
+      if (key == "RUNNING" or self.experiment.log_level == "verbose"):
+        status_strings.append("%s: %s" %
+                              (key, self._GetNamesAndIterations(val)))
+      else:
+        status_strings.append("%s: %s" %
+                              (key, self._GetCompactNamesAndIterations(val)))
 
     thread_status = ""
     thread_status_format = "Thread Status: \n{}\n"
@@ -118,9 +122,31 @@ class ExperimentStatus(object):
     for benchmark_run in benchmark_runs:
       t_last = benchmark_run.timeline.GetLastEventTime()
       elapsed = str(datetime.timedelta(seconds=int(t-t_last)))
-      if (self.experiment.log_level == "verbose" or
-          benchmark_run.timeline.GetLastEvent() == "RUNNING"):
-        strings.append("'{0}' {1}".format(benchmark_run.name, elapsed))
-      else:
-        strings.append("'{0}'".format(benchmark_run.name))
+      strings.append("'{0}' {1}".format(benchmark_run.name, elapsed))
     return " %s (%s)" % (len(strings), ", ".join(strings))
+
+  def _GetCompactNamesAndIterations(self, benchmark_runs):
+    output = ''
+    labels = {}
+    for benchmark_run in benchmark_runs:
+      if benchmark_run.label.name not in labels:
+        labels[benchmark_run.label.name] = []
+
+    for label in labels:
+      strings = []
+      benchmark_iterations = {}
+      for benchmark_run in benchmark_runs:
+        if benchmark_run.label.name != label:
+          continue
+        benchmark_name = benchmark_run.benchmark.name
+        if benchmark_name not in benchmark_iterations:
+          benchmark_iterations[benchmark_name] = []
+        benchmark_iterations[benchmark_name].append(benchmark_run.iteration)
+      for key, val in benchmark_iterations.items():
+        val.sort()
+        iterations = ",".join(map(str,val))
+        strings.append("{} [{}]".format(key, iterations))
+      output += "  " + label + ": " + ", ".join(strings) + "\n"
+
+    return " %s \n%s" % (len(benchmark_runs), output)
+
