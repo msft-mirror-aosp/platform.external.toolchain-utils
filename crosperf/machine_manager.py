@@ -350,11 +350,11 @@ class MachineManager(object):
     with self._lock:
       for m in self._all_machines:
         assert m.name != machine_name, "Tried to double-add %s" % machine_name
-        if self.log_level != "verbose":
-          self.logger.LogOutput("Setting up remote access to %s"
-                              % machine_name)
-          self.logger.LogOutput("Checking machine characteristics for %s"
-                              % machine_name)
+
+      if self.log_level != "verbose":
+        self.logger.LogOutput("Setting up remote access to %s" % machine_name)
+        self.logger.LogOutput(
+            "Checking machine characteristics for %s" % machine_name)
       cm = CrosMachine(machine_name, self.chromeos_root, self.log_level)
       if cm.machine_checksum:
         self._all_machines.append(cm)
