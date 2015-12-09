@@ -12,7 +12,7 @@ from field import IntegerField
 from field import ListField
 import download_images
 
-from utils import logger
+from cros_utils import logger
 
 class TestSettings(unittest.TestCase):
 

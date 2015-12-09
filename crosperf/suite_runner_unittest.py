@@ -18,8 +18,8 @@ import label
 from benchmark import Benchmark
 from benchmark_run import MockBenchmarkRun
 
-from utils import command_executer
-from utils import logger
+from cros_utils import command_executer
+from cros_utils import logger
 
 
 class SuiteRunnerTest(unittest.TestCase):

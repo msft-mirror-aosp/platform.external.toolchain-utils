@@ -12,8 +12,8 @@ import time
 import afe_lock_machine
 from threading import Lock
 
-from utils import logger
-from utils import misc
+from cros_utils import logger
+from cros_utils import misc
 
 import benchmark_run
 from machine_manager import BadChecksum

@@ -3,8 +3,8 @@
 # Copyright 2014 Google Inc.  All Rights Reserved
 
 import download_images
-from utils import command_executer
-from utils import logger
+from cros_utils import command_executer
+from cros_utils import logger
 
 import os
 import mock

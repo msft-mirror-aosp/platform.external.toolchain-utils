@@ -2,7 +2,7 @@
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
-from utils import logger
+from cros_utils import logger
 from download_images import *
 
 class Settings(object):

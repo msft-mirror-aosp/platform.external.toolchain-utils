@@ -8,10 +8,10 @@ import time
 
 import afe_lock_machine
 
-from utils import command_executer
-from utils import logger
-from utils.email_sender import EmailSender
-from utils.file_utils import FileUtils
+from cros_utils import command_executer
+from cros_utils import logger
+from cros_utils.email_sender import EmailSender
+from cros_utils.file_utils import FileUtils
 
 import config
 from experiment_status import ExperimentStatus

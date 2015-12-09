@@ -10,8 +10,8 @@ import threading
 import time
 import traceback
 
-from utils import command_executer
-from utils import timeline
+from cros_utils import command_executer
+from cros_utils import timeline
 
 from suite_runner import SuiteRunner
 from results_cache import MockResult

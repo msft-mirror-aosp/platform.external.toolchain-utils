@@ -19,9 +19,9 @@ from results_cache import CacheConditions
 from results_cache import Result
 from results_cache import ResultsCache
 from results_cache import TelemetryResult
-from utils import command_executer
-from utils import logger
-from utils import misc
+from cros_utils import command_executer
+from cros_utils import logger
+from cros_utils import misc
 
 OUTPUT = """CMD (True): ./test_that.sh --remote=172.17.128.241  --board=lumpy   LibCBench
 CMD (None): cd /usr/local/google/home/yunlian/gd/src/build/images/lumpy/latest/../../../../..; cros_sdk  -- ./in_chroot_cmd6X7Cxu.sh

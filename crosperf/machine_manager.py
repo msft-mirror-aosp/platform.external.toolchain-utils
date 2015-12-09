@@ -15,10 +15,10 @@ import threading
 import time
 
 
-from utils import command_executer
-from utils import logger
-from utils import misc
-from utils.file_utils import FileUtils
+from cros_utils import command_executer
+from cros_utils import logger
+from cros_utils import misc
+from cros_utils.file_utils import FileUtils
 
 CHECKSUM_FILE = "/usr/local/osimage_checksum_file"
 

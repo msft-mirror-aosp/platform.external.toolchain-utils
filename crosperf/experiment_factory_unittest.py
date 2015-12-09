@@ -9,7 +9,7 @@ import socket
 import mock
 import unittest
 
-from utils.file_utils import FileUtils
+from cros_utils.file_utils import FileUtils
 
 from experiment_factory import ExperimentFactory
 from experiment_file import ExperimentFile

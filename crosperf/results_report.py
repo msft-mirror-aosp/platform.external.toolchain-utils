@@ -8,7 +8,7 @@ import datetime
 import json
 import os
 
-from utils.tabulator import *
+from cros_utils.tabulator import *
 
 from update_telemetry_defaults import TelemetryDefaults
 from column_chart import ColumnChart

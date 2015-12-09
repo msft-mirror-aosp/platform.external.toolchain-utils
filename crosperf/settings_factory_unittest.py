@@ -11,8 +11,8 @@ import unittest
 import settings_factory
 import settings
 
-from utils import command_executer
-from utils import logger
+from cros_utils import command_executer
+from cros_utils import logger
 
 class BenchmarkSettingsTest(unittest.TestCase):
 
