@@ -1,9 +1,9 @@
-#!/usr/bin/python
-
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+"""Module to draw column chart."""
 
 class ColumnChart(object):
+  """class to draw column chart."""
   def __init__(self, title, width, height):
     self.title = title
     self.chart_div = filter(str.isalnum, title)
