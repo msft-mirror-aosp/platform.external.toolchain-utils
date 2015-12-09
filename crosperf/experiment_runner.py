@@ -267,8 +267,8 @@ class ExperimentRunner(object):
 class MockExperimentRunner(ExperimentRunner):
   """Mocked ExperimentRunner for testing."""
 
-  def __init__(self, experiment):
-    super(MockExperimentRunner, self).__init__(experiment)
+  def __init__(self, experiment, json_report):
+    super(MockExperimentRunner, self).__init__(experiment, json_report)
 
   def _Run(self, experiment):
     self.l.LogOutput("Would run the following experiment: '%s'." %

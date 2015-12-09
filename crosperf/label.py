@@ -101,7 +101,8 @@ class Label(object):
 
 class MockLabel(object):
   def __init__(self, name, chromeos_image, chromeos_root, board, remote,
-               image_args, cache_dir, cache_only, chrome_src=None):
+               image_args, cache_dir, cache_only, log_level, compiler,
+               chrome_src=None):
     self.name = name
     self.chromeos_image = chromeos_image
     self.board = board
@@ -116,6 +117,8 @@ class MockLabel(object):
     self.chrome_src = chrome_src
     self.image_type = self._GetImageType(chromeos_image)
     self.checksum = ''
+    self.log_level = log_level
+    self.compiler = compiler
 
   def _GetImageType(self, chromeos_image):
     image_type = None

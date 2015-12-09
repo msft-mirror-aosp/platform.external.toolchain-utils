@@ -119,7 +119,7 @@ def Main(argv):
   atexit.register(Cleanup, experiment)
 
   if options.dry_run:
-    runner = MockExperimentRunner(experiment)
+    runner = MockExperimentRunner(experiment, json_report)
   else:
     runner = ExperimentRunner(experiment, json_report,
                               using_schedv2=(not options.noschedv2))

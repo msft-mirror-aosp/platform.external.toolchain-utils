@@ -234,7 +234,7 @@ class ExperimentFactory(object):
       if test_flag.GetTestMode():
         # pylint: disable=too-many-function-args
         label = MockLabel(label_name, image, chromeos_root, board, my_remote,
-                          image_args, cache_dir, cache_only,
+                          image_args, cache_dir, cache_only, log_level,
                           compiler, chrome_src)
       else:
         label = Label(label_name, image, chromeos_root, board, my_remote,
