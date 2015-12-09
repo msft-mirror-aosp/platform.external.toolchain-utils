@@ -1,11 +1,10 @@
-#!/usr/bin/python
-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """A module to generate experiments."""
 
+from __future__ import print_function
 import os
 import re
 import socket
@@ -23,63 +22,48 @@ import file_lock_machine
 # specified sets.  Here we define sets of tests that users may want
 # to run together.
 
-telemetry_perfv2_tests = [ 'dromaeo.domcoreattr',
-                           'dromaeo.domcoremodify',
-                           'dromaeo.domcorequery',
-                           'dromaeo.domcoretraverse',
-                           'kraken',
-# The following benchmark is extremely flaky, so omit it for now.
-#                           'memory.top_25',
-                           'octane',
-                           'robohornet_pro',
-# The following benchmark is broken (and hanging) for now, so omit it.
-#                           'smoothness.top_25',
-                           'sunspider',
-                           ]
+telemetry_perfv2_tests = ['dromaeo.domcoreattr',
+                          'dromaeo.domcoremodify',
+                          'dromaeo.domcorequery',
+                          'dromaeo.domcoretraverse',
+                          'kraken',
+                          'octane',
+                          'robohornet_pro',
+                          'sunspider',
+                         ]
 
-telemetry_pagecycler_tests = [
-                               'page_cycler.intl_ar_fa_he',
-                               'page_cycler.intl_es_fr_pt-BR',
-                               'page_cycler.intl_hi_ru',
-                               'page_cycler.intl_ja_zh',
-                               'page_cycler.intl_ko_th_vi',
-                               'page_cycler.morejs',
-                               'page_cycler.moz',
-                               'page_cycler.netsim.top_10',
-                               'page_cycler.tough_layout_cases',
-                               'page_cycler.typical_25',
-# Following benchmarks are now deprecated in Telemetry:
-#                               'page_cycler.indexed_db.basic_insert',
-#                               'page_cycler.bloat',
-                               ]
+telemetry_pagecycler_tests = ['page_cycler.intl_ar_fa_he',
+                              'page_cycler.intl_es_fr_pt-BR',
+                              'page_cycler.intl_hi_ru',
+                              'page_cycler.intl_ja_zh',
+                              'page_cycler.intl_ko_th_vi',
+                              'page_cycler.morejs',
+                              'page_cycler.moz',
+                              'page_cycler.netsim.top_10',
+                              'page_cycler.tough_layout_cases',
+                              'page_cycler.typical_25',
+                             ]
 
-telemetry_toolchain_old_perf_tests = [
-                               'dromaeo.domcoremodify',
-                               'page_cycler.intl_es_fr_pt-BR',
-                               'page_cycler.intl_hi_ru',
-                               'page_cycler.intl_ja_zh',
-                               'page_cycler.intl_ko_th_vi',
-                               'page_cycler.netsim.top_10',
-                               'page_cycler.typical_25',
-                               'robohornet_pro',
-                               'spaceport',
-                               'tab_switching.top_10',
-# Following benchmarks are now deprecated in Telemetry:
-#                               'canvasmark',
-#                               'jsgamebench',
-#                               'page_cycler.bloat',
-#                               'peacekeeper.html',
-                               ]
-telemetry_toolchain_perf_tests = [
-                               'octane',
-                               'kraken',
-                               'speedometer',
-                               'dromaeo.domcoreattr',
-                               'dromaeo.domcoremodify',
-                               'smoothness.tough_webgl_cases',
-                               'page_cycler.typical_25',
-                               'media.tough_video_cases',
-                               ]
+telemetry_toolchain_old_perf_tests = ['dromaeo.domcoremodify',
+                                      'page_cycler.intl_es_fr_pt-BR',
+                                      'page_cycler.intl_hi_ru',
+                                      'page_cycler.intl_ja_zh',
+                                      'page_cycler.intl_ko_th_vi',
+                                      'page_cycler.netsim.top_10',
+                                      'page_cycler.typical_25',
+                                      'robohornet_pro',
+                                      'spaceport',
+                                      'tab_switching.top_10',
+                                     ]
+telemetry_toolchain_perf_tests = ['octane',
+                                  'kraken',
+                                  'speedometer',
+                                  'dromaeo.domcoreattr',
+                                  'dromaeo.domcoremodify',
+                                  'smoothness.tough_webgl_cases',
+                                  'page_cycler.typical_25',
+                                  'media.tough_video_cases',
+                                 ]
 
 class ExperimentFactory(object):
   """Factory class for building an Experiment, given an ExperimentFile as input.
@@ -94,9 +78,10 @@ class ExperimentFactory(object):
                           show_all_results, retries, run_local):
     """Add all the tests in a set to the benchmarks list."""
     for test_name in benchmark_list:
-      telemetry_benchmark = Benchmark (test_name, test_name, test_args,
-                                       iterations, rm_chroot_tmp, perf_args,
-                                       suite, show_all_results, retries, run_local)
+      telemetry_benchmark = Benchmark(test_name, test_name, test_args,
+                                      iterations, rm_chroot_tmp, perf_args,
+                                      suite, show_all_results, retries,
+                                      run_local)
       benchmarks.append(telemetry_benchmark)
 
 
@@ -116,7 +101,7 @@ class ExperimentFactory(object):
     chromeos_root = global_settings.GetField("chromeos_root")
     rm_chroot_tmp = global_settings.GetField("rm_chroot_tmp")
     perf_args = global_settings.GetField("perf_args")
-    acquire_timeout= global_settings.GetField("acquire_timeout")
+    acquire_timeout = global_settings.GetField("acquire_timeout")
     cache_dir = global_settings.GetField("cache_dir")
     cache_only = global_settings.GetField("cache_only")
     config.AddConfig("no_email", global_settings.GetField("no_email"))
@@ -228,8 +213,8 @@ class ExperimentFactory(object):
         build = label_settings.GetField("build")
         if len(build) == 0:
           raise RuntimeError("Can not have empty 'build' field!")
-        image = label_settings.GetXbuddyPath (build, board, chromeos_root,
-                                              log_level)
+        image = label_settings.GetXbuddyPath(build, board, chromeos_root,
+                                             log_level)
 
       cache_dir = label_settings.GetField("cache_dir")
       chrome_src = label_settings.GetField("chrome_src")
@@ -247,8 +232,10 @@ class ExperimentFactory(object):
       all_remote += my_remote
       image_args = label_settings.GetField("image_args")
       if test_flag.GetTestMode():
+        # pylint: disable=too-many-function-args
         label = MockLabel(label_name, image, chromeos_root, board, my_remote,
-                          image_args, cache_dir, cache_only, compiler, chrome_src)
+                          image_args, cache_dir, cache_only,
+                          compiler, chrome_src)
       else:
         label = Label(label_name, image, chromeos_root, board, my_remote,
                       image_args, cache_dir, cache_only, log_level, compiler,
@@ -287,6 +274,6 @@ class ExperimentFactory(object):
     except IOError:
       # TODO: rethrow instead of throwing different exception.
       raise RuntimeError("IOError while reading file {0}"
-                      .format(default_remotes_file))
+                         .format(default_remotes_file))
     else:
       raise RuntimeError("There is not remote for {0}".format(board))
