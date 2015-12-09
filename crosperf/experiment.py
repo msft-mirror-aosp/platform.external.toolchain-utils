@@ -21,7 +21,6 @@ from machine_manager import MachineManager
 from machine_manager import MockMachineManager
 import test_flag
 
-
 class Experiment(object):
   """Class representing an Experiment to be run."""
 
@@ -86,6 +85,8 @@ class Experiment(object):
     # Now machine_manager._all_machines contains a list of reachable
     # machines. This is a subset of self.remote. We make both lists the same.
     self.remote = [m.name for m in self.machine_manager._all_machines]
+    if not self.remote:
+      raise RuntimeError("No machine available for running experiment.")
 
     for label in labels:
       # We filter out label remotes that are not reachable (not in
