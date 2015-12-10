@@ -20,6 +20,7 @@ import experiment
 import experiment_factory
 import machine_manager
 import settings_factory
+import test_flag
 
 EXPERIMENT_FILE_1 = """
   board: x86-alex
@@ -67,7 +68,8 @@ class ExperimentFactoryTest(unittest.TestCase):
     bench_list = []
     ef._AppendBenchmarkSet(bench_list,
                            experiment_factory.telemetry_perfv2_tests,
-                           "", 1, False, "", "telemetry_Crosperf", False)
+                           "", 1, False, "", "telemetry_Crosperf", False, 0,
+                           False)
     self.assertEqual(len(bench_list),
                      len(experiment_factory.telemetry_perfv2_tests))
     self.assertTrue(type(bench_list[0]) is benchmark.Benchmark)
@@ -75,7 +77,8 @@ class ExperimentFactoryTest(unittest.TestCase):
     bench_list = []
     ef._AppendBenchmarkSet(bench_list,
                            experiment_factory.telemetry_pagecycler_tests,
-                           "", 1, False, "", "telemetry_Crosperf", False)
+                           "", 1, False, "", "telemetry_Crosperf", False, 0,
+                           False)
     self.assertEqual(len(bench_list),
                      len(experiment_factory.telemetry_pagecycler_tests))
     self.assertTrue(type(bench_list[0]) is benchmark.Benchmark)
@@ -83,7 +86,8 @@ class ExperimentFactoryTest(unittest.TestCase):
     bench_list = []
     ef._AppendBenchmarkSet(bench_list,
                            experiment_factory.telemetry_toolchain_perf_tests,
-                           "", 1, False, "", "telemetry_Crosperf", False)
+                           "", 1, False, "", "telemetry_Crosperf", False, 0,
+                           False)
     self.assertEqual(len(bench_list),
                      len(experiment_factory.telemetry_toolchain_perf_tests))
     self.assertTrue(type(bench_list[0]) is benchmark.Benchmark)
@@ -110,7 +114,6 @@ class ExperimentFactoryTest(unittest.TestCase):
     def FakeGetXbuddyPath(build, board, chroot, log_level):
       return "fake_image_path"
 
-
     ef = ExperimentFactory()
     ef._AppendBenchmarkSet = FakeAppendBenchmarkSet
     ef.GetDefaultRemotes = FakeGetDefaultRemotes
@@ -124,7 +127,8 @@ class ExperimentFactoryTest(unittest.TestCase):
     mock_experiment_file = ExperimentFile(StringIO.StringIO(""))
     mock_experiment_file.all_settings = []
 
-   # Basic test.
+    test_flag.SetTestMode(True)
+    # Basic test.
     global_settings.SetField("name","unittest_test")
     global_settings.SetField("board", "lumpy")
     global_settings.SetField("remote", "123.45.67.89 123.45.76.80")
@@ -162,6 +166,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertEqual(exp.labels[0].board, "lumpy")
 
     # Second test: Remotes listed in labels.
+    test_flag.SetTestMode(True)
     label_settings.SetField("remote", "chromeos1.cros chromeos2.cros")
     exp = ef.GetExperiment(mock_experiment_file, "", "")
     self.assertEqual(exp.remote,

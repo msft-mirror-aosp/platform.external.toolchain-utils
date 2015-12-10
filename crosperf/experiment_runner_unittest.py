@@ -13,16 +13,17 @@ import experiment_runner
 import experiment_status
 import machine_manager
 import config
+import test_flag
 from experiment_file import ExperimentFile
 from experiment_factory import ExperimentFactory
 from results_report import TextResultsReport
 from results_report import HTMLResultsReport
 from results_cache import Result
 
-from utils import logger
-from utils import command_executer
-from utils.email_sender import EmailSender
-from utils.file_utils import FileUtils
+from cros_utils import logger
+from cros_utils import command_executer
+from cros_utils.email_sender import EmailSender
+from cros_utils.file_utils import FileUtils
 
 EXPERIMENT_FILE_1 = """
   board: parrot
@@ -91,6 +92,7 @@ class ExperimentRunnerTest(unittest.TestCase):
   mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
 
   def make_fake_experiment(self):
+    test_flag.SetTestMode(True)
     experiment_file = ExperimentFile(StringIO.StringIO(EXPERIMENT_FILE_1))
     experiment = ExperimentFactory().GetExperiment(experiment_file,
                                                    working_directory="",
@@ -105,14 +107,18 @@ class ExperimentRunnerTest(unittest.TestCase):
 
 
   def test_init(self):
-    er = experiment_runner.ExperimentRunner(self.exp, self.mock_logger,
-                                            self.mock_cmd_exec)
+    er = experiment_runner.ExperimentRunner(self.exp, json_report=False,
+                                            using_schedv2=False,
+                                            log=self.mock_logger,
+                                            cmd_exec=self.mock_cmd_exec)
     self.assertFalse (er._terminated)
     self.assertEqual (er.STATUS_TIME_DELAY, 10)
 
     self.exp.log_level = "verbose"
-    er = experiment_runner.ExperimentRunner(self.exp, self.mock_logger,
-                                            self.mock_cmd_exec)
+    er = experiment_runner.ExperimentRunner(self.exp, json_report=False,
+                                            using_schedv2=False,
+                                            log=self.mock_logger,
+                                            cmd_exec=self.mock_cmd_exec)
     self.assertEqual (er.STATUS_TIME_DELAY, 30)
 
 
@@ -145,8 +151,10 @@ class ExperimentRunnerTest(unittest.TestCase):
 
     # Test 1: log_level == "quiet"
     self.exp.log_level = "quiet"
-    er = experiment_runner.ExperimentRunner(self.exp, self.mock_logger,
-                                            self.mock_cmd_exec)
+    er = experiment_runner.ExperimentRunner(self.exp, json_report=False,
+                                            using_schedv2=False,
+                                            log = self.mock_logger,
+                                            cmd_exec =self.mock_cmd_exec)
     er.STATUS_TIME_DELAY = 2
     mock_status_string.return_value = "Fake status string"
     er._Run(self.exp)
@@ -168,8 +176,10 @@ class ExperimentRunnerTest(unittest.TestCase):
     reset()
     self.exp.log_level = "average"
     mock_status_string.call_count = 0
-    er = experiment_runner.ExperimentRunner(self.exp, self.mock_logger,
-                                            self.mock_cmd_exec)
+    er = experiment_runner.ExperimentRunner(self.exp, json_report=False,
+                                            using_schedv2=False,
+                                            log=self.mock_logger,
+                                            cmd_exec=self.mock_cmd_exec)
     er.STATUS_TIME_DELAY = 2
     mock_status_string.return_value = "Fake status string"
     er._Run(self.exp)
@@ -192,8 +202,10 @@ class ExperimentRunnerTest(unittest.TestCase):
     reset()
     self.exp.log_level = "verbose"
     mock_status_string.call_count = 0
-    er = experiment_runner.ExperimentRunner(self.exp, self.mock_logger,
-                                            self.mock_cmd_exec)
+    er = experiment_runner.ExperimentRunner(self.exp, json_report=False,
+                                            using_schedv2=False,
+                                            log=self.mock_logger,
+                                            cmd_exec=self.mock_cmd_exec)
     er.STATUS_TIME_DELAY = 2
     mock_status_string.return_value = "Fake status string"
     mock_progress_string.return_value = "Fake progress string"
@@ -220,8 +232,10 @@ class ExperimentRunnerTest(unittest.TestCase):
   def test_print_table(self, mock_report):
     self.mock_logger.Reset()
     mock_report.return_value = "This is a fake experiment report."
-    er = experiment_runner.ExperimentRunner(self.exp, self.mock_logger,
-                                            self.mock_cmd_exec)
+    er = experiment_runner.ExperimentRunner(self.exp, json_report=False,
+                                            using_schedv2=False,
+                                            log=self.mock_logger,
+                                            cmd_exec=self.mock_cmd_exec)
     er._PrintTable(self.exp)
     self.assertEqual(mock_report.call_count, 1)
     self.assertEqual(self.mock_logger.output_msgs,
@@ -243,8 +257,10 @@ class ExperimentRunnerTest(unittest.TestCase):
     self.mock_logger.Reset()
     config.AddConfig("no_email", True)
     self.exp.email_to = ["jane.doe@google.com"]
-    er = experiment_runner.ExperimentRunner(self.exp, self.mock_logger,
-                                            self.mock_cmd_exec)
+    er = experiment_runner.ExperimentRunner(self.exp, json_report=False,
+                                            using_schedv2=False,
+                                            log=self.mock_logger,
+                                            cmd_exec=self.mock_cmd_exec)
     # Test 1. Config:no_email; exp.email_to set ==> no email sent
     er._Email(self.exp)
     self.assertEqual(mock_getuser.call_count, 0)
@@ -356,10 +372,11 @@ class ExperimentRunnerTest(unittest.TestCase):
   @mock.patch.object(FileUtils, 'MkDirP')
   @mock.patch.object(FileUtils, 'WriteFile')
   @mock.patch.object(HTMLResultsReport, 'GetReport')
+  @mock.patch.object(TextResultsReport, 'GetReport')
   @mock.patch.object(Result, 'CopyResultsTo')
   @mock.patch.object(Result, 'CleanUp')
-  def test_store_results(self, mock_cleanup, mock_copy, mock_report,
-                         mock_writefile, mock_mkdir, mock_rmdir):
+  def test_store_results(self, mock_cleanup, mock_copy, mock_text_report,
+                         mock_report, mock_writefile, mock_mkdir, mock_rmdir):
 
     self.mock_logger.Reset()
     self.exp.results_directory='/usr/local/crosperf-results'
@@ -368,8 +385,10 @@ class ExperimentRunnerTest(unittest.TestCase):
                                                          bench_run.name)
     self.assertEqual (len(self.exp.benchmark_runs), 6)
 
-    er = experiment_runner.ExperimentRunner(self.exp, self.mock_logger,
-                                            self.mock_cmd_exec)
+    er = experiment_runner.ExperimentRunner(self.exp, json_report=False,
+                                            using_schedv2=False,
+                                            log=self.mock_logger,
+                                            cmd_exec=self.mock_cmd_exec)
 
     # Test 1. Make sure nothing is done if _terminated is true.
     er._terminated = True
@@ -383,7 +402,8 @@ class ExperimentRunnerTest(unittest.TestCase):
     self.assertEqual(self.mock_logger.LogOutputCount, 0)
 
     # Test 2. _terminated is false; everything works properly.
-    fake_result = Result(self.mock_logger, self.exp.labels[0], "average")
+    fake_result = Result(self.mock_logger, self.exp.labels[0], "average",
+                         "daisy1")
     for r in self.exp.benchmark_runs:
       r.result = fake_result
     er._terminated = False
@@ -406,10 +426,10 @@ class ExperimentRunnerTest(unittest.TestCase):
     mock_rmdir.called_with('/usr/local/crosperf-results')
     self.assertEqual(self.mock_logger.LogOutputCount, 4)
     self.assertEqual(self.mock_logger.output_msgs,
-                     [ 'Storing experiment file in /usr/local/crosperf-results.',
-                       'Storing results report in /usr/local/crosperf-results.',
-                       'Storing email message body in /usr/local/crosperf-results.',
-                       'Storing results of each benchmark run.' ])
+                     ['Storing experiment file in /usr/local/crosperf-results.',
+                      'Storing results report in /usr/local/crosperf-results.',
+                      'Storing email message body in /usr/local/crosperf-results.',
+                      'Storing results of each benchmark run.'])
 
 
 

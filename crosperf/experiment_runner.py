@@ -7,6 +7,7 @@ import shutil
 import time
 
 import afe_lock_machine
+import test_flag
 
 from cros_utils import command_executer
 from cros_utils import logger
@@ -82,25 +83,29 @@ class ExperimentRunner(object):
     requested for this crosperf run, to prevent any other crosperf runs from
     being able to update/use the machines while this experiment is running.
     """
-    lock_mgr = afe_lock_machine.AFELockManager(
-        self._GetMachineList(),
-        "",
-        experiment.labels[0].chromeos_root,
-        None,
-        log=self.l,
-    )
-    for m in lock_mgr.machines:
-      if not lock_mgr.MachineIsKnown(m):
-        lock_mgr.AddLocalMachine(m)
-    machine_states = lock_mgr.GetMachineStates("lock")
-    lock_mgr.CheckMachineLocks(machine_states, "lock")
-    self.locked_machines = lock_mgr.UpdateMachines(True)
-    self._experiment.locked_machines = self.locked_machines
-    self._UpdateMachineList(self.locked_machines)
-    self._experiment.machine_manager.RemoveNonLockedMachines(
-        self.locked_machines)
-    if len(self.locked_machines) == 0:
-      raise RuntimeError("Unable to lock any machines.")
+    if test_flag.GetTestMode():
+      self.locked_machines = self._GetMachineList()
+      self._experiment.locked_machines = self.locked_machines
+    else:
+      lock_mgr = afe_lock_machine.AFELockManager(
+          self._GetMachineList(),
+          "",
+          experiment.labels[0].chromeos_root,
+          None,
+          log=self.l,
+      )
+      for m in lock_mgr.machines:
+        if not lock_mgr.MachineIsKnown(m):
+          lock_mgr.AddLocalMachine(m)
+      machine_states = lock_mgr.GetMachineStates("lock")
+      lock_mgr.CheckMachineLocks(machine_states, "lock")
+      self.locked_machines = lock_mgr.UpdateMachines(True)
+      self._experiment.locked_machines = self.locked_machines
+      self._UpdateMachineList(self.locked_machines)
+      self._experiment.machine_manager.RemoveNonLockedMachines(
+          self.locked_machines)
+      if len(self.locked_machines) == 0:
+        raise RuntimeError("Unable to lock any machines.")
 
   def _UnlockAllMachines(self, experiment):
     """Attempt to globally unlock all of the machines requested for run.
@@ -108,7 +113,7 @@ class ExperimentRunner(object):
     The method will use the AFE server to globally unlock all of the machines
     requested for this crosperf run.
     """
-    if not self.locked_machines:
+    if not self.locked_machines or test_flag.GetTestMode():
       return
 
     lock_mgr = afe_lock_machine.AFELockManager(

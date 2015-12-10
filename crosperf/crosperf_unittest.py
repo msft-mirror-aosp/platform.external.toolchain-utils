@@ -19,8 +19,8 @@ import experiment_runner
 
 from help import Help
 
-from utils import command_executer
-from utils import logger
+from cros_utils import command_executer
+from cros_utils import logger
 
 EXPERIMENT_FILE_1 = """
   board: x86-alex
@@ -60,7 +60,7 @@ class CrosperfTest(unittest.TestCase):
     self.assertEqual(len(options_before), 3)
     crosperf.SetupParserOptions(parser)
     options_after = parser._get_all_options()
-    self.assertEqual(len(options_after), 26)
+    self.assertEqual(len(options_after), 29)
 
 
   def test_convert_options_to_settings(self):
@@ -78,7 +78,7 @@ class CrosperfTest(unittest.TestCase):
     settings = crosperf.ConvertOptionsToSettings(options)
     self.assertIsNotNone(settings)
     self.assertIsInstance(settings, settings_factory.GlobalSettings)
-    self.assertEqual(len(settings.fields), 22)
+    self.assertEqual(len(settings.fields), 25)
     self.assertTrue(settings.GetField('rerun'))
     argv = ['crosperf/crosperf.py', 'temp.exp']
     options, args = parser.parse_args(argv)

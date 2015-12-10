@@ -9,6 +9,7 @@ import time
 import shlex
 
 from utils import command_executer
+import test_flag
 
 TEST_THAT_PATH = '/usr/bin/test_that'
 CHROME_MOUNT_DIR = '/tmp/chrome_root'
@@ -252,7 +253,8 @@ class SuiteRunner(object):
     # Check for and remove temporary file that may have been left by
     # previous telemetry runs (and which might prevent this run from
     # working).
-    self.RemoveTelemetryTempFile (machine, label.chromeos_root)
+    if not test_flag.GetTestMode():
+      self.RemoveTelemetryTempFile (machine, label.chromeos_root)
 
     rsa_key = os.path.join(label.chromeos_root,
         "src/scripts/mod_for_test_scripts/ssh_keys/testing_rsa")

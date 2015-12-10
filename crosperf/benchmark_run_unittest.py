@@ -10,7 +10,7 @@ import mock
 import unittest
 import inspect
 
-from utils import logger
+from cros_utils import logger
 
 import benchmark_run
 
@@ -43,8 +43,9 @@ class BenchmarkRunTest(unittest.TestCase):
 
     self.test_label = MockLabel("test1", "image1", "/tmp/test_benchmark_run",
                                 "x86-alex", "chromeos2-row1-rack4-host9.cros",
-                                image_args="",
-                                cache_dir="", cache_only=False)
+                                image_args="", cache_dir="", cache_only=False,
+                                log_level="average", compiler="gcc")
+
 
     self.test_cache_conditions =  [CacheConditions.CACHE_FILE_EXISTS,
                                    CacheConditions.CHECKSUMS_MATCH]
@@ -56,15 +57,16 @@ class BenchmarkRunTest(unittest.TestCase):
   def testDryRun(self):
     my_label = MockLabel("test1", "image1", "/tmp/test_benchmark_run",
                          "x86-alex", "chromeos2-row1-rack4-host9.cros",
-                         image_args="",
-                         cache_dir="", cache_only=False)
+                         image_args="", cache_dir="", cache_only=False,
+                         log_level="average", compiler="gcc")
+
     logging_level = "average"
     m = MockMachineManager("/tmp/chromeos_root", 0, logging_level, '')
     m.AddMachine("chromeos2-row1-rack4-host9.cros")
     bench = Benchmark("page_cycler.netsim.top_10",    # name
                       "page_cycler.netsim.top_10",    # test_name
                       "",             # test_args
-                      1,              # iteratins
+                      1,              # iterations
                       False,          # rm_chroot_tmp
                       "",             # perf_args
                       suite="telemetry_Crosperf")     # suite
@@ -386,7 +388,7 @@ class BenchmarkRunTest(unittest.TestCase):
 
     self.assertEqual (mock_result.call_count, 1)
     mock_result.assert_called_with (self.mock_logger, 'average',
-                                    self.test_label,  "{'Score':100}",
+                                    self.test_label,  None, "{'Score':100}",
                                     "", 0, False, 'page_cycler.netsim.top_10',
                                     'telemetry_Crosperf')
 

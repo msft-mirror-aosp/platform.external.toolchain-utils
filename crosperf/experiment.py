@@ -203,6 +203,9 @@ class Experiment(object):
       # to unlock everything.
       self.machine_manager.Cleanup()
     else:
+      if test_flag.GetTestMode():
+        return
+
       all_machines = self.locked_machines
       if not all_machines:
         return

@@ -123,6 +123,7 @@ class MockLabel(object):
     self.checksum = ''
     self.log_level = log_level
     self.compiler = compiler
+    self.chrome_version = "Fake Chrome Version 50"
 
   def _GetImageType(self, chromeos_image):
     image_type = None

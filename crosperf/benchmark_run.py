@@ -251,7 +251,7 @@ class BenchmarkRun(threading.Thread):
 
 
 class MockBenchmarkRun(BenchmarkRun):
-  """Inherited from BenchmarkRuna."""
+  """Inherited from BenchmarkRun."""
 
   def ReadCache(self):
     # Just use the first machine for running the cached version,
@@ -292,7 +292,7 @@ class MockBenchmarkRun(BenchmarkRun):
                                                self.test_args,
                                                self.profiler_args)
     self.run_completed = True
-    rr = MockResult("logger", self.label, self.log_level)
+    rr = MockResult("logger", self.label, self.log_level, machine)
     rr.out = out
     rr.err = err
     rr.retval = retval

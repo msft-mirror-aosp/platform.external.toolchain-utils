@@ -526,6 +526,97 @@ class MachineManager(object):
 class MockCrosMachine(CrosMachine):
   """Mock cros machine class."""
   # pylint: disable=super-init-not-called
+
+  MEMINFO_STRING = """MemTotal:        3990332 kB
+MemFree:         2608396 kB
+Buffers:          147168 kB
+Cached:           811560 kB
+SwapCached:            0 kB
+Active:           503480 kB
+Inactive:         628572 kB
+Active(anon):     174532 kB
+Inactive(anon):    88576 kB
+Active(file):     328948 kB
+Inactive(file):   539996 kB
+Unevictable:           0 kB
+Mlocked:               0 kB
+SwapTotal:       5845212 kB
+SwapFree:        5845212 kB
+Dirty:              9384 kB
+Writeback:             0 kB
+AnonPages:        173408 kB
+Mapped:           146268 kB
+Shmem:             89676 kB
+Slab:             188260 kB
+SReclaimable:     169208 kB
+SUnreclaim:        19052 kB
+KernelStack:        2032 kB
+PageTables:         7120 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:     7840376 kB
+Committed_AS:    1082032 kB
+VmallocTotal:   34359738367 kB
+VmallocUsed:      364980 kB
+VmallocChunk:   34359369407 kB
+DirectMap4k:       45824 kB
+DirectMap2M:     4096000 kB
+"""
+
+  CPUINFO_STRING = """processor: 0
+vendor_id: GenuineIntel
+cpu family: 6
+model: 42
+model name: Intel(R) Celeron(R) CPU 867 @ 1.30GHz
+stepping: 7
+microcode: 0x25
+cpu MHz: 1300.000
+cache size: 2048 KB
+physical id: 0
+siblings: 2
+core id: 0
+cpu cores: 2
+apicid: 0
+initial apicid: 0
+fpu: yes
+fpu_exception: yes
+cpuid level: 13
+wp: yes
+flags: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx rdtscp lm constant_tsc arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx est tm2 ssse3 cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic popcnt tsc_deadline_timer xsave lahf_lm arat epb xsaveopt pln pts dts tpr_shadow vnmi flexpriority ept vpid
+bogomips: 2594.17
+clflush size: 64
+cache_alignment: 64
+address sizes: 36 bits physical, 48 bits virtual
+power management:
+
+processor: 1
+vendor_id: GenuineIntel
+cpu family: 6
+model: 42
+model name: Intel(R) Celeron(R) CPU 867 @ 1.30GHz
+stepping: 7
+microcode: 0x25
+cpu MHz: 1300.000
+cache size: 2048 KB
+physical id: 0
+siblings: 2
+core id: 1
+cpu cores: 2
+apicid: 2
+initial apicid: 2
+fpu: yes
+fpu_exception: yes
+cpuid level: 13
+wp: yes
+flags: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx rdtscp lm constant_tsc arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx est tm2 ssse3 cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic popcnt tsc_deadline_timer xsave lahf_lm arat epb xsaveopt pln pts dts tpr_shadow vnmi flexpriority ept vpid
+bogomips: 2594.17
+clflush size: 64
+cache_alignment: 64
+address sizes: 36 bits physical, 48 bits virtual
+power management:
+"""
+
   def __init__(self, name, chromeos_root, log_level):
     self.name = name
     self.image = None
@@ -539,10 +630,17 @@ class MockCrosMachine(CrosMachine):
     self.machine_checksum = self._GetMD5Checksum(self.checksum_string)
     self.log_level = log_level
     self.label = None
+    self.ce = command_executer.GetCommandExecuter(log_level=self.log_level)
 
   def IsReachable(self):
     return True
 
+  def _GetMemoryInfo(self):
+    self.meminfo = self.MEMINFO_STRING
+    self._ParseMemoryInfo()
+
+  def _GetCPUInfo(self):
+    self.cpuinfo = self.CPUINFO_STRING
 
 class MockMachineManager(MachineManager):
   """Mock machine manager class."""
@@ -571,6 +669,9 @@ class MockMachineManager(MachineManager):
       if cm.IsReachable():
         self._all_machines.append(cm)
 
+  def GetChromeVersion(self, machine):
+    return "Mock Chrome Version R50"
+
   def AcquireMachine(self, label):
     for machine in self._all_machines:
       if not machine.locked:
@@ -590,3 +691,12 @@ class MockMachineManager(MachineManager):
 
   def GetAvailableMachines(self, label=None):
     return self._all_machines
+
+  def ForceSameImageToAllMachines(self, label):
+    return 0
+
+  def ComputeCommonCheckSum(self, label):
+    common_checksum = 12345
+    for machine in self.GetMachines(label):
+      machine.machine_checksum = common_checksum
+    self.machine_checksum[label.name] = common_checksum

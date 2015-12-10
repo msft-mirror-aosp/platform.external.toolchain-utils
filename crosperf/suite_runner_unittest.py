@@ -14,6 +14,7 @@ import suite_runner
 import machine_manager
 import image_checksummer
 import label
+import test_flag
 
 from benchmark import Benchmark
 from benchmark_run import MockBenchmarkRun
@@ -31,7 +32,7 @@ class SuiteRunnerTest(unittest.TestCase):
   mock_logger = mock.Mock(spec=logger.Logger)
   mock_label = label.MockLabel("lumpy", "lumpy_chromeos_image", "/tmp/chromeos",
                                "lumpy", [ "lumpy1.cros", "lumpy.cros2" ],
-                               "", "", False, "")
+                               "", "", False, "average", "gcc", "")
   telemetry_crosperf_bench = Benchmark("b1_test", # name
                                        "octane",  # test_name
                                        "",        # test_args
@@ -215,7 +216,8 @@ class SuiteRunnerTest(unittest.TestCase):
     raised_exception = False
     try:
       self.runner.Test_That_Run('lumpy1.cros', self.mock_label,
-                                self.test_that_bench, '', 'record -a -e cycles')
+                                self.test_that_bench, '',
+                                'record -a -e cycles')
     except:
       raised_exception = True
     self.assertTrue(raised_exception)
@@ -224,7 +226,8 @@ class SuiteRunnerTest(unittest.TestCase):
     self.mock_cmd_exec.ChrootRunCommand = mock_chroot_runcmd
     self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
     res = self.runner.Test_That_Run ('lumpy1.cros', self.mock_label,
-                                     self.test_that_bench, '--iterations=2', '')
+                                     self.test_that_bench, '--iterations=2',
+                                     '')
     self.assertEqual(mock_cros_runcmd.call_count, 1)
     self.assertEqual(mock_chroot_runcmd.call_count, 1)
     self.assertEqual(res, 0)
@@ -233,7 +236,9 @@ class SuiteRunnerTest(unittest.TestCase):
     args_list = mock_chroot_runcmd.call_args_list[0][0]
     self.assertEqual(len(args_list), 4)
     self.assertEqual(args_list[0], '/tmp/chromeos')
-    self.assertEqual(args_list[1], ('/usr/bin/test_that  --board=lumpy '
+    self.assertEqual(args_list[1], ('/usr/bin/test_that --autotest_dir '
+                                    '~/trunk/src/third_party/autotest/files '
+                                    '--fast  --board=lumpy '
                                     '--iterations=2 lumpy1.cros octane'))
     self.assertTrue(args_list[2])
     self.assertEqual(args_list[3], self.mock_cmd_term)
@@ -261,11 +266,12 @@ class SuiteRunnerTest(unittest.TestCase):
     self.assertEqual(args_list[1],
                      ('/usr/bin/test_that --autotest_dir '
                       '~/trunk/src/third_party/autotest/files '
-                      ' --board=lumpy --args=" test=octane '
+                      ' --board=lumpy --args=" run_local=False test=octane '
                       'profiler=custom_perf profiler_args=\'record -a -e '
                       'cycles,instructions\'" lumpy1.cros telemetry_Crosperf'))
     self.assertEqual(args_dict['cros_sdk_options'],
-                     (' --chrome_root= --chrome_root_mount=/tmp/chrome_root  '
+                     ('--no-ns-pid --chrome_root= '
+                      '--chrome_root_mount=/tmp/chrome_root '
                       'FEATURES="-usersandbox" CHROME_ROOT=/tmp/chrome_root'))
     self.assertEqual(args_dict['command_terminator'], self.mock_cmd_term)
     self.assertTrue(args_dict['return_output'])
@@ -319,6 +325,7 @@ class SuiteRunnerTest(unittest.TestCase):
       raises_exception = True
     self.assertTrue(raises_exception)
 
+    test_flag.SetTestMode(True)
     res = self.runner.Telemetry_Run('lumpy1.cros', self.mock_label,
                                     self.telemetry_bench, '')
     self.assertEqual(res, 0)

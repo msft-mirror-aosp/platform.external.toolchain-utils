@@ -15,8 +15,8 @@ from experiment_factory import ExperimentFactory
 from experiment_file import ExperimentFile
 from experiment_runner import ExperimentRunner
 from machine_manager import MockCrosMachine
-from utils import command_executer
-from utils.command_executer import CommandExecuter
+from cros_utils import command_executer
+from cros_utils.command_executer import CommandExecuter
 from experiment_runner_unittest import FakeLogger
 from schedv2 import Schedv2
 
