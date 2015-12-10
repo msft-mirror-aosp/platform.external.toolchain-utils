@@ -1,8 +1,8 @@
-#!/usr/bin/python
-
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 """The class to show the banner."""
+
+from __future__ import print_function
 
 import datetime
 import time
@@ -93,7 +93,7 @@ class ExperimentStatus(object):
 
     status_strings = []
     for key, val in status_bins.items():
-      if (key == "RUNNING" or self.experiment.log_level == "verbose"):
+      if key == "RUNNING" or self.experiment.log_level == "verbose":
         status_strings.append("%s: %s" %
                               (key, self._GetNamesAndIterations(val)))
       else:
@@ -105,12 +105,12 @@ class ExperimentStatus(object):
     if (self.experiment.schedv2() is None and
         self.experiment.log_level == "verbose"):
         # Add the machine manager status.
-        thread_status = thread_status_format.format(
+      thread_status = thread_status_format.format(
           self.experiment.machine_manager.AsString())
     elif self.experiment.schedv2():
         # In schedv2 mode, we always print out thread status.
-        thread_status = thread_status_format.format(
-            self.experiment.schedv2().threads_status_as_string())
+      thread_status = thread_status_format.format(
+          self.experiment.schedv2().threads_status_as_string())
 
     result = "{}{}".format(thread_status, "\n".join(status_strings))
 
@@ -144,9 +144,8 @@ class ExperimentStatus(object):
         benchmark_iterations[benchmark_name].append(benchmark_run.iteration)
       for key, val in benchmark_iterations.items():
         val.sort()
-        iterations = ",".join(map(str,val))
+        iterations = ",".join(map(str, val))
         strings.append("{} [{}]".format(key, iterations))
       output += "  " + label + ": " + ", ".join(strings) + "\n"
 
     return " %s \n%s" % (len(benchmark_runs), output)
-
