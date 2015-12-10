@@ -63,8 +63,7 @@ class CrosImage(object):
     self.CreateUnmountScript()
     command = image_chromeos.GetImageMountCommand(
         self.chromeos_root, self.image, self.rootfs, self.stateful)
-    rv = self._ce.RunCommand(
-        command, return_output=False, print_to_console=True)
+    rv = self._ce.RunCommand(command, print_to_console=True)
     self.mounted = (rv == 0)
     if not self.mounted:
       self.logger.LogError('Failed to mount "{0}" onto "{1}" and "{2}".'.format(
@@ -79,7 +78,7 @@ class CrosImage(object):
     f.write(command)
     f.close()
     self._ce.RunCommand('chmod +x {}'.format(self.unmount_script),
-                        print_to_console=False, return_output=False)
+                        print_to_console=False)
     self.logger.LogOutput('Created an unmount script - "{0}"'.format(
         self.unmount_script))
 
@@ -94,8 +93,7 @@ class CrosImage(object):
         self.logger.LogOutput(('Please unmount manually - \n'
                                '\t bash "{0}"'.format(self.unmount_script)))
       else:
-        if self._ce.RunCommand(
-            command, return_output=False, print_to_console=True) == 0:
+        if self._ce.RunCommand(command, print_to_console=True) == 0:
           self._ce.RunCommand('rm {0}'.format(self.unmount_script))
           self.mounted = False
           self.rootfs = None
@@ -118,8 +116,7 @@ class CrosImage(object):
                'bash -c \'file -b "{{}}" | grep -q "ELF"\'' r' \; '
                r'-exec echo "{{}}" \;').format(self.rootfs)
     self.logger.LogCmd(command)
-    _, out, _ = self._ce.RunCommand(
-        command, return_output=True, print_to_console=False)
+    _, out, _ = self._ce.RunCommandWOutput(command, print_to_console=False)
     self.elf_files = out.splitlines()
     self.logger.LogOutput(
         'Total {0} elf files found.'.format(len(self.elf_files)))
@@ -212,8 +209,7 @@ class ImageComparator(object):
                      f1=full_path1, f2=full_path2,
                      rootfs1=i1.rootfs, rootfs2=i2.rootfs,
                      tempf1=self.tempf1, tempf2=self.tempf2)
-      ret = cmde.RunCommand(command, return_output=False,
-                            print_to_console=False)
+      ret = cmde.RunCommand(command, print_to_console=False)
       if ret != 0:
         self.logger.LogOutput('*** Not match - "{0}" "{1}"'.format(
             full_path1, full_path2))
@@ -225,7 +221,7 @@ class ImageComparator(object):
               '>> {diff_file}').format(
                   f1=full_path1, f2=full_path2, diff_file=self.diff_file,
                   tempf1=self.tempf1, tempf2=self.tempf2)
-          cmde.RunCommand(command, return_output=False, print_to_console=False)
+          cmde.RunCommand(command, print_to_console=False)
       else:
         match_count += 1
     ## End of comparing every elf files.

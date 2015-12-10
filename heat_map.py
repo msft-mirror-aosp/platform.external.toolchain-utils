@@ -46,7 +46,7 @@ class HeatMapProducer(object):
 
   def getBinaryBaseAddress(self):
     cmd = 'grep PERF_RECORD_MMAP %s | grep "%s$"' % (self.perf_report, self.binary)
-    retval, output, _ = self.ce.RunCommand(cmd, return_output=True)
+    retval, output, _ = self.ce.RunCommandWOutput(cmd)
     if retval:
       raise RuntimeError('Failed to run grep to get base address')
     baseAddresses = Set();
@@ -128,4 +128,3 @@ def main(argv):
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
-

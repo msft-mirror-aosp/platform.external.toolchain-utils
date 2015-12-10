@@ -28,8 +28,8 @@ class ImageDownloader(object):
     # image name.
     command = ("cd ~/trunk/src/third_party/toolchain-utils/crosperf; "
                "python translate_xbuddy.py '%s'" % xbuddy_label)
-    retval, build_id_tuple_str, _ = self._ce.ChrootRunCommand(chromeos_root,
-                                                          command, True)
+    retval, build_id_tuple_str, _ = self._ce.ChrootRunCommandWOutput(
+        chromeos_root, command)
     if not build_id_tuple_str:
       raise MissingImage ("Unable to find image for '%s'" % xbuddy_label)
 

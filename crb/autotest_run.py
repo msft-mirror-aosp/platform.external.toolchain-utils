@@ -254,7 +254,7 @@ class AutotestRun(threading.Thread):
                  " cros_sdk -- /usr/sbin/perf report --symfs=/build/%s"
                  " -i %s --stdio" % (self.chromeos_root, self.board,
                                      perf_data_file))
-      ret, out, err = self._ce.RunCommand(command, return_output=True)
+      ret, out, err = self._ce.RunCommandWOutput(command)
       with open(os.path.join(self.cache_dir, "perf.report"), "wb") as f:
         f.write(out)
     return self.retval

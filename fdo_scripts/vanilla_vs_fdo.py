@@ -129,8 +129,7 @@ class FDOComparator(object):
                                           "build_chrome_browser.py")
       command = "python %s %s" % (build_chrome_browser,
                                   " ".join(build_chrome_browser_args))
-      ret, out, err = self._ce.RunCommand(command,
-                                          return_output=True)
+      ret, out, err = self._ce.RunCommandWOutput(command)
       if "-fprofile-use" in cxxflags:
         self._ReportMismatches(out)
 

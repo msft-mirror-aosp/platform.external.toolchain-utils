@@ -152,9 +152,8 @@ class DutWorker(Thread):
         checksum_file = "/usr/local/osimage_checksum_file"
         try:
             rv, checksum, _ = command_executer.GetCommandExecuter().\
-                CrosRunCommand(
+                CrosRunCommandWOutput(
                     "cat " + checksum_file,
-                    return_output=True,
                     chromeos_root=self._sched._labels[0].chromeos_root,
                     machine=self._dut.name,
                     print_to_console=False)

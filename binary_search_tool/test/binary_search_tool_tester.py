@@ -43,8 +43,8 @@ class BisectingUtilsTest(unittest.TestCase):
             '--prune', '--file_args']
     binary_search_state.Main(args)
 
-    _, out, _ = command_executer.GetCommandExecuter().RunCommand(
-        'tail -n 10 logs/binary_search_state.py.out', return_output=True)
+    _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
+        'tail -n 10 logs/binary_search_state.py.out')
     ls = out.splitlines()
     for l in ls:
       t = l.find('Bad items are: ')

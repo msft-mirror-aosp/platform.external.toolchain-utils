@@ -51,8 +51,7 @@ def FindVersionForToolchain(branch, chromeos_root):
   major_version = digits.split(".")[0]
   ce = command_executer.GetCommandExecuter()
   command = "repo sync . && git branch -a | grep {0}".format(major_version)
-  _, branches, _ = ce.RunCommand(command, return_output=True,
-                                 print_to_console=False)
+  _, branches, _ = ce.RunCommandWOutput(command, print_to_console=False)
   m = re.search(r"(R\d+)", branches)
   if not m:
     logger.GetLogger().LogFatal("Cannot find version for branch {0}"
@@ -89,8 +88,7 @@ def FindBuildIdFromLog(description):
               "http://chromegw/p/tryserver.chromiumos/"
               .format(file_dir))
   ce = command_executer.GetCommandExecuter()
-  _, buildinfo, _ = ce.RunCommand(commands, return_output=True,
-                                  print_to_console=False)
+  _, buildinfo, _ = ce.RunCommandWOutput(commands, print_to_console=False)
 
   my_info = buildinfo.splitlines()
   current_line = 1
@@ -143,7 +141,7 @@ def DownloadImage(target, index, dest, version):
   download_cmd = ("$(which gsutil) cp {0} {1}".format("{0}", dest))
   ce = command_executer.GetCommandExecuter()
 
-  _, out, _ = ce.RunCommand(ls_cmd, return_output=True, print_to_console=True)
+  _, out, _ = ce.RunCommandWOutput(ls_cmd, print_to_console=True)
   lines = out.splitlines()
   download_files = ["autotest.tar", "chromeos-chrome",
                     "chromiumos_test_image", "debug.tgz",
@@ -175,7 +173,7 @@ def RemoveOldBranch():
   """Remove the branch with name BRANCH."""
   ce = command_executer.GetCommandExecuter()
   command = "git rev-parse --abbrev-ref HEAD"
-  _, out, _ = ce.RunCommand(command, return_output=True)
+  _, out, _ = ce.RunCommandWOutput(command)
   if BRANCH in out:
     command = "git checkout -B {0}".format(TMP_BRANCH)
     ce.RunCommand(command)
@@ -228,7 +226,7 @@ def UploadPatch(source):
   ce.RunCommand(commands)
 
   commands = ("yes | repo upload .   --cbr --no-verify")
-  _, _, err = ce.RunCommand(commands, return_output=True)
+  _, _, err = ce.RunCommandWOutput(commands)
   return GetPatchNum(err)
 
 
@@ -264,13 +262,13 @@ def GetGccBranch(branch):
   """Get the remote branch name from branch or version."""
   ce = command_executer.GetCommandExecuter()
   command = "git branch -a | grep {0}".format(branch)
-  _, out, _ = ce.RunCommand(command, return_output=True)
+  _, out, _ = ce.RunCommandWOutput(command)
   if not out:
     release_num = re.match(r".*(R\d+)-*", branch)
     if release_num:
       release_num = release_num.group(0)
       command = "git branch -a | grep {0}".format(release_num)
-      _, out, _ = ce.RunCommand(command, return_output=True)
+      _, out, _ = ce.RunCommandWOutput(command)
       if not out:
         GccBranchForToolchain(branch)
   if not out:

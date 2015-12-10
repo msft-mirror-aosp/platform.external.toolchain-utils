@@ -134,7 +134,7 @@ class P4Repo(Repo):
     ret = self._ce.RunCommand(command)
     assert ret == 0, 'Could not setup client.'
     command = p4client.InCheckoutDir(p4client.SaveCurrentCLNumber())
-    ret, o, _ = self._ce.RunCommand(command, return_output=True)
+    ret, o, _ = self._ce.RunCommandWOutput(command)
     assert ret == 0, 'Could not get version from client.'
     self.revision = re.search('^\d+$', o.strip(), re.MULTILINE).group(0)
     command = p4client.InCheckoutDir(p4client.Remove())
@@ -162,7 +162,7 @@ class SvnRepo(Repo):
       for mapping in self.mappings:
         remote_path, local_path = SplitMapping(mapping)
         command = 'cd %s && svnversion -c .' % (local_path)
-        ret, o, _ = self._ce.RunCommand(command, return_output=True)
+        ret, o, _ = self._ce.RunCommandWOutput(command)
         self.revision += o.strip().split(":")[-1]
         if ret: return ret
     return 0
@@ -194,7 +194,7 @@ class GitRepo(Repo):
       if ret: return ret
 
       command = 'git describe --always'
-      ret, o, _ = self._ce.RunCommand(command, return_output=True)
+      ret, o, _ = self._ce.RunCommandWOutput(command)
       self.revision = o.strip()
       return ret
 

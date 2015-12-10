@@ -179,7 +179,7 @@ class BinarySearchState(object):
 
   def PopulateItemsUsingCommand(self, command):
     ce = command_executer.GetCommandExecuter()
-    [_, out, _] = ce.RunCommand(command, return_output=True)
+    _, out, _ = ce.RunCommandWOutput(command)
     all_items = out.split()
     self.PopulateItemsUsingList(all_items)
 

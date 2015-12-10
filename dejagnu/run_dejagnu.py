@@ -270,9 +270,9 @@ class DejagnuExecuter(object):
 
   def PrepareGccDefault(self):
     """Auto emerging gcc for building purpose only."""
-    ret = self._executer.ChrootRunCommand(
+    ret = self._executer.ChrootRunCommandWOutput(
         self._chromeos_root,
-        'equery w cross-%s/gcc' % self._target, return_output=True)[1]
+        'equery w cross-%s/gcc' % self._target)[1]
     ret = path.basename(ret.strip())
     # ret is expected to be something like 'gcc-4.6.2-r11.ebuild' or
     # 'gcc-9999.ebuild' parse it.
@@ -316,8 +316,8 @@ class DejagnuExecuter(object):
     cmd = 'cd {0} ; {1} --build_dir={0}'.format(
         self._gcc_top_build_dir, validate_failures_py)
     self.MountGccSourceAndBuildDir()
-    ret = self._executer.ChrootRunCommand(
-      self._chromeos_root, cmd, return_output=True)
+    ret = self._executer.ChrootRunCommandWOutput(
+      self._chromeos_root, cmd)
     if ret[0] != 0:
       self._l.LogWarning('*** validate_failures.py exited with non-zero code,'
                          'please run it manually inside chroot - \n'

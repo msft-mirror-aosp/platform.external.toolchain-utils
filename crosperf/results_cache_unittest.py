@@ -713,13 +713,13 @@ class ResultTest(unittest.TestCase):
     f1 = os.path.join(test_dir, 'machine.txt')
     f2 = os.path.join(base_dir, 'machine.txt')
     cmd = 'diff %s %s' % (f1, f2)
-    [_, out, _] = self.result._ce.RunCommand(cmd, return_output=True)
+    [_, out, _] = self.result._ce.RunCommandWOutput(cmd)
     self.assertEqual(len(out), 0)
 
     f1 = os.path.join(test_dir, 'results.txt')
     f2 = os.path.join(base_dir, 'results.txt')
     cmd = 'diff %s %s' % (f1, f2)
-    [_, out, _] = self.result._ce.RunCommand(cmd, return_output=True)
+    [_, out, _] = self.result._ce.RunCommandWOutput(cmd)
     self.assertEqual(len(out), 0)
 
     # Clean up after test.

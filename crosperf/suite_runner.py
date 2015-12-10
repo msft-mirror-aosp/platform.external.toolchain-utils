@@ -85,9 +85,8 @@ class SuiteRunner(object):
                        "else "
                        "  cat scaling_max_freq ; "
                        "fi")
-    ret, freqs_str, _ = self._ce.CrosRunCommand(
-        get_avail_freqs, return_output=True, machine=machine_name,
-        chromeos_root=chromeos_root)
+    ret, freqs_str, _ = self._ce.CrosRunCommandWOutput(
+        get_avail_freqs, machine=machine_name, chromeos_root=chromeos_root)
     self._logger.LogFatalIf(ret, "Could not get available frequencies "
                             "from machine: %s" % machine_name)
     freqs = freqs_str.split()
@@ -163,11 +162,9 @@ class SuiteRunner(object):
     # Use --no-ns-pid so that cros_sdk does not create a different
     # process namespace and we can kill process created easily by
     # their process group.
-    return self._ce.ChrootRunCommand(label.chromeos_root,
-                                     command,
-                                     True,
-                                     self._ct,
-                                     cros_sdk_options="--no-ns-pid")
+    return self._ce.ChrootRunCommandWOutput(
+        label.chromeos_root, command, command_terminator=self._ct,
+        cros_sdk_options="--no-ns-pid")
 
   def RemoveTelemetryTempFile (self, machine, chromeos_root):
     filename = "telemetry@%s" % machine
@@ -230,11 +227,9 @@ class SuiteRunner(object):
     if self.log_level != "verbose":
       self._logger.LogOutput("Running test.")
       self._logger.LogOutput("CMD: %s" % cmd)
-    return self._ce.ChrootRunCommand(label.chromeos_root,
-                                     cmd,
-                                     return_output=True,
-                                     command_terminator=self._ct,
-                                     cros_sdk_options=chrome_root_options)
+    return self._ce.ChrootRunCommandWOutput(
+        label.chromeos_root, cmd, command_terminator=self._ct,
+        cros_sdk_options=chrome_root_options)
 
 
   def Telemetry_Run(self, machine, label, benchmark, profiler_args):
@@ -272,8 +267,7 @@ class SuiteRunner(object):
     if self.log_level != "verbose":
       self._logger.LogOutput("Running test.")
       self._logger.LogOutput("CMD: %s" % cmd)
-    return self._ce.RunCommand(cmd, return_output=True,
-                               print_to_console=False)
+    return self._ce.RunCommandWOutput(cmd, print_to_console=False)
 
   def Terminate(self):
     self._ct.Terminate()

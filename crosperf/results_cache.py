@@ -137,10 +137,8 @@ class Result(object):
 
     command = ("python generate_test_report --no-color --csv %s" %
                (os.path.join("/tmp", os.path.basename(self._temp_dir))))
-    [_, out, _] = self._ce.ChrootRunCommand(self._chromeos_root,
-                                            command,
-                                            return_output=True,
-                                            print_to_console=False)
+    _, out, _ = self._ce.ChrootRunCommandWOutput(
+        self._chromeos_root, command, print_to_console=False)
     keyvals_dict = {}
     tmp_dir_in_chroot = misc.GetInsideChrootPath(self._chromeos_root,
                                                  self._temp_dir)
@@ -175,8 +173,7 @@ class Result(object):
 
     command = "find %s %s" % (self.results_dir,
                               find_args)
-    ret, out, _ = self._ce.RunCommand(command, return_output=True,
-                                      print_to_console=False)
+    ret, out, _ = self._ce.RunCommandWOutput(command, print_to_console=False)
     if ret:
       raise Exception("Could not run find command!")
     return out
@@ -239,8 +236,7 @@ class Result(object):
                   self._board,
                   chroot_perf_data_file,
                   chroot_perf_report_file))
-      self._ce.ChrootRunCommand(self._chromeos_root,
-                                command)
+      self._ce.ChrootRunCommand(self._chromeos_root, command)
 
       # Add a keyval to the dictionary for the events captured.
       perf_report_files.append(

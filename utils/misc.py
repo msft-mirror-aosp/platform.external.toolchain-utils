@@ -29,8 +29,7 @@ def GetChromeOSVersionFromLSBVersion(lsb_version):
   ce = command_executer.GetCommandExecuter()
   command = ("git ls-remote "
              "https://chromium.googlesource.com/chromiumos/manifest.git")
-  ret, out, _ = ce.RunCommand(command, return_output=True,
-                              print_to_console=False)
+  ret, out, _ = ce.RunCommandWOutput(command, print_to_console=False)
   assert ret == 0, "Command %s failed" % command
   lower = []
   for line in out.splitlines():
@@ -219,9 +218,7 @@ def GetCtargetFromBoard(board, chromeos_root):
   command = ("source %s; get_ctarget_from_board %s" %
              (TOOLCHAIN_UTILS_PATH, base_board))
   ce = command_executer.GetCommandExecuter()
-  ret, out, _ = ce.ChrootRunCommand(chromeos_root,
-                                    command,
-                                    return_output=True)
+  ret, out, _ = ce.ChrootRunCommandWOutput(chromeos_root, command)
   if ret != 0:
     raise ValueError("Board %s is invalid!" % board)
   # Remove ANSI escape sequences.
@@ -235,9 +232,7 @@ def GetArchFromBoard(board, chromeos_root):
   command = ("source %s; get_board_arch %s" %
              (TOOLCHAIN_UTILS_PATH, base_board))
   ce = command_executer.GetCommandExecuter()
-  ret, out, _ = ce.ChrootRunCommand(chromeos_root,
-                                    command,
-                                    return_output=True)
+  ret, out, _ = ce.ChrootRunCommandWOutput(chromeos_root, command)
   if ret != 0:
     raise ValueError("Board %s is invalid!" % board)
   # Remove ANSI escape sequences.
@@ -285,7 +280,7 @@ def MergeEnvStringWithDict(env_string, env_dict, prepend=True):
     else:
       new_env = "%s=\"$%s %s\"" % (k, k, v)
     command = "; ".join([env_string, new_env, "echo $%s" % k])
-    ret, out, _ = ce.RunCommand(command, return_output=True)
+    ret, out, _ = ce.RunCommandWOutput(command)
     override_env_list.append("%s=%r" % (k, out.strip()))
   ret = env_string + " " + " ".join(override_env_list)
   return ret.strip()
@@ -295,7 +290,7 @@ def GetAllImages(chromeos_root, board):
   ce = command_executer.GetCommandExecuter()
   command = ("find %s/src/build/images/%s -name chromiumos_test_image.bin" %
              (chromeos_root, board))
-  ret, out, _ = ce.RunCommand(command, return_output=True)
+  ret, out, _ = ce.RunCommandWOutput(command)
   assert ret == 0, "Could not run command: %s" % command
   return out.splitlines()
 
@@ -380,8 +375,8 @@ def GitGetCommitHash(git_dir, commit_symbolic_name):
 
   command = ('cd {0} && git log -n 1 --pretty="format:%H" {1}').format(
       git_dir, commit_symbolic_name)
-  rv, out, _ = command_executer.GetCommandExecuter().RunCommand(
-      command, return_output=True, print_to_console=False)
+  rv, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
+      command, print_to_console=False)
   if rv == 0:
     return out.strip()
   return None
@@ -422,8 +417,8 @@ def GetGitChangesAsList(git_dir, path=None, staged=False):
     command += " --cached"
   if path:
     command += " -- " + path
-  _, out, _ = command_executer.GetCommandExecuter().RunCommand(
-      command, return_output=True, print_to_console=False)
+  _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
+      command, print_to_console=False)
   rv = []
   for line in out.splitlines():
     rv.append(line)
@@ -457,7 +452,7 @@ def DeleteChromeOsTree(chromeos_root, dry_run=False):
     print cmd0
   else:
     if command_executer.GetCommandExecuter().RunCommand(
-        cmd0, return_output=False, print_to_console=True) != 0:
+        cmd0, print_to_console=True) != 0:
       return False
 
   cmd1 = ('export CHROMEOSDIRNAME="$(dirname $(cd {0} && pwd))" && '
@@ -469,7 +464,7 @@ def DeleteChromeOsTree(chromeos_root, dry_run=False):
     return True
 
   return command_executer.GetCommandExecuter().RunCommand(
-      cmd1, return_output=False, print_to_console=True) == 0
+      cmd1, print_to_console=True) == 0
 
 
 def ApplyGerritPatches(chromeos_root,

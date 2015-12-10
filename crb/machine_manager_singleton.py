@@ -56,8 +56,8 @@ class MachineManagerSingleton(object):
       if locked:
         ce = command_executer.GetCommandExecuter()
         command = "cat %s" % image_chromeos.checksum_file
-        ret, out, err = ce.CrosRunCommand(
-            command, return_output=True, chromeos_root=self.chromeos_root,
+        ret, out, err = ce.CrosRunCommandWOutput(
+            command, chromeos_root=self.chromeos_root,
             machine=cros_machine.name)
         if ret == 0:
           cros_machine.checksum = out.strip()

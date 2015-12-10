@@ -48,7 +48,7 @@ class MountPoint:
     ce = command_executer.GetCommandExecuter()
     mount_signature = "%s on %s" % (self.external_dir, self.mount_dir)
     command = "mount"
-    retval, out, err = ce.RunCommand(command, return_output=True)
+    retval, out, err = ce.RunCommandWOutput(command)
     if mount_signature not in out:
       retval = self.CreateAndOwnDir(self.mount_dir)
       logger.GetLogger().LogFatalIf(retval, "Cannot create mount_dir!")
@@ -239,12 +239,13 @@ def Main(argv, return_output=False):
       command += " sudo ./" + command_file
     else:
       command += " ./" + command_file
-    retval = command_executer.GetCommandExecuter().RunCommand(command, return_output)
+    retval = command_executer.GetCommandExecuter().RunCommandGeneric(
+        command, return_output)
     return retval
   else:
     os.chdir("%s/src/scripts" % chromeos_root)
     ce = command_executer.GetCommandExecuter()
-    [ret, out, err] = ce.RunCommand("which cros_sdk", return_output=True)
+    _, out, _ = ce.RunCommandWOutput("which cros_sdk")
     cros_sdk_binary = out.split()[0]
     return os.execv(cros_sdk_binary, ["", "--enter"])
 

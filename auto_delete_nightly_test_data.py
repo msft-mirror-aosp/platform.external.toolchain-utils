@@ -47,8 +47,7 @@ def CleanNumberedDir(s, dry_run=False):
   if dry_run:
     print cmd
   else:
-    if ce.RunCommand(cmd, return_output=False, print_to_console=False,
-                     terminated_timeout=480) == 0:
+    if ce.RunCommand(cmd, print_to_console=False, terminated_timeout=480) == 0:
       print 'Successfully removed "{0}".'.format(s)
     else:
       all_succeeded = False
@@ -97,7 +96,7 @@ def CleanChromeOsTmpAndImages():
          r'-amin +1440 '
          r'-exec bash -c "echo rm -fr {{}}" \; '
          r'-exec bash -c "rm -fr {{}}" \;').format(chromeos_chroot_tmp)
-  rv = ce.RunCommand(cmd, return_output=False, print_to_console=False)
+  rv = ce.RunCommand(cmd, print_to_console=False)
   if rv == 0:
     print ('Successfully cleaned chromeos tree tmp directory '
            '"{0}".'.format(chromeos_chroot_tmp))
@@ -113,7 +112,7 @@ def CleanChromeOsTmpAndImages():
          r'   -name "chromiumos_test_image.bin"    -amin +1440 \) '
          r'-exec bash -c "echo rm -f {{}}" \; '
          r'-exec bash -c "rm -f {{}}" \;').format(chromeos_chroot_tmp)
-  rv2 = ce.RunCommand(cmd, return_output=False, print_to_console=False)
+  rv2 = ce.RunCommand(cmd, print_to_console=False)
   if rv2 == 0:
     print 'Successfully cleaned chromeos images.'
   else:

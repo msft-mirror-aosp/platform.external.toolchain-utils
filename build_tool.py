@@ -152,8 +152,8 @@ class Bootstrapper(object):
     # 4.1 Try to get some information about the tool dir we are using.
     cmd = 'cd {0} && git log -1 --pretty=oneline'.format(tool_dir)
     tool_dir_extra_info = None
-    ret, tool_dir_extra_info, _ = self._ce.RunCommand(
-        cmd, return_output=True, print_to_console=False)
+    ret, tool_dir_extra_info, _ = self._ce.RunCommandWOutput(
+        cmd, print_to_console=False)
     commit_message = 'Synced with tool source tree at - "{0}".'.format(tool_dir)
     if not ret:
       commit_message += '\nGit log for {0}:\n{1}'.format(
@@ -206,8 +206,8 @@ class Bootstrapper(object):
       command = ('cd "{0}" && git cat-file -p {1} '
                  '| grep -E "^tree [a-f0-9]+$" '
                  '| cut -d" " -f2').format(chrome_tool_dir, tool_branch)
-      ret, stdout, _ = self._ce.RunCommand(
-          command, return_output=True, print_to_console=False)
+      ret, stdout, _ = self._ce.RunCommandWOutput(
+          command, print_to_console=False)
       # Pipe operation always has a zero return value. So need to check if
       # stdout is valid.
       if not ret and stdout and re.match(
@@ -265,9 +265,9 @@ class Bootstrapper(object):
                              'in-complete chroot.'))
       return (False, None, None)
 
-    rv, stdout, _ = self._ce.ChrootRunCommand(
+    rv, stdout, _ = self._ce.ChrootRunCommandWOutput(
         self._chromeos_root, 'equery w sys-devel/{0}'.format(tool_name),
-        return_output=True, print_to_console=True)
+        print_to_console=True)
     if rv:
       self._logger.LogError(
           ('Failed to execute inside chroot '
@@ -433,7 +433,7 @@ class Bootstrapper(object):
         command = 'sudo emerge cross-{0}/{1}'.format(target, tool_name)
 
       rv = self._ce.ChrootRunCommand(self._chromeos_root, command,
-                                     return_output=False, print_to_console=True)
+                                     print_to_console=True)
       if rv:
         self._logger.LogError(
             'Build {0} failed for {1}, aborted.'.format(tool_name, board))
@@ -463,8 +463,7 @@ class Bootstrapper(object):
     logfile = os.path.join(self._chromeos_root, 'bootstrap.log')
     command = 'cd "{0}" && cros_sdk --delete --bootstrap |& tee "{1}"'.format(
         self._chromeos_root, logfile)
-    rv = self._ce.RunCommand(command, return_output=False,
-                             print_to_console=True)
+    rv = self._ce.RunCommand(command, print_to_console=True)
     if rv:
       self._logger.LogError('Bootstrapping failed, log file - "{0}"\n'.format(
           logfile))
@@ -492,7 +491,7 @@ class Bootstrapper(object):
     cmd = ('cd {0} && cros_sdk -- -- ./setup_board --board=amd64-host '
            '--accept_licenses=@CHROMEOS --skip_chroot_upgrade --nousepkg '
            '--reuse_pkgs_from_local_boards').format(self._chromeos_root)
-    rv = self._ce.RunCommand(cmd, return_output=False, print_to_console=True)
+    rv = self._ce.RunCommand(cmd, print_to_console=True)
     if rv:
       self._logger.LogError('Build amd64-host failed.')
       return False
@@ -504,7 +503,7 @@ class Bootstrapper(object):
            '--exclude="tmp/*" --exclude="usr/local/build/autotest/*" '
            '--sparse -I xz -vcf {1} . && sudo chmod a+r {1}').format(
                self._chromeos_root, sdk_package)
-    rv = self._ce.RunCommand(cmd, return_output=False, print_to_console=True)
+    rv = self._ce.RunCommand(cmd, print_to_console=True)
     if rv:
       self._logger.LogError('Failed to create "built-sdk.tar.xz".')
       return False
@@ -513,7 +512,7 @@ class Bootstrapper(object):
     cmd = ('cd {0} && cros_sdk --chroot new-sdk-chroot --download --replace '
            '--nousepkg --url file://{1}').format(
                self._chromeos_root, sdk_package)
-    rv = self._ce.RunCommand(cmd, return_output=False, print_to_console=True)
+    rv = self._ce.RunCommand(cmd, print_to_console=True)
     if rv:
       self._logger.LogError('Failed to install "built-sdk.tar.xz".')
       return False
@@ -523,7 +522,7 @@ class Bootstrapper(object):
     # Rename the newly created new-sdk-chroot to chroot.
     cmd = ('cd {0} && sudo mv chroot chroot-old && '
            'sudo mv new-sdk-chroot chroot').format(self._chromeos_root)
-    rv = self._ce.RunCommand(cmd, return_output=False, print_to_console=True)
+    rv = self._ce.RunCommand(cmd, print_to_console=True)
     return rv == 0
 
   def Do(self):

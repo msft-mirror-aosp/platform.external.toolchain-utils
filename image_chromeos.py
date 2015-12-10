@@ -141,11 +141,8 @@ def DoImage(argv):
       image_checksum = FileUtils().Md5File(image, log_level=log_level)
 
       command = "cat " + checksum_file
-      retval, device_checksum, _ = cmd_executer.CrosRunCommand(
-          command,
-          return_output=True,
-          chromeos_root=options.chromeos_root,
-          machine=options.remote)
+      retval, device_checksum, _ = cmd_executer.CrosRunCommandWOutput(
+          command, chromeos_root=options.chromeos_root, machine=options.remote)
 
       device_checksum = device_checksum.strip()
       image_checksum = str(image_checksum)
@@ -368,10 +365,8 @@ def VerifyChromeChecksum(chromeos_root, image, remote, log_level):
              unmount=True)
 
   command = "md5sum /opt/google/chrome/chrome"
-  [_, o, _] = cmd_executer.CrosRunCommand(command,
-                                          return_output=True,
-                                          chromeos_root=chromeos_root,
-                                          machine=remote)
+  [_, o, _] = cmd_executer.CrosRunCommandWOutput(
+      command, chromeos_root=chromeos_root, machine=remote)
   device_chrome_checksum = o.split()[0]
   if image_chrome_checksum.strip() == device_chrome_checksum.strip():
     return True

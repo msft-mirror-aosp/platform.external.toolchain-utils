@@ -139,8 +139,7 @@ def Main(argv):
     chrome_origin = "LOCAL_SOURCE"
     command = 'cros_workon --board={0} start chromeos-chrome'.format(
       options.board)
-    ret = cmd_executer.ChrootRunCommand(
-      options.chromeos_root, command, return_output=True)
+    ret = cmd_executer.ChrootRunCommandWOutput(options.chromeos_root, command)
 
     # cros_workon start returns non-zero if chromeos-chrome is already a
     # cros_workon package.

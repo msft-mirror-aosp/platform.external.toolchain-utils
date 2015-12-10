@@ -54,12 +54,15 @@ class CommandExecuter(object):
   def SetLogLevel(self, log_level):
     self.log_level = log_level
 
-  def RunCommand(self, cmd, return_output=False, machine=None,
-                 username=None, command_terminator=None,
-                 command_timeout=None,
-                 terminated_timeout=10,
-                 print_to_console=True):
-    """Run a command."""
+  def RunCommandGeneric(self, cmd, return_output=False, machine=None,
+                        username=None, command_terminator=None,
+                        command_timeout=None,
+                        terminated_timeout=10,
+                        print_to_console=True):
+    """Run a command.
+
+    Returns triplet (returncode, stdout, stderr).
+    """
 
     cmd = str(cmd)
 
@@ -73,10 +76,7 @@ class CommandExecuter(object):
     if command_terminator and command_terminator.IsTerminated():
       if self.logger:
         self.logger.LogError("Command was terminated!", print_to_console)
-      if return_output:
-        return [1, "", ""]
-      else:
-        return 1
+      return (1, "", "")
 
     if machine is not None:
       user = ""
@@ -162,7 +162,31 @@ class CommandExecuter(object):
     p.wait()
     if return_output:
       return (p.returncode, full_stdout, full_stderr)
-    return p.returncode
+    return (p.returncode, "", "")
+
+  def RunCommand(self, *args, **kwargs):
+    """Run a command.
+
+    Takes the same arguments as RunCommandGeneric except for return_output.
+    Returns a single value returncode.
+    """
+    # Make sure that args does not overwrite 'return_output'
+    assert len(args) <= 1
+    assert 'return_output' not in kwargs
+    kwargs['return_output'] = False
+    return self.RunCommandGeneric(*args, **kwargs)[0]
+
+  def RunCommandWOutput(self, *args, **kwargs):
+    """Run a command.
+
+    Takes the same arguments as RunCommandGeneric except for return_output.
+    Returns a triplet (returncode, stdout, stderr).
+    """
+    # Make sure that args does not overwrite 'return_output'
+    assert len(args) <= 1
+    assert 'return_output' not in kwargs
+    kwargs['return_output'] = True
+    return self.RunCommandGeneric(*args, **kwargs)
 
   def RemoteAccessInitCommand(self, chromeos_root, machine):
     command = ""
@@ -187,18 +211,21 @@ class CommandExecuter(object):
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
     command += "\nlearn_board"
     command += "\necho ${FLAGS_board}"
-    retval, output, _ = self.RunCommand(command, True)
+    retval, output, _ = self.RunCommandWOutput(command)
     if self.logger:
       self.logger.LogFatalIf(retval, "learn_board command failed")
     elif retval:
       sys.exit(1)
     return output.split()[-1]
 
-  def CrosRunCommand(self, cmd, return_output=False, machine=None,
-                     command_terminator=None,
-                     chromeos_root=None, command_timeout=None,
-                     terminated_timeout=10, print_to_console=True):
-    """Run a command on a chromeos box"""
+  def CrosRunCommandGeneric(self, cmd, return_output=False, machine=None,
+                            command_terminator=None,
+                            chromeos_root=None, command_timeout=None,
+                            terminated_timeout=10, print_to_console=True):
+    """Run a command on a ChromeOS box.
+
+    Returns triplet (returncode, stdout, stderr).
+    """
 
     if self.log_level != "verbose":
       print_to_console = False
@@ -225,16 +252,16 @@ class CommandExecuter(object):
       if self.logger:
         self.logger.LogError("Could not run remote command on machine."
                              " Is the machine up?")
-      return retval
+      return (retval, "", "")
 
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
     command += "\nremote_sh bash %s" % command_file
     command += "\nl_retval=$?; echo \"$REMOTE_OUT\"; exit $l_retval"
-    retval = self.RunCommand(command, return_output,
-                             command_terminator=command_terminator,
-                             command_timeout=command_timeout,
-                             terminated_timeout=terminated_timeout,
-                             print_to_console=print_to_console)
+    retval = self.RunCommandGeneric(command, return_output,
+                                    command_terminator=command_terminator,
+                                    command_timeout=command_timeout,
+                                    terminated_timeout=terminated_timeout,
+                                    print_to_console=print_to_console)
     if return_output:
       connect_signature = ("Initiating first contact with remote host\n" +
                            "Connection OK\n")
@@ -244,11 +271,39 @@ class CommandExecuter(object):
       return modded_retval
     return retval
 
-  def ChrootRunCommand(self, chromeos_root, command, return_output=False,
-                       command_terminator=None, command_timeout=None,
-                       terminated_timeout=10,
-                       print_to_console=True,
-                       cros_sdk_options=""):
+  def CrosRunCommand(self, *args, **kwargs):
+    """Run a command on a ChromeOS box.
+
+    Takes the same arguments as CrosRunCommandGeneric except for return_output.
+    Returns a single value returncode.
+    """
+    # Make sure that args does not overwrite 'return_output'
+    assert len(args) <= 1
+    assert 'return_output' not in kwargs
+    kwargs['return_output'] = False
+    return self.CrosRunCommandGeneric(*args, **kwargs)[0]
+
+  def CrosRunCommandWOutput(self, *args, **kwargs):
+    """Run a command on a ChromeOS box.
+
+    Takes the same arguments as CrosRunCommandGeneric except for return_output.
+    Returns a triplet (returncode, stdout, stderr).
+    """
+    # Make sure that args does not overwrite 'return_output'
+    assert len(args) <= 1
+    assert 'return_output' not in kwargs
+    kwargs['return_output'] = True
+    return self.CrosRunCommandGeneric(*args, **kwargs)
+
+  def ChrootRunCommandGeneric(self, chromeos_root, command, return_output=False,
+                              command_terminator=None, command_timeout=None,
+                              terminated_timeout=10, print_to_console=True,
+                              cros_sdk_options=""):
+    """Runs a command within the chroot.
+
+    Returns triplet (returncode, stdout, stderr).
+    """
+
 
     if self.log_level != "verbose":
       print_to_console = False
@@ -283,20 +338,44 @@ class CommandExecuter(object):
                 cros_sdk_options,
                 misc.CHROMEOS_SCRIPTS_DIR,
                 os.path.basename(command_file)))
-    ret = self.RunCommand(command, return_output,
-                          command_terminator=command_terminator,
-                          command_timeout=command_timeout,
-                          terminated_timeout=terminated_timeout,
-                          print_to_console=print_to_console)
+    ret = self.RunCommandGeneric(command, return_output,
+                                 command_terminator=command_terminator,
+                                 command_timeout=command_timeout,
+                                 terminated_timeout=terminated_timeout,
+                                 print_to_console=print_to_console)
     os.remove(command_file)
     return ret
 
+  def ChrootRunCommand(self, *args, **kwargs):
+    """Runs a command within the chroot.
 
-  def RunCommands(self, cmdlist, return_output=False, machine=None,
+    Takes the same arguments as ChrootRunCommandGeneric except for
+    return_output.
+    Returns a single value returncode.
+    """
+    # Make sure that args does not overwrite 'return_output'
+    assert len(args) <= 2
+    assert 'return_output' not in kwargs
+    kwargs['return_output'] = False
+    return self.ChrootRunCommandGeneric(*args, **kwargs)[0]
+
+  def ChrootRunCommandWOutput(self, *args, **kwargs):
+    """Runs a command within the chroot.
+
+    Takes the same arguments as ChrootRunCommandGeneric except for
+    return_output.
+    Returns a triplet (returncode, stdout, stderr).
+    """
+    # Make sure that args does not overwrite 'return_output'
+    assert len(args) <= 2
+    assert 'return_output' not in kwargs
+    kwargs['return_output'] = True
+    return self.ChrootRunCommandGeneric(*args, **kwargs)
+
+  def RunCommands(self, cmdlist, machine=None,
                   username=None, command_terminator=None):
     cmd = " ;\n" .join(cmdlist)
-    return self.RunCommand(cmd, return_output, machine, username,
-                           command_terminator)
+    return self.RunCommand(cmd, machine, username, command_terminator)
 
   def CopyFiles(self, src, dest, src_machine=None, dest_machine=None,
                 src_user=None, dest_user=None, recursive=True,
@@ -484,10 +563,10 @@ class MockCommandExecuter(CommandExecuter):
   def __init__(self, log_level, logger_to_set=None):
     super(MockCommandExecuter, self).__init__(log_level, logger_to_set)
 
-  def RunCommand(self, cmd, return_output=False, machine=None,
-                 username=None, command_terminator=None,
-                 command_timeout=None, terminated_timeout=10,
-                 print_to_console=True):
+  def RunCommandGeneric(self, cmd, return_output=False, machine=None,
+                        username=None, command_terminator=None,
+                        command_timeout=None, terminated_timeout=10,
+                        print_to_console=True):
     assert not command_timeout
     cmd = str(cmd)
     if machine is None:
@@ -496,8 +575,17 @@ class MockCommandExecuter(CommandExecuter):
       username = "current"
     logger.GetLogger().LogCmd("(Mock) " + cmd, machine,
                               username, print_to_console)
-    return 0
+    return (0, "", "")
 
+  def RunCommand(self, *args, **kwargs):
+    assert 'return_output' not in kwargs
+    kwargs['return_output'] = False
+    return self.RunCommandGeneric(*args, **kwargs)[0]
+
+  def RunCommandWOutput(self, *args, **kwargs):
+    assert 'return_output' not in kwargs
+    kwargs['return_output'] = True
+    return self.RunCommandGeneric(*args, **kwargs)
 
 class CommandTerminator(object):
   """Object to request termination of a command in execution."""

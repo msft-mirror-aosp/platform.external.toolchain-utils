@@ -161,9 +161,9 @@ class DejagnuExecuter(object):
     self.PrepareGdbDefault()
 
   def PrepareGdbDefault(self):
-    ret = self._executer.ChrootRunCommand(
+    ret = self._executer.ChrootRunCommandWOutput(
         self._chromeos_root,
-        'equery w cross-%s/gdb' % self._target, return_output=True)[1]
+        'equery w cross-%s/gdb' % self._target)[1]
     ret = path.basename(ret.strip())
 
     matcher = re.match(r'(.*).ebuild', ret)

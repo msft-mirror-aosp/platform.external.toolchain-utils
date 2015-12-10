@@ -114,20 +114,16 @@ class CrosMachine(object):
     #TODO yunlian: when the machine in rebooting, it will not return
     #meminfo, the assert does not catch it either
     command = "cat /proc/meminfo"
-    ret, self.meminfo, _ = self.ce.CrosRunCommand(
-        command, return_output=True,
-        machine=self.name,
-        chromeos_root=self.chromeos_root)
+    ret, self.meminfo, _ = self.ce.CrosRunCommandWOutput(
+        command, machine=self.name, chromeos_root=self.chromeos_root)
     assert ret == 0, "Could not get meminfo from machine: %s" % self.name
     if ret == 0:
       self._ParseMemoryInfo()
 
   def _GetCPUInfo(self):
     command = "cat /proc/cpuinfo"
-    ret, self.cpuinfo, _ = self.ce.CrosRunCommand(
-        command, return_output=True,
-        machine=self.name,
-        chromeos_root=self.chromeos_root)
+    ret, self.cpuinfo, _ = self.ce.CrosRunCommandWOutput(
+        command, machine=self.name, chromeos_root=self.chromeos_root)
     assert ret == 0, "Could not get cpuinfo from machine: %s" % self.name
 
   def _ComputeMachineChecksumString(self):
@@ -146,18 +142,16 @@ class CrosMachine(object):
 
   def _GetMachineID(self):
     command = "dump_vpd_log --full --stdout"
-    _, if_out, _ = self.ce.CrosRunCommand(command, return_output=True,
-                                          machine=self.name,
-                                          chromeos_root=self.chromeos_root)
+    _, if_out, _ = self.ce.CrosRunCommandWOutput(
+        command, machine=self.name, chromeos_root=self.chromeos_root)
     b = if_out.splitlines()
     a = [l for l in b if "Product" in l]
     if len(a):
       self.machine_id = a[0]
       return
     command = "ifconfig"
-    _, if_out, _ = self.ce.CrosRunCommand(command, return_output=True,
-                                          machine=self.name,
-                                          chromeos_root=self.chromeos_root)
+    _, if_out, _ = self.ce.CrosRunCommandWOutput(
+        command, machine=self.name, chromeos_root=self.chromeos_root)
     b = if_out.splitlines()
     a = [l for l in b if "HWaddr" in l]
     if len(a):
@@ -227,9 +221,8 @@ class MachineManager(object):
     """Get the version of Chrome running on the DUT."""
 
     cmd = "/opt/google/chrome/chrome --version"
-    ret, version, _ = self.ce.CrosRunCommand(cmd, return_output=True,
-                                             machine=machine.name,
-                                             chromeos_root=self.chromeos_root)
+    ret, version, _ = self.ce.CrosRunCommandWOutput(
+        cmd, machine=machine.name, chromeos_root=self.chromeos_root)
     if ret != 0:
       raise CrosCommandError("Couldn't get Chrome version from %s."
                              % machine.name)
@@ -340,8 +333,8 @@ class MachineManager(object):
       if locked:
         self._machines.append(cros_machine)
         command = "cat %s" % CHECKSUM_FILE
-        ret, out, _ = self.ce.CrosRunCommand(
-            command, return_output=True, chromeos_root=self.chromeos_root,
+        ret, out, _ = self.ce.CrosRunCommandWOutput(
+            command, chromeos_root=self.chromeos_root,
             machine=cros_machine.name)
         if ret == 0:
           cros_machine.checksum = out.strip()

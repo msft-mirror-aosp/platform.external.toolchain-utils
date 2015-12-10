@@ -123,8 +123,7 @@ def GetBuildInfo(file_dir, builder):
         commands += " -b release"
       else:
         commands += " -b %s" % builder
-    _, buildinfo, _ = ce.RunCommand(commands, return_output=True,
-                                    print_to_console=False)
+    _, buildinfo, _ = ce.RunCommandWOutput(commands, print_to_console=False)
     build_log = buildinfo.splitlines()
     return build_log
 
@@ -138,9 +137,8 @@ def FindArchiveImage(chromeos_root, build, build_id):
     ce = command_executer.GetCommandExecuter()
     command = ("gsutil ls gs://chromeos-image-archive/trybot-%s/*b%s"
                "/chromiumos_test_image.tar.xz" % (build, build_id))
-    retval, out, err = ce.ChrootRunCommand(chromeos_root, command,
-                                           return_output=True,
-                                           print_to_console=False)
+    retval, out, err = ce.ChrootRunCommandWOutput(chromeos_root, command,
+                                                  print_to_console=False)
     #
     # If build_id is not unique, there may be multiple archive images
     # to choose from; sort them & pick the first (newest).
@@ -214,7 +212,7 @@ def GetTrybotImage(chromeos_root, buildbot_name, patch_list, build_tag,
     command = ("./cbuildbot --remote --nochromesdk --notests"
                " --remote-description=%s %s %s %s"
                % (description, toolchain_flags, patch_arg, build))
-    _, out, _ = ce.RunCommand(command, return_output=True)
+    _, out, _ = ce.RunCommandWOutput(command)
     if "Tryjob submitted!" not in out:
       logger.GetLogger().LogFatal("Error occurred while launching trybot job: "
                                   "%s" % command)

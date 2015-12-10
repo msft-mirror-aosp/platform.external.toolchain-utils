@@ -150,10 +150,10 @@ class SuiteRunnerTest(unittest.TestCase):
 
 
 
-  @mock.patch.object (command_executer.CommandExecuter, 'CrosRunCommand')
+  @mock.patch.object (command_executer.CommandExecuter, 'CrosRunCommandWOutput')
   def test_get_highest_static_frequency(self, mock_cros_runcmd):
 
-    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd
     mock_cros_runcmd.return_value = [ 0, '1666000 1333000 1000000', '']
     freq = self.runner.GetHighestStaticFrequency ('lumpy1.cros', '/tmp/chromeos')
     self.assertEqual(freq, '1666000')
@@ -199,7 +199,8 @@ class SuiteRunnerTest(unittest.TestCase):
 
 
   @mock.patch.object (command_executer.CommandExecuter, 'CrosRunCommand')
-  @mock.patch.object (command_executer.CommandExecuter, 'ChrootRunCommand')
+  @mock.patch.object (command_executer.CommandExecuter,
+                      'ChrootRunCommandWOutput')
   def test_test_that_run(self, mock_chroot_runcmd, mock_cros_runcmd):
 
     def FakeRebootMachine (machine, chroot):
@@ -223,7 +224,7 @@ class SuiteRunnerTest(unittest.TestCase):
     self.assertTrue(raised_exception)
 
     mock_chroot_runcmd.return_value = 0
-    self.mock_cmd_exec.ChrootRunCommand = mock_chroot_runcmd
+    self.mock_cmd_exec.ChrootRunCommandWOutput = mock_chroot_runcmd
     self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
     res = self.runner.Test_That_Run ('lumpy1.cros', self.mock_label,
                                      self.test_that_bench, '--iterations=2',
@@ -234,25 +235,25 @@ class SuiteRunnerTest(unittest.TestCase):
     self.assertEqual(mock_cros_runcmd.call_args_list[0][0],
                      ('rm -rf /usr/local/autotest/results/*',))
     args_list = mock_chroot_runcmd.call_args_list[0][0]
-    self.assertEqual(len(args_list), 4)
+    args_dict = mock_chroot_runcmd.call_args_list[0][1]
+    self.assertEqual(len(args_list), 2)
     self.assertEqual(args_list[0], '/tmp/chromeos')
     self.assertEqual(args_list[1], ('/usr/bin/test_that --autotest_dir '
                                     '~/trunk/src/third_party/autotest/files '
                                     '--fast  --board=lumpy '
                                     '--iterations=2 lumpy1.cros octane'))
-    self.assertTrue(args_list[2])
-    self.assertEqual(args_list[3], self.mock_cmd_term)
-
+    self.assertEqual(args_dict['command_terminator'], self.mock_cmd_term)
     self.real_logger._LogMsg = save_log_msg
 
 
   @mock.patch.object (os.path, 'isdir')
-  @mock.patch.object (command_executer.CommandExecuter, 'ChrootRunCommand')
+  @mock.patch.object (command_executer.CommandExecuter,
+                      'ChrootRunCommandWOutput')
   def test_telemetry_crosperf_run(self, mock_chroot_runcmd, mock_isdir):
 
     mock_isdir.return_value = True
     mock_chroot_runcmd.return_value = 0
-    self.mock_cmd_exec.ChrootRunCommand = mock_chroot_runcmd
+    self.mock_cmd_exec.ChrootRunCommandWOutput = mock_chroot_runcmd
     profiler_args = ('--profiler=custom_perf --profiler_args=\'perf_options'
                      '="record -a -e cycles,instructions"\'')
     res = self.runner.Telemetry_Crosperf_Run ('lumpy1.cros', self.mock_label,
@@ -274,13 +275,12 @@ class SuiteRunnerTest(unittest.TestCase):
                       '--chrome_root_mount=/tmp/chrome_root '
                       'FEATURES="-usersandbox" CHROME_ROOT=/tmp/chrome_root'))
     self.assertEqual(args_dict['command_terminator'], self.mock_cmd_term)
-    self.assertTrue(args_dict['return_output'])
-    self.assertEqual(len(args_dict), 3)
+    self.assertEqual(len(args_dict), 2)
 
 
   @mock.patch.object (os.path, 'isdir')
   @mock.patch.object (os.path, 'exists')
-  @mock.patch.object (command_executer.CommandExecuter, 'RunCommand')
+  @mock.patch.object (command_executer.CommandExecuter, 'RunCommandWOutput')
   def test_telemetry_run(self, mock_runcmd, mock_exists, mock_isdir):
 
     def FakeLogMsg (fd, termfd, msg, flush):
@@ -290,7 +290,7 @@ class SuiteRunnerTest(unittest.TestCase):
     self.real_logger._LogMsg = FakeLogMsg
     mock_runcmd.return_value = 0
 
-    self.mock_cmd_exec.RunCommand = mock_runcmd
+    self.mock_cmd_exec.RunCommandWOutput = mock_runcmd
     self.runner._logger = self.real_logger
 
     profiler_args = ('--profiler=custom_perf --profiler_args=\'perf_options'
