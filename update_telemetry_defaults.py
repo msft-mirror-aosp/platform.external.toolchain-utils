@@ -89,6 +89,9 @@ class TelemetryDefaults(object):
     else:
       print ("Cannot find benchmark named '%s'" % benchmark)
 
+  def GetDefault (self):
+    return self._defaults
+
   def RemoveBenchmark (self, benchmark):
     if benchmark in self._defaults:
       del self._defaults[benchmark]

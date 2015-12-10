@@ -1,16 +1,34 @@
-#!/usr/bin/python
-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
+"""A module to handle the report format."""
+from __future__ import print_function
 
 import datetime
 import json
 import os
 
-from cros_utils.tabulator import *
-
+from cros_utils.tabulator import AmeanResult
+from cros_utils.tabulator import Cell
+from cros_utils.tabulator import CoeffVarFormat
+from cros_utils.tabulator import CoeffVarResult
+from cros_utils.tabulator import Column
+from cros_utils.tabulator import Format
+from cros_utils.tabulator import GmeanRatioResult
+from cros_utils.tabulator import LiteralResult
+from cros_utils.tabulator import MaxResult
+from cros_utils.tabulator import MinResult
+from cros_utils.tabulator import PValueFormat
+from cros_utils.tabulator import PValueResult
+from cros_utils.tabulator import RatioFormat
+from cros_utils.tabulator import RawResult
+from cros_utils.tabulator import StdResult
+from cros_utils.tabulator import TableFormatter
+from cros_utils.tabulator import TableGenerator
+from cros_utils.tabulator import TablePrinter
 from update_telemetry_defaults import TelemetryDefaults
+
 from column_chart import ColumnChart
 from results_organizer import ResultOrganizer
 from perf_table import PerfTable
@@ -31,11 +49,11 @@ def ParseChromeosImage(chromeos_image):
   part after '/chroot/tmp' in the second case.
 
   Args:
-    chromeos_image:  String containing the path to the chromeos_image that
+      chromeos_image: string containing the path to the chromeos_image that
       crosperf used for the test.
 
   Returns:
-    version, image:  The results of parsing the input string, as explained
+      version, image: The results of parsing the input string, as explained
       above.
   """
   version = ''
@@ -59,9 +77,10 @@ def ParseChromeosImage(chromeos_image):
     loc += len('/chroot/tmp')
     real_file = real_file[loc:]
   image = real_file
-  return version,image
+  return version, image
 
 class ResultsReport(object):
+  """Class to handle the report format."""
   MAX_COLOR_CODE = 255
   PERF_ROWS = 5
 
@@ -153,6 +172,7 @@ class ResultsReport(object):
     result = ro.result
     label_name = ro.labels
     for item in result:
+      benchmark = None
       runs = result[item]
       for benchmark in self.benchmarks:
         if benchmark.name == item:
@@ -229,6 +249,7 @@ class ResultsReport(object):
 
 
 class TextResultsReport(ResultsReport):
+  """Class to generate text result report."""
   TEXT = """
 ===========================================
 Results report for: '%s'
@@ -288,7 +309,6 @@ CPUInfo
     """Generate the report for email and console."""
     status_table = self.GetStatusTable()
     summary_table = self.GetSummaryTables()
-    full_table = self.GetFullTables()
     perf_table = self.GetSummaryTables(perf=True)
     if not perf_table:
       perf_table = None
@@ -313,6 +333,7 @@ CPUInfo
 
 
 class HTMLResultsReport(ResultsReport):
+  """Class to generate html result report."""
 
   HTML = """
 <html>
@@ -548,7 +569,7 @@ pre {
     return charts
 
 class JSONResultsReport(ResultsReport):
-
+  """class to generate JASON report."""
   def __init__(self, experiment, date=None, time=None):
     super(JSONResultsReport, self).__init__(experiment)
     self.ro = ResultOrganizer(experiment.benchmark_runs,
@@ -560,7 +581,7 @@ class JSONResultsReport(ResultsReport):
     self.defaults = TelemetryDefaults()
     if not self.date:
       timestamp = datetime.datetime.strftime(datetime.datetime.now(),
-                                           "%Y-%m-%d %H:%M:%S")
+                                             "%Y-%m-%d %H:%M:%S")
       date, time = timestamp.split(" ")
       self.date = date
       self.time = time
@@ -572,7 +593,7 @@ class JSONResultsReport(ResultsReport):
     for test, test_results in self.ro.result.iteritems():
       for i, label in enumerate(self.ro.labels):
         label_results = test_results[i]
-        for j, iter_Results in enumerate(label_results):
+        for j in enumerate(label_results):
           iter_results = label_results[j]
           json_results = dict()
           json_results['date'] = self.date
@@ -604,13 +625,13 @@ class JSONResultsReport(ResultsReport):
           else:
             json_results['pass'] = True
             # Get overall results.
-            if test in self.defaults._defaults:
-              default_result_fields = self.defaults._defaults[test]
+            if test in self.defaults.GetDefault():
+              default_result_fields = self.defaults.GetDefault()[test]
               value = []
               for f in default_result_fields:
                 v = iter_results[f]
                 if type(v) == list:
-                    v = v[0]
+                  v = v[0]
                 item = (f, float(v))
                 value.append(item)
               json_results['overall_result'] = value
@@ -634,8 +655,8 @@ class JSONResultsReport(ResultsReport):
           final_results.append(json_results)
 
     filename = "report_%s_%s_%s.%s.json" % (board, self.date,
-                                           self.time.replace(':','.'),
-                                           compiler_string)
+                                            self.time.replace(':', '.'),
+                                            compiler_string)
     fullname = os.path.join(results_dir, filename)
     with open(fullname, "w") as fp:
       json.dump(final_results, fp, indent=2)
