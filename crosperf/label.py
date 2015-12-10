@@ -1,19 +1,21 @@
-#!/usr/bin/python
-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """The label of benchamrks."""
 
+from __future__ import print_function
+
+import hashlib
 import os
 
 from image_checksummer import ImageChecksummer
-from utils.file_utils import FileUtils
-from utils import misc
+from cros_utils.file_utils import FileUtils
+from cros_utils import misc
 
 
 class Label(object):
+  """The label class."""
   def __init__(self, name, chromeos_image, chromeos_root, board, remote,
                image_args, cache_dir, cache_only, log_level, compiler,
                chrome_src=None):
@@ -51,11 +53,12 @@ class Label(object):
 
     self.chromeos_root = chromeos_root
     if not chrome_src:
-      self.chrome_src = os.path.join(self.chromeos_root,
+      self.chrome_src = os.path.join(
+          self.chromeos_root,
           ".cache/distfiles/target/chrome-src-internal")
       if not os.path.exists(self.chrome_src):
         self.chrome_src = os.path.join(self.chromeos_root,
-          ".cache/distfiles/target/chrome-src")
+                                       ".cache/distfiles/target/chrome-src")
     else:
       chromeos_src = misc.CanonicalizePath(chrome_src)
       if not chromeos_src:
@@ -85,21 +88,22 @@ class Label(object):
     return image_type
 
   def __hash__(self):
-      """Label objects are used in a map, so provide "hash" and "equal"."""
+    """Label objects are used in a map, so provide "hash" and "equal"."""
 
-      return hash(self.name)
+    return hash(self.name)
 
   def __eq__(self, other):
-      """Label objects are used in a map, so provide "hash" and "equal"."""
+    """Label objects are used in a map, so provide "hash" and "equal"."""
 
-      return isinstance(other, Label) and other.name == self.name
+    return isinstance(other, Label) and other.name == self.name
 
   def __str__(self):
-      """For better debugging."""
+    """For better debugging."""
 
-      return 'label[name="{}"]'.format(self.name)
+    return 'label[name="{}"]'.format(self.name)
 
 class MockLabel(object):
+  """The mock label class."""
   def __init__(self, name, chromeos_image, chromeos_root, board, remote,
                image_args, cache_dir, cache_only, log_level, compiler,
                chrome_src=None):
