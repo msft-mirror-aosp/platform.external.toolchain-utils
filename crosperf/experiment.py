@@ -1,10 +1,10 @@
-#!/usr/bin/python
-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """The experiment setting module."""
+
+from __future__ import print_function
 
 import os
 import time
@@ -168,17 +168,17 @@ class Experiment(object):
     return True
 
   def BenchmarkRunFinished(self, br):
-      """Update internal counters after br finishes.
+    """Update internal counters after br finishes.
 
-      Note this is only used by schedv2 and is called by multiple threads.
-      Never throw any exception here.
-      """
+    Note this is only used by schedv2 and is called by multiple threads.
+    Never throw any exception here.
+    """
 
-      assert self._schedv2 is not None
-      with self._internal_counter_lock:
-          self.num_complete += 1
-          if not br.cache_hit:
-            self.num_run_complete += 1
+    assert self._schedv2 is not None
+    with self._internal_counter_lock:
+      self.num_complete += 1
+      if not br.cache_hit:
+        self.num_run_complete += 1
 
   def Run(self):
     self.start_time = time.time()

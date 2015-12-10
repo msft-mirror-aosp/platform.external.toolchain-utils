@@ -1,9 +1,12 @@
-#!/usr/bin/python
-
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+"""Module to get the settings from experiment file."""
+
+from __future__ import print_function
+
 from cros_utils import logger
-from download_images import *
+from download_images import ImageDownloader
+
 
 class Settings(object):
   """Class representing settings (a set of fields) from an experiment file."""

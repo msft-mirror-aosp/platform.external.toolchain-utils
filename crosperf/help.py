@@ -1,6 +1,8 @@
-#!/usr/bin/python
-
 # Copyright 2011 Google Inc. All Rights Reserved.
+
+"""Module to print help message."""
+
+from __future__ import print_function
 
 import sys
 import textwrap
@@ -10,6 +12,7 @@ from settings_factory import LabelSettings
 
 
 class Help(object):
+  """The help class."""
   def GetUsage(self):
     return """%s [OPTIONS] EXPERIMENT_FILE""" % (sys.argv[0])
 

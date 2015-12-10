@@ -1,7 +1,6 @@
-#!/usr/bin/python
-
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+"""Module to represent a Field in an experiment file."""
 
 class Field(object):
   """Class representing a Field in an experiment file."""
@@ -37,6 +36,7 @@ class Field(object):
 
 
 class TextField(Field):
+  """Class of text field."""
   def __init__(self, name, required=False, default="", inheritable=False,
                description=""):
     super(TextField, self).__init__(name, required, default, inheritable,
@@ -47,6 +47,7 @@ class TextField(Field):
 
 
 class BooleanField(Field):
+  """Class of boolean field."""
   def __init__(self, name, required=False, default=False, inheritable=False,
                description=""):
     super(BooleanField, self).__init__(name, required, default, inheritable,
@@ -62,6 +63,7 @@ class BooleanField(Field):
 
 
 class IntegerField(Field):
+  """Class of integer field."""
   def __init__(self, name, required=False, default=0, inheritable=False,
                description=""):
     super(IntegerField, self).__init__(name, required, default, inheritable,
@@ -72,6 +74,7 @@ class IntegerField(Field):
 
 
 class FloatField(Field):
+  """Class of float field."""
   def __init__(self, name, required=False, default=0, inheritable=False,
                description=""):
     super(FloatField, self).__init__(name, required, default, inheritable,
@@ -82,7 +85,8 @@ class FloatField(Field):
 
 
 class ListField(Field):
-  def __init__(self, name, required=False, default=[], inheritable=False,
+  """Class of list field."""
+  def __init__(self, name, required=False, default=None, inheritable=False,
                description=""):
     super(ListField, self).__init__(name, required, default, inheritable,
                                     description)
@@ -95,6 +99,7 @@ class ListField(Field):
 
 
 class EnumField(Field):
+  """Class of enum field."""
   def __init__(self, name, options, required=False, default="",
                inheritable=False, description=""):
     super(EnumField, self).__init__(name, required, default, inheritable,
