@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -13,7 +11,7 @@ import os
 import re
 import sys
 
-from utils import misc
+from cros_utils import misc
 
 TELEMETRY_RESULT_DEFAULTS_FILE = "default-telemetry-results.json"
 
@@ -64,7 +62,7 @@ class ResultOrganizer(object):
       if not show_all_results:
         summary_list = self._GetSummaryResults(benchmark.test_name)
         if len(summary_list) > 0:
-          summary_list.append ("retval")
+          summary_list.append("retval")
         else:
           # Did not find test_name in json file; therefore show everything.
           show_all_results = True
@@ -86,10 +84,10 @@ class ResultOrganizer(object):
         cur_dict['machine_string'] = benchmark_run.machine.checksum_string
     self._DuplicatePass()
 
-  def _GetSummaryResults (self, test_name):
+  def _GetSummaryResults(self, test_name):
     dirname, _ = misc.GetRoot(sys.argv[0])
     fullname = os.path.join(dirname, TELEMETRY_RESULT_DEFAULTS_FILE)
-    if os.path.exists (fullname):
+    if os.path.exists(fullname):
       # Slurp the file into a dictionary.  The keys in the dictionary are
       # the benchmark names.  The value for a key is a list containing the
       # names of all the result fields that should be returned in a 'default'
@@ -129,7 +127,7 @@ class ResultOrganizer(object):
     for run in label:
       start_index = len(new_label)
       new_label.append(dict(run))
-      for i in range(max_dup):
+      for _ in range(max_dup):
         new_label.append({})
       new_run = new_label[start_index]
       for key, value in new_run.items():
