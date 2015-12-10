@@ -179,8 +179,7 @@ class BenchmarkRun(threading.Thread):
       if self.terminated:
         raise Exception("Thread terminated while trying to acquire machine.")
 
-      machine = self.machine_manager.AcquireMachine(self.label.chromeos_image,
-                                                    self.label, throw=False)
+      machine = self.machine_manager.AcquireMachine(self.label)
 
       if machine:
         self._logger.LogOutput("%s: Machine %s acquired at %s" %

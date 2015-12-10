@@ -347,7 +347,7 @@ class MachineManagerTest(unittest.TestCase):
     self.mock_daisy2.checksum = "fake_md5_checksum"
 
     # Test 1. Basic test. Acquire lumpy3.
-    m = self.mm.AcquireMachine(LABEL_LUMPY.chromeos_image, LABEL_LUMPY, True)
+    m = self.mm.AcquireMachine(LABEL_LUMPY)
     self.assertEqual(m, self.mock_lumpy3)
     self.assertTrue(self.mock_lumpy3.locked)
     self.assertEqual(mock_checksum.call_count, 1)
@@ -358,7 +358,7 @@ class MachineManagerTest(unittest.TestCase):
 
     # Test 3. Not all machines are the same, throw = False
     self.assertEqual(len(self.log_fatal_msgs), 0)
-    m = self.mm.AcquireMachine(LABEL_MIX.chromeos_image, LABEL_MIX, False)
+    m = self.mm.AcquireMachine(LABEL_MIX)
     self.assertEqual(len(self.log_fatal_msgs), 1)
     self.assertEqual(self.log_fatal_msgs[0],
                      '-- not all the machines are identical')
@@ -367,7 +367,7 @@ class MachineManagerTest(unittest.TestCase):
     save_locked = self.mock_lumpy1.locked
     self.mock_lumpy1.locked = False
     self.mock_lumpy1.checksum = None
-    m = self.mm.AcquireMachine(LABEL_LUMPY.chromeos_image, LABEL_LUMPY, True)
+    m = self.mm.AcquireMachine(LABEL_LUMPY)
     self.assertEqual(m, self.mock_lumpy1)
     self.assertTrue(self.mock_lumpy1.locked)
 
@@ -378,12 +378,12 @@ class MachineManagerTest(unittest.TestCase):
     self.mock_lumpy1.locked = False
     self.mock_lumpy1.checksum = "123"
     self.mock_lumpy1.released_time = time.time() - 8
-    m = self.mm.AcquireMachine(LABEL_LUMPY.chromeos_image, LABEL_LUMPY, True)
+    m = self.mm.AcquireMachine(LABEL_LUMPY)
     self.assertEqual(m, self.mock_lumpy1)
     self.assertTrue(self.mock_lumpy1.locked)
 
     # Test all machines are already locked.
-    m = self.mm.AcquireMachine(LABEL_LUMPY.chromeos_image, LABEL_LUMPY, True)
+    m = self.mm.AcquireMachine(LABEL_LUMPY)
     self.assertIsNone(m)
 
     # Restore values of mock_lumpy1, so other tests succeed.
