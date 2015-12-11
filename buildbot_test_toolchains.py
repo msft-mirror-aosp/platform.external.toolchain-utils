@@ -1,6 +1,5 @@
-#!/usr/bin/python
-"""
-Script for running nightly compiler tests on ChromeOS.
+#!/usr/bin/python2
+"""Script for running nightly compiler tests on ChromeOS.
 
 This script launches a buildbot to build ChromeOS with the latest compiler on
 a particular board; then it finds and downloads the trybot image and the
@@ -10,6 +9,9 @@ well as copying the images into the seven-day reports directory.
 """
 
 # Script to test different toolchains against ChromeOS benchmarks.
+
+from __future__ import print_function
+
 import datetime
 import optparse
 import os
@@ -38,12 +40,11 @@ WEEKLY_REPORTS_ROOT = os.path.join(CROSTC_ROOT, "weekly_test_data")
 PENDING_ARCHIVES_DIR = os.path.join(CROSTC_ROOT, "pending_archives")
 NIGHTLY_TESTS_DIR = os.path.join(CROSTC_ROOT, "nightly_test_reports")
 
-class ToolchainComparator():
-  """
-  Class for doing the nightly tests work.
-  """
+class ToolchainComparator(object):
+  """Class for doing the nightly tests work."""
 
-  def __init__(self, board, remotes, chromeos_root, weekday, patches, noschedv2=False):
+  def __init__(self, board, remotes, chromeos_root, weekday,
+               patches, noschedv2=False):
     self._board = board
     self._remotes = remotes
     self._chromeos_root = chromeos_root
@@ -62,12 +63,11 @@ class ToolchainComparator():
     timestamp = datetime.datetime.strftime(datetime.datetime.now(),
                                            "%Y-%m-%d_%H:%M:%S")
     self._reports_dir = os.path.join(NIGHTLY_TESTS_DIR,
-        "%s.%s" % (timestamp, board),
-        )
+                                     "%s.%s" % (timestamp, board),
+                                    )
 
   def _ParseVanillaImage(self, trybot_image):
-    """
-    Parse a trybot artifact name to get corresponding vanilla image.
+    """Parse a trybot artifact name to get corresponding vanilla image.
 
     This function takes an artifact name, such as
     'trybot-daisy-release/R40-6394.0.0-b1389', and returns the
@@ -79,9 +79,7 @@ class ToolchainComparator():
     return vanilla_image
 
   def _FinishSetup(self):
-    """
-    Make sure testing_rsa file is properly set up.
-    """
+    """Make sure testing_rsa file is properly set up."""
     # Fix protections on ssh key
     command = ("chmod 600 /var/cache/chromeos-cache/distfiles/target"
                "/chrome-src-internal/src/third_party/chromite/ssh_keys"
@@ -91,23 +89,22 @@ class ToolchainComparator():
       raise RuntimeError("chmod for testing_rsa failed")
 
   def _TestImages(self, trybot_image, vanilla_image):
-    """
-    Create crosperf experiment file.
+    """Create crosperf experiment file.
 
     Given the names of the trybot and vanilla images, create the
     appropriate crosperf experiment file and launch crosperf on it.
     """
-    experiment_file_dir = os.path.join (self._chromeos_root, "..",
-                                        self._weekday)
+    experiment_file_dir = os.path.join(self._chromeos_root, "..",
+                                       self._weekday)
     experiment_file_name = "%s_toolchain_experiment.txt" % self._board
 
     compiler_string = "gcc"
-    if self._patches_string == USE_LLVM_PATCH:
+    if USE_LLVM_PATCH in self._patches_string:
       experiment_file_name = "%s_llvm_experiment.txt" % self._board
       compiler_string = "llvm"
 
-    experiment_file = os.path.join (experiment_file_dir,
-                                    experiment_file_name)
+    experiment_file = os.path.join(experiment_file_dir,
+                                   experiment_file_name)
     experiment_header = """
     board: %s
     remote: %s
@@ -120,8 +117,8 @@ class ToolchainComparator():
     }
     """
     with open(experiment_file, "w") as f:
-      print >> f, experiment_header
-      print >> f, experiment_tests
+      f.write(experiment_header)
+      f.write(experiment_tests)
 
       # Now add vanilla to test file.
       official_image = """
@@ -131,7 +128,7 @@ class ToolchainComparator():
             compiler: gcc
           }
           """ % (self._chromeos_root, vanilla_image)
-      print >> f, official_image
+      f.write(official_image)
 
       label_string = "%s_trybot_image" % compiler_string
       if USE_NEXT_GCC_PATCH in self._patches:
@@ -145,7 +142,7 @@ class ToolchainComparator():
           }
           """ % (label_string, self._chromeos_root, trybot_image,
                  compiler_string)
-      print >> f, experiment_image
+      f.write(experiment_image)
 
     crosperf = os.path.join(TOOLCHAIN_DIR,
                             "crosperf",
@@ -153,10 +150,10 @@ class ToolchainComparator():
     noschedv2_opts = '--noschedv2' if self._noschedv2 else ''
     command = ("{crosperf} --no_email=True --results_dir={r_dir} "
                "--json_report=True {noschedv2_opts} {exp_file}").format(
-                crosperf=crosperf,
-                r_dir=self._reports_dir,
-                noschedv2_opts=noschedv2_opts,
-                exp_file=experiment_file)
+                   crosperf=crosperf,
+                   r_dir=self._reports_dir,
+                   noschedv2_opts=noschedv2_opts,
+                   exp_file=experiment_file)
 
     ret = self._ce.RunCommand(command)
     if ret != 0:
@@ -168,8 +165,7 @@ class ToolchainComparator():
     return
 
   def _CopyWeeklyReportFiles(self, trybot_image, vanilla_image):
-    """
-    Put files in place for running seven-day reports.
+    """Put files in place for running seven-day reports.
 
     Create tar files of the custom and official images and copy them
     to the weekly reports directory, so they exist when the weekly report
@@ -178,7 +174,7 @@ class ToolchainComparator():
     """
 
     dry_run = False
-    if (os.getlogin() != ROLE_ACCOUNT):
+    if os.getlogin() != ROLE_ACCOUNT:
       self._l.LogOutput("Running this from non-role account; not copying "
                         "tar files for weekly reports.")
       dry_run = True
@@ -187,19 +183,19 @@ class ToolchainComparator():
                                "chroot/tmp")
 
     data_dir = os.path.join(WEEKLY_REPORTS_ROOT, self._board)
-    dest_dir = os.path.join (data_dir, self._weekday)
+    dest_dir = os.path.join(data_dir, self._weekday)
     if not os.path.exists(dest_dir):
       os.makedirs(dest_dir)
 
     # Make sure dest_dir is empty (clean out last week's data).
     cmd = "cd %s; rm -Rf %s_*_image*" % (dest_dir, self._weekday)
     if dry_run:
-      print "CMD: %s" % cmd
+      print("CMD: %s" % cmd)
     else:
       self._ce.RunCommand(cmd)
 
     # Now create new tar files and copy them over.
-    labels = [ "test", "vanilla" ]
+    labels = ["test", "vanilla"]
     for label_name in labels:
       if label_name == "test":
         test_path = trybot_image
@@ -213,7 +209,7 @@ class ToolchainComparator():
                               tar_file_name,
                               dest_dir)
       if dry_run:
-        print "CMD: %s" % cmd
+        print("CMD: %s" % cmd)
         tar_ret = 0
       else:
         tar_ret = self._ce.RunCommand(cmd)
@@ -235,8 +231,7 @@ class ToolchainComparator():
       self._ce.RunCommand(command)
 
   def DoAll(self):
-    """
-    Main function inside ToolchainComparator class.
+    """Main function inside ToolchainComparator class.
 
     Launch trybot, get image names, create crosperf experiment file, run
     crosperf, and copy images into seven-day report directories.
@@ -305,13 +300,13 @@ def Main(argv):
 
   options, _ = parser.parse_args(argv)
   if not options.board:
-    print "Please give a board."
+    print("Please give a board.")
     return 1
   if not options.remote:
-    print "Please give at least one remote machine."
+    print("Please give at least one remote machine.")
     return 1
   if not options.chromeos_root:
-    print "Please specify the ChromeOS root directory."
+    print("Please specify the ChromeOS root directory.")
     return 1
   if options.patches:
     patches = options.patches
