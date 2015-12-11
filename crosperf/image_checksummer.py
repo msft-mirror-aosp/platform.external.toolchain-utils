@@ -5,8 +5,8 @@
 import os
 import threading
 
-from utils import logger
-from utils.file_utils import FileUtils
+from cros_utils import logger
+from cros_utils.file_utils import FileUtils
 
 
 class ImageChecksummer(object):

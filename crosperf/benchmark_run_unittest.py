@@ -61,7 +61,7 @@ class BenchmarkRunTest(unittest.TestCase):
                          log_level="average", compiler="gcc")
 
     logging_level = "average"
-    m = MockMachineManager("/tmp/chromeos_root", 0, logging_level, '')
+    m = MockMachineManager("/tmp/chromeos_root", 0, logging_level)
     m.AddMachine("chromeos2-row1-rack4-host9.cros")
     bench = Benchmark("page_cycler.netsim.top_10",    # name
                       "page_cycler.netsim.top_10",    # test_name
@@ -231,9 +231,6 @@ class BenchmarkRunTest(unittest.TestCase):
     br.ReadCache = FakeReadCacheException
     br.machine = FakeAcquireMachine()
     br.run()
-    self.assertEqual (self.log_output,
-                      ['Releasing machine: chromeos1-row3-rack5-host7.cros',
-                       'Released machine: chromeos1-row3-rack5-host7.cros'])
     self.assertEqual (self.log_error,
                       ["Benchmark run: 'test_run' failed: This is an exception test; it is supposed to happen"])
     self.assertEqual (self.status, ['FAILED'])

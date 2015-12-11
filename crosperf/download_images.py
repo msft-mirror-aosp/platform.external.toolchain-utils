@@ -7,6 +7,8 @@
 import ast
 import os
 
+import test_flag
+
 from utils import command_executer
 
 class MissingImage(Exception):
@@ -87,8 +89,10 @@ class ImageDownloader(object):
 
     # Verify that image exists for build_id, before attempting to
     # download it.
-    cmd = "gsutil ls %s" % image_name
-    status = self._ce.ChrootRunCommand(chromeos_root, cmd)
+    status = 0
+    if not test_flag.GetTestMode():
+      cmd = "gsutil ls %s" % image_name
+      status = self._ce.ChrootRunCommand(chromeos_root, cmd)
     if status != 0:
       raise MissingImage("Cannot find official image: %s." % image_name)
     image_path = self._DownloadImage(chromeos_root, build_id, image_name)

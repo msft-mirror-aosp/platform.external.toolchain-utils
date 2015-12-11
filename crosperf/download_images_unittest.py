@@ -2,13 +2,15 @@
 #
 # Copyright 2014 Google Inc.  All Rights Reserved
 
+import os
+import mock
+import unittest
+
 import download_images
 from cros_utils import command_executer
 from cros_utils import logger
 
-import os
-import mock
-import unittest
+import test_flag
 
 MOCK_LOGGER = logger.GetLogger(log_dir="", mock=True)
 
@@ -23,13 +25,16 @@ class ImageDownloaderTestcast(unittest.TestCase):
     mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
     test_chroot = "/usr/local/home/chromeos"
     test_build_id = "lumpy-release/R36-5814.0.0"
+    image_path = ("gs://chromeos-image-archive/%s/chromiumos_test_image.tar.xz"
+                  % test_build_id)
 
     downloader = download_images.ImageDownloader(logger_to_use=MOCK_LOGGER,
                                                  cmd_exec=mock_cmd_exec)
 
     # Set os.path.exists to always return False and run downloader
     mock_path_exists.return_value = False
-    downloader._DownloadImage(test_chroot, test_build_id)
+    test_flag.SetTestMode(True)
+    downloader._DownloadImage(test_chroot, test_build_id, image_path)
 
     # Verify os.path.exists was called twice, with proper arguments.
     self.assertEqual(mock_path_exists.call_count, 2)
@@ -50,7 +55,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
     mock_path_exists.return_value = True
 
     # Run downloader
-    downloader._DownloadImage(test_chroot, test_build_id)
+    downloader._DownloadImage(test_chroot, test_build_id,image_path)
 
     # Verify os.path.exists was called twice, with proper arguments.
     self.assertEqual(mock_path_exists.call_count, 2)
@@ -118,11 +123,11 @@ class ImageDownloaderTestcast(unittest.TestCase):
       self.called_get_build_id = True
       return 'lumpy-release/R36-5814.0.0'
 
-    def GoodDownloadImage(root, build_id):
+    def GoodDownloadImage(root, build_id, image_path):
       self.called_download_image = True
       return "chromiumos_test_image.bin"
 
-    def BadDownloadImage(root, build_id):
+    def BadDownloadImage(root, build_id, image_path):
       self.called_download_image = True
       return None
 

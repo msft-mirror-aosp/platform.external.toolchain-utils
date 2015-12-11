@@ -10,15 +10,17 @@ import hashlib
 import mock
 import unittest
 
+import image_chromeos
 import label
 import file_lock_machine
 import machine_manager
 import image_checksummer
+import test_flag
 
 from benchmark import Benchmark
 from benchmark_run import MockBenchmarkRun
-from utils import command_executer
-from utils import logger
+from cros_utils import command_executer
+from cros_utils import logger
 
 class MyMachineManager(machine_manager.MachineManager):
 
@@ -42,12 +44,13 @@ class MyMachineManager(machine_manager.MachineManager):
 
 CHROMEOS_ROOT = "/tmp/chromeos-root"
 MACHINE_NAMES = ["lumpy1", "lumpy2", "lumpy3", "daisy1", "daisy2"]
-LABEL_LUMPY = label.MockLabel("lumpy", "lumpy_chromeos_image", CHROMEOS_ROOT, "lumpy",
+LABEL_LUMPY = label.MockLabel("lumpy", "lumpy_chromeos_image", CHROMEOS_ROOT,
+                              "lumpy",
                               ["lumpy1", "lumpy2", "lumpy3", "lumpy4"],
-                              "", "", False, "")
+                              "", "", False, "average," "gcc", None)
 LABEL_MIX = label.MockLabel("mix", "chromeos_image", CHROMEOS_ROOT, "mix",
                             ["daisy1", "daisy2", "lumpy3", "lumpy4"],
-                            "", "", False, "")
+                            "", "", False, "average", "gcc", None)
 
 
 class MachineManagerTest(unittest.TestCase):
@@ -59,6 +62,7 @@ class MachineManagerTest(unittest.TestCase):
   mock_lumpy1 = mock.Mock(spec=machine_manager.CrosMachine)
   mock_lumpy2 = mock.Mock(spec=machine_manager.CrosMachine)
   mock_lumpy3 = mock.Mock(spec=machine_manager.CrosMachine)
+  mock_lumpy4 = mock.Mock(spec=machine_manager.CrosMachine)
   mock_daisy1 = mock.Mock(spec=machine_manager.CrosMachine)
   mock_daisy2 = mock.Mock(spec=machine_manager.CrosMachine)
 
@@ -75,21 +79,25 @@ class MachineManagerTest(unittest.TestCase):
     self.mock_lumpy1.name = 'lumpy1'
     self.mock_lumpy2.name = 'lumpy2'
     self.mock_lumpy3.name = 'lumpy3'
+    self.mock_lumpy4.name = 'lumpy4'
     self.mock_daisy1.name = 'daisy1'
     self.mock_daisy2.name = 'daisy2'
     self.mock_lumpy1.machine_checksum = 'lumpy123'
     self.mock_lumpy2.machine_checksum = 'lumpy123'
     self.mock_lumpy3.machine_checksum = 'lumpy123'
+    self.mock_lumpy4.machine_checksum = 'lumpy123'
     self.mock_daisy1.machine_checksum = 'daisy12'
     self.mock_daisy2.machine_checksum = 'daisy12'
     self.mock_lumpy1.checksum_string = 'lumpy_checksum_str'
     self.mock_lumpy2.checksum_string = 'lumpy_checksum_str'
     self.mock_lumpy3.checksum_string = 'lumpy_checksum_str'
+    self.mock_lumpy4.checksum_string = 'lumpy_checksum_str'
     self.mock_daisy1.checksum_string = 'daisy_checksum_str'
     self.mock_daisy2.checksum_string = 'daisy_checksum_str'
     self.mock_lumpy1.cpuinfo = "lumpy_cpu_info"
     self.mock_lumpy2.cpuinfo = "lumpy_cpu_info"
     self.mock_lumpy3.cpuinfo = "lumpy_cpu_info"
+    self.mock_lumpy4.cpuinfo = "lumpy_cpu_info"
     self.mock_daisy1.cpuinfo = "daisy_cpu_info"
     self.mock_daisy2.cpuinfo = "daisy_cpu_info"
     self.mm._all_machines.append(self.mock_daisy1)
@@ -154,31 +162,20 @@ class MachineManagerTest(unittest.TestCase):
     mock_checksummer.return_value = "fake_md5_checksum"
     self.mock_cmd_exec.log_level = "verbose"
 
+    test_flag.SetTestMode(True)
     # Test 1: label.image_type == "local"
     LABEL_LUMPY.image_type = "local"
     self.mm.ImageMachine(machine, LABEL_LUMPY)
     self.assertEqual(mock_run_cmd.call_count, 0)
     self.assertEqual(mock_run_croscmd.call_count, 0)
-    self.assertEqual(mock_checksummer.call_count, 1)
 
     #Test 2: label.image_type == "trybot"
     ResetValues()
     LABEL_LUMPY.image_type = "trybot"
     mock_run_cmd.return_value = 0
     self.mm.ImageMachine(machine, LABEL_LUMPY)
-    self.assertEqual(mock_run_cmd.call_count, 1)
     self.assertEqual(mock_run_croscmd.call_count, 0)
     self.assertEqual(mock_checksummer.call_count, 0)
-    image_call_args_str = mock_run_cmd.call_args[0][0]
-    image_call_args = image_call_args_str.split(' ')
-    self.assertEqual(image_call_args[0], 'python')
-    self.assertEqual(image_call_args[1].split('/')[-1], 'image_chromeos.pyc')
-    image_call_args = image_call_args[2:]
-    self.assertEqual(image_call_args,
-                     [ '--chromeos_root=/tmp/chromeos-root',
-                       '--image=lumpy_chromeos_image',
-                       '--image_args=', '--remote=lumpy1',
-                       '--logging_level=average', '--board=lumpy'])
 
     # Test 3: label.image_type is neither local nor trybot; retval from
     # RunCommand is 1, i.e. image_chromeos fails...
@@ -210,19 +207,8 @@ class MachineManagerTest(unittest.TestCase):
     mock_run_cmd.return_value = 0
     self.mm.ImageMachine(machine, LABEL_LUMPY)
     self.assertEqual(mock_checksummer.call_count, 0)
-    self.assertEqual(mock_run_cmd.call_count, 1)
     self.assertEqual(mock_run_croscmd.call_count, 0)
     self.assertEqual(mock_sleep.call_count, 0)
-    image_call_args_str = mock_run_cmd.call_args[0][0]
-    image_call_args = image_call_args_str.split(' ')
-    self.assertEqual(image_call_args[0], 'python')
-    self.assertEqual(image_call_args[1].split('/')[-1], 'image_chromeos.pyc')
-    image_call_args = image_call_args[2:]
-    self.assertEqual(image_call_args,
-                     [ '--chromeos_root=/tmp/chromeos-root',
-                       '--image=lumpy_chromeos_image',
-                       '--image_args=', '--remote=lumpy1',
-                       '--logging_level=average', '--board=lumpy'])
 
 
   def test_compute_common_checksum(self):
@@ -233,9 +219,7 @@ class MachineManagerTest(unittest.TestCase):
     self.assertEqual(len(self.mm.machine_checksum), 1)
 
     self.mm.machine_checksum = {}
-    self.mm.ComputeCommonCheckSum(LABEL_MIX)
-    self.assertEqual(len(self.mm.machine_checksum), 1)
-    self.assertEqual(self.mm.machine_checksum['mix'], 'daisy12')
+    self.assertRaises(machine_manager.BadChecksum, self.mm.ComputeCommonCheckSum, LABEL_MIX)
 
 
   def test_compute_common_checksum_string(self):
@@ -346,22 +330,21 @@ class MachineManagerTest(unittest.TestCase):
     self.mock_daisy2.locked = False
     self.mock_daisy2.checksum = "fake_md5_checksum"
 
+    self.mock_lumpy1.released_time = time.time()
+    self.mock_lumpy2.released_time = time.time()
+    self.mock_lumpy3.released_time = time.time()
+    self.mock_daisy1.released_time = time.time()
+    self.mock_daisy2.released_time = time.time()
+
     # Test 1. Basic test. Acquire lumpy3.
-    m = self.mm.AcquireMachine(LABEL_LUMPY)
-    self.assertEqual(m, self.mock_lumpy3)
-    self.assertTrue(self.mock_lumpy3.locked)
-    self.assertEqual(mock_checksum.call_count, 1)
+    self.mm.AcquireMachine(LABEL_LUMPY)
+    m = self.mock_lumpy1
+    self.assertEqual(m, self.mock_lumpy1)
+    self.assertTrue(self.mock_lumpy1.locked)
     self.assertEqual(mock_md5.call_count, 0)
     self.assertEqual(self.msgs, ['Tried to lock lumpy1',
                                  'Tried to lock lumpy2',
                                  'Tried to lock lumpy3'])
-
-    # Test 3. Not all machines are the same, throw = False
-    self.assertEqual(len(self.log_fatal_msgs), 0)
-    m = self.mm.AcquireMachine(LABEL_MIX)
-    self.assertEqual(len(self.log_fatal_msgs), 1)
-    self.assertEqual(self.log_fatal_msgs[0],
-                     '-- not all the machines are identical')
 
     # Test the second return statment (machine is unlocked, has no checksum)
     save_locked = self.mock_lumpy1.locked
@@ -445,9 +428,7 @@ class MachineManagerTest(unittest.TestCase):
     self.mm.Cleanup()
     self.assertEqual(self.mock_logger.call_count, 0)
 
-
-  OUTPUT_STR = 'Machine Status:\nMachine                        Thread     Lock Status                    Checksum                        \nlumpy1                         test run   True PENDING                   123                             \n\nlumpy3                         test run   False PENDING                   123                             \n\ndaisy2                         test run   True PENDING                   678                             '
-
+  OUTPUT_STR = 'Machine Status:\nMachine                        Thread     Lock Status                    Checksum                        \nlumpy1                         test run   True PENDING                   123                             \nlumpy2                         test run   False PENDING                   123                             \nlumpy3                         test run   False PENDING                   123                             \ndaisy1                         test run   False PENDING                   678                             \ndaisy2                         test run   True PENDING                   678                             '
 
   def test_as_string(self):
 
@@ -487,7 +468,9 @@ class MachineManagerTest(unittest.TestCase):
     self.mock_daisy2.locked = True
 
     self.mock_lumpy1.checksum = "123"
+    self.mock_lumpy2.checksum = "123"
     self.mock_lumpy3.checksum = "123"
+    self.mock_daisy1.checksum = "678"
     self.mock_daisy2.checksum = "678"
 
     output = self.mm.AsString()
@@ -759,7 +742,6 @@ class CrosMachineTest(unittest.TestCase):
     call_args = mock_run_cmd.call_args_list[0]
     self.assertEqual(call_args[0][0], "cat /proc/meminfo")
     args_dict = call_args[1]
-    self.assertEqual(args_dict['username'], 'root')
     self.assertEqual(args_dict['machine'], 'daisy.cros')
     self.assertEqual(args_dict['chromeos_root'], '/usr/local/chromeos')
     self.assertEqual(args_dict['return_output'], True)
@@ -782,7 +764,6 @@ class CrosMachineTest(unittest.TestCase):
     call_args = mock_run_cmd.call_args_list[0]
     self.assertEqual(call_args[0][0], "cat /proc/cpuinfo")
     args_dict = call_args[1]
-    self.assertEqual(args_dict['username'], 'root')
     self.assertEqual(args_dict['machine'], 'daisy.cros')
     self.assertEqual(args_dict['chromeos_root'], '/usr/local/chromeos')
     self.assertEqual(args_dict['return_output'], True)

@@ -251,26 +251,26 @@ class MachineImageManagerTester(unittest.TestCase):
                   'X  Y  X  .']
         mim = self.pattern_based_test(input, output)
         self.assertTrue(mim.allocate(mim.duts_[2]) == mim.labels_[0])
-        self.assertTrue(mim.allocate(mim.duts_[3]) == mim.labels_[1])
+        self.assertTrue(mim.allocate(mim.duts_[3]) == mim.labels_[2])
         self.assertTrue(mim.allocate(mim.duts_[0]) == mim.labels_[1])
         self.assertTrue(mim.allocate(mim.duts_[1]) == mim.labels_[2])
+        self.assertTrue(mim.allocate(mim.duts_[3]) == mim.labels_[1])
         self.assertTrue(mim.allocate(mim.duts_[3]) == mim.labels_[0])
-        self.assertTrue(mim.allocate(mim.duts_[3]) == mim.labels_[2])
         self.assertTrue(mim.allocate(mim.duts_[3]) is None)
         self.assertTrue(mim.allocate(mim.duts_[2]) is None)
         self.assertTrue(mim.allocate(mim.duts_[1]) == mim.labels_[1])
         self.assertTrue(mim.allocate(mim.duts_[1]) == None)
         self.assertTrue(mim.allocate(mim.duts_[0]) == None)
         self.assertTrue(mim.label_duts_[0] == [2, 3])
-        self.assertTrue(mim.label_duts_[1] == [3, 0, 1])
-        self.assertTrue(mim.label_duts_[2] == [1, 3])
+        self.assertTrue(mim.label_duts_[1] == [0, 3, 1])
+        self.assertTrue(mim.label_duts_[2] == [3, 1])
         self.assertTrue(mim.allocate_log_ ==
                          [(0, 2),
-                          (1, 3),
+                          (2, 3),
                           (1, 0),
                           (2, 1),
+                          (1, 3),
                           (0, 3),
-                          (2, 3),
                           (1, 1)])
 
     def test_cornercase_1(self):

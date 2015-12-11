@@ -22,6 +22,7 @@ from cros_utils import misc
 from image_checksummer import ImageChecksummer
 
 import results_report
+import test_flag
 
 SCRATCH_DIR = os.path.expanduser("~/cros_scratch")
 RESULTS_FILE = "results.txt"
@@ -333,13 +334,14 @@ class Result(object):
       pickle.dump(self.err, f)
       pickle.dump(self.retval, f)
 
-    with open(os.path.join(temp_dir, CACHE_KEYS_FILE), "w") as f:
-      f.write("%s\n" % self.label.name)
-      f.write("%s\n" % self.label.chrome_version)
-      f.write("%s\n" % self.machine.checksum_string)
-      for k in key_list:
-        f.write(k)
-        f.write("\n")
+    if not test_flag.GetTestMode():
+      with open(os.path.join(temp_dir, CACHE_KEYS_FILE), "w") as f:
+        f.write("%s\n" % self.label.name)
+        f.write("%s\n" % self.label.chrome_version)
+        f.write("%s\n" % self.machine.checksum_string)
+        for k in key_list:
+          f.write(k)
+          f.write("\n")
 
     if self.results_dir:
       tarball = os.path.join(temp_dir, AUTOTEST_TARBALL)
@@ -644,6 +646,7 @@ class MockResultsCache(ResultsCache):
 
 
 class MockResult(Result):
+
   def _PopulateFromRun(self, out, err, retval, show_all, test, suite):
     self.out = out
     self.err = err

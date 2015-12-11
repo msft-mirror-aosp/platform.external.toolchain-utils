@@ -190,7 +190,7 @@ class MachineImageManager(object):
         self.allocate_log_.append((label_i, dut_j))
         self.label_duts_[label_i].append(dut_j)
 
-    def allocate(self, dut, schedv2):
+    def allocate(self, dut, schedv2=None):
         """Allocate a label for dut.
 
         Arguments:
@@ -212,20 +212,30 @@ class MachineImageManager(object):
             label = self.labels_[i]
 
             # 2 optimizations here regarding allocating label to dut.
-            pending_br_num = len(schedv2._label_brl_map[label])
-            if pending_br_num == 0:
-                # (A) - we have finished all br of this label, apparently, we do
-                # not want to reimaeg dut to this label.
-                continue
+            # Note schedv2 might be None in case we do not need this
+            # optimization or we are in testing mode.
+            if schedv2 is not None:
+                pending_br_num = len(schedv2._label_brl_map[label])
+                if pending_br_num == 0:
+                    # (A) - we have finished all br of this label,
+                    # apparently, we do not want to reimaeg dut to
+                    # this label.
+                    continue
+            else:
+                # In case we do not have a schedv2 instance, mark
+                # pending_br_num as 0, so pending_br_num >=
+                # can_pending_br_num is always True.
+                pending_br_num = 0
 
             # For this time being, I just comment this out until we have a
             # better estimation how long each benchmarkrun takes.
             # if (pending_br_num <= 5 and
             #     len(self.label_duts_[i]) >= 1):
             #     # (B) this is heuristic - if there are just a few test cases
-            #     # (say <5) left undone for this label, and there is at least 1
-            #     # other machine working on this lable, we probably not want to
-            #     # bother to reimage this dut to help with these 5 test cases.
+            #     # (say <5) left undone for this label, and there is at least
+            #     # 1 other machine working on this lable, we probably not want
+            #     # to bother to reimage this dut to help with these 5 test
+            #     # cases
             #     continue
 
             if v == 'Y':

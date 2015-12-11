@@ -16,7 +16,7 @@ import sys
 import threading
 import time
 
-
+import test_flag
 from cros_utils import command_executer
 from cros_utils import logger
 
@@ -267,7 +267,9 @@ class MachineManager(object):
         self.logger.LogOutput("Pushing image onto machine.")
         self.logger.LogOutput("Running image_chromeos.DoImage with %s"
                               % " ".join(image_chromeos_args))
-      retval = image_chromeos.DoImage(image_chromeos_args)
+      retval = 0
+      if not test_flag.GetTestMode():
+        retval = image_chromeos.DoImage(image_chromeos_args)
       if retval:
         cmd = "reboot && exit"
         if self.log_level != "verbose":
@@ -680,6 +682,7 @@ class MockMachineManager(MachineManager):
   def ImageMachine(self, machine_name, label):
     if machine_name or label:
       return 0
+    return 1
 
   def ReleaseMachine(self, machine):
     machine.locked = False
@@ -690,10 +693,10 @@ class MockMachineManager(MachineManager):
   def GetAvailableMachines(self, label=None):
     return self._all_machines
 
-  def ForceSameImageToAllMachines(self, label):
+  def ForceSameImageToAllMachines(self, label=None):
     return 0
 
-  def ComputeCommonCheckSum(self, label):
+  def ComputeCommonCheckSum(self, label=None):
     common_checksum = 12345
     for machine in self.GetMachines(label):
       machine.machine_checksum = common_checksum

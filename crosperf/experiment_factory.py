@@ -205,9 +205,10 @@ class ExperimentFactory(object):
       my_remote = label_settings.GetField("remote")
       compiler = label_settings.GetField("compiler")
       new_remote = []
-      for i in my_remote:
-        c = re.sub('["\']', '', i)
-        new_remote.append(c)
+      if my_remote:
+        for i in my_remote:
+          c = re.sub('["\']', '', i)
+          new_remote.append(c)
       my_remote = new_remote
       if image == "":
         build = label_settings.GetField("build")

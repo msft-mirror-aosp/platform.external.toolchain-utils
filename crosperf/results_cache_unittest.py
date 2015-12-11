@@ -13,6 +13,7 @@ import unittest
 
 import image_checksummer
 import machine_manager
+import test_flag
 
 from label import MockLabel
 from results_cache import CacheConditions
@@ -127,8 +128,8 @@ TMP_DIR1 = '/tmp/tmpAbcXyz'
 
 class MockResult(Result):
 
-  def __init__(self, logger, label, logging_level):
-    super(MockResult, self).__init__(logger, label, logging_level)
+  def __init__(self, logger, label, logging_level, machine):
+    super(MockResult, self).__init__(logger, label, logging_level, machine)
 
   def _FindFilesInResultsDir(self, find_args):
     return ''
@@ -140,13 +141,14 @@ class MockResult(Result):
 class ResultTest(unittest.TestCase):
 
   mock_label = MockLabel('mock_label', 'chromeos_image', '/tmp', 'lumpy',
-                         'remote', 'image_args', 'cache_dir', False)
+                         'remote', 'image_args', 'cache_dir', 'average',
+                         'gcc', None)
   mock_logger = mock.Mock(spec=logger.Logger)
   mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
 
   def testCreateFromRun(self):
     result = MockResult.CreateFromRun(logger.GetLogger(), 'average',
-                                      self.mock_label,
+                                      self.mock_label, 'remote1',
                                       OUTPUT, error, 0, True, 0)
     self.assertEqual(result.keyvals, keyvals)
     self.assertEqual(result.chroot_results_dir,
@@ -694,10 +696,12 @@ class ResultTest(unittest.TestCase):
     tempfile.mkdtemp = FakeMkdtemp
 
     mock_mm = machine_manager.MockMachineManager('/tmp/chromeos_root', 0,
-                                                 'average', '')
+                                                 'average')
     mock_mm.machine_checksum_string['mock_label'] = 'fake_machine_checksum123'
 
-    self.result.StoreToCacheDir(cache_dir, mock_mm)
+    mock_keylist = ['key1', 'key2', 'key3']
+    test_flag.SetTestMode(True)
+    self.result.StoreToCacheDir(cache_dir, mock_mm, mock_keylist)
 
     # Check that the correct things were written to the 'cache'.
     test_dir = os.path.join(os.getcwd(), 'test_cache/test_output')
@@ -733,7 +737,11 @@ class TelemetryResultTest(unittest.TestCase):
   mock_logger = mock.Mock(spec=logger.Logger)
   mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
   mock_label = MockLabel('mock_label', 'chromeos_image', '/tmp', 'lumpy',
-                         'remote', 'image_args', 'cache_dir', False)
+                         'remote', 'image_args', 'cache_dir', 'average',
+                         'gcc', None)
+  mock_machine = machine_manager.MockCrosMachine('falco.cros',
+                                                 '/tmp/chromeos',
+                                                 'average')
 
   def test_populate_from_run(self):
 
@@ -755,7 +763,7 @@ class TelemetryResultTest(unittest.TestCase):
   def test_populate_from_cache_dir_and_process_results(self):
 
     self.result = TelemetryResult(self.mock_logger, self.mock_label,
-                                  'average')
+                                  'average', self.mock_machine)
     current_path = os.getcwd()
     cache_dir = os.path.join(current_path,
                              'test_cache/test_puretelemetry_input')
@@ -770,13 +778,17 @@ class ResultsCacheTest(unittest.TestCase):
 
   mock_logger = mock.Mock(spec=logger.Logger)
   mock_label = MockLabel('mock_label', 'chromeos_image', '/tmp', 'lumpy',
-                         'remote', 'image_args', 'cache_dir', False)
+                         'remote', 'image_args', 'cache_dir', 'average',
+                         'gcc', None)
   def setUp(self):
     self.results_cache = ResultsCache()
 
+    mock_machine = machine_manager.MockCrosMachine('falco.cros',
+                                                   '/tmp/chromeos',
+                                                   'average')
 
     mock_mm = machine_manager.MockMachineManager('/tmp/chromeos_root', 0,
-                                                 'average', '')
+                                                 'average')
     mock_mm.machine_checksum_string['mock_label'] = 'fake_machine_checksum123'
 
     self.results_cache.Init(self.mock_label.chromeos_image,
@@ -786,6 +798,7 @@ class ResultsCacheTest(unittest.TestCase):
                             '',         # benchmark_run.test_args,
                             '',         # benchmark_run.profiler_args,
                             mock_mm,
+                            mock_machine,
                             self.mock_label.board,
                             [CacheConditions.CACHE_FILE_EXISTS,
                              CacheConditions.CHECKSUMS_MATCH],
@@ -823,7 +836,7 @@ class ResultsCacheTest(unittest.TestCase):
     # the result, rather than '~/cros_scratch').
     comp_path = os.path.join(os.getcwd(),
                              'cache_dir/54524606abaae4fdf7b02f49f7ae7127_'
-                             'sunspider_1_7215ee9c7d9dc229d2921a40e899ec5f_'
+                             'sunspider_1_fda29412ceccb72977516c4785d08e2c_'
                              'FakeImageChecksumabc123_FakeMachineChecksum'
                              'abc987__6')
     self.assertEqual(result_path, comp_path)
@@ -869,7 +882,7 @@ class ResultsCacheTest(unittest.TestCase):
     self.assertEqual(key_list[0], '*') # Machine checksum value, for read.
     self.assertEqual(key_list[1], 'sunspider')
     self.assertEqual(key_list[2], '1')
-    self.assertEqual(key_list[3], '7215ee9c7d9dc229d2921a40e899ec5f')
+    self.assertEqual(key_list[3], 'fda29412ceccb72977516c4785d08e2c')
     self.assertEqual(key_list[4], 'FakeImageChecksumabc123')
     self.assertEqual(key_list[5], '*')
     self.assertEqual(key_list[6], '*')
@@ -880,7 +893,7 @@ class ResultsCacheTest(unittest.TestCase):
     self.assertEqual(key_list[0], '54524606abaae4fdf7b02f49f7ae7127')
     self.assertEqual(key_list[1], 'sunspider')
     self.assertEqual(key_list[2], '1')
-    self.assertEqual(key_list[3], '7215ee9c7d9dc229d2921a40e899ec5f')
+    self.assertEqual(key_list[3], 'fda29412ceccb72977516c4785d08e2c')
     self.assertEqual(key_list[4], 'FakeImageChecksumabc123')
     self.assertEqual(key_list[5], 'FakeMachineChecksumabc987')
     self.assertEqual(key_list[6], '')
@@ -890,7 +903,7 @@ class ResultsCacheTest(unittest.TestCase):
     self.results_cache.label.image_type = 'trybot'
     key_list = self.results_cache._GetCacheKeyList(False)
     self.assertEqual(key_list[0], '54524606abaae4fdf7b02f49f7ae7127')
-    self.assertEqual(key_list[3], '7215ee9c7d9dc229d2921a40e899ec5f')
+    self.assertEqual(key_list[3], 'fda29412ceccb72977516c4785d08e2c')
     self.assertEqual(key_list[4], '54524606abaae4fdf7b02f49f7ae7127')
     self.assertEqual(key_list[5], 'FakeMachineChecksumabc987')
 
@@ -900,7 +913,7 @@ class ResultsCacheTest(unittest.TestCase):
     self.assertEqual(key_list[0], '54524606abaae4fdf7b02f49f7ae7127')
     self.assertEqual(key_list[1], 'sunspider')
     self.assertEqual(key_list[2], '1')
-    self.assertEqual(key_list[3], '7215ee9c7d9dc229d2921a40e899ec5f')
+    self.assertEqual(key_list[3], 'fda29412ceccb72977516c4785d08e2c')
     self.assertEqual(key_list[4], '*')
     self.assertEqual(key_list[5], 'FakeMachineChecksumabc987')
     self.assertEqual(key_list[6], '')
@@ -912,7 +925,7 @@ class ResultsCacheTest(unittest.TestCase):
     self.results_cache.cache_conditions.append(CacheConditions.IMAGE_PATH_MATCH)
     key_list = self.results_cache._GetCacheKeyList(False)
     self.assertEqual(key_list[0], '54524606abaae4fdf7b02f49f7ae7127')
-    self.assertEqual(key_list[3], '7215ee9c7d9dc229d2921a40e899ec5f')
+    self.assertEqual(key_list[3], 'fda29412ceccb72977516c4785d08e2c')
     self.assertEqual(key_list[4], 'FakeImageChecksumabc123')
     self.assertEqual(key_list[5], 'FakeMachineChecksumabc987')
 
