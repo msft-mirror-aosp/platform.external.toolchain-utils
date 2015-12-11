@@ -129,8 +129,6 @@ class CrosMachine(object):
         machine=self.name,
         chromeos_root=self.chromeos_root)
     assert ret == 0, "Could not get cpuinfo from machine: %s" % self.name
-    if ret == 0:
-      self._ParseCPUInfo(self.cpuinfo)
 
   def _ComputeMachineChecksumString(self):
     self.checksum_string = ""
