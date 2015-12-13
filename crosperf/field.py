@@ -97,6 +97,13 @@ class ListField(Field):
   def GetString(self):
     return " ".join(self._value)
 
+  def Append(self, value):
+    v = self._Parse(value)
+    if not self._value:
+      self._value = v
+    else:
+      self._value += v
+    self.assigned = True
 
 class EnumField(Field):
   """Class of enum field."""

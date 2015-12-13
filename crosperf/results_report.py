@@ -593,8 +593,7 @@ class JSONResultsReport(ResultsReport):
     for test, test_results in self.ro.result.iteritems():
       for i, label in enumerate(self.ro.labels):
         label_results = test_results[i]
-        for j in enumerate(label_results):
-          iter_results = label_results[j]
+        for j, iter_results in enumerate(label_results):
           json_results = dict()
           json_results['date'] = self.date
           json_results['time'] = self.time
