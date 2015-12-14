@@ -216,7 +216,8 @@ class ExperimentRunner(object):
     text_report = "<pre style='font-size: 13px'>%s</pre>" % text_report
     html_report = HTMLResultsReport(experiment).GetReport()
     attachment = EmailSender.Attachment("report.html", html_report)
-    email_to = [getpass.getuser()] + experiment.email_to
+    email_to = experiment.email_to or []
+    email_to.append(getpass.getuser())
     EmailSender().SendEmail(email_to,
                             subject,
                             text_report,

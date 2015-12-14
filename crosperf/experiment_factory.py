@@ -94,9 +94,10 @@ class ExperimentFactory(object):
     # This is used to remove the ",' from the remote if user
     # add them to the remote string.
     new_remote = []
-    for i in remote:
-      c = re.sub('["\']', '', i)
-      new_remote.append(c)
+    if remote:
+      for i in remote:
+        c = re.sub('["\']', '', i)
+        new_remote.append(c)
     remote = new_remote
     chromeos_root = global_settings.GetField("chromeos_root")
     rm_chroot_tmp = global_settings.GetField("rm_chroot_tmp")
