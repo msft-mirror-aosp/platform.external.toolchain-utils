@@ -6,6 +6,7 @@ import test_flag
 
 import unittest
 
+
 class FlagTestCase(unittest.TestCase):
 
   def test_test_flag(self):
@@ -13,7 +14,6 @@ class FlagTestCase(unittest.TestCase):
     # and that it contains 1 element.
     self.assertTrue(type(test_flag._is_test) is list)
     self.assertEqual(len(test_flag._is_test), 1)
-
 
     # Verify that the getting the flag works and that the flag
     # contains False, its starting value.

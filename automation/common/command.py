@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 __author__ = 'kbaclawski@google.com (Krystian Baclawski)'
@@ -197,8 +195,8 @@ def RemoteCopyFrom(from_machine, from_path, to_path, username=None):
     login = '%s@%s' % (username, from_machine)
 
   return Chain(
-      MakeDir(to_path),
-      Shell('rsync', '-a', '%s:%s' % (login, from_path), to_path))
+      MakeDir(to_path), Shell('rsync', '-a', '%s:%s' %
+                              (login, from_path), to_path))
 
 
 def MakeSymlink(to_path, link_name):
@@ -224,8 +222,7 @@ def RmTree(*dirs):
 
 def UnTar(tar_file, dest_dir):
   return Chain(
-      MakeDir(dest_dir),
-      Shell('tar', '-x', '-f', tar_file, '-C', dest_dir))
+      MakeDir(dest_dir), Shell('tar', '-x', '-f', tar_file, '-C', dest_dir))
 
 
 def Tar(tar_file, *args):
@@ -241,6 +238,4 @@ def Tar(tar_file, *args):
   options.extend(['-f', tar_file])
   options.extend(args)
 
-  return Chain(
-      MakeDir(os.path.dirname(tar_file)),
-      Shell('tar', *options))
+  return Chain(MakeDir(os.path.dirname(tar_file)), Shell('tar', *options))

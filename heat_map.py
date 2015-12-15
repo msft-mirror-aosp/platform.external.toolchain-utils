@@ -2,7 +2,6 @@
 # Copyright 2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Wrapper to generate heat maps for chrome."""
 
 import argparse
@@ -15,9 +14,11 @@ from sets import Set
 from utils import command_executer
 from utils import misc
 
+
 def IsARepoRoot(directory):
   """Returns True if directory is the root of a repo checkout."""
   return os.path.exists(os.path.join(directory, '.repo'))
+
 
 class HeatMapProducer(object):
   """Class to produce heat map."""
@@ -28,34 +29,39 @@ class HeatMapProducer(object):
     self.page_size = page_size
     self.dir = os.path.dirname(os.path.realpath(__file__))
     self.binary = binary
-    self.tempDir = ""
+    self.tempDir = ''
     self.ce = command_executer.GetCommandExecuter()
 
   def copyFileToChroot(self):
-    self.tempDir = tempfile.mkdtemp(prefix=os.path.join(self.chromeos_root, 'src/'))
+    self.tempDir = tempfile.mkdtemp(
+        prefix=os.path.join(self.chromeos_root, 'src/'))
     self.temp_perf = os.path.join(self.tempDir, 'perf.data')
     shutil.copy2(self.perf_data, self.temp_perf)
-    self.temp_perf_inchroot = os.path.join('~/trunk/src', os.path.basename(self.tempDir))
+    self.temp_perf_inchroot = os.path.join('~/trunk/src',
+                                           os.path.basename(self.tempDir))
 
   def getPerfReport(self):
-    cmd='cd %s; perf report -D -i perf.data > perf_report.txt' % self.temp_perf_inchroot
+    cmd = 'cd %s; perf report -D -i perf.data > perf_report.txt' % self.temp_perf_inchroot
     retval = self.ce.ChrootRunCommand(self.chromeos_root, cmd)
     if retval:
       raise RuntimeError('Failed to generate perf report')
     self.perf_report = os.path.join(self.tempDir, 'perf_report.txt')
 
   def getBinaryBaseAddress(self):
-    cmd = 'grep PERF_RECORD_MMAP %s | grep "%s$"' % (self.perf_report, self.binary)
+    cmd = 'grep PERF_RECORD_MMAP %s | grep "%s$"' % (self.perf_report,
+                                                     self.binary)
     retval, output, _ = self.ce.RunCommandWOutput(cmd)
     if retval:
       raise RuntimeError('Failed to run grep to get base address')
-    baseAddresses = Set();
+    baseAddresses = Set()
     for line in output.strip().split('\n'):
       head = line.split('[')[2]
       address = head.split('(')[0]
       baseAddresses.add(address)
     if len(baseAddresses) > 1:
-      raise RuntimeError('Multiple base address found, please disable ASLR and collect profile again')
+      raise RuntimeError(
+          'Multiple base address found, please disable ASLR and collect '
+          'profile again')
     if not len(baseAddresses):
       raise RuntimeError('Could not find the base address in the profile')
     self.loading_address = baseAddresses.pop()
@@ -71,20 +77,16 @@ class HeatMapProducer(object):
     if not self.loading_address:
       return
     heatmap_script = os.path.join(self.dir, 'perf-to-inst-page.sh')
-    cmd = '{0} {1} {2} {3} {4}'.format(heatmap_script,
-                                       self.binary,
-                                       self.perf_report,
-                                       self.loading_address,
+    cmd = '{0} {1} {2} {3} {4}'.format(heatmap_script, self.binary,
+                                       self.perf_report, self.loading_address,
                                        self.page_size)
     retval = self.ce.RunCommand(cmd)
     if retval:
       raise RuntimeError('Failed to run script to generate heatmap')
 
 
-
 def main(argv):
-  """
-  Parse the options.
+  """Parse the options.
 
   Args:
     argv:  The options with which this script was invoked.
@@ -94,13 +96,22 @@ def main(argv):
   """
   parser = argparse.ArgumentParser()
 
-  parser.add_argument('--chromeos_root', dest='chromeos_root', required=True,
+  parser.add_argument('--chromeos_root',
+                      dest='chromeos_root',
+                      required=True,
                       help='ChromeOS root to use for generate heatmaps.')
-  parser.add_argument('--perf_data', dest='perf_data', required=True,
+  parser.add_argument('--perf_data',
+                      dest='perf_data',
+                      required=True,
                       help='The raw perf data.')
-  parser.add_argument('--binary', dest='binary', required=False,
-                      help='The name of the binary.', default='chrome')
-  parser.add_argument('--page_size', dest='page_size', required=False,
+  parser.add_argument('--binary',
+                      dest='binary',
+                      required=False,
+                      help='The name of the binary.',
+                      default='chrome')
+  parser.add_argument('--page_size',
+                      dest='page_size',
+                      required=False,
                       help='The page size for heat maps.',
                       default=4096)
   options = parser.parse_args(argv)
@@ -127,4 +138,4 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
+  sys.exit(main(sys.argv[1:]))

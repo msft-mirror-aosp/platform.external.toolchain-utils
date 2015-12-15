@@ -1,13 +1,8 @@
-#!/usr/bin/python
-#
 # Copyright 2010 Google Inc. All Rights Reserved.
 #
-
 """A module for a job in the infrastructure."""
 
-
 __author__ = 'raymes@google.com (Raymes Khoury)'
-
 
 import os.path
 
@@ -22,6 +17,7 @@ STATUS_FAILED = 'FAILED'
 
 
 class FolderDependency(object):
+
   def __init__(self, job, src, dest=None):
     if not dest:
       dest = src
@@ -41,12 +37,14 @@ class JobStateMachine(state_machine.BasicStateMachine):
       STATUS_NOT_EXECUTED: [STATUS_SETUP],
       STATUS_SETUP: [STATUS_COPYING, STATUS_FAILED],
       STATUS_COPYING: [STATUS_RUNNING, STATUS_FAILED],
-      STATUS_RUNNING: [STATUS_SUCCEEDED, STATUS_FAILED]}
+      STATUS_RUNNING: [STATUS_SUCCEEDED, STATUS_FAILED]
+  }
 
   final_states = [STATUS_SUCCEEDED, STATUS_FAILED]
 
 
 class JobFailure(Exception):
+
   def __init__(self, message, exit_code):
     Exception.__init__(self, message)
     self.exit_code = exit_code
@@ -57,7 +55,7 @@ class Job(object):
 
   WORKDIR_PREFIX = '/usr/local/google/tmp/automation'
 
-  def __init__(self, label, command, timeout=4*60*60):
+  def __init__(self, label, command, timeout=4 * 60 * 60):
     self._state = JobStateMachine(STATUS_NOT_EXECUTED)
     self.predecessors = set()
     self.successors = set()
@@ -110,15 +108,15 @@ class Job(object):
 
   def GetCommand(self):
     substitutions = [
-        ('$JOB_ID', str(self.id)),
-        ('$JOB_TMP', self.work_dir),
+        ('$JOB_ID', str(self.id)), ('$JOB_TMP', self.work_dir),
         ('$JOB_HOME', self.home_dir),
-        ('$PRIMARY_MACHINE', self.primary_machine.hostname)]
+        ('$PRIMARY_MACHINE', self.primary_machine.hostname)
+    ]
 
     if len(self.machines) > 1:
       for num, machine in enumerate(self.machines[1:]):
-        substitutions.append(
-            ('$SECONDARY_MACHINES[%d]' % num, machine.hostname))
+        substitutions.append(('$SECONDARY_MACHINES[%d]' % num, machine.hostname
+                             ))
 
     return self._FormatCommand(str(self.command), substitutions)
 
@@ -127,7 +125,8 @@ class Job(object):
     # non existing Command class. If one is created then PrettyFormatCommand
     # shall become its method.
     return self._FormatCommand(self.GetCommand(), [
-        ('\{ ', ''), ('; \}', ''), ('\} ', '\n'), ('\s*&&\s*', '\n')])
+        ('\{ ', ''), ('; \}', ''), ('\} ', '\n'), ('\s*&&\s*', '\n')
+    ])
 
   def DependsOnFolder(self, dependency):
     self.folder_dependencies.append(dependency)

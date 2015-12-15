@@ -1,7 +1,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """The pipeline_worker functions of the build and test stage of the framework.
 
 Part of the Chrome build flags optimization.

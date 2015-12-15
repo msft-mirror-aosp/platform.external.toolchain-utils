@@ -1,11 +1,10 @@
-#!/usr/bin/python
-#
 # Copyright 2010 Google Inc. All Rights Reserved.
 
 # System modules
 import os.path
 import sys
 import traceback
+
 
 #TODO(yunlian@google.com): Use GetRoot from misc
 def GetRoot(scr_name):
@@ -19,7 +18,7 @@ class Logger(object):
 
   MAX_LOG_FILES = 10
 
-  def __init__ (self, rootdir, basefilename, print_console, subdir="logs"):
+  def __init__(self, rootdir, basefilename, print_console, subdir='logs'):
     logdir = os.path.join(rootdir, subdir)
     basename = os.path.join(logdir, basefilename)
 
@@ -33,10 +32,10 @@ class Logger(object):
 
     self._CreateLogFileHandles(basename)
 
-    self._WriteTo(self.cmdfd, " ".join(sys.argv), True)
+    self._WriteTo(self.cmdfd, ' '.join(sys.argv), True)
 
   def _AddSuffix(self, basename, suffix):
-    return "%s%s" % (basename, suffix)
+    return '%s%s' % (basename, suffix)
 
   def _FindSuffix(self, basename):
     timestamps = []
@@ -44,7 +43,7 @@ class Logger(object):
     for i in range(self.MAX_LOG_FILES):
       suffix = str(i)
       suffixed_basename = self._AddSuffix(basename, suffix)
-      cmd_file = "%s.cmd" % suffixed_basename
+      cmd_file = '%s.cmd' % suffixed_basename
       if not os.path.exists(cmd_file):
         found_suffix = suffix
         break
@@ -62,32 +61,32 @@ class Logger(object):
   def _CreateLogFileHandle(self, name):
     fd = None
     try:
-      fd = open(name, "w")
+      fd = open(name, 'w')
     except IOError:
-      print "Warning: could not open %s for writing." % name
+      print 'Warning: could not open %s for writing.' % name
     return fd
 
   def _CreateLogFileHandles(self, basename):
     suffix = self._FindSuffix(basename)
     suffixed_basename = self._AddSuffix(basename, suffix)
 
-    self.cmdfd = self._CreateLogFileHandle("%s.cmd" % suffixed_basename)
-    self.stdout = self._CreateLogFileHandle("%s.out" % suffixed_basename)
-    self.stderr = self._CreateLogFileHandle("%s.err" % suffixed_basename)
+    self.cmdfd = self._CreateLogFileHandle('%s.cmd' % suffixed_basename)
+    self.stdout = self._CreateLogFileHandle('%s.out' % suffixed_basename)
+    self.stderr = self._CreateLogFileHandle('%s.err' % suffixed_basename)
 
     self._CreateLogFileSymlinks(basename, suffixed_basename)
 
   # Symlink unsuffixed basename to currently suffixed one.
   def _CreateLogFileSymlinks(self, basename, suffixed_basename):
     try:
-      for extension in ["cmd", "out", "err"]:
-        src_file = "%s.%s" % (os.path.basename(suffixed_basename), extension)
-        dest_file = "%s.%s" % (basename, extension)
+      for extension in ['cmd', 'out', 'err']:
+        src_file = '%s.%s' % (os.path.basename(suffixed_basename), extension)
+        dest_file = '%s.%s' % (basename, extension)
         if os.path.exists(dest_file):
           os.remove(dest_file)
         os.symlink(src_file, dest_file)
     except Exception as ex:
-      print "Exception while creating symlinks: %s" % str(ex)
+      print 'Exception while creating symlinks: %s' % str(ex)
 
   def _WriteTo(self, fd, msg, flush):
     if fd:
@@ -99,19 +98,19 @@ class Logger(object):
     term_fd = self._GetStdout(print_to_console)
     if (term_fd):
       term_fd.flush()
-      term_fd.write(". ")
+      term_fd.write('. ')
       term_fd.flush()
 
   def LogAppendDot(self, print_to_console=True):
     term_fd = self._GetStdout(print_to_console)
     if (term_fd):
-      term_fd.write(". ")
+      term_fd.write('. ')
       term_fd.flush()
 
   def LogEndDots(self, print_to_console=True):
     term_fd = self._GetStdout(print_to_console)
     if (term_fd):
-      term_fd.write("\n")
+      term_fd.write('\n')
       term_fd.flush()
 
   def _LogMsg(self, file_fd, term_fd, msg, flush=True):
@@ -130,42 +129,42 @@ class Logger(object):
       return sys.stderr
     return None
 
-  def LogCmdToFileOnly (self, cmd, machine="", user=None):
+  def LogCmdToFileOnly(self, cmd, machine='', user=None):
     if not self.cmdfd:
       return
 
-    host = ("%s@%s" % (user, machine)) if user else machine
+    host = ('%s@%s' % (user, machine)) if user else machine
     flush = True
-    cmd_string = "CMD (%s): %s\n" % (host, cmd)
+    cmd_string = 'CMD (%s): %s\n' % (host, cmd)
     self._WriteTo(self.cmdfd, cmd_string, flush)
 
-  def LogCmd(self, cmd, machine="", user=None, print_to_console=True):
+  def LogCmd(self, cmd, machine='', user=None, print_to_console=True):
     if user:
-      host = "%s@%s" % (user, machine)
+      host = '%s@%s' % (user, machine)
     else:
       host = machine
 
     self._LogMsg(self.cmdfd, self._GetStdout(print_to_console),
-                 "CMD (%s): %s\n" % (host, cmd))
+                 'CMD (%s): %s\n' % (host, cmd))
 
   def LogFatal(self, msg, print_to_console=True):
     self._LogMsg(self.stderr, self._GetStderr(print_to_console),
-                 "FATAL: %s\n" % msg)
+                 'FATAL: %s\n' % msg)
     self._LogMsg(self.stderr, self._GetStderr(print_to_console),
-                 "\n".join(traceback.format_stack()))
+                 '\n'.join(traceback.format_stack()))
     sys.exit(1)
 
   def LogError(self, msg, print_to_console=True):
     self._LogMsg(self.stderr, self._GetStderr(print_to_console),
-                 "ERROR: %s\n" % msg)
+                 'ERROR: %s\n' % msg)
 
   def LogWarning(self, msg, print_to_console=True):
     self._LogMsg(self.stderr, self._GetStderr(print_to_console),
-                 "WARNING: %s\n" % msg)
+                 'WARNING: %s\n' % msg)
 
   def LogOutput(self, msg, print_to_console=True):
     self._LogMsg(self.stdout, self._GetStdout(print_to_console),
-                 "OUTPUT: %s\n" % msg)
+                 'OUTPUT: %s\n' % msg)
 
   def LogFatalIf(self, condition, msg):
     if condition:
@@ -180,12 +179,16 @@ class Logger(object):
       self.LogWarning(msg)
 
   def LogCommandOutput(self, msg, print_to_console=True):
-    self._LogMsg(self.stdout, self._GetStdout(print_to_console),
-                 msg, flush=False)
+    self._LogMsg(self.stdout,
+                 self._GetStdout(print_to_console),
+                 msg,
+                 flush=False)
 
   def LogCommandError(self, msg, print_to_console=True):
-    self._LogMsg(self.stderr, self._GetStderr(print_to_console),
-                 msg, flush=False)
+    self._LogMsg(self.stderr,
+                 self._GetStderr(print_to_console),
+                 msg,
+                 flush=False)
 
   def Flush(self):
     self.cmdfd.flush()
@@ -198,13 +201,13 @@ class MockLogger(object):
 
   MAX_LOG_FILES = 10
 
-  def __init__ (self, rootdir, basefilename, print_console, subdir="logs"):
+  def __init__(self, rootdir, basefilename, print_console, subdir='logs'):
     self.stdout = sys.stdout
     self.stderr = sys.stderr
     return None
 
   def _AddSuffix(self, basename, suffix):
-    return "%s%s" % (basename, suffix)
+    return '%s%s' % (basename, suffix)
 
   def _FindSuffix(self, basename):
     timestamps = []
@@ -212,7 +215,7 @@ class MockLogger(object):
     for i in range(self.MAX_LOG_FILES):
       suffix = str(i)
       suffixed_basename = self._AddSuffix(basename, suffix)
-      cmd_file = "%s.cmd" % suffixed_basename
+      cmd_file = '%s.cmd' % suffixed_basename
       if not os.path.exists(cmd_file):
         found_suffix = suffix
         break
@@ -228,86 +231,81 @@ class MockLogger(object):
     return suffix
 
   def _CreateLogFileHandle(self, name):
-    print "MockLogger: creating open file handle for %s (writing)" % name
+    print 'MockLogger: creating open file handle for %s (writing)' % name
 
   def _CreateLogFileHandles(self, basename):
     suffix = self._FindSuffix(basename)
     suffixed_basename = self._AddSuffix(basename, suffix)
 
-    print "MockLogger: opening file %s.cmd" % suffixed_basename
-    print "MockLogger: opening file %s.out" % suffixed_basename
-    print "MockLogger: opening file %s.err" % suffixed_basename
+    print 'MockLogger: opening file %s.cmd' % suffixed_basename
+    print 'MockLogger: opening file %s.out' % suffixed_basename
+    print 'MockLogger: opening file %s.err' % suffixed_basename
 
     self._CreateLogFileSymlinks(basename, suffixed_basename)
 
   # Symlink unsuffixed basename to currently suffixed one.
   def _CreateLogFileSymlinks(self, basename, suffixed_basename):
-    for extension in ["cmd", "out", "err"]:
-      src_file = "%s.%s" % (os.path.basename(suffixed_basename), extension)
-      dest_file = "%s.%s" % (basename, extension)
-      print "MockLogger: Calling os.symlink(%s, %s)" % (src_file, dest_file)
+    for extension in ['cmd', 'out', 'err']:
+      src_file = '%s.%s' % (os.path.basename(suffixed_basename), extension)
+      dest_file = '%s.%s' % (basename, extension)
+      print 'MockLogger: Calling os.symlink(%s, %s)' % (src_file, dest_file)
 
   def _WriteTo(self, fd, msg, flush):
-    print "MockLogger: %s" % msg
+    print 'MockLogger: %s' % msg
 
   def LogStartDots(self, print_to_console=True):
-    print ". "
-
+    print '. '
 
   def LogAppendDot(self, print_to_console=True):
-    print ". "
+    print '. '
 
   def LogEndDots(self, print_to_console=True):
-    print "\n"
+    print '\n'
 
   def _LogMsg(self, file_fd, term_fd, msg, flush=True):
-    print "MockLogger: %s" % msg
+    print 'MockLogger: %s' % msg
 
   def _GetStdout(self, print_to_console):
-#    if print_to_console:
-#      return sys.stdout
+    #    if print_to_console:
+    #      return sys.stdout
     return None
 
   def _GetStderr(self, print_to_console):
-#    if print_to_console:
-#      return sys.stderr
+    #    if print_to_console:
+    #      return sys.stderr
     return None
 
-  def LogCmdToFileOnly (self, cmd, machine="", user=None):
+  def LogCmdToFileOnly(self, cmd, machine='', user=None):
     return
 
-    host = ("%s@%s" % (user, machine)) if user else machine
+    host = ('%s@%s' % (user, machine)) if user else machine
     flush = True
-    cmd_string = "CMD (%s): %s\n" % (host, cmd)
-    print "MockLogger: Writing to file ONLY: %s" % cmd_string
+    cmd_string = 'CMD (%s): %s\n' % (host, cmd)
+    print 'MockLogger: Writing to file ONLY: %s' % cmd_string
 
-  def LogCmd(self, cmd, machine="", user=None, print_to_console=True):
+  def LogCmd(self, cmd, machine='', user=None, print_to_console=True):
     if user:
-      host = "%s@%s" % (user, machine)
+      host = '%s@%s' % (user, machine)
     else:
       host = machine
 
     self._LogMsg(0, self._GetStdout(print_to_console),
-                 "CMD (%s): %s\n" % (host, cmd))
+                 'CMD (%s): %s\n' % (host, cmd))
 
   def LogFatal(self, msg, print_to_console=True):
+    self._LogMsg(0, self._GetStderr(print_to_console), 'FATAL: %s\n' % msg)
     self._LogMsg(0, self._GetStderr(print_to_console),
-                 "FATAL: %s\n" % msg)
-    self._LogMsg(0, self._GetStderr(print_to_console),
-                 "\n".join(traceback.format_stack()))
-    print "MockLogger: Calling sysexit(1)"
+                 '\n'.join(traceback.format_stack()))
+    print 'MockLogger: Calling sysexit(1)'
 
   def LogError(self, msg, print_to_console=True):
-    self._LogMsg(0, self._GetStderr(print_to_console),
-                 "ERROR: %s\n" % msg)
+    self._LogMsg(0, self._GetStderr(print_to_console), 'ERROR: %s\n' % msg)
 
   def LogWarning(self, msg, print_to_console=True):
-    self._LogMsg(0, self._GetStderr(print_to_console),
-                 "WARNING: %s\n" % msg)
+    self._LogMsg(0, self._GetStderr(print_to_console), 'WARNING: %s\n' % msg)
 
   def LogOutput(self, msg, print_to_console=True):
-    self._LogMsg(0, self._GetStdout(print_to_console),
-                 "OUTPUT: %s\n" % msg)
+    self._LogMsg(0, self._GetStdout(print_to_console), 'OUTPUT: %s\n' % msg)
 
   def LogFatalIf(self, condition, msg):
     if condition:
@@ -322,23 +320,28 @@ class MockLogger(object):
       self.LogWarning(msg)
 
   def LogCommandOutput(self, msg, print_to_console=True):
-    self._LogMsg(self.stdout, self._GetStdout(print_to_console),
-                 msg, flush=False)
+    self._LogMsg(self.stdout,
+                 self._GetStdout(print_to_console),
+                 msg,
+                 flush=False)
 
   def LogCommandError(self, msg, print_to_console=True):
-    self._LogMsg(self.stderr, self._GetStderr(print_to_console),
-                 msg, flush=False)
+    self._LogMsg(self.stderr,
+                 self._GetStderr(print_to_console),
+                 msg,
+                 flush=False)
 
   def Flush(self):
-    print "MockLogger: Flushing cmdfd, stdout, stderr"
+    print 'MockLogger: Flushing cmdfd, stdout, stderr'
 
 
 main_logger = None
 
+
 def InitLogger(script_name, log_dir, print_console=True, mock=False):
   """Initialize a global logger. To be called only once."""
   global main_logger
-  assert not main_logger, "The logger has already been initialized"
+  assert not main_logger, 'The logger has already been initialized'
   rootdir, basefilename = GetRoot(script_name)
   if not log_dir:
     log_dir = rootdir
@@ -348,7 +351,7 @@ def InitLogger(script_name, log_dir, print_console=True, mock=False):
     main_logger = MockLogger(log_dir, basefilename, print_console)
 
 
-def GetLogger(log_dir="", mock=False):
+def GetLogger(log_dir='', mock=False):
   if not main_logger:
     InitLogger(sys.argv[0], log_dir, mock=mock)
   return main_logger
@@ -361,6 +364,6 @@ def HandleUncaughtExceptions(fun):
     try:
       return fun(*args, **kwargs)
     except StandardError:
-      GetLogger().LogFatal("Uncaught exception:\n%s" % traceback.format_exc())
+      GetLogger().LogFatal('Uncaught exception:\n%s' % traceback.format_exc())
 
   return _Interceptor

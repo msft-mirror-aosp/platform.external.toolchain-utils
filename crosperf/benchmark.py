@@ -1,4 +1,3 @@
-#!/usr/bin/python
 
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -15,9 +14,17 @@ class Benchmark(object):
   arguments.
   """
 
-  def __init__(self, name, test_name, test_args, iterations,
-               rm_chroot_tmp, perf_args, suite="",
-               show_all_results=False, retries=0, run_local=False):
+  def __init__(self,
+               name,
+               test_name,
+               test_args,
+               iterations,
+               rm_chroot_tmp,
+               perf_args,
+               suite='',
+               show_all_results=False,
+               retries=0,
+               run_local=False):
     self.name = name
     #For telemetry, this is the benchmark name.
     self.test_name = test_name
@@ -30,8 +37,8 @@ class Benchmark(object):
     self.suite = suite
     self.show_all_results = show_all_results
     self.retries = retries
-    if self.suite == "telemetry":
+    if self.suite == 'telemetry':
       self.show_all_results = True
     if run_local and self.suite != 'telemetry_Crosperf':
-      raise Exception("run_local is only supported by telemetry_Crosperf.")
+      raise Exception('run_local is only supported by telemetry_Crosperf.')
     self.run_local = run_local

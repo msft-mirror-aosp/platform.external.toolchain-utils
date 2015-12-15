@@ -1,8 +1,5 @@
-#!/usr/bin/python
-#
 # Copyright 2012 Google Inc. All Rights Reserved.
 #
-
 """Tools for recording and reporting timeline of benchmark_run."""
 
 __author__ = 'yunlian@google.com (Yunlian Jiang)'
@@ -11,6 +8,7 @@ import time
 
 
 class Event(object):
+
   def __init__(self, name='', cur_time=0):
     self.name = name
     self.timestamp = cur_time
@@ -30,7 +28,7 @@ class Timeline(object):
     self.events.append(cur_event)
 
   def GetEvents(self):
-    return([e.name for e in self.events])
+    return ([e.name for e in self.events])
 
   def GetEventDict(self):
     tl = {}

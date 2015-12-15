@@ -1,7 +1,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """The experiment setting module."""
 
 from __future__ import print_function
@@ -21,13 +20,14 @@ from machine_manager import MachineManager
 from machine_manager import MockMachineManager
 import test_flag
 
+
 class Experiment(object):
   """Class representing an Experiment to be run."""
 
-  def __init__(self, name, remote, working_directory,
-               chromeos_root, cache_conditions, labels, benchmarks,
-               experiment_file, email_to, acquire_timeout, log_dir,
-               log_level, share_cache, results_directory, locks_directory):
+  def __init__(self, name, remote, working_directory, chromeos_root,
+               cache_conditions, labels, benchmarks, experiment_file, email_to,
+               acquire_timeout, log_dir, log_level, share_cache,
+               results_directory, locks_directory):
     self.name = name
     self.working_directory = working_directory
     self.remote = remote
@@ -37,7 +37,7 @@ class Experiment(object):
     self.email_to = email_to
     if not results_directory:
       self.results_directory = os.path.join(self.working_directory,
-                                            self.name + "_results")
+                                            self.name + '_results')
     else:
       self.results_directory = misc.CanonicalizePath(results_directory)
     self.log_dir = log_dir
@@ -54,11 +54,11 @@ class Experiment(object):
     self.locked_machines = []
 
     if not remote:
-      raise RuntimeError("No remote hosts specified")
+      raise RuntimeError('No remote hosts specified')
     if not self.benchmarks:
-      raise RuntimeError("No benchmarks specified")
+      raise RuntimeError('No benchmarks specified')
     if not self.labels:
-      raise RuntimeError("No labels specified")
+      raise RuntimeError('No labels specified')
 
     # We need one chromeos_root to run the benchmarks in, but it doesn't
     # matter where it is, unless the ABIs are different.
@@ -68,8 +68,8 @@ class Experiment(object):
           chromeos_root = label.chromeos_root
           break
     if not chromeos_root:
-      raise RuntimeError("No chromeos_root given and could not determine "
-                         "one from the image path.")
+      raise RuntimeError('No chromeos_root given and could not determine '
+                         'one from the image path.')
 
     if test_flag.GetTestMode():
       self.machine_manager = MockMachineManager(chromeos_root, acquire_timeout,
@@ -86,7 +86,7 @@ class Experiment(object):
     # machines. This is a subset of self.remote. We make both lists the same.
     self.remote = [m.name for m in self.machine_manager._all_machines]
     if not self.remote:
-      raise RuntimeError("No machine available for running experiment.")
+      raise RuntimeError('No machine available for running experiment.')
 
     for label in labels:
       # We filter out label remotes that are not reachable (not in
@@ -121,22 +121,15 @@ class Experiment(object):
       for benchmark in self.benchmarks:
         for iteration in range(1, benchmark.iterations + 1):
 
-          benchmark_run_name = "%s: %s (%s)" % (label.name, benchmark.name,
+          benchmark_run_name = '%s: %s (%s)' % (label.name, benchmark.name,
                                                 iteration)
-          full_name = "%s_%s_%s" % (label.name, benchmark.name, iteration)
-          logger_to_use = logger.Logger(self.log_dir,
-                                        "run.%s" % (full_name),
+          full_name = '%s_%s_%s' % (label.name, benchmark.name, iteration)
+          logger_to_use = logger.Logger(self.log_dir, 'run.%s' % (full_name),
                                         True)
           benchmark_runs.append(benchmark_run.BenchmarkRun(
-              benchmark_run_name,
-              benchmark,
-              label,
-              iteration,
-              self.cache_conditions,
-              self.machine_manager,
-              logger_to_use,
-              self.log_level,
-              self.share_cache))
+              benchmark_run_name, benchmark, label, iteration,
+              self.cache_conditions, self.machine_manager, logger_to_use,
+              self.log_level, self.share_cache))
 
     return benchmark_runs
 
@@ -211,10 +204,9 @@ class Experiment(object):
         return
 
       # If we locked any machines earlier, make sure we unlock them now.
-      lock_mgr = afe_lock_machine.AFELockManager(all_machines, "",
-                                                 self.labels[0].chromeos_root,
-                                                 None)
-      machine_states = lock_mgr.GetMachineStates("unlock")
+      lock_mgr = afe_lock_machine.AFELockManager(
+          all_machines, '', self.labels[0].chromeos_root, None)
+      machine_states = lock_mgr.GetMachineStates('unlock')
       for k, state in machine_states.iteritems():
-        if state["locked"]:
+        if state['locked']:
           lock_mgr.UpdateLockInAFE(False, k)

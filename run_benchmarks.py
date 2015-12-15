@@ -1,7 +1,6 @@
 #!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
-
 """Script to run ChromeOS benchmarks
 
 Inputs:
@@ -11,7 +10,8 @@ Inputs:
     hostname/IP of Chromeos machine
 
     chromeos/cpu/<benchname>
-       - Read run script rules from bench.mk perflab-bin, copy benchmark to host, run
+       - Read run script rules from bench.mk perflab-bin, copy benchmark to
+       host, run
        and return results.
 
     chromeos/startup
@@ -25,7 +25,7 @@ Inputs:
 
 """
 
-__author__ = "bjanakiraman@google.com (Bhaskar Janakiraman)"
+__author__ = 'bjanakiraman@google.com (Bhaskar Janakiraman)'
 
 import optparse
 import os
@@ -37,30 +37,27 @@ import run_tests
 from utils import command_executer
 from utils import logger
 
-
 KNOWN_BENCHMARKS = [
-    "chromeos/startup",
-    "chromeos/browser/pagecycler",
-    "chromeos/browser/sunspider",
-    "chromeos/browser/v8bench",
-    "chromeos/cpu/bikjmp"]
+    'chromeos/startup', 'chromeos/browser/pagecycler',
+    'chromeos/browser/sunspider', 'chromeos/browser/v8bench',
+    'chromeos/cpu/bikjmp'
+]
 
 name_map = {
-    "pagecycler" : "Page",
-    "sunspider" : "SunSpider",
-    "v8bench" : "V8Bench",
-    "startup" : "BootPerfServer"}
-
+    'pagecycler': 'Page',
+    'sunspider': 'SunSpider',
+    'v8bench': 'V8Bench',
+    'startup': 'BootPerfServer'
+}
 
 # Run command template
-
 
 # Common initializations
 cmd_executer = command_executer.GetCommandExecuter()
 
 
 def Usage(parser, message):
-  print "ERROR: " + message
+  print 'ERROR: ' + message
   parser.print_help()
   sys.exit(0)
 
@@ -118,16 +115,18 @@ def RunCpuBenchmark(chromeos_root, bench, workdir, machine):
   # Since this has exclusive access to the machine,
   # we do not worry about duplicates.
   args = 'rm -rf /tmp/%s' % benchname
-  retval = cmd_executer.CrosRunCommand(args, chromeos_root=chromeos_root,
+  retval = cmd_executer.CrosRunCommand(args,
+                                       chromeos_root=chromeos_root,
                                        machine=machine)
   if retval:
     return retval
 
   # Copy benchmark directory.
-  retval = cmd_executer.CopyFiles(benchdir, "/tmp/" + benchname,
-      chromeos_root=chromeos_root,
-      dest_machine=machine,
-      dest_cros=True)
+  retval = cmd_executer.CopyFiles(benchdir,
+                                  '/tmp/' + benchname,
+                                  chromeos_root=chromeos_root,
+                                  dest_machine=machine,
+                                  dest_cros=True)
   if retval:
     return retval
 
@@ -146,7 +145,8 @@ def RunCpuBenchmark(chromeos_root, bench, workdir, machine):
   # Capture output and process it.
   sshargs = "'cd /tmp/%s;" % benchname
   sshargs += "time -p %s'" % run_cmd
-  cmd_executer.CrosRunCommand(sshargs, chromeos_root=chromeos_root,
+  cmd_executer.CrosRunCommand(sshargs,
+                              chromeos_root=chromeos_root,
                               machine=machine)
 
   return retval
@@ -157,30 +157,37 @@ def Main(argv):
   # Common initializations
 
   parser = optparse.OptionParser()
-  parser.add_option("-c", "--chromeos_root", dest="chromeos_root",
-                    help="Target directory for ChromeOS installation.")
-  parser.add_option("-m", "--machine", dest="machine",
-                    help="The chromeos host machine.")
-  parser.add_option("--workdir", dest="workdir", default="./perflab-bin",
-                    help="Work directory for perflab outputs.")
-  parser.add_option("--board", dest="board",
-                    help="ChromeOS target board, e.g. x86-generic")
+  parser.add_option('-c',
+                    '--chromeos_root',
+                    dest='chromeos_root',
+                    help='Target directory for ChromeOS installation.')
+  parser.add_option('-m',
+                    '--machine',
+                    dest='machine',
+                    help='The chromeos host machine.')
+  parser.add_option('--workdir',
+                    dest='workdir',
+                    default='./perflab-bin',
+                    help='Work directory for perflab outputs.')
+  parser.add_option('--board',
+                    dest='board',
+                    help='ChromeOS target board, e.g. x86-generic')
 
   (options, args) = parser.parse_args(argv[1:])
 
   # validate args
   for arg in args:
     if arg not in KNOWN_BENCHMARKS:
-      logger.GetLogger().LogFatal("Bad benchmark %s specified" % arg)
+      logger.GetLogger().LogFatal('Bad benchmark %s specified' % arg)
 
   if options.chromeos_root is None:
-    Usage(parser, "--chromeos_root must be set")
+    Usage(parser, '--chromeos_root must be set')
 
   if options.board is None:
-    Usage(parser, "--board must be set")
+    Usage(parser, '--board must be set')
 
   if options.machine is None:
-    Usage(parser, "--machine must be set")
+    Usage(parser, '--machine must be set')
 
   found_err = 0
   retval = 0
@@ -189,50 +196,47 @@ def Main(argv):
     comps = re.split('/', arg)
     if re.match('chromeos/cpu', arg):
       benchname = comps[2]
-      print "RUNNING %s" % benchname
-      retval = RunCpuBenchmark(options.chromeos_root,
-                               arg, options.workdir, options.machine)
+      print 'RUNNING %s' % benchname
+      retval = RunCpuBenchmark(options.chromeos_root, arg, options.workdir,
+                               options.machine)
       if not found_err:
         found_err = retval
     elif re.match('chromeos/startup', arg):
       benchname = comps[1]
-      image_args = [os.path.dirname(os.path.abspath(__file__)) +
-                    "/image_chromeos.py",
-                    "--chromeos_root=" + options.chromeos_root,
-                    "--remote=" + options.machine,
-                    "--image=" + options.workdir + "/" +
-                    benchname + "/chromiumos_image.bin"
-                   ]
-      logger.GetLogger().LogOutput("Reimaging machine %s" % options.machine)
+      image_args = [
+          os.path.dirname(os.path.abspath(__file__)) + '/image_chromeos.py',
+          '--chromeos_root=' + options.chromeos_root,
+          '--remote=' + options.machine, '--image=' + options.workdir + '/' +
+          benchname + '/chromiumos_image.bin'
+      ]
+      logger.GetLogger().LogOutput('Reimaging machine %s' % options.machine)
       image_chromeos.Main(image_args)
 
-      logger.GetLogger().LogOutput("Running %s" % arg)
-      retval = RunStartupBenchmark(options.chromeos_root,
-                                   options.board,
-                                   arg, options.workdir, options.machine)
+      logger.GetLogger().LogOutput('Running %s' % arg)
+      retval = RunStartupBenchmark(options.chromeos_root, options.board, arg,
+                                   options.workdir, options.machine)
       if not found_err:
         found_err = retval
     elif re.match('chromeos/browser', arg):
       benchname = comps[2]
-      image_args = [os.path.dirname(os.path.abspath(__file__)) +
-                    "/image_chromeos.py",
-                    "--chromeos_root=" + options.chromeos_root,
-                    "--remote=" + options.machine,
-                    "--image=" + options.workdir + "/" +
-                    benchname + "/chromiumos_image.bin"
-                   ]
-      logger.GetLogger().LogOutput("Reimaging machine %s" % options.machine)
+      image_args = [
+          os.path.dirname(os.path.abspath(__file__)) + '/image_chromeos.py',
+          '--chromeos_root=' + options.chromeos_root,
+          '--remote=' + options.machine, '--image=' + options.workdir + '/' +
+          benchname + '/chromiumos_image.bin'
+      ]
+      logger.GetLogger().LogOutput('Reimaging machine %s' % options.machine)
       image_chromeos.Main(image_args)
 
-      logger.GetLogger().LogOutput("Running %s" % arg)
-      retval = RunBrowserBenchmark(options.chromeos_root, 
-                                   options.board,
-                                   arg, options.workdir, options.machine)
+      logger.GetLogger().LogOutput('Running %s' % arg)
+      retval = RunBrowserBenchmark(options.chromeos_root, options.board, arg,
+                                   options.workdir, options.machine)
       if not found_err:
         found_err = retval
 
   return found_err
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
   retval = Main(sys.argv)
   sys.exit(retval)

@@ -1,7 +1,6 @@
 #!/usr/bin/python2
 #
 # Copyright 2015 Google INc.  All Rights Reserved.
-
 """This module controls locking and unlocking of test machines."""
 
 from __future__ import print_function
@@ -14,6 +13,7 @@ import traceback
 
 from utils import logger
 from utils import machines
+
 
 class AFELockException(Exception):
   """Base class for exceptions in this module."""
@@ -76,8 +76,13 @@ class AFELockManager(object):
 
   LOCAL_SERVER = 'chrotomation2.mtv.corp.google.com'
 
-  def __init__(self, remotes, force_option, chromeos_root, local_server,
-               local=True, log=None):
+  def __init__(self,
+               remotes,
+               force_option,
+               chromeos_root,
+               local_server,
+               local=True,
+               log=None):
     """Initializes an AFELockManager object.
 
     Args:
@@ -124,8 +129,8 @@ class AFELockManager(object):
       dargs = {}
       dargs['server'] = local_server or AFELockManager.LOCAL_SERVER
       # Make sure local server is pingable.
-      error_msg = ('Local autotest server machine %s not responding to ping.'
-                   % dargs['server'])
+      error_msg = ('Local autotest server machine %s not responding to ping.' %
+                   dargs['server'])
       self.CheckMachine(dargs['server'], error_msg)
       self.local_afe = frontend_wrappers.RetryingAFE(timeout_min=30,
                                                      delay_sec=10,
@@ -176,8 +181,8 @@ class AFELockManager(object):
     Returns:
       A list of names of the toolchain machines in the ChromeOS HW lab.
     """
-    machines_file = os.path.join(os.path.dirname(__file__),
-                                 'crosperf', 'default_remotes')
+    machines_file = os.path.join(
+        os.path.dirname(__file__), 'crosperf', 'default_remotes')
     machine_list = []
     with open(machines_file, 'r') as input_file:
       lines = input_file.readlines()
@@ -258,8 +263,8 @@ class AFELockManager(object):
       for cros_name in [m, m + '.cros']:
         if cros_name in self.toolchain_lab_machines:
           raise UpdateNonLocalMachine('Machine %s is already in the ChromeOS HW'
-                                      'Lab.  Cannot add it to local server.'
-                                      % cros_name)
+                                      'Lab.  Cannot add it to local server.' %
+                                      cros_name)
       host_info = self.local_afe.get_hosts(hostname=m)
       if host_info:
         raise DuplicateAdd('Machine %s is already on the local server.' % m)
@@ -268,8 +273,8 @@ class AFELockManager(object):
         self.logger.LogOutput('Successfully added %s to local server.' % m)
       except Exception as e:
         traceback.print_exc()
-        raise UpdateServerError('Error occurred while attempting to add %s. %s'
-                                % (m, str(e)))
+        raise UpdateServerError(
+            'Error occurred while attempting to add %s. %s' % (m, str(e)))
 
   def RemoveMachinesFromLocalServer(self):
     """Removes one or more machines from the local AFE server.
@@ -285,9 +290,9 @@ class AFELockManager(object):
     for m in self.machines:
       for cros_name in [m, m + '.cros']:
         if cros_name in self.toolchain_lab_machines:
-          raise UpdateNonLocalMachine('Machine %s is in the ChromeOS HW Lab. '
-                                      'This script cannot remove lab machines.'
-                                      % cros_name)
+          raise UpdateNonLocalMachine(
+              'Machine %s is in the ChromeOS HW Lab. '
+              'This script cannot remove lab machines.' % cros_name)
       try:
         self.RemoveLocalMachine(m)
         self.logger.LogOutput('Successfully removed %s from local server.' % m)
@@ -335,7 +340,6 @@ class AFELockManager(object):
                 (m, state['board'], state['locked_by'], state['lock_time']))
         else:
           print('%s (%s)\tunlocked' % (m, state['board']))
-
 
   def UpdateLockInAFE(self, should_lock_machine, machine):
     """Calls an AFE server to lock/unlock a machine.
@@ -412,8 +416,9 @@ class AFELockManager(object):
       if machine.find('.cros') == -1:
         cros_machine = cros_machine + '.cros'
 
-    self.machines = [m for m in self.machines if m != cros_machine and
-                     m != machine]
+    self.machines = [m
+                     for m in self.machines
+                     if m != cros_machine and m != machine]
 
   def CheckMachineLocks(self, machine_states, cmd):
     """Check that every machine in requested list is in the proper state.
@@ -442,8 +447,8 @@ class AFELockManager(object):
                             'else (%s).' % (k, state['locked_by']))
       elif cmd == 'lock':
         if state['locked']:
-          self.logger.LogWarning('Attempt to lock already locked machine (%s)'
-                                 % k)
+          self.logger.LogWarning('Attempt to lock already locked machine (%s)' %
+                                 k)
           self._InternalRemoveMachine(k)
 
   def HasAFEServer(self, local):
@@ -533,32 +538,55 @@ def Main(argv):
   """
   parser = argparse.ArgumentParser()
 
-  parser.add_argument('--list', dest='cmd', action='store_const',
+  parser.add_argument('--list',
+                      dest='cmd',
+                      action='store_const',
                       const='status',
                       help='List current status of all known machines.')
-  parser.add_argument('--lock', dest='cmd', action='store_const',
-                      const='lock', help='Lock given machine(s).')
-  parser.add_argument('--unlock', dest='cmd', action='store_const',
-                      const='unlock', help='Unlock given machine(s).')
-  parser.add_argument('--status', dest='cmd', action='store_const',
+  parser.add_argument('--lock',
+                      dest='cmd',
+                      action='store_const',
+                      const='lock',
+                      help='Lock given machine(s).')
+  parser.add_argument('--unlock',
+                      dest='cmd',
+                      action='store_const',
+                      const='unlock',
+                      help='Unlock given machine(s).')
+  parser.add_argument('--status',
+                      dest='cmd',
+                      action='store_const',
                       const='status',
                       help='List current status of given machine(s).')
-  parser.add_argument('--add_machine', dest='cmd', action='store_const',
+  parser.add_argument('--add_machine',
+                      dest='cmd',
+                      action='store_const',
                       const='add',
                       help='Add machine to local machine server.')
-  parser.add_argument('--remove_machine', dest='cmd',
-                      action='store_const', const='remove',
+  parser.add_argument('--remove_machine',
+                      dest='cmd',
+                      action='store_const',
+                      const='remove',
                       help='Remove machine from the local machine server.')
-  parser.add_argument('--nolocal', dest='local',
-                      action='store_false', default=True,
+  parser.add_argument('--nolocal',
+                      dest='local',
+                      action='store_false',
+                      default=True,
                       help='Do not try to use local machine server.')
-  parser.add_argument('--remote', dest='remote',
+  parser.add_argument('--remote',
+                      dest='remote',
                       help='machines on which to operate')
-  parser.add_argument('--chromeos_root', dest='chromeos_root', required=True,
+  parser.add_argument('--chromeos_root',
+                      dest='chromeos_root',
+                      required=True,
                       help='ChromeOS root to use for autotest scripts.')
-  parser.add_argument('--local_server', dest='local_server', default=None,
+  parser.add_argument('--local_server',
+                      dest='local_server',
+                      default=None,
                       help='Alternate local autotest server to use.')
-  parser.add_argument('--force', dest='force', action='store_true',
+  parser.add_argument('--force',
+                      dest='force',
+                      action='store_true',
                       default=False,
                       help='Force lock/unlock of machines, even if not'
                       ' current lock owner.')

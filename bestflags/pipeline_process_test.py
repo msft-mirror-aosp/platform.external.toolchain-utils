@@ -1,7 +1,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Pipeline Process unittest.
 
 Part of the Chrome build flags optimization.
@@ -62,9 +61,8 @@ class PipelineProcessTest(unittest.TestCase):
     inp = manager.Queue()
     output = manager.Queue()
 
-    process = pipeline_process.PipelineProcess(2, 'testing', {}, TEST_STAGE,
-                                               inp, MockHelper, MockWorker,
-                                               output)
+    process = pipeline_process.PipelineProcess(
+        2, 'testing', {}, TEST_STAGE, inp, MockHelper, MockWorker, output)
 
     process.start()
     inp.put(MockTask(TEST_STAGE, 1))

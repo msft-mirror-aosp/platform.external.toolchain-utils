@@ -1,5 +1,4 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
-
 """Module to get the settings from experiment file."""
 
 from __future__ import print_function
@@ -24,13 +23,13 @@ class Settings(object):
   def AddField(self, field):
     name = field.name
     if name in self.fields:
-      raise Exception("Field %s defined previously." % name)
+      raise Exception('Field %s defined previously.' % name)
     self.fields[name] = field
 
   def SetField(self, name, value, append=False):
     if name not in self.fields:
-      raise Exception("'%s' is not a valid field in '%s' settings"
-                      % (name, self.settings_type))
+      raise Exception("'%s' is not a valid field in '%s' settings" %
+                      (name, self.settings_type))
     if append:
       self.fields[name].Append(value)
     else:
@@ -64,17 +63,17 @@ class Settings(object):
     """Check that all required fields have been set."""
     for name in self.fields:
       if not self.fields[name].assigned and self.fields[name].required:
-        raise Exception("Field %s is invalid." % name)
+        raise Exception('Field %s is invalid.' % name)
 
   def GetXbuddyPath(self, path_str, board, chromeos_root, log_level):
-    prefix = "remote"
+    prefix = 'remote'
     l = logger.GetLogger()
-    if path_str.find("trybot") < 0 and path_str.find(board) < 0:
-      xbuddy_path = "%s/%s/%s" % (prefix, board, path_str)
+    if path_str.find('trybot') < 0 and path_str.find(board) < 0:
+      xbuddy_path = '%s/%s/%s' % (prefix, board, path_str)
     else:
-      xbuddy_path = "%s/%s" % (prefix, path_str)
+      xbuddy_path = '%s/%s' % (prefix, path_str)
     image_downloader = ImageDownloader(l, log_level)
     retval, image_path = image_downloader.Run(chromeos_root, xbuddy_path)
     if retval != 0:
-      raise Exception("Unable to find/download xbuddy image.")
+      raise Exception('Unable to find/download xbuddy image.')
     return image_path

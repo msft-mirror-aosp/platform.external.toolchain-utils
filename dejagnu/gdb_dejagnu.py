@@ -3,7 +3,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """The gdb dejagnu test wrapper."""
 import optparse
 import os
@@ -21,8 +20,8 @@ from utils import misc
 
 from run_dejagnu import TryAcquireMachine
 
-_VALID_TEST_RESULTS = ['FAIL', 'UNRESOLVED', 'XPASS',
-                       'ERROR', 'UNSUPPORTED', 'PASS']
+_VALID_TEST_RESULTS = ['FAIL', 'UNRESOLVED', 'XPASS', 'ERROR', 'UNSUPPORTED',
+                       'PASS']
 
 
 def ProcessArguments(argv):
@@ -31,9 +30,13 @@ def ProcessArguments(argv):
       'Launches gdb dejagnu test in chroot for chromeos toolchain, compares '
       'the test result with a repository baseline and prints out the result.'),
                                  usage='run_dejagnu options')
-  parser.add_option('-c', '--chromeos_root', dest='chromeos_root',
+  parser.add_option('-c',
+                    '--chromeos_root',
+                    dest='chromeos_root',
                     help='Required. Specify chromeos root')
-  parser.add_option('-m', '--mount', dest='mount',
+  parser.add_option('-m',
+                    '--mount',
+                    dest='mount',
                     help=('Specify gdb source to mount instead of "auto". '
                           'Under "auto" mode, which is the default - gdb is '
                           'checked out and built automatically at default '
@@ -41,12 +44,18 @@ def ProcessArguments(argv):
                           '- the gdb_source is set to "$chromeos_'
                           'root/chroot/usr/local/toolchain_root/gdb", which is '
                           'the mount point for this option value.'))
-  parser.add_option('-b', '--board', dest='board',
+  parser.add_option('-b',
+                    '--board',
+                    dest='board',
                     help=('Required. Specify board.'))
-  parser.add_option('-r', '--remote', dest='remote',
+  parser.add_option('-r',
+                    '--remote',
+                    dest='remote',
                     help=('Required. Specify addresses/names of the board, '
                           'seperate each address/name using comma(\',\').'))
-  parser.add_option('--cleanup', dest='cleanup', default=None,
+  parser.add_option('--cleanup',
+                    dest='cleanup',
+                    default=None,
                     help=('Optional. Values to this option could be '
                           '\'chroot\' (delete chroot) and '
                           '\'chromeos\' (delete the whole chromeos tree).'))
@@ -61,9 +70,9 @@ def ProcessArguments(argv):
     raise Exception('Missing argument for --board.')
   if options.cleanup == 'mount' and not options.mount:
     raise Exception('--cleanup=\'mount\' not valid unless --mount is given.')
-  if options.cleanup and not (
-      options.cleanup == 'mount' or
-      options.cleanup == 'chroot' or options.cleanup == 'chromeos'):
+  if options.cleanup and not (options.cleanup == 'mount' or
+                              options.cleanup == 'chroot' or
+                              options.cleanup == 'chromeos'):
     raise Exception('Invalid option value for --cleanup')
 
   return options
@@ -88,8 +97,7 @@ class DejagnuExecuter(object):
     self._base_dir = base_dir
     self._tmp_abs = None
     self._cleanup = cleanup
-    self._sshflag = ('-o StrictHostKeyChecking=no ' +
-                     '-o CheckHostIP=no ' +
+    self._sshflag = ('-o StrictHostKeyChecking=no ' + '-o CheckHostIP=no ' +
                      '-o UserKnownHostsFile=$(mktemp) ')
 
     if source_dir:
@@ -101,18 +109,19 @@ class DejagnuExecuter(object):
       self._mount_flag = ''
 
   def SetupTestingDir(self):
-    self._tmp_abs = tempfile.mkdtemp(prefix='dejagnu_', dir=path.join(
-        self._chromeos_chroot, 'tmp'))
+    self._tmp_abs = tempfile.mkdtemp(
+        prefix='dejagnu_',
+        dir=path.join(self._chromeos_chroot, 'tmp'))
     self._tmp = self._tmp_abs[len(self._chromeos_chroot):]
     self._tmp_testing_rsa = path.join(self._tmp, 'testing_rsa')
     self._tmp_testing_rsa_abs = path.join(self._tmp_abs, 'testing_rsa')
 
   def PrepareTestingRsaKeys(self):
     if not path.isfile(self._tmp_testing_rsa_abs):
-      shutil.copy(path.join(
-          self._chromeos_root,
-          'src/scripts/mod_for_test_scripts/ssh_keys/testing_rsa'),
-                  self._tmp_testing_rsa_abs)
+      shutil.copy(
+          path.join(self._chromeos_root,
+                    'src/scripts/mod_for_test_scripts/ssh_keys/testing_rsa'),
+          self._tmp_testing_rsa_abs)
       os.chmod(self._tmp_testing_rsa_abs, stat.S_IRUSR)
 
   def PrepareTestFiles(self):
@@ -128,7 +137,8 @@ class DejagnuExecuter(object):
         '__boardname__': self._board,
         '__board_hostname__': self._remote,
         '__tmp_testing_rsa__': self._tmp_testing_rsa,
-        '__tmp_dir__': self._tmp})
+        '__tmp_dir__': self._tmp
+    })
     for pat, sub in substitutions.items():
       content = content.replace(pat, sub)
 
@@ -146,7 +156,8 @@ class DejagnuExecuter(object):
     substitutions = dict({
         '__board_hostname__': self._remote,
         '__tmp_testing_rsa__': self._tmp_testing_rsa,
-        '__tmp_dir__': self._tmp})
+        '__tmp_dir__': self._tmp
+    })
     for pat, sub in substitutions.items():
       content = content.replace(pat, sub)
 
@@ -162,8 +173,7 @@ class DejagnuExecuter(object):
 
   def PrepareGdbDefault(self):
     ret = self._executer.ChrootRunCommandWOutput(
-        self._chromeos_root,
-        'equery w cross-%s/gdb' % self._target)[1]
+        self._chromeos_root, 'equery w cross-%s/gdb' % self._target)[1]
     ret = path.basename(ret.strip())
 
     matcher = re.match(r'(.*).ebuild', ret)
@@ -172,13 +182,12 @@ class DejagnuExecuter(object):
     else:
       raise Exception('Failed to get gdb reversion.')
     gdb_version = gdb_reversion.split('-r')[0]
-    gdb_portage_dir = '/var/tmp/portage/cross-%s/%s/work' % (
-        self._target, gdb_reversion)
+    gdb_portage_dir = '/var/tmp/portage/cross-%s/%s/work' % (self._target,
+                                                             gdb_reversion)
     self._gdb_source_dir = path.join(gdb_portage_dir, gdb_version)
 
-    ret = self._executer.ChrootRunCommand(
-        self._chromeos_root,
-        ('sudo %s ebuild $(equery w cross-%s/gdb) clean compile' % (
+    ret = self._executer.ChrootRunCommand(self._chromeos_root, (
+        'sudo %s ebuild $(equery w cross-%s/gdb) clean compile' % (
             self._mount_flag, self._target)))
     if ret:
       raise Exception('ebuild gdb failed.')
@@ -189,19 +198,18 @@ class DejagnuExecuter(object):
   def PrepareGdbserverDefault(self):
     cmd = ('./setup_board --board {0}; '
            '{1} emerge-{0} gdb'.format(self._board, self._mount_flag))
-    ret = self._executer.ChrootRunCommand(
-        self._chromeos_root,
-        cmd, print_to_console=True)
+    ret = self._executer.ChrootRunCommand(self._chromeos_root,
+                                          cmd,
+                                          print_to_console=True)
     if ret:
       raise Exception('ebuild gdbserver failed.')
 
     cmd = ('scp -i {0}  {1} '
-           '/build/{2}/usr/bin/gdbserver root@{3}:/usr/local/bin/'
-           .format(self._tmp_testing_rsa, self._sshflag,
-                   self._board, self._remote))
-    ret = self._executer.ChrootRunCommand(
-        self._chromeos_root,
-        cmd, print_to_console=True)
+           '/build/{2}/usr/bin/gdbserver root@{3}:/usr/local/bin/'.format(
+               self._tmp_testing_rsa, self._sshflag, self._board, self._remote))
+    ret = self._executer.ChrootRunCommand(self._chromeos_root,
+                                          cmd,
+                                          print_to_console=True)
     if ret:
       raise Exception('copy gdbserver failed.')
 
@@ -235,25 +243,19 @@ class DejagnuExecuter(object):
 
   def MakeCheck(self):
     cmd = ('ssh -i {0} {1}  root@{2} "reboot && exit"'
-           .format(self._tmp_testing_rsa, self._sshflag,
-                   self._remote))
-    self._executer.ChrootRunCommand(
-        self._chromeos_root, cmd)
+           .format(self._tmp_testing_rsa, self._sshflag, self._remote))
+    self._executer.ChrootRunCommand(self._chromeos_root, cmd)
     time.sleep(40)
 
     cmd = ('ssh -i {0} {1}  root@{2} '
-           '"iptables -A INPUT -p tcp --dport 1234 -j ACCEPT"'
-           .format(self._tmp_testing_rsa, self._sshflag,
-                   self._remote))
-    self._executer.ChrootRunCommand(
-        self._chromeos_root, cmd)
+           '"iptables -A INPUT -p tcp --dport 1234 -j ACCEPT"'.format(
+               self._tmp_testing_rsa, self._sshflag, self._remote))
+    self._executer.ChrootRunCommand(self._chromeos_root, cmd)
 
     cmd = ('cd %s ; '
-           'DEJAGNU=%s make check' %
-           (path.join(self._gdb_source_dir, 'gdb'),
-            path.join(self._tmp, 'site.exp')))
-    ret = self._executer.ChrootRunCommand(
-        self._chromeos_root, cmd)
+           'DEJAGNU=%s make check' % (path.join(self._gdb_source_dir, 'gdb'),
+                                      path.join(self._tmp, 'site.exp')))
+    ret = self._executer.ChrootRunCommand(self._chromeos_root, cmd)
     if ret:
       raise Exception('Make check failed.')
 
@@ -265,10 +267,9 @@ class DejagnuExecuter(object):
     else:
       mount = '-m'
     cmd = ('python {0} --chromeos_root={1} '
-           '--gdb_dir={2} --board={3} {4}'
-           .format(script, self._chromeos_root,
-                   self._source_dir, self._board,
-                   mount))
+           '--gdb_dir={2} --board={3} {4}'.format(script, self._chromeos_root,
+                                                  self._source_dir, self._board,
+                                                  mount))
     rv = self._executer.RunCommand(cmd)
     if rv:
       raise Exception('Mount source failed.')
@@ -287,10 +288,9 @@ class DejagnuExecuter(object):
     return result
 
   def PrepareResult(self):
-    test_output = os.path.join(self._gdb_source_dir, 'gdb',
-                               'testsuite', 'gdb.sum')
-    test_output = misc.GetOutsideChrootPath(self._chromeos_root,
-                                            test_output)
+    test_output = os.path.join(self._gdb_source_dir, 'gdb', 'testsuite',
+                               'gdb.sum')
+    test_output = misc.GetOutsideChrootPath(self._chromeos_root, test_output)
     base_output = os.path.join(self._base_dir, 'gdb_baseline', self._target)
 
     self.test_result = self.ParseResult(test_output)
@@ -318,11 +318,9 @@ class DejagnuExecuter(object):
 def Main(argv):
   opts = ProcessArguments(argv)
   available_machine = TryAcquireMachine(opts.remote)
-  executer = DejagnuExecuter(misc.GetRoot(argv[0])[0],
-                             opts.mount, opts.chromeos_root,
-                             available_machine._name,
-                             opts.board,
-                             opts.cleanup)
+  executer = DejagnuExecuter(
+      misc.GetRoot(argv[0])[0], opts.mount, opts.chromeos_root,
+      available_machine._name, opts.board, opts.cleanup)
   # Return value is a 3- or 4-element tuple
   #   element#1 - exit code
   #   element#2 - stdout
@@ -352,6 +350,7 @@ def Main(argv):
   finally:
     executer.Cleanup()
     return ret
+
 
 if __name__ == '__main__':
   retval = Main(sys.argv)[0]

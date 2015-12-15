@@ -1,5 +1,4 @@
 # Copyright 2012 Google Inc. All Rights Reserved.
-
 """Tests for misc."""
 
 __author__ = 'asharif@google.com (Ahmad Sharif)'
@@ -13,6 +12,7 @@ import misc
 
 
 class UtilsTest(unittest.TestCase):
+
   def testGetFilenameFromString(self):
     string = 'a /b=c"d^$?\\'
     filename = misc.GetFilenameFromString(string)
@@ -29,11 +29,10 @@ class UtilsTest(unittest.TestCase):
     self.assertTrue(new_env_string == ' '.join([env_string, expected_new_env]))
 
   def testGetChromeOSVersionFromLSBVersion(self):
-    versions_dict = {"2630.0.0": "22",
-                     "2030.0.0": "19"}
+    versions_dict = {'2630.0.0': '22', '2030.0.0': '19'}
     f = misc.GetChromeOSVersionFromLSBVersion
     for k, v in versions_dict.items():
-      self.assertTrue(f(k) == "R%s-%s" % (v, k))
+      self.assertTrue(f(k) == 'R%s-%s' % (v, k))
 
   def testPostpendMergeEnv(self):
     var = 'USE'
@@ -41,10 +40,10 @@ class UtilsTest(unittest.TestCase):
     added_use_flags = 'bla bla'
     env_string = '%s=%r' % (var, use_flags)
     new_env_string = misc.MergeEnvStringWithDict(env_string,
-                                                 {var: added_use_flags},
-                                                 False)
+                                                 {var: added_use_flags}, False)
     expected_new_env = '%s=%r' % (var, ' '.join([use_flags, added_use_flags]))
     self.assertTrue(new_env_string == ' '.join([env_string, expected_new_env]))
+
 
 if __name__ == '__main__':
   unittest.main()

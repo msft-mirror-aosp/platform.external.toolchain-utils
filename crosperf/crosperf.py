@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 # Copyright 2011 Google Inc. All Rights Reserved.
-
 """The driver script for running performance benchmarks on ChromeOS."""
 
 import atexit
@@ -21,32 +20,33 @@ import test_flag
 
 
 class MyIndentedHelpFormatter(optparse.IndentedHelpFormatter):
+
   def format_description(self, description):
     return description
 
 
 def SetupParserOptions(parser):
   """Add all options to the parser."""
-  parser.add_option("--dry_run",
-                    dest="dry_run",
-                    help=("Parse the experiment file and "
-                          "show what will be done"),
-                    action="store_true",
+  parser.add_option('--dry_run',
+                    dest='dry_run',
+                    help=('Parse the experiment file and '
+                          'show what will be done'),
+                    action='store_true',
                     default=False)
   # Allow each of the global fields to be overridden by passing in
   # options. Add each global field as an option.
-  option_settings = GlobalSettings("")
+  option_settings = GlobalSettings('')
   for field_name in option_settings.fields:
     field = option_settings.fields[field_name]
-    parser.add_option("--%s" % field.name,
+    parser.add_option('--%s' % field.name,
                       dest=field.name,
                       help=field.description,
-                      action="store")
+                      action='store')
 
 
 def ConvertOptionsToSettings(options):
   """Convert options passed in into global settings."""
-  option_settings = GlobalSettings("option_settings")
+  option_settings = GlobalSettings('option_settings')
   for option_name in options.__dict__:
     if (options.__dict__[option_name] is not None and
         option_name in option_settings.fields):
@@ -73,18 +73,19 @@ def Main(argv):
   parser = optparse.OptionParser(usage=Help().GetUsage(),
                                  description=Help().GetHelp(),
                                  formatter=MyIndentedHelpFormatter(),
-                                 version="%prog 3.0")
+                                 version='%prog 3.0')
 
-  parser.add_option("--noschedv2",
-                    dest="noschedv2",
+  parser.add_option('--noschedv2',
+                    dest='noschedv2',
                     default=False,
-                    action="store_true",
-                    help=("Do not use new scheduler. "
-                          "Use original scheduler instead."))
-  parser.add_option("-l", "--log_dir",
-                    dest="log_dir",
-                    default="",
-                    help="The log_dir, default is under <crosperf_logs>/logs")
+                    action='store_true',
+                    help=('Do not use new scheduler. '
+                          'Use original scheduler instead.'))
+  parser.add_option('-l',
+                    '--log_dir',
+                    dest='log_dir',
+                    default='',
+                    help='The log_dir, default is under <crosperf_logs>/logs')
 
   SetupParserOptions(parser)
   options, args = parser.parse_args(argv)
@@ -98,22 +99,21 @@ def Main(argv):
   if len(args) == 2:
     experiment_filename = args[1]
   else:
-    parser.error("Invalid number arguments.")
+    parser.error('Invalid number arguments.')
 
   working_directory = os.getcwd()
   if options.dry_run:
     test_flag.SetTestMode(True)
 
-  experiment_file = ExperimentFile(open(experiment_filename, "rb"),
-                                   option_settings)
-  if not experiment_file.GetGlobalSettings().GetField("name"):
+  experiment_file = ExperimentFile(
+      open(experiment_filename, 'rb'), option_settings)
+  if not experiment_file.GetGlobalSettings().GetField('name'):
     experiment_name = os.path.basename(experiment_filename)
-    experiment_file.GetGlobalSettings().SetField("name", experiment_name)
+    experiment_file.GetGlobalSettings().SetField('name', experiment_name)
   experiment = ExperimentFactory().GetExperiment(experiment_file,
-                                                 working_directory,
-                                                 log_dir)
+                                                 working_directory, log_dir)
 
-  json_report = experiment_file.GetGlobalSettings().GetField("json_report")
+  json_report = experiment_file.GetGlobalSettings().GetField('json_report')
 
   signal.signal(signal.SIGTERM, CallExitHandler)
   atexit.register(Cleanup, experiment)
@@ -121,10 +121,12 @@ def Main(argv):
   if options.dry_run:
     runner = MockExperimentRunner(experiment, json_report)
   else:
-    runner = ExperimentRunner(experiment, json_report,
+    runner = ExperimentRunner(experiment,
+                              json_report,
                               using_schedv2=(not options.noschedv2))
 
   runner.Run()
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
   Main(sys.argv)

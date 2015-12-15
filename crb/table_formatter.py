@@ -1,6 +1,7 @@
 import numpy
 import re
 
+
 def IsFloat(text):
   if text is None:
     return False
@@ -13,22 +14,22 @@ def IsFloat(text):
 
 def RemoveTrailingZeros(x):
   ret = x
-  ret = re.sub("\.0*$", "", ret)
-  ret = re.sub("(\.[1-9]*)0+$", "\\1", ret)
+  ret = re.sub('\.0*$', '', ret)
+  ret = re.sub('(\.[1-9]*)0+$', '\\1', ret)
   return ret
 
 
 def HumanizeFloat(x, n=2):
   if not IsFloat(x):
     return x
-  digits = re.findall("[0-9.]", str(x))
+  digits = re.findall('[0-9.]', str(x))
   decimal_found = False
-  ret = ""
+  ret = ''
   sig_figs = 0
   for digit in digits:
-    if digit == ".":
+    if digit == '.':
       decimal_found = True
-    elif sig_figs != 0 or digit != "0":
+    elif sig_figs != 0 or digit != '0':
       sig_figs += 1
     if decimal_found and sig_figs >= n:
       break
@@ -39,23 +40,23 @@ def HumanizeFloat(x, n=2):
 def GetNSigFigs(x, n=2):
   if not IsFloat(x):
     return x
-  my_fmt = "%." + str(n-1) + "e"
+  my_fmt = '%.' + str(n - 1) + 'e'
   x_string = my_fmt % x
   f = float(x_string)
   return f
 
 
-def GetFormattedPercent(baseline, other, bad_result="--"):
-  result = "%8s" % GetPercent(baseline, other, bad_result)
+def GetFormattedPercent(baseline, other, bad_result='--'):
+  result = '%8s' % GetPercent(baseline, other, bad_result)
   return result
 
 
-def GetPercent(baseline, other, bad_result="--"):
+def GetPercent(baseline, other, bad_result='--'):
   result = bad_result
   if IsFloat(baseline) and IsFloat(other):
     try:
-      pct = (float(other)/float(baseline) - 1) * 100
-      result = "%+1.1f" % pct
+      pct = (float(other) / float(baseline) - 1) * 100
+      result = '%+1.1f' % pct
     except ZeroDivisionError:
       pass
   return result
@@ -67,14 +68,15 @@ def FitString(text, length):
   elif len(text) > length:
     return text[-length:]
   else:
-    fmt = "%%%ds" % length
+    fmt = '%%%ds' % length
     return fmt % text
 
 
 class TableFormatter(object):
+
   def __init__(self):
-    self.d = "\t"
-    self.bad_result = "x"
+    self.d = '\t'
+    self.bad_result = 'x'
 
   def GetTablePercents(self, table):
     # Assumes table is not transposed.
@@ -84,7 +86,7 @@ class TableFormatter(object):
     for i in range(1, len(table)):
       row = []
       row.append(table[i][0])
-      for j in range (1, len(table[0])):
+      for j in range(1, len(table[0])):
         c = table[i][j]
         b = table[i][1]
         p = GetPercent(b, c, self.bad_result)
@@ -99,7 +101,7 @@ class TableFormatter(object):
     ret = HumanizeFloat(f, 4)
     ret = RemoveTrailingZeros(ret)
     if len(ret) > max_length:
-      ret = "%1.1ef" % f
+      ret = '%1.1ef' % f
     return ret
 
   def TransposeTable(self, table):
@@ -112,17 +114,20 @@ class TableFormatter(object):
     return transposed_table
 
   def GetTableLabels(self, table):
-    ret = ""
+    ret = ''
     header = table[0]
     for i in range(1, len(header)):
-      ret += "%d: %s\n" % (i, header[i])
+      ret += '%d: %s\n' % (i, header[i])
     return ret
 
-  def GetFormattedTable(self, table, transposed=False,
-                        first_column_width=30, column_width=14,
+  def GetFormattedTable(self,
+                        table,
+                        transposed=False,
+                        first_column_width=30,
+                        column_width=14,
                         percents_only=True,
                         fit_string=True):
-    o = ""
+    o = ''
     pct_table = self.GetTablePercents(table)
     if transposed == True:
       table = self.TransposeTable(table)
@@ -143,14 +148,14 @@ class TableFormatter(object):
           c = self.FormatFloat(c)
 
         if IsFloat(p) and not percents_only:
-          p = "%s%%" % p
+          p = '%s%%' % p
 
         # Print percent values side by side.
         if j != 0:
           if percents_only:
-            c = "%s" % p
+            c = '%s' % p
           else:
-            c = "%s (%s)" % (c, p)
+            c = '%s (%s)' % (c, p)
 
         if i == 0 and j != 0:
           c = str(j)
@@ -159,7 +164,7 @@ class TableFormatter(object):
           o += FitString(c, width) + self.d
         else:
           o += c + self.d
-      o += "\n"
+      o += '\n'
     return o
 
   def GetGroups(self, table):
@@ -183,11 +188,11 @@ class TableFormatter(object):
 
     labels = table[0]
 
-    summary_labels = ["Summary Table"]
+    summary_labels = ['Summary Table']
     for group in groups:
       label = labels[group[0]]
       stripped_label = self.GetStrippedLabel(label)
-      group_label = "%s (%d runs)" % (stripped_label, len(group))
+      group_label = '%s (%d runs)' % (stripped_label, len(group))
       summary_labels.append(group_label)
     summary_table.append(summary_labels)
 
@@ -210,8 +215,8 @@ class TableFormatter(object):
   def AverageWithDrops(numbers, slow_percent=20, fast_percent=20):
     sorted_numbers = list(numbers)
     sorted_numbers.sort()
-    num_slow = int(slow_percent/100.0 * len(sorted_numbers))
-    num_fast = int(fast_percent/100.0 * len(sorted_numbers))
+    num_slow = int(slow_percent / 100.0 * len(sorted_numbers))
+    num_fast = int(fast_percent / 100.0 * len(sorted_numbers))
     sorted_numbers = sorted_numbers[num_slow:]
     if num_fast:
       sorted_numbers = sorted_numbers[:-num_fast]
@@ -219,7 +224,7 @@ class TableFormatter(object):
 
   @staticmethod
   def AggregateResults(group_results):
-    ret = ""
+    ret = ''
     if not group_results:
       return ret
     all_floats = True
@@ -228,26 +233,26 @@ class TableFormatter(object):
     for group_result in group_results:
       if not IsFloat(group_result):
         all_floats = False
-      if group_result != "PASSED":
+      if group_result != 'PASSED':
         all_passes = False
-      if group_result != "FAILED":
+      if group_result != 'FAILED':
         all_fails = False
     if all_floats == True:
       float_results = [float(v) for v in group_results]
-      ret = "%f" % TableFormatter.AverageWithDrops(float_results)
+      ret = '%f' % TableFormatter.AverageWithDrops(float_results)
       # Add this line for standard deviation.
-###      ret += " %f" % numpy.std(float_results)
+      ###      ret += " %f" % numpy.std(float_results)
     elif all_passes == True:
-      ret = "ALL_PASS"
+      ret = 'ALL_PASS'
     elif all_fails == True:
-      ret = "ALL_FAILS"
+      ret = 'ALL_FAILS'
     return ret
 
   @staticmethod
   def GetStrippedLabel(label):
-    return re.sub("\s*\S+:\S+\s*", "", label)
+    return re.sub('\s*\S+:\S+\s*', '', label)
 ###    return re.sub("\s*remote:\S*\s*i:\d+$", "", label)
 
   @staticmethod
   def GetLabelWithIteration(label, iteration):
-    return "%s i:%d" % (label, iteration)
+    return '%s i:%d' % (label, iteration)

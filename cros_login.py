@@ -1,12 +1,11 @@
 #!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
-
 """Script to get past the login screen of ChromeOS.
 
 """
 
-__author__ = "asharif@google.com (Ahmad Sharif)"
+__author__ = 'asharif@google.com (Ahmad Sharif)'
 
 import datetime
 import fcntl
@@ -25,14 +24,13 @@ from utils import command_executer
 LOGIN_PROMPT_VISIBLE_MAGIC_FILE = '/tmp/uptime-login-prompt-visible'
 LOGGED_IN_MAGIC_FILE = '/var/run/state/logged-in'
 
-
-script_header="""
+script_header = """
 import os
 import autox
 import time
 """
 
-wait_for_login_screen="""
+wait_for_login_screen = """
 
 while True:
   print 'Waiting for login screen to appear...'
@@ -44,8 +42,7 @@ while True:
 time.sleep(20)
 """ % LOGIN_PROMPT_VISIBLE_MAGIC_FILE
 
-
-do_login="""
+do_login = """
 xauth_filename = '/home/chronos/.Xauthority'
 os.environ.setdefault('XAUTHORITY', xauth_filename)
 os.environ.setdefault('DISPLAY', ':0.0')
@@ -76,20 +73,20 @@ while True:
 print 'Done'
 """ % LOGGED_IN_MAGIC_FILE
 
+
 def RestartUI(remote, chromeos_root, login=True):
   chromeos_root = os.path.expanduser(chromeos_root)
   ce = command_executer.GetCommandExecuter()
   # First, restart ui.
   command = 'rm -rf %s && restart ui' % LOGIN_PROMPT_VISIBLE_MAGIC_FILE
-  ce.CrosRunCommand(command, machine=remote,
-                    chromeos_root=chromeos_root)
+  ce.CrosRunCommand(command, machine=remote, chromeos_root=chromeos_root)
   host_login_script = tempfile.mktemp()
   device_login_script = '/tmp/login.py'
   login_script_list = [script_header, wait_for_login_screen]
   if login:
     login_script_list.append(do_login)
 
-  full_login_script_contents = "\n".join(login_script_list)
+  full_login_script_contents = '\n'.join(login_script_list)
 
   with open(host_login_script, 'w') as f:
     f.write(full_login_script_contents)
@@ -122,6 +119,7 @@ def Main(argv):
   options, args = parser.parse_args(argv)
 
   return RestartUI(options.remote, options.chromeos_root)
+
 
 if __name__ == '__main__':
   retval = Main(sys.argv)

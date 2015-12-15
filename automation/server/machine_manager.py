@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Copyright 2010 Google Inc. All Rights Reserved.
 
 __author__ = 'asharif@google.com (Ahmad Sharif)'
@@ -41,7 +39,8 @@ class MachineManager(object):
       mach = min(available_pool, key=uses)
 
       if mach_spec.preferred_machines:
-        preferred_pool = [m for m in available_pool
+        preferred_pool = [m
+                          for m in available_pool
                           if m.hostname in mach_spec.preferred_machines]
         if preferred_pool:
           mach = min(preferred_pool, key=uses)

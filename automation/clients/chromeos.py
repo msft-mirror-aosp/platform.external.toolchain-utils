@@ -1,11 +1,9 @@
 #!/usr/bin/python
 #
 # Copyright 2011 Google Inc. All Rights Reserved.
-
 """chromeos.py: Build & Test ChromeOS using custom compilers."""
 
 __author__ = 'asharif@google.com (Ahmad Sharif)'
-
 
 import logging
 import optparse
@@ -38,7 +36,8 @@ class ChromeOSNightlyClient(object):
 
   def CheckoutV14Dir(self):
     p4view = perforce.View(self.DEPOT2_DIR, [
-        perforce.PathMapping('gcctools/chromeos/v14/...')])
+        perforce.PathMapping('gcctools/chromeos/v14/...')
+    ])
     return self.GetP4Snapshot(p4view)
 
   def GetP4Snapshot(self, p4view):
@@ -56,12 +55,12 @@ class ChromeOSNightlyClient(object):
                   os.path.join(self.P4_VERSION_DIR, 'test_toolchains.py'),
                   '--force-mismatch',
                   '--clean',
-                  '--public', # crbug.com/145822
+                  '--public',  # crbug.com/145822
                   '--board=%s' % self._board,
                   '--remote=%s' % self._remote,
                   '--githashes=%s' % self._gcc_githash))
     label = 'testlabel'
-    job = jobs.CreateLinuxJob(label, chain, timeout=24*60*60)
+    job = jobs.CreateLinuxJob(label, chain, timeout=24 * 60 * 60)
 
     return job_group.JobGroup(label, [job], True, False)
 
@@ -92,7 +91,8 @@ def Main(argv):
     logging.error('Specify a board, remote and gcc_githash')
     return 1
 
-  client = ChromeOSNightlyClient(options.board, options.remote,
+  client = ChromeOSNightlyClient(options.board,
+                                 options.remote,
                                  options.gcc_githash,
                                  p4_snapshot=options.p4_snapshot)
   client.Run()

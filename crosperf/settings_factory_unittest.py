@@ -1,7 +1,6 @@
 #!/usr/bin/python
 #
 # Copyright 2014 Google Inc. All Rights Reserved.
-
 """Unittest for crosperf."""
 import os
 
@@ -14,10 +13,11 @@ import settings
 from cros_utils import command_executer
 from cros_utils import logger
 
+
 class BenchmarkSettingsTest(unittest.TestCase):
 
   def test_init(self):
-    res = settings_factory.BenchmarkSettings("b_settings")
+    res = settings_factory.BenchmarkSettings('b_settings')
     self.assertIsNotNone(res)
     self.assertEqual(len(res.fields), 6)
     self.assertEqual(res.GetField('test_name'), '')
@@ -25,10 +25,11 @@ class BenchmarkSettingsTest(unittest.TestCase):
     self.assertEqual(res.GetField('iterations'), 1)
     self.assertEqual(res.GetField('suite'), '')
 
+
 class LabelSettingsTest(unittest.TestCase):
 
   def test_init(self):
-    res = settings_factory.LabelSettings("l_settings")
+    res = settings_factory.LabelSettings('l_settings')
     self.assertIsNotNone(res)
     self.assertEqual(len(res.fields), 8)
     self.assertEqual(res.GetField('chromeos_image'), '')
@@ -43,7 +44,7 @@ class LabelSettingsTest(unittest.TestCase):
 class GlobalSettingsTest(unittest.TestCase):
 
   def test_init(self):
-    res = settings_factory.GlobalSettings("g_settings")
+    res = settings_factory.GlobalSettings('g_settings')
     self.assertIsNotNone(res)
     self.assertEqual(len(res.fields), 25)
     self.assertEqual(res.GetField('name'), '')
@@ -72,24 +73,24 @@ class GlobalSettingsTest(unittest.TestCase):
 class SettingsFactoryTest(unittest.TestCase):
 
   def test_get_settings(self):
-    self.assertRaises (Exception, settings_factory.SettingsFactory.GetSettings,
-                       'global', 'bad_type')
+    self.assertRaises(Exception, settings_factory.SettingsFactory.GetSettings,
+                      'global', 'bad_type')
 
-
-    l_settings = settings_factory.SettingsFactory().GetSettings ('label', 'label')
+    l_settings = settings_factory.SettingsFactory().GetSettings('label',
+                                                                'label')
     self.assertIsInstance(l_settings, settings_factory.LabelSettings)
     self.assertEqual(len(l_settings.fields), 8)
 
-    b_settings = settings_factory.SettingsFactory().GetSettings ('benchmark',
-                                                                 'benchmark')
+    b_settings = settings_factory.SettingsFactory().GetSettings('benchmark',
+                                                                'benchmark')
     self.assertIsInstance(b_settings, settings_factory.BenchmarkSettings)
     self.assertEqual(len(b_settings.fields), 6)
 
-    g_settings = settings_factory.SettingsFactory().GetSettings ('global',
-                                                                 'global')
+    g_settings = settings_factory.SettingsFactory().GetSettings('global',
+                                                                'global')
     self.assertIsInstance(g_settings, settings_factory.GlobalSettings)
     self.assertEqual(len(g_settings.fields), 25)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   unittest.main()

@@ -10,52 +10,61 @@ from utils import command_executer
 from utils import logger
 from utils import misc
 
+
 def _GetP4ClientSpec(client_name, p4_paths):
-  p4_string = ""
+  p4_string = ''
   for p4_path in p4_paths:
-    if " " not in p4_path:
-      p4_string += " -a %s" % p4_path
+    if ' ' not in p4_path:
+      p4_string += ' -a %s' % p4_path
     else:
-      p4_string += " -a \"" + (" //" + client_name + "/").join(p4_path) + "\""
+      p4_string += " -a \"" + (' //' + client_name + '/').join(p4_path) + "\""
 
   return p4_string
 
 
-def GetP4Command(client_name, p4_port, p4_paths, revision, checkoutdir, p4_snapshot=""):
-  command = ""
+def GetP4Command(client_name,
+                 p4_port,
+                 p4_paths,
+                 revision,
+                 checkoutdir,
+                 p4_snapshot=''):
+  command = ''
 
   if p4_snapshot:
-    command += "mkdir -p " + checkoutdir
+    command += 'mkdir -p ' + checkoutdir
     for p4_path in p4_paths:
       real_path = p4_path[1]
-      if real_path.endswith("..."):
-        real_path = real_path.replace("/...", "")
-        command += ("; mkdir -p " + checkoutdir + "/" +
-                    os.path.dirname(real_path))
-        command += ("&& rsync -lr " + p4_snapshot + "/" + real_path +
-                  " " + checkoutdir + "/" + os.path.dirname(real_path))
+      if real_path.endswith('...'):
+        real_path = real_path.replace('/...', '')
+        command += (
+            '; mkdir -p ' + checkoutdir + '/' + os.path.dirname(real_path))
+        command += ('&& rsync -lr ' + p4_snapshot + '/' + real_path + ' ' +
+                    checkoutdir + '/' + os.path.dirname(real_path))
     return command
 
-  command += " export P4CONFIG=.p4config"
-  command += " && mkdir -p " + checkoutdir
-  command += " && cd " + checkoutdir
-  command += " && cp ${HOME}/.p4config ."
-  command += " && chmod u+w .p4config"
+  command += ' export P4CONFIG=.p4config'
+  command += ' && mkdir -p ' + checkoutdir
+  command += ' && cd ' + checkoutdir
+  command += ' && cp ${HOME}/.p4config .'
+  command += ' && chmod u+w .p4config'
   command += " && echo \"P4PORT=" + p4_port + "\" >> .p4config"
   command += " && echo \"P4CLIENT=" + client_name + "\" >> .p4config"
-  command += (" && g4 client " +
-              _GetP4ClientSpec(client_name, p4_paths))
-  command += " && g4 sync "
-  command += " && cd -"
+  command += (' && g4 client ' + _GetP4ClientSpec(client_name, p4_paths))
+  command += ' && g4 sync '
+  command += ' && cd -'
   return command
 
+
 class BinarySearchPoint:
+
   def __init__(self, revision, status, tag=None):
     self.revision = revision
     self.status = status
     self.tag = tag
 
+
 class BinarySearcher:
+
   def __init__(self):
     self.sorted_list = []
     self.index_log = []
@@ -66,23 +75,21 @@ class BinarySearcher:
     pass
 
   def SetSortedList(self, sorted_list):
-    assert(len(sorted_list) > 0)
+    assert (len(sorted_list) > 0)
     self.sorted_list = sorted_list
     self.index_log = []
     self.hi = len(sorted_list) - 1
     self.lo = 0
     self.points = {}
     for i in range(len(self.sorted_list)):
-      bsp = BinarySearchPoint(self.sorted_list[i], -1, "Not yet done.")
+      bsp = BinarySearchPoint(self.sorted_list[i], -1, 'Not yet done.')
       self.points[i] = bsp
 
   def SetStatus(self, status, tag=None):
-    message = ("Revision: %s index: %d returned: %d" %
-               (self.sorted_list[self.current],
-                self.current,
-                status))
+    message = ('Revision: %s index: %d returned: %d' %
+               (self.sorted_list[self.current], self.current, status))
     logger.GetLogger().LogOutput(message)
-    assert(status == 0 or status == 1 or status == 2)
+    assert (status == 0 or status == 1 or status == 2)
     self.index_log.append(self.current)
     self.status_log.append(status)
     bsp = BinarySearchPoint(self.sorted_list[self.current], status, tag)
@@ -96,22 +103,20 @@ class BinarySearcher:
         self.lo = self.current + 1
       elif status == 1:
         self.hi = self.current
-      logger.GetLogger().LogOutput("lo: %d hi: %d\n" % (self.lo, self.hi))
-      self.current = (self.lo + self.hi)/2
+      logger.GetLogger().LogOutput('lo: %d hi: %d\n' % (self.lo, self.hi))
+      self.current = (self.lo + self.hi) / 2
 
     if self.lo == self.hi:
-      message = ("Search complete. First bad version: %s"
-                  " at index: %d" %
-                  (self.sorted_list[self.current],
-                   self.lo))
+      message = ('Search complete. First bad version: %s'
+                 ' at index: %d' % (self.sorted_list[self.current], self.lo))
       logger.GetLogger().LogOutput(message)
       return True
 
     for index in range(self.lo, self.hi):
       if index not in self.skipped_indices:
         return False
-    logger.GetLogger().LogOutput(
-        "All skipped indices between: %d and %d\n" % (self.lo, self.hi))
+    logger.GetLogger().LogOutput('All skipped indices between: %d and %d\n' %
+                                 (self.lo, self.hi))
     return True
 
   # Does a better job with chromeos flakiness.
@@ -130,23 +135,23 @@ class BinarySearcher:
       else:
         self.current = element[1]
         return
-    assert len(q), "Queue should never be 0-size!"
+    assert len(q), 'Queue should never be 0-size!'
 
   def GetNextFlakyLinear(self):
-      current_hi = self.current
-      current_lo = self.current
-      while True:
-        if current_hi < self.hi and current_hi not in self.skipped_indices:
-          self.current = current_hi
-          break
-        if current_lo >= self.lo and current_lo not in self.skipped_indices:
-          self.current = current_lo
-          break
-        if current_lo < self.lo and current_hi >= self.hi:
-          break
+    current_hi = self.current
+    current_lo = self.current
+    while True:
+      if current_hi < self.hi and current_hi not in self.skipped_indices:
+        self.current = current_hi
+        break
+      if current_lo >= self.lo and current_lo not in self.skipped_indices:
+        self.current = current_lo
+        break
+      if current_lo < self.lo and current_hi >= self.hi:
+        break
 
-        current_hi += 1
-        current_lo -= 1
+      current_hi += 1
+      current_lo -= 1
 
   def GetNext(self):
     self.current = (self.hi + self.lo) / 2
@@ -155,52 +160,56 @@ class BinarySearcher:
       self.GetNextFlakyBinary()
 
     # TODO: Add an estimated time remaining as well.
-    message = ("Estimated tries: min: %d max: %d\n" %
+    message = ('Estimated tries: min: %d max: %d\n' %
                (1 + math.log(self.hi - self.lo, 2),
                 self.hi - self.lo - len(self.skipped_indices)))
     logger.GetLogger().LogOutput(message)
-    message = ("lo: %d hi: %d current: %d version: %s\n" %
-               (self.lo, self.hi, self.current,
-                self.sorted_list[self.current]))
+    message = ('lo: %d hi: %d current: %d version: %s\n' %
+               (self.lo, self.hi, self.current, self.sorted_list[self.current]))
     logger.GetLogger().LogOutput(message)
     logger.GetLogger().LogOutput(str(self))
     return self.sorted_list[self.current]
 
   def SetLoRevision(self, lo_revision):
     self.lo = self.sorted_list.index(lo_revision)
+
   def SetHiRevision(self, hi_revision):
     self.hi = self.sorted_list.index(hi_revision)
+
   def GetAllPoints(self):
-    to_return = ""
+    to_return = ''
     for i in range(len(self.sorted_list)):
-      to_return += ("%d %d %s\n" %
-                    (self.points[i].status,
-                     i,
-                     self.points[i].revision))
+      to_return += ('%d %d %s\n' % (self.points[i].status, i,
+                                    self.points[i].revision))
 
     return to_return
+
   def __str__(self):
-    to_return = ""
-    to_return += "Current: %d\n" % self.current
-    to_return += str(self.index_log) + "\n"
+    to_return = ''
+    to_return += 'Current: %d\n' % self.current
+    to_return += str(self.index_log) + '\n'
     revision_log = []
     for index in self.index_log:
       revision_log.append(self.sorted_list[index])
-    to_return += str(revision_log) + "\n"
-    to_return += str(self.status_log) + "\n"
-    to_return += "Skipped indices:\n"
-    to_return += str(self.skipped_indices) + "\n"
+    to_return += str(revision_log) + '\n'
+    to_return += str(self.status_log) + '\n'
+    to_return += 'Skipped indices:\n'
+    to_return += str(self.skipped_indices) + '\n'
     to_return += self.GetAllPoints()
     return to_return
 
+
 class RevisionInfo:
+
   def __init__(self, date, client, description):
     self.date = date
     self.client = client
     self.description = description
     self.status = -1
 
+
 class VCSBinarySearcher:
+
   def __init__(self):
     self.bs = BinarySearcher()
     self.rim = {}
@@ -208,28 +217,37 @@ class VCSBinarySearcher:
     self.checkout_dir = None
     self.current_revision = None
     pass
+
   def Initialize(self):
     pass
+
   def GetNextRevision(self):
     pass
+
   def CheckoutRevision(self, revision):
     pass
+
   def SetStatus(self, status):
     pass
+
   def Cleanup(self):
     pass
+
   def SetGoodRevision(self, revision):
     if revision is None:
       return
-    assert(revision in self.bs.sorted_list)
+    assert (revision in self.bs.sorted_list)
     self.bs.SetLoRevision(revision)
+
   def SetBadRevision(self, revision):
     if revision is None:
       return
-    assert(revision in self.bs.sorted_list)
+    assert (revision in self.bs.sorted_list)
     self.bs.SetHiRevision(revision)
 
+
 class P4BinarySearcher(VCSBinarySearcher):
+
   def __init__(self, p4_port, p4_paths, test_command):
     VCSBinarySearcher.__init__(self)
     self.p4_port = p4_port
@@ -237,50 +255,56 @@ class P4BinarySearcher(VCSBinarySearcher):
     self.test_command = test_command
     self.checkout_dir = tempfile.mkdtemp()
     self.ce = command_executer.GetCommandExecuter()
-    self.client_name = "binary-searcher-$HOSTNAME-$USER"
-    self.job_log_root = "/home/asharif/www/coreboot_triage/"
+    self.client_name = 'binary-searcher-$HOSTNAME-$USER'
+    self.job_log_root = '/home/asharif/www/coreboot_triage/'
+
   def Initialize(self, good_revision=None, bad_revision=None):
     self.Cleanup()
-    command = GetP4Command(self.client_name, self.p4_port, self.p4_paths, 1, self.checkout_dir)
+    command = GetP4Command(self.client_name, self.p4_port, self.p4_paths, 1,
+                           self.checkout_dir)
     self.ce.RunCommand(command)
-    command = "cd %s && g4 changes ..." % self.checkout_dir
+    command = 'cd %s && g4 changes ...' % self.checkout_dir
     [retval, out, err] = self.ce.RunCommand(command, True)
-    self.changes = re.findall("Change (\d+)", out)
-    change_infos = re.findall("Change (\d+) on ([\d/]+) by ([^\s]+) ('[^']*')", out)
+    self.changes = re.findall('Change (\d+)', out)
+    change_infos = re.findall("Change (\d+) on ([\d/]+) by ([^\s]+) ('[^']*')",
+                              out)
     for change_info in change_infos:
       ri = RevisionInfo(change_info[1], change_info[2], change_info[3])
       self.rim[change_info[0]] = ri
     # g4 gives changes in reverse chronological order.
     self.changes.reverse()
     self.bs.SetSortedList(self.changes)
+
   def SetStatus(self, status):
     self.rim[self.current_revision].status = status
     return self.bs.SetStatus(status)
+
   def GetNextRevision(self):
     next_revision = self.bs.GetNext()
     self.current_revision = next_revision
     return next_revision
+
   def CleanupCLs(self):
-    if not os.path.isfile(self.checkout_dir + "/.p4config"):
-      command = "cd %s" % self.checkout_dir
-      command += " && cp ${HOME}/.p4config ."
+    if not os.path.isfile(self.checkout_dir + '/.p4config'):
+      command = 'cd %s' % self.checkout_dir
+      command += ' && cp ${HOME}/.p4config .'
       command += " && echo \"P4PORT=" + self.p4_port + "\" >> .p4config"
       command += " && echo \"P4CLIENT=" + self.client_name + "\" >> .p4config"
       self.ce.RunCommand(command)
-    command = "cd %s" % self.checkout_dir
-    command += "; g4 changes -c %s" % self.client_name
+    command = 'cd %s' % self.checkout_dir
+    command += '; g4 changes -c %s' % self.client_name
     [retval, out, err] = self.ce.RunCommand(command, True)
-    changes = re.findall("Change (\d+)", out)
+    changes = re.findall('Change (\d+)', out)
     if len(changes) != 0:
-      command = "cd %s" % self.checkout_dir
+      command = 'cd %s' % self.checkout_dir
       for change in changes:
-        command += "; g4 revert -c %s" % change
+        command += '; g4 revert -c %s' % change
       self.ce.RunCommand(command)
 
   def CleanupClient(self):
-    command = "cd %s" % self.checkout_dir
-    command += "; g4 revert ..."
-    command += "; g4 client -d %s" % self.client_name
+    command = 'cd %s' % self.checkout_dir
+    command += '; g4 revert ...'
+    command += '; g4 client -d %s' % self.client_name
     self.ce.RunCommand(command)
 
   def Cleanup(self):
@@ -288,23 +312,18 @@ class P4BinarySearcher(VCSBinarySearcher):
     self.CleanupClient()
 
   def __str__(self):
-    to_return = ""
+    to_return = ''
     for change in self.changes:
       ri = self.rim[change]
       if ri.status == -1:
-        to_return = "%s\t%d\n" % (change, ri.status)
+        to_return = '%s\t%d\n' % (change, ri.status)
       else:
-        to_return += ("%s\t%d\t%s\t%s\t%s\t%s\t%s\t%s\n" %
-               (change,
-                ri.status,
-                ri.date,
-                ri.client,
-                ri.description,
-                self.job_log_root + change + ".cmd",
-                self.job_log_root + change + ".out",
-                self.job_log_root + change + ".err"))
+        to_return += ('%s\t%d\t%s\t%s\t%s\t%s\t%s\t%s\n' %
+                      (change, ri.status, ri.date, ri.client, ri.description,
+                       self.job_log_root + change + '.cmd',
+                       self.job_log_root + change + '.out',
+                       self.job_log_root + change + '.err'))
     return to_return
-
 
 
 class P4GCCBinarySearcher(P4BinarySearcher):
@@ -315,30 +334,33 @@ class P4GCCBinarySearcher(P4BinarySearcher):
     problematic_ranges.append([44528, 44539])
     problematic_ranges.append([44528, 44760])
     problematic_ranges.append([44335, 44882])
-    command = "pwd"
+    command = 'pwd'
     for pr in problematic_ranges:
       if cr in range(pr[0], pr[1]):
-        patch_file = "/home/asharif/triage_tool/%d-%d.patch" % (pr[0], pr[1])
+        patch_file = '/home/asharif/triage_tool/%d-%d.patch' % (pr[0], pr[1])
         f = open(patch_file)
         patch = f.read()
         f.close()
-        files = re.findall("--- (//.*)", patch)
-        command += "; cd %s" % self.checkout_dir
+        files = re.findall('--- (//.*)', patch)
+        command += '; cd %s' % self.checkout_dir
         for f in files:
-          command += "; g4 open %s" % f
-        command += "; patch -p2 < %s" % patch_file
+          command += '; g4 open %s' % f
+        command += '; patch -p2 < %s' % patch_file
     self.current_ce.RunCommand(command)
 
   def CheckoutRevision(self, current_revision):
     job_logger = logger.Logger(self.job_log_root,
                                current_revision,
-                               True, subdir="")
+                               True,
+                               subdir='')
     self.current_ce = command_executer.GetCommandExecuter(job_logger)
 
     self.CleanupCLs()
     # Change the revision of only the gcc part of the toolchain.
-    command = ("cd %s/gcctools/google_vendor_src_branch/gcc && g4 revert ...; g4 sync @%s" % 
-               (self.checkout_dir, current_revision))
+    command = (
+        'cd %s/gcctools/google_vendor_src_branch/gcc && g4 revert ...; g4 sync'
+        ' @%s'
+        % (self.checkout_dir, current_revision))
     self.current_ce.RunCommand(command)
 
     self.HandleBrokenCLs(current_revision)
@@ -347,30 +369,37 @@ class P4GCCBinarySearcher(P4BinarySearcher):
 def Main(argv):
   """The main function."""
   # Common initializations
-###  command_executer.InitCommandExecuter(True)
+  ###  command_executer.InitCommandExecuter(True)
   ce = command_executer.GetCommandExecuter()
   rootdir = misc.GetRoot(sys.argv[0])[0]
 
   parser = optparse.OptionParser()
-  parser.add_option("-n", "--num_tries", dest="num_tries",
-                    default="100",
-                    help="Number of tries.")
-  parser.add_option("-g", "--good_revision", dest="good_revision",
-                    help="Last known good revision.")
-  parser.add_option("-b", "--bad_revision", dest="bad_revision",
-                    help="Last known bad revision.")
-  parser.add_option("-s",
-                    "--script",
-                    dest="script",
-                    help="Script to run for every version.")
+  parser.add_option('-n',
+                    '--num_tries',
+                    dest='num_tries',
+                    default='100',
+                    help='Number of tries.')
+  parser.add_option('-g',
+                    '--good_revision',
+                    dest='good_revision',
+                    help='Last known good revision.')
+  parser.add_option('-b',
+                    '--bad_revision',
+                    dest='bad_revision',
+                    help='Last known bad revision.')
+  parser.add_option('-s',
+                    '--script',
+                    dest='script',
+                    help='Script to run for every version.')
   [options, args] = parser.parse_args(argv)
   # First get all revisions
-###  p4_paths = ["//depot2/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/README.google"]
-  p4_paths = ["//depot2/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/...",
-              "//depot2/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/...",
-              "//depot2/gcctools/google_vendor_src_branch/binutils/binutils-20100303/..."]
-  p4gccbs = P4GCCBinarySearcher("perforce2:2666", p4_paths, "")
-
+  ###  p4_paths = ["//depot2/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/README.google"]
+  p4_paths = [
+      '//depot2/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/...',
+      '//depot2/gcctools/google_vendor_src_branch/binutils/binutils-2.20.1-mobile/...',
+      '//depot2/gcctools/google_vendor_src_branch/binutils/binutils-20100303/...'
+  ]
+  p4gccbs = P4GCCBinarySearcher('perforce2:2666', p4_paths, '')
 
   # Main loop:
   terminated = False
@@ -387,9 +416,9 @@ def Main(argv):
 
       # Now run command to get the status
       ce = command_executer.GetCommandExecuter()
-      command = "%s %s" % (script, p4gccbs.checkout_dir)
+      command = '%s %s' % (script, p4gccbs.checkout_dir)
       status = ce.RunCommand(command)
-      message = ("Revision: %s produced: %d status\n" %
+      message = ('Revision: %s produced: %d status\n' %
                  (current_revision, status))
       logger.GetLogger().LogOutput(message)
       terminated = p4gccbs.SetStatus(status)
@@ -397,14 +426,14 @@ def Main(argv):
       logger.GetLogger().LogOutput(str(p4gccbs))
 
     if not terminated:
-      logger.GetLogger().LogOutput("Tries: %d expired." % num_tries)
+      logger.GetLogger().LogOutput('Tries: %d expired.' % num_tries)
     logger.GetLogger().LogOutput(str(p4gccbs.bs))
   except (KeyboardInterrupt, SystemExit):
-    logger.GetLogger().LogOutput("Cleaning up...")
+    logger.GetLogger().LogOutput('Cleaning up...')
   finally:
     logger.GetLogger().LogOutput(str(p4gccbs.bs))
     status = p4gccbs.Cleanup()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   Main(sys.argv)

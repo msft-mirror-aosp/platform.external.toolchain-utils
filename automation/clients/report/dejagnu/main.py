@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Copyright 2011 Google Inc. All Rights Reserved.
 # Author: kbaclawski@google.com (Krystian Baclawski)
 #
@@ -35,12 +33,12 @@ def OptionChecker(parser):
 
 def ManifestCommand(argv):
   parser = optparse.OptionParser(
-      description=(
-          'Read in one or more DejaGNU summary files (.sum), parse their '
-          'content and generate manifest files.  Manifest files store a list '
-          'of failed tests that should be ignored.  Generated files are '
-          'stored in current directory under following name: '
-          '${tool}-${board}.xfail (e.g. "gcc-unix.xfail").'),
+      description=
+      ('Read in one or more DejaGNU summary files (.sum), parse their '
+       'content and generate manifest files.  Manifest files store a list '
+       'of failed tests that should be ignored.  Generated files are '
+       'stored in current directory under following name: '
+       '${tool}-${board}.xfail (e.g. "gcc-unix.xfail").'),
       usage='Usage: %prog manifest [file.sum] (file2.sum ...)')
 
   _, args = parser.parse_args(argv[2:])
@@ -53,8 +51,7 @@ def ManifestCommand(argv):
     test_run = DejaGnuTestRun.FromFile(filename)
 
     manifest = Manifest.FromDejaGnuTestRun(test_run)
-    manifest_filename = '%s-%s.xfail' % (
-        test_run.tool, test_run.board)
+    manifest_filename = '%s-%s.xfail' % (test_run.tool, test_run.board)
 
     with open(manifest_filename, 'w') as manifest_file:
       manifest_file.write(manifest.Generate())
@@ -64,18 +61,25 @@ def ManifestCommand(argv):
 
 def ReportCommand(argv):
   parser = optparse.OptionParser(
-      description=(
-          'Read in one or more DejaGNU summary files (.sum), parse their '
-          'content and generate a single report file in selected format '
-          '(currently only HTML).'),
+      description=
+      ('Read in one or more DejaGNU summary files (.sum), parse their '
+       'content and generate a single report file in selected format '
+       '(currently only HTML).'),
       usage=('Usage: %prog report (-m manifest.xfail) [-o report.html] '
              '[file.sum (file2.sum ...)'))
   parser.add_option(
-      '-o', dest='output', type='string', default=None,
+      '-o',
+      dest='output',
+      type='string',
+      default=None,
       help=('Suppress failures for test listed in provided manifest files. '
             '(use -m for each manifest file you want to read)'))
   parser.add_option(
-      '-m', dest='manifests', type='string', action='append', default=None,
+      '-m',
+      dest='manifests',
+      type='string',
+      action='append',
+      default=None,
       help=('Suppress failures for test listed in provided manifest files. '
             '(use -m for each manifest file you want to read)'))
 
@@ -109,11 +113,11 @@ def ReportCommand(argv):
 
 def HelpCommand(argv):
   sys.exit('\n'.join([
-      'Usage: %s command [options]' % os.path.basename(argv[0]),
-      '',
-      'Commands:',
+      'Usage: %s command [options]' % os.path.basename(argv[
+          0]), '', 'Commands:',
       '  manifest - manage files containing a list of suppressed test failures',
-      '  report   - generate report file for selected test runs']))
+      '  report   - generate report file for selected test runs'
+  ]))
 
 
 def Main(argv):
@@ -122,10 +126,9 @@ def Main(argv):
   except IndexError:
     cmd_name = None
 
-  cmd_map = {
-      'manifest': ManifestCommand,
-      'report': ReportCommand}
+  cmd_map = {'manifest': ManifestCommand, 'report': ReportCommand}
   cmd_map.get(cmd_name, HelpCommand)(argv)
+
 
 if __name__ == '__main__':
   FORMAT = '%(asctime)-15s %(levelname)s %(message)s'

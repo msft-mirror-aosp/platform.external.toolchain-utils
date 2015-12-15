@@ -1,15 +1,12 @@
-#!/usr/bin/python
-#
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
-
 """Classes that help running commands in a subshell.
 
 Commands can be run locally, or remotly using SSH connection.  You may log the
 output of a command to a terminal or a file, or any other destination.
 """
 
-__author__ = "kbaclawski@google.com (Krystian Baclawski)"
+__author__ = 'kbaclawski@google.com (Krystian Baclawski)'
 
 import fcntl
 import logging
@@ -32,8 +29,12 @@ class CommandExecuter(object):
   def Configure(cls, dry_run):
     cls.DRY_RUN = dry_run
 
-  def RunCommand(self, cmd, machine=None, username=None,
-                 command_terminator=None, command_timeout=None):
+  def RunCommand(self,
+                 cmd,
+                 machine=None,
+                 username=None,
+                 command_terminator=None,
+                 command_timeout=None):
     cmd = str(cmd)
 
     if self._dry_run:
@@ -43,13 +44,13 @@ class CommandExecuter(object):
       command_terminator = CommandTerminator()
 
     if command_terminator.IsTerminated():
-      self._logger.warning("Command has been already terminated!")
+      self._logger.warning('Command has been already terminated!')
       return 1
 
     # Rewrite command for remote execution.
     if machine:
       if username:
-        login = "%s@%s" % (username, machine)
+        login = '%s@%s' % (username, machine)
       else:
         login = machine
 
@@ -62,8 +63,8 @@ class CommandExecuter(object):
 
     child = self._SpawnProcess(cmd, command_terminator, command_timeout)
 
-    self._logger.debug(
-        "{PID: %d} Finished with %d code.", child.pid, child.returncode)
+    self._logger.debug('{PID: %d} Finished with %d code.', child.pid,
+                       child.returncode)
 
     return child.returncode
 
@@ -71,10 +72,10 @@ class CommandExecuter(object):
     """Gracefully shutdown the child by sending SIGTERM."""
 
     if command_timeout:
-      self._logger.warning("{PID: %d} Timeout of %s seconds reached since "
-                           "process started.", child.pid, command_timeout)
+      self._logger.warning('{PID: %d} Timeout of %s seconds reached since '
+                           'process started.', child.pid, command_timeout)
 
-    self._logger.warning("{PID: %d} Terminating child.", child.pid)
+    self._logger.warning('{PID: %d} Terminating child.', child.pid)
 
     try:
       child.terminate()
@@ -92,16 +93,18 @@ class CommandExecuter(object):
 
   def _Kill(self, child):
     """Kill the child with immediate result."""
-    self._logger.warning("{PID: %d} Process still alive.", child.pid)
-    self._logger.warning("{PID: %d} Killing child.", child.pid)
+    self._logger.warning('{PID: %d} Process still alive.', child.pid)
+    self._logger.warning('{PID: %d} Killing child.', child.pid)
     child.kill()
     child.wait()
 
   def _SpawnProcess(self, cmd, command_terminator, command_timeout):
     # Create a child process executing provided command.
-    child = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        stdin=subprocess.PIPE, shell=True)
+    child = subprocess.Popen(cmd,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             stdin=subprocess.PIPE,
+                             shell=True)
 
     # Close stdin so the child won't be able to block on read.
     child.stdin.close()
@@ -157,10 +160,10 @@ class CommandExecuter(object):
             data = os.read(fd, 4096)
           except OSError:
             # terminate loop if EWOULDBLOCK (EAGAIN) is received
-            data = ""
+            data = ''
 
     if not already_terminated:
-      self._logger.debug("Waiting for command to finish.")
+      self._logger.debug('Waiting for command to finish.')
       child.wait()
 
     return child
@@ -175,6 +178,7 @@ class CommandExecuter(object):
 
 
 class LoggingCommandExecuter(CommandExecuter):
+
   def __init__(self, *args, **kwargs):
     super(LoggingCommandExecuter, self).__init__(*args, **kwargs)
 
@@ -183,8 +187,8 @@ class LoggingCommandExecuter(CommandExecuter):
 
   def OpenLog(self, log_path):
     """The messages are going to be saved to gzip compressed file."""
-    formatter = logging.Formatter(
-        '%(asctime)s %(prefix)s: %(message)s', '%Y-%m-%d %H:%M:%S')
+    formatter = logging.Formatter('%(asctime)s %(prefix)s: %(message)s',
+                                  '%Y-%m-%d %H:%M:%S')
     handler = logger.CompressedFileHandler(log_path, delay=True)
     handler.setFormatter(formatter)
     self._output.addHandler(handler)
@@ -215,6 +219,7 @@ class LoggingCommandExecuter(CommandExecuter):
 
 
 class CommandTerminator(object):
+
   def __init__(self):
     self.terminated = False
 

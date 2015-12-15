@@ -1,7 +1,4 @@
-#!/usr/bin/python
-#
 # Copyright 2011 Google Inc. All Rights Reserved.
-
 """Helper modules for Android toolchain test infrastructure.
 
 Provides following Android toolchain test jobs and commands.
@@ -24,6 +21,7 @@ from automation.common import job
 
 
 class JobsFactory(object):
+
   def __init__(self, gcc_version='4.4.3', build_type='DEVELOPMENT'):
     assert gcc_version in ['4.4.3', '4.6', 'google_main', 'fsf_trunk']
     assert build_type in ['DEVELOPMENT', 'RELEASE']
@@ -46,11 +44,13 @@ class JobsFactory(object):
     new_job = jobs.CreateLinuxJob('AndroidBuildToolchain(%s)' % self.tc_tag,
                                   command)
     new_job.DependsOnFolder(checkout_dir_dep)
-    tc_prefix_dep = job.FolderDependency(
-        new_job, self.commands.toolchain_prefix_dir)
+    tc_prefix_dep = job.FolderDependency(new_job,
+                                         self.commands.toolchain_prefix_dir)
     return new_job, tc_prefix_dep
 
-  def BuildAndroidImage(self, tc_prefix_dep, product='stingray',
+  def BuildAndroidImage(self,
+                        tc_prefix_dep,
+                        product='stingray',
                         branch='ics-release'):
     assert product in ['stingray', 'passion', 'trygon', 'soju']
     assert branch in ['honeycomb-release', 'ics-release']
@@ -89,8 +89,7 @@ class CommandsFactory(object):
     self.gcc_version = gcc_version
     self.binutils_version = '2.21'
     self.gold_version = '2.21'
-    self.toolchain_prefix_dir = 'install-gcc-%s-%s' % (
-        gcc_version, build_type)
+    self.toolchain_prefix_dir = 'install-gcc-%s-%s' % (gcc_version, build_type)
     self.p4client = self._CreatePerforceClient()
     self.scripts = ScriptsFactory(self.gcc_version, self.binutils_version,
                                   self.gold_version)
@@ -105,11 +104,9 @@ class CommandsFactory(object):
                           'google_vendor_src_branch')
 
     # Common views for tools
-    p4view = perforce.View('depot2',
-                           perforce.PathMapping.ListFromPathTuples(
-                               [('gcctools/android/build/...', 'src/build/...'),
-                                ('gcctools/android/Tarballs/...',
-                                 'src/tarballs/...')]))
+    p4view = perforce.View('depot2', perforce.PathMapping.ListFromPathTuples([(
+        'gcctools/android/build/...', 'src/build/...'), (
+            'gcctools/android/Tarballs/...', 'src/tarballs/...')]))
     for mapping in perforce.PathMapping.ListFromPathDict(
         {'gcctools/android': ['tools/scripts/...', 'master/...']}):
       p4view.add(mapping)
@@ -123,13 +120,11 @@ class CommandsFactory(object):
       binutils_branch = mobile_rel_branch
     else:
       binutils_branch = p4_dev_path
-    p4view.add(perforce.PathMapping(binutils_branch, 'src',
-                                    ('binutils/binutils-%s/...' %
-                                     self.binutils_version)))
+    p4view.add(perforce.PathMapping(binutils_branch, 'src', (
+        'binutils/binutils-%s/...' % self.binutils_version)))
     if self.binutils_version != self.gold_version:
-      p4view.add(perforce.PathMapping(binutils_branch, 'src',
-                                      ('binutils/binutils-%s/...' %
-                                       self.gold_version)))
+      p4view.add(perforce.PathMapping(binutils_branch, 'src', (
+          'binutils/binutils-%s/...' % self.gold_version)))
 
     # Add view for gcc if gcc_version is '4.4.3'.
     if self.gcc_version == '4.4.3':
@@ -172,9 +167,11 @@ class CommandsFactory(object):
     gcc_required_dir = os.path.join(self.TOOLCHAIN_SRC_DIR, 'gcc',
                                     'gcc-%s' % self.gcc_version)
 
-    return cmd.Chain(cmd.MakeDir(gcc_required_dir),
-                     cmd.Wrapper(cmd.Chain(svn_co_command, svn_get_revision),
-                                 cwd=gcc_required_dir))
+    return cmd.Chain(
+        cmd.MakeDir(gcc_required_dir),
+        cmd.Wrapper(
+            cmd.Chain(svn_co_command, svn_get_revision),
+            cwd=gcc_required_dir))
 
   def CheckoutAndroidToolchain(self):
     p4client = self.p4client
@@ -187,25 +184,24 @@ class CommandsFactory(object):
     return command
 
   def BuildAndroidToolchain(self):
-    script_cmd = self.scripts.BuildAndroidToolchain(self.toolchain_prefix_dir,
-                                                    self.CHECKOUT_DIR,
-                                                    self.TOOLCHAIN_BUILD_DIR,
-                                                    self.TOOLCHAIN_SRC_DIR)
+    script_cmd = self.scripts.BuildAndroidToolchain(
+        self.toolchain_prefix_dir, self.CHECKOUT_DIR, self.TOOLCHAIN_BUILD_DIR,
+        self.TOOLCHAIN_SRC_DIR)
 
     # Record toolchain and gcc CL number
-    record_cl_cmd = cmd.Copy(os.path.join(self.CHECKOUT_DIR, 'CLNUM*'),
-                             to_dir=self.toolchain_prefix_dir)
-    save_cmd = cmd.Tar(os.path.join('$JOB_TMP', 'results',
-                                    '%s.tar.bz2' % self.toolchain_prefix_dir),
-                       self.toolchain_prefix_dir)
+    record_cl_cmd = cmd.Copy(
+        os.path.join(self.CHECKOUT_DIR, 'CLNUM*'),
+        to_dir=self.toolchain_prefix_dir)
+    save_cmd = cmd.Tar(
+        os.path.join('$JOB_TMP', 'results', '%s.tar.bz2' %
+                     self.toolchain_prefix_dir), self.toolchain_prefix_dir)
     return cmd.Chain(script_cmd, record_cl_cmd, save_cmd)
 
   def _BuildAndroidTree(self, local_android_branch_dir, product):
     target_tools_prefix = os.path.join('$JOB_TMP', self.toolchain_prefix_dir,
                                        'bin', 'arm-linux-androideabi-')
     java_path = '/usr/lib/jvm/java-6-sun/bin'
-    build_cmd = cmd.Shell('make', '-j8',
-                          'PRODUCT-%s-userdebug' % product,
+    build_cmd = cmd.Shell('make', '-j8', 'PRODUCT-%s-userdebug' % product,
                           'TARGET_TOOLS_PREFIX=%s' % target_tools_prefix,
                           'PATH=%s:$PATH' % java_path)
     return cmd.Wrapper(build_cmd, cwd=local_android_branch_dir)
@@ -219,9 +215,8 @@ class CommandsFactory(object):
                          'android_trees')
     remote_android_branch_path = os.path.join(androidtrees_path, branch)
     local_android_branch_dir = os.path.join(self.ANDROID_TREES_DIR, branch)
-    gettree_cmd = cmd.RemoteCopyFrom(androidtrees_host,
-                                     remote_android_branch_path,
-                                     local_android_branch_dir)
+    gettree_cmd = cmd.RemoteCopyFrom(
+        androidtrees_host, remote_android_branch_path, local_android_branch_dir)
 
     # Configure and build the tree
     buildtree_cmd = self._BuildAndroidTree(local_android_branch_dir, product)
@@ -235,8 +230,9 @@ class CommandsFactory(object):
     return cmd.Chain(gettree_cmd, buildtree_cmd, copy_img, compress_img)
 
   def CheckoutScripts(self):
-    p4view = perforce.View('depot2', [perforce.PathMapping(
-        'gcctools/android/tools/...', 'tools/...')])
+    p4view = perforce.View('depot2',
+                           [perforce.PathMapping('gcctools/android/tools/...',
+                                                 'tools/...')])
     p4client = perforce.CommandsFactory(self.TOOLS_DIR, p4view)
     return p4client.SetupAndDo(p4client.Sync(), p4client.Remove())
 
@@ -246,19 +242,15 @@ class CommandsFactory(object):
     base_benchbin_path = ('/usr/local/google2/home/mobiletc-prebuild/'
                           'archive/v3binaries/2011-10-18')
     local_basebenchbin_dir = 'base_benchmark_bin'
-    getbase_cmd = cmd.RemoteCopyFrom(base_benchbin_host,
-                                     base_benchbin_path,
+    getbase_cmd = cmd.RemoteCopyFrom(base_benchbin_host, base_benchbin_path,
                                      local_basebenchbin_dir)
 
     # Build and run benchmark.
     android_arch = 'android_%s' % arch
     run_label = 'normal'
-    benchmark_cmd = self.scripts.RunBenchmark(self.toolchain_prefix_dir,
-                                              self.TOOLS_DIR,
-                                              self.BENCHMARK_OUT_DIR,
-                                              run_label, run_experiment,
-                                              android_arch,
-                                              local_basebenchbin_dir)
+    benchmark_cmd = self.scripts.RunBenchmark(
+        self.toolchain_prefix_dir, self.TOOLS_DIR, self.BENCHMARK_OUT_DIR,
+        run_label, run_experiment, android_arch, local_basebenchbin_dir)
 
     # Extract jobid from BENCHMARK_OUT_DIR/log/jobid_normal.log file.
     # Copy jobid to www server to generate performance dashboard.
@@ -268,6 +260,7 @@ class CommandsFactory(object):
 
 
 class ScriptsFactory(object):
+
   def __init__(self, gcc_version, binutils_version, gold_version):
     self._gcc_version = gcc_version
     self._binutils_version = binutils_version
@@ -292,14 +285,20 @@ class ScriptsFactory(object):
         '--with-gold-version=%s' % self._gold_version,
         '--with-gdb-version=7.1.x-android',
         '--log-path=%s/logs' % '$JOB_HOME',
-        '--android-sysroot=%s' %
-        os.path.join('$JOB_TMP', checkout_dir, 'gcctools', 'android',
-                     'master', 'honeycomb_generic_sysroot'),
+        '--android-sysroot=%s' % os.path.join('$JOB_TMP', checkout_dir,
+                                              'gcctools', 'android', 'master',
+                                              'honeycomb_generic_sysroot'),
         path=os.path.join(checkout_dir, 'gcctools', 'android', 'tools',
                           'scripts'))
 
-  def RunBenchmark(self, toolchain_prefix_dir, checkout_dir, output_dir,
-                   run_label, run_experiment, arch, base_bench_bin=None):
+  def RunBenchmark(self,
+                   toolchain_prefix_dir,
+                   checkout_dir,
+                   output_dir,
+                   run_label,
+                   run_experiment,
+                   arch,
+                   base_bench_bin=None):
     if base_bench_bin:
       base_bench_opt = '--base_benchmark_bin=%s' % base_bench_bin
     else:

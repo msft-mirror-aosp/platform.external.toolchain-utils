@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Copyright 2012 Google Inc. All Rights Reserved.
 """Parse perf report data for tabulator."""
 
@@ -11,8 +9,10 @@ from utils import perf_diff
 def ParsePerfReport(perf_file):
   """It should return a dict."""
 
-  return {"cycles": {"foo": 10, "bar": 20},
-          "cache_miss": {"foo": 20, "bar": 10}}
+  return {'cycles': {'foo': 10,
+                     'bar': 20},
+          'cache_miss': {'foo': 20,
+                         'bar': 10}}
 
 
 class PerfTable(object):
@@ -37,12 +37,11 @@ class PerfTable(object):
   def GenerateData(self):
     for label in self._label_names:
       for benchmark in self._experiment.benchmarks:
-        for i in range(1, benchmark.iterations+1):
+        for i in range(1, benchmark.iterations + 1):
           dir_name = label + benchmark.name + str(i)
           dir_name = filter(str.isalnum, dir_name)
-          perf_file = os.path.join(self._experiment.results_directory,
-                                   dir_name,
-                                   "perf.data.report.0")
+          perf_file = os.path.join(self._experiment.results_directory, dir_name,
+                                   'perf.data.report.0')
           if os.path.exists(perf_file):
             self.ReadPerfReport(perf_file, label, benchmark.name, i - 1)
 

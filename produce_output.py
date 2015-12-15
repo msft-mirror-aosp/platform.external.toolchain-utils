@@ -1,13 +1,11 @@
 #!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
+"""This simulates a real job by producing a lot of output.
 
 """
-This simulates a real job by producing a lot of output.
 
-"""
-
-__author__ = "asharif@google.com (Ahmad Sharif)"
+__author__ = 'asharif@google.com (Ahmad Sharif)'
 
 import optparse
 import os
@@ -25,11 +23,11 @@ def Main(argv):
 
   for j in range(10):
     for i in range(10000):
-      print str(j) + "The quick brown fox jumped over the lazy dog." + str(i)
+      print str(j) + 'The quick brown fox jumped over the lazy dog.' + str(i)
     time.sleep(60)
 
   return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   Main(sys.argv)

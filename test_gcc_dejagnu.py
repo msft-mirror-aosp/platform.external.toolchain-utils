@@ -1,7 +1,6 @@
 #!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
-
 """Script adapter used by automation client for testing dejagnu.
    This is not intended to be run on command line.
    To kick off a single dejagnu run, use chromeos/v14/dejagnu/run_dejagnu.py
@@ -20,17 +19,18 @@ from dejagnu import run_dejagnu
 from utils import command_executer
 from utils import email_sender
 
+
 class DejagnuAdapter(object):
 
   # TODO(shenhan): move these to constants.py.
-  _CHROMIUM_GCC_GIT = ("https://chromium.googlesource.com/"
-                       "chromiumos/third_party/gcc.git")
-  _CHROMIUM_GCC_BRANCH = "gcc.gnu.org/branches/google/gcc-4_7-mobile"
+  _CHROMIUM_GCC_GIT = ('https://chromium.googlesource.com/'
+                       'chromiumos/third_party/gcc.git')
+  _CHROMIUM_GCC_BRANCH = 'gcc.gnu.org/branches/google/gcc-4_7-mobile'
 
   _cmd_exec = command_executer.GetCommandExecuter()
 
-  def __init__(self, board, remote, gcc_dir,
-               chromeos_root, runtestflags, cleanup):
+  def __init__(self, board, remote, gcc_dir, chromeos_root, runtestflags,
+               cleanup):
     self._board = board
     self._remote = remote
     self._gcc_dir = gcc_dir
@@ -39,55 +39,53 @@ class DejagnuAdapter(object):
     self._cleanup = cleanup
 
   def SetupChromeOS(self):
-    cmd = [setup_chromeos.__file__,
-           "--dir=" + self._chromeos_root, "--minilayout", "--jobs=8"]
+    cmd = [setup_chromeos.__file__, '--dir=' + self._chromeos_root,
+           '--minilayout', '--jobs=8']
     ret = setup_chromeos.Main(cmd)
     if ret:
-      raise Exception("Failed to checkout chromeos")
+      raise Exception('Failed to checkout chromeos')
     ## Do cros_sdk and setup_board, otherwise build_tc in next step will fail.
-    cmd = "cd {0} && cros_sdk --download".format(self._chromeos_root)
+    cmd = 'cd {0} && cros_sdk --download'.format(self._chromeos_root)
     ret = self._cmd_exec.RunCommand(cmd, terminated_timeout=9000)
     if ret:
-      raise Exception("Failed to create chroot.")
+      raise Exception('Failed to create chroot.')
 
   def SetupBoard(self):
-    cmd = "./setup_board --board=" + self._board
+    cmd = './setup_board --board=' + self._board
     ret = self._cmd_exec.ChrootRunCommand(self._chromeos_root,
-                                          cmd, terminated_timeout=4000)
+                                          cmd,
+                                          terminated_timeout=4000)
     if ret:
-      raise Exception("Failed to setup board.")
+      raise Exception('Failed to setup board.')
 
   def CheckoutGCC(self):
-    cmd = "git clone {0} {1} && cd {1} && git checkout {2}".format(
-      self._CHROMIUM_GCC_GIT, self._gcc_dir, self._CHROMIUM_GCC_BRANCH)
+    cmd = 'git clone {0} {1} && cd {1} && git checkout {2}'.format(
+        self._CHROMIUM_GCC_GIT, self._gcc_dir, self._CHROMIUM_GCC_BRANCH)
 
     ret = self._cmd_exec.RunCommand(cmd, terminated_timeout=300)
     if ret:
-      raise Exception("Failed to checkout gcc.")
+      raise Exception('Failed to checkout gcc.')
     ## Handle build_tc bug.
-    cmd = ("touch {0}/gcc/config/arm/arm-tune.md " + \
-        "{0}/gcc/config/arm/arm-tables.opt").format(self._gcc_dir)
+    cmd = ('touch {0}/gcc/config/arm/arm-tune.md ' + \
+        '{0}/gcc/config/arm/arm-tables.opt').format(self._gcc_dir)
     ret = self._cmd_exec.RunCommand(cmd)
 
   def BuildGCC(self):
-    build_gcc_args = [build_tc.__file__,
-                      "--board=" + self._board,
-                      "--chromeos_root=" + self._chromeos_root,
-                      "--gcc_dir=" + self._gcc_dir]
+    build_gcc_args = [build_tc.__file__, '--board=' + self._board,
+                      '--chromeos_root=' + self._chromeos_root,
+                      '--gcc_dir=' + self._gcc_dir]
     ret = build_tc.Main(build_gcc_args)
     if ret:
-      raise Exception("Building gcc failed.")
+      raise Exception('Building gcc failed.')
 
   def CheckGCC(self):
-    args = [run_dejagnu.__file__,
-            "--board=" + self._board,
-            "--chromeos_root=" + self._chromeos_root,
-            "--mount=" + self._gcc_dir,
-            "--remote=" + self._remote]
+    args = [run_dejagnu.__file__, '--board=' + self._board,
+            '--chromeos_root=' + self._chromeos_root,
+            '--mount=' + self._gcc_dir, '--remote=' + self._remote]
     if self._cleanup:
-      args.append("--cleanup=" + self._cleanup)
+      args.append('--cleanup=' + self._cleanup)
     if self._runtestflags:
-      args.append("--flags=" + self._runtestflags)
+      args.append('--flags=' + self._runtestflags)
     return run_dejagnu.Main(args)
 
 
@@ -109,6 +107,7 @@ def GetNumNewFailures(str):
   if not start_counting:
     return -1
   return n_failures
+
 
 # Do not throw any exception in this function!
 def EmailResult(result):
@@ -144,31 +143,44 @@ def EmailResult(result):
   except Exception as e:
     # Do not propagate this email sending exception, you want to email an
     # email exception? Just log it on console.
-    print ('Sending email failed - {0}'
-           'Subject: {1}'
-           'Text: {2}').format(
-      str(e), subject, email_text)
+    print('Sending email failed - {0}'
+          'Subject: {1}'
+          'Text: {2}').format(
+              str(e), subject, email_text)
 
 
 def ProcessArguments(argv):
   """Processing script arguments."""
-  parser = optparse.OptionParser(description=(
-      'This script is used by nightly client to test gcc. '
-      'DO NOT run it unless you know what you are doing.'),
+  parser = optparse.OptionParser(
+      description=('This script is used by nightly client to test gcc. '
+                   'DO NOT run it unless you know what you are doing.'),
       usage='test_gcc_dejagnu.py options')
-  parser.add_option('-b', '--board', dest='board',
+  parser.add_option('-b',
+                    '--board',
+                    dest='board',
                     help=('Required. Specify board type. For example '
                           '\'lumpy\' and \'daisy\''))
-  parser.add_option('-r', '--remote', dest='remote',
+  parser.add_option('-r',
+                    '--remote',
+                    dest='remote',
                     help=('Required. Specify remote board address'))
-  parser.add_option('-g', '--gcc_dir', dest='gcc_dir', default='gcc.live',
+  parser.add_option('-g',
+                    '--gcc_dir',
+                    dest='gcc_dir',
+                    default='gcc.live',
                     help=('Optional. Specify gcc checkout directory.'))
-  parser.add_option('-c', '--chromeos_root', dest='chromeos_root',
+  parser.add_option('-c',
+                    '--chromeos_root',
+                    dest='chromeos_root',
                     default='chromeos.live',
                     help=('Optional. Specify chromeos checkout directory.'))
-  parser.add_option('--cleanup', dest='cleanup', default=None,
+  parser.add_option('--cleanup',
+                    dest='cleanup',
+                    default=None,
                     help=('Optional. Do cleanup after the test.'))
-  parser.add_option('--runtestflags', dest='runtestflags', default=None,
+  parser.add_option('--runtestflags',
+                    dest='runtestflags',
+                    default=None,
                     help=('Optional. Options to RUNTESTFLAGS env var '
                           'while invoking make check. '
                           '(Mainly used for testing purpose.)'))
@@ -176,16 +188,15 @@ def ProcessArguments(argv):
   options, args = parser.parse_args(argv)
 
   if not options.board or not options.remote:
-    raise Exception("--board and --remote are mandatory options.")
+    raise Exception('--board and --remote are mandatory options.')
 
   return options
 
 
 def Main(argv):
   opt = ProcessArguments(argv)
-  adapter = DejagnuAdapter(
-    opt.board, opt.remote, opt.gcc_dir, opt.chromeos_root,
-    opt.runtestflags, opt.cleanup)
+  adapter = DejagnuAdapter(opt.board, opt.remote, opt.gcc_dir,
+                           opt.chromeos_root, opt.runtestflags, opt.cleanup)
   try:
     adapter.SetupChromeOS()
     adapter.SetupBoard()
@@ -200,6 +211,6 @@ def Main(argv):
     return ret
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   retval = Main(sys.argv)
   sys.exit(retval[0])

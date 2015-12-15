@@ -5,6 +5,7 @@ DEFAULT_BAD_OBJECT_NUMBER = 23
 OBJECTS_FILE = 'objects.txt'
 WORKING_SET_FILE = 'working_set.txt'
 
+
 def ReadWorkingSet():
   working_set = []
   f = open(WORKING_SET_FILE, 'r')

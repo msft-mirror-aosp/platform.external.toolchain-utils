@@ -1,5 +1,4 @@
 # Copyright 2011-2015 Google Inc. All Rights Reserved.
-
 """The experiment runner module."""
 import getpass
 import os
@@ -30,7 +29,11 @@ class ExperimentRunner(object):
   STATUS_TIME_DELAY = 30
   THREAD_MONITOR_DELAY = 2
 
-  def __init__(self, experiment, json_report, using_schedv2=False, log=None,
+  def __init__(self,
+               experiment,
+               json_report,
+               using_schedv2=False,
+               log=None,
                cmd_exec=None):
     self._experiment = experiment
     self.l = log or logger.GetLogger(experiment.log_dir)
@@ -38,7 +41,7 @@ class ExperimentRunner(object):
     self._terminated = False
     self.json_report = json_report
     self.locked_machines = []
-    if experiment.log_level != "verbose":
+    if experiment.log_level != 'verbose':
       self.STATUS_TIME_DELAY = 10
 
     # Setting this to True will use crosperf sched v2 (feature in progress).
@@ -89,23 +92,22 @@ class ExperimentRunner(object):
     else:
       lock_mgr = afe_lock_machine.AFELockManager(
           self._GetMachineList(),
-          "",
+          '',
           experiment.labels[0].chromeos_root,
           None,
-          log=self.l,
-      )
+          log=self.l,)
       for m in lock_mgr.machines:
         if not lock_mgr.MachineIsKnown(m):
           lock_mgr.AddLocalMachine(m)
-      machine_states = lock_mgr.GetMachineStates("lock")
-      lock_mgr.CheckMachineLocks(machine_states, "lock")
+      machine_states = lock_mgr.GetMachineStates('lock')
+      lock_mgr.CheckMachineLocks(machine_states, 'lock')
       self.locked_machines = lock_mgr.UpdateMachines(True)
       self._experiment.locked_machines = self.locked_machines
       self._UpdateMachineList(self.locked_machines)
       self._experiment.machine_manager.RemoveNonLockedMachines(
           self.locked_machines)
       if len(self.locked_machines) == 0:
-        raise RuntimeError("Unable to lock any machines.")
+        raise RuntimeError('Unable to lock any machines.')
 
   def _UnlockAllMachines(self, experiment):
     """Attempt to globally unlock all of the machines requested for run.
@@ -118,13 +120,12 @@ class ExperimentRunner(object):
 
     lock_mgr = afe_lock_machine.AFELockManager(
         self.locked_machines,
-        "",
+        '',
         experiment.labels[0].chromeos_root,
         None,
-        log=self.l,
-    )
-    machine_states = lock_mgr.GetMachineStates("unlock")
-    lock_mgr.CheckMachineLocks(machine_states, "unlock")
+        log=self.l,)
+    machine_states = lock_mgr.GetMachineStates('unlock')
+    lock_mgr.CheckMachineLocks(machine_states, 'unlock')
     lock_mgr.UpdateMachines(False)
 
   def _ClearCacheEntries(self, experiment):
@@ -138,7 +139,7 @@ class ExperimentRunner(object):
                  br.benchmark.show_all_results, br.benchmark.run_local)
       cache_dir = cache._GetCacheDirForWrite()
       if os.path.exists(cache_dir):
-        self.l.LogOutput("Removing cache dir: %s" % cache_dir)
+        self.l.LogOutput('Removing cache dir: %s' % cache_dir)
         shutil.rmtree(cache_dir)
 
   def _Run(self, experiment):
@@ -153,15 +154,15 @@ class ExperimentRunner(object):
       status = ExperimentStatus(experiment)
       experiment.Run()
       last_status_time = 0
-      last_status_string = ""
+      last_status_string = ''
       try:
-        if experiment.log_level != "verbose":
+        if experiment.log_level != 'verbose':
           self.l.LogStartDots()
         while not experiment.IsComplete():
           if last_status_time + self.STATUS_TIME_DELAY < time.time():
             last_status_time = time.time()
-            border = "=============================="
-            if experiment.log_level == "verbose":
+            border = '=============================='
+            if experiment.log_level == 'verbose':
               self.l.LogOutput(border)
               self.l.LogOutput(status.GetProgressString())
               self.l.LogOutput(status.GetStatusString())
@@ -179,12 +180,12 @@ class ExperimentRunner(object):
           time.sleep(self.THREAD_MONITOR_DELAY)
       except KeyboardInterrupt:
         self._terminated = True
-        self.l.LogError("Ctrl-c pressed. Cleaning up...")
+        self.l.LogError('Ctrl-c pressed. Cleaning up...')
         experiment.Terminate()
         raise
       except SystemExit:
         self._terminated = True
-        self.l.LogError("Unexpected exit. Cleaning up...")
+        self.l.LogError('Unexpected exit. Cleaning up...')
         experiment.Terminate()
         raise
     finally:
@@ -201,28 +202,28 @@ class ExperimentRunner(object):
       if not benchmark_run.cache_hit:
         send_mail = True
         break
-    if (not send_mail and not experiment.email_to
-        or config.GetConfig("no_email")):
+    if (not send_mail and not experiment.email_to or
+        config.GetConfig('no_email')):
       return
 
     label_names = []
     for label in experiment.labels:
       label_names.append(label.name)
-    subject = "%s: %s" % (experiment.name, " vs. ".join(label_names))
+    subject = '%s: %s' % (experiment.name, ' vs. '.join(label_names))
 
     text_report = TextResultsReport(experiment, True).GetReport()
-    text_report += ("\nResults are stored in %s.\n" %
+    text_report += ('\nResults are stored in %s.\n' %
                     experiment.results_directory)
     text_report = "<pre style='font-size: 13px'>%s</pre>" % text_report
     html_report = HTMLResultsReport(experiment).GetReport()
-    attachment = EmailSender.Attachment("report.html", html_report)
+    attachment = EmailSender.Attachment('report.html', html_report)
     email_to = experiment.email_to or []
     email_to.append(getpass.getuser())
     EmailSender().SendEmail(email_to,
                             subject,
                             text_report,
                             attachments=[attachment],
-                            msg_type="html")
+                            msg_type='html')
 
   def _StoreResults(self, experiment):
     if self._terminated:
@@ -230,32 +231,30 @@ class ExperimentRunner(object):
     results_directory = experiment.results_directory
     FileUtils().RmDir(results_directory)
     FileUtils().MkDirP(results_directory)
-    self.l.LogOutput("Storing experiment file in %s." % results_directory)
-    experiment_file_path = os.path.join(results_directory,
-                                        "experiment.exp")
+    self.l.LogOutput('Storing experiment file in %s.' % results_directory)
+    experiment_file_path = os.path.join(results_directory, 'experiment.exp')
     FileUtils().WriteFile(experiment_file_path, experiment.experiment_file)
 
-    self.l.LogOutput("Storing results report in %s." % results_directory)
-    results_table_path = os.path.join(results_directory, "results.html")
+    self.l.LogOutput('Storing results report in %s.' % results_directory)
+    results_table_path = os.path.join(results_directory, 'results.html')
     report = HTMLResultsReport(experiment).GetReport()
     if self.json_report:
       JSONResultsReport(experiment).GetReport(results_directory)
     FileUtils().WriteFile(results_table_path, report)
 
-    self.l.LogOutput("Storing email message body in %s." % results_directory)
-    msg_file_path = os.path.join(results_directory, "msg_body.html")
+    self.l.LogOutput('Storing email message body in %s.' % results_directory)
+    msg_file_path = os.path.join(results_directory, 'msg_body.html')
     text_report = TextResultsReport(experiment, True).GetReport()
-    text_report += ("\nResults are stored in %s.\n" %
+    text_report += ('\nResults are stored in %s.\n' %
                     experiment.results_directory)
     msg_body = "<pre style='font-size: 13px'>%s</pre>" % text_report
     FileUtils().WriteFile(msg_file_path, msg_body)
 
-    self.l.LogOutput("Storing results of each benchmark run.")
+    self.l.LogOutput('Storing results of each benchmark run.')
     for benchmark_run in experiment.benchmark_runs:
       if benchmark_run.result:
         benchmark_run_name = filter(str.isalnum, benchmark_run.name)
-        benchmark_run_path = os.path.join(results_directory,
-                                          benchmark_run_name)
+        benchmark_run_path = os.path.join(results_directory, benchmark_run_name)
         benchmark_run.result.CopyResultsTo(benchmark_run_path)
         benchmark_run.result.CleanUp(benchmark_run.benchmark.rm_chroot_tmp)
 
@@ -281,10 +280,10 @@ class MockExperimentRunner(ExperimentRunner):
                      experiment.name)
 
   def _PrintTable(self, experiment):
-    self.l.LogOutput("Would print the experiment table.")
+    self.l.LogOutput('Would print the experiment table.')
 
   def _Email(self, experiment):
-    self.l.LogOutput("Would send result email.")
+    self.l.LogOutput('Would send result email.')
 
   def _StoreResults(self, experiment):
-    self.l.LogOutput("Would store the results.")
+    self.l.LogOutput('Would store the results.')

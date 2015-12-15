@@ -1,7 +1,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Pipeline process that encapsulates the actual content.
 
 Part of the Chrome build flags optimization.
@@ -90,11 +89,10 @@ class PipelineProcess(multiprocessing.Process):
     work_pool = multiprocessing.Pool(self._num_processes)
 
     # the helper process
-    helper_process = multiprocessing.Process(target=self._helper,
-                                             args=(self._stage, self._cache,
-                                                   self._helper_queue,
-                                                   self._work_queue,
-                                                   self._result_queue))
+    helper_process = multiprocessing.Process(
+        target=self._helper,
+        args=(self._stage, self._cache, self._helper_queue, self._work_queue,
+              self._result_queue))
     helper_process.start()
     mycache = self._cache.keys()
 
@@ -112,9 +110,9 @@ class PipelineProcess(multiprocessing.Process):
         self._helper_queue.put(task)
       else:
         # Let the workers do the actual work.
-        work_pool.apply_async(self._worker, args=(self._stage, task,
-                                                  self._work_queue,
-                                                  self._result_queue))
+        work_pool.apply_async(
+            self._worker,
+            args=(self._stage, task, self._work_queue, self._result_queue))
         mycache.append(task_key)
 
     # Shutdown the workers pool and the helper process.

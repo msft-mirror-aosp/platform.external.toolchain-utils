@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright 2012 Google Inc. All Rights Reserved.
 # Author: mrdmnd@ (Matt Redmond)
 """A client to pull data from Bartlett.
@@ -23,9 +22,9 @@ import os
 import urllib
 import urllib2
 
-SERVER_NAME = "http://chromeoswideprofiling.appspot.com"
-APP_NAME = "chromeoswideprofiling"
-DELIMITER = "~"
+SERVER_NAME = 'http://chromeoswideprofiling.appspot.com'
+APP_NAME = 'chromeoswideprofiling'
+DELIMITER = '~'
 
 
 def Authenticate(server_name):
@@ -38,33 +37,33 @@ def Authenticate(server_name):
                         to grab other pages.
   """
 
-  if server_name.endswith("/"):
-    server_name = server_name.rstrip("/")
+  if server_name.endswith('/'):
+    server_name = server_name.rstrip('/')
   # Grab username and password from user through stdin.
-  username = raw_input("Email (must be @google.com account): ")
-  password = getpass.getpass("Password: ")
+  username = raw_input('Email (must be @google.com account): ')
+  password = getpass.getpass('Password: ')
   # Use a cookie to authenticate with GAE.
   cookiejar = cookielib.LWPCookieJar()
   opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookiejar))
   urllib2.install_opener(opener)
   # Get an AuthToken from Google accounts service.
-  auth_uri = "https://www.google.com/accounts/ClientLogin"
-  authreq_data = urllib.urlencode({"Email": username,
-                                   "Passwd": password,
-                                   "service": "ah",
-                                   "source": APP_NAME,
-                                   "accountType": "HOSTED_OR_GOOGLE"})
+  auth_uri = 'https://www.google.com/accounts/ClientLogin'
+  authreq_data = urllib.urlencode({'Email': username,
+                                   'Passwd': password,
+                                   'service': 'ah',
+                                   'source': APP_NAME,
+                                   'accountType': 'HOSTED_OR_GOOGLE'})
   auth_req = urllib2.Request(auth_uri, data=authreq_data)
   try:
     auth_resp = urllib2.urlopen(auth_req)
   except urllib2.URLError:
-    print "Error logging in to Google accounts service."
+    print 'Error logging in to Google accounts service.'
     return None
   body = auth_resp.read()
   # Auth response contains several fields.
   # We care about the part after Auth=
-  auth_resp_dict = dict(x.split("=") for x in body.split("\n") if x)
-  authtoken = auth_resp_dict["Auth"]
+  auth_resp_dict = dict(x.split('=') for x in body.split('\n') if x)
+  authtoken = auth_resp_dict['Auth']
   return authtoken
 
 
@@ -81,32 +80,32 @@ def DownloadSamples(server_name, authtoken, output_dir, start, stop):
     None
   """
 
-  if server_name.endswith("/"):
-    server_name = server_name.rstrip("/")
+  if server_name.endswith('/'):
+    server_name = server_name.rstrip('/')
 
   serve_page_string = _GetServePage(server_name, authtoken)
   if serve_page_string is None:
-    print "Error getting /serve page."
+    print 'Error getting /serve page.'
     return
 
-  sample_list = serve_page_string.split("</br>")
-  print "Will download:"
+  sample_list = serve_page_string.split('</br>')
+  print 'Will download:'
   sample_list_subset = sample_list[start:stop]
   for sample in sample_list_subset:
     print sample
   for sample in sample_list_subset:
-    assert sample, "Sample should be valid."
+    assert sample, 'Sample should be valid.'
     sample_info = [s.strip() for s in sample.split(DELIMITER)]
     key = sample_info[0]
     time = sample_info[1]
-    time = time.replace(" ", "_") # No space between date and time.
+    time = time.replace(' ', '_')  # No space between date and time.
     # sample_md5 = sample_info[2]
     board = sample_info[3]
     version = sample_info[4]
 
     # Put a compressed copy of the samples in output directory.
-    _DownloadSampleFromServer(server_name, authtoken, key, time, board,
-                              version, output_dir)
+    _DownloadSampleFromServer(server_name, authtoken, key, time, board, version,
+                              output_dir)
     _UncompressSample(key, time, board, version, output_dir)
 
 
@@ -124,8 +123,8 @@ def _BuildFilenameFromParams(key, time, board, version):
   return filename
 
 
-def _DownloadSampleFromServer(server_name, authtoken, key, time, board,
-                              version, output_dir):
+def _DownloadSampleFromServer(server_name, authtoken, key, time, board, version,
+                              output_dir):
   """Downloads sample_$(samplekey).gz to current dir.
   Args:
     server_name: (string) URL that the app engine code is living on.
@@ -139,18 +138,18 @@ def _DownloadSampleFromServer(server_name, authtoken, key, time, board,
     None
   """
   filename = _BuildFilenameFromParams(key, time, board, version)
-  compressed_filename = filename+".gz"
+  compressed_filename = filename + '.gz'
 
   if os.path.exists(os.path.join(output_dir, filename)):
-    print "Already downloaded %s, skipping." % filename
+    print 'Already downloaded %s, skipping.' % filename
     return
 
-  serv_uri = server_name + "/serve/" + key
-  serv_args = {"continue": serv_uri, "auth": authtoken}
-  full_serv_uri = server_name + "/_ah/login?%s" % urllib.urlencode(serv_args)
+  serv_uri = server_name + '/serve/' + key
+  serv_args = {'continue': serv_uri, 'auth': authtoken}
+  full_serv_uri = server_name + '/_ah/login?%s' % urllib.urlencode(serv_args)
   serv_req = urllib2.Request(full_serv_uri)
   serv_resp = urllib2.urlopen(serv_req)
-  f = open(os.path.join(output_dir, compressed_filename), "w+")
+  f = open(os.path.join(output_dir, compressed_filename), 'w+')
   f.write(serv_resp.read())
   f.close()
 
@@ -167,14 +166,14 @@ def _UncompressSample(key, time, board, version, output_dir):
     None
   """
   filename = _BuildFilenameFromParams(key, time, board, version)
-  compressed_filename = filename+".gz"
+  compressed_filename = filename + '.gz'
 
   if os.path.exists(os.path.join(output_dir, filename)):
-    print "Already decompressed %s, skipping." % filename
+    print 'Already decompressed %s, skipping.' % filename
     return
 
-  out_file = open(os.path.join(output_dir, filename), "wb")
-  in_file = gzip.open(os.path.join(output_dir, compressed_filename), "rb")
+  out_file = open(os.path.join(output_dir, filename), 'wb')
+  in_file = gzip.open(os.path.join(output_dir, compressed_filename), 'rb')
   out_file.write(in_file.read())
   in_file.close()
   out_file.close()
@@ -192,9 +191,9 @@ def _DeleteSampleFromServer(server_name, authtoken, key):
       None
   """
 
-  serv_uri = server_name + "/del/" + key
-  serv_args = {"continue": serv_uri, "auth": authtoken}
-  full_serv_uri = server_name + "/_ah/login?%s" % urllib.urlencode(serv_args)
+  serv_uri = server_name + '/del/' + key
+  serv_args = {'continue': serv_uri, 'auth': authtoken}
+  full_serv_uri = server_name + '/_ah/login?%s' % urllib.urlencode(serv_args)
   serv_req = urllib2.Request(full_serv_uri)
   urllib2.urlopen(serv_req)
 
@@ -208,9 +207,9 @@ def _GetServePage(server_name, authtoken):
     The text of the /serve page (including HTML tags)
   """
 
-  serv_uri = server_name + "/serve"
-  serv_args = {"continue": serv_uri, "auth": authtoken}
-  full_serv_uri = server_name + "/_ah/login?%s" % urllib.urlencode(serv_args)
+  serv_uri = server_name + '/serve'
+  serv_args = {'continue': serv_uri, 'auth': authtoken}
+  full_serv_uri = server_name + '/_ah/login?%s' % urllib.urlencode(serv_args)
   serv_req = urllib2.Request(full_serv_uri)
   serv_resp = urllib2.urlopen(serv_req)
   return serv_resp.read()
@@ -218,28 +217,37 @@ def _GetServePage(server_name, authtoken):
 
 def main():
   parser = optparse.OptionParser()
-  parser.add_option("--output_dir", dest="output_dir", action="store",
-                    help="Path to output perf data files.")
-  parser.add_option("--start", dest="start_ind", action="store",
-                    default=0, help="Start index.")
-  parser.add_option("--stop", dest="stop_ind", action="store",
-                    default=-1, help="Stop index.")
+  parser.add_option('--output_dir',
+                    dest='output_dir',
+                    action='store',
+                    help='Path to output perf data files.')
+  parser.add_option('--start',
+                    dest='start_ind',
+                    action='store',
+                    default=0,
+                    help='Start index.')
+  parser.add_option('--stop',
+                    dest='stop_ind',
+                    action='store',
+                    default=-1,
+                    help='Stop index.')
   options = parser.parse_args()[0]
   if not options.output_dir:
-    print "Must specify --output_dir."
+    print 'Must specify --output_dir.'
     return 1
   if not os.path.exists(options.output_dir):
-    print "Specified output_dir does not exist."
+    print 'Specified output_dir does not exist.'
     return 1
 
   authtoken = Authenticate(SERVER_NAME)
   if not authtoken:
-    print "Could not obtain authtoken, exiting."
+    print 'Could not obtain authtoken, exiting.'
     return 1
-  DownloadSamples(SERVER_NAME, authtoken, options.output_dir,
-                  options.start_ind, options.stop_ind)
-  print "Downloaded samples."
+  DownloadSamples(SERVER_NAME, authtoken, options.output_dir, options.start_ind,
+                  options.stop_ind)
+  print 'Downloaded samples.'
   return 0
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
   exit(main())

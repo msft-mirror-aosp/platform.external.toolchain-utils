@@ -1,7 +1,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """A module to handle the report format."""
 from __future__ import print_function
 
@@ -63,8 +62,8 @@ def ParseChromeosImage(chromeos_image):
   # chromeos_image should have been something like:
   # <path>/<board-trybot-release>/<chromeos-version>/chromiumos_test_image.bin"
   num_pieces = len(pieces)
-  if pieces[num_pieces-1] == "chromiumos_test_image.bin":
-    version = pieces[num_pieces-2]
+  if pieces[num_pieces - 1] == 'chromiumos_test_image.bin':
+    version = pieces[num_pieces - 2]
     # Find last '.' in the version and chop it off (removing the .datatime
     # piece from local builds).
     loc = version.rfind('.')
@@ -78,6 +77,7 @@ def ParseChromeosImage(chromeos_image):
     real_file = real_file[loc:]
   image = real_file
   return version, image
+
 
 class ResultsReport(object):
   """Class to handle the report format."""
@@ -100,54 +100,41 @@ class ResultsReport(object):
     return labels
 
   def GetFullTables(self, perf=False):
-    columns = [Column(RawResult(),
-                      Format()),
-               Column(MinResult(),
-                      Format()),
-               Column(MaxResult(),
-                      Format()),
-               Column(AmeanResult(),
-                      Format()),
-               Column(StdResult(),
-                      Format(), "StdDev"),
-               Column(CoeffVarResult(),
-                      CoeffVarFormat(), "StdDev/Mean"),
-               Column(GmeanRatioResult(),
-                      RatioFormat(), "GmeanSpeedup"),
-               Column(PValueResult(),
-                      PValueFormat(), "p-value")
-              ]
+    columns = [Column(RawResult(), Format()), Column(
+        MinResult(), Format()), Column(MaxResult(),
+                                       Format()), Column(AmeanResult(),
+                                                         Format()),
+               Column(StdResult(), Format(),
+                      'StdDev'), Column(CoeffVarResult(), CoeffVarFormat(),
+                                        'StdDev/Mean'),
+               Column(GmeanRatioResult(), RatioFormat(),
+                      'GmeanSpeedup'), Column(PValueResult(), PValueFormat(),
+                                              'p-value')]
     if not perf:
-      return self._GetTables(self.labels, self.benchmark_runs, columns,
-                             "full")
-    return self._GetPerfTables(self.labels, columns, "full")
+      return self._GetTables(self.labels, self.benchmark_runs, columns, 'full')
+    return self._GetPerfTables(self.labels, columns, 'full')
 
   def GetSummaryTables(self, perf=False):
-    columns = [Column(AmeanResult(),
-                      Format()),
-               Column(StdResult(),
-                      Format(), "StdDev"),
-               Column(CoeffVarResult(),
-                      CoeffVarFormat(), "StdDev/Mean"),
-               Column(GmeanRatioResult(),
-                      RatioFormat(), "GmeanSpeedup"),
-               Column(PValueResult(),
-                      PValueFormat(), "p-value")
-              ]
+    columns = [Column(AmeanResult(), Format()), Column(StdResult(), Format(),
+                                                       'StdDev'),
+               Column(CoeffVarResult(), CoeffVarFormat(), 'StdDev/Mean'),
+               Column(GmeanRatioResult(), RatioFormat(),
+                      'GmeanSpeedup'), Column(PValueResult(), PValueFormat(),
+                                              'p-value')]
     if not perf:
       return self._GetTables(self.labels, self.benchmark_runs, columns,
-                             "summary")
-    return self._GetPerfTables(self.labels, columns, "summary")
+                             'summary')
+    return self._GetPerfTables(self.labels, columns, 'summary')
 
   def _ParseColumn(self, columns, iteration):
     new_column = []
     for column in columns:
-      if column.result.__class__.__name__ != "RawResult":
-      #TODO(asharif): tabulator should support full table natively.
+      if column.result.__class__.__name__ != 'RawResult':
+        #TODO(asharif): tabulator should support full table natively.
         new_column.append(column)
       else:
         for i in range(iteration):
-          cc = Column(LiteralResult(i), Format(), str(i+1))
+          cc = Column(LiteralResult(i), Format(), str(i + 1))
           new_column.append(cc)
     return new_column
 
@@ -159,12 +146,12 @@ class ResultsReport(object):
     return True
 
   def _GetTableHeader(self, benchmark):
-    benchmark_info = ("Benchmark:  {0};  Iterations: {1}"
+    benchmark_info = ('Benchmark:  {0};  Iterations: {1}'
                       .format(benchmark.name, benchmark.iterations))
     cell = Cell()
     cell.string_value = benchmark_info
     cell.header = True
-    return  [[cell]]
+    return [[cell]]
 
   def _GetTables(self, labels, benchmark_runs, columns, table_type):
     tables = []
@@ -179,10 +166,10 @@ class ResultsReport(object):
           break
       ben_table = self._GetTableHeader(benchmark)
 
-      if  self._AreAllRunsEmpty(runs):
+      if self._AreAllRunsEmpty(runs):
         cell = Cell()
-        cell.string_value = ("This benchmark contains no result."
-                             " Is the benchmark name valid?")
+        cell.string_value = ('This benchmark contains no result.'
+                             ' Is the benchmark name valid?')
         cell_table = [[cell]]
       else:
         tg = TableGenerator(runs, label_name)
@@ -214,7 +201,8 @@ class ResultsReport(object):
       row_info = p_table.row_info[benchmark]
       table = []
       for event in benchmark_data:
-        tg = TableGenerator(benchmark_data[event], label_names,
+        tg = TableGenerator(benchmark_data[event],
+                            label_names,
                             sort=TableGenerator.SORT_BY_VALUES_DESC)
         table = tg.GetTable(max(self.PERF_ROWS, row_info[event]))
         parsed_columns = self._ParseColumn(columns, ben.iterations)
@@ -228,19 +216,19 @@ class ResultsReport(object):
     return tables
 
   def PrintTables(self, tables, out_to):
-    output = ""
+    output = ''
     if not tables:
       return output
     for table in tables:
-      if out_to == "HTML":
+      if out_to == 'HTML':
         tp = TablePrinter(table, TablePrinter.HTML)
-      elif out_to == "PLAIN":
+      elif out_to == 'PLAIN':
         tp = TablePrinter(table, TablePrinter.PLAIN)
-      elif out_to == "CONSOLE":
+      elif out_to == 'CONSOLE':
         tp = TablePrinter(table, TablePrinter.CONSOLE)
-      elif out_to == "TSV":
+      elif out_to == 'TSV':
         tp = TablePrinter(table, TablePrinter.TSV)
-      elif out_to == "EMAIL":
+      elif out_to == 'EMAIL':
         tp = TablePrinter(table, TablePrinter.EMAIL)
       else:
         pass
@@ -293,16 +281,21 @@ CPUInfo
 
   def GetStatusTable(self):
     """Generate the status table by the tabulator."""
-    table = [["", ""]]
-    columns = [Column(LiteralResult(iteration=0), Format(), "Status"),
-               Column(LiteralResult(iteration=1), Format(), "Failing Reason")]
+    table = [['', '']]
+    columns = [Column(
+        LiteralResult(iteration=0),
+        Format(),
+        'Status'), Column(
+            LiteralResult(iteration=1),
+            Format(),
+            'Failing Reason')]
 
     for benchmark_run in self.benchmark_runs:
       status = [benchmark_run.name, [benchmark_run.timeline.GetLastEvent(),
                                      benchmark_run.failure_reason]]
       table.append(status)
     tf = TableFormatter(table, columns)
-    cell_table = tf.GetCellTable("status")
+    cell_table = tf.GetCellTable('status')
     return [cell_table]
 
   def GetReport(self):
@@ -313,23 +306,20 @@ CPUInfo
     if not perf_table:
       perf_table = None
     if not self.email:
-      return self.TEXT % (self.experiment.name,
-                          self.PrintTables(summary_table, "CONSOLE"),
-                          self.experiment.machine_manager.num_reimages,
-                          self.PrintTables(status_table, "CONSOLE"),
-                          self.PrintTables(perf_table, "CONSOLE"),
-                          self.experiment.experiment_file,
-                          self.experiment.machine_manager.GetAllCPUInfo(
-                              self.experiment.labels))
+      return self.TEXT % (
+          self.experiment.name, self.PrintTables(summary_table, 'CONSOLE'),
+          self.experiment.machine_manager.num_reimages,
+          self.PrintTables(status_table, 'CONSOLE'),
+          self.PrintTables(perf_table, 'CONSOLE'),
+          self.experiment.experiment_file,
+          self.experiment.machine_manager.GetAllCPUInfo(self.experiment.labels))
 
-    return self.TEXT % (self.experiment.name,
-                        self.PrintTables(summary_table, "EMAIL"),
-                        self.experiment.machine_manager.num_reimages,
-                        self.PrintTables(status_table, "EMAIL"),
-                        self.PrintTables(perf_table, "EMAIL"),
-                        self.experiment.experiment_file,
-                        self.experiment.machine_manager.GetAllCPUInfo(
-                            self.experiment.labels))
+    return self.TEXT % (
+        self.experiment.name, self.PrintTables(summary_table, 'EMAIL'),
+        self.experiment.machine_manager.num_reimages,
+        self.PrintTables(status_table, 'EMAIL'),
+        self.PrintTables(perf_table, 'EMAIL'), self.experiment.experiment_file,
+        self.experiment.machine_manager.GetAllCPUInfo(self.experiment.labels))
 
 
 class HTMLResultsReport(ResultsReport):
@@ -489,11 +479,11 @@ pre {
 </div>""" % (table, table, table)
 
   def GetReport(self):
-    chart_javascript = ""
+    chart_javascript = ''
     charts = self._GetCharts(self.labels, self.benchmark_runs)
     for chart in charts:
       chart_javascript += chart.GetJavascript()
-    chart_divs = ""
+    chart_divs = ''
     for chart in charts:
       chart_divs += chart.GetDiv()
 
@@ -501,30 +491,23 @@ pre {
     full_table = self.GetFullTables()
     perf_table = self.GetSummaryTables(perf=True)
     if perf_table:
-      perf_html = self.PERF_HTML % (
-          self.PrintTables(perf_table, "HTML"),
-          self.PrintTables(perf_table, "PLAIN"),
-          self.PrintTables(perf_table, "TSV"),
-          self._GetTabMenuHTML("perf")
-          )
+      perf_html = self.PERF_HTML % (self.PrintTables(perf_table, 'HTML'),
+                                    self.PrintTables(perf_table, 'PLAIN'),
+                                    self.PrintTables(perf_table, 'TSV'),
+                                    self._GetTabMenuHTML('perf'))
       perf_init = "switchTab('perf', 'html');"
     else:
-      perf_html = ""
-      perf_init = ""
+      perf_html = ''
+      perf_init = ''
 
-    return self.HTML % (perf_init,
-                        chart_javascript,
-                        self.PrintTables(summary_table, "HTML"),
-                        self.PrintTables(summary_table, "PLAIN"),
-                        self.PrintTables(summary_table, "TSV"),
-                        self._GetTabMenuHTML("summary"),
-                        perf_html,
-                        chart_divs,
-                        self.PrintTables(full_table, "HTML"),
-                        self.PrintTables(full_table, "PLAIN"),
-                        self.PrintTables(full_table, "TSV"),
-                        self._GetTabMenuHTML("full"),
-                        self.experiment.experiment_file)
+    return self.HTML % (
+        perf_init, chart_javascript, self.PrintTables(summary_table, 'HTML'),
+        self.PrintTables(summary_table, 'PLAIN'),
+        self.PrintTables(summary_table, 'TSV'), self._GetTabMenuHTML('summary'),
+        perf_html, chart_divs, self.PrintTables(full_table, 'HTML'),
+        self.PrintTables(full_table, 'PLAIN'),
+        self.PrintTables(full_table, 'TSV'), self._GetTabMenuHTML('full'),
+        self.experiment.experiment_file)
 
   def _GetCharts(self, labels, benchmark_runs):
     charts = []
@@ -534,32 +517,26 @@ pre {
       runs = result[item]
       tg = TableGenerator(runs, ro.labels)
       table = tg.GetTable()
-      columns = [Column(AmeanResult(),
-                        Format()),
-                 Column(MinResult(),
-                        Format()),
-                 Column(MaxResult(),
-                        Format())
-                ]
+      columns = [Column(AmeanResult(), Format()), Column(MinResult(), Format()),
+                 Column(MaxResult(), Format())]
       tf = TableFormatter(table, columns)
-      data_table = tf.GetCellTable("full")
+      data_table = tf.GetCellTable('full')
 
       for i in range(2, len(data_table)):
         cur_row_data = data_table[i]
         test_key = cur_row_data[0].string_value
-        title = "{0}: {1}".format(item, test_key.replace("/", ""))
+        title = '{0}: {1}'.format(item, test_key.replace('/', ''))
         chart = ColumnChart(title, 300, 200)
-        chart.AddColumn("Label", "string")
-        chart.AddColumn("Average", "number")
-        chart.AddColumn("Min", "number")
-        chart.AddColumn("Max", "number")
-        chart.AddSeries("Min", "line", "black")
-        chart.AddSeries("Max", "line", "black")
+        chart.AddColumn('Label', 'string')
+        chart.AddColumn('Average', 'number')
+        chart.AddColumn('Min', 'number')
+        chart.AddColumn('Max', 'number')
+        chart.AddSeries('Min', 'line', 'black')
+        chart.AddSeries('Max', 'line', 'black')
         cur_index = 1
         for label in ro.labels:
-          chart.AddRow([label, cur_row_data[cur_index].value,
-                        cur_row_data[cur_index + 1].value,
-                        cur_row_data[cur_index + 2].value])
+          chart.AddRow([label, cur_row_data[cur_index].value, cur_row_data[
+              cur_index + 1].value, cur_row_data[cur_index + 2].value])
           if isinstance(cur_row_data[cur_index].value, str):
             chart = None
             break
@@ -568,8 +545,10 @@ pre {
           charts.append(chart)
     return charts
 
+
 class JSONResultsReport(ResultsReport):
   """class to generate JASON report."""
+
   def __init__(self, experiment, date=None, time=None):
     super(JSONResultsReport, self).__init__(experiment)
     self.ro = ResultOrganizer(experiment.benchmark_runs,
@@ -581,8 +560,8 @@ class JSONResultsReport(ResultsReport):
     self.defaults = TelemetryDefaults()
     if not self.date:
       timestamp = datetime.datetime.strftime(datetime.datetime.now(),
-                                             "%Y-%m-%d %H:%M:%S")
-      date, time = timestamp.split(" ")
+                                             '%Y-%m-%d %H:%M:%S')
+      date, time = timestamp.split(' ')
       self.date = date
       self.time = time
 
@@ -653,9 +632,8 @@ class JSONResultsReport(ResultsReport):
             json_results['detailed_results'] = detail_results
           final_results.append(json_results)
 
-    filename = "report_%s_%s_%s.%s.json" % (board, self.date,
-                                            self.time.replace(':', '.'),
-                                            compiler_string)
+    filename = 'report_%s_%s_%s.%s.json' % (
+        board, self.date, self.time.replace(':', '.'), compiler_string)
     fullname = os.path.join(results_dir, filename)
-    with open(fullname, "w") as fp:
+    with open(fullname, 'w') as fp:
       json.dump(final_results, fp, indent=2)

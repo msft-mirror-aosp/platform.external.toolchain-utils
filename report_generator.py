@@ -1,65 +1,70 @@
 #!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
-
 """Script to  compare a baseline results file to a new results file."""
 
-__author__ = "raymes@google.com (Raymes Khoury)"
+__author__ = 'raymes@google.com (Raymes Khoury)'
 
 import sys
 from utils import logger
 from utils import html_tools
 
-PASS = "pass"
-FAIL = "fail"
-NOT_EXECUTED = "not executed"
+PASS = 'pass'
+FAIL = 'fail'
+NOT_EXECUTED = 'not executed'
+
 
 class ResultsReport:
-  def __init__(self, report, num_tests_executed, num_passes, num_failures, num_regressions):
+
+  def __init__(self, report, num_tests_executed, num_passes, num_failures,
+               num_regressions):
     self.report = report
     self.num_tests_executed = num_tests_executed
     self.num_passes = num_passes
     self.num_failures = num_failures
     self.num_regressions = num_regressions
-  
+
   def GetReport(self):
     return self.report
-  
+
   def GetNumExecuted(self):
     return self.num_tests_executed
-  
+
   def GetNumPasses(self):
     return self.num_passes
-  
+
   def GetNumFailures(self):
     return self.num_failures
-  
+
   def GetNumRegressions(self):
     return self.num_regressions
 
   def GetSummary(self):
-    summary = "Tests executed: %s\n" % str(self.num_tests_executed)
-    summary += "Tests Passing: %s\n" % str(self.num_passes)
-    summary += "Tests Failing: %s\n" % str(self.num_failures)
-    summary += "Regressions: %s\n" % str(self.num_regressions)
+    summary = 'Tests executed: %s\n' % str(self.num_tests_executed)
+    summary += 'Tests Passing: %s\n' % str(self.num_passes)
+    summary += 'Tests Failing: %s\n' % str(self.num_failures)
+    summary += 'Regressions: %s\n' % str(self.num_regressions)
     return summary
 
+
 def Usage():
-  print "Usage: %s baseline_results new_results" % sys.argv[0]
+  print 'Usage: %s baseline_results new_results' % sys.argv[0]
   sys.exit(1)
+
 
 def ParseResults(results_filename):
   results = []
   try:
     results_file = open(results_filename, 'rb')
     for line in results_file:
-      if line.strip() != "":
-        results.append(line.strip().split("\t"))
+      if line.strip() != '':
+        results.append(line.strip().split('\t'))
     results_file.close()
   except IOError:
-    logger.GetLogger().LogWarning("Could not open results file: " +
+    logger.GetLogger().LogWarning('Could not open results file: ' +
                                   results_filename)
   return results
+
 
 def GenerateResultsReport(baseline_file, new_result_file):
   baseline_results = ParseResults(baseline_file)
@@ -85,7 +90,7 @@ def GenerateResultsReport(baseline_file, new_result_file):
   for result in test_status.keys():
     if test_status[result][0] != test_status[result][1]:
       regressions.append(result)
-  
+
   num_tests_executed = len(new_results)
   num_regressions = len(regressions)
   num_passes = 0
@@ -96,32 +101,35 @@ def GenerateResultsReport(baseline_file, new_result_file):
     else:
       num_failures += 1
 
-  report = html_tools.GetPageHeader("Test Summary")
-  report += html_tools.GetHeader("Test Summary")
+  report = html_tools.GetPageHeader('Test Summary')
+  report += html_tools.GetHeader('Test Summary')
   report += html_tools.GetListHeader()
-  report += html_tools.GetListItem("Tests executed: " + str(num_tests_executed))
-  report += html_tools.GetListItem("Passes: " + str(num_passes))
-  report += html_tools.GetListItem("Failures: " + str(num_failures))
-  report += html_tools.GetListItem("Regressions: " + str(num_regressions))
+  report += html_tools.GetListItem('Tests executed: ' + str(num_tests_executed))
+  report += html_tools.GetListItem('Passes: ' + str(num_passes))
+  report += html_tools.GetListItem('Failures: ' + str(num_failures))
+  report += html_tools.GetListItem('Regressions: ' + str(num_regressions))
   report += html_tools.GetListFooter()
-  report += html_tools.GetHeader("Regressions", 2)
-  report += html_tools.GetTableHeader(["Test name", "Expected result", 
-                                       "Actual result"])
-  
+  report += html_tools.GetHeader('Regressions', 2)
+  report += html_tools.GetTableHeader(['Test name', 'Expected result',
+                                       'Actual result'])
+
   for regression in regressions:
-    report += html_tools.GetTableRow([regression[:150], test_status[regression][1],
-                                      test_status[regression][0]])
-    report += "\n"
+    report += html_tools.GetTableRow([regression[:150], test_status[regression][
+        1], test_status[regression][0]])
+    report += '\n'
   report += html_tools.GetTableFooter()
-  report += html_tools.GetHeader("All Tests", 2)
-  report += html_tools.GetTableHeader(["Test name", "Expected result", "Actual result"])
+  report += html_tools.GetHeader('All Tests', 2)
+  report += html_tools.GetTableHeader(['Test name', 'Expected result',
+                                       'Actual result'])
   for result in test_status.keys():
     report += html_tools.GetTableRow([result[:150], test_status[result][1],
-                              test_status[result][0]])
-    report += "\n"
+                                      test_status[result][0]])
+    report += '\n'
   report += html_tools.GetTableFooter()
   report += html_tools.GetFooter()
-  return ResultsReport(report, num_tests_executed, num_passes, num_failures, num_regressions)
+  return ResultsReport(report, num_tests_executed, num_passes, num_failures,
+                       num_regressions)
+
 
 def Main(argv):
   if len(argv) < 2:
@@ -129,5 +137,6 @@ def Main(argv):
 
   print GenerateResultsReport(argv[1], argv[2])[0]
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
   Main(sys.argv)

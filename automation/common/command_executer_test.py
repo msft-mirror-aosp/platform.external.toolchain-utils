@@ -32,6 +32,7 @@ from automation.common.command_executer import CommandExecuter
 
 
 class LoggerMock(object):
+
   def LogCmd(self, cmd, machine='', user=''):
     if machine:
       logging.info('[%s] Executing: %s', machine, cmd)
@@ -49,6 +50,7 @@ class LoggerMock(object):
 
 
 class CommandExecuterUnderTest(CommandExecuter):
+
   def __init__(self):
     CommandExecuter.__init__(self, logger_to_set=LoggerMock())
 
@@ -83,8 +85,9 @@ class CommandExecuterLocalTests(unittest.TestCase):
   def RunCommand(self, method, **kwargs):
     program = os.path.abspath(sys.argv[0])
 
-    return self._executer.RunCommand(
-        '%s runHelper %s' % (program, method), machine=self.HOSTNAME, **kwargs)
+    return self._executer.RunCommand('%s runHelper %s' % (program, method),
+                                     machine=self.HOSTNAME,
+                                     **kwargs)
 
   def testCommandTimeout(self):
     exit_code = self.RunCommand('SleepForMinute', command_timeout=3)
@@ -114,12 +117,14 @@ class CommandExecuterLocalTests(unittest.TestCase):
     self.assertEquals(self._executer.stdout, '')
 
   def testOutputStreamNonInteractive(self):
-    self.assertFalse(self.RunCommand('IsOutputStreamInteractive'),
-                     'stdout stream is a terminal!')
+    self.assertFalse(
+        self.RunCommand('IsOutputStreamInteractive'),
+        'stdout stream is a terminal!')
 
   def testErrorStreamNonInteractive(self):
-    self.assertFalse(self.RunCommand('IsErrorStreamInteractive'),
-                     'stderr stream is a terminal!')
+    self.assertFalse(
+        self.RunCommand('IsErrorStreamInteractive'),
+        'stderr stream is a terminal!')
 
   def testAttemptToRead(self):
     self.assertFalse(self.RunCommand('WaitForInput', command_timeout=3))
@@ -149,6 +154,7 @@ class CommandExecuterRemoteTests(CommandExecuterLocalTests):
 
 
 class CommandExecuterTestHelpers(object):
+
   def SleepForMinute(self):
     time.sleep(60)
     return 1

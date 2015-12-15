@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Copyright 2010 Google Inc. All Rights Reserved.
 #
 
@@ -60,6 +58,7 @@ class IdProducerPolicy(object):
 
 
 class JobManager(threading.Thread):
+
   def __init__(self, machine_manager):
     threading.Thread.__init__(self, name=self.__class__.__name__)
     self.all_jobs = []
@@ -81,14 +80,14 @@ class JobManager(threading.Thread):
     self._logger = logging.getLogger(self.__class__.__name__)
 
   def StartJobManager(self):
-    self._logger.info("Starting...")
+    self._logger.info('Starting...')
 
     with self._lock:
       self.start()
       self._jobs_available.notifyAll()
 
   def StopJobManager(self):
-    self._logger.info("Shutdown request received.")
+    self._logger.info('Shutdown request received.')
 
     with self._lock:
       for job_ in self.all_jobs:
@@ -117,7 +116,7 @@ class JobManager(threading.Thread):
     return None
 
   def _KillJob(self, job_id):
-    self._logger.info("Killing [Job: %d].", job_id)
+    self._logger.info('Killing [Job: %d].', job_id)
 
     if job_id in self.job_executer_mapping:
       self.job_executer_mapping[job_id].Kill()
@@ -165,7 +164,7 @@ class JobManager(threading.Thread):
 
   @logger.HandleUncaughtExceptions
   def run(self):
-    self._logger.info("Started.")
+    self._logger.info('Started.')
 
     while not self._exit_request:
       with self._lock:
@@ -192,4 +191,4 @@ class JobManager(threading.Thread):
             executer.start()
             self.job_executer_mapping[ready_job.id] = executer
 
-    self._logger.info("Stopped.")
+    self._logger.info('Stopped.')

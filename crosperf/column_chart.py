@@ -1,9 +1,10 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
-
 """Module to draw column chart."""
+
 
 class ColumnChart(object):
   """class to draw column chart."""
+
   def __init__(self, title, width, height):
     self.title = title
     self.chart_div = filter(str.isalnum, title)
@@ -26,18 +27,18 @@ class ColumnChart(object):
     self.rows.append(row)
 
   def GetJavascript(self):
-    res = "var data = new google.visualization.DataTable();\n"
+    res = 'var data = new google.visualization.DataTable();\n'
     for column in self.columns:
       res += "data.addColumn('%s', '%s');\n" % column
-    res += "data.addRows(%s);\n" % len(self.rows)
+    res += 'data.addRows(%s);\n' % len(self.rows)
     for row in range(len(self.rows)):
       for column in range(len(self.columns)):
         val = self.rows[row][column]
         if isinstance(val, str):
           val = "'%s'" % val
-        res += "data.setValue(%s, %s, %s);\n" % (row, column, val)
+        res += 'data.setValue(%s, %s, %s);\n' % (row, column, val)
 
-    series_javascript = ""
+    series_javascript = ''
     for series in self.series:
       series_javascript += "%s: {type: '%s', color: '%s'}, " % series
 
@@ -48,9 +49,10 @@ chart_%s.draw(data, {width: %s, height: %s, title: '%s', legend: 'none',
   seriesType: "bars", lineWidth: 0, pointSize: 5, series: {%s},
   vAxis: {minValue: 0}})
 """
+
     res += chart_add_javascript % (self.chart_div, self.chart_div,
-                                   self.chart_div, self.width,
-                                   self.height, self.title, series_javascript)
+                                   self.chart_div, self.width, self.height,
+                                   self.title, series_javascript)
     return res
 
   def GetDiv(self):

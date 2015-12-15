@@ -1,7 +1,6 @@
 #!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
-
 """Script to build ChromeOS benchmarks
 
 Inputs:
@@ -26,7 +25,7 @@ Inputs:
 
 """
 
-__author__ = "bjanakiraman@google.com (Bhaskar Janakiraman)"
+__author__ = 'bjanakiraman@google.com (Bhaskar Janakiraman)'
 
 import optparse
 import os
@@ -38,37 +37,37 @@ import tc_enter_chroot
 from utils import command_executer
 from utils import logger
 
-
 KNOWN_BENCHMARKS = [
-  'chromeos/startup',
-  'chromeos/browser/pagecycler',
-  'chromeos/browser/sunspider',
-  'chromeos/browser/v8bench',
-  'chromeos/cpu/bikjmp' ]
+    'chromeos/startup', 'chromeos/browser/pagecycler',
+    'chromeos/browser/sunspider', 'chromeos/browser/v8bench',
+    'chromeos/cpu/bikjmp'
+]
 
 # Commands to build CPU benchmarks.
 
-CPU_BUILDCMD_CLEAN = "cd /usr/local/toolchain_root/third_party/android_bench/v2_0/CLOSED_SOURCE/%s;\
-python ../../scripts/bench.py --toolchain=/usr/bin --action=clean;"
+CPU_BUILDCMD_CLEAN = 'cd /usr/local/toolchain_root/third_party/android_bench/v2_0/CLOSED_SOURCE/%s;\
+python ../../scripts/bench.py --toolchain=/usr/bin --action=clean;'
 
-CPU_BUILDCMD_BUILD = "cd /usr/local/toolchain_root/third_party/android_bench/v2_0/CLOSED_SOURCE/%s;\
-python ../../scripts/bench.py --toolchain=/usr/bin --add_cflags=%s --add_ldflags=%s --makeopts=%s --action=build"
-
+CPU_BUILDCMD_BUILD = 'cd /usr/local/toolchain_root/third_party/android_bench/v2_0/CLOSED_SOURCE/%s;\
+python ../../scripts/bench.py --toolchain=/usr/bin --add_cflags=%s --add_ldflags=%s --makeopts=%s --action=build'
 
 # Common initializations
 cmd_executer = command_executer.GetCommandExecuter()
 
 
 def Usage(parser, message):
-  print "ERROR: " + message
+  print 'ERROR: ' + message
   parser.print_help()
   sys.exit(0)
 
 
 def CreateRunsh(destdir, benchmark):
-  """Create run.sh script to run benchmark.  Perflab needs a run.sh that runs the benchmark."""
-  run_cmd = os.path.dirname(os.path.abspath(__file__)) + "/run_benchmarks.py"
-  contents = "#!/bin/sh\n%s $@ %s\n" % (run_cmd, benchmark)
+  """Create run.sh script to run benchmark.
+
+  Perflab needs a run.sh that runs the benchmark.
+  """
+  run_cmd = os.path.dirname(os.path.abspath(__file__)) + '/run_benchmarks.py'
+  contents = '#!/bin/sh\n%s $@ %s\n' % (run_cmd, benchmark)
   runshfile = destdir + '/run.sh'
   f = open(runshfile, 'w')
   f.write(contents)
@@ -77,8 +76,9 @@ def CreateRunsh(destdir, benchmark):
   return retval
 
 
-def CreateBinaryCopy(sourcedir, destdir, copy = None):
+def CreateBinaryCopy(sourcedir, destdir, copy=None):
   """Create links in perflab-bin/destdir/* to sourcedir/* for now, instead of copies
+
   Args:
     copy: when none, make soft links to everything under sourcedir, otherwise
           copy all to destdir.
@@ -88,7 +88,7 @@ def CreateBinaryCopy(sourcedir, destdir, copy = None):
   retval = 0
   # check if sourcedir exists
   if not os.path.exists(sourcedir):
-    logger.GetLogger().LogError("benchmark results %s does not exist." %
+    logger.GetLogger().LogError('benchmark results %s does not exist.' %
                                 sourcedir)
     return 1
 
@@ -118,53 +118,85 @@ def Main(argv):
   # Common initializations
 
   parser = optparse.OptionParser()
-  parser.add_option("-c", "--chromeos_root", dest="chromeos_root",
-                    help="Target directory for ChromeOS installation.")
-  parser.add_option("-t", "--toolchain_root", dest="toolchain_root",
-                    help="This is obsolete. Do not use.")
-  parser.add_option("-r", "--third_party", dest="third_party",
-                    help="The third_party dir containing android benchmarks.")
-  parser.add_option("-C", "--clean", dest="clean", action="store_true",
-                    default=False, help="Clean up build."),
-  parser.add_option("-B", "--build", dest="build", action="store_true",
-                    default=False, help="Build benchmark."),
-  parser.add_option("-O", "--only_copy", dest="only_copy", action="store_true",
-                    default=False, help="Only copy to perflab-bin - no builds."),
-  parser.add_option("--workdir", dest="workdir", default=".",
-                    help="Work directory for perflab outputs.")
-  parser.add_option("--clobber_chroot", dest="clobber_chroot",
-                    action="store_true", help=
-                    "Delete the chroot and start fresh", default=False)
-  parser.add_option("--clobber_board", dest="clobber_board",
-                    action="store_true",
-                    help="Delete the board and start fresh", default=False)
-  parser.add_option("--cflags", dest="cflags", default="",
-                    help="CFLAGS for the ChromeOS packages")
-  parser.add_option("--cxxflags", dest="cxxflags",default="",
-                    help="CXXFLAGS for the ChromeOS packages")
-  parser.add_option("--ldflags", dest="ldflags", default="",
-                    help="LDFLAGS for the ChromeOS packages")
-  parser.add_option("--makeopts", dest="makeopts", default="",
-                    help="Make options for the ChromeOS packages")
-  parser.add_option("--board", dest="board",
-                    help="ChromeOS target board, e.g. x86-generic")
+  parser.add_option('-c',
+                    '--chromeos_root',
+                    dest='chromeos_root',
+                    help='Target directory for ChromeOS installation.')
+  parser.add_option('-t',
+                    '--toolchain_root',
+                    dest='toolchain_root',
+                    help='This is obsolete. Do not use.')
+  parser.add_option('-r',
+                    '--third_party',
+                    dest='third_party',
+                    help='The third_party dir containing android benchmarks.')
+  parser.add_option('-C',
+                    '--clean',
+                    dest='clean',
+                    action='store_true',
+                    default=False,
+                    help='Clean up build.'),
+  parser.add_option('-B',
+                    '--build',
+                    dest='build',
+                    action='store_true',
+                    default=False,
+                    help='Build benchmark.'),
+  parser.add_option('-O',
+                    '--only_copy',
+                    dest='only_copy',
+                    action='store_true',
+                    default=False,
+                    help='Only copy to perflab-bin - no builds.'),
+  parser.add_option('--workdir',
+                    dest='workdir',
+                    default='.',
+                    help='Work directory for perflab outputs.')
+  parser.add_option('--clobber_chroot',
+                    dest='clobber_chroot',
+                    action='store_true',
+                    help='Delete the chroot and start fresh',
+                    default=False)
+  parser.add_option('--clobber_board',
+                    dest='clobber_board',
+                    action='store_true',
+                    help='Delete the board and start fresh',
+                    default=False)
+  parser.add_option('--cflags',
+                    dest='cflags',
+                    default='',
+                    help='CFLAGS for the ChromeOS packages')
+  parser.add_option('--cxxflags',
+                    dest='cxxflags',
+                    default='',
+                    help='CXXFLAGS for the ChromeOS packages')
+  parser.add_option('--ldflags',
+                    dest='ldflags',
+                    default='',
+                    help='LDFLAGS for the ChromeOS packages')
+  parser.add_option('--makeopts',
+                    dest='makeopts',
+                    default='',
+                    help='Make options for the ChromeOS packages')
+  parser.add_option('--board',
+                    dest='board',
+                    help='ChromeOS target board, e.g. x86-generic')
 
-  (options,args) = parser.parse_args(argv[1:])
+  (options, args) = parser.parse_args(argv[1:])
 
   # validate args
   for arg in args:
     if arg not in KNOWN_BENCHMARKS:
-     logger.GetLogger().LogFatal("Bad benchmark %s specified" % arg)
-
+      logger.GetLogger().LogFatal('Bad benchmark %s specified' % arg)
 
   if options.chromeos_root is None:
-    Usage(parser, "--chromeos_root must be set")
+    Usage(parser, '--chromeos_root must be set')
 
   if options.board is None:
-    Usage(parser, "--board must be set")
+    Usage(parser, '--board must be set')
 
   if options.toolchain_root:
-    logger.GetLogger().LogWarning("--toolchain_root should not be set")
+    logger.GetLogger().LogWarning('--toolchain_root should not be set')
 
   options.chromeos_root = os.path.expanduser(options.chromeos_root)
   options.workdir = os.path.expanduser(options.workdir)
@@ -173,7 +205,7 @@ def Main(argv):
   if options.third_party:
     third_party = options.third_party
   else:
-    third_party = "%s/../../../third_party" % os.path.dirname(__file__)
+    third_party = '%s/../../../third_party' % os.path.dirname(__file__)
     third_party = os.path.realpath(third_party)
   for arg in args:
     # CPU benchmarks
@@ -183,22 +215,21 @@ def Main(argv):
 
       tec_options = []
       if third_party:
-        tec_options.append("--third_party=%s" % third_party)
+        tec_options.append('--third_party=%s' % third_party)
       if options.clean:
         retval = cmd_executer.ChrootRunCommand(options.chromeos_root,
                                                CPU_BUILDCMD_CLEAN % benchname,
-                                               tec_options=tec_options
-                                               )
+                                               tec_options=tec_options)
         logger.GetLogger().LogErrorIf(retval,
-                                      "clean of benchmark %s failed." % arg)
+                                      'clean of benchmark %s failed.' % arg)
       if options.build:
         retval = cmd_executer.ChrootRunCommand(
             options.chromeos_root,
-            CPU_BUILDCMD_BUILD % (benchname, options.cflags,
-                                  options.ldflags, options.makeopts),
+            CPU_BUILDCMD_BUILD % (benchname, options.cflags, options.ldflags,
+                                  options.makeopts),
             tec_options=tec_options)
         logger.GetLogger().LogErrorIf(retval,
-                                      "Build of benchmark %s failed." % arg)
+                                      'Build of benchmark %s failed.' % arg)
       if retval == 0 and (options.build or options.only_copy):
         benchdir = ('%s/android_bench/v2_0/CLOSED_SOURCE/%s' %
                     (third_party, benchname))
@@ -207,50 +238,57 @@ def Main(argv):
         # For cpu/*, we need to copy (not symlinks) of all the contents,
         # because they are part of the test fixutre.
         retval = CreateBinaryCopy(benchdir, linkdir, True)
-        if retval != 0: return retval
+        if retval != 0:
+          return retval
         retval = CreateRunsh(linkdir, arg)
-        if retval != 0: return retval
+        if retval != 0:
+          return retval
     elif re.match('chromeos/startup', arg):
       if options.build:
-      # Clean for chromeos/browser and chromeos/startup is a Nop since builds are always from scratch.
-        build_args = [os.path.dirname(os.path.abspath(__file__)) + "/build_chromeos.py",
-                      "--chromeos_root=" + options.chromeos_root,
-                      "--board=" + options.board,
-                      "--cflags=" + options.cflags,
-                      "--cxxflags=" + options.cxxflags,
-                      "--ldflags=" + options.ldflags,
-                      "--clobber_board"
-                     ]
+        # Clean for chromeos/browser and chromeos/startup is a Nop since builds are always from scratch.
+        build_args = [
+            os.path.dirname(os.path.abspath(__file__)) + '/build_chromeos.py',
+            '--chromeos_root=' + options.chromeos_root,
+            '--board=' + options.board, '--cflags=' + options.cflags,
+            '--cxxflags=' + options.cxxflags, '--ldflags=' + options.ldflags,
+            '--clobber_board'
+        ]
         retval = build_chromeos.Main(build_args)
-        logger.GetLogger().LogErrorIf(retval, "Build of ChromeOS failed.")
+        logger.GetLogger().LogErrorIf(retval, 'Build of ChromeOS failed.')
       if retval == 0 and (options.build or options.only_copy):
-        benchdir = '%s/src/build/images/%s/latest' % (options.chromeos_root, options.board)
+        benchdir = '%s/src/build/images/%s/latest' % (options.chromeos_root,
+                                                      options.board)
         linkdir = '%s/perflab-bin/%s' % (options.workdir, arg)
         retval = CreateBinaryCopy(benchdir, linkdir)
-        if retval != 0: return retval
+        if retval != 0:
+          return retval
         CreateRunsh(linkdir, arg)
-        if retval != 0: return retval
+        if retval != 0:
+          return retval
     elif re.match('chromeos/browser', arg):
       if options.build:
         # For now, re-build os. TBD: Change to call build_browser
-        build_args = [os.path.dirname(os.path.abspath(__file__)) + "/build_chrome_browser.py",
-                      "--chromeos_root=" + options.chromeos_root,
-                      "--board=" + options.board,
-                      "--cflags=" + options.cflags,
-                      "--cxxflags=" + options.cxxflags,
-                      "--ldflags=" + options.ldflags
-                     ]
+        build_args = [os.path.dirname(os.path.abspath(__file__)) +
+                      '/build_chrome_browser.py',
+                      '--chromeos_root=' + options.chromeos_root,
+                      '--board=' + options.board, '--cflags=' + options.cflags,
+                      '--cxxflags=' + options.cxxflags,
+                      '--ldflags=' + options.ldflags]
         retval = build_chromeos.Main(build_args)
-        logger.GetLogger().LogErrorIf(retval, "Build of ChromeOS failed.")
+        logger.GetLogger().LogErrorIf(retval, 'Build of ChromeOS failed.')
       if retval == 0 and (options.build or options.only_copy):
-        benchdir = '%s/src/build/images/%s/latest' % (options.chromeos_root, options.board)
+        benchdir = '%s/src/build/images/%s/latest' % (options.chromeos_root,
+                                                      options.board)
         linkdir = '%s/perflab-bin/%s' % (options.workdir, arg)
-        retval = CreateBinaryCopy(benchdir,linkdir)
-        if retval != 0: return retval
+        retval = CreateBinaryCopy(benchdir, linkdir)
+        if retval != 0:
+          return retval
         retval = CreateRunsh(linkdir, arg)
-        if retval != 0: return retval
+        if retval != 0:
+          return retval
 
   return 0
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
   sys.exit(Main(sys.argv))

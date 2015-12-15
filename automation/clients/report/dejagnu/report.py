@@ -1,12 +1,9 @@
-#!/usr/bin/python
-#
 # Copyright 2011 Google Inc. All Rights Reserved.
 # Author: kbaclawski@google.com (Krystian Baclawski)
 #
 
 import logging
 import os.path
-
 
 RESULT_DESCRIPTION = {
     'ERROR': 'DejaGNU errors',
@@ -18,13 +15,15 @@ RESULT_DESCRIPTION = {
     'UNTESTED': 'Not executed tests',
     'WARNING': 'DejaGNU warnings',
     'XFAIL': 'Expected test failures',
-    'XPASS': 'Unexpectedly passed tests'}
+    'XPASS': 'Unexpectedly passed tests'
+}
 
 RESULT_GROUPS = {
     'Successes': ['PASS', 'XFAIL'],
     'Failures': ['FAIL', 'XPASS', 'UNRESOLVED'],
     'Suppressed': ['!FAIL', '!XPASS', '!UNRESOLVED', '!ERROR'],
-    'Framework': ['UNTESTED', 'UNSUPPORTED', 'ERROR', 'WARNING', 'NOTE']}
+    'Framework': ['UNTESTED', 'UNSUPPORTED', 'ERROR', 'WARNING', 'NOTE']
+}
 
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -40,18 +39,18 @@ def _GetResultDescription(name):
 
 
 def _PrepareSummary(res_types, summary):
+
   def GetResultCount(res_type):
     return summary.get(res_type, 0)
 
-  return [(_GetResultDescription(rt), GetResultCount(rt))
-          for rt in res_types]
+  return [(_GetResultDescription(rt), GetResultCount(rt)) for rt in res_types]
 
 
 def _PrepareTestList(res_types, tests):
+
   def GetTestsByResult(res_type):
     return [(test.name, test.variant or '')
-            for test in sorted(tests)
-            if test.result == res_type]
+            for test in sorted(tests) if test.result == res_type]
 
   return [(_GetResultDescription(rt), GetTestsByResult(rt))
           for rt in res_types if rt != 'PASS']
@@ -92,7 +91,8 @@ def Generate(test_runs, manifests):
     tmpl_args.append({
         'id': test_run_id,
         'name': '%s @%s' % (test_run.tool, test_run.board),
-        'groups': groups})
+        'groups': groups
+    })
 
   logging.info('Rendering report in HTML format.')
 
@@ -105,7 +105,8 @@ def Generate(test_runs, manifests):
     logging.error('Failed to generate report in HTML format!')
     return ''
 
-  settings.configure(DEBUG=True, TEMPLATE_DEBUG=True,
+  settings.configure(DEBUG=True,
+                     TEMPLATE_DEBUG=True,
                      TEMPLATE_DIRS=(ROOT_PATH,))
 
   tmpl = loader.get_template('report.html')

@@ -1,7 +1,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Hill climbing unitest.
 
 Part of the Chrome build flags optimization.
@@ -29,7 +28,6 @@ from steering import Steering
 from task import BUILD_STAGE
 from task import Task
 from task import TEST_STAGE
-
 
 # The number of flags be tested.
 NUM_FLAGS = 5
@@ -296,9 +294,9 @@ def _TestAlgorithm(cost_func, specs, generations, best_result):
   manager = multiprocessing.Manager()
   input_queue = manager.Queue()
   output_queue = manager.Queue()
-  pp_steer = multiprocessing.Process(target=Steering,
-                                     args=(set(), generations, output_queue,
-                                           input_queue))
+  pp_steer = multiprocessing.Process(
+      target=Steering,
+      args=(set(), generations, output_queue, input_queue))
   pp_steer.start()
 
   # The best result of the algorithm so far.
@@ -401,8 +399,7 @@ class MockAlgorithmsTest(unittest.TestCase):
                               specs, MUTATION_RATE)
 
     # Generate the initial generations.
-    generation_tasks = GenerateRandomGATasks(specs, NUM_CHROMOSOMES,
-                                             NUM_TRIALS)
+    generation_tasks = GenerateRandomGATasks(specs, NUM_CHROMOSOMES, NUM_TRIALS)
     generations = [GAGeneration(generation_tasks, set([]), 0)]
 
     # Test the algorithm.
@@ -447,6 +444,7 @@ class MockAlgorithmsTest(unittest.TestCase):
     # The concrete type of the generation decides how the next generation will
     # be generated.
     _TestAlgorithm(cost_function, specs, generations, cost)
+
 
 if __name__ == '__main__':
   unittest.main()

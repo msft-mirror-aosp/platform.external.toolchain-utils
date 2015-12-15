@@ -1,12 +1,11 @@
 #!/usr/bin/python
 # Copyright 2012 Google Inc. All Rights Reserved.
-
 """One-line documentation for perf_diff module.
 
 A detailed description of perf_diff.
 """
 
-__author__ = "asharif@google.com (Ahmad Sharif)"
+__author__ = 'asharif@google.com (Ahmad Sharif)'
 
 import optparse
 import re
@@ -15,8 +14,8 @@ import sys
 import misc
 import tabulator
 
-ROWS_TO_SHOW = "Rows_to_show_in_the_perf_table"
-TOTAL_EVENTS = "Total_events_of_this_profile"
+ROWS_TO_SHOW = 'Rows_to_show_in_the_perf_table'
+TOTAL_EVENTS = 'Total_events_of_this_profile'
 
 
 def GetPerfDictFromReport(report_file):
@@ -28,7 +27,7 @@ def GetPerfDictFromReport(report_file):
     output[k][ROWS_TO_SHOW] = 0
     output[k][TOTAL_EVENTS] = 0
     for function in v.functions:
-      out_key = "%s" % (function.name)
+      out_key = '%s' % (function.name)
       output[k][out_key] = function.count
       output[k][TOTAL_EVENTS] += function.count
       if function.percent > 1:
@@ -45,13 +44,13 @@ def _SortDictionaryByValue(d):
     else:
       return x
 
-  sorted_l = sorted(l,
-                    key=lambda x: GetFloat(x[1]))
+  sorted_l = sorted(l, key=lambda x: GetFloat(x[1]))
   sorted_l.reverse()
   return [f[0] for f in sorted_l]
 
 
 class Tabulator(object):
+
   def __init__(self, all_dicts):
     self._all_dicts = all_dicts
 
@@ -69,7 +68,7 @@ class Tabulator(object):
         else:
           fields[f] = max(fields[f], d[f])
     table = []
-    header = ["name"]
+    header = ['name']
     for i in range(len(dicts)):
       header.append(i)
 
@@ -83,27 +82,29 @@ class Tabulator(object):
         if f in d:
           row.append(d[f])
         else:
-          row.append("0")
+          row.append('0')
       table.append(row)
 
     print tabulator.GetSimpleTable(table)
 
 
 class Function(object):
+
   def __init__(self):
     self.count = 0
-    self.name = ""
+    self.name = ''
     self.percent = 0
 
 
 class Section(object):
+
   def __init__(self, contents):
     self.raw_contents = contents
     self._ParseSection()
 
   def _ParseSection(self):
-    matches = re.findall(r"Events: (\w+)\s+(.*)", self.raw_contents)
-    assert len(matches) <= 1, "More than one event found in 1 section"
+    matches = re.findall(r'Events: (\w+)\s+(.*)', self.raw_contents)
+    assert len(matches) <= 1, 'More than one event found in 1 section'
     if not matches:
       return
     match = matches[0]
@@ -114,14 +115,14 @@ class Section(object):
     for line in self.raw_contents.splitlines():
       if not line.strip():
         continue
-      if "%" not in line:
+      if '%' not in line:
         continue
-      if not line.startswith("#"):
-        fields = [f for f in line.split(" ") if f]
+      if not line.startswith('#'):
+        fields = [f for f in line.split(' ') if f]
         function = Function()
-        function.percent = float(fields[0].strip("%"))
+        function.percent = float(fields[0].strip('%'))
         function.count = int(fields[1])
-        function.name = " ".join(fields[2:])
+        function.name = ' '.join(fields[2:])
         self.functions.append(function)
 
 
@@ -134,7 +135,7 @@ class PerfReport(object):
     self.sections = {}
     self.metadata = {}
     self._section_contents = []
-    self._section_header = ""
+    self._section_header = ''
     self._SplitSections()
     self._ParseSections()
     self._ParseSectionHeader()
@@ -145,8 +146,8 @@ class PerfReport(object):
     # report was generated, not when the data was captured.
     for line in self._section_header.splitlines():
       line = line[2:]
-      if ":" in line:
-        key, val = line.strip().split(":", 1)
+      if ':' in line:
+        key, val = line.strip().split(':', 1)
         key = key.strip()
         val = val.strip()
         self.metadata[key] = val
@@ -164,22 +165,22 @@ class PerfReport(object):
 
   # TODO(asharif): Do this better.
   def _GetHumanReadableName(self, section_name):
-    if not "raw" in section_name:
+    if not 'raw' in section_name:
       return section_name
-    raw_number = section_name.strip().split(" ")[-1]
+    raw_number = section_name.strip().split(' ')[-1]
     for line in self._section_header.splitlines():
       if raw_number in line:
-        name = line.strip().split(" ")[5]
+        name = line.strip().split(' ')[5]
         return name
 
   def _SplitSections(self):
     self._section_contents = []
-    indices = [m.start() for m in re.finditer("# Events:", self._perf_contents)]
+    indices = [m.start() for m in re.finditer('# Events:', self._perf_contents)]
     indices.append(len(self._perf_contents))
     for i in range(len(indices) - 1):
-      section_content = self._perf_contents[indices[i]:indices[i+1]]
+      section_content = self._perf_contents[indices[i]:indices[i + 1]]
       self._section_contents.append(section_content)
-    self._section_header = ""
+    self._section_header = ''
     if indices:
       self._section_header = self._perf_contents[0:indices[0]]
 
@@ -201,7 +202,7 @@ class PerfDiffer(object):
     summary_dicts = []
     for report in self._reports:
       d = {}
-      filename_dicts.append({"file": report.perf_file})
+      filename_dicts.append({'file': report.perf_file})
       for section_name in section_names:
         if section_name in report.sections:
           d[section_name] = report.sections[section_name].count
@@ -210,8 +211,7 @@ class PerfDiffer(object):
     all_dicts = [filename_dicts, summary_dicts]
 
     for section_name in section_names:
-      function_names = self._GetTopFunctions(section_name,
-                                             self._num_symbols)
+      function_names = self._GetTopFunctions(section_name, self._num_symbols)
       self._FindCommonFunctions(section_name)
       dicts = []
       for report in self._reports:
@@ -224,13 +224,13 @@ class PerfDiffer(object):
 
           for function in section.functions:
             if function.name in function_names:
-              key = "%s %s" % (section.name, function.name)
+              key = '%s %s' % (section.name, function.name)
               d[key] = function.count
               # Compute a factor to scale the function count by in common_only
               # mode.
               if self._common_only and (
                   function.name in self._common_function_names[section.name]):
-                d[key + " scaled"] = common_scaling_factor * function.count
+                d[key + ' scaled'] = common_scaling_factor * function.count
         dicts.append(d)
 
       all_dicts.append(dicts)
@@ -245,15 +245,13 @@ class PerfDiffer(object):
         if section.name not in sections:
           sections[section.name] = section.count
         else:
-          sections[section.name] = max(sections[section.name],
-                                       section.count)
+          sections[section.name] = max(sections[section.name], section.count)
     return _SortDictionaryByValue(sections)
 
   def _GetCommonScalingFactor(self, section):
     unique_count = self._GetCount(
-        section,
-        lambda x: x in self._common_function_names[section.name])
-    return 100.0/unique_count
+        section, lambda x: x in self._common_function_names[section.name])
+    return 100.0 / unique_count
 
   def _GetCount(self, section, filter_fun=None):
     total_count = 0
@@ -297,17 +295,17 @@ class PerfDiffer(object):
 def Main(argv):
   """The entry of the main."""
   parser = optparse.OptionParser()
-  parser.add_option("-n",
-                    "--num_symbols",
-                    dest="num_symbols",
-                    default="5",
-                    help="The number of symbols to show.")
-  parser.add_option("-c",
-                    "--common_only",
-                    dest="common_only",
-                    action="store_true",
+  parser.add_option('-n',
+                    '--num_symbols',
+                    dest='num_symbols',
+                    default='5',
+                    help='The number of symbols to show.')
+  parser.add_option('-c',
+                    '--common_only',
+                    dest='common_only',
+                    action='store_true',
                     default=False,
-                    help="Diff common symbols only.")
+                    help='Diff common symbols only.')
 
   options, args = parser.parse_args(argv)
 
@@ -324,5 +322,5 @@ def Main(argv):
   return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   sys.exit(Main(sys.argv))

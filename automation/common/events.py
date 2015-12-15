@@ -1,9 +1,7 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
-
 """Tools for recording and reporting timeline of abstract events.
 
 You can store any events provided that they can be stringified.
@@ -56,8 +54,7 @@ class _EventRecord(object):
     return self._time_elapsed is not None
 
   def GetTimeStartedFormatted(self):
-    return time.strftime('%m/%d/%Y %H:%M:%S',
-                         time.gmtime(self._time_started))
+    return time.strftime('%m/%d/%Y %H:%M:%S', time.gmtime(self._time_started))
 
   def GetTimeElapsedRounded(self):
     return datetime.timedelta(seconds=int(self.time_elapsed.seconds))
@@ -104,8 +101,8 @@ class EventHistory(collections.Sequence):
 
   def GetTotalTime(self):
     if self._records:
-      total_time_elapsed = sum(evrec.time_elapsed.seconds for evrec in
-                               self._records)
+      total_time_elapsed = sum(evrec.time_elapsed.seconds
+                               for evrec in self._records)
 
       return datetime.timedelta(seconds=int(total_time_elapsed))
 
@@ -114,15 +111,16 @@ class EventHistory(collections.Sequence):
 
     if self._records:
       for num, next_evrec in enumerate(self._records[1:], start=1):
-        evrec = self._records[num-1]
+        evrec = self._records[num - 1]
 
-        records.append(_EventRecord(_Transition(evrec.event, next_evrec.event),
-                                    evrec.time_started, evrec.time_elapsed))
+        records.append(_EventRecord(
+            _Transition(evrec.event, next_evrec.event), evrec.time_started,
+            evrec.time_elapsed))
 
       if not self.last.has_finished:
-        records.append(_EventRecord(_Transition(self.last.event, 'NOW'),
-                                    self.last.time_started,
-                                    self.last.time_elapsed))
+        records.append(_EventRecord(
+            _Transition(self.last.event,
+                        'NOW'), self.last.time_started, self.last.time_elapsed))
 
     return EventHistory(records)
 

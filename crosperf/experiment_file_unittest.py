@@ -64,7 +64,7 @@ EXPERIMENT_FILE_3 = """
   }
   """
 
-OUTPUT_FILE="""board: x86-alex
+OUTPUT_FILE = """board: x86-alex
 remote: chromeos-alex3
 perf_args: record -a -e cycles
 
@@ -82,39 +82,41 @@ label: image2 {
 \tchromeos_image: /usr/local/google/cros_image2.bin
 }\n\n"""
 
+
 class ExperimentFileTest(unittest.TestCase):
+
   def testLoadExperimentFile1(self):
     input_file = StringIO.StringIO(EXPERIMENT_FILE_1)
     experiment_file = ExperimentFile(input_file)
     global_settings = experiment_file.GetGlobalSettings()
-    self.assertEqual(global_settings.GetField("remote"), ["chromeos-alex3"])
-    self.assertEqual(global_settings.GetField("perf_args"),
-                     "record -a -e cycles")
-    benchmark_settings = experiment_file.GetSettings("benchmark")
+    self.assertEqual(global_settings.GetField('remote'), ['chromeos-alex3'])
+    self.assertEqual(
+        global_settings.GetField('perf_args'), 'record -a -e cycles')
+    benchmark_settings = experiment_file.GetSettings('benchmark')
     self.assertEqual(len(benchmark_settings), 1)
-    self.assertEqual(benchmark_settings[0].name, "PageCycler")
-    self.assertEqual(benchmark_settings[0].GetField("iterations"), 3)
+    self.assertEqual(benchmark_settings[0].name, 'PageCycler')
+    self.assertEqual(benchmark_settings[0].GetField('iterations'), 3)
 
-    label_settings = experiment_file.GetSettings("label")
+    label_settings = experiment_file.GetSettings('label')
     self.assertEqual(len(label_settings), 2)
-    self.assertEqual(label_settings[0].name, "image1")
-    self.assertEqual(label_settings[0].GetField("chromeos_image"),
-                     "/usr/local/google/cros_image1.bin")
-    self.assertEqual(label_settings[1].GetField("remote"), ["chromeos-lumpy1"])
-    self.assertEqual(label_settings[0].GetField("remote"), ["chromeos-alex3"])
+    self.assertEqual(label_settings[0].name, 'image1')
+    self.assertEqual(label_settings[0].GetField('chromeos_image'),
+                     '/usr/local/google/cros_image1.bin')
+    self.assertEqual(label_settings[1].GetField('remote'), ['chromeos-lumpy1'])
+    self.assertEqual(label_settings[0].GetField('remote'), ['chromeos-alex3'])
 
   def testOverrideSetting(self):
     input_file = StringIO.StringIO(EXPERIMENT_FILE_2)
     experiment_file = ExperimentFile(input_file)
     global_settings = experiment_file.GetGlobalSettings()
-    self.assertEqual(global_settings.GetField("remote"), ["chromeos-alex3"])
+    self.assertEqual(global_settings.GetField('remote'), ['chromeos-alex3'])
 
-    benchmark_settings = experiment_file.GetSettings("benchmark")
+    benchmark_settings = experiment_file.GetSettings('benchmark')
     self.assertEqual(len(benchmark_settings), 2)
-    self.assertEqual(benchmark_settings[0].name, "PageCycler")
-    self.assertEqual(benchmark_settings[0].GetField("iterations"), 3)
-    self.assertEqual(benchmark_settings[1].name, "AndroidBench")
-    self.assertEqual(benchmark_settings[1].GetField("iterations"), 2)
+    self.assertEqual(benchmark_settings[0].name, 'PageCycler')
+    self.assertEqual(benchmark_settings[0].GetField('iterations'), 3)
+    self.assertEqual(benchmark_settings[1].name, 'AndroidBench')
+    self.assertEqual(benchmark_settings[1].GetField('iterations'), 2)
 
   def testDuplicateLabel(self):
     input_file = StringIO.StringIO(EXPERIMENT_FILE_3)
@@ -126,5 +128,6 @@ class ExperimentFileTest(unittest.TestCase):
     res = experiment_file.Canonicalize()
     self.assertEqual(res, OUTPUT_FILE)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
   unittest.main()

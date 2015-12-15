@@ -1,8 +1,6 @@
-#!/usr/bin/python
-#
 # Copyright 2010 Google Inc. All Rights Reserved.
 
-__author__ = "asharif@google.com (Ahmad Sharif)"
+__author__ = 'asharif@google.com (Ahmad Sharif)'
 
 from fnmatch import fnmatch
 
@@ -38,24 +36,20 @@ class Machine(object):
       self.locked = False
 
   def __repr__(self):
-    return "{%s: %s@%s}" % (
-        self.__class__.__name__, self.username, self.hostname)
+    return '{%s: %s@%s}' % (self.__class__.__name__, self.username,
+                            self.hostname)
 
   def __str__(self):
-    return "\n".join(["Machine Information:",
-                      "Hostname: %s" % self.hostname,
-                      "Label: %s" % self.label,
-                      "CPU: %s" % self.cpu,
-                      "Cores: %d" % self.cores,
-                      "OS: %s" % self.os,
-                      "Uses: %d" % self.uses,
-                      "Locked: %s" % self.locked])
+    return '\n'.join(
+        ['Machine Information:', 'Hostname: %s' % self.hostname, 'Label: %s' %
+         self.label, 'CPU: %s' % self.cpu, 'Cores: %d' % self.cores, 'OS: %s' %
+         self.os, 'Uses: %d' % self.uses, 'Locked: %s' % self.locked])
 
 
 class MachineSpecification(object):
   """Helper class used to find a machine matching your requirements."""
 
-  def __init__(self, hostname="*", label="*", os="*", lock_required=False):
+  def __init__(self, hostname='*', label='*', os='*', lock_required=False):
     self.hostname = hostname
     self.label = label
     self.os = os
@@ -63,16 +57,13 @@ class MachineSpecification(object):
     self.preferred_machines = []
 
   def __str__(self):
-    return "\n".join(["Machine Specification:",
-                      "Name: %s" % self.name,
-                      "OS: %s" % self.os,
-                      "Lock required: %s" % self.lock_required])
+    return '\n'.join(['Machine Specification:', 'Name: %s' % self.name, 'OS: %s'
+                      % self.os, 'Lock required: %s' % self.lock_required])
 
   def IsMatch(self, machine):
-    return all([not machine.locked,
-                fnmatch(machine.hostname, self.hostname),
-                fnmatch(machine.label, self.label),
-                fnmatch(machine.os, self.os)])
+    return all([not machine.locked, fnmatch(machine.hostname, self.hostname),
+                fnmatch(machine.label, self.label), fnmatch(machine.os,
+                                                            self.os)])
 
   def AddPreferredMachine(self, hostname):
     if hostname not in self.preferred_machines:

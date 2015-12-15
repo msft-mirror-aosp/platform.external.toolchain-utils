@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Copyright 2010 Google Inc. All Rights Reserved.
 #
 
@@ -34,59 +32,59 @@ function displayRow(id){
 
 
 def GetListHeader():
-  return "<ul>"
+  return '<ul>'
 
 
 def GetListItem(text):
-  return "<li>%s</li>" % text
+  return '<li>%s</li>' % text
 
 
 def GetListFooter():
-  return "</ul>"
+  return '</ul>'
 
 
 def GetList(items):
-  return "<ul>%s</ul>" % "".join(["<li>%s</li>" % item for item in items])
+  return '<ul>%s</ul>' % ''.join(['<li>%s</li>' % item for item in items])
 
 
 def GetParagraph(text):
-  return "<p>%s</p>" % text
+  return '<p>%s</p>' % text
 
 
 def GetFooter():
-  return "</body>\n</html>"
+  return '</body>\n</html>'
 
 
 def GetHeader(text, h=1):
-  return "<h%s>%s</h%s>" % (h, text, h)
+  return '<h%s>%s</h%s>' % (h, text, h)
 
 
 def GetTableHeader(headers):
-  row = "".join(["<th>%s</th>" % header for header in headers])
-  return "<table><tr>%s</tr>" % row
+  row = ''.join(['<th>%s</th>' % header for header in headers])
+  return '<table><tr>%s</tr>' % row
 
 
 def GetTableFooter():
-  return "</table>"
+  return '</table>'
 
 
 def FormatLineBreaks(text):
-  return text.replace("\n", "<br/>")
+  return text.replace('\n', '<br/>')
 
 
 def GetTableCell(text):
-  return "<td>%s</td>" % FormatLineBreaks(str(text))
+  return '<td>%s</td>' % FormatLineBreaks(str(text))
 
 
 def GetTableRow(columns):
-  return "<tr>%s</tr>" % "\n".join([GetTableCell(column) for column in columns])
+  return '<tr>%s</tr>' % '\n'.join([GetTableCell(column) for column in columns])
 
 
 def GetTable(headers, rows):
   table = [GetTableHeader(headers)]
   table.extend([GetTableRow(row) for row in rows])
   table.append(GetTableFooter())
-  return "\n".join(table)
+  return '\n'.join(table)
 
 
 def GetLink(link, text):

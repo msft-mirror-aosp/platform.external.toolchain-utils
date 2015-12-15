@@ -1,7 +1,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Parse data from benchmark_runs for tabulator."""
 
 from __future__ import print_function
@@ -13,7 +12,8 @@ import sys
 
 from cros_utils import misc
 
-TELEMETRY_RESULT_DEFAULTS_FILE = "default-telemetry-results.json"
+TELEMETRY_RESULT_DEFAULTS_FILE = 'default-telemetry-results.json'
+
 
 class ResultOrganizer(object):
   """Create a dict from benchmark_runs.
@@ -30,11 +30,14 @@ class ResultOrganizer(object):
     ]}.
   """
 
-  def __init__(self, benchmark_runs, labels, benchmarks=None,
+  def __init__(self,
+               benchmark_runs,
+               labels,
+               benchmarks=None,
                json_report=False):
     self.result = {}
     self.labels = []
-    self.prog = re.compile(r"(\w+)\{(\d+)\}")
+    self.prog = re.compile(r'(\w+)\{(\d+)\}')
     self.benchmarks = benchmarks
     if not self.benchmarks:
       self.benchmarks = []
@@ -62,7 +65,7 @@ class ResultOrganizer(object):
       if not show_all_results:
         summary_list = self._GetSummaryResults(benchmark.test_name)
         if len(summary_list) > 0:
-          summary_list.append("retval")
+          summary_list.append('retval')
         else:
           # Did not find test_name in json file; therefore show everything.
           show_all_results = True
@@ -77,7 +80,8 @@ class ResultOrganizer(object):
         cur_dict['retval'] = 1
         # TODO: This output should be sent via logger.
         print("WARNING: Test '%s' appears to have succeeded but returned"
-              " no results." % benchmark_name, file=sys.stderr)
+              ' no results.' % benchmark_name,
+              file=sys.stderr)
       if json_report and benchmark_run.machine:
         cur_dict['machine'] = benchmark_run.machine.name
         cur_dict['machine_checksum'] = benchmark_run.machine.checksum
@@ -117,8 +121,7 @@ class ResultOrganizer(object):
       for run in label:
         for key in run:
           if re.match(self.prog, key):
-            max_dup = max(max_dup,
-                          int(re.search(self.prog, key).group(2)))
+            max_dup = max(max_dup, int(re.search(self.prog, key).group(2)))
     return max_dup
 
   def _GetNonDupLabel(self, max_dup, label):
@@ -134,7 +137,7 @@ class ResultOrganizer(object):
         if re.match(self.prog, key):
           new_key = re.search(self.prog, key).group(1)
           index = int(re.search(self.prog, key).group(2))
-          new_label[start_index+index][new_key] = str(value)
+          new_label[start_index + index][new_key] = str(value)
           del new_run[key]
     return new_label
 
@@ -144,4 +147,4 @@ class ResultOrganizer(object):
       if benchmark.name == bench:
         if not benchmark.iteration_adjusted:
           benchmark.iteration_adjusted = True
-          benchmark.iterations *= (max_dup +1)
+          benchmark.iterations *= (max_dup + 1)

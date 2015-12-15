@@ -1,7 +1,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """The hill genetic algorithm.
 
 Part of the Chrome build flags optimization.
@@ -87,6 +86,7 @@ def RandomMutate(specs, flag_set, mutation_rate):
 
 
 class GATask(Task):
+
   def __init__(self, flag_set):
     Task.__init__(self, flag_set)
 

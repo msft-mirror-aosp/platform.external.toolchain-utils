@@ -7,39 +7,40 @@ from benchmark import Benchmark
 
 import unittest
 
+
 class BenchmarkTestCase(unittest.TestCase):
 
   def test_benchmark(self):
     # Test creating a benchmark with all the fields filled out.
-    b1 = Benchmark("b1_test", # name
-                   "octane",  # test_name
-                   "",        # test_args
-                   3,         # iterations
-                   False,     # rm_chroot_tmp
-                   "record -e cycles",   # perf_args
-                   "telemetry_Crosperf", # suite
-                   True)      # show_all_results
+    b1 = Benchmark('b1_test',  # name
+                   'octane',  # test_name
+                   '',  # test_args
+                   3,  # iterations
+                   False,  # rm_chroot_tmp
+                   'record -e cycles',  # perf_args
+                   'telemetry_Crosperf',  # suite
+                   True)  # show_all_results
 
     # Test creating a benchmark field with default fields left out.
-    b2 = Benchmark("b2_test", # name
-                   "octane",  # test_name
-                   "",        # test_args
-                   3,         # iterations
-                   False,     # rm_chroot_tmp
-                   "record -e cycles")   # perf_args
-    self.assertEqual(b2.suite, "")
+    b2 = Benchmark('b2_test',  # name
+                   'octane',  # test_name
+                   '',  # test_args
+                   3,  # iterations
+                   False,  # rm_chroot_tmp
+                   'record -e cycles')  # perf_args
+    self.assertEqual(b2.suite, '')
     self.assertFalse(b2.show_all_results)
 
     # Test explicitly creating 'suite=Telemetry' and 'show_all_results=False"
     # and see what happens.
-    b3 = Benchmark("b3_test", # name
-                   "octane",  # test_name
-                   "",        # test_args
-                   3,         # iterations
-                   False,     # rm_chroot_tmp
-                   "record -e cycles",   # perf_args
-                   "telemetry", # suite
-                   False)     # show_all_results
+    b3 = Benchmark('b3_test',  # name
+                   'octane',  # test_name
+                   '',  # test_args
+                   3,  # iterations
+                   False,  # rm_chroot_tmp
+                   'record -e cycles',  # perf_args
+                   'telemetry',  # suite
+                   False)  # show_all_results
     self.assertTrue(b3.show_all_results)
 
     # Check to see if the args to Benchmark have changed since the last time
@@ -50,7 +51,7 @@ class BenchmarkTestCase(unittest.TestCase):
     arg_spec = inspect.getargspec(Benchmark.__init__)
     self.assertEqual(len(arg_spec.args), len(args_list))
     for arg in args_list:
-      self.assertIn (arg, arg_spec.args)
+      self.assertIn(arg, arg_spec.args)
 
 
 if __name__ == '__main__':

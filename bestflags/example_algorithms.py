@@ -1,7 +1,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """An example main file running the algorithms.
 
 Part of the Chrome build flags optimization.
@@ -30,8 +29,11 @@ import testing_batch
 
 parser = OptionParser()
 
-parser.add_option('-f', '--file', dest='filename',
-                  help='configuration file FILE input', metavar='FILE')
+parser.add_option('-f',
+                  '--file',
+                  dest='filename',
+                  help='configuration file FILE input',
+                  metavar='FILE')
 
 # The meta data for the genetic algorithm.
 BUILD_CMD = 'BUILD_CMD'
@@ -112,8 +114,8 @@ def _ProcessGA(meta_data):
   Task.InitLogCommand(build_cmd, test_cmd, output_file)
 
   # Initiate the build/test command and the log directory.
-  GAGeneration.InitMetaData(stop_threshold, num_chromosomes, num_trials,
-                            specs, mutation_rate)
+  GAGeneration.InitMetaData(stop_threshold, num_chromosomes, num_trials, specs,
+                            mutation_rate)
 
   # Generate the initial generations.
   generation_tasks = testing_batch.GenerateRandomGATasks(specs, num_chromosomes,
@@ -169,9 +171,9 @@ def _StartExperiment(num_builders, num_testers, generations):
                                  build_test, pipeline_worker.Helper,
                                  pipeline_worker.Worker, test_steering)
 
-  steer_process = multiprocessing.Process(target=Steering,
-                                          args=(set([]), generations,
-                                                test_steering, steering_build))
+  steer_process = multiprocessing.Process(
+      target=Steering,
+      args=(set([]), generations, test_steering, steering_build))
 
   # Start the processes.
   build_process.start()

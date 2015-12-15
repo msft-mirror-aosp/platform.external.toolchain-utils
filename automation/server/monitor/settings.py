@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
 # Django settings for monitor project.
@@ -48,6 +46,4 @@ SECRET_KEY = '13p5p_4q91*8@yo+tvvt#2k&6#d_&e_zvxdpdil53k419i5sop'
 ROOT_URLCONF = 'monitor.urls'
 
 # List of locations of the template source files, in search order.
-TEMPLATE_DIRS = (
-    os.path.join(ROOT_PATH, 'templates'),
-)
+TEMPLATE_DIRS = (os.path.join(ROOT_PATH, 'templates'),)

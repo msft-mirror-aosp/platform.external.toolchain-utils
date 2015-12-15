@@ -1,5 +1,4 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
-
 """The class to show the banner."""
 
 from __future__ import print_function
@@ -19,14 +18,14 @@ class ExperimentStatus(object):
     self.log_level = experiment.log_level
 
   def _GetProgressBar(self, num_complete, num_total):
-    ret = "Done: %s%%" % int(100.0 * num_complete / num_total)
+    ret = 'Done: %s%%' % int(100.0 * num_complete / num_total)
     bar_length = 50
-    done_char = ">"
-    undone_char = " "
+    done_char = '>'
+    undone_char = ' '
     num_complete_chars = bar_length * num_complete / num_total
     num_undone_chars = bar_length - num_complete_chars
-    ret += " [%s%s]" % (num_complete_chars * done_char, num_undone_chars *
-                        undone_char)
+    ret += ' [%s%s]' % (num_complete_chars * done_char,
+                        num_undone_chars * undone_char)
     return ret
 
   def GetProgressString(self):
@@ -62,26 +61,25 @@ class ExperimentStatus(object):
       #  first long job, after a series of short jobs).  For now, if that
       #  happens, we set the ETA to "Unknown."
       #
-      eta_seconds = (float(self.num_total - self.experiment.num_complete -1) *
-                     time_completed_jobs / self.experiment.num_run_complete
-                     + (time_completed_jobs / self.experiment.num_run_complete
-                        - (current_time - self.new_job_start_time)))
+      eta_seconds = (float(self.num_total - self.experiment.num_complete - 1) *
+                     time_completed_jobs / self.experiment.num_run_complete +
+                     (time_completed_jobs / self.experiment.num_run_complete -
+                      (current_time - self.new_job_start_time)))
 
       eta_seconds = int(eta_seconds)
       if eta_seconds > 0:
         eta = datetime.timedelta(seconds=eta_seconds)
       else:
-        eta = "Unknown"
+        eta = 'Unknown'
     except ZeroDivisionError:
-      eta = "Unknown"
+      eta = 'Unknown'
     strings = []
-    strings.append("Current time: %s Elapsed: %s ETA: %s" %
+    strings.append('Current time: %s Elapsed: %s ETA: %s' %
                    (datetime.datetime.now(),
-                    datetime.timedelta(seconds=int(elapsed_time)),
-                    eta))
+                    datetime.timedelta(seconds=int(elapsed_time)), eta))
     strings.append(self._GetProgressBar(self.experiment.num_complete,
                                         self.num_total))
-    return "\n".join(strings)
+    return '\n'.join(strings)
 
   def GetStatusString(self):
     """Get the status string of all the benchmark_runs."""
@@ -93,26 +91,26 @@ class ExperimentStatus(object):
 
     status_strings = []
     for key, val in status_bins.items():
-      if key == "RUNNING":
-        status_strings.append("%s: %s" %
+      if key == 'RUNNING':
+        status_strings.append('%s: %s' %
                               (key, self._GetNamesAndIterations(val)))
       else:
-        status_strings.append("%s: %s" %
+        status_strings.append('%s: %s' %
                               (key, self._GetCompactNamesAndIterations(val)))
 
-    thread_status = ""
-    thread_status_format = "Thread Status: \n{}\n"
+    thread_status = ''
+    thread_status_format = 'Thread Status: \n{}\n'
     if (self.experiment.schedv2() is None and
-        self.experiment.log_level == "verbose"):
-        # Add the machine manager status.
+        self.experiment.log_level == 'verbose'):
+      # Add the machine manager status.
       thread_status = thread_status_format.format(
           self.experiment.machine_manager.AsString())
     elif self.experiment.schedv2():
-        # In schedv2 mode, we always print out thread status.
-      thread_status = thread_status_format.format(
-          self.experiment.schedv2().threads_status_as_string())
+      # In schedv2 mode, we always print out thread status.
+      thread_status = thread_status_format.format(self.experiment.schedv2(
+      ).threads_status_as_string())
 
-    result = "{}{}".format(thread_status, "\n".join(status_strings))
+    result = '{}{}'.format(thread_status, '\n'.join(status_strings))
 
     return result
 
@@ -121,9 +119,9 @@ class ExperimentStatus(object):
     t = time.time()
     for benchmark_run in benchmark_runs:
       t_last = benchmark_run.timeline.GetLastEventTime()
-      elapsed = str(datetime.timedelta(seconds=int(t-t_last)))
+      elapsed = str(datetime.timedelta(seconds=int(t - t_last)))
       strings.append("'{0}' {1}".format(benchmark_run.name, elapsed))
-    return " %s (%s)" % (len(strings), ", ".join(strings))
+    return ' %s (%s)' % (len(strings), ', '.join(strings))
 
   def _GetCompactNamesAndIterations(self, benchmark_runs):
     output = ''
@@ -144,8 +142,8 @@ class ExperimentStatus(object):
         benchmark_iterations[benchmark_name].append(benchmark_run.iteration)
       for key, val in benchmark_iterations.items():
         val.sort()
-        iterations = ",".join(map(str, val))
-        strings.append("{} [{}]".format(key, iterations))
-      output += "  " + label + ": " + ", ".join(strings) + "\n"
+        iterations = ','.join(map(str, val))
+        strings.append('{} [{}]'.format(key, iterations))
+      output += '  ' + label + ': ' + ', '.join(strings) + '\n'
 
-    return " %s \n%s" % (len(benchmark_runs), output)
+    return ' %s \n%s' % (len(benchmark_runs), output)

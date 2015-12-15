@@ -1,7 +1,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Unittest for the pipeline_worker functions in the build/test stage.
 
 Part of the Chrome build flags optimization.
@@ -19,7 +18,6 @@ import unittest
 from mock_task import MockTask
 import pipeline_process
 import pipeline_worker
-
 
 # Pick an integer at random.
 TEST_STAGE = -3
@@ -51,10 +49,9 @@ class PipelineWorkerTest(unittest.TestCase):
     completed_queue = manager.Queue()
 
     # Set up the helper process that holds the helper method.
-    helper_process = multiprocessing.Process(target=pipeline_worker.Helper,
-                                             args=(TEST_STAGE, {}, helper_queue,
-                                                   completed_queue,
-                                                   result_queue))
+    helper_process = multiprocessing.Process(
+        target=pipeline_worker.Helper,
+        args=(TEST_STAGE, {}, helper_queue, completed_queue, result_queue))
     helper_process.start()
 
     # A dictionary defines the mock result to the helper.

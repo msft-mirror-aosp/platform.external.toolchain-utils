@@ -1,4 +1,3 @@
-#!/usr/bin/python
 
 # Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -31,11 +30,11 @@ class ExperimentFile(object):
   """
 
   # Field regex, e.g. "iterations: 3"
-  _FIELD_VALUE_RE = re.compile(r"(\+)?\s*(\w+?)(?:\.(\S+))?\s*:\s*(.*)")
+  _FIELD_VALUE_RE = re.compile(r'(\+)?\s*(\w+?)(?:\.(\S+))?\s*:\s*(.*)')
   # Open settings regex, e.g. "label {"
-  _OPEN_SETTINGS_RE = re.compile(r"(?:([\w.-]+):)?\s*([\w.-]+)\s*{")
+  _OPEN_SETTINGS_RE = re.compile(r'(?:([\w.-]+):)?\s*([\w.-]+)\s*{')
   # Close settings regex.
-  _CLOSE_SETTINGS_RE = re.compile(r"}")
+  _CLOSE_SETTINGS_RE = re.compile(r'}')
 
   def __init__(self, experiment_file, overrides=None):
     """Construct object from file-like experiment_file.
@@ -48,7 +47,7 @@ class ExperimentFile(object):
       Exception: if invalid build type or description is invalid.
     """
     self.all_settings = []
-    self.global_settings = SettingsFactory().GetSettings("global", "global")
+    self.global_settings = SettingsFactory().GetSettings('global', 'global')
     self.all_settings.append(self.global_settings)
 
     self._Parse(experiment_file)
@@ -84,7 +83,7 @@ class ExperimentFile(object):
     match = ExperimentFile._OPEN_SETTINGS_RE.match(line)
     settings_type = match.group(1)
     if settings_type is None:
-      settings_type = ""
+      settings_type = ''
     settings_name = match.group(2)
     settings = SettingsFactory().GetSettings(settings_name, settings_type)
     settings.SetParentSettings(self.global_settings)
@@ -100,7 +99,7 @@ class ExperimentFile(object):
       elif ExperimentFile._CLOSE_SETTINGS_RE.match(line):
         return settings
 
-    raise Exception("Unexpected EOF while parsing settings block.")
+    raise Exception('Unexpected EOF while parsing settings block.')
 
   def _Parse(self, experiment_file):
     """Parse experiment file and create settings."""
@@ -123,44 +122,44 @@ class ExperimentFile(object):
           field = self._ParseField(reader)
           self.global_settings.SetField(field[0], field[1], field[2])
         else:
-          raise Exception("Unexpected line.")
+          raise Exception('Unexpected line.')
     except Exception, err:
-      raise Exception("Line %d: %s\n==> %s" % (reader.LineNo(), str(err),
+      raise Exception('Line %d: %s\n==> %s' % (reader.LineNo(), str(err),
                                                reader.CurrentLine(False)))
 
   def Canonicalize(self):
     """Convert parsed experiment file back into an experiment file."""
-    res = ""
-    board = ""
+    res = ''
+    board = ''
     for field_name in self.global_settings.fields:
       field = self.global_settings.fields[field_name]
       if field.assigned:
-        res += "%s: %s\n" % (field.name, field.GetString())
-      if field.name == "board":
+        res += '%s: %s\n' % (field.name, field.GetString())
+      if field.name == 'board':
         board = field.GetString()
-    res += "\n"
+    res += '\n'
 
     for settings in self.all_settings:
-      if settings.settings_type != "global":
-        res += "%s: %s {\n" % (settings.settings_type, settings.name)
+      if settings.settings_type != 'global':
+        res += '%s: %s {\n' % (settings.settings_type, settings.name)
         for field_name in settings.fields:
           field = settings.fields[field_name]
           if field.assigned:
-            res += "\t%s: %s\n" % (field.name, field.GetString())
-            if field.name == "chromeos_image":
-              real_file = (os.path.realpath
-                           (os.path.expanduser(field.GetString())))
+            res += '\t%s: %s\n' % (field.name, field.GetString())
+            if field.name == 'chromeos_image':
+              real_file = (
+                  os.path.realpath(os.path.expanduser(field.GetString())))
               if real_file != field.GetString():
-                res += "\t#actual_image: %s\n" % real_file
-            if field.name == "build":
-              chromeos_root_field = settings.fields["chromeos_root"]
+                res += '\t#actual_image: %s\n' % real_file
+            if field.name == 'build':
+              chromeos_root_field = settings.fields['chromeos_root']
               if chromeos_root_field:
                 chromeos_root = chromeos_root_field.GetString()
               value = field.GetString()
-              xbuddy_path = settings.GetXbuddyPath (value, board, chromeos_root,
-                                                    "quiet")
-              res +=  "\t#actual_image: %s\n" % xbuddy_path
-        res += "}\n\n"
+              xbuddy_path = settings.GetXbuddyPath(value, board, chromeos_root,
+                                                   'quiet')
+              res += '\t#actual_image: %s\n' % xbuddy_path
+        res += '}\n\n'
 
     return res
 
@@ -187,8 +186,8 @@ class ExperimentFileReader(object):
 
   def _StripComment(self, line):
     """Strip comments starting with # from a line."""
-    if "#" in line:
-      line = line[:line.find("#")] + line[-1]
+    if '#' in line:
+      line = line[:line.find('#')] + line[-1]
     return line
 
   def LineNo(self):

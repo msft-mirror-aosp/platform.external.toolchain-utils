@@ -14,7 +14,7 @@ class NoPsuedoTerminalTest(unittest.TestCase):
 
   def _AttachStraceToSelf(self, output_file):
     """Attaches strace to the current process."""
-    args = ["strace", "-o", output_file, "-p", str(os.getpid())]
+    args = ['strace', '-o', output_file, '-p', str(os.getpid())]
     print args
     self._strace_process = subprocess.Popen(args)
     # Wait until we see some activity.
@@ -37,12 +37,12 @@ class NoPsuedoTerminalTest(unittest.TestCase):
     self.assertTrue(self._AttachStraceToSelf(temp_file))
 
     ce = command_executer.GetCommandExecuter()
-    ce.RunCommand("echo")
+    ce.RunCommand('echo')
 
     self.assertTrue(self._KillStraceProcess())
 
     strace_contents = open(temp_file).read()
-    self.assertFalse("/dev/ptmx" in strace_contents)
+    self.assertFalse('/dev/ptmx' in strace_contents)
 
 
 if __name__ == '__main__':

@@ -1,7 +1,4 @@
-#!/usr/bin/python
-#
 # Copyright 2010 Google Inc. All Rights Reserved.
-
 """Generic constants used accross modules.
 """
 

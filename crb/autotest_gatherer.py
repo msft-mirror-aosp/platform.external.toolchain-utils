@@ -1,30 +1,34 @@
 from table_formatter import TableFormatter as TableFormatter
 
+
 class AutotestGatherer(TableFormatter):
+
   def __init__(self):
     self.runs = []
     TableFormatter.__init__(self)
 
   def GetFormattedMainTable(self, percents_only, fit_string):
-    ret = ""
+    ret = ''
     table = self.GetTableValues()
     ret += self.GetTableLabels(table)
-    ret += self.GetFormattedTable(table, percents_only=percents_only,
+    ret += self.GetFormattedTable(table,
+                                  percents_only=percents_only,
                                   fit_string=fit_string)
     return ret
 
   def GetFormattedSummaryTable(self, percents_only, fit_string):
-    ret = ""
+    ret = ''
     table = self.GetTableValues()
     summary_table = self.GetSummaryTableValues(table)
     ret += self.GetTableLabels(summary_table)
-    ret += self.GetFormattedTable(summary_table, percents_only=percents_only,
+    ret += self.GetFormattedTable(summary_table,
+                                  percents_only=percents_only,
                                   fit_string=fit_string)
     return ret
 
   def GetBenchmarksString(self):
-    ret = "Benchmarks (in order):"
-    ret = "\n".join(self.GetAllBenchmarks())
+    ret = 'Benchmarks (in order):'
+    ret = '\n'.join(self.GetAllBenchmarks())
     return ret
 
   def GetAllBenchmarks(self):
@@ -40,7 +44,7 @@ class AutotestGatherer(TableFormatter):
     table = []
     row = []
 
-    row.append("Benchmark")
+    row.append('Benchmark')
     for i in range(len(self.runs)):
       run = self.runs[i]
       label = run.GetLabel()
@@ -57,7 +61,7 @@ class AutotestGatherer(TableFormatter):
         if benchmark in results:
           row.append(results[benchmark])
         else:
-          row.append("")
+          row.append('')
       table.append(row)
 
     return table

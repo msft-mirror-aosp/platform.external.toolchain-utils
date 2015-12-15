@@ -1,14 +1,12 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Utility functions to explore the neighbor flags.
 
 Part of the Chrome build flags optimization.
 """
 
 __author__ = 'yuhenglong@google.com (Yuheng Long)'
-
 
 import flags
 from flags import Flag

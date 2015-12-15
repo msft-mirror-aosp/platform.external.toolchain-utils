@@ -1,5 +1,4 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
-
 """Module to print help message."""
 
 from __future__ import print_function
@@ -13,29 +12,30 @@ from settings_factory import LabelSettings
 
 class Help(object):
   """The help class."""
+
   def GetUsage(self):
     return """%s [OPTIONS] EXPERIMENT_FILE""" % (sys.argv[0])
 
   def _WrapLine(self, line):
-    return "\n".join(textwrap.wrap(line, 80))
+    return '\n'.join(textwrap.wrap(line, 80))
 
   def _GetFieldDescriptions(self, fields):
-    res = ""
+    res = ''
     for field_name in fields:
       field = fields[field_name]
-      res += "Field:\t\t%s\n" % field.name
-      res += self._WrapLine("Description:\t%s" % field.description) + "\n"
-      res += "Type:\t\t%s\n" % type(field).__name__.replace("Field", "")
-      res += "Required:\t%s\n" % field.required
+      res += 'Field:\t\t%s\n' % field.name
+      res += self._WrapLine('Description:\t%s' % field.description) + '\n'
+      res += 'Type:\t\t%s\n' % type(field).__name__.replace('Field', '')
+      res += 'Required:\t%s\n' % field.required
       if field.default:
-        res += "Default:\t%s\n" % field.default
-      res += "\n"
+        res += 'Default:\t%s\n' % field.default
+      res += '\n'
     return res
 
   def GetHelp(self):
-    global_fields = self._GetFieldDescriptions(GlobalSettings("").fields)
-    benchmark_fields = self._GetFieldDescriptions(BenchmarkSettings("").fields)
-    label_fields = self._GetFieldDescriptions(LabelSettings("").fields)
+    global_fields = self._GetFieldDescriptions(GlobalSettings('').fields)
+    benchmark_fields = self._GetFieldDescriptions(BenchmarkSettings('').fields)
+    label_fields = self._GetFieldDescriptions(LabelSettings('').fields)
 
     return """%s is a script for running performance experiments on
 ChromeOS. It allows one to run ChromeOS Autotest benchmarks over
@@ -110,5 +110,5 @@ experiment file).  Crosperf runs the experiment and caches the results
 generates and displays a report based on the run, and emails the
 report to the user.  If the results were all read out of the cache,
 then by default no email is generated.
-""" % (sys.argv[0], sys.argv[0], global_fields,
-       benchmark_fields, label_fields, sys.argv[0])
+""" % (sys.argv[0], sys.argv[0], global_fields, benchmark_fields, label_fields,
+       sys.argv[0])

@@ -41,6 +41,7 @@ def SplitMapping(mapping):
 
 
 class Repo(object):
+
   def __init__(self, no_create_tmp_dir=False):
     self.repo_type = None
     self.address = None
@@ -68,14 +69,14 @@ class Repo(object):
 
   def _RsyncExcludingRepoDirs(self, source_dir, dest_dir):
     for f in os.listdir(source_dir):
-      if f in [".git", ".svn", ".p4config"]:
+      if f in ['.git', '.svn', '.p4config']:
         continue
       dest_file = os.path.join(dest_dir, f)
       source_file = os.path.join(source_dir, f)
       if os.path.exists(dest_file):
-        command = "rm -rf %s" % dest_file
+        command = 'rm -rf %s' % dest_file
         self._ce.RunCommand(command)
-      command = "rsync -a %s %s" % (source_file, dest_dir)
+      command = 'rsync -a %s %s' % (source_file, dest_dir)
       self._ce.RunCommand(command)
     return 0
 
@@ -91,14 +92,14 @@ class Repo(object):
     return self._ce.RunCommand(command)
 
   def __str__(self):
-    return '\n'.join(str(s) for s in [self.repo_type,
-                                      self.address,
-                                      self.mappings])
+    return '\n'.join(str(s)
+                     for s in [self.repo_type, self.address, self.mappings])
 
 
 # Note - this type of repo is used only for "readonly", in other words, this
 # only serves as a incoming repo.
 class FileRepo(Repo):
+
   def __init__(self, address, ignores=None):
     Repo.__init__(self, no_create_tmp_dir=True)
     self.repo_type = 'file'
@@ -115,6 +116,7 @@ class FileRepo(Repo):
 
 
 class P4Repo(Repo):
+
   def __init__(self, address, mappings, revision=None):
     Repo.__init__(self)
     self.repo_type = 'p4'
@@ -126,9 +128,9 @@ class P4Repo(Repo):
     client_name = socket.gethostname()
     client_name += tempfile.mkstemp()[1].replace('/', '-')
     mappings = self.mappings
-    p4view = perforce.View('depot2',
-                           GetCanonicalMappings(mappings))
-    p4client = perforce.CommandsFactory(self._root_dir, p4view,
+    p4view = perforce.View('depot2', GetCanonicalMappings(mappings))
+    p4client = perforce.CommandsFactory(self._root_dir,
+                                        p4view,
                                         name=client_name)
     command = p4client.SetupAndDo(p4client.Sync(self.revision))
     ret = self._ce.RunCommand(command)
@@ -144,6 +146,7 @@ class P4Repo(Repo):
 
 
 class SvnRepo(Repo):
+
   def __init__(self, address, mappings):
     Repo.__init__(self)
     self.repo_type = 'svn'
@@ -156,19 +159,22 @@ class SvnRepo(Repo):
         remote_path, local_path = SplitMapping(mapping)
         command = 'svn co %s/%s %s' % (self.address, remote_path, local_path)
       ret = self._ce.RunCommand(command)
-      if ret: return ret
+      if ret:
+        return ret
 
       self.revision = ''
       for mapping in self.mappings:
         remote_path, local_path = SplitMapping(mapping)
         command = 'cd %s && svnversion -c .' % (local_path)
         ret, o, _ = self._ce.RunCommandWOutput(command)
-        self.revision += o.strip().split(":")[-1]
-        if ret: return ret
+        self.revision += o.strip().split(':')[-1]
+        if ret:
+          return ret
     return 0
 
 
 class GitRepo(Repo):
+
   def __init__(self, address, branch, mappings=None, ignores=None, gerrit=None):
     Repo.__init__(self)
     self.repo_type = 'git'
@@ -187,11 +193,13 @@ class GitRepo(Repo):
   def PullSources(self):
     with misc.WorkingDirectory(self._root_dir):
       ret = self._CloneSources()
-      if ret: return ret
+      if ret:
+        return ret
 
       command = 'git checkout %s' % self.branch
       ret = self._ce.RunCommand(command)
-      if ret: return ret
+      if ret:
+        return ret
 
       command = 'git describe --always'
       ret, o, _ = self._ce.RunCommandWOutput(command)
@@ -231,13 +239,14 @@ class GitRepo(Repo):
       elif commit_message:
         message_arg = '-m \'%s\'' % commit_message
       else:
-        raise Exception("No commit message given!")
+        raise Exception('No commit message given!')
       command += '&& git commit -v %s' % message_arg
       return self._ce.RunCommand(command)
 
   def PushSources(self, commit_message=None, dry_run=False, message_file=None):
     ret = self.CommitLocally(commit_message, message_file)
-    if ret: return ret
+    if ret:
+      return ret
     push_args = ''
     if dry_run:
       push_args += ' -n '
@@ -246,7 +255,7 @@ class GitRepo(Repo):
         label = 'somelabel'
         command = 'git remote add %s %s' % (label, self.address)
         command += ('&& git push %s %s HEAD:refs/for/master' %
-                    (push_args,label))
+                    (push_args, label))
       else:
         command = 'git push -v %s origin %s:%s' % (push_args, self.branch,
                                                    self.branch)
@@ -264,11 +273,13 @@ class GitRepo(Repo):
         local_path.rstrip('...')
         full_local_path = os.path.join(root_dir, local_path)
         ret = self._RsyncExcludingRepoDirs(remote_path, full_local_path)
-        if ret: return ret
+        if ret:
+          return ret
     return 0
 
 
 class RepoReader(object):
+
   def __init__(self, filename):
     self.filename = filename
     self.main_dict = {}
@@ -302,12 +313,9 @@ class RepoReader(object):
     revision = repo_dict.get('revision', None)
 
     if repo_type == 'p4':
-      repo = P4Repo(repo_address,
-                    repo_mappings,
-                    revision=revision)
+      repo = P4Repo(repo_address, repo_mappings, revision=revision)
     elif repo_type == 'svn':
-      repo = SvnRepo(repo_address,
-                     repo_mappings)
+      repo = SvnRepo(repo_address, repo_mappings)
     elif repo_type == 'git':
       repo = GitRepo(repo_address,
                      repo_branch,
@@ -353,29 +361,33 @@ def Main(argv):
   for output_repo in output_repos:
     if output_repo.repo_type == 'file':
       logger.GetLogger().LogFatal(
-        'FileRepo is only supported as an input repo.')
+          'FileRepo is only supported as an input repo.')
 
   for output_repo in output_repos:
     ret = output_repo.SetupForPush()
-    if ret: return ret
+    if ret:
+      return ret
 
   input_revisions = []
   for input_repo in input_repos:
     ret = input_repo.PullSources()
-    if ret: return ret
+    if ret:
+      return ret
     input_revisions.append(input_repo.revision)
 
   for input_repo in input_repos:
     for output_repo in output_repos:
       ret = input_repo.MapSources(output_repo.GetRoot())
-      if ret: return ret
+      if ret:
+        return ret
 
   commit_message = 'Synced repos to: %s' % ','.join(input_revisions)
   for output_repo in output_repos:
     ret = output_repo.PushSources(commit_message=commit_message,
                                   dry_run=options.dry_run,
                                   message_file=options.message_file)
-    if ret: return ret
+    if ret:
+      return ret
 
   if not options.dry_run:
     for output_repo in output_repos:

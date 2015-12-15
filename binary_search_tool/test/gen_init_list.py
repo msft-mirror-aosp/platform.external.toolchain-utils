@@ -9,8 +9,8 @@ import common
 
 def Main():
   ce = command_executer.GetCommandExecuter()
-  _, l, _ = ce.RunCommandWOutput(
-      'cat {0} | wc -l'.format(common.OBJECTS_FILE), print_to_console=False)
+  _, l, _ = ce.RunCommandWOutput('cat {0} | wc -l'.format(common.OBJECTS_FILE),
+                                 print_to_console=False)
   for i in range(0, int(l)):
     print i
 

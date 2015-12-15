@@ -1,9 +1,7 @@
-#!/usr/bin/python
 
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Module to deal with result cache."""
 
 import getpass
@@ -24,12 +22,13 @@ from image_checksummer import ImageChecksummer
 import results_report
 import test_flag
 
-SCRATCH_DIR = os.path.expanduser("~/cros_scratch")
-RESULTS_FILE = "results.txt"
-MACHINE_FILE = "machine.txt"
-AUTOTEST_TARBALL = "autotest.tbz2"
-PERF_RESULTS_FILE = "perf-results.txt"
-CACHE_KEYS_FILE = "cache_keys.txt"
+SCRATCH_DIR = os.path.expanduser('~/cros_scratch')
+RESULTS_FILE = 'results.txt'
+MACHINE_FILE = 'machine.txt'
+AUTOTEST_TARBALL = 'autotest.tbz2'
+PERF_RESULTS_FILE = 'perf-results.txt'
+CACHE_KEYS_FILE = 'cache_keys.txt'
+
 
 class Result(object):
   """ This class manages what exactly is stored inside the cache without knowing
@@ -40,8 +39,9 @@ class Result(object):
   def __init__(self, logger, label, log_level, machine, cmd_exec=None):
     self._chromeos_root = label.chromeos_root
     self._logger = logger
-    self._ce = cmd_exec or command_executer.GetCommandExecuter(self._logger,
-                                                   log_level=log_level)
+    self._ce = cmd_exec or command_executer.GetCommandExecuter(
+        self._logger,
+        log_level=log_level)
     self._temp_dir = None
     self.label = label
     self.results_dir = None
@@ -54,28 +54,26 @@ class Result(object):
     file_index = 0
     for file_to_copy in files_to_copy:
       if not os.path.isdir(dest_dir):
-        command = "mkdir -p %s" % dest_dir
+        command = 'mkdir -p %s' % dest_dir
         self._ce.RunCommand(command)
       dest_file = os.path.join(dest_dir,
-                               ("%s.%s" % (os.path.basename(file_to_copy),
+                               ('%s.%s' % (os.path.basename(file_to_copy),
                                            file_index)))
-      ret = self._ce.CopyFiles(file_to_copy,
-                               dest_file,
-                               recursive=False)
+      ret = self._ce.CopyFiles(file_to_copy, dest_file, recursive=False)
       if ret:
-        raise Exception("Could not copy results file: %s" % file_to_copy)
+        raise Exception('Could not copy results file: %s' % file_to_copy)
 
   def CopyResultsTo(self, dest_dir):
     self._CopyFilesTo(dest_dir, self.perf_data_files)
     self._CopyFilesTo(dest_dir, self.perf_report_files)
     if len(self.perf_data_files) or len(self.perf_report_files):
-      self._logger.LogOutput("Perf results files stored in %s." % dest_dir)
+      self._logger.LogOutput('Perf results files stored in %s.' % dest_dir)
 
   def _GetNewKeyvals(self, keyvals_dict):
     # Initialize 'units' dictionary.
     units_dict = {}
     for k in keyvals_dict:
-      units_dict[k] = ""
+      units_dict[k] = ''
     results_files = self._GetDataMeasurementsFiles()
     for f in results_files:
       # Make sure we can find the results file
@@ -85,26 +83,23 @@ class Result(object):
         # Otherwise get the base filename and create the correct
         # path for it.
         f_dir, f_base = misc.GetRoot(f)
-        data_filename = os.path.join(self._chromeos_root, "chroot/tmp",
+        data_filename = os.path.join(self._chromeos_root, 'chroot/tmp',
                                      self._temp_dir, f_base)
       if os.path.exists(data_filename):
-        with open(data_filename, "r") as data_file:
+        with open(data_filename, 'r') as data_file:
           lines = data_file.readlines()
           for line in lines:
             tmp_dict = json.loads(line)
-            graph_name = tmp_dict["graph"]
-            graph_str = (graph_name + "__") if graph_name else ""
-            key = graph_str + tmp_dict["description"]
-            keyvals_dict[key] = tmp_dict["value"]
-            units_dict[key] = tmp_dict["units"]
+            graph_name = tmp_dict['graph']
+            graph_str = (graph_name + '__') if graph_name else ''
+            key = graph_str + tmp_dict['description']
+            keyvals_dict[key] = tmp_dict['value']
+            units_dict[key] = tmp_dict['units']
 
     return keyvals_dict, units_dict
 
-
   def _AppendTelemetryUnits(self, keyvals_dict, units_dict):
-    """
-    keyvals_dict is the dictionary of key-value pairs that is used for
-    generating Crosperf reports.
+    """keyvals_dict is the dictionary of key-value pairs that is used for generating Crosperf reports.
 
     units_dict is a dictionary of the units for the return values in
     keyvals_dict.  We need to associate the units with the return values,
@@ -119,31 +114,31 @@ class Result(object):
     results_dict = {}
     for k in keyvals_dict:
       # We don't want these lines in our reports; they add no useful data.
-      if k == "" or k == "telemetry_Crosperf":
+      if k == '' or k == 'telemetry_Crosperf':
         continue
       val = keyvals_dict[k]
       units = units_dict[k]
-      new_val = [ val, units ]
+      new_val = [val, units]
       results_dict[k] = new_val
     return results_dict
 
   def _GetKeyvals(self, show_all):
-    results_in_chroot = os.path.join(self._chromeos_root,
-                                     "chroot", "tmp")
+    results_in_chroot = os.path.join(self._chromeos_root, 'chroot', 'tmp')
     if not self._temp_dir:
       self._temp_dir = tempfile.mkdtemp(dir=results_in_chroot)
-      command = "cp -r {0}/* {1}".format(self.results_dir, self._temp_dir)
+      command = 'cp -r {0}/* {1}'.format(self.results_dir, self._temp_dir)
       self._ce.RunCommand(command, print_to_console=False)
 
-    command = ("python generate_test_report --no-color --csv %s" %
-               (os.path.join("/tmp", os.path.basename(self._temp_dir))))
-    _, out, _ = self._ce.ChrootRunCommandWOutput(
-        self._chromeos_root, command, print_to_console=False)
+    command = ('python generate_test_report --no-color --csv %s' %
+               (os.path.join('/tmp', os.path.basename(self._temp_dir))))
+    _, out, _ = self._ce.ChrootRunCommandWOutput(self._chromeos_root,
+                                                 command,
+                                                 print_to_console=False)
     keyvals_dict = {}
     tmp_dir_in_chroot = misc.GetInsideChrootPath(self._chromeos_root,
                                                  self._temp_dir)
     for line in out.splitlines():
-      tokens = re.split("=|,", line)
+      tokens = re.split('=|,', line)
       key = tokens[-2]
       if key.startswith(tmp_dir_in_chroot):
         key = key[len(tmp_dir_in_chroot) + 1:]
@@ -153,39 +148,37 @@ class Result(object):
     # Check to see if there is a perf_measurements file and get the
     # data from it if so.
     keyvals_dict, units_dict = self._GetNewKeyvals(keyvals_dict)
-    if self.suite == "telemetry_Crosperf":
+    if self.suite == 'telemetry_Crosperf':
       # For telemtry_Crosperf results, append the units to the return
       # results, for use in generating the reports.
-      keyvals_dict = self._AppendTelemetryUnits(keyvals_dict,
-                                                units_dict)
+      keyvals_dict = self._AppendTelemetryUnits(keyvals_dict, units_dict)
     return keyvals_dict
 
   def _GetResultsDir(self):
-    mo = re.search(r"Results placed in (\S+)", self.out)
+    mo = re.search(r'Results placed in (\S+)', self.out)
     if mo:
       result = mo.group(1)
       return result
-    raise Exception("Could not find results directory.")
+    raise Exception('Could not find results directory.')
 
   def _FindFilesInResultsDir(self, find_args):
     if not self.results_dir:
       return None
 
-    command = "find %s %s" % (self.results_dir,
-                              find_args)
+    command = 'find %s %s' % (self.results_dir, find_args)
     ret, out, _ = self._ce.RunCommandWOutput(command, print_to_console=False)
     if ret:
-      raise Exception("Could not run find command!")
+      raise Exception('Could not run find command!')
     return out
 
   def _GetPerfDataFiles(self):
-    return self._FindFilesInResultsDir("-name perf.data").splitlines()
+    return self._FindFilesInResultsDir('-name perf.data').splitlines()
 
   def _GetPerfReportFiles(self):
-    return self._FindFilesInResultsDir("-name perf.data.report").splitlines()
+    return self._FindFilesInResultsDir('-name perf.data.report').splitlines()
 
   def _GetDataMeasurementsFiles(self):
-    return self._FindFilesInResultsDir("-name perf_measurements").splitlines()
+    return self._FindFilesInResultsDir('-name perf_measurements').splitlines()
 
   def _GeneratePerfReportFiles(self):
     perf_report_files = []
@@ -194,65 +187,57 @@ class Result(object):
       # file.
       chroot_perf_data_file = misc.GetInsideChrootPath(self._chromeos_root,
                                                        perf_data_file)
-      perf_report_file = "%s.report" % perf_data_file
+      perf_report_file = '%s.report' % perf_data_file
       if os.path.exists(perf_report_file):
-        raise Exception("Perf report file already exists: %s" %
+        raise Exception('Perf report file already exists: %s' %
                         perf_report_file)
       chroot_perf_report_file = misc.GetInsideChrootPath(self._chromeos_root,
                                                          perf_report_file)
-      perf_path = os.path.join (self._chromeos_root,
-                                "chroot",
-                                "usr/bin/perf")
+      perf_path = os.path.join(self._chromeos_root, 'chroot', 'usr/bin/perf')
 
-      perf_file = "/usr/sbin/perf"
+      perf_file = '/usr/sbin/perf'
       if os.path.exists(perf_path):
-        perf_file = "/usr/bin/perf"
+        perf_file = '/usr/bin/perf'
 
       # The following is a hack, to use the perf.static binary that
       # was given to us by Stephane Eranian, until he can figure out
       # why "normal" perf cannot properly symbolize ChromeOS perf.data files.
       # Get the directory containing the 'crosperf' script.
       dirname, _ = misc.GetRoot(sys.argv[0])
-      perf_path = os.path.join (dirname, "..", "perf.static")
+      perf_path = os.path.join(dirname, '..', 'perf.static')
       if os.path.exists(perf_path):
         # copy the executable into the chroot so that it can be found.
         src_path = perf_path
-        dst_path = os.path.join (self._chromeos_root, "chroot",
-                                 "tmp/perf.static")
-        command = "cp %s %s" % (src_path,dst_path)
-        self._ce.RunCommand (command)
-        perf_file = "/tmp/perf.static"
+        dst_path = os.path.join(self._chromeos_root, 'chroot',
+                                'tmp/perf.static')
+        command = 'cp %s %s' % (src_path, dst_path)
+        self._ce.RunCommand(command)
+        perf_file = '/tmp/perf.static'
 
-      command = ("%s report "
-                 "-n "
-                 "--symfs /build/%s "
-                 "--vmlinux /build/%s/usr/lib/debug/boot/vmlinux "
-                 "--kallsyms /build/%s/boot/System.map-* "
-                 "-i %s --stdio "
-                 "> %s" %
-                 (perf_file,
-                  self._board,
-                  self._board,
-                  self._board,
-                  chroot_perf_data_file,
-                  chroot_perf_report_file))
+      command = ('%s report '
+                 '-n '
+                 '--symfs /build/%s '
+                 '--vmlinux /build/%s/usr/lib/debug/boot/vmlinux '
+                 '--kallsyms /build/%s/boot/System.map-* '
+                 '-i %s --stdio '
+                 '> %s' % (perf_file, self._board, self._board, self._board,
+                           chroot_perf_data_file, chroot_perf_report_file))
       self._ce.ChrootRunCommand(self._chromeos_root, command)
 
       # Add a keyval to the dictionary for the events captured.
-      perf_report_files.append(
-          misc.GetOutsideChrootPath(self._chromeos_root,
-                                    chroot_perf_report_file))
+      perf_report_files.append(misc.GetOutsideChrootPath(
+          self._chromeos_root, chroot_perf_report_file))
     return perf_report_files
 
   def _GatherPerfResults(self):
     report_id = 0
     for perf_report_file in self.perf_report_files:
-      with open(perf_report_file, "r") as f:
+      with open(perf_report_file, 'r') as f:
         report_contents = f.read()
-        for group in re.findall(r"Events: (\S+) (\S+)", report_contents):
+        for group in re.findall(r'Events: (\S+) (\S+)', report_contents):
           num_events = group[0]
           event_name = group[1]
-          key = "perf_%s_%s" % (report_id, event_name)
+          key = 'perf_%s_%s' % (report_id, event_name)
           value = str(misc.UnitToNumber(num_events))
           self.keyvals[key] = value
 
@@ -279,7 +264,7 @@ class Result(object):
     # cache hit or miss. It should process results agnostic of the cache hit
     # state.
     self.keyvals = self._GetKeyvals(show_all)
-    self.keyvals["retval"] = self.retval
+    self.keyvals['retval'] = self.retval
     # Generate report from all perf.data files.
     # Now parse all perf report files and include them in keyvals.
     self._GatherPerfResults()
@@ -288,21 +273,20 @@ class Result(object):
     self.test_name = test
     self.suite = suite
     # Read in everything from the cache directory.
-    with open(os.path.join(cache_dir, RESULTS_FILE), "r") as f:
+    with open(os.path.join(cache_dir, RESULTS_FILE), 'r') as f:
       self.out = pickle.load(f)
       self.err = pickle.load(f)
       self.retval = pickle.load(f)
 
     # Untar the tarball to a temporary directory
-    self._temp_dir = tempfile.mkdtemp(dir=os.path.join(self._chromeos_root,
-                                                       "chroot", "tmp"))
+    self._temp_dir = tempfile.mkdtemp(
+        dir=os.path.join(self._chromeos_root, 'chroot', 'tmp'))
 
-    command = ("cd %s && tar xf %s" %
-               (self._temp_dir,
-                os.path.join(cache_dir, AUTOTEST_TARBALL)))
+    command = ('cd %s && tar xf %s' %
+               (self._temp_dir, os.path.join(cache_dir, AUTOTEST_TARBALL)))
     ret = self._ce.RunCommand(command, print_to_console=False)
     if ret:
-      raise Exception("Could not untar cached tarball")
+      raise Exception('Could not untar cached tarball')
     self.results_dir = self._temp_dir
     self.perf_data_files = self._GetPerfDataFiles()
     self.perf_report_files = self._GetPerfReportFiles()
@@ -311,13 +295,13 @@ class Result(object):
   def CleanUp(self, rm_chroot_tmp):
     if rm_chroot_tmp and self.results_dir:
       dirname, basename = misc.GetRoot(self.results_dir)
-      if basename.find("test_that_results_") != -1:
-        command = "rm -rf %s" % self.results_dir
+      if basename.find('test_that_results_') != -1:
+        command = 'rm -rf %s' % self.results_dir
       else:
-        command = "rm -rf %s" % dirname
+        command = 'rm -rf %s' % dirname
       self._ce.RunCommand(command)
     if self._temp_dir:
-      command = "rm -rf %s" % self._temp_dir
+      command = 'rm -rf %s' % self._temp_dir
       self._ce.RunCommand(command)
 
   def StoreToCacheDir(self, cache_dir, machine_manager, key_list):
@@ -325,54 +309,62 @@ class Result(object):
     temp_dir = tempfile.mkdtemp()
 
     # Store to the temp directory.
-    with open(os.path.join(temp_dir, RESULTS_FILE), "w") as f:
+    with open(os.path.join(temp_dir, RESULTS_FILE), 'w') as f:
       pickle.dump(self.out, f)
       pickle.dump(self.err, f)
       pickle.dump(self.retval, f)
 
     if not test_flag.GetTestMode():
-      with open(os.path.join(temp_dir, CACHE_KEYS_FILE), "w") as f:
-        f.write("%s\n" % self.label.name)
-        f.write("%s\n" % self.label.chrome_version)
-        f.write("%s\n" % self.machine.checksum_string)
+      with open(os.path.join(temp_dir, CACHE_KEYS_FILE), 'w') as f:
+        f.write('%s\n' % self.label.name)
+        f.write('%s\n' % self.label.chrome_version)
+        f.write('%s\n' % self.machine.checksum_string)
         for k in key_list:
           f.write(k)
-          f.write("\n")
+          f.write('\n')
 
     if self.results_dir:
       tarball = os.path.join(temp_dir, AUTOTEST_TARBALL)
-      command = ("cd %s && "
-                 "tar "
-                 "--exclude=var/spool "
-                 "--exclude=var/log "
-                 "-cjf %s ." % (self.results_dir, tarball))
+      command = ('cd %s && '
+                 'tar '
+                 '--exclude=var/spool '
+                 '--exclude=var/log '
+                 '-cjf %s .' % (self.results_dir, tarball))
       ret = self._ce.RunCommand(command)
       if ret:
         raise Exception("Couldn't store autotest output directory.")
     # Store machine info.
     # TODO(asharif): Make machine_manager a singleton, and don't pass it into
     # this function.
-    with open(os.path.join(temp_dir, MACHINE_FILE), "w") as f:
+    with open(os.path.join(temp_dir, MACHINE_FILE), 'w') as f:
       f.write(machine_manager.machine_checksum_string[self.label.name])
 
     if os.path.exists(cache_dir):
-      command = "rm -rf {0}".format(cache_dir)
+      command = 'rm -rf {0}'.format(cache_dir)
       self._ce.RunCommand(command)
 
-    command = "mkdir -p {0} && ".format(os.path.dirname(cache_dir))
-    command += "chmod g+x {0} && ".format(temp_dir)
-    command += "mv {0} {1}".format(temp_dir, cache_dir)
+    command = 'mkdir -p {0} && '.format(os.path.dirname(cache_dir))
+    command += 'chmod g+x {0} && '.format(temp_dir)
+    command += 'mv {0} {1}'.format(temp_dir, cache_dir)
     ret = self._ce.RunCommand(command)
     if ret:
-      command = "rm -rf {0}".format(temp_dir)
+      command = 'rm -rf {0}'.format(temp_dir)
       self._ce.RunCommand(command)
-      raise Exception("Could not move dir %s to dir %s" %
-                      (temp_dir, cache_dir))
+      raise Exception('Could not move dir %s to dir %s' % (temp_dir, cache_dir))
 
   @classmethod
-  def CreateFromRun(cls, logger, log_level, label, machine, out, err, retval,
-                    show_all, test, suite="telemetry_Crosperf"):
-    if suite == "telemetry":
+  def CreateFromRun(cls,
+                    logger,
+                    log_level,
+                    label,
+                    machine,
+                    out,
+                    err,
+                    retval,
+                    show_all,
+                    test,
+                    suite='telemetry_Crosperf'):
+    if suite == 'telemetry':
       result = TelemetryResult(logger, label, log_level, machine)
     else:
       result = cls(logger, label, log_level, machine)
@@ -380,9 +372,16 @@ class Result(object):
     return result
 
   @classmethod
-  def CreateFromCacheHit(cls, logger, log_level, label, machine, cache_dir,
-                         show_all, test, suite="telemetry_Crosperf"):
-    if suite == "telemetry":
+  def CreateFromCacheHit(cls,
+                         logger,
+                         log_level,
+                         label,
+                         machine,
+                         cache_dir,
+                         show_all,
+                         test,
+                         suite='telemetry_Crosperf'):
+    if suite == 'telemetry':
       result = TelemetryResult(logger, label, log_level, machine)
     else:
       result = cls(logger, label, log_level, machine)
@@ -390,7 +389,7 @@ class Result(object):
       result._PopulateFromCacheDir(cache_dir, show_all, test, suite)
 
     except Exception as e:
-      logger.LogError("Exception while using cache: %s" % e)
+      logger.LogError('Exception while using cache: %s' % e)
       return None
     return result
 
@@ -424,24 +423,24 @@ class TelemetryResult(Result):
     self.keyvals = {}
 
     if lines:
-      if lines[0].startswith("JSON.stringify"):
+      if lines[0].startswith('JSON.stringify'):
         lines = lines[1:]
 
     if not lines:
       return
-    labels = lines[0].split(",")
+    labels = lines[0].split(',')
     for line in lines[1:]:
-      fields = line.split(",")
+      fields = line.split(',')
       if len(fields) != len(labels):
         continue
       for i in range(1, len(labels)):
-        key = "%s %s" % (fields[0], labels[i])
+        key = '%s %s' % (fields[0], labels[i])
         value = fields[i]
         self.keyvals[key] = value
-    self.keyvals["retval"] = self.retval
+    self.keyvals['retval'] = self.retval
 
   def _PopulateFromCacheDir(self, cache_dir):
-    with open(os.path.join(cache_dir, RESULTS_FILE), "r") as f:
+    with open(os.path.join(cache_dir, RESULTS_FILE), 'r') as f:
       self.out = pickle.load(f)
       self.err = pickle.load(f)
       self.retval = pickle.load(f)
@@ -474,17 +473,16 @@ class CacheConditions(object):
 
 
 class ResultsCache(object):
-
   """ This class manages the key of the cached runs without worrying about what
   is exactly stored (value). The value generation is handled by the Results
   class.
   """
   CACHE_VERSION = 6
 
-  def Init(self, chromeos_image, chromeos_root, test_name, iteration,
-           test_args, profiler_args, machine_manager, machine, board,
-           cache_conditions, logger_to_use, log_level, label, share_cache,
-           suite, show_all_results, run_local):
+  def Init(self, chromeos_image, chromeos_root, test_name, iteration, test_args,
+           profiler_args, machine_manager, machine, board, cache_conditions,
+           logger_to_use, log_level, label, share_cache, suite,
+           show_all_results, run_local):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.test_name = test_name
@@ -519,19 +517,17 @@ class ResultsCache(object):
   def _GetCacheDirForWrite(self, get_keylist=False):
     cache_path = self._FormCacheDir(self._GetCacheKeyList(False))[0]
     if get_keylist:
-      args_str = "%s_%s_%s" % (self.test_args,
-                               self.profiler_args,
+      args_str = '%s_%s_%s' % (self.test_args, self.profiler_args,
                                self.run_local)
       version, image = results_report.ParseChromeosImage(
           self.label.chromeos_image)
-      keylist = [version, image, self.label.board,
-                 self.machine.name, self.test_name, str(self.iteration),
-                 args_str]
+      keylist = [version, image, self.label.board, self.machine.name,
+                 self.test_name, str(self.iteration), args_str]
       return cache_path, keylist
     return cache_path
 
   def _FormCacheDir(self, list_of_strings):
-    cache_key = " ".join(list_of_strings)
+    cache_key = ' '.join(list_of_strings)
     cache_dir = misc.GetFilenameFromString(cache_key)
     if self.label.cache_dir:
       cache_home = os.path.abspath(os.path.expanduser(self.label.cache_dir))
@@ -540,36 +536,36 @@ class ResultsCache(object):
       cache_path = [os.path.join(SCRATCH_DIR, cache_dir)]
 
     if len(self.share_cache):
-      for path in [x.strip() for x in self.share_cache.split(",")]:
+      for path in [x.strip() for x in self.share_cache.split(',')]:
         if os.path.exists(path):
           cache_path.append(os.path.join(path, cache_dir))
         else:
-          self._logger.LogFatal("Unable to find shared cache: %s" % path)
+          self._logger.LogFatal('Unable to find shared cache: %s' % path)
 
     return cache_path
 
   def _GetCacheKeyList(self, read):
     if read and CacheConditions.MACHINES_MATCH not in self.cache_conditions:
-      machine_checksum = "*"
+      machine_checksum = '*'
     else:
       machine_checksum = self.machine_manager.machine_checksum[self.label.name]
     if read and CacheConditions.CHECKSUMS_MATCH not in self.cache_conditions:
-      checksum = "*"
-    elif self.label.image_type == "trybot":
+      checksum = '*'
+    elif self.label.image_type == 'trybot':
       checksum = hashlib.md5(self.label.chromeos_image).hexdigest()
-    elif self.label.image_type == "official":
-      checksum = "*"
+    elif self.label.image_type == 'official':
+      checksum = '*'
     else:
       checksum = ImageChecksummer().Checksum(self.label, self.log_level)
 
     if read and CacheConditions.IMAGE_PATH_MATCH not in self.cache_conditions:
-      image_path_checksum = "*"
+      image_path_checksum = '*'
     else:
       image_path_checksum = hashlib.md5(self.chromeos_image).hexdigest()
 
-    machine_id_checksum = ""
+    machine_id_checksum = ''
     if read and CacheConditions.SAME_MACHINE_MATCH not in self.cache_conditions:
-      machine_id_checksum = "*"
+      machine_id_checksum = '*'
     else:
       if self.machine and self.machine.name in self.label.remote:
         machine_id_checksum = self.machine.machine_id_checksum
@@ -579,23 +575,17 @@ class ResultsCache(object):
             machine_id_checksum = machine.machine_id_checksum
             break
 
-    temp_test_args = "%s %s %s" % (self.test_args,
-                                   self.profiler_args,
+    temp_test_args = '%s %s %s' % (self.test_args, self.profiler_args,
                                    self.run_local)
-    test_args_checksum = hashlib.md5(
-        "".join(temp_test_args)).hexdigest()
-    return (image_path_checksum,
-            self.test_name, str(self.iteration),
-            test_args_checksum,
-            checksum,
-            machine_checksum,
-            machine_id_checksum,
+    test_args_checksum = hashlib.md5(''.join(temp_test_args)).hexdigest()
+    return (image_path_checksum, self.test_name, str(self.iteration),
+            test_args_checksum, checksum, machine_checksum, machine_id_checksum,
             str(self.CACHE_VERSION))
 
   def ReadResult(self):
     if CacheConditions.FALSE in self.cache_conditions:
       cache_dir = self._GetCacheDirForWrite()
-      command = "rm -rf {0}".format(cache_dir)
+      command = 'rm -rf {0}'.format(cache_dir)
       self._ce.RunCommand(command)
       return None
     cache_dir = self._GetCacheDirForRead()
@@ -607,15 +597,10 @@ class ResultsCache(object):
       return None
 
     if self.log_level == 'verbose':
-      self._logger.LogOutput("Trying to read from cache dir: %s" % cache_dir)
-    result = Result.CreateFromCacheHit(self._logger,
-                                       self.log_level,
-                                       self.label,
-                                       self.machine,
-                                       cache_dir,
-                                       self.show_all,
-                                       self.test_name,
-                                       self.suite)
+      self._logger.LogOutput('Trying to read from cache dir: %s' % cache_dir)
+    result = Result.CreateFromCacheHit(self._logger, self.log_level, self.label,
+                                       self.machine, cache_dir, self.show_all,
+                                       self.test_name, self.suite)
     if not result:
       return None
 
@@ -631,6 +616,7 @@ class ResultsCache(object):
 
 
 class MockResultsCache(ResultsCache):
+
   def Init(self, *args):
     pass
 

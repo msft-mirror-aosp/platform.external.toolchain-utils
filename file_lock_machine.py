@@ -1,10 +1,9 @@
 #!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
-
 """Script to lock/unlock machines."""
 
-__author__ = "asharif@google.com (Ahmad Sharif)"
+__author__ = 'asharif@google.com (Ahmad Sharif)'
 
 import datetime
 import fcntl
@@ -19,12 +18,13 @@ import time
 
 from utils import logger
 
-LOCK_SUFFIX = "_check_lock_liveness"
+LOCK_SUFFIX = '_check_lock_liveness'
 
 # The locks file directory REQUIRES that 'group' only has read/write
 # privileges and 'world' has no privileges.  So the mask must be
 # '0027': 0777 - 0027 = 0750.
 LOCK_MASK = 0027
+
 
 def FileCheckName(name):
   return name + LOCK_SUFFIX
@@ -32,7 +32,7 @@ def FileCheckName(name):
 
 def OpenLiveCheck(file_name):
   with FileCreationMask(LOCK_MASK):
-    fd = open(file_name, "a+w")
+    fd = open(file_name, 'a+w')
   try:
     fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
   except IOError:
@@ -41,6 +41,7 @@ def OpenLiveCheck(file_name):
 
 
 class FileCreationMask(object):
+
   def __init__(self, mask):
     self._mask = mask
 
@@ -56,30 +57,27 @@ class LockDescription(object):
 
   def __init__(self, desc=None):
     try:
-      self.owner = desc["owner"]
-      self.exclusive = desc["exclusive"]
-      self.counter = desc["counter"]
-      self.time = desc["time"]
-      self.reason = desc["reason"]
-      self.auto = desc["auto"]
+      self.owner = desc['owner']
+      self.exclusive = desc['exclusive']
+      self.counter = desc['counter']
+      self.time = desc['time']
+      self.reason = desc['reason']
+      self.auto = desc['auto']
     except (KeyError, TypeError):
-      self.owner = ""
+      self.owner = ''
       self.exclusive = False
       self.counter = 0
       self.time = 0
-      self.reason = ""
+      self.reason = ''
       self.auto = False
 
   def IsLocked(self):
     return self.counter or self.exclusive
 
   def __str__(self):
-    return " ".join(["Owner: %s" % self.owner,
-                     "Exclusive: %s" % self.exclusive,
-                     "Counter: %s" % self.counter,
-                     "Time: %s" % self.time,
-                     "Reason: %s" % self.reason,
-                     "Auto: %s" % self.auto])
+    return ' '.join(['Owner: %s' % self.owner, 'Exclusive: %s' % self.exclusive,
+                     'Counter: %s' % self.counter, 'Time: %s' % self.time,
+                     'Reason: %s' % self.reason, 'Auto: %s' % self.auto])
 
 
 class FileLock(object):
@@ -89,31 +87,28 @@ class FileLock(object):
   def __init__(self, lock_filename):
     self._filepath = lock_filename
     lock_dir = os.path.dirname(lock_filename)
-    assert os.path.isdir(lock_dir), (
-        "Locks dir: %s doesn't exist!" % lock_dir)
+    assert os.path.isdir(lock_dir), ("Locks dir: %s doesn't exist!" % lock_dir)
     self._file = None
 
   @classmethod
   def AsString(cls, file_locks):
-    stringify_fmt = "%-30s %-15s %-4s %-4s %-15s %-40s %-4s"
-    header = stringify_fmt % ("machine", "owner", "excl", "ctr",
-                              "elapsed", "reason", "auto")
+    stringify_fmt = '%-30s %-15s %-4s %-4s %-15s %-40s %-4s'
+    header = stringify_fmt % ('machine', 'owner', 'excl', 'ctr', 'elapsed',
+                              'reason', 'auto')
     lock_strings = []
     for file_lock in file_locks:
 
       elapsed_time = datetime.timedelta(
           seconds=int(time.time() - file_lock._description.time))
-      elapsed_time = "%s ago" % elapsed_time
-      lock_strings.append(stringify_fmt %
-                          (os.path.basename(file_lock._filepath),
-                           file_lock._description.owner,
-                           file_lock._description.exclusive,
-                           file_lock._description.counter,
-                           elapsed_time,
-                           file_lock._description.reason,
-                           file_lock._description.auto))
-    table = "\n".join(lock_strings)
-    return "\n".join([header, table])
+      elapsed_time = '%s ago' % elapsed_time
+      lock_strings.append(
+          stringify_fmt %
+          (os.path.basename(file_lock._filepath), file_lock._description.owner,
+           file_lock._description.exclusive, file_lock._description.counter,
+           elapsed_time, file_lock._description.reason,
+           file_lock._description.auto))
+    table = '\n'.join(lock_strings)
+    return '\n'.join([header, table])
 
   @classmethod
   def ListLock(cls, pattern, locks_dir):
@@ -128,16 +123,16 @@ class FileLock(object):
       with file_lock as lock:
         if lock.IsLocked():
           file_locks.append(file_lock)
-    logger.GetLogger().LogOutput("\n%s" % cls.AsString(file_locks))
+    logger.GetLogger().LogOutput('\n%s' % cls.AsString(file_locks))
 
   def __enter__(self):
     with FileCreationMask(LOCK_MASK):
       try:
-        self._file = open(self._filepath, "a+")
+        self._file = open(self._filepath, 'a+')
         self._file.seek(0, os.SEEK_SET)
 
         if fcntl.flock(self._file.fileno(), fcntl.LOCK_EX) == -1:
-          raise IOError("flock(%s, LOCK_EX) failed!" % self._filepath)
+          raise IOError('flock(%s, LOCK_EX) failed!' % self._filepath)
 
         try:
           desc = json.load(self._file)
@@ -176,23 +171,24 @@ class FileLock(object):
 
 
 class Lock(object):
+
   def __init__(self, lock_file, auto=True):
     self._to_lock = os.path.basename(lock_file)
     self._lock_file = lock_file
     self._logger = logger.GetLogger()
     self._auto = auto
 
-  def NonBlockingLock(self, exclusive, reason=""):
+  def NonBlockingLock(self, exclusive, reason=''):
     with FileLock(self._lock_file) as lock:
       if lock.exclusive:
         self._logger.LogError(
-            "Exclusive lock already acquired by %s. Reason: %s" %
+            'Exclusive lock already acquired by %s. Reason: %s' %
             (lock.owner, lock.reason))
         return False
 
       if exclusive:
         if lock.counter:
-          self._logger.LogError("Shared lock already acquired")
+          self._logger.LogError('Shared lock already acquired')
           return False
         lock_file_check = FileCheckName(self._lock_file)
         fd = OpenLiveCheck(lock_file_check)
@@ -205,7 +201,7 @@ class Lock(object):
         lock.auto = self._auto
       else:
         lock.counter += 1
-    self._logger.LogOutput("Successfully locked: %s" % self._to_lock)
+    self._logger.LogOutput('Successfully locked: %s' % self._to_lock)
     return True
 
   def Unlock(self, exclusive, force=False):
@@ -215,7 +211,7 @@ class Lock(object):
         return True
 
       if lock.exclusive != exclusive:
-        self._logger.LogError("shared locks must be unlocked with --shared")
+        self._logger.LogError('shared locks must be unlocked with --shared')
         return False
 
       if lock.exclusive:
@@ -225,14 +221,15 @@ class Lock(object):
           return False
         if lock.auto != self._auto:
           self._logger.LogError("Can't unlock lock with different -a"
-                                " parameter.")
+                                ' parameter.')
           return False
         lock.exclusive = False
-        lock.reason = ""
-        lock.owner = ""
+        lock.reason = ''
+        lock.owner = ''
 
         if self._auto:
-          del_list = [i for i in FileLock.FILE_OPS
+          del_list = [i
+                      for i in FileLock.FILE_OPS
                       if i.name == FileCheckName(self._lock_file)]
           for i in del_list:
             FileLock.FILE_OPS.remove(i)
@@ -248,7 +245,7 @@ class Lock(object):
 
 
 class Machine(object):
-  LOCKS_DIR = "/google/data/rw/users/mo/mobiletc-prebuild/locks"
+  LOCKS_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/locks'
 
   def __init__(self, name, locks_dir=LOCKS_DIR, auto=True):
     self._name = name
@@ -259,19 +256,19 @@ class Machine(object):
       self._full_name = self._name
     self._full_name = os.path.join(locks_dir, self._full_name)
 
-  def Lock(self, exclusive=False, reason=""):
+  def Lock(self, exclusive=False, reason=''):
     lock = Lock(self._full_name, self._auto)
     return lock.NonBlockingLock(exclusive, reason)
 
-  def TryLock(self, timeout=300, exclusive=False, reason=""):
+  def TryLock(self, timeout=300, exclusive=False, reason=''):
     locked = False
     sleep = timeout / 10
     while True:
       locked = self.Lock(exclusive, reason)
       if locked or not timeout >= 0:
         break
-      print "Lock not acquired for {0}, wait {1} seconds ...".format(
-          self._name, sleep)
+      print 'Lock not acquired for {0}, wait {1} seconds ...'.format(self._name,
+                                                                     sleep)
       time.sleep(sleep)
       timeout -= sleep
     return locked
@@ -284,41 +281,41 @@ class Machine(object):
 def Main(argv):
   """The main function."""
   parser = optparse.OptionParser()
-  parser.add_option("-r",
-                    "--reason",
-                    dest="reason",
-                    default="",
-                    help="The lock reason.")
-  parser.add_option("-u",
-                    "--unlock",
-                    dest="unlock",
-                    action="store_true",
+  parser.add_option('-r',
+                    '--reason',
+                    dest='reason',
+                    default='',
+                    help='The lock reason.')
+  parser.add_option('-u',
+                    '--unlock',
+                    dest='unlock',
+                    action='store_true',
                     default=False,
-                    help="Use this to unlock.")
-  parser.add_option("-l",
-                    "--list_locks",
-                    dest="list_locks",
-                    action="store_true",
+                    help='Use this to unlock.')
+  parser.add_option('-l',
+                    '--list_locks',
+                    dest='list_locks',
+                    action='store_true',
                     default=False,
-                    help="Use this to list locks.")
-  parser.add_option("-f",
-                    "--ignore_ownership",
-                    dest="ignore_ownership",
-                    action="store_true",
+                    help='Use this to list locks.')
+  parser.add_option('-f',
+                    '--ignore_ownership',
+                    dest='ignore_ownership',
+                    action='store_true',
                     default=False,
                     help="Use this to force unlock on a lock you don't own.")
-  parser.add_option("-s",
-                    "--shared",
-                    dest="shared",
-                    action="store_true",
+  parser.add_option('-s',
+                    '--shared',
+                    dest='shared',
+                    action='store_true',
                     default=False,
-                    help="Use this for a shared (non-exclusive) lock.")
-  parser.add_option("-d",
-                    "--dir",
-                    dest="locks_dir",
-                    action="store",
+                    help='Use this for a shared (non-exclusive) lock.')
+  parser.add_option('-d',
+                    '--dir',
+                    dest='locks_dir',
+                    action='store',
                     default=Machine.LOCKS_DIR,
-                    help="Use this to set different locks_dir")
+                    help='Use this to set different locks_dir')
 
   options, args = parser.parse_args(argv)
 
@@ -327,7 +324,7 @@ def Main(argv):
 
   if not options.list_locks and len(args) != 2:
     logger.GetLogger().LogError(
-        "Either --list_locks or a machine arg is needed.")
+        'Either --list_locks or a machine arg is needed.')
     return 1
 
   if len(args) > 1:
@@ -336,7 +333,7 @@ def Main(argv):
     machine = None
 
   if options.list_locks:
-    FileLock.ListLock("*", options.locks_dir)
+    FileLock.ListLock('*', options.locks_dir)
     retval = True
   elif options.unlock:
     retval = machine.Unlock(exclusive, options.ignore_ownership)
@@ -348,5 +345,6 @@ def Main(argv):
   else:
     return 1
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
   sys.exit(Main(sys.argv))

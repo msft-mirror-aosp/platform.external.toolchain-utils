@@ -1,7 +1,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Steering stage unittest.
 
 Part of the Chrome build flags optimization.
@@ -16,7 +15,6 @@ from generation import Generation
 from mock_task import IdentifierMockTask
 import pipeline_process
 import steering
-
 
 # Pick an integer at random.
 STEERING_TEST_STAGE = -8
@@ -110,10 +108,9 @@ class SteeringTest(unittest.TestCase):
     input_queue = manager.Queue()
     result_queue = manager.Queue()
 
-    steering_process = multiprocessing.Process(target=steering.Steering,
-                                               args=(set(),
-                                                     [current_generation],
-                                                     input_queue, result_queue))
+    steering_process = multiprocessing.Process(
+        target=steering.Steering,
+        args=(set(), [current_generation], input_queue, result_queue))
     steering_process.start()
 
     # Test that each generation is processed properly. I.e., the generations are
@@ -158,16 +155,16 @@ class SteeringTest(unittest.TestCase):
     input_queue = manager.Queue()
     result_queue = manager.Queue()
 
-    steering_process = multiprocessing.Process(target=steering.Steering,
-                                               args=(steering_tasks,
-                                                     [current_generation],
-                                                     input_queue, result_queue))
+    steering_process = multiprocessing.Process(
+        target=steering.Steering,
+        args=(steering_tasks, [current_generation], input_queue, result_queue))
 
     steering_process.start()
 
     # Test that the steering method returns right away.
     assert result_queue.get() == pipeline_process.POISONPILL
     steering_process.join()
+
 
 if __name__ == '__main__':
   unittest.main()

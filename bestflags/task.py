@@ -1,7 +1,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """A reproducing entity.
 
 Part of the Chrome build flags optimization.
@@ -257,7 +256,8 @@ class Task(object):
     for _ in range(BUILD_TRIES):
       try:
         # Execute the command and get the execution status/results.
-        p = subprocess.Popen(command.split(), stdout=subprocess.PIPE,
+        p = subprocess.Popen(command.split(),
+                             stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         (out, err) = p.communicate()
 
@@ -311,7 +311,8 @@ class Task(object):
     # Try TEST_TRIES number of times before confirming that the build fails.
     for _ in range(TEST_TRIES):
       try:
-        p = subprocess.Popen(command.split(), stdout=subprocess.PIPE,
+        p = subprocess.Popen(command.split(),
+                             stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         (out, err) = p.communicate()
 

@@ -1,5 +1,4 @@
 #!/usr/bin/python
-
 """A crontab script to delete night test data."""
 __author__ = 'shenhan@google.com (Han Shen)'
 
@@ -18,9 +17,10 @@ DIR_BY_WEEKDAY = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 
 def CleanNumberedDir(s, dry_run=False):
   """Deleted directories under each dated_dir."""
-  chromeos_dirs = [os.path.join(s, x) for x in os.listdir(s)
+  chromeos_dirs = [os.path.join(s, x)
+                   for x in os.listdir(s)
                    if misc.IsChromeOsTree(os.path.join(s, x))]
-  ce = command_executer.GetCommandExecuter(log_level="none")
+  ce = command_executer.GetCommandExecuter(log_level='none')
   all_succeeded = True
   for cd in chromeos_dirs:
     if misc.DeleteChromeOsTree(cd, dry_run=dry_run):
@@ -36,11 +36,11 @@ def CleanNumberedDir(s, dry_run=False):
   ## Now delete the numbered dir Before forcibly removing the directory, just
   ## check 's' to make sure it is sane.  A valid dir to be removed must be
   ## '/usr/local/google/crostc/(SUN|MON|TUE...|SAT)'.
-  valid_dir_pattern = ('^' + constants.CROSTC_WORKSPACE + '/(' +
-                       '|'.join(DIR_BY_WEEKDAY) + ')')
+  valid_dir_pattern = (
+      '^' + constants.CROSTC_WORKSPACE + '/(' + '|'.join(DIR_BY_WEEKDAY) + ')')
   if not re.search(valid_dir_pattern, s):
-    print ('Trying to delete an invalid dir "{0}" (must match "{1}"), '
-           'please check.'.format(s, valid_dir_pattern))
+    print('Trying to delete an invalid dir "{0}" (must match "{1}"), '
+          'please check.'.format(s, valid_dir_pattern))
     return False
 
   cmd = 'rm -fr {0}'.format(s)
@@ -57,7 +57,8 @@ def CleanNumberedDir(s, dry_run=False):
 
 def CleanDatedDir(dated_dir, dry_run=False):
   # List subdirs under dir
-  subdirs = [os.path.join(dated_dir, x) for x in os.listdir(dated_dir)
+  subdirs = [os.path.join(dated_dir, x)
+             for x in os.listdir(dated_dir)
              if os.path.isdir(os.path.join(dated_dir, x))]
   all_succeeded = True
   for s in subdirs:
@@ -71,10 +72,15 @@ def ProcessArguments(argv):
   parser = optparse.OptionParser(
       description='Automatically delete nightly test data directories.',
       usage='auto_delete_nightly_test_data.py options')
-  parser.add_option('-d', '--dry_run', dest='dry_run',
-                    default=False, action='store_true',
+  parser.add_option('-d',
+                    '--dry_run',
+                    dest='dry_run',
+                    default=False,
+                    action='store_true',
                     help='Only print command line, do not execute anything.')
-  parser.add_option('--days_to_preserve', dest='days_to_preserve', default=3,
+  parser.add_option('--days_to_preserve',
+                    dest='days_to_preserve',
+                    default=3,
                     help=('Specify the number of days (not including today), '
                           'test data generated on these days will *NOT* be '
                           'deleted. Defaults to 3.'))
@@ -85,8 +91,8 @@ def ProcessArguments(argv):
 def CleanChromeOsTmpAndImages():
   """Delete temporaries, images under crostc/chromeos."""
 
-  chromeos_chroot_tmp = os.path.join(constants.CROSTC_WORKSPACE,
-                                     'chromeos', 'chroot', 'tmp')
+  chromeos_chroot_tmp = os.path.join(constants.CROSTC_WORKSPACE, 'chromeos',
+                                     'chroot', 'tmp')
 
   ce = command_executer.GetCommandExecuter()
   # Clean chroot/tmp/test_that_* and chroot/tmp/tmpxxxxxx, that were last
@@ -98,11 +104,11 @@ def CleanChromeOsTmpAndImages():
          r'-exec bash -c "rm -fr {{}}" \;').format(chromeos_chroot_tmp)
   rv = ce.RunCommand(cmd, print_to_console=False)
   if rv == 0:
-    print ('Successfully cleaned chromeos tree tmp directory '
-           '"{0}".'.format(chromeos_chroot_tmp))
+    print('Successfully cleaned chromeos tree tmp directory '
+          '"{0}".'.format(chromeos_chroot_tmp))
   else:
-    print ('Some directories were not removed under chromeos tree '
-           'tmp directory -"{0}".'.format(chromeos_chroot_tmp))
+    print('Some directories were not removed under chromeos tree '
+          'tmp directory -"{0}".'.format(chromeos_chroot_tmp))
 
   # Clean image tar files, which were last accessed 1 hour ago and clean image
   # bin files that were last accessed more than 24 hours ago.
@@ -135,11 +141,12 @@ def Main(argv):
     if i <= 0:
       ## Wrap around if index is negative.  6 is from i + 7 - 1, because
       ## DIR_BY_WEEKDAY starts from 0, while isoweekday is from 1-7.
-      dated_dir = DIR_BY_WEEKDAY[i+6]
+      dated_dir = DIR_BY_WEEKDAY[i + 6]
     else:
-      dated_dir = DIR_BY_WEEKDAY[i-1]
-    rv += 0 if CleanDatedDir(os.path.join(
-        constants.CROSTC_WORKSPACE, dated_dir), options.dry_run) else 1
+      dated_dir = DIR_BY_WEEKDAY[i - 1]
+    rv += 0 if CleanDatedDir(
+        os.path.join(constants.CROSTC_WORKSPACE,
+                     dated_dir), options.dry_run) else 1
 
   ## Finally clean temporaries, images under crostc/chromeos
   rv2 = CleanChromeOsTmpAndImages()

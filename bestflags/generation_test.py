@@ -1,7 +1,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Generation unittest.
 
 Part of the Chrome build flags optimization.
@@ -14,7 +13,6 @@ import unittest
 
 from generation import Generation
 from mock_task import IdentifierMockTask
-
 
 # Pick an integer at random.
 TEST_STAGE = -125
@@ -68,6 +66,7 @@ class GenerationTest(unittest.TestCase):
     # The Done method should return true after all the tasks in the permuted
     # list is set.
     assert gen.Done()
+
 
 if __name__ == '__main__':
   unittest.main()

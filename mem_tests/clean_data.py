@@ -1,5 +1,4 @@
 #! /usr/bin/python
-
 """Cleans output from other scripts to eliminate duplicates.
 
 When frequently sampling data, we see that records occasionally will contain
@@ -15,16 +14,16 @@ standard time.
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("filename")
+parser.add_argument('filename')
 args = parser.parse_args()
 
 my_file = open(args.filename)
-output_file = open("clean2.csv", "a")
+output_file = open('clean2.csv', 'a')
 dictionary = dict()
 
 for line in my_file:
-    new_time = int(line.split(",")[0])
-    dictionary[new_time] = line
+  new_time = int(line.split(',')[0])
+  dictionary[new_time] = line
 
 for key in dictionary.keys():
-    output_file.write(dictionary[key])
+  output_file.write(dictionary[key])

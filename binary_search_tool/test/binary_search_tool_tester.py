@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 # Copyright 2012 Google Inc. All Rights Reserved.
-
 """Tests for bisecting tool."""
 
 __author__ = 'shenhan@google.com (Han Shen)'
@@ -32,15 +31,13 @@ class BisectingUtilsTest(unittest.TestCase):
     """Cleanup temp files."""
     os.remove(common.OBJECTS_FILE)
     os.remove(common.WORKING_SET_FILE)
-    print 'Deleted "{0}" and "{1}"'.format(
-        common.OBJECTS_FILE, common.WORKING_SET_FILE)
+    print 'Deleted "{0}" and "{1}"'.format(common.OBJECTS_FILE,
+                                           common.WORKING_SET_FILE)
 
   def runTest(self):
-    args = ['--get_initial_items', './gen_init_list.py',
-            '--switch_to_good', './switch_to_good.py',
-            '--switch_to_bad', './switch_to_bad.py',
-            '--test_script', './is_good.py',
-            '--prune', '--file_args']
+    args = ['--get_initial_items', './gen_init_list.py', '--switch_to_good',
+            './switch_to_good.py', '--switch_to_bad', './switch_to_bad.py',
+            '--test_script', './is_good.py', '--prune', '--file_args']
     binary_search_state.Main(args)
 
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(

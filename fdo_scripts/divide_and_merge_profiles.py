@@ -1,7 +1,6 @@
 #!/usr/bin/python
 #
 # Copyright 2011 Google Inc. All Rights Reserved.
-
 """Script to divide and merge profiles."""
 
 import copy
@@ -20,6 +19,7 @@ from utils import logger
 
 
 class ProfileMerger:
+
   def __init__(self, inputs, output, chunk_size, merge_program, multipliers):
     self._inputs = inputs
     self._output = output
@@ -31,13 +31,14 @@ class ProfileMerger:
 
   def _GetFilesSetForInputDir(self, input_dir):
     output_file = tempfile.mktemp()
-    command = "find %s -name '*.gcda' -o -name '*.imports' > %s" % (input_dir, output_file)
+    command = "find %s -name '*.gcda' -o -name '*.imports' > %s" % (input_dir,
+                                                                    output_file)
     self._ce.RunCommand(command)
-    files = open(output_file, "r").read()
+    files = open(output_file, 'r').read()
     files_set = set([])
     for f in files.splitlines():
-      stripped_file = f.replace(input_dir, "", 1)
-      stripped_file = stripped_file.lstrip("/")
+      stripped_file = f.replace(input_dir, '', 1)
+      stripped_file = stripped_file.lstrip('/')
       files_set.add(stripped_file)
     return files_set
 
@@ -60,9 +61,9 @@ class ProfileMerger:
       src_file = os.path.join(input_dir, f)
       dst_file = os.path.join(output_dir, f)
       if not os.path.isdir(os.path.dirname(dst_file)):
-        command = "mkdir -p %s" % os.path.dirname(dst_file)
+        command = 'mkdir -p %s' % os.path.dirname(dst_file)
         self._ce.RunCommand(command)
-      command = "cp %s %s" % (src_file, dst_file)
+      command = 'cp %s %s' % (src_file, dst_file)
       self._ce.RunCommand(command)
 
   def _DoChunkMerge(self, current_files):
@@ -72,17 +73,14 @@ class ProfileMerger:
       temp_dirs.append(temp_dir)
       self._CopyFilesTree(i, current_files, temp_dir)
     # Now do the merge.
-    command = ("%s --inputs=%s --output=%s" %
-               (self._merge_program,
-                ",".join(temp_dirs),
-                self._output))
+    command = ('%s --inputs=%s --output=%s' %
+               (self._merge_program, ','.join(temp_dirs), self._output))
     if self._multipliers:
-      command = ("%s --multipliers=%s" %
-                 (command, self._multipliers))
+      command = ('%s --multipliers=%s' % (command, self._multipliers))
     ret = self._ce.RunCommand(command)
-    assert ret == 0, "%s command failed!" % command
+    assert ret == 0, '%s command failed!' % command
     for temp_dir in temp_dirs:
-      command = "rm -rf %s" % temp_dir
+      command = 'rm -rf %s' % temp_dir
       self._ce.RunCommand(command)
 
   def DoMerge(self):
@@ -97,49 +95,46 @@ class ProfileMerger:
 def Main(argv):
   """The main function."""
   # Common initializations
-###  command_executer.InitCommandExecuter(True)
+  ###  command_executer.InitCommandExecuter(True)
   command_executer.InitCommandExecuter()
   l = logger.GetLogger()
   ce = command_executer.GetCommandExecuter()
   parser = optparse.OptionParser()
-  parser.add_option("--inputs",
-                    dest="inputs",
-                    help="Comma-separated input profile directories to merge.")
-  parser.add_option("--output",
-                    dest="output",
-                    help="Output profile directory.")
-  parser.add_option("--chunk_size",
-                    dest="chunk_size",
-                    default="50",
-                    help="Chunk size to divide up the profiles into.")
-  parser.add_option("--merge_program",
-                    dest="merge_program",
-                    default="/home/xur/bin/profile_merge_v15.par",
-                    help="Merge program to use to do the actual merge.")
-  parser.add_option("--multipliers",
-                    dest="multipliers",
-                    help="multipliers to use when merging. (optional)")
+  parser.add_option('--inputs',
+                    dest='inputs',
+                    help='Comma-separated input profile directories to merge.')
+  parser.add_option('--output', dest='output', help='Output profile directory.')
+  parser.add_option('--chunk_size',
+                    dest='chunk_size',
+                    default='50',
+                    help='Chunk size to divide up the profiles into.')
+  parser.add_option('--merge_program',
+                    dest='merge_program',
+                    default='/home/xur/bin/profile_merge_v15.par',
+                    help='Merge program to use to do the actual merge.')
+  parser.add_option('--multipliers',
+                    dest='multipliers',
+                    help='multipliers to use when merging. (optional)')
 
   options, _ = parser.parse_args(argv)
 
-  if not all([options.inputs,
-              options.output,]):
-    l.LogError("Must supply --inputs and --output")
+  if not all([options.inputs, options.output]):
+    l.LogError('Must supply --inputs and --output')
     return 1
 
   try:
-    pm = ProfileMerger(options.inputs.split(","), options.output,
-                       int(options.chunk_size), options.merge_program,
-                       options.multipliers)
+    pm = ProfileMerger(
+        options.inputs.split(','), options.output, int(options.chunk_size),
+        options.merge_program, options.multipliers)
     pm.DoMerge()
     retval = 0
   except:
     retval = 1
   finally:
-    print "My work is done..."
+    print 'My work is done...'
   return retval
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   retval = Main(sys.argv)
   sys.exit(retval)

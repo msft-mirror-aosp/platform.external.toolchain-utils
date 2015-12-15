@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Copyright 2011 Google Inc. All Rights Reserved.
 # Author: kbaclawski@google.com (Krystian Baclawski)
 #
@@ -42,7 +40,8 @@ class Manifest(namedtuple('Manifest', 'tool board results')):
 
   @classmethod
   def FromDejaGnuTestRun(cls, test_run):
-    results = [result for result in test_run.results
+    results = [result
+               for result in test_run.results
                if result.result in cls.SUPPRESSIBLE_RESULTS]
 
     return cls(test_run.tool, test_run.board, results)

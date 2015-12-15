@@ -1,9 +1,7 @@
-#!/usr/bin/python
 
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Table generating, analyzing and printing functions.
 
 This defines several classes that are used to generate, analyze and print
@@ -63,7 +61,6 @@ table:
 
 """
 
-
 import getpass
 import math
 import sys
@@ -100,9 +97,9 @@ class TableGenerator(object):
   SORT_BY_VALUES = 2
   SORT_BY_VALUES_DESC = 3
 
-  MISSING_VALUE = "x"
+  MISSING_VALUE = 'x'
 
-  def __init__(self, d, l, sort=SORT_BY_KEYS, key_name="keys"):
+  def __init__(self, d, l, sort=SORT_BY_KEYS, key_name='keys'):
     self._runs = d
     self._labels = l
     self._sort = sort
@@ -147,7 +144,7 @@ class TableGenerator(object):
       # pylint: disable=unnecessary-lambda
       return sorted(keys, key=lambda x: self._GetHighestValue(x), reverse=True)
     else:
-      assert 0, "Unimplemented sort %s" % self._sort
+      assert 0, 'Unimplemented sort %s' % self._sort
 
   def _GetKeys(self):
     keys = self._AggregateKeys()
@@ -201,7 +198,7 @@ class TableGenerator(object):
         row.append(v)
       # If we got a 'unit' value, append the units name to the key name.
       if unit:
-        keyname = row[0] + " (%s) " % unit
+        keyname = row[0] + ' (%s) ' % unit
         row[0] = keyname
       table.append(row)
       rows += 1
@@ -229,7 +226,7 @@ class Result(object):
 
   # pylint: disable=unused-argument
   def _Literal(self, cell, values, baseline_values):
-    cell.value = " ".join([str(v) for v in values])
+    cell.value = ' '.join([str(v) for v in values])
 
   def _ComputeFloat(self, cell, values, baseline_values):
     self._Literal(cell, values, baseline_values)
@@ -242,13 +239,13 @@ class Result(object):
 
   def _GetGmean(self, values):
     if not values:
-      return float("nan")
+      return float('nan')
     if any([v < 0 for v in values]):
-      return float("nan")
+      return float('nan')
     if any([v == 0 for v in values]):
       return 0.0
     log_list = [math.log(v) for v in values]
-    gmean_log = sum(log_list)/len(log_list)
+    gmean_log = sum(log_list) / len(log_list)
     return math.exp(gmean_log)
 
   def Compute(self, cell, values, baseline_values):
@@ -263,7 +260,7 @@ class Result(object):
     all_floats = True
     values = _StripNone(values)
     if not values:
-      cell.value = ""
+      cell.value = ''
       return
     if _AllFloat(values):
       float_values = _GetFloats(values)
@@ -278,7 +275,7 @@ class Result(object):
         all_floats = False
     else:
       if self.NeedsBaseline():
-        cell.value = ""
+        cell.value = ''
         return
       float_baseline_values = None
     if all_floats:
@@ -289,6 +286,7 @@ class Result(object):
 
 
 class LiteralResult(Result):
+
   def __init__(self, iteration=0):
     super(LiteralResult, self).__init__()
     self.iteration = iteration
@@ -297,7 +295,7 @@ class LiteralResult(Result):
     try:
       cell.value = values[self.iteration]
     except IndexError:
-      cell.value = "-"
+      cell.value = '-'
 
 
 class NonEmptyCountResult(Result):
@@ -331,14 +329,16 @@ class NonEmptyCountResult(Result):
 
 
 class StringMeanResult(Result):
+
   def _ComputeString(self, cell, values, baseline_values):
     if self._AllStringsSame(values):
       cell.value = str(values[0])
     else:
-      cell.value = "?"
+      cell.value = '?'
 
 
 class AmeanResult(StringMeanResult):
+
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = numpy.mean(values)
 
@@ -348,6 +348,7 @@ class RawResult(Result):
 
 
 class MinResult(Result):
+
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = min(values)
 
@@ -355,10 +356,11 @@ class MinResult(Result):
     if values:
       cell.value = min(values)
     else:
-      cell.value = ""
+      cell.value = ''
 
 
 class MaxResult(Result):
+
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = max(values)
 
@@ -366,29 +368,33 @@ class MaxResult(Result):
     if values:
       cell.value = max(values)
     else:
-      cell.value = ""
+      cell.value = ''
 
 
 class NumericalResult(Result):
+
   def _ComputeString(self, cell, values, baseline_values):
-    cell.value = "?"
+    cell.value = '?'
 
 
 class StdResult(NumericalResult):
+
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = numpy.std(values)
 
 
 class CoeffVarResult(NumericalResult):
+
   def _ComputeFloat(self, cell, values, baseline_values):
     if numpy.mean(values) != 0.0:
-      noise = numpy.abs(numpy.std(values)/numpy.mean(values))
+      noise = numpy.abs(numpy.std(values) / numpy.mean(values))
     else:
       noise = 0.0
     cell.value = noise
 
 
 class ComparisonResult(Result):
+
   def NeedsBaseline(self):
     return True
 
@@ -401,26 +407,28 @@ class ComparisonResult(Result):
       baseline_value = baseline_values[0]
     if value is not None and baseline_value is not None:
       if value == baseline_value:
-        cell.value = "SAME"
+        cell.value = 'SAME'
       else:
-        cell.value = "DIFFERENT"
+        cell.value = 'DIFFERENT'
     else:
-      cell.value = "?"
+      cell.value = '?'
 
 
 class PValueResult(ComparisonResult):
+
   def _ComputeFloat(self, cell, values, baseline_values):
     if len(values) < 2 or len(baseline_values) < 2:
-      cell.value = float("nan")
+      cell.value = float('nan')
       return
     import stats  # pylint: disable=g-import-not-at-top
     _, cell.value = stats.lttest_ind(values, baseline_values)
 
   def _ComputeString(self, cell, values, baseline_values):
-    return float("nan")
+    return float('nan')
 
 
 class KeyAwareComparisonResult(ComparisonResult):
+
   def _IsLowerBetter(self, key):
     # TODO(llozano): Trying to guess direction by looking at the name of the
     # test does not seem like a good idea. Test frameworks should provide this
@@ -443,27 +451,26 @@ class KeyAwareComparisonResult(ComparisonResult):
     # --texture_upload_count--texture_upload_count--count (high is good)
     # --total_deferred_image_decode_count--count (low is good)
     # --total_tiles_analyzed--total_tiles_analyzed--count (high is good)
-    lower_is_better_keys = ["milliseconds", "ms_", "seconds_", "KB",
-                            "rdbytes", "wrbytes", "dropped_percent",
-                            "(ms)", "(seconds)",
-                            "--ms", "--average_num_missing_tiles",
-                            "--experimental_jank", "--experimental_mean_frame",
-                            "--experimental_median_frame_time",
-                            "--total_deferred_image_decode_count",
-                            "--seconds"]
+    lower_is_better_keys = ['milliseconds', 'ms_', 'seconds_', 'KB', 'rdbytes',
+                            'wrbytes', 'dropped_percent', '(ms)', '(seconds)',
+                            '--ms', '--average_num_missing_tiles',
+                            '--experimental_jank', '--experimental_mean_frame',
+                            '--experimental_median_frame_time',
+                            '--total_deferred_image_decode_count', '--seconds']
 
     return any([l in key for l in lower_is_better_keys])
 
   def _InvertIfLowerIsBetter(self, cell):
     if self._IsLowerBetter(cell.name):
       if cell.value:
-        cell.value = 1.0/cell.value
+        cell.value = 1.0 / cell.value
 
 
 class AmeanRatioResult(KeyAwareComparisonResult):
+
   def _ComputeFloat(self, cell, values, baseline_values):
     if numpy.mean(baseline_values) != 0:
-      cell.value = numpy.mean(values)/numpy.mean(baseline_values)
+      cell.value = numpy.mean(values) / numpy.mean(baseline_values)
     elif numpy.mean(values) != 0:
       cell.value = 0.00
       # cell.value = 0 means the values and baseline_values have big difference
@@ -473,9 +480,10 @@ class AmeanRatioResult(KeyAwareComparisonResult):
 
 
 class GmeanRatioResult(KeyAwareComparisonResult):
+
   def _ComputeFloat(self, cell, values, baseline_values):
     if self._GetGmean(baseline_values) != 0:
-      cell.value = self._GetGmean(values)/self._GetGmean(baseline_values)
+      cell.value = self._GetGmean(values) / self._GetGmean(baseline_values)
     elif self._GetGmean(values) != 0:
       cell.value = 0.00
     else:
@@ -492,7 +500,7 @@ class Color(object):
     self.a = a
 
   def __str__(self):
-    return "r: %s g: %s: b: %s: a: %s" % (self.r, self.g, self.b, self.a)
+    return 'r: %s g: %s: b: %s: a: %s' % (self.r, self.g, self.b, self.a)
 
   def Round(self):
     """Round RGBA values to the nearest integer."""
@@ -503,7 +511,7 @@ class Color(object):
 
   def GetRGB(self):
     """Get a hex representation of the color."""
-    return "%02x%02x%02x" % (self.r, self.g, self.b)
+    return '%02x%02x%02x' % (self.r, self.g, self.b)
 
   @classmethod
   def Lerp(cls, ratio, a, b):
@@ -518,10 +526,10 @@ class Color(object):
       Linearly interpolated color.
     """
     ret = cls()
-    ret.r = (b.r - a.r)*ratio + a.r
-    ret.g = (b.g - a.g)*ratio + a.g
-    ret.b = (b.b - a.b)*ratio + a.b
-    ret.a = (b.a - a.a)*ratio + a.a
+    ret.r = (b.r - a.r) * ratio + a.r
+    ret.g = (b.g - a.g) * ratio + a.g
+    ret.b = (b.b - a.b) * ratio + a.b
+    ret.a = (b.a - a.a) * ratio + a.a
     return ret
 
 
@@ -540,14 +548,14 @@ class Format(object):
       cell: The cell whose attributes are to be populated.
     """
     if cell.value is None:
-      cell.string_value = ""
+      cell.string_value = ''
     if isinstance(cell.value, float):
       self._ComputeFloat(cell)
     else:
       self._ComputeString(cell)
 
   def _ComputeFloat(self, cell):
-    cell.string_value = "{0:.2f}".format(cell.value)
+    cell.string_value = '{0:.2f}'.format(cell.value)
 
   def _ComputeString(self, cell):
     cell.string_value = str(cell.value)
@@ -558,24 +566,21 @@ class Format(object):
     if math.isnan(value):
       return mid
     if value > mid_value:
-      value = max_value - mid_value/value
+      value = max_value - mid_value / value
 
     return self._GetColorBetweenRange(value, min_value, mid_value, max_value,
                                       low, mid, high, power)
 
-  def _GetColorBetweenRange(self,
-                            value,
-                            min_value, mid_value, max_value,
-                            low_color, mid_color, high_color,
-                            power):
+  def _GetColorBetweenRange(self, value, min_value, mid_value, max_value,
+                            low_color, mid_color, high_color, power):
     assert value <= max_value
     assert value >= min_value
     if value > mid_value:
-      value = (max_value - value)/(max_value - mid_value)
+      value = (max_value - value) / (max_value - mid_value)
       value **= power
       ret = Color.Lerp(value, high_color, mid_color)
     else:
-      value = (value - min_value)/(mid_value - min_value)
+      value = (value - min_value) / (mid_value - min_value)
       value **= power
       ret = Color.Lerp(value, low_color, mid_color)
     ret.Round()
@@ -583,8 +588,9 @@ class Format(object):
 
 
 class PValueFormat(Format):
+
   def _ComputeFloat(self, cell):
-    cell.string_value = "%0.2f" % float(cell.value)
+    cell.string_value = '%0.2f' % float(cell.value)
     if float(cell.value) < 0.05:
       cell.bgcolor = self._GetColor(cell.value,
                                     Color(255, 255, 0, 0),
@@ -603,7 +609,7 @@ class StorageFormat(Format):
 
   def _ComputeFloat(self, cell):
     base = 1024
-    suffices = ["K", "M", "G"]
+    suffices = ['K', 'M', 'G']
     v = float(cell.value)
     current = 0
     while v >= base**(current + 1) and current < len(suffices):
@@ -611,7 +617,7 @@ class StorageFormat(Format):
 
     if current:
       divisor = base**current
-      cell.string_value = "%1.1f%s" % ((v/divisor), suffices[current - 1])
+      cell.string_value = '%1.1f%s' % ((v / divisor), suffices[current - 1])
     else:
       cell.string_value = str(cell.value)
 
@@ -624,7 +630,7 @@ class CoeffVarFormat(Format):
   """
 
   def _ComputeFloat(self, cell):
-    cell.string_value = "%1.1f%%" % (float(cell.value) * 100)
+    cell.string_value = '%1.1f%%' % (float(cell.value) * 100)
     cell.color = self._GetColor(cell.value,
                                 Color(0, 255, 0, 0),
                                 Color(0, 0, 0, 0),
@@ -641,11 +647,9 @@ class PercentFormat(Format):
   """
 
   def _ComputeFloat(self, cell):
-    cell.string_value = "%+1.1f%%" % ((float(cell.value) - 1) * 100)
-    cell.color = self._GetColor(cell.value,
-                                Color(255, 0, 0, 0),
-                                Color(0, 0, 0, 0),
-                                Color(0, 255, 0, 0))
+    cell.string_value = '%+1.1f%%' % ((float(cell.value) - 1) * 100)
+    cell.color = self._GetColor(cell.value, Color(255, 0, 0, 0),
+                                Color(0, 0, 0, 0), Color(0, 255, 0, 0))
 
 
 class RatioFormat(Format):
@@ -656,11 +660,9 @@ class RatioFormat(Format):
   """
 
   def _ComputeFloat(self, cell):
-    cell.string_value = "%+1.1f%%" % ((cell.value - 1) * 100)
-    cell.color = self._GetColor(cell.value,
-                                Color(255, 0, 0, 0),
-                                Color(0, 0, 0, 0),
-                                Color(0, 255, 0, 0))
+    cell.string_value = '%+1.1f%%' % ((cell.value - 1) * 100)
+    cell.color = self._GetColor(cell.value, Color(255, 0, 0, 0),
+                                Color(0, 0, 0, 0), Color(0, 255, 0, 0))
 
 
 class ColorBoxFormat(Format):
@@ -674,11 +676,9 @@ class ColorBoxFormat(Format):
   """
 
   def _ComputeFloat(self, cell):
-    cell.string_value = "--"
-    bgcolor = self._GetColor(cell.value,
-                             Color(255, 0, 0, 0),
-                             Color(255, 255, 255, 0),
-                             Color(0, 255, 0, 0))
+    cell.string_value = '--'
+    bgcolor = self._GetColor(cell.value, Color(255, 0, 0, 0),
+                             Color(255, 255, 255, 0), Color(0, 255, 0, 0))
     cell.bgcolor = bgcolor
     cell.color = bgcolor
 
@@ -721,9 +721,9 @@ class Cell(object):
 
   def __str__(self):
     l = []
-    l.append("value: %s" % self.value)
-    l.append("string_value: %s" % self.string_value)
-    return " ".join(l)
+    l.append('value: %s' % self.value)
+    l.append('string_value: %s' % self.string_value)
+    return ' '.join(l)
 
 
 class Column(object):
@@ -734,7 +734,7 @@ class Column(object):
     fmt: an object of the Format class.
   """
 
-  def __init__(self, result, fmt, name=""):
+  def __init__(self, result, fmt, name=''):
     self.result = result
     self.fmt = fmt
     self.name = name
@@ -774,7 +774,7 @@ class TableFormatter(object):
 
     for row in self._table[1:]:
       # It does not make sense to put retval in the summary table.
-      if str(row[0]) == "retval" and table_type == "summary":
+      if str(row[0]) == 'retval' and table_type == 'summary':
         # Check to see if any runs passed, and update all_failed.
         all_failed = True
         for values in row[1:]:
@@ -811,17 +811,17 @@ class TableFormatter(object):
     # If this is a summary table, and the only row in it is 'retval', and
     # all the test runs failed, we need to a 'Results' row to the output
     # table.
-    if table_type == "summary" and all_failed and len(self._table) == 2:
+    if table_type == 'summary' and all_failed and len(self._table) == 2:
       labels_row = self._table[0]
       key = Cell()
-      key.string_value = "Results"
+      key.string_value = 'Results'
       out_row = [key]
       baseline = None
       for value in labels_row[1:]:
         for column in self._columns:
           cell = Cell()
           cell.name = key.string_value
-          column.result.Compute(cell, ["Fail"], baseline)
+          column.result.Compute(cell, ['Fail'], baseline)
           column.fmt.Compute(cell)
           out_row.append(cell)
           if not row_index:
@@ -832,7 +832,7 @@ class TableFormatter(object):
     """Generate Column name at the top of table."""
     key = Cell()
     key.header = True
-    key.string_value = "Keys"
+    key.string_value = 'Keys'
     header = [key]
     for column in self._table_columns:
       cell = Cell()
@@ -843,8 +843,8 @@ class TableFormatter(object):
         result_name = column.result.__class__.__name__
         format_name = column.fmt.__class__.__name__
 
-        cell.string_value = "%s %s" % (result_name.replace("Result", ""),
-                                       format_name.replace("Format", ""))
+        cell.string_value = '%s %s' % (result_name.replace('Result', ''),
+                                       format_name.replace('Format', ''))
 
       header.append(cell)
 
@@ -873,15 +873,15 @@ class TableFormatter(object):
   def AddLabelName(self):
     """Put label on the top of the table."""
     top_header = []
-    base_colspan = len([c for c in self._columns
-                        if not c.result.NeedsBaseline()])
+    base_colspan = len([c for c in self._columns if not c.result.NeedsBaseline()
+                       ])
     compare_colspan = len(self._columns)
     # Find the row with the key 'retval', if it exists.  This
     # will be used to calculate the number of iterations that passed and
     # failed for each image label.
     retval_row = None
     for row in self._table:
-      if row[0] == "retval":
+      if row[0] == 'retval':
         retval_row = row
     # The label is organized as follows
     # "keys" label_base, label_comparison1, label_comparison2
@@ -896,7 +896,7 @@ class TableFormatter(object):
         retval_values = retval_row[column_position]
         if type(retval_values) is list:
           passes, fails = self.GetPassesAndFails(retval_values)
-          cell.string_value = str(label) + "  (pass:%d fail:%d)" % (passes,
+          cell.string_value = str(label) + '  (pass:%d fail:%d)' % (passes,
                                                                     fails)
         else:
           cell.string_value = str(label)
@@ -911,11 +911,11 @@ class TableFormatter(object):
     self._out_table = [top_header] + self._out_table
 
   def _PrintOutTable(self):
-    o = ""
+    o = ''
     for row in self._out_table:
       for cell in row:
-        o += str(cell) + " "
-      o += "\n"
+        o += str(cell) + ' '
+      o += '\n'
     print o
 
   def GetCellTable(self, table_type, headers=True):
@@ -959,12 +959,12 @@ class TablePrinter(object):
       row_style = Cell()
       for cell in row:
         if cell.color_row:
-          assert cell.color, "Cell color not set but color_row set!"
-          assert not row_style.color, "Multiple row_style.colors found!"
+          assert cell.color, 'Cell color not set but color_row set!'
+          assert not row_style.color, 'Multiple row_style.colors found!'
           row_style.color = cell.color
         if cell.bgcolor_row:
-          assert cell.bgcolor, "Cell bgcolor not set but bgcolor_row set!"
-          assert not row_style.bgcolor, "Multiple row_style.bgcolors found!"
+          assert cell.bgcolor, 'Cell bgcolor not set but bgcolor_row set!'
+          assert not row_style.bgcolor, 'Multiple row_style.bgcolors found!'
           row_style.bgcolor = cell.bgcolor
       self._row_styles.append(row_style)
 
@@ -976,8 +976,7 @@ class TablePrinter(object):
       column_style = Cell()
       for row in self._table:
         if not any([cell.colspan != 1 for cell in row]):
-          column_style.width = max(column_style.width,
-                                   len(row[i].string_value))
+          column_style.width = max(column_style.width, len(row[i].string_value))
       self._column_styles.append(column_style)
 
   def _GetBGColorFix(self, color):
@@ -985,16 +984,15 @@ class TablePrinter(object):
       rgb = color.GetRGB()
       prefix, _ = colortrans.rgb2short(rgb)
       # pylint: disable=anomalous-backslash-in-string
-      prefix = "\033[48;5;%sm" % prefix
-      suffix = "\033[0m"
+      prefix = '\033[48;5;%sm' % prefix
+      suffix = '\033[0m'
     elif self._output_type in [self.EMAIL, self.HTML]:
       rgb = color.GetRGB()
-      prefix = ("<FONT style=\"BACKGROUND-COLOR:#{0}\">"
-                .format(rgb))
-      suffix = "</FONT>"
+      prefix = ("<FONT style=\"BACKGROUND-COLOR:#{0}\">".format(rgb))
+      suffix = '</FONT>'
     elif self._output_type in [self.PLAIN, self.TSV]:
-      prefix = ""
-      suffix = ""
+      prefix = ''
+      suffix = ''
     return prefix, suffix
 
   def _GetColorFix(self, color):
@@ -1002,15 +1000,15 @@ class TablePrinter(object):
       rgb = color.GetRGB()
       prefix, _ = colortrans.rgb2short(rgb)
       # pylint: disable=anomalous-backslash-in-string
-      prefix = "\033[38;5;%sm" % prefix
-      suffix = "\033[0m"
+      prefix = '\033[38;5;%sm' % prefix
+      suffix = '\033[0m'
     elif self._output_type in [self.EMAIL, self.HTML]:
       rgb = color.GetRGB()
-      prefix = "<FONT COLOR=#{0}>".format(rgb)
-      suffix = "</FONT>"
+      prefix = '<FONT COLOR=#{0}>'.format(rgb)
+      suffix = '</FONT>'
     elif self._output_type in [self.PLAIN, self.TSV]:
-      prefix = ""
-      suffix = ""
+      prefix = ''
+      suffix = ''
     return prefix, suffix
 
   def Print(self):
@@ -1029,11 +1027,11 @@ class TablePrinter(object):
 
     if cell.color:
       p, s = self._GetColorFix(cell.color)
-      out = "%s%s%s" % (p, out, s)
+      out = '%s%s%s' % (p, out, s)
 
     if cell.bgcolor:
       p, s = self._GetBGColorFix(cell.bgcolor)
-      out = "%s%s%s" % (p, out, s)
+      out = '%s%s%s' % (p, out, s)
 
     if self._output_type in [self.PLAIN, self.CONSOLE, self.EMAIL]:
       if cell.width:
@@ -1051,51 +1049,51 @@ class TablePrinter(object):
         for k in range(cell.colspan):
           width += self._column_styles[start + k].width
       if width > raw_width:
-        padding = ("%" + str(width - raw_width) + "s") % ""
+        padding = ('%' + str(width - raw_width) + 's') % ''
         out = padding + out
 
     if self._output_type == self.HTML:
       if cell.header:
-        tag = "th"
+        tag = 'th'
       else:
-        tag = "td"
+        tag = 'td'
       out = "<{0} colspan = \"{2}\"> {1} </{0}>".format(tag, out, cell.colspan)
 
     return out
 
   def _GetHorizontalSeparator(self):
     if self._output_type in [self.CONSOLE, self.PLAIN, self.EMAIL]:
-      return " "
+      return ' '
     if self._output_type == self.HTML:
-      return ""
+      return ''
     if self._output_type == self.TSV:
-      return "\t"
+      return '\t'
 
   def _GetVerticalSeparator(self):
     if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV, self.EMAIL]:
-      return "\n"
+      return '\n'
     if self._output_type == self.HTML:
-      return "</tr>\n<tr>"
+      return '</tr>\n<tr>'
 
   def _GetPrefix(self):
     if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV, self.EMAIL]:
-      return ""
+      return ''
     if self._output_type == self.HTML:
       return "<p></p><table id=\"box-table-a\">\n<tr>"
 
   def _GetSuffix(self):
     if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV, self.EMAIL]:
-      return ""
+      return ''
     if self._output_type == self.HTML:
-      return "</tr>\n</table>"
+      return '</tr>\n</table>'
 
   def _GetStringValue(self):
-    o = ""
+    o = ''
     o += self._GetPrefix()
     for i in range(len(self._table)):
       row = self._table[i]
       # Apply row color and bgcolor.
-      p = s = bgp = bgs = ""
+      p = s = bgp = bgs = ''
       if self._row_styles[i].bgcolor:
         bgp, bgs = self._GetBGColorFix(self._row_styles[i].bgcolor)
       if self._row_styles[i].color:
@@ -1129,13 +1127,10 @@ def GetSimpleTable(table, out_to=TablePrinter.CONSOLE):
     will produce a colored table that can be printed to the console.
   """
   columns = [
-      Column(AmeanResult(),
-             Format()),
-      Column(AmeanRatioResult(),
-             PercentFormat()),
-      Column(AmeanRatioResult(),
-             ColorBoxFormat()),
-      ]
+      Column(AmeanResult(), Format()),
+      Column(AmeanRatioResult(), PercentFormat()),
+      Column(AmeanRatioResult(), ColorBoxFormat()),
+  ]
   our_table = [table[0]]
   for row in table[1:]:
     our_row = [row[0]]
@@ -1166,61 +1161,68 @@ def GetComplexTable(runs, labels, out_to=TablePrinter.CONSOLE):
   """
   tg = TableGenerator(runs, labels, TableGenerator.SORT_BY_VALUES_DESC)
   table = tg.GetTable()
-  columns = [Column(LiteralResult(),
-                    Format(),
-                    "Literal"),
-             Column(AmeanResult(),
-                    Format()),
-             Column(StdResult(),
-                    Format()),
-             Column(CoeffVarResult(),
-                    CoeffVarFormat()),
-             Column(NonEmptyCountResult(),
-                    Format()),
-             Column(AmeanRatioResult(),
-                    PercentFormat()),
-             Column(AmeanRatioResult(),
-                    RatioFormat()),
-             Column(GmeanRatioResult(),
-                    RatioFormat()),
-             Column(PValueResult(),
-                    PValueFormat()),
-            ]
+  columns = [Column(LiteralResult(), Format(), 'Literal'),
+             Column(AmeanResult(), Format()),
+             Column(StdResult(), Format()),
+             Column(CoeffVarResult(), CoeffVarFormat()),
+             Column(NonEmptyCountResult(), Format()),
+             Column(AmeanRatioResult(), PercentFormat()),
+             Column(AmeanRatioResult(), RatioFormat()),
+             Column(GmeanRatioResult(), RatioFormat()),
+             Column(PValueResult(), PValueFormat())]
   tf = TableFormatter(table, columns)
   cell_table = tf.GetCellTable()
   tp = TablePrinter(cell_table, out_to)
   return tp.Print()
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
   # Run a few small tests here.
-  runs = [[{"k1": "10", "k2": "12", "k5": "40", "k6": "40",
-            "ms_1": "20", "k7": "FAIL", "k8": "PASS", "k9": "PASS",
-            "k10": "0"},
-           {"k1": "13", "k2": "14", "k3": "15", "ms_1": "10", "k8": "PASS",
-            "k9": "FAIL", "k10": "0"}],
-          [{"k1": "50", "k2": "51", "k3": "52", "k4": "53", "k5": "35", "k6":
-            "45", "ms_1": "200", "ms_2": "20", "k7": "FAIL", "k8": "PASS", "k9":
-            "PASS"}]]
-  labels = ["vanilla", "modified"]
+  runs = [[{'k1': '10',
+            'k2': '12',
+            'k5': '40',
+            'k6': '40',
+            'ms_1': '20',
+            'k7': 'FAIL',
+            'k8': 'PASS',
+            'k9': 'PASS',
+            'k10': '0'}, {'k1': '13',
+                          'k2': '14',
+                          'k3': '15',
+                          'ms_1': '10',
+                          'k8': 'PASS',
+                          'k9': 'FAIL',
+                          'k10': '0'}], [{'k1': '50',
+                                          'k2': '51',
+                                          'k3': '52',
+                                          'k4': '53',
+                                          'k5': '35',
+                                          'k6': '45',
+                                          'ms_1': '200',
+                                          'ms_2': '20',
+                                          'k7': 'FAIL',
+                                          'k8': 'PASS',
+                                          'k9': 'PASS'}]]
+  labels = ['vanilla', 'modified']
   t = GetComplexTable(runs, labels, TablePrinter.CONSOLE)
   print t
   email = GetComplexTable(runs, labels, TablePrinter.EMAIL)
 
-  runs = [[{"k1": "1"}, {"k1": "1.1"}, {"k1": "1.2"}],
-          [{"k1": "5"}, {"k1": "5.1"}, {"k1": "5.2"}]]
+  runs = [[{'k1': '1'}, {'k1': '1.1'}, {'k1': '1.2'}],
+          [{'k1': '5'}, {'k1': '5.1'}, {'k1': '5.2'}]]
   t = GetComplexTable(runs, labels, TablePrinter.CONSOLE)
   print t
 
   simple_table = [
-      ["binary", "b1", "b2", "b3"],
-      ["size", 100, 105, 108],
-      ["rodata", 100, 80, 70],
-      ["data", 100, 100, 100],
-      ["debug", 100, 140, 60],
-      ]
+      ['binary', 'b1', 'b2', 'b3'],
+      ['size', 100, 105, 108],
+      ['rodata', 100, 80, 70],
+      ['data', 100, 100, 100],
+      ['debug', 100, 140, 60],
+  ]
   t = GetSimpleTable(simple_table)
   print t
   email += GetSimpleTable(simple_table, TablePrinter.HTML)
   email_to = [getpass.getuser()]
   email = "<pre style='font-size: 13px'>%s</pre>" % email
-  EmailSender().SendEmail(email_to, "SimpleTableTest", email, msg_type="html")
+  EmailSender().SendEmail(email_to, 'SimpleTableTest', email, msg_type='html')

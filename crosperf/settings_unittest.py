@@ -1,7 +1,6 @@
 #!/usr/bin/python2
 #
 # Copyright 2014 Google Inc.  All Rights Reserved.
-
 """unittest for settings."""
 
 from __future__ import print_function
@@ -18,6 +17,7 @@ import download_images
 
 from cros_utils import logger
 
+
 class TestSettings(unittest.TestCase):
   """setting test class."""
 
@@ -29,38 +29,42 @@ class TestSettings(unittest.TestCase):
     self.assertEqual(self.settings.settings_type, 'global')
     self.assertIsNone(self.settings.parent)
 
-
   def test_set_parent_settings(self):
     self.assertIsNone(self.settings.parent)
-    settings_parent = {'fake_parent_entry' : 0}
+    settings_parent = {'fake_parent_entry': 0}
     self.settings.SetParentSettings(settings_parent)
     self.assertIsNotNone(self.settings.parent)
     self.assertEqual(type(self.settings.parent), dict)
     self.assertEqual(self.settings.parent, settings_parent)
 
-
   def test_add_field(self):
     self.assertEqual(self.settings.fields, {})
-    self.settings.AddField(IntegerField("iterations", default=1, required=False,
-                                        description="Number of iterations to "
-                                                    "run the test."))
+    self.settings.AddField(IntegerField('iterations',
+                                        default=1,
+                                        required=False,
+                                        description='Number of iterations to '
+                                        'run the test.'))
     self.assertEqual(len(self.settings.fields), 1)
     # Adding the same field twice raises an exception.
-    self.assertRaises(Exception, self.settings.AddField,
-                      (IntegerField("iterations", default=1, required=False,
-                                    description="Number of iterations to run "
-                                    "the test.")))
+    self.assertRaises(Exception,
+                      self.settings.AddField,
+                      (IntegerField('iterations',
+                                    default=1,
+                                    required=False,
+                                    description='Number of iterations to run '
+                                    'the test.')))
     res = self.settings.fields['iterations']
     self.assertIsInstance(res, IntegerField)
     self.assertEqual(res.Get(), 1)
 
-
   def test_set_field(self):
     self.assertEqual(self.settings.fields, {})
-    self.settings.AddField(IntegerField(
-        "iterations", default=1, required=False,
-        description="Number of iterations to run the "
-        "test."))
+    self.settings.AddField(
+        IntegerField('iterations',
+                     default=1,
+                     required=False,
+                     description='Number of iterations to run the '
+                     'test.'))
     res = self.settings.fields['iterations']
     self.assertEqual(res.Get(), 1)
 
@@ -69,13 +73,15 @@ class TestSettings(unittest.TestCase):
     self.assertEqual(res.Get(), 10)
 
     # Setting a field that's not there raises an exception.
-    self.assertRaises(Exception, self.settings.SetField,
-                      'remote', 'lumpy1.cros')
+    self.assertRaises(Exception, self.settings.SetField, 'remote',
+                      'lumpy1.cros')
 
-    self.settings.AddField(ListField("remote", default=[], description=
-                                     "A comma-separated list of ip's of "
-                                     "chromeos devices to run "
-                                     "experiments on."))
+    self.settings.AddField(
+        ListField('remote',
+                  default=[],
+                  description="A comma-separated list of ip's of "
+                  'chromeos devices to run '
+                  'experiments on.'))
     self.assertEqual(type(self.settings.fields), dict)
     self.assertEqual(len(self.settings.fields), 2)
     res = self.settings.fields['remote']
@@ -85,15 +91,15 @@ class TestSettings(unittest.TestCase):
     res = self.settings.fields['remote']
     self.assertEqual(res.Get(), ['lumpy1.cros', 'lumpy2.cros'])
 
-
   def test_get_field(self):
     # Getting a field that's not there raises an exception.
     self.assertRaises(Exception, self.settings.GetField, 'iterations')
 
     # Getting a required field that hasn't been assigned raises an exception.
-    self.settings.AddField(IntegerField("iterations", required=True,
-                                        description="Number of iterations to "
-                                        "run the test."))
+    self.settings.AddField(IntegerField('iterations',
+                                        required=True,
+                                        description='Number of iterations to '
+                                        'run the test.'))
     self.assertIsNotNone(self.settings.fields['iterations'])
     self.assertRaises(Exception, self.settings.GetField, 'iterations')
 
@@ -101,7 +107,6 @@ class TestSettings(unittest.TestCase):
     self.settings.SetField('iterations', 5)
     res = self.settings.GetField('iterations')
     self.assertEqual(res, 5)
-
 
   def test_inherit(self):
     parent_settings = settings_factory.SettingsFactory().GetSettings('global',
@@ -119,13 +124,12 @@ class TestSettings(unittest.TestCase):
     label_settings.Inherit()
     self.assertEqual(label_settings.GetField('chromeos_root'), '/tmp/chromeos')
 
-
   def test_override(self):
-    self.settings.AddField(ListField("email", default=[],
-                                     description="Space-seperated"
-                                     "list of email addresses to send "
-                                     "email to."))
-
+    self.settings.AddField(ListField('email',
+                                     default=[],
+                                     description='Space-seperated'
+                                     'list of email addresses to send '
+                                     'email to.'))
 
     global_settings = settings_factory.SettingsFactory().GetSettings('global',
                                                                      'global')
@@ -140,20 +144,23 @@ class TestSettings(unittest.TestCase):
     res = self.settings.GetField('email')
     self.assertEqual(res, ['john.doe@google.com', 'jane.smith@google.com'])
 
-
   def test_validate(self):
 
-    self.settings.AddField(IntegerField("iterations", required=True,
-                                        description="Number of iterations "
-                                        "to run the test."))
-    self.settings.AddField(ListField("remote", default=[], required=True,
-                                     description="A comma-separated list "
+    self.settings.AddField(IntegerField('iterations',
+                                        required=True,
+                                        description='Number of iterations '
+                                        'to run the test.'))
+    self.settings.AddField(ListField('remote',
+                                     default=[],
+                                     required=True,
+                                     description='A comma-separated list '
                                      "of ip's of chromeos "
-                                     "devices to run experiments on."))
-    self.settings.AddField(ListField("email", default=[],
-                                     description="Space-seperated"
-                                     "list of email addresses to "
-                                     "send email to."))
+                                     'devices to run experiments on.'))
+    self.settings.AddField(ListField('email',
+                                     default=[],
+                                     description='Space-seperated'
+                                     'list of email addresses to '
+                                     'send email to.'))
 
     # 'required' fields have not been assigned; should raise an exception.
     self.assertRaises(Exception, self.settings.Validate)
@@ -166,7 +173,6 @@ class TestSettings(unittest.TestCase):
   @mock.patch.object(download_images.ImageDownloader, 'Run')
   @mock.patch.object(download_images, 'ImageDownloader')
   def test_get_xbuddy_path(self, mock_downloader, mock_run, mock_logger):
-
 
     mock_run.return_value = [0, 'fake_xbuddy_translation']
     mock_downloader.Run = mock_run
@@ -182,23 +188,21 @@ class TestSettings(unittest.TestCase):
     self.assertEqual(mock_run.call_count, 1)
     self.assertEqual(mock_run.call_args_list[0][0],
                      ('/tmp/chromeos',
-                      'remote/trybot-lumpy-paladin/R34-5417.0.0-b1506',))
-
+                      'remote/trybot-lumpy-paladin/R34-5417.0.0-b1506'))
 
     mock_run.reset_mock()
     self.settings.GetXbuddyPath(official_str, board, chromeos_root, log_level)
     self.assertEqual(mock_run.call_count, 1)
     self.assertEqual(mock_run.call_args_list[0][0],
                      ('/tmp/chromeos',
-                      'remote/lumpy-release/R34-5417.0.0',))
-
+                      'remote/lumpy-release/R34-5417.0.0'))
 
     mock_run.reset_mock()
     self.settings.GetXbuddyPath(xbuddy_str, board, chromeos_root, log_level)
     self.assertEqual(mock_run.call_count, 1)
     self.assertEqual(mock_run.call_args_list[0][0],
                      ('/tmp/chromeos',
-                      'remote/lumpy/latest-dev',))
+                      'remote/lumpy/latest-dev'))
 
     mock_run.return_value = [1, 'fake_xbuddy_translation']
     self.assertRaises(Exception, self.settings.GetXbuddyPath, xbuddy_str, board,
@@ -206,5 +210,6 @@ class TestSettings(unittest.TestCase):
     if mock_logger:
       return
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
   unittest.main()

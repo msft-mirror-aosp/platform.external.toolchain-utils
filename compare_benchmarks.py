@@ -1,7 +1,6 @@
 #!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
-
 """Script to compare ChromeOS benchmarks
 
 Inputs:
@@ -15,7 +14,7 @@ the results and presents it, along with a geometric mean.
 
 """
 
-__author__ = "bjanakiraman@google.com (Bhaskar Janakiraman)"
+__author__ = 'bjanakiraman@google.com (Bhaskar Janakiraman)'
 
 import glob
 import math
@@ -29,15 +28,14 @@ import run_tests
 from utils import command_executer
 from utils import logger
 
-BENCHDIRS = "%s/default/default/*/gcc-4.4.3-glibc-2.11.1-grte-k8-opt/ref/*/results.txt"
-
+BENCHDIRS = '%s/default/default/*/gcc-4.4.3-glibc-2.11.1-grte-k8-opt/ref/*/results.txt'
 
 # Common initializations
 cmd_executer = command_executer.GetCommandExecuter()
 
 
 def Usage(parser, message):
-  print "ERROR: " + message
+  print 'ERROR: ' + message
   parser.print_help()
   sys.exit(0)
 
@@ -55,13 +53,14 @@ def GetStats(file):
     if not m:
       continue
     metric = m.group(1)
-    if re.match(r"isolated_walltime", metric):
+    if re.match(r'isolated_walltime', metric):
       continue
 
     value = float(m.group(2))
     pairs.append((metric, value))
 
   return dict(pairs)
+
 
 def PrintDash(n):
   tmpstr = ''
@@ -85,25 +84,29 @@ def PrintHeader(hdr):
 
   tmpstr = ''
   for i in range(len(hdr)):
-    tmpstr += "%15.15s" % hdr[i]
+    tmpstr += '%15.15s' % hdr[i]
 
   print tmpstr
   PrintDash(tot_len * 15)
+
 
 def Main(argv):
   """Compare Benchmarks."""
   # Common initializations
 
   parser = optparse.OptionParser()
-  parser.add_option("-c", "--csv", dest="csv_output",
-                    action="store_true", default=False,
-                    help="Output in csv form.")
+  parser.add_option('-c',
+                    '--csv',
+                    dest='csv_output',
+                    action='store_true',
+                    default=False,
+                    help='Output in csv form.')
 
   (options, args) = parser.parse_args(argv[1:])
 
   # validate args
   if len(args) != 2:
-    Usage(parser, "Needs <baseline output dir> <results output dir>")
+    Usage(parser, 'Needs <baseline output dir> <results output dir>')
 
   base_dir = args[0]
   res_dir = args[1]
@@ -128,7 +131,7 @@ def Main(argv):
     # benchname (remove results.txt), basetime, restime, %speed-up
     hdr = []
     benchname = re.split('/', resfile)[-2:-1][0]
-    benchname = benchname.replace('chromeos__', '',1)
+    benchname = benchname.replace('chromeos__', '', 1)
     hdr.append(benchname)
     hdr.append('basetime')
     hdr.append('restime')
@@ -143,28 +146,29 @@ def Main(argv):
     count = 0
     for key in stats.keys():
       if key in basestats.keys():
-        # ignore very small values. 
+        # ignore very small values.
         if stats[key] < 0.01:
           continue
         count = count + 1
-        prod = prod * (stats[key]/basestats[key])
-        speedup = (basestats[key] - stats[key])/basestats[key]
+        prod = prod * (stats[key] / basestats[key])
+        speedup = (basestats[key] - stats[key]) / basestats[key]
         speedup = speedup * 100.0
         if options.csv_output:
-          print "%s,%f,%f,%f" % (key, basestats[key], stats[key],speedup)
+          print '%s,%f,%f,%f' % (key, basestats[key], stats[key], speedup)
         else:
-          print "%15.15s%15.2f%15.2f%14.2f%%" % (key, basestats[key], stats[key],speedup)
+          print '%15.15s%15.2f%15.2f%14.2f%%' % (key, basestats[key],
+                                                 stats[key], speedup)
 
-    prod = math.exp(1.0/count * math.log(prod))
+    prod = math.exp(1.0 / count * math.log(prod))
     prod = (1.0 - prod) * 100
     if options.csv_output:
-      print "%s,,,%f" % ('Geomean', prod)
+      print '%s,,,%f' % ('Geomean', prod)
     else:
-      print "%15.15s%15.15s%15.15s%14.2f%%" % ('Geomean', '', '',  prod)
+      print '%15.15s%15.15s%15.15s%14.2f%%' % ('Geomean', '', '', prod)
       print
   return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   retval = Main(sys.argv)
   sys.exit(retval)

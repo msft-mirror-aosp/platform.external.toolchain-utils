@@ -2,7 +2,7 @@
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 
-__author__ = "asharif@google.com (Ahmad Sharif)"
+__author__ = 'asharif@google.com (Ahmad Sharif)'
 
 import unittest
 from automation.common import machine
@@ -18,15 +18,15 @@ class MachineManagerTest(unittest.TestCase):
     print self.machine_manager
 
   def testGetLinuxBox(self):
-    mach_spec_list = [machine.MachineSpecification(os="linux")]
+    mach_spec_list = [machine.MachineSpecification(os='linux')]
     machines = self.machine_manager.GetMachines(mach_spec_list)
     self.assertTrue(machines)
 
   def testGetChromeOSBox(self):
-    mach_spec_list = [machine.MachineSpecification(os="chromeos")]
+    mach_spec_list = [machine.MachineSpecification(os='chromeos')]
     machines = self.machine_manager.GetMachines(mach_spec_list)
     self.assertTrue(machines)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   unittest.main()

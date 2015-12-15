@@ -1,8 +1,10 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
-
 """Module to sort the results."""
+
+
 class ResultSorter(object):
   """Class to sort the results."""
+
   def __init__(self, benchmark_runs):
     self.table = {}
     for benchmark_run in benchmark_runs:

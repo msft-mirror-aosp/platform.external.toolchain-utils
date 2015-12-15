@@ -1,7 +1,6 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Task unittest.
 
 Part of the Chrome build flags optimization.
@@ -169,6 +168,7 @@ class TaskTest(unittest.TestCase):
       work_task.SetResult(task.TEST_STAGE, random.randint(0, RANDOM_TESTRESULT))
       assert work_task.Done(task.TEST_STAGE)
       assert work_task.Done(task.BUILD_STAGE)
+
 
 if __name__ == '__main__':
   unittest.main()

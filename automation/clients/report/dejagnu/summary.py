@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Copyright 2011 Google Inc. All Rights Reserved.
 # Author: kbaclawski@google.com (Krystian Baclawski)
 #
@@ -60,7 +58,8 @@ class DejaGnuTestResult(namedtuple('Result', 'name variant result flaky')):
           # remove include paths - they contain name of tmp directory
           ('-I\S+', ''),
           # compress white spaces
-          ('\s+', ' ')]
+          ('\s+', ' ')
+      ]
 
       for pattern, replacement in substitutions:
         variant = re.sub(pattern, replacement, variant)
@@ -168,12 +167,11 @@ class DejaGnuTestRun(object):
     with open(filename, 'r') as report:
       lines = [line.strip() for line in report.readlines() if line.strip()]
 
-    parsers = (
-        (re.compile(r'Running target (.*)'), self._ParseBoard),
-        (re.compile(r'Test Run By (.*) on (.*)'), self._ParseDate),
-        (re.compile(r'=== (.*) tests ==='), self._ParseTool),
-        (re.compile(r'Target(\s+)is (.*)'), self._ParseTarget),
-        (re.compile(r'Host(\s+)is (.*)'), self._ParseHost))
+    parsers = ((re.compile(r'Running target (.*)'), self._ParseBoard),
+               (re.compile(r'Test Run By (.*) on (.*)'), self._ParseDate),
+               (re.compile(r'=== (.*) tests ==='), self._ParseTool),
+               (re.compile(r'Target(\s+)is (.*)'), self._ParseTarget),
+               (re.compile(r'Host(\s+)is (.*)'), self._ParseHost))
 
     for line in lines:
       result = DejaGnuTestResult.FromLine(line)
@@ -219,8 +217,7 @@ class DejaGnuTestRun(object):
 
       # Remove all UNRESOLVED results that were also marked as UNSUPPORTED.
       unresolved = [res._replace(result='UNRESOLVED')
-                    for res in results
-                    if res.result == 'UNSUPPORTED']
+                    for res in results if res.result == 'UNSUPPORTED']
 
       for res in unresolved:
         if res in self.results:
@@ -257,8 +254,8 @@ class DejaGnuTestRun(object):
       self.results.add(result._replace(result=new_result))
 
     for result in sorted(manifest_results):
-      logging.warning(
-          'Result {%s} listed in manifest but not suppressed.', result)
+      logging.warning('Result {%s} listed in manifest but not suppressed.',
+                      result)
 
   def __str__(self):
     return '{0}, {1} @{2} on {3}'.format(self.target, self.tool, self.board,

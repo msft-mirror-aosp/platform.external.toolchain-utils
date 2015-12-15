@@ -38,7 +38,7 @@ class Server(object):
 
   def ExecuteJobGroup(self, job_group, dry_run=False):
     job_group = pickle.loads(job_group)
-    self._logger.info("Received ExecuteJobGroup(%r, dry_run=%s) request.",
+    self._logger.info('Received ExecuteJobGroup(%r, dry_run=%s) request.',
                       job_group, dry_run)
 
     for job in job_group.jobs:
@@ -46,25 +46,25 @@ class Server(object):
     return self.job_group_manager.AddJobGroup(job_group)
 
   def GetAllJobGroups(self):
-    self._logger.info("Received GetAllJobGroups() request.")
+    self._logger.info('Received GetAllJobGroups() request.')
     return pickle.dumps(self.job_group_manager.GetAllJobGroups())
 
   def KillJobGroup(self, job_group_id):
-    self._logger.info("Received KillJobGroup(%d) request.", job_group_id)
+    self._logger.info('Received KillJobGroup(%d) request.', job_group_id)
     self.job_group_manager.KillJobGroup(pickle.loads(job_group_id))
 
   def GetJobGroup(self, job_group_id):
-    self._logger.info("Received GetJobGroup(%d) request.", job_group_id)
+    self._logger.info('Received GetJobGroup(%d) request.', job_group_id)
 
     return pickle.dumps(self.job_group_manager.GetJobGroup(job_group_id))
 
   def GetJob(self, job_id):
-    self._logger.info("Received GetJob(%d) request.", job_id)
+    self._logger.info('Received GetJob(%d) request.', job_id)
 
     return pickle.dumps(self.job_manager.GetJob(job_id))
 
   def GetMachineList(self):
-    self._logger.info("Received GetMachineList() request.")
+    self._logger.info('Received GetMachineList() request.')
 
     return pickle.dumps(self.job_manager.machine_manager.GetMachineList())
 
@@ -79,18 +79,18 @@ class Server(object):
 def GetServerOptions():
   """Get server's settings from command line options."""
   parser = optparse.OptionParser()
-  parser.add_option("-m",
-                    "--machines-file",
-                    dest="machines_file",
-                    help="The location of the file "
-                    "containing the machines database",
+  parser.add_option('-m',
+                    '--machines-file',
+                    dest='machines_file',
+                    help='The location of the file '
+                    'containing the machines database',
                     default=machine_manager.DEFAULT_MACHINES_FILE)
-  parser.add_option("-n",
-                    "--dry-run",
-                    dest="dry_run",
-                    help="Start the server in dry-run mode, where jobs will "
-                    "not actually be executed.",
-                    action="store_true",
+  parser.add_option('-n',
+                    '--dry-run',
+                    dest='dry_run',
+                    help='Start the server in dry-run mode, where jobs will '
+                    'not actually be executed.',
+                    action='store_true',
                     default=False)
   return parser.parse_args()[0]
 
@@ -110,7 +110,9 @@ def Main():
 
   try:
     xmlserver = SimpleXMLRPCServer(
-        ("localhost", 8000), allow_none=True, logRequests=False)
+        ('localhost', 8000),
+        allow_none=True,
+        logRequests=False)
     xmlserver.register_instance(server)
     xmlserver.serve_forever()
   except Exception as ex:
@@ -119,5 +121,5 @@ def Main():
     sys.exit(1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   Main()

@@ -41,19 +41,19 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 
 class FileEntry(db.Model):
-  profile_data = db.BlobProperty()                # The profile data
-  date = db.DateTimeProperty(auto_now_add=True)   # Date it was uploaded
-  data_md5 = db.ByteStringProperty()              # md5 of the profile data
-  board = db.StringProperty()                     # board arch
-  chromeos_version = db.StringProperty()          # ChromeOS version
+  profile_data = db.BlobProperty()  # The profile data
+  date = db.DateTimeProperty(auto_now_add=True)  # Date it was uploaded
+  data_md5 = db.ByteStringProperty()  # md5 of the profile data
+  board = db.StringProperty()  # board arch
+  chromeos_version = db.StringProperty()  # ChromeOS version
 
 
 class MainPage(webapp.RequestHandler):
   """Main page only used as the form template, not actually displayed."""
 
-  def get(self, response=""):  # pylint: disable-msg=C6409
+  def get(self, response=''):  # pylint: disable-msg=C6409
     if response:
-      self.response.out.write("<html><body>")
+      self.response.out.write('<html><body>')
       self.response.out.write("""<br>
         <form action="/upload" enctype="multipart/form-data" method="post">
           <div><label>Profile Data:</label></div>
@@ -74,11 +74,11 @@ class Upload(webapp.RequestHandler):
   def post(self):  # pylint: disable-msg=C6409
     """Takes input based on the main page's form."""
     getfile = FileEntry()
-    f1 = self.request.get("profile_data")
+    f1 = self.request.get('profile_data')
     getfile.profile_data = db.Blob(f1)
     getfile.data_md5 = md5.new(f1).hexdigest()
-    getfile.board = self.request.get("board")
-    getfile.chromeos_version = self.request.get("chromeos_version")
+    getfile.board = self.request.get('board')
+    getfile.chromeos_version = self.request.get('chromeos_version')
     getfile.put()
     self.response.out.write(getfile.key())
     #self.redirect('/')
@@ -101,15 +101,15 @@ class ListAll(webapp.RequestHandler):
   def get(self):  # pylint: disable-msg=C6409
     """Displays all information in FileEntry, ~ delimited."""
     if Authenticate(self):
-      query_str = "SELECT * FROM FileEntry ORDER BY date ASC"
+      query_str = 'SELECT * FROM FileEntry ORDER BY date ASC'
       query = db.GqlQuery(query_str)
-      delimiter = "~"
+      delimiter = '~'
 
       for item in query:
-        display_list = [item.key(), item.date, item.data_md5,
-                        item.board, item.chromeos_version]
+        display_list = [item.key(), item.date, item.data_md5, item.board,
+                        item.chromeos_version]
         str_list = [cgi.escape(str(i)) for i in display_list]
-        self.response.out.write(delimiter.join(str_list)+"</br>")
+        self.response.out.write(delimiter.join(str_list) + '</br>')
 
 
 class DelEntries(webapp.RequestHandler):
@@ -129,24 +129,25 @@ def Authenticate(webpage):
   user = users.get_current_user()
   if user is None:
     webpage.redirect(users.create_login_url(webpage.request.uri))
-  elif user.email().endswith("@google.com"):
+  elif user.email().endswith('@google.com'):
     return True
   else:
-    webpage.response.out.write("Not Authenticated")
+    webpage.response.out.write('Not Authenticated')
     return False
 
 
 def main():
-  application = webapp.WSGIApplication([
-      ("/", MainPage),
-      ("/upload", Upload),
-      ("/serve/([^/]+)?", ServeHandler),
-      ("/serve", ListAll),
-      ("/del/([^/]+)?", DelEntries),
-  ], debug=False)
+  application = webapp.WSGIApplication(
+      [
+          ('/', MainPage),
+          ('/upload', Upload),
+          ('/serve/([^/]+)?', ServeHandler),
+          ('/serve', ListAll),
+          ('/del/([^/]+)?', DelEntries),
+      ],
+      debug=False)
   run_wsgi_app(application)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   main()
-

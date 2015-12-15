@@ -43,8 +43,8 @@ class CrosstoolNightlyClient(object):
     all_jobs = [checkout_crosstool_job]
 
     # Build crosstool target
-    build_release_job, build_tree_dir = factory.BuildRelease(
-        checkout_dir, self._target)
+    build_release_job, build_tree_dir = factory.BuildRelease(checkout_dir,
+                                                             self._target)
     all_jobs.append(build_release_job)
 
     testruns = []
@@ -52,8 +52,8 @@ class CrosstoolNightlyClient(object):
     # Perform crosstool tests
     for board in self._boards:
       for component in ('gcc', 'binutils'):
-        test_job, testrun_dir = factory.RunTests(
-            checkout_dir, build_tree_dir, self._target, board, component)
+        test_job, testrun_dir = factory.RunTests(checkout_dir, build_tree_dir,
+                                                 self._target, board, component)
         all_jobs.append(test_job)
         testruns.append(testrun_dir)
 
@@ -61,8 +61,8 @@ class CrosstoolNightlyClient(object):
       all_jobs.append(factory.GenerateReport(testruns, manifests_dir,
                                              self._target, self._boards))
 
-    return job_group.JobGroup(
-        'Crosstool Nightly Build (%s)' % self._target, all_jobs, True, False)
+    return job_group.JobGroup('Crosstool Nightly Build (%s)' % self._target,
+                              all_jobs, True, False)
 
 
 @logger.HandleUncaughtExceptions
@@ -70,14 +70,14 @@ def Main(argv):
   valid_boards_string = ', '.join(CrosstoolNightlyClient.VALID_BOARDS)
 
   parser = optparse.OptionParser()
-  parser.add_option('-b',
-                    '--board',
-                    dest='boards',
-                    action='append',
-                    choices=CrosstoolNightlyClient.VALID_BOARDS,
-                    default=[],
-                    help=('Run DejaGNU tests on selected boards: %s.' %
-                          valid_boards_string))
+  parser.add_option(
+      '-b',
+      '--board',
+      dest='boards',
+      action='append',
+      choices=CrosstoolNightlyClient.VALID_BOARDS,
+      default=[],
+      help=('Run DejaGNU tests on selected boards: %s.' % valid_boards_string))
   options, args = parser.parse_args(argv)
 
   if len(args) == 2:
@@ -86,7 +86,7 @@ def Main(argv):
     logging.error('Exactly one target required as a command line argument!')
     logging.info('List of valid targets:')
     for pair in enumerate(CrosstoolNightlyClient.VALID_TARGETS, start=1):
-      logging.info('%d) %s' % pair)
+      logging.info('%d) %s', pair)
     sys.exit(1)
 
   option_list = [opt.dest for opt in parser.option_list if opt.dest]

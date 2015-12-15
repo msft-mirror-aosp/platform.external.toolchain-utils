@@ -1,4 +1,3 @@
-#!/usr/bin/python
 
 # Copyright 2011 Google Inc. All Rights Reserved.
 
@@ -24,30 +23,28 @@ class FileUtils(object):
         cls._instance = super(FileUtils, cls).__new__(MockFileUtils, *args,
                                                       **kwargs)
       else:
-        cls._instance = super(FileUtils, cls).__new__(cls, *args,
-                                                      **kwargs)
+        cls._instance = super(FileUtils, cls).__new__(cls, *args, **kwargs)
     return cls._instance
 
-  def Md5File(self, filename, log_level="verbose", block_size=2 ** 10):
-    command = "md5sum %s" % filename
+  def Md5File(self, filename, log_level='verbose', block_size=2**10):
+    command = 'md5sum %s' % filename
     ce = command_executer.GetCommandExecuter(log_level=log_level)
     ret, out, err = ce.RunCommandWOutput(command)
     if ret:
-      raise Exception("Could not run md5sum on: %s" % filename)
+      raise Exception('Could not run md5sum on: %s' % filename)
 
     return out.strip().split()[0]
 
   def CanonicalizeChromeOSRoot(self, chromeos_root):
     chromeos_root = os.path.expanduser(chromeos_root)
-    if os.path.isdir(os.path.join(chromeos_root,
-                                  "chromite")):
+    if os.path.isdir(os.path.join(chromeos_root, 'chromite')):
       return chromeos_root
     else:
       return None
 
   def ChromeOSRootFromImage(self, chromeos_image):
-    chromeos_root = os.path.join(os.path.dirname(chromeos_image),
-                                 "../../../../..")
+    chromeos_root = os.path.join(
+        os.path.dirname(chromeos_image), '../../../../..')
     return self.CanonicalizeChromeOSRoot(chromeos_root)
 
   def MkDirP(self, path):
@@ -63,21 +60,21 @@ class FileUtils(object):
     shutil.rmtree(path, ignore_errors=True)
 
   def WriteFile(self, path, contents):
-    with open(path, "wb") as f:
+    with open(path, 'wb') as f:
       f.write(contents)
 
 
 class MockFileUtils(FileUtils):
   """Mock class for file utilities."""
 
-  def Md5File(self, filename, block_size=2 ** 10):
-    return "d41d8cd98f00b204e9800998ecf8427e"
+  def Md5File(self, filename, block_size=2**10):
+    return 'd41d8cd98f00b204e9800998ecf8427e'
 
   def CanonicalizeChromeOSRoot(self, chromeos_root):
-    return "/tmp/chromeos_root"
+    return '/tmp/chromeos_root'
 
   def ChromeOSRootFromImage(self, chromeos_image):
-    return "/tmp/chromeos_root"
+    return '/tmp/chromeos_root'
 
   def RmDir(self, path):
     pass

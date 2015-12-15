@@ -1,12 +1,10 @@
-#!/usr/bin/python
 
 # Copyright 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Utilities for toolchain build."""
 
-__author__ = "asharif@google.com (Ahmad Sharif)"
+__author__ = 'asharif@google.com (Ahmad Sharif)'
 
 from contextlib import contextmanager
 import os
@@ -19,32 +17,31 @@ import traceback
 import command_executer
 import logger
 
-
-CHROMEOS_SCRIPTS_DIR = "~/trunk/src/scripts"
-TOOLCHAIN_UTILS_PATH = "~/trunk/src/platform/dev/toolchain_utils.sh"
+CHROMEOS_SCRIPTS_DIR = '~/trunk/src/scripts'
+TOOLCHAIN_UTILS_PATH = '~/trunk/src/platform/dev/toolchain_utils.sh'
 
 
 def GetChromeOSVersionFromLSBVersion(lsb_version):
   """Get Chromeos version from Lsb version."""
   ce = command_executer.GetCommandExecuter()
-  command = ("git ls-remote "
-             "https://chromium.googlesource.com/chromiumos/manifest.git")
+  command = ('git ls-remote '
+             'https://chromium.googlesource.com/chromiumos/manifest.git')
   ret, out, _ = ce.RunCommandWOutput(command, print_to_console=False)
-  assert ret == 0, "Command %s failed" % command
+  assert ret == 0, 'Command %s failed' % command
   lower = []
   for line in out.splitlines():
-    mo = re.search(r"refs/heads/release-R(\d+)-(\d+)\.B", line)
+    mo = re.search(r'refs/heads/release-R(\d+)-(\d+)\.B', line)
     if mo:
       revision = int(mo.group(1))
       build = int(mo.group(2))
-      lsb_build = int(lsb_version.split(".")[0])
+      lsb_build = int(lsb_version.split('.')[0])
       if lsb_build > build:
         lower.append(revision)
   lower = sorted(lower)
   if lower:
-    return "R%d-%s" % (lower[-1] + 1, lsb_version)
+    return 'R%d-%s' % (lower[-1] + 1, lsb_version)
   else:
-    return "Unknown"
+    return 'Unknown'
 
 
 def ApplySubs(string, *substitutions):
@@ -55,11 +52,9 @@ def ApplySubs(string, *substitutions):
 
 def UnitToNumber(unit_num, base=1000):
   """Convert a number with unit to float."""
-  unit_dict = {"kilo": base,
-               "mega": base**2,
-               "giga": base**3}
+  unit_dict = {'kilo': base, 'mega': base**2, 'giga': base**3}
   unit_num = unit_num.lower()
-  mo = re.search(r"(\d*)(.+)?", unit_num)
+  mo = re.search(r'(\d*)(.+)?', unit_num)
   number = mo.group(1)
   unit = mo.group(2)
   if not unit:
@@ -67,17 +62,11 @@ def UnitToNumber(unit_num, base=1000):
   for k, v in unit_dict.items():
     if k.startswith(unit):
       return float(number) * v
-  raise Exception("Unit: %s not found in byte: %s!" %
-                  (unit,
-                   unit_num))
+  raise Exception('Unit: %s not found in byte: %s!' % (unit, unit_num))
 
 
 def GetFilenameFromString(string):
-  return ApplySubs(string,
-                   (r"/", "__"),
-                   (r"\s", "_"),
-                   (r"[\^\$=\"\\\?]", ""),
-                  )
+  return ApplySubs(string, (r'/', '__'), (r'\s', '_'), (r"[\^\$=\"\\\?]", ''),)
 
 
 def GetRoot(scr_name):
@@ -87,123 +76,111 @@ def GetRoot(scr_name):
 
 
 def GetChromeOSKeyFile(chromeos_root):
-  return os.path.join(chromeos_root,
-                      "src",
-                      "scripts",
-                      "mod_for_test_scripts",
-                      "ssh_keys",
-                      "testing_rsa")
+  return os.path.join(chromeos_root, 'src', 'scripts', 'mod_for_test_scripts',
+                      'ssh_keys', 'testing_rsa')
 
 
 def GetChrootPath(chromeos_root):
-  return os.path.join(chromeos_root,
-                      "chroot")
+  return os.path.join(chromeos_root, 'chroot')
 
 
 def GetInsideChrootPath(chromeos_root, file_path):
   if not file_path.startswith(GetChrootPath(chromeos_root)):
     raise Exception("File: %s doesn't seem to be in the chroot: %s" %
-                    (file_path,
-                     chromeos_root))
+                    (file_path, chromeos_root))
   return file_path[len(GetChrootPath(chromeos_root)):]
 
 
 def GetOutsideChrootPath(chromeos_root, file_path):
-  return os.path.join(GetChrootPath(chromeos_root),
-                      file_path.lstrip("/"))
+  return os.path.join(GetChrootPath(chromeos_root), file_path.lstrip('/'))
 
 
 def FormatQuotedCommand(command):
-  return ApplySubs(command,
-                   ("\"", "\\\""))
+  return ApplySubs(command, ("\"", "\\\""))
 
 
 def FormatCommands(commands):
-  return ApplySubs(str(commands),
-                   ("&&", "&&\n"),
-                   (";", ";\n"),
-                   (r"\n+\s*", "\n"))
+  return ApplySubs(
+      str(commands), ('&&', '&&\n'), (';', ';\n'), (r'\n+\s*', '\n'))
 
 
 def GetImageDir(chromeos_root, board):
-  return os.path.join(chromeos_root,
-                      "src",
-                      "build",
-                      "images",
-                      board)
+  return os.path.join(chromeos_root, 'src', 'build', 'images', board)
 
 
 def LabelLatestImage(chromeos_root, board, label, vanilla_path=None):
   image_dir = GetImageDir(chromeos_root, board)
-  latest_image_dir = os.path.join(image_dir, "latest")
+  latest_image_dir = os.path.join(image_dir, 'latest')
   latest_image_dir = os.path.realpath(latest_image_dir)
   latest_image_dir = os.path.basename(latest_image_dir)
   retval = 0
   with WorkingDirectory(image_dir):
-    command = "ln -sf -T %s %s" % (latest_image_dir, label)
+    command = 'ln -sf -T %s %s' % (latest_image_dir, label)
     ce = command_executer.GetCommandExecuter()
     retval = ce.RunCommand(command)
     if retval:
       return retval
     if vanilla_path:
-      command = "ln -sf -T %s %s" % (vanilla_path, "vanilla")
+      command = 'ln -sf -T %s %s' % (vanilla_path, 'vanilla')
       retval2 = ce.RunCommand(command)
       return retval2
   return retval
 
 
 def DoesLabelExist(chromeos_root, board, label):
-  image_label = os.path.join(GetImageDir(chromeos_root, board),
-                             label)
+  image_label = os.path.join(GetImageDir(chromeos_root, board), label)
   return os.path.exists(image_label)
 
 
 def GetBuildPackagesCommand(board, usepkg=False, debug=False):
   if usepkg:
-    usepkg_flag = "--usepkg"
+    usepkg_flag = '--usepkg'
   else:
-    usepkg_flag = "--nousepkg"
+    usepkg_flag = '--nousepkg'
   if debug:
-    withdebug_flag = "--withdebug"
+    withdebug_flag = '--withdebug'
   else:
-    withdebug_flag = "--nowithdebug"
-  return ("%s/build_packages %s --withdev --withtest --withautotest "
-          "--skip_toolchain_update %s --board=%s "
-          "--accept_licenses=@CHROMEOS" %
+    withdebug_flag = '--nowithdebug'
+  return ('%s/build_packages %s --withdev --withtest --withautotest '
+          '--skip_toolchain_update %s --board=%s '
+          '--accept_licenses=@CHROMEOS' %
           (CHROMEOS_SCRIPTS_DIR, usepkg_flag, withdebug_flag, board))
 
 
 def GetBuildImageCommand(board, dev=False):
-  dev_args = ""
+  dev_args = ''
   if dev:
-    dev_args = "--noenable_rootfs_verification --disk_layout=2gb-rootfs"
-  return ("%s/build_image --board=%s %s test" %
+    dev_args = '--noenable_rootfs_verification --disk_layout=2gb-rootfs'
+  return ('%s/build_image --board=%s %s test' %
           (CHROMEOS_SCRIPTS_DIR, board, dev_args))
 
 
-def GetSetupBoardCommand(board, gcc_version=None, binutils_version=None,
-                         usepkg=None, force=None):
+def GetSetupBoardCommand(board,
+                         gcc_version=None,
+                         binutils_version=None,
+                         usepkg=None,
+                         force=None):
   """Get setup_board command."""
   options = []
 
   if gcc_version:
-    options.append("--gcc_version=%s" % gcc_version)
+    options.append('--gcc_version=%s' % gcc_version)
 
   if binutils_version:
-    options.append("--binutils_version=%s" % binutils_version)
+    options.append('--binutils_version=%s' % binutils_version)
 
   if usepkg:
-    options.append("--usepkg")
+    options.append('--usepkg')
   else:
-    options.append("--nousepkg")
+    options.append('--nousepkg')
 
   if force:
-    options.append("--force")
+    options.append('--force')
 
-  options.append("--accept_licenses=@CHROMEOS")
+  options.append('--accept_licenses=@CHROMEOS')
 
-  return ("%s/setup_board --board=%s %s" %
-          (CHROMEOS_SCRIPTS_DIR, board, " ".join(options)))
+  return ('%s/setup_board --board=%s %s' %
+          (CHROMEOS_SCRIPTS_DIR, board, ' '.join(options)))
 
 
 def CanonicalizePath(path):
@@ -214,13 +191,13 @@ def CanonicalizePath(path):
 
 def GetCtargetFromBoard(board, chromeos_root):
   """Get Ctarget from board."""
-  base_board = board.split("_")[0]
-  command = ("source %s; get_ctarget_from_board %s" %
+  base_board = board.split('_')[0]
+  command = ('source %s; get_ctarget_from_board %s' %
              (TOOLCHAIN_UTILS_PATH, base_board))
   ce = command_executer.GetCommandExecuter()
   ret, out, _ = ce.ChrootRunCommandWOutput(chromeos_root, command)
   if ret != 0:
-    raise ValueError("Board %s is invalid!" % board)
+    raise ValueError('Board %s is invalid!' % board)
   # Remove ANSI escape sequences.
   out = StripANSIEscapeSequences(out)
   return out.strip()
@@ -228,13 +205,13 @@ def GetCtargetFromBoard(board, chromeos_root):
 
 def GetArchFromBoard(board, chromeos_root):
   """Get Arch from board."""
-  base_board = board.split("_")[0]
-  command = ("source %s; get_board_arch %s" %
+  base_board = board.split('_')[0]
+  command = ('source %s; get_board_arch %s' %
              (TOOLCHAIN_UTILS_PATH, base_board))
   ce = command_executer.GetCommandExecuter()
   ret, out, _ = ce.ChrootRunCommandWOutput(chromeos_root, command)
   if ret != 0:
-    raise ValueError("Board %s is invalid!" % board)
+    raise ValueError('Board %s is invalid!' % board)
   # Remove ANSI escape sequences.
   out = StripANSIEscapeSequences(out)
   return out.strip()
@@ -243,28 +220,28 @@ def GetArchFromBoard(board, chromeos_root):
 def GetGccLibsDestForBoard(board, chromeos_root):
   """Get gcc libs destination from board."""
   arch = GetArchFromBoard(board, chromeos_root)
-  if arch == "x86":
-    return "/build/%s/usr/lib/gcc/" % board
-  if arch == "amd64":
-    return "/build/%s/usr/lib64/gcc/" % board
-  if arch == "arm":
-    return "/build/%s/usr/lib/gcc/" % board
-  if arch == "arm64":
-    return "/build/%s/usr/lib/gcc/" % board
-  raise ValueError("Arch %s is invalid!" % arch)
+  if arch == 'x86':
+    return '/build/%s/usr/lib/gcc/' % board
+  if arch == 'amd64':
+    return '/build/%s/usr/lib64/gcc/' % board
+  if arch == 'arm':
+    return '/build/%s/usr/lib/gcc/' % board
+  if arch == 'arm64':
+    return '/build/%s/usr/lib/gcc/' % board
+  raise ValueError('Arch %s is invalid!' % arch)
 
 
 def StripANSIEscapeSequences(string):
-  string = re.sub(r"\x1b\[[0-9]*[a-zA-Z]", "", string)
+  string = re.sub(r'\x1b\[[0-9]*[a-zA-Z]', '', string)
   return string
 
 
 def GetChromeSrcDir():
-  return "var/cache/distfiles/target/chrome-src/src"
+  return 'var/cache/distfiles/target/chrome-src/src'
 
 
 def GetEnvStringFromDict(env_dict):
-  return " ".join(["%s=\"%s\"" % var for var in env_dict.items()])
+  return ' '.join(["%s=\"%s\"" % var for var in env_dict.items()])
 
 
 def MergeEnvStringWithDict(env_string, env_dict, prepend=True):
@@ -279,19 +256,19 @@ def MergeEnvStringWithDict(env_string, env_dict, prepend=True):
       new_env = "%s=\"%s $%s\"" % (k, v, k)
     else:
       new_env = "%s=\"$%s %s\"" % (k, k, v)
-    command = "; ".join([env_string, new_env, "echo $%s" % k])
+    command = '; '.join([env_string, new_env, 'echo $%s' % k])
     ret, out, _ = ce.RunCommandWOutput(command)
-    override_env_list.append("%s=%r" % (k, out.strip()))
-  ret = env_string + " " + " ".join(override_env_list)
+    override_env_list.append('%s=%r' % (k, out.strip()))
+  ret = env_string + ' ' + ' '.join(override_env_list)
   return ret.strip()
 
 
 def GetAllImages(chromeos_root, board):
   ce = command_executer.GetCommandExecuter()
-  command = ("find %s/src/build/images/%s -name chromiumos_test_image.bin" %
+  command = ('find %s/src/build/images/%s -name chromiumos_test_image.bin' %
              (chromeos_root, board))
   ret, out, _ = ce.RunCommandWOutput(command)
-  assert ret == 0, "Could not run command: %s" % command
+  assert ret == 0, 'Could not run command: %s' % command
   return out.splitlines()
 
 
@@ -309,16 +286,16 @@ def RemoveChromeBrowserObjectFiles(chromeos_root, board):
   """Remove any object files from all the posible locations."""
   out_dir = os.path.join(
       GetChrootPath(chromeos_root),
-      "var/cache/chromeos-chrome/chrome-src/src/out_%s" % board)
+      'var/cache/chromeos-chrome/chrome-src/src/out_%s' % board)
   if os.path.exists(out_dir):
     shutil.rmtree(out_dir)
-    logger.GetLogger().LogCmd("rm -rf %s" % out_dir)
+    logger.GetLogger().LogCmd('rm -rf %s' % out_dir)
   out_dir = os.path.join(
       GetChrootPath(chromeos_root),
-      "var/cache/chromeos-chrome/chrome-src-internal/src/out_%s" % board)
+      'var/cache/chromeos-chrome/chrome-src-internal/src/out_%s' % board)
   if os.path.exists(out_dir):
     shutil.rmtree(out_dir)
-    logger.GetLogger().LogCmd("rm -rf %s" % out_dir)
+    logger.GetLogger().LogCmd('rm -rf %s' % out_dir)
 
 
 @contextmanager
@@ -326,37 +303,40 @@ def WorkingDirectory(new_dir):
   """Get the working directory."""
   old_dir = os.getcwd()
   if old_dir != new_dir:
-    msg = "cd %s" % new_dir
+    msg = 'cd %s' % new_dir
     logger.GetLogger().LogCmd(msg)
   os.chdir(new_dir)
   yield new_dir
   if old_dir != new_dir:
-    msg = "cd %s" % old_dir
+    msg = 'cd %s' % old_dir
     logger.GetLogger().LogCmd(msg)
   os.chdir(old_dir)
 
 
 def HasGitStagedChanges(git_dir):
   """Return True if git repository has staged changes."""
-  command = "cd {0} && git diff --quiet --cached --exit-code HEAD".format(
+  command = 'cd {0} && git diff --quiet --cached --exit-code HEAD'.format(
       git_dir)
   return command_executer.GetCommandExecuter().RunCommand(
-      command, print_to_console=False)
+      command,
+      print_to_console=False)
 
 
 def HasGitUnstagedChanges(git_dir):
   """Return True if git repository has un-staged changes."""
-  command = "cd {0} && git diff --quiet --exit-code HEAD".format(git_dir)
+  command = 'cd {0} && git diff --quiet --exit-code HEAD'.format(git_dir)
   return command_executer.GetCommandExecuter().RunCommand(
-      command, print_to_console=False)
+      command,
+      print_to_console=False)
 
 
 def HasGitUntrackedChanges(git_dir):
   """Return True if git repository has un-tracked changes."""
-  command = ("cd {0} && test -z "
-             "$(git ls-files --exclude-standard --others)").format(git_dir)
+  command = ('cd {0} && test -z '
+             '$(git ls-files --exclude-standard --others)').format(git_dir)
   return command_executer.GetCommandExecuter().RunCommand(
-      command, print_to_console=False)
+      command,
+      print_to_console=False)
 
 
 def GitGetCommitHash(git_dir, commit_symbolic_name):
@@ -376,7 +356,8 @@ def GitGetCommitHash(git_dir, commit_symbolic_name):
   command = ('cd {0} && git log -n 1 --pretty="format:%H" {1}').format(
       git_dir, commit_symbolic_name)
   rv, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
-      command, print_to_console=False)
+      command,
+      print_to_console=False)
   if rv == 0:
     return out.strip()
   return None
@@ -391,13 +372,13 @@ def IsGitTreeClean(git_dir):
     True if git dir is clean.
   """
   if HasGitStagedChanges(git_dir):
-    logger.GetLogger().LogWarning("Git tree has staged changes.")
+    logger.GetLogger().LogWarning('Git tree has staged changes.')
     return False
   if HasGitUnstagedChanges(git_dir):
-    logger.GetLogger().LogWarning("Git tree has unstaged changes.")
+    logger.GetLogger().LogWarning('Git tree has unstaged changes.')
     return False
   if HasGitUntrackedChanges(git_dir):
-    logger.GetLogger().LogWarning("Git tree has un-tracked changes.")
+    logger.GetLogger().LogWarning('Git tree has un-tracked changes.')
     return False
   return True
 
@@ -412,13 +393,14 @@ def GetGitChangesAsList(git_dir, path=None, staged=False):
   Returns:
     A list containing all the changed files.
   """
-  command = "cd {0} && git diff --name-only".format(git_dir)
+  command = 'cd {0} && git diff --name-only'.format(git_dir)
   if staged:
-    command += " --cached"
+    command += ' --cached'
   if path:
-    command += " -- " + path
+    command += ' -- ' + path
   _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
-      command, print_to_console=False)
+      command,
+      print_to_console=False)
   rv = []
   for line in out.splitlines():
     rv.append(line)
@@ -426,10 +408,9 @@ def GetGitChangesAsList(git_dir, path=None, staged=False):
 
 
 def IsChromeOsTree(chromeos_root):
-  return (os.path.isdir(os.path.join(
-      chromeos_root, "src/third_party/chromiumos-overlay")) and
-          os.path.isdir(os.path.join(
-              chromeos_root, "manifest")))
+  return (os.path.isdir(os.path.join(chromeos_root,
+                                     'src/third_party/chromiumos-overlay')) and
+          os.path.isdir(os.path.join(chromeos_root, 'manifest')))
 
 
 def DeleteChromeOsTree(chromeos_root, dry_run=False):
@@ -447,12 +428,13 @@ def DeleteChromeOsTree(chromeos_root, dry_run=False):
         '"{0}" does not seem to be a valid chromeos tree, do nothing.'.format(
             chromeos_root))
     return False
-  cmd0 = "cd {0} && cros_sdk --delete".format(chromeos_root)
+  cmd0 = 'cd {0} && cros_sdk --delete'.format(chromeos_root)
   if dry_run:
     print cmd0
   else:
     if command_executer.GetCommandExecuter().RunCommand(
-        cmd0, print_to_console=True) != 0:
+        cmd0,
+        print_to_console=True) != 0:
       return False
 
   cmd1 = ('export CHROMEOSDIRNAME="$(dirname $(cd {0} && pwd))" && '
@@ -464,11 +446,13 @@ def DeleteChromeOsTree(chromeos_root, dry_run=False):
     return True
 
   return command_executer.GetCommandExecuter().RunCommand(
-      cmd1, print_to_console=True) == 0
+      cmd1,
+      print_to_console=True) == 0
 
 
 def ApplyGerritPatches(chromeos_root,
-                       gerrit_patch_string, branch='cros/master'):
+                       gerrit_patch_string,
+                       branch='cros/master'):
   """Apply gerrit patches on a chromeos tree.
 
   Args:
@@ -510,8 +494,11 @@ def ApplyGerritPatches(chromeos_root,
   return True
 
 
-def BooleanPrompt(prompt='Do you want to continue?', default=True,
-                  true_value='yes', false_value='no', prolog=None):
+def BooleanPrompt(prompt='Do you want to continue?',
+                  default=True,
+                  true_value='yes',
+                  false_value='no',
+                  prolog=None):
   """Helper function for processing boolean choice prompts.
 
   Args:
@@ -527,8 +514,8 @@ def BooleanPrompt(prompt='Do you want to continue?', default=True,
   true_value, false_value = true_value.lower(), false_value.lower()
   true_text, false_text = true_value, false_value
   if true_value == false_value:
-    raise ValueError('true_value and false_value must differ: got %r'
-                     % true_value)
+    raise ValueError('true_value and false_value must differ: got %r' %
+                     true_value)
 
   if default:
     true_text = true_text[0].upper() + true_text[1:]

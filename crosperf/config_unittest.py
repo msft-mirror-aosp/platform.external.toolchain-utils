@@ -6,6 +6,7 @@ import config
 
 import unittest
 
+
 class ConfigTestCase(unittest.TestCase):
 
   def test_config(self):

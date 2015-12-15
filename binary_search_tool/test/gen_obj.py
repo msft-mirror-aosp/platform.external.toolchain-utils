@@ -25,10 +25,14 @@ def Main(argv):
     0 always.
   """
   parser = optparse.OptionParser()
-  parser.add_option('-n', '--obj_num', dest='obj_num',
+  parser.add_option('-n',
+                    '--obj_num',
+                    dest='obj_num',
                     default=common.DEFAULT_OBJECT_NUMBER,
                     help=('Number of total objects.'))
-  parser.add_option('-b', '--bad_obj_num', dest='bad_obj_num',
+  parser.add_option('-b',
+                    '--bad_obj_num',
+                    dest='bad_obj_num',
                     default=common.DEFAULT_BAD_OBJECT_NUMBER,
                     help=('Number of bad objects. Must be great than or equal '
                           'to zero and less than total object number.'))
@@ -39,8 +43,7 @@ def Main(argv):
   bad_to_gen = int(options.bad_obj_num)
   obj_list = []
   for i in range(obj_num):
-    if (bad_to_gen > 0 and
-        random.randint(1, obj_num) <= bad_obj_num):
+    if (bad_to_gen > 0 and random.randint(1, obj_num) <= bad_obj_num):
       obj_list.append(1)
       bad_to_gen -= 1
     else:

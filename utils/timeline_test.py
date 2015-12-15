@@ -1,5 +1,4 @@
 # Copyright 2012 Google Inc. All Rights Reserved.
-
 """Tests for time_line.py."""
 
 __author__ = 'yunlian@google.com (Yunlian Jiang)'
@@ -17,7 +16,7 @@ class TimeLineTest(unittest.TestCase):
     tl.Record('A')
     t = time.time()
     t1 = tl.events[0].timestamp
-    self.assertEqual(int(t1-t), 0)
+    self.assertEqual(int(t1 - t), 0)
     self.assertRaises(AssertionError, tl.Record, 'A')
 
   def testGetEvents(self):
@@ -34,7 +33,7 @@ class TimeLineTest(unittest.TestCase):
     tl.Record('A')
     t = time.time()
     t1 = tl.GetEventTime('A')
-    self.assertEqual(int(t1-t), 0)
+    self.assertEqual(int(t1 - t), 0)
     self.assertRaises(IndexError, tl.GetEventTime, 'B')
 
   def testGetLastEventTime(self):
@@ -43,12 +42,13 @@ class TimeLineTest(unittest.TestCase):
     tl.Record('A')
     t = time.time()
     t1 = tl.GetLastEventTime()
-    self.assertEqual(int(t1-t), 0)
+    self.assertEqual(int(t1 - t), 0)
     time.sleep(2)
     tl.Record('B')
     t = time.time()
     t1 = tl.GetLastEventTime()
-    self.assertEqual(int(t1-t), 0)
+    self.assertEqual(int(t1 - t), 0)
+
 
 if __name__ == '__main__':
   unittest.main()

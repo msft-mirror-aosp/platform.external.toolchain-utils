@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 __author__ = 'kbaclawski@google.com (Krystian Baclawski)'
@@ -153,17 +151,16 @@ class CommandsFactory(object):
     self.p4config_path = os.path.join(self.checkout_dir, '.p4config')
 
   def Initialize(self):
-    return cmd.Chain(
-        'mkdir -p %s' % self.checkout_dir,
-        'cp ~/.p4config %s' % self.checkout_dir,
-        'chmod u+w %s' % self.p4config_path,
-        'echo "P4PORT=%s" >> %s' % (self.port, self.p4config_path),
-        'echo "P4CLIENT=%s" >> %s' % (self.view.client, self.p4config_path))
+    return cmd.Chain('mkdir -p %s' % self.checkout_dir, 'cp ~/.p4config %s' %
+                     self.checkout_dir, 'chmod u+w %s' % self.p4config_path,
+                     'echo "P4PORT=%s" >> %s' % (self.port, self.p4config_path),
+                     'echo "P4CLIENT=%s" >> %s' %
+                     (self.view.client, self.p4config_path))
 
   def Create(self):
     # TODO(kbaclawski): Could we support value list for options consistently?
-    mappings = ['-a \"%s %s\"' % mapping for mapping in
-                self.view.AbsoluteMappings()]
+    mappings = ['-a \"%s %s\"' % mapping
+                for mapping in self.view.AbsoluteMappings()]
 
     # First command will create client with default mappings.  Second one will
     # replace default mapping with desired.  Unfortunately, it seems that it
@@ -176,14 +173,12 @@ class CommandsFactory(object):
         env={'P4EDITOR': '/bin/true'})
 
   def SaveSpecification(self, filename=None):
-    return cmd.Pipe(
-        cmd.Shell('g4', 'client', '-o'),
-        output=filename)
+    return cmd.Pipe(cmd.Shell('g4', 'client', '-o'), output=filename)
 
   def Sync(self, revision=None):
     sync_arg = '...'
     if revision:
-      sync_arg = "%s@%s" % (sync_arg, revision)
+      sync_arg = '%s@%s' % (sync_arg, revision)
     return cmd.Shell('g4', 'sync', sync_arg)
 
   def SaveCurrentCLNumber(self, filename=None):
@@ -196,14 +191,11 @@ class CommandsFactory(object):
     return cmd.Shell('g4', 'client', '-d', self.view.client)
 
   def SetupAndDo(self, *commands):
-    return cmd.Chain(
-        self.Initialize(),
-        self.InCheckoutDir(self.Create(), *commands))
+    return cmd.Chain(self.Initialize(),
+                     self.InCheckoutDir(self.Create(), *commands))
 
   def InCheckoutDir(self, *commands):
-    return cmd.Wrapper(
-            cmd.Chain(*commands),
-            cwd=self.checkout_dir)
+    return cmd.Wrapper(cmd.Chain(*commands), cwd=self.checkout_dir)
 
   def CheckoutFromSnapshot(self, snapshot):
     cmds = cmd.Chain()
@@ -216,7 +208,8 @@ class CommandsFactory(object):
         local_dir = os.path.join(self.checkout_dir, os.path.dirname(local_path))
 
         cmds.extend([
-            cmd.Shell('mkdir', '-p', local_dir),
-            cmd.Shell('rsync', '-lr', remote_dir, local_dir)])
+            cmd.Shell('mkdir', '-p', local_dir), cmd.Shell(
+                'rsync', '-lr', remote_dir, local_dir)
+        ])
 
     return cmds

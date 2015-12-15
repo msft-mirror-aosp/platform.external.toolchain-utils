@@ -8,12 +8,12 @@ import tempfile
 
 # Programtically adding utils python path to PYTHONPATH
 if os.path.isabs(sys.argv[0]):
-  utils_pythonpath = os.path.abspath(
-      '{0}/..'.format(os.path.dirname(sys.argv[0])))
+  utils_pythonpath = os.path.abspath('{0}/..'.format(os.path.dirname(sys.argv[
+      0])))
 else:
   wdir = os.getcwd()
-  utils_pythonpath = os.path.abspath(
-      '{0}/{1}/..'.format(wdir, os.path.dirname(sys.argv[0])))
+  utils_pythonpath = os.path.abspath('{0}/{1}/..'.format(wdir, os.path.dirname(
+      sys.argv[0])))
 sys.path.append(utils_pythonpath)
 # Now we do import from utils
 from utils import command_executer
@@ -21,10 +21,11 @@ from utils import logger
 
 import binary_search_perforce
 
-STATE_FILE = "%s.state" % sys.argv[0]
+STATE_FILE = '%s.state' % sys.argv[0]
 
 
 class BinarySearchState(object):
+
   def __init__(self, get_initial_items, switch_to_good, switch_to_bad,
                test_script, incremental, prune, iterations, prune_iterations,
                verify_level, file_args):
@@ -49,36 +50,38 @@ class BinarySearchState(object):
 
   def SwitchToGood(self, item_list):
     if self.incremental:
-      self.l.LogOutput(
-          "Incremental set. Wanted to switch %s to good" % str(item_list))
+      self.l.LogOutput('Incremental set. Wanted to switch %s to good' %
+                       str(item_list))
       incremental_items = [
-          item for item in item_list if item not in self.currently_good_items]
+          item for item in item_list if item not in self.currently_good_items
+      ]
       item_list = incremental_items
-      self.l.LogOutput(
-          "Incremental set. Actually switching %s to good" % str(item_list))
+      self.l.LogOutput('Incremental set. Actually switching %s to good' %
+                       str(item_list))
 
     if not item_list:
       return
 
-    self.l.LogOutput("Switching %s to good" % str(item_list))
+    self.l.LogOutput('Switching %s to good' % str(item_list))
     self.RunSwitchScript(self.switch_to_good, item_list)
     self.currently_good_items = self.currently_good_items.union(set(item_list))
     self.currently_bad_items.difference_update(set(item_list))
 
   def SwitchToBad(self, item_list):
     if self.incremental:
-      self.l.LogOutput(
-          "Incremental set. Wanted to switch %s to bad" % str(item_list))
+      self.l.LogOutput('Incremental set. Wanted to switch %s to bad' %
+                       str(item_list))
       incremental_items = [
-          item for item in item_list if item not in self.currently_bad_items]
+          item for item in item_list if item not in self.currently_bad_items
+      ]
       item_list = incremental_items
-      self.l.LogOutput(
-          "Incremental set. Actually switching %s to bad" % str(item_list))
+      self.l.LogOutput('Incremental set. Actually switching %s to bad' %
+                       str(item_list))
 
     if not item_list:
       return
 
-    self.l.LogOutput("Switching %s to bad" % str(item_list))
+    self.l.LogOutput('Switching %s to bad' % str(item_list))
     self.RunSwitchScript(self.switch_to_bad, item_list)
     self.currently_bad_items = self.currently_bad_items.union(set(item_list))
     self.currently_good_items.difference_update(set(item_list))
@@ -86,14 +89,14 @@ class BinarySearchState(object):
   def RunSwitchScript(self, switch_script, item_list):
     if self.file_args:
       temp_file = tempfile.mktemp()
-      f = open(temp_file, "wb")
-      f.write("\n".join(item_list))
+      f = open(temp_file, 'wb')
+      f.write('\n'.join(item_list))
       f.close()
-      command = "%s %s" % (switch_script, temp_file)
+      command = '%s %s' % (switch_script, temp_file)
     else:
-      command = "%s %s" % (switch_script, " ".join(item_list))
+      command = '%s %s' % (switch_script, ' '.join(item_list))
     ret = self.ce.RunCommand(command)
-    assert ret == 0, "Switch script %s returned %d" % (switch_script, ret)
+    assert ret == 0, 'Switch script %s returned %d' % (switch_script, ret)
 
   def TestScript(self):
     command = self.test_script
@@ -101,15 +104,15 @@ class BinarySearchState(object):
 
   def DoVerify(self):
     for _ in range(int(self.verify_level)):
-      self.l.LogOutput("Resetting all items to good to verify.")
+      self.l.LogOutput('Resetting all items to good to verify.')
       self.SwitchToGood(self.all_items)
       status = self.TestScript()
-      assert status == 0, "When reset_to_good, status should be 0."
+      assert status == 0, 'When reset_to_good, status should be 0.'
 
-      self.l.LogOutput("Resetting all items to bad to verify.")
+      self.l.LogOutput('Resetting all items to bad to verify.')
       self.SwitchToBad(self.all_items)
       status = self.TestScript()
-      assert status == 1, "When reset_to_bad, status should be 1."
+      assert status == 1, 'When reset_to_bad, status should be 1.'
 
   def DoSearch(self):
     num_bad_items_history = []
@@ -120,14 +123,14 @@ class BinarySearchState(object):
       if not terminated:
         break
       if not self.prune:
-        self.l.LogOutput("Not continuning further, --prune is not set")
+        self.l.LogOutput('Not continuning further, --prune is not set')
         break
       # Prune is set.
       prune_index = self.bs.current
 
       if prune_index == len(self.all_items) - 1:
-        self.l.LogOutput("First bad item is the last item. Breaking.")
-        self.l.LogOutput("Only bad item is: %s" % self.all_items[-1])
+        self.l.LogOutput('First bad item is the last item. Breaking.')
+        self.l.LogOutput('Only bad item is: %s' % self.all_items[-1])
         break
 
       num_bad_items = len(self.all_items) - prune_index
@@ -135,12 +138,11 @@ class BinarySearchState(object):
 
       if (num_bad_items_history[-num_bad_items:] ==
           [num_bad_items for _ in range(num_bad_items)]):
-        self.l.LogOutput("num_bad_items_history: %s for past %d iterations. "
-                         "Breaking." %
-                         (str(num_bad_items_history),
-                          num_bad_items))
-        self.l.LogOutput(
-            "Bad items are: %s" % " ".join(self.all_items[prune_index:]))
+        self.l.LogOutput('num_bad_items_history: %s for past %d iterations. '
+                         'Breaking.' % (str(num_bad_items_history),
+                                        num_bad_items))
+        self.l.LogOutput('Bad items are: %s' %
+                         ' '.join(self.all_items[prune_index:]))
         break
 
       new_all_items = list(self.all_items)
@@ -150,9 +152,8 @@ class BinarySearchState(object):
       if prune_index:
         new_all_items = new_all_items[prune_index - 1:]
 
-      self.l.LogOutput("Old list: %s. New list: %s" %
-                       (str(self.all_items),
-                        str(new_all_items)))
+      self.l.LogOutput('Old list: %s. New list: %s' % (str(self.all_items),
+                                                       str(new_all_items)))
 
       # FIXME: Do we need to Convert the currently good items to bad
       self.PopulateItemsUsingList(new_all_items)
@@ -171,9 +172,9 @@ class BinarySearchState(object):
       terminated = self.bs.SetStatus(status)
 
       if terminated:
-        self.l.LogOutput("Terminated!")
+        self.l.LogOutput('Terminated!')
     if not terminated:
-      self.l.LogOutput("Ran out of iterations searching...")
+      self.l.LogOutput('Ran out of iterations searching...')
     self.l.LogOutput(str(self))
     return terminated
 
@@ -192,8 +193,8 @@ class BinarySearchState(object):
     self.l = None
     self.ce = None
     # TODO Implement save/restore
-###    return
-    f = open(STATE_FILE, "wb")
+    ###    return
+    f = open(STATE_FILE, 'wb')
     pickle.dump(self, f)
     f.close()
 
@@ -217,24 +218,24 @@ class BinarySearchState(object):
     border_item = self.bs.GetNext()
     index = self.all_items.index(border_item)
 
-    next_bad_items = self.all_items[:index+1]
-    next_good_items = self.all_items[index+1:]
+    next_bad_items = self.all_items[:index + 1]
+    next_good_items = self.all_items[index + 1:]
 
     return [next_bad_items, next_good_items]
 
   def __str__(self):
-    ret = ""
-    ret += "all: %s\n" % str(self.all_items)
-    ret += "currently_good: %s\n" % str(self.currently_good_items)
-    ret += "currently_bad: %s\n" % str(self.currently_bad_items)
+    ret = ''
+    ret += 'all: %s\n' % str(self.all_items)
+    ret += 'currently_good: %s\n' % str(self.currently_good_items)
+    ret += 'currently_bad: %s\n' % str(self.currently_bad_items)
     ret += str(self.bs)
     return ret
 
 
 def _CanonicalizeScript(script_name):
   script_name = os.path.expanduser(script_name)
-  if not script_name.startswith("/"):
-    return os.path.join(".", script_name)
+  if not script_name.startswith('/'):
+    return os.path.join('.', script_name)
 
 
 def Main(argv):
@@ -242,60 +243,60 @@ def Main(argv):
   # Common initializations
 
   parser = optparse.OptionParser()
-  parser.add_option("-n",
-                    "--iterations",
-                    dest="iterations",
-                    help="Number of iterations to try in the search.",
-                    default="50")
-  parser.add_option("-i",
-                    "--get_initial_items",
-                    dest="get_initial_items",
-                    help="Script to run to get the initial objects.")
-  parser.add_option("-g",
-                    "--switch_to_good",
-                    dest="switch_to_good",
-                    help="Script to run to switch to good.")
-  parser.add_option("-b",
-                    "--switch_to_bad",
-                    dest="switch_to_bad",
-                    help="Script to run to switch to bad.")
-  parser.add_option("-t",
-                    "--test_script",
-                    dest="test_script",
-                    help=("Script to run to test the "
-                          "output after packages are built."))
-  parser.add_option("-p",
-                    "--prune",
-                    dest="prune",
-                    action="store_true",
+  parser.add_option('-n',
+                    '--iterations',
+                    dest='iterations',
+                    help='Number of iterations to try in the search.',
+                    default='50')
+  parser.add_option('-i',
+                    '--get_initial_items',
+                    dest='get_initial_items',
+                    help='Script to run to get the initial objects.')
+  parser.add_option('-g',
+                    '--switch_to_good',
+                    dest='switch_to_good',
+                    help='Script to run to switch to good.')
+  parser.add_option('-b',
+                    '--switch_to_bad',
+                    dest='switch_to_bad',
+                    help='Script to run to switch to bad.')
+  parser.add_option('-t',
+                    '--test_script',
+                    dest='test_script',
+                    help=('Script to run to test the '
+                          'output after packages are built.'))
+  parser.add_option('-p',
+                    '--prune',
+                    dest='prune',
+                    action='store_true',
                     default=False,
-                    help=("Script to run to test the output after "
-                          "packages are built."))
-  parser.add_option("-c",
-                    "--noincremental",
-                    dest="noincremental",
-                    action="store_true",
+                    help=('Script to run to test the output after '
+                          'packages are built.'))
+  parser.add_option('-c',
+                    '--noincremental',
+                    dest='noincremental',
+                    action='store_true',
                     default=False,
-                    help="Do not propagate good/bad changes incrementally.")
-  parser.add_option("-f",
-                    "--file_args",
-                    dest="file_args",
-                    action="store_true",
+                    help='Do not propagate good/bad changes incrementally.')
+  parser.add_option('-f',
+                    '--file_args',
+                    dest='file_args',
+                    action='store_true',
                     default=False,
-                    help="Use a file to pass arguments to scripts.")
-  parser.add_option("-v",
-                    "--verify_level",
-                    dest="verify_level",
-                    default="1",
-                    help=("Check binary search assumptions N times "
-                          "before starting."))
-  parser.add_option("-N",
-                    "--prune_iterations",
-                    dest="prune_iterations",
-                    help="Number of prune iterations to try in the search.",
-                    default="100")
+                    help='Use a file to pass arguments to scripts.')
+  parser.add_option('-v',
+                    '--verify_level',
+                    dest='verify_level',
+                    default='1',
+                    help=('Check binary search assumptions N times '
+                          'before starting.'))
+  parser.add_option('-N',
+                    '--prune_iterations',
+                    dest='prune_iterations',
+                    help='Number of prune iterations to try in the search.',
+                    default='100')
 
-  logger.GetLogger().LogOutput(" ".join(argv))
+  logger.GetLogger().LogOutput(' '.join(argv))
   [options, _] = parser.parse_args(argv)
 
   if not (options.get_initial_items and options.switch_to_good and
@@ -326,9 +327,10 @@ def Main(argv):
     bss.DoSearch()
 
   except (KeyboardInterrupt, SystemExit):
-    print "C-c pressed"
+    print 'C-c pressed'
     bss.SaveState()
   return 0
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
   sys.exit(Main(sys.argv))

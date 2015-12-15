@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Copyright 2010 Google Inc. All Rights Reserved.
 #
 
@@ -16,6 +14,7 @@ from automation.server.job_manager import IdProducerPolicy
 
 
 class JobGroupManager(object):
+
   def __init__(self, job_manager):
     self.all_job_groups = []
 
@@ -27,7 +26,7 @@ class JobGroupManager(object):
 
     self._id_producer = IdProducerPolicy()
     self._id_producer.Initialize(job_group.JobGroup.HOMEDIR_PREFIX,
-                                 "job-group-(?P<id>\d+)")
+                                 'job-group-(?P<id>\d+)')
 
     self._logger = logging.getLogger(self.__class__.__name__)
 
@@ -49,9 +48,8 @@ class JobGroupManager(object):
 
     self._logger.debug('Creating runtime environment for %r.', group)
 
-    CommandExecuter().RunCommand(
-        cmd.Chain(cmd.RmTree(group.home_dir),
-                  cmd.MakeDir(group.home_dir)))
+    CommandExecuter().RunCommand(cmd.Chain(
+        cmd.RmTree(group.home_dir), cmd.MakeDir(group.home_dir)))
 
     with self._lock:
       self.all_job_groups.append(group)
@@ -61,7 +59,7 @@ class JobGroupManager(object):
 
       group.status = job_group.STATUS_EXECUTING
 
-    self._logger.info("Added %r to queue.", group)
+    self._logger.info('Added %r to queue.', group)
 
     return group.id
 

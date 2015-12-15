@@ -13,28 +13,30 @@
 import sys
 import os
 
+
 def Main(args):
 
-    if args:
-        filename = args[0]
-        if not os.path.exists(filename):
-            return 1
-    else:
-        return 1
+  if args:
+    filename = args[0]
+    if not os.path.exists(filename):
+      return 1
+  else:
+    return 1
 
-    outname = filename + ".edited"
-    with open(filename, "r") as input_file:
-        lines = input_file.readlines()
-        with open(outname, "w") as out_file:
-            for line in lines:
-                if line.find("eclean") >= 0:
-                    out_line = "# " + line
-                else:
-                    out_line = line
-                out_file.write(out_line)
+  outname = filename + '.edited'
+  with open(filename, 'r') as input_file:
+    lines = input_file.readlines()
+    with open(outname, 'w') as out_file:
+      for line in lines:
+        if line.find('eclean') >= 0:
+          out_line = '# ' + line
+        else:
+          out_line = line
+        out_file.write(out_line)
 
-    return 0
+  return 0
 
-if __name__ == "__main__":
-    retval = Main(sys.argv[1:])
-    sys.exit(retval)
+
+if __name__ == '__main__':
+  retval = Main(sys.argv[1:])
+  sys.exit(retval)

@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Copyright 2010 Google Inc. All Rights Reserved.
 
 from itertools import chain
@@ -17,7 +15,10 @@ def SetUpRootLogger(filename=None, level=None, display_flags={}):
 
   if filename:
     file_handler = logging.handlers.RotatingFileHandler(
-        filename, maxBytes=10*1024*1024, backupCount=9, delay=True)
+        filename,
+        maxBytes=10 * 1024 * 1024,
+        backupCount=9,
+        delay=True)
     file_handler.setFormatter(CustomFormatter(NullColorCoder(), display_flags))
     logging.root.addHandler(file_handler)
 
@@ -26,12 +27,13 @@ def SetUpRootLogger(filename=None, level=None, display_flags={}):
 
 
 class NullColorCoder(object):
+
   def __call__(self, *args):
     return ''
 
 
 class AnsiColorCoder(object):
-  CODES = {'reset': (0, ),
+  CODES = {'reset': (0,),
            'bold': (1, 22),
            'italics': (3, 23),
            'underline': (4, 24),
@@ -82,8 +84,8 @@ class CustomFormatter(logging.Formatter):
 
   def formatTime(self, record):
     ct = self.converter(record.created)
-    t = time.strftime("%Y-%m-%d %H:%M:%S", ct)
-    return "%s.%02d" % (t, record.msecs / 10)
+    t = time.strftime('%Y-%m-%d %H:%M:%S', ct)
+    return '%s.%02d' % (t, record.msecs / 10)
 
   def formatLevelName(self, record):
     if record.levelname in ['WARNING', 'CRITICAL']:
@@ -96,8 +98,8 @@ class CustomFormatter(logging.Formatter):
 
   def formatMessagePrefix(self, record):
     try:
-      return ' %s%s:%s ' % (
-          self._coder('black', 'bold'), record.prefix, self._coder('reset'))
+      return ' %s%s:%s ' % (self._coder('black', 'bold'), record.prefix,
+                            self._coder('reset'))
     except AttributeError:
       return ''
 
@@ -125,6 +127,7 @@ class CustomFormatter(logging.Formatter):
 
 
 class CompressedFileHandler(logging.FileHandler):
+
   def _open(self):
     return gzip.open(self.baseFilename + '.gz', self.mode, 9)
 
@@ -136,6 +139,6 @@ def HandleUncaughtExceptions(fun):
     try:
       return fun(*args, **kwargs)
     except StandardError:
-      logging.exception("Uncaught exception:")
+      logging.exception('Uncaught exception:')
 
   return _Interceptor

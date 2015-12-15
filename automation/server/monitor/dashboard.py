@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Copyright 2011 Google Inc. All Rights Reserved.
 #
 
@@ -19,7 +17,6 @@ from django.shortcuts import render_to_response
 from django.template import Context
 from django.views import static
 
-
 Link = namedtuple('Link', 'href name')
 
 
@@ -29,8 +26,8 @@ def GetServerConnection():
 
 def MakeDefaultContext(*args):
   context = Context({'links': [
-      Link('/job-group', 'Job Groups'),
-      Link('/machine', 'Machines')]})
+      Link('/job-group', 'Job Groups'), Link('/machine', 'Machines')
+  ]})
 
   for arg in args:
     context.update(arg)
@@ -39,6 +36,7 @@ def MakeDefaultContext(*args):
 
 
 class JobInfo(object):
+
   def __init__(self, job_id):
     self._job = pickle.loads(GetServerConnection().GetJob(job_id))
 
@@ -60,12 +58,9 @@ class JobInfo(object):
 
     commands = enumerate(job.PrettyFormatCommand().split('\n'), start=1)
 
-    return {'text': [('Label', job.label),
-                     ('Directory', job.work_dir)],
-            'link': [('Group', group),
-                     ('Predecessors', predecessors),
-                     ('Successors', successors),
-                     ('Machines', machines),
+    return {'text': [('Label', job.label), ('Directory', job.work_dir)],
+            'link': [('Group', group), ('Predecessors', predecessors),
+                     ('Successors', successors), ('Machines', machines),
                      ('Logs', logs)],
             'code': [('Command', commands)]}
 
@@ -77,8 +72,8 @@ class JobInfo(object):
             for evlog in self._job.timeline.GetTransitionEventHistory()]
 
   def GetLog(self):
-    log_path = os.path.join(
-        self._job.logs_dir, '%s.gz' % self._job.log_filename_prefix)
+    log_path = os.path.join(self._job.logs_dir,
+                            '%s.gz' % self._job.log_filename_prefix)
 
     try:
       log = gzip.open(log_path, 'r')
@@ -104,9 +99,10 @@ class JobInfo(object):
 
 
 class JobGroupInfo(object):
+
   def __init__(self, job_group_id):
-    self._job_group = pickle.loads(
-        GetServerConnection().GetJobGroup(job_group_id))
+    self._job_group = pickle.loads(GetServerConnection().GetJobGroup(
+        job_group_id))
 
   def GetAttributes(self):
     group = self._job_group
@@ -159,9 +155,9 @@ class JobGroupInfo(object):
 
 
 class JobGroupListInfo(object):
+
   def __init__(self):
-    self._all_job_groups = pickle.loads(
-        GetServerConnection().GetAllJobGroups())
+    self._all_job_groups = pickle.loads(GetServerConnection().GetAllJobGroups())
 
   def _GetJobGroupState(self, group):
     return str(group.status)
@@ -188,7 +184,8 @@ def JobPageHandler(request, job_id):
   ctx = MakeDefaultContext({
       'job_id': job_id,
       'attributes': job.GetAttributes(),
-      'timeline': job.GetTimeline()})
+      'timeline': job.GetTimeline()
+  })
 
   return render_to_response('job.html', ctx)
 
@@ -196,9 +193,7 @@ def JobPageHandler(request, job_id):
 def LogPageHandler(request, job_id):
   job = JobInfo(int(job_id))
 
-  ctx = MakeDefaultContext({
-      'job_id': job_id,
-      'log_lines': job.GetLog()})
+  ctx = MakeDefaultContext({'job_id': job_id, 'log_lines': job.GetLog()})
 
   return render_to_response('job_log.html', ctx)
 
@@ -210,7 +205,8 @@ def JobGroupPageHandler(request, job_group_id):
       'group_id': job_group_id,
       'attributes': group.GetAttributes(),
       'job_list': group.GetJobList(),
-      'reports': group.GetReportList()})
+      'reports': group.GetReportList()
+  })
 
   return render_to_response('job_group.html', ctx)
 
@@ -218,8 +214,10 @@ def JobGroupPageHandler(request, job_group_id):
 def JobGroupFilesPageHandler(request, job_group_id, path):
   group = JobGroupInfo(int(job_group_id))
 
-  return static.serve(
-      request, path, document_root=group.GetHomeDirectory(), show_indexes=True)
+  return static.serve(request,
+                      path,
+                      document_root=group.GetHomeDirectory(),
+                      show_indexes=True)
 
 
 class FilterJobGroupsForm(forms.Form):
@@ -245,9 +243,7 @@ def JobGroupListPageHandler(request):
   else:
     form = FilterJobGroupsForm({'initial': '*'})
 
-  ctx = MakeDefaultContext({
-      'filter': form,
-      'groups': group_list})
+  ctx = MakeDefaultContext({'filter': form, 'groups': group_list})
 
   return render_to_response('job_group_list.html', ctx)
 

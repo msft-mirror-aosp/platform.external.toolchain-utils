@@ -8,7 +8,7 @@ __author__ = 'kbaclawski@google.com (Krystian Baclawski)'
 from django.core.management import execute_manager
 
 try:
-  import settings # Assumed to be in the same directory.
+  import settings  # Assumed to be in the same directory.
 except ImportError:
   import sys
 
@@ -16,5 +16,5 @@ except ImportError:
                    'containing %r.' % __file__)
   sys.exit(1)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   execute_manager(settings)

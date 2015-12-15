@@ -1,7 +1,6 @@
 #!/usr/bin/python
 #
 # Copyright 2011 Google Inc. All Rights Reserved.
-
 """Client for Android nightly jobs.
 
 Does the following jobs:
