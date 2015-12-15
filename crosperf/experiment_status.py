@@ -93,7 +93,7 @@ class ExperimentStatus(object):
 
     status_strings = []
     for key, val in status_bins.items():
-      if key == "RUNNING" or self.experiment.log_level == "verbose":
+      if key == "RUNNING":
         status_strings.append("%s: %s" %
                               (key, self._GetNamesAndIterations(val)))
       else:
