@@ -375,7 +375,8 @@ class CommandExecuter(object):
   def RunCommands(self, cmdlist, machine=None,
                   username=None, command_terminator=None):
     cmd = " ;\n" .join(cmdlist)
-    return self.RunCommand(cmd, machine, username, command_terminator)
+    return self.RunCommand(cmd, machine=machine, username=username,
+                           command_terminator=command_terminator)
 
   def CopyFiles(self, src, dest, src_machine=None, dest_machine=None,
                 src_user=None, dest_user=None, recursive=True,
