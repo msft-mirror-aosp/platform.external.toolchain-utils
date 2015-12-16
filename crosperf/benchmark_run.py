@@ -3,8 +3,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+"""Module of benchmark runs."""
+from __future__ import print_function
+
 import datetime
-import os
 import threading
 import time
 import traceback
@@ -17,7 +19,6 @@ from results_cache import MockResult
 from results_cache import MockResultsCache
 from results_cache import Result
 from results_cache import ResultsCache
-from results_cache import TelemetryResult
 
 STATUS_FAILED = 'FAILED'
 STATUS_SUCCEEDED = 'SUCCEEDED'
@@ -28,7 +29,7 @@ STATUS_PENDING = 'PENDING'
 
 
 class BenchmarkRun(threading.Thread):
-
+  """The benchmarkrun class."""
   def __init__(self, name, benchmark, label, iteration, cache_conditions,
                machine_manager, logger_to_use, log_level, share_cache):
     threading.Thread.__init__(self)
@@ -50,6 +51,7 @@ class BenchmarkRun(threading.Thread):
     self.cache_hit = False
     self.failure_reason = ''
     self.test_args = benchmark.test_args
+    self.cache = None
     self.profiler_args = self._GetExtraAutotestArgs()
     self._ce = command_executer.GetCommandExecuter(self._logger,
                                                    log_level=self.log_level)

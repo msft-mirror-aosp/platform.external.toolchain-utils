@@ -1,5 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 """A crontab script to delete night test data."""
+
+from __future__ import print_function
+
 __author__ = 'shenhan@google.com (Han Shen)'
 
 import datetime
@@ -24,13 +27,13 @@ def CleanNumberedDir(s, dry_run=False):
   all_succeeded = True
   for cd in chromeos_dirs:
     if misc.DeleteChromeOsTree(cd, dry_run=dry_run):
-      print 'Successfully removed chromeos tree "{0}".'.format(cd)
+      print('Successfully removed chromeos tree "{0}".'.format(cd))
     else:
       all_succeeded = False
-      print 'Failed to remove chromeos tree "{0}", please check.'.format(cd)
+      print('Failed to remove chromeos tree "{0}", please check.'.format(cd))
 
   if not all_succeeded:
-    print 'Failed to delete at least one chromeos tree, please check.'
+    print('Failed to delete at least one chromeos tree, please check.')
     return False
 
   ## Now delete the numbered dir Before forcibly removing the directory, just
@@ -45,13 +48,13 @@ def CleanNumberedDir(s, dry_run=False):
 
   cmd = 'rm -fr {0}'.format(s)
   if dry_run:
-    print cmd
+    print(cmd)
   else:
     if ce.RunCommand(cmd, print_to_console=False, terminated_timeout=480) == 0:
-      print 'Successfully removed "{0}".'.format(s)
+      print('Successfully removed "{0}".'.format(s))
     else:
       all_succeeded = False
-      print 'Failed to remove "{0}", please check.'.format(s)
+      print('Failed to remove "{0}", please check.'.format(s))
   return all_succeeded
 
 
@@ -120,9 +123,9 @@ def CleanChromeOsTmpAndImages():
          r'-exec bash -c "rm -f {{}}" \;').format(chromeos_chroot_tmp)
   rv2 = ce.RunCommand(cmd, print_to_console=False)
   if rv2 == 0:
-    print 'Successfully cleaned chromeos images.'
+    print('Successfully cleaned chromeos images.')
   else:
-    print 'Some chromeos images were not removed.'
+    print('Some chromeos images were not removed.')
 
   return rv + rv2
 

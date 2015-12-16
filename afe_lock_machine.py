@@ -113,6 +113,7 @@ class AFELockManager(object):
 
     # We have to wait to do these imports until the paths above have
     # been fixed.
+    # pylint: disable=import-error
     from client import setup_modules
     setup_modules.setup(base_path=autotest_path,
                         root_module_name='autotest_lib')
