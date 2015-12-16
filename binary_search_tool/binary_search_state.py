@@ -1,4 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/python2
+
+"""The binary search wrapper."""
+
+from __future__ import print_function
 
 import optparse
 import os
@@ -25,7 +29,7 @@ STATE_FILE = '%s.state' % sys.argv[0]
 
 
 class BinarySearchState(object):
-
+  """The binary search state class."""
   def __init__(self, get_initial_items, switch_to_good, switch_to_bad,
                test_script, incremental, prune, iterations, prune_iterations,
                verify_level, file_args):
@@ -44,6 +48,7 @@ class BinarySearchState(object):
     self.ce = command_executer.GetCommandExecuter()
 
     self.bs = None
+    self.all_items = None
     self.PopulateItemsUsingCommand(self.get_initial_items)
     self.currently_good_items = set([])
     self.currently_bad_items = set([])
@@ -163,7 +168,7 @@ class BinarySearchState(object):
     terminated = False
     while i < self.iterations and not terminated:
       i += 1
-      [bad_items, good_items] = self.GetNextItems(self.incremental)
+      [bad_items, good_items] = self.GetNextItems()
 
       # TODO: bad_items should come first.
       self.SwitchToGood(good_items)
@@ -204,17 +209,7 @@ class BinarySearchState(object):
       return None
     return pickle.load(file(STATE_FILE))
 
-  @classmethod
-  def GetInstance(cls, command):
-    # Disable state loading for now.
-    # obj = cls.LoadState()
-    obj = None
-    if not obj:
-      obj = cls()
-      return obj
-    return obj
-
-  def GetNextItems(self, incremental=True):
+  def GetNextItems(self):
     border_item = self.bs.GetNext()
     index = self.all_items.index(border_item)
 
@@ -327,7 +322,7 @@ def Main(argv):
     bss.DoSearch()
 
   except (KeyboardInterrupt, SystemExit):
-    print 'C-c pressed'
+    print('C-c pressed')
     bss.SaveState()
   return 0
 
