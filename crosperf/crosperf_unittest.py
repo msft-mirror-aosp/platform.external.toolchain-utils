@@ -1,24 +1,20 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2014 Google Inc. All Rights Reserved.
 """Unittest for crosperf."""
-import atexit
-import os
+
+from __future__ import print_function
+
 import optparse
 import StringIO
 
-import mock
 import unittest
 
 import crosperf
 import settings_factory
 import experiment_file
-import experiment_runner
 
 from help import Help
-
-from cros_utils import command_executer
-from cros_utils import logger
 
 EXPERIMENT_FILE_1 = """
   board: x86-alex
@@ -40,6 +36,7 @@ EXPERIMENT_FILE_1 = """
 
 
 class CrosperfTest(unittest.TestCase):
+  """Crosperf test class."""
 
   def setUp(self):
     input_file = StringIO.StringIO(EXPERIMENT_FILE_1)
@@ -56,10 +53,10 @@ class CrosperfTest(unittest.TestCase):
                       dest='log_dir',
                       default='',
                       help='The log_dir, default is under <crosperf_logs>/logs')
-    options_before = parser._get_all_options()
+    options_before = parser.option_list
     self.assertEqual(len(options_before), 3)
     crosperf.SetupParserOptions(parser)
-    options_after = parser._get_all_options()
+    options_after = parser.option_list
     self.assertEqual(len(options_after), 29)
 
   def test_convert_options_to_settings(self):
@@ -74,14 +71,14 @@ class CrosperfTest(unittest.TestCase):
                       help='The log_dir, default is under <crosperf_logs>/logs')
     crosperf.SetupParserOptions(parser)
     argv = ['crosperf/crosperf.py', 'temp.exp', '--rerun=True']
-    options, args = parser.parse_args(argv)
+    options, _ = parser.parse_args(argv)
     settings = crosperf.ConvertOptionsToSettings(options)
     self.assertIsNotNone(settings)
     self.assertIsInstance(settings, settings_factory.GlobalSettings)
     self.assertEqual(len(settings.fields), 25)
     self.assertTrue(settings.GetField('rerun'))
     argv = ['crosperf/crosperf.py', 'temp.exp']
-    options, args = parser.parse_args(argv)
+    options, _ = parser.parse_args(argv)
     settings = crosperf.ConvertOptionsToSettings(options)
     self.assertFalse(settings.GetField('rerun'))
 
