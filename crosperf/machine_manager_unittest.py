@@ -239,7 +239,7 @@ class MachineManagerTest(unittest.TestCase):
     self.assertRaises(self.mm._TryToLockMachine, None)
 
     mock_cros_runcmd.return_value = [0, 'false_lock_checksum', '']
-    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd
     self.mm._machines = []
     self.mm._TryToLockMachine(self.mock_lumpy1)
     self.assertEqual(len(self.mm._machines), 1)
@@ -747,7 +747,7 @@ class CrosMachineTest(unittest.TestCase):
   def test_get_memory_info(self, mock_setup, mock_run_cmd):
     cm = machine_manager.CrosMachine('daisy.cros', '/usr/local/chromeos',
                                      'average', self.mock_cmd_exec)
-    self.mock_cmd_exec.CrosRunCommand = mock_run_cmd
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_run_cmd
     mock_run_cmd.return_value = [0, MEMINFO_STRING, '']
     cm._GetMemoryInfo()
     self.assertEqual(mock_run_cmd.call_count, 1)
@@ -767,7 +767,7 @@ class CrosMachineTest(unittest.TestCase):
   def test_get_cpu_info(self, mock_setup, mock_run_cmd):
     cm = machine_manager.CrosMachine('daisy.cros', '/usr/local/chromeos',
                                      'average', self.mock_cmd_exec)
-    self.mock_cmd_exec.CrosRunCommand = mock_run_cmd
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_run_cmd
     mock_run_cmd.return_value = [0, CPUINFO_STRING, '']
     cm._GetCPUInfo()
     self.assertEqual(mock_run_cmd.call_count, 1)
@@ -800,12 +800,12 @@ class CrosMachineTest(unittest.TestCase):
     checksum_str = cm._GetMD5Checksum(temp_str)
     self.assertEqual(checksum_str, '')
 
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
   @mock.patch.object(machine_manager.CrosMachine, 'SetUpChecksumInfo')
   def test_get_machine_id(self, mock_setup, mock_run_cmd):
     cm = machine_manager.CrosMachine('daisy.cros', '/usr/local/chromeos',
                                      'average', self.mock_cmd_exec)
-    self.mock_cmd_exec.CrosRunCommand = mock_run_cmd
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_run_cmd
     mock_run_cmd.return_value = [0, DUMP_VPD_STRING, '']
 
     cm._GetMachineID()

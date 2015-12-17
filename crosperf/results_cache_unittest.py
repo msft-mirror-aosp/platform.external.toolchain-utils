@@ -363,7 +363,7 @@ class ResultTest(unittest.TestCase):
   @mock.patch.object(misc, 'GetInsideChrootPath')
   @mock.patch.object(tempfile, 'mkdtemp')
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommand')
-  @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommand')
+  @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommandWOutput')
   def test_get_keyvals(self, mock_chrootruncmd, mock_runcmd, mock_mkdtemp,
                        mock_getpath):
 
@@ -390,7 +390,7 @@ class ResultTest(unittest.TestCase):
                                       ('%s,PASS\n%s/telemetry_Crosperf,PASS\n')
                                       % (TMP_DIR1, TMP_DIR1), '']
     mock_getpath.return_value = TMP_DIR1
-    self.result._ce.ChrootRunCommand = mock_chrootruncmd
+    self.result._ce.ChrootRunCommandWOutput = mock_chrootruncmd
     self.result._ce.RunCommand = mock_runcmd
     self.result._GetNewKeyvals = FakeGetNewKeyvals
     self.result.suite = 'telemetry_Crosperf'
@@ -444,7 +444,7 @@ class ResultTest(unittest.TestCase):
     resdir = self.result._GetResultsDir()
     self.assertEqual(resdir, '/tmp/test_that.PO1234567/platform_LibCBench')
 
-  @mock.patch.object(command_executer.CommandExecuter, 'RunCommand')
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandGeneric')
   def test_find_files_in_results_dir(self, mock_runcmd):
 
     self.result.results_dir = None
@@ -584,7 +584,7 @@ class ResultTest(unittest.TestCase):
     self.assertEqual(self.result.keyvals, {'Total': 10, 'retval': 1})
 
   @mock.patch.object(misc, 'GetInsideChrootPath')
-  @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommand')
+  @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommandWOutput')
   def test_populate_from_cache_dir(self, mock_runchrootcmd, mock_getpath):
 
     def FakeMkdtemp(dir=''):
@@ -593,7 +593,7 @@ class ResultTest(unittest.TestCase):
     current_path = os.getcwd()
     cache_dir = os.path.join(current_path, 'test_cache/test_input')
     self.result._ce = command_executer.GetCommandExecuter(log_level='average')
-    self.result._ce.ChrootRunCommand = mock_runchrootcmd
+    self.result._ce.ChrootRunCommandWOutput = mock_runchrootcmd
     mock_runchrootcmd.return_value = ['',
                                       ('%s,PASS\n%s/\telemetry_Crosperf,PASS\n')
                                       % (TMP_DIR1, TMP_DIR1), '']

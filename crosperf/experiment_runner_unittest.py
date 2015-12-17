@@ -283,7 +283,7 @@ class ExperimentRunnerTest(unittest.TestCase):
     self.assertEqual(mock_html_report.call_count, 1)
     self.assertEqual(len(mock_emailer.call_args), 2)
     self.assertEqual(mock_emailer.call_args[0],
-                     (['john.smith@google.com', 'jane.doe@google.com'],
+                     (['jane.doe@google.com', 'john.smith@google.com'],
                       ': image1 vs. image2',
                       "<pre style='font-size: 13px'>This is a fake text "
                       'report.\nResults are stored in _results.\n</pre>'))
@@ -313,7 +313,8 @@ class ExperimentRunnerTest(unittest.TestCase):
     self.assertEqual(mock_html_report.call_count, 1)
     self.assertEqual(len(mock_emailer.call_args), 2)
     self.assertEqual(mock_emailer.call_args[0],
-                     (['john.smith@google.com', 'jane.doe@google.com'],
+                     (['jane.doe@google.com', 'john.smith@google.com',
+                       'john.smith@google.com'],
                       ': image1 vs. image2',
                       "<pre style='font-size: 13px'>This is a fake text "
                       'report.\nResults are stored in _results.\n</pre>'))
