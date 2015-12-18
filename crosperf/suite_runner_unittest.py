@@ -1,29 +1,28 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2014 Google Inc. All Rights Reserved.
-"""Unittest for machine_manager."""
+"""Unittest for suite_runner."""
+
+from __future__ import print_function
+
 import os.path
 import time
-import hashlib
 
 import mock
 import unittest
 
 import suite_runner
-import machine_manager
-import image_checksummer
 import label
 import test_flag
 
 from benchmark import Benchmark
-from benchmark_run import MockBenchmarkRun
 
 from cros_utils import command_executer
 from cros_utils import logger
 
 
 class SuiteRunnerTest(unittest.TestCase):
-
+  """Class of SuiteRunner test."""
   real_logger = logger.GetLogger()
 
   mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
@@ -57,6 +56,17 @@ class SuiteRunnerTest(unittest.TestCase):
                               'telemetry',  # suite
                               False)  # show_all_results
 
+  def __init__(self, *args, **kwargs):
+    super(SuiteRunnerTest, self).__init__(*args, **kwargs)
+    self.call_test_that_run = False
+    self.pin_governor_args = []
+    self.test_that_args = []
+    self.telemetry_run_args = []
+    self.telemetry_crosperf_args = []
+    self.call_telemetry_crosperf_run = False
+    self.call_pin_governor = False
+    self.call_telemetry_run = False
+
   def setUp(self):
     self.runner = suite_runner.SuiteRunner(
         self.mock_logger, 'verbose', self.mock_cmd_exec, self.mock_cmd_term)
@@ -85,20 +95,22 @@ class SuiteRunnerTest(unittest.TestCase):
       self.call_pin_governor = True
       self.pin_governor_args = [machine, chroot]
 
-    def FakeTelemetryRun(machine, label, benchmark, profiler_args):
-      self.telemetry_run_args = [machine, label, benchmark, profiler_args]
+    def FakeTelemetryRun(machine, test_label, benchmark, profiler_args):
+      self.telemetry_run_args = [machine, test_label, benchmark, profiler_args]
       self.call_telemetry_run = True
       return 'Ran FakeTelemetryRun'
 
-    def FakeTelemetryCrosperfRun(machine, label, benchmark, test_args,
+    def FakeTelemetryCrosperfRun(machine, test_label, benchmark, test_args,
                                  profiler_args):
-      self.telemetry_crosperf_args = [machine, label, benchmark, test_args,
+      self.telemetry_crosperf_args = [machine, test_label, benchmark, test_args,
                                       profiler_args]
       self.call_telemetry_crosperf_run = True
       return 'Ran FakeTelemetryCrosperfRun'
 
-    def FakeTestThatRun(machine, label, benchmark, test_args, profiler_args):
-      self.test_that_args = [machine, label, benchmark, test_args, profiler_args
+    def FakeTestThatRun(machine, test_label, benchmark,
+                        test_args, profiler_args):
+      self.test_that_args = [machine, test_label, benchmark,
+                             test_args, profiler_args
                             ]
       self.call_test_that_run = True
       return 'Ran FakeTestThatRun'
@@ -112,8 +124,8 @@ class SuiteRunnerTest(unittest.TestCase):
     test_args = ''
     profiler_args = ''
     reset()
-    res = self.runner.Run(machine, self.mock_label, self.telemetry_bench,
-                          test_args, profiler_args)
+    self.runner.Run(machine, self.mock_label, self.telemetry_bench,
+                    test_args, profiler_args)
     self.assertTrue(self.call_pin_governor)
     self.assertTrue(self.call_telemetry_run)
     self.assertFalse(self.call_test_that_run)
@@ -123,8 +135,8 @@ class SuiteRunnerTest(unittest.TestCase):
         ['fake_machine', self.mock_label, self.telemetry_bench, ''])
 
     reset()
-    res = self.runner.Run(machine, self.mock_label, self.test_that_bench,
-                          test_args, profiler_args)
+    self.runner.Run(machine, self.mock_label, self.test_that_bench,
+                    test_args, profiler_args)
     self.assertTrue(self.call_pin_governor)
     self.assertFalse(self.call_telemetry_run)
     self.assertTrue(self.call_test_that_run)
@@ -133,9 +145,9 @@ class SuiteRunnerTest(unittest.TestCase):
                                            self.test_that_bench, '', ''])
 
     reset()
-    res = self.runner.Run(machine, self.mock_label,
-                          self.telemetry_crosperf_bench, test_args,
-                          profiler_args)
+    self.runner.Run(machine, self.mock_label,
+                    self.telemetry_crosperf_bench, test_args,
+                    profiler_args)
     self.assertTrue(self.call_pin_governor)
     self.assertFalse(self.call_telemetry_run)
     self.assertFalse(self.call_test_that_run)
@@ -164,6 +176,8 @@ class SuiteRunnerTest(unittest.TestCase):
   def test_pin_governor_execution_frequencies(self, mock_cros_runcmd):
 
     def FakeGetHighestFreq(machine_name, chromeos_root):
+      if machine_name or chromeos_root:
+        pass
       return '1666000'
 
     self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
@@ -173,12 +187,12 @@ class SuiteRunnerTest(unittest.TestCase):
     cmd = mock_cros_runcmd.call_args_list[0][0]
     self.assertEqual(cmd, (
         'set -e  && for f in '
-                     '/sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq; do echo '
-                     '1666000 > $f; done && for f in '
-                     '/sys/devices/system/cpu/cpu*/cpufreq/scaling_min_freq; do echo '
-                     '1666000 > $f; done && for f in '
-                     '/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo '
-                     'performance > $f; done',
+        '/sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq; do echo '
+        '1666000 > $f; done && for f in '
+        '/sys/devices/system/cpu/cpu*/cpufreq/scaling_min_freq; do echo '
+        '1666000 > $f; done && for f in '
+        '/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo '
+        'performance > $f; done',
     ))
 
   @mock.patch.object(time, 'sleep')
@@ -186,7 +200,8 @@ class SuiteRunnerTest(unittest.TestCase):
   def test_reboot_machine(self, mock_cros_runcmd, mock_sleep):
 
     def FakePinGovernor(machine_name, chromeos_root):
-      pass
+      if machine_name or chromeos_root:
+        pass
 
     self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
     self.runner.PinGovernorExecutionFrequencies = FakePinGovernor
@@ -202,10 +217,12 @@ class SuiteRunnerTest(unittest.TestCase):
   def test_test_that_run(self, mock_chroot_runcmd, mock_cros_runcmd):
 
     def FakeRebootMachine(machine, chroot):
-      pass
+      if machine or chroot:
+        pass
 
     def FakeLogMsg(fd, termfd, msg, flush):
-      pass
+      if fd or termfd or msg or flush:
+        pass
 
     save_log_msg = self.real_logger._LogMsg
     self.real_logger._LogMsg = FakeLogMsg
@@ -278,7 +295,8 @@ class SuiteRunnerTest(unittest.TestCase):
   def test_telemetry_run(self, mock_runcmd, mock_exists, mock_isdir):
 
     def FakeLogMsg(fd, termfd, msg, flush):
-      pass
+      if fd or termfd or msg or flush:
+        pass
 
     save_log_msg = self.real_logger._LogMsg
     self.real_logger._LogMsg = FakeLogMsg
