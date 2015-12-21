@@ -1,12 +1,14 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import hashlib
+"""Module of result cache unittest."""
+
+from __future__ import print_function
+
 import mock
-import mock_instance
 import os
 import tempfile
 import unittest
@@ -156,8 +158,8 @@ TMP_DIR1 = '/tmp/tmpAbcXyz'
 
 class MockResult(Result):
 
-  def __init__(self, logger, label, logging_level, machine):
-    super(MockResult, self).__init__(logger, label, logging_level, machine)
+  def __init__(self, mylogger, label, logging_level, machine):
+    super(MockResult, self).__init__(mylogger, label, logging_level, machine)
 
   def _FindFilesInResultsDir(self, find_args):
     return ''
@@ -363,7 +365,8 @@ class ResultTest(unittest.TestCase):
   @mock.patch.object(misc, 'GetInsideChrootPath')
   @mock.patch.object(tempfile, 'mkdtemp')
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommand')
-  @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommandWOutput')
+  @mock.patch.object(command_executer.CommandExecuter,
+                     'ChrootRunCommandWOutput')
   def test_get_keyvals(self, mock_chrootruncmd, mock_runcmd, mock_mkdtemp,
                        mock_getpath):
 
@@ -584,7 +587,8 @@ class ResultTest(unittest.TestCase):
     self.assertEqual(self.result.keyvals, {'Total': 10, 'retval': 1})
 
   @mock.patch.object(misc, 'GetInsideChrootPath')
-  @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommandWOutput')
+  @mock.patch.object(command_executer.CommandExecuter,
+                     'ChrootRunCommandWOutput')
   def test_populate_from_cache_dir(self, mock_runchrootcmd, mock_getpath):
 
     def FakeMkdtemp(dir=''):
@@ -834,7 +838,9 @@ TELEMETRY_RESULT_KEYVALS = {
         '45.0'
 }
 
-PURE_TELEMETRY_OUTPUT = """page_name,3d-cube (ms),3d-morph (ms),3d-raytrace (ms),Total (ms),access-binary-trees (ms),access-fannkuch (ms),access-nbody (ms),access-nsieve (ms),bitops-3bit-bits-in-byte (ms),bitops-bits-in-byte (ms),bitops-bitwise-and (ms),bitops-nsieve-bits (ms),controlflow-recursive (ms),crypto-aes (ms),crypto-md5 (ms),crypto-sha1 (ms),date-format-tofte (ms),date-format-xparb (ms),math-cordic (ms),math-partial-sums (ms),math-spectral-norm (ms),regexp-dna (ms),string-base64 (ms),string-fasta (ms),string-tagcloud (ms),string-unpack-code (ms),string-validate-input (ms)\r\nhttp://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html,42.7,50.2,28.7,656.5,7.3,26.3,6.9,8.6,3.5,9.8,8.8,9.3,5.3,19.2,10.8,12.4,31.2,138.1,11.4,32.8,6.3,16.1,17.5,36.3,47.2,45.0,24.8\r\n"""
+PURE_TELEMETRY_OUTPUT = """
+page_name,3d-cube (ms),3d-morph (ms),3d-raytrace (ms),Total (ms),access-binary-trees (ms),access-fannkuch (ms),access-nbody (ms),access-nsieve (ms),bitops-3bit-bits-in-byte (ms),bitops-bits-in-byte (ms),bitops-bitwise-and (ms),bitops-nsieve-bits (ms),controlflow-recursive (ms),crypto-aes (ms),crypto-md5 (ms),crypto-sha1 (ms),date-format-tofte (ms),date-format-xparb (ms),math-cordic (ms),math-partial-sums (ms),math-spectral-norm (ms),regexp-dna (ms),string-base64 (ms),string-fasta (ms),string-tagcloud (ms),string-unpack-code (ms),string-validate-input (ms)\r\nhttp://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html,42.7,50.2,28.7,656.5,7.3,26.3,6.9,8.6,3.5,9.8,8.8,9.3,5.3,19.2,10.8,12.4,31.2,138.1,11.4,32.8,6.3,16.1,17.5,36.3,47.2,45.0,24.8\r
+"""
 
 
 class TelemetryResultTest(unittest.TestCase):
@@ -871,7 +877,7 @@ class TelemetryResultTest(unittest.TestCase):
     cache_dir = os.path.join(current_path,
                              'test_cache/test_puretelemetry_input')
     self.result._PopulateFromCacheDir(cache_dir)
-    self.assertEqual(self.result.out, PURE_TELEMETRY_OUTPUT)
+    self.assertEqual(self.result.out.strip(), PURE_TELEMETRY_OUTPUT.strip())
     self.assertEqual(self.result.err, '')
     self.assertEqual(self.result.retval, 0)
     self.assertEqual(self.result.keyvals, TELEMETRY_RESULT_KEYVALS)
