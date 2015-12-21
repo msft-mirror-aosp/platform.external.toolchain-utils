@@ -1,6 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2014 Google Inc.  All Rights Reserved
+
+"""Download image unittest."""
+
+from __future__ import print_function
 
 import os
 import mock
@@ -16,6 +20,13 @@ MOCK_LOGGER = logger.GetLogger(log_dir='', mock=True)
 
 
 class ImageDownloaderTestcast(unittest.TestCase):
+  """The image downloader test class."""
+
+  def __init__(self, *args, **kwargs):
+    super(ImageDownloaderTestcast, self).__init__(*args, **kwargs)
+    self.called_download_image = False
+    self.called_uncompress_image = False
+    self.called_get_build_id = False
 
   @mock.patch.object(os, 'makedirs')
   @mock.patch.object(os.path, 'exists')
@@ -39,7 +50,8 @@ class ImageDownloaderTestcast(unittest.TestCase):
     # Verify os.path.exists was called twice, with proper arguments.
     self.assertEqual(mock_path_exists.call_count, 2)
     mock_path_exists.assert_called_with(
-        '/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0/chromiumos_test_image.bin')
+        '/usr/local/home/chromeos/chroot/tmp/lumpy-release/'
+        'R36-5814.0.0/chromiumos_test_image.bin')
     mock_path_exists.assert_any_call(
         '/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0')
 
@@ -53,7 +65,8 @@ class ImageDownloaderTestcast(unittest.TestCase):
     mock_cmd_exec.ChrootRunCommand.assert_called_with(
         '/usr/local/home/chromeos',
         'gsutil cp '
-        'gs://chromeos-image-archive/lumpy-release/R36-5814.0.0/chromiumos_test_image.tar.xz'
+        'gs://chromeos-image-archive/lumpy-release/R36-5814.0.0/'
+        'chromiumos_test_image.tar.xz'
         ' /tmp/lumpy-release/R36-5814.0.0')
 
     # Reset the velues in the mocks; set os.path.exists to always return True.
@@ -67,7 +80,8 @@ class ImageDownloaderTestcast(unittest.TestCase):
     # Verify os.path.exists was called twice, with proper arguments.
     self.assertEqual(mock_path_exists.call_count, 2)
     mock_path_exists.assert_called_with(
-        '/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0/chromiumos_test_image.bin')
+        '/usr/local/home/chromeos/chroot/tmp/lumpy-release/'
+        'R36-5814.0.0/chromiumos_test_image.bin')
     mock_path_exists.assert_any_call(
         '/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0')
 
@@ -94,7 +108,8 @@ class ImageDownloaderTestcast(unittest.TestCase):
     # Verify os.path.exists was called once, with correct arguments.
     self.assertEqual(mock_path_exists.call_count, 1)
     mock_path_exists.assert_called_with(
-        '/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0/chromiumos_test_image.bin')
+        '/usr/local/home/chromeos/chroot/tmp/lumpy-release/'
+        'R36-5814.0.0/chromiumos_test_image.bin')
 
     # Verify ChrootRunCommand was called, with correct arguments.
     self.assertEqual(mock_cmd_exec.ChrootRunCommand.call_count, 1)
@@ -112,7 +127,8 @@ class ImageDownloaderTestcast(unittest.TestCase):
     # Verify os.path.exists was called once, with correct arguments.
     self.assertEqual(mock_path_exists.call_count, 1)
     mock_path_exists.assert_called_with(
-        '/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0/chromiumos_test_image.bin')
+        '/usr/local/home/chromeos/chroot/tmp/lumpy-release/'
+        'R36-5814.0.0/chromiumos_test_image.bin')
 
     # Verify ChrootRunCommand was not called.
     self.assertEqual(mock_cmd_exec.ChrootRunCommand.call_count, 0)
@@ -134,14 +150,20 @@ class ImageDownloaderTestcast(unittest.TestCase):
       return 'lumpy-release/R36-5814.0.0'
 
     def GoodDownloadImage(root, build_id, image_path):
+      if root or build_id or image_path:
+        pass
       self.called_download_image = True
       return 'chromiumos_test_image.bin'
 
     def BadDownloadImage(root, build_id, image_path):
+      if root or build_id or image_path:
+        pass
       self.called_download_image = True
       return None
 
     def FakeUncompressImage(root, build_id):
+      if root or build_id:
+        pass
       self.called_uncompress_image = True
       return 0
 
