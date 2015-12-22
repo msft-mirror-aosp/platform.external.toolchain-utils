@@ -224,8 +224,8 @@ class SuiteRunnerTest(unittest.TestCase):
       if fd or termfd or msg or flush:
         pass
 
-    save_log_msg = self.real_logger._LogMsg
-    self.real_logger._LogMsg = FakeLogMsg
+    save_log_msg = self.real_logger.LogMsg
+    self.real_logger.LogMsg = FakeLogMsg
     self.runner._logger = self.real_logger
     self.runner.RebootMachine = FakeRebootMachine
 
@@ -256,7 +256,7 @@ class SuiteRunnerTest(unittest.TestCase):
                                     '--fast  --board=lumpy '
                                     '--iterations=2 lumpy1.cros octane'))
     self.assertEqual(args_dict['command_terminator'], self.mock_cmd_term)
-    self.real_logger._LogMsg = save_log_msg
+    self.real_logger.LogMsg = save_log_msg
 
   @mock.patch.object(os.path, 'isdir')
   @mock.patch.object(command_executer.CommandExecuter,
@@ -298,8 +298,8 @@ class SuiteRunnerTest(unittest.TestCase):
       if fd or termfd or msg or flush:
         pass
 
-    save_log_msg = self.real_logger._LogMsg
-    self.real_logger._LogMsg = FakeLogMsg
+    save_log_msg = self.real_logger.LogMsg
+    self.real_logger.LogMsg = FakeLogMsg
     mock_runcmd.return_value = 0
 
     self.mock_cmd_exec.RunCommandWOutput = mock_runcmd
@@ -348,7 +348,7 @@ class SuiteRunnerTest(unittest.TestCase):
          '--remote=lumpy1.cros --identity /tmp/chromeos/src/scripts'
          '/mod_for_test_scripts/ssh_keys/testing_rsa octane '),))
 
-    self.real_logger._LogMsg = save_log_msg
+    self.real_logger.LogMsg = save_log_msg
 
 
 if __name__ == '__main__':

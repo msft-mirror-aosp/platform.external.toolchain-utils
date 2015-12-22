@@ -113,7 +113,7 @@ class Logger(object):
       term_fd.write('\n')
       term_fd.flush()
 
-  def _LogMsg(self, file_fd, term_fd, msg, flush=True):
+  def LogMsg(self, file_fd, term_fd, msg, flush=True):
     if file_fd:
       self._WriteTo(file_fd, msg, flush)
     if self.print_console:
@@ -144,26 +144,26 @@ class Logger(object):
     else:
       host = machine
 
-    self._LogMsg(self.cmdfd, self._GetStdout(print_to_console),
+    self.LogMsg(self.cmdfd, self._GetStdout(print_to_console),
                  'CMD (%s): %s\n' % (host, cmd))
 
   def LogFatal(self, msg, print_to_console=True):
-    self._LogMsg(self.stderr, self._GetStderr(print_to_console),
+    self.LogMsg(self.stderr, self._GetStderr(print_to_console),
                  'FATAL: %s\n' % msg)
-    self._LogMsg(self.stderr, self._GetStderr(print_to_console),
+    self.LogMsg(self.stderr, self._GetStderr(print_to_console),
                  '\n'.join(traceback.format_stack()))
     sys.exit(1)
 
   def LogError(self, msg, print_to_console=True):
-    self._LogMsg(self.stderr, self._GetStderr(print_to_console),
+    self.LogMsg(self.stderr, self._GetStderr(print_to_console),
                  'ERROR: %s\n' % msg)
 
   def LogWarning(self, msg, print_to_console=True):
-    self._LogMsg(self.stderr, self._GetStderr(print_to_console),
+    self.LogMsg(self.stderr, self._GetStderr(print_to_console),
                  'WARNING: %s\n' % msg)
 
   def LogOutput(self, msg, print_to_console=True):
-    self._LogMsg(self.stdout, self._GetStdout(print_to_console),
+    self.LogMsg(self.stdout, self._GetStdout(print_to_console),
                  'OUTPUT: %s\n' % msg)
 
   def LogFatalIf(self, condition, msg):
@@ -179,13 +179,13 @@ class Logger(object):
       self.LogWarning(msg)
 
   def LogCommandOutput(self, msg, print_to_console=True):
-    self._LogMsg(self.stdout,
+    self.LogMsg(self.stdout,
                  self._GetStdout(print_to_console),
                  msg,
                  flush=False)
 
   def LogCommandError(self, msg, print_to_console=True):
-    self._LogMsg(self.stderr,
+    self.LogMsg(self.stderr,
                  self._GetStderr(print_to_console),
                  msg,
                  flush=False)
@@ -262,7 +262,7 @@ class MockLogger(object):
   def LogEndDots(self, print_to_console=True):
     print '\n'
 
-  def _LogMsg(self, file_fd, term_fd, msg, flush=True):
+  def LogMsg(self, file_fd, term_fd, msg, flush=True):
     print 'MockLogger: %s' % msg
 
   def _GetStdout(self, print_to_console):
@@ -289,23 +289,23 @@ class MockLogger(object):
     else:
       host = machine
 
-    self._LogMsg(0, self._GetStdout(print_to_console),
+    self.LogMsg(0, self._GetStdout(print_to_console),
                  'CMD (%s): %s\n' % (host, cmd))
 
   def LogFatal(self, msg, print_to_console=True):
-    self._LogMsg(0, self._GetStderr(print_to_console), 'FATAL: %s\n' % msg)
-    self._LogMsg(0, self._GetStderr(print_to_console),
+    self.LogMsg(0, self._GetStderr(print_to_console), 'FATAL: %s\n' % msg)
+    self.LogMsg(0, self._GetStderr(print_to_console),
                  '\n'.join(traceback.format_stack()))
     print 'MockLogger: Calling sysexit(1)'
 
   def LogError(self, msg, print_to_console=True):
-    self._LogMsg(0, self._GetStderr(print_to_console), 'ERROR: %s\n' % msg)
+    self.LogMsg(0, self._GetStderr(print_to_console), 'ERROR: %s\n' % msg)
 
   def LogWarning(self, msg, print_to_console=True):
-    self._LogMsg(0, self._GetStderr(print_to_console), 'WARNING: %s\n' % msg)
+    self.LogMsg(0, self._GetStderr(print_to_console), 'WARNING: %s\n' % msg)
 
   def LogOutput(self, msg, print_to_console=True):
-    self._LogMsg(0, self._GetStdout(print_to_console), 'OUTPUT: %s\n' % msg)
+    self.LogMsg(0, self._GetStdout(print_to_console), 'OUTPUT: %s\n' % msg)
 
   def LogFatalIf(self, condition, msg):
     if condition:
@@ -320,13 +320,13 @@ class MockLogger(object):
       self.LogWarning(msg)
 
   def LogCommandOutput(self, msg, print_to_console=True):
-    self._LogMsg(self.stdout,
+    self.LogMsg(self.stdout,
                  self._GetStdout(print_to_console),
                  msg,
                  flush=False)
 
   def LogCommandError(self, msg, print_to_console=True):
-    self._LogMsg(self.stderr,
+    self.LogMsg(self.stderr,
                  self._GetStderr(print_to_console),
                  msg,
                  flush=False)
