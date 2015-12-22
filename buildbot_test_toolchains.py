@@ -74,14 +74,40 @@ class ToolchainComparator(object):
   def _ParseVanillaImage(self, trybot_image):
     """Parse a trybot artifact name to get corresponding vanilla image.
 
-    This function takes an artifact name, such as
-    'trybot-daisy-release/R40-6394.0.0-b1389', and returns the
-    corresponding official build name, e.g. 'daisy-release/R40-6394.0.0'.
+    Args:
+      trybot_image: artifact name such as
+          'trybot-daisy-release/R40-6394.0.0-b1389'
+
+    Returns:
+      Corresponding official image name, e.g. 'daisy-release/R40-6394.0.0'.
     """
     start_pos = trybot_image.find(self._build)
+    assert start_pos != -1
     end_pos = trybot_image.rfind('-b')
+    assert end_pos != -1
     vanilla_image = trybot_image[start_pos:end_pos]
     return vanilla_image
+
+  def _ParseNonAFDOImage(self, trybot_image):
+    """Parse a trybot artifact name to get corresponding non-AFDO image.
+
+    Args:
+      trybot_image: artifact name such as
+          'trybot-daisy-release/R40-6394.0.0-b1389'
+
+    Returns:
+      Corresponding chrome PFQ image name, e.g.
+      'daisy-chrome-pfq/R40-6394.0.0-rc1'.
+    """
+    start_pos = trybot_image.find(self._build)
+    assert start_pos != -1
+    end_pos = trybot_image.rfind('-b')
+    assert end_pos != -1
+    nonafdo_image = trybot_image[start_pos:end_pos]
+    pfq_suffix = '-chrome-pfq'
+    nonafdo_image = nonafdo_image.replace('-release', pfq_suffix) + '-rc1'
+    assert nonafdo_image.find(pfq_suffix) != -1
+    return nonafdo_image
 
   def _FinishSetup(self):
     """Make sure testing_rsa file is properly set up."""
@@ -93,10 +119,10 @@ class ToolchainComparator(object):
     if ret_val != 0:
       raise RuntimeError('chmod for testing_rsa failed')
 
-  def _TestImages(self, trybot_image, vanilla_image):
+  def _TestImages(self, trybot_image, vanilla_image, nonafdo_image):
     """Create crosperf experiment file.
 
-    Given the names of the trybot and vanilla images, create the
+    Given the names of the trybot, vanilla and non-AFDO images, create the
     appropriate crosperf experiment file and launch crosperf on it.
     """
     experiment_file_dir = os.path.join(self._chromeos_root, '..', self._weekday)
@@ -134,6 +160,16 @@ class ToolchainComparator(object):
           """ % (self._chromeos_root, vanilla_image)
       f.write(official_image)
 
+      # Now add non-AFDO image to test file.
+      official_nonafdo_image = """
+          nonafdo_image {
+            chromeos_root: %s
+            build: %s
+            compiler: gcc
+          }
+          """ % (self._chromeos_root, nonafdo_image)
+      f.write(official_nonafdo_image)
+
       label_string = '%s_trybot_image' % compiler_string
       if USE_NEXT_GCC_PATCH in self._patches:
         label_string = 'gcc_next_trybot_image'
@@ -166,7 +202,7 @@ class ToolchainComparator(object):
       ret = self._ce.RunCommand(command)
     return
 
-  def _CopyWeeklyReportFiles(self, trybot_image, vanilla_image):
+  def _CopyWeeklyReportFiles(self, trybot_image, vanilla_image, nonafdo_image):
     """Put files in place for running seven-day reports.
 
     Create tar files of the custom and official images and copy them
@@ -197,12 +233,14 @@ class ToolchainComparator(object):
       self._ce.RunCommand(cmd)
 
     # Now create new tar files and copy them over.
-    labels = ['test', 'vanilla']
+    labels = ['test', 'vanilla', 'nonafdo']
     for label_name in labels:
       if label_name == 'test':
         test_path = trybot_image
-      else:
+      elif label_name == 'vanilla':
         test_path = vanilla_image
+      else:
+        test_path = nonafdo_image
       tar_file_name = '%s_%s_image.tar' % (self._weekday, label_name)
       cmd = ('cd %s; tar -cvf %s %s/chromiumos_test_image.bin; '
              'cp %s %s/.') % (images_path, tar_file_name, test_path,
@@ -243,25 +281,25 @@ class ToolchainComparator(object):
                                                  description,
                                                  build_toolchain=True)
 
-    vanilla_image = self._ParseVanillaImage(trybot_image)
-
-    print('trybot_image: %s' % trybot_image)
-    print('vanilla_image: %s' % vanilla_image)
     if len(trybot_image) == 0:
       self._l.LogError('Unable to find trybot_image for %s!' % description)
       return 1
-    if len(vanilla_image) == 0:
-      self._l.LogError('Unable to find vanilla image for %s!' % description)
-      return 1
+
+    vanilla_image = self._ParseVanillaImage(trybot_image)
+    nonafdo_image = self._ParseNonAFDOImage(trybot_image)
+
+    print('trybot_image: %s' % trybot_image)
+    print('vanilla_image: %s' % vanilla_image)
+    print('nonafdo_image: %s' % nonafdo_image)
     if os.getlogin() == ROLE_ACCOUNT:
       self._FinishSetup()
 
-    self._TestImages(trybot_image, vanilla_image)
+    self._TestImages(trybot_image, vanilla_image, nonafdo_image)
     self._SendEmail()
     if (self._patches_string == USE_NEXT_GCC_PATCH and
         self._board in WEEKLY_REPORT_BOARDS):
       # Only try to copy the image files if the test runs ran successfully.
-      self._CopyWeeklyReportFiles(trybot_image, vanilla_image)
+      self._CopyWeeklyReportFiles(trybot_image, vanilla_image, nonafdo_image)
     return 0
 
 
