@@ -145,26 +145,26 @@ class Logger(object):
       host = machine
 
     self.LogMsg(self.cmdfd, self._GetStdout(print_to_console),
-                 'CMD (%s): %s\n' % (host, cmd))
+                'CMD (%s): %s\n' % (host, cmd))
 
   def LogFatal(self, msg, print_to_console=True):
     self.LogMsg(self.stderr, self._GetStderr(print_to_console),
-                 'FATAL: %s\n' % msg)
+                'FATAL: %s\n' % msg)
     self.LogMsg(self.stderr, self._GetStderr(print_to_console),
-                 '\n'.join(traceback.format_stack()))
+                '\n'.join(traceback.format_stack()))
     sys.exit(1)
 
   def LogError(self, msg, print_to_console=True):
     self.LogMsg(self.stderr, self._GetStderr(print_to_console),
-                 'ERROR: %s\n' % msg)
+                'ERROR: %s\n' % msg)
 
   def LogWarning(self, msg, print_to_console=True):
     self.LogMsg(self.stderr, self._GetStderr(print_to_console),
-                 'WARNING: %s\n' % msg)
+                'WARNING: %s\n' % msg)
 
   def LogOutput(self, msg, print_to_console=True):
     self.LogMsg(self.stdout, self._GetStdout(print_to_console),
-                 'OUTPUT: %s\n' % msg)
+                'OUTPUT: %s\n' % msg)
 
   def LogFatalIf(self, condition, msg):
     if condition:
@@ -180,15 +180,15 @@ class Logger(object):
 
   def LogCommandOutput(self, msg, print_to_console=True):
     self.LogMsg(self.stdout,
-                 self._GetStdout(print_to_console),
-                 msg,
-                 flush=False)
+                self._GetStdout(print_to_console),
+                msg,
+                flush=False)
 
   def LogCommandError(self, msg, print_to_console=True):
     self.LogMsg(self.stderr,
-                 self._GetStderr(print_to_console),
-                 msg,
-                 flush=False)
+                self._GetStderr(print_to_console),
+                msg,
+                flush=False)
 
   def Flush(self):
     self.cmdfd.flush()
@@ -290,12 +290,12 @@ class MockLogger(object):
       host = machine
 
     self.LogMsg(0, self._GetStdout(print_to_console),
-                 'CMD (%s): %s\n' % (host, cmd))
+                'CMD (%s): %s\n' % (host, cmd))
 
   def LogFatal(self, msg, print_to_console=True):
     self.LogMsg(0, self._GetStderr(print_to_console), 'FATAL: %s\n' % msg)
     self.LogMsg(0, self._GetStderr(print_to_console),
-                 '\n'.join(traceback.format_stack()))
+                '\n'.join(traceback.format_stack()))
     print 'MockLogger: Calling sysexit(1)'
 
   def LogError(self, msg, print_to_console=True):
@@ -321,15 +321,15 @@ class MockLogger(object):
 
   def LogCommandOutput(self, msg, print_to_console=True):
     self.LogMsg(self.stdout,
-                 self._GetStdout(print_to_console),
-                 msg,
-                 flush=False)
+                self._GetStdout(print_to_console),
+                msg,
+                flush=False)
 
   def LogCommandError(self, msg, print_to_console=True):
     self.LogMsg(self.stderr,
-                 self._GetStderr(print_to_console),
-                 msg,
-                 flush=False)
+                self._GetStderr(print_to_console),
+                msg,
+                flush=False)
 
   def Flush(self):
     print 'MockLogger: Flushing cmdfd, stdout, stderr'
