@@ -9,7 +9,6 @@ import hashlib
 import mock
 import unittest
 
-import image_chromeos
 import label
 import file_lock_machine
 import machine_manager

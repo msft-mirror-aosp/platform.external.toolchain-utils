@@ -2,12 +2,9 @@
 # Copyright 2015 The Chromium OS Authors. All rights reserved.
 """Utilities for locking machines."""
 
-import os
-import sys
 import time
 
 import afe_lock_machine
-import file_lock_machine
 
 import logger
 

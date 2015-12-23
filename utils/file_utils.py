@@ -2,7 +2,6 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 import errno
-import hashlib
 import os
 import shutil
 import command_executer

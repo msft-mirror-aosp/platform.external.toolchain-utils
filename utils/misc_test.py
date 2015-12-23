@@ -4,7 +4,6 @@
 __author__ = 'asharif@google.com (Ahmad Sharif)'
 
 # System modules
-import re
 import unittest
 
 # Local modules

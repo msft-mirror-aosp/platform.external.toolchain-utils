@@ -4,7 +4,6 @@
 import StringIO
 import getpass
 import os
-import time
 
 import mock
 import unittest
@@ -20,7 +19,6 @@ from results_report import TextResultsReport
 from results_report import HTMLResultsReport
 from results_cache import Result
 
-from cros_utils import logger
 from cros_utils import command_executer
 from cros_utils.email_sender import EmailSender
 from cros_utils.file_utils import FileUtils
