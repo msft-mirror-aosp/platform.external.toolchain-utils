@@ -663,7 +663,7 @@ class BuildSteps(NonAddressableNodeList):
   @property
   def keys(self):
     """Returns the steps name in order."""
-    return [i['name'] for i in (self.data or [])]
+    return [i['name'] for i in self.data or []]
 
   @property
   def failed(self):

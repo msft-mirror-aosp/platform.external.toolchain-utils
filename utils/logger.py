@@ -96,20 +96,20 @@ class Logger(object):
 
   def LogStartDots(self, print_to_console=True):
     term_fd = self._GetStdout(print_to_console)
-    if (term_fd):
+    if term_fd:
       term_fd.flush()
       term_fd.write('. ')
       term_fd.flush()
 
   def LogAppendDot(self, print_to_console=True):
     term_fd = self._GetStdout(print_to_console)
-    if (term_fd):
+    if term_fd:
       term_fd.write('. ')
       term_fd.flush()
 
   def LogEndDots(self, print_to_console=True):
     term_fd = self._GetStdout(print_to_console)
-    if (term_fd):
+    if term_fd:
       term_fd.write('\n')
       term_fd.flush()
 
