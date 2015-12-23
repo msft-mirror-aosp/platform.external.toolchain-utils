@@ -279,7 +279,6 @@ class MockLogger(object):
     return
 
     host = ('%s@%s' % (user, machine)) if user else machine
-    flush = True
     cmd_string = 'CMD (%s): %s\n' % (host, cmd)
     print 'MockLogger: Writing to file ONLY: %s' % cmd_string
 

@@ -136,9 +136,9 @@ def FindArchiveImage(chromeos_root, build, build_id):
   ce = command_executer.GetCommandExecuter()
   command = ('gsutil ls gs://chromeos-image-archive/trybot-%s/*b%s'
              '/chromiumos_test_image.tar.xz' % (build, build_id))
-  retval, out, err = ce.ChrootRunCommandWOutput(chromeos_root,
-                                                command,
-                                                print_to_console=False)
+  _, out, _ = ce.ChrootRunCommandWOutput(chromeos_root,
+                                         command,
+                                         print_to_console=False)
   #
   # If build_id is not unique, there may be multiple archive images
   # to choose from; sort them & pick the first (newest).
@@ -207,7 +207,6 @@ def GetTrybotImage(chromeos_root,
   toolchain_flags = ''
   if build_toolchain:
     toolchain_flags += '--latest-toolchain'
-  branch = 'master'
   os.chdir(cbuildbot_path)
 
   # Launch buildbot with appropriate flags.

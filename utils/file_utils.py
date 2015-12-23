@@ -28,7 +28,7 @@ class FileUtils(object):
   def Md5File(self, filename, log_level='verbose', block_size=2**10):
     command = 'md5sum %s' % filename
     ce = command_executer.GetCommandExecuter(log_level=log_level)
-    ret, out, err = ce.RunCommandWOutput(command)
+    ret, out, _ = ce.RunCommandWOutput(command)
     if ret:
       raise Exception('Could not run md5sum on: %s' % filename)
 

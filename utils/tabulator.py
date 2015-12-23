@@ -817,7 +817,7 @@ class TableFormatter(object):
       key.string_value = 'Results'
       out_row = [key]
       baseline = None
-      for value in labels_row[1:]:
+      for _ in labels_row[1:]:
         for column in self._columns:
           cell = Cell()
           cell.name = key.string_value
