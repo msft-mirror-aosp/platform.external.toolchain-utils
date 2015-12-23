@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 """Switch part of the objects file in working set to (possible) bad ones."""
 
 import sys

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 """Prints out index for every object file, starting from 0."""
 
 import sys

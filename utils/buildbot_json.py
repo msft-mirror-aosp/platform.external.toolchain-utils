@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python2
 # Copyright (c) 2012 The Chromium Authors. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without

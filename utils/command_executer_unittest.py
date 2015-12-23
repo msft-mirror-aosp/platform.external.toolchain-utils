@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 """Unittest for command_executer.py."""
 import time
 import unittest

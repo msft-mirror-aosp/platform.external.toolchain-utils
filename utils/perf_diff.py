@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # Copyright 2012 Google Inc. All Rights Reserved.
 """One-line documentation for perf_diff module.
 
