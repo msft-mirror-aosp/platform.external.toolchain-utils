@@ -1,3 +1,5 @@
+# We did not author this file nor mantain it. Skip linting it.
+#pylint: skip-file
 # Copyright (c) 1999-2007 Gary Strangman; All Rights Reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy

@@ -1,3 +1,5 @@
+# We did not author this file nor mantain it. Skip linting it.
+#pylint: skip-file
 """ Convert values between RGB hex codes and xterm-256 color codes.
 
 Nice long listing of all 256 colors and their codes. Useful for
