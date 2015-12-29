@@ -157,7 +157,7 @@ TMP_DIR1 = '/tmp/tmpAbcXyz'
 
 
 class MockResult(Result):
-
+  """Mock result class."""
   def __init__(self, mylogger, label, logging_level, machine):
     super(MockResult, self).__init__(mylogger, label, logging_level, machine)
 
@@ -165,11 +165,13 @@ class MockResult(Result):
     return ''
 
   def _GetKeyvals(self, show_all_results):
+    if show_all_results:
+      pass
     return keyvals
 
 
 class ResultTest(unittest.TestCase):
-
+  """Result test class."""
   mock_label = MockLabel('mock_label', 'chromeos_image', '/tmp', 'lumpy',
                          'remote', 'image_args', 'cache_dir', 'average', 'gcc',
                          None)
@@ -535,8 +537,12 @@ class ResultTest(unittest.TestCase):
       return []
 
     def FakeProcessResults(show_results):
+      if show_results:
+        pass
       self.callProcessResults = True
 
+    if mock_getpath:
+      pass
     mock.get_path = '/tmp/chromeos/tmp/results_dir'
     self.result._chromeos_root = '/tmp/chromeos'
 
@@ -592,6 +598,8 @@ class ResultTest(unittest.TestCase):
   def test_populate_from_cache_dir(self, mock_runchrootcmd, mock_getpath):
 
     def FakeMkdtemp(dir=''):
+      if dir:
+        pass
       return self.tmpdir
 
     current_path = os.getcwd()
@@ -703,9 +711,13 @@ class ResultTest(unittest.TestCase):
   @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommand')
   def test_store_to_cache_dir(self, mock_chrootruncmd, mock_getpath):
 
-    def FakeMkdtemp(dir=''):
+    def FakeMkdtemp(directory=''):
+      if directory:
+        pass
       return self.tmpdir
 
+    if mock_chrootruncmd or mock_getpath:
+      pass
     current_path = os.getcwd()
     cache_dir = os.path.join(current_path, 'test_cache/test_output')
 
@@ -844,7 +856,7 @@ page_name,3d-cube (ms),3d-morph (ms),3d-raytrace (ms),Total (ms),access-binary-t
 
 
 class TelemetryResultTest(unittest.TestCase):
-
+  """Telemetry result test."""
   mock_logger = mock.Mock(spec=logger.Logger)
   mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
   mock_label = MockLabel('mock_label', 'chromeos_image', '/tmp', 'lumpy',
@@ -884,7 +896,7 @@ class TelemetryResultTest(unittest.TestCase):
 
 
 class ResultsCacheTest(unittest.TestCase):
-
+  """Resultcache test class."""
   mock_logger = mock.Mock(spec=logger.Logger)
   mock_label = MockLabel('mock_label', 'chromeos_image', '/tmp', 'lumpy',
                          'remote', 'image_args', 'cache_dir', 'average', 'gcc',
@@ -923,6 +935,8 @@ class ResultsCacheTest(unittest.TestCase):
   def test_get_cache_dir_for_write(self, mock_checksum):
 
     def FakeGetMachines(label):
+      if label:
+        pass
       m1 = machine_manager.MockCrosMachine(
           'lumpy1.cros', self.results_cache.chromeos_root, 'average')
       m2 = machine_manager.MockCrosMachine(
@@ -966,6 +980,8 @@ class ResultsCacheTest(unittest.TestCase):
     # cache directory name, based on various conditions.
 
     def FakeGetMachines(label):
+      if label:
+        pass
       m1 = machine_manager.MockCrosMachine(
           'lumpy1.cros', self.results_cache.chromeos_root, 'average')
       m2 = machine_manager.MockCrosMachine(
