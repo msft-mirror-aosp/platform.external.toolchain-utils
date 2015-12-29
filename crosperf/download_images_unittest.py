@@ -45,7 +45,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
     # Set os.path.exists to always return False and run downloader
     mock_path_exists.return_value = False
     test_flag.SetTestMode(True)
-    downloader._DownloadImage(test_chroot, test_build_id, image_path)
+    downloader.DownloadImage(test_chroot, test_build_id, image_path)
 
     # Verify os.path.exists was called twice, with proper arguments.
     self.assertEqual(mock_path_exists.call_count, 2)
@@ -75,7 +75,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
     mock_path_exists.return_value = True
 
     # Run downloader
-    downloader._DownloadImage(test_chroot, test_build_id, image_path)
+    downloader.DownloadImage(test_chroot, test_build_id, image_path)
 
     # Verify os.path.exists was called twice, with proper arguments.
     self.assertEqual(mock_path_exists.call_count, 2)
@@ -103,7 +103,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
 
     # Set os.path.exists to always return False and run uncompress.
     mock_path_exists.return_value = False
-    downloader._UncompressImage(test_chroot, test_build_id)
+    downloader.UncompressImage(test_chroot, test_build_id)
 
     # Verify os.path.exists was called once, with correct arguments.
     self.assertEqual(mock_path_exists.call_count, 1)
@@ -122,7 +122,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
     mock_path_exists.reset_mock()
     mock_cmd_exec.reset_mock()
     mock_path_exists.return_value = True
-    downloader._UncompressImage(test_chroot, test_build_id)
+    downloader.UncompressImage(test_chroot, test_build_id)
 
     # Verify os.path.exists was called once, with correct arguments.
     self.assertEqual(mock_path_exists.call_count, 1)
@@ -171,9 +171,9 @@ class ImageDownloaderTestcast(unittest.TestCase):
     downloader = download_images.ImageDownloader(logger_to_use=MOCK_LOGGER)
 
     # Set downloader to call fake stubs.
-    downloader._GetBuildID = FakeGetBuildID
-    downloader._UncompressImage = FakeUncompressImage
-    downloader._DownloadImage = GoodDownloadImage
+    downloader.GetBuildID = FakeGetBuildID
+    downloader.UncompressImage = FakeUncompressImage
+    downloader.DownloadImage = GoodDownloadImage
 
     # Call Run.
     downloader.Run(test_chroot, test_build_id)
@@ -185,7 +185,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
     # Reset values; Now use fake stub that simulates DownloadImage failing.
     self.called_download_image = False
     self.called_uncompress_image = False
-    downloader._DownloadImage = BadDownloadImage
+    downloader.DownloadImage = BadDownloadImage
 
     # Call Run again.
     downloader.Run(test_chroot, test_build_id)

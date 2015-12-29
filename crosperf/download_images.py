@@ -24,7 +24,7 @@ class ImageDownloader(object):
         self._logger,
         log_level=self.log_level)
 
-  def _GetBuildID(self, chromeos_root, xbuddy_label):
+  def GetBuildID(self, chromeos_root, xbuddy_label):
     # Get the translation of the xbuddy_label into the real Google Storage
     # image name.
     command = ('cd ~/trunk/src/third_party/toolchain-utils/crosperf; '
@@ -39,7 +39,7 @@ class ImageDownloader(object):
 
     return build_id
 
-  def _DownloadImage(self, chromeos_root, build_id, image_name):
+  def DownloadImage(self, chromeos_root, build_id, image_name):
     if self.log_level == 'average':
       self._logger.LogOutput('Preparing to download %s image to local '
                              'directory.' % build_id)
@@ -65,7 +65,7 @@ class ImageDownloader(object):
     else:
       return None
 
-  def _UncompressImage(self, chromeos_root, build_id):
+  def UncompressImage(self, chromeos_root, build_id):
     # Check to see if the file has already been uncompresssed, etc.
     if os.path.exists(os.path.join(chromeos_root, 'chroot/tmp', build_id,
                                    'chromiumos_test_image.bin')):
@@ -82,7 +82,7 @@ class ImageDownloader(object):
     return retval
 
   def Run(self, chromeos_root, xbuddy_label):
-    build_id = self._GetBuildID(chromeos_root, xbuddy_label)
+    build_id = self.GetBuildID(chromeos_root, xbuddy_label)
     image_name = ('gs://chromeos-image-archive/%s/chromiumos_test_image.tar.xz'
                   % build_id)
 
@@ -94,10 +94,10 @@ class ImageDownloader(object):
       status = self._ce.ChrootRunCommand(chromeos_root, cmd)
     if status != 0:
       raise MissingImage('Cannot find official image: %s.' % image_name)
-    image_path = self._DownloadImage(chromeos_root, build_id, image_name)
+    image_path = self.DownloadImage(chromeos_root, build_id, image_name)
     retval = 0
     if image_path:
-      retval = self._UncompressImage(chromeos_root, build_id)
+      retval = self.UncompressImage(chromeos_root, build_id)
     else:
       retval = 1
 

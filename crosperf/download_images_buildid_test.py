@@ -68,7 +68,7 @@ class ImageDownloaderBuildIDTest(object):
     print "Translating '%s'" % test_id
     self.tests_run = self.tests_run + 1
 
-    result = downloader._GetBuildID(self.chromeos_root, test_id)
+    result = downloader.GetBuildID(self.chromeos_root, test_id)
     # Verify that we got a build id back.
     self.assertIsNotNone(result, 'result')
 
