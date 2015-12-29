@@ -26,7 +26,8 @@ from cros_utils import command_executer
 from cros_utils import logger
 from cros_utils import misc
 
-OUTPUT = """CMD (True): ./test_that.sh --remote=172.17.128.241  --board=lumpy   LibCBench
+OUTPUT = """CMD (True): ./test_that.sh\
+ --remote=172.17.128.241  --board=lumpy   LibCBench
 CMD (None): cd /usr/local/google/home/yunlian/gd/src/build/images/lumpy/latest/../../../../..; cros_sdk  -- ./in_chroot_cmd6X7Cxu.sh
 Identity added: /tmp/test_that.PO1234567/autotest_key (/tmp/test_that.PO1234567/autotest_key)
 INFO    : Using emerged autotests already installed at /build/lumpy/usr/local/autotest.
@@ -172,11 +173,25 @@ class MockResult(Result):
 
 class ResultTest(unittest.TestCase):
   """Result test class."""
-  mock_label = MockLabel('mock_label', 'chromeos_image', '/tmp', 'lumpy',
-                         'remote', 'image_args', 'cache_dir', 'average', 'gcc',
-                         None)
-  mock_logger = mock.Mock(spec=logger.Logger)
-  mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
+
+  def __init__(self, *args, **kwargs):
+    super(ResultTest, self).__init__(*args, **kwargs)
+    self.callFakeProcessResults = False
+    self.fakeCacheReturnResult = None
+    self.callGetResultsDir = False
+    self.callProcessResults = False
+    self.callGetPerfReportFiles = False
+    self.kv_dict = None
+    self.tmpdir = ''
+    self.call_GetNewKeyvals = False
+    self.callGetPerfDataFiles = False
+    self.args = None
+    self.callGatherPerfResults = False
+    self.mock_logger = mock.Mock(spec=logger.Logger)
+    self.mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
+    self.mock_label = MockLabel('mock_label', 'chromeos_image', '/tmp', 'lumpy',
+                                'remote', 'image_args', 'cache_dir', 'average',
+                                'gcc', None)
 
   def testCreateFromRun(self):
     result = MockResult.CreateFromRun(logger.GetLogger(), 'average',
@@ -857,13 +872,19 @@ page_name,3d-cube (ms),3d-morph (ms),3d-raytrace (ms),Total (ms),access-binary-t
 
 class TelemetryResultTest(unittest.TestCase):
   """Telemetry result test."""
-  mock_logger = mock.Mock(spec=logger.Logger)
-  mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
-  mock_label = MockLabel('mock_label', 'chromeos_image', '/tmp', 'lumpy',
-                         'remote', 'image_args', 'cache_dir', 'average', 'gcc',
-                         None)
-  mock_machine = machine_manager.MockCrosMachine('falco.cros', '/tmp/chromeos',
-                                                 'average')
+
+  def __init__(self, *args, **kwargs):
+    super(TelemetryResultTest, self).__init__(*args, **kwargs)
+    self.callFakeProcessResults = False
+    self.result = None
+    self.mock_logger = mock.Mock(spec=logger.Logger)
+    self.mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
+    self.mock_label = MockLabel('mock_label', 'chromeos_image', '/tmp',
+                                'lumpy', 'remote', 'image_args', 'cache_dir',
+                                'average', 'gcc', None)
+    self.mock_machine = machine_manager.MockCrosMachine('falco.cros',
+                                                        '/tmp/chromeos',
+                                                        'average')
 
   def test_populate_from_run(self):
 
@@ -897,10 +918,14 @@ class TelemetryResultTest(unittest.TestCase):
 
 class ResultsCacheTest(unittest.TestCase):
   """Resultcache test class."""
-  mock_logger = mock.Mock(spec=logger.Logger)
-  mock_label = MockLabel('mock_label', 'chromeos_image', '/tmp', 'lumpy',
-                         'remote', 'image_args', 'cache_dir', 'average', 'gcc',
-                         None)
+
+  def __init__(self, *args, **kwargs):
+    super(ResultsCacheTest, self).__init__(*args, **kwargs)
+    self.fakeCacheReturnResult = None
+    self.mock_logger = mock.Mock(spec=logger.Logger)
+    self.mock_label = MockLabel('mock_label', 'chromeos_image', '/tmp', 'lumpy',
+                                'remote', 'image_args', 'cache_dir', 'average',
+                                'gcc', None)
 
   def setUp(self):
     self.results_cache = ResultsCache()
