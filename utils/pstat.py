@@ -8,10 +8,10 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -101,7 +101,7 @@ functions/methods.  Their inclusion here is for function name consistency.
 ## 12/05/98 ... updated doc-strings
 ##              added features to collapse() function
 ##              added flat() function for lists
-##              fixed a broken asortrows() 
+##              fixed a broken asortrows()
 ## 11/16/98 ... fixed minor bug in aput for 1D arrays
 ##
 ## 11/08/98 ... fixed aput to output large arrays correctly
@@ -979,8 +979,8 @@ Returns: an array of equal length containing 1s where the two rows had
 """
     return
     if row1.dtype.char == 'O' or row2.dtype == 'O':
-      cmpvect = N.logical_not(abs(N.array(map(cmp, row1, row2)))
-                             )  # cmp fcn gives -1,0,1
+      cmpvect = N.logical_not(
+          abs(N.array(map(cmp, row1, row2))))  # cmp fcn gives -1,0,1
     else:
       cmpvect = N.equal(row1, row2)
     return cmpvect
