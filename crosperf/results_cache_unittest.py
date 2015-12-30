@@ -162,10 +162,10 @@ class MockResult(Result):
   def __init__(self, mylogger, label, logging_level, machine):
     super(MockResult, self).__init__(mylogger, label, logging_level, machine)
 
-  def _FindFilesInResultsDir(self, find_args):
+  def FindFilesInResultsDir(self, find_args):
     return ''
 
-  def _GetKeyvals(self, show_all_results):
+  def GetKeyvals(self, show_all_results):
     if show_all_results:
       pass
     return keyvals
@@ -183,7 +183,7 @@ class ResultTest(unittest.TestCase):
     self.callGetPerfReportFiles = False
     self.kv_dict = None
     self.tmpdir = ''
-    self.call_GetNewKeyvals = False
+    self.callGetNewKeyvals = False
     self.callGetPerfDataFiles = False
     self.args = None
     self.callGatherPerfResults = False
@@ -222,7 +222,7 @@ class ResultTest(unittest.TestCase):
 
     #test 1. dest_dir exists; CopyFiles returns 0.
     mock_isdir.return_value = True
-    self.result._CopyFilesTo(dest_dir, files)
+    self.result.CopyFilesTo(dest_dir, files)
     self.assertEqual(mock_runcmd.call_count, 0)
     self.assertEqual(mock_copyfiles.call_count, 3)
     first_args = mock_copyfiles.call_args_list[0][0]
@@ -236,7 +236,7 @@ class ResultTest(unittest.TestCase):
     mock_copyfiles.reset_mock()
     #test 2. dest_dir does not exist; CopyFiles returns 0.
     mock_isdir.return_value = False
-    self.result._CopyFilesTo(dest_dir, files)
+    self.result.CopyFilesTo(dest_dir, files)
     self.assertEqual(mock_runcmd.call_count, 3)
     self.assertEqual(mock_copyfiles.call_count, 3)
     self.assertEqual(mock_runcmd.call_args_list[0],
@@ -247,10 +247,10 @@ class ResultTest(unittest.TestCase):
 
     #test 3. CopyFiles returns 1 (fails).
     mock_copyfiles.return_value = 1
-    self.assertRaises(Exception, self.result._CopyFilesTo, dest_dir, files)
+    self.assertRaises(Exception, self.result.CopyFilesTo, dest_dir, files)
 
-  @mock.patch.object(Result, '_CopyFilesTo')
-  def test_copy_results_to(self, mock_CopyFilesTo):
+  @mock.patch.object(Result, 'CopyFilesTo')
+  def test_copy_results_to(self, mockCopyFilesTo):
     perf_data_files = ['/tmp/perf.data.0', '/tmp/perf.data.1',
                        '/tmp/perf.data.2']
     perf_report_files = ['/tmp/perf.report.0', '/tmp/perf.report.1',
@@ -259,13 +259,13 @@ class ResultTest(unittest.TestCase):
     self.result.perf_data_files = perf_data_files
     self.result.perf_report_files = perf_report_files
 
-    self.result._CopyFilesTo = mock_CopyFilesTo
+    self.result.CopyFilesTo = mockCopyFilesTo
     self.result.CopyResultsTo('/tmp/results/')
-    self.assertEqual(mock_CopyFilesTo.call_count, 2)
-    self.assertEqual(len(mock_CopyFilesTo.call_args_list), 2)
-    self.assertEqual(mock_CopyFilesTo.call_args_list[0][0],
+    self.assertEqual(mockCopyFilesTo.call_count, 2)
+    self.assertEqual(len(mockCopyFilesTo.call_args_list), 2)
+    self.assertEqual(mockCopyFilesTo.call_args_list[0][0],
                      ('/tmp/results/', perf_data_files))
-    self.assertEqual(mock_CopyFilesTo.call_args_list[1][0],
+    self.assertEqual(mockCopyFilesTo.call_args_list[1][0],
                      ('/tmp/results/', perf_report_files))
 
   def test_get_new_keyvals(self):
@@ -275,8 +275,8 @@ class ResultTest(unittest.TestCase):
       filename = os.path.join(os.getcwd(), 'unittest_keyval_file.txt')
       return [filename]
 
-    self.result._GetDataMeasurementsFiles = FakeGetDataMeasurementsFiles
-    kv_dict2, udict = self.result._GetNewKeyvals(kv_dict)
+    self.result.GetDataMeasurementsFiles = FakeGetDataMeasurementsFiles
+    kv_dict2, udict = self.result.GetNewKeyvals(kv_dict)
     self.assertEqual(kv_dict2,
                      {u'Box2D__Box2D': 4775,
                       u'Mandreel__Mandreel': 6620,
@@ -358,7 +358,7 @@ class ResultTest(unittest.TestCase):
                   u'Splay__Splay': u'score',
                   u'RayTrace__RayTrace': u'score'}
 
-    results_dict = self.result._AppendTelemetryUnits(kv_dict, units_dict)
+    results_dict = self.result.AppendTelemetryUnits(kv_dict, units_dict)
     self.assertEqual(results_dict,
                      {u'Box2D__Box2D': [4775, u'score'],
                       u'Splay__Splay': [4425, u'score'],
@@ -388,11 +388,11 @@ class ResultTest(unittest.TestCase):
                        mock_getpath):
 
     self.kv_dict = {}
-    self.call_GetNewKeyvals = False
+    self.callGetNewKeyvals = False
 
     def reset():
       self.kv_dict = {}
-      self.call_GetNewKeyvals = False
+      self.callGetNewKeyvals = False
       mock_chrootruncmd.reset_mock()
       mock_runcmd.reset_mock()
       mock_mkdtemp.reset_mock()
@@ -400,7 +400,7 @@ class ResultTest(unittest.TestCase):
 
     def FakeGetNewKeyvals(kv_dict):
       self.kv_dict = kv_dict
-      self.call_GetNewKeyvals = True
+      self.callGetNewKeyvals = True
       return_kvdict = {'first_time': 680, 'Total': 10}
       return_udict = {'first_time': 'ms', 'Total': 'score'}
       return return_kvdict, return_udict
@@ -410,15 +410,15 @@ class ResultTest(unittest.TestCase):
                                       ('%s,PASS\n%s/telemetry_Crosperf,PASS\n')
                                       % (TMP_DIR1, TMP_DIR1), '']
     mock_getpath.return_value = TMP_DIR1
-    self.result._ce.ChrootRunCommandWOutput = mock_chrootruncmd
-    self.result._ce.RunCommand = mock_runcmd
-    self.result._GetNewKeyvals = FakeGetNewKeyvals
+    self.result.ce.ChrootRunCommandWOutput = mock_chrootruncmd
+    self.result.ce.RunCommand = mock_runcmd
+    self.result.GetNewKeyvals = FakeGetNewKeyvals
     self.result.suite = 'telemetry_Crosperf'
     self.result.results_dir = '/tmp/test_that_resultsNmq'
 
-    # Test 1. no self._temp_dir.
-    res = self.result._GetKeyvals(True)
-    self.assertTrue(self.call_GetNewKeyvals)
+    # Test 1. no self.temp_dir.
+    res = self.result.GetKeyvals(True)
+    self.assertTrue(self.callGetNewKeyvals)
     self.assertEqual(self.kv_dict, {'': 'PASS', 'telemetry_Crosperf': 'PASS'})
     self.assertEqual(mock_runcmd.call_count, 1)
     self.assertEqual(mock_runcmd.call_args_list[0][0],
@@ -430,18 +430,18 @@ class ResultTest(unittest.TestCase):
     self.assertEqual(mock_mkdtemp.call_count, 1)
     self.assertEqual(res, {'Total': [10, 'score'], 'first_time': [680, 'ms']})
 
-    # Test 2. self._temp_dir
+    # Test 2. self.temp_dir
     reset()
     mock_chrootruncmd.return_value = ['',
                                       ('/tmp/tmpJCajRG,PASS\n/tmp/tmpJCajRG/'
                                        'telemetry_Crosperf,PASS\n'), '']
     mock_getpath.return_value = '/tmp/tmpJCajRG'
-    self.result._temp_dir = '/tmp/tmpJCajRG'
-    res = self.result._GetKeyvals(True)
+    self.result.temp_dir = '/tmp/tmpJCajRG'
+    res = self.result.GetKeyvals(True)
     self.assertEqual(mock_runcmd.call_count, 0)
     self.assertEqual(mock_mkdtemp.call_count, 0)
     self.assertEqual(mock_chrootruncmd.call_count, 1)
-    self.assertTrue(self.call_GetNewKeyvals)
+    self.assertTrue(self.callGetNewKeyvals)
     self.assertEqual(self.kv_dict, {'': 'PASS', 'telemetry_Crosperf': 'PASS'})
     self.assertEqual(res, {'Total': [10, 'score'], 'first_time': [680, 'ms']})
 
@@ -452,29 +452,29 @@ class ResultTest(unittest.TestCase):
     # test results (which we do for Telemetry autotest runs).
     reset()
     self.result.suite = ''
-    res = self.result._GetKeyvals(True)
+    res = self.result.GetKeyvals(True)
     self.assertEqual(res, {'Total': 10, 'first_time': 680})
 
   def test_get_results_dir(self):
 
     self.result.out = ''
-    self.assertRaises(Exception, self.result._GetResultsDir)
+    self.assertRaises(Exception, self.result.GetResultsDir)
 
     self.result.out = OUTPUT
-    resdir = self.result._GetResultsDir()
+    resdir = self.result.GetResultsDir()
     self.assertEqual(resdir, '/tmp/test_that.PO1234567/platform_LibCBench')
 
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandGeneric')
   def test_find_files_in_results_dir(self, mock_runcmd):
 
     self.result.results_dir = None
-    res = self.result._FindFilesInResultsDir('-name perf.data')
+    res = self.result.FindFilesInResultsDir('-name perf.data')
     self.assertIsNone(res)
 
-    self.result._ce.RunCommand = mock_runcmd
+    self.result.ce.RunCommand = mock_runcmd
     self.result.results_dir = '/tmp/test_results'
     mock_runcmd.return_value = [0, '/tmp/test_results/perf.data', '']
-    res = self.result._FindFilesInResultsDir('-name perf.data')
+    res = self.result.FindFilesInResultsDir('-name perf.data')
     self.assertEqual(mock_runcmd.call_count, 1)
     self.assertEqual(mock_runcmd.call_args_list[0][0],
                      ('find /tmp/test_results -name perf.data',))
@@ -482,16 +482,16 @@ class ResultTest(unittest.TestCase):
 
     mock_runcmd.reset_mock()
     mock_runcmd.return_value = [1, '', '']
-    self.assertRaises(Exception, self.result._FindFilesInResultsDir,
+    self.assertRaises(Exception, self.result.FindFilesInResultsDir,
                       '-name perf.data')
 
-  @mock.patch.object(Result, '_FindFilesInResultsDir')
+  @mock.patch.object(Result, 'FindFilesInResultsDir')
   def test_get_perf_data_files(self, mock_findfiles):
     self.args = None
 
     mock_findfiles.return_value = 'line1\nline1\n'
-    self.result._FindFilesInResultsDir = mock_findfiles
-    res = self.result._GetPerfDataFiles()
+    self.result.FindFilesInResultsDir = mock_findfiles
+    res = self.result.GetPerfDataFiles()
     self.assertEqual(res, ['line1', 'line1'])
     self.assertEqual(mock_findfiles.call_args_list[0][0], ('-name perf.data',))
 
@@ -502,8 +502,8 @@ class ResultTest(unittest.TestCase):
       self.args = find_args
       return 'line1\nline1\n'
 
-    self.result._FindFilesInResultsDir = FakeFindFiles
-    res = self.result._GetPerfReportFiles()
+    self.result.FindFilesInResultsDir = FakeFindFiles
+    res = self.result.GetPerfReportFiles()
     self.assertEqual(res, ['line1', 'line1'])
     self.assertEqual(self.args, '-name perf.data.report')
 
@@ -514,8 +514,8 @@ class ResultTest(unittest.TestCase):
       self.args = find_args
       return 'line1\nline1\n'
 
-    self.result._FindFilesInResultsDir = FakeFindFiles
-    res = self.result._GetDataMeasurementsFiles()
+    self.result.FindFilesInResultsDir = FakeFindFiles
+    res = self.result.GetDataMeasurementsFiles()
     self.assertEqual(res, ['line1', 'line1'])
     self.assertEqual(self.args, '-name perf_measurements')
 
@@ -524,10 +524,10 @@ class ResultTest(unittest.TestCase):
   def test_generate_perf_report_files(self, mock_chrootruncmd, mock_getpath):
     fake_file = '/usr/chromeos/chroot/tmp/results/fake_file'
     self.result.perf_data_files = ['/tmp/results/perf.data']
-    self.result._board = 'lumpy'
+    self.result.board = 'lumpy'
     mock_getpath.return_value = fake_file
-    self.result._ce.ChrootRunCommand = mock_chrootruncmd
-    tmp = self.result._GeneratePerfReportFiles()
+    self.result.ce.ChrootRunCommand = mock_chrootruncmd
+    tmp = self.result.GeneratePerfReportFiles()
     self.assertEqual(tmp, ['/tmp/chroot%s' % fake_file])
     self.assertEqual(mock_chrootruncmd.call_args_list[0][0],
                      ('/tmp',
@@ -559,20 +559,20 @@ class ResultTest(unittest.TestCase):
     if mock_getpath:
       pass
     mock.get_path = '/tmp/chromeos/tmp/results_dir'
-    self.result._chromeos_root = '/tmp/chromeos'
+    self.result.chromeos_root = '/tmp/chromeos'
 
     self.callGetResultsDir = False
     self.callGetPerfDataFiles = False
     self.callGetPerfReportFiles = False
     self.callProcessResults = False
 
-    self.result._GetResultsDir = FakeGetResultsDir
-    self.result._GetPerfDataFiles = FakeGetPerfDataFiles
-    self.result._GeneratePerfReportFiles = FakeGetPerfReportFiles
-    self.result._ProcessResults = FakeProcessResults
+    self.result.GetResultsDir = FakeGetResultsDir
+    self.result.GetPerfDataFiles = FakeGetPerfDataFiles
+    self.result.GeneratePerfReportFiles = FakeGetPerfReportFiles
+    self.result.ProcessResults = FakeProcessResults
 
-    self.result._PopulateFromRun(OUTPUT, '', 0, True, 'test',
-                                 'telemetry_Crosperf')
+    self.result.PopulateFromRun(OUTPUT, '', 0, True, 'test',
+                                'telemetry_Crosperf')
     self.assertTrue(self.callGetResultsDir)
     self.assertTrue(self.callGetPerfDataFiles)
     self.assertTrue(self.callGetPerfReportFiles)
@@ -591,11 +591,11 @@ class ResultTest(unittest.TestCase):
 
     self.callGatherPerfResults = False
 
-    self.result._GetKeyvals = FakeGetKeyvals
-    self.result._GatherPerfResults = FakeGatherPerfResults
+    self.result.GetKeyvals = FakeGetKeyvals
+    self.result.GatherPerfResults = FakeGatherPerfResults
 
     self.result.retval = 0
-    self.result._ProcessResults(True)
+    self.result.ProcessResults(True)
     self.assertTrue(self.callGatherPerfResults)
     self.assertEqual(len(self.result.keyvals), 3)
     self.assertEqual(self.result.keyvals, {'first_time': 680,
@@ -603,7 +603,7 @@ class ResultTest(unittest.TestCase):
                                            'retval': 0})
 
     self.result.retval = 1
-    self.result._ProcessResults(False)
+    self.result.ProcessResults(False)
     self.assertEqual(len(self.result.keyvals), 2)
     self.assertEqual(self.result.keyvals, {'Total': 10, 'retval': 1})
 
@@ -612,15 +612,15 @@ class ResultTest(unittest.TestCase):
                      'ChrootRunCommandWOutput')
   def test_populate_from_cache_dir(self, mock_runchrootcmd, mock_getpath):
 
-    def FakeMkdtemp(dir=''):
+    def FakeMkdtemp(dir):
       if dir:
         pass
       return self.tmpdir
 
     current_path = os.getcwd()
     cache_dir = os.path.join(current_path, 'test_cache/test_input')
-    self.result._ce = command_executer.GetCommandExecuter(log_level='average')
-    self.result._ce.ChrootRunCommandWOutput = mock_runchrootcmd
+    self.result.ce = command_executer.GetCommandExecuter(log_level='average')
+    self.result.ce.ChrootRunCommandWOutput = mock_runchrootcmd
     mock_runchrootcmd.return_value = ['',
                                       ('%s,PASS\n%s/\telemetry_Crosperf,PASS\n')
                                       % (TMP_DIR1, TMP_DIR1), '']
@@ -629,8 +629,8 @@ class ResultTest(unittest.TestCase):
     save_real_mkdtemp = tempfile.mkdtemp
     tempfile.mkdtemp = FakeMkdtemp
 
-    self.result._PopulateFromCacheDir(cache_dir, True, 'sunspider',
-                                      'telemetry_Crosperf')
+    self.result.PopulateFromCacheDir(cache_dir, True, 'sunspider',
+                                     'telemetry_Crosperf')
     self.assertEqual(
         self.result.keyvals,
         {u'Total__Total': [444.0, u'ms'],
@@ -668,41 +668,41 @@ class ResultTest(unittest.TestCase):
     # Clean up after test.
     tempfile.mkdtemp = save_real_mkdtemp
     command = 'rm -Rf %s' % self.tmpdir
-    self.result._ce.RunCommand(command)
+    self.result.ce.RunCommand(command)
 
   @mock.patch.object(misc, 'GetRoot')
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommand')
   def test_cleanup(self, mock_runcmd, mock_getroot):
 
     # Test 1. 'rm_chroot_tmp' is True; self.results_dir exists;
-    # self._temp_dir exists; results_dir name contains 'test_that_results_'.
+    # self.temp_dir exists; results_dir name contains 'test_that_results_'.
     mock_getroot.return_value = ['/tmp/tmp_AbcXyz', 'test_that_results_fake']
-    self.result._ce.RunCommand = mock_runcmd
+    self.result.ce.RunCommand = mock_runcmd
     self.result.results_dir = 'test_results_dir'
-    self.result._temp_dir = 'test_temp_dir'
+    self.result.temp_dir = 'testtemp_dir'
     self.result.CleanUp(True)
     self.assertEqual(mock_getroot.call_count, 1)
     self.assertEqual(mock_runcmd.call_count, 2)
     self.assertEqual(mock_runcmd.call_args_list[0][0],
                      ('rm -rf test_results_dir',))
     self.assertEqual(mock_runcmd.call_args_list[1][0],
-                     ('rm -rf test_temp_dir',))
+                     ('rm -rf testtemp_dir',))
 
     # Test 2. Same, except ath results_dir name does not contain
     # 'test_that_results_'
     mock_getroot.reset_mock()
     mock_runcmd.reset_mock()
     mock_getroot.return_value = ['/tmp/tmp_AbcXyz', 'other_results_fake']
-    self.result._ce.RunCommand = mock_runcmd
+    self.result.ce.RunCommand = mock_runcmd
     self.result.results_dir = 'test_results_dir'
-    self.result._temp_dir = 'test_temp_dir'
+    self.result.temp_dir = 'testtemp_dir'
     self.result.CleanUp(True)
     self.assertEqual(mock_getroot.call_count, 1)
     self.assertEqual(mock_runcmd.call_count, 2)
     self.assertEqual(mock_runcmd.call_args_list[0][0],
                      ('rm -rf /tmp/tmp_AbcXyz',))
     self.assertEqual(mock_runcmd.call_args_list[1][0],
-                     ('rm -rf test_temp_dir',))
+                     ('rm -rf testtemp_dir',))
 
     # Test 3. mock_getroot returns nothing; 'rm_chroot_tmp' is False.
     mock_getroot.reset_mock()
@@ -711,13 +711,13 @@ class ResultTest(unittest.TestCase):
     self.assertEqual(mock_getroot.call_count, 0)
     self.assertEqual(mock_runcmd.call_count, 1)
     self.assertEqual(mock_runcmd.call_args_list[0][0],
-                     ('rm -rf test_temp_dir',))
+                     ('rm -rf testtemp_dir',))
 
-    # Test 4. 'rm_chroot_tmp' is True, but result_dir & _temp_dir are None.
+    # Test 4. 'rm_chroot_tmp' is True, but result_dir & temp_dir are None.
     mock_getroot.reset_mock()
     mock_runcmd.reset_mock()
     self.result.results_dir = None
-    self.result._temp_dir = None
+    self.result.temp_dir = None
     self.result.CleanUp(True)
     self.assertEqual(mock_getroot.call_count, 0)
     self.assertEqual(mock_runcmd.call_count, 0)
@@ -736,7 +736,7 @@ class ResultTest(unittest.TestCase):
     current_path = os.getcwd()
     cache_dir = os.path.join(current_path, 'test_cache/test_output')
 
-    self.result._ce = command_executer.GetCommandExecuter(log_level='average')
+    self.result.ce = command_executer.GetCommandExecuter(log_level='average')
     self.result.out = OUTPUT
     self.result.err = error
     self.result.retval = 0
@@ -765,19 +765,19 @@ class ResultTest(unittest.TestCase):
     f1 = os.path.join(test_dir, 'machine.txt')
     f2 = os.path.join(base_dir, 'machine.txt')
     cmd = 'diff %s %s' % (f1, f2)
-    [_, out, _] = self.result._ce.RunCommandWOutput(cmd)
+    [_, out, _] = self.result.ce.RunCommandWOutput(cmd)
     self.assertEqual(len(out), 0)
 
     f1 = os.path.join(test_dir, 'results.txt')
     f2 = os.path.join(base_dir, 'results.txt')
     cmd = 'diff %s %s' % (f1, f2)
-    [_, out, _] = self.result._ce.RunCommandWOutput(cmd)
+    [_, out, _] = self.result.ce.RunCommandWOutput(cmd)
     self.assertEqual(len(out), 0)
 
     # Clean up after test.
     tempfile.mkdtemp = save_real_mkdtemp
     command = 'rm %s/*' % test_dir
-    self.result._ce.RunCommand(command)
+    self.result.ce.RunCommand(command)
 
 
 TELEMETRY_RESULT_KEYVALS = {
@@ -894,9 +894,9 @@ class TelemetryResultTest(unittest.TestCase):
     self.callFakeProcessResults = False
     self.result = TelemetryResult(self.mock_logger, self.mock_label, 'average',
                                   self.mock_cmd_exec)
-    self.result._ProcessResults = FakeProcessResults
-    self.result._PopulateFromRun(OUTPUT, error, 3, False, 'fake_test',
-                                 'telemetry_Crosperf')
+    self.result.ProcessResults = FakeProcessResults
+    self.result.PopulateFromRun(OUTPUT, error, 3, False, 'fake_test',
+                                'telemetry_Crosperf')
     self.assertTrue(self.callFakeProcessResults)
     self.assertEqual(self.result.out, OUTPUT)
     self.assertEqual(self.result.err, error)
@@ -909,7 +909,7 @@ class TelemetryResultTest(unittest.TestCase):
     current_path = os.getcwd()
     cache_dir = os.path.join(current_path,
                              'test_cache/test_puretelemetry_input')
-    self.result._PopulateFromCacheDir(cache_dir)
+    self.result.PopulateFromCacheDir(cache_dir)
     self.assertEqual(self.result.out.strip(), PURE_TELEMETRY_OUTPUT.strip())
     self.assertEqual(self.result.err, '')
     self.assertEqual(self.result.retval, 0)
@@ -974,7 +974,7 @@ class ResultsCacheTest(unittest.TestCase):
         'FakeMachineChecksumabc987'
     # Based on the label, benchmark and machines, get the directory in which
     # to store the cache information for this test run.
-    result_path = self.results_cache._GetCacheDirForWrite()
+    result_path = self.results_cache.GetCacheDirForWrite()
     # Verify that the returned directory is correct (since the label
     # contained a cache_dir, named 'cache_dir', that's what is expected in
     # the result, rather than '~/cros_scratch').
@@ -986,12 +986,12 @@ class ResultsCacheTest(unittest.TestCase):
     self.assertEqual(result_path, comp_path)
 
   def test_form_cache_dir(self):
-    # This is very similar to the previous test (_FormCacheDir is called
-    # from _GetCacheDirForWrite).
+    # This is very similar to the previous test (FormCacheDir is called
+    # from GetCacheDirForWrite).
     cache_key_list = ('54524606abaae4fdf7b02f49f7ae7127', 'sunspider', '1',
                       '7215ee9c7d9dc229d2921a40e899ec5f',
                       'FakeImageChecksumabc123', '*', '*', '6')
-    path = self.results_cache._FormCacheDir(cache_key_list)
+    path = self.results_cache.FormCacheDir(cache_key_list)
     self.assertEqual(len(path), 1)
     path1 = path[0]
     test_dirname = ('54524606abaae4fdf7b02f49f7ae7127_sunspider_1_7215ee9'
@@ -1019,7 +1019,7 @@ class ResultsCacheTest(unittest.TestCase):
         'FakeMachineChecksumabc987'
 
     # Test 1. Generating cache name for reading (not writing).
-    key_list = self.results_cache._GetCacheKeyList(True)
+    key_list = self.results_cache.GetCacheKeyList(True)
     self.assertEqual(key_list[0], '*')  # Machine checksum value, for read.
     self.assertEqual(key_list[1], 'sunspider')
     self.assertEqual(key_list[2], '1')
@@ -1030,7 +1030,7 @@ class ResultsCacheTest(unittest.TestCase):
     self.assertEqual(key_list[7], '6')
 
     # Test 2. Generating cache name for writing, with local image type.
-    key_list = self.results_cache._GetCacheKeyList(False)
+    key_list = self.results_cache.GetCacheKeyList(False)
     self.assertEqual(key_list[0], '54524606abaae4fdf7b02f49f7ae7127')
     self.assertEqual(key_list[1], 'sunspider')
     self.assertEqual(key_list[2], '1')
@@ -1042,7 +1042,7 @@ class ResultsCacheTest(unittest.TestCase):
 
     # Test 3. Generating cache name for writing, with trybot image type.
     self.results_cache.label.image_type = 'trybot'
-    key_list = self.results_cache._GetCacheKeyList(False)
+    key_list = self.results_cache.GetCacheKeyList(False)
     self.assertEqual(key_list[0], '54524606abaae4fdf7b02f49f7ae7127')
     self.assertEqual(key_list[3], 'fda29412ceccb72977516c4785d08e2c')
     self.assertEqual(key_list[4], '54524606abaae4fdf7b02f49f7ae7127')
@@ -1050,7 +1050,7 @@ class ResultsCacheTest(unittest.TestCase):
 
     # Test 4. Generating cache name for writing, with official image type.
     self.results_cache.label.image_type = 'official'
-    key_list = self.results_cache._GetCacheKeyList(False)
+    key_list = self.results_cache.GetCacheKeyList(False)
     self.assertEqual(key_list[0], '54524606abaae4fdf7b02f49f7ae7127')
     self.assertEqual(key_list[1], 'sunspider')
     self.assertEqual(key_list[2], '1')
@@ -1064,7 +1064,7 @@ class ResultsCacheTest(unittest.TestCase):
     # specifying that the image path must match the cached image path.
     self.results_cache.label.image_type = 'local'
     self.results_cache.cache_conditions.append(CacheConditions.IMAGE_PATH_MATCH)
-    key_list = self.results_cache._GetCacheKeyList(False)
+    key_list = self.results_cache.GetCacheKeyList(False)
     self.assertEqual(key_list[0], '54524606abaae4fdf7b02f49f7ae7127')
     self.assertEqual(key_list[3], 'fda29412ceccb72977516c4785d08e2c')
     self.assertEqual(key_list[4], 'FakeImageChecksumabc123')
@@ -1091,8 +1091,8 @@ class ResultsCacheTest(unittest.TestCase):
     # Set up results_cache _GetCacheDirFor{Read,Write} to return
     # self.fakeCacheReturnResult, which is initially None (see above).
     # So initially, no cache dir is returned.
-    self.results_cache._GetCacheDirForRead = FakeGetCacheDirForRead
-    self.results_cache._GetCacheDirForWrite = FakeGetCacheDirForWrite
+    self.results_cache.GetCacheDirForRead = FakeGetCacheDirForRead
+    self.results_cache.GetCacheDirForWrite = FakeGetCacheDirForWrite
 
     mock_isdir.return_value = True
     save_cc = [CacheConditions.CACHE_FILE_EXISTS,
@@ -1106,14 +1106,14 @@ class ResultsCacheTest(unittest.TestCase):
     self.assertEqual(mock_runcmd.call_count, 1)
 
     # Test 2. Remove CacheCondition.FALSE. Result should still be None,
-    # because _GetCacheDirForRead is returning None at the moment.
+    # because GetCacheDirForRead is returning None at the moment.
     mock_runcmd.reset_mock()
     self.results_cache.cache_conditions = save_cc
     res = self.results_cache.ReadResult()
     self.assertIsNone(res)
     self.assertEqual(mock_runcmd.call_count, 0)
 
-    # Test 3. Now set up cache dir to be returned by _GetCacheDirForRead.
+    # Test 3. Now set up cache dir to be returned by GetCacheDirForRead.
     # Since cache_dir is found, will call Result.CreateFromCacheHit, which
     # which will actually all our mock_create and should return fake_result.
     self.fakeCacheReturnResult = 'fake/cache/dir'

@@ -37,12 +37,12 @@ class Result(object):
   """
 
   def __init__(self, logger, label, log_level, machine, cmd_exec=None):
-    self._chromeos_root = label.chromeos_root
+    self.chromeos_root = label.chromeos_root
     self._logger = logger
-    self._ce = cmd_exec or command_executer.GetCommandExecuter(
+    self.ce = cmd_exec or command_executer.GetCommandExecuter(
         self._logger,
         log_level=log_level)
-    self._temp_dir = None
+    self.temp_dir = None
     self.label = label
     self.results_dir = None
     self.log_level = log_level
@@ -50,31 +50,31 @@ class Result(object):
     self.perf_data_files = []
     self.perf_report_files = []
 
-  def _CopyFilesTo(self, dest_dir, files_to_copy):
+  def CopyFilesTo(self, dest_dir, files_to_copy):
     file_index = 0
     for file_to_copy in files_to_copy:
       if not os.path.isdir(dest_dir):
         command = 'mkdir -p %s' % dest_dir
-        self._ce.RunCommand(command)
+        self.ce.RunCommand(command)
       dest_file = os.path.join(dest_dir,
                                ('%s.%s' % (os.path.basename(file_to_copy),
                                            file_index)))
-      ret = self._ce.CopyFiles(file_to_copy, dest_file, recursive=False)
+      ret = self.ce.CopyFiles(file_to_copy, dest_file, recursive=False)
       if ret:
         raise Exception('Could not copy results file: %s' % file_to_copy)
 
   def CopyResultsTo(self, dest_dir):
-    self._CopyFilesTo(dest_dir, self.perf_data_files)
-    self._CopyFilesTo(dest_dir, self.perf_report_files)
+    self.CopyFilesTo(dest_dir, self.perf_data_files)
+    self.CopyFilesTo(dest_dir, self.perf_report_files)
     if len(self.perf_data_files) or len(self.perf_report_files):
       self._logger.LogOutput('Perf results files stored in %s.' % dest_dir)
 
-  def _GetNewKeyvals(self, keyvals_dict):
+  def GetNewKeyvals(self, keyvals_dict):
     # Initialize 'units' dictionary.
     units_dict = {}
     for k in keyvals_dict:
       units_dict[k] = ''
-    results_files = self._GetDataMeasurementsFiles()
+    results_files = self.GetDataMeasurementsFiles()
     for f in results_files:
       # Make sure we can find the results file
       if os.path.exists(f):
@@ -83,8 +83,8 @@ class Result(object):
         # Otherwise get the base filename and create the correct
         # path for it.
         f_dir, f_base = misc.GetRoot(f)
-        data_filename = os.path.join(self._chromeos_root, 'chroot/tmp',
-                                     self._temp_dir, f_base)
+        data_filename = os.path.join(self.chromeos_root, 'chroot/tmp',
+                                     self.temp_dir, f_base)
       if os.path.exists(data_filename):
         with open(data_filename, 'r') as data_file:
           lines = data_file.readlines()
@@ -98,7 +98,7 @@ class Result(object):
 
     return keyvals_dict, units_dict
 
-  def _AppendTelemetryUnits(self, keyvals_dict, units_dict):
+  def AppendTelemetryUnits(self, keyvals_dict, units_dict):
     """keyvals_dict is the dictionary of key-value pairs that is used for generating Crosperf reports.
 
     units_dict is a dictionary of the units for the return values in
@@ -122,21 +122,21 @@ class Result(object):
       results_dict[k] = new_val
     return results_dict
 
-  def _GetKeyvals(self, show_all):
-    results_in_chroot = os.path.join(self._chromeos_root, 'chroot', 'tmp')
-    if not self._temp_dir:
-      self._temp_dir = tempfile.mkdtemp(dir=results_in_chroot)
-      command = 'cp -r {0}/* {1}'.format(self.results_dir, self._temp_dir)
-      self._ce.RunCommand(command, print_to_console=False)
+  def GetKeyvals(self, show_all):
+    results_in_chroot = os.path.join(self.chromeos_root, 'chroot', 'tmp')
+    if not self.temp_dir:
+      self.temp_dir = tempfile.mkdtemp(dir=results_in_chroot)
+      command = 'cp -r {0}/* {1}'.format(self.results_dir, self.temp_dir)
+      self.ce.RunCommand(command, print_to_console=False)
 
     command = ('python generate_test_report --no-color --csv %s' %
-               (os.path.join('/tmp', os.path.basename(self._temp_dir))))
-    _, out, _ = self._ce.ChrootRunCommandWOutput(self._chromeos_root,
+               (os.path.join('/tmp', os.path.basename(self.temp_dir))))
+    _, out, _ = self.ce.ChrootRunCommandWOutput(self.chromeos_root,
                                                  command,
                                                  print_to_console=False)
     keyvals_dict = {}
-    tmp_dir_in_chroot = misc.GetInsideChrootPath(self._chromeos_root,
-                                                 self._temp_dir)
+    tmp_dir_in_chroot = misc.GetInsideChrootPath(self.chromeos_root,
+                                                 self.temp_dir)
     for line in out.splitlines():
       tokens = re.split('=|,', line)
       key = tokens[-2]
@@ -147,53 +147,53 @@ class Result(object):
 
     # Check to see if there is a perf_measurements file and get the
     # data from it if so.
-    keyvals_dict, units_dict = self._GetNewKeyvals(keyvals_dict)
+    keyvals_dict, units_dict = self.GetNewKeyvals(keyvals_dict)
     if self.suite == 'telemetry_Crosperf':
       # For telemtry_Crosperf results, append the units to the return
       # results, for use in generating the reports.
-      keyvals_dict = self._AppendTelemetryUnits(keyvals_dict, units_dict)
+      keyvals_dict = self.AppendTelemetryUnits(keyvals_dict, units_dict)
     return keyvals_dict
 
-  def _GetResultsDir(self):
+  def GetResultsDir(self):
     mo = re.search(r'Results placed in (\S+)', self.out)
     if mo:
       result = mo.group(1)
       return result
     raise Exception('Could not find results directory.')
 
-  def _FindFilesInResultsDir(self, find_args):
+  def FindFilesInResultsDir(self, find_args):
     if not self.results_dir:
       return None
 
     command = 'find %s %s' % (self.results_dir, find_args)
-    ret, out, _ = self._ce.RunCommandWOutput(command, print_to_console=False)
+    ret, out, _ = self.ce.RunCommandWOutput(command, print_to_console=False)
     if ret:
       raise Exception('Could not run find command!')
     return out
 
-  def _GetPerfDataFiles(self):
-    return self._FindFilesInResultsDir('-name perf.data').splitlines()
+  def GetPerfDataFiles(self):
+    return self.FindFilesInResultsDir('-name perf.data').splitlines()
 
-  def _GetPerfReportFiles(self):
-    return self._FindFilesInResultsDir('-name perf.data.report').splitlines()
+  def GetPerfReportFiles(self):
+    return self.FindFilesInResultsDir('-name perf.data.report').splitlines()
 
-  def _GetDataMeasurementsFiles(self):
-    return self._FindFilesInResultsDir('-name perf_measurements').splitlines()
+  def GetDataMeasurementsFiles(self):
+    return self.FindFilesInResultsDir('-name perf_measurements').splitlines()
 
-  def _GeneratePerfReportFiles(self):
+  def GeneratePerfReportFiles(self):
     perf_report_files = []
     for perf_data_file in self.perf_data_files:
       # Generate a perf.report and store it side-by-side with the perf.data
       # file.
-      chroot_perf_data_file = misc.GetInsideChrootPath(self._chromeos_root,
+      chroot_perf_data_file = misc.GetInsideChrootPath(self.chromeos_root,
                                                        perf_data_file)
       perf_report_file = '%s.report' % perf_data_file
       if os.path.exists(perf_report_file):
         raise Exception('Perf report file already exists: %s' %
                         perf_report_file)
-      chroot_perf_report_file = misc.GetInsideChrootPath(self._chromeos_root,
+      chroot_perf_report_file = misc.GetInsideChrootPath(self.chromeos_root,
                                                          perf_report_file)
-      perf_path = os.path.join(self._chromeos_root, 'chroot', 'usr/bin/perf')
+      perf_path = os.path.join(self.chromeos_root, 'chroot', 'usr/bin/perf')
 
       perf_file = '/usr/sbin/perf'
       if os.path.exists(perf_path):
@@ -208,10 +208,10 @@ class Result(object):
       if os.path.exists(perf_path):
         # copy the executable into the chroot so that it can be found.
         src_path = perf_path
-        dst_path = os.path.join(self._chromeos_root, 'chroot',
+        dst_path = os.path.join(self.chromeos_root, 'chroot',
                                 'tmp/perf.static')
         command = 'cp %s %s' % (src_path, dst_path)
-        self._ce.RunCommand(command)
+        self.ce.RunCommand(command)
         perf_file = '/tmp/perf.static'
 
       command = ('%s report '
@@ -220,16 +220,16 @@ class Result(object):
                  '--vmlinux /build/%s/usr/lib/debug/boot/vmlinux '
                  '--kallsyms /build/%s/boot/System.map-* '
                  '-i %s --stdio '
-                 '> %s' % (perf_file, self._board, self._board, self._board,
+                 '> %s' % (perf_file, self.board, self.board, self.board,
                            chroot_perf_data_file, chroot_perf_report_file))
-      self._ce.ChrootRunCommand(self._chromeos_root, command)
+      self.ce.ChrootRunCommand(self.chromeos_root, command)
 
       # Add a keyval to the dictionary for the events captured.
       perf_report_files.append(misc.GetOutsideChrootPath(
-          self._chromeos_root, chroot_perf_report_file))
+          self.chromeos_root, chroot_perf_report_file))
     return perf_report_files
 
-  def _GatherPerfResults(self):
+  def GatherPerfResults(self):
     report_id = 0
     for perf_report_file in self.perf_report_files:
       with open(perf_report_file, 'r') as f:
@@ -241,35 +241,35 @@ class Result(object):
           value = str(misc.UnitToNumber(num_events))
           self.keyvals[key] = value
 
-  def _PopulateFromRun(self, out, err, retval, show_all, test, suite):
-    self._board = self.label.board
+  def PopulateFromRun(self, out, err, retval, show_all, test, suite):
+    self.board = self.label.board
     self.out = out
     self.err = err
     self.retval = retval
     self.test_name = test
     self.suite = suite
-    self.chroot_results_dir = self._GetResultsDir()
-    self.results_dir = misc.GetOutsideChrootPath(self._chromeos_root,
+    self.chroot_results_dir = self.GetResultsDir()
+    self.results_dir = misc.GetOutsideChrootPath(self.chromeos_root,
                                                  self.chroot_results_dir)
-    self.perf_data_files = self._GetPerfDataFiles()
+    self.perf_data_files = self.GetPerfDataFiles()
     # Include all perf.report data in table.
-    self.perf_report_files = self._GeneratePerfReportFiles()
+    self.perf_report_files = self.GeneratePerfReportFiles()
     # TODO(asharif): Do something similar with perf stat.
 
     # Grab keyvals from the directory.
-    self._ProcessResults(show_all)
+    self.ProcessResults(show_all)
 
-  def _ProcessResults(self, show_all):
+  def ProcessResults(self, show_all):
     # Note that this function doesn't know anything about whether there is a
     # cache hit or miss. It should process results agnostic of the cache hit
     # state.
-    self.keyvals = self._GetKeyvals(show_all)
+    self.keyvals = self.GetKeyvals(show_all)
     self.keyvals['retval'] = self.retval
     # Generate report from all perf.data files.
     # Now parse all perf report files and include them in keyvals.
-    self._GatherPerfResults()
+    self.GatherPerfResults()
 
-  def _PopulateFromCacheDir(self, cache_dir, show_all, test, suite):
+  def PopulateFromCacheDir(self, cache_dir, show_all, test, suite):
     self.test_name = test
     self.suite = suite
     # Read in everything from the cache directory.
@@ -279,18 +279,18 @@ class Result(object):
       self.retval = pickle.load(f)
 
     # Untar the tarball to a temporary directory
-    self._temp_dir = tempfile.mkdtemp(
-        dir=os.path.join(self._chromeos_root, 'chroot', 'tmp'))
+    self.temp_dir = tempfile.mkdtemp(
+        dir=os.path.join(self.chromeos_root, 'chroot', 'tmp'))
 
     command = ('cd %s && tar xf %s' %
-               (self._temp_dir, os.path.join(cache_dir, AUTOTEST_TARBALL)))
-    ret = self._ce.RunCommand(command, print_to_console=False)
+               (self.temp_dir, os.path.join(cache_dir, AUTOTEST_TARBALL)))
+    ret = self.ce.RunCommand(command, print_to_console=False)
     if ret:
       raise Exception('Could not untar cached tarball')
-    self.results_dir = self._temp_dir
-    self.perf_data_files = self._GetPerfDataFiles()
-    self.perf_report_files = self._GetPerfReportFiles()
-    self._ProcessResults(show_all)
+    self.results_dir = self.temp_dir
+    self.perf_data_files = self.GetPerfDataFiles()
+    self.perf_report_files = self.GetPerfReportFiles()
+    self.ProcessResults(show_all)
 
   def CleanUp(self, rm_chroot_tmp):
     if rm_chroot_tmp and self.results_dir:
@@ -299,10 +299,10 @@ class Result(object):
         command = 'rm -rf %s' % self.results_dir
       else:
         command = 'rm -rf %s' % dirname
-      self._ce.RunCommand(command)
-    if self._temp_dir:
-      command = 'rm -rf %s' % self._temp_dir
-      self._ce.RunCommand(command)
+      self.ce.RunCommand(command)
+    if self.temp_dir:
+      command = 'rm -rf %s' % self.temp_dir
+      self.ce.RunCommand(command)
 
   def StoreToCacheDir(self, cache_dir, machine_manager, key_list):
     # Create the dir if it doesn't exist.
@@ -330,7 +330,7 @@ class Result(object):
                  '--exclude=var/spool '
                  '--exclude=var/log '
                  '-cjf %s .' % (self.results_dir, tarball))
-      ret = self._ce.RunCommand(command)
+      ret = self.ce.RunCommand(command)
       if ret:
         raise Exception("Couldn't store autotest output directory.")
     # Store machine info.
@@ -341,15 +341,15 @@ class Result(object):
 
     if os.path.exists(cache_dir):
       command = 'rm -rf {0}'.format(cache_dir)
-      self._ce.RunCommand(command)
+      self.ce.RunCommand(command)
 
     command = 'mkdir -p {0} && '.format(os.path.dirname(cache_dir))
     command += 'chmod g+x {0} && '.format(temp_dir)
     command += 'mv {0} {1}'.format(temp_dir, cache_dir)
-    ret = self._ce.RunCommand(command)
+    ret = self.ce.RunCommand(command)
     if ret:
       command = 'rm -rf {0}'.format(temp_dir)
-      self._ce.RunCommand(command)
+      self.ce.RunCommand(command)
       raise Exception('Could not move dir %s to dir %s' % (temp_dir, cache_dir))
 
   @classmethod
@@ -368,7 +368,7 @@ class Result(object):
       result = TelemetryResult(logger, label, log_level, machine)
     else:
       result = cls(logger, label, log_level, machine)
-    result._PopulateFromRun(out, err, retval, show_all, test, suite)
+    result.PopulateFromRun(out, err, retval, show_all, test, suite)
     return result
 
   @classmethod
@@ -386,7 +386,7 @@ class Result(object):
     else:
       result = cls(logger, label, log_level, machine)
     try:
-      result._PopulateFromCacheDir(cache_dir, show_all, test, suite)
+      result.PopulateFromCacheDir(cache_dir, show_all, test, suite)
 
     except Exception as e:
       logger.LogError('Exception while using cache: %s' % e)
@@ -400,14 +400,14 @@ class TelemetryResult(Result):
     super(TelemetryResult, self).__init__(logger, label, log_level, machine,
                                           cmd_exec)
 
-  def _PopulateFromRun(self, out, err, retval, show_all, test, suite):
+  def PopulateFromRun(self, out, err, retval, show_all, test, suite):
     self.out = out
     self.err = err
     self.retval = retval
 
-    self._ProcessResults()
+    self.ProcessResults()
 
-  def _ProcessResults(self):
+  def ProcessResults(self):
     # The output is:
     # url,average_commit_time (ms),...
     # www.google.com,33.4,21.2,...
@@ -439,12 +439,12 @@ class TelemetryResult(Result):
         self.keyvals[key] = value
     self.keyvals['retval'] = self.retval
 
-  def _PopulateFromCacheDir(self, cache_dir):
+  def PopulateFromCacheDir(self, cache_dir):
     with open(os.path.join(cache_dir, RESULTS_FILE), 'r') as f:
       self.out = pickle.load(f)
       self.err = pickle.load(f)
       self.retval = pickle.load(f)
-    self._ProcessResults()
+    self.ProcessResults()
 
 
 class CacheConditions(object):
@@ -494,7 +494,7 @@ class ResultsCache(object):
     self.machine_manager = machine_manager
     self.machine = machine
     self._logger = logger_to_use
-    self._ce = command_executer.GetCommandExecuter(self._logger,
+    self.ce = command_executer.GetCommandExecuter(self._logger,
                                                    log_level=log_level)
     self.label = label
     self.share_cache = share_cache
@@ -503,9 +503,9 @@ class ResultsCache(object):
     self.show_all = show_all_results
     self.run_local = run_local
 
-  def _GetCacheDirForRead(self):
+  def GetCacheDirForRead(self):
     matching_dirs = []
-    for glob_path in self._FormCacheDir(self._GetCacheKeyList(True)):
+    for glob_path in self.FormCacheDir(self.GetCacheKeyList(True)):
       matching_dirs += glob.glob(glob_path)
 
     if matching_dirs:
@@ -514,8 +514,8 @@ class ResultsCache(object):
     else:
       return None
 
-  def _GetCacheDirForWrite(self, get_keylist=False):
-    cache_path = self._FormCacheDir(self._GetCacheKeyList(False))[0]
+  def GetCacheDirForWrite(self, get_keylist=False):
+    cache_path = self.FormCacheDir(self.GetCacheKeyList(False))[0]
     if get_keylist:
       args_str = '%s_%s_%s' % (self.test_args, self.profiler_args,
                                self.run_local)
@@ -526,7 +526,7 @@ class ResultsCache(object):
       return cache_path, keylist
     return cache_path
 
-  def _FormCacheDir(self, list_of_strings):
+  def FormCacheDir(self, list_of_strings):
     cache_key = ' '.join(list_of_strings)
     cache_dir = misc.GetFilenameFromString(cache_key)
     if self.label.cache_dir:
@@ -544,7 +544,7 @@ class ResultsCache(object):
 
     return cache_path
 
-  def _GetCacheKeyList(self, read):
+  def GetCacheKeyList(self, read):
     if read and CacheConditions.MACHINES_MATCH not in self.cache_conditions:
       machine_checksum = '*'
     else:
@@ -584,11 +584,11 @@ class ResultsCache(object):
 
   def ReadResult(self):
     if CacheConditions.FALSE in self.cache_conditions:
-      cache_dir = self._GetCacheDirForWrite()
+      cache_dir = self.GetCacheDirForWrite()
       command = 'rm -rf {0}'.format(cache_dir)
-      self._ce.RunCommand(command)
+      self.ce.RunCommand(command)
       return None
-    cache_dir = self._GetCacheDirForRead()
+    cache_dir = self.GetCacheDirForRead()
 
     if not cache_dir:
       return None
@@ -611,7 +611,7 @@ class ResultsCache(object):
     return None
 
   def StoreResult(self, result):
-    cache_dir, keylist = self._GetCacheDirForWrite(get_keylist=True)
+    cache_dir, keylist = self.GetCacheDirForWrite(get_keylist=True)
     result.StoreToCacheDir(cache_dir, self.machine_manager, keylist)
 
 
@@ -629,7 +629,7 @@ class MockResultsCache(ResultsCache):
 
 class MockResult(Result):
 
-  def _PopulateFromRun(self, out, err, retval, show_all, test, suite):
+  def PopulateFromRun(self, out, err, retval, show_all, test, suite):
     self.out = out
     self.err = err
     self.retval = retval
