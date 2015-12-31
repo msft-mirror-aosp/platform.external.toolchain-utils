@@ -312,8 +312,7 @@ class ExperimentRunnerTest(unittest.TestCase):
     self.assertEqual(len(mock_emailer.call_args), 2)
     self.assertEqual(mock_emailer.call_args[0],
                      (['jane.doe@google.com', 'john.smith@google.com',
-                       'john.smith@google.com'],
-                      ': image1 vs. image2',
+                       'john.smith@google.com'], ': image1 vs. image2',
                       "<pre style='font-size: 13px'>This is a fake text "
                       'report.\nResults are stored in _results.\n</pre>'))
     self.assertTrue(type(mock_emailer.call_args[1]) is dict)

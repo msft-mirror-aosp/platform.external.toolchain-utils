@@ -1,4 +1,3 @@
-
 # Copyright 2015 The Chromium OS Authors. All rights reserved.
 """Utilities for locking machines."""
 

@@ -1,4 +1,3 @@
-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -1162,8 +1161,7 @@ def GetComplexTable(runs, labels, out_to=TablePrinter.CONSOLE):
   tg = TableGenerator(runs, labels, TableGenerator.SORT_BY_VALUES_DESC)
   table = tg.GetTable()
   columns = [Column(LiteralResult(), Format(), 'Literal'),
-             Column(AmeanResult(), Format()),
-             Column(StdResult(), Format()),
+             Column(AmeanResult(), Format()), Column(StdResult(), Format()),
              Column(CoeffVarResult(), CoeffVarFormat()),
              Column(NonEmptyCountResult(), Format()),
              Column(AmeanRatioResult(), PercentFormat()),
