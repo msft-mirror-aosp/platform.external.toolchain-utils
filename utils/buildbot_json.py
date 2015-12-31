@@ -335,7 +335,9 @@ class NonAddressableNodeList(VirtualNodeList):  # pylint: disable=W0223
     self.parent.cache()
 
   def discard(self):  # pragma: no cover
-    """Avoid infinite recursion by having the caller calls the parent's
+    """Do not call.
+
+    Avoid infinite recursion by having the caller calls the parent's
     discard() explicitely.
     """
     raise AttributeError('Call parent discard() instead')
@@ -558,8 +560,7 @@ class Slaves(AddressableNodeList):
 
 
 class BuilderSlaves(SubViewNodeList):
-  """Similar to Slaves but only list slaves connected to a specific builder.
-  """
+  """Similar to Slaves but only list slaves connected to a specific builder."""
   printable_attributes = SubViewNodeList.printable_attributes + ['names']
 
   def __init__(self, parent):
@@ -586,9 +587,7 @@ class BuildStep(NonAddressableDataNode):
   ]
 
   def __init__(self, parent, number):
-    """It's already pre-loaded by definition since the data is retrieve via the
-    Build object.
-    """
+    """Pre-loaded, since the data is retrieved via the Build object."""
     assert isinstance(number, int)
     super(BuildStep, self).__init__(parent, number)
     self.number = number
@@ -657,9 +656,7 @@ class BuildSteps(NonAddressableNodeList):
   _child_cls = BuildStep
 
   def __init__(self, parent):
-    """It's already pre-loaded by definition since the data is retrieve via the
-    Build object.
-    """
+    """Pre-loaded, since the data is retrieved via the Build object."""
     super(BuildSteps, self).__init__(parent, 'steps')
 
   @property
@@ -819,8 +816,7 @@ class Builds(AddressableNodeList):
     super(Builds, self).__init__(parent, 'builds')
 
   def __getitem__(self, key):
-    """Adds supports for negative reference and enables retrieving non-cached
-    builds.
+    """Support for negative reference and enable retrieving non-cached builds.
 
     e.g. -1 is the last build, -2 is the previous build before the last one.
     """
@@ -917,9 +913,7 @@ class Builders(AddressableNodeList):
 
 
 class Buildbot(AddressableBaseDataNode):
-  """If a master restart occurs, this object should be recreated as it caches
-  data.
-  """
+  """This object should be recreated on a master restart as it caches data."""
   # Throttle fetches to not kill the server.
   auto_throttle = None
   printable_attributes = AddressableDataNode.printable_attributes + [
@@ -1160,9 +1154,7 @@ def last_failure(buildbot,
                  slaves=None,
                  steps=None,
                  no_cache=False):
-  """Generator returning Build object that were the last failure with the
-  specific filters.
-  """
+  """Returns Build object with last failure with the specific filters."""
   builders = builders or buildbot.builders.keys
   for builder in builders:
     builder = buildbot.builders[builder]
@@ -1369,8 +1361,7 @@ def CMDbuilds(parser, args):
 
 @need_buildbot
 def CMDcount(parser, args):
-  """Count the number of builds that occured during a specific period.
-  """
+  """Count the number of builds that occured during a specific period."""
   parser.add_option('-o',
                     '--over',
                     type='int',

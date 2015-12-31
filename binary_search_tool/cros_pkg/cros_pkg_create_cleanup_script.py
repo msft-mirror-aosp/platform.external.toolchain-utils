@@ -22,7 +22,8 @@ def Usage(parser, msg):
 
 
 def Main(argv):
-  """
+  """Generate a script to undo changes done by cros_pkg_setup.sh
+
     The script cros_pkg_setup.sh make two main changes that need to be
     undone: 1).  It creates a soft link making /build/${board} point to
     /build/${board}.work, and 2). It saves a copy of the build_image

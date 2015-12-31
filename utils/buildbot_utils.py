@@ -27,8 +27,7 @@ OK_STATUS = [  # List of result status values that are 'ok'.
 
 
 def ParseReportLog(url, build):
-  """
-    Scrape the trybot image name off the Reports log page.
+  """Scrape the trybot image name off the Reports log page.
 
     This takes the URL for a trybot Reports Stage web page,
     and a trybot build type, such as 'daisy-release'.  It
@@ -54,8 +53,7 @@ def ParseReportLog(url, build):
 
 
 def GetBuildData(buildbot_queue, build_id):
-  """
-    Find the Reports stage web page for a trybot build.
+  """Find the Reports stage web page for a trybot build.
 
     This takes the name of a buildbot_queue, such as 'daisy-release'
     and a build id (the build number), and uses the json buildbot api to
@@ -74,8 +72,7 @@ def GetBuildData(buildbot_queue, build_id):
 
 
 def FindBuildRecordFromLog(description, log_info):
-  """
-    Find the right build record in the build logs.
+  """Find the right build record in the build logs.
 
     Get the first build record from build log with a reason field
     that matches 'description'. ('description' is a special tag we
@@ -110,8 +107,7 @@ def FindBuildRecordFromLog(description, log_info):
 
 
 def GetBuildInfo(file_dir, builder):
-  """
-    Get all the build records for the trybot builds.
+  """Get all the build records for the trybot builds.
 
     file_dir is the toolchain_utils directory.
     """
@@ -131,11 +127,7 @@ def GetBuildInfo(file_dir, builder):
 
 
 def FindArchiveImage(chromeos_root, build, build_id):
-  """
-    Given a build_id, search Google Storage for a trybot artifact
-    for the correct board with the correct build_id.  Return the
-    name of the artifact, if found.
-    """
+  """Returns name of the trybot artifact for board/build_id."""
   ce = command_executer.GetCommandExecuter()
   command = ('gsutil ls gs://chromeos-image-archive/trybot-%s/*b%s'
              '/chromiumos_test_image.tar.xz' % (build, build_id))
@@ -181,8 +173,7 @@ def GetTrybotImage(chromeos_root,
                    patch_list,
                    build_tag,
                    build_toolchain=False):
-  """
-    Launch buildbot and get resulting trybot artifact name.
+  """Launch buildbot and get resulting trybot artifact name.
 
     This function launches a buildbot with the appropriate flags to
     build the test ChromeOS image, with the current ToT mobile compiler.  It
