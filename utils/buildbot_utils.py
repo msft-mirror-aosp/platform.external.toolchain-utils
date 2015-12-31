@@ -16,7 +16,9 @@ SLEEP_TIME = 600  # 10 minutes; time between polling of buildbot.
 TIME_OUT = 18000  # Decide the build is dead or will never finish
 # after this time (5 hours).
 OK_STATUS = [  # List of result status values that are 'ok'.
-    # This was obtained from: https://chromium.googlesource.com/chromium/tools/build/+/master/third_party/buildbot_8_4p1/buildbot/status/results.py
+    # This was obtained from:
+    #   https://chromium.googlesource.com/chromium/tools/build/+/
+    #       master/third_party/buildbot_8_4p1/buildbot/status/results.py
     0,  # "success"
     1,  # "warnings"
     6,  # "retry"
@@ -147,14 +149,15 @@ def FindArchiveImage(chromeos_root, build, build_id):
   # If there are multiple archive images found, out will look something
   # like this:
   #
-  # 'gs://chromeos-image-archive/trybot-peppy-release/R35-5692.0.0-b105/chromiumos_test_image.tar.xz\ngs://chromeos-image-archive/trybot-peppy-release/R46-7339.0.0-b105/chromiumos_test_image.tar.xz\n'
+  # 'gs://.../R35-5692.0.0-b105/chromiumos_test_image.tar.xz
+  #  gs://.../R46-7339.0.0-b105/chromiumos_test_image.tar.xz'
   #
   out = out.rstrip('\n')
   tmp_list = out.split('\n')
   # After stripping the final '\n' and splitting on any other '\n', we get
   # something like this:
-  #  tmp_list = [ 'gs://chromeos-image-archive/trybot-peppy-release/R35-5692.0.0-b105/chromiumos_test_image.tar.xz' ,
-  #               'gs://chromeos-image-archive/trybot-peppy-release/R46-7339.0.0-b105/chromiumos_test_image.tar.xz' ]
+  #  tmp_list = [ 'gs://.../R35-5692.0.0-b105/chromiumos_test_image.tar.xz' ,
+  #               'gs://.../R46-7339.0.0-b105/chromiumos_test_image.tar.xz' ]
   #
   #  If we sort this in descending order, we should end up with the most
   #  recent test image first, so that's what we do here.
