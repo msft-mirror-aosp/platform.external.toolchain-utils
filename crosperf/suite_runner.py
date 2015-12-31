@@ -42,8 +42,7 @@ def GetProfilerArgs(profiler_args):
 
 
 class SuiteRunner(object):
-  """ This defines the interface from crosperf to test script.
-  """
+  """This defines the interface from crosperf to test script."""
 
   def __init__(self,
                logger_to_use=None,
@@ -82,8 +81,7 @@ class SuiteRunner(object):
     return ret_tup
 
   def GetHighestStaticFrequency(self, machine_name, chromeos_root):
-    """ Gets the highest static frequency for the specified machine
-    """
+    """Gets the highest static frequency for the specified machine."""
     get_avail_freqs = ('cd /sys/devices/system/cpu/cpu0/cpufreq/; '
                        'if [[ -e scaling_available_frequencies ]]; then '
                        '  cat scaling_available_frequencies; '
@@ -112,8 +110,7 @@ class SuiteRunner(object):
       return freqs[0]
 
   def PinGovernorExecutionFrequencies(self, machine_name, chromeos_root):
-    """ Set min and max frequencies to max static frequency
-    """
+    """Set min and max frequencies to max static frequency."""
     highest_freq = self.GetHighestStaticFrequency(machine_name, chromeos_root)
     BASH_FOR = 'for f in {list}; do {body}; done'
     CPUFREQ_DIRS = '/sys/devices/system/cpu/cpu*/cpufreq/'
