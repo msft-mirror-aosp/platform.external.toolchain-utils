@@ -203,7 +203,7 @@ class MockLogger(object):
 
   MAX_LOG_FILES = 10
 
-  def __init__(self, rootdir, basefilename, print_console, subdir='logs'):
+  def __init__(self, *_args, **_kwargs):
     self.stdout = sys.stdout
     self.stderr = sys.stderr
     return None
@@ -252,37 +252,34 @@ class MockLogger(object):
       dest_file = '%s.%s' % (basename, extension)
       print('MockLogger: Calling os.symlink(%s, %s)' % (src_file, dest_file))
 
-  def _WriteTo(self, fd, msg, flush):
+  def _WriteTo(self, _fd, msg, _flush):
     print('MockLogger: %s' % msg)
 
-  def LogStartDots(self, print_to_console=True):
+  def LogStartDots(self, _print_to_console=True):
     print('. ')
 
-  def LogAppendDot(self, print_to_console=True):
+  def LogAppendDot(self, _print_to_console=True):
     print('. ')
 
-  def LogEndDots(self, print_to_console=True):
+  def LogEndDots(self, _print_to_console=True):
     print('\n')
 
-  def LogMsg(self, file_fd, term_fd, msg, flush=True):
+  def LogMsg(self, _file_fd, _term_fd, msg, **_kwargs):
     print('MockLogger: %s' % msg)
 
-  def _GetStdout(self, print_to_console):
-    #    if print_to_console:
-    #      return sys.stdout
+  def _GetStdout(self, _print_to_console):
     return None
 
-  def _GetStderr(self, print_to_console):
-    #    if print_to_console:
-    #      return sys.stderr
+  def _GetStderr(self, _print_to_console):
     return None
 
-  def LogCmdToFileOnly(self, cmd, machine='', user=None):
+  def LogCmdToFileOnly(self, *_args, **_kwargs):
     return
 
-    host = ('%s@%s' % (user, machine)) if user else machine
-    cmd_string = 'CMD (%s): %s\n' % (host, cmd)
-    print('MockLogger: Writing to file ONLY: %s' % cmd_string)
+  # def LogCmdToFileOnly(self, cmd, machine='', user=None):
+  #   host = ('%s@%s' % (user, machine)) if user else machine
+  #   cmd_string = 'CMD (%s): %s\n' % (host, cmd)
+  #   print('MockLogger: Writing to file ONLY: %s' % cmd_string)
 
   def LogCmd(self, cmd, machine='', user=None, print_to_console=True):
     if user:

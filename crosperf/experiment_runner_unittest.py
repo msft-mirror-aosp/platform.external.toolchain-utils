@@ -104,7 +104,7 @@ class ExperimentRunnerTest(unittest.TestCase):
 
   @mock.patch.object(machine_manager.MachineManager, 'AddMachine')
   @mock.patch.object(os.path, 'isfile')
-  def setUp(self, mock_isfile, mock_addmachine):
+  def setUp(self, mock_isfile, _mock_addmachine):
     mock_isfile.return_value = True
     self.exp = self.make_fake_experiment()
 
@@ -376,7 +376,7 @@ class ExperimentRunnerTest(unittest.TestCase):
   @mock.patch.object(TextResultsReport, 'GetReport')
   @mock.patch.object(Result, 'CopyResultsTo')
   @mock.patch.object(Result, 'CleanUp')
-  def test_store_results(self, mock_cleanup, mock_copy, mock_text_report,
+  def test_store_results(self, mock_cleanup, mock_copy, _mock_text_report,
                          mock_report, mock_writefile, mock_mkdir, mock_rmdir):
 
     self.mock_logger.Reset()

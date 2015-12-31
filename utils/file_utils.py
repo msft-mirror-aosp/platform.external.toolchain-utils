@@ -26,7 +26,7 @@ class FileUtils(object):
         cls._instance = super(FileUtils, cls).__new__(cls, *args, **kwargs)
     return cls._instance
 
-  def Md5File(self, filename, log_level='verbose', block_size=2**10):
+  def Md5File(self, filename, log_level='verbose', _block_size=2**10):
     command = 'md5sum %s' % filename
     ce = command_executer.GetCommandExecuter(log_level=log_level)
     ret, out, _ = ce.RunCommandWOutput(command)
@@ -67,7 +67,7 @@ class FileUtils(object):
 class MockFileUtils(FileUtils):
   """Mock class for file utilities."""
 
-  def Md5File(self, filename, block_size=2**10):
+  def Md5File(self, filename, _block_size=2**10):
     return 'd41d8cd98f00b204e9800998ecf8427e'
 
   def CanonicalizeChromeOSRoot(self, chromeos_root):

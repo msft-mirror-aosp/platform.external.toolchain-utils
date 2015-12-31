@@ -132,7 +132,7 @@ class MachineManagerTest(unittest.TestCase):
   def test_image_machine(self, mock_checksummer, mock_run_croscmd, mock_run_cmd,
                          mock_sleep):
 
-    def FakeMD5Checksum(input_str):
+    def FakeMD5Checksum(_input_str):
       return 'machine_fake_md5_checksum'
 
     self.fake_logger_count = 0
@@ -737,7 +737,7 @@ class CrosMachineTest(unittest.TestCase):
     self.assertEqual(args_dict['chromeos_root'], '/usr/local/chromeos')
 
   @mock.patch.object(machine_manager.CrosMachine, 'SetUpChecksumInfo')
-  def test_parse_memory_info(self, mock_setup):
+  def test_parse_memory_info(self, _mock_setup):
     cm = machine_manager.CrosMachine('daisy.cros', '/usr/local/chromeos',
                                      'average', self.mock_cmd_exec)
     cm.meminfo = MEMINFO_STRING
@@ -746,7 +746,7 @@ class CrosMachineTest(unittest.TestCase):
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
   @mock.patch.object(machine_manager.CrosMachine, 'SetUpChecksumInfo')
-  def test_get_memory_info(self, mock_setup, mock_run_cmd):
+  def test_get_memory_info(self, _mock_setup, mock_run_cmd):
     cm = machine_manager.CrosMachine('daisy.cros', '/usr/local/chromeos',
                                      'average', self.mock_cmd_exec)
     self.mock_cmd_exec.CrosRunCommandWOutput = mock_run_cmd
@@ -766,7 +766,7 @@ class CrosMachineTest(unittest.TestCase):
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
   @mock.patch.object(machine_manager.CrosMachine, 'SetUpChecksumInfo')
-  def test_get_cpu_info(self, mock_setup, mock_run_cmd):
+  def test_get_cpu_info(self, _mock_setup, mock_run_cmd):
     cm = machine_manager.CrosMachine('daisy.cros', '/usr/local/chromeos',
                                      'average', self.mock_cmd_exec)
     self.mock_cmd_exec.CrosRunCommandWOutput = mock_run_cmd
@@ -781,7 +781,7 @@ class CrosMachineTest(unittest.TestCase):
     self.assertEqual(cm.cpuinfo, CPUINFO_STRING)
 
   @mock.patch.object(machine_manager.CrosMachine, 'SetUpChecksumInfo')
-  def test_compute_machine_checksum_string(self, mock_setup):
+  def test_compute_machine_checksum_string(self, _mock_setup):
     cm = machine_manager.CrosMachine('daisy.cros', '/usr/local/chromeos',
                                      'average', self.mock_cmd_exec)
     cm.cpuinfo = CPUINFO_STRING
@@ -791,7 +791,7 @@ class CrosMachineTest(unittest.TestCase):
     self.assertEqual(cm.checksum_string, CHECKSUM_STRING)
 
   @mock.patch.object(machine_manager.CrosMachine, 'SetUpChecksumInfo')
-  def test_get_md5_checksum(self, mock_setup):
+  def test_get_md5_checksum(self, _mock_setup):
     cm = machine_manager.CrosMachine('daisy.cros', '/usr/local/chromeos',
                                      'average', self.mock_cmd_exec)
     temp_str = 'abcde'
@@ -804,7 +804,7 @@ class CrosMachineTest(unittest.TestCase):
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
   @mock.patch.object(machine_manager.CrosMachine, 'SetUpChecksumInfo')
-  def test_get_machine_id(self, mock_setup, mock_run_cmd):
+  def test_get_machine_id(self, _mock_setup, mock_run_cmd):
     cm = machine_manager.CrosMachine('daisy.cros', '/usr/local/chromeos',
                                      'average', self.mock_cmd_exec)
     self.mock_cmd_exec.CrosRunCommandWOutput = mock_run_cmd
