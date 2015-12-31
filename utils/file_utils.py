@@ -1,5 +1,7 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 
+from __future__ import print_function
+
 import errno
 import os
 import shutil

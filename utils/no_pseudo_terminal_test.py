@@ -1,5 +1,7 @@
 """Test to ensure we're not touching /dev/ptmx when running commands."""
 
+from __future__ import print_function
+
 import os
 import subprocess
 import tempfile
@@ -15,7 +17,7 @@ class NoPsuedoTerminalTest(unittest.TestCase):
   def _AttachStraceToSelf(self, output_file):
     """Attaches strace to the current process."""
     args = ['strace', '-o', output_file, '-p', str(os.getpid())]
-    print args
+    print(args)
     self._strace_process = subprocess.Popen(args)
     # Wait until we see some activity.
     start_time = time.time()

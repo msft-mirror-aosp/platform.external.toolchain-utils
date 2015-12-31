@@ -1,6 +1,8 @@
 #!/usr/bin/python2
 """Prints out index for every object file, starting from 0."""
 
+from __future__ import print_function
+
 import sys
 
 from utils import command_executer
@@ -12,7 +14,7 @@ def Main():
   _, l, _ = ce.RunCommandWOutput('cat {0} | wc -l'.format(common.OBJECTS_FILE),
                                  print_to_console=False)
   for i in range(0, int(l)):
-    print i
+    print(i)
 
 
 if __name__ == '__main__':

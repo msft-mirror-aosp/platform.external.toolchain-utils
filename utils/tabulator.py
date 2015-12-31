@@ -60,6 +60,8 @@ table:
 
 """
 
+from __future__ import print_function
+
 import getpass
 import math
 import sys
@@ -915,7 +917,7 @@ class TableFormatter(object):
       for cell in row:
         o += str(cell) + ' '
       o += '\n'
-    print o
+    print(o)
 
   def GetCellTable(self, table_type, headers=True):
     """Function to return a table of cells.
@@ -1203,13 +1205,13 @@ if __name__ == '__main__':
                                           'k9': 'PASS'}]]
   labels = ['vanilla', 'modified']
   t = GetComplexTable(runs, labels, TablePrinter.CONSOLE)
-  print t
+  print(t)
   email = GetComplexTable(runs, labels, TablePrinter.EMAIL)
 
   runs = [[{'k1': '1'}, {'k1': '1.1'}, {'k1': '1.2'}],
           [{'k1': '5'}, {'k1': '5.1'}, {'k1': '5.2'}]]
   t = GetComplexTable(runs, labels, TablePrinter.CONSOLE)
-  print t
+  print(t)
 
   simple_table = [
       ['binary', 'b1', 'b2', 'b3'],
@@ -1219,7 +1221,7 @@ if __name__ == '__main__':
       ['debug', 100, 140, 60],
   ]
   t = GetSimpleTable(simple_table)
-  print t
+  print(t)
   email += GetSimpleTable(simple_table, TablePrinter.HTML)
   email_to = [getpass.getuser()]
   email = "<pre style='font-size: 13px'>%s</pre>" % email

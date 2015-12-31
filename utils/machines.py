@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 """Utilities relating to machine-specific functions."""
 
+from __future__ import print_function
+
 from utils import command_executer
 
 

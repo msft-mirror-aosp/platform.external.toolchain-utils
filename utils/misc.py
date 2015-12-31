@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 """Utilities for toolchain build."""
 
+from __future__ import print_function
+
 __author__ = 'asharif@google.com (Ahmad Sharif)'
 
 from contextlib import contextmanager
@@ -428,7 +430,7 @@ def DeleteChromeOsTree(chromeos_root, dry_run=False):
     return False
   cmd0 = 'cd {0} && cros_sdk --delete'.format(chromeos_root)
   if dry_run:
-    print cmd0
+    print(cmd0)
   else:
     if command_executer.GetCommandExecuter().RunCommand(
         cmd0,
@@ -440,7 +442,7 @@ def DeleteChromeOsTree(chromeos_root, dry_run=False):
           'cd $CHROMEOSDIRNAME && sudo rm -fr $CHROMEOSBASENAME').format(
               chromeos_root)
   if dry_run:
-    print cmd1
+    print(cmd1)
     return True
 
   return command_executer.GetCommandExecuter().RunCommand(

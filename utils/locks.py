@@ -1,6 +1,8 @@
 # Copyright 2015 The Chromium OS Authors. All rights reserved.
 """Utilities for locking machines."""
 
+from __future__ import print_function
+
 import time
 
 import afe_lock_machine

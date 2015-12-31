@@ -10,6 +10,8 @@
 # output file, in effect commenting out any lines that contain 'eclean'.
 #
 
+from __future__ import print_function
+
 import sys
 import os
 

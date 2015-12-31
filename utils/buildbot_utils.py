@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+from __future__ import print_function
+
 import os
 import time
 import urllib2
@@ -96,7 +98,7 @@ def FindBuildRecordFromLog(description, log_info):
         # We found a match; we're done.
         return my_dict
     except:
-      print "reason is not in dictionary: '%s'" % repr(my_dict)
+      print("reason is not in dictionary: '%s'" % repr(my_dict))
     else:
       # Keep going.
       continue

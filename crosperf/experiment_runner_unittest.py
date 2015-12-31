@@ -1,6 +1,9 @@
 #!/usr/bin/python2
 #
 # Copyright 2014 Google Inc. All Rights Reserved
+
+from __future__ import print_function
+
 import StringIO
 import getpass
 import os

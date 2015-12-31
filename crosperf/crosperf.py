@@ -3,6 +3,8 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 """The driver script for running performance benchmarks on ChromeOS."""
 
+from __future__ import print_function
+
 import atexit
 import optparse
 import os

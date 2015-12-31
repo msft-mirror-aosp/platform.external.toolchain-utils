@@ -1,6 +1,8 @@
 # Copyright 2012 Google Inc. All Rights Reserved.
 """Tests for misc."""
 
+from __future__ import print_function
+
 __author__ = 'asharif@google.com (Ahmad Sharif)'
 
 # System modules

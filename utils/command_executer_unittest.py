@@ -1,5 +1,8 @@
 #!/usr/bin/python2
 """Unittest for command_executer.py."""
+
+from __future__ import print_function
+
 import time
 import unittest
 

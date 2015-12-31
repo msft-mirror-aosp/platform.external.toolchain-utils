@@ -5,6 +5,8 @@
 A detailed description of perf_diff.
 """
 
+from __future__ import print_function
+
 __author__ = 'asharif@google.com (Ahmad Sharif)'
 
 import optparse
@@ -85,7 +87,7 @@ class Tabulator(object):
           row.append('0')
       table.append(row)
 
-    print tabulator.GetSimpleTable(table)
+    print(tabulator.GetSimpleTable(table))
 
 
 class Function(object):

@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 """Tools for searching/manipulating the manifests repository."""
 
+from __future__ import print_function
+
 __author__ = 'llozano@google.com (Luis Lozano)'
 
 import os

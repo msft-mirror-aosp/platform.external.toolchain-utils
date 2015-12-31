@@ -9,12 +9,14 @@
 #  original state.
 #
 
+from __future__ import print_function
+
 import argparse
 import sys
 
 
 def Usage(parser, msg):
-  print 'ERROR: ' + msg
+  print('ERROR: ' + msg)
   parser.print_help()
   sys.exit(1)
 

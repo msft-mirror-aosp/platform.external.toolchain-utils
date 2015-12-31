@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 """Utilities to run commands in outside/inside chroot and on the board."""
 
+from __future__ import print_function
+
 import getpass
 import os
 import re

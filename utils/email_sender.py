@@ -3,6 +3,8 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
 """Utilities to send email either through SMTP or SendGMR."""
 
+from __future__ import print_function
+
 from email import Encoders
 from email.MIMEBase import MIMEBase
 from email.MIMEMultipart import MIMEMultipart

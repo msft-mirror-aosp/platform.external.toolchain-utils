@@ -2,6 +2,8 @@
 #
 """Tools for recording and reporting timeline of benchmark_run."""
 
+from __future__ import print_function
+
 __author__ = 'yunlian@google.com (Yunlian Jiang)'
 
 import time

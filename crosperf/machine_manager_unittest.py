@@ -2,6 +2,9 @@
 
 # Copyright 2012 Google Inc. All Rights Reserved.
 """Unittest for machine_manager."""
+
+from __future__ import print_function
+
 import os.path
 import time
 import hashlib

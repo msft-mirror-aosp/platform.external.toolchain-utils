@@ -1,5 +1,7 @@
 # Copyright 2010 Google Inc. All Rights Reserved.
 
+from __future__ import print_function
+
 # System modules
 import os.path
 import sys
@@ -26,7 +28,7 @@ class Logger(object):
       os.makedirs(logdir)
     except OSError:
       pass
-      # print "Warning: Logs directory '%s' already exists." % logdir
+      # print("Warning: Logs directory '%s' already exists." % logdir)
 
     self.print_console = print_console
 
@@ -63,7 +65,7 @@ class Logger(object):
     try:
       fd = open(name, 'w')
     except IOError:
-      print 'Warning: could not open %s for writing.' % name
+      print('Warning: could not open %s for writing.' % name)
     return fd
 
   def _CreateLogFileHandles(self, basename):
@@ -86,7 +88,7 @@ class Logger(object):
           os.remove(dest_file)
         os.symlink(src_file, dest_file)
     except Exception as ex:
-      print 'Exception while creating symlinks: %s' % str(ex)
+      print('Exception while creating symlinks: %s' % str(ex))
 
   def _WriteTo(self, fd, msg, flush):
     if fd:
@@ -231,15 +233,15 @@ class MockLogger(object):
     return suffix
 
   def _CreateLogFileHandle(self, name):
-    print 'MockLogger: creating open file handle for %s (writing)' % name
+    print('MockLogger: creating open file handle for %s (writing)' % name)
 
   def _CreateLogFileHandles(self, basename):
     suffix = self._FindSuffix(basename)
     suffixed_basename = self._AddSuffix(basename, suffix)
 
-    print 'MockLogger: opening file %s.cmd' % suffixed_basename
-    print 'MockLogger: opening file %s.out' % suffixed_basename
-    print 'MockLogger: opening file %s.err' % suffixed_basename
+    print('MockLogger: opening file %s.cmd' % suffixed_basename)
+    print('MockLogger: opening file %s.out' % suffixed_basename)
+    print('MockLogger: opening file %s.err' % suffixed_basename)
 
     self._CreateLogFileSymlinks(basename, suffixed_basename)
 
@@ -248,22 +250,22 @@ class MockLogger(object):
     for extension in ['cmd', 'out', 'err']:
       src_file = '%s.%s' % (os.path.basename(suffixed_basename), extension)
       dest_file = '%s.%s' % (basename, extension)
-      print 'MockLogger: Calling os.symlink(%s, %s)' % (src_file, dest_file)
+      print('MockLogger: Calling os.symlink(%s, %s)' % (src_file, dest_file))
 
   def _WriteTo(self, fd, msg, flush):
-    print 'MockLogger: %s' % msg
+    print('MockLogger: %s' % msg)
 
   def LogStartDots(self, print_to_console=True):
-    print '. '
+    print('. ')
 
   def LogAppendDot(self, print_to_console=True):
-    print '. '
+    print('. ')
 
   def LogEndDots(self, print_to_console=True):
-    print '\n'
+    print('\n')
 
   def LogMsg(self, file_fd, term_fd, msg, flush=True):
-    print 'MockLogger: %s' % msg
+    print('MockLogger: %s' % msg)
 
   def _GetStdout(self, print_to_console):
     #    if print_to_console:
@@ -280,7 +282,7 @@ class MockLogger(object):
 
     host = ('%s@%s' % (user, machine)) if user else machine
     cmd_string = 'CMD (%s): %s\n' % (host, cmd)
-    print 'MockLogger: Writing to file ONLY: %s' % cmd_string
+    print('MockLogger: Writing to file ONLY: %s' % cmd_string)
 
   def LogCmd(self, cmd, machine='', user=None, print_to_console=True):
     if user:
@@ -295,7 +297,7 @@ class MockLogger(object):
     self.LogMsg(0, self._GetStderr(print_to_console), 'FATAL: %s\n' % msg)
     self.LogMsg(0, self._GetStderr(print_to_console),
                 '\n'.join(traceback.format_stack()))
-    print 'MockLogger: Calling sysexit(1)'
+    print('MockLogger: Calling sysexit(1)')
 
   def LogError(self, msg, print_to_console=True):
     self.LogMsg(0, self._GetStderr(print_to_console), 'ERROR: %s\n' % msg)
@@ -331,7 +333,7 @@ class MockLogger(object):
                 flush=False)
 
   def Flush(self):
-    print 'MockLogger: Flushing cmdfd, stdout, stderr'
+    print('MockLogger: Flushing cmdfd, stdout, stderr')
 
 
 main_logger = None

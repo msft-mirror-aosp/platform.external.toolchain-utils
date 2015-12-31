@@ -1,6 +1,8 @@
 # Copyright 2012 Google Inc. All Rights Reserved.
 """Tests for time_line.py."""
 
+from __future__ import print_function
+
 __author__ = 'yunlian@google.com (Yunlian Jiang)'
 
 import time
