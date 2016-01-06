@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+"""Module for building with cbuildbot."""
+
 from __future__ import print_function
 
 import os
@@ -294,3 +296,24 @@ def GetTrybotImage(chromeos_root,
   logger.GetLogger().LogOutput("trybot_image is '%s'" % trybot_image)
   logger.GetLogger().LogOutput('build_status is %d' % build_status)
   return trybot_image
+
+def WaitForImage(chromeos_root, build):
+  """Wait for a image to be ready."""
+
+  ready = False
+  elapsed_time = 0
+  ce = command_executer.GetCommandExecuter()
+  command = ('gsutil ls gs://chromeos-image-archive/%s'
+             '/chromiumos_test_image.tar.xz' % (build))
+  while not ready and elapsed_time < TIME_OUT:
+    ret = ce.ChrootRunCommand(chromeos_root,
+                              command,
+                              print_to_console=False)
+    if not ret:
+      return ret
+    logger.GetLogger().LogOutput("Image %s not ready, waiting for 10 minutes"
+                                 % build)
+    time.sleep(SLEEP_TIME)
+    elapsed_time += SLEEP_TIME
+
+  return ret

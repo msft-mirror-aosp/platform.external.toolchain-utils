@@ -288,6 +288,9 @@ class ToolchainComparator(object):
     vanilla_image = self._ParseVanillaImage(trybot_image)
     nonafdo_image = self._ParseNonAFDOImage(trybot_image)
 
+    # The trybot image is ready here, in some cases, the vanilla image
+    # is not ready, so we need to make sure vanilla image is available.
+    buildbot_utils.WaitForImage(self._chromeos_root, vanilla_image)
     print('trybot_image: %s' % trybot_image)
     print('vanilla_image: %s' % vanilla_image)
     print('nonafdo_image: %s' % nonafdo_image)
