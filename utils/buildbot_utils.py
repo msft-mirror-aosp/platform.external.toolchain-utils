@@ -1,8 +1,7 @@
 # Copyright 2014 Google Inc. All Rights Reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
-"""Module for building with cbuildbot."""
+"""Utilities for launching and accessing ChromeOS buildbots."""
 
 from __future__ import print_function
 
@@ -25,7 +24,11 @@ OK_STATUS = [  # List of result status values that are 'ok'.
     1,  # "warnings"
     6,  # "retry"
 ]
-"""Utilities for launching and accessing ChromeOS buildbots."""
+
+
+class BuildbotTimeout(Exception):
+  """Exception to throw when a buildbot operation timesout."""
+  pass
 
 
 def ParseReportLog(url, build):
@@ -98,7 +101,7 @@ def FindBuildRecordFromLog(description, log_info):
       if str(description) in my_dict['reason']:
         # We found a match; we're done.
         return my_dict
-    except:
+    except KeyError:
       print("reason is not in dictionary: '%s'" % repr(my_dict))
     else:
       # Keep going.
@@ -297,23 +300,29 @@ def GetTrybotImage(chromeos_root,
   logger.GetLogger().LogOutput('build_status is %d' % build_status)
   return trybot_image
 
-def WaitForImage(chromeos_root, build):
-  """Wait for a image to be ready."""
 
-  ready = False
-  elapsed_time = 0
+def DoesImageExist(chromeos_root, build):
+  """Check if the image for the given build exists."""
+
   ce = command_executer.GetCommandExecuter()
   command = ('gsutil ls gs://chromeos-image-archive/%s'
              '/chromiumos_test_image.tar.xz' % (build))
-  while not ready and elapsed_time < TIME_OUT:
-    ret = ce.ChrootRunCommand(chromeos_root,
-                              command,
-                              print_to_console=False)
-    if not ret:
-      return ret
-    logger.GetLogger().LogOutput("Image %s not ready, waiting for 10 minutes"
-                                 % build)
+  ret = ce.ChrootRunCommand(chromeos_root, command, print_to_console=False)
+  return not ret
+
+
+def WaitForImage(chromeos_root, build):
+  """Wait for an image to be ready."""
+
+  elapsed_time = 0
+  while elapsed_time < TIME_OUT:
+    if DoesImageExist(chromeos_root, build):
+      return
+    logger.GetLogger().LogOutput('Image %s not ready, waiting for 10 minutes' %
+                                 build)
     time.sleep(SLEEP_TIME)
     elapsed_time += SLEEP_TIME
 
-  return ret
+  logger.GetLogger().LogOutput('Image %s not found, waited for %d hours' %
+                               (build, (TIME_OUT / 3600)))
+  raise BuildbotTimeout('Timeout while waiting for image %s' % build)

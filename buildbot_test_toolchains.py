@@ -161,14 +161,15 @@ class ToolchainComparator(object):
       f.write(official_image)
 
       # Now add non-AFDO image to test file.
-      official_nonafdo_image = """
+      if nonafdo_image:
+        official_nonafdo_image = """
           nonafdo_image {
             chromeos_root: %s
             build: %s
             compiler: gcc
           }
           """ % (self._chromeos_root, nonafdo_image)
-      f.write(official_nonafdo_image)
+        f.write(official_nonafdo_image)
 
       label_string = '%s_trybot_image' % compiler_string
       if USE_NEXT_GCC_PATCH in self._patches:
@@ -233,14 +234,10 @@ class ToolchainComparator(object):
       self._ce.RunCommand(cmd)
 
     # Now create new tar files and copy them over.
-    labels = ['test', 'vanilla', 'nonafdo']
-    for label_name in labels:
-      if label_name == 'test':
-        test_path = trybot_image
-      elif label_name == 'vanilla':
-        test_path = vanilla_image
-      else:
-        test_path = nonafdo_image
+    labels = {'test': trybot_image, 'vanilla': vanilla_image}
+    if nonafdo_image:
+      labels['nonafdo'] = nonafdo_image
+    for label_name, test_path in labels.iteritems():
       tar_file_name = '%s_%s_image.tar' % (self._weekday, label_name)
       cmd = ('cd %s; tar -cvf %s %s/chromiumos_test_image.bin; '
              'cp %s %s/.') % (images_path, tar_file_name, test_path,
@@ -287,6 +284,8 @@ class ToolchainComparator(object):
 
     vanilla_image = self._ParseVanillaImage(trybot_image)
     nonafdo_image = self._ParseNonAFDOImage(trybot_image)
+    if not buildbot_utils.DoesImageExist(self._chromeos_root, nonafdo_image):
+      nonafdo_image = ''
 
     # The trybot image is ready here, in some cases, the vanilla image
     # is not ready, so we need to make sure vanilla image is available.
