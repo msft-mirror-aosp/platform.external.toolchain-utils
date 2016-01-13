@@ -1,20 +1,23 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 """Script to  compare a baseline results file to a new results file."""
 
+from __future__ import print_function
+
 __author__ = 'raymes@google.com (Raymes Khoury)'
 
 import sys
-from utils import logger
-from utils import html_tools
+from cros_utils import logger
+from cros_utils import html_tools
 
 PASS = 'pass'
 FAIL = 'fail'
 NOT_EXECUTED = 'not executed'
 
 
-class ResultsReport:
+class ResultsReport(object):
+  """Class for holding report results."""
 
   def __init__(self, report, num_tests_executed, num_passes, num_failures,
                num_regressions):
@@ -48,7 +51,7 @@ class ResultsReport:
 
 
 def Usage():
-  print 'Usage: %s baseline_results new_results' % sys.argv[0]
+  print('Usage: %s baseline_results new_results' % sys.argv[0])
   sys.exit(1)
 
 
@@ -135,7 +138,7 @@ def Main(argv):
   if len(argv) < 2:
     Usage()
 
-  print GenerateResultsReport(argv[1], argv[2])[0]
+  print(GenerateResultsReport(argv[1], argv[2])[0])
 
 
 if __name__ == '__main__':

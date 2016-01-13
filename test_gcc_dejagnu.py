@@ -1,26 +1,28 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 """Script adapter used by automation client for testing dejagnu.
+
    This is not intended to be run on command line.
-   To kick off a single dejagnu run, use chromeos/v14/dejagnu/run_dejagnu.py
+   To kick off a single dejagnu run, use ./dejagnu/run_dejagnu.py
 """
+
+from __future__ import print_function
 
 __author__ = 'shenhan@google.com (Han Shen)'
 
-import optparse
-import os
-from os import path
+import argparse
 import sys
 import setup_chromeos
 import build_tc
 
 from dejagnu import run_dejagnu
-from utils import command_executer
-from utils import email_sender
+from cros_utils import command_executer
+from cros_utils import email_sender
 
 
 class DejagnuAdapter(object):
+  """Dejagnu Adapter class"""
 
   # TODO(shenhan): move these to constants.py.
   _CHROMIUM_GCC_GIT = ('https://chromium.googlesource.com/'
@@ -91,17 +93,17 @@ class DejagnuAdapter(object):
 
 # Parse the output log to determine how many failures we have.
 # Return -1 if parse output log failed.
-def GetNumNewFailures(str):
-  if not str:
+def GetNumNewFailures(input_str):
+  if not input_str:
     return 0
   start_counting = False
   n_failures = 0
-  for l in str.splitlines():
-    print l
+  for l in input_str.splitlines():
+    print(l)
     if not start_counting and 'Build results not in the manifest' in l:
       start_counting = True
     elif start_counting and l and (
-      l.find('UNRESOLVED:') == 0 or l.find('FAIL:') == 0 or \
+        l.find('UNRESOLVED:') == 0 or l.find('FAIL:') == 0 or
         l.find('XFAIL:') == 0 or l.find('XPASS:') == 0):
       n_failures = n_failures + 1
   if not start_counting:
@@ -112,7 +114,6 @@ def GetNumNewFailures(str):
 # Do not throw any exception in this function!
 def EmailResult(result):
   email_to = ['c-compiler-chrome@google.com']
-  email_from = ['dejagnu-job@google.com']
   if len(result) == 4:
     subject = 'Job failed: dejagnu test didn\'t finish'
     email_text = 'Job failed prematurely, check exception below.\n' + \
@@ -139,7 +140,7 @@ def EmailResult(result):
 
   try:
     email_sender.EmailSender().SendEmail(email_to, subject, email_text)
-    print 'Email sent.'
+    print('Email sent.')
   except Exception as e:
     # Do not propagate this email sending exception, you want to email an
     # email exception? Just log it on console.
@@ -151,41 +152,41 @@ def EmailResult(result):
 
 def ProcessArguments(argv):
   """Processing script arguments."""
-  parser = optparse.OptionParser(
+  parser = argparse.ArgumentParser(
       description=('This script is used by nightly client to test gcc. '
                    'DO NOT run it unless you know what you are doing.'),
       usage='test_gcc_dejagnu.py options')
-  parser.add_option('-b',
-                    '--board',
-                    dest='board',
-                    help=('Required. Specify board type. For example '
-                          '\'lumpy\' and \'daisy\''))
-  parser.add_option('-r',
-                    '--remote',
-                    dest='remote',
-                    help=('Required. Specify remote board address'))
-  parser.add_option('-g',
-                    '--gcc_dir',
-                    dest='gcc_dir',
-                    default='gcc.live',
-                    help=('Optional. Specify gcc checkout directory.'))
-  parser.add_option('-c',
-                    '--chromeos_root',
-                    dest='chromeos_root',
-                    default='chromeos.live',
-                    help=('Optional. Specify chromeos checkout directory.'))
-  parser.add_option('--cleanup',
-                    dest='cleanup',
-                    default=None,
-                    help=('Optional. Do cleanup after the test.'))
-  parser.add_option('--runtestflags',
-                    dest='runtestflags',
-                    default=None,
-                    help=('Optional. Options to RUNTESTFLAGS env var '
-                          'while invoking make check. '
-                          '(Mainly used for testing purpose.)'))
+  parser.add_argument('-b',
+                      '--board',
+                      dest='board',
+                      help=('Required. Specify board type. For example '
+                            '\'lumpy\' and \'daisy\''))
+  parser.add_argument('-r',
+                      '--remote',
+                      dest='remote',
+                      help=('Required. Specify remote board address'))
+  parser.add_argument('-g',
+                      '--gcc_dir',
+                      dest='gcc_dir',
+                      default='gcc.live',
+                      help=('Optional. Specify gcc checkout directory.'))
+  parser.add_argument('-c',
+                      '--chromeos_root',
+                      dest='chromeos_root',
+                      default='chromeos.live',
+                      help=('Optional. Specify chromeos checkout directory.'))
+  parser.add_argument('--cleanup',
+                      dest='cleanup',
+                      default=None,
+                      help=('Optional. Do cleanup after the test.'))
+  parser.add_argument('--runtestflags',
+                      dest='runtestflags',
+                      default=None,
+                      help=('Optional. Options to RUNTESTFLAGS env var '
+                            'while invoking make check. '
+                            '(Mainly used for testing purpose.)'))
 
-  options, args = parser.parse_args(argv)
+  options = parser.parse_args(argv[1:])
 
   if not options.board or not options.remote:
     raise Exception('--board and --remote are mandatory options.')
@@ -204,11 +205,12 @@ def Main(argv):
     adapter.BuildGCC()
     ret = adapter.CheckGCC()
   except Exception as e:
-    print e
+    print(e)
     ret = (1, '', '', str(e))
   finally:
     EmailResult(ret)
-    return ret
+
+  return ret
 
 
 if __name__ == '__main__':

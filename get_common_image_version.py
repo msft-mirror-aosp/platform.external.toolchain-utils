@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2013 Google Inc. All Rights Reserved.
 """Script to find list of common images (first beta releases) in Chromeos.
@@ -10,9 +10,11 @@ using randomly selected versions. Currently we define as a "stable"
 version the first Beta release in a particular release cycle.
 """
 
+from __future__ import print_function
+
 __author__ = 'llozano@google.com (Luis Lozano)'
 
-import optparse
+import argparse
 import pickle
 import re
 import sys
@@ -22,9 +24,9 @@ VERSIONS_HISTORY_URL = 'http://cros-omahaproxy.appspot.com/history'
 
 
 def DisplayBetas(betas):
-  print 'List of betas from', VERSIONS_HISTORY_URL
+  print('List of betas from %s' % VERSIONS_HISTORY_URL)
   for beta in betas:
-    print '  Release', beta['chrome_major_version'], beta
+    print('  Release', beta['chrome_major_version'], beta)
   return
 
 
@@ -53,26 +55,27 @@ def FindAllBetas(all_versions):
 def SerializeBetas(all_betas, serialize_file):
   with open(serialize_file, 'wb') as f:
     pickle.dump(all_betas, f)
-    print 'Serialized list of betas into', serialize_file
+    print('Serialized list of betas into', serialize_file)
   return
 
 
 def Main(argv):
   """Get ChromeOS first betas list from history URL."""
 
-  parser = optparse.OptionParser()
-  parser.add_option('--serialize',
-                    dest='serialize',
-                    default=None,
-                    help='Save list of common images into the specified file.')
-  options = parser.parse_args(argv)[0]
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--serialize',
+                      dest='serialize',
+                      default=None,
+                      help='Save list of common images into the specified '
+                      'file.')
+  options = parser.parse_args(argv)
 
   try:
     opener = urllib.URLopener()
     all_versions = opener.open(VERSIONS_HISTORY_URL)
   except IOError as ioe:
-    print 'Cannot open', VERSIONS_HISTORY_URL
-    print ioe
+    print('Cannot open', VERSIONS_HISTORY_URL)
+    print(ioe)
     return 1
 
   all_betas = FindAllBetas(all_versions)
@@ -85,5 +88,5 @@ def Main(argv):
 
 
 if __name__ == '__main__':
-  retval = Main(sys.argv)
+  retval = Main(sys.argv[1:])
   sys.exit(retval)

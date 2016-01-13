@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 """Script to checkout the ChromeOS source.
@@ -7,23 +7,24 @@ This script sets up the ChromeOS source in the given directory, matching a
 particular release of ChromeOS.
 """
 
+from __future__ import print_function
+
 __author__ = ('asharif@google.com (Ahmad Sharif) '
               'llozano@google.com (Luis Lozano) '
               'raymes@google.com (Raymes Khoury) '
               'shenhan@google.com (Han Shen)')
 
-import optparse
+import argparse
 import os
 import sys
 
-import tc_enter_chroot
-from utils import command_executer
-from utils import logger
-from utils import misc
+from cros_utils import command_executer
+from cros_utils import logger
+from cros_utils import misc
 
 
 def Usage(parser, message):
-  print 'ERROR: ' + message
+  print('ERROR: %s' % message)
   parser.print_help()
   sys.exit(0)
 
@@ -33,76 +34,76 @@ def Main(argv):
   # Common initializations
   cmd_executer = command_executer.GetCommandExecuter()
 
-  parser = optparse.OptionParser()
-  parser.add_option('--chromeos_root',
-                    dest='chromeos_root',
-                    help='Target directory for ChromeOS installation.')
-  parser.add_option('--clobber_chroot',
-                    dest='clobber_chroot',
-                    action='store_true',
-                    help='Delete the chroot and start fresh',
-                    default=False)
-  parser.add_option('--clobber_board',
-                    dest='clobber_board',
-                    action='store_true',
-                    help='Delete the board and start fresh',
-                    default=False)
-  parser.add_option('--rebuild',
-                    dest='rebuild',
-                    action='store_true',
-                    help='Rebuild all board packages except the toolchain.',
-                    default=False)
-  parser.add_option('--cflags',
-                    dest='cflags',
-                    default='',
-                    help='CFLAGS for the ChromeOS packages')
-  parser.add_option('--cxxflags',
-                    dest='cxxflags',
-                    default='',
-                    help='CXXFLAGS for the ChromeOS packages')
-  parser.add_option('--ldflags',
-                    dest='ldflags',
-                    default='',
-                    help='LDFLAGS for the ChromeOS packages')
-  parser.add_option('--board',
-                    dest='board',
-                    help='ChromeOS target board, e.g. x86-generic')
-  parser.add_option('--package',
-                    dest='package',
-                    help='The package needs to be built')
-  parser.add_option('--label',
-                    dest='label',
-                    help='Optional label symlink to point to build dir.')
-  parser.add_option('--dev',
-                    dest='dev',
-                    default=False,
-                    action='store_true',
-                    help=('Make the final image in dev mode (eg writable, '
-                          'more space on image). Defaults to False.'))
-  parser.add_option('--debug',
-                    dest='debug',
-                    default=False,
-                    action='store_true',
-                    help=("Optional. Build chrome browser with \"-g -O0\". "
-                          "Notice, this also turns on \'--dev\'. "
-                          'Defaults to False.'))
-  parser.add_option('--env',
-                    dest='env',
-                    default='',
-                    help='Env to pass to build_packages.')
-  parser.add_option('--vanilla',
-                    dest='vanilla',
-                    default=False,
-                    action='store_true',
-                    help='Use default ChromeOS toolchain.')
-  parser.add_option('--vanilla_image',
-                    dest='vanilla_image',
-                    default=False,
-                    action='store_true',
-                    help=('Use prebuild packages for building the image. '
-                          'It also implies the --vanilla option is set.'))
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--chromeos_root',
+                      dest='chromeos_root',
+                      help='Target directory for ChromeOS installation.')
+  parser.add_argument('--clobber_chroot',
+                      dest='clobber_chroot',
+                      action='store_true',
+                      help='Delete the chroot and start fresh',
+                      default=False)
+  parser.add_argument('--clobber_board',
+                      dest='clobber_board',
+                      action='store_true',
+                      help='Delete the board and start fresh',
+                      default=False)
+  parser.add_argument('--rebuild',
+                      dest='rebuild',
+                      action='store_true',
+                      help='Rebuild all board packages except the toolchain.',
+                      default=False)
+  parser.add_argument('--cflags',
+                      dest='cflags',
+                      default='',
+                      help='CFLAGS for the ChromeOS packages')
+  parser.add_argument('--cxxflags',
+                      dest='cxxflags',
+                      default='',
+                      help='CXXFLAGS for the ChromeOS packages')
+  parser.add_argument('--ldflags',
+                      dest='ldflags',
+                      default='',
+                      help='LDFLAGS for the ChromeOS packages')
+  parser.add_argument('--board',
+                      dest='board',
+                      help='ChromeOS target board, e.g. x86-generic')
+  parser.add_argument('--package',
+                      dest='package',
+                      help='The package needs to be built')
+  parser.add_argument('--label',
+                      dest='label',
+                      help='Optional label symlink to point to build dir.')
+  parser.add_argument('--dev',
+                      dest='dev',
+                      default=False,
+                      action='store_true',
+                      help=('Make the final image in dev mode (eg writable, '
+                            'more space on image). Defaults to False.'))
+  parser.add_argument('--debug',
+                      dest='debug',
+                      default=False,
+                      action='store_true',
+                      help=("Optional. Build chrome browser with \"-g -O0\". "
+                            "Notice, this also turns on \'--dev\'. "
+                            'Defaults to False.'))
+  parser.add_argument('--env',
+                      dest='env',
+                      default='',
+                      help='Env to pass to build_packages.')
+  parser.add_argument('--vanilla',
+                      dest='vanilla',
+                      default=False,
+                      action='store_true',
+                      help='Use default ChromeOS toolchain.')
+  parser.add_argument('--vanilla_image',
+                      dest='vanilla_image',
+                      default=False,
+                      action='store_true',
+                      help=('Use prebuild packages for building the image. '
+                            'It also implies the --vanilla option is set.'))
 
-  options = parser.parse_args(argv[1:])[0]
+  options = parser.parse_args(argv[1:])
 
   if options.chromeos_root is None:
     Usage(parser, '--chromeos_root must be set')
@@ -158,8 +159,6 @@ def Main(argv):
   if not os.path.isdir(options.chromeos_root + '/chroot/build/' +
                        options.board) or options.clobber_board:
     # Run build_tc.py from binary package
-    rootdir = misc.GetRoot(argv[0])[0]
-    version_number = misc.GetRoot(rootdir)[1]
     ret = cmd_executer.ChrootRunCommand(options.chromeos_root,
                                         misc.GetSetupBoardCommand(
                                             options.board,

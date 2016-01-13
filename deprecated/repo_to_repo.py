@@ -1,11 +1,15 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
+"""Module for transferring files between various types of repositories."""
+
+from __future__ import print_function
 
 __author__ = 'asharif@google.com (Ahmad Sharif)'
 
+import argparse
 import datetime
-import optparse
+import json
 import os
 import re
 import socket
@@ -17,6 +21,7 @@ from utils import command_executer
 from utils import logger
 from utils import misc
 
+# pylint: disable=anomalous-backslash-in-string
 
 def GetCanonicalMappings(mappings):
   canonical_mappings = []
@@ -41,6 +46,7 @@ def SplitMapping(mapping):
 
 
 class Repo(object):
+  """Basic repository base class."""
 
   def __init__(self, no_create_tmp_dir=False):
     self.repo_type = None
@@ -87,6 +93,9 @@ class Repo(object):
   def GetRoot(self):
     return self._root_dir
 
+  def SetRoot(self, directory):
+    self._root_dir = directory
+
   def CleanupRoot(self):
     command = 'rm -rf %s' % self._root_dir
     return self._ce.RunCommand(command)
@@ -99,6 +108,7 @@ class Repo(object):
 # Note - this type of repo is used only for "readonly", in other words, this
 # only serves as a incoming repo.
 class FileRepo(Repo):
+  """Class for file repositories."""
 
   def __init__(self, address, ignores=None):
     Repo.__init__(self, no_create_tmp_dir=True)
@@ -109,6 +119,8 @@ class FileRepo(Repo):
     self.revision = '{0} (as of "{1}")'.format(address, datetime.datetime.now())
     self.gerrit = None
     self._root_dir = self.address
+    if ignores:
+      self.ignores += ignores
 
   def CleanupRoot(self):
     """Override to prevent deletion."""
@@ -116,6 +128,8 @@ class FileRepo(Repo):
 
 
 class P4Repo(Repo):
+  """Class for P4 repositories."""
+
 
   def __init__(self, address, mappings, revision=None):
     Repo.__init__(self)
@@ -146,6 +160,7 @@ class P4Repo(Repo):
 
 
 class SvnRepo(Repo):
+  """Class for svn repositories."""
 
   def __init__(self, address, mappings):
     Repo.__init__(self)
@@ -174,6 +189,7 @@ class SvnRepo(Repo):
 
 
 class GitRepo(Repo):
+  """Class for git repositories."""
 
   def __init__(self, address, branch, mappings=None, ignores=None, gerrit=None):
     Repo.__init__(self)
@@ -279,6 +295,7 @@ class GitRepo(Repo):
 
 
 class RepoReader(object):
+  """Class for reading repositories."""
 
   def __init__(self, filename):
     self.filename = filename
@@ -288,7 +305,7 @@ class RepoReader(object):
 
   def ParseFile(self):
     with open(self.filename) as f:
-      self.main_dict = eval(f.read())
+      self.main_dict = json.load(f)
       self.CreateReposFromDict(self.main_dict)
     return [self.input_repos, self.output_repos]
 
@@ -331,26 +348,27 @@ class RepoReader(object):
 
 @logger.HandleUncaughtExceptions
 def Main(argv):
-  parser = optparse.OptionParser()
-  parser.add_option('-i',
-                    '--input_file',
-                    dest='input_file',
-                    help='The input file that contains repo descriptions.')
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-i',
+                      '--input_file',
+                      dest='input_file',
+                      help='The input file that contains repo descriptions.')
 
-  parser.add_option('-n',
-                    '--dry_run',
-                    dest='dry_run',
-                    action='store_true',
-                    default=False,
-                    help='Do a dry run of the push.')
+  parser.add_argument('-n',
+                      '--dry_run',
+                      dest='dry_run',
+                      action='store_true',
+                      default=False,
+                      help='Do a dry run of the push.')
 
-  parser.add_option('-F',
-                    '--message_file',
-                    dest='message_file',
-                    default=None,
-                    help='Use contents of the log file as the commit message.')
+  parser.add_argument('-F',
+                      '--message_file',
+                      dest='message_file',
+                      default=None,
+                      help=('Use contents of the log file as the commit '
+                            'message.'))
 
-  options = parser.parse_args(argv)[0]
+  options = parser.parse_args(argv)
   if not options.input_file:
     parser.print_help()
     return 1
@@ -399,5 +417,5 @@ def Main(argv):
 
 
 if __name__ == '__main__':
-  retval = Main(sys.argv)
+  retval = Main(sys.argv[1:])
   sys.exit(retval)

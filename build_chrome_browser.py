@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 """Script to checkout the ChromeOS source.
@@ -7,101 +7,98 @@ This script sets up the ChromeOS source in the given directory, matching a
 particular release of ChromeOS.
 """
 
+from __future__ import print_function
+
 __author__ = 'raymes@google.com (Raymes Khoury)'
 
-import optparse
+import argparse
 import os
-import shutil
 import sys
 
-import build_chromeos
-from utils import command_executer
-from utils import logger
-from utils import misc
-
-cmd_executer = None
+from cros_utils import command_executer
+from cros_utils import logger
+from cros_utils import misc
 
 
 def Usage(parser, message):
-  print 'ERROR: ' + message
+  print('ERROR: %s' % message)
   parser.print_help()
   sys.exit(0)
 
 
 def Main(argv):
   """Build Chrome browser."""
-  # Common initializations
-  global cmd_executer
+
   cmd_executer = command_executer.GetCommandExecuter()
 
-  parser = optparse.OptionParser()
-  parser.add_option('--chromeos_root',
-                    dest='chromeos_root',
-                    help='Target directory for ChromeOS installation.')
-  parser.add_option('--version', dest='version')
-  parser.add_option('--clean',
-                    dest='clean',
-                    default=False,
-                    action='store_true',
-                    help=('Clean the /var/cache/chromeos-chrome/'
-                          'chrome-src/src/out_$board dir'))
-  parser.add_option('--env',
-                    dest='env',
-                    default='',
-                    help='Use the following env')
-  parser.add_option('--ebuild_version',
-                    dest='ebuild_version',
-                    help='Use this ebuild instead of the default one.')
-  parser.add_option('--cflags',
-                    dest='cflags',
-                    default='',
-                    help='CFLAGS for the ChromeOS packages')
-  parser.add_option('--cxxflags',
-                    dest='cxxflags',
-                    default='',
-                    help='CXXFLAGS for the ChromeOS packages')
-  parser.add_option('--ldflags',
-                    dest='ldflags',
-                    default='',
-                    help='LDFLAGS for the ChromeOS packages')
-  parser.add_option('--board',
-                    dest='board',
-                    help='ChromeOS target board, e.g. x86-generic')
-  parser.add_option('--no_build_image',
-                    dest='no_build_image',
-                    default=False,
-                    action='store_true',
-                    help=('Skip build image after building browser.'
-                          'Defaults to False.'))
-  parser.add_option('--label',
-                    dest='label',
-                    help='Optional label to apply to the ChromeOS image.')
-  parser.add_option('--build_image_args',
-                    default='',
-                    dest='build_image_args',
-                    help='Optional arguments to build_image.')
-  parser.add_option('--cros_workon',
-                    dest='cros_workon',
-                    help='Build using external source tree.')
-  parser.add_option('--dev',
-                    dest='dev',
-                    default=False,
-                    action='store_true',
-                    help=('Build a dev (eg. writable/large) image. '
-                          'Defaults to False.'))
-  parser.add_option('--debug',
-                    dest='debug',
-                    default=False,
-                    action='store_true',
-                    help=('Build chrome browser using debug mode. '
-                          'This option implies --dev. Defaults to false.'))
-  parser.add_option('--verbose',
-                    dest='verbose',
-                    default=False,
-                    action='store_true',
-                    help='Build with verbose information.')
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--chromeos_root',
+                      dest='chromeos_root',
+                      help='Target directory for ChromeOS installation.')
+  parser.add_argument('--version', dest='version')
+  parser.add_argument('--clean',
+                      dest='clean',
+                      default=False,
+                      action='store_true',
+                      help=('Clean the /var/cache/chromeos-chrome/'
+                            'chrome-src/src/out_$board dir'))
+  parser.add_argument('--env',
+                      dest='env',
+                      default='',
+                      help='Use the following env')
+  parser.add_argument('--ebuild_version',
+                      dest='ebuild_version',
+                      help='Use this ebuild instead of the default one.')
+  parser.add_argument('--cflags',
+                      dest='cflags',
+                      default='',
+                      help='CFLAGS for the ChromeOS packages')
+  parser.add_argument('--cxxflags',
+                      dest='cxxflags',
+                      default='',
+                      help='CXXFLAGS for the ChromeOS packages')
+  parser.add_argument('--ldflags',
+                      dest='ldflags',
+                      default='',
+                      help='LDFLAGS for the ChromeOS packages')
+  parser.add_argument('--board',
+                      dest='board',
+                      help='ChromeOS target board, e.g. x86-generic')
+  parser.add_argument('--no_build_image',
+                      dest='no_build_image',
+                      default=False,
+                      action='store_true',
+                      help=('Skip build image after building browser.'
+                            'Defaults to False.'))
+  parser.add_argument('--label',
+                      dest='label',
+                      help='Optional label to apply to the ChromeOS image.')
+  parser.add_argument('--build_image_args',
+                      default='',
+                      dest='build_image_args',
+                      help='Optional arguments to build_image.')
+  parser.add_argument('--cros_workon',
+                      dest='cros_workon',
+                      help='Build using external source tree.')
+  parser.add_argument('--dev',
+                      dest='dev',
+                      default=False,
+                      action='store_true',
+                      help=('Build a dev (eg. writable/large) image. '
+                            'Defaults to False.'))
+  parser.add_argument('--debug',
+                      dest='debug',
+                      default=False,
+                      action='store_true',
+                      help=('Build chrome browser using debug mode. '
+                            'This option implies --dev. Defaults to false.'))
+  parser.add_argument('--verbose',
+                      dest='verbose',
+                      default=False,
+                      action='store_true',
+                      help='Build with verbose information.')
 
-  options = parser.parse_args(argv)[0]
+  options = parser.parse_args(argv)
 
   if options.chromeos_root is None:
     Usage(parser, '--chromeos_root must be set')
@@ -169,14 +166,14 @@ def Main(argv):
     cros_workon_keep = (ret[0] != 0)
 
   # Emerge the browser
-  emerge_browser_command = \
-      ('CHROME_ORIGIN={0} {1} '
-       "CFLAGS=\"$(portageq-{2} envvar CFLAGS) {3}\" "
-       "LDFLAGS=\"$(portageq-{2} envvar LDFLAGS) {4}\" "
-       "CXXFLAGS=\"$(portageq-{2} envvar CXXFLAGS) {5}\" "
-       '{6} emerge-{2} --buildpkg {7}').format(
-        chrome_origin, chrome_version, options.board, options.cflags,
-        options.ldflags, options.cxxflags, options.env, ebuild_version)
+  emerge_browser_command = ('CHROME_ORIGIN={0} {1} '
+                            'CFLAGS="$(portageq-{2} envvar CFLAGS) {3}" '
+                            'LDFLAGS="$(portageq-{2} envvar LDFLAGS) {4}" '
+                            'CXXFLAGS="$(portageq-{2} envvar CXXFLAGS) {5}" '
+                            '{6} emerge-{2} --buildpkg {7}').format(
+                                chrome_origin, chrome_version, options.board,
+                                options.cflags, options.ldflags,
+                                options.cxxflags, options.env, ebuild_version)
 
   cros_sdk_options = ''
   if options.cros_workon:
@@ -194,7 +191,7 @@ def Main(argv):
     ret = cmd_executer.ChrootRunCommand(options.chromeos_root, command)
     # cros_workon failed, not a fatal one, just report it.
     if ret:
-      print 'cros_workon stop chromeos-chrome failed.'
+      print('cros_workon stop chromeos-chrome failed.')
 
   if options.no_build_image:
     return ret
@@ -224,7 +221,7 @@ def Main(argv):
         options.chromeos_root, options.board)
     real_image_dir_path = os.path.realpath(image_dir_path)
     command = 'ln -sf -T {0} {1}/{2}'.format(
-      os.path.basename(real_image_dir_path),\
+        os.path.basename(real_image_dir_path),\
         os.path.dirname(real_image_dir_path),\
         options.label)
 
@@ -236,5 +233,5 @@ def Main(argv):
 
 
 if __name__ == '__main__':
-  retval = Main(sys.argv)
+  retval = Main(sys.argv[1:])
   sys.exit(retval)

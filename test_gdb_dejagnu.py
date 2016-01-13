@@ -1,15 +1,23 @@
-#!/usr/bin/python
+#!/usr/bin/python2
+"""Script adapter used by automation client for testing dejagnu.
 
-import optparse
+   This is not intended to be run on command line.
+   To kick off a single dejagnu run, use ./dejagnu/run_dejagnu.py
+"""
+
+from __future__ import print_function
+
+import argparse
 import sys
 import setup_chromeos
 
 from dejagnu import gdb_dejagnu
-from utils import command_executer
-from utils import email_sender
+from cros_utils import command_executer
+from cros_utils import email_sender
 
 
 class DejagnuAdapter(object):
+  """Dejagnu Adapter class."""
 
   def __init__(self, board, remote, gdb_dir, chromeos_root, cleanup):
     self._board = board
@@ -84,7 +92,7 @@ def EmailResult(result):
 
   try:
     email_sender.EmailSender().SendEmail(email_to, subject, email_text)
-    print 'Email sent.'
+    print('Email sent.')
   except Exception as e:
     # Do not propagate this email sending exception, you want to email an
     # email exception? Just log it on console.
@@ -96,35 +104,35 @@ def EmailResult(result):
 
 def ProcessArguments(argv):
   """Processing script arguments."""
-  parser = optparse.OptionParser(
+  parser = argparse.ArgumentParser(
       description=('This script is used by nightly client to test gdb. '
                    'DO NOT run it unless you know what you are doing.'),
       usage='test_gdb_dejagnu.py options')
-  parser.add_option('-b',
-                    '--board',
-                    dest='board',
-                    help=('Required. Specify board type. For example '
-                          '\'lumpy\' and \'daisy\''))
-  parser.add_option('-r',
-                    '--remote',
-                    dest='remote',
-                    help=('Required. Specify remote board address'))
-  parser.add_option('-g',
-                    '--gdb_dir',
-                    dest='gdb_dir',
-                    default='',
-                    help=('Optional. Specify gdb checkout directory.'))
-  parser.add_option('-c',
-                    '--chromeos_root',
-                    dest='chromeos_root',
-                    default='chromeos.live',
-                    help=('Optional. Specify chromeos checkout directory.'))
-  parser.add_option('--cleanup',
-                    dest='cleanup',
-                    default=None,
-                    help=('Optional. Do cleanup after the test.'))
+  parser.add_argument('-b',
+                      '--board',
+                      dest='board',
+                      help=('Required. Specify board type. For example '
+                            '\'lumpy\' and \'daisy\''))
+  parser.add_argument('-r',
+                      '--remote',
+                      dest='remote',
+                      help=('Required. Specify remote board address'))
+  parser.add_argument('-g',
+                      '--gdb_dir',
+                      dest='gdb_dir',
+                      default='',
+                      help=('Optional. Specify gdb checkout directory.'))
+  parser.add_argument('-c',
+                      '--chromeos_root',
+                      dest='chromeos_root',
+                      default='chromeos.live',
+                      help=('Optional. Specify chromeos checkout directory.'))
+  parser.add_argument('--cleanup',
+                      dest='cleanup',
+                      default=None,
+                      help=('Optional. Do cleanup after the test.'))
 
-  options, _ = parser.parse_args(argv)
+  options = parser.parse_args(argv)
 
   if not options.board or not options.remote:
     raise Exception('--board and --remote are mandatory options.')
@@ -134,7 +142,7 @@ def ProcessArguments(argv):
 
 def Main(argv):
   opt = ProcessArguments(argv)
-  print opt
+  print(opt)
   adapter = DejagnuAdapter(opt.board, opt.remote, opt.gdb_dir,
                            opt.chromeos_root, opt.cleanup)
   try:
@@ -142,13 +150,14 @@ def Main(argv):
     adapter.SetupBoard()
     ret = adapter.CheckGDB()
   except Exception as e:
-    print e
+    print(e)
     ret = (1, '', '', str(e))
   finally:
     EmailResult(ret)
-    return ret
+
+  return ret
 
 
 if __name__ == '__main__':
-  retval = Main(sys.argv)
+  retval = Main(sys.argv[1:])
   sys.exit(retval[0])

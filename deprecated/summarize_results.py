@@ -1,11 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 """Script to summarize the results of various log files."""
 
+from __future__ import print_function
+
 __author__ = 'raymes@google.com (Raymes Khoury)'
 
-from utils import command_executer
+from cros_utils import command_executer
 import os
 import sys
 import re
@@ -13,8 +15,13 @@ import re
 RESULTS_DIR = 'results'
 RESULTS_FILE = RESULTS_DIR + '/results.csv'
 
+# pylint: disable=anomalous-backslash-in-string
 
-class DejaGNUSummarizer:
+class DejaGNUSummarizer(object):
+  """DejaGNU Summarizer Class"""
+
+  def __int__(self):
+    pass
 
   def Matches(self, log_file):
     for log_line in log_file:
@@ -43,7 +50,11 @@ class DejaGNUSummarizer:
     return result
 
 
-class PerflabSummarizer:
+class PerflabSummarizer(object):
+  """Perflab Summarizer class"""
+
+  def __init__(self):
+    pass
 
   def Matches(self, log_file):
     p = re.compile('METRIC isolated \w+')
@@ -60,11 +71,15 @@ class PerflabSummarizer:
     for match in matches:
       if len(match) != 2:
         continue
-      result += '%s\t%s\n' % (match[0], match[1])
+      result += '%s\t%s\t%s\n' % (match[0], match[1], filename)
     return result
 
 
-class AutoTestSummarizer:
+class AutoTestSummarizer(object):
+  """AutoTest Summarizer class"""
+
+  def __init__(self):
+    pass
 
   def Matches(self, log_file):
     for log_line in log_file:
@@ -90,23 +105,23 @@ class AutoTestSummarizer:
 
 
 def Usage():
-  print 'Usage: %s log_file' % sys.argv[0]
+  print('Usage: %s log_file' % sys.argv[0])
   sys.exit(1)
 
 
 def SummarizeFile(filename):
   summarizers = [DejaGNUSummarizer(), AutoTestSummarizer(), PerflabSummarizer()]
-  input = open(filename, 'rb')
+  inp = open(filename, 'rb')
   executer = command_executer.GetCommandExecuter()
   for summarizer in summarizers:
-    input.seek(0)
-    if summarizer.Matches(input):
+    inp.seek(0)
+    if summarizer.Matches(inp):
       executer.CopyFiles(filename, RESULTS_DIR, recursive=False)
-      input.seek(0)
-      result = summarizer.Summarize(input, os.path.basename(filename))
-      input.close()
+      inp.seek(0)
+      result = summarizer.Summarize(inp, os.path.basename(filename))
+      inp.close()
       return result
-  input.close()
+  inp.close()
   return None
 
 

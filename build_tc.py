@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2010 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -8,21 +8,24 @@
 This script sets up the toolchain if you give it the gcctools directory.
 """
 
+from __future__ import print_function
+
 __author__ = 'asharif@google.com (Ahmad Sharif)'
 
+import argparse
 import getpass
-import optparse
 import os
 import sys
 import tempfile
 
 import tc_enter_chroot
-from utils import command_executer
-from utils import constants
-from utils import misc
+from cros_utils import command_executer
+from cros_utils import constants
+from cros_utils import misc
 
 
 class ToolchainPart(object):
+  """Class to hold the toolchain pieces."""
 
   def __init__(self,
                name,
@@ -177,86 +180,86 @@ class ToolchainPart(object):
 def Main(argv):
   """The main function."""
   # Common initializations
-  parser = optparse.OptionParser()
-  parser.add_option('-c',
-                    '--chromeos_root',
-                    dest='chromeos_root',
-                    default='../../',
-                    help=('ChromeOS root checkout directory'
-                          ' uses ../.. if none given.'))
-  parser.add_option('-g',
-                    '--gcc_dir',
-                    dest='gcc_dir',
-                    help='The directory where gcc resides.')
-  parser.add_option('--binutils_dir',
-                    dest='binutils_dir',
-                    help='The directory where binutils resides.')
-  parser.add_option('-x',
-                    '--gdb_dir',
-                    dest='gdb_dir',
-                    help='The directory where gdb resides.')
-  parser.add_option('-b',
-                    '--board',
-                    dest='board',
-                    default='x86-agz',
-                    help='The target board.')
-  parser.add_option('-n',
-                    '--noincremental',
-                    dest='noincremental',
-                    default=False,
-                    action='store_true',
-                    help='Use FEATURES=keepwork to do incremental builds.')
-  parser.add_option('--cflags',
-                    dest='cflags',
-                    default='',
-                    help='Build a compiler with specified CFLAGS')
-  parser.add_option('--cxxflags',
-                    dest='cxxflags',
-                    default='',
-                    help='Build a compiler with specified CXXFLAGS')
-  parser.add_option('--cflags_for_target',
-                    dest='cflags_for_target',
-                    default='',
-                    help='Build the target libraries with specified flags')
-  parser.add_option('--cxxflags_for_target',
-                    dest='cxxflags_for_target',
-                    default='',
-                    help='Build the target libraries with specified flags')
-  parser.add_option('--ldflags',
-                    dest='ldflags',
-                    default='',
-                    help='Build a compiler with specified LDFLAGS')
-  parser.add_option('-d',
-                    '--debug',
-                    dest='debug',
-                    default=False,
-                    action='store_true',
-                    help='Build a compiler with -g3 -O0 appended to both'
-                    ' CFLAGS and CXXFLAGS.')
-  parser.add_option('-m',
-                    '--mount_only',
-                    dest='mount_only',
-                    default=False,
-                    action='store_true',
-                    help='Just mount the tool directories.')
-  parser.add_option('-u',
-                    '--unmount_only',
-                    dest='unmount_only',
-                    default=False,
-                    action='store_true',
-                    help='Just unmount the tool directories.')
-  parser.add_option('--extra_use_flags',
-                    dest='extra_use_flags',
-                    default='',
-                    help='Extra flag for USE, to be passed to the ebuild. '
-                    "('multislot' and 'mounted_<tool>' are always passed.)")
-  parser.add_option('--gcc_enable_ccache',
-                    dest='gcc_enable_ccache',
-                    default=False,
-                    action='store_true',
-                    help='Enable ccache for the gcc invocations')
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-c',
+                      '--chromeos_root',
+                      dest='chromeos_root',
+                      default='../../',
+                      help=('ChromeOS root checkout directory'
+                            ' uses ../.. if none given.'))
+  parser.add_argument('-g',
+                      '--gcc_dir',
+                      dest='gcc_dir',
+                      help='The directory where gcc resides.')
+  parser.add_argument('--binutils_dir',
+                      dest='binutils_dir',
+                      help='The directory where binutils resides.')
+  parser.add_argument('-x',
+                      '--gdb_dir',
+                      dest='gdb_dir',
+                      help='The directory where gdb resides.')
+  parser.add_argument('-b',
+                      '--board',
+                      dest='board',
+                      default='x86-alex',
+                      help='The target board.')
+  parser.add_argument('-n',
+                      '--noincremental',
+                      dest='noincremental',
+                      default=False,
+                      action='store_true',
+                      help='Use FEATURES=keepwork to do incremental builds.')
+  parser.add_argument('--cflags',
+                      dest='cflags',
+                      default='',
+                      help='Build a compiler with specified CFLAGS')
+  parser.add_argument('--cxxflags',
+                      dest='cxxflags',
+                      default='',
+                      help='Build a compiler with specified CXXFLAGS')
+  parser.add_argument('--cflags_for_target',
+                      dest='cflags_for_target',
+                      default='',
+                      help='Build the target libraries with specified flags')
+  parser.add_argument('--cxxflags_for_target',
+                      dest='cxxflags_for_target',
+                      default='',
+                      help='Build the target libraries with specified flags')
+  parser.add_argument('--ldflags',
+                      dest='ldflags',
+                      default='',
+                      help='Build a compiler with specified LDFLAGS')
+  parser.add_argument('-d',
+                      '--debug',
+                      dest='debug',
+                      default=False,
+                      action='store_true',
+                      help='Build a compiler with -g3 -O0 appended to both'
+                      ' CFLAGS and CXXFLAGS.')
+  parser.add_argument('-m',
+                      '--mount_only',
+                      dest='mount_only',
+                      default=False,
+                      action='store_true',
+                      help='Just mount the tool directories.')
+  parser.add_argument('-u',
+                      '--unmount_only',
+                      dest='unmount_only',
+                      default=False,
+                      action='store_true',
+                      help='Just unmount the tool directories.')
+  parser.add_argument('--extra_use_flags',
+                      dest='extra_use_flags',
+                      default='',
+                      help='Extra flag for USE, to be passed to the ebuild. '
+                      "('multislot' and 'mounted_<tool>' are always passed.)")
+  parser.add_argument('--gcc_enable_ccache',
+                      dest='gcc_enable_ccache',
+                      default=False,
+                      action='store_true',
+                      help='Enable ccache for the gcc invocations')
 
-  options, _ = parser.parse_args(argv)
+  options = parser.parse_args(argv)
 
   chromeos_root = misc.CanonicalizePath(options.chromeos_root)
   if options.gcc_dir:
@@ -325,10 +328,10 @@ def Main(argv):
       else:
         rv = rv + tp.Build()
   finally:
-    print 'Exiting...'
+    print('Exiting...')
   return rv
 
 
 if __name__ == '__main__':
-  retval = Main(sys.argv)
+  retval = Main(sys.argv[1:])
   sys.exit(retval)

@@ -1,9 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Script to use remote try-bot build image with local gcc."""
+
+from __future__ import print_function
 
 import argparse
 import glob
@@ -15,15 +17,16 @@ import sys
 import tempfile
 import time
 
-from utils import command_executer
-from utils import logger
-from utils import manifest_versions
-from utils import misc
+from cros_utils import command_executer
+from cros_utils import logger
+from cros_utils import manifest_versions
+from cros_utils import misc
 
 BRANCH = 'the_actual_branch_used_in_this_script'
 TMP_BRANCH = 'tmp_branch'
 SLEEP_TIME = 600
 
+# pylint: disable=anomalous-backslash-in-string
 
 def GetPatchNum(output):
   lines = output.splitlines()
@@ -131,10 +134,11 @@ def DownloadImage(target, index, dest, version):
     os.makedirs(dest)
 
   rversion = manifest_versions.RFormatCrosVersion(version)
+  print(str(rversion))
   #  ls_cmd = ("gsutil ls gs://chromeos-image-archive/trybot-{0}/{1}-b{2}"
   #            .format(target, rversion, index))
   ls_cmd = ('gsutil ls gs://chromeos-image-archive/trybot-{0}/*-b{2}'
-            .format(target, rversion, index))
+            .format(target, index))
 
   download_cmd = ('$(which gsutil) cp {0} {1}'.format('{0}', dest))
   ce = command_executer.GetCommandExecuter()

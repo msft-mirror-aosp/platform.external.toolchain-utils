@@ -1,15 +1,17 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright Google Inc. 2014
+"""Module to generate the 7-day crosperf reports."""
 
+from __future__ import print_function
+
+import argparse
 import datetime
-import optparse
 import os
 import sys
-import time
 
-from utils import constants
-from utils import command_executer
+from cros_utils import constants
+from cros_utils import command_executer
 
 WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 DATA_ROOT_DIR = os.path.join(constants.CROSTC_WORKSPACE, 'weekly_test_data')
@@ -41,8 +43,8 @@ benchmark: all_toolchain_perf {
     cmd_executer.RunCommand(cmd)
 
   with open(filename, 'w') as f:
-    print >> f, experiment_header
-    print >> f, experiment_tests
+    f.write(experiment_header)
+    f.write(experiment_tests)
 
     # Add each vanilla image
     for test_path in vanilla_image_paths:
@@ -55,7 +57,7 @@ benchmark: all_toolchain_perf {
 }
 """ % (test_name, chromeos_root, os.path.join(test_path,
                                               'chromiumos_test_image.bin'))
-      print >> f, test_image
+      f.write(test_image)
 
   return filename
 
@@ -84,8 +86,8 @@ benchmark: all_toolchain_perf {
     cmd_executer.RunCommand(cmd)
 
   with open(filename, 'w') as f:
-    print >> f, experiment_header
-    print >> f, experiment_tests
+    f.write(experiment_header)
+    f.write(experiment_tests)
 
     # Add vanilla image (first)
     vanilla_image = """
@@ -96,7 +98,7 @@ benchmark: all_toolchain_perf {
 """ % (vanilla_image_path.split('/')[-1], chromeos_root,
        os.path.join(vanilla_image_path, 'chromiumos_test_image.bin'))
 
-    print >> f, vanilla_image
+    f.write(vanilla_image)
 
     # Add each test image
     for test_path in test_image_paths:
@@ -109,31 +111,32 @@ benchmark: all_toolchain_perf {
 }
 """ % (test_name, chromeos_root, os.path.join(test_path,
                                               'chromiumos_test_image.bin'))
-      print >> f, test_image
+      f.write(test_image)
 
   return filename
 
 
 def Main(argv):
 
-  parser = optparse.OptionParser()
-  parser.add_option('-b', '--board', dest='board', help='Target board.')
-  parser.add_option('-r', '--remote', dest='remote', help='Target device.')
-  parser.add_option('-v',
-                    '--vanilla_only',
-                    dest='vanilla_only',
-                    action='store_true',
-                    default=False,
-                    help='Generate a report comparing only the vanilla images.')
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-b', '--board', dest='board', help='Target board.')
+  parser.add_argument('-r', '--remote', dest='remote', help='Target device.')
+  parser.add_argument('-v',
+                      '--vanilla_only',
+                      dest='vanilla_only',
+                      action='store_true',
+                      default=False,
+                      help='Generate a report comparing only the vanilla '
+                      'images.')
 
-  options = parser.parse_args(argv[1:])[0]
+  options = parser.parse_args(argv[1:])
 
   if not options.board:
-    print 'Must specify a board.'
+    print('Must specify a board.')
     return 1
 
   if not options.remote:
-    print 'Must specify at least one remote.'
+    print('Must specify at least one remote.')
     return 1
 
   cmd_executer = command_executer.GetCommandExecuter(log_level='average')
@@ -214,7 +217,7 @@ def Main(argv):
       break
 
   if not chromeos_root:
-    print 'Unable to locate a usable chroot. Exiting without report.'
+    print('Unable to locate a usable chroot. Exiting without report.')
     return 1
 
   # Create the Crosperf experiment file for generating the weekly report.
@@ -231,8 +234,8 @@ def Main(argv):
   cmd = ('%s/toolchain-utils/crosperf/crosperf '
          '%s --no_email=True --results_dir=%s' %
          (constants.CROSTC_WORKSPACE, filename, results_dir))
-  retval = cmd_executer.RunCommand(cmd)
-  if retval == 0:
+  retv = cmd_executer.RunCommand(cmd)
+  if retv == 0:
     # Send the email, if the crosperf command worked.
     filename = os.path.join(results_dir, 'msg_body.html')
     if (os.path.exists(filename) and
@@ -242,9 +245,9 @@ def Main(argv):
         vanilla_string = ' Vanilla '
       command = ('cat %s | %s -s "Weekly%sReport results, %s" -team -html' %
                  (filename, MAIL_PROGRAM, vanilla_string, options.board))
-    retval = cmd_executer.RunCommand(command)
+    retv = cmd_executer.RunCommand(command)
 
-  return retval
+  return retv
 
 
 if __name__ == '__main__':

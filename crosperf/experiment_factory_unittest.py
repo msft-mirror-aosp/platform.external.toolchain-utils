@@ -1,8 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+"""Unit test for experiment_factory.py"""
+
+from __future__ import print_function
 
 import StringIO
 import socket
@@ -15,12 +18,8 @@ from experiment_factory import ExperimentFactory
 from experiment_file import ExperimentFile
 import test_flag
 import benchmark
-import label
-import experiment
 import experiment_factory
-import machine_manager
 import settings_factory
-import test_flag
 
 EXPERIMENT_FILE_1 = """
   board: x86-alex
@@ -39,47 +38,54 @@ EXPERIMENT_FILE_1 = """
   }
   """
 
+# pylint: disable=too-many-function-args
 
 class ExperimentFactoryTest(unittest.TestCase):
+  """Class for running experiment factory unittests."""
+
+  def setUp(self):
+    self.append_benchmark_call_args = []
 
   def testLoadExperimentFile1(self):
     experiment_file = ExperimentFile(StringIO.StringIO(EXPERIMENT_FILE_1))
-    experiment = ExperimentFactory().GetExperiment(experiment_file,
-                                                   working_directory='',
-                                                   log_dir='')
-    self.assertEqual(experiment.remote, ['chromeos-alex3'])
+    exp = ExperimentFactory().GetExperiment(experiment_file,
+                                            working_directory='',
+                                            log_dir='')
+    self.assertEqual(exp.remote, ['chromeos-alex3'])
 
-    self.assertEqual(len(experiment.benchmarks), 1)
-    self.assertEqual(experiment.benchmarks[0].name, 'PageCycler')
-    self.assertEqual(experiment.benchmarks[0].test_name, 'PageCycler')
-    self.assertEqual(experiment.benchmarks[0].iterations, 3)
+    self.assertEqual(len(exp.benchmarks), 1)
+    self.assertEqual(exp.benchmarks[0].name, 'PageCycler')
+    self.assertEqual(exp.benchmarks[0].test_name, 'PageCycler')
+    self.assertEqual(exp.benchmarks[0].iterations, 3)
 
-    self.assertEqual(len(experiment.labels), 2)
-    self.assertEqual(experiment.labels[0].chromeos_image,
+    self.assertEqual(len(exp.labels), 2)
+    self.assertEqual(exp.labels[0].chromeos_image,
                      '/usr/local/google/cros_image1.bin')
-    self.assertEqual(experiment.labels[0].board, 'x86-alex')
+    self.assertEqual(exp.labels[0].board, 'x86-alex')
 
   def test_append_benchmark_set(self):
     ef = ExperimentFactory()
 
     bench_list = []
-    ef._AppendBenchmarkSet(bench_list,
-                           experiment_factory.telemetry_perfv2_tests, '', 1,
-                           False, '', 'telemetry_Crosperf', False, 0, False)
+    ef.AppendBenchmarkSet(bench_list,
+                          experiment_factory.telemetry_perfv2_tests, '', 1,
+                          False, '', 'telemetry_Crosperf', False,
+                          0,
+                          False)
     self.assertEqual(
         len(bench_list), len(experiment_factory.telemetry_perfv2_tests))
     self.assertTrue(type(bench_list[0]) is benchmark.Benchmark)
 
     bench_list = []
-    ef._AppendBenchmarkSet(bench_list,
-                           experiment_factory.telemetry_pagecycler_tests, '', 1,
-                           False, '', 'telemetry_Crosperf', False, 0, False)
+    ef.AppendBenchmarkSet(bench_list,
+                          experiment_factory.telemetry_pagecycler_tests, '', 1,
+                          False, '', 'telemetry_Crosperf', False, 0, False)
     self.assertEqual(
         len(bench_list), len(experiment_factory.telemetry_pagecycler_tests))
     self.assertTrue(type(bench_list[0]) is benchmark.Benchmark)
 
     bench_list = []
-    ef._AppendBenchmarkSet(
+    ef.AppendBenchmarkSet(
         bench_list, experiment_factory.telemetry_toolchain_perf_tests, '', 1,
         False, '', 'telemetry_Crosperf', False, 0, False)
     self.assertEqual(
@@ -87,8 +93,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertTrue(type(bench_list[0]) is benchmark.Benchmark)
 
   @mock.patch.object(socket, 'gethostname')
-  @mock.patch.object(machine_manager.MachineManager, 'AddMachine')
-  def test_get_experiment(self, mock_machine_manager, mock_socket):
+  def test_get_experiment(self, mock_socket):
 
     test_flag.SetTestMode(False)
     self.append_benchmark_call_args = []
@@ -98,16 +103,20 @@ class ExperimentFactoryTest(unittest.TestCase):
       'Helper function for test_get_experiment'
       arg_list = [bench_list, set_list, args, iters, rm_ch, perf_args, suite,
                   show_all]
-      self.append_benchmark_call_args.append(args_list)
+      self.append_benchmark_call_args.append(arg_list)
 
     def FakeGetDefaultRemotes(board):
+      if not board:
+        return []
       return ['fake_chromeos_machine1.cros', 'fake_chromeos_machine2.cros']
 
     def FakeGetXbuddyPath(build, board, chroot, log_level):
+      if not build or not board or not chroot or not log_level:
+        return ''
       return 'fake_image_path'
 
     ef = ExperimentFactory()
-    ef._AppendBenchmarkSet = FakeAppendBenchmarkSet
+    ef.AppendBenchmarkSet = FakeAppendBenchmarkSet
     ef.GetDefaultRemotes = FakeGetDefaultRemotes
 
     label_settings = settings_factory.LabelSettings('image_label')

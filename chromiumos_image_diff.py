@@ -1,8 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 """Diff 2 chromiumos images by comparing each elf file.
 
-   The script diffs every *ELF* files by dissembling every *executable* section,
-   which means it is not a FULL elf differ.
+   The script diffs every *ELF* files by dissembling every *executable*
+   section, which means it is not a FULL elf differ.
 
    A simple usage example -
      chromiumos_image_diff.py --image1 image-path-1 --image2 image-path-2
@@ -14,6 +14,8 @@
    And this script should be executed outside chroot.
 """
 
+from __future__ import print_function
+
 __author__ = 'shenhan@google.com (Han Shen)'
 
 import argparse
@@ -23,9 +25,9 @@ import sys
 import tempfile
 
 import image_chromeos
-from utils import command_executer
-from utils import logger
-from utils import misc
+from cros_utils import command_executer
+from cros_utils import logger
+from cros_utils import misc
 
 
 class CrosImage(object):
@@ -39,6 +41,9 @@ class CrosImage(object):
     self.logger = logger.GetLogger()
     self.elf_files = []
     self.no_unmount = no_unmount
+    self.unmount_script = ''
+    self.stateful = ''
+    self.rootfs = ''
 
   def MountImage(self, mount_basename):
     """Mount/unpack the image."""
@@ -100,7 +105,7 @@ class CrosImage(object):
           self.stateful = None
           self.unmount_script = None
 
-   return not self.mounted
+    return not self.mounted
 
   def FindElfFiles(self):
     """Find all elf files for the image.
@@ -276,7 +281,7 @@ def Main(argv):
   result = False
   image_comparator = None
   try:
-    for image_path in [options.image1, options.image2]:
+    for i, image_path in enumerate([options.image1, options.image2], start=1):
       image_path = os.path.realpath(image_path)
       if not os.path.isfile(image_path):
         logger.getLogger().LogError('"{0}" is not a file.'.format(image_path))

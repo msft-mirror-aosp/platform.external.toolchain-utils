@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2010 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -9,20 +9,21 @@ This script sets up the ChromeOS source in the given directory, matching a
 particular release of ChromeOS.
 """
 
+from __future__ import print_function
+
 __author__ = 'raymes@google.com (Raymes Khoury)'
 
 from datetime import datetime
-import getpass
 
-import optparse
+import argparse
 import os
 import pickle
 import sys
 import tempfile
 import time
-from utils import command_executer
-from utils import logger
-from utils import manifest_versions
+from cros_utils import command_executer
+from cros_utils import logger
+from cros_utils import manifest_versions
 
 GCLIENT_FILE = """solutions = [
   { "name"        : "CHROME_DEPS",
@@ -97,14 +98,14 @@ def TimeToCommonVersion(timestamp):
 
 def Main(argv):
   """Checkout the ChromeOS source."""
-  parser = optparse.OptionParser()
-  parser.add_option('--dir',
-                    dest='directory',
-                    help='Target directory for ChromeOS installation.')
-  parser.add_option('--version',
-                    dest='version',
-                    default='latest_lkgm',
-                    help="""ChromeOS version. Can be:
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--dir',
+                      dest='directory',
+                      help='Target directory for ChromeOS installation.')
+  parser.add_argument('--version',
+                      dest='version',
+                      default='latest_lkgm',
+                      help="""ChromeOS version. Can be:
 (1) A release version in the format: 'X.X.X.X'
 (2) 'top' for top of trunk
 (3) 'latest_lkgm' for the latest lkgm version
@@ -112,31 +113,33 @@ def Main(argv):
 (5) 'latest_common' for the latest team common stable version
 (6) 'common' for the team common stable version before timestamp
 Default is 'latest_lkgm'.""")
-  parser.add_option('--timestamp',
-                    dest='timestamp',
-                    default=None,
-                    help="""Timestamps in epoch format. It will check out the
-latest LKGM or the latest COMMON version of ChromeOS before the timestamp.
-Use in combination with --version=latest or --version=common. Use
-'date -d <date string> +%s' to find epoch time""")
-  parser.add_option('--minilayout',
-                    dest='minilayout',
-                    default=False,
-                    action='store_true',
-                    help="""Whether to checkout the minilayout
-(smaller checkout).'""")
-  parser.add_option('--jobs',
-                    '-j',
-                    dest='jobs',
-                    help='Number of repo sync threads to use.')
-  parser.add_option('--public',
-                    '-p',
-                    dest='public',
-                    default=False,
-                    action='store_true',
-                    help='Use the public checkout instead of the private one.')
+  parser.add_argument('--timestamp',
+                      dest='timestamp',
+                      default=None,
+                      help='Timestamps in epoch format. It will check out the'
+                      'latest LKGM or the latest COMMON version of ChromeOS'
+                      ' before the timestamp. Use in combination with'
+                      ' --version=latest or --version=common. Use '
+                      '"date -d <date string> +%s" to find epoch time')
+  parser.add_argument('--minilayout',
+                      dest='minilayout',
+                      default=False,
+                      action='store_true',
+                      help='Whether to checkout the minilayout (smaller '
+                      'checkout).')
+  parser.add_argument('--jobs',
+                      '-j',
+                      dest='jobs',
+                      help='Number of repo sync threads to use.')
+  parser.add_argument('--public',
+                      '-p',
+                      dest='public',
+                      default=False,
+                      action='store_true',
+                      help='Use the public checkout instead of the private '
+                      'one.')
 
-  options = parser.parse_args(argv)[0]
+  options = parser.parse_args(argv)
 
   if not options.version:
     parser.print_help()
@@ -165,10 +168,12 @@ Use in combination with --version=latest or --version=common. Use
                      'chromiumos/manifest-versions.git')
   else:
     manifest_repo = (
-        'https://chrome-internal.googlesource.com/chromeos/manifest-internal.git'
+        'https://chrome-internal.googlesource.com/chromeos/'
+        'manifest-internal.git'
     )
     versions_repo = (
-        'https://chrome-internal.googlesource.com/chromeos/manifest-versions.git'
+        'https://chrome-internal.googlesource.com/chromeos/'
+        'manifest-versions.git'
     )
 
   if version == 'top':
@@ -243,5 +248,5 @@ Use in combination with --version=latest or --version=common. Use
 
 
 if __name__ == '__main__':
-  retval = Main(sys.argv)
+  retval = Main(sys.argv[1:])
   sys.exit(retval)

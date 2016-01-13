@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 """Script to build ChromeOS benchmarks
@@ -7,7 +7,9 @@ Inputs:
     chromeos_root
     toolchain_root
     board
-    [chromeos/cpu/<benchname>|chromeos/browser/[pagecycler|sunspider]|chromeos/startup]
+    [chromeos/cpu/<benchname> |
+     chromeos/browser/[pagecycler|sunspider] |
+     chromeos/startup]
 
     This script assumes toolchain has already been built in toolchain_root.
 
@@ -25,17 +27,18 @@ Inputs:
 
 """
 
+from __future__ import print_function
+
 __author__ = 'bjanakiraman@google.com (Bhaskar Janakiraman)'
 
-import optparse
+import argparse
 import os
 import sys
 import re
 
 import build_chromeos
-import tc_enter_chroot
-from utils import command_executer
-from utils import logger
+from cros_utils import command_executer
+from cros_utils import logger
 
 KNOWN_BENCHMARKS = [
     'chromeos/startup', 'chromeos/browser/pagecycler',
@@ -45,18 +48,21 @@ KNOWN_BENCHMARKS = [
 
 # Commands to build CPU benchmarks.
 
-CPU_BUILDCMD_CLEAN = 'cd /usr/local/toolchain_root/third_party/android_bench/v2_0/CLOSED_SOURCE/%s;\
-python ../../scripts/bench.py --toolchain=/usr/bin --action=clean;'
+CPU_BUILDCMD_CLEAN = ('cd /usr/local/toolchain_root/third_party/android_bench/'
+                      'v2_0/CLOSED_SOURCE/%s; python ../../scripts/bench.py '
+                      '--toolchain=/usr/bin --action=clean;')
 
-CPU_BUILDCMD_BUILD = 'cd /usr/local/toolchain_root/third_party/android_bench/v2_0/CLOSED_SOURCE/%s;\
-python ../../scripts/bench.py --toolchain=/usr/bin --add_cflags=%s --add_ldflags=%s --makeopts=%s --action=build'
+CPU_BUILDCMD_BUILD = ('cd /usr/local/toolchain_root/third_party/android_bench/'
+                      'v2_0/CLOSED_SOURCE/%s; python ../../scripts/bench.py '
+                      '--toolchain=/usr/bin --add_cflags=%s --add_ldflags=%s '
+                      '--makeopts=%s --action=build')
 
 # Common initializations
 cmd_executer = command_executer.GetCommandExecuter()
 
 
 def Usage(parser, message):
-  print 'ERROR: ' + message
+  print('ERROR: %s' % message)
   parser.print_help()
   sys.exit(0)
 
@@ -77,9 +83,11 @@ def CreateRunsh(destdir, benchmark):
 
 
 def CreateBinaryCopy(sourcedir, destdir, copy=None):
-  """Create links in perflab-bin/destdir/* to sourcedir/* for now, instead of copies
+  """Create links in perflab-bin/destdir/* to sourcedir/*, instead of copies
 
   Args:
+    sourcedir: directory from which to copy.
+    destdir: directory to which to copy.
     copy: when none, make soft links to everything under sourcedir, otherwise
           copy all to destdir.
           TODO: remove this parameter if it's determined that CopyFiles can use
@@ -117,75 +125,78 @@ def Main(argv):
   """Build ChromeOS."""
   # Common initializations
 
-  parser = optparse.OptionParser()
-  parser.add_option('-c',
-                    '--chromeos_root',
-                    dest='chromeos_root',
-                    help='Target directory for ChromeOS installation.')
-  parser.add_option('-t',
-                    '--toolchain_root',
-                    dest='toolchain_root',
-                    help='This is obsolete. Do not use.')
-  parser.add_option('-r',
-                    '--third_party',
-                    dest='third_party',
-                    help='The third_party dir containing android benchmarks.')
-  parser.add_option('-C',
-                    '--clean',
-                    dest='clean',
-                    action='store_true',
-                    default=False,
-                    help='Clean up build.'),
-  parser.add_option('-B',
-                    '--build',
-                    dest='build',
-                    action='store_true',
-                    default=False,
-                    help='Build benchmark.'),
-  parser.add_option('-O',
-                    '--only_copy',
-                    dest='only_copy',
-                    action='store_true',
-                    default=False,
-                    help='Only copy to perflab-bin - no builds.'),
-  parser.add_option('--workdir',
-                    dest='workdir',
-                    default='.',
-                    help='Work directory for perflab outputs.')
-  parser.add_option('--clobber_chroot',
-                    dest='clobber_chroot',
-                    action='store_true',
-                    help='Delete the chroot and start fresh',
-                    default=False)
-  parser.add_option('--clobber_board',
-                    dest='clobber_board',
-                    action='store_true',
-                    help='Delete the board and start fresh',
-                    default=False)
-  parser.add_option('--cflags',
-                    dest='cflags',
-                    default='',
-                    help='CFLAGS for the ChromeOS packages')
-  parser.add_option('--cxxflags',
-                    dest='cxxflags',
-                    default='',
-                    help='CXXFLAGS for the ChromeOS packages')
-  parser.add_option('--ldflags',
-                    dest='ldflags',
-                    default='',
-                    help='LDFLAGS for the ChromeOS packages')
-  parser.add_option('--makeopts',
-                    dest='makeopts',
-                    default='',
-                    help='Make options for the ChromeOS packages')
-  parser.add_option('--board',
-                    dest='board',
-                    help='ChromeOS target board, e.g. x86-generic')
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-c',
+                      '--chromeos_root',
+                      dest='chromeos_root',
+                      help='Target directory for ChromeOS installation.')
+  parser.add_argument('-t',
+                      '--toolchain_root',
+                      dest='toolchain_root',
+                      help='This is obsolete. Do not use.')
+  parser.add_argument('-r',
+                      '--third_party',
+                      dest='third_party',
+                      help='The third_party dir containing android '
+                           'benchmarks.')
+  parser.add_argument('-C',
+                      '--clean',
+                      dest='clean',
+                      action='store_true',
+                      default=False,
+                      help='Clean up build.')
+  parser.add_argument('-B',
+                      '--build',
+                      dest='build',
+                      action='store_true',
+                      default=False,
+                      help='Build benchmark.')
+  parser.add_argument('-O',
+                      '--only_copy',
+                      dest='only_copy',
+                      action='store_true',
+                      default=False,
+                      help='Only copy to perflab-bin - no builds.')
+  parser.add_argument('--workdir',
+                      dest='workdir',
+                      default='.',
+                      help='Work directory for perflab outputs.')
+  parser.add_argument('--clobber_chroot',
+                      dest='clobber_chroot',
+                      action='store_true',
+                      help='Delete the chroot and start fresh',
+                      default=False)
+  parser.add_argument('--clobber_board',
+                      dest='clobber_board',
+                      action='store_true',
+                      help='Delete the board and start fresh',
+                      default=False)
+  parser.add_argument('--cflags',
+                      dest='cflags',
+                      default='',
+                      help='CFLAGS for the ChromeOS packages')
+  parser.add_argument('--cxxflags',
+                      dest='cxxflags',
+                      default='',
+                      help='CXXFLAGS for the ChromeOS packages')
+  parser.add_argument('--ldflags',
+                      dest='ldflags',
+                      default='',
+                      help='LDFLAGS for the ChromeOS packages')
+  parser.add_argument('--makeopts',
+                      dest='makeopts',
+                      default='',
+                      help='Make options for the ChromeOS packages')
+  parser.add_argument('--board',
+                      dest='board',
+                      help='ChromeOS target board, e.g. x86-generic')
+  # Leftover positional arguments
+  parser.add_argument('args', nargs='+', help='benchmarks')
 
-  (options, args) = parser.parse_args(argv[1:])
+  options = parser.parse_args(argv[1:])
 
   # validate args
-  for arg in args:
+  for arg in options.args:
     if arg not in KNOWN_BENCHMARKS:
       logger.GetLogger().LogFatal('Bad benchmark %s specified' % arg)
 
@@ -207,7 +218,7 @@ def Main(argv):
   else:
     third_party = '%s/../../../third_party' % os.path.dirname(__file__)
     third_party = os.path.realpath(third_party)
-  for arg in args:
+  for arg in options.args:
     # CPU benchmarks
     if re.match('chromeos/cpu', arg):
       comps = re.split('/', arg)
@@ -245,7 +256,8 @@ def Main(argv):
           return retval
     elif re.match('chromeos/startup', arg):
       if options.build:
-        # Clean for chromeos/browser and chromeos/startup is a Nop since builds are always from scratch.
+        # Clean for chromeos/browser and chromeos/startup is a Nop
+        # since builds are always from scratch.
         build_args = [
             os.path.dirname(os.path.abspath(__file__)) + '/build_chromeos.py',
             '--chromeos_root=' + options.chromeos_root,

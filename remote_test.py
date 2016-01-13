@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 """Script to wrap test_that script.
@@ -6,34 +6,35 @@
 This script can login to the chromeos machine using the test private key.
 """
 
+from __future__ import print_function
+
 __author__ = 'asharif@google.com (Ahmad Sharif)'
 
-import optparse
+import argparse
 import os
-import re
 import sys
 
-from utils import command_executer
-from utils import misc
+from cros_utils import command_executer
+from cros_utils import misc
 
 
 def Usage(parser, message):
-  print 'ERROR: ' + message
+  print('ERROR: %s' % message)
   parser.print_help()
   sys.exit(0)
 
 
 def Main(argv):
-  parser = optparse.OptionParser()
-  parser.add_option('-c',
-                    '--chromeos_root',
-                    dest='chromeos_root',
-                    help='ChromeOS root checkout directory')
-  parser.add_option('-r',
-                    '--remote',
-                    dest='remote',
-                    help='Remote chromeos device.')
-  options = parser.parse_args(argv)[0]
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-c',
+                      '--chromeos_root',
+                      dest='chromeos_root',
+                      help='ChromeOS root checkout directory')
+  parser.add_argument('-r',
+                      '--remote',
+                      dest='remote',
+                      help='Remote chromeos device.')
+  options = parser.parse_args(argv)
   if options.chromeos_root is None:
     Usage(parser, 'chromeos_root must be given')
 
@@ -89,9 +90,9 @@ def Main(argv):
                src_cros=True,
                chromeos_root=options.chromeos_root)
   board = ce.CrosLearnBoard(options.chromeos_root, options.remote)
-  print board
+  print(board)
   return 0
 
 
 if __name__ == '__main__':
-  Main(sys.argv)
+  Main(sys.argv[1:])

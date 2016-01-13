@@ -1,8 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # Copyright 2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Wrapper to generate heat maps for chrome."""
+
+from __future__ import print_function
 
 import argparse
 import shutil
@@ -11,9 +13,7 @@ import sys
 import tempfile
 from sets import Set
 
-from utils import command_executer
-from utils import misc
-
+from cros_utils import command_executer
 
 def IsARepoRoot(directory):
   """Returns True if directory is the root of a repo checkout."""
@@ -31,6 +31,10 @@ class HeatMapProducer(object):
     self.binary = binary
     self.tempDir = ''
     self.ce = command_executer.GetCommandExecuter()
+    self.loading_address = None
+    self.temp_perf = ''
+    self.temp_perf_inchroot = ''
+    self.perf_report = ''
 
   def copyFileToChroot(self):
     self.tempDir = tempfile.mkdtemp(
@@ -41,7 +45,8 @@ class HeatMapProducer(object):
                                            os.path.basename(self.tempDir))
 
   def getPerfReport(self):
-    cmd = 'cd %s; perf report -D -i perf.data > perf_report.txt' % self.temp_perf_inchroot
+    cmd = ('cd %s; perf report -D -i perf.data > perf_report.txt' %
+           self.temp_perf_inchroot)
     retval = self.ce.ChrootRunCommand(self.chromeos_root, cmd)
     if retval:
       raise RuntimeError('Failed to generate perf report')
@@ -89,7 +94,7 @@ def main(argv):
   """Parse the options.
 
   Args:
-    argv:  The options with which this script was invoked.
+    argv: The options with which this script was invoked.
 
   Returns:
     0 unless an exception is raised.
@@ -132,7 +137,7 @@ def main(argv):
     print('\nheat map and time histgram genereated in the current directory '
           'with name heat_map.png and timeline.png accordingly.')
   except RuntimeError, e:
-    print e
+    print(e)
   finally:
     heatmap_producer.RemoveFiles()
 

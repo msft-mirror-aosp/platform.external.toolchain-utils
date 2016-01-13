@@ -1,17 +1,20 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # Script to test different toolchains against ChromeOS benchmarks.
+"""Toolchain team nightly performance test script (local builds)."""
+
+from __future__ import print_function
+
+import argparse
 import datetime
-import optparse
 import os
-import string
 import sys
 import build_chromeos
 import setup_chromeos
 import time
-from utils import command_executer
-from utils import misc
-from utils import logger
+from cros_utils import command_executer
+from cros_utils import misc
+from cros_utils import logger
 
 CROSTC_ROOT = '/usr/local/google/crostc'
 MAIL_PROGRAM = '~/var/bin/mail-sheriff'
@@ -21,18 +24,21 @@ NIGHTLY_TESTS_DIR = os.path.join(CROSTC_ROOT, 'nightly_test_reports')
 
 
 class GCCConfig(object):
+  """GCC configuration class."""
 
   def __init__(self, githash):
     self.githash = githash
 
 
-class ToolchainConfig:
+class ToolchainConfig(object):
+  """Toolchain configuration class."""
 
-  def __init__(self, gcc_config=None, binutils_config=None):
+  def __init__(self, gcc_config=None):
     self.gcc_config = gcc_config
 
 
 class ChromeOSCheckout(object):
+  """Main class for checking out, building and testing ChromeOS."""
 
   def __init__(self, board, chromeos_root):
     self._board = board
@@ -51,7 +57,9 @@ class ChromeOSCheckout(object):
     return self._ce.RunCommand(command)
 
   def _GetBuildNumber(self):
-    """ This function assumes a ChromeOS image has been built in the chroot.
+    """Get the build number of the ChromeOS image from the chroot.
+
+    This function assumes a ChromeOS image has been built in the chroot.
     It translates the 'latest' symlink in the
     <chroot>/src/build/images/<board> directory, to find the actual
     ChromeOS build number for the image that was built.  For example, if
@@ -74,7 +82,7 @@ class ChromeOSCheckout(object):
     image_parts = last_piece.split('.')
     self._build_num = image_parts[0]
 
-  def _BuildLabelName(self, config, board):
+  def _BuildLabelName(self, config):
     pieces = config.split('/')
     compiler_version = pieces[-1]
     label = compiler_version + '_tot_afdo'
@@ -148,6 +156,7 @@ class ChromeOSCheckout(object):
 
 
 class ToolchainComparator(ChromeOSCheckout):
+  """Main class for running tests and generating reports."""
 
   def __init__(self,
                board,
@@ -182,16 +191,16 @@ class ToolchainComparator(ChromeOSCheckout):
                         'googlestorage_account.boto')
     # Copy the file to the correct place
     copy_cmd = 'cp %s %s' % (src, dest)
-    retval = self._ce.RunCommand(copy_cmd)
-    if retval != 0:
+    retv = self._ce.RunCommand(copy_cmd)
+    if retv != 0:
       raise RuntimeError("Couldn't copy .boto file for google storage.")
 
     # Fix protections on ssh key
     command = ('chmod 600 /var/cache/chromeos-cache/distfiles/target'
                '/chrome-src-internal/src/third_party/chromite/ssh_keys'
                '/testing_rsa')
-    retval = self._ce.ChrootRunCommand(self._chromeos_root, command)
-    if retval != 0:
+    retv = self._ce.ChrootRunCommand(self._chromeos_root, command)
+    if retv != 0:
       raise RuntimeError('chmod for testing_rsa failed')
 
   def _TestLabels(self, labels):
@@ -212,8 +221,8 @@ class ToolchainComparator(ChromeOSCheckout):
     """
 
     with open(experiment_file, 'w') as f:
-      print >> f, experiment_header
-      print >> f, experiment_tests
+      f.write(experiment_header)
+      f.write(experiment_tests)
       for label in labels:
         # TODO(asharif): Fix crosperf so it accepts labels with symbols
         crosperf_label = label
@@ -232,7 +241,7 @@ class ToolchainComparator(ChromeOSCheckout):
             build: %s
           }
           """ % (self._chromeos_root, build_name)
-          print >> f, official_image
+          f.write(official_image)
 
         else:
           experiment_image = """
@@ -243,7 +252,7 @@ class ToolchainComparator(ChromeOSCheckout):
           """ % (crosperf_label, os.path.join(
               misc.GetImageDir(self._chromeos_root, self._board), label,
               'chromiumos_test_image.bin'), image_args)
-          print >> f, experiment_image
+          f.write(experiment_image)
 
     crosperf = os.path.join(os.path.dirname(__file__), 'crosperf', 'crosperf')
     noschedv2_opts = '--noschedv2' if self._noschedv2 else ''
@@ -264,7 +273,9 @@ class ToolchainComparator(ChromeOSCheckout):
     return
 
   def _CopyWeeklyReportFiles(self, labels):
-    """Create tar files of the custom and official images and copy them
+    """Move files into place for creating 7-day reports.
+
+    Create tar files of the custom and official images and copy them
     to the weekly reports directory, so they exist when the weekly report
     gets generated.  IMPORTANT NOTE: This function must run *after*
     crosperf has been run; otherwise the vanilla images will not be there.
@@ -310,8 +321,8 @@ class ToolchainComparator(ChromeOSCheckout):
     labels = []
     labels.append('vanilla')
     for config in self._configs:
-      label = self._BuildLabelName(config.gcc_config.githash, self._board)
-      if (not misc.DoesLabelExist(self._chromeos_root, self._board, label)):
+      label = self._BuildLabelName(config.gcc_config.githash)
+      if not misc.DoesLabelExist(self._chromeos_root, self._board, label):
         self._BuildToolchain(config)
         label = self._BuildAndImage(label)
       labels.append(label)
@@ -335,43 +346,43 @@ def Main(argv):
   # Common initializations
   ###  command_executer.InitCommandExecuter(True)
   command_executer.InitCommandExecuter()
-  parser = optparse.OptionParser()
-  parser.add_option('--remote',
-                    dest='remote',
-                    help='Remote machines to run tests on.')
-  parser.add_option('--board',
-                    dest='board',
-                    default='x86-zgb',
-                    help='The target board.')
-  parser.add_option('--githashes',
-                    dest='githashes',
-                    default='master',
-                    help='The gcc githashes to test.')
-  parser.add_option('--clean',
-                    dest='clean',
-                    default=False,
-                    action='store_true',
-                    help='Clean the chroot after testing.')
-  parser.add_option('--public',
-                    dest='public',
-                    default=False,
-                    action='store_true',
-                    help='Use the public checkout/build.')
-  parser.add_option('--force-mismatch',
-                    dest='force_mismatch',
-                    default='',
-                    help='Force the image regardless of board mismatch')
-  parser.add_option('--noschedv2',
-                    dest='noschedv2',
-                    action='store_true',
-                    default=False,
-                    help='Pass --noschedv2 to crosperf.')
-  options, _ = parser.parse_args(argv)
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--remote',
+                      dest='remote',
+                      help='Remote machines to run tests on.')
+  parser.add_argument('--board',
+                      dest='board',
+                      default='x86-alex',
+                      help='The target board.')
+  parser.add_argument('--githashes',
+                      dest='githashes',
+                      default='master',
+                      help='The gcc githashes to test.')
+  parser.add_argument('--clean',
+                      dest='clean',
+                      default=False,
+                      action='store_true',
+                      help='Clean the chroot after testing.')
+  parser.add_argument('--public',
+                      dest='public',
+                      default=False,
+                      action='store_true',
+                      help='Use the public checkout/build.')
+  parser.add_argument('--force-mismatch',
+                      dest='force_mismatch',
+                      default='',
+                      help='Force the image regardless of board mismatch')
+  parser.add_argument('--noschedv2',
+                      dest='noschedv2',
+                      action='store_true',
+                      default=False,
+                      help='Pass --noschedv2 to crosperf.')
+  options = parser.parse_args(argv)
   if not options.board:
-    print 'Please give a board.'
+    print('Please give a board.')
     return 1
   if not options.remote:
-    print 'Please give at least one remote machine.'
+    print('Please give at least one remote machine.')
     return 1
   toolchain_configs = []
   for githash in options.githashes.split(','):

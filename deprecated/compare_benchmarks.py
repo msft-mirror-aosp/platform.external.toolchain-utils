@@ -1,11 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 """Script to compare ChromeOS benchmarks
 
 Inputs:
-    <perflab-output directory 1 - baseline> 
-    <perflab-output directory 2 - results> 
+    <perflab-output directory 1 - baseline>
+    <perflab-output directory 2 - results>
     --csv - comma separated results
 
 This script doesn't really know much about benchmarks. It simply looks for
@@ -14,41 +14,41 @@ the results and presents it, along with a geometric mean.
 
 """
 
+from __future__ import print_function
+
 __author__ = 'bjanakiraman@google.com (Bhaskar Janakiraman)'
 
 import glob
 import math
-import optparse
-import os
+import argparse
 import re
 import sys
 
-import image_chromeos
-import run_tests
-from utils import command_executer
-from utils import logger
+from cros_utils import command_executer
 
-BENCHDIRS = '%s/default/default/*/gcc-4.4.3-glibc-2.11.1-grte-k8-opt/ref/*/results.txt'
+BENCHDIRS = ('%s/default/default/*/gcc-4.4.3-glibc-2.11.1-grte-k8-opt/ref/*'
+             '/results.txt')
 
 # Common initializations
 cmd_executer = command_executer.GetCommandExecuter()
 
 
 def Usage(parser, message):
-  print 'ERROR: ' + message
+  print('ERROR: %s' % message)
   parser.print_help()
   sys.exit(0)
 
 
-def GetStats(file):
+def GetStats(in_file):
   """Return stats from file"""
-  f = open(file, 'r')
+  f = open(in_file, 'r')
   pairs = []
   for l in f:
     line = l.strip()
     # Look for match lines like the following:
     #       METRIC isolated TotalTime_ms (down, scalar) trial_run_0: ['1524.4']
-    #       METRIC isolated isolated_walltime (down, scalar) trial_run_0: ['167.407445192']
+    #       METRIC isolated isolated_walltime (down, scalar) trial_run_0: \
+    #         ['167.407445192']
     m = re.match(r"METRIC\s+isolated\s+(\S+).*\['(\d+(?:\.\d+)?)'\]", line)
     if not m:
       continue
@@ -64,9 +64,9 @@ def GetStats(file):
 
 def PrintDash(n):
   tmpstr = ''
-  for i in range(n):
+  for _ in range(n):
     tmpstr += '-'
-  print tmpstr
+  print(tmpstr)
 
 
 def PrintHeaderCSV(hdr):
@@ -75,7 +75,7 @@ def PrintHeaderCSV(hdr):
     if tmpstr != '':
       tmpstr += ','
     tmpstr += hdr[i]
-  print tmpstr
+  print(tmpstr)
 
 
 def PrintHeader(hdr):
@@ -86,7 +86,7 @@ def PrintHeader(hdr):
   for i in range(len(hdr)):
     tmpstr += '%15.15s' % hdr[i]
 
-  print tmpstr
+  print(tmpstr)
   PrintDash(tot_len * 15)
 
 
@@ -94,22 +94,24 @@ def Main(argv):
   """Compare Benchmarks."""
   # Common initializations
 
-  parser = optparse.OptionParser()
-  parser.add_option('-c',
-                    '--csv',
-                    dest='csv_output',
-                    action='store_true',
-                    default=False,
-                    help='Output in csv form.')
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-c',
+                      '--csv',
+                      dest='csv_output',
+                      action='store_true',
+                      default=False,
+                      help='Output in csv form.')
+  parser.add_argument('args', nargs='+', help='positional arguments: '
+                      '<baseline-output-dir> <results-output-dir>')
 
-  (options, args) = parser.parse_args(argv[1:])
+  options = parser.parse_args(argv[1:])
 
   # validate args
-  if len(args) != 2:
+  if len(options.args) != 2:
     Usage(parser, 'Needs <baseline output dir> <results output dir>')
 
-  base_dir = args[0]
-  res_dir = args[1]
+  base_dir = options.args[0]
+  res_dir = options.args[1]
 
   # find res benchmarks that have results
   resbenches_glob = BENCHDIRS % res_dir
@@ -154,18 +156,18 @@ def Main(argv):
         speedup = (basestats[key] - stats[key]) / basestats[key]
         speedup = speedup * 100.0
         if options.csv_output:
-          print '%s,%f,%f,%f' % (key, basestats[key], stats[key], speedup)
+          print('%s,%f,%f,%f' % (key, basestats[key], stats[key], speedup))
         else:
-          print '%15.15s%15.2f%15.2f%14.2f%%' % (key, basestats[key],
-                                                 stats[key], speedup)
+          print('%15.15s%15.2f%15.2f%14.2f%%' % (key, basestats[key],
+                                                 stats[key], speedup))
 
     prod = math.exp(1.0 / count * math.log(prod))
     prod = (1.0 - prod) * 100
     if options.csv_output:
-      print '%s,,,%f' % ('Geomean', prod)
+      print('%s,,,%f' % ('Geomean', prod))
     else:
-      print '%15.15s%15.15s%15.15s%14.2f%%' % ('Geomean', '', '', prod)
-      print
+      print('%15.15s%15.15s%15.15s%14.2f%%' % ('Geomean', '', '', prod))
+      print('')
   return 0
 
 

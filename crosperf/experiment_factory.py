@@ -69,9 +69,9 @@ class ExperimentFactory(object):
   of experiments could be produced.
   """
 
-  def _AppendBenchmarkSet(self, benchmarks, benchmark_list, test_args,
-                          iterations, rm_chroot_tmp, perf_args, suite,
-                          show_all_results, retries, run_local):
+  def AppendBenchmarkSet(self, benchmarks, benchmark_list, test_args,
+                         iterations, rm_chroot_tmp, perf_args, suite,
+                         show_all_results, retries, run_local):
     """Add all the tests in a set to the benchmarks list."""
     for test_name in benchmark_list:
       telemetry_benchmark = Benchmark(
@@ -146,20 +146,20 @@ class ExperimentFactory(object):
 
       if suite == 'telemetry_Crosperf':
         if test_name == 'all_perfv2':
-          self._AppendBenchmarkSet(benchmarks, telemetry_perfv2_tests,
-                                   test_args, iterations, rm_chroot_tmp,
-                                   perf_args, suite, show_all_results, retries,
-                                   run_local)
+          self.AppendBenchmarkSet(benchmarks, telemetry_perfv2_tests,
+                                  test_args, iterations, rm_chroot_tmp,
+                                  perf_args, suite, show_all_results, retries,
+                                  run_local)
         elif test_name == 'all_pagecyclers':
-          self._AppendBenchmarkSet(benchmarks, telemetry_pagecycler_tests,
-                                   test_args, iterations, rm_chroot_tmp,
-                                   perf_args, suite, show_all_results, retries,
-                                   run_local)
+          self.AppendBenchmarkSet(benchmarks, telemetry_pagecycler_tests,
+                                  test_args, iterations, rm_chroot_tmp,
+                                  perf_args, suite, show_all_results, retries,
+                                  run_local)
         elif test_name == 'all_toolchain_perf':
-          self._AppendBenchmarkSet(benchmarks, telemetry_toolchain_perf_tests,
-                                   test_args, iterations, rm_chroot_tmp,
-                                   perf_args, suite, show_all_results, retries,
-                                   run_local)
+          self.AppendBenchmarkSet(benchmarks, telemetry_toolchain_perf_tests,
+                                  test_args, iterations, rm_chroot_tmp,
+                                  perf_args, suite, show_all_results, retries,
+                                  run_local)
           # Add non-telemetry toolchain-perf benchmarks:
           benchmarks.append(Benchmark('graphics_WebGLAquarium',
                                       'graphics_WebGLAquarium',
@@ -172,7 +172,7 @@ class ExperimentFactory(object):
                                       retries,
                                       run_local=False))
         elif test_name == 'all_toolchain_perf_old':
-          self._AppendBenchmarkSet(
+          self.AppendBenchmarkSet(
               benchmarks, telemetry_toolchain_old_perf_tests, test_args,
               iterations, rm_chroot_tmp, perf_args, suite, show_all_results,
               retries, run_local)

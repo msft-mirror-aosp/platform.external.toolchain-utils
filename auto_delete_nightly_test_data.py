@@ -5,15 +5,15 @@ from __future__ import print_function
 
 __author__ = 'shenhan@google.com (Han Shen)'
 
+import argparse
 import datetime
-import optparse
 import os
 import re
 import sys
 
-from utils import command_executer
-from utils import constants
-from utils import misc
+from cros_utils import command_executer
+from cros_utils import constants
+from cros_utils import misc
 
 DIR_BY_WEEKDAY = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 
@@ -72,28 +72,27 @@ def CleanDatedDir(dated_dir, dry_run=False):
 
 def ProcessArguments(argv):
   """Process arguments."""
-  parser = optparse.OptionParser(
+  parser = argparse.ArgumentParser(
       description='Automatically delete nightly test data directories.',
       usage='auto_delete_nightly_test_data.py options')
-  parser.add_option('-d',
-                    '--dry_run',
-                    dest='dry_run',
-                    default=False,
-                    action='store_true',
-                    help='Only print command line, do not execute anything.')
-  parser.add_option('--days_to_preserve',
-                    dest='days_to_preserve',
-                    default=3,
-                    help=('Specify the number of days (not including today), '
-                          'test data generated on these days will *NOT* be '
-                          'deleted. Defaults to 3.'))
-  options, _ = parser.parse_args(argv)
+  parser.add_argument('-d',
+                      '--dry_run',
+                      dest='dry_run',
+                      default=False,
+                      action='store_true',
+                      help='Only print command line, do not execute anything.')
+  parser.add_argument('--days_to_preserve',
+                      dest='days_to_preserve',
+                      default=3,
+                      help=('Specify the number of days (not including today),'
+                            ' test data generated on these days will *NOT* be '
+                            'deleted. Defaults to 3.'))
+  options = parser.parse_args(argv)
   return options
 
 
 def CleanChromeOsTmpAndImages():
   """Delete temporaries, images under crostc/chromeos."""
-
   chromeos_chroot_tmp = os.path.join(constants.CROSTC_WORKSPACE, 'chromeos',
                                      'chroot', 'tmp')
 
@@ -158,5 +157,5 @@ def Main(argv):
 
 
 if __name__ == '__main__':
-  retval = Main(sys.argv)
+  retval = Main(sys.argv[1:])
   sys.exit(retval)

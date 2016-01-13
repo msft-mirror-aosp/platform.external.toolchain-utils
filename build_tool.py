@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 """Script to bootstrap the chroot using new toolchain.
 
 This script allows you to build/install a customized version of gcc/binutils,
@@ -8,14 +8,15 @@ This script must be executed outside chroot.
 
 Below is some typical usage -
 
-## Build gcc located at /local/gcc/dir and do a bootstrap using the new compiler
-## for the chromeos root.  The script tries to find a valid chromeos tree all
-## the way up from your current working directory.
+## Build gcc located at /local/gcc/dir and do a bootstrap using the new
+## compiler for the chromeos root.  The script tries to find a valid chromeos
+## tree all the way up from your current working directory.
 ./build_tool.py --gcc_dir=/loca/gcc/dir --bootstrap
 
-## Build binutils, using remote branch "mobile_toolchain_v17" and do a bootstrap
-## using the new binutils for the chromeos root. The script tries to find a
-## valid chromeos tree all the way up from your current working directory.
+## Build binutils, using remote branch "mobile_toolchain_v17" and do a
+## bootstrap using the new binutils for the chromeos root. The script tries to
+## find a valid chromeos tree all the way up from your current working
+## directory.
 ./build_tool.py --binutils_branch=cros/mobile_toolchain_v17 \
     --chromeos_root=/chromeos/dir --bootstrap
 
@@ -24,17 +25,19 @@ Below is some typical usage -
     --chromeos_root=/chromeos/dir --board=daisy
 """
 
+from __future__ import print_function
+
 __author__ = 'shenhan@google.com (Han Shen)'
 
-import optparse
+import argparse
 import os
 import re
 import sys
 
 import repo_to_repo
-from utils import command_executer
-from utils import logger
-from utils import misc
+from cros_utils import command_executer
+from cros_utils import logger
+from cros_utils import misc
 
 REPO_PATH_PATTERN = 'src/third_party/{0}'
 TEMP_BRANCH_NAME = 'internal_testing_branch_no_use'
@@ -43,8 +46,7 @@ EBUILD_PATH_PATTERN = 'src/third_party/chromiumos-overlay/sys-devel/{0}'
 
 
 class Bootstrapper(object):
-  """Class that handles bootstrap process.
-  """
+  """Class that handles bootstrap process."""
 
   def __init__(self,
                chromeos_root,
@@ -106,6 +108,7 @@ class Bootstrapper(object):
     Args:
       tool_name: either 'gcc' or 'binutils'
       tool_dir: the tool source dir to be used
+
     Returns:
       True if all succeeded False otherwise.
     """
@@ -137,7 +140,7 @@ class Bootstrapper(object):
     # 2. Sync sources from user provided tool dir to chromiumos tool git.
     local_tool_repo = repo_to_repo.FileRepo(tool_dir)
     chrome_tool_repo = repo_to_repo.GitRepo(chrome_tool_dir, TEMP_BRANCH_NAME)
-    chrome_tool_repo._root_dir = chrome_tool_dir
+    chrome_tool_repo.SetRoot(chrome_tool_dir)
     # Delete all stuff except '.git' before start mapping.
     self._ce.RunCommand(
         'cd {0} && find . -maxdepth 1 -not -name ".git" -not -name "." '
@@ -200,6 +203,7 @@ class Bootstrapper(object):
     Args:
       tool_name: either 'gcc' or 'binutils'
       tool_branch: tool branch to use
+
     Returns:
       True: if operation succeeds. Otherwise False.
     """
@@ -256,6 +260,7 @@ class Bootstrapper(object):
 
     Args:
       tool_name: either "gcc" or "binutils".
+
     Returns:
       A triplet that consisits of whether operation succeeds or not,
       tool ebuild file full path and tool ebuild file name.
@@ -328,6 +333,7 @@ class Bootstrapper(object):
     Args:
       chromeos_root: chromeos source tree
       tool_name: either "gcc" or "binutils"
+
     Returns:
       True if operation succeds.
     """
@@ -356,6 +362,7 @@ class Bootstrapper(object):
 
     Args:
       tool_name: either 'gcc' or 'binutils'.
+
     Returns:
       Absolute git path for the tool.
     """
@@ -371,6 +378,7 @@ class Bootstrapper(object):
       tool_branch_githash: githash for tool_branch
       tool_branch_tree: treeish for the tool branch
       tool_ebuild_file: tool ebuild file
+
     Returns:
       True: if operation succeeded.
     """
@@ -419,6 +427,7 @@ class Bootstrapper(object):
 
     Args:
       tool_name: either "gcc" or "binutils"
+
     Returns:
       True if operation succeeds.
     """
@@ -556,84 +565,86 @@ class Bootstrapper(object):
 
 
 def Main(argv):
-  parser = optparse.OptionParser()
-  parser.add_option('-c',
-                    '--chromeos_root',
-                    dest='chromeos_root',
-                    help=('Optional. ChromeOs root dir. '
-                          'When not specified, chromeos root will be deduced '
-                          'from current working directory.'))
-  parser.add_option('--gcc_branch',
-                    dest='gcc_branch',
-                    help=('The branch to test against. '
-                          'This branch must be a local branch '
-                          'inside "src/third_party/gcc". '
-                          'Notice, this must not be used with "--gcc_dir".'))
-  parser.add_option('--binutils_branch',
-                    dest='binutils_branch',
-                    help=('The branch to test against binutils. '
-                          'This branch must be a local branch '
-                          'inside "src/third_party/binutils". '
-                          'Notice, this must not be used with '
-                          '"--binutils_dir".'))
-  parser.add_option('-g',
-                    '--gcc_dir',
-                    dest='gcc_dir',
-                    help=('Use a local gcc tree to do bootstrapping. '
-                          'Notice, this must not be used with "--gcc_branch".'))
-  parser.add_option('--binutils_dir',
-                    dest='binutils_dir',
-                    help=('Use a local binutils tree to do bootstrapping. '
-                          'Notice, this must not be used with '
-                          '"--binutils_branch".'))
-  parser.add_option('--fixperm',
-                    dest='fixperm',
-                    default=False,
-                    action='store_true',
-                    help=('Fix the (notorious) permission error '
-                          'while trying to bootstrap the chroot. '
-                          'Note this takes an extra 10-15 minutes '
-                          'and is only needed once per chromiumos tree.'))
-  parser.add_option('--setup_tool_ebuild_file_only',
-                    dest='setup_tool_ebuild_file_only',
-                    default=False,
-                    action='store_true',
-                    help=('Setup gcc and/or binutils ebuild file '
-                          'to pick up the branch (--gcc/binutils_branch) or '
-                          'use gcc and/or binutils source (--gcc/binutils_dir) '
-                          'and exit. Keep chroot as is. This should not be '
-                          'used with --gcc/binutils_dir/branch options.'))
-  parser.add_option('--reset_tool_ebuild_file',
-                    dest='reset_tool_ebuild_file',
-                    default=False,
-                    action='store_true',
-                    help=('Reset the modification that is done by this script.'
-                          'Note, when this script is running, it will modify '
-                          'the active gcc/binutils ebuild file. Use this '
-                          'option to reset (what this script has done) '
-                          'and exit. This should not be used with -- '
-                          'gcc/binutils_dir/branch options.'))
-  parser.add_option('--board',
-                    dest='board',
-                    default=None,
-                    help=('Only build toolchain for specific board(s). '
-                          'Use "host" to build for host. '
-                          'Use "," to seperate multiple boards. '
-                          'This does not perform a chroot bootstrap.'))
-  parser.add_option('--bootstrap',
-                    dest='bootstrap',
-                    default=False,
-                    action='store_true',
-                    help=('Performs a chroot bootstrap. '
-                          'Note, this will *destroy* your current chroot.'))
-  parser.add_option('--disable-2nd-bootstrap',
-                    dest='disable_2nd_bootstrap',
-                    default=False,
-                    action='store_true',
-                    help=('Disable a second bootstrap '
-                          '(build of amd64-host stage).'))
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-c',
+                      '--chromeos_root',
+                      dest='chromeos_root',
+                      help=('Optional. ChromeOs root dir. '
+                            'When not specified, chromeos root will be deduced'
+                            ' from current working directory.'))
+  parser.add_argument('--gcc_branch',
+                      dest='gcc_branch',
+                      help=('The branch to test against. '
+                            'This branch must be a local branch '
+                            'inside "src/third_party/gcc". '
+                            'Notice, this must not be used with "--gcc_dir".'))
+  parser.add_argument('--binutils_branch',
+                      dest='binutils_branch',
+                      help=('The branch to test against binutils. '
+                            'This branch must be a local branch '
+                            'inside "src/third_party/binutils". '
+                            'Notice, this must not be used with '
+                            '"--binutils_dir".'))
+  parser.add_argument('-g',
+                      '--gcc_dir',
+                      dest='gcc_dir',
+                      help=('Use a local gcc tree to do bootstrapping. '
+                            'Notice, this must not be used with '
+                            '"--gcc_branch".'))
+  parser.add_argument('--binutils_dir',
+                      dest='binutils_dir',
+                      help=('Use a local binutils tree to do bootstrapping. '
+                            'Notice, this must not be used with '
+                            '"--binutils_branch".'))
+  parser.add_argument('--fixperm',
+                      dest='fixperm',
+                      default=False,
+                      action='store_true',
+                      help=('Fix the (notorious) permission error '
+                            'while trying to bootstrap the chroot. '
+                            'Note this takes an extra 10-15 minutes '
+                            'and is only needed once per chromiumos tree.'))
+  parser.add_argument('--setup_tool_ebuild_file_only',
+                      dest='setup_tool_ebuild_file_only',
+                      default=False,
+                      action='store_true',
+                      help=('Setup gcc and/or binutils ebuild file '
+                            'to pick up the branch (--gcc/binutils_branch) or '
+                            'use gcc and/or binutils source '
+                            '(--gcc/binutils_dir) and exit. Keep chroot as is.'
+                            ' This should not be used with '
+                            '--gcc/binutils_dir/branch options.'))
+  parser.add_argument('--reset_tool_ebuild_file',
+                      dest='reset_tool_ebuild_file',
+                      default=False,
+                      action='store_true',
+                      help=('Reset the modification that is done by this '
+                            'script. Note, when this script is running, it '
+                            'will modify the active gcc/binutils ebuild file. '
+                            'Use this option to reset (what this script has '
+                            'done) and exit. This should not be used with -- '
+                            'gcc/binutils_dir/branch options.'))
+  parser.add_argument('--board',
+                      dest='board',
+                      default=None,
+                      help=('Only build toolchain for specific board(s). '
+                            'Use "host" to build for host. '
+                            'Use "," to seperate multiple boards. '
+                            'This does not perform a chroot bootstrap.'))
+  parser.add_argument('--bootstrap',
+                      dest='bootstrap',
+                      default=False,
+                      action='store_true',
+                      help=('Performs a chroot bootstrap. '
+                            'Note, this will *destroy* your current chroot.'))
+  parser.add_argument('--disable-2nd-bootstrap',
+                      dest='disable_2nd_bootstrap',
+                      default=False,
+                      action='store_true',
+                      help=('Disable a second bootstrap '
+                            '(build of amd64-host stage).'))
 
-  options = parser.parse_args(argv)[0]
+  options = parser.parse_args(argv)
   # Trying to deduce chromeos root from current directory.
   if not options.chromeos_root:
     logger.GetLogger().LogOutput('Trying to deduce chromeos root ...')
@@ -741,5 +752,5 @@ def Main(argv):
 
 
 if __name__ == '__main__':
-  retval = Main(sys.argv)
+  retval = Main(sys.argv[1:])
   sys.exit(retval)

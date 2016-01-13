@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 """Script to run ChromeOS benchmarks
@@ -6,7 +6,9 @@
 Inputs:
     chromeos_root
     board
-    [chromeos/cpu/<benchname>|chromeos/browser/[pagecycler|sunspider]|chromeos/startup]
+    [chromeos/cpu/<benchname>|
+     chromeos/browser/[pagecycler|sunspider]|
+     chromeos/startup]
     hostname/IP of Chromeos machine
 
     chromeos/cpu/<benchname>
@@ -25,17 +27,21 @@ Inputs:
 
 """
 
+from __future__ import print_function
+
 __author__ = 'bjanakiraman@google.com (Bhaskar Janakiraman)'
 
-import optparse
+import argparse
 import os
 import re
 import sys
 
 import image_chromeos
 import run_tests
-from utils import command_executer
-from utils import logger
+from cros_utils import command_executer
+from cros_utils import logger
+
+# pylint: disable=anomalous-backslash-in-string
 
 KNOWN_BENCHMARKS = [
     'chromeos/startup', 'chromeos/browser/pagecycler',
@@ -57,49 +63,45 @@ cmd_executer = command_executer.GetCommandExecuter()
 
 
 def Usage(parser, message):
-  print 'ERROR: ' + message
+  print('ERROR: %s' % message)
   parser.print_help()
   sys.exit(0)
 
 
-def RunBrowserBenchmark(chromeos_root, board, bench, workdir, machine):
+def RunBrowserBenchmark(chromeos_root, board, bench, machine):
   """Run browser benchmarks.
 
   Args:
     chromeos_root: ChromeOS src dir
     board: Board being tested
     bench: Name of benchmark (chromeos/browser/*)
-    workdir: Directory containing benchmark directory
     machine: name of chromeos machine
   """
   benchname = re.split('/', bench)[2]
-  benchdir = '%s/%s' % (workdir, benchname)
   benchname = name_map[benchname]
-  retval = run_tests.RunRemoteTests(chromeos_root, machine, board, benchname)
-  return retval
+  ret = run_tests.RunRemoteTests(chromeos_root, machine, board, benchname)
+  return ret
 
 
-def RunStartupBenchmark(chromeos_root, board, bench, workdir, machine):
+def RunStartupBenchmark(chromeos_root, board, machine):
   """Run browser benchmarks.
 
   Args:
     chromeos_root: ChromeOS src dir
     board: Board being tested
-    bench: Name of benchmark (chromeos/browser/*)
-    workdir: Directory containing benchmark directory
     machine: name of chromeos machine
   """
   benchname = 'startup'
-  benchdir = '%s/%s' % (workdir, benchname)
   benchname = name_map[benchname]
-  retval = run_tests.RunRemoteTests(chromeos_root, machine, board, benchname)
-  return retval
+  ret = run_tests.RunRemoteTests(chromeos_root, machine, board, benchname)
+  return ret
 
 
 def RunCpuBenchmark(chromeos_root, bench, workdir, machine):
   """Run CPU benchmark.
 
   Args:
+    chromeos_root: ChromeOS src dir
     bench: Name of benchmark
     workdir: directory containing benchmark directory
     machine: name of chromeos machine
@@ -115,20 +117,20 @@ def RunCpuBenchmark(chromeos_root, bench, workdir, machine):
   # Since this has exclusive access to the machine,
   # we do not worry about duplicates.
   args = 'rm -rf /tmp/%s' % benchname
-  retval = cmd_executer.CrosRunCommand(args,
-                                       chromeos_root=chromeos_root,
-                                       machine=machine)
-  if retval:
-    return retval
+  retv = cmd_executer.CrosRunCommand(args,
+                                     chromeos_root=chromeos_root,
+                                     machine=machine)
+  if retv:
+    return retv
 
   # Copy benchmark directory.
-  retval = cmd_executer.CopyFiles(benchdir,
-                                  '/tmp/' + benchname,
-                                  chromeos_root=chromeos_root,
-                                  dest_machine=machine,
-                                  dest_cros=True)
-  if retval:
-    return retval
+  retv = cmd_executer.CopyFiles(benchdir,
+                                '/tmp/' + benchname,
+                                chromeos_root=chromeos_root,
+                                dest_machine=machine,
+                                dest_cros=True)
+  if retv:
+    return retv
 
   # Parse bench.mk to extract run flags.
 
@@ -149,34 +151,35 @@ def RunCpuBenchmark(chromeos_root, bench, workdir, machine):
                               chromeos_root=chromeos_root,
                               machine=machine)
 
-  return retval
+  return retv
 
 
 def Main(argv):
   """Build ChromeOS."""
   # Common initializations
 
-  parser = optparse.OptionParser()
-  parser.add_option('-c',
-                    '--chromeos_root',
-                    dest='chromeos_root',
-                    help='Target directory for ChromeOS installation.')
-  parser.add_option('-m',
-                    '--machine',
-                    dest='machine',
-                    help='The chromeos host machine.')
-  parser.add_option('--workdir',
-                    dest='workdir',
-                    default='./perflab-bin',
-                    help='Work directory for perflab outputs.')
-  parser.add_option('--board',
-                    dest='board',
-                    help='ChromeOS target board, e.g. x86-generic')
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-c',
+                      '--chromeos_root',
+                      dest='chromeos_root',
+                      help='Target directory for ChromeOS installation.')
+  parser.add_argument('-m',
+                      '--machine',
+                      dest='machine',
+                      help='The chromeos host machine.')
+  parser.add_argument('--workdir',
+                      dest='workdir',
+                      default='./perflab-bin',
+                      help='Work directory for perflab outputs.')
+  parser.add_argument('--board',
+                      dest='board',
+                      help='ChromeOS target board, e.g. x86-generic')
+  parser.add_argumen('args', margs='+', help='Benchmarks to run.')
 
-  (options, args) = parser.parse_args(argv[1:])
+  options = parser.parse_args(argv[1:])
 
   # validate args
-  for arg in args:
+  for arg in options.args:
     if arg not in KNOWN_BENCHMARKS:
       logger.GetLogger().LogFatal('Bad benchmark %s specified' % arg)
 
@@ -190,17 +193,17 @@ def Main(argv):
     Usage(parser, '--machine must be set')
 
   found_err = 0
-  retval = 0
-  for arg in args:
+  retv = 0
+  for arg in options.args:
     # CPU benchmarks
     comps = re.split('/', arg)
     if re.match('chromeos/cpu', arg):
       benchname = comps[2]
-      print 'RUNNING %s' % benchname
-      retval = RunCpuBenchmark(options.chromeos_root, arg, options.workdir,
-                               options.machine)
+      print('RUNNING %s' % benchname)
+      retv = RunCpuBenchmark(options.chromeos_root, arg, options.workdir,
+                             options.machine)
       if not found_err:
-        found_err = retval
+        found_err = retv
     elif re.match('chromeos/startup', arg):
       benchname = comps[1]
       image_args = [
@@ -213,10 +216,10 @@ def Main(argv):
       image_chromeos.Main(image_args)
 
       logger.GetLogger().LogOutput('Running %s' % arg)
-      retval = RunStartupBenchmark(options.chromeos_root, options.board, arg,
-                                   options.workdir, options.machine)
+      retv = RunStartupBenchmark(options.chromeos_root, options.board,
+                                 options.machine)
       if not found_err:
-        found_err = retval
+        found_err = retv
     elif re.match('chromeos/browser', arg):
       benchname = comps[2]
       image_args = [
@@ -229,10 +232,10 @@ def Main(argv):
       image_chromeos.Main(image_args)
 
       logger.GetLogger().LogOutput('Running %s' % arg)
-      retval = RunBrowserBenchmark(options.chromeos_root, options.board, arg,
-                                   options.workdir, options.machine)
+      retv = RunBrowserBenchmark(options.chromeos_root, options.board, arg,
+                                 options.machine)
       if not found_err:
-        found_err = retval
+        found_err = retv
 
   return found_err
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 """Script to enter the ChromeOS chroot with mounted sources.
@@ -6,21 +6,23 @@
 This script enters the chroot with mounted sources.
 """
 
+from __future__ import print_function
+
 __author__ = 'asharif@google.com (Ahmad Sharif)'
 
+import argparse
 import getpass
-import optparse
 import os
 import pwd
-import stat
 import sys
 
-from utils import command_executer
-from utils import logger
-from utils import misc
+from cros_utils import command_executer
+from cros_utils import logger
+from cros_utils import misc
 
 
-class MountPoint:
+class MountPoint(object):
+  """Mount point class"""
 
   def __init__(self, external_dir, mount_dir, owner, options=None):
     self.external_dir = os.path.realpath(external_dir)
@@ -29,32 +31,32 @@ class MountPoint:
     self.options = options
 
   def CreateAndOwnDir(self, dir_name):
-    retval = 0
+    retv = 0
     if not os.path.exists(dir_name):
       command = 'mkdir -p ' + dir_name
       command += ' || sudo mkdir -p ' + dir_name
-      retval = command_executer.GetCommandExecuter().RunCommand(command)
-    if retval != 0:
-      return retval
+      retv = command_executer.GetCommandExecuter().RunCommand(command)
+    if retv != 0:
+      return retv
     pw = pwd.getpwnam(self.owner)
     if os.stat(dir_name).st_uid != pw.pw_uid:
       command = 'sudo chown -f ' + self.owner + ' ' + dir_name
-      retval = command_executer.GetCommandExecuter().RunCommand(command)
-    return retval
+      retv = command_executer.GetCommandExecuter().RunCommand(command)
+    return retv
 
   def DoMount(self):
     ce = command_executer.GetCommandExecuter()
     mount_signature = '%s on %s' % (self.external_dir, self.mount_dir)
     command = 'mount'
-    retval, out, err = ce.RunCommandWOutput(command)
+    retv, out, _ = ce.RunCommandWOutput(command)
     if mount_signature not in out:
-      retval = self.CreateAndOwnDir(self.mount_dir)
-      logger.GetLogger().LogFatalIf(retval, 'Cannot create mount_dir!')
-      retval = self.CreateAndOwnDir(self.external_dir)
-      logger.GetLogger().LogFatalIf(retval, 'Cannot create external_dir!')
-      retval = self.MountDir()
-      logger.GetLogger().LogFatalIf(retval, 'Cannot mount!')
-      return retval
+      retv = self.CreateAndOwnDir(self.mount_dir)
+      logger.GetLogger().LogFatalIf(retv, 'Cannot create mount_dir!')
+      retv = self.CreateAndOwnDir(self.external_dir)
+      logger.GetLogger().LogFatalIf(retv, 'Cannot create external_dir!')
+      retv = self.MountDir()
+      logger.GetLogger().LogFatalIf(retv, 'Cannot mount!')
+      return retv
     else:
       return 0
 
@@ -66,8 +68,8 @@ class MountPoint:
     command = 'sudo mount --bind ' + self.external_dir + ' ' + self.mount_dir
     if self.options == 'ro':
       command += ' && sudo mount --bind -oremount,ro ' + self.mount_dir
-    retval = command_executer.GetCommandExecuter().RunCommand(command)
-    return retval
+    retv = command_executer.GetCommandExecuter().RunCommand(command)
+    return retv
 
   def __str__(self):
     ret = ''
@@ -82,43 +84,45 @@ class MountPoint:
 
 def Main(argv, return_output=False):
   """The main function."""
-  parser = optparse.OptionParser()
-  parser.add_option('-c',
-                    '--chromeos_root',
-                    dest='chromeos_root',
-                    default='../..',
-                    help='ChromeOS root checkout directory.')
-  parser.add_option('-t',
-                    '--toolchain_root',
-                    dest='toolchain_root',
-                    help='Toolchain root directory.')
-  parser.add_option('-o',
-                    '--output',
-                    dest='output',
-                    help='Toolchain output directory')
-  parser.add_option('--sudo',
-                    dest='sudo',
-                    action='store_true',
-                    default=False,
-                    help='Run the command with sudo.')
-  parser.add_option('-r',
-                    '--third_party',
-                    dest='third_party',
-                    help='The third_party directory to mount.')
-  parser.add_option(
-      '-m',
-      '--other_mounts',
-      dest='other_mounts',
-      help='Other mount points in the form: ' + 'dir:mounted_dir:options')
-  parser.add_option('-s',
-                    '--mount-scripts-only',
-                    dest='mount_scripts_only',
-                    action='store_true',
-                    default=False,
-                    help='Mount only the scripts dir, and not the sources.')
 
-  passthrough_argv = []
-  (options, passthrough_argv) = parser.parse_args(argv)
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-c',
+                      '--chromeos_root',
+                      dest='chromeos_root',
+                      default='../..',
+                      help='ChromeOS root checkout directory.')
+  parser.add_argument('-t',
+                      '--toolchain_root',
+                      dest='toolchain_root',
+                      help='Toolchain root directory.')
+  parser.add_argument('-o',
+                      '--output',
+                      dest='output',
+                      help='Toolchain output directory')
+  parser.add_argument('--sudo',
+                      dest='sudo',
+                      action='store_true',
+                      default=False,
+                      help='Run the command with sudo.')
+  parser.add_argument('-r',
+                      '--third_party',
+                      dest='third_party',
+                      help='The third_party directory to mount.')
+  parser.add_argument('-m',
+                      '--other_mounts',
+                      dest='other_mounts',
+                      help='Other mount points in the form: '
+                      'dir:mounted_dir:options')
+  parser.add_argument('-s',
+                      '--mount-scripts-only',
+                      dest='mount_scripts_only',
+                      action='store_true',
+                      default=False,
+                      help='Mount only the scripts dir, and not the sources.')
+  parser.add_argument('passthrough_argv', nargs='*',
+                      help='Command to be executed inside the chroot.')
+
+  options = parser.parse_args(argv)
 
   chromeos_root = options.chromeos_root
 
@@ -206,13 +210,13 @@ def Main(argv, return_output=False):
   mount_points.append(mount_point)
 
   for mount_point in mount_points:
-    retval = mount_point.DoMount()
-    if retval != 0:
-      return retval
+    retv = mount_point.DoMount()
+    if retv != 0:
+      return retv
 
   # Finally, create the symlink to build-gcc.
   command = 'sudo chown ' + getpass.getuser() + ' ' + full_mounted_tc_root
-  retval = command_executer.GetCommandExecuter().RunCommand(command)
+  retv = command_executer.GetCommandExecuter().RunCommand(command)
 
   try:
     CreateSymlink(last_dir + '/build-gcc', full_mounted_tc_root + '/build-gcc')
@@ -224,33 +228,33 @@ def Main(argv, return_output=False):
   # Now call cros_sdk --enter with the rest of the arguments.
   command = 'cd %s/src/scripts && cros_sdk --enter' % chromeos_root
 
-  if len(passthrough_argv) > 1:
-    inner_command = ' '.join(passthrough_argv[1:])
+  if len(options.passthrough_argv) > 1:
+    inner_command = ' '.join(options.passthrough_argv[1:])
     inner_command = inner_command.strip()
     if inner_command.startswith('-- '):
       inner_command = inner_command[3:]
     command_file = 'tc_enter_chroot.cmd'
     command_file_path = chromeos_root + '/src/scripts/' + command_file
-    retval = command_executer.GetCommandExecuter().RunCommand('sudo rm -f ' +
-                                                              command_file_path)
-    if retval != 0:
-      return retval
+    retv = command_executer.GetCommandExecuter().RunCommand('sudo rm -f ' +
+                                                            command_file_path)
+    if retv != 0:
+      return retv
     f = open(command_file_path, 'w')
     f.write(inner_command)
     f.close()
     logger.GetLogger().LogCmd(inner_command)
-    retval = command_executer.GetCommandExecuter().RunCommand('chmod +x ' +
-                                                              command_file_path)
-    if retval != 0:
-      return retval
+    retv = command_executer.GetCommandExecuter().RunCommand('chmod +x ' +
+                                                            command_file_path)
+    if retv != 0:
+      return retv
 
     if options.sudo:
       command += ' sudo ./' + command_file
     else:
       command += ' ./' + command_file
-    retval = command_executer.GetCommandExecuter().RunCommandGeneric(
+    retv = command_executer.GetCommandExecuter().RunCommandGeneric(
         command, return_output)
-    return retval
+    return retv
   else:
     os.chdir('%s/src/scripts' % chromeos_root)
     ce = command_executer.GetCommandExecuter()

@@ -1,26 +1,33 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
-"""Script to build the ChromeOS toolchain.
+"""Script to rotate the weekly team sheriff.
 
-This script sets up the toolchain if you give it the gcctools directory.
+This script determines who the next sheriff is, updates the file
+appropriately and sends out email notifying the team.
 """
+
+from __future__ import print_function
 
 __author__ = 'asharif@google.com (Ahmad Sharif)'
 
+import argparse
 import datetime
 import os
-import optparse
 import sys
-from utils import constants
-from utils import email_sender
+
+from cros_utils import constants
+from cros_utils import email_sender
 
 
 class SheriffHandler(object):
+  """Main class for handling sheriff rotations."""
+
   SHERIFF_FILE = os.path.join(constants.CROSTC_WORKSPACE, 'sheriffs.txt')
   SUBJECT = 'You (%s) are the sheriff for the week: %s - %s'
   BODY = ('Please see instructions here: '
-          'https://sites.google.com/a/google.com/chromeos-toolchain-team-home2/home/sheriff-s-corner/sheriff-duties')
+          'https://sites.google.com/a/google.com/chromeos-toolchain-team-home2'
+          '/home/sheriff-s-corner/sheriff-duties')
 
   def GetWeekInfo(self, day=datetime.datetime.today()):
     """Return week_start, week_end."""
@@ -29,7 +36,6 @@ class SheriffHandler(object):
     delta_since_epoch = day - epoch
 
     abs_days = abs(delta_since_epoch.days) - 2  # To get it to start from Sat.
-    weeks_since_epoch = abs_days / 7
     day_of_week = abs_days % 7
 
     week_begin = day - datetime.timedelta(days=day_of_week)
@@ -78,47 +84,47 @@ class SheriffHandler(object):
 
 
 def Main(argv):
-  parser = optparse.OptionParser()
-  parser.add_option('-e',
-                    '--email',
-                    dest='email',
-                    action='store_true',
-                    help='Email the sheriff.')
-  parser.add_option('-r',
-                    '--rotate',
-                    dest='rotate',
-                    help='Print sheriffs after n rotations.')
-  parser.add_option('-w',
-                    '--write',
-                    dest='write',
-                    action='store_true',
-                    default=False,
-                    help='Wrote rotated contents to the sheriff file.')
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-e',
+                      '--email',
+                      dest='email',
+                      action='store_true',
+                      help='Email the sheriff.')
+  parser.add_argument('-r',
+                      '--rotate',
+                      dest='rotate',
+                      help='Print sheriffs after n rotations.')
+  parser.add_argument('-w',
+                      '--write',
+                      dest='write',
+                      action='store_true',
+                      default=False,
+                      help='Wrote rotated contents to the sheriff file.')
 
-  options, _ = parser.parse_args(argv)
+  options = parser.parse_args(argv)
 
   sheriff_handler = SheriffHandler()
 
   current_sheriff = sheriff_handler.GetCurrentSheriff()
   week_start, week_end = sheriff_handler.GetWeekInfo()
 
-  print 'Current sheriff: %s (%s - %s)' % (current_sheriff, week_start,
-                                           week_end)
+  print('Current sheriff: %s (%s - %s)' % (current_sheriff, week_start,
+                                           week_end))
 
   if options.email:
     sheriff_handler.Email()
 
   if options.rotate:
     rotated_sheriffs = sheriff_handler.GetRotatedSheriffs(int(options.rotate))
-    print 'Rotated sheriffs (after %s rotations)' % options.rotate
-    print '\n'.join(rotated_sheriffs)
+    print('Rotated sheriffs (after %s rotations)' % options.rotate)
+    print('\n'.join(rotated_sheriffs))
     if options.write:
       sheriff_handler.WriteSheriffsAsList(rotated_sheriffs)
-      print 'Rotated sheriffs written to file.'
+      print('Rotated sheriffs written to file.')
 
   return 0
 
 
 if __name__ == '__main__':
-  retval = Main(sys.argv)
+  retval = Main(sys.argv[1:])
   sys.exit(retval)

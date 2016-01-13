@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2013 Google Inc. All Rights Reserved.
 """Script to maintain the Telemetry benchmark default results file.
@@ -9,18 +9,21 @@ benchmarks.
 
 """
 
+from __future__ import print_function
+
 __author__ = 'cmtice@google.com (Caroline Tice)'
 
 import os
 import sys
 import json
 
-from utils import misc
+from cros_utils import misc
 
 Defaults = {}
 
 
 class TelemetryDefaults(object):
+  """Class for handling telemetry default return result fields."""
 
   DEFAULTS_FILE_NAME = 'crosperf/default-telemetry-results.json'
 
@@ -111,7 +114,7 @@ class TelemetryDefaults(object):
     self.ShowOptions()
 
   def ShowOptions(self):
-    print """
+    print("""
 Below are the valid user options and their arguments, and an explanation
 of what each option does.  You may either print out the full name of the
 option, or you may use the first letter of the option.  Case (upper or
@@ -131,7 +134,7 @@ lower) does not matter, for the command (case of the result name DOES matter):
     (Q)uit                           - Exit this program, saving changes.
     (T)erminate                      - Exit this program; abandon changes.
 
-"""
+""")
 
   def GetUserInput(self):
     # Prompt user
