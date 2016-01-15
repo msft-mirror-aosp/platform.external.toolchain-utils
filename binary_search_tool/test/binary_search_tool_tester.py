@@ -20,6 +20,7 @@ import gen_obj
 
 
 class BisectingUtilsTest(unittest.TestCase):
+  """Tests for bisecting tool."""
 
   def setUp(self):
     """Generate [100-1000] object files, and 1-5% of which are bad ones."""

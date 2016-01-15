@@ -48,6 +48,7 @@ EXPERIMENT_FILE_1 = """
 
 
 class FakeLogger(object):
+  """Fake logger for tests."""
 
   def __init__(self):
     self.LogOutputCount = 0
@@ -90,6 +91,7 @@ class FakeLogger(object):
 
 
 class ExperimentRunnerTest(unittest.TestCase):
+  """Test for experiment runner class."""
 
   run_counter = 0
   mock_logger = FakeLogger()

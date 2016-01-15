@@ -52,6 +52,7 @@ def _SortDictionaryByValue(d):
 
 
 class Tabulator(object):
+  """Make tables."""
 
   def __init__(self, all_dicts):
     self._all_dicts = all_dicts
@@ -91,6 +92,7 @@ class Tabulator(object):
 
 
 class Function(object):
+  """Function for formatting."""
 
   def __init__(self):
     self.count = 0
@@ -99,6 +101,7 @@ class Function(object):
 
 
 class Section(object):
+  """Section formatting."""
 
   def __init__(self, contents):
     self.raw_contents = contents

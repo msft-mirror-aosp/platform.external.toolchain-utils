@@ -10,6 +10,7 @@ import time
 
 
 class Event(object):
+  """One event on the timeline."""
 
   def __init__(self, name='', cur_time=0):
     self.name = name

@@ -13,6 +13,7 @@ import misc
 
 
 class UtilsTest(unittest.TestCase):
+  """Tests for misc."""
 
   def testGetFilenameFromString(self):
     string = 'a /b=c"d^$?\\'

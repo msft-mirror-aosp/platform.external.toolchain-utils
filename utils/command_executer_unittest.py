@@ -10,6 +10,7 @@ import command_executer
 
 
 class CommandExecuterTest(unittest.TestCase):
+  """Test for CommandExecuter class."""
 
   def testTimeout(self):
     timeout = 1

@@ -25,6 +25,7 @@ from cros_utils import logger
 
 
 class MyMachineManager(machine_manager.MachineManager):
+  """Machine manager for test."""
 
   def __init__(self, chromeos_root):
     super(MyMachineManager, self).__init__(chromeos_root, 0, 'average',
@@ -57,6 +58,7 @@ LABEL_MIX = label.MockLabel('mix', 'chromeos_image', CHROMEOS_ROOT, 'mix',
 
 
 class MachineManagerTest(unittest.TestCase):
+  """Test for machine manager class."""
 
   mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
 
@@ -653,6 +655,7 @@ wlan0: flags=4099<UP,BROADCAST,MULTICAST>  mtu 1500
 
 
 class CrosMachineTest(unittest.TestCase):
+  """Test for CrosMachine class."""
 
   mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
 

@@ -22,6 +22,7 @@ import test_flag
 
 
 class MyIndentedHelpFormatter(optparse.IndentedHelpFormatter):
+  """Help formatter."""
 
   def format_description(self, description):
     return description

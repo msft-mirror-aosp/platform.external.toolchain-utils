@@ -12,6 +12,7 @@ import timeline
 
 
 class TimeLineTest(unittest.TestCase):
+  """Tests for the Timeline class."""
 
   def testRecord(self):
     tl = timeline.Timeline()

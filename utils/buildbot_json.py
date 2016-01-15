@@ -524,6 +524,7 @@ class SubViewNodeList(VirtualNodeList):  # pylint: disable=W0223
 
 
 class Slave(AddressableDataNode):
+  """Buildbot slave class."""
   printable_attributes = AddressableDataNode.printable_attributes + [
       'name',
       'key',
@@ -548,6 +549,7 @@ class Slave(AddressableDataNode):
 
 
 class Slaves(AddressableNodeList):
+  """Buildbot slaves."""
   _child_cls = Slave
   printable_attributes = AddressableNodeList.printable_attributes + ['names']
 
@@ -573,6 +575,7 @@ class BuilderSlaves(SubViewNodeList):
 
 
 class BuildStep(NonAddressableDataNode):
+  """Class for a buildbot build step."""
   printable_attributes = NonAddressableDataNode.printable_attributes + [
       'name',
       'number',
@@ -683,6 +686,7 @@ class BuildSteps(NonAddressableNodeList):
 
 
 class Build(AddressableDataNode):
+  """Buildbot build info."""
   printable_attributes = AddressableDataNode.printable_attributes + [
       'key',
       'number',
@@ -799,6 +803,7 @@ class CurrentBuilds(SubViewNodeList):
 
 
 class PendingBuilds(AddressableDataNode):
+  """List of the pending builds."""
 
   def __init__(self, parent):
     super(PendingBuilds, self).__init__(parent, 'pendingBuilds', None)
@@ -879,6 +884,7 @@ class Builds(AddressableNodeList):
 
 
 class Builder(AddressableDataNode):
+  """Builder status."""
   printable_attributes = AddressableDataNode.printable_attributes + [
       'name',
       'key',

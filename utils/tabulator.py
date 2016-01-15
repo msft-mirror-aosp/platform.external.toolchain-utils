@@ -287,6 +287,7 @@ class Result(object):
 
 
 class LiteralResult(Result):
+  """A literal result."""
 
   def __init__(self, iteration=0):
     super(LiteralResult, self).__init__()
@@ -330,6 +331,7 @@ class NonEmptyCountResult(Result):
 
 
 class StringMeanResult(Result):
+  """Mean of string values."""
 
   def _ComputeString(self, cell, values, baseline_values):
     if self._AllStringsSame(values):
@@ -339,16 +341,19 @@ class StringMeanResult(Result):
 
 
 class AmeanResult(StringMeanResult):
+  """Arithmetic mean."""
 
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = numpy.mean(values)
 
 
 class RawResult(Result):
+  """Raw result."""
   pass
 
 
 class MinResult(Result):
+  """Minimum."""
 
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = min(values)
@@ -361,6 +366,7 @@ class MinResult(Result):
 
 
 class MaxResult(Result):
+  """Maximum."""
 
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = max(values)
@@ -373,18 +379,21 @@ class MaxResult(Result):
 
 
 class NumericalResult(Result):
+  """Numerical result."""
 
   def _ComputeString(self, cell, values, baseline_values):
     cell.value = '?'
 
 
 class StdResult(NumericalResult):
+  """Standard deviation."""
 
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = numpy.std(values)
 
 
 class CoeffVarResult(NumericalResult):
+  """Standard deviation / Mean"""
 
   def _ComputeFloat(self, cell, values, baseline_values):
     if numpy.mean(values) != 0.0:
@@ -395,6 +404,7 @@ class CoeffVarResult(NumericalResult):
 
 
 class ComparisonResult(Result):
+  """Same or Different."""
 
   def NeedsBaseline(self):
     return True
@@ -416,6 +426,7 @@ class ComparisonResult(Result):
 
 
 class PValueResult(ComparisonResult):
+  """P-value."""
 
   def _ComputeFloat(self, cell, values, baseline_values):
     if len(values) < 2 or len(baseline_values) < 2:
@@ -429,6 +440,7 @@ class PValueResult(ComparisonResult):
 
 
 class KeyAwareComparisonResult(ComparisonResult):
+  """Automatic key aware comparison."""
 
   def _IsLowerBetter(self, key):
     # TODO(llozano): Trying to guess direction by looking at the name of the
@@ -468,6 +480,7 @@ class KeyAwareComparisonResult(ComparisonResult):
 
 
 class AmeanRatioResult(KeyAwareComparisonResult):
+  """Ratio of arithmetic means of values vs. baseline values."""
 
   def _ComputeFloat(self, cell, values, baseline_values):
     if numpy.mean(baseline_values) != 0:
@@ -481,6 +494,7 @@ class AmeanRatioResult(KeyAwareComparisonResult):
 
 
 class GmeanRatioResult(KeyAwareComparisonResult):
+  """Ratio of geometric means of values vs. baseline values."""
 
   def _ComputeFloat(self, cell, values, baseline_values):
     if self._GetGmean(baseline_values) != 0:
@@ -589,6 +603,7 @@ class Format(object):
 
 
 class PValueFormat(Format):
+  """Formatting for p-value."""
 
   def _ComputeFloat(self, cell):
     cell.string_value = '%0.2f' % float(cell.value)

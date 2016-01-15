@@ -13,6 +13,7 @@ import tabulator
 
 
 class TabulatorTest(unittest.TestCase):
+  """Tests for the Tabulator class."""
 
   def testResult(self):
     table = ['k1', ['1', '3'], ['55']]

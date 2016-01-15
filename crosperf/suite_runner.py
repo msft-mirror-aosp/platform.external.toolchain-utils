@@ -271,6 +271,7 @@ class SuiteRunner(object):
 
 
 class MockSuiteRunner(object):
+  """Mock suite runner for test."""
 
   def __init__(self):
     self._true = True
