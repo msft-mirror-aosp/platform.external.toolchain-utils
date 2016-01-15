@@ -1,14 +1,15 @@
 #!/usr/bin/python2
 #
 # Copyright 2015 Google Inc. All Rights Reserved.
-#
-# This script takes a single argument, the name of a file (normally expected to
-# be 'build_image'), which should be a shell script.  It then creates a new
-# output file, named <input_file>.edited, and it copies each line from the
-# input file to the output file.  If the line from the input file contains the
-# string 'eclean', it prepends a '#' to the line before copying it to the
-# output file, in effect commenting out any lines that contain 'eclean'.
-#
+"""Comment out eclean invocations from input script.
+
+This script takes a single argument, the name of a file (normally expected to
+be 'build_image'), which should be a shell script. It then creates a new
+output file, named <input_file>.edited, and it copies each line from the
+input file to the output file.  If the line from the input file contains the
+string 'eclean', it prepends a '#' to the line before copying it to the
+output file, in effect commenting out any lines that contain 'eclean'.
+"""
 
 from __future__ import print_function
 

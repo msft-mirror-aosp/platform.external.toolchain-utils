@@ -1,4 +1,5 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
+"""Utilities for operations on files."""
 
 from __future__ import print_function
 

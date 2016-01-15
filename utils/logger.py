@@ -1,4 +1,5 @@
 # Copyright 2010 Google Inc. All Rights Reserved.
+"""Logging helper module."""
 
 from __future__ import print_function
 

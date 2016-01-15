@@ -1,13 +1,14 @@
 #!/usr/bin/python2
 #
 #  Copyright 2015 Google Inc. All Rights Reserved
-#
-#  This script takes a set of flags, telling it what cros_pkg_setup.sh changed
-#  during the set up process.  Based on the values of the input flags, it
-#  generates a cleanup script, named cros_pkg_${BOARD}_cleanup.sh, which will
-#  undo the changes made by cros_pkg_setup.sh, returning everything to its
-#  original state.
-#
+"""The script to generate a cleanup script after cros_pkg_setup.sh.
+
+This script takes a set of flags, telling it what cros_pkg_setup.sh changed
+during the set up process. Based on the values of the input flags, it
+generates a cleanup script, named cros_pkg_${BOARD}_cleanup.sh, which will
+undo the changes made by cros_pkg_setup.sh, returning everything to its
+original state.
+"""
 
 from __future__ import print_function
 

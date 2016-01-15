@@ -1,4 +1,5 @@
 #!/usr/bin/python2
+"""Common utility functions."""
 
 DEFAULT_OBJECT_NUMBER = 1238
 DEFAULT_BAD_OBJECT_NUMBER = 23

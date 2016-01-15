@@ -1,6 +1,7 @@
 #!/usr/bin/python2
 #
 # Copyright 2014 Google Inc. All Rights Reserved
+"""Tests for the experiment runner module."""
 
 from __future__ import print_function
 
