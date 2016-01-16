@@ -66,6 +66,7 @@ class TabulatorTest(unittest.TestCase):
 
   def testGmean(self):
     a = [1.0e+308] * 3
+    # pylint: disable=protected-access
     b = tabulator.Result()._GetGmean(a)
     self.assertTrue(b >= 0.99e+308 and b <= 1.01e+308)
 

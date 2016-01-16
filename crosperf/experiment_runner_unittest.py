@@ -46,6 +46,8 @@ EXPERIMENT_FILE_1 = """
   }
   """
 
+# pylint: disable=protected-access
+
 
 class FakeLogger(object):
   """Fake logger for tests."""

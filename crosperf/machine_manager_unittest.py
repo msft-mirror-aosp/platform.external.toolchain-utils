@@ -23,6 +23,8 @@ from benchmark_run import MockBenchmarkRun
 from cros_utils import command_executer
 from cros_utils import logger
 
+# pylint: disable=protected-access
+
 
 class MyMachineManager(machine_manager.MachineManager):
   """Machine manager for test."""
