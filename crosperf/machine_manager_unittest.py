@@ -79,7 +79,7 @@ class MachineManagerTest(unittest.TestCase):
     mock_isdir.return_value = True
     self.mm = machine_manager.MachineManager(
         '/usr/local/chromeos', 0, 'average',
-        file_lock_machine.Machine.LOCKS_DIR, self.mock_cmd_exec,
+        None, self.mock_cmd_exec,
         self.mock_logger)
 
     self.mock_lumpy1.name = 'lumpy1'
@@ -241,7 +241,6 @@ class MachineManagerTest(unittest.TestCase):
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
   def test_try_to_lock_machine(self, mock_cros_runcmd):
-
     self.assertRaises(self.mm._TryToLockMachine, None)
 
     mock_cros_runcmd.return_value = [0, 'false_lock_checksum', '']

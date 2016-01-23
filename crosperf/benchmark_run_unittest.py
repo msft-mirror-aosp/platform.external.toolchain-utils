@@ -70,7 +70,7 @@ class BenchmarkRunTest(unittest.TestCase):
                          compiler='gcc')
 
     logging_level = 'average'
-    m = MockMachineManager('/tmp/chromeos_root', 0, logging_level)
+    m = MockMachineManager('/tmp/chromeos_root', 0, logging_level, '')
     m.AddMachine('chromeos2-row1-rack4-host9.cros')
     bench = Benchmark('page_cycler.netsim.top_10',    # name
                       'page_cycler.netsim.top_10',    # test_name

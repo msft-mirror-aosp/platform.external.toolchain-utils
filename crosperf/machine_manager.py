@@ -656,10 +656,9 @@ power management:
 class MockMachineManager(MachineManager):
   """Mock machine manager class."""
 
-  def __init__(self, chromeos_root, acquire_timeout, log_level):
+  def __init__(self, chromeos_root, acquire_timeout, log_level, locks_dir):
     super(MockMachineManager, self).__init__(
-        chromeos_root, acquire_timeout, log_level,
-        file_lock_machine.Machine.LOCKS_DIR)
+        chromeos_root, acquire_timeout, log_level, locks_dir)
 
   def _TryToLockMachine(self, cros_machine):
     self._machines.append(cros_machine)

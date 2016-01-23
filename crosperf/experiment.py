@@ -71,12 +71,11 @@ class Experiment(object):
       raise RuntimeError('No chromeos_root given and could not determine '
                          'one from the image path.')
 
+    machine_manager_fn = MachineManager
     if test_flag.GetTestMode():
-      self.machine_manager = MockMachineManager(chromeos_root, acquire_timeout,
-                                                log_level)
-    else:
-      self.machine_manager = MachineManager(chromeos_root, acquire_timeout,
-                                            log_level, locks_directory)
+      machine_manager_fn = MockMachineManager
+    self.machine_manager = machine_manager_fn(chromeos_root, acquire_timeout,
+                                              log_level, locks_directory)
     self.l = logger.GetLogger(log_dir)
 
     for machine in self.remote:

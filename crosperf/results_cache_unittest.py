@@ -748,7 +748,7 @@ class ResultTest(unittest.TestCase):
     tempfile.mkdtemp = FakeMkdtemp
 
     mock_mm = machine_manager.MockMachineManager('/tmp/chromeos_root', 0,
-                                                 'average')
+                                                 'average', '')
     mock_mm.machine_checksum_string['mock_label'] = 'fake_machine_checksum123'
 
     mock_keylist = ['key1', 'key2', 'key3']
@@ -934,7 +934,7 @@ class ResultsCacheTest(unittest.TestCase):
                                                    '/tmp/chromeos', 'average')
 
     mock_mm = machine_manager.MockMachineManager('/tmp/chromeos_root', 0,
-                                                 'average')
+                                                 'average', '')
     mock_mm.machine_checksum_string['mock_label'] = 'fake_machine_checksum123'
 
     self.results_cache.Init(self.mock_label.chromeos_image,
