@@ -117,15 +117,17 @@ def DoImage(argv):
     image = os.path.join(images_dir, 'latest', 'chromiumos_test_image.bin')
     if not os.path.exists(image):
       image = os.path.join(images_dir, 'latest', 'chromiumos_image.bin')
+    is_xbuddy_image = False
   else:
     image = options.image
-    if image.find('xbuddy://') < 0:
+    is_xbuddy_image = image.startswith('xbuddy://')
+    if not is_xbuddy_image:
       image = os.path.expanduser(image)
 
-  if image.find('xbuddy://') < 0:
+  if not is_xbuddy_image:
     image = os.path.realpath(image)
 
-  if not os.path.exists(image) and image.find('xbuddy://') < 0:
+  if not os.path.exists(image) and not is_xbuddy_image:
     Usage(parser, 'Image file: ' + image + ' does not exist!')
 
   try:
@@ -140,7 +142,7 @@ def DoImage(argv):
 
     reimage = False
     local_image = False
-    if image.find('xbuddy://') < 0:
+    if not is_xbuddy_image:
       local_image = True
       image_checksum = FileUtils().Md5File(image, log_level=log_level)
 
@@ -200,34 +202,32 @@ def DoImage(argv):
       # Check to see if cros flash will work for the remote machine.
       CheckForCrosFlash(options.chromeos_root, options.remote, log_level)
 
+      cros_flash_args = ['cros', 'flash', '--board=%s' % board,
+                         '--clobber-stateful', options.remote]
       if local_image:
-        cros_flash_args = ['--board=%s' % board, '--clobber-stateful',
-                           options.remote, chroot_image]
+        cros_flash_args.append(chroot_image)
       else:
-        cros_flash_args = ['--board=%s' % board, '--clobber-stateful',
-                           options.remote, image]
+        cros_flash_args.append(image)
 
-      command = ('cros flash %s' % ' '.join(cros_flash_args))
+      command = ' '.join(cros_flash_args)
 
       # Workaround for crosbug.com/35684.
       os.chmod(misc.GetChromeOSKeyFile(options.chromeos_root), 0600)
-      if log_level == 'quiet':
-        l.LogOutput('CMD : %s' % command)
-      elif log_level == 'average':
-        cmd_executer.SetLogLevel('verbose')
-      ret = cmd_executer.ChrootRunCommand(options.chromeos_root,
-                                          command,
-                                          command_timeout=1800)
 
+      if log_level == 'average':
+        cmd_executer.SetLogLevel('verbose')
       retries = 0
-      while ret != 0 and retries < 2:
-        retries += 1
+      while True:
         if log_level == 'quiet':
-          l.LogOutput('Imaging failed. Retry # %d.' % retries)
           l.LogOutput('CMD : %s' % command)
         ret = cmd_executer.ChrootRunCommand(options.chromeos_root,
                                             command,
                                             command_timeout=1800)
+        if ret == 0 or retries >= 2:
+          break
+        retries += 1
+        if log_level == 'quiet':
+          l.LogOutput('Imaging failed. Retry # %d.' % retries)
 
       if log_level == 'average':
         cmd_executer.SetLogLevel(log_level)
