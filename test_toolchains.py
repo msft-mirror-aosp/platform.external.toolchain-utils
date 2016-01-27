@@ -135,8 +135,7 @@ class ChromeOSCheckout(object):
   def _CheckoutChromeOS(self):
     # TODO(asharif): Setup a fixed ChromeOS version (quarterly snapshot).
     if not os.path.exists(self._chromeos_root):
-      setup_chromeos_args = [setup_chromeos.__file__,
-                             '--dir=%s' % self._chromeos_root]
+      setup_chromeos_args = ['--dir=%s' % self._chromeos_root]
       if self._public:
         setup_chromeos_args.append('--public')
       ret = setup_chromeos.Main(setup_chromeos_args)
