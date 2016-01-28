@@ -30,8 +30,7 @@ class MyMachineManager(machine_manager.MachineManager):
   """Machine manager for test."""
 
   def __init__(self, chromeos_root):
-    super(MyMachineManager, self).__init__(chromeos_root, 0, 'average',
-                                           file_lock_machine.Machine.LOCKS_DIR)
+    super(MyMachineManager, self).__init__(chromeos_root, 0, 'average', '')
 
   def _TryToLockMachine(self, cros_machine):
     self._machines.append(cros_machine)
