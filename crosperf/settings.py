@@ -4,6 +4,7 @@
 from __future__ import print_function
 
 from cros_utils import logger
+from cros_utils import misc
 from download_images import ImageDownloader
 
 
@@ -73,7 +74,8 @@ class Settings(object):
     else:
       xbuddy_path = '%s/%s' % (prefix, path_str)
     image_downloader = ImageDownloader(l, log_level)
-    retval, image_path = image_downloader.Run(chromeos_root, xbuddy_path)
+    retval, image_path = image_downloader.Run(
+        misc.CanonicalizePath(chromeos_root), xbuddy_path)
     if retval != 0:
       raise Exception('Unable to find/download xbuddy image.')
     return image_path
