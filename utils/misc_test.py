@@ -18,7 +18,7 @@ class UtilsTest(unittest.TestCase):
   def testGetFilenameFromString(self):
     string = 'a /b=c"d^$?\\'
     filename = misc.GetFilenameFromString(string)
-    self.assertTrue(filename == 'a___bcd')
+    self.assertEqual(filename, 'a___bcd')
 
   def testPrependMergeEnv(self):
     var = 'USE'
@@ -28,13 +28,13 @@ class UtilsTest(unittest.TestCase):
     new_env_string = misc.MergeEnvStringWithDict(env_string,
                                                  {var: added_use_flags})
     expected_new_env = '%s=%r' % (var, ' '.join([added_use_flags, use_flags]))
-    self.assertTrue(new_env_string == ' '.join([env_string, expected_new_env]))
+    self.assertEqual(new_env_string, ' '.join([env_string, expected_new_env]))
 
   def testGetChromeOSVersionFromLSBVersion(self):
     versions_dict = {'2630.0.0': '22', '2030.0.0': '19'}
     f = misc.GetChromeOSVersionFromLSBVersion
     for k, v in versions_dict.items():
-      self.assertTrue(f(k) == 'R%s-%s' % (v, k))
+      self.assertEqual(f(k), 'R%s-%s' % (v, k))
 
   def testPostpendMergeEnv(self):
     var = 'USE'
@@ -44,7 +44,7 @@ class UtilsTest(unittest.TestCase):
     new_env_string = misc.MergeEnvStringWithDict(env_string,
                                                  {var: added_use_flags}, False)
     expected_new_env = '%s=%r' % (var, ' '.join([use_flags, added_use_flags]))
-    self.assertTrue(new_env_string == ' '.join([env_string, expected_new_env]))
+    self.assertEqual(new_env_string, ' '.join([env_string, expected_new_env]))
 
 
 if __name__ == '__main__':

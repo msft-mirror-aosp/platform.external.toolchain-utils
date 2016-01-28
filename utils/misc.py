@@ -66,7 +66,7 @@ def UnitToNumber(unit_num, base=1000):
 
 
 def GetFilenameFromString(string):
-  return ApplySubs(string, (r'/', '__'), (r'\s', '_'), (r"[\^\$=\"\\\?]", ''),)
+  return ApplySubs(string, (r'/', '__'), (r'\s', '_'), (r'[\\$="?^]', ''),)
 
 
 def GetRoot(scr_name):
@@ -96,7 +96,7 @@ def GetOutsideChrootPath(chromeos_root, file_path):
 
 
 def FormatQuotedCommand(command):
-  return ApplySubs(command, ("\"", "\\\""))
+  return ApplySubs(command, ('"', r'\"'))
 
 
 def FormatCommands(commands):
