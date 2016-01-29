@@ -6,7 +6,7 @@
 from __future__ import print_function
 
 import atexit
-import optparse
+import argparse
 import os
 import signal
 import sys
@@ -14,37 +14,29 @@ from experiment_runner import ExperimentRunner
 from experiment_runner import MockExperimentRunner
 from experiment_factory import ExperimentFactory
 from experiment_file import ExperimentFile
-from help import Help
 from settings_factory import GlobalSettings
 from utils import logger
 
 import test_flag
 
 
-class MyIndentedHelpFormatter(optparse.IndentedHelpFormatter):
-  """Help formatter."""
-
-  def format_description(self, description):
-    return description
-
-
 def SetupParserOptions(parser):
   """Add all options to the parser."""
-  parser.add_option('--dry_run',
-                    dest='dry_run',
-                    help=('Parse the experiment file and '
-                          'show what will be done'),
-                    action='store_true',
-                    default=False)
+  parser.add_argument('--dry_run',
+                      dest='dry_run',
+                      help=('Parse the experiment file and '
+                            'show what will be done'),
+                      action='store_true',
+                      default=False)
   # Allow each of the global fields to be overridden by passing in
   # options. Add each global field as an option.
   option_settings = GlobalSettings('')
   for field_name in option_settings.fields:
     field = option_settings.fields[field_name]
-    parser.add_option('--%s' % field.name,
-                      dest=field.name,
-                      help=field.description,
-                      action='store')
+    parser.add_argument('--%s' % field.name,
+                        dest=field.name,
+                        help=field.description,
+                        action='store')
 
 
 def ConvertOptionsToSettings(options):
@@ -73,25 +65,22 @@ def CallExitHandler(signum, _):
 
 
 def Main(argv):
-  parser = optparse.OptionParser(usage=Help().GetUsage(),
-                                 description=Help().GetHelp(),
-                                 formatter=MyIndentedHelpFormatter(),
-                                 version='%prog 3.0')
+  parser = argparse.ArgumentParser()
 
-  parser.add_option('--noschedv2',
-                    dest='noschedv2',
-                    default=False,
-                    action='store_true',
-                    help=('Do not use new scheduler. '
-                          'Use original scheduler instead.'))
-  parser.add_option('-l',
-                    '--log_dir',
-                    dest='log_dir',
-                    default='',
-                    help='The log_dir, default is under <crosperf_logs>/logs')
+  parser.add_argument('--noschedv2',
+                      dest='noschedv2',
+                      default=False,
+                      action='store_true',
+                      help=('Do not use new scheduler. '
+                            'Use original scheduler instead.'))
+  parser.add_argument('-l',
+                      '--log_dir',
+                      dest='log_dir',
+                      default='',
+                      help='The log_dir, default is under <crosperf_logs>/logs')
 
   SetupParserOptions(parser)
-  options, args = parser.parse_args(argv)
+  options, args = parser.parse_known_args(argv)
 
   # Convert the relevant options that are passed in into a settings
   # object which will override settings in the experiment file.

@@ -9,7 +9,7 @@ from __future__ import print_function
 
 __author__ = 'asharif@google.com (Ahmad Sharif)'
 
-import optparse
+import argparse
 import re
 import sys
 
@@ -299,20 +299,20 @@ class PerfDiffer(object):
 
 def Main(argv):
   """The entry of the main."""
-  parser = optparse.OptionParser()
-  parser.add_option('-n',
-                    '--num_symbols',
-                    dest='num_symbols',
-                    default='5',
-                    help='The number of symbols to show.')
-  parser.add_option('-c',
-                    '--common_only',
-                    dest='common_only',
-                    action='store_true',
-                    default=False,
-                    help='Diff common symbols only.')
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-n',
+                      '--num_symbols',
+                      dest='num_symbols',
+                      default='5',
+                      help='The number of symbols to show.')
+  parser.add_argument('-c',
+                      '--common_only',
+                      dest='common_only',
+                      action='store_true',
+                      default=False,
+                      help='Diff common symbols only.')
 
-  options, args = parser.parse_args(argv)
+  options, args = parser.parse_known_args(argv)
 
   try:
     reports = []

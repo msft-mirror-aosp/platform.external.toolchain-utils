@@ -5,7 +5,7 @@
 
 from __future__ import print_function
 
-import optparse
+import argparse
 import StringIO
 
 import unittest
@@ -42,43 +42,23 @@ class CrosperfTest(unittest.TestCase):
     input_file = StringIO.StringIO(EXPERIMENT_FILE_1)
     self.exp_file = experiment_file.ExperimentFile(input_file)
 
-  def test_setup_parser_options(self):
-
-    parser = optparse.OptionParser(usage=Help().GetUsage(),
-                                   description=Help().GetHelp(),
-                                   formatter=crosperf.MyIndentedHelpFormatter(),
-                                   version='%prog 3.0')
-    parser.add_option('-l',
-                      '--log_dir',
-                      dest='log_dir',
-                      default='',
-                      help='The log_dir, default is under <crosperf_logs>/logs')
-    options_before = parser.option_list
-    self.assertEqual(len(options_before), 3)
-    crosperf.SetupParserOptions(parser)
-    options_after = parser.option_list
-    self.assertEqual(len(options_after), 29)
-
   def test_convert_options_to_settings(self):
-    parser = optparse.OptionParser(usage=Help().GetUsage(),
-                                   description=Help().GetHelp(),
-                                   formatter=crosperf.MyIndentedHelpFormatter(),
-                                   version='%prog 3.0')
-    parser.add_option('-l',
-                      '--log_dir',
-                      dest='log_dir',
-                      default='',
-                      help='The log_dir, default is under <crosperf_logs>/logs')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-l',
+                        '--log_dir',
+                        dest='log_dir',
+                        default='',
+                        help='The log_dir, default is under <crosperf_logs>/logs')
     crosperf.SetupParserOptions(parser)
     argv = ['crosperf/crosperf.py', 'temp.exp', '--rerun=True']
-    options, _ = parser.parse_args(argv)
+    options, _ = parser.parse_known_args(argv)
     settings = crosperf.ConvertOptionsToSettings(options)
     self.assertIsNotNone(settings)
     self.assertIsInstance(settings, settings_factory.GlobalSettings)
     self.assertEqual(len(settings.fields), 25)
     self.assertTrue(settings.GetField('rerun'))
     argv = ['crosperf/crosperf.py', 'temp.exp']
-    options, _ = parser.parse_args(argv)
+    options, _ = parser.parse_known_args(argv)
     settings = crosperf.ConvertOptionsToSettings(options)
     self.assertFalse(settings.GetField('rerun'))
 
