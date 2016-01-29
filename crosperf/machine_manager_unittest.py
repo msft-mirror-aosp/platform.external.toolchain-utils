@@ -77,8 +77,7 @@ class MachineManagerTest(unittest.TestCase):
 
     mock_isdir.return_value = True
     self.mm = machine_manager.MachineManager(
-        '/usr/local/chromeos', 0, 'average',
-        None, self.mock_cmd_exec,
+        '/usr/local/chromeos', 0, 'average', None, self.mock_cmd_exec,
         self.mock_logger)
 
     self.mock_lumpy1.name = 'lumpy1'
