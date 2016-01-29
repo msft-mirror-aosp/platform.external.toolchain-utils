@@ -935,13 +935,14 @@ class TableFormatter(object):
       o += '\n'
     print(o)
 
-  def GetCellTable(self, table_type, headers=True):
+  def GetCellTable(self, table_type='full', headers=True):
     """Function to return a table of cells.
 
     The table (list of lists) is converted into a table of cells by this
     function.
 
     Args:
+      table_type: Can be 'full' or 'summary'
       headers: A boolean saying whether we want default headers
 
     Returns:
