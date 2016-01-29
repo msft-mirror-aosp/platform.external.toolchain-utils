@@ -1205,7 +1205,8 @@ def CMDlast_failure(parser, args):
   """Lists all slaves that failed on that step on their last build.
 
   Example: to find all slaves where their last build was a compile failure,
-  run with --step compile"""
+  run with --step compile
+  """
   parser.add_option(
       '-S',
       '--step',

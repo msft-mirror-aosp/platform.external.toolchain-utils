@@ -12,8 +12,8 @@ def MachineIsPingable(machine, logging_level='average'):
   """Checks to see if a machine is responding to 'ping'.
 
   Args:
-    machine:  String containing the name or ip address of the machine to check.
-    logging_level:  The logging level with which to initialize the
+    machine: String containing the name or ip address of the machine to check.
+    logging_level: The logging level with which to initialize the
       command_executer (from command_executor.LOG_LEVEL enum list).
 
   Returns:

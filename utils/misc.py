@@ -349,6 +349,7 @@ def GitGetCommitHash(git_dir, commit_symbolic_name):
   Args:
     git_dir: a git working tree.
     commit_symbolic_name: a symbolic name for a particular git commit.
+
   Returns:
     The git hash for the symbolic name or None if fails.
   """
@@ -368,6 +369,7 @@ def IsGitTreeClean(git_dir):
 
   Args:
     git_dir: git tree directory.
+
   Returns:
     True if git dir is clean.
   """
@@ -390,6 +392,7 @@ def GetGitChangesAsList(git_dir, path=None, staged=False):
     git_dir: git tree directory.
     path: a relative path that is part of the tree directory, could be null.
     staged: whether to include staged files as well.
+
   Returns:
     A list containing all the changed files.
   """
@@ -460,6 +463,7 @@ def ApplyGerritPatches(chromeos_root,
     gerrit_patch_string: a patch string just like the one gives to cbuildbot,
     'id1 id2 *id3 ... idn'. A prefix of '* means this is an internal patch.
     branch: the tree based on which to apply the patches.
+
   Returns:
     True if success.
   """

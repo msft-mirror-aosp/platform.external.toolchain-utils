@@ -160,6 +160,7 @@ class TableGenerator(object):
 
     Args:
       number_of_rows: Maximum number of rows to return from the table.
+
     Returns:
       A list of lists which is the table.
 
@@ -939,6 +940,7 @@ class TableFormatter(object):
 
     The table (list of lists) is converted into a table of cells by this
     function.
+
     Args:
       headers: A boolean saying whether we want default headers
 
