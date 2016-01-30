@@ -104,6 +104,7 @@ class Section(object):
   """Section formatting."""
 
   def __init__(self, contents):
+    self.name = ''
     self.raw_contents = contents
     self._ParseSection()
 

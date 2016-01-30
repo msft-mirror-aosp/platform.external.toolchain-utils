@@ -61,6 +61,12 @@ LABEL_MIX = label.MockLabel('mix', 'chromeos_image', CHROMEOS_ROOT, 'mix',
 class MachineManagerTest(unittest.TestCase):
   """Test for machine manager class."""
 
+  msgs = []
+  image_log = []
+  log_fatal_msgs = []
+  fake_logger_count = 0
+  fake_logger_msgs = []
+
   mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
 
   mock_logger = mock.Mock(spec=logger.Logger)

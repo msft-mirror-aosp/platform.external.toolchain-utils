@@ -95,7 +95,8 @@ class FakeLogger(object):
 class ExperimentRunnerTest(unittest.TestCase):
   """Test for experiment runner class."""
 
-  run_counter = 0
+  run_count = 0
+  is_complete_count = 0
   mock_logger = FakeLogger()
   mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
 

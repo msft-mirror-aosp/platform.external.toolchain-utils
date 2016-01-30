@@ -13,6 +13,7 @@ from utils import command_executer
 class NoPsuedoTerminalTest(unittest.TestCase):
   """Test to ensure we're not touching /dev/ptmx when running commands."""
 
+  _strace_process = None
   STRACE_TIMEOUT = 10
 
   def _AttachStraceToSelf(self, output_file):

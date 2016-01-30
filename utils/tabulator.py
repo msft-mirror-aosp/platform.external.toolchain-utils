@@ -970,6 +970,8 @@ class TablePrinter(object):
     """Constructor that stores the cell table and output type."""
     self._table = table
     self._output_type = output_type
+    self._row_styles = []
+    self._column_styles = []
 
   # Compute whole-table properties like max-size, etc.
   def _ComputeStyle(self):
