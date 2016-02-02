@@ -532,6 +532,9 @@ class MachineManager(object):
       output += '\n\n\n'
     return output
 
+  def GetAllMachines(self):
+    return self._all_machines
+
 
 class MockCrosMachine(CrosMachine):
   """Mock cros machine class."""
@@ -710,3 +713,6 @@ class MockMachineManager(MachineManager):
     for machine in self.GetMachines(label):
       machine.machine_checksum = common_checksum
     self.machine_checksum[label.name] = common_checksum
+
+  def GetAllMachines(self):
+    return self._all_machines

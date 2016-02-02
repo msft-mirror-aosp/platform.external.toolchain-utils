@@ -1,25 +1,17 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
-# Copyright 2010 Google Inc. All Rights Reserved.
+# Copyright 2010~2015 Google Inc. All Rights Reserved.
 """Script to get past the login screen of ChromeOS.
 
 """
+from __future__ import print_function
 
-__author__ = 'asharif@google.com (Ahmad Sharif)'
-
-import datetime
-import fcntl
-import getpass
-import glob
-import optparse
+import argparse
 import os
-import pickle
-import socket
 import sys
-import time
 import tempfile
-from utils import logger
-from utils import command_executer
+
+from cros_utils import command_executer
 
 LOGIN_PROMPT_VISIBLE_MAGIC_FILE = '/tmp/uptime-login-prompt-visible'
 LOGGED_IN_MAGIC_FILE = '/var/run/state/logged-in'
@@ -106,21 +98,21 @@ def RestartUI(remote, chromeos_root, login=True):
 
 def Main(argv):
   """The main function."""
-  parser = optparse.OptionParser()
-  parser.add_option('-r',
-                    '--remote',
-                    dest='remote',
-                    help='The remote ChromeOS box.')
-  parser.add_option('-c',
-                    '--chromeos_root',
-                    dest='chromeos_root',
-                    help='The ChromeOS root.')
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-r',
+                      '--remote',
+                      dest='remote',
+                      help='The remote ChromeOS box.')
+  parser.add_argument('-c',
+                      '--chromeos_root',
+                      dest='chromeos_root',
+                      help='The ChromeOS root.')
 
-  options, args = parser.parse_args(argv)
+  options = parser.parse_args(argv)
 
   return RestartUI(options.remote, options.chromeos_root)
 
 
 if __name__ == '__main__':
-  retval = Main(sys.argv)
+  retval = Main(sys.argv[1:])
   sys.exit(retval)

@@ -1,9 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Testing of benchmark_run."""
+
+from __future__ import print_function
 
 import mock
 import unittest
@@ -27,10 +29,14 @@ from results_cache import ResultsCache
 
 
 class BenchmarkRunTest(unittest.TestCase):
-  """Unit tests for the BenchmarkRun class and all of its methods.
-  """
+  """Unit tests for the BenchmarkRun class and all of its methods."""
 
   def setUp(self):
+    self.status = []
+    self.called_ReadCache = None
+    self.log_error = []
+    self.log_output = []
+    self.err_msg = None
     self.test_benchmark = Benchmark('page_cycler.netsim.top_10',   # name
                                     'page_cycler.netsim.top_10',   # test_name
                                     '',                            # test_args
@@ -110,10 +116,12 @@ class BenchmarkRunTest(unittest.TestCase):
 
     def MockLogOutput(msg, print_to_console=False):
       'Helper function for test_run.'
+      del print_to_console
       self.log_output.append(msg)
 
     def MockLogError(msg, print_to_console=False):
       'Helper function for test_run.'
+      del print_to_console
       self.log_error.append(msg)
 
     def MockRecordStatus(msg):
@@ -167,8 +175,8 @@ class BenchmarkRunTest(unittest.TestCase):
       self.called_ReadCache = False
 
     # Assign all the fake functions to the appropriate objects.
-    br._logger.LogOutput = MockLogOutput
-    br._logger.LogError = MockLogError
+    br.logger().LogOutput = MockLogOutput
+    br.logger().LogError = MockLogError
     br.timeline.Record = MockRecordStatus
     br.ReadCache = FakeReadCache
     br.RunTest = FakeRunTest
@@ -232,7 +240,7 @@ class BenchmarkRunTest(unittest.TestCase):
     br.run()
     self.assertEqual(self.log_error, [
         "Benchmark run: 'test_run' failed: This is an exception test; it is "
-                     "supposed to happen"
+        "supposed to happen"
     ])
     self.assertEqual(self.status, ['FAILED'])
 
@@ -252,7 +260,7 @@ class BenchmarkRunTest(unittest.TestCase):
 
     self.status = benchmark_run.STATUS_SUCCEEDED
     self.assertFalse(br.terminated)
-    self.assertFalse(br.suite_runner._ct.IsTerminated())
+    self.assertFalse(br.suite_runner.CommandTerminator().IsTerminated())
 
     br.timeline.GetLastEvent = GetLastEventPassed
     br.timeline.Record = RecordStub
@@ -260,7 +268,7 @@ class BenchmarkRunTest(unittest.TestCase):
     br.Terminate()
 
     self.assertTrue(br.terminated)
-    self.assertTrue(br.suite_runner._ct.IsTerminated())
+    self.assertTrue(br.suite_runner.CommandTerminator().IsTerminated())
     self.assertEqual(self.status, benchmark_run.STATUS_FAILED)
 
   def test_terminate_fail(self):
@@ -279,7 +287,7 @@ class BenchmarkRunTest(unittest.TestCase):
 
     self.status = benchmark_run.STATUS_SUCCEEDED
     self.assertFalse(br.terminated)
-    self.assertFalse(br.suite_runner._ct.IsTerminated())
+    self.assertFalse(br.suite_runner.CommandTerminator().IsTerminated())
 
     br.timeline.GetLastEvent = GetLastEventFailed
     br.timeline.Record = RecordStub
@@ -287,7 +295,7 @@ class BenchmarkRunTest(unittest.TestCase):
     br.Terminate()
 
     self.assertTrue(br.terminated)
-    self.assertTrue(br.suite_runner._ct.IsTerminated())
+    self.assertTrue(br.suite_runner.CommandTerminator().IsTerminated())
     self.assertEqual(self.status, benchmark_run.STATUS_SUCCEEDED)
 
   def test_acquire_machine(self):
@@ -319,30 +327,30 @@ class BenchmarkRunTest(unittest.TestCase):
 
     self.mock_logger.LogError = MockLogError
 
-    result = br._GetExtraAutotestArgs()
+    result = br.GetExtraAutotestArgs()
     self.assertEqual(result, '')
 
     self.test_benchmark.perf_args = 'record -e cycles'
-    result = br._GetExtraAutotestArgs()
+    result = br.GetExtraAutotestArgs()
     self.assertEqual(
         result,
         "--profiler=custom_perf --profiler_args='perf_options=\"record -a -e "
         "cycles\"'")
 
     self.test_benchmark.suite = 'telemetry'
-    result = br._GetExtraAutotestArgs()
+    result = br.GetExtraAutotestArgs()
     self.assertEqual(result, '')
     self.assertEqual(self.err_msg, 'Telemetry does not support profiler.')
 
     self.test_benchmark.perf_args = 'record -e cycles'
     self.test_benchmark.suite = 'test_that'
-    result = br._GetExtraAutotestArgs()
+    result = br.GetExtraAutotestArgs()
     self.assertEqual(result, '')
     self.assertEqual(self.err_msg, 'test_that does not support profiler.')
 
     self.test_benchmark.perf_args = 'junk args'
     self.test_benchmark.suite = 'telemetry_Crosperf'
-    self.assertRaises(Exception, br._GetExtraAutotestArgs)
+    self.assertRaises(Exception, br.GetExtraAutotestArgs)
 
   @mock.patch.object(SuiteRunner, 'Run')
   @mock.patch.object(Result, 'CreateFromRun')

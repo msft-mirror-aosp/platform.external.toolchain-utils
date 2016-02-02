@@ -1,4 +1,5 @@
-# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
+
+# Copyright (c) 2013~2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """SuiteRunner defines the interface from crosperf to test script."""
@@ -9,7 +10,7 @@ import os
 import time
 import shlex
 
-from utils import command_executer
+from cros_utils import command_executer
 import test_flag
 
 TEST_THAT_PATH = '/usr/bin/test_that'
@@ -265,6 +266,9 @@ class SuiteRunner(object):
       self._logger.LogOutput('Running test.')
       self._logger.LogOutput('CMD: %s' % cmd)
     return self._ce.RunCommandWOutput(cmd, print_to_console=False)
+
+  def CommandTerminator(self):
+    return self._ct
 
   def Terminate(self):
     self._ct.Terminate()

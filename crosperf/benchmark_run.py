@@ -52,7 +52,7 @@ class BenchmarkRun(threading.Thread):
     self.failure_reason = ''
     self.test_args = benchmark.test_args
     self.cache = None
-    self.profiler_args = self._GetExtraAutotestArgs()
+    self.profiler_args = self.GetExtraAutotestArgs()
     self._ce = command_executer.GetCommandExecuter(self._logger,
                                                    log_level=self.log_level)
     self.timeline = timeline.Timeline()
@@ -174,7 +174,7 @@ class BenchmarkRun(threading.Thread):
         time.sleep(sleep_duration)
     return machine
 
-  def _GetExtraAutotestArgs(self):
+  def GetExtraAutotestArgs(self):
     if self.benchmark.perf_args and self.benchmark.suite == 'telemetry':
       self._logger.LogError('Telemetry does not support profiler.')
       self.benchmark.perf_args = ''
@@ -215,6 +215,15 @@ class BenchmarkRun(threading.Thread):
 
   def SetCacheConditions(self, cache_conditions):
     self.cache_conditions = cache_conditions
+
+  def logger(self):
+    """Return the logger, only used by unittest.
+
+    Returns:
+      self._logger
+    """
+
+    return self._logger
 
   def __str__(self):
     """For better debugging."""
