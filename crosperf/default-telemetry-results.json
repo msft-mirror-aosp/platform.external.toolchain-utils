@@ -132,10 +132,6 @@
   "kraken": [
     "Total__Total"
   ], 
-  "media.tough_video_cases": [
-    "avg_loop_time__mixed_audio", 
-    "avg_loop_time__single_audio"
-  ], 
   "dromaeo.jslibmodifyjquery": [
     "jslib_modify_jquery__jslib_modify_jquery"
   ]
