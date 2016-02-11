@@ -5,10 +5,10 @@
 
 from __future__ import print_function
 
-from email import Encoders
-from email.MIMEBase import MIMEBase
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEText import MIMEText
+from email import encoders as Encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 import os
 import smtplib
 import tempfile
