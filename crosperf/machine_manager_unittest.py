@@ -13,7 +13,6 @@ import mock
 import unittest
 
 import label
-import file_lock_machine
 import machine_manager
 import image_checksummer
 import test_flag
