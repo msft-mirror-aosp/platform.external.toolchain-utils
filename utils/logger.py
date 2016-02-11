@@ -339,6 +339,7 @@ main_logger = None
 
 def InitLogger(script_name, log_dir, print_console=True, mock=False):
   """Initialize a global logger. To be called only once."""
+  # pylint: disable=global-statement
   global main_logger
   assert not main_logger, 'The logger has already been initialized'
   rootdir, basefilename = GetRoot(script_name)

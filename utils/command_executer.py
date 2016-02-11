@@ -24,6 +24,7 @@ LOG_LEVEL = ('none', 'quiet', 'average', 'verbose')
 
 
 def InitCommandExecuter(mock=False):
+  # pylint: disable=global-statement
   global mock_default
   # Whether to default to a mock command executer or not
   mock_default = mock
