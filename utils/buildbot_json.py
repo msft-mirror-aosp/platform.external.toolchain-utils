@@ -1072,6 +1072,7 @@ def CMDrun(parser, args):
   else:
     cmds = '\n'.join(args)
   compiled = compile(cmds, '<cmd line>', 'exec')
+  # pylint: disable=eval-used
   eval(compiled, globals(), locals())
   return 0
 
