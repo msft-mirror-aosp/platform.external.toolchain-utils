@@ -68,7 +68,7 @@ class FileUtils(object):
 class MockFileUtils(FileUtils):
   """Mock class for file utilities."""
 
-  def Md5File(self, filename, _block_size=2**10):
+  def Md5File(self, filename, log_level='verbose', _block_size=2**10):
     return 'd41d8cd98f00b204e9800998ecf8427e'
 
   def CanonicalizeChromeOSRoot(self, chromeos_root):
