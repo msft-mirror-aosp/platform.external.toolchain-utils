@@ -24,8 +24,7 @@ def AcquireLock(machines, chromeos_root, timeout=1200):
       if time.time() - start_time > timeout:
         locked = False
         logger.GetLogger().LogWarning(
-            'Could not acquire lock on this machine: {0} within {1} seconds. %s'
-            .format(
+            'Could not acquire lock on {0} within {1} seconds: {2}'.format(
                 repr(machines), timeout, str(e)))
         break
       time.sleep(sleep_time)
