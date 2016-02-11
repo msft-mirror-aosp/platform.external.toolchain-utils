@@ -433,7 +433,7 @@ class PValueResult(ComparisonResult):
     if len(values) < 2 or len(baseline_values) < 2:
       cell.value = float('nan')
       return
-    import stats  # pylint: disable=g-import-not-at-top
+    import stats
     _, cell.value = stats.lttest_ind(values, baseline_values)
 
   def _ComputeString(self, cell, values, baseline_values):
