@@ -110,6 +110,8 @@ class ExperimentRunnerTest(unittest.TestCase):
 
   @mock.patch.object(machine_manager.MachineManager, 'AddMachine')
   @mock.patch.object(os.path, 'isfile')
+
+  # pylint: disable=arguments-differ
   def setUp(self, mock_isfile, _mock_addmachine):
     mock_isfile.return_value = True
     self.exp = self.make_fake_experiment()

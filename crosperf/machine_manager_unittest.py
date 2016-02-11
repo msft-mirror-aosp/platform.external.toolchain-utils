@@ -79,6 +79,8 @@ class MachineManagerTest(unittest.TestCase):
   mock_daisy2 = mock.Mock(spec=machine_manager.CrosMachine)
 
   @mock.patch.object(os.path, 'isdir')
+
+  # pylint: disable=arguments-differ
   def setUp(self, mock_isdir):
 
     mock_isdir.return_value = True
