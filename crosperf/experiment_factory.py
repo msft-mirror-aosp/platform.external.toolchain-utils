@@ -57,8 +57,7 @@ telemetry_toolchain_perf_tests = ['octane',
                                   'dromaeo.domcoreattr',
                                   'dromaeo.domcoremodify',
                                   'smoothness.tough_webgl_cases',
-                                  'page_cycler.typical_25',
-                                  'media.tough_video_cases']
+                                  'page_cycler.typical_25']
 
 
 class ExperimentFactory(object):
