@@ -1,4 +1,3 @@
-
 # Copyright (c) 2014, 2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -52,24 +51,22 @@ class ImageDownloader(object):
 
     # Check to see if the image has already been downloaded.  If not,
     # download the image.
-    status = 0
     if not os.path.exists(image_path):
       command = 'gsutil cp %s /tmp/%s' % (image_name, build_id)
 
       if self.log_level != 'verbose':
         self._logger.LogOutput('CMD: %s' % command)
       status = self._ce.ChrootRunCommand(chromeos_root, command)
+      if status != 0 or not os.path.exists(image_path):
+        raise MissingImage('Cannot download image: %s.' % image_name)
 
-    if status == 0:
-      return image_path
-    else:
-      return None
+    return image_path
 
   def UncompressImage(self, chromeos_root, build_id):
     # Check to see if the file has already been uncompresssed, etc.
     if os.path.exists(os.path.join(chromeos_root, 'chroot/tmp', build_id,
                                    'chromiumos_test_image.bin')):
-      return 0
+      return
 
     # Uncompress and untar the downloaded image.
     command = ('cd /tmp/%s ;unxz chromiumos_test_image.tar.xz; '
@@ -79,7 +76,8 @@ class ImageDownloader(object):
       print('(Uncompressing and un-tarring may take a couple of minutes...'
             'please be patient.)')
     retval = self._ce.ChrootRunCommand(chromeos_root, command)
-    return retval
+    if retval != 0:
+      raise MissingImage('Cannot uncompress image: %s.' % build_id)
 
   def Run(self, chromeos_root, xbuddy_label):
     build_id = self.GetBuildID(chromeos_root, xbuddy_label)
@@ -94,14 +92,11 @@ class ImageDownloader(object):
       status = self._ce.ChrootRunCommand(chromeos_root, cmd)
     if status != 0:
       raise MissingImage('Cannot find official image: %s.' % image_name)
-    image_path = self.DownloadImage(chromeos_root, build_id, image_name)
-    retval = 0
-    if image_path:
-      retval = self.UncompressImage(chromeos_root, build_id)
-    else:
-      retval = 1
 
-    if retval == 0 and self.log_level != 'quiet':
+    image_path = self.DownloadImage(chromeos_root, build_id, image_name)
+    self.UncompressImage(chromeos_root, build_id)
+
+    if self.log_level != 'quiet':
       self._logger.LogOutput('Using image from %s.' % image_path)
 
-    return retval, image_path
+    return image_path

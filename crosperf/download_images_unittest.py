@@ -1,7 +1,6 @@
 #!/usr/bin/python2
 #
 # Copyright 2014 Google Inc.  All Rights Reserved
-
 """Download image unittest."""
 
 from __future__ import print_function
@@ -45,7 +44,8 @@ class ImageDownloaderTestcast(unittest.TestCase):
     # Set os.path.exists to always return False and run downloader
     mock_path_exists.return_value = False
     test_flag.SetTestMode(True)
-    downloader.DownloadImage(test_chroot, test_build_id, image_path)
+    self.assertRaises(download_images.MissingImage, downloader.DownloadImage,
+                      test_chroot, test_build_id, image_path)
 
     # Verify os.path.exists was called twice, with proper arguments.
     self.assertEqual(mock_path_exists.call_count, 2)
@@ -63,8 +63,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
     # Verify we called ChrootRunCommand once, with proper arguments.
     self.assertEqual(mock_cmd_exec.ChrootRunCommand.call_count, 1)
     mock_cmd_exec.ChrootRunCommand.assert_called_with(
-        '/usr/local/home/chromeos',
-        'gsutil cp '
+        '/usr/local/home/chromeos', 'gsutil cp '
         'gs://chromeos-image-archive/lumpy-release/R36-5814.0.0/'
         'chromiumos_test_image.tar.xz'
         ' /tmp/lumpy-release/R36-5814.0.0')
@@ -103,7 +102,8 @@ class ImageDownloaderTestcast(unittest.TestCase):
 
     # Set os.path.exists to always return False and run uncompress.
     mock_path_exists.return_value = False
-    downloader.UncompressImage(test_chroot, test_build_id)
+    self.assertRaises(download_images.MissingImage, downloader.UncompressImage,
+                      test_chroot, test_build_id)
 
     # Verify os.path.exists was called once, with correct arguments.
     self.assertEqual(mock_path_exists.call_count, 1)
@@ -114,8 +114,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
     # Verify ChrootRunCommand was called, with correct arguments.
     self.assertEqual(mock_cmd_exec.ChrootRunCommand.call_count, 1)
     mock_cmd_exec.ChrootRunCommand.assert_called_with(
-        '/usr/local/home/chromeos',
-        'cd /tmp/lumpy-release/R36-5814.0.0 ;unxz '
+        '/usr/local/home/chromeos', 'cd /tmp/lumpy-release/R36-5814.0.0 ;unxz '
         'chromiumos_test_image.tar.xz; tar -xvf chromiumos_test_image.tar')
 
     # Set os.path.exists to always return False and run uncompress.
@@ -159,7 +158,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
       if root or build_id or image_path:
         pass
       self.called_download_image = True
-      return None
+      raise download_images.MissingImage('Could not download image')
 
     def FakeUncompressImage(root, build_id):
       if root or build_id:
@@ -188,7 +187,8 @@ class ImageDownloaderTestcast(unittest.TestCase):
     downloader.DownloadImage = BadDownloadImage
 
     # Call Run again.
-    downloader.Run(test_chroot, test_build_id)
+    self.assertRaises(download_images.MissingImage, downloader.Run, test_chroot,
+                      test_build_id)
 
     # Verify that UncompressImage was not called, since _DownloadImage "failed"
     self.assertTrue(self.called_download_image)

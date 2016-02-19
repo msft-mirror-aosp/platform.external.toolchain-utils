@@ -74,8 +74,6 @@ class Settings(object):
     else:
       xbuddy_path = '%s/%s' % (prefix, path_str)
     image_downloader = ImageDownloader(l, log_level)
-    retval, image_path = image_downloader.Run(
+    image_path = image_downloader.Run(
         misc.CanonicalizePath(chromeos_root), xbuddy_path)
-    if retval != 0:
-      raise Exception('Unable to find/download xbuddy image.')
     return image_path

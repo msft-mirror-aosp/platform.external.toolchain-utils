@@ -174,7 +174,7 @@ class TestSettings(unittest.TestCase):
   @mock.patch.object(download_images, 'ImageDownloader')
   def test_get_xbuddy_path(self, mock_downloader, mock_run, mock_logger):
 
-    mock_run.return_value = [0, 'fake_xbuddy_translation']
+    mock_run.return_value = 'fake_xbuddy_translation'
     mock_downloader.Run = mock_run
     board = 'lumpy'
     chromeos_root = '/tmp/chromeos'
@@ -194,19 +194,14 @@ class TestSettings(unittest.TestCase):
     self.settings.GetXbuddyPath(official_str, board, chromeos_root, log_level)
     self.assertEqual(mock_run.call_count, 1)
     self.assertEqual(mock_run.call_args_list[0][0],
-                     ('/tmp/chromeos',
-                      'remote/lumpy-release/R34-5417.0.0'))
+                     ('/tmp/chromeos', 'remote/lumpy-release/R34-5417.0.0'))
 
     mock_run.reset_mock()
     self.settings.GetXbuddyPath(xbuddy_str, board, chromeos_root, log_level)
     self.assertEqual(mock_run.call_count, 1)
-    self.assertEqual(mock_run.call_args_list[0][0],
-                     ('/tmp/chromeos',
-                      'remote/lumpy/latest-dev'))
+    self.assertEqual(mock_run.call_args_list[0][0], ('/tmp/chromeos',
+                                                     'remote/lumpy/latest-dev'))
 
-    mock_run.return_value = [1, 'fake_xbuddy_translation']
-    self.assertRaises(Exception, self.settings.GetXbuddyPath, xbuddy_str, board,
-                      chromeos_root, log_level)
     if mock_logger:
       return
 
