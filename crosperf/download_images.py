@@ -57,8 +57,11 @@ class ImageDownloader(object):
       if self.log_level != 'verbose':
         self._logger.LogOutput('CMD: %s' % command)
       status = self._ce.ChrootRunCommand(chromeos_root, command)
-      if status != 0 or not os.path.exists(image_path):
-        raise MissingImage('Cannot download image: %s.' % image_name)
+      downloaded_image_name = os.path.join(download_path,
+                                           'chromiumos_test_image.tar.xz')
+      if status != 0 or not os.path.exists(downloaded_image_name):
+        raise MissingImage('Cannot download image: %s.'
+                           % downloaded_image_name)
 
     return image_path
 
