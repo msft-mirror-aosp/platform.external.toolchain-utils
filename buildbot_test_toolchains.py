@@ -15,6 +15,7 @@ from __future__ import print_function
 import datetime
 import optparse
 import os
+import re
 import sys
 import time
 
@@ -39,6 +40,19 @@ MAIL_PROGRAM = '~/var/bin/mail-sheriff'
 WEEKLY_REPORTS_ROOT = os.path.join(CROSTC_ROOT, 'weekly_test_data')
 PENDING_ARCHIVES_DIR = os.path.join(CROSTC_ROOT, 'pending_archives')
 NIGHTLY_TESTS_DIR = os.path.join(CROSTC_ROOT, 'nightly_test_reports')
+
+IMAGE_FS = (r'{board}-{image_type}/{chrome_version}-{tip}\.' +
+            r'{branch}\.{branch_branch}')
+TRYBOT_IMAGE_FS = 'trybot-' + IMAGE_FS + '-{build_id}'
+PFQ_IMAGE_FS = IMAGE_FS + '-rc1'
+IMAGE_RE_GROUPS = {'board': r'(?P<board>\S+)',
+                   'image_type': r'(?P<image_type>\S+)',
+                   'chrome_version': r'(?P<chrome_version>R\d+)',
+                   'tip': r'(?P<tip>\d+)',
+                   'branch': r'(?P<branch>\d+)',
+                   'branch_branch': r'(?P<branch_branch>\d+)',
+                   'build_id': r'(?P<build_id>b\d+)'}
+TRYBOT_IMAGE_RE = TRYBOT_IMAGE_FS.format(**IMAGE_RE_GROUPS)
 
 
 class ToolchainComparator(object):
@@ -71,8 +85,8 @@ class ToolchainComparator(object):
     self._reports_dir = os.path.join(NIGHTLY_TESTS_DIR,
                                      '%s.%s' % (timestamp, board),)
 
-  def _ParseVanillaImage(self, trybot_image):
-    """Parse a trybot artifact name to get corresponding vanilla image.
+  def _GetVanillaImageName(self, trybot_image):
+    """Given a trybot artifact name, get corresponding vanilla image name.
 
     Args:
       trybot_image: artifact name such as
@@ -81,15 +95,20 @@ class ToolchainComparator(object):
     Returns:
       Corresponding official image name, e.g. 'daisy-release/R40-6394.0.0'.
     """
-    start_pos = trybot_image.find(self._build)
-    assert start_pos != -1
-    end_pos = trybot_image.rfind('-b')
-    assert end_pos != -1
-    vanilla_image = trybot_image[start_pos:end_pos]
-    return vanilla_image
+    mo = re.search(TRYBOT_IMAGE_RE, trybot_image)
+    assert mo
+    return IMAGE_FS.replace('\\', '').format(**mo.groupdict())
 
-  def _ParseNonAFDOImage(self, trybot_image):
-    """Parse a trybot artifact name to get corresponding non-AFDO image.
+  def _GetNonAFDOImageName(self, trybot_image):
+    """Given a trybot artifact name, get corresponding non-AFDO image name.
+
+    We get the non-AFDO image from the PFQ builders. This image
+    is not generated for all the boards and, the closest PFQ image
+    was the one build for the previous ChromeOS version (the chrome
+    used in the current version is the one validated in the previous
+    version).
+    The previous ChromeOS does not always exist either. So, we try
+    a couple of versions before.
 
     Args:
       trybot_image: artifact name such as
@@ -97,17 +116,18 @@ class ToolchainComparator(object):
 
     Returns:
       Corresponding chrome PFQ image name, e.g.
-      'daisy-chrome-pfq/R40-6394.0.0-rc1'.
+      'daisy-chrome-pfq/R40-6393.0.0-rc1'.
     """
-    start_pos = trybot_image.find(self._build)
-    assert start_pos != -1
-    end_pos = trybot_image.rfind('-b')
-    assert end_pos != -1
-    nonafdo_image = trybot_image[start_pos:end_pos]
-    pfq_suffix = '-chrome-pfq'
-    nonafdo_image = nonafdo_image.replace('-release', pfq_suffix) + '-rc1'
-    assert nonafdo_image.find(pfq_suffix) != -1
-    return nonafdo_image
+    mo = re.search(TRYBOT_IMAGE_RE, trybot_image)
+    assert mo
+    image_dict = mo.groupdict()
+    image_dict['image_type'] = 'chrome-pfq'
+    for _ in xrange(2):
+      image_dict['tip'] = str(int(image_dict['tip']) - 1)
+      nonafdo_image = PFQ_IMAGE_FS.replace('\\', '').format(**image_dict)
+      if buildbot_utils.DoesImageExist(self._chromeos_root, nonafdo_image):
+        return nonafdo_image
+    return ''
 
   def _FinishSetup(self):
     """Make sure testing_rsa file is properly set up."""
@@ -282,10 +302,8 @@ class ToolchainComparator(object):
       self._l.LogError('Unable to find trybot_image for %s!' % description)
       return 1
 
-    vanilla_image = self._ParseVanillaImage(trybot_image)
-    nonafdo_image = self._ParseNonAFDOImage(trybot_image)
-    if not buildbot_utils.DoesImageExist(self._chromeos_root, nonafdo_image):
-      nonafdo_image = ''
+    vanilla_image = self._GetVanillaImageName(trybot_image)
+    nonafdo_image = self._GetNonAFDOImageName(trybot_image)
 
     # The trybot image is ready here, in some cases, the vanilla image
     # is not ready, so we need to make sure vanilla image is available.
@@ -293,6 +311,7 @@ class ToolchainComparator(object):
     print('trybot_image: %s' % trybot_image)
     print('vanilla_image: %s' % vanilla_image)
     print('nonafdo_image: %s' % nonafdo_image)
+
     if os.getlogin() == ROLE_ACCOUNT:
       self._FinishSetup()
 
