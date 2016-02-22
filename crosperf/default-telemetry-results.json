@@ -9,7 +9,7 @@
     "warm_times__page_load_time"
   ], 
   "smoothness.tough_webgl_cases": [
-    "percentage_smooth__percentage_smooth"
+    "WebGLAnimation-percentage_smooth__WebGLAnimation-percentage_smooth"
   ], 
   "page_cycler.intl_es_fr_pt-BR": [
     "cold_times__page_load_time", 
