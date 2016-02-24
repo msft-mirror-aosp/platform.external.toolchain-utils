@@ -470,6 +470,9 @@ def ApplyGerritPatches(chromeos_root,
 
   ### First of all, we need chromite libs
   sys.path.append(os.path.join(chromeos_root, 'chromite'))
+  # Imports below are ok after modifying path to add chromite.
+  # Pylint cannot detect that and complains.
+  # pylint: disable=import-error
   from lib import git
   from lib import gerrit
   manifest = git.ManifestCheckout(chromeos_root)
@@ -541,7 +544,8 @@ def BooleanPrompt(prompt='Do you want to continue?',
     except KeyboardInterrupt:
       # If the user hits CTRL+C, just exit the process.
       print()
-      Die('CTRL+C detected; exiting')
+      print('CTRL+C detected; exiting')
+      sys.exit()
 
     if not response:
       return default

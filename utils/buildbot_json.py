@@ -40,8 +40,15 @@ import code
 import datetime
 import functools
 import json
+
+# Pylint recommends we use "from chromite.lib import cros_logging as logging".
+# Chromite specific policy message, we want to keep using the standard logging.
+# pylint: disable=cros-logging-import
 import logging
+
+# pylint: disable=deprecated-module
 import optparse
+
 import time
 import urllib
 import urllib2
