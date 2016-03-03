@@ -49,6 +49,7 @@ class Result(object):
     self.machine = machine
     self.perf_data_files = []
     self.perf_report_files = []
+    self.chrome_version = ''
 
   def CopyFilesTo(self, dest_dir, files_to_copy):
     file_index = 0
@@ -269,6 +270,21 @@ class Result(object):
     # Now parse all perf report files and include them in keyvals.
     self.GatherPerfResults()
 
+  def GetChromeVersionFromCache(self, cache_dir):
+    # Read chrome_version from keys file, if present.
+    chrome_version = ''
+    keys_file = os.path.join(cache_dir, CACHE_KEYS_FILE)
+    if os.path.exists(keys_file):
+      with open(keys_file, 'r') as f:
+        lines = f.readlines()
+        for l in lines:
+          if l.find('Google Chrome ') == 0:
+            chrome_version = l
+            if chrome_version[-1] == '\n':
+              chrome_version = chrome_version[:-1]
+            break
+    return chrome_version
+
   def PopulateFromCacheDir(self, cache_dir, show_all, test, suite):
     self.test_name = test
     self.suite = suite
@@ -290,6 +306,7 @@ class Result(object):
     self.results_dir = self.temp_dir
     self.perf_data_files = self.GetPerfDataFiles()
     self.perf_report_files = self.GetPerfReportFiles()
+    self.chrome_version = self.GetChromeVersionFromCache(cache_dir)
     self.ProcessResults(show_all)
 
   def CleanUp(self, rm_chroot_tmp):
@@ -444,6 +461,9 @@ class TelemetryResult(Result):
       self.out = pickle.load(f)
       self.err = pickle.load(f)
       self.retval = pickle.load(f)
+
+    self.chrome_version = \
+        super(TelemetryResult, self).GetChromeVersionFromCache(cache_dir)
     self.ProcessResults()
 
 
