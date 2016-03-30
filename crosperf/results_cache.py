@@ -86,21 +86,35 @@ class Result(object):
         f_dir, f_base = misc.GetRoot(f)
         data_filename = os.path.join(self.chromeos_root, 'chroot/tmp',
                                      self.temp_dir, f_base)
-      if os.path.exists(data_filename):
-        with open(data_filename, 'r') as data_file:
-          lines = data_file.readlines()
-          for line in lines:
-            tmp_dict = json.loads(line)
-            graph_name = tmp_dict['graph']
-            graph_str = (graph_name + '__') if graph_name else ''
-            key = graph_str + tmp_dict['description']
-            keyvals_dict[key] = tmp_dict['value']
-            units_dict[key] = tmp_dict['units']
+      if data_filename.find('.json') > 0:
+        raw_dict = dict()
+        if os.path.exists(data_filename):
+          with open(data_filename, 'r') as data_file:
+            raw_dict = json.load(data_file)
+
+        for k1 in raw_dict:
+          field_dict = raw_dict[k1]
+          for k2 in field_dict:
+            result_dict = field_dict[k2]
+            key = k1 + '__' + k2
+            keyvals_dict[key] = result_dict['value']
+            units_dict[key] = result_dict['units']
+      else:
+        if os.path.exists(data_filename):
+          with open(data_filename, 'r') as data_file:
+            lines = data_file.readlines()
+            for line in lines:
+              tmp_dict = json.loads(line)
+              graph_name = tmp_dict['graph']
+              graph_str = (graph_name + '__') if graph_name else ''
+              key = graph_str + tmp_dict['description']
+              keyvals_dict[key] = tmp_dict['value']
+              units_dict[key] = tmp_dict['units']
 
     return keyvals_dict, units_dict
 
   def AppendTelemetryUnits(self, keyvals_dict, units_dict):
-    """keyvals_dict is the dictionary of key-value pairs that is used for generating Crosperf reports.
+    """keyvals_dict is the dict of key-value used to generate Crosperf reports.
 
     units_dict is a dictionary of the units for the return values in
     keyvals_dict.  We need to associate the units with the return values,
@@ -179,7 +193,10 @@ class Result(object):
     return self.FindFilesInResultsDir('-name perf.data.report').splitlines()
 
   def GetDataMeasurementsFiles(self):
-    return self.FindFilesInResultsDir('-name perf_measurements').splitlines()
+    result = self.FindFilesInResultsDir('-name perf_measurements').splitlines()
+    if not result:
+      result = self.FindFilesInResultsDir('-name results-chart.json').splitlines()
+    return result
 
   def GeneratePerfReportFiles(self):
     perf_report_files = []
