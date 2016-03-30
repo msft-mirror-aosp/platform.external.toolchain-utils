@@ -607,11 +607,12 @@ class JSONResultsReport(ResultsReport):
               default_result_fields = self.defaults.GetDefault()[test]
               value = []
               for f in default_result_fields:
-                v = iter_results[f]
-                if type(v) == list:
-                  v = v[0]
-                item = (f, float(v))
-                value.append(item)
+                if f in iter_results:
+                  v = iter_results[f]
+                  if type(v) == list:
+                    v = v[0]
+                  item = (f, float(v))
+                  value.append(item)
               json_results['overall_result'] = value
             # Get detailed results.
             detail_results = dict()
