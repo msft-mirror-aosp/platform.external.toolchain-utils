@@ -97,7 +97,10 @@ class Result(object):
           for k2 in field_dict:
             result_dict = field_dict[k2]
             key = k1 + '__' + k2
-            keyvals_dict[key] = result_dict['value']
+            if 'value' in result_dict:
+              keyvals_dict[key] = result_dict['value']
+            elif 'values' in result_dict:
+              keyvals_dict[key] = result_dict['values']
             units_dict[key] = result_dict['units']
       else:
         if os.path.exists(data_filename):
