@@ -4,7 +4,8 @@
 # found in the LICENSE file.
 """Module to deal with result cache."""
 
-import getpass
+from __future__ import print_function
+
 import glob
 import hashlib
 import os
@@ -31,7 +32,9 @@ CACHE_KEYS_FILE = 'cache_keys.txt'
 
 
 class Result(object):
-  """ This class manages what exactly is stored inside the cache without knowing
+  """Class for holding the results of a single test run.
+
+  This class manages what exactly is stored inside the cache without knowing
   what the key of the cache is. For runs with perf, it stores perf.data,
   perf.report, etc. The key generation is handled by the ResultsCache class.
   """
@@ -50,6 +53,14 @@ class Result(object):
     self.perf_data_files = []
     self.perf_report_files = []
     self.chrome_version = ''
+    self.err = None
+    self.chroot_results_dir = ''
+    self.test_name = ''
+    self.keyvals = None
+    self.board = None
+    self.suite = None
+    self.retval = None
+    self.out = None
 
   def CopyFilesTo(self, dest_dir, files_to_copy):
     file_index = 0
@@ -83,7 +94,7 @@ class Result(object):
       else:
         # Otherwise get the base filename and create the correct
         # path for it.
-        f_dir, f_base = misc.GetRoot(f)
+        _, f_base = misc.GetRoot(f)
         data_filename = os.path.join(self.chromeos_root, 'chroot/tmp',
                                      self.temp_dir, f_base)
       if data_filename.find('.json') > 0:
@@ -126,7 +137,6 @@ class Result(object):
     unit in the units_dict, and replaces the old value with a list of the
     old value and the units.  This later gets properly parsed in the
     ResultOrganizer class, for generating the reports.
-
     """
 
     results_dict = {}
@@ -140,7 +150,7 @@ class Result(object):
       results_dict[k] = new_val
     return results_dict
 
-  def GetKeyvals(self, show_all):
+  def GetKeyvals(self):
     results_in_chroot = os.path.join(self.chromeos_root, 'chroot', 'tmp')
     if not self.temp_dir:
       self.temp_dir = tempfile.mkdtemp(dir=results_in_chroot)
@@ -150,8 +160,8 @@ class Result(object):
     command = ('python generate_test_report --no-color --csv %s' %
                (os.path.join('/tmp', os.path.basename(self.temp_dir))))
     _, out, _ = self.ce.ChrootRunCommandWOutput(self.chromeos_root,
-                                                 command,
-                                                 print_to_console=False)
+                                                command,
+                                                print_to_console=False)
     keyvals_dict = {}
     tmp_dir_in_chroot = misc.GetInsideChrootPath(self.chromeos_root,
                                                  self.temp_dir)
@@ -198,7 +208,8 @@ class Result(object):
   def GetDataMeasurementsFiles(self):
     result = self.FindFilesInResultsDir('-name perf_measurements').splitlines()
     if not result:
-      result = self.FindFilesInResultsDir('-name results-chart.json').splitlines()
+      result = \
+          self.FindFilesInResultsDir('-name results-chart.json').splitlines()
     return result
 
   def GeneratePerfReportFiles(self):
@@ -262,7 +273,7 @@ class Result(object):
           value = str(misc.UnitToNumber(num_events))
           self.keyvals[key] = value
 
-  def PopulateFromRun(self, out, err, retval, show_all, test, suite):
+  def PopulateFromRun(self, out, err, retval, test, suite):
     self.board = self.label.board
     self.out = out
     self.err = err
@@ -278,13 +289,13 @@ class Result(object):
     # TODO(asharif): Do something similar with perf stat.
 
     # Grab keyvals from the directory.
-    self.ProcessResults(show_all)
+    self.ProcessResults()
 
-  def ProcessResults(self, show_all):
+  def ProcessResults(self):
     # Note that this function doesn't know anything about whether there is a
     # cache hit or miss. It should process results agnostic of the cache hit
     # state.
-    self.keyvals = self.GetKeyvals(show_all)
+    self.keyvals = self.GetKeyvals()
     self.keyvals['retval'] = self.retval
     # Generate report from all perf.data files.
     # Now parse all perf report files and include them in keyvals.
@@ -305,7 +316,7 @@ class Result(object):
             break
     return chrome_version
 
-  def PopulateFromCacheDir(self, cache_dir, show_all, test, suite):
+  def PopulateFromCacheDir(self, cache_dir, test, suite):
     self.test_name = test
     self.suite = suite
     # Read in everything from the cache directory.
@@ -327,7 +338,7 @@ class Result(object):
     self.perf_data_files = self.GetPerfDataFiles()
     self.perf_report_files = self.GetPerfReportFiles()
     self.chrome_version = self.GetChromeVersionFromCache(cache_dir)
-    self.ProcessResults(show_all)
+    self.ProcessResults()
 
   def CleanUp(self, rm_chroot_tmp):
     if rm_chroot_tmp and self.results_dir:
@@ -398,14 +409,13 @@ class Result(object):
                     out,
                     err,
                     retval,
-                    show_all,
                     test,
                     suite='telemetry_Crosperf'):
     if suite == 'telemetry':
       result = TelemetryResult(logger, label, log_level, machine)
     else:
       result = cls(logger, label, log_level, machine)
-    result.PopulateFromRun(out, err, retval, show_all, test, suite)
+    result.PopulateFromRun(out, err, retval, test, suite)
     return result
 
   @classmethod
@@ -415,7 +425,6 @@ class Result(object):
                          label,
                          machine,
                          cache_dir,
-                         show_all,
                          test,
                          suite='telemetry_Crosperf'):
     if suite == 'telemetry':
@@ -423,7 +432,7 @@ class Result(object):
     else:
       result = cls(logger, label, log_level, machine)
     try:
-      result.PopulateFromCacheDir(cache_dir, show_all, test, suite)
+      result.PopulateFromCacheDir(cache_dir, test, suite)
 
     except Exception as e:
       logger.LogError('Exception while using cache: %s' % e)
@@ -432,12 +441,13 @@ class Result(object):
 
 
 class TelemetryResult(Result):
+  """Class to hold the results of a single Telemetry run."""
 
   def __init__(self, logger, label, log_level, machine, cmd_exec=None):
     super(TelemetryResult, self).__init__(logger, label, log_level, machine,
                                           cmd_exec)
 
-  def PopulateFromRun(self, out, err, retval, show_all, test, suite):
+  def PopulateFromRun(self, out, err, retval, test, suite):
     self.out = out
     self.err = err
     self.retval = retval
@@ -476,7 +486,9 @@ class TelemetryResult(Result):
         self.keyvals[key] = value
     self.keyvals['retval'] = self.retval
 
-  def PopulateFromCacheDir(self, cache_dir):
+  def PopulateFromCacheDir(self, cache_dir, test, suite):
+    self.test_name = test
+    self.suite = suite
     with open(os.path.join(cache_dir, RESULTS_FILE), 'r') as f:
       self.out = pickle.load(f)
       self.err = pickle.load(f)
@@ -488,6 +500,8 @@ class TelemetryResult(Result):
 
 
 class CacheConditions(object):
+  """Various Cache condition values, for export."""
+
   # Cache hit only if the result file exists.
   CACHE_FILE_EXISTS = 0
 
@@ -513,11 +527,35 @@ class CacheConditions(object):
 
 
 class ResultsCache(object):
-  """ This class manages the key of the cached runs without worrying about what
+  """Class to handle the cache for storing/retrieving test run results.
+
+  This class manages the key of the cached runs without worrying about what
   is exactly stored (value). The value generation is handled by the Results
   class.
   """
   CACHE_VERSION = 6
+
+  def __init__(self):
+    # Proper initialization happens in the Init function below.
+    self.chromeos_image = None
+    self.chromeos_root = None
+    self.test_name = None
+    self.iteration = None
+    self.test_args = None
+    self.profiler_args = None
+    self.board = None
+    self.cache_conditions = None
+    self.machine_manager = None
+    self.machine = None
+    self._logger = None
+    self.ce = None
+    self.label = None
+    self.share_cache = None
+    self.suite = None
+    self.log_level = None
+    self.show_all = None
+    self.run_local = None
+
 
   def Init(self, chromeos_image, chromeos_root, test_name, iteration, test_args,
            profiler_args, machine_manager, machine, board, cache_conditions,
@@ -535,7 +573,7 @@ class ResultsCache(object):
     self.machine = machine
     self._logger = logger_to_use
     self.ce = command_executer.GetCommandExecuter(self._logger,
-                                                   log_level=log_level)
+                                                  log_level=log_level)
     self.label = label
     self.share_cache = share_cache
     self.suite = suite
@@ -639,7 +677,7 @@ class ResultsCache(object):
     if self.log_level == 'verbose':
       self._logger.LogOutput('Trying to read from cache dir: %s' % cache_dir)
     result = Result.CreateFromCacheHit(self._logger, self.log_level, self.label,
-                                       self.machine, cache_dir, self.show_all,
+                                       self.machine, cache_dir,
                                        self.test_name, self.suite)
     if not result:
       return None
@@ -656,6 +694,7 @@ class ResultsCache(object):
 
 
 class MockResultsCache(ResultsCache):
+  """Class for mock testing, corresponding to ResultsCache class."""
 
   def Init(self, *args):
     pass
@@ -668,8 +707,9 @@ class MockResultsCache(ResultsCache):
 
 
 class MockResult(Result):
+  """Class for mock testing, corresponding to Result class."""
 
-  def PopulateFromRun(self, out, err, retval, show_all, test, suite):
+  def PopulateFromRun(self, out, err, retval, test, suite):
     self.out = out
     self.err = err
     self.retval = retval

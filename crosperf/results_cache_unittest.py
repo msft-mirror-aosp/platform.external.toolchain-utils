@@ -165,8 +165,9 @@ class MockResult(Result):
   def FindFilesInResultsDir(self, find_args):
     return ''
 
-  def GetKeyvals(self, show_all_results):
-    if show_all_results:
+  # pylint: disable=arguments-differ
+  def GetKeyvals(self, temp=False):
+    if temp:
       pass
     return keyvals
 
@@ -417,7 +418,7 @@ class ResultTest(unittest.TestCase):
     self.result.results_dir = '/tmp/test_that_resultsNmq'
 
     # Test 1. no self.temp_dir.
-    res = self.result.GetKeyvals(True)
+    res = self.result.GetKeyvals()
     self.assertTrue(self.callGetNewKeyvals)
     self.assertEqual(self.kv_dict, {'': 'PASS', 'telemetry_Crosperf': 'PASS'})
     self.assertEqual(mock_runcmd.call_count, 1)
@@ -437,7 +438,7 @@ class ResultTest(unittest.TestCase):
                                        'telemetry_Crosperf,PASS\n'), '']
     mock_getpath.return_value = '/tmp/tmpJCajRG'
     self.result.temp_dir = '/tmp/tmpJCajRG'
-    res = self.result.GetKeyvals(True)
+    res = self.result.GetKeyvals()
     self.assertEqual(mock_runcmd.call_count, 0)
     self.assertEqual(mock_mkdtemp.call_count, 0)
     self.assertEqual(mock_chrootruncmd.call_count, 1)
@@ -452,7 +453,7 @@ class ResultTest(unittest.TestCase):
     # test results (which we do for Telemetry autotest runs).
     reset()
     self.result.suite = ''
-    res = self.result.GetKeyvals(True)
+    res = self.result.GetKeyvals()
     self.assertEqual(res, {'Total': 10, 'first_time': 680})
 
   def test_get_results_dir(self):
@@ -551,7 +552,7 @@ class ResultTest(unittest.TestCase):
       self.callGetPerfReportFiles = True
       return []
 
-    def FakeProcessResults(show_results):
+    def FakeProcessResults(show_results=False):
       if show_results:
         pass
       self.callProcessResults = True
@@ -571,7 +572,7 @@ class ResultTest(unittest.TestCase):
     self.result.GeneratePerfReportFiles = FakeGetPerfReportFiles
     self.result.ProcessResults = FakeProcessResults
 
-    self.result.PopulateFromRun(OUTPUT, '', 0, True, 'test',
+    self.result.PopulateFromRun(OUTPUT, '', 0, 'test',
                                 'telemetry_Crosperf')
     self.assertTrue(self.callGetResultsDir)
     self.assertTrue(self.callGetPerfDataFiles)
@@ -580,7 +581,7 @@ class ResultTest(unittest.TestCase):
 
   def test_process_results(self):
 
-    def FakeGetKeyvals(show_all):
+    def FakeGetKeyvals(show_all=False):
       if show_all:
         return {'first_time': 680, 'Total': 10}
       else:
@@ -595,15 +596,14 @@ class ResultTest(unittest.TestCase):
     self.result.GatherPerfResults = FakeGatherPerfResults
 
     self.result.retval = 0
-    self.result.ProcessResults(True)
+    self.result.ProcessResults()
     self.assertTrue(self.callGatherPerfResults)
-    self.assertEqual(len(self.result.keyvals), 3)
-    self.assertEqual(self.result.keyvals, {'first_time': 680,
-                                           'Total': 10,
+    self.assertEqual(len(self.result.keyvals), 2)
+    self.assertEqual(self.result.keyvals, {'Total': 10,
                                            'retval': 0})
 
     self.result.retval = 1
-    self.result.ProcessResults(False)
+    self.result.ProcessResults()
     self.assertEqual(len(self.result.keyvals), 2)
     self.assertEqual(self.result.keyvals, {'Total': 10, 'retval': 1})
 
@@ -612,7 +612,8 @@ class ResultTest(unittest.TestCase):
                      'ChrootRunCommandWOutput')
   def test_populate_from_cache_dir(self, mock_runchrootcmd, mock_getpath):
 
-    def FakeMkdtemp(dir):
+    # pylint: disable=redefined-builtin
+    def FakeMkdtemp(dir=None):
       if dir:
         pass
       return self.tmpdir
@@ -629,7 +630,7 @@ class ResultTest(unittest.TestCase):
     save_real_mkdtemp = tempfile.mkdtemp
     tempfile.mkdtemp = FakeMkdtemp
 
-    self.result.PopulateFromCacheDir(cache_dir, True, 'sunspider',
+    self.result.PopulateFromCacheDir(cache_dir, 'sunspider',
                                      'telemetry_Crosperf')
     self.assertEqual(
         self.result.keyvals,
@@ -895,7 +896,7 @@ class TelemetryResultTest(unittest.TestCase):
     self.result = TelemetryResult(self.mock_logger, self.mock_label, 'average',
                                   self.mock_cmd_exec)
     self.result.ProcessResults = FakeProcessResults
-    self.result.PopulateFromRun(OUTPUT, error, 3, False, 'fake_test',
+    self.result.PopulateFromRun(OUTPUT, error, 3, 'fake_test',
                                 'telemetry_Crosperf')
     self.assertTrue(self.callFakeProcessResults)
     self.assertEqual(self.result.out, OUTPUT)
@@ -909,7 +910,7 @@ class TelemetryResultTest(unittest.TestCase):
     current_path = os.getcwd()
     cache_dir = os.path.join(current_path,
                              'test_cache/test_puretelemetry_input')
-    self.result.PopulateFromCacheDir(cache_dir)
+    self.result.PopulateFromCacheDir(cache_dir, '', '')
     self.assertEqual(self.result.out.strip(), PURE_TELEMETRY_OUTPUT.strip())
     self.assertEqual(self.result.err, '')
     self.assertEqual(self.result.retval, 0)

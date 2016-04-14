@@ -1,20 +1,17 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2014 Google Inc. All Rights Reserved.
 """Unittest for crosperf."""
-import os
 
-import mock
+from __future__ import print_function
+
 import unittest
 
 import settings_factory
-import settings
-
-from cros_utils import command_executer
-from cros_utils import logger
 
 
 class BenchmarkSettingsTest(unittest.TestCase):
+  """Class to test benchmark settings."""
 
   def test_init(self):
     res = settings_factory.BenchmarkSettings('b_settings')
@@ -27,6 +24,7 @@ class BenchmarkSettingsTest(unittest.TestCase):
 
 
 class LabelSettingsTest(unittest.TestCase):
+  """Class to test label settings."""
 
   def test_init(self):
     res = settings_factory.LabelSettings('l_settings')
@@ -42,6 +40,7 @@ class LabelSettingsTest(unittest.TestCase):
 
 
 class GlobalSettingsTest(unittest.TestCase):
+  """Class to test global settings."""
 
   def test_init(self):
     res = settings_factory.GlobalSettings('g_settings')
@@ -71,6 +70,7 @@ class GlobalSettingsTest(unittest.TestCase):
 
 
 class SettingsFactoryTest(unittest.TestCase):
+  """Class to test SettingsFactory."""
 
   def test_get_settings(self):
     self.assertRaises(Exception, settings_factory.SettingsFactory.GetSettings,

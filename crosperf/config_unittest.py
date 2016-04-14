@@ -1,6 +1,9 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2014 Google Inc. All Rights Reserved.
+"""Unit tests for config.py"""
+
+from __future__ import print_function
 
 import config
 
@@ -8,6 +11,7 @@ import unittest
 
 
 class ConfigTestCase(unittest.TestCase):
+  """Class for the config unit tests."""
 
   def test_config(self):
     # Verify that config exists, that it's a dictionary, and that it's

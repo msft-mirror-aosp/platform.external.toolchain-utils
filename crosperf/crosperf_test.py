@@ -1,12 +1,15 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # Copyright 2011 Google Inc. All Rights Reserved.
+"""Test for crosperf."""
+
+from __future__ import print_function
 
 import os
 import tempfile
 import unittest
 import crosperf
-from utils.file_utils import FileUtils
+from cros_utils.file_utils import FileUtils
 
 EXPERIMENT_FILE_1 = """
   board: x86-alex
@@ -27,6 +30,7 @@ EXPERIMENT_FILE_1 = """
 
 
 class CrosPerfTest(unittest.TestCase):
+  """Class to test Crosperf."""
 
   def testDryRun(self):
     filehandle, filename = tempfile.mkstemp()

@@ -1,21 +1,18 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # Copyright 2015 Google Inc. All Rights Reserved.
+"""This contains the unit tests for the new Crosperf task scheduler."""
+
+from __future__ import print_function
 
 import mock
 import unittest
 import StringIO
 
 import benchmark_run
-import machine_manager
-import schedv2
 import test_flag
-from benchmark_run import MockBenchmarkRun
 from experiment_factory import ExperimentFactory
 from experiment_file import ExperimentFile
-from experiment_runner import ExperimentRunner
-from machine_manager import MockCrosMachine
-from cros_utils import command_executer
 from cros_utils.command_executer import CommandExecuter
 from experiment_runner_unittest import FakeLogger
 from schedv2 import Schedv2
@@ -62,6 +59,10 @@ image2 {{
 
 
 class Schedv2Test(unittest.TestCase):
+  """Class for setting up and running the unit tests."""
+
+  def setUp(self):
+    self.exp = None
 
   mock_logger = FakeLogger()
   mock_cmd_exec = mock.Mock(spec=CommandExecuter)
@@ -83,7 +84,8 @@ class Schedv2Test(unittest.TestCase):
 
     self.exp = self._make_fake_experiment(EXPERIMENT_FILE_1)
     self.exp.log_level = 'verbose'
-    schedv2 = Schedv2(self.exp)
+    my_schedv2 = Schedv2(self.exp)
+    self.assertFalse(my_schedv2.is_complete())
     self.assertIn('chromeos-daisy1.cros', self.exp.remote)
     self.assertIn('chromeos-daisy2.cros', self.exp.remote)
     self.assertIn('chromeos-daisy3.cros', self.exp.remote)
@@ -91,15 +93,14 @@ class Schedv2Test(unittest.TestCase):
     self.assertIn('chromeos-daisy5.cros', self.exp.remote)
 
   def test_unreachable_remote(self):
-    """Test unreachable remotes are removed from experiment remote and
-        label.remote."""
+    """Test unreachable remotes are removed from experiment and label."""
 
     def MockIsReachable(cm):
       return (cm.name != 'chromeos-daisy3.cros' and
               cm.name != 'chromeos-daisy5.cros')
 
     with mock.patch('machine_manager.MockCrosMachine.IsReachable',
-                    new=MockIsReachable) as f:
+                    new=MockIsReachable):
       self.exp = self._make_fake_experiment(EXPERIMENT_FILE_1)
       self.assertIn('chromeos-daisy1.cros', self.exp.remote)
       self.assertIn('chromeos-daisy2.cros', self.exp.remote)
@@ -120,7 +121,8 @@ class Schedv2Test(unittest.TestCase):
 
     self.exp = self._make_fake_experiment(EXPERIMENT_FILE_WITH_FORMAT.format(
         kraken_iterations=9))
-    schedv2 = Schedv2(self.exp)
+    my_schedv2 = Schedv2(self.exp)
+    self.assertFalse(my_schedv2.is_complete())
     # We have 9 * 2 == 18 brs, we use 5 threads, each reading 4, 4, 4,
     # 4, 2 brs respectively.
     # Assert that BenchmarkRunCacheReader() is called 5 times.
@@ -141,7 +143,8 @@ class Schedv2Test(unittest.TestCase):
 
     self.exp = self._make_fake_experiment(EXPERIMENT_FILE_WITH_FORMAT.format(
         kraken_iterations=8))
-    schedv2 = Schedv2(self.exp)
+    my_schedv2 = Schedv2(self.exp)
+    self.assertFalse(my_schedv2.is_complete())
     # We have 8 * 2 == 16 brs, we use 4 threads, each reading 4 brs.
     self.assertEquals(reader.call_count, 4)
     self.assertEquals(len(reader.call_args_list[0][0][1]), 4)
@@ -155,7 +158,8 @@ class Schedv2Test(unittest.TestCase):
 
     self.exp = self._make_fake_experiment(EXPERIMENT_FILE_WITH_FORMAT.format(
         kraken_iterations=3))
-    schedv2 = Schedv2(self.exp)
+    my_schedv2 = Schedv2(self.exp)
+    self.assertFalse(my_schedv2.is_complete())
     # We have 3 * 2 == 6 brs, we use 2 threads.
     self.assertEquals(reader.call_count, 2)
     self.assertEquals(len(reader.call_args_list[0][0][1]), 3)
@@ -167,7 +171,8 @@ class Schedv2Test(unittest.TestCase):
 
     self.exp = self._make_fake_experiment(EXPERIMENT_FILE_WITH_FORMAT.format(
         kraken_iterations=1))
-    schedv2 = Schedv2(self.exp)
+    my_schedv2 = Schedv2(self.exp)
+    self.assertFalse(my_schedv2.is_complete())
     # We have 1 * 2 == 2 br, so only 1 instance.
     self.assertEquals(reader.call_count, 1)
     self.assertEquals(len(reader.call_args_list[0][0][1]), 2)
@@ -179,15 +184,16 @@ class Schedv2Test(unittest.TestCase):
       br.cache_hit = (br.label.name == 'image2')
 
     with mock.patch('benchmark_run.MockBenchmarkRun.ReadCache',
-                    new=MockReadCache) as f:
+                    new=MockReadCache):
       # We have 2 * 30 brs, half of which are put into _cached_br_list.
       self.exp = self._make_fake_experiment(EXPERIMENT_FILE_WITH_FORMAT.format(
           kraken_iterations=30))
-      schedv2 = Schedv2(self.exp)
-      self.assertEquals(len(schedv2._cached_br_list), 30)
+      my_schedv2 = Schedv2(self.exp)
+      self.assertEquals(len(my_schedv2.get_cached_run_list()), 30)
       # The non-cache-hit brs are put into Schedv2._label_brl_map.
       self.assertEquals(
-          reduce(lambda a, x: a + len(x[1]), schedv2._label_brl_map.iteritems(),
+          reduce(lambda a, x: a + len(x[1]),
+                 my_schedv2.get_label_map().iteritems(),
                  0), 30)
 
   def test_nocachehit(self):
@@ -197,15 +203,16 @@ class Schedv2Test(unittest.TestCase):
       br.cache_hit = False
 
     with mock.patch('benchmark_run.MockBenchmarkRun.ReadCache',
-                    new=MockReadCache) as f:
+                    new=MockReadCache):
       # We have 2 * 30 brs, none of which are put into _cached_br_list.
       self.exp = self._make_fake_experiment(EXPERIMENT_FILE_WITH_FORMAT.format(
           kraken_iterations=30))
-      schedv2 = Schedv2(self.exp)
-      self.assertEquals(len(schedv2._cached_br_list), 0)
+      my_schedv2 = Schedv2(self.exp)
+      self.assertEquals(len(my_schedv2.get_cached_run_list()), 0)
       # The non-cache-hit brs are put into Schedv2._label_brl_map.
       self.assertEquals(
-          reduce(lambda a, x: a + len(x[1]), schedv2._label_brl_map.iteritems(),
+          reduce(lambda a, x: a + len(x[1]),
+                 my_schedv2.get_label_map().iteritems(),
                  0), 60)
 
 

@@ -14,8 +14,6 @@ import crosperf
 import settings_factory
 import experiment_file
 
-from help import Help
-
 EXPERIMENT_FILE_1 = """
   board: x86-alex
   remote: chromeos-alex3
@@ -48,7 +46,8 @@ class CrosperfTest(unittest.TestCase):
                         '--log_dir',
                         dest='log_dir',
                         default='',
-                        help='The log_dir, default is under <crosperf_logs>/logs')
+                        help='The log_dir, default is under '
+                             '<crosperf_logs>/logs')
     crosperf.SetupParserOptions(parser)
     argv = ['crosperf/crosperf.py', 'temp.exp', '--rerun=True']
     options, _ = parser.parse_known_args(argv)

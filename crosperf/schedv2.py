@@ -1,7 +1,10 @@
 
 # Copyright 2015 Google Inc. All Rights Reserved.
+"""Module to optimize the scheduling of benchmark_run tasks."""
 
-import math
+
+from __future__ import print_function
+
 import sys
 import test_flag
 import traceback
@@ -24,7 +27,7 @@ class DutWorker(Thread):
     self._stat_num_br_run = 0
     self._stat_num_reimage = 0
     self._stat_annotation = ''
-    self._logger = logger.GetLogger(self._sched._experiment.log_dir)
+    self._logger = logger.GetLogger(self._sched.get_experiment().log_dir)
     self.daemon = True
     self._terminated = False
     self._active_br = None
@@ -52,7 +55,7 @@ class DutWorker(Thread):
       try:
         self._stat_annotation = 'finishing cached {}'.format(br)
         br.run()
-      except:
+      except RuntimeError:
         traceback.print_exc(file=sys.stdout)
       br = self._sched.get_cached_benchmark_run()
 
@@ -106,11 +109,13 @@ class DutWorker(Thread):
     try:
       # Note, only 1 reimage at any given time, this is guaranteed in
       # ImageMachine, so no sync needed below.
-      retval = self._sched._experiment.machine_manager.ImageMachine(self._dut,
-                                                                    label)
+      retval = self._sched.get_experiment().machine_manager.ImageMachine(
+          self._dut,
+          label)
+
       if retval:
         return 1
-    except:
+    except RuntimeError:
       return 1
 
     self._dut.label = label
@@ -137,7 +142,7 @@ class DutWorker(Thread):
         self._active_br = br
       br.run()
     finally:
-      self._sched._experiment.BenchmarkRunFinished(br)
+      self._sched.get_experiment().BenchmarkRunFinished(br)
       with self._active_br_lock:
         self._active_br = None
 
@@ -153,18 +158,18 @@ class DutWorker(Thread):
       rv, checksum, _ = command_executer.GetCommandExecuter().\
           CrosRunCommandWOutput(
               'cat ' + checksum_file,
-              chromeos_root=self._sched._labels[0].chromeos_root,
+              chromeos_root=self._sched.get_labels(0).chromeos_root,
               machine=self._dut.name,
               print_to_console=False)
       if rv == 0:
         checksum = checksum.strip()
-        for l in self._sched._labels:
+        for l in self._sched.get_labels():
           if l.checksum == checksum:
             self._logger.LogOutput("Dut '{}' is pre-installed with '{}'".format(
                 self._dut.name, l))
             self._dut.label = l
             return
-    except:
+    except RuntimeError:
       traceback.print_exc(file=sys.stdout)
       self._dut.label = None
 
@@ -196,7 +201,7 @@ class BenchmarkRunCacheReader(Thread):
     super(BenchmarkRunCacheReader, self).__init__()
     self._schedv2 = schedv2
     self._br_list = br_list
-    self._logger = self._schedv2._logger
+    self._logger = self._schedv2.get_logger()
 
   def run(self):
     for br in self._br_list:
@@ -204,11 +209,11 @@ class BenchmarkRunCacheReader(Thread):
         br.ReadCache()
         if br.cache_hit:
           self._logger.LogOutput('Cache hit - {}'.format(br))
-          with self._schedv2._lock_on('_cached_br_list'):
-            self._schedv2._cached_br_list.append(br)
+          with self._schedv2.lock_on('_cached_br_list'):
+            self._schedv2.get_cached_run_list().append(br)
         else:
           self._logger.LogOutput('Cache not hit - {}'.format(br))
-      except:
+      except RuntimeError:
         traceback.print_exc(file=sys.stderr)
 
 
@@ -221,11 +226,12 @@ class Schedv2(object):
 
     # Create shortcuts to nested data structure. "_duts" points to a list of
     # locked machines. _labels points to a list of all labels.
-    self._duts = self._experiment.machine_manager._all_machines
+    self._duts = self._experiment.machine_manager.GetMachines()
     self._labels = self._experiment.labels
 
     # Bookkeeping for synchronization.
     self._workers_lock = Lock()
+    # pylint: disable=unnecessary-lambda
     self._lock_map = defaultdict(lambda: Lock())
 
     # Test mode flag
@@ -256,14 +262,15 @@ class Schedv2(object):
   def run_sched(self):
     """Start all dut worker threads and return immediately."""
 
-    [w.start() for w in self._active_workers]
+    _ = [w.start() for w in self._active_workers]
 
   def _read_br_cache(self):
     """Use multi-threading to read cache for all benchmarkruns.
 
         We do this by firstly creating a few threads, and then assign each
         thread a segment of all brs. Each thread will check cache status for
-        each br and put those with cache into '_cached_br_list'."""
+        each br and put those with cache into '_cached_br_list'.
+        """
 
     self._cached_br_list = []
     n_benchmarkruns = len(self._experiment.benchmark_runs)
@@ -290,7 +297,7 @@ class Schedv2(object):
         (n_threads - 1) * benchmarkruns_per_thread:])
 
     # Assert: aggregation of benchmarkrun_segments equals to benchmark_runs.
-    assert (sum([len(x) for x in benchmarkrun_segments]) == n_benchmarkruns)
+    assert sum([len(x) for x in benchmarkrun_segments]) == n_benchmarkruns
 
     # Create and start all readers.
     cache_readers = [
@@ -309,14 +316,31 @@ class Schedv2(object):
         'Total {} cache hit out of {} benchmark_runs.'.format(
             len(self._cached_br_list), n_benchmarkruns))
 
+  def get_cached_run_list(self):
+    return self._cached_br_list
+
+  def get_label_map(self):
+    return self._label_brl_map
+
+  def get_experiment(self):
+    return self._experiment
+
+  def get_labels(self, i=None):
+    if i == None:
+      return self._labels
+    return self._labels[i]
+
+  def get_logger(self):
+    return self._logger
+
   def get_cached_benchmark_run(self):
     """Get a benchmark_run with 'cache hit'.
 
-        return:
+        Returns:
           The benchmark that has cache hit, if any. Otherwise none.
         """
 
-    with self._lock_on('_cached_br_list'):
+    with self.lock_on('_cached_br_list'):
       if self._cached_br_list:
         return self._cached_br_list.pop()
       return None
@@ -324,7 +348,7 @@ class Schedv2(object):
   def get_benchmark_run(self, dut):
     """Get a benchmark_run (br) object for a certain dut.
 
-        Arguments:
+        Args:
           dut: the dut for which a br is returned.
 
         Returns:
@@ -343,7 +367,7 @@ class Schedv2(object):
 
     # If br list for the dut's label is empty (that means all brs for this
     # label have been done), return None.
-    with self._lock_on(dut.label):
+    with self.lock_on(dut.label):
       brl = self._label_brl_map[dut.label]
       if not brl:
         return None
@@ -358,7 +382,7 @@ class Schedv2(object):
         The dut_worker calling this method is responsible for reimage the dut to
         this label.
 
-        Arguments:
+        Args:
           dut: the new label that is to be reimaged onto the dut.
 
         Returns:
@@ -373,8 +397,9 @@ class Schedv2(object):
   def dut_worker_finished(self, dut_worker):
     """Notify schedv2 that the dut_worker thread finished.
 
-        Arguemnts:
-          dut_worker: the thread that is about to end."""
+       Args:
+         dut_worker: the thread that is about to end.
+       """
 
     self._logger.LogOutput('{} finished.'.format(dut_worker))
     with self._workers_lock:
@@ -384,8 +409,8 @@ class Schedv2(object):
   def is_complete(self):
     return len(self._active_workers) == 0
 
-  def _lock_on(self, object):
-    return self._lock_map[object]
+  def lock_on(self, my_object):
+    return self._lock_map[my_object]
 
   def terminate(self):
     """Mark flag so we stop providing br/reimages.

@@ -1,12 +1,14 @@
 # Copyright 2012 Google Inc. All Rights Reserved.
 """Parse perf report data for tabulator."""
 
+from __future__ import print_function
+
 import os
 
-from utils import perf_diff
+from cros_utils import perf_diff
 
 
-def ParsePerfReport(perf_file):
+def ParsePerfReport():
   """It should return a dict."""
 
   return {'cycles': {'foo': 10,

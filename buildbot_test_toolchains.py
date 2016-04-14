@@ -12,8 +12,8 @@ well as copying the images into the seven-day reports directory.
 
 from __future__ import print_function
 
+import argparse
 import datetime
-import optparse
 import os
 import re
 import sys
@@ -329,33 +329,33 @@ def Main(argv):
 
   # Common initializations
   command_executer.InitCommandExecuter()
-  parser = optparse.OptionParser()
-  parser.add_option('--remote',
-                    dest='remote',
-                    help='Remote machines to run tests on.')
-  parser.add_option('--board',
-                    dest='board',
-                    default='x86-zgb',
-                    help='The target board.')
-  parser.add_option('--chromeos_root',
-                    dest='chromeos_root',
-                    help='The chromeos root from which to run tests.')
-  parser.add_option('--weekday',
-                    default='',
-                    dest='weekday',
-                    help='The day of the week for which to run tests.')
-  parser.add_option('--patch',
-                    dest='patches',
-                    help='The patches to use for the testing, '
-                    "seprate the patch numbers with ',' "
-                    'for more than one patches.')
-  parser.add_option('--noschedv2',
-                    dest='noschedv2',
-                    action='store_true',
-                    default=False,
-                    help='Pass --noschedv2 to crosperf.')
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--remote',
+                      dest='remote',
+                      help='Remote machines to run tests on.')
+  parser.add_argument('--board',
+                      dest='board',
+                      default='x86-zgb',
+                      help='The target board.')
+  parser.add_argument('--chromeos_root',
+                      dest='chromeos_root',
+                      help='The chromeos root from which to run tests.')
+  parser.add_argument('--weekday',
+                      default='',
+                      dest='weekday',
+                      help='The day of the week for which to run tests.')
+  parser.add_argument('--patch',
+                      dest='patches',
+                      help='The patches to use for the testing, '
+                      "seprate the patch numbers with ',' "
+                      'for more than one patches.')
+  parser.add_argument('--noschedv2',
+                      dest='noschedv2',
+                      action='store_true',
+                      default=False,
+                      help='Pass --noschedv2 to crosperf.')
 
-  options, _ = parser.parse_args(argv)
+  options = parser.parse_args(argv[1:])
   if not options.board:
     print('Please give a board.')
     return 1

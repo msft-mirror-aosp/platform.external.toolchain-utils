@@ -1,6 +1,9 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2014 Google Inc.  All Rights Reserved
+"""Unit tests for the Crosperf Benchmark class."""
+
+from __future__ import print_function
 
 import inspect
 from benchmark import Benchmark
@@ -9,6 +12,7 @@ import unittest
 
 
 class BenchmarkTestCase(unittest.TestCase):
+  """Individual tests for the Benchmark class."""
 
   def test_benchmark(self):
     # Test creating a benchmark with all the fields filled out.
@@ -20,6 +24,7 @@ class BenchmarkTestCase(unittest.TestCase):
                    'record -e cycles',  # perf_args
                    'telemetry_Crosperf',  # suite
                    True)  # show_all_results
+    self.assertTrue(b1.suite, 'telemetry_Crosperf')
 
     # Test creating a benchmark field with default fields left out.
     b2 = Benchmark('b2_test',  # name
