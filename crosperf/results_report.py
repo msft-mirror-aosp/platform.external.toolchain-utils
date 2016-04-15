@@ -623,7 +623,10 @@ class JSONResultsReport(ResultsReport):
                   v = v[0]
                 if v != 'PASS':
                   if k.find('machine') == -1:
-                    detail_results[k] = float(v)
+                    if type(v) != list:
+                      detail_results[k] = float(v)
+                    else:
+                      detail_results[k] = [float(d) for d in v]
                   else:
                     json_results[k] = v
             if 'machine_checksum' not in json_results.keys():
