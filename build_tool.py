@@ -34,10 +34,11 @@ import os
 import re
 import sys
 
-import repo_to_repo
+
 from cros_utils import command_executer
 from cros_utils import logger
 from cros_utils import misc
+import repo_to_repo
 
 REPO_PATH_PATTERN = 'src/third_party/{0}'
 TEMP_BRANCH_NAME = 'internal_testing_branch_no_use'
@@ -50,6 +51,7 @@ class Bootstrapper(object):
 
   def __init__(self,
                chromeos_root,
+               ndk_dir,
                gcc_branch=None,
                gcc_dir=None,
                binutils_branch=None,
@@ -58,6 +60,7 @@ class Bootstrapper(object):
                disable_2nd_bootstrap=False,
                setup_tool_ebuild_file_only=False):
     self._chromeos_root = chromeos_root
+    self._ndk_dir = ndk_dir
 
     self._gcc_branch = gcc_branch
     self._gcc_branch_tree = None
@@ -164,8 +167,8 @@ class Bootstrapper(object):
         print_to_console=False)
     commit_message = 'Synced with tool source tree at - "{0}".'.format(tool_dir)
     if not ret:
-      commit_message += '\nGit log for {0}:\n{1}'.format(tool_dir,
-                                                         tool_dir_extra_info)
+      commit_message += '\nGit log for {0}:\n{1}'.format(
+          tool_dir, tool_dir_extra_info.strip())
 
     if chrome_tool_repo.CommitLocally(commit_message):
       self._logger.LogError(
@@ -308,23 +311,35 @@ class Bootstrapper(object):
     # Note we shall not use remote branch name (eg. "cros/gcc.gnu.org/...") in
     # CROS_WORKON_COMMIT, we have to use GITHASH. So we call GitGetCommitHash on
     # tool_branch.
+    tool = None
+    toolbranch = None
     if self._gcc_branch:
-      tool_branch_githash = misc.GitGetCommitHash(
-          self.GetChromeOsToolDir('gcc'), self._gcc_branch)
-      if not tool_branch_githash:
-        return False
-      if not self.InplaceModifyToolEbuildFile(
-          tool_branch_githash, self._gcc_branch_tree, self._gcc_ebuild_file):
-        return False
+      tool = 'gcc'
+      toolbranch = self._gcc_branch
+      tooltree = self._gcc_branch_tree
+      toolebuild = self._gcc_ebuild_file
+    elif self._binutils_branch:
+      tool = 'binutils'
+      toolbranch = self._binutils_branch
+      tooltree = self._binutils_branch_tree
+      toolebuild = self._binutils_ebuild_file
 
-    if self._binutils_branch:
-      tool_branch_githash = misc.GitGetCommitHash(
-          self.GetChromeOsToolDir('binutils'), self._binutils_branch)
-      if not self.InplaceModifyToolEbuildFile(tool_branch_githash,
-                                              self._binutils_branch_tree,
-                                              self._binutils_ebuild_file):
-        return False
-    return True
+
+    assert tool
+
+    # An example for the following variables would be:
+    #   tooldir = '~/android/master-ndk/toolchain/gcc/gcc-4.9'
+    #   tool_branch_githash = xxxxx
+    #   toolcomponents = toolchain/gcc
+    tooldir = self.GetChromeOsToolDir(tool)
+    toolgithash = misc.GitGetCommitHash(tooldir, toolbranch)
+    if not toolgithash:
+      return False
+    toolcomponents = 'toolchain/{}'.format(tool)
+    return self.InplaceModifyToolEbuildFile(toolcomponents,
+                                            toolgithash,
+                                            tooltree,
+                                            toolebuild)
 
   @staticmethod
   def ResetToolEbuildFile(chromeos_root, tool_name):
@@ -360,6 +375,9 @@ class Bootstrapper(object):
   def GetChromeOsToolDir(self, tool_name):
     """Return the chromeos git dir for a specific tool.
 
+    Note, after we unified ChromeOs and Android, the tool dir is under
+    ndk_dir/toolchain/[gcc,binutils].
+
     Args:
       tool_name: either 'gcc' or 'binutils'.
 
@@ -367,14 +385,32 @@ class Bootstrapper(object):
       Absolute git path for the tool.
     """
 
-    return os.path.join(self._chromeos_root,
-                        REPO_PATH_PATTERN.format(tool_name))
+    tool_toppath = os.path.join(self._ndk_dir, 'toolchain', tool_name)
+    # There may be sub-directories like 'binutils-2.25', 'binutils-2.24',
+    # 'gcc-4.9', 'gcc-4.8', etc. find the newest binutils version.
+    cmd = ('find {} -maxdepth 1 -type d -name "{}-*" '
+           '| sort -r | head -1').format(tool_toppath, tool_name)
+    rv, out, _ = self._ce.RunCommandWOutput(cmd, print_to_console=False)
+    if rv:
+      return None
+    repo = out.strip()
 
-  def InplaceModifyToolEbuildFile(self, tool_branch_githash, tool_branch_tree,
+    # cros-workon eclass expects every CROS_WORKON_PROJECT ends with ".git".
+    self._ce.RunCommand(('cd $(dirname {0}) && '
+                         'ln -sf $(basename {0}) $(basename {0}).git').format(
+                             repo, print_to_console=True))
+    return repo
+
+
+  def InplaceModifyToolEbuildFile(self,
+                                  tool_components,
+                                  tool_branch_githash,
+                                  tool_branch_tree,
                                   tool_ebuild_file):
     """Using sed to fill properly values into the ebuild file.
 
     Args:
+      tool_components: either "toolchain/gcc" or "toolchain/binutils"
       tool_branch_githash: githash for tool_branch
       tool_branch_tree: treeish for the tool branch
       tool_ebuild_file: tool ebuild file
@@ -384,13 +420,22 @@ class Bootstrapper(object):
     """
 
     command = ('sed -i '
+               '-e \'/^CROS_WORKON_REPO=".*"/i'
+               ' # The following line is modified by script.\' '
+               '-e \'s!^CROS_WORKON_REPO=".*"$!CROS_WORKON_REPO="{0}"!\' '
+               '-e \'/^CROS_WORKON_PROJECT=".*"/i'
+               ' # The following line is modified by script.\' '
+               '-e \'s!^CROS_WORKON_PROJECT=.*$!CROS_WORKON_PROJECT="{1}"!\' '
                '-e \'/^CROS_WORKON_COMMIT=".*"/i'
                ' # The following line is modified by script.\' '
-               '-e \'s!^CROS_WORKON_COMMIT=".*"$!CROS_WORKON_COMMIT="{0}"!\' '
+               '-e \'s!^CROS_WORKON_COMMIT=".*"$!CROS_WORKON_COMMIT="{2}"!\' '
                '-e \'/^CROS_WORKON_TREE=".*"/i'
                ' # The following line is modified by script.\' '
-               '-e \'s!^CROS_WORKON_TREE=".*"$!CROS_WORKON_TREE="{1}"!\' '
-               '{2}').format(tool_branch_githash, tool_branch_tree,
+               '-e \'s!^CROS_WORKON_TREE=".*"$!CROS_WORKON_TREE="{3}"!\' '
+               '{4}').format('/home/{}/ndk-root'.format(os.environ['USER']),
+                             tool_components,
+                             tool_branch_githash,
+                             tool_branch_tree,
                              tool_ebuild_file)
     rv = self._ce.RunCommand(command)
     if rv:
@@ -432,30 +477,61 @@ class Bootstrapper(object):
       True if operation succeeds.
     """
 
-    boards_to_build = self._board.split(',')
+    chroot_ndk_root = os.path.join(self._chromeos_root, 'chroot',
+                                   'home', os.environ['USER'],
+                                   'ndk-root')
+    self._ce.RunCommand('mkdir -p {}'.format(chroot_ndk_root))
+    if self._ce.RunCommand('sudo mount --bind {} {}'.format(
+        self._ndk_dir, chroot_ndk_root)):
+      self._logger.LogError('Failed to mount ndk dir into chroot')
+      return False
 
-    failed = []
-    for board in boards_to_build:
-      if board == 'host':
-        command = 'sudo emerge sys-devel/{0}'.format(tool_name)
-      else:
-        target = misc.GetCtargetFromBoard(board, self._chromeos_root)
-        if not target:
-          self._logger.LogError('Unsupported board "{0}", skip.'.format(board))
+    try:
+      boards_to_build = self._board.split(',')
+      target_built = set()
+      failed = []
+      for board in boards_to_build:
+        if board == 'host':
+          command = 'sudo emerge sys-devel/{0}'.format(tool_name)
+        else:
+          target = misc.GetCtargetFromBoard(board, self._chromeos_root)
+          if not target:
+            self._logger.LogError(
+                'Unsupported board "{0}", skip.'.format(board))
+            failed.append(board)
+            continue
+          # Skip this board if we have already built for a board that has the
+          # same target.
+          if target in target_built:
+            self._logger.LogWarning(
+                'Skipping toolchain for board "{}"'.format(board))
+            continue
+          target_built.add(target)
+          command = 'sudo emerge cross-{0}/{1}'.format(target, tool_name)
+
+        rv = self._ce.ChrootRunCommand(self._chromeos_root,
+                                       command,
+                                       print_to_console=True)
+        if rv:
+          self._logger.LogError('Build {0} failed for {1}, aborted.'.format(
+              tool_name, board))
           failed.append(board)
-          continue
-        command = 'sudo emerge cross-{0}/{1}'.format(target, tool_name)
+        else:
+          self._logger.LogOutput('Successfully built {0} for board {1}.'.format(
+              tool_name, board))
+    finally:
+      # Make sure we un-mount ndk-root before we leave here, regardless of the
+      # build result of the tool. Otherwise we may inadvertently delete ndk-root
+      # dir, which is not part of the chroot and could be disastrous.
+      if chroot_ndk_root:
+        if self._ce.RunCommand('sudo umount {}'.format(chroot_ndk_root)):
+          self._logger.LogWarning(('Failed to umount "{}", please check '
+                                   'before deleting chroot.').format(
+                                       chroot_ndk_root))
 
-      rv = self._ce.ChrootRunCommand(self._chromeos_root,
-                                     command,
-                                     print_to_console=True)
-      if rv:
-        self._logger.LogError('Build {0} failed for {1}, aborted.'.format(
-            tool_name, board))
-        failed.append(board)
-      else:
-        self._logger.LogOutput('Successfully built {0} for board {1}.'.format(
-            tool_name, board))
+      # Clean up soft links created during build.
+      self._ce.RunCommand('cd {}/toolchain/{} && git clean -df'.format(
+          self._ndk_dir, tool_name))
 
     if failed:
       self._logger.LogError(
@@ -572,6 +648,10 @@ def Main(argv):
                       help=('Optional. ChromeOs root dir. '
                             'When not specified, chromeos root will be deduced'
                             ' from current working directory.'))
+  parser.add_argument('--ndk_dir',
+                      dest='ndk_dir',
+                      help=('Topmost android ndk dir, required. '
+                            'Do not need to include the "toolchain/*" part.'))
   parser.add_argument('--gcc_branch',
                       dest='gcc_branch',
                       help=('The branch to test against. '
@@ -668,6 +748,22 @@ def Main(argv):
         options.chromeos_root))
     return 1
 
+  options.ndk_dir = os.path.expanduser(options.ndk_dir)
+  if not options.ndk_dir:
+    parser.error('Missing mandatory option "--ndk_dir".')
+    return 1
+
+  # Some tolerance regarding user input. We only need the ndk_root part, do not
+  # include toolchain/(gcc|binutils)/ part in this option.
+  options.ndk_dir = re.sub(
+      '/toolchain(/gcc|/binutils)?/?$', '', options.ndk_dir)
+
+  if not (os.path.isdir(options.ndk_dir) and
+          os.path.isdir(os.path.join(options.ndk_dir, 'toolchain'))):
+    logger.GetLogger().LogError(
+        '"toolchain" directory not found under "{0}".'.format(options.ndk_dir))
+    return 1
+
   if options.fixperm:
     # Fix perm error before continuing.
     cmd = (
@@ -740,6 +836,7 @@ def Main(argv):
 
   if Bootstrapper(
       options.chromeos_root,
+      options.ndk_dir,
       gcc_branch=options.gcc_branch,
       gcc_dir=options.gcc_dir,
       binutils_branch=options.binutils_branch,
