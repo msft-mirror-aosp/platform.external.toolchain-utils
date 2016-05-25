@@ -25,21 +25,20 @@ def Usage(parser, msg):
 def Main(argv):
   """Generate a script to undo changes done by cros_pkg_setup.sh
 
-    The script cros_pkg_setup.sh make two main changes that need to be
-    undone: 1).  It creates a soft link making /build/${board} point to
-    /build/${board}.work, and 2). It saves a copy of the build_image
-    script, then updates build_image to not execute 'eclean'.  For the first
-    change, it had to see if /build/${board} already existed, and if so, whether
-    it was a real tree or a soft link.  If it was soft link, it saved the old
-    value of the link, then deleted it and created the new link.  If it was a
-    real tree, it renamed the tree to /build/${board}.save, and then created the
-    new soft link.  If the /build/${board} did not previously exist, then it
-    just
-    created the new soft link.
+    The script cros_pkg_setup.sh makes a change that needs to be
+    undone, namely it creates a soft link making /build/${board} point
+    to /build/${board}.work.  To do this, it had to see if
+    /build/${board} already existed, and if so, whether it was a real
+    tree or a soft link.  If it was soft link, it saved the old value
+    of the link, then deleted it and created the new link.  If it was
+    a real tree, it renamed the tree to /build/${board}.save, and then
+    created the new soft link.  If the /build/${board} did not
+    previously exist, then it just created the new soft link.
 
     This function takes arguments that tell it exactly what cros_pkg_setup.sh
     actually did, then generates a script to undo those exact changes.
-    """
+
+  """
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--board',
@@ -101,9 +100,6 @@ def Main(argv):
         out_file.write('sudo ln -s %s /build/%s\n' % (original_link,
                                                       options.board))
     out_file.write('\n')
-    # Restore the original saved version of build_image script.
-    out_file.write('mv ~/trunk/src/scripts/build_image.save '
-                   '~/trunk/src/scripts/build_image\n\n')
     # Remove cros_pkg_common.sh file
     out_file.write('rm cros_pkg_common.sh\n')
 

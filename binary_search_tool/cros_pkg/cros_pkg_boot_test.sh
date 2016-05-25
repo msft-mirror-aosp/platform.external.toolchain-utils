@@ -18,14 +18,14 @@
 source cros_pkg_common.sh
 
 pushd ~/trunk/src/scripts
-./build_image test --board=${BOARD} --noenable_rootfs_verification
+./build_image test --noeclean --board=${BOARD} --noenable_rootfs_verification
 build_status=$?
 popd
 
 if [[ ${build_status} -eq 0 ]] ; then
     echo "Pushing built image onto device."
     echo "cros flash --board=${BOARD} --clobber-stateful ${REMOTE} ~/trunk/src/build/images/${BOARD}/latest/chromiumos_test_image.bin"
-    cros flash --board=${BOARD} --clobber-stateful ${REMOTE} ../build/images/${BOARD}/latest/chromiumos_test_image.bin
+    cros flash --board=${BOARD} --clobber-stateful ${REMOTE} ~/trunk/src/build/images/${BOARD}/latest/chromiumos_test_image.bin
     cros_flash_status=$?
     if [[ ${cros_flash_status} -ne 0 ]] ; then
 	echo "cros flash failed!!"

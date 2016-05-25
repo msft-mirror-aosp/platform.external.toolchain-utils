@@ -12,15 +12,13 @@
 # etc.).  The second argument must be the name or IP address of the chromebook
 # on which the ChromeOS images will be pushed and tested.
 #
-# This script sets up a soft link definining /build/${board} to point to the
-# working build tree, for the binary search triags process.  It also modifies
-# the build_image script, to prevent that script from undoing the package
-# copying that the binary triage process must do.  In addition, this script
-# generates two other scripts, cros_pkg_common.sh, which generates enviroment
-# variables used by the other scripts in the package binary search triage
-# process; and cros_pkg_${board}_cleanup.sh, which undoes the various changes
-# that this script performs, returning the user's environment to its original
-# state.
+# This script sets up a soft link definining /build/${board} to point
+# to the working build tree, for the binary search triags process.  In
+# addition, this script generates two other scripts, cros_pkg_common.sh,
+# which generates enviroment variables used by the other scripts in the
+# package binary search triage process; and cros_pkg_${board}_cleanup.sh,
+# which undoes the various changes that this script performs, returning the
+# user's environment to its original state.
 #
 
 # Set up basic variables.
@@ -97,21 +95,6 @@ WORK_BUILD=/build/${BOARD}.work
 EOF
 
 chmod 755 ${COMMON_FILE}
-
-#
-# Fix ~/trunk/src/scripts/build_image script to NOT delete/update the packages
-# after we have put them in place.  First save a copy of the original file,
-# then call cros_pkg_undo_eclean.py to edit the script (it creates
-# 'build_image.edited').
-#
-
-cp ~/trunk/src/scripts/build_image .
-python cros_pkg_undo_eclean.py build_image
-if [[ $? -eq 0 ]] ; then
-    chmod 755 build_image.edited
-    mv build_image ~/trunk/src/scripts/build_image.save
-    mv build_image.edited ~/trunk/src/scripts/build_image
-fi
 
 #
 # Create clean-up script, calling cros_pkg_create_cleanup_script.py with

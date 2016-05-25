@@ -20,7 +20,7 @@
 source cros_pkg_common.sh
 
 pushd ~/trunk/src/scripts
-./build_image test --board=${BOARD} --noenable_rootfs_verification
+./build_image test --noeclean --board=${BOARD} --noenable_rootfs_verification
 build_status=$?
 popd
 

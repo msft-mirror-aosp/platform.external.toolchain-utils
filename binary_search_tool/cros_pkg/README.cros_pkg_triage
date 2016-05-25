@@ -88,15 +88,11 @@ FILES AND SCRIPTS:
                       package binary search triage, and it generates two
                       necessary scripts (see below).
 
-  cros_pkg_swith_to_bad.sh - This script is used to copy packages from the
-                             'bad' build tree into the work area.
+  cros_pkg_switch_to_bad.sh - This script is used to copy packages from the
+                              'bad' build tree into the work area.
 
-  cros_pkg_swith_to_good.sh - This script is used to copy packages from the
-                              'good' build tree into the work area.
-
-  cros_pkg_undo_eclean.py - Script for modifying build_image script so that it
-                            does not perform any calls to 'eclean', which can
-                            mess up the binary search triage process.
+  cros_pkg_switch_to_good.sh - This script is used to copy packages from the
+                               'good' build tree into the work area.
 
 
 GENERATED SCRIPTS:
@@ -150,8 +146,6 @@ testing your chromeos images.  cros_pkg_setup.sh will do the following:
      and work).
    - Create a soft link for /build/${board} pointing to the work build
      tree.
-   - Update build_image, so it will not do 'eclean', which gets in the
-     way of copying packages around for building the image.
    - Create the cros_pkg_common.sh file that the other scripts passed to the
      binary triage tool will need.
    - Create a cleanup script, cros_pkg_${board}_cleanup.sh, for you to
@@ -169,7 +163,7 @@ prompts you and waits for a response).
 
 
 Once you have run cros_pkg_setup.sh (and decided which test script you
-want to use) run the binary triage tool using this scripts to
+want to use) run the binary triage tool using these scripts to
 isolate/identify the bad package:
 
 ~/trunk/src/third_party/toolchain_utils/binary_search_tool/binary_search_state.py \
