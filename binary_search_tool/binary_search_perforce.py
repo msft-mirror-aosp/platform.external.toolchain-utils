@@ -3,7 +3,7 @@
 from __future__ import print_function
 
 import math
-import optparse
+import argparse
 import os
 import re
 import sys
@@ -365,19 +365,19 @@ def Main(argv):
 ###  command_executer.InitCommandExecuter(True)
   ce = command_executer.GetCommandExecuter()
 
-  parser = optparse.OptionParser()
-  parser.add_option("-n", "--num_tries", dest="num_tries",
-                    default="100",
-                    help="Number of tries.")
-  parser.add_option("-g", "--good_revision", dest="good_revision",
-                    help="Last known good revision.")
-  parser.add_option("-b", "--bad_revision", dest="bad_revision",
-                    help="Last known bad revision.")
-  parser.add_option("-s",
-                    "--script",
-                    dest="script",
-                    help="Script to run for every version.")
-  [options, _] = parser.parse_args(argv)
+  parser = argparse.ArgumentParser()
+  parser.add_argument("-n", "--num_tries", dest="num_tries",
+                      default="100",
+                      help="Number of tries.")
+  parser.add_argument("-g", "--good_revision", dest="good_revision",
+                      help="Last known good revision.")
+  parser.add_argument("-b", "--bad_revision", dest="bad_revision",
+                      help="Last known bad revision.")
+  parser.add_argument("-s",
+                      "--script",
+                      dest="script",
+                      help="Script to run for every version.")
+  options = parser.parse_args(argv)
   # First get all revisions
   p4_paths = ["//depot2/gcctools/google_vendor_src_branch/gcc/gcc-4.4.3/...",
               "//depot2/gcctools/google_vendor_src_branch/binutils/"
@@ -421,4 +421,4 @@ def Main(argv):
 
 
 if __name__ == "__main__":
-  Main(sys.argv)
+  Main(sys.argv[1:])

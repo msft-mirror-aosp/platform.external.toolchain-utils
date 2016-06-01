@@ -1,10 +1,12 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 """Change portions of the object files to good.
 
 The "portion" is defined by the file (which is passed as the only argument to
 this script) content. Every line in the file is an object index, which will be
 set to good (mark as 0).
 """
+
+from __future__ import print_function
 
 import sys
 

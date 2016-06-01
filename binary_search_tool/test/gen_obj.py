@@ -1,11 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 """Script to generate a list of object files.
 
 0 represents a good object file.
 1 represents a bad object file.
 """
 
-import optparse
+from __future__ import print_function
+
+import argparse
 import os
 import random
 import sys
@@ -21,29 +23,31 @@ def Main(argv):
 
   Args:
     argv: argument from command line
+
   Returns:
     0 always.
   """
-  parser = optparse.OptionParser()
-  parser.add_option('-n',
-                    '--obj_num',
-                    dest='obj_num',
-                    default=common.DEFAULT_OBJECT_NUMBER,
-                    help=('Number of total objects.'))
-  parser.add_option('-b',
-                    '--bad_obj_num',
-                    dest='bad_obj_num',
-                    default=common.DEFAULT_BAD_OBJECT_NUMBER,
-                    help=('Number of bad objects. Must be great than or equal '
-                          'to zero and less than total object number.'))
-  options = parser.parse_args(argv)[0]
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-n',
+                      '--obj_num',
+                      dest='obj_num',
+                      default=common.DEFAULT_OBJECT_NUMBER,
+                      help=('Number of total objects.'))
+  parser.add_argument('-b',
+                      '--bad_obj_num',
+                      dest='bad_obj_num',
+                      default=common.DEFAULT_BAD_OBJECT_NUMBER,
+                      help=('Number of bad objects. Must be great than or '
+                            'equal to zero and less than total object '
+                            'number.'))
+  options = parser.parse_args(argv)
 
   obj_num = int(options.obj_num)
   bad_obj_num = int(options.bad_obj_num)
   bad_to_gen = int(options.bad_obj_num)
   obj_list = []
   for i in range(obj_num):
-    if (bad_to_gen > 0 and random.randint(1, obj_num) <= bad_obj_num):
+    if bad_to_gen > 0 and random.randint(1, obj_num) <= bad_obj_num:
       obj_list.append(1)
       bad_to_gen -= 1
     else:
@@ -66,12 +70,12 @@ def Main(argv):
     w.write('{0}\n'.format(i))
   f.close()
 
-  print 'Generated {0} object files, with {1} bad ones.'.format(
-      options.obj_num, options.bad_obj_num)
+  print('Generated {0} object files, with {1} bad ones.'.format(
+      options.obj_num, options.bad_obj_num))
 
   return 0
 
 
 if __name__ == '__main__':
-  retval = Main(sys.argv)
+  retval = Main(sys.argv[1:])
   sys.exit(retval)

@@ -4,7 +4,7 @@
 
 from __future__ import print_function
 
-import optparse
+import argparse
 import os
 import pickle
 import sys
@@ -237,62 +237,62 @@ def Main(argv):
   """The main function."""
   # Common initializations
 
-  parser = optparse.OptionParser()
-  parser.add_option('-n',
-                    '--iterations',
-                    dest='iterations',
-                    help='Number of iterations to try in the search.',
-                    default='50')
-  parser.add_option('-i',
-                    '--get_initial_items',
-                    dest='get_initial_items',
-                    help='Script to run to get the initial objects.')
-  parser.add_option('-g',
-                    '--switch_to_good',
-                    dest='switch_to_good',
-                    help='Script to run to switch to good.')
-  parser.add_option('-b',
-                    '--switch_to_bad',
-                    dest='switch_to_bad',
-                    help='Script to run to switch to bad.')
-  parser.add_option('-t',
-                    '--test_script',
-                    dest='test_script',
-                    help=('Script to run to test the '
-                          'output after packages are built.'))
-  parser.add_option('-p',
-                    '--prune',
-                    dest='prune',
-                    action='store_true',
-                    default=False,
-                    help=('Script to run to test the output after '
-                          'packages are built.'))
-  parser.add_option('-c',
-                    '--noincremental',
-                    dest='noincremental',
-                    action='store_true',
-                    default=False,
-                    help='Do not propagate good/bad changes incrementally.')
-  parser.add_option('-f',
-                    '--file_args',
-                    dest='file_args',
-                    action='store_true',
-                    default=False,
-                    help='Use a file to pass arguments to scripts.')
-  parser.add_option('-v',
-                    '--verify_level',
-                    dest='verify_level',
-                    default='1',
-                    help=('Check binary search assumptions N times '
-                          'before starting.'))
-  parser.add_option('-N',
-                    '--prune_iterations',
-                    dest='prune_iterations',
-                    help='Number of prune iterations to try in the search.',
-                    default='100')
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-n',
+                      '--iterations',
+                      dest='iterations',
+                      help='Number of iterations to try in the search.',
+                      default=50)
+  parser.add_argument('-i',
+                      '--get_initial_items',
+                      dest='get_initial_items',
+                      help='Script to run to get the initial objects.')
+  parser.add_argument('-g',
+                      '--switch_to_good',
+                      dest='switch_to_good',
+                      help='Script to run to switch to good.')
+  parser.add_argument('-b',
+                      '--switch_to_bad',
+                      dest='switch_to_bad',
+                      help='Script to run to switch to bad.')
+  parser.add_argument('-t',
+                      '--test_script',
+                      dest='test_script',
+                      help=('Script to run to test the '
+                            'output after packages are built.'))
+  parser.add_argument('-p',
+                      '--prune',
+                      dest='prune',
+                      action='store_true',
+                      default=False,
+                      help=('Script to run to test the output after '
+                            'packages are built.'))
+  parser.add_argument('-c',
+                      '--noincremental',
+                      dest='noincremental',
+                      action='store_true',
+                      default=False,
+                      help='Do not propagate good/bad changes incrementally.')
+  parser.add_argument('-f',
+                      '--file_args',
+                      dest='file_args',
+                      action='store_true',
+                      default=False,
+                      help='Use a file to pass arguments to scripts.')
+  parser.add_argument('-v',
+                      '--verify_level',
+                      dest='verify_level',
+                      default=1,
+                      help=('Check binary search assumptions N times '
+                            'before starting.'))
+  parser.add_argument('-N',
+                      '--prune_iterations',
+                      dest='prune_iterations',
+                      help='Number of prune iterations to try in the search.',
+                      default=100)
 
   logger.GetLogger().LogOutput(' '.join(argv))
-  [options, _] = parser.parse_args(argv)
+  options = parser.parse_args(argv)
 
   if not (options.get_initial_items and options.switch_to_good and
           options.switch_to_bad and options.test_script):
@@ -328,4 +328,4 @@ def Main(argv):
 
 
 if __name__ == '__main__':
-  sys.exit(Main(sys.argv))
+  sys.exit(Main(sys.argv[1:]))
