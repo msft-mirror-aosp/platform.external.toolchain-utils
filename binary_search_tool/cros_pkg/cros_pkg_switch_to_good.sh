@@ -20,7 +20,7 @@ if [[ -f ${PKG_LIST_FILE} ]] ; then
 
   while read pkg
   do
-    sudo cp ${BAD_BUILD}/packages/$pkg ${WORK_BUILD}/packages/$pkg
+    sudo cp ${GOOD_BUILD}/packages/$pkg ${WORK_BUILD}/packages/$pkg
     status=$?
     if [[ ${status} -ne 0 ]] ; then
       echo "Failed to copy ${pkg} to work build tree."
