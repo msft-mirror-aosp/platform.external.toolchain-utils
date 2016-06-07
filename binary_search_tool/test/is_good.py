@@ -9,6 +9,8 @@ import common
 
 
 def Main():
+  if not common.installed:
+    return 1
   working_set = common.ReadWorkingSet()
   for w in working_set:
     if w == 1:

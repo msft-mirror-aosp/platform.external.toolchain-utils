@@ -42,7 +42,26 @@ class BisectingUtilsTest(unittest.TestCase):
             './switch_to_good.py', '--switch_to_bad', './switch_to_bad.py',
             '--test_script', './is_good.py', '--prune', '--file_args']
     binary_search_state.Main(args)
+    self.check_output()
 
+  def test_install_script(self):
+    args = ['--get_initial_items', './gen_init_list.py', '--switch_to_good',
+            './switch_to_good.py', '--switch_to_bad', './switch_to_bad.py',
+            '--test_script', './is_good.py', '--prune', '--file_args',
+            '--install_script', './install.py']
+    common.installed = False
+    binary_search_state.Main(args)
+    self.check_output()
+
+  def test_bad_install_script(self):
+    args = ['--get_initial_items', './gen_init_list.py', '--switch_to_good',
+            './switch_to_good.py', '--switch_to_bad', './switch_to_bad.py',
+            '--test_script', './is_good.py', '--prune', '--file_args',
+            '--install_script', './install_bad.py']
+    with self.assertRaises(AssertionError):
+      binary_search_state.Main(args)
+
+  def check_output(self):
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
         'tail -n 10 logs/binary_search_state.py.out')
     ls = out.splitlines()
@@ -63,6 +82,8 @@ def Main(argv):
   suite = unittest.TestSuite()
   for _ in range(0, num_tests):
     suite.addTest(BisectingUtilsTest())
+  suite.addTest(BisectingUtilsTest('test_install_script'))
+  suite.addTest(BisectingUtilsTest('test_bad_install_script'))
   runner = unittest.TextTestRunner()
   runner.run(suite)
 

@@ -1,5 +1,4 @@
 #!/usr/bin/python2
-
 """The binary search wrapper."""
 
 from __future__ import print_function
@@ -30,12 +29,14 @@ STATE_FILE = '%s.state' % sys.argv[0]
 
 class BinarySearchState(object):
   """The binary search state class."""
+
   def __init__(self, get_initial_items, switch_to_good, switch_to_bad,
-               test_script, incremental, prune, iterations, prune_iterations,
-               verify_level, file_args):
+               install_script, test_script, incremental, prune, iterations,
+               prune_iterations, verify_level, file_args):
     self.get_initial_items = get_initial_items
     self.switch_to_good = switch_to_good
     self.switch_to_bad = switch_to_bad
+    self.install_script = install_script
     self.test_script = test_script
     self.incremental = incremental
     self.prune = prune
@@ -107,15 +108,26 @@ class BinarySearchState(object):
     command = self.test_script
     return self.ce.RunCommand(command)
 
+  def InstallScript(self):
+    if not self.install_script:
+      return 0
+
+    command = self.install_script
+    return self.ce.RunCommand(command)
+
   def DoVerify(self):
     for _ in range(int(self.verify_level)):
       self.l.LogOutput('Resetting all items to good to verify.')
       self.SwitchToGood(self.all_items)
+      status = self.InstallScript()
+      assert status == 0, 'When reset_to_good, install should succeed.'
       status = self.TestScript()
       assert status == 0, 'When reset_to_good, status should be 0.'
 
       self.l.LogOutput('Resetting all items to bad to verify.')
       self.SwitchToBad(self.all_items)
+      status = self.InstallScript()
+      assert status == 0, 'When reset_to_bad, install should succeed.'
       status = self.TestScript()
       assert status == 1, 'When reset_to_bad, status should be 1.'
 
@@ -173,7 +185,12 @@ class BinarySearchState(object):
       # TODO: bad_items should come first.
       self.SwitchToGood(good_items)
       self.SwitchToBad(bad_items)
-      status = self.TestScript()
+      status = self.InstallScript()
+      if status == 0:
+        status = self.TestScript()
+      else:
+        # Install script failed, treat as skipped item
+        status = 2
       terminated = self.bs.SetStatus(status)
 
       if terminated:
@@ -255,6 +272,12 @@ def Main(argv):
                       '--switch_to_bad',
                       dest='switch_to_bad',
                       help='Script to run to switch to bad.')
+  parser.add_argument('-I',
+                      '--install_script',
+                      dest='install_script',
+                      default=None,
+                      help=('Optional script to perform building, flashing, '
+                            'and other setup before the test script runs.'))
   parser.add_argument('-t',
                       '--test_script',
                       dest='test_script',
@@ -302,6 +325,9 @@ def Main(argv):
   iterations = int(options.iterations)
   switch_to_good = _CanonicalizeScript(options.switch_to_good)
   switch_to_bad = _CanonicalizeScript(options.switch_to_bad)
+  install_script = options.install_script
+  if install_script:
+    install_script = _CanonicalizeScript(options.install_script)
   test_script = _CanonicalizeScript(options.test_script)
   get_initial_items = _CanonicalizeScript(options.get_initial_items)
   prune = options.prune
@@ -316,8 +342,9 @@ def Main(argv):
 
   try:
     bss = BinarySearchState(get_initial_items, switch_to_good, switch_to_bad,
-                            test_script, incremental, prune, iterations,
-                            prune_iterations, verify_level, file_args)
+                            install_script, test_script, incremental, prune,
+                            iterations, prune_iterations, verify_level,
+                            file_args)
     bss.DoVerify()
     bss.DoSearch()
 
