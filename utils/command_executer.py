@@ -65,7 +65,8 @@ class CommandExecuter(object):
                         command_terminator=None,
                         command_timeout=None,
                         terminated_timeout=10,
-                        print_to_console=True):
+                        print_to_console=True,
+                        except_handler=lambda p, e: None):
     """Run a command.
 
     Returns triplet (returncode, stdout, stderr).
@@ -95,82 +96,86 @@ class CommandExecuter(object):
     # and we can easily kill the process group. This is also important
     # because the child will be disassociated from the parent terminal.
     # In this way the child cannot mess the parent's terminal.
-    p = subprocess.Popen(cmd,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE,
-                         shell=True,
-                         preexec_fn=os.setsid)
+    try:
+      p = subprocess.Popen(cmd,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE,
+                           shell=True,
+                           preexec_fn=os.setsid)
 
-    full_stdout = ''
-    full_stderr = ''
+      full_stdout = ''
+      full_stderr = ''
 
-    # Pull output from pipes, send it to file/stdout/string
-    out = err = None
-    pipes = [p.stdout, p.stderr]
+      # Pull output from pipes, send it to file/stdout/string
+      out = err = None
+      pipes = [p.stdout, p.stderr]
 
-    my_poll = select.poll()
-    my_poll.register(p.stdout, select.POLLIN)
-    my_poll.register(p.stderr, select.POLLIN)
+      my_poll = select.poll()
+      my_poll.register(p.stdout, select.POLLIN)
+      my_poll.register(p.stderr, select.POLLIN)
 
-    terminated_time = None
-    started_time = time.time()
+      terminated_time = None
+      started_time = time.time()
 
-    while len(pipes):
-      if command_terminator and command_terminator.IsTerminated():
-        os.killpg(os.getpgid(p.pid), signal.SIGTERM)
-        if self.logger:
-          self.logger.LogError('Command received termination request. '
-                               'Killed child process group.', print_to_console)
-        break
-
-      l = my_poll.poll(100)
-      for (fd, _) in l:
-        if fd == p.stdout.fileno():
-          out = os.read(p.stdout.fileno(), 16384)
-          if return_output:
-            full_stdout += out
+      while len(pipes):
+        if command_terminator and command_terminator.IsTerminated():
+          os.killpg(os.getpgid(p.pid), signal.SIGTERM)
           if self.logger:
-            self.logger.LogCommandOutput(out, print_to_console)
-          if out == '':
-            pipes.remove(p.stdout)
-            my_poll.unregister(p.stdout)
-        if fd == p.stderr.fileno():
-          err = os.read(p.stderr.fileno(), 16384)
-          if return_output:
-            full_stderr += err
-          if self.logger:
-            self.logger.LogCommandError(err, print_to_console)
-          if err == '':
-            pipes.remove(p.stderr)
-            my_poll.unregister(p.stderr)
-
-      if p.poll() is not None:
-        if terminated_time is None:
-          terminated_time = time.time()
-        elif (terminated_timeout is not None and
-              time.time() - terminated_time > terminated_timeout):
-          if self.logger:
-            self.logger.LogWarning('Timeout of %s seconds reached since '
-                                   'process termination.' % terminated_timeout,
-                                   print_to_console)
+            self.logger.LogError('Command received termination request. '
+                                 'Killed child process group.', print_to_console)
           break
 
-      if (command_timeout is not None and
-          time.time() - started_time > command_timeout):
-        os.killpg(os.getpgid(p.pid), signal.SIGTERM)
-        if self.logger:
-          self.logger.LogWarning('Timeout of %s seconds reached since process'
-                                 'started. Killed child process group.' %
-                                 command_timeout, print_to_console)
-        break
+        l = my_poll.poll(100)
+        for (fd, _) in l:
+          if fd == p.stdout.fileno():
+            out = os.read(p.stdout.fileno(), 16384)
+            if return_output:
+              full_stdout += out
+            if self.logger:
+              self.logger.LogCommandOutput(out, print_to_console)
+            if out == '':
+              pipes.remove(p.stdout)
+              my_poll.unregister(p.stdout)
+          if fd == p.stderr.fileno():
+            err = os.read(p.stderr.fileno(), 16384)
+            if return_output:
+              full_stderr += err
+            if self.logger:
+              self.logger.LogCommandError(err, print_to_console)
+            if err == '':
+              pipes.remove(p.stderr)
+              my_poll.unregister(p.stderr)
 
-      if out == err == '':
-        break
+        if p.poll() is not None:
+          if terminated_time is None:
+            terminated_time = time.time()
+          elif (terminated_timeout is not None and
+                time.time() - terminated_time > terminated_timeout):
+            if self.logger:
+              self.logger.LogWarning('Timeout of %s seconds reached since '
+                                     'process termination.' % terminated_timeout,
+                                     print_to_console)
+            break
 
-    p.wait()
-    if return_output:
-      return (p.returncode, full_stdout, full_stderr)
-    return (p.returncode, '', '')
+        if (command_timeout is not None and
+            time.time() - started_time > command_timeout):
+          os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+          if self.logger:
+            self.logger.LogWarning('Timeout of %s seconds reached since process'
+                                   'started. Killed child process group.' %
+                                   command_timeout, print_to_console)
+          break
+
+        if out == err == '':
+          break
+
+      p.wait()
+      if return_output:
+        return (p.returncode, full_stdout, full_stderr)
+      return (p.returncode, '', '')
+    except BaseException as e:
+      except_handler(p, e)
+      raise
 
   def RunCommand(self, *args, **kwargs):
     """Run a command.
@@ -183,6 +188,22 @@ class CommandExecuter(object):
     assert 'return_output' not in kwargs
     kwargs['return_output'] = False
     return self.RunCommandGeneric(*args, **kwargs)[0]
+
+  def RunCommandWExceptionCleanup(self, *args, **kwargs):
+    """Run a command and kill process if exception is thrown.
+
+    Takes the same arguments as RunCommandGeneric except for except_handler.
+    Returns same as RunCommandGeneric.
+    """
+
+    def KillProc(proc, _):
+      os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+
+    # Make sure that args does not overwrite 'except_handler'
+    assert len(args) <= 8
+    assert 'except_handler' not in kwargs
+    kwargs['except_handler'] = KillProc
+    return self.RunCommandGeneric(*args, **kwargs)
 
   def RunCommandWOutput(self, *args, **kwargs):
     """Run a command.
@@ -472,7 +493,8 @@ class CommandExecuter(object):
                   timeout=None,
                   shell=True,
                   join_stderr=True,
-                  env=None):
+                  env=None,
+                  except_handler=lambda p, e: None):
     """Run the command with an extra feature line_consumer.
 
     This version allow developers to provide a line_consumer which will be
@@ -502,6 +524,8 @@ class CommandExecuter(object):
       shell: Whether to use a shell for execution.
       join_stderr: Whether join stderr to stdout stream.
       env: Execution environment.
+      except_handler: Callback for when exception is thrown during command
+        execution. Passed process object and exception.
 
     Returns:
       Execution return code.
@@ -557,44 +581,48 @@ class CommandExecuter(object):
     # and we can easily kill the process group. This is also important
     # because the child will be disassociated from the parent terminal.
     # In this way the child cannot mess the parent's terminal.
-    pobject = subprocess.Popen(
-        cmd,
-        cwd=cwd,
-        bufsize=1024,
-        env=env,
-        shell=shell,
-        universal_newlines=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT if join_stderr else subprocess.PIPE,
-        preexec_fn=os.setsid)
+    try:
+      pobject = subprocess.Popen(
+          cmd,
+          cwd=cwd,
+          bufsize=1024,
+          env=env,
+          shell=shell,
+          universal_newlines=True,
+          stdout=subprocess.PIPE,
+          stderr=subprocess.STDOUT if join_stderr else subprocess.PIPE,
+          preexec_fn=os.setsid)
 
-    # We provide a default line_consumer
-    if line_consumer is None:
-      line_consumer = lambda **d: None
-    start_time = time.time()
-    poll = select.poll()
-    outfd = pobject.stdout.fileno()
-    poll.register(outfd, select.POLLIN | select.POLLPRI)
-    handlermap = {outfd: StreamHandler(pobject, outfd, 'stdout', line_consumer)}
-    if not join_stderr:
-      errfd = pobject.stderr.fileno()
-      poll.register(errfd, select.POLLIN | select.POLLPRI)
-      handlermap[errfd] = StreamHandler(pobject, errfd, 'stderr', line_consumer)
-    while len(handlermap):
-      readables = poll.poll(300)
-      for (fd, evt) in readables:
-        handler = handlermap[fd]
-        if evt & (select.POLLPRI | select.POLLIN):
-          handler.read_and_notify_line()
-        elif evt & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
-          handler.notify_eos()
-          poll.unregister(fd)
-          del handlermap[fd]
+      # We provide a default line_consumer
+      if line_consumer is None:
+        line_consumer = lambda **d: None
+      start_time = time.time()
+      poll = select.poll()
+      outfd = pobject.stdout.fileno()
+      poll.register(outfd, select.POLLIN | select.POLLPRI)
+      handlermap = {outfd: StreamHandler(pobject, outfd, 'stdout', line_consumer)}
+      if not join_stderr:
+        errfd = pobject.stderr.fileno()
+        poll.register(errfd, select.POLLIN | select.POLLPRI)
+        handlermap[errfd] = StreamHandler(pobject, errfd, 'stderr', line_consumer)
+      while len(handlermap):
+        readables = poll.poll(300)
+        for (fd, evt) in readables:
+          handler = handlermap[fd]
+          if evt & (select.POLLPRI | select.POLLIN):
+            handler.read_and_notify_line()
+          elif evt & (select.POLLHUP | select.POLLERR | select.POLLNVAL):
+            handler.notify_eos()
+            poll.unregister(fd)
+            del handlermap[fd]
 
-      if timeout is not None and (time.time() - start_time > timeout):
-        os.killpg(os.getpgid(pobject.pid), signal.SIGTERM)
+        if timeout is not None and (time.time() - start_time > timeout):
+          os.killpg(os.getpgid(pobject.pid), signal.SIGTERM)
 
-    return pobject.wait()
+      return pobject.wait()
+    except BaseException as e:
+      except_handler(pobject, e)
+      raise
 
 
 class MockCommandExecuter(CommandExecuter):
@@ -611,7 +639,8 @@ class MockCommandExecuter(CommandExecuter):
                         command_terminator=None,
                         command_timeout=None,
                         terminated_timeout=10,
-                        print_to_console=True):
+                        print_to_console=True,
+                        except_handler=lambda p, e: None):
     assert not command_timeout
     cmd = str(cmd)
     if machine is None:
