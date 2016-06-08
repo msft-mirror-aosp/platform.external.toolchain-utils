@@ -9,7 +9,7 @@
     "warm_times__page_load_time"
   ], 
   "smoothness.tough_webgl_cases": [
-    "WebGLAnimation-percentage_smooth__WebGLAnimation-percentage_smooth"
+    "percentage_smooth__percentage_smooth"
   ], 
   "page_cycler.intl_es_fr_pt-BR": [
     "cold_times__page_load_time", 
@@ -89,8 +89,8 @@
     "jslib_attr_jquery__jslib_attr_jquery"
   ], 
   "page_cycler.typical_25": [
-    "warm_times__page_load_time", 
-    "cold_times__page_load_time"
+    "warm_times-page_load_time__warm_times-page_load_time",
+    "cold_times-page_load_time__cold_times-page_load_time"
   ], 
   "dromaeo.domcoretraverse": [
     "dom_traverse__dom_traverse"
