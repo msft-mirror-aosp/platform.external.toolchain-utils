@@ -36,6 +36,7 @@ following:
        --get_initial_items=cros_pkg_get_initial_items.sh \
        --switch_to_good=cros_pkg_switch_to_good.sh \
        --switch_to_bad=cros_pkg_switch_to_bad.sh \
+       --install_script=cros_pkg_install.sh \
        --test_script=cros_pkg_boot_test.sh \
        --file_args \
        --prune
@@ -46,6 +47,7 @@ following:
        --get_initial_items=cros_pkg_get_initial_items.sh \
        --switch_to_good=cros_pkg_switch_to_good.sh \
        --switch_to_bad=cros_pkg_switch_to_bad.sh \
+       --install_script=cros_pkg_install.sh \
        --test_script=cros_pkg_interactive_test.sh \
        --file_args \
        --prune
@@ -75,6 +77,11 @@ FILES AND SCRIPTS:
 
   cros_pkg_get_initial_items.sh - This script is used to determine the current
                                   set of ChromeOS packages.
+
+  cros_pkg_install.sh - This script will build and flash your image to the
+                        remote machine. If the flash fails, this script will
+			help the user troubleshoot by flashing through usb or
+			by retrying the flash over ethernet.
 
   cros_pkg_interactive_test.sh - One of two possible scripts used to determine
                                  if the ChromeOS image built from the packages
@@ -153,8 +160,7 @@ testing your chromeos images.  cros_pkg_setup.sh will do the following:
      various changes that cros_pkg_setup.sh did.
 
 
-This set of scripts comes with two alternate test scripts.  Both test
-scripts build the image and push it onto the Chromebook.  One test
+This set of scripts comes with two alternate test scripts.  One test
 script, cros_pkg_boot_test.sh, just checks to make sure that the image
 booted (i.e. responds to ping) and assumes that is enough.  The other
 test script, cros_pkg_interactive_test.sh, is interactive and asks YOU
@@ -170,6 +176,7 @@ isolate/identify the bad package:
  --get_initial_items=cros_pkg_get_initial_items.sh \
  --switch_to_good=cros_pkg_switch_to_good.sh \
  --switch_to_bad=cros_pkg_switch_to_bad.sh \
+ --install_script=cros_pkg_install.sh \
  --test_script=cros_pkg_boots_test.sh \  # could use cros_pkg_interactive_test.sh instead
  --prune
 
