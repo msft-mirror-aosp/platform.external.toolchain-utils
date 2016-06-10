@@ -4,6 +4,7 @@
 from __future__ import print_function
 
 import argparse
+import math
 import os
 import pickle
 import sys
@@ -49,11 +50,14 @@ class BinarySearchState(object):
     self.l = logger.GetLogger()
     self.ce = command_executer.GetCommandExecuter()
 
+    self.prune_cycles = 0
+    self.search_cycles = 0
     self.bs = None
     self.all_items = None
     self.PopulateItemsUsingCommand(self.get_initial_items)
     self.currently_good_items = set([])
     self.currently_bad_items = set([])
+    self.found_items = set([])
 
   def SwitchToGood(self, item_list):
     if self.incremental:
@@ -122,6 +126,8 @@ class BinarySearchState(object):
     return ret
 
   def DoVerify(self):
+    self.l.LogOutput('VERIFICATION')
+    self.l.LogOutput('Beginning %d tests to verify good/bad sets\n')
     for _ in range(int(self.verify_level)):
       self.l.LogOutput('Resetting all items to good to verify.')
       self.SwitchToGood(self.all_items)
@@ -139,9 +145,11 @@ class BinarySearchState(object):
 
   def DoSearch(self):
     num_bad_items_history = []
-    i = 0
-    while True and len(self.all_items) > 1 and i < self.prune_iterations:
-      i += 1
+    self.prune_cycles = 0
+    while (True and
+           len(self.all_items) > 1 and
+           self.prune_cycles < self.prune_iterations):
+      self.prune_cycles += 1
       terminated = self.DoBinarySearch()
       if not terminated:
         break
@@ -171,6 +179,7 @@ class BinarySearchState(object):
       new_all_items = list(self.all_items)
       # Move prune item to the end of the list.
       new_all_items.append(new_all_items.pop(prune_index))
+      self.found_items.add(new_all_items[-1])
 
       if prune_index:
         new_all_items = new_all_items[prune_index - 1:]
@@ -183,10 +192,11 @@ class BinarySearchState(object):
       self.PopulateItemsUsingList(new_all_items)
 
   def DoBinarySearch(self):
-    i = 0
+    self.search_cycles = 0
     terminated = False
-    while i < self.iterations and not terminated:
-      i += 1
+    while self.search_cycles < self.iterations and not terminated:
+      self.OutputProgress()
+      self.search_cycles += 1
       [bad_items, good_items] = self.GetNextItems()
 
       # TODO: bad_items should come first.
@@ -243,6 +253,21 @@ class BinarySearchState(object):
     next_good_items = self.all_items[index + 1:]
 
     return [next_bad_items, next_good_items]
+
+  def OutputProgress(self):
+    out = ('\n********** PROGRESS **********\n'
+           'Search %d of estimated %d.\n'
+           'Prune %d of max %d.\n'
+           'Current bad items found:\n'
+           '%s\n'
+           '******************************')
+    out = out % (self.search_cycles + 1,
+                 math.ceil(math.log(len(self.all_items), 2)),
+                 self.prune_cycles,
+                 self.prune_iterations,
+                 str(self.found_items))
+
+    self.l.LogOutput(out)
 
   def __str__(self):
     ret = ''
