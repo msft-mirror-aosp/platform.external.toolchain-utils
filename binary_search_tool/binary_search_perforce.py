@@ -63,7 +63,7 @@ class BinarySearchPoint(object):
 
 class BinarySearcher(object):
   """Class of binary searcher."""
-  def __init__(self):
+  def __init__(self, logger_to_set=None):
     self.sorted_list = []
     self.index_log = []
     self.status_log = []
@@ -72,6 +72,10 @@ class BinarySearcher(object):
     self.points = {}
     self.lo = 0
     self.hi = 0
+    if logger_to_set is not None:
+      self.logger = logger_to_set
+    else:
+      self.logger = logger.GetLogger();
 
   def SetSortedList(self, sorted_list):
     assert len(sorted_list) > 0
@@ -89,7 +93,7 @@ class BinarySearcher(object):
                (self.sorted_list[self.current],
                 self.current,
                 status))
-    logger.GetLogger().LogOutput(message, print_to_console=verbose)
+    self.logger.LogOutput(message, print_to_console=verbose)
     assert status == 0 or status == 1 or status == 2
     self.index_log.append(self.current)
     self.status_log.append(status)
@@ -104,7 +108,7 @@ class BinarySearcher(object):
         self.lo = self.current + 1
       elif status == 1:
         self.hi = self.current
-      logger.GetLogger().LogOutput("lo: %d hi: %d\n" % (self.lo, self.hi))
+      self.logger.LogOutput("lo: %d hi: %d\n" % (self.lo, self.hi))
       self.current = (self.lo + self.hi)/2
 
     if self.lo == self.hi:
@@ -112,13 +116,13 @@ class BinarySearcher(object):
                  " at index: %d" %
                  (self.sorted_list[self.current],
                   self.lo))
-      logger.GetLogger().LogOutput(message)
+      self.logger.LogOutput(message)
       return True
 
     for index in range(self.lo, self.hi):
       if index not in self.skipped_indices:
         return False
-    logger.GetLogger().LogOutput(
+    self.logger.LogOutput(
         "All skipped indices between: %d and %d\n" % (self.lo, self.hi),
         print_to_console=verbose)
     return True
@@ -167,12 +171,12 @@ class BinarySearcher(object):
     message = ("Estimated tries: min: %d max: %d\n" %
                (1 + math.log(self.hi - self.lo, 2),
                 self.hi - self.lo - len(self.skipped_indices)))
-    logger.GetLogger().LogOutput(message, print_to_console=verbose)
+    self.logger.LogOutput(message, print_to_console=verbose)
     message = ("lo: %d hi: %d current: %d version: %s\n" %
                (self.lo, self.hi, self.current,
                 self.sorted_list[self.current]))
-    logger.GetLogger().LogOutput(message, print_to_console=verbose)
-    logger.GetLogger().LogOutput(str(self), print_to_console=verbose)
+    self.logger.LogOutput(message, print_to_console=verbose)
+    self.logger.LogOutput(str(self), print_to_console=verbose)
     return self.sorted_list[self.current]
 
   def SetLoRevision(self, lo_revision):

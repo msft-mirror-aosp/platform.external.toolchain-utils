@@ -217,7 +217,7 @@ class BinarySearchState(object):
 
   def PopulateItemsUsingList(self, all_items):
     self.all_items = all_items
-    self.bs = binary_search_perforce.BinarySearcher()
+    self.bs = binary_search_perforce.BinarySearcher(logger_to_set=self.l)
     self.bs.SetSortedList(self.all_items)
 
   def SaveState(self):
