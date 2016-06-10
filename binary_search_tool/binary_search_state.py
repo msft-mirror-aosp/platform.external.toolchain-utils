@@ -32,7 +32,7 @@ class BinarySearchState(object):
 
   def __init__(self, get_initial_items, switch_to_good, switch_to_bad,
                install_script, test_script, incremental, prune, iterations,
-               prune_iterations, verify_level, file_args):
+               prune_iterations, verify_level, file_args, verbose):
     self.get_initial_items = get_initial_items
     self.switch_to_good = switch_to_good
     self.switch_to_bad = switch_to_bad
@@ -44,6 +44,7 @@ class BinarySearchState(object):
     self.prune_iterations = prune_iterations
     self.verify_level = verify_level
     self.file_args = file_args
+    self.verbose = verbose
 
     self.l = logger.GetLogger()
     self.ce = command_executer.GetCommandExecuter()
@@ -57,18 +58,19 @@ class BinarySearchState(object):
   def SwitchToGood(self, item_list):
     if self.incremental:
       self.l.LogOutput('Incremental set. Wanted to switch %s to good' %
-                       str(item_list))
+                       str(item_list), print_to_console=self.verbose)
       incremental_items = [
           item for item in item_list if item not in self.currently_good_items
       ]
       item_list = incremental_items
       self.l.LogOutput('Incremental set. Actually switching %s to good' %
-                       str(item_list))
+                       str(item_list), print_to_console=self.verbose)
 
     if not item_list:
       return
 
-    self.l.LogOutput('Switching %s to good' % str(item_list))
+    self.l.LogOutput('Switching %s to good' % str(item_list),
+                     print_to_console=self.verbose)
     self.RunSwitchScript(self.switch_to_good, item_list)
     self.currently_good_items = self.currently_good_items.union(set(item_list))
     self.currently_bad_items.difference_update(set(item_list))
@@ -76,18 +78,19 @@ class BinarySearchState(object):
   def SwitchToBad(self, item_list):
     if self.incremental:
       self.l.LogOutput('Incremental set. Wanted to switch %s to bad' %
-                       str(item_list))
+                       str(item_list), print_to_console=self.verbose)
       incremental_items = [
           item for item in item_list if item not in self.currently_bad_items
       ]
       item_list = incremental_items
       self.l.LogOutput('Incremental set. Actually switching %s to bad' %
-                       str(item_list))
+                       str(item_list), print_to_console=self.verbose)
 
     if not item_list:
       return
 
-    self.l.LogOutput('Switching %s to bad' % str(item_list))
+    self.l.LogOutput('Switching %s to bad' % str(item_list),
+                     print_to_console=self.verbose)
     self.RunSwitchScript(self.switch_to_bad, item_list)
     self.currently_bad_items = self.currently_bad_items.union(set(item_list))
     self.currently_good_items.difference_update(set(item_list))
@@ -101,7 +104,7 @@ class BinarySearchState(object):
       command = '%s %s' % (switch_script, temp_file)
     else:
       command = '%s %s' % (switch_script, ' '.join(item_list))
-    ret = self.ce.RunCommand(command)
+    ret = self.ce.RunCommand(command, print_to_console=self.verbose)
     assert ret == 0, 'Switch script %s returned %d' % (switch_script, ret)
 
   def TestScript(self):
@@ -170,7 +173,8 @@ class BinarySearchState(object):
         new_all_items = new_all_items[prune_index - 1:]
 
       self.l.LogOutput('Old list: %s. New list: %s' % (str(self.all_items),
-                                                       str(new_all_items)))
+                                                       str(new_all_items)),
+                       print_to_console=self.verbose)
 
       # FIXME: Do we need to Convert the currently good items to bad
       self.PopulateItemsUsingList(new_all_items)
@@ -197,12 +201,12 @@ class BinarySearchState(object):
         self.l.LogOutput('Terminated!')
     if not terminated:
       self.l.LogOutput('Ran out of iterations searching...')
-    self.l.LogOutput(str(self))
+    self.l.LogOutput(str(self), print_to_console=self.verbose)
     return terminated
 
   def PopulateItemsUsingCommand(self, command):
     ce = command_executer.GetCommandExecuter()
-    _, out, _ = ce.RunCommandWOutput(command)
+    _, out, _ = ce.RunCommandWOutput(command, print_to_console=self.verbose)
     all_items = out.split()
     self.PopulateItemsUsingList(all_items)
 
@@ -263,15 +267,21 @@ def Main(argv):
   parser.add_argument('-i',
                       '--get_initial_items',
                       dest='get_initial_items',
-                      help='Script to run to get the initial objects.')
+                      help=('Script to run to get the initial objects. '
+                            'If your script requires user input '
+                            'the --verbose option must be used'))
   parser.add_argument('-g',
                       '--switch_to_good',
                       dest='switch_to_good',
-                      help='Script to run to switch to good.')
+                      help=('Script to run to switch to good. '
+                            'If your switch script requires user input '
+                            'the --verbose option must be used'))
   parser.add_argument('-b',
                       '--switch_to_bad',
                       dest='switch_to_bad',
-                      help='Script to run to switch to bad.')
+                      help=('Script to run to switch to bad. '
+                            'If your switch script requires user input '
+                            'the --verbose option must be used'))
   parser.add_argument('-I',
                       '--install_script',
                       dest='install_script',
@@ -313,6 +323,11 @@ def Main(argv):
                       dest='prune_iterations',
                       help='Number of prune iterations to try in the search.',
                       default=100)
+  parser.add_argument('-V',
+                      '--verbose',
+                      dest='verbose',
+                      action='store_true',
+                      help='Print full output to console.')
 
   logger.GetLogger().LogOutput(' '.join(argv))
   options = parser.parse_args(argv)
@@ -334,6 +349,8 @@ def Main(argv):
   prune_iterations = options.prune_iterations
   verify_level = options.verify_level
   file_args = options.file_args
+  verbose = options.verbose
+  binary_search_perforce.verbose = verbose
 
   if options.noincremental:
     incremental = False
@@ -344,7 +361,7 @@ def Main(argv):
     bss = BinarySearchState(get_initial_items, switch_to_good, switch_to_bad,
                             install_script, test_script, incremental, prune,
                             iterations, prune_iterations, verify_level,
-                            file_args)
+                            file_args, verbose)
     bss.DoVerify()
     bss.DoSearch()
 

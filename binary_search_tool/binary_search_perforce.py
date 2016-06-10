@@ -12,6 +12,8 @@ import tempfile
 from cros_utils import command_executer
 from cros_utils import logger
 
+verbose = True
+
 def _GetP4ClientSpec(client_name, p4_paths):
   p4_string = ""
   for p4_path in p4_paths:
@@ -87,7 +89,7 @@ class BinarySearcher(object):
                (self.sorted_list[self.current],
                 self.current,
                 status))
-    logger.GetLogger().LogOutput(message)
+    logger.GetLogger().LogOutput(message, print_to_console=verbose)
     assert status == 0 or status == 1 or status == 2
     self.index_log.append(self.current)
     self.status_log.append(status)
@@ -117,7 +119,8 @@ class BinarySearcher(object):
       if index not in self.skipped_indices:
         return False
     logger.GetLogger().LogOutput(
-        "All skipped indices between: %d and %d\n" % (self.lo, self.hi))
+        "All skipped indices between: %d and %d\n" % (self.lo, self.hi),
+        print_to_console=verbose)
     return True
 
   # Does a better job with chromeos flakiness.
@@ -164,12 +167,12 @@ class BinarySearcher(object):
     message = ("Estimated tries: min: %d max: %d\n" %
                (1 + math.log(self.hi - self.lo, 2),
                 self.hi - self.lo - len(self.skipped_indices)))
-    logger.GetLogger().LogOutput(message)
+    logger.GetLogger().LogOutput(message, print_to_console=verbose)
     message = ("lo: %d hi: %d current: %d version: %s\n" %
                (self.lo, self.hi, self.current,
                 self.sorted_list[self.current]))
-    logger.GetLogger().LogOutput(message)
-    logger.GetLogger().LogOutput(str(self))
+    logger.GetLogger().LogOutput(message, print_to_console=verbose)
+    logger.GetLogger().LogOutput(str(self), print_to_console=verbose)
     return self.sorted_list[self.current]
 
   def SetLoRevision(self, lo_revision):
@@ -405,18 +408,21 @@ def Main(argv):
       status = ce.RunCommand(command)
       message = ("Revision: %s produced: %d status\n" %
                  (current_revision, status))
-      logger.GetLogger().LogOutput(message)
+      logger.GetLogger().LogOutput(message, print_to_console=verbose)
       terminated = p4gccbs.SetStatus(status)
       num_tries -= 1
-      logger.GetLogger().LogOutput(str(p4gccbs))
+      logger.GetLogger().LogOutput(str(p4gccbs), print_to_console=verbose)
 
     if not terminated:
-      logger.GetLogger().LogOutput("Tries: %d expired." % num_tries)
-    logger.GetLogger().LogOutput(str(p4gccbs.bs))
+      logger.GetLogger().LogOutput("Tries: %d expired." % num_tries,
+                                   print_to_console=verbose)
+    logger.GetLogger().LogOutput(str(p4gccbs.bs),
+                                 print_to_console=verbose)
   except (KeyboardInterrupt, SystemExit):
     logger.GetLogger().LogOutput("Cleaning up...")
   finally:
-    logger.GetLogger().LogOutput(str(p4gccbs.bs))
+    logger.GetLogger().LogOutput(str(p4gccbs.bs),
+                                 print_to_console=verbose)
     status = p4gccbs.Cleanup()
 
 
