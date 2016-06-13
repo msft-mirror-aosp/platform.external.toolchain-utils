@@ -104,19 +104,22 @@ class BinarySearchState(object):
       command = '%s %s' % (switch_script, temp_file)
     else:
       command = '%s %s' % (switch_script, ' '.join(item_list))
-    ret = self.ce.RunCommand(command, print_to_console=self.verbose)
+    ret, _, _ = self.ce.RunCommandWExceptionCleanup(
+        command, print_to_console=self.verbose)
     assert ret == 0, 'Switch script %s returned %d' % (switch_script, ret)
 
   def TestScript(self):
     command = self.test_script
-    return self.ce.RunCommand(command)
+    ret, _, _ = self.ce.RunCommandWExceptionCleanup(command)
+    return ret
 
   def InstallScript(self):
     if not self.install_script:
       return 0
 
     command = self.install_script
-    return self.ce.RunCommand(command)
+    ret, _, _ = self.ce.RunCommandWExceptionCleanup(command)
+    return ret
 
   def DoVerify(self):
     for _ in range(int(self.verify_level)):
@@ -206,7 +209,9 @@ class BinarySearchState(object):
 
   def PopulateItemsUsingCommand(self, command):
     ce = command_executer.GetCommandExecuter()
-    _, out, _ = ce.RunCommandWOutput(command, print_to_console=self.verbose)
+    _, out, _ = ce.RunCommandWExceptionCleanup(command,
+                                               return_output=True,
+                                               print_to_console=self.verbose)
     all_items = out.split()
     self.PopulateItemsUsingList(all_items)
 
