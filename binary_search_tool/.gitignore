@@ -2,4 +2,6 @@ log
 *.pyc
 working_set.txt
 objects.txt
+.binary_search_state.py.state*
+binary_search_state.py.state
 

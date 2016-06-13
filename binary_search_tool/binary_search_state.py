@@ -29,6 +29,10 @@ STATE_FILE = '%s.state' % sys.argv[0]
 HIDDEN_STATE_FILE = os.path.join(
     os.path.dirname(STATE_FILE), '.%s' % os.path.basename(STATE_FILE))
 
+class Error(Exception):
+  """The general binary search tool error class."""
+  pass
+
 
 class BinarySearchState(object):
   """The binary search state class."""
@@ -52,8 +56,10 @@ class BinarySearchState(object):
     self.l = logger.GetLogger()
     self.ce = command_executer.GetCommandExecuter()
 
+    self.resumed = False
     self.prune_cycles = 0
     self.search_cycles = 0
+    self.num_bad_items_history = []
     self.bs = None
     self.all_items = None
     self.PopulateItemsUsingCommand(self.get_initial_items)
@@ -147,13 +153,11 @@ class BinarySearchState(object):
       assert status == 1, 'When reset_to_bad, status should be 1.'
 
   def DoSearch(self):
-    num_bad_items_history = []
-    self.prune_cycles = 0
     while (True and
            len(self.all_items) > 1 and
            self.prune_cycles < self.prune_iterations):
-      self.prune_cycles += 1
       terminated = self.DoBinarySearch()
+      self.prune_cycles += 1
       if not terminated:
         break
       if not self.prune:
@@ -168,12 +172,12 @@ class BinarySearchState(object):
         break
 
       num_bad_items = len(self.all_items) - prune_index
-      num_bad_items_history.append(num_bad_items)
+      self.num_bad_items_history.append(num_bad_items)
 
-      if (num_bad_items_history[-num_bad_items:] ==
+      if (self.num_bad_items_history[-num_bad_items:] ==
           [num_bad_items for _ in range(num_bad_items)]):
         self.l.LogOutput('num_bad_items_history: %s for past %d iterations. '
-                         'Breaking.' % (str(num_bad_items_history),
+                         'Breaking.' % (str(self.num_bad_items_history),
                                         num_bad_items))
         self.l.LogOutput('Bad items are: %s' %
                          ' '.join(self.all_items[prune_index:]))
@@ -195,9 +199,15 @@ class BinarySearchState(object):
       self.PopulateItemsUsingList(new_all_items)
 
   def DoBinarySearch(self):
-    self.search_cycles = 0
+    # If in resume mode don't reset search_cycles
+    if not self.resumed:
+      self.search_cycles = 0
+    else:
+      self.resumed = False
+
     terminated = False
     while self.search_cycles < self.iterations and not terminated:
+      self.SaveState()
       self.OutputProgress()
       self.search_cycles += 1
       [bad_items, good_items] = self.GetNextItems()
@@ -246,9 +256,8 @@ class BinarySearchState(object):
       if os.path.islink(STATE_FILE):
         old_state = os.readlink(STATE_FILE)
       else:
-        l.LogError(('%s already exists and is not a symlink!\n'
-                    'State file saved to %s' % (STATE_FILE, path)))
-        sys.exit(1)
+        raise Error(('%s already exists and is not a symlink!\n'
+                     'State file saved to %s' % (STATE_FILE, path)))
 
     # Create new link and atomically overwrite old link
     temp_link = '%s.link' % HIDDEN_STATE_FILE
@@ -264,7 +273,23 @@ class BinarySearchState(object):
   def LoadState(cls):
     if not os.path.isfile(STATE_FILE):
       return None
-    return pickle.load(file(STATE_FILE))
+    try:
+      bss = pickle.load(file(STATE_FILE))
+      bss.l = logger.GetLogger()
+      bss.ce = command_executer.GetCommandExecuter()
+      bss.PopulateItemsUsingList(bss.all_items)
+      bss.resumed = True
+      binary_search_perforce.verbose = bss.verbose
+      return bss
+    except Exception:
+      return None
+
+  def RemoveState(self):
+    if os.path.exists(STATE_FILE):
+      if os.path.islink(STATE_FILE):
+        real_file = os.readlink(STATE_FILE)
+        os.remove(real_file)
+        os.remove(STATE_FILE)
 
   def GetNextItems(self):
     border_item = self.bs.GetNext()
@@ -284,7 +309,7 @@ class BinarySearchState(object):
            '******************************')
     out = out % (self.search_cycles + 1,
                  math.ceil(math.log(len(self.all_items), 2)),
-                 self.prune_cycles,
+                 self.prune_cycles + 1,
                  self.prune_iterations,
                  str(self.found_items))
 
@@ -402,46 +427,68 @@ def Main(argv):
                       dest='verbose',
                       action='store_true',
                       help='Print full output to console.')
+  parser.add_argument('-r',
+                      '--resume',
+                      dest='resume',
+                      action='store_true',
+                      help=('Resume bisection tool execution from state file.'
+                            'Useful if the last bisection was terminated '
+                            'before it could properly finish.'))
 
   logger.GetLogger().LogOutput(' '.join(argv))
   options = parser.parse_args(argv)
 
   if not (options.get_initial_items and options.switch_to_good and
-          options.switch_to_bad and options.test_script):
+          options.switch_to_bad and options.test_script) and not options.resume:
     parser.print_help()
     return 1
 
-  iterations = int(options.iterations)
-  switch_to_good = _CanonicalizeScript(options.switch_to_good)
-  switch_to_bad = _CanonicalizeScript(options.switch_to_bad)
-  install_script = options.install_script
-  if install_script:
-    install_script = _CanonicalizeScript(options.install_script)
-  test_script = _CanonicalizeScript(options.test_script)
-  get_initial_items = _CanonicalizeScript(options.get_initial_items)
-  prune = options.prune
-  prune_iterations = options.prune_iterations
-  verify_level = options.verify_level
-  file_args = options.file_args
-  verbose = options.verbose
-  binary_search_perforce.verbose = verbose
-
-  if options.noincremental:
-    incremental = False
+  if options.resume:
+    logger.GetLogger().LogOutput('Resuming from %s' % STATE_FILE)
+    if len(argv) > 1:
+      logger.GetLogger().LogOutput(('Note: resuming from previous state, '
+                                    'ignoring given options and loading saved '
+                                    'options instead.'))
+    bss = BinarySearchState.LoadState()
+    if not bss:
+      logger.GetLogger().LogOutput(
+          '%s is not a valid binary_search_tool state file, cannot resume!' %
+          STATE_FILE)
+      return 1
   else:
-    incremental = True
+    iterations = int(options.iterations)
+    switch_to_good = _CanonicalizeScript(options.switch_to_good)
+    switch_to_bad = _CanonicalizeScript(options.switch_to_bad)
+    install_script = options.install_script
+    if install_script:
+      install_script = _CanonicalizeScript(options.install_script)
+    test_script = _CanonicalizeScript(options.test_script)
+    get_initial_items = _CanonicalizeScript(options.get_initial_items)
+    prune = options.prune
+    prune_iterations = options.prune_iterations
+    verify_level = options.verify_level
+    file_args = options.file_args
+    verbose = options.verbose
+    binary_search_perforce.verbose = verbose
 
-  try:
+    if options.noincremental:
+      incremental = False
+    else:
+      incremental = True
+
     bss = BinarySearchState(get_initial_items, switch_to_good, switch_to_bad,
                             install_script, test_script, incremental, prune,
                             iterations, prune_iterations, verify_level,
                             file_args, verbose)
     bss.DoVerify()
-    bss.DoSearch()
 
-  except (KeyboardInterrupt, SystemExit):
-    print('C-c pressed')
-    bss.SaveState()
+  try:
+    bss.DoSearch()
+    bss.RemoveState()
+  except Error as e:
+    logger.GetLogger().LogError(e)
+    return 1
+
   return 0
 
 

@@ -86,7 +86,7 @@ class BisectingUtilsTest(unittest.TestCase):
       f.write('test123')
 
     bss = binary_search_state.MockBinarySearchState()
-    with self.assertRaises(SystemExit):
+    with self.assertRaises(binary_search_state.Error):
       bss.SaveState()
 
     with open(state_file, 'r') as f:
@@ -103,9 +103,26 @@ class BisectingUtilsTest(unittest.TestCase):
     first_state = os.readlink(state_file)
 
     bss.SaveState()
+    second_state = os.readlink(state_file)
     self.assertTrue(os.path.exists(state_file))
-    self.assertTrue(os.readlink(state_file) != first_state)
+    self.assertTrue(second_state != first_state)
     self.assertFalse(os.path.exists(first_state))
+
+    bss.RemoveState()
+    self.assertFalse(os.path.islink(state_file))
+    self.assertFalse(os.path.exists(second_state))
+
+  def test_load_state(self):
+    test_items = [1, 2, 3, 4, 5]
+
+    bss = binary_search_state.MockBinarySearchState()
+    bss.all_items = test_items
+    bss.SaveState()
+
+    bss = None
+
+    bss2 = binary_search_state.MockBinarySearchState.LoadState()
+    self.assertEquals(bss2.all_items, test_items)
 
   def test_tmp_cleanup(self):
     bss = binary_search_state.MockBinarySearchState(
@@ -148,6 +165,7 @@ def Main(argv):
   suite.addTest(BisectingUtilsTest('test_bad_install_script'))
   suite.addTest(BisectingUtilsTest('test_bad_save_state'))
   suite.addTest(BisectingUtilsTest('test_save_state'))
+  suite.addTest(BisectingUtilsTest('test_load_state'))
   suite.addTest(BisectingUtilsTest('test_tmp_cleanup'))
   runner = unittest.TextTestRunner()
   runner.run(suite)
