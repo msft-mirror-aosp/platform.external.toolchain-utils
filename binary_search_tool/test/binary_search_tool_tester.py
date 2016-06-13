@@ -30,12 +30,22 @@ class BisectingUtilsTest(unittest.TestCase):
       bad_obj_num = 1
     gen_obj.Main(['--obj_num', str(obj_num), '--bad_obj_num', str(bad_obj_num)])
 
+    try:
+      os.remove(binary_search_state.STATE_FILE)
+    except OSError:
+      pass
+
   def tearDown(self):
     """Cleanup temp files."""
     os.remove(common.OBJECTS_FILE)
     os.remove(common.WORKING_SET_FILE)
     print('Deleted "{0}" and "{1}"'.format(common.OBJECTS_FILE,
                                            common.WORKING_SET_FILE))
+    try:
+      os.remove(os.readlink(binary_search_state.STATE_FILE))
+      os.remove(binary_search_state.STATE_FILE)
+    except OSError:
+      pass
 
   def runTest(self):
     args = ['--get_initial_items', './gen_init_list.py', '--switch_to_good',
@@ -61,6 +71,34 @@ class BisectingUtilsTest(unittest.TestCase):
     with self.assertRaises(AssertionError):
       binary_search_state.Main(args)
 
+  def test_bad_save_state(self):
+    state_file = binary_search_state.STATE_FILE
+
+    with open(state_file, 'w') as f:
+      f.write('test123')
+
+    bss = binary_search_state.MockBinarySearchState()
+    with self.assertRaises(SystemExit):
+      bss.SaveState()
+
+    with open(state_file, 'r') as f:
+      self.assertEquals(f.read(), 'test123')
+
+    os.remove(state_file)
+
+  def test_save_state(self):
+    state_file = binary_search_state.STATE_FILE
+
+    bss = binary_search_state.MockBinarySearchState()
+    bss.SaveState()
+    self.assertTrue(os.path.exists(state_file))
+    first_state = os.readlink(state_file)
+
+    bss.SaveState()
+    self.assertTrue(os.path.exists(state_file))
+    self.assertTrue(os.readlink(state_file) != first_state)
+    self.assertFalse(os.path.exists(first_state))
+
   def check_output(self):
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
         'tail -n 10 logs/binary_search_state.py.out')
@@ -84,6 +122,8 @@ def Main(argv):
     suite.addTest(BisectingUtilsTest())
   suite.addTest(BisectingUtilsTest('test_install_script'))
   suite.addTest(BisectingUtilsTest('test_bad_install_script'))
+  suite.addTest(BisectingUtilsTest('test_bad_save_state'))
+  suite.addTest(BisectingUtilsTest('test_save_state'))
   runner = unittest.TextTestRunner()
   runner.run(suite)
 

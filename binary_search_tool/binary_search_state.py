@@ -26,6 +26,8 @@ from utils import logger
 import binary_search_perforce
 
 STATE_FILE = '%s.state' % sys.argv[0]
+HIDDEN_STATE_FILE = os.path.join(
+    os.path.dirname(STATE_FILE), '.%s' % os.path.basename(STATE_FILE))
 
 
 class BinarySearchState(object):
@@ -231,13 +233,31 @@ class BinarySearchState(object):
     self.bs.SetSortedList(self.all_items)
 
   def SaveState(self):
-    self.l = None
-    self.ce = None
-    # TODO Implement save/restore
-    ###    return
-    f = open(STATE_FILE, 'wb')
-    pickle.dump(self, f)
-    f.close()
+    ce, l, bs = self.ce, self.l, self.bs
+    self.ce, self.l, self.bs = None, None, None
+    old_state = None
+
+    _, path = tempfile.mkstemp(prefix=HIDDEN_STATE_FILE, dir='.')
+    with open(path, 'wb') as f:
+      pickle.dump(self, f)
+
+    if os.path.exists(STATE_FILE):
+      if os.path.islink(STATE_FILE):
+        old_state = os.readlink(STATE_FILE)
+      else:
+        l.LogError(('%s already exists and is not a symlink!\n'
+                    'State file saved to %s' % (STATE_FILE, path)))
+        sys.exit(1)
+
+    # Create new link and atomically overwrite old link
+    temp_link = '%s.link' % HIDDEN_STATE_FILE
+    os.symlink(path, temp_link)
+    os.rename(temp_link, STATE_FILE)
+
+    if old_state:
+      os.remove(old_state)
+
+    self.ce, self.l, self.bs = ce, l, bs
 
   @classmethod
   def LoadState(cls):
@@ -276,6 +296,28 @@ class BinarySearchState(object):
     ret += 'currently_bad: %s\n' % str(self.currently_bad_items)
     ret += str(self.bs)
     return ret
+
+
+class MockBinarySearchState(BinarySearchState):
+  """Mock class for BinarySearchState."""
+
+  def __init__(self):
+    # Initialize all arguments to None
+    kwargs = {
+        'get_initial_items': 'echo "1"',
+        'switch_to_good': None,
+        'switch_to_bad': None,
+        'install_script': None,
+        'test_script': None,
+        'incremental': None,
+        'prune': None,
+        'iterations': None,
+        'prune_iterations': None,
+        'verify_level': None,
+        'file_args': None,
+        'verbose': None
+    }
+    super(MockBinarySearchState, self).__init__(**kwargs)
 
 
 def _CanonicalizeScript(script_name):
