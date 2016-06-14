@@ -101,7 +101,7 @@ class BisectingUtilsTest(unittest.TestCase):
 
   def check_output(self):
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
-        'tail -n 10 logs/binary_search_state.py.out')
+        'tail -n 10 logs/binary_search_tool_tester.py.out')
     ls = out.splitlines()
     for l in ls:
       t = l.find('Bad items are: ')

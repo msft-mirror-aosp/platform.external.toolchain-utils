@@ -163,7 +163,7 @@ class BinarySearchState(object):
 
       if prune_index == len(self.all_items) - 1:
         self.l.LogOutput('First bad item is the last item. Breaking.')
-        self.l.LogOutput('Only bad item is: %s' % self.all_items[-1])
+        self.l.LogOutput('Bad items are: %s' % self.all_items[-1])
         break
 
       num_bad_items = len(self.all_items) - prune_index
