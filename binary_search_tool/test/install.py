@@ -5,11 +5,12 @@ from __future__ import print_function
 
 import sys
 
-import common
-
 
 def Main():
-  common.installed = True
+  # create ./installed
+  with open('./installed', 'w'):
+    pass
+
   return 0
 
 

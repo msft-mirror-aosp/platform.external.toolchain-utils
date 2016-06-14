@@ -30,6 +30,9 @@ class BisectingUtilsTest(unittest.TestCase):
       bad_obj_num = 1
     gen_obj.Main(['--obj_num', str(obj_num), '--bad_obj_num', str(bad_obj_num)])
 
+    with open('./installed', 'w'):
+      pass
+
     try:
       os.remove(binary_search_state.STATE_FILE)
     except OSError:
@@ -42,6 +45,7 @@ class BisectingUtilsTest(unittest.TestCase):
     print('Deleted "{0}" and "{1}"'.format(common.OBJECTS_FILE,
                                            common.WORKING_SET_FILE))
     try:
+      os.remove('./installed')
       os.remove(os.readlink(binary_search_state.STATE_FILE))
       os.remove(binary_search_state.STATE_FILE)
     except OSError:
@@ -57,9 +61,13 @@ class BisectingUtilsTest(unittest.TestCase):
   def test_install_script(self):
     args = ['--get_initial_items', './gen_init_list.py', '--switch_to_good',
             './switch_to_good.py', '--switch_to_bad', './switch_to_bad.py',
-            '--test_script', './is_good.py', '--prune', '--file_args',
-            '--install_script', './install.py']
-    common.installed = False
+            '--test_script', './is_good.py', '--prune', '--file_args']
+
+    os.remove('./installed')
+    with self.assertRaises(AssertionError):
+      binary_search_state.Main(args)
+
+    args += ['--install_script', './install.py']
     binary_search_state.Main(args)
     self.check_output()
 

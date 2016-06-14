@@ -3,13 +3,14 @@
 
 from __future__ import print_function
 
+import os
 import sys
 
 import common
 
 
 def Main():
-  if not common.installed:
+  if not os.path.exists('./installed'):
     return 1
   working_set = common.ReadWorkingSet()
   for w in working_set:
