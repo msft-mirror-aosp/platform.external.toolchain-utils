@@ -107,6 +107,22 @@ class BisectingUtilsTest(unittest.TestCase):
     self.assertTrue(os.readlink(state_file) != first_state)
     self.assertFalse(os.path.exists(first_state))
 
+  def test_tmp_cleanup(self):
+    bss = binary_search_state.MockBinarySearchState(
+        get_initial_items='echo "0\n1\n2\n3"', switch_to_good='./switch_tmp.py',
+        file_args=True)
+    bss.SwitchToGood(['0', '1', '2', '3'])
+
+    tmp_file = None
+    with open('tmp_file', 'r') as f:
+      tmp_file = f.read()
+    os.remove('tmp_file')
+
+    self.assertFalse(os.path.exists(tmp_file))
+    ws = common.ReadWorkingSet()
+    for i in range(3):
+      self.assertEquals(ws[i], 42)
+
   def check_output(self):
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
         'tail -n 10 logs/binary_search_tool_tester.py.out')
@@ -132,6 +148,7 @@ def Main(argv):
   suite.addTest(BisectingUtilsTest('test_bad_install_script'))
   suite.addTest(BisectingUtilsTest('test_bad_save_state'))
   suite.addTest(BisectingUtilsTest('test_save_state'))
+  suite.addTest(BisectingUtilsTest('test_tmp_cleanup'))
   runner = unittest.TextTestRunner()
   runner.run(suite)
 

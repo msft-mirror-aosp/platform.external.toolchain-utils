@@ -103,15 +103,16 @@ class BinarySearchState(object):
 
   def RunSwitchScript(self, switch_script, item_list):
     if self.file_args:
-      temp_file = tempfile.mktemp()
-      f = open(temp_file, 'wb')
-      f.write('\n'.join(item_list))
-      f.close()
-      command = '%s %s' % (switch_script, temp_file)
+      with tempfile.NamedTemporaryFile() as f:
+        f.write('\n'.join(item_list))
+        f.flush()
+        command = '%s %s' % (switch_script, f.name)
+        ret, _, _ = self.ce.RunCommandWExceptionCleanup(
+            command, print_to_console=self.verbose)
     else:
       command = '%s %s' % (switch_script, ' '.join(item_list))
-    ret, _, _ = self.ce.RunCommandWExceptionCleanup(
-        command, print_to_console=self.verbose)
+      ret, _, _ = self.ce.RunCommandWExceptionCleanup(
+          command, print_to_console=self.verbose)
     assert ret == 0, 'Switch script %s returned %d' % (switch_script, ret)
 
   def TestScript(self):
@@ -301,9 +302,9 @@ class BinarySearchState(object):
 class MockBinarySearchState(BinarySearchState):
   """Mock class for BinarySearchState."""
 
-  def __init__(self):
+  def __init__(self, **kwargs):
     # Initialize all arguments to None
-    kwargs = {
+    default_kwargs = {
         'get_initial_items': 'echo "1"',
         'switch_to_good': None,
         'switch_to_bad': None,
@@ -317,7 +318,8 @@ class MockBinarySearchState(BinarySearchState):
         'file_args': None,
         'verbose': None
     }
-    super(MockBinarySearchState, self).__init__(**kwargs)
+    default_kwargs.update(kwargs)
+    super(MockBinarySearchState, self).__init__(**default_kwargs)
 
 
 def _CanonicalizeScript(script_name):
