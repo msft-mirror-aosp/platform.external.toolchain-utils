@@ -18,7 +18,8 @@ overall_status=0
 
 if [[ -f ${PKG_LIST_FILE} ]] ; then
 
-  while read pkg
+  # Read every line, and handle case where last line has no newline
+  while read pkg || [[ -n "$pkg" ]];
   do
     sudo cp ${GOOD_BUILD}/packages/$pkg ${WORK_BUILD}/packages/$pkg
     status=$?
