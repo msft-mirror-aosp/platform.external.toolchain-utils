@@ -244,8 +244,8 @@ class BinarySearchState(object):
     self.bs.SetSortedList(self.all_items)
 
   def SaveState(self):
-    ce, l, bs = self.ce, self.l, self.bs
-    self.ce, self.l, self.bs = None, None, None
+    ce, l = self.ce, self.l
+    self.ce, self.l, self.bs.logger = None, None, None
     old_state = None
 
     _, path = tempfile.mkstemp(prefix=HIDDEN_STATE_FILE, dir='.')
@@ -267,7 +267,7 @@ class BinarySearchState(object):
     if old_state:
       os.remove(old_state)
 
-    self.ce, self.l, self.bs = ce, l, bs
+    self.ce, self.l, self.bs.logger = ce, l, l
 
   @classmethod
   def LoadState(cls):
@@ -277,7 +277,7 @@ class BinarySearchState(object):
       bss = pickle.load(file(STATE_FILE))
       bss.l = logger.GetLogger()
       bss.ce = command_executer.GetCommandExecuter()
-      bss.PopulateItemsUsingList(bss.all_items)
+      bss.bs.logger = bss.l
       bss.resumed = True
       binary_search_perforce.verbose = bss.verbose
       return bss
