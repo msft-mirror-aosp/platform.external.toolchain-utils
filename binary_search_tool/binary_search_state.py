@@ -59,7 +59,6 @@ class BinarySearchState(object):
     self.resumed = False
     self.prune_cycles = 0
     self.search_cycles = 0
-    self.num_bad_items_history = []
     self.bs = None
     self.all_items = None
     self.PopulateItemsUsingCommand(self.get_initial_items)
@@ -166,21 +165,12 @@ class BinarySearchState(object):
       # Prune is set.
       prune_index = self.bs.current
 
-      if prune_index == len(self.all_items) - 1:
-        self.l.LogOutput('First bad item is the last item. Breaking.')
-        self.l.LogOutput('Bad items are: %s' % self.all_items[-1])
-        break
-
-      num_bad_items = len(self.all_items) - prune_index
-      self.num_bad_items_history.append(num_bad_items)
-
-      if (self.num_bad_items_history[-num_bad_items:] ==
-          [num_bad_items for _ in range(num_bad_items)]):
-        self.l.LogOutput('num_bad_items_history: %s for past %d iterations. '
-                         'Breaking.' % (str(self.num_bad_items_history),
-                                        num_bad_items))
+      # If already seen item we have no new bad items to find, finish up
+      if self.all_items[prune_index] in self.found_items:
+        self.l.LogOutput(('Found item already found before: %s. '
+                          'Done searching.' % self.all_items[prune_index]))
         self.l.LogOutput('Bad items are: %s' %
-                         ' '.join(self.all_items[prune_index:]))
+                         ' '.join(self.found_items))
         break
 
       new_all_items = list(self.all_items)
