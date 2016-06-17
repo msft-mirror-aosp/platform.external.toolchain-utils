@@ -81,6 +81,7 @@ class BisectingUtilsTest(unittest.TestCase):
 
   def test_bad_save_state(self):
     state_file = binary_search_state.STATE_FILE
+    hidden_state_file = os.path.basename(binary_search_state.HIDDEN_STATE_FILE)
 
     with open(state_file, 'w') as f:
       f.write('test123')
@@ -93,6 +94,11 @@ class BisectingUtilsTest(unittest.TestCase):
       self.assertEquals(f.read(), 'test123')
 
     os.remove(state_file)
+
+    # Cleanup generated save state that has no symlink
+    files = os.listdir(os.getcwd())
+    save_states = [x for x in files if x.startswith(hidden_state_file)]
+    _ = [os.remove(x) for x in save_states]
 
   def test_save_state(self):
     state_file = binary_search_state.STATE_FILE
