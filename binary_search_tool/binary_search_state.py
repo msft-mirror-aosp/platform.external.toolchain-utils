@@ -59,7 +59,7 @@ class BinarySearchState(object):
     self.resumed = False
     self.prune_cycles = 0
     self.search_cycles = 0
-    self.bs = None
+    self.binary_search = None
     self.all_items = None
     self.PopulateItemsUsingCommand(self.get_initial_items)
     self.currently_good_items = set([])
@@ -163,7 +163,7 @@ class BinarySearchState(object):
         self.l.LogOutput('Not continuning further, --prune is not set')
         break
       # Prune is set.
-      prune_index = self.bs.current
+      prune_index = self.binary_search.current
 
       # If already seen item we have no new bad items to find, finish up
       if self.all_items[prune_index] in self.found_items:
@@ -211,7 +211,7 @@ class BinarySearchState(object):
       else:
         # Install script failed, treat as skipped item
         status = 2
-      terminated = self.bs.SetStatus(status)
+      terminated = self.binary_search.SetStatus(status)
 
       if terminated:
         self.l.LogOutput('Terminated!')
@@ -230,12 +230,13 @@ class BinarySearchState(object):
 
   def PopulateItemsUsingList(self, all_items):
     self.all_items = all_items
-    self.bs = binary_search_perforce.BinarySearcher(logger_to_set=self.l)
-    self.bs.SetSortedList(self.all_items)
+    self.binary_search = binary_search_perforce.BinarySearcher(
+        logger_to_set=self.l)
+    self.binary_search.SetSortedList(self.all_items)
 
   def SaveState(self):
     ce, l = self.ce, self.l
-    self.ce, self.l, self.bs.logger = None, None, None
+    self.ce, self.l, self.binary_search.logger = None, None, None
     old_state = None
 
     _, path = tempfile.mkstemp(prefix=HIDDEN_STATE_FILE, dir='.')
@@ -257,7 +258,7 @@ class BinarySearchState(object):
     if old_state:
       os.remove(old_state)
 
-    self.ce, self.l, self.bs.logger = ce, l, l
+    self.ce, self.l, self.binary_search.logger = ce, l, l
 
   @classmethod
   def LoadState(cls):
@@ -267,7 +268,7 @@ class BinarySearchState(object):
       bss = pickle.load(file(STATE_FILE))
       bss.l = logger.GetLogger()
       bss.ce = command_executer.GetCommandExecuter()
-      bss.bs.logger = bss.l
+      bss.binary_search.logger = bss.l
       bss.resumed = True
       binary_search_perforce.verbose = bss.verbose
       return bss
@@ -282,7 +283,7 @@ class BinarySearchState(object):
         os.remove(STATE_FILE)
 
   def GetNextItems(self):
-    border_item = self.bs.GetNext()
+    border_item = self.binary_search.GetNext()
     index = self.all_items.index(border_item)
 
     next_bad_items = self.all_items[:index + 1]
@@ -310,7 +311,7 @@ class BinarySearchState(object):
     ret += 'all: %s\n' % str(self.all_items)
     ret += 'currently_good: %s\n' % str(self.currently_good_items)
     ret += 'currently_bad: %s\n' % str(self.currently_bad_items)
-    ret += str(self.bs)
+    ret += str(self.binary_search)
     return ret
 
 
