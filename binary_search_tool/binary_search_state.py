@@ -343,6 +343,44 @@ def _CanonicalizeScript(script_name):
   if not script_name.startswith('/'):
     return os.path.join('.', script_name)
 
+def Run(get_initial_items, switch_to_good, switch_to_bad, test_script,
+        install_script=None, iterations=50, prune=True, noincremental=False,
+        file_args=False, verify_level=1, prune_iterations=100, verbose=False,
+        resume=False):
+  """Run binary search tool. Equivalent to running through terminal."""
+  if resume:
+    bss = BinarySearchState.LoadState()
+    if not bss:
+      logger.GetLogger().LogOutput(
+          '%s is not a valid binary_search_tool state file, cannot resume!' %
+          STATE_FILE)
+      return 1
+  else:
+    switch_to_good = _CanonicalizeScript(switch_to_good)
+    switch_to_bad = _CanonicalizeScript(switch_to_bad)
+    if install_script:
+      install_script = _CanonicalizeScript(install_script)
+    test_script = _CanonicalizeScript(test_script)
+    get_initial_items = _CanonicalizeScript(get_initial_items)
+    incremental = not noincremental
+
+    binary_search_perforce.verbose = verbose
+
+    bss = BinarySearchState(get_initial_items, switch_to_good, switch_to_bad,
+                            install_script, test_script, incremental, prune,
+                            iterations, prune_iterations, verify_level,
+                            file_args, verbose)
+    bss.DoVerify()
+
+  try:
+    bss.DoSearch()
+    bss.RemoveState()
+  except Error as e:
+    logger.GetLogger().LogError(e)
+    return 1
+
+  return 0
+
 
 def Main(argv):
   """The main function."""
@@ -352,6 +390,7 @@ def Main(argv):
   parser.add_argument('-n',
                       '--iterations',
                       dest='iterations',
+                      type=int,
                       help='Number of iterations to try in the search.',
                       default=50)
   parser.add_argument('-i',
@@ -405,12 +444,14 @@ def Main(argv):
   parser.add_argument('-v',
                       '--verify_level',
                       dest='verify_level',
+                      type=int,
                       default=1,
                       help=('Check binary search assumptions N times '
                             'before starting.'))
   parser.add_argument('-N',
                       '--prune_iterations',
                       dest='prune_iterations',
+                      type=int,
                       help='Number of prune iterations to try in the search.',
                       default=100)
   parser.add_argument('-V',
@@ -440,47 +481,10 @@ def Main(argv):
       logger.GetLogger().LogOutput(('Note: resuming from previous state, '
                                     'ignoring given options and loading saved '
                                     'options instead.'))
-    bss = BinarySearchState.LoadState()
-    if not bss:
-      logger.GetLogger().LogOutput(
-          '%s is not a valid binary_search_tool state file, cannot resume!' %
-          STATE_FILE)
-      return 1
-  else:
-    iterations = int(options.iterations)
-    switch_to_good = _CanonicalizeScript(options.switch_to_good)
-    switch_to_bad = _CanonicalizeScript(options.switch_to_bad)
-    install_script = options.install_script
-    if install_script:
-      install_script = _CanonicalizeScript(options.install_script)
-    test_script = _CanonicalizeScript(options.test_script)
-    get_initial_items = _CanonicalizeScript(options.get_initial_items)
-    prune = options.prune
-    prune_iterations = options.prune_iterations
-    verify_level = options.verify_level
-    file_args = options.file_args
-    verbose = options.verbose
-    binary_search_perforce.verbose = verbose
 
-    if options.noincremental:
-      incremental = False
-    else:
-      incremental = True
-
-    bss = BinarySearchState(get_initial_items, switch_to_good, switch_to_bad,
-                            install_script, test_script, incremental, prune,
-                            iterations, prune_iterations, verify_level,
-                            file_args, verbose)
-    bss.DoVerify()
-
-  try:
-    bss.DoSearch()
-    bss.RemoveState()
-  except Error as e:
-    logger.GetLogger().LogError(e)
-    return 1
-
-  return 0
+  # Get dictionary of all options
+  args = vars(options)
+  return Run(**args)
 
 
 if __name__ == '__main__':

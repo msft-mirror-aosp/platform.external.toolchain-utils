@@ -52,32 +52,52 @@ class BisectingUtilsTest(unittest.TestCase):
       pass
 
   def runTest(self):
+    ret = binary_search_state.Run(get_initial_items='./gen_init_list.py',
+                                  switch_to_good='./switch_to_good.py',
+                                  switch_to_bad='./switch_to_bad.py',
+                                  test_script='./is_good.py',
+                                  prune=True,
+                                  file_args=True)
+    self.assertEquals(ret, 0)
+    self.check_output()
+
+  def test_arg_parse(self):
     args = ['--get_initial_items', './gen_init_list.py', '--switch_to_good',
             './switch_to_good.py', '--switch_to_bad', './switch_to_bad.py',
             '--test_script', './is_good.py', '--prune', '--file_args']
-    binary_search_state.Main(args)
+    ret = binary_search_state.Main(args)
+    self.assertEquals(ret, 0)
     self.check_output()
 
   def test_install_script(self):
-    args = ['--get_initial_items', './gen_init_list.py', '--switch_to_good',
-            './switch_to_good.py', '--switch_to_bad', './switch_to_bad.py',
-            '--test_script', './is_good.py', '--prune', '--file_args']
-
     os.remove('./installed')
     with self.assertRaises(AssertionError):
-      binary_search_state.Main(args)
+      ret = binary_search_state.Run(get_initial_items='./gen_init_list.py',
+                                    switch_to_good='./switch_to_good.py',
+                                    switch_to_bad='./switch_to_bad.py',
+                                    test_script='./is_good.py',
+                                    prune=True,
+                                    file_args=True)
 
-    args += ['--install_script', './install.py']
-    binary_search_state.Main(args)
+    ret = binary_search_state.Run(get_initial_items='./gen_init_list.py',
+                                  switch_to_good='./switch_to_good.py',
+                                  switch_to_bad='./switch_to_bad.py',
+                                  test_script='./is_good.py',
+                                  install_script='./install.py',
+                                  prune=True,
+                                  file_args=True)
+    self.assertEquals(ret, 0)
     self.check_output()
 
   def test_bad_install_script(self):
-    args = ['--get_initial_items', './gen_init_list.py', '--switch_to_good',
-            './switch_to_good.py', '--switch_to_bad', './switch_to_bad.py',
-            '--test_script', './is_good.py', '--prune', '--file_args',
-            '--install_script', './install_bad.py']
     with self.assertRaises(AssertionError):
-      binary_search_state.Main(args)
+      binary_search_state.Run(get_initial_items='./gen_init_list.py',
+                              switch_to_good='./switch_to_good.py',
+                              switch_to_bad='./switch_to_bad.py',
+                              test_script='./is_good.py',
+                              install_script='./install_bad.py',
+                              prune=True,
+                              file_args=True)
 
   def test_bad_save_state(self):
     state_file = binary_search_state.STATE_FILE
@@ -167,6 +187,7 @@ def Main(argv):
   suite = unittest.TestSuite()
   for _ in range(0, num_tests):
     suite.addTest(BisectingUtilsTest())
+  suite.addTest(BisectingUtilsTest('test_arg_parse'))
   suite.addTest(BisectingUtilsTest('test_install_script'))
   suite.addTest(BisectingUtilsTest('test_bad_install_script'))
   suite.addTest(BisectingUtilsTest('test_bad_save_state'))
