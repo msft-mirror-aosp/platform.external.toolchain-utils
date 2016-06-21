@@ -209,10 +209,15 @@ def Main(argv):
 
   start_board = (days * TEST_PER_DAY) % len(TEST_BOARD)
   for i in range(TEST_PER_DAY):
-    board = TEST_BOARD[(start_board + i)  % len(TEST_BOARD)]
-    fv = ToolchainVerifier(board, options.chromeos_root,
-                           options.weekday, patches)
-    fv.DoAll()
+    try:
+      board = TEST_BOARD[(start_board + i)  % len(TEST_BOARD)]
+      fv = ToolchainVerifier(board, options.chromeos_root,
+                             options.weekday, patches)
+      fv.DoAll()
+    except SystemExit:
+      logfile = os.path.join(VALIDATION_RESULT_DIR, board)
+      with open(logfile, 'w') as f:
+        f.write("Verifier got an exception, please check the log.\n")
 
   SendEmail(start_board)
 
