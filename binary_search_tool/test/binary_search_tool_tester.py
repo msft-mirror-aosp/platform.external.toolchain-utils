@@ -14,9 +14,93 @@ import unittest
 
 from utils import command_executer
 from binary_search_tool import binary_search_state
+from binary_search_tool import bisect
 
 import common
 import gen_obj
+
+
+def GenObj():
+  obj_num = random.randint(100, 1000)
+  bad_obj_num = random.randint(obj_num / 100, obj_num / 20)
+  if bad_obj_num == 0:
+    bad_obj_num = 1
+  gen_obj.Main(['--obj_num', str(obj_num), '--bad_obj_num', str(bad_obj_num)])
+
+
+def CleanObj():
+  os.remove(common.OBJECTS_FILE)
+  os.remove(common.WORKING_SET_FILE)
+  print('Deleted "{0}" and "{1}"'.format(common.OBJECTS_FILE,
+                                         common.WORKING_SET_FILE))
+
+
+class BisectTest(unittest.TestCase):
+  """Tests for bisect.py"""
+
+  def setUp(self):
+    with open('./installed', 'w'):
+      pass
+
+    try:
+      os.remove(binary_search_state.STATE_FILE)
+    except OSError:
+      pass
+
+  def tearDown(self):
+    try:
+      os.remove('./installed')
+      os.remove(os.readlink(binary_search_state.STATE_FILE))
+      os.remove(binary_search_state.STATE_FILE)
+    except OSError:
+      pass
+
+  class FullBisector(bisect.Bisector):
+    """Test bisector to test bisect.py with"""
+
+    def __init__(self, options):
+      super(BisectTest.FullBisector, self).__init__(options)
+
+    def PreRun(self):
+      GenObj()
+      return 0
+
+    def Run(self):
+      return binary_search_state.Run(get_initial_items='./gen_init_list.py',
+                                     switch_to_good='./switch_to_good.py',
+                                     switch_to_bad='./switch_to_bad.py',
+                                     test_script='./is_good.py',
+                                     prune=True,
+                                     file_args=True)
+
+    def PostRun(self):
+      CleanObj()
+      return 0
+
+  def test_full_bisector(self):
+    ret = bisect.Run(self.FullBisector({}))
+    self.assertEquals(ret, 0)
+    self.assertFalse(os.path.exists(common.OBJECTS_FILE))
+    self.assertFalse(os.path.exists(common.WORKING_SET_FILE))
+
+  def check_output(self):
+    _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
+        ('grep "Bad items are: " logs/binary_search_tool_tester.py.out | '
+         'tail -n1'))
+    ls = out.splitlines()
+    self.assertEqual(len(ls), 1)
+    line = ls[0]
+
+    _, _, bad_ones = line.partition('Bad items are: ')
+    bad_ones = bad_ones.split()
+    expected_result = common.ReadObjectsFile()
+
+    # Reconstruct objects file from bad_ones and compare
+    actual_result = [0] * len(expected_result)
+    for bad_obj in bad_ones:
+      actual_result[int(bad_obj)] = 1
+
+    self.assertEqual(actual_result, expected_result)
 
 
 class BisectingUtilsTest(unittest.TestCase):
@@ -24,11 +108,7 @@ class BisectingUtilsTest(unittest.TestCase):
 
   def setUp(self):
     """Generate [100-1000] object files, and 1-5% of which are bad ones."""
-    obj_num = random.randint(100, 1000)
-    bad_obj_num = random.randint(obj_num / 100, obj_num / 20)
-    if bad_obj_num == 0:
-      bad_obj_num = 1
-    gen_obj.Main(['--obj_num', str(obj_num), '--bad_obj_num', str(bad_obj_num)])
+    GenObj()
 
     with open('./installed', 'w'):
       pass
@@ -40,10 +120,8 @@ class BisectingUtilsTest(unittest.TestCase):
 
   def tearDown(self):
     """Cleanup temp files."""
-    os.remove(common.OBJECTS_FILE)
-    os.remove(common.WORKING_SET_FILE)
-    print('Deleted "{0}" and "{1}"'.format(common.OBJECTS_FILE,
-                                           common.WORKING_SET_FILE))
+    CleanObj()
+
     try:
       os.remove('./installed')
       os.remove(os.readlink(binary_search_state.STATE_FILE))
@@ -202,6 +280,7 @@ def Main(argv):
   suite.addTest(BisectingUtilsTest('test_save_state'))
   suite.addTest(BisectingUtilsTest('test_load_state'))
   suite.addTest(BisectingUtilsTest('test_tmp_cleanup'))
+  suite.addTest(BisectTest('test_full_bisector'))
   runner = unittest.TextTestRunner()
   runner.run(suite)
 
