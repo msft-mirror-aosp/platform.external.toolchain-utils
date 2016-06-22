@@ -152,7 +152,8 @@ class BisectingUtilsTest(unittest.TestCase):
 
   def test_tmp_cleanup(self):
     bss = binary_search_state.MockBinarySearchState(
-        get_initial_items='echo "0\n1\n2\n3"', switch_to_good='./switch_tmp.py',
+        get_initial_items='echo "0\n1\n2\n3"',
+        switch_to_good='./switch_tmp.py',
         file_args=True)
     bss.SwitchToGood(['0', '1', '2', '3'])
 
@@ -168,15 +169,22 @@ class BisectingUtilsTest(unittest.TestCase):
 
   def check_output(self):
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
-        'tail -n 10 logs/binary_search_tool_tester.py.out')
+        ('grep "Bad items are: " logs/binary_search_tool_tester.py.out | '
+         'tail -n1'))
     ls = out.splitlines()
-    for l in ls:
-      t = l.find('Bad items are: ')
-      if t > 0:
-        bad_ones = l[(t + len('Bad items are: ')):].split()
-        objects_file = common.ReadObjectsFile()
-        for b in bad_ones:
-          self.assertEqual(objects_file[int(b)], 1)
+    self.assertEqual(len(ls), 1)
+    line = ls[0]
+
+    _, _, bad_ones = line.partition('Bad items are: ')
+    bad_ones = bad_ones.split()
+    expected_result = common.ReadObjectsFile()
+
+    # Reconstruct objects file from bad_ones and compare
+    actual_result = [0] * len(expected_result)
+    for bad_obj in bad_ones:
+      actual_result[int(bad_obj)] = 1
+
+    self.assertEqual(actual_result, expected_result)
 
 
 def Main(argv):
