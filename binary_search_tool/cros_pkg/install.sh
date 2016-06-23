@@ -16,7 +16,7 @@
 
 export PYTHONUNBUFFERED=1
 
-source cros_pkg_common.sh
+source cros_pkg/common.sh
 
 usb_flash()
 {

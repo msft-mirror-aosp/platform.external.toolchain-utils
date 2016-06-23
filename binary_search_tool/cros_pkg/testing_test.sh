@@ -13,7 +13,7 @@
 # dealing with a real 'bad' image).
 #
 
-source cros_pkg_common.sh
+source cros_pkg/common.sh
 
 #
 #Initialize the value below before using this script!!!
@@ -27,7 +27,7 @@ HASH=''
 
 if [ -z "${HASH}" ]
 then
-    echo "ERROR: HASH must be intialized in cros_pkg_testing_test.sh"
+    echo "ERROR: HASH must be intialized in testing_test.sh"
     exit 3
 fi
 

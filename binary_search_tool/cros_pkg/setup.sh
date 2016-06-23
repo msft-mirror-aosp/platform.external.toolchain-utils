@@ -14,9 +14,9 @@
 #
 # This script sets up a soft link definining /build/${board} to point
 # to the working build tree, for the binary search triags process.  In
-# addition, this script generates two other scripts, cros_pkg_common.sh,
+# addition, this script generates two other scripts, common.sh,
 # which generates enviroment variables used by the other scripts in the
-# package binary search triage process; and cros_pkg_${board}_cleanup.sh,
+# package binary search triage process; and ${board}_cleanup.sh,
 # which undoes the various changes that this script performs, returning the
 # user's environment to its original state.
 #
@@ -52,7 +52,7 @@ fi
 #
 # Check to see if /build/${BOARD} already exists and if so, in what state.
 # Set appropriate flags & values, in order to be able to undo these changes
-# in cros_pkg_${board_cleanup.sh.  If it's a soft link, remove it; if it's a
+# in ${board}_cleanup.sh. If it's a soft link, remove it; if it's a
 # read tree, rename it.
 #
 
@@ -78,10 +78,10 @@ fi
 sudo ln -s /build/${BOARD}.work /build/${BOARD}
 
 #
-# Create cros_pkg_common.sh file, containing appropriate environment variables.
+# Create common.sh file, containing appropriate environment variables.
 #
 
-COMMON_FILE="cros_pkg_common.sh"
+COMMON_FILE="cros_pkg/common.sh"
 
 cat <<-EOF > ${COMMON_FILE}
 
@@ -97,26 +97,26 @@ EOF
 chmod 755 ${COMMON_FILE}
 
 #
-# Create clean-up script, calling cros_pkg_create_cleanup_script.py with
+# Create clean-up script, calling create_cleanup_script.py with
 # the appropriate flags.
 #
 
 if [[ ${build_tree_existed} -eq 0 ]] ; then
 
-    python cros_pkg_create_cleanup_script.py --board=${BOARD} \
+    python cros_pkg/create_cleanup_script.py --board=${BOARD} \
         --old_tree_missing
 
 elif [[ ${build_tree_was_soft_link} -eq 0 ]] ; then
 
-    python cros_pkg_create_cleanup_script.py --board=${BOARD} \
+    python cros_pkg/create_cleanup_script.py --board=${BOARD} \
         --renamed_tree
 
 else
 
-    python cros_pkg_create_cleanup_script.py --board=${BOARD} \
+    python cros_pkg/create_cleanup_script.py --board=${BOARD} \
         --old_link="'${build_tree_link}'"
 fi
 
-chmod 755 cros_pkg_${BOARD}_cleanup.sh
+chmod 755 cros_pkg/${BOARD}_cleanup.sh
 
 exit 0

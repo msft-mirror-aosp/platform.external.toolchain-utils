@@ -49,14 +49,14 @@ class Bisector(object):
 class BisectPackage(Bisector):
   """The class for package bisection steps."""
 
-  cros_pkg_setup = './cros_pkg_setup.sh'
-  cros_pkg_cleanup = './cros_pkg_%s_cleanup.sh'
+  cros_pkg_setup = 'cros_pkg/setup.sh'
+  cros_pkg_cleanup = 'cros_pkg/%s_cleanup.sh'
   default_kwargs = {
-      'get_initial_items': './cros_pkg_get_initial_items.sh',
-      'switch_to_good': './cros_pkg_switch_to_good.sh',
-      'switch_to_bad': './cros_pkg_switch_to_bad.sh',
-      'install_script': './cros_pkg_install.sh',
-      'test_script': './cros_pkg_interactive_test.sh',
+      'get_initial_items': 'cros_pkg/get_initial_items.sh',
+      'switch_to_good': 'cros_pkg/switch_to_good.sh',
+      'switch_to_bad': 'cros_pkg/switch_to_bad.sh',
+      'install_script': 'cros_pkg/install.sh',
+      'test_script': 'cros_pkg/interactive_test.sh',
       'noincremental': False,
       'prune': True,
       'file_args': True
@@ -66,7 +66,6 @@ class BisectPackage(Bisector):
     super(BisectPackage, self).__init__(options)
 
   def PreRun(self):
-    os.chdir('./cros_pkg')
     cmd = ('%s %s %s' %
            (self.cros_pkg_setup, self.options.board, self.options.remote))
     ret, _, _ = self.ce.RunCommandWExceptionCleanup(cmd, print_to_console=True)

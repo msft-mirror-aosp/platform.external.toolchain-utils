@@ -14,7 +14,7 @@
 # not determine (does not apply in this case).
 #
 
-source cros_pkg_common.sh
+source cros_pkg/common.sh
 
 ping -c 3 -W 3 ${REMOTE}
 retval=$?

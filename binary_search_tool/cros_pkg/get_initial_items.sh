@@ -8,7 +8,7 @@
 # for doing the binary search.
 #
 
-source cros_pkg_common.sh
+source cros_pkg/common.sh
 
 cd ${GOOD_BUILD}/packages
 find . -name "*.tbz2"

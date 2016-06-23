@@ -12,7 +12,7 @@
 # apply in this case).
 #
 
-source cros_pkg_common.sh
+source cros_pkg/common.sh
 
 # Send 3 pings and wait 3 seconds for any responsed (then timeout).
 ping -c 3 -W 3 ${REMOTE}

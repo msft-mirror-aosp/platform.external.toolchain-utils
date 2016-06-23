@@ -1,12 +1,12 @@
 #!/usr/bin/python2
 #
 #  Copyright 2015 Google Inc. All Rights Reserved
-"""The script to generate a cleanup script after cros_pkg_setup.sh.
+"""The script to generate a cleanup script after setup.sh.
 
-This script takes a set of flags, telling it what cros_pkg_setup.sh changed
+This script takes a set of flags, telling it what setup.sh changed
 during the set up process. Based on the values of the input flags, it
-generates a cleanup script, named cros_pkg_${BOARD}_cleanup.sh, which will
-undo the changes made by cros_pkg_setup.sh, returning everything to its
+generates a cleanup script, named ${BOARD}_cleanup.sh, which will
+undo the changes made by setup.sh, returning everything to its
 original state.
 """
 
@@ -23,9 +23,9 @@ def Usage(parser, msg):
 
 
 def Main(argv):
-  """Generate a script to undo changes done by cros_pkg_setup.sh
+  """Generate a script to undo changes done by setup.sh
 
-    The script cros_pkg_setup.sh makes a change that needs to be
+    The script setup.sh makes a change that needs to be
     undone, namely it creates a soft link making /build/${board} point
     to /build/${board}.work.  To do this, it had to see if
     /build/${board} already existed, and if so, whether it was a real
@@ -35,9 +35,8 @@ def Main(argv):
     created the new soft link.  If the /build/${board} did not
     previously exist, then it just created the new soft link.
 
-    This function takes arguments that tell it exactly what cros_pkg_setup.sh
+    This function takes arguments that tell it exactly what setup.sh
     actually did, then generates a script to undo those exact changes.
-
   """
 
   parser = argparse.ArgumentParser()
@@ -77,7 +76,7 @@ def Main(argv):
       Usage(parser, 'If --tree_existed is True, then must have either '
             '--old_link or --renamed_tree')
 
-  out_filename = 'cros_pkg_' + options.board + '_cleanup.sh'
+  out_filename = 'cros_pkg/' + options.board + '_cleanup.sh'
 
   with open(out_filename, 'w') as out_file:
     out_file.write('#!/bin/bash\n\n')
@@ -100,8 +99,8 @@ def Main(argv):
         out_file.write('sudo ln -s %s /build/%s\n' % (original_link,
                                                       options.board))
     out_file.write('\n')
-    # Remove cros_pkg_common.sh file
-    out_file.write('rm cros_pkg_common.sh\n')
+    # Remove common.sh file
+    out_file.write('rm cros_pkg/common.sh\n')
 
   return 0
 

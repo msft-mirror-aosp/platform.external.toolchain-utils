@@ -8,7 +8,7 @@
 # build tree, for testing.
 #
 
-source cros_pkg_common.sh
+source cros_pkg/common.sh
 
 pushd ${WORK_BUILD}
 
