@@ -144,4 +144,5 @@ def Main(argv):
 
 
 if __name__ == '__main__':
+  os.chdir(os.path.dirname(__file__))
   sys.exit(Main(sys.argv[1:]))
