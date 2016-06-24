@@ -5,17 +5,9 @@ from __future__ import print_function
 
 import abc
 import argparse
-import os
 import sys
+import common
 
-if os.path.isabs(sys.argv[0]):
-  utils_pythonpath = os.path.abspath('{0}/..'.format(os.path.dirname(sys.argv[
-      0])))
-else:
-  wdir = os.getcwd()
-  utils_pythonpath = os.path.abspath('{0}/{1}/..'.format(wdir, os.path.dirname(
-      sys.argv[0])))
-sys.path.append(utils_pythonpath)
 from utils import command_executer
 from utils import logger
 

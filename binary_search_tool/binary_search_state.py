@@ -10,15 +10,9 @@ import pickle
 import sys
 import tempfile
 
-# Programtically adding utils python path to PYTHONPATH
-if os.path.isabs(sys.argv[0]):
-  utils_pythonpath = os.path.abspath('{0}/..'.format(os.path.dirname(sys.argv[
-      0])))
-else:
-  wdir = os.getcwd()
-  utils_pythonpath = os.path.abspath('{0}/{1}/..'.format(wdir, os.path.dirname(
-      sys.argv[0])))
-sys.path.append(utils_pythonpath)
+# Adds utils to PYTHONPATH
+import common
+
 # Now we do import from utils
 from utils import command_executer
 from utils import logger
@@ -343,6 +337,7 @@ def _CanonicalizeScript(script_name):
   if not script_name.startswith('/'):
     return os.path.join('.', script_name)
 
+
 def Run(get_initial_items, switch_to_good, switch_to_bad, test_script,
         install_script=None, iterations=50, prune=True, noincremental=False,
         file_args=False, verify_level=1, prune_iterations=100, verbose=False,
@@ -387,86 +382,7 @@ def Main(argv):
   # Common initializations
 
   parser = argparse.ArgumentParser()
-  parser.add_argument('-n',
-                      '--iterations',
-                      dest='iterations',
-                      type=int,
-                      help='Number of iterations to try in the search.',
-                      default=50)
-  parser.add_argument('-i',
-                      '--get_initial_items',
-                      dest='get_initial_items',
-                      help=('Script to run to get the initial objects. '
-                            'If your script requires user input '
-                            'the --verbose option must be used'))
-  parser.add_argument('-g',
-                      '--switch_to_good',
-                      dest='switch_to_good',
-                      help=('Script to run to switch to good. '
-                            'If your switch script requires user input '
-                            'the --verbose option must be used'))
-  parser.add_argument('-b',
-                      '--switch_to_bad',
-                      dest='switch_to_bad',
-                      help=('Script to run to switch to bad. '
-                            'If your switch script requires user input '
-                            'the --verbose option must be used'))
-  parser.add_argument('-I',
-                      '--install_script',
-                      dest='install_script',
-                      default=None,
-                      help=('Optional script to perform building, flashing, '
-                            'and other setup before the test script runs.'))
-  parser.add_argument('-t',
-                      '--test_script',
-                      dest='test_script',
-                      help=('Script to run to test the '
-                            'output after packages are built.'))
-  parser.add_argument('-p',
-                      '--prune',
-                      dest='prune',
-                      action='store_true',
-                      default=False,
-                      help=('Script to run to test the output after '
-                            'packages are built.'))
-  parser.add_argument('-c',
-                      '--noincremental',
-                      dest='noincremental',
-                      action='store_true',
-                      default=False,
-                      help='Do not propagate good/bad changes incrementally.')
-  parser.add_argument('-f',
-                      '--file_args',
-                      dest='file_args',
-                      action='store_true',
-                      default=False,
-                      help='Use a file to pass arguments to scripts.')
-  parser.add_argument('-v',
-                      '--verify_level',
-                      dest='verify_level',
-                      type=int,
-                      default=1,
-                      help=('Check binary search assumptions N times '
-                            'before starting.'))
-  parser.add_argument('-N',
-                      '--prune_iterations',
-                      dest='prune_iterations',
-                      type=int,
-                      help='Number of prune iterations to try in the search.',
-                      default=100)
-  parser.add_argument('-V',
-                      '--verbose',
-                      dest='verbose',
-                      action='store_true',
-                      help='Print full output to console.')
-  parser.add_argument('-r',
-                      '--resume',
-                      dest='resume',
-                      action='store_true',
-                      help=('Resume bisection tool execution from state file.'
-                            'Useful if the last bisection was terminated '
-                            'before it could properly finish.'))
-
+  common.BuildArgParser(parser)
   logger.GetLogger().LogOutput(' '.join(argv))
   options = parser.parse_args(argv)
 
