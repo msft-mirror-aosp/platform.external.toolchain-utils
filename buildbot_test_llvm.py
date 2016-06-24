@@ -67,12 +67,14 @@ class ToolchainVerifier(object):
                board,
                chromeos_root,
                weekday,
-               patches):
+               patches,
+               compiler):
     self._board = board
     self._chromeos_root = chromeos_root
     self._base_dir = os.getcwd()
     self._ce = command_executer.GetCommandExecuter()
     self._l = logger.GetLogger()
+    self._compiler = compiler
     self._build = '%s-release' % board
     self._patches = patches.split(',')
     self._patches_string = '_'.join(str(p) for p in self._patches)
@@ -136,10 +138,9 @@ class ToolchainVerifier(object):
       self._FinishSetup()
 
     self._TestImages(trybot_image)
-    self._SendEmail()
     return 0
 
-def SendEmail(start_board):
+def SendEmail(start_board, compiler):
   """Send out the test results for all the boards."""
   results = ""
   for i in range(len(TEST_BOARD)):
@@ -160,7 +161,7 @@ def SendEmail(start_board):
 
   ce = command_executer.GetCommandExecuter()
   if os.path.exists(os.path.expanduser(MAIL_PROGRAM)):
-    email_title = 'llvm validation test results'
+    email_title = '%s validation test results' % compiler
     command = ('cat %s | %s -s "%s" -team' %
                (output, MAIL_PROGRAM, email_title))
     ce.RunCommand(command)
@@ -188,19 +189,26 @@ def Main(argv):
                       help='The patches to use for the testing, '
                       "seprate the patch numbers with ',' "
                       'for more than one patches.')
+  parser.add_argument('--compiler',
+                      dest='compiler',
+                      help='Which compiler (llvm or gcc) to use for '
+                      'testing.')
 
   options = parser.parse_args(argv[1:])
   if not options.chromeos_root:
     print('Please specify the ChromeOS root directory.')
     return 1
+  if not options.compiler:
+    print('Please specify which compiler to test (gcc or llvm).')
+    return 1
   if options.patches:
     patches = options.patches
-  else:
+  elif options.compiler == 'llvm':
     patches = USE_LLVM_PATCH
 
   if options.board:
     fv = ToolchainVerifier(options.board, options.chromeos_root,
-                           options.weekday, patches)
+                           options.weekday, patches, options.compiler)
     return fv.Doall()
 
   today = datetime.date.today()
@@ -212,14 +220,14 @@ def Main(argv):
     try:
       board = TEST_BOARD[(start_board + i)  % len(TEST_BOARD)]
       fv = ToolchainVerifier(board, options.chromeos_root,
-                             options.weekday, patches)
+                             options.weekday, patches, options.compiler)
       fv.DoAll()
     except SystemExit:
       logfile = os.path.join(VALIDATION_RESULT_DIR, board)
       with open(logfile, 'w') as f:
         f.write("Verifier got an exception, please check the log.\n")
 
-  SendEmail(start_board)
+  SendEmail(start_board, options.compiler)
 
 if __name__ == '__main__':
   retval = Main(sys.argv)
