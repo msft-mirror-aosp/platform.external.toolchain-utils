@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import abc
 import argparse
+import os
 import sys
 from argparse import RawTextHelpFormatter
 
@@ -36,6 +37,79 @@ class Bisector(object):
     self.logger = logger.GetLogger()
     self.ce = command_executer.GetCommandExecuter()
 
+  def _PrettyPrintArgs(self, args, overrides):
+    """Output arguments in a nice, human readable format
+
+    Will print and log all arguments for the bisecting tool and make note of
+    which arguments have been overridden.
+
+    Example output:
+      ./bisect.py package daisy 172.17.211.184 -I "" -t cros_pkg/my_test.sh
+      Performing ChromeOS Package bisection
+      Method Config:
+        board : daisy
+       remote : 172.17.211.184
+
+      Bisection Config: (* = overridden)
+         get_initial_items : cros_pkg/get_initial_items.sh
+            switch_to_good : cros_pkg/switch_to_good.sh
+             switch_to_bad : cros_pkg/switch_to_bad.sh
+       *    install_script :
+       *       test_script : cros_pkg/my_test.sh
+                     prune : True
+             noincremental : False
+                 file_args : True
+
+    Args:
+      args: The args to be given to binary_search_state.Run. This represents
+            how the bisection tool will run (with overridden arguments already
+            added in).
+      overrides: The dict of overriden arguments provided by the user. This is
+                 provided so the user can be told which arguments were
+                 overriden and with what value.
+    """
+    # Output method config (board, remote, etc.)
+    options = vars(self.options)
+    out = '\nPerforming %s bisection\n' % self.method_name
+    out += 'Method Config:\n'
+    max_key_len = max([len(str(x)) for x in options.keys()])
+    for key in sorted(options):
+      val = options[key]
+      key_str = str(key).rjust(max_key_len)
+      val_str = str(val)
+      out += ' %s : %s\n' % (key_str, val_str)
+
+    # Output bisection config (scripts, prune, etc.)
+    out += '\nBisection Config: (* = overridden)\n'
+    max_key_len = max([len(str(x)) for x in args.keys()])
+    # Print args in common._ArgsDict order
+    args_order = [x['dest'] for x in common.GetArgsDict().itervalues()]
+    compare = lambda x, y: cmp(args_order.index(x), args_order.index(y))
+
+    for key in sorted(args, cmp=compare):
+      val = args[key]
+      key_str = str(key).rjust(max_key_len)
+      val_str = str(val)
+      changed_str = '*' if key in overrides else ' '
+
+      out += ' %s %s : %s\n' % (changed_str, key_str, val_str)
+
+    out += '\n'
+    self.logger.LogOutput(out)
+
+  def ArgOverride(self, args, overrides, pretty_print=True):
+    """Override arguments based on given overrides and provide nice output
+
+    Args:
+      args: dict of arguments to be passed to binary_search_state.Run (runs
+            dict.update, causing args to be mutated).
+      overrides: dict of arguments to update args with
+      pretty_print: if True print out args/overrides to user in pretty format
+    """
+    args.update(overrides)
+    if pretty_print:
+      self._PrettyPrintArgs(args, overrides)
+
   @abc.abstractmethod
   def PreRun(self):
     pass
@@ -57,6 +131,7 @@ class BisectPackage(Bisector):
 
   def __init__(self, options, overrides):
     super(BisectPackage, self).__init__(options, overrides)
+    self.method_name = 'ChromeOS Package'
     self.default_kwargs = {
         'get_initial_items': 'cros_pkg/get_initial_items.sh',
         'switch_to_good': 'cros_pkg/switch_to_good.sh',
@@ -67,6 +142,7 @@ class BisectPackage(Bisector):
         'prune': True,
         'file_args': True
     }
+    self.ArgOverride(self.default_kwargs, self.overrides)
 
   def PreRun(self):
     cmd = ('%s %s %s' %
@@ -78,7 +154,6 @@ class BisectPackage(Bisector):
     return 0
 
   def Run(self):
-    self.default_kwargs.update(self.overrides)
     return binary_search_state.Run(**self.default_kwargs)
 
   def PostRun(self):
@@ -107,14 +182,19 @@ class BisectObject(Bisector):
 
 
 def Run(bisector):
+  log = logger.GetLogger()
+
+  log.LogOutput('Setting up Bisection tool')
   ret = bisector.PreRun()
   if ret:
     return ret
 
+  log.LogOutput('Running Bisection tool')
   ret = bisector.Run()
   if ret:
     return ret
 
+  log.LogOutput('Cleaning up Bisection tool')
   ret = bisector.PostRun()
   if ret:
     return ret
