@@ -4,8 +4,9 @@
 # found in the LICENSE file.
 """Setting files for global, benchmark and labels."""
 
+from __future__ import print_function
+
 from field import BooleanField
-from field import FloatField
 from field import IntegerField
 from field import ListField
 from field import TextField
@@ -13,11 +14,12 @@ from settings import Settings
 
 
 class BenchmarkSettings(Settings):
+  """Settings used to configure individual benchmarks."""
 
   def __init__(self, name):
     super(BenchmarkSettings, self).__init__(name, 'benchmark')
     self.AddField(TextField('test_name',
-                            description='The name of the test to run.'
+                            description='The name of the test to run. '
                             'Defaults to the name of the benchmark.'))
     self.AddField(TextField('test_args',
                             description='Arguments to be passed to the '
@@ -28,7 +30,7 @@ class BenchmarkSettings(Settings):
                                'test.'))
     self.AddField(TextField('suite',
                             default='',
-                            description='The type of the benchmark'))
+                            description='The type of the benchmark.'))
     self.AddField(IntegerField('retries',
                                default=0,
                                description='Number of times to retry a '
@@ -42,14 +44,15 @@ class BenchmarkSettings(Settings):
 
 
 class LabelSettings(Settings):
+  """Settings for each label."""
 
   def __init__(self, name):
     super(LabelSettings, self).__init__(name, 'label')
     self.AddField(TextField('chromeos_image',
                             required=False,
                             description='The path to the image to run tests '
-                            "on, for local/custom-built images. See 'build' "
-                            'option for official or trybot images.'))
+                            'on, for local/custom-built images. See the '
+                            "'build' option for official or trybot images."))
     self.AddField(TextField('chromeos_root',
                             description='The path to a chromeos checkout which '
                             'contains a src/scripts directory. Defaults to '
@@ -57,7 +60,7 @@ class LabelSettings(Settings):
                             'chromeos_image.'))
     self.AddField(
         ListField('remote',
-                  description="A comma-separated list of ip's of chromeos"
+                  description='A comma-separated list of IPs of chromeos'
                   'devices to run experiments on.'))
     self.AddField(TextField('image_args',
                             required=False,
@@ -81,13 +84,14 @@ class LabelSettings(Settings):
                             description='The xbuddy specification for an '
                             'official or trybot image to use for tests. '
                             "'/remote' is assumed, and the board is given "
-                            "elsewhere, so omit the '/remote/<board>/' xbuddy"
+                            "elsewhere, so omit the '/remote/<board>/' xbuddy "
                             'prefix.',
                             required=False,
                             default=''))
 
 
 class GlobalSettings(Settings):
+  """Settings that apply per-experiment."""
 
   def __init__(self, name):
     super(GlobalSettings, self).__init__(name, 'global')
@@ -95,25 +99,25 @@ class GlobalSettings(Settings):
                             description='The name of the experiment. Just an '
                             'identifier.'))
     self.AddField(TextField('board',
-                            description='The target '
-                            'board for running experiments on, e.g. x86-alex.'))
+                            description='The target board for running '
+                            'experiments on, e.g. x86-alex.'))
     self.AddField(ListField('remote',
-                            description="A comma-separated list of ip's of "
+                            description="A comma-separated list of IPs of "
                             'chromeos devices to run experiments on.'))
     self.AddField(BooleanField('rerun_if_failed',
-                               description='Whether to '
-                               're-run failed test runs or not.',
+                               description='Whether to re-run failed test runs '
+                               'or not.',
                                default=False))
     self.AddField(BooleanField('rm_chroot_tmp',
                                default=False,
-                               description='Whether to remove the test_that'
-                               'result in the chroot'))
+                               description='Whether to remove the test_that '
+                               'result in the chroot.'))
     self.AddField(ListField('email',
-                            description='Space-seperated'
-                            'list of email addresses to send email to.'))
+                            description='Space-separated list of email '
+                            'addresses to send email to.'))
     self.AddField(BooleanField('rerun',
-                               description='Whether to ignore the '
-                               'cache and for tests to be re-run.',
+                               description='Whether to ignore the cache and '
+                               'for tests to be re-run.',
                                default=False))
     self.AddField(BooleanField('same_specs',
                                default=True,
@@ -123,10 +127,10 @@ class GlobalSettings(Settings):
     self.AddField(BooleanField('same_machine',
                                default=False,
                                description='Ensure cached runs are run on the '
-                               'exact the same remote'))
+                               'same remote.'))
     self.AddField(BooleanField('use_file_locks',
                                default=False,
-                               description='Whether to use the file locks  '
+                               description='Whether to use the file locks '
                                'mechanism (deprecated) instead of the AFE '
                                'server lock mechanism.'))
     self.AddField(IntegerField('iterations',
@@ -146,7 +150,7 @@ class GlobalSettings(Settings):
                                default=0,
                                description='Number of seconds to wait for '
                                'machine before exit if all the machines in '
-                               'the experiment file are busy. Default is 0'))
+                               'the experiment file are busy. Default is 0.'))
     self.AddField(TextField('perf_args',
                             default='',
                             description='The optional profile command. It '
@@ -167,8 +171,8 @@ class GlobalSettings(Settings):
                                'user after crosperf finishes.'))
     self.AddField(BooleanField('json_report',
                                default=False,
-                               description='Whether to generate a json version'
-                               ' of the report, for archiving.'))
+                               description='Whether to generate a json version '
+                               'of the report, for archiving.'))
     self.AddField(BooleanField('show_all_results',
                                default=False,
                                description='When running Telemetry tests, '
@@ -177,17 +181,17 @@ class GlobalSettings(Settings):
     self.AddField(TextField('share_cache',
                             default='',
                             description='Path to alternate cache whose data '
-                            'you want to use. It accepts multiples directories'
-                            " separated by a \",\""))
+                            'you want to use. It accepts multiple directories '
+                            'separated by a ",".'))
     self.AddField(TextField('results_dir',
                             default='',
-                            description='The results dir'))
+                            description='The results dir.'))
     self.AddField(TextField('locks_dir',
                             default='',
                             description='An alternate directory to use for '
                             'storing/checking machine locks. Using this field '
                             'automatically sets use_file_locks to True.\n'
-                            'WARNING:  If you use your own locks directory, '
+                            'WARNING: If you use your own locks directory, '
                             'there is no guarantee that someone else might not '
                             'hold a lock on the same machine in a different '
                             'locks directory.'))
