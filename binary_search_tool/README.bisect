@@ -40,7 +40,7 @@ Bisection Methods:
     --switch_to_bad='cros_pkg/switch_to_bad.sh'
     --install_script='cros_pkg/install.sh'
     --test_script='cros_pkg/interactive_test.sh'
-    --noincremental
+    --incremental
     --prune
     --file_args
 
@@ -56,7 +56,64 @@ Bisection Methods:
         ./bisect.py package daisy 172.17.211.184 -t cros_pkg/boot_test.sh
 
 2) ChromeOS Object:
-  WIP
+  This method will bisect across all objects in a ChromeOS package and find
+  the offending objects (according to your test script). This method takes the
+  following arguments:
+
+    board: The board to bisect on. For example: daisy, falco, etc.
+    remote: The IP address of the physical machine you're using to test with.
+    package: The package to bisect with. For example: chromeos-chrome
+    dir: (Optional) the directory for your good/bad build trees. Defaults to
+         $BISECT_DIR or /tmp/sysroot_bisect. This value will set $BISECT_DIR
+         for all bisecting scripts.
+
+  By default the ChromeOS object method will do a simple interactive test that
+  pings the machine and prompts the user if the machine is good.
+
+  a) Setup:
+    The ChromeOS package method requires that you populate your good and bad set
+    of objects. sysroot_wrapper will automatically detect the BISECT_STAGE
+    variable and use this to populate emerged objects. Here is an example:
+
+      # Defaults to /tmp/sysroot_bisect
+      BISECT_DIR="/path/to/where/you/want/to/store/builds/"
+
+      BISECT_STAGE="POPULATE_GOOD"
+      ./switch_to_good_compiler.sh
+      emerge-${board} -C ${package_to_bisect}
+      emerge-${board} ${package_to_bisect}
+
+      BISECT_STAGE="POPULATE_BAD"
+      ./switch_to_bad_compiler.sh
+      emerge-${board} -C {package_to_bisect}
+      emerge-${board} ${package_to_bisect}
+
+  b) Cleanup:
+    The user must clean up all built images and the populated object files.
+
+  c) Default Arguments:
+    --get_initial_items='sysroot_wrapper/get_initial_items.sh'
+    --switch_to_good='sysroot_wrapper/switch_to_good.sh'
+    --switch_to_bad='sysroot_wrapper/switch_to_bad.sh'
+    --install_script='sysroot_wrapper/install.sh'
+    --test_script='sysroot_wrapper/interactive_test.sh'
+    --noincremental
+    --prune
+    --file_args
+
+  d) Additional Documentation:
+    See ./sysroot_wrapper/README for full documentation of ChromeOS object file
+    bisecting.
+
+  e) Examples:
+    i)  Basic interactive test object bisection, on daisy board for
+        cryptohome package:
+        ./bisect.py object daisy 172.17.211.184 cryptohome
+
+    ii) Basic boot test package bisection, on daisy board for cryptohome
+        package:
+        ./bisect.py object daisy 172.17.211.184 cryptohome \
+        --test_script=sysroot_wrapper/boot_test.sh
 
 Resuming:
   bisect.py and binary_search_state.py offer the ability to resume a bisection

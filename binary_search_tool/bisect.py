@@ -168,17 +168,46 @@ class BisectPackage(Bisector):
 class BisectObject(Bisector):
   """The class for object bisection steps."""
 
+  sysroot_wrapper_files = ['bad/_LIST', 'good/_LIST']
+
   def __init__(self, options, overrides):
     super(BisectObject, self).__init__(options, overrides)
+    self.method_name = 'ChromeOS Object'
+    self.default_kwargs = {
+        'get_initial_items': 'sysroot_wrapper/get_initial_items.sh',
+        'switch_to_good': 'sysroot_wrapper/switch_to_good.sh',
+        'switch_to_bad': 'sysroot_wrapper/switch_to_bad.sh',
+        'install_script': 'sysroot_wrapper/install.sh',
+        'test_script': 'sysroot_wrapper/interactive_test.sh',
+        'noincremental': True,
+        'prune': True,
+        'file_args': True
+    }
+    self.options = options
+    if options.dir:
+      os.environ['BISECT_DIR'] = options.dir
+    self.options.dir = os.environ.get('BISECT_DIR', '/tmp/sysroot_bisect')
+
+    self.ArgOverride(self.default_kwargs, overrides)
 
   def PreRun(self):
-    raise NotImplementedError('Object bisecting still WIP')
+    for f in self.sysroot_wrapper_files:
+      full_path = os.path.join(self.options.dir, f)
+      if not os.path.exists(full_path):
+        self.logger.LogError('Object bisector setup failed, %s does not exist' %
+                             full_path)
+        return 1
+
+    os.environ['BISECT_BOARD'] = self.options.board
+    os.environ['BISECT_REMOTE'] = self.options.remote
+    os.environ['BISECT_PACKAGE'] = self.options.package
+    return 0
 
   def Run(self):
-    return 1
+    return binary_search_state.Run(**self.default_kwargs)
 
   def PostRun(self):
-    return 1
+    return 0
 
 
 def Run(bisector):
@@ -236,6 +265,15 @@ def Main(argv):
   parser_package.set_defaults(handler=BisectPackage)
 
   parser_object = subparsers.add_parser('object')
+  parser_object.add_argument('board', help='Board to target')
+  parser_object.add_argument('remote', help='Remote machine to test on')
+  parser_object.add_argument('package', help='Package to emerge and test')
+  parser_object.add_argument('--dir',
+                             help=('Bisection directory to use, sets '
+                                   '$BISECT_DIR if provided. Defaults to '
+                                   'current value of $BISECT_DIR (or '
+                                   '/tmp/sysroot_bisect if $BISECT_DIR is '
+                                   'empty).'))
   parser_object.set_defaults(handler=BisectObject)
 
   options, remaining = parser.parse_known_args(argv)
