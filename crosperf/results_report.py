@@ -5,6 +5,7 @@
 from __future__ import print_function
 
 import datetime
+import itertools
 import json
 import os
 
@@ -55,27 +56,25 @@ def ParseChromeosImage(chromeos_image):
       version, image: The results of parsing the input string, as explained
       above.
   """
-  version = ''
-  real_file = os.path.realpath(os.path.expanduser(chromeos_image))
-  pieces = real_file.split('/')
   # Find the Chromeos Version, e.g. R45-2345.0.0.....
   # chromeos_image should have been something like:
   # <path>/<board-trybot-release>/<chromeos-version>/chromiumos_test_image.bin"
-  num_pieces = len(pieces)
-  if pieces[num_pieces - 1] == 'chromiumos_test_image.bin':
-    version = pieces[num_pieces - 2]
-    # Find last '.' in the version and chop it off (removing the .datatime
-    # piece from local builds).
-    loc = version.rfind('.')
-    version = version[:loc]
+  if chromeos_image.endswith('/chromiumos_test_image.bin'):
+    full_version = chromeos_image.split('/')[-2]
+    # Strip the date and time off of local builds (which have the format
+    # "R43-2345.0.0.date-and-time").
+    version, _ = os.path.splitext(full_version)
+  else:
+    version = ''
+
   # Find the chromeos image.  If it's somewhere in .../chroot/tmp/..., then
   # it's an official image that got downloaded, so chop off the download path
   # to make the official image name more clear.
-  loc = real_file.find('/chroot/tmp')
-  if loc != -1:
-    loc += len('/chroot/tmp')
-    real_file = real_file[loc:]
-  image = real_file
+  official_image_path = '/chroot/tmp'
+  if official_image_path in chromeos_image:
+    image = chromeos_image.split(official_image_path, 1)[1]
+  else:
+    image = chromeos_image
   return version, image
 
 
@@ -207,7 +206,7 @@ class ResultsReport(object):
         table = tg.GetTable(max(self.PERF_ROWS, row_info[event]))
         parsed_columns = self._ParseColumn(columns, ben.iterations)
         tf = TableFormatter(table, parsed_columns)
-        tf.GenerateCellTable()
+        tf.GenerateCellTable(table_type)
         tf.AddColumnName()
         tf.AddLabelName()
         tf.AddHeader(str(event))
@@ -547,7 +546,13 @@ pre {
 
 
 class JSONResultsReport(ResultsReport):
-  """class to generate JASON report."""
+  """Class that generates JSON reports."""
+
+  @staticmethod
+  def _WriteResultsToFile(filename, results):
+    """Write the results as JSON to the given filename."""
+    with open(filename, 'w') as fp:
+      json.dump(results, fp, indent=2)
 
   def __init__(self, experiment, date=None, time=None):
     super(JSONResultsReport, self).__init__(experiment)
@@ -565,25 +570,29 @@ class JSONResultsReport(ResultsReport):
       self.date = date
       self.time = time
 
-  def GetReport(self, results_dir):
+  def GetReport(self, results_dir, write_results=None):
+    if write_results is None:
+      write_results = JSONResultsReport._WriteResultsToFile
+
     self.defaults.ReadDefaultsFile()
     final_results = []
     board = self.experiment.labels[0].board
+    compiler_string = 'gcc'
     for test, test_results in self.ro.result.iteritems():
-      for i, label in enumerate(self.ro.labels):
-        label_results = test_results[i]
-        for j, iter_results in enumerate(label_results):
-          json_results = dict()
-          json_results['date'] = self.date
-          json_results['time'] = self.time
-          json_results['board'] = board
-          json_results['label'] = label
+      for label, label_results in itertools.izip(self.ro.labels, test_results):
+        for iter_results in label_results:
+          json_results = {
+              'date': self.date,
+              'time': self.time,
+              'board': board,
+              'label': label
+          }
           common_checksum = ''
           common_string = ''
-          compiler_string = 'gcc'
           for l in self.experiment.labels:
             if l.name == label:
-              ver, img = ParseChromeosImage(l.chromeos_image)
+              img_path = os.path.realpath(os.path.expanduser(l.chromeos_image))
+              ver, img = ParseChromeosImage(img_path)
               json_results['chromeos_image'] = img
               json_results['chromeos_version'] = ver
               json_results['chrome_version'] = l.chrome_version
@@ -597,7 +606,10 @@ class JSONResultsReport(ResultsReport):
               common_string = \
                 self.experiment.machine_manager.machine_checksum_string[l.name]
               break
+          else:
+            raise RuntimeError("Label doesn't exist in label_results?")
           json_results['test_name'] = test
+
           if not iter_results or iter_results['retval'] != 0:
             json_results['pass'] = False
           else:
@@ -615,8 +627,8 @@ class JSONResultsReport(ResultsReport):
                   value.append(item)
               json_results['overall_result'] = value
             # Get detailed results.
-            detail_results = dict()
-            for k in iter_results.keys():
+            detail_results = {}
+            for k in iter_results:
               if k != 'retval':
                 v = iter_results[k]
                 if type(v) == list:
@@ -629,9 +641,9 @@ class JSONResultsReport(ResultsReport):
                       detail_results[k] = [float(d) for d in v]
                   else:
                     json_results[k] = v
-            if 'machine_checksum' not in json_results.keys():
+            if 'machine_checksum' not in json_results:
               json_results['machine_checksum'] = common_checksum
-            if 'machine_string' not in json_results.keys():
+            if 'machine_string' not in json_results:
               json_results['machine_string'] = common_string
             json_results['detailed_results'] = detail_results
           final_results.append(json_results)
@@ -639,5 +651,4 @@ class JSONResultsReport(ResultsReport):
     filename = 'report_%s_%s_%s.%s.json' % (
         board, self.date, self.time.replace(':', '.'), compiler_string)
     fullname = os.path.join(results_dir, filename)
-    with open(fullname, 'w') as fp:
-      json.dump(final_results, fp, indent=2)
+    write_results(fullname, final_results)
