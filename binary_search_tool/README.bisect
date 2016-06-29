@@ -1,0 +1,82 @@
+
+bisect.py is a wrapper around the general purpose binary_search_state.py. It
+provides a user friendly interface for bisecting various compilation errors.
+The 2 currently provided methods of bisecting are ChromeOS package and object
+bisection. Each method defines a default set of options to pass to
+binary_search_state.py and allow the user to override these defaults (see
+the "Overriding" section).
+
+** NOTE **
+All commands, examples, scripts, etc. are to be run from your chroot unless
+stated otherwise.
+
+Bisection Methods:
+
+1) ChromeOS Package:
+  This method will bisect across all packages in a ChromeOS repository and find
+  the offending packages (according to your test script). This method takes the
+  following arguments:
+
+    board: The board to bisect on. For example: daisy, falco, etc.
+    remote: The IP address of the physical machine you're using to test with.
+
+  By default the ChromeOS package method will do a simple interactive test that
+  pings the machine and prompts the user if the machine is good.
+
+  a) Setup:
+    The ChromeOS package method requires that you have three build trees:
+
+      /build/${board}.bad  - The build tree for your "bad" build
+      /build/${board}.good - The build tree for your "good" build
+      /build/${board}.work - A full copy of /build/${board}.bad
+
+  b) Cleanup:
+    bisect.py does most cleanup for you, the only thing required by the user is
+    to cleanup all built images and the three build trees made in /build/
+
+  c) Default Arguments:
+    --get_initial_items='cros_pkg/get_initial_items.sh'
+    --switch_to_good='cros_pkg/switch_to_good.sh'
+    --switch_to_bad='cros_pkg/switch_to_bad.sh'
+    --install_script='cros_pkg/install.sh'
+    --test_script='cros_pkg/interactive_test.sh'
+    --noincremental
+    --prune
+    --file_args
+
+  d) Additional Documentation:
+    See ./cros_pkg/README.cros_pkg_triage for full documentation of ChromeOS
+    package bisection.
+
+  e) Examples:
+    i)  Basic interactive test package bisection, on daisy board:
+        ./bisect.py package daisy 172.17.211.184
+
+    ii) Basic boot test package bisection, on daisy board:
+        ./bisect.py package daisy 172.17.211.184 -t cros_pkg/boot_test.sh
+
+2) ChromeOS Object:
+  WIP
+
+Resuming:
+  bisect.py and binary_search_state.py offer the ability to resume a bisection
+  in case it was interrupted by a SIGINT, power failure, etc. Every time the
+  tool completes a bisection iteration its state is saved to disk (usually to
+  the file "./bisect.py.state"). If passed the --resume option, the tool
+  it will automatically detect the state file and resume from the last
+  completed iteration.
+
+Overriding:
+  You can run ./bisect.py --help or ./binary_search_state.py --help for a full
+  list of arguments that can be overriden. Here are a couple of examples:
+
+  Example 1 (do boot test instead of interactive test):
+  ./bisect.py package daisy 172.17.211.182 --test_script=cros_pkg/boot_test.sh
+
+  Example 2 (do package bisector system test instead of interactive test):
+  ./bisect.py package daisy 172.17.211.182 \
+    --test_script=cros_pkg/testing_test.sh --install_script=""
+
+  Example 3 (enable verbose mode and disable pruning):
+  ./bisect.py package daisy 172.17.211.182 --verbose --noprune
+
