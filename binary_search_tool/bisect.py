@@ -6,6 +6,8 @@ from __future__ import print_function
 import abc
 import argparse
 import sys
+from argparse import RawTextHelpFormatter
+
 import common
 
 from utils import command_executer
@@ -20,8 +22,17 @@ class Bisector(object):
   # Make Bisector an abstract class
   __metaclass__ = abc.ABCMeta
 
-  def __init__(self, options):
+  def __init__(self, options, overrides=None):
+    """Constructor for Bisector abstract base class
+
+    Args:
+      options: positional arguments for specific mode (board, remote, etc.)
+      overrides: optional dict of overrides for argument defaults
+    """
     self.options = options
+    self.overrides = overrides
+    if not overrides:
+      self.overrides = {}
     self.logger = logger.GetLogger()
     self.ce = command_executer.GetCommandExecuter()
 
@@ -43,19 +54,19 @@ class BisectPackage(Bisector):
 
   cros_pkg_setup = 'cros_pkg/setup.sh'
   cros_pkg_cleanup = 'cros_pkg/%s_cleanup.sh'
-  default_kwargs = {
-      'get_initial_items': 'cros_pkg/get_initial_items.sh',
-      'switch_to_good': 'cros_pkg/switch_to_good.sh',
-      'switch_to_bad': 'cros_pkg/switch_to_bad.sh',
-      'install_script': 'cros_pkg/install.sh',
-      'test_script': 'cros_pkg/interactive_test.sh',
-      'noincremental': False,
-      'prune': True,
-      'file_args': True
-  }
 
-  def __init__(self, options):
-    super(BisectPackage, self).__init__(options)
+  def __init__(self, options, overrides):
+    super(BisectPackage, self).__init__(options, overrides)
+    self.default_kwargs = {
+        'get_initial_items': 'cros_pkg/get_initial_items.sh',
+        'switch_to_good': 'cros_pkg/switch_to_good.sh',
+        'switch_to_bad': 'cros_pkg/switch_to_bad.sh',
+        'install_script': 'cros_pkg/install.sh',
+        'test_script': 'cros_pkg/interactive_test.sh',
+        'noincremental': False,
+        'prune': True,
+        'file_args': True
+    }
 
   def PreRun(self):
     cmd = ('%s %s %s' %
@@ -67,6 +78,7 @@ class BisectPackage(Bisector):
     return 0
 
   def Run(self):
+    self.default_kwargs.update(self.overrides)
     return binary_search_state.Run(**self.default_kwargs)
 
   def PostRun(self):
@@ -81,8 +93,8 @@ class BisectPackage(Bisector):
 class BisectObject(Bisector):
   """The class for object bisection steps."""
 
-  def __init__(self, options):
-    super(BisectObject, self).__init__(options)
+  def __init__(self, options, overrides):
+    super(BisectObject, self).__init__(options, overrides)
 
   def PreRun(self):
     raise NotImplementedError('Object bisecting still WIP')
@@ -110,13 +122,33 @@ def Run(bisector):
   return 0
 
 
+_HELP_EPILOG = """
+Run ./bisect.py {method} --help for individual method help/args
+
+------------------
+
+See README.bisect for examples on argument overriding
+
+See below for full override argument reference:
+"""
+
+
 def Main(argv):
-  parser = argparse.ArgumentParser(epilog=('Run ./bisect.py {command} --help '
-                                           'for individual subcommand '
-                                           'help/args.'))
+  override_parser = argparse.ArgumentParser(add_help=False,
+                                            argument_default=argparse.SUPPRESS,
+                                            usage='bisect.py {mode} [options]')
+  common.BuildArgParser(override_parser, override=True)
+
+  epilog = _HELP_EPILOG + override_parser.format_help()
+  parser = argparse.ArgumentParser(epilog=epilog,
+                                   formatter_class=RawTextHelpFormatter)
   subparsers = parser.add_subparsers(title='Bisect mode',
-                                     description=('Whether to package or object'
-                                                  'bisect'))
+                                     description=('Which bisection method to '
+                                                  'use. Each method has '
+                                                  'specific setup and '
+                                                  'arguments. Please consult '
+                                                  'the README for more '
+                                                  'information.'))
 
   parser_package = subparsers.add_parser('package')
   parser_package.add_argument('board', help='Board to target')
@@ -126,12 +158,17 @@ def Main(argv):
   parser_object = subparsers.add_parser('object')
   parser_object.set_defaults(handler=BisectObject)
 
-  options = parser.parse_args(argv)
+  options, remaining = parser.parse_known_args(argv)
+  if remaining:
+    overrides = override_parser.parse_args(remaining)
+    overrides = vars(overrides)
+  else:
+    overrides = {}
 
   subcmd = options.handler
   del options.handler
 
-  bisector = subcmd(options)
+  bisector = subcmd(options, overrides)
   return Run(bisector)
 
 

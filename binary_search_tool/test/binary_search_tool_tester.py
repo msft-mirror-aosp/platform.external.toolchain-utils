@@ -58,8 +58,8 @@ class BisectTest(unittest.TestCase):
   class FullBisector(bisect.Bisector):
     """Test bisector to test bisect.py with"""
 
-    def __init__(self, options):
-      super(BisectTest.FullBisector, self).__init__(options)
+    def __init__(self, options, overrides):
+      super(BisectTest.FullBisector, self).__init__(options, overrides)
 
     def PreRun(self):
       GenObj()
@@ -78,7 +78,7 @@ class BisectTest(unittest.TestCase):
       return 0
 
   def test_full_bisector(self):
-    ret = bisect.Run(self.FullBisector({}))
+    ret = bisect.Run(self.FullBisector({}, {}))
     self.assertEquals(ret, 0)
     self.assertFalse(os.path.exists(common.OBJECTS_FILE))
     self.assertFalse(os.path.exists(common.WORKING_SET_FILE))
