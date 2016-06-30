@@ -81,12 +81,13 @@ sudo ln -s /build/${BOARD}.work /build/${BOARD}
 # Create common.sh file, containing appropriate environment variables.
 #
 
-COMMON_FILE="cros_pkg/common.sh"
+COMMON_FILE="common/common.sh"
 
 cat <<-EOF > ${COMMON_FILE}
 
-BOARD=${BOARD}
-REMOTE=${REMOTE}
+BISECT_BOARD=${BOARD}
+BISECT_REMOTE=${REMOTE}
+BISECT_MODE="PACKAGE_MODE"
 
 GOOD_BUILD=/build/${BOARD}.good
 BAD_BUILD=/build/${BOARD}.bad

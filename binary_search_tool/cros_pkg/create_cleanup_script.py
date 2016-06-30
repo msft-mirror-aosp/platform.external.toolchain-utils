@@ -100,7 +100,7 @@ def Main(argv):
                                                       options.board))
     out_file.write('\n')
     # Remove common.sh file
-    out_file.write('rm cros_pkg/common.sh\n')
+    out_file.write('rm common/common.sh\n')
 
   return 0
 

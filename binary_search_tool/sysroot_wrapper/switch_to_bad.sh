@@ -1,6 +1,6 @@
 #!/bin/bash -u
 
-source ./sysroot_wrapper/common.sh
+source common/common.sh
 
 cat $1 > ${bisect_dir}/BAD_SET
 

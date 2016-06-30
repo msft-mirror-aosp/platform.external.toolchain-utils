@@ -13,7 +13,7 @@
 # dealing with a real 'bad' image).
 #
 
-source cros_pkg/common.sh
+source common/common.sh
 
 #
 #Initialize the value below before using this script!!!

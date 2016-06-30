@@ -168,7 +168,8 @@ class BisectPackage(Bisector):
 class BisectObject(Bisector):
   """The class for object bisection steps."""
 
-  sysroot_wrapper_files = ['bad/_LIST', 'good/_LIST']
+  sysroot_wrapper_setup = 'sysroot_wrapper/setup.sh'
+  sysroot_wrapper_cleanup = 'sysroot_wrapper/cleanup.sh'
 
   def __init__(self, options, overrides):
     super(BisectObject, self).__init__(options, overrides)
@@ -191,22 +192,25 @@ class BisectObject(Bisector):
     self.ArgOverride(self.default_kwargs, overrides)
 
   def PreRun(self):
-    for f in self.sysroot_wrapper_files:
-      full_path = os.path.join(self.options.dir, f)
-      if not os.path.exists(full_path):
-        self.logger.LogError('Object bisector setup failed, %s does not exist' %
-                             full_path)
-        return 1
+    cmd = ('%s %s %s %s' % (self.sysroot_wrapper_setup, self.options.board,
+                            self.options.remote, self.options.package))
+    ret, _, _ = self.ce.RunCommandWExceptionCleanup(cmd, print_to_console=True)
+    if ret:
+      self.logger.LogError('Object bisector setup failed w/ error %d' % ret)
+      return 1
 
-    os.environ['BISECT_BOARD'] = self.options.board
-    os.environ['BISECT_REMOTE'] = self.options.remote
-    os.environ['BISECT_PACKAGE'] = self.options.package
+    os.environ['BISECT_STAGE'] = 'TRIAGE'
     return 0
 
   def Run(self):
     return binary_search_state.Run(**self.default_kwargs)
 
   def PostRun(self):
+    cmd = self.sysroot_wrapper_cleanup
+    ret, _, _ = self.ce.RunCommandWExceptionCleanup(cmd, print_to_console=True)
+    if ret:
+      self.logger.LogError('Object bisector cleanup failed w/ error %d' % ret)
+      return 1
     return 0
 
 

@@ -1,5 +1,5 @@
 #!/bin/bash -u
 
-source ./sysroot_wrapper/common.sh
+source common/common.sh
 
 cat ${bisect_dir}/good/_LIST

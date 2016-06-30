@@ -7,7 +7,7 @@
 # Note it returns 0 only when the installation of the image succeeded
 # (ie: the machine booted after installation)
 
-source ./sysroot_wrapper/common.sh
+source common/common.sh
 
 #export BISECT_STAGE=TRIAGE
 echo "BISECT_STAGE=${BISECT_STAGE}"
