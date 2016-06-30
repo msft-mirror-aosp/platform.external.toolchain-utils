@@ -304,20 +304,13 @@ CPUInfo
     perf_table = self.GetSummaryTables(perf=True)
     if not perf_table:
       perf_table = None
-    if not self.email:
-      return self.TEXT % (
-          self.experiment.name, self.PrintTables(summary_table, 'CONSOLE'),
-          self.experiment.machine_manager.num_reimages,
-          self.PrintTables(status_table, 'CONSOLE'),
-          self.PrintTables(perf_table, 'CONSOLE'),
-          self.experiment.experiment_file,
-          self.experiment.machine_manager.GetAllCPUInfo(self.experiment.labels))
-
+    output_type = 'EMAIL' if self.email else 'CONSOLE'
     return self.TEXT % (
-        self.experiment.name, self.PrintTables(summary_table, 'EMAIL'),
+        self.experiment.name, self.PrintTables(summary_table, output_type),
         self.experiment.machine_manager.num_reimages,
-        self.PrintTables(status_table, 'EMAIL'),
-        self.PrintTables(perf_table, 'EMAIL'), self.experiment.experiment_file,
+        self.PrintTables(status_table, output_type),
+        self.PrintTables(perf_table, output_type),
+        self.experiment.experiment_file,
         self.experiment.machine_manager.GetAllCPUInfo(self.experiment.labels))
 
 
@@ -480,11 +473,8 @@ pre {
   def GetReport(self):
     chart_javascript = ''
     charts = self._GetCharts(self.labels, self.benchmark_runs)
-    for chart in charts:
-      chart_javascript += chart.GetJavascript()
-    chart_divs = ''
-    for chart in charts:
-      chart_divs += chart.GetDiv()
+    chart_javascript = ''.join(chart.GetJavascript() for chart in charts)
+    chart_divs = ''.join(chart.GetDiv() for chart in charts)
 
     summary_table = self.GetSummaryTables()
     full_table = self.GetFullTables()
@@ -512,8 +502,7 @@ pre {
     charts = []
     ro = ResultOrganizer(benchmark_runs, labels)
     result = ro.result
-    for item in result:
-      runs = result[item]
+    for item, runs in result.iteritems():
       tg = TableGenerator(runs, ro.labels)
       table = tg.GetTable()
       columns = [Column(AmeanResult(), Format()), Column(MinResult(), Format()),

@@ -5,9 +5,10 @@
 
 from __future__ import print_function
 
+import collections
+import file_lock_machine
 import hashlib
 import image_chromeos
-import file_lock_machine
 import math
 import os.path
 import re
@@ -515,22 +516,20 @@ class MachineManager(object):
 
   def GetAllCPUInfo(self, labels):
     """Get cpuinfo for labels, merge them if their cpuinfo are the same."""
-    dic = {}
+    dic = collections.defaultdict(list)
     for label in labels:
       for machine in self._all_machines:
         if machine.name in label.remote:
-          if machine.cpuinfo not in dic:
-            dic[machine.cpuinfo] = [label.name]
-          else:
-            dic[machine.cpuinfo].append(label.name)
+          dic[machine.cpuinfo].append(label.name)
           break
-    output = ''
-    for key, v in dic.items():
-      output += ' '.join(v)
+    output_segs = []
+    for key, v in dic.iteritems():
+      output = ' '.join(v)
       output += '\n-------------------\n'
       output += key
       output += '\n\n\n'
-    return output
+      output_segs.append(output)
+    return ''.join(output_segs)
 
   def GetAllMachines(self):
     return self._all_machines
@@ -644,6 +643,7 @@ power management:
     self.log_level = log_level
     self.label = None
     self.ce = command_executer.GetCommandExecuter(log_level=self.log_level)
+    self._GetCPUInfo()
 
   def IsReachable(self):
     return True

@@ -11,6 +11,8 @@ from __future__ import print_function
 
 from StringIO import StringIO
 
+import collections
+import mock
 import os
 import test_flag
 import unittest
@@ -19,10 +21,13 @@ from benchmark_run import MockBenchmarkRun
 from cros_utils import logger
 from experiment_factory import ExperimentFactory
 from experiment_file import ExperimentFile
+from machine_manager import MockCrosMachine
 from machine_manager import MockMachineManager
 from results_cache import MockResult
+from results_report import HTMLResultsReport
 from results_report import JSONResultsReport
 from results_report import ParseChromeosImage
+from results_report import TextResultsReport
 
 
 class FreeFunctionsTest(unittest.TestCase):
@@ -98,6 +103,136 @@ def MakeMockExperiment(compiler='gcc'):
   return experiment
 
 
+def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0,
+                     label=None):
+  """Injects successful experiment runs (for each label) into the experiment."""
+  # Defensive copy of keyvals, so if it's modified, we'll know.
+  keyvals = dict(keyvals)
+  num_configs = len(experiment.benchmarks) * len(experiment.labels)
+  num_runs = len(experiment.benchmark_runs) // num_configs
+
+  # TODO(gbiv): Centralize the mocking of these, maybe? (It's also done in
+  # benchmark_run_unittest)
+  bench = experiment.benchmarks[for_benchmark]
+  cache_conditions = []
+  log_level = 'average'
+  share_cache = ''
+  locks_dir = ''
+  log = logger.GetLogger()
+  machine_manager = MockMachineManager(FakePath('chromeos_root'), 0,
+                                       log_level, locks_dir)
+  machine_manager.AddMachine('testing_machine')
+  machine = next(m for m in machine_manager.GetMachines()
+                 if m.name == 'testing_machine')
+  for label in experiment.labels:
+    def MakeSuccessfulRun(n):
+      run = MockBenchmarkRun('mock_success%d' % (n, ), bench, label,
+                             1 + n + num_runs, cache_conditions,
+                             machine_manager, log, log_level, share_cache)
+      mock_result = MockResult(log, label, log_level, machine)
+      mock_result.keyvals = keyvals
+      run.result = mock_result
+      return run
+
+    experiment.benchmark_runs.extend(MakeSuccessfulRun(n)
+                                     for n in xrange(how_many))
+  return experiment
+
+
+class TextResultsReportTest(unittest.TestCase):
+  """Tests that the output of a text report contains the things we pass in.
+
+  At the moment, this doesn't care deeply about the format in which said
+  things are displayed. It just cares that they're present.
+  """
+
+  def _checkReport(self, email):
+    num_success = 2
+    success_keyvals = {'retval': 0, 'machine': 'some bot', 'a_float': 3.96}
+    experiment = _InjectSuccesses(MakeMockExperiment(), num_success,
+                                  success_keyvals)
+    text_report = TextResultsReport(experiment, email=email).GetReport()
+    self.assertIn(str(success_keyvals['a_float']), text_report)
+    self.assertIn(success_keyvals['machine'], text_report)
+    self.assertIn(MockCrosMachine.CPUINFO_STRING, text_report)
+    return text_report
+
+
+  def testOutput(self):
+    email_report = self._checkReport(email=True)
+    text_report = self._checkReport(email=False)
+
+    # Ensure that the reports somehow different. Otherwise, having the
+    # distinction is useless.
+    self.assertNotEqual(email_report, text_report)
+
+
+class HTMLResultsReportTest(unittest.TestCase):
+  """Tests that the output of a HTML report contains the things we pass in.
+
+  At the moment, this doesn't care deeply about the format in which said
+  things are displayed. It just cares that they're present.
+  """
+
+  _TestOutput = collections.namedtuple('TestOutput', ['summary_table',
+                                                      'perf_html',
+                                                      'charts',
+                                                      'table_html',
+                                                      'experiment_file'])
+
+  @staticmethod
+  def _TupleToTestOutput(to_what):
+    fields = {}
+    # to_what has 13 fields. So, dealing with it can be unfun.
+    it = iter(to_what)
+    next(it) # perf_init
+    next(it) # chart_javascript
+    fields['summary_table'] = next(it) # HTML summary
+    next(it) # plaintext summary
+    next(it) # TSV summary
+    next(it) # tab menu summary
+    fields['perf_html'] = next(it)
+    fields['charts'] = next(it)
+    fields['table_html'] = next(it)
+    next(it) # full table plain text
+    next(it) # full table TSV
+    next(it) # full tab menu
+    fields['experiment_file'] = next(it)
+
+    remaining_fields = list(it)
+    if not remaining_fields:
+      return HTMLResultsReportTest._TestOutput(**fields)
+
+    raise RuntimeError('Initialization missed field(s): %s' %
+                       (remaining_fields, ))
+
+  def _GetOutput(self, experiment):
+    with mock.patch('results_report.HTMLResultsReport.HTML') as standin:
+      HTMLResultsReport(experiment).GetReport()
+      mod_mock = standin.__mod__
+    self.assertEquals(mod_mock.call_count, 1)
+    fmt_args = mod_mock.call_args[0][0]
+    return self._TupleToTestOutput(fmt_args)
+
+  def testNoSuccessOutput(self):
+    output = self._GetOutput(MakeMockExperiment())
+    self.assertIn('no result', output.summary_table)
+    self.assertEqual(output.charts, '')
+
+  def testSuccessfulOutput(self):
+    num_success = 2
+    success_keyvals = {'retval': 0, 'a_float': 3.96}
+    output = self._GetOutput(_InjectSuccesses(MakeMockExperiment(), num_success,
+                                              success_keyvals))
+
+    self.assertNotIn('no result', output.summary_table)
+    #self.assertIn(success_keyvals['machine'], output.summary_table)
+    self.assertIn('a_float', output.summary_table)
+    self.assertIn(str(success_keyvals['a_float']), output.summary_table)
+    # The _ in a_float is filtered out when we're generating HTML.
+    self.assertIn('afloat', output.charts)
+
+
 class JSONResultsReportTest(unittest.TestCase):
   """Tests JSONResultsReport."""
   REQUIRED_REPORT_KEYS = ('date', 'time', 'board', 'label', 'chromeos_image',
@@ -162,42 +297,6 @@ class JSONResultsReportTest(unittest.TestCase):
     for result in results:
       self.assertItemsEqual(result.iterkeys(), self.REQUIRED_REPORT_KEYS)
 
-  @staticmethod
-  def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0,
-                       label=None):
-    if label is None:
-      # Pick an arbitrary label
-      label = experiment.benchmark_runs[0].label
-    bench = experiment.benchmarks[for_benchmark]
-    num_configs = len(experiment.benchmarks) * len(experiment.labels)
-    num_runs = len(experiment.benchmark_runs) // num_configs
-
-    # TODO(gbiv): Centralize the mocking of these, maybe? (It's also done in
-    # benchmark_run_unittest)
-    cache_conditions = []
-    log_level = 'average'
-    share_cache = ''
-    locks_dir = ''
-    log = logger.GetLogger()
-    machine_manager = MockMachineManager(FakePath('chromeos_root'), 0,
-                                         log_level, locks_dir)
-    machine_manager.AddMachine('testing_machine')
-    machine = next(m for m in machine_manager.GetMachines()
-                   if m.name == 'testing_machine')
-
-    def MakeSuccessfulRun(n):
-      run = MockBenchmarkRun('mock_success%d' % (n, ), bench, label,
-                             1 + n + num_runs, cache_conditions,
-                             machine_manager, log, log_level, share_cache)
-      mock_result = MockResult(log, label, log_level, machine)
-      mock_result.keyvals = keyvals
-      run.result = mock_result
-      return run
-
-    experiment.benchmark_runs.extend(MakeSuccessfulRun(n)
-                                     for n in xrange(how_many))
-    return experiment
-
   def testJSONReportOutputWithSuccesses(self):
     success_keyvals = {
         'retval': 0,
@@ -207,12 +306,13 @@ class JSONResultsReportTest(unittest.TestCase):
     }
 
     # 2 is arbitrary.
-    num_passes = 2
-    # copy success_keyvals so we can catch something trying to mutate it.
-    experiment = self._InjectSuccesses(MakeMockExperiment(), num_passes,
-                                       dict(success_keyvals))
+    num_success = 2
+    experiment = _InjectSuccesses(MakeMockExperiment(), num_success,
+                                  success_keyvals)
     _, results = self._GetResultsFor(experiment, FakePath('results'))
     self._CheckRequiredKeys(results)
+
+    num_passes = num_success * len(experiment.labels)
     non_failures = [r for r in results if r['pass']]
     self.assertEqual(num_passes, len(non_failures))
 
