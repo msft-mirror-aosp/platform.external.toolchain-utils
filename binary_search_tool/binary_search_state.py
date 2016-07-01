@@ -128,8 +128,12 @@ class BinarySearchState(object):
     return ret
 
   def DoVerify(self):
+    if not self.verify_level:
+      return
+
     self.l.LogOutput('VERIFICATION')
-    self.l.LogOutput('Beginning %d tests to verify good/bad sets\n')
+    self.l.LogOutput('Beginning %d tests to verify good/bad sets\n' %
+                     self.verify_level)
     for _ in range(int(self.verify_level)):
       self.l.LogOutput('Resetting all items to good to verify.')
       self.SwitchToGood(self.all_items)

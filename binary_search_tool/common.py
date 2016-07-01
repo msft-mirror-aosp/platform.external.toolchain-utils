@@ -163,8 +163,7 @@ def _BuildArgsDict(args):
                    dest='prune',
                    action='store_true',
                    default=False,
-                   help=('Script to run to test the output after '
-                         'packages are built.'))
+                   help='Continue until all bad items are found.')
   # --prune False override, opposite of --prune
   args.AddArgument('--noprune',
                    dest='prune',

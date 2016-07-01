@@ -76,14 +76,14 @@ Bisection Methods:
     variable and use this to populate emerged objects. Here is an example:
 
       # Defaults to /tmp/sysroot_bisect
-      BISECT_DIR="/path/to/where/you/want/to/store/builds/"
+      export BISECT_DIR="/path/to/where/you/want/to/store/builds/"
 
-      BISECT_STAGE="POPULATE_GOOD"
+      export BISECT_STAGE="POPULATE_GOOD"
       ./switch_to_good_compiler.sh
       emerge-${board} -C ${package_to_bisect}
       emerge-${board} ${package_to_bisect}
 
-      BISECT_STAGE="POPULATE_BAD"
+      export BISECT_STAGE="POPULATE_BAD"
       ./switch_to_bad_compiler.sh
       emerge-${board} -C {package_to_bisect}
       emerge-${board} ${package_to_bisect}
