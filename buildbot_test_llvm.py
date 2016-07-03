@@ -83,7 +83,7 @@ class ToolchainVerifier(object):
       self._weekday = time.strftime('%a')
     else:
       self._weekday = weekday
-    self._reports = os.path.join(VALIDATION_RESULT_DIR, board)
+    self._reports = os.path.join(VALIDATION_RESULT_DIR, compiler, board)
 
   def _FinishSetup(self):
     """Make sure testing_rsa file is properly set up."""
@@ -145,7 +145,7 @@ def SendEmail(start_board, compiler):
   results = ""
   for i in range(len(TEST_BOARD)):
     board = TEST_BOARD[(start_board + i) % len(TEST_BOARD)]
-    f = os.path.join(VALIDATION_RESULT_DIR, board)
+    f = os.path.join(VALIDATION_RESULT_DIR, compiler, board)
     if not os.path.exists(f):
       continue
     results += board
@@ -155,7 +155,7 @@ def SendEmail(start_board, compiler):
       read_data = readin.read()
       results += read_data
 
-  output = os.path.join(VALIDATION_RESULT_DIR, "result")
+  output = os.path.join(VALIDATION_RESULT_DIR, compiler, "result")
   with open(output, 'w') as out:
     out.write(results)
 
@@ -223,7 +223,7 @@ def Main(argv):
                              options.weekday, patches, options.compiler)
       fv.DoAll()
     except SystemExit:
-      logfile = os.path.join(VALIDATION_RESULT_DIR, board)
+      logfile = os.path.join(VALIDATION_RESULT_DIR, options.compiler, board)
       with open(logfile, 'w') as f:
         f.write("Verifier got an exception, please check the log.\n")
 
