@@ -34,6 +34,7 @@ class BinarySearchState(object):
   def __init__(self, get_initial_items, switch_to_good, switch_to_bad,
                install_script, test_script, incremental, prune, iterations,
                prune_iterations, verify_level, file_args, verbose):
+    """BinarySearchState constructor, see Run for full args documentation."""
     self.get_initial_items = get_initial_items
     self.switch_to_good = switch_to_good
     self.switch_to_bad = switch_to_bad
@@ -61,6 +62,7 @@ class BinarySearchState(object):
     self.found_items = set([])
 
   def SwitchToGood(self, item_list):
+    """Switch given items to "good" set."""
     if self.incremental:
       self.l.LogOutput('Incremental set. Wanted to switch %s to good' %
                        str(item_list), print_to_console=self.verbose)
@@ -81,6 +83,7 @@ class BinarySearchState(object):
     self.currently_bad_items.difference_update(set(item_list))
 
   def SwitchToBad(self, item_list):
+    """Switch given items to "bad" set."""
     if self.incremental:
       self.l.LogOutput('Incremental set. Wanted to switch %s to bad' %
                        str(item_list), print_to_console=self.verbose)
@@ -101,6 +104,12 @@ class BinarySearchState(object):
     self.currently_good_items.difference_update(set(item_list))
 
   def RunSwitchScript(self, switch_script, item_list):
+    """Pass given items to switch script.
+
+    Args:
+      switch_script: path to switch script
+      item_list: list of all items to be switched
+    """
     if self.file_args:
       with tempfile.NamedTemporaryFile() as f:
         f.write('\n'.join(item_list))
@@ -115,11 +124,13 @@ class BinarySearchState(object):
     assert ret == 0, 'Switch script %s returned %d' % (switch_script, ret)
 
   def TestScript(self):
+    """Run test script and return exit code from script."""
     command = self.test_script
     ret, _, _ = self.ce.RunCommandWExceptionCleanup(command)
     return ret
 
   def InstallScript(self):
+    """Run install script and return exit code from script."""
     if not self.install_script:
       return 0
 
@@ -128,6 +139,12 @@ class BinarySearchState(object):
     return ret
 
   def DoVerify(self):
+    """Verify correctness of test environment.
+
+    Verify that a "good" set of items produces a "good" result and that a "bad"
+    set of items produces a "bad" result. To be run directly before running
+    DoSearch. If verify_level is 0 this step is skipped.
+    """
     if not self.verify_level:
       return
 
@@ -150,6 +167,10 @@ class BinarySearchState(object):
       assert status == 1, 'When reset_to_bad, status should be 1.'
 
   def DoSearch(self):
+    """Perform full search for bad items.
+
+    Perform full search until prune_iterations number of bad items are found.
+    """
     while (True and
            len(self.all_items) > 1 and
            self.prune_cycles < self.prune_iterations):
@@ -187,6 +208,7 @@ class BinarySearchState(object):
       self.PopulateItemsUsingList(new_all_items)
 
   def DoBinarySearch(self):
+    """Perform single iteration of binary search."""
     # If in resume mode don't reset search_cycles
     if not self.resumed:
       self.search_cycles = 0
@@ -219,6 +241,14 @@ class BinarySearchState(object):
     return terminated
 
   def PopulateItemsUsingCommand(self, command):
+    """Update all_items and binary search logic from executable.
+
+    This method is mainly required for enumerating the initial list of items
+    from the get_initial_items script.
+
+    Args:
+      command: path to executable that will enumerate items.
+    """
     ce = command_executer.GetCommandExecuter()
     _, out, _ = ce.RunCommandWExceptionCleanup(command,
                                                return_output=True,
@@ -227,12 +257,26 @@ class BinarySearchState(object):
     self.PopulateItemsUsingList(all_items)
 
   def PopulateItemsUsingList(self, all_items):
+    """Update all_items and binary searching logic from list.
+
+    Args:
+      all_items: new list of all_items
+    """
     self.all_items = all_items
     self.binary_search = binary_search_perforce.BinarySearcher(
         logger_to_set=self.l)
     self.binary_search.SetSortedList(self.all_items)
 
   def SaveState(self):
+    """Save state to STATE_FILE.
+
+    SaveState will create a new unique, hidden state file to hold data from
+    object. Then atomically overwrite the STATE_FILE symlink to point to the
+    new data.
+
+    Raises:
+      Error if STATE_FILE already exists but is not a symlink.
+    """
     ce, l = self.ce, self.l
     self.ce, self.l, self.binary_search.logger = None, None, None
     old_state = None
@@ -260,6 +304,7 @@ class BinarySearchState(object):
 
   @classmethod
   def LoadState(cls):
+    """Create BinarySearchState object from STATE_FILE."""
     if not os.path.isfile(STATE_FILE):
       return None
     try:
@@ -274,6 +319,7 @@ class BinarySearchState(object):
       return None
 
   def RemoveState(self):
+    """Remove STATE_FILE and its symlinked data from file system."""
     if os.path.exists(STATE_FILE):
       if os.path.islink(STATE_FILE):
         real_file = os.readlink(STATE_FILE)
@@ -281,6 +327,7 @@ class BinarySearchState(object):
         os.remove(STATE_FILE)
 
   def GetNextItems(self):
+    """Get next items for binary search based on result of the last test run."""
     border_item = self.binary_search.GetNext()
     index = self.all_items.index(border_item)
 
@@ -290,6 +337,7 @@ class BinarySearchState(object):
     return [next_bad_items, next_good_items]
 
   def OutputProgress(self):
+    """Output current progress of binary search to console and logs."""
     out = ('\n********** PROGRESS **********\n'
            'Search %d of estimated %d.\n'
            'Prune %d of max %d.\n'
@@ -337,6 +385,14 @@ class MockBinarySearchState(BinarySearchState):
 
 
 def _CanonicalizeScript(script_name):
+  """Return canonical path to script.
+
+  Args:
+    script_name: Relative or absolute path to script
+
+  Returns:
+    Canonicalized script path
+  """
   script_name = os.path.expanduser(script_name)
   if not script_name.startswith('/'):
     return os.path.join('.', script_name)
@@ -346,7 +402,34 @@ def Run(get_initial_items, switch_to_good, switch_to_bad, test_script,
         install_script=None, iterations=50, prune=True, noincremental=False,
         file_args=False, verify_level=1, prune_iterations=100, verbose=False,
         resume=False):
-  """Run binary search tool. Equivalent to running through terminal."""
+  """Run binary search tool. Equivalent to running through terminal.
+
+  Args:
+    get_initial_items: Script to enumerate all items being binary searched
+    switch_to_good: Script that will take items as input and switch them to good
+                    set
+    switch_to_bad: Script that will take items as input and switch them to bad
+                   set
+    test_script: Script that will determine if the current combination of good
+                 and bad items make a "good" or "bad" result.
+    install_script: Script to do necessary setup (building, compilation, etc.)
+                    for test_script
+    iterations: How many binary search iterations to run before exiting.
+    prune: If False the binary search tool will stop when the first bad item is
+           found. Otherwise then binary search tool will continue searching
+           until all bad items are found (or prune_iterations is reached).
+    noincremental: Whether to send "diffs" of good/bad items to switch scripts.
+    file_args: If True then arguments to switch scripts will be a file name
+               containing a newline separated list of the items to switch.
+    verify_level: How many verification tests to run to ensure initial good/bad
+                  sets actually produce a good/bad result.
+    prune_iterations: Max number of bad items to search for.
+    verbose: If True will print extra debug information to user.
+    resume: If True will resume using STATE_FILE.
+
+  Returns:
+    0 for success, error otherwise
+  """
   if resume:
     bss = BinarySearchState.LoadState()
     if not bss:
