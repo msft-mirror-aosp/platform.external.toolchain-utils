@@ -245,6 +245,30 @@ class BisectingUtilsTest(unittest.TestCase):
     for i in range(3):
       self.assertEquals(ws[i], 42)
 
+  def test_verify_fail(self):
+    bss = binary_search_state.MockBinarySearchState(
+        get_initial_items='./gen_init_list.py',
+        switch_to_good='./switch_to_bad.py',
+        switch_to_bad='./switch_to_good.py',
+        test_script='./is_good.py',
+        prune=True,
+        file_args=True,
+        verify_level=1)
+    with self.assertRaises(AssertionError):
+      bss.DoVerify()
+
+  def test_early_terminate(self):
+    bss = binary_search_state.MockBinarySearchState(
+        get_initial_items='./gen_init_list.py',
+        switch_to_good='./switch_to_good.py',
+        switch_to_bad='./switch_to_bad.py',
+        test_script='./is_good.py',
+        prune=True,
+        file_args=True,
+        iterations=1)
+    bss.DoSearch()
+    self.assertFalse(bss.found_items)
+
   def check_output(self):
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
         ('grep "Bad items are: " logs/binary_search_tool_tester.py.out | '
@@ -280,6 +304,8 @@ def Main(argv):
   suite.addTest(BisectingUtilsTest('test_save_state'))
   suite.addTest(BisectingUtilsTest('test_load_state'))
   suite.addTest(BisectingUtilsTest('test_tmp_cleanup'))
+  suite.addTest(BisectingUtilsTest('test_verify_fail'))
+  suite.addTest(BisectingUtilsTest('test_early_terminate'))
   suite.addTest(BisectTest('test_full_bisector'))
   runner = unittest.TextTestRunner()
   runner.run(suite)
