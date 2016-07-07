@@ -178,9 +178,6 @@ class BinarySearchState(object):
       self.prune_cycles += 1
       if not terminated:
         break
-      if not self.prune:
-        self.l.LogOutput('Not continuning further, --prune is not set')
-        break
       # Prune is set.
       prune_index = self.binary_search.current
 
@@ -204,6 +201,9 @@ class BinarySearchState(object):
                                                        str(new_all_items)),
                        print_to_console=self.verbose)
 
+      if not self.prune:
+        self.l.LogOutput('Not continuning further, --prune is not set')
+        break
       # FIXME: Do we need to Convert the currently good items to bad
       self.PopulateItemsUsingList(new_all_items)
 
@@ -372,13 +372,13 @@ class MockBinarySearchState(BinarySearchState):
         'switch_to_bad': None,
         'install_script': None,
         'test_script': None,
-        'incremental': None,
-        'prune': None,
-        'iterations': None,
-        'prune_iterations': None,
-        'verify_level': None,
-        'file_args': None,
-        'verbose': None
+        'incremental': True,
+        'prune': False,
+        'iterations': 50,
+        'prune_iterations': 100,
+        'verify_level': 1,
+        'file_args': False,
+        'verbose': False
     }
     default_kwargs.update(kwargs)
     super(MockBinarySearchState, self).__init__(**default_kwargs)
