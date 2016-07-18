@@ -130,9 +130,11 @@ Overriding:
   Example 1 (do boot test instead of interactive test):
   ./bisect.py package daisy 172.17.211.182 --test_script=cros_pkg/boot_test.sh
 
-  Example 2 (do package bisector system test instead of interactive test):
+  Example 2 (do package bisector system test instead of interactive test, this
+             is used to test the bisecting tool itself -- see comments in
+             hash_test.sh for more details):
   ./bisect.py package daisy 172.17.211.182 \
-    --test_script=cros_pkg/testing_test.sh --install_script=""
+    --test_script=common/hash_test.sh --install_script=""
 
   Example 3 (enable verbose mode and disable pruning):
   ./bisect.py package daisy 172.17.211.182 --verbose --noprune
