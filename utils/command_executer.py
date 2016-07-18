@@ -96,6 +96,7 @@ class CommandExecuter(object):
     # and we can easily kill the process group. This is also important
     # because the child will be disassociated from the parent terminal.
     # In this way the child cannot mess the parent's terminal.
+    p = None
     try:
       p = subprocess.Popen(cmd,
                            stdout=subprocess.PIPE,
@@ -122,7 +123,8 @@ class CommandExecuter(object):
           os.killpg(os.getpgid(p.pid), signal.SIGTERM)
           if self.logger:
             self.logger.LogError('Command received termination request. '
-                                 'Killed child process group.', print_to_console)
+                                 'Killed child process group.',
+                                 print_to_console)
           break
 
         l = my_poll.poll(100)
@@ -153,7 +155,8 @@ class CommandExecuter(object):
                 time.time() - terminated_time > terminated_timeout):
             if self.logger:
               self.logger.LogWarning('Timeout of %s seconds reached since '
-                                     'process termination.' % terminated_timeout,
+                                     'process termination.' %
+                                     terminated_timeout,
                                      print_to_console)
             break
 
@@ -197,7 +200,8 @@ class CommandExecuter(object):
     """
 
     def KillProc(proc, _):
-      os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+      if proc:
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
 
     # Make sure that args does not overwrite 'except_handler'
     assert len(args) <= 8
@@ -581,6 +585,7 @@ class CommandExecuter(object):
     # and we can easily kill the process group. This is also important
     # because the child will be disassociated from the parent terminal.
     # In this way the child cannot mess the parent's terminal.
+    pobject = None
     try:
       pobject = subprocess.Popen(
           cmd,
@@ -600,11 +605,16 @@ class CommandExecuter(object):
       poll = select.poll()
       outfd = pobject.stdout.fileno()
       poll.register(outfd, select.POLLIN | select.POLLPRI)
-      handlermap = {outfd: StreamHandler(pobject, outfd, 'stdout', line_consumer)}
+      handlermap = {outfd:
+                    StreamHandler(pobject, outfd, 'stdout', line_consumer)}
       if not join_stderr:
         errfd = pobject.stderr.fileno()
-        poll.register(errfd, select.POLLIN | select.POLLPRI)
-        handlermap[errfd] = StreamHandler(pobject, errfd, 'stderr', line_consumer)
+        poll.register(errfd,
+                      select.POLLIN | select.POLLPRI)
+        handlermap[errfd] = StreamHandler(pobject,
+                                          errfd,
+                                          'stderr',
+                                          line_consumer)
       while len(handlermap):
         readables = poll.poll(300)
         for (fd, evt) in readables:
