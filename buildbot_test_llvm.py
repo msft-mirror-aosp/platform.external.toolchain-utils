@@ -18,10 +18,10 @@ import os
 import sys
 import time
 
-from utils import command_executer
-from utils import logger
+from cros_utils import command_executer
+from cros_utils import logger
 
-from utils import buildbot_utils
+from cros_utils import buildbot_utils
 
 # CL that uses LLVM to build the peppy image.
 USE_LLVM_PATCH = '295217'

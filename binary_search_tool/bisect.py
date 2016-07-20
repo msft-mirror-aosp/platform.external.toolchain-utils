@@ -11,8 +11,8 @@ from argparse import RawTextHelpFormatter
 
 import common
 
-from utils import command_executer
-from utils import logger
+from cros_utils import command_executer
+from cros_utils import logger
 
 import binary_search_state
 

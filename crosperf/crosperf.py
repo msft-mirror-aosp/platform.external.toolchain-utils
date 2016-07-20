@@ -16,10 +16,10 @@ from experiment_factory import ExperimentFactory
 from experiment_file import ExperimentFile
 from settings_factory import GlobalSettings
 
-# This import causes pylint to warn about "No name 'logger' in module 'utils'".
-# I do not understand why. The import works fine in python.
+# This import causes pylint to warn about "No name 'logger' in module
+# 'cros_utils'". I do not understand why. The import works fine in python.
 # pylint: disable=no-name-in-module
-from utils import logger
+from cros_utils import logger
 
 import test_flag
 

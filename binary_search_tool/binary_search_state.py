@@ -11,12 +11,12 @@ import sys
 import tempfile
 import time
 
-# Adds utils to PYTHONPATH
+# Adds cros_utils to PYTHONPATH
 import common
 
-# Now we do import from utils
-from utils import command_executer
-from utils import logger
+# Now we do import from cros_utils
+from cros_utils import command_executer
+from cros_utils import logger
 
 import binary_search_perforce
 

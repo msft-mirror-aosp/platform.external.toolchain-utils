@@ -12,7 +12,7 @@ import random
 import sys
 import unittest
 
-from utils import command_executer
+from cros_utils import command_executer
 from binary_search_tool import binary_search_state
 from binary_search_tool import bisect
 

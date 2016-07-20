@@ -5,7 +5,7 @@
 
 from __future__ import print_function
 
-from utils import command_executer
+from cros_utils import command_executer
 
 
 def MachineIsPingable(machine, logging_level='average'):

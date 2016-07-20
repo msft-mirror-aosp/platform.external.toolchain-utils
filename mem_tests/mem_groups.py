@@ -13,7 +13,7 @@ and groups[1], etc.
 """
 
 import argparse
-from utils import compute_total_diff
+from cros_utils import compute_total_diff
 from datetime import datetime
 
 pretty_print = True

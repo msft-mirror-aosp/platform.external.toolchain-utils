@@ -9,8 +9,8 @@ import time
 import image_chromeos
 import machine_manager_singleton
 import table_formatter
-from utils import command_executer
-from utils import logger
+from cros_utils import command_executer
+from cros_utils import logger
 
 SCRATCH_DIR = '/home/%s/cros_scratch' % getpass.getuser()
 PICKLE_FILE = 'pickle.txt'

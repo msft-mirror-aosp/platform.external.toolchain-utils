@@ -9,7 +9,7 @@ time in seconds from a base time, amount of memory that has been sampled
 """
 
 import argparse
-from utils import compute_total_diff
+from cros_utils import compute_total_diff
 from datetime import datetime
 
 parser = argparse.ArgumentParser()

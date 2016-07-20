@@ -3,8 +3,8 @@ import lock_machine
 import sys
 import threading
 import time
-from utils import command_executer
-from utils import logger
+from cros_utils import command_executer
+from cros_utils import logger
 
 
 class CrosMachine(object):

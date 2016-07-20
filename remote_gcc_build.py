@@ -86,7 +86,7 @@ def FindBuildIdFromLog(description):
   #                              description yet
 
   file_dir = os.path.dirname(os.path.realpath(__file__))
-  commands = ('{0}/utils/buildbot_json.py builds '
+  commands = ('{0}/cros_utils/buildbot_json.py builds '
               'http://chromegw/p/tryserver.chromiumos/'.format(file_dir))
   ce = command_executer.GetCommandExecuter()
   _, buildinfo, _ = ce.RunCommandWOutput(commands, print_to_console=False)

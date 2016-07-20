@@ -8,7 +8,7 @@ tables.
 
 Example usage:
 
-  from utils import tabulator
+  from cros_utils import tabulator
 
   data = [["benchmark1", "33", "44"],["benchmark2", "44", "33"]]
   tabulator.GetSimpleTable(data)
@@ -20,7 +20,7 @@ columns with custom result computation and coloring, and will compare values in
 each row according to taht scheme. Here is a complex example on printing a
 table:
 
-  from utils import tabulator
+  from cros_utils import tabulator
 
   runs = [[{"k1": "10", "k2": "12", "k5": "40", "k6": "40",
             "ms_1": "20", "k7": "FAIL", "k8": "PASS", "k9": "PASS",

@@ -16,9 +16,9 @@ import build_chrome_browser
 import cros_login
 import lock_machine
 import run_tests
-from utils import command_executer
-from utils import logger
-from utils import misc
+from cros_utils import command_executer
+from cros_utils import logger
+from cros_utils import misc
 
 
 class CyclerProfiler:

@@ -14,9 +14,9 @@ import sys
 import tempfile
 import time
 
-from utils import command_executer
-from utils import logger
-from utils import misc
+from cros_utils import command_executer
+from cros_utils import logger
+from cros_utils import misc
 
 from run_dejagnu import TryAcquireMachine
 

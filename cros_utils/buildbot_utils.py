@@ -9,9 +9,9 @@ import os
 import time
 import urllib2
 
-from utils import command_executer
-from utils import logger
-from utils import buildbot_json
+from cros_utils import command_executer
+from cros_utils import logger
+from cros_utils import buildbot_json
 
 SLEEP_TIME = 600  # 10 minutes; time between polling of buildbot.
 TIME_OUT = 18000  # Decide the build is dead or will never finish
@@ -117,7 +117,7 @@ def GetBuildInfo(file_dir, builder):
     file_dir is the toolchain_utils directory.
     """
   ce = command_executer.GetCommandExecuter()
-  commands = ('{0}/utils/buildbot_json.py builds '
+  commands = ('{0}/cros_utils/buildbot_json.py builds '
               'http://chromegw/i/tryserver.chromiumos/'.format(file_dir))
 
   if builder:

@@ -7,7 +7,7 @@ import os
 
 import test_flag
 
-from utils import command_executer
+from cros_utils import command_executer
 
 
 class MissingImage(Exception):

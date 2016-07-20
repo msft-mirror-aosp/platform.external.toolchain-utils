@@ -17,9 +17,9 @@ import sys
 import tempfile
 
 from automation.clients.helper import perforce
-from utils import command_executer
-from utils import logger
-from utils import misc
+from cros_utils import command_executer
+from cros_utils import logger
+from cros_utils import misc
 
 # pylint: disable=anomalous-backslash-in-string
 

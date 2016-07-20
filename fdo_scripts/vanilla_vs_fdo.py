@@ -8,9 +8,9 @@ import sys
 
 import image_chromeos
 import setup_chromeos
-from utils import command_executer
-from utils import misc
-from utils import logger
+from cros_utils import command_executer
+from cros_utils import misc
+from cros_utils import logger
 
 
 class Patcher(object):

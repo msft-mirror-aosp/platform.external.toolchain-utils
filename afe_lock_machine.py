@@ -11,8 +11,8 @@ import os
 import sys
 import traceback
 
-from utils import logger
-from utils import machines
+from cros_utils import logger
+from cros_utils import machines
 
 
 class AFELockException(Exception):
@@ -99,7 +99,7 @@ class AFELockManager(object):
         server to be used (see local_server argument).
       log: If not None, this is the logger object to be used for writing out
         informational output messages.  It is expected to be an instance of
-        Logger class from utils/logger.py.
+        Logger class from cros_utils/logger.py.
     """
     self.chromeos_root = chromeos_root
     self.user = getpass.getuser()

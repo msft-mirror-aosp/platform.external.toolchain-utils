@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import time
 import unittest
-from utils import command_executer
+from cros_utils import command_executer
 
 
 class NoPsuedoTerminalTest(unittest.TestCase):

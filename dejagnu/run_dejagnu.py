@@ -18,10 +18,10 @@ import time
 
 import lock_machine
 import tc_enter_chroot
-from utils import command_executer
-from utils import constants
-from utils import logger
-from utils import misc
+from cros_utils import command_executer
+from cros_utils import constants
+from cros_utils import logger
+from cros_utils import misc
 
 
 def ProcessArguments(argv):

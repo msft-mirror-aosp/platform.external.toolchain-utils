@@ -10,8 +10,8 @@ import shutil
 import tempfile
 import unittest
 
-from utils import command_executer
-from utils import misc
+from cros_utils import command_executer
+from cros_utils import misc
 
 
 class DivideAndMergeProfilesTest(unittest.TestCase):

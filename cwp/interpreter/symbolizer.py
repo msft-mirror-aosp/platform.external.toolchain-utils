@@ -6,7 +6,7 @@ import shutil
 from subprocess import call
 from subprocess import PIPE
 from subprocess import Popen
-from utils import misc
+from cros_utils import misc
 
 GSUTIL_CMD = 'gsutil cp gs://chromeos-image-archive/%s-release/%s/debug.tgz %s'
 TAR_CMD = 'tar -zxvf %s -C %s'

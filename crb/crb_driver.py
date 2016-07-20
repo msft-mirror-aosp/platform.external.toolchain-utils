@@ -13,8 +13,8 @@ from email.mime.text import MIMEText
 from autotest_gatherer import AutotestGatherer as AutotestGatherer
 from autotest_run import AutotestRun as AutotestRun
 from machine_manager_singleton import MachineManagerSingleton as MachineManagerSingleton
-from utils import logger
-from utils.file_utils import FileUtils
+from cros_utils import logger
+from cros_utils.file_utils import FileUtils
 
 
 def CanonicalizeChromeOSRoot(chromeos_root):

@@ -5,7 +5,7 @@ from __future__ import print_function
 
 import sys
 
-from utils import command_executer
+from cros_utils import command_executer
 import common
 
 

@@ -19,10 +19,10 @@ import re
 import sys
 import time
 
-from utils import command_executer
-from utils import logger
+from cros_utils import command_executer
+from cros_utils import logger
 
-from utils import buildbot_utils
+from cros_utils import buildbot_utils
 
 # CL that updated GCC ebuilds to use 'next_gcc'.
 USE_NEXT_GCC_PATCH = '230260'
