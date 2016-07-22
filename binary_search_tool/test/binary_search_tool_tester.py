@@ -285,6 +285,17 @@ class BisectingUtilsTest(unittest.TestCase):
     found_obj = int(bss.found_items.pop())
     self.assertEquals(bad_objs[found_obj], 1)
 
+  def test_set_file(self):
+    binary_search_state.Run(
+        get_initial_items='./gen_init_list.py',
+        switch_to_good='./switch_to_good_set_file.py',
+        switch_to_bad='./switch_to_bad_set_file.py',
+        test_script='./is_good.py',
+        prune=True,
+        file_args=True,
+        verify_level=1)
+    self.check_output()
+
   def check_output(self):
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
         ('grep "Bad items are: " logs/binary_search_tool_tester.py.out | '
@@ -323,6 +334,7 @@ def Main(argv):
   suite.addTest(BisectingUtilsTest('test_verify_fail'))
   suite.addTest(BisectingUtilsTest('test_early_terminate'))
   suite.addTest(BisectingUtilsTest('test_no_prune'))
+  suite.addTest(BisectingUtilsTest('test_set_file'))
   suite.addTest(BisectTest('test_full_bisector'))
   runner = unittest.TextTestRunner()
   runner.run(suite)

@@ -4,6 +4,7 @@
 from __future__ import print_function
 
 import argparse
+import contextlib
 import math
 import os
 import pickle
@@ -20,6 +21,9 @@ from cros_utils import logger
 
 import binary_search_perforce
 
+GOOD_SET_VAR = 'BISECT_GOOD_SET'
+BAD_SET_VAR = 'BISECT_BAD_SET'
+
 STATE_FILE = '%s.state' % sys.argv[0]
 HIDDEN_STATE_FILE = os.path.join(
     os.path.dirname(STATE_FILE), '.%s' % os.path.basename(STATE_FILE))
@@ -27,6 +31,30 @@ HIDDEN_STATE_FILE = os.path.join(
 class Error(Exception):
   """The general binary search tool error class."""
   pass
+
+
+@contextlib.contextmanager
+def SetFile(env_var, items):
+  """Generate set files that can be used by switch/test scripts.
+
+  Generate temporary set file (good/bad) holding contents of good/bad items for
+  the current binary search iteration. Store the name of each file as an
+  environment variable so all child processes can access it.
+
+  This function is a contextmanager, meaning it's meant to be used with the
+  "with" statement in Python. This is so cleanup and setup happens automatically
+  and cleanly. Execution of the outer "with" statement happens at the "yield"
+  statement.
+
+  Args:
+    env_var: What environment variable to store the file name in.
+    items: What items are in this set.
+  """
+  with tempfile.NamedTemporaryFile() as f:
+    os.environ[env_var] = f.name
+    f.write('\n'.join(items))
+    f.flush()
+    yield
 
 
 class BinarySearchState(object):
@@ -155,19 +183,21 @@ class BinarySearchState(object):
     self.l.LogOutput('Beginning %d tests to verify good/bad sets\n' %
                      self.verify_level)
     for _ in range(int(self.verify_level)):
-      self.l.LogOutput('Resetting all items to good to verify.')
-      self.SwitchToGood(self.all_items)
-      status = self.InstallScript()
-      assert status == 0, 'When reset_to_good, install should succeed.'
-      status = self.TestScript()
-      assert status == 0, 'When reset_to_good, status should be 0.'
+      with SetFile(GOOD_SET_VAR, self.all_items), SetFile(BAD_SET_VAR, []):
+        self.l.LogOutput('Resetting all items to good to verify.')
+        self.SwitchToGood(self.all_items)
+        status = self.InstallScript()
+        assert status == 0, 'When reset_to_good, install should succeed.'
+        status = self.TestScript()
+        assert status == 0, 'When reset_to_good, status should be 0.'
 
-      self.l.LogOutput('Resetting all items to bad to verify.')
-      self.SwitchToBad(self.all_items)
-      status = self.InstallScript()
-      assert status == 0, 'When reset_to_bad, install should succeed.'
-      status = self.TestScript()
-      assert status == 1, 'When reset_to_bad, status should be 1.'
+      with SetFile(GOOD_SET_VAR, []), SetFile(BAD_SET_VAR, self.all_items):
+        self.l.LogOutput('Resetting all items to bad to verify.')
+        self.SwitchToBad(self.all_items)
+        status = self.InstallScript()
+        assert status == 0, 'When reset_to_bad, install should succeed.'
+        status = self.TestScript()
+        assert status == 1, 'When reset_to_bad, status should be 1.'
 
   def DoSearch(self):
     """Perform full search for bad items.
@@ -226,16 +256,17 @@ class BinarySearchState(object):
       self.search_cycles += 1
       [bad_items, good_items] = self.GetNextItems()
 
-      # TODO: bad_items should come first.
-      self.SwitchToGood(good_items)
-      self.SwitchToBad(bad_items)
-      status = self.InstallScript()
-      if status == 0:
-        status = self.TestScript()
-      else:
-        # Install script failed, treat as skipped item
-        status = 2
-      terminated = self.binary_search.SetStatus(status)
+      with SetFile(GOOD_SET_VAR, good_items), SetFile(BAD_SET_VAR, bad_items):
+        # TODO: bad_items should come first.
+        self.SwitchToGood(good_items)
+        self.SwitchToBad(bad_items)
+        status = self.InstallScript()
+        if status == 0:
+          status = self.TestScript()
+        else:
+          # Install script failed, treat as skipped item
+          status = 2
+        terminated = self.binary_search.SetStatus(status)
 
       if terminated:
         self.l.LogOutput('Terminated!')
