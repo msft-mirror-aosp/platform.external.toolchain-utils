@@ -123,11 +123,17 @@ class BisectingUtilsTest(unittest.TestCase):
     CleanObj()
 
     try:
-      os.remove('./installed')
       os.remove(os.readlink(binary_search_state.STATE_FILE))
-      os.remove(binary_search_state.STATE_FILE)
     except OSError:
       pass
+
+    cleanup_list = ['./installed',
+                    binary_search_state.STATE_FILE,
+                    'noinc_prune_bad',
+                    'noinc_prune_good']
+    for f in cleanup_list:
+      if os.path.exists(f):
+        os.remove(f)
 
   def runTest(self):
     ret = binary_search_state.Run(get_initial_items='./gen_init_list.py',
@@ -296,6 +302,20 @@ class BisectingUtilsTest(unittest.TestCase):
         verify_level=1)
     self.check_output()
 
+  def test_noincremental_prune(self):
+    ret = binary_search_state.Run(
+        get_initial_items='./gen_init_list.py',
+        switch_to_good='./switch_to_good_noinc_prune.py',
+        switch_to_bad='./switch_to_bad_noinc_prune.py',
+        test_script='./is_good_noinc_prune.py',
+        install_script='./install.py',
+        prune=True,
+        noincremental=True,
+        file_args=True,
+        verify_level=0)
+    self.assertEquals(ret, 0)
+    self.check_output()
+
   def check_output(self):
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
         ('grep "Bad items are: " logs/binary_search_tool_tester.py.out | '
@@ -335,6 +355,7 @@ def Main(argv):
   suite.addTest(BisectingUtilsTest('test_early_terminate'))
   suite.addTest(BisectingUtilsTest('test_no_prune'))
   suite.addTest(BisectingUtilsTest('test_set_file'))
+  suite.addTest(BisectingUtilsTest('test_noincremental_prune'))
   suite.addTest(BisectTest('test_full_bisector'))
   runner = unittest.TextTestRunner()
   runner.run(suite)

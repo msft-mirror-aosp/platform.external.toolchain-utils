@@ -89,6 +89,7 @@ class BinarySearchState(object):
     self.currently_good_items = set([])
     self.currently_bad_items = set([])
     self.found_items = set([])
+    self.known_good = set([])
 
     self.start_time = time.time()
 
@@ -227,8 +228,13 @@ class BinarySearchState(object):
       new_all_items.append(new_all_items.pop(prune_index))
       self.found_items.add(new_all_items[-1])
 
+      # Everything below newly found bad item is now known to be a good item.
+      # Take these good items out of the equation to save time on the next
+      # search. We save these known good items so they are still sent to the
+      # switch_to_good script.
       if prune_index:
-        new_all_items = new_all_items[prune_index - 1:]
+        self.known_good.update(new_all_items[:prune_index])
+        new_all_items = new_all_items[prune_index:]
 
       self.l.LogOutput('Old list: %s. New list: %s' % (str(self.all_items),
                                                        str(new_all_items)),
@@ -368,7 +374,7 @@ class BinarySearchState(object):
     index = self.all_items.index(border_item)
 
     next_bad_items = self.all_items[:index + 1]
-    next_good_items = self.all_items[index + 1:]
+    next_good_items = self.all_items[index + 1:] + list(self.known_good)
 
     return [next_bad_items, next_good_items]
 
