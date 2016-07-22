@@ -9,6 +9,7 @@ import os
 import pickle
 import sys
 import tempfile
+import time
 
 # Adds utils to PYTHONPATH
 import common
@@ -60,6 +61,8 @@ class BinarySearchState(object):
     self.currently_good_items = set([])
     self.currently_bad_items = set([])
     self.found_items = set([])
+
+    self.start_time = time.time()
 
   def SwitchToGood(self, item_list):
     """Switch given items to "good" set."""
@@ -219,6 +222,7 @@ class BinarySearchState(object):
     while self.search_cycles < self.iterations and not terminated:
       self.SaveState()
       self.OutputProgress()
+
       self.search_cycles += 1
       [bad_items, good_items] = self.GetNextItems()
 
@@ -312,6 +316,7 @@ class BinarySearchState(object):
       bss.l = logger.GetLogger()
       bss.ce = command_executer.GetCommandExecuter()
       bss.binary_search.logger = bss.l
+      bss.start_time = time.time()
       bss.resumed = True
       binary_search_perforce.verbose = bss.verbose
       return bss
@@ -336,15 +341,29 @@ class BinarySearchState(object):
 
     return [next_bad_items, next_good_items]
 
+  def ElapsedTimeString(self):
+    """Return h m s format of elapsed time since execution has started."""
+    diff = int(time.time() - self.start_time)
+    seconds = diff % 60
+    minutes = (diff / 60) % 60
+    hours = diff / (60 * 60)
+
+    seconds = str(seconds).rjust(2)
+    minutes = str(minutes).rjust(2)
+    hours = str(hours).rjust(2)
+
+    return '%sh %sm %ss' % (hours, minutes, seconds)
+
   def OutputProgress(self):
     """Output current progress of binary search to console and logs."""
-    out = ('\n********** PROGRESS **********\n'
+    out = ('\n***** PROGRESS (elapsed time: %s) *****\n'
            'Search %d of estimated %d.\n'
            'Prune %d of max %d.\n'
            'Current bad items found:\n'
            '%s\n'
-           '******************************')
-    out = out % (self.search_cycles + 1,
+           '************************************************')
+    out = out % (self.ElapsedTimeString(),
+                 self.search_cycles + 1,
                  math.ceil(math.log(len(self.all_items), 2)),
                  self.prune_cycles + 1,
                  self.prune_iterations,
@@ -457,6 +476,8 @@ def Run(get_initial_items, switch_to_good, switch_to_bad, test_script,
   try:
     bss.DoSearch()
     bss.RemoveState()
+    logger.GetLogger().LogOutput('Total execution time: %s' %
+                                 bss.ElapsedTimeString())
   except Error as e:
     logger.GetLogger().LogError(e)
     return 1
