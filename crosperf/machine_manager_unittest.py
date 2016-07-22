@@ -194,7 +194,7 @@ class MachineManagerTest(unittest.TestCase):
     mock_run_cmd.return_value = 1
     try:
       self.mm.ImageMachine(machine, LABEL_LUMPY)
-    except Exception:
+    except RuntimeError:
       self.assertEqual(mock_checksummer.call_count, 0)
       self.assertEqual(mock_run_cmd.call_count, 2)
       self.assertEqual(mock_run_croscmd.call_count, 1)

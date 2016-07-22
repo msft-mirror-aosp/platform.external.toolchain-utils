@@ -146,7 +146,7 @@ class BenchmarkRunTest(unittest.TestCase):
 
     def FakeReadCacheException():
       'Helper function for test_run.'
-      raise Exception('This is an exception test; it is supposed to happen')
+      raise RuntimeError('This is an exception test; it is supposed to happen')
 
     def FakeAcquireMachine():
       'Helper function for test_run.'

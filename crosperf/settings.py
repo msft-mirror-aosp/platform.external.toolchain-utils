@@ -24,13 +24,13 @@ class Settings(object):
   def AddField(self, field):
     name = field.name
     if name in self.fields:
-      raise Exception('Field %s defined previously.' % name)
+      raise SyntaxError('Field %s defined previously.' % name)
     self.fields[name] = field
 
   def SetField(self, name, value, append=False):
     if name not in self.fields:
-      raise Exception("'%s' is not a valid field in '%s' settings" %
-                      (name, self.settings_type))
+      raise SyntaxError("'%s' is not a valid field in '%s' settings" %
+                        (name, self.settings_type))
     if append:
       self.fields[name].Append(value)
     else:
@@ -39,12 +39,12 @@ class Settings(object):
   def GetField(self, name):
     """Get the value of a field with a given name."""
     if name not in self.fields:
-      raise Exception("Field '%s' not a valid field in '%s' settings." %
-                      (name, self.name))
+      raise SyntaxError("Field '%s' not a valid field in '%s' settings." %
+                        (name, self.name))
     field = self.fields[name]
     if not field.assigned and field.required:
-      raise Exception("Required field '%s' not defined in '%s' settings." %
-                      (name, self.name))
+      raise SyntaxError("Required field '%s' not defined in '%s' settings." %
+                        (name, self.name))
     return self.fields[name].Get()
 
   def Inherit(self):
@@ -64,7 +64,7 @@ class Settings(object):
     """Check that all required fields have been set."""
     for name in self.fields:
       if not self.fields[name].assigned and self.fields[name].required:
-        raise Exception('Field %s is invalid.' % name)
+        raise SyntaxError('Field %s is invalid.' % name)
 
   def GetXbuddyPath(self, path_str, board, chromeos_root, log_level):
     prefix = 'remote'

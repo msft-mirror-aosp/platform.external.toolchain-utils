@@ -197,7 +197,7 @@ def UploadManifest(manifest, chromeos_root, branch='master'):
   command = 'git checkout -b {0} -t cros-internal/{1}'.format(BRANCH, branch)
   ret = ce.RunCommand(command)
   if ret:
-    raise Exception('Command {0} failed'.format(command))
+    raise RuntimeError('Command {0} failed'.format(command))
 
   # We remove the default.xml, which is the symbolic link of full.xml.
   # After that, we copy our xml file to default.xml.
@@ -399,8 +399,8 @@ def Main(argv):
     patch = []
   chromeos_root = misc.CanonicalizePath(args.chromeos_root)
   if args.chromeos_version and args.branch:
-    raise Exception('You can not set chromeos_version and branch at the '
-                    'same time.')
+    raise RuntimeError('You can not set chromeos_version and branch at the '
+                      'same time.')
 
   manifests = None
   if args.branch:

@@ -43,7 +43,7 @@ class CyclerProfiler:
                                    'chrome-src-internal', 'src', 'data',
                                    'page_cycler')
     if not os.path.isdir(page_cycler_dir):
-      raise Exception('Page cycler dir %s not found!' % page_cycler_dir)
+      raise RuntimeError('Page cycler dir %s not found!' % page_cycler_dir)
     self._ce.CopyFiles(page_cycler_dir,
                        os.path.join(self.REMOTE_TMP_DIR, 'page_cycler'),
                        dest_machine=self._remote,

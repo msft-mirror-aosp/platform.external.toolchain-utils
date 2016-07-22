@@ -30,10 +30,10 @@ class Patcher(object):
     full_args = '%s --dry-run' % args
     ret = self._RunPatchCommand(full_args)
     if ret:
-      raise Exception('Patch dry run failed!')
+      raise RuntimeError('Patch dry run failed!')
     ret = self._RunPatchCommand(args)
     if ret:
-      raise Exception('Patch application failed!')
+      raise RuntimeError('Patch application failed!')
 
   def __enter__(self):
     self._ApplyPatch('')
@@ -75,11 +75,11 @@ class FDOComparator(object):
       command = misc.GetSetupBoardCommand(self._board, usepkg=True)
       ret = self._ce.ChrootRunCommand(self._chromeos_root, command)
       if ret:
-        raise Exception("Couldn't run setup_board!")
+        raise RuntimeError("Couldn't run setup_board!")
       command = misc.GetBuildPackagesCommand(self._board, True)
       ret = self._ce.ChrootRunCommand(self._chromeos_root, command)
       if ret:
-        raise Exception("Couldn't run build_packages!")
+        raise RuntimeError("Couldn't run build_packages!")
 
   def _ReportMismatches(self, build_log):
     mismatch_signature = '-Wcoverage-mismatch'
@@ -123,7 +123,7 @@ class FDOComparator(object):
         self._ReportMismatches(out)
 
       if ret:
-        raise Exception("Couldn't build chrome browser!")
+        raise RuntimeError("Couldn't build chrome browser!")
       misc.LabelLatestImage(self._chromeos_root, self._board, label)
     return label
 
@@ -160,7 +160,7 @@ class FDOComparator(object):
     command = '%s %s' % (crosperf, experiment_file)
     ret = self._ce.RunCommand(command)
     if ret:
-      raise Exception("Couldn't run crosperf!")
+      raise RuntimeError("Couldn't run crosperf!")
 
   def _ImageRemote(self, label):
     image_path = os.path.join(
@@ -182,7 +182,7 @@ class FDOComparator(object):
     command = 'python %s %s' % (profile_cycler, ' '.join(profile_cycler_args))
     ret = self._ce.RunCommand(command)
     if ret:
-      raise Exception("Couldn't profile cycler!")
+      raise RuntimeError("Couldn't profile cycler!")
 
   def _BuildGenerateImage(self):
     # TODO(asharif): add cflags as well.

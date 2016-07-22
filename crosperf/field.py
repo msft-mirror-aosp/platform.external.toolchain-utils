@@ -68,7 +68,7 @@ class BooleanField(Field):
       return True
     elif value.lower() == 'false':
       return False
-    raise Exception("Invalid value for '%s'. Must be true or false." %
+    raise TypeError("Invalid value for '%s'. Must be true or false." %
                     self.name)
 
 
@@ -147,6 +147,6 @@ class EnumField(Field):
 
   def _Parse(self, value):
     if value not in self.options:
-      raise Exception("Invalid enum value for field '%s'. Must be one of (%s)" %
+      raise TypeError("Invalid enum value for field '%s'. Must be one of (%s)" %
                       (self.name, ', '.join(self.options)))
     return str(value)

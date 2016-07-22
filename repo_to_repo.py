@@ -255,7 +255,7 @@ class GitRepo(Repo):
       elif commit_message:
         message_arg = '-m \'%s\'' % commit_message
       else:
-        raise Exception('No commit message given!')
+        raise RuntimeError('No commit message given!')
       command += '&& git commit -v %s' % message_arg
       return self._ce.RunCommand(command)
 

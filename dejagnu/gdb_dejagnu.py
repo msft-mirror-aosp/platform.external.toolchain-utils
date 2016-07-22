@@ -63,17 +63,17 @@ def ProcessArguments(argv):
   options, args = parser.parse_args(argv)
 
   if not options.chromeos_root:
-    raise Exception('Missing argument for --chromeos_root.')
+    raise SyntaxError('Missing argument for --chromeos_root.')
   if not options.remote:
-    raise Exception('Missing argument for --remote.')
+    raise SyntaxError('Missing argument for --remote.')
   if not options.board:
-    raise Exception('Missing argument for --board.')
+    raise SyntaxError('Missing argument for --board.')
   if options.cleanup == 'mount' and not options.mount:
-    raise Exception('--cleanup=\'mount\' not valid unless --mount is given.')
+    raise SyntaxError('--cleanup=\'mount\' not valid unless --mount is given.')
   if options.cleanup and not (options.cleanup == 'mount' or
                               options.cleanup == 'chroot' or
                               options.cleanup == 'chromeos'):
-    raise Exception('Invalid option value for --cleanup')
+    raise SyntaxError('Invalid option value for --cleanup')
 
   return options
 
@@ -92,7 +92,7 @@ class DejagnuExecuter(object):
     ## Compute target from board
     self._target = misc.GetCtargetFromBoard(board, chromeos_root)
     if not self._target:
-      raise Exception('Unsupported board "%s"' % board)
+      raise RuntimeError('Unsupported board "%s"' % board)
     self._executer = command_executer.GetCommandExecuter()
     self._base_dir = base_dir
     self._tmp_abs = None
@@ -180,7 +180,7 @@ class DejagnuExecuter(object):
     if matcher:
       gdb_reversion = matcher.group(1)
     else:
-      raise Exception('Failed to get gdb reversion.')
+      raise RuntimeError('Failed to get gdb reversion.')
     gdb_version = gdb_reversion.split('-r')[0]
     gdb_portage_dir = '/var/tmp/portage/cross-%s/%s/work' % (self._target,
                                                              gdb_reversion)
@@ -190,7 +190,7 @@ class DejagnuExecuter(object):
         'sudo %s ebuild $(equery w cross-%s/gdb) clean compile' % (
             self._mount_flag, self._target)))
     if ret:
-      raise Exception('ebuild gdb failed.')
+      raise RuntimeError('ebuild gdb failed.')
 
   def PrepareGdbserver(self):
     self.PrepareGdbserverDefault()
@@ -202,7 +202,7 @@ class DejagnuExecuter(object):
                                           cmd,
                                           print_to_console=True)
     if ret:
-      raise Exception('ebuild gdbserver failed.')
+      raise RuntimeError('ebuild gdbserver failed.')
 
     cmd = ('scp -i {0}  {1} '
            '/build/{2}/usr/bin/gdbserver root@{3}:/usr/local/bin/'.format(
@@ -211,7 +211,7 @@ class DejagnuExecuter(object):
                                           cmd,
                                           print_to_console=True)
     if ret:
-      raise Exception('copy gdbserver failed.')
+      raise RuntimeError('copy gdbserver failed.')
 
     if self._mount_flag:
       self.MountSource(unmount=False)
@@ -257,7 +257,7 @@ class DejagnuExecuter(object):
                                       path.join(self._tmp, 'site.exp')))
     ret = self._executer.ChrootRunCommand(self._chromeos_root, cmd)
     if ret:
-      raise Exception('Make check failed.')
+      raise RuntimeError('Make check failed.')
 
   # This method ensures necessary mount points before executing chroot comamnd.
   def MountSource(self, unmount=False):
@@ -272,7 +272,7 @@ class DejagnuExecuter(object):
                                                   mount))
     rv = self._executer.RunCommand(cmd)
     if rv:
-      raise Exception('Mount source failed.')
+      raise RuntimeError('Mount source failed.')
 
   def ResultValidate(self):
     self.PrepareResult()

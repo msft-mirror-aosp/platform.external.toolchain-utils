@@ -62,7 +62,7 @@ def UnitToNumber(unit_num, base=1000):
   for k, v in unit_dict.items():
     if k.startswith(unit):
       return float(number) * v
-  raise Exception('Unit: %s not found in byte: %s!' % (unit, unit_num))
+  raise RuntimeError('Unit: %s not found in byte: %s!' % (unit, unit_num))
 
 
 def GetFilenameFromString(string):
@@ -86,8 +86,8 @@ def GetChrootPath(chromeos_root):
 
 def GetInsideChrootPath(chromeos_root, file_path):
   if not file_path.startswith(GetChrootPath(chromeos_root)):
-    raise Exception("File: %s doesn't seem to be in the chroot: %s" %
-                    (file_path, chromeos_root))
+    raise RuntimeError("File: %s doesn't seem to be in the chroot: %s" %
+                       (file_path, chromeos_root))
   return file_path[len(GetChrootPath(chromeos_root)):]
 
 

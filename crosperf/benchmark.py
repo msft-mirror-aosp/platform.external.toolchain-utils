@@ -41,5 +41,5 @@ class Benchmark(object):
     if self.suite == 'telemetry':
       self.show_all_results = True
     if run_local and self.suite != 'telemetry_Crosperf':
-      raise Exception('run_local is only supported by telemetry_Crosperf.')
+      raise RuntimeError('run_local is only supported by telemetry_Crosperf.')
     self.run_local = run_local

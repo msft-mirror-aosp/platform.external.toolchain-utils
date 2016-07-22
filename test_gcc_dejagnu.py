@@ -45,12 +45,12 @@ class DejagnuAdapter(object):
            '--minilayout', '--jobs=8']
     ret = setup_chromeos.Main(cmd)
     if ret:
-      raise Exception('Failed to checkout chromeos')
+      raise RuntimeError('Failed to checkout chromeos')
     ## Do cros_sdk and setup_board, otherwise build_tc in next step will fail.
     cmd = 'cd {0} && cros_sdk --download'.format(self._chromeos_root)
     ret = self._cmd_exec.RunCommand(cmd, terminated_timeout=9000)
     if ret:
-      raise Exception('Failed to create chroot.')
+      raise RuntimeError('Failed to create chroot.')
 
   def SetupBoard(self):
     cmd = './setup_board --board=' + self._board
@@ -58,7 +58,7 @@ class DejagnuAdapter(object):
                                           cmd,
                                           terminated_timeout=4000)
     if ret:
-      raise Exception('Failed to setup board.')
+      raise RuntimeError('Failed to setup board.')
 
   def CheckoutGCC(self):
     cmd = 'git clone {0} {1} && cd {1} && git checkout {2}'.format(
@@ -66,7 +66,7 @@ class DejagnuAdapter(object):
 
     ret = self._cmd_exec.RunCommand(cmd, terminated_timeout=300)
     if ret:
-      raise Exception('Failed to checkout gcc.')
+      raise RuntimeError('Failed to checkout gcc.')
     ## Handle build_tc bug.
     cmd = ('touch {0}/gcc/config/arm/arm-tune.md ' + \
         '{0}/gcc/config/arm/arm-tables.opt').format(self._gcc_dir)
@@ -78,7 +78,7 @@ class DejagnuAdapter(object):
                       '--gcc_dir=' + self._gcc_dir]
     ret = build_tc.Main(build_gcc_args)
     if ret:
-      raise Exception('Building gcc failed.')
+      raise RuntimeError('Building gcc failed.')
 
   def CheckGCC(self):
     args = [run_dejagnu.__file__, '--board=' + self._board,
@@ -189,7 +189,7 @@ def ProcessArguments(argv):
   options = parser.parse_args(argv[1:])
 
   if not options.board or not options.remote:
-    raise Exception('--board and --remote are mandatory options.')
+    raise SyntaxError('--board and --remote are mandatory options.')
 
   return options
 

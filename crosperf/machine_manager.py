@@ -297,7 +297,7 @@ class MachineManager(object):
                                 ' '.join(image_chromeos_args))
         retval = image_chromeos.DoImage(image_chromeos_args)
       if retval:
-        raise Exception("Could not image machine: '%s'." % machine.name)
+        raise RuntimeError("Could not image machine: '%s'." % machine.name)
       else:
         self.num_reimages += 1
       machine.checksum = checksum

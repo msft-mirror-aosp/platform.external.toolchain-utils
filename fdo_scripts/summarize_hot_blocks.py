@@ -74,7 +74,7 @@ class Collector(object):
                 os.path.join(self._tempdir, list_file)))
     ret = self._ce.RunCommand(command)
     if ret:
-      raise Exception('Failed: %s' % command)
+      raise RuntimeError('Failed: %s' % command)
 
   def SummarizeLines(self, data_file):
     sum_lines = []
@@ -128,7 +128,7 @@ class Collector(object):
 
     ret = self._ce.RunCommand(merge_command)
     if ret:
-      raise Exception('Failed: %s' % merge_command)
+      raise RuntimeError('Failed: %s' % merge_command)
     print 'Generated general summary: ', summary_file
 
   def SummarizePreOptimized(self, summary_file):

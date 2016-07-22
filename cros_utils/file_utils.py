@@ -32,7 +32,7 @@ class FileUtils(object):
     ce = command_executer.GetCommandExecuter(log_level=log_level)
     ret, out, _ = ce.RunCommandWOutput(command)
     if ret:
-      raise Exception('Could not run md5sum on: %s' % filename)
+      raise RuntimeError('Could not run md5sum on: %s' % filename)
 
     return out.strip().split()[0]
 

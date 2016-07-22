@@ -163,7 +163,7 @@ class BenchmarkRun(threading.Thread):
     while True:
       machine = None
       if self.terminated:
-        raise Exception('Thread terminated while trying to acquire machine.')
+        raise RuntimeError('Thread terminated while trying to acquire machine.')
 
       machine = self.machine_manager.AcquireMachine(self.label)
 
@@ -191,7 +191,7 @@ class BenchmarkRun(threading.Thread):
       perf_args_list = [perf_args_list[0]] + ['-a'] + perf_args_list[1:]
       perf_args = ' '.join(perf_args_list)
       if not perf_args_list[0] in ['record', 'stat']:
-        raise Exception('perf_args must start with either record or stat')
+        raise SyntaxError('perf_args must start with either record or stat')
       extra_test_args = ['--profiler=custom_perf',
                          ("--profiler_args='perf_options=\"%s\"'" % perf_args)]
       return ' '.join(extra_test_args)

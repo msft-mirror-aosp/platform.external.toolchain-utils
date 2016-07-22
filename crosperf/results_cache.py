@@ -74,7 +74,7 @@ class Result(object):
                                            file_index)))
       ret = self.ce.CopyFiles(file_to_copy, dest_file, recursive=False)
       if ret:
-        raise Exception('Could not copy results file: %s' % file_to_copy)
+        raise IOError('Could not copy results file: %s' % file_to_copy)
 
   def CopyResultsTo(self, dest_dir):
     self.CopyFilesTo(dest_dir, self.perf_data_files)
@@ -188,7 +188,7 @@ class Result(object):
     if mo:
       result = mo.group(1)
       return result
-    raise Exception('Could not find results directory.')
+    raise RuntimeError('Could not find results directory.')
 
   def FindFilesInResultsDir(self, find_args):
     if not self.results_dir:
@@ -197,7 +197,7 @@ class Result(object):
     command = 'find %s %s' % (self.results_dir, find_args)
     ret, out, _ = self.ce.RunCommandWOutput(command, print_to_console=False)
     if ret:
-      raise Exception('Could not run find command!')
+      raise RuntimeError('Could not run find command!')
     return out
 
   def GetResultsFile(self):
@@ -225,8 +225,8 @@ class Result(object):
                                                        perf_data_file)
       perf_report_file = '%s.report' % perf_data_file
       if os.path.exists(perf_report_file):
-        raise Exception('Perf report file already exists: %s' %
-                        perf_report_file)
+        raise RuntimeError('Perf report file already exists: %s' %
+                           perf_report_file)
       chroot_perf_report_file = misc.GetInsideChrootPath(self.chromeos_root,
                                                          perf_report_file)
       perf_path = os.path.join(self.chromeos_root, 'chroot', 'usr/bin/perf')
@@ -367,7 +367,7 @@ class Result(object):
                (self.temp_dir, os.path.join(cache_dir, AUTOTEST_TARBALL)))
     ret = self.ce.RunCommand(command, print_to_console=False)
     if ret:
-      raise Exception('Could not untar cached tarball')
+      raise RuntimeError('Could not untar cached tarball')
     self.results_dir = self.temp_dir
     self.perf_data_files = self.GetPerfDataFiles()
     self.perf_report_files = self.GetPerfReportFiles()
@@ -414,7 +414,7 @@ class Result(object):
                  '-cjf %s .' % (self.results_dir, tarball))
       ret = self.ce.RunCommand(command)
       if ret:
-        raise Exception("Couldn't store autotest output directory.")
+        raise RuntimeError("Couldn't store autotest output directory.")
     # Store machine info.
     # TODO(asharif): Make machine_manager a singleton, and don't pass it into
     # this function.
@@ -432,7 +432,8 @@ class Result(object):
     if ret:
       command = 'rm -rf {0}'.format(temp_dir)
       self.ce.RunCommand(command)
-      raise Exception('Could not move dir %s to dir %s' % (temp_dir, cache_dir))
+      raise RuntimeError('Could not move dir %s to dir %s' %
+                         (temp_dir, cache_dir))
 
   @classmethod
   def CreateFromRun(cls,
@@ -468,7 +469,7 @@ class Result(object):
     try:
       result.PopulateFromCacheDir(cache_dir, test, suite)
 
-    except Exception as e:
+    except RuntimeError as e:
       logger.LogError('Exception while using cache: %s' % e)
       return None
     return result

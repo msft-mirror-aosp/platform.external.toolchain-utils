@@ -223,4 +223,4 @@ class SettingsFactory(object):
     if settings_type == 'benchmark':
       return BenchmarkSettings(name)
 
-    raise Exception("Invalid settings type: '%s'." % settings_type)
+    raise TypeError("Invalid settings type: '%s'." % settings_type)

@@ -99,7 +99,7 @@ class ExperimentFile(object):
       elif ExperimentFile._CLOSE_SETTINGS_RE.match(line):
         return settings
 
-    raise Exception('Unexpected EOF while parsing settings block.')
+    raise EOFError('Unexpected EOF while parsing settings block.')
 
   def _Parse(self, experiment_file):
     """Parse experiment file and create settings."""
@@ -114,7 +114,7 @@ class ExperimentFile(object):
         elif ExperimentFile._OPEN_SETTINGS_RE.match(line):
           new_settings = self._ParseSettings(reader)
           if new_settings.name in settings_names:
-            raise Exception("Duplicate settings name: '%s'." %
+            raise SyntaxError("Duplicate settings name: '%s'." %
                             new_settings.name)
           settings_names[new_settings.name] = True
           self.all_settings.append(new_settings)
@@ -122,10 +122,10 @@ class ExperimentFile(object):
           field = self._ParseField(reader)
           self.global_settings.SetField(field[0], field[1], field[2])
         else:
-          raise Exception('Unexpected line.')
+          raise IOError('Unexpected line.')
     except Exception, err:
-      raise Exception('Line %d: %s\n==> %s' % (reader.LineNo(), str(err),
-                                               reader.CurrentLine(False)))
+      raise RuntimeError('Line %d: %s\n==> %s' % (reader.LineNo(), str(err),
+                                                  reader.CurrentLine(False)))
 
   def Canonicalize(self):
     """Convert parsed experiment file back into an experiment file."""

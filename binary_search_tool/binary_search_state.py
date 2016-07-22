@@ -357,7 +357,7 @@ class BinarySearchState(object):
       bss.resumed = True
       binary_search_perforce.verbose = bss.verbose
       return bss
-    except Exception:
+    except StandardError:
       return None
 
   def RemoveState(self):

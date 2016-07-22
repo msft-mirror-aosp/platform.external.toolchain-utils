@@ -138,7 +138,7 @@ def DoImage(argv):
             list(options.remote.split()), options.chromeos_root)
         should_unlock = True
       except Exception as e:
-        raise Exception('Error acquiring machine: %s' % str(e))
+        raise RuntimeError('Error acquiring machine: %s' % str(e))
 
     reimage = False
     local_image = False
@@ -191,8 +191,8 @@ def DoImage(argv):
       if local_image:
         if located_image.find(real_src_dir) != 0:
           if located_image.find(real_chroot_dir) != 0:
-            raise Exception('Located image: %s not in chromeos_root: %s' %
-                            (located_image, options.chromeos_root))
+            raise RuntimeError('Located image: %s not in chromeos_root: %s' %
+                               (located_image, options.chromeos_root))
           else:
             chroot_image = located_image[len(real_chroot_dir):]
         else:

@@ -89,19 +89,19 @@ def ProcessArguments(argv):
   options, args = parser.parse_args(argv)
 
   if not options.chromeos_root:
-    raise Exception('Missing argument for --chromeos_root.')
+    raise SyntaxError('Missing argument for --chromeos_root.')
   if not options.remote:
-    raise Exception('Missing argument for --remote.')
+    raise SyntaxError('Missing argument for --remote.')
   if not options.board:
-    raise Exception('Missing argument for --board.')
+    raise SyntaxError('Missing argument for --board.')
   if options.cleanup == 'mount' and not options.mount:
-    raise Exception('--cleanup=\'mount\' not valid unless --mount is given.')
+    raise SyntaxError('--cleanup=\'mount\' not valid unless --mount is given.')
   if options.cleanup and not (
     options.cleanup == 'mount' or \
       options.cleanup == 'chroot' or options.cleanup == 'chromeos'):
-    raise Exception('Invalid option value for --cleanup')
+    raise ValueError('Invalid option value for --cleanup')
   if options.cleanup and options.keep_intermediate_files:
-    raise Exception('Only one of --keep and --cleanup could be given.')
+    raise SyntaxError('Only one of --keep and --cleanup could be given.')
 
   return options
 
@@ -125,7 +125,7 @@ class DejagnuExecuter(object):
     ## Compute target from board
     self._target = misc.GetCtargetFromBoard(board, chromeos_root)
     if not self._target:
-      raise Exception('Unsupported board "%s"' % board)
+      raise ValueError('Unsupported board "%s"' % board)
     self._executer = command_executer.GetCommandExecuter()
     self._flags = flags or ''
     self._base_dir = base_dir
@@ -250,11 +250,11 @@ class DejagnuExecuter(object):
     if not path.isdir(self._gcc_source_dir_abs) and \
           self._executer.RunCommand(
       'sudo mkdir -p {0}'.format(self._gcc_source_dir_abs)):
-      raise Exception("Failed to create \'{0}\' inside chroot.".format(
+      raise RuntimeError("Failed to create \'{0}\' inside chroot.".format(
           self._gcc_source_dir))
     if not (path.isdir(self._gcc_source_dir_to_mount) and
             path.isdir(path.join(self._gcc_source_dir_to_mount, 'gcc'))):
-      raise Exception('{0} is not a valid gcc source tree.'.format(
+      raise RuntimeError('{0} is not a valid gcc source tree.'.format(
           self._gcc_source_dir_to_mount))
 
     # We have these build directories -
@@ -277,11 +277,11 @@ class DejagnuExecuter(object):
     if not path.isdir(self._gcc_top_build_dir_abs) and \
           self._executer.RunCommand(
       'sudo mkdir -p {0}'.format(self._gcc_top_build_dir_abs)):
-      raise Exception('Failed to create \'{0}\' inside chroot.'.format(
+      raise RuntimeError('Failed to create \'{0}\' inside chroot.'.format(
           self._gcc_top_build_dir))
     if not (path.isdir(self._gcc_build_dir_to_mount) and path.join(
         self._gcc_build_dir_to_mount, 'gcc')):
-      raise Exception('{0} is not a valid gcc build tree.'.format(
+      raise RuntimeError('{0} is not a valid gcc build tree.'.format(
           self._gcc_build_dir_to_mount))
 
     # All check passed. Now mount gcc source and build directories.
@@ -301,7 +301,7 @@ class DejagnuExecuter(object):
       gccrevision = 'gcc-9999'
       gccversion = 'gcc-9999'
     else:
-      raise Exception('Failed to get gcc version.')
+      raise RuntimeError('Failed to get gcc version.')
 
     gcc_portage_dir = '/var/tmp/portage/cross-%s/%s/work' % (self._target,
                                                              gccrevision)
@@ -316,7 +316,7 @@ class DejagnuExecuter(object):
           'ebuild $(equery w cross-%s/gcc) clean prepare compile' % (
               self._target)))
       if ret:
-        raise Exception('ebuild gcc failed.')
+        raise RuntimeError('ebuild gcc failed.')
 
   def MakeCheck(self):
     self.MountGccSourceAndBuildDir()
@@ -351,12 +351,13 @@ class DejagnuExecuter(object):
     for mp in mount_points:
       if unmount:
         if mp.UnMount():
-          raise Exception('Failed to unmount {0}'.format(mp.mount_dir))
+          raise RuntimeError('Failed to unmount {0}'.format(mp.mount_dir))
         else:
           self._l.LogOutput('{0} unmounted successfully.'.format(mp.mount_dir))
       elif mp.DoMount():
-        raise Exception('Failed to mount {0} onto {1}'.format(mp.external_dir,
-                                                              mp.mount_dir))
+        raise RuntimeError(
+            'Failed to mount {0} onto {1}'.format(mp.external_dir,
+                                                  mp.mount_dir))
       else:
         self._l.LogOutput('{0} mounted successfully.'.format(mp.mount_dir))
 
@@ -374,7 +375,7 @@ def TryAcquireMachine(remotes):
       logger.GetLogger().LogWarning(
           '*** Failed to lock machine \'{0}\'.'.format(r))
   if not available_machine:
-    raise Exception("Failed to acquire one machine from \'{0}\'.".format(
+    raise RuntimeError("Failed to acquire one machine from \'{0}\'.".format(
         remotes))
   return available_machine
 

@@ -25,7 +25,7 @@ class ImageChecksummer(object):
                                        self.label.name)
           self._checksum = None
           if self.label.image_type != 'local':
-            raise Exception('Called Checksum on non-local image!')
+            raise RuntimeError('Called Checksum on non-local image!')
           if self.label.chromeos_image:
             if os.path.exists(self.label.chromeos_image):
               self._checksum = FileUtils().Md5File(self.label.chromeos_image,
@@ -33,7 +33,7 @@ class ImageChecksummer(object):
               logger.GetLogger().LogOutput('Computed checksum is '
                                            ': %s' % self._checksum)
           if not self._checksum:
-            raise Exception('Checksum computing error.')
+            raise RuntimeError('Checksum computing error.')
           logger.GetLogger().LogOutput('Checksum is: %s' % self._checksum)
         return self._checksum
 
@@ -50,7 +50,7 @@ class ImageChecksummer(object):
 
   def Checksum(self, label, log_level):
     if label.image_type != 'local':
-      raise Exception('Attempt to call Checksum on non-local image.')
+      raise RuntimeError('Attempt to call Checksum on non-local image.')
     with self._lock:
       if label.name not in self._per_image_checksummers:
         self._per_image_checksummers[label.name] = (
@@ -59,7 +59,7 @@ class ImageChecksummer(object):
 
     try:
       return checksummer.Checksum()
-    except Exception, e:
+    except:
       logger.GetLogger().LogError('Could not compute checksum of image in label'
                                   " '%s'." % label.name)
-      raise e
+      raise

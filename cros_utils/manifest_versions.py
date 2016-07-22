@@ -92,6 +92,6 @@ class ManifestVersions(object):
       command = 'cp {0} {1}'.format(files[0], to_file)
       ret = self.ce.RunCommand(command)
       if ret:
-        raise Exception('Cannot copy manifest to {0}'.format(to_file))
+        raise RuntimeError('Cannot copy manifest to {0}'.format(to_file))
     else:
-      raise Exception('Version {0} is not available.'.format(version))
+      raise RuntimeError('Version {0} is not available.'.format(version))

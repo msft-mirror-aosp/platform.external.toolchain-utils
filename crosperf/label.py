@@ -51,14 +51,14 @@ class Label(object):
       if self.image_type == 'local':
         chromeos_root = FileUtils().ChromeOSRootFromImage(chromeos_image)
       if not chromeos_root:
-        raise Exception("No ChromeOS root given for label '%s' and could not "
-                        "determine one from image path: '%s'." %
-                        (name, chromeos_image))
+        raise RuntimeError("No ChromeOS root given for label '%s' and could "
+                           "not determine one from image path: '%s'." %
+                           (name, chromeos_image))
     else:
       chromeos_root = FileUtils().CanonicalizeChromeOSRoot(chromeos_root)
       if not chromeos_root:
-        raise Exception("Invalid ChromeOS root given for label '%s': '%s'." %
-                        (name, chromeos_root))
+        raise RuntimeError("Invalid ChromeOS root given for label '%s': '%s'." %
+                           (name, chromeos_root))
 
     self.chromeos_root = chromeos_root
     if not chrome_src:
@@ -70,8 +70,8 @@ class Label(object):
     else:
       chromeos_src = misc.CanonicalizePath(chrome_src)
       if not chromeos_src:
-        raise Exception("Invalid Chrome src given for label '%s': '%s'." %
-                        (name, chrome_src))
+        raise RuntimeError("Invalid Chrome src given for label '%s': '%s'." %
+                           (name, chrome_src))
       self.chrome_src = chromeos_src
 
     self._SetupChecksum()

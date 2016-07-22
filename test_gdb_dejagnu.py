@@ -32,12 +32,12 @@ class DejagnuAdapter(object):
            '--minilayout', '--jobs=8']
     ret = setup_chromeos.Main(cmd)
     if ret:
-      raise Exception('Failed to checkout chromeos')
+      raise RuntimeError('Failed to checkout chromeos')
     ## Do cros_sdk and setup_board, otherwise build_tc in next step will fail.
     cmd = 'cd {0} && cros_sdk --download'.format(self._chromeos_root)
     ret = self._cmd_exec.RunCommand(cmd, terminated_timeout=9000)
     if ret:
-      raise Exception('Failed to create chroot.')
+      raise RuntimeError('Failed to create chroot.')
 
   def SetupBoard(self):
     cmd = './setup_board --board=' + self._board
@@ -45,7 +45,7 @@ class DejagnuAdapter(object):
                                           cmd,
                                           terminated_timeout=4000)
     if ret:
-      raise Exception('Failed to setup board.')
+      raise RuntimeError('Failed to setup board.')
 
   def CheckGDB(self):
     args = [gdb_dejagnu.__file__, '--board=' + self._board,
@@ -135,7 +135,7 @@ def ProcessArguments(argv):
   options = parser.parse_args(argv)
 
   if not options.board or not options.remote:
-    raise Exception('--board and --remote are mandatory options.')
+    raise SyntaxError('--board and --remote are mandatory options.')
 
   return options
 
