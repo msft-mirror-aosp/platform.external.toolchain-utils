@@ -296,6 +296,7 @@ class ToolchainComparator(object):
                                                  self._build,
                                                  self._patches,
                                                  description,
+                                                 other_flags=['--notests'],
                                                  build_toolchain=True)
 
     if len(trybot_image) == 0:

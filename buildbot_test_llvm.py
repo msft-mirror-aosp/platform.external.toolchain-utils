@@ -129,6 +129,7 @@ class ToolchainVerifier(object):
                                                  self._build,
                                                  self._patches,
                                                  description,
+                                                 other_flags=['--hwtest'],
                                                  build_toolchain=True)
     if len(trybot_image) == 0:
       self._l.LogError('Unable to find trybot_image for %s!' % description)
