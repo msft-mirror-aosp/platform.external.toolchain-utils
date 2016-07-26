@@ -40,23 +40,34 @@ def Main(argv):
                       help=('Number of bad objects. Must be great than or '
                             'equal to zero and less than total object '
                             'number.'))
+  parser.add_argument('-o',
+                      '--obj_list',
+                      dest='obj_list',
+                      default='',
+                      help=('List of comma seperated objects to generate. '
+                            'A 0 means the object is good, a 1 means the '
+                            'object is bad.'))
   options = parser.parse_args(argv)
 
   obj_num = int(options.obj_num)
   bad_obj_num = int(options.bad_obj_num)
   bad_to_gen = int(options.bad_obj_num)
-  obj_list = []
-  for i in range(obj_num):
-    if bad_to_gen > 0 and random.randint(1, obj_num) <= bad_obj_num:
-      obj_list.append(1)
-      bad_to_gen -= 1
-    else:
-      obj_list.append(0)
-  while bad_to_gen > 0:
-    t = random.randint(0, obj_num - 1)
-    if obj_list[t] == 0:
-      obj_list[t] = 1
-      bad_to_gen -= 1
+  obj_list = options.obj_list
+  if not obj_list:
+    obj_list = []
+    for i in range(obj_num):
+      if bad_to_gen > 0 and random.randint(1, obj_num) <= bad_obj_num:
+        obj_list.append(1)
+        bad_to_gen -= 1
+      else:
+        obj_list.append(0)
+    while bad_to_gen > 0:
+      t = random.randint(0, obj_num - 1)
+      if obj_list[t] == 0:
+        obj_list[t] = 1
+        bad_to_gen -= 1
+  else:
+    obj_list = obj_list.split(',')
 
   if os.path.isfile(common.OBJECTS_FILE):
     os.remove(common.OBJECTS_FILE)
@@ -70,8 +81,11 @@ def Main(argv):
     w.write('{0}\n'.format(i))
   f.close()
 
+  obj_num = len(obj_list)
+  bad_obj_num = obj_list.count('1')
   print('Generated {0} object files, with {1} bad ones.'.format(
-      options.obj_num, options.bad_obj_num))
+      obj_num, bad_obj_num))
+
 
   return 0
 

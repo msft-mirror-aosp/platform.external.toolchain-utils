@@ -336,6 +336,60 @@ class BisectingUtilsTest(unittest.TestCase):
     self.assertEqual(actual_result, expected_result)
 
 
+class BisectStressTest(unittest.TestCase):
+  """Stress tests for bisecting tool."""
+
+  def test_every_obj_bad(self):
+    amt = 25
+    gen_obj.Main(['--obj_num', str(amt), '--bad_obj_num', str(amt)])
+    ret = binary_search_state.Run(get_initial_items='./gen_init_list.py',
+                                  switch_to_good='./switch_to_good.py',
+                                  switch_to_bad='./switch_to_bad.py',
+                                  test_script='./is_good.py',
+                                  prune=True,
+                                  file_args=True,
+                                  verify_level=0)
+    self.assertEquals(ret, 0)
+    self.check_output()
+
+  def test_every_index_is_bad(self):
+    amt = 25
+    for i in range(amt):
+      obj_list = ['0'] * amt
+      obj_list[i] = '1'
+      obj_list = ','.join(obj_list)
+      gen_obj.Main(['--obj_list', obj_list])
+      ret = binary_search_state.Run(get_initial_items='./gen_init_list.py',
+                                    switch_to_good='./switch_to_good.py',
+                                    switch_to_bad='./switch_to_bad.py',
+                                    install_script='./install.py',
+                                    test_script='./is_good.py',
+                                    prune=True,
+                                    file_args=True)
+      self.assertEquals(ret, 0)
+      self.check_output()
+
+
+  def check_output(self):
+    _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
+        ('grep "Bad items are: " logs/binary_search_tool_tester.py.out | '
+         'tail -n1'))
+    ls = out.splitlines()
+    self.assertEqual(len(ls), 1)
+    line = ls[0]
+
+    _, _, bad_ones = line.partition('Bad items are: ')
+    bad_ones = bad_ones.split()
+    expected_result = common.ReadObjectsFile()
+
+    # Reconstruct objects file from bad_ones and compare
+    actual_result = [0] * len(expected_result)
+    for bad_obj in bad_ones:
+      actual_result[int(bad_obj)] = 1
+
+    self.assertEqual(actual_result, expected_result)
+
+
 def Main(argv):
   num_tests = 2
   if len(argv) > 1:
@@ -357,6 +411,8 @@ def Main(argv):
   suite.addTest(BisectingUtilsTest('test_set_file'))
   suite.addTest(BisectingUtilsTest('test_noincremental_prune'))
   suite.addTest(BisectTest('test_full_bisector'))
+  suite.addTest(BisectStressTest('test_every_obj_bad'))
+  suite.addTest(BisectStressTest('test_every_index_is_bad'))
   runner = unittest.TextTestRunner()
   runner.run(suite)
 

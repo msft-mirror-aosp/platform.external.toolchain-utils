@@ -222,6 +222,12 @@ class BinarySearchState(object):
       # Prune is set.
       prune_index = self.binary_search.current
 
+      # If found item is last item, no new items can be found
+      if prune_index == len(self.all_items) - 1:
+        self.l.LogOutput('First bad item is the last item. Breaking.')
+        self.l.LogOutput('Bad items are: %s' % self.all_items[-1])
+        break
+
       # If already seen item we have no new bad items to find, finish up
       if self.all_items[prune_index] in self.found_items:
         self.l.LogOutput(('Found item already found before: %s. '
