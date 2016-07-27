@@ -75,7 +75,7 @@ class BinarySearcher(object):
     if logger_to_set is not None:
       self.logger = logger_to_set
     else:
-      self.logger = logger.GetLogger();
+      self.logger = logger.GetLogger()
 
   def SetSortedList(self, sorted_list):
     assert len(sorted_list) > 0
