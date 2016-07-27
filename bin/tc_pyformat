@@ -5,7 +5,7 @@
 set -u
 
 PF=pyformat
-PF_OPTIONS="--remove_trailing_comma --yapf --force_quote_type=single"
+PF_OPTIONS="--yapf --force_quote_type=single"
 PF_USER_OPTIONS=""
 
 if [[ -z "$(type -t ${PF})" ]]; then
