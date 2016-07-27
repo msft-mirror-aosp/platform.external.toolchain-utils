@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import argparse
 import contextlib
+import errno
 import math
 import os
 import pickle
@@ -151,8 +152,14 @@ class BinarySearchState(object):
             command, print_to_console=self.verbose)
     else:
       command = '%s %s' % (switch_script, ' '.join(item_list))
-      ret, _, _ = self.ce.RunCommandWExceptionCleanup(
-          command, print_to_console=self.verbose)
+      try:
+        ret, _, _ = self.ce.RunCommandWExceptionCleanup(
+            command, print_to_console=self.verbose)
+      except OSError as e:
+        if e.errno == errno.E2BIG:
+          raise Error('Too many arguments for switch script! Use --file_args')
+        else:
+          raise
     assert ret == 0, 'Switch script %s returned %d' % (switch_script, ret)
 
   def TestScript(self):
