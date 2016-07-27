@@ -28,7 +28,7 @@ function GenerateExperiment() {
 
   cat <<_EOF
 $perf_args
-benchmark: page_cycler.typical_25 {
+benchmark: page_cycler_v2.typical_25 {
     suite: telemetry_Crosperf
 }
 

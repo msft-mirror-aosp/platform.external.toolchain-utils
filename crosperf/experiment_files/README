@@ -20,14 +20,15 @@ vanilla_image {
    build: lumpy-release/R35-5672.0.0
 }
 
-# Paste experiment benchmarks here. Example, I pasted page_cyler.morejs here.
+# Paste experiment benchmarks here. Example, I pasted
+# page_cycler_v2.morejs here.
 
 # This experiment just runs a short autotest which measures the performance of
-# Telemetry's page_cycler.morejs. In addition, it profiles
+# Telemetry's page_cycler_v2.morejs. In addition, it profiles
 
 perg_args: record -e cycles
 
-benchmark: page_cycler.morejs {
+benchmark: page_cycler_v2.morejs {
    suite: telemetry_Crosperf
    iterations: 1
 }

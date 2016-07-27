@@ -52,7 +52,7 @@ name: my_experiment
 board: x86-alex
 remote: chromeos2-row1-rack4-host7.cros 172.18.122.132
 
-benchmark: page_cycler.morejs {
+benchmark: page_cycler_v2.morejs {
   suite: telemetry_Crosperf
   iterations: 3
 }
@@ -73,14 +73,14 @@ device specified by it's IP address. Benchmarks will be run in
 parallel across these devices.  There is currently no way to specify
 which benchmark will run on each device.
 
-We define one "benchmark" that will be run, page_cycler.morejs. This
+We define one "benchmark" that will be run, page_cycler_v2.morejs. This
 benchmark has two "fields", one which specifies that this benchmark is
 part of the telemetry_Crosperf suite (this is the common way to run
 most Telemetry benchmarks), and the other which specifies how many
 iterations it will run for.
 
 We specify one or more "labels" or images which will be compared. The
-page_cycler.morejs benchmark will be run on each of these images 3
+page_cycler_v2.morejs benchmark will be run on each of these images 3
 times and a result table will be output which compares them for all
 the images specified.
 

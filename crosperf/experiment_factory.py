@@ -30,24 +30,24 @@ telemetry_perfv2_tests = ['dromaeo.domcoreattr',
                           'robohornet_pro',
                           'sunspider']
 
-telemetry_pagecycler_tests = ['page_cycler.intl_ar_fa_he',
-                              'page_cycler.intl_es_fr_pt-BR',
-                              'page_cycler.intl_hi_ru',
-                              'page_cycler.intl_ja_zh',
-                              'page_cycler.intl_ko_th_vi',
-                              'page_cycler.morejs',
-                              'page_cycler.moz',
-                              'page_cycler.netsim.top_10',
-                              'page_cycler.tough_layout_cases',
-                              'page_cycler.typical_25']
+telemetry_pagecycler_tests = ['page_cycler_v2.intl_ar_fa_he',
+                              'page_cycler_v2.intl_es_fr_pt-BR',
+                              'page_cycler_v2.intl_hi_ru',
+                              'page_cycler_v2.intl_ja_zh',
+                              'page_cycler_v2.intl_ko_th_vi',
+                              'page_cycler_v2.morejs',
+                              'page_cycler_v2.moz',
+                              'page_cycler_v2.netsim.top_10',
+                              'page_cycler_v2.tough_layout_cases',
+                              'page_cycler_v2.typical_25']
 
 telemetry_toolchain_old_perf_tests = ['dromaeo.domcoremodify',
-                                      'page_cycler.intl_es_fr_pt-BR',
-                                      'page_cycler.intl_hi_ru',
-                                      'page_cycler.intl_ja_zh',
-                                      'page_cycler.intl_ko_th_vi',
-                                      'page_cycler.netsim.top_10',
-                                      'page_cycler.typical_25',
+                                      'page_cycler_v2.intl_es_fr_pt-BR',
+                                      'page_cycler_v2.intl_hi_ru',
+                                      'page_cycler_v2.intl_ja_zh',
+                                      'page_cycler_v2.intl_ko_th_vi',
+                                      'page_cycler_v2.netsim.top_10',
+                                      'page_cycler_v2.typical_25',
                                       'robohornet_pro',
                                       'spaceport',
                                       'tab_switching.top_10']
@@ -57,7 +57,7 @@ telemetry_toolchain_perf_tests = ['octane',
                                   'dromaeo.domcoreattr',
                                   'dromaeo.domcoremodify',
                                   'smoothness.tough_webgl_cases',
-                                  'page_cycler.typical_25']
+                                  'page_cycler_v2.typical_25']
 
 
 class ExperimentFactory(object):

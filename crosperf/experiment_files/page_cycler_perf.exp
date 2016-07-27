@@ -14,27 +14,27 @@ remote: <your-remote-goes-here>
 
 perf_args: record -e cycles,instructions
 
-benchmark: page_cycler.morejs {
+benchmark: page_cycler_v2.morejs {
 	suite: telemetry_Crosperf
 	iterations: 10
 }
 
-benchmark: page_cycler.bloat {
+benchmark: page_cycler_v2.bloat {
 	suite: telemetry_Crosperf
 	iterations: 10
 }
 
-benchmark: page_cycler.dhtml {
+benchmark: page_cycler_v2.dhtml {
 	suite: telemetry_Crosperf
 	iterations: 10
 }
 
-benchmark: page_cycler.intl_ar_fa_he {
+benchmark: page_cycler_v2.intl_ar_fa_he {
 	suite: telemetry_Crosperf
 	iterations: 10
 }
 
-benchmark: page_cycler.moz {
+benchmark: page_cycler_v2.moz {
 	suite: telemetry_Crosperf
 	iterations: 10
 }

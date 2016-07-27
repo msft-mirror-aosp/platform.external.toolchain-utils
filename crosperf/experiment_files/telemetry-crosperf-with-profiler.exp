@@ -23,7 +23,7 @@ remote: <your-remote-goes-here>
 # with the rest of the Crosperf results.
 perf_args: record -e cycles,instructions
 
-benchmark: page_cycler.dhtml {
+benchmark: page_cycler_v2.dhtml {
     suite: telemetry_Crosperf
     iterations: 1
 }

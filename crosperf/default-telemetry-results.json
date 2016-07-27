@@ -4,14 +4,14 @@
     "workerContrast01__Score", 
     "workerContrast02__Score"
   ], 
-  "page_cycler.intl_hi_ru": [
+  "page_cycler_v2.intl_hi_ru": [
     "cold_times__page_load_time", 
     "warm_times__page_load_time"
   ], 
   "smoothness.tough_webgl_cases": [
     "percentage_smooth__percentage_smooth"
   ], 
-  "page_cycler.intl_es_fr_pt-BR": [
+  "page_cycler_v2.intl_es_fr_pt-BR": [
     "cold_times__page_load_time", 
     "warm_times__page_load_time"
   ], 
@@ -25,15 +25,15 @@
     "frame_times__frame_times", 
     "mean_frame_time__mean_frame_time"
   ], 
-  "page_cycler.morejs": [
+  "page_cycler_v2.morejs": [
     "warm_times__page_load_time", 
     "cold_times__page_load_time"
   ], 
-  "page_cycler.dhtml": [
+  "page_cycler_v2.dhtml": [
     "warm_times__page_load_time", 
     "cold_times__page_load_time"
   ], 
-  "page_cycler.bloat": [
+  "page_cycler_v2.bloat": [
     "warm_times__page_load_time", 
     "cold_times__page_load_time"
   ], 
@@ -46,7 +46,7 @@
   "dromaeo.jslibeventprototype": [
     "jslib_event_prototype__jslib_event_prototype"
   ], 
-  "page_cycler.moz": [
+  "page_cycler_v2.moz": [
     "warm_times__page_load_time", 
     "cold_times__page_load_time"
   ], 
@@ -59,7 +59,7 @@
   "jsgamebench": [
     "Score__Score"
   ], 
-  "page_cycler.indexed_db.basic_insert": [
+  "page_cycler_v2.indexed_db.basic_insert": [
     "warm_times__page_load_time", 
     "cold_times__page_load_time"
   ], 
@@ -69,7 +69,7 @@
   "dromaeo.jslibtraverseprototype": [
     "jslib_traverse_prototype__jslib_traverse_prototype"
   ], 
-  "page_cycler.netsim.top_10": [
+  "page_cycler_v2.netsim.top_10": [
     "cold_times__page_load_time", 
     "warm_times__page_load_time"
   ], 
@@ -88,7 +88,7 @@
   "dromaeo.jslibattrjquery": [
     "jslib_attr_jquery__jslib_attr_jquery"
   ], 
-  "page_cycler.typical_25": [
+  "page_cycler_v2.typical_25": [
     "warm_times-page_load_time__warm_times-page_load_time",
     "cold_times-page_load_time__cold_times-page_load_time"
   ], 
@@ -98,18 +98,18 @@
   "dromaeo.domcoremodify": [
     "dom_modify__dom_modify"
   ], 
-  "page_cycler.intl_ar_fa_he": [
+  "page_cycler_v2.intl_ar_fa_he": [
     "warm_times__page_load_time", 
     "cold_times__page_load_time"
   ], 
-  "page_cycler.intl_ja_zh": [
+  "page_cycler_v2.intl_ja_zh": [
     "warm_times__page_load_time", 
     "cold_times__page_load_time"
   ], 
   "graphics_WebGLAquarium": [
     "avg_fps_1000_fishes"
   ], 
-  "page_cycler.intl_ko_th_vi": [
+  "page_cycler_v2.intl_ko_th_vi": [
     "warm_times__page_load_time", 
     "cold_times__page_load_time"
   ], 
@@ -125,7 +125,7 @@
   "dromaeo.jslibmodifyprototype": [
     "jslib_modify_prototype__jslib_modify_prototype"
   ], 
-  "page_cycler.tough_layout_cases": [
+  "page_cycler_v2.tough_layout_cases": [
     "warm_times__page_load_time", 
     "cold_times__page_load_time"
   ], 

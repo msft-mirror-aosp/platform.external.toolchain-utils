@@ -442,8 +442,8 @@ class MachineManagerTest(unittest.TestCase):
 
     mock_logger = mock.Mock(spec=logger.Logger)
 
-    bench = Benchmark('page_cycler.netsim.top_10',    # name
-                      'page_cycler.netsim.top_10',    # test_name
+    bench = Benchmark('page_cycler_v2.netsim.top_10',    # name
+                      'page_cycler_v2.netsim.top_10',    # test_name
                       '',             # test_args
                       1,              # iteratins
                       False,          # rm_chroot_tmp
