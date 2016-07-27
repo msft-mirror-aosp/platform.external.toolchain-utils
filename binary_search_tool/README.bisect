@@ -115,6 +115,77 @@ Bisection Methods:
         ./bisect.py object daisy 172.17.211.184 cryptohome \
         --test_script=sysroot_wrapper/boot_test.sh
 
+3) Android object:
+  NOTE: Because this isn't a ChromeOS bisection tool, the concept of a
+        chroot doesn't exist. Just run this tool from a normal shell.
+
+  This method will bisect across all objects in the Android source tree and
+  find the offending objects (according to your test script). This method takes
+  the following arguments:
+
+    android_src: The location of your android source tree
+    num_jobs: (Optional) The number of jobs to pass to make. This is dependent
+              on how many cores your machine has. A good number is probably
+	      somewhere around 5 to 10.
+    device_id: (Optional) The serial code for the device you are testing on.
+               This is used to determine which device should be used in case
+	       multiple devices are plugged into your computer. You can get
+	       serial code for your device by running "adb devices".
+    dir: (Optional) the directory for your good/bad build trees. Defaults to
+         $BISECT_DIR or ~/ANDROID_BISECT/. This value will set $BISECT_DIR
+         for all bisecting scripts.
+
+  By default the Android object method will do a simple interactive test that
+  pings the machine and prompts the user if the machine is good.
+
+  a) Setup:
+    The Android object method requires that you populate your good and bad set
+    of objects. The Android compiler wrapper will automatically detect the
+    BISECT_STAGE variable and use this to populate emerged objects. Here is an
+    example:
+
+      # Defaults to ~/ANDROID_BISECT/
+      export BISECT_DIR="/path/to/where/you/want/to/store/builds/"
+
+      export BISECT_STAGE="POPULATE_GOOD"
+      # Install the "good" compiler
+      ./switch_to_good_compiler.sh
+      make clean
+      make -j <your_preferred_number_of_jobs>
+
+      export BISECT_STAGE="POPULATE_BAD"
+      # Install the "bad" compiler
+      ./switch_to_bad_compiler.sh
+      make clean
+      make -j <your_preferred_number_of_jobs>
+
+  b) Cleanup:
+    The user must clean up all built images and the populated object files.
+
+  c) Default Arguments:
+    --get_initial_items='android/get_initial_items.sh'
+    --switch_to_good='android/switch_to_good.sh'
+    --switch_to_bad='android/switch_to_bad.sh'
+    --install_script='android/install.sh'
+    --test_script='android/interactive_test.sh'
+    --incremental
+    --prune
+    --file_args
+
+  d) Additional Documentation:
+    See ./android/README.android for full documentation of Android object file
+    bisecting.
+
+  e) Examples:
+    i)  Basic interactive test android bisection, where the android source is
+        at ~/android_src:
+        ./bisect.py android ~/android_src
+
+    ii) Basic boot test android bisection, where the android source is at
+        ~/android_src, and 10 jobs will be used to build android:
+        ./bisect.py android ~/android_src --num_jobs=10 \
+        --test_script=sysroot_wrapper/boot_test.sh
+
 Resuming:
   bisect.py and binary_search_state.py offer the ability to resume a bisection
   in case it was interrupted by a SIGINT, power failure, etc. Every time the
