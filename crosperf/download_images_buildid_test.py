@@ -1,6 +1,7 @@
 #!/usr/bin/python2
 #
 # Copyright 2014 Google Inc.  All Rights Reserved
+"""Test translation of xbuddy names."""
 
 from __future__ import print_function
 
@@ -18,6 +19,7 @@ import download_images
 
 
 class ImageDownloaderBuildIDTest(object):
+  """Test translation of xbuddy names."""
 
   def __init__(self):
     parser = optparse.OptionParser()
@@ -84,8 +86,7 @@ class ImageDownloaderBuildIDTest(object):
     self.tests_passed = self.tests_passed + 1
 
   def test_get_build_id(self):
-    """Test that the actual translating of xbuddy names is working properly.
-    """
+    """Test that the actual translating of xbuddy names is working properly."""
     downloader = download_images.ImageDownloader(log_level='quiet')
 
     self.test_one_id(downloader, 'remote/lumpy/latest-dev', 'lumpy-release/R',

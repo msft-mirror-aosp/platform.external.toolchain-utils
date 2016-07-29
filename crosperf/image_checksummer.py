@@ -1,4 +1,5 @@
 # Copyright 2011 Google Inc. All Rights Reserved.
+"""Compute image checksum."""
 
 from __future__ import print_function
 
@@ -10,8 +11,10 @@ from cros_utils.file_utils import FileUtils
 
 
 class ImageChecksummer(object):
+  """Compute image checksum."""
 
   class PerImageChecksummer(object):
+    """Compute checksum for an image."""
 
     def __init__(self, label, log_level):
       self._lock = threading.Lock()
