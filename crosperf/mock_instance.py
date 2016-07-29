@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 """This contains some mock instances for testing."""
 
+from __future__ import print_function
+
 from benchmark import Benchmark
 from benchmark_run import MockBenchmarkRun
 from label import MockLabel

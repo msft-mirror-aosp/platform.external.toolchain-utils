@@ -2,6 +2,8 @@
 #
 # Copyright 2014 Google Inc.  All Rights Reserved
 
+from __future__ import print_function
+
 import optparse
 import sys
 
@@ -34,19 +36,19 @@ class ImageDownloaderBuildIDTest(object):
     self.tests_failed = 0
 
   def _usage(self, parser, message):
-    print 'ERROR: ' + message
+    print('ERROR: ' + message)
     parser.print_help()
     sys.exit(0)
 
   def print_test_status(self):
-    print '----------------------------------------\n'
-    print 'Tests attempted: %d' % self.tests_run
-    print 'Tests passed:    %d' % self.tests_passed
-    print 'Tests failed:    %d' % self.tests_failed
-    print '\n----------------------------------------'
+    print('----------------------------------------\n')
+    print('Tests attempted: %d' % self.tests_run)
+    print('Tests passed:    %d' % self.tests_passed)
+    print('Tests failed:    %d' % self.tests_failed)
+    print('\n----------------------------------------')
 
   def assert_failure(self, msg):
-    print 'Assert failure: %s' % msg
+    print('Assert failure: %s' % msg)
     self.print_test_status()
     sys.exit(1)
 
@@ -66,7 +68,7 @@ class ImageDownloaderBuildIDTest(object):
       self.assert_failure('%s is not Equal to %s' % (arg1_name, arg2_name))
 
   def test_one_id(self, downloader, test_id, result_string, exact_match):
-    print "Translating '%s'" % test_id
+    print("Translating '%s'" % test_id)
     self.tests_run = self.tests_run + 1
 
     result = downloader.GetBuildID(self.chromeos_root, test_id)
