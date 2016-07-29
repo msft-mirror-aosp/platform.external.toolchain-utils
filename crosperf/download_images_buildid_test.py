@@ -19,10 +19,11 @@ class ImageDownloaderBuildIDTest(object):
 
   def __init__(self):
     parser = optparse.OptionParser()
-    parser.add_option('-c',
-                      '--chromeos_root',
-                      dest='chromeos_root',
-                      help='Directory containing ChromeOS root.')
+    parser.add_option(
+        '-c',
+        '--chromeos_root',
+        dest='chromeos_root',
+        help='Directory containing ChromeOS root.')
 
     options = parser.parse_args(sys.argv[1:])[0]
     if options.chromeos_root is None:

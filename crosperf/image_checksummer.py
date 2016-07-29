@@ -1,4 +1,3 @@
-
 # Copyright 2011 Google Inc. All Rights Reserved.
 
 import os
@@ -28,8 +27,8 @@ class ImageChecksummer(object):
             raise RuntimeError('Called Checksum on non-local image!')
           if self.label.chromeos_image:
             if os.path.exists(self.label.chromeos_image):
-              self._checksum = FileUtils().Md5File(self.label.chromeos_image,
-                                                   log_level=self.log_level)
+              self._checksum = FileUtils().Md5File(
+                  self.label.chromeos_image, log_level=self.log_level)
               logger.GetLogger().LogOutput('Computed checksum is '
                                            ': %s' % self._checksum)
           if not self._checksum:

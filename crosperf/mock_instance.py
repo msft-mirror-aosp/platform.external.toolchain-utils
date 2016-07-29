@@ -1,4 +1,3 @@
-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -11,27 +10,29 @@ from machine_manager import MockMachineManager
 from results_cache import MockResultsCache
 
 perf_args = 'record -a -e cycles'
-label1 = MockLabel('test1',
-                   'image1',
-                   '/tmp/test_benchmark_run',
-                   'x86-alex',
-                   'chromeos-alex1',
-                   image_args='',
-                   cache_dir='',
-                   cache_only=False,
-                   log_level='average',
-                   compiler='gcc')
+label1 = MockLabel(
+    'test1',
+    'image1',
+    '/tmp/test_benchmark_run',
+    'x86-alex',
+    'chromeos-alex1',
+    image_args='',
+    cache_dir='',
+    cache_only=False,
+    log_level='average',
+    compiler='gcc')
 
-label2 = MockLabel('test2',
-                   'image2',
-                   '/tmp/test_benchmark_run_2',
-                   'x86-alex',
-                   'chromeos-alex2',
-                   image_args='',
-                   cache_dir='',
-                   cache_only=False,
-                   log_level='average',
-                   compiler='gcc')
+label2 = MockLabel(
+    'test2',
+    'image2',
+    '/tmp/test_benchmark_run_2',
+    'x86-alex',
+    'chromeos-alex2',
+    image_args='',
+    cache_dir='',
+    cache_only=False,
+    log_level='average',
+    compiler='gcc')
 
 benchmark1 = Benchmark('benchmark1', 'autotest_name_1', 'autotest_args', 2, '',
                        perf_args, '', '')
