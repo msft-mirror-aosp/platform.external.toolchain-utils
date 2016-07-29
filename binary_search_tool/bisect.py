@@ -214,6 +214,61 @@ class BisectObject(Bisector):
     return 0
 
 
+class BisectAndroid(Bisector):
+  """The class for Android bisection steps."""
+
+  android_setup = 'android/setup.sh'
+  android_cleanup = 'android/cleanup.sh'
+  default_dir = os.path.expanduser('~/ANDROID_BISECT')
+
+  def __init__(self, options, overrides):
+    super(BisectAndroid, self).__init__(options, overrides)
+    self.method_name = 'Android'
+    self.default_kwargs = {
+        'get_initial_items': 'android/get_initial_items.sh',
+        'switch_to_good': 'android/switch_to_good.sh',
+        'switch_to_bad': 'android/switch_to_bad.sh',
+        'install_script': 'android/install.sh',
+        'test_script': 'android/interactive_test.sh',
+        'prune': True,
+        'file_args': True,
+        'noincremental': False,
+    }
+    self.options = options
+    if options.dir:
+      os.environ['BISECT_DIR'] = options.dir
+    self.options.dir = os.environ.get('BISECT_DIR', self.default_dir)
+
+    self.ArgOverride(self.default_kwargs, overrides)
+
+  def PreRun(self):
+    num_jobs = "NUM_JOBS='%s'" % self.options.num_jobs
+    device_id = ""
+    if self.options.device_id:
+      device_id = "ANDROID_SERIAL='%s'" % self.options.device_id
+
+    cmd = ('%s %s %s %s' % (num_jobs, device_id, self.android_setup,
+                            self.options.android_src))
+    ret, _, _ = self.ce.RunCommandWExceptionCleanup(cmd, print_to_console=True)
+    if ret:
+      self.logger.LogError('Android bisector setup failed w/ error %d' % ret)
+      return 1
+
+    os.environ['BISECT_STAGE'] = 'TRIAGE'
+    return 0
+
+  def Run(self):
+    return binary_search_state.Run(**self.default_kwargs)
+
+  def PostRun(self):
+    cmd = self.android_cleanup
+    ret, _, _ = self.ce.RunCommandWExceptionCleanup(cmd, print_to_console=True)
+    if ret:
+      self.logger.LogError('Android bisector cleanup failed w/ error %d' % ret)
+      return 1
+    return 0
+
+
 def Run(bisector):
   log = logger.GetLogger()
 
@@ -279,6 +334,28 @@ def Main(argv):
                                    '/tmp/sysroot_bisect if $BISECT_DIR is '
                                    'empty).'))
   parser_object.set_defaults(handler=BisectObject)
+
+  parser_android = subparsers.add_parser('android')
+  parser_android.add_argument('android_src', help='Path to android source tree')
+  parser_android.add_argument('--dir',
+                              help=('Bisection directory to use, sets '
+                                    '$BISECT_DIR if provided. Defaults to '
+                                    'current value of $BISECT_DIR (or '
+                                    '~/ANDROID_BISECT/ if $BISECT_DIR is '
+                                    'empty).'))
+  parser_android.add_argument('-j', '--num_jobs',
+                              type=int,
+                              default=1,
+                              help=('Number of jobs that make and various '
+                                    'scripts for bisector can spawn. Setting '
+                                    'this value too high can freeze up your '
+                                    'machine!'))
+  parser_android.add_argument('--device_id',
+                              default='',
+                              help=('Device id for device used for testing. '
+                                    'Use this if you have multiple Android '
+                                    'devices plugged into your machine.'))
+  parser_android.set_defaults(handler=BisectAndroid)
 
   options, remaining = parser.parse_known_args(argv)
   if remaining:
