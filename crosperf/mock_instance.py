@@ -6,10 +6,7 @@
 from __future__ import print_function
 
 from benchmark import Benchmark
-from benchmark_run import MockBenchmarkRun
 from label import MockLabel
-from machine_manager import MockMachineManager
-from results_cache import MockResultsCache
 
 perf_args = 'record -a -e cycles'
 label1 = MockLabel(
