@@ -5,7 +5,7 @@
 
 from __future__ import print_function
 
-import optparse
+import argparse
 import sys
 
 import download_images
@@ -22,14 +22,14 @@ class ImageDownloaderBuildIDTest(object):
   """Test translation of xbuddy names."""
 
   def __init__(self):
-    parser = optparse.OptionParser()
-    parser.add_option(
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
         '-c',
         '--chromeos_root',
         dest='chromeos_root',
         help='Directory containing ChromeOS root.')
 
-    options = parser.parse_args(sys.argv[1:])[0]
+    options = parser.parse_known_args(sys.argv[1:])[0]
     if options.chromeos_root is None:
       self._usage(parser, '--chromeos_root must be set')
     self.chromeos_root = options.chromeos_root
