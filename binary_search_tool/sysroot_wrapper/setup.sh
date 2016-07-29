@@ -64,6 +64,8 @@ BISECT_MODE="OBJECT_MODE"
 
 bisect_dir=${bisect_dir}
 
+export BISECT_STAGE=TRIAGE
+
 EOF
 
 chmod 755 ${COMMON_FILE}
