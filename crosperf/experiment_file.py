@@ -1,13 +1,14 @@
-
 # Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+"""The experiment file module. It manages the input file of crosperf."""
+
+
+from __future__ import print_function
 import os.path
 import re
-from settings import Settings
 from settings_factory import SettingsFactory
-
 
 class ExperimentFile(object):
   """Class for parsing the experiment file format.

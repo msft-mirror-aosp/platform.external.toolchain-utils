@@ -1,19 +1,22 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2014 Google Inc. All Rights Reserved.
 
+"""The unittest of flags."""
+
+from __future__ import print_function
 import test_flag
 
 import unittest
 
 
 class FlagTestCase(unittest.TestCase):
-
+  """The unittest class."""
   def test_test_flag(self):
-    # Verify that test_flag._is_test exists, that it is a list,
+    # Verify that test_flag.is_test exists, that it is a list,
     # and that it contains 1 element.
-    self.assertTrue(type(test_flag._is_test) is list)
-    self.assertEqual(len(test_flag._is_test), 1)
+    self.assertTrue(type(test_flag.is_test) is list)
+    self.assertEqual(len(test_flag.is_test), 1)
 
     # Verify that the getting the flag works and that the flag
     # contains False, its starting value.
@@ -28,10 +31,10 @@ class FlagTestCase(unittest.TestCase):
     test_flag.SetTestMode(save_flag)
     self.assertFalse(test_flag.GetTestMode())
 
-    # Verify that test_flag._is_test still exists, that it still is a
+    # Verify that test_flag.is_test still exists, that it still is a
     # list, and that it still contains 1 element.
-    self.assertTrue(type(test_flag._is_test) is list)
-    self.assertEqual(len(test_flag._is_test), 1)
+    self.assertTrue(type(test_flag.is_test) is list)
+    self.assertEqual(len(test_flag.is_test), 1)
 
 
 if __name__ == '__main__':
