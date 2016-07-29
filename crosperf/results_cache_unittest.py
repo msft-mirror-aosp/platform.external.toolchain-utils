@@ -185,6 +185,7 @@ class ResultTest(unittest.TestCase):
     self.kv_dict = None
     self.tmpdir = ''
     self.callGetNewKeyvals = False
+    self.callGetResultsFile = False
     self.callGetPerfDataFiles = False
     self.args = None
     self.callGatherPerfResults = False
@@ -544,6 +545,10 @@ class ResultTest(unittest.TestCase):
       self.callGetResultsDir = True
       return '/tmp/results_dir'
 
+    def FakeGetResultsFile():
+      self.callGetResultsFile = True
+      return []
+
     def FakeGetPerfDataFiles():
       self.callGetPerfDataFiles = True
       return []
@@ -563,11 +568,13 @@ class ResultTest(unittest.TestCase):
     self.result.chromeos_root = '/tmp/chromeos'
 
     self.callGetResultsDir = False
+    self.callGetResultsFile = False
     self.callGetPerfDataFiles = False
     self.callGetPerfReportFiles = False
     self.callProcessResults = False
 
     self.result.GetResultsDir = FakeGetResultsDir
+    self.result.GetResultsFile = FakeGetResultsFile
     self.result.GetPerfDataFiles = FakeGetPerfDataFiles
     self.result.GeneratePerfReportFiles = FakeGetPerfReportFiles
     self.result.ProcessResults = FakeProcessResults
@@ -575,6 +582,7 @@ class ResultTest(unittest.TestCase):
     self.result.PopulateFromRun(OUTPUT, '', 0, 'test',
                                 'telemetry_Crosperf')
     self.assertTrue(self.callGetResultsDir)
+    self.assertTrue(self.callGetResultsFile)
     self.assertTrue(self.callGetPerfDataFiles)
     self.assertTrue(self.callGetPerfReportFiles)
     self.assertTrue(self.callProcessResults)
