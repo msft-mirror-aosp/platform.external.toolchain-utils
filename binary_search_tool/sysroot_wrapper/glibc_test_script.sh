@@ -19,20 +19,20 @@ board=x86-alex
 DUT=172.17.186.180
 
 echo "Cleaning up"
-{ sudo emerge -C cross-i686-pc-linux-gnu/glibc || exit 2; } &>> /tmp/glibc_triage.log
+{ sudo emerge -C cross-i686-pc-linux-gnu/glibc || exit 125; } &>> /tmp/glibc_triage.log
 
 echo "Building"
-{ sudo -E emerge cross-i686-pc-linux-gnu/glibc || exit 2; } &>> /tmp/glibc_triage.log
+{ sudo -E emerge cross-i686-pc-linux-gnu/glibc || exit 125; } &>> /tmp/glibc_triage.log
 
 echo "Building image"
-{ /home/llozano/trunk/src/scripts/build_image --board=${board} test || exit 2; } &>> /tmp/glibc_triage.log
+{ /home/llozano/trunk/src/scripts/build_image --board=${board} test || exit 125; } &>> /tmp/glibc_triage.log
 
 echo "Installing image"
 cros flash ${DUT} latest &> /tmp/tmp_cros_flash_result.log
 
 cat /tmp/tmp_cros_flash_result.log >> /tmp/cros_flash_result.log
 
-grep "Cros Flash completed successfully" /tmp/tmp_cros_flash_result.log || exit 2
+grep "Cros Flash completed successfully" /tmp/tmp_cros_flash_result.log || exit 125
 
 echo "Trying piglit"
 

@@ -94,13 +94,13 @@ class BinarySearcher(object):
                 self.current,
                 status))
     self.logger.LogOutput(message, print_to_console=verbose)
-    assert status == 0 or status == 1 or status == 2
+    assert status == 0 or status == 1 or status == 125
     self.index_log.append(self.current)
     self.status_log.append(status)
     bsp = BinarySearchPoint(self.sorted_list[self.current], status, tag)
     self.points[self.current] = bsp
 
-    if status == 2:
+    if status == 125:
       self.skipped_indices.append(self.current)
 
     if status == 0 or status == 1:

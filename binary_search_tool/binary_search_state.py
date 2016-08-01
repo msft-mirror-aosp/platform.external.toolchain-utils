@@ -284,7 +284,7 @@ class BinarySearchState(object):
           status = self.TestScript()
         else:
           # Install script failed, treat as skipped item
-          status = 2
+          status = 125
         terminated = self.binary_search.SetStatus(status)
 
       if terminated:

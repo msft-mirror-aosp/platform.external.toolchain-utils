@@ -16,13 +16,13 @@ echo "State of sets"
 wc -l ${bisect_dir}/*_SET
 
 echo "Cleaning up"
-{ /usr/bin/sudo rm -rf /build/falco/var/cache/portage/sys-kernel && emerge-falco -C sys-kernel/chromeos-kernel-3_8-3.8.11-r96 || exit 2; } &>> /tmp/kernel_triage.log
+{ /usr/bin/sudo rm -rf /build/falco/var/cache/portage/sys-kernel && emerge-falco -C sys-kernel/chromeos-kernel-3_8-3.8.11-r96 || exit 125; } &>> /tmp/kernel_triage.log
 
 echo "Building"
-{ /usr/local/bin/emerge-falco =sys-kernel/chromeos-kernel-3_8-3.8.11-r96 || exit 2; } &>> /tmp/kernel_triage.log
+{ /usr/local/bin/emerge-falco =sys-kernel/chromeos-kernel-3_8-3.8.11-r96 || exit 125; } &>> /tmp/kernel_triage.log
 
 echo "Building image"
-{ /home/llozano/trunk/src/scripts/build_image --board=falco test || exit 2; } &>> /tmp/kernel_triage.log
+{ /home/llozano/trunk/src/scripts/build_image --board=falco test || exit 125; } &>> /tmp/kernel_triage.log
 
 echo "Installing image"
 cros flash 172.17.187.150 latest &> /tmp/tmp_cros_flash_result.log

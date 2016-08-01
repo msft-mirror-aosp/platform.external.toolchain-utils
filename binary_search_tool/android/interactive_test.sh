@@ -10,8 +10,8 @@
 # part of the binary search triage on the Android source tree. It
 # waits for the install script to build and install the image, then asks the
 # user if the image is good or not. It should return '0' if the test succeeds
-# (the image is 'good'); '1' if the test fails (the image is 'bad'); and '2' if
-# it could not determine (does not apply in this case).
+# (the image is 'good'); '1' if the test fails (the image is 'bad'); and '125'
+# if it could not determine (does not apply in this case).
 #
 
 source android/common.sh
@@ -36,4 +36,4 @@ while true; do
   esac
 done
 
-exit 2
+exit 125
