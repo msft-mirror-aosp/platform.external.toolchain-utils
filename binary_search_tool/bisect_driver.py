@@ -8,6 +8,9 @@ This module contains a set of utilities to allow bisection between
 two sets (good and bad) of object files. Mostly used to find compiler
 bugs.
 
+Reference page:
+https://sites.google.com/a/google.com/chromeos-toolchain-team-home2/home/team-tools-and-scripts/bisecting-chromeos-compiler-problems/bisection-compiler-wrapper
+
 Design doc:
 https://docs.google.com/document/d/1yDgaUIa2O5w6dc3sSTe1ry-1ehKajTGJGQCbyn0fcEM
 """
@@ -27,6 +30,7 @@ BAD_CACHE = 'bad'
 LIST_FILE = os.path.join(GOOD_CACHE, '_LIST')
 
 CONTINUE_ON_MISSING = os.environ.get('BISECT_CONTINUE_ON_MISSING', None) == '1'
+WRAPPER_SAFE_MODE = os.environ.get('BISECT_WRAPPER_SAFE_MODE', None) == '1'
 
 
 class Error(Exception):
@@ -241,8 +245,8 @@ def restore_file(bisect_dir, cache, abs_file_path):
       os.remove(abs_file_path)
     os.link(cached_path, abs_file_path)
   else:
-    raise Error(('%s is missing from %s cache! Unsure how to proceed. Make will'
-                 'now crash.' % (cache, cached_path)))
+    raise Error(('%s is missing from %s cache! Unsure how to proceed. Make '
+                 'will now crash.' % (cache, cached_path)))
 
 
 def bisect_populate(execargs, bisect_dir, population_name):
@@ -298,6 +302,17 @@ def bisect_triage(execargs, bisect_dir):
                    'details on this option.' % full_obj_path))
 
   cache = which_cache(full_obj_path)
+
+  # If using safe WRAPPER_SAFE_MODE option call compiler and overwrite the
+  # result from the good/bad cache. This option is safe and covers all compiler
+  # side effects, but is very slow!
+  if WRAPPER_SAFE_MODE:
+    retval = exec_and_return(execargs)
+    if retval:
+      return retval
+    os.remove(full_obj_path)
+    restore_file(bisect_dir, cache, full_obj_path)
+    return
 
   # Generate compiler side effects. Trick Make into thinking compiler was
   # actually executed.

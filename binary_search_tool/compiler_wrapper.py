@@ -8,6 +8,9 @@ Installation instructions:
      <compiler_name>. compiler_wrapper.py can live anywhere as long as it is
      executable.
 
+Reference page:
+https://sites.google.com/a/google.com/chromeos-toolchain-team-home2/home/team-tools-and-scripts/bisecting-chromeos-compiler-problems/bisection-compiler-wrapper
+
 Design doc:
 https://docs.google.com/document/d/1yDgaUIa2O5w6dc3sSTe1ry-1ehKajTGJGQCbyn0fcEM
 """
