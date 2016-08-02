@@ -1,6 +1,10 @@
-# Copyright (c) 2014, 2015 The Chromium OS Authors. All rights reserved.
+# Copyright (c) 2014-2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
+"""Download images from Cloud Storage."""
+
+from __future__ import print_function
 
 import ast
 import os
@@ -15,6 +19,7 @@ class MissingImage(Exception):
 
 
 class ImageDownloader(object):
+  """Download images from Cloud Storage."""
 
   def __init__(self, logger_to_use=None, log_level='verbose', cmd_exec=None):
     self._logger = logger_to_use
@@ -28,7 +33,7 @@ class ImageDownloader(object):
     # image name.
     command = ('cd ~/trunk/src/third_party/toolchain-utils/crosperf; '
                "python translate_xbuddy.py '%s'" % xbuddy_label)
-    retval, build_id_tuple_str, _ = self._ce.ChrootRunCommandWOutput(
+    _, build_id_tuple_str, _ = self._ce.ChrootRunCommandWOutput(
         chromeos_root, command)
     if not build_id_tuple_str:
       raise MissingImage("Unable to find image for '%s'" % xbuddy_label)

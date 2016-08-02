@@ -1,6 +1,9 @@
 
-# Copyright 2015 Google Inc. All Rights Reserved.
+# Copyright 2015 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
+"""MachineImageManager allocates images to duts."""
 
 class MachineImageManager(object):
   """Management of allocating images to duts.
@@ -143,7 +146,7 @@ class MachineImageManager(object):
 
     # Generate initial matrix containg 'X' or ' '.
     self.matrix_ = [['X' if (l.remote and len(l.remote)) else ' ' \
-                     for d in range(self.n_duts_)] for l in self.labels_]
+                     for _ in range(self.n_duts_)] for l in self.labels_]
     for ol, l in enumerate(self.labels_):
       if l.remote:
         for r in l.remote:
@@ -193,7 +196,7 @@ class MachineImageManager(object):
   def allocate(self, dut, schedv2=None):
     """Allocate a label for dut.
 
-        Arguments:
+        Args:
           dut: the dut that asks for a new image.
           schedv2: the scheduling instance, we need the benchmark run
                    information with schedv2 for a better allocation.
@@ -215,7 +218,7 @@ class MachineImageManager(object):
       # Note schedv2 might be None in case we do not need this
       # optimization or we are in testing mode.
       if schedv2 is not None:
-        pending_br_num = len(schedv2._label_brl_map[label])
+        pending_br_num = len(schedv2.get_label_map()[label])
         if pending_br_num == 0:
           # (A) - we have finished all br of this label,
           # apparently, we do not want to reimaeg dut to
@@ -269,7 +272,7 @@ class MachineImageManager(object):
 
         Yield row number i and value at matrix_[i][col].
         """
-    for i, l in enumerate(self.labels_):
+    for i, _ in enumerate(self.labels_):
       yield i, self.matrix_[i][col]
 
   def matrix_horizontal_generator(self, row):
@@ -277,11 +280,11 @@ class MachineImageManager(object):
 
         Yield col number j and value at matrix_[row][j].
         """
-    for j, d in enumerate(self.duts_):
+    for j, _ in enumerate(self.duts_):
       yield j, self.matrix_[row][j]
 
   def _compute_initial_allocation_internal(self, level, N):
-    """ Search matrix for d with N. """
+    """Search matrix for d with N."""
 
     if level == self.n_labels_:
       return True

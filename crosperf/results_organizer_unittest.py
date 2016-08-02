@@ -1,11 +1,16 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-"""Testing of ResultsOrganizer. We create some labels, benchmark_runs
-   and then create a ResultsOrganizer, after that, we compare the result of
-   ResultOrganizer"""
+
+"""Testing of ResultsOrganizer
+
+   We create some labels, benchmark_runs and then create a ResultsOrganizer,
+   after that, we compare the result of ResultOrganizer.
+   """
+
+from __future__ import print_function
 
 import unittest
 
@@ -67,6 +72,7 @@ result = {'benchmark1': [[{'': 'PASS',
 
 
 class ResultOrganizerTest(unittest.TestCase):
+  """Test result organizer."""
 
   def testResultOrganizer(self):
     labels = [mock_instance.label1, mock_instance.label2]
