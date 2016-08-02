@@ -47,6 +47,7 @@ class Experiment(object):
     self.num_complete = 0
     self.num_run_complete = 0
     self.share_cache = share_cache
+    self.active_threads = []
     # If locks_directory (self.lock_dir) not blank, we will use the file
     # locking mechanism; if it is blank then we will use the AFE server
     # locking mechanism.
@@ -83,14 +84,14 @@ class Experiment(object):
       self.machine_manager.AddMachine(machine)
     # Now machine_manager._all_machines contains a list of reachable
     # machines. This is a subset of self.remote. We make both lists the same.
-    self.remote = [m.name for m in self.machine_manager._all_machines]
+    self.remote = [m.name for m in self.machine_manager.GetAllMachines()]
     if not self.remote:
       raise RuntimeError('No machine available for running experiment.')
 
     for label in labels:
       # We filter out label remotes that are not reachable (not in
       # self.remote). So each label.remote is a sublist of experiment.remote.
-      label.remote = filter(lambda x: x in self.remote, label.remote)
+      label.remote = [r for r in label.remote if r in self.remote]
       try:
         self.machine_manager.ComputeCommonCheckSum(label)
       except BadChecksum:
@@ -178,15 +179,15 @@ class Experiment(object):
       self._schedv2.run_sched()
     else:
       self.active_threads = []
-      for benchmark_run in self.benchmark_runs:
+      for run in self.benchmark_runs:
         # Set threads to daemon so program exits when ctrl-c is pressed.
-        benchmark_run.daemon = True
-        benchmark_run.start()
-        self.active_threads.append(benchmark_run)
+        run.daemon = True
+        run.start()
+        self.active_threads.append(run)
 
   def SetCacheConditions(self, cache_conditions):
-    for benchmark_run in self.benchmark_runs:
-      benchmark_run.SetCacheConditions(cache_conditions)
+    for run in self.benchmark_runs:
+      run.SetCacheConditions(cache_conditions)
 
   def Cleanup(self):
     """Make sure all machines are unlocked."""
