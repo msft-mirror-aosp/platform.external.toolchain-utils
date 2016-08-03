@@ -259,7 +259,7 @@ class BisectingUtilsTest(unittest.TestCase):
         test_script='./is_good.py',
         prune=True,
         file_args=True,
-        verify_level=1)
+        verify=True)
     with self.assertRaises(AssertionError):
       bss.DoVerify()
 
@@ -299,7 +299,7 @@ class BisectingUtilsTest(unittest.TestCase):
         test_script='./is_good.py',
         prune=True,
         file_args=True,
-        verify_level=1)
+        verify=True)
     self.check_output()
 
   def test_noincremental_prune(self):
@@ -312,7 +312,7 @@ class BisectingUtilsTest(unittest.TestCase):
         prune=True,
         noincremental=True,
         file_args=True,
-        verify_level=0)
+        verify=False)
     self.assertEquals(ret, 0)
     self.check_output()
 
@@ -348,7 +348,7 @@ class BisectStressTest(unittest.TestCase):
                                   test_script='./is_good.py',
                                   prune=True,
                                   file_args=True,
-                                  verify_level=0)
+                                  verify=False)
     self.assertEquals(ret, 0)
     self.check_output()
 

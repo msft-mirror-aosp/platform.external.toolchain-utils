@@ -18,7 +18,6 @@ created so the help text is made properly.
 
 from __future__ import print_function
 
-import argparse
 import collections
 import os
 import sys
@@ -122,6 +121,15 @@ def BuildArgParser(parser, override=False):
     parser.add_argument(*arg_names, **arg_options)
 
 
+def StrToBool(str_in):
+  if str_in.lower() in ['true', 't', '1']:
+    return True
+  if str_in.lower() in ['false', 'f', '0']:
+    return False
+
+  raise AttributeError('%s is not a valid boolean string' % str_in)
+
+
 def _BuildArgsDict(args):
   """Populate ArgumentDict with all arguments"""
   args.AddArgument('-n',
@@ -158,62 +166,80 @@ def _BuildArgsDict(args):
                    dest='test_script',
                    help=('Script to run to test the '
                          'output after packages are built.'))
+  # No input (evals to False),
+  # --prune (evals to True),
+  # --prune=False,
+  # --prune=True
   args.AddArgument('-p',
                    '--prune',
                    dest='prune',
-                   action='store_true',
+                   nargs='?',
+                   const=True,
                    default=False,
-                   help='Continue until all bad items are found.')
-  # --prune False override, opposite of --prune
-  args.AddArgument('--noprune',
-                   dest='prune',
-                   action='store_false',
-                   default=argparse.SUPPRESS)
+                   type=StrToBool,
+                   metavar='bool',
+                   help=('If True, continue until all bad items are found. '
+                         'Defaults to False.'))
+  # No input (evals to False),
+  # --noincremental (evals to True),
+  # --noincremental=False,
+  # --noincremental=True
   args.AddArgument('-c',
                    '--noincremental',
                    dest='noincremental',
-                   action='store_true',
+                   nargs='?',
+                   const=True,
                    default=False,
-                   help='Do not propagate good/bad changes incrementally.')
-  # --noincremental False override, opposite of --noincremental
-  args.AddArgument('--incremental',
-                   dest='noincremental',
-                   action='store_false',
-                   default=argparse.SUPPRESS)
+                   type=StrToBool,
+                   metavar='bool',
+                   help=('If True, don\'t propagate good/bad changes '
+                         'incrementally. Defaults to False.'))
+  # No input (evals to False),
+  # --file_args (evals to True),
+  # --file_args=False,
+  # --file_args=True
   args.AddArgument('-f',
                    '--file_args',
                    dest='file_args',
-                   action='store_true',
+                   nargs='?',
+                   const=True,
                    default=False,
-                   help='Use a file to pass arguments to scripts.')
-  # --file_args False override, opposite of --file_args
-  args.AddArgument('--nofile_args',
-                   dest='file_args',
-                   action='store_false',
-                   default=argparse.SUPPRESS)
-  args.AddArgument('-v',
-                   '--verify_level',
-                   dest='verify_level',
-                   type=int,
-                   default=1,
-                   help=('Check binary search assumptions N times '
-                         'before starting.'))
+                   type=StrToBool,
+                   metavar='bool',
+                   help=('Whether to use a file to pass arguments to scripts. '
+                         'Defaults to False.'))
+  # No input (evals to True),
+  # --verify (evals to True),
+  # --verify=False,
+  # --verify=True
+  args.AddArgument('--verify',
+                   dest='verify',
+                   nargs='?',
+                   const=True,
+                   default=True,
+                   type=StrToBool,
+                   metavar='bool',
+                   help=('Whether to run verify iterations before searching. '
+                         'Defaults to True.'))
   args.AddArgument('-N',
                    '--prune_iterations',
                    dest='prune_iterations',
                    type=int,
                    help='Number of prune iterations to try in the search.',
                    default=100)
+  # No input (evals to False),
+  # --verbose (evals to True),
+  # --verbose=False,
+  # --verbose=True
   args.AddArgument('-V',
                    '--verbose',
                    dest='verbose',
-                   action='store_true',
-                   help='Print full output to console.')
-  # --verbose False override, opposite of --verbose
-  args.AddArgument('--noverbose',
-                   dest='verbose',
-                   action='store_false',
-                   default=argparse.SUPPRESS)
+                   nargs='?',
+                   const=True,
+                   default=False,
+                   type=StrToBool,
+                   metavar='bool',
+                   help='If True, print full output to console.')
   args.AddArgument('-r',
                    '--resume',
                    dest='resume',

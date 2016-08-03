@@ -207,6 +207,7 @@ Overriding:
   ./bisect.py package daisy 172.17.211.182 \
     --test_script=common/hash_test.sh --install_script=""
 
-  Example 3 (enable verbose mode and disable pruning):
-  ./bisect.py package daisy 172.17.211.182 --verbose --noprune
+  Example 3 (enable verbose mode, disable pruning, and disable verification):
+  ./bisect.py package daisy 172.17.211.182 \
+  --verbose --prune=False --verify=False
 

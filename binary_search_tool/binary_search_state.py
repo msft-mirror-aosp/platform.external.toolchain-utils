@@ -63,7 +63,7 @@ class BinarySearchState(object):
 
   def __init__(self, get_initial_items, switch_to_good, switch_to_bad,
                install_script, test_script, incremental, prune, iterations,
-               prune_iterations, verify_level, file_args, verbose):
+               prune_iterations, verify, file_args, verbose):
     """BinarySearchState constructor, see Run for full args documentation."""
     self.get_initial_items = get_initial_items
     self.switch_to_good = switch_to_good
@@ -74,7 +74,7 @@ class BinarySearchState(object):
     self.prune = prune
     self.iterations = iterations
     self.prune_iterations = prune_iterations
-    self.verify_level = verify_level
+    self.verify = verify
     self.file_args = file_args
     self.verbose = verbose
 
@@ -182,30 +182,29 @@ class BinarySearchState(object):
 
     Verify that a "good" set of items produces a "good" result and that a "bad"
     set of items produces a "bad" result. To be run directly before running
-    DoSearch. If verify_level is 0 this step is skipped.
+    DoSearch. If verify is False this step is skipped.
     """
-    if not self.verify_level:
+    if not self.verify:
       return
 
     self.l.LogOutput('VERIFICATION')
-    self.l.LogOutput('Beginning %d tests to verify good/bad sets\n' %
-                     self.verify_level)
-    for _ in range(int(self.verify_level)):
-      with SetFile(GOOD_SET_VAR, self.all_items), SetFile(BAD_SET_VAR, []):
-        self.l.LogOutput('Resetting all items to good to verify.')
-        self.SwitchToGood(self.all_items)
-        status = self.InstallScript()
-        assert status == 0, 'When reset_to_good, install should succeed.'
-        status = self.TestScript()
-        assert status == 0, 'When reset_to_good, status should be 0.'
+    self.l.LogOutput('Beginning tests to verify good/bad sets\n')
 
-      with SetFile(GOOD_SET_VAR, []), SetFile(BAD_SET_VAR, self.all_items):
-        self.l.LogOutput('Resetting all items to bad to verify.')
-        self.SwitchToBad(self.all_items)
-        status = self.InstallScript()
-        assert status == 0, 'When reset_to_bad, install should succeed.'
-        status = self.TestScript()
-        assert status == 1, 'When reset_to_bad, status should be 1.'
+    with SetFile(GOOD_SET_VAR, self.all_items), SetFile(BAD_SET_VAR, []):
+      self.l.LogOutput('Resetting all items to good to verify.')
+      self.SwitchToGood(self.all_items)
+      status = self.InstallScript()
+      assert status == 0, 'When reset_to_good, install should succeed.'
+      status = self.TestScript()
+      assert status == 0, 'When reset_to_good, status should be 0.'
+
+    with SetFile(GOOD_SET_VAR, []), SetFile(BAD_SET_VAR, self.all_items):
+      self.l.LogOutput('Resetting all items to bad to verify.')
+      self.SwitchToBad(self.all_items)
+      status = self.InstallScript()
+      assert status == 0, 'When reset_to_bad, install should succeed.'
+      status = self.TestScript()
+      assert status == 1, 'When reset_to_bad, status should be 1.'
 
   def DoSearch(self):
     """Perform full search for bad items.
@@ -445,7 +444,7 @@ class MockBinarySearchState(BinarySearchState):
         'prune': False,
         'iterations': 50,
         'prune_iterations': 100,
-        'verify_level': 1,
+        'verify': True,
         'file_args': False,
         'verbose': False
     }
@@ -468,8 +467,8 @@ def _CanonicalizeScript(script_name):
 
 
 def Run(get_initial_items, switch_to_good, switch_to_bad, test_script,
-        install_script=None, iterations=50, prune=True, noincremental=False,
-        file_args=False, verify_level=1, prune_iterations=100, verbose=False,
+        install_script=None, iterations=50, prune=False, noincremental=False,
+        file_args=False, verify=True, prune_iterations=100, verbose=False,
         resume=False):
   """Run binary search tool. Equivalent to running through terminal.
 
@@ -490,8 +489,8 @@ def Run(get_initial_items, switch_to_good, switch_to_bad, test_script,
     noincremental: Whether to send "diffs" of good/bad items to switch scripts.
     file_args: If True then arguments to switch scripts will be a file name
                containing a newline separated list of the items to switch.
-    verify_level: How many verification tests to run to ensure initial good/bad
-                  sets actually produce a good/bad result.
+    verify: If True, run tests to ensure initial good/bad sets actually
+            produce a good/bad result.
     prune_iterations: Max number of bad items to search for.
     verbose: If True will print extra debug information to user.
     resume: If True will resume using STATE_FILE.
@@ -519,8 +518,8 @@ def Run(get_initial_items, switch_to_good, switch_to_bad, test_script,
 
     bss = BinarySearchState(get_initial_items, switch_to_good, switch_to_bad,
                             install_script, test_script, incremental, prune,
-                            iterations, prune_iterations, verify_level,
-                            file_args, verbose)
+                            iterations, prune_iterations, verify, file_args,
+                            verbose)
     bss.DoVerify()
 
   try:
