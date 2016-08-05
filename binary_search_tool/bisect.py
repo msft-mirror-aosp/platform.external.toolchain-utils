@@ -142,12 +142,13 @@ class BisectPackage(Bisector):
         'prune': True,
         'file_args': True
     }
+    self.setup_cmd = ('%s %s %s' % (self.cros_pkg_setup, self.options.board,
+                                    self.options.remote))
     self.ArgOverride(self.default_kwargs, self.overrides)
 
   def PreRun(self):
-    cmd = ('%s %s %s' %
-           (self.cros_pkg_setup, self.options.board, self.options.remote))
-    ret, _, _ = self.ce.RunCommandWExceptionCleanup(cmd, print_to_console=True)
+    ret, _, _ = self.ce.RunCommandWExceptionCleanup(
+        self.setup_cmd, print_to_console=True)
     if ret:
       self.logger.LogError('Package bisector setup failed w/ error %d' % ret)
       return 1
@@ -162,6 +163,10 @@ class BisectPackage(Bisector):
     if ret:
       self.logger.LogError('Package bisector cleanup failed w/ error %d' % ret)
       return 1
+
+    self.logger.LogOutput(('Cleanup successful! To restore the bisection '
+                           'environment run the following:\n'
+                           '  cd %s; %s') % (os.getcwd(), self.setup_cmd))
     return 0
 
 
@@ -188,13 +193,15 @@ class BisectObject(Bisector):
     if options.dir:
       os.environ['BISECT_DIR'] = options.dir
     self.options.dir = os.environ.get('BISECT_DIR', '/tmp/sysroot_bisect')
+    self.setup_cmd = ('%s %s %s %s' % (self.sysroot_wrapper_setup,
+                                       self.options.board, self.options.remote,
+                                       self.options.package))
 
     self.ArgOverride(self.default_kwargs, overrides)
 
   def PreRun(self):
-    cmd = ('%s %s %s %s' % (self.sysroot_wrapper_setup, self.options.board,
-                            self.options.remote, self.options.package))
-    ret, _, _ = self.ce.RunCommandWExceptionCleanup(cmd, print_to_console=True)
+    ret, _, _ = self.ce.RunCommandWExceptionCleanup(
+        self.setup_cmd, print_to_console=True)
     if ret:
       self.logger.LogError('Object bisector setup failed w/ error %d' % ret)
       return 1
@@ -211,6 +218,9 @@ class BisectObject(Bisector):
     if ret:
       self.logger.LogError('Object bisector cleanup failed w/ error %d' % ret)
       return 1
+    self.logger.LogOutput(('Cleanup successful! To restore the bisection '
+                           'environment run the following:\n'
+                           '  cd %s; %s') % (os.getcwd(), self.setup_cmd))
     return 0
 
 
@@ -239,17 +249,19 @@ class BisectAndroid(Bisector):
       os.environ['BISECT_DIR'] = options.dir
     self.options.dir = os.environ.get('BISECT_DIR', self.default_dir)
 
-    self.ArgOverride(self.default_kwargs, overrides)
-
-  def PreRun(self):
     num_jobs = "NUM_JOBS='%s'" % self.options.num_jobs
     device_id = ""
     if self.options.device_id:
       device_id = "ANDROID_SERIAL='%s'" % self.options.device_id
 
-    cmd = ('%s %s %s %s' % (num_jobs, device_id, self.android_setup,
-                            self.options.android_src))
-    ret, _, _ = self.ce.RunCommandWExceptionCleanup(cmd, print_to_console=True)
+    self.setup_cmd = ('%s %s %s %s' % (num_jobs, device_id, self.android_setup,
+                                       self.options.android_src))
+
+    self.ArgOverride(self.default_kwargs, overrides)
+
+  def PreRun(self):
+    ret, _, _ = self.ce.RunCommandWExceptionCleanup(
+        self.setup_cmd, print_to_console=True)
     if ret:
       self.logger.LogError('Android bisector setup failed w/ error %d' % ret)
       return 1
@@ -266,6 +278,9 @@ class BisectAndroid(Bisector):
     if ret:
       self.logger.LogError('Android bisector cleanup failed w/ error %d' % ret)
       return 1
+    self.logger.LogOutput(('Cleanup successful! To restore the bisection '
+                           'environment run the following:\n'
+                           '  cd %s; %s') % (os.getcwd(), self.setup_cmd))
     return 0
 
 
