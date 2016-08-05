@@ -190,6 +190,7 @@ class BinarySearchState(object):
     self.l.LogOutput('VERIFICATION')
     self.l.LogOutput('Beginning tests to verify good/bad sets\n')
 
+    self._OutputProgress('Verifying items from GOOD set\n')
     with SetFile(GOOD_SET_VAR, self.all_items), SetFile(BAD_SET_VAR, []):
       self.l.LogOutput('Resetting all items to good to verify.')
       self.SwitchToGood(self.all_items)
@@ -198,6 +199,7 @@ class BinarySearchState(object):
       status = self.TestScript()
       assert status == 0, 'When reset_to_good, status should be 0.'
 
+    self._OutputProgress('Verifying items from BAD set\n')
     with SetFile(GOOD_SET_VAR, []), SetFile(BAD_SET_VAR, self.all_items):
       self.l.LogOutput('Resetting all items to bad to verify.')
       self.SwitchToBad(self.all_items)
@@ -229,8 +231,10 @@ class BinarySearchState(object):
 
       # If already seen item we have no new bad items to find, finish up
       if self.all_items[prune_index] in self.found_items:
-        self.l.LogOutput(('Found item already found before: %s. '
-                          'Done searching.' % self.all_items[prune_index]))
+        self.l.LogOutput('Found item already found before: %s.' %
+                         self.all_items[prune_index],
+                         print_to_console=self.verbose)
+        self.l.LogOutput('No more bad items remaining. Done searching.')
         self.l.LogOutput('Bad items are: %s' %
                          ' '.join(self.found_items))
         break
@@ -269,7 +273,7 @@ class BinarySearchState(object):
     terminated = False
     while self.search_cycles < self.iterations and not terminated:
       self.SaveState()
-      self.OutputProgress()
+      self.OutputIterationProgress()
 
       self.search_cycles += 1
       [bad_items, good_items] = self.GetNextItems()
@@ -287,7 +291,7 @@ class BinarySearchState(object):
         terminated = self.binary_search.SetStatus(status)
 
       if terminated:
-        self.l.LogOutput('Terminated!')
+        self.l.LogOutput('Terminated!', print_to_console=self.verbose)
     if not terminated:
       self.l.LogOutput('Ran out of iterations searching...')
     self.l.LogOutput(str(self), print_to_console=self.verbose)
@@ -403,22 +407,29 @@ class BinarySearchState(object):
 
     return '%sh %sm %ss' % (hours, minutes, seconds)
 
-  def OutputProgress(self):
-    """Output current progress of binary search to console and logs."""
-    out = ('\n***** PROGRESS (elapsed time: %s) *****\n'
-           'Search %d of estimated %d.\n'
+  def _OutputProgress(self, progress_text):
+    """Output current progress of binary search to console and logs.
+
+    Args:
+      progress_text: The progress to display to the user.
+    """
+    progress = ('\n***** PROGRESS (elapsed time: %s) *****\n'
+                '%s'
+                '************************************************')
+    progress = progress % (self.ElapsedTimeString(), progress_text)
+    self.l.LogOutput(progress)
+
+  def OutputIterationProgress(self):
+    out = ('Search %d of estimated %d.\n'
            'Prune %d of max %d.\n'
            'Current bad items found:\n'
-           '%s\n'
-           '************************************************')
-    out = out % (self.ElapsedTimeString(),
-                 self.search_cycles + 1,
+           '%s\n')
+    out = out % (self.search_cycles + 1,
                  math.ceil(math.log(len(self.all_items), 2)),
                  self.prune_cycles + 1,
                  self.prune_iterations,
-                 str(self.found_items))
-
-    self.l.LogOutput(out)
+                 ', '.join(self.found_items))
+    self._OutputProgress(out)
 
   def __str__(self):
     ret = ''
