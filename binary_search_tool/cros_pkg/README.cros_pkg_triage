@@ -35,7 +35,7 @@ following:
        --get_initial_items=cros_pkg/get_initial_items.sh \
        --switch_to_good=cros_pkg/switch_to_good.sh \
        --switch_to_bad=cros_pkg/switch_to_bad.sh \
-       --install_script=cros_pkg/install.sh \
+       --test_setup_script=cros_pkg/test_setup.sh \
        --test_script=cros_pkg/boot_test.sh \
        --file_args \
        --prune
@@ -46,7 +46,7 @@ following:
        --get_initial_items=cros_pkg/get_initial_items.sh \
        --switch_to_good=cros_pkg/switch_to_good.sh \
        --switch_to_bad=cros_pkg/switch_to_bad.sh \
-       --install_script=cros_pkg/install.sh \
+       --test_setup_script=cros_pkg/test_setup.sh \
        --test_script=cros_pkg/interactive_test.sh \
        --file_args \
        --prune
@@ -77,10 +77,10 @@ FILES AND SCRIPTS:
   get_initial_items.sh - This script is used to determine the current
                          set of ChromeOS packages.
 
-  install.sh - This script will build and flash your image to the
-               remote machine. If the flash fails, this script will
-               help the user troubleshoot by flashing through usb or
-               by retrying the flash over ethernet.
+  test_setup.sh - This script will build and flash your image to the
+                  remote machine. If the flash fails, this script will
+                  help the user troubleshoot by flashing through usb or
+                  by retrying the flash over ethernet.
 
   interactive_test.sh - One of two possible scripts used to determine
                         if the ChromeOS image built from the packages
@@ -175,7 +175,7 @@ isolate/identify the bad package:
  --get_initial_items=cros_pkg/get_initial_items.sh \
  --switch_to_good=cros_pkg/switch_to_good.sh \
  --switch_to_bad=cros_pkg/switch_to_bad.sh \
- --install_script=cros_pkg/install.sh \
+ --test_setup_script=cros_pkg/test_setup.sh \
  --test_script=cros_pkg/boots_test.sh \  # could use interactive_test.sh instead
  --prune
 

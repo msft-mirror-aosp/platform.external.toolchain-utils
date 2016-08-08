@@ -54,7 +54,7 @@ class Bisector(object):
          get_initial_items : cros_pkg/get_initial_items.sh
             switch_to_good : cros_pkg/switch_to_good.sh
              switch_to_bad : cros_pkg/switch_to_bad.sh
-       *    install_script :
+       * test_setup_script :
        *       test_script : cros_pkg/my_test.sh
                      prune : True
              noincremental : False
@@ -136,7 +136,7 @@ class BisectPackage(Bisector):
         'get_initial_items': 'cros_pkg/get_initial_items.sh',
         'switch_to_good': 'cros_pkg/switch_to_good.sh',
         'switch_to_bad': 'cros_pkg/switch_to_bad.sh',
-        'install_script': 'cros_pkg/install.sh',
+        'test_setup_script': 'cros_pkg/test_setup.sh',
         'test_script': 'cros_pkg/interactive_test.sh',
         'noincremental': False,
         'prune': True,
@@ -183,7 +183,7 @@ class BisectObject(Bisector):
         'get_initial_items': 'sysroot_wrapper/get_initial_items.sh',
         'switch_to_good': 'sysroot_wrapper/switch_to_good.sh',
         'switch_to_bad': 'sysroot_wrapper/switch_to_bad.sh',
-        'install_script': 'sysroot_wrapper/install.sh',
+        'test_setup_script': 'sysroot_wrapper/test_setup.sh',
         'test_script': 'sysroot_wrapper/interactive_test.sh',
         'noincremental': True,
         'prune': True,
@@ -238,7 +238,7 @@ class BisectAndroid(Bisector):
         'get_initial_items': 'android/get_initial_items.sh',
         'switch_to_good': 'android/switch_to_good.sh',
         'switch_to_bad': 'android/switch_to_bad.sh',
-        'install_script': 'android/install.sh',
+        'test_setup_script': 'android/test_setup.sh',
         'test_script': 'android/interactive_test.sh',
         'prune': True,
         'file_args': True,

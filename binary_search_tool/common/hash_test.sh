@@ -4,7 +4,7 @@
 #
 # This script is intended to be used by binary_search_state.py. It is to
 # be used for testing/development of the binary search triage tool
-# itself.  It waits for the install script to build and install the
+# itself.  It waits for the test setup script to build and install the
 # image, then checks the hashes in the provided file.
 # If the real hashes match the checksum hashes, then the image is 'good',
 # otherwise it is 'bad'.  This allows the rest of the bisecting tool

@@ -6,8 +6,6 @@ DEFAULT_BAD_OBJECT_NUMBER = 23
 OBJECTS_FILE = 'objects.txt'
 WORKING_SET_FILE = 'working_set.txt'
 
-installed = True
-
 
 def ReadWorkingSet():
   working_set = []

@@ -6,8 +6,8 @@
 #
 # This script is intended to be used by binary_search_state.py, as
 # part of the binary search triage on the Android source tree. It
-# waits for the install script to build and install the image, then checks if
-# image boots or not. It should return '0' if the test succeeds
+# waits for the test setup script to build and install the image, then checks
+# if image boots or not. It should return '0' if the test succeeds
 # (the image is 'good'); '1' if the test fails (the image is 'bad'); and '125'
 # if it could not determine (does not apply in this case).
 #

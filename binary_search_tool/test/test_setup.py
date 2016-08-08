@@ -1,5 +1,5 @@
 #!/usr/bin/python2
-"""Emulate installation of files, is_good.py should fail without this."""
+"""Emulate running of test setup script, is_good.py should fail without this."""
 
 from __future__ import print_function
 
@@ -7,8 +7,8 @@ import sys
 
 
 def Main():
-  # create ./installed
-  with open('./installed', 'w'):
+  # create ./is_setup
+  with open('./is_setup', 'w'):
     pass
 
   return 0

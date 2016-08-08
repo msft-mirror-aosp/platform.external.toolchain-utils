@@ -2,7 +2,7 @@
 #
 # Copyright 2016 Google Inc. All Rights Reserved.
 #
-# This is the install script for generating an Android image based off the
+# This is the test setup script for generating an Android image based off the
 # current working build tree. make is called to relink the object files and
 # generate the new Android image to be flashed. The device is then rebooted into
 # bootloader mode and fastboot is used to flash the new image. The device is
@@ -10,7 +10,7 @@
 #
 # This script is intended to be used by binary_search_state.py, as
 # part of the binary search triage on the Android source tree. It should
-# return '0' if the install succeeds; and '1' if the install fails (the image
+# return '0' if the setup succeeds; and '1' if the setup fails (the image
 # could not build or be flashed).
 #
 

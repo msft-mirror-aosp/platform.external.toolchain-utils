@@ -2,7 +2,7 @@
 #
 # Copyright 2016 Google Inc. All Rights Reserved.
 #
-# This is a generic ChromeOS package/image installation script. It is meant to
+# This is a generic ChromeOS package/image test setup script. It is meant to
 # be used for either the object file or package bisection tools. This script
 # does one of the following depending on what ${BISECT_MODE} is set to:
 #
@@ -20,7 +20,7 @@
 #
 # This script is intended to be used by binary_search_state.py, as
 # part of the binary search triage on ChromeOS objects and packages. It should
-# return '0' if the install succeeds; and '1' if the install fails (the image
+# return '0' if the setup succeeds; and '1' if the setup fails (the image
 # could not build or be flashed).
 #
 

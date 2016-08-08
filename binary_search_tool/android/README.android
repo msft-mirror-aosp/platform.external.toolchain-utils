@@ -45,7 +45,7 @@ following:
        --get_initial_items=android/get_initial_items.sh \
        --switch_to_good=android/switch_to_good.sh \
        --switch_to_bad=android/switch_to_bad.sh \
-       --install_script=android/install.sh \
+       --test_setup_script=android/test_setup.sh \
        --test_script=$TEST_SCRIPT \
        --file_args \
        --prune
@@ -72,10 +72,10 @@ FILES AND SCRIPTS:
   get_initial_items.sh - This script is used to determine all Android objects
                          that will be bisected.
 
-  install.sh - This script will build and flash your image to the
-               Android device. If the flash fails, this script will
-               help the user troubleshoot by trying to flash again or
-               by asking the user to manually flash it.
+  test_setup.sh - This script will build and flash your image to the
+                  Android device. If the flash fails, this script will
+                  help the user troubleshoot by trying to flash again or
+                  by asking the user to manually flash it.
 
   interactive_test.sh - One of two possible scripts used to determine
                         if the Android image built from the objects
@@ -176,7 +176,7 @@ isolate/identify the bad object:
  --get_initial_items=android/get_initial_items.sh \
  --switch_to_good=android/switch_to_good.sh \
  --switch_to_bad=android/switch_to_bad.sh \
- --install_script=android/install.sh \
+ --test_setup_script=android/test_setup.sh \
  --test_script=android/boot_test.sh \  # could use interactive_test.sh instead
  --prune
 

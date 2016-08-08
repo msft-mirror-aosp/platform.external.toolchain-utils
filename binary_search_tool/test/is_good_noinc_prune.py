@@ -33,7 +33,7 @@ def Main():
   os.remove('noinc_prune_bad')
   os.remove('noinc_prune_good')
 
-  if not os.path.exists('./installed'):
+  if not os.path.exists('./is_setup'):
     return 1
   for w in working_set:
     if w == 1:

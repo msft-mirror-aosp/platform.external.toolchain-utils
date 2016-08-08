@@ -1,5 +1,5 @@
 #!/usr/bin/python2
-"""Emulate installation that fails (i.e. failed flash to device)"""
+"""Emulate test setup that fails (i.e. failed flash to device)"""
 
 from __future__ import print_function
 

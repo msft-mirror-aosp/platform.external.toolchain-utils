@@ -39,7 +39,7 @@ class BisectTest(unittest.TestCase):
   """Tests for bisect.py"""
 
   def setUp(self):
-    with open('./installed', 'w'):
+    with open('./is_setup', 'w'):
       pass
 
     try:
@@ -49,7 +49,7 @@ class BisectTest(unittest.TestCase):
 
   def tearDown(self):
     try:
-      os.remove('./installed')
+      os.remove('./is_setup')
       os.remove(os.readlink(binary_search_state.STATE_FILE))
       os.remove(binary_search_state.STATE_FILE)
     except OSError:
@@ -110,7 +110,7 @@ class BisectingUtilsTest(unittest.TestCase):
     """Generate [100-1000] object files, and 1-5% of which are bad ones."""
     GenObj()
 
-    with open('./installed', 'w'):
+    with open('./is_setup', 'w'):
       pass
 
     try:
@@ -127,7 +127,7 @@ class BisectingUtilsTest(unittest.TestCase):
     except OSError:
       pass
 
-    cleanup_list = ['./installed',
+    cleanup_list = ['./is_setup',
                     binary_search_state.STATE_FILE,
                     'noinc_prune_bad',
                     'noinc_prune_good']
@@ -153,8 +153,8 @@ class BisectingUtilsTest(unittest.TestCase):
     self.assertEquals(ret, 0)
     self.check_output()
 
-  def test_install_script(self):
-    os.remove('./installed')
+  def test_test_setup_script(self):
+    os.remove('./is_setup')
     with self.assertRaises(AssertionError):
       ret = binary_search_state.Run(get_initial_items='./gen_init_list.py',
                                     switch_to_good='./switch_to_good.py',
@@ -167,19 +167,19 @@ class BisectingUtilsTest(unittest.TestCase):
                                   switch_to_good='./switch_to_good.py',
                                   switch_to_bad='./switch_to_bad.py',
                                   test_script='./is_good.py',
-                                  install_script='./install.py',
+                                  test_setup_script='./test_setup.py',
                                   prune=True,
                                   file_args=True)
     self.assertEquals(ret, 0)
     self.check_output()
 
-  def test_bad_install_script(self):
+  def test_bad_test_setup_script(self):
     with self.assertRaises(AssertionError):
       binary_search_state.Run(get_initial_items='./gen_init_list.py',
                               switch_to_good='./switch_to_good.py',
                               switch_to_bad='./switch_to_bad.py',
                               test_script='./is_good.py',
-                              install_script='./install_bad.py',
+                              test_setup_script='./test_setup_bad.py',
                               prune=True,
                               file_args=True)
 
@@ -281,7 +281,7 @@ class BisectingUtilsTest(unittest.TestCase):
         switch_to_good='./switch_to_good.py',
         switch_to_bad='./switch_to_bad.py',
         test_script='./is_good.py',
-        install_script='./install.py',
+        test_setup_script='./test_setup.py',
         prune=False,
         file_args=True)
     bss.DoSearch()
@@ -308,7 +308,7 @@ class BisectingUtilsTest(unittest.TestCase):
         switch_to_good='./switch_to_good_noinc_prune.py',
         switch_to_bad='./switch_to_bad_noinc_prune.py',
         test_script='./is_good_noinc_prune.py',
-        install_script='./install.py',
+        test_setup_script='./test_setup.py',
         prune=True,
         noincremental=True,
         file_args=True,
@@ -362,7 +362,7 @@ class BisectStressTest(unittest.TestCase):
       ret = binary_search_state.Run(get_initial_items='./gen_init_list.py',
                                     switch_to_good='./switch_to_good.py',
                                     switch_to_bad='./switch_to_bad.py',
-                                    install_script='./install.py',
+                                    test_setup_script='./test_setup.py',
                                     test_script='./is_good.py',
                                     prune=True,
                                     file_args=True)
@@ -399,8 +399,8 @@ def Main(argv):
   for _ in range(0, num_tests):
     suite.addTest(BisectingUtilsTest())
   suite.addTest(BisectingUtilsTest('test_arg_parse'))
-  suite.addTest(BisectingUtilsTest('test_install_script'))
-  suite.addTest(BisectingUtilsTest('test_bad_install_script'))
+  suite.addTest(BisectingUtilsTest('test_test_setup_script'))
+  suite.addTest(BisectingUtilsTest('test_bad_test_setup_script'))
   suite.addTest(BisectingUtilsTest('test_bad_save_state'))
   suite.addTest(BisectingUtilsTest('test_save_state'))
   suite.addTest(BisectingUtilsTest('test_load_state'))

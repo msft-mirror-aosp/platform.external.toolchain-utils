@@ -62,13 +62,13 @@ class BinarySearchState(object):
   """The binary search state class."""
 
   def __init__(self, get_initial_items, switch_to_good, switch_to_bad,
-               install_script, test_script, incremental, prune, iterations,
+               test_setup_script, test_script, incremental, prune, iterations,
                prune_iterations, verify, file_args, verbose):
     """BinarySearchState constructor, see Run for full args documentation."""
     self.get_initial_items = get_initial_items
     self.switch_to_good = switch_to_good
     self.switch_to_bad = switch_to_bad
-    self.install_script = install_script
+    self.test_setup_script = test_setup_script
     self.test_script = test_script
     self.incremental = incremental
     self.prune = prune
@@ -168,12 +168,12 @@ class BinarySearchState(object):
     ret, _, _ = self.ce.RunCommandWExceptionCleanup(command)
     return ret
 
-  def InstallScript(self):
-    """Run install script and return exit code from script."""
-    if not self.install_script:
+  def TestSetupScript(self):
+    """Run test setup script and return exit code from script."""
+    if not self.test_setup_script:
       return 0
 
-    command = self.install_script
+    command = self.test_setup_script
     ret, _, _ = self.ce.RunCommandWExceptionCleanup(command)
     return ret
 
@@ -194,8 +194,8 @@ class BinarySearchState(object):
     with SetFile(GOOD_SET_VAR, self.all_items), SetFile(BAD_SET_VAR, []):
       self.l.LogOutput('Resetting all items to good to verify.')
       self.SwitchToGood(self.all_items)
-      status = self.InstallScript()
-      assert status == 0, 'When reset_to_good, install should succeed.'
+      status = self.TestSetupScript()
+      assert status == 0, 'When reset_to_good, test setup should succeed.'
       status = self.TestScript()
       assert status == 0, 'When reset_to_good, status should be 0.'
 
@@ -203,8 +203,8 @@ class BinarySearchState(object):
     with SetFile(GOOD_SET_VAR, []), SetFile(BAD_SET_VAR, self.all_items):
       self.l.LogOutput('Resetting all items to bad to verify.')
       self.SwitchToBad(self.all_items)
-      status = self.InstallScript()
-      assert status == 0, 'When reset_to_bad, install should succeed.'
+      status = self.TestSetupScript()
+      assert status == 0, 'When reset_to_bad, test setup should succeed.'
       status = self.TestScript()
       assert status == 1, 'When reset_to_bad, status should be 1.'
 
@@ -282,11 +282,11 @@ class BinarySearchState(object):
         # TODO: bad_items should come first.
         self.SwitchToGood(good_items)
         self.SwitchToBad(bad_items)
-        status = self.InstallScript()
+        status = self.TestSetupScript()
         if status == 0:
           status = self.TestScript()
         else:
-          # Install script failed, treat as skipped item
+          # Test setup script failed, treat as skipped item
           status = 125
         terminated = self.binary_search.SetStatus(status)
 
@@ -449,7 +449,7 @@ class MockBinarySearchState(BinarySearchState):
         'get_initial_items': 'echo "1"',
         'switch_to_good': None,
         'switch_to_bad': None,
-        'install_script': None,
+        'test_setup_script': None,
         'test_script': None,
         'incremental': True,
         'prune': False,
@@ -478,7 +478,7 @@ def _CanonicalizeScript(script_name):
 
 
 def Run(get_initial_items, switch_to_good, switch_to_bad, test_script,
-        install_script=None, iterations=50, prune=False, noincremental=False,
+        test_setup_script=None, iterations=50, prune=False, noincremental=False,
         file_args=False, verify=True, prune_iterations=100, verbose=False,
         resume=False):
   """Run binary search tool. Equivalent to running through terminal.
@@ -491,8 +491,8 @@ def Run(get_initial_items, switch_to_good, switch_to_bad, test_script,
                    set
     test_script: Script that will determine if the current combination of good
                  and bad items make a "good" or "bad" result.
-    install_script: Script to do necessary setup (building, compilation, etc.)
-                    for test_script
+    test_setup_script: Script to do necessary setup (building, compilation,
+                       etc.) for test_script.
     iterations: How many binary search iterations to run before exiting.
     prune: If False the binary search tool will stop when the first bad item is
            found. Otherwise then binary search tool will continue searching
@@ -519,8 +519,8 @@ def Run(get_initial_items, switch_to_good, switch_to_bad, test_script,
   else:
     switch_to_good = _CanonicalizeScript(switch_to_good)
     switch_to_bad = _CanonicalizeScript(switch_to_bad)
-    if install_script:
-      install_script = _CanonicalizeScript(install_script)
+    if test_setup_script:
+      test_setup_script = _CanonicalizeScript(test_setup_script)
     test_script = _CanonicalizeScript(test_script)
     get_initial_items = _CanonicalizeScript(get_initial_items)
     incremental = not noincremental
@@ -528,7 +528,7 @@ def Run(get_initial_items, switch_to_good, switch_to_bad, test_script,
     binary_search_perforce.verbose = verbose
 
     bss = BinarySearchState(get_initial_items, switch_to_good, switch_to_bad,
-                            install_script, test_script, incremental, prune,
+                            test_setup_script, test_script, incremental, prune,
                             iterations, prune_iterations, verify, file_args,
                             verbose)
     bss.DoVerify()

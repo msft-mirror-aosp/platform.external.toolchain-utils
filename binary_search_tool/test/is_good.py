@@ -10,7 +10,7 @@ import common
 
 
 def Main():
-  if not os.path.exists('./installed'):
+  if not os.path.exists('./is_setup'):
     return 1
   working_set = common.ReadWorkingSet()
   for w in working_set:

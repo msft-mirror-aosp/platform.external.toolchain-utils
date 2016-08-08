@@ -38,7 +38,7 @@ Bisection Methods:
     --get_initial_items='cros_pkg/get_initial_items.sh'
     --switch_to_good='cros_pkg/switch_to_good.sh'
     --switch_to_bad='cros_pkg/switch_to_bad.sh'
-    --install_script='cros_pkg/install.sh'
+    --test_setup_script='cros_pkg/test_setup.sh'
     --test_script='cros_pkg/interactive_test.sh'
     --incremental
     --prune
@@ -95,7 +95,7 @@ Bisection Methods:
     --get_initial_items='sysroot_wrapper/get_initial_items.sh'
     --switch_to_good='sysroot_wrapper/switch_to_good.sh'
     --switch_to_bad='sysroot_wrapper/switch_to_bad.sh'
-    --install_script='sysroot_wrapper/install.sh'
+    --test_setup_script='sysroot_wrapper/test_setup.sh'
     --test_script='sysroot_wrapper/interactive_test.sh'
     --noincremental
     --prune
@@ -166,7 +166,7 @@ Bisection Methods:
     --get_initial_items='android/get_initial_items.sh'
     --switch_to_good='android/switch_to_good.sh'
     --switch_to_bad='android/switch_to_bad.sh'
-    --install_script='android/install.sh'
+    --test_setup_script='android/test_setup.sh'
     --test_script='android/interactive_test.sh'
     --incremental
     --prune
@@ -205,7 +205,7 @@ Overriding:
              is used to test the bisecting tool itself -- see comments in
              hash_test.sh for more details):
   ./bisect.py package daisy 172.17.211.182 \
-    --test_script=common/hash_test.sh --install_script=""
+    --test_script=common/hash_test.sh --test_setup_script=""
 
   Example 3 (enable verbose mode, disable pruning, and disable verification):
   ./bisect.py package daisy 172.17.211.182 \

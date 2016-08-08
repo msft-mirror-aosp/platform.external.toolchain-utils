@@ -157,8 +157,8 @@ def _BuildArgsDict(args):
                          'If your switch script requires user input '
                          'the --verbose option must be used'))
   args.AddArgument('-I',
-                   '--install_script',
-                   dest='install_script',
+                   '--test_setup_script',
+                   dest='test_setup_script',
                    help=('Optional script to perform building, flashing, '
                          'and other setup before the test script runs.'))
   args.AddArgument('-t',
