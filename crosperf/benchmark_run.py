@@ -172,9 +172,7 @@ class BenchmarkRun(threading.Thread):
                                (self.name, machine.name,
                                 datetime.datetime.now()))
         break
-      else:
-        sleep_duration = 10
-        time.sleep(sleep_duration)
+      time.sleep(10)
     return machine
 
   def GetExtraAutotestArgs(self):
@@ -207,9 +205,9 @@ class BenchmarkRun(threading.Thread):
     else:
       self.machine_manager.ImageMachine(machine, self.label)
     self.timeline.Record(STATUS_RUNNING)
-    [retval, out, err] = self.suite_runner.Run(machine.name, self.label,
-                                               self.benchmark, self.test_args,
-                                               self.profiler_args)
+    retval, out, err = self.suite_runner.Run(machine.name, self.label,
+                                             self.benchmark, self.test_args,
+                                             self.profiler_args)
     self.run_completed = True
     return Result.CreateFromRun(self._logger, self.log_level, self.label,
                                 self.machine, out, err, retval,

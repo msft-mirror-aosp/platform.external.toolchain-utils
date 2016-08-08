@@ -1,5 +1,6 @@
-
-# Copyright 2015 Google Inc. All Rights Reserved.
+# Copyright 2015 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 """Module to optimize the scheduling of benchmark_run tasks."""
 
 
@@ -241,7 +242,7 @@ class Schedv2(object):
     self._read_br_cache()
 
     # Mapping from label to a list of benchmark_runs.
-    self._label_brl_map = dict([(l, []) for l in self._labels])
+    self._label_brl_map = dict((l, []) for l in self._labels)
     for br in self._experiment.benchmark_runs:
       assert br.label in self._label_brl_map
       # Only put no-cache-hit br into the map.
@@ -262,7 +263,8 @@ class Schedv2(object):
   def run_sched(self):
     """Start all dut worker threads and return immediately."""
 
-    _ = [w.start() for w in self._active_workers]
+    for w in self._active_workers:
+      w.start()
 
   def _read_br_cache(self):
     """Use multi-threading to read cache for all benchmarkruns.
@@ -297,7 +299,7 @@ class Schedv2(object):
         (n_threads - 1) * benchmarkruns_per_thread:])
 
     # Assert: aggregation of benchmarkrun_segments equals to benchmark_runs.
-    assert sum([len(x) for x in benchmarkrun_segments]) == n_benchmarkruns
+    assert sum(len(x) for x in benchmarkrun_segments) == n_benchmarkruns
 
     # Create and start all readers.
     cache_readers = [

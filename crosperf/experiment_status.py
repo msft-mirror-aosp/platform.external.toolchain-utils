@@ -1,8 +1,11 @@
-# Copyright 2011 Google Inc. All Rights Reserved.
+# Copyright 2011 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 """The class to show the banner."""
 
 from __future__ import print_function
 
+import collections
 import datetime
 import time
 
@@ -83,20 +86,17 @@ class ExperimentStatus(object):
 
   def GetStatusString(self):
     """Get the status string of all the benchmark_runs."""
-    status_bins = {}
+    status_bins = collections.defaultdict(list)
     for benchmark_run in self.experiment.benchmark_runs:
-      if benchmark_run.timeline.GetLastEvent() not in status_bins:
-        status_bins[benchmark_run.timeline.GetLastEvent()] = []
       status_bins[benchmark_run.timeline.GetLastEvent()].append(benchmark_run)
 
     status_strings = []
-    for key, val in status_bins.items():
+    for key, val in status_bins.iteritems():
       if key == 'RUNNING':
-        status_strings.append('%s: %s' %
-                              (key, self._GetNamesAndIterations(val)))
+        get_description = self._GetNamesAndIterations
       else:
-        status_strings.append('%s: %s' %
-                              (key, self._GetCompactNamesAndIterations(val)))
+        get_description = self._GetCompactNamesAndIterations
+      status_strings.append('%s: %s' % (key, get_description(val)))
 
     thread_status = ''
     thread_status_format = 'Thread Status: \n{}\n'
@@ -124,26 +124,22 @@ class ExperimentStatus(object):
     return ' %s (%s)' % (len(strings), ', '.join(strings))
 
   def _GetCompactNamesAndIterations(self, benchmark_runs):
-    output = ''
-    labels = {}
+    grouped_benchmarks = collections.defaultdict(list)
     for benchmark_run in benchmark_runs:
-      if benchmark_run.label.name not in labels:
-        labels[benchmark_run.label.name] = []
+      grouped_benchmarks[benchmark_run.label.name].append(benchmark_run)
 
-    for label in labels:
+    output_segs = []
+    for label_name, label_runs in grouped_benchmarks.iteritems():
       strings = []
-      benchmark_iterations = {}
-      for benchmark_run in benchmark_runs:
-        if benchmark_run.label.name != label:
-          continue
+      benchmark_iterations = collections.defaultdict(list)
+      for benchmark_run in label_runs:
+        assert benchmark_run.label.name == label_name
         benchmark_name = benchmark_run.benchmark.name
-        if benchmark_name not in benchmark_iterations:
-          benchmark_iterations[benchmark_name] = []
         benchmark_iterations[benchmark_name].append(benchmark_run.iteration)
-      for key, val in benchmark_iterations.items():
+      for key, val in benchmark_iterations.iteritems():
         val.sort()
         iterations = ','.join(map(str, val))
         strings.append('{} [{}]'.format(key, iterations))
-      output += '  ' + label + ': ' + ', '.join(strings) + '\n'
+      output_segs.append('  ' + label_name + ': ' + ', '.join(strings) + '\n')
 
-    return ' %s \n%s' % (len(benchmark_runs), output)
+    return ' %s \n%s' % (len(benchmark_runs), ''.join(output_segs))

@@ -304,20 +304,19 @@ class Result(object):
     if not filename.endswith('.json'):
       raise IOError('Attempt to call json on non-json file: %s' % filename)
 
-    keyvals = dict()
-    if os.path.exists(filename):
-      raw_dict = dict()
-      with open(filename, 'r') as f:
-        raw_dict = json.load(f)
-        for k in raw_dict:
-          field_dict = raw_dict[k]
-          for item in field_dict:
-            keyname = k + "__" + item
-            value_dict = field_dict[item]
-            result = value_dict['value']
-            units = value_dict['units']
-            new_value = [ result, units ]
-            keyvals[keyname] = new_value
+    if not os.path.exists(filename):
+      return {}
+
+    keyvals = {}
+    with open(filename, 'r') as f:
+      raw_dict = json.load(f)
+      for k, field_dict in raw_dict.iteritems():
+        for item, value_dict in field_dict.iteritems():
+          keyname = k + "__" + item
+          result = value_dict['value']
+          units = value_dict['units']
+          new_value = [result, units]
+          keyvals[keyname] = new_value
     return keyvals
 
   def ProcessResults(self):
@@ -343,9 +342,9 @@ class Result(object):
       with open(keys_file, 'r') as f:
         lines = f.readlines()
         for l in lines:
-          if l.find('Google Chrome ') == 0:
+          if l.startswith('Google Chrome '):
             chrome_version = l
-            if chrome_version[-1] == '\n':
+            if chrome_version.endswith('\n'):
               chrome_version = chrome_version[:-1]
             break
     return chrome_version
@@ -515,7 +514,7 @@ class TelemetryResult(Result):
       fields = line.split(',')
       if len(fields) != len(labels):
         continue
-      for i in range(1, len(labels)):
+      for i in xrange(1, len(labels)):
         key = '%s %s' % (fields[0], labels[i])
         value = fields[i]
         self.keyvals[key] = value
@@ -624,8 +623,7 @@ class ResultsCache(object):
     if matching_dirs:
       # Cache file found.
       return matching_dirs[0]
-    else:
-      return None
+    return None
 
   def GetCacheDirForWrite(self, get_keylist=False):
     cache_path = self.FormCacheDir(self.GetCacheKeyList(False))[0]
@@ -690,7 +688,7 @@ class ResultsCache(object):
 
     temp_test_args = '%s %s %s' % (self.test_args, self.profiler_args,
                                    self.run_local)
-    test_args_checksum = hashlib.md5(''.join(temp_test_args)).hexdigest()
+    test_args_checksum = hashlib.md5(temp_test_args).hexdigest()
     return (image_path_checksum, self.test_name, str(self.iteration),
             test_args_checksum, checksum, machine_checksum, machine_id_checksum,
             str(self.CACHE_VERSION))
@@ -698,7 +696,7 @@ class ResultsCache(object):
   def ReadResult(self):
     if CacheConditions.FALSE in self.cache_conditions:
       cache_dir = self.GetCacheDirForWrite()
-      command = 'rm -rf {0}'.format(cache_dir)
+      command = 'rm -rf %s' % (cache_dir, )
       self.ce.RunCommand(command)
       return None
     cache_dir = self.GetCacheDirForRead()

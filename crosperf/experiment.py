@@ -119,7 +119,7 @@ class Experiment(object):
     benchmark_runs = []
     for label in self.labels:
       for benchmark in self.benchmarks:
-        for iteration in range(1, benchmark.iterations + 1):
+        for iteration in xrange(1, benchmark.iterations + 1):
 
           benchmark_run_name = '%s: %s (%s)' % (label.name, benchmark.name,
                                                 iteration)

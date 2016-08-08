@@ -140,7 +140,7 @@ class CrosMachine(object):
     self.checksum_string = ''
     exclude_lines_list = ['MHz', 'BogoMIPS', 'bogomips']
     for line in self.cpuinfo.splitlines():
-      if not any([e in line for e in exclude_lines_list]):
+      if not any(e in line for e in exclude_lines_list):
         self.checksum_string += line
     self.checksum_string += ' ' + str(self.phys_kbytes)
 
@@ -406,33 +406,28 @@ class MachineManager(object):
             m.released_time = time.time()
         if self.GetAvailableMachines(label):
           break
-        else:
-          sleep_time = max(1, min(self.acquire_timeout, check_interval_time))
-          time.sleep(sleep_time)
-          self.acquire_timeout -= sleep_time
+        sleep_time = max(1, min(self.acquire_timeout, check_interval_time))
+        time.sleep(sleep_time)
+        self.acquire_timeout -= sleep_time
 
       if self.acquire_timeout < 0:
-        machine_names = []
-        for machine in machines:
-          machine_names.append(machine.name)
         self.logger.LogFatal('Could not acquire any of the '
                              "following machines: '%s'" %
-                             ', '.join(machine_names))
+                             ', '.join(machine.name for machine in machines))
 
 ###      for m in self._machines:
 ###        if (m.locked and time.time() - m.released_time < 10 and
 ###            m.checksum == image_checksum):
 ###          return None
-      for m in [machine
-                for machine in self.GetAvailableMachines(label)
-                if not machine.locked]:
-        if image_checksum and (m.checksum == image_checksum):
+      unlocked_machines = [machine
+                           for machine in self.GetAvailableMachines(label)
+                           if not machine.locked]
+      for m in unlocked_machines:
+        if image_checksum and m.checksum == image_checksum:
           m.locked = True
           m.test_run = threading.current_thread()
           return m
-      for m in [machine
-                for machine in self.GetAvailableMachines(label)
-                if not machine.locked]:
+      for m in unlocked_machines:
         if not m.checksum:
           m.locked = True
           m.test_run = threading.current_thread()
@@ -443,9 +438,7 @@ class MachineManager(object):
       # the number of re-images.
       # TODO(asharif): If we centralize the thread-scheduler, we wont need this
       # code and can implement minimal reimaging code more cleanly.
-      for m in [machine
-                for machine in self.GetAvailableMachines(label)
-                if not machine.locked]:
+      for m in unlocked_machines:
         if time.time() - m.released_time > 15:
           # The release time gap is too large, so it is probably in the start
           # stage, we need to reset the released_time.
@@ -470,7 +463,7 @@ class MachineManager(object):
     with self._lock:
       for m in self._machines:
         if machine.name == m.name:
-          assert m.locked == True, 'Tried to double-release %s' % m.name
+          assert m.locked, 'Tried to double-release %s' % m.name
           m.released_time = time.time()
           m.locked = False
           m.status = 'Available'
@@ -487,9 +480,7 @@ class MachineManager(object):
 
   def __str__(self):
     with self._lock:
-      l = ['MachineManager Status:']
-      for m in self._machines:
-        l.append(str(m))
+      l = ['MachineManager Status:'] + [str(m) for m in self._machines]
       return '\n'.join(l)
 
   def AsString(self):
