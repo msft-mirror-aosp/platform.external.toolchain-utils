@@ -148,7 +148,7 @@ def get_dep_path(execargs):
     Absolute path of dependency file path from execution args (-o argument). If
     no dependency being outputted then return empty string.
   """
-  if '-MD' not in execargs:
+  if '-MD' not in execargs and '-MMD' not in execargs:
     return ''
 
   # If -MF given this is the path of the dependency file. Otherwise the

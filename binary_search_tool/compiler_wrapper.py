@@ -45,7 +45,7 @@ def Main(_):
 
   execargs = [WRAPPED] + sys.argv[1:]
 
-  if BISECT_STAGE not in bisect_driver.VALID_MODES:
+  if BISECT_STAGE not in bisect_driver.VALID_MODES or '-o' not in execargs:
     os.execv(WRAPPED, [WRAPPED] + sys.argv[1:])
 
   # Handle @file argument syntax with compiler
