@@ -370,7 +370,18 @@ class BinarySearchState(object):
       bss.ce = command_executer.GetCommandExecuter()
       bss.binary_search.logger = bss.l
       bss.start_time = time.time()
+
+      # Set resumed to be True so we can enter DoBinarySearch without the method
+      # resetting our current search_cycles to 0.
       bss.resumed = True
+
+      # Set currently_good_items and currently_bad_items to empty so that the
+      # first iteration after resuming will always be non-incremental. This is
+      # just in case the environment changes, the user makes manual changes, or
+      # a previous switch_script corrupted the environment.
+      bss.currently_good_items = set([])
+      bss.currently_bad_items = set([])
+
       binary_search_perforce.verbose = bss.verbose
       return bss
     except StandardError:

@@ -227,12 +227,16 @@ class BisectingUtilsTest(unittest.TestCase):
 
     bss = binary_search_state.MockBinarySearchState()
     bss.all_items = test_items
+    bss.currently_good_items = set([1, 2, 3])
+    bss.currently_bad_items = set([4, 5])
     bss.SaveState()
 
     bss = None
 
     bss2 = binary_search_state.MockBinarySearchState.LoadState()
     self.assertEquals(bss2.all_items, test_items)
+    self.assertEquals(bss2.currently_good_items, set([]))
+    self.assertEquals(bss2.currently_bad_items, set([]))
 
   def test_tmp_cleanup(self):
     bss = binary_search_state.MockBinarySearchState(
