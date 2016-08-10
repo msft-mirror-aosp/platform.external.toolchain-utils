@@ -310,10 +310,18 @@ class Result(object):
     keyvals = {}
     with open(filename, 'r') as f:
       raw_dict = json.load(f)
+      if 'charts' in raw_dict:
+        raw_dict = raw_dict['charts']
       for k, field_dict in raw_dict.iteritems():
-        for item, value_dict in field_dict.iteritems():
+        for item in field_dict:
           keyname = k + "__" + item
-          result = value_dict['value']
+          value_dict = field_dict[item]
+          if 'value' in value_dict:
+            result = value_dict['value']
+          elif 'values' in value_dict:
+            result = value_dict['values'][0]
+            if len(value_dict['values']) > 1:
+              raise RuntimeError('Too many values returned for %s.' % item)
           units = value_dict['units']
           new_value = [result, units]
           keyvals[keyname] = new_value
