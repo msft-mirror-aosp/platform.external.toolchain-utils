@@ -40,26 +40,30 @@ def Main(argv):
   """
 
   parser = argparse.ArgumentParser()
-  parser.add_argument('--board',
-                      dest='board',
-                      required=True,
-                      help='Chromeos board for packages/image.')
+  parser.add_argument(
+      '--board',
+      dest='board',
+      required=True,
+      help='Chromeos board for packages/image.')
 
-  parser.add_argument('--old_tree_missing',
-                      dest='tree_existed',
-                      action='store_false',
-                      help='Did /build/${BOARD} exist.',
-                      default=True)
+  parser.add_argument(
+      '--old_tree_missing',
+      dest='tree_existed',
+      action='store_false',
+      help='Did /build/${BOARD} exist.',
+      default=True)
 
-  parser.add_argument('--renamed_tree',
-                      dest='renamed_tree',
-                      action='store_true',
-                      help='Was /build/${BOARD} saved & renamed.',
-                      default=False)
+  parser.add_argument(
+      '--renamed_tree',
+      dest='renamed_tree',
+      action='store_true',
+      help='Was /build/${BOARD} saved & renamed.',
+      default=False)
 
-  parser.add_argument('--old_link',
-                      dest='old_link',
-                      help=('The original build tree soft link.'))
+  parser.add_argument(
+      '--old_link',
+      dest='old_link',
+      help=('The original build tree soft link.'))
 
   options = parser.parse_args(argv[1:])
 

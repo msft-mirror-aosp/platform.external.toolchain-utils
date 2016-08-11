@@ -28,25 +28,28 @@ def Main(argv):
     0 always.
   """
   parser = argparse.ArgumentParser()
-  parser.add_argument('-n',
-                      '--obj_num',
-                      dest='obj_num',
-                      default=common.DEFAULT_OBJECT_NUMBER,
-                      help=('Number of total objects.'))
-  parser.add_argument('-b',
-                      '--bad_obj_num',
-                      dest='bad_obj_num',
-                      default=common.DEFAULT_BAD_OBJECT_NUMBER,
-                      help=('Number of bad objects. Must be great than or '
-                            'equal to zero and less than total object '
-                            'number.'))
-  parser.add_argument('-o',
-                      '--obj_list',
-                      dest='obj_list',
-                      default='',
-                      help=('List of comma seperated objects to generate. '
-                            'A 0 means the object is good, a 1 means the '
-                            'object is bad.'))
+  parser.add_argument(
+      '-n',
+      '--obj_num',
+      dest='obj_num',
+      default=common.DEFAULT_OBJECT_NUMBER,
+      help=('Number of total objects.'))
+  parser.add_argument(
+      '-b',
+      '--bad_obj_num',
+      dest='bad_obj_num',
+      default=common.DEFAULT_BAD_OBJECT_NUMBER,
+      help=('Number of bad objects. Must be great than or '
+            'equal to zero and less than total object '
+            'number.'))
+  parser.add_argument(
+      '-o',
+      '--obj_list',
+      dest='obj_list',
+      default='',
+      help=('List of comma seperated objects to generate. '
+            'A 0 means the object is good, a 1 means the '
+            'object is bad.'))
   options = parser.parse_args(argv)
 
   obj_num = int(options.obj_num)
@@ -83,9 +86,8 @@ def Main(argv):
 
   obj_num = len(obj_list)
   bad_obj_num = obj_list.count('1')
-  print('Generated {0} object files, with {1} bad ones.'.format(
-      obj_num, bad_obj_num))
-
+  print('Generated {0} object files, with {1} bad ones.'.format(obj_num,
+                                                                bad_obj_num))
 
   return 0
 

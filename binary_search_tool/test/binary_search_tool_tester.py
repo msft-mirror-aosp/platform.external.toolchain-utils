@@ -127,10 +127,8 @@ class BisectingUtilsTest(unittest.TestCase):
     except OSError:
       pass
 
-    cleanup_list = ['./is_setup',
-                    binary_search_state.STATE_FILE,
-                    'noinc_prune_bad',
-                    'noinc_prune_good']
+    cleanup_list = ['./is_setup', binary_search_state.STATE_FILE,
+                    'noinc_prune_bad', 'noinc_prune_good']
     for f in cleanup_list:
       if os.path.exists(f):
         os.remove(f)
@@ -296,14 +294,13 @@ class BisectingUtilsTest(unittest.TestCase):
     self.assertEquals(bad_objs[found_obj], 1)
 
   def test_set_file(self):
-    binary_search_state.Run(
-        get_initial_items='./gen_init_list.py',
-        switch_to_good='./switch_to_good_set_file.py',
-        switch_to_bad='./switch_to_bad_set_file.py',
-        test_script='./is_good.py',
-        prune=True,
-        file_args=True,
-        verify=True)
+    binary_search_state.Run(get_initial_items='./gen_init_list.py',
+                            switch_to_good='./switch_to_good_set_file.py',
+                            switch_to_bad='./switch_to_bad_set_file.py',
+                            test_script='./is_good.py',
+                            prune=True,
+                            file_args=True,
+                            verify=True)
     self.check_output()
 
   def test_noincremental_prune(self):
@@ -372,7 +369,6 @@ class BisectStressTest(unittest.TestCase):
                                     file_args=True)
       self.assertEquals(ret, 0)
       self.check_output()
-
 
   def check_output(self):
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(

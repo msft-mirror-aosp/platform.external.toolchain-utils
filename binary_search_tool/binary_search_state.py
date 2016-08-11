@@ -29,6 +29,7 @@ STATE_FILE = '%s.state' % sys.argv[0]
 HIDDEN_STATE_FILE = os.path.join(
     os.path.dirname(STATE_FILE), '.%s' % os.path.basename(STATE_FILE))
 
+
 class Error(Exception):
   """The general binary search tool error class."""
   pass
@@ -97,20 +98,22 @@ class BinarySearchState(object):
   def SwitchToGood(self, item_list):
     """Switch given items to "good" set."""
     if self.incremental:
-      self.l.LogOutput('Incremental set. Wanted to switch %s to good' %
-                       str(item_list), print_to_console=self.verbose)
+      self.l.LogOutput(
+          'Incremental set. Wanted to switch %s to good' % str(item_list),
+          print_to_console=self.verbose)
       incremental_items = [
           item for item in item_list if item not in self.currently_good_items
       ]
       item_list = incremental_items
-      self.l.LogOutput('Incremental set. Actually switching %s to good' %
-                       str(item_list), print_to_console=self.verbose)
+      self.l.LogOutput(
+          'Incremental set. Actually switching %s to good' % str(item_list),
+          print_to_console=self.verbose)
 
     if not item_list:
       return
 
-    self.l.LogOutput('Switching %s to good' % str(item_list),
-                     print_to_console=self.verbose)
+    self.l.LogOutput(
+        'Switching %s to good' % str(item_list), print_to_console=self.verbose)
     self.RunSwitchScript(self.switch_to_good, item_list)
     self.currently_good_items = self.currently_good_items.union(set(item_list))
     self.currently_bad_items.difference_update(set(item_list))
@@ -118,20 +121,22 @@ class BinarySearchState(object):
   def SwitchToBad(self, item_list):
     """Switch given items to "bad" set."""
     if self.incremental:
-      self.l.LogOutput('Incremental set. Wanted to switch %s to bad' %
-                       str(item_list), print_to_console=self.verbose)
+      self.l.LogOutput(
+          'Incremental set. Wanted to switch %s to bad' % str(item_list),
+          print_to_console=self.verbose)
       incremental_items = [
           item for item in item_list if item not in self.currently_bad_items
       ]
       item_list = incremental_items
-      self.l.LogOutput('Incremental set. Actually switching %s to bad' %
-                       str(item_list), print_to_console=self.verbose)
+      self.l.LogOutput(
+          'Incremental set. Actually switching %s to bad' % str(item_list),
+          print_to_console=self.verbose)
 
     if not item_list:
       return
 
-    self.l.LogOutput('Switching %s to bad' % str(item_list),
-                     print_to_console=self.verbose)
+    self.l.LogOutput(
+        'Switching %s to bad' % str(item_list), print_to_console=self.verbose)
     self.RunSwitchScript(self.switch_to_bad, item_list)
     self.currently_bad_items = self.currently_bad_items.union(set(item_list))
     self.currently_good_items.difference_update(set(item_list))
@@ -213,8 +218,7 @@ class BinarySearchState(object):
 
     Perform full search until prune_iterations number of bad items are found.
     """
-    while (True and
-           len(self.all_items) > 1 and
+    while (True and len(self.all_items) > 1 and
            self.prune_cycles < self.prune_iterations):
       terminated = self.DoBinarySearch()
       self.prune_cycles += 1
@@ -231,12 +235,12 @@ class BinarySearchState(object):
 
       # If already seen item we have no new bad items to find, finish up
       if self.all_items[prune_index] in self.found_items:
-        self.l.LogOutput('Found item already found before: %s.' %
-                         self.all_items[prune_index],
-                         print_to_console=self.verbose)
+        self.l.LogOutput(
+            'Found item already found before: %s.' %
+            self.all_items[prune_index],
+            print_to_console=self.verbose)
         self.l.LogOutput('No more bad items remaining. Done searching.')
-        self.l.LogOutput('Bad items are: %s' %
-                         ' '.join(self.found_items))
+        self.l.LogOutput('Bad items are: %s' % ' '.join(self.found_items))
         break
 
       new_all_items = list(self.all_items)
@@ -252,9 +256,10 @@ class BinarySearchState(object):
         self.known_good.update(new_all_items[:prune_index])
         new_all_items = new_all_items[prune_index:]
 
-      self.l.LogOutput('Old list: %s. New list: %s' % (str(self.all_items),
-                                                       str(new_all_items)),
-                       print_to_console=self.verbose)
+      self.l.LogOutput(
+          'Old list: %s. New list: %s' % (str(self.all_items),
+                                          str(new_all_items)),
+          print_to_console=self.verbose)
 
       if not self.prune:
         self.l.LogOutput('Not continuning further, --prune is not set')
@@ -307,9 +312,8 @@ class BinarySearchState(object):
       command: path to executable that will enumerate items.
     """
     ce = command_executer.GetCommandExecuter()
-    _, out, _ = ce.RunCommandWExceptionCleanup(command,
-                                               return_output=True,
-                                               print_to_console=self.verbose)
+    _, out, _ = ce.RunCommandWExceptionCleanup(
+        command, return_output=True, print_to_console=self.verbose)
     all_items = out.split()
     self.PopulateItemsUsingList(all_items)
 
@@ -437,8 +441,7 @@ class BinarySearchState(object):
            '%s\n')
     out = out % (self.search_cycles + 1,
                  math.ceil(math.log(len(self.all_items), 2)),
-                 self.prune_cycles + 1,
-                 self.prune_iterations,
+                 self.prune_cycles + 1, self.prune_iterations,
                  ', '.join(self.found_items))
     self._OutputProgress(out)
 
@@ -488,9 +491,18 @@ def _CanonicalizeScript(script_name):
     return os.path.join('.', script_name)
 
 
-def Run(get_initial_items, switch_to_good, switch_to_bad, test_script,
-        test_setup_script=None, iterations=50, prune=False, noincremental=False,
-        file_args=False, verify=True, prune_iterations=100, verbose=False,
+def Run(get_initial_items,
+        switch_to_good,
+        switch_to_bad,
+        test_script,
+        test_setup_script=None,
+        iterations=50,
+        prune=False,
+        noincremental=False,
+        file_args=False,
+        verify=True,
+        prune_iterations=100,
+        verbose=False,
         resume=False):
   """Run binary search tool. Equivalent to running through terminal.
 

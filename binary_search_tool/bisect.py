@@ -250,7 +250,7 @@ class BisectAndroid(Bisector):
     self.options.dir = os.environ.get('BISECT_DIR', self.default_dir)
 
     num_jobs = "NUM_JOBS='%s'" % self.options.num_jobs
-    device_id = ""
+    device_id = ''
     if self.options.device_id:
       device_id = "ANDROID_SERIAL='%s'" % self.options.device_id
 
@@ -317,21 +317,23 @@ See below for full override argument reference:
 
 
 def Main(argv):
-  override_parser = argparse.ArgumentParser(add_help=False,
-                                            argument_default=argparse.SUPPRESS,
-                                            usage='bisect.py {mode} [options]')
+  override_parser = argparse.ArgumentParser(
+      add_help=False,
+      argument_default=argparse.SUPPRESS,
+      usage='bisect.py {mode} [options]')
   common.BuildArgParser(override_parser, override=True)
 
   epilog = _HELP_EPILOG + override_parser.format_help()
-  parser = argparse.ArgumentParser(epilog=epilog,
-                                   formatter_class=RawTextHelpFormatter)
-  subparsers = parser.add_subparsers(title='Bisect mode',
-                                     description=('Which bisection method to '
-                                                  'use. Each method has '
-                                                  'specific setup and '
-                                                  'arguments. Please consult '
-                                                  'the README for more '
-                                                  'information.'))
+  parser = argparse.ArgumentParser(
+      epilog=epilog, formatter_class=RawTextHelpFormatter)
+  subparsers = parser.add_subparsers(
+      title='Bisect mode',
+      description=('Which bisection method to '
+                   'use. Each method has '
+                   'specific setup and '
+                   'arguments. Please consult '
+                   'the README for more '
+                   'information.'))
 
   parser_package = subparsers.add_parser('package')
   parser_package.add_argument('board', help='Board to target')
@@ -342,34 +344,39 @@ def Main(argv):
   parser_object.add_argument('board', help='Board to target')
   parser_object.add_argument('remote', help='Remote machine to test on')
   parser_object.add_argument('package', help='Package to emerge and test')
-  parser_object.add_argument('--dir',
-                             help=('Bisection directory to use, sets '
-                                   '$BISECT_DIR if provided. Defaults to '
-                                   'current value of $BISECT_DIR (or '
-                                   '/tmp/sysroot_bisect if $BISECT_DIR is '
-                                   'empty).'))
+  parser_object.add_argument(
+      '--dir',
+      help=('Bisection directory to use, sets '
+            '$BISECT_DIR if provided. Defaults to '
+            'current value of $BISECT_DIR (or '
+            '/tmp/sysroot_bisect if $BISECT_DIR is '
+            'empty).'))
   parser_object.set_defaults(handler=BisectObject)
 
   parser_android = subparsers.add_parser('android')
   parser_android.add_argument('android_src', help='Path to android source tree')
-  parser_android.add_argument('--dir',
-                              help=('Bisection directory to use, sets '
-                                    '$BISECT_DIR if provided. Defaults to '
-                                    'current value of $BISECT_DIR (or '
-                                    '~/ANDROID_BISECT/ if $BISECT_DIR is '
-                                    'empty).'))
-  parser_android.add_argument('-j', '--num_jobs',
-                              type=int,
-                              default=1,
-                              help=('Number of jobs that make and various '
-                                    'scripts for bisector can spawn. Setting '
-                                    'this value too high can freeze up your '
-                                    'machine!'))
-  parser_android.add_argument('--device_id',
-                              default='',
-                              help=('Device id for device used for testing. '
-                                    'Use this if you have multiple Android '
-                                    'devices plugged into your machine.'))
+  parser_android.add_argument(
+      '--dir',
+      help=('Bisection directory to use, sets '
+            '$BISECT_DIR if provided. Defaults to '
+            'current value of $BISECT_DIR (or '
+            '~/ANDROID_BISECT/ if $BISECT_DIR is '
+            'empty).'))
+  parser_android.add_argument(
+      '-j',
+      '--num_jobs',
+      type=int,
+      default=1,
+      help=('Number of jobs that make and various '
+            'scripts for bisector can spawn. Setting '
+            'this value too high can freeze up your '
+            'machine!'))
+  parser_android.add_argument(
+      '--device_id',
+      default='',
+      help=('Device id for device used for testing. '
+            'Use this if you have multiple Android '
+            'devices plugged into your machine.'))
   parser_android.set_defaults(handler=BisectAndroid)
 
   options, remaining = parser.parse_known_args(argv)
