@@ -2,9 +2,8 @@
 
 source common/common.sh
 
-cat $1 > ${bisect_dir}/BAD_SET
-
-grep -v -x -F -f $1 ${bisect_dir}/GOOD_SET > ${bisect_dir}/GOOD_SET.tmp
-mv ${bisect_dir}/GOOD_SET.tmp ${bisect_dir}/GOOD_SET
+# Remove file, signaling to emerge that it needs to be rebuilt. The compiler
+# wrapper will insert the correct object file based on $BISECT_BAD_SET
+cat $1 | sudo xargs rm -f
 
 exit 0

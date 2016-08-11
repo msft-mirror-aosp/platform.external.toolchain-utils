@@ -185,7 +185,7 @@ class BisectObject(Bisector):
         'switch_to_bad': 'sysroot_wrapper/switch_to_bad.sh',
         'test_setup_script': 'sysroot_wrapper/test_setup.sh',
         'test_script': 'sysroot_wrapper/interactive_test.sh',
-        'noincremental': True,
+        'noincremental': False,
         'prune': True,
         'file_args': True
     }
