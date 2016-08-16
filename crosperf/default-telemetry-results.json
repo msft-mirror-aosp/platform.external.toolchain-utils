@@ -9,7 +9,8 @@
     "warm_times__page_load_time"
   ], 
   "smoothness.tough_webgl_cases": [
-    "percentage_smooth__percentage_smooth"
+    "percentage_smooth__percentage_smooth", 
+    "percentage_smooth__summary"
   ], 
   "page_cycler_v2.intl_es_fr_pt-BR": [
     "cold_times__page_load_time", 
@@ -51,7 +52,8 @@
     "cold_times__page_load_time"
   ], 
   "speedometer": [
-    "Total__Total"
+    "Total__Total", 
+    "Total__summary"
   ], 
   "octane": [
     "Total__Score"
@@ -77,7 +79,8 @@
     "Total__Total"
   ], 
   "dromaeo.domcoreattr": [
-    "dom_attr__dom_attr"
+    "dom_attr__dom_attr", 
+    "dom__summary"
   ], 
   "dromaeo.jslibattrprototype": [
     "jslib_attr_prototype__jslib_attr_prototype"
@@ -89,14 +92,15 @@
     "jslib_attr_jquery__jslib_attr_jquery"
   ], 
   "page_cycler_v2.typical_25": [
-    "warm_times-page_load_time__warm_times-page_load_time",
+    "warm_times-page_load_time__warm_times-page_load_time", 
     "cold_times-page_load_time__cold_times-page_load_time"
   ], 
   "dromaeo.domcoretraverse": [
     "dom_traverse__dom_traverse"
   ], 
   "dromaeo.domcoremodify": [
-    "dom_modify__dom_modify"
+    "dom_modify__dom_modify", 
+    "dom__summary"
   ], 
   "page_cycler_v2.intl_ar_fa_he": [
     "warm_times__page_load_time", 
@@ -107,7 +111,8 @@
     "cold_times__page_load_time"
   ], 
   "graphics_WebGLAquarium": [
-    "avg_fps_1000_fishes"
+    "avg_fps_1000_fishes",
+    "avg_fps_1000_fishes__summary"
   ], 
   "page_cycler_v2.intl_ko_th_vi": [
     "warm_times__page_load_time", 
@@ -130,7 +135,8 @@
     "cold_times__page_load_time"
   ], 
   "kraken": [
-    "Total__Total"
+    "Total__Total", 
+    "Total__summary"
   ], 
   "dromaeo.jslibmodifyjquery": [
     "jslib_modify_jquery__jslib_modify_jquery"

@@ -259,6 +259,8 @@ class Result(object):
       baseline_values: List of baseline values. Can be none if this is the
       baseline itself.
     """
+    if len(values) == 1 and type(values[0]) == list:
+      values = values[0]
     all_floats = True
     values = _StripNone(values)
     if not values:

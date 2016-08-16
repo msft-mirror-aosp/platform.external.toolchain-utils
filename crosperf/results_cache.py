@@ -319,9 +319,9 @@ class Result(object):
           if 'value' in value_dict:
             result = value_dict['value']
           elif 'values' in value_dict:
-            result = value_dict['values'][0]
-            if len(value_dict['values']) > 1:
-              raise RuntimeError('Too many values returned for %s.' % item)
+            if not value_dict['values']:
+              continue
+            result = value_dict['values']
           units = value_dict['units']
           new_value = [result, units]
           keyvals[keyname] = new_value
