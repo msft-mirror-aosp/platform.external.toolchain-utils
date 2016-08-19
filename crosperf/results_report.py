@@ -612,6 +612,10 @@ class JSONResultsReport(ResultsReport):
                   v = iter_results[f]
                   if type(v) == list:
                     v = v[0]
+                  # New telemetry results format: sometimes we get a list
+                  # of lists now.
+                  if type(v) == list:
+                    v = v[0]
                   item = (f, float(v))
                   value.append(item)
               json_results['overall_result'] = value
@@ -624,6 +628,8 @@ class JSONResultsReport(ResultsReport):
                   v = v[0]
                 if v != 'PASS':
                   if k.find('machine') == -1:
+                    if v is None:
+                      continue
                     if type(v) != list:
                       detail_results[k] = float(v)
                     else:

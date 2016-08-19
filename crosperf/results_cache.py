@@ -1,4 +1,3 @@
-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -104,6 +103,8 @@ class Result(object):
           with open(data_filename, 'r') as data_file:
             raw_dict = json.load(data_file)
 
+        if 'charts' in raw_dict:
+          raw_dict = raw_dict['charts']
         for k1 in raw_dict:
           field_dict = raw_dict[k1]
           for k2 in field_dict:
@@ -327,15 +328,16 @@ class Result(object):
           keyvals[keyname] = new_value
     return keyvals
 
-  def ProcessResults(self):
+  def ProcessResults(self, use_cache=False):
     # Note that this function doesn't know anything about whether there is a
     # cache hit or miss. It should process results agnostic of the cache hit
     # state.
     if self.results_file and self.results_file[0].find('results_chart.json'):
       self.keyvals = self.ProcessJsonResults()
     else:
-      print('\n ** WARNING **: Had to use deprecated output-method to '
-            'collect results.\n')
+      if not use_cache:
+        print('\n ** WARNING **: Had to use deprecated output-method to '
+              'collect results.\n')
       self.keyvals = self.GetKeyvals()
     self.keyvals['retval'] = self.retval
     # Generate report from all perf.data files.
@@ -379,7 +381,7 @@ class Result(object):
     self.perf_data_files = self.GetPerfDataFiles()
     self.perf_report_files = self.GetPerfReportFiles()
     self.chrome_version = self.GetChromeVersionFromCache(cache_dir)
-    self.ProcessResults()
+    self.ProcessResults(use_cache=True)
 
   def CleanUp(self, rm_chroot_tmp):
     if rm_chroot_tmp and self.results_dir:
