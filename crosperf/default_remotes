@@ -1,8 +1,8 @@
-x86-alex : chromeos2-row1-rack4-host7.cros chromeos2-row1-rack4-host8.cros chromeos2-row1-rack4-host9.cros
-lumpy    : chromeos2-row1-rack7-host1.cros chromeos2-row1-rack7-host2.cros chromeos2-row3-rack10-host8.cros
+x86-alex : chromeos2-row9-rack10-host1.cros chromeos2-row9-rack10-host3.cros chromeos2-row9-rack10-host5.cros
+lumpy    : chromeos2-row9-rack9-host9.cros chromeos2-row9-rack9-host11.cros chromeos2-row3-rack10-host8.cros
 stumpy   : chromeos2-row3-rack3-host1.cros chromeos2-row3-rack3-host2.cros chromeos2-row3-rack3-host3.cros
 parrot   : chromeos2-row3-rack2-host14.cros chromeos2-row3-rack2-host15.cros chromeos2-row3-rack2-host16.cros
-daisy    : chromeos2-row1-rack6-host4.cros chromeos2-row1-rack6-host5.cros chromeos2-row1-rack6-host3.cros
-peach_pit : chromeos2-row1-rack5-host3.cros chromeos2-row1-rack5-host4.cros chromeos2-row1-rack5-host5.cros
-peppy    : chromeos2-row1-rack5-host6.cros chromeos2-row1-rack6-host1.cros chromeos2-row1-rack6-host2.cros
-squawks    : chromeos2-row1-rack6-host6.cros chromeos2-row1-rack5-host1.cros chromeos2-row1-rack5-host2.cros
+daisy    : chromeos2-row9-rack9-host5.cros chromeos2-row9-rack9-host7.cros chromeos2-row9-rack9-host3.cros
+peach_pit : chromeos2-row9-rack10-host13.cros chromeos2-row9-rack10-host15.cros chromeos2-row9-rack10-host17.cros
+peppy    : chromeos2-row9-rack10-host19.cros chromeos2-row9-rack10-host21.cros chromeos2-row9-rack9-host1.cros
+squawks    : chromeos2-row9-rack10-host11.cros chromeos2-row9-rack10-host7.cros chromeos2-row9-rack10-host9.cros
