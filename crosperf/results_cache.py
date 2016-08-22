@@ -113,7 +113,13 @@ class Result(object):
             if 'value' in result_dict:
               keyvals_dict[key] = result_dict['value']
             elif 'values' in result_dict:
-              keyvals_dict[key] = result_dict['values']
+              values = result_dict['values'];
+              if ('type' in result_dict and
+                  result_dict['type'] == 'list_of_scalar_values' and
+                  values and values != 'null'):
+                keyvals_dict[key] = sum(values)/float(len(values))
+              else:
+                keyvals_dict[key] = values
             units_dict[key] = result_dict['units']
       else:
         if os.path.exists(data_filename):
@@ -320,9 +326,15 @@ class Result(object):
           if 'value' in value_dict:
             result = value_dict['value']
           elif 'values' in value_dict:
-            if not value_dict['values']:
+            values = value_dict['values']
+            if not values:
               continue
-            result = value_dict['values']
+            if ('type' in value_dict and
+                value_dict['type'] == 'list_of_scalar_values' and
+                values != 'null'):
+              result = sum(values)/float(len(values))
+            else:
+              result = values
           units = value_dict['units']
           new_value = [result, units]
           keyvals[keyname] = new_value
