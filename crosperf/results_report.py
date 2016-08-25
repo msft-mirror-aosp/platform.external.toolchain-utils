@@ -5,9 +5,11 @@
 from __future__ import print_function
 
 import datetime
+import functools
 import itertools
 import json
 import os
+import re
 
 from cros_utils.tabulator import AmeanResult
 from cros_utils.tabulator import Cell
@@ -31,7 +33,8 @@ from update_telemetry_defaults import TelemetryDefaults
 
 from column_chart import ColumnChart
 from results_organizer import OrganizeResults
-from perf_table import PerfTable
+
+import results_report_templates as templates
 
 
 def ParseChromeosImage(chromeos_image):
@@ -78,573 +81,611 @@ def ParseChromeosImage(chromeos_image):
   return version, image
 
 
+def _AppendUntilLengthIs(gen, the_list, target_len):
+  """Appends to `list` until `list` is `target_len` elements long.
+
+  Uses `gen` to generate elements.
+  """
+  the_list.extend(gen() for _ in xrange(target_len - len(the_list)))
+  return the_list
+
+
+def _FilterPerfReport(event_threshold, report):
+  """Filters out entries with `< event_threshold` percent in a perf report."""
+  def filter_dict(m):
+    return {fn_name: pct for fn_name, pct in m.iteritems()
+            if pct >= event_threshold}
+  return {event: filter_dict(m) for event, m in report.iteritems()}
+
+
+class _PerfTable(object):
+  """Generates dicts from a perf table.
+
+  Dicts look like:
+  {'benchmark_name': {'perf_event_name': [LabelData]}}
+  where LabelData is a list of perf dicts, each perf dict coming from the same
+  label.
+  Each perf dict looks like {'function_name': 0.10, ...} (where 0.10 is the
+  percentage of time spent in function_name).
+  """
+
+  def __init__(self, benchmark_names_and_iterations, label_names,
+               read_perf_report, event_threshold=None):
+    """Constructor.
+
+    read_perf_report is a function that takes a label name, benchmark name, and
+    benchmark iteration, and returns a dictionary describing the perf output for
+    that given run.
+    """
+    self.event_threshold = event_threshold
+    self._label_indices = {name: i for i, name in enumerate(label_names)}
+    self.perf_data = {}
+    for label in label_names:
+      for bench_name, bench_iterations in benchmark_names_and_iterations:
+        for i in xrange(bench_iterations):
+          report = read_perf_report(label, bench_name, i)
+          self._ProcessPerfReport(report, label, bench_name, i)
+
+  def _ProcessPerfReport(self, perf_report, label, benchmark_name, iteration):
+    """Add the data from one run to the dict."""
+    perf_of_run = perf_report
+    if self.event_threshold is not None:
+      perf_of_run = _FilterPerfReport(self.event_threshold, perf_report)
+    if benchmark_name not in self.perf_data:
+      self.perf_data[benchmark_name] = {event: [] for event in perf_of_run}
+    ben_data = self.perf_data[benchmark_name]
+    label_index = self._label_indices[label]
+    for event in ben_data:
+      _AppendUntilLengthIs(list, ben_data[event], label_index + 1)
+      data_for_label = ben_data[event][label_index]
+      _AppendUntilLengthIs(dict, data_for_label, iteration + 1)
+      data_for_label[iteration] = perf_of_run[event] if perf_of_run else {}
+
+
+def _GetResultsTableHeader(ben_name, iterations):
+  benchmark_info = ('Benchmark:  {0};  Iterations: {1}'
+                    .format(ben_name, iterations))
+  cell = Cell()
+  cell.string_value = benchmark_info
+  cell.header = True
+  return [[cell]]
+
+
+def _ParseColumn(columns, iteration):
+  new_column = []
+  for column in columns:
+    if column.result.__class__.__name__ != 'RawResult':
+      new_column.append(column)
+    else:
+      new_column.extend(Column(LiteralResult(i), Format(), str(i + 1))
+                        for i in xrange(iteration))
+  return new_column
+
+
+def _GetTables(benchmark_results, columns, table_type):
+  iter_counts = benchmark_results.iter_counts
+  result = benchmark_results.run_keyvals
+  tables = []
+  for bench_name, runs in result.iteritems():
+    iterations = iter_counts[bench_name]
+    ben_table = _GetResultsTableHeader(bench_name, iterations)
+
+    all_runs_empty = all(not dict for label in runs for dict in label)
+    if all_runs_empty:
+      cell = Cell()
+      cell.string_value = ('This benchmark contains no result.'
+                           ' Is the benchmark name valid?')
+      cell_table = [[cell]]
+    else:
+      table = TableGenerator(runs, benchmark_results.label_names).GetTable()
+      parsed_columns = _ParseColumn(columns, iterations)
+      tf = TableFormatter(table, parsed_columns)
+      cell_table = tf.GetCellTable(table_type)
+    tables.append(ben_table)
+    tables.append(cell_table)
+  return tables
+
+
+def _GetPerfTables(benchmark_results, columns, table_type):
+  p_table = _PerfTable(benchmark_results.benchmark_names_and_iterations,
+                       benchmark_results.label_names,
+                       benchmark_results.read_perf_report)
+
+  tables = []
+  for benchmark in p_table.perf_data:
+    iterations = benchmark_results.iter_counts[benchmark]
+    ben_table = _GetResultsTableHeader(benchmark, iterations)
+    tables.append(ben_table)
+    benchmark_data = p_table.perf_data[benchmark]
+    table = []
+    for event in benchmark_data:
+      tg = TableGenerator(benchmark_data[event],
+                          benchmark_results.label_names,
+                          sort=TableGenerator.SORT_BY_VALUES_DESC)
+      table = tg.GetTable(ResultsReport.PERF_ROWS)
+      parsed_columns = _ParseColumn(columns, iterations)
+      tf = TableFormatter(table, parsed_columns)
+      tf.GenerateCellTable(table_type)
+      tf.AddColumnName()
+      tf.AddLabelName()
+      tf.AddHeader(str(event))
+      table = tf.GetCellTable(table_type, headers=False)
+      tables.append(table)
+  return tables
+
+
 class ResultsReport(object):
   """Class to handle the report format."""
   MAX_COLOR_CODE = 255
   PERF_ROWS = 5
 
-  def __init__(self, experiment):
-    self.experiment = experiment
-    self.benchmark_runs = experiment.benchmark_runs
-    self.labels = experiment.labels
-    self.benchmarks = experiment.benchmarks
-    self.baseline = self.labels[0]
+  def __init__(self, results):
+    self.benchmark_results = results
 
-  def _SortByLabel(self, runs):
-    labels = {}
-    for benchmark_run in runs:
-      if benchmark_run.label_name not in labels:
-        labels[benchmark_run.label_name] = []
-      labels[benchmark_run.label_name].append(benchmark_run)
-    return labels
+  def _GetTablesWithColumns(self, columns, table_type, perf):
+    get_tables = _GetPerfTables if perf else _GetTables
+    return get_tables(self.benchmark_results, columns, table_type)
 
   def GetFullTables(self, perf=False):
-    columns = [Column(RawResult(), Format()), Column(
-        MinResult(), Format()), Column(MaxResult(),
-                                       Format()), Column(AmeanResult(),
-                                                         Format()),
-               Column(StdResult(), Format(),
-                      'StdDev'), Column(CoeffVarResult(), CoeffVarFormat(),
-                                        'StdDev/Mean'),
-               Column(GmeanRatioResult(), RatioFormat(),
-                      'GmeanSpeedup'), Column(PValueResult(), PValueFormat(),
-                                              'p-value')]
-    if not perf:
-      return self._GetTables(self.labels, self.benchmark_runs, columns, 'full')
-    return self._GetPerfTables(self.labels, columns, 'full')
+    columns = [Column(RawResult(), Format()),
+               Column(MinResult(), Format()),
+               Column(MaxResult(), Format()),
+               Column(AmeanResult(), Format()),
+               Column(StdResult(), Format(), 'StdDev'),
+               Column(CoeffVarResult(), CoeffVarFormat(), 'StdDev/Mean'),
+               Column(GmeanRatioResult(), RatioFormat(), 'GmeanSpeedup'),
+               Column(PValueResult(), PValueFormat(), 'p-value')]
+    return self._GetTablesWithColumns(columns, 'full', perf)
 
   def GetSummaryTables(self, perf=False):
-    columns = [Column(AmeanResult(), Format()), Column(StdResult(), Format(),
-                                                       'StdDev'),
+    columns = [Column(AmeanResult(), Format()),
+               Column(StdResult(), Format(), 'StdDev'),
                Column(CoeffVarResult(), CoeffVarFormat(), 'StdDev/Mean'),
-               Column(GmeanRatioResult(), RatioFormat(),
-                      'GmeanSpeedup'), Column(PValueResult(), PValueFormat(),
-                                              'p-value')]
-    if not perf:
-      return self._GetTables(self.labels, self.benchmark_runs, columns,
-                             'summary')
-    return self._GetPerfTables(self.labels, columns, 'summary')
+               Column(GmeanRatioResult(), RatioFormat(), 'GmeanSpeedup'),
+               Column(PValueResult(), PValueFormat(), 'p-value')]
+    return self._GetTablesWithColumns(columns, 'summary', perf)
 
-  def _ParseColumn(self, columns, iteration):
-    new_column = []
-    for column in columns:
-      if column.result.__class__.__name__ != 'RawResult':
-        #TODO(asharif): tabulator should support full table natively.
-        new_column.append(column)
-      else:
-        for i in range(iteration):
-          cc = Column(LiteralResult(i), Format(), str(i + 1))
-          new_column.append(cc)
-    return new_column
 
-  def _AreAllRunsEmpty(self, runs):
-    for label in runs:
-      for dictionary in label:
-        if dictionary:
-          return False
-    return True
+def _PrintTable(tables, out_to):
+  # tables may be None.
+  if not tables:
+    return ''
 
-  def _GetTableHeader(self, benchmark):
-    benchmark_info = ('Benchmark:  {0};  Iterations: {1}'
-                      .format(benchmark.name, benchmark.iterations))
-    cell = Cell()
-    cell.string_value = benchmark_info
-    cell.header = True
-    return [[cell]]
+  if out_to == 'HTML':
+    out_type = TablePrinter.HTML
+  elif out_to == 'PLAIN':
+    out_type = TablePrinter.PLAIN
+  elif out_to == 'CONSOLE':
+    out_type = TablePrinter.CONSOLE
+  elif out_to == 'TSV':
+    out_type = TablePrinter.TSV
+  elif out_to == 'EMAIL':
+    out_type = TablePrinter.EMAIL
+  else:
+    raise ValueError('Invalid out_to value: %s' % (out_to,))
 
-  def _GetTables(self, labels, benchmark_runs, columns, table_type):
-    tables = []
-    result = OrganizeResults(benchmark_runs, labels, self.benchmarks)
-    label_name = [label.name for label in labels]
-    for item in result:
-      benchmark = None
-      runs = result[item]
-      for benchmark in self.benchmarks:
-        if benchmark.name == item:
-          break
-      ben_table = self._GetTableHeader(benchmark)
-
-      if self._AreAllRunsEmpty(runs):
-        cell = Cell()
-        cell.string_value = ('This benchmark contains no result.'
-                             ' Is the benchmark name valid?')
-        cell_table = [[cell]]
-      else:
-        tg = TableGenerator(runs, label_name)
-        table = tg.GetTable()
-        parsed_columns = self._ParseColumn(columns, benchmark.iterations)
-        tf = TableFormatter(table, parsed_columns)
-        cell_table = tf.GetCellTable(table_type)
-      tables.append(ben_table)
-      tables.append(cell_table)
-    return tables
-
-  def _GetPerfTables(self, labels, columns, table_type):
-    tables = []
-    label_names = [label.name for label in labels]
-    p_table = PerfTable(self.experiment, label_names)
-
-    if not p_table.perf_data:
-      return tables
-
-    for benchmark in p_table.perf_data:
-      ben = None
-      for ben in self.benchmarks:
-        if ben.name == benchmark:
-          break
-
-      ben_table = self._GetTableHeader(ben)
-      tables.append(ben_table)
-      benchmark_data = p_table.perf_data[benchmark]
-      row_info = p_table.row_info[benchmark]
-      table = []
-      for event in benchmark_data:
-        tg = TableGenerator(benchmark_data[event],
-                            label_names,
-                            sort=TableGenerator.SORT_BY_VALUES_DESC)
-        table = tg.GetTable(max(self.PERF_ROWS, row_info[event]))
-        parsed_columns = self._ParseColumn(columns, ben.iterations)
-        tf = TableFormatter(table, parsed_columns)
-        tf.GenerateCellTable(table_type)
-        tf.AddColumnName()
-        tf.AddLabelName()
-        tf.AddHeader(str(event))
-        table = tf.GetCellTable(table_type, headers=False)
-        tables.append(table)
-    return tables
-
-  def PrintTables(self, tables, out_to):
-    output = ''
-    if not tables:
-      return output
-    for table in tables:
-      if out_to == 'HTML':
-        tp = TablePrinter(table, TablePrinter.HTML)
-      elif out_to == 'PLAIN':
-        tp = TablePrinter(table, TablePrinter.PLAIN)
-      elif out_to == 'CONSOLE':
-        tp = TablePrinter(table, TablePrinter.CONSOLE)
-      elif out_to == 'TSV':
-        tp = TablePrinter(table, TablePrinter.TSV)
-      elif out_to == 'EMAIL':
-        tp = TablePrinter(table, TablePrinter.EMAIL)
-      else:
-        pass
-      output += tp.Print()
-    return output
+  printers = (TablePrinter(table, out_type) for table in tables)
+  return ''.join(printer.Print() for printer in printers)
 
 
 class TextResultsReport(ResultsReport):
   """Class to generate text result report."""
-  TEXT = """
-===========================================
-Results report for: '%s'
-===========================================
 
--------------------------------------------
-Summary
--------------------------------------------
-%s
+  H1_STR = '==========================================='
+  H2_STR = '-------------------------------------------'
 
-
-Number re-images: %s
-
--------------------------------------------
-Benchmark Run Status
--------------------------------------------
-%s
-
-
--------------------------------------------
-Perf Data
--------------------------------------------
-%s
-
-
-
-Experiment File
--------------------------------------------
-%s
-
-
-CPUInfo
--------------------------------------------
-%s
-===========================================
-"""
-
-  def __init__(self, experiment, email=False):
-    super(TextResultsReport, self).__init__(experiment)
+  def __init__(self, results, email=False, experiment=None):
+    super(TextResultsReport, self).__init__(results)
     self.email = email
+    self.experiment = experiment
+
+  @staticmethod
+  def _MakeTitle(title):
+    header_line = TextResultsReport.H1_STR
+    # '' at the end gives one newline.
+    return '\n'.join([header_line, title, header_line, ''])
+
+  @staticmethod
+  def _MakeSection(title, body):
+    header_line = TextResultsReport.H2_STR
+    # '\n' at the end gives us two newlines.
+    return '\n'.join([header_line, title, header_line, body, '\n'])
+
+  @staticmethod
+  def FromExperiment(experiment, email=False):
+    results = BenchmarkResults.FromExperiment(experiment)
+    return TextResultsReport(results, email, experiment)
 
   def GetStatusTable(self):
     """Generate the status table by the tabulator."""
     table = [['', '']]
-    columns = [Column(
-        LiteralResult(iteration=0),
-        Format(),
-        'Status'), Column(
-            LiteralResult(iteration=1),
-            Format(),
-            'Failing Reason')]
+    columns = [Column(LiteralResult(iteration=0), Format(), 'Status'),
+               Column(LiteralResult(iteration=1), Format(), 'Failing Reason')]
 
-    for benchmark_run in self.benchmark_runs:
+    for benchmark_run in self.experiment.benchmark_runs:
       status = [benchmark_run.name, [benchmark_run.timeline.GetLastEvent(),
                                      benchmark_run.failure_reason]]
       table.append(status)
-    tf = TableFormatter(table, columns)
-    cell_table = tf.GetCellTable('status')
+    cell_table = TableFormatter(table, columns).GetCellTable('status')
     return [cell_table]
 
   def GetReport(self):
     """Generate the report for email and console."""
-    status_table = self.GetStatusTable()
-    summary_table = self.GetSummaryTables()
-    perf_table = self.GetSummaryTables(perf=True)
-    if not perf_table:
-      perf_table = None
     output_type = 'EMAIL' if self.email else 'CONSOLE'
-    return self.TEXT % (
-        self.experiment.name, self.PrintTables(summary_table, output_type),
-        self.experiment.machine_manager.num_reimages,
-        self.PrintTables(status_table, output_type),
-        self.PrintTables(perf_table, output_type),
-        self.experiment.experiment_file,
-        self.experiment.machine_manager.GetAllCPUInfo(self.experiment.labels))
+    experiment = self.experiment
+
+    sections = []
+    if experiment is not None:
+      title_contents = "Results report for '%s'" % (experiment.name, )
+    else:
+      title_contents = 'Results report'
+    sections.append(self._MakeTitle(title_contents))
+
+    summary_table = _PrintTable(self.GetSummaryTables(perf=False), output_type)
+    sections.append(self._MakeSection('Summary', summary_table))
+
+    if experiment is not None:
+      table = _PrintTable(self.GetStatusTable(), output_type)
+      sections.append(self._MakeSection('Benchmark Run Status', table))
+
+    perf_table = _PrintTable(self.GetSummaryTables(perf=True), output_type)
+    if perf_table:
+      sections.append(self._MakeSection('Perf Data', perf_table))
+
+    if experiment is not None:
+      experiment_file = experiment.experiment_file
+      sections.append(self._MakeSection('Experiment File', experiment_file))
+
+      cpu_info = experiment.machine_manager.GetAllCPUInfo(experiment.labels)
+      sections.append(self._MakeSection('CPUInfo', cpu_info))
+
+    return '\n'.join(sections)
+
+
+def _GetHTMLCharts(label_names, test_results):
+  charts = []
+  for item, runs in test_results.iteritems():
+    # Fun fact: label_names is actually *entirely* useless as a param, since we
+    # never add headers. We still need to pass it anyway.
+    table = TableGenerator(runs, label_names).GetTable()
+    columns = [Column(AmeanResult(), Format()), Column(MinResult(), Format()),
+               Column(MaxResult(), Format())]
+    tf = TableFormatter(table, columns)
+    data_table = tf.GetCellTable('full', headers=False)
+
+    for cur_row_data in data_table:
+      test_key = cur_row_data[0].string_value
+      title = '{0}: {1}'.format(item, test_key.replace('/', ''))
+      chart = ColumnChart(title, 300, 200)
+      chart.AddColumn('Label', 'string')
+      chart.AddColumn('Average', 'number')
+      chart.AddColumn('Min', 'number')
+      chart.AddColumn('Max', 'number')
+      chart.AddSeries('Min', 'line', 'black')
+      chart.AddSeries('Max', 'line', 'black')
+      cur_index = 1
+      for label in label_names:
+        chart.AddRow([label,
+                      cur_row_data[cur_index].value,
+                      cur_row_data[cur_index + 1].value,
+                      cur_row_data[cur_index + 2].value])
+        if isinstance(cur_row_data[cur_index].value, str):
+          chart = None
+          break
+        cur_index += 3
+      if chart:
+        charts.append(chart)
+  return charts
 
 
 class HTMLResultsReport(ResultsReport):
   """Class to generate html result report."""
 
-  HTML = """
-<html>
-  <head>
-    <style type="text/css">
+  def __init__(self, benchmark_results, experiment=None):
+    super(HTMLResultsReport, self).__init__(benchmark_results)
+    self.experiment = experiment
 
-body {
-  font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
-  font-size: 12px;
-}
-
-pre {
-  margin: 10px;
-  color: #039;
-  font-size: 14px;
-}
-
-.chart {
-  display: inline;
-}
-
-.hidden {
-  visibility: hidden;
-}
-
-.results-section {
-  border: 1px solid #b9c9fe;
-  margin: 10px;
-}
-
-.results-section-title {
-  background-color: #b9c9fe;
-  color: #039;
-  padding: 7px;
-  font-size: 14px;
-  width: 200px;
-}
-
-.results-section-content {
-  margin: 10px;
-  padding: 10px;
-  overflow:auto;
-}
-
-#box-table-a {
-  font-size: 12px;
-  width: 480px;
-  text-align: left;
-  border-collapse: collapse;
-}
-
-#box-table-a th {
-  padding: 6px;
-  background: #b9c9fe;
-  border-right: 1px solid #fff;
-  border-bottom: 1px solid #fff;
-  color: #039;
-  text-align: center;
-}
-
-#box-table-a td {
-  padding: 4px;
-  background: #e8edff;
-  border-bottom: 1px solid #fff;
-  border-right: 1px solid #fff;
-  color: #669;
-  border-top: 1px solid transparent;
-}
-
-#box-table-a tr:hover td {
-  background: #d0dafd;
-  color: #339;
-}
-
-    </style>
-    <script type='text/javascript' src='https://www.google.com/jsapi'></script>
-    <script type='text/javascript'>
-      google.load('visualization', '1', {packages:['corechart']});
-      google.setOnLoadCallback(init);
-      function init() {
-        switchTab('summary', 'html');
-        %s
-        switchTab('full', 'html');
-        drawTable();
-      }
-      function drawTable() {
-        %s
-      }
-      function switchTab(table, tab) {
-        document.getElementById(table + '-html').style.display = 'none';
-        document.getElementById(table + '-text').style.display = 'none';
-        document.getElementById(table + '-tsv').style.display = 'none';
-        document.getElementById(table + '-' + tab).style.display = 'block';
-      }
-    </script>
-  </head>
-
-  <body>
-    <div class='results-section'>
-      <div class='results-section-title'>Summary Table</div>
-      <div class='results-section-content'>
-        <div id='summary-html'>%s</div>
-        <div id='summary-text'><pre>%s</pre></div>
-        <div id='summary-tsv'><pre>%s</pre></div>
-      </div>
-      %s
-    </div>
-    %s
-    <div class='results-section'>
-      <div class='results-section-title'>Charts</div>
-      <div class='results-section-content'>%s</div>
-    </div>
-    <div class='results-section'>
-      <div class='results-section-title'>Full Table</div>
-      <div class='results-section-content'>
-        <div id='full-html'>%s</div>
-        <div id='full-text'><pre>%s</pre></div>
-        <div id='full-tsv'><pre>%s</pre></div>
-      </div>
-      %s
-    </div>
-    <div class='results-section'>
-      <div class='results-section-title'>Experiment File</div>
-      <div class='results-section-content'>
-        <pre>%s</pre>
-    </div>
-    </div>
-  </body>
-</html>
-"""
-
-  PERF_HTML = """
-    <div class='results-section'>
-      <div class='results-section-title'>Perf Table</div>
-      <div class='results-section-content'>
-        <div id='perf-html'>%s</div>
-        <div id='perf-text'><pre>%s</pre></div>
-        <div id='perf-tsv'><pre>%s</pre></div>
-      </div>
-      %s
-    </div>
-"""
-
-  def __init__(self, experiment):
-    super(HTMLResultsReport, self).__init__(experiment)
-
-  def _GetTabMenuHTML(self, table):
-    return """
-<div class='tab-menu'>
-  <a href="javascript:switchTab('%s', 'html')">HTML</a>
-  <a href="javascript:switchTab('%s', 'text')">Text</a>
-  <a href="javascript:switchTab('%s', 'tsv')">TSV</a>
-</div>""" % (table, table, table)
+  @staticmethod
+  def FromExperiment(experiment):
+    return HTMLResultsReport(BenchmarkResults.FromExperiment(experiment),
+                             experiment=experiment)
 
   def GetReport(self):
-    chart_javascript = ''
-    charts = self._GetCharts(self.labels, self.benchmark_runs)
+    label_names = self.benchmark_results.label_names
+    test_results = self.benchmark_results.run_keyvals
+    charts = _GetHTMLCharts(label_names, test_results)
     chart_javascript = ''.join(chart.GetJavascript() for chart in charts)
     chart_divs = ''.join(chart.GetDiv() for chart in charts)
 
     summary_table = self.GetSummaryTables()
     full_table = self.GetFullTables()
     perf_table = self.GetSummaryTables(perf=True)
-    if perf_table:
-      perf_html = self.PERF_HTML % (self.PrintTables(perf_table, 'HTML'),
-                                    self.PrintTables(perf_table, 'PLAIN'),
-                                    self.PrintTables(perf_table, 'TSV'),
-                                    self._GetTabMenuHTML('perf'))
-      perf_init = "switchTab('perf', 'html');"
-    else:
-      perf_html = ''
-      perf_init = ''
-
-    return self.HTML % (
-        perf_init, chart_javascript, self.PrintTables(summary_table, 'HTML'),
-        self.PrintTables(summary_table, 'PLAIN'),
-        self.PrintTables(summary_table, 'TSV'), self._GetTabMenuHTML('summary'),
-        perf_html, chart_divs, self.PrintTables(full_table, 'HTML'),
-        self.PrintTables(full_table, 'PLAIN'),
-        self.PrintTables(full_table, 'TSV'), self._GetTabMenuHTML('full'),
-        self.experiment.experiment_file)
-
-  def _GetCharts(self, labels, benchmark_runs):
-    charts = []
-    result = OrganizeResults(benchmark_runs, labels)
-    label_names = [label.name for label in labels]
-    for item, runs in result.iteritems():
-      tg = TableGenerator(runs, label_names)
-      table = tg.GetTable()
-      columns = [Column(AmeanResult(), Format()), Column(MinResult(), Format()),
-                 Column(MaxResult(), Format())]
-      tf = TableFormatter(table, columns)
-      data_table = tf.GetCellTable('full')
-
-      for i in range(2, len(data_table)):
-        cur_row_data = data_table[i]
-        test_key = cur_row_data[0].string_value
-        title = '{0}: {1}'.format(item, test_key.replace('/', ''))
-        chart = ColumnChart(title, 300, 200)
-        chart.AddColumn('Label', 'string')
-        chart.AddColumn('Average', 'number')
-        chart.AddColumn('Min', 'number')
-        chart.AddColumn('Max', 'number')
-        chart.AddSeries('Min', 'line', 'black')
-        chart.AddSeries('Max', 'line', 'black')
-        cur_index = 1
-        for label in label_names:
-          chart.AddRow([label, cur_row_data[cur_index].value, cur_row_data[
-              cur_index + 1].value, cur_row_data[cur_index + 2].value])
-          if isinstance(cur_row_data[cur_index].value, str):
-            chart = None
-            break
-          cur_index += 3
-        if chart:
-          charts.append(chart)
-    return charts
+    experiment_file = ''
+    if self.experiment is not None:
+      experiment_file = self.experiment.experiment_file
+    # Use kwargs for sanity, and so that testing is a bit easier.
+    return templates.GenerateHTMLPage(perf_table=perf_table,
+                                      chart_js=chart_javascript,
+                                      summary_table=summary_table,
+                                      print_table=_PrintTable,
+                                      chart_divs=chart_divs,
+                                      full_table=full_table,
+                                      experiment_file=experiment_file)
 
 
-class JSONResultsReport(ResultsReport):
-  """Class that generates JSON reports."""
+def ParseStandardPerfReport(report_data):
+  """Parses the output of `perf report`.
+
+  It'll parse the following:
+  {{garbage}}
+  # Samples: 1234M of event 'foo'
+
+  1.23% command shared_object location function::name
+
+  1.22% command shared_object location function2::name
+
+  # Samples: 999K of event 'bar'
+
+  0.23% command shared_object location function3::name
+  {{etc.}}
+
+  Into:
+    {'foo': {'function::name': 1.23, 'function2::name': 1.22},
+     'bar': {'function3::name': 0.23, etc.}}
+  """
+  # This function fails silently on its if it's handed a string (as opposed to a
+  # list of lines). So, auto-split if we do happen to get a string.
+  if isinstance(report_data, basestring):
+    report_data = report_data.splitlines()
+
+  # Samples: N{K,M,G} of event 'event-name'
+  samples_regex = re.compile(r"#\s+Samples: \d+\S? of event '([^']+)'")
+
+  # We expect lines like:
+  # N.NN%  command  samples  shared_object  [location] symbol
+  #
+  # Note that we're looking at stripped lines, so there is no space at the
+  # start.
+  perf_regex = re.compile(r'^(\d+(?:.\d*)?)%' # N.NN%
+                          r'\s*\d+' # samples count (ignored)
+                          r'\s*\S+' # command (ignored)
+                          r'\s*\S+' # shared_object (ignored)
+                          r'\s*\[.\]' # location (ignored)
+                          r'\s*(\S.+)' # function
+                         )
+
+  stripped_lines = (l.strip() for l in report_data)
+  nonempty_lines = (l for l in stripped_lines if l)
+  # Ignore all lines before we see samples_regex
+  interesting_lines = itertools.dropwhile(lambda x: not samples_regex.match(x),
+                                          nonempty_lines)
+
+  first_sample_line = next(interesting_lines, None)
+  # Went through the entire file without finding a 'samples' header. Quit.
+  if first_sample_line is None:
+    return {}
+
+  sample_name = samples_regex.match(first_sample_line).group(1)
+  current_result = {}
+  results = {sample_name: current_result}
+  for line in interesting_lines:
+    samples_match = samples_regex.match(line)
+    if samples_match:
+      sample_name = samples_match.group(1)
+      current_result = {}
+      results[sample_name] = current_result
+      continue
+
+    match = perf_regex.match(line)
+    if not match:
+      continue
+    percentage_str, func_name = match.groups()
+    try:
+      percentage = float(percentage_str)
+    except ValueError:
+      # Couldn't parse it; try to be "resilient".
+      continue
+    current_result[func_name] = percentage
+  return results
+
+
+def _ReadExperimentPerfReport(results_directory, label_name, benchmark_name,
+                              benchmark_iteration):
+  """Reads a perf report for the given benchmark. Returns {} on failure.
+
+  The result should be a map of maps; it should look like:
+  {perf_event_name: {function_name: pct_time_spent}}, e.g.
+  {'cpu_cycles': {'_malloc': 10.0, '_free': 0.3, ...}}
+  """
+  raw_dir_name = label_name + benchmark_name + str(benchmark_iteration + 1)
+  dir_name = ''.join(c for c in raw_dir_name if c.isalnum())
+  file_name = os.path.join(results_directory, dir_name, 'perf.data.report.0')
+  try:
+    with open(file_name) as in_file:
+      return ParseStandardPerfReport(in_file)
+  except IOError:
+    # Yes, we swallow any IO-related errors.
+    return {}
+
+
+# Split out so that testing (specifically: mocking) is easier
+def _ExperimentToKeyvals(experiment, for_json_report):
+  """Converts an experiment to keyvals."""
+  return OrganizeResults(experiment.benchmark_runs, experiment.labels,
+                         json_report=for_json_report)
+
+
+class BenchmarkResults(object):
+  """The minimum set of fields that any ResultsReport will take."""
+  def __init__(self, label_names, benchmark_names_and_iterations, run_keyvals,
+               read_perf_report=None):
+    if read_perf_report is None:
+      def _NoPerfReport(*_args, **_kwargs):
+        return {}
+      read_perf_report = _NoPerfReport
+
+    self.label_names = label_names
+    self.benchmark_names_and_iterations = benchmark_names_and_iterations
+    self.iter_counts = dict(benchmark_names_and_iterations)
+    self.run_keyvals = run_keyvals
+    self.read_perf_report = read_perf_report
 
   @staticmethod
-  def _WriteResultsToFile(filename, results):
-    """Write the results as JSON to the given filename."""
-    with open(filename, 'w') as fp:
-      json.dump(results, fp, indent=2)
+  def FromExperiment(experiment, for_json_report=False):
+    label_names = [label.name for label in experiment.labels]
+    benchmark_names_and_iterations = [(benchmark.name, benchmark.iterations)
+                                      for benchmark in experiment.benchmarks]
+    run_keyvals = _ExperimentToKeyvals(experiment, for_json_report)
+    read_perf_report = functools.partial(_ReadExperimentPerfReport,
+                                         experiment.results_directory)
+    return BenchmarkResults(label_names, benchmark_names_and_iterations,
+                            run_keyvals, read_perf_report)
 
-  def __init__(self, experiment, date=None, time=None):
-    super(JSONResultsReport, self).__init__(experiment)
-    self.label_names = [label.name for label in experiment.labels]
-    self.organized_result = OrganizeResults(experiment.benchmark_runs,
-                                            experiment.labels,
-                                            experiment.benchmarks,
-                                            json_report=True)
-    self.date = date
-    self.time = time
-    self.defaults = TelemetryDefaults()
-    if not self.date:
+
+def _GetElemByName(name, from_list):
+  """Gets an element from the given list by its name field.
+
+  Raises an error if it doesn't find exactly one match.
+  """
+  elems = [e for e in from_list if e.name == name]
+  if len(elems) != 1:
+    raise ValueError('Expected 1 item named %s, found %d' % (name, len(elems)))
+  return elems[0]
+
+
+def _Unlist(l):
+  """If l is a list, extracts the first element of l. Otherwise, returns l."""
+  return l[0] if isinstance(l, list) else l
+
+class JSONResultsReport(ResultsReport):
+  """Class that generates JSON reports for experiments."""
+
+  def __init__(self, benchmark_results, date=None, time=None, experiment=None,
+               json_args=None):
+    """Construct a JSONResultsReport.
+
+    json_args is the dict of arguments we pass to json.dumps in GetReport().
+    """
+    super(JSONResultsReport, self).__init__(benchmark_results)
+
+    defaults = TelemetryDefaults()
+    defaults.ReadDefaultsFile()
+    summary_field_defaults = defaults.GetDefault()
+    if summary_field_defaults is None:
+      summary_field_defaults = {}
+    self.summary_field_defaults = summary_field_defaults
+
+    if json_args is None:
+      json_args = {}
+    self.json_args = json_args
+
+    self.experiment = experiment
+    if not date:
       timestamp = datetime.datetime.strftime(datetime.datetime.now(),
                                              '%Y-%m-%d %H:%M:%S')
       date, time = timestamp.split(' ')
-      self.date = date
-      self.time = time
+    self.date = date
+    self.time = time
 
-  def GetReport(self, results_dir, write_results=None):
-    if write_results is None:
-      write_results = JSONResultsReport._WriteResultsToFile
+  @staticmethod
+  def FromExperiment(experiment, date=None, time=None, json_args=None):
+    benchmark_results = BenchmarkResults.FromExperiment(experiment,
+                                                        for_json_report=True)
+    return JSONResultsReport(benchmark_results, date, time, experiment,
+                             json_args)
 
-    self.defaults.ReadDefaultsFile()
+  def GetReportObjectIgnoringExperiment(self):
+    """Gets the JSON report object specifically for the output data.
+
+    Ignores any experiment-specific fields (e.g. board, machine checksum, ...).
+    """
+    benchmark_results = self.benchmark_results
+    label_names = benchmark_results.label_names
+    summary_field_defaults = self.summary_field_defaults
     final_results = []
-    board = self.experiment.labels[0].board
-    compiler_string = 'gcc'
-    for test, test_results in self.organized_result.iteritems():
-      for label, label_results in itertools.izip(self.label_names,
-                                                 test_results):
+    for test, test_results in benchmark_results.run_keyvals.iteritems():
+      for label_name, label_results in zip(label_names, test_results):
         for iter_results in label_results:
+          passed = iter_results.get('retval') == 0
           json_results = {
               'date': self.date,
               'time': self.time,
-              'board': board,
-              'label': label
+              'label': label_name,
+              'test_name': test,
+              'pass': passed,
           }
-          common_checksum = ''
-          common_string = ''
-          for l in self.experiment.labels:
-            if l.name == label:
-              img_path = os.path.realpath(os.path.expanduser(l.chromeos_image))
-              ver, img = ParseChromeosImage(img_path)
-              json_results['chromeos_image'] = img
-              json_results['chromeos_version'] = ver
-              json_results['chrome_version'] = l.chrome_version
-              json_results['compiler'] = l.compiler
-              # If any of the labels used the LLVM compiler, we will add
-              # ".llvm" to the json report filename. (Otherwise we use .gcc).
-              if 'llvm' in l.compiler:
-                compiler_string = 'llvm'
-              common_checksum = \
-                self.experiment.machine_manager.machine_checksum[l.name]
-              common_string = \
-                self.experiment.machine_manager.machine_checksum_string[l.name]
-              break
-          else:
-            raise RuntimeError("Label doesn't exist in label_results?")
-          json_results['test_name'] = test
-
-          if not iter_results or iter_results['retval'] != 0:
-            json_results['pass'] = False
-          else:
-            json_results['pass'] = True
-            # Get overall results.
-            if test in self.defaults.GetDefault():
-              default_result_fields = self.defaults.GetDefault()[test]
-              value = []
-              for f in default_result_fields:
-                if f in iter_results:
-                  v = iter_results[f]
-                  if type(v) == list:
-                    v = v[0]
-                  # New telemetry results format: sometimes we get a list
-                  # of lists now.
-                  if type(v) == list:
-                    v = v[0]
-                  item = (f, float(v))
-                  value.append(item)
-              json_results['overall_result'] = value
-            # Get detailed results.
-            detail_results = {}
-            for k in iter_results:
-              if k != 'retval':
-                v = iter_results[k]
-                if type(v) == list:
-                  v = v[0]
-                if v != 'PASS':
-                  if k.find('machine') == -1:
-                    if v is None:
-                      continue
-                    if type(v) != list:
-                      detail_results[k] = float(v)
-                    else:
-                      detail_results[k] = [float(d) for d in v]
-                  else:
-                    json_results[k] = v
-            if 'machine_checksum' not in json_results:
-              json_results['machine_checksum'] = common_checksum
-            if 'machine_string' not in json_results:
-              json_results['machine_string'] = common_string
-            json_results['detailed_results'] = detail_results
           final_results.append(json_results)
 
-    filename = 'report_%s_%s_%s.%s.json' % (
-        board, self.date, self.time.replace(':', '.'), compiler_string)
-    fullname = os.path.join(results_dir, filename)
-    write_results(fullname, final_results)
+          if not passed:
+            continue
+
+          # Get overall results.
+          summary_fields = summary_field_defaults.get(test)
+          if summary_fields is not None:
+            value = []
+            json_results['overall_result'] = value
+            for f in summary_fields:
+              v = iter_results.get(f)
+              if v is None:
+                continue
+              # New telemetry results format: sometimes we get a list of lists
+              # now.
+              v = _Unlist(_Unlist(v))
+              value.append((f, float(v)))
+
+          # Get detailed results.
+          detail_results = {}
+          json_results['detailed_results'] = detail_results
+          for k, v in iter_results.iteritems():
+            if k == 'retval' or k == 'PASS' or k == ['PASS']:
+              continue
+
+            v = _Unlist(v)
+            if 'machine' in k:
+              json_results[k] = v
+            elif v is not None:
+              if isinstance(v, list):
+                detail_results[k] = [float(d) for d in v]
+              else:
+                detail_results[k] = float(v)
+    return final_results
+
+  def GetReportObject(self):
+    """Generate the JSON report, returning it as a python object."""
+    report_list = self.GetReportObjectIgnoringExperiment()
+    if self.experiment is not None:
+      self._AddExperimentSpecificFields(report_list)
+    return report_list
+
+  def _AddExperimentSpecificFields(self, report_list):
+    """Add experiment-specific data to the JSON report."""
+    board = self.experiment.labels[0].board
+    manager = self.experiment.machine_manager
+    for report in report_list:
+      label_name = report['label']
+      label = _GetElemByName(label_name, self.experiment.labels)
+
+      img_path = os.path.realpath(os.path.expanduser(label.chromeos_image))
+      ver, img = ParseChromeosImage(img_path)
+
+      report.update({
+          'board': board,
+          'chromeos_image': img,
+          'chromeos_version': ver,
+          'chrome_version': label.chrome_version,
+          'compiler': label.compiler
+      })
+
+      if not report['pass']:
+        continue
+      if 'machine_checksum' not in report:
+        report['machine_checksum'] = manager.machine_checksum[label_name]
+      if 'machine_string' not in report:
+        report['machine_string'] = manager.machine_checksum_string[label_name]
+
+  def GetReport(self):
+    """Dump the results of self.GetReportObject() to a string as JSON."""
+    # This exists for consistency with the other GetReport methods.
+    # Specifically, they all return strings, so it's a bit awkward if the JSON
+    # results reporter returns an object.
+    return json.dumps(self.GetReportObject(), **self.json_args)

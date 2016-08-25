@@ -1,6 +1,8 @@
 #!/usr/bin/python2
 #
-# Copyright 2014 Google Inc. All Rights Reserved
+# Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 """Tests for the experiment runner module."""
 
 from __future__ import print_function
@@ -17,11 +19,12 @@ import experiment_status
 import machine_manager
 import config
 import test_flag
-from experiment_file import ExperimentFile
+
 from experiment_factory import ExperimentFactory
-from results_report import TextResultsReport
-from results_report import HTMLResultsReport
+from experiment_file import ExperimentFile
 from results_cache import Result
+from results_report import HTMLResultsReport
+from results_report import TextResultsReport
 
 from cros_utils import command_executer
 from cros_utils.email_sender import EmailSender
@@ -380,8 +383,8 @@ class ExperimentRunnerTest(unittest.TestCase):
   @mock.patch.object(FileUtils, 'RmDir')
   @mock.patch.object(FileUtils, 'MkDirP')
   @mock.patch.object(FileUtils, 'WriteFile')
-  @mock.patch.object(HTMLResultsReport, 'GetReport')
-  @mock.patch.object(TextResultsReport, 'GetReport')
+  @mock.patch.object(HTMLResultsReport, 'FromExperiment')
+  @mock.patch.object(TextResultsReport, 'FromExperiment')
   @mock.patch.object(Result, 'CopyResultsTo')
   @mock.patch.object(Result, 'CleanUp')
   def test_store_results(self, mock_cleanup, mock_copy, _mock_text_report,

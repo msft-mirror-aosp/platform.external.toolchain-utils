@@ -1,5 +1,9 @@
-# Copyright 2011-2015 Google Inc. All Rights Reserved.
+# Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 """The experiment runner module."""
+from __future__ import print_function
+
 import getpass
 import os
 import shutil
@@ -21,6 +25,19 @@ from results_report import HTMLResultsReport
 from results_report import TextResultsReport
 from results_report import JSONResultsReport
 from schedv2 import Schedv2
+
+def _WriteJSONReportToFile(experiment, results_dir, json_report):
+  """Writes a JSON report to a file in results_dir."""
+  has_llvm = any('llvm' in l.compiler for l in experiment.labels)
+  compiler_string = 'llvm' if has_llvm else 'gcc'
+  board = experiment.labels[0].board
+  filename = 'report_%s_%s_%s.%s.json' % (
+      board, json_report.date, json_report.time.replace(':', '.'),
+      compiler_string)
+  fullname = os.path.join(results_dir, filename)
+  report_text = json_report.GetReport()
+  with open(fullname, 'w') as out_file:
+    out_file.write(report_text)
 
 
 class ExperimentRunner(object):
@@ -193,7 +210,7 @@ class ExperimentRunner(object):
         self._UnlockAllMachines(experiment)
 
   def _PrintTable(self, experiment):
-    self.l.LogOutput(TextResultsReport(experiment).GetReport())
+    self.l.LogOutput(TextResultsReport.FromExperiment(experiment).GetReport())
 
   def _Email(self, experiment):
     # Only email by default if a new run was completed.
@@ -211,11 +228,11 @@ class ExperimentRunner(object):
       label_names.append(label.name)
     subject = '%s: %s' % (experiment.name, ' vs. '.join(label_names))
 
-    text_report = TextResultsReport(experiment, True).GetReport()
+    text_report = TextResultsReport.FromExperiment(experiment, True).GetReport()
     text_report += ('\nResults are stored in %s.\n' %
                     experiment.results_directory)
     text_report = "<pre style='font-size: 13px'>%s</pre>" % text_report
-    html_report = HTMLResultsReport(experiment).GetReport()
+    html_report = HTMLResultsReport.FromExperiment(experiment).GetReport()
     attachment = EmailSender.Attachment('report.html', html_report)
     email_to = experiment.email_to or []
     email_to.append(getpass.getuser())
@@ -237,14 +254,17 @@ class ExperimentRunner(object):
 
     self.l.LogOutput('Storing results report in %s.' % results_directory)
     results_table_path = os.path.join(results_directory, 'results.html')
-    report = HTMLResultsReport(experiment).GetReport()
+    report = HTMLResultsReport.FromExperiment(experiment).GetReport()
     if self.json_report:
-      JSONResultsReport(experiment).GetReport(results_directory)
+      json_report = JSONResultsReport.FromExperiment(experiment,
+                                                     json_args={'indent': 2})
+      _WriteJSONReportToFile(experiment, results_directory, json_report)
+
     FileUtils().WriteFile(results_table_path, report)
 
     self.l.LogOutput('Storing email message body in %s.' % results_directory)
     msg_file_path = os.path.join(results_directory, 'msg_body.html')
-    text_report = TextResultsReport(experiment, True).GetReport()
+    text_report = TextResultsReport.FromExperiment(experiment, True).GetReport()
     text_report += ('\nResults are stored in %s.\n' %
                     experiment.results_directory)
     msg_body = "<pre style='font-size: 13px'>%s</pre>" % text_report
