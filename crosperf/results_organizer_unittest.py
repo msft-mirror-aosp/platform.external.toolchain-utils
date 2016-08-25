@@ -16,7 +16,7 @@ import unittest
 
 from benchmark_run import BenchmarkRun
 from results_cache import Result
-from results_organizer import ResultOrganizer
+from results_organizer import OrganizeResults
 
 import mock_instance
 
@@ -101,8 +101,8 @@ class ResultOrganizerTest(unittest.TestCase):
       b.result.keyvals = mock_instance.keyval[i]
       i += 1
 
-    ro = ResultOrganizer(benchmark_runs, labels, benchmarks)
-    self.assertEqual(ro.result, result)
+    organized = OrganizeResults(benchmark_runs, labels, benchmarks)
+    self.assertEqual(organized, result)
 
 
 if __name__ == '__main__':

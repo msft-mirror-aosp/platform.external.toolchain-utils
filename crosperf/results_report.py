@@ -30,7 +30,7 @@ from cros_utils.tabulator import TablePrinter
 from update_telemetry_defaults import TelemetryDefaults
 
 from column_chart import ColumnChart
-from results_organizer import ResultOrganizer
+from results_organizer import OrganizeResults
 from perf_table import PerfTable
 
 
@@ -154,9 +154,8 @@ class ResultsReport(object):
 
   def _GetTables(self, labels, benchmark_runs, columns, table_type):
     tables = []
-    ro = ResultOrganizer(benchmark_runs, labels, self.benchmarks)
-    result = ro.result
-    label_name = ro.labels
+    result = OrganizeResults(benchmark_runs, labels, self.benchmarks)
+    label_name = [label.name for label in labels]
     for item in result:
       benchmark = None
       runs = result[item]
@@ -500,10 +499,10 @@ pre {
 
   def _GetCharts(self, labels, benchmark_runs):
     charts = []
-    ro = ResultOrganizer(benchmark_runs, labels)
-    result = ro.result
+    result = OrganizeResults(benchmark_runs, labels)
+    label_names = [label.name for label in labels]
     for item, runs in result.iteritems():
-      tg = TableGenerator(runs, ro.labels)
+      tg = TableGenerator(runs, label_names)
       table = tg.GetTable()
       columns = [Column(AmeanResult(), Format()), Column(MinResult(), Format()),
                  Column(MaxResult(), Format())]
@@ -522,7 +521,7 @@ pre {
         chart.AddSeries('Min', 'line', 'black')
         chart.AddSeries('Max', 'line', 'black')
         cur_index = 1
-        for label in ro.labels:
+        for label in label_names:
           chart.AddRow([label, cur_row_data[cur_index].value, cur_row_data[
               cur_index + 1].value, cur_row_data[cur_index + 2].value])
           if isinstance(cur_row_data[cur_index].value, str):
@@ -545,10 +544,11 @@ class JSONResultsReport(ResultsReport):
 
   def __init__(self, experiment, date=None, time=None):
     super(JSONResultsReport, self).__init__(experiment)
-    self.ro = ResultOrganizer(experiment.benchmark_runs,
-                              experiment.labels,
-                              experiment.benchmarks,
-                              json_report=True)
+    self.label_names = [label.name for label in experiment.labels]
+    self.organized_result = OrganizeResults(experiment.benchmark_runs,
+                                            experiment.labels,
+                                            experiment.benchmarks,
+                                            json_report=True)
     self.date = date
     self.time = time
     self.defaults = TelemetryDefaults()
@@ -567,8 +567,9 @@ class JSONResultsReport(ResultsReport):
     final_results = []
     board = self.experiment.labels[0].board
     compiler_string = 'gcc'
-    for test, test_results in self.ro.result.iteritems():
-      for label, label_results in itertools.izip(self.ro.labels, test_results):
+    for test, test_results in self.organized_result.iteritems():
+      for label, label_results in itertools.izip(self.label_names,
+                                                 test_results):
         for iter_results in label_results:
           json_results = {
               'date': self.date,
