@@ -269,7 +269,7 @@ class ExperimentFactory(object):
         for line in f:
           key, v = line.split(':')
           if key.strip() == board:
-            remotes = v.strip().split(' ')
+            remotes = v.strip().split()
             if remotes:
               return remotes
             else:
