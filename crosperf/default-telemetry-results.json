@@ -76,7 +76,8 @@
     "warm_times__page_load_time"
   ], 
   "robohornet_pro": [
-    "Total__Total"
+    "Total__Total",
+    "Total__summary"
   ], 
   "dromaeo.domcoreattr": [
     "dom_attr__dom_attr", 
@@ -86,7 +87,8 @@
     "jslib_attr_prototype__jslib_attr_prototype"
   ], 
   "sunspider": [
-    "Total__Total"
+    "Total__Total",
+    "Total__summary"
   ], 
   "dromaeo.jslibattrjquery": [
     "jslib_attr_jquery__jslib_attr_jquery"
@@ -96,7 +98,8 @@
     "cold_times-page_load_time__cold_times-page_load_time"
   ], 
   "dromaeo.domcoretraverse": [
-    "dom_traverse__dom_traverse"
+    "dom_traverse__dom_traverse",
+    "dom__summary"
   ], 
   "dromaeo.domcoremodify": [
     "dom_modify__dom_modify", 
@@ -122,7 +125,8 @@
     "Score__Score"
   ], 
   "dromaeo.domcorequery": [
-    "dom_query__dom_query"
+    "dom_query__dom_query",
+    "dom__summary"
   ], 
   "dromaeo.jslibtraversejquery": [
     "jslib_traverse_jquery__jslib_traverse_jquery"
