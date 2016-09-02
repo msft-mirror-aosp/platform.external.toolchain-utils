@@ -14,8 +14,8 @@ from cros_utils import logger
 from cros_utils import buildbot_json
 
 SLEEP_TIME = 600  # 10 minutes; time between polling of buildbot.
-TIME_OUT = 18000  # Decide the build is dead or will never finish
-# after this time (5 hours).
+TIME_OUT = 28800  # Decide the build is dead or will never finish
+# after this time (8 hours).
 OK_STATUS = [  # List of result status values that are 'ok'.
     # This was obtained from:
     #   https://chromium.googlesource.com/chromium/tools/build/+/
