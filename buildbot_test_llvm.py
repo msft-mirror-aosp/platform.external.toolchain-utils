@@ -26,7 +26,6 @@ from cros_utils import buildbot_utils
 # CL that uses LLVM to build the peppy image.
 USE_LLVM_PATCH = '295217'
 
-
 CROSTC_ROOT = '/usr/local/google/crostc'
 ROLE_ACCOUNT = 'mobiletc-prebuild'
 TOOLCHAIN_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -39,14 +38,14 @@ TEST_BOARD = [
     'terra',
     'lulu',
     'peach_pit',
-    'falco',
-    'oak',
+    'peppy',
+    'link',
     'veyron_jaq',
     'lumpy',
     'sentry',
     'chell',
     'nyan_big',
-    ]
+]
 
 TEST = [
     'bvt-inline',
@@ -55,20 +54,16 @@ TEST = [
     'security',
     #'kernel_per-build_regression',
     #'kernel_per-build_benchmarks',
-    'kernal_daily_regression',
+    'kernel_daily_regression',
     'kernel_daily_benchmarks',
     #'stress',
-    ]
+]
+
 
 class ToolchainVerifier(object):
   """Class for the toolchain verifier."""
 
-  def __init__(self,
-               board,
-               chromeos_root,
-               weekday,
-               patches,
-               compiler):
+  def __init__(self, board, chromeos_root, weekday, patches, compiler):
     self._board = board
     self._chromeos_root = chromeos_root
     self._base_dir = os.getcwd()
@@ -102,9 +97,7 @@ class ToolchainVerifier(object):
                  '-i {image} --fast --autotest_dir '
                  '~/trunk/src/third_party/autotest/files '
                  '--web  cautotest.corp.google.com'.format(
-                     board=self._board,
-                     test=test,
-                     image=image))
+                     board=self._board, test=test, image=image))
       ret_val = self._ce.ChrootRunCommand(self._chromeos_root, command)
       timestamp = datetime.datetime.strftime(datetime.datetime.now(),
                                              '%Y-%m-%d_%H:%M:%S')
@@ -125,12 +118,13 @@ class ToolchainVerifier(object):
     date_str = datetime.date.today()
     description = 'master_%s_%s_%s' % (self._patches_string, self._build,
                                        date_str)
-    trybot_image = buildbot_utils.GetTrybotImage(self._chromeos_root,
-                                                 self._build,
-                                                 self._patches,
-                                                 description,
-                                                 other_flags=['--hwtest'],
-                                                 build_toolchain=True)
+    trybot_image = buildbot_utils.GetTrybotImage(
+        self._chromeos_root,
+        self._build,
+        self._patches,
+        description,
+        other_flags=['--hwtest'],
+        build_toolchain=True)
     if len(trybot_image) == 0:
       self._l.LogError('Unable to find trybot_image for %s!' % description)
       return 1
@@ -141,9 +135,10 @@ class ToolchainVerifier(object):
     self._TestImages(trybot_image)
     return 0
 
+
 def SendEmail(start_board, compiler):
   """Send out the test results for all the boards."""
-  results = ""
+  results = ''
   for i in range(len(TEST_BOARD)):
     board = TEST_BOARD[(start_board + i) % len(TEST_BOARD)]
     f = os.path.join(VALIDATION_RESULT_DIR, compiler, board)
@@ -156,7 +151,7 @@ def SendEmail(start_board, compiler):
       read_data = readin.read()
       results += read_data
 
-  output = os.path.join(VALIDATION_RESULT_DIR, compiler, "result")
+  output = os.path.join(VALIDATION_RESULT_DIR, compiler, 'result')
   with open(output, 'w') as out:
     out.write(results)
 
@@ -174,26 +169,28 @@ def Main(argv):
   # Common initializations
   command_executer.InitCommandExecuter()
   parser = argparse.ArgumentParser()
-  parser.add_argument('--chromeos_root',
-                      dest='chromeos_root',
-                      help='The chromeos root from which to run tests.')
-  parser.add_argument('--weekday',
-                      default='',
-                      dest='weekday',
-                      help='The day of the week for which to run tests.')
-  parser.add_argument('--board',
-                      default='',
-                      dest='board',
-                      help='The board to test.')
-  parser.add_argument('--patch',
-                      dest='patches',
-                      help='The patches to use for the testing, '
-                      "seprate the patch numbers with ',' "
-                      'for more than one patches.')
-  parser.add_argument('--compiler',
-                      dest='compiler',
-                      help='Which compiler (llvm or gcc) to use for '
-                      'testing.')
+  parser.add_argument(
+      '--chromeos_root',
+      dest='chromeos_root',
+      help='The chromeos root from which to run tests.')
+  parser.add_argument(
+      '--weekday',
+      default='',
+      dest='weekday',
+      help='The day of the week for which to run tests.')
+  parser.add_argument(
+      '--board', default='', dest='board', help='The board to test.')
+  parser.add_argument(
+      '--patch',
+      dest='patches',
+      help='The patches to use for the testing, '
+      "seprate the patch numbers with ',' "
+      'for more than one patches.')
+  parser.add_argument(
+      '--compiler',
+      dest='compiler',
+      help='Which compiler (llvm or gcc) to use for '
+      'testing.')
 
   options = parser.parse_args(argv[1:])
   if not options.chromeos_root:
@@ -219,16 +216,17 @@ def Main(argv):
   start_board = (days * TEST_PER_DAY) % len(TEST_BOARD)
   for i in range(TEST_PER_DAY):
     try:
-      board = TEST_BOARD[(start_board + i)  % len(TEST_BOARD)]
-      fv = ToolchainVerifier(board, options.chromeos_root,
-                             options.weekday, patches, options.compiler)
+      board = TEST_BOARD[(start_board + i) % len(TEST_BOARD)]
+      fv = ToolchainVerifier(board, options.chromeos_root, options.weekday,
+                             patches, options.compiler)
       fv.DoAll()
     except SystemExit:
       logfile = os.path.join(VALIDATION_RESULT_DIR, options.compiler, board)
       with open(logfile, 'w') as f:
-        f.write("Verifier got an exception, please check the log.\n")
+        f.write('Verifier got an exception, please check the log.\n')
 
   SendEmail(start_board, options.compiler)
+
 
 if __name__ == '__main__':
   retval = Main(sys.argv)
