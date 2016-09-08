@@ -179,18 +179,22 @@ class HTMLResultsReportTest(unittest.TestCase):
 
   _TestOutput = collections.namedtuple('TestOutput', ['summary_table',
                                                       'perf_html',
+                                                      'chart_js',
                                                       'charts',
                                                       'full_table',
                                                       'experiment_file'])
 
   @staticmethod
-  def _GetTestOutput(perf_table, _chart_js, summary_table, print_table,
+  def _GetTestOutput(perf_table, chart_js, summary_table, print_table,
                      chart_divs, full_table, experiment_file):
+    # N.B. Currently we don't check chart_js; it's just passed through because
+    # cros lint complains otherwise.
     summary_table = print_table(summary_table, 'HTML')
     perf_html = print_table(perf_table, 'HTML')
     full_table = print_table(full_table, 'HTML')
     return HTMLResultsReportTest._TestOutput(summary_table=summary_table,
                                              perf_html=perf_html,
+                                             chart_js=chart_js,
                                              charts=chart_divs,
                                              full_table=full_table,
                                              experiment_file=experiment_file)
@@ -369,6 +373,7 @@ class JSONResultsReportTest(unittest.TestCase):
 
 
 class PerfReportParserTest(unittest.TestCase):
+  """Tests for the perf report parser in results_report."""
   @staticmethod
   def _ReadRealPerfReport():
     my_dir = os.path.dirname(os.path.realpath(__file__))
@@ -393,10 +398,10 @@ class PerfReportParserTest(unittest.TestCase):
       self.assertEqual(v, report_cycles[k])
 
     known_instrunctions_percentages = {
-      '0x0000115bb6c35d7a': 1.65,
-      '0x0000115bb7ba9b54': 0.67,
-      '0x0000000000024f56': 0.00,
-      '0xffffffffa4a0ee03': 0.00,
+        '0x0000115bb6c35d7a': 1.65,
+        '0x0000115bb7ba9b54': 0.67,
+        '0x0000000000024f56': 0.00,
+        '0xffffffffa4a0ee03': 0.00,
     }
     report_instructions = report['instructions']
     self.assertEqual(len(report_instructions), 492)
