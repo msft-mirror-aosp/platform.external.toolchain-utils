@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 
 # Copyright 2015 Google Inc. All Rights Reserved.
 """This contains the unit tests for the new Crosperf task scheduler."""

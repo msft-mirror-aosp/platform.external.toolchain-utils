@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 """Unittest for command_executer.py."""
 
 from __future__ import print_function

@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 #
 # Copyright 2014 Google Inc.  All Rights Reserved
 """Test translation of xbuddy names."""
