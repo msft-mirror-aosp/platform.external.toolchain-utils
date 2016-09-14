@@ -49,7 +49,7 @@ auto_flash()
   sleep 1
   read -p $'Press enter to continue and retry the flashing' notused
 
-  "  ${ADB_DEVICE}fastboot flashall -w"
+  echo "  ${ADB_DEVICE}fastboot flashall -w"
   fastboot flashall -w
 }
 
@@ -58,8 +58,8 @@ flash()
   echo
   echo "FLASHING"
   echo "Rebooting device into fastboot mode."
-  echo "  ${ADB_DEVICE}adb reboot-bootloader"
-  adb reboot-bootloader
+  echo "  ${ADB_DEVICE}adb reboot bootloader"
+  adb reboot bootloader
 
   echo
   echo "Waiting for device to reach fastboot mode."

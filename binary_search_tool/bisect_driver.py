@@ -228,9 +228,6 @@ def cache_file(execargs, bisect_dir, cache, abs_file_path):
   try:
     if os.path.exists(abs_file_path):
       shutil.copy2(abs_file_path, bisect_path)
-      # Set cache object to be read-only so later compilations can't
-      # accidentally overwrite it.
-      os.chmod(bisect_path, 0444)
   except Exception:
     print('Could not cache file %s' % abs_file_path, file=sys.stderr)
     raise
