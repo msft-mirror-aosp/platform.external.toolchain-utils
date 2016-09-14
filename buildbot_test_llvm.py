@@ -93,21 +93,23 @@ class ToolchainVerifier(object):
   def _TestImages(self, image):
     to_file = ''
     for test in TEST:
-      command = ('test_that --board {board} :lab: suite:{test} '
-                 '-i {image} --fast --autotest_dir '
-                 '~/trunk/src/third_party/autotest/files '
-                 '--web  cautotest.corp.google.com'.format(
-                     board=self._board, test=test, image=image))
-      ret_val = self._ce.ChrootRunCommand(self._chromeos_root, command)
-      timestamp = datetime.datetime.strftime(datetime.datetime.now(),
-                                             '%Y-%m-%d_%H:%M:%S')
-      if ret_val:
-        out = 'FAILED'
-      else:
-        out = '      '
-      to_file += out + ' ' + test + ' ' + timestamp + '\n'
-      with open(self._reports, 'w') as f:
-        f.write(to_file)
+      # Do not run the kernel tests with the LLVM compiler.
+      if self._compiler == 'gcc' or not 'kernel' in test:
+        command = ('test_that --board {board} :lab: suite:{test} '
+                   '-i {image} --fast --autotest_dir '
+                   '~/trunk/src/third_party/autotest/files '
+                   '--web  cautotest.corp.google.com'.format(
+                       board=self._board, test=test, image=image))
+        ret_val = self._ce.ChrootRunCommand(self._chromeos_root, command)
+        timestamp = datetime.datetime.strftime(datetime.datetime.now(),
+                                               '%Y-%m-%d_%H:%M:%S')
+        if ret_val:
+          out = 'FAILED'
+        else:
+          out = '      '
+        to_file += out + ' ' + test + ' ' + timestamp + '\n'
+        with open(self._reports, 'w') as f:
+          f.write(to_file)
 
   def DoAll(self):
     """Main function inside ToolchainComparator class.
