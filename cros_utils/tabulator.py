@@ -67,7 +67,6 @@ import math
 import sys
 import numpy
 
-import colortrans
 from email_sender import EmailSender
 import misc
 
@@ -1002,8 +1001,7 @@ class TablePrinter(object):
 
   def _GetBGColorFix(self, color):
     if self._output_type == self.CONSOLE:
-      rgb = color.GetRGB()
-      prefix, _ = colortrans.rgb2short(rgb)
+      prefix = misc.rgb2short(color.r, color.g, color.b)
       # pylint: disable=anomalous-backslash-in-string
       prefix = '\033[48;5;%sm' % prefix
       suffix = '\033[0m'
@@ -1018,8 +1016,7 @@ class TablePrinter(object):
 
   def _GetColorFix(self, color):
     if self._output_type == self.CONSOLE:
-      rgb = color.GetRGB()
-      prefix, _ = colortrans.rgb2short(rgb)
+      prefix = misc.rgb2short(color.r, color.g, color.b)
       # pylint: disable=anomalous-backslash-in-string
       prefix = '\033[38;5;%sm' % prefix
       suffix = '\033[0m'

@@ -555,3 +555,15 @@ def BooleanPrompt(prompt='Do you want to continue?',
       # common prefix between the two...
     elif false_value.startswith(response):
       return False
+
+def rgb2short(r, g, b):
+  """  Converts RGB values to xterm-256 color. """
+
+  redcolor = [255, 124, 160, 196, 9 ]
+  greencolor = [255, 118, 82, 46, 10 ]
+
+  if g == 0:
+    return redcolor[r/50]
+  if r == 0:
+    return greencolor[g/50]
+  return 4
