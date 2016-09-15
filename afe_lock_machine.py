@@ -81,7 +81,7 @@ class AFELockManager(object):
                force_option,
                chromeos_root,
                local_server,
-               local=True,
+               use_local=True,
                log=None):
     """Initializes an AFELockManager object.
 
@@ -115,16 +115,21 @@ class AFELockManager(object):
     # been fixed.
     # pylint: disable=import-error
     from client import setup_modules
-    setup_modules.setup(base_path=autotest_path,
-                        root_module_name='autotest_lib')
+    setup_modules.setup(
+        base_path=autotest_path, root_module_name='autotest_lib')
 
     from dynamic_suite import frontend_wrappers
 
-    self.afe = frontend_wrappers.RetryingAFE(timeout_min=30,
-                                             delay_sec=10,
-                                             debug=False,
-                                             server='cautotest')
-    if not local:
+    self.afe = frontend_wrappers.RetryingAFE(
+        timeout_min=30, delay_sec=10, debug=False, server='cautotest')
+
+    self.local = use_local
+    self.machines = list(set(remotes)) or []
+    self.toolchain_lab_machines = self.GetAllToolchainLabMachines()
+    if self.machines and self.AllLabMachines():
+      self.local = False
+
+    if not self.local:
       self.local_afe = None
     else:
       dargs = {}
@@ -133,16 +138,20 @@ class AFELockManager(object):
       error_msg = ('Local autotest server machine %s not responding to ping.' %
                    dargs['server'])
       self.CheckMachine(dargs['server'], error_msg)
-      self.local_afe = frontend_wrappers.RetryingAFE(timeout_min=30,
-                                                     delay_sec=10,
-                                                     debug=False,
-                                                     **dargs)
-    self.local = local
-    self.machines = list(set(remotes)) or []
-    self.force = force_option
-    self.toolchain_lab_machines = self.GetAllToolchainLabMachines()
+      self.local_afe = frontend_wrappers.RetryingAFE(
+          timeout_min=30, delay_sec=10, debug=False, **dargs)
     if not self.machines:
       self.machines = self.toolchain_lab_machines + self.GetAllNonlabMachines()
+    self.force = force_option
+
+  def AllLabMachines(self):
+    """Check to see if all machines being used are HW Lab machines."""
+    all_lab = True
+    for m in self.machines:
+      if m not in self.toolchain_lab_machines:
+        all_lab = False
+        break
+    return all_lab
 
   def CheckMachine(self, machine, error_msg):
     """Verifies that machine is responding to ping.
@@ -417,8 +426,7 @@ class AFELockManager(object):
       if machine.find('.cros') == -1:
         cros_machine = cros_machine + '.cros'
 
-    self.machines = [m
-                     for m in self.machines
+    self.machines = [m for m in self.machines
                      if m != cros_machine and m != machine]
 
   def CheckMachineLocks(self, machine_states, cmd):
@@ -539,58 +547,67 @@ def Main(argv):
   """
   parser = argparse.ArgumentParser()
 
-  parser.add_argument('--list',
-                      dest='cmd',
-                      action='store_const',
-                      const='status',
-                      help='List current status of all known machines.')
-  parser.add_argument('--lock',
-                      dest='cmd',
-                      action='store_const',
-                      const='lock',
-                      help='Lock given machine(s).')
-  parser.add_argument('--unlock',
-                      dest='cmd',
-                      action='store_const',
-                      const='unlock',
-                      help='Unlock given machine(s).')
-  parser.add_argument('--status',
-                      dest='cmd',
-                      action='store_const',
-                      const='status',
-                      help='List current status of given machine(s).')
-  parser.add_argument('--add_machine',
-                      dest='cmd',
-                      action='store_const',
-                      const='add',
-                      help='Add machine to local machine server.')
-  parser.add_argument('--remove_machine',
-                      dest='cmd',
-                      action='store_const',
-                      const='remove',
-                      help='Remove machine from the local machine server.')
-  parser.add_argument('--nolocal',
-                      dest='local',
-                      action='store_false',
-                      default=True,
-                      help='Do not try to use local machine server.')
-  parser.add_argument('--remote',
-                      dest='remote',
-                      help='machines on which to operate')
-  parser.add_argument('--chromeos_root',
-                      dest='chromeos_root',
-                      required=True,
-                      help='ChromeOS root to use for autotest scripts.')
-  parser.add_argument('--local_server',
-                      dest='local_server',
-                      default=None,
-                      help='Alternate local autotest server to use.')
-  parser.add_argument('--force',
-                      dest='force',
-                      action='store_true',
-                      default=False,
-                      help='Force lock/unlock of machines, even if not'
-                      ' current lock owner.')
+  parser.add_argument(
+      '--list',
+      dest='cmd',
+      action='store_const',
+      const='status',
+      help='List current status of all known machines.')
+  parser.add_argument(
+      '--lock',
+      dest='cmd',
+      action='store_const',
+      const='lock',
+      help='Lock given machine(s).')
+  parser.add_argument(
+      '--unlock',
+      dest='cmd',
+      action='store_const',
+      const='unlock',
+      help='Unlock given machine(s).')
+  parser.add_argument(
+      '--status',
+      dest='cmd',
+      action='store_const',
+      const='status',
+      help='List current status of given machine(s).')
+  parser.add_argument(
+      '--add_machine',
+      dest='cmd',
+      action='store_const',
+      const='add',
+      help='Add machine to local machine server.')
+  parser.add_argument(
+      '--remove_machine',
+      dest='cmd',
+      action='store_const',
+      const='remove',
+      help='Remove machine from the local machine server.')
+  parser.add_argument(
+      '--nolocal',
+      dest='local',
+      action='store_false',
+      default=True,
+      help='Do not try to use local machine server.')
+  parser.add_argument(
+      '--remote', dest='remote', help='machines on which to operate')
+  parser.add_argument(
+      '--chromeos_root',
+      dest='chromeos_root',
+      required=True,
+      help='ChromeOS root to use for autotest scripts.')
+  parser.add_argument(
+      '--local_server',
+      dest='local_server',
+      default=None,
+      help='Alternate local autotest server to use.')
+  parser.add_argument(
+      '--force',
+      dest='force',
+      action='store_true',
+      default=False,
+      help='Force lock/unlock of machines, even if not'
+      ' current lock owner.')
 
   options = parser.parse_args(argv)
 
