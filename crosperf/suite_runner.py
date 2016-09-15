@@ -53,8 +53,7 @@ class SuiteRunner(object):
     self._logger = logger_to_use
     self.log_level = log_level
     self._ce = cmd_exec or command_executer.GetCommandExecuter(
-        self._logger,
-        log_level=self.log_level)
+        self._logger, log_level=self.log_level)
     self._ct = cmd_term or command_executer.CommandTerminator()
 
   def Run(self, machine, label, benchmark, test_args, profiler_args):
@@ -90,9 +89,7 @@ class SuiteRunner(object):
                        '  cat scaling_max_freq ; '
                        'fi')
     ret, freqs_str, _ = self._ce.CrosRunCommandWOutput(
-        get_avail_freqs,
-        machine=machine_name,
-        chromeos_root=chromeos_root)
+        get_avail_freqs, machine=machine_name, chromeos_root=chromeos_root)
     self._logger.LogFatalIf(ret, 'Could not get available frequencies '
                             'from machine: %s' % machine_name)
     freqs = freqs_str.split()
@@ -115,27 +112,29 @@ class SuiteRunner(object):
     highest_freq = self.GetHighestStaticFrequency(machine_name, chromeos_root)
     BASH_FOR = 'for f in {list}; do {body}; done'
     CPUFREQ_DIRS = '/sys/devices/system/cpu/cpu*/cpufreq/'
-    change_max_freq = BASH_FOR.format(list=CPUFREQ_DIRS + 'scaling_max_freq',
-                                      body='echo %s > $f' % highest_freq)
-    change_min_freq = BASH_FOR.format(list=CPUFREQ_DIRS + 'scaling_min_freq',
-                                      body='echo %s > $f' % highest_freq)
-    change_perf_gov = BASH_FOR.format(list=CPUFREQ_DIRS + 'scaling_governor',
-                                      body='echo performance > $f')
+    change_max_freq = BASH_FOR.format(
+        list=CPUFREQ_DIRS + 'scaling_max_freq',
+        body='echo %s > $f' % highest_freq)
+    change_min_freq = BASH_FOR.format(
+        list=CPUFREQ_DIRS + 'scaling_min_freq',
+        body='echo %s > $f' % highest_freq)
+    change_perf_gov = BASH_FOR.format(
+        list=CPUFREQ_DIRS + 'scaling_governor', body='echo performance > $f')
     if self.log_level == 'average':
       self._logger.LogOutput('Pinning governor execution frequencies for %s' %
                              machine_name)
-    ret = self._ce.CrosRunCommand(' && '.join((
-        'set -e ', change_max_freq, change_min_freq, change_perf_gov)),
-                                  machine=machine_name,
-                                  chromeos_root=chromeos_root)
+    ret = self._ce.CrosRunCommand(
+        ' && '.join(('set -e ', change_max_freq, change_min_freq,
+                     change_perf_gov)),
+        machine=machine_name,
+        chromeos_root=chromeos_root)
     self._logger.LogFatalIf(ret, 'Could not pin frequencies on machine: %s' %
                             machine_name)
 
   def RebootMachine(self, machine_name, chromeos_root):
     command = 'reboot && exit'
-    self._ce.CrosRunCommand(command,
-                            machine=machine_name,
-                            chromeos_root=chromeos_root)
+    self._ce.CrosRunCommand(
+        command, machine=machine_name, chromeos_root=chromeos_root)
     time.sleep(60)
     # Whenever we reboot the machine, we need to restore the governor settings.
     self.PinGovernorExecutionFrequencies(machine_name, chromeos_root)
@@ -150,27 +149,26 @@ class SuiteRunner(object):
     if profiler_args:
       self._logger.LogFatal('test_that does not support profiler.')
     command = 'rm -rf /usr/local/autotest/results/*'
-    self._ce.CrosRunCommand(command,
-                            machine=machine,
-                            chromeos_root=label.chromeos_root)
+    self._ce.CrosRunCommand(
+        command, machine=machine, chromeos_root=label.chromeos_root)
 
     # We do this because some tests leave the machine in weird states.
     # Rebooting between iterations has proven to help with this.
     self.RebootMachine(machine, label.chromeos_root)
 
-    command = (
-        ('%s --autotest_dir ~/trunk/src/third_party/autotest/files --fast '
-         '%s %s %s') % (TEST_THAT_PATH, options, machine, benchmark.test_name))
+    command = '%s --fast %s %s %s' % (TEST_THAT_PATH, options, machine,
+                                      benchmark.test_name)
     if self.log_level != 'verbose':
       self._logger.LogOutput('Running test.')
       self._logger.LogOutput('CMD: %s' % command)
     # Use --no-ns-pid so that cros_sdk does not create a different
     # process namespace and we can kill process created easily by
     # their process group.
-    return self._ce.ChrootRunCommandWOutput(label.chromeos_root,
-                                            command,
-                                            command_terminator=self._ct,
-                                            cros_sdk_options='--no-ns-pid')
+    return self._ce.ChrootRunCommandWOutput(
+        label.chromeos_root,
+        command,
+        command_terminator=self._ct,
+        cros_sdk_options='--no-ns-pid')
 
   def RemoveTelemetryTempFile(self, machine, chromeos_root):
     filename = 'telemetry@%s' % machine
@@ -208,10 +206,11 @@ class SuiteRunner(object):
       args_string = "test_args='%s'" % test_args
 
     cmd = ('{} {} {} --board={} --args="{} run_local={} test={} '
-           '{}" {} telemetry_Crosperf'.format(
-               TEST_THAT_PATH, autotest_dir_arg, fast_arg, label.board,
-               args_string, benchmark.run_local, benchmark.test_name,
-               profiler_args, machine))
+           '{}" {} telemetry_Crosperf'.format(TEST_THAT_PATH, autotest_dir_arg,
+                                              fast_arg, label.board,
+                                              args_string, benchmark.run_local,
+                                              benchmark.test_name,
+                                              profiler_args, machine))
 
     # Use --no-ns-pid so that cros_sdk does not create a different
     # process namespace and we can kill process created easily by their
