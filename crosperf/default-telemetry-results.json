@@ -95,7 +95,9 @@
   ], 
   "page_cycler_v2.typical_25": [
     "warm_times-page_load_time__warm_times-page_load_time", 
-    "cold_times-page_load_time__cold_times-page_load_time"
+    "cold_times-page_load_time__cold_times-page_load_time",
+    "pcv1-warm@@timeToOnload_avg__summary",
+    "pcv1-cold@@timeToOnload_avg__summary"
   ], 
   "dromaeo.domcoretraverse": [
     "dom_traverse__dom_traverse",
