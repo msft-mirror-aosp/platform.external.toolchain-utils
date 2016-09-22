@@ -50,7 +50,7 @@ TEST_BOARD = [
 TEST = [
     'bvt-inline',
     'bvt-cq',
-    'paygen_au_canary',
+    'toolchain-tests',
     'security',
     #'kernel_per-build_regression',
     #'kernel_per-build_benchmarks',
