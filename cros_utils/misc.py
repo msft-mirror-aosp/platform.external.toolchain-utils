@@ -563,7 +563,7 @@ def rgb2short(r, g, b):
   greencolor = [255, 118, 82, 46, 10 ]
 
   if g == 0:
-    return redcolor[r/50]
+    return redcolor[r/52]
   if r == 0:
-    return greencolor[g/50]
+    return greencolor[g/52]
   return 4
