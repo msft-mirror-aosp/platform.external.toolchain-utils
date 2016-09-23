@@ -118,21 +118,27 @@ class GenerateReportTests(unittest.TestCase):
     ctors = [ctor for ctor, _ in mock_run_actions.call_args[0][0]]
     self.assertItemsEqual(ctors, [results_report.HTMLResultsReport])
 
-  @mock.patch('generate_report.WriteFile')
-  def testRunActionsRunsAllActionsRegardlessOfExceptions(self, mock_write_file):
-    def raise_error(_):
-      raise Exception('Oh nooo')
-    actions = [
-        (raise_error, 'json'),
-        (raise_error, 'html'),
-        (raise_error, 'text'),
-        (raise_error, 'email'),
-    ]
+  # We only mock print_exc so we don't have exception info printed to stdout.
+  @mock.patch('generate_report.WriteFile', side_effect=ValueError('Oh noo'))
+  @mock.patch('traceback.print_exc')
+  def testRunActionsRunsAllActionsRegardlessOfExceptions(self, mock_print_exc,
+                                                         mock_write_file):
+    actions = [(None, 'json'), (None, 'html'), (None, 'text'), (None, 'email')]
     output_prefix = '-'
     ok = generate_report.RunActions(actions, {}, output_prefix, overwrite=False,
                                     verbose=False)
     self.assertFalse(ok)
-    self.assertEqual(mock_write_file.call_count, 4)
+    self.assertEqual(mock_write_file.call_count, len(actions))
+    self.assertEqual(mock_print_exc.call_count, len(actions))
+
+  @mock.patch('generate_report.WriteFile')
+  def testRunActionsReturnsTrueIfAllActionsSucceed(self, mock_write_file):
+    actions = [(None, 'json'), (None, 'html'), (None, 'text')]
+    output_prefix = '-'
+    ok = generate_report.RunActions(actions, {}, output_prefix, overwrite=False,
+                                    verbose=False)
+    self.assertEqual(mock_write_file.call_count, len(actions))
+    self.assertTrue(ok)
 
 
 if __name__ == '__main__':

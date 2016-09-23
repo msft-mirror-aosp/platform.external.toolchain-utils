@@ -198,7 +198,7 @@ def WriteFile(output_prefix, extension, get_contents, overwrite, verbose):
 
 def RunActions(actions, benchmark_results, output_prefix, overwrite, verbose):
   """Runs `actions`, returning True if all succeeded."""
-  num_success = 0
+  failed = False
 
   report_ctor = None # Make the linter happy
   for report_ctor, extension in actions:
@@ -208,8 +208,9 @@ def RunActions(actions, benchmark_results, output_prefix, overwrite, verbose):
     except Exception:
       # Complain and move along; we may have more actions that might complete
       # successfully.
+      failed = True
       traceback.print_exc()
-  return num_success == len(actions)
+  return not failed
 
 
 def PickInputFile(input_name):
