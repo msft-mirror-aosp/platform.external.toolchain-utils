@@ -35,9 +35,9 @@ telemetry_pagecycler_tests = ['page_cycler_v2.intl_ar_fa_he',
                               'page_cycler_v2.intl_hi_ru',
                               'page_cycler_v2.intl_ja_zh',
                               'page_cycler_v2.intl_ko_th_vi',
-                              'page_cycler_v2.morejs',
-                              'page_cycler_v2.moz',
-                              'page_cycler_v2.netsim.top_10',
+#                              'page_cycler_v2.morejs',
+#                              'page_cycler_v2.moz',
+#                              'page_cycler_v2.netsim.top_10',
                               'page_cycler_v2.tough_layout_cases',
                               'page_cycler_v2.typical_25']
 
