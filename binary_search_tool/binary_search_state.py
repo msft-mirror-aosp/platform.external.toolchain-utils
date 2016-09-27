@@ -209,8 +209,11 @@ class BinarySearchState(object):
       self.l.LogOutput('Resetting all items to bad to verify.')
       self.SwitchToBad(self.all_items)
       status = self.TestSetupScript()
-      assert status == 0, 'When reset_to_bad, test setup should succeed.'
-      status = self.TestScript()
+      # The following assumption is not true; a bad image might not
+      # successfully push onto a device.
+      # assert status == 0, 'When reset_to_bad, test setup should succeed.'
+      if status == 0:
+        status = self.TestScript()
       assert status == 1, 'When reset_to_bad, status should be 1.'
 
   def DoSearch(self):
