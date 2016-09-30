@@ -59,6 +59,7 @@ class SuiteRunner(object):
 
   def Run(self, machine, label, benchmark, test_args, profiler_args):
     for i in range(0, benchmark.retries + 1):
+      self.DecreaseWaitTime(machine, label.chromeos_root)
       self.PinGovernorExecutionFrequencies(machine, label.chromeos_root)
       if benchmark.suite == 'telemetry':
         ret_tup = self.Telemetry_Run(machine, label, benchmark, profiler_args)
@@ -130,6 +131,24 @@ class SuiteRunner(object):
                                   chromeos_root=chromeos_root)
     self._logger.LogFatalIf(ret, 'Could not pin frequencies on machine: %s' %
                             machine_name)
+
+  def DecreaseWaitTime(self, machine_name, chromeos_root):
+    """Change the ten seconds wait time for pagecycler to two seconds."""
+    FILE = '/usr/local/telemetry/src/tools/perf/page_sets/page_cycler_story.py'
+    ret = self._ce.CrosRunCommand(command='ls ' + FILE,
+                                  machine=machine_name,
+                                  chromeos_root=chromeos_root)
+    self._logger.LogFatalIf(ret, 'Could not find {} on machine: {}'.format(
+        FILE, machine_name))
+
+    if not ret:
+      sed_command = 'sed -i "s/_TTI_WAIT_TIME = 10/_TTI_WAIT_TIME = 2/g" '
+      ret = self._ce.CrosRunCommand(sed_command + FILE,
+                                    machine=machine_name,
+                                    chromeos_root=chromeos_root)
+      self._logger.LogFatalIf(ret, 'Could not modify {} on machine: {}'.format(
+          FILE, machine_name))
+
 
   def RebootMachine(self, machine_name, chromeos_root):
     command = 'reboot && exit'
