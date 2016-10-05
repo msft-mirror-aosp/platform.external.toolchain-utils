@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 """Script for running llvm validation tests on ChromeOS.
 
 This script launches a buildbot to build ChromeOS with the llvm on
@@ -40,23 +40,10 @@ TEST_BOARD = [
     'peach_pit',
     'peppy',
     'link',
-    'veyron_jaq',
-    'lumpy',
     'sentry',
     'chell',
     'nyan_big',
-]
-
-TEST = [
-    'bvt-inline',
-    'bvt-cq',
-    'toolchain-tests',
-    'security',
-    #'kernel_per-build_regression',
-    #'kernel_per-build_benchmarks',
-    'kernel_daily_regression',
-    'kernel_daily_benchmarks',
-    #'stress',
+    'daisy',
 ]
 
 
@@ -70,7 +57,7 @@ class ToolchainVerifier(object):
     self._ce = command_executer.GetCommandExecuter()
     self._l = logger.GetLogger()
     self._compiler = compiler
-    self._build = '%s-release' % board
+    self._build = '%s-%s-toolchain' % (board, compiler)
     self._patches = patches.split(',')
     self._patches_string = '_'.join(str(p) for p in self._patches)
 
@@ -90,27 +77,6 @@ class ToolchainVerifier(object):
     if ret_val != 0:
       raise RuntimeError('chmod for testing_rsa failed')
 
-  def _TestImages(self, image):
-    to_file = ''
-    for test in TEST:
-      # Do not run the kernel tests with the LLVM compiler.
-      if self._compiler == 'gcc' or not 'kernel' in test:
-        command = ('test_that --board {board} :lab: suite:{test} '
-                   '-i {image} --fast --autotest_dir '
-                   '~/trunk/src/third_party/autotest/files '
-                   '--web  cautotest.corp.google.com'.format(
-                       board=self._board, test=test, image=image))
-        ret_val = self._ce.ChrootRunCommand(self._chromeos_root, command)
-        timestamp = datetime.datetime.strftime(datetime.datetime.now(),
-                                               '%Y-%m-%d_%H:%M:%S')
-        if ret_val:
-          out = 'FAILED'
-        else:
-          out = '      '
-        to_file += out + ' ' + test + ' ' + timestamp + '\n'
-        with open(self._reports, 'w') as f:
-          f.write(to_file)
-
   def DoAll(self):
     """Main function inside ToolchainComparator class.
 
@@ -120,13 +86,9 @@ class ToolchainVerifier(object):
     date_str = datetime.date.today()
     description = 'master_%s_%s_%s' % (self._patches_string, self._build,
                                        date_str)
-    trybot_image = buildbot_utils.GetTrybotImage(
-        self._chromeos_root,
-        self._build,
-        self._patches,
-        description,
-        other_flags=['--hwtest'],
-        build_toolchain=True)
+    trybot_image = buildbot_utils.GetTrybotImage(self._chromeos_root,
+                                                 self._build, self._patches,
+                                                 description)
     if len(trybot_image) == 0:
       self._l.LogError('Unable to find trybot_image for %s!' % description)
       return 1
@@ -134,7 +96,6 @@ class ToolchainVerifier(object):
     if os.getlogin() == ROLE_ACCOUNT:
       self._FinishSetup()
 
-    self._TestImages(trybot_image)
     return 0
 
 
@@ -191,7 +152,7 @@ def Main(argv):
   parser.add_argument(
       '--compiler',
       dest='compiler',
-      help='Which compiler (llvm or gcc) to use for '
+      help='Which compiler (llvm, llvm-next or gcc) to use for '
       'testing.')
 
   options = parser.parse_args(argv[1:])
@@ -199,7 +160,7 @@ def Main(argv):
     print('Please specify the ChromeOS root directory.')
     return 1
   if not options.compiler:
-    print('Please specify which compiler to test (gcc or llvm).')
+    print('Please specify which compiler to test (gcc, llvm, or llvm-next).')
     return 1
   if options.patches:
     patches = options.patches

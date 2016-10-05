@@ -124,6 +124,8 @@ def GetBuildInfo(file_dir, builder):
     # For release builds, get logs from the 'release' builder.
     if builder.endswith('-release'):
       commands += ' -b release'
+    elif builder.endswith('-toolchain'):
+      commands += ' -b etc'
     else:
       commands += ' -b %s' % builder
   _, buildinfo, _ = ce.RunCommandWOutput(commands, print_to_console=False)
@@ -136,9 +138,8 @@ def FindArchiveImage(chromeos_root, build, build_id):
   ce = command_executer.GetCommandExecuter()
   command = ('gsutil ls gs://chromeos-image-archive/trybot-%s/*b%s'
              '/chromiumos_test_image.tar.xz' % (build, build_id))
-  _, out, _ = ce.ChrootRunCommandWOutput(chromeos_root,
-                                         command,
-                                         print_to_console=False)
+  _, out, _ = ce.ChrootRunCommandWOutput(
+      chromeos_root, command, print_to_console=False)
   #
   # If build_id is not unique, there may be multiple archive images
   # to choose from; sort them & pick the first (newest).
