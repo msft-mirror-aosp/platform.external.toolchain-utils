@@ -135,7 +135,7 @@ class SuiteRunner(object):
   def DecreaseWaitTime(self, machine_name, chromeos_root):
     """Change the ten seconds wait time for pagecycler to two seconds."""
     FILE = '/usr/local/telemetry/src/tools/perf/page_sets/page_cycler_story.py'
-    ret = self._ce.CrosRunCommand(command='ls ' + FILE,
+    ret = self._ce.CrosRunCommand('ls ' + FILE,
                                   machine=machine_name,
                                   chromeos_root=chromeos_root)
     self._logger.LogFatalIf(ret, 'Could not find {} on machine: {}'.format(
