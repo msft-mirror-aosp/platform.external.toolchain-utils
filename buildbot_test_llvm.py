@@ -83,12 +83,16 @@ class ToolchainVerifier(object):
     Launch trybot, get image names, create crosperf experiment file, run
     crosperf, and copy images into seven-day report directories.
     """
+    flags = ['--hwtest']
     date_str = datetime.date.today()
     description = 'master_%s_%s_%s' % (self._patches_string, self._build,
                                        date_str)
-    trybot_image = buildbot_utils.GetTrybotImage(self._chromeos_root,
-                                                 self._build, self._patches,
-                                                 description)
+    trybot_image = buildbot_utils.GetTrybotImage(
+        self._chromeos_root,
+        self._build,
+        self._patches,
+        description,
+        other_flags=flags)
     if len(trybot_image) == 0:
       self._l.LogError('Unable to find trybot_image for %s!' % description)
       return 1
