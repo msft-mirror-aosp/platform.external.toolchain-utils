@@ -6,3 +6,4 @@ daisy     : chromeos2-row9-rack9-host3.cros   chromeos2-row9-rack9-host5.cros   
 peach_pit : chromeos2-row9-rack10-host13.cros chromeos2-row9-rack10-host15.cros chromeos2-row9-rack10-host17.cros
 peppy     : chromeos2-row9-rack10-host19.cros chromeos2-row9-rack10-host21.cros chromeos2-row9-rack9-host1.cros
 squawks   : chromeos2-row9-rack10-host7.cros  chromeos2-row9-rack10-host9.cros  chromeos2-row9-rack10-host11.cros
+elm       : chromeos2-row7-rack7-host5.cros   chromeos2-row7-rack7-host6.cros
