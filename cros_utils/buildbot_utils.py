@@ -218,9 +218,14 @@ def GetTrybotImage(chromeos_root,
   # Launch buildbot with appropriate flags.
   build = buildbot_name
   description = build_tag
-  command = ('./cbuildbot --remote --nochromesdk %s'
-             ' --remote-description=%s %s %s %s' %
-             (optional_flags, description, toolchain_flags, patch_arg, build))
+  command_prefix = ''
+  if not patch_arg:
+    command_prefix = 'yes | '
+  command = ('%s ./cbuildbot --remote --nochromesdk %s'
+             ' --remote-description=%s %s %s %s' % (command_prefix,
+                                                    optional_flags, description,
+                                                    toolchain_flags, patch_arg,
+                                                    build))
   _, out, _ = ce.RunCommandWOutput(command)
   if 'Tryjob submitted!' not in out:
     logger.GetLogger().LogFatal('Error occurred while launching trybot job: '

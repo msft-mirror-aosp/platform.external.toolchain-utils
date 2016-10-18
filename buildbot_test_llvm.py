@@ -58,7 +58,7 @@ class ToolchainVerifier(object):
     self._l = logger.GetLogger()
     self._compiler = compiler
     self._build = '%s-%s-toolchain' % (board, compiler)
-    self._patches = patches.split(',')
+    self._patches = patches.split(',') if patches else []
     self._patches_string = '_'.join(str(p) for p in self._patches)
 
     if not weekday:
@@ -105,6 +105,11 @@ class ToolchainVerifier(object):
 
 def SendEmail(start_board, compiler):
   """Send out the test results for all the boards."""
+
+  # This is no longer the correct way to get results.  Until
+  # this is fixed, don't send any email at all.
+  return 0
+
   results = ''
   for i in range(len(TEST_BOARD)):
     board = TEST_BOARD[(start_board + i) % len(TEST_BOARD)]
@@ -150,6 +155,7 @@ def Main(argv):
   parser.add_argument(
       '--patch',
       dest='patches',
+      default='',
       help='The patches to use for the testing, '
       "seprate the patch numbers with ',' "
       'for more than one patches.')
@@ -166,9 +172,8 @@ def Main(argv):
   if not options.compiler:
     print('Please specify which compiler to test (gcc, llvm, or llvm-next).')
     return 1
-  if options.patches:
-    patches = options.patches
-  elif options.compiler == 'llvm':
+  patches = options.patches
+  if not patches and options.compiler == 'llvm':
     patches = USE_LLVM_PATCH
 
   if options.board:
