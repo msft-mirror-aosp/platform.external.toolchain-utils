@@ -45,13 +45,15 @@ IMAGE_FS = (r'{board}-{image_type}/{chrome_version}-{tip}\.' +
             r'{branch}\.{branch_branch}')
 TRYBOT_IMAGE_FS = 'trybot-' + IMAGE_FS + '-{build_id}'
 PFQ_IMAGE_FS = IMAGE_FS + '-rc1'
-IMAGE_RE_GROUPS = {'board': r'(?P<board>\S+)',
-                   'image_type': r'(?P<image_type>\S+)',
-                   'chrome_version': r'(?P<chrome_version>R\d+)',
-                   'tip': r'(?P<tip>\d+)',
-                   'branch': r'(?P<branch>\d+)',
-                   'branch_branch': r'(?P<branch_branch>\d+)',
-                   'build_id': r'(?P<build_id>b\d+)'}
+IMAGE_RE_GROUPS = {
+    'board': r'(?P<board>\S+)',
+    'image_type': r'(?P<image_type>\S+)',
+    'chrome_version': r'(?P<chrome_version>R\d+)',
+    'tip': r'(?P<tip>\d+)',
+    'branch': r'(?P<branch>\d+)',
+    'branch_branch': r'(?P<branch_branch>\d+)',
+    'build_id': r'(?P<build_id>b\d+)'
+}
 TRYBOT_IMAGE_RE = TRYBOT_IMAGE_FS.format(**IMAGE_RE_GROUPS)
 
 
@@ -82,8 +84,9 @@ class ToolchainComparator(object):
       self._weekday = weekday
     timestamp = datetime.datetime.strftime(datetime.datetime.now(),
                                            '%Y-%m-%d_%H:%M:%S')
-    self._reports_dir = os.path.join(NIGHTLY_TESTS_DIR,
-                                     '%s.%s' % (timestamp, board),)
+    self._reports_dir = os.path.join(
+        NIGHTLY_TESTS_DIR,
+        '%s.%s' % (timestamp, board),)
 
   def _GetVanillaImageName(self, trybot_image):
     """Given a trybot artifact name, get corresponding vanilla image name.
@@ -216,7 +219,7 @@ class ToolchainComparator(object):
 
     ret = self._ce.RunCommand(command)
     if ret != 0:
-      raise RuntimeError("Couldn't run crosperf!")
+      raise RuntimeError('Crosperf execution error!')
     else:
       # Copy json report to pending archives directory.
       command = 'cp %s/*.json %s/.' % (self._reports_dir, PENDING_ARCHIVES_DIR)
@@ -292,12 +295,13 @@ class ToolchainComparator(object):
     date_str = datetime.date.today()
     description = 'master_%s_%s_%s' % (self._patches_string, self._build,
                                        date_str)
-    trybot_image = buildbot_utils.GetTrybotImage(self._chromeos_root,
-                                                 self._build,
-                                                 self._patches,
-                                                 description,
-                                                 other_flags=['--notests'],
-                                                 build_toolchain=True)
+    trybot_image = buildbot_utils.GetTrybotImage(
+        self._chromeos_root,
+        self._build,
+        self._patches,
+        description,
+        other_flags=['--notests'],
+        build_toolchain=True)
 
     if len(trybot_image) == 0:
       self._l.LogError('Unable to find trybot_image for %s!' % description)
@@ -331,30 +335,31 @@ def Main(argv):
   # Common initializations
   command_executer.InitCommandExecuter()
   parser = argparse.ArgumentParser()
-  parser.add_argument('--remote',
-                      dest='remote',
-                      help='Remote machines to run tests on.')
-  parser.add_argument('--board',
-                      dest='board',
-                      default='x86-zgb',
-                      help='The target board.')
-  parser.add_argument('--chromeos_root',
-                      dest='chromeos_root',
-                      help='The chromeos root from which to run tests.')
-  parser.add_argument('--weekday',
-                      default='',
-                      dest='weekday',
-                      help='The day of the week for which to run tests.')
-  parser.add_argument('--patch',
-                      dest='patches',
-                      help='The patches to use for the testing, '
-                      "seprate the patch numbers with ',' "
-                      'for more than one patches.')
-  parser.add_argument('--noschedv2',
-                      dest='noschedv2',
-                      action='store_true',
-                      default=False,
-                      help='Pass --noschedv2 to crosperf.')
+  parser.add_argument(
+      '--remote', dest='remote', help='Remote machines to run tests on.')
+  parser.add_argument(
+      '--board', dest='board', default='x86-zgb', help='The target board.')
+  parser.add_argument(
+      '--chromeos_root',
+      dest='chromeos_root',
+      help='The chromeos root from which to run tests.')
+  parser.add_argument(
+      '--weekday',
+      default='',
+      dest='weekday',
+      help='The day of the week for which to run tests.')
+  parser.add_argument(
+      '--patch',
+      dest='patches',
+      help='The patches to use for the testing, '
+      "seprate the patch numbers with ',' "
+      'for more than one patches.')
+  parser.add_argument(
+      '--noschedv2',
+      dest='noschedv2',
+      action='store_true',
+      default=False,
+      help='Pass --noschedv2 to crosperf.')
 
   options = parser.parse_args(argv[1:])
   if not options.board:

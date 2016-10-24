@@ -26,21 +26,23 @@ import test_flag
 
 def SetupParserOptions(parser):
   """Add all options to the parser."""
-  parser.add_argument('--dry_run',
-                      dest='dry_run',
-                      help=('Parse the experiment file and '
-                            'show what will be done'),
-                      action='store_true',
-                      default=False)
+  parser.add_argument(
+      '--dry_run',
+      dest='dry_run',
+      help=('Parse the experiment file and '
+            'show what will be done'),
+      action='store_true',
+      default=False)
   # Allow each of the global fields to be overridden by passing in
   # options. Add each global field as an option.
   option_settings = GlobalSettings('')
   for field_name in option_settings.fields:
     field = option_settings.fields[field_name]
-    parser.add_argument('--%s' % field.name,
-                        dest=field.name,
-                        help=field.description,
-                        action='store')
+    parser.add_argument(
+        '--%s' % field.name,
+        dest=field.name,
+        help=field.description,
+        action='store')
 
 
 def ConvertOptionsToSettings(options):
@@ -68,20 +70,22 @@ def CallExitHandler(signum, _):
   sys.exit(128 + signum)
 
 
-def Main(argv):
+def RunCrosperf(argv):
   parser = argparse.ArgumentParser()
 
-  parser.add_argument('--noschedv2',
-                      dest='noschedv2',
-                      default=False,
-                      action='store_true',
-                      help=('Do not use new scheduler. '
-                            'Use original scheduler instead.'))
-  parser.add_argument('-l',
-                      '--log_dir',
-                      dest='log_dir',
-                      default='',
-                      help='The log_dir, default is under <crosperf_logs>/logs')
+  parser.add_argument(
+      '--noschedv2',
+      dest='noschedv2',
+      default=False,
+      action='store_true',
+      help=('Do not use new scheduler. '
+            'Use original scheduler instead.'))
+  parser.add_argument(
+      '-l',
+      '--log_dir',
+      dest='log_dir',
+      default='',
+      help='The log_dir, default is under <crosperf_logs>/logs')
 
   SetupParserOptions(parser)
   options, args = parser.parse_known_args(argv)
@@ -117,11 +121,23 @@ def Main(argv):
   if options.dry_run:
     runner = MockExperimentRunner(experiment, json_report)
   else:
-    runner = ExperimentRunner(experiment,
-                              json_report,
-                              using_schedv2=(not options.noschedv2))
+    runner = ExperimentRunner(
+        experiment, json_report, using_schedv2=(not options.noschedv2))
 
   runner.Run()
+
+
+def Main(argv):
+  try:
+    RunCrosperf(argv)
+  except Exception as ex:
+    # Flush buffers before exiting to avoid out of order printing
+    sys.stdout.flush()
+    sys.stderr.flush()
+    print('Crosperf error: %s' % repr(ex))
+    sys.stdout.flush()
+    sys.stderr.flush()
+    sys.exit(1)
 
 
 if __name__ == '__main__':

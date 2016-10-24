@@ -91,9 +91,10 @@ class ChromeOSCheckout(object):
   def _BuildAndImage(self, label=''):
     if (not label or
         not misc.DoesLabelExist(self._chromeos_root, self._board, label)):
-      build_chromeos_args = [build_chromeos.__file__,
-                             '--chromeos_root=%s' % self._chromeos_root,
-                             '--board=%s' % self._board, '--rebuild']
+      build_chromeos_args = [
+          build_chromeos.__file__, '--chromeos_root=%s' % self._chromeos_root,
+          '--board=%s' % self._board, '--rebuild'
+      ]
       if self._public:
         build_chromeos_args.append('--env=USE=-chrome_internal')
 
@@ -117,10 +118,8 @@ class ChromeOSCheckout(object):
 
   def _SetupBoard(self, env_dict, usepkg_flag, clobber_flag):
     env_string = misc.GetEnvStringFromDict(env_dict)
-    command = ('%s %s' % (env_string,
-                          misc.GetSetupBoardCommand(self._board,
-                                                    usepkg=usepkg_flag,
-                                                    force=clobber_flag)))
+    command = ('%s %s' % (env_string, misc.GetSetupBoardCommand(
+        self._board, usepkg=usepkg_flag, force=clobber_flag)))
     ret = self._ce.ChrootRunCommand(self._chromeos_root, command)
     error_str = "Could not setup board: '%s'" % command
     assert ret == 0, error_str
@@ -148,9 +147,11 @@ class ChromeOSCheckout(object):
     # Now uninstall the vanilla compiler and setup/build our custom
     # compiler.
     self._UnInstallToolchain()
-    envdict = {'USE': 'git_gcc',
-               'GCC_GITHASH': config.gcc_config.githash,
-               'EMERGE_DEFAULT_OPTS': '--exclude=gcc'}
+    envdict = {
+        'USE': 'git_gcc',
+        'GCC_GITHASH': config.gcc_config.githash,
+        'EMERGE_DEFAULT_OPTS': '--exclude=gcc'
+    }
     self._SetupBoard(envdict, usepkg_flag=False, clobber_flag=False)
 
 
@@ -176,8 +177,9 @@ class ToolchainComparator(ChromeOSCheckout):
     self._l = logger.GetLogger()
     timestamp = datetime.datetime.strftime(datetime.datetime.now(),
                                            '%Y-%m-%d_%H:%M:%S')
-    self._reports_dir = os.path.join(NIGHTLY_TESTS_DIR,
-                                     '%s.%s' % (timestamp, board),)
+    self._reports_dir = os.path.join(
+        NIGHTLY_TESTS_DIR,
+        '%s.%s' % (timestamp, board),)
     self._noschedv2 = noschedv2
     ChromeOSCheckout.__init__(self, board, self._chromeos_root)
 
@@ -264,7 +266,7 @@ class ToolchainComparator(ChromeOSCheckout):
 
     ret = self._ce.RunCommand(command)
     if ret != 0:
-      raise RuntimeError("Couldn't run crosperf!")
+      raise RuntimeError('Crosperf execution error!')
     else:
       # Copy json report to pending archives directory.
       command = 'cp %s/*.json %s/.' % (self._reports_dir, PENDING_ARCHIVES_DIR)
@@ -346,36 +348,38 @@ def Main(argv):
   ###  command_executer.InitCommandExecuter(True)
   command_executer.InitCommandExecuter()
   parser = argparse.ArgumentParser()
-  parser.add_argument('--remote',
-                      dest='remote',
-                      help='Remote machines to run tests on.')
-  parser.add_argument('--board',
-                      dest='board',
-                      default='x86-alex',
-                      help='The target board.')
-  parser.add_argument('--githashes',
-                      dest='githashes',
-                      default='master',
-                      help='The gcc githashes to test.')
-  parser.add_argument('--clean',
-                      dest='clean',
-                      default=False,
-                      action='store_true',
-                      help='Clean the chroot after testing.')
-  parser.add_argument('--public',
-                      dest='public',
-                      default=False,
-                      action='store_true',
-                      help='Use the public checkout/build.')
-  parser.add_argument('--force-mismatch',
-                      dest='force_mismatch',
-                      default='',
-                      help='Force the image regardless of board mismatch')
-  parser.add_argument('--noschedv2',
-                      dest='noschedv2',
-                      action='store_true',
-                      default=False,
-                      help='Pass --noschedv2 to crosperf.')
+  parser.add_argument(
+      '--remote', dest='remote', help='Remote machines to run tests on.')
+  parser.add_argument(
+      '--board', dest='board', default='x86-alex', help='The target board.')
+  parser.add_argument(
+      '--githashes',
+      dest='githashes',
+      default='master',
+      help='The gcc githashes to test.')
+  parser.add_argument(
+      '--clean',
+      dest='clean',
+      default=False,
+      action='store_true',
+      help='Clean the chroot after testing.')
+  parser.add_argument(
+      '--public',
+      dest='public',
+      default=False,
+      action='store_true',
+      help='Use the public checkout/build.')
+  parser.add_argument(
+      '--force-mismatch',
+      dest='force_mismatch',
+      default='',
+      help='Force the image regardless of board mismatch')
+  parser.add_argument(
+      '--noschedv2',
+      dest='noschedv2',
+      action='store_true',
+      default=False,
+      help='Pass --noschedv2 to crosperf.')
   options = parser.parse_args(argv)
   if not options.board:
     print('Please give a board.')
