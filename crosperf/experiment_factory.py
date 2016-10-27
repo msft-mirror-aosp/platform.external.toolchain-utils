@@ -21,43 +21,41 @@ import file_lock_machine
 # specified sets.  Here we define sets of tests that users may want
 # to run together.
 
-telemetry_perfv2_tests = ['dromaeo.domcoreattr',
-                          'dromaeo.domcoremodify',
-                          'dromaeo.domcorequery',
-                          'dromaeo.domcoretraverse',
-                          'kraken',
-                          'octane',
-                          'robohornet_pro',
-                          'sunspider']
+telemetry_perfv2_tests = [
+    'dromaeo.domcoreattr', 'dromaeo.domcoremodify', 'dromaeo.domcorequery',
+    'dromaeo.domcoretraverse', 'kraken', 'octane', 'robohornet_pro', 'sunspider'
+]
 
-telemetry_pagecycler_tests = ['page_cycler_v2.intl_ar_fa_he',
-                              'page_cycler_v2.intl_es_fr_pt-BR',
-                              'page_cycler_v2.intl_hi_ru',
-                              'page_cycler_v2.intl_ja_zh',
-                              'page_cycler_v2.intl_ko_th_vi',
-#                              'page_cycler_v2.morejs',
-#                              'page_cycler_v2.moz',
-#                              'page_cycler_v2.netsim.top_10',
-                              'page_cycler_v2.tough_layout_cases',
-                              'page_cycler_v2.typical_25']
+telemetry_pagecycler_tests = [
+    'page_cycler_v2.intl_ar_fa_he',
+    'page_cycler_v2.intl_es_fr_pt-BR',
+    'page_cycler_v2.intl_hi_ru',
+    'page_cycler_v2.intl_ja_zh',
+    'page_cycler_v2.intl_ko_th_vi',
+    #                              'page_cycler_v2.morejs',
+    #                              'page_cycler_v2.moz',
+    #                              'page_cycler_v2.netsim.top_10',
+    'page_cycler_v2.tough_layout_cases',
+    'page_cycler_v2.typical_25'
+]
 
-telemetry_toolchain_old_perf_tests = ['dromaeo.domcoremodify',
-                                      'page_cycler_v2.intl_es_fr_pt-BR',
-                                      'page_cycler_v2.intl_hi_ru',
-                                      'page_cycler_v2.intl_ja_zh',
-                                      'page_cycler_v2.intl_ko_th_vi',
-                                      'page_cycler_v2.netsim.top_10',
-                                      'page_cycler_v2.typical_25',
-                                      'robohornet_pro',
-                                      'spaceport',
-                                      'tab_switching.top_10']
-telemetry_toolchain_perf_tests = ['octane',
-                                  'kraken',
-                                  'speedometer',
-                                  'dromaeo.domcoreattr',
-                                  'dromaeo.domcoremodify',
-                                  'smoothness.tough_webgl_cases',
-                                  'page_cycler_v2.typical_25']
+telemetry_toolchain_old_perf_tests = [
+    'dromaeo.domcoremodify', 'page_cycler_v2.intl_es_fr_pt-BR',
+    'page_cycler_v2.intl_hi_ru', 'page_cycler_v2.intl_ja_zh',
+    'page_cycler_v2.intl_ko_th_vi', 'page_cycler_v2.netsim.top_10',
+    'page_cycler_v2.typical_25', 'robohornet_pro', 'spaceport',
+    'tab_switching.top_10'
+]
+telemetry_toolchain_perf_tests = [
+    'octane',
+    'kraken',
+    'speedometer',
+    'dromaeo.domcoreattr',
+    'dromaeo.domcoremodify',
+    'smoothness.tough_webgl_cases',
+]
+
+#                                  'page_cycler_v2.typical_25']
 
 
 class ExperimentFactory(object):
@@ -73,9 +71,10 @@ class ExperimentFactory(object):
                          show_all_results, retries, run_local):
     """Add all the tests in a set to the benchmarks list."""
     for test_name in benchmark_list:
-      telemetry_benchmark = Benchmark(
-          test_name, test_name, test_args, iterations, rm_chroot_tmp, perf_args,
-          suite, show_all_results, retries, run_local)
+      telemetry_benchmark = Benchmark(test_name, test_name, test_args,
+                                      iterations, rm_chroot_tmp, perf_args,
+                                      suite, show_all_results, retries,
+                                      run_local)
       benchmarks.append(telemetry_benchmark)
 
   def GetExperiment(self, experiment_file, working_directory, log_dir):
@@ -116,8 +115,9 @@ class ExperimentFactory(object):
       log_level = 'verbose'
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.
-    cache_conditions = [CacheConditions.CACHE_FILE_EXISTS,
-                        CacheConditions.CHECKSUMS_MATCH]
+    cache_conditions = [
+        CacheConditions.CACHE_FILE_EXISTS, CacheConditions.CHECKSUMS_MATCH
+    ]
     if global_settings.GetField('rerun_if_failed'):
       cache_conditions.append(CacheConditions.RUN_SUCCEEDED)
     if global_settings.GetField('rerun'):
@@ -145,10 +145,9 @@ class ExperimentFactory(object):
 
       if suite == 'telemetry_Crosperf':
         if test_name == 'all_perfv2':
-          self.AppendBenchmarkSet(benchmarks, telemetry_perfv2_tests,
-                                  test_args, iterations, rm_chroot_tmp,
-                                  perf_args, suite, show_all_results, retries,
-                                  run_local)
+          self.AppendBenchmarkSet(benchmarks, telemetry_perfv2_tests, test_args,
+                                  iterations, rm_chroot_tmp, perf_args, suite,
+                                  show_all_results, retries, run_local)
         elif test_name == 'all_pagecyclers':
           self.AppendBenchmarkSet(benchmarks, telemetry_pagecycler_tests,
                                   test_args, iterations, rm_chroot_tmp,
@@ -160,21 +159,23 @@ class ExperimentFactory(object):
                                   perf_args, suite, show_all_results, retries,
                                   run_local)
           # Add non-telemetry toolchain-perf benchmarks:
-          benchmarks.append(Benchmark('graphics_WebGLAquarium',
-                                      'graphics_WebGLAquarium',
-                                      '',
-                                      iterations,
-                                      rm_chroot_tmp,
-                                      perf_args,
-                                      '',
-                                      show_all_results,
-                                      retries,
-                                      run_local=False))
+          benchmarks.append(
+              Benchmark(
+                  'graphics_WebGLAquarium',
+                  'graphics_WebGLAquarium',
+                  '',
+                  iterations,
+                  rm_chroot_tmp,
+                  perf_args,
+                  '',
+                  show_all_results,
+                  retries,
+                  run_local=False))
         elif test_name == 'all_toolchain_perf_old':
-          self.AppendBenchmarkSet(
-              benchmarks, telemetry_toolchain_old_perf_tests, test_args,
-              iterations, rm_chroot_tmp, perf_args, suite, show_all_results,
-              retries, run_local)
+          self.AppendBenchmarkSet(benchmarks,
+                                  telemetry_toolchain_old_perf_tests, test_args,
+                                  iterations, rm_chroot_tmp, perf_args, suite,
+                                  show_all_results, retries, run_local)
         else:
           benchmark = Benchmark(test_name, test_name, test_args, iterations,
                                 rm_chroot_tmp, perf_args, suite,
@@ -182,16 +183,17 @@ class ExperimentFactory(object):
           benchmarks.append(benchmark)
       else:
         # Add the single benchmark.
-        benchmark = Benchmark(benchmark_name,
-                              test_name,
-                              test_args,
-                              iterations,
-                              rm_chroot_tmp,
-                              perf_args,
-                              suite,
-                              show_all_results,
-                              retries,
-                              run_local=False)
+        benchmark = Benchmark(
+            benchmark_name,
+            test_name,
+            test_args,
+            iterations,
+            rm_chroot_tmp,
+            perf_args,
+            suite,
+            show_all_results,
+            retries,
+            run_local=False)
         benchmarks.append(benchmark)
 
     if not benchmarks:

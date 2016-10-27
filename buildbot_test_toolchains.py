@@ -167,6 +167,13 @@ class ToolchainComparator(object):
       suite: telemetry_Crosperf
       iterations: 3
     }
+
+    benchmark: page_cycler_v2.typical_25 {
+      suite: telemetry_Crosperf
+      iterations: 2
+      run_local: False
+      retries: 0
+    }
     """
 
     with open(experiment_file, 'w') as f:
