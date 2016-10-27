@@ -637,7 +637,7 @@ class JSONResultsReport(ResultsReport):
           detail_results = {}
           json_results['detailed_results'] = detail_results
           for k, v in iter_results.iteritems():
-            if k == 'retval' or k == 'PASS' or k == ['PASS']:
+            if k == 'retval' or k == 'PASS' or k == ['PASS'] or v == 'PASS':
               continue
 
             v = _Unlist(v)

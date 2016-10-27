@@ -124,6 +124,10 @@ def GetBuildInfo(file_dir, builder):
     # For release builds, get logs from the 'release' builder.
     if builder.endswith('-release'):
       commands += ' -b release'
+    elif builder.endswith('-gcc-toolchain'):
+      commands += ' -b gcc_toolchain'
+    elif builder.endswith('-llvm-toolchain'):
+      commands += ' -b llvm_toolchain'
     elif builder.endswith('-toolchain'):
       commands += ' -b etc'
     else:
@@ -300,8 +304,16 @@ def GetTrybotImage(chromeos_root,
 
   trybot_image = ''
 
-  if build_status in OK_STATUS:
+  if build.endswith('-toolchain'):
+    # For rotating testers, we don't care about their build_status
+    # result, because if any HWTest failed it will be non-zero.
     trybot_image = FindArchiveImage(chromeos_root, build, build_id)
+  else:
+    # The nightly performance tests do not run HWTests, so if
+    # their build_status is non-zero, we do care.  In this case
+    # non-zero means the image itself probably did not build.
+    if build_status in OK_STATUS:
+      trybot_image = FindArchiveImage(chromeos_root, build, build_id)
   if not trybot_image:
     logger.GetLogger().LogError('Trybot job %s failed with status %d;'
                                 ' no trybot image generated.' %
