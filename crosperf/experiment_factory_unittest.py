@@ -40,6 +40,7 @@ EXPERIMENT_FILE_1 = """
 
 # pylint: disable=too-many-function-args
 
+
 class ExperimentFactoryTest(unittest.TestCase):
   """Class for running experiment factory unittests."""
 
@@ -48,9 +49,8 @@ class ExperimentFactoryTest(unittest.TestCase):
 
   def testLoadExperimentFile1(self):
     experiment_file = ExperimentFile(StringIO.StringIO(EXPERIMENT_FILE_1))
-    exp = ExperimentFactory().GetExperiment(experiment_file,
-                                            working_directory='',
-                                            log_dir='')
+    exp = ExperimentFactory().GetExperiment(
+        experiment_file, working_directory='', log_dir='')
     self.assertEqual(exp.remote, ['chromeos-alex3'])
 
     self.assertEqual(len(exp.benchmarks), 1)
@@ -67,10 +67,8 @@ class ExperimentFactoryTest(unittest.TestCase):
     ef = ExperimentFactory()
 
     bench_list = []
-    ef.AppendBenchmarkSet(bench_list,
-                          experiment_factory.telemetry_perfv2_tests, '', 1,
-                          False, '', 'telemetry_Crosperf', False,
-                          0,
+    ef.AppendBenchmarkSet(bench_list, experiment_factory.telemetry_perfv2_tests,
+                          '', 1, False, '', 'telemetry_Crosperf', False, 0,
                           False)
     self.assertEqual(
         len(bench_list), len(experiment_factory.telemetry_perfv2_tests))
@@ -85,9 +83,9 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertTrue(type(bench_list[0]) is benchmark.Benchmark)
 
     bench_list = []
-    ef.AppendBenchmarkSet(
-        bench_list, experiment_factory.telemetry_toolchain_perf_tests, '', 1,
-        False, '', 'telemetry_Crosperf', False, 0, False)
+    ef.AppendBenchmarkSet(bench_list,
+                          experiment_factory.telemetry_toolchain_perf_tests, '',
+                          1, False, '', 'telemetry_Crosperf', False, 0, False)
     self.assertEqual(
         len(bench_list), len(experiment_factory.telemetry_toolchain_perf_tests))
     self.assertTrue(type(bench_list[0]) is benchmark.Benchmark)
@@ -101,8 +99,9 @@ class ExperimentFactoryTest(unittest.TestCase):
     def FakeAppendBenchmarkSet(bench_list, set_list, args, iters, rm_ch,
                                perf_args, suite, show_all):
       'Helper function for test_get_experiment'
-      arg_list = [bench_list, set_list, args, iters, rm_ch, perf_args, suite,
-                  show_all]
+      arg_list = [
+          bench_list, set_list, args, iters, rm_ch, perf_args, suite, show_all
+      ]
       self.append_benchmark_call_args.append(arg_list)
 
     def FakeGetDefaultRemotes(board):
@@ -171,10 +170,9 @@ class ExperimentFactoryTest(unittest.TestCase):
     test_flag.SetTestMode(True)
     label_settings.SetField('remote', 'chromeos1.cros chromeos2.cros')
     exp = ef.GetExperiment(mock_experiment_file, '', '')
-    self.assertEqual(exp.remote, ['chromeos1.cros',
-                                  'chromeos2.cros',
-                                  '123.45.67.89',
-                                  '123.45.76.80'])
+    self.assertEqual(
+        exp.remote,
+        ['chromeos1.cros', 'chromeos2.cros', '123.45.67.89', '123.45.76.80'])
 
     # Third test: Automatic fixing of bad  logging_level param:
     global_settings.SetField('logging_level', 'really loud!')
@@ -208,12 +206,15 @@ class ExperimentFactoryTest(unittest.TestCase):
     exp = ef.GetExperiment(mock_experiment_file, '', '')
     self.assertEqual(len(exp.labels), 2)
     self.assertEqual(exp.labels[1].chromeos_image, 'fake_image_path')
-    self.assertEqual(exp.remote, ['fake_chromeos_machine1.cros',
-                                  'fake_chromeos_machine2.cros'])
+    self.assertEqual(
+        exp.remote,
+        ['fake_chromeos_machine1.cros', 'fake_chromeos_machine2.cros'])
 
   def test_get_default_remotes(self):
-    board_list = ['x86-alex', 'lumpy', 'stumpy', 'parrot', 'daisy', 'peach_pit',
-                  'peppy', 'squawks']
+    board_list = [
+        'x86-alex', 'lumpy', 'elm', 'parrot', 'daisy', 'peach_pit', 'peppy',
+        'squawks'
+    ]
 
     ef = ExperimentFactory()
     self.assertRaises(Exception, ef.GetDefaultRemotes, 'bad-board')
@@ -222,7 +223,10 @@ class ExperimentFactoryTest(unittest.TestCase):
     # machines back for each board.
     for b in board_list:
       remotes = ef.GetDefaultRemotes(b)
-      self.assertEqual(len(remotes), 3)
+      if b == 'elm':
+        self.assertEqual(len(remotes), 2)
+      else:
+        self.assertEqual(len(remotes), 3)
 
 
 if __name__ == '__main__':
