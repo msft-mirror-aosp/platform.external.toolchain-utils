@@ -49,8 +49,9 @@ class MyMachineManager(machine_manager.MachineManager):
 CHROMEOS_ROOT = '/tmp/chromeos-root'
 MACHINE_NAMES = ['lumpy1', 'lumpy2', 'lumpy3', 'daisy1', 'daisy2']
 LABEL_LUMPY = label.MockLabel('lumpy', 'lumpy_chromeos_image', CHROMEOS_ROOT,
-                              'lumpy', ['lumpy1', 'lumpy2', 'lumpy3', 'lumpy4'],
-                              '', '', False, 'average,'
+                              'lumpy',
+                              ['lumpy1', 'lumpy2', 'lumpy3', 'lumpy4'], '', '',
+                              False, 'average,'
                               'gcc', None)
 LABEL_MIX = label.MockLabel('mix', 'chromeos_image', CHROMEOS_ROOT, 'mix',
                             ['daisy1', 'daisy2', 'lumpy3', 'lumpy4'], '', '',
@@ -83,9 +84,10 @@ class MachineManagerTest(unittest.TestCase):
   def setUp(self, mock_isdir):
 
     mock_isdir.return_value = True
-    self.mm = machine_manager.MachineManager(
-        '/usr/local/chromeos', 0, 'average', None, self.mock_cmd_exec,
-        self.mock_logger)
+    self.mm = machine_manager.MachineManager('/usr/local/chromeos', 0,
+                                             'average', None,
+                                             self.mock_cmd_exec,
+                                             self.mock_logger)
 
     self.mock_lumpy1.name = 'lumpy1'
     self.mock_lumpy2.name = 'lumpy2'
@@ -204,11 +206,11 @@ class MachineManagerTest(unittest.TestCase):
       self.assertEqual(image_call_args[0], 'python')
       self.assertEqual(image_call_args[1].split('/')[-1], 'image_chromeos.pyc')
       image_call_args = image_call_args[2:]
-      self.assertEqual(image_call_args,
-                       ['--chromeos_root=/tmp/chromeos-root',
-                        '--image=lumpy_chromeos_image', '--image_args=',
-                        '--remote=lumpy1', '--logging_level=average',
-                        '--board=lumpy'])
+      self.assertEqual(image_call_args, [
+          '--chromeos_root=/tmp/chromeos-root', '--image=lumpy_chromeos_image',
+          '--image_args=', '--remote=lumpy1', '--logging_level=average',
+          '--board=lumpy'
+      ])
       self.assertEqual(mock_run_croscmd.call_args[0][0], 'reboot && exit')
 
     # Test 4: Everything works properly. Trybot image type.
@@ -343,8 +345,9 @@ class MachineManagerTest(unittest.TestCase):
     self.assertEqual(m, self.mock_lumpy1)
     self.assertTrue(self.mock_lumpy1.locked)
     self.assertEqual(mock_md5.call_count, 0)
-    self.assertEqual(self.msgs, ['Tried to lock lumpy1', 'Tried to lock lumpy2',
-                                 'Tried to lock lumpy3'])
+    self.assertEqual(self.msgs, [
+        'Tried to lock lumpy1', 'Tried to lock lumpy2', 'Tried to lock lumpy3'
+    ])
 
     # Test the second return statment (machine is unlocked, has no checksum)
     save_locked = self.mock_lumpy1.locked
@@ -380,24 +383,24 @@ class MachineManagerTest(unittest.TestCase):
     self.assertEqual(machine_list, self.mm._all_machines)
 
     machine_list = self.mm.GetAvailableMachines(LABEL_MIX)
-    self.assertEqual(machine_list, [self.mock_daisy1, self.mock_daisy2,
-                                    self.mock_lumpy3])
+    self.assertEqual(machine_list,
+                     [self.mock_daisy1, self.mock_daisy2, self.mock_lumpy3])
 
     machine_list = self.mm.GetAvailableMachines(LABEL_LUMPY)
-    self.assertEqual(machine_list, [self.mock_lumpy1, self.mock_lumpy2,
-                                    self.mock_lumpy3])
+    self.assertEqual(machine_list,
+                     [self.mock_lumpy1, self.mock_lumpy2, self.mock_lumpy3])
 
   def test_get_machines(self):
     machine_list = self.mm.GetMachines()
     self.assertEqual(machine_list, self.mm._all_machines)
 
     machine_list = self.mm.GetMachines(LABEL_MIX)
-    self.assertEqual(machine_list, [self.mock_daisy1, self.mock_daisy2,
-                                    self.mock_lumpy3])
+    self.assertEqual(machine_list,
+                     [self.mock_daisy1, self.mock_daisy2, self.mock_lumpy3])
 
     machine_list = self.mm.GetMachines(LABEL_LUMPY)
-    self.assertEqual(machine_list, [self.mock_lumpy1, self.mock_lumpy2,
-                                    self.mock_lumpy3])
+    self.assertEqual(machine_list,
+                     [self.mock_lumpy1, self.mock_lumpy2, self.mock_lumpy3])
 
   def test_release_machines(self):
 
@@ -442,19 +445,22 @@ class MachineManagerTest(unittest.TestCase):
 
     mock_logger = mock.Mock(spec=logger.Logger)
 
-    bench = Benchmark('page_cycler_v2.netsim.top_10',    # name
-                      'page_cycler_v2.netsim.top_10',    # test_name
-                      '',             # test_args
-                      1,              # iteratins
-                      False,          # rm_chroot_tmp
-                      '',             # perf_args
-                      suite='telemetry_Crosperf')     # suite
+    bench = Benchmark(
+        'page_cycler_v2.netsim.top_10',  # name
+        'page_cycler_v2.netsim.top_10',  # test_name
+        '',  # test_args
+        1,  # iteratins
+        False,  # rm_chroot_tmp
+        '',  # perf_args
+        suite='telemetry_Crosperf')  # suite
 
     test_run = MockBenchmarkRun('test run', bench, LABEL_LUMPY, 1, [], self.mm,
                                 mock_logger, 'verbose', '')
 
-    self.mm._machines = [self.mock_lumpy1, self.mock_lumpy2, self.mock_lumpy3,
-                         self.mock_daisy1, self.mock_daisy2]
+    self.mm._machines = [
+        self.mock_lumpy1, self.mock_lumpy2, self.mock_lumpy3, self.mock_daisy1,
+        self.mock_daisy2
+    ]
 
     self.mock_lumpy1.test_run = test_run
     self.mock_lumpy2.test_run = test_run

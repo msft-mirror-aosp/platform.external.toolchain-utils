@@ -31,30 +31,33 @@ class SuiteRunnerTest(unittest.TestCase):
   mock_label = label.MockLabel('lumpy', 'lumpy_chromeos_image', '/tmp/chromeos',
                                'lumpy', ['lumpy1.cros', 'lumpy.cros2'], '', '',
                                False, 'average', 'gcc', '')
-  telemetry_crosperf_bench = Benchmark('b1_test',  # name
-                                       'octane',  # test_name
-                                       '',  # test_args
-                                       3,  # iterations
-                                       False,  # rm_chroot_tmp
-                                       'record -e cycles',  # perf_args
-                                       'telemetry_Crosperf',  # suite
-                                       True)  # show_all_results
+  telemetry_crosperf_bench = Benchmark(
+      'b1_test',  # name
+      'octane',  # test_name
+      '',  # test_args
+      3,  # iterations
+      False,  # rm_chroot_tmp
+      'record -e cycles',  # perf_args
+      'telemetry_Crosperf',  # suite
+      True)  # show_all_results
 
-  test_that_bench = Benchmark('b2_test',  # name
-                              'octane',  # test_name
-                              '',  # test_args
-                              3,  # iterations
-                              False,  # rm_chroot_tmp
-                              'record -e cycles')  # perf_args
+  test_that_bench = Benchmark(
+      'b2_test',  # name
+      'octane',  # test_name
+      '',  # test_args
+      3,  # iterations
+      False,  # rm_chroot_tmp
+      'record -e cycles')  # perf_args
 
-  telemetry_bench = Benchmark('b3_test',  # name
-                              'octane',  # test_name
-                              '',  # test_args
-                              3,  # iterations
-                              False,  # rm_chroot_tmp
-                              'record -e cycles',  # perf_args
-                              'telemetry',  # suite
-                              False)  # show_all_results
+  telemetry_bench = Benchmark(
+      'b3_test',  # name
+      'octane',  # test_name
+      '',  # test_args
+      3,  # iterations
+      False,  # rm_chroot_tmp
+      'record -e cycles',  # perf_args
+      'telemetry',  # suite
+      False)  # show_all_results
 
   def __init__(self, *args, **kwargs):
     super(SuiteRunnerTest, self).__init__(*args, **kwargs)
@@ -68,8 +71,9 @@ class SuiteRunnerTest(unittest.TestCase):
     self.call_telemetry_run = False
 
   def setUp(self):
-    self.runner = suite_runner.SuiteRunner(
-        self.mock_logger, 'verbose', self.mock_cmd_exec, self.mock_cmd_term)
+    self.runner = suite_runner.SuiteRunner(self.mock_logger, 'verbose',
+                                           self.mock_cmd_exec,
+                                           self.mock_cmd_term)
 
   def test_get_profiler_args(self):
     input_str = ('--profiler=custom_perf --profiler_args=\'perf_options'
@@ -102,16 +106,17 @@ class SuiteRunnerTest(unittest.TestCase):
 
     def FakeTelemetryCrosperfRun(machine, test_label, benchmark, test_args,
                                  profiler_args):
-      self.telemetry_crosperf_args = [machine, test_label, benchmark, test_args,
-                                      profiler_args]
+      self.telemetry_crosperf_args = [
+          machine, test_label, benchmark, test_args, profiler_args
+      ]
       self.call_telemetry_crosperf_run = True
       return 'Ran FakeTelemetryCrosperfRun'
 
-    def FakeTestThatRun(machine, test_label, benchmark,
-                        test_args, profiler_args):
-      self.test_that_args = [machine, test_label, benchmark,
-                             test_args, profiler_args
-                            ]
+    def FakeTestThatRun(machine, test_label, benchmark, test_args,
+                        profiler_args):
+      self.test_that_args = [
+          machine, test_label, benchmark, test_args, profiler_args
+      ]
       self.call_test_that_run = True
       return 'Ran FakeTestThatRun'
 
@@ -124,8 +129,8 @@ class SuiteRunnerTest(unittest.TestCase):
     test_args = ''
     profiler_args = ''
     reset()
-    self.runner.Run(machine, self.mock_label, self.telemetry_bench,
-                    test_args, profiler_args)
+    self.runner.Run(machine, self.mock_label, self.telemetry_bench, test_args,
+                    profiler_args)
     self.assertTrue(self.call_pin_governor)
     self.assertTrue(self.call_telemetry_run)
     self.assertFalse(self.call_test_that_run)
@@ -135,26 +140,26 @@ class SuiteRunnerTest(unittest.TestCase):
         ['fake_machine', self.mock_label, self.telemetry_bench, ''])
 
     reset()
-    self.runner.Run(machine, self.mock_label, self.test_that_bench,
-                    test_args, profiler_args)
+    self.runner.Run(machine, self.mock_label, self.test_that_bench, test_args,
+                    profiler_args)
     self.assertTrue(self.call_pin_governor)
     self.assertFalse(self.call_telemetry_run)
     self.assertTrue(self.call_test_that_run)
     self.assertFalse(self.call_telemetry_crosperf_run)
-    self.assertEqual(self.test_that_args, ['fake_machine', self.mock_label,
-                                           self.test_that_bench, '', ''])
+    self.assertEqual(
+        self.test_that_args,
+        ['fake_machine', self.mock_label, self.test_that_bench, '', ''])
 
     reset()
-    self.runner.Run(machine, self.mock_label,
-                    self.telemetry_crosperf_bench, test_args,
-                    profiler_args)
+    self.runner.Run(machine, self.mock_label, self.telemetry_crosperf_bench,
+                    test_args, profiler_args)
     self.assertTrue(self.call_pin_governor)
     self.assertFalse(self.call_telemetry_run)
     self.assertFalse(self.call_test_that_run)
     self.assertTrue(self.call_telemetry_crosperf_run)
-    self.assertEqual(self.telemetry_crosperf_args,
-                     ['fake_machine', self.mock_label,
-                      self.telemetry_crosperf_bench, '', ''])
+    self.assertEqual(self.telemetry_crosperf_args, [
+        'fake_machine', self.mock_label, self.telemetry_crosperf_bench, '', ''
+    ])
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
   def test_get_highest_static_frequency(self, mock_cros_runcmd):
@@ -192,8 +197,7 @@ class SuiteRunnerTest(unittest.TestCase):
         '/sys/devices/system/cpu/cpu*/cpufreq/scaling_min_freq; do echo '
         '1666000 > $f; done && for f in '
         '/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo '
-        'performance > $f; done',
-    ))
+        'performance > $f; done',))
 
   @mock.patch.object(time, 'sleep')
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')

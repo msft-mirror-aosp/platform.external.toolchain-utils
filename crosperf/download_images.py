@@ -1,7 +1,6 @@
 # Copyright (c) 2014-2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Download images from Cloud Storage."""
 
 from __future__ import print_function
@@ -25,16 +24,15 @@ class ImageDownloader(object):
     self._logger = logger_to_use
     self.log_level = log_level
     self._ce = cmd_exec or command_executer.GetCommandExecuter(
-        self._logger,
-        log_level=self.log_level)
+        self._logger, log_level=self.log_level)
 
   def GetBuildID(self, chromeos_root, xbuddy_label):
     # Get the translation of the xbuddy_label into the real Google Storage
     # image name.
     command = ('cd ~/trunk/src/third_party/toolchain-utils/crosperf; '
                "python translate_xbuddy.py '%s'" % xbuddy_label)
-    _, build_id_tuple_str, _ = self._ce.ChrootRunCommandWOutput(
-        chromeos_root, command)
+    _, build_id_tuple_str, _ = self._ce.ChrootRunCommandWOutput(chromeos_root,
+                                                                command)
     if not build_id_tuple_str:
       raise MissingImage("Unable to find image for '%s'" % xbuddy_label)
 
@@ -65,15 +63,15 @@ class ImageDownloader(object):
       downloaded_image_name = os.path.join(download_path,
                                            'chromiumos_test_image.tar.xz')
       if status != 0 or not os.path.exists(downloaded_image_name):
-        raise MissingImage('Cannot download image: %s.'
-                           % downloaded_image_name)
+        raise MissingImage('Cannot download image: %s.' % downloaded_image_name)
 
     return image_path
 
   def UncompressImage(self, chromeos_root, build_id):
     # Check to see if the file has already been uncompresssed, etc.
-    if os.path.exists(os.path.join(chromeos_root, 'chroot/tmp', build_id,
-                                   'chromiumos_test_image.bin')):
+    if os.path.exists(
+        os.path.join(chromeos_root, 'chroot/tmp', build_id,
+                     'chromiumos_test_image.bin')):
       return
 
     # Uncompress and untar the downloaded image.

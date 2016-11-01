@@ -38,8 +38,8 @@ class ImageDownloaderTestcast(unittest.TestCase):
     image_path = ('gs://chromeos-image-archive/%s/chromiumos_test_image.tar.xz'
                   % test_build_id)
 
-    downloader = download_images.ImageDownloader(logger_to_use=MOCK_LOGGER,
-                                                 cmd_exec=mock_cmd_exec)
+    downloader = download_images.ImageDownloader(
+        logger_to_use=MOCK_LOGGER, cmd_exec=mock_cmd_exec)
 
     # Set os.path.exists to always return False and run downloader
     mock_path_exists.return_value = False
@@ -97,8 +97,8 @@ class ImageDownloaderTestcast(unittest.TestCase):
     test_chroot = '/usr/local/home/chromeos'
     test_build_id = 'lumpy-release/R36-5814.0.0'
 
-    downloader = download_images.ImageDownloader(logger_to_use=MOCK_LOGGER,
-                                                 cmd_exec=mock_cmd_exec)
+    downloader = download_images.ImageDownloader(
+        logger_to_use=MOCK_LOGGER, cmd_exec=mock_cmd_exec)
 
     # Set os.path.exists to always return False and run uncompress.
     mock_path_exists.return_value = False
