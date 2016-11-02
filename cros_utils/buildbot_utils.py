@@ -183,7 +183,8 @@ def GetTrybotImage(chromeos_root,
                    patch_list,
                    build_tag,
                    other_flags=[],
-                   build_toolchain=False):
+                   build_toolchain=False,
+                   async=False):
   """Launch buildbot and get resulting trybot artifact name.
 
     This function launches a buildbot with the appropriate flags to
@@ -234,6 +235,11 @@ def GetTrybotImage(chromeos_root,
   if 'Tryjob submitted!' not in out:
     logger.GetLogger().LogFatal('Error occurred while launching trybot job: '
                                 '%s' % command)
+
+  if async:
+    # Do not wait for trybot job to finish; return immediately
+    return 0
+
   os.chdir(base_dir)
 
   build_id = 0

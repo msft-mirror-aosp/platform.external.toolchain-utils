@@ -87,53 +87,15 @@ class ToolchainVerifier(object):
     date_str = datetime.date.today()
     description = 'master_%s_%s_%s' % (self._patches_string, self._build,
                                        date_str)
-    trybot_image = buildbot_utils.GetTrybotImage(
+    _ = buildbot_utils.GetTrybotImage(
         self._chromeos_root,
         self._build,
         self._patches,
         description,
-        other_flags=flags)
-    if len(trybot_image) == 0:
-      self._l.LogError('Unable to find trybot_image for %s!' % description)
-      return 1
-
-    if os.getlogin() == ROLE_ACCOUNT:
-      self._FinishSetup()
+        other_flags=flags,
+        async=True)
 
     return 0
-
-
-def SendEmail(start_board, compiler):
-  """Send out the test results for all the boards."""
-
-  # This is no longer the correct way to get results.  Until
-  # this is fixed, don't send any email at all.
-  return 0
-
-  results = ''
-  for i in range(len(TEST_BOARD)):
-    board = TEST_BOARD[(start_board + i) % len(TEST_BOARD)]
-    f = os.path.join(VALIDATION_RESULT_DIR, compiler, board)
-    if not os.path.exists(f):
-      continue
-    results += board
-    results += '\n'
-    file_name = os.path.join(VALIDATION_RESULT_DIR, f)
-    with open(file_name, 'r') as readin:
-      read_data = readin.read()
-      results += read_data
-
-  output = os.path.join(VALIDATION_RESULT_DIR, compiler, 'result')
-  with open(output, 'w') as out:
-    out.write(results)
-
-  ce = command_executer.GetCommandExecuter()
-  if os.path.exists(os.path.expanduser(MAIL_PROGRAM)):
-    email_title = '%s validation test results' % compiler
-    command = ('cat %s | %s -s "%s" -team' %
-               (output, MAIL_PROGRAM, email_title))
-    ce.RunCommand(command)
-
 
 def Main(argv):
   """The main function."""
@@ -196,8 +158,6 @@ def Main(argv):
       logfile = os.path.join(VALIDATION_RESULT_DIR, options.compiler, board)
       with open(logfile, 'w') as f:
         f.write('Verifier got an exception, please check the log.\n')
-
-  SendEmail(start_board, options.compiler)
 
 
 if __name__ == '__main__':
