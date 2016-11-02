@@ -49,6 +49,7 @@ class BenchmarkRunTest(unittest.TestCase):
     self.test_label = MockLabel(
         'test1',
         'image1',
+        'autotest_dir',
         '/tmp/test_benchmark_run',
         'x86-alex',
         'chromeos2-row1-rack4-host9.cros',
@@ -70,6 +71,7 @@ class BenchmarkRunTest(unittest.TestCase):
     my_label = MockLabel(
         'test1',
         'image1',
+        'autotest_dir',
         '/tmp/test_benchmark_run',
         'x86-alex',
         'chromeos2-row1-rack4-host9.cros',

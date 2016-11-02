@@ -17,6 +17,10 @@ class MissingImage(Exception):
   """Raised when the requested image does not exist in gs://"""
 
 
+class MissingFile(Exception):
+  """Raised when the requested file does not exist in gs://"""
+
+
 class ImageDownloader(object):
   """Download images from Cloud Storage."""
 
@@ -85,7 +89,102 @@ class ImageDownloader(object):
     if retval != 0:
       raise MissingImage('Cannot uncompress image: %s.' % build_id)
 
-  def Run(self, chromeos_root, xbuddy_label):
+  def DownloadSingleAutotestFile(self, chromeos_root, build_id,
+                                 package_file_name):
+    # Verify if package files exist
+    status = 0
+    gs_package_name = ('gs://chromeos-image-archive/%s/%s' %
+                       (build_id, package_file_name))
+    if not test_flag.GetTestMode():
+      cmd = 'gsutil ls %s' % gs_package_name
+      status = self._ce.ChrootRunCommand(chromeos_root, cmd)
+    if status != 0:
+      raise MissingFile('Cannot find autotest package file: %s.' %
+                        package_file_name)
+
+    if self.log_level == 'average':
+      self._logger.LogOutput('Preparing to download %s package to local '
+                             'directory.' % package_file_name)
+
+    # Make sure the directory for downloading the package exists.
+    download_path = os.path.join(chromeos_root, 'chroot/tmp', build_id)
+    package_path = os.path.join(download_path, package_file_name)
+    if not os.path.exists(download_path):
+      os.makedirs(download_path)
+
+    # Check to see if the package file has already been downloaded.  If not,
+    # download it.
+    if not os.path.exists(package_path):
+      command = 'gsutil cp %s /tmp/%s' % (gs_package_name, build_id)
+
+      if self.log_level != 'verbose':
+        self._logger.LogOutput('CMD: %s' % command)
+      status = self._ce.ChrootRunCommand(chromeos_root, command)
+      if status != 0 or not os.path.exists(package_path):
+        raise MissingFile('Cannot download package: %s .' % package_path)
+
+  def UncompressSingleAutotestFile(self, chromeos_root, build_id,
+                                   package_file_name, uncompress_cmd):
+    # Uncompress file
+    command = ('cd /tmp/%s ; %s %s' %
+               (build_id, uncompress_cmd, package_file_name))
+
+    if self.log_level != 'verbose':
+      self._logger.LogOutput('CMD: %s' % command)
+      print('(Uncompressing autotest file %s .)' % package_file_name)
+    retval = self._ce.ChrootRunCommand(chromeos_root, command)
+    if retval != 0:
+      raise MissingFile('Cannot uncompress file: %s.' % package_file_name)
+    # Remove uncompressed downloaded file
+    command = ('cd /tmp/%s ; rm -f %s' % (build_id, package_file_name))
+    if self.log_level != 'verbose':
+      self._logger.LogOutput('CMD: %s' % command)
+      print('(Removing processed autotest file %s .)' % package_file_name)
+    # try removing file, its ok to have an error, print if encountered
+    retval = self._ce.ChrootRunCommand(chromeos_root, command)
+    if retval != 0:
+      print('(Warning: Could not remove file %s .)' % package_file_name)
+
+  def DownloadAutotestFiles(self, chromeos_root, build_id):
+    # Download autest package files (3 files)
+    autotest_packages_name = ('autotest_packages.tar')
+    autotest_server_package_name = ('autotest_server_package.tar.bz2')
+    autotest_control_files_name = ('control_files.tar')
+
+    # Autotest directory relative path wrt chroot
+    autotest_rel_path = os.path.join('/tmp', build_id, 'autotest_files')
+    # Absolute Path to download files
+    autotest_path = os.path.join(chromeos_root, 'chroot/tmp', build_id,
+                                 'autotest_files')
+
+    if not os.path.exists(autotest_path):
+      self.DownloadSingleAutotestFile(chromeos_root, build_id,
+                                      autotest_packages_name)
+      self.DownloadSingleAutotestFile(chromeos_root, build_id,
+                                      autotest_server_package_name)
+      self.DownloadSingleAutotestFile(chromeos_root, build_id,
+                                      autotest_control_files_name)
+
+      self.UncompressSingleAutotestFile(chromeos_root, build_id,
+                                        autotest_packages_name, 'tar -xvf ')
+      self.UncompressSingleAutotestFile(chromeos_root, build_id,
+                                        autotest_server_package_name,
+                                        'tar -jxvf ')
+      self.UncompressSingleAutotestFile(chromeos_root, build_id,
+                                        autotest_control_files_name,
+                                        'tar -xvf ')
+      # Rename created autotest directory to autotest_files
+      command = ('cd /tmp/%s ; mv autotest autotest_files' % build_id)
+      if self.log_level != 'verbose':
+        self._logger.LogOutput('CMD: %s' % command)
+        print('(Moving downloaded autotest files to autotest_files)')
+      retval = self._ce.ChrootRunCommand(chromeos_root, command)
+      if retval != 0:
+        raise MissingFile('Could not create directory autotest_files')
+
+    return autotest_rel_path
+
+  def Run(self, chromeos_root, xbuddy_label, autotest_path):
     build_id = self.GetBuildID(chromeos_root, xbuddy_label)
     image_name = ('gs://chromeos-image-archive/%s/chromiumos_test_image.tar.xz'
                   % build_id)
@@ -105,4 +204,7 @@ class ImageDownloader(object):
     if self.log_level != 'quiet':
       self._logger.LogOutput('Using image from %s.' % image_path)
 
-    return image_path
+    if autotest_path == '':
+      autotest_path = self.DownloadAutotestFiles(chromeos_root, build_id)
+
+    return image_path, autotest_path

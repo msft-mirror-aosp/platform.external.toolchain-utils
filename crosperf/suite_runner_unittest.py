@@ -28,9 +28,10 @@ class SuiteRunnerTest(unittest.TestCase):
   mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
   mock_cmd_term = mock.Mock(spec=command_executer.CommandTerminator)
   mock_logger = mock.Mock(spec=logger.Logger)
-  mock_label = label.MockLabel('lumpy', 'lumpy_chromeos_image', '/tmp/chromeos',
-                               'lumpy', ['lumpy1.cros', 'lumpy.cros2'], '', '',
-                               False, 'average', 'gcc', '')
+  mock_label = label.MockLabel('lumpy', 'lumpy_chromeos_image', '',
+                               '/tmp/chromeos', 'lumpy',
+                               ['lumpy1.cros', 'lumpy.cros2'], '', '', False,
+                               'average', 'gcc', '')
   telemetry_crosperf_bench = Benchmark(
       'b1_test',  # name
       'octane',  # test_name

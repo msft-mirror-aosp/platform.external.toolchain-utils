@@ -156,9 +156,19 @@ class ExperimentFile(object):
               if chromeos_root_field:
                 chromeos_root = chromeos_root_field.GetString()
               value = field.GetString()
-              xbuddy_path = settings.GetXbuddyPath(value, board, chromeos_root,
-                                                   'quiet')
-              res += '\t#actual_image: %s\n' % xbuddy_path
+              autotest_field = settings.fields['autotest_path']
+              autotest_path = ''
+              if autotest_field.assigned:
+                autotest_path = autotest_field.GetString()
+              image_path, autotest_path = settings.GetXbuddyPath(value,
+                                                                 autotest_path,
+                                                                 board,
+                                                                 chromeos_root,
+                                                                 'quiet')
+              res += '\t#actual_image: %s\n' % image_path
+              if not autotest_field.assigned:
+                res += '\t#actual_autotest_path: %s\n' % autotest_path
+
         res += '}\n\n'
 
     return res

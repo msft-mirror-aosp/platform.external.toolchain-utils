@@ -29,8 +29,9 @@ class LabelSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.LabelSettings('l_settings')
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 8)
+    self.assertEqual(len(res.fields), 9)
     self.assertEqual(res.GetField('chromeos_image'), '')
+    self.assertEqual(res.GetField('autotest_path'), '')
     self.assertEqual(res.GetField('chromeos_root'), '')
     self.assertEqual(res.GetField('remote'), None)
     self.assertEqual(res.GetField('image_args'), '')
@@ -79,7 +80,7 @@ class SettingsFactoryTest(unittest.TestCase):
     l_settings = settings_factory.SettingsFactory().GetSettings('label',
                                                                 'label')
     self.assertIsInstance(l_settings, settings_factory.LabelSettings)
-    self.assertEqual(len(l_settings.fields), 8)
+    self.assertEqual(len(l_settings.fields), 9)
 
     b_settings = settings_factory.SettingsFactory().GetSettings('benchmark',
                                                                 'benchmark')

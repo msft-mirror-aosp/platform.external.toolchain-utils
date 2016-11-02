@@ -19,6 +19,7 @@ class Label(object):
   def __init__(self,
                name,
                chromeos_image,
+               autotest_path,
                chromeos_root,
                board,
                remote,
@@ -38,6 +39,7 @@ class Label(object):
 
     self.name = name
     self.chromeos_image = chromeos_image
+    self.autotest_path = autotest_path
     self.board = board
     self.remote = remote
     self.image_args = image_args
@@ -117,6 +119,7 @@ class MockLabel(object):
   def __init__(self,
                name,
                chromeos_image,
+               autotest_path,
                chromeos_root,
                board,
                remote,
@@ -128,6 +131,7 @@ class MockLabel(object):
                chrome_src=None):
     self.name = name
     self.chromeos_image = chromeos_image
+    self.autotest_path = autotest_path
     self.board = board
     self.remote = remote
     self.cache_dir = cache_dir

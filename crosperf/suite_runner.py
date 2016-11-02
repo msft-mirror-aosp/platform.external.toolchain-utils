@@ -172,9 +172,13 @@ class SuiteRunner(object):
     # Rebooting between iterations has proven to help with this.
     self.RebootMachine(machine, label.chromeos_root)
 
+    autotest_dir = '~/trunk/src/third_party/autotest/files'
+    if label.autotest_path != '':
+      autotest_dir = label.autotest_path
     command = (
-        ('%s --autotest_dir ~/trunk/src/third_party/autotest/files --fast '
-         '%s %s %s') % (TEST_THAT_PATH, options, machine, benchmark.test_name))
+        ('%s --autotest_dir %s --fast '
+         '%s %s %s') %
+        (TEST_THAT_PATH, autotest_dir, options, machine, benchmark.test_name))
     if self.log_level != 'verbose':
       self._logger.LogOutput('Running test.')
       self._logger.LogOutput('CMD: %s' % command)
@@ -207,6 +211,8 @@ class SuiteRunner(object):
     # For telemetry runs, we can use the autotest copy from the source
     # location. No need to have one under /build/<board>.
     autotest_dir_arg = '--autotest_dir ~/trunk/src/third_party/autotest/files'
+    if label.autotest_path != '':
+      autotest_dir_arg = '--autotest_dir %s' % label.autotest_path
 
     profiler_args = GetProfilerArgs(profiler_args)
     fast_arg = ''

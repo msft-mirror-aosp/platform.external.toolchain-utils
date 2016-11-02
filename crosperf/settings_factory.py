@@ -65,6 +65,13 @@ class LabelSettings(Settings):
             "'build' option for official or trybot images."))
     self.AddField(
         TextField(
+            'autotest_path',
+            required=False,
+            description='Autotest directory path relative to chroot which '
+            'has autotest files for the image to run tests requiring autotest files'
+        ))
+    self.AddField(
+        TextField(
             'chromeos_root',
             description='The path to a chromeos checkout which '
             'contains a src/scripts directory. Defaults to '

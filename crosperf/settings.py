@@ -66,7 +66,8 @@ class Settings(object):
       if not self.fields[name].assigned and self.fields[name].required:
         raise SyntaxError('Field %s is invalid.' % name)
 
-  def GetXbuddyPath(self, path_str, board, chromeos_root, log_level):
+  def GetXbuddyPath(self, path_str, autotest_path, board, chromeos_root,
+                    log_level):
     prefix = 'remote'
     l = logger.GetLogger()
     if (path_str.find('trybot') < 0 and path_str.find('toolchain') < 0 and
@@ -75,6 +76,6 @@ class Settings(object):
     else:
       xbuddy_path = '%s/%s' % (prefix, path_str)
     image_downloader = ImageDownloader(l, log_level)
-    image_path = image_downloader.Run(
-        misc.CanonicalizePath(chromeos_root), xbuddy_path)
-    return image_path
+    image_and_autotest_path = image_downloader.Run(
+        misc.CanonicalizePath(chromeos_root), xbuddy_path, autotest_path)
+    return image_and_autotest_path

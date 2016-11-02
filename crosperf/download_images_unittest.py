@@ -137,11 +137,14 @@ class ImageDownloaderTestcast(unittest.TestCase):
     # Set test arguments
     test_chroot = '/usr/local/home/chromeos'
     test_build_id = 'remote/lumpy/latest-dev'
+    test_empty_autotest_path = ''
+    test_autotest_path = '/tmp/autotest'
 
     # Set values to test/check.
     self.called_download_image = False
     self.called_uncompress_image = False
     self.called_get_build_id = False
+    self.called_download_autotest_files = False
 
     # Define fake stub functions for Run to call
     def FakeGetBuildID(unused_root, unused_xbuddy_label):
@@ -166,6 +169,12 @@ class ImageDownloaderTestcast(unittest.TestCase):
       self.called_uncompress_image = True
       return 0
 
+    def FakeDownloadAutotestFiles(root, build_id):
+      if root or build_id:
+        pass
+      self.called_download_autotest_files = True
+      return 'autotest'
+
     # Initialize downloader
     downloader = download_images.ImageDownloader(logger_to_use=MOCK_LOGGER)
 
@@ -173,26 +182,45 @@ class ImageDownloaderTestcast(unittest.TestCase):
     downloader.GetBuildID = FakeGetBuildID
     downloader.UncompressImage = FakeUncompressImage
     downloader.DownloadImage = GoodDownloadImage
+    downloader.DownloadAutotestFiles = FakeDownloadAutotestFiles
 
     # Call Run.
-    downloader.Run(test_chroot, test_build_id)
+    image_path, autotest_path = downloader.Run(test_chroot, test_build_id,
+                                               test_empty_autotest_path)
 
     # Make sure it called both _DownloadImage and _UncompressImage
     self.assertTrue(self.called_download_image)
     self.assertTrue(self.called_uncompress_image)
+    # Make sure it called DownloadAutotestFiles
+    self.assertTrue(self.called_download_autotest_files)
+    # Make sure it returned a autotest path returned from this call
+    self.assertTrue(autotest_path == 'autotest')
+
+    # Call Run with a non-empty autotest path
+    self.called_download_autotest_files = False
+
+    image_path, autotest_path = downloader.Run(test_chroot, test_build_id,
+                                               test_autotest_path)
+
+    # Verify that downloadAutotestFiles was not called
+    self.assertFalse(self.called_download_autotest_files)
+    # Make sure it returned the specified autotest path returned from this call
+    self.assertTrue(autotest_path == test_autotest_path)
 
     # Reset values; Now use fake stub that simulates DownloadImage failing.
     self.called_download_image = False
     self.called_uncompress_image = False
+    self.called_download_autotest_files = False
     downloader.DownloadImage = BadDownloadImage
 
     # Call Run again.
     self.assertRaises(download_images.MissingImage, downloader.Run, test_chroot,
-                      test_build_id)
+                      test_autotest_path, test_build_id)
 
-    # Verify that UncompressImage was not called, since _DownloadImage "failed"
+    # Verify that UncompressImage and downloadAutotestFiles was not called, since _DownloadImage "failed"
     self.assertTrue(self.called_download_image)
     self.assertFalse(self.called_uncompress_image)
+    self.assertFalse(self.called_download_autotest_files)
 
 
 if __name__ == '__main__':

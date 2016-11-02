@@ -12,6 +12,7 @@ perf_args = 'record -a -e cycles'
 label1 = MockLabel(
     'test1',
     'image1',
+    'autotest_dir',
     '/tmp/test_benchmark_run',
     'x86-alex',
     'chromeos-alex1',
@@ -24,6 +25,7 @@ label1 = MockLabel(
 label2 = MockLabel(
     'test2',
     'image2',
+    'autotest_dir',
     '/tmp/test_benchmark_run_2',
     'x86-alex',
     'chromeos-alex2',

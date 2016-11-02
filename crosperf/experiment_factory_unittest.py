@@ -109,10 +109,13 @@ class ExperimentFactoryTest(unittest.TestCase):
         return []
       return ['fake_chromeos_machine1.cros', 'fake_chromeos_machine2.cros']
 
-    def FakeGetXbuddyPath(build, board, chroot, log_level):
+    def FakeGetXbuddyPath(build, autotest_dir, board, chroot, log_level):
+      autotest_path = autotest_dir
+      if not autotest_path:
+        autotest_path = 'fake_autotest_path'
       if not build or not board or not chroot or not log_level:
-        return ''
-      return 'fake_image_path'
+        return '', autotest_path
+      return 'fake_image_path', autotest_path
 
     ef = ExperimentFactory()
     ef.AppendBenchmarkSet = FakeAppendBenchmarkSet
@@ -139,6 +142,7 @@ class ExperimentFactoryTest(unittest.TestCase):
         'chromeos_image',
         'chromeos/src/build/images/lumpy/latest/chromiumos_test_image.bin')
     label_settings.SetField('chrome_src', '/usr/local/google/home/chrome-top')
+    label_settings.SetField('autotest_path', '/tmp/autotest')
 
     mock_experiment_file.global_settings = global_settings
     mock_experiment_file.all_settings.append(label_settings)
@@ -164,6 +168,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertEqual(exp.labels[0].chromeos_image,
                      'chromeos/src/build/images/lumpy/latest/'
                      'chromiumos_test_image.bin')
+    self.assertEqual(exp.labels[0].autotest_path, '/tmp/autotest')
     self.assertEqual(exp.labels[0].board, 'lumpy')
 
     # Second test: Remotes listed in labels.
@@ -200,12 +205,14 @@ class ExperimentFactoryTest(unittest.TestCase):
     label_settings_2 = settings_factory.LabelSettings('official_image_label')
     label_settings_2.SetField('chromeos_root', 'chromeos')
     label_settings_2.SetField('build', 'official-dev')
+    label_settings_2.SetField('autotest_path', '')
     label_settings_2.GetXbuddyPath = FakeGetXbuddyPath
 
     mock_experiment_file.all_settings.append(label_settings_2)
     exp = ef.GetExperiment(mock_experiment_file, '', '')
     self.assertEqual(len(exp.labels), 2)
     self.assertEqual(exp.labels[1].chromeos_image, 'fake_image_path')
+    self.assertEqual(exp.labels[1].autotest_path, 'fake_autotest_path')
     self.assertEqual(
         exp.remote,
         ['fake_chromeos_machine1.cros', 'fake_chromeos_machine2.cros'])
