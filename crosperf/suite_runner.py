@@ -58,11 +58,12 @@ class SuiteRunner(object):
 
   def Run(self, machine, label, benchmark, test_args, profiler_args):
     for i in range(0, benchmark.retries + 1):
-      self.DecreaseWaitTime(machine, label.chromeos_root)
       self.PinGovernorExecutionFrequencies(machine, label.chromeos_root)
       if benchmark.suite == 'telemetry':
+        self.DecreaseWaitTime(machine, label.chromeos_root)
         ret_tup = self.Telemetry_Run(machine, label, benchmark, profiler_args)
       elif benchmark.suite == 'telemetry_Crosperf':
+        self.DecreaseWaitTime(machine, label.chromeos_root)
         ret_tup = self.Telemetry_Crosperf_Run(machine, label, benchmark,
                                               test_args, profiler_args)
       else:
