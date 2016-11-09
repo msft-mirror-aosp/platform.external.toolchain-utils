@@ -26,6 +26,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
     self.called_download_image = False
     self.called_uncompress_image = False
     self.called_get_build_id = False
+    self.called_download_autotest_files = False
 
   @mock.patch.object(os, 'makedirs')
   @mock.patch.object(os.path, 'exists')
@@ -111,11 +112,18 @@ class ImageDownloaderTestcast(unittest.TestCase):
         '/usr/local/home/chromeos/chroot/tmp/lumpy-release/'
         'R36-5814.0.0/chromiumos_test_image.bin')
 
-    # Verify ChrootRunCommand was called, with correct arguments.
-    self.assertEqual(mock_cmd_exec.ChrootRunCommand.call_count, 1)
-    mock_cmd_exec.ChrootRunCommand.assert_called_with(
-        '/usr/local/home/chromeos', 'cd /tmp/lumpy-release/R36-5814.0.0 ;unxz '
-        'chromiumos_test_image.tar.xz; tar -xvf chromiumos_test_image.tar')
+    # Verify ChrootRunCommand was called twice, with correct arguments.
+    self.assertEqual(mock_cmd_exec.ChrootRunCommand.call_count, 2)
+    call_args_0 = mock_cmd_exec.ChrootRunCommand.call_args_list[0][0]
+    call_args_1 = mock_cmd_exec.ChrootRunCommand.call_args_list[1][0]
+    expected_arg_0 = ('/usr/local/home/chromeos',
+                      'cd /tmp/lumpy-release/R36-5814.0.0 ; '
+                      'tar -Jxf chromiumos_test_image.tar.xz ')
+    expected_arg_1 = ('/usr/local/home/chromeos',
+                      'cd /tmp/lumpy-release/R36-5814.0.0 ; '
+                      'rm -f chromiumos_test_image.bin; ')
+    self.assertEqual(call_args_0, expected_arg_0)
+    self.assertEqual(call_args_1, expected_arg_1)
 
     # Set os.path.exists to always return False and run uncompress.
     mock_path_exists.reset_mock()
@@ -193,7 +201,8 @@ class ImageDownloaderTestcast(unittest.TestCase):
     self.assertTrue(self.called_uncompress_image)
     # Make sure it called DownloadAutotestFiles
     self.assertTrue(self.called_download_autotest_files)
-    # Make sure it returned a autotest path returned from this call
+    # Make sure it returned an image and  autotest path returned from this call
+    self.assertTrue(image_path == 'chromiumos_test_image.bin')
     self.assertTrue(autotest_path == 'autotest')
 
     # Call Run with a non-empty autotest path
@@ -217,7 +226,8 @@ class ImageDownloaderTestcast(unittest.TestCase):
     self.assertRaises(download_images.MissingImage, downloader.Run, test_chroot,
                       test_autotest_path, test_build_id)
 
-    # Verify that UncompressImage and downloadAutotestFiles was not called, since _DownloadImage "failed"
+    # Verify that UncompressImage and downloadAutotestFiles were not called,
+    # since _DownloadImage "failed"
     self.assertTrue(self.called_download_image)
     self.assertFalse(self.called_uncompress_image)
     self.assertFalse(self.called_download_autotest_files)

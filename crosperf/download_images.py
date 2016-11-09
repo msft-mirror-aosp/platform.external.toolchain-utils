@@ -79,15 +79,32 @@ class ImageDownloader(object):
       return
 
     # Uncompress and untar the downloaded image.
-    command = ('cd /tmp/%s ;unxz chromiumos_test_image.tar.xz; '
-               'tar -xvf chromiumos_test_image.tar' % build_id)
+    command = ('cd /tmp/%s ; tar -Jxf chromiumos_test_image.tar.xz ' % build_id)
     if self.log_level != 'verbose':
       self._logger.LogOutput('CMD: %s' % command)
       print('(Uncompressing and un-tarring may take a couple of minutes...'
             'please be patient.)')
+    try:
+      retval = self._ce.ChrootRunCommand(chromeos_root, command)
+      if retval != 0:
+        raise MissingImage('Cannot uncompress image: %s.' % build_id)
+    except Exception:
+      # Exception in uncompressing file, so cleanup
+      command = ('cd /tmp/%s ; rm -f chromiumos_test_image.bin; ' % build_id)
+      # Remove the partially extracted bin file to avoid issues with future runs
+      _ = self._ce.ChrootRunCommand(chromeos_root, command)
+      # Raise exception again
+      raise
+
+    # Remove uncompressed file
+    command = ('cd /tmp/%s ; rm -f chromiumos_test_image.tar.xz; ' % build_id)
+    if self.log_level != 'verbose':
+      self._logger.LogOutput('CMD: %s' % command)
+      print('(Removing file chromiumos_test_image.tar.xz.)')
+    # try removing file, its ok to have an error, print if encountered
     retval = self._ce.ChrootRunCommand(chromeos_root, command)
     if retval != 0:
-      raise MissingImage('Cannot uncompress image: %s.' % build_id)
+      print('(Warning: Could not remove file chromiumos_test_image.tar.xz .)')
 
   def DownloadSingleAutotestFile(self, chromeos_root, build_id,
                                  package_file_name):
