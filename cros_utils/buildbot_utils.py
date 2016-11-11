@@ -5,9 +5,14 @@
 
 from __future__ import print_function
 
+import base64
+import json
 import os
 import time
 import urllib2
+
+# pylint: disable=no-name-in-module
+from oauth2client.service_account import ServiceAccountCredentials
 
 from cros_utils import command_executer
 from cros_utils import logger
@@ -34,13 +39,13 @@ class BuildbotTimeout(Exception):
 def ParseReportLog(url, build):
   """Scrape the trybot image name off the Reports log page.
 
-    This takes the URL for a trybot Reports Stage web page,
-    and a trybot build type, such as 'daisy-release'.  It
-    opens the web page and parses it looking for the trybot
-    artifact name (e.g. something like
-    'trybot-daisy-release/R40-6394.0.0-b1389'). It returns the
-    artifact name, if found.
-    """
+  This takes the URL for a trybot Reports Stage web page,
+  and a trybot build type, such as 'daisy-release'.  It
+  opens the web page and parses it looking for the trybot
+  artifact name (e.g. something like
+  'trybot-daisy-release/R40-6394.0.0-b1389'). It returns the
+  artifact name, if found.
+  """
   trybot_image = ''
   url += '/text'
   newurl = url.replace('uberchromegw', 'chromegw')
@@ -60,10 +65,10 @@ def ParseReportLog(url, build):
 def GetBuildData(buildbot_queue, build_id):
   """Find the Reports stage web page for a trybot build.
 
-    This takes the name of a buildbot_queue, such as 'daisy-release'
-    and a build id (the build number), and uses the json buildbot api to
-    find the Reports stage web page for that build, if it exists.
-    """
+  This takes the name of a buildbot_queue, such as 'daisy-release'
+  and a build id (the build number), and uses the json buildbot api to
+  find the Reports stage web page for that build, if it exists.
+  """
   builder = buildbot_json.Buildbot(
       'http://chromegw/p/tryserver.chromiumos/').builders[buildbot_queue]
   build_data = builder.builds[build_id].data
@@ -76,65 +81,67 @@ def GetBuildData(buildbot_queue, build_id):
   return ''
 
 
-def FindBuildRecordFromLog(description, log_info):
+def FindBuildRecordFromLog(description, build_info):
   """Find the right build record in the build logs.
 
-    Get the first build record from build log with a reason field
-    that matches 'description'. ('description' is a special tag we
-    created when we launched the buildbot, so we could find it at this
-    point.)
-    """
-
-  current_line = 1
-  while current_line < len(log_info):
-    my_dict = {}
-    # Read all the lines from one "Build" to the next into my_dict
-    while True:
-      key = log_info[current_line].split(':')[0].strip()
-      value = log_info[current_line].split(':', 1)[1].strip()
-      my_dict[key] = value
-      current_line += 1
-      if 'Build' in key or current_line == len(log_info):
-        break
-    try:
-      # Check to see of the build record is the right one.
-      if str(description) in my_dict['reason']:
-        # We found a match; we're done.
-        return my_dict
-    except KeyError:
-      print("reason is not in dictionary: '%s'" % repr(my_dict))
-    else:
-      # Keep going.
-      continue
-
-  # We hit the bottom of the log without a match.
+  Get the first build record from build log with a reason field
+  that matches 'description'. ('description' is a special tag we
+  created when we launched the buildbot, so we could find it at this
+  point.)
+  """
+  for build_log in build_info:
+    if description in build_log['reason']:
+      return build_log
   return {}
 
 
-def GetBuildInfo(file_dir, builder):
-  """Get all the build records for the trybot builds.
+def GetBuildInfo(file_dir, waterfall_builder):
+  """Get all the build records for the trybot builds."""
 
-    file_dir is the toolchain_utils directory.
-    """
-  ce = command_executer.GetCommandExecuter()
-  commands = ('{0}/cros_utils/buildbot_json.py builds '
-              'http://chromegw/i/tryserver.chromiumos/'.format(file_dir))
+  builder = ''
+  if waterfall_builder.endswith('-release'):
+    builder = 'release'
+  elif waterfall_builder.endswith('-gcc-toolchain'):
+    builder = 'gcc_toolchain'
+  elif waterfall_builder.endswith('-llvm-toolchain'):
+    builder = 'llvm_toolchain'
 
-  if builder:
-    # For release builds, get logs from the 'release' builder.
-    if builder.endswith('-release'):
-      commands += ' -b release'
-    elif builder.endswith('-gcc-toolchain'):
-      commands += ' -b gcc_toolchain'
-    elif builder.endswith('-llvm-toolchain'):
-      commands += ' -b llvm_toolchain'
-    elif builder.endswith('-toolchain'):
-      commands += ' -b etc'
-    else:
-      commands += ' -b %s' % builder
-  _, buildinfo, _ = ce.RunCommandWOutput(commands, print_to_console=False)
-  build_log = buildinfo.splitlines()
-  return build_log
+  sa_file = os.path.expanduser(
+      os.path.join(file_dir, 'cros_utils',
+                   'chromeos-toolchain-credentials.json'))
+  scopes = ['https://www.googleapis.com/auth/userinfo.email']
+
+  credentials = ServiceAccountCredentials.from_json_keyfile_name(
+      sa_file, scopes=scopes)
+  url = (
+      'https://luci-milo.appspot.com/prpc/milo.Buildbot/GetBuildbotBuildsJSON')
+
+  # NOTE: If we want to get build logs for the main waterfall builders, the
+  # 'master' field below should be 'chromeos' instead of 'chromiumos.tryserver'.
+  # Builder would be 'amd64-gcc-toolchain' or 'arm-llvm-toolchain', etc.
+
+  body = json.dumps({
+      'master': 'chromiumos.tryserver',
+      'builder': builder,
+      'include_current': True,
+      'limit': 100
+  })
+  access_token = credentials.get_access_token()
+  headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer %s' % access_token.access_token
+  }
+  r = urllib2.Request(url, body, headers)
+  u = urllib2.urlopen(r, timeout=60)
+  u.read(4)
+  o = json.load(u)
+  data = [base64.b64decode(item['data']) for item in o['builds']]
+  result = []
+  for d in data:
+    tmp = json.loads(d)
+    result.append(tmp)
+  return result
 
 
 def FindArchiveImage(chromeos_root, build, build_id):
@@ -182,28 +189,28 @@ def GetTrybotImage(chromeos_root,
                    buildbot_name,
                    patch_list,
                    build_tag,
-                   other_flags=[],
+                   other_flags=None,
                    build_toolchain=False,
                    async=False):
   """Launch buildbot and get resulting trybot artifact name.
 
-    This function launches a buildbot with the appropriate flags to
-    build the test ChromeOS image, with the current ToT mobile compiler.  It
-    checks every 10 minutes to see if the trybot has finished.  When the trybot
-    has finished, it parses the resulting report logs to find the trybot
-    artifact (if one was created), and returns that artifact name.
+  This function launches a buildbot with the appropriate flags to
+  build the test ChromeOS image, with the current ToT mobile compiler.  It
+  checks every 10 minutes to see if the trybot has finished.  When the trybot
+  has finished, it parses the resulting report logs to find the trybot
+  artifact (if one was created), and returns that artifact name.
 
-    chromeos_root is the path to the ChromeOS root, needed for finding chromite
-    and launching the buildbot.
+  chromeos_root is the path to the ChromeOS root, needed for finding chromite
+  and launching the buildbot.
 
-    buildbot_name is the name of the buildbot queue, such as lumpy-release or
-    daisy-paladin.
+  buildbot_name is the name of the buildbot queue, such as lumpy-release or
+  daisy-paladin.
 
-    patch_list a python list of the patches, if any, for the buildbot to use.
+  patch_list a python list of the patches, if any, for the buildbot to use.
 
-    build_tag is a (unique) string to be used to look up the buildbot results
-    from among all the build records.
-    """
+  build_tag is a (unique) string to be used to look up the buildbot results
+  from among all the build records.
+  """
   ce = command_executer.GetCommandExecuter()
   cbuildbot_path = os.path.join(chromeos_root, 'chromite/cbuildbot')
   base_dir = os.getcwd()
@@ -286,9 +293,9 @@ def GetTrybotImage(chromeos_root,
         # still have to wait for the buildbot job to finish running
         # however.
         pending = False
-        if 'True' in data_dict['completed']:
+        if True == data_dict['finished']:
           build_id = data_dict['number']
-          build_status = int(data_dict['result'])
+          build_status = data_dict['results']
         else:
           done = False
 
