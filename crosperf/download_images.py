@@ -162,11 +162,38 @@ class ImageDownloader(object):
     if retval != 0:
       print('(Warning: Could not remove file %s .)' % package_file_name)
 
+  def VerifyAutotestFilesExist(self, chromeos_root, build_id, package_file):
+    # Quickly verify if the files are there
+    status = 0
+    gs_package_name = ('gs://chromeos-image-archive/%s/%s' %
+                       (build_id, package_file))
+    if not test_flag.GetTestMode():
+      cmd = 'gsutil ls %s' % gs_package_name
+      if self.log_level != 'verbose':
+        self._logger.LogOutput('CMD: %s' % cmd)
+      status = self._ce.ChrootRunCommand(chromeos_root, cmd)
+      if status != 0:
+        print('(Warning: Could not find file %s )' % gs_package_name)
+        return 1
+    # Package exists on server
+    return 0
+
   def DownloadAutotestFiles(self, chromeos_root, build_id):
     # Download autest package files (3 files)
     autotest_packages_name = ('autotest_packages.tar')
     autotest_server_package_name = ('autotest_server_package.tar.bz2')
     autotest_control_files_name = ('control_files.tar')
+
+    # Quickly verify if the files are there
+    # If not, just exit with warning
+    status = self.VerifyAutotestFilesExist(chromeos_root, build_id,
+                                      autotest_packages_name)
+    if status != 0:
+      default_autotest_dir = '~/trunk/src/third_party/autotest/files'
+      print('(Warning: Could not download autotest packages .)\n'
+            '(Warning: Defaulting autotest path to %s .' %
+            default_autotest_dir)
+      return default_autotest_dir
 
     # Autotest directory relative path wrt chroot
     autotest_rel_path = os.path.join('/tmp', build_id, 'autotest_files')
