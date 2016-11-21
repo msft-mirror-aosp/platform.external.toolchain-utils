@@ -42,8 +42,7 @@ class Result(object):
     self.chromeos_root = label.chromeos_root
     self._logger = logger
     self.ce = cmd_exec or command_executer.GetCommandExecuter(
-        self._logger,
-        log_level=log_level)
+        self._logger, log_level=log_level)
     self.temp_dir = None
     self.label = label
     self.results_dir = None
@@ -113,11 +112,11 @@ class Result(object):
             if 'value' in result_dict:
               keyvals_dict[key] = result_dict['value']
             elif 'values' in result_dict:
-              values = result_dict['values'];
+              values = result_dict['values']
               if ('type' in result_dict and
-                  result_dict['type'] == 'list_of_scalar_values' and
-                  values and values != 'null'):
-                keyvals_dict[key] = sum(values)/float(len(values))
+                  result_dict['type'] == 'list_of_scalar_values' and values and
+                  values != 'null'):
+                keyvals_dict[key] = sum(values) / float(len(values))
               else:
                 keyvals_dict[key] = values
             units_dict[key] = result_dict['units']
@@ -167,9 +166,8 @@ class Result(object):
 
     command = ('python generate_test_report --no-color --csv %s' %
                (os.path.join('/tmp', os.path.basename(self.temp_dir))))
-    _, out, _ = self.ce.ChrootRunCommandWOutput(self.chromeos_root,
-                                                command,
-                                                print_to_console=False)
+    _, out, _ = self.ce.ChrootRunCommandWOutput(
+        self.chromeos_root, command, print_to_console=False)
     keyvals_dict = {}
     tmp_dir_in_chroot = misc.GetInsideChrootPath(self.chromeos_root,
                                                  self.temp_dir)
@@ -251,8 +249,7 @@ class Result(object):
       if os.path.exists(perf_path):
         # copy the executable into the chroot so that it can be found.
         src_path = perf_path
-        dst_path = os.path.join(self.chromeos_root, 'chroot',
-                                'tmp/perf.static')
+        dst_path = os.path.join(self.chromeos_root, 'chroot', 'tmp/perf.static')
         command = 'cp %s %s' % (src_path, dst_path)
         self.ce.RunCommand(command)
         perf_file = '/tmp/perf.static'
@@ -268,8 +265,9 @@ class Result(object):
       self.ce.ChrootRunCommand(self.chromeos_root, command)
 
       # Add a keyval to the dictionary for the events captured.
-      perf_report_files.append(misc.GetOutsideChrootPath(
-          self.chromeos_root, chroot_perf_report_file))
+      perf_report_files.append(
+          misc.GetOutsideChrootPath(self.chromeos_root,
+                                    chroot_perf_report_file))
     return perf_report_files
 
   def GatherPerfResults(self):
@@ -321,7 +319,7 @@ class Result(object):
         raw_dict = raw_dict['charts']
       for k, field_dict in raw_dict.iteritems():
         for item in field_dict:
-          keyname = k + "__" + item
+          keyname = k + '__' + item
           value_dict = field_dict[item]
           if 'value' in value_dict:
             result = value_dict['value']
@@ -332,7 +330,7 @@ class Result(object):
             if ('type' in value_dict and
                 value_dict['type'] == 'list_of_scalar_values' and
                 values != 'null'):
-              result = sum(values)/float(len(values))
+              result = sum(values) / float(len(values))
             else:
               result = values
           units = value_dict['units']
@@ -344,7 +342,8 @@ class Result(object):
     # Note that this function doesn't know anything about whether there is a
     # cache hit or miss. It should process results agnostic of the cache hit
     # state.
-    if self.results_file and self.results_file[0].find('results_chart.json'):
+    if self.results_file and self.results_file[0].find(
+        'results_chart.json') != -1:
       self.keyvals = self.ProcessJsonResults()
     else:
       if not use_cache:
@@ -390,6 +389,7 @@ class Result(object):
     if ret:
       raise RuntimeError('Could not untar cached tarball')
     self.results_dir = self.temp_dir
+    self.results_file = self.GetDataMeasurementsFiles()
     self.perf_data_files = self.GetPerfDataFiles()
     self.perf_report_files = self.GetPerfReportFiles()
     self.chrome_version = self.GetChromeVersionFromCache(cache_dir)
@@ -510,6 +510,7 @@ class TelemetryResult(Result):
 
     self.ProcessResults()
 
+  # pylint: disable=arguments-differ
   def ProcessResults(self):
     # The output is:
     # url,average_commit_time (ms),...
@@ -612,7 +613,6 @@ class ResultsCache(object):
     self.show_all = None
     self.run_local = None
 
-
   def Init(self, chromeos_image, chromeos_root, test_name, iteration, test_args,
            profiler_args, machine_manager, machine, board, cache_conditions,
            logger_to_use, log_level, label, share_cache, suite,
@@ -628,8 +628,8 @@ class ResultsCache(object):
     self.machine_manager = machine_manager
     self.machine = machine
     self._logger = logger_to_use
-    self.ce = command_executer.GetCommandExecuter(self._logger,
-                                                  log_level=log_level)
+    self.ce = command_executer.GetCommandExecuter(
+        self._logger, log_level=log_level)
     self.label = label
     self.share_cache = share_cache
     self.suite = suite
@@ -654,8 +654,10 @@ class ResultsCache(object):
                                self.run_local)
       version, image = results_report.ParseChromeosImage(
           self.label.chromeos_image)
-      keylist = [version, image, self.label.board, self.machine.name,
-                 self.test_name, str(self.iteration), args_str]
+      keylist = [
+          version, image, self.label.board, self.machine.name, self.test_name,
+          str(self.iteration), args_str
+      ]
       return cache_path, keylist
     return cache_path
 
@@ -718,7 +720,7 @@ class ResultsCache(object):
   def ReadResult(self):
     if CacheConditions.FALSE in self.cache_conditions:
       cache_dir = self.GetCacheDirForWrite()
-      command = 'rm -rf %s' % (cache_dir, )
+      command = 'rm -rf %s' % (cache_dir,)
       self.ce.RunCommand(command)
       return None
     cache_dir = self.GetCacheDirForRead()
@@ -732,8 +734,8 @@ class ResultsCache(object):
     if self.log_level == 'verbose':
       self._logger.LogOutput('Trying to read from cache dir: %s' % cache_dir)
     result = Result.CreateFromCacheHit(self._logger, self.log_level, self.label,
-                                       self.machine, cache_dir,
-                                       self.test_name, self.suite)
+                                       self.machine, cache_dir, self.test_name,
+                                       self.suite)
     if not result:
       return None
 
