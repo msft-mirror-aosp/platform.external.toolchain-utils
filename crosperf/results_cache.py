@@ -343,7 +343,7 @@ class Result(object):
     # cache hit or miss. It should process results agnostic of the cache hit
     # state.
     if self.results_file and self.results_file[0].find(
-        'results_chart.json') != -1:
+        'results-chart.json') != -1:
       self.keyvals = self.ProcessJsonResults()
     else:
       if not use_cache:
