@@ -79,19 +79,6 @@ def format_date(int_date):
   return date_str
 
 
-def GetValueIfExists(dictionary, keyval, unknown_value='[??/ ?? /??]'):
-  """Returns value from dictionary, if it's already there.
-
-  Check dictionary to see if keyval is in it, and if so
-  return the corresponding value; otherwise return string
-  for unknown value.
-  """
-  retval = unknown_value
-  if keyval in dictionary:
-    retval = dictionary[keyval]
-  return retval
-
-
 def GenerateWaterfallReport(report_dict, fail_dict, waterfall_type, date):
   """Write out the actual formatted report."""
 
@@ -128,29 +115,47 @@ def GenerateWaterfallReport(report_dict, fail_dict, waterfall_type, date):
     # Write daily waterfall status section.
     for i in range(0, len(report_list)):
       builder = report_list[i]
+      if builder == 'date':
+        continue
 
       if builder not in report_dict:
         out_file.write('Unable to find information for %s.\n\n' % builder)
         continue
 
       build_dict = report_dict[builder]
-      status = GetValueIfExists(build_dict, 'build_status', unknown_value='bad')
-      inline = GetValueIfExists(build_dict, 'bvt-inline')
-      cq = GetValueIfExists(build_dict, 'bvt-cq')
+      status = build_dict.get('build_status', 'bad')
+      inline = build_dict.get('bvt-inline', '[??/ ?? /??]')
+      cq = build_dict.get('bvt-cq', '[??/ ?? /??]')
+      inline_color = build_dict.get('bvt-inline-color', '')
+      cq_color = build_dict.get('bvt-cq-color', '')
       if 'x86' not in builder:
-        toolchain = GetValueIfExists(build_dict, 'toolchain-tests')
-        security = GetValueIfExists(build_dict, 'security')
+        toolchain = build_dict.get('toolchain-tests', '[??/ ?? /??]')
+        security = build_dict.get('security', '[??/ ?? /??]')
+        toolchain_color = build_dict.get('toolchain-tests-color', '')
+        security_color = build_dict.get('security-color', '')
         if 'gcc' in builder:
-          regression = GetValueIfExists(build_dict, 'kernel_daily_regression')
-          bench = GetValueIfExists(build_dict, 'kernel_daily_benchmarks')
+          regression = build_dict.get('kernel_daily_regression', '[??/ ?? /??]')
+          bench = build_dict.get('kernel_daily_benchmarks', '[??/ ?? /??]')
+          regression_color = build_dict.get('kernel_daily_regression-color', '')
+          bench_color = build_dict.get('kernel_daily_benchmarks-color', '')
+          out_file.write('                                  %6s        %6s'
+                         '       %6s      %6s      %6s      %6s\n' %
+                         (inline_color, cq_color, toolchain_color,
+                          security_color, regression_color, bench_color))
           out_file.write('%25s %3s  %s %s %s %s %s %s\n' % (builder, status,
                                                             inline, cq,
                                                             toolchain, security,
                                                             regression, bench))
         else:
+          out_file.write('                                  %6s        %6s'
+                         '       %6s      %6s\n' % (inline_color, cq_color,
+                                                    toolchain_color,
+                                                    security_color))
           out_file.write('%25s %3s  %s %s %s %s\n' % (builder, status, inline,
                                                       cq, toolchain, security))
       else:
+        out_file.write('                                  %6s        %6s\n' %
+                       (inline_color, cq_color))
         out_file.write('%25s %3s  %s %s\n' % (builder, status, inline, cq))
       if 'build_link' in build_dict:
         out_file.write('%s\n\n' % build_dict['build_link'])
@@ -199,7 +204,7 @@ def GenerateWaterfallReport(report_dict, fail_dict, waterfall_type, date):
 
 
 def UpdateReport(report_dict, builder, test, report_date, build_link,
-                 test_summary, board):
+                 test_summary, board, color):
   """Update the data in our report dictionary with current test's data."""
 
   if 'date' not in report_dict:
@@ -232,6 +237,9 @@ def UpdateReport(report_dict, builder, test, report_date, build_link,
     raise RuntimeError('Error: Two different boards (%s,%s) in one build (%s)!'
                        % (board, build_dict['board'], build_link))
   build_dict['board'] = board
+
+  color_key = '%s-color' % test
+  build_dict[color_key] = color
 
   # Check to see if we already have a build status for this build_key
   status = ''
@@ -415,10 +423,12 @@ def ParseLogFile(log_file, test_data_dict, failure_dict, test, builder,
       int_date = (
           date_obj.tm_year * 10000 + date_obj.tm_mon * 100 + date_obj.tm_mday)
       date = time.strftime('%a %b %d %Y', date_obj)
-    elif line.startswith('status: '):
+    elif not status and line.startswith('status: '):
       status = line.rstrip()
       words = status.split(':')
       status = words[-1]
+    elif line.find('Suite passed with a warning') != -1:
+      status = 'WARNING'
     elif line.startswith('@@@STEP_LINK@Link to suite@'):
       afe_line = line.rstrip()
       words = afe_line.split('@')
@@ -450,7 +460,7 @@ def ParseLogFile(log_file, test_data_dict, failure_dict, test, builder,
     total_notrun = 0
     status = 'Not found.'
   if not build_ok:
-    return [], date, board, 0
+    return [], date, board, 0, '     '
 
   build_dict = dict()
   build_dict['id'] = build_num
@@ -462,6 +472,14 @@ def ParseLogFile(log_file, test_data_dict, failure_dict, test, builder,
   build_dict['total_not_run'] = total_notrun
   build_dict['afe_job_link'] = afe_line
   build_dict['provision_errors'] = num_provision_errors
+  if status.strip() == 'SUCCESS':
+    build_dict['color'] = 'green '
+  elif status.strip() == 'FAILURE':
+    build_dict['color'] = ' red  '
+  elif status.strip() == 'WARNING':
+    build_dict['color'] = 'orange'
+  else:
+    build_dict['color'] = '      '
 
   # Use YYYYMMDD (integer) as the build record key
   if build_ok:
@@ -487,7 +505,7 @@ def ParseLogFile(log_file, test_data_dict, failure_dict, test, builder,
 
   summary_result = '[%2d/ %2d/ %2d]' % (total_pass, total_fail, total_notrun)
 
-  return summary_result, date, board, int_date
+  return summary_result, date, board, int_date, build_dict['color']
 
 
 def DownloadLogFile(builder, buildnum, test, test_family):
@@ -544,7 +562,7 @@ def Main():
       target, build_link = DownloadLogFile(builder, buildnum, test, test_family)
 
       if os.path.exists(target):
-        test_summary, report_date, board, tmp_date = ParseLogFile(
+        test_summary, report_date, board, tmp_date, color = ParseLogFile(
             target, test_data_dict, failure_dict, test, builder, buildnum,
             build_link)
 
@@ -553,10 +571,10 @@ def Main():
 
         if builder in ROTATING_BUILDERS:
           UpdateReport(rotating_report_dict, builder, test, report_date,
-                       build_link, test_summary, board)
+                       build_link, test_summary, board, color)
         else:
           UpdateReport(waterfall_report_dict, builder, test, report_date,
-                       build_link, test_summary, board)
+                       build_link, test_summary, board, color)
 
   if waterfall_report_dict:
     GenerateWaterfallReport(waterfall_report_dict, failure_dict, 'main',
