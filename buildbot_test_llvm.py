@@ -34,16 +34,16 @@ VALIDATION_RESULT_DIR = os.path.join(CROSTC_ROOT, 'validation_result')
 START_DATE = datetime.date(2016, 1, 1)
 TEST_PER_DAY = 2
 TEST_BOARD = [
-    'squawks',
-    'terra',
-    'lulu',
-    'peach_pit',
-    'peppy',
-    'link',
-    'sentry',
-    'chell',
-    'nyan_big',
-    'daisy',
+    'squawks',      # x86_64, rambi  (baytrail)
+    'terra',        # x86_64, strago (braswell)
+    'lulu',         # x86_64, auron  (broadwell)
+    'peach_pit',    # arm,    peach  (exynos-5420)
+    'peppy',        # x86_64, slippy (haswell celeron)
+    'link',         # x86_64, ivybridge (ivybridge)
+    'nyan_big',     # arm,    nyan   (tegra)
+    'sentry',       # x86_64, kunimitsu (skylake-u)
+    'chell',        # x86_64, glados (skylake-y)
+    'daisy',        # arm,    daisy  (exynos)
 ]
 
 
