@@ -144,13 +144,15 @@ if [[ ${build_status} -eq 0 ]] ; then
           echo "1. Flash through USB"
           echo "2. Retry flashing over ethernet"
           echo "3. Abort this installation and skip this image"
+          echo "4. Abort this installation and mark test as failed"
           sleep 1
           read -p "Which method would you like to do? " choice
           case $choice in
               1) usb_flash && break;;
               2) ethernet_flash && break;;
-              3) exit 1;;
-              *) echo "Please answer 1, 2, or 3.";;
+              3) exit 125;;
+              4) exit 1;;
+              *) echo "Please answer 1, 2, 3, or 4.";;
           esac
         done
 

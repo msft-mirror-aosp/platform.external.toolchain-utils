@@ -84,13 +84,15 @@ flash()
     echo "1. Debug and/or flash manually"
     echo "2. Retry flashing automatically"
     echo "3. Abort this installation and skip this image"
+    echo "4. Abort this installation and mark test as failed"
     sleep 1
     read -p "Which method would you like to do? " choice
     case $choice in
       1) manual_flash && break;;
       2) auto_flash && break;;
-      3) return 1;;
-      *) echo "Please answer 1, 2, or 3.";;
+      3) return 125;;
+      4) return 1;;
+      *) echo "Please answer 1, 2, 3, or 4.";;
     esac
   done
 }

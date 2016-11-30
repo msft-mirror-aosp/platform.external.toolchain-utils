@@ -293,9 +293,6 @@ class BinarySearchState(object):
         status = self.TestSetupScript()
         if status == 0:
           status = self.TestScript()
-        else:
-          # Test setup script failed, treat as skipped item
-          status = 125
         terminated = self.binary_search.SetStatus(status)
 
       if terminated:
