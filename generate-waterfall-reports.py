@@ -20,8 +20,10 @@
 
 from __future__ import print_function
 
+import getpass
 import json
 import os
+import shutil
 import sys
 import time
 
@@ -46,10 +48,10 @@ WATERFALL_BUILDERS = [
     'x86-llvm-next-toolchain'
 ]
 
-ROLE_ACCOUNT = 'mobiletc-prebuild'
 DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
+ARCHIVE_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-reports/'
 DOWNLOAD_DIR = '/tmp/waterfall-logs'
-MAX_SAVE_RECORDS = 5
+MAX_SAVE_RECORDS = 7
 BUILD_DATA_FILE = '%s/build-data.txt' % DATA_DIR
 ROTATING_BUILDERS = ['gcc_toolchain', 'llvm_toolchain']
 
@@ -77,6 +79,45 @@ def format_date(int_date):
   month_str = MONTHS[month]
   date_str = '%d-%s-%d' % (year, month_str, day)
   return date_str
+
+
+def EmailReport(report_file, report_type, date):
+  subject = '%s Waterfall Summary report, %s' % (report_type, date)
+  email_to = getpass.getuser()
+  command = ('sendgmr --to=%s@google.com --subject="%s" --body_file=%s' %
+             (email_to, subject, report_file))
+  command_executer.GetCommandExecuter().RunCommand(command)
+
+
+def PruneOldFailures(failure_dict, int_date):
+  earliest_date = int_date - MAX_SAVE_RECORDS
+  for suite in failure_dict:
+    suite_dict = failure_dict[suite]
+    test_keys_to_remove = []
+    for test in suite_dict:
+      test_dict = suite_dict[test]
+      msg_keys_to_remove = []
+      for msg in test_dict:
+        fails = test_dict[msg]
+        i = 0
+        while i < len(fails) and fails[i][0] <= earliest_date:
+          i += 1
+        new_fails = fails[i:]
+        test_dict[msg] = new_fails
+        if len(new_fails) == 0:
+          msg_keys_to_remove.append(msg)
+
+      for k in msg_keys_to_remove:
+        del test_dict[k]
+
+      suite_dict[test] = test_dict
+      if len(test_dict) == 0:
+        test_keys_to_remove.append(test)
+
+    for k in test_keys_to_remove:
+      del suite_dict[k]
+
+    failure_dict[suite] = suite_dict
 
 
 def GenerateWaterfallReport(report_dict, fail_dict, waterfall_type, date):
@@ -201,6 +242,7 @@ def GenerateWaterfallReport(report_dict, fail_dict, waterfall_type, date):
       out_file.write('\n')
 
   print('Report generated in %s.' % filename)
+  return filename
 
 
 def UpdateReport(report_dict, builder, test, report_date, build_link,
@@ -363,7 +405,7 @@ def RecordFailures(failure_dict, platform, suite, builder, int_date, log_file,
     # Calculate the earliest date to save; delete records for older failures.
     earliest_date = int_date - MAX_SAVE_RECORDS
     i = 0
-    while error_list[i][0] <= earliest_date and i < len(error_list):
+    while i < len(error_list) and error_list[i][0] <= earliest_date:
       i += 1
     if i > 0:
       error_list = error_list[i:]
@@ -576,12 +618,19 @@ def Main():
           UpdateReport(waterfall_report_dict, builder, test, report_date,
                        build_link, test_summary, board, color)
 
+  PruneOldFailures(failure_dict, int_date)
+
   if waterfall_report_dict:
-    GenerateWaterfallReport(waterfall_report_dict, failure_dict, 'main',
-                            int_date)
+    main_report = GenerateWaterfallReport(waterfall_report_dict, failure_dict,
+                                          'main', int_date)
+    EmailReport(main_report, 'Main', format_date(int_date))
+    shutil.copy(main_report, ARCHIVE_DIR)
   if rotating_report_dict:
-    GenerateWaterfallReport(rotating_report_dict, failure_dict, 'rotating',
-                            int_date)
+    rotating_report = GenerateWaterfallReport(rotating_report_dict,
+                                              failure_dict, 'rotating',
+                                              int_date)
+    EmailReport(rotating_report, 'Rotating', format_date(int_date))
+    shutil.copy(rotating_report, ARCHIVE_DIR)
 
   with open('%s/waterfall-test-data.json' % DATA_DIR, 'w') as out_file:
     json.dump(test_data_dict, out_file, indent=2)
