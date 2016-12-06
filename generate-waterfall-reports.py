@@ -84,8 +84,9 @@ def format_date(int_date):
 def EmailReport(report_file, report_type, date):
   subject = '%s Waterfall Summary report, %s' % (report_type, date)
   email_to = getpass.getuser()
-  command = ('sendgmr --to=%s@google.com --subject="%s" --body_file=%s' %
-             (email_to, subject, report_file))
+  sendgmr_path = '/google/data/ro/projects/gws-sre/sendgmr'
+  command = ('%s --to=%s@google.com --subject="%s" --body_file=%s' %
+             (sendgmr_path, email_to, subject, report_file))
   command_executer.GetCommandExecuter().RunCommand(command)
 
 
