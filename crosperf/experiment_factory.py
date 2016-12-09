@@ -54,8 +54,35 @@ telemetry_toolchain_perf_tests = [
     'dromaeo.domcoremodify',
     'smoothness.tough_webgl_cases',
 ]
-
-#                                  'page_cycler_v2.typical_25']
+graphics_perf_tests = [
+    'graphics_GLBench',
+    'graphics_GLMark2',
+    'graphics_SanAngeles',
+    'graphics_WebGLAquarium',
+    'graphics_WebGLPerformance',
+]
+telemetry_crosbolt_perf_tests = [
+    'octane',
+    'kraken',
+    'speedometer',
+    'jetstream',
+    'startup.cold.blank_page',
+    'smoothness.top_25_smooth',
+]
+crosbolt_perf_tests = [
+    'graphics_WebGLAquarium',
+    'video_PlaybackPerf.h264',
+    'video_PlaybackPerf.vp9',
+    'video_WebRtcPerf',
+    'BootPerfServerCrosPerf',
+    'power_Resume',
+    'video_PlaybackPerf.h264',
+    'build_RootFilesystemSize',
+    'cheets_AntutuTest',
+    'cheets_PerfBootServer',
+    'cheets_CandyCrushTest',
+    'cheets_LinpackTest',
+]
 
 
 class ExperimentFactory(object):
@@ -182,19 +209,35 @@ class ExperimentFactory(object):
                                 show_all_results, retries, run_local)
           benchmarks.append(benchmark)
       else:
-        # Add the single benchmark.
-        benchmark = Benchmark(
-            benchmark_name,
-            test_name,
-            test_args,
-            iterations,
-            rm_chroot_tmp,
-            perf_args,
-            suite,
-            show_all_results,
-            retries,
-            run_local=False)
-        benchmarks.append(benchmark)
+        if test_name == 'all_graphics_perf':
+          self.AppendBenchmarkSet(benchmarks,
+                                  graphics_perf_tests, '',
+                                  iterations, rm_chroot_tmp, perf_args, '',
+                                  show_all_results, retries, run_local=False)
+        elif test_name == 'all_crosbolt_perf':
+          self.AppendBenchmarkSet(benchmarks,
+                                  telemetry_crosbolt_perf_tests, test_args,
+                                  iterations, rm_chroot_tmp, perf_args,
+                                  'telemetry_Crosperf', show_all_results,
+                                  retries, run_local)
+          self.AppendBenchmarkSet(benchmarks,
+                                  crosbolt_perf_tests, '',
+                                  iterations, rm_chroot_tmp, perf_args, '',
+                                  show_all_results, retries, run_local=False)
+        else:
+          # Add the single benchmark.
+          benchmark = Benchmark(
+              benchmark_name,
+              test_name,
+              test_args,
+              iterations,
+              rm_chroot_tmp,
+              perf_args,
+              suite,
+              show_all_results,
+              retries,
+              run_local=False)
+          benchmarks.append(benchmark)
 
     if not benchmarks:
       raise RuntimeError('No benchmarks specified')
