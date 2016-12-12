@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 """Script for running nightly compiler tests on ChromeOS.
 
 This script launches a buildbot to build ChromeOS with the latest compiler on
@@ -250,7 +250,7 @@ class ToolchainComparator(object):
     date_str = datetime.date.today()
     description = 'master_%s_%s_%s' % (self._patches_string, self._build,
                                        date_str)
-    trybot_image = buildbot_utils.GetTrybotImage(
+    build_id, trybot_image = buildbot_utils.GetTrybotImage(
         self._chromeos_root,
         self._build,
         self._patches,
@@ -258,6 +258,9 @@ class ToolchainComparator(object):
         other_flags=['--notests'],
         build_toolchain=True)
 
+    print('trybot_url: \
+       https://uberchromegw.corp.google.com/i/chromiumos.tryserver/builders/release/builds/%s' \
+       % build_id)
     if len(trybot_image) == 0:
       self._l.LogError('Unable to find trybot_image for %s!' % description)
       return 1

@@ -18,6 +18,7 @@ from cros_utils import command_executer
 from cros_utils import logger
 from cros_utils import buildbot_json
 
+INITIAL_SLEEP_TIME = 7200 # 2 hours; wait time before polling buildbot.
 SLEEP_TIME = 600  # 10 minutes; time between polling of buildbot.
 TIME_OUT = 28800  # Decide the build is dead or will never finish
 # after this time (8 hours).
@@ -243,10 +244,6 @@ def GetTrybotImage(chromeos_root,
     logger.GetLogger().LogFatal('Error occurred while launching trybot job: '
                                 '%s' % command)
 
-  if async:
-    # Do not wait for trybot job to finish; return immediately
-    return 0
-
   os.chdir(base_dir)
 
   build_id = 0
@@ -264,6 +261,7 @@ def GetTrybotImage(chromeos_root,
   # logs.
   pending_time = SLEEP_TIME
   running_time = 0
+  long_slept = False
   while not done:
     done = True
     build_info = GetBuildInfo(base_dir, build)
@@ -293,8 +291,19 @@ def GetTrybotImage(chromeos_root,
         # still have to wait for the buildbot job to finish running
         # however.
         pending = False
+        build_id = data_dict['number']
+
+        if async:
+           # Do not wait for trybot job to finish; return immediately
+          return build_id, " "
+
+        if not long_slept:
+          # The trybot generally takes more than 2 hours to finish.
+          # Wait two hours before polling the status.
+          long_slept = True
+          time.sleep(INITIAL_SLEEP_TIME)
+          pending_time += INITIAL_SLEEP_TIME
         if True == data_dict['finished']:
-          build_id = data_dict['number']
           build_status = data_dict['results']
         else:
           done = False
@@ -334,7 +343,7 @@ def GetTrybotImage(chromeos_root,
 
   logger.GetLogger().LogOutput("trybot_image is '%s'" % trybot_image)
   logger.GetLogger().LogOutput('build_status is %d' % build_status)
-  return trybot_image
+  return build_id, trybot_image
 
 
 def DoesImageExist(chromeos_root, build):
