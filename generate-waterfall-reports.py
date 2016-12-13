@@ -20,6 +20,7 @@
 
 from __future__ import print_function
 
+import argparse
 import getpass
 import json
 import os
@@ -48,12 +49,16 @@ WATERFALL_BUILDERS = [
     'x86-llvm-next-toolchain'
 ]
 
-DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
-ARCHIVE_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-reports/'
+DATA_DIR = '/usr/local/google2/cmtice/toolchain-utils/waterfall-report-data/'
+ARCHIVE_DIR = '/usr/local/google2/cmtice/toolchain-utils/waterfall-reports/'
+#DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
+#ARCHIVE_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-reports/'
 DOWNLOAD_DIR = '/tmp/waterfall-logs'
 MAX_SAVE_RECORDS = 7
 BUILD_DATA_FILE = '%s/build-data.txt' % DATA_DIR
-ROTATING_BUILDERS = ['gcc_toolchain', 'llvm_toolchain']
+GCC_ROTATING_BUILDER = 'gcc_toolchain'
+LLVM_ROTATING_BUILDER = 'llvm_next_toolchain'
+ROTATING_BUILDERS = [GCC_ROTATING_BUILDER, LLVM_ROTATING_BUILDER]
 
 # For int-to-string date conversion.  Note, the index of the month in this
 # list needs to correspond to the month's integer value.  i.e. 'Sep' must
@@ -121,7 +126,52 @@ def PruneOldFailures(failure_dict, int_date):
     failure_dict[suite] = suite_dict
 
 
-def GenerateWaterfallReport(report_dict, fail_dict, waterfall_type, date):
+def GenerateFailuresReport(fail_dict, date):
+  filename = 'waterfall_report.failures.%s.txt' % date
+  date_string = format_date(date)
+  with open(filename, 'w') as out_file:
+    # Write failure report section.
+    out_file.write('\n\nSummary of Test Failures as of %s\n\n' % date_string)
+
+    # We want to sort the errors and output them in order of the ones that occur
+    # most often.  So we have to collect the data about all of them, then sort
+    # it.
+    error_groups = []
+    for suite in fail_dict:
+      suite_dict = fail_dict[suite]
+      if suite_dict:
+        for test in suite_dict:
+          test_dict = suite_dict[test]
+          for err_msg in test_dict:
+            err_list = test_dict[err_msg]
+            sorted_list = sorted(err_list, key=lambda x: x[0], reverse=True)
+            err_group = [len(sorted_list), suite, test, err_msg, sorted_list]
+            error_groups.append(err_group)
+
+    # Sort the errors by the number of errors of each type. Then output them in
+    # order.
+    sorted_errors = sorted(error_groups, key=lambda x: x[0], reverse=True)
+    for i in range(0, len(sorted_errors)):
+      err_group = sorted_errors[i]
+      suite = err_group[1]
+      test = err_group[2]
+      err_msg = err_group[3]
+      err_list = err_group[4]
+      out_file.write('Suite: %s\n' % suite)
+      out_file.write('    %s (%d failures)\n' % (test, len(err_list)))
+      out_file.write('    (%s)\n' % err_msg)
+      for i in range(0, len(err_list)):
+        err = err_list[i]
+        out_file.write('        %s, %s, %s\n' % (format_date(err[0]), err[1],
+                                                 err[2]))
+      out_file.write('\n')
+
+  print('Report generated in %s.' % filename)
+  return filename
+
+
+def GenerateWaterfallReport(report_dict, fail_dict, waterfall_type, date,
+                            omit_failures):
   """Write out the actual formatted report."""
 
   filename = 'waterfall_report.%s_waterfall.%s.txt' % (waterfall_type, date)
@@ -206,6 +256,10 @@ def GenerateWaterfallReport(report_dict, fail_dict, waterfall_type, date):
                    'Number of tests in suite that Failed; DR = Number of tests'
                    ' in suite that Didn\'t Run.\n')
 
+    if omit_failures:
+      print('Report generated in %s.' % filename)
+      return filename
+
     # Write failure report section.
     out_file.write('\n\nSummary of Test Failures as of %s\n\n' % date_string)
 
@@ -258,10 +312,10 @@ def UpdateReport(report_dict, builder, test, report_date, build_link,
     report_dict['date'].append(report_date)
 
   build_key = ''
-  if builder == 'gcc_toolchain':
+  if builder == GCC_ROTATING_BUILDER:
     build_key = '%s-gcc-toolchain' % board
-  elif builder == 'llvm_toolchain':
-    build_key = '%s-llvm-toolchain' % board
+  elif builder == LLVM_ROTATING_BUILDER:
+    build_key = '%s-llvm-next-toolchain' % board
   else:
     build_key = builder
 
@@ -317,16 +371,16 @@ def UpdateBuilds(builds):
     gcc_max = 0
     llvm_max = 0
     for b in builds:
-      if b[0] == 'gcc_toolchain':
+      if b[0] == GCC_ROTATING_BUILDER:
         gcc_max = max(gcc_max, b[1])
-      elif b[0] == 'llvm_toolchain':
+      elif b[0] == LLVM_ROTATING_BUILDER:
         llvm_max = max(llvm_max, b[1])
       else:
         fp.write('%s,%d\n' % (b[0], b[1]))
     if gcc_max > 0:
-      fp.write('gcc_toolchain,%d\n' % gcc_max)
+      fp.write('%s,%d\n' % (GCC_ROTATING_BUILDER, gcc_max))
     if llvm_max > 0:
-      fp.write('llvm_toolchain,%d\n' % llvm_max)
+      fp.write('%s,%d\n' % (LLVM_ROTATING_BUILDER, llvm_max))
 
 
 def GetBuilds():
@@ -348,7 +402,7 @@ def GetBuilds():
     # NOTE: We are assuming here that there are always 2 daily builds in
     # each of the rotating builders.  I am not convinced this is a valid
     # assumption.
-    if builder == 'gcc_toolchain' or builder == 'llvm_toolchain':
+    if builder in ROTATING_BUILDERS:
       builds.append((builder, build + 2))
 
   return builds
@@ -555,7 +609,7 @@ def DownloadLogFile(builder, buildnum, test, test_family):
 
   ce = command_executer.GetCommandExecuter()
   os.system('mkdir -p %s/%s/%s' % (DOWNLOAD_DIR, builder, test))
-  if builder == 'gcc_toolchain' or builder == 'llvm_toolchain':
+  if builder in ROTATING_BUILDERS:
     source = ('https://uberchromegw.corp.google.com/i/chromiumos.tryserver'
               '/builders/%s/builds/%d/steps/%s%%20%%5B%s%%5D/logs/stdio' %
               (builder, buildnum, test_family, test))
@@ -590,8 +644,70 @@ def CheckProdAccess():
   return False
 
 
-def Main():
+def ValidOptions(parser, options):
+  too_many_options = False
+  if options.main:
+    if options.rotating or options.failures_report:
+      too_many_options = True
+  elif options.rotating and options.failures_report:
+    too_many_options = True
+
+  if too_many_options:
+    parser.error('Can only specify one of --main, --rotating or'
+                 ' --failures_report.')
+
+  conflicting_failure_options = False
+  if options.failures_report and options.omit_failures:
+    conflicting_failure_options = True
+    parser.error('Cannot specify both --failures_report and --omit_failures.')
+
+  return not too_many_options and not conflicting_failure_options
+
+
+def Main(argv):
   """Main function for this script."""
+  parser = argparse.ArgumentParser()
+  parser.add_argument(
+      '--main',
+      dest='main',
+      default=False,
+      action='store_true',
+      help='Generate report only for main waterfall '
+      'builders.')
+  parser.add_argument(
+      '--rotating',
+      dest='rotating',
+      default=False,
+      action='store_true',
+      help='Generate report only for rotating builders.')
+  parser.add_argument(
+      '--failures_report',
+      dest='failures_report',
+      default=False,
+      action='store_true',
+      help='Only generate the failures section of the report.')
+  parser.add_argument(
+      '--omit_failures',
+      dest='omit_failures',
+      default=False,
+      action='store_true',
+      help='Do not generate the failures section of the report.')
+  parser.add_argument(
+      '--no_update',
+      dest='no_update',
+      default=False,
+      action='store_true',
+      help='Run reports, but do not update the data files.')
+
+  options = parser.parse_args(argv)
+
+  if not ValidOptions(parser, options):
+    return 1
+
+  main_only = options.main
+  rotating_only = options.rotating
+  failures_report = options.failures_report
+  omit_failures = options.omit_failures
 
   test_data_dict = dict()
   failure_dict = dict()
@@ -639,27 +755,33 @@ def Main():
 
   PruneOldFailures(failure_dict, int_date)
 
-  if waterfall_report_dict:
+  if waterfall_report_dict and not rotating_only and not failures_report:
     main_report = GenerateWaterfallReport(waterfall_report_dict, failure_dict,
-                                          'main', int_date)
+                                          'main', int_date, omit_failures)
     EmailReport(main_report, 'Main', format_date(int_date))
     shutil.copy(main_report, ARCHIVE_DIR)
-  if rotating_report_dict:
+  if rotating_report_dict and not main_only and not failures_report:
     rotating_report = GenerateWaterfallReport(rotating_report_dict,
                                               failure_dict, 'rotating',
-                                              int_date)
+                                              int_date, omit_failures)
     EmailReport(rotating_report, 'Rotating', format_date(int_date))
     shutil.copy(rotating_report, ARCHIVE_DIR)
 
-  with open('%s/waterfall-test-data.json' % DATA_DIR, 'w') as out_file:
-    json.dump(test_data_dict, out_file, indent=2)
+  if failures_report:
+    failures_report = GenerateFailuresReport(failure_dict, int_date)
+    EmailReport(failures_report, 'Failures', format_date(int_date))
+    shutil.copy(failures_report, ARCHIVE_DIR)
 
-  with open('%s/test-failure-data.json' % DATA_DIR, 'w') as out_file:
-    json.dump(failure_dict, out_file, indent=2)
+  if not options.no_update:
+    with open('%s/waterfall-test-data.json' % DATA_DIR, 'w') as out_file:
+      json.dump(test_data_dict, out_file, indent=2)
 
-  UpdateBuilds(builds)
+    with open('%s/test-failure-data.json' % DATA_DIR, 'w') as out_file:
+      json.dump(failure_dict, out_file, indent=2)
+
+    UpdateBuilds(builds)
 
 
 if __name__ == '__main__':
-  Main()
+  Main(sys.argv[1:])
   sys.exit(0)
