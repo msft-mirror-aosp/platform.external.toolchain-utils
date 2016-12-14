@@ -578,11 +578,29 @@ def DownloadLogFile(builder, buildnum, test, test_family):
   return target, build_link
 
 
+# Check for prodaccess.
+def CheckProdAccess():
+  status, output, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
+      'prodcertstatus')
+  if status != 0:
+    return False
+  # Verify that status is not expired
+  if 'expires' in output:
+    return True
+  return False
+
+
 def Main():
   """Main function for this script."""
 
   test_data_dict = dict()
   failure_dict = dict()
+
+  prod_access = CheckProdAccess()
+  if not prod_access:
+    print('ERROR: Please run prodaccess first.')
+    return
+
   with open('%s/waterfall-test-data.json' % DATA_DIR, 'r') as input_file:
     test_data_dict = json.load(input_file)
 
