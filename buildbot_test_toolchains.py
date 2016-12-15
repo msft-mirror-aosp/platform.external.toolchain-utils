@@ -1,4 +1,9 @@
 #!/usr/bin/env python2
+#
+# Copyright 2016 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """Script for running nightly compiler tests on ChromeOS.
 
 This script launches a buildbot to build ChromeOS with the latest compiler on
@@ -37,8 +42,9 @@ MAIL_PROGRAM = '~/var/bin/mail-sheriff'
 PENDING_ARCHIVES_DIR = os.path.join(CROSTC_ROOT, 'pending_archives')
 NIGHTLY_TESTS_DIR = os.path.join(CROSTC_ROOT, 'nightly_test_reports')
 
-IMAGE_FS = (r'{board}-{image_type}/{chrome_version}-{tip}\.' +
-            r'{branch}\.{branch_branch}')
+IMAGE_DIR = '{board}-{image_type}'
+IMAGE_VERSION_STR = r'{chrome_version}-{tip}\.{branch}\.{branch_branch}'
+IMAGE_FS = IMAGE_DIR + '/' + IMAGE_VERSION_STR
 TRYBOT_IMAGE_FS = 'trybot-' + IMAGE_FS + '-{build_id}'
 PFQ_IMAGE_FS = IMAGE_FS + '-rc1'
 IMAGE_RE_GROUPS = {
@@ -85,18 +91,21 @@ class ToolchainComparator(object):
         '%s.%s' % (timestamp, board),)
 
   def _GetVanillaImageName(self, trybot_image):
-    """Given a trybot artifact name, get corresponding vanilla image name.
+    """Given a trybot artifact name, get latest vanilla image name.
 
     Args:
       trybot_image: artifact name such as
           'trybot-daisy-release/R40-6394.0.0-b1389'
 
     Returns:
-      Corresponding official image name, e.g. 'daisy-release/R40-6394.0.0'.
+      Latest official image name, e.g. 'daisy-release/R57-9089.0.0'.
     """
     mo = re.search(TRYBOT_IMAGE_RE, trybot_image)
     assert mo
-    return IMAGE_FS.replace('\\', '').format(**mo.groupdict())
+    dirname = IMAGE_DIR.replace('\\', '').format(**mo.groupdict())
+    version = buildbot_utils.GetGSContent(self._chromeos_root,
+                                          dirname + '/LATEST-master')
+    return dirname + '/' + version
 
   def _GetNonAFDOImageName(self, trybot_image):
     """Given a trybot artifact name, get corresponding non-AFDO image name.
@@ -268,9 +277,6 @@ class ToolchainComparator(object):
     vanilla_image = self._GetVanillaImageName(trybot_image)
     nonafdo_image = self._GetNonAFDOImageName(trybot_image)
 
-    # The trybot image is ready here, in some cases, the vanilla image
-    # is not ready, so we need to make sure vanilla image is available.
-    buildbot_utils.WaitForImage(self._chromeos_root, vanilla_image)
     print('trybot_image: %s' % trybot_image)
     print('vanilla_image: %s' % vanilla_image)
     print('nonafdo_image: %s' % nonafdo_image)

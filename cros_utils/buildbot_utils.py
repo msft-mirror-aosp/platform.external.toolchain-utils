@@ -1,4 +1,4 @@
-# Copyright 2014 Google Inc. All Rights Reserved.
+# Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Utilities for launching and accessing ChromeOS buildbots."""
@@ -344,6 +344,16 @@ def GetTrybotImage(chromeos_root,
   logger.GetLogger().LogOutput("trybot_image is '%s'" % trybot_image)
   logger.GetLogger().LogOutput('build_status is %d' % build_status)
   return build_id, trybot_image
+
+
+def GetGSContent(chromeos_root, path):
+  """gsutil cat path"""
+
+  ce = command_executer.GetCommandExecuter()
+  command = ('gsutil cat gs://chromeos-image-archive/%s' % path)
+  _, out, _ = ce.ChrootRunCommandWOutput(
+      chromeos_root, command, print_to_console=False)
+  return out
 
 
 def DoesImageExist(chromeos_root, build):
