@@ -24,6 +24,7 @@ import argparse
 import getpass
 import json
 import os
+import re
 import shutil
 import sys
 import time
@@ -122,6 +123,48 @@ def PruneOldFailures(failure_dict, int_date):
       del suite_dict[k]
 
     failure_dict[suite] = suite_dict
+
+
+def GetBuildID(build_bot, date):
+  """Get the build id for a build_bot at a given date."""
+  day = '{day:02d}'.format(day=date%100)
+  mon = MONTHS[date/100%100]
+  date_string = mon + ' ' + day
+  if build_bot in WATERFALL_BUILDERS:
+    url = 'https://uberchromegw.corp.google.com/i/chromeos/' + \
+          'builders/%s?numbuilds=200' % build_bot
+  if build_bot in ROTATING_BUILDERS:
+    url = 'https://uberchromegw.corp.google.com/i/chromiumos.tryserver/' + \
+          'builders/%s?numbuilds=200' % build_bot
+  command = 'sso_client %s' %url
+  retval = 1
+  retry_time = 3
+  while retval and retry_time:
+    retval, output, _ = \
+        command_executer.GetCommandExecuter().RunCommandWOutput(command, \
+        print_to_console=False)
+    retry_time -= 1
+
+  if retval:
+    return []
+
+  out = output.split('\n')
+  line_num = 0
+  build_id = []
+  # Parse the output like this
+  # <td>Dec 14 10:55</td>
+  # <td class="revision">??</td>
+  # <td failure</td><td><a href="../builders/gcc_toolchain/builds/109">#109</a>
+  while line_num < len(out):
+    if date_string in out[line_num]:
+      if line_num + 2 < len(out):
+        build_num_line = out[line_num + 2]
+        raw_num = re.findall(r'builds/\d+', build_num_line)
+        # raw_num is ['builds/109'] in the example.
+        if raw_num:
+          build_id.append(int(raw_num[0].split('/')[1]))
+    line_num += 1
+  return build_id
 
 
 def GenerateFailuresReport(fail_dict, date):
@@ -381,16 +424,26 @@ def UpdateBuilds(builds):
       fp.write('%s,%d\n' % (LLVM_ROTATING_BUILDER, llvm_max))
 
 
-def GetBuilds():
-  """Read build-data.txt to determine values for current report."""
+def GetBuilds(date=0):
+  """Get build id from builds."""
 
+  # If date is set, get the build id from waterfall.
+  builds = []
+
+  if date:
+    for builder in WATERFALL_BUILDERS + ROTATING_BUILDERS:
+      build_ids = GetBuildID(builder, date)
+      for build_id in build_ids:
+        builds.append((builder, build_id))
+    return builds
+
+  # If date is not set, we try to get the most recent builds.
   # Read the values of the last builds used to generate a report, and
   # increment them appropriately, to get values for generating the
   # current report.  (See comments in UpdateBuilds).
   with open(BUILD_DATA_FILE, 'r') as fp:
     lines = fp.readlines()
 
-  builds = []
   for l in lines:
     l = l.rstrip()
     words = l.split(',')
@@ -696,6 +749,12 @@ def Main(argv):
       default=False,
       action='store_true',
       help='Run reports, but do not update the data files.')
+  parser.add_argument(
+      '--date',
+      dest='date',
+      default=0,
+      type=int,
+      help='The date YYYYMMDD of waterfall report.')
 
   options = parser.parse_args(argv)
 
@@ -706,6 +765,7 @@ def Main(argv):
   rotating_only = options.rotating
   failures_report = options.failures_report
   omit_failures = options.omit_failures
+  date = options.date
 
   test_data_dict = dict()
   failure_dict = dict()
@@ -721,7 +781,7 @@ def Main(argv):
   with open('%s/test-failure-data.json' % DATA_DIR, 'r') as fp:
     failure_dict = json.load(fp)
 
-  builds = GetBuilds()
+  builds = GetBuilds(date)
 
   waterfall_report_dict = dict()
   rotating_report_dict = dict()
