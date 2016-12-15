@@ -49,10 +49,8 @@ WATERFALL_BUILDERS = [
     'x86-llvm-next-toolchain'
 ]
 
-DATA_DIR = '/usr/local/google2/cmtice/toolchain-utils/waterfall-report-data/'
-ARCHIVE_DIR = '/usr/local/google2/cmtice/toolchain-utils/waterfall-reports/'
-#DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
-#ARCHIVE_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-reports/'
+DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
+ARCHIVE_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-reports/'
 DOWNLOAD_DIR = '/tmp/waterfall-logs'
 MAX_SAVE_RECORDS = 7
 BUILD_DATA_FILE = '%s/build-data.txt' % DATA_DIR
