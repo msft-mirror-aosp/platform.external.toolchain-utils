@@ -50,10 +50,10 @@ class SuiteRunner(object):
                log_level='verbose',
                cmd_exec=None,
                cmd_term=None):
-    self._logger = logger_to_use
+    self.logger = logger_to_use
     self.log_level = log_level
     self._ce = cmd_exec or command_executer.GetCommandExecuter(
-        self._logger, log_level=self.log_level)
+        self.logger, log_level=self.log_level)
     self._ct = cmd_term or command_executer.CommandTerminator()
 
   def Run(self, machine, label, benchmark, test_args, profiler_args):
@@ -70,15 +70,15 @@ class SuiteRunner(object):
         ret_tup = self.Test_That_Run(machine, label, benchmark, test_args,
                                      profiler_args)
       if ret_tup[0] != 0:
-        self._logger.LogOutput('benchmark %s failed. Retries left: %s' %
-                               (benchmark.name, benchmark.retries - i))
+        self.logger.LogOutput('benchmark %s failed. Retries left: %s' %
+                              (benchmark.name, benchmark.retries - i))
       elif i > 0:
-        self._logger.LogOutput('benchmark %s succeded after %s retries' %
-                               (benchmark.name, i))
+        self.logger.LogOutput('benchmark %s succeded after %s retries' %
+                              (benchmark.name, i))
         break
       else:
-        self._logger.LogOutput('benchmark %s succeded on first try' %
-                               benchmark.name)
+        self.logger.LogOutput('benchmark %s succeded on first try' %
+                              benchmark.name)
         break
     return ret_tup
 
@@ -92,8 +92,8 @@ class SuiteRunner(object):
                        'fi')
     ret, freqs_str, _ = self._ce.CrosRunCommandWOutput(
         get_avail_freqs, machine=machine_name, chromeos_root=chromeos_root)
-    self._logger.LogFatalIf(ret, 'Could not get available frequencies '
-                            'from machine: %s' % machine_name)
+    self.logger.LogFatalIf(ret, 'Could not get available frequencies '
+                           'from machine: %s' % machine_name)
     freqs = freqs_str.split()
     # We need to make sure that the frequencies are sorted in decreasing
     # order
@@ -123,29 +123,29 @@ class SuiteRunner(object):
     change_perf_gov = BASH_FOR.format(
         list=CPUFREQ_DIRS + 'scaling_governor', body='echo performance > $f')
     if self.log_level == 'average':
-      self._logger.LogOutput('Pinning governor execution frequencies for %s' %
-                             machine_name)
+      self.logger.LogOutput('Pinning governor execution frequencies for %s' %
+                            machine_name)
     ret = self._ce.CrosRunCommand(
         ' && '.join(('set -e ', change_max_freq, change_min_freq,
                      change_perf_gov)),
         machine=machine_name,
         chromeos_root=chromeos_root)
-    self._logger.LogFatalIf(ret, 'Could not pin frequencies on machine: %s' %
-                            machine_name)
+    self.logger.LogFatalIf(ret, 'Could not pin frequencies on machine: %s' %
+                           machine_name)
 
   def DecreaseWaitTime(self, machine_name, chromeos_root):
     """Change the ten seconds wait time for pagecycler to two seconds."""
     FILE = '/usr/local/telemetry/src/tools/perf/page_sets/page_cycler_story.py'
     ret = self._ce.CrosRunCommand(
         'ls ' + FILE, machine=machine_name, chromeos_root=chromeos_root)
-    self._logger.LogFatalIf(ret, 'Could not find {} on machine: {}'.format(
+    self.logger.LogFatalIf(ret, 'Could not find {} on machine: {}'.format(
         FILE, machine_name))
 
     if not ret:
       sed_command = 'sed -i "s/_TTI_WAIT_TIME = 10/_TTI_WAIT_TIME = 2/g" '
       ret = self._ce.CrosRunCommand(
           sed_command + FILE, machine=machine_name, chromeos_root=chromeos_root)
-      self._logger.LogFatalIf(ret, 'Could not modify {} on machine: {}'.format(
+      self.logger.LogFatalIf(ret, 'Could not modify {} on machine: {}'.format(
           FILE, machine_name))
 
   def RebootMachine(self, machine_name, chromeos_root):
@@ -164,7 +164,7 @@ class SuiteRunner(object):
     if test_args:
       options += ' %s' % test_args
     if profiler_args:
-      self._logger.LogFatal('test_that does not support profiler.')
+      self.logger.LogFatal('test_that does not support profiler.')
     command = 'rm -rf /usr/local/autotest/results/*'
     self._ce.CrosRunCommand(
         command, machine=machine, chromeos_root=label.chromeos_root)
@@ -181,8 +181,8 @@ class SuiteRunner(object):
          '%s %s %s') %
         (TEST_THAT_PATH, autotest_dir, options, machine, benchmark.test_name))
     if self.log_level != 'verbose':
-      self._logger.LogOutput('Running test.')
-      self._logger.LogOutput('CMD: %s' % command)
+      self.logger.LogOutput('Running test.')
+      self.logger.LogOutput('CMD: %s' % command)
     # Use --no-ns-pid so that cros_sdk does not create a different
     # process namespace and we can kill process created easily by
     # their process group.
@@ -201,8 +201,8 @@ class SuiteRunner(object):
   def Telemetry_Crosperf_Run(self, machine, label, benchmark, test_args,
                              profiler_args):
     if not os.path.isdir(label.chrome_src):
-      self._logger.LogFatal('Cannot find chrome src dir to'
-                            ' run telemetry: %s' % label.chrome_src)
+      self.logger.LogFatal('Cannot find chrome src dir to'
+                           ' run telemetry: %s' % label.chrome_src)
 
     # Check for and remove temporary file that may have been left by
     # previous telemetry runs (and which might prevent this run from
@@ -246,8 +246,8 @@ class SuiteRunner(object):
                                                    CHROME_MOUNT_DIR,
                                                    CHROME_MOUNT_DIR))
     if self.log_level != 'verbose':
-      self._logger.LogOutput('Running test.')
-      self._logger.LogOutput('CMD: %s' % cmd)
+      self.logger.LogOutput('Running test.')
+      self.logger.LogOutput('CMD: %s' % cmd)
     return self._ce.ChrootRunCommandWOutput(
         label.chromeos_root,
         cmd,
@@ -257,14 +257,14 @@ class SuiteRunner(object):
   def Telemetry_Run(self, machine, label, benchmark, profiler_args):
     telemetry_run_path = ''
     if not os.path.isdir(label.chrome_src):
-      self._logger.LogFatal('Cannot find chrome src dir to' ' run telemetry.')
+      self.logger.LogFatal('Cannot find chrome src dir to' ' run telemetry.')
     else:
       telemetry_run_path = os.path.join(label.chrome_src, 'src/tools/perf')
       if not os.path.exists(telemetry_run_path):
-        self._logger.LogFatal('Cannot find %s directory.' % telemetry_run_path)
+        self.logger.LogFatal('Cannot find %s directory.' % telemetry_run_path)
 
     if profiler_args:
-      self._logger.LogFatal('Telemetry does not support the perf profiler.')
+      self.logger.LogFatal('Telemetry does not support the perf profiler.')
 
     # Check for and remove temporary file that may have been left by
     # previous telemetry runs (and which might prevent this run from
@@ -285,8 +285,8 @@ class SuiteRunner(object):
            '{3} {4}'.format(telemetry_run_path, machine, rsa_key,
                             benchmark.test_name, benchmark.test_args))
     if self.log_level != 'verbose':
-      self._logger.LogOutput('Running test.')
-      self._logger.LogOutput('CMD: %s' % cmd)
+      self.logger.LogOutput('Running test.')
+      self.logger.LogOutput('CMD: %s' % cmd)
     return self._ce.RunCommandWOutput(cmd, print_to_console=False)
 
   def CommandTerminator(self):

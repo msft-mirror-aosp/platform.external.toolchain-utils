@@ -225,20 +225,20 @@ class SuiteRunnerTest(unittest.TestCase):
       if machine or chroot:
         pass
 
-    def FakeLogMsg(fd, termfd, msg, flush):
+    def FakeLogMsg(fd, termfd, msg, flush=True):
       if fd or termfd or msg or flush:
         pass
 
     save_log_msg = self.real_logger.LogMsg
     self.real_logger.LogMsg = FakeLogMsg
-    self.runner._logger = self.real_logger
+    self.runner.logger = self.real_logger
     self.runner.RebootMachine = FakeRebootMachine
 
     raised_exception = False
     try:
       self.runner.Test_That_Run('lumpy1.cros', self.mock_label,
                                 self.test_that_bench, '', 'record -a -e cycles')
-    except:
+    except SystemExit:
       raised_exception = True
     self.assertTrue(raised_exception)
 
@@ -299,7 +299,7 @@ class SuiteRunnerTest(unittest.TestCase):
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def test_telemetry_run(self, mock_runcmd, mock_exists, mock_isdir):
 
-    def FakeLogMsg(fd, termfd, msg, flush):
+    def FakeLogMsg(fd, termfd, msg, flush=True):
       if fd or termfd or msg or flush:
         pass
 
@@ -308,7 +308,7 @@ class SuiteRunnerTest(unittest.TestCase):
     mock_runcmd.return_value = 0
 
     self.mock_cmd_exec.RunCommandWOutput = mock_runcmd
-    self.runner._logger = self.real_logger
+    self.runner.logger = self.real_logger
 
     profiler_args = ('--profiler=custom_perf --profiler_args=\'perf_options'
                      '="record -a -e cycles,instructions"\'')
@@ -318,7 +318,7 @@ class SuiteRunnerTest(unittest.TestCase):
     try:
       self.runner.Telemetry_Run('lumpy1.cros', self.mock_label,
                                 self.telemetry_bench, '')
-    except:
+    except SystemExit:
       raises_exception = True
     self.assertTrue(raises_exception)
 
@@ -328,7 +328,7 @@ class SuiteRunnerTest(unittest.TestCase):
     try:
       self.runner.Telemetry_Run('lumpy1.cros', self.mock_label,
                                 self.telemetry_bench, '')
-    except:
+    except SystemExit:
       raises_exception = True
     self.assertTrue(raises_exception)
 
@@ -338,7 +338,7 @@ class SuiteRunnerTest(unittest.TestCase):
     try:
       self.runner.Telemetry_Run('lumpy1.cros', self.mock_label,
                                 self.telemetry_bench, profiler_args)
-    except:
+    except SystemExit:
       raises_exception = True
     self.assertTrue(raises_exception)
 
