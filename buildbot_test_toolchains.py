@@ -3,7 +3,6 @@
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Script for running nightly compiler tests on ChromeOS.
 
 This script launches a buildbot to build ChromeOS with the latest compiler on
@@ -34,6 +33,9 @@ USE_NEXT_GCC_PATCH = '230260'
 
 # CL that uses LLVM to build the peppy image.
 USE_LLVM_PATCH = '295217'
+
+# CL that uses LLVM-Next to build the images (includes chrome).
+USE_LLVM_NEXT_PATCH = '424123'
 
 CROSTC_ROOT = '/usr/local/google/crostc'
 ROLE_ACCOUNT = 'mobiletc-prebuild'
@@ -157,7 +159,10 @@ class ToolchainComparator(object):
     experiment_file_name = '%s_toolchain_experiment.txt' % self._board
 
     compiler_string = 'gcc'
-    if USE_LLVM_PATCH in self._patches_string:
+    if USE_LLVM_NEXT_PATCH in self._patches_string:
+      experiment_file_name = '%s_llvm_next_experiment.txt' % self._board
+      compiler_string = 'llvm_next'
+    elif USE_LLVM_PATCH in self._patches_string:
       experiment_file_name = '%s_llvm_experiment.txt' % self._board
       compiler_string = 'llvm'
 
@@ -244,7 +249,9 @@ class ToolchainComparator(object):
     if (os.path.exists(filename) and
         os.path.exists(os.path.expanduser(MAIL_PROGRAM))):
       email_title = 'buildbot test results'
-      if self._patches_string == USE_LLVM_PATCH:
+      if USE_LLVM_NEXT_PATCH in self._patches_string:
+        email_title = 'buildbot llvm_next test results'
+      elif USE_LLVM_PATCH in self._patches_string:
         email_title = 'buildbot llvm test results'
       command = ('cat %s | %s -s "%s, %s" -team -html' %
                  (filename, MAIL_PROGRAM, email_title, self._board))
@@ -268,8 +275,8 @@ class ToolchainComparator(object):
         build_toolchain=True)
 
     print('trybot_url: \
-       https://uberchromegw.corp.google.com/i/chromiumos.tryserver/builders/release/builds/%s' \
-       % build_id)
+       https://uberchromegw.corp.google.com/i/chromiumos.tryserver/builders/release/builds/%s'
+          % build_id)
     if len(trybot_image) == 0:
       self._l.LogError('Unable to find trybot_image for %s!' % description)
       return 1
