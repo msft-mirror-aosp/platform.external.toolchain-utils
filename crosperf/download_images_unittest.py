@@ -61,13 +61,15 @@ class ImageDownloaderTestcast(unittest.TestCase):
     mock_mkdirs.assert_called_with(
         '/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0')
 
-    # Verify we called ChrootRunCommand once, with proper arguments.
-    self.assertEqual(mock_cmd_exec.ChrootRunCommand.call_count, 1)
-    mock_cmd_exec.ChrootRunCommand.assert_called_with(
-        '/usr/local/home/chromeos', 'gsutil cp '
-        'gs://chromeos-image-archive/lumpy-release/R36-5814.0.0/'
-        'chromiumos_test_image.tar.xz'
-        ' /tmp/lumpy-release/R36-5814.0.0')
+    # Verify we called RunCommand once, with proper arguments.
+    self.assertEqual(mock_cmd_exec.RunCommand.call_count, 1)
+    expected_args = (
+        '/usr/local/home/chromeos/chromium/tools/depot_tools/gsutil.py '
+        'cp gs://chromeos-image-archive/lumpy-release/R36-5814.0.0/'
+        'chromiumos_test_image.tar.xz '
+        '/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0')
+
+    mock_cmd_exec.RunCommand.assert_called_with(expected_args)
 
     # Reset the velues in the mocks; set os.path.exists to always return True.
     mock_path_exists.reset_mock()
@@ -112,20 +114,33 @@ class ImageDownloaderTestcast(unittest.TestCase):
         '/usr/local/home/chromeos/chroot/tmp/lumpy-release/'
         'R36-5814.0.0/chromiumos_test_image.bin')
 
-    # Verify ChrootRunCommand was called twice, with correct arguments.
-    self.assertEqual(mock_cmd_exec.ChrootRunCommand.call_count, 2)
-    call_args_0 = mock_cmd_exec.ChrootRunCommand.call_args_list[0][0]
-    call_args_1 = mock_cmd_exec.ChrootRunCommand.call_args_list[1][0]
-    expected_arg_0 = ('/usr/local/home/chromeos',
-                      'cd /tmp/lumpy-release/R36-5814.0.0 ; '
-                      'tar -Jxf chromiumos_test_image.tar.xz ')
-    expected_arg_1 = ('/usr/local/home/chromeos',
-                      'cd /tmp/lumpy-release/R36-5814.0.0 ; '
-                      'rm -f chromiumos_test_image.bin; ')
-    self.assertEqual(call_args_0, expected_arg_0)
-    self.assertEqual(call_args_1, expected_arg_1)
+    # Verify RunCommand was called twice with correct arguments.
+    self.assertEqual(mock_cmd_exec.RunCommand.call_count, 2)
+    print(mock_cmd_exec.RunCommand.call_args_list)
+    # Call 1, should have 2 arguments
+    self.assertEqual(len(mock_cmd_exec.RunCommand.call_args_list[0]), 2)
+    actual_arg = mock_cmd_exec.RunCommand.call_args_list[0][0]
+    expected_arg = (
+        'cd /usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0 ; '
+        'tar -Jxf chromiumos_test_image.tar.xz ',)
+    self.assertEqual(expected_arg, actual_arg)
+    # 2nd arg must be exception handler
+    except_handler_string = 'RunCommandExceptionHandler.HandleException'
+    self.assertTrue(
+        except_handler_string in
+        repr(mock_cmd_exec.RunCommand.call_args_list[0][1]))
 
-    # Set os.path.exists to always return False and run uncompress.
+    # Call 2, should have 2 arguments
+    self.assertEqual(len(mock_cmd_exec.RunCommand.call_args_list[1]), 2)
+    actual_arg = mock_cmd_exec.RunCommand.call_args_list[1][0]
+    expected_arg = (
+        'cd /usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0 ; '
+        'rm -f chromiumos_test_image.bin ',)
+    self.assertEqual(expected_arg, actual_arg)
+    # 2nd arg must be empty
+    self.assertTrue('{}' in repr(mock_cmd_exec.RunCommand.call_args_list[1][1]))
+
+    # Set os.path.exists to always return True and run uncompress.
     mock_path_exists.reset_mock()
     mock_cmd_exec.reset_mock()
     mock_path_exists.return_value = True
@@ -137,8 +152,8 @@ class ImageDownloaderTestcast(unittest.TestCase):
         '/usr/local/home/chromeos/chroot/tmp/lumpy-release/'
         'R36-5814.0.0/chromiumos_test_image.bin')
 
-    # Verify ChrootRunCommand was not called.
-    self.assertEqual(mock_cmd_exec.ChrootRunCommand.call_count, 0)
+    # Verify RunCommand was not called.
+    self.assertEqual(mock_cmd_exec.RunCommand.call_count, 0)
 
   def test_run(self):
 
