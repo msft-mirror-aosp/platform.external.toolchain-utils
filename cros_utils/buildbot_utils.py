@@ -244,6 +244,10 @@ def GetTrybotImage(chromeos_root,
     logger.GetLogger().LogFatal('Error occurred while launching trybot job: '
                                 '%s' % command)
 
+  if async:
+    # Do not wait for trybot job to finish; return immediately.
+    return 0
+
   os.chdir(base_dir)
 
   build_id = 0
@@ -292,10 +296,6 @@ def GetTrybotImage(chromeos_root,
         # however.
         pending = False
         build_id = data_dict['number']
-
-        if async:
-           # Do not wait for trybot job to finish; return immediately
-          return build_id, " "
 
         if not long_slept:
           # The trybot generally takes more than 2 hours to finish.
