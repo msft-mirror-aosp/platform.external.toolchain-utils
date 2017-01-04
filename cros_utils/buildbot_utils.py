@@ -18,7 +18,7 @@ from cros_utils import command_executer
 from cros_utils import logger
 from cros_utils import buildbot_json
 
-INITIAL_SLEEP_TIME = 7200 # 2 hours; wait time before polling buildbot.
+INITIAL_SLEEP_TIME = 7200  # 2 hours; wait time before polling buildbot.
 SLEEP_TIME = 600  # 10 minutes; time between polling of buildbot.
 TIME_OUT = 28800  # Decide the build is dead or will never finish
 # after this time (8 hours).
@@ -106,6 +106,8 @@ def GetBuildInfo(file_dir, waterfall_builder):
     builder = 'gcc_toolchain'
   elif waterfall_builder.endswith('-llvm-toolchain'):
     builder = 'llvm_toolchain'
+  elif waterfall_builder.endswith('-llvm-next-toolchain'):
+    builder = 'llvm_next_toolchain'
 
   sa_file = os.path.expanduser(
       os.path.join(file_dir, 'cros_utils',
@@ -244,10 +246,6 @@ def GetTrybotImage(chromeos_root,
     logger.GetLogger().LogFatal('Error occurred while launching trybot job: '
                                 '%s' % command)
 
-  if async:
-    # Do not wait for trybot job to finish; return immediately.
-    return 0
-
   os.chdir(base_dir)
 
   build_id = 0
@@ -296,6 +294,10 @@ def GetTrybotImage(chromeos_root,
         # however.
         pending = False
         build_id = data_dict['number']
+
+        if async:
+          # Do not wait for trybot job to finish; return immediately
+          return build_id, ' '
 
         if not long_slept:
           # The trybot generally takes more than 2 hours to finish.
