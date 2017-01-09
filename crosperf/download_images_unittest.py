@@ -116,7 +116,6 @@ class ImageDownloaderTestcast(unittest.TestCase):
 
     # Verify RunCommand was called twice with correct arguments.
     self.assertEqual(mock_cmd_exec.RunCommand.call_count, 2)
-    print(mock_cmd_exec.RunCommand.call_args_list)
     # Call 1, should have 2 arguments
     self.assertEqual(len(mock_cmd_exec.RunCommand.call_args_list[0]), 2)
     actual_arg = mock_cmd_exec.RunCommand.call_args_list[0][0]

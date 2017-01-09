@@ -13,6 +13,7 @@ from cros_utils import command_executer
 import test_flag
 
 TEST_THAT_PATH = '/usr/bin/test_that'
+AUTOTEST_DIR = '~/trunk/src/third_party/autotest/files'
 CHROME_MOUNT_DIR = '/tmp/chrome_root'
 
 
@@ -173,13 +174,19 @@ class SuiteRunner(object):
     # Rebooting between iterations has proven to help with this.
     self.RebootMachine(machine, label.chromeos_root)
 
-    autotest_dir = '~/trunk/src/third_party/autotest/files'
+    autotest_dir = AUTOTEST_DIR
     if label.autotest_path != '':
       autotest_dir = label.autotest_path
-    command = (
-        ('%s --autotest_dir %s --fast '
-         '%s %s %s') %
-        (TEST_THAT_PATH, autotest_dir, options, machine, benchmark.test_name))
+
+    autotest_dir_arg = '--autotest_dir %s' % autotest_dir
+    # For non-telemetry tests, specify an autotest directory only if the
+    # specified directory is different from default (crosbug.com/679001).
+    if autotest_dir == AUTOTEST_DIR:
+      autotest_dir_arg = ''
+
+    command = (('%s %s --fast '
+                '%s %s %s') % (TEST_THAT_PATH, autotest_dir_arg, options,
+                               machine, benchmark.test_name))
     if self.log_level != 'verbose':
       self.logger.LogOutput('Running test.')
       self.logger.LogOutput('CMD: %s' % command)
@@ -211,7 +218,7 @@ class SuiteRunner(object):
 
     # For telemetry runs, we can use the autotest copy from the source
     # location. No need to have one under /build/<board>.
-    autotest_dir_arg = '--autotest_dir ~/trunk/src/third_party/autotest/files'
+    autotest_dir_arg = '--autotest_dir %s' % AUTOTEST_DIR
     if label.autotest_path != '':
       autotest_dir_arg = '--autotest_dir %s' % label.autotest_path
 

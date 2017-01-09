@@ -256,8 +256,7 @@ class SuiteRunnerTest(unittest.TestCase):
     args_dict = mock_chroot_runcmd.call_args_list[0][1]
     self.assertEqual(len(args_list), 2)
     self.assertEqual(args_list[0], '/tmp/chromeos')
-    self.assertEqual(args_list[1], ('/usr/bin/test_that --autotest_dir '
-                                    '~/trunk/src/third_party/autotest/files '
+    self.assertEqual(args_list[1], ('/usr/bin/test_that  '
                                     '--fast  --board=lumpy '
                                     '--iterations=2 lumpy1.cros octane'))
     self.assertEqual(args_dict['command_terminator'], self.mock_cmd_term)
