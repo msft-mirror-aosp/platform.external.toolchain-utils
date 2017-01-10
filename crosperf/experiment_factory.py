@@ -78,10 +78,10 @@ crosbolt_perf_tests = [
     'power_Resume',
     'video_PlaybackPerf.h264',
     'build_RootFilesystemSize',
-    'cheets_AntutuTest',
-    'cheets_PerfBootServer',
-    'cheets_CandyCrushTest',
-    'cheets_LinpackTest',
+#    'cheets_AntutuTest',
+#    'cheets_PerfBootServer',
+#    'cheets_CandyCrushTest',
+#    'cheets_LinpackTest',
 ]
 
 
