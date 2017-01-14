@@ -83,54 +83,35 @@ class SuiteRunner(object):
         break
     return ret_tup
 
-  def GetHighestStaticFrequency(self, machine_name, chromeos_root):
-    """Gets the highest static frequency for the specified machine."""
-    get_avail_freqs = ('cd /sys/devices/system/cpu/cpu0/cpufreq/; '
-                       'if [[ -e scaling_available_frequencies ]]; then '
-                       '  cat scaling_available_frequencies; '
-                       'else '
-                       '  cat scaling_max_freq ; '
-                       'fi')
-    ret, freqs_str, _ = self._ce.CrosRunCommandWOutput(
-        get_avail_freqs, machine=machine_name, chromeos_root=chromeos_root)
-    self.logger.LogFatalIf(ret, 'Could not get available frequencies '
-                           'from machine: %s' % machine_name)
-    freqs = freqs_str.split()
-    # We need to make sure that the frequencies are sorted in decreasing
-    # order
-    freqs.sort(key=int, reverse=True)
-
-    ## When there is no scaling_available_frequencies file,
-    ## we have only 1 choice.
-    if len(freqs) == 1:
-      return freqs[0]
-    # The dynamic frequency ends with a "1000". So, ignore it if found.
-    if freqs[0].endswith('1000'):
-      return freqs[1]
-    else:
-      return freqs[0]
-
   def PinGovernorExecutionFrequencies(self, machine_name, chromeos_root):
     """Set min and max frequencies to max static frequency."""
-    highest_freq = self.GetHighestStaticFrequency(machine_name, chromeos_root)
-    BASH_FOR = 'for f in {list}; do {body}; done'
-    CPUFREQ_DIRS = '/sys/devices/system/cpu/cpu*/cpufreq/'
-    change_max_freq = BASH_FOR.format(
-        list=CPUFREQ_DIRS + 'scaling_max_freq',
-        body='echo %s > $f' % highest_freq)
-    change_min_freq = BASH_FOR.format(
-        list=CPUFREQ_DIRS + 'scaling_min_freq',
-        body='echo %s > $f' % highest_freq)
-    change_perf_gov = BASH_FOR.format(
-        list=CPUFREQ_DIRS + 'scaling_governor', body='echo performance > $f')
+    # pyformat: disable
+    set_cpu_freq = (
+        'set -e && '
+        'for f in /sys/devices/system/cpu/cpu*/cpufreq; do '
+        'cd $f; '
+        'val=0; '
+        'if [[ -e scaling_available_frequencies ]]; then '
+        # pylint: disable=line-too-long
+        '  val=`cat scaling_available_frequencies | tr " " "\\n" | sort -n -b -r`; '
+        'else '
+        '  val=`cat scaling_max_freq | tr " " "\\n" | sort -n -b -r`; fi ; '
+        'set -- $val; '
+        'highest=$1; '
+        'if [[ $# -gt 1 ]]; then '
+        '  case $highest in *1000) highest=$2;; esac; '
+        'fi ;'
+        'echo $highest > scaling_max_freq; '
+        'echo $highest > scaling_min_freq; '
+        'echo performance > scaling_governor; '
+        'done'
+    )
+    # pyformat: enable
     if self.log_level == 'average':
       self.logger.LogOutput('Pinning governor execution frequencies for %s' %
                             machine_name)
     ret = self._ce.CrosRunCommand(
-        ' && '.join(('set -e ', change_max_freq, change_min_freq,
-                     change_perf_gov)),
-        machine=machine_name,
-        chromeos_root=chromeos_root)
+        set_cpu_freq, machine=machine_name, chromeos_root=chromeos_root)
     self.logger.LogFatalIf(ret, 'Could not pin frequencies on machine: %s' %
                            machine_name)
 

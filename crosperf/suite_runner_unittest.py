@@ -162,43 +162,35 @@ class SuiteRunnerTest(unittest.TestCase):
         'fake_machine', self.mock_label, self.telemetry_crosperf_bench, '', ''
     ])
 
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
-  def test_get_highest_static_frequency(self, mock_cros_runcmd):
-
-    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd
-    mock_cros_runcmd.return_value = [0, '1666000 1333000 1000000', '']
-    freq = self.runner.GetHighestStaticFrequency('lumpy1.cros', '/tmp/chromeos')
-    self.assertEqual(freq, '1666000')
-
-    mock_cros_runcmd.return_value = [0, '1333000', '']
-    freq = self.runner.GetHighestStaticFrequency('lumpy1.cros', '/tmp/chromeos')
-    self.assertEqual(freq, '1333000')
-
-    mock_cros_runcmd.return_value = [0, '1661000 1333000 1000000', '']
-    freq = self.runner.GetHighestStaticFrequency('lumpy1.cros', '/tmp/chromeos')
-    self.assertEqual(freq, '1333000')
-
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
   def test_pin_governor_execution_frequencies(self, mock_cros_runcmd):
-
-    def FakeGetHighestFreq(machine_name, chromeos_root):
-      if machine_name or chromeos_root:
-        pass
-      return '1666000'
-
     self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
-    self.runner.GetHighestStaticFrequency = FakeGetHighestFreq
     self.runner.PinGovernorExecutionFrequencies('lumpy1.cros', '/tmp/chromeos')
     self.assertEqual(mock_cros_runcmd.call_count, 1)
     cmd = mock_cros_runcmd.call_args_list[0][0]
-    self.assertEqual(cmd, (
-        'set -e  && for f in '
-        '/sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq; do echo '
-        '1666000 > $f; done && for f in '
-        '/sys/devices/system/cpu/cpu*/cpufreq/scaling_min_freq; do echo '
-        '1666000 > $f; done && for f in '
-        '/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo '
-        'performance > $f; done',))
+    # pyformat: disable
+    set_cpu_cmd = (
+        'set -e && '
+        'for f in /sys/devices/system/cpu/cpu*/cpufreq; do '
+        'cd $f; '
+        'val=0; '
+        'if [[ -e scaling_available_frequencies ]]; then '
+        # pylint: disable=line-too-long
+        '  val=`cat scaling_available_frequencies | tr " " "\\n" | sort -n -b -r`; '
+        'else '
+        '  val=`cat scaling_max_freq | tr " " "\\n" | sort -n -b -r`; fi ; '
+        'set -- $val; '
+        'highest=$1; '
+        'if [[ $# -gt 1 ]]; then '
+        '  case $highest in *1000) highest=$2;; esac; '
+        'fi ;'
+        'echo $highest > scaling_max_freq; '
+        'echo $highest > scaling_min_freq; '
+        'echo performance > scaling_governor; '
+        'done'
+    )
+    # pyformat: enable
+    self.assertEqual(cmd, (set_cpu_cmd,))
 
   @mock.patch.object(time, 'sleep')
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
