@@ -95,11 +95,7 @@ def ProcessArguments(argv):
   return options
 
 
-def CleanChromeOsTmpAndImages(days_to_preserve=1, dry_run=False):
-  """Delete temporaries, images under crostc/chromeos."""
-  chromeos_chroot_tmp = os.path.join(constants.CROSTC_WORKSPACE, 'chromeos',
-                                     'chroot', 'tmp')
-
+def CleanChromeOsTmpFiles(chroot_tmp, days_to_preserve, dry_run):
   rv = 0
   ce = command_executer.GetCommandExecuter()
   # Clean chroot/tmp/test_that_* and chroot/tmp/tmpxxxxxx, that were last
@@ -110,58 +106,86 @@ def CleanChromeOsTmpAndImages(days_to_preserve=1, dry_run=False):
          r'   -name "cros-update*" -amin +{1} -o '
          r' -regex "{0}/tmp......" -amin +{1} \) '
          r'-exec bash -c "echo rm -fr {{}}" \; '
-         r'-exec bash -c "rm -fr {{}}" \;').format(chromeos_chroot_tmp, minutes)
+         r'-exec bash -c "rm -fr {{}}" \;').format(chroot_tmp, minutes)
   if dry_run:
     print('Going to execute:\n%s' % cmd)
   else:
     rv = ce.RunCommand(cmd, print_to_console=False)
     if rv == 0:
       print('Successfully cleaned chromeos tree tmp directory '
-            '"{0}".'.format(chromeos_chroot_tmp))
+            '"{0}".'.format(chroot_tmp))
     else:
       print('Some directories were not removed under chromeos tree '
-            'tmp directory -"{0}".'.format(chromeos_chroot_tmp))
+            'tmp directory -"{0}".'.format(chroot_tmp))
 
+  return rv
+
+
+def CleanChromeOsImageFiles(chroot_tmp, subdir_suffix, days_to_preserve,
+                            dry_run):
+  rv = 0
+  rv2 = 0
+  ce = command_executer.GetCommandExecuter()
+  minutes = 1440 * days_to_preserve
   # Clean image tar files, which were last accessed 1 hour ago and clean image
   # bin files that were last accessed more than specified time.
-  rv2 = 0
-  cmd = ('find {0}/*-release -type f '
+  cmd = ('find {0}/*{1} -type f '
          r'\( -name "chromiumos_test_image.tar"    -amin +60 -o '
          r'   -name "chromiumos_test_image.tar.xz" -amin +60 -o '
-         r'   -name "chromiumos_test_image.bin"    -amin +{1} \) '
+         r'   -name "chromiumos_test_image.bin"    -amin +{2} \) '
          r'-exec bash -c "echo rm -f {{}}" \; '
-         r'-exec bash -c "rm -f {{}}" \;').format(chromeos_chroot_tmp, minutes)
+         r'-exec bash -c "rm -f {{}}" \;').format(chroot_tmp, subdir_suffix,
+                                                  minutes)
 
   if dry_run:
     print('Going to execute:\n%s' % cmd)
   else:
     rv2 = ce.RunCommand(cmd, print_to_console=False)
     if rv2 == 0:
-      print('Successfully cleaned chromeos images.')
+      print('Successfully cleaned chromeos images from '
+            '"{0}/*{1}".'.format(chroot_tmp, subdir_suffix))
     else:
-      print('Some chromeos images were not removed.')
+      print('Some chromeos images were not removed from '
+            '"{0}/*{1}".'.format(chroot_tmp, subdir_suffix))
 
   rv += rv2
 
   # Clean autotest files that were last accessed more than specified time.
   rv2 = 0
-  cmd = (r'find {0}/*-release -maxdepth 2 -type d '
+  cmd = (r'find {0}/*{1} -maxdepth 2 -type d '
          r'\( -name "autotest_files" \) '
-         r'-amin +{1} '
+         r'-amin +{2} '
          r'-exec bash -c "echo rm -fr {{}}" \; '
-         r'-exec bash -c "rm -fr {{}}" \;').format(chromeos_chroot_tmp, minutes)
+         r'-exec bash -c "rm -fr {{}}" \;').format(chroot_tmp, subdir_suffix,
+                                                   minutes)
   if dry_run:
     print('Going to execute:\n%s' % cmd)
   else:
     rv2 = ce.RunCommand(cmd, print_to_console=False)
     if rv2 == 0:
-      print('Successfully cleaned chromeos image autotest directories '
-            '"{0}".'.format(chromeos_chroot_tmp))
+      print('Successfully cleaned chromeos image autotest directories from '
+            '"{0}/*{1}".'.format(chroot_tmp, subdir_suffix))
     else:
-      print('Some image autotest directories were not removed under chromeos '
-            'tree tmp directory -"{0}".'.format(chromeos_chroot_tmp))
+      print('Some image autotest directories were not removed from '
+            '"{0}/*{1}".'.format(chroot_tmp, subdir_suffix))
 
   rv += rv2
+  return rv
+
+
+def CleanChromeOsTmpAndImages(days_to_preserve=1, dry_run=False):
+  """Delete temporaries, images under crostc/chromeos."""
+  chromeos_chroot_tmp = os.path.join(constants.CROSTC_WORKSPACE, 'chromeos',
+                                     'chroot', 'tmp')
+  # Clean files in tmp directory
+  rv = CleanChromeOsTmpFiles(chromeos_chroot_tmp, days_to_preserve, dry_run)
+  # Clean image files in *-release directories
+  rv += CleanChromeOsImageFiles(chromeos_chroot_tmp, '-release',
+                                days_to_preserve, dry_run)
+  # Clean image files in *-pfq directories
+  rv += CleanChromeOsImageFiles(chromeos_chroot_tmp, '-pfq', days_to_preserve,
+                                dry_run)
+
   return rv
 
 
@@ -182,16 +206,16 @@ def Main(argv):
       dated_dir = DIR_BY_WEEKDAY[i + 6]
     else:
       dated_dir = DIR_BY_WEEKDAY[i - 1]
+
     rv += 0 if CleanDatedDir(
         os.path.join(constants.CROSTC_WORKSPACE, dated_dir),
         options.dry_run) else 1
 
-  ## Finally clean temporaries, images under crostc/chromeos
+## Finally clean temporaries, images under crostc/chromeos
   rv2 = CleanChromeOsTmpAndImages(
       int(options.days_to_preserve), options.dry_run)
 
   return rv + rv2
-
 
 if __name__ == '__main__':
   retval = Main(sys.argv[1:])
