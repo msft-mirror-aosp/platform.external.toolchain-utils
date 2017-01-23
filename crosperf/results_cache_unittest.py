@@ -544,7 +544,7 @@ class ResultTest(unittest.TestCase):
     self.assertEqual(tmp, ['/tmp/chroot%s' % fake_file])
     self.assertEqual(mock_chrootruncmd.call_args_list[0][0],
                      ('/tmp',
-                      ('/tmp/perf.static report -n --symfs /build/lumpy '
+                      ('/usr/sbin/perf report -n --symfs /build/lumpy '
                        '--vmlinux /build/lumpy/usr/lib/debug/boot/vmlinux '
                        '--kallsyms /build/lumpy/boot/System.map-* -i '
                        '%s --stdio > %s') % (fake_file, fake_file)))
