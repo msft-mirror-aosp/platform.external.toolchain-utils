@@ -44,6 +44,8 @@ TEST_BOARD = [
     'sentry',       # x86_64, kunimitsu (skylake-u)
     'chell',        # x86_64, glados (skylake-y)
     'daisy',        # arm,    daisy  (exynos)
+    'caroline',     # amd64
+    'kevin',        # arm,    gru  (Rockchip)
 ]
 
 
