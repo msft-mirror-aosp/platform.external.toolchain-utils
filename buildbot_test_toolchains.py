@@ -215,14 +215,17 @@ class ToolchainComparator(object):
       if USE_NEXT_GCC_PATCH in self._patches:
         label_string = 'gcc_next_trybot_image'
 
+      # Reuse autotest files from vanilla image for trybot images
+      autotest_files = os.path.join('/tmp', vanilla_image, 'autotest_files')
       experiment_image = """
           %s {
             chromeos_root: %s
             build: %s
+            autotest_path: %s
             compiler: %s
           }
           """ % (label_string, self._chromeos_root, trybot_image,
-                 compiler_string)
+                 autotest_files, compiler_string)
       f.write(experiment_image)
 
     crosperf = os.path.join(TOOLCHAIN_DIR, 'crosperf', 'crosperf')
