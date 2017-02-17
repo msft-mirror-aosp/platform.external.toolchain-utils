@@ -175,12 +175,12 @@ class ToolchainComparator(object):
     experiment_tests = """
     benchmark: all_toolchain_perf {
       suite: telemetry_Crosperf
-      iterations: 3
+      iterations: 0
     }
 
     benchmark: page_cycler_v2.typical_25 {
       suite: telemetry_Crosperf
-      iterations: 2
+      iterations: 0
       run_local: False
       retries: 0
     }

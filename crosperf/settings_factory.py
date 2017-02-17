@@ -29,9 +29,11 @@ class BenchmarkSettings(Settings):
     self.AddField(
         IntegerField(
             'iterations',
-            default=1,
-            description='Number of iterations to run the '
-            'test.'))
+            required=False,
+            default=0,
+            description='Number of iterations to run the test. '
+            'If not set, will run each benchmark test the optimum number of '
+            'times to get a stable result.'))
     self.AddField(
         TextField(
             'suite', default='', description='The type of the benchmark.'))
@@ -186,9 +188,11 @@ class GlobalSettings(Settings):
     self.AddField(
         IntegerField(
             'iterations',
-            default=1,
-            description='Number of iterations to run all '
-            'tests.'))
+            required=False,
+            default=0,
+            description='Number of iterations to run all tests. '
+            'If not set, will run each benchmark test the optimum number of '
+            'times to get a stable result.'))
     self.AddField(
         TextField(
             'chromeos_root',
