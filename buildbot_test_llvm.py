@@ -149,7 +149,7 @@ def Main(argv):
     try:
       board = TEST_BOARD[(start_board + i) % len(TEST_BOARD)]
       fv = ToolchainVerifier(board, options.chromeos_root, options.weekday,
-                             patches, options.compiler)
+                             options.patches, options.compiler)
       fv.DoAll()
     except SystemExit:
       logfile = os.path.join(VALIDATION_RESULT_DIR, options.compiler, board)
