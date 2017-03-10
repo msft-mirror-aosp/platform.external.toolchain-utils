@@ -103,7 +103,8 @@ class CommandExecuter(object):
           stdout=subprocess.PIPE,
           stderr=subprocess.PIPE,
           shell=True,
-          preexec_fn=os.setsid)
+          preexec_fn=os.setsid,
+          executable='/bin/bash')
 
       full_stdout = ''
       full_stderr = ''
