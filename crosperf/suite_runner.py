@@ -88,22 +88,26 @@ class SuiteRunner(object):
     # pyformat: disable
     set_cpu_freq = (
         'set -e && '
+        # Disable Turbo in Intel pstate driver
+        'if [[ -e /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then '
+        'echo -n 1 > /sys/devices/system/cpu/intel_pstate/no_turbo; fi; '
+        # Set governor to performance for each cpu
         'for f in /sys/devices/system/cpu/cpu*/cpufreq; do '
         'cd $f; '
-        'val=0; '
-        'if [[ -e scaling_available_frequencies ]]; then '
-        # pylint: disable=line-too-long
-        '  val=`cat scaling_available_frequencies | tr " " "\\n" | sort -n -b -r`; '
-        'else '
-        '  val=`cat scaling_max_freq | tr " " "\\n" | sort -n -b -r`; fi ; '
-        'set -- $val; '
-        'highest=$1; '
-        'if [[ $# -gt 1 ]]; then '
-        '  case $highest in *1000) highest=$2;; esac; '
-        'fi ;'
-        'echo $highest > scaling_max_freq; '
-        'echo $highest > scaling_min_freq; '
         'echo performance > scaling_governor; '
+        # Uncomment rest of lines to enable setting frequency by crosperf
+        #'val=0; '
+        #'if [[ -e scaling_available_frequencies ]]; then '
+        #'  val=`cat scaling_available_frequencies | tr " " "\\n" | sort -n -b -r`; '
+        #'else '
+        #'  val=`cat scaling_max_freq | tr " " "\\n" | sort -n -b -r`; fi ; '
+        #'set -- $val; '
+        #'highest=$1; '
+        #'if [[ $# -gt 1 ]]; then '
+        #'  case $highest in *1000) highest=$2;; esac; '
+        #'fi ;'
+        #'echo $highest > scaling_max_freq; '
+        #'echo $highest > scaling_min_freq; '
         'done'
     )
     # pyformat: enable
@@ -218,11 +222,10 @@ class SuiteRunner(object):
       args_string = "test_args='%s'" % test_args
 
     cmd = ('{} {} {} --board={} --args="{} run_local={} test={} '
-           '{}" {} telemetry_Crosperf'.format(TEST_THAT_PATH, autotest_dir_arg,
-                                              fast_arg, label.board,
-                                              args_string, benchmark.run_local,
-                                              benchmark.test_name,
-                                              profiler_args, machine))
+           '{}" {} telemetry_Crosperf'.format(
+               TEST_THAT_PATH, autotest_dir_arg, fast_arg, label.board,
+               args_string, benchmark.run_local, benchmark.test_name,
+               profiler_args, machine))
 
     # Use --no-ns-pid so that cros_sdk does not create a different
     # process namespace and we can kill process created easily by their
