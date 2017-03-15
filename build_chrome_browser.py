@@ -131,7 +131,7 @@ def Main(argv):
 
   if options.cros_workon and not (
       os.path.isdir(options.cros_workon) and os.path.exists(os.path.join(
-          options.cros_workon, 'src/chromeos/chromeos.gyp'))):
+          options.cros_workon, 'src/chromeos/BUILD.gn'))):
     Usage(parser, '--cros_workon must be a valid chromium browser checkout.')
 
   if options.verbose:
