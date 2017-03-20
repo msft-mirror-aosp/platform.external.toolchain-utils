@@ -186,7 +186,7 @@ class ToolchainComparator(object):
           vanilla_image {
             chromeos_root: %s
             build: %s
-            compiler: gcc
+            compiler: llvm
           }
           """ % (self._chromeos_root, vanilla_image)
       f.write(official_image)
@@ -197,7 +197,7 @@ class ToolchainComparator(object):
           nonafdo_image {
             chromeos_root: %s
             build: %s
-            compiler: gcc
+            compiler: llvm
           }
           """ % (self._chromeos_root, nonafdo_image)
         f.write(official_nonafdo_image)
