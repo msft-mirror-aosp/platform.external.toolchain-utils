@@ -47,6 +47,17 @@ def _Repeat(func, times):
   return [func() for _ in xrange(times)]
 
 
+def _DictWithReturnValues(retval, pass_fail):
+  """Create a new dictionary pre-populated with success/fail values."""
+  new_dict = {}
+  # Note: 0 is a valid retval; test to make sure it's not None.
+  if retval is not None:
+    new_dict['retval'] = retval
+  if pass_fail:
+    new_dict[''] = pass_fail
+  return new_dict
+
+
 def _GetNonDupLabel(max_dup, runs):
   """Create new list for the runs of the same label.
 
@@ -61,8 +72,12 @@ def _GetNonDupLabel(max_dup, runs):
   """
   new_runs = []
   for run in runs:
+    run_retval = run.get('retval', None)
+    run_pass_fail = run.get('', None)
     new_run = {}
-    added_runs = _Repeat(dict, max_dup)
+    # pylint: disable=cell-var-from-loop
+    added_runs = _Repeat(
+        lambda: _DictWithReturnValues(run_retval, run_pass_fail), max_dup)
     for key, value in run.iteritems():
       match = _DUP_KEY_REGEX.match(key)
       if not match:
