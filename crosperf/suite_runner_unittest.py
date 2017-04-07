@@ -327,11 +327,12 @@ class SuiteRunnerTest(unittest.TestCase):
                                     self.telemetry_bench, '')
     self.assertEqual(res, 0)
     self.assertEqual(mock_runcmd.call_count, 1)
-    self.assertEqual(mock_runcmd.call_args_list[0][0], (
-        ('cd src/tools/perf && ./run_measurement '
-         '--browser=cros-chrome --output-format=csv '
-         '--remote=lumpy1.cros --identity /tmp/chromeos/src/scripts'
-         '/mod_for_test_scripts/ssh_keys/testing_rsa octane '),))
+    self.assertEqual(
+        mock_runcmd.call_args_list[0][0],
+        (('cd src/tools/perf && ./run_measurement '
+          '--browser=cros-chrome --output-format=csv '
+          '--remote=lumpy1.cros --identity /tmp/chromeos/src/scripts'
+          '/mod_for_test_scripts/ssh_keys/testing_rsa octane '),))
 
     self.real_logger.LogMsg = save_log_msg
 

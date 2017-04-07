@@ -78,8 +78,8 @@ class SuiteRunner(object):
                               (benchmark.name, i))
         break
       else:
-        self.logger.LogOutput('benchmark %s succeded on first try' %
-                              benchmark.name)
+        self.logger.LogOutput(
+            'benchmark %s succeded on first try' % benchmark.name)
         break
     return ret_tup
 
@@ -98,6 +98,7 @@ class SuiteRunner(object):
         # Uncomment rest of lines to enable setting frequency by crosperf
         #'val=0; '
         #'if [[ -e scaling_available_frequencies ]]; then '
+        # pylint: disable=line-too-long
         #'  val=`cat scaling_available_frequencies | tr " " "\\n" | sort -n -b -r`; '
         #'else '
         #'  val=`cat scaling_max_freq | tr " " "\\n" | sort -n -b -r`; fi ; '
@@ -112,12 +113,12 @@ class SuiteRunner(object):
     )
     # pyformat: enable
     if self.log_level == 'average':
-      self.logger.LogOutput('Pinning governor execution frequencies for %s' %
-                            machine_name)
+      self.logger.LogOutput(
+          'Pinning governor execution frequencies for %s' % machine_name)
     ret = self._ce.CrosRunCommand(
         set_cpu_freq, machine=machine_name, chromeos_root=chromeos_root)
-    self.logger.LogFatalIf(ret, 'Could not pin frequencies on machine: %s' %
-                           machine_name)
+    self.logger.LogFatalIf(
+        ret, 'Could not pin frequencies on machine: %s' % machine_name)
 
   def DecreaseWaitTime(self, machine_name, chromeos_root):
     """Change the ten seconds wait time for pagecycler to two seconds."""

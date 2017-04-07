@@ -1,9 +1,8 @@
-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Define a type that wraps a Benchmark instance."""
+from __future__ import print_function
 
 import math
 from scipy import stats
@@ -20,20 +19,22 @@ _estimated_stddev = {
     'page_cycler_v2.typical_25': 0.021,
 }
 
+
 # Get #samples needed to guarantee a given confidence interval, assuming the
 # samples follow normal distribution.
 def _samples(b):
-    # TODO: Make this an option
-    # CI = (0.9, 0.02), i.e., 90% chance that |sample mean - true mean| < 2%.
-    p = 0.9
-    e = 0.02
-    if b not in _estimated_stddev:
-        return 1
-    d = _estimated_stddev[b]
-    # Get at least 2 samples so as to calculate standard deviation, which is
-    # needed in T-test for p-value.
-    n = int(math.ceil((stats.norm.isf((1 - p) / 2) * d / e) ** 2))
-    return n if n > 1 else 2
+  # TODO: Make this an option
+  # CI = (0.9, 0.02), i.e., 90% chance that |sample mean - true mean| < 2%.
+  p = 0.9
+  e = 0.02
+  if b not in _estimated_stddev:
+    return 1
+  d = _estimated_stddev[b]
+  # Get at least 2 samples so as to calculate standard deviation, which is
+  # needed in T-test for p-value.
+  n = int(math.ceil((stats.norm.isf((1 - p) / 2) * d / e)**2))
+  return n if n > 1 else 2
+
 
 class Benchmark(object):
   """Class representing a benchmark to be run.

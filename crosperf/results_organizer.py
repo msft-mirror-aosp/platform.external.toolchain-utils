@@ -69,7 +69,7 @@ def _GetNonDupLabel(max_dup, runs):
         new_run[key] = value
       else:
         new_key, index_str = match.groups()
-        added_runs[int(index_str)-1][new_key] = str(value)
+        added_runs[int(index_str) - 1][new_key] = str(value)
     new_runs.append(new_run)
     new_runs += added_runs
   return new_runs
@@ -135,6 +135,7 @@ def _MakeOrganizeResultOutline(benchmark_runs, labels):
     result[name] = _Repeat(make_dicts, len(labels))
   return result
 
+
 def OrganizeResults(benchmark_runs, labels, benchmarks=None, json_report=False):
   """Create a dict from benchmark_runs.
 
@@ -181,9 +182,10 @@ def OrganizeResults(benchmark_runs, labels, benchmarks=None, json_report=False):
     if len(cur_dict) == 1 and cur_dict['retval'] == 0:
       cur_dict['retval'] = 1
       # TODO: This output should be sent via logger.
-      print("WARNING: Test '%s' appears to have succeeded but returned"
-            ' no results.' % benchmark.name,
-            file=sys.stderr)
+      print(
+          "WARNING: Test '%s' appears to have succeeded but returned"
+          ' no results.' % benchmark.name,
+          file=sys.stderr)
     if json_report and benchmark_run.machine:
       cur_dict['machine'] = benchmark_run.machine.name
       cur_dict['machine_checksum'] = benchmark_run.machine.checksum

@@ -1,4 +1,5 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
+"""Run full bisection test."""
 
 from __future__ import print_function
 
@@ -89,7 +90,7 @@ Is your compiler wrapper properly set up? [Y/n]
   inp = sys.stdin.readline()
   inp = inp.strip()
   inp = inp.lower()
-  return (not inp or inp == 'y' or inp == 'yes')
+  return not inp or inp == 'y' or inp == 'yes'
 
 
 def Main(argv):
@@ -121,13 +122,13 @@ def Main(argv):
   if not bisect_dir:
     bisect_dir = DEFAULT_BISECT_DIR
 
-  retval = populate_good_files(cwd, ce, bisect_dir)
-  if retval != 0:
-    return retval
+  retv = populate_good_files(cwd, ce, bisect_dir)
+  if retv != 0:
+    return retv
 
-  retval = populate_bad_files(cwd, ce, bisect_dir)
-  if retval != 0:
-    return retval
+  retv = populate_bad_files(cwd, ce, bisect_dir)
+  if retv != 0:
+    return retv
 
   # Set up good/bad work soft links
   cmd = ('rm -f %s/%s/good-objects; ln -s %s/good %s/%s/good-objects' %
@@ -146,8 +147,8 @@ def Main(argv):
     print('Error executing: %s; exiting now.' % cmd)
     return status
 
-  retval = run_main_bisection_test(cwd, ce)
-  return retval
+  retv = run_main_bisection_test(cwd, ce)
+  return retv
 
 
 if __name__ == '__main__':

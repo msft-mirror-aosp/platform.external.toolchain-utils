@@ -70,8 +70,8 @@ class LabelSettings(Settings):
             'autotest_path',
             required=False,
             description='Autotest directory path relative to chroot which '
-            'has autotest files for the image to run tests requiring autotest files'
-        ))
+            'has autotest files for the image to run tests requiring autotest '
+            'files.'))
     self.AddField(
         TextField(
             'chromeos_root',
@@ -260,8 +260,7 @@ class GlobalSettings(Settings):
             'you want to use. It accepts multiple directories '
             'separated by a ",".'))
     self.AddField(
-        TextField(
-            'results_dir', default='', description='The results dir.'))
+        TextField('results_dir', default='', description='The results dir.'))
     self.AddField(
         TextField(
             'locks_dir',
