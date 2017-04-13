@@ -236,11 +236,10 @@ def GetTrybotImage(chromeos_root,
   command_prefix = ''
   if not patch_arg:
     command_prefix = 'yes | '
-  command = ('%s ./cbuildbot --remote --nochromesdk %s'
-             ' --remote-description=%s %s %s %s' % (command_prefix,
-                                                    optional_flags, description,
-                                                    toolchain_flags, patch_arg,
-                                                    build))
+  command = ('%s ./cbuildbot --remote --nochromesdk --do-not-use-buildbucket %s'
+             ' --remote-description=%s %s %s %s' %
+             (command_prefix, optional_flags, description, toolchain_flags,
+              patch_arg, build))
   _, out, _ = ce.RunCommandWOutput(command)
   if 'Tryjob submitted!' not in out:
     logger.GetLogger().LogFatal('Error occurred while launching trybot job: '
@@ -269,8 +268,8 @@ def GetTrybotImage(chromeos_root,
     build_info = GetBuildInfo(base_dir, build)
     if not build_info:
       if pending_time > TIME_OUT:
-        logger.GetLogger().LogFatal('Unable to get build logs for target %s.' %
-                                    build)
+        logger.GetLogger().LogFatal(
+            'Unable to get build logs for target %s.' % build)
       else:
         pending_message = 'Unable to find build log; job may be pending.'
         done = False
@@ -317,8 +316,8 @@ def GetTrybotImage(chromeos_root,
                                      (pending_time / 60))
         pending_time += SLEEP_TIME
       else:
-        logger.GetLogger().LogOutput('{0} minutes passed.'.format(running_time /
-                                                                  60))
+        logger.GetLogger().LogOutput(
+            '{0} minutes passed.'.format(running_time / 60))
         logger.GetLogger().LogOutput('Sleeping {0} seconds.'.format(SLEEP_TIME))
         running_time += SLEEP_TIME
 
@@ -340,8 +339,8 @@ def GetTrybotImage(chromeos_root,
       trybot_image = FindArchiveImage(chromeos_root, build, build_id)
   if not trybot_image:
     logger.GetLogger().LogError('Trybot job %s failed with status %d;'
-                                ' no trybot image generated.' %
-                                (description, build_status))
+                                ' no trybot image generated.' % (description,
+                                                                 build_status))
 
   logger.GetLogger().LogOutput("trybot_image is '%s'" % trybot_image)
   logger.GetLogger().LogOutput('build_status is %d' % build_status)
@@ -375,8 +374,8 @@ def WaitForImage(chromeos_root, build):
   while elapsed_time < TIME_OUT:
     if DoesImageExist(chromeos_root, build):
       return
-    logger.GetLogger().LogOutput('Image %s not ready, waiting for 10 minutes' %
-                                 build)
+    logger.GetLogger().LogOutput(
+        'Image %s not ready, waiting for 10 minutes' % build)
     time.sleep(SLEEP_TIME)
     elapsed_time += SLEEP_TIME
 
