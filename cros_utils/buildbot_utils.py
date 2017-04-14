@@ -91,8 +91,14 @@ def FindBuildRecordFromLog(description, build_info):
   point.)
   """
   for build_log in build_info:
-    if description in build_log['reason']:
-      return build_log
+    property_list = build_log['properties']
+    for prop in property_list:
+      if len(prop) < 2:
+        continue
+      pname = prop[0]
+      pvalue = prop[1]
+      if pname == 'name' and pvalue == description:
+        return build_log
   return {}
 
 
@@ -236,7 +242,7 @@ def GetTrybotImage(chromeos_root,
   command_prefix = ''
   if not patch_arg:
     command_prefix = 'yes | '
-  command = ('%s ./cbuildbot --remote --nochromesdk --do-not-use-buildbucket %s'
+  command = ('%s ./cbuildbot --remote --nochromesdk %s'
              ' --remote-description=%s %s %s %s' %
              (command_prefix, optional_flags, description, toolchain_flags,
               patch_arg, build))
