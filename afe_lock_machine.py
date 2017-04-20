@@ -65,7 +65,7 @@ class AFELockManager(object):
   changing the lock status of machines on either server.  For the ChromeOS
   HW Lab, it only allows access to the toolchain team lab machines, as
   defined in toolchain-utils/crosperf/default_remotes.  By default it will
-  look for a local server on chrotomation2.mtv.corp.google.com, but an
+  look for a local server on chrotomation2.svl.corp.google.com, but an
   alternative local AFE server can be supplied, if desired.
 
   !!!IMPORTANT NOTE!!!  The AFE server can only be called from the main
@@ -74,7 +74,7 @@ class AFELockManager(object):
   in the Python virtual machine (and signal handling) and cannot be changed.
   """
 
-  LOCAL_SERVER = 'chrotomation2.mtv.corp.google.com'
+  LOCAL_SERVER = 'chrotomation2.svl.corp.google.com'
 
   def __init__(self,
                remotes,
