@@ -99,9 +99,7 @@ class ToolchainComparator(object):
     mo = re.search(TRYBOT_IMAGE_RE, trybot_image)
     assert mo
     dirname = IMAGE_DIR.replace('\\', '').format(**mo.groupdict())
-    version = buildbot_utils.GetGSContent(self._chromeos_root,
-                                          dirname + '/LATEST-master')
-    return dirname + '/' + version
+    return buildbot_utils.GetLatestImage(self._chromeos_root, dirname)
 
   def _GetNonAFDOImageName(self, trybot_image):
     """Given a trybot artifact name, get corresponding non-AFDO image name.

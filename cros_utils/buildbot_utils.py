@@ -8,6 +8,7 @@ from __future__ import print_function
 import base64
 import json
 import os
+import re
 import time
 import urllib2
 
@@ -388,3 +389,22 @@ def WaitForImage(chromeos_root, build):
   logger.GetLogger().LogOutput('Image %s not found, waited for %d hours' %
                                (build, (TIME_OUT / 3600)))
   raise BuildbotTimeout('Timeout while waiting for image %s' % build)
+
+
+def GetLatestImage(chromeos_root, path):
+  """Get latest image"""
+
+  fmt = re.compile(r'R([0-9]+)-([0-9]+).([0-9]+).([0-9]+)')
+
+  ce = command_executer.GetCommandExecuter()
+  command = ('gsutil ls gs://chromeos-image-archive/%s' % path)
+  _, out, _ = ce.ChrootRunCommandWOutput(
+      chromeos_root, command, print_to_console=False)
+  candidates = [l.split('/')[-2] for l in out.split()]
+  candidates = map(fmt.match, candidates)
+  candidates = [[int(r) for r in m.group(1, 2, 3, 4)] for m in candidates if m]
+  candidates.sort(reverse=True)
+  for c in candidates:
+      build = '%s/R%d-%d.%d.%d' % (path, c[0], c[1], c[2], c[3])
+      if DoesImageExist(chromeos_root, build):
+          return build
