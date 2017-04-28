@@ -29,7 +29,7 @@ TOOLCHAIN_DIR = os.path.dirname(os.path.realpath(__file__))
 MAIL_PROGRAM = '~/var/bin/mail-sheriff'
 VALIDATION_RESULT_DIR = os.path.join(CROSTC_ROOT, 'validation_result')
 START_DATE = datetime.date(2016, 1, 1)
-TEST_PER_DAY = 2
+TEST_PER_DAY = 3
 TEST_BOARD = [
     'squawks',  # x86_64, rambi  (baytrail)
     'terra',  # x86_64, strago (braswell)
@@ -41,8 +41,9 @@ TEST_BOARD = [
     'sentry',  # x86_64, kunimitsu (skylake-u)
     'chell',  # x86_64, glados (skylake-y)
     'daisy',  # arm,    daisy  (exynos)
-    'caroline',  # amd64
+    'caroline',  # x86_64, glados (skylake-y)
     'kevin',  # arm,    gru  (Rockchip)
+    'reef',  # x86_64, reef  (Apollo Lake)
 ]
 
 
