@@ -29,8 +29,10 @@ result = {
         'ms_1': '2.1',
         'total': '5'
     }, {
+        '': 'PASS',
         'test': '2'
     }, {
+        '': 'PASS',
         'test': '4'
     }, {
         '': 'PASS',
@@ -40,8 +42,10 @@ result = {
         'ms_1': '2.2',
         'total': '6'
     }, {
+        '': 'PASS',
         'test': '3'
     }, {
+        '': 'PASS',
         'test': '4'
     }], [{
         '': 'PASS',
@@ -51,8 +55,10 @@ result = {
         'ms_1': '2.23',
         'total': '6'
     }, {
+        '': 'PASS',
         'test': '5'
     }, {
+        '': 'PASS',
         'test': '4'
     }, {
         '': 'PASS',
@@ -62,8 +68,10 @@ result = {
         'ms_1': '2.3',
         'total': '7'
     }, {
+        '': 'PASS',
         'test': '2'
     }, {
+        '': 'PASS',
         'test': '6'
     }]],
     'benchmark2': [[{
@@ -74,8 +82,10 @@ result = {
         'ms_1': '2.3',
         'total': '7'
     }, {
+        '': 'PASS',
         'test': '2'
     }, {
+        '': 'PASS',
         'test': '6'
     }, {
         '': 'PASS',
@@ -85,8 +95,10 @@ result = {
         'ms_1': '2.2',
         'total': '7'
     }, {
+        '': 'PASS',
         'test': '2'
     }, {
+        '': 'PASS',
         'test': '2'
     }], [{
         '': 'PASS',
@@ -96,8 +108,10 @@ result = {
         'ms_1': '2',
         'total': '7'
     }, {
+        '': 'PASS',
         'test': '2'
     }, {
+        '': 'PASS',
         'test': '4'
     }, {
         '': 'PASS',
@@ -107,8 +121,10 @@ result = {
         'ms_1': '1',
         'total': '7'
     }, {
+        '': 'PASS',
         'test': '1'
     }, {
+        '': 'PASS',
         'test': '6'
     }]]
 }
