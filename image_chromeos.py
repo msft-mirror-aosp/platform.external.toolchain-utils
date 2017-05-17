@@ -50,6 +50,20 @@ def CheckForCrosFlash(chromeos_root, remote, log_level):
       'cros flash cannot work.'.format(remote))
 
 
+def DisableCrosBeeps(chromeos_root, remote, log_level):
+  """Disable annoying chromebooks beeps after reboots."""
+  cmd_executer = command_executer.GetCommandExecuter(log_level=log_level)
+
+  command = '/usr/share/vboot/bin/set_gbb_flags.sh 0x1'
+  logger.GetLogger().LogOutput('Trying to disable beeping.')
+
+  ret, o, _ = cmd_executer.CrosRunCommandWOutput(
+      command, chromeos_root=chromeos_root, machine=remote)
+  if ret != 0:
+    logger.GetLogger().LogOutput(o)
+    logger.GetLogger().LogOutput('Failed to disable beeps.')
+
+
 def DoImage(argv):
   """Image ChromeOS."""
 
@@ -199,9 +213,12 @@ def DoImage(argv):
       # Check to see if cros flash will work for the remote machine.
       CheckForCrosFlash(options.chromeos_root, options.remote, log_level)
 
+      # Disable the annoying chromebook beeps after reboot.
+      DisableCrosBeeps(options.chromeos_root, options.remote, log_level)
+
       cros_flash_args = [
-          'cros', 'flash', '--board=%s' % board, '--clobber-stateful',
-          options.remote
+          'cros', 'flash',
+          '--board=%s' % board, '--clobber-stateful', options.remote
       ]
       if local_image:
         cros_flash_args.append(chroot_image)
