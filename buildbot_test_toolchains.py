@@ -29,7 +29,7 @@ from cros_utils import logger
 from cros_utils import buildbot_utils
 
 # CL that uses LLVM-Next to build the images (includes chrome).
-USE_LLVM_NEXT_PATCH = '419149'
+USE_LLVM_NEXT_PATCH = '513590'
 
 CROSTC_ROOT = '/usr/local/google/crostc'
 ROLE_ACCOUNT = 'mobiletc-prebuild'
