@@ -179,7 +179,7 @@ Default is 'latest_lkgm'.""")
     init = 'repo init -u %s' % manifest_repo
   elif version == 'latest_lkgm':
     manifests = manifest_versions.ManifestVersions()
-    version = manifests.TimeToVersion(time.mktime(time.gmtime()))
+    version = manifests.TimeToVersionChromeOS(time.mktime(time.gmtime()))
     version, manifest = version.split('.', 1)
     logger.GetLogger().LogOutput('found version %s.%s for latest LKGM' %
                                  (version, manifest))
