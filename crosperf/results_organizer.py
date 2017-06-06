@@ -196,6 +196,7 @@ def OrganizeResults(benchmark_runs, labels, benchmarks=None, json_report=False):
     # (This can happen if, for example, the test has been disabled.)
     if len(cur_dict) == 1 and cur_dict['retval'] == 0:
       cur_dict['retval'] = 1
+      benchmark_run.result.keyvals['retval'] = 1
       # TODO: This output should be sent via logger.
       print(
           "WARNING: Test '%s' appears to have succeeded but returned"
