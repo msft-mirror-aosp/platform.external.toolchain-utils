@@ -142,7 +142,7 @@ def Main(argv):
   # Build with afdo_use by default.
   # To change the default use --env="USE=-afdo_use".
   build_packages_env = misc.MergeEnvStringWithDict(
-      build_packages_env, {'USE': 'chrome_internal afdo_use'})
+      build_packages_env, {'USE': 'chrome_internal afdo_use -cros-debug'})
 
   build_packages_command = misc.GetBuildPackagesCommand(
       board=options.board, usepkg=options.vanilla_image, debug=options.debug)
