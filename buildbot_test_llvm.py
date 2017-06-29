@@ -44,6 +44,8 @@ TEST_BOARD = [
     'caroline',  # x86_64, glados (skylake-y)
     'kevin',  # arm,    gru  (Rockchip)
     'reef',  # x86_64, reef  (Apollo Lake)
+    'lakitu',
+    'whirlwind',
 ]
 
 
