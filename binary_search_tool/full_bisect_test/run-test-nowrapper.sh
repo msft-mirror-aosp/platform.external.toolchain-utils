@@ -46,18 +46,17 @@ if [[ ! -f good-objects-permanent/build.o ]] ; then
   rm -f work/*.o
   # skip populate stages in bisect wrapper
   unset BISECT_STAGE
-  SAVE_DIR=`pwd`
   # Set up the 'good' source files.
   cd ..
   ${DIR}/make_sources_good.sh
-  cd ${SAVE_DIR}
+  cd ${DIR}
   # Build the 'good' .o files & copy to appropriate directory.
   ./build.sh
   mv work/*.o good-objects-permanent/.
   # Set up the 'bad' source files.
   cd ..
   ${DIR}/make_sources_bad.sh
-  cd ${SAVE_DIR}
+  cd ${DIR}
   # Build the 'bad' .o files & copy to appropriate directory.
   ./build.sh
   mv work/*.o bad-objects-permanent/.
