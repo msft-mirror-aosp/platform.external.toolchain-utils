@@ -32,11 +32,10 @@ Running the bisection tests, testing the compiler wrapper.
 
 If you want to run the bisection tests, and test the compiler wrapper
 (to make sure the POPULATE_GOOD and POPULATE_BAD stages are still
-working properly) you can do something like the following.  The steps
-below illustrate how to test with the Android compiler wrapper, but
-the steps for testing with the ChromeOS compiler wrapper would be very
-similar.
+working properly) you can do the following.
 
+If you are testing with the ANDROID COMPILER WRAPPER, you need to to some
+preliminary setup:
 
 Set up the compiler wrapper to replace GCC:
 
@@ -55,6 +54,23 @@ Move to the correct directory, then run the test script:
     $ cd toolchain-utils/binary_search_tool
     $ ./run_bisect_test.py
 
+
+If you are testing with the CHROMEOS COMPILER WRAPPER, you MUST run the
+tests from INSIDE your CHROOT (but you don't need to do any special setup):
+
+    $ cd <path-to-chromeos-root>
+    $ cros_sdk
+    $ cd ~/trunk/src/third_party/toolchain-utils
+
+    Set up your PYTHONPATH:
+
+    $ export PYTHONPATH=`pwd`:${PYTHONPATH}
+    $ cd binary_search_tool
+    $ export PYTHONPATH=`pwd`:${PYTHONPATH}
+
+    Run the test script:
+
+    $ ./run_bisect_test.py
 
 
 Running the bisection tests, without testing the compiler wrapper.

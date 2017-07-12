@@ -10,7 +10,7 @@ import sys
 from cros_utils import command_executer
 
 TEST_DIR = 'full_bisect_test'
-DEFAULT_BISECT_DIR = os.path.expanduser('~/ANDROID_BISECT')
+DEFAULT_BISECT_DIR = '/tmp/sysroot_bisect'
 
 
 def populate_good_files(top_dir, ce, bisect_dir=DEFAULT_BISECT_DIR):
@@ -29,13 +29,15 @@ def populate_good_files(top_dir, ce, bisect_dir=DEFAULT_BISECT_DIR):
     print('Error setting up "good" source files: %s' % script)
     return status
 
-  export_bisect = ''
-  if bisect_dir != DEFAULT_BISECT_DIR:
-    export_bisect = 'export BISECT_DIR=%s; ' % bisect_dir
+  export_bisect = 'export BISECT_DIR=%s; ' % bisect_dir
   # build the good source files
   script_path = os.path.join(top_dir, TEST_DIR)
-  cmd = ('%s export BISECT_STAGE=POPULATE_GOOD; pushd %s; ./build.sh; popd' %
-         (export_bisect, script_path))
+  if os.path.exists('/usr/bin/x86_64-cros-linux-gnu-gcc'):
+    build_script = 'chromeos_build.sh'
+  else:
+    build_script = 'build.sh'
+  cmd = ('%s export BISECT_STAGE=POPULATE_GOOD; pushd %s; ./%s; popd' %
+         (export_bisect, script_path, build_script))
   status = ce.RunCommand(cmd)
   return status
 
@@ -56,13 +58,15 @@ def populate_bad_files(top_dir, ce, bisect_dir=DEFAULT_BISECT_DIR):
     print('Error setting up "bad" source files: %s' % script)
     return status
 
-  export_bisect = ''
-  if bisect_dir != DEFAULT_BISECT_DIR:
-    export_bisect = 'export BISECT_DIR=%s; ' % bisect_dir
+  export_bisect = 'export BISECT_DIR=%s; ' % bisect_dir
   # build the bad source files
   script_path = os.path.join(top_dir, TEST_DIR)
-  cmd = ('%s export BISECT_STAGE=POPULATE_BAD; pushd %s; ./build.sh ; popd' %
-         (export_bisect, script_path))
+  if os.path.exists('/usr/bin/x86_64-cros-linux-gnu-gcc'):
+    build_script = 'chromeos_build.sh'
+  else:
+    build_script = 'build.sh'
+  cmd = ('%s export BISECT_STAGE=POPULATE_BAD; pushd %s; ./%s ; popd' %
+         (export_bisect, script_path, build_script))
   status = ce.RunCommand(cmd)
   return status
 
@@ -74,6 +78,11 @@ def run_main_bisection_test(top_dir, ce):
 
 
 def verify_compiler_and_wrapper():
+  # We don't need to do any special setup if running inside a ChromeOS
+  # chroot.
+  if os.path.exists('/usr/bin/x86_64-cros-linux-gnu-gcc'):
+    return
+
   message = """
 *** IMPORTANT --- READ THIS CAREFULLY!! ***
 
@@ -99,7 +108,7 @@ def Main(argv):
       '--dir',
       dest='directory',
       help='Bisection work tree, where good  & bad object '
-      'files go.  Default is ~/ANDROID_BISECT')
+      'files go.  Default is /tmp/sysroot_bisect')
 
   options = parser.parse_args(argv)
 
@@ -121,6 +130,13 @@ def Main(argv):
   bisect_dir = options.directory
   if not bisect_dir:
     bisect_dir = DEFAULT_BISECT_DIR
+
+  # Make sure BISECT_DIR is clean
+  if os.path.exists(bisect_dir):
+    cmd = 'rm -Rf %s/*' % bisect_dir
+    retv = ce.RunCommand(cmd)
+    if retv != 0:
+      return retv
 
   retv = populate_good_files(cwd, ce, bisect_dir)
   if retv != 0:

@@ -10,6 +10,7 @@
 source full_bisect_test/common.sh
 
 pushd ${BISECT_WORK_BUILD}
+chmod 644 *
 
 OBJ_LIST_FILES=$1
 FILE_ARGS=0
