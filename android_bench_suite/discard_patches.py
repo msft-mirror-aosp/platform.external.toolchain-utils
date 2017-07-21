@@ -44,8 +44,6 @@ def dispatch_synthmark():
     subprocess.check_call(
         ['rm', '-rf',
          os.path.join(config.android_home, synthmark_dir)])
-    subprocess.check_call(['rm', '-rf', 'devrel/tools'])
-    subprocess.check_call(['rm', '-rf', 'devrel/.repo'])
     print('Synthmark patch removed successfully!')
   except subprocess.CalledProcessError:
     print('Synthmark is not removed. Error occurred.')

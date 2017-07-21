@@ -76,15 +76,18 @@ def try_patch_synthmark():
   # applied in the future.
   try:
     subprocess.check_call([
-        'bash', '-c', 'cd devrel && '
-        'repo init -u sso://devrel/manifest &&'
+        'bash', '-c', 'mkdir devrel && '
+        'cd devrel && '
+        'repo init -u sso://devrel/manifest && '
         'repo sync tools/synthmark'
     ])
-    subprocess.check_call(['cp', '-rf', synthmark_dir, config.android_home])
-    subprocess.check_call([
-        'cp', 'devrel/Android.mk',
-        os.path.join(config.android_home, 'synthmark')
-    ])
+    synthmark_patch = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), 'synthmark.diff')
+    subprocess.check_call(['git', '-C', synthmark_dir,
+                           'apply', synthmark_patch])
+
+    subprocess.check_call(['mv', '-f', synthmark_dir, config.android_home])
+    subprocess.check_call(['rm', '-rf', 'devrel'])
     print('Synthmark patched successfully!')
   except subprocess.CalledProcessError:
     print('Synthmark patch not applied, error or already patched.')
