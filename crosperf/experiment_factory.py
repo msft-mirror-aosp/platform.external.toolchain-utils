@@ -76,7 +76,6 @@ crosbolt_perf_tests = [
     'video_WebRtcPerf',
     'BootPerfServerCrosPerf',
     'power_Resume',
-    'video_PlaybackPerf.h264',
     'build_RootFilesystemSize',
 ]
 
