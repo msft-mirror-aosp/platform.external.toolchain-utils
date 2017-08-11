@@ -30,21 +30,44 @@ MAIL_PROGRAM = '~/var/bin/mail-sheriff'
 VALIDATION_RESULT_DIR = os.path.join(CROSTC_ROOT, 'validation_result')
 START_DATE = datetime.date(2016, 1, 1)
 TEST_PER_DAY = 3
+
+# Information about Rotating Boards
+#  Board       Arch    Reference  Platform     Kernel
+#                      Board                   Version
+#  --------   ------   ---------  ----------   -------
+#  caroline   x86_64   glados     skylake-y     3.18
+#  daisy      armv7    daisy      exynos-5250   3.8.11
+#  eve        x86_64   poppy      kabylake-y    4.4.79
+#  gale       armv7                             3.18
+#  kevin      armv7    gru        rockchip-3399 4.4.79
+#  lakitu     x86_64                            4.4.79
+#  link       x86_64   ivybridge  ivybridge     3.8.11
+#  lumpy      x86_64   --         sandybridge   3.8.11
+#  nyan_big   armv7    nyan       tegra         3.10.18
+#  peach_pit  armv7    peach      exynos-5420   3.8.11
+#  peppy      x86_64   slippy     haswell       3.8.11
+#  reef       x86_64   reef       apollo lake   4.4.79
+#  sentry     x86_64   kunimitsu  skylake-u     3.18
+#  squawks    x86_64   rambi      baytrail      4.4.79
+#  terra      x86_64   strago     braswell      3.18
+#  whirlwind  armv7                             3.14
+
 TEST_BOARD = [
-    'squawks',  # x86_64, rambi  (baytrail)
-    'terra',  # x86_64, strago (braswell)
-    'lulu',  # x86_64, auron  (broadwell)
-    'peach_pit',  # arm,    peach  (exynos-5420)
-    'peppy',  # x86_64, slippy (haswell celeron)
-    'link',  # x86_64, ivybridge (ivybridge)
-    'nyan_big',  # arm,    nyan   (tegra)
-    'sentry',  # x86_64, kunimitsu (skylake-u)
-    'chell',  # x86_64, glados (skylake-y)
-    'daisy',  # arm,    daisy  (exynos)
-    'caroline',  # x86_64, glados (skylake-y)
-    'kevin',  # arm,    gru  (Rockchip)
-    'reef',  # x86_64, reef  (Apollo Lake)
+    'caroline',
+    'daisy',
+    'eve',
+    'gale',
+    'kevin',
     'lakitu',
+    'link',
+    'lumpy',
+    'nyan_big',
+    'peach_pit',
+    'peppy',
+    'reef',
+    'sentry',
+    'squawks',
+    'terra',
     'whirlwind',
 ]
 
