@@ -1,4 +1,4 @@
-# Copyright 2016 The Chromium OS Authors. All rights reserved.
+# Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Utilities for launching and accessing ChromeOS buildbots."""
@@ -199,7 +199,8 @@ def GetTrybotImage(chromeos_root,
                    buildbot_name,
                    patch_list,
                    build_tag,
-                   other_flags=None,
+                   tryjob_flags=[],
+                   cbuildbot_flags=[],
                    build_toolchain=False,
                    async=False):
   """Launch buildbot and get resulting trybot artifact name.
@@ -220,9 +221,15 @@ def GetTrybotImage(chromeos_root,
 
   build_tag is a (unique) string to be used to look up the buildbot results
   from among all the build records.
+
+  build_toolchain builds and uses the latest toolchain, rather than the
+  prebuilt one in SDK.
+
+  tryjob_flags See cros tryjob --help for available options.
+
+  cbuildbot_flags See cbuildbot --help for available options.
   """
   ce = command_executer.GetCommandExecuter()
-  cbuildbot_path = os.path.join(chromeos_root, 'chromite/cbuildbot')
   base_dir = os.getcwd()
   patch_arg = ''
   if patch_list:
@@ -230,23 +237,18 @@ def GetTrybotImage(chromeos_root,
       patch_arg = patch_arg + ' -g ' + repr(p)
   toolchain_flags = ''
   if build_toolchain:
-    toolchain_flags += '--latest-toolchain'
-  os.chdir(cbuildbot_path)
-  if other_flags:
-    optional_flags = ' '.join(other_flags)
-  else:
-    optional_flags = ''
+    cbuildbot_flags.append('--latest-toolchain')
+  os.chdir(chromeos_root)
+  tryjob_flags = ' '.join(tryjob_flags)
+  cbuildbot_flags = ' '.join(cbuildbot_flags)
 
   # Launch buildbot with appropriate flags.
   build = buildbot_name
   description = build_tag
-  command_prefix = ''
-  if not patch_arg:
-    command_prefix = 'yes | '
-  command = ('%s ./cbuildbot --remote --nochromesdk %s'
-             ' --remote-description=%s %s %s %s' %
-             (command_prefix, optional_flags, description, toolchain_flags,
-              patch_arg, build))
+  command = ('cros tryjob --yes %s --remote-description %s'
+             ' %s %s --passthrough --nochromesdk %s' %
+             (tryjob_flags, description,
+              patch_arg, build, cbuildbot_flags))
   _, out, _ = ce.RunCommandWOutput(command)
   if 'Tryjob submitted!' not in out:
     logger.GetLogger().LogFatal('Error occurred while launching trybot job: '

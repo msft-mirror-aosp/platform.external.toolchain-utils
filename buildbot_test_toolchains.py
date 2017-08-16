@@ -254,12 +254,13 @@ class ToolchainComparator(object):
     date_str = datetime.date.today()
     description = 'master_%s_%s_%s' % (self._patches_string, self._build,
                                        date_str)
+    # TODO(laszio): move --notests to tryjob_flags once it is available.
     build_id, trybot_image = buildbot_utils.GetTrybotImage(
         self._chromeos_root,
         self._build,
         self._patches,
         description,
-        other_flags=['--notests'],
+        cbuildbot_flags=['--notests'],
         build_toolchain=True)
 
     print('trybot_url: \

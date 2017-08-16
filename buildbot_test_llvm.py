@@ -1,4 +1,8 @@
 #!/usr/bin/env python2
+#
+# Copyright 2017 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 """Script for running llvm validation tests on ChromeOS.
 
 This script launches a buildbot to build ChromeOS with the llvm on
@@ -108,7 +112,6 @@ class ToolchainVerifier(object):
     Launch trybot, get image names, create crosperf experiment file, run
     crosperf, and copy images into seven-day report directories.
     """
-    flags = ['--hwtest']
     date_str = datetime.date.today()
     description = 'master_%s_%s_%s' % (self._patches_string, self._build,
                                        date_str)
@@ -117,7 +120,7 @@ class ToolchainVerifier(object):
         self._build,
         self._patches,
         description,
-        other_flags=flags,
+        tryjob_flags=['--hwtest'],
         async=True)
 
     return 0
