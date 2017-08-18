@@ -200,7 +200,6 @@ def GetTrybotImage(chromeos_root,
                    patch_list,
                    build_tag,
                    tryjob_flags=[],
-                   cbuildbot_flags=[],
                    build_toolchain=False,
                    async=False):
   """Launch buildbot and get resulting trybot artifact name.
@@ -226,8 +225,6 @@ def GetTrybotImage(chromeos_root,
   prebuilt one in SDK.
 
   tryjob_flags See cros tryjob --help for available options.
-
-  cbuildbot_flags See cbuildbot --help for available options.
   """
   ce = command_executer.GetCommandExecuter()
   base_dir = os.getcwd()
@@ -237,18 +234,16 @@ def GetTrybotImage(chromeos_root,
       patch_arg = patch_arg + ' -g ' + repr(p)
   toolchain_flags = ''
   if build_toolchain:
-    cbuildbot_flags.append('--latest-toolchain')
+    tryjob_flags.append('--latest-toolchain')
   os.chdir(chromeos_root)
   tryjob_flags = ' '.join(tryjob_flags)
-  cbuildbot_flags = ' '.join(cbuildbot_flags)
 
   # Launch buildbot with appropriate flags.
   build = buildbot_name
   description = build_tag
-  command = ('cros tryjob --yes %s --remote-description %s'
-             ' %s %s --passthrough --nochromesdk %s' %
-             (tryjob_flags, description,
-              patch_arg, build, cbuildbot_flags))
+  command = ('cros tryjob --yes --nochromesdk --remote-description %s'
+             ' %s %s %s' %
+             (description, tryjob_flags, patch_arg, build))
   _, out, _ = ce.RunCommandWOutput(command)
   if 'Tryjob submitted!' not in out:
     logger.GetLogger().LogFatal('Error occurred while launching trybot job: '
