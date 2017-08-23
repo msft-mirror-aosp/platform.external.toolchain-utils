@@ -165,6 +165,7 @@ class ToolchainComparator(object):
     benchmark: all_toolchain_perf {
       suite: telemetry_Crosperf
       iterations: 0
+      run_local: False
     }
 
     benchmark: page_cycler_v2.typical_25 {
