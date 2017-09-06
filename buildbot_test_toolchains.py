@@ -219,7 +219,9 @@ class ToolchainComparator(object):
     crosperf = os.path.join(TOOLCHAIN_DIR, 'crosperf', 'crosperf')
     noschedv2_opts = '--noschedv2' if self._noschedv2 else ''
     command = ('{crosperf} --no_email=True --results_dir={r_dir} '
-               '--json_report=True {noschedv2_opts} {exp_file}').format(
+               '--json_report=True {noschedv2_opts} {exp_file} '
+               '--locks_dir=/usr/local/google/home/mobiletc-prebuild/locks '
+               '--use_file_locks=True').format(
                    crosperf=crosperf,
                    r_dir=self._reports_dir,
                    noschedv2_opts=noschedv2_opts,
