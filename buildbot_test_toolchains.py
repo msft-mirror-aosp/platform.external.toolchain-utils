@@ -270,7 +270,7 @@ class ToolchainComparator(object):
           % build_id)
     if len(trybot_image) == 0:
       self._l.LogError('Unable to find trybot_image for %s!' % description)
-      return 1
+      return 2
 
     vanilla_image = self._GetVanillaImageName(trybot_image)
     nonafdo_image = self._GetNonAFDOImageName(trybot_image)
