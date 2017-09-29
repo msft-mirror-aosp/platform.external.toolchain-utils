@@ -50,9 +50,9 @@ TEST_PER_DAY = 3
 #  nyan_big   armv7    nyan       tegra         3.10.18
 #  peach_pit  armv7    peach      exynos-5420   3.8.11
 #  peppy      x86_64   slippy     haswell       3.8.11
-#  reef       x86_64   reef       apollo lake   4.4.79
+#  pyro       x86_64   reef       apollo lake   4.4.79
 #  sentry     x86_64   kunimitsu  skylake-u     3.18
-#  squawks    x86_64   rambi      baytrail      4.4.79
+#  swanky     x86_64   rambi      baytrail      4.4.79
 #  terra      x86_64   strago     braswell      3.18
 #  whirlwind  armv7                             3.14
 
@@ -68,9 +68,9 @@ TEST_BOARD = [
     'nyan_big',
     'peach_pit',
     'peppy',
-    'reef',
+    'pyro',
     'sentry',
-    'squawks',
+    'swanky',
     'terra',
     'whirlwind',
 ]
