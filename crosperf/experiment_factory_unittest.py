@@ -219,8 +219,7 @@ class ExperimentFactoryTest(unittest.TestCase):
 
   def test_get_default_remotes(self):
     board_list = [
-        'x86-alex', 'lumpy', 'elm', 'parrot', 'daisy', 'peach_pit', 'peppy',
-        'squawks'
+        'lumpy', 'elm', 'parrot', 'daisy', 'peach_pit', 'peppy', 'squawks'
     ]
 
     ef = ExperimentFactory()
