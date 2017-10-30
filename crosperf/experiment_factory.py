@@ -66,7 +66,6 @@ telemetry_crosbolt_perf_tests = [
     'kraken',
     'speedometer',
     'jetstream',
-    'startup.cold.blank_page',
     'smoothness.top_25_smooth',
 ]
 crosbolt_perf_tests = [
