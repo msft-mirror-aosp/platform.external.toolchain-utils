@@ -106,7 +106,7 @@ class ToolchainVerifier(object):
     if ret_val != 0:
       raise RuntimeError('chmod for testing_rsa failed')
 
-  def DoAll(self):
+  def DoAll(self, crostc_dir):
     """Main function inside ToolchainComparator class.
 
     Launch trybot, get image names, create crosperf experiment file, run
@@ -115,13 +115,23 @@ class ToolchainVerifier(object):
     date_str = datetime.date.today()
     description = 'master_%s_%s_%s' % (self._patches_string, self._build,
                                        date_str)
-    _ = buildbot_utils.GetTrybotImage(
-        self._chromeos_root,
-        self._build,
-        self._patches,
-        description,
-        tryjob_flags=['--hwtest'],
-        async=True)
+    if crostc_dir:
+      _ = buildbot_utils.GetTrybotImage(
+          self._chromeos_root,
+          self._build,
+          self._patches,
+          description,
+          tryjob_flags=['--hwtest'],
+          credentials_dir=crostc_dir,
+          async=True)
+    else:
+      _ = buildbot_utils.GetTrybotImage(
+          self._chromeos_root,
+          self._build,
+          self._patches,
+          description,
+          tryjob_flags=['--hwtest'],
+          async=True)
 
     return 0
 
@@ -155,6 +165,12 @@ def Main(argv):
       dest='compiler',
       help='Which compiler (llvm, llvm-next or gcc) to use for '
       'testing.')
+  parser.add_argument(
+      '--crostc_dir',
+      dest='crostc_dir',
+      help='Path to the directory containing the '
+      'chromeos-toolchain-credentials.json file; normally in the '
+      'crostc repo.')
 
   options = parser.parse_args(argv[1:])
   if not options.chromeos_root:
@@ -179,7 +195,7 @@ def Main(argv):
       board = TEST_BOARD[(start_board + i) % len(TEST_BOARD)]
       fv = ToolchainVerifier(board, options.chromeos_root, options.weekday,
                              options.patches, options.compiler)
-      fv.DoAll()
+      fv.DoAll(options.crostc_dir)
     except SystemExit:
       logfile = os.path.join(VALIDATION_RESULT_DIR, options.compiler, board)
       with open(logfile, 'w') as f:

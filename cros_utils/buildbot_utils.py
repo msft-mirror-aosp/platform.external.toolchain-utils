@@ -117,8 +117,12 @@ def GetBuildInfo(file_dir, waterfall_builder):
     builder = 'llvm_next_toolchain'
 
   sa_file = os.path.expanduser(
-      os.path.join(file_dir, 'cros_utils',
-                   'chromeos-toolchain-credentials.json'))
+      os.path.join(file_dir, 'chromeos-toolchain-credentials.json'))
+
+  if not os.path.exists(sa_file):
+    logger.GetLogger().LogFatal('ERROR:  Unable to find %s; please check '
+                                'your script arguments.' % sa_file)
+
   scopes = ['https://www.googleapis.com/auth/userinfo.email']
 
   credentials = ServiceAccountCredentials.from_json_keyfile_name(
@@ -195,13 +199,15 @@ def FindArchiveImage(chromeos_root, build, build_id):
   return trybot_image
 
 
-def GetTrybotImage(chromeos_root,
-                   buildbot_name,
-                   patch_list,
-                   build_tag,
-                   tryjob_flags=[],
-                   build_toolchain=False,
-                   async=False):
+def GetTrybotImage(
+    chromeos_root,
+    buildbot_name,
+    patch_list,
+    build_tag,
+    tryjob_flags=[],
+    build_toolchain=False,
+    credentials_dir='/usr/local/google/home/mobiletc-prebuild/sheriff_utils',
+    async=False):
   """Launch buildbot and get resulting trybot artifact name.
 
   This function launches a buildbot with the appropriate flags to
@@ -221,10 +227,13 @@ def GetTrybotImage(chromeos_root,
   build_tag is a (unique) string to be used to look up the buildbot results
   from among all the build records.
 
+  tryjob_flags See cros tryjob --help for available options.
+
   build_toolchain builds and uses the latest toolchain, rather than the
   prebuilt one in SDK.
 
-  tryjob_flags See cros tryjob --help for available options.
+  credentials_dir is the path to the chromeos-toolchain-credentials.json file,
+  which should be in the crostc repo.
   """
   ce = command_executer.GetCommandExecuter()
   base_dir = os.getcwd()
@@ -242,8 +251,7 @@ def GetTrybotImage(chromeos_root,
   build = buildbot_name
   description = build_tag
   command = ('cros tryjob --yes --nochromesdk --remote-description %s'
-             ' %s %s %s' %
-             (description, tryjob_flags, patch_arg, build))
+             ' %s %s %s' % (description, tryjob_flags, patch_arg, build))
   _, out, _ = ce.RunCommandWOutput(command)
   if 'Tryjob submitted!' not in out:
     logger.GetLogger().LogFatal('Error occurred while launching trybot job: '
@@ -269,7 +277,7 @@ def GetTrybotImage(chromeos_root,
   long_slept = False
   while not done:
     done = True
-    build_info = GetBuildInfo(base_dir, build)
+    build_info = GetBuildInfo(credentials_dir, build)
     if not build_info:
       if pending_time > TIME_OUT:
         logger.GetLogger().LogFatal(
@@ -320,8 +328,8 @@ def GetTrybotImage(chromeos_root,
                                      (pending_time / 60))
         pending_time += SLEEP_TIME
       else:
-        logger.GetLogger().LogOutput(
-            '{0} minutes passed.'.format(running_time / 60))
+        logger.GetLogger().LogOutput('{0} minutes passed.'.format(
+            running_time / 60))
         logger.GetLogger().LogOutput('Sleeping {0} seconds.'.format(SLEEP_TIME))
         running_time += SLEEP_TIME
 
@@ -402,6 +410,6 @@ def GetLatestImage(chromeos_root, path):
   candidates = [[int(r) for r in m.group(1, 2, 3, 4)] for m in candidates if m]
   candidates.sort(reverse=True)
   for c in candidates:
-      build = '%s/R%d-%d.%d.%d' % (path, c[0], c[1], c[2], c[3])
-      if DoesImageExist(chromeos_root, build):
-          return build
+    build = '%s/R%d-%d.%d.%d' % (path, c[0], c[1], c[2], c[3])
+    if DoesImageExist(chromeos_root, build):
+      return build
