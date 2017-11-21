@@ -71,7 +71,7 @@ class ToolchainComparator(object):
     self._base_dir = os.getcwd()
     self._ce = command_executer.GetCommandExecuter()
     self._l = logger.GetLogger()
-    self._build = '%s-release' % board
+    self._build = '%s-release-tryjob' % board
     self._patches = patches.split(',') if patches else []
     self._patches_string = '_'.join(str(p) for p in self._patches)
     self._noschedv2 = noschedv2
@@ -92,7 +92,7 @@ class ToolchainComparator(object):
 
     Args:
       trybot_image: artifact name such as
-          'trybot-daisy-release/R40-6394.0.0-b1389'
+          'trybot-daisy-release-tryjob/R40-6394.0.0-b1389'
 
     Returns:
       Latest official image name, e.g. 'daisy-release/R57-9089.0.0'.
@@ -115,7 +115,7 @@ class ToolchainComparator(object):
 
     Args:
       trybot_image: artifact name such as
-          'trybot-daisy-release/R40-6394.0.0-b1389'
+          'trybot-daisy-release-tryjob/R40-6394.0.0-b1389'
 
     Returns:
       Corresponding chrome PFQ image name, e.g.

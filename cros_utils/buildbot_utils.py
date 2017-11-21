@@ -107,7 +107,7 @@ def GetBuildInfo(file_dir, waterfall_builder):
   """Get all the build records for the trybot builds."""
 
   builder = ''
-  if waterfall_builder.endswith('-release'):
+  if waterfall_builder.endswith('-release-tryjob'):
     builder = 'release'
   elif waterfall_builder.endswith('-gcc-toolchain'):
     builder = 'gcc_toolchain'
