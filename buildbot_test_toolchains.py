@@ -97,7 +97,9 @@ class ToolchainComparator(object):
     Returns:
       Latest official image name, e.g. 'daisy-release/R57-9089.0.0'.
     """
-    mo = re.search(TRYBOT_IMAGE_RE, trybot_image)
+    # We need to filter out -tryjob in the trybot_image.
+    trybot = re.sub('-tryjob', '', trybot_image)
+    mo = re.search(TRYBOT_IMAGE_RE, trybot)
     assert mo
     dirname = IMAGE_DIR.replace('\\', '').format(**mo.groupdict())
     return buildbot_utils.GetLatestImage(self._chromeos_root, dirname)
@@ -121,7 +123,8 @@ class ToolchainComparator(object):
       Corresponding chrome PFQ image name, e.g.
       'daisy-chrome-pfq/R40-6393.0.0-rc1'.
     """
-    mo = re.search(TRYBOT_IMAGE_RE, trybot_image)
+    trybot = re.sub('-tryjob', '', trybot_image)
+    mo = re.search(TRYBOT_IMAGE_RE, trybot)
     assert mo
     image_dict = mo.groupdict()
     image_dict['image_type'] = 'chrome-pfq'
