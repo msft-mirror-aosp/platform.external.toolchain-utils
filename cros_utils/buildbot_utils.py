@@ -109,11 +109,11 @@ def GetBuildInfo(file_dir, waterfall_builder):
   builder = ''
   if waterfall_builder.endswith('-release-tryjob'):
     builder = 'release'
-  elif waterfall_builder.endswith('-gcc-toolchain'):
+  elif waterfall_builder.endswith('-gcc-toolchain-tryjob'):
     builder = 'gcc_toolchain'
-  elif waterfall_builder.endswith('-llvm-toolchain'):
+  elif waterfall_builder.endswith('-llvm-toolchain-tryjob'):
     builder = 'llvm_toolchain'
-  elif waterfall_builder.endswith('-llvm-next-toolchain'):
+  elif waterfall_builder.endswith('-llvm-next-toolchain-tryjob'):
     builder = 'llvm_next_toolchain'
 
   sa_file = os.path.expanduser(

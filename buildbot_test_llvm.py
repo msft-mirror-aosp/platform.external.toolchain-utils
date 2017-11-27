@@ -86,7 +86,7 @@ class ToolchainVerifier(object):
     self._ce = command_executer.GetCommandExecuter()
     self._l = logger.GetLogger()
     self._compiler = compiler
-    self._build = '%s-%s-toolchain' % (board, compiler)
+    self._build = '%s-%s-toolchain-tryjob' % (board, compiler)
     self._patches = patches.split(',') if patches else []
     self._patches_string = '_'.join(str(p) for p in self._patches)
 
