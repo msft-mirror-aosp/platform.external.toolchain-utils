@@ -22,8 +22,10 @@ import file_lock_machine
 # to run together.
 
 telemetry_perfv2_tests = [
-    'dromaeo.domcoreattr', 'dromaeo.domcoremodify', 'dromaeo.domcorequery',
-    'dromaeo.domcoretraverse', 'kraken', 'octane', 'robohornet_pro', 'sunspider'
+    'kraken',
+    'octane',
+    'robohornet_pro',
+    'sunspider',
 ]
 
 telemetry_pagecycler_tests = [
@@ -36,22 +38,24 @@ telemetry_pagecycler_tests = [
     #                              'page_cycler_v2.moz',
     #                              'page_cycler_v2.netsim.top_10',
     'page_cycler_v2.tough_layout_cases',
-    'page_cycler_v2.typical_25'
+    'page_cycler_v2.typical_25',
 ]
 
 telemetry_toolchain_old_perf_tests = [
-    'dromaeo.domcoremodify', 'page_cycler_v2.intl_es_fr_pt-BR',
-    'page_cycler_v2.intl_hi_ru', 'page_cycler_v2.intl_ja_zh',
-    'page_cycler_v2.intl_ko_th_vi', 'page_cycler_v2.netsim.top_10',
-    'page_cycler_v2.typical_25', 'robohornet_pro', 'spaceport',
-    'tab_switching.top_10'
+    'page_cycler_v2.intl_es_fr_pt-BR',
+    'page_cycler_v2.intl_hi_ru',
+    'page_cycler_v2.intl_ja_zh',
+    'page_cycler_v2.intl_ko_th_vi',
+    'page_cycler_v2.netsim.top_10',
+    'page_cycler_v2.typical_25',
+    'robohornet_pro',
+    'spaceport',
+    'tab_switching.top_10',
 ]
 telemetry_toolchain_perf_tests = [
     'octane',
     'kraken',
     'speedometer',
-    'dromaeo.domcoreattr',
-    'dromaeo.domcoremodify',
     'smoothness.tough_webgl_cases',
 ]
 graphics_perf_tests = [
