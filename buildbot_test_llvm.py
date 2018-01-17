@@ -43,6 +43,7 @@ TEST_PER_DAY = 3
 #  daisy      armv7    daisy      exynos-5250   3.8.11
 #  eve        x86_64   poppy      kabylake-y    4.4.79
 #  gale       armv7                             3.18
+#  kahlee     x86_64   kahlee     stoney ridge  4.14
 #  kevin      armv7    gru        rockchip-3399 4.4.79
 #  lakitu     x86_64                            4.4.79
 #  link       x86_64   ivybridge  ivybridge     3.8.11
@@ -61,6 +62,7 @@ TEST_BOARD = [
     'daisy',
     'eve',
     'gale',
+    'kahlee',
     'kevin',
     'lakitu',
     'link',
