@@ -42,6 +42,7 @@ TEST_PER_DAY = 3
 #  caroline   x86_64   glados     skylake-y     3.18
 #  daisy      armv7    daisy      exynos-5250   3.8.11
 #  eve        x86_64   poppy      kabylake-y    4.4.79
+#  fizz       x86_64   fizz       kabylake-u/r  4.4
 #  gale       armv7                             3.18
 #  kahlee     x86_64   kahlee     stoney ridge  4.14
 #  kevin      armv7    gru        rockchip-3399 4.4.79
@@ -56,11 +57,13 @@ TEST_PER_DAY = 3
 #  swanky     x86_64   rambi      baytrail      4.4.79
 #  terra      x86_64   strago     braswell      3.18
 #  whirlwind  armv7                             3.14
+#  zoombini   x86_64   zoombini   cannonlake-y  4.14
 
 TEST_BOARD = [
     'caroline',
     'daisy',
     'eve',
+    'fizz',
     'gale',
     'kahlee',
     'kevin',
@@ -75,6 +78,7 @@ TEST_BOARD = [
     'swanky',
     'terra',
     'whirlwind',
+    'zoombini',
 ]
 
 
