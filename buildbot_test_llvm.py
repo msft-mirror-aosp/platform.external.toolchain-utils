@@ -33,7 +33,7 @@ TOOLCHAIN_DIR = os.path.dirname(os.path.realpath(__file__))
 MAIL_PROGRAM = '~/var/bin/mail-sheriff'
 VALIDATION_RESULT_DIR = os.path.join(CROSTC_ROOT, 'validation_result')
 START_DATE = datetime.date(2016, 1, 1)
-TEST_PER_DAY = 3
+TEST_PER_DAY = 4
 
 # Information about Rotating Boards
 #  Board       Arch    Reference  Platform     Kernel
@@ -44,6 +44,7 @@ TEST_PER_DAY = 3
 #  eve        x86_64   poppy      kabylake-y    4.4.79
 #  fizz       x86_64   fizz       kabylake-u/r  4.4
 #  gale       armv7                             3.18
+#  guado_moblab x86_64                          3.14
 #  kahlee     x86_64   kahlee     stoney ridge  4.14
 #  kevin      armv7    gru        rockchip-3399 4.4.79
 #  lakitu     x86_64                            4.4.79
@@ -65,6 +66,7 @@ TEST_BOARD = [
     'eve',
     'fizz',
     'gale',
+    'guado_moblab',
     'kahlee',
     'kevin',
     'lakitu',
