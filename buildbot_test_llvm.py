@@ -36,33 +36,37 @@ START_DATE = datetime.date(2016, 1, 1)
 TEST_PER_DAY = 4
 
 # Information about Rotating Boards
-#  Board       Arch    Reference  Platform     Kernel
-#                      Board                   Version
-#  --------   ------   ---------  ----------   -------
-#  caroline   x86_64   glados     skylake-y     3.18
-#  daisy      armv7    daisy      exynos-5250   3.8.11
-#  eve        x86_64   poppy      kabylake-y    4.4.79
-#  fizz       x86_64   fizz       kabylake-u/r  4.4
-#  gale       armv7                             3.18
-#  guado_moblab x86_64                          3.14
-#  kahlee     x86_64   kahlee     stoney ridge  4.14
-#  kevin      armv7    gru        rockchip-3399 4.4.79
-#  lakitu     x86_64                            4.4.79
-#  link       x86_64   ivybridge  ivybridge     3.8.11
-#  lumpy      x86_64   --         sandybridge   3.8.11
-#  nyan_big   armv7    nyan       tegra         3.10.18
-#  peach_pit  armv7    peach      exynos-5420   3.8.11
-#  peppy      x86_64   slippy     haswell       3.8.11
-#  pyro       x86_64   reef       apollo lake   4.4.79
-#  sentry     x86_64   kunimitsu  skylake-u     3.18
-#  swanky     x86_64   rambi      baytrail      4.4.79
-#  terra      x86_64   strago     braswell      3.18
-#  whirlwind  armv7                             3.14
-#  zoombini   x86_64   zoombini   cannonlake-y  4.14
+#  Board        Arch     Reference    Platform      Kernel
+#                        Board                      Version
+#  ------------ -------  ------------ ------------- -------
+#  caroline     x86_64   glados       skylake-y     3.18
+#  daisy        armv7    daisy        exynos-5250   3.8.11
+#  elm          aarch64  oak          mediatek-8173 3.18
+#  eve          x86_64   poppy        kabylake-y    4.4.*
+#  fizz         x86_64   fizz         kabylake-u/r  4.4.*
+#  gale         armv7                               3.18
+#  guado_moblab x86_64                              3.14
+#  kahlee       x86_64   kahlee       stoney ridge  4.14.*
+#  kevin        aarch64  gru          rockchip-3399 4.4.*
+#  lakitu       x86_64                              4.4.*
+#  link         x86_64   ivybridge    ivybridge     3.8.11
+#  lumpy        x86_64   --           sandybridge   3.8.11
+#  nyan_big     armv7    nyan         tegra         3.10.18
+#  peach_pit    armv7    peach        exynos-5420   3.8.11
+#  peppy        x86_64   slippy       haswell       3.8.11
+#  pyro         x86_64   reef         apollo lake   4.4.*
+#  samus        x86_64   auron        broadwell     3.14
+#  sentry       x86_64   kunimitsu    skylake-u     3.18
+#  swanky       x86_64   rambi        baytrail      4.4.*
+#  terra        x86_64   strago       braswell      3.18
+#  veyron_jaq   armv7    veyron-pinky rockchip-3288 3.14
+#  whirlwind    armv7                               3.14
+#  zoombini     x86_64   zoombini     cannonlake-y  4.14.*
 
 TEST_BOARD = [
     'caroline',
     'daisy',
+    # 'elm', tested by arm64-llvm-next-toolchain builder.
     'eve',
     'fizz',
     'gale',
@@ -76,9 +80,11 @@ TEST_BOARD = [
     'peach_pit',
     'peppy',
     'pyro',
+    # 'samus', tested by amd64-llvm-next-toolchain builder.
     'sentry',
     'swanky',
     'terra',
+    # 'veyron_jaq', tested by arm-llvm-next-toolchain builder.
     'whirlwind',
     'zoombini',
 ]
