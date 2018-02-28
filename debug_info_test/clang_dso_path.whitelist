@@ -1,0 +1,12 @@
+# modules we don't care:
+.*/binutils/.*
+.*/binutils-bin/.*
+.*/libpepflashplayer\.so\.debug
+.*/opt/punybench/bin/.*
+.*/telemetry_dep/.*
+.*/unixbench/.*
+.*/opt/google/containers/android/.*
+.*/libmali\.so.*\.debug
+# todos:
+.*/flashrom_s.debug
+.*/ec_ctl.debug
