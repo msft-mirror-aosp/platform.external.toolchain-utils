@@ -5,9 +5,9 @@
 import os
 import subprocess
 
-import check_clang
+import check_ngcc
 
-cu_checks = [check_clang.is_built_with_clang]
+cu_checks = [check_ngcc.not_by_gcc]
 
 def check_compile_unit(dso_path, producer, comp_path):
     """check all compiler flags used to build the compile unit.

@@ -48,8 +48,8 @@ def load_whitelists(dirname):
         key = os.path.splitext(os.path.basename(fn))[0]
         with open(fn, 'r') as f:
             patterns = f.read().splitlines()
-            patterns = [l for l in patterns if l[0] != '#']
             patterns = [l for l in patterns if l != '']
+            patterns = [l for l in patterns if l[0] != '#']
         wlist[key] = prepare_whitelist(patterns)
     return wlist
 

@@ -4,8 +4,8 @@
 
 from whitelist import is_whitelisted
 
-def is_built_with_clang(dso_path, producer, comp_path):
-    """Check whether the compile unit is built by clang.
+def not_by_gcc(dso_path, producer, comp_path):
+    """Check whether the compile unit is not built by gcc.
 
     Args:
         dso_path: path to the elf/dso
@@ -15,12 +15,12 @@ def is_built_with_clang(dso_path, producer, comp_path):
     Returns:
         False if compiled by gcc otherwise True
     """
-    if is_whitelisted('clang_comp_path', comp_path):
+    if is_whitelisted('ngcc_comp_path', comp_path):
         return True
 
-    if is_whitelisted('clang_dso_path', dso_path):
+    if is_whitelisted('ngcc_dso_path', dso_path):
         return True
 
-    if 'clang version' not in producer:
+    if 'GNU C' in producer:
         return False
     return True

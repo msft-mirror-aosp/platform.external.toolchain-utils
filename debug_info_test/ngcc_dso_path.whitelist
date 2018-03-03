@@ -1,3 +1,5 @@
+# DSOs specified here are not CrOS packages compiled within CrOS SDK.
+# CrOS packages should be whitelisted in *_comp_path.whitelist
 # modules we don't care:
 .*/binutils/.*
 .*/binutils-bin/.*
@@ -7,6 +9,5 @@
 .*/unixbench/.*
 .*/opt/google/containers/android/.*
 .*/libmali\.so.*\.debug
+.*/pyelftools/examples/sample_exe64.elf.debug
 # todos:
-.*/flashrom_s.debug
-.*/ec_ctl.debug

@@ -1,4 +1,0 @@
-# These are generally objects linked from system libraries such as glibc
-# and libgcc.
-.*/glibc-.*/
-.*/libgcc/.*

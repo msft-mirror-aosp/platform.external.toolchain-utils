@@ -1,0 +1,15 @@
+# CrOS packages are compiled in /tmp/$board/portage/${CATEGORY}/${P}.
+# They can be matched by .*/portage/${CATEGORY}/${PN}-.*
+.*/portage/chromeos-base/ec-utils-.*
+.*/portage/dev-libs/elfutils-.*
+.*/portage/dev-libs/libusb-.*
+.*/portage/dev-util/perf-.*
+.*/portage/sys-apps/busybox-.*
+.*/portage/sys-boot/syslinux-.*
+.*/portage/sys-kernel/chromeos-kernel-.*
+.*/portage/sys-libs/gcc-libs-.*
+# glibc and libgcc are built in different ways.
+# and libstdc++.
+.*/glibc-.*/
+.*/libgcc/.*
+.*/libstdc\+\+-.*
