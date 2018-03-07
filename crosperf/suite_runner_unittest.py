@@ -191,11 +191,9 @@ class SuiteRunnerTest(unittest.TestCase):
 
     self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
     self.runner.PinGovernorExecutionFrequencies = FakePinGovernor
-    self.runner.RebootMachine('lumpy1.cros', '/tmp/chromeos')
+    self.runner.RestartUI('lumpy1.cros', '/tmp/chromeos')
     self.assertEqual(mock_cros_runcmd.call_count, 1)
-    self.assertEqual(mock_cros_runcmd.call_args_list[0][0], ('reboot && exit',))
-    self.assertEqual(mock_sleep.call_count, 1)
-    self.assertEqual(mock_sleep.call_args_list[0][0], (60,))
+    self.assertEqual(mock_cros_runcmd.call_args_list[0][0], ('stop ui; sleep 5; start ui',))
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
   @mock.patch.object(command_executer.CommandExecuter,
@@ -228,7 +226,7 @@ class SuiteRunnerTest(unittest.TestCase):
     self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
     res = self.runner.Test_That_Run('lumpy1.cros', self.mock_label,
                                     self.test_that_bench, '--iterations=2', '')
-    self.assertEqual(mock_cros_runcmd.call_count, 1)
+    self.assertEqual(mock_cros_runcmd.call_count, 2)
     self.assertEqual(mock_chroot_runcmd.call_count, 1)
     self.assertEqual(res, 0)
     self.assertEqual(mock_cros_runcmd.call_args_list[0][0],

@@ -135,13 +135,10 @@ class SuiteRunner(object):
       self.logger.LogFatalIf(ret, 'Could not modify {} on machine: {}'.format(
           FILE, machine_name))
 
-  def RebootMachine(self, machine_name, chromeos_root):
-    command = 'reboot && exit'
+  def RestartUI(self, machine_name, chromeos_root):
+    command = 'stop ui; sleep 5; start ui'
     self._ce.CrosRunCommand(
         command, machine=machine_name, chromeos_root=chromeos_root)
-    time.sleep(60)
-    # Whenever we reboot the machine, we need to restore the governor settings.
-    self.PinGovernorExecutionFrequencies(machine_name, chromeos_root)
 
   def Test_That_Run(self, machine, label, benchmark, test_args, profiler_args):
     """Run the test_that test.."""
@@ -158,7 +155,8 @@ class SuiteRunner(object):
 
     # We do this because some tests leave the machine in weird states.
     # Rebooting between iterations has proven to help with this.
-    self.RebootMachine(machine, label.chromeos_root)
+    # But the beep is anoying, we will try restart ui.
+    self.RestartUI(machine, label.chromeos_root)
 
     autotest_dir = AUTOTEST_DIR
     if label.autotest_path != '':

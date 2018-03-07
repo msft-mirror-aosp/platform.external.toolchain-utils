@@ -225,14 +225,14 @@ class ExperimentFactoryTest(unittest.TestCase):
     ef = ExperimentFactory()
     self.assertRaises(Exception, ef.GetDefaultRemotes, 'bad-board')
 
-    # Verify that we have entries for every board, and that we get three
-    # machines back for each board.
+    # Verify that we have entries for every board, and that we get at least
+    # two machines for each board.
     for b in board_list:
       remotes = ef.GetDefaultRemotes(b)
-      if b == 'elm':
-        self.assertEqual(len(remotes), 2)
+      if b == 'daisy':
+        self.assertEqual(len(remotes), 1)
       else:
-        self.assertEqual(len(remotes), 3)
+        self.assertGreaterEqual(len(remotes), 2)
 
 
 if __name__ == '__main__':
