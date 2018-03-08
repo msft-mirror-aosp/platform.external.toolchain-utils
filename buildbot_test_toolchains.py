@@ -252,7 +252,7 @@ class ToolchainComparator(object):
                  (filename, MAIL_PROGRAM, email_title, self._board))
       self._ce.RunCommand(command)
 
-  def DoAll(self, crostc_dir):
+  def DoAll(self):
     """Main function inside ToolchainComparator class.
 
     Launch trybot, get image names, create crosperf experiment file, run
@@ -261,27 +261,17 @@ class ToolchainComparator(object):
     date_str = datetime.date.today()
     description = 'master_%s_%s_%s' % (self._patches_string, self._build,
                                        date_str)
-    if crostc_dir:
-      build_id, trybot_image = buildbot_utils.GetTrybotImage(
-          self._chromeos_root,
-          self._build,
-          self._patches,
-          description,
-          tryjob_flags=['--notests'],
-          credentials_dir=crostc_dir,
-          build_toolchain=True)
-    else:
-      build_id, trybot_image = buildbot_utils.GetTrybotImage(
-          self._chromeos_root,
-          self._build,
-          self._patches,
-          description,
-          tryjob_flags=['--notests'],
-          build_toolchain=True)
+    buildbucket_id, trybot_image = buildbot_utils.GetTrybotImage(
+        self._chromeos_root,
+        self._build,
+        self._patches,
+        description,
+        tryjob_flags=['--notests'],
+        build_toolchain=True)
 
     print('trybot_url: \
-       https://uberchromegw.corp.google.com/i/chromiumos.tryserver/builders/release/builds/%s'
-          % build_id)
+          http://cros-goldeneye/chromeos/healthmonitoring/buildDetails?buildbucketId=%s'
+          % buildbucket_id)
     if len(trybot_image) == 0:
       self._l.LogError('Unable to find trybot_image for %s!' % description)
       return 2
@@ -332,12 +322,6 @@ def Main(argv):
       action='store_true',
       default=False,
       help='Pass --noschedv2 to crosperf.')
-  parser.add_argument(
-      '--crostc_dir',
-      dest='crostc_dir',
-      help='Path to the directory containing the '
-      'chromeos-toolchain-credentials.json file; normally in the '
-      'crostc repo.')
 
   options = parser.parse_args(argv[1:])
   if not options.board:
@@ -352,7 +336,7 @@ def Main(argv):
 
   fc = ToolchainComparator(options.board, options.remote, options.chromeos_root,
                            options.weekday, options.patches, options.noschedv2)
-  return fc.DoAll(options.crostc_dir)
+  return fc.DoAll()
 
 
 if __name__ == '__main__':
