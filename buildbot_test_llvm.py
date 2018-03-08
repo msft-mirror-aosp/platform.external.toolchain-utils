@@ -50,7 +50,6 @@ TEST_PER_DAY = 4
 #  kevin        aarch64  gru          rockchip-3399 4.4.*
 #  lakitu       x86_64                              4.4.*
 #  link         x86_64   ivybridge    ivybridge     3.8.11
-#  lumpy        x86_64   --           sandybridge   3.8.11
 #  nyan_big     armv7    nyan         tegra         3.10.18
 #  peach_pit    armv7    peach        exynos-5420   3.8.11
 #  peppy        x86_64   slippy       haswell       3.8.11
@@ -75,7 +74,6 @@ TEST_BOARD = [
     'kevin',
     'lakitu',
     'link',
-    'lumpy',
     'nyan_big',
     'peach_pit',
     'peppy',
