@@ -70,7 +70,7 @@ telemetry_crosbolt_perf_tests = [
     'kraken',
     'speedometer',
     'jetstream',
-    'smoothness.top_25_smooth',
+    'cros_ui_smoothness',
 ]
 crosbolt_perf_tests = [
     'graphics_WebGLAquarium',
