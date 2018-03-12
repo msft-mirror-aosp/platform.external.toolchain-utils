@@ -41,9 +41,10 @@ def PeekTrybotImage(chromeos_root, buildbucket_id):
     chromeos_root: root dir of chrome os checkout
 
   Returns:
-    (status, url) where status can be 'pass', 'fail', 'running'
+    (status, url) where status can be 'pass', 'fail', 'running',
+                  and url looks like:
+    gs://chromeos-image-archive/trybot-elm-release-tryjob/R67-10468.0.0-b20789
   """
-  TEST_IMAGE_FILENAME = 'chromiumos_test_image.tar.xz'
   command = ('cros buildresult --report json --buildbucket-id %s' %
              buildbucket_id)
   rc, out, _ = RunCommandInPath(chromeos_root, command)
@@ -55,8 +56,7 @@ def PeekTrybotImage(chromeos_root, buildbucket_id):
 
   results = json.loads(out)[buildbucket_id]
 
-  return (results['status'],
-          os.path.join(results['artifacts_url'], TEST_IMAGE_FILENAME))
+  return (results['status'], results['artifacts_url'].rstrip('/'))
 
 
 def ParseTryjobBuildbucketId(msg):
@@ -149,7 +149,8 @@ def GetTrybotImage(
     async: don't wait for artifacts; just return the buildbucket id
 
   Returns:
-    (buildbucket id, image url)
+    (buildbucket id, partial image url) e.g.
+    (8952271933586980528, trybot-elm-release-tryjob/R67-10480.0.0-b2373596)
   """
   buildbucket_id = SubmitTryjob(chromeos_root, buildbot_name, patch_list,
                                 build_tag, tryjob_flags, build_toolchain)
@@ -191,6 +192,12 @@ def GetTrybotImage(
     logger.GetLogger().LogError('Trybot job %s (buildbucket id: %s) failed with'
                                 'status %s; no trybot image generated. ' %
                                 (build_tag, buildbucket_id, status))
+  else:
+    # Convert full gs path to what crosperf expects. For example, convert
+    # gs://chromeos-image-archive/trybot-elm-release-tryjob/R67-10468.0.0-b20789
+    # to
+    # trybot-elm-release-tryjob/R67-10468.0.0-b20789
+    image = '/'.join(image.split('/')[-2:])
 
   logger.GetLogger().LogOutput("image is '%s'" % image)
   logger.GetLogger().LogOutput('status is %s' % status)
