@@ -4,6 +4,7 @@
 .*/portage/dev-libs/elfutils-.*
 .*/portage/dev-libs/libusb-.*
 .*/portage/dev-util/perf-.*
+.*/portage/media-libs/arc-cros-gralloc-.*
 .*/portage/sys-apps/busybox-.*
 .*/portage/sys-boot/syslinux-.*
 .*/portage/sys-kernel/chromeos-kernel-.*
