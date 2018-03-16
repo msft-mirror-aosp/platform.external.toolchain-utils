@@ -8,6 +8,8 @@
 .*/portage/sys-apps/busybox-.*
 .*/portage/sys-boot/syslinux-.*
 .*/portage/sys-kernel/chromeos-kernel-.*
+.*/portage/sys-kernel/kernel-.*
+.*/portage/sys-kernel/.*-kernel-.*
 .*/portage/sys-libs/gcc-libs-.*
 # glibc and libgcc are built in different ways.
 # and libstdc++.
