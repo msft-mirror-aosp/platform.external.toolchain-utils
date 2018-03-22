@@ -4,13 +4,17 @@
 .*/binutils/.*
 .*/binutils-bin/.*
 .*/boot/u-boot\.debug
+.*/boot/vmlinux\.debug
+.*/uboot/u-boot\.debug
 .*/firmware/u-boot\.debug
 .*/libpepflashplayer\.so\.debug
 .*/opt/punybench/bin/.*
+.*/opt/scribe/grpc/_cython/cygrpc\.so\.debug
 .*/telemetry_dep/.*
 .*/unixbench/.*
 .*/usr/bin/core_collector32\.debug
 .*/usr/bin/kubelet\.debug
+.*/usr/lib/libatomic.so.*\.debug
 .*/usr/lib/librk_aiq\.so\.debug
 .*/usr/local/build/autotest/client/site_tests/factory_Leds/src/ec_ctl\.debug
 .*/opt/google/containers/android/.*
