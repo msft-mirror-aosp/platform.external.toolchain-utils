@@ -41,7 +41,7 @@ NIGHTLY_TESTS_DIR = os.path.join(CROSTC_ROOT, 'nightly_test_reports')
 IMAGE_DIR = '{board}-{image_type}'
 IMAGE_VERSION_STR = r'{chrome_version}-{tip}\.{branch}\.{branch_branch}'
 IMAGE_FS = IMAGE_DIR + '/' + IMAGE_VERSION_STR
-TRYBOT_IMAGE_FS = 'trybot-' + IMAGE_FS + '-{build_id}'
+TRYBOT_IMAGE_FS = IMAGE_FS + '-{build_id}'
 PFQ_IMAGE_FS = IMAGE_FS + '-rc1'
 IMAGE_RE_GROUPS = {
     'board': r'(?P<board>\S+)',
@@ -92,7 +92,7 @@ class ToolchainComparator(object):
 
     Args:
       trybot_image: artifact name such as
-          'trybot-daisy-release-tryjob/R40-6394.0.0-b1389'
+          'daisy-release-tryjob/R40-6394.0.0-b1389'
 
     Returns:
       Latest official image name, e.g. 'daisy-release/R57-9089.0.0'.
@@ -117,7 +117,7 @@ class ToolchainComparator(object):
 
     Args:
       trybot_image: artifact name such as
-          'trybot-daisy-release-tryjob/R40-6394.0.0-b1389'
+          'daisy-release-tryjob/R40-6394.0.0-b1389'
 
     Returns:
       Corresponding chrome PFQ image name, e.g.
