@@ -24,8 +24,6 @@ import file_lock_machine
 telemetry_perfv2_tests = [
     'kraken',
     'octane',
-    'robohornet_pro',
-    'sunspider',
 ]
 
 telemetry_pagecycler_tests = [
@@ -34,10 +32,6 @@ telemetry_pagecycler_tests = [
     'page_cycler_v2.intl_hi_ru',
     'page_cycler_v2.intl_ja_zh',
     'page_cycler_v2.intl_ko_th_vi',
-    #                              'page_cycler_v2.morejs',
-    #                              'page_cycler_v2.moz',
-    #                              'page_cycler_v2.netsim.top_10',
-    'page_cycler_v2.tough_layout_cases',
     'page_cycler_v2.typical_25',
 ]
 
@@ -48,7 +42,6 @@ telemetry_toolchain_old_perf_tests = [
     'page_cycler_v2.intl_ko_th_vi',
     'page_cycler_v2.netsim.top_10',
     'page_cycler_v2.typical_25',
-    'robohornet_pro',
     'spaceport',
     'tab_switching.top_10',
 ]
