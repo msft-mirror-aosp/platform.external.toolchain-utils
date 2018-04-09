@@ -196,5 +196,11 @@
   ],
   "dromaeo.jslibmodifyjquery": [
     "jslib_modify_jquery__jslib_modify_jquery"
+  ],
+  "jetstream": [
+    "Score__summary"
+  ],
+  "cros_ui_smoothness": [
+    "ui_percentage_smooth__summary"
   ]
 }
