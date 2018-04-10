@@ -5,6 +5,7 @@
 
 from __future__ import print_function
 
+import ast
 import json
 import os
 import re
@@ -68,12 +69,10 @@ def ParseTryjobBuildbucketId(msg):
   Returns:
     buildbucket-id, which will be passed to `cros buildresult`
   """
-  pattern = (r'Successfully sent PUT request to .* '
-             r'\[buildbucket_id:([0-9]+)\].*')
-  for line in msg.split('\n'):
-    m = re.match(pattern, line)
-    if m:
-      return m.group(1)
+  output_list = ast.literal_eval(msg)
+  output_dict = output_list[0]
+  if 'buildbucket_id' in ouput_dict:
+    return output_dict['buildbucket_id']
   return None
 
 
@@ -109,7 +108,7 @@ def SubmitTryjob(chromeos_root, buildbot_name, patch_list, build_tag,
   # Launch buildbot with appropriate flags.
   build = buildbot_name
   description = build_tag
-  command = ('cros tryjob --yes --nochromesdk --remote-description %s'
+  command = ('cros tryjob --yes --json --nochromesdk --remote-description %s'
              ' %s %s %s' % (description, tryjob_flags, patch_arg, build))
   _, out, _ = RunCommandInPath(chromeos_root, command)
   buildbucket_id = ParseTryjobBuildbucketId(out)
