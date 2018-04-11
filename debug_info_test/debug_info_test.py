@@ -9,8 +9,10 @@ import subprocess
 import sys
 
 import check_cus
+import check_exist
 
-elf_checks = [check_cus.check_compile_units]
+elf_checks = [check_exist.check_exist_all,
+              check_cus.check_compile_units]
 
 def scanelf(root):
     """find ELFs in root
