@@ -71,7 +71,7 @@ def ParseTryjobBuildbucketId(msg):
   """
   output_list = ast.literal_eval(msg)
   output_dict = output_list[0]
-  if 'buildbucket_id' in ouput_dict:
+  if 'buildbucket_id' in output_dict:
     return output_dict['buildbucket_id']
   return None
 
