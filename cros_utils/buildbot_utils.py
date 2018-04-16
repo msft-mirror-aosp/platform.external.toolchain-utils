@@ -17,6 +17,7 @@ from cros_utils import logger
 INITIAL_SLEEP_TIME = 7200  # 2 hours; wait time before polling buildbot.
 SLEEP_TIME = 600  # 10 minutes; time between polling of buildbot.
 TIME_OUT = 28800  # Decide the build is dead or will never finish
+
 # after this time (8 hours).
 
 
@@ -46,8 +47,8 @@ def PeekTrybotImage(chromeos_root, buildbucket_id):
                   and url looks like:
     gs://chromeos-image-archive/trybot-elm-release-tryjob/R67-10468.0.0-b20789
   """
-  command = ('cros buildresult --report json --buildbucket-id %s' %
-             buildbucket_id)
+  command = (
+      'cros buildresult --report json --buildbucket-id %s' % buildbucket_id)
   rc, out, _ = RunCommandInPath(chromeos_root, command)
 
   # Current implementation of cros buildresult returns fail when a job is still
@@ -76,8 +77,12 @@ def ParseTryjobBuildbucketId(msg):
   return None
 
 
-def SubmitTryjob(chromeos_root, buildbot_name, patch_list, build_tag,
-                 tryjob_flags=None, build_toolchain=False):
+def SubmitTryjob(chromeos_root,
+                 buildbot_name,
+                 patch_list,
+                 build_tag,
+                 tryjob_flags=None,
+                 build_toolchain=False):
   """Calls `cros tryjob ...`
 
   Args:
@@ -110,22 +115,23 @@ def SubmitTryjob(chromeos_root, buildbot_name, patch_list, build_tag,
   description = build_tag
   command = ('cros tryjob --yes --json --nochromesdk --remote-description %s'
              ' %s %s %s' % (description, tryjob_flags, patch_arg, build))
+  print('CMD: %s' % command)
   _, out, _ = RunCommandInPath(chromeos_root, command)
   buildbucket_id = ParseTryjobBuildbucketId(out)
+  print('buildbucket_id: %s' % repr(buildbucket_id))
   if not buildbucket_id:
     logger.GetLogger().LogFatal('Error occurred while launching trybot job: '
                                 '%s' % command)
   return buildbucket_id
 
 
-def GetTrybotImage(
-    chromeos_root,
-    buildbot_name,
-    patch_list,
-    build_tag,
-    tryjob_flags=None,
-    build_toolchain=False,
-    async=False):
+def GetTrybotImage(chromeos_root,
+                   buildbot_name,
+                   patch_list,
+                   build_tag,
+                   tryjob_flags=None,
+                   build_toolchain=False,
+                   async=False):
   """Launch buildbot and get resulting trybot artifact name.
 
   This function launches a buildbot with the appropriate flags to
@@ -225,8 +231,8 @@ def WaitForImage(chromeos_root, build):
     time.sleep(SLEEP_TIME)
     elapsed_time += SLEEP_TIME
 
-  logger.GetLogger().LogOutput('Image %s not found, waited for %d hours' %
-                               (build, (TIME_OUT / 3600)))
+  logger.GetLogger().LogOutput(
+      'Image %s not found, waited for %d hours' % (build, (TIME_OUT / 3600)))
   raise BuildbotTimeout('Timeout while waiting for image %s' % build)
 
 
