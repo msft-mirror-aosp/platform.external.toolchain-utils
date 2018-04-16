@@ -80,7 +80,6 @@ def ParseTryjobBuildbucketId(msg):
 def SubmitTryjob(chromeos_root,
                  buildbot_name,
                  patch_list,
-                 build_tag,
                  tryjob_flags=None,
                  build_toolchain=False):
   """Calls `cros tryjob ...`
@@ -91,8 +90,6 @@ def SubmitTryjob(chromeos_root,
     buildbot_name: the name of the buildbot queue, such as lumpy-release or
                    daisy-paladin.
     patch_list: a python list of the patches, if any, for the buildbot to use.
-    build_tag: a (unique) string to be used to look up the buildbot results
-               from among all the build records.
     tryjob_flags: See cros tryjob --help for available options.
     build_toolchain: builds and uses the latest toolchain, rather than the
                      prebuilt one in SDK.
@@ -112,9 +109,8 @@ def SubmitTryjob(chromeos_root,
 
   # Launch buildbot with appropriate flags.
   build = buildbot_name
-  description = build_tag
-  command = ('cros tryjob --yes --json --nochromesdk --remote-description %s'
-             ' %s %s %s' % (description, tryjob_flags, patch_arg, build))
+  command = ('cros tryjob --yes --json --nochromesdk  %s %s %s' %
+             (tryjob_flags, patch_arg, build))
   print('CMD: %s' % command)
   _, out, _ = RunCommandInPath(chromeos_root, command)
   buildbucket_id = ParseTryjobBuildbucketId(out)
@@ -128,7 +124,6 @@ def SubmitTryjob(chromeos_root,
 def GetTrybotImage(chromeos_root,
                    buildbot_name,
                    patch_list,
-                   build_tag,
                    tryjob_flags=None,
                    build_toolchain=False,
                    async=False):
@@ -146,8 +141,6 @@ def GetTrybotImage(chromeos_root,
     buildbot_name: the name of the buildbot queue, such as lumpy-release or
                    daisy-paladin.
     patch_list: a python list of the patches, if any, for the buildbot to use.
-    build_tag: a (unique) string to be used to look up the buildbot results
-               from among all the build records.
     tryjob_flags: See cros tryjob --help for available options.
     build_toolchain: builds and uses the latest toolchain, rather than the
                      prebuilt one in SDK.
@@ -158,7 +151,7 @@ def GetTrybotImage(chromeos_root,
     (8952271933586980528, trybot-elm-release-tryjob/R67-10480.0.0-b2373596)
   """
   buildbucket_id = SubmitTryjob(chromeos_root, buildbot_name, patch_list,
-                                build_tag, tryjob_flags, build_toolchain)
+                                tryjob_flags, build_toolchain)
   if async:
     return buildbucket_id, ' '
 

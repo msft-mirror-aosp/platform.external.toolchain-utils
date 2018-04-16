@@ -19,7 +19,7 @@ from cros_utils import command_executer
 class TrybotTest(unittest.TestCase):
   """Test for CommandExecuter class."""
 
-  tryjob_out = (
+  old_tryjob_out = (
       'Verifying patches...\n'
       'Submitting tryjob...\n'
       'Successfully sent PUT request to [buildbucket_bucket:master.chromiumos.t'
@@ -31,12 +31,16 @@ class TrybotTest(unittest.TestCase):
       'etId=8952721143823688176\n'
       '  https://uberchromegw.corp.google.com/i/chromiumos.tryserver/waterfall?'
       'committer=laszio@chromium.org&builder=etc\n')
+  tryjob_out = (
+      '[{"buildbucket_id": "8952721143823688176", "build_config": '
+      '"cave-llvm-toolchain-tryjob", "url": '
+      '"http://cros-goldeneye/chromeos/healthmonitoring/buildDetails?buildbucketId=8952721143823688176"}]'
+  )
 
   buildresult_out = (
       '{"8952721143823688176": {"status": "pass", "artifacts_url":'
       '"gs://chromeos-image-archive/trybot-elm-release-tryjob/R67-10468.0.0-'
-      'b20789"}}'
-  )
+      'b20789"}}')
 
   buildbucket_id = '8952721143823688176'
   counter_1 = 10
@@ -45,6 +49,7 @@ class TrybotTest(unittest.TestCase):
     with patch.object(buildbot_utils, 'SubmitTryjob') as mock_submit:
       with patch.object(buildbot_utils, 'PeekTrybotImage') as mock_peek:
         with patch.object(time, 'sleep', return_value=None):
+
           def peek(_chromeos_root, _buildbucket_id):
             self.counter_1 -= 1
             if self.counter_1 >= 0:
@@ -52,20 +57,20 @@ class TrybotTest(unittest.TestCase):
             return ('pass',
                     'gs://chromeos-image-archive/trybot-elm-release-tryjob/'
                     'R67-10468.0.0-b20789')
+
           mock_peek.side_effect = peek
           mock_submit.return_value = self.buildbucket_id
 
           # sync
           buildbucket_id, image = buildbot_utils.GetTrybotImage(
-              '/tmp', 'falco-release-tryjob', [], 'description')
+              '/tmp', 'falco-release-tryjob', [])
           self.assertEqual(buildbucket_id, self.buildbucket_id)
           self.assertEqual('trybot-elm-release-tryjob/'
-                           'R67-10468.0.0-b20789',
-                           image)
+                           'R67-10468.0.0-b20789', image)
 
           # async
           buildbucket_id, image = buildbot_utils.GetTrybotImage(
-              '/tmp', 'falco-release-tryjob', [], 'description', async=True)
+              '/tmp', 'falco-release-tryjob', [], async=True)
           self.assertEqual(buildbucket_id, self.buildbucket_id)
           self.assertEqual(' ', image)
 
@@ -84,9 +89,9 @@ class TrybotTest(unittest.TestCase):
       mocked_run.return_value = (0, self.buildresult_out, '')
       status, image = buildbot_utils.PeekTrybotImage('/', self.buildbucket_id)
       self.assertEqual('pass', status)
-      self.assertEqual('gs://chromeos-image-archive/trybot-elm-release-tryjob/'
-                       'R67-10468.0.0-b20789',
-                       image)
+      self.assertEqual(
+          'gs://chromeos-image-archive/trybot-elm-release-tryjob/'
+          'R67-10468.0.0-b20789', image)
 
       # running
       mocked_run.return_value = (1, '', '')
@@ -99,9 +104,9 @@ class TrybotTest(unittest.TestCase):
       mocked_run.return_value = (0, buildresult_fail, '')
       status, image = buildbot_utils.PeekTrybotImage('/', self.buildbucket_id)
       self.assertEqual('fail', status)
-      self.assertEqual('gs://chromeos-image-archive/trybot-elm-release-tryjob/'
-                       'R67-10468.0.0-b20789',
-                       image)
+      self.assertEqual(
+          'gs://chromeos-image-archive/trybot-elm-release-tryjob/'
+          'R67-10468.0.0-b20789', image)
 
   def testParseTryjobBuildbucketId(self):
     buildbucket_id = buildbot_utils.ParseTryjobBuildbucketId(self.tryjob_out)
