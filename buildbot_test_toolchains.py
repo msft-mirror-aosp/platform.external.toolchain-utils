@@ -269,7 +269,7 @@ class ToolchainComparator(object):
           http://cros-goldeneye/chromeos/healthmonitoring/buildDetails?buildbucketId=%s'
           % buildbucket_id)
     if len(trybot_image) == 0:
-      self._l.LogError('Unable to find trybot_image for %s!' % description)
+      self._l.LogError('Unable to find trybot_image!')
       return 2
 
     vanilla_image = self._GetVanillaImageName(trybot_image)

@@ -187,9 +187,9 @@ def GetTrybotImage(chromeos_root,
     image = ''
 
   if not image:
-    logger.GetLogger().LogError('Trybot job %s (buildbucket id: %s) failed with'
-                                'status %s; no trybot image generated. ' %
-                                (build_tag, buildbucket_id, status))
+    logger.GetLogger().LogError(
+        'Trybot job (buildbucket id: %s) failed with'
+        'status %s; no trybot image generated. ' % (buildbucket_id, status))
   else:
     # Convert full gs path to what crosperf expects. For example, convert
     # gs://chromeos-image-archive/trybot-elm-release-tryjob/R67-10468.0.0-b20789
