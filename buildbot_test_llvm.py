@@ -44,8 +44,8 @@ TEST_PER_DAY = 4
 #  elm          aarch64  oak          mediatek-8173 3.18
 #  fizz         x86_64   fizz         kabylake-u/r  4.4.*
 #  gale         armv7                               3.18
+#  grunt        x86_64   grunt        stoney ridge  4.14.*
 #  guado_moblab x86_64                              3.14
-#  kahlee       x86_64   kahlee       stoney ridge  4.14.*
 #  kevin        aarch64  gru          rockchip-3399 4.4.*
 #  lakitu       x86_64                              4.4.*
 #  lars         x86_64   kunimitsu    skylake-u     3.18
@@ -68,8 +68,8 @@ TEST_BOARD = [
     # 'elm', tested by arm64-llvm-next-toolchain builder.
     'fizz',
     'gale',
+    'grunt',
     'guado_moblab',
-    'kahlee',
     'kevin',
     'lakitu',
     'lars',
