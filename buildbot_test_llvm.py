@@ -34,6 +34,7 @@ MAIL_PROGRAM = '~/var/bin/mail-sheriff'
 VALIDATION_RESULT_DIR = os.path.join(CROSTC_ROOT, 'validation_result')
 START_DATE = datetime.date(2016, 1, 1)
 TEST_PER_DAY = 4
+DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
 
 # Information about Rotating Boards
 #  Board        Arch     Reference    Platform      Kernel
@@ -124,14 +125,24 @@ class ToolchainVerifier(object):
     Launch trybot, get image names, create crosperf experiment file, run
     crosperf, and copy images into seven-day report directories.
     """
-    _ = buildbot_utils.GetTrybotImage(
+    buildbucket_id, _ = buildbot_utils.GetTrybotImage(
         self._chromeos_root,
         self._build,
         self._patches,
         tryjob_flags=['--hwtest'],
         async=True)
 
-    return 0
+    return buildbucket_id
+
+
+def WriteRotatingReportsData(results_dict, date):
+  """Write data for waterfall report."""
+  fname = '%d-%02d-%02d.builds' % (date.year, date.month, date.day)
+  filename = os.path.join(DATA_DIR, 'rotating-builders', fname)
+  with open(filename, 'w') as out_file:
+    for board in results_dict.keys():
+      buildbucket_id = results_dict[board]
+      out_file.write('%s,%s\n' % (buildbucket_id, board))
 
 
 def Main(argv):
@@ -182,16 +193,20 @@ def Main(argv):
   days = delta.days
 
   start_board = (days * TEST_PER_DAY) % len(TEST_BOARD)
+  results_dict = dict()
   for i in range(TEST_PER_DAY):
     try:
       board = TEST_BOARD[(start_board + i) % len(TEST_BOARD)]
       fv = ToolchainVerifier(board, options.chromeos_root, options.weekday,
                              options.patches, options.compiler)
-      fv.DoAll()
+      buildbucket_id = fv.DoAll()
+      if buildbucket_id:
+        results_dict[board] = buildbucket_id
     except SystemExit:
       logfile = os.path.join(VALIDATION_RESULT_DIR, options.compiler, board)
       with open(logfile, 'w') as f:
         f.write('Verifier got an exception, please check the log.\n')
+  WriteRotatingReportsData(results_dict, today)
 
 
 if __name__ == '__main__':
