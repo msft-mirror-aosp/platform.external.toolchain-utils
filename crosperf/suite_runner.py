@@ -74,8 +74,8 @@ class SuiteRunner(object):
         self.logger.LogOutput('benchmark %s failed. Retries left: %s' %
                               (benchmark.name, benchmark.retries - i))
       elif i > 0:
-        self.logger.LogOutput('benchmark %s succeded after %s retries' %
-                              (benchmark.name, i))
+        self.logger.LogOutput(
+            'benchmark %s succeded after %s retries' % (benchmark.name, i))
         break
       else:
         self.logger.LogOutput(
@@ -90,7 +90,7 @@ class SuiteRunner(object):
         'set -e && '
         # Disable Turbo in Intel pstate driver
         'if [[ -e /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then '
-        'echo -n 1 > /sys/devices/system/cpu/intel_pstate/no_turbo; fi; '
+        '(echo -n 1 > /sys/devices/system/cpu/intel_pstate/no_turbo || true); fi; '
         # Set governor to performance for each cpu
         'for f in /sys/devices/system/cpu/cpu*/cpufreq; do '
         'cd $f; '
@@ -125,15 +125,15 @@ class SuiteRunner(object):
     FILE = '/usr/local/telemetry/src/tools/perf/page_sets/page_cycler_story.py'
     ret = self._ce.CrosRunCommand(
         'ls ' + FILE, machine=machine_name, chromeos_root=chromeos_root)
-    self.logger.LogFatalIf(ret, 'Could not find {} on machine: {}'.format(
-        FILE, machine_name))
+    self.logger.LogFatalIf(
+        ret, 'Could not find {} on machine: {}'.format(FILE, machine_name))
 
     if not ret:
       sed_command = 'sed -i "s/_TTI_WAIT_TIME = 10/_TTI_WAIT_TIME = 2/g" '
       ret = self._ce.CrosRunCommand(
           sed_command + FILE, machine=machine_name, chromeos_root=chromeos_root)
-      self.logger.LogFatalIf(ret, 'Could not modify {} on machine: {}'.format(
-          FILE, machine_name))
+      self.logger.LogFatalIf(
+          ret, 'Could not modify {} on machine: {}'.format(FILE, machine_name))
 
   def RestartUI(self, machine_name, chromeos_root):
     command = 'stop ui; sleep 5; start ui'
