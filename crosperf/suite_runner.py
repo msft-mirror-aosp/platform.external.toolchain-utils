@@ -90,7 +90,10 @@ class SuiteRunner(object):
         'set -e && '
         # Disable Turbo in Intel pstate driver
         'if [[ -e /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then '
-        '(echo -n 1 > /sys/devices/system/cpu/intel_pstate/no_turbo || true); fi; '
+        '  if grep -q 0 /sys/devices/system/cpu/intel_pstate/no_turbo;  then '
+        '    echo -n 1 > /sys/devices/system/cpu/intel_pstate/no_turbo; '
+        '  fi; '
+        'fi; '
         # Set governor to performance for each cpu
         'for f in /sys/devices/system/cpu/cpu*/cpufreq; do '
         'cd $f; '
