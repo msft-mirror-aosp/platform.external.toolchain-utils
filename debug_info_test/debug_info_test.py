@@ -8,11 +8,13 @@ import os
 import subprocess
 import sys
 
+import check_icf
 import check_cus
 import check_exist
 
 elf_checks = [check_exist.check_exist_all,
-              check_cus.check_compile_units]
+              check_cus.check_compile_units,
+              check_icf.check_identical_code_folding]
 
 def scanelf(root):
     """find ELFs in root
