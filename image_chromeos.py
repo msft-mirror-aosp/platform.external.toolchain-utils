@@ -242,16 +242,6 @@ def DoImage(argv):
           os.path.realpath(options.chromeos_root), 'src')
       real_chroot_dir = os.path.join(
           os.path.realpath(options.chromeos_root), 'chroot')
-      if local_image:
-        if located_image.find(real_src_dir) != 0:
-          if located_image.find(real_chroot_dir) != 0:
-            raise RuntimeError('Located image: %s not in chromeos_root: %s' %
-                               (located_image, options.chromeos_root))
-          else:
-            chroot_image = located_image[len(real_chroot_dir):]
-        else:
-          chroot_image = os.path.join(
-              '~/trunk/src', located_image[len(real_src_dir):].lstrip('/'))
 
       # Check to see if cros flash will work for the remote machine.
       CheckForCrosFlash(options.chromeos_root, options.remote, log_level)
@@ -320,7 +310,6 @@ def DoImage(argv):
             machine=options.remote)
         logger.GetLogger().LogFatalIf(ret, 'Writing checksum failed.')
 
-        chroot_image = FindChromeOSImage(image, options.chromeos_root)
         successfully_imaged = VerifyChromeChecksum(
             options.chromeos_root, chroot_image, options.remote, log_level)
         logger.GetLogger().LogFatalIf(not successfully_imaged,
