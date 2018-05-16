@@ -280,11 +280,6 @@ def DoImage(argv):
       if log_level == 'average':
         cmd_executer.SetLogLevel(log_level)
 
-      if found == False:
-        temp_dir = os.path.dirname(located_image)
-        l.LogOutput('Deleting temp image dir: %s' % temp_dir)
-        shutil.rmtree(temp_dir)
-
       logger.GetLogger().LogFatalIf(ret, 'Image command failed')
 
       # Unfortunately cros_image_to_target.py sometimes returns early when the
@@ -316,6 +311,11 @@ def DoImage(argv):
                                       'Image verification failed!')
         TryRemountPartitionAsRW(options.chromeos_root, options.remote,
                                 log_level)
+
+      if found == False:
+        temp_dir = os.path.dirname(located_image)
+        l.LogOutput('Deleting temp image dir: %s' % temp_dir)
+        shutil.rmtree(temp_dir)
     else:
       l.LogOutput('Checksums match. Skipping reimage')
     return ret
