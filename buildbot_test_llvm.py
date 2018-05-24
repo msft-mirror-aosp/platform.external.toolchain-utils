@@ -109,16 +109,6 @@ class ToolchainVerifier(object):
       self._weekday = weekday
     self._reports = os.path.join(VALIDATION_RESULT_DIR, compiler, board)
 
-  def _FinishSetup(self):
-    """Make sure testing_rsa file is properly set up."""
-    # Fix protections on ssh key
-    command = ('chmod 600 /var/cache/chromeos-cache/distfiles/target'
-               '/chrome-src-internal/src/third_party/chromite/ssh_keys'
-               '/testing_rsa')
-    ret_val = self._ce.ChrootRunCommand(self._chromeos_root, command)
-    if ret_val != 0:
-      raise RuntimeError('chmod for testing_rsa failed')
-
   def DoAll(self):
     """Main function inside ToolchainComparator class.
 
