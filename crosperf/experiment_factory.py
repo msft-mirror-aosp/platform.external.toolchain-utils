@@ -49,6 +49,7 @@ telemetry_toolchain_perf_tests = [
     'octane',
     'kraken',
     'speedometer',
+    'speedometer2',
     'smoothness.tough_webgl_cases',
 ]
 graphics_perf_tests = [
@@ -62,6 +63,7 @@ telemetry_crosbolt_perf_tests = [
     'octane',
     'kraken',
     'speedometer',
+    'speedometer2',
     'jetstream',
     'cros_ui_smoothness',
 ]
