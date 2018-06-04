@@ -79,6 +79,9 @@
     "Total__Total",
     "Total__summary"
   ],
+  "speedometer2": [
+    "Total__summary"
+  ],
   "octane": [
     "Total__Score"
   ],
