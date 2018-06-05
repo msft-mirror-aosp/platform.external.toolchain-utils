@@ -12,6 +12,7 @@ _estimated_stddev = {
     'octane': 0.015,
     'kraken': 0.019,
     'speedometer': 0.007,
+    'speedometer2': 0.006,
     'dromaeo.domcoreattr': 0.023,
     'dromaeo.domcoremodify': 0.011,
     'smoothness.tough_webgl_cases': 0.025,
