@@ -175,17 +175,7 @@ class ToolchainComparator(object):
       f.write(experiment_tests)
 
       # Now add vanilla to test file.
-      if os.getlogin() == ROLE_ACCOUNT:
-        official_image = """
-          vanilla_image {
-            chromeos_root: %s
-            build: %s
-            compiler: llvm
-            chrome_src: /usr/local/google/crostc/chrome-src-internal
-          }
-          """ % (self._chromeos_root, vanilla_image)
-      else:
-        official_image = """
+      official_image = """
           vanilla_image {
             chromeos_root: %s
             build: %s
@@ -196,17 +186,7 @@ class ToolchainComparator(object):
 
       # Now add non-AFDO image to test file.
       if nonafdo_image:
-        if os.getlogin() == ROLE_ACCOUNT:
-          official_nonafdo_image = """
-          nonafdo_image {
-            chromeos_root: %s
-            build: %s
-            compiler: llvm
-            chrome_src: /usr/local/google/crostc/chrome-src-internal
-          }
-          """ % (self._chromeos_root, nonafdo_image)
-        else:
-          official_nonafdo_image = """
+        official_nonafdo_image = """
           nonafdo_image {
             chromeos_root: %s
             build: %s
@@ -219,19 +199,7 @@ class ToolchainComparator(object):
 
       # Reuse autotest files from vanilla image for trybot images
       autotest_files = os.path.join('/tmp', vanilla_image, 'autotest_files')
-      if os.getlogin() == ROLE_ACCOUNT:
-        experiment_image = """
-          %s {
-            chromeos_root: %s
-            build: %s
-            autotest_path: %s
-            compiler: %s
-            chrome_src: /usr/local/google/crostc/chrome-src-internal
-          }
-          """ % (label_string, self._chromeos_root, trybot_image,
-                 autotest_files, compiler_string)
-      else:
-        experiment_image = """
+      experiment_image = """
           %s {
             chromeos_root: %s
             build: %s
