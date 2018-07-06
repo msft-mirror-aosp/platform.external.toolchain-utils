@@ -50,7 +50,6 @@ telemetry_toolchain_perf_tests = [
     'kraken',
     'speedometer',
     'speedometer2',
-    'smoothness.tough_webgl_cases',
 ]
 graphics_perf_tests = [
     'graphics_GLBench',

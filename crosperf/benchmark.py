@@ -15,7 +15,6 @@ _estimated_stddev = {
     'speedometer2': 0.006,
     'dromaeo.domcoreattr': 0.023,
     'dromaeo.domcoremodify': 0.011,
-    'smoothness.tough_webgl_cases': 0.025,
     'graphics_WebGLAquarium': 0.008,
     'page_cycler_v2.typical_25': 0.021,
 }
