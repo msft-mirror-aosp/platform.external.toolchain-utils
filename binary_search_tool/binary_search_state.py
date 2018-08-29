@@ -1,4 +1,9 @@
 #!/usr/bin/env python2
+
+# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """The binary search wrapper."""
 
 from __future__ import print_function
@@ -63,8 +68,8 @@ class BinarySearchState(object):
   """The binary search state class."""
 
   def __init__(self, get_initial_items, switch_to_good, switch_to_bad,
-               test_setup_script, test_script, incremental, prune, iterations,
-               prune_iterations, verify, file_args, verbose):
+               test_setup_script, test_script, incremental, prune, pass_bisect,
+               iterations, prune_iterations, verify, file_args, verbose):
     """BinarySearchState constructor, see Run for full args documentation."""
     self.get_initial_items = get_initial_items
     self.switch_to_good = switch_to_good
@@ -73,6 +78,7 @@ class BinarySearchState(object):
     self.test_script = test_script
     self.incremental = incremental
     self.prune = prune
+    self.pass_bisect = pass_bisect
     self.iterations = iterations
     self.prune_iterations = prune_iterations
     self.verify = verify
@@ -269,6 +275,26 @@ class BinarySearchState(object):
         break
       # FIXME: Do we need to Convert the currently good items to bad
       self.PopulateItemsUsingList(new_all_items)
+
+    # If pass level bisecting is set, generate a script which contains command
+    # line options to rebuild bad item.
+    if self.pass_bisect:
+      assert not self.prune, 'Prune must be false if pass_bisect is set.'
+      status = self.GenerateBadCommandScript(self.found_items)
+      if status == 0:
+        self.l.LogOutput('Command script generated.')
+      else:
+        raise RuntimeError('Error while generating command script.')
+
+  def GenerateBadCommandScript(self, bad_items):
+    assert len(bad_items) == 1, 'Pruning is off, but number of bad items' \
+                                'found was not 1.'
+    item = list(bad_items)[0]
+
+    command = '%s %s' % (self.pass_bisect, item)
+    ret, _, _ = self.ce.RunCommandWExceptionCleanup(command,
+                  print_to_console=self.verbose)
+    return ret
 
   def DoBinarySearch(self):
     """Perform single iteration of binary search."""
@@ -467,6 +493,7 @@ class MockBinarySearchState(BinarySearchState):
         'test_script': None,
         'incremental': True,
         'prune': False,
+        'pass_bisect': None,
         'iterations': 50,
         'prune_iterations': 100,
         'verify': True,
@@ -498,6 +525,7 @@ def Run(get_initial_items,
         test_setup_script=None,
         iterations=50,
         prune=False,
+        pass_bisect=None,
         noincremental=False,
         file_args=False,
         verify=True,
@@ -520,6 +548,9 @@ def Run(get_initial_items,
     prune: If False the binary search tool will stop when the first bad item is
            found. Otherwise then binary search tool will continue searching
            until all bad items are found (or prune_iterations is reached).
+    pass_bisect: Script that takes single bad item from POPULATE_BAD and
+                 returns the compiler command used to generate the bad item.
+                 Requires that 'prune' be set to False.
     noincremental: Whether to send "diffs" of good/bad items to switch scripts.
     file_args: If True then arguments to switch scripts will be a file name
                containing a newline separated list of the items to switch.
@@ -532,18 +563,36 @@ def Run(get_initial_items,
   Returns:
     0 for success, error otherwise
   """
+  # Notice that all the argument checks are in the Run() function rather than
+  # in the Main() function. It is not common to do so but some wrappers are
+  # going to call Run() directly and bypass checks in Main() function.
   if resume:
+    logger.GetLogger().LogOutput('Resuming from %s' % STATE_FILE)
     bss = BinarySearchState.LoadState()
     if not bss:
       logger.GetLogger().LogOutput(
           '%s is not a valid binary_search_tool state file, cannot resume!' %
           STATE_FILE)
       return 1
+    logger.GetLogger().LogOutput('Note: resuming from previous state, '
+                                 'ignoring given options and loading saved '
+                                 'options instead.')
   else:
+    if not (get_initial_items and switch_to_good and
+            switch_to_bad and test_script):
+      logger.GetLogger().LogOutput('The following options are required: '
+                                   '[-i, -g, -b, -t] | [-r]')
+      return 1
+    if pass_bisect and prune:
+      logger.GetLogger().LogOutput('"--pass_bisect" only works when '
+                                   '"--prune" is set to be False.')
+      return 1
     switch_to_good = _CanonicalizeScript(switch_to_good)
     switch_to_bad = _CanonicalizeScript(switch_to_bad)
     if test_setup_script:
       test_setup_script = _CanonicalizeScript(test_setup_script)
+    if pass_bisect:
+      pass_bisect = _CanonicalizeScript(pass_bisect)
     test_script = _CanonicalizeScript(test_script)
     get_initial_items = _CanonicalizeScript(get_initial_items)
     incremental = not noincremental
@@ -552,8 +601,8 @@ def Run(get_initial_items,
 
     bss = BinarySearchState(get_initial_items, switch_to_good, switch_to_bad,
                             test_setup_script, test_script, incremental, prune,
-                            iterations, prune_iterations, verify, file_args,
-                            verbose)
+                            pass_bisect, iterations, prune_iterations, verify,
+                            file_args, verbose)
     bss.DoVerify()
 
   try:
@@ -576,18 +625,6 @@ def Main(argv):
   common.BuildArgParser(parser)
   logger.GetLogger().LogOutput(' '.join(argv))
   options = parser.parse_args(argv)
-
-  if not (options.get_initial_items and options.switch_to_good and
-          options.switch_to_bad and options.test_script) and not options.resume:
-    parser.print_help()
-    return 1
-
-  if options.resume:
-    logger.GetLogger().LogOutput('Resuming from %s' % STATE_FILE)
-    if len(argv) > 1:
-      logger.GetLogger().LogOutput(('Note: resuming from previous state, '
-                                    'ignoring given options and loading saved '
-                                    'options instead.'))
 
   # Get dictionary of all options
   args = vars(options)
