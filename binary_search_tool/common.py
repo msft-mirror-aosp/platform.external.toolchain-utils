@@ -196,9 +196,12 @@ def _BuildArgsDict(args):
       dest='pass_bisect',
       default=None,
       help='Script to generate another script for pass level bisect, '
-           'which contains command line options to build bad item.'
+           'which contains command line options to build bad item. '
+           'This will also turn on pass/transformation level bisection. '
+           'Needs support of `-opt-bisect-limit`(pass) and '
+           '`-print-debug-counter`(transformation) from LLVM. '
            'For now it only supports one single bad item, so to use it, '
-           'prune must be set to false.')
+           'prune must be set to False.')
   # No input (evals to False),
   # --noincremental (evals to True),
   # --noincremental=False,

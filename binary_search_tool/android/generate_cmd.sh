@@ -38,4 +38,15 @@ output+=${result}
 
 echo -e "${output}" > android/cmd_script.sh
 
+chmod u+x android/cmd_script.sh
+
 echo 'Script created as android/cmd_script.sh'
+
+# Check if compiler is LLVM.
+if grep -q "clang" android/cmd_script.sh
+then
+    exit 0
+else
+    echo 'Pass/transformation level bisection only works for LLVM compiler.'
+    exit 1
+fi
