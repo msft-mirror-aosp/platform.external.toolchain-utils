@@ -1,4 +1,4 @@
-#!/bin/bash -u
+#!/bin/bash -eu
 
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -28,13 +28,21 @@ output+='source android/common.sh\n'
 
 result=$(egrep -m 1 -- "${item}" ${populate_log})
 
+# Re-generate bad item to tmp directory location
+tmp_ir='/tmp/bisection_bad_item.o'
+result=$(sed "s|$item|-o $tmp_ir |g" <<< ${result})
+
 # Remove `:` after cd command
-result=$(sed 's/cd\:/cd/g' <<< ${result})
+result=$(sed 's|cd:|cd|g' <<< ${result})
 
 # Add environment variable which helps pass level bisection
-result=$(sed 's/ \-o / $LIMIT_FLAGS \-o /g' <<< ${result})
+result=$(sed 's| -o | $LIMIT_FLAGS -o |g' <<< ${result})
 
 output+=${result}
+
+# Symbolic link generated bad item to original object
+output+="\nln -f $tmp_ir $abs_path"
+output+="\ntouch $abs_path"
 
 echo -e "${output}" > android/cmd_script.sh
 
