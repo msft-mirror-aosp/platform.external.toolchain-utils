@@ -11,9 +11,10 @@ information on binary_search_state.py, see
 
 https://sites.google.com/a/google.com/chromeos-toolchain-team-home2/home/team-tools-and-scripts/binary-searcher-tool-for-triage
 
-This particular set of scripts is designed to work wtih
+This particular set of scripts is designed to work with
 binary_search_state.py in order to find the bad object or set of
-bad objects in an Android build.
+bad objects in an Android build. Furthermore, it can also help find
+the bad compiler pass and transformation when building that bad object.
 
 
 QUICKSTART:
@@ -94,6 +95,10 @@ FILES AND SCRIPTS:
 
   switch_to_good.sh - This script is used to link objects from the
                       'good' build tree into the work area.
+
+  generate_cmd.sh - This script will generate another temporary script, which
+                    contains the command line options to build the bad object
+                    file again with pass/transformation level limit.
 
 
 GENERATED SCRIPTS:
