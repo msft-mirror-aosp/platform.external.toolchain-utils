@@ -41,6 +41,7 @@ DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
 #                        Board                      Version
 #  ------------ -------  ------------ ------------- -------
 #  cave         x86_64   glados       skylake-y     3.18
+#  cheza        aarch64  cheza        SDM845        4.14
 #  daisy        armv7    daisy        exynos-5250   3.8.11
 #  elm          aarch64  oak          mediatek-8173 3.18
 #  fizz         x86_64   fizz         kabylake-u/r  4.4.*
@@ -61,10 +62,10 @@ DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
 #  terra        x86_64   strago       braswell      3.18
 #  veyron_jaq   armv7    veyron-pinky rockchip-3288 3.14
 #  whirlwind    armv7                               3.14
-#  zoombini     x86_64   zoombini     cannonlake-y  4.14.*
 
 TEST_BOARD = [
     'cave',
+    'cheza',
     'daisy',
     # 'elm', tested by arm64-llvm-next-toolchain builder.
     'fizz',
@@ -85,7 +86,6 @@ TEST_BOARD = [
     'terra',
     # 'veyron_jaq', tested by arm-llvm-next-toolchain builder.
     'whirlwind',
-    'zoombini',
 ]
 
 
