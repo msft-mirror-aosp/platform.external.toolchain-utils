@@ -23,7 +23,7 @@ do
 		aarch64)
 			glibc="/usr/aarch64-cros-linux-gnu/lib64"
 			loader="ld-linux-aarch64.so.1"
-			glibc32="/usr/armv7a-cros-linux-gnueabi/lib"
+			glibc32="/usr/armv7a-cros-linux-gnueabihf/lib"
 			loader32="ld-linux-armhf.so.3"
 			;;
 		*)
