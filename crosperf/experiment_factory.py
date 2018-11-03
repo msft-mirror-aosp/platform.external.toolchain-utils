@@ -177,6 +177,22 @@ class ExperimentFactory(object):
                                   test_args, iterations, rm_chroot_tmp,
                                   perf_args, suite, show_all_results, retries,
                                   run_local)
+        elif test_name == 'all_crosbolt_perf':
+          self.AppendBenchmarkSet(benchmarks, telemetry_crosbolt_perf_tests,
+                                  test_args, iterations, rm_chroot_tmp,
+                                  perf_args, 'telemetry_Crosperf',
+                                  show_all_results, retries, run_local)
+          self.AppendBenchmarkSet(
+              benchmarks,
+              crosbolt_perf_tests,
+              '',
+              iterations,
+              rm_chroot_tmp,
+              perf_args,
+              '',
+              show_all_results,
+              retries,
+              run_local=False)
         elif test_name == 'all_toolchain_perf':
           self.AppendBenchmarkSet(benchmarks, telemetry_toolchain_perf_tests,
                                   test_args, iterations, rm_chroot_tmp,
@@ -210,22 +226,6 @@ class ExperimentFactory(object):
           self.AppendBenchmarkSet(
               benchmarks,
               graphics_perf_tests,
-              '',
-              iterations,
-              rm_chroot_tmp,
-              perf_args,
-              '',
-              show_all_results,
-              retries,
-              run_local=False)
-        elif test_name == 'all_crosbolt_perf':
-          self.AppendBenchmarkSet(benchmarks, telemetry_crosbolt_perf_tests,
-                                  test_args, iterations, rm_chroot_tmp,
-                                  perf_args, 'telemetry_Crosperf',
-                                  show_all_results, retries, run_local)
-          self.AppendBenchmarkSet(
-              benchmarks,
-              crosbolt_perf_tests,
               '',
               iterations,
               rm_chroot_tmp,
