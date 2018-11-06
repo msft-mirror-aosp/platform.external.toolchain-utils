@@ -156,12 +156,29 @@ class ExperimentFactory(object):
     # inherited and/or merged with the global settings values.
     benchmarks = []
     all_benchmark_settings = experiment_file.GetSettings('benchmark')
+    # Check if there is duplicated benchmark name
+    benchmark_names = {}
     for benchmark_settings in all_benchmark_settings:
       benchmark_name = benchmark_settings.name
       test_name = benchmark_settings.GetField('test_name')
       if not test_name:
         test_name = benchmark_name
       test_args = benchmark_settings.GetField('test_args')
+
+      # Rename benchmark name if 'story-filter' or 'story-tag-filter' specified
+      # in test_args.
+      for arg in test_args.split():
+        if '--story-filter' in arg or '--story-tag-filter' in arg:
+          # Rename benchmark name with an extension of 'story'-option
+          benchmark_name = '%s@@%s' % (benchmark_name, arg.split('=')[-1])
+        break
+
+      # Check for duplicated benchmark name after renaming
+      if not benchmark_name in benchmark_names:
+        benchmark_names[benchmark_name] = True
+      else:
+        raise SyntaxError("Duplicate benchmark name: '%s'." % benchmark_name)
+
       iterations = benchmark_settings.GetField('iterations')
       suite = benchmark_settings.GetField('suite')
       retries = benchmark_settings.GetField('retries')
@@ -217,8 +234,8 @@ class ExperimentFactory(object):
                                   iterations, rm_chroot_tmp, perf_args, suite,
                                   show_all_results, retries, run_local)
         else:
-          benchmark = Benchmark(test_name, test_name, test_args, iterations,
-                                rm_chroot_tmp, perf_args, suite,
+          benchmark = Benchmark(benchmark_name, test_name, test_args,
+                                iterations, rm_chroot_tmp, perf_args, suite,
                                 show_all_results, retries, run_local)
           benchmarks.append(benchmark)
       else:

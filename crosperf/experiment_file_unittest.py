@@ -65,6 +65,24 @@ EXPERIMENT_FILE_3 = """
   }
   """
 
+EXPERIMENT_FILE_4 = """
+  board: x86-alex
+  remote: chromeos-alex3
+  iterations: 3
+
+  benchmark: webrtc {
+    test_args: --story-filter=datachannel
+  }
+
+  benchmark: webrtc {
+    test_args: --story-tag-filter=smoothness
+  }
+
+  image1 {
+    chromeos_image:/usr/local/google/cros_image1.bin
+  }
+  """
+
 OUTPUT_FILE = """board: x86-alex
 remote: chromeos-alex3
 perf_args: record -a -e cycles
@@ -123,6 +141,17 @@ class ExperimentFileTest(unittest.TestCase):
   def testDuplicateLabel(self):
     input_file = StringIO.StringIO(EXPERIMENT_FILE_3)
     self.assertRaises(Exception, ExperimentFile, input_file)
+
+  def testDuplicateBenchmark(self):
+    input_file = StringIO.StringIO(EXPERIMENT_FILE_4)
+    experiment_file = ExperimentFile(input_file)
+    benchmark_settings = experiment_file.GetSettings('benchmark')
+    self.assertEqual(benchmark_settings[0].name, 'webrtc')
+    self.assertEqual(benchmark_settings[0].GetField('test_args'),
+                     '--story-filter=datachannel')
+    self.assertEqual(benchmark_settings[1].name, 'webrtc')
+    self.assertEqual(benchmark_settings[1].GetField('test_args'),
+                     '--story-tag-filter=smoothness')
 
   def testCanonicalize(self):
     input_file = StringIO.StringIO(EXPERIMENT_FILE_1)

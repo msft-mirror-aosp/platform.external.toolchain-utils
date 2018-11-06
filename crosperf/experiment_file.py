@@ -97,7 +97,7 @@ class ExperimentFile(object):
         field = self._ParseField(reader)
         settings.SetField(field[0], field[1], field[2])
       elif ExperimentFile._CLOSE_SETTINGS_RE.match(line):
-        return settings
+        return settings, settings_type
 
     raise EOFError('Unexpected EOF while parsing settings block.')
 
@@ -112,11 +112,15 @@ class ExperimentFile(object):
         if not line:
           continue
         elif ExperimentFile._OPEN_SETTINGS_RE.match(line):
-          new_settings = self._ParseSettings(reader)
-          if new_settings.name in settings_names:
-            raise SyntaxError(
-                "Duplicate settings name: '%s'." % new_settings.name)
-          settings_names[new_settings.name] = True
+          new_settings, settings_type = self._ParseSettings(reader)
+          # We will allow benchmarks with duplicated settings name for now.
+          # Further decision will be made when parsing benchmark details in
+          # ExperimentFactory.GetExperiment().
+          if settings_type != 'benchmark':
+            if new_settings.name in settings_names:
+              raise SyntaxError(
+                  "Duplicate settings name: '%s'." % new_settings.name)
+            settings_names[new_settings.name] = True
           self.all_settings.append(new_settings)
         elif ExperimentFile._FIELD_VALUE_RE.match(line):
           field = self._ParseField(reader)

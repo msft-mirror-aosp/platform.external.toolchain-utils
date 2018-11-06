@@ -29,6 +29,11 @@ EXPERIMENT_FILE_1 = """
     iterations: 3
   }
 
+  benchmark: webrtc {
+    iterations: 1
+    test_args: --story-filter=datachannel
+  }
+
   image1 {
     chromeos_image: /usr/local/google/cros_image1.bin
   }
@@ -53,15 +58,30 @@ class ExperimentFactoryTest(unittest.TestCase):
         experiment_file, working_directory='', log_dir='')
     self.assertEqual(exp.remote, ['chromeos-alex3'])
 
-    self.assertEqual(len(exp.benchmarks), 1)
+    self.assertEqual(len(exp.benchmarks), 2)
     self.assertEqual(exp.benchmarks[0].name, 'PageCycler')
     self.assertEqual(exp.benchmarks[0].test_name, 'PageCycler')
     self.assertEqual(exp.benchmarks[0].iterations, 3)
+    self.assertEqual(exp.benchmarks[1].name, 'webrtc@@datachannel')
+    self.assertEqual(exp.benchmarks[1].test_name, 'webrtc')
+    self.assertEqual(exp.benchmarks[1].iterations, 1)
 
     self.assertEqual(len(exp.labels), 2)
     self.assertEqual(exp.labels[0].chromeos_image,
                      '/usr/local/google/cros_image1.bin')
     self.assertEqual(exp.labels[0].board, 'x86-alex')
+
+  def testDuplecateBenchmark(self):
+    mock_experiment_file = ExperimentFile(StringIO.StringIO(''))
+    mock_experiment_file.all_settings = []
+    benchmark_settings1 = settings_factory.BenchmarkSettings('name')
+    mock_experiment_file.all_settings.append(benchmark_settings1)
+    benchmark_settings2 = settings_factory.BenchmarkSettings('name')
+    mock_experiment_file.all_settings.append(benchmark_settings2)
+
+    with self.assertRaises(SyntaxError):
+      ef = ExperimentFactory()
+      ef.GetExperiment(mock_experiment_file, '', '')
 
   def test_append_benchmark_set(self):
     ef = ExperimentFactory()
@@ -158,7 +178,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertEqual(exp.log_level, 'average')
 
     self.assertEqual(len(exp.benchmarks), 1)
-    self.assertEqual(exp.benchmarks[0].name, 'kraken')
+    self.assertEqual(exp.benchmarks[0].name, 'bench_test')
     self.assertEqual(exp.benchmarks[0].test_name, 'kraken')
     self.assertEqual(exp.benchmarks[0].iterations, 1)
     self.assertEqual(exp.benchmarks[0].suite, 'telemetry_Crosperf')
