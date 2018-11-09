@@ -56,7 +56,8 @@ class Benchmark(object):
                suite='',
                show_all_results=False,
                retries=0,
-               run_local=False):
+               run_local=False,
+               weight=0):
     self.name = name
     #For telemetry, this is the benchmark name.
     self.test_name = test_name
@@ -74,3 +75,4 @@ class Benchmark(object):
     if run_local and self.suite != 'telemetry_Crosperf':
       raise RuntimeError('run_local is only supported by telemetry_Crosperf.')
     self.run_local = run_local
+    self.weight = weight

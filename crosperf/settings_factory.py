@@ -6,6 +6,7 @@
 from __future__ import print_function
 
 from field import BooleanField
+from field import FloatField
 from field import IntegerField
 from field import ListField
 from field import TextField
@@ -51,6 +52,11 @@ class BenchmarkSettings(Settings):
             'telemetry_Crosperf.',
             required=False,
             default=True))
+    self.AddField(
+        FloatField(
+            'weight',
+            default=0.0,
+            description='Weight of the benchmark for CWP approximation'))
 
 
 class LabelSettings(Settings):
@@ -286,6 +292,16 @@ class GlobalSettings(Settings):
             default=0,
             description='Number of times to retry a '
             'benchmark run.'))
+    self.AddField(
+        TextField(
+            'cwp_dso',
+            description='The DSO type that we want to use for '
+            'CWP approximation. This is used to run telemetry '
+            'benchmarks. Valid DSO types can be found from dso_list '
+            'in experiment_factory.py. The default value is set to '
+            'be empty.',
+            required=False,
+            default=''))
 
 
 class SettingsFactory(object):

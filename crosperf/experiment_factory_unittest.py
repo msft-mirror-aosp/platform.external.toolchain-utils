@@ -43,6 +43,30 @@ EXPERIMENT_FILE_1 = """
   }
   """
 
+EXPERIMENT_FILE_2 = """
+  board: x86-alex
+  remote: chromeos-alex3
+
+  cwp_dso: kallsyms
+
+  benchmark: Octane {
+    iterations: 1
+    suite: telemetry_Crosperf
+    weight: 0.8
+  }
+
+  benchmark: Kraken {
+    iterations: 1
+    suite: telemetry_Crosperf
+    weight: 0.2
+  }
+
+  image1 {
+    chromeos_image: /usr/local/google/cros_image1.bin
+  }
+  """
+
+
 # pylint: disable=too-many-function-args
 
 
@@ -71,6 +95,15 @@ class ExperimentFactoryTest(unittest.TestCase):
                      '/usr/local/google/cros_image1.bin')
     self.assertEqual(exp.labels[0].board, 'x86-alex')
 
+  def testLoadExperimentFile2CWP(self):
+    experiment_file = ExperimentFile(StringIO.StringIO(EXPERIMENT_FILE_2))
+    exp = ExperimentFactory().GetExperiment(
+        experiment_file, working_directory='', log_dir='')
+    self.assertEqual(exp.cwp_dso, 'kallsyms')
+    self.assertEqual(len(exp.benchmarks), 2)
+    self.assertEqual(exp.benchmarks[0].weight, 0.8)
+    self.assertEqual(exp.benchmarks[1].weight, 0.2)
+
   def testDuplecateBenchmark(self):
     mock_experiment_file = ExperimentFile(StringIO.StringIO(''))
     mock_experiment_file.all_settings = []
@@ -82,6 +115,71 @@ class ExperimentFactoryTest(unittest.TestCase):
     with self.assertRaises(SyntaxError):
       ef = ExperimentFactory()
       ef.GetExperiment(mock_experiment_file, '', '')
+
+  def testCWPExceptions(self):
+    mock_experiment_file = ExperimentFile(StringIO.StringIO(''))
+    mock_experiment_file.all_settings = []
+    global_settings = settings_factory.GlobalSettings('test_name')
+
+    # Test 1: DSO type not supported
+    global_settings.SetField('cwp_dso', 'test')
+    self.assertEqual(global_settings.GetField('cwp_dso'), 'test')
+    mock_experiment_file.global_settings = global_settings
+    with self.assertRaises(RuntimeError) as msg:
+      ef = ExperimentFactory()
+      ef.GetExperiment(mock_experiment_file, '', '')
+    self.assertEqual('The DSO specified is not supported',
+                     str(msg.exception))
+
+    # Test 2: No weight after DSO specified
+    global_settings.SetField('cwp_dso', 'kallsyms')
+    mock_experiment_file.global_settings = global_settings
+    benchmark_settings = settings_factory.BenchmarkSettings('name')
+    mock_experiment_file.all_settings.append(benchmark_settings)
+    with self.assertRaises(RuntimeError) as msg:
+      ef = ExperimentFactory()
+      ef.GetExperiment(mock_experiment_file, '', '')
+    self.assertEqual('With DSO specified, each benchmark should have a weight',
+                     str(msg.exception))
+
+    # Test 3: Weight is set, but no dso specified
+    global_settings.SetField('cwp_dso', '')
+    mock_experiment_file.global_settings = global_settings
+    benchmark_settings = settings_factory.BenchmarkSettings('name')
+    benchmark_settings.SetField('weight', '0.8')
+    mock_experiment_file.all_settings = []
+    mock_experiment_file.all_settings.append(benchmark_settings)
+    with self.assertRaises(RuntimeError) as msg:
+      ef = ExperimentFactory()
+      ef.GetExperiment(mock_experiment_file, '', '')
+    self.assertEqual('Weight can only be set when DSO specified',
+                     str(msg.exception))
+
+    # Test 4: cwp_dso only works for telemetry_Crosperf benchmarks
+    global_settings.SetField('cwp_dso', 'kallsyms')
+    mock_experiment_file.global_settings = global_settings
+    benchmark_settings = settings_factory.BenchmarkSettings('name')
+    benchmark_settings.SetField('weight', '0.8')
+    mock_experiment_file.all_settings = []
+    mock_experiment_file.all_settings.append(benchmark_settings)
+    with self.assertRaises(RuntimeError) as msg:
+      ef = ExperimentFactory()
+      ef.GetExperiment(mock_experiment_file, '', '')
+    self.assertEqual('CWP approximation weight only works with '
+                     'telemetry_Crosperf suite',
+                     str(msg.exception))
+
+    # Test 5: weight should be float between 0 and 1
+    benchmark_settings = settings_factory.BenchmarkSettings('name')
+    benchmark_settings.SetField('weight', '1.2')
+    benchmark_settings.SetField('suite', 'telemetry_Crosperf')
+    mock_experiment_file.all_settings = []
+    mock_experiment_file.all_settings.append(benchmark_settings)
+    with self.assertRaises(RuntimeError) as msg:
+      ef = ExperimentFactory()
+      ef.GetExperiment(mock_experiment_file, '', '')
+    self.assertEqual('Weight should be a float between 0 and 1',
+                     str(msg.exception))
 
   def test_append_benchmark_set(self):
     ef = ExperimentFactory()

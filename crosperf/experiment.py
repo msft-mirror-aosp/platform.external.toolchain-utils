@@ -27,7 +27,7 @@ class Experiment(object):
   def __init__(self, name, remote, working_directory, chromeos_root,
                cache_conditions, labels, benchmarks, experiment_file, email_to,
                acquire_timeout, log_dir, log_level, share_cache,
-               results_directory, locks_directory):
+               results_directory, locks_directory, cwp_dso):
     self.name = name
     self.working_directory = working_directory
     self.remote = remote
@@ -53,6 +53,7 @@ class Experiment(object):
     # locking mechanism.
     self.locks_dir = locks_directory
     self.locked_machines = []
+    self.cwp_dso = cwp_dso
 
     if not remote:
       raise RuntimeError('No remote hosts specified')

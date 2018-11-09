@@ -82,6 +82,11 @@ crosbolt_perf_tests = [
 #    'cheets_LinpackTest',
 #]
 
+dso_list = [
+    'all',
+    'chrome',
+    'kallsyms',
+]
 
 class ExperimentFactory(object):
   """Factory class for building an Experiment, given an ExperimentFile as input.
@@ -137,6 +142,9 @@ class ExperimentFactory(object):
     log_level = global_settings.GetField('logging_level')
     if log_level not in ('quiet', 'average', 'verbose'):
       log_level = 'verbose'
+    cwp_dso = global_settings.GetField('cwp_dso')
+    if cwp_dso and not cwp_dso in dso_list:
+      raise RuntimeError('The DSO specified is not supported')
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.
     cache_conditions = [
@@ -183,6 +191,18 @@ class ExperimentFactory(object):
       suite = benchmark_settings.GetField('suite')
       retries = benchmark_settings.GetField('retries')
       run_local = benchmark_settings.GetField('run_local')
+      weight = benchmark_settings.GetField('weight')
+      if weight:
+        if not cwp_dso:
+          raise RuntimeError('Weight can only be set when DSO specified')
+        if suite != 'telemetry_Crosperf':
+          raise RuntimeError('CWP approximation weight only works with '
+                             'telemetry_Crosperf suite')
+        if weight > 1 or weight < 0:
+          raise RuntimeError('Weight should be a float between 0 and 1')
+      elif cwp_dso:
+        raise RuntimeError('With DSO specified, each benchmark should have a '
+                           'weight')
 
       if suite == 'telemetry_Crosperf':
         if test_name == 'all_perfv2':
@@ -234,9 +254,9 @@ class ExperimentFactory(object):
                                   iterations, rm_chroot_tmp, perf_args, suite,
                                   show_all_results, retries, run_local)
         else:
-          benchmark = Benchmark(benchmark_name, test_name, test_args,
-                                iterations, rm_chroot_tmp, perf_args, suite,
-                                show_all_results, retries, run_local)
+          benchmark = Benchmark(benchmark_name, test_name, test_args, iterations,
+                                rm_chroot_tmp, perf_args, suite,
+                                show_all_results, retries, run_local, weight)
           benchmarks.append(benchmark)
       else:
         if test_name == 'all_graphics_perf':
@@ -330,7 +350,7 @@ class ExperimentFactory(object):
                             chromeos_root, cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(), email,
                             acquire_timeout, log_dir, log_level, share_cache,
-                            results_dir, locks_dir)
+                            results_dir, locks_dir, cwp_dso)
 
     return experiment
 
@@ -352,4 +372,4 @@ class ExperimentFactory(object):
       raise RuntimeError('IOError while reading file {0}'
                          .format(default_remotes_file))
     else:
-      raise RuntimeError('There is not remote for {0}'.format(board))
+      raise RuntimeError('There is no remote for {0}'.format(board))
