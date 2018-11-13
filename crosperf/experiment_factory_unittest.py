@@ -181,6 +181,20 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertEqual('Weight should be a float between 0 and 1',
                      str(msg.exception))
 
+    # Test 6: more than one story tag in test_args
+    benchmark_settings = settings_factory.BenchmarkSettings('name')
+    benchmark_settings.SetField('test_args',
+                                '--story-filter=a --story-tag-filter=b')
+    benchmark_settings.SetField('weight', '1.2')
+    benchmark_settings.SetField('suite', 'telemetry_Crosperf')
+    mock_experiment_file.all_settings = []
+    mock_experiment_file.all_settings.append(benchmark_settings)
+    with self.assertRaises(RuntimeError) as msg:
+      ef = ExperimentFactory()
+      ef.GetExperiment(mock_experiment_file, '', '')
+    self.assertEqual('Only one story or story-tag filter allowed in a single '
+                     'benchmark run', str(msg.exception))
+
   def test_append_benchmark_set(self):
     ef = ExperimentFactory()
 

@@ -174,12 +174,16 @@ class ExperimentFactory(object):
       test_args = benchmark_settings.GetField('test_args')
 
       # Rename benchmark name if 'story-filter' or 'story-tag-filter' specified
-      # in test_args.
+      # in test_args. Make sure these two tags only appear once.
+      story_count = 0
       for arg in test_args.split():
-        if '--story-filter' in arg or '--story-tag-filter' in arg:
+        if '--story-filter=' in arg or '--story-tag-filter=' in arg:
+          story_count += 1
+          if story_count > 1:
+            raise RuntimeError("Only one story or story-tag filter allowed in "
+                               "a single benchmark run")
           # Rename benchmark name with an extension of 'story'-option
           benchmark_name = '%s@@%s' % (benchmark_name, arg.split('=')[-1])
-        break
 
       # Check for duplicated benchmark name after renaming
       if not benchmark_name in benchmark_names:
