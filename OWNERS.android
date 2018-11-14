@@ -1,5 +1,1 @@
-chh@google.com
-ndesaulniers@google.com
-pirama@google.com
-srhines@google.com
-yikong@google.com
+include platform/prebuilts/clang/host/linux-x86:/OWNERS
