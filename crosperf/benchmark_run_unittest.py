@@ -399,7 +399,7 @@ class BenchmarkRunTest(unittest.TestCase):
     self.assertEqual(mock_result.call_count, 1)
     mock_result.assert_called_with(
         self.mock_logger, 'average', self.test_label, None, "{'Score':100}", '',
-        0, 'page_cycler.netsim.top_10', 'telemetry_Crosperf')
+        0, 'page_cycler.netsim.top_10', 'telemetry_Crosperf', '', 0.0)
 
   def test_set_cache_conditions(self):
     br = benchmark_run.BenchmarkRun(

@@ -57,6 +57,8 @@ class Result(object):
     self.keyvals = None
     self.board = None
     self.suite = None
+    self.cwp_dso = ''
+    self.weight = 0.0
     self.retval = None
     self.out = None
 
@@ -266,13 +268,15 @@ class Result(object):
           value = str(misc.UnitToNumber(num_events))
           self.keyvals[key] = value
 
-  def PopulateFromRun(self, out, err, retval, test, suite):
+  def PopulateFromRun(self, out, err, retval, test, suite, cwp_dso, weight):
     self.board = self.label.board
     self.out = out
     self.err = err
     self.retval = retval
     self.test_name = test
     self.suite = suite
+    self.cwp_dso = cwp_dso
+    self.weight = weight
     self.chroot_results_dir = self.GetResultsDir()
     self.results_dir = misc.GetOutsideChrootPath(self.chromeos_root,
                                                  self.chroot_results_dir)
@@ -450,12 +454,14 @@ class Result(object):
                     err,
                     retval,
                     test,
-                    suite='telemetry_Crosperf'):
+                    suite='telemetry_Crosperf',
+                    cwp_dso='',
+                    weight=0.0):
     if suite == 'telemetry':
       result = TelemetryResult(logger, label, log_level, machine)
     else:
       result = cls(logger, label, log_level, machine)
-    result.PopulateFromRun(out, err, retval, test, suite)
+    result.PopulateFromRun(out, err, retval, test, suite, cwp_dso, weight)
     return result
 
   @classmethod
@@ -487,7 +493,7 @@ class TelemetryResult(Result):
     super(TelemetryResult, self).__init__(logger, label, log_level, machine,
                                           cmd_exec)
 
-  def PopulateFromRun(self, out, err, retval, test, suite):
+  def PopulateFromRun(self, out, err, retval, test, suite, cwp_dso, weight):
     self.out = out
     self.err = err
     self.retval = retval

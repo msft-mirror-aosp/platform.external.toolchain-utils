@@ -258,9 +258,10 @@ class ExperimentFactory(object):
                                   iterations, rm_chroot_tmp, perf_args, suite,
                                   show_all_results, retries, run_local)
         else:
-          benchmark = Benchmark(benchmark_name, test_name, test_args, iterations,
-                                rm_chroot_tmp, perf_args, suite,
-                                show_all_results, retries, run_local, weight)
+          benchmark = Benchmark(benchmark_name, test_name, test_args,
+                                iterations, rm_chroot_tmp, perf_args, suite,
+                                show_all_results, retries, run_local, cwp_dso,
+                                weight)
           benchmarks.append(benchmark)
       else:
         if test_name == 'all_graphics_perf':

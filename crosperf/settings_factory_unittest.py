@@ -18,7 +18,7 @@ class BenchmarkSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.BenchmarkSettings('b_settings')
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 6)
+    self.assertEqual(len(res.fields), 7)
     self.assertEqual(res.GetField('test_name'), '')
     self.assertEqual(res.GetField('test_args'), '')
     self.assertEqual(res.GetField('iterations'), 0)
@@ -48,7 +48,7 @@ class GlobalSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.GlobalSettings('g_settings')
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 25)
+    self.assertEqual(len(res.fields), 26)
     self.assertEqual(res.GetField('name'), '')
     self.assertEqual(res.GetField('board'), '')
     self.assertEqual(res.GetField('remote'), None)
@@ -70,6 +70,7 @@ class GlobalSettingsTest(unittest.TestCase):
     self.assertEqual(res.GetField('share_cache'), '')
     self.assertEqual(res.GetField('results_dir'), '')
     self.assertEqual(res.GetField('chrome_src'), '')
+    self.assertEqual(res.GetField('cwp_dso'), '')
 
 
 class SettingsFactoryTest(unittest.TestCase):
@@ -87,12 +88,12 @@ class SettingsFactoryTest(unittest.TestCase):
     b_settings = settings_factory.SettingsFactory().GetSettings(
         'benchmark', 'benchmark')
     self.assertIsInstance(b_settings, settings_factory.BenchmarkSettings)
-    self.assertEqual(len(b_settings.fields), 6)
+    self.assertEqual(len(b_settings.fields), 7)
 
     g_settings = settings_factory.SettingsFactory().GetSettings(
         'global', 'global')
     self.assertIsInstance(g_settings, settings_factory.GlobalSettings)
-    self.assertEqual(len(g_settings.fields), 25)
+    self.assertEqual(len(g_settings.fields), 26)
 
 
 if __name__ == '__main__':

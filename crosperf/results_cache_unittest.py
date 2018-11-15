@@ -592,7 +592,8 @@ class ResultTest(unittest.TestCase):
     self.result.GeneratePerfReportFiles = FakeGetPerfReportFiles
     self.result.ProcessResults = FakeProcessResults
 
-    self.result.PopulateFromRun(OUTPUT, '', 0, 'test', 'telemetry_Crosperf')
+    self.result.PopulateFromRun(OUTPUT, '', 0, 'test', 'telemetry_Crosperf',
+                                '', 0.0)
     self.assertTrue(self.callGetResultsDir)
     self.assertTrue(self.callGetResultsFile)
     self.assertTrue(self.callGetPerfDataFiles)
@@ -914,7 +915,7 @@ class TelemetryResultTest(unittest.TestCase):
                                   self.mock_cmd_exec)
     self.result.ProcessResults = FakeProcessResults
     self.result.PopulateFromRun(OUTPUT, error, 3, 'fake_test',
-                                'telemetry_Crosperf')
+                                'telemetry_Crosperf', '', 0.0)
     self.assertTrue(self.callFakeProcessResults)
     self.assertEqual(self.result.out, OUTPUT)
     self.assertEqual(self.result.err, error)

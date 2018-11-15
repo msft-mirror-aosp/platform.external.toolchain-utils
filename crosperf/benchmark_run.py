@@ -95,7 +95,8 @@ class BenchmarkRun(threading.Thread):
         err = 'No cache hit.'
         self.result = Result.CreateFromRun(
             self._logger, self.log_level, self.label, self.machine, output, err,
-            retval, self.benchmark.test_name, self.benchmark.suite)
+            retval, self.benchmark.test_name, self.benchmark.suite,
+            self.benchmark.cwp_dso, self.benchmark.weight)
 
       else:
         self._logger.LogOutput('%s: No cache hit.' % self.name)
@@ -211,7 +212,8 @@ class BenchmarkRun(threading.Thread):
     self.run_completed = True
     return Result.CreateFromRun(self._logger, self.log_level, self.label,
                                 self.machine, out, err, retval,
-                                self.benchmark.test_name, self.benchmark.suite)
+                                self.benchmark.test_name, self.benchmark.suite,
+                                self.benchmark.cwp_dso, self.benchmark.weight)
 
   def SetCacheConditions(self, cache_conditions):
     self.cache_conditions = cache_conditions
