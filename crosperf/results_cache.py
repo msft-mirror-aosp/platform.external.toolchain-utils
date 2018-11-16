@@ -188,6 +188,50 @@ class Result(object):
       keyvals_dict = self.AppendTelemetryUnits(keyvals_dict, units_dict)
     return keyvals_dict
 
+  def GetCPUCycles(self):
+    cpu_cycles = []
+    for perf_data_file in self.perf_data_files:
+      chroot_perf_data_file = misc.GetInsideChrootPath(self.chromeos_root,
+                                                       perf_data_file)
+      perf_path = os.path.join(self.chromeos_root, 'chroot', 'usr/bin/perf')
+      perf_file = '/usr/sbin/perf'
+      if os.path.exists(perf_path):
+        perf_file = '/usr/bin/perf'
+
+      # For each perf.data, we want to collect sample count for specific DSO.
+      # We specify exact match for known DSO type, and every sample for `all`.
+      exact_match = ''
+      if self.cwp_dso == 'all':
+        exact_match = '""'
+      elif self.cwp_dso == 'chrome':
+        exact_match = '" chrome "'
+      elif self.cwp_dso == 'kallsyms':
+        exact_match = '"[kernal.kallsyms]"'
+      else:
+        # This will need to be updated once there are more DSO types supported,
+        # if user want an exact match for the field they want.
+        exact_match = '"%s"' % self.cwp_dso
+
+      command = ('%s report -n -s dso -i %s 2> /dev/null | grep %s'
+                  % (perf_file, chroot_perf_data_file, exact_match))
+      _, result, _ = self.ce.ChrootRunCommandWOutput(self.chromeos_root,
+                                                     command)
+      # Accumulate the sample count for all matched fields.
+      # Each line looks like this:
+      #     45.42%        237210  chrome
+      # And we want the second number which is the sample count.
+      cpu_cycle = 0
+      try:
+        for line in result.split('\n'):
+          attr = line.split()
+          if len(attr) == 3 and '%' in attr[0]:
+            cpu_cycle += int(attr[1])
+      except:
+        raise RuntimeError('Cannot parse perf dso result')
+
+      cpu_cycles.append(cpu_cycle)
+    return cpu_cycles
+
   def GetResultsDir(self):
     mo = re.search(r'Results placed in (\S+)', self.out)
     if mo:
@@ -339,6 +383,10 @@ class Result(object):
               'collect results.\n')
       self.keyvals = self.GetKeyvals()
     self.keyvals['retval'] = self.retval
+    # If we are in CWP approximation mode, we want to collect DSO CPU cycles
+    # for each perf.data file
+    if self.cwp_dso:
+      self.keyvals['cpu_cycles'] = self.GetCPUCycles()
     # Generate report from all perf.data files.
     # Now parse all perf report files and include them in keyvals.
     self.GatherPerfResults()
