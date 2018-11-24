@@ -17,9 +17,9 @@ from cros_utils import logger
 INITIAL_SLEEP_TIME = 7200  # 2 hours; wait time before polling buildbot.
 SLEEP_TIME = 600  # 10 minutes; time between polling of buildbot.
 
-# Some of our slower builders (llmv-next) are taking more
-# than 8 hours. So, increase this TIME_OUT to 9 hours.
-TIME_OUT = 32400  # Decide the build is dead or will never finish
+# Some of our slower builders (llvm-next) are taking more
+# than 8 hours. So, increase this TIME_OUT to 10.5 hours.
+TIME_OUT = 37800  # Decide the build is dead or will never finish
 
 
 class BuildbotTimeout(Exception):
