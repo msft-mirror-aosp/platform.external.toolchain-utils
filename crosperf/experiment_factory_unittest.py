@@ -52,12 +52,14 @@ EXPERIMENT_FILE_2 = """
   benchmark: Octane {
     iterations: 1
     suite: telemetry_Crosperf
+    run_local: False
     weight: 0.8
   }
 
   benchmark: Kraken {
     iterations: 1
     suite: telemetry_Crosperf
+    run_local: False
     weight: 0.2
   }
 
@@ -169,10 +171,24 @@ class ExperimentFactoryTest(unittest.TestCase):
                      'telemetry_Crosperf suite',
                      str(msg.exception))
 
-    # Test 5: weight should be float between 0 and 1
+    # Test 5: cwp_dso does not work for local run
+    benchmark_settings = settings_factory.BenchmarkSettings('name')
+    benchmark_settings.SetField('weight', '0.8')
+    benchmark_settings.SetField('suite', 'telemetry_Crosperf')
+    benchmark_settings.SetField('run_local', 'True')
+    mock_experiment_file.all_settings = []
+    mock_experiment_file.all_settings.append(benchmark_settings)
+    with self.assertRaises(RuntimeError) as msg:
+      ef = ExperimentFactory()
+      ef.GetExperiment(mock_experiment_file, '', '')
+    self.assertEqual('run_local must be set to False to use CWP approximation',
+                     str(msg.exception))
+
+    # Test 6: weight should be float between 0 and 1
     benchmark_settings = settings_factory.BenchmarkSettings('name')
     benchmark_settings.SetField('weight', '1.2')
     benchmark_settings.SetField('suite', 'telemetry_Crosperf')
+    benchmark_settings.SetField('run_local', 'False')
     mock_experiment_file.all_settings = []
     mock_experiment_file.all_settings.append(benchmark_settings)
     with self.assertRaises(RuntimeError) as msg:
@@ -181,7 +197,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertEqual('Weight should be a float between 0 and 1',
                      str(msg.exception))
 
-    # Test 6: more than one story tag in test_args
+    # Test 7: more than one story tag in test_args
     benchmark_settings = settings_factory.BenchmarkSettings('name')
     benchmark_settings.SetField('test_args',
                                 '--story-filter=a --story-tag-filter=b')

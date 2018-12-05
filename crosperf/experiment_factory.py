@@ -202,6 +202,9 @@ class ExperimentFactory(object):
         if suite != 'telemetry_Crosperf':
           raise RuntimeError('CWP approximation weight only works with '
                              'telemetry_Crosperf suite')
+        if run_local:
+          raise RuntimeError('run_local must be set to False to use CWP '
+                             'approximation')
         if weight > 1 or weight < 0:
           raise RuntimeError('Weight should be a float between 0 and 1')
       elif cwp_dso:
