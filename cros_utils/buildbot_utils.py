@@ -59,6 +59,10 @@ def PeekTrybotImage(chromeos_root, buildbucket_id):
 
   results = json.loads(out)[buildbucket_id]
 
+  # Handle the case where the tryjob failed to launch correctly.
+  if results['artifacts_url'] is None:
+    return (results['status'], '')
+
   return (results['status'], results['artifacts_url'].rstrip('/'))
 
 
