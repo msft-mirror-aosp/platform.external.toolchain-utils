@@ -189,7 +189,7 @@ class Result(object):
     return keyvals_dict
 
   def GetCPUCycles(self):
-    cpu_cycles = []
+    cpu_cycles = 0
     for perf_data_file in self.perf_data_files:
       chroot_perf_data_file = misc.GetInsideChrootPath(self.chromeos_root,
                                                        perf_data_file)
@@ -229,7 +229,7 @@ class Result(object):
       except:
         raise RuntimeError('Cannot parse perf dso result')
 
-      cpu_cycles.append(cpu_cycle)
+      cpu_cycles += cpu_cycle
     return cpu_cycles
 
   def GetResultsDir(self):
@@ -382,11 +382,11 @@ class Result(object):
         print('\n ** WARNING **: Had to use deprecated output-method to '
               'collect results.\n')
       self.keyvals = self.GetKeyvals()
-    self.keyvals['retval'] = self.retval
     # If we are in CWP approximation mode, we want to collect DSO CPU cycles
     # for each perf.data file
     if self.cwp_dso:
-      self.keyvals['cpu_cycles'] = self.GetCPUCycles()
+      self.keyvals['cpu_cycles'] = [self.GetCPUCycles(), u'count']
+    self.keyvals['retval'] = self.retval
     # Generate report from all perf.data files.
     # Now parse all perf report files and include them in keyvals.
     self.GatherPerfResults()
