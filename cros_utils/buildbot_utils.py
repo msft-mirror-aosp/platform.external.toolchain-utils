@@ -91,13 +91,13 @@ def SubmitTryjob(chromeos_root,
 
   Args:
     chromeos_root: the path to the ChromeOS root, needed for finding chromite
-      and launching the buildbot.
+                   and launching the buildbot.
     buildbot_name: the name of the buildbot queue, such as lumpy-release or
-      daisy-paladin.
+                   daisy-paladin.
     patch_list: a python list of the patches, if any, for the buildbot to use.
     tryjob_flags: See cros tryjob --help for available options.
     build_toolchain: builds and uses the latest toolchain, rather than the
-      prebuilt one in SDK.
+                     prebuilt one in SDK.
 
   Returns:
     buildbucket id
@@ -114,9 +114,8 @@ def SubmitTryjob(chromeos_root,
 
   # Launch buildbot with appropriate flags.
   build = buildbot_name
-  command = (
-      'cros tryjob --pass-through=--chrome_rev=tot --yes --json --nochromesdk'
-      '  %s %s %s' % (tryjob_flags, patch_arg, build))
+  command = ('cros tryjob --yes --json --nochromesdk  %s %s %s' %
+             (tryjob_flags, patch_arg, build))
   print('CMD: %s' % command)
   _, out, _ = RunCommandInPath(chromeos_root, command)
   buildbucket_id = ParseTryjobBuildbucketId(out)
@@ -143,13 +142,13 @@ def GetTrybotImage(chromeos_root,
 
   Args:
     chromeos_root: the path to the ChromeOS root, needed for finding chromite
-      and launching the buildbot.
+                   and launching the buildbot.
     buildbot_name: the name of the buildbot queue, such as lumpy-release or
-      daisy-paladin.
+                   daisy-paladin.
     patch_list: a python list of the patches, if any, for the buildbot to use.
     tryjob_flags: See cros tryjob --help for available options.
     build_toolchain: builds and uses the latest toolchain, rather than the
-      prebuilt one in SDK.
+                     prebuilt one in SDK.
     async: don't wait for artifacts; just return the buildbucket id
 
   Returns:
