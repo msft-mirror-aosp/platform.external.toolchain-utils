@@ -188,9 +188,15 @@ def OrganizeResults(benchmark_runs, labels, benchmarks=None, json_report=False):
       else:
         # Did not find test_name in json file; show everything.
         show_all_results = True
-    for test_key in benchmark_run.result.keyvals:
-      if show_all_results or test_key in summary_list:
-        cur_dict[test_key] = benchmark_run.result.keyvals[test_key]
+    if benchmark_run.result.cwp_dso:
+      # If we are in cwp approximation mode, we only care about cpu_cycles
+      if 'cpu_cycles' in benchmark_run.result.keyvals:
+        cur_dict['cpu_cycles'] = benchmark_run.result.keyvals['cpu_cycles']
+      cur_dict['retval'] = benchmark_run.result.keyvals['retval']
+    else:
+      for test_key in benchmark_run.result.keyvals:
+        if show_all_results or test_key in summary_list:
+          cur_dict[test_key] = benchmark_run.result.keyvals[test_key]
     # Occasionally Telemetry tests will not fail but they will not return a
     # result, either.  Look for those cases, and force them to be a fail.
     # (This can happen if, for example, the test has been disabled.)

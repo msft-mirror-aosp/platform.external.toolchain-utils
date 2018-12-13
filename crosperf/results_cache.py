@@ -385,7 +385,7 @@ class Result(object):
     # If we are in CWP approximation mode, we want to collect DSO CPU cycles
     # for each perf.data file
     if self.cwp_dso:
-      self.keyvals['cpu_cycles'] = [self.GetCPUCycles(), u'count']
+      self.keyvals['cpu_cycles'] = [self.GetCPUCycles(), u'cycles']
     self.keyvals['retval'] = self.retval
     # Generate report from all perf.data files.
     # Now parse all perf report files and include them in keyvals.

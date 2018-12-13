@@ -207,6 +207,189 @@ class TableGenerator(object):
     return table
 
 
+class CPUTableGenerator(TableGenerator):
+  """Creates a table with only cpu cycles from the results
+
+  The main public function is called GetTable().
+
+  Different than TableGenerator, self._runs is now a dict of {benchmark: runs}
+  We are expecting there is 'cpu_cycles' in `runs`.
+  """
+  def __init__(self, run_keyvals, labels, iter_counts, weights):
+    TableGenerator.__init__(self, run_keyvals, labels,  key_name='Benchmarks')
+    self._iter_counts = iter_counts
+    self._weights = weights
+
+  def _GetKeys(self):
+    keys = self._runs.keys()
+    return self._SortKeys(keys)
+
+  def GetTable(self, number_of_rows=sys.maxint):
+    """Returns a tuple, which contains three args:
+        1) a table from a list of list of dicts.
+        2) updated benchmark_results run_keyvals with composite benchmark
+        3) updated benchmark_results iter_count with composite benchmark
+
+    The dict of list of list of dicts is passed into the constructor of
+    CPUTableGenerator.
+    This method converts that into a canonical list of lists which represents a
+    table of values.
+
+    Args:
+      number_of_rows: Maximum number of rows to return from the table.
+
+    Returns:
+      A list of lists which is the table.
+
+    Example:
+      We have the following runs:
+        {bench1: [[{"cpu_cycles": "v1"}, {"cpu_cycles": "v2"}],
+                  [{"cpu_cycles": "v3"}, {"cpu_cycles": "v4"}]]
+         bench2: [[{"cpu_cycles": "v21"}, None],
+                  [{"cpu_cycles": "v22"}, {"cpu_cycles": "v23"}]]}
+      and weights of benchmarks:
+        {bench1: w1, bench2: w2}
+      and the following labels:
+        ["vanilla", "modified"]
+      it will return:
+        [["Benchmark", "Weights", "vanilla", "modified"]
+         ["bench1", w1,
+            ((2, 0), ["v1*w1", "v2*w1"]), ((2, 0), ["v3*w1", "v4*w1"])]
+         ["bench2", w2,
+            ((1, 1), ["v21*w2", None]), ((2, 0), ["v22*w2", "v23*w2"])]
+         ["Composite Benchmark", N/A,
+            ((1, 1), ["v1*w1+v21*w2", None]),
+            ((2, 0), ["v3*w1+v22*w2", "v4*w1+ v23*w2"])]]
+      The returned table can then be processed further by other classes in this
+      module.
+    """
+    keys = self._GetKeys()
+    header = [self._key_name, 'Weights'] + self._labels
+    table = [header]
+    rows = 0
+    iterations = 0
+
+    for k in keys:
+      runs = self._runs[k]
+      unit = None
+      all_runs_empty = all(not dict for label in runs for dict in label)
+      if all_runs_empty:
+        cell = Cell()
+        cell.string_value = 'Benchmark %s contains no result.' + \
+                            ' Is the benchmark name valid?' % k
+        table.append([cell])
+      else:
+        row = [k]
+        row.append(self._weights[k])
+        for run_list in runs:
+          run_pass = 0
+          run_fail = 0
+          v = []
+          for run in run_list:
+            if 'cpu_cycles' in run:
+              if type(run['cpu_cycles']) is list:
+                val = run['cpu_cycles'][0] * self._weights[k]
+                unit = run['cpu_cycles'][1]
+              else:
+                val = run['cpu_cycles']
+              v.append(val)
+              run_pass += 1
+            else:
+              v.append(None)
+              run_fail += 1
+          t = ((run_pass, run_fail), v)
+          if iterations != 0  and iterations != run_pass + run_fail:
+            raise ValueError('Iterations of each benchmark run ' \
+                             'are not the same')
+          iterations = run_pass + run_fail
+          row.append(t)
+        if unit:
+          keyname = row[0] + ' (%s) ' % unit
+          row[0] = keyname
+        table.append(row)
+        rows += 1
+        if rows == number_of_rows:
+          break
+
+    k = 'Composite Benchmark'
+    if k in keys:
+      raise RuntimeError('Composite benchmark already exists in results')
+
+    # Create a new composite benchmark row at the bottom of the summary table
+    # The new row will be like the format in example:
+    # ["Composite Benchmark", N/A,
+    #        ((1, 1), ["v1*w1+v21*w2", None]),
+    #        ((2, 0), ["v3*w1+v22*w2", "v4*w1+ v23*w2"])]]
+    # First we will create a row of [key, weight, [[0] * iterations] * labels]
+    row = [None] * len(header)
+    row[0] = '%s (cycles)' % k
+    row[1] = 'N/A'
+    for label_index in xrange(2, len(row)):
+      row[label_index] = [0] * iterations
+
+    for cur_row in table[1:]:
+      # Iterate through each benchmark
+      if len(cur_row) > 1:
+        for label_index in xrange(2, len(cur_row)):
+          # Iterate through each run in a single benchmark
+          # each result should look like ((pass, fail), [values_list])
+          runs = cur_row[label_index][1]
+          for index in xrange(iterations):
+            # Accumulate each run result to composite benchmark run
+            # If any run fails, then we set this run for composite benchmark
+            # to None so that we know it fails.
+            if runs[index] and row[label_index][index] != None:
+              row[label_index][index] += runs[index]
+            else:
+              row[label_index][index] = None
+      else:
+        # One benchmark totally fails, no valid data will be in final result
+        for label_index in xrange(2, len(row)):
+          row[label_index] = [None] * iterations
+        break
+    # Calculate pass and fail count for composite benchmark
+    for label_index in xrange(2, len(row)):
+      run_pass = 0
+      run_fail = 0
+      for run in row[label_index]:
+        if run:
+          run_pass += 1
+        else:
+          run_fail += 1
+      row[label_index] = ((run_pass, run_fail), row[label_index])
+    table.append(row)
+
+    # Now that we have the table genearted, we want to store this new composite
+    # benchmark into the benchmark_result in ResultReport object.
+    # This will be used to generate a full table which contains our composite
+    # benchmark.
+    # We need to create composite benchmark result and add it to keyvals in
+    # benchmark_results.
+    v = []
+    for label in row[2:]:
+      # each label's result looks like ((pass, fail), [values])
+      runs = label[1]
+      # List of values of each label
+      single_run_list = []
+      for run in runs:
+        # Result of each run under the same label is a dict of keys.
+        # Here the only key we will add for composite benchmark is the
+        # weighted_cpu_cycles we added up.
+        one_dict = {}
+        if run:
+          one_dict[u'weighted_cpu_cycles'] = [run, u'cycles']
+          one_dict['retval'] = 0
+        else:
+          one_dict['retval'] = 1
+        single_run_list.append(one_dict)
+      v.append(single_run_list)
+
+    self._runs[k] = v
+    self._iter_counts[k] = iterations
+ 
+    return (table, self._runs, self._iter_counts)
+
+
 class Result(object):
   """A class that respresents a single result.
 
@@ -345,11 +528,13 @@ class AmeanResult(StringMeanResult):
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = numpy.mean(values)
 
-
 class RawResult(Result):
   """Raw result."""
   pass
 
+class IterationResult(Result):
+  """Iteration result."""
+  pass
 
 class MinResult(Result):
   """Minimum."""
@@ -468,7 +653,7 @@ class KeyAwareComparisonResult(ComparisonResult):
         'dropped_percent', '(ms)', '(seconds)', '--ms',
         '--average_num_missing_tiles', '--experimental_jank',
         '--experimental_mean_frame', '--experimental_median_frame_time',
-        '--total_deferred_image_decode_count', '--seconds'
+        '--total_deferred_image_decode_count', '--seconds', 'cycles'
     ]
 
     return any([l in key for l in lower_is_better_keys])
@@ -615,6 +800,13 @@ class PValueFormat(Format):
           Color(255, 255, 255, 0),
           mid_value=0.05,
           power=1)
+
+
+class WeightFormat(Format):
+  """Formatting for weight in cwp mode."""
+
+  def _ComputeFloat(self, cell):
+    cell.string_value = '%0.4f' % float(cell.value)
 
 
 class StorageFormat(Format):
@@ -777,15 +969,18 @@ class TableFormatter(object):
   formats to apply to the table and returns a table of cells.
   """
 
-  def __init__(self, table, columns):
+  def __init__(self, table, columns, cpu_table=False):
     """The constructor takes in a table and a list of columns.
 
     Args:
       table: A list of lists of values.
       columns: A list of column containing what to produce and how to format it.
+      cpu_table: A flag to check whether we are generating a table of cpu cycles
+        in CWP apporximation mode.
     """
     self._table = table
     self._columns = columns
+    self._cpu_table = cpu_table
     self._table_columns = []
     self._out_table = []
 
@@ -794,30 +989,48 @@ class TableFormatter(object):
     all_failed = False
 
     for row in self._table[1:]:
+      # If we are generating cpu_table, the second value will be weight rather
+      # than values.
+      start_col = 2 if self._cpu_table else 1
       # It does not make sense to put retval in the summary table.
       if str(row[0]) == 'retval' and table_type == 'summary':
         # Check to see if any runs passed, and update all_failed.
         all_failed = True
-        for values in row[1:]:
+        for values in row[start_col:]:
           if 0 in values:
             all_failed = False
         continue
       key = Cell()
       key.string_value = str(row[0])
       out_row = [key]
+      if self._cpu_table:
+        # Add one column for weight if in cpu_table mode
+        weight = Cell()
+        weight.value = row[1]
+        f = WeightFormat()
+        f.Compute(weight)
+        out_row.append(weight)
       baseline = None
-      for values in row[1:]:
-        for column in self._columns:
+      for results in row[start_col:]:
+        column_start = 0
+        values = None
+        # If generating cpu table, we will split a tuple of iterations info
+        # from the results
+        if isinstance(results, tuple):
+          it, values = results
+          column_start = 1
+          cell = Cell()
+          cell.string_value = '[%d: %d]' % (it[0], it[1])
+          out_row.append(cell)
+          if not row_index:
+            self._table_columns.append(self._columns[0])
+        else:
+          values = results
+        # Parse each column
+        for column in self._columns[column_start:]:
           cell = Cell()
           cell.name = key.string_value
-          if column.result.NeedsBaseline():
-            if baseline is not None:
-              column.result.Compute(cell, values, baseline)
-              column.fmt.Compute(cell)
-              out_row.append(cell)
-              if not row_index:
-                self._table_columns.append(column)
-          else:
+          if not column.result.NeedsBaseline() or baseline is not None:
             column.result.Compute(cell, values, baseline)
             column.fmt.Compute(cell)
             out_row.append(cell)
@@ -853,8 +1066,13 @@ class TableFormatter(object):
     """Generate Column name at the top of table."""
     key = Cell()
     key.header = True
-    key.string_value = 'Keys'
+    key.string_value = 'Keys'if not self._cpu_table else 'Benchmarks'
     header = [key]
+    if self._cpu_table:
+      weight = Cell()
+      weight.header = True
+      weight.string_value = 'Weights'
+      header.append(weight)
     for column in self._table_columns:
       cell = Cell()
       cell.header = True
@@ -891,7 +1109,7 @@ class TableFormatter(object):
         fails = fails + 1
     return passes, fails
 
-  def AddLabelName(self):
+  def AddLabelName(self, table_type):
     """Put label on the top of the table."""
     top_header = []
     base_colspan = len(
@@ -924,9 +1142,11 @@ class TableFormatter(object):
       else:
         cell.string_value = str(label)
       if top_header:
-        cell.colspan = base_colspan
+        if not self._cpu_table or (self._cpu_table and len(top_header) == 2):
+          cell.colspan = base_colspan
       if len(top_header) > 1:
-        cell.colspan = compare_colspan
+        if not self._cpu_table or (self._cpu_table and len(top_header) > 2):
+          cell.colspan = compare_colspan
       top_header.append(cell)
       column_position = column_position + 1
     self._out_table = [top_header] + self._out_table
@@ -958,7 +1178,7 @@ class TableFormatter(object):
       self.GenerateCellTable(table_type)
     if headers:
       self.AddColumnName()
-      self.AddLabelName()
+      self.AddLabelName(table_type)
     return self._out_table
 
 
