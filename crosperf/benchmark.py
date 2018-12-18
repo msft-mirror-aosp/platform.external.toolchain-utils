@@ -17,6 +17,7 @@ _estimated_stddev = {
     'dromaeo.domcoremodify': 0.011,
     'graphics_WebGLAquarium': 0.008,
     'page_cycler_v2.typical_25': 0.021,
+    'loading.desktop': 0.021,  # Copied from page_cycler initially
 }
 
 

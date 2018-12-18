@@ -92,7 +92,7 @@ class ToolchainComparator(object):
 
     Args:
       trybot_image: artifact name such as
-          'daisy-release-tryjob/R40-6394.0.0-b1389'
+        'daisy-release-tryjob/R40-6394.0.0-b1389'
 
     Returns:
       Latest official image name, e.g. 'daisy-release/R57-9089.0.0'.
@@ -117,7 +117,7 @@ class ToolchainComparator(object):
 
     Args:
       trybot_image: artifact name such as
-          'daisy-release-tryjob/R40-6394.0.0-b1389'
+        'daisy-release-tryjob/R40-6394.0.0-b1389'
 
     Returns:
       Corresponding chrome PFQ image name, e.g.
@@ -162,9 +162,10 @@ class ToolchainComparator(object):
       run_local: False
     }
 
-    benchmark: page_cycler_v2.typical_25 {
+    benchmark: loading.desktop {
       suite: telemetry_Crosperf
-      iterations: 0
+      test_args: --story-tag-filter=typical
+      iterations: 3
       run_local: False
       retries: 0
     }

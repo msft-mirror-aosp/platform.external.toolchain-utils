@@ -182,7 +182,7 @@ def OrganizeResults(benchmark_runs, labels, benchmarks=None, json_report=False):
 
     show_all_results = json_report or benchmark.show_all_results
     if not show_all_results:
-      summary_list = summary_file.get(benchmark.test_name)
+      summary_list = summary_file.get(benchmark.name)
       if summary_list:
         summary_list.append('retval')
       else:
