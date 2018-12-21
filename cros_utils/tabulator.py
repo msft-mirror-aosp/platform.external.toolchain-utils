@@ -207,7 +207,7 @@ class TableGenerator(object):
     return table
 
 
-class CPUTableGenerator(TableGenerator):
+class CPUCyclesTableGenerator(TableGenerator):
   """Creates a table with only cpu cycles from the results
 
   The main public function is called GetTable().
@@ -231,7 +231,7 @@ class CPUTableGenerator(TableGenerator):
         3) updated benchmark_results iter_count with composite benchmark
 
     The dict of list of list of dicts is passed into the constructor of
-    CPUTableGenerator.
+    CPUCyclesTableGenerator.
     This method converts that into a canonical list of lists which represents a
     table of values.
 
@@ -291,7 +291,7 @@ class CPUTableGenerator(TableGenerator):
                 val = run['cpu_cycles'][0] * self._weights[k]
                 unit = run['cpu_cycles'][1]
               else:
-                val = run['cpu_cycles']
+                val = run['cpu_cycles'] * self._weights[k]
               v.append(val)
               run_pass += 1
             else:
@@ -386,7 +386,7 @@ class CPUTableGenerator(TableGenerator):
 
     self._runs[k] = v
     self._iter_counts[k] = iterations
- 
+
     return (table, self._runs, self._iter_counts)
 
 

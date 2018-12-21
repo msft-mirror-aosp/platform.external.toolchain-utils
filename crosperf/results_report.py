@@ -16,7 +16,7 @@ from cros_utils.tabulator import Cell
 from cros_utils.tabulator import CoeffVarFormat
 from cros_utils.tabulator import CoeffVarResult
 from cros_utils.tabulator import Column
-from cros_utils.tabulator import CPUTableGenerator
+from cros_utils.tabulator import CPUCyclesTableGenerator
 from cros_utils.tabulator import Format
 from cros_utils.tabulator import IterationResult
 from cros_utils.tabulator import GmeanRatioResult
@@ -234,7 +234,7 @@ def _GetCPUTables(benchmark_results, columns, table_type):
   tables = []
   dso_header_table = _GetDSOHeader(benchmark_results.cwp_dso)
   tables.append(dso_header_table)
-  (table, new_keyvals, iter_counts) = CPUTableGenerator(
+  (table, new_keyvals, iter_counts) = CPUCyclesTableGenerator(
                                         benchmark_results.run_keyvals,
                                         benchmark_results.label_names,
                                         benchmark_results.iter_counts,
@@ -377,7 +377,7 @@ class TextResultsReport(ResultsReport):
       title_contents = 'Results report'
     sections.append(self._MakeTitle(title_contents))
 
-    if not self.experiment.cwp_dso:
+    if not self.benchmark_results.cwp_dso:
       summary_table = _PrintTable(self.GetSummaryTables(), output_type)
     else:
       summary_table = _PrintTable(self.GetSummaryTables(summary_type='cpu'),
@@ -390,7 +390,7 @@ class TextResultsReport(ResultsReport):
 
     perf_table = _PrintTable(self.GetSummaryTables(summary_type='perf'),
                              output_type)
-    if perf_table and not self.experiment.cwp_dso:
+    if perf_table and not self.benchmark_results.cwp_dso:
       sections.append(self._MakeSection('Perf Data', perf_table))
 
     if experiment is not None:
@@ -460,7 +460,7 @@ class HTMLResultsReport(ResultsReport):
     chart_javascript = ''.join(chart.GetJavascript() for chart in charts)
     chart_divs = ''.join(chart.GetDiv() for chart in charts)
 
-    if not self.experiment.cwp_dso:
+    if not self.benchmark_results.cwp_dso:
       summary_table = self.GetSummaryTables()
       perf_table = self.GetSummaryTables(summary_type='perf')
     else:
@@ -607,7 +607,7 @@ class BenchmarkResults(object):
     self.run_keyvals = run_keyvals
     self.read_perf_report = read_perf_report
     self.cwp_dso = cwp_dso
-    self.weights = dict(weights)
+    self.weights = dict(weights) if weights else None
 
   @staticmethod
   def FromExperiment(experiment, for_json_report=False):
