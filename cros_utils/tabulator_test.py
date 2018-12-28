@@ -103,6 +103,47 @@ class TabulatorTest(unittest.TestCase):
     table = tf.GetCellTable()
     self.assertTrue(table)
 
+  def testCPUCyclesTableGenerator(self):
+    keyvals = {'bench1': [[{'cpu_cycles': 1}, {'cpu_cycles': 2}],
+                          [{'cpu_cycles': 3}, {'cpu_cycles': 4}]],
+               'bench2': [[{'cpu_cycles': 5}, {}],
+                          [{'cpu_cycles': 6}, {'cpu_cycles': 7}]]}
+    weights = {'bench1': 0.2, 'bench2': 0.7}
+    iter_counts = {'bench1': 2, 'bench2': 2}
+    labels = ['vanilla', 'modified']
+    tg = tabulator.CPUCyclesTableGenerator(keyvals, labels, iter_counts,
+                                           weights)
+    (table, new_keyvals, new_iter_counts) = tg.GetTable()
+
+    columns = [
+        tabulator.Column(tabulator.IterationResult(), tabulator.Format()),
+        tabulator.Column(tabulator.AmeanResult(), tabulator.Format()),
+        tabulator.Column(tabulator.AmeanRatioResult(),
+                         tabulator.PercentFormat()),
+    ]
+    # This is the function to load column info.
+    tf = tabulator.TableFormatter(table, columns, cpu_table=True)
+    # This is the function where to do all weighting calculation.
+    cell_table = tf.GetCellTable('summary')
+    self.assertTrue(cell_table)
+
+    header = table.pop(0)
+    self.assertTrue(header == ['Benchmarks', 'Weights', 'vanilla', 'modified'])
+    row = table.pop(0)
+    self.assertTrue(row == ['bench1', 0.2, ((2, 0), [1*0.2, 2*0.2]),
+                                           ((2, 0), [3*0.2, 4*0.2])])
+    row = table.pop(0)
+    self.assertTrue(row == ['bench2', 0.7, ((1, 1), [5*0.7, None]),
+                                           ((2, 0), [6*0.7, 7*0.7])])
+    row = table.pop(0)
+    self.assertTrue(row == ['Composite Benchmark (cycles)', 'N/A',
+                            ((1, 1), [1*0.2+5*0.7, None]),
+                            ((2, 0), [3*0.2+6*0.7, 4*0.2+7*0.7])])
+
+    self.assertTrue('Composite Benchmark' in new_keyvals.keys())
+    self.assertTrue('Composite Benchmark' in new_iter_counts.keys())
+
+
   def testColspan(self):
     simple_table = [
         ['binary', 'b1', 'b2', 'b3'],
