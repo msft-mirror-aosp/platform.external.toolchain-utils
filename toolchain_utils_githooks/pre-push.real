@@ -4,8 +4,10 @@
 #
 # This is a pre-push hook that does the following before uploading a
 # CL for review:
-# 1) check that python sources have been formatted with pyformat.
+# 1) check that python sources have been formatted with yapf.
 # 2) allows the user to run the unit tests.
+
+mydir="$(dirname "$(readlink -m "$0")")"
 
 # This redirects stdin. Make sure to run after stdin has been read.
 run_UnitTests() {
@@ -30,27 +32,6 @@ run_UnitTests() {
   fi
 }
 
-run_PyFormat() {
-  pyformat="./bin/tc_pyformat"
-  range=$1
-  files=$(git show --pretty="format:" --name-only $range)
-  for f in $files; do
-    [[ $f == *.py ]] || continue
-    # File could have been removed as part of the commit.
-    [[ -e $f ]] || continue
-    diffs=$($pyformat -d $f)
-    if [[ $? -ne 0 ]]; then
-      echo "Error: $pyformat $f returned with error code $?"
-      exit 1
-    fi
-    if [[ -n "$diffs" ]]; then
-      echo -e "Error: $f is not formatted correctly. Run $pyformat -i $f\n"
-      echo -e "diffs:\n$diffs\n"
-      exit 2
-    fi
-  done
-}
-
 z40=0000000000000000000000000000000000000000
 
 while IFS=' ' read local_ref local_sha remote_ref remote_sha; do
@@ -62,7 +43,10 @@ while IFS=' ' read local_ref local_sha remote_ref remote_sha; do
       # Update to existing branch, examine new commits
       range="$remote_sha..$local_sha"
     fi
-    run_PyFormat $range
+    all_files="$(git show --pretty="format:" --name-only "${range}")"
+    # Note that ${all_files} may include files that were deleted. Hence, we
+    # ignore any complaints about missing files.
+    IGNORE_MISSING=1 "${mydir}/check-format" ${all_files} || exit 1
   fi
 done
 
