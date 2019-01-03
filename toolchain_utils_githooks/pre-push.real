@@ -46,7 +46,7 @@ while IFS=' ' read local_ref local_sha remote_ref remote_sha; do
     all_files="$(git show --pretty="format:" --name-only "${range}")"
     # Note that ${all_files} may include files that were deleted. Hence, we
     # ignore any complaints about missing files.
-    IGNORE_MISSING=1 "${mydir}/check-format" ${all_files} || exit 1
+    IGNORE_MISSING=1 "${mydir}/check-style" ${all_files} || exit 1
   fi
 done
 

@@ -1,0 +1,44 @@
+#!/bin/bash -eu
+# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# Convenient wrapper to run format and lint checks in parallel without
+# interleaving output/etc.
+
+if test $# -eq 0; then
+  echo "No files were given to check the format of." >&2
+  echo "Usage: $0 file1 file2 ..." >&2
+  exit 1
+fi
+
+mydir="$(dirname "$(readlink -m "$0")")"
+
+tempfile="$(mktemp)"
+rm_tempfile() {
+  rm -f "${tempfile}"
+}
+
+trap rm_tempfile EXIT
+
+success=true
+
+# Since we only have two things to do in parallel, we just output the
+# stdout/stderr of this to a temp file. When the other check is done, we `cat`
+# the temp file, and we're good.
+#
+# It appears that check-lint will emit colorful output regardless of whether or
+# not it's writing to a tty, so we don't lose the nice red "ERROR" text from
+# it.
+"${mydir}/check-lint" "$@" >"${tempfile}" 2>&1 &
+pid="$!"
+
+"${mydir}/check-format" "$@" || success=false
+wait "${pid}" || success=false
+
+lint_output="$(cat "${tempfile}")"
+if ! test -z "${lint_output}"; then
+  echo "${lint_output}"
+fi
+
+$success

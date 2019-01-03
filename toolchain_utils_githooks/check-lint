@@ -1,0 +1,22 @@
+#!/bin/bash -u
+# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# This script runs `cros lint` on everything it's handed.
+
+if test $# -eq 0; then
+  echo "No files were given to lint." >&2
+  echo "Usage: $0 file1 file2 ..." >&2
+  exit 1
+fi
+
+cros=cros
+
+if ! type "${cros}" >&/dev/null; then
+  echo "${cros} isn't on your \$PATH. Please either enter a chroot, or place" \
+    "depot_tools on your \$PATH." >&2
+  exit 1
+fi
+
+"${cros}" lint -- $@
