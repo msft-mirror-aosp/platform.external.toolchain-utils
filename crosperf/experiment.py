@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -27,7 +28,7 @@ class Experiment(object):
   def __init__(self, name, remote, working_directory, chromeos_root,
                cache_conditions, labels, benchmarks, experiment_file, email_to,
                acquire_timeout, log_dir, log_level, share_cache,
-               results_directory, locks_directory, cwp_dso):
+               results_directory, locks_directory, cwp_dso, enable_aslr):
     self.name = name
     self.working_directory = working_directory
     self.remote = remote
@@ -54,6 +55,7 @@ class Experiment(object):
     self.locks_dir = locks_directory
     self.locked_machines = []
     self.cwp_dso = cwp_dso
+    self.enable_aslr = enable_aslr
 
     if not remote:
       raise RuntimeError('No remote hosts specified')
@@ -128,10 +130,10 @@ class Experiment(object):
           logger_to_use = logger.Logger(self.log_dir, 'run.%s' % (full_name),
                                         True)
           benchmark_runs.append(
-              benchmark_run.BenchmarkRun(benchmark_run_name, benchmark, label,
-                                         iteration, self.cache_conditions,
-                                         self.machine_manager, logger_to_use,
-                                         self.log_level, self.share_cache))
+              benchmark_run.BenchmarkRun(
+                  benchmark_run_name, benchmark, label, iteration,
+                  self.cache_conditions, self.machine_manager, logger_to_use,
+                  self.log_level, self.share_cache, self.enable_aslr))
 
     return benchmark_runs
 

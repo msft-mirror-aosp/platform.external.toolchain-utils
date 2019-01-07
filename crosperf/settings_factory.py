@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -302,6 +303,13 @@ class GlobalSettings(Settings):
             'be empty.',
             required=False,
             default=''))
+    self.AddField(
+        BooleanField(
+            'enable_aslr',
+            description='Enable ASLR on the machine to run the '
+            'benchmarks. ASLR is disabled by default',
+            required=False,
+            default=False))
 
 
 class SettingsFactory(object):

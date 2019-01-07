@@ -147,6 +147,8 @@ class ExperimentFactory(object):
     cwp_dso = global_settings.GetField('cwp_dso')
     if cwp_dso and not cwp_dso in dso_list:
       raise RuntimeError('The DSO specified is not supported')
+    enable_aslr = global_settings.GetField('enable_aslr')
+
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.
     cache_conditions = [
@@ -370,7 +372,7 @@ class ExperimentFactory(object):
                             chromeos_root, cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(), email,
                             acquire_timeout, log_dir, log_level, share_cache,
-                            results_dir, locks_dir, cwp_dso)
+                            results_dir, locks_dir, cwp_dso, enable_aslr)
 
     return experiment
 

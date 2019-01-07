@@ -1,4 +1,5 @@
-# Copyright (c) 2013~2015 The Chromium OS Authors. All rights reserved.
+# -*- coding: utf-8 -*-
+# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """SuiteRunner defines the interface from crosperf to test script."""
@@ -6,7 +7,6 @@
 from __future__ import print_function
 
 import os
-import time
 import shlex
 
 from cros_utils import command_executer
@@ -50,15 +50,21 @@ class SuiteRunner(object):
                logger_to_use=None,
                log_level='verbose',
                cmd_exec=None,
-               cmd_term=None):
+               cmd_term=None,
+               enable_aslr=False):
     self.logger = logger_to_use
     self.log_level = log_level
     self._ce = cmd_exec or command_executer.GetCommandExecuter(
         self.logger, log_level=self.log_level)
     self._ct = cmd_term or command_executer.CommandTerminator()
+    self.enable_aslr = enable_aslr
 
   def Run(self, machine, label, benchmark, test_args, profiler_args):
     for i in range(0, benchmark.retries + 1):
+      # Unless the user turns on ASLR in the flag, we first disable ASLR
+      # before running the benchmarks
+      if not self.enable_aslr:
+        self.DisableASLR(machine, label.chromeos_root)
       self.PinGovernorExecutionFrequencies(machine, label.chromeos_root)
       if benchmark.suite == 'telemetry':
         self.DecreaseWaitTime(machine, label.chromeos_root)
@@ -70,6 +76,7 @@ class SuiteRunner(object):
       else:
         ret_tup = self.Test_That_Run(machine, label, benchmark, test_args,
                                      profiler_args)
+
       if ret_tup[0] != 0:
         self.logger.LogOutput('benchmark %s failed. Retries left: %s' %
                               (benchmark.name, benchmark.retries - i))
@@ -82,6 +89,17 @@ class SuiteRunner(object):
             'benchmark %s succeded on first try' % benchmark.name)
         break
     return ret_tup
+
+  def DisableASLR(self, machine_name, chromeos_root):
+    disable_aslr = ('set -e && '
+                    'stop ui; '
+                    'if [[ -e /proc/sys/kernel/randomize_va_space ]]; then '
+                    '  echo 0 > /proc/sys/kernel/randomize_va_space; '
+                    'fi; '
+                    'start ui ')
+    self.logger.LogOutput('Disable ASLR for %s' % machine_name)
+    self._ce.CrosRunCommand(
+        disable_aslr, machine=machine_name, chromeos_root=chromeos_root)
 
   def PinGovernorExecutionFrequencies(self, machine_name, chromeos_root):
     """Set min and max frequencies to max static frequency."""
@@ -112,8 +130,7 @@ class SuiteRunner(object):
         #'fi ;'
         #'echo $highest > scaling_max_freq; '
         #'echo $highest > scaling_min_freq; '
-        'done'
-    )
+        'done')
     # pyformat: enable
     if self.log_level == 'average':
       self.logger.LogOutput(

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -30,7 +31,8 @@ class BenchmarkRun(threading.Thread):
   """The benchmarkrun class."""
 
   def __init__(self, name, benchmark, label, iteration, cache_conditions,
-               machine_manager, logger_to_use, log_level, share_cache):
+               machine_manager, logger_to_use, log_level, share_cache,
+               enable_aslr):
     threading.Thread.__init__(self)
     self.name = name
     self._logger = logger_to_use
@@ -43,7 +45,8 @@ class BenchmarkRun(threading.Thread):
     self.retval = None
     self.run_completed = False
     self.machine_manager = machine_manager
-    self.suite_runner = SuiteRunner(self._logger, self.log_level)
+    self.suite_runner = SuiteRunner(
+        self._logger, self.log_level, enable_aslr=enable_aslr)
     self.machine = None
     self.cache_conditions = cache_conditions
     self.runs_complete = 0
@@ -167,9 +170,9 @@ class BenchmarkRun(threading.Thread):
       machine = self.machine_manager.AcquireMachine(self.label)
 
       if machine:
-        self._logger.LogOutput('%s: Machine %s acquired at %s' %
-                               (self.name, machine.name,
-                                datetime.datetime.now()))
+        self._logger.LogOutput(
+            '%s: Machine %s acquired at %s' % (self.name, machine.name,
+                                               datetime.datetime.now()))
         break
       time.sleep(10)
     return machine
