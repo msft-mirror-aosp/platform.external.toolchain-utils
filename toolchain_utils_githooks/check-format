@@ -10,7 +10,7 @@
 # FIXME: It would be nice if YAPF supported tweaking quotes:
 # https://github.com/google/yapf/issues/399
 
-if test $# -eq 0; then
+if [[ $# -eq 0 ]]; then
   echo "No files were given to check the format of." >&2
   echo "Usage: $0 file1 file2 ..." >&2
   exit 1
@@ -39,7 +39,7 @@ check_python_file_header() {
   local needs_hashbang=$(status_to_tf test -x "${py_file}")
   local has_hashbang=$(status_to_tf grep -q '^#!' <(head -n1 "${py_file}"))
 
-  if test "${needs_hashbang}" = "${has_hashbang}"; then
+  if [[ "${needs_hashbang}" == "${has_hashbang}" ]]; then
     return 0
   fi
 
@@ -58,7 +58,7 @@ python_files=()
 
 for f in "$@"; do
   [[ "${f}" == *.py ]] || continue
-  if ! test -e "${f}"; then
+  if [[ ! -e "${f}" ]]; then
     if "${complain_about_missing}"; then
       echo "error: no such file: ${f}" >&2
       everything_passed=false
@@ -74,7 +74,7 @@ for f in "$@"; do
 done
 
 bad_files=()
-if test "${#python_files[@]}" -ne 0; then
+if [[ "${#python_files[@]}" -ne 0 ]]; then
   # yapf will give us a full unified (git-like) diff. We parse out the file
   # names, e.g.,
   #
@@ -93,10 +93,10 @@ if test "${#python_files[@]}" -ne 0; then
   )
 fi
 
-if test "${#bad_files[@]}" -ne 0; then
+if [[ "${#bad_files[@]}" -ne 0 ]]; then
   echo "One or more files appear to be incorrectly formatted."
   echo "Please run \`${yapf} -i ${bad_files[@]}\` to rectify this."
   everything_passed=false
 fi
 
-$everything_passed
+"${everything_passed}"

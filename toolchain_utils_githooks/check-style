@@ -6,7 +6,7 @@
 # Convenient wrapper to run format and lint checks in parallel without
 # interleaving output/etc.
 
-if test $# -eq 0; then
+if [[ $# -eq 0 ]]; then
   echo "No files were given to check the format of." >&2
   echo "Usage: $0 file1 file2 ..." >&2
   exit 1
@@ -37,8 +37,8 @@ pid="$!"
 wait "${pid}" || success=false
 
 lint_output="$(cat "${tempfile}")"
-if ! test -z "${lint_output}"; then
+if [[ -n "${lint_output}" ]]; then
   echo "${lint_output}"
 fi
 
-$success
+"${success}"
