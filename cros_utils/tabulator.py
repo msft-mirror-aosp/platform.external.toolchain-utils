@@ -1109,7 +1109,7 @@ class TableFormatter(object):
         fails = fails + 1
     return passes, fails
 
-  def AddLabelName(self, table_type):
+  def AddLabelName(self):
     """Put label on the top of the table."""
     top_header = []
     base_colspan = len(
@@ -1178,7 +1178,7 @@ class TableFormatter(object):
       self.GenerateCellTable(table_type)
     if headers:
       self.AddColumnName()
-      self.AddLabelName(table_type)
+      self.AddLabelName()
     return self._out_table
 
 
