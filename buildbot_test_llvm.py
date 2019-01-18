@@ -51,7 +51,6 @@ DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
 #  kevin        aarch64  gru          rockchip-3399 4.4.*
 #  lakitu       x86_64                              4.4.*
 #  lars         x86_64   kunimitsu    skylake-u     3.18
-#  link         x86_64   ivybridge    ivybridge     3.8.11
 #  nautilus     x86_64   poppy        kabylake-y    4.4.*
 #  nyan_big     armv7    nyan         tegra         3.10.18
 #  peach_pit    armv7    peach        exynos-5420   3.8.11
@@ -75,7 +74,6 @@ TEST_BOARD = [
     'kevin',
     'lakitu',
     'lars',
-    'link',
     'nautilus',
     'nyan_big',
     'peach_pit',
