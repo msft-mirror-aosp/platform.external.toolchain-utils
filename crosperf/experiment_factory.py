@@ -205,8 +205,8 @@ class ExperimentFactory(object):
         if run_local:
           raise RuntimeError('run_local must be set to False to use CWP '
                              'approximation')
-        if weight > 1 or weight < 0:
-          raise RuntimeError('Weight should be a float between 0 and 1')
+        if weight < 0:
+          raise RuntimeError('Weight should be a float no less than 0')
       elif cwp_dso:
         raise RuntimeError('With DSO specified, each benchmark should have a '
                            'weight')
