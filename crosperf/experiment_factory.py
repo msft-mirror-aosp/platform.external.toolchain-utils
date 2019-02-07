@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -88,6 +89,7 @@ dso_list = [
     'kallsyms',
 ]
 
+
 class ExperimentFactory(object):
   """Factory class for building an Experiment, given an ExperimentFile as input.
 
@@ -164,8 +166,12 @@ class ExperimentFactory(object):
     # inherited and/or merged with the global settings values.
     benchmarks = []
     all_benchmark_settings = experiment_file.GetSettings('benchmark')
+
     # Check if there is duplicated benchmark name
     benchmark_names = {}
+    # Check if in cwp_dso mode, all benchmarks should have same iterations
+    cwp_dso_iterations = 0
+
     for benchmark_settings in all_benchmark_settings:
       benchmark_name = benchmark_settings.name
       test_name = benchmark_settings.GetField('test_name')
@@ -192,6 +198,12 @@ class ExperimentFactory(object):
         raise SyntaxError("Duplicate benchmark name: '%s'." % benchmark_name)
 
       iterations = benchmark_settings.GetField('iterations')
+      if cwp_dso:
+        if cwp_dso_iterations != 0 and iterations != cwp_dso_iterations:
+          raise RuntimeError('Iterations of each benchmark run are not the ' \
+                             'same')
+        cwp_dso_iterations = iterations
+
       suite = benchmark_settings.GetField('suite')
       retries = benchmark_settings.GetField('retries')
       run_local = benchmark_settings.GetField('run_local')
@@ -206,7 +218,7 @@ class ExperimentFactory(object):
           raise RuntimeError('run_local must be set to False to use CWP '
                              'approximation')
         if weight < 0:
-          raise RuntimeError('Weight should be a float no less than 0')
+          raise RuntimeError('Weight should be a float >=0')
       elif cwp_dso:
         raise RuntimeError('With DSO specified, each benchmark should have a '
                            'weight')
@@ -377,7 +389,7 @@ class ExperimentFactory(object):
               raise RuntimeError('There is no remote for {0}'.format(board))
     except IOError:
       # TODO: rethrow instead of throwing different exception.
-      raise RuntimeError('IOError while reading file {0}'
-                         .format(default_remotes_file))
+      raise RuntimeError(
+          'IOError while reading file {0}'.format(default_remotes_file))
     else:
       raise RuntimeError('There is no remote for {0}'.format(board))

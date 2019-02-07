@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -14,11 +15,11 @@ import unittest
 
 from cros_utils.file_utils import FileUtils
 
-from experiment_factory import ExperimentFactory
 from experiment_file import ExperimentFile
 import test_flag
 import benchmark
 import experiment_factory
+from experiment_factory import ExperimentFactory
 import settings_factory
 
 EXPERIMENT_FILE_1 = """
@@ -67,7 +68,6 @@ EXPERIMENT_FILE_2 = """
     chromeos_image: /usr/local/google/cros_image1.bin
   }
   """
-
 
 # pylint: disable=too-many-function-args
 
@@ -130,8 +130,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     with self.assertRaises(RuntimeError) as msg:
       ef = ExperimentFactory()
       ef.GetExperiment(mock_experiment_file, '', '')
-    self.assertEqual('The DSO specified is not supported',
-                     str(msg.exception))
+    self.assertEqual('The DSO specified is not supported', str(msg.exception))
 
     # Test 2: No weight after DSO specified
     global_settings.SetField('cwp_dso', 'kallsyms')
@@ -167,9 +166,9 @@ class ExperimentFactoryTest(unittest.TestCase):
     with self.assertRaises(RuntimeError) as msg:
       ef = ExperimentFactory()
       ef.GetExperiment(mock_experiment_file, '', '')
-    self.assertEqual('CWP approximation weight only works with '
-                     'telemetry_Crosperf suite',
-                     str(msg.exception))
+    self.assertEqual(
+        'CWP approximation weight only works with '
+        'telemetry_Crosperf suite', str(msg.exception))
 
     # Test 5: cwp_dso does not work for local run
     benchmark_settings = settings_factory.BenchmarkSettings('name')
@@ -184,9 +183,9 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertEqual('run_local must be set to False to use CWP approximation',
                      str(msg.exception))
 
-    # Test 6: weight should be float between 0 and 1
+    # Test 6: weight should be float >=0
     benchmark_settings = settings_factory.BenchmarkSettings('name')
-    benchmark_settings.SetField('weight', '1.2')
+    benchmark_settings.SetField('weight', '-1.2')
     benchmark_settings.SetField('suite', 'telemetry_Crosperf')
     benchmark_settings.SetField('run_local', 'False')
     mock_experiment_file.all_settings = []
@@ -194,8 +193,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     with self.assertRaises(RuntimeError) as msg:
       ef = ExperimentFactory()
       ef.GetExperiment(mock_experiment_file, '', '')
-    self.assertEqual('Weight should be a float between 0 and 1',
-                     str(msg.exception))
+    self.assertEqual('Weight should be a float >=0', str(msg.exception))
 
     # Test 7: more than one story tag in test_args
     benchmark_settings = settings_factory.BenchmarkSettings('name')
@@ -208,8 +206,29 @@ class ExperimentFactoryTest(unittest.TestCase):
     with self.assertRaises(RuntimeError) as msg:
       ef = ExperimentFactory()
       ef.GetExperiment(mock_experiment_file, '', '')
-    self.assertEqual('Only one story or story-tag filter allowed in a single '
-                     'benchmark run', str(msg.exception))
+    self.assertEqual(
+        'Only one story or story-tag filter allowed in a single '
+        'benchmark run', str(msg.exception))
+
+    # Test 8: Iterations of each benchmark run are not same in cwp mode
+    mock_experiment_file.all_settings = []
+    benchmark_settings = settings_factory.BenchmarkSettings('name1')
+    benchmark_settings.SetField('iterations', '4')
+    benchmark_settings.SetField('weight', '1.2')
+    benchmark_settings.SetField('suite', 'telemetry_Crosperf')
+    benchmark_settings.SetField('run_local', 'False')
+    mock_experiment_file.all_settings.append(benchmark_settings)
+    benchmark_settings = settings_factory.BenchmarkSettings('name2')
+    benchmark_settings.SetField('iterations', '3')
+    benchmark_settings.SetField('weight', '1.2')
+    benchmark_settings.SetField('suite', 'telemetry_Crosperf')
+    benchmark_settings.SetField('run_local', 'False')
+    mock_experiment_file.all_settings.append(benchmark_settings)
+    with self.assertRaises(RuntimeError) as msg:
+      ef = ExperimentFactory()
+      ef.GetExperiment(mock_experiment_file, '', '')
+    self.assertEqual('Iterations of each benchmark run are not the same',
+                     str(msg.exception))
 
   def test_append_benchmark_set(self):
     ef = ExperimentFactory()
@@ -220,7 +239,7 @@ class ExperimentFactoryTest(unittest.TestCase):
                           False)
     self.assertEqual(
         len(bench_list), len(experiment_factory.telemetry_perfv2_tests))
-    self.assertTrue(type(bench_list[0]) is benchmark.Benchmark)
+    self.assertTrue(isinstance(bench_list[0], benchmark.Benchmark))
 
     bench_list = []
     ef.AppendBenchmarkSet(bench_list,
@@ -228,7 +247,7 @@ class ExperimentFactoryTest(unittest.TestCase):
                           False, '', 'telemetry_Crosperf', False, 0, False)
     self.assertEqual(
         len(bench_list), len(experiment_factory.telemetry_pagecycler_tests))
-    self.assertTrue(type(bench_list[0]) is benchmark.Benchmark)
+    self.assertTrue(isinstance(bench_list[0], benchmark.Benchmark))
 
     bench_list = []
     ef.AppendBenchmarkSet(bench_list,
@@ -236,7 +255,7 @@ class ExperimentFactoryTest(unittest.TestCase):
                           1, False, '', 'telemetry_Crosperf', False, 0, False)
     self.assertEqual(
         len(bench_list), len(experiment_factory.telemetry_toolchain_perf_tests))
-    self.assertTrue(type(bench_list[0]) is benchmark.Benchmark)
+    self.assertTrue(isinstance(bench_list[0], benchmark.Benchmark))
 
   @mock.patch.object(socket, 'gethostname')
   def test_get_experiment(self, mock_socket):
@@ -313,9 +332,9 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertFalse(exp.benchmarks[0].show_all_results)
 
     self.assertEqual(len(exp.labels), 1)
-    self.assertEqual(exp.labels[0].chromeos_image,
-                     'chromeos/src/build/images/lumpy/latest/'
-                     'chromiumos_test_image.bin')
+    self.assertEqual(
+        exp.labels[0].chromeos_image, 'chromeos/src/build/images/lumpy/latest/'
+        'chromiumos_test_image.bin')
     self.assertEqual(exp.labels[0].autotest_path, '/tmp/autotest')
     self.assertEqual(exp.labels[0].board, 'lumpy')
 
@@ -323,9 +342,9 @@ class ExperimentFactoryTest(unittest.TestCase):
     test_flag.SetTestMode(True)
     label_settings.SetField('remote', 'chromeos1.cros chromeos2.cros')
     exp = ef.GetExperiment(mock_experiment_file, '', '')
-    self.assertEqual(exp.remote, [
-        'chromeos1.cros', 'chromeos2.cros', '123.45.67.89', '123.45.76.80'
-    ])
+    self.assertEqual(
+        exp.remote,
+        ['chromeos1.cros', 'chromeos2.cros', '123.45.67.89', '123.45.76.80'])
 
     # Third test: Automatic fixing of bad  logging_level param:
     global_settings.SetField('logging_level', 'really loud!')
@@ -361,9 +380,9 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertEqual(len(exp.labels), 2)
     self.assertEqual(exp.labels[1].chromeos_image, 'fake_image_path')
     self.assertEqual(exp.labels[1].autotest_path, 'fake_autotest_path')
-    self.assertEqual(exp.remote, [
-        'fake_chromeos_machine1.cros', 'fake_chromeos_machine2.cros'
-    ])
+    self.assertEqual(
+        exp.remote,
+        ['fake_chromeos_machine1.cros', 'fake_chromeos_machine2.cros'])
 
   def test_get_default_remotes(self):
     board_list = [
