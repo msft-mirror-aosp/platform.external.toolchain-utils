@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -114,7 +115,7 @@ def SubmitTryjob(chromeos_root,
 
   # Launch buildbot with appropriate flags.
   build = buildbot_name
-  command = ('cros tryjob --yes --json --nochromesdk  %s %s %s' %
+  command = ('cros_sdk -- cros tryjob --yes --json --nochromesdk  %s %s %s' %
              (tryjob_flags, patch_arg, build))
   print('CMD: %s' % command)
   _, out, _ = RunCommandInPath(chromeos_root, command)
