@@ -30,9 +30,17 @@ STATUS_PENDING = 'PENDING'
 class BenchmarkRun(threading.Thread):
   """The benchmarkrun class."""
 
-  def __init__(self, name, benchmark, label, iteration, cache_conditions,
-               machine_manager, logger_to_use, log_level, share_cache,
-               enable_aslr):
+  def __init__(self,
+               name,
+               benchmark,
+               label,
+               iteration,
+               cache_conditions,
+               machine_manager,
+               logger_to_use,
+               log_level,
+               share_cache,
+               enable_aslr=False):
     threading.Thread.__init__(self)
     self.name = name
     self._logger = logger_to_use

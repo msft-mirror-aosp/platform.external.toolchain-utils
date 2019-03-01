@@ -1,12 +1,14 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 #
-# Copyright 2014 Google Inc. All Rights Reserved.
+# Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 """Unittest for suite_runner."""
 
 from __future__ import print_function
 
 import os.path
-import time
 
 import mock
 import unittest
@@ -62,11 +64,13 @@ class SuiteRunnerTest(unittest.TestCase):
   def __init__(self, *args, **kwargs):
     super(SuiteRunnerTest, self).__init__(*args, **kwargs)
     self.call_test_that_run = False
+    self.disable_aslr_args = []
     self.pin_governor_args = []
     self.test_that_args = []
     self.telemetry_run_args = []
     self.telemetry_crosperf_args = []
     self.call_telemetry_crosperf_run = False
+    self.call_disable_aslr = False
     self.call_pin_governor = False
     self.call_telemetry_run = False
 
@@ -94,6 +98,10 @@ class SuiteRunnerTest(unittest.TestCase):
       self.telemetry_run_args = []
       self.telemetry_crosperf_args = []
 
+    def FakeDisableASLR(machine, chroot):
+      self.call_disable_aslr = True
+      self.disable_aslr_args = [machine, chroot]
+
     def FakePinGovernor(machine, chroot):
       self.call_pin_governor = True
       self.pin_governor_args = [machine, chroot]
@@ -119,6 +127,7 @@ class SuiteRunnerTest(unittest.TestCase):
       self.call_test_that_run = True
       return 'Ran FakeTestThatRun'
 
+    self.runner.DisableASLR = FakeDisableASLR
     self.runner.PinGovernorExecutionFrequencies = FakePinGovernor
     self.runner.Telemetry_Run = FakeTelemetryRun
     self.runner.Telemetry_Crosperf_Run = FakeTelemetryCrosperfRun
@@ -130,6 +139,7 @@ class SuiteRunnerTest(unittest.TestCase):
     reset()
     self.runner.Run(machine, self.mock_label, self.telemetry_bench, test_args,
                     profiler_args)
+    self.assertTrue(self.call_disable_aslr)
     self.assertTrue(self.call_pin_governor)
     self.assertTrue(self.call_telemetry_run)
     self.assertFalse(self.call_test_that_run)
@@ -141,6 +151,7 @@ class SuiteRunnerTest(unittest.TestCase):
     reset()
     self.runner.Run(machine, self.mock_label, self.test_that_bench, test_args,
                     profiler_args)
+    self.assertTrue(self.call_disable_aslr)
     self.assertTrue(self.call_pin_governor)
     self.assertFalse(self.call_telemetry_run)
     self.assertTrue(self.call_test_that_run)
@@ -152,6 +163,7 @@ class SuiteRunnerTest(unittest.TestCase):
     reset()
     self.runner.Run(machine, self.mock_label, self.telemetry_crosperf_bench,
                     test_args, profiler_args)
+    self.assertTrue(self.call_disable_aslr)
     self.assertTrue(self.call_pin_governor)
     self.assertFalse(self.call_telemetry_run)
     self.assertFalse(self.call_test_that_run)
@@ -159,6 +171,22 @@ class SuiteRunnerTest(unittest.TestCase):
     self.assertEqual(self.telemetry_crosperf_args, [
         'fake_machine', self.mock_label, self.telemetry_crosperf_bench, '', ''
     ])
+
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
+  def test_disable_aslr(self, mock_cros_runcmd):
+    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
+    self.runner.DisableASLR('lumpy1.cros', '/tmp/chromeos')
+    self.assertEqual(mock_cros_runcmd.call_count, 1)
+    cmd = mock_cros_runcmd.call_args_list[0][0]
+    # pyformat: disable
+    set_cpu_cmd = ('set -e && '
+                   'stop ui; '
+                   'if [[ -e /proc/sys/kernel/randomize_va_space ]]; then '
+                   '  echo 0 > /proc/sys/kernel/randomize_va_space; '
+                   'fi; '
+                   'start ui ')
+    # pyformat: enable
+    self.assertEqual(cmd, (set_cpu_cmd,))
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
   def test_pin_governor_execution_frequencies(self, mock_cros_runcmd):
@@ -179,14 +207,12 @@ class SuiteRunnerTest(unittest.TestCase):
         'for f in /sys/devices/system/cpu/cpu*/cpufreq; do '
         'cd $f; '
         'echo performance > scaling_governor; '
-        'done'
-    )
+        'done')
     # pyformat: enable
     self.assertEqual(cmd, (set_cpu_cmd,))
 
-  @mock.patch.object(time, 'sleep')
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
-  def test_reboot_machine(self, mock_cros_runcmd, mock_sleep):
+  def test_reboot_machine(self, mock_cros_runcmd):
 
     def FakePinGovernor(machine_name, chromeos_root):
       if machine_name or chromeos_root:

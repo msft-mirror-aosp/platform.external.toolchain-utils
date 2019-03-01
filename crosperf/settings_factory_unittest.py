@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 #
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -48,7 +49,7 @@ class GlobalSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.GlobalSettings('g_settings')
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 26)
+    self.assertEqual(len(res.fields), 27)
     self.assertEqual(res.GetField('name'), '')
     self.assertEqual(res.GetField('board'), '')
     self.assertEqual(res.GetField('remote'), None)
@@ -71,6 +72,7 @@ class GlobalSettingsTest(unittest.TestCase):
     self.assertEqual(res.GetField('results_dir'), '')
     self.assertEqual(res.GetField('chrome_src'), '')
     self.assertEqual(res.GetField('cwp_dso'), '')
+    self.assertEqual(res.GetField('enable_aslr'), False)
 
 
 class SettingsFactoryTest(unittest.TestCase):
@@ -93,7 +95,7 @@ class SettingsFactoryTest(unittest.TestCase):
     g_settings = settings_factory.SettingsFactory().GetSettings(
         'global', 'global')
     self.assertIsInstance(g_settings, settings_factory.GlobalSettings)
-    self.assertEqual(len(g_settings.fields), 26)
+    self.assertEqual(len(g_settings.fields), 27)
 
 
 if __name__ == '__main__':

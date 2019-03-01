@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -102,7 +103,8 @@ class BenchmarkRunTest(unittest.TestCase):
     # since the last time this test was updated:
     args_list = [
         'self', 'name', 'benchmark', 'label', 'iteration', 'cache_conditions',
-        'machine_manager', 'logger_to_use', 'log_level', 'share_cache'
+        'machine_manager', 'logger_to_use', 'log_level', 'share_cache',
+        'enable_aslr'
     ]
     arg_spec = inspect.getargspec(benchmark_run.BenchmarkRun.__init__)
     self.assertEqual(len(arg_spec.args), len(args_list))
@@ -385,9 +387,9 @@ class BenchmarkRunTest(unittest.TestCase):
     br.RunTest(mock_machine)
 
     self.assertTrue(br.run_completed)
-    self.assertEqual(self.status, [
-        benchmark_run.STATUS_IMAGING, benchmark_run.STATUS_RUNNING
-    ])
+    self.assertEqual(
+        self.status,
+        [benchmark_run.STATUS_IMAGING, benchmark_run.STATUS_RUNNING])
 
     self.assertEqual(br.machine_manager.ImageMachine.call_count, 1)
     br.machine_manager.ImageMachine.assert_called_with(mock_machine,
@@ -399,7 +401,7 @@ class BenchmarkRunTest(unittest.TestCase):
     self.assertEqual(mock_result.call_count, 1)
     mock_result.assert_called_with(
         self.mock_logger, 'average', self.test_label, None, "{'Score':100}", '',
-        0, 'page_cycler.netsim.top_10', 'telemetry_Crosperf', '', 0.0)
+        0, 'page_cycler.netsim.top_10', 'telemetry_Crosperf', '')
 
   def test_set_cache_conditions(self):
     br = benchmark_run.BenchmarkRun(

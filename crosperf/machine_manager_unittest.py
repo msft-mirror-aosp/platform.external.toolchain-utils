@@ -1,6 +1,9 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 
-# Copyright 2012 Google Inc. All Rights Reserved.
+# Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 """Unittest for machine_manager."""
 
 from __future__ import print_function
@@ -54,8 +57,8 @@ LABEL_LUMPY = label.MockLabel(
     'gcc', None)
 LABEL_MIX = label.MockLabel('mix', 'chromeos_image', 'autotest_dir',
                             CHROMEOS_ROOT, 'mix',
-                            ['daisy1', 'daisy2', 'lumpy3',
-                             'lumpy4'], '', '', False, 'average', 'gcc', None)
+                            ['daisy1', 'daisy2', 'lumpy3', 'lumpy4'], '', '',
+                            False, 'average', 'gcc', None)
 
 
 class MachineManagerTest(unittest.TestCase):
@@ -454,7 +457,7 @@ class MachineManagerTest(unittest.TestCase):
         suite='telemetry_Crosperf')  # suite
 
     test_run = MockBenchmarkRun('test run', bench, LABEL_LUMPY, 1, [], self.mm,
-                                mock_logger, 'verbose', '')
+                                mock_logger, 'verbose', '', False)
 
     self.mm._machines = [
         self.mock_lumpy1, self.mock_lumpy2, self.mock_lumpy3, self.mock_daisy1,
@@ -484,9 +487,9 @@ class MachineManagerTest(unittest.TestCase):
 
   def test_get_all_cpu_info(self):
     info = self.mm.GetAllCPUInfo([LABEL_LUMPY, LABEL_MIX])
-    self.assertEqual(info,
-                     'lumpy\n-------------------\nlumpy_cpu_info\n\n\nmix\n-'
-                     '------------------\ndaisy_cpu_info\n\n\n')
+    self.assertEqual(
+        info, 'lumpy\n-------------------\nlumpy_cpu_info\n\n\nmix\n-'
+        '------------------\ndaisy_cpu_info\n\n\n')
 
 
 MEMINFO_STRING = """MemTotal:        3990332 kB
