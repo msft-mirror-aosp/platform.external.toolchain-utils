@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -152,17 +153,7 @@ class TableGenerator(object):
   def GetTable(self, number_of_rows=sys.maxint):
     """Returns a table from a list of list of dicts.
 
-    The list of list of dicts is passed into the constructor of TableGenerator.
-    This method converts that into a canonical list of lists which represents a
-    table of values.
-
-    Args:
-      number_of_rows: Maximum number of rows to return from the table.
-
-    Returns:
-      A list of lists which is the table.
-
-    Example:
+    Examples:
       We have the following runs:
         [[{"k1": "v1", "k2": "v2"}, {"k1": "v3"}],
          [{"k1": "v4", "k4": "v5"}]]
@@ -175,6 +166,16 @@ class TableGenerator(object):
          ["k4", [], ["v5"]]]
       The returned table can then be processed further by other classes in this
       module.
+
+    The list of list of dicts is passed into the constructor of TableGenerator.
+    This method converts that into a canonical list of lists which represents a
+    table of values.
+
+    Args:
+      number_of_rows: Maximum number of rows to return from the table.
+
+    Returns:
+      A list of lists which is the table.
     """
     keys = self._GetKeys()
     header = [self._key_name] + self._labels
@@ -187,7 +188,7 @@ class TableGenerator(object):
         v = []
         for run in run_list:
           if k in run:
-            if type(run[k]) is list:
+            if isinstance(run[k], list):
               val = run[k][0]
               unit = run[k][1]
             else:
@@ -207,16 +208,18 @@ class TableGenerator(object):
     return table
 
 
-class CPUCyclesTableGenerator(TableGenerator):
-  """Creates a table with only cpu cycles from the results
+class SamplesTableGenerator(TableGenerator):
+  """Creates a table with only samples from the results
 
   The main public function is called GetTable().
 
   Different than TableGenerator, self._runs is now a dict of {benchmark: runs}
-  We are expecting there is 'cpu_cycles' in `runs`.
+  We are expecting there is 'samples' in `runs`.
   """
-  def __init__(self, run_keyvals, labels, iter_counts, weights):
-    TableGenerator.__init__(self, run_keyvals, labels,  key_name='Benchmarks')
+
+  def __init__(self, run_keyvals, label_list, iter_counts, weights):
+    TableGenerator.__init__(
+        self, run_keyvals, label_list, key_name='Benchmarks')
     self._iter_counts = iter_counts
     self._weights = weights
 
@@ -226,27 +229,22 @@ class CPUCyclesTableGenerator(TableGenerator):
 
   def GetTable(self, number_of_rows=sys.maxint):
     """Returns a tuple, which contains three args:
-        1) a table from a list of list of dicts.
-        2) updated benchmark_results run_keyvals with composite benchmark
-        3) updated benchmark_results iter_count with composite benchmark
+
+      1) a table from a list of list of dicts.
+      2) updated benchmark_results run_keyvals with composite benchmark
+      3) updated benchmark_results iter_count with composite benchmark
 
     The dict of list of list of dicts is passed into the constructor of
-    CPUCyclesTableGenerator.
-    This method converts that into a canonical list of lists which represents a
-    table of values.
+    SamplesTableGenerator.
+    This method converts that into a canonical list of lists which
+    represents a table of values.
 
-    Args:
-      number_of_rows: Maximum number of rows to return from the table.
-
-    Returns:
-      A list of lists which is the table.
-
-    Example:
+    Examples:
       We have the following runs:
-        {bench1: [[{"cpu_cycles": "v1"}, {"cpu_cycles": "v2"}],
-                  [{"cpu_cycles": "v3"}, {"cpu_cycles": "v4"}]]
-         bench2: [[{"cpu_cycles": "v21"}, None],
-                  [{"cpu_cycles": "v22"}, {"cpu_cycles": "v23"}]]}
+        {bench1: [[{"samples": "v1"}, {"samples": "v2"}],
+                  [{"samples": "v3"}, {"samples": "v4"}]]
+         bench2: [[{"samples": "v21"}, None],
+                  [{"samples": "v22"}, {"samples": "v23"}]]}
       and weights of benchmarks:
         {bench1: w1, bench2: w2}
       and the following labels:
@@ -262,6 +260,12 @@ class CPUCyclesTableGenerator(TableGenerator):
             ((2, 0), ["v3*w1+v22*w2", "v4*w1+ v23*w2"])]]
       The returned table can then be processed further by other classes in this
       module.
+
+    Args:
+      number_of_rows: Maximum number of rows to return from the table.
+
+    Returns:
+      A list of lists which is the table.
     """
     keys = self._GetKeys()
     header = [self._key_name, 'Weights'] + self._labels
@@ -270,9 +274,9 @@ class CPUCyclesTableGenerator(TableGenerator):
     iterations = 0
 
     for k in keys:
-      runs = self._runs[k]
+      bench_runs = self._runs[k]
       unit = None
-      all_runs_empty = all(not dict for label in runs for dict in label)
+      all_runs_empty = all(not dict for label in bench_runs for dict in label)
       if all_runs_empty:
         cell = Cell()
         cell.string_value = 'Benchmark %s contains no result.' + \
@@ -281,28 +285,28 @@ class CPUCyclesTableGenerator(TableGenerator):
       else:
         row = [k]
         row.append(self._weights[k])
-        for run_list in runs:
+        for run_list in bench_runs:
           run_pass = 0
           run_fail = 0
           v = []
           for run in run_list:
-            if 'cpu_cycles' in run:
-              if type(run['cpu_cycles']) is list:
-                val = run['cpu_cycles'][0] * self._weights[k]
-                unit = run['cpu_cycles'][1]
+            if 'samples' in run:
+              if isinstance(run['samples'], list):
+                val = run['samples'][0] * self._weights[k]
+                unit = run['samples'][1]
               else:
-                val = run['cpu_cycles'] * self._weights[k]
+                val = run['samples'] * self._weights[k]
               v.append(val)
               run_pass += 1
             else:
               v.append(None)
               run_fail += 1
-          t = ((run_pass, run_fail), v)
-          if iterations != 0  and iterations != run_pass + run_fail:
+          one_tuple = ((run_pass, run_fail), v)
+          if iterations != 0 and iterations != run_pass + run_fail:
             raise ValueError('Iterations of each benchmark run ' \
                              'are not the same')
           iterations = run_pass + run_fail
-          row.append(t)
+          row.append(one_tuple)
         if unit:
           keyname = row[0] + ' (%s) ' % unit
           row[0] = keyname
@@ -322,7 +326,7 @@ class CPUCyclesTableGenerator(TableGenerator):
     #        ((2, 0), ["v3*w1+v22*w2", "v4*w1+ v23*w2"])]]
     # First we will create a row of [key, weight, [[0] * iterations] * labels]
     row = [None] * len(header)
-    row[0] = '%s (cycles)' % k
+    row[0] = '%s (samples)' % k
     row[1] = 'N/A'
     for label_index in xrange(2, len(row)):
       row[label_index] = [0] * iterations
@@ -333,13 +337,13 @@ class CPUCyclesTableGenerator(TableGenerator):
         for label_index in xrange(2, len(cur_row)):
           # Iterate through each run in a single benchmark
           # each result should look like ((pass, fail), [values_list])
-          runs = cur_row[label_index][1]
+          bench_runs = cur_row[label_index][1]
           for index in xrange(iterations):
             # Accumulate each run result to composite benchmark run
             # If any run fails, then we set this run for composite benchmark
             # to None so that we know it fails.
-            if runs[index] and row[label_index][index] != None:
-              row[label_index][index] += runs[index]
+            if bench_runs[index] and row[label_index][index] != None:
+              row[label_index][index] += bench_runs[index]
             else:
               row[label_index][index] = None
       else:
@@ -368,16 +372,16 @@ class CPUCyclesTableGenerator(TableGenerator):
     v = []
     for label in row[2:]:
       # each label's result looks like ((pass, fail), [values])
-      runs = label[1]
+      benchmark_runs = label[1]
       # List of values of each label
       single_run_list = []
-      for run in runs:
+      for run in benchmark_runs:
         # Result of each run under the same label is a dict of keys.
         # Here the only key we will add for composite benchmark is the
-        # weighted_cpu_cycles we added up.
+        # weighted_samples we added up.
         one_dict = {}
         if run:
-          one_dict[u'weighted_cpu_cycles'] = [run, u'cycles']
+          one_dict[u'weighted_samples'] = [run, u'samples']
           one_dict['retval'] = 0
         else:
           one_dict['retval'] = 1
@@ -506,8 +510,8 @@ class NonEmptyCountResult(Result):
     len_values = len(values)
     len_baseline_values = len(baseline_values)
     tmp_cell = Cell()
-    tmp_cell.value = 1.0 + (float(cell.value - base_value) /
-                            (max(len_values, len_baseline_values)))
+    tmp_cell.value = 1.0 + (
+        float(cell.value - base_value) / (max(len_values, len_baseline_values)))
     f.Compute(tmp_cell)
     cell.bgcolor = tmp_cell.bgcolor
 
@@ -528,13 +532,16 @@ class AmeanResult(StringMeanResult):
   def _ComputeFloat(self, cell, values, baseline_values):
     cell.value = numpy.mean(values)
 
+
 class RawResult(Result):
   """Raw result."""
   pass
 
+
 class IterationResult(Result):
   """Iteration result."""
   pass
+
 
 class MinResult(Result):
   """Minimum."""
@@ -653,7 +660,7 @@ class KeyAwareComparisonResult(ComparisonResult):
         'dropped_percent', '(ms)', '(seconds)', '--ms',
         '--average_num_missing_tiles', '--experimental_jank',
         '--experimental_mean_frame', '--experimental_median_frame_time',
-        '--total_deferred_image_decode_count', '--seconds', 'cycles'
+        '--total_deferred_image_decode_count', '--seconds', 'samples'
     ]
 
     return any([l in key for l in lower_is_better_keys])
@@ -858,8 +865,7 @@ class PercentFormat(Format):
 
   def _ComputeFloat(self, cell):
     cell.string_value = '%+1.1f%%' % ((float(cell.value) - 1) * 100)
-    cell.color = self._GetColor(cell.value,
-                                Color(255, 0, 0, 0),
+    cell.color = self._GetColor(cell.value, Color(255, 0, 0, 0),
                                 Color(0, 0, 0, 0), Color(0, 255, 0, 0))
 
 
@@ -872,8 +878,7 @@ class RatioFormat(Format):
 
   def _ComputeFloat(self, cell):
     cell.string_value = '%+1.1f%%' % ((cell.value - 1) * 100)
-    cell.color = self._GetColor(cell.value,
-                                Color(255, 0, 0, 0),
+    cell.color = self._GetColor(cell.value, Color(255, 0, 0, 0),
                                 Color(0, 0, 0, 0), Color(0, 255, 0, 0))
 
 
@@ -889,8 +894,7 @@ class ColorBoxFormat(Format):
 
   def _ComputeFloat(self, cell):
     cell.string_value = '--'
-    bgcolor = self._GetColor(cell.value,
-                             Color(255, 0, 0, 0),
+    bgcolor = self._GetColor(cell.value, Color(255, 0, 0, 0),
                              Color(255, 255, 255, 0), Color(0, 255, 0, 0))
     cell.bgcolor = bgcolor
     cell.color = bgcolor
@@ -969,18 +973,19 @@ class TableFormatter(object):
   formats to apply to the table and returns a table of cells.
   """
 
-  def __init__(self, table, columns, cpu_table=False):
+  def __init__(self, table, columns, samples_table=False):
     """The constructor takes in a table and a list of columns.
 
     Args:
       table: A list of lists of values.
-      columns: A list of column containing what to produce and how to format it.
-      cpu_table: A flag to check whether we are generating a table of cpu cycles
-        in CWP apporximation mode.
+      columns: A list of column containing what to produce and how to format
+               it.
+      samples_table: A flag to check whether we are generating a table of
+                     samples in CWP apporximation mode.
     """
     self._table = table
     self._columns = columns
-    self._cpu_table = cpu_table
+    self._samples_table = samples_table
     self._table_columns = []
     self._out_table = []
 
@@ -989,9 +994,9 @@ class TableFormatter(object):
     all_failed = False
 
     for row in self._table[1:]:
-      # If we are generating cpu_table, the second value will be weight rather
-      # than values.
-      start_col = 2 if self._cpu_table else 1
+      # If we are generating samples_table, the second value will be weight
+      # rather than values.
+      start_col = 2 if self._samples_table else 1
       # It does not make sense to put retval in the summary table.
       if str(row[0]) == 'retval' and table_type == 'summary':
         # Check to see if any runs passed, and update all_failed.
@@ -1003,8 +1008,8 @@ class TableFormatter(object):
       key = Cell()
       key.string_value = str(row[0])
       out_row = [key]
-      if self._cpu_table:
-        # Add one column for weight if in cpu_table mode
+      if self._samples_table:
+        # Add one column for weight if in samples_table mode
         weight = Cell()
         weight.value = row[1]
         f = WeightFormat()
@@ -1014,7 +1019,7 @@ class TableFormatter(object):
       for results in row[start_col:]:
         column_start = 0
         values = None
-        # If generating cpu table, we will split a tuple of iterations info
+        # If generating sample table, we will split a tuple of iterations info
         # from the results
         if isinstance(results, tuple):
           it, values = results
@@ -1066,9 +1071,9 @@ class TableFormatter(object):
     """Generate Column name at the top of table."""
     key = Cell()
     key.header = True
-    key.string_value = 'Keys'if not self._cpu_table else 'Benchmarks'
+    key.string_value = 'Keys' if not self._samples_table else 'Benchmarks'
     header = [key]
-    if self._cpu_table:
+    if self._samples_table:
       weight = Cell()
       weight.header = True
       weight.string_value = 'Weights'
@@ -1133,7 +1138,7 @@ class TableFormatter(object):
       # Put the number of pass/fail iterations in the image label header.
       if column_position > 0 and retval_row:
         retval_values = retval_row[column_position]
-        if type(retval_values) is list:
+        if isinstance(retval_values, list):
           passes, fails = self.GetPassesAndFails(retval_values)
           cell.string_value = str(label) + '  (pass:%d fail:%d)' % (passes,
                                                                     fails)
@@ -1142,10 +1147,12 @@ class TableFormatter(object):
       else:
         cell.string_value = str(label)
       if top_header:
-        if not self._cpu_table or (self._cpu_table and len(top_header) == 2):
+        if not self._samples_table or (self._samples_table and
+                                       len(top_header) == 2):
           cell.colspan = base_colspan
       if len(top_header) > 1:
-        if not self._cpu_table or (self._cpu_table and len(top_header) > 2):
+        if not self._samples_table or (self._samples_table and
+                                       len(top_header) > 2):
           cell.colspan = compare_colspan
       top_header.append(cell)
       column_position = column_position + 1
@@ -1355,8 +1362,12 @@ class TablePrinter(object):
 def GetSimpleTable(table, out_to=TablePrinter.CONSOLE):
   """Prints a simple table.
 
-  This is used by code that has a very simple list-of-lists and wants to produce
-  a table with ameans, a percentage ratio of ameans and a colorbox.
+  This is used by code that has a very simple list-of-lists and wants to
+  produce a table with ameans, a percentage ratio of ameans and a colorbox.
+
+  Examples:
+    GetSimpleConsoleTable([["binary", "b1", "b2"],["size", "300", "400"]])
+    will produce a colored table that can be printed to the console.
 
   Args:
     table: a list of lists.
@@ -1364,10 +1375,6 @@ def GetSimpleTable(table, out_to=TablePrinter.CONSOLE):
 
   Returns:
     A string version of the table that can be printed to the console.
-
-  Example:
-    GetSimpleConsoleTable([["binary", "b1", "b2"],["size", "300", "400"]])
-    will produce a colored table that can be printed to the console.
   """
   columns = [
       Column(AmeanResult(), Format()),
@@ -1405,15 +1412,15 @@ def GetComplexTable(runs, labels, out_to=TablePrinter.CONSOLE):
   tg = TableGenerator(runs, labels, TableGenerator.SORT_BY_VALUES_DESC)
   table = tg.GetTable()
   columns = [
-      Column(LiteralResult(), Format(), 'Literal'), Column(
-          AmeanResult(), Format()), Column(StdResult(), Format()), Column(
-              CoeffVarResult(), CoeffVarFormat()), Column(
-                  NonEmptyCountResult(), Format()),
-      Column(AmeanRatioResult(), PercentFormat()), Column(
-          AmeanRatioResult(), RatioFormat()), Column(GmeanRatioResult(),
-                                                     RatioFormat()), Column(
-                                                         PValueResult(),
-                                                         PValueFormat())
+      Column(LiteralResult(), Format(), 'Literal'),
+      Column(AmeanResult(), Format()),
+      Column(StdResult(), Format()),
+      Column(CoeffVarResult(), CoeffVarFormat()),
+      Column(NonEmptyCountResult(), Format()),
+      Column(AmeanRatioResult(), PercentFormat()),
+      Column(AmeanRatioResult(), RatioFormat()),
+      Column(GmeanRatioResult(), RatioFormat()),
+      Column(PValueResult(), PValueFormat())
   ]
   tf = TableFormatter(table, columns)
   cell_table = tf.GetCellTable()
@@ -1433,27 +1440,29 @@ if __name__ == '__main__':
       'k8': 'PASS',
       'k9': 'PASS',
       'k10': '0'
-  }, {
-      'k1': '13',
-      'k2': '14',
-      'k3': '15',
-      'ms_1': '10',
-      'k8': 'PASS',
-      'k9': 'FAIL',
-      'k10': '0'
-  }], [{
-      'k1': '50',
-      'k2': '51',
-      'k3': '52',
-      'k4': '53',
-      'k5': '35',
-      'k6': '45',
-      'ms_1': '200',
-      'ms_2': '20',
-      'k7': 'FAIL',
-      'k8': 'PASS',
-      'k9': 'PASS'
-  }]]
+  },
+           {
+               'k1': '13',
+               'k2': '14',
+               'k3': '15',
+               'ms_1': '10',
+               'k8': 'PASS',
+               'k9': 'FAIL',
+               'k10': '0'
+           }],
+          [{
+              'k1': '50',
+              'k2': '51',
+              'k3': '52',
+              'k4': '53',
+              'k5': '35',
+              'k6': '45',
+              'ms_1': '200',
+              'ms_2': '20',
+              'k7': 'FAIL',
+              'k8': 'PASS',
+              'k9': 'PASS'
+          }]]
   labels = ['vanilla', 'modified']
   t = GetComplexTable(runs, labels, TablePrinter.CONSOLE)
   print(t)

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -188,8 +189,8 @@ class Result(object):
       keyvals_dict = self.AppendTelemetryUnits(keyvals_dict, units_dict)
     return keyvals_dict
 
-  def GetCPUCycles(self):
-    cpu_cycles = 0
+  def GetSamples(self):
+    samples = 0
     for perf_data_file in self.perf_data_files:
       chroot_perf_data_file = misc.GetInsideChrootPath(self.chromeos_root,
                                                        perf_data_file)
@@ -212,25 +213,25 @@ class Result(object):
         # if user want an exact match for the field they want.
         exact_match = '"%s"' % self.cwp_dso
 
-      command = ('%s report -n -s dso -i %s 2> /dev/null | grep %s'
-                  % (perf_file, chroot_perf_data_file, exact_match))
+      command = ('%s report -n -s dso -i %s 2> /dev/null | grep %s' %
+                 (perf_file, chroot_perf_data_file, exact_match))
       _, result, _ = self.ce.ChrootRunCommandWOutput(self.chromeos_root,
                                                      command)
       # Accumulate the sample count for all matched fields.
       # Each line looks like this:
       #     45.42%        237210  chrome
       # And we want the second number which is the sample count.
-      cpu_cycle = 0
+      sample = 0
       try:
         for line in result.split('\n'):
           attr = line.split()
           if len(attr) == 3 and '%' in attr[0]:
-            cpu_cycle += int(attr[1])
+            sample += int(attr[1])
       except:
         raise RuntimeError('Cannot parse perf dso result')
 
-      cpu_cycles += cpu_cycle
-    return cpu_cycles
+      samples += sample
+    return samples
 
   def GetResultsDir(self):
     mo = re.search(r'Results placed in (\S+)', self.out)
@@ -382,10 +383,10 @@ class Result(object):
         print('\n ** WARNING **: Had to use deprecated output-method to '
               'collect results.\n')
       self.keyvals = self.GetKeyvals()
-    # If we are in CWP approximation mode, we want to collect DSO CPU cycles
+    # If we are in CWP approximation mode, we want to collect DSO samples
     # for each perf.data file
     if self.cwp_dso:
-      self.keyvals['cpu_cycles'] = [self.GetCPUCycles(), u'cycles']
+      self.keyvals['samples'] = [self.GetSamples(), u'samples']
     self.keyvals['retval'] = self.retval
     # Generate report from all perf.data files.
     # Now parse all perf report files and include them in keyvals.
@@ -416,8 +417,8 @@ class Result(object):
       self.retval = pickle.load(f)
 
     # Untar the tarball to a temporary directory
-    self.temp_dir = tempfile.mkdtemp(dir=os.path.join(self.chromeos_root,
-                                                      'chroot', 'tmp'))
+    self.temp_dir = tempfile.mkdtemp(
+        dir=os.path.join(self.chromeos_root, 'chroot', 'tmp'))
 
     command = ('cd %s && tar xf %s' %
                (self.temp_dir, os.path.join(cache_dir, AUTOTEST_TARBALL)))
@@ -489,8 +490,8 @@ class Result(object):
     if ret:
       command = 'rm -rf {0}'.format(temp_dir)
       self.ce.RunCommand(command)
-      raise RuntimeError('Could not move dir %s to dir %s' % (temp_dir,
-                                                              cache_dir))
+      raise RuntimeError(
+          'Could not move dir %s to dir %s' % (temp_dir, cache_dir))
 
   @classmethod
   def CreateFromRun(cls,
@@ -804,7 +805,7 @@ class MockResultsCache(ResultsCache):
 class MockResult(Result):
   """Class for mock testing, corresponding to Result class."""
 
-  def PopulateFromRun(self, out, err, retval, test, suite):
+  def PopulateFromRun(self, out, err, retval, test, suite, cwp_dso, weight):
     self.out = out
     self.err = err
     self.retval = retval

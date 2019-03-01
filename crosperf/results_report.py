@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -16,7 +17,7 @@ from cros_utils.tabulator import Cell
 from cros_utils.tabulator import CoeffVarFormat
 from cros_utils.tabulator import CoeffVarResult
 from cros_utils.tabulator import Column
-from cros_utils.tabulator import CPUCyclesTableGenerator
+from cros_utils.tabulator import SamplesTableGenerator
 from cros_utils.tabulator import Format
 from cros_utils.tabulator import IterationResult
 from cros_utils.tabulator import GmeanRatioResult
@@ -54,12 +55,12 @@ def ParseChromeosImage(chromeos_image):
   part after '/chroot/tmp' in the second case.
 
   Args:
-      chromeos_image: string containing the path to the chromeos_image that
-      crosperf used for the test.
+    chromeos_image: string containing the path to the chromeos_image that
+    crosperf used for the test.
 
   Returns:
-      version, image: The results of parsing the input string, as explained
-      above.
+    version, image: The results of parsing the input string, as explained
+    above.
   """
   # Find the Chromeos Version, e.g. R45-2345.0.0.....
   # chromeos_image should have been something like:
@@ -97,8 +98,7 @@ def _FilterPerfReport(event_threshold, report):
 
   def filter_dict(m):
     return {
-        fn_name: pct
-        for fn_name, pct in m.iteritems() if pct >= event_threshold
+        fn_name: pct for fn_name, pct in m.iteritems() if pct >= event_threshold
     }
 
   return {event: filter_dict(m) for event, m in report.iteritems()}
@@ -159,12 +159,14 @@ def _GetResultsTableHeader(ben_name, iterations):
   cell.header = True
   return [[cell]]
 
+
 def _GetDSOHeader(cwp_dso):
   info = 'CWP_DSO: %s' % cwp_dso
   cell = Cell()
   cell.string_value = info
   cell.header = False
   return [[cell]]
+
 
 def _ParseColumn(columns, iteration):
   new_column = []
@@ -230,20 +232,20 @@ def _GetPerfTables(benchmark_results, columns, table_type):
       tables.append(table)
   return tables
 
-def _GetCPUTables(benchmark_results, columns, table_type):
+
+def _GetSamplesTables(benchmark_results, columns, table_type):
   tables = []
   dso_header_table = _GetDSOHeader(benchmark_results.cwp_dso)
   tables.append(dso_header_table)
-  (table, new_keyvals, iter_counts) = CPUCyclesTableGenerator(
-                                        benchmark_results.run_keyvals,
-                                        benchmark_results.label_names,
-                                        benchmark_results.iter_counts,
-                                        benchmark_results.weights).GetTable()
+  (table, new_keyvals, iter_counts) = SamplesTableGenerator(
+      benchmark_results.run_keyvals, benchmark_results.label_names,
+      benchmark_results.iter_counts, benchmark_results.weights).GetTable()
   parsed_columns = _ParseColumn(columns, 1)
-  tf = TableFormatter(table, parsed_columns, cpu_table=True)
+  tf = TableFormatter(table, parsed_columns, samples_table=True)
   cell_table = tf.GetCellTable(table_type)
   tables.append(cell_table)
   return (tables, new_keyvals, iter_counts)
+
 
 class ResultsReport(object):
   """Class to handle the report format."""
@@ -256,14 +258,14 @@ class ResultsReport(object):
   def _GetTablesWithColumns(self, columns, table_type, summary_type):
     if summary_type == 'perf':
       get_tables = _GetPerfTables
-    elif summary_type == 'cpu':
-      get_tables = _GetCPUTables
+    elif summary_type == 'samples':
+      get_tables = _GetSamplesTables
     else:
       get_tables = _GetTables
     ret = get_tables(self.benchmark_results, columns, table_type)
-    # If we are generating a CPU summary table, the return value of get_tables
-    # will be a tuple, and we will update the benchmark_results for composite
-    # benchmark so that full table can use it.
+    # If we are generating a samples summary table, the return value of
+    # get_tables will be a tuple, and we will update the benchmark_results for
+    # composite benchmark so that full table can use it.
     if isinstance(ret, tuple):
       self.benchmark_results.run_keyvals = ret[1]
       self.benchmark_results.iter_counts = ret[2]
@@ -272,29 +274,35 @@ class ResultsReport(object):
 
   def GetFullTables(self, perf=False):
     columns = [
-        Column(RawResult(), Format()), Column(MinResult(), Format()), Column(
-            MaxResult(), Format()), Column(AmeanResult(), Format()), Column(
-                StdResult(), Format(), 'StdDev'),
-        Column(CoeffVarResult(), CoeffVarFormat(), 'StdDev/Mean'), Column(
-            GmeanRatioResult(), RatioFormat(), 'GmeanSpeedup'), Column(
-                PValueResult(), PValueFormat(), 'p-value')
+        Column(RawResult(), Format()),
+        Column(MinResult(), Format()),
+        Column(MaxResult(), Format()),
+        Column(AmeanResult(), Format()),
+        Column(StdResult(), Format(), 'StdDev'),
+        Column(CoeffVarResult(), CoeffVarFormat(), 'StdDev/Mean'),
+        Column(GmeanRatioResult(), RatioFormat(), 'GmeanSpeedup'),
+        Column(PValueResult(), PValueFormat(), 'p-value')
     ]
     return self._GetTablesWithColumns(columns, 'full', perf)
 
   def GetSummaryTables(self, summary_type=''):
-    if summary_type == 'cpu':
-      columns = [Column(IterationResult(), Format(), 'Iterations [Pass:Fail]'),
-                 Column(AmeanResult(), Format(), 'Weighted CPU-cycles Amean'),
-                 Column(StdResult(), Format(), 'StdDev'),
-                 Column(CoeffVarResult(), CoeffVarFormat(), 'StdDev/Mean'),
-                 Column(GmeanRatioResult(), RatioFormat(), 'GmeanSpeedup'),
-                 Column(PValueResult(), PValueFormat(), 'p-value')]
+    if summary_type == 'samples':
+      columns = [
+          Column(IterationResult(), Format(), 'Iterations [Pass:Fail]'),
+          Column(AmeanResult(), Format(), 'Weighted Samples Amean'),
+          Column(StdResult(), Format(), 'StdDev'),
+          Column(CoeffVarResult(), CoeffVarFormat(), 'StdDev/Mean'),
+          Column(GmeanRatioResult(), RatioFormat(), 'GmeanSpeedup'),
+          Column(PValueResult(), PValueFormat(), 'p-value')
+      ]
     else:
-      columns = [Column(AmeanResult(), Format()),
-                 Column(StdResult(), Format(), 'StdDev'),
-                 Column(CoeffVarResult(), CoeffVarFormat(), 'StdDev/Mean'),
-                 Column(GmeanRatioResult(), RatioFormat(), 'GmeanSpeedup'),
-                 Column(PValueResult(), PValueFormat(), 'p-value')]
+      columns = [
+          Column(AmeanResult(), Format()),
+          Column(StdResult(), Format(), 'StdDev'),
+          Column(CoeffVarResult(), CoeffVarFormat(), 'StdDev/Mean'),
+          Column(GmeanRatioResult(), RatioFormat(), 'GmeanSpeedup'),
+          Column(PValueResult(), PValueFormat(), 'p-value')
+      ]
     return self._GetTablesWithColumns(columns, 'summary', summary_type)
 
 
@@ -352,8 +360,8 @@ class TextResultsReport(ResultsReport):
     """Generate the status table by the tabulator."""
     table = [['', '']]
     columns = [
-        Column(LiteralResult(iteration=0), Format(), 'Status'), Column(
-            LiteralResult(iteration=1), Format(), 'Failing Reason')
+        Column(LiteralResult(iteration=0), Format(), 'Status'),
+        Column(LiteralResult(iteration=1), Format(), 'Failing Reason')
     ]
 
     for benchmark_run in self.experiment.benchmark_runs:
@@ -380,16 +388,16 @@ class TextResultsReport(ResultsReport):
     if not self.benchmark_results.cwp_dso:
       summary_table = _PrintTable(self.GetSummaryTables(), output_type)
     else:
-      summary_table = _PrintTable(self.GetSummaryTables(summary_type='cpu'),
-                                  output_type)
+      summary_table = _PrintTable(
+          self.GetSummaryTables(summary_type='samples'), output_type)
     sections.append(self._MakeSection('Summary', summary_table))
 
     if experiment is not None:
       table = _PrintTable(self.GetStatusTable(), output_type)
       sections.append(self._MakeSection('Benchmark Run Status', table))
 
-    perf_table = _PrintTable(self.GetSummaryTables(summary_type='perf'),
-                             output_type)
+    perf_table = _PrintTable(
+        self.GetSummaryTables(summary_type='perf'), output_type)
     if perf_table and not self.benchmark_results.cwp_dso:
       sections.append(self._MakeSection('Perf Data', perf_table))
 
@@ -410,8 +418,9 @@ def _GetHTMLCharts(label_names, test_results):
     # never add headers. We still need to pass it anyway.
     table = TableGenerator(runs, label_names).GetTable()
     columns = [
-        Column(AmeanResult(), Format()), Column(MinResult(), Format()), Column(
-            MaxResult(), Format())
+        Column(AmeanResult(), Format()),
+        Column(MinResult(), Format()),
+        Column(MaxResult(), Format())
     ]
     tf = TableFormatter(table, columns)
     data_table = tf.GetCellTable('full', headers=False)
@@ -464,7 +473,7 @@ class HTMLResultsReport(ResultsReport):
       summary_table = self.GetSummaryTables()
       perf_table = self.GetSummaryTables(summary_type='perf')
     else:
-      summary_table = self.GetSummaryTables(summary_type='cpu')
+      summary_table = self.GetSummaryTables(summary_type='samples')
       perf_table = None
     full_table = self.GetFullTables()
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -189,9 +190,9 @@ def OrganizeResults(benchmark_runs, labels, benchmarks=None, json_report=False):
         # Did not find test_name in json file; show everything.
         show_all_results = True
     if benchmark_run.result.cwp_dso:
-      # If we are in cwp approximation mode, we only care about cpu_cycles
-      if 'cpu_cycles' in benchmark_run.result.keyvals:
-        cur_dict['cpu_cycles'] = benchmark_run.result.keyvals['cpu_cycles']
+      # If we are in cwp approximation mode, we only care about samples
+      if 'samples' in benchmark_run.result.keyvals:
+        cur_dict['samples'] = benchmark_run.result.keyvals['samples']
       cur_dict['retval'] = benchmark_run.result.keyvals['retval']
     else:
       for test_key in benchmark_run.result.keyvals:
