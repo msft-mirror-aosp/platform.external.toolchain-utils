@@ -381,11 +381,11 @@ class Result(object):
         print('\n ** WARNING **: Had to use deprecated output-method to '
               'collect results.\n')
       self.keyvals = self.GetKeyvals()
+    self.keyvals['retval'] = self.retval
     # If we are in CWP approximation mode, we want to collect DSO samples
     # for each perf.data file
-    if self.cwp_dso:
+    if self.cwp_dso and self.retval == 0:
       self.keyvals['samples'] = self.GetSamples()
-    self.keyvals['retval'] = self.retval
     # Generate report from all perf.data files.
     # Now parse all perf report files and include them in keyvals.
     self.GatherPerfResults()
