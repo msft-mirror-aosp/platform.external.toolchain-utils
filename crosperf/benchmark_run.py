@@ -75,7 +75,7 @@ class BenchmarkRun(threading.Thread):
                     self.label.board, self.cache_conditions, self._logger,
                     self.log_level, self.label, self.share_cache,
                     self.benchmark.suite, self.benchmark.show_all_results,
-                    self.benchmark.run_local)
+                    self.benchmark.run_local, self.benchmark.cwp_dso)
 
     self.result = self.cache.ReadResult()
     self.cache_hit = (self.result is not None)
@@ -99,7 +99,7 @@ class BenchmarkRun(threading.Thread):
         self.result = Result.CreateFromRun(
             self._logger, self.log_level, self.label, self.machine, output, err,
             retval, self.benchmark.test_name, self.benchmark.suite,
-            self.benchmark.cwp_dso, self.benchmark.weight)
+            self.benchmark.cwp_dso)
 
       else:
         self._logger.LogOutput('%s: No cache hit.' % self.name)
@@ -216,7 +216,7 @@ class BenchmarkRun(threading.Thread):
     return Result.CreateFromRun(self._logger, self.log_level, self.label,
                                 self.machine, out, err, retval,
                                 self.benchmark.test_name, self.benchmark.suite,
-                                self.benchmark.cwp_dso, self.benchmark.weight)
+                                self.benchmark.cwp_dso)
 
   def SetCacheConditions(self, cache_conditions):
     self.cache_conditions = cache_conditions
@@ -249,7 +249,7 @@ class MockBenchmarkRun(BenchmarkRun):
                     self.label.board, self.cache_conditions, self._logger,
                     self.log_level, self.label, self.share_cache,
                     self.benchmark.suite, self.benchmark.show_all_results,
-                    self.benchmark.run_local)
+                    self.benchmark.run_local, self.benchmark.cwp_dso)
 
     self.result = self.cache.ReadResult()
     self.cache_hit = (self.result is not None)

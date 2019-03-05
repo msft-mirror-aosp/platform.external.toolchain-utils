@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -113,7 +114,8 @@ class ExperimentRunner(object):
           '',
           experiment.labels[0].chromeos_root,
           None,
-          log=self.l,)
+          log=self.l,
+      )
       for m in lock_mgr.machines:
         if not lock_mgr.MachineIsKnown(m):
           lock_mgr.AddLocalMachine(m)
@@ -141,7 +143,8 @@ class ExperimentRunner(object):
         '',
         experiment.labels[0].chromeos_root,
         None,
-        log=self.l,)
+        log=self.l,
+    )
     machine_states = lock_mgr.GetMachineStates('unlock')
     lock_mgr.CheckMachineLocks(machine_states, 'unlock')
     lock_mgr.UpdateMachines(False)
@@ -149,13 +152,13 @@ class ExperimentRunner(object):
   def _ClearCacheEntries(self, experiment):
     for br in experiment.benchmark_runs:
       cache = ResultsCache()
-      cache.Init(br.label.chromeos_image, br.label.chromeos_root,
-                 br.benchmark.test_name, br.iteration, br.test_args,
-                 br.profiler_args, br.machine_manager, br.machine,
-                 br.label.board, br.cache_conditions,
-                 br.logger(), br.log_level, br.label, br.share_cache,
-                 br.benchmark.suite, br.benchmark.show_all_results,
-                 br.benchmark.run_local)
+      cache.Init(
+          br.label.chromeos_image, br.label.chromeos_root,
+          br.benchmark.test_name, br.iteration, br.test_args, br.profiler_args,
+          br.machine_manager, br.machine, br.label.board, br.cache_conditions,
+          br.logger(), br.log_level, br.label, br.share_cache,
+          br.benchmark.suite, br.benchmark.show_all_results,
+          br.benchmark.run_local, br.benchmark.cwp_dso)
       cache_dir = cache.GetCacheDirForWrite()
       if os.path.exists(cache_dir):
         self.l.LogOutput('Removing cache dir: %s' % cache_dir)

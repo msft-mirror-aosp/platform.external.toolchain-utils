@@ -59,7 +59,6 @@ class Result(object):
     self.board = None
     self.suite = None
     self.cwp_dso = ''
-    self.weight = 0.0
     self.retval = None
     self.out = None
 
@@ -231,7 +230,7 @@ class Result(object):
         raise RuntimeError('Cannot parse perf dso result')
 
       samples += sample
-    return samples
+    return [samples, u'samples']
 
   def GetResultsDir(self):
     mo = re.search(r'Results placed in (\S+)', self.out)
@@ -313,7 +312,7 @@ class Result(object):
           value = str(misc.UnitToNumber(num_events))
           self.keyvals[key] = value
 
-  def PopulateFromRun(self, out, err, retval, test, suite, cwp_dso, weight):
+  def PopulateFromRun(self, out, err, retval, test, suite, cwp_dso):
     self.board = self.label.board
     self.out = out
     self.err = err
@@ -321,7 +320,6 @@ class Result(object):
     self.test_name = test
     self.suite = suite
     self.cwp_dso = cwp_dso
-    self.weight = weight
     self.chroot_results_dir = self.GetResultsDir()
     self.results_dir = misc.GetOutsideChrootPath(self.chromeos_root,
                                                  self.chroot_results_dir)
@@ -386,7 +384,7 @@ class Result(object):
     # If we are in CWP approximation mode, we want to collect DSO samples
     # for each perf.data file
     if self.cwp_dso:
-      self.keyvals['samples'] = [self.GetSamples(), u'samples']
+      self.keyvals['samples'] = self.GetSamples()
     self.keyvals['retval'] = self.retval
     # Generate report from all perf.data files.
     # Now parse all perf report files and include them in keyvals.
@@ -407,9 +405,10 @@ class Result(object):
             break
     return chrome_version
 
-  def PopulateFromCacheDir(self, cache_dir, test, suite):
+  def PopulateFromCacheDir(self, cache_dir, test, suite, cwp_dso):
     self.test_name = test
     self.suite = suite
+    self.cwp_dso = cwp_dso
     # Read in everything from the cache directory.
     with open(os.path.join(cache_dir, RESULTS_FILE), 'r') as f:
       self.out = pickle.load(f)
@@ -504,13 +503,12 @@ class Result(object):
                     retval,
                     test,
                     suite='telemetry_Crosperf',
-                    cwp_dso='',
-                    weight=0.0):
+                    cwp_dso=''):
     if suite == 'telemetry':
       result = TelemetryResult(logger, label, log_level, machine)
     else:
       result = cls(logger, label, log_level, machine)
-    result.PopulateFromRun(out, err, retval, test, suite, cwp_dso, weight)
+    result.PopulateFromRun(out, err, retval, test, suite, cwp_dso)
     return result
 
   @classmethod
@@ -521,13 +519,14 @@ class Result(object):
                          machine,
                          cache_dir,
                          test,
-                         suite='telemetry_Crosperf'):
+                         suite='telemetry_Crosperf',
+                         cwp_dso=''):
     if suite == 'telemetry':
       result = TelemetryResult(logger, label, log_level, machine)
     else:
       result = cls(logger, label, log_level, machine)
     try:
-      result.PopulateFromCacheDir(cache_dir, test, suite)
+      result.PopulateFromCacheDir(cache_dir, test, suite, cwp_dso)
 
     except RuntimeError as e:
       logger.LogError('Exception while using cache: %s' % e)
@@ -542,7 +541,7 @@ class TelemetryResult(Result):
     super(TelemetryResult, self).__init__(logger, label, log_level, machine,
                                           cmd_exec)
 
-  def PopulateFromRun(self, out, err, retval, test, suite, cwp_dso, weight):
+  def PopulateFromRun(self, out, err, retval, test, suite, cwp_dso):
     self.out = out
     self.err = err
     self.retval = retval
@@ -582,9 +581,10 @@ class TelemetryResult(Result):
         self.keyvals[key] = value
     self.keyvals['retval'] = self.retval
 
-  def PopulateFromCacheDir(self, cache_dir, test, suite):
+  def PopulateFromCacheDir(self, cache_dir, test, suite, cwp_dso):
     self.test_name = test
     self.suite = suite
+    self.cwp_dso = cwp_dso
     with open(os.path.join(cache_dir, RESULTS_FILE), 'r') as f:
       self.out = pickle.load(f)
       self.err = pickle.load(f)
@@ -651,11 +651,12 @@ class ResultsCache(object):
     self.log_level = None
     self.show_all = None
     self.run_local = None
+    self.cwp_dso = None
 
   def Init(self, chromeos_image, chromeos_root, test_name, iteration, test_args,
            profiler_args, machine_manager, machine, board, cache_conditions,
            logger_to_use, log_level, label, share_cache, suite,
-           show_all_results, run_local):
+           show_all_results, run_local, cwp_dso):
     self.chromeos_image = chromeos_image
     self.chromeos_root = chromeos_root
     self.test_name = test_name
@@ -675,6 +676,7 @@ class ResultsCache(object):
     self.log_level = log_level
     self.show_all = show_all_results
     self.run_local = run_local
+    self.cwp_dso = cwp_dso
 
   def GetCacheDirForRead(self):
     matching_dirs = []
@@ -774,7 +776,7 @@ class ResultsCache(object):
       self._logger.LogOutput('Trying to read from cache dir: %s' % cache_dir)
     result = Result.CreateFromCacheHit(self._logger, self.log_level, self.label,
                                        self.machine, cache_dir, self.test_name,
-                                       self.suite)
+                                       self.suite, self.cwp_dso)
     if not result:
       return None
 
@@ -805,7 +807,7 @@ class MockResultsCache(ResultsCache):
 class MockResult(Result):
   """Class for mock testing, corresponding to Result class."""
 
-  def PopulateFromRun(self, out, err, retval, test, suite, cwp_dso, weight):
+  def PopulateFromRun(self, out, err, retval, test, suite, cwp_dso):
     self.out = out
     self.err = err
     self.retval = retval
