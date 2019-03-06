@@ -1,3 +1,5 @@
+# bestflags
+
 There is a vast set of compiler flags that can be used to build Chrome for
 ChromeOS. This option space has not been explored before. This directory
 provides an infrastructure to build Chrome with certain flag combinations, test
@@ -6,10 +8,10 @@ infrastructure supports plug-in modules that implement algorithms for searching
 in the N-Dimensional space of compiler flag combinations.
 
 Currently, three different algorithms are built, namely genetic algorithm, hill
-climbing and negative flag iterative elimination. The module 'testing_batch.py'
+climbing and negative flag iterative elimination. The module `testing_batch.py`
 contains the testing of these algorithms.
 
-To run the script, type in python testing_batch.py.
+To run the script, type in `python testing_batch.py`.
 
 For further information about the project, please refer to the design document
 at:

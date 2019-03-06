@@ -1,16 +1,20 @@
+# Experiment files
+
 To use these experiment files, replace the board, remote and images
 placeholders and run crosperf on them.
 
 Further information about crosperf:
 https://sites.google.com/a/google.com/chromeos-toolchain-team-home2/home/team-tools-and-scripts/crosperf-cros-image-performance-comparison-tool
 
-The final experiment file should look something like the following (but with 
+The final experiment file should look something like the following (but with
 different actual values for the fields):
 
+```
 board: lumpy
 remote: 123.45.67.089
 
 # Add images you want to test:
+
 my_image {
   chromeos_image: /usr/local/chromeos/src/build/images/lumpy/chromiumos_test_image.bin
 }
@@ -21,14 +25,15 @@ vanilla_image {
 }
 
 # Paste experiment benchmarks here. Example, I pasted
-# page_cycler_v2.morejs here.
+# `page_cycler_v2.morejs` here.
 
-# This experiment just runs a short autotest which measures the performance of
-# Telemetry's page_cycler_v2.morejs. In addition, it profiles
+# This experiment just runs a short autotest which measures the performance
+# of Telemetry's `page_cycler_v2.morejs`. In addition, it profiles cycles.
 
-perg_args: record -e cycles
+perf_args: record -e cycles
 
 benchmark: page_cycler_v2.morejs {
    suite: telemetry_Crosperf
    iterations: 1
 }
+```
