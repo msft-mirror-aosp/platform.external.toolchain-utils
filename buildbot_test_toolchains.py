@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 #
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -158,7 +159,7 @@ class ToolchainComparator(object):
     experiment_tests = """
     benchmark: all_toolchain_perf {
       suite: telemetry_Crosperf
-      iterations: 0
+      iterations: 5
       run_local: False
     }
 
