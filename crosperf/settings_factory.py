@@ -310,6 +310,13 @@ class GlobalSettings(Settings):
             'benchmarks. ASLR is disabled by default',
             required=False,
             default=False))
+    self.AddField(
+        BooleanField(
+            'ignore_min_max',
+            description='When doing math for the raw results, '
+            'ignore min and max values to reduce noise.',
+            required=False,
+            default=False))
 
 
 class SettingsFactory(object):

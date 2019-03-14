@@ -28,7 +28,8 @@ class Experiment(object):
   def __init__(self, name, remote, working_directory, chromeos_root,
                cache_conditions, labels, benchmarks, experiment_file, email_to,
                acquire_timeout, log_dir, log_level, share_cache,
-               results_directory, locks_directory, cwp_dso, enable_aslr):
+               results_directory, locks_directory, cwp_dso, enable_aslr,
+               ignore_min_max):
     self.name = name
     self.working_directory = working_directory
     self.remote = remote
@@ -56,6 +57,7 @@ class Experiment(object):
     self.locked_machines = []
     self.cwp_dso = cwp_dso
     self.enable_aslr = enable_aslr
+    self.ignore_min_max = ignore_min_max
 
     if not remote:
       raise RuntimeError('No remote hosts specified')

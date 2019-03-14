@@ -273,36 +273,31 @@ class ResultsReport(object):
     return ret
 
   def GetFullTables(self, perf=False):
+    ignore_min_max = self.benchmark_results.ignore_min_max
     columns = [
         Column(RawResult(), Format()),
         Column(MinResult(), Format()),
         Column(MaxResult(), Format()),
-        Column(AmeanResult(), Format()),
-        Column(StdResult(), Format(), 'StdDev'),
-        Column(CoeffVarResult(), CoeffVarFormat(), 'StdDev/Mean'),
-        Column(GmeanRatioResult(), RatioFormat(), 'GmeanSpeedup'),
-        Column(PValueResult(), PValueFormat(), 'p-value')
+        Column(AmeanResult(ignore_min_max), Format()),
+        Column(StdResult(ignore_min_max), Format(), 'StdDev'),
+        Column(CoeffVarResult(ignore_min_max), CoeffVarFormat(), 'StdDev/Mean'),
+        Column(GmeanRatioResult(ignore_min_max), RatioFormat(), 'GmeanSpeedup'),
+        Column(PValueResult(ignore_min_max), PValueFormat(), 'p-value')
     ]
     return self._GetTablesWithColumns(columns, 'full', perf)
 
   def GetSummaryTables(self, summary_type=''):
+    ignore_min_max = self.benchmark_results.ignore_min_max
+    columns = []
     if summary_type == 'samples':
-      columns = [
-          Column(IterationResult(), Format(), 'Iterations [Pass:Fail]'),
-          Column(AmeanResult(), Format(), 'Weighted Samples Amean'),
-          Column(StdResult(), Format(), 'StdDev'),
-          Column(CoeffVarResult(), CoeffVarFormat(), 'StdDev/Mean'),
-          Column(GmeanRatioResult(), RatioFormat(), 'GmeanSpeedup'),
-          Column(PValueResult(), PValueFormat(), 'p-value')
-      ]
-    else:
-      columns = [
-          Column(AmeanResult(), Format()),
-          Column(StdResult(), Format(), 'StdDev'),
-          Column(CoeffVarResult(), CoeffVarFormat(), 'StdDev/Mean'),
-          Column(GmeanRatioResult(), RatioFormat(), 'GmeanSpeedup'),
-          Column(PValueResult(), PValueFormat(), 'p-value')
-      ]
+      columns += [Column(IterationResult(), Format(), 'Iterations [Pass:Fail]')]
+    columns += [
+        Column(AmeanResult(ignore_min_max), Format()),
+        Column(StdResult(ignore_min_max), Format(), 'StdDev'),
+        Column(CoeffVarResult(ignore_min_max), CoeffVarFormat(), 'StdDev/Mean'),
+        Column(GmeanRatioResult(ignore_min_max), RatioFormat(), 'GmeanSpeedup'),
+        Column(PValueResult(ignore_min_max), PValueFormat(), 'p-value')
+    ]
     return self._GetTablesWithColumns(columns, 'summary', summary_type)
 
 
@@ -396,9 +391,9 @@ class TextResultsReport(ResultsReport):
       table = _PrintTable(self.GetStatusTable(), output_type)
       sections.append(self._MakeSection('Benchmark Run Status', table))
 
-    perf_table = _PrintTable(
-        self.GetSummaryTables(summary_type='perf'), output_type)
-    if perf_table and not self.benchmark_results.cwp_dso:
+    if not self.benchmark_results.cwp_dso:
+      perf_table = _PrintTable(
+          self.GetSummaryTables(summary_type='perf'), output_type)
       sections.append(self._MakeSection('Perf Data', perf_table))
 
     if experiment is not None:
@@ -600,6 +595,7 @@ class BenchmarkResults(object):
                label_names,
                benchmark_names_and_iterations,
                run_keyvals,
+               ignore_min_max=False,
                read_perf_report=None,
                cwp_dso=None,
                weights=None):
@@ -614,6 +610,7 @@ class BenchmarkResults(object):
     self.benchmark_names_and_iterations = benchmark_names_and_iterations
     self.iter_counts = dict(benchmark_names_and_iterations)
     self.run_keyvals = run_keyvals
+    self.ignore_min_max = ignore_min_max
     self.read_perf_report = read_perf_report
     self.cwp_dso = cwp_dso
     self.weights = dict(weights) if weights else None
@@ -624,13 +621,15 @@ class BenchmarkResults(object):
     benchmark_names_and_iterations = [(benchmark.name, benchmark.iterations)
                                       for benchmark in experiment.benchmarks]
     run_keyvals = _ExperimentToKeyvals(experiment, for_json_report)
+    ignore_min_max = experiment.ignore_min_max
     read_perf_report = functools.partial(_ReadExperimentPerfReport,
                                          experiment.results_directory)
     cwp_dso = experiment.cwp_dso
     weights = [(benchmark.name, benchmark.weight)
                for benchmark in experiment.benchmarks]
     return BenchmarkResults(label_names, benchmark_names_and_iterations,
-                            run_keyvals, read_perf_report, cwp_dso, weights)
+                            run_keyvals, ignore_min_max, read_perf_report,
+                            cwp_dso, weights)
 
 
 def _GetElemByName(name, from_list):

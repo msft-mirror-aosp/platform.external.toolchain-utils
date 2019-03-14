@@ -73,20 +73,22 @@ class TabulatorTest(unittest.TestCase):
     b = tabulator.Result()._GetGmean(a)
     self.assertTrue(b >= 0.99e+308 and b <= 1.01e+308)
 
+  def testIgnoreMinMax(self):
+    amr = tabulator.AmeanResult(ignore_min_max=True)
+    cell = tabulator.Cell()
+    values = [1, 2]
+    amr.Compute(cell, values, None)
+    self.assertTrue(cell.value == 1.5)
+    values = [1, 2, 8]
+    amr.Compute(cell, values, None)
+    self.assertTrue(cell.value == 2)
+
   def testTableGenerator(self):
-    runs = [[{
-        'k1': '10',
-        'k2': '12'
-    }, {
-        'k1': '13',
-        'k2': '14',
-        'k3': '15'
-    }], [{
-        'k1': '50',
-        'k2': '51',
-        'k3': '52',
-        'k4': '53'
-    }]]
+    # yapf: disable
+    runs = [[{'k1': '10', 'k2': '12'},
+             {'k1': '13', 'k2': '14', 'k3': '15'}],
+            [{'k1': '50', 'k2': '51', 'k3': '52', 'k4': '53'}]]
+    # yapf: enable
     labels = ['vanilla', 'modified']
     tg = tabulator.TableGenerator(runs, labels)
     table = tg.GetTable()
@@ -113,24 +115,14 @@ class TabulatorTest(unittest.TestCase):
     self.assertTrue(table)
 
   def testSamplesTableGenerator(self):
+    # yapf: disable
     keyvals = {
-        'bench1': [[{
-            'samples': 1
-        }, {
-            'samples': 2
-        }], [{
-            'samples': 3
-        }, {
-            'samples': 4
-        }]],
-        'bench2': [[{
-            'samples': 5
-        }, {}], [{
-            'samples': 6
-        }, {
-            'samples': 7
-        }]]
+        'bench1': [[{'samples': 1}, {'samples': 2}],
+                   [{'samples': 3}, {'samples': 4}]],
+        'bench2': [[{'samples': 5}, {}],
+                   [{'samples': 6}, {'samples': 7}]]
     }
+    # yapf: enable
     weights = {'bench1': 0.2, 'bench2': 0.7}
     iter_counts = {'bench1': 2, 'bench2': 2}
     labels = ['vanilla', 'modified']
@@ -152,22 +144,19 @@ class TabulatorTest(unittest.TestCase):
     header = table.pop(0)
     self.assertTrue(header == ['Benchmarks', 'Weights', 'vanilla', 'modified'])
     row = table.pop(0)
-    self.assertTrue(row == [
-        'bench1', 0.2, ((2, 0), [1 * 0.2, 2 * 0.2]), ((2, 0),
-                                                      [3 * 0.2, 4 * 0.2])
-    ])
+    # yapf: disable
+    self.assertTrue(row == ['bench1', 0.2,
+                            ((2, 0), [1 * 0.2, 2 * 0.2]),
+                            ((2, 0), [3 * 0.2, 4 * 0.2])])
     row = table.pop(0)
-    self.assertTrue(row == [
-        'bench2', 0.7, ((1, 1), [5 * 0.7, None]), ((2, 0), [6 * 0.7, 7 * 0.7])
-    ])
+    self.assertTrue(row == ['bench2', 0.7,
+                            ((1, 1), [5 * 0.7, None]),
+                            ((2, 0), [6 * 0.7, 7 * 0.7])])
     row = table.pop(0)
-    self.assertTrue(row == [
-        'Composite Benchmark (samples)', 'N/A',
-        ((1, 1),
-         [1 * 0.2 +
-          5 * 0.7, None]), ((2, 0), [3 * 0.2 + 6 * 0.7, 4 * 0.2 + 7 * 0.7])
-    ])
-
+    self.assertTrue(row == ['Composite Benchmark (samples)', 'N/A',
+                            ((1, 1), [1 * 0.2 + 5 * 0.7, None]),
+                            ((2, 0), [3 * 0.2 + 6 * 0.7, 4 * 0.2 + 7 * 0.7])])
+    # yapf: enable
     self.assertTrue('Composite Benchmark' in new_keyvals.keys())
     self.assertTrue('Composite Benchmark' in new_iter_counts.keys())
 

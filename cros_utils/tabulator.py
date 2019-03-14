@@ -87,6 +87,17 @@ def _StripNone(results):
   return res
 
 
+def _RemoveMinMax(cell, values):
+  if len(values) < 3:
+    print('WARNING: Values count is less than 3, not ignoring min/max values')
+    print('WARNING: Cell name:', cell.name, 'Values:', values)
+    return values
+
+  values.remove(min(values))
+  values.remove(max(values))
+  return values
+
+
 class TableGenerator(object):
   """Creates a table from a list of list of dicts.
 
@@ -529,7 +540,13 @@ class StringMeanResult(Result):
 class AmeanResult(StringMeanResult):
   """Arithmetic mean."""
 
+  def __init__(self, ignore_min_max=False):
+    super(AmeanResult, self).__init__()
+    self.ignore_min_max = ignore_min_max
+
   def _ComputeFloat(self, cell, values, baseline_values):
+    if self.ignore_min_max:
+      values = _RemoveMinMax(cell, values)
     cell.value = numpy.mean(values)
 
 
@@ -579,14 +596,26 @@ class NumericalResult(Result):
 class StdResult(NumericalResult):
   """Standard deviation."""
 
+  def __init__(self, ignore_min_max=False):
+    super(StdResult, self).__init__()
+    self.ignore_min_max = ignore_min_max
+
   def _ComputeFloat(self, cell, values, baseline_values):
+    if self.ignore_min_max:
+      values = _RemoveMinMax(cell, values)
     cell.value = numpy.std(values)
 
 
 class CoeffVarResult(NumericalResult):
   """Standard deviation / Mean"""
 
+  def __init__(self, ignore_min_max=False):
+    super(CoeffVarResult, self).__init__()
+    self.ignore_min_max = ignore_min_max
+
   def _ComputeFloat(self, cell, values, baseline_values):
+    if self.ignore_min_max:
+      values = _RemoveMinMax(cell, values)
     if numpy.mean(values) != 0.0:
       noise = numpy.abs(numpy.std(values) / numpy.mean(values))
     else:
@@ -619,7 +648,14 @@ class ComparisonResult(Result):
 class PValueResult(ComparisonResult):
   """P-value."""
 
+  def __init__(self, ignore_min_max=False):
+    super(PValueResult, self).__init__()
+    self.ignore_min_max = ignore_min_max
+
   def _ComputeFloat(self, cell, values, baseline_values):
+    if self.ignore_min_max:
+      values = _RemoveMinMax(cell, values)
+      baseline_values = _RemoveMinMax(cell, baseline_values)
     if len(values) < 2 or len(baseline_values) < 2:
       cell.value = float('nan')
       return
@@ -674,7 +710,14 @@ class KeyAwareComparisonResult(ComparisonResult):
 class AmeanRatioResult(KeyAwareComparisonResult):
   """Ratio of arithmetic means of values vs. baseline values."""
 
+  def __init__(self, ignore_min_max=False):
+    super(AmeanRatioResult, self).__init__()
+    self.ignore_min_max = ignore_min_max
+
   def _ComputeFloat(self, cell, values, baseline_values):
+    if self.ignore_min_max:
+      values = _RemoveMinMax(cell, values)
+      baseline_values = _RemoveMinMax(cell, baseline_values)
     if numpy.mean(baseline_values) != 0:
       cell.value = numpy.mean(values) / numpy.mean(baseline_values)
     elif numpy.mean(values) != 0:
@@ -688,7 +731,14 @@ class AmeanRatioResult(KeyAwareComparisonResult):
 class GmeanRatioResult(KeyAwareComparisonResult):
   """Ratio of geometric means of values vs. baseline values."""
 
+  def __init__(self, ignore_min_max=False):
+    super(GmeanRatioResult, self).__init__()
+    self.ignore_min_max = ignore_min_max
+
   def _ComputeFloat(self, cell, values, baseline_values):
+    if self.ignore_min_max:
+      values = _RemoveMinMax(cell, values)
+      baseline_values = _RemoveMinMax(cell, baseline_values)
     if self._GetGmean(baseline_values) != 0:
       cell.value = self._GetGmean(values) / self._GetGmean(baseline_values)
     elif self._GetGmean(values) != 0:
