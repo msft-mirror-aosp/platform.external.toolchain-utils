@@ -2,6 +2,7 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """A module to handle the report format."""
 from __future__ import print_function
 
@@ -292,7 +293,9 @@ class ResultsReport(object):
     if summary_type == 'samples':
       columns += [Column(IterationResult(), Format(), 'Iterations [Pass:Fail]')]
     columns += [
-        Column(AmeanResult(ignore_min_max), Format()),
+        Column(
+            AmeanResult(ignore_min_max), Format(),
+            'Weighted Samples Amean' if summary_type == 'samples' else ''),
         Column(StdResult(ignore_min_max), Format(), 'StdDev'),
         Column(CoeffVarResult(ignore_min_max), CoeffVarFormat(), 'StdDev/Mean'),
         Column(GmeanRatioResult(ignore_min_max), RatioFormat(), 'GmeanSpeedup'),
