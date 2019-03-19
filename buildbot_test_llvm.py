@@ -1,8 +1,10 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 #
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Script for running llvm validation tests on ChromeOS.
 
 This script launches a buildbot to build ChromeOS with the llvm on
@@ -41,7 +43,7 @@ DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
 #                        Board                      Version
 #  ------------ -------  ------------ ------------- -------
 #  cave         x86_64   glados       skylake-y     3.18
-#  daisy        armv7    daisy        exynos-5250   3.8.11
+#  daisy_skate  armv7    daisy        exynos-5250   3.8.11
 #  elm          aarch64  oak          mediatek-8173 3.18 arm32 userspace
 #  fizz         x86_64   fizz         kabylake-u/r  4.4.*
 #  gale         armv7                               3.18
@@ -51,10 +53,10 @@ DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
 #  kevin64      aarch64  gru          rockchip-3399 4.4.* arm64 userspace
 #  lakitu       x86_64                              4.4.*
 #  lars         x86_64   kunimitsu    skylake-u     3.18
+#  leon         x86_64   slippy       haswell       3.8.11
 #  nautilus     x86_64   poppy        kabylake-y    4.4.*
 #  nyan_big     armv7    nyan         tegra         3.10.18
 #  peach_pit    armv7    peach        exynos-5420   3.8.11
-#  peppy        x86_64   slippy       haswell       3.8.11
 #  samus        x86_64   auron        broadwell     3.14
 #  snappy       x86_64   reef         apollo lake   4.4.*
 #  swanky       x86_64   rambi        baytrail      4.4.*
@@ -64,7 +66,7 @@ DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
 
 TEST_BOARD = [
     'cave',
-    'daisy',
+    'daisy_skate',
     # 'elm', tested by arm64-llvm-next-toolchain builder.
     'fizz',
     'gale',
@@ -74,10 +76,10 @@ TEST_BOARD = [
     'kevin64',
     'lakitu',
     'lars',
+    'leon',
     'nautilus',
     'nyan_big',
     'peach_pit',
-    'peppy',
     # 'samus', tested by amd64-llvm-next-toolchain builder.
     'snappy',
     'swanky',
