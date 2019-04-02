@@ -41,6 +41,7 @@ spawn_child() {
 
 spawn_child "${mydir}/check-lint" "$@"
 spawn_child "${mydir}/check-format" "$@"
+spawn_child "${mydir}/../run_tests_for.py" "$@"
 
 success=true
 for i in "${!child_pids[@]}"; do
