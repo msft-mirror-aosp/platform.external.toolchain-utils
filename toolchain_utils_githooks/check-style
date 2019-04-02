@@ -12,6 +12,13 @@ if [[ $# -eq 0 ]]; then
 fi
 
 mydir="$(dirname "$(readlink -m "$0")")"
+pydir="${mydir}/.."
+
+if [[ -z "${PYTHONPATH:-}" ]]; then
+  export PYTHONPATH="${pydir}"
+else
+  export PYTHONPATH="${pydir}:${PYTHONPATH}"
+fi
 
 tempfiles=()
 rm_tempfiles() {

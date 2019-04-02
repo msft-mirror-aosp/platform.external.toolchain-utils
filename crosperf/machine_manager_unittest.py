@@ -4,6 +4,7 @@
 # Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Unittest for machine_manager."""
 
 from __future__ import print_function
@@ -250,8 +251,6 @@ class MachineManagerTest(unittest.TestCase):
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
   def test_try_to_lock_machine(self, mock_cros_runcmd):
-    self.assertRaises(self.mm._TryToLockMachine, None)
-
     mock_cros_runcmd.return_value = [0, 'false_lock_checksum', '']
     self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd
     self.mm._machines = []
