@@ -2,6 +2,7 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Module to deal with result cache."""
 
 from __future__ import print_function
@@ -364,6 +365,8 @@ class Result(object):
               result = sum(values) / float(len(values))
             else:
               result = values
+          else:
+            continue
           units = value_dict['units']
           new_value = [result, units]
           keyvals[keyname] = new_value
