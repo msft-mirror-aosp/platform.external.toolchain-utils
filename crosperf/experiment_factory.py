@@ -2,6 +2,7 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """A module to generate experiments."""
 
 from __future__ import print_function
@@ -322,6 +323,7 @@ class ExperimentFactory(object):
       label_name = label_settings.name
       image = label_settings.GetField('chromeos_image')
       autotest_path = label_settings.GetField('autotest_path')
+      debug_path = label_settings.GetField('debug_path')
       chromeos_root = label_settings.GetField('chromeos_root')
       my_remote = label_settings.GetField('remote')
       compiler = label_settings.GetField('compiler')
@@ -335,8 +337,9 @@ class ExperimentFactory(object):
         build = label_settings.GetField('build')
         if len(build) == 0:
           raise RuntimeError("Can not have empty 'build' field!")
-        image, autotest_path = label_settings.GetXbuddyPath(
-            build, autotest_path, board, chromeos_root, log_level)
+        image, autotest_path, debug_path = label_settings.GetXbuddyPath(
+            build, autotest_path, debug_path, board, chromeos_root, log_level,
+            perf_args)
 
       cache_dir = label_settings.GetField('cache_dir')
       chrome_src = label_settings.GetField('chrome_src')
@@ -354,13 +357,14 @@ class ExperimentFactory(object):
       image_args = label_settings.GetField('image_args')
       if test_flag.GetTestMode():
         # pylint: disable=too-many-function-args
-        label = MockLabel(label_name, image, autotest_path, chromeos_root,
-                          board, my_remote, image_args, cache_dir, cache_only,
-                          log_level, compiler, chrome_src)
+        label = MockLabel(label_name, image, autotest_path, debug_path,
+                          chromeos_root, board, my_remote, image_args,
+                          cache_dir, cache_only, log_level, compiler,
+                          chrome_src)
       else:
-        label = Label(label_name, image, autotest_path, chromeos_root, board,
-                      my_remote, image_args, cache_dir, cache_only, log_level,
-                      compiler, chrome_src)
+        label = Label(label_name, image, autotest_path, debug_path,
+                      chromeos_root, board, my_remote, image_args, cache_dir,
+                      cache_only, log_level, compiler, chrome_src)
       labels.append(label)
 
     if not labels:

@@ -4,6 +4,7 @@
 # Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Unittest for suite_runner."""
 
 from __future__ import print_function
@@ -31,7 +32,7 @@ class SuiteRunnerTest(unittest.TestCase):
   mock_cmd_term = mock.Mock(spec=command_executer.CommandTerminator)
   mock_logger = mock.Mock(spec=logger.Logger)
   mock_label = label.MockLabel(
-      'lumpy', 'lumpy_chromeos_image', '', '/tmp/chromeos', 'lumpy',
+      'lumpy', 'lumpy_chromeos_image', '', '', '/tmp/chromeos', 'lumpy',
       ['lumpy1.cros', 'lumpy.cros2'], '', '', False, 'average', 'gcc', '')
   telemetry_crosperf_bench = Benchmark(
       'b1_test',  # name

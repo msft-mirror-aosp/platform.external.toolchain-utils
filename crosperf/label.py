@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """The label of benchamrks."""
 
 from __future__ import print_function
@@ -20,6 +22,7 @@ class Label(object):
                name,
                chromeos_image,
                autotest_path,
+               debug_path,
                chromeos_root,
                board,
                remote,
@@ -40,6 +43,7 @@ class Label(object):
     self.name = name
     self.chromeos_image = chromeos_image
     self.autotest_path = autotest_path
+    self.debug_path = debug_path
     self.board = board
     self.remote = remote
     self.image_args = image_args
@@ -53,9 +57,9 @@ class Label(object):
       if self.image_type == 'local':
         chromeos_root = FileUtils().ChromeOSRootFromImage(chromeos_image)
       if not chromeos_root:
-        raise RuntimeError("No ChromeOS root given for label '%s' and could "
-                           "not determine one from image path: '%s'." %
-                           (name, chromeos_image))
+        raise RuntimeError(
+            "No ChromeOS root given for label '%s' and could "
+            "not determine one from image path: '%s'." % (name, chromeos_image))
     else:
       chromeos_root = FileUtils().CanonicalizeChromeOSRoot(chromeos_root)
       if not chromeos_root:
@@ -120,6 +124,7 @@ class MockLabel(object):
                name,
                chromeos_image,
                autotest_path,
+               debug_path,
                chromeos_root,
                board,
                remote,
@@ -132,6 +137,7 @@ class MockLabel(object):
     self.name = name
     self.chromeos_image = chromeos_image
     self.autotest_path = autotest_path
+    self.debug_path = debug_path
     self.board = board
     self.remote = remote
     self.cache_dir = cache_dir

@@ -4,6 +4,7 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Unit test for experiment_factory.py"""
 
 from __future__ import print_function
@@ -276,13 +277,17 @@ class ExperimentFactoryTest(unittest.TestCase):
         return []
       return ['fake_chromeos_machine1.cros', 'fake_chromeos_machine2.cros']
 
-    def FakeGetXbuddyPath(build, autotest_dir, board, chroot, log_level):
+    def FakeGetXbuddyPath(build, autotest_dir, debug_dir, board, chroot,
+                          log_level, perf_args):
       autotest_path = autotest_dir
       if not autotest_path:
         autotest_path = 'fake_autotest_path'
+      debug_path = debug_dir
+      if not debug_path and perf_args:
+        debug_path = 'fake_debug_path'
       if not build or not board or not chroot or not log_level:
-        return '', autotest_path
-      return 'fake_image_path', autotest_path
+        return '', autotest_path, debug_path
+      return 'fake_image_path', autotest_path, debug_path
 
     ef = ExperimentFactory()
     ef.AppendBenchmarkSet = FakeAppendBenchmarkSet

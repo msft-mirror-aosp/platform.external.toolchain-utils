@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """The experiment file module. It manages the input file of crosperf."""
 
 from __future__ import print_function
@@ -164,11 +166,22 @@ class ExperimentFile(object):
               autotest_path = ''
               if autotest_field.assigned:
                 autotest_path = autotest_field.GetString()
-              image_path, autotest_path = settings.GetXbuddyPath(
-                  value, autotest_path, board, chromeos_root, 'quiet')
+              debug_field = settings.fields['debug_path']
+              debug_path = ''
+              if debug_field.assigned:
+                debug_path = autotest_field.GetString()
+              perf_args_field = self.global_settings.fields['perf_args']
+              perf_args = ''
+              if perf_args_field.assigned:
+                perf_args = perf_args_field.GetString()
+              image_path, autotest_path, debug_path = settings.GetXbuddyPath(
+                  value, autotest_path, debug_path, board, chromeos_root,
+                  'quiet', perf_args)
               res += '\t#actual_image: %s\n' % image_path
               if not autotest_field.assigned:
                 res += '\t#actual_autotest_path: %s\n' % autotest_path
+              if not debug_field.assigned:
+                res += '\t#actual_debug_path: %s\n' % debug_path
 
         res += '}\n\n'
 

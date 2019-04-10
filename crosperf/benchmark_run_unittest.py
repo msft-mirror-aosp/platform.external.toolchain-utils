@@ -4,6 +4,7 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Testing of benchmark_run."""
 
 from __future__ import print_function
@@ -51,6 +52,7 @@ class BenchmarkRunTest(unittest.TestCase):
         'test1',
         'image1',
         'autotest_dir',
+        'debug_dir',
         '/tmp/test_benchmark_run',
         'x86-alex',
         'chromeos2-row1-rack4-host9.cros',
@@ -73,6 +75,7 @@ class BenchmarkRunTest(unittest.TestCase):
         'test1',
         'image1',
         'autotest_dir',
+        'debug_dir',
         '/tmp/test_benchmark_run',
         'x86-alex',
         'chromeos2-row1-rack4-host9.cros',

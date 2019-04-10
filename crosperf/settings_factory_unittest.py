@@ -4,6 +4,7 @@
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Unittest for crosperf."""
 
 from __future__ import print_function
@@ -32,7 +33,7 @@ class LabelSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.LabelSettings('l_settings')
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 9)
+    self.assertEqual(len(res.fields), 10)
     self.assertEqual(res.GetField('chromeos_image'), '')
     self.assertEqual(res.GetField('autotest_path'), '')
     self.assertEqual(res.GetField('chromeos_root'), '')
@@ -86,7 +87,7 @@ class SettingsFactoryTest(unittest.TestCase):
     l_settings = settings_factory.SettingsFactory().GetSettings(
         'label', 'label')
     self.assertIsInstance(l_settings, settings_factory.LabelSettings)
-    self.assertEqual(len(l_settings.fields), 9)
+    self.assertEqual(len(l_settings.fields), 10)
 
     b_settings = settings_factory.SettingsFactory().GetSettings(
         'benchmark', 'benchmark')

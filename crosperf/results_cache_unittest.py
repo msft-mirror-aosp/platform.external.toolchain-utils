@@ -4,6 +4,7 @@
 # Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Module of result cache unittest."""
 
 from __future__ import print_function
@@ -193,9 +194,9 @@ class ResultTest(unittest.TestCase):
     self.callGatherPerfResults = False
     self.mock_logger = mock.Mock(spec=logger.Logger)
     self.mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
-    self.mock_label = MockLabel('mock_label', 'chromeos_image', 'autotest_dir',
-                                '/tmp', 'lumpy', 'remote', 'image_args',
-                                'cache_dir', 'average', 'gcc', None)
+    self.mock_label = MockLabel(
+        'mock_label', 'chromeos_image', 'autotest_dir', 'debug_dir', '/tmp',
+        'lumpy', 'remote', 'image_args', 'cache_dir', 'average', 'gcc', None)
 
   def testCreateFromRun(self):
     result = MockResult.CreateFromRun(logger.GetLogger(), 'average',
@@ -559,14 +560,33 @@ class ResultTest(unittest.TestCase):
     self.result.board = 'lumpy'
     mock_getpath.return_value = fake_file
     self.result.ce.ChrootRunCommand = mock_chrootruncmd
+    mock_chrootruncmd.return_value = 0
+    # Debug path not found
+    self.result.label.debug_path = ''
     tmp = self.result.GeneratePerfReportFiles()
     self.assertEqual(tmp, ['/tmp/chroot%s' % fake_file])
     self.assertEqual(mock_chrootruncmd.call_args_list[0][0],
-                     ('/tmp',
-                      ('/usr/sbin/perf report -n --symfs /build/lumpy '
-                       '--vmlinux /build/lumpy/usr/lib/debug/boot/vmlinux '
-                       '--kallsyms /build/lumpy/boot/System.map-* -i '
-                       '%s --stdio > %s') % (fake_file, fake_file)))
+                     ('/tmp', ('/usr/sbin/perf report -n    '
+                               '-i %s --stdio > %s') % (fake_file, fake_file)))
+
+  @mock.patch.object(misc, 'GetInsideChrootPath')
+  @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommand')
+  def test_generate_perf_report_files_debug(self, mock_chrootruncmd,
+                                            mock_getpath):
+    fake_file = '/usr/chromeos/chroot/tmp/results/fake_file'
+    self.result.perf_data_files = ['/tmp/results/perf.data']
+    self.result.board = 'lumpy'
+    mock_getpath.return_value = fake_file
+    self.result.ce.ChrootRunCommand = mock_chrootruncmd
+    mock_chrootruncmd.return_value = 0
+    # Debug path found
+    self.result.label.debug_path = '/tmp/debug'
+    tmp = self.result.GeneratePerfReportFiles()
+    self.assertEqual(tmp, ['/tmp/chroot%s' % fake_file])
+    self.assertEqual(mock_chrootruncmd.call_args_list[0][0],
+                     ('/tmp', ('/usr/sbin/perf report -n --symfs /tmp/debug '
+                               '--vmlinux /tmp/debug/boot/vmlinux  '
+                               '-i %s --stdio > %s') % (fake_file, fake_file)))
 
   @mock.patch.object(misc, 'GetOutsideChrootPath')
   def test_populate_from_run(self, mock_getpath):
@@ -975,9 +995,9 @@ class TelemetryResultTest(unittest.TestCase):
     self.result = None
     self.mock_logger = mock.Mock(spec=logger.Logger)
     self.mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
-    self.mock_label = MockLabel('mock_label', 'chromeos_image', 'autotest_dir',
-                                '/tmp', 'lumpy', 'remote', 'image_args',
-                                'cache_dir', 'average', 'gcc', None)
+    self.mock_label = MockLabel(
+        'mock_label', 'chromeos_image', 'autotest_dir', 'debug_dir', '/tmp',
+        'lumpy', 'remote', 'image_args', 'cache_dir', 'average', 'gcc', None)
     self.mock_machine = machine_manager.MockCrosMachine(
         'falco.cros', '/tmp/chromeos', 'average')
 
@@ -1018,9 +1038,9 @@ class ResultsCacheTest(unittest.TestCase):
     super(ResultsCacheTest, self).__init__(*args, **kwargs)
     self.fakeCacheReturnResult = None
     self.mock_logger = mock.Mock(spec=logger.Logger)
-    self.mock_label = MockLabel('mock_label', 'chromeos_image', 'autotest_dir',
-                                '/tmp', 'lumpy', 'remote', 'image_args',
-                                'cache_dir', 'average', 'gcc', None)
+    self.mock_label = MockLabel(
+        'mock_label', 'chromeos_image', 'autotest_dir', 'debug_dir', '/tmp',
+        'lumpy', 'remote', 'image_args', 'cache_dir', 'average', 'gcc', None)
 
   def setUp(self):
     self.results_cache = ResultsCache()

@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """This contains some mock instances for testing."""
 
 from __future__ import print_function
@@ -13,6 +15,7 @@ label1 = MockLabel(
     'test1',
     'image1',
     'autotest_dir',
+    'debug_dir',
     '/tmp/test_benchmark_run',
     'x86-alex',
     'chromeos-alex1',
@@ -26,6 +29,7 @@ label2 = MockLabel(
     'test2',
     'image2',
     'autotest_dir',
+    'debug_dir',
     '/tmp/test_benchmark_run_2',
     'x86-alex',
     'chromeos-alex2',

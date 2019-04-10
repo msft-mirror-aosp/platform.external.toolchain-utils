@@ -2,6 +2,7 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Setting files for global, benchmark and labels."""
 
 from __future__ import print_function
@@ -79,6 +80,12 @@ class LabelSettings(Settings):
             description='Autotest directory path relative to chroot which '
             'has autotest files for the image to run tests requiring autotest '
             'files.'))
+    self.AddField(
+        TextField(
+            'debug_path',
+            required=False,
+            description='Debug info directory relative to chroot which has '
+            'symbols and vmlinux that can be used by perf tool.'))
     self.AddField(
         TextField(
             'chromeos_root',
