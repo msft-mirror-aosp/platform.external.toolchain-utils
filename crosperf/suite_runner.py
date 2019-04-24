@@ -2,6 +2,7 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """SuiteRunner defines the interface from crosperf to test script."""
 
 from __future__ import print_function
@@ -227,11 +228,8 @@ class SuiteRunner(object):
       autotest_dir_arg = '--autotest_dir %s' % label.autotest_path
 
     profiler_args = GetProfilerArgs(profiler_args)
-    fast_arg = ''
-    if not profiler_args:
-      # --fast works unless we are doing profiling (autotest limitation).
-      # --fast avoids unnecessary copies of syslogs.
-      fast_arg = '--fast'
+    # --fast avoids unnecessary copies of syslogs.
+    fast_arg = '--fast'
     args_string = ''
     if test_args:
       # Strip double quotes off args (so we can wrap them in single
