@@ -2,6 +2,7 @@
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Python module to draw heat map for Chrome
 
 heat map is a histogram used to analyze the locality of function layout.
@@ -26,8 +27,10 @@ from cros_utils import command_executer
 class MMap(object):
   """Class to store mmap information in perf report.
 
-  Useful for cases where there are multiple mmaps for Chrome in the same
-  process
+  We assume ASLR is disabled, so MMap for all Chrome is assumed to be
+  the same. This class deals with the case hugepage creates several
+  mmaps for Chrome but should be merged together. In these case, we
+  assume the first MMAP is not affected by the bug and use the MMAP.
   """
 
   def __init__(self, addr, size, offset):
@@ -39,24 +42,29 @@ class MMap(object):
     return '(%x, %x, %x)' % (self.start_address, self.size, self.offset)
 
   def merge(self, mmap):
+    # This function should not be needed, since we should only have
+    # one MMAP on Chrome of each process. This function only deals with
+    # images that is affected by http://crbug.com/931465.
+
+    # This function is only checking a few conditions to make sure
+    # the bug is within our expectation.
+
     if self.start_address == mmap.start_address:
-      assert self.start_address == mmap.start_address and \
-      self.size == mmap.size, 'The process mmap is copied from forking'
+      assert self.size >= mmap.size, \
+        'Original MMAP size(%x) is smaller than the forked process(%x).' % (
+            self.size, mmap.size)
+      # The case that the MMAP is forked from the previous process
+      # No need to do anything, OR
+      # The case where hugepage causes a small Chrome mmap.
+      # In this case, we use the prior MMAP for the whole Chrome
       return
 
-    # This case occurs when two mmaps are found for the same process.
-    # Observed before but never seen since. Turn if off now
-    assert self.start_address == mmap.start_address, \
-    'There should only be one mmap for each process'
-
-    # Assume the smaller address is for rodata
-    # Use the larger address for text segment
     assert self.start_address < mmap.start_address, \
-    'Assume always mmap larger address later for the same process'
+      'Original MMAP starting address(%x) is larger than the forked' \
+      'process(%x).' % (self.start_address, mmap.start_address)
 
-    # Assumes larger address is text segment
-    self.start_address = mmap.start_address
-    self.size = mmap.size
+    assert self.start_address + self.size >= mmap.start_address + mmap.size, \
+      'MMAP of the forked process exceeds the end of original MMAP.'
 
 
 class HeatmapGenerator(object):
@@ -160,7 +168,7 @@ class HeatmapGenerator(object):
     address_raw = args[6].split('(')
     start_address = int(address_raw[0][1:], base=16)
     size = int(address_raw[1][:-1], base=16)
-    offset = int(args[8][:-2], base=16)
+    offset = int(args[8], base=16)
     # Return an mmap object instead of only starting address,
     # in case there are many mmaps for the sample PID
     return pid, MMap(start_address, size, offset)
@@ -186,6 +194,9 @@ class HeatmapGenerator(object):
       # PID = None meaning the mmap is not for chrome
       return
     if pid in self.processes:
+      # This should never happen for a correct profiling result, as we
+      # should only have one MMAP for Chrome for each process.
+      # If it happens, see http://crbug.com/931465
       self.processes[pid].merge(mmap)
     else:
       self.processes[pid] = mmap

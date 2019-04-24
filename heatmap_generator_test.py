@@ -1,5 +1,9 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
+# Copyright 2018 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """Tests for heatmap_generator.py."""
 
 from __future__ import division, print_function
@@ -10,11 +14,11 @@ import unittest
 import heatmap_generator
 
 
-def _write_perf_record(pid, tid, addr, fp):
+def _write_perf_mmap(pid, tid, addr, size, fp):
   print(
       '0 0 0 0 PERF_RECORD_MMAP2 %d/%d: '
-      '[%x(0x100) @ 0x0 0:0 0 0] '
-      'r-xp /opt/google/chrome/chrome\n' % (pid, tid, addr),
+      '[%x(%x) @ 0x0 0:0 0 0] '
+      'r-xp /opt/google/chrome/chrome\n' % (pid, tid, addr, size),
       file=fp)
 
 
@@ -62,13 +66,13 @@ class Tests(unittest.TestCase):
     """Tests one perf record and one sample."""
     fname = 'test.txt'
     with open(fname, 'w') as f:
-      _write_perf_record(101, 101, 0xABCD000, f)
+      _write_perf_mmap(101, 101, 0xABCD000, 0x100, f)
       _write_perf_sample(101, 101, 0xABCD101, f)
     _heatmap(fname)
     self.assertIn('out.txt', os.listdir('.'))
     with open('out.txt') as f:
       lines = f.readlines()
-      self.assertTrue(len(lines) == 1)
+      self.assertEqual(len(lines), 1)
       self.assertIn('101/101: 1 0', lines[0])
     _cleanup(fname)
 
@@ -76,7 +80,7 @@ class Tests(unittest.TestCase):
     """Tests one perf record and three samples."""
     fname = 'test.txt'
     with open(fname, 'w') as f:
-      _write_perf_record(101, 101, 0xABCD000, f)
+      _write_perf_mmap(101, 101, 0xABCD000, 0x100, f)
       _write_perf_sample(101, 101, 0xABCD101, f)
       _write_perf_sample(101, 101, 0xABCD102, f)
       _write_perf_sample(101, 101, 0xABCE102, f)
@@ -84,7 +88,7 @@ class Tests(unittest.TestCase):
     self.assertIn('out.txt', os.listdir('.'))
     with open('out.txt') as f:
       lines = f.readlines()
-      self.assertTrue(len(lines) == 3)
+      self.assertEqual(len(lines), 3)
       self.assertIn('101/101: 1 0', lines[0])
       self.assertIn('101/101: 2 0', lines[1])
       self.assertIn('101/101: 3 4096', lines[2])
@@ -94,7 +98,7 @@ class Tests(unittest.TestCase):
     """Tests perf fork and perf exit."""
     fname = 'test_fork.txt'
     with open(fname, 'w') as f:
-      _write_perf_record(101, 101, 0xABCD000, f)
+      _write_perf_mmap(101, 101, 0xABCD000, 0x100, f)
       _write_perf_fork(101, 101, 202, 202, f)
       _write_perf_sample(101, 101, 0xABCD101, f)
       _write_perf_sample(202, 202, 0xABCE101, f)
@@ -103,10 +107,60 @@ class Tests(unittest.TestCase):
     self.assertIn('out.txt', os.listdir('.'))
     with open('out.txt') as f:
       lines = f.readlines()
-      self.assertTrue(len(lines) == 2)
+      self.assertEqual(len(lines), 2)
       self.assertIn('101/101: 1 0', lines[0])
       self.assertIn('202/202: 2 4096', lines[1])
     _cleanup(fname)
+
+  def test_hugepage_creates_two_chrome_mmaps(self):
+    """Test two chrome mmaps for the same process."""
+    fname = 'test_hugepage.txt'
+    with open(fname, 'w') as f:
+      _write_perf_mmap(101, 101, 0xABCD000, 0x1000, f)
+      _write_perf_fork(101, 101, 202, 202, f)
+      _write_perf_mmap(202, 202, 0xABCD000, 0x100, f)
+      _write_perf_mmap(202, 202, 0xABCD300, 0xD00, f)
+      _write_perf_sample(101, 101, 0xABCD102, f)
+      _write_perf_sample(202, 202, 0xABCD102, f)
+    _heatmap(fname)
+    self.assertIn('out.txt', os.listdir('.'))
+    with open('out.txt') as f:
+      lines = f.readlines()
+      self.assertEqual(len(lines), 2)
+      self.assertIn('101/101: 1 0', lines[0])
+      self.assertIn('202/202: 2 0', lines[1])
+    _cleanup(fname)
+
+  def test_hugepage_creates_two_chrome_mmaps_fail(self):
+    """Test two chrome mmaps for the same process."""
+    fname = 'test_hugepage.txt'
+    # Cases where first_mmap.size < second_mmap.size
+    with open(fname, 'w') as f:
+      _write_perf_mmap(101, 101, 0xABCD000, 0x1000, f)
+      _write_perf_fork(101, 101, 202, 202, f)
+      _write_perf_mmap(202, 202, 0xABCD000, 0x10000, f)
+    with self.assertRaises(AssertionError) as msg:
+      _heatmap(fname)
+    self.assertIn('Original MMAP size', str(msg.exception))
+
+    # Cases where first_mmap.address > second_mmap.address
+    with open(fname, 'w') as f:
+      _write_perf_mmap(101, 101, 0xABCD000, 0x1000, f)
+      _write_perf_fork(101, 101, 202, 202, f)
+      _write_perf_mmap(202, 202, 0xABCC000, 0x10000, f)
+    with self.assertRaises(AssertionError) as msg:
+      _heatmap(fname)
+    self.assertIn('Original MMAP starting address', str(msg.exception))
+
+    # Cases where first_mmap.address + size <
+    # second_mmap.address + second_mmap.size
+    with open(fname, 'w') as f:
+      _write_perf_mmap(101, 101, 0xABCD000, 0x1000, f)
+      _write_perf_fork(101, 101, 202, 202, f)
+      _write_perf_mmap(202, 202, 0xABCD100, 0x10000, f)
+    with self.assertRaises(AssertionError) as msg:
+      _heatmap(fname)
+    self.assertIn('exceeds the end of original MMAP', str(msg.exception))
 
   def test_histogram(self):
     """Tests if the tool can generate correct histogram.
@@ -118,7 +172,7 @@ class Tests(unittest.TestCase):
     """
     fname = 'test_histo.txt'
     with open(fname, 'w') as f:
-      _write_perf_record(101, 101, 0xABCD000, f)
+      _write_perf_mmap(101, 101, 0xABCD000, 0x100, f)
       for i in range(0, 100):
         _write_perf_sample(101, 101, 0xABCD000 + i, f)
         _write_perf_sample(101, 101, 0xABCE000 + i, f)
@@ -128,7 +182,7 @@ class Tests(unittest.TestCase):
     self.assertIn('inst-histo.txt', os.listdir('.'))
     with open('inst-histo.txt') as f:
       lines = f.readlines()
-      self.assertTrue(len(lines) == 4)
+      self.assertEqual(len(lines), 4)
       self.assertIn('100 0', lines[0])
       self.assertIn('100 4096', lines[1])
       self.assertIn('100 196608', lines[2])
@@ -139,7 +193,7 @@ class Tests(unittest.TestCase):
     """Tests handling of 2MB page."""
     fname = 'test_histo.txt'
     with open(fname, 'w') as f:
-      _write_perf_record(101, 101, 0xABCD000, f)
+      _write_perf_mmap(101, 101, 0xABCD000, 0x100, f)
       for i in range(0, 100):
         _write_perf_sample(101, 101, 0xABCD000 + i, f)
         _write_perf_sample(101, 101, 0xABCE000 + i, f)
@@ -149,7 +203,7 @@ class Tests(unittest.TestCase):
     self.assertIn('inst-histo.txt', os.listdir('.'))
     with open('inst-histo.txt') as f:
       lines = f.readlines()
-      self.assertTrue(len(lines) == 2)
+      self.assertEqual(len(lines), 2)
       self.assertIn('300 0', lines[0])
       self.assertIn('100 4194304', lines[1])
     _cleanup(fname)

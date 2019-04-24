@@ -3,6 +3,7 @@
 # Copyright 2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Wrapper to generate heat maps for chrome."""
 
 from __future__ import print_function
@@ -64,7 +65,7 @@ class HeatMapProducer(object):
                                                    self.page_size, self.title)
     generator.draw()
     # Analyze top N hottest symbols with the binary, if provided
-    if self.binary != '':
+    if self.binary:
       if top_n_pages is not None:
         generator.analyze(self.binary, top_n_pages)
       else:
