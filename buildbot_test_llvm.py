@@ -42,12 +42,10 @@ DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
 #  Board         Arch     Reference    Platform      Kernel
 #                         Board                      Version
 #  ------------  -------  ------------ ------------- -------
-#  asuka         x86_64   kunimitsu    skylake-u     3.18
 #  atlas         x86_64   poppy        kabylake-y    4.4.*
 #  cave          x86_64   glados       skylake-y     3.18
 #  coral         x86_64   reef         apollo lake   4.4.*
 #  cyan          x86_64   strago       braswell      3.18
-#  daisy_skate   armv7    daisy        exynos-5250   3.8.11
 #  elm           aarch64  oak          mediatek-8173 3.18 arm32 userspace
 #  eve           x86_64   poppy        kabylake-u/r  4.4.*
 #  gale          armv7                               3.18
@@ -60,17 +58,16 @@ DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
 #  peach_pit     armv7    peach        exynos-5420   3.8.11
 #  peppy         x86_64   slippy       haswell       3.8.11
 #  quawks        x86_64   rambi        baytrail      4.4.*
+#  sentry        x86_64   kunimitsu    skylake-u     3.18
 #  tidus         x86_64   auron        broadwell     3.14
 #  veyron_mighty armv7    veyron-pinky rockchip-3288 3.14
 #  whirlwind     armv7                               3.14
 
 TEST_BOARD = [
-    'asuka',
     'atlas',
     'cave',
     'coral',
     'cyan',
-    'daisy_skate',
     'elm',
     # 'eve', tested by amd64-llvm-next-toolchain builder.
     'gale',
@@ -79,10 +76,11 @@ TEST_BOARD = [
     # 'kevin', tested by arm64-llvm-next-toolchain builder.
     'kevin64',
     'lakitu',
-    'peppy',
     'nyan_big',
     'peach_pit',
+    'peppy',
     'quawks',
+    'sentry',
     'tidus',
     # 'veyron_mighty', tested by arm-llvm-next-toolchain builder.
     'whirlwind',
