@@ -976,7 +976,7 @@ class ResultTest(unittest.TestCase):
       self.callGatherPerfResults = True
 
     def FakeGetSamples():
-      return 1
+      return (1, 'samples')
 
     # Test 1
     self.callGatherPerfResults = False
@@ -1004,7 +1004,7 @@ class ResultTest(unittest.TestCase):
     self.assertEqual(len(self.result.keyvals), 3)
     self.assertEqual(self.result.keyvals, {
         'Total': 10,
-        'samples': 1,
+        'samples': (1, 'samples'),
         'retval': 0
     })
 

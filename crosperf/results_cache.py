@@ -638,6 +638,11 @@ class Result(object):
     # for each perf.data file
     if self.cwp_dso and self.retval == 0:
       self.keyvals['samples'] = self.GetSamples()
+      # If the samples count collected from perf file is 0, we will treat
+      # it as a failed run.
+      if self.keyvals['samples'][0] == 0:
+        del self.keyvals['samples']
+        self.keyvals['retval'] = 1
     # Generate report from all perf.data files.
     # Now parse all perf report files and include them in keyvals.
     self.GatherPerfResults()
