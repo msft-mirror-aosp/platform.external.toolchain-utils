@@ -45,18 +45,21 @@ def _write_perf_sample(pid, tid, addr, fp):
   print(' ...... dso: /opt/google/chrome/chrome\n', file=fp)
 
 
-def _heatmap(file_name, page_size=4096):
+def _heatmap(file_name, page_size=4096, hugepage=None):
   generator = heatmap_generator.HeatmapGenerator(
-      file_name, page_size, '', log_level='none')  # Don't log to stdout
+      file_name, page_size, hugepage, '',
+      log_level='none')  # Don't log to stdout
   generator.draw()
 
 
 def _cleanup(file_name):
-  os.remove(file_name)
-  os.remove('out.txt')
-  os.remove('inst-histo.txt')
-  os.remove('heat_map.png')
-  os.remove('timeline.png')
+  files = [
+      file_name, 'out.txt', 'inst-histo.txt', 'inst-histo-hp.txt',
+      'inst-histo-sp.txt', 'heat_map.png', 'timeline.png'
+  ]
+  for f in files:
+    if os.path.exists(f):
+      os.remove(f)
 
 
 class Tests(unittest.TestCase):
@@ -68,13 +71,13 @@ class Tests(unittest.TestCase):
     with open(fname, 'w') as f:
       _write_perf_mmap(101, 101, 0xABCD000, 0x100, f)
       _write_perf_sample(101, 101, 0xABCD101, f)
+    self.addCleanup(_cleanup, fname)
     _heatmap(fname)
     self.assertIn('out.txt', os.listdir('.'))
     with open('out.txt') as f:
       lines = f.readlines()
       self.assertEqual(len(lines), 1)
       self.assertIn('101/101: 1 0', lines[0])
-    _cleanup(fname)
 
   def test_with_one_mmap_multiple_samples(self):
     """Tests one perf record and three samples."""
@@ -84,6 +87,7 @@ class Tests(unittest.TestCase):
       _write_perf_sample(101, 101, 0xABCD101, f)
       _write_perf_sample(101, 101, 0xABCD102, f)
       _write_perf_sample(101, 101, 0xABCE102, f)
+    self.addCleanup(_cleanup, fname)
     _heatmap(fname)
     self.assertIn('out.txt', os.listdir('.'))
     with open('out.txt') as f:
@@ -92,7 +96,6 @@ class Tests(unittest.TestCase):
       self.assertIn('101/101: 1 0', lines[0])
       self.assertIn('101/101: 2 0', lines[1])
       self.assertIn('101/101: 3 4096', lines[2])
-    _cleanup(fname)
 
   def test_with_fork_and_exit(self):
     """Tests perf fork and perf exit."""
@@ -103,6 +106,7 @@ class Tests(unittest.TestCase):
       _write_perf_sample(101, 101, 0xABCD101, f)
       _write_perf_sample(202, 202, 0xABCE101, f)
       _write_perf_exit(202, 202, 202, 202, f)
+    self.addCleanup(_cleanup, fname)
     _heatmap(fname)
     self.assertIn('out.txt', os.listdir('.'))
     with open('out.txt') as f:
@@ -110,7 +114,6 @@ class Tests(unittest.TestCase):
       self.assertEqual(len(lines), 2)
       self.assertIn('101/101: 1 0', lines[0])
       self.assertIn('202/202: 2 4096', lines[1])
-    _cleanup(fname)
 
   def test_hugepage_creates_two_chrome_mmaps(self):
     """Test two chrome mmaps for the same process."""
@@ -122,6 +125,7 @@ class Tests(unittest.TestCase):
       _write_perf_mmap(202, 202, 0xABCD300, 0xD00, f)
       _write_perf_sample(101, 101, 0xABCD102, f)
       _write_perf_sample(202, 202, 0xABCD102, f)
+    self.addCleanup(_cleanup, fname)
     _heatmap(fname)
     self.assertIn('out.txt', os.listdir('.'))
     with open('out.txt') as f:
@@ -129,7 +133,6 @@ class Tests(unittest.TestCase):
       self.assertEqual(len(lines), 2)
       self.assertIn('101/101: 1 0', lines[0])
       self.assertIn('202/202: 2 0', lines[1])
-    _cleanup(fname)
 
   def test_hugepage_creates_two_chrome_mmaps_fail(self):
     """Test two chrome mmaps for the same process."""
@@ -139,6 +142,7 @@ class Tests(unittest.TestCase):
       _write_perf_mmap(101, 101, 0xABCD000, 0x1000, f)
       _write_perf_fork(101, 101, 202, 202, f)
       _write_perf_mmap(202, 202, 0xABCD000, 0x10000, f)
+    self.addCleanup(_cleanup, fname)
     with self.assertRaises(AssertionError) as msg:
       _heatmap(fname)
     self.assertIn('Original MMAP size', str(msg.exception))
@@ -173,11 +177,12 @@ class Tests(unittest.TestCase):
     fname = 'test_histo.txt'
     with open(fname, 'w') as f:
       _write_perf_mmap(101, 101, 0xABCD000, 0x100, f)
-      for i in range(0, 100):
+      for i in range(100):
         _write_perf_sample(101, 101, 0xABCD000 + i, f)
         _write_perf_sample(101, 101, 0xABCE000 + i, f)
         _write_perf_sample(101, 101, 0xABFD000 + i, f)
         _write_perf_sample(101, 101, 0xAFCD000 + i, f)
+    self.addCleanup(_cleanup, fname)
     _heatmap(fname)
     self.assertIn('inst-histo.txt', os.listdir('.'))
     with open('inst-histo.txt') as f:
@@ -187,18 +192,18 @@ class Tests(unittest.TestCase):
       self.assertIn('100 4096', lines[1])
       self.assertIn('100 196608', lines[2])
       self.assertIn('100 4194304', lines[3])
-    _cleanup(fname)
 
   def test_histogram_two_mb_page(self):
     """Tests handling of 2MB page."""
     fname = 'test_histo.txt'
     with open(fname, 'w') as f:
       _write_perf_mmap(101, 101, 0xABCD000, 0x100, f)
-      for i in range(0, 100):
+      for i in range(100):
         _write_perf_sample(101, 101, 0xABCD000 + i, f)
         _write_perf_sample(101, 101, 0xABCE000 + i, f)
         _write_perf_sample(101, 101, 0xABFD000 + i, f)
         _write_perf_sample(101, 101, 0xAFCD000 + i, f)
+    self.addCleanup(_cleanup, fname)
     _heatmap(fname, page_size=2 * 1024 * 1024)
     self.assertIn('inst-histo.txt', os.listdir('.'))
     with open('inst-histo.txt') as f:
@@ -206,7 +211,33 @@ class Tests(unittest.TestCase):
       self.assertEqual(len(lines), 2)
       self.assertIn('300 0', lines[0])
       self.assertIn('100 4194304', lines[1])
-    _cleanup(fname)
+
+  def test_histogram_in_and_out_hugepage(self):
+    """Tests handling the case of separating samples in and out huge page."""
+    fname = 'test_histo.txt'
+    with open(fname, 'w') as f:
+      _write_perf_mmap(101, 101, 0xABCD000, 0x100, f)
+      for i in range(100):
+        _write_perf_sample(101, 101, 0xABCD000 + i, f)
+        _write_perf_sample(101, 101, 0xABCE000 + i, f)
+        _write_perf_sample(101, 101, 0xABFD000 + i, f)
+        _write_perf_sample(101, 101, 0xAFCD000 + i, f)
+    self.addCleanup(_cleanup, fname)
+    _heatmap(fname, hugepage=[0, 8192])
+    file_list = os.listdir('.')
+    self.assertNotIn('inst-histo.txt', file_list)
+    self.assertIn('inst-histo-hp.txt', file_list)
+    self.assertIn('inst-histo-sp.txt', file_list)
+    with open('inst-histo-hp.txt') as f:
+      lines = f.readlines()
+      self.assertEqual(len(lines), 2)
+      self.assertIn('100 0', lines[0])
+      self.assertIn('100 4096', lines[1])
+    with open('inst-histo-sp.txt') as f:
+      lines = f.readlines()
+      self.assertEqual(len(lines), 2)
+      self.assertIn('100 196608', lines[0])
+      self.assertIn('100 4194304', lines[1])
 
 
 if __name__ == '__main__':

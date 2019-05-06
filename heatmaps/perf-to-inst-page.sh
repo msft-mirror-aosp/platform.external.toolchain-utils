@@ -16,11 +16,9 @@
 HEAT_PNG="heat_map.png"
 TIMELINE_PNG="timeline.png"
 HEATMAP_TITLE=$1
+ENABLE_HUGEPAGE=$2
 
-awk '{print $3}' out.txt | sort -n | uniq -c > inst-histo.txt
-
-# generate inst heat map
-echo "
+heatmap_command="
 set terminal png size 600,450
 set xlabel \"Instruction Virtual Address (MB)\"
 set ylabel \"Sample Occurance\"
@@ -28,9 +26,32 @@ set grid
 
 set output \"${HEAT_PNG}\"
 set title \"${HEATMAP_TITLE}\"
+"
 
-plot 'inst-histo.txt' using (\$2/1024/1024):1 with impulses notitle
-" | gnuplot
+if [[ "${ENABLE_HUGEPAGE}" = "hugepage" ]]; then
+  hugepage_hist="inst-histo-hp.txt"
+  smallpage_hist="inst-histo-sp.txt"
+  cat out.txt | grep hugepage | awk '{print $3}' \
+    | sort -n | uniq -c > "${hugepage_hist}"
+  cat out.txt | grep smallpage | awk '{print $3}' \
+    | sort -n | uniq -c > "${smallpage_hist}"
+  # generate inst heat map
+  heatmap_in_hugepage=("'${hugepage_hist}' using \
+(\$2/1024/1024):1 with impulses notitle lt rgb 'red'")
+  heatmap_outside_hugepage=("'${smallpage_hist}' using \
+(\$2/1024/1024):1 with impulses notitle lt rgb 'blue'")
+  echo "
+  ${heatmap_command}
+  plot ${heatmap_in_hugepage}, ${heatmap_outside_hugepage}
+  " | gnuplot
+else
+  awk '{print $3}' out.txt | sort -n | uniq -c > inst-histo.txt
+  # generate inst heat map
+  echo "
+  ${heatmap_command}
+  plot 'inst-histo.txt' using (\$2/1024/1024):1 with impulses notitle
+  " | gnuplot
+fi
 
 # generate instruction page access timeline
 num=$(awk 'END {print NR+1}' out.txt)
