@@ -103,7 +103,7 @@ def Main(argv):
         '--url http://cs/android --separator "?l=" > %s' % warnfile)
 
   if result.returncode != 0:
-    print("Couldn't generate warnings.html")
+    print("Couldn't generate warnings.html", file=sys.stderr)
     try:
       os.remove(warnfile)
     except EnvironmentError:
@@ -112,6 +112,7 @@ def Main(argv):
       os.remove(warnfile_csv)
     except EnvironmentError:
       pass
+    return 1
 
   return 0
 
