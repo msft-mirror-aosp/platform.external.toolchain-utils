@@ -11,9 +11,9 @@ from __future__ import print_function
 import argparse
 import datetime
 import os
+import shutil
+import subprocess
 import sys
-
-import clang_tidy_execute
 
 
 def Main(argv):
@@ -89,29 +89,25 @@ def Main(argv):
   warnfile = os.path.join(output_dir, html_filename)
   warnfile_csv = os.path.join(output_dir, csv_filename)
 
-  result = clang_tidy_execute.Execute(
-      'python %s %s ' % (warn_script, logfile) +
-      '--csvpath %s --url http://cs/android --separator "?l=" > %s' %
-      (warnfile_csv, warnfile))
+  run_warn_py = [
+      'python',
+      warn_script,
+      logfile,
+      '--csvpath',
+      warnfile_csv,
+      '--url',
+      'http://cs/android',
+      '--separator',
+      '?l=',
+  ]
 
-  # Handle if we are running on an older version of warn.py
-  # that does not have support for --csvpath added in
-  # aosp/369755
-  if result.returncode == 2:
-    result = clang_tidy_execute.Execute(
-        'python %s %s ' % (warn_script, logfile) +
-        '--url http://cs/android --separator "?l=" > %s' % warnfile)
-
-  if result.returncode != 0:
+  try:
+    with open('/dev/null') as stdin, open(warnfile, 'w') as stdout:
+      subprocess.check_call(run_warn_py, stdin=stdin, stdout=stdout)
+  except subprocess.CalledProcessError:
     print("Couldn't generate warnings.html", file=sys.stderr)
-    try:
-      os.remove(warnfile)
-    except EnvironmentError:
-      pass
-    try:
-      os.remove(warnfile_csv)
-    except EnvironmentError:
-      pass
+    shutil.rmtree(warnfile, ignore_errors=True)
+    shutil.rmtree(warnfile_csv, ignore_errors=True)
     return 1
 
   return 0
