@@ -115,6 +115,10 @@ class SuiteRunner(object):
         'fi; '
         # Set governor to performance for each cpu
         'for f in /sys/devices/system/cpu/cpu*/cpufreq; do '
+        # Skip writing scaling_governor if cpu is not online.
+        '[[ -e ${f/cpufreq/online} ]] && grep -q 0 ${f/cpufreq/online} '
+        '&& continue; '
+        # The cpu is online, can update.
         'cd $f; '
         'echo performance > scaling_governor; '
         # Uncomment rest of lines to enable setting frequency by crosperf
