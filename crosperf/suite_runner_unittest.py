@@ -204,14 +204,14 @@ class SuiteRunnerTest(unittest.TestCase):
         '    echo -n 1 > /sys/devices/system/cpu/intel_pstate/no_turbo; '
         '  fi; '
         'fi; '
-        # Set governor to performance for each cpu
+        # Set governor to ppowersave for each cpu.
         'for f in /sys/devices/system/cpu/cpu*/cpufreq; do '
         # Skip writing scaling_governor if cpu is not online.
         '[[ -e ${f/cpufreq/online} ]] && grep -q 0 ${f/cpufreq/online} '
         '&& continue; '
         # This cpu is online, can update.
         'cd $f; '
-        'echo performance > scaling_governor; '
+        'echo powersave > scaling_governor; '
         'done')
     # pyformat: enable
     self.assertEqual(cmd, (set_cpu_cmd,))

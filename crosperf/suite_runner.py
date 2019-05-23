@@ -103,7 +103,9 @@ class SuiteRunner(object):
         disable_aslr, machine=machine_name, chromeos_root=chromeos_root)
 
   def PinGovernorExecutionFrequencies(self, machine_name, chromeos_root):
-    """Set min and max frequencies to max static frequency."""
+    """Manages the cpu governor and other performance settings.
+       Includes support for setting cpu frequency to a static value.
+    """
     # pyformat: disable
     set_cpu_freq = (
         'set -e && '
@@ -113,15 +115,16 @@ class SuiteRunner(object):
         '    echo -n 1 > /sys/devices/system/cpu/intel_pstate/no_turbo; '
         '  fi; '
         'fi; '
-        # Set governor to performance for each cpu
+        # Set governor to powersave for each cpu.
         'for f in /sys/devices/system/cpu/cpu*/cpufreq; do '
         # Skip writing scaling_governor if cpu is not online.
         '[[ -e ${f/cpufreq/online} ]] && grep -q 0 ${f/cpufreq/online} '
         '&& continue; '
         # The cpu is online, can update.
         'cd $f; '
-        'echo performance > scaling_governor; '
-        # Uncomment rest of lines to enable setting frequency by crosperf
+        'echo powersave > scaling_governor; '
+        # Uncomment rest of lines to enable setting frequency by crosperf.
+        # It sets the cpu to the second highest supported frequency.
         #'val=0; '
         #'if [[ -e scaling_available_frequencies ]]; then '
         # pylint: disable=line-too-long
