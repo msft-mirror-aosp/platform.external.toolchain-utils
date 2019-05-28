@@ -36,10 +36,11 @@ def _fetch_gs_artifact(remote_name, local_name):
 
 
 def _find_latest_profdata(arch):
-  remote_latest = ('%schromeos-image-archive/%s-llvm-pgo-generate-toolchain/'
-                   'LATEST-master' % (_GS_PREFIX, arch))
+  remote_latest = (
+      '%schromeos-image-archive/'
+      '%s-pgo-generate-llvm-next-toolchain/LATEST-master' % (_GS_PREFIX, arch))
   version = _get_gs_latest(remote_latest)
-  profdata = ('%s-llvm-pgo-generate-toolchain/%s/llvm_profdata.tar.xz' %
+  profdata = ('%s-pgo-generate-llvm-next-toolchain/%s/llvm_profdata.tar.xz' %
               (arch, version))
   return profdata
 
@@ -95,8 +96,9 @@ def main():
       '--tryjob',
       default=[],
       action='append',
-      help='Extra pgo-generate-toolchain/tryjob results to be used. Format '
-      'should be {arch}-llvm-pgo-generate-toolchain(-tryjob)/{VERSION}.')
+      help='Extra pgo-generate-llvm-next-toolchain/tryjob results to be used. '
+      'Format should be '
+      '{arch}-pgo-generate-llvm-next-toolchain(-tryjob)/{VERSION}.')
   parser.add_argument(
       '-o',
       '--output',
