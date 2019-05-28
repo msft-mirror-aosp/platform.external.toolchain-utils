@@ -197,22 +197,12 @@ class SuiteRunnerTest(unittest.TestCase):
     cmd = mock_cros_runcmd.call_args_list[0][0]
     # pyformat: disable
     set_cpu_cmd = (
-        'set -e && '
         # Disable Turbo in Intel pstate driver
         'if [[ -e /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then '
         '  if grep -q 0 /sys/devices/system/cpu/intel_pstate/no_turbo;  then '
         '    echo -n 1 > /sys/devices/system/cpu/intel_pstate/no_turbo; '
         '  fi; '
-        'fi; '
-        # Set governor to ppowersave for each cpu.
-        'for f in /sys/devices/system/cpu/cpu*/cpufreq; do '
-        # Skip writing scaling_governor if cpu is not online.
-        '[[ -e ${f/cpufreq/online} ]] && grep -q 0 ${f/cpufreq/online} '
-        '&& continue; '
-        # This cpu is online, can update.
-        'cd $f; '
-        'echo powersave > scaling_governor; '
-        'done')
+        'fi; ')
     # pyformat: enable
     self.assertEqual(cmd, (set_cpu_cmd,))
 

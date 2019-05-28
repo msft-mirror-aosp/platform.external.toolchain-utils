@@ -108,21 +108,22 @@ class SuiteRunner(object):
     """
     # pyformat: disable
     set_cpu_freq = (
-        'set -e && '
         # Disable Turbo in Intel pstate driver
         'if [[ -e /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then '
         '  if grep -q 0 /sys/devices/system/cpu/intel_pstate/no_turbo;  then '
         '    echo -n 1 > /sys/devices/system/cpu/intel_pstate/no_turbo; '
         '  fi; '
         'fi; '
-        # Set governor to powersave for each cpu.
-        'for f in /sys/devices/system/cpu/cpu*/cpufreq; do '
+        # Uncomment the following lines to set governor to powersave for each
+        # cpu. Also uncomment the 'done' at end.
+        # 'for f in /sys/devices/system/cpu/cpu*/cpufreq; do '
         # Skip writing scaling_governor if cpu is not online.
-        '[[ -e ${f/cpufreq/online} ]] && grep -q 0 ${f/cpufreq/online} '
-        '&& continue; '
+        # '[[ -e ${f/cpufreq/online} ]] && grep -q 0 ${f/cpufreq/online} '
+        # '&& continue; '
         # The cpu is online, can update.
-        'cd $f; '
-        'echo powersave > scaling_governor; '
+        # 'cd $f; '
+        # 'echo powersave > scaling_governor; '
+        #
         # Uncomment rest of lines to enable setting frequency by crosperf.
         # It sets the cpu to the second highest supported frequency.
         #'val=0; '
@@ -138,7 +139,10 @@ class SuiteRunner(object):
         #'fi ;'
         #'echo $highest > scaling_max_freq; '
         #'echo $highest > scaling_min_freq; '
-        'done')
+        #
+        # Uncomment to enable the loop for CPU governor settings.
+        # 'done'
+    )
     # pyformat: enable
     if self.log_level == 'average':
       self.logger.LogOutput(
