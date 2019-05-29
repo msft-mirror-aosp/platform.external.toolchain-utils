@@ -9,8 +9,9 @@
 from __future__ import print_function
 
 import argparse
-import datetime
+import collections
 import distutils.spawn
+import json
 import os
 import os.path
 import shutil
@@ -20,6 +21,8 @@ import tempfile
 
 _LLVM_PROFDATA = '/usr/bin/llvm-profdata'
 _GS_PREFIX = 'gs://'
+
+_LLVMMetadata = collections.namedtuple('_LLVMMetadata', ['head_sha'])
 
 
 def _get_gs_latest(remote_lastest):
@@ -32,31 +35,50 @@ def _get_gs_latest(remote_lastest):
 
 def _fetch_gs_artifact(remote_name, local_name):
   assert remote_name.startswith(_GS_PREFIX)
+
+  print('Fetching %r to %r' % (remote_name, local_name))
   subprocess.check_call(['gsutil', 'cp', remote_name, local_name])
 
 
-def _find_latest_profdata(arch):
+def _find_latest_artifacts(arch):
   remote_latest = (
       '%schromeos-image-archive/'
       '%s-pgo-generate-llvm-next-toolchain/LATEST-master' % (_GS_PREFIX, arch))
   version = _get_gs_latest(remote_latest)
-  profdata = ('%s-pgo-generate-llvm-next-toolchain/%s/llvm_profdata.tar.xz' %
-              (arch, version))
-  return profdata
+  return '%s-pgo-generate-llvm-next-toolchain/%s' % (arch, version)
 
 
-def _get_gs_profdata(profdata):
-  remote_profdata = ('%schromeos-image-archive/%s' % (_GS_PREFIX, profdata))
+def _get_gs_profdata(remote_base, base_dir):
+  remote_profdata_basename = 'llvm_profdata.tar.xz'
+
+  remote_profdata = os.path.join(remote_base, remote_profdata_basename)
   tar = 'llvm_profdata.tar.xz'
-  print('Downloading single profdata for: %s' % profdata)
   _fetch_gs_artifact(remote_profdata, tar)
   extract_cmd = ['tar', '-xf', tar]
 
   print('Extracting profdata tarball.\nCMD: %s\n' % extract_cmd)
   subprocess.check_call(extract_cmd)
-  profdata = profdata.replace('llvm_profdata.tar.xz', 'llvm.profdata')
   # Return directory to the llvm.profdata extracted.
-  return 'b/s/w/ir/cache/cbuild/repository/buildbot_archive/%s' % profdata
+  return os.path.join('b/s/w/ir/cache/cbuild/repository/buildbot_archive/',
+                      base_dir, 'llvm.profdata')
+
+
+def _get_gs_metadata(remote_base):
+  metadata_basename = 'llvm_metadata.json'
+  _fetch_gs_artifact(
+      os.path.join(remote_base, metadata_basename), metadata_basename)
+
+  with open(metadata_basename) as f:
+    result = json.load(f)
+
+  return _LLVMMetadata(head_sha=result['head_sha'])
+
+
+def _get_gs_artifacts(base_dir):
+  remote_base = '%schromeos-image-archive/%s' % (_GS_PREFIX, base_dir)
+  profile_path = _get_gs_profdata(remote_base, base_dir)
+  metadata = _get_gs_metadata(remote_base)
+  return metadata, profile_path
 
 
 def _merge_profdata(profdata_list, output_name):
@@ -65,9 +87,8 @@ def _merge_profdata(profdata_list, output_name):
   subprocess.check_call(merge_cmd)
 
 
-def _tar_and_upload_profdata(profdata):
-  timestamp = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d')
-  tarball = 'llvm-profdata-%s.tar.xz' % timestamp
+def _tar_and_upload_profdata(profdata, name_suffix):
+  tarball = 'llvm-profdata-%s.tar.xz' % name_suffix
   print('Making profdata tarball: %s' % tarball)
   subprocess.check_call(
       ['tar', '--sparse', '-I', 'xz', '-cf', tarball, profdata])
@@ -105,6 +126,9 @@ def main():
       default='llvm.profdata',
       help='Where to put merged PGO profile. The default is to not save it '
       'anywhere.')
+  parser.add_argument(
+      '--llvm_hash',
+      help='The LLVM hash to select for the profiles. Generally autodetected.')
   args = parser.parse_args()
 
   # If no --latest specified, by default we collect from listed arches.
@@ -119,26 +143,52 @@ def main():
   try:
     os.chdir(temp_dir)
     profdata_list = []
+    heads = set()
+
+    def fetch_and_append_artifacts(gs_url):
+      llvm_metadata, profdata_loc = _get_gs_artifacts(gs_url)
+      if os.path.getsize(profdata_loc) < 512 * 1024:
+        raise RuntimeError('The PGO profile in %s (local path: %s) is '
+                           'suspiciously small. Something might have gone '
+                           'wrong.' % (gs_url, profdata_loc))
+
+      heads.add(llvm_metadata.head_sha)
+      profdata_list.append(profdata_loc)
 
     for arch in latest:
-      profdata = _find_latest_profdata(arch)
-      profdata_loc = _get_gs_profdata(profdata)
-      profdata_list.append(profdata_loc)
+      fetch_and_append_artifacts(_find_latest_artifacts(arch))
 
     if args.tryjob:
       for tryjob in args.tryjob:
-        profdata = os.path.join(tryjob, 'llvm_profdata.tar.xz')
-        profdata_loc = _get_gs_profdata(profdata)
-        profdata_list.append(profdata_loc)
+        fetch_and_append_artifacts(tryjob)
 
-    for profdata in profdata_list:
-      if os.path.getsize(profdata_loc) < 512 * 1024:
-        raise RuntimeError('The PGO profile in %s is suspiciously small. '
-                           'Something might have gone wrong.' % profdata)
+    assert heads, 'Didn\'t fetch anything?'
+
+    def die_with_head_complaint(complaint):
+      extra = ' (HEADs found: %s)' % sorted(heads)
+      raise RuntimeError(complaint.rstrip() + extra)
+
+    llvm_hash = args.llvm_hash
+    if not llvm_hash:
+      if len(heads) != 1:
+        die_with_head_complaint(
+            '%d LLVM HEADs were found, which is more than one. You probably '
+            'want a consistent set of HEADs for a profile. If you know you '
+            'don\'t, please specify --llvm_hash, and note that *all* profiles '
+            'will be merged into this final profile, regardless of their '
+            'reported HEAD.' % len(heads))
+      llvm_hash, = heads
+
+    if llvm_hash not in heads:
+      assert llvm_hash == args.llvm_hash
+      die_with_head_complaint(
+          'HEAD %s wasn\'t found in any fetched artifacts.' % llvm_hash)
+
+    print('Using LLVM hash: %s' % llvm_hash)
 
     _merge_profdata(profdata_list, args.output)
     print('Merged profdata locates at %s\n' % os.path.abspath(args.output))
-    _tar_and_upload_profdata(args.output)
+    _tar_and_upload_profdata(args.output, name_suffix=llvm_hash)
     print('Merged profdata uploaded successfully.')
   except:
     success = False
