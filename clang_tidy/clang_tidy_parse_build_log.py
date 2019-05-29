@@ -36,7 +36,7 @@ def Main(argv):
   output_dir = options.out_dir if options.out_dir else '/tmp/clang-tidy-output'
 
   cwd = os.path.dirname(os.path.realpath(__file__))
-  warn_script = os.path.join(cwd, 'clang-tidy-warn.py')
+  warn_script = os.path.join(cwd, 'clang_tidy_warn.py')
 
   logfile = options.log_file
   if not os.path.exists(logfile):

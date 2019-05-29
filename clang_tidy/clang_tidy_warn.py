@@ -93,6 +93,7 @@ import re
 import signal
 import sys
 
+# TODO: move the parser code into a function
 parser = argparse.ArgumentParser(description='Convert a build log into HTML')
 parser.add_argument(
     '--csvpath',
@@ -123,7 +124,11 @@ parser.add_argument(
     help='Number of parallel processes to process warnings')
 parser.add_argument(
     dest='buildlog', metavar='build.log', help='Path to build.log file')
-args = parser.parse_args()
+
+if len(sys.argv) > 1:
+  args = parser.parse_args()
+else:
+  args = None
 
 
 class Severity(object):
@@ -5680,34 +5685,53 @@ def sort_warnings():
     i['members'] = sorted(set(i['members']))
 
 
-def emit_stats_by_project():
-  """Dump a google chart table of warnings per project and severity."""
-  # warnings[p][s] is number of warnings in project p of severity s.
+def create_warnings():
+  """Creates warnings s.t. warnings[p][s] is as specified in above docs
+
+  Returns 2D warnings array where warnings[p][s] is # of warnings
+  in project name p of severity level s
+  """
+
   warnings = {p: {s: 0 for s in Severity.range} for p in project_names}
   for i in warn_patterns:
     s = i['severity']
     for p in i['projects']:
       warnings[p][s] += i['projects'][p]
+  return warnings
 
-  # total_by_project[p] is number of warnings in project p.
-  total_by_project = {
-      p: sum(warnings[p][s] for s in Severity.range) for p in project_names
-  }
 
-  # total_by_severity[s] is number of warnings of severity s.
-  total_by_severity = {
-      s: sum(warnings[p][s] for p in project_names) for s in Severity.range
-  }
+def get_total_by_project(warnings):
+  """Returns dict, project as key and # warnings for that project as value"""
 
-  # emit table header
+  return {p: sum(warnings[p][s] for s in Severity.range) for p in project_names}
+
+
+def get_total_by_severity(warnings):
+  """Returns dict, severity as key and # warnings of that severity as value"""
+
+  return {s: sum(warnings[p][s] for p in project_names) for s in Severity.range}
+
+
+def emit_table_header(total_by_severity):
+  """Returns list of HTML-formatted content for severity stats"""
+
   stats_header = ['Project']
   for s in Severity.range:
     if total_by_severity[s]:
       stats_header.append("<span style='background-color:{}'>{}</span>".format(
           Severity.colors[s], Severity.column_headers[s]))
   stats_header.append('TOTAL')
+  return stats_header
 
-  # emit a row of warning counts per project, skip no-warning projects
+
+def emit_row_counts_per_project(warnings, total_by_project, total_by_severity):
+  """Returns total project warnings and row of stats for each project
+
+  Returns total_all_projects, the total number of warnings over all projects
+  and stats_rows, a 2d list where each row is [Project Name,
+  <severity counts>, total # warnings for this project]
+  """
+
   total_all_projects = 0
   stats_rows = []
   for p in project_names:
@@ -5719,8 +5743,17 @@ def emit_stats_by_project():
       one_row.append(total_by_project[p])
       stats_rows.append(one_row)
       total_all_projects += total_by_project[p]
+  return total_all_projects, stats_rows
 
-  # emit a row of warning counts per severity
+
+def emit_row_counts_per_severity(total_by_severity, stats_header, stats_rows,
+                                 total_all_projects):
+  """Emits stats_header and stats_rows as specified above
+
+  Specifications found in docstrings for emit_table_header and
+  emit_row_counts_per_project above
+  """
+
   total_all_severities = 0
   one_row = ['<b>TOTAL</b>']
   for s in Severity.range:
@@ -5736,8 +5769,22 @@ def emit_stats_by_project():
   print('</script>')
 
 
+def emit_stats_by_project():
+  """Dump a google chart table of warnings per project and severity."""
+
+  warnings = create_warnings()
+  total_by_project = get_total_by_project(warnings)
+  total_by_severity = get_total_by_severity(warnings)
+  stats_header = emit_table_header(total_by_severity)
+  total_all_projects, stats_rows = \
+    emit_row_counts_per_project(warnings, total_by_project, total_by_severity)
+  emit_row_counts_per_severity(total_by_severity, stats_header, stats_rows,
+                               total_all_projects)
+
+
 def dump_stats():
   """Dump some stats about total number of warnings and such."""
+
   known = 0
   skipped = 0
   unknown = 0
