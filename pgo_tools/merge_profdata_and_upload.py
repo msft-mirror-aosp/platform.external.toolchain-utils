@@ -93,14 +93,33 @@ def _tar_and_upload_profdata(profdata, name_suffix):
   subprocess.check_call(
       ['tar', '--sparse', '-I', 'xz', '-cf', tarball, profdata])
 
+  upload_location = '%schromeos-localmirror/distfiles/%s' % (_GS_PREFIX,
+                                                             tarball)
+
   # TODO: it's better to create a subdir: distfiles/llvm_pgo_profile, but
   # now llvm could only recognize distfiles.
   upload_cmd = [
-      'gsutil', '-m', 'cp', '-n', '-a', 'public-read', tarball,
-      '%schromeos-localmirror/distfiles/%s' % (_GS_PREFIX, tarball)
+      'gsutil',
+      '-m',
+      'cp',
+      '-n',
+      '-a',
+      'public-read',
+      tarball,
+      upload_location,
   ]
   print('Uploading tarball to gs.\nCMD: %s\n' % upload_cmd)
-  subprocess.check_call(upload_cmd)
+
+  # gsutil prints all status to stderr, oddly enough.
+  gs_output = subprocess.check_output(upload_cmd, stderr=subprocess.STDOUT)
+  print(gs_output)
+
+  # gsutil exits successfully even if it uploaded nothing. It prints a summary
+  # of what all it did, though. Successful uploads are just a progress bar,
+  # unsuccessful ones note that items were skipped.
+  if 'Skipping existing item' in gs_output:
+    raise ValueError('Profile upload failed: would overwrite an existing '
+                     'profile at %s' % upload_location)
 
 
 def main():
