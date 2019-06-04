@@ -761,6 +761,22 @@ def find_project_index(line):
 
 def classify_one_warning(line, results):
   """Classify one warning line."""
+
+  # Ignore the following warnings so that the html will load
+  # TODO: check out the significance of these warnings
+  ignored_warnings = [
+      '\[hicpp-no-array-decay\]$', '\[hicpp-signed-bitwise\]$',
+      '\[hicpp-braces-around-statements\]$',
+      '\[hicpp-uppercase-literal-suffix\]$',
+      '\[bugprone-narrowing-conversions\]$', '\[fuchsia-.*\]$'
+  ]
+
+  for warning in ignored_warnings:
+    pattern = re.compile(warning)
+    searched_res = pattern.search(line)
+    if searched_res:
+      return
+
   for i, w in enumerate(warn_patterns):
     for cpat in w['compiled_patterns']:
       if cpat.match(line):
