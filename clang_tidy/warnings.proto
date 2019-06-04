@@ -1,0 +1,22 @@
+syntax = "proto2";
+
+message warning {
+ enum severity_class {
+    FIXMENOW = 0;
+    HIGH = 1;
+    MEDIUM = 2;
+    LOW = 3;
+    ANALYZER = 4;
+    TIDY = 5;
+    HARMLESS = 6;
+    UNKNOWN = 7;
+    SKIP = 8;
+  }
+
+  optional severity_class severity = 1;
+  optional string warning_text = 2;
+  optional string file_path = 4;
+  optional int32 line_number = 5;
+  optional int32 col_number = 6;
+  optional string matching_compiler_output = 7;
+}

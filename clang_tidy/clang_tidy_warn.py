@@ -94,6 +94,7 @@ import signal
 import sys
 
 from clang_tidy_warn_patterns import warn_patterns, Severity
+import warning_pb2
 
 # TODO: move the parser code into a function
 parser = argparse.ArgumentParser(description='Convert a build log into HTML')
@@ -106,6 +107,10 @@ parser.add_argument(
     help='Generate a CSV file with number of various warnings',
     action='store_true',
     default=False)
+parser.add_argument(
+    '--protopath',
+    help='Save protobuffer warning file to the passed absolute path',
+    default=None)
 parser.add_argument(
     '--byproject',
     help='Separate warnings in HTML output by project names',
@@ -1584,6 +1589,56 @@ def dump_csv(writer):
   writer.writerow([total, '', 'All warnings'])
 
 
+def dump_protobuf(write_file):
+  """Dump warnings in protobuf format to file given"""
+  warnings = generate_protobufs()
+  protobufsString = ""
+  # write all protobufs to file (length delimited for now)
+  maxNumberLength = len(str(sys.maxint))
+  for warning in warnings:
+    warningString = warning.SerializeToString()
+    protobufsString += str(len(warningString)).zfill(maxNumberLength)
+    protobufsString += warningString
+  write_file.write(protobufsString)
+
+
+def parse_compiler_output(compiler_output):
+  # Parse compiler output for relevant info
+  split_output = compiler_output.split(":")
+  if len(split_output) < 3:
+    return  # lacks path:line_number:col_number <warning> format
+  file_path = split_output[0]
+  line_number = int(split_output[1])
+  col_number = int(split_output[2].split(" ")[0])
+  warning_message = ":".join(split_output[3:])
+  return file_path, line_number, col_number, warning_message
+
+
+def generate_protobufs():
+  """Convert warning_records to protobufs"""
+  warnings = []
+  for warning_record in warning_records:
+    warn_pattern = warn_patterns[warning_record[0]]
+    compiler_output = warning_messages[warning_record[2]]
+
+    # create warning protobuf
+    warning = warning_pb2.warning()
+    warning.severity = warn_pattern['severity']
+    warning.warning_text = warn_pattern['description']
+
+    parsed_output = parse_compiler_output(compiler_output)
+    if parsed_output is None:  # lacks structure for parsing
+      warning.matching_compiler_output = parsed_output
+    else:
+      file_path, line_number, col_number, warning_message = parsed_output
+      warning.file_path = file_path
+      warning.line_number = line_number
+      warning.col_number = col_number
+      warning.matching_compiler_output = warning_message
+    warnings.append(warning)
+  return warnings
+
+
 def main():
   warning_lines = parse_input_file(open(args.buildlog, 'r'))
   parallel_classify_warnings(warning_lines)
@@ -1597,6 +1652,10 @@ def main():
     dump_csv(csv.writer(sys.stdout, lineterminator='\n'))
   else:
     dump_html()
+
+  if args.protopath:
+    with open(args.protopath, 'wb') as f:
+      dump_protobuf(f)
 
 
 # Run main function if warn.py is the main program.

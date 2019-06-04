@@ -19,6 +19,8 @@ import unittest
 from contextlib import contextmanager
 import StringIO
 
+import warning_pb2
+
 
 def get_test_vars():
   """create artificial warn_patterns and project names for testing purposes"""
@@ -29,25 +31,49 @@ def get_test_vars():
       'projects': {
           'ProjectA': 2,
           'ProjectB': 0
-      }
-  }, {
-      'severity': 1,
-      'projects': {
-          'ProjectA': 1,
-          'ProjectB': 3
-      }
-  }, {
-      'severity': 2,
-      'projects': {
-          'ProjectA': 0,
-          'ProjectB': 6
-      }
-  }]
-  for s in range(9):
+      },
+      'description': 'Test warning of severity 0 (FIXMENOW)'
+  },
+                   {
+                       'severity': 1,
+                       'projects': {
+                           'ProjectA': 1,
+                           'ProjectB': 3
+                       },
+                       'description': 'Test warning of severity 1 (HIGH)'
+                   },
+                   {
+                       'severity': 2,
+                       'projects': {
+                           'ProjectA': 0,
+                           'ProjectB': 6
+                       },
+                       'description': 'Test warning of severity 2 (MEDIUM)'
+                   }]
+  for s in range(9):  # pad warn_patterns with severities we are not using
     if s >= len(warn_patterns):
       warn_patterns.append({'severity': s, 'projects': {}})
+      warn_patterns[s]['description'] = ""
     warn_patterns[s]['members'] = []
-    warn_patterns[s]['description'] = ""
+
+  warning_messages = [
+      "/ProjectB:1:1 warning: (1) Project B of severity 1",
+      "/ProjectB:1:1 warning: (2) Project B of severity 1",
+      "/ProjectA:22:23 warning: (3) Project B of severity 1",
+      "/ProjectA:22:23 (1) Project A of severity 0",
+      "/ProjectA:22:23 warning: (2) Project A of severity 0",
+      "/ProjectA:22:23 warning: Project A of severity 1",
+      "/ProjectB:1:1 warning: (1) Project B of severity 2",
+      "/ProjectB:1:1 warning: (2) Project B of severity 2",
+      "/ProjectB:1:1 warning: (3) Project B of severity 2",
+      "/ProjectB:1:1 warning: (4) Project B of severity 2",
+      "/ProjectB:1:1 warning: (5) Project B of severity 2",
+      "/ProjectB:1:1 warning: (6) Project B of severity 2"
+  ]
+  # [ warn_patterns index, project_names index, warning_messages index
+  warning_records = [[1, 1, 0], [1, 1, 1], [1, 1, 2], [0, 0, 3], [0, 0, 4],
+                     [1, 0, 5], [2, 1, 6], [2, 1, 7], [2, 1, 8], [2, 1, 9],
+                     [2, 1, 10], [2, 1, 11]]
 
   expected_warnings = {
       'ProjectA': {
@@ -102,7 +128,9 @@ def get_test_vars():
       'total_by_severity': expected_total_by_severity,
       'total_all_projects': expected_total_all_projects,
       'stats_rows': expected_stats_rows,
-      'count_severity_total': expected_count_severity_total
+      'count_severity_total': expected_count_severity_total,
+      'warning_messages': warning_messages,
+      'warning_records': warning_records,
   }
 
   return res
@@ -112,19 +140,27 @@ def put_test_vars():
   # save old warn patterns to reset to following this test
   actual_warn_patterns = ct_warn.warn_patterns
   actual_project_names = ct_warn.project_names
+  actual_warning_messages = ct_warn.warning_messages
+  actual_warning_records = ct_warn.warning_records
 
   # run test w specified inputs
   expected = get_test_vars()
 
   ct_warn.warn_patterns = expected['warn_patterns']
   ct_warn.project_names = expected['project_names']
-  return actual_warn_patterns, actual_project_names
+  ct_warn.warning_messages = expected['warning_messages']
+  ct_warn.warning_records = expected['warning_records']
+  return (actual_warn_patterns, actual_project_names, actual_warning_messages,
+          actual_warning_records)
 
 
-def remove_test_vars(actual_warn_patterns, actual_project_names):
+def remove_test_vars(actual_warn_patterns, actual_project_names,
+                     actual_warning_messages, actual_warning_records):
   # reset to actual vals
   ct_warn.project_names = actual_project_names
   ct_warn.warn_patterns = actual_warn_patterns
+  ct_warn.warning_messages = actual_warning_messages
+  ct_warn.warning_records = actual_warning_records
 
 
 def setup_classify():
@@ -140,11 +176,13 @@ def setup_classify():
 
 @contextmanager
 def test_vars():
-  actual_warn_patterns, actual_project_names = put_test_vars()
+  actual_warn_patterns, actual_project_names, actual_warning_messages, \
+    actual_warning_records = put_test_vars()
   try:
     yield
   finally:
-    remove_test_vars(actual_warn_patterns, actual_project_names)
+    remove_test_vars(actual_warn_patterns, actual_project_names,
+                     actual_warning_messages, actual_warning_records)
 
 
 class Tests(unittest.TestCase):
@@ -222,6 +260,18 @@ class Tests(unittest.TestCase):
         count_severity_total = ct_warn.count_severity(csvwriter, total[0],
                                                       "testing")
         self.assertEqual(count_severity_total, total[1])
+
+  def test_data_to_protobuf(self):
+    with test_vars():
+      parsed_warning_messages = []
+      for message in ct_warn.warning_messages:
+        parsed_warning_messages.append(
+            ct_warn.parse_compiler_output(message)[3])
+
+      warnings = ct_warn.generate_protobufs()
+      self.assertEqual(len(parsed_warning_messages), len(warnings))
+      for warning in warnings:  # check that each warning was found
+        self.assertIn(warning.matching_compiler_output, parsed_warning_messages)
 
 
 if __name__ == '__main__':
