@@ -94,7 +94,7 @@ import signal
 import sys
 
 from clang_tidy_warn_patterns import warn_patterns, Severity
-import warning_pb2
+import warnings_pb2
 
 # TODO: move the parser code into a function
 parser = argparse.ArgumentParser(description='Convert a build log into HTML')
@@ -1622,7 +1622,7 @@ def generate_protobufs():
     compiler_output = warning_messages[warning_record[2]]
 
     # create warning protobuf
-    warning = warning_pb2.warning()
+    warning = warnings_pb2.warning()
     warning.severity = warn_pattern['severity']
     warning.warning_text = warn_pattern['description']
 

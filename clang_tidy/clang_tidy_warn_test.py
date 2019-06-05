@@ -19,7 +19,7 @@ import unittest
 from contextlib import contextmanager
 import StringIO
 
-import warning_pb2
+import warnings_pb2
 
 
 def get_test_vars():
