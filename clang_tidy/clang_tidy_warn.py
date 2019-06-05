@@ -96,77 +96,6 @@ import sys
 from clang_tidy_warn_patterns import warn_patterns, Severity
 import warnings_pb2
 
-# TODO: move the parser code into a function
-parser = argparse.ArgumentParser(description='Convert a build log into HTML')
-parser.add_argument(
-    '--csvpath',
-    help='Save CSV warning file to the passed absolute path',
-    default=None)
-parser.add_argument(
-    '--gencsv',
-    help='Generate a CSV file with number of various warnings',
-    action='store_true',
-    default=False)
-parser.add_argument(
-    '--protopath',
-    help='Save protobuffer warning file to the passed absolute path',
-    default=None)
-parser.add_argument(
-    '--byproject',
-    help='Separate warnings in HTML output by project names',
-    action='store_true',
-    default=False)
-parser.add_argument(
-    '--url',
-    help='Root URL of an Android source code tree prefixed '
-    'before files in warnings')
-parser.add_argument(
-    '--separator',
-    help='Separator between the end of a URL and the line '
-    'number argument. e.g. #')
-parser.add_argument(
-    '--processes',
-    type=int,
-    default=multiprocessing.cpu_count(),
-    help='Number of parallel processes to process warnings')
-parser.add_argument(
-    dest='buildlog', metavar='build.log', help='Path to build.log file')
-
-if len(sys.argv) > 1:
-  args = parser.parse_args()
-else:
-  args = None
-
-
-class Severity(object):
-  """Severity levels and attributes."""
-  # numbered by dump order
-  FIXMENOW = 0
-  HIGH = 1
-  MEDIUM = 2
-  LOW = 3
-  ANALYZER = 4
-  TIDY = 5
-  HARMLESS = 6
-  UNKNOWN = 7
-  SKIP = 8
-  range = range(SKIP + 1)
-  attributes = [
-      # pylint:disable=bad-whitespace
-      ['fuchsia', 'FixNow', 'Critical warnings, fix me now'],
-      ['red', 'High', 'High severity warnings'],
-      ['orange', 'Medium', 'Medium severity warnings'],
-      ['yellow', 'Low', 'Low severity warnings'],
-      ['hotpink', 'Analyzer', 'Clang-Analyzer warnings'],
-      ['peachpuff', 'Tidy', 'Clang-Tidy warnings'],
-      ['limegreen', 'Harmless', 'Harmless warnings'],
-      ['lightblue', 'Unknown', 'Unknown warnings'],
-      ['grey', 'Unhandled', 'Unhandled warnings']
-  ]
-  colors = [a[0] for a in attributes]
-  column_headers = [a[1] for a in attributes]
-  headers = [a[2] for a in attributes]
-
 
 def project_name_and_pattern(name, pattern):
   return [name, '(^|.*/)' + pattern + '/.*: warning:']
@@ -1135,10 +1064,10 @@ def classify_one_warning(line, results):
   # Ignore the following warnings so that the html will load
   # TODO: check out the significance of these warnings
   ignored_warnings = [
-      '\[hicpp-no-array-decay\]$', '\[hicpp-signed-bitwise\]$',
-      '\[hicpp-braces-around-statements\]$',
-      '\[hicpp-uppercase-literal-suffix\]$',
-      '\[bugprone-narrowing-conversions\]$', '\[fuchsia-.*\]$'
+      r'\[hicpp-no-array-decay\]$', r'\[hicpp-signed-bitwise\]$',
+      r'\[hicpp-braces-around-statements\]$',
+      r'\[hicpp-uppercase-literal-suffix\]$',
+      r'\[bugprone-narrowing-conversions\]$', r'\[fuchsia-.*\]$'
   ]
 
   for warning in ignored_warnings:
@@ -1160,7 +1089,13 @@ def classify_one_warning(line, results):
         pass
 
 
-def classify_warnings(lines):
+def classify_warnings_wrapper(input_tuple):
+  """map doesn't work with two input arguments, needs wrapper function"""
+  lines, args = input_tuple
+  return classify_warnings(lines, args)
+
+
+def classify_warnings(lines, args):
   results = []
   for line in lines:
     classify_one_warning(line, results)
@@ -1171,7 +1106,7 @@ def classify_warnings(lines):
   return results
 
 
-def parallel_classify_warnings(warning_lines):
+def parallel_classify_warnings(warning_lines, args):
   """Classify all warning lines with num_cpu parallel processes."""
   compile_patterns()
   num_cpu = args.processes
@@ -1181,10 +1116,12 @@ def parallel_classify_warnings(warning_lines):
     for x in warning_lines:
       groups[i].append(x)
       i = (i + 1) % num_cpu
+    for i, group in enumerate(groups):
+      groups[i] = (group, args)
     pool = multiprocessing.Pool(num_cpu)
-    group_results = pool.map(classify_warnings, groups)
+    group_results = pool.map(classify_warnings_wrapper, groups)
   else:
-    group_results = [classify_warnings(warning_lines)]
+    group_results = [classify_warnings(warning_lines, args)]
 
   for result in group_results:
     for line, pattern_idx, project_idx in result:
@@ -1490,7 +1427,7 @@ def emit_const_object_array(name, array):
   print('];')
 
 
-def emit_js_data():
+def emit_js_data(args):
   """Dump dynamic HTML page's static JavaScript data."""
   emit_const_string('FlagURL', args.url if args.url else '')
   emit_const_string('FlagSeparator', args.separator if args.separator else '')
@@ -1530,14 +1467,14 @@ function drawTable() {
 """
 
 
-def dump_html():
+def dump_html(args):
   """Dump the html output to stdout."""
   dump_html_prologue('Warnings for ' + platform_version + ' - ' +
                      target_product + ' - ' + target_variant)
   dump_stats()
   print('<br><div id="stats_table"></div><br>')
   print('\n<script>')
-  emit_js_data()
+  emit_js_data(args)
   print(scripts_for_warning_groups)
   print('</script>')
   emit_buttons()
@@ -1639,9 +1576,52 @@ def generate_protobufs():
   return warnings
 
 
+# helper function to parse the inputting arguments
+def create_parser():
+  parser = argparse.ArgumentParser(description='Convert a build log into HTML')
+  parser.add_argument(
+      '--csvpath',
+      help='Save CSV warning file to the passed absolute path',
+      default=None)
+  parser.add_argument(
+      '--gencsv',
+      help='Generate a CSV file with number of various warnings',
+      action='store_true',
+      default=False)
+  parser.add_argument(
+      '--protopath',
+      help='Save protobuffer warning file to the passed absolute path',
+      default=None)
+  parser.add_argument(
+      '--byproject',
+      help='Separate warnings in HTML output by project names',
+      action='store_true',
+      default=False)
+  parser.add_argument(
+      '--url',
+      help='Root URL of an Android source code tree prefixed '
+      'before files in warnings')
+  parser.add_argument(
+      '--separator',
+      help='Separator between the end of a URL and the line '
+      'number argument. e.g. #')
+  parser.add_argument(
+      '--processes',
+      type=int,
+      default=multiprocessing.cpu_count(),
+      help='Number of parallel processes to process warnings')
+  parser.add_argument(
+      dest='buildlog', metavar='build.log', help='Path to build.log file')
+  return parser
+
+
 def main():
+  # parse the input arguments for generating html and csv files
+  parser = create_parser()
+  args = parser.parse_args()
+
   warning_lines = parse_input_file(open(args.buildlog, 'r'))
-  parallel_classify_warnings(warning_lines)
+  parallel_classify_warnings(warning_lines, args)
   # If a user pases a csv path, save the fileoutput to the path
   # If the user also passed gencsv write the output to stdout
   # If the user did not pass gencsv flag dump the html report to stdout.
@@ -1651,7 +1631,7 @@ def main():
   if args.gencsv:
     dump_csv(csv.writer(sys.stdout, lineterminator='\n'))
   else:
-    dump_html()
+    dump_html(args)
 
   if args.protopath:
     with open(args.protopath, 'wb') as f:
