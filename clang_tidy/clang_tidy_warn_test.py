@@ -19,7 +19,7 @@ import unittest
 from contextlib import contextmanager
 import StringIO
 
-import warnings_pb2
+import warnings_pb2  # if missing, run compile_proto.sh to generate it
 
 
 def get_test_vars():
@@ -59,8 +59,8 @@ def get_test_vars():
   warning_messages = [
       "/ProjectB:1:1 warning: (1) Project B of severity 1",
       "/ProjectB:1:1 warning: (2) Project B of severity 1",
-      "/ProjectA:22:23 warning: (3) Project B of severity 1",
-      "/ProjectA:22:23 (1) Project A of severity 0",
+      "/ProjectB:1:1 warning: (3) Project B of severity 1",
+      "/ProjectA:22:23 warning: (1) Project A of severity 0",
       "/ProjectA:22:23 warning: (2) Project A of severity 0",
       "/ProjectA:22:23 warning: Project A of severity 1",
       "/ProjectB:1:1 warning: (1) Project B of severity 2",
@@ -261,6 +261,21 @@ class Tests(unittest.TestCase):
                                                       "testing")
         self.assertEqual(count_severity_total, total[1])
 
+  def test_parse_compiler_output_exception(self):
+    with self.assertRaises(ValueError):
+      ct_warn.parse_compiler_output("bad compiler output")
+
+  def test_parse_compiler_output(self):
+    with test_vars():
+      expected = get_test_vars()
+      test_message = expected['warning_messages'][4]  # /ProjectA:22:23 <text..>
+      file_path, line_number, col_number, warning_message = (
+          ct_warn.parse_compiler_output(test_message))
+      self.assertEqual(file_path, "/ProjectA")
+      self.assertEqual(line_number, 22)
+      self.assertEqual(col_number, 23)
+      self.assertEqual(warning_message, " (2) Project A of severity 0")
+
   def test_data_to_protobuf(self):
     with test_vars():
       parsed_warning_messages = []
@@ -269,7 +284,6 @@ class Tests(unittest.TestCase):
             ct_warn.parse_compiler_output(message)[3])
 
       warnings = ct_warn.generate_protobufs()
-      self.assertEqual(len(parsed_warning_messages), len(warnings))
       for warning in warnings:  # check that each warning was found
         self.assertIn(warning.matching_compiler_output, parsed_warning_messages)
 

@@ -91,10 +91,11 @@ import multiprocessing
 import os
 import re
 import signal
+import struct
 import sys
 
 from clang_tidy_warn_patterns import warn_patterns, Severity
-import warnings_pb2
+import warnings_pb2  # if missing, run compile_proto.sh to generate it
 
 
 def project_name_and_pattern(name, pattern):
@@ -1529,34 +1530,34 @@ def dump_csv(writer):
 def dump_protobuf(write_file):
   """Dump warnings in protobuf format to file given"""
   warnings = generate_protobufs()
-  protobufsString = ""
+  len_struct = struct.Struct('I')  # struct of one integer
   # write all protobufs to file (length delimited for now)
-  maxNumberLength = len(str(sys.maxint))
   for warning in warnings:
-    warningString = warning.SerializeToString()
-    protobufsString += str(len(warningString)).zfill(maxNumberLength)
-    protobufsString += warningString
-  write_file.write(protobufsString)
+    warning_string = warning.SerializeToString()
+    packed_len = len_struct.pack(len(warning_string))
+    write_file.write(packed_len)
+    write_file.write(warning_string)
 
 
 def parse_compiler_output(compiler_output):
   # Parse compiler output for relevant info
-  split_output = compiler_output.split(":")
+  split_output = compiler_output.split(':', 4)  # 4 = max splits
   if len(split_output) < 3:
-    return  # lacks path:line_number:col_number <warning> format
+    # lacks path:line_number:col_number warning: <warning> format
+    raise ValueError('Invalid compiler output %s' % compiler_output)
   file_path = split_output[0]
   line_number = int(split_output[1])
-  col_number = int(split_output[2].split(" ")[0])
-  warning_message = ":".join(split_output[3:])
+  col_number = int(split_output[2].split(' ')[0])
+  warning_message = split_output[3]
   return file_path, line_number, col_number, warning_message
 
 
 def generate_protobufs():
   """Convert warning_records to protobufs"""
-  warnings = []
   for warning_record in warning_records:
-    warn_pattern = warn_patterns[warning_record[0]]
-    compiler_output = warning_messages[warning_record[2]]
+    pattern_idx, _, message_idx = warning_record
+    warn_pattern = warn_patterns[pattern_idx]
+    compiler_output = warning_messages[message_idx]
 
     # create warning protobuf
     warning = warnings_pb2.warning()
@@ -1564,16 +1565,12 @@ def generate_protobufs():
     warning.warning_text = warn_pattern['description']
 
     parsed_output = parse_compiler_output(compiler_output)
-    if parsed_output is None:  # lacks structure for parsing
-      warning.matching_compiler_output = parsed_output
-    else:
-      file_path, line_number, col_number, warning_message = parsed_output
-      warning.file_path = file_path
-      warning.line_number = line_number
-      warning.col_number = col_number
-      warning.matching_compiler_output = warning_message
-    warnings.append(warning)
-  return warnings
+    file_path, line_number, col_number, warning_message = parsed_output
+    warning.file_path = file_path
+    warning.line_number = line_number
+    warning.col_number = col_number
+    warning.matching_compiler_output = warning_message
+    yield warning
 
 
 # helper function to parse the inputting arguments
