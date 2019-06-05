@@ -252,7 +252,7 @@ class ToolchainComparator(object):
         self._chromeos_root,
         self._build,
         self._patches,
-        tryjob_flags=['--notests'],
+        tryjob_flags=['--notests', '--chrome_version=HEAD'],
         build_toolchain=True)
 
     print('trybot_url: \

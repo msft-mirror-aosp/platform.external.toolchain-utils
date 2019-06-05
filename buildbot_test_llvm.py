@@ -117,7 +117,7 @@ class ToolchainVerifier(object):
         self._chromeos_root,
         self._build,
         self._patches,
-        tryjob_flags=['--hwtest'],
+        tryjob_flags=['--hwtest', '--chrome_version=HEAD'],
         async=True)
 
     return buildbucket_id
