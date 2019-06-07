@@ -1560,7 +1560,7 @@ def generate_protobufs():
     compiler_output = warning_messages[message_idx]
 
     # create warning protobuf
-    warning = warnings_pb2.warning()
+    warning = warnings_pb2.Warning()
     warning.severity = warn_pattern['severity']
     warning.warning_text = warn_pattern['description']
 

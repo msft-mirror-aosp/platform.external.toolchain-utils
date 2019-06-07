@@ -1,19 +1,21 @@
 syntax = "proto2";
 
-message warning {
- enum severity_class {
-    FIXMENOW = 0;
-    HIGH = 1;
-    MEDIUM = 2;
-    LOW = 3;
-    ANALYZER = 4;
-    TIDY = 5;
-    HARMLESS = 6;
-    UNKNOWN = 7;
+package clang_tidy;
+
+message Warning {
+ enum SeverityClass {
+    UNKNOWN = 0;
+    FIXMENOW = 1;
+    HIGH = 2;
+    MEDIUM = 3;
+    LOW = 4;
+    ANALYZER = 5;
+    TIDY = 6;
+    HARMLESS = 7;
     SKIP = 8;
   }
 
-  optional severity_class severity = 1;
+  optional SeverityClass severity = 1;
   optional string warning_text = 2;
   optional string file_path = 4;
   optional int32 line_number = 5;

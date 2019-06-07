@@ -15,18 +15,23 @@ understanding of the original file.
 class Severity(object):
   """Severity levels and attributes."""
   # numbered by dump order
-  FIXMENOW = 0
-  HIGH = 1
-  MEDIUM = 2
-  LOW = 3
-  ANALYZER = 4
-  TIDY = 5
-  HARMLESS = 6
-  UNKNOWN = 7
+  UNKNOWN = 0
+  FIXMENOW = 1
+  HIGH = 2
+  MEDIUM = 3
+  LOW = 4
+  ANALYZER = 5
+  TIDY = 6
+  HARMLESS = 7
   SKIP = 8
   range = range(SKIP + 1)
+
+  # TODO(emmavukelj, ziyig): There is an implicit assumption that Severity
+  # matches attributes (with severity level as attributes index), but this
+  # assumption is never checked/validated. We need to verify this somehow
   attributes = [
       # pylint:disable=bad-whitespace
+      ['lightblue', 'Unknown', 'Unknown warnings'],
       ['fuchsia', 'FixNow', 'Critical warnings, fix me now'],
       ['red', 'High', 'High severity warnings'],
       ['orange', 'Medium', 'Medium severity warnings'],
@@ -34,7 +39,6 @@ class Severity(object):
       ['hotpink', 'Analyzer', 'Clang-Analyzer warnings'],
       ['peachpuff', 'Tidy', 'Clang-Tidy warnings'],
       ['limegreen', 'Harmless', 'Harmless warnings'],
-      ['lightblue', 'Unknown', 'Unknown warnings'],
       ['grey', 'Unhandled', 'Unhandled warnings']
   ]
   colors = [a[0] for a in attributes]
