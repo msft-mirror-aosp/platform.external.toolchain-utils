@@ -4,17 +4,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Grep warnings messages and output HTML tables or warning counts in CSV.
+"""Grep warnings messages and output HTML tables or warning data in protobuf.
 
 Default is to output warnings in HTML tables grouped by warning severity.
 Use option --byproject to output tables grouped by source file projects.
-Use option --gencsv to output warning counts in CSV format.
+Use option --genproto to output warning data in protobuf format.
 """
-
-# FIXME: This was imported from Android at
-# ${android_root}/build/make/tools/warn.py, so it has some Android-specific
-# bits. Java-specific warnings have been removed but other details such as
-# the project list still have Android-specific parts.
 
 # List of important data structures and functions in this script.
 #
@@ -86,7 +81,6 @@ from __future__ import print_function
 
 import argparse
 import cgi
-import csv
 import multiprocessing
 import os
 import re
@@ -107,7 +101,6 @@ def simple_project_pattern(pattern):
 
 
 # A list of [project_name, file_path_pattern].
-# project_name should not contain comma, to be used in CSV output.
 project_list = [
     simple_project_pattern("android_webview"),
     simple_project_pattern("apps"),
@@ -1489,44 +1482,6 @@ def dump_html(args):
   dump_html_epilogue()
 
 
-##### Functions to count warnings and dump csv file. #########################
-
-
-def description_for_csv(category):
-  if not category['description']:
-    return '?'
-  return category['description']
-
-
-def count_severity(writer, sev, kind):
-  """Count warnings of given severity."""
-  total = 0
-  for i in warn_patterns:
-    if i['severity'] == sev and i['members']:
-      n = len(i['members'])
-      total += n
-      warning = kind + ': ' + description_for_csv(i)
-      writer.writerow([n, '', warning])
-      # print number of warnings for each project, ordered by project name.
-      projects = i['projects'].keys()
-      projects.sort()
-      for p in projects:
-        writer.writerow([i['projects'][p], p, warning])
-  writer.writerow([total, '', kind + ' warnings'])
-
-  return total
-
-
-# dump number of warnings in csv format to stdout
-def dump_csv(writer):
-  """Dump number of warnings in csv format to stdout."""
-  sort_warnings()
-  total = 0
-  for s in Severity.range:
-    total += count_severity(writer, s, Severity.column_headers[s])
-  writer.writerow([total, '', 'All warnings'])
-
-
 def dump_protobuf(write_file):
   """Dump warnings in protobuf format to file given"""
   warnings = generate_protobufs()
@@ -1577,18 +1532,14 @@ def generate_protobufs():
 def create_parser():
   parser = argparse.ArgumentParser(description='Convert a build log into HTML')
   parser.add_argument(
-      '--csvpath',
-      help='Save CSV warning file to the passed absolute path',
-      default=None)
-  parser.add_argument(
-      '--gencsv',
-      help='Generate a CSV file with number of various warnings',
-      action='store_true',
-      default=False)
-  parser.add_argument(
       '--protopath',
       help='Save protobuffer warning file to the passed absolute path',
       default=None)
+  parser.add_argument(
+      '--genproto',
+      help='Generate a protobuf file with number of various warnings',
+      action='store_true',
+      default=False)
   parser.add_argument(
       '--byproject',
       help='Separate warnings in HTML output by project names',
@@ -1613,26 +1564,22 @@ def create_parser():
 
 
 def main():
-  # parse the input arguments for generating html and csv files
+  # parse the input arguments for generating html and proto files
   parser = create_parser()
   args = parser.parse_args()
 
   warning_lines = parse_input_file(open(args.buildlog, 'r'))
   parallel_classify_warnings(warning_lines, args)
-  # If a user pases a csv path, save the fileoutput to the path
-  # If the user also passed gencsv write the output to stdout
-  # If the user did not pass gencsv flag dump the html report to stdout.
-  if args.csvpath:
-    with open(args.csvpath, 'w') as f:
-      dump_csv(csv.writer(f, lineterminator='\n'))
-  if args.gencsv:
-    dump_csv(csv.writer(sys.stdout, lineterminator='\n'))
-  else:
-    dump_html(args)
-
+  # If a user pases a proto path, save the fileoutput to the path
+  # If the user also passed genproto, write the output to stdout
+  # If the user did not pass genproto flag dump the html report to stdout.
   if args.protopath:
     with open(args.protopath, 'wb') as f:
       dump_protobuf(f)
+  if args.genproto:
+    dump_protobuf(sys.stdout)
+  else:
+    dump_html(args)
 
 
 # Run main function if warn.py is the main program.

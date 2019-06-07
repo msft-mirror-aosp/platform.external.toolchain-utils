@@ -113,12 +113,6 @@ def get_test_vars():
   }
   expected_total_all_projects = 12
   expected_stats_rows = [['ProjectA', 2, 1, 0, 3], ['ProjectB', 0, 3, 6, 9]]
-  expected_count_severity_total = {}
-  for s, warn_by_severity in enumerate(warn_patterns):
-    # for each project, the number of desired warnings
-    for project, count in warn_by_severity['projects'].items():
-      warn_by_severity['members'] += [project] * count
-    expected_count_severity_total[s] = len(warn_by_severity['members'])
 
   res = {
       'project_names': project_names,
@@ -128,7 +122,6 @@ def get_test_vars():
       'total_by_severity': expected_total_by_severity,
       'total_all_projects': expected_total_all_projects,
       'stats_rows': expected_stats_rows,
-      'count_severity_total': expected_count_severity_total,
       'warning_messages': warning_messages,
       'warning_records': warning_records,
   }
@@ -246,20 +239,6 @@ class Tests(unittest.TestCase):
     # check that the expected result is in index column of actual results
     ct_warn.classify_one_warning(line, results)
     self.assertIn(expected_index, [result[1] for result in results])
-
-  def test_count_severity(self):
-    with test_vars():
-      expected = get_test_vars()
-
-      # NOTE: csv writer necessary to call function but not testing that
-      # functionality only testing that count_severity returns the correct total
-      csvfile = StringIO.StringIO()
-      csvwriter = writer(csvfile)
-      for total in expected['count_severity_total'].items():
-        # total = (severity, count for the severity)
-        count_severity_total = ct_warn.count_severity(csvwriter, total[0],
-                                                      "testing")
-        self.assertEqual(count_severity_total, total[1])
 
   def test_parse_compiler_output_exception(self):
     with self.assertRaises(ValueError):
