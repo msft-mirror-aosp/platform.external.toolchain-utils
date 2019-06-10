@@ -1496,7 +1496,7 @@ def dump_protobuf(write_file):
 
 def parse_compiler_output(compiler_output):
   # Parse compiler output for relevant info
-  split_output = compiler_output.split(':', 4)  # 4 = max splits
+  split_output = compiler_output.split(':', 3)  # 3 = max splits
   if len(split_output) < 3:
     # lacks path:line_number:col_number warning: <warning> format
     raise ValueError('Invalid compiler output %s' % compiler_output)

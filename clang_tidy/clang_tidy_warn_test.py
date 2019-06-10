@@ -57,18 +57,18 @@ def get_test_vars():
     warn_patterns[s]['members'] = []
 
   warning_messages = [
-      "/ProjectB:1:1 warning: (1) Project B of severity 1",
-      "/ProjectB:1:1 warning: (2) Project B of severity 1",
-      "/ProjectB:1:1 warning: (3) Project B of severity 1",
-      "/ProjectA:22:23 warning: (1) Project A of severity 0",
-      "/ProjectA:22:23 warning: (2) Project A of severity 0",
-      "/ProjectA:22:23 warning: Project A of severity 1",
-      "/ProjectB:1:1 warning: (1) Project B of severity 2",
-      "/ProjectB:1:1 warning: (2) Project B of severity 2",
-      "/ProjectB:1:1 warning: (3) Project B of severity 2",
-      "/ProjectB:1:1 warning: (4) Project B of severity 2",
-      "/ProjectB:1:1 warning: (5) Project B of severity 2",
-      "/ProjectB:1:1 warning: (6) Project B of severity 2"
+      "/ProjectB:1:1: warning: (1) Project B of severity 1",
+      "/ProjectB:1:1: warning: (2) Project B of severity 1",
+      "/ProjectB:1:1: warning: (3) Project B of severity 1",
+      "/ProjectA:22:23: warning: (1) Project A of severity 0",
+      "/ProjectA:22:23: warning: (2) Project A of severity 0",
+      "/ProjectA:22:23: warning: Project A of severity 1",
+      "/ProjectB:1:1: warning: (1) Project B of severity 2",
+      "/ProjectB:1:1: warning: (2) Project B of severity 2",
+      "/ProjectB:1:1: warning: (3) Project B of severity 2",
+      "/ProjectB:1:1: warning: (4) Project B of severity 2",
+      "/ProjectB:1:1: warning: (5) Project B of severity 2",
+      "/ProjectB:1:1: warning: (6) Project B of severity 2"
   ]
   # [ warn_patterns index, project_names index, warning_messages index
   warning_records = [[1, 1, 0], [1, 1, 1], [1, 1, 2], [0, 0, 3], [0, 0, 4],
@@ -253,7 +253,7 @@ class Tests(unittest.TestCase):
       self.assertEqual(file_path, "/ProjectA")
       self.assertEqual(line_number, 22)
       self.assertEqual(col_number, 23)
-      self.assertEqual(warning_message, " (2) Project A of severity 0")
+      self.assertEqual(warning_message, " warning: (2) Project A of severity 0")
 
   def test_data_to_protobuf(self):
     with test_vars():
