@@ -14,6 +14,7 @@ from __future__ import print_function
 
 from csv import writer
 import clang_tidy_warn as ct_warn
+import clang_tidy_warn_patterns as ct_patterns
 
 import unittest
 from contextlib import contextmanager
@@ -27,34 +28,35 @@ def get_test_vars():
 
   project_names = ['ProjectA', 'ProjectB']
   warn_patterns = [{
-      'severity': 0,
+      'severity': ct_patterns.Severity.FIXMENOW,
       'projects': {
           'ProjectA': 2,
           'ProjectB': 0
       },
-      'description': 'Test warning of severity 0 (FIXMENOW)'
+      'description': 'Test warning of severity 1 (FIXMENOW)'
   },
                    {
-                       'severity': 1,
+                       'severity': ct_patterns.Severity.HIGH,
                        'projects': {
                            'ProjectA': 1,
                            'ProjectB': 3
                        },
-                       'description': 'Test warning of severity 1 (HIGH)'
+                       'description': 'Test warning of severity 2 (HIGH)'
                    },
                    {
-                       'severity': 2,
+                       'severity': ct_patterns.Severity.MEDIUM,
                        'projects': {
                            'ProjectA': 0,
                            'ProjectB': 6
                        },
-                       'description': 'Test warning of severity 2 (MEDIUM)'
+                       'description': 'Test warning of severity 3 (MEDIUM)'
                    }]
-  for s in range(9):  # pad warn_patterns with severities we are not using
-    if s >= len(warn_patterns):
+  # pad warn_patterns with severities we are not using
+  for s in sorted(ct_patterns.Severity.levels, key=lambda s: s.value):
+    if s.value >= len(warn_patterns):
       warn_patterns.append({'severity': s, 'projects': {}})
-      warn_patterns[s]['description'] = ""
-    warn_patterns[s]['members'] = []
+      warn_patterns[s.value]['description'] = ""
+    warn_patterns[s.value]['members'] = []
 
   warning_messages = [
       "/ProjectB:1:1: warning: (1) Project B of severity 1",

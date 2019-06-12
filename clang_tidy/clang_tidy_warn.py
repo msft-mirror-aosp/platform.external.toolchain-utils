@@ -15,10 +15,6 @@ Use option --genproto to output warning data in protobuf format.
 #
 # To parse and keep warning message in the input file:
 #   severity:                classification of message severity
-#   severity.range           [0, 1, ... last_severity_level]
-#   severity.colors          for header background
-#   severity.column_headers  for the warning count table
-#   severity.headers         for warning message tables
 #   warn_patterns:
 #   warn_patterns[w]['category']     tool that issued the warning, not used now
 #   warn_patterns[w]['description']  table heading
@@ -26,7 +22,7 @@ Use option --genproto to output warning data in protobuf format.
 #   warn_patterns[w]['option']       compiler flag to control the warning
 #   warn_patterns[w]['patterns']     regular expressions to match warnings
 #   warn_patterns[w]['projects'][p]  number of warnings of pattern w in p
-#   warn_patterns[w]['severity']     severity level
+#   warn_patterns[w]['severity']     severity tuple
 #   project_list[p][0]               project name
 #   project_list[p][1]               regular expression to match a project path
 #   project_patterns[p]              re.compile(project_list[p][1])
@@ -59,9 +55,9 @@ Use option --genproto to output warning data in protobuf format.
 #   Some data are copied from Python to JavaScript, to generate HTML elements.
 #   FlagURL                args.url
 #   FlagSeparator          args.separator
-#   SeverityColors:        severity.colors
-#   SeverityHeaders:       severity.headers
-#   SeverityColumnHeaders: severity.column_headers
+#   SeverityColors:        list of colors for all severity levels
+#   SeverityHeaders:       list of headers for all severity levels
+#   SeverityColumnHeaders: list of column_headers for all severity levels
 #   ProjectNames:          project_names, or project_list[*][0]
 #   WarnPatternsSeverity:     warn_patterns[*]['severity']
 #   WarnPatternsDescription:  warn_patterns[*]['description']
@@ -872,9 +868,9 @@ def create_warnings():
   in project name p of severity level s
   """
 
-  warnings = {p: {s: 0 for s in Severity.range} for p in project_names}
+  warnings = {p: {s.value: 0 for s in Severity.levels} for p in project_names}
   for i in warn_patterns:
-    s = i['severity']
+    s = i['severity'].value
     for p in i['projects']:
       warnings[p][s] += i['projects'][p]
   return warnings
@@ -883,23 +879,29 @@ def create_warnings():
 def get_total_by_project(warnings):
   """Returns dict, project as key and # warnings for that project as value"""
 
-  return {p: sum(warnings[p][s] for s in Severity.range) for p in project_names}
+  return {
+      p: sum(warnings[p][s.value] for s in Severity.levels)
+      for p in project_names
+  }
 
 
 def get_total_by_severity(warnings):
   """Returns dict, severity as key and # warnings of that severity as value"""
 
-  return {s: sum(warnings[p][s] for p in project_names) for s in Severity.range}
+  return {
+      s.value: sum(warnings[p][s.value] for p in project_names)
+      for s in Severity.levels
+  }
 
 
 def emit_table_header(total_by_severity):
   """Returns list of HTML-formatted content for severity stats"""
 
   stats_header = ['Project']
-  for s in Severity.range:
-    if total_by_severity[s]:
+  for s in Severity.levels:
+    if total_by_severity[s.value]:
       stats_header.append("<span style='background-color:{}'>{}</span>".format(
-          Severity.colors[s], Severity.column_headers[s]))
+          s.color, s.column_header))
   stats_header.append('TOTAL')
   return stats_header
 
@@ -917,9 +919,9 @@ def emit_row_counts_per_project(warnings, total_by_project, total_by_severity):
   for p in project_names:
     if total_by_project[p]:
       one_row = [p]
-      for s in Severity.range:
-        if total_by_severity[s]:
-          one_row.append(warnings[p][s])
+      for s in Severity.levels:
+        if total_by_severity[s.value]:
+          one_row.append(warnings[p][s.value])
       one_row.append(total_by_project[p])
       stats_rows.append(one_row)
       total_all_projects += total_by_project[p]
@@ -936,10 +938,10 @@ def emit_row_counts_per_severity(total_by_severity, stats_header, stats_rows,
 
   total_all_severities = 0
   one_row = ['<b>TOTAL</b>']
-  for s in Severity.range:
-    if total_by_severity[s]:
-      one_row.append(total_by_severity[s])
-      total_all_severities += total_by_severity[s]
+  for s in Severity.levels:
+    if total_by_severity[s.value]:
+      one_row.append(total_by_severity[s.value])
+      total_all_severities += total_by_severity[s.value]
   one_row.append(total_all_projects)
   stats_rows.append(one_row)
   print('<script>')
@@ -1239,7 +1241,10 @@ def strip_escape_string(s):
 def emit_warning_array(name):
   print('var warning_{} = ['.format(name))
   for w in warn_patterns:
-    print('{},'.format(w[name]))
+    if name == "severity":
+      print('{},'.format(w[name].value))
+    else:
+      print('{},'.format(w[name]))
   print('];')
 
 
@@ -1425,12 +1430,14 @@ def emit_js_data(args):
   """Dump dynamic HTML page's static JavaScript data."""
   emit_const_string('FlagURL', args.url if args.url else '')
   emit_const_string('FlagSeparator', args.separator if args.separator else '')
-  emit_const_string_array('SeverityColors', Severity.colors)
-  emit_const_string_array('SeverityHeaders', Severity.headers)
-  emit_const_string_array('SeverityColumnHeaders', Severity.column_headers)
+  emit_const_string_array('SeverityColors', [s.color for s in Severity.levels])
+  emit_const_string_array('SeverityHeaders',
+                          [s.header for s in Severity.levels])
+  emit_const_string_array('SeverityColumnHeaders',
+                          [s.column_header for s in Severity.levels])
   emit_const_string_array('ProjectNames', project_names)
   emit_const_int_array('WarnPatternsSeverity',
-                       [w['severity'] for w in warn_patterns])
+                       [w['severity'].value for w in warn_patterns])
   emit_const_html_string_array('WarnPatternsDescription',
                                [w['description'] for w in warn_patterns])
   emit_const_html_string_array('WarnPatternsOption',
@@ -1516,7 +1523,7 @@ def generate_protobufs():
 
     # create warning protobuf
     warning = warnings_pb2.Warning()
-    warning.severity = warn_pattern['severity']
+    warning.severity = warn_pattern['severity'].proto_value
     warning.warning_text = warn_pattern['description']
 
     parsed_output = parse_compiler_output(compiler_output)

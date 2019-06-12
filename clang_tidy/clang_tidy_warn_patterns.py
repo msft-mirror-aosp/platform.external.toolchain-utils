@@ -11,39 +11,77 @@ its dependencies. It has been put into this file for easier navigation and
 understanding of the original file.
 """
 
+from collections import namedtuple
 
-class Severity(object):
-  """Severity levels and attributes."""
-  # numbered by dump order
-  UNKNOWN = 0
-  FIXMENOW = 1
-  HIGH = 2
-  MEDIUM = 3
-  LOW = 4
-  ANALYZER = 5
-  TIDY = 6
-  HARMLESS = 7
-  SKIP = 8
-  range = range(SKIP + 1)
+# Create Severity class, where each Severity level is a named tuple
+# value and proto_value exist because value adheres to the original severity
+# ordering, while protobuffer severity values are edited so that UNKNOWN=0
+# because this is best practice for enums. proto_value is only used for
+# generating Warning messages, and value should be used elsewhere.
+Severity = namedtuple(
+    'Severity', ['proto_value', 'value', 'color', 'column_header', 'header'])
+Severity.UNKNOWN = Severity(
+    proto_value=0,
+    value=7,
+    color='lightblue',
+    column_header='Unknown',
+    header='Unknown warnings')
+Severity.FIXMENOW = Severity(
+    proto_value=1,
+    value=0,
+    color='fuschia',
+    column_header='FixNow',
+    header='Critical warnings, fix me now')
+Severity.HIGH = Severity(
+    proto_value=2,
+    value=1,
+    color='red',
+    column_header='High',
+    header='High severity warnings')
+Severity.MEDIUM = Severity(
+    proto_value=3,
+    value=2,
+    color='orange',
+    column_header='Medium',
+    header='Medium severity warnings')
+Severity.LOW = Severity(
+    proto_value=4,
+    value=3,
+    color='yellow',
+    column_header='Low',
+    header='Low severity warnings')
+Severity.ANALYZER = Severity(
+    proto_value=5,
+    value=4,
+    color='hotpink',
+    column_header='Analyzer',
+    header='Clang-Analyzer warnings')
+Severity.TIDY = Severity(
+    proto_value=6,
+    value=5,
+    color='peachpuff',
+    column_header='Tidy',
+    header='Clang-Tidy warnings')
+Severity.HARMLESS = Severity(
+    proto_value=7,
+    value=6,
+    color='limegreen',
+    column_header='Harmless',
+    header='Harmless warnings')
+Severity.SKIP = Severity(
+    proto_value=8,
+    value=8,
+    color='grey',
+    column_header='Unhandled',
+    header='Unhandled warnings')
 
-  # TODO(emmavukelj, ziyig): There is an implicit assumption that Severity
-  # matches attributes (with severity level as attributes index), but this
-  # assumption is never checked/validated. We need to verify this somehow
-  attributes = [
-      # pylint:disable=bad-whitespace
-      ['lightblue', 'Unknown', 'Unknown warnings'],
-      ['fuchsia', 'FixNow', 'Critical warnings, fix me now'],
-      ['red', 'High', 'High severity warnings'],
-      ['orange', 'Medium', 'Medium severity warnings'],
-      ['yellow', 'Low', 'Low severity warnings'],
-      ['hotpink', 'Analyzer', 'Clang-Analyzer warnings'],
-      ['peachpuff', 'Tidy', 'Clang-Tidy warnings'],
-      ['limegreen', 'Harmless', 'Harmless warnings'],
-      ['grey', 'Unhandled', 'Unhandled warnings']
-  ]
-  colors = [a[0] for a in attributes]
-  column_headers = [a[1] for a in attributes]
-  headers = [a[2] for a in attributes]
+Severity.levels = [
+    Severity.FIXMENOW, Severity.HIGH, Severity.MEDIUM, Severity.LOW,
+    Severity.ANALYZER, Severity.TIDY, Severity.HARMLESS, Severity.UNKNOWN,
+    Severity.SKIP
+]
+# HTML relies on ordering by value. Sort here to ensure that this is proper
+Severity.levels = sorted(Severity.levels, key=lambda severity: severity.value)
 
 
 def tidy_warn_pattern(description, pattern):
