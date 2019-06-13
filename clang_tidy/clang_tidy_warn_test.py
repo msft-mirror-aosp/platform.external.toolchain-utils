@@ -73,9 +73,9 @@ def get_test_vars():
       "/ProjectB:1:1: warning: (6) Project B of severity 2"
   ]
   # [ warn_patterns index, project_names index, warning_messages index
-  warning_records = [[1, 1, 0], [1, 1, 1], [1, 1, 2], [0, 0, 3], [0, 0, 4],
-                     [1, 0, 5], [2, 1, 6], [2, 1, 7], [2, 1, 8], [2, 1, 9],
-                     [2, 1, 10], [2, 1, 11]]
+  warning_records = [[1, 1, 0, 0], [1, 1, 1, 0], [1, 1, 2, 0], [0, 0, 3, 0],
+                     [0, 0, 4, 0], [1, 0, 5, 0], [2, 1, 6, 0], [2, 1, 7, 0],
+                     [2, 1, 8, 0], [2, 1, 9, 0], [2, 1, 10, 0], [2, 1, 11, 0]]
 
   expected_warnings = {
       'ProjectA': {
@@ -226,6 +226,7 @@ class Tests(unittest.TestCase):
     setup_classify()
     line = ("external/libese/apps/weaver/weaver.c:340:17: "
             "warning: unused variable 'READ_SUCCESS' [-Wunused-variable]")
+    warning = {"line": line, "link": ""}
     results = []
 
     # find expected result
@@ -239,8 +240,8 @@ class Tests(unittest.TestCase):
     assert expected_index != -1
 
     # check that the expected result is in index column of actual results
-    ct_warn.classify_one_warning(line, results)
-    self.assertIn(expected_index, [result[1] for result in results])
+    ct_warn.classify_one_warning(warning, results)
+    self.assertIn(expected_index, [result[2] for result in results])
 
   def test_parse_compiler_output_exception(self):
     with self.assertRaises(ValueError):
@@ -267,6 +268,14 @@ class Tests(unittest.TestCase):
       warnings = ct_warn.generate_protobufs()
       for warning in warnings:  # check that each warning was found
         self.assertIn(warning.matching_compiler_output, parsed_warning_messages)
+
+  def test_remove_prefix_found(self):
+    self.assertEqual(
+        ct_warn.remove_prefix("googley google code", "gle"), "gle code")
+
+  def test_remove_prefix_not_found(self):
+    self.assertEqual(
+        ct_warn.remove_prefix("google code", "bugs"), "google code")
 
 
 if __name__ == '__main__':

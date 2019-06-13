@@ -28,10 +28,11 @@ Use option --genproto to output warning data in protobuf format.
 #   project_patterns[p]              re.compile(project_list[p][1])
 #   project_names[p]                 project_list[p][0]
 #   warning_messages     array of each warning message, without source url
+#   warning_links        array of each warning code search link
 #   warning_records      array of [idx to warn_patterns,
 #                                  idx to project_names,
-#                                  idx to warning_messages]
-#   android_root
+#                                  idx to warning_messages,
+#                                  idx to warning_links]
 #   platform_version
 #   target_product
 #   target_variant
@@ -776,6 +777,7 @@ project_list = [
 
 warning_messages = []
 warning_records = []
+warning_links = []
 
 
 def initialize_arrays():
@@ -794,7 +796,6 @@ def initialize_arrays():
 
 project_names, project_patterns = initialize_arrays()
 
-android_root = ''
 platform_version = 'unknown'
 target_product = 'unknown'
 target_variant = 'unknown'
@@ -1054,7 +1055,7 @@ def find_project_index(line):
   return -1
 
 
-def classify_one_warning(line, results):
+def classify_one_warning(warning, results):
   """Classify one warning line."""
 
   # Ignore the following warnings so that the html will load
@@ -1066,17 +1067,17 @@ def classify_one_warning(line, results):
       r'\[bugprone-narrowing-conversions\]$', r'\[fuchsia-.*\]$'
   ]
 
-  for warning in ignored_warnings:
-    pattern = re.compile(warning)
-    searched_res = pattern.search(line)
+  for warning_text in ignored_warnings:
+    pattern = re.compile(warning_text)
+    searched_res = pattern.search(warning['line'])
     if searched_res:
       return
 
   for i, w in enumerate(warn_patterns):
     for cpat in w['compiled_patterns']:
-      if cpat.match(line):
-        p = find_project_index(line)
-        results.append([line, i, p])
+      if cpat.match(warning['line']):
+        p = find_project_index(warning['line'])
+        results.append([warning['line'], warning['link'], i, p])
         return
       else:
         # If we end up here, there was a problem parsing the log
@@ -1087,14 +1088,14 @@ def classify_one_warning(line, results):
 
 def classify_warnings_wrapper(input_tuple):
   """map doesn't work with two input arguments, needs wrapper function"""
-  lines, args = input_tuple
-  return classify_warnings(lines, args)
+  warnings, args = input_tuple
+  return classify_warnings(warnings, args)
 
 
-def classify_warnings(lines, args):
+def classify_warnings(warnings, args):
   results = []
-  for line in lines:
-    classify_one_warning(line, results)
+  for warning in warnings:
+    classify_one_warning(warning, results)
   # After the main work, ignore all other signals to a child process,
   # to avoid bad warning/error messages from the exit clean-up process.
   if args.processes > 1:
@@ -1102,30 +1103,32 @@ def classify_warnings(lines, args):
   return results
 
 
-def parallel_classify_warnings(warning_lines, args):
+def parallel_classify_warnings(warning_data, args):
   """Classify all warning lines with num_cpu parallel processes."""
   compile_patterns()
   num_cpu = args.processes
   if num_cpu > 1:
-    groups = [[] for x in range(num_cpu)]
+    groups = [[] for _ in range(num_cpu)]
     i = 0
-    for x in warning_lines:
-      groups[i].append(x)
+    for warning in warning_data:
+      groups[i].append(warning)
       i = (i + 1) % num_cpu
     for i, group in enumerate(groups):
       groups[i] = (group, args)
     pool = multiprocessing.Pool(num_cpu)
     group_results = pool.map(classify_warnings_wrapper, groups)
   else:
-    group_results = [classify_warnings(warning_lines, args)]
+    group_results = [classify_warnings(warnings_data, args)]
 
   for result in group_results:
-    for line, pattern_idx, project_idx in result:
+    for line, link, pattern_idx, project_idx in result:
       pattern = warn_patterns[pattern_idx]
       pattern['members'].append(line)
       message_idx = len(warning_messages)
       warning_messages.append(line)
-      warning_records.append([pattern_idx, project_idx, message_idx])
+      link_idx = len(warning_links)
+      warning_links.append(link)
+      warning_records.append([pattern_idx, project_idx, message_idx, link_idx])
       pname = '???' if project_idx < 0 else project_names[project_idx]
       # Count warnings by project.
       if pname in pattern['projects']:
@@ -1142,87 +1145,102 @@ def compile_patterns():
       i['compiled_patterns'].append(re.compile(pat))
 
 
-def find_android_root(path):
-  """Set and return android_root path if it is found."""
-  global android_root  # pylint:disable=global-statement
-  parts = path.split('/')
-  for idx in reversed(range(2, len(parts))):
-    root_path = '/'.join(parts[:idx])
-    # Android root directory should contain this script.
-    if os.path.exists(root_path + '/build/make/tools/warn.py'):
-      android_root = root_path
-      return root_path
-  return ''
+def remove_prefix(s, sub):
+  """Remove everything before last occurence of substring sub in string s"""
+  if sub in s:
+    inc_sub = s.rfind(sub)
+    return s[inc_sub:]
+  return s
 
 
-def remove_android_root_prefix(path):
-  """Remove android_root prefix from path if it is found."""
-  if path.startswith(android_root):
-    return path[1 + len(android_root):]
-  else:
-    return path
+def generate_cs_link(warning_line):
+  """Generate the code search link for a warning line."""
+  raw_path = warning_line.split(':')[0]
+  normalized_path = normalize_path(warning_line.split(':')[0])
+  link_base = 'https://cs.chromium.org/'
+  link_add = 'chromium'
+  link_path = None
+
+  # Basically just going through a few specific directory cases and specifying
+  # the proper behavior for that case. This list of cases was accumulated
+  # through trial and error manually going through the warnings.
+  #
+  # This code pattern of using case-specific "if"s instead of "elif"s looks
+  # possibly accidental and mistaken but it is intentional because some paths
+  # fall under several cases (e.g. third_party/lib/nghttp2_frame.c) and for
+  # those we want the most specific case to be applied. If there is reliable
+  # knowledge of exactly where these occur, this could be changed to "elif"s
+  # but there is no reliable set of paths falling under multiple cases at the
+  # moment.
+  if '/src/third_party' in raw_path:
+    link_path = remove_prefix(raw_path, '/src/third_party/')
+  if '/chrome_root/src_internal/' in raw_path:
+    link_path = remove_prefix(raw_path, '/chrome_root/src_internal/')
+    link_path = link_path[len('/chrome_root'):]  # remove chrome_root
+  if '/chrome_root/src/' in raw_path:
+    link_path = remove_prefix(raw_path, '/chrome_root/src/')
+    link_path = link_path[len('/chrome_root'):]  # remove chrome_root
+  if '/libassistant/' in raw_path:
+    link_add = 'eureka_internal/chromium/src'
+    link_base = 'https://cs.corp.google.com/'  # internal data
+    link_path = remove_prefix(normalized_path, '/libassistant/')
+  if raw_path.startswith('gen/'):
+    link_path = '/src/out/Debug/gen/' + normalized_path
+  if '/gen/' in raw_path:
+    return '%s?q=file:%s' % (link_base, remove_prefix(normalized_path, '/gen/'))
+
+  if not link_path:  # can't find specific link, send a query
+    return '%s?q=file:%s' % (link_base, normalized_path)
+
+  line_number = int(warning_line.split(':')[1])
+  link = '%s%s%s?l=%d' % (link_base, link_add, link_path, line_number)
+  return link
 
 
 def normalize_path(path):
-  """Normalize file path relative to android_root."""
-  # If path is not an absolute path, just normalize it.
+  """Normalize file path relative to src/ or src-internal/ directory."""
   path = os.path.normpath(path)
-  if path[0] != '/':
-    return path
   # Remove known prefix of root path and normalize the suffix.
-  if android_root or find_android_root(path):
-    return remove_android_root_prefix(path)
+  idx = path.find('chrome_root/')
+  if idx >= 0:
+    # remove chrome_root/, we want path relative to that
+    return path[idx + len('chrome_root/'):]
   else:
     return path
 
 
 def normalize_warning_line(line):
-  """Normalize file path relative to android_root in a warning line."""
+  """Normalize file path relative to src directory in a warning line."""
   # replace fancy quotes with plain ol' quotes
   line = line.replace('‘', "'")
-  line = line.replace('’', "'")
   line = line.strip()
   first_column = line.find(':')
-  if first_column > 0:
-    return normalize_path(line[:first_column]) + line[first_column:]
-  else:
-    return line
+  return normalize_path(line[:first_column]) + line[first_column:]
 
 
 def parse_input_file(infile):
   """Parse input file, collect parameters and warning lines."""
   # pylint:disable=global-statement
-  global android_root
   global platform_version
-  global target_product
-  global target_variant
-  line_counter = 0
 
   # handle only warning messages with a file path
   warning_pattern = re.compile('^[^ ]*/[^ ]*: warning: .*')
 
   # Collect all warnings into the warning_lines set.
-  warning_lines = set()
+  warning_data = []
   for line in infile:
+
     if warning_pattern.match(line):
+      warning = {}
+      warning['link'] = generate_cs_link(line)
       line = normalize_warning_line(line)
-      warning_lines.add(line)
-    elif line_counter < 100:
-      # save a little bit of time by only doing this for the first few lines
-      line_counter += 1
-      m = re.search('(?<=^PLATFORM_VERSION=).*', line)
+      warning['line'] = line
+      warning_data.append(warning)
+    elif platform_version == 'unknown':
+      m = re.match(r'.+Package:.+chromeos-base/chromeos-chrome-', line)
       if m is not None:
-        platform_version = m.group(0)
-      m = re.search('(?<=^TARGET_PRODUCT=).*', line)
-      if m is not None:
-        target_product = m.group(0)
-      m = re.search('(?<=^TARGET_BUILD_VARIANT=).*', line)
-      if m is not None:
-        target_variant = m.group(0)
-      m = re.search('.* TOP=([^ ]*) .*', line)
-      if m is not None:
-        android_root = m.group(1)
-  return warning_lines
+        platform_version = line.split('chrome-')[1].split('_')[0]
+  return warning_data
 
 
 # Return s with escaped backslash and quotation characters.
@@ -1283,6 +1301,15 @@ scripts_for_warning_groups = """
       "<a target='_blank' href='" + FlagURL + "/$1" + FlagSeparator +
         "$2'>$1:$2</a>:$3");
   }
+
+  function addURLToLine(line, link) {
+      let line_split = line.split(":");
+      let path = line_split.slice(0,3).join(":");
+      let msg = line_split.slice(3).join(":");
+      let html_link = `<a target="_blank" href="${link}">${path}</a>${msg}`;
+      return html_link;
+  }
+
   function createArrayOfDictionaries(n) {
     var result = [];
     for (var i=0; i<n; i++) result.push({});
@@ -1344,7 +1371,7 @@ scripts_for_warning_groups = """
       messages.sort(compareMessages);
       for (var i=0; i<messages.length; i++) {
         result += "<tr><td class='c" + c + "'>" +
-                  addURL(WarningMessages[messages[i][2]]) + "</td></tr>";
+                  addURLToLine(WarningMessages[messages[i][2]], WarningLinks[messages[i][3]]) + "</td></tr>";
         c = 1 - c;
       }
       result += "</table></div>";
@@ -1444,6 +1471,7 @@ def emit_js_data(args):
                                [w['option'] for w in warn_patterns])
   emit_const_html_string_array('WarningMessages', warning_messages)
   emit_const_object_array('Warnings', warning_records)
+  emit_const_html_string_array('WarningLinks', warning_links)
 
 
 draw_table_javascript = """
@@ -1517,7 +1545,7 @@ def parse_compiler_output(compiler_output):
 def generate_protobufs():
   """Convert warning_records to protobufs"""
   for warning_record in warning_records:
-    pattern_idx, _, message_idx = warning_record
+    pattern_idx, _, message_idx, _ = warning_record
     warn_pattern = warn_patterns[pattern_idx]
     compiler_output = warning_messages[message_idx]
 
@@ -1575,8 +1603,8 @@ def main():
   parser = create_parser()
   args = parser.parse_args()
 
-  warning_lines = parse_input_file(open(args.buildlog, 'r'))
-  parallel_classify_warnings(warning_lines, args)
+  warning_lines_and_links = parse_input_file(open(args.buildlog, 'r'))
+  parallel_classify_warnings(warning_lines_and_links, args)
   # If a user pases a proto path, save the fileoutput to the path
   # If the user also passed genproto, write the output to stdout
   # If the user did not pass genproto flag dump the html report to stdout.
