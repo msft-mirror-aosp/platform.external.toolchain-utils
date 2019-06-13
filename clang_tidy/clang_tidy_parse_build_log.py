@@ -14,6 +14,7 @@ import os
 import shutil
 import subprocess
 import sys
+import re
 
 
 def Main(argv):
@@ -46,28 +47,29 @@ def Main(argv):
     parser.error('Cannot find %s' % warn_script)
 
   # Normally, ChromeOS build logs have a filename format like:
-  # 'pkg-part1:pkg-part2:date-time.log'.  Below we parse this to find the
-  # package name(s).  We use these to create the warnings file names:
-  # 'date.package.warnings.html' and 'date.package.warnings.csv'.
+  # 'chromeos-base:chromeos-chrome-version_rc-r1:date-time.log'.
+  # Below we parse this to find the chrome version and date.  We
+  # use these to create the warnings file names:
+  # 'chrome-warning-{date}-R{version}.html' and
+  # 'chrome-warning-{date}-R{version}.proto'.
   # If filename does not conform to ChromeOS build log format, use full
-  # filename rather than the package name.
+  # filename rather than the version name.
 
   dirname, filename = os.path.split(logfile)
-  filename_bits = filename.split(':')
-  timestamp = ''
-  if len(filename_bits) >= 3:
-    package = '%s-%s' % (filename_bits[0], filename_bits[1])
-    time_parts = filename_bits[2].split('-')
-    timestamp = time_parts[0]
-  else:
-    package = filename
+  datestamp = ''
+  version = filename
+  pattern = r'chromeos-base:chromeos-chrome-(.*)_rc-r\d+:([^-]*)-.*'
+  match = re.match(pattern, filename)
+  if match:
+    version, datestamp = match.groups()
 
-  if not timestamp:
+  if not datestamp:
     # Get a string with the current date, in the format 'YYYYMMDD'.
-    timestamp = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d')
+    datestamp = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d')
 
-  html_filename = '%s.%s.warnings.html' % (timestamp, package)
-  csv_filename = '%s.%s.warnings.csv' % (timestamp, package)
+  new_filename = 'chrome-warning-%s-R%s' % (datestamp, version)
+  html_filename = new_filename + '.html'
+  proto_filename = new_filename + '.proto'
 
   # If the user did not specify a particular output directory and the logs
   # appear to be in the default input directory, which contains the board name,
@@ -86,28 +88,26 @@ def Main(argv):
   if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
-  warnfile = os.path.join(output_dir, html_filename)
-  warnfile_csv = os.path.join(output_dir, csv_filename)
+  warnfile_html = os.path.join(output_dir, html_filename)
+  warnfile_proto = os.path.join(output_dir, proto_filename)
 
   run_warn_py = [
       'python',
       warn_script,
       logfile,
-      '--csvpath',
-      warnfile_csv,
-      '--url',
-      'http://cs/android',
+      '--protopath',
+      warnfile_proto,
       '--separator',
       '?l=',
   ]
 
   try:
-    with open('/dev/null') as stdin, open(warnfile, 'w') as stdout:
+    with open('/dev/null') as stdin, open(warnfile_html, 'w') as stdout:
       subprocess.check_call(run_warn_py, stdin=stdin, stdout=stdout)
   except subprocess.CalledProcessError:
     print("Couldn't generate warnings.html", file=sys.stderr)
-    shutil.rmtree(warnfile, ignore_errors=True)
-    shutil.rmtree(warnfile_csv, ignore_errors=True)
+    shutil.rmtree(warnfile_html, ignore_errors=True)
+    shutil.rmtree(warnfile_proto, ignore_errors=True)
     return 1
 
   return 0
