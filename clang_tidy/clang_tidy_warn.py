@@ -34,8 +34,8 @@ Use option --genproto to output warning data in protobuf format.
 #                                  idx to warning_messages,
 #                                  idx to warning_links]
 #   platform_version
-#   target_product
-#   target_variant
+#   board_name
+#   architecture
 #   compile_patterns, parse_input_file
 #
 # To emit html page of warning messages:
@@ -797,8 +797,8 @@ def initialize_arrays():
 project_names, project_patterns = initialize_arrays()
 
 platform_version = 'unknown'
-target_product = 'unknown'
-target_variant = 'unknown'
+board_name = 'unknown'
+architecture = 'unknown'
 
 ##### Data and functions to dump html file. ##################################
 
@@ -1222,6 +1222,8 @@ def parse_input_file(infile):
   """Parse input file, collect parameters and warning lines."""
   # pylint:disable=global-statement
   global platform_version
+  global board_name
+  global architecture
 
   # handle only warning messages with a file path
   warning_pattern = re.compile('^[^ ]*/[^ ]*: warning: .*')
@@ -1236,10 +1238,21 @@ def parse_input_file(infile):
       line = normalize_warning_line(line)
       warning['line'] = line
       warning_data.append(warning)
-    elif platform_version == 'unknown':
+    elif platform_version == 'unknown' or board_name == 'unknown' or\
+        architecture == 'unknown':
       m = re.match(r'.+Package:.+chromeos-base/chromeos-chrome-', line)
       if m is not None:
-        platform_version = line.split('chrome-')[1].split('_')[0]
+        platform_version = 'R' + line.split('chrome-')[1].split('_')[0]
+        continue
+      m = re.match(r'.+Source\sunpacked\sin\s(.+)', line)
+      if m is not None:
+        board_name = m.group(1).split('/')[2]
+        continue
+      m = re.match(r'.+USE:\s*([^\s]*).*',line)
+      if m is not None:
+        architecture = m.group(1)
+        continue
+
   return warning_data
 
 
@@ -1499,7 +1512,7 @@ function drawTable() {
 def dump_html(args):
   """Dump the html output to stdout."""
   dump_html_prologue('Warnings for ' + platform_version + ' - ' +
-                     target_product + ' - ' + target_variant)
+                     board_name + ' - ' + architecture)
   dump_stats()
   print('<br><div id="stats_table"></div><br>')
   print('\n<script>')
