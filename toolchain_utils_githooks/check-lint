@@ -12,6 +12,7 @@ if [[ $# -eq 0 ]]; then
 fi
 
 cros=cros
+golint=golint
 
 if ! type "${cros}" >&/dev/null; then
   echo "${cros} isn't on your \$PATH. Please either enter a chroot, or place" \
@@ -60,22 +61,31 @@ fi
 # this should get us most of the way there, and is probably the best we can
 # reasonably expect to do for users who want to develop without the source
 # tree.
-echo "WARNING: No Chrome OS checkout detected, and no viable CrOS tree" >&2
-echo "found; falling back to python-only linting. If you have a Chrome OS" >&2
-echo "checkout, please either develop from inside of the source tree, or" >&2
-echo "set \$CHROMEOS_ROOT_DIRECTORY to the root of it." >&2
+echo "WARNING: No Chrome OS checkout detected, and no viable CrOS tree " >&2
+echo "found; falling back to linting only python and go. If you have a " >&2
+echo "Chrome OS checkout, please either develop from inside of the source ">&2
+echo "tree, or set \$CHROMEOS_ROOT_DIRECTORY to the root of it." >&2
 
 python_files=()
+go_files=()
 for file in "$@"; do
   if [[ "${file}" == *.py ]]; then
     python_files+=( "${file}" )
   fi
+  if [[ "${file}" == *.go ]]; then
+    go_files+=( "${file}" )
+  fi
 done
 
-if [[ "${#python_files[@]}" -eq 0 ]]; then
-  exit 0
+if [[ "${#python_files[@]}" -ne 0 ]]; then
+  # We saw `cros` above, so assume that `pylint` is in our PATH (depot_tools
+  # packages it, and provides a reasonable default config).
+  pylint "${python_files[@]}"
 fi
 
-# We saw `cros` above, so assume that `pylint` is in our PATH (depot_tools
-# packages it, and provides a reasonable default config).
-pylint "${python_files[@]}"
+if ! type "${golint}" >/dev/null 2>&1; then
+  echo "Warning: go linting disabled. ${golint} isn't on your \$PATH. "\
+    "Please either enter a chroot, or install go locally. Continuing." >&2
+elif [[ "${#go_files[@]}" -ne 0 ]]; then
+  "${golint}" -set_exit_status "${go_files[@]}"
+fi

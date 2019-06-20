@@ -165,7 +165,7 @@ def _fix_python_path(toolchain_utils):
   os.environ['PYTHONPATH'] = toolchain_utils + pypath
 
 
-def _find_forced_subdir_tests(test_paths, toolchain_utils):
+def _find_forced_subdir_python_tests(test_paths, toolchain_utils):
   assert all(os.path.isabs(path) for path in test_paths)
 
   # Directories under toolchain_utils for which any change will cause all tests
@@ -191,6 +191,19 @@ def _find_forced_subdir_tests(test_paths, toolchain_utils):
   for d in sorted(gather_test_dirs):
     results += _gather_python_tests_in(os.path.join(toolchain_utils, d))
   return results
+
+
+def _find_go_tests(test_paths):
+  """Returns TestSpecs for the go folders of the given files"""
+  assert all(os.path.isabs(path) for path in test_paths)
+
+  dirs_with_gofiles = set(
+      os.path.dirname(p) for p in test_paths if p.endswith(".go"))
+  command = ["go", "test", "-vet=all"]
+  # Note: We sort the directories to be deterministic.
+  return [
+      TestSpec(directory=d, command=command) for d in sorted(dirs_with_gofiles)
+  ]
 
 
 def main(argv):
@@ -219,9 +232,11 @@ def main(argv):
 
   _fix_python_path(toolchain_utils)
 
-  tests_to_run = _find_forced_subdir_tests(modified_files, toolchain_utils)
+  tests_to_run = _find_forced_subdir_python_tests(modified_files,
+                                                  toolchain_utils)
   for f in modified_files:
     tests_to_run += _autodetect_python_tests_for(f)
+  tests_to_run += _find_go_tests(modified_files)
 
   # TestSpecs have lists, so we can't use a set. We'd likely want to keep them
   # sorted for determinism anyway.

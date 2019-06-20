@@ -17,10 +17,17 @@ if [[ $# -eq 0 ]]; then
 fi
 
 yapf=yapf
+gofmt=gofmt
 
 if ! type "${yapf}" >/dev/null 2>&1; then
   echo "${yapf} isn't on your \$PATH. Please either enter a chroot, or place" \
     "depot_tools on your \$PATH." >&2
+  exit 1
+fi
+
+if ! type "${gofmt}" >/dev/null 2>&1; then
+  echo "${gofmt} isn't on your \$PATH. Please either enter a chroot, or add " \
+    "the go binaries to your \$PATH." >&2
   exit 1
 fi
 
@@ -55,9 +62,9 @@ check_python_file_header() {
 
 everything_passed=true
 python_files=()
+go_files=()
 
 for f in "$@"; do
-  [[ "${f}" == *.py ]] || continue
   if [[ ! -e "${f}" ]]; then
     if "${complain_about_missing}"; then
       echo "error: no such file: ${f}" >&2
@@ -66,14 +73,17 @@ for f in "$@"; do
     continue
   fi
 
-  python_files+=( "${f}" )
+  if [[ "${f}" == *.py ]]; then
+    python_files+=( "${f}" )
 
-  if ! check_python_file_header "${f}"; then
-    everything_passed=false
+    if ! check_python_file_header "${f}"; then
+      everything_passed=false
+    fi
+  elif [[ "${f}" == *.go ]]; then
+    go_files+=( "${f}" )
   fi
 done
 
-bad_files=()
 if [[ "${#python_files[@]}" -ne 0 ]]; then
   # yapf will give us a full unified (git-like) diff. We parse out the file
   # names, e.g.,
@@ -91,12 +101,22 @@ if [[ "${#python_files[@]}" -ne 0 ]]; then
     $("${yapf}" -d "${python_files[@]}" |
       sed -n '/^--- /{ s/^--- //; s/ *(original)$//p }')
   )
+  if [[ "${#bad_files[@]}" -ne 0 ]]; then
+    echo "One or more python files appear to be incorrectly formatted."
+    echo "Please run \`${yapf} -i ${bad_files[@]}\` to rectify this."
+    everything_passed=false
+  fi
 fi
 
-if [[ "${#bad_files[@]}" -ne 0 ]]; then
-  echo "One or more files appear to be incorrectly formatted."
-  echo "Please run \`${yapf} -i ${bad_files[@]}\` to rectify this."
-  everything_passed=false
+if [[ "${#go_files[@]}" -ne 0 ]]; then
+  bad_files=(
+    $("${gofmt}" -l "${go_files[@]}")
+  )
+  if [[ "${#bad_files[@]}" -ne 0 ]]; then
+    echo "One or more go files appear to be incorrectly formatted."
+    echo "Please run \`${gofmt} -w ${bad_files[@]}\` to rectify this."
+    everything_passed=false
+  fi
 fi
 
 "${everything_passed}"
