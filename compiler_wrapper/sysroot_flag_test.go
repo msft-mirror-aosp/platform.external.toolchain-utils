@@ -37,8 +37,8 @@ func TestSetSysrootFlagFromEnv(t *testing.T) {
 func TestSetSysrootRelativeToWrapperPath(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.rootRelPath = "somepath"
-		wrapperCmd := ctx.newCommand(gccX86_64, mainCc)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg, wrapperCmd))
+		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyArgOrder(cmd,
 			"--sysroot="+ctx.tempDir+"/somepath/usr/x86_64-cros-linux-gnu", mainCc); err != nil {
 			t.Error(err)

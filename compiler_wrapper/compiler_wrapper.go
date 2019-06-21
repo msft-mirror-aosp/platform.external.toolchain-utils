@@ -15,7 +15,7 @@ func calcCompilerCommand(env env, cfg *config, wrapperCmd *command) (*command, e
 	if err := checkUnsupportedFlags(wrapperCmd); err != nil {
 		return nil, err
 	}
-	builder, err := newCommandBuilder(env, wrapperCmd)
+	builder, err := newCommandBuilder(env, cfg, wrapperCmd)
 	if err != nil {
 		return nil, err
 	}

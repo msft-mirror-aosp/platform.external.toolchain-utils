@@ -1,13 +1,11 @@
-// +build cros
-
-// This binary uses the following build tags:
-// - cros: Whether the wrapper should be built for ChromeOS
-// - nonhardened: For a non-hardened set of compiler flags
-// - hardened: For a hardened set of compiler flags
+// This binary requires the following linker variables:
+// - main.UseCCache: Whether to use ccache.
+// - main.ConfigName: Name of the configuration to use.
+//   See config.go for the supported values.
 //
-// There is a bash script for every meaningful combination.
-// E.g. ./build_cros_hardened_wrapper.sh will build the ChromeOS
-// hardened compiler wrapper.
+// The script ./build simplifies the call to `go build`.
+// E.g. ./build --use_ccache=true --config=cros.hardened will build a
+// binary that uses the ccache for ChromeOS with hardened flags.
 //
 // Test arguments:
 // - crosroot: Specifies the ChromeOS toolchain root directory (aka chroot).
@@ -33,7 +31,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg := getRealConfig()
+	cfg, err := getRealConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 	if shouldForwardToOldWrapper(env, wrapperCmd) {
 		err := forwardToOldWrapper(env, cfg, wrapperCmd)
 		if err != nil {

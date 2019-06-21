@@ -15,7 +15,7 @@ func processCCacheFlag(sysroot string, builder *commandBuilder) {
 		return arg.Value
 	})
 
-	if useCCache {
+	if builder.cfg.useCCache && useCCache {
 		// We need to get ccache to make relative paths from within the
 		// sysroot.  This lets us share cached files across boards (if
 		// all other things are equal of course like CFLAGS) as well as

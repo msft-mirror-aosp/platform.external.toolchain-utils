@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 )
@@ -101,19 +102,31 @@ func writeOldWrapperMock(writer io.Writer, env env, cfg *config, wrapperCmd *com
 		}
 		absOldWrapperPath = filepath.Join(absWrapperDir, cfg.oldWrapperPath)
 	}
+	oldWrapperContentBytes, err := ioutil.ReadFile(absOldWrapperPath)
+	if err != nil {
+		return err
+	}
+	oldWrapperContent := string(oldWrapperContentBytes)
+	// Disable the original call to main()
+	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "__name__", "'none'")
+	// Inject the value of cfg.useCCache
+	if !cfg.useCCache {
+		oldWrapperContent = regexp.MustCompile(`True\s+#\s+@CCACHE_DEFAULT@`).ReplaceAllString(oldWrapperContent, "False #")
+	}
+
 	// Note: Fieldnames need to be upper case so that they can be read via reflection.
 	mockData := struct {
-		CmdPath         string
-		WrapperPath     string
-		RootRelPath     string
-		MockForks       bool
-		OverwriteConfig bool
-		CommonFlags     []string
-		GccFlags        []string
-		ClangFlags      []string
+		CmdPath           string
+		OldWrapperContent string
+		RootRelPath       string
+		MockForks         bool
+		OverwriteConfig   bool
+		CommonFlags       []string
+		GccFlags          []string
+		ClangFlags        []string
 	}{
 		wrapperCmd.path,
-		absOldWrapperPath,
+		oldWrapperContent,
 		cfg.rootRelPath,
 		mockForks,
 		cfg.overrideOldWrapperConfig,
@@ -122,11 +135,7 @@ func writeOldWrapperMock(writer io.Writer, env env, cfg *config, wrapperCmd *com
 		cfg.clangFlags,
 	}
 
-	const mockTemplate = `from __future__ import print_function
-import imp
-import os
-import sys
-
+	const mockTemplate = `{{.OldWrapperContent}}
 {{if .MockForks}}
 init_env = os.environ.copy()
 
@@ -144,20 +153,15 @@ os.execv = execv_mock
 
 sys.argv[0] = '{{.CmdPath}}'
 
-# Equivalent to "import wrapper", but does not need a ".py" suffix.
-# Also avoids writing '.pyc' files
-sys.dont_write_bytecode = True
-wrapper = imp.load_source('wrapper', '{{.WrapperPath}}')
-
-wrapper.ROOT_REL_PATH = '{{.RootRelPath}}'
+ROOT_REL_PATH = '{{.RootRelPath}}'
 
 {{if .OverwriteConfig}}
-wrapper.FLAGS_TO_ADD=set([{{range .CommonFlags}}'{{.}}',{{end}}])
-wrapper.GCC_FLAGS_TO_ADD=set([{{range .GccFlags}}'{{.}}',{{end}}])
-wrapper.CLANG_FLAGS_TO_ADD=set([{{range .ClangFlags}}'{{.}}',{{end}}])
+FLAGS_TO_ADD=set([{{range .CommonFlags}}'{{.}}',{{end}}])
+GCC_FLAGS_TO_ADD=set([{{range .GccFlags}}'{{.}}',{{end}}])
+CLANG_FLAGS_TO_ADD=set([{{range .ClangFlags}}'{{.}}',{{end}}])
 {{end}}
 
-wrapper.main()
+sys.exit(main())
 `
 
 	tmpl, err := template.New("mock").Parse(mockTemplate)

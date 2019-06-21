@@ -1,0 +1,35 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+"""Build script that wraps go build and sets the correct linker variables."""
+
+from __future__ import print_function
+
+import argparse
+import os
+import os.path
+import subprocess
+import sys
+
+def parse_args():
+  parser = argparse.ArgumentParser()
+  parser.add_argument("--config", required=True,
+                      choices=['cros.hardened', 'cros.nonhardened'], type=str)
+  parser.add_argument("--use_ccache", required=True,
+                      choices=['true', 'false'], type=str)
+  return parser.parse_known_args()
+
+def calc_go_args(parsed_args, rest_args):
+  src_dir = os.path.dirname(sys.argv[0])
+  ldFlags = ['-X', 'main.ConfigName=' + parsed_args.config,
+             '-X', 'main.UseCCache='+parsed_args.use_ccache]
+  return (['go', 'build', '-ldflags', ' '.join(ldFlags)]
+          + rest_args + [src_dir])
+
+def main():
+  sys.exit(subprocess.call(calc_go_args(*parse_args())))
+
+if __name__ == '__main__':
+  main()

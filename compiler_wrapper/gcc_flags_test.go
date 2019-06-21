@@ -6,9 +6,9 @@ import (
 
 func TestCallRealGcc(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		wrapperCmd := ctx.newCommand(gccX86_64, "-noccache", mainCc)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg, wrapperCmd))
-		if err := verifyPath(cmd, wrapperCmd.path+".real"); err != nil {
+		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyPath(cmd, gccX86_64+".real"); err != nil {
 			t.Error(err)
 		}
 	})
@@ -16,8 +16,8 @@ func TestCallRealGcc(t *testing.T) {
 
 func TestCallRealGPlusPlus(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		wrapperCmd := ctx.newCommand("./x86_64-cros-linux-gnu-g++", "-noccache", mainCc)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg, wrapperCmd))
+		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+			ctx.newCommand("./x86_64-cros-linux-gnu-g++", mainCc)))
 		if err := verifyPath(cmd, "\\./x86_64-cros-linux-gnu-g\\+\\+\\.real"); err != nil {
 			t.Error(err)
 		}

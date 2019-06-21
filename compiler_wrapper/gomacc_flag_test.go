@@ -11,12 +11,12 @@ func TestCallGomaccIfEnvIsGivenAndValid(t *testing.T) {
 		// Create a file so the gomacc path is valid.
 		ctx.writeFile(gomaPath, "")
 		ctx.env = []string{"GOMACC_PATH=" + gomaPath}
-		wrapperCmd := ctx.newCommand(gccX86_64, mainCc)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg, wrapperCmd))
+		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyPath(cmd, gomaPath); err != nil {
 			t.Error(err)
 		}
-		if err := verifyArgOrder(cmd, wrapperCmd.path+".real", mainCc); err != nil {
+		if err := verifyArgOrder(cmd, gccX86_64+".real", mainCc); err != nil {
 			t.Error(err)
 		}
 	})
@@ -29,7 +29,7 @@ func TestOmitGomaccIfEnvIsGivenButInvalid(t *testing.T) {
 		ctx.env = []string{"GOMACC_PATH=" + gomaPath}
 		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
-		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
+		if err := verifyPath(cmd, gccX86_64+".real"); err != nil {
 			t.Error(err)
 		}
 	})
@@ -39,7 +39,7 @@ func TestOmitGomaccByDefault(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
-		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
+		if err := verifyPath(cmd, gccX86_64+".real"); err != nil {
 			t.Error(err)
 		}
 	})

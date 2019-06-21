@@ -8,12 +8,12 @@ import (
 func TestFullHardeningConfigAndGcc(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initFullHardeningConfig(ctx)
-		wrapperCmd := ctx.newCommand(gccX86_64, mainCc)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg, wrapperCmd))
+		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
 			t.Error(err)
 		}
-		if err := verifyArgOrder(cmd, wrapperCmd.path+".real", "--sysroot=/usr/x86_64-cros-linux-gnu", "-Wno-unused-local-typedefs",
+		if err := verifyArgOrder(cmd, gccX86_64+".real", "--sysroot=/usr/x86_64-cros-linux-gnu", "-Wno-unused-local-typedefs",
 			"-Wno-maybe-uninitialized", "-fno-reorder-blocks-and-partition", "-fPIE", "-D_FORTIFY_SOURCE=2", "-fstack-protector-strong",
 			"-pie", "-fno-omit-frame-pointer", "main.cc", "-mno-movbe"); err != nil {
 			t.Error(err)
@@ -24,8 +24,8 @@ func TestFullHardeningConfigAndGcc(t *testing.T) {
 func TestFullHardeningConfigAndClang(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initFullHardeningConfig(ctx)
-		wrapperCmd := ctx.newCommand(clangX86_64, mainCc)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg, wrapperCmd))
+		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, mainCc)))
 		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
 			t.Error(err)
 		}
@@ -46,12 +46,12 @@ func TestFullHardeningConfigAndClang(t *testing.T) {
 func TestNonHardeningConfigAndGcc(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initNonHardeningConfig(ctx)
-		wrapperCmd := ctx.newCommand(gccX86_64, mainCc)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg, wrapperCmd))
+		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
 			t.Error(err)
 		}
-		if err := verifyArgOrder(cmd, wrapperCmd.path+".real", "--sysroot=/usr/x86_64-cros-linux-gnu",
+		if err := verifyArgOrder(cmd, gccX86_64+".real", "--sysroot=/usr/x86_64-cros-linux-gnu",
 			"-Wno-unused-local-typedefs", "-Wno-maybe-uninitialized", "-Wtrampolines",
 			"-Wno-deprecated-declarations", "main.cc", "-mno-movbe"); err != nil {
 			t.Error(err)
@@ -62,8 +62,8 @@ func TestNonHardeningConfigAndGcc(t *testing.T) {
 func TestNonHardeningConfigAndClang(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initNonHardeningConfig(ctx)
-		wrapperCmd := ctx.newCommand(clangX86_64, mainCc)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg, wrapperCmd))
+		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, mainCc)))
 		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
 			t.Error(err)
 		}
@@ -80,12 +80,89 @@ func TestNonHardeningConfigAndClang(t *testing.T) {
 	})
 }
 
+func TestRealConfigWithUseCCacheFlag(t *testing.T) {
+	resetGlobals()
+	defer resetGlobals()
+	ConfigName = "cros.hardened"
+
+	UseCCache = "false"
+	cfg, err := getRealConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.useCCache {
+		t.Fatal("UseCCache: Expected false got true")
+	}
+
+	UseCCache = "true"
+	cfg, err = getRealConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.useCCache {
+		t.Fatal("UseCCache: Expected true got false")
+	}
+
+	UseCCache = "invalid"
+	_, err = getRealConfig()
+	if err == nil {
+		t.Fatalf("UseCCache: Expected an error, got none")
+	}
+}
+
+func TestRealConfigWithConfigNameFlag(t *testing.T) {
+	resetGlobals()
+	defer resetGlobals()
+	UseCCache = "false"
+
+	ConfigName = "cros.hardened"
+	cfg, err := getRealConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isHardened(cfg) {
+		t.Fatal("ConfigName: Expected hardened config got non hardened")
+	}
+
+	ConfigName = "cros.nonhardened"
+	cfg, err = getRealConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isHardened(cfg) {
+		t.Fatal("ConfigName: Expected non hardened config got hardened")
+	}
+
+	ConfigName = "invalid"
+	_, err = getRealConfig()
+	if err == nil {
+		t.Fatalf("ConfigName: Expected an error, got none")
+	}
+}
+
+func isHardened(cfg *config) bool {
+	for _, arg := range cfg.commonFlags {
+		if arg == "-pie" {
+			return true
+		}
+	}
+	return false
+}
+
 func initFullHardeningConfig(ctx *testContext) {
-	*ctx.cfg = crosHardenedConfig
+	useCCache := true
+	*ctx.cfg = *getCrosHardenedConfig(useCCache)
 	ctx.setOldWrapperPath(oldHardenedWrapperPathForTest)
 }
 
 func initNonHardeningConfig(ctx *testContext) {
-	*ctx.cfg = crosNonHardenedConfig
+	useCCache := true
+	*ctx.cfg = *getCrosNonHardenedConfig(useCCache)
 	ctx.setOldWrapperPath(oldNonHardenedWrapperPathForTest)
+}
+
+func resetGlobals() {
+	// Set all global variables to a defined state.
+	ConfigName = "unknown"
+	UseCCache = "unknown"
 }

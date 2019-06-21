@@ -60,7 +60,7 @@ func (actual *command) verifySimilarTo(expected *command) error {
 	return nil
 }
 
-func newCommandBuilder(env env, cmd *command) (*commandBuilder, error) {
+func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, error) {
 	basename := filepath.Base(cmd.path)
 	nameParts := strings.Split(basename, "-")
 	if len(nameParts) != 5 {
@@ -83,6 +83,7 @@ func newCommandBuilder(env env, cmd *command) (*commandBuilder, error) {
 		path: cmd.path,
 		args: createBuilderArgs( /*fromUser=*/ true, cmd.args),
 		env:  env,
+		cfg:  cfg,
 		target: builderTarget{
 			target:       strings.Join(nameParts[:4], "-"),
 			arch:         nameParts[0],
@@ -101,6 +102,7 @@ type commandBuilder struct {
 	args       []builderArg
 	envUpdates []string
 	env        env
+	cfg        *config
 }
 
 type builderArg struct {

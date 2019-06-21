@@ -4,24 +4,34 @@ import (
 	"testing"
 )
 
-func TestCallCCache(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
-		wrapperCmd := ctx.newCommand(gccX86_64, mainCc)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg, wrapperCmd))
+func TestCallCCacheGivenConfig(t *testing.T) {
+	withCCacheEnabledTestContext(t, func(ctx *testContext) {
+		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
 			t.Error(err)
 		}
-		if err := verifyArgOrder(cmd, wrapperCmd.path+".real", mainCc); err != nil {
+		if err := verifyArgOrder(cmd, gccX86_64+".real", mainCc); err != nil {
 			t.Error(err)
 		}
 	})
 }
 
-func TestNotCallCCacheIfNoCCacheArgGiven(t *testing.T) {
+func TestNotCallCCacheGivenConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		wrapperCmd := ctx.newCommand(gccX86_64, "-noccache", mainCc)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg, wrapperCmd))
-		if err := verifyPath(cmd, wrapperCmd.path+".real"); err != nil {
+		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyPath(cmd, gccX86_64+".real"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestNotCallCCacheGivenConfigAndNoCCacheArg(t *testing.T) {
+	withCCacheEnabledTestContext(t, func(ctx *testContext) {
+		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, "-noccache", mainCc)))
+		if err := verifyPath(cmd, gccX86_64+".real"); err != nil {
 			t.Error(err)
 		}
 		if err := verifyArgCount(cmd, 0, "-noccache"); err != nil {
@@ -31,7 +41,7 @@ func TestNotCallCCacheIfNoCCacheArgGiven(t *testing.T) {
 }
 
 func TestSetCacheDir(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
+	withCCacheEnabledTestContext(t, func(ctx *testContext) {
 		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyEnvUpdate(cmd, "CCACHE_DIR=/var/cache/distfiles/ccache"); err != nil {
@@ -41,7 +51,7 @@ func TestSetCacheDir(t *testing.T) {
 }
 
 func TestSetCacheBaseDirToSysroot(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
+	withCCacheEnabledTestContext(t, func(ctx *testContext) {
 		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyEnvUpdate(cmd,
@@ -52,7 +62,7 @@ func TestSetCacheBaseDirToSysroot(t *testing.T) {
 }
 
 func TestSetCacheUmask(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
+	withCCacheEnabledTestContext(t, func(ctx *testContext) {
 		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyEnvUpdate(cmd, "CCACHE_UMASK=002"); err != nil {
@@ -62,7 +72,7 @@ func TestSetCacheUmask(t *testing.T) {
 }
 
 func TestUpdateSandboxRewrite(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
+	withCCacheEnabledTestContext(t, func(ctx *testContext) {
 		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyNoEnvUpdate(cmd, "SANDBOX_WRITE"); err != nil {
@@ -80,7 +90,7 @@ func TestUpdateSandboxRewrite(t *testing.T) {
 }
 
 func TestClearCacheDisable(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
+	withCCacheEnabledTestContext(t, func(ctx *testContext) {
 		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyNoEnvUpdate(cmd, "SANDBOX_WRITE"); err != nil {
@@ -97,7 +107,7 @@ func TestClearCacheDisable(t *testing.T) {
 }
 
 func TestAddCCacheCpp2FlagForClang(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
+	withCCacheEnabledTestContext(t, func(ctx *testContext) {
 		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
 			ctx.newCommand(clangX86_64, mainCc)))
 		if err := verifyEnvUpdate(cmd, "CCACHE_CPP2=yes"); err != nil {
@@ -107,11 +117,18 @@ func TestAddCCacheCpp2FlagForClang(t *testing.T) {
 }
 
 func TestOmitCCacheCpp2FlagForGcc(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
+	withCCacheEnabledTestContext(t, func(ctx *testContext) {
 		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyNoEnvUpdate(cmd, "CCACHE_CPP2"); err != nil {
 			t.Error(err)
 		}
+	})
+}
+
+func withCCacheEnabledTestContext(t *testing.T, work func(ctx *testContext)) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.cfg.useCCache = true
+		work(ctx)
 	})
 }
