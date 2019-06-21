@@ -405,8 +405,7 @@ def IsImageModdedForTest(chromeos_root, image, log_level):
   rootfs_mp = rootfs_mp.strip()
   stateful_mp = stateful_mp.strip()
   lsb_release_file = os.path.join(rootfs_mp, 'etc/lsb-release')
-  extra = (
-      'grep CHROMEOS_RELEASE_DESCRIPTION %s | grep -i test' % lsb_release_file)
+  extra = ('grep CHROMEOS_RELEASE_TRACK %s | grep -i test' % lsb_release_file)
   output = MountImage(
       chromeos_root,
       image,
