@@ -12,13 +12,13 @@ func processGccFlags(builder *commandBuilder) {
 	}
 
 	builder.transformArgs(func(arg builderArg) string {
-		if unsupported[arg.Value] {
+		if unsupported[arg.value] {
 			return ""
 		}
-		if mapped, ok := clangToGcc[arg.Value]; ok {
+		if mapped, ok := clangToGcc[arg.value]; ok {
 			return mapped
 		}
-		return arg.Value
+		return arg.value
 	})
 
 	builder.path += ".real"

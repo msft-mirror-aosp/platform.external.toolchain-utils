@@ -7,7 +7,7 @@ import (
 func TestAddStrongStackProtectorFlag(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initStackProtectorStrongConfig(ctx.cfg)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyArgOrder(cmd, "-fstack-protector-strong", mainCc); err != nil {
 			t.Error(err)
@@ -18,7 +18,7 @@ func TestAddStrongStackProtectorFlag(t *testing.T) {
 func TestAddNoStackProtectorFlagWhenKernelDefined(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initStackProtectorStrongConfig(ctx.cfg)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, "-D__KERNEL__", mainCc)))
 		if err := verifyArgOrder(cmd, "-fno-stack-protector", mainCc); err != nil {
 			t.Error(err)
@@ -29,7 +29,7 @@ func TestAddNoStackProtectorFlagWhenKernelDefined(t *testing.T) {
 func TestOmitNoStackProtectorFlagWhenAlreadyInCommonFlags(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.commonFlags = []string{"-fno-stack-protector"}
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyArgCount(cmd, 1, "-fno-stack-protector"); err != nil {
 			t.Error(err)
@@ -40,7 +40,7 @@ func TestOmitNoStackProtectorFlagWhenAlreadyInCommonFlags(t *testing.T) {
 func TestAddStrongStackProtectorFlagForEabiEvenIfNoStackProtectorGiven(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initStackProtectorStrongConfig(ctx.cfg)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64Eabi, "-fno-stack-protector", mainCc)))
 		if err := verifyArgCount(cmd, 1, "-fstack-protector-strong"); err != nil {
 			t.Error(err)

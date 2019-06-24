@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -26,10 +29,16 @@ const oldHardenedWrapperPathForTest = "/usr/x86_64-pc-linux-gnu/x86_64-cros-linu
 const oldNonHardenedWrapperPathForTest = "/usr/x86_64-pc-linux-gnu/arm-none-eabi/gcc-bin/4.9.x/sysroot_wrapper"
 
 type testContext struct {
-	t       *testing.T
-	tempDir string
-	env     []string
-	cfg     *config
+	t            *testing.T
+	tempDir      string
+	env          []string
+	cfg          *config
+	inputCmd     *command
+	lastCmd      *command
+	cmdCount     int
+	cmdMock      func(cmd *command, stdout io.Writer, stderr io.Writer) error
+	stdoutBuffer bytes.Buffer
+	stderrBuffer bytes.Buffer
 }
 
 func withTestContext(t *testing.T, work func(ctx *testContext)) {
@@ -44,14 +53,11 @@ func withTestContext(t *testing.T, work func(ctx *testContext)) {
 		t:       t,
 		tempDir: tempDir,
 		env:     nil,
-		cfg: &config{
-			oldWrapperPath:           "FilledLater",
-			overrideOldWrapperConfig: true,
-		},
+		cfg:     &config{},
 	}
 	// Note: It's ok to use the hardened wrapper here, as we replace its config
 	// on each run.
-	ctx.setOldWrapperPath(oldHardenedWrapperPathForTest)
+	ctx.updateConfig(oldHardenedWrapperPathForTest, &config{})
 
 	work(&ctx)
 }
@@ -76,16 +82,69 @@ func (ctx *testContext) getwd() string {
 	return ctx.tempDir
 }
 
-func (ctx *testContext) must(cmd *command, err error) *command {
-	if err != nil {
-		ctx.t.Fatalf("Expected no error, but got %s", err)
-	}
-	return cmd
+func (ctx *testContext) stdout() io.Writer {
+	return &ctx.stdoutBuffer
 }
 
-func (ctx *testContext) setOldWrapperPath(chrootPath string) {
+func (ctx *testContext) stdoutString() string {
+	return ctx.stdoutBuffer.String()
+}
+
+func (ctx *testContext) stderr() io.Writer {
+	return &ctx.stderrBuffer
+}
+
+func (ctx *testContext) stderrString() string {
+	return ctx.stderrBuffer.String()
+}
+
+func (ctx *testContext) run(cmd *command, stdout io.Writer, stderr io.Writer) error {
+	// Keep calling the old wrapper when we are comparing the output of the
+	// old wrapper to the new wrapper.
+	if isCompareToOldWrapperCmd(cmd) {
+		execCmd := newExecCmd(ctx, cmd)
+		execCmd.Stdout = stdout
+		execCmd.Stderr = stderr
+		return execCmd.Run()
+	}
+	ctx.cmdCount++
+	ctx.lastCmd = cmd
+	if ctx.cmdMock != nil {
+		return ctx.cmdMock(cmd, stdout, stderr)
+	}
+	return nil
+}
+
+func (ctx *testContext) exec(cmd *command) error {
+	ctx.cmdCount++
+	ctx.lastCmd = cmd
+	if ctx.cmdMock != nil {
+		return ctx.cmdMock(cmd, ctx.stdout(), ctx.stderr())
+	}
+	return nil
+}
+
+func (ctx *testContext) must(exitCode int) *command {
+	if exitCode != 0 {
+		ctx.t.Fatalf("expected no error, but got %d. Stderr: %s",
+			exitCode, ctx.stderrString())
+	}
+	return ctx.lastCmd
+}
+
+func (ctx *testContext) mustFail(exitCode int) string {
+	if exitCode == 0 {
+		ctx.t.Fatalf("expected an error, but got none")
+	}
+	return ctx.stderrString()
+}
+
+func (ctx *testContext) updateConfig(wrapperChrootPath string, cfg *config) {
+	*ctx.cfg = *cfg
+	ctx.cfg.overwriteOldWrapperCfg = true
+	ctx.cfg.mockOldWrapperCmds = true
 	if *crosRootDirFlag != "" {
-		ctx.cfg.oldWrapperPath = filepath.Join(*crosRootDirFlag, chrootPath)
+		ctx.cfg.oldWrapperPath = filepath.Join(*crosRootDirFlag, wrapperChrootPath)
 	} else {
 		ctx.cfg.oldWrapperPath = ""
 	}
@@ -188,6 +247,54 @@ func verifyNoEnvUpdate(cmd *command, expectedRegex string) error {
 	return nil
 }
 
+func verifyInternalError(stderr string) error {
+	if !strings.Contains(stderr, "Internal error") {
+		return fmt.Errorf("expected an internal error. Got: %s", stderr)
+	}
+	if ok, _ := regexp.MatchString(`\w+.go:\d+`, stderr); !ok {
+		return fmt.Errorf("expected a source line reference. Got: %s", stderr)
+	}
+	return nil
+}
+
+func verifyNonInternalError(stderr string, expectedRegex string) error {
+	if strings.Contains(stderr, "Internal error") {
+		return fmt.Errorf("expected a non internal error. Got: %s", stderr)
+	}
+	if ok, _ := regexp.MatchString(`\w+.go:\d+`, stderr); ok {
+		return fmt.Errorf("expected no source line reference. Got: %s", stderr)
+	}
+	if ok, _ := regexp.MatchString(matchFullString(expectedRegex), strings.TrimSpace(stderr)); !ok {
+		return fmt.Errorf("expected stderr matching %s. Got: %s", expectedRegex, stderr)
+	}
+	return nil
+}
+
 func matchFullString(regex string) string {
 	return "^" + regex + "$"
+}
+
+func newExitCodeError(exitCode int) error {
+	// It's actually hard to create an error that represents a command
+	// with exit code. Using a real command instead.
+	tmpCmd := exec.Command("/usr/bin/sh", "-c", fmt.Sprintf("exit %d", exitCode))
+	return tmpCmd.Run()
+}
+
+func isForwardToOldWrapperCmd(cmd *command) bool {
+	for _, arg := range cmd.args {
+		if strings.Contains(arg, forwardToOldWrapperFilePattern) {
+			return true
+		}
+	}
+	return false
+}
+
+func isCompareToOldWrapperCmd(cmd *command) bool {
+	for _, arg := range cmd.args {
+		if strings.Contains(arg, compareToOldWrapperFilePattern) {
+			return true
+		}
+	}
+	return false
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 )
 
@@ -17,8 +16,11 @@ type config struct {
 	// Toolchain root path relative to the wrapper binary.
 	rootRelPath string
 	// Path of the old wrapper using the toolchain root.
-	oldWrapperPath           string
-	overrideOldWrapperConfig bool
+	oldWrapperPath string
+	// Whether to mock out the calls that the old wrapper does.
+	mockOldWrapperCmds bool
+	// Whether to overwrite the config in the old wrapper.
+	overwriteOldWrapperCfg bool
 }
 
 // UseCCache can be set via a linker flag.
@@ -36,7 +38,7 @@ var ConfigName = "unknown"
 func getRealConfig() (*config, error) {
 	useCCache, err := strconv.ParseBool(UseCCache)
 	if err != nil {
-		return nil, fmt.Errorf("Parse error for UseCCache: %s", err)
+		return nil, wrapErrorwithSourceLocf(err, "invalid format for UseCCache")
 	}
 	config, err := getConfig(useCCache, ConfigName)
 	if err != nil {
@@ -52,7 +54,7 @@ func getConfig(useCCache bool, configName string) (*config, error) {
 	case "cros.nonhardened":
 		return getCrosNonHardenedConfig(useCCache), nil
 	default:
-		return nil, fmt.Errorf("Unknown config name: %s", configName)
+		return nil, newErrorwithSourceLocf("unknown config name: %s", configName)
 	}
 }
 

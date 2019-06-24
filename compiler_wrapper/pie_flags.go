@@ -13,11 +13,11 @@ func processPieFlags(builder *commandBuilder) {
 	fpie := false
 	if builder.target.abi != "eabi" {
 		for _, arg := range builder.args {
-			if arg.FromUser {
-				if fpieMap[arg.Value] {
+			if arg.fromUser {
+				if fpieMap[arg.value] {
 					fpie = true
 				}
-				if pieMap[arg.Value] {
+				if pieMap[arg.value] {
 					pie = true
 				}
 			}
@@ -25,15 +25,15 @@ func processPieFlags(builder *commandBuilder) {
 	}
 	builder.transformArgs(func(arg builderArg) string {
 		// Remove -nopie as it is a non-standard flag.
-		if arg.Value == "-nopie" {
+		if arg.value == "-nopie" {
 			return ""
 		}
-		if fpie && !arg.FromUser && arg.Value == "-fPIE" {
+		if fpie && !arg.fromUser && arg.value == "-fPIE" {
 			return ""
 		}
-		if pie && !arg.FromUser && arg.Value == "-pie" {
+		if pie && !arg.fromUser && arg.value == "-pie" {
 			return ""
 		}
-		return arg.Value
+		return arg.value
 	})
 }

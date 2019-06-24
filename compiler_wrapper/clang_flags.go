@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"path/filepath"
 	"strings"
 )
 
 func processClangFlags(rootPath string, builder *commandBuilder) error {
-	clangDir := builder.env.getenv("CLANG")
+	env := builder.env
+	clangDir := env.getenv("CLANG")
 
 	if clangDir == "" {
 		clangDir = filepath.Join(rootPath, "usr/bin/")
@@ -15,15 +17,14 @@ func processClangFlags(rootPath string, builder *commandBuilder) error {
 			// relative form. This is neccesary to remove absolute path from compile
 			// outputs.
 			var err error
-			clangDir, err = filepath.Rel(builder.env.getwd(), clangDir)
+			clangDir, err = filepath.Rel(env.getwd(), clangDir)
 			if err != nil {
-				return err
+				return wrapErrorwithSourceLocf(err, "failed to make clangDir %s relative to %s.", clangDir, env.getwd())
 			}
 		}
 	} else {
 		clangDir = filepath.Dir(clangDir)
 	}
-	builder.path = filepath.Join(clangDir, builder.target.compiler)
 
 	// GCC flags to remove from the clang command line.
 	// TODO: Once clang supports GCC compatibility mode, remove
@@ -61,42 +62,76 @@ func processClangFlags(rootPath string, builder *commandBuilder) error {
 		"-Wunused-but-set-variable":          "-Wunused-variable",
 	}
 
-	builder.transformArgs(func(arg builderArg) string {
-		if mapped, ok := gccToClang[arg.Value]; ok {
-			return mapped
+	// Note: not using builder.transformArgs as we need to add multiple arguments
+	// based on a single input argument, and also be able to return errors.
+	newArgs := []builderArg{}
+
+	for _, arg := range builder.args {
+		// Adds an argument with the given value, preserving the
+		// fromUser value of the original argument.
+		addNewArg := func(value string) {
+			newArgs = append(newArgs, builderArg{
+				fromUser: arg.fromUser,
+				value:    value,
+			})
 		}
 
-		if unsupported[arg.Value] {
-			return ""
+		if mapped, ok := gccToClang[arg.value]; ok {
+			addNewArg(mapped)
+			continue
 		}
 
-		for _, prefix := range unsupportedPrefixes {
-			if strings.HasPrefix(arg.Value, prefix) {
-				return ""
-			}
+		if unsupported[arg.value] {
+			continue
+		}
+
+		if hasAtLeastOnePrefix(arg.value, unsupportedPrefixes) {
+			continue
 		}
 
 		if builder.target.arch == "armv7a" && builder.target.sys == "linux" {
-			if armUnsupported[arg.Value] {
-				return ""
+			if armUnsupported[arg.value] {
+				continue
 			}
 		}
 
-		if clangOnly := "-Xclang-only="; strings.HasPrefix(arg.Value, clangOnly) {
-			return arg.Value[len(clangOnly):]
+		if clangOnly := "-Xclang-only="; strings.HasPrefix(arg.value, clangOnly) {
+			addNewArg(arg.value[len(clangOnly):])
+			continue
 		}
 
-		return arg.Value
-	})
+		if clangPath := "-Xclang-path="; strings.HasPrefix(arg.value, clangPath) {
+			readResourceCmd := &command{
+				path: filepath.Join(clangDir, builder.target.compiler),
+				args: []string{"--print-resource-dir"},
+			}
+			stdoutBuffer := bytes.Buffer{}
+			if err := env.run(readResourceCmd, &stdoutBuffer, env.stderr()); err != nil {
+				return wrapErrorwithSourceLocf(err,
+					"failed to call clang to read the resouce-dir: %s %s",
+					readResourceCmd.path, readResourceCmd.args)
+			}
+
+			clangPathValue := arg.value[len(clangPath):]
+			clangDir = clangPathValue
+
+			addNewArg("-resource-dir=" + stdoutBuffer.String())
+			addNewArg("--gcc-toolchain=/usr")
+			continue
+		}
+
+		addNewArg(arg.value)
+	}
+	builder.args = newArgs
+
+	builder.path = filepath.Join(clangDir, builder.target.compiler)
 
 	// Specify the target for clang.
-	linkerPath, err := getLinkerPath(builder.env, builder.target.target+"-ld", rootPath)
+	linkerPath := getLinkerPath(env, builder.target.target+"-ld", rootPath)
+	relLinkerPath, err := filepath.Rel(env.getwd(), linkerPath)
 	if err != nil {
-		return err
-	}
-	relLinkerPath, err := filepath.Rel(builder.env.getwd(), linkerPath)
-	if err != nil {
-		return err
+		return wrapErrorwithSourceLocf(err, "failed to make linker path %s relative to %s",
+			linkerPath, env.getwd())
 	}
 	builder.addPostUserArgs("-B" + relLinkerPath)
 	if startswithI86(builder.target.arch) {
@@ -115,14 +150,14 @@ func processClangFlags(rootPath string, builder *commandBuilder) error {
 }
 
 // Return the a directory which contains an 'ld' that gcc is using.
-func getLinkerPath(env env, linkerCmd string, rootPath string) (string, error) {
+func getLinkerPath(env env, linkerCmd string, rootPath string) string {
 	// We did not pass the tuple i686-pc-linux-gnu to x86-32 clang. Instead,
 	// we passed '-m32' to clang. As a result, clang does not want to use the
 	// i686-pc-linux-gnu-ld, so we need to add this to help clang find the right
 	// linker.
 	for _, path := range strings.Split(env.getenv("PATH"), ":") {
 		if linkerPath, err := filepath.EvalSymlinks(filepath.Join(path, linkerCmd)); err == nil {
-			return filepath.Dir(linkerPath), nil
+			return filepath.Dir(linkerPath)
 		}
 	}
 
@@ -133,5 +168,14 @@ func getLinkerPath(env env, linkerCmd string, rootPath string) (string, error) {
 	// ${SDK_LOCATION}/bin is not necessarily in the ${PATH}. To fix this, we
 	// provide the directory that contains the cross linker wrapper to clang.
 	// Outside chroot, it is the top bin directory form the sdk tarball.
-	return filepath.Join(rootPath, "bin"), nil
+	return filepath.Join(rootPath, "bin")
+}
+
+func hasAtLeastOnePrefix(s string, prefixes []string) bool {
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(s, prefix) {
+			return true
+		}
+	}
+	return false
 }

@@ -8,11 +8,11 @@ func processCCacheFlag(sysroot string, builder *commandBuilder) {
 
 	useCCache := true
 	builder.transformArgs(func(arg builderArg) string {
-		if arg.Value == "-noccache" {
+		if arg.value == "-noccache" {
 			useCCache = false
 			return ""
 		}
-		return arg.Value
+		return arg.value
 	})
 
 	if builder.cfg.useCCache && useCCache {

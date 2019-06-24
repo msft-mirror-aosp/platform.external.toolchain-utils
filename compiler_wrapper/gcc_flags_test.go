@@ -6,7 +6,7 @@ import (
 
 func TestCallRealGcc(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyPath(cmd, gccX86_64+".real"); err != nil {
 			t.Error(err)
@@ -14,11 +14,11 @@ func TestCallRealGcc(t *testing.T) {
 	})
 }
 
-func TestCallRealGPlusPlus(t *testing.T) {
+func TestCallRealGccForOtherNames(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
-			ctx.newCommand("./x86_64-cros-linux-gnu-g++", mainCc)))
-		if err := verifyPath(cmd, "\\./x86_64-cros-linux-gnu-g\\+\\+\\.real"); err != nil {
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand("./x86_64-cros-linux-gnu-somename", mainCc)))
+		if err := verifyPath(cmd, "\\./x86_64-cros-linux-gnu-somename.real"); err != nil {
 			t.Error(err)
 		}
 	})
@@ -36,7 +36,7 @@ func TestConvertClangToGccFlags(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+			cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 				ctx.newCommand(gccX86_64, tt.in, mainCc)))
 			if err := verifyArgCount(cmd, 0, tt.in); err != nil {
 				t.Error(err)
@@ -50,7 +50,7 @@ func TestConvertClangToGccFlags(t *testing.T) {
 
 func TestFilterUnsupportedGccFlags(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, "-Xcompiler", mainCc)))
 		if err := verifyArgCount(cmd, 0, "-Xcompiler"); err != nil {
 			t.Error(err)

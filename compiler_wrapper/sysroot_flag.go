@@ -8,7 +8,7 @@ import (
 func processSysrootFlag(rootPath string, builder *commandBuilder) string {
 	fromUser := false
 	for _, arg := range builder.args {
-		if arg.FromUser && strings.HasPrefix(arg.Value, "--sysroot=") {
+		if arg.fromUser && strings.HasPrefix(arg.value, "--sysroot=") {
 			fromUser = true
 			break
 		}

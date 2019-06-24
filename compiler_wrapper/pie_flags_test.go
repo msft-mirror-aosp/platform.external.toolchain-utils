@@ -7,8 +7,8 @@ import (
 func TestAddPieFlags(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initPieConfig(ctx.cfg)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
-
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyArgOrder(cmd, "-pie", mainCc); err != nil {
 			t.Error(err)
 		}
@@ -21,7 +21,7 @@ func TestAddPieFlags(t *testing.T) {
 func TestOmitPieFlagsWhenNoPieArgGiven(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initPieConfig(ctx.cfg)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, "-nopie", mainCc)))
 		if err := verifyArgCount(cmd, 0, "-nopie"); err != nil {
 			t.Error(err)
@@ -33,7 +33,7 @@ func TestOmitPieFlagsWhenNoPieArgGiven(t *testing.T) {
 			t.Error(err)
 		}
 
-		cmd = ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd = ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, "-fno-pie", mainCc)))
 		if err := verifyArgCount(cmd, 0, "-pie"); err != nil {
 			t.Error(err)
@@ -47,7 +47,7 @@ func TestOmitPieFlagsWhenNoPieArgGiven(t *testing.T) {
 func TestOmitPieFlagsWhenKernelDefined(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initPieConfig(ctx.cfg)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, "-D__KERNEL__", mainCc)))
 		if err := verifyArgCount(cmd, 0, "-pie"); err != nil {
 			t.Error(err)
@@ -61,7 +61,7 @@ func TestOmitPieFlagsWhenKernelDefined(t *testing.T) {
 func TestAddPieFlagsForEabiEvenIfNoPieGiven(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initPieConfig(ctx.cfg)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64Eabi, "-nopie", mainCc)))
 		if err := verifyArgCount(cmd, 0, "-nopie"); err != nil {
 			t.Error(err)

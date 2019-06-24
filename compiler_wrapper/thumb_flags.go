@@ -14,10 +14,10 @@ func processThumbCodeFlags(builder *commandBuilder) {
 		// 2. Do not force frame pointers on ARM32 (https://crbug.com/693137).
 		builder.addPreUserArgs("-mthumb")
 		builder.transformArgs(func(arg builderArg) string {
-			if !arg.FromUser && arg.Value == "-fno-omit-frame-pointer" {
+			if !arg.fromUser && arg.value == "-fno-omit-frame-pointer" {
 				return ""
 			}
-			return arg.Value
+			return arg.value
 		})
 	}
 }

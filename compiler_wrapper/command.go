@@ -1,13 +1,9 @@
 package main
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
-	"sort"
 	"strings"
 )
 
@@ -26,45 +22,26 @@ func newProcessCommand() *command {
 
 func newExecCmd(env env, cmd *command) *exec.Cmd {
 	execCmd := exec.Command(cmd.path, cmd.args...)
-	execCmd.Env = env.environ()
+	execCmd.Env = append(env.environ(), cmd.envUpdates...)
+	ensurePathEnv(execCmd)
 	execCmd.Dir = env.getwd()
 	return execCmd
 }
 
-// TODO: Move to test once we no longer compare the calculated command against
-// the command produced by the old wrapper in the released binary.
-func (actual *command) verifySimilarTo(expected *command) error {
-	var differences []string
-	if actual.path != expected.path {
-		differences = append(differences, fmt.Sprintf("Paths are different. Expected: %q. Actual: %q", expected.path, actual.path))
+func ensurePathEnv(cmd *exec.Cmd) {
+	for _, env := range cmd.Env {
+		if strings.HasPrefix(env, "PATH=") {
+			return
+		}
 	}
-
-	if !reflect.DeepEqual(actual.args, expected.args) {
-		differences = append(differences, fmt.Sprintf("Args are different. Expected: %q. Actual: %q", expected.args, actual.args))
-	}
-
-	// Sort the environment as we don't care in which order
-	// it was modified.
-	actualEnvUpdates := actual.envUpdates
-	sort.Strings(actualEnvUpdates)
-	expectedEnvUpdates := expected.envUpdates
-	sort.Strings(expectedEnvUpdates)
-
-	if !reflect.DeepEqual(actualEnvUpdates, expectedEnvUpdates) {
-		differences = append(differences, fmt.Sprintf("Env updates are different. Expected: %q. Actual: %q", expectedEnvUpdates, actualEnvUpdates))
-	}
-
-	if len(differences) > 0 {
-		return errors.New("commands differ:\n" + strings.Join(differences, "\n"))
-	}
-	return nil
+	cmd.Env = append(cmd.Env, "PATH=")
 }
 
 func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, error) {
 	basename := filepath.Base(cmd.path)
 	nameParts := strings.Split(basename, "-")
 	if len(nameParts) != 5 {
-		return nil, fmt.Errorf("expected 5 parts in the compiler name. Actual: %s", basename)
+		return nil, newErrorwithSourceLocf("expected 5 parts in the compiler name. Actual: %s", basename)
 	}
 
 	compiler := nameParts[4]
@@ -72,12 +49,8 @@ func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, err
 	switch {
 	case strings.HasPrefix(compiler, "clang"):
 		compilerType = clangType
-	case strings.HasPrefix(compiler, "gcc"):
-		compilerType = gccType
-	case strings.HasPrefix(compiler, "g++"):
-		compilerType = gccType
 	default:
-		return nil, fmt.Errorf("expected clang or gcc. Actual: %s", basename)
+		compilerType = gccType
 	}
 	return &commandBuilder{
 		path: cmd.path,
@@ -106,8 +79,8 @@ type commandBuilder struct {
 }
 
 type builderArg struct {
-	Value    string
-	FromUser bool
+	value    string
+	fromUser bool
 }
 
 type compilerType int32
@@ -130,20 +103,20 @@ type builderTarget struct {
 func createBuilderArgs(fromUser bool, args []string) []builderArg {
 	builderArgs := make([]builderArg, len(args))
 	for i, arg := range args {
-		builderArgs[i] = builderArg{Value: arg, FromUser: fromUser}
+		builderArgs[i] = builderArg{value: arg, fromUser: fromUser}
 	}
 	return builderArgs
 }
 
 func (builder *commandBuilder) wrapPath(path string) {
-	builder.args = append([]builderArg{{Value: builder.path, FromUser: false}}, builder.args...)
+	builder.args = append([]builderArg{{value: builder.path, fromUser: false}}, builder.args...)
 	builder.path = path
 }
 
 func (builder *commandBuilder) addPreUserArgs(args ...string) {
 	index := 0
 	for _, arg := range builder.args {
-		if arg.FromUser {
+		if arg.fromUser {
 			break
 		}
 		index++
@@ -163,8 +136,8 @@ func (builder *commandBuilder) transformArgs(transform func(arg builderArg) stri
 		newArg := transform(arg)
 		if newArg != "" {
 			newArgs = append(newArgs, builderArg{
-				Value:    newArg,
-				FromUser: arg.FromUser,
+				value:    newArg,
+				fromUser: arg.fromUser,
 			})
 		}
 	}
@@ -178,7 +151,7 @@ func (builder *commandBuilder) updateEnv(updates ...string) {
 func (builder *commandBuilder) build() *command {
 	cmdArgs := make([]string, len(builder.args))
 	for i, builderArg := range builder.args {
-		cmdArgs[i] = builderArg.Value
+		cmdArgs[i] = builderArg.value
 	}
 	return &command{
 		path:       builder.path,

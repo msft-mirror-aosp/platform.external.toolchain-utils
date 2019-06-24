@@ -6,13 +6,13 @@ import (
 
 func TestAddThumbFlagForArm(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccArmV7, mainCc)))
 		if err := verifyArgOrder(cmd, "-mthumb", mainCc); err != nil {
 			t.Error(err)
 		}
 
-		cmd = ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd = ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccArmV8, mainCc)))
 		if err := verifyArgOrder(cmd, "-mthumb", mainCc); err != nil {
 			t.Error(err)
@@ -22,7 +22,7 @@ func TestAddThumbFlagForArm(t *testing.T) {
 
 func TestOmitThumbFlagForNonArm(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyArgCount(cmd, 0, "-mthumb"); err != nil {
 			t.Error(err)
@@ -32,13 +32,13 @@ func TestOmitThumbFlagForNonArm(t *testing.T) {
 
 func TestOmitThumbFlagForEabiArm(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccArmV7Eabi, mainCc)))
 		if err := verifyArgCount(cmd, 0, "-mthumb"); err != nil {
 			t.Error(err)
 		}
 
-		cmd = ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd = ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccArmV8Eabi, mainCc)))
 		if err := verifyArgCount(cmd, 0, "-mthumb"); err != nil {
 			t.Error(err)
@@ -50,13 +50,13 @@ func TestRemoveNoOmitFramePointerFlagForArm(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initNoOmitFramePointerConfig(ctx.cfg)
 
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccArmV7, mainCc)))
 		if err := verifyArgCount(cmd, 0, "-fno-omit-frame-pointer"); err != nil {
 			t.Error(err)
 		}
 
-		cmd = ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd = ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccArmV8, mainCc)))
 		if err := verifyArgCount(cmd, 0, "-fno-omit-frame-pointer"); err != nil {
 			t.Error(err)
@@ -68,7 +68,7 @@ func TestKeepNoOmitFramePointerFlagForNonArm(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initNoOmitFramePointerConfig(ctx.cfg)
 
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyArgCount(cmd, 1, "-fno-omit-frame-pointer"); err != nil {
 			t.Error(err)
@@ -80,13 +80,13 @@ func TestKeepNoOmitFramePointerFlagForEabiArm(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initNoOmitFramePointerConfig(ctx.cfg)
 
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccArmV7Eabi, mainCc)))
 		if err := verifyArgCount(cmd, 1, "-fno-omit-frame-pointer"); err != nil {
 			t.Error(err)
 		}
 
-		cmd = ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd = ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccArmV8Eabi, mainCc)))
 		if err := verifyArgCount(cmd, 1, "-fno-omit-frame-pointer"); err != nil {
 			t.Error(err)
@@ -96,7 +96,7 @@ func TestKeepNoOmitFramePointerFlagForEabiArm(t *testing.T) {
 
 func TestKeepNoOmitFramePointIfGivenByUser(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccArmV7, "-fno-omit-frame-pointer", mainCc)))
 		if err := verifyArgCount(cmd, 1, "-fno-omit-frame-pointer"); err != nil {
 			t.Error(err)

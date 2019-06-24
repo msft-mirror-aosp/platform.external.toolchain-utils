@@ -9,7 +9,7 @@ func processSanitizerFlags(builder *commandBuilder) {
 	for _, arg := range builder.args {
 		// TODO: This should probably be -fsanitize= to not match on
 		// e.g. -fsanitize-blacklist
-		if arg.FromUser && strings.HasPrefix(arg.Value, "-fsanitize") {
+		if arg.fromUser && strings.HasPrefix(arg.value, "-fsanitize") {
 			filterSanitizerFlags = true
 			break
 		}
@@ -24,10 +24,10 @@ func processSanitizerFlags(builder *commandBuilder) {
 		}
 
 		builder.transformArgs(func(arg builderArg) string {
-			if unsupportedSanitizerFlags[arg.Value] {
+			if unsupportedSanitizerFlags[arg.value] {
 				return ""
 			}
-			return arg.Value
+			return arg.value
 		})
 	}
 }

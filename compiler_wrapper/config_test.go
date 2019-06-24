@@ -8,7 +8,7 @@ import (
 func TestFullHardeningConfigAndGcc(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initFullHardeningConfig(ctx)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
 			t.Error(err)
@@ -24,7 +24,7 @@ func TestFullHardeningConfigAndGcc(t *testing.T) {
 func TestFullHardeningConfigAndClang(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initFullHardeningConfig(ctx)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(clangX86_64, mainCc)))
 		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
 			t.Error(err)
@@ -46,7 +46,7 @@ func TestFullHardeningConfigAndClang(t *testing.T) {
 func TestNonHardeningConfigAndGcc(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initNonHardeningConfig(ctx)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
 			t.Error(err)
@@ -62,7 +62,7 @@ func TestNonHardeningConfigAndGcc(t *testing.T) {
 func TestNonHardeningConfigAndClang(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		initNonHardeningConfig(ctx)
-		cmd := ctx.must(calcCompilerCommandAndCompareToOld(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(clangX86_64, mainCc)))
 		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
 			t.Error(err)
@@ -151,14 +151,14 @@ func isHardened(cfg *config) bool {
 
 func initFullHardeningConfig(ctx *testContext) {
 	useCCache := true
-	*ctx.cfg = *getCrosHardenedConfig(useCCache)
-	ctx.setOldWrapperPath(oldHardenedWrapperPathForTest)
+	ctx.updateConfig(oldHardenedWrapperPathForTest, getCrosHardenedConfig(useCCache))
+	ctx.cfg.overwriteOldWrapperCfg = false
 }
 
 func initNonHardeningConfig(ctx *testContext) {
 	useCCache := true
-	*ctx.cfg = *getCrosNonHardenedConfig(useCCache)
-	ctx.setOldWrapperPath(oldNonHardenedWrapperPathForTest)
+	ctx.updateConfig(oldNonHardenedWrapperPathForTest, getCrosNonHardenedConfig(useCCache))
+	ctx.cfg.overwriteOldWrapperCfg = false
 }
 
 func resetGlobals() {

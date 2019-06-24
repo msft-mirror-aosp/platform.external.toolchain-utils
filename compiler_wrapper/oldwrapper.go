@@ -6,34 +6,81 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"text/template"
 )
 
-func calcOldCompilerCommands(env env, cfg *config, wrapperCmd *command) ([]*command, error) {
+const forwardToOldWrapperFilePattern = "old_wrapper_forward"
+const compareToOldWrapperFilePattern = "old_wrapper_compare"
+
+// Whether the command should be executed by the old wrapper as we don't
+// support it yet.
+func shouldForwardToOldWrapper(env env, inputCmd *command) bool {
+	for _, arg := range inputCmd.args {
+		if arg == "-clang-syntax" {
+			return true
+		}
+	}
+	switch {
+	case env.getenv("WITH_TIDY") != "":
+		fallthrough
+	case env.getenv("FORCE_DISABLE_WERROR") != "":
+		fallthrough
+	case env.getenv("GETRUSAGE") != "":
+		fallthrough
+	case env.getenv("BISECT_STAGE") != "":
+		return true
+	}
+	return false
+}
+
+func forwardToOldWrapper(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
+	oldWrapperCfg, err := newOldWrapperConfig(env, cfg, inputCmd)
+	if err != nil {
+		return 0, err
+	}
+	return callOldWrapper(env, oldWrapperCfg, inputCmd, forwardToOldWrapperFilePattern, env.stdout(), env.stderr())
+}
+
+func compareToOldWrapper(env env, cfg *config, inputCmd *command, newCmdResults []*commandResult) error {
+	oldWrapperCfg, err := newOldWrapperConfig(env, cfg, inputCmd)
+	if err != nil {
+		return err
+	}
+	oldWrapperCfg.LogCmds = true
+	oldWrapperCfg.MockCmds = cfg.mockOldWrapperCmds
+	for _, cmdResult := range newCmdResults {
+		oldWrapperCfg.CmdResults = append(oldWrapperCfg.CmdResults, oldWrapperCmdResult{
+			Stdout:   cmdResult.stdout,
+			Stderr:   cmdResult.stderr,
+			Exitcode: cmdResult.exitCode,
+		})
+	}
+	oldWrapperCfg.OverwriteConfig = cfg.overwriteOldWrapperCfg
+
 	stdoutBuffer := bytes.Buffer{}
 	stderrBuffer := bytes.Buffer{}
-	pipes := exec.Cmd{
-		Stdin:  strings.NewReader(""),
-		Stdout: &stdoutBuffer,
-		Stderr: &stderrBuffer,
+	exitCode, err := callOldWrapper(env, oldWrapperCfg, inputCmd, compareToOldWrapperFilePattern, &stdoutBuffer, &stderrBuffer)
+	if err != nil {
+		return err
 	}
-	mockForks := true
-	if err := callOldWrapper(env, cfg, wrapperCmd, &pipes, mockForks); err != nil {
-		return nil, fmt.Errorf("error: %s. %s", err, stderrBuffer.String())
-	}
+	oldCmdResults := parseOldWrapperCommands(stdoutBuffer.String(), stderrBuffer.String(), exitCode)
+	return diffCommandResults(oldCmdResults, newCmdResults)
+}
 
-	// Parse the nested commands.
-	allStderrLines := strings.Split(stderrBuffer.String(), "\n")
-	var commands []*command
+func parseOldWrapperCommands(stdout string, stderr string, exitCode int) []*commandResult {
+	allStderrLines := strings.Split(stderr, "\n")
+	remainingStderrLines := []string{}
+	cmdResults := []*commandResult{}
 	for _, line := range allStderrLines {
 		const commandPrefix = "command:"
 		const envupdatePrefix = ".EnvUpdate:"
-		envUpdateIdx := strings.Index(line, ".EnvUpdate:")
-		if strings.Index(line, commandPrefix) >= 0 {
+		envUpdateIdx := strings.Index(line, envupdatePrefix)
+		if strings.Index(line, commandPrefix) == 0 {
 			if envUpdateIdx == -1 {
 				envUpdateIdx = len(line) - 1
 			}
@@ -50,61 +97,123 @@ func calcOldCompilerCommands(env env, cfg *config, wrapperCmd *command) ([]*comm
 				args:       args[1:],
 				envUpdates: envUpdate,
 			}
-			commands = append(commands, command)
+			cmdResults = append(cmdResults, &commandResult{cmd: command})
+		} else {
+			remainingStderrLines = append(remainingStderrLines, line)
 		}
 	}
-	return commands, nil
+	remainingStderr := strings.TrimSpace(strings.Join(remainingStderrLines, "\n"))
+	if len(cmdResults) > 0 {
+		lastCmdResult := cmdResults[len(cmdResults)-1]
+		lastCmdResult.exitCode = exitCode
+		lastCmdResult.stderr = remainingStderr
+		lastCmdResult.stdout = strings.TrimSpace(stdout)
+	}
+
+	return cmdResults
 }
 
-func forwardToOldWrapper(env env, cfg *config, wrapperCmd *command) error {
-	pipes := exec.Cmd{
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
+func diffCommandResults(oldCmdResults []*commandResult, newCmdResults []*commandResult) error {
+	maxLen := len(newCmdResults)
+	if maxLen < len(oldCmdResults) {
+		maxLen = len(oldCmdResults)
 	}
-	mockForks := false
-	return callOldWrapper(env, cfg, wrapperCmd, &pipes, mockForks)
+	hasDifferences := false
+	var cmdDifferences []string
+	for i := 0; i < maxLen; i++ {
+		var differences []string
+		if i >= len(newCmdResults) {
+			differences = append(differences, "missing command")
+		} else if i >= len(oldCmdResults) {
+			differences = append(differences, "extra command")
+		} else {
+			newCmdResult := newCmdResults[i]
+			oldCmdResult := oldCmdResults[i]
+
+			if i == maxLen-1 && newCmdResult.exitCode != oldCmdResult.exitCode {
+				// We do not capture errors in nested commands from the old wrapper,
+				// so only compare the exit codes of the final compiler command.
+				differences = append(differences, "exit code")
+			}
+
+			if newCmdResult.cmd.path != oldCmdResult.cmd.path {
+				differences = append(differences, "path")
+			}
+
+			if !reflect.DeepEqual(newCmdResult.cmd.args, oldCmdResult.cmd.args) {
+				differences = append(differences, "args")
+			}
+
+			// Sort the environment as we don't care in which order
+			// it was modified.
+			newEnvUpdates := newCmdResult.cmd.envUpdates
+			sort.Strings(newEnvUpdates)
+			oldEnvUpdates := oldCmdResult.cmd.envUpdates
+			sort.Strings(oldEnvUpdates)
+
+			if !reflect.DeepEqual(newEnvUpdates, oldEnvUpdates) {
+				differences = append(differences, "env updates")
+			}
+		}
+		if len(differences) > 0 {
+			hasDifferences = true
+		} else {
+			differences = []string{"none"}
+		}
+		cmdDifferences = append(cmdDifferences,
+			fmt.Sprintf("Index %d: %s", i, strings.Join(differences, ",")))
+	}
+	if hasDifferences {
+		return newErrorwithSourceLocf("commands differ:\n%s\nOld commands:\n%s\nNew commands:\n%s",
+			strings.Join(cmdDifferences, "\n"),
+			dumpCommandResults(oldCmdResults),
+			dumpCommandResults(newCmdResults),
+		)
+	}
+	return nil
 }
 
-func callOldWrapper(env env, cfg *config, wrapperCmd *command, pipes *exec.Cmd, mockForks bool) error {
-	mockFile, err := ioutil.TempFile("", "compiler_wrapper_mock")
-	if err != nil {
-		return err
+func dumpCommandResults(results []*commandResult) string {
+	lines := []string{}
+	for _, result := range results {
+		lines = append(lines, fmt.Sprintf("cmd: %#v; result: %#v", result.cmd, result))
 	}
-	defer os.Remove(mockFile.Name())
-
-	if err := writeOldWrapperMock(mockFile, env, cfg, wrapperCmd, mockForks); err != nil {
-		return err
-	}
-	if err := mockFile.Close(); err != nil {
-		return err
-	}
-
-	// Call the wrapper.
-	cmd := newExecCmd(env, wrapperCmd)
-	ensurePathEnv(cmd)
-	// Note: Using a self executable wrapper does not work due to a race condition
-	// on unix systems. See https://github.com/golang/go/issues/22315
-	cmd.Args = append([]string{"/usr/bin/python2", "-S", mockFile.Name()}, cmd.Args[1:]...)
-	cmd.Path = cmd.Args[0]
-	cmd.Stdin = pipes.Stdin
-	cmd.Stdout = pipes.Stdout
-	cmd.Stderr = pipes.Stderr
-	return cmd.Run()
+	return strings.Join(lines, "\n")
 }
 
-func writeOldWrapperMock(writer io.Writer, env env, cfg *config, wrapperCmd *command, mockForks bool) error {
+// Note: field names are upper case so they can be used in
+// a template via reflection.
+type oldWrapperConfig struct {
+	CmdPath           string
+	OldWrapperContent string
+	RootRelPath       string
+	LogCmds           bool
+	MockCmds          bool
+	CmdResults        []oldWrapperCmdResult
+	OverwriteConfig   bool
+	CommonFlags       []string
+	GccFlags          []string
+	ClangFlags        []string
+}
+
+type oldWrapperCmdResult struct {
+	Stdout   string
+	Stderr   string
+	Exitcode int
+}
+
+func newOldWrapperConfig(env env, cfg *config, inputCmd *command) (*oldWrapperConfig, error) {
 	absOldWrapperPath := cfg.oldWrapperPath
 	if !filepath.IsAbs(absOldWrapperPath) {
-		absWrapperDir, err := getAbsWrapperDir(env, wrapperCmd.path)
+		absWrapperDir, err := getAbsWrapperDir(env, inputCmd.path)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		absOldWrapperPath = filepath.Join(absWrapperDir, cfg.oldWrapperPath)
 	}
 	oldWrapperContentBytes, err := ioutil.ReadFile(absOldWrapperPath)
 	if err != nil {
-		return err
+		return nil, wrapErrorwithSourceLocf(err, "failed to read old wrapper")
 	}
 	oldWrapperContent := string(oldWrapperContentBytes)
 	// Disable the original call to main()
@@ -114,42 +223,69 @@ func writeOldWrapperMock(writer io.Writer, env env, cfg *config, wrapperCmd *com
 		oldWrapperContent = regexp.MustCompile(`True\s+#\s+@CCACHE_DEFAULT@`).ReplaceAllString(oldWrapperContent, "False #")
 	}
 
-	// Note: Fieldnames need to be upper case so that they can be read via reflection.
-	mockData := struct {
-		CmdPath           string
-		OldWrapperContent string
-		RootRelPath       string
-		MockForks         bool
-		OverwriteConfig   bool
-		CommonFlags       []string
-		GccFlags          []string
-		ClangFlags        []string
-	}{
-		wrapperCmd.path,
-		oldWrapperContent,
-		cfg.rootRelPath,
-		mockForks,
-		cfg.overrideOldWrapperConfig,
-		cfg.commonFlags,
-		cfg.gccFlags,
-		cfg.clangFlags,
+	return &oldWrapperConfig{
+		CmdPath:           inputCmd.path,
+		OldWrapperContent: oldWrapperContent,
+		RootRelPath:       cfg.rootRelPath,
+		CommonFlags:       cfg.commonFlags,
+		GccFlags:          cfg.gccFlags,
+		ClangFlags:        cfg.clangFlags,
+	}, nil
+}
+
+func callOldWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, filepattern string, stdout io.Writer, stderr io.Writer) (exitCode int, err error) {
+	mockFile, err := ioutil.TempFile("", filepattern)
+	if err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "failed to create tempfile")
 	}
+	defer os.Remove(mockFile.Name())
 
 	const mockTemplate = `{{.OldWrapperContent}}
-{{if .MockForks}}
+import subprocess
+
 init_env = os.environ.copy()
 
+mockResults = [{{range .CmdResults}} {
+	'stdout': '{{.Stdout}}',
+	'stderr': '{{.Stderr}}',
+	'exitcode': {{.Exitcode}},
+},{{end}}]
+
 def serialize_cmd(args):
+	{{if .LogCmds}}
 	current_env = os.environ
 	envupdate = [k + "=" + current_env.get(k, '') for k in set(list(current_env.keys()) + list(init_env.keys())) if current_env.get(k, '') != init_env.get(k, '')]
-	print('command:%s.EnvUpdate:%s\n' % (' '.join(args), ' '.join(envupdate)), file=sys.stderr)
+	print('command:%s.EnvUpdate:%s' % (' '.join(args), ' '.join(envupdate)), file=sys.stderr)
+	{{end}}
+
+def check_output_mock(args):
+	serialize_cmd(args)
+	{{if .MockCmds}}
+	result = mockResults.pop(0)
+	print(result['stderr'], file=sys.stderr)
+	if result['exitcode']:
+		raise subprocess.CalledProcessError(result['exitcode'])
+	return result['stdout']
+	{{else}}
+	return old_check_output(args)
+	{{end}}
+
+old_check_output = subprocess.check_output
+subprocess.check_output = check_output_mock
 
 def execv_mock(binary, args):
 	serialize_cmd([binary] + args[1:])
-	sys.exit(0)
+	{{if .MockCmds}}
+	result = mockResults.pop(0)
+	print(result['stdout'], file=sys.stdout)
+	print(result['stderr'], file=sys.stderr)
+	sys.exit(result['exitcode'])
+	{{else}}
+	old_execv(binary, args)
+	{{end}}
 
+old_execv = os.execv
 os.execv = execv_mock
-{{end}}
 
 sys.argv[0] = '{{.CmdPath}}'
 
@@ -163,20 +299,31 @@ CLANG_FLAGS_TO_ADD=set([{{range .ClangFlags}}'{{.}}',{{end}}])
 
 sys.exit(main())
 `
-
 	tmpl, err := template.New("mock").Parse(mockTemplate)
 	if err != nil {
-		return err
+		return 0, wrapErrorwithSourceLocf(err, "failed to parse old wrapper template")
 	}
+	if err := tmpl.Execute(mockFile, cfg); err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "failed execute old wrapper template")
+	}
+	if err := mockFile.Close(); err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "failed to close temp file")
+	}
+	buf := bytes.Buffer{}
+	tmpl.Execute(&buf, cfg)
 
-	return tmpl.Execute(writer, mockData)
-}
-
-func ensurePathEnv(cmd *exec.Cmd) {
-	for _, env := range cmd.Env {
-		if strings.HasPrefix(env, "PATH=") {
-			return
+	// Note: Using a self executable wrapper does not work due to a race condition
+	// on unix systems. See https://github.com/golang/go/issues/22315
+	if err := env.run(&command{
+		path:       "/usr/bin/python2",
+		args:       append([]string{"-S", mockFile.Name()}, inputCmd.args...),
+		envUpdates: inputCmd.envUpdates,
+	}, stdout, stderr); err != nil {
+		if exitCode, ok := getExitCode(err); ok {
+			return exitCode, nil
 		}
+		return 0, wrapErrorwithSourceLocf(err, "failed to call old wrapper. Command: %s %s",
+			inputCmd.path, inputCmd.args)
 	}
-	cmd.Env = append(cmd.Env, "PATH=")
+	return 0, nil
 }

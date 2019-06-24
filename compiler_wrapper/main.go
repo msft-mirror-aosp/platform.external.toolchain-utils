@@ -21,12 +21,10 @@ package main
 
 import (
 	"log"
-	"os/exec"
-	"syscall"
+	"os"
 )
 
 func main() {
-	wrapperCmd := newProcessCommand()
 	env, err := newProcessEnv()
 	if err != nil {
 		log.Fatal(err)
@@ -35,23 +33,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if shouldForwardToOldWrapper(env, wrapperCmd) {
-		err := forwardToOldWrapper(env, cfg, wrapperCmd)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return
-	}
-
-	cmd, err := calcCompilerCommandAndCompareToOld(env, cfg, wrapperCmd)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := execCmd(newExecCmd(env, cmd)); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func execCmd(cmd *exec.Cmd) error {
-	return syscall.Exec(cmd.Path, cmd.Args, cmd.Env)
+	// Note: callCompiler will exec the command. Only in case of
+	// an error or when we are comparing against the old wrapper
+	// will this os.Exit be called.
+	os.Exit(callCompiler(env, cfg, newProcessCommand()))
 }

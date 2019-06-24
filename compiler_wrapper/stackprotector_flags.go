@@ -7,7 +7,7 @@ func processStackProtectorFlags(builder *commandBuilder) {
 	fstack := false
 	if builder.target.abi != "eabi" {
 		for _, arg := range builder.args {
-			if arg.FromUser && fstackMap[arg.Value] {
+			if arg.fromUser && fstackMap[arg.value] {
 				fstack = true
 				break
 			}
@@ -16,10 +16,10 @@ func processStackProtectorFlags(builder *commandBuilder) {
 	if fstack {
 		builder.addPreUserArgs("-fno-stack-protector")
 		builder.transformArgs(func(arg builderArg) string {
-			if !arg.FromUser && arg.Value == "-fstack-protector-strong" {
+			if !arg.fromUser && arg.value == "-fstack-protector-strong" {
 				return ""
 			}
-			return arg.Value
+			return arg.value
 		})
 	}
 }
