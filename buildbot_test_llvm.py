@@ -54,14 +54,14 @@ DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
 #  kevin         aarch64  gru          rockchip-3399 4.4.* arm32 userspace
 #  kevin64       aarch64  gru          rockchip-3399 4.4.* arm64 userspace
 #  lakitu        x86_64                              4.4.*
-#  nyan_big      armv7    nyan         tegra         3.10.18
+#  nyan_kitty    armv7    nyan         tegra         3.10.18
+#  octopus       x86_64   octopus      GLK           4.14.*
 #  peach_pit     armv7    peach        exynos-5420   3.8.11
-#  peppy         x86_64   slippy       haswell       3.8.11
-#  quawks        x86_64   rambi        baytrail      4.4.*
 #  sentry        x86_64   kunimitsu    skylake-u     3.18
 #  tidus         x86_64   auron        broadwell     3.14
 #  veyron_mighty armv7    veyron-pinky rockchip-3288 3.14
 #  whirlwind     armv7                               3.14
+#  winky         x86_64   rambi        baytrail      4.4.*
 
 TEST_BOARD = [
     'atlas',
@@ -76,14 +76,14 @@ TEST_BOARD = [
     # 'kevin', tested by arm64-llvm-next-toolchain builder.
     'kevin64',
     'lakitu',
-    'nyan_big',
+    'nyan_kitty',
+    'octopus',
     'peach_pit',
-    'peppy',
-    'quawks',
     'sentry',
     'tidus',
     # 'veyron_mighty', tested by arm-llvm-next-toolchain builder.
     'whirlwind',
+    'winky',
 ]
 
 
