@@ -103,26 +103,32 @@ class SuiteRunner(object):
         disable_aslr, machine=machine_name, chromeos_root=chromeos_root)
 
   def PinGovernorExecutionFrequencies(self, machine_name, chromeos_root):
-    """Manages the cpu governor and other performance settings.
-       Includes support for setting cpu frequency to a static value.
+    """Setup Intel CPU frequency.
+
+    Manages the cpu governor and other performance settings.
+    Includes support for setting cpu frequency to a static value.
     """
     # pyformat: disable
     set_cpu_freq = (
-        # Disable Turbo in Intel pstate driver
-        'if [[ -e /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then '
-        '  if grep -q 0 /sys/devices/system/cpu/intel_pstate/no_turbo;  then '
-        '    echo -n 1 > /sys/devices/system/cpu/intel_pstate/no_turbo; '
-        '  fi; '
-        'fi; '
-        # Uncomment the following lines to set governor to powersave for each
-        # cpu. Also uncomment the 'done' at end.
-        # 'for f in /sys/devices/system/cpu/cpu*/cpufreq; do '
+        # Disable Intel Opportunistic Processor
+        # Commented out because wrmsr requires kernel change
+        # to enable white-listed write access to msr 0x199.
+        # See Intel 64 and IA-32 Archtectures
+        # Software Developer's Manual, 14.3.2.2.
+        #'awk \'$1 ~ /^processor/ { print $NF }\' /proc/cpuinfo '
+        #'   | while read c; do '
+        # 'iotools wrmsr $c 0x199 $(printf "0x%x\n" $(( (1 << 32) '
+        # '   | $(iotools rdmsr $c 0x199) )));'
+        #'done;'
+        # Set up intel_pstate governor to performance if enabled.
+        'for f in `ls -d /sys/devices/system/cpu/cpu*/cpufreq 2>/dev/null`; do '
         # Skip writing scaling_governor if cpu is not online.
-        # '[[ -e ${f/cpufreq/online} ]] && grep -q 0 ${f/cpufreq/online} '
-        # '&& continue; '
+        ' [[ -e ${f/cpufreq/online} ]] && grep -q 0 ${f/cpufreq/online} '
+        '   && continue; '
         # The cpu is online, can update.
-        # 'cd $f; '
-        # 'echo powersave > scaling_governor; '
+        ' cd $f; '
+        ' if [[ -e scaling_governor ]]; then '
+        '  echo performance > scaling_governor; fi; '
         #
         # Uncomment rest of lines to enable setting frequency by crosperf.
         # It sets the cpu to the second highest supported frequency.
@@ -139,10 +145,15 @@ class SuiteRunner(object):
         #'fi ;'
         #'echo $highest > scaling_max_freq; '
         #'echo $highest > scaling_min_freq; '
-        #
-        # Uncomment to enable the loop for CPU governor settings.
-        # 'done'
-    )
+        'done; '
+        # Disable Turbo in Intel pstate driver
+        # no_turbo should follow governor setup.
+        # Otherwise it can be overwritten.
+        'if [[ -e /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then '
+        '  if grep -q 0 /sys/devices/system/cpu/intel_pstate/no_turbo;  then '
+        '    echo -n 1 > /sys/devices/system/cpu/intel_pstate/no_turbo; '
+        '  fi; '
+        'fi; ')
     # pyformat: enable
     if self.log_level == 'average':
       self.logger.LogOutput(

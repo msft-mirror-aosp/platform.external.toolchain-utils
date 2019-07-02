@@ -197,6 +197,15 @@ class SuiteRunnerTest(unittest.TestCase):
     cmd = mock_cros_runcmd.call_args_list[0][0]
     # pyformat: disable
     set_cpu_cmd = (
+        'for f in `ls -d /sys/devices/system/cpu/cpu*/cpufreq 2>/dev/null`; do '
+        # Skip writing scaling_governor if cpu is not online.
+        ' [[ -e ${f/cpufreq/online} ]] && grep -q 0 ${f/cpufreq/online} '
+        '   && continue; '
+        # The cpu is online, can update.
+        ' cd $f; '
+        ' if [[ -e scaling_governor ]]; then '
+        '  echo performance > scaling_governor; fi; '
+        'done; '
         # Disable Turbo in Intel pstate driver
         'if [[ -e /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then '
         '  if grep -q 0 /sys/devices/system/cpu/intel_pstate/no_turbo;  then '
