@@ -45,7 +45,7 @@ class LLVMHash(object):
     ret, _, err = self._ce.RunCommandWOutput(clone_cmd, print_to_console=False)
 
     if ret:  # failed to create repo
-      raise Exception('Failed to clone the llvm repo: %s' % err)
+      raise ValueError('Failed to clone the llvm repo: %s' % err)
 
   def _ParseCommitMessages(self, subdir, hash_vals, llvm_version):
     """Parses the hashes that match the llvm version.
@@ -80,7 +80,7 @@ class LLVMHash(object):
           find_llvm_cmd, print_to_console=False)
 
       if ret:  # failed to parse the commit message
-        raise Exception('Failed to parse commit message: %s' % err)
+        raise ValueError('Failed to parse commit message: %s' % err)
 
       # find all "llvm-svn:" instances
       llvm_versions = llvm_svn_pattern.findall(out)
@@ -90,7 +90,7 @@ class LLVMHash(object):
         return cur_hash
 
     # failed to find the commit hash
-    raise Exception('Could not find commit hash.')
+    raise ValueError('Could not find commit hash.')
 
   def GetGitHashForVersion(self, llvm_git_dir, llvm_version):
     """Finds the commit hash(es) of the llvm version in the git log history.
@@ -116,7 +116,7 @@ class LLVMHash(object):
         hash_cmd, print_to_console=False)
 
     if ret:  # failed to find hash
-      raise Exception('Hash not found: %s' % err)
+      raise ValueError('Hash not found: %s' % err)
 
     return self._ParseCommitMessages(subdir, hash_vals, llvm_version)
 
