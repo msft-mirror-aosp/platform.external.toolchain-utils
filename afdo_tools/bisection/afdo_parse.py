@@ -37,7 +37,9 @@ def parse_afdo(f):
       if curr_func:
         results[curr_func] = ''.join(curr_data)
         curr_data = []
-      curr_func = line.split(':')[0].strip()
+      curr_func, rest = line.split(':', 1)
+      curr_func = curr_func.strip()
+      curr_data.append(':' + rest)
     else:
       curr_data.append(line)
 

@@ -30,7 +30,8 @@ class SimpleAfdoParseTest(unittest.TestCase):
                                   ' 46: 13942\n'
                                   ' 46.1: 14003\n')
     expected = {
-        'deflate_slow': ' 3: 24\n'
+        'deflate_slow': ':87460059:3\n'
+                        ' 3: 24\n'
                         ' 14: 54767\n'
                         ' 15: 664 fill_window:22\n'
                         ' 16: 661\n'
