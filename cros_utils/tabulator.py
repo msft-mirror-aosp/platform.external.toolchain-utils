@@ -2,6 +2,7 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Table generating, analyzing and printing functions.
 
 This defines several classes that are used to generate, analyze and print
@@ -670,6 +671,13 @@ class KeyAwareComparisonResult(ComparisonResult):
   """Automatic key aware comparison."""
 
   def _IsLowerBetter(self, key):
+    # Units in histograms should include directions
+    if 'smallerIsBetter' in key:
+      return True
+    if 'biggerIsBetter' in key:
+      return False
+
+    # For units in chartjson:
     # TODO(llozano): Trying to guess direction by looking at the name of the
     # test does not seem like a good idea. Test frameworks should provide this
     # info explicitly. I believe Telemetry has this info. Need to find it out.
