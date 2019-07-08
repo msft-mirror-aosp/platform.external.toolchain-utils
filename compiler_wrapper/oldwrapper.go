@@ -21,8 +21,6 @@ const compareToOldWrapperFilePattern = "old_wrapper_compare"
 // support it yet.
 func shouldForwardToOldWrapper(env env, inputCmd *command) bool {
 	switch {
-	case env.getenv("WITH_TIDY") != "":
-		fallthrough
 	case env.getenv("FORCE_DISABLE_WERROR") != "":
 		fallthrough
 	case env.getenv("GETRUSAGE") != "":

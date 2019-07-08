@@ -34,7 +34,6 @@ func TestNoForwardToOldWrapperBecauseOfEnv(t *testing.T) {
 func TestForwardToOldWrapperBecauseOfEnv(t *testing.T) {
 	withForwardToOldWrapperTestContext(t, func(ctx *testContext) {
 		testEnvs := []string{
-			"WITH_TIDY=abc",
 			"FORCE_DISABLE_WERROR=abc",
 			"GETRUSAGE=abc",
 			"BISECT_STAGE=abc",

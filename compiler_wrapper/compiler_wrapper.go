@@ -79,13 +79,20 @@ func calcCompilerCommand(env env, cfg *config, inputCmd *command) (compilerCmd *
 	}
 	clangSyntax := processClangSyntaxFlag(mainBuilder)
 	if mainBuilder.target.compilerType == clangType {
-		compilerCmd, err = calcClangCommand(mainBuilder)
+		cSrcFile, useClangTidy := processClangTidyFlags(mainBuilder)
+		compilerCmd, err = calcClangCommand(useClangTidy, mainBuilder)
 		if err != nil {
 			return nil, exitCode, err
 		}
+		if useClangTidy {
+			if err := runClangTidy(env, compilerCmd, cSrcFile); err != nil {
+				return nil, exitCode, err
+			}
+		}
 	} else {
 		if clangSyntax {
-			clangCmd, err := calcClangCommand(mainBuilder.clone())
+			forceLocal := false
+			clangCmd, err := calcClangCommand(forceLocal, mainBuilder.clone())
 			if err != nil {
 				return nil, 0, err
 			}
@@ -100,14 +107,16 @@ func calcCompilerCommand(env env, cfg *config, inputCmd *command) (compilerCmd *
 	return compilerCmd, exitCode, nil
 }
 
-func calcClangCommand(builder *commandBuilder) (*command, error) {
+func calcClangCommand(forceLocal bool, builder *commandBuilder) (*command, error) {
 	sysroot := processSysrootFlag(builder)
 	builder.addPreUserArgs(builder.cfg.clangFlags...)
 	calcCommonPreUserArgs(builder)
 	if err := processClangFlags(builder); err != nil {
 		return nil, err
 	}
-	processGomaCCacheFlags(sysroot, builder)
+	if !forceLocal {
+		processGomaCCacheFlags(sysroot, builder)
+	}
 	return builder.build(), nil
 }
 

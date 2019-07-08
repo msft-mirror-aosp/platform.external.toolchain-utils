@@ -106,21 +106,14 @@ func processClangFlags(builder *commandBuilder) error {
 		}
 
 		if clangPath := "-Xclang-path="; strings.HasPrefix(arg.value, clangPath) {
-			readResourceCmd := &command{
-				path: filepath.Join(clangDir, clangBasename),
-				args: []string{"--print-resource-dir"},
-			}
-			stdoutBuffer := bytes.Buffer{}
-			if err := env.run(readResourceCmd, &stdoutBuffer, env.stderr()); err != nil {
-				return wrapErrorwithSourceLocf(err,
-					"failed to call clang to read the resouce-dir: %s %s",
-					readResourceCmd.path, readResourceCmd.args)
-			}
-
 			clangPathValue := arg.value[len(clangPath):]
+			resourceDir, err := getClangResourceDir(env, filepath.Join(clangDir, clangBasename))
+			if err != nil {
+				return err
+			}
 			clangDir = clangPathValue
 
-			addNewArg("-resource-dir=" + stdoutBuffer.String())
+			addNewArg("-resource-dir=" + resourceDir)
 			addNewArg("--gcc-toolchain=/usr")
 			continue
 		}
@@ -152,6 +145,20 @@ func processClangFlags(builder *commandBuilder) error {
 		builder.addPostUserArgs("-target", builder.target.target)
 	}
 	return nil
+}
+
+func getClangResourceDir(env env, clangPath string) (string, error) {
+	readResourceCmd := &command{
+		path: clangPath,
+		args: []string{"--print-resource-dir"},
+	}
+	stdoutBuffer := bytes.Buffer{}
+	if err := env.run(readResourceCmd, &stdoutBuffer, env.stderr()); err != nil {
+		return "", wrapErrorwithSourceLocf(err,
+			"failed to call clang to read the resouce-dir: %#v",
+			readResourceCmd)
+	}
+	return stdoutBuffer.String(), nil
 }
 
 // Return the a directory which contains an 'ld' that gcc is using.
