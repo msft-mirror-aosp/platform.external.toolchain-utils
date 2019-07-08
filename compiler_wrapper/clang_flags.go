@@ -6,12 +6,12 @@ import (
 	"strings"
 )
 
-func processClangFlags(rootPath string, builder *commandBuilder) error {
+func processClangFlags(builder *commandBuilder) error {
 	env := builder.env
 	clangDir := env.getenv("CLANG")
 
 	if clangDir == "" {
-		clangDir = filepath.Join(rootPath, "usr/bin/")
+		clangDir = filepath.Join(builder.rootPath, "usr/bin/")
 		if !filepath.IsAbs(builder.path) {
 			// If sysroot_wrapper is invoked by relative path, call actual compiler in
 			// relative form. This is neccesary to remove absolute path from compile
@@ -24,6 +24,11 @@ func processClangFlags(rootPath string, builder *commandBuilder) error {
 		}
 	} else {
 		clangDir = filepath.Dir(clangDir)
+	}
+
+	clangBasename := "clang"
+	if strings.HasSuffix(builder.target.compiler, "++") {
+		clangBasename = "clang++"
 	}
 
 	// GCC flags to remove from the clang command line.
@@ -102,7 +107,7 @@ func processClangFlags(rootPath string, builder *commandBuilder) error {
 
 		if clangPath := "-Xclang-path="; strings.HasPrefix(arg.value, clangPath) {
 			readResourceCmd := &command{
-				path: filepath.Join(clangDir, builder.target.compiler),
+				path: filepath.Join(clangDir, clangBasename),
 				args: []string{"--print-resource-dir"},
 			}
 			stdoutBuffer := bytes.Buffer{}
@@ -124,10 +129,10 @@ func processClangFlags(rootPath string, builder *commandBuilder) error {
 	}
 	builder.args = newArgs
 
-	builder.path = filepath.Join(clangDir, builder.target.compiler)
+	builder.path = filepath.Join(clangDir, clangBasename)
 
 	// Specify the target for clang.
-	linkerPath := getLinkerPath(env, builder.target.target+"-ld", rootPath)
+	linkerPath := getLinkerPath(env, builder.target.target+"-ld", builder.rootPath)
 	relLinkerPath, err := filepath.Rel(env.getwd(), linkerPath)
 	if err != nil {
 		return wrapErrorwithSourceLocf(err, "failed to make linker path %s relative to %s",

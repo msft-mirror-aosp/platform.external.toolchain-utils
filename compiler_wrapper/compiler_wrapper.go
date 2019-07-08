@@ -18,7 +18,7 @@ func callCompiler(env env, cfg *config, inputCmd *command) int {
 	} else if cfg.oldWrapperPath != "" {
 		exitCode, compilerErr = callCompilerWithRunAndCompareToOldWrapper(env, cfg, inputCmd)
 	} else {
-		compilerErr = callCompilerWithExec(env, cfg, inputCmd)
+		exitCode, compilerErr = callCompilerWithExec(env, cfg, inputCmd)
 	}
 	if compilerErr != nil {
 		printCompilerError(env.stderr(), compilerErr)
@@ -31,8 +31,8 @@ func callCompilerWithRunAndCompareToOldWrapper(env env, cfg *config, inputCmd *c
 	recordingEnv := &commandRecordingEnv{
 		env: env,
 	}
-	compilerCmd, err := calcCompilerCommand(recordingEnv, cfg, inputCmd)
-	if err != nil {
+	compilerCmd, exitCode, err := calcCompilerCommand(recordingEnv, cfg, inputCmd)
+	if err != nil || exitCode != 0 {
 		return exitCode, err
 	}
 	exitCode = 0
@@ -44,7 +44,7 @@ func callCompilerWithRunAndCompareToOldWrapper(env env, cfg *config, inputCmd *c
 		}
 		var ok bool
 		if exitCode, ok = getExitCode(err); !ok {
-			return exitCode, wrapErrorwithSourceLocf(err, "failed to execute %s %s", compilerCmd.path, compilerCmd.args)
+			return exitCode, wrapErrorwithSourceLocf(err, "failed to execute %#v", compilerCmd)
 		}
 	}
 	if err := compareToOldWrapper(env, cfg, inputCmd, recordingEnv.cmdResults); err != nil {
@@ -53,61 +53,87 @@ func callCompilerWithRunAndCompareToOldWrapper(env env, cfg *config, inputCmd *c
 	return exitCode, nil
 }
 
-func callCompilerWithExec(env env, cfg *config, inputCmd *command) error {
-	compilerCmd, err := calcCompilerCommand(env, cfg, inputCmd)
-	if err != nil {
-		return err
+func callCompilerWithExec(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
+	compilerCmd, exitCode, err := calcCompilerCommand(env, cfg, inputCmd)
+	if err != nil || exitCode != 0 {
+		return exitCode, err
 	}
 	if err := env.exec(compilerCmd); err != nil {
 		// Note: No need to check for exit code error as exec will
 		// stop this control flow once the command started executing.
 		if userErr, ok := getCCacheError(compilerCmd, err); ok {
-			return userErr
+			return exitCode, userErr
 		}
-		return wrapErrorwithSourceLocf(err, "failed to execute %s %s", compilerCmd.path, compilerCmd.args)
+		return exitCode, wrapErrorwithSourceLocf(err, "failed to execute %#v", compilerCmd)
 	}
-	return nil
+	return exitCode, nil
 }
 
-func calcCompilerCommand(env env, cfg *config, inputCmd *command) (*command, error) {
+func calcCompilerCommand(env env, cfg *config, inputCmd *command) (compilerCmd *command, exitCode int, err error) {
 	if err := checkUnsupportedFlags(inputCmd); err != nil {
-		return nil, err
+		return nil, exitCode, err
 	}
-	absWrapperDir, err := getAbsWrapperDir(env, inputCmd.path)
+	mainBuilder, err := newCommandBuilder(env, cfg, inputCmd)
 	if err != nil {
-		return nil, err
+		return nil, exitCode, err
 	}
-	rootPath := filepath.Join(absWrapperDir, cfg.rootRelPath)
-	builder, err := newCommandBuilder(env, cfg, inputCmd)
-	if err != nil {
-		return nil, err
-	}
-	useClang := builder.target.compilerType == clangType
-	sysroot := processSysrootFlag(rootPath, builder)
-	if useClang {
-		builder.addPreUserArgs(cfg.clangFlags...)
+	clangSyntax := processClangSyntaxFlag(mainBuilder)
+	if mainBuilder.target.compilerType == clangType {
+		compilerCmd, err = calcClangCommand(mainBuilder)
+		if err != nil {
+			return nil, exitCode, err
+		}
 	} else {
-		builder.addPreUserArgs(cfg.gccFlags...)
+		if clangSyntax {
+			clangCmd, err := calcClangCommand(mainBuilder.clone())
+			if err != nil {
+				return nil, 0, err
+			}
+			exitCode, err = checkClangSyntax(env, clangCmd)
+			if err != nil || exitCode != 0 {
+				return nil, exitCode, err
+			}
+		}
+		compilerCmd = calcGccCommand(mainBuilder)
 	}
-	builder.addPreUserArgs(cfg.commonFlags...)
+
+	return compilerCmd, exitCode, nil
+}
+
+func calcClangCommand(builder *commandBuilder) (*command, error) {
+	sysroot := processSysrootFlag(builder)
+	builder.addPreUserArgs(builder.cfg.clangFlags...)
+	calcCommonPreUserArgs(builder)
+	if err := processClangFlags(builder); err != nil {
+		return nil, err
+	}
+	processGomaCCacheFlags(sysroot, builder)
+	return builder.build(), nil
+}
+
+func calcGccCommand(builder *commandBuilder) *command {
+	sysroot := processSysrootFlag(builder)
+	builder.addPreUserArgs(builder.cfg.gccFlags...)
+	calcCommonPreUserArgs(builder)
+	processGccFlags(builder)
+	processGomaCCacheFlags(sysroot, builder)
+	return builder.build()
+}
+
+func calcCommonPreUserArgs(builder *commandBuilder) {
+	builder.addPreUserArgs(builder.cfg.commonFlags...)
 	processPieFlags(builder)
 	processStackProtectorFlags(builder)
 	processThumbCodeFlags(builder)
 	processX86Flags(builder)
 	processSanitizerFlags(builder)
-	if useClang {
-		if err := processClangFlags(rootPath, builder); err != nil {
-			return nil, err
-		}
-	} else {
-		processGccFlags(builder)
-	}
+}
+
+func processGomaCCacheFlags(sysroot string, builder *commandBuilder) {
 	gomaccUsed := processGomaCccFlags(builder)
 	if !gomaccUsed {
 		processCCacheFlag(sysroot, builder)
 	}
-
-	return builder.build(), nil
 }
 
 func getAbsWrapperDir(env env, wrapperPath string) (string, error) {

@@ -20,11 +20,6 @@ const compareToOldWrapperFilePattern = "old_wrapper_compare"
 // Whether the command should be executed by the old wrapper as we don't
 // support it yet.
 func shouldForwardToOldWrapper(env env, inputCmd *command) bool {
-	for _, arg := range inputCmd.args {
-		if arg == "-clang-syntax" {
-			return true
-		}
-	}
 	switch {
 	case env.getenv("WITH_TIDY") != "":
 		fallthrough
@@ -273,6 +268,28 @@ def check_output_mock(args):
 old_check_output = subprocess.check_output
 subprocess.check_output = check_output_mock
 
+def popen_mock(args):
+	serialize_cmd(args)
+	{{if .MockCmds}}
+	result = mockResults.pop(0)
+	print(result['stdout'], file=sys.stdout)
+	print(result['stderr'], file=sys.stderr)
+
+	class MockResult:
+		def __init__(self, returncode):
+			self.returncode = returncode
+
+		def wait(self):
+			return None
+
+	return MockResult(result['exitcode'])
+	{{else}}
+	return old_popen(args)
+	{{end}}
+
+old_popen = subprocess.Popen
+subprocess.Popen = popen_mock
+
 def execv_mock(binary, args):
 	serialize_cmd([binary] + args[1:])
 	{{if .MockCmds}}
@@ -322,8 +339,8 @@ sys.exit(main())
 		if exitCode, ok := getExitCode(err); ok {
 			return exitCode, nil
 		}
-		return 0, wrapErrorwithSourceLocf(err, "failed to call old wrapper. Command: %s %s",
-			inputCmd.path, inputCmd.args)
+		return 0, wrapErrorwithSourceLocf(err, "failed to call old wrapper. Command: %#v",
+			inputCmd)
 	}
 	return 0, nil
 }

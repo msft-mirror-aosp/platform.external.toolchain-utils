@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func processSysrootFlag(rootPath string, builder *commandBuilder) string {
+func processSysrootFlag(builder *commandBuilder) string {
 	fromUser := false
 	for _, arg := range builder.args {
 		if arg.fromUser && strings.HasPrefix(arg.value, "--sysroot=") {
@@ -18,7 +18,7 @@ func processSysrootFlag(rootPath string, builder *commandBuilder) string {
 		builder.updateEnv("SYSROOT=")
 	} else {
 		// Use the bundled sysroot by default.
-		sysroot = filepath.Join(rootPath, "usr", builder.target.target)
+		sysroot = filepath.Join(builder.rootPath, "usr", builder.target.target)
 	}
 	if !fromUser {
 		builder.addPreUserArgs("--sysroot=" + sysroot)

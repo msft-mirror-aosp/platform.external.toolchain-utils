@@ -52,11 +52,17 @@ func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, err
 	default:
 		compilerType = gccType
 	}
+	absWrapperDir, err := getAbsWrapperDir(env, cmd.path)
+	if err != nil {
+		return nil, err
+	}
+	rootPath := filepath.Join(absWrapperDir, cfg.rootRelPath)
 	return &commandBuilder{
-		path: cmd.path,
-		args: createBuilderArgs( /*fromUser=*/ true, cmd.args),
-		env:  env,
-		cfg:  cfg,
+		path:     cmd.path,
+		args:     createBuilderArgs( /*fromUser=*/ true, cmd.args),
+		env:      env,
+		cfg:      cfg,
+		rootPath: rootPath,
 		target: builderTarget{
 			target:       strings.Join(nameParts[:4], "-"),
 			arch:         nameParts[0],
@@ -76,6 +82,7 @@ type commandBuilder struct {
 	envUpdates []string
 	env        env
 	cfg        *config
+	rootPath   string
 }
 
 type builderArg struct {
@@ -106,6 +113,17 @@ func createBuilderArgs(fromUser bool, args []string) []builderArg {
 		builderArgs[i] = builderArg{value: arg, fromUser: fromUser}
 	}
 	return builderArgs
+}
+
+func (builder *commandBuilder) clone() *commandBuilder {
+	return &commandBuilder{
+		path:     builder.path,
+		args:     append([]builderArg{}, builder.args...),
+		env:      builder.env,
+		cfg:      builder.cfg,
+		rootPath: builder.rootPath,
+		target:   builder.target,
+	}
 }
 
 func (builder *commandBuilder) wrapPath(path string) {

@@ -11,52 +11,6 @@ import (
 	"text/template"
 )
 
-func TestNoForwardToOldWrapperBecauseOfArgs(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
-		testArgs := []string{
-			"abc",
-			"-clang-syntaxabc",
-		}
-		for _, testArg := range testArgs {
-			forwarded := false
-			ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
-				if isForwardToOldWrapperCmd(cmd) {
-					forwarded = true
-				}
-				return nil
-			}
-			ctx.must(callCompiler(ctx, ctx.cfg,
-				ctx.newCommand(clangX86_64, testArg)))
-			if forwarded {
-				t.Errorf("forwarded to old wrapper for arg %s", testArg)
-			}
-		}
-	})
-}
-
-func TestForwardToOldWrapperBecauseOfArgs(t *testing.T) {
-	withForwardToOldWrapperTestContext(t, func(ctx *testContext) {
-		testArgs := []string{"-clang-syntax"}
-		for _, testArg := range testArgs {
-			forwarded := false
-			ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
-				forwarded = true
-				if !isForwardToOldWrapperCmd(cmd) {
-					return newErrorwithSourceLocf("expected call to old wrapper. Got: %s", cmd.path)
-				}
-				if err := verifyArgCount(cmd, 1, testArg); err != nil {
-					return err
-				}
-				return nil
-			}
-			ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, testArg)))
-			if !forwarded {
-				t.Errorf("not forwarded to old wrapper for arg %s", testArg)
-			}
-		}
-	})
-}
-
 func TestNoForwardToOldWrapperBecauseOfEnv(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		testEnvs := []string{"PATH=abc"}
