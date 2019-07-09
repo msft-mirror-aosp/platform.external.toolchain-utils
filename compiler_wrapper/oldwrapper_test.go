@@ -34,7 +34,6 @@ func TestNoForwardToOldWrapperBecauseOfEnv(t *testing.T) {
 func TestForwardToOldWrapperBecauseOfEnv(t *testing.T) {
 	withForwardToOldWrapperTestContext(t, func(ctx *testContext) {
 		testEnvs := []string{
-			"FORCE_DISABLE_WERROR=abc",
 			"GETRUSAGE=abc",
 			"BISECT_STAGE=abc",
 		}
@@ -122,6 +121,15 @@ func TestCompareToOldWrapperCompilerCommand(t *testing.T) {
 		pathSuffix := ""
 		extraArgs := []string{}
 		exitCode := 0
+		newWrapperExitCode := 0
+
+		reset := func() {
+			ctx.stderrBuffer.Reset()
+			pathSuffix = ""
+			extraArgs = []string{}
+			exitCode = 0
+			newWrapperExitCode = 0
+		}
 
 		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
 			writeMockWrapper(ctx, &mockWrapperConfig{
@@ -133,42 +141,44 @@ func TestCompareToOldWrapperCompilerCommand(t *testing.T) {
 					},
 				},
 			})
+			if newWrapperExitCode != 0 {
+				return newExitCodeError(newWrapperExitCode)
+			}
 			return nil
 		}
 
 		// Note: This will cause only the compiler command.
 		inputCmd := ctx.newCommand(gccX86_64)
 
-		ctx.stderrBuffer.Reset()
+		reset()
 		pathSuffix = "xyz"
-		extraArgs = nil
-		exitCode = 0
 		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, inputCmd))
 		if !strings.Contains(stderr, "Index 0: path") {
 			t.Errorf("expected path difference error. Got: %s", stderr)
 		}
 
-		ctx.stderrBuffer.Reset()
-		pathSuffix = ""
+		reset()
 		extraArgs = []string{"xyz"}
-		exitCode = 0
 		stderr = ctx.mustFail(callCompiler(ctx, ctx.cfg, inputCmd))
 		if !strings.Contains(stderr, "Index 0: args") {
 			t.Errorf("expected args difference error. Got: %s", stderr)
 		}
 
-		ctx.stderrBuffer.Reset()
-		pathSuffix = ""
-		extraArgs = nil
+		reset()
 		exitCode = 1
 		stderr = ctx.mustFail(callCompiler(ctx, ctx.cfg, inputCmd))
-		if !strings.Contains(stderr, "Index 0: exit code") {
+		if !strings.Contains(stderr, "exit codes differ: old 1, new 0") {
 			t.Errorf("expected exit code difference error. Got: %s", stderr)
 		}
 
-		pathSuffix = ""
-		extraArgs = nil
-		exitCode = 0
+		reset()
+		newWrapperExitCode = 1
+		stderr = ctx.mustFail(callCompiler(ctx, ctx.cfg, inputCmd))
+		if !strings.Contains(stderr, "exit codes differ: old 0, new 1") {
+			t.Errorf("expected exit code difference error. Got: %s", stderr)
+		}
+
+		reset()
 		ctx.must(callCompiler(ctx, ctx.cfg, inputCmd))
 	})
 }

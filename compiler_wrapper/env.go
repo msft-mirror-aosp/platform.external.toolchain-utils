@@ -77,10 +77,9 @@ type commandResult struct {
 var _ env = (*commandRecordingEnv)(nil)
 
 func (env *commandRecordingEnv) exec(cmd *command) error {
-	// Note: We will only get here if the exec failed,
-	// e.g. when the underlying command could not be called.
-	// In this case, we don't compare commands, so nothing to record.
-	return env.exec(cmd)
+	// Note: We treat exec the same as run so that we can do work
+	// after the call.
+	return env.run(cmd, env.stdout(), env.stderr())
 }
 
 func (env *commandRecordingEnv) run(cmd *command, stdout io.Writer, stderr io.Writer) error {

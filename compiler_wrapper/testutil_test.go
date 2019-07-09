@@ -126,7 +126,7 @@ func (ctx *testContext) exec(cmd *command) error {
 
 func (ctx *testContext) must(exitCode int) *command {
 	if exitCode != 0 {
-		ctx.t.Fatalf("expected no error, but got %d. Stderr: %s",
+		ctx.t.Fatalf("expected no error, but got exit code %d. Stderr: %s",
 			exitCode, ctx.stderrString())
 	}
 	return ctx.lastCmd
@@ -143,6 +143,7 @@ func (ctx *testContext) updateConfig(wrapperChrootPath string, cfg *config) {
 	*ctx.cfg = *cfg
 	ctx.cfg.overwriteOldWrapperCfg = true
 	ctx.cfg.mockOldWrapperCmds = true
+	ctx.cfg.newWarningsDir = filepath.Join(ctx.tempDir, "fatal_clang_warnings")
 	if *crosRootDirFlag != "" {
 		ctx.cfg.oldWrapperPath = filepath.Join(*crosRootDirFlag, wrapperChrootPath)
 	} else {

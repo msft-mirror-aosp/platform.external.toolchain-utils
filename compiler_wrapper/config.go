@@ -21,6 +21,8 @@ type config struct {
 	mockOldWrapperCmds bool
 	// Whether to overwrite the config in the old wrapper.
 	overwriteOldWrapperCfg bool
+	// Directory to store errors that were prevented with -Wno-error.
+	newWarningsDir string
 }
 
 // UseCCache can be set via a linker flag.
@@ -90,6 +92,7 @@ func getCrosHardenedConfig(useCCache bool) *config {
 			"-fno-addrsig",
 			"-Wno-tautological-constant-compare",
 		},
+		newWarningsDir: "/tmp/fatal_clang_warnings",
 	}
 }
 
@@ -116,5 +119,6 @@ func getCrosNonHardenedConfig(useCCache bool) *config {
 			"-Wno-tautological-unsigned-enum-zero-compare",
 			"-Wno-tautological-constant-compare",
 		},
+		newWarningsDir: "/tmp/fatal_clang_warnings",
 	}
 }

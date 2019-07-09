@@ -9,7 +9,7 @@ import (
 )
 
 func TestClangTidyBasename(t *testing.T) {
-	withClangSyntaxTestContext(t, func(ctx *testContext) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
 		testData := []struct {
 			in  string
 			out string
@@ -42,7 +42,7 @@ func TestClangTidyBasename(t *testing.T) {
 }
 
 func TestClangTidyClangResourceDir(t *testing.T) {
-	withClangSyntaxTestContext(t, func(ctx *testContext) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
 		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
@@ -81,7 +81,7 @@ func TestClangTidyClangResourceDir(t *testing.T) {
 }
 
 func TestClangTidyArgOrder(t *testing.T) {
-	withClangSyntaxTestContext(t, func(ctx *testContext) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
 		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 2 {
 				if err := verifyArgOrder(cmd, "-checks=.*", mainCc, "--", "-resource-dir=.*", mainCc, "--some_arg"); err != nil {
@@ -99,7 +99,7 @@ func TestClangTidyArgOrder(t *testing.T) {
 }
 
 func TestForwardStdOutAndStderrFromClangTidyCall(t *testing.T) {
-	withClangSyntaxTestContext(t, func(ctx *testContext) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
 		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 2 {
 				fmt.Fprintf(stdout, "somemessage")
@@ -119,7 +119,7 @@ func TestForwardStdOutAndStderrFromClangTidyCall(t *testing.T) {
 }
 
 func TestIgnoreNonZeroExitCodeFromClangTidy(t *testing.T) {
-	withClangSyntaxTestContext(t, func(ctx *testContext) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
 		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 2 {
 				return newExitCodeError(23)
@@ -136,7 +136,7 @@ func TestIgnoreNonZeroExitCodeFromClangTidy(t *testing.T) {
 }
 
 func TestReportGeneralErrorsFromClangTidy(t *testing.T) {
-	withClangSyntaxTestContext(t, func(ctx *testContext) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
 		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 2 {
 				return errors.New("someerror")
@@ -155,7 +155,7 @@ func TestReportGeneralErrorsFromClangTidy(t *testing.T) {
 }
 
 func TestOmitClangTidyForGcc(t *testing.T) {
-	withClangSyntaxTestContext(t, func(ctx *testContext) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
 		ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if ctx.cmdCount > 1 {
@@ -165,7 +165,7 @@ func TestOmitClangTidyForGcc(t *testing.T) {
 }
 
 func TestOmitClangTidyForGccWithClangSyntax(t *testing.T) {
-	withClangSyntaxTestContext(t, func(ctx *testContext) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
 		ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, "-clang-syntax", mainCc)))
 		if ctx.cmdCount > 2 {
@@ -175,7 +175,7 @@ func TestOmitClangTidyForGccWithClangSyntax(t *testing.T) {
 }
 
 func TestUseClangTidyBasedOnFileExtension(t *testing.T) {
-	withClangSyntaxTestContext(t, func(ctx *testContext) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
 		testData := []struct {
 			args      []string
 			clangTidy bool
@@ -204,7 +204,7 @@ func TestUseClangTidyBasedOnFileExtension(t *testing.T) {
 }
 
 func TestOmitCCacheWithClangTidy(t *testing.T) {
-	withClangSyntaxTestContext(t, func(ctx *testContext) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
 		ctx.cfg.useCCache = true
 
 		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
@@ -234,7 +234,7 @@ func TestOmitCCacheWithClangTidy(t *testing.T) {
 	})
 }
 
-func withClangSyntaxTestContext(t *testing.T, work func(ctx *testContext)) {
+func withClangTidyTestContext(t *testing.T, work func(ctx *testContext)) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.env = []string{"WITH_TIDY=1"}
 		work(ctx)

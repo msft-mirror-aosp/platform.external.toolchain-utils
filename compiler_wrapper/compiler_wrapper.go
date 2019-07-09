@@ -18,7 +18,7 @@ func callCompiler(env env, cfg *config, inputCmd *command) int {
 	} else if cfg.oldWrapperPath != "" {
 		exitCode, compilerErr = callCompilerWithRunAndCompareToOldWrapper(env, cfg, inputCmd)
 	} else {
-		exitCode, compilerErr = callCompilerWithExec(env, cfg, inputCmd)
+		exitCode, compilerErr = callCompilerInternal(env, cfg, inputCmd)
 	}
 	if compilerErr != nil {
 		printCompilerError(env.stderr(), compilerErr)
@@ -31,62 +31,35 @@ func callCompilerWithRunAndCompareToOldWrapper(env env, cfg *config, inputCmd *c
 	recordingEnv := &commandRecordingEnv{
 		env: env,
 	}
-	compilerCmd, exitCode, err := calcCompilerCommand(recordingEnv, cfg, inputCmd)
-	if err != nil || exitCode != 0 {
-		return exitCode, err
+	// Note: this won't do a real exec as recordingEnv redirects exec to run.
+	if exitCode, err = callCompilerInternal(recordingEnv, cfg, inputCmd); err != nil {
+		return 0, err
 	}
-	exitCode = 0
-	// Note: we are not using env.exec here so that we can compare the exit code
-	// against the old wrapper too.
-	if err := recordingEnv.run(compilerCmd, env.stdout(), env.stderr()); err != nil {
-		if userErr, ok := getCCacheError(compilerCmd, err); ok {
-			return exitCode, userErr
-		}
-		var ok bool
-		if exitCode, ok = getExitCode(err); !ok {
-			return exitCode, wrapErrorwithSourceLocf(err, "failed to execute %#v", compilerCmd)
-		}
-	}
-	if err := compareToOldWrapper(env, cfg, inputCmd, recordingEnv.cmdResults); err != nil {
+	if err = compareToOldWrapper(env, cfg, inputCmd, recordingEnv.cmdResults, exitCode); err != nil {
 		return exitCode, err
 	}
 	return exitCode, nil
 }
 
-func callCompilerWithExec(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
-	compilerCmd, exitCode, err := calcCompilerCommand(env, cfg, inputCmd)
-	if err != nil || exitCode != 0 {
-		return exitCode, err
-	}
-	if err := env.exec(compilerCmd); err != nil {
-		// Note: No need to check for exit code error as exec will
-		// stop this control flow once the command started executing.
-		if userErr, ok := getCCacheError(compilerCmd, err); ok {
-			return exitCode, userErr
-		}
-		return exitCode, wrapErrorwithSourceLocf(err, "failed to execute %#v", compilerCmd)
-	}
-	return exitCode, nil
-}
-
-func calcCompilerCommand(env env, cfg *config, inputCmd *command) (compilerCmd *command, exitCode int, err error) {
+func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
 	if err := checkUnsupportedFlags(inputCmd); err != nil {
-		return nil, exitCode, err
+		return 0, err
 	}
 	mainBuilder, err := newCommandBuilder(env, cfg, inputCmd)
 	if err != nil {
-		return nil, exitCode, err
+		return 0, err
 	}
+	var compilerCmd *command
 	clangSyntax := processClangSyntaxFlag(mainBuilder)
 	if mainBuilder.target.compilerType == clangType {
 		cSrcFile, useClangTidy := processClangTidyFlags(mainBuilder)
 		compilerCmd, err = calcClangCommand(useClangTidy, mainBuilder)
 		if err != nil {
-			return nil, exitCode, err
+			return 0, err
 		}
 		if useClangTidy {
 			if err := runClangTidy(env, compilerCmd, cSrcFile); err != nil {
-				return nil, exitCode, err
+				return 0, err
 			}
 		}
 	} else {
@@ -94,17 +67,30 @@ func calcCompilerCommand(env env, cfg *config, inputCmd *command) (compilerCmd *
 			forceLocal := false
 			clangCmd, err := calcClangCommand(forceLocal, mainBuilder.clone())
 			if err != nil {
-				return nil, 0, err
+				return 0, err
 			}
 			exitCode, err = checkClangSyntax(env, clangCmd)
 			if err != nil || exitCode != 0 {
-				return nil, exitCode, err
+				return exitCode, err
 			}
 		}
 		compilerCmd = calcGccCommand(mainBuilder)
 	}
-
-	return compilerCmd, exitCode, nil
+	if shouldForceDisableWError(env) {
+		return doubleBuildWithWNoError(env, cfg, compilerCmd)
+	}
+	if err := env.exec(compilerCmd); err != nil {
+		if userErr, ok := getCCacheError(compilerCmd, err); ok {
+			return 0, userErr
+		}
+		// Note: This case only happens when the underlying env is not
+		// really doing an exec, e.g. commandRecordingEnv.
+		if exitCode, ok := getExitCode(err); ok {
+			return exitCode, nil
+		}
+		return exitCode, wrapErrorwithSourceLocf(err, "failed to execute %#v", compilerCmd)
+	}
+	return 0, err
 }
 
 func calcClangCommand(forceLocal bool, builder *commandBuilder) (*command, error) {

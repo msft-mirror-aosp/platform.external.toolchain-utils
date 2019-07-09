@@ -21,8 +21,6 @@ const compareToOldWrapperFilePattern = "old_wrapper_compare"
 // support it yet.
 func shouldForwardToOldWrapper(env env, inputCmd *command) bool {
 	switch {
-	case env.getenv("FORCE_DISABLE_WERROR") != "":
-		fallthrough
 	case env.getenv("GETRUSAGE") != "":
 		fallthrough
 	case env.getenv("BISECT_STAGE") != "":
@@ -39,36 +37,49 @@ func forwardToOldWrapper(env env, cfg *config, inputCmd *command) (exitCode int,
 	return callOldWrapper(env, oldWrapperCfg, inputCmd, forwardToOldWrapperFilePattern, env.stdout(), env.stderr())
 }
 
-func compareToOldWrapper(env env, cfg *config, inputCmd *command, newCmdResults []*commandResult) error {
+func compareToOldWrapper(env env, cfg *config, inputCmd *command, newCmdResults []*commandResult, newExitCode int) error {
 	oldWrapperCfg, err := newOldWrapperConfig(env, cfg, inputCmd)
 	if err != nil {
 		return err
 	}
 	oldWrapperCfg.LogCmds = true
 	oldWrapperCfg.MockCmds = cfg.mockOldWrapperCmds
+	newCmds := []*command{}
 	for _, cmdResult := range newCmdResults {
 		oldWrapperCfg.CmdResults = append(oldWrapperCfg.CmdResults, oldWrapperCmdResult{
 			Stdout:   cmdResult.stdout,
 			Stderr:   cmdResult.stderr,
 			Exitcode: cmdResult.exitCode,
 		})
+		newCmds = append(newCmds, cmdResult.cmd)
 	}
 	oldWrapperCfg.OverwriteConfig = cfg.overwriteOldWrapperCfg
 
-	stdoutBuffer := bytes.Buffer{}
 	stderrBuffer := bytes.Buffer{}
-	exitCode, err := callOldWrapper(env, oldWrapperCfg, inputCmd, compareToOldWrapperFilePattern, &stdoutBuffer, &stderrBuffer)
+	oldExitCode, err := callOldWrapper(env, oldWrapperCfg, inputCmd, compareToOldWrapperFilePattern, &bytes.Buffer{}, &stderrBuffer)
 	if err != nil {
 		return err
 	}
-	oldCmdResults := parseOldWrapperCommands(stdoutBuffer.String(), stderrBuffer.String(), exitCode)
-	return diffCommandResults(oldCmdResults, newCmdResults)
+	differences := []string{}
+	if oldExitCode != newExitCode {
+		differences = append(differences, fmt.Sprintf("exit codes differ: old %d, new %d", oldExitCode, newExitCode))
+	}
+	oldCmds, stderr := parseOldWrapperCommands(stderrBuffer.String())
+	if cmdDifferences := diffCommands(oldCmds, newCmds); cmdDifferences != "" {
+		differences = append(differences, cmdDifferences)
+	}
+	if len(differences) > 0 {
+		return newErrorwithSourceLocf("wrappers differ:\n%s\nOld stderr:%s",
+			strings.Join(differences, "\n"),
+			stderr,
+		)
+	}
+	return nil
 }
 
-func parseOldWrapperCommands(stdout string, stderr string, exitCode int) []*commandResult {
+func parseOldWrapperCommands(stderr string) (cmds []*command, remainingStderr string) {
 	allStderrLines := strings.Split(stderr, "\n")
 	remainingStderrLines := []string{}
-	cmdResults := []*commandResult{}
 	for _, line := range allStderrLines {
 		const commandPrefix = "command:"
 		const envupdatePrefix = ".EnvUpdate:"
@@ -85,63 +96,50 @@ func parseOldWrapperCommands(stdout string, stderr string, exitCode int) []*comm
 				// simpler.
 				envUpdate = nil
 			}
-			command := &command{
+			cmd := &command{
 				path:       args[0],
 				args:       args[1:],
 				envUpdates: envUpdate,
 			}
-			cmdResults = append(cmdResults, &commandResult{cmd: command})
+			cmds = append(cmds, cmd)
 		} else {
 			remainingStderrLines = append(remainingStderrLines, line)
 		}
 	}
-	remainingStderr := strings.TrimSpace(strings.Join(remainingStderrLines, "\n"))
-	if len(cmdResults) > 0 {
-		lastCmdResult := cmdResults[len(cmdResults)-1]
-		lastCmdResult.exitCode = exitCode
-		lastCmdResult.stderr = remainingStderr
-		lastCmdResult.stdout = strings.TrimSpace(stdout)
-	}
-
-	return cmdResults
+	remainingStderr = strings.TrimSpace(strings.Join(remainingStderrLines, "\n"))
+	return cmds, remainingStderr
 }
 
-func diffCommandResults(oldCmdResults []*commandResult, newCmdResults []*commandResult) error {
-	maxLen := len(newCmdResults)
-	if maxLen < len(oldCmdResults) {
-		maxLen = len(oldCmdResults)
+func diffCommands(oldCmds []*command, newCmds []*command) string {
+	maxLen := len(newCmds)
+	if maxLen < len(oldCmds) {
+		maxLen = len(oldCmds)
 	}
 	hasDifferences := false
 	var cmdDifferences []string
 	for i := 0; i < maxLen; i++ {
 		var differences []string
-		if i >= len(newCmdResults) {
+		if i >= len(newCmds) {
 			differences = append(differences, "missing command")
-		} else if i >= len(oldCmdResults) {
+		} else if i >= len(oldCmds) {
 			differences = append(differences, "extra command")
 		} else {
-			newCmdResult := newCmdResults[i]
-			oldCmdResult := oldCmdResults[i]
+			newCmd := newCmds[i]
+			oldCmd := oldCmds[i]
 
-			if i == maxLen-1 && newCmdResult.exitCode != oldCmdResult.exitCode {
-				// We do not capture errors in nested commands from the old wrapper,
-				// so only compare the exit codes of the final compiler command.
-				differences = append(differences, "exit code")
-			}
-
-			if newCmdResult.cmd.path != oldCmdResult.cmd.path {
+			if newCmd.path != oldCmd.path {
 				differences = append(differences, "path")
 			}
 
-			if !reflect.DeepEqual(newCmdResult.cmd.args, oldCmdResult.cmd.args) {
+			if !reflect.DeepEqual(newCmd.args, oldCmd.args) {
 				differences = append(differences, "args")
 			}
 
 			// Sort the environment as we don't care in which order
 			// it was modified.
-			newEnvUpdates := newCmdResult.cmd.envUpdates
+			newEnvUpdates := newCmd.envUpdates
 			sort.Strings(newEnvUpdates)
-			oldEnvUpdates := oldCmdResult.cmd.envUpdates
+			oldEnvUpdates := oldCmd.envUpdates
 			sort.Strings(oldEnvUpdates)
 
 			if !reflect.DeepEqual(newEnvUpdates, oldEnvUpdates) {
@@ -157,19 +155,18 @@ func diffCommandResults(oldCmdResults []*commandResult, newCmdResults []*command
 			fmt.Sprintf("Index %d: %s", i, strings.Join(differences, ",")))
 	}
 	if hasDifferences {
-		return newErrorwithSourceLocf("commands differ:\n%s\nOld commands:\n%s\nNew commands:\n%s",
+		return fmt.Sprintf("commands differ:\n%s\nOld:%#v\nNew:%#v",
 			strings.Join(cmdDifferences, "\n"),
-			dumpCommandResults(oldCmdResults),
-			dumpCommandResults(newCmdResults),
-		)
+			dumpCommands(oldCmds),
+			dumpCommands(newCmds))
 	}
-	return nil
+	return ""
 }
 
-func dumpCommandResults(results []*commandResult) string {
+func dumpCommands(cmds []*command) string {
 	lines := []string{}
-	for _, result := range results {
-		lines = append(lines, fmt.Sprintf("cmd: %#v; result: %#v", result.cmd, result))
+	for _, cmd := range cmds {
+		lines = append(lines, fmt.Sprintf("%#v", cmd))
 	}
 	return strings.Join(lines, "\n")
 }
@@ -266,19 +263,22 @@ def check_output_mock(args):
 old_check_output = subprocess.check_output
 subprocess.check_output = check_output_mock
 
-def popen_mock(args):
+def popen_mock(args, stdout=None, stderr=None):
 	serialize_cmd(args)
 	{{if .MockCmds}}
 	result = mockResults.pop(0)
-	print(result['stdout'], file=sys.stdout)
-	print(result['stderr'], file=sys.stderr)
+	if stdout is None:
+		print(result['stdout'], file=sys.stdout)
+	if stderr is None:
+		print(result['stderr'], file=sys.stderr)
 
 	class MockResult:
 		def __init__(self, returncode):
 			self.returncode = returncode
-
 		def wait(self):
-			return None
+			return self.returncode
+		def communicate(self):
+			return (result['stdout'], result['stderr'])
 
 	return MockResult(result['exitcode'])
 	{{else}}
