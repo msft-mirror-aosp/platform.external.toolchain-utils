@@ -423,7 +423,7 @@ class Result(object):
 
     keyvals = {}
     with open(filename) as f:
-      histograms = json.loads(f)
+      histograms = json.load(f)
       for obj in histograms:
         if 'name' not in obj or 'sampleValues' not in obj:
           continue
