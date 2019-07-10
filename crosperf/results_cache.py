@@ -207,7 +207,7 @@ class Result(object):
       elif self.cwp_dso == 'chrome':
         exact_match = '" chrome "'
       elif self.cwp_dso == 'kallsyms':
-        exact_match = '"[kernal.kallsyms]"'
+        exact_match = '"[kernel.kallsyms]"'
       else:
         # This will need to be updated once there are more DSO types supported,
         # if user want an exact match for the field they want.
