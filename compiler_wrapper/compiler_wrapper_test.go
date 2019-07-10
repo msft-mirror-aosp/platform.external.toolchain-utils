@@ -124,6 +124,19 @@ func TestLogExitCodeErrorWhenComparingToOldWrapper(t *testing.T) {
 	})
 }
 
+func TestErrorOnLogRusageAndForceDisableWError(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.env = []string{
+			"FORCE_DISABLE_WERROR=1",
+			"GETRUSAGE=" + filepath.Join(ctx.tempDir, "rusage.log"),
+		}
+		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyNonInternalError(stderr, "GETRUSAGE is meaningless with FORCE_DISABLE_WERROR"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
 func TestPrintUserCompilerError(t *testing.T) {
 	buffer := bytes.Buffer{}
 	printCompilerError(&buffer, newUserErrorf("abcd"))

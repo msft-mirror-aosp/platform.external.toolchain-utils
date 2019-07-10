@@ -20,13 +20,7 @@ const compareToOldWrapperFilePattern = "old_wrapper_compare"
 // Whether the command should be executed by the old wrapper as we don't
 // support it yet.
 func shouldForwardToOldWrapper(env env, inputCmd *command) bool {
-	switch {
-	case env.getenv("GETRUSAGE") != "":
-		fallthrough
-	case env.getenv("BISECT_STAGE") != "":
-		return true
-	}
-	return false
+	return env.getenv("BISECT_STAGE") != ""
 }
 
 func forwardToOldWrapper(env env, cfg *config, inputCmd *command) (exitCode int, err error) {

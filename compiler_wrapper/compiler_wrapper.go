@@ -74,8 +74,15 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		}
 		compilerCmd = calcGccCommand(mainBuilder)
 	}
+	rusageLogfileName := getRusageLogFilename(env)
 	if shouldForceDisableWError(env) {
+		if rusageLogfileName != "" {
+			return 0, newUserErrorf("GETRUSAGE is meaningless with FORCE_DISABLE_WERROR")
+		}
 		return doubleBuildWithWNoError(env, cfg, compilerCmd)
+	}
+	if rusageLogfileName != "" {
+		return logRusage(env, rusageLogfileName, compilerCmd)
 	}
 	// Note: We return an exit code only if the underlying env is not
 	// really doing an exec, e.g. commandRecordingEnv.

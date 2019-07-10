@@ -78,7 +78,7 @@ func runClangTidy(env env, clangCmd *command, cSrcFile string) error {
 	if err == nil && exitCode != 0 {
 		// Note: We continue on purpose when clang-tidy fails
 		// to maintain compatibility with the previous wrapper.
-		fmt.Fprintf(env.stderr(), "clang-tidy failed")
+		fmt.Fprint(env.stderr(), "clang-tidy failed")
 	}
 	return err
 }

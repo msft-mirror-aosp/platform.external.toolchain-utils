@@ -40,8 +40,8 @@ func TestForwardStdOutAndStderrFromClangSyntaxCheck(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 1 {
-				fmt.Fprintf(stdout, "somemessage")
-				fmt.Fprintf(stderr, "someerror")
+				fmt.Fprint(stdout, "somemessage")
+				fmt.Fprint(stderr, "someerror")
 			}
 			return nil
 		}
