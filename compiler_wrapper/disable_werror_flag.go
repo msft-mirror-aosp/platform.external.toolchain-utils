@@ -15,10 +15,10 @@ func shouldForceDisableWError(env env) bool {
 func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCode int, err error) {
 	originalStdoutBuffer := &bytes.Buffer{}
 	originalStderrBuffer := &bytes.Buffer{}
-	err = env.run(originalCmd, originalStdoutBuffer, originalStderrBuffer)
-	originalExitCode, ok := getExitCode(err)
-	if !ok {
-		return 0, wrapErrorwithSourceLocf(err, "failed to execute %#v", originalCmd)
+	originalExitCode, err := wrapSubprocessErrorWithSourceLoc(originalCmd,
+		env.run(originalCmd, originalStdoutBuffer, originalStderrBuffer))
+	if err != nil {
+		return 0, err
 	}
 	// The only way we can do anything useful is if it looks like the failure
 	// was -Werror-related.
@@ -35,10 +35,10 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 		args:       append(originalCmd.args, "-Wno-error"),
 		envUpdates: originalCmd.envUpdates,
 	}
-	err = env.run(retryCommand, retryStdoutBuffer, retryStderrBuffer)
-	retryExitCode, ok := getExitCode(err)
-	if !ok {
-		return 0, wrapErrorwithSourceLocf(err, "failed to execute %#v", retryCommand)
+	retryExitCode, err := wrapSubprocessErrorWithSourceLoc(retryCommand,
+		env.run(retryCommand, retryStdoutBuffer, retryStderrBuffer))
+	if err != nil {
+		return 0, err
 	}
 	// If -Wno-error fixed us, pretend that we never ran without -Wno-error.
 	// Otherwise, pretend that we never ran the second invocation. Since -Werror

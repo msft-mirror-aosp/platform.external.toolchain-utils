@@ -329,16 +329,10 @@ sys.exit(main())
 
 	// Note: Using a self executable wrapper does not work due to a race condition
 	// on unix systems. See https://github.com/golang/go/issues/22315
-	if err := env.run(&command{
+	oldWrapperCmd := &command{
 		path:       "/usr/bin/python2",
 		args:       append([]string{"-S", mockFile.Name()}, inputCmd.args...),
 		envUpdates: inputCmd.envUpdates,
-	}, stdout, stderr); err != nil {
-		if exitCode, ok := getExitCode(err); ok {
-			return exitCode, nil
-		}
-		return 0, wrapErrorwithSourceLocf(err, "failed to call old wrapper. Command: %#v",
-			inputCmd)
 	}
-	return 0, nil
+	return wrapSubprocessErrorWithSourceLoc(oldWrapperCmd, env.run(oldWrapperCmd, stdout, stderr))
 }

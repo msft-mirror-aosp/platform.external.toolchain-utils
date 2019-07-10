@@ -17,12 +17,6 @@ func checkClangSyntax(env env, clangCmd *command) (exitCode int, err error) {
 		args:       append(clangCmd.args, "-fsyntax-only", "-stdlib=libstdc++"),
 		envUpdates: clangCmd.envUpdates,
 	}
-	if err := env.run(clangSyntaxCmd, env.stdout(), env.stderr()); err != nil {
-		if exitCode, ok := getExitCode(err); ok {
-			return exitCode, nil
-		}
-		return exitCode, wrapErrorwithSourceLocf(err, "failed to call clang for syntax check. Command: %#v",
-			clangSyntaxCmd)
-	}
-	return exitCode, nil
+	return wrapSubprocessErrorWithSourceLoc(clangSyntaxCmd,
+		env.run(clangSyntaxCmd, env.stdout(), env.stderr()))
 }

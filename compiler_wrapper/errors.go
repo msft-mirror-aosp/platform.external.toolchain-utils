@@ -30,6 +30,20 @@ func wrapErrorwithSourceLocf(err error, format string, v ...interface{}) error {
 	return newErrorwithSourceLocfInternal(2, "%s: %s", fmt.Sprintf(format, v...), err.Error())
 }
 
+func wrapSubprocessErrorWithSourceLoc(cmd *command, subprocessErr error) (exitCode int, err error) {
+	if subprocessErr == nil {
+		return 0, nil
+	}
+	if userErr, ok := getCCacheError(cmd, subprocessErr); ok {
+		return 0, userErr
+	}
+	if exitCode, ok := getExitCode(subprocessErr); ok {
+		return exitCode, nil
+	}
+	err = newErrorwithSourceLocfInternal(2, "failed to execute %#v: %s", cmd, subprocessErr)
+	return 0, err
+}
+
 // Based on the implementation of log.Output
 func newErrorwithSourceLocfInternal(skip int, format string, v ...interface{}) error {
 	_, file, line, ok := runtime.Caller(skip)
@@ -54,4 +68,15 @@ func getExitCode(err error) (exitCode int, ok bool) {
 		}
 	}
 	return 0, false
+}
+
+func getCCacheError(compilerCmd *command, compilerCmdErr error) (ccacheErr userError, ok bool) {
+	if en, ok := compilerCmdErr.(syscall.Errno); ok && en == syscall.ENOENT &&
+		strings.Contains(compilerCmd.path, "ccache") {
+		ccacheErr =
+			newUserErrorf("ccache not found under %s. Please install it",
+				compilerCmd.path)
+		return ccacheErr, true
+	}
+	return ccacheErr, false
 }

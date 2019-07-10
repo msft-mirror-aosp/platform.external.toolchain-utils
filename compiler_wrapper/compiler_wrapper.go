@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
-	"strings"
-	"syscall"
 )
 
 func callCompiler(env env, cfg *config, inputCmd *command) int {
@@ -79,18 +77,9 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	if shouldForceDisableWError(env) {
 		return doubleBuildWithWNoError(env, cfg, compilerCmd)
 	}
-	if err := env.exec(compilerCmd); err != nil {
-		if userErr, ok := getCCacheError(compilerCmd, err); ok {
-			return 0, userErr
-		}
-		// Note: This case only happens when the underlying env is not
-		// really doing an exec, e.g. commandRecordingEnv.
-		if exitCode, ok := getExitCode(err); ok {
-			return exitCode, nil
-		}
-		return exitCode, wrapErrorwithSourceLocf(err, "failed to execute %#v", compilerCmd)
-	}
-	return 0, err
+	// Note: We return an exit code only if the underlying env is not
+	// really doing an exec, e.g. commandRecordingEnv.
+	return wrapSubprocessErrorWithSourceLoc(compilerCmd, env.exec(compilerCmd))
 }
 
 func calcClangCommand(forceLocal bool, builder *commandBuilder) (*command, error) {
@@ -140,17 +129,6 @@ func getAbsWrapperDir(env env, wrapperPath string) (string, error) {
 		return "", wrapErrorwithSourceLocf(err, "failed to evaluate symlinks for %s", wrapperPath)
 	}
 	return filepath.Dir(evaledCmdPath), nil
-}
-
-func getCCacheError(compilerCmd *command, compilerCmdErr error) (ccacheErr userError, ok bool) {
-	if en, ok := compilerCmdErr.(syscall.Errno); ok && en == syscall.ENOENT &&
-		strings.Contains(compilerCmd.path, "ccache") {
-		ccacheErr =
-			newUserErrorf("ccache not found under %s. Please install it",
-				compilerCmd.path)
-		return ccacheErr, ok
-	}
-	return ccacheErr, false
 }
 
 func printCompilerError(writer io.Writer, compilerErr error) {

@@ -73,18 +73,14 @@ func runClangTidy(env env, clangCmd *command, cSrcFile string) error {
 		envUpdates: clangCmd.envUpdates,
 	}
 
-	if err := env.run(clangTidyCmd, env.stdout(), env.stderr()); err != nil {
-		if _, ok := getExitCode(err); ok {
-			// Note: We continue on purpose when clang-tidy fails
-			// to maintain compatibility with the previous wrapper.
-			fmt.Fprintf(env.stderr(), "clang-tidy failed")
-		} else {
-			return wrapErrorwithSourceLocf(err, "failed to call clang tidy. Command: %#v",
-				clangTidyCmd)
-		}
+	exitCode, err := wrapSubprocessErrorWithSourceLoc(clangTidyCmd,
+		env.run(clangTidyCmd, env.stdout(), env.stderr()))
+	if err == nil && exitCode != 0 {
+		// Note: We continue on purpose when clang-tidy fails
+		// to maintain compatibility with the previous wrapper.
+		fmt.Fprintf(env.stderr(), "clang-tidy failed")
 	}
-
-	return nil
+	return err
 }
 
 func hasAtLeastOneSuffix(s string, suffixes []string) bool {
