@@ -63,19 +63,19 @@ graphics_perf_tests = [
 telemetry_crosbolt_perf_tests = [
     'octane',
     'kraken',
-    'speedometer',
     'speedometer2',
     'jetstream',
-    'cros_ui_smoothness',
 ]
+# TODO: disable rendering.desktop by default as the benchmark is
+# currently in a bad state
+# TODO: replace video_PlaybackPerf.vp9 with the tast version
+# page_cycler_v2.typical_25 is deprecated and the recommend replacement is
+# loading.desktop@@typical (crbug.com/916340)
 crosbolt_perf_tests = [
     'graphics_WebGLAquarium',
-    'video_PlaybackPerf.h264',
     'video_PlaybackPerf.vp9',
-    'video_WebRtcPerf',
-    'BootPerfServerCrosPerf',
-    'power_Resume',
-    'build_RootFilesystemSize',
+    #'rendering.desktop',
+    'loading.desktop'
 ]
 
 #    'cheets_AntutuTest',

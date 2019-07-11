@@ -155,5 +155,8 @@
   ],
   "cros_ui_smoothness": [
     "ui_percentage_smooth"
+  ],
+  "rendering.desktop": [
+    "Event.Latency.ScrollUpdate.Touch.TimeToScrollUpdateSwapBegin4_avg"
   ]
 }
