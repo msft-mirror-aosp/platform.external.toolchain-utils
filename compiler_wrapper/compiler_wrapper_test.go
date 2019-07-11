@@ -128,10 +128,36 @@ func TestErrorOnLogRusageAndForceDisableWError(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.env = []string{
 			"FORCE_DISABLE_WERROR=1",
-			"GETRUSAGE=" + filepath.Join(ctx.tempDir, "rusage.log"),
+			"GETRUSAGE=rusage.log",
 		}
 		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyNonInternalError(stderr, "GETRUSAGE is meaningless with FORCE_DISABLE_WERROR"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestErrorOnLogRusageAndBisect(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.env = []string{
+			"BISECT_STAGE=xyz",
+			"GETRUSAGE=rusage.log",
+		}
+		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyNonInternalError(stderr, "BISECT_STAGE is meaningless with GETRUSAGE"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestErrorOnBisectAndForceDisableWError(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.env = []string{
+			"BISECT_STAGE=xyz",
+			"FORCE_DISABLE_WERROR=1",
+		}
+		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyNonInternalError(stderr, "BISECT_STAGE is meaningless with FORCE_DISABLE_WERROR"); err != nil {
 			t.Error(err)
 		}
 	})

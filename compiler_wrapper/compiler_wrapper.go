@@ -9,11 +9,7 @@ import (
 func callCompiler(env env, cfg *config, inputCmd *command) int {
 	exitCode := 0
 	var compilerErr error
-	if shouldForwardToOldWrapper(env, inputCmd) {
-		// TODO: Once this is only checking for bisect, create a command
-		// that directly calls the bisect driver in calcCompilerCommand.
-		exitCode, compilerErr = forwardToOldWrapper(env, cfg, inputCmd)
-	} else if cfg.oldWrapperPath != "" {
+	if cfg.oldWrapperPath != "" {
 		exitCode, compilerErr = callCompilerWithRunAndCompareToOldWrapper(env, cfg, inputCmd)
 	} else {
 		exitCode, compilerErr = callCompilerInternal(env, cfg, inputCmd)
@@ -75,14 +71,24 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		compilerCmd = calcGccCommand(mainBuilder)
 	}
 	rusageLogfileName := getRusageLogFilename(env)
+	bisectStage := getBisectStage(env)
 	if shouldForceDisableWError(env) {
 		if rusageLogfileName != "" {
 			return 0, newUserErrorf("GETRUSAGE is meaningless with FORCE_DISABLE_WERROR")
 		}
+		if bisectStage != "" {
+			return 0, newUserErrorf("BISECT_STAGE is meaningless with FORCE_DISABLE_WERROR")
+		}
 		return doubleBuildWithWNoError(env, cfg, compilerCmd)
 	}
 	if rusageLogfileName != "" {
+		if bisectStage != "" {
+			return 0, newUserErrorf("BISECT_STAGE is meaningless with GETRUSAGE")
+		}
 		return logRusage(env, rusageLogfileName, compilerCmd)
+	}
+	if bisectStage != "" {
+		compilerCmd = calcBisectCommand(env, bisectStage, compilerCmd)
 	}
 	// Note: We return an exit code only if the underlying env is not
 	// really doing an exec, e.g. commandRecordingEnv.

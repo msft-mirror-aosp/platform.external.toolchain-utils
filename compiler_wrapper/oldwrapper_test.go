@@ -2,115 +2,12 @@ package main
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
 	"testing"
 	"text/template"
 )
-
-func TestNoForwardToOldWrapperBecauseOfEnv(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
-		testEnvs := []string{"PATH=abc"}
-		for _, testEnv := range testEnvs {
-			ctx.env = []string{testEnv}
-			forwarded := false
-			ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
-				if isForwardToOldWrapperCmd(cmd) {
-					forwarded = true
-				}
-				return nil
-			}
-			ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64)))
-			if forwarded {
-				t.Errorf("forwarded to old wrapper for env %s", testEnv)
-			}
-		}
-	})
-}
-
-func TestForwardToOldWrapperBecauseOfEnv(t *testing.T) {
-	withForwardToOldWrapperTestContext(t, func(ctx *testContext) {
-		testEnvs := []string{
-			"BISECT_STAGE=abc",
-		}
-		for _, testEnv := range testEnvs {
-			ctx.env = []string{testEnv}
-			forwarded := false
-			ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
-				forwarded = true
-				if !isForwardToOldWrapperCmd(cmd) {
-					return newErrorwithSourceLocf("expected call to old wrapper. Got: %s", cmd.path)
-				}
-				return nil
-			}
-			ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64)))
-			if !forwarded {
-				t.Errorf("not forwarded to old wrapper for env %s", testEnv)
-			}
-		}
-	})
-}
-
-func TestForwardStdOutAndStderrFromOldWrapperOnSuccess(t *testing.T) {
-	withForwardToOldWrapperTestContext(t, func(ctx *testContext) {
-		ctx.env = []string{"BISECT_STAGE=abc"}
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
-			fmt.Fprint(stdout, "somemessage")
-			fmt.Fprint(stderr, "someerror")
-			return nil
-		}
-
-		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64)))
-		if ctx.stdoutString() != "somemessage" {
-			t.Errorf("stdout was not exactly forwarded. Got: %s", ctx.stdoutString())
-		}
-		if ctx.stderrString() != "someerror" {
-			t.Errorf("stderr was not exactly forwarded. Got: %s", ctx.stderrString())
-		}
-	})
-}
-
-func TestReportExitCodeErrorsWhenForwardingToOldWrapper(t *testing.T) {
-	withForwardToOldWrapperTestContext(t, func(ctx *testContext) {
-		ctx.env = []string{"BISECT_STAGE=abc"}
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
-			fmt.Fprint(stderr, "someerror")
-			return newExitCodeError(2)
-		}
-
-		exitCode := callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64))
-		if exitCode != 2 {
-			t.Fatalf("Expected exit code 2. Got %d", exitCode)
-		}
-		if err := verifyNonInternalError(ctx.stderrString(), "someerror"); err != nil {
-			t.Fatal(err)
-		}
-	})
-}
-
-func TestReportGeneralErrorsWhenForwardingToOldWrapper(t *testing.T) {
-	withForwardToOldWrapperTestContext(t, func(ctx *testContext) {
-		ctx.env = []string{"BISECT_STAGE=abc"}
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
-			fmt.Fprint(stderr, "someoldwrappererror")
-			return errors.New("someerror")
-		}
-
-		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64)))
-		if err := verifyInternalError(stderr); err != nil {
-			t.Fatal(err)
-		}
-		if !strings.Contains(stderr, "someerror") {
-			t.Errorf("error message was not forwarded. Got: %s", stderr)
-		}
-		if !strings.Contains(stderr, "someoldwrappererror") {
-			t.Errorf("stderr was not forwarded. Got: %s", stderr)
-		}
-	})
-}
 
 func TestCompareToOldWrapperCompilerCommand(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {

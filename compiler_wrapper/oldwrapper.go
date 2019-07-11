@@ -17,20 +17,6 @@ import (
 const forwardToOldWrapperFilePattern = "old_wrapper_forward"
 const compareToOldWrapperFilePattern = "old_wrapper_compare"
 
-// Whether the command should be executed by the old wrapper as we don't
-// support it yet.
-func shouldForwardToOldWrapper(env env, inputCmd *command) bool {
-	return env.getenv("BISECT_STAGE") != ""
-}
-
-func forwardToOldWrapper(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
-	oldWrapperCfg, err := newOldWrapperConfig(env, cfg, inputCmd)
-	if err != nil {
-		return 0, err
-	}
-	return callOldWrapper(env, oldWrapperCfg, inputCmd, forwardToOldWrapperFilePattern, env.stdout(), env.stderr())
-}
-
 func compareToOldWrapper(env env, cfg *config, inputCmd *command, newCmdResults []*commandResult, newExitCode int) error {
 	oldWrapperCfg, err := newOldWrapperConfig(env, cfg, inputCmd)
 	if err != nil {
