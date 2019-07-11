@@ -37,6 +37,14 @@ func ensurePathEnv(cmd *exec.Cmd) {
 	cmd.Env = append(cmd.Env, "PATH=")
 }
 
+func getAbsCmdPath(env env, cmd *command) string {
+	path := cmd.path
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(env.getwd(), path)
+	}
+	return path
+}
+
 func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, error) {
 	basename := filepath.Base(cmd.path)
 	nameParts := strings.Split(basename, "-")
@@ -52,7 +60,7 @@ func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, err
 	default:
 		compilerType = gccType
 	}
-	absWrapperDir, err := getAbsWrapperDir(env, cmd.path)
+	absWrapperDir, err := getAbsWrapperDir(env, cmd)
 	if err != nil {
 		return nil, err
 	}

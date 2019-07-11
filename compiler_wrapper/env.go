@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
+	"strings"
 	"syscall"
 )
 
@@ -95,4 +97,32 @@ func (env *commandRecordingEnv) run(cmd *command, stdout io.Writer, stderr io.Wr
 		})
 	}
 	return err
+}
+
+type printingEnv struct {
+	env
+}
+
+var _env = (*printingEnv)(nil)
+
+func (env *printingEnv) exec(cmd *command) error {
+	printCmd(env, cmd)
+	return env.env.exec(cmd)
+}
+
+func (env *printingEnv) run(cmd *command, stdout io.Writer, stderr io.Writer) error {
+	printCmd(env, cmd)
+	return env.env.run(cmd, stdout, stderr)
+}
+
+func printCmd(env env, cmd *command) {
+	fmt.Fprintf(env.stderr(), "cd '%s' &&", env.getwd())
+	if len(cmd.envUpdates) > 0 {
+		fmt.Fprintf(env.stderr(), " env '%s'", strings.Join(cmd.envUpdates, "' '"))
+	}
+	fmt.Fprintf(env.stderr(), " '%s'", getAbsCmdPath(env, cmd))
+	if len(cmd.args) > 0 {
+		fmt.Fprintf(env.stderr(), " '%s'", strings.Join(cmd.args, "' '"))
+	}
+	io.WriteString(env.stderr(), "\n")
 }

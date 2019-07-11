@@ -1,7 +1,5 @@
 package main
 
-import "path/filepath"
-
 const bisectPythonCommand = "import bisect_driver; sys.exit(bisect_driver.bisect_driver(sys.argv[1], sys.argv[2], sys.argv[3:]))"
 
 func getBisectStage(env env) string {
@@ -13,10 +11,7 @@ func calcBisectCommand(env env, bisectStage string, compilerCmd *command) *comma
 	if bisectDir == "" {
 		bisectDir = "/tmp/sysroot_bisect"
 	}
-	absCompilerPath := compilerCmd.path
-	if !filepath.IsAbs(absCompilerPath) {
-		absCompilerPath = filepath.Join(env.getwd(), absCompilerPath)
-	}
+	absCompilerPath := getAbsCmdPath(env, compilerCmd)
 	return &command{
 		path: "/usr/bin/python2",
 		args: append([]string{

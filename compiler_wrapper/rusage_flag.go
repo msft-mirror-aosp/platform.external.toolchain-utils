@@ -39,10 +39,7 @@ func logRusage(env env, logFileName string, compilerCmd *command) (exitCode int,
 	// Note: We assume that the compiler takes more heap than any other
 	// subcommands that we might have executed before.
 	maxMemUsed := rusageAfter.Maxrss
-	absCompilerPath := compilerCmd.path
-	if !filepath.IsAbs(absCompilerPath) {
-		absCompilerPath = filepath.Join(env.getwd(), absCompilerPath)
-	}
+	absCompilerPath := getAbsCmdPath(env, compilerCmd)
 
 	if err := os.MkdirAll(filepath.Dir(logFileName), 0777); err != nil {
 		return 0, wrapErrorwithSourceLocf(err, "error creating rusage log directory %s", logFileName)

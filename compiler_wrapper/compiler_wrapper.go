@@ -43,6 +43,9 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	if err != nil {
 		return 0, err
 	}
+	processPrintConfigFlag(mainBuilder)
+	processPrintCmdlineFlag(mainBuilder)
+	env = mainBuilder.env
 	var compilerCmd *command
 	clangSyntax := processClangSyntaxFlag(mainBuilder)
 	if mainBuilder.target.compilerType == clangType {
@@ -133,10 +136,8 @@ func processGomaCCacheFlags(sysroot string, builder *commandBuilder) {
 	}
 }
 
-func getAbsWrapperDir(env env, wrapperPath string) (string, error) {
-	if !filepath.IsAbs(wrapperPath) {
-		wrapperPath = filepath.Join(env.getwd(), wrapperPath)
-	}
+func getAbsWrapperDir(env env, wrapperCmd *command) (string, error) {
+	wrapperPath := getAbsCmdPath(env, wrapperCmd)
 	evaledCmdPath, err := filepath.EvalSymlinks(wrapperPath)
 	if err != nil {
 		return "", wrapErrorwithSourceLocf(err, "failed to evaluate symlinks for %s", wrapperPath)

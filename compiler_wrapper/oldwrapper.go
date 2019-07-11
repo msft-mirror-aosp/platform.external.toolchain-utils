@@ -175,7 +175,7 @@ type oldWrapperCmdResult struct {
 func newOldWrapperConfig(env env, cfg *config, inputCmd *command) (*oldWrapperConfig, error) {
 	absOldWrapperPath := cfg.oldWrapperPath
 	if !filepath.IsAbs(absOldWrapperPath) {
-		absWrapperDir, err := getAbsWrapperDir(env, inputCmd.path)
+		absWrapperDir, err := getAbsWrapperDir(env, inputCmd)
 		if err != nil {
 			return nil, err
 		}
