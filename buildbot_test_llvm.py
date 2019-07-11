@@ -56,7 +56,6 @@ DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
 #  lakitu        x86_64                              4.4.*
 #  nyan_kitty    armv7    nyan         tegra         3.10.18
 #  octopus       x86_64   octopus      GLK           4.14.*
-#  peach_pit     armv7    peach        exynos-5420   3.8.11
 #  sentry        x86_64   kunimitsu    skylake-u     3.18
 #  tidus         x86_64   auron        broadwell     3.14
 #  veyron_mighty armv7    veyron-pinky rockchip-3288 3.14
@@ -78,7 +77,6 @@ TEST_BOARD = [
     'lakitu',
     'nyan_kitty',
     'octopus',
-    'peach_pit',
     'sentry',
     'tidus',
     # 'veyron_mighty', tested by arm-llvm-next-toolchain builder.
