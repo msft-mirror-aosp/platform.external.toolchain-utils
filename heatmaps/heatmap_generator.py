@@ -315,12 +315,17 @@ class HeatmapGenerator(object):
     if retval:
       raise RuntimeError('Failed to run script to generate heatmap')
 
-  def _restore_histogram(self, name):
+  def _restore_histogram(self):
+    # When hugepage is used, there are two files inst-histo-{hp,sp}.txt
+    # So we need to read in all the files.
+    names = [x for x in os.listdir('.') if 'inst-histo' in x and '.txt' in x]
     hist = {}
-    with open(name) as f:
-      for l in f.readlines():
-        num, addr = l.strip().split(' ')
-        hist[int(addr)] = int(num)
+    for n in names:
+      with open(n) as f:
+        for l in f.readlines():
+          num, addr = l.strip().split(' ')
+          assert int(addr) not in hist
+          hist[int(addr)] = int(num)
     return hist
 
   def _read_symbols_from_binary(self, binary):
@@ -367,32 +372,6 @@ class HeatmapGenerator(object):
           self.symbol_addresses.append(addr - text_section_start)
           self.symbol_names.append(name)
 
-  def _get_list_of_pages_to_show(self, hist, top_n):
-    sorted_hist = sorted(
-        hist.iteritems(), key=lambda value: value[1], reverse=True)
-    _, max_count = sorted_hist[0]
-
-    # Depending on the configuration of top_n, select pages in the list
-    # if % is in top_n, e.g. top_n = '20%', we will select the pages that has
-    # sample count larger than 20% of the peak amount
-    # otherwise, if top_n is a number, e.g. top_n = 5, we will select top 5
-    # hottest pages within the 30MB region and top 5 hottest pages outside of
-    # the 30MB region
-
-    if '%' in top_n:
-      count_threshold = max_count * int(top_n[:-1]) / 100
-      list_to_show = [(k, v) for (k, v) in sorted_hist if v >= count_threshold]
-    else:
-      in_huge_page = [
-          (k, v) for (k, v) in sorted_hist \
-          if self.hugepage.start <= k < self.hugepage.end][:int(top_n)]
-      outside_huge_page = [
-          (k, v) for (k, v) in sorted_hist \
-          if k < self.hugepage.start or k >= self.hugepage.end][:int(top_n)]
-
-      list_to_show = in_huge_page + outside_huge_page
-    return list_to_show, max_count
-
   def _map_addr_to_symbol(self, addr):
     # Find out the symbol name
     assert len(self.symbol_addresses) > 0
@@ -402,14 +381,15 @@ class HeatmapGenerator(object):
         index, len(self.symbol_names))
     return self.symbol_names[index - 1]
 
-  def _get_symbols_in_hot_pages(self, fp, pages_to_show, max_count):
+  def _print_symbols_in_hot_pages(self, fp, pages_to_show):
     # Print symbols in all the pages of interest
     for page_num, sample_num in pages_to_show:
       print(
           '----------------------------------------------------------', file=fp)
-      print(('Page Offset: %d MB, Count: %d (%.1f%%)' % (
-          page_num / 1024 / 1024, sample_num, 100.0 * sample_num / max_count)),
-            file=fp)
+      print(
+          'Page Offset: %d MB, Count: %d' % (page_num / 1024 / 1024,
+                                             sample_num),
+          file=fp)
 
       symbol_counts = collections.Counter()
       # Read Sample File and find out the occurance of symbols in the page
@@ -417,8 +397,6 @@ class HeatmapGenerator(object):
       for line in lines:
         if 'PERF_RECORD_SAMPLE' in line:
           pid, addr = self._parse_perf_sample(line + next(lines) + next(lines))
-          lines.next()
-          lines.next()
           if pid is None:
             # The sampling is not on Chrome
             continue
@@ -452,14 +430,39 @@ class HeatmapGenerator(object):
     # Then use gnu plot to draw heat map
     self._draw_heat_map()
 
-  def analyze(self, binary, top_n='10'):
+  def analyze(self, binary, top_n):
     # Read histogram from histo.txt
-    hist = self._restore_histogram('inst-histo.txt')
-    # Generate Symbol Names and save it to nm.txt
+    hist = self._restore_histogram()
+    # Sort the pages in histogram
+    sorted_hist = sorted(
+        hist.iteritems(), key=lambda value: value[1], reverse=True)
+
+    # Generate symbolizations
     self._read_symbols_from_binary(binary)
-    # Sort the pages according to the hotness
-    pages_to_show, max_count = self._get_list_of_pages_to_show(hist, top_n)
 
     # Write hottest pages
     with open('addr2symbol.txt', 'w') as fp:
-      self._get_symbols_in_hot_pages(fp, pages_to_show, max_count)
+      if self.hugepage:
+        # Print hugepage region first
+        print(
+            'Hugepage top %d hot pages (%d MB - %d MB):' %
+            (top_n, self.hugepage.start / 1024 / 1024,
+             self.hugepage.end / 1024 / 1024),
+            file=fp)
+        pages_to_print = [(k, v)
+                          for k, v in sorted_hist
+                          if self.hugepage.start <= k < self.hugepage.end
+                         ][:top_n]
+        self._print_symbols_in_hot_pages(fp, pages_to_print)
+        print('==========================================', file=fp)
+        print('Top %d hot pages landed outside of hugepage:' % top_n, file=fp)
+        # Then print outside pages
+        pages_to_print = [(k, v)
+                          for k, v in sorted_hist
+                          if k < self.hugepage.start or k >= self.hugepage.end
+                         ][:top_n]
+        self._print_symbols_in_hot_pages(fp, pages_to_print)
+      else:
+        # Print top_n hottest pages.
+        pages_to_print = [(k, v) for k, v in sorted_hist][:top_n]
+        self._print_symbols_in_hot_pages(fp, pages_to_print)

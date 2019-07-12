@@ -84,7 +84,7 @@ class HeatmapTest(unittest.TestCase):
   @mock.patch('heatmap_generator.HeatmapGenerator')
   def test_GetHeatMap(self, mock_heatmap_generator):
     heatmap = make_heatmap()
-    heatmap._GetHeatMap(None)
+    heatmap._GetHeatMap(10)
     self.assertTrue(mock_heatmap_generator.called)
 
   @mock.patch.object(heat_map.HeatMapProducer, '_EnsureFileInChroot')
@@ -94,10 +94,10 @@ class HeatmapTest(unittest.TestCase):
   def test_Run(self, mock_remove_files, mock_get_heatmap,
                mock_generate_perf_report, mock_ensure_file_in_chroot):
     heatmap = make_heatmap()
-    heatmap.Run()
+    heatmap.Run(10)
     mock_ensure_file_in_chroot.assert_called_once_with()
     mock_generate_perf_report.assert_called_once_with()
-    mock_get_heatmap.assert_called_once_with(None)
+    mock_get_heatmap.assert_called_once_with(10)
     mock_remove_files.assert_called_once_with()
 
   @mock.patch.object(heat_map.HeatMapProducer, '_EnsureFileInChroot')
@@ -112,7 +112,7 @@ class HeatmapTest(unittest.TestCase):
                               mock_get_heatmap, mock_ensure_file_in_chroot):
     heatmap = make_heatmap()
     with self.assertRaises(Exception):
-      heatmap.Run()
+      heatmap.Run(10)
     mock_ensure_file_in_chroot.assert_called_once_with()
     mock_get_heatmap.assert_not_called()
     mock_remove_files.assert_called_once_with()

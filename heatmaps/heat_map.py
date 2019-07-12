@@ -82,10 +82,7 @@ class HeatMapProducer(object):
     generator.draw()
     # Analyze top N hottest symbols with the binary, if provided
     if self.binary:
-      if top_n_pages is not None:
-        generator.analyze(self.binary, top_n_pages)
-      else:
-        generator.analyze(self.binary)
+      generator.analyze(self.binary, top_n_pages)
 
   def _RemoveFiles(self):
     files = [
@@ -95,7 +92,7 @@ class HeatMapProducer(object):
       if os.path.exists(f):
         os.remove(f)
 
-  def Run(self, top_n_pages=None):
+  def Run(self, top_n_pages):
     try:
       self._EnsureFileInChroot()
       self._GeneratePerfReport()
@@ -105,6 +102,9 @@ class HeatMapProducer(object):
     msg = ('heat map and time histogram genereated in the current '
            'directory with name heat_map.png and timeline.png '
            'accordingly.')
+    if self.binary:
+      msg += ('\nThe hottest %d pages inside and outside hugepage '
+              'is symbolized and saved to addr2symbol.txt' % top_n_pages)
     if self.logger:
       self.logger.LogOutput(msg)
     else:
@@ -142,9 +142,10 @@ def main(argv):
   parser.add_argument(
       '--top_n',
       dest='top_n',
+      type=int,
+      default=10,
       help='Print out top N hottest pages within/outside huge page range. '
-      'Must be used with --hugepage and --binary.',
-      default=None)
+      'Must be used with --hugepage and --binary. (Default: %(default)s)')
   parser.add_argument(
       '--title', dest='title', help='Title of the heatmap', default='')
   parser.add_argument(

@@ -8,6 +8,7 @@
 
 from __future__ import division, print_function
 
+import mock
 import os
 import unittest
 
@@ -45,25 +46,27 @@ def _write_perf_sample(pid, tid, addr, fp):
   print(' ...... dso: /opt/google/chrome/chrome\n', file=fp)
 
 
-def _heatmap(file_name, page_size=4096, hugepage=None):
+def _heatmap(file_name, page_size=4096, hugepage=None, analyze=False, top_n=10):
   generator = heatmap_generator.HeatmapGenerator(
       file_name, page_size, hugepage, '',
       log_level='none')  # Don't log to stdout
   generator.draw()
+  if analyze:
+    generator.analyze('/path/to/chrome', top_n)
 
 
 def _cleanup(file_name):
   files = [
       file_name, 'out.txt', 'inst-histo.txt', 'inst-histo-hp.txt',
-      'inst-histo-sp.txt', 'heat_map.png', 'timeline.png'
+      'inst-histo-sp.txt', 'heat_map.png', 'timeline.png', 'addr2symbol.txt'
   ]
   for f in files:
     if os.path.exists(f):
       os.remove(f)
 
 
-class Tests(unittest.TestCase):
-  """All of our tests for heatmap_generator."""
+class HeatmapGeneratorDrawTests(unittest.TestCase):
+  """All of our tests for heatmap_generator.draw() and related."""
 
   def test_with_one_mmap_one_sample(self):
     """Tests one perf record and one sample."""
@@ -238,6 +241,74 @@ class Tests(unittest.TestCase):
       self.assertEqual(len(lines), 2)
       self.assertIn('100 196608', lines[0])
       self.assertIn('100 4194304', lines[1])
+
+
+class HeatmapGeneratorAnalyzeTests(unittest.TestCase):
+  """All of our tests for heatmap_generator.analyze() and related."""
+
+  def setUp(self):
+    # Use the same perf report for testing
+    self.fname = 'test_histo.txt'
+    with open(self.fname, 'w') as f:
+      _write_perf_mmap(101, 101, 0xABCD000, 0x100, f)
+      for i in range(10):
+        _write_perf_sample(101, 101, 0xABCD000 + i, f)
+        _write_perf_sample(101, 101, 0xABCE000 + i, f)
+        _write_perf_sample(101, 101, 0xABFD000 + i, f)
+    self.nm = ('000000000abcd000 t Func1@Page1\n'
+               '000000000abcd001 t Func2@Page1\n'
+               '000000000abcd0a0 t Func3@Page1andFunc1@Page2\n'
+               '000000000abce010 t Func2@Page2\n'
+               '000000000abfd000 t Func1@Page3\n')
+
+  def tearDown(self):
+    _cleanup(self.fname)
+
+  @mock.patch('subprocess.check_output')
+  def test_analyze_hot_pages_with_hp_top(self, mock_nm):
+    """Test if the analyze() can print the top page with hugepage."""
+    mock_nm.return_value = self.nm
+    _heatmap(self.fname, hugepage=[0, 8192], analyze=True, top_n=1)
+    file_list = os.listdir('.')
+    self.assertIn('addr2symbol.txt', file_list)
+    with open('addr2symbol.txt') as f:
+      contents = f.read()
+      self.assertIn('Func2@Page1 : 9', contents)
+      self.assertIn('Func1@Page1 : 1', contents)
+      self.assertIn('Func1@Page3 : 10', contents)
+      # Only displaying one page in hugepage
+      self.assertNotIn('Func3@Page1andFunc1@Page2 : 10', contents)
+
+  @mock.patch('subprocess.check_output')
+  def test_analyze_hot_pages_without_hp_top(self, mock_nm):
+    """Test if the analyze() can print the top page without hugepage."""
+    mock_nm.return_value = self.nm
+    _heatmap(self.fname, analyze=True, top_n=1)
+    file_list = os.listdir('.')
+    self.assertIn('addr2symbol.txt', file_list)
+    with open('addr2symbol.txt') as f:
+      contents = f.read()
+      self.assertIn('Func2@Page1 : 9', contents)
+      self.assertIn('Func1@Page1 : 1', contents)
+      # Only displaying one page
+      self.assertNotIn('Func3@Page1andFunc1@Page2 : 10', contents)
+      self.assertNotIn('Func1@Page3 : 10', contents)
+
+  @mock.patch('subprocess.check_output')
+  def test_analyze_hot_pages_with_hp_top10(self, mock_nm):
+    """Test if the analyze() can print with default top 10."""
+    mock_nm.return_value = self.nm
+    _heatmap(self.fname, analyze=True)
+    # Make sure nm command is called correctly.
+    mock_nm.assert_called_with(['nm', '-n', '/path/to/chrome'])
+    file_list = os.listdir('.')
+    self.assertIn('addr2symbol.txt', file_list)
+    with open('addr2symbol.txt') as f:
+      contents = f.read()
+      self.assertIn('Func2@Page1 : 9', contents)
+      self.assertIn('Func1@Page1 : 1', contents)
+      self.assertIn('Func3@Page1andFunc1@Page2 : 10', contents)
+      self.assertIn('Func1@Page3 : 10', contents)
 
 
 if __name__ == '__main__':
