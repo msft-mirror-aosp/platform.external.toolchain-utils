@@ -282,15 +282,6 @@ func newExitCodeError(exitCode int) error {
 	return tmpCmd.Run()
 }
 
-func isForwardToOldWrapperCmd(cmd *command) bool {
-	for _, arg := range cmd.args {
-		if strings.Contains(arg, forwardToOldWrapperFilePattern) {
-			return true
-		}
-	}
-	return false
-}
-
 func isCompareToOldWrapperCmd(cmd *command) bool {
 	for _, arg := range cmd.args {
 		if strings.Contains(arg, compareToOldWrapperFilePattern) {

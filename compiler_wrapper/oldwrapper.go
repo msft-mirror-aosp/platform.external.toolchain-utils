@@ -14,7 +14,6 @@ import (
 	"text/template"
 )
 
-const forwardToOldWrapperFilePattern = "old_wrapper_forward"
 const compareToOldWrapperFilePattern = "old_wrapper_compare"
 
 func compareToOldWrapper(env env, cfg *config, inputCmd *command, newCmdResults []*commandResult, newExitCode int) error {
@@ -22,7 +21,6 @@ func compareToOldWrapper(env env, cfg *config, inputCmd *command, newCmdResults 
 	if err != nil {
 		return err
 	}
-	oldWrapperCfg.LogCmds = true
 	oldWrapperCfg.MockCmds = cfg.mockOldWrapperCmds
 	newCmds := []*command{}
 	for _, cmdResult := range newCmdResults {
@@ -157,7 +155,6 @@ type oldWrapperConfig struct {
 	CmdPath           string
 	OldWrapperContent string
 	RootRelPath       string
-	LogCmds           bool
 	MockCmds          bool
 	CmdResults        []oldWrapperCmdResult
 	OverwriteConfig   bool
@@ -222,11 +219,9 @@ mockResults = [{{range .CmdResults}} {
 },{{end}}]
 
 def serialize_cmd(args):
-	{{if .LogCmds}}
 	current_env = os.environ
 	envupdate = [k + "=" + current_env.get(k, '') for k in set(list(current_env.keys()) + list(init_env.keys())) if current_env.get(k, '') != init_env.get(k, '')]
 	print('command:%s.EnvUpdate:%s' % (' '.join(args), ' '.join(envupdate)), file=sys.stderr)
-	{{end}}
 
 def check_output_mock(args):
 	serialize_cmd(args)

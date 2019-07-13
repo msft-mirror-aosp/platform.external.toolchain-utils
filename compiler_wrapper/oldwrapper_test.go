@@ -143,16 +143,6 @@ func TestCompareToOldWrapperNestedCommand(t *testing.T) {
 	})
 }
 
-func withForwardToOldWrapperTestContext(t *testing.T, work func(ctx *testContext)) {
-	withTestContext(t, func(ctx *testContext) {
-		// Need to make sure the old wrapper file exists as oldwrapper.go
-		// tries to read it.
-		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "somewrapper")
-		ctx.writeFile(ctx.cfg.oldWrapperPath, "")
-		work(ctx)
-	})
-}
-
 func writeMockWrapper(ctx *testContext, cfg *mockWrapperConfig) {
 	const mockTemplate = `
 from __future__ import print_function
