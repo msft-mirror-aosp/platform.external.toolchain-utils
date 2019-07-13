@@ -4,7 +4,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Download profdata from different arches, merge them and upload to gs."""
+"""Download profdata from different arches, merge them and upload to gs
+
+The script is used for updating the PGO profiles for LLVM. The workflow
+is that the script will download profdata from different PGO builds, merge
+them and then upload it to a gs location that LLVM can access.
+
+The simplest way of using this script, is to run:
+    ./merge_profdata_and_upload.py --all_latest_profiles
+which will automatically grab profdata from latest PGO generate builders
+for three different architectures and merge them. LLVM hash is also
+detected automatically from the artifacts.
+
+If you want to specify certain llvm hash, run it with:
+    ./merge_profdata_and_upload.py --all_latest_profiles --llvm_hash LLVM_HASH
+Note that hash checking will fail if the llvm hash you provided is not the
+same as those in artifacts, or llvm hash in different artifacts are not the
+same.
+
+To only use profiles from PGO generate tryjob, run it with:
+    ./merge_profdata_and_upload.py --nolatest -t TRYJOB1 -t TRYJOB2 ...
+Using of --nolatest will tell the script not to use any results from builders,
+and merge only the profdata from the tryjobs you specified.
+
+There is a chance that builders only succeeded partially, in this case, you
+can run this script to merge both profdata from builder and tryjob:
+    ./merge_profdata_and_upload.py -l arm -l amd64 -t TRYJOB_FOR_ARM64
+In this example, the script will merge profdata from arm and amd64 builder, and
+profdata from an arm64 tryjob.
+"""
 
 from __future__ import print_function
 
@@ -59,8 +87,11 @@ def _get_gs_profdata(remote_base, base_dir):
   print('Extracting profdata tarball.\nCMD: %s\n' % extract_cmd)
   subprocess.check_call(extract_cmd)
   # Return directory to the llvm.profdata extracted.
-  return os.path.join('b/s/w/ir/cache/cbuild/repository/buildbot_archive/',
-                      base_dir, 'llvm.profdata')
+  if '-tryjob/' in base_dir:
+    prefix = 'b/s/w/ir/cache/cbuild/repository/trybot_archive/'
+  else:
+    prefix = 'b/s/w/ir/cache/cbuild/repository/buildbot_archive/'
+  return os.path.join(prefix, base_dir, 'llvm.profdata')
 
 
 def _get_gs_metadata(remote_base):
@@ -123,14 +154,21 @@ def _tar_and_upload_profdata(profdata, name_suffix):
 
 
 def main():
-  parser = argparse.ArgumentParser(description=__doc__)
+  parser = argparse.ArgumentParser(
+      description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+  parser.add_argument(
+      '-a',
+      '--all_latest_profiles',
+      action='store_true',
+      help='Merge and upload profiles from the latest builders.')
   parser.add_argument(
       '-l',
       '--latest',
       default=[],
       action='append',
-      help='User can specify the profdata from which architectures to '
-      'download. By default, we merge profdata from arm, arm64, amd64.')
+      help='User can specify the profdata from which builder with specific '
+      'architecture to download. By default, we merge profdata from arm, '
+      'arm64, amd64.')
   parser.add_argument(
       '-t',
       '--tryjob',
@@ -150,8 +188,16 @@ def main():
       help='The LLVM hash to select for the profiles. Generally autodetected.')
   args = parser.parse_args()
 
-  # If no --latest specified, by default we collect from listed arches.
-  latest = ['arm', 'arm64', 'amd64'] if not args.latest else args.latest
+  if not args.all_latest_profiles and not (args.latest or args.tryjob):
+    sys.exit('Please specify whether to use latest profiles or profiles from '
+             'tryjobs')
+
+  if args.all_latest_profiles and (args.latest or args.tryjob):
+    sys.exit('--all_latest_profiles cannot be specified together with '
+             '--latest or --tryjob.')
+
+  latest = ['arm', 'arm64', 'amd64'] \
+    if args.all_latest_profiles else args.latest
 
   if not distutils.spawn.find_executable(_LLVM_PROFDATA):
     sys.exit(_LLVM_PROFDATA + ' not found; are you in the chroot?')
