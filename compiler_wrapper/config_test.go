@@ -1,84 +1,8 @@
 package main
 
 import (
-	"path/filepath"
 	"testing"
 )
-
-func TestFullHardeningConfigAndGcc(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
-		initFullHardeningConfig(ctx)
-		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
-			ctx.newCommand(gccX86_64, mainCc)))
-		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
-			t.Error(err)
-		}
-		if err := verifyArgOrder(cmd, gccX86_64+".real", "--sysroot=/usr/x86_64-cros-linux-gnu", "-fno-reorder-blocks-and-partition",
-			"-Wno-unused-local-typedefs", "-Wno-maybe-uninitialized", "-fstack-protector-strong", "-fPIE", "-pie", "-D_FORTIFY_SOURCE=2",
-			"-fno-omit-frame-pointer", "main.cc", "-mno-movbe"); err != nil {
-			t.Error(err)
-		}
-	})
-}
-
-func TestFullHardeningConfigAndClang(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
-		initFullHardeningConfig(ctx)
-		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
-			ctx.newCommand(clangX86_64, mainCc)))
-		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
-			t.Error(err)
-		}
-		clangPath, err := filepath.Rel(ctx.tempDir, "/usr/bin/clang")
-		if err != nil {
-			t.Error(err)
-		}
-		binPath, err := filepath.Rel(ctx.tempDir, "/bin")
-		if err := verifyArgOrder(cmd, clangPath, "--sysroot=/usr/x86_64-cros-linux-gnu", "-Qunused-arguments", "-grecord-gcc-switches",
-			"-fno-addrsig", "-Wno-tautological-constant-compare", "-Wno-tautological-unsigned-enum-zero-compare", "-Wno-unknown-warning-option",
-			"-Wno-section", "-fstack-protector-strong", "-fPIE", "-pie", "-D_FORTIFY_SOURCE=2", "-fno-omit-frame-pointer", "main.cc",
-			"-B"+binPath, "-target", "x86_64-cros-linux-gnu"); err != nil {
-			t.Error(err)
-		}
-	})
-}
-
-func TestNonHardeningConfigAndGcc(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
-		initNonHardeningConfig(ctx)
-		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
-			ctx.newCommand(gccX86_64, mainCc)))
-		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
-			t.Error(err)
-		}
-		if err := verifyArgOrder(cmd, gccX86_64+".real", "--sysroot=/usr/x86_64-cros-linux-gnu",
-			"-Wno-maybe-uninitialized", "-Wno-unused-local-typedefs", "-Wno-deprecated-declarations",
-			"-Wtrampolines", "main.cc", "-mno-movbe"); err != nil {
-			t.Error(err)
-		}
-	})
-}
-
-func TestNonHardeningConfigAndClang(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
-		initNonHardeningConfig(ctx)
-		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
-			ctx.newCommand(clangX86_64, mainCc)))
-		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
-			t.Error(err)
-		}
-		clangPath, err := filepath.Rel(ctx.tempDir, "/usr/bin/clang")
-		if err != nil {
-			t.Error(err)
-		}
-		binPath, err := filepath.Rel(ctx.tempDir, "/bin")
-		if err := verifyArgOrder(cmd, clangPath, "--sysroot=/usr/x86_64-cros-linux-gnu", "-Qunused-arguments",
-			"-Wno-tautological-constant-compare", "-Wno-tautological-unsigned-enum-zero-compare",
-			"-Wno-unknown-warning-option", "-Wno-section", "main.cc", "-B"+binPath, "-target", "x86_64-cros-linux-gnu"); err != nil {
-			t.Error(err)
-		}
-	})
-}
 
 func TestRealConfigWithUseCCacheFlag(t *testing.T) {
 	resetGlobals()
@@ -147,18 +71,6 @@ func isHardened(cfg *config) bool {
 		}
 	}
 	return false
-}
-
-func initFullHardeningConfig(ctx *testContext) {
-	useCCache := true
-	ctx.updateConfig(oldHardenedWrapperPathForTest, getCrosHardenedConfig(useCCache))
-	ctx.cfg.overwriteOldWrapperCfg = false
-}
-
-func initNonHardeningConfig(ctx *testContext) {
-	useCCache := true
-	ctx.updateConfig(oldNonHardenedWrapperPathForTest, getCrosNonHardenedConfig(useCCache))
-	ctx.cfg.overwriteOldWrapperCfg = false
 }
 
 func resetGlobals() {

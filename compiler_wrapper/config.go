@@ -19,8 +19,6 @@ type config struct {
 	oldWrapperPath string
 	// Whether to mock out the calls that the old wrapper does.
 	mockOldWrapperCmds bool
-	// Whether to overwrite the config in the old wrapper.
-	overwriteOldWrapperCfg bool
 	// Directory to store errors that were prevented with -Wno-error.
 	newWarningsDir string
 }

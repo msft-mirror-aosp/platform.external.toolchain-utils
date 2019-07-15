@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"sort"
 	"strings"
 	"text/template"
@@ -31,7 +30,6 @@ func compareToOldWrapper(env env, cfg *config, inputCmd *command, newCmdResults 
 		})
 		newCmds = append(newCmds, cmdResult.Cmd)
 	}
-	oldWrapperCfg.OverwriteConfig = cfg.overwriteOldWrapperCfg
 
 	stderrBuffer := bytes.Buffer{}
 	oldExitCode, err := callOldWrapper(env, oldWrapperCfg, inputCmd, compareToOldWrapperFilePattern, &bytes.Buffer{}, &stderrBuffer)
@@ -115,10 +113,15 @@ func diffCommands(oldCmds []*command, newCmds []*command) string {
 
 			// Sort the environment as we don't care in which order
 			// it was modified.
-			newEnvUpdates := newCmd.EnvUpdates
-			sort.Strings(newEnvUpdates)
-			oldEnvUpdates := oldCmd.EnvUpdates
-			sort.Strings(oldEnvUpdates)
+			copyAndSort := func(data []string) []string {
+				result := make([]string, len(data))
+				copy(result, data)
+				sort.Strings(result)
+				return result
+			}
+
+			newEnvUpdates := copyAndSort(newCmd.EnvUpdates)
+			oldEnvUpdates := copyAndSort(oldCmd.EnvUpdates)
 
 			if !reflect.DeepEqual(newEnvUpdates, oldEnvUpdates) {
 				differences = append(differences, "env updates")
@@ -154,13 +157,8 @@ func dumpCommands(cmds []*command) string {
 type oldWrapperConfig struct {
 	CmdPath           string
 	OldWrapperContent string
-	RootRelPath       string
 	MockCmds          bool
 	CmdResults        []oldWrapperCmdResult
-	OverwriteConfig   bool
-	CommonFlags       []string
-	GccFlags          []string
-	ClangFlags        []string
 }
 
 type oldWrapperCmdResult struct {
@@ -188,17 +186,9 @@ func newOldWrapperConfig(env env, cfg *config, inputCmd *command) (*oldWrapperCo
 	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "__name__", "'none'")
 	// Replace sets with lists to make our comparisons deterministic
 	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "set(", "ListSet(")
-	// Inject the value of cfg.useCCache
-	if !cfg.useCCache {
-		oldWrapperContent = regexp.MustCompile(`True\s+#\s+@CCACHE_DEFAULT@`).ReplaceAllString(oldWrapperContent, "False #")
-	}
 	return &oldWrapperConfig{
 		CmdPath:           inputCmd.Path,
 		OldWrapperContent: oldWrapperContent,
-		RootRelPath:       cfg.rootRelPath,
-		CommonFlags:       cfg.commonFlags,
-		GccFlags:          cfg.gccFlags,
-		ClangFlags:        cfg.clangFlags,
 	}, nil
 }
 
@@ -301,14 +291,6 @@ old_execv = os.execv
 os.execv = execv_mock
 
 sys.argv[0] = '{{.CmdPath}}'
-
-ROOT_REL_PATH = '{{.RootRelPath}}'
-
-{{if .OverwriteConfig}}
-FLAGS_TO_ADD=set([{{range .CommonFlags}}'{{.}}',{{end}}])
-GCC_FLAGS_TO_ADD=set([{{range .GccFlags}}'{{.}}',{{end}}])
-CLANG_FLAGS_TO_ADD=set([{{range .ClangFlags}}'{{.}}',{{end}}])
-{{end}}
 
 sys.exit(main())
 `

@@ -25,11 +25,9 @@ const gccArmV7Eabi = "./armv7m-cros-linux-eabi-gcc"
 const gccArmV8 = "./armv8m-cros-linux-gnu-gcc"
 const gccArmV8Eabi = "./armv8m-cros-linux-eabi-gcc"
 
-const oldHardenedWrapperPathForTest = "/usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/gcc-bin/4.9.x/sysroot_wrapper.hardened"
-const oldNonHardenedWrapperPathForTest = "/usr/x86_64-pc-linux-gnu/arm-none-eabi/gcc-bin/4.9.x/sysroot_wrapper"
-
 type testContext struct {
 	t            *testing.T
+	wd           string
 	tempDir      string
 	env          []string
 	cfg          *config
@@ -51,13 +49,12 @@ func withTestContext(t *testing.T, work func(ctx *testContext)) {
 
 	ctx := testContext{
 		t:       t,
+		wd:      tempDir,
 		tempDir: tempDir,
 		env:     nil,
 		cfg:     &config{},
 	}
-	// Note: It's ok to use the hardened wrapper here, as we replace its config
-	// on each run.
-	ctx.updateConfig(oldHardenedWrapperPathForTest, &config{})
+	ctx.updateConfig("", &config{})
 
 	work(&ctx)
 }
@@ -79,7 +76,7 @@ func (ctx *testContext) environ() []string {
 }
 
 func (ctx *testContext) getwd() string {
-	return ctx.tempDir
+	return ctx.wd
 }
 
 func (ctx *testContext) stdout() io.Writer {
@@ -141,10 +138,9 @@ func (ctx *testContext) mustFail(exitCode int) string {
 
 func (ctx *testContext) updateConfig(wrapperChrootPath string, cfg *config) {
 	*ctx.cfg = *cfg
-	ctx.cfg.overwriteOldWrapperCfg = true
 	ctx.cfg.mockOldWrapperCmds = true
 	ctx.cfg.newWarningsDir = filepath.Join(ctx.tempDir, "fatal_clang_warnings")
-	if *crosRootDirFlag != "" {
+	if *crosRootDirFlag != "" && wrapperChrootPath != "" {
 		ctx.cfg.oldWrapperPath = filepath.Join(*crosRootDirFlag, wrapperChrootPath)
 	} else {
 		ctx.cfg.oldWrapperPath = ""
@@ -248,8 +244,12 @@ func verifyNoEnvUpdate(cmd *command, expectedRegex string) error {
 	return nil
 }
 
+func hasInternalError(stderr string) bool {
+	return strings.Contains(stderr, "Internal error")
+}
+
 func verifyInternalError(stderr string) error {
-	if !strings.Contains(stderr, "Internal error") {
+	if !hasInternalError(stderr) {
 		return fmt.Errorf("expected an internal error. Got: %s", stderr)
 	}
 	if ok, _ := regexp.MatchString(`\w+.go:\d+`, stderr); !ok {
@@ -259,7 +259,7 @@ func verifyInternalError(stderr string) error {
 }
 
 func verifyNonInternalError(stderr string, expectedRegex string) error {
-	if strings.Contains(stderr, "Internal error") {
+	if hasInternalError(stderr) {
 		return fmt.Errorf("expected a non internal error. Got: %s", stderr)
 	}
 	if ok, _ := regexp.MatchString(`\w+.go:\d+`, stderr); ok {

@@ -9,11 +9,14 @@
 //
 // Test arguments:
 // - crosroot: Specifies the ChromeOS toolchain root directory (aka chroot).
-//   If this is given, tests will compare the produced commands against the
+//   If this is given, golden tests will compare the produced commands against the
 //   old compiler wrapper.
+// - updategolden: To update the golden results for the wrapper. Without it,
+//   the tests will verify that the wrapper output matches the goldens.
+// - rungolden: To filter the golden tests by a regex for the wrapper env, path and args.
 //
 // Examples:
-// - run all tests and compare output against old compiler wrapper:
+// - run all tests and compare golden output against old compiler wrapper:
 // 		go test third_party/toolchain-utils/compiler_wrapper/ -v --crosroot=$HOME/chromiumos/chroot/
 // - run all tests in isolation:
 // 		go test third_party/toolchain-utils/compiler_wrapper/ -v
