@@ -10,7 +10,6 @@ from __future__ import print_function
 
 import afdo_prof_analysis as analysis
 
-import mock
 import random
 import unittest
 
@@ -37,31 +36,31 @@ class AfdoProfAnalysisTest(unittest.TestCase):
     expected_text = 'func_a:1\ndata\nfunc_b:2\nmore data\n'
     self.assertEqual(analysis.json_to_text(example_prof), expected_text)
 
-  @mock.patch.object(analysis, 'run_external')
-  def test_bisect_profiles(self, mock_run_external):
+  def test_bisect_profiles(self):
 
     # mock run of external script with arbitrarily-chosen bad profile vals
-    def run_external(prof):
+    # increment_counter specified and unused b/c afdo_prof_analysis.py
+    # will call with argument explicitly specified
+    # pylint: disable=unused-argument
+    def decider(prof, increment_counter=True):
       if '1' in prof['func_a'] or '3' in prof['func_b']:
-        return analysis.BAD_STATUS
-      return analysis.GOOD_STATUS
+        return analysis.status_enum.BAD_STATUS
+      return analysis.status_enum.GOOD_STATUS
 
-    mock_run_external.side_effect = run_external
-    results = analysis.bisect_profiles_wrapper(self.good_items, self.bad_items)
+    results = analysis.bisect_profiles_wrapper(decider, self.good_items,
+                                               self.bad_items)
     self.assertEqual(results['individuals'], sorted(['func_a', 'func_b']))
     self.assertEqual(results['ranges'], [])
 
-  @mock.patch.object(analysis, 'run_external')
-  def test_non_bisecting_search(self, mock_run_external):
+  def test_range_search(self):
 
     # arbitrarily chosen functions whose values in the bad profile constitute
     # a problematic pair
-    def run_external(prof):
+    # pylint: disable=unused-argument
+    def decider(prof, increment_counter=True):
       if '1' in prof['func_a'] and '3' in prof['func_b']:
-        return analysis.BAD_STATUS
-      return analysis.GOOD_STATUS
-
-    mock_run_external.side_effect = run_external
+        return analysis.status_enum.BAD_STATUS
+      return analysis.status_enum.GOOD_STATUS
 
     # put the problematic combination in separate halves of the common funcs
     # so that non-bisecting search is invoked for its actual use case
@@ -71,41 +70,35 @@ class AfdoProfAnalysisTest(unittest.TestCase):
     common_funcs.remove('func_b')
     common_funcs.append('func_b')
 
-    problem_range = analysis.non_bisecting_search(
-        self.good_items, self.bad_items, common_funcs, 0, len(common_funcs))
+    problem_range = analysis.range_search(decider, self.good_items,
+                                          self.bad_items, common_funcs, 0,
+                                          len(common_funcs))
 
-    # we cannot test for the range being exactly these two functions because
-    # the output is slightly random and, if unlucky, the range could end up
-    # being bigger. But it is guaranteed that the output will at least
-    # *contain* the problematic pair created here
-    self.assertIn('func_a', problem_range)
-    self.assertIn('func_b', problem_range)
+    self.assertEquals(['func_a', 'func_b'], problem_range)
 
-  @mock.patch.object(analysis, 'run_external')
-  def test_check_good_not_bad(self, mock_run_external):
+  def test_check_good_not_bad(self):
     func_in_good = 'func_c'
 
-    def run_external(prof):
+    # pylint: disable=unused-argument
+    def decider(prof, increment_counter=True):
       if func_in_good in prof:
-        return analysis.GOOD_STATUS
-      return analysis.BAD_STATUS
+        return analysis.status_enum.GOOD_STATUS
+      return analysis.status_enum.BAD_STATUS
 
-    mock_run_external.side_effect = run_external
     self.assertTrue(
-        analysis.check_good_not_bad(self.good_items, self.bad_items))
+        analysis.check_good_not_bad(decider, self.good_items, self.bad_items))
 
-  @mock.patch.object(analysis, 'run_external')
-  def test_check_bad_not_good(self, mock_run_external):
+  def test_check_bad_not_good(self):
     func_in_bad = 'func_d'
 
-    def run_external(prof):
+    # pylint: disable=unused-argument
+    def decider(prof, increment_counter=True):
       if func_in_bad in prof:
-        return analysis.BAD_STATUS
-      return analysis.GOOD_STATUS
+        return analysis.status_enum.BAD_STATUS
+      return analysis.status_enum.GOOD_STATUS
 
-    mock_run_external.side_effect = run_external
     self.assertTrue(
-        analysis.check_bad_not_good(self.good_items, self.bad_items))
+        analysis.check_bad_not_good(decider, self.good_items, self.bad_items))
 
 
 if __name__ == '__main__':

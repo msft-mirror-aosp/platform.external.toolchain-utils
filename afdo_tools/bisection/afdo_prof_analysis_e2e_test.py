@@ -63,10 +63,6 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
         'ranges': [['func_b', 'func_c', 'func_d']]
     }
 
-    # Since the range is so small, we want to finetune func interval
-    # to confirm algo runs as expected
-    # pylint:disable=protected-access
-    analysis._FUNC_STEP = 1
     self.run_check(good_prof, bad_prof, expected)
 
   def run_check(self, good_prof, bad_prof, expected):
