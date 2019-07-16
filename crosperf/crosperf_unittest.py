@@ -4,6 +4,7 @@
 # Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Unittest for crosperf."""
 
 from __future__ import print_function
@@ -58,7 +59,7 @@ class CrosperfTest(unittest.TestCase):
     settings = crosperf.ConvertOptionsToSettings(options)
     self.assertIsNotNone(settings)
     self.assertIsInstance(settings, settings_factory.GlobalSettings)
-    self.assertEqual(len(settings.fields), 28)
+    self.assertEqual(len(settings.fields), 29)
     self.assertTrue(settings.GetField('rerun'))
     argv = ['crosperf/crosperf.py', 'temp.exp']
     options, _ = parser.parse_known_args(argv)

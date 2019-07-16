@@ -152,6 +152,11 @@ class GlobalSettings(Settings):
             description='The target board for running '
             'experiments on, e.g. x86-alex.'))
     self.AddField(
+        BooleanField(
+            'skylab',
+            description='Whether to run experiments via skylab.',
+            default=False))
+    self.AddField(
         ListField(
             'remote',
             description='A comma-separated list of IPs of '

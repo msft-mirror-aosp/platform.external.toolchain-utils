@@ -52,14 +52,14 @@ class MyMachineManager(machine_manager.MachineManager):
 
 CHROMEOS_ROOT = '/tmp/chromeos-root'
 MACHINE_NAMES = ['lumpy1', 'lumpy2', 'lumpy3', 'daisy1', 'daisy2']
-LABEL_LUMPY = label.MockLabel(
-    'lumpy', 'lumpy_chromeos_image', 'autotest_dir', 'debug_dir', CHROMEOS_ROOT,
-    'lumpy', ['lumpy1', 'lumpy2', 'lumpy3', 'lumpy4'], '', '', False, 'average,'
-    'gcc', None)
-LABEL_MIX = label.MockLabel('mix', 'chromeos_image', 'autotest_dir',
+LABEL_LUMPY = label.MockLabel('lumpy', 'build', 'lumpy_chromeos_image',
+                              'autotest_dir', 'debug_dir', CHROMEOS_ROOT,
+                              'lumpy', ['lumpy1', 'lumpy2', 'lumpy3', 'lumpy4'],
+                              '', '', False, 'average', 'gcc', False, None)
+LABEL_MIX = label.MockLabel('mix', 'build', 'chromeos_image', 'autotest_dir',
                             'debug_dir', CHROMEOS_ROOT, 'mix',
                             ['daisy1', 'daisy2', 'lumpy3', 'lumpy4'], '', '',
-                            False, 'average', 'gcc', None)
+                            False, 'average', 'gcc', False, None)
 
 
 class MachineManagerTest(unittest.TestCase):

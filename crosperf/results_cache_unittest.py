@@ -194,9 +194,10 @@ class ResultTest(unittest.TestCase):
     self.callGatherPerfResults = False
     self.mock_logger = mock.Mock(spec=logger.Logger)
     self.mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
-    self.mock_label = MockLabel(
-        'mock_label', 'chromeos_image', 'autotest_dir', 'debug_dir', '/tmp',
-        'lumpy', 'remote', 'image_args', 'cache_dir', 'average', 'gcc', None)
+    self.mock_label = MockLabel('mock_label', 'build', 'chromeos_image',
+                                'autotest_dir', 'debug_dir', '/tmp', 'lumpy',
+                                'remote', 'image_args', 'cache_dir', 'average',
+                                'gcc', False, None)
 
   def testCreateFromRun(self):
     result = MockResult.CreateFromRun(logger.GetLogger(), 'average',
@@ -995,9 +996,10 @@ class TelemetryResultTest(unittest.TestCase):
     self.result = None
     self.mock_logger = mock.Mock(spec=logger.Logger)
     self.mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
-    self.mock_label = MockLabel(
-        'mock_label', 'chromeos_image', 'autotest_dir', 'debug_dir', '/tmp',
-        'lumpy', 'remote', 'image_args', 'cache_dir', 'average', 'gcc', None)
+    self.mock_label = MockLabel('mock_label', 'build', 'chromeos_image',
+                                'autotest_dir', 'debug_dir', '/tmp', 'lumpy',
+                                'remote', 'image_args', 'cache_dir', 'average',
+                                'gcc', False, None)
     self.mock_machine = machine_manager.MockCrosMachine(
         'falco.cros', '/tmp/chromeos', 'average')
 
@@ -1038,9 +1040,10 @@ class ResultsCacheTest(unittest.TestCase):
     super(ResultsCacheTest, self).__init__(*args, **kwargs)
     self.fakeCacheReturnResult = None
     self.mock_logger = mock.Mock(spec=logger.Logger)
-    self.mock_label = MockLabel(
-        'mock_label', 'chromeos_image', 'autotest_dir', 'debug_dir', '/tmp',
-        'lumpy', 'remote', 'image_args', 'cache_dir', 'average', 'gcc', None)
+    self.mock_label = MockLabel('mock_label', 'build', 'chromeos_image',
+                                'autotest_dir', 'debug_dir', '/tmp', 'lumpy',
+                                'remote', 'image_args', 'cache_dir', 'average',
+                                'gcc', False, None)
 
   def setUp(self):
     self.results_cache = ResultsCache()

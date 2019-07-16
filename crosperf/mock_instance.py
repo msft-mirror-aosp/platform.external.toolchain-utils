@@ -13,6 +13,7 @@ from label import MockLabel
 perf_args = 'record -a -e cycles'
 label1 = MockLabel(
     'test1',
+    'build1',
     'image1',
     'autotest_dir',
     'debug_dir',
@@ -23,10 +24,13 @@ label1 = MockLabel(
     cache_dir='',
     cache_only=False,
     log_level='average',
-    compiler='gcc')
+    compiler='gcc',
+    skylab=False,
+    chrome_src=None)
 
 label2 = MockLabel(
     'test2',
+    'build2',
     'image2',
     'autotest_dir',
     'debug_dir',
@@ -37,7 +41,9 @@ label2 = MockLabel(
     cache_dir='',
     cache_only=False,
     log_level='average',
-    compiler='gcc')
+    compiler='gcc',
+    skylab=False,
+    chrome_src=None)
 
 benchmark1 = Benchmark('benchmark1', 'autotest_name_1', 'autotest_args', 2, '',
                        perf_args, '', '')

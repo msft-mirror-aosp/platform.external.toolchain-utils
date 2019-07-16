@@ -114,6 +114,7 @@ class ExperimentFactory(object):
     global_settings = experiment_file.GetGlobalSettings()
     experiment_name = global_settings.GetField('name')
     board = global_settings.GetField('board')
+    skylab = global_settings.GetField('skylab')
     remote = global_settings.GetField('remote')
     # This is used to remove the ",' from the remote if user
     # add them to the remote string.
@@ -322,6 +323,7 @@ class ExperimentFactory(object):
     for label_settings in all_label_settings:
       label_name = label_settings.name
       image = label_settings.GetField('chromeos_image')
+      build = label_settings.GetField('build')
       autotest_path = label_settings.GetField('autotest_path')
       debug_path = label_settings.GetField('debug_path')
       chromeos_root = label_settings.GetField('chromeos_root')
@@ -333,9 +335,15 @@ class ExperimentFactory(object):
           c = re.sub('["\']', '', i)
           new_remote.append(c)
       my_remote = new_remote
-      if image == '':
-        build = label_settings.GetField('build')
-        if len(build) == 0:
+
+      if image:
+        if skylab:
+          raise RuntimeError('In skylab mode, local image should not be used.')
+        if build:
+          raise RuntimeError('Image path and build are provided at the same '
+                             'time, please use only one of them.')
+      else:
+        if not build:
           raise RuntimeError("Can not have empty 'build' field!")
         image, autotest_path, debug_path = label_settings.GetXbuddyPath(
             build, autotest_path, debug_path, board, chromeos_root, log_level,
@@ -346,9 +354,8 @@ class ExperimentFactory(object):
 
       # TODO(yunlian): We should consolidate code in machine_manager.py
       # to derermine whether we are running from within google or not
-      if ('corp.google.com' in socket.gethostname() and
-          (not my_remote or
-           my_remote == remote and global_settings.GetField('board') != board)):
+      if ('corp.google.com' in socket.gethostname() and not my_remote and
+          not skylab):
         my_remote = self.GetDefaultRemotes(board)
       if global_settings.GetField('same_machine') and len(my_remote) > 1:
         raise RuntimeError('Only one remote is allowed when same_machine '
@@ -357,14 +364,14 @@ class ExperimentFactory(object):
       image_args = label_settings.GetField('image_args')
       if test_flag.GetTestMode():
         # pylint: disable=too-many-function-args
-        label = MockLabel(label_name, image, autotest_path, debug_path,
+        label = MockLabel(label_name, build, image, autotest_path, debug_path,
                           chromeos_root, board, my_remote, image_args,
-                          cache_dir, cache_only, log_level, compiler,
+                          cache_dir, cache_only, log_level, compiler, skylab,
                           chrome_src)
       else:
-        label = Label(label_name, image, autotest_path, debug_path,
+        label = Label(label_name, build, image, autotest_path, debug_path,
                       chromeos_root, board, my_remote, image_args, cache_dir,
-                      cache_only, log_level, compiler, chrome_src)
+                      cache_only, log_level, compiler, skylab, chrome_src)
       labels.append(label)
 
     if not labels:
@@ -373,12 +380,15 @@ class ExperimentFactory(object):
     email = global_settings.GetField('email')
     all_remote += list(set(my_remote))
     all_remote = list(set(all_remote))
+    if skylab:
+      for remote in all_remote:
+        self.CheckRemotesInSkylab(remote)
     experiment = Experiment(experiment_name, all_remote, working_directory,
                             chromeos_root, cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(), email,
                             acquire_timeout, log_dir, log_level, share_cache,
                             results_dir, locks_dir, cwp_dso, enable_aslr,
-                            ignore_min_max)
+                            ignore_min_max, skylab)
 
     return experiment
 
@@ -401,3 +411,8 @@ class ExperimentFactory(object):
           'IOError while reading file {0}'.format(default_remotes_file))
     else:
       raise RuntimeError('There is no remote for {0}'.format(board))
+
+  def CheckRemotesInSkylab(self, remote):
+    # TODO: (AI:zhizhouy) need to check whether a remote is a local or lab
+    # machine. If not lab machine, raise an error.
+    pass

@@ -2,6 +2,7 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """The experiment setting module."""
 
 from __future__ import print_function
@@ -29,7 +30,7 @@ class Experiment(object):
                cache_conditions, labels, benchmarks, experiment_file, email_to,
                acquire_timeout, log_dir, log_level, share_cache,
                results_directory, locks_directory, cwp_dso, enable_aslr,
-               ignore_min_max):
+               ignore_min_max, skylab):
     self.name = name
     self.working_directory = working_directory
     self.remote = remote
@@ -58,13 +59,15 @@ class Experiment(object):
     self.cwp_dso = cwp_dso
     self.enable_aslr = enable_aslr
     self.ignore_min_max = ignore_min_max
+    self.skylab = skylab
+    self.l = logger.GetLogger(log_dir)
 
-    if not remote:
-      raise RuntimeError('No remote hosts specified')
     if not self.benchmarks:
       raise RuntimeError('No benchmarks specified')
     if not self.labels:
       raise RuntimeError('No labels specified')
+    if not remote and not self.skylab:
+      raise RuntimeError('No remote hosts specified')
 
     # We need one chromeos_root to run the benchmarks in, but it doesn't
     # matter where it is, unless the ABIs are different.
@@ -124,7 +127,7 @@ class Experiment(object):
     benchmark_runs = []
     for label in self.labels:
       for benchmark in self.benchmarks:
-        for iteration in xrange(1, benchmark.iterations + 1):
+        for iteration in range(1, benchmark.iterations + 1):
 
           benchmark_run_name = '%s: %s (%s)' % (label.name, benchmark.name,
                                                 iteration)
@@ -213,6 +216,6 @@ class Experiment(object):
       lock_mgr = afe_lock_machine.AFELockManager(
           all_machines, '', self.labels[0].chromeos_root, None)
       machine_states = lock_mgr.GetMachineStates('unlock')
-      for k, state in machine_states.iteritems():
+      for k, state in machine_states.items():
         if state['locked']:
           lock_mgr.UpdateLockInAFE(False, k)

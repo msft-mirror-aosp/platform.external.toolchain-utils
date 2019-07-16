@@ -50,6 +50,7 @@ class BenchmarkRunTest(unittest.TestCase):
 
     self.test_label = MockLabel(
         'test1',
+        'build',
         'image1',
         'autotest_dir',
         'debug_dir',
@@ -60,7 +61,8 @@ class BenchmarkRunTest(unittest.TestCase):
         cache_dir='',
         cache_only=False,
         log_level='average',
-        compiler='gcc')
+        compiler='gcc',
+        skylab=False)
 
     self.test_cache_conditions = [
         CacheConditions.CACHE_FILE_EXISTS, CacheConditions.CHECKSUMS_MATCH
@@ -73,6 +75,7 @@ class BenchmarkRunTest(unittest.TestCase):
   def testDryRun(self):
     my_label = MockLabel(
         'test1',
+        'build',
         'image1',
         'autotest_dir',
         'debug_dir',
@@ -83,7 +86,8 @@ class BenchmarkRunTest(unittest.TestCase):
         cache_dir='',
         cache_only=False,
         log_level='average',
-        compiler='gcc')
+        compiler='gcc',
+        skylab=False)
 
     logging_level = 'average'
     m = MockMachineManager('/tmp/chromeos_root', 0, logging_level, '')
