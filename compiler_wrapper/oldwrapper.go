@@ -183,13 +183,15 @@ func newOldWrapperConfig(env env, cfg *config, inputCmd *command) (*oldWrapperCo
 		return nil, wrapErrorwithSourceLocf(err, "failed to read old wrapper")
 	}
 	oldWrapperContent := string(oldWrapperContentBytes)
+	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "from __future__ import print_function", "")
 	// Disable the original call to main()
 	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "__name__", "'none'")
+	// Replace sets with lists to make our comparisons deterministic
+	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "set(", "ListSet(")
 	// Inject the value of cfg.useCCache
 	if !cfg.useCCache {
 		oldWrapperContent = regexp.MustCompile(`True\s+#\s+@CCACHE_DEFAULT@`).ReplaceAllString(oldWrapperContent, "False #")
 	}
-
 	return &oldWrapperConfig{
 		CmdPath:           inputCmd.Path,
 		OldWrapperContent: oldWrapperContent,
@@ -207,7 +209,28 @@ func callOldWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, filepatte
 	}
 	defer os.Remove(mockFile.Name())
 
-	const mockTemplate = `{{.OldWrapperContent}}
+	const mockTemplate = `
+from __future__ import print_function
+
+class ListSet:
+	def __init__(self, values):
+		self.values = list(values)
+	def __contains__(self, key):
+		return self.values.__contains__(key)
+	def __iter__(self):
+		return self.values.__iter__()
+	def __nonzero__(self):
+		return len(self.values) > 0
+	def add(self, value):
+		if value not in self.values:
+			self.values.append(value)
+	def discard(self, value):
+		if value in self.values:
+			self.values.remove(value)
+	def intersection(self, values):
+		return ListSet([value for value in self.values if value in values])
+
+{{.OldWrapperContent}}
 import subprocess
 
 init_env = os.environ.copy()

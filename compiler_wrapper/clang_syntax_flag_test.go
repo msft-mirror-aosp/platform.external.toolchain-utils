@@ -124,10 +124,35 @@ func TestUseGomaForClangSyntaxCheck(t *testing.T) {
 			}
 			return nil
 		}
-		ctx.must(callCompiler(ctx, ctx.cfg,
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, "-clang-syntax", mainCc)))
 		if ctx.cmdCount != 2 {
 			t.Errorf("expected 2 calls. Got: %d", ctx.cmdCount)
+		}
+		if err := verifyPath(cmd, gomaPath); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestPartiallyOmitCCacheForClangSyntaxCheck(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.cfg.useCCache = true
+		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+			if ctx.cmdCount == 1 {
+				if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, "-clang-syntax", mainCc)))
+		if ctx.cmdCount != 2 {
+			t.Errorf("expected 2 calls. Got: %d", ctx.cmdCount)
+		}
+		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
+			t.Error(err)
 		}
 	})
 }

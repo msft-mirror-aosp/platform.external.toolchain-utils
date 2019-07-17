@@ -50,19 +50,24 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	clangSyntax := processClangSyntaxFlag(mainBuilder)
 	if mainBuilder.target.compilerType == clangType {
 		cSrcFile, useClangTidy := processClangTidyFlags(mainBuilder)
-		compilerCmd, err = calcClangCommand(useClangTidy, mainBuilder)
+		sysroot, err := prepareClangCommand(mainBuilder)
 		if err != nil {
 			return 0, err
 		}
+		allowCCache := true
 		if useClangTidy {
-			if err := runClangTidy(env, compilerCmd, cSrcFile); err != nil {
+			allowCCache = false
+			clangCmdWithoutGomaAndCCache := mainBuilder.build()
+			if err := runClangTidy(env, clangCmdWithoutGomaAndCCache, cSrcFile); err != nil {
 				return 0, err
 			}
 		}
+		processGomaCCacheFlags(sysroot, allowCCache, mainBuilder)
+		compilerCmd = mainBuilder.build()
 	} else {
 		if clangSyntax {
-			forceLocal := false
-			clangCmd, err := calcClangCommand(forceLocal, mainBuilder.clone())
+			allowCCache := false
+			clangCmd, err := calcClangCommand(allowCCache, mainBuilder.clone())
 			if err != nil {
 				return 0, err
 			}
@@ -98,16 +103,22 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	return wrapSubprocessErrorWithSourceLoc(compilerCmd, env.exec(compilerCmd))
 }
 
-func calcClangCommand(forceLocal bool, builder *commandBuilder) (*command, error) {
-	sysroot := processSysrootFlag(builder)
+func prepareClangCommand(builder *commandBuilder) (sysroot string, err error) {
+	sysroot = processSysrootFlag(builder)
 	builder.addPreUserArgs(builder.cfg.clangFlags...)
 	calcCommonPreUserArgs(builder)
 	if err := processClangFlags(builder); err != nil {
+		return "", err
+	}
+	return sysroot, nil
+}
+
+func calcClangCommand(allowCCache bool, builder *commandBuilder) (*command, error) {
+	sysroot, err := prepareClangCommand(builder)
+	if err != nil {
 		return nil, err
 	}
-	if !forceLocal {
-		processGomaCCacheFlags(sysroot, builder)
-	}
+	processGomaCCacheFlags(sysroot, allowCCache, builder)
 	return builder.build(), nil
 }
 
@@ -116,7 +127,8 @@ func calcGccCommand(builder *commandBuilder) *command {
 	builder.addPreUserArgs(builder.cfg.gccFlags...)
 	calcCommonPreUserArgs(builder)
 	processGccFlags(builder)
-	processGomaCCacheFlags(sysroot, builder)
+	allowCCache := true
+	processGomaCCacheFlags(sysroot, allowCCache, builder)
 	return builder.build()
 }
 
@@ -129,9 +141,9 @@ func calcCommonPreUserArgs(builder *commandBuilder) {
 	processSanitizerFlags(builder)
 }
 
-func processGomaCCacheFlags(sysroot string, builder *commandBuilder) {
+func processGomaCCacheFlags(sysroot string, allowCCache bool, builder *commandBuilder) {
 	gomaccUsed := processGomaCccFlags(builder)
-	if !gomaccUsed {
+	if !gomaccUsed && allowCCache {
 		processCCacheFlag(sysroot, builder)
 	}
 }

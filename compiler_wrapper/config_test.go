@@ -13,9 +13,9 @@ func TestFullHardeningConfigAndGcc(t *testing.T) {
 		if err := verifyPath(cmd, "/usr/bin/ccache"); err != nil {
 			t.Error(err)
 		}
-		if err := verifyArgOrder(cmd, gccX86_64+".real", "--sysroot=/usr/x86_64-cros-linux-gnu", "-Wno-unused-local-typedefs",
-			"-Wno-maybe-uninitialized", "-fno-reorder-blocks-and-partition", "-fPIE", "-D_FORTIFY_SOURCE=2", "-fstack-protector-strong",
-			"-pie", "-fno-omit-frame-pointer", "main.cc", "-mno-movbe"); err != nil {
+		if err := verifyArgOrder(cmd, gccX86_64+".real", "--sysroot=/usr/x86_64-cros-linux-gnu", "-fno-reorder-blocks-and-partition",
+			"-Wno-unused-local-typedefs", "-Wno-maybe-uninitialized", "-fstack-protector-strong", "-fPIE", "-pie", "-D_FORTIFY_SOURCE=2",
+			"-fno-omit-frame-pointer", "main.cc", "-mno-movbe"); err != nil {
 			t.Error(err)
 		}
 	})
@@ -34,10 +34,10 @@ func TestFullHardeningConfigAndClang(t *testing.T) {
 			t.Error(err)
 		}
 		binPath, err := filepath.Rel(ctx.tempDir, "/bin")
-		if err := verifyArgOrder(cmd, clangPath, "--sysroot=/usr/x86_64-cros-linux-gnu", "-Wno-tautological-unsigned-enum-zero-compare",
-			"-Qunused-arguments", "-grecord-gcc-switches", "-Wno-section", "-Wno-unknown-warning-option", "-fno-addrsig",
-			"-Wno-tautological-constant-compare", "-fPIE", "-D_FORTIFY_SOURCE=2", "-fstack-protector-strong", "-pie",
-			"-fno-omit-frame-pointer", "main.cc", "-B"+binPath, "-target", "x86_64-cros-linux-gnu"); err != nil {
+		if err := verifyArgOrder(cmd, clangPath, "--sysroot=/usr/x86_64-cros-linux-gnu", "-Qunused-arguments", "-grecord-gcc-switches",
+			"-fno-addrsig", "-Wno-tautological-constant-compare", "-Wno-tautological-unsigned-enum-zero-compare", "-Wno-unknown-warning-option",
+			"-Wno-section", "-fstack-protector-strong", "-fPIE", "-pie", "-D_FORTIFY_SOURCE=2", "-fno-omit-frame-pointer", "main.cc",
+			"-B"+binPath, "-target", "x86_64-cros-linux-gnu"); err != nil {
 			t.Error(err)
 		}
 	})
@@ -52,8 +52,8 @@ func TestNonHardeningConfigAndGcc(t *testing.T) {
 			t.Error(err)
 		}
 		if err := verifyArgOrder(cmd, gccX86_64+".real", "--sysroot=/usr/x86_64-cros-linux-gnu",
-			"-Wno-unused-local-typedefs", "-Wno-maybe-uninitialized", "-Wtrampolines",
-			"-Wno-deprecated-declarations", "main.cc", "-mno-movbe"); err != nil {
+			"-Wno-maybe-uninitialized", "-Wno-unused-local-typedefs", "-Wno-deprecated-declarations",
+			"-Wtrampolines", "main.cc", "-mno-movbe"); err != nil {
 			t.Error(err)
 		}
 	})
@@ -72,9 +72,9 @@ func TestNonHardeningConfigAndClang(t *testing.T) {
 			t.Error(err)
 		}
 		binPath, err := filepath.Rel(ctx.tempDir, "/bin")
-		if err := verifyArgOrder(cmd, clangPath, "--sysroot=/usr/x86_64-cros-linux-gnu", "-Wno-unknown-warning-option",
-			"-Qunused-arguments", "-Wno-section", "-Wno-tautological-unsigned-enum-zero-compare",
-			"-Wno-tautological-constant-compare", "main.cc", "-B"+binPath, "-target", "x86_64-cros-linux-gnu"); err != nil {
+		if err := verifyArgOrder(cmd, clangPath, "--sysroot=/usr/x86_64-cros-linux-gnu", "-Qunused-arguments",
+			"-Wno-tautological-constant-compare", "-Wno-tautological-unsigned-enum-zero-compare",
+			"-Wno-unknown-warning-option", "-Wno-section", "main.cc", "-B"+binPath, "-target", "x86_64-cros-linux-gnu"); err != nil {
 			t.Error(err)
 		}
 	})

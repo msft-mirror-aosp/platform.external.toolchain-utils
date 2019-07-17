@@ -21,5 +21,6 @@ func calcBisectCommand(env env, bisectStage string, compilerCmd *command) *comma
 			bisectDir,
 			absCompilerPath,
 		}, compilerCmd.Args...),
+		EnvUpdates: compilerCmd.EnvUpdates,
 	}
 }

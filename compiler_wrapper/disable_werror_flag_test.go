@@ -66,6 +66,36 @@ func TestDoubleBuildWithWNoErrorFlag(t *testing.T) {
 	})
 }
 
+func TestDoubleBuildWithWNoErrorAndCCache(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		ctx.cfg.useCCache = true
+		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+			switch ctx.cmdCount {
+			case 1:
+				// TODO: This is a bug in the old wrapper that it drops the ccache path
+				// during double build. Fix this once we don't compare to the old wrapper anymore.
+				if err := verifyPath(cmd, "ccache"); err != nil {
+					return err
+				}
+				fmt.Fprint(stderr, "-Werror originalerror")
+				return newExitCodeError(1)
+			case 2:
+				if err := verifyPath(cmd, "ccache"); err != nil {
+					return err
+				}
+				return nil
+			default:
+				t.Fatalf("unexpected command: %#v", cmd)
+				return nil
+			}
+		}
+		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, mainCc)))
+		if ctx.cmdCount != 2 {
+			t.Errorf("expected 2 calls. Got: %d", ctx.cmdCount)
+		}
+	})
+}
+
 func TestForwardStdoutAndStderrWhenDoubleBuildSucceeds(t *testing.T) {
 	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
 		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {

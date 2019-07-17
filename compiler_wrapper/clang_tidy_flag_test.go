@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path"
 	"strings"
 	"testing"
 )
@@ -229,6 +230,40 @@ func TestOmitCCacheWithClangTidy(t *testing.T) {
 			t.Errorf("expected 3 calls. Got: %d", ctx.cmdCount)
 		}
 		if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestPartiallyOmitGomaWithClangTidy(t *testing.T) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
+		gomaPath := path.Join(ctx.tempDir, "gomacc")
+		// Create a file so the gomacc path is valid.
+		ctx.writeFile(gomaPath, "")
+		ctx.env = append(ctx.env, "GOMACC_PATH="+gomaPath)
+
+		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+			switch ctx.cmdCount {
+			case 1:
+				if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
+					t.Error(err)
+				}
+				return nil
+			case 2:
+				if err := verifyPath(cmd, "usr/bin/clang-tidy"); err != nil {
+					return err
+				}
+				return nil
+			default:
+				return nil
+			}
+		}
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, mainCc)))
+		if ctx.cmdCount != 3 {
+			t.Errorf("expected 3 calls. Got: %d", ctx.cmdCount)
+		}
+		if err := verifyPath(cmd, gomaPath); err != nil {
 			t.Error(err)
 		}
 	})

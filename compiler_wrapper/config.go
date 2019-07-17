@@ -68,29 +68,29 @@ func getCrosHardenedConfig(useCCache bool) *config {
 		rootRelPath:    "../../../../..",
 		oldWrapperPath: "./sysroot_wrapper.hardened.old",
 		commonFlags: []string{
-			"-fPIE",
-			"-D_FORTIFY_SOURCE=2",
 			"-fstack-protector-strong",
+			"-fPIE",
 			"-pie",
+			"-D_FORTIFY_SOURCE=2",
 			"-fno-omit-frame-pointer",
 		},
 		gccFlags: []string{
+			"-fno-reorder-blocks-and-partition",
 			"-Wno-unused-local-typedefs",
 			"-Wno-maybe-uninitialized",
-			"-fno-reorder-blocks-and-partition",
 		},
 		// Temporarily disable tautological-*-compare chromium:778316.
 		// Temporarily add no-unknown-warning-option to deal with old clang versions.
 		// Temporarily disable Wsection since kernel gets a bunch of these. chromium:778867
 		// Disable "-faddrsig" since it produces object files that strip doesn't understand, chromium:915742.
 		clangFlags: []string{
-			"-Wno-tautological-unsigned-enum-zero-compare",
 			"-Qunused-arguments",
 			"-grecord-gcc-switches",
-			"-Wno-section",
-			"-Wno-unknown-warning-option",
 			"-fno-addrsig",
 			"-Wno-tautological-constant-compare",
+			"-Wno-tautological-unsigned-enum-zero-compare",
+			"-Wno-unknown-warning-option",
+			"-Wno-section",
 		},
 		newWarningsDir: "/tmp/fatal_clang_warnings",
 	}
@@ -104,20 +104,20 @@ func getCrosNonHardenedConfig(useCCache bool) *config {
 		oldWrapperPath: "./sysroot_wrapper.old",
 		commonFlags:    []string{},
 		gccFlags: []string{
-			"-Wno-unused-local-typedefs",
 			"-Wno-maybe-uninitialized",
-			"-Wtrampolines",
+			"-Wno-unused-local-typedefs",
 			"-Wno-deprecated-declarations",
+			"-Wtrampolines",
 		},
 		// Temporarily disable tautological-*-compare chromium:778316.
 		// Temporarily add no-unknown-warning-option to deal with old clang versions.
 		// Temporarily disable Wsection since kernel gets a bunch of these. chromium:778867
 		clangFlags: []string{
-			"-Wno-unknown-warning-option",
 			"-Qunused-arguments",
-			"-Wno-section",
-			"-Wno-tautological-unsigned-enum-zero-compare",
 			"-Wno-tautological-constant-compare",
+			"-Wno-tautological-unsigned-enum-zero-compare",
+			"-Wno-unknown-warning-option",
+			"-Wno-section",
 		},
 		newWarningsDir: "/tmp/fatal_clang_warnings",
 	}

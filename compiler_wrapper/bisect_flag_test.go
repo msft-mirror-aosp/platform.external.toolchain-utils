@@ -27,6 +27,22 @@ func TestCallBisectDriver(t *testing.T) {
 	})
 }
 
+func TestCallBisectDriverWithCCache(t *testing.T) {
+	withBisectTestContext(t, func(ctx *testContext) {
+		ctx.cfg.useCCache = true
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyPath(cmd, "/usr/bin/python2"); err != nil {
+			t.Error(err)
+		}
+		if err := verifyArgCount(cmd, 1, "/usr/bin/ccache"); err != nil {
+			t.Error(err)
+		}
+		if err := verifyEnvUpdate(cmd, "CCACHE_DIR=.*"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
 func TestDefaultBisectDir(t *testing.T) {
 	withBisectTestContext(t, func(ctx *testContext) {
 		ctx.env = []string{

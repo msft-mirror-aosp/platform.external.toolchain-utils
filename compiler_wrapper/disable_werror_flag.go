@@ -15,6 +15,11 @@ func shouldForceDisableWError(env env) bool {
 func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCode int, err error) {
 	originalStdoutBuffer := &bytes.Buffer{}
 	originalStderrBuffer := &bytes.Buffer{}
+	// TODO: This is a bug in the old wrapper that it drops the ccache path
+	// during double build. Fix this once we don't compare to the old wrapper anymore.
+	if originalCmd.Path == "/usr/bin/ccache" {
+		originalCmd.Path = "ccache"
+	}
 	originalExitCode, err := wrapSubprocessErrorWithSourceLoc(originalCmd,
 		env.run(originalCmd, originalStdoutBuffer, originalStderrBuffer))
 	if err != nil {
