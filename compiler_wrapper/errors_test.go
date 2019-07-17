@@ -50,7 +50,7 @@ func TestSubprocessExitCodeError(t *testing.T) {
 }
 
 func TestSubprocessCCacheError(t *testing.T) {
-	_, err := wrapSubprocessErrorWithSourceLoc(&command{path: "/usr/bin/ccache"}, syscall.ENOENT)
+	_, err := wrapSubprocessErrorWithSourceLoc(&command{Path: "/usr/bin/ccache"}, syscall.ENOENT)
 	if _, ok := err.(userError); !ok {
 		t.Errorf("unexpected error type. Got: %T", err)
 	}
@@ -60,7 +60,7 @@ func TestSubprocessCCacheError(t *testing.T) {
 }
 
 func TestSubprocessGeneralError(t *testing.T) {
-	cmd := &command{path: "somepath"}
+	cmd := &command{Path: "somepath"}
 	_, err := wrapSubprocessErrorWithSourceLoc(cmd, errors.New("someerror"))
 	if err.Error() != fmt.Sprintf("errors_test.go:64: failed to execute %#v: someerror", cmd) {
 		t.Errorf("Error message incorrect. Got: %s", err.Error())

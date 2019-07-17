@@ -8,21 +8,21 @@ import (
 )
 
 type command struct {
-	path       string
-	args       []string
-	envUpdates []string
+	Path       string   `json:"path"`
+	Args       []string `json:"args"`
+	EnvUpdates []string `json:"env_updates,omitempty"`
 }
 
 func newProcessCommand() *command {
 	return &command{
-		path: os.Args[0],
-		args: os.Args[1:],
+		Path: os.Args[0],
+		Args: os.Args[1:],
 	}
 }
 
 func newExecCmd(env env, cmd *command) *exec.Cmd {
-	execCmd := exec.Command(cmd.path, cmd.args...)
-	execCmd.Env = append(env.environ(), cmd.envUpdates...)
+	execCmd := exec.Command(cmd.Path, cmd.Args...)
+	execCmd.Env = append(env.environ(), cmd.EnvUpdates...)
 	ensurePathEnv(execCmd)
 	execCmd.Dir = env.getwd()
 	return execCmd
@@ -38,7 +38,7 @@ func ensurePathEnv(cmd *exec.Cmd) {
 }
 
 func getAbsCmdPath(env env, cmd *command) string {
-	path := cmd.path
+	path := cmd.Path
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(env.getwd(), path)
 	}
@@ -46,7 +46,7 @@ func getAbsCmdPath(env env, cmd *command) string {
 }
 
 func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, error) {
-	basename := filepath.Base(cmd.path)
+	basename := filepath.Base(cmd.Path)
 	nameParts := strings.Split(basename, "-")
 	if len(nameParts) != 5 {
 		return nil, newErrorwithSourceLocf("expected 5 parts in the compiler name. Actual: %s", basename)
@@ -66,8 +66,8 @@ func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, err
 	}
 	rootPath := filepath.Join(absWrapperDir, cfg.rootRelPath)
 	return &commandBuilder{
-		path:     cmd.path,
-		args:     createBuilderArgs( /*fromUser=*/ true, cmd.args),
+		path:     cmd.Path,
+		args:     createBuilderArgs( /*fromUser=*/ true, cmd.Args),
 		env:      env,
 		cfg:      cfg,
 		rootPath: rootPath,
@@ -180,8 +180,8 @@ func (builder *commandBuilder) build() *command {
 		cmdArgs[i] = builderArg.value
 	}
 	return &command{
-		path:       builder.path,
-		args:       cmdArgs,
-		envUpdates: builder.envUpdates,
+		Path:       builder.path,
+		Args:       cmdArgs,
+		EnvUpdates: builder.envUpdates,
 	}
 }

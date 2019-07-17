@@ -156,8 +156,8 @@ func (ctx *testContext) newCommand(path string, args ...string) *command {
 	// Needed as we are resolving symlinks which stats the wrapper file.
 	ctx.writeFile(path, "")
 	return &command{
-		path: path,
-		args: args,
+		Path: path,
+		Args: args,
 	}
 }
 
@@ -184,8 +184,8 @@ func (ctx *testContext) symlink(oldname string, newname string) {
 
 func verifyPath(cmd *command, expectedRegex string) error {
 	compiledRegex := regexp.MustCompile(matchFullString(expectedRegex))
-	if !compiledRegex.MatchString(cmd.path) {
-		return fmt.Errorf("path does not match %s. Actual %s", expectedRegex, cmd.path)
+	if !compiledRegex.MatchString(cmd.Path) {
+		return fmt.Errorf("path does not match %s. Actual %s", expectedRegex, cmd.Path)
 	}
 	return nil
 }
@@ -193,14 +193,14 @@ func verifyPath(cmd *command, expectedRegex string) error {
 func verifyArgCount(cmd *command, expectedCount int, expectedRegex string) error {
 	compiledRegex := regexp.MustCompile(matchFullString(expectedRegex))
 	count := 0
-	for _, arg := range cmd.args {
+	for _, arg := range cmd.Args {
 		if compiledRegex.MatchString(arg) {
 			count++
 		}
 	}
 	if count != expectedCount {
 		return fmt.Errorf("expected %d matches for arg %s. All args: %s",
-			expectedCount, expectedRegex, cmd.args)
+			expectedCount, expectedRegex, cmd.Args)
 	}
 	return nil
 }
@@ -211,7 +211,7 @@ func verifyArgOrder(cmd *command, expectedRegexes ...string) error {
 		compiledRegexes = append(compiledRegexes, regexp.MustCompile(matchFullString(regex)))
 	}
 	expectedArgIndex := 0
-	for _, arg := range cmd.args {
+	for _, arg := range cmd.Args {
 		if expectedArgIndex == len(compiledRegexes) {
 			break
 		} else if compiledRegexes[expectedArgIndex].MatchString(arg) {
@@ -220,29 +220,29 @@ func verifyArgOrder(cmd *command, expectedRegexes ...string) error {
 	}
 	if expectedArgIndex != len(expectedRegexes) {
 		return fmt.Errorf("expected args %s in order. All args: %s",
-			expectedRegexes, cmd.args)
+			expectedRegexes, cmd.Args)
 	}
 	return nil
 }
 
 func verifyEnvUpdate(cmd *command, expectedRegex string) error {
 	compiledRegex := regexp.MustCompile(matchFullString(expectedRegex))
-	for _, update := range cmd.envUpdates {
+	for _, update := range cmd.EnvUpdates {
 		if compiledRegex.MatchString(update) {
 			return nil
 		}
 	}
 	return fmt.Errorf("expected at least one match for env update %s. All env updates: %s",
-		expectedRegex, cmd.envUpdates)
+		expectedRegex, cmd.EnvUpdates)
 }
 
 func verifyNoEnvUpdate(cmd *command, expectedRegex string) error {
 	compiledRegex := regexp.MustCompile(matchFullString(expectedRegex))
-	updates := cmd.envUpdates
+	updates := cmd.EnvUpdates
 	for _, update := range updates {
 		if compiledRegex.MatchString(update) {
 			return fmt.Errorf("expected no match for env update %s. All env updates: %s",
-				expectedRegex, cmd.envUpdates)
+				expectedRegex, cmd.EnvUpdates)
 		}
 	}
 	return nil
@@ -283,7 +283,7 @@ func newExitCodeError(exitCode int) error {
 }
 
 func isCompareToOldWrapperCmd(cmd *command) bool {
-	for _, arg := range cmd.args {
+	for _, arg := range cmd.Args {
 		if strings.Contains(arg, compareToOldWrapperFilePattern) {
 			return true
 		}

@@ -19,9 +19,9 @@ func logRusage(env env, logFileName string, compilerCmd *command) (exitCode int,
 		return 0, err
 	}
 	compilerCmdWithoutRusage := &command{
-		path:       compilerCmd.path,
-		args:       compilerCmd.args,
-		envUpdates: append(compilerCmd.envUpdates, "GETRUSAGE="),
+		Path:       compilerCmd.Path,
+		Args:       compilerCmd.Args,
+		EnvUpdates: append(compilerCmd.EnvUpdates, "GETRUSAGE="),
 	}
 	startTime := time.Now()
 	exitCode, err = wrapSubprocessErrorWithSourceLoc(compilerCmdWithoutRusage,
@@ -53,7 +53,7 @@ func logRusage(env env, logFileName string, compilerCmd *command) (exitCode int,
 	if _, err := fmt.Fprintf(logFile, "%.5f : %.5f : %.5f : %d : %s : %s\n",
 		float64(elapsedRealTime)/timeUnit, float64(elapsedUserTime)/timeUnit, float64(elapsedSysTime)/timeUnit,
 		maxMemUsed, absCompilerPath,
-		strings.Join(append([]string{filepath.Base(absCompilerPath)}, compilerCmd.args...), " ")); err != nil {
+		strings.Join(append([]string{filepath.Base(absCompilerPath)}, compilerCmd.Args...), " ")); err != nil {
 		_ = logFile.Close()
 		return 0, wrapErrorwithSourceLocf(err, "error writing rusage logfile %s", logFileName)
 	}

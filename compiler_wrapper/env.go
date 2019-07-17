@@ -70,10 +70,10 @@ type commandRecordingEnv struct {
 	cmdResults []*commandResult
 }
 type commandResult struct {
-	cmd      *command
-	stdout   string
-	stderr   string
-	exitCode int
+	Cmd      *command `json:"cmd"`
+	Stdout   string   `json:"stdout,omitempty"`
+	Stderr   string   `json:"stderr,omitempty"`
+	ExitCode int      `json:"exitcode,omitempty"`
 }
 
 var _ env = (*commandRecordingEnv)(nil)
@@ -90,10 +90,10 @@ func (env *commandRecordingEnv) run(cmd *command, stdout io.Writer, stderr io.Wr
 	err := env.env.run(cmd, io.MultiWriter(stdout, stdoutBuffer), io.MultiWriter(stderr, stderrBuffer))
 	if exitCode, ok := getExitCode(err); ok {
 		env.cmdResults = append(env.cmdResults, &commandResult{
-			cmd:      cmd,
-			stdout:   stdoutBuffer.String(),
-			stderr:   stderrBuffer.String(),
-			exitCode: exitCode,
+			Cmd:      cmd,
+			Stdout:   stdoutBuffer.String(),
+			Stderr:   stderrBuffer.String(),
+			ExitCode: exitCode,
 		})
 	}
 	return err
@@ -117,12 +117,12 @@ func (env *printingEnv) run(cmd *command, stdout io.Writer, stderr io.Writer) er
 
 func printCmd(env env, cmd *command) {
 	fmt.Fprintf(env.stderr(), "cd '%s' &&", env.getwd())
-	if len(cmd.envUpdates) > 0 {
-		fmt.Fprintf(env.stderr(), " env '%s'", strings.Join(cmd.envUpdates, "' '"))
+	if len(cmd.EnvUpdates) > 0 {
+		fmt.Fprintf(env.stderr(), " env '%s'", strings.Join(cmd.EnvUpdates, "' '"))
 	}
 	fmt.Fprintf(env.stderr(), " '%s'", getAbsCmdPath(env, cmd))
-	if len(cmd.args) > 0 {
-		fmt.Fprintf(env.stderr(), " '%s'", strings.Join(cmd.args, "' '"))
+	if len(cmd.Args) > 0 {
+		fmt.Fprintf(env.stderr(), " '%s'", strings.Join(cmd.Args, "' '"))
 	}
 	io.WriteString(env.stderr(), "\n")
 }

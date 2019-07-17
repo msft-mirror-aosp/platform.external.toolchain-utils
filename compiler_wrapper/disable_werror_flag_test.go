@@ -185,8 +185,8 @@ func TestLogWarningsWhenDoubleBuildSucceeds(t *testing.T) {
 			t.Fatalf("unexpected cwd. Got: %s", loggedWarnings.Cwd)
 		}
 		loggedCmd := &command{
-			path: loggedWarnings.Command[0],
-			args: loggedWarnings.Command[1:],
+			Path: loggedWarnings.Command[0],
+			Args: loggedWarnings.Command[1:],
 		}
 		if err := verifyPath(loggedCmd, "usr/bin/clang"); err != nil {
 			t.Error(err)

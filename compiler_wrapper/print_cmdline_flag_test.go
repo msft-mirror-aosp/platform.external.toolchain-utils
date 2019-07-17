@@ -37,7 +37,7 @@ func TestPrintNestedCommand(t *testing.T) {
 func TestPrintCmdWd(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		printCmd(ctx, &command{
-			path: "/somepath",
+			Path: "/somepath",
 		})
 		if ctx.stderrString() != fmt.Sprintf("cd '%s' && '/somepath'\n", ctx.tempDir) {
 			t.Errorf("unexpected result. Got: %s", ctx.stderrString())
@@ -48,7 +48,7 @@ func TestPrintCmdWd(t *testing.T) {
 func TestPrintCmdAbsolutePath(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		printCmd(ctx, &command{
-			path: "somepath",
+			Path: "somepath",
 		})
 		if ctx.stderrString() != fmt.Sprintf("cd '%s' && '%s/somepath'\n", ctx.tempDir, ctx.tempDir) {
 			t.Errorf("unexpected result. Got: %s", ctx.stderrString())
@@ -59,8 +59,8 @@ func TestPrintCmdAbsolutePath(t *testing.T) {
 func TestPrintCmdEnvUpdates(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		printCmd(ctx, &command{
-			path:       "/somepath",
-			envUpdates: []string{"a=b"},
+			Path:       "/somepath",
+			EnvUpdates: []string{"a=b"},
 		})
 		if ctx.stderrString() != fmt.Sprintf("cd '%s' && env 'a=b' '/somepath'\n", ctx.tempDir) {
 			t.Errorf("unexpected result. Got: %s", ctx.stderrString())
@@ -71,8 +71,8 @@ func TestPrintCmdEnvUpdates(t *testing.T) {
 func TestPrintCmdArgs(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		printCmd(ctx, &command{
-			path: "/somepath",
-			args: []string{"-a"},
+			Path: "/somepath",
+			Args: []string{"-a"},
 		})
 		if ctx.stderrString() != fmt.Sprintf("cd '%s' && '/somepath' '-a'\n", ctx.tempDir) {
 			t.Errorf("unexpected result. Got: %s", ctx.stderrString())

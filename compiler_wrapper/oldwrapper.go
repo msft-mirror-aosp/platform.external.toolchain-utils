@@ -25,11 +25,11 @@ func compareToOldWrapper(env env, cfg *config, inputCmd *command, newCmdResults 
 	newCmds := []*command{}
 	for _, cmdResult := range newCmdResults {
 		oldWrapperCfg.CmdResults = append(oldWrapperCfg.CmdResults, oldWrapperCmdResult{
-			Stdout:   cmdResult.stdout,
-			Stderr:   cmdResult.stderr,
-			Exitcode: cmdResult.exitCode,
+			Stdout:   cmdResult.Stdout,
+			Stderr:   cmdResult.Stderr,
+			Exitcode: cmdResult.ExitCode,
 		})
-		newCmds = append(newCmds, cmdResult.cmd)
+		newCmds = append(newCmds, cmdResult.Cmd)
 	}
 	oldWrapperCfg.OverwriteConfig = cfg.overwriteOldWrapperCfg
 
@@ -75,9 +75,9 @@ func parseOldWrapperCommands(stderr string) (cmds []*command, remainingStderr st
 				envUpdate = nil
 			}
 			cmd := &command{
-				path:       args[0],
-				args:       args[1:],
-				envUpdates: envUpdate,
+				Path:       args[0],
+				Args:       args[1:],
+				EnvUpdates: envUpdate,
 			}
 			cmds = append(cmds, cmd)
 		} else {
@@ -105,19 +105,19 @@ func diffCommands(oldCmds []*command, newCmds []*command) string {
 			newCmd := newCmds[i]
 			oldCmd := oldCmds[i]
 
-			if newCmd.path != oldCmd.path {
+			if newCmd.Path != oldCmd.Path {
 				differences = append(differences, "path")
 			}
 
-			if !reflect.DeepEqual(newCmd.args, oldCmd.args) {
+			if !reflect.DeepEqual(newCmd.Args, oldCmd.Args) {
 				differences = append(differences, "args")
 			}
 
 			// Sort the environment as we don't care in which order
 			// it was modified.
-			newEnvUpdates := newCmd.envUpdates
+			newEnvUpdates := newCmd.EnvUpdates
 			sort.Strings(newEnvUpdates)
-			oldEnvUpdates := oldCmd.envUpdates
+			oldEnvUpdates := oldCmd.EnvUpdates
 			sort.Strings(oldEnvUpdates)
 
 			if !reflect.DeepEqual(newEnvUpdates, oldEnvUpdates) {
@@ -191,7 +191,7 @@ func newOldWrapperConfig(env env, cfg *config, inputCmd *command) (*oldWrapperCo
 	}
 
 	return &oldWrapperConfig{
-		CmdPath:           inputCmd.path,
+		CmdPath:           inputCmd.Path,
 		OldWrapperContent: oldWrapperContent,
 		RootRelPath:       cfg.rootRelPath,
 		CommonFlags:       cfg.commonFlags,
@@ -305,9 +305,9 @@ sys.exit(main())
 	// Note: Using a self executable wrapper does not work due to a race condition
 	// on unix systems. See https://github.com/golang/go/issues/22315
 	oldWrapperCmd := &command{
-		path:       "/usr/bin/python2",
-		args:       append([]string{"-S", mockFile.Name()}, inputCmd.args...),
-		envUpdates: inputCmd.envUpdates,
+		Path:       "/usr/bin/python2",
+		Args:       append([]string{"-S", mockFile.Name()}, inputCmd.Args...),
+		EnvUpdates: inputCmd.EnvUpdates,
 	}
 	return wrapSubprocessErrorWithSourceLoc(oldWrapperCmd, env.run(oldWrapperCmd, stdout, stderr))
 }

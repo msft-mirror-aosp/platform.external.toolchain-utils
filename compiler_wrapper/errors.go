@@ -72,10 +72,10 @@ func getExitCode(err error) (exitCode int, ok bool) {
 
 func getCCacheError(compilerCmd *command, compilerCmdErr error) (ccacheErr userError, ok bool) {
 	if en, ok := compilerCmdErr.(syscall.Errno); ok && en == syscall.ENOENT &&
-		strings.Contains(compilerCmd.path, "ccache") {
+		strings.Contains(compilerCmd.Path, "ccache") {
 		ccacheErr =
 			newUserErrorf("ccache not found under %s. Please install it",
-				compilerCmd.path)
+				compilerCmd.Path)
 		return ccacheErr, true
 	}
 	return ccacheErr, false

@@ -56,21 +56,21 @@ func runClangTidy(env env, clangCmd *command, cSrcFile string) error {
 		"-readability-*",
 	}, ",")
 
-	resourceDir, err := getClangResourceDir(env, clangCmd.path)
+	resourceDir, err := getClangResourceDir(env, clangCmd.Path)
 	if err != nil {
 		return err
 	}
 
-	clangTidyPath := filepath.Join(filepath.Dir(clangCmd.path), "clang-tidy")
+	clangTidyPath := filepath.Join(filepath.Dir(clangCmd.Path), "clang-tidy")
 	clangTidyCmd := &command{
-		path: clangTidyPath,
-		args: append([]string{
+		Path: clangTidyPath,
+		Args: append([]string{
 			"-checks=" + defaultTidyChecks,
 			cSrcFile,
 			"--",
 			"-resource-dir=" + resourceDir,
-		}, clangCmd.args...),
-		envUpdates: clangCmd.envUpdates,
+		}, clangCmd.Args...),
+		EnvUpdates: clangCmd.EnvUpdates,
 	}
 
 	exitCode, err := wrapSubprocessErrorWithSourceLoc(clangTidyCmd,

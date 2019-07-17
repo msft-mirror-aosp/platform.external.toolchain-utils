@@ -13,9 +13,9 @@ func processClangSyntaxFlag(builder *commandBuilder) (clangSyntax bool) {
 
 func checkClangSyntax(env env, clangCmd *command) (exitCode int, err error) {
 	clangSyntaxCmd := &command{
-		path:       clangCmd.path,
-		args:       append(clangCmd.args, "-fsyntax-only", "-stdlib=libstdc++"),
-		envUpdates: clangCmd.envUpdates,
+		Path:       clangCmd.Path,
+		Args:       append(clangCmd.Args, "-fsyntax-only", "-stdlib=libstdc++"),
+		EnvUpdates: clangCmd.EnvUpdates,
 	}
 	return wrapSubprocessErrorWithSourceLoc(clangSyntaxCmd,
 		env.run(clangSyntaxCmd, env.stdout(), env.stderr()))

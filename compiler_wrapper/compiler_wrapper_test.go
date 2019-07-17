@@ -104,8 +104,8 @@ func TestLogExitCodeErrorWhenComparingToOldWrapper(t *testing.T) {
 			writeMockWrapper(ctx, &mockWrapperConfig{
 				Cmds: []*mockWrapperCmd{
 					{
-						Path:     cmd.path,
-						Args:     cmd.args,
+						Path:     cmd.Path,
+						Args:     cmd.Args,
 						ExitCode: 2,
 					},
 				},

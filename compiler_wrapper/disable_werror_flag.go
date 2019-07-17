@@ -31,9 +31,9 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 	retryStdoutBuffer := &bytes.Buffer{}
 	retryStderrBuffer := &bytes.Buffer{}
 	retryCommand := &command{
-		path:       originalCmd.path,
-		args:       append(originalCmd.args, "-Wno-error"),
-		envUpdates: originalCmd.envUpdates,
+		Path:       originalCmd.Path,
+		Args:       append(originalCmd.Args, "-Wno-error"),
+		EnvUpdates: originalCmd.EnvUpdates,
 	}
 	retryExitCode, err := wrapSubprocessErrorWithSourceLoc(retryCommand,
 		env.run(retryCommand, retryStdoutBuffer, retryStderrBuffer))
@@ -84,7 +84,7 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 
 	jsonData := warningsJSONData{
 		Cwd:     env.getwd(),
-		Command: append([]string{originalCmd.path}, originalCmd.args...),
+		Command: append([]string{originalCmd.Path}, originalCmd.Args...),
 		Stdout:  outputToLog,
 	}
 	enc := json.NewEncoder(tmpFile)

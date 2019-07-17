@@ -31,8 +31,8 @@ func TestCompareToOldWrapperCompilerCommand(t *testing.T) {
 			writeMockWrapper(ctx, &mockWrapperConfig{
 				Cmds: []*mockWrapperCmd{
 					{
-						Path:     cmd.path + pathSuffix,
-						Args:     append(cmd.args, extraArgs...),
+						Path:     cmd.Path + pathSuffix,
+						Args:     append(cmd.Args, extraArgs...),
 						ExitCode: exitCode,
 					},
 				},
@@ -93,13 +93,13 @@ func TestCompareToOldWrapperNestedCommand(t *testing.T) {
 			var wrapperCmd *mockWrapperCmd
 			if isNestedCmd {
 				wrapperCmd = &mockWrapperCmd{
-					Path: cmd.path + pathSuffix,
-					Args: append(cmd.args, extraArgs...),
+					Path: cmd.Path + pathSuffix,
+					Args: append(cmd.Args, extraArgs...),
 				}
 			} else {
 				wrapperCmd = &mockWrapperCmd{
-					Path: cmd.path,
-					Args: cmd.args,
+					Path: cmd.Path,
+					Args: cmd.Args,
 				}
 			}
 			wrapperCfg.Cmds = append(wrapperCfg.Cmds, wrapperCmd)

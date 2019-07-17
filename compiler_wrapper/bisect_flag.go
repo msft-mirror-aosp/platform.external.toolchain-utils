@@ -13,13 +13,13 @@ func calcBisectCommand(env env, bisectStage string, compilerCmd *command) *comma
 	}
 	absCompilerPath := getAbsCmdPath(env, compilerCmd)
 	return &command{
-		path: "/usr/bin/python2",
-		args: append([]string{
+		Path: "/usr/bin/python2",
+		Args: append([]string{
 			"-c",
 			bisectPythonCommand,
 			bisectStage,
 			bisectDir,
 			absCompilerPath,
-		}, compilerCmd.args...),
+		}, compilerCmd.Args...),
 	}
 }

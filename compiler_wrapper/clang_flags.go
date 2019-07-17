@@ -149,8 +149,8 @@ func processClangFlags(builder *commandBuilder) error {
 
 func getClangResourceDir(env env, clangPath string) (string, error) {
 	readResourceCmd := &command{
-		path: clangPath,
-		args: []string{"--print-resource-dir"},
+		Path: clangPath,
+		Args: []string{"--print-resource-dir"},
 	}
 	stdoutBuffer := bytes.Buffer{}
 	if err := env.run(readResourceCmd, &stdoutBuffer, env.stderr()); err != nil {
