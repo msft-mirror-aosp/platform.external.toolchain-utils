@@ -14,10 +14,12 @@ from __future__ import print_function
 
 from pipes import quote
 import argparse
+import llvm_patch_management
 import os
 import re
 
 from cros_utils import command_executer
+from failure_modes import FailureModes
 from get_google3_llvm_version import LLVMVersion
 from get_llvm_hash import LLVMHash
 
@@ -50,7 +52,7 @@ def GetCommandLineArgs():
 
   # Add argument for specific builds to uprev and update their llvm-next hash.
   parser.add_argument(
-      '--update_package',
+      '--update_packages',
       default=['sys-devel/llvm'],
       required=False,
       nargs='+',
@@ -71,14 +73,27 @@ def GetCommandLineArgs():
       help='the LLVM version to use for retrieving the LLVM hash ' \
           '(default: uses the google3 llvm version)')
 
+  # Add argument for the mode of the patch management when handling patches.
+  parser.add_argument(
+      '--failure_mode',
+      default=FailureModes.FAIL.value,
+      choices=[mode.value for mode in FailureModes],
+      help='the mode of the patch manager when handling failed patches ' \
+          '(default: %(default)s)')
+
+  # Add argument for the patch metadata file.
+  parser.add_argument(
+      '--patch_metadata_file',
+      help='the .json file that has all the patches and their '
+      'metadata if applicable (default: PATCHES.json inside $FILESDIR)')
+
   # Parse the command line.
   args_output = parser.parse_args()
 
   # Set the log level for the command executer.
   ce.SetLogLevel(log_level=args_output.log_level)
 
-  return (args_output.log_level, args_output.chroot_path,
-          args_output.update_package, args_output.llvm_version)
+  return args_output
 
 
 def GetChrootBuildPaths(chromeos_root, package_list):
@@ -427,7 +442,105 @@ def CreatePathDictionaryFromPackages(chroot_path, update_packages):
   return GetEbuildPathsFromSymLinkPaths(symlink_file_paths)
 
 
-def UpdatePackages(paths_dict, llvm_hash, llvm_version):
+def RemovePatchesFromFilesDir(patches_to_remove):
+  """Removes the patches from $FILESDIR of a package.
+
+  Args:
+    patches_to_remove: A list where each entry is the absolute path to a patch.
+
+  Raises:
+    ValueError: Failed to remove a patch in $FILESDIR.
+  """
+
+  for cur_patch in patches_to_remove:
+    ret, _, err = ce.RunCommandWOutput(
+        'git -C %s rm -f %s' % (os.path.dirname(cur_patch), cur_patch),
+        print_to_console=False)
+
+    if ret:  # Failed to remove the patch in $FILESDIR.
+      raise ValueError(
+          'Failed to remove patch %s: %s' % (os.path.basename(cur_patch), err))
+
+
+def StagePatchMetadataFileForCommit(patch_metadata_file_path):
+  """Stages the updated patch metadata file for commit.
+
+  Args:
+    patch_metadata_file_path: The absolute path to the patch metadata file.
+
+  Raises:
+    ValueError: Failed to stage the patch metadata file for commit or invalid
+    patch metadata file.
+  """
+
+  if not os.path.isfile(patch_metadata_file_path):
+    raise ValueError(
+        'Invalid patch metadata file provided: %s' % patch_metadata_file_path)
+
+  # Cmd to stage the patch metadata file for commit.
+  stage_patch_file = 'git -C %s add %s' % (
+      os.path.dirname(patch_metadata_file_path), patch_metadata_file_path)
+
+  ret, _, err = ce.RunCommandWOutput(stage_patch_file, print_to_console=False)
+
+  if ret:  # Failed to stage the patch metadata file for commit.
+    raise ValueError('Failed to stage patch metadata file %s for commit: %s' %
+                     (os.path.basename(patch_metadata_file_path), err))
+
+
+def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
+  """Stages the patch results of the packages to the commit message.
+
+  Args:
+    package_info_dict: A dictionary where the key is the package name and the
+    value is a dictionary that contains information about the patches of the
+    package (key).
+    commit_messages: The commit message that has the updated ebuilds and
+    upreving information.
+  """
+
+  # For each package, check if any patches for that package have
+  # changed, if so, add which patches have changed to the commit
+  # message.
+  for package_name, patch_info_dict in package_info_dict.items():
+    if patch_info_dict['disabled_patches'] or \
+        patch_info_dict['removed_patches'] or \
+        patch_info_dict['modified_metadata']:
+      cur_package_header = 'For the package %s:' % package_name
+      commit_messages.append('-m %s' % quote(cur_package_header))
+
+    # Add to the commit message that the patch metadata file was modified.
+    if patch_info_dict['modified_metadata']:
+      patch_metadata_path = patch_info_dict['modified_metadata']
+      commit_messages.append(
+          '-m %s' % quote('The patch metadata file %s was '
+                          'modified' % os.path.basename(patch_metadata_path)))
+
+      StagePatchMetadataFileForCommit(patch_metadata_path)
+
+    # Add each disabled patch to the commit message.
+    if patch_info_dict['disabled_patches']:
+      commit_messages.append(
+          '-m %s' % quote('The following patches were disabled:'))
+
+      for patch_path in patch_info_dict['disabled_patches']:
+        commit_messages.append('-m %s' % quote(os.path.basename(patch_path)))
+
+    # Add each removed patch to the commit message.
+    if patch_info_dict['removed_patches']:
+      commit_messages.append(
+          '-m %s' % quote('The following patches were removed:'))
+
+      for patch_path in patch_info_dict['removed_patches']:
+        commit_messages.append('-m %s' % quote(os.path.basename(patch_path)))
+
+      RemovePatchesFromFilesDir(patch_info_dict['removed_patches'])
+
+  return commit_messages
+
+
+def UpdatePackages(paths_dict, llvm_hash, llvm_version, chroot_path,
+                   patch_metadata_file, mode):
   """Updates the package's LLVM_NEXT_HASH and uprevs the ebuild.
 
   A temporary repo is created for the changes. The changes are
@@ -439,6 +552,12 @@ def UpdatePackages(paths_dict, llvm_hash, llvm_version):
     value is the absolute path to the ebuild of the package.
     llvm_hash: The LLVM hash to use for 'LLVM_NEXT_HASH'.
     llvm_version: The LLVM version of the 'llvm_hash'.
+    chroot_path: The absolute path to the chroot.
+    patch_metadata_file: The name of the .json file in '$FILESDIR/' that has
+    the patches and its metadata.
+    mode: The mode of the patch manager when handling an applicable patch
+    that failed to apply.
+      Ex: 'FailureModes.FAIL'
   """
 
   repo_path = os.path.dirname(paths_dict.itervalues().next())
@@ -451,6 +570,9 @@ def UpdatePackages(paths_dict, llvm_hash, llvm_version):
 
     commit_messages.append(
         '-m %s' % quote('Following packages have been updated:'))
+
+    # Holds the list of packages that are updating.
+    packages = []
 
     # Iterate through the dictionary.
     #
@@ -468,9 +590,20 @@ def UpdatePackages(paths_dict, llvm_hash, llvm_version):
       cur_dir_name = os.path.basename(path_to_ebuild_dir)
       parent_dir_name = os.path.basename(os.path.dirname(path_to_ebuild_dir))
 
+      packages.append('%s/%s' % (parent_dir_name, cur_dir_name))
+
       new_commit_message = '%s/%s' % (parent_dir_name, cur_dir_name)
 
       commit_messages.append('-m %s' % quote(new_commit_message))
+
+    # Handle the patches for each package.
+    llvm_patch_management.ce.SetLogLevel(log_level=ce.GetLogLevel())
+    package_info_dict = llvm_patch_management.UpdatePackagesPatchMetadataFile(
+        chroot_path, llvm_version, patch_metadata_file, packages, mode)
+
+    # Update the commit message if changes were made to a package's patches.
+    commit_messages = StagePackagesPatchResultsForCommit(
+        package_info_dict, commit_messages)
 
     UploadChanges(repo_path, llvm_hash, ' '.join(commit_messages))
 
@@ -481,20 +614,25 @@ def UpdatePackages(paths_dict, llvm_hash, llvm_version):
 def main():
   """Updates the LLVM next hash for each package."""
 
-  log_level, chroot_path, update_packages, llvm_version = GetCommandLineArgs()
+  args_output = GetCommandLineArgs()
 
   # Construct a dictionary where the key is the absolute path of the symlink to
   # the package and the value is the absolute path to the ebuild of the package.
-  paths_dict = CreatePathDictionaryFromPackages(chroot_path, update_packages)
+  paths_dict = CreatePathDictionaryFromPackages(args_output.chroot_path,
+                                                args_output.update_packages)
 
   # Get the google3 LLVM version if a LLVM version was not provided.
-  if not llvm_version:
-    llvm_version = LLVMVersion(log_level=log_level).GetGoogle3LLVMVersion()
+  if not args_output.llvm_version:
+    args_output.llvm_version = LLVMVersion(
+        log_level=args_output.log_level).GetGoogle3LLVMVersion()
 
   # Get the LLVM hash.
-  llvm_hash = LLVMHash(log_level=log_level).GetLLVMHash(llvm_version)
+  llvm_hash = LLVMHash(log_level=args_output.log_level).GetLLVMHash(
+      args_output.llvm_version)
 
-  UpdatePackages(paths_dict, llvm_hash, llvm_version)
+  UpdatePackages(paths_dict, llvm_hash, args_output.llvm_version,
+                 args_output.chroot_path, args_output.patch_metadata_file,
+                 FailureModes(args_output.failure_mode))
 
 
 if __name__ == '__main__':
