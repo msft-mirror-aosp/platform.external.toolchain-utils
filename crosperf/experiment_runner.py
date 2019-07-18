@@ -2,6 +2,7 @@
 # Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """The experiment runner module."""
 from __future__ import print_function
 
@@ -166,7 +167,7 @@ class ExperimentRunner(object):
 
   def _Run(self, experiment):
     try:
-      if not experiment.locks_dir:
+      if not experiment.locks_dir and not experiment.skylab:
         self._LockAllMachines(experiment)
       if self._using_schedv2:
         schedv2 = Schedv2(experiment)
@@ -211,7 +212,7 @@ class ExperimentRunner(object):
         experiment.Terminate()
         raise
     finally:
-      if not experiment.locks_dir:
+      if not experiment.locks_dir and not experiment.skylab:
         self._UnlockAllMachines(experiment)
 
   def _PrintTable(self, experiment):

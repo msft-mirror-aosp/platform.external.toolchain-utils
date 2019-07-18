@@ -10,13 +10,13 @@
 from __future__ import print_function
 
 import os.path
+import time
 
 import mock
 import unittest
 
 import suite_runner
 import label
-import test_flag
 
 from benchmark import Benchmark
 
@@ -68,13 +68,14 @@ class SuiteRunnerTest(unittest.TestCase):
     self.call_test_that_run = False
     self.disable_aslr_args = []
     self.pin_governor_args = []
+    self.skylab_run_args = []
     self.test_that_args = []
     self.telemetry_run_args = []
     self.telemetry_crosperf_args = []
+    self.call_skylab_run = False
     self.call_telemetry_crosperf_run = False
     self.call_disable_aslr = False
     self.call_pin_governor = False
-    self.call_telemetry_run = False
 
   def setUp(self):
     self.runner = suite_runner.SuiteRunner(
@@ -93,9 +94,10 @@ class SuiteRunnerTest(unittest.TestCase):
     def reset():
       self.call_pin_governor = False
       self.call_test_that_run = False
-      self.call_telemetry_run = False
+      self.call_skylab_run = False
       self.call_telemetry_crosperf_run = False
       self.pin_governor_args = []
+      self.skylab_run_args = []
       self.test_that_args = []
       self.telemetry_run_args = []
       self.telemetry_crosperf_args = []
@@ -108,10 +110,10 @@ class SuiteRunnerTest(unittest.TestCase):
       self.call_pin_governor = True
       self.pin_governor_args = [machine, chroot]
 
-    def FakeTelemetryRun(machine, test_label, benchmark, profiler_args):
-      self.telemetry_run_args = [machine, test_label, benchmark, profiler_args]
-      self.call_telemetry_run = True
-      return 'Ran FakeTelemetryRun'
+    def FakeSkylabRun(test_label, benchmark, test_args, profiler_args):
+      self.skylab_run_args = [test_label, benchmark, test_args, profiler_args]
+      self.call_skylab_run = True
+      return 'Ran FakeSkylabRun'
 
     def FakeTelemetryCrosperfRun(machine, test_label, benchmark, test_args,
                                  profiler_args):
@@ -131,31 +133,31 @@ class SuiteRunnerTest(unittest.TestCase):
 
     self.runner.DisableASLR = FakeDisableASLR
     self.runner.PinGovernorExecutionFrequencies = FakePinGovernor
-    self.runner.Telemetry_Run = FakeTelemetryRun
+    self.runner.Skylab_Run = FakeSkylabRun
     self.runner.Telemetry_Crosperf_Run = FakeTelemetryCrosperfRun
     self.runner.Test_That_Run = FakeTestThatRun
-
     machine = 'fake_machine'
     test_args = ''
     profiler_args = ''
+
     reset()
+    self.mock_label.skylab = True
     self.runner.Run(machine, self.mock_label, self.telemetry_bench, test_args,
                     profiler_args)
-    self.assertTrue(self.call_disable_aslr)
-    self.assertTrue(self.call_pin_governor)
-    self.assertTrue(self.call_telemetry_run)
+    self.assertFalse(self.call_disable_aslr)
+    self.assertFalse(self.call_pin_governor)
+    self.assertTrue(self.call_skylab_run)
     self.assertFalse(self.call_test_that_run)
     self.assertFalse(self.call_telemetry_crosperf_run)
-    self.assertEqual(
-        self.telemetry_run_args,
-        ['fake_machine', self.mock_label, self.telemetry_bench, ''])
+    self.assertEqual(self.skylab_run_args,
+                     [self.mock_label, self.telemetry_bench, '', ''])
+    self.mock_label.skylab = False
 
     reset()
     self.runner.Run(machine, self.mock_label, self.test_that_bench, test_args,
                     profiler_args)
     self.assertTrue(self.call_disable_aslr)
     self.assertTrue(self.call_pin_governor)
-    self.assertFalse(self.call_telemetry_run)
     self.assertTrue(self.call_test_that_run)
     self.assertFalse(self.call_telemetry_crosperf_run)
     self.assertEqual(
@@ -167,7 +169,6 @@ class SuiteRunnerTest(unittest.TestCase):
                     test_args, profiler_args)
     self.assertTrue(self.call_disable_aslr)
     self.assertTrue(self.call_pin_governor)
-    self.assertFalse(self.call_telemetry_run)
     self.assertFalse(self.call_test_that_run)
     self.assertTrue(self.call_telemetry_crosperf_run)
     self.assertEqual(self.telemetry_crosperf_args, [
@@ -235,10 +236,6 @@ class SuiteRunnerTest(unittest.TestCase):
                      'ChrootRunCommandWOutput')
   def test_test_that_run(self, mock_chroot_runcmd, mock_cros_runcmd):
 
-    def FakeRebootMachine(machine, chroot):
-      if machine or chroot:
-        pass
-
     def FakeLogMsg(fd, termfd, msg, flush=True):
       if fd or termfd or msg or flush:
         pass
@@ -246,7 +243,6 @@ class SuiteRunnerTest(unittest.TestCase):
     save_log_msg = self.real_logger.LogMsg
     self.real_logger.LogMsg = FakeLogMsg
     self.runner.logger = self.real_logger
-    self.runner.RebootMachine = FakeRebootMachine
 
     raised_exception = False
     try:
@@ -307,67 +303,58 @@ class SuiteRunnerTest(unittest.TestCase):
     self.assertEqual(args_dict['command_terminator'], self.mock_cmd_term)
     self.assertEqual(len(args_dict), 2)
 
-  @mock.patch.object(os.path, 'isdir')
-  @mock.patch.object(os.path, 'exists')
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
-  def test_telemetry_run(self, mock_runcmd, mock_exists, mock_isdir):
+  def test_skylab_run(self, mock_runcmd):
 
-    def FakeLogMsg(fd, termfd, msg, flush=True):
-      if fd or termfd or msg or flush:
-        pass
+    def FakeDownloadResult(l, task_id):
+      if l and task_id:
+        self.assertEqual(task_id, '12345')
+        return 0
 
-    save_log_msg = self.real_logger.LogMsg
-    self.real_logger.LogMsg = FakeLogMsg
-    mock_runcmd.return_value = 0
-
+    mock_runcmd.return_value = \
+      (0,
+       '"success":true\nCreated Swarming task https://swarming/task?id=12345',
+       '')
     self.mock_cmd_exec.RunCommandWOutput = mock_runcmd
-    self.runner.logger = self.real_logger
+    self.mock_label.skylab = True
+    self.runner.DownloadResult = FakeDownloadResult
+    res = self.runner.Skylab_Run(self.mock_label, self.test_that_bench, '', '')
+    ret_tup = (0, '\nResults placed in tmp/swarming-12345\n', '')
+    self.assertEqual(res, ret_tup)
+    self.assertEqual(mock_runcmd.call_count, 2)
 
-    profiler_args = ('--profiler=custom_perf --profiler_args=\'perf_options'
-                     '="record -a -e cycles,instructions"\'')
+    args_list = mock_runcmd.call_args_list[0][0]
+    args_dict = mock_runcmd.call_args_list[0][1]
+    self.assertEqual(args_list[0],
+                     ('/usr/local/bin/skylab create-test -client-test '
+                      '-board=lumpy -image=build -pool=DUT_POOL_QUOTA '
+                      'octane  dut_name:lumpy1 dut_name:lumpy.cros2'))
+    self.assertEqual(args_dict['command_terminator'], self.mock_cmd_term)
 
-    raises_exception = False
-    mock_isdir.return_value = False
-    try:
-      self.runner.Telemetry_Run('lumpy1.cros', self.mock_label,
-                                self.telemetry_bench, '')
-    except SystemExit:
-      raises_exception = True
-    self.assertTrue(raises_exception)
+    args_list = mock_runcmd.call_args_list[1][0]
+    self.assertEqual(args_list[0], ('skylab wait-task 12345'))
+    self.assertEqual(args_dict['command_terminator'], self.mock_cmd_term)
 
-    raises_exception = False
-    mock_isdir.return_value = True
-    mock_exists.return_value = False
-    try:
-      self.runner.Telemetry_Run('lumpy1.cros', self.mock_label,
-                                self.telemetry_bench, '')
-    except SystemExit:
-      raises_exception = True
-    self.assertTrue(raises_exception)
+  @mock.patch.object(time, 'sleep')
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommand')
+  def test_download_result(self, mock_runcmd, mock_sleep):
+    mock_runcmd.return_value = 0
+    mock_sleep.return_value = 0
+    self.mock_cmd_exec.RunCommand = mock_runcmd
 
-    raises_exception = False
-    mock_isdir.return_value = True
-    mock_exists.return_value = True
-    try:
-      self.runner.Telemetry_Run('lumpy1.cros', self.mock_label,
-                                self.telemetry_bench, profiler_args)
-    except SystemExit:
-      raises_exception = True
-    self.assertTrue(raises_exception)
+    self.runner.DownloadResult(self.mock_label, '12345')
 
-    test_flag.SetTestMode(True)
-    res = self.runner.Telemetry_Run('lumpy1.cros', self.mock_label,
-                                    self.telemetry_bench, '')
-    self.assertEqual(res, 0)
-    self.assertEqual(mock_runcmd.call_count, 1)
-    self.assertEqual(
-        mock_runcmd.call_args_list[0][0],
-        (('cd src/tools/perf && ./run_measurement '
-          '--browser=cros-chrome --output-format=csv '
-          '--remote=lumpy1.cros --identity /tmp/chromeos/src/scripts'
-          '/mod_for_test_scripts/ssh_keys/testing_rsa octane '),))
-
-    self.real_logger.LogMsg = save_log_msg
+    self.assertEqual(mock_runcmd.call_count, 2)
+    cmd = mock_runcmd.call_args_list[0][0][0]
+    self.assertEqual(cmd,
+                     ('/tmp/chromeos/chromium/tools/depot_tools/gsutil.py ls '
+                      'gs://chromeos-autotest-results/swarming-12345/'
+                      'autoserv_test'))
+    cmd = mock_runcmd.call_args_list[1][0][0]
+    self.assertEqual(cmd,
+                     ('/tmp/chromeos/chromium/tools/depot_tools/gsutil.py -mq '
+                      'cp -r gs://chromeos-autotest-results/swarming-12345 '
+                      '/tmp/chromeos/chroot/tmp'))
 
 
 if __name__ == '__main__':

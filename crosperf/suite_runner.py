@@ -9,11 +9,14 @@ from __future__ import print_function
 
 import os
 import shlex
+import time
 
 from cros_utils import command_executer
-import test_flag
 
 TEST_THAT_PATH = '/usr/bin/test_that'
+# TODO: Need to check whether Skylab is installed and set up correctly.
+SKYLAB_PATH = '/usr/local/bin/skylab'
+GS_UTIL = 'chromium/tools/depot_tools/gsutil.py'
 AUTOTEST_DIR = '~/trunk/src/third_party/autotest/files'
 CHROME_MOUNT_DIR = '/tmp/chrome_root'
 
@@ -62,21 +65,26 @@ class SuiteRunner(object):
 
   def Run(self, machine, label, benchmark, test_args, profiler_args):
     for i in range(0, benchmark.retries + 1):
-      # Unless the user turns on ASLR in the flag, we first disable ASLR
-      # before running the benchmarks
-      if not self.enable_aslr:
-        self.DisableASLR(machine, label.chromeos_root)
-      self.PinGovernorExecutionFrequencies(machine, label.chromeos_root)
-      if benchmark.suite == 'telemetry':
-        self.DecreaseWaitTime(machine, label.chromeos_root)
-        ret_tup = self.Telemetry_Run(machine, label, benchmark, profiler_args)
-      elif benchmark.suite == 'telemetry_Crosperf':
-        self.DecreaseWaitTime(machine, label.chromeos_root)
-        ret_tup = self.Telemetry_Crosperf_Run(machine, label, benchmark,
-                                              test_args, profiler_args)
+      if label.skylab:
+        # TODO: need to migrate DisableASLR and PinGovernorExecutionFrequencies
+        # since in skylab mode, we may not know the DUT until one is assigned
+        # to the test. For telemetry_Crosperf run, we can move them into the
+        # server test script, for client runs, need to figure out wrapper to do
+        # it before running.
+        ret_tup = self.Skylab_Run(label, benchmark, test_args, profiler_args)
       else:
-        ret_tup = self.Test_That_Run(machine, label, benchmark, test_args,
-                                     profiler_args)
+        # Unless the user turns on ASLR in the flag, we first disable ASLR
+        # before running the benchmarks
+        if not self.enable_aslr:
+          self.DisableASLR(machine, label.chromeos_root)
+        self.PinGovernorExecutionFrequencies(machine, label.chromeos_root)
+        if benchmark.suite == 'telemetry_Crosperf':
+          self.DecreaseWaitTime(machine, label.chromeos_root)
+          ret_tup = self.Telemetry_Crosperf_Run(machine, label, benchmark,
+                                                test_args, profiler_args)
+        else:
+          ret_tup = self.Test_That_Run(machine, label, benchmark, test_args,
+                                       profiler_args)
 
       if ret_tup[0] != 0:
         self.logger.LogOutput('benchmark %s failed. Retries left: %s' %
@@ -226,6 +234,103 @@ class SuiteRunner(object):
         command_terminator=self._ct,
         cros_sdk_options='--no-ns-pid')
 
+  def DownloadResult(self, label, task_id):
+    gsutil_cmd = os.path.join(label.chromeos_root, GS_UTIL)
+    result_dir = 'gs://chromeos-autotest-results/swarming-%s' % task_id
+    download_path = os.path.join(label.chromeos_root, 'chroot/tmp')
+    ls_command = '%s ls %s' % (gsutil_cmd,
+                               os.path.join(result_dir, 'autoserv_test'))
+    cp_command = '%s -mq cp -r %s %s' % (gsutil_cmd, result_dir, download_path)
+
+    # Server sometimes will not be able to generate the result directory right
+    # after the test. Will try to access this gs location every 60s for 5 mins.
+    t = 0
+    RETRY_LIMIT = 5
+    while t < RETRY_LIMIT:
+      self.logger.LogOutput('Downloading test results.')
+      t += 1
+      status = self._ce.RunCommand(ls_command, print_to_console=False)
+      if status == 0:
+        break
+      if t < RETRY_LIMIT:
+        self.logger.LogOutput('Result directory not generated yet, '
+                              'retry (%d) in 60s.' % t)
+        time.sleep(60)
+      else:
+        self.logger.LogOutput('No result directory for task %s' % task_id)
+        return status
+
+    # Wait for 60s to make sure server finished writing to gs location.
+    time.sleep(60)
+
+    status = self._ce.RunCommand(cp_command)
+    if status != 0:
+      self.logger.LogOutput('Cannot download results from task %s' % task_id)
+    return status
+
+  def Skylab_Run(self, label, benchmark, test_args, profiler_args):
+    """Run the test via skylab.."""
+    options = ''
+    if benchmark.suite != 'telemetry_Crosperf':
+      options += '-client-test'
+    if label.board:
+      options += ' -board=%s' % label.board
+    if label.build:
+      options += ' -image=%s' % label.build
+    # TODO: now only put quota pool here, user need to be able to specify which
+    # pool to use. Need to request feature to not use this option at all.
+    options += ' -pool=DUT_POOL_QUOTA'
+    if benchmark.suite == 'telemetry_Crosperf':
+      if test_args:
+        # Strip double quotes off args (so we can wrap them in single
+        # quotes, to pass through to Telemetry).
+        if test_args[0] == '"' and test_args[-1] == '"':
+          test_args = test_args[1:-1]
+      if profiler_args:
+        test_args += GetProfilerArgs(profiler_args)
+      test_args += ' run_local={} test={}'.format(
+          benchmark.run_local,
+          benchmark.test_name,
+      )
+    else:
+      if profiler_args:
+        self.logger.LogFatal('Client tests do not support profiler.')
+    if test_args:
+      options += ' -test-args="%s"' % test_args
+
+    dimensions = ''
+    for dut in label.remote:
+      dimensions += ' dut_name:%s' % dut.rstrip('.cros')
+
+    command = (('%s create-test %s %s %s') % \
+              (SKYLAB_PATH, options, benchmark.test_name, dimensions))
+
+    if self.log_level != 'verbose':
+      self.logger.LogOutput('Starting skylab test.')
+      self.logger.LogOutput('CMD: %s' % command)
+    ret_tup = self._ce.RunCommandWOutput(command, command_terminator=self._ct)
+
+    if ret_tup[0] != 0:
+      self.logger.LogOutput('Skylab test not created successfully.')
+      return ret_tup
+
+    # Std output of the command will look like:
+    # Created Swarming task https://chromeos-swarming.appspot.com/task?id=12345
+    # We want to parse it and get the id number of the task.
+    task_id = ret_tup[1].strip().split('id=')[1]
+
+    command = ('skylab wait-task %s' % (task_id))
+    if self.log_level != 'verbose':
+      self.logger.LogOutput('Waiting for skylab test to finish.')
+      self.logger.LogOutput('CMD: %s' % command)
+
+    ret_tup = self._ce.RunCommandWOutput(command, command_terminator=self._ct)
+    if '"success":true' in ret_tup[1]:
+      if self.DownloadResult(label, task_id) == 0:
+        result_dir = '\nResults placed in tmp/swarming-%s\n' % task_id
+        return (ret_tup[0], result_dir, ret_tup[2])
+    return ret_tup
+
   def RemoveTelemetryTempFile(self, machine, chromeos_root):
     filename = 'telemetry@%s' % machine
     fullname = os.path.join(chromeos_root, 'chroot', 'tmp', filename)
@@ -283,41 +388,6 @@ class SuiteRunner(object):
         cmd,
         command_terminator=self._ct,
         cros_sdk_options=chrome_root_options)
-
-  def Telemetry_Run(self, machine, label, benchmark, profiler_args):
-    telemetry_run_path = ''
-    if not os.path.isdir(label.chrome_src):
-      self.logger.LogFatal('Cannot find chrome src dir to' ' run telemetry.')
-    else:
-      telemetry_run_path = os.path.join(label.chrome_src, 'src/tools/perf')
-      if not os.path.exists(telemetry_run_path):
-        self.logger.LogFatal('Cannot find %s directory.' % telemetry_run_path)
-
-    if profiler_args:
-      self.logger.LogFatal('Telemetry does not support the perf profiler.')
-
-    # Check for and remove temporary file that may have been left by
-    # previous telemetry runs (and which might prevent this run from
-    # working).
-    if not test_flag.GetTestMode():
-      self.RemoveTelemetryTempFile(machine, label.chromeos_root)
-
-    rsa_key = os.path.join(
-        label.chromeos_root,
-        'src/scripts/mod_for_test_scripts/ssh_keys/testing_rsa')
-
-    cmd = ('cd {0} && '
-           './run_measurement '
-           '--browser=cros-chrome '
-           '--output-format=csv '
-           '--remote={1} '
-           '--identity {2} '
-           '{3} {4}'.format(telemetry_run_path, machine, rsa_key,
-                            benchmark.test_name, benchmark.test_args))
-    if self.log_level != 'verbose':
-      self.logger.LogOutput('Running test.')
-      self.logger.LogOutput('CMD: %s' % cmd)
-    return self._ce.RunCommandWOutput(cmd, print_to_console=False)
 
   def CommandTerminator(self):
     return self._ct

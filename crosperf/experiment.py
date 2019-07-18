@@ -105,6 +105,9 @@ class Experiment(object):
       except BadChecksum:
         # Force same image on all machines, then we do checksum again. No
         # bailout if checksums still do not match.
+        # TODO: It's not a good idea to force flashing the image when we are
+        # running with skylab... Although for now it even helps us getting
+        # that machine...
         self.machine_manager.ForceSameImageToAllMachines(label)
         self.machine_manager.ComputeCommonCheckSum(label)
 
