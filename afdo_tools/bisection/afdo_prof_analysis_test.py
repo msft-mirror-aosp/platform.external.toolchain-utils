@@ -39,15 +39,18 @@ class AfdoProfAnalysisTest(unittest.TestCase):
   def test_bisect_profiles(self):
 
     # mock run of external script with arbitrarily-chosen bad profile vals
-    # increment_counter specified and unused b/c afdo_prof_analysis.py
+    # save_run specified and unused b/c afdo_prof_analysis.py
     # will call with argument explicitly specified
     # pylint: disable=unused-argument
-    def decider(prof, increment_counter=True):
-      if '1' in prof['func_a'] or '3' in prof['func_b']:
-        return analysis.status_enum.BAD_STATUS
-      return analysis.status_enum.GOOD_STATUS
+    class DeciderClass(object):
+      """Class for this tests's decider."""
 
-    results = analysis.bisect_profiles_wrapper(decider, self.good_items,
+      def run(self, prof, save_run=False):
+        if '1' in prof['func_a'] or '3' in prof['func_b']:
+          return analysis.StatusEnum.BAD_STATUS
+        return analysis.StatusEnum.GOOD_STATUS
+
+    results = analysis.bisect_profiles_wrapper(DeciderClass(), self.good_items,
                                                self.bad_items)
     self.assertEqual(results['individuals'], sorted(['func_a', 'func_b']))
     self.assertEqual(results['ranges'], [])
@@ -57,10 +60,13 @@ class AfdoProfAnalysisTest(unittest.TestCase):
     # arbitrarily chosen functions whose values in the bad profile constitute
     # a problematic pair
     # pylint: disable=unused-argument
-    def decider(prof, increment_counter=True):
-      if '1' in prof['func_a'] and '3' in prof['func_b']:
-        return analysis.status_enum.BAD_STATUS
-      return analysis.status_enum.GOOD_STATUS
+    class DeciderClass(object):
+      """Class for this tests's decider."""
+
+      def run(self, prof, save_run=False):
+        if '1' in prof['func_a'] and '3' in prof['func_b']:
+          return analysis.StatusEnum.BAD_STATUS
+        return analysis.StatusEnum.GOOD_STATUS
 
     # put the problematic combination in separate halves of the common funcs
     # so that non-bisecting search is invoked for its actual use case
@@ -70,7 +76,7 @@ class AfdoProfAnalysisTest(unittest.TestCase):
     common_funcs.remove('func_b')
     common_funcs.append('func_b')
 
-    problem_range = analysis.range_search(decider, self.good_items,
+    problem_range = analysis.range_search(DeciderClass(), self.good_items,
                                           self.bad_items, common_funcs, 0,
                                           len(common_funcs))
 
@@ -80,25 +86,33 @@ class AfdoProfAnalysisTest(unittest.TestCase):
     func_in_good = 'func_c'
 
     # pylint: disable=unused-argument
-    def decider(prof, increment_counter=True):
-      if func_in_good in prof:
-        return analysis.status_enum.GOOD_STATUS
-      return analysis.status_enum.BAD_STATUS
+    class DeciderClass(object):
+      """Class for this tests's decider."""
+
+      def run(self, prof, save_run=False):
+        if func_in_good in prof:
+          return analysis.StatusEnum.GOOD_STATUS
+        return analysis.StatusEnum.BAD_STATUS
 
     self.assertTrue(
-        analysis.check_good_not_bad(decider, self.good_items, self.bad_items))
+        analysis.check_good_not_bad(DeciderClass(), self.good_items,
+                                    self.bad_items))
 
   def test_check_bad_not_good(self):
     func_in_bad = 'func_d'
 
     # pylint: disable=unused-argument
-    def decider(prof, increment_counter=True):
-      if func_in_bad in prof:
-        return analysis.status_enum.BAD_STATUS
-      return analysis.status_enum.GOOD_STATUS
+    class DeciderClass(object):
+      """Class for this tests's decider."""
+
+      def run(self, prof, save_run=False):
+        if func_in_bad in prof:
+          return analysis.StatusEnum.BAD_STATUS
+        return analysis.StatusEnum.GOOD_STATUS
 
     self.assertTrue(
-        analysis.check_bad_not_good(decider, self.good_items, self.bad_items))
+        analysis.check_bad_not_good(DeciderClass(), self.good_items,
+                                    self.bad_items))
 
 
 if __name__ == '__main__':

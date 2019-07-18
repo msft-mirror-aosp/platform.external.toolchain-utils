@@ -17,6 +17,7 @@ from __future__ import print_function
 
 from absl import app
 from absl import flags
+from datetime import date
 from enum import IntEnum
 from tempfile import mkstemp
 
@@ -41,11 +42,21 @@ flags.DEFINE_string(
     'AFDO profile, returns GOOD/BAD/SKIP')
 flags.DEFINE_string('analysis_output_file', None,
                     'File to output JSON results to')
-flags.DEFINE_integer('seed', None, 'Integer specifying seed for randomness')
+flags.DEFINE_string(
+    'state_file', '%s/afdo_analysis_state.json' % os.getcwd(),
+    'File path containing state to load from initially, and '
+    'will be overwritten with new state on each iteration')
+flags.DEFINE_boolean(
+    'no_resume', False, 'If enabled, no initial state will be '
+    'loaded and the program will run from the beginning')
+flags.DEFINE_boolean(
+    'remove_state_on_completion', False, 'If enabled, state '
+    'file will be removed once profile analysis is completed')
+flags.DEFINE_float('seed', None, 'Float specifying seed for randomness')
 FLAGS = flags.FLAGS
 
 
-class status_enum(IntEnum):
+class StatusEnum(IntEnum):
   """Enum of valid statuses returned by profile decider."""
   GOOD_STATUS = 0
   BAD_STATUS = 1
@@ -53,7 +64,7 @@ class status_enum(IntEnum):
   PROBLEM_STATUS = 127
 
 
-statuses = status_enum.__members__.values()
+statuses = StatusEnum.__members__.values()
 
 _NUM_RUNS_RANGE_SEARCH = 20  # how many times range search should run its algo
 
@@ -76,22 +87,52 @@ def prof_to_tmp(prof):
   return temp_path
 
 
-def generate_decider():
-  """create the decider function with counter for total number of calls
+class DeciderState(object):
+  """Class for the external decider."""
 
-  generate_decider is a function which returns an inner function (and the
-  inner one does the work of running the external decider). This has been
-  structured as a function which returns a function so we can keep track of the
-  global/total number of runs as a member of the outer function, as opposed to
-  using a global variable.
-  """
+  def __init__(self, state_file):
+    self.accumulated_results = []  # over this run of the script
+    self.saved_results = []  # imported from a previous run of this script
+    self.state_file = state_file
+    self.seed = FLAGS.seed or time.time()
 
-  # Inner functions can only modify, and not rebind, nonlocal variables
-  # which is why this uses a list to represent a single integer
-  _num_runs = [0]
+  def load_state(self):
+    if not os.path.exists(self.state_file):
+      logging.info('State file %s is empty, starting from beginning',
+                   self.state_file)
+      return
 
-  def run(prof, increment_counter=True):
+    with open(self.state_file) as f:
+      try:
+        data = json.load(f)
+      except:
+        raise ValueError('Provided state file %s to resume from does not'
+                         ' contain a valid JSON.' % self.state_file)
+
+    if 'seed' not in data or 'accumulated_results' not in data:
+      raise ValueError('Provided state file %s to resume from does not contain'
+                       ' the correct information' % self.state_file)
+
+    self.seed = data['seed']
+    self.saved_results = data['accumulated_results']
+    logging.info('Restored state from %s...', self.state_file)
+
+  def save_state(self):
+    state = {'seed': self.seed, 'accumulated_results': self.accumulated_results}
+    fd, tmp_file = mkstemp()
+    with open(tmp_file, 'w') as f:
+      json.dump(state, f, indent=2)
+    os.close(fd)
+    os.rename(tmp_file, self.state_file)
+    logging.info('Logged state to %s...', self.state_file)
+
+  def run(self, prof, save_run=True):
     """Run the external deciding script on the given profile."""
+    if self.saved_results and save_run:
+      result = StatusEnum(self.saved_results.pop(0))
+      self.accumulated_results.append(result)
+      return result
+
     filename = prof_to_tmp(prof)
 
     try:
@@ -100,17 +141,16 @@ def generate_decider():
       os.remove(filename)
 
     if return_code in statuses:
-      if increment_counter:
-        _num_runs[0] += 1
-
-      status = status_enum(return_code)
-      logging.info('Run %d of external script %s returned %s', _num_runs[0],
-                   FLAGS.external_decider, status.name)
+      status = StatusEnum(return_code)
+      if save_run:
+        self.accumulated_results.append(status.value)
+      logging.info('Run %d of external script %s returned %s',
+                   len(self.accumulated_results), FLAGS.external_decider,
+                   status.name)
+      self.save_state()
       return status
     raise ValueError(
         'Provided external script had unexpected return code %d' % return_code)
-
-  return run
 
 
 def bisect_profiles(decider, good, bad, common_funcs, lo, hi):
@@ -148,21 +188,21 @@ def bisect_profiles(decider, good, bad, common_funcs, lo, hi):
   for func in common_funcs[mid:hi]:
     mid_hi_prof[func] = bad[func]
 
-  lo_mid_verdict = decider(lo_mid_prof)
-  mid_hi_verdict = decider(mid_hi_prof)
+  lo_mid_verdict = decider.run(lo_mid_prof)
+  mid_hi_verdict = decider.run(mid_hi_prof)
 
-  if lo_mid_verdict == status_enum.BAD_STATUS:
+  if lo_mid_verdict == StatusEnum.BAD_STATUS:
     result = bisect_profiles(decider, good, bad, common_funcs, lo, mid)
     results['individuals'].extend(result['individuals'])
     results['ranges'].extend(result['ranges'])
-  if mid_hi_verdict == status_enum.BAD_STATUS:
+  if mid_hi_verdict == StatusEnum.BAD_STATUS:
     result = bisect_profiles(decider, good, bad, common_funcs, mid, hi)
     results['individuals'].extend(result['individuals'])
     results['ranges'].extend(result['ranges'])
 
   # neither half is bad -> the issue is caused by several things occuring
   # in conjunction, and this combination crosses 'mid'
-  if lo_mid_verdict == mid_hi_verdict == status_enum.GOOD_STATUS:
+  if lo_mid_verdict == mid_hi_verdict == StatusEnum.GOOD_STATUS:
     problem_range = range_search(decider, good, bad, common_funcs, lo, hi)
     if problem_range:
       logging.info('Found %s as a problematic combination of profiles',
@@ -178,9 +218,9 @@ def bisect_profiles_wrapper(decider, good, bad, perform_check=True):
   # Validate good and bad profiles are such, otherwise bisection reports noise
   # Note that while decider is a random mock, these assertions may fail.
   if perform_check:
-    if decider(good, increment_counter=False) != status_enum.GOOD_STATUS:
+    if decider.run(good, save_run=False) != StatusEnum.GOOD_STATUS:
       raise ValueError("Supplied good profile is not actually GOOD")
-    if decider(bad, increment_counter=False) != status_enum.BAD_STATUS:
+    if decider.run(bad, save_run=False) != StatusEnum.BAD_STATUS:
       raise ValueError("Supplied bad profile is not actually BAD")
 
   common_funcs = sorted(func for func in good if func in bad)
@@ -223,13 +263,13 @@ def range_search(decider, good, bad, common_funcs, lo, hi):
 
     for func in funcs[lo:mid]:
       good_copy[func] = bad[func]
-    verdict = decider(good_copy)
+    verdict = decider.run(good_copy)
 
     # reset for next iteration
     for func in funcs:
       good_copy[func] = good[func]
 
-    if verdict == status_enum.BAD_STATUS:
+    if verdict == StatusEnum.BAD_STATUS:
       return find_upper_border(good_copy, funcs, lo, mid, mid)
     return find_upper_border(good_copy, funcs, mid, hi, last_bad_val)
 
@@ -241,13 +281,13 @@ def range_search(decider, good, bad, common_funcs, lo, hi):
 
     for func in funcs[lo:mid]:
       good_copy[func] = good[func]
-    verdict = decider(good_copy)
+    verdict = decider.run(good_copy)
 
     # reset for next iteration
     for func in funcs:
       good_copy[func] = bad[func]
 
-    if verdict == status_enum.BAD_STATUS:
+    if verdict == StatusEnum.BAD_STATUS:
       return find_lower_border(good_copy, funcs, mid, hi, lo)
     return find_lower_border(good_copy, funcs, lo, mid, last_bad_val)
 
@@ -299,7 +339,7 @@ def check_good_not_bad(decider, good, bad):
   for func in good:
     if func not in bad:
       bad_copy[func] = good[func]
-  return decider(bad_copy) == status_enum.GOOD_STATUS
+  return decider.run(bad_copy) == StatusEnum.GOOD_STATUS
 
 
 def check_bad_not_good(decider, good, bad):
@@ -308,33 +348,46 @@ def check_bad_not_good(decider, good, bad):
   for func in bad:
     if func not in good:
       good_copy[func] = bad[func]
-  return decider(good_copy) == status_enum.BAD_STATUS
+  return decider.run(good_copy) == StatusEnum.BAD_STATUS
 
 
 def main(_):
+
+  if not FLAGS.no_resume and FLAGS.seed:  # conflicting seeds
+    raise RuntimeError('Ambiguous seed value; do not resume from existing '
+                       'state and also specify seed by command line flag')
+
+  decider = DeciderState(FLAGS.state_file)
+  if not FLAGS.no_resume:
+    decider.load_state()
+  random.seed(decider.seed)
+
   with open(FLAGS.good_prof) as good_f:
     good_items = parse_afdo(good_f)
   with open(FLAGS.bad_prof) as bad_f:
     bad_items = parse_afdo(bad_f)
 
-  seed = FLAGS.seed
-  if not FLAGS.seed:
-    seed = time.time()
-  random.seed(seed)
-
-  decider = generate_decider()
   bisect_results = bisect_profiles_wrapper(decider, good_items, bad_items)
   gnb_result = check_good_not_bad(decider, good_items, bad_items)
   bng_result = check_bad_not_good(decider, good_items, bad_items)
 
   results = {
-      'seed': seed,
+      'seed': decider.seed,
       'bisect_results': bisect_results,
       'good_only_functions': gnb_result,
       'bad_only_functions': bng_result
   }
   with open(FLAGS.analysis_output_file, 'wb') as f:
     json.dump(results, f, indent=2)
+  if FLAGS.remove_state_on_completion:
+    os.remove(FLAGS.state_file)
+    logging.info('Removed state file %s following completion of script...',
+                 FLAGS.state_file)
+  else:
+    completed_state_file = '%s.completed.%s' % (FLAGS.state_file,
+                                                str(date.today()))
+    os.rename(FLAGS.state_file, completed_state_file)
+    logging.info('Stored completed state file as %s...', completed_state_file)
   return results
 
 
