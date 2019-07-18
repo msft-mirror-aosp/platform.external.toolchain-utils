@@ -9,6 +9,8 @@ import (
 )
 
 type config struct {
+	// TODO: Refactor this flag into more generic configuration properties.
+	isHostWrapper bool
 	// Whether to use ccache.
 	useCCache bool
 	// Flags to add to gcc and clang.
@@ -57,6 +59,8 @@ func getConfig(useCCache bool, configName string) (*config, error) {
 		return getCrosHardenedConfig(useCCache), nil
 	case "cros.nonhardened":
 		return getCrosNonHardenedConfig(useCCache), nil
+	case "cros.host":
+		return getCrosHostConfig(), nil
 	default:
 		return nil, newErrorwithSourceLocf("unknown config name: %s", configName)
 	}
@@ -122,6 +126,31 @@ func getCrosNonHardenedConfig(useCCache bool) *config {
 			"-Wno-unknown-warning-option",
 			"-Wno-section",
 			"-static-libgcc",
+		},
+		newWarningsDir: "/tmp/fatal_clang_warnings",
+	}
+}
+
+// Flags to be added to host toolchain.
+func getCrosHostConfig() *config {
+	return &config{
+		isHostWrapper:  true,
+		useCCache:      false,
+		rootRelPath:    "../..",
+		oldWrapperPath: "./host_wrapper.old",
+		commonFlags:    []string{},
+		gccFlags:       []string{},
+		// Temporarily disable tautological-*-compare chromium:778316.
+		// Temporarily add no-unknown-warning-option to deal with old clang versions.
+		clangFlags: []string{
+			"-Qunused-arguments",
+			"-grecord-gcc-switches",
+			"-fno-addrsig",
+			"-Wno-unused-local-typedefs",
+			"-Wno-deprecated-declarations",
+			"-Wno-tautological-constant-compare",
+			"-Wno-tautological-unsigned-enum-zero-compare",
+			"-Wno-unknown-warning-option",
 		},
 		newWarningsDir: "/tmp/fatal_clang_warnings",
 	}

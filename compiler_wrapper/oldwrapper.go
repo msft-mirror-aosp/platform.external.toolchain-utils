@@ -172,13 +172,13 @@ type oldWrapperCmdResult struct {
 }
 
 func newOldWrapperConfig(env env, cfg *config, inputCmd *command) (*oldWrapperConfig, error) {
+	absWrapperPath, err := getAbsWrapperPath(env, inputCmd)
+	if err != nil {
+		return nil, err
+	}
 	absOldWrapperPath := cfg.oldWrapperPath
 	if !filepath.IsAbs(absOldWrapperPath) {
-		absWrapperDir, err := getAbsWrapperDir(env, inputCmd)
-		if err != nil {
-			return nil, err
-		}
-		absOldWrapperPath = filepath.Join(absWrapperDir, cfg.oldWrapperPath)
+		absOldWrapperPath = filepath.Join(filepath.Dir(absWrapperPath), cfg.oldWrapperPath)
 	}
 	oldWrapperContentBytes, err := ioutil.ReadFile(absOldWrapperPath)
 	if err != nil {
@@ -186,10 +186,10 @@ func newOldWrapperConfig(env env, cfg *config, inputCmd *command) (*oldWrapperCo
 	}
 	oldWrapperContent := string(oldWrapperContentBytes)
 	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "from __future__ import print_function", "")
-	// Disable the original call to main()
-	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "__name__", "'none'")
 	// Replace sets with lists to make our comparisons deterministic
 	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "set(", "ListSet(")
+	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "if __name__ == '__main__':", "def runMain():")
+	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "__file__", "'"+absWrapperPath+"'")
 	return &oldWrapperConfig{
 		CmdPath:           inputCmd.Path,
 		OldWrapperContent: oldWrapperContent,
@@ -296,7 +296,7 @@ os.execv = execv_mock
 
 sys.argv[0] = '{{.CmdPath}}'
 
-sys.exit(main())
+runMain()
 `
 	tmpl, err := template.New("mock").Parse(mockTemplate)
 	if err != nil {

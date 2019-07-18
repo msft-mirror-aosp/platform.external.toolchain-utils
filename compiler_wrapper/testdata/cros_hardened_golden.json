@@ -605,6 +605,49 @@
           "cmd": {
             "path": "./x86_64-cros-linux-gnu-gcc",
             "args": [
+              "--sysroot=xyz",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/usr/bin/ccache",
+              "args": [
+                "./x86_64-cros-linux-gnu-gcc.real",
+                "-fno-reorder-blocks-and-partition",
+                "-Wno-unused-local-typedefs",
+                "-Wno-maybe-uninitialized",
+                "-fstack-protector-strong",
+                "-fPIE",
+                "-pie",
+                "-D_FORTIFY_SOURCE=2",
+                "-fno-omit-frame-pointer",
+                "--sysroot=xyz",
+                "main.cc",
+                "-mno-movbe"
+              ],
+              "env_updates": [
+                "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
+                "CCACHE_DIR=/var/cache/distfiles/ccache",
+                "CCACHE_UMASK=002"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "gcc sanitizer args",
+    "records": [
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-gcc",
+            "args": [
               "-fsanitize=kernel-address",
               "-Wl,--no-undefined",
               "main.cc"
@@ -786,44 +829,6 @@
                 "-D_FORTIFY_SOURCE=2",
                 "-fno-omit-frame-pointer",
                 "-fsanitize=fuzzer",
-                "main.cc",
-                "-mno-movbe"
-              ],
-              "env_updates": [
-                "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
-                "CCACHE_DIR=/var/cache/distfiles/ccache",
-                "CCACHE_UMASK=002"
-              ]
-            }
-          }
-        ]
-      },
-      {
-        "wd": "/tmp/stable",
-        "wrapper": {
-          "cmd": {
-            "path": "./x86_64-cros-linux-gnu-gcc",
-            "args": [
-              "--sysroot=xyz",
-              "main.cc"
-            ]
-          }
-        },
-        "cmds": [
-          {
-            "cmd": {
-              "path": "/usr/bin/ccache",
-              "args": [
-                "./x86_64-cros-linux-gnu-gcc.real",
-                "-fno-reorder-blocks-and-partition",
-                "-Wno-unused-local-typedefs",
-                "-Wno-maybe-uninitialized",
-                "-fstack-protector-strong",
-                "-fPIE",
-                "-pie",
-                "-D_FORTIFY_SOURCE=2",
-                "-fno-omit-frame-pointer",
-                "--sysroot=xyz",
                 "main.cc",
                 "-mno-movbe"
               ],
@@ -2638,6 +2643,57 @@
           "cmd": {
             "path": "./x86_64-cros-linux-gnu-clang",
             "args": [
+              "--sysroot=xyz",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/usr/bin/ccache",
+              "args": [
+                "../../usr/bin/clang",
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-Wno-section",
+                "-static-libgcc",
+                "-fstack-protector-strong",
+                "-fPIE",
+                "-pie",
+                "-D_FORTIFY_SOURCE=2",
+                "-fno-omit-frame-pointer",
+                "--sysroot=xyz",
+                "main.cc",
+                "-B../../bin",
+                "-target",
+                "x86_64-cros-linux-gnu"
+              ],
+              "env_updates": [
+                "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
+                "CCACHE_DIR=/var/cache/distfiles/ccache",
+                "CCACHE_UMASK=002",
+                "CCACHE_CPP2=yes"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "clang sanitizer args",
+    "records": [
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
               "-fsanitize=kernel-address",
               "-Wl,--no-undefined",
               "main.cc"
@@ -2852,52 +2908,6 @@
                 "-fno-omit-frame-pointer",
                 "-fno-experimental-new-pass-manager",
                 "-fsanitize=fuzzer",
-                "main.cc",
-                "-B../../bin",
-                "-target",
-                "x86_64-cros-linux-gnu"
-              ],
-              "env_updates": [
-                "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
-                "CCACHE_DIR=/var/cache/distfiles/ccache",
-                "CCACHE_UMASK=002",
-                "CCACHE_CPP2=yes"
-              ]
-            }
-          }
-        ]
-      },
-      {
-        "wd": "/tmp/stable",
-        "wrapper": {
-          "cmd": {
-            "path": "./x86_64-cros-linux-gnu-clang",
-            "args": [
-              "--sysroot=xyz",
-              "main.cc"
-            ]
-          }
-        },
-        "cmds": [
-          {
-            "cmd": {
-              "path": "/usr/bin/ccache",
-              "args": [
-                "../../usr/bin/clang",
-                "-Qunused-arguments",
-                "-grecord-gcc-switches",
-                "-fno-addrsig",
-                "-Wno-tautological-constant-compare",
-                "-Wno-tautological-unsigned-enum-zero-compare",
-                "-Wno-unknown-warning-option",
-                "-Wno-section",
-                "-static-libgcc",
-                "-fstack-protector-strong",
-                "-fPIE",
-                "-pie",
-                "-D_FORTIFY_SOURCE=2",
-                "-fno-omit-frame-pointer",
-                "--sysroot=xyz",
                 "main.cc",
                 "-B../../bin",
                 "-target",

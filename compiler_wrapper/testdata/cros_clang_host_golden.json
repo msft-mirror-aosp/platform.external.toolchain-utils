@@ -1,0 +1,1695 @@
+[
+  {
+    "name": "clang path",
+    "records": [
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          },
+          "stdout": "somemessage",
+          "stderr": "someerror",
+          "exitcode": 1
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            },
+            "stdout": "somemessage",
+            "stderr": "someerror",
+            "exitcode": 1
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang++",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang++",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "env": [
+          "CLANG=somepath/clang"
+        ],
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "somepath/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-Xclang-path=/somedir",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "--print-resource-dir"
+              ]
+            },
+            "stdout": "someResourceDir"
+          },
+          {
+            "cmd": {
+              "path": "/somedir/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-resource-dir=someResourceDir",
+                "--gcc-toolchain=/usr",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "env": [
+          "GOMACC_PATH=/tmp/stable/gomacc"
+        ],
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-Xclang-path=/somedir",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "--print-resource-dir"
+              ]
+            },
+            "stdout": "someResourceDir"
+          },
+          {
+            "cmd": {
+              "path": "/somedir/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-resource-dir=someResourceDir",
+                "--gcc-toolchain=/usr",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-Xclang-path=/somedir",
+              "main.cc"
+            ]
+          },
+          "stdout": "somemessage",
+          "stderr": "someerror",
+          "exitcode": 1
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "--print-resource-dir"
+              ]
+            },
+            "stdout": "someResourceDir"
+          },
+          {
+            "cmd": {
+              "path": "/somedir/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-resource-dir=someResourceDir",
+                "--gcc-toolchain=/usr",
+                "main.cc"
+              ]
+            },
+            "stdout": "somemessage",
+            "stderr": "someerror",
+            "exitcode": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "clang [main.cc] target specific",
+    "records": [
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-eabi-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-win-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./armv7m-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./armv7m-cros-linux-eabi-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./armv7m-cros-win-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./armv8m-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./armv8m-cros-linux-eabi-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./armv8m-cros-win-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "clang [-ftrapv main.cc] target specific",
+    "records": [
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-ftrapv",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-eabi-clang",
+            "args": [
+              "-ftrapv",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-win-gnu-clang",
+            "args": [
+              "-ftrapv",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./armv7m-cros-linux-gnu-clang",
+            "args": [
+              "-ftrapv",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./armv7m-cros-linux-eabi-clang",
+            "args": [
+              "-ftrapv",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./armv7m-cros-win-gnu-clang",
+            "args": [
+              "-ftrapv",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./armv8m-cros-linux-gnu-clang",
+            "args": [
+              "-ftrapv",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./armv8m-cros-linux-eabi-clang",
+            "args": [
+              "-ftrapv",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./armv8m-cros-win-gnu-clang",
+            "args": [
+              "-ftrapv",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "clang sanitizer args",
+    "records": [
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-fsanitize=kernel-address",
+              "-Wl,--no-undefined",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-fsanitize=kernel-address",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-fsanitize=kernel-address",
+              "-Wl,-z,defs",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-fsanitize=kernel-address",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-fsanitize=kernel-address",
+              "-D_FORTIFY_SOURCE=1",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-fsanitize=kernel-address",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-fsanitize=kernel-address",
+              "-D_FORTIFY_SOURCE=2",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-fsanitize=kernel-address",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-fsanitize=fuzzer",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-fno-experimental-new-pass-manager",
+                "-fsanitize=fuzzer",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "clang specific args",
+    "records": [
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-mno-movbe",
+              "-pass-exit-codes",
+              "-Wclobbered",
+              "-Wno-psabi",
+              "-Wlogical-op",
+              "-Wmissing-parameter-type",
+              "-Wold-style-declaration",
+              "-Woverride-init",
+              "-Wunsafe-loop-optimizations",
+              "-Wstrict-aliasing=abc",
+              "-finline-limit=abc",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-Wno-error=cpp",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-Wno-#warnings",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-Wno-error=maybe-uninitialized",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-Wno-error=uninitialized",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-Wno-error=unused-but-set-variable",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-Wno-error=unused-variable",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-Wno-unused-but-set-variable",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-Wno-unused-variable",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-Wunused-but-set-variable",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-Wunused-variable",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "-Xclang-only=-someflag",
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "-someflag",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "bisect",
+    "records": [
+      {
+        "wd": "/tmp/stable",
+        "env": [
+          "BISECT_STAGE=someBisectStage",
+          "BISECT_DIR=someBisectDir"
+        ],
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/usr/bin/python2",
+              "args": [
+                "-c",
+                "import bisect_driver; sys.exit(bisect_driver.bisect_driver(sys.argv[1], sys.argv[2], sys.argv[3:]))",
+                "someBisectStage",
+                "someBisectDir",
+                "/tmp/stable/clang",
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "env": [
+          "BISECT_STAGE=someBisectStage",
+          "BISECT_DIR=someBisectDir"
+        ],
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          },
+          "stdout": "somemessage",
+          "stderr": "someerror",
+          "exitcode": 1
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/usr/bin/python2",
+              "args": [
+                "-c",
+                "import bisect_driver; sys.exit(bisect_driver.bisect_driver(sys.argv[1], sys.argv[2], sys.argv[3:]))",
+                "someBisectStage",
+                "someBisectDir",
+                "/tmp/stable/clang",
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            },
+            "stdout": "somemessage",
+            "stderr": "someerror",
+            "exitcode": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "force disable werror",
+    "records": [
+      {
+        "wd": "/tmp/stable",
+        "env": [
+          "FORCE_DISABLE_WERROR=1"
+        ],
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "env": [
+          "FORCE_DISABLE_WERROR=1"
+        ],
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            },
+            "stderr": "-Werror originalerror",
+            "exitcode": 1
+          },
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc",
+                "-Wno-error"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "env": [
+          "FORCE_DISABLE_WERROR=1"
+        ],
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          },
+          "stderr": "-Werror originalerror",
+          "exitcode": 1
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            },
+            "stderr": "-Werror originalerror",
+            "exitcode": 1
+          },
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc",
+                "-Wno-error"
+              ]
+            },
+            "stdout": "somemessage",
+            "stderr": "someerror",
+            "exitcode": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "clang-tidy",
+    "records": [
+      {
+        "wd": "/tmp/stable",
+        "env": [
+          "WITH_TIDY=1"
+        ],
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "--print-resource-dir"
+              ]
+            },
+            "stdout": "someResourceDir"
+          },
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang-tidy",
+              "args": [
+                "-checks=*,google*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-build-using-namespace,-google-default-arguments,-google-explicit-constructor,-google-readability*,-google-runtime-int,-google-runtime-references,-hicpp-avoid-c-arrays,-hicpp-braces-around-statements,-hicpp-no-array-decay,-hicpp-signed-bitwise,-hicpp-uppercase-literal-suffix,-hicpp-use-auto,-llvm-namespace-comment,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
+                "main.cc",
+                "--",
+                "-resource-dir=someResourceDir",
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          },
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "env": [
+          "WITH_TIDY=1",
+          "GOMACC_PATH=/tmp/stable/gomacc"
+        ],
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          }
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "--print-resource-dir"
+              ]
+            },
+            "stdout": "someResourceDir"
+          },
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang-tidy",
+              "args": [
+                "-checks=*,google*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-build-using-namespace,-google-default-arguments,-google-explicit-constructor,-google-readability*,-google-runtime-int,-google-runtime-references,-hicpp-avoid-c-arrays,-hicpp-braces-around-statements,-hicpp-no-array-decay,-hicpp-signed-bitwise,-hicpp-uppercase-literal-suffix,-hicpp-use-auto,-llvm-namespace-comment,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
+                "main.cc",
+                "--",
+                "-resource-dir=someResourceDir",
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          },
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "env": [
+          "WITH_TIDY=1",
+          "GOMACC_PATH=/tmp/stable/gomacc"
+        ],
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          },
+          "stdout": "somemessage",
+          "stderr": "someerrorclang-tidy failed"
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "--print-resource-dir"
+              ]
+            },
+            "stdout": "someResourceDir"
+          },
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang-tidy",
+              "args": [
+                "-checks=*,google*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-build-using-namespace,-google-default-arguments,-google-explicit-constructor,-google-readability*,-google-runtime-int,-google-runtime-references,-hicpp-avoid-c-arrays,-hicpp-braces-around-statements,-hicpp-no-array-decay,-hicpp-signed-bitwise,-hicpp-uppercase-literal-suffix,-hicpp-use-auto,-llvm-namespace-comment,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
+                "main.cc",
+                "--",
+                "-resource-dir=someResourceDir",
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            },
+            "stdout": "somemessage",
+            "stderr": "someerror",
+            "exitcode": 1
+          },
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "wd": "/tmp/stable",
+        "env": [
+          "WITH_TIDY=1",
+          "GOMACC_PATH=/tmp/stable/gomacc"
+        ],
+        "wrapper": {
+          "cmd": {
+            "path": "./x86_64-cros-linux-gnu-clang",
+            "args": [
+              "main.cc"
+            ]
+          },
+          "stdout": "somemessage",
+          "stderr": "someerror",
+          "exitcode": 1
+        },
+        "cmds": [
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "--print-resource-dir"
+              ]
+            },
+            "stdout": "someResourceDir"
+          },
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang-tidy",
+              "args": [
+                "-checks=*,google*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-build-using-namespace,-google-default-arguments,-google-explicit-constructor,-google-readability*,-google-runtime-int,-google-runtime-references,-hicpp-avoid-c-arrays,-hicpp-braces-around-statements,-hicpp-no-array-decay,-hicpp-signed-bitwise,-hicpp-uppercase-literal-suffix,-hicpp-use-auto,-llvm-namespace-comment,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
+                "main.cc",
+                "--",
+                "-resource-dir=someResourceDir",
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            }
+          },
+          {
+            "cmd": {
+              "path": "/tmp/stable/clang",
+              "args": [
+                "-Qunused-arguments",
+                "-grecord-gcc-switches",
+                "-fno-addrsig",
+                "-Wno-unused-local-typedefs",
+                "-Wno-deprecated-declarations",
+                "-Wno-tautological-constant-compare",
+                "-Wno-tautological-unsigned-enum-zero-compare",
+                "-Wno-unknown-warning-option",
+                "main.cc"
+              ]
+            },
+            "stdout": "somemessage",
+            "stderr": "someerror",
+            "exitcode": 1
+          }
+        ]
+      }
+    ]
+  }
+]

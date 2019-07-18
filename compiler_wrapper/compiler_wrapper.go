@@ -108,7 +108,10 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 }
 
 func prepareClangCommand(builder *commandBuilder) (sysroot string, err error) {
-	sysroot = processSysrootFlag(builder)
+	sysroot = ""
+	if !builder.cfg.isHostWrapper {
+		sysroot = processSysrootFlag(builder)
+	}
 	builder.addPreUserArgs(builder.cfg.clangFlags...)
 	calcCommonPreUserArgs(builder)
 	if err := processClangFlags(builder); err != nil {
@@ -138,27 +141,32 @@ func calcGccCommand(builder *commandBuilder) *command {
 
 func calcCommonPreUserArgs(builder *commandBuilder) {
 	builder.addPreUserArgs(builder.cfg.commonFlags...)
-	processPieFlags(builder)
-	processStackProtectorFlags(builder)
-	processThumbCodeFlags(builder)
-	processX86Flags(builder)
+	if !builder.cfg.isHostWrapper {
+		processPieFlags(builder)
+		processStackProtectorFlags(builder)
+		processThumbCodeFlags(builder)
+		processX86Flags(builder)
+	}
 	processSanitizerFlags(builder)
 }
 
 func processGomaCCacheFlags(sysroot string, allowCCache bool, builder *commandBuilder) {
-	gomaccUsed := processGomaCccFlags(builder)
+	gomaccUsed := false
+	if !builder.cfg.isHostWrapper {
+		gomaccUsed = processGomaCccFlags(builder)
+	}
 	if !gomaccUsed && allowCCache {
 		processCCacheFlag(sysroot, builder)
 	}
 }
 
-func getAbsWrapperDir(env env, wrapperCmd *command) (string, error) {
+func getAbsWrapperPath(env env, wrapperCmd *command) (string, error) {
 	wrapperPath := getAbsCmdPath(env, wrapperCmd)
 	evaledCmdPath, err := filepath.EvalSymlinks(wrapperPath)
 	if err != nil {
 		return "", wrapErrorwithSourceLocf(err, "failed to evaluate symlinks for %s", wrapperPath)
 	}
-	return filepath.Dir(evaledCmdPath), nil
+	return evaledCmdPath, nil
 }
 
 func printCompilerError(writer io.Writer, compilerErr error) {

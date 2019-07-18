@@ -68,63 +68,15 @@ func createSyswrapperGoldenInputs(ctx *testContext) []goldenRecordSection {
 		createGccPathGoldenInputs(gomaEnv),
 		createGoldenInputsForAllTargets("gcc", mainCc),
 		createSysrootWrapperCommonGoldenInputs("gcc", gomaEnv),
-		{
-			Name: "gcc specific args",
-			Records: []goldenRecord{
-				{
-					WrapperCmd: newGoldenCmd(gccX86_64, "-march=goldmont", mainCc),
-					Cmds:       okResults,
-				},
-				{
-					WrapperCmd: newGoldenCmd(gccX86_64, "-march=goldmont-plus", mainCc),
-					Cmds:       okResults,
-				},
-				{
-					WrapperCmd: newGoldenCmd(gccX86_64, "-march=skylake", mainCc),
-					Cmds:       okResults,
-				},
-			},
-		},
+		createSanitizerGoldenInputs("gcc"),
+		createGccArgsGoldenInputs(),
 		createClangSyntaxGoldenInputs(gomaEnv),
 		createClangPathGoldenInputs(gomaEnv),
 		createGoldenInputsForAllTargets("clang", mainCc),
 		createGoldenInputsForAllTargets("clang", "-ftrapv", mainCc),
 		createSysrootWrapperCommonGoldenInputs("clang", gomaEnv),
-		{
-			Name: "clang specific args",
-			Records: []goldenRecord{
-				{
-					WrapperCmd: newGoldenCmd(clangX86_64, "-mno-movbe", "-pass-exit-codes", "-Wclobbered", "-Wno-psabi", "-Wlogical-op",
-						"-Wmissing-parameter-type", "-Wold-style-declaration", "-Woverride-init", "-Wunsafe-loop-optimizations",
-						"-Wstrict-aliasing=abc", "-finline-limit=abc", mainCc),
-					Cmds: okResults,
-				},
-				{
-					WrapperCmd: newGoldenCmd(clangX86_64, "-Wno-error=cpp", mainCc),
-					Cmds:       okResults,
-				},
-				{
-					WrapperCmd: newGoldenCmd(clangX86_64, "-Wno-error=maybe-uninitialized", mainCc),
-					Cmds:       okResults,
-				},
-				{
-					WrapperCmd: newGoldenCmd(clangX86_64, "-Wno-error=unused-but-set-variable", mainCc),
-					Cmds:       okResults,
-				},
-				{
-					WrapperCmd: newGoldenCmd(clangX86_64, "-Wno-unused-but-set-variable", mainCc),
-					Cmds:       okResults,
-				},
-				{
-					WrapperCmd: newGoldenCmd(clangX86_64, "-Wunused-but-set-variable", mainCc),
-					Cmds:       okResults,
-				},
-				{
-					WrapperCmd: newGoldenCmd(clangX86_64, "-Xclang-only=-someflag", mainCc),
-					Cmds:       okResults,
-				},
-			},
-		},
+		createSanitizerGoldenInputs("clang"),
+		createClangArgsGoldenInputs(),
 		createBisectGoldenInputs(),
 		createForceDisableWErrorGoldenInputs(),
 		createClangTidyGoldenInputs(gomaEnv),
@@ -412,6 +364,20 @@ func createSysrootWrapperCommonGoldenInputs(compiler string, gomaEnv string) gol
 				Cmds:       okResults,
 			},
 			{
+				WrapperCmd: newGoldenCmd(wrapperPath, "--sysroot=xyz", mainCc),
+				Cmds:       okResults,
+			},
+		},
+	}
+}
+
+func createSanitizerGoldenInputs(compiler string) goldenRecordSection {
+	// We are using a fixed target as all of the following args are target independent.
+	wrapperPath := "./x86_64-cros-linux-gnu-" + compiler
+	return goldenRecordSection{
+		Name: compiler + " sanitizer args",
+		Records: []goldenRecord{
+			{
 				WrapperCmd: newGoldenCmd(wrapperPath, "-fsanitize=kernel-address", "-Wl,--no-undefined", mainCc),
 				Cmds:       okResults,
 			},
@@ -431,8 +397,62 @@ func createSysrootWrapperCommonGoldenInputs(compiler string, gomaEnv string) gol
 				WrapperCmd: newGoldenCmd(wrapperPath, "-fsanitize=fuzzer", mainCc),
 				Cmds:       okResults,
 			},
+		},
+	}
+}
+
+func createGccArgsGoldenInputs() goldenRecordSection {
+	return goldenRecordSection{
+		Name: "gcc specific args",
+		Records: []goldenRecord{
 			{
-				WrapperCmd: newGoldenCmd(wrapperPath, "--sysroot=xyz", mainCc),
+				WrapperCmd: newGoldenCmd(gccX86_64, "-march=goldmont", mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(gccX86_64, "-march=goldmont-plus", mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(gccX86_64, "-march=skylake", mainCc),
+				Cmds:       okResults,
+			},
+		},
+	}
+}
+
+func createClangArgsGoldenInputs() goldenRecordSection {
+	return goldenRecordSection{
+		Name: "clang specific args",
+		Records: []goldenRecord{
+			{
+				WrapperCmd: newGoldenCmd(clangX86_64, "-mno-movbe", "-pass-exit-codes", "-Wclobbered", "-Wno-psabi", "-Wlogical-op",
+					"-Wmissing-parameter-type", "-Wold-style-declaration", "-Woverride-init", "-Wunsafe-loop-optimizations",
+					"-Wstrict-aliasing=abc", "-finline-limit=abc", mainCc),
+				Cmds: okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(clangX86_64, "-Wno-error=cpp", mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(clangX86_64, "-Wno-error=maybe-uninitialized", mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(clangX86_64, "-Wno-error=unused-but-set-variable", mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(clangX86_64, "-Wno-unused-but-set-variable", mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(clangX86_64, "-Wunused-but-set-variable", mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(clangX86_64, "-Xclang-only=-someflag", mainCc),
 				Cmds:       okResults,
 			},
 		},

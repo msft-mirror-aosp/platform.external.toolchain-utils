@@ -48,8 +48,8 @@ func TestRealConfigWithConfigNameFlag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !isHardened(cfg) {
-		t.Fatal("ConfigName: Expected hardened config got non hardened")
+	if !isSysrootHardened(cfg) || cfg.isHostWrapper {
+		t.Fatalf("ConfigName: Expected sysroot hardened config. Got: %#v", cfg)
 	}
 
 	ConfigName = "cros.nonhardened"
@@ -57,8 +57,17 @@ func TestRealConfigWithConfigNameFlag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if isHardened(cfg) {
-		t.Fatal("ConfigName: Expected non hardened config got hardened")
+	if isSysrootHardened(cfg) || cfg.isHostWrapper {
+		t.Fatalf("ConfigName: Expected sysroot non hardened config. Got: %#v", cfg)
+	}
+
+	ConfigName = "cros.host"
+	cfg, err = getRealConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.isHostWrapper {
+		t.Fatalf("ConfigName: Expected clang host config. Got: %#v", cfg)
 	}
 
 	ConfigName = "invalid"
@@ -68,7 +77,7 @@ func TestRealConfigWithConfigNameFlag(t *testing.T) {
 	}
 }
 
-func isHardened(cfg *config) bool {
+func isSysrootHardened(cfg *config) bool {
 	for _, arg := range cfg.commonFlags {
 		if arg == "-pie" {
 			return true

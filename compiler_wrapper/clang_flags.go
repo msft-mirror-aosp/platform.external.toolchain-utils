@@ -15,15 +15,19 @@ func processClangFlags(builder *commandBuilder) error {
 	clangDir := env.getenv("CLANG")
 
 	if clangDir == "" {
-		clangDir = filepath.Join(builder.rootPath, "usr/bin/")
-		if !filepath.IsAbs(builder.path) {
-			// If sysroot_wrapper is invoked by relative path, call actual compiler in
-			// relative form. This is neccesary to remove absolute path from compile
-			// outputs.
-			var err error
-			clangDir, err = filepath.Rel(env.getwd(), clangDir)
-			if err != nil {
-				return wrapErrorwithSourceLocf(err, "failed to make clangDir %s relative to %s.", clangDir, env.getwd())
+		if builder.cfg.isHostWrapper {
+			clangDir = filepath.Dir(builder.absWrapperPath)
+		} else {
+			clangDir = filepath.Join(builder.rootPath, "usr/bin/")
+			if !filepath.IsAbs(builder.path) {
+				// If sysroot_wrapper is invoked by relative path, call actual compiler in
+				// relative form. This is neccesary to remove absolute path from compile
+				// outputs.
+				var err error
+				clangDir, err = filepath.Rel(env.getwd(), clangDir)
+				if err != nil {
+					return wrapErrorwithSourceLocf(err, "failed to make clangDir %s relative to %s.", clangDir, env.getwd())
+				}
 			}
 		}
 	} else {
@@ -61,6 +65,9 @@ func processClangFlags(builder *commandBuilder) error {
 	// other hand, generate 'call __mulvdi3', which is implemented in libgcc. See
 	// bug chromium:503229.
 	armUnsupported := map[string]bool{"-ftrapv": true}
+	if builder.cfg.isHostWrapper {
+		unsupported["-ftrapv"] = true
+	}
 
 	// Clang may use different options for the same or similar functionality.
 	gccToClang := map[string]string{
@@ -129,24 +136,26 @@ func processClangFlags(builder *commandBuilder) error {
 	builder.path = filepath.Join(clangDir, clangBasename)
 
 	// Specify the target for clang.
-	linkerPath := getLinkerPath(env, builder.target.target+"-ld", builder.rootPath)
-	relLinkerPath, err := filepath.Rel(env.getwd(), linkerPath)
-	if err != nil {
-		return wrapErrorwithSourceLocf(err, "failed to make linker path %s relative to %s",
-			linkerPath, env.getwd())
-	}
-	builder.addPostUserArgs("-B" + relLinkerPath)
-	if startswithI86(builder.target.arch) {
-		// TODO: -target i686-pc-linux-gnu causes clang to search for
-		// libclang_rt.asan-i686.a which doesn't exist because it's packaged
-		// as libclang_rt.asan-i386.a. We can't use -target i386-pc-linux-gnu
-		// because then it would try to run i386-pc-linux-gnu-ld which doesn't
-		// exist. Consider renaming the runtime library to use i686 in its name.
-		builder.addPostUserArgs("-m32")
-		// clang does not support -mno-movbe. This is the alternate way to do it.
-		builder.addPostUserArgs("-Xclang", "-target-feature", "-Xclang", "-movbe")
-	} else {
-		builder.addPostUserArgs("-target", builder.target.target)
+	if !builder.cfg.isHostWrapper {
+		linkerPath := getLinkerPath(env, builder.target.target+"-ld", builder.rootPath)
+		relLinkerPath, err := filepath.Rel(env.getwd(), linkerPath)
+		if err != nil {
+			return wrapErrorwithSourceLocf(err, "failed to make linker path %s relative to %s",
+				linkerPath, env.getwd())
+		}
+		builder.addPostUserArgs("-B" + relLinkerPath)
+		if startswithI86(builder.target.arch) {
+			// TODO: -target i686-pc-linux-gnu causes clang to search for
+			// libclang_rt.asan-i686.a which doesn't exist because it's packaged
+			// as libclang_rt.asan-i386.a. We can't use -target i386-pc-linux-gnu
+			// because then it would try to run i386-pc-linux-gnu-ld which doesn't
+			// exist. Consider renaming the runtime library to use i686 in its name.
+			builder.addPostUserArgs("-m32")
+			// clang does not support -mno-movbe. This is the alternate way to do it.
+			builder.addPostUserArgs("-Xclang", "-target-feature", "-Xclang", "-movbe")
+		} else {
+			builder.addPostUserArgs("-target", builder.target.target)
+		}
 	}
 	return nil
 }

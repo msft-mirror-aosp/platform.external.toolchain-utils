@@ -66,6 +66,18 @@ func TestRelativeClangPathBasedOnRootPath(t *testing.T) {
 	})
 }
 
+func TestClangPathForClangHostWrapper(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.cfg.isHostWrapper = true
+		ctx.cfg.rootRelPath = "somepath"
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, mainCc)))
+		if err := verifyPath(cmd, filepath.Join(ctx.tempDir, "clang")); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
 func TestUseXclangPathAndCalcResourceDirByNestedClangCall(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.rootRelPath = "somepath"

@@ -16,7 +16,8 @@ import sys
 def parse_args():
   parser = argparse.ArgumentParser()
   parser.add_argument("--config", required=True,
-                      choices=['cros.hardened', 'cros.nonhardened'], type=str)
+                      choices=['cros.hardened', 'cros.nonhardened',
+                               'cros.host'], type=str)
   parser.add_argument("--use_ccache", required=True,
                       choices=['true', 'false'], type=str)
   return parser.parse_known_args()

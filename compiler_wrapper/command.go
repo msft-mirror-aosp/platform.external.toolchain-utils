@@ -64,17 +64,18 @@ func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, err
 	default:
 		compilerType = gccType
 	}
-	absWrapperDir, err := getAbsWrapperDir(env, cmd)
+	absWrapperPath, err := getAbsWrapperPath(env, cmd)
 	if err != nil {
 		return nil, err
 	}
-	rootPath := filepath.Join(absWrapperDir, cfg.rootRelPath)
+	rootPath := filepath.Join(filepath.Dir(absWrapperPath), cfg.rootRelPath)
 	return &commandBuilder{
-		path:     cmd.Path,
-		args:     createBuilderArgs( /*fromUser=*/ true, cmd.Args),
-		env:      env,
-		cfg:      cfg,
-		rootPath: rootPath,
+		path:           cmd.Path,
+		args:           createBuilderArgs( /*fromUser=*/ true, cmd.Args),
+		env:            env,
+		cfg:            cfg,
+		rootPath:       rootPath,
+		absWrapperPath: absWrapperPath,
 		target: builderTarget{
 			target:       strings.Join(nameParts[:4], "-"),
 			arch:         nameParts[0],
@@ -88,13 +89,14 @@ func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, err
 }
 
 type commandBuilder struct {
-	path       string
-	target     builderTarget
-	args       []builderArg
-	envUpdates []string
-	env        env
-	cfg        *config
-	rootPath   string
+	path           string
+	target         builderTarget
+	args           []builderArg
+	envUpdates     []string
+	env            env
+	cfg            *config
+	rootPath       string
+	absWrapperPath string
 }
 
 type builderArg struct {
@@ -129,12 +131,13 @@ func createBuilderArgs(fromUser bool, args []string) []builderArg {
 
 func (builder *commandBuilder) clone() *commandBuilder {
 	return &commandBuilder{
-		path:     builder.path,
-		args:     append([]builderArg{}, builder.args...),
-		env:      builder.env,
-		cfg:      builder.cfg,
-		rootPath: builder.rootPath,
-		target:   builder.target,
+		path:           builder.path,
+		args:           append([]builderArg{}, builder.args...),
+		env:            builder.env,
+		cfg:            builder.cfg,
+		rootPath:       builder.rootPath,
+		target:         builder.target,
+		absWrapperPath: builder.absWrapperPath,
 	}
 }
 
