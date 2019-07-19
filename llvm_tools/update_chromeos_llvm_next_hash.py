@@ -81,11 +81,11 @@ def GetCommandLineArgs():
           args_output.update_package, args_output.llvm_version)
 
 
-def GetChrootBuildPaths(chroot_path, package_list):
+def GetChrootBuildPaths(chromeos_root, package_list):
   """Gets the chroot path(s) of the package(s).
 
   Args:
-    chroot_path: The absolute path to the chroot to
+    chromeos_root: The absolute path to the chroot to
     use for executing chroot commands.
     package_list: A list of a package/packages to
     be used to find their chroot path.
@@ -106,7 +106,7 @@ def GetChrootBuildPaths(chroot_path, package_list):
 
     # Find the chroot path for the package.
     ret, chroot_path, err = ce.ChrootRunCommandWOutput(
-        chromeos_root=chroot_path, command=equery_cmd, print_to_console=False)
+        chromeos_root=chromeos_root, command=equery_cmd, print_to_console=False)
 
     if ret:  # failed to get the chroot path
       raise ValueError('Failed to get chroot path for the package (%s): %s' %
