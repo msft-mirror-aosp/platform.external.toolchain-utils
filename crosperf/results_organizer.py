@@ -187,7 +187,9 @@ def OrganizeResults(benchmark_runs, labels, benchmarks=None, json_report=False):
     if not show_all_results:
       summary_list = summary_file.get(benchmark.name)
       if summary_list:
-        summary_list.append('retval')
+        summary_list += [
+            'retval', 'cpufreq_avg', 'cpufreq_min', 'cpufreq_max', 'cputemp'
+        ]
       else:
         # Did not find test_name in json file; show everything.
         show_all_results = True
