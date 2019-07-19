@@ -1,3 +1,7 @@
+// Copyright 2019 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package main
 
 import (
@@ -9,7 +13,7 @@ import (
 
 func TestNewErrorwithSourceLocfMessage(t *testing.T) {
 	err := newErrorwithSourceLocf("a%sc", "b")
-	if err.Error() != "errors_test.go:11: abc" {
+	if err.Error() != "errors_test.go:15: abc" {
 		t.Errorf("Error message incorrect. Got: %s", err.Error())
 	}
 }
@@ -17,7 +21,7 @@ func TestNewErrorwithSourceLocfMessage(t *testing.T) {
 func TestWrapErrorwithSourceLocfMessage(t *testing.T) {
 	cause := errors.New("someCause")
 	err := wrapErrorwithSourceLocf(cause, "a%sc", "b")
-	if err.Error() != "errors_test.go:19: abc: someCause" {
+	if err.Error() != "errors_test.go:23: abc: someCause" {
 		t.Errorf("Error message incorrect. Got: %s", err.Error())
 	}
 }
@@ -62,7 +66,7 @@ func TestSubprocessCCacheError(t *testing.T) {
 func TestSubprocessGeneralError(t *testing.T) {
 	cmd := &command{Path: "somepath"}
 	_, err := wrapSubprocessErrorWithSourceLoc(cmd, errors.New("someerror"))
-	if err.Error() != fmt.Sprintf("errors_test.go:64: failed to execute %#v: someerror", cmd) {
+	if err.Error() != fmt.Sprintf("errors_test.go:68: failed to execute %#v: someerror", cmd) {
 		t.Errorf("Error message incorrect. Got: %s", err.Error())
 	}
 }

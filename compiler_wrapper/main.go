@@ -1,3 +1,7 @@
+// Copyright 2019 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 // This binary requires the following linker variables:
 // - main.UseCCache: Whether to use ccache.
 // - main.ConfigName: Name of the configuration to use.
