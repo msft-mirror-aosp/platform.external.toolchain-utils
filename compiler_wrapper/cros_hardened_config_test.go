@@ -428,6 +428,10 @@ func createSysrootWrapperCommonGoldenInputs(compiler string, gomaEnv string) gol
 				Cmds:       okResults,
 			},
 			{
+				WrapperCmd: newGoldenCmd(wrapperPath, "-fsanitize=fuzzer", mainCc),
+				Cmds:       okResults,
+			},
+			{
 				WrapperCmd: newGoldenCmd(wrapperPath, "--sysroot=xyz", mainCc),
 				Cmds:       okResults,
 			},

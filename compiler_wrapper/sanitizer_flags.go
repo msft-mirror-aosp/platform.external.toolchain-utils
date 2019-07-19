@@ -9,18 +9,21 @@ import (
 )
 
 func processSanitizerFlags(builder *commandBuilder) {
-	filterSanitizerFlags := false
+	hasSanitizeFlags := false
+	hasSanitizeFuzzerFlags := false
 	for _, arg := range builder.args {
 		// TODO: This should probably be -fsanitize= to not match on
 		// e.g. -fsanitize-blacklist
 		if arg.fromUser && strings.HasPrefix(arg.value, "-fsanitize") {
-			filterSanitizerFlags = true
-			break
+			hasSanitizeFlags = true
+			if strings.Contains(arg.value, "fuzzer") {
+				hasSanitizeFuzzerFlags = true
+			}
 		}
 	}
-	if filterSanitizerFlags {
+	if hasSanitizeFlags {
 		// Flags not supported by sanitizers (ASan etc.)
-		var unsupportedSanitizerFlags = map[string]bool{
+		unsupportedSanitizerFlags := map[string]bool{
 			"-D_FORTIFY_SOURCE=1": true,
 			"-D_FORTIFY_SOURCE=2": true,
 			"-Wl,--no-undefined":  true,
@@ -36,5 +39,12 @@ func processSanitizerFlags(builder *commandBuilder) {
 			}
 			return arg.value
 		})
+		if hasSanitizeFuzzerFlags && builder.target.compilerType == clangType {
+			fuzzerFlagsToAdd := []string{
+				// TODO: This flag should be removed once fuzzer works with new pass manager
+				"-fno-experimental-new-pass-manager",
+			}
+			builder.addPreUserArgs(fuzzerFlagsToAdd...)
+		}
 	}
 }

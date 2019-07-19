@@ -93,6 +93,7 @@ func getCrosHardenedConfig(useCCache bool) *config {
 			"-Wno-tautological-unsigned-enum-zero-compare",
 			"-Wno-unknown-warning-option",
 			"-Wno-section",
+			"-static-libgcc",
 		},
 		newWarningsDir: "/tmp/fatal_clang_warnings",
 	}
@@ -120,6 +121,7 @@ func getCrosNonHardenedConfig(useCCache bool) *config {
 			"-Wno-tautological-unsigned-enum-zero-compare",
 			"-Wno-unknown-warning-option",
 			"-Wno-section",
+			"-static-libgcc",
 		},
 		newWarningsDir: "/tmp/fatal_clang_warnings",
 	}

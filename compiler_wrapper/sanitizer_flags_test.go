@@ -98,3 +98,24 @@ func TestKeepSanitizerFlagsIfSanitizeGivenInCommonFlags(t *testing.T) {
 		}
 	})
 }
+
+func TestAddFuzzerFlagsForClang(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, "-fsanitize=fuzzer", mainCc)))
+		if err := verifyArgOrder(cmd, "-fno-experimental-new-pass-manager",
+			"-fsanitize=fuzzer", mainCc); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestOmitFuzzerFlagsForGcc(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, "-fsanitize=fuzzer", mainCc)))
+		if err := verifyArgCount(cmd, 0, "-fno-experimental-new-pass-manager"); err != nil {
+			t.Error(err)
+		}
+	})
+}
