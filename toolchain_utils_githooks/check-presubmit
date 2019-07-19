@@ -36,12 +36,20 @@ spawn_child() {
   child_pids+=( "$!" )
 }
 
+
+# only lint existing files
+declare -a to_lint
+for file; do
+  if [[ -f "${file}" ]]; then
+    to_lint+=("${file}")
+  fi
+done
+
 # We have a few things to do in parallel here. To avoid interleaving their
 # output, we pipe them all to tempfiles, then cat those tempfiles.
-
-spawn_child "${mydir}/check-lint" "$@"
-spawn_child "${mydir}/check-format" "$@"
-spawn_child "${mydir}/../run_tests_for.py" "$@"
+spawn_child "${mydir}/check-lint" "${to_lint[@]}"
+spawn_child "${mydir}/check-format" "${to_lint[@]}"
+spawn_child "${mydir}/../run_tests_for.py" "${to_lint[@]}"
 
 success=true
 for i in "${!child_pids[@]}"; do
