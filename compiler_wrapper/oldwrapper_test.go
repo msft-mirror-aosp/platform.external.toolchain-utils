@@ -13,7 +13,7 @@ import (
 	"text/template"
 )
 
-func TestCompareToOldWrapperCompilerCommand(t *testing.T) {
+func TestCompareToOldPythonWrapperCompilerCommand(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.mockOldWrapperCmds = false
 		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
@@ -32,7 +32,7 @@ func TestCompareToOldWrapperCompilerCommand(t *testing.T) {
 		}
 
 		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
-			writeMockWrapper(ctx, &mockWrapperConfig{
+			writePythonMockWrapper(ctx, &mockWrapperConfig{
 				Cmds: []*mockWrapperCmd{
 					{
 						Path:     cmd.Path + pathSuffix,
@@ -83,7 +83,7 @@ func TestCompareToOldWrapperCompilerCommand(t *testing.T) {
 	})
 }
 
-func TestCompareToOldWrapperNestedCommand(t *testing.T) {
+func TestCompareToOldPythonWrapperNestedCommand(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.mockOldWrapperCmds = false
 		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
@@ -108,7 +108,7 @@ func TestCompareToOldWrapperNestedCommand(t *testing.T) {
 			}
 			wrapperCfg.Cmds = append(wrapperCfg.Cmds, wrapperCmd)
 			if !isNestedCmd {
-				writeMockWrapper(ctx, wrapperCfg)
+				writePythonMockWrapper(ctx, wrapperCfg)
 			}
 			return nil
 		}
@@ -147,7 +147,77 @@ func TestCompareToOldWrapperNestedCommand(t *testing.T) {
 	})
 }
 
-func writeMockWrapper(ctx *testContext, cfg *mockWrapperConfig) {
+func TestCompareToOldShellWrapperCompilerCommand(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.cfg.mockOldWrapperCmds = false
+		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
+
+		pathSuffix := ""
+		extraArgs := []string{}
+		exitCode := 0
+		newWrapperExitCode := 0
+
+		reset := func() {
+			ctx.stderrBuffer.Reset()
+			pathSuffix = ""
+			extraArgs = []string{}
+			exitCode = 0
+			newWrapperExitCode = 0
+		}
+
+		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+			writeShellMockWrapper(ctx, &mockWrapperConfig{
+				Cmds: []*mockWrapperCmd{
+					{
+						Path:     cmd.Path + pathSuffix,
+						Args:     append(cmd.Args, extraArgs...),
+						ExitCode: exitCode,
+					},
+				},
+			})
+			if newWrapperExitCode != 0 {
+				return newExitCodeError(newWrapperExitCode)
+			}
+			return nil
+		}
+
+		// Note: This will cause only the compiler command.
+		inputCmd := ctx.newCommand(gccX86_64)
+
+		reset()
+		pathSuffix = "xyz"
+		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, inputCmd))
+		if !strings.Contains(stderr, "Index 0: path") {
+			t.Errorf("expected path difference error. Got: %s", stderr)
+		}
+
+		reset()
+		extraArgs = []string{"xyz"}
+		stderr = ctx.mustFail(callCompiler(ctx, ctx.cfg, inputCmd))
+		if !strings.Contains(stderr, "Index 0: args") {
+			t.Errorf("expected args difference error. Got: %s", stderr)
+		}
+
+		reset()
+		exitCode = 1
+		stderr = ctx.mustFail(callCompiler(ctx, ctx.cfg, inputCmd))
+		if !strings.Contains(stderr, "exit codes differ: old 1, new 0") {
+			t.Errorf("expected exit code difference error. Got: %s", stderr)
+		}
+
+		reset()
+		newWrapperExitCode = 1
+		stderr = ctx.mustFail(callCompiler(ctx, ctx.cfg, inputCmd))
+		if !strings.Contains(stderr, "exit codes differ: old 0, new 1") {
+			t.Errorf("expected exit code difference error. Got: %s", stderr)
+		}
+
+		reset()
+		ctx.must(callCompiler(ctx, ctx.cfg, inputCmd))
+	})
+}
+
+func writePythonMockWrapper(ctx *testContext, cfg *mockWrapperConfig) {
 	const mockTemplate = `
 from __future__ import print_function
 import os
@@ -180,6 +250,27 @@ def main():
 
 if __name__ == '__main__':
 	sys.exit(main())
+`
+	tmpl, err := template.New("mock").Parse(mockTemplate)
+	if err != nil {
+		ctx.t.Fatalf("failed to parse old wrapper template. Error: %s", err)
+	}
+	buf := bytes.Buffer{}
+	if err := tmpl.Execute(&buf, cfg); err != nil {
+		ctx.t.Fatalf("failed to execute the template. Error: %s", err)
+	}
+	ctx.writeFile(ctx.cfg.oldWrapperPath, buf.String())
+}
+
+func writeShellMockWrapper(ctx *testContext, cfg *mockWrapperConfig) {
+	const mockTemplate = `#!/bin/sh
+EXEC=fake_exec
+
+function fake_exec {
+	exit {{(index .Cmds 0).ExitCode}}
+}
+
+$EXEC {{(index .Cmds 0).Path}}{{range (index .Cmds 0).Args}} {{.}}{{end}}
 `
 	tmpl, err := template.New("mock").Parse(mockTemplate)
 	if err != nil {

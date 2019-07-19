@@ -105,7 +105,7 @@ func TestLogExitCodeErrorWhenComparingToOldWrapper(t *testing.T) {
 		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
 
 		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
-			writeMockWrapper(ctx, &mockWrapperConfig{
+			writePythonMockWrapper(ctx, &mockWrapperConfig{
 				Cmds: []*mockWrapperCmd{
 					{
 						Path:     cmd.Path,

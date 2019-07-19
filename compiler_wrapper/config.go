@@ -139,7 +139,11 @@ func getCrosHostConfig() *config {
 		rootRelPath:    "../..",
 		oldWrapperPath: "./host_wrapper.old",
 		commonFlags:    []string{},
-		gccFlags:       []string{},
+		gccFlags: []string{
+			"-Wno-maybe-uninitialized",
+			"-Wno-unused-local-typedefs",
+			"-Wno-deprecated-declarations",
+		},
 		// Temporarily disable tautological-*-compare chromium:778316.
 		// Temporarily add no-unknown-warning-option to deal with old clang versions.
 		clangFlags: []string{

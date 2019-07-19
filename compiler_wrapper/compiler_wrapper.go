@@ -130,12 +130,19 @@ func calcClangCommand(allowCCache bool, builder *commandBuilder) (*command, erro
 }
 
 func calcGccCommand(builder *commandBuilder) *command {
-	sysroot := processSysrootFlag(builder)
+	sysroot := ""
+	if !builder.cfg.isHostWrapper {
+		sysroot = processSysrootFlag(builder)
+	}
 	builder.addPreUserArgs(builder.cfg.gccFlags...)
-	calcCommonPreUserArgs(builder)
+	if !builder.cfg.isHostWrapper {
+		calcCommonPreUserArgs(builder)
+	}
 	processGccFlags(builder)
-	allowCCache := true
-	processGomaCCacheFlags(sysroot, allowCCache, builder)
+	if !builder.cfg.isHostWrapper {
+		allowCCache := true
+		processGomaCCacheFlags(sysroot, allowCCache, builder)
+	}
 	return builder.build()
 }
 

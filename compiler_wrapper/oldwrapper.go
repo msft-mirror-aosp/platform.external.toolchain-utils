@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"text/template"
@@ -36,7 +37,12 @@ func compareToOldWrapper(env env, cfg *config, inputCmd *command, newCmdResults 
 	}
 
 	stderrBuffer := bytes.Buffer{}
-	oldExitCode, err := callOldWrapper(env, oldWrapperCfg, inputCmd, compareToOldWrapperFilePattern, &bytes.Buffer{}, &stderrBuffer)
+	oldExitCode := 0
+	if strings.HasPrefix(oldWrapperCfg.OldWrapperContent, "#!/bin/sh") {
+		oldExitCode, err = callOldShellWrapper(env, oldWrapperCfg, inputCmd, compareToOldWrapperFilePattern, &bytes.Buffer{}, &stderrBuffer)
+	} else {
+		oldExitCode, err = callOldPythonWrapper(env, oldWrapperCfg, inputCmd, compareToOldWrapperFilePattern, &bytes.Buffer{}, &stderrBuffer)
+	}
 	if err != nil {
 		return err
 	}
@@ -159,6 +165,7 @@ func dumpCommands(cmds []*command) string {
 // Note: field names are upper case so they can be used in
 // a template via reflection.
 type oldWrapperConfig struct {
+	WrapperPath       string
 	CmdPath           string
 	OldWrapperContent string
 	MockCmds          bool
@@ -185,18 +192,71 @@ func newOldWrapperConfig(env env, cfg *config, inputCmd *command) (*oldWrapperCo
 		return nil, wrapErrorwithSourceLocf(err, "failed to read old wrapper")
 	}
 	oldWrapperContent := string(oldWrapperContentBytes)
-	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "from __future__ import print_function", "")
-	// Replace sets with lists to make our comparisons deterministic
-	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "set(", "ListSet(")
-	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "if __name__ == '__main__':", "def runMain():")
-	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "__file__", "'"+absWrapperPath+"'")
 	return &oldWrapperConfig{
+		WrapperPath:       absWrapperPath,
 		CmdPath:           inputCmd.Path,
 		OldWrapperContent: oldWrapperContent,
 	}, nil
 }
 
-func callOldWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, filepattern string, stdout io.Writer, stderr io.Writer) (exitCode int, err error) {
+func callOldShellWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, filepattern string, stdout io.Writer, stderr io.Writer) (exitCode int, err error) {
+	oldWrapperContent := cfg.OldWrapperContent
+	oldWrapperContent = regexp.MustCompile(`(?m)^exec\b`).ReplaceAllString(oldWrapperContent, "exec_mock")
+	oldWrapperContent = regexp.MustCompile(`\$EXEC`).ReplaceAllString(oldWrapperContent, "exec_mock")
+	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "$0", cfg.CmdPath)
+	cfg.OldWrapperContent = oldWrapperContent
+	mockFile, err := ioutil.TempFile("", filepattern)
+	if err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "failed to create tempfile")
+	}
+	defer os.Remove(mockFile.Name())
+
+	const mockTemplate = `
+EXEC=exec
+
+function exec_mock {
+	echo command:${*}.EnvUpdate: 1>&2
+	{{if .MockCmds}}
+	echo '{{(index .CmdResults 0).Stdout}}'
+	echo '{{(index .CmdResults 0).Stderr}}' 1>&2
+	exit {{(index .CmdResults 0).Exitcode}}
+	{{else}}
+	$EXEC ${*}
+	{{end}}
+}
+
+{{.OldWrapperContent}}
+`
+	tmpl, err := template.New("mock").Parse(mockTemplate)
+	if err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "failed to parse old wrapper template")
+	}
+	if err := tmpl.Execute(mockFile, cfg); err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "failed execute old wrapper template")
+	}
+	if err := mockFile.Close(); err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "failed to close temp file")
+	}
+
+	// Note: Using a self executable wrapper does not work due to a race condition
+	// on unix systems. See https://github.com/golang/go/issues/22315
+	oldWrapperCmd := &command{
+		Path:       "/usr/bin/sh",
+		Args:       append([]string{mockFile.Name()}, inputCmd.Args...),
+		EnvUpdates: inputCmd.EnvUpdates,
+	}
+	return wrapSubprocessErrorWithSourceLoc(oldWrapperCmd, env.run(oldWrapperCmd, stdout, stderr))
+}
+
+func callOldPythonWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, filepattern string, stdout io.Writer, stderr io.Writer) (exitCode int, err error) {
+	oldWrapperContent := cfg.OldWrapperContent
+	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "from __future__ import print_function", "")
+	// Replace sets with lists to make our comparisons deterministic
+	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "set(", "ListSet(")
+	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "if __name__ == '__main__':", "def runMain():")
+	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "__file__", "'"+cfg.WrapperPath+"'")
+	cfg.OldWrapperContent = oldWrapperContent
+
 	mockFile, err := ioutil.TempFile("", filepattern)
 	if err != nil {
 		return 0, wrapErrorwithSourceLocf(err, "failed to create tempfile")
@@ -308,8 +368,6 @@ runMain()
 	if err := mockFile.Close(); err != nil {
 		return 0, wrapErrorwithSourceLocf(err, "failed to close temp file")
 	}
-	buf := bytes.Buffer{}
-	tmpl.Execute(&buf, cfg)
 
 	// Note: Using a self executable wrapper does not work due to a race condition
 	// on unix systems. See https://github.com/golang/go/issues/22315
