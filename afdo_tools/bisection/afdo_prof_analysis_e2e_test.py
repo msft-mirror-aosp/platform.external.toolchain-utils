@@ -112,13 +112,28 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
       loaded_run = json.load(f)
     self.assertEqual(initial_run, loaded_run)
 
+  def test_exit_on_problem_status(self):
+    temp_dir = tempfile.mkdtemp()
+    self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)
+
+    fd_state, state_file = tempfile.mkstemp(dir=temp_dir)
+    os.close(fd_state)
+    with self.assertRaises(RuntimeError):
+      self.run_check(
+          self.good_prof,
+          self.bad_prof,
+          self.expected,
+          state_file=state_file,
+          extern_decider='problemstatus_external.sh')
+
   def run_check(self,
                 good_prof,
                 bad_prof,
                 expected,
                 state_file=None,
                 no_resume=True,
-                out_file=None):
+                out_file=None,
+                extern_decider=None):
     temp_dir = tempfile.mkdtemp()
     self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)
 
@@ -139,7 +154,7 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
     analysis.FLAGS.analysis_output_file = out_file or '/dev/null'
 
     dir_path = os.path.dirname(os.path.realpath(__file__))  # dir of this file
-    external_script = '%s/e2e_external.sh' % (dir_path)
+    external_script = '%s/%s' % (dir_path, extern_decider or 'e2e_external.sh')
     analysis.FLAGS.external_decider = external_script
 
     actual = analysis.main(None)

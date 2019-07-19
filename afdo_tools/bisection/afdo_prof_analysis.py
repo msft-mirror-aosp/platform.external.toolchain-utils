@@ -142,6 +142,12 @@ class DeciderState(object):
 
     if return_code in statuses:
       status = StatusEnum(return_code)
+      if status == StatusEnum.PROBLEM_STATUS:
+        prof_file = prof_to_tmp(prof)
+        raise RuntimeError('Provided decider script returned PROBLEM_STATUS '
+                           'when run on profile stored at %s. AFDO Profile '
+                           'analysis aborting' % prof_file)
+
       if save_run:
         self.accumulated_results.append(status.value)
       logging.info('Run %d of external script %s returned %s',
