@@ -30,7 +30,7 @@ class Experiment(object):
                cache_conditions, labels, benchmarks, experiment_file, email_to,
                acquire_timeout, log_dir, log_level, share_cache,
                results_directory, locks_directory, cwp_dso, enable_aslr,
-               ignore_min_max, skylab):
+               ignore_min_max, skylab, intel_pstate=''):
     self.name = name
     self.working_directory = working_directory
     self.remote = remote
@@ -61,6 +61,7 @@ class Experiment(object):
     self.ignore_min_max = ignore_min_max
     self.skylab = skylab
     self.l = logger.GetLogger(log_dir)
+    self.intel_pstate = intel_pstate
 
     if not self.benchmarks:
       raise RuntimeError('No benchmarks specified')

@@ -7,6 +7,7 @@ from __future__ import print_function
 
 import sys
 import test_flag
+import time
 import traceback
 
 from collections import defaultdict
@@ -43,12 +44,158 @@ class DutWorker(Thread):
         # suite_runner.Terminate and updates timeline.
         self._active_br.Terminate()
 
+  def _kerncmd_update_needed(self, intel_pstate):
+    """Check whether kernel cmdline update is needed.
+
+    Args:
+      intel_pstate: kernel command line argument (active, passive, no_hwp)
+
+    Returns:
+      True if update is needed.
+    """
+
+    ce = command_executer.GetCommandExecuter()
+    good = 0
+
+    # Check that dut platform supports hwp
+    cmd = 'grep -q \'^flags.*hwp\' /proc/cpuinfo'
+    ret_code = ce.CrosRunCommand(
+        cmd, chromeos_root=self._sched.get_labels(0).chromeos_root,
+        machine=self._dut.name)
+    if ret_code != good:
+      # Intel hwp is not supported, update is not needed.
+      return False
+
+    kern_cmdline_cmd = 'grep -q "intel_pstate=%s" /proc/cmdline' % intel_pstate
+    ret_code = ce.CrosRunCommand(
+        kern_cmdline_cmd,
+        chromeos_root=self._sched.get_labels(0).chromeos_root,
+        machine=self._dut.name)
+    self._logger.LogOutput('grep /proc/cmdline returned %d' % ret_code)
+    if (intel_pstate and ret_code == good or
+        not intel_pstate and ret_code != good):
+      # No need to updated cmdline if:
+      # 1. We are setting intel_pstate and we found it is already set.
+      # 2. Not using intel_pstate and it is not in cmdline.
+      return False
+
+    # Otherwise we need to update intel_pstate.
+    return True
+
+  def _update_kerncmd_intel_pstate(self, intel_pstate):
+    """Update kernel command line.
+
+    Args:
+      intel_pstate: kernel command line argument (active, passive, no_hwp)
+    """
+
+    ce = command_executer.GetCommandExecuter()
+    good = 0
+
+    # First phase is to remove rootfs verification to allow cmdline change.
+    remove_verif_cmd = ' '.join([
+        '/usr/share/vboot/bin/make_dev_ssd.sh',
+        '--remove_rootfs_verification',
+        '--partition %d'])
+    # Command for partition 2.
+    verif_part2_failed = ce.CrosRunCommand(
+        remove_verif_cmd % 2,
+        chromeos_root=self._sched.get_labels(0).chromeos_root,
+        machine=self._dut.name)
+    # Command for partition 4
+    # Some machines in the lab use partition 4 to boot from,
+    # so cmdline should be update for both partitions.
+    verif_part4_failed = ce.CrosRunCommand(
+        remove_verif_cmd % 4,
+        chromeos_root=self._sched.get_labels(0).chromeos_root,
+        machine=self._dut.name)
+    if verif_part2_failed or verif_part4_failed:
+      self._logger.LogFatal(
+          'ERROR. Failed to update kernel cmdline on partition %d.\n'
+          'Remove verification failed with status %d' %
+          (2 if verif_part2_failed else 4,
+           verif_part2_failed or verif_part4_failed))
+
+    ce.CrosRunCommand(
+        'reboot && exit',
+        chromeos_root=self._sched.get_labels(0).chromeos_root,
+        machine=self._dut.name)
+    # Give enough time for dut to complete reboot
+    # TODO(denik): Replace with the function checking machine availability.
+    time.sleep(30)
+
+    # Second phase to update intel_pstate in kernel cmdline.
+    kern_cmdline = '\n'.join([
+        'tmpfile=$(mktemp)',
+        'partnumb=%d',
+        'pstate=%s',
+        # Store kernel cmdline in a temp file.
+        '/usr/share/vboot/bin/make_dev_ssd.sh --partition ${partnumb}'
+        ' --save_config ${tmpfile}',
+        # Remove intel_pstate argument if present.
+        'sed -i -r \'s/ intel_pstate=[A-Za-z_]+//g\' ${tmpfile}.${partnumb}',
+        # Insert intel_pstate with a new value if it is set.
+        '[[ -n ${pstate} ]] &&'
+        ' sed -i -e \"s/ *$/ intel_pstate=${pstate}/\" ${tmpfile}.${partnumb}',
+        # Save the change in kernel cmdline.
+        # After completion we have to reboot.
+        '/usr/share/vboot/bin/make_dev_ssd.sh --partition ${partnumb}'
+        ' --set_config ${tmpfile}'
+    ])
+    kern_part2_cmdline_cmd = kern_cmdline % (2, intel_pstate)
+    self._logger.LogOutput('Command to change kernel command line: %s' %
+                           kern_part2_cmdline_cmd)
+    upd_part2_failed = ce.CrosRunCommand(
+        kern_part2_cmdline_cmd,
+        chromeos_root=self._sched.get_labels(0).chromeos_root,
+        machine=self._dut.name)
+    # Again here we are updating cmdline for partition 4
+    # in addition to partition 2. Without this some machines
+    # in the lab might fail.
+    kern_part4_cmdline_cmd = kern_cmdline % (4, intel_pstate)
+    self._logger.LogOutput('Command to change kernel command line: %s' %
+                           kern_part4_cmdline_cmd)
+    upd_part4_failed = ce.CrosRunCommand(
+        kern_part4_cmdline_cmd,
+        chromeos_root=self._sched.get_labels(0).chromeos_root,
+        machine=self._dut.name)
+    if upd_part2_failed or upd_part4_failed:
+      self._logger.LogFatal(
+          'ERROR. Failed to update kernel cmdline on partition %d.\n'
+          'intel_pstate update failed with status %d' %
+          (2 if upd_part2_failed else 4, upd_part2_failed or upd_part4_failed))
+
+    ce.CrosRunCommand(
+        'reboot && exit',
+        chromeos_root=self._sched.get_labels(0).chromeos_root,
+        machine=self._dut.name)
+    # Wait 30s after reboot.
+    time.sleep(30)
+
+    # Verification phase.
+    # Check that cmdline was updated.
+    # Throw an exception if not.
+    kern_cmdline_cmd = 'grep -q "intel_pstate=%s" /proc/cmdline' % intel_pstate
+    ret_code = ce.CrosRunCommand(
+        kern_cmdline_cmd,
+        chromeos_root=self._sched.get_labels(0).chromeos_root,
+        machine=self._dut.name)
+    if (intel_pstate and ret_code != good or
+        not intel_pstate and ret_code == good):
+      # Kernel cmdline doesn't match input intel_pstate.
+      self._logger.LogFatal(
+          'ERROR. Failed to update kernel cmdline. '
+          'Final verification failed with status %d' % ret_code)
+
+    self._logger.LogOutput('Kernel cmdline updated successfully.')
+
   def run(self):
     """Do the "run-test->(optionally reimage)->run-test" chore.
 
         Note - 'br' below means 'benchmark_run'.
     """
 
+    intel_pstate = self._sched.get_experiment().intel_pstate
     # Firstly, handle benchmarkruns that have cache hit.
     br = self._sched.get_cached_benchmark_run()
     while br:
@@ -82,6 +229,11 @@ class DutWorker(Thread):
                                     'working thread {}.'.format(self))
             break
         else:
+          self._logger.LogOutput('Update kernel cmdline if necessary '
+                                 'and reboot')
+          if self._kerncmd_update_needed(intel_pstate):
+            self._update_kerncmd_intel_pstate(intel_pstate)
+
           # Execute the br.
           self._execute_benchmark_run(br)
     finally:

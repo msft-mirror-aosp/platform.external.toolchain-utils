@@ -288,7 +288,7 @@ def DoImage(argv):
       # If this is a non-local image, then the ret returned from
       # EnsureMachineUp is the one that will be returned by this function;
       # in that case, make sure the value in 'ret' is appropriate.
-      if not local_image and ret is True:
+      if not local_image and ret:
         ret = 0
       else:
         ret = 1
@@ -311,22 +311,24 @@ def DoImage(argv):
         TryRemountPartitionAsRW(options.chromeos_root, options.remote,
                                 log_level)
 
-      if found is False:
+      if not found:
         temp_dir = os.path.dirname(located_image)
         l.LogOutput('Deleting temp image dir: %s' % temp_dir)
         shutil.rmtree(temp_dir)
+      l.LogOutput('Image updated.')
     else:
-      l.LogOutput('Checksums match. Skipping reimage, doing a reboot.')
+      l.LogOutput('Checksums match, skip image update and reboot.')
       command = 'reboot && exit'
       _ = cmd_executer.CrosRunCommand(
           command, chromeos_root=options.chromeos_root, machine=options.remote)
       # Wait 30s after reboot.
       time.sleep(30)
 
-    return ret
   finally:
     if should_unlock:
       locks.ReleaseLock(list(options.remote.split()), options.chromeos_root)
+
+  return ret
 
 
 def LocateOrCopyImage(chromeos_root, image, board=None):
