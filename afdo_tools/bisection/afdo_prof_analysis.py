@@ -120,18 +120,19 @@ class DeciderState(object):
   def save_state(self):
     state = {'seed': self.seed, 'accumulated_results': self.accumulated_results}
     fd, tmp_file = mkstemp()
+    os.close(fd)
     with open(tmp_file, 'w') as f:
       json.dump(state, f, indent=2)
-    os.close(fd)
     os.rename(tmp_file, self.state_file)
     logging.info('Logged state to %s...', self.state_file)
 
   def run(self, prof, save_run=True):
     """Run the external deciding script on the given profile."""
     if self.saved_results and save_run:
-      result = StatusEnum(self.saved_results.pop(0))
+      result = self.saved_results.pop(0)
       self.accumulated_results.append(result)
-      return result
+      self.save_state()
+      return StatusEnum(result)
 
     filename = prof_to_tmp(prof)
 
@@ -147,7 +148,6 @@ class DeciderState(object):
         raise RuntimeError('Provided decider script returned PROBLEM_STATUS '
                            'when run on profile stored at %s. AFDO Profile '
                            'analysis aborting' % prof_file)
-
       if save_run:
         self.accumulated_results.append(status.value)
       logging.info('Run %d of external script %s returned %s',

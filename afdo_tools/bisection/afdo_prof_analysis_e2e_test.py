@@ -126,6 +126,91 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
           state_file=state_file,
           extern_decider='problemstatus_external.sh')
 
+  def test_state_assumption(self):
+
+    def compare_runs(tmp_dir, first_ctr, second_ctr):
+      """Compares given prof versions between first and second run in test."""
+      first_prof = '%s/.first_run_%d' % (tmp_dir, first_ctr)
+      second_prof = '%s/.second_run_%d' % (tmp_dir, second_ctr)
+      with open(first_prof) as f:
+        first_prof_text = f.read()
+      with open(second_prof) as f:
+        second_prof_text = f.read()
+      self.assertEqual(first_prof_text, second_prof_text)
+
+    good_prof = {'func_a': ':1\n3: 3\n5: 7\n'}
+    bad_prof = {'func_a': ':2\n4: 4\n6: 8\n'}
+    # add some noise to the profiles; 15 is an arbitrary choice
+    for x in range(15):
+      func = 'func_%d' % x
+      good_prof[func] = ':%d\n' % (x)
+      bad_prof[func] = ':%d\n' % (x + 1)
+    expected = {
+        'bisect_results': {
+            'ranges': [],
+            'individuals': ['func_a']
+        },
+        'good_only_functions': False,
+        'bad_only_functions': False
+    }
+
+    # using a static temp dir rather than a dynamic one because these files are
+    # shared between the bash scripts and this Python test, and the arguments
+    # to the bash scripts are fixed by afdo_prof_analysis.py so it would be
+    # difficult to communicate dynamically generated directory to bash scripts
+    scripts_tmp_dir = '%s/afdo_test_tmp' % os.getcwd()
+    os.mkdir(scripts_tmp_dir)
+    self.addCleanup(shutil.rmtree, scripts_tmp_dir, ignore_errors=True)
+
+    # files used in the bash scripts used as external deciders below
+    # - count_file tracks the current number of calls to the script in total
+    # - local_count_file tracks the number of calls to the script without
+    # interruption
+    count_file = '%s/.count' % scripts_tmp_dir
+    local_count_file = '%s/.local_count' % scripts_tmp_dir
+
+    # runs through whole thing at once
+    initial_seed = self.run_check(
+        good_prof,
+        bad_prof,
+        expected,
+        extern_decider='state_assumption_external.sh')
+    with open(count_file) as f:
+      num_calls = int(f.read())
+    os.remove(count_file)  # reset counts for second run
+    finished_state_file = 'afdo_analysis_state.json.completed.%s' % str(
+        date.today())
+    self.addCleanup(os.remove, finished_state_file)
+
+    # runs the same analysis but interrupted each iteration
+    for i in range(2 * num_calls + 1):
+      no_resume_run = (i == 0)
+      seed = initial_seed if no_resume_run else None
+      try:
+        self.run_check(
+            good_prof,
+            bad_prof,
+            expected,
+            no_resume=no_resume_run,
+            extern_decider='state_assumption_interrupt.sh',
+            seed=seed)
+        break
+      except RuntimeError:
+        # script was interrupted, so we restart local count
+        os.remove(local_count_file)
+    else:
+      raise RuntimeError('Test failed -- took too many iterations')
+
+    for initial_ctr in range(3):  # initial runs unaffected by interruption
+      compare_runs(scripts_tmp_dir, initial_ctr, initial_ctr)
+
+    start = 3
+    for ctr in range(start, num_calls):
+      # second run counter incremented by 4 for each one first run is because
+      # +2 for performing initial checks on good and bad profs each time
+      # +1 for PROBLEM_STATUS run which causes error and restart
+      compare_runs(scripts_tmp_dir, ctr, 6 + (ctr - start) * 4)
+
   def run_check(self,
                 good_prof,
                 bad_prof,
@@ -133,7 +218,9 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
                 state_file=None,
                 no_resume=True,
                 out_file=None,
-                extern_decider=None):
+                extern_decider=None,
+                seed=None):
+
     temp_dir = tempfile.mkdtemp()
     self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)
 
@@ -149,7 +236,16 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
     analysis.FLAGS.good_prof = good_prof_file
     analysis.FLAGS.bad_prof = bad_prof_file
     if state_file:
+      actual_state_file = analysis.FLAGS.state_file
+
+      def cleanup():
+        analysis.FLAGS.state_file = actual_state_file
+
+      self.addCleanup(cleanup)
+
       analysis.FLAGS.state_file = state_file
+
+    analysis.FLAGS.seed = seed
     analysis.FLAGS.no_resume = no_resume
     analysis.FLAGS.analysis_output_file = out_file or '/dev/null'
 
@@ -158,8 +254,9 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
     analysis.FLAGS.external_decider = external_script
 
     actual = analysis.main(None)
-    actual.pop('seed')  # nothing to check
+    actual_seed = actual.pop('seed')  # nothing to check
     self.assertEqual(actual, expected)
+    return actual_seed
 
 
 if __name__ == '__main__':
