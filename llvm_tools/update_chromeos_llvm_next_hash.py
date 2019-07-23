@@ -265,8 +265,7 @@ def ReplaceLLVMNextHash(ebuild_lines, is_updated, llvm_regex, llvm_hash,
   for cur_line in ebuild_lines:
     if not is_updated and llvm_regex.search(cur_line):
       # Update the LLVM next hash and revision number.
-      cur_line = 'LLVM_NEXT_HASH=\"%s\" # EGIT_COMMIT r%d\n' % (llvm_hash,
-                                                                llvm_version)
+      cur_line = 'LLVM_NEXT_HASH=\"%s\" # r%d\n' % (llvm_hash, llvm_version)
 
       is_updated = True
 

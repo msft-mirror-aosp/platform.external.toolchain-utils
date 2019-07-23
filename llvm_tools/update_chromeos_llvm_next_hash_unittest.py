@@ -207,7 +207,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     os.write(
         ebuild_file, '\n'.join([
             'First line in the ebuild', 'Second line in the ebuild',
-            'LLVM_NEXT_HASH=\"a12b34c56d78e90\" # EGIT_COMMIT r500',
+            'LLVM_NEXT_HASH=\"a12b34c56d78e90\" # r500',
             'Last line in the ebuild'
         ]))
 
@@ -225,7 +225,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
       expected_file_contents = [
           'First line in the ebuild\n', 'Second line in the ebuild\n',
-          'LLVM_NEXT_HASH=\"a123testhash1\" # EGIT_COMMIT r1000\n',
+          'LLVM_NEXT_HASH=\"a123testhash1\" # r1000\n',
           'Last line in the ebuild'
       ]
 
@@ -261,7 +261,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     os.write(
         ebuild_file, '\n'.join([
             'First line in the ebuild', 'Second line in the ebuild',
-            'LLVM_NEXT_HASH=\"a12b34c56d78e90\" # EGIT_COMMIT r500',
+            'LLVM_NEXT_HASH=\"a12b34c56d78e90\" # r500',
             'Last line in the ebuild'
         ]))
 
@@ -273,7 +273,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
       expected_file_contents = [
           'First line in the ebuild\n', 'Second line in the ebuild\n',
-          'LLVM_NEXT_HASH=\"a123testhash1\" # EGIT_COMMIT r1000\n',
+          'LLVM_NEXT_HASH=\"a123testhash1\" # r1000\n',
           'Last line in the ebuild'
       ]
 
