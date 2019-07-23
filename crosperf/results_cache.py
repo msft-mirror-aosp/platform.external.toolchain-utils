@@ -29,6 +29,9 @@ MACHINE_FILE = 'machine.txt'
 AUTOTEST_TARBALL = 'autotest.tbz2'
 PERF_RESULTS_FILE = 'perf-results.txt'
 CACHE_KEYS_FILE = 'cache_keys.txt'
+HISTOGRAMS_BLOCKLIST = {
+    'loading.desktop',
+}
 
 
 class Result(object):
@@ -251,7 +254,8 @@ class Result(object):
     return out
 
   def GetResultsFile(self):
-    if self.suite == 'telemetry_Crosperf':
+    if self.suite == 'telemetry_Crosperf' and \
+        self.test_name not in HISTOGRAMS_BLOCKLIST:
       return self.FindFilesInResultsDir('-name histograms.json').splitlines()
     return self.FindFilesInResultsDir('-name results-chart.json').splitlines()
 
@@ -264,7 +268,8 @@ class Result(object):
   def GetDataMeasurementsFiles(self):
     result = self.FindFilesInResultsDir('-name perf_measurements').splitlines()
     if not result:
-      if self.suite == 'telemetry_Crosperf':
+      if self.suite == 'telemetry_Crosperf' and \
+          self.test_name not in HISTOGRAMS_BLOCKLIST:
         result = \
             self.FindFilesInResultsDir('-name histograms.json').splitlines()
       else:
@@ -450,9 +455,15 @@ class Result(object):
     # Note that this function doesn't know anything about whether there is a
     # cache hit or miss. It should process results agnostic of the cache hit
     # state.
-    if self.results_file and self.suite == 'telemetry_Crosperf' and \
-        'histograms.json' in self.results_file[0]:
+    # FIXME: Properly parse histograms results of the tests in the blocklist
+    if self.results_file and \
+        self.suite == 'telemetry_Crosperf' and \
+        'histograms.json' in self.results_file[0] and \
+        self.test_name not in HISTOGRAMS_BLOCKLIST:
       self.keyvals = self.ProcessHistogramsResults()
+    elif self.results_file and self.suite == 'telemetry_Crosperf' and \
+        'histograms.json' in self.results_file[0]:
+      self.keyvals = self.ProcessChartResults()
     elif self.results_file and self.suite != 'telemetry_Crosperf' and \
         'results-chart.json' in self.results_file[0]:
       self.keyvals = self.ProcessChartResults()
