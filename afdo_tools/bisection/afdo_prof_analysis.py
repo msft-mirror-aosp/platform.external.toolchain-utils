@@ -21,8 +21,6 @@ from datetime import date
 from enum import IntEnum
 from tempfile import mkstemp
 
-from afdo_parse import parse_afdo
-
 import json
 # Pylint recommends we use "from chromite.lib import cros_logging as logging".
 # Chromite specific policy message, we want to keep using the standard logging
@@ -75,6 +73,31 @@ def json_to_text(json_prof):
     text_profile.append(func)
     text_profile.append(json_prof[func])
   return ''.join(text_profile)
+
+
+def text_to_json(f):
+  """Performs basic parsing of an AFDO text-based profile.
+
+  This parsing expects an input file object with contents of the form generated
+  by bin/llvm-profdata (within an LLVM build).
+  """
+  results = {}
+  curr_func = None
+  curr_data = []
+  for line in f:
+    if not line.startswith(' '):
+      if curr_func:
+        results[curr_func] = ''.join(curr_data)
+        curr_data = []
+      curr_func, rest = line.split(':', 1)
+      curr_func = curr_func.strip()
+      curr_data.append(':' + rest)
+    else:
+      curr_data.append(line)
+
+  if curr_func:
+    results[curr_func] = ''.join(curr_data)
+  return results
 
 
 def prof_to_tmp(prof):
@@ -369,9 +392,9 @@ def main(_):
   random.seed(decider.seed)
 
   with open(FLAGS.good_prof) as good_f:
-    good_items = parse_afdo(good_f)
+    good_items = text_to_json(good_f)
   with open(FLAGS.bad_prof) as bad_f:
-    bad_items = parse_afdo(bad_f)
+    bad_items = text_to_json(bad_f)
 
   bisect_results = bisect_profiles_wrapper(decider, good_items, bad_items)
   gnb_result = check_good_not_bad(decider, good_items, bad_items)

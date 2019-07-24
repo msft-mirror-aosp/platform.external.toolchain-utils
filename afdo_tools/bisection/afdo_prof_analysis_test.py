@@ -11,6 +11,7 @@ from __future__ import print_function
 import afdo_prof_analysis as analysis
 
 import random
+import StringIO
 import unittest
 
 
@@ -30,6 +31,40 @@ class AfdoProfAnalysisTest(unittest.TestCase):
       good_items[func_name] = 'test_data'
 
   analysis.random.seed(5)  # 5 is an arbitrary choice. For consistent testing
+
+  def test_text_to_json(self):
+    test_data = StringIO.StringIO('deflate_slow:87460059:3\n'
+                                  ' 3: 24\n'
+                                  ' 14: 54767\n'
+                                  ' 15: 664 fill_window:22\n'
+                                  ' 16: 661\n'
+                                  ' 19: 637\n'
+                                  ' 41: 36692 longest_match:36863\n'
+                                  ' 44: 36692\n'
+                                  ' 44.2: 5861\n'
+                                  ' 46: 13942\n'
+                                  ' 46.1: 14003\n')
+    expected = {
+        'deflate_slow': ':87460059:3\n'
+                        ' 3: 24\n'
+                        ' 14: 54767\n'
+                        ' 15: 664 fill_window:22\n'
+                        ' 16: 661\n'
+                        ' 19: 637\n'
+                        ' 41: 36692 longest_match:36863\n'
+                        ' 44: 36692\n'
+                        ' 44.2: 5861\n'
+                        ' 46: 13942\n'
+                        ' 46.1: 14003\n'
+    }
+    actual = analysis.text_to_json(test_data)
+    self.assertEqual(actual, expected)
+    test_data.close()
+
+  def test_text_to_json_empty_afdo(self):
+    expected = {}
+    actual = analysis.text_to_json('')
+    self.assertEqual(actual, expected)
 
   def test_json_to_text(self):
     example_prof = {'func_a': ':1\ndata\n', 'func_b': ':2\nmore data\n'}
