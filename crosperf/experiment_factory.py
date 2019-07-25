@@ -60,22 +60,22 @@ graphics_perf_tests = [
     'graphics_WebGLAquarium',
     'graphics_WebGLPerformance',
 ]
+# TODO: disable rendering.desktop by default as the benchmark is
+# currently in a bad state
+# page_cycler_v2.typical_25 is deprecated and the recommend replacement is
+# loading.desktop@@typical (crbug.com/916340)
 telemetry_crosbolt_perf_tests = [
     'octane',
     'kraken',
     'speedometer2',
     'jetstream',
+    'loading.desktop',
+    #'rendering.desktop',
 ]
-# TODO: disable rendering.desktop by default as the benchmark is
-# currently in a bad state
 # TODO: replace video_PlaybackPerf.vp9 with the tast version
-# page_cycler_v2.typical_25 is deprecated and the recommend replacement is
-# loading.desktop@@typical (crbug.com/916340)
 crosbolt_perf_tests = [
     'graphics_WebGLAquarium',
     'video_PlaybackPerf.vp9',
-    #'rendering.desktop',
-    'loading.desktop'
 ]
 
 #    'cheets_AntutuTest',
