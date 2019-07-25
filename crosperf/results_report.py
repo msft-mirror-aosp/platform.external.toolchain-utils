@@ -90,7 +90,7 @@ def _AppendUntilLengthIs(gen, the_list, target_len):
 
   Uses `gen` to generate elements.
   """
-  the_list.extend(gen() for _ in xrange(target_len - len(the_list)))
+  the_list.extend(gen() for _ in range(target_len - len(the_list)))
   return the_list
 
 
@@ -132,7 +132,7 @@ class _PerfTable(object):
     self.perf_data = {}
     for label in label_names:
       for bench_name, bench_iterations in benchmark_names_and_iterations:
-        for i in xrange(bench_iterations):
+        for i in range(bench_iterations):
           report = read_perf_report(label, bench_name, i)
           self._ProcessPerfReport(report, label, bench_name, i)
 
@@ -177,7 +177,7 @@ def _ParseColumn(columns, iteration):
     else:
       new_column.extend(
           Column(LiteralResult(i), Format(), str(i + 1))
-          for i in xrange(iteration))
+          for i in range(iteration))
   return new_column
 
 

@@ -340,17 +340,17 @@ class SamplesTableGenerator(TableGenerator):
     row = [None] * len(header)
     row[0] = '%s (samples)' % k
     row[1] = 'N/A'
-    for label_index in xrange(2, len(row)):
+    for label_index in range(2, len(row)):
       row[label_index] = [0] * iterations
 
     for cur_row in table[1:]:
       # Iterate through each benchmark
       if len(cur_row) > 1:
-        for label_index in xrange(2, len(cur_row)):
+        for label_index in range(2, len(cur_row)):
           # Iterate through each run in a single benchmark
           # each result should look like ((pass, fail), [values_list])
           bench_runs = cur_row[label_index][1]
-          for index in xrange(iterations):
+          for index in range(iterations):
             # Accumulate each run result to composite benchmark run
             # If any run fails, then we set this run for composite benchmark
             # to None so that we know it fails.
@@ -360,11 +360,11 @@ class SamplesTableGenerator(TableGenerator):
               row[label_index][index] = None
       else:
         # One benchmark totally fails, no valid data will be in final result
-        for label_index in xrange(2, len(row)):
+        for label_index in range(2, len(row)):
           row[label_index] = [None] * iterations
         break
     # Calculate pass and fail count for composite benchmark
-    for label_index in xrange(2, len(row)):
+    for label_index in range(2, len(row)):
       run_pass = 0
       run_fail = 0
       for run in row[label_index]:

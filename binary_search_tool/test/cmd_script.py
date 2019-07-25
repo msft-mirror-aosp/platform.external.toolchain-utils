@@ -45,7 +45,7 @@ def Main(argv):
   if opt_bisect_limit == -1:
     opt_bisect_limit = total_pass
 
-  for i in xrange(1, total_pass + 1):
+  for i in range(1, total_pass + 1):
     bisect_str = 'BISECT: %srunning pass (%d) Combine redundant ' \
                  'instructions on function (f1)' \
                  % ('NOT ' if i > opt_bisect_limit else '', i)

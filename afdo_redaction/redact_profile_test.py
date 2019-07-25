@@ -55,7 +55,7 @@ def _generate_repeated_function_body(repeats, fn_name='_some_name'):
   num_width = len(str(repeats))
 
   lines = []
-  for i in xrange(repeats):
+  for i in range(repeats):
     num = str(i).zfill(num_width)
     lines.append(num + function_header)
     lines.extend(function_body)

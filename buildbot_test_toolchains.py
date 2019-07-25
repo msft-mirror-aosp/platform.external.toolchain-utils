@@ -129,7 +129,7 @@ class ToolchainComparator(object):
     assert mo
     image_dict = mo.groupdict()
     image_dict['image_type'] = 'chrome-pfq'
-    for _ in xrange(2):
+    for _ in range(2):
       image_dict['tip'] = str(int(image_dict['tip']) - 1)
       nonafdo_image = PFQ_IMAGE_FS.replace('\\', '').format(**image_dict)
       if buildbot_utils.DoesImageExist(self._chromeos_root, nonafdo_image):

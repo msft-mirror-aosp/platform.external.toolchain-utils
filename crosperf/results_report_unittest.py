@@ -141,7 +141,7 @@ def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0,
       return run
 
     experiment.benchmark_runs.extend(
-        MakeSuccessfulRun(n) for n in xrange(how_many))
+        MakeSuccessfulRun(n) for n in range(how_many))
   return experiment
 
 
