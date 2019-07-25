@@ -655,7 +655,7 @@ class TelemetryResult(Result):
       fields = line.split(',')
       if len(fields) != len(labels):
         continue
-      for i in xrange(1, len(labels)):
+      for i in range(1, len(labels)):
         key = '%s %s' % (fields[0], labels[i])
         value = fields[i]
         self.keyvals[key] = value
