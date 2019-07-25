@@ -2,6 +2,7 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Parse data from benchmark_runs for tabulator."""
 
 from __future__ import print_function
@@ -45,7 +46,7 @@ def _GetMaxDup(data):
 
 def _Repeat(func, times):
   """Returns the result of running func() n times."""
-  return [func() for _ in xrange(times)]
+  return [func() for _ in range(times)]
 
 
 def _DictWithReturnValues(retval, pass_fail):
@@ -170,6 +171,7 @@ def OrganizeResults(benchmark_runs, labels, benchmarks=None, json_report=False):
   label_names = [label.name for label in labels]
   label_indices = {name: i for i, name in enumerate(label_names)}
   summary_file = _ReadSummaryFile(sys.argv[0])
+
   if benchmarks is None:
     benchmarks = []
 

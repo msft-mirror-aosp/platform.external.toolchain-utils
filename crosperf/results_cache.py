@@ -9,11 +9,11 @@ from __future__ import print_function
 
 import glob
 import hashlib
+import json
 import os
 import pickle
 import re
 import tempfile
-import json
 
 from cros_utils import command_executer
 from cros_utils import misc
@@ -153,7 +153,7 @@ class Result(object):
     results_dict = {}
     for k in keyvals_dict:
       # We don't want these lines in our reports; they add no useful data.
-      if k == '' or k == 'telemetry_Crosperf':
+      if not k or k == 'telemetry_Crosperf':
         continue
       val = keyvals_dict[k]
       units = units_dict[k]
@@ -456,16 +456,15 @@ class Result(object):
     # cache hit or miss. It should process results agnostic of the cache hit
     # state.
     # FIXME: Properly parse histograms results of the tests in the blocklist
-    if self.results_file and \
-        self.suite == 'telemetry_Crosperf' and \
-        'histograms.json' in self.results_file[0] and \
-        self.test_name not in HISTOGRAMS_BLOCKLIST:
+    if (self.results_file and self.suite == 'telemetry_Crosperf' and
+        'histograms.json' in self.results_file[0] and
+        self.test_name not in HISTOGRAMS_BLOCKLIST):
       self.keyvals = self.ProcessHistogramsResults()
-    elif self.results_file and self.suite == 'telemetry_Crosperf' and \
-        'histograms.json' in self.results_file[0]:
+    elif (self.results_file and self.suite == 'telemetry_Crosperf' and
+          'histograms.json' in self.results_file[0]):
       self.keyvals = self.ProcessChartResults()
-    elif self.results_file and self.suite != 'telemetry_Crosperf' and \
-        'results-chart.json' in self.results_file[0]:
+    elif (self.results_file and self.suite != 'telemetry_Crosperf' and
+          'results-chart.json' in self.results_file[0]):
       self.keyvals = self.ProcessChartResults()
     else:
       if not use_cache:
@@ -802,7 +801,7 @@ class ResultsCache(object):
     else:
       cache_path = [os.path.join(SCRATCH_DIR, cache_dir)]
 
-    if len(self.share_cache):
+    if self.share_cache:
       for path in [x.strip() for x in self.share_cache.split(',')]:
         if os.path.exists(path):
           cache_path.append(os.path.join(path, cache_dir))
