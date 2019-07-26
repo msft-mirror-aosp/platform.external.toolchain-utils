@@ -8,6 +8,7 @@
 
 from __future__ import print_function
 
+from collections import namedtuple
 from pipes import quote
 from tempfile import mkstemp
 import mock
@@ -15,32 +16,10 @@ import os
 import unittest
 
 from cros_utils import command_executer
+from failure_modes import FailureModes
+from test_helpers import CallCountsToMockFunctions
+import llvm_patch_management
 import update_chromeos_llvm_next_hash
-
-
-def CallCountsToMockFunctions(mock_function):
-  """A decorator that passes a call count to the function it decorates.
-
-  Examples:
-    @CallCountsToMockFunctions
-    def foo(call_count):
-      return call_count
-    ...
-    ...
-    [foo(), foo(), foo()]
-    [0, 1, 2]
-
-  NOTE: This decorator will not handle recursive functions properly.
-  """
-
-  counter = [0]
-
-  def Result(*args, **kwargs):
-    ret_value = mock_function(counter[0], *args, **kwargs)
-    counter[0] += 1
-    return ret_value
-
-  return Result
 
 
 class UpdateLLVMNextHashTest(unittest.TestCase):
@@ -108,11 +87,9 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
             '/path/to/chroot', ['/mnt/host/source/src/package.ebuild']),
         ['/path/to/chroot/src/package.ebuild'])
 
-  @mock.patch.object(os.path, 'islink')
+  # Simulate 'os.path.islink' when a path is not a symbolic link.
+  @mock.patch.object(os.path, 'islink', return_value=False)
   def testFailedToGetEbuildPathFromInvalidSymlink(self, mock_islink):
-    # Simulate 'os.path.islink' when a path is not a symbolic link.
-    mock_islink.return_value = False
-
     # Verify the exception is raised when the argument is not a symbolic link.
     with self.assertRaises(ValueError) as err:
       update_chromeos_llvm_next_hash.GetEbuildPathsFromSymLinkPaths(
@@ -125,16 +102,14 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     mock_islink.assert_called_once_with(
         '/symlink/path/src/to/package-r1.ebuild')
 
-  @mock.patch.object(os.path, 'islink')
+  # Simulate 'os.path.islink' when a path is a symbolic link.
+  @mock.patch.object(os.path, 'islink', return_value=True)
   @mock.patch.object(os.path, 'realpath')
   def testSucceedsToGetEbuildPathFromValidSymlink(self, mock_realpath,
                                                   mock_islink):
 
     # Simulate 'os.path.realpath' when a valid path is passed in.
     mock_realpath.return_value = '/abs/path/to/src/package.ebuild'
-
-    # Simulate 'os.path.islink' when a path is a symbolic link.
-    mock_islink.return_value = True
 
     self.assertEqual(
         update_chromeos_llvm_next_hash.GetEbuildPathsFromSymLinkPaths(
@@ -148,7 +123,10 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     mock_islink.assert_called_once_with('/path/to/chroot/src/package-r1.ebuild')
 
-  def testFailedToUpdateLLVMNextHashForInvalidEbuildPath(self):
+  # Simulate behavior of 'os.path.isfile()' when the ebuild path to a package
+  # does not exist.
+  @mock.patch.object(os.path, 'isfile', return_value=False)
+  def testFailedToUpdateLLVMNextHashForInvalidEbuildPath(self, mock_isfile):
     # Verify the exception is raised when the ebuild path does not exist.
     with self.assertRaises(ValueError) as err:
       update_chromeos_llvm_next_hash.UpdateBuildLLVMNextHash(
@@ -158,11 +136,11 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
         err.exception.message,
         'Invalid ebuild path provided: /some/path/to/package.ebuild')
 
-  @mock.patch.object(os.path, 'isfile')
-  def testFailedToUpdateLLVMNextHash(self, mock_isfile):
-    # Simulate 'os.path.isfile' behavior on a valid ebuild path.
-    mock_isfile.return_value = True
+    mock_isfile.assert_called_once()
 
+  # Simulate 'os.path.isfile' behavior on a valid ebuild path.
+  @mock.patch.object(os.path, 'isfile', return_value=True)
+  def testFailedToUpdateLLVMNextHash(self, mock_isfile):
     # Create a temporary file to simulate an ebuild file of a package.
     ebuild_file, file_path = mkstemp()
 
@@ -187,13 +165,11 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     mock_isfile.assert_called_once()
 
-  @mock.patch.object(os.path, 'isfile')
+  # Simulate 'os.path.isfile' behavior on a valid ebuild path.
+  @mock.patch.object(os.path, 'isfile', return_value=True)
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def testFailedToStageTheEbuildForCommitForLLVMNextHashUpdate(
       self, mock_stage_commit_command, mock_isfile):
-
-    # Simulate 'os.path.isfile' behavior on a valid ebuild path.
-    mock_isfile.return_value = True
 
     # Simulate 'RunCommandWOutput' when failed to stage the ebuild file for
     # commit.
@@ -241,13 +217,11 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     mock_isfile.assert_called_once()
     mock_stage_commit_command.assert_called_once()
 
-  @mock.patch.object(os.path, 'isfile')
+  # Simulate 'os.path.isfile' behavior on a valid ebuild path.
+  @mock.patch.object(os.path, 'isfile', return_value=True)
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def testSuccessfullyStageTheEbuildForCommitForLLVMNextHashUpdate(
       self, mock_stage_commit_command, mock_isfile):
-
-    # Simulate 'os.path.isfile' behavior on a valid ebuild path.
-    mock_isfile.return_value = True
 
     # Simulate 'RunCommandWOutput' when successfully staged the ebuild file for
     # commit.
@@ -289,7 +263,10 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     mock_isfile.assert_called_once()
     mock_stage_commit_command.assert_called_once()
 
-  def testFailedToUprevEbuildForInvalidSymlink(self):
+  # Simulate behavior of 'os.path.islink()' when the argument passed in is not a
+  # symbolic link.
+  @mock.patch.object(os.path, 'islink', return_value=False)
+  def testFailedToUprevEbuildForInvalidSymlink(self, mock_islink):
     # Verify the exception is raised when a symbolic link is not passed in.
     with self.assertRaises(ValueError) as err:
       update_chromeos_llvm_next_hash.UprevEbuild('/symlink/to/package.ebuild')
@@ -297,11 +274,11 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     self.assertEqual(err.exception.message,
                      'Invalid symlink provided: /symlink/to/package.ebuild')
 
-  @mock.patch.object(os.path, 'islink')
-  def testFailedToUprevEbuild(self, mock_islink):
-    # Simulate 'os.path.islink' when a symbolic link is passed in.
-    mock_islink.return_value = True
+    mock_islink.assert_called_once()
 
+  # Simulate 'os.path.islink' when a symbolic link is passed in.
+  @mock.patch.object(os.path, 'islink', return_value=True)
+  def testFailedToUprevEbuild(self, mock_islink):
     # Verify the exception is raised when the symlink does not have a revision
     # number.
     with self.assertRaises(ValueError) as err:
@@ -311,18 +288,14 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     mock_islink.assert_called_once_with('/symlink/to/package.ebuild')
 
-  @mock.patch.object(os.path, 'islink')
-  @mock.patch.object(os.path, 'dirname')
+  # Simulate 'os.path.islink' when a valid symbolic link is passed in.
+  @mock.patch.object(os.path, 'islink', return_value=True)
+  # Simulate 'os.path.dirname' when returning a path to the directory of a
+  # valid symbolic link.
+  @mock.patch.object(os.path, 'dirname', return_value='/symlink/to')
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def testSuccessfullyUprevEbuild(self, mock_command_output, mock_dirname,
                                   mock_islink):
-
-    # Simulate 'os.path.islink' when a valid symbolic link is passed in.
-    mock_islink.return_value = True
-
-    # Simulate 'os.path.dirname' when returning a path to the directory of a
-    # valid symbolic link.
-    mock_dirname.return_value = '/symlink/to'
 
     # Simulate 'RunCommandWOutput' when the symbolic link was incremented by 1
     # and staged for commit.
@@ -341,7 +314,10 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
         '/symlink/to/package-r1.ebuild /symlink/to/package-r2.ebuild',
         print_to_console=False)
 
-  def testFailedToCreateRepoForInvalidDirectoryPath(self):
+  # Simulate behavior of 'os.path.isdir()' when the path to the repo is not a
+  # directory.
+  @mock.patch.object(os.path, 'isdir', return_value=False)
+  def testFailedToCreateRepoForInvalidDirectoryPath(self, mock_isdir):
     # Verify the exception is raised when provided an invalid directory path.
     with self.assertRaises(ValueError) as err:
       update_chromeos_llvm_next_hash._CreateRepo('/path/to/repo',
@@ -350,12 +326,12 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     self.assertEqual(err.exception.message,
                      'Invalid directory path provided: /path/to/repo')
 
-  @mock.patch.object(os.path, 'isdir')
+    mock_isdir.assert_called_once()
+
+  # Simulate 'os.path.isdir' when the path to the repo is valid.
+  @mock.patch.object(os.path, 'isdir', return_value=True)
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def testFailedToCreateRepo(self, mock_command_output, mock_isdir):
-    # Simulate 'os.path.isdir' when the path to the repo is valid.
-    mock_isdir.return_value = True
-
     # Simulate 'RunCommandWOutput' when 'repo start' fails.
     #
     # Returns shell error code, stdout, stderr.
@@ -375,7 +351,8 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     mock_command_output.assert_called_once()
 
-  @mock.patch.object(os.path, 'isdir')
+  # Simulate 'os.path.isdir' when a valid repo path is provided.
+  @mock.patch.object(os.path, 'isdir', return_value=True)
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def testSuccessfullyCreatedRepo(self, mock_command_output, mock_isdir):
     # Test function to simulate 'RunCommandWOutput' when 'repo start' succeeds.
@@ -386,9 +363,6 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
       # Returns shell error code, stdout, stderr.
       return 0, None, 0
 
-    # Simulate 'os.path.isdir' when a valid repo path is provided.
-    mock_isdir.return_value = True
-
     # Use test function to simulate 'RunCommandWOutput' behavior.
     mock_command_output.side_effect = GoodRepoStart
 
@@ -398,7 +372,10 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     mock_command_output.assert_called_once()
 
-  def testFailedToDeleteRepoForInvalidDirectoryPath(self):
+  # Simulate behavior of 'os.path.isdir()' when the path to the repo is not a
+  # directory.
+  @mock.patch.object(os.path, 'isdir', return_value=False)
+  def testFailedToDeleteRepoForInvalidDirectoryPath(self, mock_isdir):
     # Verify the exception is raised on an invalid repo path.
     with self.assertRaises(ValueError) as err:
       update_chromeos_llvm_next_hash._DeleteRepo('/some/path/to/repo',
@@ -407,12 +384,12 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     self.assertEqual(err.exception.message,
                      'Invalid directory path provided: /some/path/to/repo')
 
-  @mock.patch.object(os.path, 'isdir')
+    mock_isdir.assert_called_once()
+
+  # Simulate 'os.path.isdir' on a valid directory.
+  @mock.patch.object(os.path, 'isdir', return_value=True)
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def testFailedToDeleteRepo(self, mock_command_output, mock_isdir):
-    # Simulate 'os.path.isdir' on a valid directory.
-    mock_isdir.return_value = True
-
     # Simulate 'RunCommandWOutput' when failed to delete a branch.
     #
     # Returns shell error code, stdout, stderr.
@@ -432,7 +409,8 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     mock_command_output.assert_called_once()
 
-  @mock.patch.object(os.path, 'isdir')
+  # Simulate 'os.path.isdir' on valid directory path.
+  @mock.patch.object(os.path, 'isdir', return_value=True)
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def testSuccessfullyDeletedRepo(self, mock_command_output, mock_isdir):
     # Test function to simulate 'RunCommandWOutput' when successfully deleted a
@@ -444,9 +422,6 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
       # Returns shell error code, stdout, stderr.
       return 0, None, 0
 
-    # Simulate 'os.path.isdir' on valid directory path.
-    mock_isdir.return_value = True
-
     # Use test function to simulate 'RunCommandWOutput' behavior.
     mock_command_output.side_effect = GoodRepoDelete
 
@@ -457,7 +432,10 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     mock_command_output.assert_called_once()
 
-  def testFailedToUploadChangesForInvalidPathDirectory(self):
+  # Simulate behavior of 'os.path.isdir()' when the path to the repo is not a
+  # directory.
+  @mock.patch.object(os.path, 'isdir', return_value=False)
+  def testFailedToUploadChangesForInvalidPathDirectory(self, mock_isdir):
     # Verify exception is raised when on an invalid repo path.
     with self.assertRaises(ValueError) as err:
       update_chromeos_llvm_next_hash.UploadChanges(
@@ -466,13 +444,13 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     self.assertEqual(err.exception.message,
                      'Invalid directory path provided: /some/path/to/repo')
 
-  @mock.patch.object(os.path, 'isdir')
+    mock_isdir.assert_called_once()
+
+  # Simulate 'os.path.isdir' on a valid repo directory.
+  @mock.patch.object(os.path, 'isdir', return_value=True)
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def testFailedToCreateACommitForTheChanges(self, mock_command_output,
                                              mock_isdir):
-
-    # Simulate 'os.path.isdir' on a valid repo directory.
-    mock_isdir.return_value = True
 
     # Simulate 'RunCommandWOutput' when failed to create a commit for the
     # changes.
@@ -495,7 +473,8 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
         'cd /some/path/to/repo && git commit -m \"Test message\"',
         print_to_console=False)
 
-  @mock.patch.object(os.path, 'isdir')
+  # Simulate 'os.path.isdir' on a valid repo path.
+  @mock.patch.object(os.path, 'isdir', return_value=True)
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def testFailedToUploadChangesForReview(self, mock_command_output, mock_isdir):
     # Test function to simulate 'RunCommandWOutput' when attempting to create
@@ -521,9 +500,6 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
       # Testing function was called more times than expected (2 times).
       assert False, 'RunCommandWOutput was called more than 2 times.'
 
-    # Simulate 'os.path.isdir' on a valid repo path.
-    mock_isdir.return_value = True
-
     # Use test function to simulate 'RunCommandWOutput' behavior.
     mock_command_output.side_effect = MultipleCallsToUploadACommit
 
@@ -540,7 +516,8 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     self.assertEqual(mock_command_output.call_count, 2)
 
-  @mock.patch.object(os.path, 'isdir')
+  # Simulate 'os.path.isdir' when a valid repo path is passed in.
+  @mock.patch.object(os.path, 'isdir', return_value=True)
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def testSuccessfullyUploadedChangesForReview(self, mock_command_output,
                                                mock_isdir):
@@ -566,9 +543,6 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
       # Testing function was called more times than expected (2 times).
       assert False, 'RunCommandWOutput was called more than 2 times.'
-
-    # Simulate 'os.path.isdir' when a valid repo path is passed in.
-    mock_isdir.return_value = True
 
     # Use test function to simulate 'RunCommandWOutput' behavior.
     mock_command_output.side_effect = MultipleCallsToUploadACommit
@@ -671,6 +645,220 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     mock_ebuild_paths_from_symlink_paths.assert_called_once_with(
         ['/some/path/to/chroot/src/path/to/package-r1.ebuild'])
 
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
+  def testFailedToRemovePatchFromFilesDir(self, mock_run_cmd):
+    # Simulate the behavior of 'RunCommandWOutput()' when failed to remove a
+    # patch whose absolute path does not exist.
+    #
+    # Returns shell error code, stdout, stderr.
+    mock_run_cmd.return_value = (1, None, 'Patch does not exist.')
+
+    # Verify the exception is raised when the patch does not exist and the
+    # command executer attempts to remove the patch.
+    with self.assertRaises(ValueError) as err:
+      update_chromeos_llvm_next_hash.RemovePatchesFromFilesDir([
+          '/abs/path/to/filesdir/display_results.patch',
+          '/abs/path/to/filesdir/cherry/fix_output.patch'
+      ])
+
+    self.assertEqual(
+        err.exception.message, 'Failed to remove patch display_results.patch: '
+        'Patch does not exist.')
+
+    self.assertEqual(mock_run_cmd.call_count, 1)
+
+    mock_run_cmd.assert_called_once_with(
+        'git -C /abs/path/to/filesdir rm -f '
+        '/abs/path/to/filesdir/display_results.patch',
+        print_to_console=False)
+
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
+  def testSuccessfullyRemovedPatchesFromFilesDir(self, mock_run_cmd):
+    # Simulate the behavior of 'RunCommandWOutput()' when all patches exist and
+    # were removed from $FILESDIR.
+    @CallCountsToMockFunctions
+    def MultipleCallsToRemovePatches(call_count, rm_cmd, print_to_console):
+      # First patch to remove from $FILESDIR.
+      if call_count == 0:
+        self.assertEqual(
+            rm_cmd, 'git -C /abs/path/to/filesdir/cherry rm -f '
+            '/abs/path/to/filesdir/cherry/fix_output.patch')
+        self.assertFalse(print_to_console)
+
+        # Returns shell error code, stdout, stderr.
+        return 0, None, 0
+
+      # Second (and last patch) to remove from $FILESDIR.
+      if call_count == 1:
+        self.assertEqual(
+            rm_cmd, 'git -C /abs/path/to/filesdir rm -f '
+            '/abs/path/to/filesdir/display_results.patch')
+        self.assertFalse(print_to_console)
+
+        # Returns shell error code, stdout, stderr.
+        return 0, None, 0
+
+      # 'RunCommandWOutput()' called more than times than expected (2 times).
+      assert False, 'Unexpectedly called more than 2 times.'
+
+    # Use test function to simulate 'RunCommandWOutput()' behavior.
+    mock_run_cmd.side_effect = MultipleCallsToRemovePatches
+
+    update_chromeos_llvm_next_hash.RemovePatchesFromFilesDir([
+        '/abs/path/to/filesdir/cherry/fix_output.patch',
+        '/abs/path/to/filesdir/display_results.patch'
+    ])
+
+    self.assertEqual(mock_run_cmd.call_count, 2)
+
+  # Simulate behavior of 'os.path.isfile()' when the absolute path to the patch
+  # metadata file does not exist.
+  @mock.patch.object(os.path, 'isfile', return_value=False)
+  def testInvalidPatchMetadataFileStagedForCommit(self, mock_isfile):
+    # Verify the exception is raised when the absolute path to the patch
+    # metadata file does not exist or is not a file.
+    with self.assertRaises(ValueError) as err:
+      update_chromeos_llvm_next_hash.StagePatchMetadataFileForCommit(
+          '/abs/path/to/filesdir/PATCHES')
+
+    self.assertEqual(
+        err.exception.message, 'Invalid patch metadata file provided: '
+        '/abs/path/to/filesdir/PATCHES')
+
+    mock_isfile.assert_called_once()
+
+  # Simulate the behavior of 'os.path.isfile()' when the absolute path to the
+  # patch metadata file exists.
+  @mock.patch.object(os.path, 'isfile', return_value=True)
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
+  def testFailedToStagePatchMetadataFileForCommit(self, mock_run_cmd,
+                                                  mock_isfile):
+
+    # Simulate the behavior of 'RunCommandWOutput()' when failed to stage the
+    # patch metadata file for commit.
+    #
+    # Returns shell error code, stdout, stderr.
+    mock_run_cmd.return_value = (1, None, 'No changes made to the file.')
+
+    # Verify the exception is raised when no changes were made to the patch
+    # metadata file when attempting to stage the file for commit.
+    with self.assertRaises(ValueError) as err:
+      update_chromeos_llvm_next_hash.StagePatchMetadataFileForCommit(
+          '/abs/path/to/filesdir/PATCHES.json')
+
+    self.assertEqual(
+        err.exception.message,
+        'Failed to stage patch metadata file PATCHES.json for '
+        'commit: No changes made to the file.')
+
+    mock_run_cmd.assert_called_once_with(
+        'git -C /abs/path/to/filesdir add /abs/path/to/filesdir/PATCHES.json',
+        print_to_console=False)
+
+  # Simulate the behavior of 'os.path.isfile()' when the absolute path to the
+  # patch metadata file exists.
+  @mock.patch.object(os.path, 'isfile', return_value=True)
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
+  def testSuccessfullyStagedPatchMetadataFileForCommit(self, mock_run_cmd,
+                                                       mock_isfile):
+
+    # Simulate the behavior of 'RunCommandWOutput()' when successfully staged
+    # the patch metadata file for commit.
+    #
+    # Returns shell error code, stdout, stderr.
+    mock_run_cmd.return_value = (0, None, 0)
+
+    update_chromeos_llvm_next_hash.StagePatchMetadataFileForCommit(
+        '/abs/path/to/filesdir/PATCHES.json')
+
+    mock_run_cmd.assert_called_once_with(
+        'git -C /abs/path/to/filesdir add /abs/path/to/filesdir/PATCHES.json',
+        print_to_console=False)
+
+  def testNoPatchResultsForCommit(self):
+    package_1_patch_info_dict = {
+        'applied_patches': ['display_results.patch'],
+        'failed_patches': ['fixes_output.patch'],
+        'non_applicable_patches': [],
+        'disabled_patches': [],
+        'removed_patches': [],
+        'modified_metadata': None
+    }
+
+    package_2_patch_info_dict = {
+        'applied_patches': ['redirects_stdout.patch', 'fix_display.patch'],
+        'failed_patches': [],
+        'non_applicable_patches': [],
+        'disabled_patches': [],
+        'removed_patches': [],
+        'modified_metadata': None
+    }
+
+    test_package_info_dict = {
+        'test-packages/package1': package_1_patch_info_dict,
+        'test-packages/package2': package_2_patch_info_dict
+    }
+
+    test_commit_message = ['-m %s' % quote('Updated packages')]
+
+    self.assertListEqual(
+        update_chromeos_llvm_next_hash.StagePackagesPatchResultsForCommit(
+            test_package_info_dict, test_commit_message), test_commit_message)
+
+  @mock.patch.object(update_chromeos_llvm_next_hash,
+                     'StagePatchMetadataFileForCommit')
+  @mock.patch.object(update_chromeos_llvm_next_hash,
+                     'RemovePatchesFromFilesDir')
+  def testAddedPatchResultsForCommit(self, mock_remove_patches,
+                                     mock_stage_patches_for_commit):
+
+    package_1_patch_info_dict = {
+        'applied_patches': [],
+        'failed_patches': [],
+        'non_applicable_patches': [],
+        'disabled_patches': ['fixes_output.patch'],
+        'removed_patches': [],
+        'modified_metadata': '/abs/path/to/filesdir/PATCHES.json'
+    }
+
+    package_2_patch_info_dict = {
+        'applied_patches': ['fix_display.patch'],
+        'failed_patches': [],
+        'non_applicable_patches': [],
+        'disabled_patches': [],
+        'removed_patches': ['/abs/path/to/filesdir/redirect_stdout.patch'],
+        'modified_metadata': '/abs/path/to/filesdir/PATCHES.json'
+    }
+
+    test_package_info_dict = {
+        'test-packages/package1': package_1_patch_info_dict,
+        'test-packages/package2': package_2_patch_info_dict
+    }
+
+    test_commit_message = ['-m %s' % quote('Updated packages')]
+
+    expected_commit_messages = [
+        '-m %s' % quote('Updated packages'),
+        '-m %s' % quote('For the package test-packages/package2:'),
+        '-m %s' % quote('The patch metadata file PATCHES.json was modified'),
+        '-m %s' % quote('The following patches were removed:'),
+        '-m %s' % quote('redirect_stdout.patch'),
+        '-m %s' % quote('For the package test-packages/package1:'),
+        '-m %s' % quote('The patch metadata file PATCHES.json was modified'),
+        '-m %s' % quote('The following patches were disabled:'),
+        '-m %s' % quote('fixes_output.patch')
+    ]
+
+    self.assertListEqual(
+        update_chromeos_llvm_next_hash.StagePackagesPatchResultsForCommit(
+            test_package_info_dict, test_commit_message),
+        expected_commit_messages)
+
+    mock_remove_patches.assert_called_once_with(
+        ['/abs/path/to/filesdir/redirect_stdout.patch'])
+
+    self.assertEqual(mock_stage_patches_for_commit.call_count, 2)
+
   @mock.patch.object(os.path, 'dirname')
   @mock.patch.object(update_chromeos_llvm_next_hash, '_CreateRepo')
   @mock.patch.object(update_chromeos_llvm_next_hash, 'UpdateBuildLLVMNextHash')
@@ -732,13 +920,17 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     mock_uprev_ebuild.side_effect = FailedToUprevEbuild
     mock_upload_changes.side_effect = ShouldNotExecuteUploadChanges
 
+    test_ebuild_dict = {
+        '/some/path/to/chroot/src/path/to/package-r1.ebuild':
+            '/some/path/to/chroot/src/path/to/package.ebuild'
+    }
+
     # Verify exception is raised when an exception is thrown within
     # the 'try' block by UprevEbuild function.
     with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_next_hash.UpdatePackages({
-          '/some/path/to/chroot/src/path/to/package-r1.ebuild':
-              '/some/path/to/chroot/src/path/to/package.ebuild'
-      }, 'a123testhash4', 1000)
+      update_chromeos_llvm_next_hash.UpdatePackages(
+          test_ebuild_dict, 'a123testhash4', 1000, '/some/path/to/chroot',
+          '/abs/path/to/filesdir/PATCHES.json', FailureModes.FAIL)
 
     self.assertEqual(err.exception.message, 'Failed to uprev the ebuild.')
 
@@ -759,52 +951,24 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     mock_delete_repo.assert_called_once_with('/some/path/to/chroot/src/path/to',
                                              'a123testhash4')
 
-  @mock.patch.object(os.path, 'dirname')
   @mock.patch.object(update_chromeos_llvm_next_hash, '_CreateRepo')
   @mock.patch.object(update_chromeos_llvm_next_hash, 'UpdateBuildLLVMNextHash')
   @mock.patch.object(update_chromeos_llvm_next_hash, 'UprevEbuild')
-  @mock.patch.object(os.path, 'basename')
   @mock.patch.object(update_chromeos_llvm_next_hash, 'UploadChanges')
   @mock.patch.object(update_chromeos_llvm_next_hash, '_DeleteRepo')
+  @mock.patch.object(llvm_patch_management, 'UpdatePackagesPatchMetadataFile')
+  @mock.patch.object(update_chromeos_llvm_next_hash,
+                     'StagePatchMetadataFileForCommit')
   def testSuccessfullyUpdatedPackages(
-      self, mock_delete_repo, mock_upload_changes, mock_basename,
-      mock_uprev_ebuild, mock_update_llvm_next, mock_create_repo, mock_dirname):
-
-    # Test function to simulate 'os.path.dirname' on a valid ebuild path.
-    @CallCountsToMockFunctions
-    def SuccessfullyGetDirectoryPath(call_count, ebuild_path):
-      # Returns the absolute path to the directory of the ebuild file.
-      #
-      # 'os.path.dirname()' is expected to be called 3 times.
-      if call_count == 0 or call_count == 1:
-        return '/some/path/to/chroot/src/path/to'
-      if call_count == 2:
-        return '/some/path/to/chroot/src/path'
-
-      # 'os.path.dirname()' was called more than 3 times.
-      assert False, 'os.path.dirname() was called more than 3 times.'
+      self, mock_stage_patch_file, mock_update_package_metadata_file,
+      mock_delete_repo, mock_upload_changes, mock_uprev_ebuild,
+      mock_update_llvm_next, mock_create_repo):
 
     # Test function to simulate '_CreateRepo' when successfully created the repo
     # for the changes to be made to the ebuild files.
     def SuccessfullyCreateRepoForChanges(repo_path, llvm_hash):
       self.assertEqual(llvm_hash, 'a123testhash5')
       return
-
-    # Test function to simulate 'os.path.basename' when called on the ebuild
-    # path.
-    @CallCountsToMockFunctions
-    def SuccessfullyGetBaseNameOfDirectory(call_count, path_to_ebuild_dir):
-      if call_count == 0:
-        self.assertEqual(path_to_ebuild_dir, '/some/path/to/chroot/src/path/to')
-
-        return 'to'
-      if call_count == 1:
-        self.assertEqual(path_to_ebuild_dir, '/some/path/to/chroot/src/path')
-
-        return 'path'
-
-      # Test function was called more times than expected (2 times).
-      assert False, 'os.path.basename() was called more than 2 times.'
 
     # Test function to simulate 'UploadChanges' after a successfull update of
     # 'LLVM_NEXT_HASH" of the ebuild file.
@@ -823,19 +987,52 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
       return
 
+    # Test function to simulate 'UpdatePackagesPatchMetadataFile()' when the
+    # patch results contains a disabled patch in 'disable_patches' mode.
+    def RetrievedPatchResults(chroot_path, llvm_version, patch_metadata_file,
+                              packages, mode):
+
+      self.assertEqual(chroot_path, '/some/path/to/chroot')
+      self.assertEqual(llvm_version, 1000)
+      self.assertEqual(patch_metadata_file,
+                       '/abs/path/to/filesdir/PATCHES.json')
+      self.assertListEqual(packages, ['path/to'])
+      self.assertEqual(mode, FailureModes.DISABLE_PATCHES)
+
+      PatchInfo = namedtuple('PatchInfo', [
+          'applied_patches', 'failed_patches', 'non_applicable_patches',
+          'disabled_patches', 'removed_patches', 'modified_metadata'
+      ])
+
+      package_patch_info = PatchInfo(
+          applied_patches=['fix_display.patch'],
+          failed_patches=['fix_stdout.patch'],
+          non_applicable_patches=[],
+          disabled_patches=['fix_stdout.patch'],
+          removed_patches=[],
+          modified_metadata=patch_metadata_file)
+
+      package_info_dict = {'path/to': package_patch_info._asdict()}
+
+      # Returns a dictionary where the key is the package and the value is a
+      # dictionary that contains information about the package's patch results
+      # produced by the patch manager.
+      return package_info_dict
+
     # Use test function to simulate behavior.
-    mock_dirname.side_effect = SuccessfullyGetDirectoryPath
     mock_create_repo.side_effect = SuccessfullyCreateRepoForChanges
     mock_update_llvm_next.side_effect = SuccessfullyUpdatedLLVMNextHash
     mock_uprev_ebuild.side_effect = SuccessfullyUprevedEbuild
-    mock_basename.side_effect = SuccessfullyGetBaseNameOfDirectory
+    mock_update_package_metadata_file.side_effect = RetrievedPatchResults
 
-    update_chromeos_llvm_next_hash.UpdatePackages({
+    test_ebuild_dict = {
         '/some/path/to/chroot/src/path/to/package-r1.ebuild':
             '/some/path/to/chroot/src/path/to/package.ebuild'
-    }, 'a123testhash5', 1000)
+    }
 
-    self.assertEqual(mock_dirname.call_count, 3)
+    update_chromeos_llvm_next_hash.UpdatePackages(
+        test_ebuild_dict, 'a123testhash5', 1000, '/some/path/to/chroot',
+        '/abs/path/to/filesdir/PATCHES.json', FailureModes.DISABLE_PATCHES)
 
     mock_create_repo.assert_called_once_with('/some/path/to/chroot/src/path/to',
                                              'a123testhash5')
@@ -847,13 +1044,20 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     mock_uprev_ebuild.assert_called_once_with(
         '/some/path/to/chroot/src/path/to/package-r1.ebuild')
 
-    self.assertEqual(mock_basename.call_count, 2)
-
     expected_commit_messages = ' '.join([
         '-m %s' % quote('llvm-next: Update packages to r1000'),
         '-m %s' % quote('Following packages have been updated:'),
-        '-m %s' % quote('path/to')
+        '-m %s' % quote('path/to'),
+        '-m %s' % quote('For the package path/to:'),
+        '-m %s' % quote('The patch metadata file PATCHES.json was modified'),
+        '-m %s' % quote('The following patches were disabled:'),
+        '-m %s' % quote('fix_stdout.patch')
     ])
+
+    mock_update_package_metadata_file.assert_called_once()
+
+    mock_stage_patch_file.assert_called_once_with(
+        '/abs/path/to/filesdir/PATCHES.json')
 
     mock_upload_changes.assert_called_once_with(
         '/some/path/to/chroot/src/path/to', 'a123testhash5',
