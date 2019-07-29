@@ -356,6 +356,42 @@ class TestGetLLVMHash(unittest.TestCase):
     mock_get_llvm_hash.assert_called_once_with(1000)
     mock_google3_llvm_version.assert_called_once()
 
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
+  def testFailedToGetHashFromTopOfTrunk(self, mock_run_cmd):
+    # Simulate the behavior of 'RunCommandWOutput()' when failed to get the
+    # latest git hash from top of tree of LLVM.
+    #
+    # Returns shell error code, stdout, stderr.
+    mock_run_cmd.return_value = (1, None, 'Could not get git hash from HEAD.')
+
+    TestLLVMHash = LLVMHash()
+
+    # Verify the exception is raised when failed to get the git hash of HEAD
+    # from LLVM.
+    with self.assertRaises(ValueError) as err:
+      TestLLVMHash.GetTopOfTrunkGitHash()
+
+    self.assertEqual(
+        err.exception.message,
+        'Failed to get the latest git hash from the top of trunk '
+        'of LLVM: Could not get git hash from HEAD.')
+
+    mock_run_cmd.assert_called_once()
+
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
+  def testSuccessfullyGetGitHashFromToTOfLLVM(self, mock_run_cmd):
+    # Simulate the behavior of 'RunCommandWOutput()' when successfully retrieved
+    # the git hash from top of tree of LLVM.
+    #
+    # Returns shell error code, stdout, stderr.
+    mock_run_cmd.return_value = (0, 'a123testhash1 path/to/master\n', 0)
+
+    TestLLVMHash = LLVMHash()
+
+    self.assertEqual(TestLLVMHash.GetTopOfTrunkGitHash(), 'a123testhash1')
+
+    mock_run_cmd.assert_called_once()
+
 
 if __name__ == '__main__':
   unittest.main()
