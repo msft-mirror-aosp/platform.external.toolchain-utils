@@ -59,6 +59,12 @@ class BenchmarkSettings(Settings):
             'weight',
             default=0.0,
             description='Weight of the benchmark for CWP approximation'))
+    self.AddField(
+        BooleanField(
+            'turbostat',
+            description='During benchmark run turbostat process in background',
+            required=False,
+            default=True))
 
 
 class LabelSettings(Settings):
@@ -329,6 +335,13 @@ class GlobalSettings(Settings):
             'ignore min and max values to reduce noise.',
             required=False,
             default=False))
+    self.AddField(
+        TextField(
+            'intel_pstate',
+            description='Intel Pstate mode.\n'
+            'Supported modes: active (default), passive, no_hwp.',
+            required=False,
+            default=''))
 
 
 class SettingsFactory(object):

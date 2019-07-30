@@ -59,7 +59,8 @@ class Benchmark(object):
                retries=0,
                run_local=False,
                cwp_dso='',
-               weight=0):
+               weight=0,
+               turbostat=True):
     self.name = name
     #For telemetry, this is the benchmark name.
     self.test_name = test_name
@@ -79,3 +80,4 @@ class Benchmark(object):
     self.run_local = run_local
     self.cwp_dso = cwp_dso
     self.weight = weight
+    self.turbostat = turbostat

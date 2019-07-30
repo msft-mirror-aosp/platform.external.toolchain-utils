@@ -56,7 +56,7 @@ class BenchmarkTestCase(unittest.TestCase):
     args_list = [
         'self', 'name', 'test_name', 'test_args', 'iterations', 'rm_chroot_tmp',
         'perf_args', 'suite', 'show_all_results', 'retries', 'run_local',
-        'cwp_dso', 'weight'
+        'cwp_dso', 'weight', 'turbostat'
     ]
     arg_spec = inspect.getargspec(Benchmark.__init__)
     self.assertEqual(len(arg_spec.args), len(args_list))

@@ -294,8 +294,9 @@ class SuiteRunnerTest(unittest.TestCase):
                      ('/usr/bin/test_that --autotest_dir '
                       '~/trunk/src/third_party/autotest/files --fast '
                       '--board=lumpy --args=" run_local=False test=octane '
-                      'profiler=custom_perf profiler_args=\'record -a -e '
-                      'cycles,instructions\'" lumpy1.cros telemetry_Crosperf'))
+                      'turbostat=True profiler=custom_perf '
+                      'profiler_args=\'record -a -e cycles,instructions\'" '
+                      'lumpy1.cros telemetry_Crosperf'))
     self.assertEqual(args_dict['cros_sdk_options'],
                      ('--no-ns-pid --chrome_root= '
                       '--chrome_root_mount=/tmp/chrome_root '

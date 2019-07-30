@@ -366,10 +366,10 @@ class SuiteRunner(object):
       args_string = "test_args='%s'" % test_args
 
     cmd = ('{} {} {} --board={} --args="{} run_local={} test={} '
-           '{}" {} telemetry_Crosperf'.format(
+           'turbostat={} {}" {} telemetry_Crosperf'.format(
                TEST_THAT_PATH, autotest_dir_arg, fast_arg, label.board,
                args_string, benchmark.run_local, benchmark.test_name,
-               profiler_args, machine))
+               benchmark.turbostat, profiler_args, machine))
 
     # Use --no-ns-pid so that cros_sdk does not create a different
     # process namespace and we can kill process created easily by their
