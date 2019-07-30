@@ -9,9 +9,12 @@ from __future__ import print_function
 import os
 import re
 import socket
+import sys
 
 from benchmark import Benchmark
 import config
+from cros_utils import logger
+from cros_utils import command_executer
 from experiment import Experiment
 from label import Label
 from label import MockLabel
@@ -114,7 +117,16 @@ class ExperimentFactory(object):
     global_settings = experiment_file.GetGlobalSettings()
     experiment_name = global_settings.GetField('name')
     board = global_settings.GetField('board')
+    chromeos_root = global_settings.GetField('chromeos_root')
+    log_level = global_settings.GetField('logging_level')
+    if log_level not in ('quiet', 'average', 'verbose'):
+      log_level = 'verbose'
+
     skylab = global_settings.GetField('skylab')
+    # Check whether skylab tool is installed correctly for skylab mode.
+    if skylab and not self.CheckSkylabTool(chromeos_root, log_level):
+      sys.exit(0)
+
     remote = global_settings.GetField('remote')
     # This is used to remove the ",' from the remote if user
     # add them to the remote string.
@@ -124,7 +136,6 @@ class ExperimentFactory(object):
         c = re.sub('["\']', '', i)
         new_remote.append(c)
     remote = new_remote
-    chromeos_root = global_settings.GetField('chromeos_root')
     rm_chroot_tmp = global_settings.GetField('rm_chroot_tmp')
     perf_args = global_settings.GetField('perf_args')
     acquire_timeout = global_settings.GetField('acquire_timeout')
@@ -143,9 +154,6 @@ class ExperimentFactory(object):
       locks_dir = file_lock_machine.Machine.LOCKS_DIR
     chrome_src = global_settings.GetField('chrome_src')
     show_all_results = global_settings.GetField('show_all_results')
-    log_level = global_settings.GetField('logging_level')
-    if log_level not in ('quiet', 'average', 'verbose'):
-      log_level = 'verbose'
     cwp_dso = global_settings.GetField('cwp_dso')
     if cwp_dso and not cwp_dso in dso_list:
       raise RuntimeError('The DSO specified is not supported')
@@ -416,3 +424,22 @@ class ExperimentFactory(object):
     # TODO: (AI:zhizhouy) need to check whether a remote is a local or lab
     # machine. If not lab machine, raise an error.
     pass
+
+  def CheckSkylabTool(self, chromeos_root, log_level):
+    SKYLAB_PATH = '/usr/local/bin/skylab'
+    if os.path.exists(SKYLAB_PATH):
+      return True
+    l = logger.GetLogger()
+    l.LogOutput('Skylab tool not installed, trying to install it.')
+    ce = command_executer.GetCommandExecuter(l, log_level=log_level)
+    setup_lab_tools = os.path.join(chromeos_root, 'chromeos-admin', 'lab-tools',
+                                   'setup_lab_tools')
+    cmd = '%s' % setup_lab_tools
+    status = ce.RunCommand(cmd)
+    if status != 0:
+      raise RuntimeError('Skylab tool not installed correctly, please try to '
+                         'manually install it from %s' % setup_lab_tools)
+    l.LogOutput('Skylab is installed at %s, please login before first use. '
+                'Login by running \'skylab login\' and follow instructions.' %
+                SKYLAB_PATH)
+    return False

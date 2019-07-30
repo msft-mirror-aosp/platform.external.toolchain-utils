@@ -9,11 +9,13 @@
 
 from __future__ import print_function
 
+import mock
+import os
 import StringIO
 import socket
-import mock
 import unittest
 
+from cros_utils import command_executer
 from cros_utils.file_utils import FileUtils
 
 from experiment_file import ExperimentFile
@@ -406,6 +408,33 @@ class ExperimentFactoryTest(unittest.TestCase):
         self.assertEqual(len(remotes), 1)
       else:
         self.assertGreaterEqual(len(remotes), 2)
+
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommand')
+  @mock.patch.object(os.path, 'exists')
+  def test_check_skylab_tool(self, mock_exists, mock_runcmd):
+    ef = ExperimentFactory()
+    chromeos_root = '/tmp/chromeos'
+    log_level = 'average'
+
+    mock_exists.return_value = True
+    ret = ef.CheckSkylabTool(chromeos_root, log_level)
+    self.assertTrue(ret)
+
+    mock_exists.return_value = False
+    mock_runcmd.return_value = 1
+    with self.assertRaises(RuntimeError) as err:
+      ef.CheckSkylabTool(chromeos_root, log_level)
+    self.assertEqual(mock_runcmd.call_count, 1)
+    self.assertEqual(
+        err.exception.message, 'Skylab tool not installed '
+        'correctly, please try to manually install it from '
+        '/tmp/chromeos/chromeos-admin/lab-tools/setup_lab_tools')
+
+    mock_runcmd.return_value = 0
+    mock_runcmd.call_count = 0
+    ret = ef.CheckSkylabTool(chromeos_root, log_level)
+    self.assertEqual(mock_runcmd.call_count, 1)
+    self.assertFalse(ret)
 
 
 if __name__ == '__main__':
