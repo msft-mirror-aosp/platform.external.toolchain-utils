@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -348,7 +349,8 @@ class CommandExecuter(object):
                               command_timeout=None,
                               terminated_timeout=10,
                               print_to_console=True,
-                              cros_sdk_options=''):
+                              cros_sdk_options='',
+                              env=None):
     """Runs a command within the chroot.
 
     Returns triplet (returncode, stdout, stderr).
@@ -376,7 +378,8 @@ class CommandExecuter(object):
     # the output from chroot creation steps.
     if return_output:
       ret = self.RunCommand(
-          'cd %s; cros_sdk %s -- true' % (chromeos_root, cros_sdk_options))
+          'cd %s; cros_sdk %s -- true' % (chromeos_root, cros_sdk_options),
+          env=env)
       if ret:
         return (ret, '', '')
 
@@ -391,7 +394,8 @@ class CommandExecuter(object):
         command_terminator=command_terminator,
         command_timeout=command_timeout,
         terminated_timeout=terminated_timeout,
-        print_to_console=print_to_console)
+        print_to_console=print_to_console,
+        env=env)
     os.remove(command_file)
     return ret
 
