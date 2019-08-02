@@ -84,6 +84,7 @@ def GetCommandLineArgs():
   # Add argument for the patch metadata file.
   parser.add_argument(
       '--patch_metadata_file',
+      default='PATCHES.json',
       help='the .json file that has all the patches and their '
       'metadata if applicable (default: PATCHES.json inside $FILESDIR)')
 
