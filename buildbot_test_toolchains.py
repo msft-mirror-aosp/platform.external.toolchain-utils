@@ -143,7 +143,7 @@ class ToolchainComparator(object):
     Given the names of the trybot, vanilla and non-AFDO images, create the
     appropriate crosperf experiment file and launch crosperf on it.
     """
-    experiment_file_dir = os.path.join(self._chromeos_root, '..', self._weekday)
+    experiment_file_dir = os.path.join(CROSTC_ROOT, self._weekday)
     experiment_file_name = '%s_toolchain_experiment.txt' % self._board
 
     compiler_string = 'llvm'
