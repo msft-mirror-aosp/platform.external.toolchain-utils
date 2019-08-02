@@ -76,6 +76,27 @@ class LLVMHash(object):
     if ret:  # Failed to create repo.
       raise ValueError('Failed to clone the llvm repo: %s' % err)
 
+  def GetSVNVersionFromCommitMessage(self, commit_message):
+    """Gets the 'llvm-svn' from the commit message.
+
+    A commit message may contain multiple 'llvm-svn' (reverting commits), so
+    the last 'llvm-svn' is the real 'llvm-svn' for that commit message.
+
+    Args:
+      commit_message: A commit message that contains a 'llvm-svn:'.
+
+    Returns:
+      The last LLVM version as an integer or 'None' if there is no 'llvm-svn'.
+    """
+
+    # Find all "llvm-svn:" instances.
+    llvm_versions = re.findall(r'llvm-svn: ([0-9]+)', commit_message)
+
+    if llvm_versions:
+      return int(llvm_versions[-1])
+
+    return None
+
   def _ParseCommitMessages(self, subdir, hash_vals, llvm_version):
     """Parses the hashes that match the LLVM version.
 
@@ -88,11 +109,9 @@ class LLVMHash(object):
       The hash that matches the LLVM version.
 
     Raises:
-      Exception: Failed to parse a commit message.
+      ValueError: Failed to parse a commit message or did not find a commit
+      hash.
     """
-
-    # Create regex.
-    llvm_svn_pattern = re.compile(r'llvm-svn: ([0-9]+)')
 
     # For each hash, grab the last "llvm-svn:" line
     # and compare the llvm version of that line against
@@ -111,11 +130,11 @@ class LLVMHash(object):
       if ret:  # Failed to parse the commit message.
         raise ValueError('Failed to parse commit message: %s' % err)
 
-      # Find all "llvm-svn:" instances.
-      llvm_versions = llvm_svn_pattern.findall(out)
+      commit_svn_version = self.GetSVNVersionFromCommitMessage(out)
 
-      # Check the last llvm version against the llvm version we are looking for.
-      if llvm_versions and int(llvm_versions[-1]) == llvm_version:
+      # Check the svn version from the commit message against the llvm version
+      # we are looking for.
+      if commit_svn_version and commit_svn_version == llvm_version:
         return cur_hash
 
     # Failed to find the commit hash.
