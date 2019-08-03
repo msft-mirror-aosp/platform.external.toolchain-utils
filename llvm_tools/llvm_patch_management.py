@@ -205,7 +205,10 @@ def UnpackLLVMPackage(chroot_path, package):
   unpack_cmd = 'sudo ebuild %s clean unpack' % quote(ebuild_path)
 
   ret, _, err = ce.ChrootRunCommandWOutput(
-      chromeos_root=chroot_path, command=unpack_cmd, print_to_console=False)
+      chromeos_root=chroot_path,
+      command=unpack_cmd,
+      print_to_console=False,
+      env=dict(os.environ, USE='llvm-next'))
 
   if ret:  # Failed to unpack the package.
     raise ValueError('Failed to unpack the package %s: %s' % (package, err))

@@ -12,6 +12,7 @@ from pipes import quote
 import argparse
 import os
 import re
+import requests
 import shutil
 import tempfile
 
@@ -48,6 +49,38 @@ def is_svn_option(svn_option):
   raise ValueError('Invalid LLVM git hash option provided: %s' % svn_option)
 
 
+def GetLLVMHashAndVersionFromSVNOption(svn_option):
+  """Gets the LLVM hash and LLVM version based off of the svn option.
+
+  Args:
+    svn_option: A valid svn option obtained from the command line.
+      Ex: 'google3', 'tot', or <svn_version> such as 365123.
+
+  Returns:
+    A tuple that is the LLVM git hash and LLVM version.
+  """
+
+  new_llvm_hash = LLVMHash()
+
+  # Determine which LLVM git hash to retrieve.
+  if svn_option == 'tot':
+    llvm_hash = new_llvm_hash.GetTopOfTrunkGitHash()
+
+    tot_commit_message = new_llvm_hash.GetCommitMessageForHash(llvm_hash)
+
+    llvm_version = new_llvm_hash.GetSVNVersionFromCommitMessage(
+        tot_commit_message)
+  else:
+    if isinstance(svn_option, int):
+      llvm_version = svn_option
+    else:
+      llvm_version = LLVMVersion().GetGoogle3LLVMVersion()
+
+    llvm_hash = new_llvm_hash.GetLLVMHash(llvm_version)
+
+  return llvm_hash, llvm_version
+
+
 class LLVMHash(object):
   """Provides three methods to retrieve a LLVM hash."""
 
@@ -75,6 +108,34 @@ class LLVMHash(object):
 
     if ret:  # Failed to create repo.
       raise ValueError('Failed to clone the llvm repo: %s' % err)
+
+  def GetCommitMessageForHash(self, git_hash):
+    """Gets the commit message from the git hash.
+
+    Args:
+      git_hash: A git hash of LLVM.
+
+    Returns:
+      The commit message of the git hash.
+
+    Raises:
+      ValueError: Unable to retrieve json contents from the LLVM commit URL.
+    """
+
+    llvm_commit_url = ('https://api.github.com/repos/llvm/llvm-project/git/'
+                       'commits/')
+
+    commit_url = os.path.join(llvm_commit_url, git_hash)
+
+    url_response = requests.get(commit_url)
+
+    if not url_response:
+      raise ValueError('Failed to get response from url %s: Status Code %d' %
+                       (commit_url, url_response.status_code))
+
+    unicode_json_contents = url_response.json()
+
+    return str(unicode_json_contents['message'])
 
   def GetSVNVersionFromCommitMessage(self, commit_message):
     """Gets the 'llvm-svn' from the commit message.

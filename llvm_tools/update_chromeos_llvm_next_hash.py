@@ -12,6 +12,7 @@ for review.
 
 from __future__ import print_function
 
+from collections import namedtuple
 from pipes import quote
 import argparse
 import llvm_patch_management
@@ -20,8 +21,8 @@ import re
 
 from cros_utils import command_executer
 from failure_modes import FailureModes
-from get_google3_llvm_version import LLVMVersion
-from get_llvm_hash import LLVMHash
+from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption
+from get_llvm_hash import is_svn_option
 
 ce = command_executer.GetCommandExecuter()
 
@@ -69,9 +70,12 @@ def GetCommandLineArgs():
   # Add argument for the LLVM version to use.
   parser.add_argument(
       '--llvm_version',
-      type=int,
-      help='the LLVM version to use for retrieving the LLVM hash ' \
-          '(default: uses the google3 llvm version)')
+      type=is_svn_option,
+      required=True,
+      help='which git hash of LLVM to find '
+      '{google3, ToT, <svn_version>} '
+      '(default: finds the git hash of the google3 LLVM '
+      'version)')
 
   # Add argument for the mode of the patch management when handling patches.
   parser.add_argument(
@@ -383,6 +387,36 @@ def _DeleteRepo(path_to_repo_dir, llvm_hash):
                      (llvm_hash, err))
 
 
+def GetGerritRepoUploadContents(repo_upload_contents):
+  """Parses 'repo upload' to get the Gerrit commit URL and CL number.
+
+  Args:
+    repo_upload_contents: The contents of the 'repo upload' command.
+
+  Returns:
+    A nametuple that has two (key, value) pairs, where the first pair is the
+    Gerrit commit URL and the second pair is the change list number.
+
+  Raises:
+    ValueError: The contents of the 'repo upload' command did not contain a
+    Gerrit commit URL.
+  """
+
+  found_url = re.search(
+      r'https://chromium-review.googlesource.com/c/'
+      'chromiumos/overlays/chromiumos-overlay/\+/([0-9]+)',
+      repo_upload_contents)
+
+  if not found_url:
+    raise ValueError('Failed to find change list URL.')
+
+  CommitContents = namedtuple('CommitContents', ['url', 'cl_number'])
+
+  cl_number = int(found_url.group(1))
+
+  return CommitContents(url=found_url.group(0), cl_number=cl_number)
+
+
 def UploadChanges(path_to_repo_dir, llvm_hash, commit_messages):
   """Uploads the changes (updating LLVM next hash and uprev symlink) for review.
 
@@ -391,6 +425,10 @@ def UploadChanges(path_to_repo_dir, llvm_hash, commit_messages):
     llvm_hash: The LLVM hash used for the name of the repo.
     commit_messages: A string of commit message(s) (i.e. '-m [message]'
     of the changes made.
+
+  Returns:
+    A nametuple that has two (key, value) pairs, where the first pair is the
+    Gerrit commit URL and the second pair is the change list number.
 
   Raises:
     ValueError: Failed to create a commit or failed to upload the
@@ -416,6 +454,8 @@ def UploadChanges(path_to_repo_dir, llvm_hash, commit_messages):
 
   if ret:  # failed to upload the changes for review
     raise ValueError('Failed to upload changes for review: %s' % err)
+
+  return GetGerritRepoUploadContents(err)
 
 
 def CreatePathDictionaryFromPackages(chroot_path, update_packages):
@@ -540,17 +580,15 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
   return commit_messages
 
 
-def UpdatePackages(paths_dict, llvm_hash, llvm_version, chroot_path,
-                   patch_metadata_file, mode):
+def UpdatePackages(packages, llvm_hash, llvm_version, chroot_path,
+                   patch_metadata_file, mode, svn_option):
   """Updates the package's LLVM_NEXT_HASH and uprevs the ebuild.
 
   A temporary repo is created for the changes. The changes are
   then uploaded for review.
 
   Args:
-    paths_dict: A dictionary that has absolute paths where the
-    key is the absolute path to the symlink of the package and the
-    value is the absolute path to the ebuild of the package.
+    packages: A list of all the packages that are going to be updated.
     llvm_hash: The LLVM hash to use for 'LLVM_NEXT_HASH'.
     llvm_version: The LLVM version of the 'llvm_hash'.
     chroot_path: The absolute path to the chroot.
@@ -559,14 +597,32 @@ def UpdatePackages(paths_dict, llvm_hash, llvm_version, chroot_path,
     mode: The mode of the patch manager when handling an applicable patch
     that failed to apply.
       Ex: 'FailureModes.FAIL'
+    svn_option: The git hash to use based off of the svn option.
+      Ex: 'google3', 'tot', or <svn_version> such as 365123
+
+  Returns:
+    A nametuple that has two (key, value) pairs, where the first pair is the
+    Gerrit commit URL and the second pair is the change list number.
   """
+
+  # Construct a dictionary where the key is the absolute path of the symlink to
+  # the package and the value is the absolute path to the ebuild of the package.
+  paths_dict = CreatePathDictionaryFromPackages(chroot_path, packages)
 
   repo_path = os.path.dirname(paths_dict.itervalues().next())
 
   _CreateRepo(repo_path, llvm_hash)
 
   try:
-    commit_message_header = 'llvm-next: Update packages to r%d' % llvm_version
+    if svn_option == 'google3':
+      commit_message_header = (
+          'llvm-next/google3: Update packages to r%d' % llvm_version)
+    elif svn_option == 'tot':
+      commit_message_header = (
+          'llvm-next/tot: Update packages to r%d' % llvm_version)
+    else:
+      commit_message_header = 'llvm-next: Update packages to r%d' % llvm_version
+
     commit_messages = ['-m %s' % quote(commit_message_header)]
 
     commit_messages.append(
@@ -606,10 +662,12 @@ def UpdatePackages(paths_dict, llvm_hash, llvm_version, chroot_path,
     commit_messages = StagePackagesPatchResultsForCommit(
         package_info_dict, commit_messages)
 
-    UploadChanges(repo_path, llvm_hash, ' '.join(commit_messages))
+    change_list = UploadChanges(repo_path, llvm_hash, ' '.join(commit_messages))
 
   finally:
     _DeleteRepo(repo_path, llvm_hash)
+
+  return change_list
 
 
 def main():
@@ -617,23 +675,18 @@ def main():
 
   args_output = GetCommandLineArgs()
 
-  # Construct a dictionary where the key is the absolute path of the symlink to
-  # the package and the value is the absolute path to the ebuild of the package.
-  paths_dict = CreatePathDictionaryFromPackages(args_output.chroot_path,
-                                                args_output.update_packages)
+  svn_option = args_output.llvm_version
 
-  # Get the google3 LLVM version if a LLVM version was not provided.
-  if not args_output.llvm_version:
-    args_output.llvm_version = LLVMVersion(
-        log_level=args_output.log_level).GetGoogle3LLVMVersion()
+  llvm_hash, llvm_version = GetLLVMHashAndVersionFromSVNOption(svn_option)
 
-  # Get the LLVM hash.
-  llvm_hash = LLVMHash(log_level=args_output.log_level).GetLLVMHash(
-      args_output.llvm_version)
+  change_list = UpdatePackages(
+      args_output.update_packages, llvm_hash, llvm_version,
+      args_output.chroot_path, args_output.patch_metadata_file,
+      FailureModes(args_output.failure_mode), svn_option)
 
-  UpdatePackages(paths_dict, llvm_hash, args_output.llvm_version,
-                 args_output.chroot_path, args_output.patch_metadata_file,
-                 FailureModes(args_output.failure_mode))
+  print('Successfully updated packages to %d' % llvm_version)
+  print('Gerrit URL: %s' % change_list.url)
+  print('Change list number: %d' % change_list.cl_number)
 
 
 if __name__ == '__main__':
