@@ -163,8 +163,11 @@ class LlvmPatchManagementTest(unittest.TestCase):
     # Simulate the behavior of 'ChrootRunCommandWOutput()' when unpacking fails
     # on a package.
     @CallCountsToMockFunctions
-    def MultipleCallsToGetSrcPath(call_count, chromeos_root, command,
-                                  print_to_console):
+    def MultipleCallsToGetSrcPath(call_count,
+                                  chromeos_root,
+                                  command,
+                                  print_to_console,
+                                  env=None):
 
       # First call to 'ChrootRunCommandWOutput()' which would successfully
       # get the ebuild path of the package.
@@ -229,8 +232,11 @@ class LlvmPatchManagementTest(unittest.TestCase):
     # get the absolute chroot ebuild path to the package and successfully
     # unpacked the package.
     @CallCountsToMockFunctions
-    def MultipleCallsToGetSrcPath(call_count, chromeos_root, command,
-                                  print_to_console):
+    def MultipleCallsToGetSrcPath(call_count,
+                                  chromeos_root,
+                                  command,
+                                  print_to_console,
+                                  env=None):
 
       # First call to 'ChrootRunCommandWOutput()' which would successfully
       # get the absolute chroot path to the package's ebuild.

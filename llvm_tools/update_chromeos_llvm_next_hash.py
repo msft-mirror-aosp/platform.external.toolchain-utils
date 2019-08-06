@@ -26,6 +26,8 @@ from get_llvm_hash import is_svn_option
 
 ce = command_executer.GetCommandExecuter()
 
+CommitContents = namedtuple('CommitContents', ['url', 'cl_number'])
+
 
 def GetCommandLineArgs():
   """Parses the command line for the optional command line arguments.
@@ -409,8 +411,6 @@ def GetGerritRepoUploadContents(repo_upload_contents):
 
   if not found_url:
     raise ValueError('Failed to find change list URL.')
-
-  CommitContents = namedtuple('CommitContents', ['url', 'cl_number'])
 
   cl_number = int(found_url.group(1))
 
