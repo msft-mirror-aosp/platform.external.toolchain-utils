@@ -208,8 +208,8 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
       print(err, file=sys.stderr)
       raise ValueError('Failed to submit tryjob.')
 
-    assert not err, 'Unexpected contents in stderr: %s' % err
-
+    # stderr can be noisy e.g. warnings when entering chroot, so ignore it.
+    # e.g. cros_sdk:enter_chroot: Gclient cache dir "/tmp/git-cache" is not...
     tryjob_results.append(out.rstrip())
 
   return tryjob_results
