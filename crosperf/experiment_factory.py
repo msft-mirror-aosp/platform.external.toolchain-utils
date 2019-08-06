@@ -104,12 +104,14 @@ class ExperimentFactory(object):
 
   def AppendBenchmarkSet(self, benchmarks, benchmark_list, test_args,
                          iterations, rm_chroot_tmp, perf_args, suite,
-                         show_all_results, retries, run_local, turbostat):
+                         show_all_results, retries, run_local, cwp_dso, weight,
+                         turbostat):
     """Add all the tests in a set to the benchmarks list."""
     for test_name in benchmark_list:
-      telemetry_benchmark = Benchmark(
-          test_name, test_name, test_args, iterations, rm_chroot_tmp, perf_args,
-          suite, show_all_results, retries, run_local, turbostat)
+      telemetry_benchmark = Benchmark(test_name, test_name, test_args,
+                                      iterations, rm_chroot_tmp, perf_args,
+                                      suite, show_all_results, retries,
+                                      run_local, cwp_dso, weight, turbostat)
       benchmarks.append(telemetry_benchmark)
 
   def GetExperiment(self, experiment_file, working_directory, log_dir):
@@ -240,21 +242,50 @@ class ExperimentFactory(object):
 
       if suite == 'telemetry_Crosperf':
         if test_name == 'all_perfv2':
-          self.AppendBenchmarkSet(benchmarks, telemetry_perfv2_tests, test_args,
-                                  iterations, rm_chroot_tmp, perf_args, suite,
-                                  show_all_results, retries, run_local,
-                                  turbostat=turbostat_opt)
+          self.AppendBenchmarkSet(
+              benchmarks,
+              telemetry_perfv2_tests,
+              test_args,
+              iterations,
+              rm_chroot_tmp,
+              perf_args,
+              suite,
+              show_all_results,
+              retries,
+              run_local,
+              cwp_dso,
+              weight,
+              turbostat=turbostat_opt)
         elif test_name == 'all_pagecyclers':
-          self.AppendBenchmarkSet(benchmarks, telemetry_pagecycler_tests,
-                                  test_args, iterations, rm_chroot_tmp,
-                                  perf_args, suite, show_all_results, retries,
-                                  run_local, turbostat=turbostat_opt)
+          self.AppendBenchmarkSet(
+              benchmarks,
+              telemetry_pagecycler_tests,
+              test_args,
+              iterations,
+              rm_chroot_tmp,
+              perf_args,
+              suite,
+              show_all_results,
+              retries,
+              run_local,
+              cwp_dso,
+              weight,
+              turbostat=turbostat_opt)
         elif test_name == 'all_crosbolt_perf':
-          self.AppendBenchmarkSet(benchmarks, telemetry_crosbolt_perf_tests,
-                                  test_args, iterations, rm_chroot_tmp,
-                                  perf_args, 'telemetry_Crosperf',
-                                  show_all_results, retries, run_local,
-                                  turbostat=turbostat_opt)
+          self.AppendBenchmarkSet(
+              benchmarks,
+              telemetry_crosbolt_perf_tests,
+              test_args,
+              iterations,
+              rm_chroot_tmp,
+              perf_args,
+              'telemetry_Crosperf',
+              show_all_results,
+              retries,
+              run_local,
+              cwp_dso,
+              weight,
+              turbostat=turbostat_opt)
           self.AppendBenchmarkSet(
               benchmarks,
               crosbolt_perf_tests,
@@ -266,12 +297,24 @@ class ExperimentFactory(object):
               show_all_results,
               retries,
               run_local=False,
+              cwp_dso=cwp_dso,
+              weight=weight,
               turbostat=turbostat_opt)
         elif test_name == 'all_toolchain_perf':
-          self.AppendBenchmarkSet(benchmarks, telemetry_toolchain_perf_tests,
-                                  test_args, iterations, rm_chroot_tmp,
-                                  perf_args, suite, show_all_results, retries,
-                                  run_local, turbostat=turbostat_opt)
+          self.AppendBenchmarkSet(
+              benchmarks,
+              telemetry_toolchain_perf_tests,
+              test_args,
+              iterations,
+              rm_chroot_tmp,
+              perf_args,
+              suite,
+              show_all_results,
+              retries,
+              run_local,
+              cwp_dso,
+              weight,
+              turbostat=turbostat_opt)
           # Add non-telemetry toolchain-perf benchmarks:
           benchmarks.append(
               Benchmark(
@@ -285,13 +328,24 @@ class ExperimentFactory(object):
                   show_all_results,
                   retries,
                   run_local=False,
+                  cwp_dso=cwp_dso,
+                  weight=weight,
                   turbostat=turbostat_opt))
         elif test_name == 'all_toolchain_perf_old':
-          self.AppendBenchmarkSet(benchmarks,
-                                  telemetry_toolchain_old_perf_tests, test_args,
-                                  iterations, rm_chroot_tmp, perf_args, suite,
-                                  show_all_results, retries, run_local,
-                                  turbostat=turbostat_opt)
+          self.AppendBenchmarkSet(
+              benchmarks,
+              telemetry_toolchain_old_perf_tests,
+              test_args,
+              iterations,
+              rm_chroot_tmp,
+              perf_args,
+              suite,
+              show_all_results,
+              retries,
+              run_local,
+              cwp_dso,
+              weight,
+              turbostat=turbostat_opt)
         else:
           benchmark = Benchmark(benchmark_name, test_name, test_args,
                                 iterations, rm_chroot_tmp, perf_args, suite,
@@ -311,6 +365,8 @@ class ExperimentFactory(object):
               show_all_results,
               retries,
               run_local=False,
+              cwp_dso=cwp_dso,
+              weight=weight,
               turbostat=turbostat_opt)
         else:
           # Add the single benchmark.
@@ -325,6 +381,8 @@ class ExperimentFactory(object):
               show_all_results,
               retries,
               run_local=False,
+              cwp_dso=cwp_dso,
+              weight=weight,
               turbostat=turbostat_opt)
           benchmarks.append(benchmark)
 
