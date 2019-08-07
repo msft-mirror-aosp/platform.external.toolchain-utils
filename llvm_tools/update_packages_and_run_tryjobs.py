@@ -12,6 +12,7 @@ import argparse
 import os
 import sys
 
+from assert_not_in_chroot import VerifyOutsideChroot
 from cros_utils import command_executer
 from failure_modes import FailureModes
 from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption
@@ -216,6 +217,14 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
 
 
 def main():
+  """Updates the packages' 'LLVM_NEXT_HASH' and submits tryjobs.
+
+  Raises:
+    AssertionError: The script was run inside the chroot.
+  """
+
+  VerifyOutsideChroot()
+
   args_output = GetCommandLineArgs()
 
   last_svn_version = GetLastTestedSVNVersion(args_output.last_tested)

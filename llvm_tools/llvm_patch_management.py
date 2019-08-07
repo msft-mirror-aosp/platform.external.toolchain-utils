@@ -14,6 +14,7 @@ import os
 import patch_manager
 import re
 
+from assert_not_in_chroot import VerifyOutsideChroot
 from cros_utils import command_executer
 from failure_modes import FailureModes
 from get_google3_llvm_version import LLVMVersion
@@ -310,7 +311,13 @@ def UpdatePackagesPatchMetadataFile(chroot_path, svn_version,
 
 
 def main():
-  """Updates the patch metadata file of each package if possible."""
+  """Updates the patch metadata file of each package if possible.
+
+  Raises:
+    AssertionError: The script was run inside the chroot.
+  """
+
+  VerifyOutsideChroot()
 
   args_output = GetCommandLineArgs()
 

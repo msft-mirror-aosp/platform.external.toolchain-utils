@@ -11,6 +11,7 @@ from __future__ import print_function
 from pipes import quote
 import argparse
 
+from assert_not_in_chroot import VerifyOutsideChroot
 from cros_utils import command_executer
 
 
@@ -53,7 +54,12 @@ def main():
 
   Parses the command line for the optional command line
   argument.
+
+  Raises:
+    AssertionError: The script was run inside the chroot.
   """
+
+  VerifyOutsideChroot()
 
   # create parser and add optional command-line argument
   parser = argparse.ArgumentParser(description='Get the google3 LLVM version.')

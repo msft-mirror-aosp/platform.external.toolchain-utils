@@ -430,7 +430,7 @@ def PrintPatchResults(patch_info):
 
 
 def main():
-  """Get the arguments for the patch manager."""
+  """Applies the patches based off of the command line arguments."""
 
   args_output = GetCommandLineArgs()
 

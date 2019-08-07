@@ -16,6 +16,7 @@ import requests
 import shutil
 import tempfile
 
+from assert_not_in_chroot import VerifyOutsideChroot
 from cros_utils import command_executer
 from get_google3_llvm_version import LLVMVersion
 
@@ -286,7 +287,12 @@ def main():
 
   Parses the command line for the optional command line
   arguments.
+
+  Raises:
+    AssertionError: The script was run inside the chroot.
   """
+
+  VerifyOutsideChroot()
 
   # Create parser and add optional command-line arguments.
   parser = argparse.ArgumentParser(description='Finds the LLVM hash.')

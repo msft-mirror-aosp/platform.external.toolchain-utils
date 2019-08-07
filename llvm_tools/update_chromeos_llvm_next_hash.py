@@ -19,6 +19,7 @@ import llvm_patch_management
 import os
 import re
 
+from assert_not_in_chroot import VerifyOutsideChroot
 from cros_utils import command_executer
 from failure_modes import FailureModes
 from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption
@@ -671,7 +672,13 @@ def UpdatePackages(packages, llvm_hash, llvm_version, chroot_path,
 
 
 def main():
-  """Updates the LLVM next hash for each package."""
+  """Updates the LLVM next hash for each package.
+
+  Raises:
+    AssertionError: The script was run inside the chroot.
+  """
+
+  VerifyOutsideChroot()
 
   args_output = GetCommandLineArgs()
 
