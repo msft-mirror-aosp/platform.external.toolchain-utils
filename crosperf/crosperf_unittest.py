@@ -10,8 +10,10 @@
 from __future__ import print_function
 
 import argparse
+import mock
+import tempfile
+import os
 import StringIO
-
 import unittest
 
 import crosperf
@@ -44,7 +46,13 @@ class CrosperfTest(unittest.TestCase):
     input_file = StringIO.StringIO(EXPERIMENT_FILE_1)
     self.exp_file = experiment_file.ExperimentFile(input_file)
 
-  def test_convert_options_to_settings(self):
+  def testDryRun(self):
+    filehandle, filename = tempfile.mkstemp()
+    os.write(filehandle, EXPERIMENT_FILE_1)
+    crosperf.Main(['', filename, '--dry_run'])
+    os.remove(filename)
+
+  def testConvertOptionsToSettings(self):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-l',
@@ -65,6 +73,18 @@ class CrosperfTest(unittest.TestCase):
     options, _ = parser.parse_known_args(argv)
     settings = crosperf.ConvertOptionsToSettings(options)
     self.assertFalse(settings.GetField('rerun'))
+
+  def testExceptionPrintTraceback(self):
+    """Test the main function can print traceback in exception."""
+
+    def mock_RunCrosperf(*_args, **_kwargs):
+      return 10 / 0
+
+    with mock.patch('crosperf.RunCrosperf', new=mock_RunCrosperf):
+      with self.assertRaises(ZeroDivisionError) as context:
+        crosperf.Main([])
+      self.assertEqual('integer division or modulo by zero',
+                       str(context.exception))
 
 
 if __name__ == '__main__':
