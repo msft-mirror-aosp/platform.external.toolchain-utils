@@ -250,5 +250,10 @@ def GetLatestImage(chromeos_root, path):
   candidates.sort(reverse=True)
   for c in candidates:
     build = '%s/R%d-%d.%d.%d' % (path, c[0], c[1], c[2], c[3])
+    # Blacklist "R79-12384.0.0" image released by mistake.
+    # TODO(crbug.com/992242): Remove the filter by 2019-09-05.
+    if '.'.join(c) == '79.12384.0.0':
+      continue
+
     if DoesImageExist(chromeos_root, build):
       return build
