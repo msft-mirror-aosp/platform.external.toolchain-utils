@@ -265,12 +265,10 @@ class LLVMHash(object):
   def GetTopOfTrunkGitHash(self):
     """Gets the latest git hash from top of trunk of LLVM."""
 
-    llvm_url = 'https://github.com/llvm/llvm-project'
-
     path_to_master_branch = 'refs/heads/master'
 
-    llvm_tot_git_hash_cmd = 'git ls-remote %s %s' % (
-        quote(llvm_url), quote(path_to_master_branch))
+    llvm_tot_git_hash_cmd = 'git ls-remote %s %s' % (quote(
+        self._llvm_url), quote(path_to_master_branch))
 
     # Get the latest git hash of the master branch of LLVM.
     ret, llvm_tot_git_hash, err = self._ce.RunCommandWOutput(
