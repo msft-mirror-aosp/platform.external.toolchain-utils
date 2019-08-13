@@ -174,6 +174,12 @@ func (ctx *testContext) writeFile(fullFileName string, fileContent string) {
 }
 
 func (ctx *testContext) symlink(oldname string, newname string) {
+	if !filepath.IsAbs(oldname) {
+		oldname = filepath.Join(ctx.tempDir, oldname)
+	}
+	if !filepath.IsAbs(newname) {
+		newname = filepath.Join(ctx.tempDir, newname)
+	}
 	if err := os.MkdirAll(filepath.Dir(newname), 0777); err != nil {
 		ctx.t.Fatal(err)
 	}

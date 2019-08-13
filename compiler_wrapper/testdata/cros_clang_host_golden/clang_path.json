@@ -255,5 +255,92 @@
         "exitcode": 1
       }
     ]
+  },
+  {
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "path": "/tmp/stable/x86_64-cros-linux-gnu-clang",
+        "args": [
+          "main.cc"
+        ]
+      }
+    },
+    "cmds": [
+      {
+        "cmd": {
+          "path": "/tmp/stable/clang",
+          "args": [
+            "-Qunused-arguments",
+            "-grecord-gcc-switches",
+            "-fno-addrsig",
+            "-Wno-unused-local-typedefs",
+            "-Wno-deprecated-declarations",
+            "-Wno-tautological-constant-compare",
+            "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-unknown-warning-option",
+            "main.cc"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "path": "a/b/c/d/e/f/g/x86_64-cros-linux-gnu-clang",
+        "args": [
+          "main.cc"
+        ]
+      }
+    },
+    "cmds": [
+      {
+        "cmd": {
+          "path": "/tmp/stable/a/b/c/d/e/f/g/clang",
+          "args": [
+            "-Qunused-arguments",
+            "-grecord-gcc-switches",
+            "-fno-addrsig",
+            "-Wno-unused-local-typedefs",
+            "-Wno-deprecated-declarations",
+            "-Wno-tautological-constant-compare",
+            "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-unknown-warning-option",
+            "main.cc"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "path": "symlinked/x86_64-cros-linux-gnu-clang",
+        "args": [
+          "main.cc"
+        ]
+      }
+    },
+    "cmds": [
+      {
+        "cmd": {
+          "path": "/tmp/stable/a/b/c/d/e/f/g/clang",
+          "args": [
+            "-Qunused-arguments",
+            "-grecord-gcc-switches",
+            "-fno-addrsig",
+            "-Wno-unused-local-typedefs",
+            "-Wno-deprecated-declarations",
+            "-Wno-tautological-constant-compare",
+            "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-unknown-warning-option",
+            "main.cc"
+          ]
+        }
+      }
+    ]
   }
 ]

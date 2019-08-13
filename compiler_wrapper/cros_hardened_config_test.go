@@ -50,8 +50,8 @@ func TestCrosHardenedConfigWithoutCCache(t *testing.T) {
 		ctx.writeFile(gomaPath, "")
 		gomaEnv := "GOMACC_PATH=" + gomaPath
 		runGoldenRecords(ctx, crosHardenedNoCCacheGoldenDir, []goldenFile{
-			createGccPathGoldenInputs(gomaEnv),
-			createClangPathGoldenInputs(gomaEnv),
+			createGccPathGoldenInputs(ctx, gomaEnv),
+			createClangPathGoldenInputs(ctx, gomaEnv),
 			createClangSyntaxGoldenInputs(gomaEnv),
 			createBisectGoldenInputs(),
 			createForceDisableWErrorGoldenInputs(),
@@ -66,13 +66,13 @@ func createSyswrapperGoldenInputs(ctx *testContext) []goldenFile {
 	gomaEnv := "GOMACC_PATH=" + gomaPath
 
 	return []goldenFile{
-		createGccPathGoldenInputs(gomaEnv),
+		createGccPathGoldenInputs(ctx, gomaEnv),
 		createGoldenInputsForAllTargets("gcc", mainCc),
 		createSysrootWrapperCommonGoldenInputs("gcc", gomaEnv),
 		createSanitizerGoldenInputs("gcc"),
 		createGccArgsGoldenInputs(),
 		createClangSyntaxGoldenInputs(gomaEnv),
-		createClangPathGoldenInputs(gomaEnv),
+		createClangPathGoldenInputs(ctx, gomaEnv),
 		createGoldenInputsForAllTargets("clang", mainCc),
 		createGoldenInputsForAllTargets("clang", "-ftrapv", mainCc),
 		createSysrootWrapperCommonGoldenInputs("clang", gomaEnv),
@@ -192,7 +192,10 @@ func createForceDisableWErrorGoldenInputs() goldenFile {
 	}
 }
 
-func createGccPathGoldenInputs(gomaEnv string) goldenFile {
+func createGccPathGoldenInputs(ctx *testContext, gomaEnv string) goldenFile {
+	deepPath := "a/b/c/d/e/f/g/x86_64-cros-linux-gnu-gcc"
+	linkedDeepPath := "symlinked/x86_64-cros-linux-gnu-gcc"
+	ctx.symlink(deepPath, linkedDeepPath)
 	return goldenFile{
 		Name: "gcc_path.json",
 		Records: []goldenRecord{
@@ -204,11 +207,26 @@ func createGccPathGoldenInputs(gomaEnv string) goldenFile {
 				WrapperCmd: newGoldenCmd("./x86_64-cros-linux-gnu-gcc", mainCc),
 				Cmds:       errorResults,
 			},
+			{
+				WrapperCmd: newGoldenCmd(filepath.Join(ctx.tempDir, "x86_64-cros-linux-gnu-gcc"), mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(deepPath, mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(linkedDeepPath, mainCc),
+				Cmds:       okResults,
+			},
 		},
 	}
 }
 
-func createClangPathGoldenInputs(gomaEnv string) goldenFile {
+func createClangPathGoldenInputs(ctx *testContext, gomaEnv string) goldenFile {
+	deepPath := "a/b/c/d/e/f/g/x86_64-cros-linux-gnu-clang"
+	linkedDeepPath := "symlinked/x86_64-cros-linux-gnu-clang"
+	ctx.symlink(deepPath, linkedDeepPath)
 	return goldenFile{
 		Name: "clang_path.json",
 		Records: []goldenRecord{
@@ -250,6 +268,18 @@ func createClangPathGoldenInputs(gomaEnv string) goldenFile {
 					{Stdout: "someResourceDir"},
 					errorResult,
 				},
+			},
+			{
+				WrapperCmd: newGoldenCmd(filepath.Join(ctx.tempDir, "x86_64-cros-linux-gnu-clang"), mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(deepPath, mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(linkedDeepPath, mainCc),
+				Cmds:       okResults,
 			},
 		},
 	}

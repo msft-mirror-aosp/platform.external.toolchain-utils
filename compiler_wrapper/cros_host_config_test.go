@@ -23,7 +23,7 @@ func TestCrosClangHostConfig(t *testing.T) {
 		gomaEnv := "GOMACC_PATH=" + gomaPath
 
 		goldenFiles := []goldenFile{
-			createClangPathGoldenInputs(gomaEnv),
+			createClangPathGoldenInputs(ctx, gomaEnv),
 			createGoldenInputsForAllTargets("clang", mainCc),
 			createGoldenInputsForAllTargets("clang", "-ftrapv", mainCc),
 			createSanitizerGoldenInputs("clang"),
@@ -48,7 +48,7 @@ func TestCrosGccHostConfig(t *testing.T) {
 		// Note: The old gcc host wrapper is very limited and only adds flags.
 		// So we only test very few things here.
 		goldenFiles := []goldenFile{
-			createGccPathGoldenInputs(gomaEnv),
+			createGccPathGoldenInputs(ctx, gomaEnv),
 			createGoldenInputsForAllTargets("gcc", mainCc),
 			createGccArgsGoldenInputs(),
 		}
