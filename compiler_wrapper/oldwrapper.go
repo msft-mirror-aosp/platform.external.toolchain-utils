@@ -203,7 +203,8 @@ func callOldShellWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, file
 	oldWrapperContent := cfg.OldWrapperContent
 	oldWrapperContent = regexp.MustCompile(`(?m)^exec\b`).ReplaceAllString(oldWrapperContent, "exec_mock")
 	oldWrapperContent = regexp.MustCompile(`\$EXEC`).ReplaceAllString(oldWrapperContent, "exec_mock")
-	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "$0", cfg.CmdPath)
+	// TODO: Use strings.ReplaceAll once cros sdk uses golang >= 1.12
+	oldWrapperContent = strings.Replace(oldWrapperContent, "$0", cfg.CmdPath, -1)
 	cfg.OldWrapperContent = oldWrapperContent
 	mockFile, err := ioutil.TempFile("", filepattern)
 	if err != nil {
@@ -241,7 +242,7 @@ function exec_mock {
 	// Note: Using a self executable wrapper does not work due to a race condition
 	// on unix systems. See https://github.com/golang/go/issues/22315
 	oldWrapperCmd := &command{
-		Path:       "/usr/bin/sh",
+		Path:       "/bin/sh",
 		Args:       append([]string{mockFile.Name()}, inputCmd.Args...),
 		EnvUpdates: inputCmd.EnvUpdates,
 	}
@@ -250,11 +251,12 @@ function exec_mock {
 
 func callOldPythonWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, filepattern string, stdout io.Writer, stderr io.Writer) (exitCode int, err error) {
 	oldWrapperContent := cfg.OldWrapperContent
-	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "from __future__ import print_function", "")
+	// TODO: Use strings.ReplaceAll once cros sdk uses golang >= 1.12
+	oldWrapperContent = strings.Replace(oldWrapperContent, "from __future__ import print_function", "", -1)
 	// Replace sets with lists to make our comparisons deterministic
-	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "set(", "ListSet(")
-	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "if __name__ == '__main__':", "def runMain():")
-	oldWrapperContent = strings.ReplaceAll(oldWrapperContent, "__file__", "'"+cfg.WrapperPath+"'")
+	oldWrapperContent = strings.Replace(oldWrapperContent, "set(", "ListSet(", -1)
+	oldWrapperContent = strings.Replace(oldWrapperContent, "if __name__ == '__main__':", "def runMain():", -1)
+	oldWrapperContent = strings.Replace(oldWrapperContent, "__file__", "'"+cfg.WrapperPath+"'", -1)
 	cfg.OldWrapperContent = oldWrapperContent
 
 	mockFile, err := ioutil.TempFile("", filepattern)

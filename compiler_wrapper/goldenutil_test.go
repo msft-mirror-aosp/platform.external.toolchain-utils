@@ -194,6 +194,7 @@ type replacingWriter struct {
 }
 
 func (writer *replacingWriter) Write(p []byte) (n int, err error) {
-	p = bytes.ReplaceAll(p, writer.old, writer.new)
+	// TODO: Use bytes.ReplaceAll once cros sdk uses golang >= 1.12
+	p = bytes.Replace(p, writer.old, writer.new, -1)
 	return writer.Writer.Write(p)
 }

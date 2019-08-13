@@ -288,7 +288,7 @@ func matchFullString(regex string) string {
 func newExitCodeError(exitCode int) error {
 	// It's actually hard to create an error that represents a command
 	// with exit code. Using a real command instead.
-	tmpCmd := exec.Command("/usr/bin/sh", "-c", fmt.Sprintf("exit %d", exitCode))
+	tmpCmd := exec.Command("/bin/sh", "-c", fmt.Sprintf("exit %d", exitCode))
 	return tmpCmd.Run()
 }
 
