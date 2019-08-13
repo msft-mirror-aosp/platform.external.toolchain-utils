@@ -10,19 +10,20 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 )
 
 const oldHardenedWrapperPathForTest = "/usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/gcc-bin/4.9.x/sysroot_wrapper.hardened"
-const crosHardenedGoldenFile = "testdata/cros_hardened_golden.json"
-const crosHardenedNoCCacheGoldenFile = "testdata/cros_hardened_noccache_golden.json"
+const crosHardenedGoldenDir = "testdata/cros_hardened_golden"
+const crosHardenedNoCCacheGoldenDir = "testdata/cros_hardened_noccache_golden"
 
 func TestCrosHardenedConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		useCCache := true
 		ctx.updateConfig(oldHardenedWrapperPathForTest, getCrosHardenedConfig(useCCache))
 
-		runGoldenRecords(ctx, crosHardenedGoldenFile, createSyswrapperGoldenInputs(ctx))
+		runGoldenRecords(ctx, crosHardenedGoldenDir, createSyswrapperGoldenInputs(ctx))
 	})
 }
 
@@ -48,7 +49,7 @@ func TestCrosHardenedConfigWithoutCCache(t *testing.T) {
 		gomaPath := path.Join(ctx.tempDir, "gomacc")
 		ctx.writeFile(gomaPath, "")
 		gomaEnv := "GOMACC_PATH=" + gomaPath
-		runGoldenRecords(ctx, crosHardenedNoCCacheGoldenFile, []goldenRecordSection{
+		runGoldenRecords(ctx, crosHardenedNoCCacheGoldenDir, []goldenFile{
 			createGccPathGoldenInputs(gomaEnv),
 			createClangPathGoldenInputs(gomaEnv),
 			createClangSyntaxGoldenInputs(gomaEnv),
@@ -59,12 +60,12 @@ func TestCrosHardenedConfigWithoutCCache(t *testing.T) {
 	})
 }
 
-func createSyswrapperGoldenInputs(ctx *testContext) []goldenRecordSection {
+func createSyswrapperGoldenInputs(ctx *testContext) []goldenFile {
 	gomaPath := path.Join(ctx.tempDir, "gomacc")
 	ctx.writeFile(gomaPath, "")
 	gomaEnv := "GOMACC_PATH=" + gomaPath
 
-	return []goldenRecordSection{
+	return []goldenFile{
 		createGccPathGoldenInputs(gomaEnv),
 		createGoldenInputsForAllTargets("gcc", mainCc),
 		createSysrootWrapperCommonGoldenInputs("gcc", gomaEnv),
@@ -83,9 +84,10 @@ func createSyswrapperGoldenInputs(ctx *testContext) []goldenRecordSection {
 	}
 }
 
-func createGoldenInputsForAllTargets(compiler string, args ...string) goldenRecordSection {
-	return goldenRecordSection{
-		Name: fmt.Sprintf("%s %s target specific", compiler, args),
+func createGoldenInputsForAllTargets(compiler string, args ...string) goldenFile {
+	argsReplacer := strings.NewReplacer(".", "", "-", "")
+	return goldenFile{
+		Name: fmt.Sprintf("%s_%s_target_specific.json", compiler, argsReplacer.Replace(strings.Join(args, "_"))),
 		Records: []goldenRecord{
 			{
 				WrapperCmd: newGoldenCmd("./x86_64-cros-linux-gnu-"+compiler, args...),
@@ -127,9 +129,9 @@ func createGoldenInputsForAllTargets(compiler string, args ...string) goldenReco
 	}
 }
 
-func createBisectGoldenInputs() goldenRecordSection {
-	return goldenRecordSection{
-		Name: "bisect",
+func createBisectGoldenInputs() goldenFile {
+	return goldenFile{
+		Name: "bisect.json",
 		// Disable comparing to the old wrapper as that calls the bisect_driver
 		// directly from python, and the new wrapper calls it via a separate
 		// sub command.
@@ -155,9 +157,9 @@ func createBisectGoldenInputs() goldenRecordSection {
 	}
 }
 
-func createForceDisableWErrorGoldenInputs() goldenRecordSection {
-	return goldenRecordSection{
-		Name: "force disable werror",
+func createForceDisableWErrorGoldenInputs() goldenFile {
+	return goldenFile{
+		Name: "force_disable_werror.json",
 		Records: []goldenRecord{
 			{
 				WrapperCmd: newGoldenCmd(clangX86_64, mainCc),
@@ -190,9 +192,9 @@ func createForceDisableWErrorGoldenInputs() goldenRecordSection {
 	}
 }
 
-func createGccPathGoldenInputs(gomaEnv string) goldenRecordSection {
-	return goldenRecordSection{
-		Name: "gcc path",
+func createGccPathGoldenInputs(gomaEnv string) goldenFile {
+	return goldenFile{
+		Name: "gcc_path.json",
 		Records: []goldenRecord{
 			{
 				WrapperCmd: newGoldenCmd("./x86_64-cros-linux-gnu-gcc", mainCc),
@@ -206,9 +208,9 @@ func createGccPathGoldenInputs(gomaEnv string) goldenRecordSection {
 	}
 }
 
-func createClangPathGoldenInputs(gomaEnv string) goldenRecordSection {
-	return goldenRecordSection{
-		Name: "clang path",
+func createClangPathGoldenInputs(gomaEnv string) goldenFile {
+	return goldenFile{
+		Name: "clang_path.json",
 		Records: []goldenRecord{
 			{
 				WrapperCmd: newGoldenCmd("./x86_64-cros-linux-gnu-clang", mainCc),
@@ -253,10 +255,10 @@ func createClangPathGoldenInputs(gomaEnv string) goldenRecordSection {
 	}
 }
 
-func createClangTidyGoldenInputs(gomaEnv string) goldenRecordSection {
+func createClangTidyGoldenInputs(gomaEnv string) goldenFile {
 	tidyEnv := "WITH_TIDY=1"
-	return goldenRecordSection{
-		Name: "clang-tidy",
+	return goldenFile{
+		Name: "clangtidy.json",
 		Records: []goldenRecord{
 			{
 				WrapperCmd: newGoldenCmd(clangX86_64, mainCc),
@@ -301,9 +303,9 @@ func createClangTidyGoldenInputs(gomaEnv string) goldenRecordSection {
 	}
 }
 
-func createClangSyntaxGoldenInputs(gomaEnv string) goldenRecordSection {
-	return goldenRecordSection{
-		Name: "gcc clang-syntax",
+func createClangSyntaxGoldenInputs(gomaEnv string) goldenFile {
+	return goldenFile{
+		Name: "gcc_clang_syntax.json",
 		Records: []goldenRecord{
 			{
 				WrapperCmd: newGoldenCmd(gccX86_64, "-clang-syntax", mainCc),
@@ -335,11 +337,11 @@ func createClangSyntaxGoldenInputs(gomaEnv string) goldenRecordSection {
 	}
 }
 
-func createSysrootWrapperCommonGoldenInputs(compiler string, gomaEnv string) goldenRecordSection {
+func createSysrootWrapperCommonGoldenInputs(compiler string, gomaEnv string) goldenFile {
 	// We are using a fixed target as all of the following args are target independent.
 	wrapperPath := "./x86_64-cros-linux-gnu-" + compiler
-	return goldenRecordSection{
-		Name: compiler + " sysroot wrapper common",
+	return goldenFile{
+		Name: compiler + "_sysroot_wrapper_common.json",
 		Records: []goldenRecord{
 			{
 				WrapperCmd: newGoldenCmd(gccX86_64, "-noccache", mainCc),
@@ -371,11 +373,11 @@ func createSysrootWrapperCommonGoldenInputs(compiler string, gomaEnv string) gol
 	}
 }
 
-func createSanitizerGoldenInputs(compiler string) goldenRecordSection {
+func createSanitizerGoldenInputs(compiler string) goldenFile {
 	// We are using a fixed target as all of the following args are target independent.
 	wrapperPath := "./x86_64-cros-linux-gnu-" + compiler
-	return goldenRecordSection{
-		Name: compiler + " sanitizer args",
+	return goldenFile{
+		Name: compiler + "_sanitizer_args.json",
 		Records: []goldenRecord{
 			{
 				WrapperCmd: newGoldenCmd(wrapperPath, "-fsanitize=kernel-address", "-Wl,--no-undefined", mainCc),
@@ -401,9 +403,9 @@ func createSanitizerGoldenInputs(compiler string) goldenRecordSection {
 	}
 }
 
-func createGccArgsGoldenInputs() goldenRecordSection {
-	return goldenRecordSection{
-		Name: "gcc specific args",
+func createGccArgsGoldenInputs() goldenFile {
+	return goldenFile{
+		Name: "gcc_specific_args.json",
 		Records: []goldenRecord{
 			{
 				WrapperCmd: newGoldenCmd(gccX86_64, "-march=goldmont", mainCc),
@@ -421,9 +423,9 @@ func createGccArgsGoldenInputs() goldenRecordSection {
 	}
 }
 
-func createClangArgsGoldenInputs() goldenRecordSection {
-	return goldenRecordSection{
-		Name: "clang specific args",
+func createClangArgsGoldenInputs() goldenFile {
+	return goldenFile{
+		Name: "clang_specific_args.json",
 		Records: []goldenRecord{
 			{
 				WrapperCmd: newGoldenCmd(clangX86_64, "-mno-movbe", "-pass-exit-codes", "-Wclobbered", "-Wno-psabi", "-Wlogical-op",

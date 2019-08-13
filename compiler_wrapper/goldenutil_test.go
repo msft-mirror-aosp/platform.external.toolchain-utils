@@ -20,7 +20,7 @@ import (
 var updateGoldenFiles = flag.Bool("updategolden", false, "update golden files")
 var filterGoldenTests = flag.String("rungolden", "", "regex filter for golden tests to run")
 
-type goldenRecordSection struct {
+type goldenFile struct {
 	Name             string `json:"name"`
 	ignoreOldWrapper bool
 	Records          []goldenRecord `json:"records"`
@@ -55,70 +55,76 @@ var errorResult = commandResult{
 }
 var errorResults = []commandResult{errorResult}
 
-func runGoldenRecords(ctx *testContext, goldenFile string, sections []goldenRecordSection) {
+func runGoldenRecords(ctx *testContext, goldenDir string, files []goldenFile) {
 	if filterPattern := *filterGoldenTests; filterPattern != "" {
-		sections = filterGoldenRecords(filterPattern, sections)
+		files = filterGoldenRecords(filterPattern, files)
 	}
-	if len(sections) == 0 {
+	if len(files) == 0 {
 		ctx.t.Errorf("No goldenrecords given.")
 		return
 	}
-	sections = fillGoldenResults(ctx, sections)
+	files = fillGoldenResults(ctx, files)
 	if *updateGoldenFiles {
-		log.Printf("updating golden file under %s", goldenFile)
-		if err := os.MkdirAll(filepath.Dir(goldenFile), 0777); err != nil {
+		log.Printf("updating golden files under %s", goldenDir)
+		if err := os.MkdirAll(goldenDir, 0777); err != nil {
 			ctx.t.Fatal(err)
 		}
-		goldenFile, err := os.Create(goldenFile)
-		if err != nil {
-			ctx.t.Fatal(err)
-		}
-		defer goldenFile.Close()
+		for _, file := range files {
+			fileHandle, err := os.Create(filepath.Join(goldenDir, file.Name))
+			if err != nil {
+				ctx.t.Fatal(err)
+			}
+			defer fileHandle.Close()
 
-		writeGoldenRecords(ctx, goldenFile, sections)
-	} else {
-		compareBuffer := &bytes.Buffer{}
-		writeGoldenRecords(ctx, compareBuffer, sections)
-		goldenFileData, err := ioutil.ReadFile(goldenFile)
-		if err != nil {
-			ctx.t.Fatal(err)
+			writeGoldenRecords(ctx, fileHandle, file.Records)
 		}
-		if !bytes.Equal(compareBuffer.Bytes(), goldenFileData) {
-			ctx.t.Fatalf("Commands don't match the golden file under %s. Please regenerate via -updategolden to check the differences.",
-				goldenFile)
+	} else {
+		for _, file := range files {
+			compareBuffer := &bytes.Buffer{}
+			writeGoldenRecords(ctx, compareBuffer, file.Records)
+			filePath := filepath.Join(goldenDir, file.Name)
+			goldenFileData, err := ioutil.ReadFile(filePath)
+			if err != nil {
+				ctx.t.Error(err)
+				continue
+			}
+			if !bytes.Equal(compareBuffer.Bytes(), goldenFileData) {
+				ctx.t.Errorf("Commands don't match the golden file under %s. Please regenerate via -updategolden to check the differences.",
+					filePath)
+			}
 		}
 	}
 }
 
-func filterGoldenRecords(pattern string, sections []goldenRecordSection) []goldenRecordSection {
+func filterGoldenRecords(pattern string, files []goldenFile) []goldenFile {
 	matcher := regexp.MustCompile(pattern)
-	newSections := []goldenRecordSection{}
-	for _, section := range sections {
+	newFiles := []goldenFile{}
+	for _, file := range files {
 		newRecords := []goldenRecord{}
-		for _, record := range section.Records {
+		for _, record := range file.Records {
 			cmd := record.WrapperCmd.Cmd
 			str := strings.Join(append(append(record.Env, cmd.Path), cmd.Args...), " ")
 			if matcher.MatchString(str) {
 				newRecords = append(newRecords, record)
 			}
 		}
-		section.Records = newRecords
-		newSections = append(newSections, section)
+		file.Records = newRecords
+		newFiles = append(newFiles, file)
 	}
-	return newSections
+	return newFiles
 }
 
-func fillGoldenResults(ctx *testContext, sections []goldenRecordSection) []goldenRecordSection {
+func fillGoldenResults(ctx *testContext, files []goldenFile) []goldenFile {
 	oldWrapperPath := ctx.cfg.oldWrapperPath
-	newSections := []goldenRecordSection{}
-	for _, section := range sections {
+	newFiles := []goldenFile{}
+	for _, file := range files {
 		ctx.cfg.oldWrapperPath = oldWrapperPath
-		if section.ignoreOldWrapper {
+		if file.ignoreOldWrapper {
 			ctx.cfg.oldWrapperPath = ""
 		}
 
 		newRecords := []goldenRecord{}
-		for _, record := range section.Records {
+		for _, record := range file.Records {
 			newCmds := []commandResult{}
 			ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
 				if len(newCmds) >= len(record.Cmds) {
@@ -160,13 +166,13 @@ func fillGoldenResults(ctx *testContext, sections []goldenRecordSection) []golde
 			record.WrapperCmd.Stderr = ctx.stderrString()
 			newRecords = append(newRecords, record)
 		}
-		section.Records = newRecords
-		newSections = append(newSections, section)
+		file.Records = newRecords
+		newFiles = append(newFiles, file)
 	}
-	return newSections
+	return newFiles
 }
 
-func writeGoldenRecords(ctx *testContext, writer io.Writer, sections []goldenRecordSection) {
+func writeGoldenRecords(ctx *testContext, writer io.Writer, records []goldenRecord) {
 	// Replace the temp dir with a stable path so that the goldens stay stable.
 	stableTempDir := filepath.Join(filepath.Dir(ctx.tempDir), "stable")
 	writer = &replacingWriter{
@@ -176,7 +182,7 @@ func writeGoldenRecords(ctx *testContext, writer io.Writer, sections []goldenRec
 	}
 	enc := json.NewEncoder(writer)
 	enc.SetIndent("", "  ")
-	if err := enc.Encode(sections); err != nil {
+	if err := enc.Encode(records); err != nil {
 		ctx.t.Fatal(err)
 	}
 }
