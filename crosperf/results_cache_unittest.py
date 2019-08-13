@@ -186,9 +186,62 @@ CPU     Avg_MHz Busy%   Bzy_MHz TSC_MHz IRQ     CoreTmp
 0       827     29.35   2826    2393    16093   47
 2       858     30.31   2838    2393    12068   46
 """
-TURBOSTAT_CPUSTATS = {
-    'freq': [2723, 2884, 2927, 2937, 2932, 2933, 2832],
-    'temp': [77, 83, 84, 72, 75, 46, 47]
+TURBOSTAT_DATA = {
+    'cpufreq': {
+        'all': [2723, 2884, 2927, 2937, 2932, 2933, 2832]
+    },
+    'cputemp': {
+        'all': [77, 83, 84, 72, 75, 46, 47]
+    },
+}
+
+CPUSTATS_UNIQ_OUTPUT = \
+"""
+/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq 1512000
+/sys/devices/system/cpu/cpu1/cpufreq/cpuinfo_cur_freq 1512000
+/sys/devices/system/cpu/cpu3/cpufreq/cpuinfo_cur_freq 2016000
+soc-thermal 44444
+little-cpu 41234
+big-cpu 51234
+/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq 1500000
+/sys/devices/system/cpu/cpu1/cpufreq/cpuinfo_cur_freq 1600000
+/sys/devices/system/cpu/cpu3/cpufreq/cpuinfo_cur_freq 2012000
+soc-thermal 45456
+little-cpu 42555
+big-cpu 61724
+"""
+CPUSTATS_UNIQ_DATA = {
+    'cpufreq': {
+        'cpu0': [1512, 1500],
+        'cpu1': [1512, 1600],
+        'cpu3': [2016, 2012]
+    },
+    'cputemp': {
+        'soc-thermal': [44.4, 45.5],
+        'little-cpu': [41.2, 42.6],
+        'big-cpu': [51.2, 61.7]
+    }
+}
+CPUSTATS_DUPL_OUTPUT = \
+"""
+/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq 1512000
+/sys/devices/system/cpu/cpu1/cpufreq/cpuinfo_cur_freq 1512000
+/sys/devices/system/cpu/cpu2/cpufreq/cpuinfo_cur_freq 1512000
+/sys/devices/system/cpu/cpu3/cpufreq/cpuinfo_cur_freq 2016000
+/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq 1500000
+/sys/devices/system/cpu/cpu1/cpufreq/cpuinfo_cur_freq 1500000
+/sys/devices/system/cpu/cpu2/cpufreq/cpuinfo_cur_freq 1500000
+/sys/devices/system/cpu/cpu3/cpufreq/cpuinfo_cur_freq 2016000
+/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq 1614000
+/sys/devices/system/cpu/cpu1/cpufreq/cpuinfo_cur_freq 1614000
+/sys/devices/system/cpu/cpu2/cpufreq/cpuinfo_cur_freq 1614000
+/sys/devices/system/cpu/cpu3/cpufreq/cpuinfo_cur_freq 1982000
+"""
+CPUSTATS_DUPL_DATA = {
+    'cpufreq': {
+        'cpu0': [1512, 1500, 1614],
+        'cpu3': [2016, 2016, 1982]
+    },
 }
 
 TMP_DIR1 = '/tmp/tmpAbcXyz'
@@ -226,9 +279,9 @@ class ResultTest(unittest.TestCase):
     self.callGetResultsFile = False
     self.callGetPerfDataFiles = False
     self.callGetTurbostatFile = False
+    self.callGetCpustatsFile = False
     self.args = None
     self.callGatherPerfResults = False
-    self.callProcessTutbostatResults = False
     self.mock_logger = mock.Mock(spec=logger.Logger)
     self.mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
     self.mock_label = MockLabel('mock_label', 'build', 'chromeos_image',
@@ -627,6 +680,34 @@ class ResultTest(unittest.TestCase):
     with self.assertRaises(RuntimeError):
       self.result.GetTurbostatFile()
 
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
+  def test_get_cpustats_file_finds_single_log(self, mock_runcmd):
+    """Expected behavior when a single log file found."""
+    self.result.results_dir = '/tmp/test_results'
+    self.result.ce.RunCommandWOutput = mock_runcmd
+    mock_runcmd.return_value = (0, 'some/long/path/cpustats.log', '')
+    found_single_log = self.result.GetCpustatsFile()
+    self.assertEqual(found_single_log, 'some/long/path/cpustats.log')
+
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
+  def test_get_cpustats_file_finds_multiple_logs(self, mock_runcmd):
+    """The case when multiple files found."""
+    self.result.results_dir = '/tmp/test_results'
+    self.result.ce.RunCommandWOutput = mock_runcmd
+    mock_runcmd.return_value = (0, 'some/long/path/cpustats.log\ncpustats.log',
+                                '')
+    found_first_logs = self.result.GetCpustatsFile()
+    self.assertEqual(found_first_logs, 'some/long/path/cpustats.log')
+
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
+  def test_get_cpustats_file_finds_no_logs(self, mock_runcmd):
+    """Error case when no log file found."""
+    self.result.results_dir = '/tmp/test_results'
+    self.result.ce.RunCommandWOutput = mock_runcmd
+    mock_runcmd.return_value = (0, '', '')
+    found_no_logs = self.result.GetCpustatsFile()
+    self.assertEqual(found_no_logs, '')
+
   def test_process_turbostat_results_with_valid_data(self):
     """Normal case when log exists and contains valid data."""
     self.result.turbostat_log_file = '/tmp/somelogfile.log'
@@ -636,7 +717,7 @@ class ResultTest(unittest.TestCase):
       # Check that the log got opened and data were read/parsed.
       calls = [mock.call('/tmp/somelogfile.log')]
       mo.assert_has_calls(calls)
-      self.assertEqual(cpustats, TURBOSTAT_CPUSTATS)
+      self.assertEqual(cpustats, TURBOSTAT_DATA)
 
   def test_process_turbostat_results_from_empty_file(self):
     """Error case when log exists but file is empty."""
@@ -649,15 +730,6 @@ class ResultTest(unittest.TestCase):
       mo.assert_has_calls(calls)
       self.assertEqual(cpustats, {})
 
-  def test_process_turbostat_results_with_no_filename(self):
-    """Error case when no log file name provided."""
-    self.result.turbostat_log_file = ''
-    with mock.patch('__builtin__.open', mock.mock_open()) as mo:
-      cpustats = self.result.ProcessTurbostatResults()
-      # Check no attempt to open a log and empty data returned.
-      mo.assert_not_called()
-      self.assertEqual(cpustats, {})
-
   def test_process_turbostat_results_when_file_doesnt_exist(self):
     """Error case when file does not exist."""
     nonexistinglog = '/tmp/1'
@@ -668,6 +740,52 @@ class ResultTest(unittest.TestCase):
     # Allow the tested function to call a 'real' open and hopefully crash.
     with self.assertRaises(IOError):
       self.result.ProcessTurbostatResults()
+
+  def test_process_cpustats_results_with_uniq_data(self):
+    """Process cpustats log which has freq unique to each core.
+
+    Testing normal case when frequency data vary between
+    different cores.
+    Expecting that data for all cores will be present in
+    returned cpustats.
+    """
+    self.maxDiff = None
+    self.result.cpustats_log_file = '/tmp/somelogfile.log'
+    with mock.patch('__builtin__.open',
+                    mock.mock_open(read_data=CPUSTATS_UNIQ_OUTPUT)) as mo:
+      cpustats = self.result.ProcessCpustatsResults()
+      # Check that the log got opened and data were read/parsed.
+      calls = [mock.call('/tmp/somelogfile.log')]
+      mo.assert_has_calls(calls)
+      self.assertEqual(cpustats, CPUSTATS_UNIQ_DATA)
+
+  def test_process_cpustats_results_with_dupl_data(self):
+    """Process cpustats log where cores have duplicate freq.
+
+    Testing normal case when frequency data on some cores
+    are duplicated.
+    Expecting that duplicated data is discarded in
+    returned cpustats.
+    """
+    self.result.cpustats_log_file = '/tmp/somelogfile.log'
+    with mock.patch('__builtin__.open',
+                    mock.mock_open(read_data=CPUSTATS_DUPL_OUTPUT)) as mo:
+      cpustats = self.result.ProcessCpustatsResults()
+      # Check that the log got opened and data were read/parsed.
+      calls = [mock.call('/tmp/somelogfile.log')]
+      mo.assert_has_calls(calls)
+      self.assertEqual(cpustats, CPUSTATS_DUPL_DATA)
+
+  def test_process_cpustats_results_from_empty_file(self):
+    """Error case when log exists but file is empty."""
+    self.result.cpustats_log_file = '/tmp/emptylogfile.log'
+    with mock.patch('__builtin__.open', mock.mock_open(read_data='')) as mo:
+      cpustats = self.result.ProcessCpustatsResults()
+      # Check that the log got opened and parsed successfully and empty data
+      # returned.
+      calls = [mock.call('/tmp/emptylogfile.log')]
+      mo.assert_has_calls(calls)
+      self.assertEqual(cpustats, {})
 
   @mock.patch.object(misc, 'GetInsideChrootPath')
   @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommand')
@@ -728,6 +846,10 @@ class ResultTest(unittest.TestCase):
       self.callGetTurbostatFile = True
       return []
 
+    def FakeGetCpustatsFile():
+      self.callGetCpustatsFile = True
+      return []
+
     def FakeProcessResults(show_results=False):
       if show_results:
         pass
@@ -743,6 +865,7 @@ class ResultTest(unittest.TestCase):
     self.callGetPerfDataFiles = False
     self.callGetPerfReportFiles = False
     self.callGetTurbostatFile = False
+    self.callGetCpustatsFile = False
     self.callProcessResults = False
 
     self.result.GetResultsDir = FakeGetResultsDir
@@ -750,6 +873,7 @@ class ResultTest(unittest.TestCase):
     self.result.GetPerfDataFiles = FakeGetPerfDataFiles
     self.result.GeneratePerfReportFiles = FakeGetPerfReportFiles
     self.result.GetTurbostatFile = FakeGetTurbostatFile
+    self.result.GetCpustatsFile = FakeGetCpustatsFile
     self.result.ProcessResults = FakeProcessResults
 
     self.result.PopulateFromRun(OUTPUT, '', 0, 'test', 'telemetry_Crosperf',
@@ -759,15 +883,16 @@ class ResultTest(unittest.TestCase):
     self.assertTrue(self.callGetPerfDataFiles)
     self.assertTrue(self.callGetPerfReportFiles)
     self.assertTrue(self.callGetTurbostatFile)
+    self.assertTrue(self.callGetCpustatsFile)
     self.assertTrue(self.callProcessResults)
 
-  def test_process_results(self):
+  def FakeGetKeyvals(self, show_all=False):
+    if show_all:
+      return {'first_time': 680, 'Total': 10}
+    else:
+      return {'Total': 10}
 
-    def FakeGetKeyvals(show_all=False):
-      if show_all:
-        return {'first_time': 680, 'Total': 10}
-      else:
-        return {'Total': 10}
+  def test_process_results(self):
 
     def FakeGatherPerfResults():
       self.callGatherPerfResults = True
@@ -775,21 +900,10 @@ class ResultTest(unittest.TestCase):
     def FakeGetSamples():
       return 1
 
-    def FakeProcessTurbostatResults():
-      self.callProcessTutbostatResults = True
-      res = {}
-      if self.result.turbostat_log_file:
-        res['freq'] = [1, 2, 3]
-        res['temp'] = [5, 6, 7]
-      return res
-
     self.callGatherPerfResults = False
-    self.callProcessTutbostatResults = False
-    self.result.turbostat_log_file = ''
 
-    self.result.GetKeyvals = FakeGetKeyvals
+    self.result.GetKeyvals = self.FakeGetKeyvals
     self.result.GatherPerfResults = FakeGatherPerfResults
-    self.result.ProcessTurbostatResults = FakeProcessTurbostatResults
 
     self.result.retval = 0
     self.result.ProcessResults()
@@ -812,22 +926,122 @@ class ResultTest(unittest.TestCase):
         'samples': 1,
         'retval': 0
     })
-    self.result.cwp_dso = ''
+
+  @mock.patch.object(Result, 'ProcessCpustatsResults')
+  @mock.patch.object(Result, 'ProcessTurbostatResults')
+  def test_process_results_with_turbostat_log(self, mock_proc_turbo,
+                                              mock_proc_cpustats):
+    self.result.GetKeyvals = self.FakeGetKeyvals
 
     self.result.retval = 0
     self.result.turbostat_log_file = '/tmp/turbostat.log'
+    mock_proc_turbo.return_value = {
+        'cpufreq': {
+            'all': [1, 2, 3]
+        },
+        'cputemp': {
+            'all': [5.0, 6.0, 7.0]
+        }
+    }
     self.result.ProcessResults()
-    self.assertTrue(self.callProcessTutbostatResults)
-    self.assertEqual(len(self.result.keyvals), 6)
+    mock_proc_turbo.assert_has_calls([mock.call()])
+    mock_proc_cpustats.assert_not_called()
+    self.assertEqual(len(self.result.keyvals), 8)
     self.assertEqual(
         self.result.keyvals, {
             'Total': 10,
-            'cpufreq_avg': 2,
-            'cpufreq_max': 3,
-            'cpufreq_min': 1,
-            'cputemp': 6,
+            'cpufreq_all_avg': 2,
+            'cpufreq_all_max': 3,
+            'cpufreq_all_min': 1,
+            'cputemp_all_avg': 6.0,
+            'cputemp_all_min': 5.0,
+            'cputemp_all_max': 7.0,
             'retval': 0
         })
+
+  @mock.patch.object(Result, 'ProcessCpustatsResults')
+  @mock.patch.object(Result, 'ProcessTurbostatResults')
+  def test_process_results_with_cpustats_log(self, mock_proc_turbo,
+                                             mock_proc_cpustats):
+    self.result.GetKeyvals = self.FakeGetKeyvals
+
+    self.result.retval = 0
+    self.result.cpustats_log_file = '/tmp/cpustats.log'
+    mock_proc_cpustats.return_value = {
+        'cpufreq': {
+            'cpu0': [100, 100, 100],
+            'cpu1': [4, 5, 6]
+        },
+        'cputemp': {
+            'little': [20.2, 20.2, 20.2],
+            'big': [55.2, 66.1, 77.3]
+        }
+    }
+    self.result.ProcessResults()
+    mock_proc_turbo.assert_not_called()
+    mock_proc_cpustats.assert_has_calls([mock.call()])
+    self.assertEqual(len(self.result.keyvals), 10)
+    self.assertEqual(
+        self.result.keyvals, {
+            'Total': 10,
+            'cpufreq_cpu0_avg': 100,
+            'cpufreq_cpu1_avg': 5,
+            'cpufreq_cpu1_max': 6,
+            'cpufreq_cpu1_min': 4,
+            'cputemp_big_avg': 66.2,
+            'cputemp_big_max': 77.3,
+            'cputemp_big_min': 55.2,
+            'cputemp_little_avg': 20.2,
+            'retval': 0
+        })
+
+  @mock.patch.object(Result, 'ProcessCpustatsResults')
+  @mock.patch.object(Result, 'ProcessTurbostatResults')
+  def test_process_results_with_turbostat_and_cpustats_logs(
+      self, mock_proc_turbo, mock_proc_cpustats):
+    self.result.GetKeyvals = self.FakeGetKeyvals
+
+    self.result.retval = 0
+    self.result.turbostat_log_file = '/tmp/turbostat.log'
+    self.result.cpustats_log_file = '/tmp/cpustats.log'
+    mock_proc_turbo.return_value = {
+        'cpufreq': {
+            'all': [1, 2, 3]
+        },
+        'cputemp': {
+            'all': [5.0, 6.0, 7.0]
+        }
+    }
+    self.result.ProcessResults()
+    mock_proc_turbo.assert_has_calls([mock.call()])
+    mock_proc_cpustats.assert_not_called()
+    self.assertEqual(len(self.result.keyvals), 8)
+    self.assertEqual(
+        self.result.keyvals, {
+            'Total': 10,
+            'cpufreq_all_avg': 2,
+            'cpufreq_all_max': 3,
+            'cpufreq_all_min': 1,
+            'cputemp_all_avg': 6.0,
+            'cputemp_all_min': 5.0,
+            'cputemp_all_max': 7.0,
+            'retval': 0
+        })
+
+  @mock.patch.object(Result, 'ProcessCpustatsResults')
+  @mock.patch.object(Result, 'ProcessTurbostatResults')
+  def test_process_results_without_cpu_data(self, mock_proc_turbo,
+                                            mock_proc_cpustats):
+    self.result.GetKeyvals = self.FakeGetKeyvals
+
+    self.result.retval = 0
+    self.result.turbostat_log_file = ''
+    self.result.cpustats_log_file = ''
+    self.result.ProcessResults()
+    mock_proc_turbo.assert_not_called()
+    mock_proc_cpustats.assert_not_called()
+    self.assertEqual(len(self.result.keyvals), 2)
+    self.assertEqual(self.result.keyvals, {'Total': 10, 'retval': 0})
 
   @mock.patch.object(misc, 'GetInsideChrootPath')
   @mock.patch.object(command_executer.CommandExecuter,

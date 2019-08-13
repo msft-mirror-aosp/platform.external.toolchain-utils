@@ -55,7 +55,8 @@ class Result(object):
     self.perf_data_files = []
     self.perf_report_files = []
     self.results_file = []
-    self.turbostat_log_file = []
+    self.turbostat_log_file = ''
+    self.cpustats_log_file = ''
     self.chrome_version = ''
     self.err = None
     self.chroot_results_dir = ''
@@ -66,8 +67,6 @@ class Result(object):
     self.cwp_dso = ''
     self.retval = None
     self.out = None
-    self.cpufreq = []
-    self.cputemp = []
 
   def CopyFilesTo(self, dest_dir, files_to_copy):
     file_index = 0
@@ -281,7 +280,12 @@ class Result(object):
     return result
 
   def GetTurbostatFile(self):
+    """Get turbostat log path string."""
     return self.FindFilesInResultsDir('-name turbostat.log').split('\n')[0]
+
+  def GetCpustatsFile(self):
+    """Get cpustats log path string."""
+    return self.FindFilesInResultsDir('-name cpustats.log').split('\n')[0]
 
   def _CheckDebugPath(self, option, path):
     relative_path = path[1:]
@@ -380,6 +384,7 @@ class Result(object):
     # Include all perf.report data in table.
     self.perf_report_files = self.GeneratePerfReportFiles()
     self.turbostat_log_file = self.GetTurbostatFile()
+    self.cpustats_log_file = self.GetCpustatsFile()
     # TODO(asharif): Do something similar with perf stat.
 
     # Grab keyvals from the directory.
@@ -400,7 +405,7 @@ class Result(object):
       raw_dict = json.load(f)
       if 'charts' in raw_dict:
         raw_dict = raw_dict['charts']
-      for k, field_dict in raw_dict.iteritems():
+      for k, field_dict in raw_dict.items():
         for item in field_dict:
           keyname = k + '__' + item
           value_dict = field_dict[item]
@@ -424,11 +429,22 @@ class Result(object):
     return keyvals
 
   def ProcessTurbostatResults(self):
-    """Given turbostat_log_file parse cpu stats from file."""
-    if not self.turbostat_log_file:
-      self._logger.LogError('Turbostat output file not found.')
-      return {}
+    """Given turbostat_log_file non-null parse cpu stats from file.
 
+    Returns:
+      Dictionary of 'cpufreq', 'cputemp' where each
+      includes dictionary 'all': [list_of_values]
+
+    Example of the output of turbostat_log.
+    ----------------------
+    CPU     Avg_MHz Busy%   Bzy_MHz TSC_MHz IRQ     CoreTmp
+    -       329     12.13   2723    2393    10975   77
+    0       336     12.41   2715    2393    6328    77
+    2       323     11.86   2731    2393    4647    69
+    CPU     Avg_MHz Busy%   Bzy_MHz TSC_MHz IRQ     CoreTmp
+    -       1940    67.46   2884    2393    39920   83
+    0       1827    63.70   2877    2393    21184   83
+    """
     cpustats = {}
     read_data = ''
     with open(self.turbostat_log_file) as f:
@@ -437,17 +453,6 @@ class Result(object):
     if not read_data:
       self._logger.LogError('Turbostat output file is empty.')
       return {}
-
-    # Gather CPU statistics from turbostat output.
-    # Example of the output.
-    # ----------------------
-    # CPU     Avg_MHz Busy%   Bzy_MHz TSC_MHz IRQ     CoreTmp
-    # -       329     12.13   2723    2393    10975   77
-    # 0       336     12.41   2715    2393    6328    77
-    # 2       323     11.86   2731    2393    4647    69
-    # CPU     Avg_MHz Busy%   Bzy_MHz TSC_MHz IRQ     CoreTmp
-    # -       1940    67.46   2884    2393    39920   83
-    # 0       1827    63.70   2877    2393    21184   83
 
     # First line always contains the header.
     stats = read_data[0].split()
@@ -461,13 +466,13 @@ class Result(object):
       return {}
     cpu_index = stats.index('CPU')
     cpufreq_index = stats.index('Bzy_MHz')
-    cpustats['freq'] = []
+    cpufreq = cpustats.setdefault('cpufreq', {'all': []})
 
     # Optional parameters.
     cputemp_index = -1
     if 'CoreTmp' in stats:
       cputemp_index = stats.index('CoreTmp')
-      cpustats['temp'] = []
+      cputemp = cpustats.setdefault('cputemp', {'all': []})
 
     # Parse data starting from the second line ignoring repeating headers.
     for st in read_data[1:]:
@@ -481,10 +486,80 @@ class Result(object):
         # Combined statistics for all core has "-" CPU identifier.
         continue
 
-      cpustats['freq'].append(int(numbers[cpufreq_index]))
+      cpufreq['all'].append(int(numbers[cpufreq_index]))
       if cputemp_index != -1:
-        cpustats['temp'].append(int(numbers[cputemp_index]))
+        cputemp['all'].append(int(numbers[cputemp_index]))
     return cpustats
+
+  def ProcessCpustatsResults(self):
+    """Given cpustats_log_file non-null parse cpu data from file.
+
+    Returns:
+      Dictionary of 'cpufreq', 'cputemp' where each
+      includes dictionary of parameter: [list_of_values]
+
+    Example of cpustats.log output.
+    ----------------------
+    /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq 1512000
+    /sys/devices/system/cpu/cpu2/cpufreq/cpuinfo_cur_freq 2016000
+    little-cpu 41234
+    big-cpu 51234
+
+    If cores share the same policy their frequencies may always match
+    on some devices.
+    To make report concise we should eliminate redundancy in the output.
+    Function removes cpuN data if it duplicates data from other cores.
+    """
+
+    cpustats = {}
+    read_data = ''
+    with open(self.cpustats_log_file) as f:
+      read_data = f.readlines()
+
+    if not read_data:
+      self._logger.LogError('Cpustats output file is empty.')
+      return {}
+
+    cpufreq_regex = re.compile(r'^[/\S]+/(cpu\d+)/[/\S]+\s+(\d+)$')
+    cputemp_regex = re.compile(r'^([^/\s]+)\s+(\d+)$')
+
+    for st in read_data:
+      match = cpufreq_regex.match(st)
+      if match:
+        cpu = match.group(1)
+        # CPU frequency comes in kHz.
+        freq_khz = int(match.group(2))
+        freq_mhz = freq_khz / 1000
+        # cpufreq represents a dictionary with CPU frequency-related
+        # data from cpustats.log.
+        cpufreq = cpustats.setdefault('cpufreq', {})
+        cpu_n_freq = cpufreq.setdefault(cpu, [])
+        cpu_n_freq.append(freq_mhz)
+      else:
+        match = cputemp_regex.match(st)
+        if match:
+          therm_type = match.group(1)
+          # The value is int, uCelsius unit.
+          temp_uc = float(match.group(2))
+          # Round to XX.X float.
+          temp_c = round(temp_uc / 1000, 1)
+          # cputemp represents a dictionary with temperature measurements
+          # from cpustats.log.
+          cputemp = cpustats.setdefault('cputemp', {})
+          therm_type = cputemp.setdefault(therm_type, [])
+          therm_type.append(temp_c)
+
+    # Remove duplicate statistics from cpustats.
+    pruned_stats = {}
+    for cpukey, cpuparam in cpustats.items():
+      # Copy 'cpufreq' and 'cputemp'.
+      pruned_params = pruned_stats.setdefault(cpukey, {})
+      for paramkey, paramvalue in sorted(cpuparam.items()):
+        # paramvalue is list of all measured data.
+        if paramvalue not in pruned_params.values():
+          pruned_params[paramkey] = paramvalue
+
+    return pruned_stats
 
   def ProcessHistogramsResults(self):
     # Open and parse the json results file generated by telemetry/test_that.
@@ -549,15 +624,28 @@ class Result(object):
     # Generate report from all perf.data files.
     # Now parse all perf report files and include them in keyvals.
     self.GatherPerfResults()
-    cpustats = self.ProcessTurbostatResults()
-    if 'freq' in cpustats:
-      self.cpufreq = cpustats['freq']
-      self.keyvals['cpufreq_avg'] = sum(self.cpufreq) / len(self.cpufreq)
-      self.keyvals['cpufreq_min'] = min(self.cpufreq)
-      self.keyvals['cpufreq_max'] = max(self.cpufreq)
-    if 'temp' in cpustats:
-      self.cputemp = cpustats['temp']
-      self.keyvals['cputemp'] = sum(self.cputemp) / len(self.cputemp)
+
+    cpustats = {}
+    # Turbostat output has higher priority of processing.
+    if self.turbostat_log_file:
+      cpustats = self.ProcessTurbostatResults()
+    # Process cpustats output only if turbostat has no data.
+    if not cpustats and self.cpustats_log_file:
+      cpustats = self.ProcessCpustatsResults()
+
+    for param_key, param in cpustats.items():
+      for param_type, param_values in param.items():
+        val_avg = sum(param_values) / len(param_values)
+        val_min = min(param_values)
+        val_max = max(param_values)
+        # Average data is always included.
+        self.keyvals['_'.join([param_key, param_type, 'avg'])] = val_avg
+        # Insert min/max results only if they deviate
+        # from average.
+        if val_min != val_avg:
+          self.keyvals['_'.join([param_key, param_type, 'min'])] = val_min
+        if val_max != val_avg:
+          self.keyvals['_'.join([param_key, param_type, 'max'])] = val_max
 
   def GetChromeVersionFromCache(self, cache_dir):
     # Read chrome_version from keys file, if present.
