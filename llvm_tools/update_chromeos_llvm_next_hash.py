@@ -84,7 +84,9 @@ def GetCommandLineArgs():
   parser.add_argument(
       '--failure_mode',
       default=FailureModes.FAIL.value,
-      choices=[mode.value for mode in FailureModes],
+      choices=[FailureModes.FAIL.value, FailureModes.CONTINUE.value,
+               FailureModes.DISABLE_PATCHES.value,
+               FailureModes.REMOVE_PATCHES.value],
       help='the mode of the patch manager when handling failed patches ' \
           '(default: %(default)s)')
 

@@ -18,3 +18,6 @@ class FailureModes(enum.Enum):
   DISABLE_PATCHES = 'disable_patches'
   BISECT_PATCHES = 'bisect_patches'
   REMOVE_PATCHES = 'remove_patches'
+
+  # Only used by 'bisect_patches'.
+  INTERNAL_BISECTION = 'internal_bisection'

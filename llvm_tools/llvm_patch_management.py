@@ -12,12 +12,12 @@ from pipes import quote
 import argparse
 import os
 import patch_manager
-import re
 
 from assert_not_in_chroot import VerifyOutsideChroot
 from cros_utils import command_executer
 from failure_modes import FailureModes
 from get_google3_llvm_version import LLVMVersion
+from get_llvm_hash import LLVMHash
 
 ce = command_executer.GetCommandExecuter()
 
@@ -69,7 +69,9 @@ def GetCommandLineArgs():
   parser.add_argument(
       '--failure_mode',
       default=FailureModes.FAIL.value,
-      choices=[mode.value for mode in FailureModes],
+      choices=[FailureModes.FAIL.value, FailureModes.CONTINUE.value,
+               FailureModes.DISABLE_PATCHES.value,
+               FailureModes.REMOVE_PATCHES.value],
       help='the mode of the patch manager when handling failed patches ' \
           '(default: %(default)s)')
 
@@ -175,92 +177,16 @@ def _CheckPatchMetadataPath(patch_metadata_path):
     raise ValueError('File does not end in \'.json\': %s' % patch_metadata_path)
 
 
-def UnpackLLVMPackage(chroot_path, package):
-  """Unpacks the package.
+def _MoveSrcTreeHEADToGitHash(src_path, git_hash):
+  """Moves HEAD to 'git_hash'."""
 
-  Args:
-    chroot_path: The absolute path to the chroot.
-    package: The package to unpack its sources.
+  move_head_cmd = 'git -C %s checkout %s' % (quote(src_path), git_hash)
 
-  Returns:
-    The absolute path to the unpacked sources of the package.
+  ret, _, err = ce.RunCommandWOutput(move_head_cmd, print_to_console=False)
 
-  Raises:
-    ValueError: Invalid chroot path or failed to unpack the package or
-    failed to construct the absolute path to the unpacked sources.
-  """
-
-  # Get the absolute chroot ebuild path of the package.
-  ret, ebuild_path, err = ce.ChrootRunCommandWOutput(
-      chromeos_root=chroot_path,
-      command='equery w %s' % package,
-      print_to_console=False)
-
-  if ret:  # Failed to get the absolute chroot path to the ebuild.
-    raise ValueError('Failed to get the absolute chroot path to the ebuild of '
-                     '%s: %s' % (package, err))
-
-  ebuild_path = ebuild_path.rstrip()
-
-  # Cmd to unpack the package.
-  unpack_cmd = 'sudo ebuild %s clean unpack' % quote(ebuild_path)
-
-  ret, _, err = ce.ChrootRunCommandWOutput(
-      chromeos_root=chroot_path,
-      command=unpack_cmd,
-      print_to_console=False,
-      env=dict(os.environ, USE='llvm-next'))
-
-  if ret:  # Failed to unpack the package.
-    raise ValueError('Failed to unpack the package %s: %s' % (package, err))
-
-  split_ebuild_path = ebuild_path.split('/')
-
-  return _ConstructPathToSources(chroot_path, split_ebuild_path[-1],
-                                 split_ebuild_path[-3])
-
-
-def _ConstructPathToSources(chroot_path, ebuild_name, parent_dir_name):
-  """Constructs the absolute path to the unpacked sources of the package.
-
-  Args:
-    chroot_path: The absolute path to the chroot.
-    ebuild_name: The ebuild name of the package that has the revision number.
-    parent_dir_name: The parent directory name of the package (Ex:
-    'sys-libs'/llvm).
-
-  Returns:
-    The absolute path to the unpacked path of the sources of the package.
-
-  Raises:
-    ValueError: The ebuild name does not have '.ebuild' or does not have a
-    revision number.
-  """
-
-  # Remove '.ebuild' from the name.
-  package_with_revision, remove_ebuild = re.subn(
-      r'\.ebuild$', '', ebuild_name, count=1)
-
-  if not remove_ebuild:  # Failed to remove '.ebuild'.
-    raise ValueError('Failed to remove \'.ebuild\' from %s.' % ebuild_name)
-
-  # Remove the revision number from the new name.
-  package_name, remove_revision_num = re.subn(
-      r'\-r[0-9]+$', '', package_with_revision, count=1)
-
-  if not remove_revision_num:  # Failed to remove the revision number.
-    raise ValueError(
-        'Failed to remove the revision number from %s.' % package_with_revision)
-
-  src_path = os.path.join(chroot_path, 'chroot/var/tmp/portage/',
-                          parent_dir_name, package_with_revision, 'work/',
-                          package_name)
-
-  if not os.path.isdir(src_path):
-    raise ValueError('Failed to construct the absolute path to the unpacked '
-                     'sources of the package %s: %s' % (package_name, src_path))
-
-  return src_path
+  if ret:  # Failed to checkout to 'git_hash'.
+    raise ValueError('Failed to moved HEAD in %s to %s: %s' % (quote(src_path),
+                                                               git_hash, err))
 
 
 def UpdatePackagesPatchMetadataFile(chroot_path, svn_version,
@@ -286,26 +212,39 @@ def UpdatePackagesPatchMetadataFile(chroot_path, svn_version,
   # that has information on the patches.
   package_info = {}
 
-  for cur_package in packages:
-    # Get the absolute path to $FILESDIR of the package.
-    filesdir_path = GetPathToFilesDirectory(chroot_path, cur_package)
+  llvm_hash = LLVMHash()
 
-    # Construct the absolute path to the patch metadata file where all the
-    # patches and their metadata are.
-    patch_metadata_path = os.path.join(filesdir_path, patch_metadata_file)
+  with llvm_hash.CreateTempDirectory() as src_path:
+    # Clone from the chromium mirror to ensure that the git hashes are
+    # available.
+    llvm_hash.CloneLLVMRepo(src_path)
 
-    # Make sure the patch metadata path is valid.
-    _CheckPatchMetadataPath(patch_metadata_path)
+    # Ensure that 'svn_version' exists in the chromiumum mirror of LLVM by
+    # finding its corresponding git hash.
+    git_hash = llvm_hash.GetGitHashForVersion(src_path, svn_version)
 
-    # Unpack the package and construct the absolute path to the unpacked
-    # sources of the package.
-    src_path = UnpackLLVMPackage(chroot_path, cur_package)
+    # Git hash of 'svn_version' exists, so move the source tree's HEAD to
+    # 'git_hash' via `git checkout`.
+    _MoveSrcTreeHEADToGitHash(src_path, git_hash)
 
-    # Get the patch results for the current package.
-    patches_info = patch_manager.HandlePatches(svn_version, patch_metadata_path,
-                                               filesdir_path, src_path, mode)
+    for cur_package in packages:
+      # Get the absolute path to $FILESDIR of the package.
+      filesdir_path = GetPathToFilesDirectory(chroot_path, cur_package)
 
-    package_info[cur_package] = patches_info._asdict()
+      # Construct the absolute path to the patch metadata file where all the
+      # patches and their metadata are.
+      patch_metadata_path = os.path.join(filesdir_path, patch_metadata_file)
+
+      # Make sure the patch metadata path is valid.
+      _CheckPatchMetadataPath(patch_metadata_path)
+
+      patch_manager.CleanSrcTree(src_path)
+
+      # Get the patch results for the current package.
+      patches_info = patch_manager.HandlePatches(
+          svn_version, patch_metadata_path, filesdir_path, src_path, mode)
+
+      package_info[cur_package] = patches_info._asdict()
 
   return package_info
 
@@ -323,8 +262,7 @@ def main():
 
   # Get the google3 LLVM version if a LLVM version was not provided.
   if not args_output.llvm_version:
-    args_output.llvm_version = LLVMVersion(
-        log_level=args_output.log_level).GetGoogle3LLVMVersion()
+    args_output.llvm_version = LLVMVersion().GetGoogle3LLVMVersion()
 
   UpdatePackagesPatchMetadataFile(
       args_output.chroot_path, args_output.llvm_version,

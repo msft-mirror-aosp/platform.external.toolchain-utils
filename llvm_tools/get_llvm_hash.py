@@ -8,16 +8,15 @@
 
 from __future__ import print_function
 
-from pipes import quote
+from contextlib import contextmanager
 import argparse
 import os
 import re
 import requests
 import shutil
+import subprocess
 import tempfile
 
-from assert_not_in_chroot import VerifyOutsideChroot
-from cros_utils import command_executer
 from get_google3_llvm_version import LLVMVersion
 
 
@@ -85,30 +84,38 @@ def GetLLVMHashAndVersionFromSVNOption(svn_option):
 class LLVMHash(object):
   """Provides three methods to retrieve a LLVM hash."""
 
-  def __init__(self, log_level='none'):
-    self._ce = command_executer.GetCommandExecuter(log_level=log_level)
+  def __init__(self):
     self._llvm_url = 'https://chromium.googlesource.com/external' \
         '/github.com/llvm/llvm-project'
 
   @staticmethod
-  def _CreateTempDirectory():
-    """Creates a temporary directory in /tmp."""
-    return tempfile.mkdtemp()
+  @contextmanager
+  def CreateTempDirectory():
+    temp_dir = tempfile.mkdtemp()
 
-  @staticmethod
-  def _DeleteTempDirectory(temp_dir):
-    """Deletes the directory created by CreateTempDirectory()."""
-    shutil.rmtree(temp_dir)
+    try:
+      yield temp_dir
+    finally:
+      if os.path.isdir(temp_dir):
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
-  def _CloneLLVMRepo(self, temp_dir):
-    """Clones the LLVM repo."""
+  def CloneLLVMRepo(self, temp_dir):
+    """Clones the LLVM repo.
 
-    clone_cmd = 'git clone %s %s' % (quote(self._llvm_url), quote(temp_dir))
+    Args:
+      temp_dir: The temporary directory to clone the repo to.
 
-    ret, _, err = self._ce.RunCommandWOutput(clone_cmd, print_to_console=False)
+    Raises:
+      ValueError: Failed to clone the LLVM repo.
+    """
 
-    if ret:  # Failed to create repo.
-      raise ValueError('Failed to clone the llvm repo: %s' % err)
+    clone_cmd = ['git', 'clone', self._llvm_url, temp_dir]
+
+    clone_cmd_obj = subprocess.Popen(clone_cmd, stderr=subprocess.PIPE)
+    _, stderr = clone_cmd_obj.communicate()
+
+    if clone_cmd_obj.returncode:
+      raise ValueError('Failed to clone the LLVM repo: %s' % stderr)
 
   def GetCommitMessageForHash(self, git_hash):
     """Gets the commit message from the git hash.
@@ -171,6 +178,7 @@ class LLVMHash(object):
       The hash that matches the LLVM version.
 
     Raises:
+      subprocess.CalledProcessError: Failed to retrieve the commit message body.
       ValueError: Failed to parse a commit message or did not find a commit
       hash.
     """
@@ -183,16 +191,13 @@ class LLVMHash(object):
       cur_hash = cur_commit.split()[0]  # Get hash.
 
       # Cmd to output the commit body.
-      find_llvm_cmd = 'git -C %s log --format=%%B -n 1 %s' % \
-          (quote(subdir), cur_hash)
+      find_llvm_cmd = [
+          'git', '-C', subdir, 'log', '--format=%B', '-n', '1', cur_hash
+      ]
 
-      ret, out, err = self._ce.RunCommandWOutput(
-          find_llvm_cmd, print_to_console=False)
+      out = subprocess.check_output(find_llvm_cmd)
 
-      if ret:  # Failed to parse the commit message.
-        raise ValueError('Failed to parse commit message: %s' % err)
-
-      commit_svn_version = self.GetSVNVersionFromCommitMessage(out)
+      commit_svn_version = self.GetSVNVersionFromCommitMessage(out.rstrip())
 
       # Check the svn version from the commit message against the llvm version
       # we are looking for.
@@ -213,22 +218,20 @@ class LLVMHash(object):
       A string of the hash corresponding to the LLVM version.
 
     Raises:
-      Exception: The hash was not found in the git log history.
+      subprocess.CalledProcessError: Failed to retrieve git hashes that match
+      'llvm_version'.
     """
 
-    # Base directory to search the git log history.
-    subdir = os.path.join(llvm_git_dir, 'llvm')
+    # Get all the git hashes that match 'llvm_version'.
+    hash_cmd = [
+        'git', '-C', llvm_git_dir, 'log', '--oneline', '--no-abbrev', '--grep',
+        'llvm-svn: %d' % llvm_version
+    ]
 
-    hash_cmd = """git -C %s log --oneline --no-abbrev --grep \"llvm-svn: %d\"
-               """ % (quote(subdir), llvm_version)
+    hash_vals = subprocess.check_output(hash_cmd)
 
-    ret, hash_vals, err = self._ce.RunCommandWOutput(
-        hash_cmd, print_to_console=False)
-
-    if ret:  # Failed to find hash.
-      raise ValueError('Hash not found: %s' % err)
-
-    return self._ParseCommitMessages(subdir, hash_vals, llvm_version)
+    return self._ParseCommitMessages(llvm_git_dir, hash_vals.rstrip(),
+                                     llvm_version)
 
   def GetLLVMHash(self, llvm_version):
     """Retrieves the LLVM hash corresponding to the LLVM version passed in.
@@ -240,25 +243,19 @@ class LLVMHash(object):
       The hash as a string that corresponds to the LLVM version.
     """
 
-    try:
-      # Create a temporary directory for the LLVM repo.
-      llvm_git_dir = self._CreateTempDirectory()
-
+    with self.CreateTempDirectory() as temp_dir:
       # Clone the "llvm-project" repo.
-      self._CloneLLVMRepo(llvm_git_dir)
+      self.CloneLLVMRepo(temp_dir)
 
       # Find the git hash.
-      hash_value = self.GetGitHashForVersion(llvm_git_dir, llvm_version)
-    finally:
-      # Delete temporary directory.
-      self._DeleteTempDirectory(llvm_git_dir)
+      hash_value = self.GetGitHashForVersion(temp_dir, llvm_version)
 
     return hash_value
 
   def GetGoogle3LLVMHash(self):
     """Retrieves the google3 LLVM hash."""
 
-    google3_llvm = LLVMVersion(self._ce.GetLogLevel())
+    google3_llvm = LLVMVersion()
     google3_llvm_version = google3_llvm.GetGoogle3LLVMVersion()
 
     return self.GetLLVMHash(google3_llvm_version)
@@ -268,16 +265,11 @@ class LLVMHash(object):
 
     path_to_master_branch = 'refs/heads/master'
 
-    llvm_tot_git_hash_cmd = 'git ls-remote %s %s' % (quote(
-        self._llvm_url), quote(path_to_master_branch))
+    llvm_tot_git_hash_cmd = [
+        'git', 'ls-remote', self._llvm_url, path_to_master_branch
+    ]
 
-    # Get the latest git hash of the master branch of LLVM.
-    ret, llvm_tot_git_hash, err = self._ce.RunCommandWOutput(
-        llvm_tot_git_hash_cmd, print_to_console=False)
-
-    if ret:  # Failed to get the latest git hash of the master branch of LLVM.
-      raise ValueError('Failed to get the latest git hash from the top of '
-                       'trunk of LLVM: %s' % err)
+    llvm_tot_git_hash = subprocess.check_output(llvm_tot_git_hash_cmd)
 
     return llvm_tot_git_hash.rstrip().split()[0]
 
@@ -287,20 +279,10 @@ def main():
 
   Parses the command line for the optional command line
   arguments.
-
-  Raises:
-    AssertionError: The script was run inside the chroot.
   """
-
-  VerifyOutsideChroot()
 
   # Create parser and add optional command-line arguments.
   parser = argparse.ArgumentParser(description='Finds the LLVM hash.')
-  parser.add_argument(
-      '--log_level',
-      default='none',
-      choices=['none', 'quiet', 'average', 'verbose'],
-      help='the level for the logs (default: %(default)s)')
   parser.add_argument(
       '--llvm_version',
       type=is_svn_option,
@@ -311,10 +293,9 @@ def main():
   # Parse command-line arguments.
   args_output = parser.parse_args()
 
-  cur_log_level = args_output.log_level
   cur_llvm_version = args_output.llvm_version
 
-  new_llvm_hash = LLVMHash(log_level=cur_log_level)
+  new_llvm_hash = LLVMHash()
 
   if isinstance(cur_llvm_version, int):
     # Find the git hash of the specific LLVM version.
