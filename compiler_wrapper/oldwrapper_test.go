@@ -217,6 +217,36 @@ func TestCompareToOldShellWrapperCompilerCommand(t *testing.T) {
 	})
 }
 
+func TestCompareToOldWrapperEscapeStdoutAndStderr(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.cfg.mockOldWrapperCmds = false
+		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
+
+		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+			io.WriteString(stdout, "a\n'b'")
+			io.WriteString(stderr, "c\n'd'")
+			writePythonMockWrapper(ctx, &mockWrapperConfig{
+				Cmds: []*mockWrapperCmd{
+					{
+						Path: cmd.Path,
+						Args: cmd.Args,
+					},
+				},
+			})
+			return nil
+		}
+
+		ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, mainCc)))
+		if ctx.stdoutString() != "a\n'b'" {
+			t.Errorf("unexpected stdout. Got: %s", ctx.stdoutString())
+		}
+		if ctx.stderrString() != "c\n'd'" {
+			t.Errorf("unexpected stderr. Got: %s", ctx.stderrString())
+		}
+	})
+}
+
 func writePythonMockWrapper(ctx *testContext, cfg *mockWrapperConfig) {
 	const mockTemplate = `
 from __future__ import print_function

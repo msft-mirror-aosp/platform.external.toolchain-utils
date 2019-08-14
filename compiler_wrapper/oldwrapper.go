@@ -21,6 +21,8 @@ import (
 const compareToOldWrapperFilePattern = "old_wrapper_compare"
 
 func compareToOldWrapper(env env, cfg *config, inputCmd *command, newCmdResults []*commandResult, newExitCode int) error {
+	pythonStringEscaper := strings.NewReplacer("\n", "\\n", "'", "\\'")
+
 	oldWrapperCfg, err := newOldWrapperConfig(env, cfg, inputCmd)
 	if err != nil {
 		return err
@@ -29,8 +31,8 @@ func compareToOldWrapper(env env, cfg *config, inputCmd *command, newCmdResults 
 	newCmds := []*command{}
 	for _, cmdResult := range newCmdResults {
 		oldWrapperCfg.CmdResults = append(oldWrapperCfg.CmdResults, oldWrapperCmdResult{
-			Stdout:   cmdResult.Stdout,
-			Stderr:   cmdResult.Stderr,
+			Stdout:   pythonStringEscaper.Replace(cmdResult.Stdout),
+			Stderr:   pythonStringEscaper.Replace(cmdResult.Stderr),
 			Exitcode: cmdResult.ExitCode,
 		})
 		newCmds = append(newCmds, cmdResult.Cmd)
