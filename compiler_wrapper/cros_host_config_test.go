@@ -9,14 +9,14 @@ import (
 	"testing"
 )
 
-const oldClangHostWrapperPathForTest = "/usr/bin/clang_host_wrapper"
-const oldGccHostWrapperPathForTest = "../src/third_party/chromiumos-overlay/sys-devel/gcc/files/host_wrapper"
+const oldClangHostWrapperPathForTest = "$CHROOT/usr/bin/clang_host_wrapper"
+const oldGccHostWrapperPathForTest = "$CHROOT/../src/third_party/chromiumos-overlay/sys-devel/gcc/files/host_wrapper"
 const crosClangHostGoldenDir = "testdata/cros_clang_host_golden"
 const crosGccHostGoldenDir = "testdata/cros_gcc_host_golden"
 
 func TestCrosClangHostConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		ctx.updateConfig(oldClangHostWrapperPathForTest, getCrosHostConfig())
+		ctx.updateConfig(getCrosHostConfig(oldClangHostWrapperPathForTest))
 
 		gomaPath := path.Join(ctx.tempDir, "gomacc")
 		ctx.writeFile(gomaPath, "")
@@ -39,7 +39,7 @@ func TestCrosClangHostConfig(t *testing.T) {
 
 func TestCrosGccHostConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		ctx.updateConfig(oldGccHostWrapperPathForTest, getCrosHostConfig())
+		ctx.updateConfig(getCrosHostConfig(oldGccHostWrapperPathForTest))
 
 		gomaPath := path.Join(ctx.tempDir, "gomacc")
 		ctx.writeFile(gomaPath, "")

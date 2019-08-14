@@ -77,6 +77,23 @@ func TestRealConfigWithConfigNameFlag(t *testing.T) {
 	}
 }
 
+func TestRealConfigWithOldWrapperPath(t *testing.T) {
+	resetGlobals()
+	defer resetGlobals()
+	UseCCache = "false"
+	ConfigName = "cros.hardened"
+
+	OldWrapperPath = "somepath"
+
+	cfg, err := getRealConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.oldWrapperPath != "somepath" {
+		t.Fatalf("OldWrapperPath: Expected somepath, got %s", cfg.oldWrapperPath)
+	}
+}
+
 func isSysrootHardened(cfg *config) bool {
 	for _, arg := range cfg.commonFlags {
 		if arg == "-pie" {
@@ -88,6 +105,7 @@ func isSysrootHardened(cfg *config) bool {
 
 func resetGlobals() {
 	// Set all global variables to a defined state.
+	OldWrapperPath = ""
 	ConfigName = "unknown"
 	UseCCache = "unknown"
 }

@@ -29,6 +29,10 @@ type config struct {
 	newWarningsDir string
 }
 
+// OldWrapperPath can be set via a linker flag.
+// Value fills config.oldWrapperPath.
+var OldWrapperPath = ""
+
 // UseCCache can be set via a linker flag.
 // Value will be passed to strconv.ParseBool.
 // E.g. go build -ldflags '-X config.UseCCache=true'.
@@ -46,33 +50,33 @@ func getRealConfig() (*config, error) {
 	if err != nil {
 		return nil, wrapErrorwithSourceLocf(err, "invalid format for UseCCache")
 	}
-	config, err := getConfig(useCCache, ConfigName)
+	config, err := getConfig(useCCache, ConfigName, OldWrapperPath)
 	if err != nil {
 		return nil, err
 	}
 	return config, nil
 }
 
-func getConfig(useCCache bool, configName string) (*config, error) {
+func getConfig(useCCache bool, configName string, oldWrapperPath string) (*config, error) {
 	switch configName {
 	case "cros.hardened":
-		return getCrosHardenedConfig(useCCache), nil
+		return getCrosHardenedConfig(useCCache, oldWrapperPath), nil
 	case "cros.nonhardened":
-		return getCrosNonHardenedConfig(useCCache), nil
+		return getCrosNonHardenedConfig(useCCache, oldWrapperPath), nil
 	case "cros.host":
-		return getCrosHostConfig(), nil
+		return getCrosHostConfig(oldWrapperPath), nil
 	default:
 		return nil, newErrorwithSourceLocf("unknown config name: %s", configName)
 	}
 }
 
 // Full hardening.
-func getCrosHardenedConfig(useCCache bool) *config {
+func getCrosHardenedConfig(useCCache bool, oldWrapperPath string) *config {
 	// Temporarily disable function splitting because of chromium:434751.
 	return &config{
 		useCCache:      useCCache,
 		rootRelPath:    "../../../../..",
-		oldWrapperPath: "./sysroot_wrapper.hardened.old",
+		oldWrapperPath: oldWrapperPath,
 		commonFlags: []string{
 			"-fstack-protector-strong",
 			"-fPIE",
@@ -104,11 +108,11 @@ func getCrosHardenedConfig(useCCache bool) *config {
 }
 
 // Flags to be added to non-hardened toolchain.
-func getCrosNonHardenedConfig(useCCache bool) *config {
+func getCrosNonHardenedConfig(useCCache bool, oldWrapperPath string) *config {
 	return &config{
 		useCCache:      useCCache,
 		rootRelPath:    "../../../../..",
-		oldWrapperPath: "./sysroot_wrapper.old",
+		oldWrapperPath: oldWrapperPath,
 		commonFlags:    []string{},
 		gccFlags: []string{
 			"-Wno-maybe-uninitialized",
@@ -132,12 +136,12 @@ func getCrosNonHardenedConfig(useCCache bool) *config {
 }
 
 // Flags to be added to host toolchain.
-func getCrosHostConfig() *config {
+func getCrosHostConfig(oldWrapperPath string) *config {
 	return &config{
 		isHostWrapper:  true,
 		useCCache:      false,
 		rootRelPath:    "../..",
-		oldWrapperPath: "./host_wrapper.old",
+		oldWrapperPath: oldWrapperPath,
 		commonFlags:    []string{},
 		gccFlags: []string{
 			"-Wno-maybe-uninitialized",

@@ -21,6 +21,7 @@ def parse_args():
       required=True,
       choices=['cros.hardened', 'cros.nonhardened', 'cros.host'])
   parser.add_argument('--use_ccache', required=True, choices=['true', 'false'])
+  parser.add_argument('--old_wrapper_path', required=True)
   parser.add_argument('--output_file', required=True, type=str)
   return parser.parse_args()
 
@@ -30,7 +31,8 @@ def calc_go_args(args):
   # build a fully static binary in go.
   ldFlags = [
       '-X', 'main.ConfigName=' + args.config, '-X',
-      'main.UseCCache=' + args.use_ccache, "-extldflags '-static'"
+      'main.UseCCache=' + args.use_ccache, '-X',
+      'main.OldWrapperPath=' + args.old_wrapper_path, "-extldflags '-static'"
   ]
   return [
       'go', 'build', '-o',

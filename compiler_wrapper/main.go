@@ -6,6 +6,8 @@
 // - main.UseCCache: Whether to use ccache.
 // - main.ConfigName: Name of the configuration to use.
 //   See config.go for the supported values.
+// - main.OldWrapperPath: Path to the old wrapper to compare commands
+//   against. Comparison is deactivated if empty.
 //
 // The script ./build simplifies the call to `go build`.
 // E.g. ./build --use_ccache=true --config=cros.hardened will build a

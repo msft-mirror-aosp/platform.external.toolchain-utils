@@ -5,7 +5,8 @@ found in the LICENSE file.
 Toolchain utils compiler wrapper sources.
 
 Build the wrapper:
-./build --config=<config name> --use_ccache=<bool> --output_file=<file>
+./build --config=<config name> --use_ccache=<bool> \
+  --old_wrapper_path=<path> --output_file=<file>
 
 ATTENTION:
 The files in this folder are generated. Do not modify manually!

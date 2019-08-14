@@ -58,7 +58,7 @@ func withTestContext(t *testing.T, work func(ctx *testContext)) {
 		env:     nil,
 		cfg:     &config{},
 	}
-	ctx.updateConfig("", &config{})
+	ctx.updateConfig(&config{})
 
 	work(&ctx)
 }
@@ -140,12 +140,12 @@ func (ctx *testContext) mustFail(exitCode int) string {
 	return ctx.stderrString()
 }
 
-func (ctx *testContext) updateConfig(wrapperChrootPath string, cfg *config) {
+func (ctx *testContext) updateConfig(cfg *config) {
 	*ctx.cfg = *cfg
 	ctx.cfg.mockOldWrapperCmds = true
 	ctx.cfg.newWarningsDir = filepath.Join(ctx.tempDir, "fatal_clang_warnings")
-	if *crosRootDirFlag != "" && wrapperChrootPath != "" {
-		ctx.cfg.oldWrapperPath = filepath.Join(*crosRootDirFlag, wrapperChrootPath)
+	if *crosRootDirFlag != "" && ctx.cfg.oldWrapperPath != "" {
+		ctx.cfg.oldWrapperPath = strings.Replace(ctx.cfg.oldWrapperPath, "$CHROOT", *crosRootDirFlag, -1)
 	} else {
 		ctx.cfg.oldWrapperPath = ""
 	}
