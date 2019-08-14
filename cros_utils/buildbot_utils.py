@@ -2,6 +2,7 @@
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Utilities for launching and accessing ChromeOS buildbots."""
 
 from __future__ import print_function
@@ -252,7 +253,7 @@ def GetLatestImage(chromeos_root, path):
     build = '%s/R%d-%d.%d.%d' % (path, c[0], c[1], c[2], c[3])
     # Blacklist "R79-12384.0.0" image released by mistake.
     # TODO(crbug.com/992242): Remove the filter by 2019-09-05.
-    if '.'.join(c) == '79.12384.0.0':
+    if c == [79, 12384, 0, 0]:
       continue
 
     if DoesImageExist(chromeos_root, build):
