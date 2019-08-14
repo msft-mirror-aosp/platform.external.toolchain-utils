@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -181,7 +182,16 @@ func getLinkerPath(env env, linkerCmd string, rootPath string) string {
 	// i686-pc-linux-gnu-ld, so we need to add this to help clang find the right
 	// linker.
 	for _, path := range strings.Split(env.getenv("PATH"), ":") {
-		if linkerPath, err := filepath.EvalSymlinks(filepath.Join(path, linkerCmd)); err == nil {
+		linkerPath := filepath.Join(path, linkerCmd)
+		// FIXME: We are not using filepath.EvalSymlinks to only unpack
+		// one layer of symlinks to match the old wrapper. Investigate
+		// why this is important or simplify to filepath.EvalSymlinks.
+		if fi, err := os.Lstat(linkerPath); err == nil {
+			if fi.Mode()&os.ModeSymlink != 0 {
+				if linkPath, err := os.Readlink(linkerPath); err == nil {
+					linkerPath = linkPath
+				}
+			}
 			return filepath.Dir(linkerPath)
 		}
 	}

@@ -226,13 +226,15 @@ func TestClangLinkerPathEvaluatesSymlinksForBinariesOnPath(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		realLinkerPath := filepath.Join(ctx.tempDir, "a/original/path/somelinker")
 		ctx.writeFile(realLinkerPath, "")
-		linkedLinkerPath := filepath.Join(ctx.tempDir, "a/linked/path/x86_64-cros-linux-gnu-ld")
-		ctx.symlink(realLinkerPath, linkedLinkerPath)
+		firstLinkLinkerPath := filepath.Join(ctx.tempDir, "a/first/somelinker")
+		ctx.symlink(realLinkerPath, firstLinkLinkerPath)
+		secondLinkLinkerPath := filepath.Join(ctx.tempDir, "a/second/x86_64-cros-linux-gnu-ld")
+		ctx.symlink(firstLinkLinkerPath, secondLinkLinkerPath)
 
-		ctx.env = []string{"PATH=nonExistantPath:" + filepath.Dir(linkedLinkerPath)}
+		ctx.env = []string{"PATH=nonExistantPath:" + filepath.Dir(secondLinkLinkerPath)}
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand("./x86_64-cros-linux-gnu-clang", mainCc)))
-		if err := verifyArgOrder(cmd, "-Ba/original/path"); err != nil {
+		if err := verifyArgOrder(cmd, "-Ba/first"); err != nil {
 			t.Error(err)
 		}
 	})
