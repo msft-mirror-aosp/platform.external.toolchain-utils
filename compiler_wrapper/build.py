@@ -30,12 +30,12 @@ def calc_go_args(args):
   # build a fully static binary in go.
   ldFlags = [
       '-X', 'main.ConfigName=' + args.config, '-X',
-      'main.UseCCache=' + args.use_ccache, '-extldflags \'-fno-PIC -static\''
+      'main.UseCCache=' + args.use_ccache, "-extldflags '-static'"
   ]
   return [
       'go', 'build', '-o',
-      os.path.abspath(args.output_file), '-ldflags', ' '.join(ldFlags),
-      '-buildmode', 'pie', '-tags', 'osusergo netgo static_build'
+      os.path.abspath(args.output_file), '-ldflags', ' '.join(ldFlags), '-tags',
+      'osusergo netgo static_build'
   ]
 
 

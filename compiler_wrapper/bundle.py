@@ -25,16 +25,17 @@ def parse_args():
 def copy_files(input_dir, output_dir):
   for filename in os.listdir(input_dir):
     if ((filename.endswith('.go') and not filename.endswith('_test.go')) or
-        filename == 'build'):
+        filename == 'build.py'):
       shutil.copy(
           os.path.join(input_dir, filename), os.path.join(output_dir, filename))
 
 
-def read_change_id():
-  last_commit_msg = subprocess.check_output(['git', 'log', '-1', '--pretty=%B'])
+def read_change_id(input_dir):
+  last_commit_msg = subprocess.check_output(
+      ['git', '-C', input_dir, 'log', '-1', '--pretty=%B'])
   match = re.search('Change-Id: (\\w+)', last_commit_msg)
   if not match:
-    sys.exit('Couldn\'t find Change-Id in last commit message.')
+    sys.exit("Couldn't find Change-Id in last commit message.")
   return match.group(1)
 
 
@@ -47,10 +48,10 @@ def write_readme(input_dir, output_dir, change_id):
 
 def main():
   args = parse_args()
-  change_id = read_change_id()
+  input_dir = os.path.dirname(__file__)
+  change_id = read_change_id(input_dir)
   shutil.rmtree(args.output_dir, ignore_errors=True)
   os.makedirs(args.output_dir)
-  input_dir = os.path.dirname(__file__)
   copy_files(input_dir, args.output_dir)
   write_readme(input_dir, args.output_dir, change_id)
 
