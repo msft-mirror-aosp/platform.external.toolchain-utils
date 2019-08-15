@@ -68,28 +68,20 @@ func compareToOldWrapper(env env, cfg *config, inputCmd *command, newCmdResults 
 func parseOldWrapperCommands(stderr string) (cmds []*command, remainingStderr string) {
 	allStderrLines := strings.Split(stderr, "\n")
 	remainingStderrLines := []string{}
+	commandPrefix := "command "
+	argPrefix := "arg "
+	envUpdatePrefix := "envupdate "
+	currentCmd := (*command)(nil)
 	for _, line := range allStderrLines {
-		const commandPrefix = "command:"
-		const envupdatePrefix = ".EnvUpdate:"
-		envUpdateIdx := strings.Index(line, envupdatePrefix)
-		if strings.Index(line, commandPrefix) == 0 {
-			if envUpdateIdx == -1 {
-				envUpdateIdx = len(line) - 1
+		if strings.HasPrefix(line, commandPrefix) {
+			currentCmd = &command{
+				Path: line[len(commandPrefix):],
 			}
-			args := strings.Fields(line[len(commandPrefix):envUpdateIdx])
-			envUpdateStr := line[envUpdateIdx+len(envupdatePrefix):]
-			envUpdate := strings.Fields(envUpdateStr)
-			if len(envUpdate) == 0 {
-				// normalize empty slice to nil to make comparing empty envUpdates
-				// simpler.
-				envUpdate = nil
-			}
-			cmd := &command{
-				Path:       args[0],
-				Args:       args[1:],
-				EnvUpdates: envUpdate,
-			}
-			cmds = append(cmds, cmd)
+			cmds = append(cmds, currentCmd)
+		} else if strings.HasPrefix(line, argPrefix) {
+			currentCmd.Args = append(currentCmd.Args, line[len(argPrefix):])
+		} else if strings.HasPrefix(line, envUpdatePrefix) {
+			currentCmd.EnvUpdates = append(currentCmd.EnvUpdates, line[len(envUpdatePrefix):])
 		} else {
 			remainingStderrLines = append(remainingStderrLines, line)
 		}
@@ -218,13 +210,16 @@ func callOldShellWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, file
 EXEC=exec
 
 function exec_mock {
-	echo command:${*}.EnvUpdate: 1>&2
+	echo command "$1" 1>&2
+	for arg in "${@:2}"; do
+		echo arg $arg 1>&2
+	done
 	{{if .MockCmds}}
 	echo '{{(index .CmdResults 0).Stdout}}'
 	echo '{{(index .CmdResults 0).Stderr}}' 1>&2
 	exit {{(index .CmdResults 0).Exitcode}}
 	{{else}}
-	$EXEC ${*}
+	$EXEC "$@"
 	{{end}}
 }
 
@@ -301,8 +296,12 @@ mockResults = [{{range .CmdResults}} {
 
 def serialize_cmd(args):
 	current_env = os.environ
-	envupdate = [k + "=" + current_env.get(k, '') for k in set(list(current_env.keys()) + list(init_env.keys())) if current_env.get(k, '') != init_env.get(k, '')]
-	print('command:%s.EnvUpdate:%s' % (' '.join(args), ' '.join(envupdate)), file=sys.stderr)
+	envupdates = [k + "=" + current_env.get(k, '') for k in set(list(current_env.keys()) + list(init_env.keys())) if current_env.get(k, '') != init_env.get(k, '')]
+	print('command %s' % args[0], file=sys.stderr)
+	for arg in args[1:]:
+		print('arg %s' % arg, file=sys.stderr)
+	for update in envupdates:
+		print('envupdate %s' % update, file=sys.stderr)
 
 def check_output_mock(args):
 	serialize_cmd(args)

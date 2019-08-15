@@ -247,6 +247,50 @@ func TestCompareToOldWrapperEscapeStdoutAndStderr(t *testing.T) {
 	})
 }
 
+func TestCompareToOldPythonWrapperArgumentsWithSpaces(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.cfg.mockOldWrapperCmds = false
+		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
+
+		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+			writePythonMockWrapper(ctx, &mockWrapperConfig{
+				Cmds: []*mockWrapperCmd{
+					{
+						Path: cmd.Path,
+						Args: cmd.Args,
+					},
+				},
+			})
+			return nil
+		}
+
+		ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, "a b", "c", mainCc)))
+	})
+}
+
+func TestCompareToOldShellWrapperArgumentsWithSpaces(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.cfg.mockOldWrapperCmds = false
+		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
+
+		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+			writeShellMockWrapper(ctx, &mockWrapperConfig{
+				Cmds: []*mockWrapperCmd{
+					{
+						Path: cmd.Path,
+						Args: cmd.Args,
+					},
+				},
+			})
+			return nil
+		}
+
+		ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, "a b", "c", mainCc)))
+	})
+}
+
 func writePythonMockWrapper(ctx *testContext, cfg *mockWrapperConfig) {
 	const mockTemplate = `
 from __future__ import print_function
@@ -300,7 +344,7 @@ function fake_exec {
 	exit {{(index .Cmds 0).ExitCode}}
 }
 
-$EXEC {{(index .Cmds 0).Path}}{{range (index .Cmds 0).Args}} {{.}}{{end}}
+$EXEC "{{(index .Cmds 0).Path}}"{{range (index .Cmds 0).Args}} "{{.}}"{{end}}
 `
 	tmpl, err := template.New("mock").Parse(mockTemplate)
 	if err != nil {
