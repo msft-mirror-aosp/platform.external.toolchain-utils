@@ -38,7 +38,8 @@ type testContext struct {
 	inputCmd     *command
 	lastCmd      *command
 	cmdCount     int
-	cmdMock      func(cmd *command, stdout io.Writer, stderr io.Writer) error
+	cmdMock      func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
+	stdinBuffer  bytes.Buffer
 	stdoutBuffer bytes.Buffer
 	stderrBuffer bytes.Buffer
 }
@@ -83,6 +84,10 @@ func (ctx *testContext) getwd() string {
 	return ctx.wd
 }
 
+func (ctx *testContext) stdin() io.Reader {
+	return &ctx.stdinBuffer
+}
+
 func (ctx *testContext) stdout() io.Writer {
 	return &ctx.stdoutBuffer
 }
@@ -99,7 +104,7 @@ func (ctx *testContext) stderrString() string {
 	return ctx.stderrBuffer.String()
 }
 
-func (ctx *testContext) run(cmd *command, stdout io.Writer, stderr io.Writer) error {
+func (ctx *testContext) run(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	// Keep calling the old wrapper when we are comparing the output of the
 	// old wrapper to the new wrapper.
 	if isCompareToOldWrapperCmd(cmd) {
@@ -111,7 +116,7 @@ func (ctx *testContext) run(cmd *command, stdout io.Writer, stderr io.Writer) er
 	ctx.cmdCount++
 	ctx.lastCmd = cmd
 	if ctx.cmdMock != nil {
-		return ctx.cmdMock(cmd, stdout, stderr)
+		return ctx.cmdMock(cmd, stdin, stdout, stderr)
 	}
 	return nil
 }
@@ -120,7 +125,7 @@ func (ctx *testContext) exec(cmd *command) error {
 	ctx.cmdCount++
 	ctx.lastCmd = cmd
 	if ctx.cmdMock != nil {
-		return ctx.cmdMock(cmd, ctx.stdout(), ctx.stderr())
+		return ctx.cmdMock(cmd, ctx.stdin(), ctx.stdout(), ctx.stderr())
 	}
 	return nil
 }
@@ -186,6 +191,17 @@ func (ctx *testContext) symlink(oldname string, newname string) {
 	if err := os.Symlink(oldname, newname); err != nil {
 		ctx.t.Fatal(err)
 	}
+}
+
+func (ctx *testContext) readAllString(r io.Reader) string {
+	if r == nil {
+		return ""
+	}
+	bytes, err := ioutil.ReadAll(r)
+	if err != nil {
+		ctx.t.Fatal(err)
+	}
+	return string(bytes)
 }
 
 func verifyPath(cmd *command, expectedRegex string) error {

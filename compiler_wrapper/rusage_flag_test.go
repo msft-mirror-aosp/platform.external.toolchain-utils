@@ -19,7 +19,7 @@ import (
 
 func TestForwardStdOutAndStdErrAndExitCodeFromLogRusage(t *testing.T) {
 	withLogRusageTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			fmt.Fprint(stdout, "somemessage")
 			fmt.Fprint(stderr, "someerror")
 			return newExitCodeError(23)
@@ -37,9 +37,26 @@ func TestForwardStdOutAndStdErrAndExitCodeFromLogRusage(t *testing.T) {
 	})
 }
 
+func TestForwardStdinFromLogRusage(t *testing.T) {
+	withLogRusageTestContext(t, func(ctx *testContext) {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			// Note: This is called for the clang syntax call as well as for
+			// the gcc call, and we assert that stdin is cloned and forwarded
+			// to both.
+			stdinStr := ctx.readAllString(stdin)
+			if stdinStr != "someinput" {
+				return fmt.Errorf("unexpected stdin. Got: %s", stdinStr)
+			}
+			return nil
+		}
+		io.WriteString(&ctx.stdinBuffer, "someinput")
+		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, "-", mainCc)))
+	})
+}
+
 func TestReportGeneralErrorsFromLogRusage(t *testing.T) {
 	withLogRusageTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return errors.New("someerror")
 		}
 		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg,

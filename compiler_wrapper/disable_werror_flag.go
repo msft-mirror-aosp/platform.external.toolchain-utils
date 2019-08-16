@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -24,8 +25,9 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 	if originalCmd.Path == "/usr/bin/ccache" {
 		originalCmd.Path = "ccache"
 	}
+	originalStdinBuffer := &bytes.Buffer{}
 	originalExitCode, err := wrapSubprocessErrorWithSourceLoc(originalCmd,
-		env.run(originalCmd, originalStdoutBuffer, originalStderrBuffer))
+		env.run(originalCmd, io.TeeReader(env.stdin(), originalStdinBuffer), originalStdoutBuffer, originalStderrBuffer))
 	if err != nil {
 		return 0, err
 	}
@@ -45,7 +47,7 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 		EnvUpdates: originalCmd.EnvUpdates,
 	}
 	retryExitCode, err := wrapSubprocessErrorWithSourceLoc(retryCommand,
-		env.run(retryCommand, retryStdoutBuffer, retryStderrBuffer))
+		env.run(retryCommand, bytes.NewReader(originalStdinBuffer.Bytes()), retryStdoutBuffer, retryStderrBuffer))
 	if err != nil {
 		return 0, err
 	}

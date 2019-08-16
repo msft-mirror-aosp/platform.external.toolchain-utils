@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
@@ -31,7 +32,7 @@ func TestCompareToOldPythonWrapperCompilerCommand(t *testing.T) {
 			newWrapperExitCode = 0
 		}
 
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			writePythonMockWrapper(ctx, &mockWrapperConfig{
 				Cmds: []*mockWrapperCmd{
 					{
@@ -92,7 +93,7 @@ func TestCompareToOldPythonWrapperNestedCommand(t *testing.T) {
 		extraArgs := []string{}
 		wrapperCfg := &mockWrapperConfig{}
 
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			isNestedCmd := len(wrapperCfg.Cmds) == 0
 			var wrapperCmd *mockWrapperCmd
 			if isNestedCmd {
@@ -165,7 +166,7 @@ func TestCompareToOldShellWrapperCompilerCommand(t *testing.T) {
 			newWrapperExitCode = 0
 		}
 
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			writeShellMockWrapper(ctx, &mockWrapperConfig{
 				Cmds: []*mockWrapperCmd{
 					{
@@ -222,7 +223,7 @@ func TestCompareToOldWrapperEscapeStdoutAndStderr(t *testing.T) {
 		ctx.cfg.mockOldWrapperCmds = false
 		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
 
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			io.WriteString(stdout, "a\n'b'")
 			io.WriteString(stderr, "c\n'd'")
 			writePythonMockWrapper(ctx, &mockWrapperConfig{
@@ -282,7 +283,7 @@ func TestCompareToOldPythonWrapperArgumentsWithSpaces(t *testing.T) {
 		ctx.cfg.mockOldWrapperCmds = false
 		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
 
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			writePythonMockWrapper(ctx, &mockWrapperConfig{
 				Cmds: []*mockWrapperCmd{
 					{
@@ -304,7 +305,7 @@ func TestCompareToOldShellWrapperArgumentsWithSpaces(t *testing.T) {
 		ctx.cfg.mockOldWrapperCmds = false
 		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
 
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			writeShellMockWrapper(ctx, &mockWrapperConfig{
 				Cmds: []*mockWrapperCmd{
 					{
@@ -318,6 +319,33 @@ func TestCompareToOldShellWrapperArgumentsWithSpaces(t *testing.T) {
 
 		ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(clangX86_64, "a b", "c", mainCc)))
+	})
+}
+
+func TestForwardStdinWhenUsingOldWrapper(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		io.WriteString(&ctx.stdinBuffer, "someinput")
+		ctx.cfg.mockOldWrapperCmds = false
+		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
+
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			writeShellMockWrapper(ctx, &mockWrapperConfig{
+				Cmds: []*mockWrapperCmd{
+					{
+						Path: cmd.Path,
+						Args: cmd.Args,
+					},
+				},
+			})
+			stdinStr := ctx.readAllString(stdin)
+			if stdinStr != "someinput" {
+				return fmt.Errorf("unexpected stdin. Got: %s", stdinStr)
+			}
+			return nil
+		}
+
+		ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, "-", mainCc)))
 	})
 }
 

@@ -20,7 +20,7 @@ import (
 
 const compareToOldWrapperFilePattern = "old_wrapper_compare"
 
-func compareToOldWrapper(env env, cfg *config, inputCmd *command, newCmdResults []*commandResult, newExitCode int) error {
+func compareToOldWrapper(env env, cfg *config, inputCmd *command, stdinBuffer []byte, newCmdResults []*commandResult, newExitCode int) error {
 	pythonStringEscaper := strings.NewReplacer("\n", "\\n", "'", "\\'")
 
 	oldWrapperCfg, err := newOldWrapperConfig(env, cfg, inputCmd)
@@ -41,9 +41,9 @@ func compareToOldWrapper(env env, cfg *config, inputCmd *command, newCmdResults 
 	stderrBuffer := bytes.Buffer{}
 	oldExitCode := 0
 	if strings.HasPrefix(oldWrapperCfg.OldWrapperContent, "#!/bin/sh") {
-		oldExitCode, err = callOldShellWrapper(env, oldWrapperCfg, inputCmd, compareToOldWrapperFilePattern, &bytes.Buffer{}, &stderrBuffer)
+		oldExitCode, err = callOldShellWrapper(env, oldWrapperCfg, inputCmd, stdinBuffer, compareToOldWrapperFilePattern, &bytes.Buffer{}, &stderrBuffer)
 	} else {
-		oldExitCode, err = callOldPythonWrapper(env, oldWrapperCfg, inputCmd, compareToOldWrapperFilePattern, &bytes.Buffer{}, &stderrBuffer)
+		oldExitCode, err = callOldPythonWrapper(env, oldWrapperCfg, inputCmd, stdinBuffer, compareToOldWrapperFilePattern, &bytes.Buffer{}, &stderrBuffer)
 	}
 	if err != nil {
 		return err
@@ -193,7 +193,7 @@ func newOldWrapperConfig(env env, cfg *config, inputCmd *command) (*oldWrapperCo
 	}, nil
 }
 
-func callOldShellWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, filepattern string, stdout io.Writer, stderr io.Writer) (exitCode int, err error) {
+func callOldShellWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, stdinBuffer []byte, filepattern string, stdout io.Writer, stderr io.Writer) (exitCode int, err error) {
 	oldWrapperContent := cfg.OldWrapperContent
 	oldWrapperContent = regexp.MustCompile(`(?m)^exec\b`).ReplaceAllString(oldWrapperContent, "exec_mock")
 	oldWrapperContent = regexp.MustCompile(`\$EXEC`).ReplaceAllString(oldWrapperContent, "exec_mock")
@@ -243,10 +243,10 @@ function exec_mock {
 		Args:       append([]string{mockFile.Name()}, inputCmd.Args...),
 		EnvUpdates: inputCmd.EnvUpdates,
 	}
-	return wrapSubprocessErrorWithSourceLoc(oldWrapperCmd, env.run(oldWrapperCmd, stdout, stderr))
+	return wrapSubprocessErrorWithSourceLoc(oldWrapperCmd, env.run(oldWrapperCmd, bytes.NewReader(stdinBuffer), stdout, stderr))
 }
 
-func callOldPythonWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, filepattern string, stdout io.Writer, stderr io.Writer) (exitCode int, err error) {
+func callOldPythonWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, stdinBuffer []byte, filepattern string, stdout io.Writer, stderr io.Writer) (exitCode int, err error) {
 	oldWrapperContent := cfg.OldWrapperContent
 	// TODO: Use strings.ReplaceAll once cros sdk uses golang >= 1.12
 	oldWrapperContent = strings.Replace(oldWrapperContent, "from __future__ import print_function", "", -1)
@@ -380,5 +380,5 @@ runMain()
 		Args:       append([]string{"-S", mockFile.Name()}, inputCmd.Args...),
 		EnvUpdates: inputCmd.EnvUpdates,
 	}
-	return wrapSubprocessErrorWithSourceLoc(oldWrapperCmd, env.run(oldWrapperCmd, stdout, stderr))
+	return wrapSubprocessErrorWithSourceLoc(oldWrapperCmd, env.run(oldWrapperCmd, bytes.NewReader(stdinBuffer), stdout, stderr))
 }

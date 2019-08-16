@@ -62,7 +62,7 @@ func TestDefaultBisectDir(t *testing.T) {
 
 func TestForwardStdOutAndStdErrAndExitCodeFromBisect(t *testing.T) {
 	withBisectTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			fmt.Fprint(stdout, "somemessage")
 			fmt.Fprint(stderr, "someerror")
 			return newExitCodeError(23)
@@ -82,7 +82,7 @@ func TestForwardStdOutAndStdErrAndExitCodeFromBisect(t *testing.T) {
 
 func TestForwardGeneralErrorFromBisect(t *testing.T) {
 	withBisectTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return errors.New("someerror")
 		}
 		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg,

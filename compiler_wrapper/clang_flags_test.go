@@ -94,7 +94,7 @@ func TestClangPathForClangHostWrapper(t *testing.T) {
 func TestUseXclangPathAndCalcResourceDirByNestedClangCall(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.rootRelPath = "somepath"
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount > 1 {
 				return nil
 			}
@@ -121,7 +121,7 @@ func TestUseXclangPathAndCalcResourceDirByNestedClangCall(t *testing.T) {
 
 func TestXclangPathFailIfNestedClangCallFails(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			fmt.Fprint(stderr, "someclangerror")
 			return errors.New("someerror")
 		}

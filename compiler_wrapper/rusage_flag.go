@@ -29,7 +29,7 @@ func logRusage(env env, logFileName string, compilerCmd *command) (exitCode int,
 	}
 	startTime := time.Now()
 	exitCode, err = wrapSubprocessErrorWithSourceLoc(compilerCmdWithoutRusage,
-		env.run(compilerCmdWithoutRusage, env.stdout(), env.stderr()))
+		env.run(compilerCmdWithoutRusage, env.stdin(), env.stdout(), env.stderr()))
 	if err != nil {
 		return 0, err
 	}

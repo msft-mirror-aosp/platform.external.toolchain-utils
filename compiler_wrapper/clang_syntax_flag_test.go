@@ -15,7 +15,7 @@ import (
 
 func TestCheckClangSyntaxByNestedCall(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 1 {
 				if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
 					return err
@@ -42,7 +42,7 @@ func TestCheckClangSyntaxByNestedCall(t *testing.T) {
 
 func TestForwardStdOutAndStderrFromClangSyntaxCheck(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 1 {
 				fmt.Fprint(stdout, "somemessage")
 				fmt.Fprint(stderr, "someerror")
@@ -60,9 +60,27 @@ func TestForwardStdOutAndStderrFromClangSyntaxCheck(t *testing.T) {
 	})
 }
 
+func TestForwardStdinToClangSyntaxCheck(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			// Note: This is called for the clang syntax call as well as for
+			// the gcc call, and we assert that stdin is cloned and forwarded
+			// to both.
+			stdinStr := ctx.readAllString(stdin)
+			if stdinStr != "someinput" {
+				return fmt.Errorf("unexpected stdin. Got: %s", stdinStr)
+			}
+			return nil
+		}
+		io.WriteString(&ctx.stdinBuffer, "someinput")
+		ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, "-clang-syntax", "-", mainCc)))
+	})
+}
+
 func TestForwardExitCodeFromClangSyntaxCheck(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 1 {
 				return newExitCodeError(23)
 			}
@@ -78,7 +96,7 @@ func TestForwardExitCodeFromClangSyntaxCheck(t *testing.T) {
 
 func TestReportGeneralErrorsFromClangSyntaxCheck(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 1 {
 				return errors.New("someerror")
 			}
@@ -97,7 +115,7 @@ func TestReportGeneralErrorsFromClangSyntaxCheck(t *testing.T) {
 
 func TestIgnoreClangSyntaxCheckWhenCallingClang(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount > 1 {
 				return fmt.Errorf("Unexpected call %#v", cmd)
 			}
@@ -117,7 +135,7 @@ func TestUseGomaForClangSyntaxCheck(t *testing.T) {
 		// Create a file so the gomacc path is valid.
 		ctx.writeFile(gomaPath, "")
 		ctx.env = []string{"GOMACC_PATH=" + gomaPath}
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 1 {
 				if err := verifyPath(cmd, gomaPath); err != nil {
 					return err
@@ -142,7 +160,7 @@ func TestUseGomaForClangSyntaxCheck(t *testing.T) {
 func TestPartiallyOmitCCacheForClangSyntaxCheck(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.useCCache = true
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 1 {
 				if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
 					return err

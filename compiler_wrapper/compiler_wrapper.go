@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -40,14 +41,16 @@ func callCompiler(env env, cfg *config, inputCmd *command) int {
 }
 
 func callCompilerWithRunAndCompareToOldWrapper(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
+	stdinBuffer := &bytes.Buffer{}
 	recordingEnv := &commandRecordingEnv{
-		env: env,
+		env:         env,
+		stdinReader: io.TeeReader(env.stdin(), stdinBuffer),
 	}
 	// Note: this won't do a real exec as recordingEnv redirects exec to run.
 	if exitCode, err = callCompilerInternal(recordingEnv, cfg, inputCmd); err != nil {
 		return 0, err
 	}
-	if err = compareToOldWrapper(env, cfg, inputCmd, recordingEnv.cmdResults, exitCode); err != nil {
+	if err = compareToOldWrapper(env, cfg, inputCmd, stdinBuffer.Bytes(), recordingEnv.cmdResults, exitCode); err != nil {
 		return exitCode, err
 	}
 	return exitCode, nil
@@ -89,10 +92,8 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			if err != nil {
 				return 0, err
 			}
-			exitCode, err = checkClangSyntax(env, clangCmd)
-			if err != nil || exitCode != 0 {
-				return exitCode, err
-			}
+			gccCmd := calcGccCommand(mainBuilder)
+			return checkClangSyntax(env, clangCmd, gccCmd)
 		}
 		compilerCmd = calcGccCommand(mainBuilder)
 	}

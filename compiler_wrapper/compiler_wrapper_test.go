@@ -58,7 +58,7 @@ func TestLogGeneralExecError(t *testing.T) {
 			ctx.cfg.oldWrapperPath = testOldWrapperPath
 			// Note: No need to write the old wrapper as we don't execute
 			// it due to the general error from the new error.
-			ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+			ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 				return errors.New("someerror")
 			}
 			stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
@@ -75,6 +75,20 @@ func TestLogGeneralExecError(t *testing.T) {
 	})
 }
 
+func TestForwardStdin(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		io.WriteString(&ctx.stdinBuffer, "someinput")
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			stdinStr := ctx.readAllString(stdin)
+			if stdinStr != "someinput" {
+				return fmt.Errorf("unexpected stdin. Got: %s", stdinStr)
+			}
+			return nil
+		}
+		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, "-", mainCc)))
+	})
+}
+
 func TestLogMissingCCacheExecError(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.useCCache = true
@@ -87,7 +101,7 @@ func TestLogMissingCCacheExecError(t *testing.T) {
 			ctx.cfg.oldWrapperPath = testOldWrapperPath
 			// Note: No need to write the old wrapper as we don't execute
 			// it due to the general error from the new error.
-			ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+			ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 				return syscall.ENOENT
 			}
 			ctx.stderrBuffer.Reset()
@@ -104,7 +118,7 @@ func TestLogExitCodeErrorWhenComparingToOldWrapper(t *testing.T) {
 		ctx.cfg.mockOldWrapperCmds = false
 		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
 
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			writePythonMockWrapper(ctx, &mockWrapperConfig{
 				Cmds: []*mockWrapperCmd{
 					{

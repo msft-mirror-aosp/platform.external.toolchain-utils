@@ -126,7 +126,7 @@ func fillGoldenResults(ctx *testContext, files []goldenFile) []goldenFile {
 		newRecords := []goldenRecord{}
 		for _, record := range file.Records {
 			newCmds := []commandResult{}
-			ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+			ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 				if len(newCmds) >= len(record.Cmds) {
 					ctx.t.Errorf("Not enough commands specified for wrapperCmd %#v and env %#v. Expected: %#v",
 						record.WrapperCmd.Cmd, record.Env, record.Cmds)

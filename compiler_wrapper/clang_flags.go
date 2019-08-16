@@ -167,7 +167,7 @@ func getClangResourceDir(env env, clangPath string) (string, error) {
 		Args: []string{"--print-resource-dir"},
 	}
 	stdoutBuffer := bytes.Buffer{}
-	if err := env.run(readResourceCmd, &stdoutBuffer, env.stderr()); err != nil {
+	if err := env.run(readResourceCmd, nil, &stdoutBuffer, env.stderr()); err != nil {
 		return "", wrapErrorwithSourceLocf(err,
 			"failed to call clang to read the resouce-dir: %#v",
 			readResourceCmd)

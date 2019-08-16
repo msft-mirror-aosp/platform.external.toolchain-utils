@@ -27,7 +27,7 @@ func TestOmitDoubleBuildForSuccessfulCall(t *testing.T) {
 
 func TestOmitDoubleBuildForGeneralError(t *testing.T) {
 	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return errors.New("someerror")
 		}
 		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, mainCc)))
@@ -45,7 +45,7 @@ func TestOmitDoubleBuildForGeneralError(t *testing.T) {
 
 func TestDoubleBuildWithWNoErrorFlag(t *testing.T) {
 	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
 				if err := verifyArgCount(cmd, 0, "-Wno-error"); err != nil {
@@ -73,7 +73,7 @@ func TestDoubleBuildWithWNoErrorFlag(t *testing.T) {
 func TestDoubleBuildWithWNoErrorAndCCache(t *testing.T) {
 	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
 		ctx.cfg.useCCache = true
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
 				// TODO: This is a bug in the old wrapper that it drops the ccache path
@@ -102,7 +102,7 @@ func TestDoubleBuildWithWNoErrorAndCCache(t *testing.T) {
 
 func TestForwardStdoutAndStderrWhenDoubleBuildSucceeds(t *testing.T) {
 	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
 				fmt.Fprint(stdout, "originalmessage")
@@ -129,7 +129,7 @@ func TestForwardStdoutAndStderrWhenDoubleBuildSucceeds(t *testing.T) {
 
 func TestForwardStdoutAndStderrWhenDoubleBuildFails(t *testing.T) {
 	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
 				fmt.Fprint(stdout, "originalmessage")
@@ -157,9 +157,36 @@ func TestForwardStdoutAndStderrWhenDoubleBuildFails(t *testing.T) {
 	})
 }
 
+func TestForwardStdinFromDoubleBuild(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			// Note: This is called for the clang syntax call as well as for
+			// the gcc call, and we assert that stdin is cloned and forwarded
+			// to both.
+			stdinStr := ctx.readAllString(stdin)
+			if stdinStr != "someinput" {
+				return fmt.Errorf("unexpected stdin. Got: %s", stdinStr)
+			}
+
+			switch ctx.cmdCount {
+			case 1:
+				fmt.Fprint(stderr, "-Werror originalerror")
+				return newExitCodeError(1)
+			case 2:
+				return nil
+			default:
+				t.Fatalf("unexpected command: %#v", cmd)
+				return nil
+			}
+		}
+		io.WriteString(&ctx.stdinBuffer, "someinput")
+		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, "-", mainCc)))
+	})
+}
+
 func TestForwardGeneralErrorWhenDoubleBuildFails(t *testing.T) {
 	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
 				fmt.Fprint(stderr, "-Werror originalerror")
@@ -195,7 +222,7 @@ func TestOmitLogWarningsIfNoDoubleBuild(t *testing.T) {
 
 func TestLogWarningsWhenDoubleBuildSucceeds(t *testing.T) {
 	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
 				fmt.Fprint(stdout, "originalmessage")
@@ -233,7 +260,7 @@ func TestLogWarningsWhenDoubleBuildSucceeds(t *testing.T) {
 
 func TestLogWarningsWhenDoubleBuildFails(t *testing.T) {
 	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
 				fmt.Fprint(stdout, "originalmessage")

@@ -77,8 +77,10 @@ func runClangTidy(env env, clangCmd *command, cSrcFile string) error {
 		EnvUpdates: clangCmd.EnvUpdates,
 	}
 
+	// Note: We pass nil as stdin as we checked before that the compiler
+	// was invoked with a source file argument.
 	exitCode, err := wrapSubprocessErrorWithSourceLoc(clangTidyCmd,
-		env.run(clangTidyCmd, env.stdout(), env.stderr()))
+		env.run(clangTidyCmd, nil, env.stdout(), env.stderr()))
 	if err == nil && exitCode != 0 {
 		// Note: We continue on purpose when clang-tidy fails
 		// to maintain compatibility with the previous wrapper.

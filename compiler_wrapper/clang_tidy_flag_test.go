@@ -24,7 +24,7 @@ func TestClangTidyBasename(t *testing.T) {
 		}
 
 		var clangTidyCmd *command
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 2 {
 				clangTidyCmd = cmd
 			}
@@ -48,7 +48,7 @@ func TestClangTidyBasename(t *testing.T) {
 
 func TestClangTidyClangResourceDir(t *testing.T) {
 	withClangTidyTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
 				if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
@@ -87,7 +87,7 @@ func TestClangTidyClangResourceDir(t *testing.T) {
 
 func TestClangTidyArgOrder(t *testing.T) {
 	withClangTidyTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 2 {
 				if err := verifyArgOrder(cmd, "-checks=.*", mainCc, "--", "-resource-dir=.*", mainCc, "--some_arg"); err != nil {
 					return err
@@ -105,7 +105,7 @@ func TestClangTidyArgOrder(t *testing.T) {
 
 func TestForwardStdOutAndStderrFromClangTidyCall(t *testing.T) {
 	withClangTidyTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 2 {
 				fmt.Fprint(stdout, "somemessage")
 				fmt.Fprint(stderr, "someerror")
@@ -125,7 +125,7 @@ func TestForwardStdOutAndStderrFromClangTidyCall(t *testing.T) {
 
 func TestIgnoreNonZeroExitCodeFromClangTidy(t *testing.T) {
 	withClangTidyTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 2 {
 				return newExitCodeError(23)
 			}
@@ -142,7 +142,7 @@ func TestIgnoreNonZeroExitCodeFromClangTidy(t *testing.T) {
 
 func TestReportGeneralErrorsFromClangTidy(t *testing.T) {
 	withClangTidyTestContext(t, func(ctx *testContext) {
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			if ctx.cmdCount == 2 {
 				return errors.New("someerror")
 			}
@@ -212,7 +212,7 @@ func TestOmitCCacheWithClangTidy(t *testing.T) {
 	withClangTidyTestContext(t, func(ctx *testContext) {
 		ctx.cfg.useCCache = true
 
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
 				if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
@@ -246,7 +246,7 @@ func TestPartiallyOmitGomaWithClangTidy(t *testing.T) {
 		ctx.writeFile(gomaPath, "")
 		ctx.env = append(ctx.env, "GOMACC_PATH="+gomaPath)
 
-		ctx.cmdMock = func(cmd *command, stdout io.Writer, stderr io.Writer) error {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
 				if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
