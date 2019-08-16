@@ -120,7 +120,7 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "a/b/c/d/e/f/g/x86_64-cros-linux-gnu-gcc",
+        "path": "./a/b/c/d/e/f/g/x86_64-cros-linux-gnu-gcc",
         "args": [
           "main.cc"
         ]
@@ -131,7 +131,7 @@
         "cmd": {
           "path": "/usr/bin/ccache",
           "args": [
-            "a/b/c/d/e/f/g/x86_64-cros-linux-gnu-gcc.real",
+            "./a/b/c/d/e/f/g/x86_64-cros-linux-gnu-gcc.real",
             "--sysroot=/tmp/stable/a/b/usr/x86_64-cros-linux-gnu",
             "-fno-reorder-blocks-and-partition",
             "-Wno-unused-local-typedefs",
@@ -157,7 +157,7 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "symlinked/x86_64-cros-linux-gnu-gcc",
+        "path": "./symlinked/x86_64-cros-linux-gnu-gcc",
         "args": [
           "main.cc"
         ]
@@ -168,7 +168,7 @@
         "cmd": {
           "path": "/usr/bin/ccache",
           "args": [
-            "symlinked/x86_64-cros-linux-gnu-gcc.real",
+            "./symlinked/x86_64-cros-linux-gnu-gcc.real",
             "--sysroot=/tmp/stable/a/b/usr/x86_64-cros-linux-gnu",
             "-fno-reorder-blocks-and-partition",
             "-Wno-unused-local-typedefs",
@@ -183,6 +183,46 @@
           ],
           "env_updates": [
             "CCACHE_BASEDIR=/tmp/stable/a/b/usr/x86_64-cros-linux-gnu",
+            "CCACHE_DIR=/var/cache/distfiles/ccache",
+            "CCACHE_UMASK=002"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "wd": "/tmp/stable",
+    "env": [
+      "PATH=/tmp/stable/pathenv"
+    ],
+    "wrapper": {
+      "cmd": {
+        "path": "x86_64-cros-linux-gnu-gcc",
+        "args": [
+          "main.cc"
+        ]
+      }
+    },
+    "cmds": [
+      {
+        "cmd": {
+          "path": "/usr/bin/ccache",
+          "args": [
+            "/tmp/stable/pathenv/x86_64-cros-linux-gnu-gcc.real",
+            "--sysroot=/usr/x86_64-cros-linux-gnu",
+            "-fno-reorder-blocks-and-partition",
+            "-Wno-unused-local-typedefs",
+            "-Wno-maybe-uninitialized",
+            "-fstack-protector-strong",
+            "-fPIE",
+            "-pie",
+            "-D_FORTIFY_SOURCE=2",
+            "-fno-omit-frame-pointer",
+            "main.cc",
+            "-mno-movbe"
+          ],
+          "env_updates": [
+            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002"
           ]

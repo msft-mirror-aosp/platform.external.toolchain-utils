@@ -66,6 +66,19 @@ func TestRelativeClangPathBasedOnRootPath(t *testing.T) {
 	})
 }
 
+func TestPathEnvClangPathBasedOnRootPath(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.cfg.rootRelPath = "somepath"
+		ctx.env = []string{"PATH=" + filepath.Join(ctx.tempDir, "/pathenv")}
+		ctx.writeFile(filepath.Join(ctx.tempDir, "/pathenv/x86_64-cros-linux-gnu-clang"), "")
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand("x86_64-cros-linux-gnu-clang", mainCc)))
+		if err := verifyPath(cmd, filepath.Join(ctx.tempDir, "pathenv/somepath/usr/bin/clang")); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
 func TestClangPathForClangHostWrapper(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.isHostWrapper = true

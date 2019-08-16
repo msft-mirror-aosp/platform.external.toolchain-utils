@@ -362,7 +362,7 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "a/b/c/d/e/f/g/x86_64-cros-linux-gnu-clang",
+        "path": "./a/b/c/d/e/f/g/x86_64-cros-linux-gnu-clang",
         "args": [
           "main.cc"
         ]
@@ -400,7 +400,7 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "symlinked/x86_64-cros-linux-gnu-clang",
+        "path": "./symlinked/x86_64-cros-linux-gnu-clang",
         "args": [
           "main.cc"
         ]
@@ -427,6 +427,48 @@
             "-fno-omit-frame-pointer",
             "main.cc",
             "-Ba/b/bin",
+            "-target",
+            "x86_64-cros-linux-gnu"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "wd": "/tmp/stable",
+    "env": [
+      "PATH=/tmp/stable/pathenv"
+    ],
+    "wrapper": {
+      "cmd": {
+        "path": "x86_64-cros-linux-gnu-clang",
+        "args": [
+          "main.cc"
+        ]
+      }
+    },
+    "cmds": [
+      {
+        "cmd": {
+          "path": "/usr/bin/clang",
+          "args": [
+            "--sysroot=/usr/x86_64-cros-linux-gnu",
+            "-Qunused-arguments",
+            "-grecord-gcc-switches",
+            "-fno-addrsig",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-tautological-constant-compare",
+            "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-unknown-warning-option",
+            "-Wno-section",
+            "-static-libgcc",
+            "-fstack-protector-strong",
+            "-fPIE",
+            "-pie",
+            "-D_FORTIFY_SOURCE=2",
+            "-fno-omit-frame-pointer",
+            "main.cc",
+            "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
           ]

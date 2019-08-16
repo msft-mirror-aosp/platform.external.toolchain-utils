@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -39,6 +40,16 @@ func ensurePathEnv(cmd *exec.Cmd) {
 		}
 	}
 	cmd.Env = append(cmd.Env, "PATH=")
+}
+
+func resolveAgainstPathEnv(env env, cmd string) (string, error) {
+	for _, path := range strings.Split(env.getenv("PATH"), ":") {
+		resolvedPath := filepath.Join(path, cmd)
+		if _, err := os.Lstat(resolvedPath); err == nil {
+			return resolvedPath, nil
+		}
+	}
+	return "", fmt.Errorf("Couldn't find cmd %q in path", cmd)
 }
 
 func getAbsCmdPath(env env, cmd *command) string {

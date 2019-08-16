@@ -8,15 +8,29 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 )
 
 func callCompiler(env env, cfg *config, inputCmd *command) int {
-	exitCode := 0
 	var compilerErr error
-	if cfg.oldWrapperPath != "" {
-		exitCode, compilerErr = callCompilerWithRunAndCompareToOldWrapper(env, cfg, inputCmd)
-	} else {
-		exitCode, compilerErr = callCompilerInternal(env, cfg, inputCmd)
+	if !filepath.IsAbs(inputCmd.Path) && !strings.HasPrefix(inputCmd.Path, ".") {
+		if resolvedPath, err := resolveAgainstPathEnv(env, inputCmd.Path); err == nil {
+			inputCmd = &command{
+				Path:       resolvedPath,
+				Args:       inputCmd.Args,
+				EnvUpdates: inputCmd.EnvUpdates,
+			}
+		} else {
+			compilerErr = err
+		}
+	}
+	exitCode := 0
+	if compilerErr == nil {
+		if cfg.oldWrapperPath != "" {
+			exitCode, compilerErr = callCompilerWithRunAndCompareToOldWrapper(env, cfg, inputCmd)
+		} else {
+			exitCode, compilerErr = callCompilerInternal(env, cfg, inputCmd)
+		}
 	}
 	if compilerErr != nil {
 		printCompilerError(env.stderr(), compilerErr)

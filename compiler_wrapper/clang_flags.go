@@ -181,8 +181,7 @@ func getLinkerPath(env env, linkerCmd string, rootPath string) string {
 	// we passed '-m32' to clang. As a result, clang does not want to use the
 	// i686-pc-linux-gnu-ld, so we need to add this to help clang find the right
 	// linker.
-	for _, path := range strings.Split(env.getenv("PATH"), ":") {
-		linkerPath := filepath.Join(path, linkerCmd)
+	if linkerPath, err := resolveAgainstPathEnv(env, linkerCmd); err == nil {
 		// FIXME: We are not using filepath.EvalSymlinks to only unpack
 		// one layer of symlinks to match the old wrapper. Investigate
 		// why this is important or simplify to filepath.EvalSymlinks.
