@@ -16,7 +16,7 @@ import patch_manager
 from assert_not_in_chroot import VerifyOutsideChroot
 from cros_utils import command_executer
 from failure_modes import FailureModes
-from get_google3_llvm_version import LLVMVersion
+from get_llvm_hash import GetGoogle3LLVMVersion
 from get_llvm_hash import LLVMHash
 
 ce = command_executer.GetCommandExecuter()
@@ -262,7 +262,7 @@ def main():
 
   # Get the google3 LLVM version if a LLVM version was not provided.
   if not args_output.llvm_version:
-    args_output.llvm_version = LLVMVersion().GetGoogle3LLVMVersion()
+    args_output.llvm_version = GetGoogle3LLVMVersion()
 
   UpdatePackagesPatchMetadataFile(
       args_output.chroot_path, args_output.llvm_version,

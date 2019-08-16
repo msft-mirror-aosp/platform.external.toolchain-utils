@@ -17,7 +17,30 @@ import shutil
 import subprocess
 import tempfile
 
-from get_google3_llvm_version import LLVMVersion
+
+def GetGoogle3LLVMVersion():
+  """Gets the latest google3 LLVM version.
+
+  Returns:
+    The latest LLVM SVN version as an integer.
+
+  Raises:
+    subprocess.CalledProcessError: An invalid path has been provided to the
+    `cat` command.
+  """
+
+  path_to_google3_llvm_version = ('/google/src/head/depot/google3/third_party'
+                                  '/crosstool/v18/stable/installs/llvm/'
+                                  'revision')
+
+  # Cmd to get latest google3 LLVM version.
+  cat_cmd = ['cat', path_to_google3_llvm_version]
+
+  # Get latest version.
+  g3_version = subprocess.check_output(cat_cmd)
+
+  # Change type to an integer
+  return int(g3_version.rstrip())
 
 
 def is_svn_option(svn_option):
@@ -74,7 +97,7 @@ def GetLLVMHashAndVersionFromSVNOption(svn_option):
     if isinstance(svn_option, int):
       llvm_version = svn_option
     else:
-      llvm_version = LLVMVersion().GetGoogle3LLVMVersion()
+      llvm_version = GetGoogle3LLVMVersion()
 
     llvm_hash = new_llvm_hash.GetLLVMHash(llvm_version)
 
@@ -255,10 +278,7 @@ class LLVMHash(object):
   def GetGoogle3LLVMHash(self):
     """Retrieves the google3 LLVM hash."""
 
-    google3_llvm = LLVMVersion()
-    google3_llvm_version = google3_llvm.GetGoogle3LLVMVersion()
-
-    return self.GetLLVMHash(google3_llvm_version)
+    return self.GetLLVMHash(GetGoogle3LLVMVersion())
 
   def GetTopOfTrunkGitHash(self):
     """Gets the latest git hash from top of trunk of LLVM."""

@@ -116,21 +116,6 @@ python patch_manager.py --help
 
 ## Other Helpful Scripts
 
-### `get_google3_llvm_version.py`
-
-#### Usage
-
-This script has a class that deals with retrieving the latest google3 LLVM
-version.
-
-For example, to retrieve the latest google3 LLVM version:
-
-```
-from get_google3_llvm_version import LLVMVersion
-
-LLVMVersion().GetGoogle3LLVMVersion()
-```
-
 ### `get_llvm_hash.py`
 
 #### Usage
@@ -138,6 +123,8 @@ LLVMVersion().GetGoogle3LLVMVersion()
 The script has a class that deals with retrieving either the top of trunk git
 hash of LLVM, the git hash of google3, or a specific git hash of a SVN version.
 It also has other functions when dealing with a git hash of LLVM.
+
+In addition, it has a function to retrieve the latest google3 LLVM version.
 
 For example, to retrieve the top of trunk git hash of LLVM:
 
@@ -169,4 +156,12 @@ For example, to retrieve the commit message of a git hash of LLVM:
 from get_llvm_hash import LLVMHash
 
 LLVMHash.GetCommitMessageForHash(<git_hash>)
+```
+
+For example, to retrieve the latest google3 LLVM version:
+
+```
+from get_llvm_hash import GetGoogle3LLVMVersion
+
+GetGoogle3LLVMVersion()
 ```
