@@ -520,7 +520,6 @@
             "-Qunused-arguments",
             "-grecord-gcc-switches",
             "-fno-addrsig",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-unknown-warning-option",
