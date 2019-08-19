@@ -263,6 +263,7 @@ func callOldPythonWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, fil
 	defer os.Remove(mockFile.Name())
 
 	const mockTemplate = `
+# -*- coding: utf-8 -*-
 from __future__ import print_function
 
 class ListSet:

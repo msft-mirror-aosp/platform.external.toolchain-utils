@@ -247,6 +247,36 @@ func TestCompareToOldWrapperEscapeStdoutAndStderr(t *testing.T) {
 	})
 }
 
+func TestCompareToOldWrapperSupportUtf8InStdoutAndStderr(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.cfg.mockOldWrapperCmds = false
+		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
+
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			io.WriteString(stdout, "©")
+			io.WriteString(stderr, "®")
+			writePythonMockWrapper(ctx, &mockWrapperConfig{
+				Cmds: []*mockWrapperCmd{
+					{
+						Path: cmd.Path,
+						Args: cmd.Args,
+					},
+				},
+			})
+			return nil
+		}
+
+		ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, mainCc)))
+		if ctx.stdoutString() != "©" {
+			t.Errorf("unexpected stdout. Got: %s", ctx.stdoutString())
+		}
+		if ctx.stderrString() != "®" {
+			t.Errorf("unexpected stderr. Got: %s", ctx.stderrString())
+		}
+	})
+}
+
 func TestCompareToOldPythonWrapperArgumentsWithSpaces(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.mockOldWrapperCmds = false
