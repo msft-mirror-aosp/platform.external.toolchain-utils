@@ -50,7 +50,7 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-linux-eabi-clang",
+        "path": "./x86_64-cros-eabi-clang",
         "args": [
           "-ftrapv",
           "main.cc"
@@ -63,7 +63,7 @@
           "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
-            "--sysroot=/usr/x86_64-cros-linux-eabi",
+            "--sysroot=/usr/x86_64-cros-eabi",
             "-Qunused-arguments",
             "-grecord-gcc-switches",
             "-fno-addrsig",
@@ -81,10 +81,10 @@
             "main.cc",
             "-B../../bin",
             "-target",
-            "x86_64-cros-linux-eabi"
+            "x86_64-cros-eabi"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-eabi",
+            "CCACHE_BASEDIR=/usr/x86_64-cros-eabi",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
@@ -191,7 +191,7 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./armv7m-cros-linux-eabi-clang",
+        "path": "./armv7m-cros-eabi-clang",
         "args": [
           "-ftrapv",
           "main.cc"
@@ -204,7 +204,7 @@
           "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
-            "--sysroot=/usr/armv7m-cros-linux-eabi",
+            "--sysroot=/usr/armv7m-cros-eabi",
             "-Qunused-arguments",
             "-grecord-gcc-switches",
             "-fno-addrsig",
@@ -222,10 +222,10 @@
             "main.cc",
             "-B../../bin",
             "-target",
-            "armv7m-cros-linux-eabi"
+            "armv7m-cros-eabi"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/armv7m-cros-linux-eabi",
+            "CCACHE_BASEDIR=/usr/armv7m-cros-eabi",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
@@ -332,7 +332,7 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./armv8m-cros-linux-eabi-clang",
+        "path": "./armv8m-cros-eabi-clang",
         "args": [
           "-ftrapv",
           "main.cc"
@@ -345,7 +345,7 @@
           "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
-            "--sysroot=/usr/armv8m-cros-linux-eabi",
+            "--sysroot=/usr/armv8m-cros-eabi",
             "-Qunused-arguments",
             "-grecord-gcc-switches",
             "-fno-addrsig",
@@ -363,10 +363,10 @@
             "main.cc",
             "-B../../bin",
             "-target",
-            "armv8m-cros-linux-eabi"
+            "armv8m-cros-eabi"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/armv8m-cros-linux-eabi",
+            "CCACHE_BASEDIR=/usr/armv8m-cros-eabi",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"

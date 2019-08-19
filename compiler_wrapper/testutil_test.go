@@ -23,11 +23,11 @@ var crosRootDirFlag = flag.String("crosroot", "", "root dir of the chrome os too
 const mainCc = "main.cc"
 const clangX86_64 = "./x86_64-cros-linux-gnu-clang"
 const gccX86_64 = "./x86_64-cros-linux-gnu-gcc"
-const gccX86_64Eabi = "./x86_64-cros-linux-eabi-gcc"
+const gccX86_64Eabi = "./x86_64-cros-eabi-gcc"
 const gccArmV7 = "./armv7m-cros-linux-gnu-gcc"
-const gccArmV7Eabi = "./armv7m-cros-linux-eabi-gcc"
+const gccArmV7Eabi = "./armv7m-cros-eabi-gcc"
 const gccArmV8 = "./armv8m-cros-linux-gnu-gcc"
-const gccArmV8Eabi = "./armv8m-cros-linux-eabi-gcc"
+const gccArmV8Eabi = "./armv8m-cros-eabi-gcc"
 
 type testContext struct {
 	t            *testing.T

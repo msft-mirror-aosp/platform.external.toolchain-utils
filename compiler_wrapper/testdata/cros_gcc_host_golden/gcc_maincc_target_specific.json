@@ -27,7 +27,7 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-linux-eabi-gcc",
+        "path": "./x86_64-cros-eabi-gcc",
         "args": [
           "main.cc"
         ]
@@ -36,7 +36,7 @@
     "cmds": [
       {
         "cmd": {
-          "path": "./x86_64-cros-linux-eabi-gcc.real",
+          "path": "./x86_64-cros-eabi-gcc.real",
           "args": [
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",
@@ -99,7 +99,7 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./armv7m-cros-linux-eabi-gcc",
+        "path": "./armv7m-cros-eabi-gcc",
         "args": [
           "main.cc"
         ]
@@ -108,7 +108,7 @@
     "cmds": [
       {
         "cmd": {
-          "path": "./armv7m-cros-linux-eabi-gcc.real",
+          "path": "./armv7m-cros-eabi-gcc.real",
           "args": [
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",
@@ -171,7 +171,7 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./armv8m-cros-linux-eabi-gcc",
+        "path": "./armv8m-cros-eabi-gcc",
         "args": [
           "main.cc"
         ]
@@ -180,7 +180,7 @@
     "cmds": [
       {
         "cmd": {
-          "path": "./armv8m-cros-linux-eabi-gcc.real",
+          "path": "./armv8m-cros-eabi-gcc.real",
           "args": [
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",

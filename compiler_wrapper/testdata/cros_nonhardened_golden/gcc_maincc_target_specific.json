@@ -36,7 +36,7 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-linux-eabi-gcc",
+        "path": "./x86_64-cros-eabi-gcc",
         "args": [
           "main.cc"
         ]
@@ -47,8 +47,8 @@
         "cmd": {
           "path": "/usr/bin/ccache",
           "args": [
-            "./x86_64-cros-linux-eabi-gcc.real",
-            "--sysroot=/usr/x86_64-cros-linux-eabi",
+            "./x86_64-cros-eabi-gcc.real",
+            "--sysroot=/usr/x86_64-cros-eabi",
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
@@ -57,7 +57,7 @@
             "-mno-movbe"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-eabi",
+            "CCACHE_BASEDIR=/usr/x86_64-cros-eabi",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002"
           ]
@@ -135,7 +135,7 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./armv7m-cros-linux-eabi-gcc",
+        "path": "./armv7m-cros-eabi-gcc",
         "args": [
           "main.cc"
         ]
@@ -146,8 +146,8 @@
         "cmd": {
           "path": "/usr/bin/ccache",
           "args": [
-            "./armv7m-cros-linux-eabi-gcc.real",
-            "--sysroot=/usr/armv7m-cros-linux-eabi",
+            "./armv7m-cros-eabi-gcc.real",
+            "--sysroot=/usr/armv7m-cros-eabi",
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
@@ -155,7 +155,7 @@
             "main.cc"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/armv7m-cros-linux-eabi",
+            "CCACHE_BASEDIR=/usr/armv7m-cros-eabi",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002"
           ]
@@ -233,7 +233,7 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./armv8m-cros-linux-eabi-gcc",
+        "path": "./armv8m-cros-eabi-gcc",
         "args": [
           "main.cc"
         ]
@@ -244,8 +244,8 @@
         "cmd": {
           "path": "/usr/bin/ccache",
           "args": [
-            "./armv8m-cros-linux-eabi-gcc.real",
-            "--sysroot=/usr/armv8m-cros-linux-eabi",
+            "./armv8m-cros-eabi-gcc.real",
+            "--sysroot=/usr/armv8m-cros-eabi",
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
@@ -253,7 +253,7 @@
             "main.cc"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/armv8m-cros-linux-eabi",
+            "CCACHE_BASEDIR=/usr/armv8m-cros-eabi",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002"
           ]

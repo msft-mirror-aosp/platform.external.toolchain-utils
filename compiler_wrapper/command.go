@@ -63,18 +63,38 @@ func getAbsCmdPath(env env, cmd *command) string {
 func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, error) {
 	basename := filepath.Base(cmd.Path)
 	nameParts := strings.Split(basename, "-")
-	if len(nameParts) != 5 {
-		return nil, newErrorwithSourceLocf("expected 5 parts in the compiler name. Actual: %s", basename)
+	target := builderTarget{}
+	if len(nameParts) == 4 {
+		// E.g. armv7m-cros-eabi-gcc
+		target = builderTarget{
+			arch:     nameParts[0],
+			vendor:   nameParts[1],
+			sys:      "",
+			abi:      nameParts[2],
+			compiler: nameParts[3],
+		}
+	} else if len(nameParts) == 5 {
+		// E.g. x86_64-cros-linux-gnu-gcc
+		target = builderTarget{
+			arch:     nameParts[0],
+			vendor:   nameParts[1],
+			sys:      nameParts[2],
+			abi:      nameParts[3],
+			compiler: nameParts[4],
+		}
+	} else {
+		return nil, newErrorwithSourceLocf("unexpected compiler name pattern. Actual: %s", basename)
 	}
 
-	compiler := nameParts[4]
+	target.target = basename[:strings.LastIndex(basename, "-")]
 	var compilerType compilerType
 	switch {
-	case strings.HasPrefix(compiler, "clang"):
+	case strings.HasPrefix(target.compiler, "clang"):
 		compilerType = clangType
 	default:
 		compilerType = gccType
 	}
+	target.compilerType = compilerType
 	absWrapperPath, err := getAbsWrapperPath(env, cmd)
 	if err != nil {
 		return nil, err
@@ -87,15 +107,7 @@ func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, err
 		cfg:            cfg,
 		rootPath:       rootPath,
 		absWrapperPath: absWrapperPath,
-		target: builderTarget{
-			target:       strings.Join(nameParts[:4], "-"),
-			arch:         nameParts[0],
-			vendor:       nameParts[1],
-			sys:          nameParts[2],
-			abi:          nameParts[3],
-			compiler:     compiler,
-			compilerType: compilerType,
-		},
+		target:         target,
 	}, nil
 }
 

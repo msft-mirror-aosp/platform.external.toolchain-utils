@@ -102,7 +102,7 @@ func createGoldenInputsForAllTargets(compiler string, args ...string) goldenFile
 				Cmds:       okResults,
 			},
 			{
-				WrapperCmd: newGoldenCmd("./x86_64-cros-linux-eabi-"+compiler, args...),
+				WrapperCmd: newGoldenCmd("./x86_64-cros-eabi-"+compiler, args...),
 				Cmds:       okResults,
 			},
 			{
@@ -114,7 +114,7 @@ func createGoldenInputsForAllTargets(compiler string, args ...string) goldenFile
 				Cmds:       okResults,
 			},
 			{
-				WrapperCmd: newGoldenCmd("./armv7m-cros-linux-eabi-"+compiler, args...),
+				WrapperCmd: newGoldenCmd("./armv7m-cros-eabi-"+compiler, args...),
 				Cmds:       okResults,
 			},
 			{
@@ -126,7 +126,7 @@ func createGoldenInputsForAllTargets(compiler string, args ...string) goldenFile
 				Cmds:       okResults,
 			},
 			{
-				WrapperCmd: newGoldenCmd("./armv8m-cros-linux-eabi-"+compiler, args...),
+				WrapperCmd: newGoldenCmd("./armv8m-cros-eabi-"+compiler, args...),
 				Cmds:       okResults,
 			},
 			{
