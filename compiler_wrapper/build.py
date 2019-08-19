@@ -26,13 +26,14 @@ def parse_args():
   return parser.parse_args()
 
 
-def calc_go_args(args):
+def calc_go_args(args, version):
   # See https://github.com/golang/go/issues/26492 for how to
   # build a fully static binary in go.
   ldFlags = [
       '-X', 'main.ConfigName=' + args.config, '-X',
       'main.UseCCache=' + args.use_ccache, '-X',
-      'main.OldWrapperPath=' + args.old_wrapper_path, "-extldflags '-static'"
+      'main.OldWrapperPath=' + args.old_wrapper_path, '-X',
+      'main.Version=' + version, "-extldflags '-static'"
   ]
   return [
       'go', 'build', '-o',
@@ -41,11 +42,18 @@ def calc_go_args(args):
   ]
 
 
+def read_version(build_dir):
+  with open(os.path.join(build_dir, 'VERSION'), 'r') as r:
+    return r.read()
+
+
 def main():
   args = parse_args()
+  build_dir = os.path.dirname(__file__)
+  version = read_version(build_dir)
   # Note: Go does not support using absolute package names.
   # So we run go inside the directory of the the build file.
-  sys.exit(subprocess.call(calc_go_args(args), cwd=os.path.dirname(__file__)))
+  sys.exit(subprocess.call(calc_go_args(args, version), cwd=build_dir))
 
 
 if __name__ == '__main__':

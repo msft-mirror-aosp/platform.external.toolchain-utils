@@ -27,7 +27,13 @@ type config struct {
 	mockOldWrapperCmds bool
 	// Directory to store errors that were prevented with -Wno-error.
 	newWarningsDir string
+	// Version. Only used for printing via -print-cmd.
+	version string
 }
+
+// Version can be set via a linker flag.
+// Values fills config.version.
+var Version = ""
 
 // OldWrapperPath can be set via a linker flag.
 // Value fills config.oldWrapperPath.
@@ -50,116 +56,109 @@ func getRealConfig() (*config, error) {
 	if err != nil {
 		return nil, wrapErrorwithSourceLocf(err, "invalid format for UseCCache")
 	}
-	config, err := getConfig(useCCache, ConfigName, OldWrapperPath)
+	config, err := getConfig(ConfigName, useCCache, OldWrapperPath, Version)
 	if err != nil {
 		return nil, err
 	}
 	return config, nil
 }
 
-func getConfig(useCCache bool, configName string, oldWrapperPath string) (*config, error) {
+func getConfig(configName string, useCCache bool, oldWrapperPath string, version string) (*config, error) {
+	var cfg *config
 	switch configName {
 	case "cros.hardened":
-		return getCrosHardenedConfig(useCCache, oldWrapperPath), nil
+		cfg = crosHardenedConfig
 	case "cros.nonhardened":
-		return getCrosNonHardenedConfig(useCCache, oldWrapperPath), nil
+		cfg = crosNonHardenedConfig
 	case "cros.host":
-		return getCrosHostConfig(oldWrapperPath), nil
+		cfg = crosHostConfig
 	default:
 		return nil, newErrorwithSourceLocf("unknown config name: %s", configName)
 	}
+	cfg.useCCache = useCCache
+	cfg.oldWrapperPath = oldWrapperPath
+	cfg.version = version
+	return cfg, nil
 }
 
 // Full hardening.
-func getCrosHardenedConfig(useCCache bool, oldWrapperPath string) *config {
-	// Temporarily disable function splitting because of chromium:434751.
-	return &config{
-		useCCache:      useCCache,
-		rootRelPath:    "../../../../..",
-		oldWrapperPath: oldWrapperPath,
-		commonFlags: []string{
-			"-fstack-protector-strong",
-			"-fPIE",
-			"-pie",
-			"-D_FORTIFY_SOURCE=2",
-			"-fno-omit-frame-pointer",
-		},
-		gccFlags: []string{
-			"-fno-reorder-blocks-and-partition",
-			"-Wno-unused-local-typedefs",
-			"-Wno-maybe-uninitialized",
-		},
-		// Temporarily disable tautological-*-compare chromium:778316.
-		// Temporarily add no-unknown-warning-option to deal with old clang versions.
-		// Temporarily disable Wsection since kernel gets a bunch of these. chromium:778867
-		// Disable "-faddrsig" since it produces object files that strip doesn't understand, chromium:915742.
-		clangFlags: []string{
-			"-Qunused-arguments",
-			"-grecord-gcc-switches",
-			"-fno-addrsig",
-			"-Wno-tautological-constant-compare",
-			"-Wno-tautological-unsigned-enum-zero-compare",
-			"-Wno-unknown-warning-option",
-			"-Wno-section",
-			"-static-libgcc",
-		},
-		newWarningsDir: "/tmp/fatal_clang_warnings",
-	}
+// Temporarily disable function splitting because of chromium:434751.
+var crosHardenedConfig = &config{
+	rootRelPath: "../../../../..",
+	commonFlags: []string{
+		"-fstack-protector-strong",
+		"-fPIE",
+		"-pie",
+		"-D_FORTIFY_SOURCE=2",
+		"-fno-omit-frame-pointer",
+	},
+	gccFlags: []string{
+		"-fno-reorder-blocks-and-partition",
+		"-Wno-unused-local-typedefs",
+		"-Wno-maybe-uninitialized",
+	},
+	// Temporarily disable tautological-*-compare chromium:778316.
+	// Temporarily add no-unknown-warning-option to deal with old clang versions.
+	// Temporarily disable Wsection since kernel gets a bunch of these. chromium:778867
+	// Disable "-faddrsig" since it produces object files that strip doesn't understand, chromium:915742.
+	clangFlags: []string{
+		"-Qunused-arguments",
+		"-grecord-gcc-switches",
+		"-fno-addrsig",
+		"-Wno-tautological-constant-compare",
+		"-Wno-tautological-unsigned-enum-zero-compare",
+		"-Wno-unknown-warning-option",
+		"-Wno-section",
+		"-static-libgcc",
+	},
+	newWarningsDir: "/tmp/fatal_clang_warnings",
 }
 
 // Flags to be added to non-hardened toolchain.
-func getCrosNonHardenedConfig(useCCache bool, oldWrapperPath string) *config {
-	return &config{
-		useCCache:      useCCache,
-		rootRelPath:    "../../../../..",
-		oldWrapperPath: oldWrapperPath,
-		commonFlags:    []string{},
-		gccFlags: []string{
-			"-Wno-maybe-uninitialized",
-			"-Wno-unused-local-typedefs",
-			"-Wno-deprecated-declarations",
-			"-Wtrampolines",
-		},
-		// Temporarily disable tautological-*-compare chromium:778316.
-		// Temporarily add no-unknown-warning-option to deal with old clang versions.
-		// Temporarily disable Wsection since kernel gets a bunch of these. chromium:778867
-		clangFlags: []string{
-			"-Qunused-arguments",
-			"-Wno-tautological-constant-compare",
-			"-Wno-tautological-unsigned-enum-zero-compare",
-			"-Wno-unknown-warning-option",
-			"-Wno-section",
-			"-static-libgcc",
-		},
-		newWarningsDir: "/tmp/fatal_clang_warnings",
-	}
+var crosNonHardenedConfig = &config{
+	rootRelPath: "../../../../..",
+	commonFlags: []string{},
+	gccFlags: []string{
+		"-Wno-maybe-uninitialized",
+		"-Wno-unused-local-typedefs",
+		"-Wno-deprecated-declarations",
+		"-Wtrampolines",
+	},
+	// Temporarily disable tautological-*-compare chromium:778316.
+	// Temporarily add no-unknown-warning-option to deal with old clang versions.
+	// Temporarily disable Wsection since kernel gets a bunch of these. chromium:778867
+	clangFlags: []string{
+		"-Qunused-arguments",
+		"-Wno-tautological-constant-compare",
+		"-Wno-tautological-unsigned-enum-zero-compare",
+		"-Wno-unknown-warning-option",
+		"-Wno-section",
+		"-static-libgcc",
+	},
+	newWarningsDir: "/tmp/fatal_clang_warnings",
 }
 
 // Flags to be added to host toolchain.
-func getCrosHostConfig(oldWrapperPath string) *config {
-	return &config{
-		isHostWrapper:  true,
-		useCCache:      false,
-		rootRelPath:    "../..",
-		oldWrapperPath: oldWrapperPath,
-		commonFlags:    []string{},
-		gccFlags: []string{
-			"-Wno-maybe-uninitialized",
-			"-Wno-unused-local-typedefs",
-			"-Wno-deprecated-declarations",
-		},
-		// Temporarily disable tautological-*-compare chromium:778316.
-		// Temporarily add no-unknown-warning-option to deal with old clang versions.
-		clangFlags: []string{
-			"-Qunused-arguments",
-			"-grecord-gcc-switches",
-			"-fno-addrsig",
-			"-Wno-unused-local-typedefs",
-			"-Wno-deprecated-declarations",
-			"-Wno-tautological-constant-compare",
-			"-Wno-tautological-unsigned-enum-zero-compare",
-			"-Wno-unknown-warning-option",
-		},
-		newWarningsDir: "/tmp/fatal_clang_warnings",
-	}
+var crosHostConfig = &config{
+	isHostWrapper: true,
+	rootRelPath:   "../..",
+	commonFlags:   []string{},
+	gccFlags: []string{
+		"-Wno-maybe-uninitialized",
+		"-Wno-unused-local-typedefs",
+		"-Wno-deprecated-declarations",
+	},
+	// Temporarily disable tautological-*-compare chromium:778316.
+	// Temporarily add no-unknown-warning-option to deal with old clang versions.
+	clangFlags: []string{
+		"-Qunused-arguments",
+		"-grecord-gcc-switches",
+		"-fno-addrsig",
+		"-Wno-unused-local-typedefs",
+		"-Wno-deprecated-declarations",
+		"-Wno-tautological-constant-compare",
+		"-Wno-tautological-unsigned-enum-zero-compare",
+		"-Wno-unknown-warning-option",
+	},
+	newWarningsDir: "/tmp/fatal_clang_warnings",
 }

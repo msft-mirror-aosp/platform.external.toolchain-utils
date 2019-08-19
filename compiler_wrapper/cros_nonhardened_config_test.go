@@ -14,7 +14,11 @@ const crosNonHardenedGoldenDir = "testdata/cros_nonhardened_golden"
 func TestCrosNonHardenedConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		useCCache := true
-		ctx.updateConfig(getCrosNonHardenedConfig(useCCache, oldNonHardenedWrapperPathForTest))
+		cfg, err := getConfig("cros.nonhardened", useCCache, oldNonHardenedWrapperPathForTest, "123")
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx.updateConfig(cfg)
 
 		runGoldenRecords(ctx, crosNonHardenedGoldenDir, createSyswrapperGoldenInputs(ctx))
 	})

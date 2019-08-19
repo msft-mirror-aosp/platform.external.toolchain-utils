@@ -46,6 +46,11 @@ def write_readme(input_dir, output_dir, change_id):
     w.write(content.format(change_id=change_id))
 
 
+def write_version(output_dir, change_id):
+  with open(os.path.join(output_dir, 'VERSION'), 'w') as w:
+    w.write(change_id)
+
+
 def main():
   args = parse_args()
   input_dir = os.path.dirname(__file__)
@@ -54,6 +59,7 @@ def main():
   os.makedirs(args.output_dir)
   copy_files(input_dir, args.output_dir)
   write_readme(input_dir, args.output_dir, change_id)
+  write_version(args.output_dir, change_id)
 
 
 if __name__ == '__main__':

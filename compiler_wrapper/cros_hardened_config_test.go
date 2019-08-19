@@ -21,7 +21,11 @@ const crosHardenedNoCCacheGoldenDir = "testdata/cros_hardened_noccache_golden"
 func TestCrosHardenedConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		useCCache := true
-		ctx.updateConfig(getCrosHardenedConfig(useCCache, oldHardenedWrapperPathForTest))
+		cfg, err := getConfig("cros.hardened", useCCache, oldHardenedWrapperPathForTest, "123")
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx.updateConfig(cfg)
 
 		runGoldenRecords(ctx, crosHardenedGoldenDir, createSyswrapperGoldenInputs(ctx))
 	})
@@ -30,7 +34,11 @@ func TestCrosHardenedConfig(t *testing.T) {
 func TestCrosHardenedConfigWithoutCCache(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		useCCache := false
-		ctx.updateConfig(getCrosHardenedConfig(useCCache, oldHardenedWrapperPathForTest))
+		cfg, err := getConfig("cros.hardened", useCCache, oldHardenedWrapperPathForTest, "123")
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx.updateConfig(cfg)
 
 		// Create a copy of the old wrapper where the CCACHE_DEFAULT is false.
 		if ctx.cfg.oldWrapperPath != "" {

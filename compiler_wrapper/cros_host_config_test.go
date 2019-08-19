@@ -16,7 +16,12 @@ const crosGccHostGoldenDir = "testdata/cros_gcc_host_golden"
 
 func TestCrosClangHostConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		ctx.updateConfig(getCrosHostConfig(oldClangHostWrapperPathForTest))
+		useCCache := false
+		cfg, err := getConfig("cros.host", useCCache, oldClangHostWrapperPathForTest, "123")
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx.updateConfig(cfg)
 
 		gomaPath := path.Join(ctx.tempDir, "gomacc")
 		ctx.writeFile(gomaPath, "")
@@ -39,7 +44,12 @@ func TestCrosClangHostConfig(t *testing.T) {
 
 func TestCrosGccHostConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		ctx.updateConfig(getCrosHostConfig(oldGccHostWrapperPathForTest))
+		useCCache := false
+		cfg, err := getConfig("cros.host", useCCache, oldClangHostWrapperPathForTest, "123")
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx.updateConfig(cfg)
 
 		gomaPath := path.Join(ctx.tempDir, "gomacc")
 		ctx.writeFile(gomaPath, "")
