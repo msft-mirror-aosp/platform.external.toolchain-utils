@@ -9,11 +9,13 @@
 from __future__ import print_function
 
 import argparse
+import json
 import os
 import sys
 
 from assert_not_in_chroot import VerifyOutsideChroot
 from cros_utils import command_executer
+from cros_utils.buildbot_utils import ParseTryjobBuildbucketId
 from failure_modes import FailureModes
 from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption
 from get_llvm_hash import is_svn_option
@@ -211,7 +213,20 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
 
     # stderr can be noisy e.g. warnings when entering chroot, so ignore it.
     # e.g. cros_sdk:enter_chroot: Gclient cache dir "/tmp/git-cache" is not...
-    tryjob_results.append(out.rstrip())
+
+    buildbucket_id = int(ParseTryjobBuildbucketId(out.rstrip()))
+
+    tryjob_contents = json.loads(out.rstrip())
+
+    new_tryjob = {
+        'link': str(tryjob_contents[0]['url']),
+        'buildbucket_id': buildbucket_id,
+        'extra_cls': extra_change_lists,
+        'options': options,
+        'builder': [cur_builder]
+    }
+
+    tryjob_results.append(new_tryjob)
 
   return tryjob_results
 
