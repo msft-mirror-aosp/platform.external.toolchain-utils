@@ -45,7 +45,7 @@ func TestCrosClangHostConfig(t *testing.T) {
 func TestCrosGccHostConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		useCCache := false
-		cfg, err := getConfig("cros.host", useCCache, oldClangHostWrapperPathForTest, "123")
+		cfg, err := getConfig("cros.host", useCCache, oldGccHostWrapperPathForTest, "123")
 		if err != nil {
 			t.Fatal(err)
 		}
