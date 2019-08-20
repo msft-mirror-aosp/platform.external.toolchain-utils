@@ -72,24 +72,6 @@ func (env *processEnv) run(cmd *command, stdin io.Reader, stdout io.Writer, stde
 	execCmd.Stdin = stdin
 	execCmd.Stdout = stdout
 	execCmd.Stderr = stderr
-	_, stdinIsFile := stdin.(*os.File)
-	_, stdinIsBytesReader := stdin.(*bytes.Reader)
-	if stdin != nil && !stdinIsFile && !stdinIsBytesReader {
-		// We can't use execCmd.Run() here as that blocks if stdin blocks,
-		// even if the underlying process has already terminated. We care
-		// especially about the case when stdin is an io.TeeReader for os.Stdin.
-		// See https://github.com/golang/go/issues/7990 for more details.
-		if err := execCmd.Start(); err != nil {
-			return err
-		}
-		if _, err := execCmd.Process.Wait(); err != nil {
-			return err
-		}
-		// Closing Stdin here as we didn't wait for the read to finish via
-		// execCmd.Wait to prevent race conditions.
-		os.Stdin.Close()
-		return nil
-	}
 	return execCmd.Run()
 }
 

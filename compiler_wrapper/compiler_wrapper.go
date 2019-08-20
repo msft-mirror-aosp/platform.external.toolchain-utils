@@ -44,7 +44,7 @@ func callCompilerWithRunAndCompareToOldWrapper(env env, cfg *config, inputCmd *c
 	stdinBuffer := &bytes.Buffer{}
 	recordingEnv := &commandRecordingEnv{
 		env:         env,
-		stdinReader: io.TeeReader(env.stdin(), stdinBuffer),
+		stdinReader: teeStdinIfNeeded(env, inputCmd, stdinBuffer),
 	}
 	// Note: this won't do a real exec as recordingEnv redirects exec to run.
 	if exitCode, err = callCompilerInternal(recordingEnv, cfg, inputCmd); err != nil {
@@ -199,4 +199,18 @@ func printCompilerError(writer io.Writer, compilerErr error) {
 			"Internal error. Please report to chromeos-toolchain@google.com.\n%s\n",
 			compilerErr)
 	}
+}
+
+func teeStdinIfNeeded(env env, inputCmd *command, dest io.Writer) io.Reader {
+	// We can't use io.TeeReader unconditionally, as that would block
+	// calls to exec.Cmd.Run(), even if the underlying process has already
+	// terminated. See https://github.com/golang/go/issues/7990 for more details.
+	lastArg := ""
+	for _, arg := range inputCmd.Args {
+		if arg == "-" && lastArg != "-o" {
+			return io.TeeReader(env.stdin(), dest)
+		}
+		lastArg = arg
+	}
+	return env.stdin()
 }

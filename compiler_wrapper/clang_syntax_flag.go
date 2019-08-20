@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"io"
 )
 
 func processClangSyntaxFlag(builder *commandBuilder) (clangSyntax bool) {
@@ -29,7 +28,7 @@ func checkClangSyntax(env env, clangCmd *command, gccCmd *command) (exitCode int
 
 	stdinBuffer := &bytes.Buffer{}
 	exitCode, err = wrapSubprocessErrorWithSourceLoc(clangSyntaxCmd,
-		env.run(clangSyntaxCmd, io.TeeReader(env.stdin(), stdinBuffer), env.stdout(), env.stderr()))
+		env.run(clangSyntaxCmd, teeStdinIfNeeded(env, clangCmd, stdinBuffer), env.stdout(), env.stderr()))
 	if err != nil || exitCode != 0 {
 		return exitCode, err
 	}

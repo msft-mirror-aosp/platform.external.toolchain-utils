@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -27,7 +26,7 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 	}
 	originalStdinBuffer := &bytes.Buffer{}
 	originalExitCode, err := wrapSubprocessErrorWithSourceLoc(originalCmd,
-		env.run(originalCmd, io.TeeReader(env.stdin(), originalStdinBuffer), originalStdoutBuffer, originalStderrBuffer))
+		env.run(originalCmd, teeStdinIfNeeded(env, originalCmd, originalStdinBuffer), originalStdoutBuffer, originalStderrBuffer))
 	if err != nil {
 		return 0, err
 	}
