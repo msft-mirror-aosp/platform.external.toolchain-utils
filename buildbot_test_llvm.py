@@ -50,7 +50,7 @@ DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
 #  eve           x86_64   poppy        kabylake-u/r  4.4.*
 #  gale          armv7                               3.18
 #  grunt         x86_64   grunt        stoney ridge  4.14.*
-#  guado_moblab  x86_64                              3.14
+#  fizz-moblab   x86_64                              4.4
 #  kevin         aarch64  gru          rockchip-3399 4.4.* arm32 userspace
 #  kevin64       aarch64  gru          rockchip-3399 4.4.* arm64 userspace
 #  lakitu        x86_64                              4.4.*
@@ -71,7 +71,7 @@ TEST_BOARD = [
     # 'eve', tested by amd64-llvm-next-toolchain builder.
     'gale',
     'grunt',
-    'guado_moblab',
+    'fizz-moblab',
     # 'kevin', tested by arm64-llvm-next-toolchain builder.
     'kevin64',
     'lakitu',
