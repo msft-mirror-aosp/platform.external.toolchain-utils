@@ -36,6 +36,7 @@ func TestCrosClangHostConfig(t *testing.T) {
 			createBisectGoldenInputs(),
 			createForceDisableWErrorGoldenInputs(),
 			createClangTidyGoldenInputs(gomaEnv),
+			createClangHostWrapperInputs(),
 		}
 
 		runGoldenRecords(ctx, crosClangHostGoldenDir, goldenFiles)
@@ -61,8 +62,33 @@ func TestCrosGccHostConfig(t *testing.T) {
 			createGccPathGoldenInputs(ctx, gomaEnv),
 			createGoldenInputsForAllTargets("gcc", mainCc),
 			createGccArgsGoldenInputs(),
+			createGccHostWrapperInputs(),
 		}
 
 		runGoldenRecords(ctx, crosGccHostGoldenDir, goldenFiles)
 	})
+}
+
+func createClangHostWrapperInputs() goldenFile {
+	return goldenFile{
+		Name: "clang_host_wrapper.json",
+		Records: []goldenRecord{
+			{
+				WrapperCmd: newGoldenCmd("./clang", mainCc),
+				Cmds:       okResults,
+			},
+		},
+	}
+}
+
+func createGccHostWrapperInputs() goldenFile {
+	return goldenFile{
+		Name: "gcc_host_wrapper.json",
+		Records: []goldenRecord{
+			{
+				WrapperCmd: newGoldenCmd("./gcc", mainCc),
+				Cmds:       okResults,
+			},
+		},
+	}
 }

@@ -64,16 +64,22 @@ func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, err
 	basename := filepath.Base(cmd.Path)
 	nameParts := strings.Split(basename, "-")
 	target := builderTarget{}
-	if len(nameParts) == 4 {
+	switch len(nameParts) {
+	case 1:
+		// E.g. gcc
+		target = builderTarget{
+			compiler: nameParts[0],
+		}
+	case 4:
 		// E.g. armv7m-cros-eabi-gcc
 		target = builderTarget{
 			arch:     nameParts[0],
 			vendor:   nameParts[1],
-			sys:      "",
 			abi:      nameParts[2],
 			compiler: nameParts[3],
+			target:   basename[:strings.LastIndex(basename, "-")],
 		}
-	} else if len(nameParts) == 5 {
+	case 5:
 		// E.g. x86_64-cros-linux-gnu-gcc
 		target = builderTarget{
 			arch:     nameParts[0],
@@ -81,12 +87,12 @@ func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, err
 			sys:      nameParts[2],
 			abi:      nameParts[3],
 			compiler: nameParts[4],
+			target:   basename[:strings.LastIndex(basename, "-")],
 		}
-	} else {
+	default:
 		return nil, newErrorwithSourceLocf("unexpected compiler name pattern. Actual: %s", basename)
 	}
 
-	target.target = basename[:strings.LastIndex(basename, "-")]
 	var compilerType compilerType
 	switch {
 	case strings.HasPrefix(target.compiler, "clang"):
