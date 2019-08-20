@@ -165,8 +165,8 @@ func calcCommonPreUserArgs(builder *commandBuilder) {
 	builder.addPreUserArgs(builder.cfg.commonFlags...)
 	if !builder.cfg.isHostWrapper {
 		processPieFlags(builder)
-		processStackProtectorFlags(builder)
 		processThumbCodeFlags(builder)
+		processStackProtectorFlags(builder)
 		processX86Flags(builder)
 	}
 	processSanitizerFlags(builder)

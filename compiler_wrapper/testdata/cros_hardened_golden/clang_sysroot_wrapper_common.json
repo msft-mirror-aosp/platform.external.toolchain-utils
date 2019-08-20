@@ -214,6 +214,51 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
+        "path": "./armv7a-cros-linux-gnueabihf-clang",
+        "args": [
+          "-D__KERNEL__",
+          "main.cc"
+        ]
+      }
+    },
+    "cmds": [
+      {
+        "cmd": {
+          "path": "/usr/bin/ccache",
+          "args": [
+            "../../usr/bin/clang",
+            "--sysroot=/usr/armv7a-cros-linux-gnueabihf",
+            "-Qunused-arguments",
+            "-grecord-gcc-switches",
+            "-fno-addrsig",
+            "-Wno-tautological-constant-compare",
+            "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-unknown-warning-option",
+            "-Wno-section",
+            "-static-libgcc",
+            "-D_FORTIFY_SOURCE=2",
+            "-mthumb",
+            "-fno-stack-protector",
+            "-D__KERNEL__",
+            "main.cc",
+            "-B../../bin",
+            "-target",
+            "armv7a-cros-linux-gnueabihf"
+          ],
+          "env_updates": [
+            "CCACHE_BASEDIR=/usr/armv7a-cros-linux-gnueabihf",
+            "CCACHE_DIR=/var/cache/distfiles/ccache",
+            "CCACHE_UMASK=002",
+            "CCACHE_CPP2=yes"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
         "path": "./x86_64-cros-linux-gnu-clang",
         "args": [
           "--sysroot=xyz",

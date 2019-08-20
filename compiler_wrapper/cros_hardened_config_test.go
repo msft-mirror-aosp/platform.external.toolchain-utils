@@ -416,6 +416,11 @@ func createSysrootWrapperCommonGoldenInputs(compiler string, gomaEnv string) gol
 				Cmds:       okResults,
 			},
 			{
+				WrapperCmd: newGoldenCmd("./armv7a-cros-linux-gnueabihf-"+compiler,
+					"-D__KERNEL__", mainCc),
+				Cmds: okResults,
+			},
+			{
 				WrapperCmd: newGoldenCmd(wrapperPath, "--sysroot=xyz", mainCc),
 				Cmds:       okResults,
 			},
