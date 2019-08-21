@@ -62,6 +62,7 @@ func compareToOldWrapper(env env, cfg *config, inputCmd *command, stdinBuffer []
 		differences = append(differences, cmdDifferences)
 	}
 	if len(differences) > 0 {
+		printCmd(env, inputCmd)
 		return newErrorwithSourceLocf("wrappers differ:\n%s\nOld stderr:%s",
 			strings.Join(differences, "\n"),
 			stderr,
