@@ -33,13 +33,11 @@ func newProcessEnv() (env, error) {
 	if err != nil {
 		return nil, wrapErrorwithSourceLocf(err, "failed to read working directory")
 	}
-	// E.g. for "/proc/self/cwd"
-	// Don't use filepath.EvalSymlinks as that uses os.Getwd again...
-	fi, err := os.Lstat(wd)
-	if err != nil {
-		return nil, wrapErrorwithSourceLocf(err, "failed to stat working directory")
-	}
-	if fi.Mode()&os.ModeSymlink != 0 {
+	// Special case for linux when setting PWD=/proc/self/cwd.
+	// Don't do this for regular symlinked directories, as we are calculating
+	// the path to clang, and following a symlinked cwd first would make
+	// this calculation invalid.
+	if wd == "/proc/self/cwd" {
 		if wd, err = os.Readlink(wd); err != nil {
 			return nil, wrapErrorwithSourceLocf(err, "failed to read wd symlink %s", wd)
 		}
