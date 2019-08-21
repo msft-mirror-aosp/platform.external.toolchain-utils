@@ -20,6 +20,11 @@ import (
 
 const compareToOldWrapperFilePattern = "old_wrapper_compare"
 
+// Note: We can't rely on os.TempDir as that just returns the value of $TMPDIR,
+// which some packages set incorrectly.
+// E.g. dev-python/pygobject sets it to "`pwd`/pygobject-2.18.0".
+const tempDir = "/tmp"
+
 func compareToOldWrapper(env env, cfg *config, inputCmd *command, stdinBuffer []byte, newCmdResults []*commandResult, newExitCode int) error {
 	pythonStringEscaper := strings.NewReplacer("\n", "\\n", "'", "\\'")
 
@@ -200,7 +205,7 @@ func callOldShellWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, stdi
 	// TODO: Use strings.ReplaceAll once cros sdk uses golang >= 1.12
 	oldWrapperContent = strings.Replace(oldWrapperContent, "$0", cfg.CmdPath, -1)
 	cfg.OldWrapperContent = oldWrapperContent
-	mockFile, err := ioutil.TempFile("", filepattern)
+	mockFile, err := ioutil.TempFile(tempDir, filepattern)
 	if err != nil {
 		return 0, wrapErrorwithSourceLocf(err, "failed to create tempfile")
 	}
@@ -256,7 +261,7 @@ func callOldPythonWrapper(env env, cfg *oldWrapperConfig, inputCmd *command, std
 	oldWrapperContent = strings.Replace(oldWrapperContent, "__file__", "'"+cfg.WrapperPath+"'", -1)
 	cfg.OldWrapperContent = oldWrapperContent
 
-	mockFile, err := ioutil.TempFile("", filepattern)
+	mockFile, err := ioutil.TempFile(tempDir, filepattern)
 	if err != nil {
 		return 0, wrapErrorwithSourceLocf(err, "failed to create tempfile")
 	}
