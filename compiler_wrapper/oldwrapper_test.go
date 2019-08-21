@@ -224,8 +224,8 @@ func TestCompareToOldWrapperEscapeStdoutAndStderr(t *testing.T) {
 		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
 
 		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			io.WriteString(stdout, "a\n'b'")
-			io.WriteString(stderr, "c\n'd'")
+			io.WriteString(stdout, "a\n'b'\\")
+			io.WriteString(stderr, "c\n'd'\\")
 			writePythonMockWrapper(ctx, &mockWrapperConfig{
 				Cmds: []*mockWrapperCmd{
 					{
@@ -239,10 +239,10 @@ func TestCompareToOldWrapperEscapeStdoutAndStderr(t *testing.T) {
 
 		ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(clangX86_64, mainCc)))
-		if ctx.stdoutString() != "a\n'b'" {
+		if ctx.stdoutString() != "a\n'b'\\" {
 			t.Errorf("unexpected stdout. Got: %s", ctx.stdoutString())
 		}
-		if ctx.stderrString() != "c\n'd'" {
+		if ctx.stderrString() != "c\n'd'\\" {
 			t.Errorf("unexpected stderr. Got: %s", ctx.stderrString())
 		}
 	})

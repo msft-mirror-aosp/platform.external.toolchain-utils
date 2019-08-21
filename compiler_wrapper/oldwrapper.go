@@ -26,7 +26,7 @@ const compareToOldWrapperFilePattern = "old_wrapper_compare"
 const tempDir = "/tmp"
 
 func compareToOldWrapper(env env, cfg *config, inputCmd *command, stdinBuffer []byte, newCmdResults []*commandResult, newExitCode int) error {
-	pythonStringEscaper := strings.NewReplacer("\n", "\\n", "'", "\\'")
+	pythonStringEscaper := strings.NewReplacer("\n", "\\n", "'", "\\'", "\\", "\\\\")
 
 	oldWrapperCfg, err := newOldWrapperConfig(env, cfg, inputCmd)
 	if err != nil {
@@ -295,11 +295,13 @@ import subprocess
 
 init_env = os.environ.copy()
 
+{{if .MockCmds}}
 mockResults = [{{range .CmdResults}} {
 	'stdout': '{{.Stdout}}',
 	'stderr': '{{.Stderr}}',
 	'exitcode': {{.Exitcode}},
 },{{end}}]
+{{end}}
 
 def serialize_cmd(args):
 	current_env = os.environ
