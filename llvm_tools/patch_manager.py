@@ -500,12 +500,15 @@ def HandlePatches(svn_version,
                             svn_version < patch_metadata[1])
 
       if can_modify_patches:
-        # Add to the list only if the mode can potentially modify a patch
-        # or if the mode is 'remove_patches', then all patches that are
-        # applicable will be added to the updated .json file and all patches
-        # that are not applicable will be added to the remove patches list which
-        # will not be included in the updated .json file.
-        if patch_applicable or mode != FailureModes.REMOVE_PATCHES:
+        # Add to the list only if the mode can potentially modify a patch.
+        #
+        # If the mode is 'remove_patches', then all patches that are
+        # applicable or are from the future will be added to the updated .json
+        # file and all patches that are not applicable will be added to the
+        # remove patches list which will not be included in the updated .json
+        # file.
+        if patch_applicable or svn_version < patch_metadata[0] or \
+            mode != FailureModes.REMOVE_PATCHES:
           applicable_patches.append(cur_patch_dict)
         elif mode == FailureModes.REMOVE_PATCHES:
           removed_patches.append(path_to_patch)
