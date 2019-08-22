@@ -121,7 +121,7 @@ def GetPathToFilesDirectory(chroot_path, package):
   ret, chroot_ebuild_path, err = ce.ChrootRunCommandWOutput(
       chromeos_root=chroot_path,
       command='equery w %s' % package,
-      print_to_console=False)
+      print_to_console=ce.GetLogLevel() == 'verbose')
 
   if ret:  # Failed to get the absolute chroot path to package's ebuild.
     raise ValueError(
@@ -182,7 +182,8 @@ def _MoveSrcTreeHEADToGitHash(src_path, git_hash):
 
   move_head_cmd = 'git -C %s checkout %s' % (quote(src_path), git_hash)
 
-  ret, _, err = ce.RunCommandWOutput(move_head_cmd, print_to_console=False)
+  ret, _, err = ce.RunCommandWOutput(
+      move_head_cmd, print_to_console=ce.GetLogLevel() == 'verbose')
 
   if ret:  # Failed to checkout to 'git_hash'.
     raise ValueError('Failed to moved HEAD in %s to %s: %s' % (quote(src_path),
@@ -268,6 +269,14 @@ def main():
       args_output.chroot_path, args_output.llvm_version,
       args_output.patch_metadata_file, args_output.packages,
       FailureModes(args_output.failure_mode))
+
+  # Only 'disable_patches' and 'remove_patches' can potentially modify the patch
+  # metadata file.
+  if args_output.failure_mode == FailureModes.DISABLE_PATCHES.value or \
+      args_output.failure_mode == FailureModes.REMOVE_PATCHES.value:
+    print('The patch file %s has been modified for the packages:' %
+          args_output.patch_metadata_file)
+    print('\n'.join(args_output.packages))
 
 
 if __name__ == '__main__':

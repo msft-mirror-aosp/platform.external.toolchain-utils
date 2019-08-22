@@ -131,7 +131,9 @@ def GetChrootBuildPaths(chromeos_root, package_list):
 
     # Find the chroot path for the package.
     ret, chroot_path, err = ce.ChrootRunCommandWOutput(
-        chromeos_root=chromeos_root, command=equery_cmd, print_to_console=False)
+        chromeos_root=chromeos_root,
+        command=equery_cmd,
+        print_to_console=ce.GetLogLevel() == 'verbose')
 
     if ret:  # failed to get the chroot path
       raise ValueError('Failed to get chroot path for the package (%s): %s' %
@@ -268,7 +270,8 @@ def UpdateBuildLLVMNextHash(ebuild_path, llvm_hash, llvm_version):
 
   # Stage the changes.
   ret, _, err = ce.RunCommandWOutput(
-      'git -C %s add %s' % (parent_dir, ebuild_path), print_to_console=False)
+      'git -C %s add %s' % (parent_dir, ebuild_path),
+      print_to_console=ce.GetLogLevel() == 'verbose')
 
   if ret:  # failed to stage the changes
     raise ValueError('Failed to stage the ebuild for commit: %s' % err)
@@ -332,7 +335,7 @@ def UprevEbuild(symlink):
   # Stage the new symlink for commit.
   ret, _, err = ce.RunCommandWOutput(
       'git -C %s mv %s %s' % (path_to_symlink_dir, symlink, new_symlink),
-      print_to_console=False)
+      print_to_console=ce.GetLogLevel() == 'verbose')
 
   if ret:  # failed to stage the symlink for commit
     raise ValueError('Failed to stage the symlink for commit: %s' % err)
@@ -358,7 +361,8 @@ def _CreateRepo(path_to_repo_dir, llvm_hash):
       'repo start llvm-next-update-%s' % llvm_hash,
   ])
 
-  ret, _, err = ce.RunCommandWOutput(create_repo_cmd, print_to_console=False)
+  ret, _, err = ce.RunCommandWOutput(
+      create_repo_cmd, print_to_console=ce.GetLogLevel() == 'verbose')
 
   if ret:  # failed to create a repo for the changes
     raise ValueError('Failed to create the repo (llvm-next-update-%s): %s' %
@@ -385,7 +389,8 @@ def _DeleteRepo(path_to_repo_dir, llvm_hash):
       'git branch -D llvm-next-update-%s' % llvm_hash
   ])
 
-  ret, _, err = ce.RunCommandWOutput(delete_repo_cmd, print_to_console=False)
+  ret, _, err = ce.RunCommandWOutput(
+      delete_repo_cmd, print_to_console=ce.GetLogLevel() == 'verbose')
 
   if ret:  # failed to delete the repo
     raise ValueError('Failed to delete the repo (llvm-next-update-%s): %s' %
@@ -443,7 +448,8 @@ def UploadChanges(path_to_repo_dir, llvm_hash, commit_messages):
 
   commit_cmd = 'cd %s && git commit %s' % (path_to_repo_dir, commit_messages)
 
-  ret, _, err = ce.RunCommandWOutput(commit_cmd, print_to_console=False)
+  ret, _, err = ce.RunCommandWOutput(
+      commit_cmd, print_to_console=ce.GetLogLevel() == 'verbose')
 
   if ret:  # failed to commit the changes
     raise ValueError('Failed to create a commit for the changes: %s' % err)
@@ -453,7 +459,8 @@ def UploadChanges(path_to_repo_dir, llvm_hash, commit_messages):
       'yes | repo upload --br=llvm-next-update-%s --no-verify' % (
           path_to_repo_dir, llvm_hash)
 
-  ret, _, err = ce.RunCommandWOutput(upload_change_cmd, print_to_console=False)
+  ret, _, err = ce.RunCommandWOutput(
+      upload_change_cmd, print_to_console=ce.GetLogLevel() == 'verbose')
 
   if ret:  # failed to upload the changes for review
     raise ValueError('Failed to upload changes for review: %s' % err)
@@ -499,7 +506,7 @@ def RemovePatchesFromFilesDir(patches_to_remove):
   for cur_patch in patches_to_remove:
     ret, _, err = ce.RunCommandWOutput(
         'git -C %s rm -f %s' % (os.path.dirname(cur_patch), cur_patch),
-        print_to_console=False)
+        print_to_console=ce.GetLogLevel() == 'verbose')
 
     if ret:  # Failed to remove the patch in $FILESDIR.
       raise ValueError(
@@ -525,7 +532,8 @@ def StagePatchMetadataFileForCommit(patch_metadata_file_path):
   stage_patch_file = 'git -C %s add %s' % (
       os.path.dirname(patch_metadata_file_path), patch_metadata_file_path)
 
-  ret, _, err = ce.RunCommandWOutput(stage_patch_file, print_to_console=False)
+  ret, _, err = ce.RunCommandWOutput(
+      stage_patch_file, print_to_console=ce.GetLogLevel() == 'verbose')
 
   if ret:  # Failed to stage the patch metadata file for commit.
     raise ValueError('Failed to stage patch metadata file %s for commit: %s' %
