@@ -29,18 +29,18 @@ type processEnv struct {
 }
 
 func newProcessEnv() (env, error) {
-	wd, err := os.Getwd()
+	// Note: We are not using os.getwd() as this sometimes uses the value of the PWD
+	// env variable. This has the following problems:
+	// - if PWD=/proc/self/cwd, os.getwd() will return "/proc/self/cwd",
+	//   and we need to read the link to get the actual wd. However, we can't always
+	//   do this as we are calculating
+	//   the path to clang, and following a symlinked cwd first would make
+	//   this calculation invalid.
+	// - the old python wrapper doesn't respect the PWD env variable either, so if we
+	//   did we would fail the comparison to the old wrapper.
+	wd, err := os.Readlink("/proc/self/cwd")
 	if err != nil {
 		return nil, wrapErrorwithSourceLocf(err, "failed to read working directory")
-	}
-	// Special case for linux when setting PWD=/proc/self/cwd.
-	// Don't do this for regular symlinked directories, as we are calculating
-	// the path to clang, and following a symlinked cwd first would make
-	// this calculation invalid.
-	if wd == "/proc/self/cwd" {
-		if wd, err = os.Readlink(wd); err != nil {
-			return nil, wrapErrorwithSourceLocf(err, "failed to read wd symlink %s", wd)
-		}
 	}
 	return &processEnv{wd: wd}, nil
 }
