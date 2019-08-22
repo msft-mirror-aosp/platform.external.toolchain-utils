@@ -215,6 +215,9 @@ func TestCompareToOldShellWrapperCompilerCommand(t *testing.T) {
 
 		reset()
 		ctx.must(callCompiler(ctx, ctx.cfg, inputCmd))
+
+		reset()
+		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, " spaces ")))
 	})
 }
 

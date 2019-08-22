@@ -218,7 +218,7 @@ EXEC=exec
 function exec_mock {
 	echo command "$1" 1>&2
 	for arg in "${@:2}"; do
-		echo arg $arg 1>&2
+		echo arg "$arg" 1>&2
 	done
 	{{if .MockCmds}}
 	echo '{{(index .CmdResults 0).Stdout}}'
