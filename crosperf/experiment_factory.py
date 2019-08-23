@@ -51,10 +51,7 @@ telemetry_toolchain_old_perf_tests = [
     'tab_switching.top_10',
 ]
 telemetry_toolchain_perf_tests = [
-    'octane',
-    'kraken',
-    'speedometer',
-    'speedometer2',
+    'octane', 'kraken', 'speedometer', 'speedometer2', 'jetstream2'
 ]
 graphics_perf_tests = [
     'graphics_GLBench',
@@ -202,8 +199,8 @@ class ExperimentFactory(object):
         if '--story-filter=' in arg or '--story-tag-filter=' in arg:
           story_count += 1
           if story_count > 1:
-            raise RuntimeError("Only one story or story-tag filter allowed in "
-                               "a single benchmark run")
+            raise RuntimeError('Only one story or story-tag filter allowed in '
+                               'a single benchmark run')
           # Rename benchmark name with an extension of 'story'-option
           benchmark_name = '%s@@%s' % (benchmark_name, arg.split('=')[-1])
 
@@ -507,6 +504,6 @@ class ExperimentFactory(object):
       raise RuntimeError('Skylab tool not installed correctly, please try to '
                          'manually install it from %s' % setup_lab_tools)
     l.LogOutput('Skylab is installed at %s, please login before first use. '
-                'Login by running \'skylab login\' and follow instructions.' %
+                'Login by running "skylab login" and follow instructions.' %
                 SKYLAB_PATH)
     return False

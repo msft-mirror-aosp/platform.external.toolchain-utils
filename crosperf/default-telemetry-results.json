@@ -153,6 +153,9 @@
   "jetstream": [
     "Score"
   ],
+  "jetstream2": [
+    "Score"
+  ],
   "cros_ui_smoothness": [
     "ui_percentage_smooth"
   ],
