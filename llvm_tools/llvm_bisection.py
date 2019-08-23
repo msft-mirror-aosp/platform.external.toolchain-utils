@@ -15,6 +15,7 @@ import json
 import os
 
 from assert_not_in_chroot import VerifyOutsideChroot
+from get_llvm_hash import CreateTempLLVMRepo
 from get_llvm_hash import LLVMHash
 from modify_a_tryjob import AddTryjob
 from patch_manager import _ConvertToASCII
@@ -272,17 +273,17 @@ def GetRevisionsListAndHashList(start, end, parallel, src_path,
   new_llvm = LLVMHash()
 
   with new_llvm.CreateTempDirectory() as temp_dir:
-    if not src_path:
-      new_llvm.CloneLLVMRepo(temp_dir)
-      src_path = temp_dir
+    with CreateTempLLVMRepo(temp_dir) as new_repo:
+      if not src_path:
+        src_path = new_repo
 
-    # Get a list of revisions between start and end.
-    revisions = GetRevisionsBetweenBisection(start, end, parallel, src_path,
-                                             pending_revisions)
+      # Get a list of revisions between start and end.
+      revisions = GetRevisionsBetweenBisection(start, end, parallel, src_path,
+                                               pending_revisions)
 
-    git_hashes = [
-        new_llvm.GetGitHashForVersion(src_path, rev) for rev in revisions
-    ]
+      git_hashes = [
+          new_llvm.GetGitHashForVersion(src_path, rev) for rev in revisions
+      ]
 
   assert revisions, ('No revisions between start %d and end %d to create '
                      'tryjobs.' % (start, end))

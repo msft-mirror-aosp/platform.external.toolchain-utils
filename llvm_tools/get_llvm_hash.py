@@ -18,6 +18,115 @@ import subprocess
 import tempfile
 
 
+@contextmanager
+def CreateTempLLVMRepo(temp_dir):
+  """Adds a LLVM worktree to 'temp_dir'.
+
+  Creating a worktree because the LLVM source tree in
+  '../toolchain-utils/llvm_tools/llvm-project-copy' should not be modified.
+
+  This is useful for applying patches to a source tree but do not want to modify
+  the actual LLVM source tree in 'llvm-project-copy'.
+
+  Args:
+    temp_dir: An absolute path to the temporary directory to put the worktree in
+    (obtained via 'tempfile.mkdtemp()').
+
+  Returns:
+    The absolute path to 'temp_dir'.
+
+  Raises:
+    subprocess.CalledProcessError: Failed to remove the worktree.
+    ValueError: Failed to add a worktree.
+  """
+
+  abs_path_to_llvm_project_dir = GetAndUpdateLLVMProjectInLLVMTools()
+
+  add_worktree_cmd = [
+      'git', '-C', abs_path_to_llvm_project_dir, 'worktree', 'add', '--detach',
+      temp_dir, 'master'
+  ]
+
+  add_worktree_cmd_obj = subprocess.Popen(
+      add_worktree_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  _, stderr = add_worktree_cmd_obj.communicate()
+
+  if add_worktree_cmd_obj.returncode:
+    raise ValueError('Failed to add worktree for %s: %s' %
+                     (abs_path_to_llvm_project_dir, stderr))
+
+  try:
+    yield temp_dir
+  finally:
+    if os.path.isdir(temp_dir):
+      subprocess.check_output([
+          'git', '-C', abs_path_to_llvm_project_dir, 'worktree', 'remove', '-f',
+          temp_dir
+      ])
+
+
+def GetAndUpdateLLVMProjectInLLVMTools():
+  """Gets the absolute path to 'llvm-project-copy' directory in 'llvm_tools'.
+
+  The intent of this function is to avoid cloning the LLVM repo and then
+  discarding the contents of the repo. The function will create a directory
+  in '../toolchain-utils/llvm_tools' called 'llvm-project-copy' if this
+  directory does not exist yet. If it does not exist, then it will use the
+  LLVMHash() class to clone the LLVM repo into 'llvm-project-copy'. Otherwise,
+  it will clean the contents of that directory and then fetch from the chromium
+  LLVM mirror. In either case, this function will return the absolute path to
+  'llvm-project-copy' directory.
+
+  Raises:
+    ValueError: LLVM repo (in 'llvm-project-copy' dir.) has changes or failed to
+    checkout to master or failed to fetch from chromium mirror of LLVM.
+  """
+
+  abs_path_to_llvm_tools_dir = os.path.dirname(os.path.abspath(__file__))
+
+  abs_path_to_llvm_project_dir = os.path.join(abs_path_to_llvm_tools_dir,
+                                              'llvm-project-copy')
+
+  if not os.path.isdir(abs_path_to_llvm_project_dir):
+    os.mkdir(abs_path_to_llvm_project_dir)
+
+    LLVMHash().CloneLLVMRepo(abs_path_to_llvm_project_dir)
+  else:
+    # `git status` has a '-s'/'--short' option that shortens the output.
+    # With the '-s' option, if no changes were made to the LLVM repo, then the
+    # output (assigned to 'repo_status') would be empty.
+    repo_status = subprocess.check_output(
+        ['git', '-C', abs_path_to_llvm_project_dir, 'status', '-s'])
+
+    if repo_status.rstrip():
+      raise ValueError('LLVM repo in %s has changes, please remove.' %
+                       abs_path_to_llvm_project_dir)
+
+    checkout_to_master_cmd = [
+        'git', '-C', abs_path_to_llvm_project_dir, 'checkout', 'master'
+    ]
+
+    checkout_cmd_obj = subprocess.Popen(
+        checkout_to_master_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    _, stderr = checkout_cmd_obj.communicate()
+
+    if checkout_cmd_obj.returncode:
+      raise ValueError('Failed to checkout to master for %s: %s' %
+                       (abs_path_to_llvm_project_dir, stderr))
+
+    update_master_cmd = ['git', '-C', abs_path_to_llvm_project_dir, 'pull']
+
+    update_cmd_obj = subprocess.Popen(
+        update_master_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    _, stderr = update_cmd_obj.communicate()
+
+    if update_cmd_obj.returncode:
+      raise ValueError('Failed to fetch from chromium mirror of LLVM for %s: %s'
+                       % (abs_path_to_llvm_project_dir, stderr))
+
+  return abs_path_to_llvm_project_dir
+
+
 def GetGoogle3LLVMVersion():
   """Gets the latest google3 LLVM version.
 
@@ -99,7 +208,8 @@ def GetLLVMHashAndVersionFromSVNOption(svn_option):
     else:
       llvm_version = GetGoogle3LLVMVersion()
 
-    llvm_hash = new_llvm_hash.GetLLVMHash(llvm_version)
+    new_llvm_hash.GetGitHashForVersion(GetAndUpdateLLVMProjectInLLVMTools(),
+                                       llvm_version)
 
   return llvm_hash, llvm_version
 
@@ -266,12 +376,8 @@ class LLVMHash(object):
       The hash as a string that corresponds to the LLVM version.
     """
 
-    with self.CreateTempDirectory() as temp_dir:
-      # Clone the "llvm-project" repo.
-      self.CloneLLVMRepo(temp_dir)
-
-      # Find the git hash.
-      hash_value = self.GetGitHashForVersion(temp_dir, llvm_version)
+    hash_value = self.GetGitHashForVersion(GetAndUpdateLLVMProjectInLLVMTools(),
+                                           llvm_version)
 
     return hash_value
 

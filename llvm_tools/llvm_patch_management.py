@@ -16,6 +16,7 @@ import patch_manager
 from assert_not_in_chroot import VerifyOutsideChroot
 from cros_utils import command_executer
 from failure_modes import FailureModes
+from get_llvm_hash import CreateTempLLVMRepo
 from get_llvm_hash import GetGoogle3LLVMVersion
 from get_llvm_hash import LLVMHash
 
@@ -215,37 +216,34 @@ def UpdatePackagesPatchMetadataFile(chroot_path, svn_version,
 
   llvm_hash = LLVMHash()
 
-  with llvm_hash.CreateTempDirectory() as src_path:
-    # Clone from the chromium mirror to ensure that the git hashes are
-    # available.
-    llvm_hash.CloneLLVMRepo(src_path)
+  with llvm_hash.CreateTempDirectory() as temp_dir:
+    with CreateTempLLVMRepo(temp_dir) as src_path:
+      # Ensure that 'svn_version' exists in the chromiumum mirror of LLVM by
+      # finding its corresponding git hash.
+      git_hash = llvm_hash.GetGitHashForVersion(src_path, svn_version)
 
-    # Ensure that 'svn_version' exists in the chromiumum mirror of LLVM by
-    # finding its corresponding git hash.
-    git_hash = llvm_hash.GetGitHashForVersion(src_path, svn_version)
+      # Git hash of 'svn_version' exists, so move the source tree's HEAD to
+      # 'git_hash' via `git checkout`.
+      _MoveSrcTreeHEADToGitHash(src_path, git_hash)
 
-    # Git hash of 'svn_version' exists, so move the source tree's HEAD to
-    # 'git_hash' via `git checkout`.
-    _MoveSrcTreeHEADToGitHash(src_path, git_hash)
+      for cur_package in packages:
+        # Get the absolute path to $FILESDIR of the package.
+        filesdir_path = GetPathToFilesDirectory(chroot_path, cur_package)
 
-    for cur_package in packages:
-      # Get the absolute path to $FILESDIR of the package.
-      filesdir_path = GetPathToFilesDirectory(chroot_path, cur_package)
+        # Construct the absolute path to the patch metadata file where all the
+        # patches and their metadata are.
+        patch_metadata_path = os.path.join(filesdir_path, patch_metadata_file)
 
-      # Construct the absolute path to the patch metadata file where all the
-      # patches and their metadata are.
-      patch_metadata_path = os.path.join(filesdir_path, patch_metadata_file)
+        # Make sure the patch metadata path is valid.
+        _CheckPatchMetadataPath(patch_metadata_path)
 
-      # Make sure the patch metadata path is valid.
-      _CheckPatchMetadataPath(patch_metadata_path)
+        patch_manager.CleanSrcTree(src_path)
 
-      patch_manager.CleanSrcTree(src_path)
+        # Get the patch results for the current package.
+        patches_info = patch_manager.HandlePatches(
+            svn_version, patch_metadata_path, filesdir_path, src_path, mode)
 
-      # Get the patch results for the current package.
-      patches_info = patch_manager.HandlePatches(
-          svn_version, patch_metadata_path, filesdir_path, src_path, mode)
-
-      package_info[cur_package] = patches_info._asdict()
+        package_info[cur_package] = patches_info._asdict()
 
   return package_info
 
