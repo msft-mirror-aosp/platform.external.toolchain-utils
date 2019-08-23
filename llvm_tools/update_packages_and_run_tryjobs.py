@@ -8,6 +8,7 @@
 
 from __future__ import print_function
 
+from pipes import quote
 import argparse
 import json
 import os
@@ -205,7 +206,9 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
                                   cur_builder)
 
     ret, out, err = ce.ChrootRunCommandWOutput(
-        chromeos_root=chroot_path, command=tryjob_cmd, print_to_console=False)
+        chromeos_root=chroot_path,
+        command=tryjob_cmd,
+        print_to_console=log_level == 'verbose')
 
     if ret:  # Failed to submit a tryjob.
       print(err, file=sys.stderr)
@@ -228,7 +231,27 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
 
     tryjob_results.append(new_tryjob)
 
+  AddTryjobLinkToCL(tryjob_results, cl_number, chroot_path, log_level)
+
   return tryjob_results
+
+
+def AddTryjobLinkToCL(tryjobs, cl, chroot_path, log_level):
+  """Adds the tryjob link(s) to the CL via `gerrit message <CL> <message>`."""
+
+  tryjob_links = ['Started the following tryjobs:']
+  tryjob_links.extend(quote(tryjob['link']) for tryjob in tryjobs)
+
+  add_message_cmd = 'gerrit message %d \"%s\"' % (cl, '\n'.join(tryjob_links))
+
+  ce = command_executer.GetCommandExecuter(log_level=log_level)
+  ret, _, err = ce.ChrootRunCommandWOutput(
+      chromeos_root=chroot_path,
+      command=add_message_cmd,
+      print_to_console=log_level == 'verbose')
+
+  if ret:  # Failed to add tryjob link(s) to CL.
+    raise ValueError('Failed to add tryjob links to CL %d: %s' % (cl, err))
 
 
 def main():
@@ -278,7 +301,8 @@ def main():
                               args_output.chroot_path, args_output.log_level)
 
   print('Tryjobs:')
-  print('\n'.join(tryjob_results))
+  for tryjob in tryjob_results:
+    print(tryjob)
 
   # Updated the packages and submitted tryjobs successfully, so the file will
   # contain 'svn_version' which will now become the last tested svn version.
