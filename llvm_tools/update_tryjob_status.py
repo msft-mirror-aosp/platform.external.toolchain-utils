@@ -12,11 +12,13 @@ import argparse
 import enum
 import json
 import os
+import subprocess
 import sys
 
 from assert_not_in_chroot import VerifyOutsideChroot
 from cros_utils import command_executer
 from patch_manager import _ConvertToASCII
+from test_helpers import CreateTemporaryJsonFile
 
 
 class TryjobStatus(enum.Enum):
@@ -25,6 +27,11 @@ class TryjobStatus(enum.Enum):
   GOOD = 'good'
   BAD = 'bad'
   PENDING = 'pending'
+  SKIP = 'skip'
+
+  # Executes the script passed into the command line (this script's exit code
+  # determines the 'status' value of the tryjob).
+  CUSTOM_SCRIPT = 'custom_script'
 
   # Uses the result returned by 'cros buildresult'.
   AUTO = 'auto'
@@ -37,6 +44,28 @@ class BuilderStatus(enum.Enum):
   FAIL = 'fail'
   RUNNING = 'running'
 
+
+class CustomScriptStatus(enum.Enum):
+  """Exit code values of a custom script."""
+
+  # NOTE: Not using 1 for 'bad' because the custom script can raise an
+  # exception which would cause the exit code of the script to be 1, so the
+  # tryjob's 'status' would be updated when there is an exception.
+  #
+  # Exit codes are as follows:
+  #   0: 'good'
+  #   124: 'bad'
+  #   125: 'skip'
+  GOOD = 0
+  BAD = 124
+  SKIP = 125
+
+
+custom_script_exit_value_mapping = {
+    CustomScriptStatus.GOOD.value: TryjobStatus.GOOD.value,
+    CustomScriptStatus.BAD.value: TryjobStatus.BAD.value,
+    CustomScriptStatus.SKIP.value: TryjobStatus.SKIP.value
+}
 
 builder_status_mapping = {
     BuilderStatus.PASS.value: TryjobStatus.GOOD.value,
@@ -84,12 +113,26 @@ def GetCommandLineArgs():
       default=cros_root,
       help='the path to the chroot (default: %(default)s)')
 
+  # Add argument for the custom script to execute for the 'custom_script'
+  # option in '--set_status'.
+  parser.add_argument(
+      '--custom_script',
+      help='The absolute path to the custom script to execute (its exit code '
+      'should be %d for \'good\', %d for \'bad\', or %d for \'skip\')' %
+      (CustomScriptStatus.GOOD.value, CustomScriptStatus.BAD.value,
+       CustomScriptStatus.SKIP.value))
+
   args_output = parser.parse_args()
 
   if not os.path.isfile(args_output.status_file) or \
       not args_output.status_file.endswith('.json'):
     raise ValueError('File does not exist or does not ending in \'.json\' '
                      ': %s' % args_output.status_file)
+
+  if args_output.set_status == TryjobStatus.CUSTOM_SCRIPT.value and \
+      not args_output.custom_script:
+    raise ValueError('Please provide the absolute path to the script to '
+                     'execute.')
 
   return args_output
 
@@ -145,7 +188,8 @@ def GetStatusFromCrosBuildResult(chroot_path, buildbucket_id):
   return str(tryjob_contents['%d' % buildbucket_id]['status'])
 
 
-def UpdateTryjobStatus(revision, set_status, status_file, chroot_path):
+def UpdateTryjobStatus(revision, set_status, status_file, chroot_path,
+                       custom_script):
   """Updates a tryjob's 'status' field based off of 'set_status'.
 
   Args:
@@ -156,6 +200,8 @@ def UpdateTryjobStatus(revision, set_status, status_file, chroot_path):
       'cros buildresult'.
     status_file: The .JSON file that contains the tryjobs.
     chroot_path: The absolute path to the chroot (used by 'cros buildresult').
+    custom_script: The absolute path to a script that will be executed which
+    will determine the 'status' value of the tryjob.
   """
 
   # Format of 'bisect_contents':
@@ -202,6 +248,44 @@ def UpdateTryjobStatus(revision, set_status, status_file, chroot_path):
 
     bisect_contents['jobs'][tryjob_index]['status'] = builder_status_mapping[
         build_result]
+  elif set_status == TryjobStatus.SKIP:
+    bisect_contents['jobs'][tryjob_index]['status'] = TryjobStatus.SKIP.value
+  elif set_status == TryjobStatus.CUSTOM_SCRIPT:
+    # Create a temporary file to write the contents of the tryjob at index
+    # 'tryjob_index' (the temporary file path will be passed into the custom
+    # script as a command line argument).
+    with CreateTemporaryJsonFile() as temp_json_file:
+      with open(temp_json_file, 'w') as tryjob_file:
+        json.dump(
+            bisect_contents['jobs'][tryjob_index],
+            tryjob_file,
+            indent=4,
+            separators=(',', ': '))
+
+      exec_script_cmd = [custom_script, temp_json_file]
+
+      # Execute the custom script to get the exit code.
+      exec_script_cmd_obj = subprocess.Popen(
+          exec_script_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      _, stderr = exec_script_cmd_obj.communicate()
+
+      # Invalid exit code by the custom script.
+      if exec_script_cmd_obj.returncode not in custom_script_exit_value_mapping:
+        name_of_json_file = os.path.join(
+            os.path.dirname(status_file), os.path.basename(temp_json_file))
+        os.rename(temp_json_file, name_of_json_file)
+        raise ValueError(
+            'Custom script %s exit code %d did not match '
+            'any of the expected exit codes: %d for \'good\', %d '
+            'for \'bad\', or %d for \'skip\'\nPlease check %s for information '
+            'about the tryjob: %s' %
+            (custom_script, exec_script_cmd_obj.returncode,
+             CustomScriptStatus.GOOD.value, CustomScriptStatus.BAD.value,
+             CustomScriptStatus.SKIP.value, name_of_json_file, stderr))
+
+    bisect_contents['jobs'][tryjob_index][
+        'status'] = custom_script_exit_value_mapping[exec_script_cmd_obj
+                                                     .returncode]
   else:
     raise ValueError('Invalid \'set_status\' option provided: %s' % set_status)
 
@@ -217,7 +301,8 @@ def main():
   args_output = GetCommandLineArgs()
 
   UpdateTryjobStatus(args_output.revision, TryjobStatus(args_output.set_status),
-                     args_output.status_file, args_output.chroot_path)
+                     args_output.status_file, args_output.chroot_path,
+                     args_output.custom_script)
 
 
 if __name__ == '__main__':

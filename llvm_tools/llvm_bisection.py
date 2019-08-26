@@ -154,7 +154,8 @@ def GetStartAndEndRevision(start, end, tryjobs):
     ]
 
   Returns:
-    The new start version and end version for bisection.
+    The new start version and end version for bisection, a set of revisions
+    that are 'pending' and a set of revisions that are to be skipped.
 
   Raises:
     ValueError: The value for 'status' is missing or there is a mismatch
@@ -198,20 +199,32 @@ def GetStartAndEndRevision(start, end, tryjobs):
   # Find all revisions that are 'pending' within 'good_rev' and 'bad_rev'.
   #
   # NOTE: The intent is to not launch tryjobs between 'good_rev' and 'bad_rev'
-  # that have already been launched (this list is used when constructing the
+  # that have already been launched (this set is used when constructing the
   # list of revisions to launch tryjobs for).
-  pending_revisions = [
+  pending_revisions = {
       tryjob['rev']
       for tryjob in tryjobs
       if tryjob['status'] == TryjobStatus.PENDING.value and
       good_rev < tryjob['rev'] < bad_rev
-  ]
+  }
 
-  return good_rev, bad_rev, pending_revisions
+  # Find all revisions that are to be skipped within 'good_rev' and 'bad_rev'.
+  #
+  # NOTE: The intent is to not launch tryjobs between 'good_rev' and 'bad_rev'
+  # that have already been marked as 'skip' (this set is used when constructing
+  # the list of revisions to launch tryjobs for).
+  skip_revisions = {
+      tryjob['rev']
+      for tryjob in tryjobs
+      if tryjob['status'] == TryjobStatus.SKIP.value and
+      good_rev < tryjob['rev'] < bad_rev
+  }
+
+  return good_rev, bad_rev, pending_revisions, skip_revisions
 
 
 def GetRevisionsBetweenBisection(start, end, parallel, src_path,
-                                 pending_revisions):
+                                 pending_revisions, skip_revisions):
   """Gets the revisions between 'start' and 'end'.
 
   Sometimes, the LLVM source tree's revisions do not increment by 1 (there is
@@ -224,8 +237,10 @@ def GetRevisionsBetweenBisection(start, end, parallel, src_path,
     end: The end revision.
     parallel: The number of tryjobs to create between 'start' and 'end'.
     src_path: The absolute path to the LLVM source tree to use.
-    pending_revisions: A list of 'pending' revisions that are between 'start'
-    and 'end'.
+    pending_revisions: A set containing 'pending' revisions that are between
+    'start' and 'end'.
+    skip_revisions: A set containing revisions between 'start' and 'end' that
+    are to be skipped.
 
   Returns:
     A list of revisions between 'start' and 'end'.
@@ -242,7 +257,8 @@ def GetRevisionsBetweenBisection(start, end, parallel, src_path,
   # this.
   for cur_revision in range(start + 1, end):
     try:
-      if cur_revision not in pending_revisions:
+      if cur_revision not in pending_revisions and \
+          cur_revision not in skip_revisions:
         # Verify that the current revision exists by finding its corresponding
         # git hash in the LLVM source tree.
         new_llvm.GetGitHashForVersion(src_path, cur_revision)
@@ -258,16 +274,14 @@ def GetRevisionsBetweenBisection(start, end, parallel, src_path,
   if not index_step:
     index_step = 1
 
-  # Starting at 'index_step' because the first element would be close to
-  # 'start' (similar to ('parallel' + 1) for the last element).
   result = [valid_revisions[index] \
-            for index in range(index_step, len(valid_revisions), index_step)]
+            for index in range(0, len(valid_revisions), index_step)]
 
   return result
 
 
 def GetRevisionsListAndHashList(start, end, parallel, src_path,
-                                pending_revisions):
+                                pending_revisions, skip_revisions):
   """Determines the revisions between start and end."""
 
   new_llvm = LLVMHash()
@@ -278,15 +292,12 @@ def GetRevisionsListAndHashList(start, end, parallel, src_path,
         src_path = new_repo
 
       # Get a list of revisions between start and end.
-      revisions = GetRevisionsBetweenBisection(start, end, parallel, src_path,
-                                               pending_revisions)
+      revisions = GetRevisionsBetweenBisection(
+          start, end, parallel, src_path, pending_revisions, skip_revisions)
 
       git_hashes = [
           new_llvm.GetGitHashForVersion(src_path, rev) for rev in revisions
       ]
-
-  assert revisions, ('No revisions between start %d and end %d to create '
-                     'tryjobs.' % (start, end))
 
   return revisions, git_hashes
 
@@ -323,13 +334,25 @@ def main():
   _ValidateStartAndEndAgainstJSONStartAndEnd(
       start, end, bisect_contents['start'], bisect_contents['end'])
 
-  # Pending revisions are between 'start_revision' and 'end_revision'.
-  start_revision, end_revision, pending_revisions = GetStartAndEndRevision(
-      start, end, bisect_contents['jobs'])
+  # Pending and skipped revisions are between 'start_revision' and
+  # 'end_revision'.
+  start_revision, end_revision, pending_revisions, skip_revisions = \
+      GetStartAndEndRevision(start, end, bisect_contents['jobs'])
 
   revisions, git_hashes = GetRevisionsListAndHashList(
       start_revision, end_revision, args_output.parallel, args_output.src_path,
-      pending_revisions)
+      pending_revisions, skip_revisions)
+
+  if not revisions:
+    no_revisions_message = (
+        'No revisions between start %d and end '
+        '%d to create tryjobs' % (start_revision, end_revision))
+
+    if skip_revisions:
+      no_revisions_message += '\nThe following tryjobs were skipped:\n' \
+          + '\n'.join(str(rev) for rev in skip_revisions)
+
+    raise ValueError(no_revisions_message)
 
   # Check if any revisions that are going to be added as a tryjob exist already
   # in the 'jobs' list.

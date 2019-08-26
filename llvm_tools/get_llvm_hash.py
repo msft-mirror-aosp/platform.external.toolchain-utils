@@ -18,6 +18,19 @@ import subprocess
 import tempfile
 
 
+def CheckCommand(cmd):
+  """Executes the command using Popen()."""
+
+  cmd_obj = subprocess.Popen(
+      cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+  stdout, _ = cmd_obj.communicate()
+
+  if cmd_obj.returncode:
+    print(stdout)
+    raise subprocess.CalledProcessError(cmd_obj.returncode, cmd)
+
+
 @contextmanager
 def CreateTempLLVMRepo(temp_dir):
   """Adds a LLVM worktree to 'temp_dir'.
@@ -47,13 +60,7 @@ def CreateTempLLVMRepo(temp_dir):
       temp_dir, 'master'
   ]
 
-  add_worktree_cmd_obj = subprocess.Popen(
-      add_worktree_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  _, stderr = add_worktree_cmd_obj.communicate()
-
-  if add_worktree_cmd_obj.returncode:
-    raise ValueError('Failed to add worktree for %s: %s' %
-                     (abs_path_to_llvm_project_dir, stderr))
+  CheckCommand(add_worktree_cmd)
 
   try:
     yield temp_dir
@@ -106,23 +113,11 @@ def GetAndUpdateLLVMProjectInLLVMTools():
         'git', '-C', abs_path_to_llvm_project_dir, 'checkout', 'master'
     ]
 
-    checkout_cmd_obj = subprocess.Popen(
-        checkout_to_master_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    _, stderr = checkout_cmd_obj.communicate()
-
-    if checkout_cmd_obj.returncode:
-      raise ValueError('Failed to checkout to master for %s: %s' %
-                       (abs_path_to_llvm_project_dir, stderr))
+    CheckCommand(checkout_to_master_cmd)
 
     update_master_cmd = ['git', '-C', abs_path_to_llvm_project_dir, 'pull']
 
-    update_cmd_obj = subprocess.Popen(
-        update_master_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    _, stderr = update_cmd_obj.communicate()
-
-    if update_cmd_obj.returncode:
-      raise ValueError('Failed to fetch from chromium mirror of LLVM for %s: %s'
-                       % (abs_path_to_llvm_project_dir, stderr))
+    CheckCommand(update_master_cmd)
 
   return abs_path_to_llvm_project_dir
 
