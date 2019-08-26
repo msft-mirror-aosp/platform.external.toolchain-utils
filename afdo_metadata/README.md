@@ -6,7 +6,8 @@ used to compile packages (Chrome and kernel) in Chrome OS.
 kernel_afdo.json contains the name of the latest AFDO profiles for each
 kernel revision.
 
-#FIXME(tcwang): Add description of Chrome AFDO.
+chrome_afdo.json contains the name of the latest AFDO profiles used in
+latest Chrome revision, including both benchmark and CWP profiles.
 
 # Usage
 ## Updates

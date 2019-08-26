@@ -1,0 +1,14 @@
+{
+    "benchmark": {
+	"name": "chromeos-chrome-amd64-78.0.3877.0_rc-r1.afdo"
+    },
+    "silvermont": {
+	"name": "R78-3849.0-1565003983.afdo"
+    },
+    "airmont": {
+	"name": "R78-3849.0-1564999971.afdo"
+    },
+    "broadwell": {
+	"name": "R78-3849.0-1565001978.afdo"
+    }
+}
