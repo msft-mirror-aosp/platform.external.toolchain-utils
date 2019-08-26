@@ -297,6 +297,10 @@ func createClangPathGoldenInputs(ctx *testContext, gomaEnv string) goldenFile {
 				Cmds:       okResults,
 			},
 			{
+				WrapperCmd: newGoldenCmd("somedir/x86_64-cros-linux-gnu-clang", mainCc),
+				Cmds:       okResults,
+			},
+			{
 				Env:        []string{"PATH=" + filepath.Join(ctx.tempDir, "/pathenv")},
 				WrapperCmd: newGoldenCmd("x86_64-cros-linux-gnu-clang", mainCc),
 				Cmds:       okResults,

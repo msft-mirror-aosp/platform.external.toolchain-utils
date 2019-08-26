@@ -429,6 +429,44 @@
   },
   {
     "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "path": "somedir/x86_64-cros-linux-gnu-clang",
+        "args": [
+          "main.cc"
+        ]
+      }
+    },
+    "cmds": [
+      {
+        "cmd": {
+          "path": "/usr/bin/ccache",
+          "args": [
+            "../../usr/bin/clang",
+            "--sysroot=/usr/x86_64-cros-linux-gnu",
+            "-Qunused-arguments",
+            "-Wno-tautological-constant-compare",
+            "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-unknown-warning-option",
+            "-Wno-section",
+            "-static-libgcc",
+            "main.cc",
+            "-B../../bin",
+            "-target",
+            "x86_64-cros-linux-gnu"
+          ],
+          "env_updates": [
+            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
+            "CCACHE_DIR=/var/cache/distfiles/ccache",
+            "CCACHE_UMASK=002",
+            "CCACHE_CPP2=yes"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "wd": "/tmp/stable",
     "env": [
       "PATH=/tmp/stable/pathenv"
     ],

@@ -14,7 +14,9 @@ import (
 
 func callCompiler(env env, cfg *config, inputCmd *command) int {
 	var compilerErr error
-	if !filepath.IsAbs(inputCmd.Path) && !strings.HasPrefix(inputCmd.Path, ".") {
+
+	if !filepath.IsAbs(inputCmd.Path) && !strings.HasPrefix(inputCmd.Path, ".") &&
+		!strings.ContainsRune(inputCmd.Path, filepath.Separator) {
 		if resolvedPath, err := resolveAgainstPathEnv(env, inputCmd.Path); err == nil {
 			inputCmd = &command{
 				Path:       resolvedPath,

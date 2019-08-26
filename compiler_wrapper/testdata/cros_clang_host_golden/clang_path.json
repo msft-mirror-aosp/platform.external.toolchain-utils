@@ -345,6 +345,35 @@
   },
   {
     "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "path": "somedir/x86_64-cros-linux-gnu-clang",
+        "args": [
+          "main.cc"
+        ]
+      }
+    },
+    "cmds": [
+      {
+        "cmd": {
+          "path": "/tmp/stable/somedir/clang",
+          "args": [
+            "-Qunused-arguments",
+            "-grecord-gcc-switches",
+            "-fno-addrsig",
+            "-Wno-unused-local-typedefs",
+            "-Wno-deprecated-declarations",
+            "-Wno-tautological-constant-compare",
+            "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-unknown-warning-option",
+            "main.cc"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "wd": "/tmp/stable",
     "env": [
       "PATH=/tmp/stable/pathenv"
     ],
