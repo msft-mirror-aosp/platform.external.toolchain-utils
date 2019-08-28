@@ -203,8 +203,8 @@ def GetLLVMHashAndVersionFromSVNOption(svn_option):
     else:
       llvm_version = GetGoogle3LLVMVersion()
 
-    new_llvm_hash.GetGitHashForVersion(GetAndUpdateLLVMProjectInLLVMTools(),
-                                       llvm_version)
+    llvm_hash = new_llvm_hash.GetGitHashForVersion(
+        GetAndUpdateLLVMProjectInLLVMTools(), llvm_version)
 
   return llvm_hash, llvm_version
 
