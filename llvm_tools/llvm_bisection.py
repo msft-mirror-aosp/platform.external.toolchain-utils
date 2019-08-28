@@ -165,7 +165,7 @@ def GetStartAndEndRevision(start, end, tryjobs):
   """
 
   if not tryjobs:
-    return start, end, []
+    return start, end, {}, {}
 
   # Verify that each tryjob has a value for the 'status' key.
   for cur_tryjob_dict in tryjobs:
@@ -333,7 +333,8 @@ def main():
 
   _ValidateStartAndEndAgainstJSONStartAndEnd(
       start, end, bisect_contents['start'], bisect_contents['end'])
-
+  print(start, end)
+  print(bisect_contents['jobs'])
   # Pending and skipped revisions are between 'start_revision' and
   # 'end_revision'.
   start_revision, end_revision, pending_revisions, skip_revisions = \
