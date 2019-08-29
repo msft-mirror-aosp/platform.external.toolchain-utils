@@ -270,9 +270,12 @@ class SuiteRunner(object):
 
   def Skylab_Run(self, label, benchmark, test_args, profiler_args):
     """Run the test via skylab.."""
-    options = ''
+    # Skylab by default uses cros_test_platform to start test.
+    # We don't use it for now since we want to directly interact with dut.
+    options = '-bb=false'
+
     if benchmark.suite != 'telemetry_Crosperf':
-      options += '-client-test'
+      options += ' -client-test'
     if label.board:
       options += ' -board=%s' % label.board
     if label.build:
@@ -300,10 +303,10 @@ class SuiteRunner(object):
 
     dimensions = ''
     for dut in label.remote:
-      dimensions += ' dut_name:%s' % dut.rstrip('.cros')
+      dimensions += ' -dim dut_name:%s' % dut.rstrip('.cros')
 
     command = (('%s create-test %s %s %s') % \
-              (SKYLAB_PATH, options, benchmark.test_name, dimensions))
+              (SKYLAB_PATH, dimensions, options, benchmark.test_name))
 
     if self.log_level != 'verbose':
       self.logger.LogOutput('Starting skylab test.')
@@ -319,7 +322,7 @@ class SuiteRunner(object):
     # We want to parse it and get the id number of the task.
     task_id = ret_tup[1].strip().split('id=')[1]
 
-    command = ('skylab wait-task %s' % (task_id))
+    command = ('skylab wait-task -bb=false %s' % (task_id))
     if self.log_level != 'verbose':
       self.logger.LogOutput('Waiting for skylab test to finish.')
       self.logger.LogOutput('CMD: %s' % command)

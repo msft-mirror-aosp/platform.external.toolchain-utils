@@ -327,13 +327,14 @@ class SuiteRunnerTest(unittest.TestCase):
     args_list = mock_runcmd.call_args_list[0][0]
     args_dict = mock_runcmd.call_args_list[0][1]
     self.assertEqual(args_list[0],
-                     ('/usr/local/bin/skylab create-test -client-test '
-                      '-board=lumpy -image=build -pool=DUT_POOL_QUOTA '
-                      'octane  dut_name:lumpy1 dut_name:lumpy.cros2'))
+                     ('/usr/local/bin/skylab create-test  '
+                      '-dim dut_name:lumpy1 -dim dut_name:lumpy.cros2 '
+                      '-bb=false -client-test -board=lumpy -image=build '
+                      '-pool=DUT_POOL_QUOTA octane'))
     self.assertEqual(args_dict['command_terminator'], self.mock_cmd_term)
 
     args_list = mock_runcmd.call_args_list[1][0]
-    self.assertEqual(args_list[0], ('skylab wait-task 12345'))
+    self.assertEqual(args_list[0], ('skylab wait-task -bb=false 12345'))
     self.assertEqual(args_dict['command_terminator'], self.mock_cmd_term)
 
   @mock.patch.object(time, 'sleep')
