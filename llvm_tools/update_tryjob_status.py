@@ -188,6 +188,71 @@ def GetStatusFromCrosBuildResult(chroot_path, buildbucket_id):
   return str(tryjob_contents['%d' % buildbucket_id]['status'])
 
 
+def GetAutoResult(chroot_path, buildbucket_id):
+  """Returns the conversion of the result of 'cros buildresult'."""
+
+  # Calls 'cros buildresult' to get the status of the tryjob.
+  build_result = GetStatusFromCrosBuildResult(chroot_path, buildbucket_id)
+
+  # The string returned by 'cros buildresult' might not be in the mapping.
+  if build_result not in builder_status_mapping:
+    raise ValueError(
+        '\'cros buildresult\' return value is invalid: %s' % build_result)
+
+  return builder_status_mapping[build_result]
+
+
+def GetCustomScriptResult(custom_script, status_file, tryjob_contents):
+  """Returns the conversion of the exit code of the custom script.
+
+  Args:
+    custom_script: Absolute path to the script to be executed.
+    status_file: Absolute path to the file that contains information about the
+    bisection of LLVM.
+    tryjob_contents: A dictionary of the contents of the tryjob (e.g. 'status',
+    'url', 'link', 'buildbucket_id', etc.).
+
+  Returns:
+    The exit code conversion to either return 'good', 'bad', or 'skip'.
+
+  Raises:
+    ValueError: The custom script failed to provide the correct exit code.
+  """
+
+  # Create a temporary file to write the contents of the tryjob at index
+  # 'tryjob_index' (the temporary file path will be passed into the custom
+  # script as a command line argument).
+  with CreateTemporaryJsonFile() as temp_json_file:
+    with open(temp_json_file, 'w') as tryjob_file:
+      json.dump(tryjob_contents, tryjob_file, indent=4, separators=(',', ': '))
+
+    exec_script_cmd = [custom_script, temp_json_file]
+
+    # Execute the custom script to get the exit code.
+    exec_script_cmd_obj = subprocess.Popen(
+        exec_script_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    _, stderr = exec_script_cmd_obj.communicate()
+
+    # Invalid exit code by the custom script.
+    if exec_script_cmd_obj.returncode not in custom_script_exit_value_mapping:
+      # Save the .JSON file to the directory of 'status_file'.
+      name_of_json_file = os.path.join(
+          os.path.dirname(status_file), os.path.basename(temp_json_file))
+
+      os.rename(temp_json_file, name_of_json_file)
+
+      raise ValueError(
+          'Custom script %s exit code %d did not match '
+          'any of the expected exit codes: %d for \'good\', %d '
+          'for \'bad\', or %d for \'skip\'.\nPlease check %s for information '
+          'about the tryjob: %s' %
+          (custom_script, exec_script_cmd_obj.returncode,
+           CustomScriptStatus.GOOD.value, CustomScriptStatus.BAD.value,
+           CustomScriptStatus.SKIP.value, name_of_json_file, stderr))
+
+  return custom_script_exit_value_mapping[exec_script_cmd_obj.returncode]
+
+
 def UpdateTryjobStatus(revision, set_status, status_file, chroot_path,
                        custom_script):
   """Updates a tryjob's 'status' field based off of 'set_status'.
@@ -236,56 +301,13 @@ def UpdateTryjobStatus(revision, set_status, status_file, chroot_path,
   elif set_status == TryjobStatus.PENDING:
     bisect_contents['jobs'][tryjob_index]['status'] = TryjobStatus.PENDING.value
   elif set_status == TryjobStatus.AUTO:
-    # Calls 'cros buildresult' and uses the mapping to assign the value to
-    # 'status'.
-    build_result = GetStatusFromCrosBuildResult(
+    bisect_contents['jobs'][tryjob_index]['status'] = GetAutoResult(
         chroot_path, bisect_contents['jobs'][tryjob_index]['buildbucket_id'])
-
-    # The string returned by 'cros buildresult' might not be in the mapping.
-    if build_result not in builder_status_mapping:
-      raise ValueError(
-          '\'cros buildresult\' return value is invalid: %s' % build_result)
-
-    bisect_contents['jobs'][tryjob_index]['status'] = builder_status_mapping[
-        build_result]
   elif set_status == TryjobStatus.SKIP:
     bisect_contents['jobs'][tryjob_index]['status'] = TryjobStatus.SKIP.value
   elif set_status == TryjobStatus.CUSTOM_SCRIPT:
-    # Create a temporary file to write the contents of the tryjob at index
-    # 'tryjob_index' (the temporary file path will be passed into the custom
-    # script as a command line argument).
-    with CreateTemporaryJsonFile() as temp_json_file:
-      with open(temp_json_file, 'w') as tryjob_file:
-        json.dump(
-            bisect_contents['jobs'][tryjob_index],
-            tryjob_file,
-            indent=4,
-            separators=(',', ': '))
-
-      exec_script_cmd = [custom_script, temp_json_file]
-
-      # Execute the custom script to get the exit code.
-      exec_script_cmd_obj = subprocess.Popen(
-          exec_script_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-      _, stderr = exec_script_cmd_obj.communicate()
-
-      # Invalid exit code by the custom script.
-      if exec_script_cmd_obj.returncode not in custom_script_exit_value_mapping:
-        name_of_json_file = os.path.join(
-            os.path.dirname(status_file), os.path.basename(temp_json_file))
-        os.rename(temp_json_file, name_of_json_file)
-        raise ValueError(
-            'Custom script %s exit code %d did not match '
-            'any of the expected exit codes: %d for \'good\', %d '
-            'for \'bad\', or %d for \'skip\'\nPlease check %s for information '
-            'about the tryjob: %s' %
-            (custom_script, exec_script_cmd_obj.returncode,
-             CustomScriptStatus.GOOD.value, CustomScriptStatus.BAD.value,
-             CustomScriptStatus.SKIP.value, name_of_json_file, stderr))
-
-    bisect_contents['jobs'][tryjob_index][
-        'status'] = custom_script_exit_value_mapping[exec_script_cmd_obj
-                                                     .returncode]
+    bisect_contents['jobs'][tryjob_index]['status'] = GetCustomScriptResult(
+        custom_script, status_file, bisect_contents['jobs'][tryjob_index])
   else:
     raise ValueError('Invalid \'set_status\' option provided: %s' % set_status)
 

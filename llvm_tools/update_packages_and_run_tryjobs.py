@@ -10,6 +10,7 @@ from __future__ import print_function
 
 from pipes import quote
 import argparse
+import datetime
 import json
 import os
 import sys
@@ -217,11 +218,14 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
     # stderr can be noisy e.g. warnings when entering chroot, so ignore it.
     # e.g. cros_sdk:enter_chroot: Gclient cache dir "/tmp/git-cache" is not...
 
+    tryjob_launch_time = datetime.datetime.utcnow()
+
     buildbucket_id = int(ParseTryjobBuildbucketId(out.rstrip()))
 
     tryjob_contents = json.loads(out.rstrip())
 
     new_tryjob = {
+        'launch_time': str(tryjob_launch_time),
         'link': str(tryjob_contents[0]['url']),
         'buildbucket_id': buildbucket_id,
         'extra_cls': extra_change_lists,

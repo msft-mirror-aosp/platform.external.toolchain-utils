@@ -10,9 +10,11 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
+import enum
 import errno
 import json
 import os
+import sys
 
 from assert_not_in_chroot import VerifyOutsideChroot
 from get_llvm_hash import CreateTempLLVMRepo
@@ -21,6 +23,13 @@ from modify_a_tryjob import AddTryjob
 from patch_manager import _ConvertToASCII
 from update_tryjob_status import FindTryjobIndex
 from update_tryjob_status import TryjobStatus
+
+
+class BisectionExitStatus(enum.Enum):
+  """Exit code when performing bisection."""
+
+  # Means that there are no more revisions available to bisect.
+  BISECTION_COMPLETE = 126
 
 
 def is_file_and_json(json_file):
@@ -302,7 +311,69 @@ def GetRevisionsListAndHashList(start, end, parallel, src_path,
   return revisions, git_hashes
 
 
-def main():
+def DieWithNoRevisionsError(start, end, skip_revisions, pending_revisions):
+  """Raises a ValueError exception with useful information."""
+
+  no_revisions_message = ('No revisions between start %d and end '
+                          '%d to create tryjobs' % (start, end))
+
+  if pending_revisions:
+    no_revisions_message += '\nThe following tryjobs are pending:\n' \
+        + '\n'.join(str(rev) for rev in pending_revisions)
+
+  if skip_revisions:
+    no_revisions_message += '\nThe following tryjobs were skipped:\n' \
+        + '\n'.join(str(rev) for rev in skip_revisions)
+
+  raise ValueError(no_revisions_message)
+
+
+def CheckForExistingTryjobsInRevisionsToLaunch(revisions, jobs):
+  """Checks if a revision in 'revisions' exists in 'jobs' list."""
+
+  for rev in revisions:
+    if FindTryjobIndex(rev, jobs) is not None:
+      raise ValueError('Revision %d exists already in \'jobs\'' % rev)
+
+
+def UpdateBisection(revisions, git_hashes, bisect_contents, last_tested,
+                    update_packages, chroot_path, patch_metadata_file,
+                    extra_change_lists, options, builder, log_level):
+  """Adds tryjobs and updates the status file with the new tryjobs."""
+
+  try:
+    for svn_revision, git_hash in zip(revisions, git_hashes):
+      tryjob_dict = AddTryjob(update_packages, git_hash, svn_revision,
+                              chroot_path, patch_metadata_file,
+                              extra_change_lists, options, builder, log_level,
+                              svn_revision)
+
+      bisect_contents['jobs'].append(tryjob_dict)
+  finally:
+    # Do not want to lose progress if there is an exception.
+    if last_tested:
+      new_file = '%s.new' % last_tested
+      with open(new_file, 'w') as json_file:
+        json.dump(bisect_contents, json_file, indent=4, separators=(',', ': '))
+
+      os.rename(new_file, last_tested)
+
+
+def _NoteCompletedBisection(last_tested, src_path, end):
+  """Prints that bisection is complete."""
+
+  print('Finished bisecting for %s' % last_tested)
+
+  if src_path:
+    bad_llvm_hash = LLVMHash().GetGitHashForVersion(src_path, end)
+  else:
+    bad_llvm_hash = LLVMHash().GetLLVMHash(end)
+
+  print(
+      'The bad revision is %d and its commit hash is %s' % (end, bad_llvm_hash))
+
+
+def main(args_output):
   """Bisects LLVM based off of a .JSON file.
 
   Raises:
@@ -310,8 +381,6 @@ def main():
   """
 
   VerifyOutsideChroot()
-
-  args_output = GetCommandLineArgs()
 
   update_packages = [
       'sys-devel/llvm', 'sys-libs/compiler-rt', 'sys-libs/libcxx',
@@ -333,8 +402,7 @@ def main():
 
   _ValidateStartAndEndAgainstJSONStartAndEnd(
       start, end, bisect_contents['start'], bisect_contents['end'])
-  print(start, end)
-  print(bisect_contents['jobs'])
+
   # Pending and skipped revisions are between 'start_revision' and
   # 'end_revision'.
   start_revision, end_revision, pending_revisions, skip_revisions = \
@@ -344,41 +412,47 @@ def main():
       start_revision, end_revision, args_output.parallel, args_output.src_path,
       pending_revisions, skip_revisions)
 
+  # No more revisions between 'start_revision' and 'end_revision', so
+  # bisection is complete.
+  #
+  # This is determined by finding all valid revisions between 'start_revision'
+  # and 'end_revision' and that are NOT in the 'pending' and 'skipped' set.
   if not revisions:
-    no_revisions_message = (
-        'No revisions between start %d and end '
-        '%d to create tryjobs' % (start_revision, end_revision))
+    # Successfully completed bisection where there are 2 cases:
+    # 1) 'start_revision' and 'end_revision' are back-to-back (example:
+    # 'start_revision' is 369410 and 'end_revision' is 369411).
+    #
+    # 2) 'start_revision' and 'end_revision' are NOT back-to-back, so there must
+    # be tryjobs in between which are labeled as 'skip' for their 'status'
+    # value.
+    #
+    # In either case, there are no 'pending' jobs.
+    if not pending_revisions:
+      _NoteCompletedBisection(args_output.last_tested, args_output.src_path,
+                              end_revision)
 
-    if skip_revisions:
-      no_revisions_message += '\nThe following tryjobs were skipped:\n' \
-          + '\n'.join(str(rev) for rev in skip_revisions)
+      if skip_revisions:
+        skip_revisions_message = ('\nThe following revisions were skipped:\n' +
+                                  '\n'.join(str(rev) for rev in skip_revisions))
 
-    raise ValueError(no_revisions_message)
+        print(skip_revisions_message)
 
-  # Check if any revisions that are going to be added as a tryjob exist already
-  # in the 'jobs' list.
-  for rev in revisions:
-    if FindTryjobIndex(rev, bisect_contents['jobs']) is not None:
-      raise ValueError('Revision %d exists already in \'jobs\'' % rev)
+      return BisectionExitStatus.BISECTION_COMPLETE.value
 
-  try:
-    for svn_revision, git_hash in zip(revisions, git_hashes):
-      tryjob_dict = AddTryjob(update_packages, git_hash, svn_revision,
-                              args_output.chroot_path, patch_metadata_file,
-                              args_output.extra_change_lists,
-                              args_output.options, args_output.builder,
-                              args_output.log_level, svn_revision)
+    # Some tryjobs are not finished which may change the actual bad
+    # commit/revision when those tryjobs are finished.
+    DieWithNoRevisionsError(start_revision, end_revision, skip_revisions,
+                            pending_revisions)
 
-      bisect_contents['jobs'].append(tryjob_dict)
-  finally:
-    # Do not want to lose progress if there is an exception.
-    if args_output.last_tested:
-      new_file = '%s.new' % args_output.last_tested
-      with open(new_file, 'w') as json_file:
-        json.dump(bisect_contents, json_file, indent=4, separators=(',', ': '))
+  CheckForExistingTryjobsInRevisionsToLaunch(revisions, bisect_contents['jobs'])
 
-        os.rename(new_file, args_output.last_tested)
+  UpdateBisection(revisions, git_hashes, bisect_contents,
+                  args_output.last_tested, update_packages,
+                  args_output.chroot_path, patch_metadata_file,
+                  args_output.extra_change_lists, args_output.options,
+                  args_output.builder, args_output.log_level)
 
 
 if __name__ == '__main__':
-  main()
+  args_output = GetCommandLineArgs()
+  sys.exit(main(args_output))
