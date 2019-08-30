@@ -171,6 +171,20 @@ class ToolchainComparator(object):
       run_local: False
       retries: 0
     }
+
+    benchmark: rendering.desktop {
+      run_local: False
+      suite: telemetry_Crosperf
+      test_args: --story-filter=aquarium$
+      iterations: 5
+    }
+
+    benchmark: rendering.desktop {
+      run_local: False
+      suite: telemetry_Crosperf
+      test_args: --story-filter=aquarium_20k$
+      iterations: 3
+    }
     """
 
     with open(experiment_file, 'w') as f:

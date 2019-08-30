@@ -5,6 +5,7 @@
 
 """Module to deal with result cache."""
 
+from __future__ import division
 from __future__ import print_function
 
 import glob
@@ -580,7 +581,12 @@ class Result(object):
         metric_name = obj['name']
         vals = obj['sampleValues']
         if isinstance(vals, list):
-          result = float(sum(vals)) / len(vals)
+          # Remove None elements from the list
+          vals = list(filter(None, vals))
+          if len(vals):
+            result = float(sum(vals)) / len(vals)
+          else:
+            result = 0
         else:
           result = vals
         unit = obj['unit']
