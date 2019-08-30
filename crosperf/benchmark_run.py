@@ -2,6 +2,7 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Module of benchmark runs."""
 from __future__ import print_function
 
@@ -40,6 +41,7 @@ class BenchmarkRun(threading.Thread):
                logger_to_use,
                log_level,
                share_cache,
+               dut_config,
                enable_aslr=False):
     threading.Thread.__init__(self)
     self.name = name
@@ -54,7 +56,7 @@ class BenchmarkRun(threading.Thread):
     self.run_completed = False
     self.machine_manager = machine_manager
     self.suite_runner = SuiteRunner(
-        self._logger, self.log_level, enable_aslr=enable_aslr)
+        dut_config, self._logger, self.log_level, enable_aslr=enable_aslr)
     self.machine = None
     self.cache_conditions = cache_conditions
     self.runs_complete = 0

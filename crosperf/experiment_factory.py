@@ -158,7 +158,14 @@ class ExperimentFactory(object):
       raise RuntimeError('The DSO specified is not supported')
     enable_aslr = global_settings.GetField('enable_aslr')
     ignore_min_max = global_settings.GetField('ignore_min_max')
-    intel_pstate = global_settings.GetField('intel_pstate')
+    turbostat_opt = global_settings.GetField('turbostat')
+    dut_config = {
+        'intel_pstate': global_settings.GetField('intel_pstate'),
+        'cooldown_time': global_settings.GetField('cooldown_time'),
+        'cooldown_temp': global_settings.GetField('cooldown_temp'),
+        'governor': global_settings.GetField('governor'),
+        'cpu_usage': global_settings.GetField('cpu_usage'),
+    }
 
     # Default cache hit conditions. The image checksum in the cache and the
     # computed checksum of the image must match. Also a cache file must exist.
@@ -235,7 +242,6 @@ class ExperimentFactory(object):
       elif cwp_dso:
         raise RuntimeError('With DSO specified, each benchmark should have a '
                            'weight')
-      turbostat_opt = benchmark_settings.GetField('turbostat')
 
       if suite == 'telemetry_Crosperf':
         if test_name == 'all_perfv2':
@@ -460,7 +466,7 @@ class ExperimentFactory(object):
                             experiment_file.Canonicalize(), email,
                             acquire_timeout, log_dir, log_level, share_cache,
                             results_dir, locks_dir, cwp_dso, enable_aslr,
-                            ignore_min_max, skylab, intel_pstate)
+                            ignore_min_max, skylab, dut_config)
 
     return experiment
 

@@ -4,6 +4,7 @@
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Unittest for the results reporter."""
 
 from __future__ import division
@@ -134,7 +135,7 @@ def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0,
     def MakeSuccessfulRun(n):
       run = MockBenchmarkRun('mock_success%d' % (n,), bench, label,
                              1 + n + num_runs, cache_conditions,
-                             machine_manager, log, log_level, share_cache)
+                             machine_manager, log, log_level, share_cache, {})
       mock_result = MockResult(log, label, log_level, machine)
       mock_result.keyvals = keyvals
       run.result = mock_result

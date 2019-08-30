@@ -20,12 +20,11 @@ class BenchmarkSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.BenchmarkSettings('b_settings')
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 8)
+    self.assertEqual(len(res.fields), 7)
     self.assertEqual(res.GetField('test_name'), '')
     self.assertEqual(res.GetField('test_args'), '')
     self.assertEqual(res.GetField('iterations'), 0)
     self.assertEqual(res.GetField('suite'), '')
-    self.assertEqual(res.GetField('turbostat'), True)
 
 
 class LabelSettingsTest(unittest.TestCase):
@@ -51,7 +50,7 @@ class GlobalSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.GlobalSettings('g_settings')
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 30)
+    self.assertEqual(len(res.fields), 35)
     self.assertEqual(res.GetField('name'), '')
     self.assertEqual(res.GetField('board'), '')
     self.assertEqual(res.GetField('skylab'), False)
@@ -78,6 +77,11 @@ class GlobalSettingsTest(unittest.TestCase):
     self.assertEqual(res.GetField('enable_aslr'), False)
     self.assertEqual(res.GetField('ignore_min_max'), False)
     self.assertEqual(res.GetField('intel_pstate'), '')
+    self.assertEqual(res.GetField('turbostat'), True)
+    self.assertEqual(res.GetField('cooldown_time'), 0)
+    self.assertEqual(res.GetField('cooldown_temp'), 40)
+    self.assertEqual(res.GetField('governor'), 'performance')
+    self.assertEqual(res.GetField('cpu_usage'), 'all')
 
 
 class SettingsFactoryTest(unittest.TestCase):
@@ -95,12 +99,12 @@ class SettingsFactoryTest(unittest.TestCase):
     b_settings = settings_factory.SettingsFactory().GetSettings(
         'benchmark', 'benchmark')
     self.assertIsInstance(b_settings, settings_factory.BenchmarkSettings)
-    self.assertEqual(len(b_settings.fields), 8)
+    self.assertEqual(len(b_settings.fields), 7)
 
     g_settings = settings_factory.SettingsFactory().GetSettings(
         'global', 'global')
     self.assertIsInstance(g_settings, settings_factory.GlobalSettings)
-    self.assertEqual(len(g_settings.fields), 30)
+    self.assertEqual(len(g_settings.fields), 35)
 
 
 if __name__ == '__main__':

@@ -30,7 +30,7 @@ class Experiment(object):
                cache_conditions, labels, benchmarks, experiment_file, email_to,
                acquire_timeout, log_dir, log_level, share_cache,
                results_directory, locks_directory, cwp_dso, enable_aslr,
-               ignore_min_max, skylab, intel_pstate=''):
+               ignore_min_max, skylab, dut_config):
     self.name = name
     self.working_directory = working_directory
     self.remote = remote
@@ -61,7 +61,7 @@ class Experiment(object):
     self.ignore_min_max = ignore_min_max
     self.skylab = skylab
     self.l = logger.GetLogger(log_dir)
-    self.intel_pstate = intel_pstate
+    self.intel_pstate = dut_config['intel_pstate']
 
     if not self.benchmarks:
       raise RuntimeError('No benchmarks specified')
@@ -115,7 +115,7 @@ class Experiment(object):
       self.machine_manager.ComputeCommonCheckSumString(label)
 
     self.start_time = None
-    self.benchmark_runs = self._GenerateBenchmarkRuns()
+    self.benchmark_runs = self._GenerateBenchmarkRuns(dut_config)
 
     self._schedv2 = None
     self._internal_counter_lock = Lock()
@@ -126,7 +126,7 @@ class Experiment(object):
   def schedv2(self):
     return self._schedv2
 
-  def _GenerateBenchmarkRuns(self):
+  def _GenerateBenchmarkRuns(self, dut_config):
     """Generate benchmark runs from labels and benchmark defintions."""
     benchmark_runs = []
     for label in self.labels:
@@ -139,10 +139,11 @@ class Experiment(object):
           logger_to_use = logger.Logger(self.log_dir, 'run.%s' % (full_name),
                                         True)
           benchmark_runs.append(
-              benchmark_run.BenchmarkRun(
-                  benchmark_run_name, benchmark, label, iteration,
-                  self.cache_conditions, self.machine_manager, logger_to_use,
-                  self.log_level, self.share_cache, self.enable_aslr))
+              benchmark_run.BenchmarkRun(benchmark_run_name, benchmark, label,
+                                         iteration, self.cache_conditions,
+                                         self.machine_manager, logger_to_use,
+                                         self.log_level, self.share_cache,
+                                         dut_config, self.enable_aslr))
 
     return benchmark_runs
 

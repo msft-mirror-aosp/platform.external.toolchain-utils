@@ -3,6 +3,7 @@
 # Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """The unittest of experiment_file."""
 from __future__ import print_function
 import StringIO
@@ -76,6 +77,55 @@ EXPERIMENT_FILE_4 = """
 
   benchmark: webrtc {
     test_args: --story-tag-filter=smoothness
+  }
+
+  image1 {
+    chromeos_image:/usr/local/google/cros_image1.bin
+  }
+  """
+
+DUT_CONFIG_EXPERIMENT_FILE_GOOD = """
+  board: kevin64
+  remote: chromeos-kevin.cros
+  turbostat: False
+  intel_pstate: no_hwp
+  cooldown_temp: 38
+  cooldown_time: 5
+  governor: powersave
+  cpu_usage: exclusive_cores
+
+  benchmark: speedometer {
+    iterations: 3
+    suite: telemetry_Crosperf
+  }
+
+  image1 {
+    chromeos_image:/usr/local/google/cros_image1.bin
+  }
+  """
+
+DUT_CONFIG_EXPERIMENT_FILE_BAD_GOV = """
+  board: kevin64
+  remote: chromeos-kevin.cros
+  intel_pstate: active
+  governor: misspelled_governor
+
+  benchmark: speedometer2 {
+    iterations: 3
+    suite: telemetry_Crosperf
+  }
+  """
+
+DUT_CONFIG_EXPERIMENT_FILE_BAD_CPUUSE = """
+  board: kevin64
+  remote: chromeos-kevin.cros
+  turbostat: False
+  governor: ondemand
+  cpu_usage: unknown
+
+  benchmark: speedometer2 {
+    iterations: 3
+    suite: telemetry_Crosperf
   }
 
   image1 {
@@ -158,6 +208,37 @@ class ExperimentFileTest(unittest.TestCase):
     experiment_file = ExperimentFile(input_file)
     res = experiment_file.Canonicalize()
     self.assertEqual(res, OUTPUT_FILE)
+
+  def testLoadDutConfigExperimentFile_Good(self):
+    input_file = StringIO.StringIO(DUT_CONFIG_EXPERIMENT_FILE_GOOD)
+    experiment_file = ExperimentFile(input_file)
+    global_settings = experiment_file.GetGlobalSettings()
+    self.assertEqual(global_settings.GetField('turbostat'), False)
+    self.assertEqual(global_settings.GetField('intel_pstate'), 'no_hwp')
+    self.assertEqual(global_settings.GetField('governor'), 'powersave')
+    self.assertEqual(global_settings.GetField('cpu_usage'), 'exclusive_cores')
+    self.assertEqual(global_settings.GetField('cooldown_time'), 5)
+    self.assertEqual(global_settings.GetField('cooldown_temp'), 38)
+
+  def testLoadDutConfigExperimentFile_WrongGovernor(self):
+    input_file = StringIO.StringIO(DUT_CONFIG_EXPERIMENT_FILE_BAD_GOV)
+    with self.assertRaises(RuntimeError) as msg:
+      ExperimentFile(input_file)
+    self.assertRegexpMatches(
+        str(msg.exception), 'governor: misspelled_governor')
+    self.assertRegexpMatches(
+        str(msg.exception), "Invalid enum value for field 'governor'."
+        r' Must be one of \(performance, powersave, userspace, ondemand,'
+        r' conservative, schedutils, sched, interactive\)')
+
+  def testLoadDutConfigExperimentFile_WrongCpuUsage(self):
+    input_file = StringIO.StringIO(DUT_CONFIG_EXPERIMENT_FILE_BAD_CPUUSE)
+    with self.assertRaises(RuntimeError) as msg:
+      ExperimentFile(input_file)
+    self.assertRegexpMatches(str(msg.exception), 'cpu_usage: unknown')
+    self.assertRegexpMatches(
+        str(msg.exception), "Invalid enum value for field 'cpu_usage'."
+        r' Must be one of \(all, big_only, little_only, exclusive_cores\)')
 
 
 if __name__ == '__main__':

@@ -8,6 +8,7 @@
 from __future__ import print_function
 
 from field import BooleanField
+from field import EnumField
 from field import FloatField
 from field import IntegerField
 from field import ListField
@@ -59,12 +60,6 @@ class BenchmarkSettings(Settings):
             'weight',
             default=0.0,
             description='Weight of the benchmark for CWP approximation'))
-    self.AddField(
-        BooleanField(
-            'turbostat',
-            description='During benchmark run turbostat process in background',
-            required=False,
-            default=True))
 
 
 class LabelSettings(Settings):
@@ -339,9 +334,68 @@ class GlobalSettings(Settings):
         TextField(
             'intel_pstate',
             description='Intel Pstate mode.\n'
-            'Supported modes: active (default), passive, no_hwp.',
+            'Supported modes: passive, no_hwp.\n'
+            'By default kernel works in active HWP mode if HWP is supported'
+            " by CPU. This corresponds to a default intel_pstate=''",
             required=False,
             default=''))
+    self.AddField(
+        BooleanField(
+            'turbostat',
+            description='Run turbostat process in the background'
+            ' of a benchmark',
+            required=False,
+            default=True))
+    self.AddField(
+        IntegerField(
+            'cooldown_temp',
+            required=False,
+            default=40,
+            description='Wait until CPU temperature goes down below'
+            ' specified temperature in Celsius'
+            ' prior starting a benchmark.'))
+    self.AddField(
+        IntegerField(
+            'cooldown_time',
+            required=False,
+            default=0,
+            description='Wait specified time in minutes allowing'
+            ' CPU to cool down. Zero value disables cooldown,'))
+    self.AddField(
+        EnumField(
+            'governor',
+            options=[
+                'performance',
+                'powersave',
+                'userspace',
+                'ondemand',
+                'conservative',
+                'schedutils',
+                'sched',
+                'interactive',
+            ],
+            default='performance',
+            required=False,
+            description='Setup CPU governor for all cores.\n'
+            'For more details refer to:\n'
+            'https://www.kernel.org/doc/Documentation/cpu-freq/governors.txt'))
+    self.AddField(
+        EnumField(
+            'cpu_usage',
+            options=[
+                'all',
+                'big_only',
+                'little_only',
+                'exclusive_cores',
+            ],
+            default='all',
+            required=False,
+            description='Restrict usage CPUs to decrease CPU interference.\n'
+            'all - no restrictions;\n'
+            'big-only, little-only - enable only big/little cores,'
+            ' applicable only on ARM;\n'
+            'exclusive-cores - (for future use)'
+            ' isolate cores for exclusive use of benchmark processes.'))
 
 
 class SettingsFactory(object):

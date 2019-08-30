@@ -51,6 +51,7 @@ class SuiteRunner(object):
   """This defines the interface from crosperf to test script."""
 
   def __init__(self,
+               dut_config,
                logger_to_use=None,
                log_level='verbose',
                cmd_exec=None,
@@ -62,6 +63,7 @@ class SuiteRunner(object):
         self.logger, log_level=self.log_level)
     self._ct = cmd_term or command_executer.CommandTerminator()
     self.enable_aslr = enable_aslr
+    self.dut_config = dut_config
 
   def Run(self, machine, label, benchmark, test_args, profiler_args):
     for i in range(0, benchmark.retries + 1):

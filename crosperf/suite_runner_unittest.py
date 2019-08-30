@@ -79,7 +79,7 @@ class SuiteRunnerTest(unittest.TestCase):
 
   def setUp(self):
     self.runner = suite_runner.SuiteRunner(
-        self.mock_logger, 'verbose', self.mock_cmd_exec, self.mock_cmd_term)
+        {}, self.mock_logger, 'verbose', self.mock_cmd_exec, self.mock_cmd_term)
 
   def test_get_profiler_args(self):
     input_str = ('--profiler=custom_perf --profiler_args=\'perf_options'

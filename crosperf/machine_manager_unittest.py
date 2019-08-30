@@ -456,7 +456,7 @@ class MachineManagerTest(unittest.TestCase):
         suite='telemetry_Crosperf')  # suite
 
     test_run = MockBenchmarkRun('test run', bench, LABEL_LUMPY, 1, [], self.mm,
-                                mock_logger, 'verbose', '', False)
+                                mock_logger, 'verbose', '', {}, False)
 
     self.mm._machines = [
         self.mock_lumpy1, self.mock_lumpy2, self.mock_lumpy3, self.mock_daisy1,

@@ -100,8 +100,15 @@ class BenchmarkRunTest(unittest.TestCase):
         False,  # rm_chroot_tmp
         '',  # perf_args
         suite='telemetry_Crosperf')  # suite
+    dut_conf = {
+        'cooldown_time': 5,
+        'cooldown_temp': 45,
+        'governor': 'powersave',
+        'cpu_usage': 'big_only',
+    }
     b = benchmark_run.MockBenchmarkRun('test run', bench, my_label, 1, [], m,
-                                       logger.GetLogger(), logging_level, '')
+                                       logger.GetLogger(), logging_level, '',
+                                       dut_conf)
     b.cache = MockResultsCache()
     b.suite_runner = MockSuiteRunner()
     b.start()
@@ -111,7 +118,7 @@ class BenchmarkRunTest(unittest.TestCase):
     args_list = [
         'self', 'name', 'benchmark', 'label', 'iteration', 'cache_conditions',
         'machine_manager', 'logger_to_use', 'log_level', 'share_cache',
-        'enable_aslr'
+        'dut_config', 'enable_aslr'
     ]
     arg_spec = inspect.getargspec(benchmark_run.BenchmarkRun.__init__)
     self.assertEqual(len(arg_spec.args), len(args_list))
@@ -129,7 +136,7 @@ class BenchmarkRunTest(unittest.TestCase):
     br = benchmark_run.BenchmarkRun(
         'test_run', self.test_benchmark, self.test_label, 1,
         self.test_cache_conditions, self.mock_machine_manager, self.mock_logger,
-        'average', '')
+        'average', '', {})
 
     def MockLogOutput(msg, print_to_console=False):
       'Helper function for test_run.'
@@ -269,7 +276,7 @@ class BenchmarkRunTest(unittest.TestCase):
     br = benchmark_run.BenchmarkRun(
         'test_run', self.test_benchmark, self.test_label, 1,
         self.test_cache_conditions, self.mock_machine_manager, self.mock_logger,
-        'average', '')
+        'average', '', {})
 
     def GetLastEventPassed():
       'Helper function for test_terminate_pass'
@@ -296,7 +303,7 @@ class BenchmarkRunTest(unittest.TestCase):
     br = benchmark_run.BenchmarkRun(
         'test_run', self.test_benchmark, self.test_label, 1,
         self.test_cache_conditions, self.mock_machine_manager, self.mock_logger,
-        'average', '')
+        'average', '', {})
 
     def GetLastEventFailed():
       'Helper function for test_terminate_fail'
@@ -323,7 +330,7 @@ class BenchmarkRunTest(unittest.TestCase):
     br = benchmark_run.BenchmarkRun(
         'test_run', self.test_benchmark, self.test_label, 1,
         self.test_cache_conditions, self.mock_machine_manager, self.mock_logger,
-        'average', '')
+        'average', '', {})
 
     br.terminated = True
     self.assertRaises(Exception, br.AcquireMachine)
@@ -340,7 +347,7 @@ class BenchmarkRunTest(unittest.TestCase):
     br = benchmark_run.BenchmarkRun(
         'test_run', self.test_benchmark, self.test_label, 1,
         self.test_cache_conditions, self.mock_machine_manager, self.mock_logger,
-        'average', '')
+        'average', '', {})
 
     def MockLogError(err_msg):
       'Helper function for test_get_extra_autotest_args'
@@ -379,7 +386,7 @@ class BenchmarkRunTest(unittest.TestCase):
     br = benchmark_run.BenchmarkRun(
         'test_run', self.test_benchmark, self.test_label, 1,
         self.test_cache_conditions, self.mock_machine_manager, self.mock_logger,
-        'average', '')
+        'average', '', {})
 
     self.status = []
 
@@ -414,7 +421,7 @@ class BenchmarkRunTest(unittest.TestCase):
     br = benchmark_run.BenchmarkRun(
         'test_run', self.test_benchmark, self.test_label, 1,
         self.test_cache_conditions, self.mock_machine_manager, self.mock_logger,
-        'average', '')
+        'average', '', {})
 
     phony_cache_conditions = [123, 456, True, False]
 
