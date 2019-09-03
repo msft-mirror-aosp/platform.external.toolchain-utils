@@ -17,8 +17,8 @@
     "percentage_smooth__summary"
   ],
   "loading.desktop@@typical": [
-    "cold@@timeToFirstContentfulPaint_avg__summary",
-    "warm@@timeToFirstContentfulPaint_avg__summary"
+    "timeToFirstContentfulPaint__cache_temperature:cold",
+    "timeToFirstContentfulPaint__cache_temperature:warm"
   ],
   "page_cycler_v2.intl_es_fr_pt-BR": [
     "cold_times__page_load_time",

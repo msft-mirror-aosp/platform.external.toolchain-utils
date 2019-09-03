@@ -9,10 +9,11 @@
 
 from __future__ import print_function
 
-import mock
 import os
+import shutil
 import tempfile
 import unittest
+import mock
 
 import image_checksummer
 import machine_manager
@@ -245,6 +246,81 @@ CPUSTATS_DUPL_DATA = {
 }
 
 TMP_DIR1 = '/tmp/tmpAbcXyz'
+
+HISTOGRAMSET = \
+"""
+[
+    {
+        "values": [
+            "cache_temperature_cold",
+            "typical",
+            "cache_temperature:cold"
+        ],
+        "guid": "db6d463b-7c07-4873-b839-db0652ccb97e",
+        "type": "GenericSet"
+    },
+    {
+        "values": [
+            "cache_temperature_warm",
+            "typical",
+            "cache_temperature:warm"
+        ],
+        "guid": "a270eb9d-3bb0-472a-951d-74ac3398b718",
+        "type": "GenericSet"
+    },
+    {
+        "sampleValues": [
+            1111.672
+        ],
+        "name": "timeToFirstContentfulPaint",
+        "diagnostics": {
+            "storyTags": "a270eb9d-3bb0-472a-951d-74ac3398b718"
+        },
+        "unit": "ms_smallerIsBetter"
+    },
+    {
+        "sampleValues": [
+            1146.459
+        ],
+        "name": "timeToFirstContentfulPaint",
+        "diagnostics": {
+            "storyTags": "db6d463b-7c07-4873-b839-db0652ccb97e"
+        },
+        "unit": "ms_smallerIsBetter"
+    },
+    {
+        "sampleValues": [
+            888.328
+        ],
+        "name": "timeToFirstContentfulPaint",
+        "diagnostics": {
+            "storyTags": "a270eb9d-3bb0-472a-951d-74ac3398b718"
+        },
+        "unit": "ms_smallerIsBetter"
+    },
+    {
+        "sampleValues": [
+            853.541
+        ],
+        "name": "timeToFirstContentfulPaint",
+        "diagnostics": {
+            "storyTags": "db6d463b-7c07-4873-b839-db0652ccb97e"
+        },
+        "unit": "ms_smallerIsBetter"
+    },
+    {
+        "sampleValues": [
+            400.000
+        ],
+        "name": "timeToFirstContentfulPaint",
+        "diagnostics": {
+            "storyTags": "a270eb9d-3bb0-472a-951d-74ac3398b718"
+        },
+        "unit": "ms_smallerIsBetter"
+    }
+
+]
+"""
 
 
 class MockResult(Result):
@@ -900,6 +976,7 @@ class ResultTest(unittest.TestCase):
     def FakeGetSamples():
       return 1
 
+    # Test 1
     self.callGatherPerfResults = False
 
     self.result.GetKeyvals = self.FakeGetKeyvals
@@ -911,11 +988,13 @@ class ResultTest(unittest.TestCase):
     self.assertEqual(len(self.result.keyvals), 2)
     self.assertEqual(self.result.keyvals, {'Total': 10, 'retval': 0})
 
+    # Test 2
     self.result.retval = 1
     self.result.ProcessResults()
     self.assertEqual(len(self.result.keyvals), 2)
     self.assertEqual(self.result.keyvals, {'Total': 10, 'retval': 1})
 
+    # Test 3
     self.result.cwp_dso = 'chrome'
     self.result.retval = 0
     self.result.GetSamples = FakeGetSamples
@@ -926,6 +1005,27 @@ class ResultTest(unittest.TestCase):
         'samples': 1,
         'retval': 0
     })
+
+    # Test 4. Parse output of benchmarks with multiple sotries in histogram
+    # format
+    self.result.suite = 'telemetry_Crosperf'
+    self.result.results_file = [tempfile.mkdtemp() + '/histograms.json']
+    with open(self.result.results_file[0], 'w') as f:
+      f.write(HISTOGRAMSET)
+    self.result.ProcessResults()
+    shutil.rmtree(os.path.dirname(self.result.results_file[0]))
+    # Verify the summary for the story is correct
+    self.assertEqual(self.result.keyvals['timeToFirstContentfulPaint__typical'],
+                     [880.000, u'ms_smallerIsBetter'])
+    # Veirfy the summary for a certain stroy tag is correct
+    self.assertEqual(
+        self.result
+        .keyvals['timeToFirstContentfulPaint__cache_temperature:cold'],
+        [1000.000, u'ms_smallerIsBetter'])
+    self.assertEqual(
+        self.result
+        .keyvals['timeToFirstContentfulPaint__cache_temperature:warm'],
+        [800.000, u'ms_smallerIsBetter'])
 
   @mock.patch.object(Result, 'ProcessCpustatsResults')
   @mock.patch.object(Result, 'ProcessTurbostatResults')

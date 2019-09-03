@@ -30,9 +30,6 @@ MACHINE_FILE = 'machine.txt'
 AUTOTEST_TARBALL = 'autotest.tbz2'
 PERF_RESULTS_FILE = 'perf-results.txt'
 CACHE_KEYS_FILE = 'cache_keys.txt'
-HISTOGRAMS_BLOCKLIST = {
-    'loading.desktop',
-}
 
 
 class Result(object):
@@ -257,8 +254,7 @@ class Result(object):
     return out
 
   def GetResultsFile(self):
-    if self.suite == 'telemetry_Crosperf' and \
-        self.test_name not in HISTOGRAMS_BLOCKLIST:
+    if self.suite == 'telemetry_Crosperf':
       return self.FindFilesInResultsDir('-name histograms.json').splitlines()
     return self.FindFilesInResultsDir('-name results-chart.json').splitlines()
 
@@ -271,8 +267,7 @@ class Result(object):
   def GetDataMeasurementsFiles(self):
     result = self.FindFilesInResultsDir('-name perf_measurements').splitlines()
     if not result:
-      if self.suite == 'telemetry_Crosperf' and \
-          self.test_name not in HISTOGRAMS_BLOCKLIST:
+      if self.suite == 'telemetry_Crosperf':
         result = \
             self.FindFilesInResultsDir('-name histograms.json').splitlines()
       else:
@@ -575,6 +570,12 @@ class Result(object):
     keyvals = {}
     with open(filename) as f:
       histograms = json.load(f)
+      value_map = {}
+      # Gets generic set values.
+      for obj in histograms:
+        if 'type' in obj and obj['type'] == 'GenericSet':
+          value_map[obj['guid']] = obj['values']
+
       for obj in histograms:
         if 'name' not in obj or 'sampleValues' not in obj:
           continue
@@ -590,30 +591,40 @@ class Result(object):
         else:
           result = vals
         unit = obj['unit']
-        if metric_name not in keyvals:
-          keyvals[metric_name] = [[result], unit]
+        diagnostics = obj['diagnostics']
+        # for summaries of benchmarks
+        key = metric_name
+        if key not in keyvals:
+          keyvals[key] = [[result], unit]
         else:
-          # in case the benchmark has multiple stories
-          keyvals[metric_name][0].append(result)
-    for metric_name in keyvals:
-      vals = keyvals[metric_name][0]
-      unit = keyvals[metric_name][1]
+          keyvals[key][0].append(result)
+        # TODO: do we need summaries of stories?
+        # for summaries of story tags
+        if 'storyTags' in diagnostics:
+          guid = diagnostics['storyTags']
+          if guid not in value_map:
+            raise RuntimeError('Unrecognized storyTags in %s ' % (obj))
+          for story_tag in value_map[guid]:
+            key = metric_name + '__' + story_tag
+            if key not in keyvals:
+              keyvals[key] = [[result], unit]
+            else:
+              keyvals[key][0].append(result)
+    # calculate summary
+    for key in keyvals:
+      vals = keyvals[key][0]
+      unit = keyvals[key][1]
       result = float(sum(vals)) / len(vals)
-      keyvals[metric_name] = [result, unit]
+      keyvals[key] = [result, unit]
     return keyvals
 
   def ProcessResults(self, use_cache=False):
     # Note that this function doesn't know anything about whether there is a
     # cache hit or miss. It should process results agnostic of the cache hit
     # state.
-    # FIXME: Properly parse histograms results of the tests in the blocklist
     if (self.results_file and self.suite == 'telemetry_Crosperf' and
-        'histograms.json' in self.results_file[0] and
-        self.test_name not in HISTOGRAMS_BLOCKLIST):
+        'histograms.json' in self.results_file[0]):
       self.keyvals = self.ProcessHistogramsResults()
-    elif (self.results_file and self.suite == 'telemetry_Crosperf' and
-          'histograms.json' in self.results_file[0]):
-      self.keyvals = self.ProcessChartResults()
     elif (self.results_file and self.suite != 'telemetry_Crosperf' and
           'results-chart.json' in self.results_file[0]):
       self.keyvals = self.ProcessChartResults()
