@@ -81,8 +81,7 @@ def GetCommandLineArgs():
       help='options to use for the tryjob testing')
 
   # Add argument for the builder to use for the tryjob.
-  parser.add_argument(
-      '--builder', required=True, help='builder to use for the tryjob testing')
+  parser.add_argument('--builder', help='builder to use for the tryjob testing')
 
   # Add argument for a specific chroot path.
   parser.add_argument(
@@ -101,8 +100,16 @@ def GetCommandLineArgs():
 
   if not os.path.isfile(args_output.status_file) or \
       not args_output.status_file.endswith('.json'):
-    raise ValueError('File does not exist or does not ending in \'.json\' '
+    raise ValueError('File does not exist or does not ending in ".json" '
                      ': %s' % args_output.status_file)
+
+  if args_output.modify_tryjob == ModifyTryjob.ADD.value and \
+      not args_output.builder:
+    raise ValueError('A builder is required for adding a tryjob.')
+  elif args_output.modify_tryjob != ModifyTryjob.ADD.value and \
+      args_output.builder:
+    raise ValueError('Specifying a builder is only available when adding a '
+                     'tryjob.')
 
   return args_output
 
@@ -139,7 +146,6 @@ def CreateNewTryjobEntryForBisection(cl, extra_cls, options, builder,
   # ]
   tryjob_results = RunTryJobs(cl, extra_cls, options, [builder], chroot_path,
                               log_level)
-
   print('\nTryjob:')
   print(tryjob_results[0])
 
@@ -248,7 +254,7 @@ def PerformTryjobModification(revision, modify_tryjob, status_file, extra_cls,
       raise ValueError('Failed to add tryjob to %s' % status_file)
   else:
     raise ValueError(
-        'Invalid \'modify_tryjob\' option provided: %s' % modify_tryjob)
+        'Invalid "modify_tryjob" option provided: %s' % modify_tryjob)
 
   with open(status_file, 'w') as update_tryjobs:
     json.dump(bisect_contents, update_tryjobs, indent=4, separators=(',', ': '))
