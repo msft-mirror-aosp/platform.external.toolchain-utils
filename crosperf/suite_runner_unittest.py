@@ -12,8 +12,8 @@ from __future__ import print_function
 import os.path
 import time
 
-import mock
 import unittest
+import mock
 
 import suite_runner
 import label
@@ -22,6 +22,80 @@ from benchmark import Benchmark
 
 from cros_utils import command_executer
 from cros_utils import logger
+
+BIG_LITTLE_CPUINFO = """processor       : 0
+model name      : ARMv8 Processor rev 4 (v8l)
+BogoMIPS        : 48.00
+Features        : half thumb fastmult vfp edsp neon vfpv3 tls vfpv4
+CPU implementer : 0x41
+CPU architecture: 8
+CPU variant     : 0x0
+CPU part        : 0xd03
+CPU revision    : 4
+
+processor       : 1
+model name      : ARMv8 Processor rev 4 (v8l)
+BogoMIPS        : 48.00
+Features        : half thumb fastmult vfp edsp neon vfpv3 tls vfpv4
+CPU implementer : 0x41
+CPU architecture: 8
+CPU variant     : 0x0
+CPU part        : 0xd03
+CPU revision    : 4
+
+processor       : 2
+model name      : ARMv8 Processor rev 2 (v8l)
+BogoMIPS        : 48.00
+Features        : half thumb fastmult vfp edsp neon vfpv3 tls vfpv4
+CPU implementer : 0x41
+CPU architecture: 8
+CPU variant     : 0x0
+CPU part        : 0xd08
+CPU revision    : 2
+"""
+LITTLE_ONLY_CPUINFO = """processor       : 0
+model name      : ARMv8 Processor rev 4 (v8l)
+BogoMIPS        : 48.00
+Features        : half thumb fastmult vfp edsp neon vfpv3 tls vfpv4
+CPU implementer : 0x41
+CPU architecture: 8
+CPU variant     : 0x0
+CPU part        : 0xd03
+CPU revision    : 4
+
+processor       : 1
+model name      : ARMv8 Processor rev 4 (v8l)
+BogoMIPS        : 48.00
+Features        : half thumb fastmult vfp edsp neon vfpv3 tls vfpv4
+CPU implementer : 0x41
+CPU architecture: 8
+CPU variant     : 0x0
+CPU part        : 0xd03
+CPU revision    : 4
+"""
+
+NOT_BIG_LITTLE_CPUINFO = """processor       : 0
+model name      : ARMv7 Processor rev 1 (v7l)
+Features        : swp half thumb fastmult vfp edsp thumbee neon vfpv3 tls vfpv4
+CPU implementer : 0x41
+CPU architecture: 7
+CPU variant     : 0x0
+CPU part        : 0xc0d
+CPU revision    : 1
+
+processor       : 1
+model name      : ARMv7 Processor rev 1 (v7l)
+Features        : swp half thumb fastmult vfp edsp thumbee neon vfpv3 tls vfpv4
+CPU implementer : 0x41
+CPU architecture: 7
+CPU variant     : 0x0
+CPU part        : 0xc0d
+CPU revision    : 1
+
+Hardware        : Rockchip (Device Tree)
+Revision        : 0000
+Serial          : 0000000000000000
+"""
 
 
 class SuiteRunnerTest(unittest.TestCase):
@@ -68,6 +142,7 @@ class SuiteRunnerTest(unittest.TestCase):
     self.call_test_that_run = False
     self.disable_aslr_args = []
     self.pin_governor_args = []
+    self.setup_cpu_usage_args = []
     self.skylab_run_args = []
     self.test_that_args = []
     self.telemetry_run_args = []
@@ -76,6 +151,7 @@ class SuiteRunnerTest(unittest.TestCase):
     self.call_telemetry_crosperf_run = False
     self.call_disable_aslr = False
     self.call_pin_governor = False
+    self.call_setup_cpu_usage = False
 
   def setUp(self):
     self.runner = suite_runner.SuiteRunner(
@@ -93,10 +169,12 @@ class SuiteRunnerTest(unittest.TestCase):
 
     def reset():
       self.call_pin_governor = False
+      self.call_setup_cpu_usage = False
       self.call_test_that_run = False
       self.call_skylab_run = False
       self.call_telemetry_crosperf_run = False
       self.pin_governor_args = []
+      self.setup_cpu_usage_args = []
       self.skylab_run_args = []
       self.test_that_args = []
       self.telemetry_run_args = []
@@ -109,6 +187,10 @@ class SuiteRunnerTest(unittest.TestCase):
     def FakePinGovernor(machine, chroot):
       self.call_pin_governor = True
       self.pin_governor_args = [machine, chroot]
+
+    def FakeSetupCpuUsage(machine, chroot):
+      self.call_setup_cpu_usage = True
+      self.setup_cpu_usage_args = [machine, chroot]
 
     def FakeSkylabRun(test_label, benchmark, test_args, profiler_args):
       self.skylab_run_args = [test_label, benchmark, test_args, profiler_args]
@@ -133,6 +215,7 @@ class SuiteRunnerTest(unittest.TestCase):
 
     self.runner.DisableASLR = FakeDisableASLR
     self.runner.PinGovernorExecutionFrequencies = FakePinGovernor
+    self.runner.SetupCpuUsage = FakeSetupCpuUsage
     self.runner.Skylab_Run = FakeSkylabRun
     self.runner.Telemetry_Crosperf_Run = FakeTelemetryCrosperfRun
     self.runner.Test_That_Run = FakeTestThatRun
@@ -146,6 +229,7 @@ class SuiteRunnerTest(unittest.TestCase):
                     profiler_args)
     self.assertFalse(self.call_disable_aslr)
     self.assertFalse(self.call_pin_governor)
+    self.assertFalse(self.call_setup_cpu_usage)
     self.assertTrue(self.call_skylab_run)
     self.assertFalse(self.call_test_that_run)
     self.assertFalse(self.call_telemetry_crosperf_run)
@@ -158,6 +242,9 @@ class SuiteRunnerTest(unittest.TestCase):
                     profiler_args)
     self.assertTrue(self.call_disable_aslr)
     self.assertTrue(self.call_pin_governor)
+    self.assertTrue(self.call_setup_cpu_usage)
+    self.assertEqual(self.setup_cpu_usage_args,
+                     [machine, self.mock_label.chromeos_root])
     self.assertTrue(self.call_test_that_run)
     self.assertFalse(self.call_telemetry_crosperf_run)
     self.assertEqual(
@@ -169,6 +256,7 @@ class SuiteRunnerTest(unittest.TestCase):
                     test_args, profiler_args)
     self.assertTrue(self.call_disable_aslr)
     self.assertTrue(self.call_pin_governor)
+    self.assertTrue(self.call_setup_cpu_usage)
     self.assertFalse(self.call_test_that_run)
     self.assertTrue(self.call_telemetry_crosperf_run)
     self.assertEqual(self.telemetry_crosperf_args, [
@@ -216,6 +304,105 @@ class SuiteRunnerTest(unittest.TestCase):
         'fi; ')
     # pyformat: enable
     self.assertEqual(cmd, (set_cpu_cmd,))
+
+  @mock.patch.object(suite_runner.SuiteRunner, 'SetupArmCores')
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
+  def test_setup_cpu_usage_little_on_arm(self, mock_cros_runcmd_wout,
+                                         mock_setup_arm):
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
+    self.runner.SetupArmCores = mock_setup_arm
+    mock_cros_runcmd_wout.return_value = (0, 'armv7l', '')
+    self.runner.dut_config['cpu_usage'] = 'little_only'
+    self.runner.SetupCpuUsage('remote.cros', '/tmp/chromeos')
+    self.assertEqual(mock_setup_arm.call_count, 1)
+
+  @mock.patch.object(suite_runner.SuiteRunner, 'SetupArmCores')
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
+  def test_setup_cpu_usage_big_on_aarch64(self, mock_cros_runcmd_wout,
+                                          mock_setup_arm):
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
+    self.runner.SetupArmCores = mock_setup_arm
+    mock_cros_runcmd_wout.return_value = (0, 'aarch64', '')
+    self.runner.dut_config['cpu_usage'] = 'big_only'
+    self.runner.SetupCpuUsage('remote.cros', '/tmp/chromeos')
+    self.assertEqual(mock_setup_arm.call_count, 1)
+
+  @mock.patch.object(suite_runner.SuiteRunner, 'SetupArmCores')
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
+  def test_setup_cpu_usage_all_on_intel(self, mock_cros_runcmd_wout,
+                                        mock_setup_arm):
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
+    self.runner.SetupArmCores = mock_setup_arm
+    mock_cros_runcmd_wout.return_value = (0, 'x86_64', '')
+    self.runner.dut_config['cpu_usage'] = 'all'
+    self.runner.SetupCpuUsage('remote.cros', '/tmp/chromeos')
+    # Check that SetupArmCores not called.
+    self.assertEqual(mock_setup_arm.call_count, 0)
+
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
+  def test_setup_arm_cores_big_on_big_little(self, mock_cros_runcmd,
+                                             mock_cros_runcmd_wout):
+    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
+    mock_cros_runcmd_wout.return_value = (0, BIG_LITTLE_CPUINFO, '')
+    self.runner.dut_config['cpu_usage'] = 'big_only'
+    self.runner.SetupArmCores('remote.cros', '/tmp/chromeos')
+    self.assertEqual(mock_cros_runcmd.call_args_list[0][0],
+                     ('echo 1 | tee /sys/devices/system/cpu/cpu{2}/online; '
+                      'echo 0 | tee /sys/devices/system/cpu/cpu{0,1}/online',))
+
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
+  def test_setup_arm_cores_little_on_big_little(self, mock_cros_runcmd,
+                                                mock_cros_runcmd_wout):
+    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
+    mock_cros_runcmd_wout.return_value = (0, BIG_LITTLE_CPUINFO, '')
+    self.runner.dut_config['cpu_usage'] = 'little_only'
+    self.runner.SetupArmCores('remote.cros', '/tmp/chromeos')
+    self.assertEqual(mock_cros_runcmd.call_args_list[0][0],
+                     ('echo 1 | tee /sys/devices/system/cpu/cpu{0,1}/online; '
+                      'echo 0 | tee /sys/devices/system/cpu/cpu{2}/online',))
+
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
+  def test_setup_arm_cores_invalid_config(self, mock_cros_runcmd,
+                                          mock_cros_runcmd_wout):
+    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
+    mock_cros_runcmd_wout.return_value = (0, LITTLE_ONLY_CPUINFO, '')
+    self.runner.dut_config['cpu_usage'] = 'big_only'
+    self.runner.SetupArmCores('remote.cros', '/tmp/chromeos')
+    # Check that CrosRun is not called when trying
+    # to use 'big_only' on a platform with all little cores.
+    self.assertEqual(mock_cros_runcmd.call_count, 0)
+
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
+  def test_setup_arm_cores_not_big_little(self, mock_cros_runcmd,
+                                          mock_cros_runcmd_wout):
+    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
+    mock_cros_runcmd_wout.return_value = (0, NOT_BIG_LITTLE_CPUINFO, '')
+    self.runner.dut_config['cpu_usage'] = 'big_only'
+    self.runner.SetupArmCores('remote.cros', '/tmp/chromeos')
+    # Check that CrosRun is not called when trying
+    # to use 'big_only' on a platform w/o support of big/little.
+    self.assertEqual(mock_cros_runcmd.call_count, 0)
+
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
+  def test_setup_arm_cores_unsupported_cpu_usage(self, mock_cros_runcmd,
+                                                 mock_cros_runcmd_wout):
+    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
+    mock_cros_runcmd_wout.return_value = (0, BIG_LITTLE_CPUINFO, '')
+    self.runner.dut_config['cpu_usage'] = 'exclusive_cores'
+    self.runner.SetupArmCores('remote.cros', '/tmp/chromeos')
+    # Check that CrosRun is not called when trying to use
+    # 'exclusive_cores' on ARM CPU setup.
+    self.assertEqual(mock_cros_runcmd.call_count, 0)
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
   def test_reboot_machine(self, mock_cros_runcmd):

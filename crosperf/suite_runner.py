@@ -8,6 +8,7 @@
 from __future__ import print_function
 
 import os
+import re
 import shlex
 import time
 
@@ -80,6 +81,7 @@ class SuiteRunner(object):
         if not self.enable_aslr:
           self.DisableASLR(machine, label.chromeos_root)
         self.PinGovernorExecutionFrequencies(machine, label.chromeos_root)
+        self.SetupCpuUsage(machine, label.chromeos_root)
         if benchmark.suite == 'telemetry_Crosperf':
           self.DecreaseWaitTime(machine, label.chromeos_root)
           ret_tup = self.Telemetry_Crosperf_Run(machine, label, benchmark,
@@ -172,6 +174,126 @@ class SuiteRunner(object):
         set_cpu_freq, machine=machine_name, chromeos_root=chromeos_root)
     self.logger.LogFatalIf(
         ret, 'Could not pin frequencies on machine: %s' % machine_name)
+
+  def SetupCpuUsage(self, machine_name, chromeos_root):
+    """Setup CPU usage.
+
+    Based on self.dut_config['cpu_usage'] configure CPU cores
+    utilization.
+    """
+
+    if (self.dut_config['cpu_usage'] == 'big_only' or
+        self.dut_config['cpu_usage'] == 'little_only'):
+      ret, arch, _ = self._ce.CrosRunCommandWOutput(
+          'uname -m', machine=machine_name, chromeos_root=chromeos_root)
+      self.logger.LogFatalIf(
+          ret, 'Setup CPU failed. Could not retrieve architecture model.')
+
+      if arch.lower().startswith('arm') or arch.lower().startswith('aarch64'):
+        self.SetupArmCores(machine_name, chromeos_root)
+
+  def SetupArmCores(self, machine_name, chromeos_root):
+    """Setup ARM big/little cores."""
+
+    # CPU implemeters/part numbers of big/LITTLE CPU.
+    # Format: dict(CPU implementer: set(CPU part numbers))
+    LITTLE_CORES = {
+        '0x41': {
+            '0xd01',  # Cortex A32
+            '0xd03',  # Cortex A53
+            '0xd04',  # Cortex A35
+            '0xd05',  # Cortex A55
+        },
+    }
+    BIG_CORES = {
+        '0x41': {
+            '0xd07',  # Cortex A57
+            '0xd08',  # Cortex A72
+            '0xd09',  # Cortex A73
+            '0xd0a',  # Cortex A75
+            '0xd0b',  # Cortex A76
+        },
+    }
+
+    # Values of CPU Implementer and CPU part number are exposed by cpuinfo.
+    # Format:
+    # =================
+    # processor       : 0
+    # model name      : ARMv8 Processor rev 4 (v8l)
+    # BogoMIPS        : 48.00
+    # Features        : half thumb fastmult vfp edsp neon vfpv3 tls vfpv4
+    # CPU implementer : 0x41
+    # CPU architecture: 8
+    # CPU variant     : 0x0
+    # CPU part        : 0xd03
+    # CPU revision    : 4
+
+    ret, cpuinfo, _ = self._ce.CrosRunCommandWOutput(
+        'cat /proc/cpuinfo', machine=machine_name, chromeos_root=chromeos_root)
+    self.logger.LogFatalIf(ret,
+                           'Setup ARM CPU failed. Could not retrieve cpuinfo.')
+
+    # List of all CPU cores: 0, 1, ..
+    proc_matches = re.findall(r'^processor\s*: (\d+)$', cpuinfo, re.MULTILINE)
+    # List of all corresponding CPU implementers
+    impl_matches = re.findall(r'^CPU implementer\s*: (0x[\da-f]+)$', cpuinfo,
+                              re.MULTILINE)
+    # List of all corresponding CPU part numbers
+    part_matches = re.findall(r'^CPU part\s*: (0x[\da-f]+)$', cpuinfo,
+                              re.MULTILINE)
+    assert len(proc_matches) == len(impl_matches)
+    assert len(part_matches) == len(impl_matches)
+
+    all_cores = set(proc_matches)
+    dut_big_cores = {
+        core
+        for core, impl, part in zip(proc_matches, impl_matches, part_matches)
+        if impl in BIG_CORES and part in BIG_CORES[impl]
+    }
+    dut_lit_cores = {
+        core
+        for core, impl, part in zip(proc_matches, impl_matches, part_matches)
+        if impl in LITTLE_CORES and part in LITTLE_CORES[impl]
+    }
+
+    if self.dut_config['cpu_usage'] == 'big_only':
+      cores_to_enable = dut_big_cores
+      cores_to_disable = all_cores - dut_big_cores
+    elif self.dut_config['cpu_usage'] == 'little_only':
+      cores_to_enable = dut_lit_cores
+      cores_to_disable = all_cores - dut_lit_cores
+    else:
+      self.logger.LogError(
+          'cpu_usage=%s is not supported on ARM.\n'
+          'Ignore ARM CPU setup and continue.' % self.dut_config['cpu_usage'])
+      return
+
+    if cores_to_enable:
+      cmd_enable_cores = ('echo 1 | tee /sys/devices/system/cpu/cpu{%s}/online'
+                          % ','.join(sorted(cores_to_enable)))
+
+      cmd_disable_cores = ''
+      if cores_to_disable:
+        cmd_disable_cores = (
+            'echo 0 | tee /sys/devices/system/cpu/cpu{%s}/online' % ','.join(
+                sorted(cores_to_disable)))
+
+      ret = self._ce.CrosRunCommand(
+          '; '.join([cmd_enable_cores, cmd_disable_cores]),
+          machine=machine_name,
+          chromeos_root=chromeos_root)
+      self.logger.LogFatalIf(
+          ret, 'Setup ARM CPU failed. Could not retrieve cpuinfo.')
+    else:
+      # If there are no cores enabled by dut_config then configuration
+      # is invalid for current platform and should be ignored.
+      self.logger.LogError(
+          '"cpu_usage" is invalid for targeted platform.\n'
+          'dut_config[cpu_usage]=%s\n'
+          'dut big cores: %s\n'
+          'dut little cores: %s\n'
+          'Ignore ARM CPU setup and continue.' % (self.dut_config['cpu_usage'],
+                                                  dut_big_cores, dut_lit_cores))
 
   def DecreaseWaitTime(self, machine_name, chromeos_root):
     """Change the ten seconds wait time for pagecycler to two seconds."""
