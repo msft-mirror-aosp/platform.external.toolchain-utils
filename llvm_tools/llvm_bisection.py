@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -6,7 +6,6 @@
 
 """Performs bisection on LLVM based off a .JSON file."""
 
-from __future__ import division
 from __future__ import print_function
 
 import argparse
@@ -20,7 +19,6 @@ from assert_not_in_chroot import VerifyOutsideChroot
 from get_llvm_hash import CreateTempLLVMRepo
 from get_llvm_hash import LLVMHash
 from modify_a_tryjob import AddTryjob
-from patch_manager import _ConvertToASCII
 from update_tryjob_status import FindTryjobIndex
 from update_tryjob_status import TryjobStatus
 
@@ -118,12 +116,12 @@ def GetCommandLineArgs():
       default=cros_root,
       help='the path to the chroot (default: %(default)s)')
 
-  # Add argument for the log level.
+  # Add argument for whether to display command contents to `stdout`.
   parser.add_argument(
-      '--log_level',
-      default='none',
-      choices=['none', 'quiet', 'average', 'verbose'],
-      help='the level for the logs (default: %(default)s)')
+      '--verbose',
+      action='store_true',
+      help='display contents of a command to the terminal '
+      '(default: %(default)s)')
 
   args_output = parser.parse_args()
 
@@ -133,7 +131,7 @@ def GetCommandLineArgs():
 
   if args_output.last_tested and not args_output.last_tested.endswith('.json'):
     raise ValueError(
-        'Filed provided %s does not end in \'.json\'' % args_output.last_tested)
+        'Filed provided %s does not end in ".json"' % args_output.last_tested)
 
   return args_output
 
@@ -144,7 +142,7 @@ def _ValidateStartAndEndAgainstJSONStartAndEnd(start, end, json_start,
 
   if start != json_start or end != json_end:
     raise ValueError('The start %d or the end %d version provided is '
-                     'different than \'start\' %d or \'end\' %d in the .JSON '
+                     'different than "start" %d or "end" %d in the .JSON '
                      'file' % (start, end, json_start, json_end))
 
 
@@ -179,7 +177,7 @@ def GetStartAndEndRevision(start, end, tryjobs):
   # Verify that each tryjob has a value for the 'status' key.
   for cur_tryjob_dict in tryjobs:
     if not cur_tryjob_dict.get('status', None):
-      raise ValueError('\'status\' is missing or has no value, please '
+      raise ValueError('"status" is missing or has no value, please '
                        'go to %s and update it' % cur_tryjob_dict['link'])
 
   all_bad_revisions = [end]
@@ -333,19 +331,19 @@ def CheckForExistingTryjobsInRevisionsToLaunch(revisions, jobs):
 
   for rev in revisions:
     if FindTryjobIndex(rev, jobs) is not None:
-      raise ValueError('Revision %d exists already in \'jobs\'' % rev)
+      raise ValueError('Revision %d exists already in "jobs"' % rev)
 
 
 def UpdateBisection(revisions, git_hashes, bisect_contents, last_tested,
                     update_packages, chroot_path, patch_metadata_file,
-                    extra_change_lists, options, builder, log_level):
+                    extra_change_lists, options, builder, verbose):
   """Adds tryjobs and updates the status file with the new tryjobs."""
 
   try:
     for svn_revision, git_hash in zip(revisions, git_hashes):
       tryjob_dict = AddTryjob(update_packages, git_hash, svn_revision,
                               chroot_path, patch_metadata_file,
-                              extra_change_lists, options, builder, log_level,
+                              extra_change_lists, options, builder, verbose,
                               svn_revision)
 
       bisect_contents['jobs'].append(tryjob_dict)
@@ -394,7 +392,7 @@ def main(args_output):
 
   try:
     with open(args_output.last_tested) as f:
-      bisect_contents = _ConvertToASCII(json.load(f))
+      bisect_contents = json.load(f)
   except IOError as err:
     if err.errno != errno.ENOENT:
       raise
@@ -450,7 +448,7 @@ def main(args_output):
                   args_output.last_tested, update_packages,
                   args_output.chroot_path, patch_metadata_file,
                   args_output.extra_change_lists, args_output.options,
-                  args_output.builder, args_output.log_level)
+                  args_output.builder, args_output.verbose)
 
 
 if __name__ == '__main__':

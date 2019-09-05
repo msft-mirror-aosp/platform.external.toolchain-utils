@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -16,8 +16,7 @@ import subprocess
 import sys
 
 from assert_not_in_chroot import VerifyOutsideChroot
-from cros_utils import command_executer
-from patch_manager import _ConvertToASCII
+from subprocess_helpers import ChrootRunCommand
 from test_helpers import CreateTemporaryJsonFile
 
 
@@ -97,7 +96,7 @@ def GetCommandLineArgs():
       '--set_status',
       required=True,
       choices=[tryjob_status.value for tryjob_status in TryjobStatus],
-      help='Sets the \'status\' field of the tryjob.')
+      help='Sets the "status" field of the tryjob.')
 
   # Add argument that determines which revision to search for in the list of
   # tryjobs.
@@ -118,7 +117,7 @@ def GetCommandLineArgs():
   parser.add_argument(
       '--custom_script',
       help='The absolute path to the custom script to execute (its exit code '
-      'should be %d for \'good\', %d for \'bad\', or %d for \'skip\')' %
+      'should be %d for "good", %d for "bad", or %d for "skip")' %
       (CustomScriptStatus.GOOD.value, CustomScriptStatus.BAD.value,
        CustomScriptStatus.SKIP.value))
 
@@ -126,7 +125,7 @@ def GetCommandLineArgs():
 
   if not os.path.isfile(args_output.status_file) or \
       not args_output.status_file.endswith('.json'):
-    raise ValueError('File does not exist or does not ending in \'.json\' '
+    raise ValueError('File does not exist or does not ending in ".json" '
                      ': %s' % args_output.status_file)
 
   if args_output.set_status == TryjobStatus.CUSTOM_SCRIPT.value and \
@@ -169,19 +168,12 @@ def FindTryjobIndex(revision, tryjobs_list):
 def GetStatusFromCrosBuildResult(chroot_path, buildbucket_id):
   """Retrieves the 'status' using 'cros buildresult'."""
 
-  ce = command_executer.GetCommandExecuter(log_level=None)
+  get_buildbucket_id_cmd = [
+      'cros', 'buildresult', '--buildbucket-id',
+      str(buildbucket_id), '--report', 'json'
+  ]
 
-  get_buildbucket_id_cmd = ('cros buildresult --buildbucket-id %d '
-                            '--report json' % buildbucket_id)
-
-  ret, tryjob_json, err = ce.ChrootRunCommandWOutput(
-      chromeos_root=chroot_path,
-      command=get_buildbucket_id_cmd,
-      print_to_console=False)
-
-  if ret:  # Failed to get the contents of the tryjob.
-    raise ValueError('Failed to get JSON contents of the tryjobs buildbucket '
-                     'ID %d: %s' % (buildbucket_id, err))
+  tryjob_json = ChrootRunCommand(chroot_path, get_buildbucket_id_cmd)
 
   tryjob_contents = json.loads(tryjob_json)
 
@@ -197,7 +189,7 @@ def GetAutoResult(chroot_path, buildbucket_id):
   # The string returned by 'cros buildresult' might not be in the mapping.
   if build_result not in builder_status_mapping:
     raise ValueError(
-        '\'cros buildresult\' return value is invalid: %s' % build_result)
+        '"cros buildresult" return value is invalid: %s' % build_result)
 
   return builder_status_mapping[build_result]
 
@@ -243,8 +235,8 @@ def GetCustomScriptResult(custom_script, status_file, tryjob_contents):
 
       raise ValueError(
           'Custom script %s exit code %d did not match '
-          'any of the expected exit codes: %d for \'good\', %d '
-          'for \'bad\', or %d for \'skip\'.\nPlease check %s for information '
+          'any of the expected exit codes: %d for "good", %d '
+          'for "bad", or %d for "skip".\nPlease check %s for information '
           'about the tryjob: %s' %
           (custom_script, exec_script_cmd_obj.returncode,
            CustomScriptStatus.GOOD.value, CustomScriptStatus.BAD.value,
@@ -281,7 +273,7 @@ def UpdateTryjobStatus(revision, set_status, status_file, chroot_path,
   #   ]
   # }
   with open(status_file) as tryjobs:
-    bisect_contents = _ConvertToASCII(json.load(tryjobs))
+    bisect_contents = json.load(tryjobs)
 
   if not bisect_contents['jobs']:
     sys.exit('No tryjobs in %s' % status_file)
@@ -309,7 +301,7 @@ def UpdateTryjobStatus(revision, set_status, status_file, chroot_path,
     bisect_contents['jobs'][tryjob_index]['status'] = GetCustomScriptResult(
         custom_script, status_file, bisect_contents['jobs'][tryjob_index])
   else:
-    raise ValueError('Invalid \'set_status\' option provided: %s' % set_status)
+    raise ValueError('Invalid "set_status" option provided: %s' % set_status)
 
   with open(status_file, 'w') as update_tryjobs:
     json.dump(bisect_contents, update_tryjobs, indent=4, separators=(',', ': '))

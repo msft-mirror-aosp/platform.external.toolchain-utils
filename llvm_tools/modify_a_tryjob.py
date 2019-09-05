@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -17,7 +17,6 @@ import sys
 from assert_not_in_chroot import VerifyOutsideChroot
 from failure_modes import FailureModes
 from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption
-from patch_manager import _ConvertToASCII
 from update_packages_and_run_tryjobs import RunTryJobs
 from update_tryjob_status import FindTryjobIndex
 from update_tryjob_status import TryjobStatus
@@ -89,12 +88,12 @@ def GetCommandLineArgs():
       default=cros_root,
       help='the path to the chroot (default: %(default)s)')
 
-  # Add argument for the log level.
+  # Add argument for whether to display command contents to `stdout`.
   parser.add_argument(
-      '--log_level',
-      default='none',
-      choices=['none', 'quiet', 'average', 'verbose'],
-      help='the level for the logs (default: %(default)s)')
+      '--verbose',
+      action='store_true',
+      help='display contents of a command to the terminal '
+      '(default: %(default)s)')
 
   args_output = parser.parse_args()
 
@@ -130,7 +129,7 @@ def GetCLAfterUpdatingPackages(packages, git_hash, svn_version, chroot_path,
 
 
 def CreateNewTryjobEntryForBisection(cl, extra_cls, options, builder,
-                                     chroot_path, log_level, cl_url, revision):
+                                     chroot_path, verbose, cl_url, revision):
   """Submits a tryjob and adds additional information."""
 
   # Get the tryjob results after submitting the tryjob.
@@ -145,7 +144,7 @@ def CreateNewTryjobEntryForBisection(cl, extra_cls, options, builder,
   #   }
   # ]
   tryjob_results = RunTryJobs(cl, extra_cls, options, [builder], chroot_path,
-                              log_level)
+                              verbose)
   print('\nTryjob:')
   print(tryjob_results[0])
 
@@ -159,24 +158,24 @@ def CreateNewTryjobEntryForBisection(cl, extra_cls, options, builder,
 
 
 def AddTryjob(packages, git_hash, revision, chroot_path, patch_metadata_file,
-              extra_cls, options, builder, log_level, svn_option):
+              extra_cls, options, builder, verbose, svn_option):
   """Submits a tryjob."""
 
-  update_chromeos_llvm_next_hash.ce.SetLogLevel(log_level=log_level)
+  update_chromeos_llvm_next_hash.verbose = verbose
 
   change_list = GetCLAfterUpdatingPackages(packages, git_hash, revision,
                                            chroot_path, patch_metadata_file,
                                            svn_option)
 
   tryjob_dict = CreateNewTryjobEntryForBisection(
-      change_list.cl_number, extra_cls, options, builder, chroot_path,
-      log_level, change_list.url, revision)
+      change_list.cl_number, extra_cls, options, builder, chroot_path, verbose,
+      change_list.url, revision)
 
   return tryjob_dict
 
 
 def PerformTryjobModification(revision, modify_tryjob, status_file, extra_cls,
-                              options, builder, chroot_path, log_level):
+                              options, builder, chroot_path, verbose):
   """Removes, relaunches, or adds a tryjob.
 
   Args:
@@ -189,7 +188,7 @@ def PerformTryjobModification(revision, modify_tryjob, status_file, extra_cls,
     builder: The builder to use for 'cros tryjob'.
     chroot_path: The absolute path to the chroot (used by 'cros tryjob' when
     relaunching a tryjob).
-    log_level: The level to use for the logs.
+    verbose: Determines whether to print the contents of a command to `stdout`.
   """
 
   # Format of 'bisect_contents':
@@ -204,7 +203,7 @@ def PerformTryjobModification(revision, modify_tryjob, status_file, extra_cls,
   #   ]
   # }
   with open(status_file) as tryjobs:
-    bisect_contents = _ConvertToASCII(json.load(tryjobs))
+    bisect_contents = json.load(tryjobs)
 
   if not bisect_contents['jobs'] and modify_tryjob != ModifyTryjob.ADD:
     sys.exit('No tryjobs in %s' % status_file)
@@ -219,14 +218,23 @@ def PerformTryjobModification(revision, modify_tryjob, status_file, extra_cls,
   # Determine the action to take based off of 'modify_tryjob'.
   if modify_tryjob == ModifyTryjob.REMOVE:
     del bisect_contents['jobs'][tryjob_index]
+
+    print('Successfully deleted the tryjob of revision %d' % revision)
   elif modify_tryjob == ModifyTryjob.RELAUNCH:
-    RunTryJobs(bisect_contents['jobs'][tryjob_index]['cl'],
-               bisect_contents['jobs'][tryjob_index]['extra_cls'],
-               bisect_contents['jobs'][tryjob_index]['options'],
-               bisect_contents['jobs'][tryjob_index]['builder'], chroot_path,
-               log_level)
+    # Need to update the tryjob link and buildbucket ID.
+    tryjob_results = RunTryJobs(
+        bisect_contents['jobs'][tryjob_index]['cl'],
+        bisect_contents['jobs'][tryjob_index]['extra_cls'],
+        bisect_contents['jobs'][tryjob_index]['options'],
+        bisect_contents['jobs'][tryjob_index]['builder'], chroot_path, verbose)
 
     bisect_contents['jobs'][tryjob_index]['status'] = TryjobStatus.PENDING.value
+    bisect_contents['jobs'][tryjob_index]['link'] = tryjob_results[0]['link']
+    bisect_contents['jobs'][tryjob_index]['buildbucket_id'] = tryjob_results[0][
+        'buildbucket_id']
+
+    print('Successfully relaunched the tryjob for revision %d and updated '
+          'the tryjob link to %s' % (revision, tryjob_results[0]['link']))
   elif modify_tryjob == ModifyTryjob.ADD:
     # Tryjob exists already.
     if tryjob_index is not None:
@@ -247,9 +255,11 @@ def PerformTryjobModification(revision, modify_tryjob, status_file, extra_cls,
 
       tryjob_dict = AddTryjob(update_packages, git_hash, revision, chroot_path,
                               patch_metadata_file, extra_cls, options, builder,
-                              log_level, revision)
+                              verbose, revision)
 
       bisect_contents['jobs'].append(tryjob_dict)
+
+      print('Successfully added tryjob of revision %d' % revision)
     else:
       raise ValueError('Failed to add tryjob to %s' % status_file)
   else:
@@ -271,7 +281,7 @@ def main():
       args_output.revision, ModifyTryjob(
           args_output.modify_tryjob), args_output.status_file,
       args_output.extra_change_lists, args_output.options, args_output.builder,
-      args_output.chroot_path, args_output.log_level)
+      args_output.chroot_path, args_output.verbose)
 
 
 if __name__ == '__main__':

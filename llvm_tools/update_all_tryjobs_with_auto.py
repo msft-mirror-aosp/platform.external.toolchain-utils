@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -13,7 +13,6 @@ import json
 import os
 
 from assert_not_in_chroot import VerifyOutsideChroot
-from patch_manager import _ConvertToASCII
 from update_tryjob_status import GetAutoResult
 from update_tryjob_status import TryjobStatus
 
@@ -51,7 +50,7 @@ def GetCommandLineArgs():
 
   if not os.path.isfile(args_output.last_tested) or \
       not args_output.last_tested.endswith('.json'):
-    raise ValueError('File does not exist or does not ending in \'.json\' '
+    raise ValueError('File does not exist or does not ending in ".json" '
                      ': %s' % args_output.last_tested)
 
   return args_output
@@ -65,7 +64,7 @@ def main():
   args_output = GetCommandLineArgs()
 
   with open(args_output.last_tested) as tryjobs:
-    bisect_contents = _ConvertToASCII(json.load(tryjobs))
+    bisect_contents = json.load(tryjobs)
 
   for tryjob in bisect_contents['jobs']:
     if tryjob['status'] == TryjobStatus.PENDING.value:

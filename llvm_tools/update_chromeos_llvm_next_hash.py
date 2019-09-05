@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -13,19 +13,22 @@ for review.
 from __future__ import print_function
 
 from collections import namedtuple
-from pipes import quote
 import argparse
-import llvm_patch_management
 import os
 import re
+import subprocess
 
 from assert_not_in_chroot import VerifyOutsideChroot
-from cros_utils import command_executer
 from failure_modes import FailureModes
 from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption
 from get_llvm_hash import is_svn_option
+from subprocess_helpers import ChrootRunCommand
+from subprocess_helpers import ExecCommandAndCaptureOutput
+import llvm_patch_management
 
-ce = command_executer.GetCommandExecuter()
+# If set to `True`, then the contents of `stdout` after executing a command will
+# be displayed to the terminal.
+verbose = False
 
 CommitContents = namedtuple('CommitContents', ['url', 'cl_number'])
 
@@ -63,12 +66,12 @@ def GetCommandLineArgs():
       help='the ebuilds to update their hash for llvm-next ' \
           '(default: %(default)s)')
 
-  # Add argument for the log level.
+  # Add argument for whether to display command contents to `stdout`.
   parser.add_argument(
-      '--log_level',
-      default='none',
-      choices=['none', 'quiet', 'average', 'verbose'],
-      help='the level for the logs (default: %(default)s)')
+      '--verbose',
+      action='store_true',
+      help='display contents of a command to the terminal '
+      '(default: %(default)s)')
 
   # Add argument for the LLVM version to use.
   parser.add_argument(
@@ -100,8 +103,9 @@ def GetCommandLineArgs():
   # Parse the command line.
   args_output = parser.parse_args()
 
-  # Set the log level for the command executer.
-  ce.SetLogLevel(log_level=args_output.log_level)
+  global verbose
+
+  verbose = args_output.verbose
 
   return args_output
 
@@ -127,17 +131,9 @@ def GetChrootBuildPaths(chromeos_root, package_list):
   # Find the chroot path for each package's ebuild.
   for cur_package in sorted(set(package_list)):
     # Cmd to find the chroot path for the package.
-    equery_cmd = 'equery w %s' % cur_package
+    equery_cmd = ['equery', 'w', cur_package]
 
-    # Find the chroot path for the package.
-    ret, chroot_path, err = ce.ChrootRunCommandWOutput(
-        chromeos_root=chromeos_root,
-        command=equery_cmd,
-        print_to_console=ce.GetLogLevel() == 'verbose')
-
-    if ret:  # failed to get the chroot path
-      raise ValueError('Failed to get chroot path for the package (%s): %s' %
-                       (cur_package, err))
+    chroot_path = ChrootRunCommand(chromeos_root, equery_cmd, verbose=verbose)
 
     chroot_paths.append(chroot_path.strip())
 
@@ -269,12 +265,9 @@ def UpdateBuildLLVMNextHash(ebuild_path, llvm_hash, llvm_version):
   parent_dir = os.path.dirname(ebuild_path)
 
   # Stage the changes.
-  ret, _, err = ce.RunCommandWOutput(
-      'git -C %s add %s' % (parent_dir, ebuild_path),
-      print_to_console=ce.GetLogLevel() == 'verbose')
+  stage_changes_cmd = ['git', '-C', parent_dir, 'add', ebuild_path]
 
-  if ret:  # failed to stage the changes
-    raise ValueError('Failed to stage the ebuild for commit: %s' % err)
+  ExecCommandAndCaptureOutput(stage_changes_cmd, verbose=verbose)
 
 
 def ReplaceLLVMNextHash(ebuild_lines, is_updated, llvm_regex, llvm_hash,
@@ -333,12 +326,11 @@ def UprevEbuild(symlink):
   path_to_symlink_dir = os.path.dirname(symlink)
 
   # Stage the new symlink for commit.
-  ret, _, err = ce.RunCommandWOutput(
-      'git -C %s mv %s %s' % (path_to_symlink_dir, symlink, new_symlink),
-      print_to_console=ce.GetLogLevel() == 'verbose')
+  stage_symlink_cmd = [
+      'git', '-C', path_to_symlink_dir, 'mv', symlink, new_symlink
+  ]
 
-  if ret:  # failed to stage the symlink for commit
-    raise ValueError('Failed to stage the symlink for commit: %s' % err)
+  ExecCommandAndCaptureOutput(stage_symlink_cmd, verbose=verbose)
 
 
 def _CreateRepo(path_to_repo_dir, llvm_hash):
@@ -355,18 +347,21 @@ def _CreateRepo(path_to_repo_dir, llvm_hash):
   if not os.path.isdir(path_to_repo_dir):
     raise ValueError('Invalid directory path provided: %s' % path_to_repo_dir)
 
-  create_repo_cmd = ' && '.join([
-      'cd %s' % path_to_repo_dir,
-      'git reset HEAD --hard',
-      'repo start llvm-next-update-%s' % llvm_hash,
-  ])
+  reset_changes_cmd = [
+      'git',
+      '-C',
+      path_to_repo_dir,
+      'reset',
+      'HEAD',
+      '--hard',
+  ]
 
-  ret, _, err = ce.RunCommandWOutput(
-      create_repo_cmd, print_to_console=ce.GetLogLevel() == 'verbose')
+  ExecCommandAndCaptureOutput(reset_changes_cmd, verbose=verbose)
 
-  if ret:  # failed to create a repo for the changes
-    raise ValueError('Failed to create the repo (llvm-next-update-%s): %s' %
-                     (llvm_hash, err))
+  create_repo_cmd = ['repo', 'start', 'llvm-next-update-%s' % llvm_hash]
+
+  ExecCommandAndCaptureOutput(
+      create_repo_cmd, cwd=path_to_repo_dir, verbose=verbose)
 
 
 def _DeleteRepo(path_to_repo_dir, llvm_hash):
@@ -383,18 +378,22 @@ def _DeleteRepo(path_to_repo_dir, llvm_hash):
   if not os.path.isdir(path_to_repo_dir):
     raise ValueError('Invalid directory path provided: %s' % path_to_repo_dir)
 
-  delete_repo_cmd = ' && '.join([
-      'cd %s' % path_to_repo_dir, 'git checkout cros/master',
-      'git reset HEAD --hard',
-      'git branch -D llvm-next-update-%s' % llvm_hash
-  ])
+  checkout_to_master_cmd = [
+      'git', '-C', path_to_repo_dir, 'checkout', 'cros/master'
+  ]
 
-  ret, _, err = ce.RunCommandWOutput(
-      delete_repo_cmd, print_to_console=ce.GetLogLevel() == 'verbose')
+  ExecCommandAndCaptureOutput(checkout_to_master_cmd, verbose=verbose)
 
-  if ret:  # failed to delete the repo
-    raise ValueError('Failed to delete the repo (llvm-next-update-%s): %s' %
-                     (llvm_hash, err))
+  reset_head_cmd = ['git', '-C', path_to_repo_dir, 'reset', 'HEAD', '--hard']
+
+  ExecCommandAndCaptureOutput(reset_head_cmd, verbose=verbose)
+
+  delete_repo_cmd = [
+      'git', '-C', path_to_repo_dir, 'branch', '-D',
+      'llvm-next-update-%s' % llvm_hash
+  ]
+
+  ExecCommandAndCaptureOutput(delete_repo_cmd, verbose=verbose)
 
 
 def GetGerritRepoUploadContents(repo_upload_contents):
@@ -446,26 +445,36 @@ def UploadChanges(path_to_repo_dir, llvm_hash, commit_messages):
   if not os.path.isdir(path_to_repo_dir):
     raise ValueError('Invalid directory path provided: %s' % path_to_repo_dir)
 
-  commit_cmd = 'cd %s && git commit %s' % (path_to_repo_dir, commit_messages)
+  commit_cmd = [
+      'git',
+      'commit',
+  ]
+  commit_cmd.extend(commit_messages)
 
-  ret, _, err = ce.RunCommandWOutput(
-      commit_cmd, print_to_console=ce.GetLogLevel() == 'verbose')
-
-  if ret:  # failed to commit the changes
-    raise ValueError('Failed to create a commit for the changes: %s' % err)
+  ExecCommandAndCaptureOutput(commit_cmd, cwd=path_to_repo_dir, verbose=verbose)
 
   # Upload the changes for review.
-  upload_change_cmd = 'cd %s && ' \
-      'yes | repo upload --br=llvm-next-update-%s --no-verify' % (
-          path_to_repo_dir, llvm_hash)
+  upload_change_cmd = (
+      'yes | repo upload --br=llvm-next-update-%s --no-verify' % llvm_hash)
 
-  ret, _, err = ce.RunCommandWOutput(
-      upload_change_cmd, print_to_console=ce.GetLogLevel() == 'verbose')
+  # NOTE: Need `shell=True` in order to pipe `yes` into `repo upload ...`.
+  #
+  # The CL URL is sent to 'stderr', so need to redirect 'stderr' to 'stdout'.
+  upload_changes_obj = subprocess.Popen(
+      upload_change_cmd,
+      cwd=path_to_repo_dir,
+      shell=True,
+      encoding='UTF-8',
+      stdout=subprocess.PIPE,
+      stderr=subprocess.STDOUT)
 
-  if ret:  # failed to upload the changes for review
-    raise ValueError('Failed to upload changes for review: %s' % err)
+  out, _ = upload_changes_obj.communicate()
 
-  return GetGerritRepoUploadContents(err)
+  if upload_changes_obj.returncode:  # Failed to upload changes.
+    print(out)
+    raise ValueError('Failed to upload changes for review')
+
+  return GetGerritRepoUploadContents(out.rstrip())
 
 
 def CreatePathDictionaryFromPackages(chroot_path, update_packages):
@@ -504,13 +513,12 @@ def RemovePatchesFromFilesDir(patches_to_remove):
   """
 
   for cur_patch in patches_to_remove:
-    ret, _, err = ce.RunCommandWOutput(
-        'git -C %s rm -f %s' % (os.path.dirname(cur_patch), cur_patch),
-        print_to_console=ce.GetLogLevel() == 'verbose')
+    remove_patch_cmd = [
+        'git', '-C',
+        os.path.dirname(cur_patch), 'rm', '-f', cur_patch
+    ]
 
-    if ret:  # Failed to remove the patch in $FILESDIR.
-      raise ValueError(
-          'Failed to remove patch %s: %s' % (os.path.basename(cur_patch), err))
+    ExecCommandAndCaptureOutput(remove_patch_cmd, verbose=verbose)
 
 
 def StagePatchMetadataFileForCommit(patch_metadata_file_path):
@@ -529,15 +537,12 @@ def StagePatchMetadataFileForCommit(patch_metadata_file_path):
         'Invalid patch metadata file provided: %s' % patch_metadata_file_path)
 
   # Cmd to stage the patch metadata file for commit.
-  stage_patch_file = 'git -C %s add %s' % (
-      os.path.dirname(patch_metadata_file_path), patch_metadata_file_path)
+  stage_patch_file = [
+      'git', '-C',
+      os.path.dirname(patch_metadata_file_path), 'add', patch_metadata_file_path
+  ]
 
-  ret, _, err = ce.RunCommandWOutput(
-      stage_patch_file, print_to_console=ce.GetLogLevel() == 'verbose')
-
-  if ret:  # Failed to stage the patch metadata file for commit.
-    raise ValueError('Failed to stage patch metadata file %s for commit: %s' %
-                     (os.path.basename(patch_metadata_file_path), err))
+  ExecCommandAndCaptureOutput(stage_patch_file, verbose=verbose)
 
 
 def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
@@ -559,32 +564,29 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
         patch_info_dict['removed_patches'] or \
         patch_info_dict['modified_metadata']:
       cur_package_header = 'For the package %s:' % package_name
-      commit_messages.append('-m %s' % quote(cur_package_header))
+      commit_messages.append('-m %s' % cur_package_header)
 
     # Add to the commit message that the patch metadata file was modified.
     if patch_info_dict['modified_metadata']:
       patch_metadata_path = patch_info_dict['modified_metadata']
-      commit_messages.append(
-          '-m %s' % quote('The patch metadata file %s was '
-                          'modified' % os.path.basename(patch_metadata_path)))
+      commit_messages.append('-m %s' % 'The patch metadata file %s was '
+                             'modified' % os.path.basename(patch_metadata_path))
 
       StagePatchMetadataFileForCommit(patch_metadata_path)
 
     # Add each disabled patch to the commit message.
     if patch_info_dict['disabled_patches']:
-      commit_messages.append(
-          '-m %s' % quote('The following patches were disabled:'))
+      commit_messages.append('-m %s' % 'The following patches were disabled:')
 
       for patch_path in patch_info_dict['disabled_patches']:
-        commit_messages.append('-m %s' % quote(os.path.basename(patch_path)))
+        commit_messages.append('-m %s' % os.path.basename(patch_path))
 
     # Add each removed patch to the commit message.
     if patch_info_dict['removed_patches']:
-      commit_messages.append(
-          '-m %s' % quote('The following patches were removed:'))
+      commit_messages.append('-m %s' % 'The following patches were removed:')
 
       for patch_path in patch_info_dict['removed_patches']:
-        commit_messages.append('-m %s' % quote(os.path.basename(patch_path)))
+        commit_messages.append('-m %s' % os.path.basename(patch_path))
 
       RemovePatchesFromFilesDir(patch_info_dict['removed_patches'])
 
@@ -616,11 +618,14 @@ def UpdatePackages(packages, llvm_hash, llvm_version, chroot_path,
     Gerrit commit URL and the second pair is the change list number.
   """
 
+  # Determines whether to print the result of each executed command.
+  llvm_patch_management.verbose = verbose
+
   # Construct a dictionary where the key is the absolute path of the symlink to
   # the package and the value is the absolute path to the ebuild of the package.
   paths_dict = CreatePathDictionaryFromPackages(chroot_path, packages)
 
-  repo_path = os.path.dirname(paths_dict.itervalues().next())
+  repo_path = os.path.dirname(next(iter(paths_dict.values())))
 
   _CreateRepo(repo_path, llvm_hash)
 
@@ -634,10 +639,9 @@ def UpdatePackages(packages, llvm_hash, llvm_version, chroot_path,
     else:
       commit_message_header = 'llvm-next: Update packages to r%d' % llvm_version
 
-    commit_messages = ['-m %s' % quote(commit_message_header)]
+    commit_messages = ['-m %s' % commit_message_header]
 
-    commit_messages.append(
-        '-m %s' % quote('Following packages have been updated:'))
+    commit_messages.append('-m %s' % 'Following packages have been updated:')
 
     # Holds the list of packages that are updating.
     packages = []
@@ -662,10 +666,9 @@ def UpdatePackages(packages, llvm_hash, llvm_version, chroot_path,
 
       new_commit_message = '%s/%s' % (parent_dir_name, cur_dir_name)
 
-      commit_messages.append('-m %s' % quote(new_commit_message))
+      commit_messages.append('-m %s' % new_commit_message)
 
     # Handle the patches for each package.
-    llvm_patch_management.ce.SetLogLevel(log_level=ce.GetLogLevel())
     package_info_dict = llvm_patch_management.UpdatePackagesPatchMetadataFile(
         chroot_path, llvm_version, patch_metadata_file, packages, mode)
 
@@ -673,7 +676,7 @@ def UpdatePackages(packages, llvm_hash, llvm_version, chroot_path,
     commit_messages = StagePackagesPatchResultsForCommit(
         package_info_dict, commit_messages)
 
-    change_list = UploadChanges(repo_path, llvm_hash, ' '.join(commit_messages))
+    change_list = UploadChanges(repo_path, llvm_hash, commit_messages)
 
   finally:
     _DeleteRepo(repo_path, llvm_hash)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -6,7 +6,6 @@
 
 """Performs bisection on LLVM based off a .JSON file."""
 
-from __future__ import division
 from __future__ import print_function
 
 import os
@@ -68,8 +67,8 @@ def main():
       # Update all tryjobs whose status is 'pending' to the result of `cros
       # buildresult`.
       while True:
-        print('\nAttempting to update all tryjobs whose \'status\' is '
-              '\'pending\':')
+        print('\nAttempting to update all tryjobs whose "status" is '
+              '"pending":')
         print('-' * 40)
 
         update_ret = subprocess.call(exec_update_tryjobs)
@@ -84,7 +83,7 @@ def main():
         delta_time = time.time() - update_start_time
 
         if delta_time > POLLING_LIMIT_SECS:
-          print('Unable to update tryjobs whose status is \'pending\' to '
+          print('Unable to update tryjobs whose status is "pending" to '
                 'the result of `cros buildresult`.')
 
           # Something is wrong with updating the tryjobs's 'status' via

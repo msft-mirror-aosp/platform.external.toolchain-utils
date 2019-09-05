@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -8,19 +8,21 @@
 
 from __future__ import print_function
 
-from pipes import quote
 import argparse
 import os
 import patch_manager
 
 from assert_not_in_chroot import VerifyOutsideChroot
-from cros_utils import command_executer
 from failure_modes import FailureModes
 from get_llvm_hash import CreateTempLLVMRepo
 from get_llvm_hash import GetGoogle3LLVMVersion
 from get_llvm_hash import LLVMHash
+from subprocess_helpers import ChrootRunCommand
+from subprocess_helpers import ExecCommandAndCaptureOutput
 
-ce = command_executer.GetCommandExecuter()
+# If set to `True`, then the contents of `stdout` after executing a command will
+# be displayed to the terminal.
+verbose = False
 
 
 def GetCommandLineArgs():
@@ -52,12 +54,12 @@ def GetCommandLineArgs():
       default=['sys-devel/llvm'],
       help='the packages to manage their patches (default: %(default)s)')
 
-  # Add argument for the log level.
+  # Add argument for whether to display command contents to `stdout`.
   parser.add_argument(
-      '--log_level',
-      default='none',
-      choices=['none', 'quiet', 'average', 'verbose'],
-      help='the level for the logs (default: %(default)s)')
+      '--verbose',
+      action='store_true',
+      help='display contents of a command to the terminal '
+      '(default: %(default)s)')
 
   # Add argument for the LLVM version to use for patch management.
   parser.add_argument(
@@ -86,8 +88,9 @@ def GetCommandLineArgs():
   # Parse the command line.
   args_output = parser.parse_args()
 
-  # Set the log level for the command executer.
-  ce.SetLogLevel(log_level=args_output.log_level)
+  global verbose
+
+  verbose = args_output.verbose
 
   unique_packages = list(set(args_output.packages))
 
@@ -119,15 +122,8 @@ def GetPathToFilesDirectory(chroot_path, package):
     raise ValueError('Invalid chroot provided: %s' % chroot_path)
 
   # Get the absolute chroot path to the ebuild.
-  ret, chroot_ebuild_path, err = ce.ChrootRunCommandWOutput(
-      chromeos_root=chroot_path,
-      command='equery w %s' % package,
-      print_to_console=ce.GetLogLevel() == 'verbose')
-
-  if ret:  # Failed to get the absolute chroot path to package's ebuild.
-    raise ValueError(
-        'Failed to get the absolute chroot path of the package %s: %s' %
-        (package, err))
+  chroot_ebuild_path = ChrootRunCommand(
+      chroot_path, ['equery', 'w', package], verbose=verbose)
 
   # Get the absolute chroot path to $FILESDIR's parent directory.
   filesdir_parent_path = os.path.dirname(chroot_ebuild_path.strip())
@@ -175,20 +171,15 @@ def _CheckPatchMetadataPath(patch_metadata_path):
     raise ValueError('Invalid file provided: %s' % patch_metadata_path)
 
   if not patch_metadata_path.endswith('.json'):
-    raise ValueError('File does not end in \'.json\': %s' % patch_metadata_path)
+    raise ValueError('File does not end in ".json": %s' % patch_metadata_path)
 
 
 def _MoveSrcTreeHEADToGitHash(src_path, git_hash):
   """Moves HEAD to 'git_hash'."""
 
-  move_head_cmd = 'git -C %s checkout %s' % (quote(src_path), git_hash)
+  move_head_cmd = ['git', '-C', src_path, 'checkout', git_hash]
 
-  ret, _, err = ce.RunCommandWOutput(
-      move_head_cmd, print_to_console=ce.GetLogLevel() == 'verbose')
-
-  if ret:  # Failed to checkout to 'git_hash'.
-    raise ValueError('Failed to moved HEAD in %s to %s: %s' % (quote(src_path),
-                                                               git_hash, err))
+  ExecCommandAndCaptureOutput(move_head_cmd, verbose=verbose)
 
 
 def UpdatePackagesPatchMetadataFile(chroot_path, svn_version,
@@ -275,6 +266,9 @@ def main():
     print('The patch file %s has been modified for the packages:' %
           args_output.patch_metadata_file)
     print('\n'.join(args_output.packages))
+  else:
+    print('Applicable patches in %s applied successfully.' %
+          args_output.patch_metadata_file)
 
 
 if __name__ == '__main__':

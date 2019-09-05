@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -14,25 +14,15 @@ import re
 import shutil
 import subprocess
 import tempfile
+
 from contextlib import contextmanager
+from subprocess_helpers import CheckCommand
+from subprocess_helpers import check_output
 
 import requests
 
 _LLVM_GIT_URL = ('https://chromium.googlesource.com/external/github.com/llvm'
                  '/llvm-project')
-
-
-def CheckCommand(cmd):
-  """Executes the command using Popen()."""
-
-  cmd_obj = subprocess.Popen(
-      cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-  stdout, _ = cmd_obj.communicate()
-
-  if cmd_obj.returncode:
-    print(stdout)
-    raise subprocess.CalledProcessError(cmd_obj.returncode, cmd)
 
 
 @contextmanager
@@ -70,7 +60,7 @@ def CreateTempLLVMRepo(temp_dir):
     yield temp_dir
   finally:
     if os.path.isdir(temp_dir):
-      subprocess.check_output([
+      check_output([
           'git', '-C', abs_path_to_llvm_project_dir, 'worktree', 'remove', '-f',
           temp_dir
       ])
@@ -106,7 +96,7 @@ def GetAndUpdateLLVMProjectInLLVMTools():
     # `git status` has a '-s'/'--short' option that shortens the output.
     # With the '-s' option, if no changes were made to the LLVM repo, then the
     # output (assigned to 'repo_status') would be empty.
-    repo_status = subprocess.check_output(
+    repo_status = check_output(
         ['git', '-C', abs_path_to_llvm_project_dir, 'status', '-s'])
 
     if repo_status.rstrip():
@@ -145,7 +135,7 @@ def GetGoogle3LLVMVersion():
   cat_cmd = ['cat', path_to_google3_llvm_version]
 
   # Get latest version.
-  g3_version = subprocess.check_output(cat_cmd)
+  g3_version = check_output(cat_cmd)
 
   # Change type to an integer
   return int(g3_version.rstrip())
@@ -323,7 +313,7 @@ class LLVMHash(object):
           'git', '-C', subdir, 'log', '--format=%B', '-n', '1', cur_hash
       ]
 
-      out = subprocess.check_output(find_llvm_cmd)
+      out = check_output(find_llvm_cmd)
 
       commit_svn_version = self.GetSVNVersionFromCommitMessage(out.rstrip())
 
@@ -356,7 +346,7 @@ class LLVMHash(object):
         'llvm-svn: %d' % llvm_version
     ]
 
-    hash_vals = subprocess.check_output(hash_cmd)
+    hash_vals = check_output(hash_cmd)
 
     return self._ParseCommitMessages(llvm_git_dir, hash_vals.rstrip(),
                                      llvm_version)
@@ -390,7 +380,7 @@ class LLVMHash(object):
         'git', 'ls-remote', _LLVM_GIT_URL, path_to_master_branch
     ]
 
-    llvm_tot_git_hash = subprocess.check_output(llvm_tot_git_hash_cmd)
+    llvm_tot_git_hash = check_output(llvm_tot_git_hash_cmd)
 
     return llvm_tot_git_hash.rstrip().split()[0]
 

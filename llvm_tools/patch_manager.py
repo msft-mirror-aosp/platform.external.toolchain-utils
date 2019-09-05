@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -17,6 +17,8 @@ import sys
 from collections import namedtuple
 from failure_modes import FailureModes
 from get_llvm_hash import LLVMHash
+from subprocess_helpers import check_call
+from subprocess_helpers import check_output
 
 
 def is_directory(dir_path):
@@ -36,8 +38,8 @@ def is_patch_metadata_file(patch_metadata_file):
         'Invalid patch metadata file provided: %s' % patch_metadata_file)
 
   if not patch_metadata_file.endswith('.json'):
-    raise ValueError('Patch metadata file does not end in \'.json\': %s' %
-                     patch_metadata_file)
+    raise ValueError(
+        'Patch metadata file does not end in ".json": %s' % patch_metadata_file)
 
   return patch_metadata_file
 
@@ -58,11 +60,11 @@ def EnsureBisectModeAndSvnVersionAreSpecifiedTogether(failure_mode,
   """Validates that 'good_svn_version' is passed in only for bisection."""
 
   if failure_mode != FailureModes.BISECT_PATCHES.value and good_svn_version:
-    raise ValueError('\'good_svn_version\' is only available for bisection.')
+    raise ValueError('"good_svn_version" is only available for bisection.')
   elif failure_mode == FailureModes.BISECT_PATCHES.value and \
       not good_svn_version:
     raise ValueError('A good SVN version is required for bisection (used by'
-                     '\'git bisect start\'.')
+                     '"git bisect start".')
 
 
 def GetCommandLineArgs():
@@ -91,7 +93,7 @@ def GetCommandLineArgs():
       default=False,
       help='Determines whether bisection should continue after successfully '
       'bisecting a patch (default: %(default)s) - only used for '
-      '\'bisect_patches\'')
+      '"bisect_patches"')
 
   # Add argument for the LLVM version to use for patch management.
   parser.add_argument(
@@ -106,7 +108,7 @@ def GetCommandLineArgs():
       '--patch_metadata_file',
       required=True,
       type=is_patch_metadata_file,
-      help='the absolute path to the .json file in \'$FILESDIR/\' of the '
+      help='the absolute path to the .json file in "$FILESDIR/" of the '
       'package which has all the patches and their metadata if applicable')
 
   # Add argument for the absolute path to the ebuild's $FILESDIR path.
@@ -115,7 +117,7 @@ def GetCommandLineArgs():
       '--filesdir_path',
       required=True,
       type=is_directory,
-      help='the absolute path to the ebuild \'files/\' directory')
+      help='the absolute path to the ebuild "files/" directory')
 
   # Add argument for the absolute path to the unpacked sources.
   parser.add_argument(
@@ -147,7 +149,7 @@ def GetHEADSVNVersion(src_path):
 
   get_head_cmd = ['git', '-C', src_path, 'log', '-1', '--pretty=%B']
 
-  head_commit_message = subprocess.check_output(get_head_cmd)
+  head_commit_message = check_output(get_head_cmd)
 
   head_svn_version = LLVMHash().GetSVNVersionFromCommitMessage(
       head_commit_message)
@@ -161,8 +163,8 @@ def VerifyHEADIsTheSameAsSVNVersion(src_path, svn_version):
   head_svn_version = GetHEADSVNVersion(src_path)
 
   if head_svn_version != svn_version:
-    raise ValueError('HEAD\'s SVN version %d does not match \'svn_version\''
-                     ' %d, please move HEAD to \'svn_version\'s\' git hash.' %
+    raise ValueError('HEAD\'s SVN version %d does not match "svn_version"'
+                     ' %d, please move HEAD to "svn_version"s\' git hash.' %
                      (head_svn_version, svn_version))
 
 
@@ -242,7 +244,7 @@ def ApplyPatch(src_path, patch_path):
   ]
 
   try:
-    subprocess.check_output(test_patch_cmd)
+    check_output(test_patch_cmd)
 
   # If the mode is 'continue', then catching the exception makes sure that
   # the program does not exit on the first failed applicable patch.
@@ -251,7 +253,7 @@ def ApplyPatch(src_path, patch_path):
     return False
 
   # Test run succeeded on the patch.
-  subprocess.check_output(apply_patch_cmd)
+  check_output(apply_patch_cmd)
 
   return True
 
@@ -269,25 +271,10 @@ def UpdatePatchMetadataFile(patch_metadata_file, patches):
   """
 
   if not patch_metadata_file.endswith('.json'):
-    raise ValueError('File does not end in \'.json\': %s' % patch_metadata_file)
+    raise ValueError('File does not end in ".json": %s' % patch_metadata_file)
 
   with open(patch_metadata_file, 'w') as patch_file:
     json.dump(patches, patch_file, indent=4, separators=(',', ': '))
-
-
-def _ConvertToASCII(obj):
-  """Convert an object loaded from JSON to ASCII; JSON gives us unicode."""
-
-  # Using something like `object_hook` is insufficient, since it only fires on
-  # actual JSON objects. `encoding` fails, too, since the default decoder always
-  # uses unicode() to decode strings.
-  if isinstance(obj, unicode):
-    return str(obj)
-  if isinstance(obj, dict):
-    return {_ConvertToASCII(k): _ConvertToASCII(v) for k, v in obj.iteritems()}
-  if isinstance(obj, list):
-    return [_ConvertToASCII(v) for v in obj]
-  return obj
 
 
 def GetCommitHashesForBisection(src_path, good_svn_version, bad_svn_version):
@@ -312,7 +299,7 @@ def PerformBisection(src_path, good_commit, bad_commit, svn_version,
       'git', '-C', src_path, 'bisect', 'start', bad_commit, good_commit
   ]
 
-  subprocess.check_output(bisect_start_cmd)
+  check_output(bisect_start_cmd)
 
   bisect_run_cmd = [
       'git', '-C', src_path, 'bisect', 'run',
@@ -323,7 +310,7 @@ def PerformBisection(src_path, good_commit, bad_commit, svn_version,
       '%d' % num_patches
   ]
 
-  subprocess.check_call(bisect_run_cmd)
+  check_call(bisect_run_cmd)
 
   # Successfully bisected the patch, so retrieve the SVN version from the
   # commit message.
@@ -331,12 +318,11 @@ def PerformBisection(src_path, good_commit, bad_commit, svn_version,
       'git', '-C', src_path, 'show', 'refs/bisect/bad'
   ]
 
-  bad_commit_message = subprocess.check_output(
-      get_bad_commit_from_bisect_run_cmd)
+  bad_commit_message = check_output(get_bad_commit_from_bisect_run_cmd)
 
   end_bisection_cmd = ['git', '-C', src_path, 'bisect', 'reset']
 
-  subprocess.check_output(end_bisection_cmd)
+  check_output(end_bisection_cmd)
 
   # `git bisect run` returns the bad commit hash and the commit message.
   bad_version = LLVMHash().GetSVNVersionFromCommitMessage(
@@ -350,11 +336,11 @@ def CleanSrcTree(src_path):
 
   reset_src_tree_cmd = ['git', '-C', src_path, 'reset', 'HEAD', '--hard']
 
-  subprocess.check_output(reset_src_tree_cmd)
+  check_output(reset_src_tree_cmd)
 
   clean_src_tree_cmd = ['git', '-C', src_path, 'clean', '-fd']
 
-  subprocess.check_output(clean_src_tree_cmd)
+  check_output(clean_src_tree_cmd)
 
 
 def SaveSrcTreeState(src_path):
@@ -362,7 +348,7 @@ def SaveSrcTreeState(src_path):
 
   save_src_tree_cmd = ['git', '-C', src_path, 'stash', '-a']
 
-  subprocess.check_output(save_src_tree_cmd)
+  check_output(save_src_tree_cmd)
 
 
 def RestoreSrcTreeState(src_path, bad_commit_hash):
@@ -370,11 +356,11 @@ def RestoreSrcTreeState(src_path, bad_commit_hash):
 
   checkout_cmd = ['git', '-C', src_path, 'checkout', bad_commit_hash]
 
-  subprocess.check_output(checkout_cmd)
+  check_output(checkout_cmd)
 
   get_changes_cmd = ['git', '-C', src_path, 'stash', 'pop']
 
-  subprocess.check_output(get_changes_cmd)
+  check_output(get_changes_cmd)
 
 
 def HandlePatches(svn_version,
@@ -454,7 +440,7 @@ def HandlePatches(svn_version,
   failed_patches = []
 
   with open(patch_metadata_file) as patch_file:
-    patch_file_contents = _ConvertToASCII(json.load(patch_file))
+    patch_file_contents = json.load(patch_file)
 
     if mode == FailureModes.BISECT_PATCHES:
       # A good and bad commit are required by `git bisect start`.

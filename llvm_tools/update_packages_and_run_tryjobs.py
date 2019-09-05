@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -8,19 +8,17 @@
 
 from __future__ import print_function
 
-from pipes import quote
 import argparse
 import datetime
 import json
 import os
-import sys
 
 from assert_not_in_chroot import VerifyOutsideChroot
-from cros_utils import command_executer
-from cros_utils.buildbot_utils import ParseTryjobBuildbucketId
 from failure_modes import FailureModes
 from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption
 from get_llvm_hash import is_svn_option
+from subprocess_helpers import ChrootRunCommand
+from subprocess_helpers import ExecCommandAndCaptureOutput
 import update_chromeos_llvm_next_hash
 
 
@@ -41,7 +39,7 @@ def GetCommandLineArgs():
   # Create parser and add optional command-line arguments.
   parser = argparse.ArgumentParser(
       description='Runs a tryjob if successfully updated packages\''
-      '\'LLVM_NEXT_HASH\'.')
+      '"LLVM_NEXT_HASH".')
 
   # Add argument for the absolute path to the file that contains information on
   # the previous tested svn version.
@@ -86,12 +84,12 @@ def GetCommandLineArgs():
       default=cros_root,
       help='the path to the chroot (default: %(default)s)')
 
-  # Add argument for the log level.
+  # Add argument for whether to display command contents to `stdout`.
   parser.add_argument(
-      '--log_level',
-      default='none',
-      choices=['none', 'quiet', 'average', 'verbose'],
-      help='the level for the logs (default: %(default)s)')
+      '--verbose',
+      action='store_true',
+      help='display contents of a command to the terminal '
+      '(default: %(default)s)')
 
   # Add argument for the LLVM version to use.
   parser.add_argument(
@@ -166,11 +164,11 @@ def GetTryJobCommand(change_list, extra_change_lists, options, builder):
   if options:
     tryjob_cmd.extend('--%s' % option for option in options)
 
-  return ' '.join(tryjob_cmd)
+  return tryjob_cmd
 
 
 def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
-               log_level):
+               verbose):
   """Runs a tryjob/tryjobs.
 
   Args:
@@ -180,7 +178,7 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
     options: Any options to be passed into the 'tryjob' command.
     builders: All the builders to run the 'tryjob' with.
     chroot_path: The absolute path to the chroot.
-    log_level: The log level to be used for the command_executer.
+    verbose: Print command contents to `stdout`.
 
   Returns:
     A list that contains stdout contents of each tryjob, where stdout is
@@ -190,8 +188,6 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
   Raises:
     ValueError: Failed to submit a tryjob.
   """
-
-  ce = command_executer.GetCommandExecuter(log_level=log_level)
 
   # Contains the results of each tryjob. The results are retrieved from 'out'
   # which is stdout of the command executer.
@@ -206,23 +202,13 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
     tryjob_cmd = GetTryJobCommand(cl_number, extra_change_lists, options,
                                   cur_builder)
 
-    ret, out, err = ce.ChrootRunCommandWOutput(
-        chromeos_root=chroot_path,
-        command=tryjob_cmd,
-        print_to_console=log_level == 'verbose')
-
-    if ret:  # Failed to submit a tryjob.
-      print(err, file=sys.stderr)
-      raise ValueError('Failed to submit tryjob.')
-
-    # stderr can be noisy e.g. warnings when entering chroot, so ignore it.
-    # e.g. cros_sdk:enter_chroot: Gclient cache dir "/tmp/git-cache" is not...
+    out = ChrootRunCommand(chroot_path, tryjob_cmd, verbose=verbose)
 
     tryjob_launch_time = datetime.datetime.utcnow()
 
-    buildbucket_id = int(ParseTryjobBuildbucketId(out.rstrip()))
+    tryjob_contents = json.loads(out)
 
-    tryjob_contents = json.loads(out.rstrip())
+    buildbucket_id = int(tryjob_contents[0]['buildbucket_id'])
 
     new_tryjob = {
         'launch_time': str(tryjob_launch_time),
@@ -235,27 +221,31 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
 
     tryjob_results.append(new_tryjob)
 
-  AddTryjobLinkToCL(tryjob_results, cl_number, chroot_path, log_level)
+  AddTryjobLinkToCL(tryjob_results, cl_number, chroot_path)
 
   return tryjob_results
 
 
-def AddTryjobLinkToCL(tryjobs, cl, chroot_path, log_level):
+def AddTryjobLinkToCL(tryjobs, cl, chroot_path):
   """Adds the tryjob link(s) to the CL via `gerrit message <CL> <message>`."""
 
+  # NOTE: Invoking `cros_sdk` does not make each tryjob link appear on its own
+  # line, so invoking the `gerrit` command directly instead of using `cros_sdk`
+  # to do it for us.
+  #
+  # FIXME: Need to figure out why `cros_sdk` does not add each tryjob link as a
+  # newline.
+  gerrit_abs_path = os.path.join(chroot_path, 'chromite/bin/gerrit')
+
   tryjob_links = ['Started the following tryjobs:']
-  tryjob_links.extend(quote(tryjob['link']) for tryjob in tryjobs)
+  tryjob_links.extend(tryjob['link'] for tryjob in tryjobs)
 
-  add_message_cmd = 'gerrit message %d \"%s\"' % (cl, '\n'.join(tryjob_links))
+  add_message_cmd = [
+      gerrit_abs_path, 'message',
+      str(cl), '\n'.join(tryjob_links)
+  ]
 
-  ce = command_executer.GetCommandExecuter(log_level=log_level)
-  ret, _, err = ce.ChrootRunCommandWOutput(
-      chromeos_root=chroot_path,
-      command=add_message_cmd,
-      print_to_console=log_level == 'verbose')
-
-  if ret:  # Failed to add tryjob link(s) to CL.
-    raise ValueError('Failed to add tryjob links to CL %d: %s' % (cl, err))
+  ExecCommandAndCaptureOutput(add_message_cmd)
 
 
 def main():
@@ -289,7 +279,7 @@ def main():
           (svn_version, last_svn_version, args_output.last_tested))
     return
 
-  update_chromeos_llvm_next_hash.ce.SetLogLevel(log_level=args_output.log_level)
+  update_chromeos_llvm_next_hash.verbose = args_output.verbose
 
   change_list = update_chromeos_llvm_next_hash.UpdatePackages(
       update_packages, git_hash, svn_version, args_output.chroot_path,
@@ -302,7 +292,7 @@ def main():
   tryjob_results = RunTryJobs(change_list.cl_number,
                               args_output.extra_change_lists,
                               args_output.options, args_output.builders,
-                              args_output.chroot_path, args_output.log_level)
+                              args_output.chroot_path, args_output.verbose)
 
   print('Tryjobs:')
   for tryjob in tryjob_results:
