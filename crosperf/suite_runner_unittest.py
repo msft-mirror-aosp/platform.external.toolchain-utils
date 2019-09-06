@@ -140,9 +140,6 @@ class SuiteRunnerTest(unittest.TestCase):
   def __init__(self, *args, **kwargs):
     super(SuiteRunnerTest, self).__init__(*args, **kwargs)
     self.call_test_that_run = False
-    self.disable_aslr_args = []
-    self.pin_governor_args = []
-    self.setup_cpu_usage_args = []
     self.skylab_run_args = []
     self.test_that_args = []
     self.telemetry_run_args = []
@@ -150,8 +147,6 @@ class SuiteRunnerTest(unittest.TestCase):
     self.call_skylab_run = False
     self.call_telemetry_crosperf_run = False
     self.call_disable_aslr = False
-    self.call_pin_governor = False
-    self.call_setup_cpu_usage = False
 
   def setUp(self):
     self.runner = suite_runner.SuiteRunner(
@@ -168,29 +163,17 @@ class SuiteRunnerTest(unittest.TestCase):
   def test_run(self):
 
     def reset():
-      self.call_pin_governor = False
-      self.call_setup_cpu_usage = False
       self.call_test_that_run = False
       self.call_skylab_run = False
       self.call_telemetry_crosperf_run = False
-      self.pin_governor_args = []
-      self.setup_cpu_usage_args = []
+      self.call_disable_aslr = False
       self.skylab_run_args = []
       self.test_that_args = []
       self.telemetry_run_args = []
       self.telemetry_crosperf_args = []
 
-    def FakeDisableASLR(machine, chroot):
+    def FakeDisableASLR(runner):
       self.call_disable_aslr = True
-      self.disable_aslr_args = [machine, chroot]
-
-    def FakePinGovernor(machine, chroot):
-      self.call_pin_governor = True
-      self.pin_governor_args = [machine, chroot]
-
-    def FakeSetupCpuUsage(machine, chroot):
-      self.call_setup_cpu_usage = True
-      self.setup_cpu_usage_args = [machine, chroot]
 
     def FakeSkylabRun(test_label, benchmark, test_args, profiler_args):
       self.skylab_run_args = [test_label, benchmark, test_args, profiler_args]
@@ -213,12 +196,20 @@ class SuiteRunnerTest(unittest.TestCase):
       self.call_test_that_run = True
       return 'Ran FakeTestThatRun'
 
+    def FakeRunner(command, ignore_status=False):
+      return 0, '', ''
+
     self.runner.DisableASLR = FakeDisableASLR
-    self.runner.PinGovernorExecutionFrequencies = FakePinGovernor
-    self.runner.SetupCpuUsage = FakeSetupCpuUsage
     self.runner.Skylab_Run = FakeSkylabRun
     self.runner.Telemetry_Crosperf_Run = FakeTelemetryCrosperfRun
     self.runner.Test_That_Run = FakeTestThatRun
+    self.runner.SetupCpuUsage = mock.Mock()
+    self.runner.DutWrapper = mock.Mock(return_value=FakeRunner)
+    self.runner.DisableTurbo = mock.Mock()
+    self.runner.SetCpuGovernor = mock.Mock()
+    self.runner.WaitCooldown = mock.Mock(return_value=0)
+    self.runner.dut_config['cooldown_time'] = 0
+    self.runner.dut_config['governor'] = 'fake_governor'
     machine = 'fake_machine'
     test_args = ''
     profiler_args = ''
@@ -228,47 +219,122 @@ class SuiteRunnerTest(unittest.TestCase):
     self.runner.Run(machine, self.mock_label, self.telemetry_bench, test_args,
                     profiler_args)
     self.assertFalse(self.call_disable_aslr)
-    self.assertFalse(self.call_pin_governor)
-    self.assertFalse(self.call_setup_cpu_usage)
     self.assertTrue(self.call_skylab_run)
     self.assertFalse(self.call_test_that_run)
     self.assertFalse(self.call_telemetry_crosperf_run)
     self.assertEqual(self.skylab_run_args,
                      [self.mock_label, self.telemetry_bench, '', ''])
+    self.runner.SetupCpuUsage.assert_not_called()
+    self.runner.DutWrapper.assert_not_called()
+    self.runner.SetCpuGovernor.assert_not_called()
+    self.runner.DisableTurbo.assert_not_called()
+    self.runner.WaitCooldown.assert_not_called()
     self.mock_label.skylab = False
 
     reset()
     self.runner.Run(machine, self.mock_label, self.test_that_bench, test_args,
                     profiler_args)
     self.assertTrue(self.call_disable_aslr)
-    self.assertTrue(self.call_pin_governor)
-    self.assertTrue(self.call_setup_cpu_usage)
-    self.assertEqual(self.setup_cpu_usage_args,
-                     [machine, self.mock_label.chromeos_root])
     self.assertTrue(self.call_test_that_run)
     self.assertFalse(self.call_telemetry_crosperf_run)
     self.assertEqual(
         self.test_that_args,
         ['fake_machine', self.mock_label, self.test_that_bench, '', ''])
+    self.runner.SetupCpuUsage.assert_called_once_with(FakeRunner)
+    self.runner.DutWrapper.assert_called_once_with(
+        machine, self.mock_label.chromeos_root)
+    self.runner.SetCpuGovernor.assert_called_once_with(
+        'fake_governor', FakeRunner, ignore_status=False)
+    self.runner.DisableTurbo.assert_called_once_with(FakeRunner)
+    self.runner.WaitCooldown.assert_not_called()
 
     reset()
     self.runner.Run(machine, self.mock_label, self.telemetry_crosperf_bench,
                     test_args, profiler_args)
     self.assertTrue(self.call_disable_aslr)
-    self.assertTrue(self.call_pin_governor)
-    self.assertTrue(self.call_setup_cpu_usage)
     self.assertFalse(self.call_test_that_run)
     self.assertTrue(self.call_telemetry_crosperf_run)
     self.assertEqual(self.telemetry_crosperf_args, [
         'fake_machine', self.mock_label, self.telemetry_crosperf_bench, '', ''
     ])
+    self.runner.DutWrapper.assert_called_with(machine,
+                                              self.mock_label.chromeos_root)
 
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
-  def test_disable_aslr(self, mock_cros_runcmd):
-    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
-    self.runner.DisableASLR('lumpy1.cros', '/tmp/chromeos')
-    self.assertEqual(mock_cros_runcmd.call_count, 1)
-    cmd = mock_cros_runcmd.call_args_list[0][0]
+  def test_run_with_cooldown(self):
+
+    def FakeRunner(command, ignore_status=False):
+      return 0, '', ''
+
+    self.runner.DisableASLR = mock.Mock()
+    self.runner.DutWrapper = mock.Mock(return_value=FakeRunner)
+    self.runner.DisableTurbo = mock.Mock()
+    self.runner.SetCpuGovernor = mock.Mock()
+    self.runner.SetupCpuUsage = mock.Mock()
+    self.runner.WaitCooldown = mock.Mock(return_value=0)
+    self.runner.Telemetry_Crosperf_Run = mock.Mock(return_value=(0, '', ''))
+    self.runner.dut_config['cooldown_time'] = 10
+    self.runner.dut_config['governor'] = 'fake_governor'
+
+    self.runner.Run('fake_machine', self.mock_label,
+                    self.telemetry_crosperf_bench, '', '')
+
+    self.runner.WaitCooldown.assert_called_once_with(FakeRunner)
+    self.runner.DisableASLR.assert_called_once()
+    self.runner.Telemetry_Crosperf_Run.assert_called_once()
+    self.runner.DisableTurbo.assert_called_once_with(FakeRunner)
+    self.runner.SetupCpuUsage.assert_called_once_with(FakeRunner)
+    self.runner.SetCpuGovernor.assert_called()
+    self.assertGreater(self.runner.SetCpuGovernor.call_count, 1)
+    self.assertEqual(
+        self.runner.SetCpuGovernor.call_args,
+        mock.call('fake_governor', FakeRunner, ignore_status=False))
+
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
+  def test_dut_wrapper(self, mock_cros_runcmd):
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd
+    mock_cros_runcmd.return_value = (0, '', '')
+    run_on_dut = self.runner.DutWrapper('lumpy.cros2', '/tmp/chromeos')
+    mock_cros_runcmd.assert_not_called()
+    run_on_dut('run command;')
+    mock_cros_runcmd.assert_called_once_with(
+        'run command;', chromeos_root='/tmp/chromeos', machine='lumpy.cros2')
+
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
+  def test_dut_wrapper_fatal_error(self, mock_cros_runcmd):
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd
+    # Command returns error 1.
+    mock_cros_runcmd.return_value = (1, '', 'Error!')
+    run_on_dut = self.runner.DutWrapper('lumpy.cros2', '/tmp/chromeos')
+    mock_cros_runcmd.assert_not_called()
+    run_on_dut('run command;')
+    mock_cros_runcmd.assert_called_once_with(
+        'run command;', chromeos_root='/tmp/chromeos', machine='lumpy.cros2')
+    # Error status causes log fatal.
+    self.assertEqual(
+        self.mock_logger.method_calls[-1],
+        mock.call.LogFatal('Command execution on DUT lumpy.cros2 failed.\n'
+                           'Failing command: run command;\nreturned 1\n'
+                           'Error message: Error!'))
+
+  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
+  def test_dut_wrapper_ignore_error(self, mock_cros_runcmd):
+    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd
+    # Command returns error 1.
+    mock_cros_runcmd.return_value = (1, '', 'Error!')
+    run_on_dut = self.runner.DutWrapper('lumpy.cros2', '/tmp/chromeos')
+    run_on_dut('run command;', ignore_status=True)
+    mock_cros_runcmd.assert_called_once_with(
+        'run command;', chromeos_root='/tmp/chromeos', machine='lumpy.cros2')
+    # Error status is not fatal. LogError records the error message.
+    self.assertEqual(
+        self.mock_logger.method_calls[-1],
+        mock.call.LogError('Command execution on DUT lumpy.cros2 failed.\n'
+                           'Failing command: run command;\nreturned 1\n'
+                           'Error message: Error!'))
+
+  def test_disable_aslr(self):
+    run_on_dut = mock.Mock()
+    self.runner.DisableASLR(run_on_dut)
     # pyformat: disable
     set_cpu_cmd = ('set -e && '
                    'stop ui; '
@@ -276,147 +342,221 @@ class SuiteRunnerTest(unittest.TestCase):
                    '  echo 0 > /proc/sys/kernel/randomize_va_space; '
                    'fi; '
                    'start ui ')
-    # pyformat: enable
-    self.assertEqual(cmd, (set_cpu_cmd,))
+    run_on_dut.assert_called_once_with(set_cpu_cmd)
 
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
-  def test_pin_governor_execution_frequencies(self, mock_cros_runcmd):
-    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
-    self.runner.PinGovernorExecutionFrequencies('lumpy1.cros', '/tmp/chromeos')
-    self.assertEqual(mock_cros_runcmd.call_count, 1)
-    cmd = mock_cros_runcmd.call_args_list[0][0]
-    # pyformat: disable
+  def test_set_cpu_governor(self):
+    dut_runner = mock.Mock(return_value=(0, '', ''))
+    self.runner.SetCpuGovernor('new_governor', dut_runner, ignore_status=False)
     set_cpu_cmd = (
         'for f in `ls -d /sys/devices/system/cpu/cpu*/cpufreq 2>/dev/null`; do '
         # Skip writing scaling_governor if cpu is not online.
         ' [[ -e ${f/cpufreq/online} ]] && grep -q 0 ${f/cpufreq/online} '
         '   && continue; '
-        # The cpu is online, can update.
         ' cd $f; '
         ' if [[ -e scaling_governor ]]; then '
-        '  echo performance > scaling_governor; fi; '
-        'done; '
+        '  echo %s > scaling_governor; fi; '
+        'done; ')
+    dut_runner.assert_called_once_with(
+        set_cpu_cmd % 'new_governor', ignore_status=False)
+
+  def test_set_cpu_governor_propagate_error(self):
+    dut_runner = mock.Mock(return_value=(1, '', 'Error.'))
+    self.runner.SetCpuGovernor('non-exist_governor', dut_runner)
+    set_cpu_cmd = (
+        'for f in `ls -d /sys/devices/system/cpu/cpu*/cpufreq 2>/dev/null`; do '
+        # Skip writing scaling_governor if cpu is not online.
+        ' [[ -e ${f/cpufreq/online} ]] && grep -q 0 ${f/cpufreq/online} '
+        '   && continue; '
+        ' cd $f; '
+        ' if [[ -e scaling_governor ]]; then '
+        '  echo %s > scaling_governor; fi; '
+        'done; ')
+    # By default error status is fatal.
+    dut_runner.assert_called_once_with(
+        set_cpu_cmd % 'non-exist_governor', ignore_status=False)
+
+  def test_set_cpu_governor_ignore_status(self):
+    dut_runner = mock.Mock(return_value=(1, '', 'Error.'))
+    ret_code = self.runner.SetCpuGovernor(
+        'non-exist_governor', dut_runner, ignore_status=True)
+    set_cpu_cmd = (
+        'for f in `ls -d /sys/devices/system/cpu/cpu*/cpufreq 2>/dev/null`; do '
+        # Skip writing scaling_governor if cpu is not online.
+        ' [[ -e ${f/cpufreq/online} ]] && grep -q 0 ${f/cpufreq/online} '
+        '   && continue; '
+        ' cd $f; '
+        ' if [[ -e scaling_governor ]]; then '
+        '  echo %s > scaling_governor; fi; '
+        'done; ')
+    dut_runner.assert_called_once_with(
+        set_cpu_cmd % 'non-exist_governor', ignore_status=True)
+
+  def test_disable_turbo(self):
+    dut_runner = mock.Mock(return_value=(0, '', ''))
+    self.runner.DisableTurbo(dut_runner)
+    set_cpu_cmd = (
         # Disable Turbo in Intel pstate driver
         'if [[ -e /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then '
         '  if grep -q 0 /sys/devices/system/cpu/intel_pstate/no_turbo;  then '
         '    echo -n 1 > /sys/devices/system/cpu/intel_pstate/no_turbo; '
         '  fi; '
         'fi; ')
-    # pyformat: enable
-    self.assertEqual(cmd, (set_cpu_cmd,))
+    dut_runner.assert_called_once_with(set_cpu_cmd)
 
   @mock.patch.object(suite_runner.SuiteRunner, 'SetupArmCores')
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
-  def test_setup_cpu_usage_little_on_arm(self, mock_cros_runcmd_wout,
-                                         mock_setup_arm):
-    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
+  def test_setup_cpu_usage_little_on_arm(self, mock_setup_arm):
     self.runner.SetupArmCores = mock_setup_arm
-    mock_cros_runcmd_wout.return_value = (0, 'armv7l', '')
+    dut_runner = mock.Mock(return_value=(0, 'armv7l', ''))
     self.runner.dut_config['cpu_usage'] = 'little_only'
-    self.runner.SetupCpuUsage('remote.cros', '/tmp/chromeos')
-    self.assertEqual(mock_setup_arm.call_count, 1)
+    self.runner.SetupCpuUsage(dut_runner)
+    self.runner.SetupArmCores.assert_called_once_with(dut_runner)
 
   @mock.patch.object(suite_runner.SuiteRunner, 'SetupArmCores')
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
-  def test_setup_cpu_usage_big_on_aarch64(self, mock_cros_runcmd_wout,
-                                          mock_setup_arm):
-    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
+  def test_setup_cpu_usage_big_on_aarch64(self, mock_setup_arm):
     self.runner.SetupArmCores = mock_setup_arm
-    mock_cros_runcmd_wout.return_value = (0, 'aarch64', '')
+    dut_runner = mock.Mock(return_value=(0, 'aarch64', ''))
     self.runner.dut_config['cpu_usage'] = 'big_only'
-    self.runner.SetupCpuUsage('remote.cros', '/tmp/chromeos')
-    self.assertEqual(mock_setup_arm.call_count, 1)
+    self.runner.SetupCpuUsage(dut_runner)
+    self.runner.SetupArmCores.assert_called_once_with(dut_runner)
 
   @mock.patch.object(suite_runner.SuiteRunner, 'SetupArmCores')
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
-  def test_setup_cpu_usage_all_on_intel(self, mock_cros_runcmd_wout,
-                                        mock_setup_arm):
-    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
+  def test_setup_cpu_usage_big_on_intel(self, mock_setup_arm):
     self.runner.SetupArmCores = mock_setup_arm
-    mock_cros_runcmd_wout.return_value = (0, 'x86_64', '')
+    dut_runner = mock.Mock(return_value=(0, 'x86_64', ''))
+    self.runner.dut_config['cpu_usage'] = 'big_only'
+    self.runner.SetupCpuUsage(dut_runner)
+    # Check that SetupArmCores not called with invalid setup.
+    self.runner.SetupArmCores.assert_not_called()
+
+  @mock.patch.object(suite_runner.SuiteRunner, 'SetupArmCores')
+  def test_setup_cpu_usage_all_on_intel(self, mock_setup_arm):
+    self.runner.SetupArmCores = mock_setup_arm
+    dut_runner = mock.Mock(return_value=(0, 'x86_64', ''))
     self.runner.dut_config['cpu_usage'] = 'all'
-    self.runner.SetupCpuUsage('remote.cros', '/tmp/chromeos')
-    # Check that SetupArmCores not called.
-    self.assertEqual(mock_setup_arm.call_count, 0)
+    self.runner.SetupCpuUsage(dut_runner)
+    # Check that SetupArmCores not called in general case.
+    self.runner.SetupArmCores.assert_not_called()
 
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
-  def test_setup_arm_cores_big_on_big_little(self, mock_cros_runcmd,
-                                             mock_cros_runcmd_wout):
-    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
-    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
-    mock_cros_runcmd_wout.return_value = (0, BIG_LITTLE_CPUINFO, '')
+  def test_setup_arm_cores_big_on_big_little(self):
+    dut_runner = mock.Mock(
+        side_effect=[(0, BIG_LITTLE_CPUINFO, ''),
+                     (0, '', '')])
     self.runner.dut_config['cpu_usage'] = 'big_only'
-    self.runner.SetupArmCores('remote.cros', '/tmp/chromeos')
-    self.assertEqual(mock_cros_runcmd.call_args_list[0][0],
-                     ('echo 1 | tee /sys/devices/system/cpu/cpu{2}/online; '
-                      'echo 0 | tee /sys/devices/system/cpu/cpu{0,1}/online',))
+    self.runner.SetupArmCores(dut_runner)
+    dut_runner.assert_called_with(
+        'echo 1 | tee /sys/devices/system/cpu/cpu{2}/online; '
+        'echo 0 | tee /sys/devices/system/cpu/cpu{0,1}/online')
 
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
-  def test_setup_arm_cores_little_on_big_little(self, mock_cros_runcmd,
-                                                mock_cros_runcmd_wout):
-    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
-    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
-    mock_cros_runcmd_wout.return_value = (0, BIG_LITTLE_CPUINFO, '')
+  def test_setup_arm_cores_little_on_big_little(self):
+    dut_runner = mock.Mock(
+        side_effect=[(0, BIG_LITTLE_CPUINFO, ''),
+                     (0, '', '')])
     self.runner.dut_config['cpu_usage'] = 'little_only'
-    self.runner.SetupArmCores('remote.cros', '/tmp/chromeos')
-    self.assertEqual(mock_cros_runcmd.call_args_list[0][0],
-                     ('echo 1 | tee /sys/devices/system/cpu/cpu{0,1}/online; '
-                      'echo 0 | tee /sys/devices/system/cpu/cpu{2}/online',))
+    self.runner.SetupArmCores(dut_runner)
+    dut_runner.assert_called_with(
+        'echo 1 | tee /sys/devices/system/cpu/cpu{0,1}/online; '
+        'echo 0 | tee /sys/devices/system/cpu/cpu{2}/online')
 
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
-  def test_setup_arm_cores_invalid_config(self, mock_cros_runcmd,
-                                          mock_cros_runcmd_wout):
-    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
-    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
-    mock_cros_runcmd_wout.return_value = (0, LITTLE_ONLY_CPUINFO, '')
+  def test_setup_arm_cores_invalid_config(self):
+    dut_runner = mock.Mock(
+        side_effect=[(0, LITTLE_ONLY_CPUINFO, ''),
+                     (0, '', '')])
     self.runner.dut_config['cpu_usage'] = 'big_only'
-    self.runner.SetupArmCores('remote.cros', '/tmp/chromeos')
-    # Check that CrosRun is not called when trying
+    self.runner.SetupArmCores(dut_runner)
+    # Check that setup command is not sent when trying
     # to use 'big_only' on a platform with all little cores.
-    self.assertEqual(mock_cros_runcmd.call_count, 0)
+    dut_runner.assert_called_once_with('cat /proc/cpuinfo')
 
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
-  def test_setup_arm_cores_not_big_little(self, mock_cros_runcmd,
-                                          mock_cros_runcmd_wout):
-    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
-    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
-    mock_cros_runcmd_wout.return_value = (0, NOT_BIG_LITTLE_CPUINFO, '')
+  def test_setup_arm_cores_not_big_little(self):
+    dut_runner = mock.Mock(
+        side_effect=[(0, NOT_BIG_LITTLE_CPUINFO, ''),
+                     (0, '', '')])
     self.runner.dut_config['cpu_usage'] = 'big_only'
-    self.runner.SetupArmCores('remote.cros', '/tmp/chromeos')
-    # Check that CrosRun is not called when trying
+    self.runner.SetupArmCores(dut_runner)
+    # Check that setup command is not sent when trying
     # to use 'big_only' on a platform w/o support of big/little.
-    self.assertEqual(mock_cros_runcmd.call_count, 0)
+    dut_runner.assert_called_once_with('cat /proc/cpuinfo')
 
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
-  def test_setup_arm_cores_unsupported_cpu_usage(self, mock_cros_runcmd,
-                                                 mock_cros_runcmd_wout):
-    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
-    self.mock_cmd_exec.CrosRunCommandWOutput = mock_cros_runcmd_wout
-    mock_cros_runcmd_wout.return_value = (0, BIG_LITTLE_CPUINFO, '')
+  def test_setup_arm_cores_unsupported_cpu_usage(self):
+    dut_runner = mock.Mock(
+        side_effect=[(0, BIG_LITTLE_CPUINFO, ''),
+                     (0, '', '')])
     self.runner.dut_config['cpu_usage'] = 'exclusive_cores'
-    self.runner.SetupArmCores('remote.cros', '/tmp/chromeos')
-    # Check that CrosRun is not called when trying to use
+    self.runner.SetupArmCores(dut_runner)
+    # Check that setup command is not sent when trying to use
     # 'exclusive_cores' on ARM CPU setup.
-    self.assertEqual(mock_cros_runcmd.call_count, 0)
+    dut_runner.assert_called_once_with('cat /proc/cpuinfo')
+
+  def test_wait_cooldown_nowait(self):
+    dut_runner = mock.Mock(return_value=(0, '39000', ''))
+    self.runner.dut_config['cooldown_time'] = 10
+    self.runner.dut_config['cooldown_temp'] = 40
+    self.runner.WaitCooldown(dut_runner)
+    # Send command to DUT only once to check temperature
+    # and make sure it does not exceed the threshold.
+    dut_runner.assert_called_once()
+
+  @mock.patch.object(time, 'sleep')
+  def test_wait_cooldown_needwait_once(self, mock_sleep):
+    """Wait one iteration for cooldown.
+
+    Set large enough timeout and changing temperature
+    output. Make sure it exits when expected value
+    received.
+    Expect that WaitCooldown check temp twice.
+    """
+    mock_sleep.return_value = 0
+    dut_runner = mock.Mock(side_effect=[(0, '41000', ''), (0, '39999', '')])
+    self.runner.dut_config['cooldown_time'] = 100
+    self.runner.dut_config['cooldown_temp'] = 40
+    self.runner.WaitCooldown(dut_runner)
+    dut_runner.assert_called()
+    self.assertEqual(dut_runner.call_count, 2)
+
+  @mock.patch.object(time, 'sleep')
+  def test_wait_cooldown_needwait(self, mock_sleep):
+    """Test exit by timeout.
+
+    Send command to DUT checking the temperature and
+    check repeatedly until timeout goes off.
+    Output from temperature sensor never changes.
+    """
+    mock_sleep.return_value = 0
+    dut_runner = mock.Mock(return_value=(0, '41000', ''))
+    self.runner.dut_config['cooldown_time'] = 60
+    self.runner.dut_config['cooldown_temp'] = 40
+    self.runner.WaitCooldown(dut_runner)
+    dut_runner.assert_called()
+    self.assertGreater(dut_runner.call_count, 2)
+
+  @mock.patch.object(time, 'sleep')
+  def test_wait_cooldown_needwait_multtemp(self, mock_sleep):
+    """Wait until all temps go down.
+
+    Set large enough timeout and changing temperature
+    output. Make sure it exits when expected value
+    for all temperatures received.
+    Expect 3 checks.
+    """
+    mock_sleep.return_value = 0
+    dut_runner = mock.Mock(side_effect=[
+        (0, '41000\n20000\n30000\n45000', ''),
+        (0, '39000\n20000\n30000\n41000', ''),
+        (0, '39000\n20000\n30000\n31000', '')])
+    self.runner.dut_config['cooldown_time'] = 100
+    self.runner.dut_config['cooldown_temp'] = 40
+    self.runner.WaitCooldown(dut_runner)
+    dut_runner.assert_called()
+    self.assertEqual(dut_runner.call_count, 3)
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
-  def test_reboot_machine(self, mock_cros_runcmd):
-
-    def FakePinGovernor(machine_name, chromeos_root):
-      if machine_name or chromeos_root:
-        pass
-
+  def test_restart_ui(self, mock_cros_runcmd):
     self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
-    self.runner.PinGovernorExecutionFrequencies = FakePinGovernor
     self.runner.RestartUI('lumpy1.cros', '/tmp/chromeos')
-    self.assertEqual(mock_cros_runcmd.call_count, 1)
-    self.assertEqual(mock_cros_runcmd.call_args_list[0][0],
-                     ('stop ui; sleep 5; start ui',))
+    mock_cros_runcmd.assert_called_once_with(
+        'stop ui; sleep 5; start ui',
+        chromeos_root='/tmp/chromeos',
+        machine='lumpy1.cros')
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
   @mock.patch.object(command_executer.CommandExecuter,

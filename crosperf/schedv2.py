@@ -198,6 +198,8 @@ class DutWorker(Thread):
     intel_pstate = self._sched.get_experiment().intel_pstate
     # Firstly, handle benchmarkruns that have cache hit.
     br = self._sched.get_cached_benchmark_run()
+    # Total wait time for cooling down.
+    total_waittime = 0
     while br:
       try:
         self._stat_annotation = 'finishing cached {}'.format(br)
@@ -236,7 +238,11 @@ class DutWorker(Thread):
 
           # Execute the br.
           self._execute_benchmark_run(br)
+          total_waittime += br.suite_runner.GetCooldownWaitTime()
+          br.suite_runner.ResetCooldownWaitTime()
     finally:
+      self._logger.LogOutput('Total wait time for cooldown: %d min'
+                             % (total_waittime / 60))
       self._stat_annotation = 'finished'
       # Thread finishes. Notify scheduler that I'm done.
       self._sched.dut_worker_finished(self)

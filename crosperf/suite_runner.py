@@ -5,6 +5,7 @@
 
 """SuiteRunner defines the interface from crosperf to test script."""
 
+from __future__ import division
 from __future__ import print_function
 
 import os
@@ -62,11 +63,48 @@ class SuiteRunner(object):
     self.log_level = log_level
     self._ce = cmd_exec or command_executer.GetCommandExecuter(
         self.logger, log_level=self.log_level)
+    # DUT command executer.
+    # Will be initialized and used within Run.
     self._ct = cmd_term or command_executer.CommandTerminator()
     self.enable_aslr = enable_aslr
     self.dut_config = dut_config
+    self.cooldown_wait_time = 0
+
+  def ResetCooldownWaitTime(self):
+    self.cooldown_wait_time = 0
+
+  def GetCooldownWaitTime(self):
+    return self.cooldown_wait_time
+
+  def DutWrapper(self, machine_name, chromeos_root):
+    """Wrap DUT parameters inside.
+
+    Eventially CommandExecuter will reqiure only one
+    argument - command.
+    """
+
+    def RunCommandOnDut(command, ignore_status=False):
+      ret, msg, err_msg = self._ce.CrosRunCommandWOutput(
+          command, machine=machine_name, chromeos_root=chromeos_root)
+
+      if ret:
+        err_msg = ('Command execution on DUT %s failed.\n'
+                   'Failing command: %s\n'
+                   'returned %d\n'
+                   'Error message: %s' % (machine_name, command, ret, err_msg))
+        if ignore_status:
+          self.logger.LogError(err_msg)
+        else:
+          self.logger.LogFatal(err_msg)
+
+      return ret, msg, err_msg
+
+    return RunCommandOnDut
 
   def Run(self, machine, label, benchmark, test_args, profiler_args):
+    if not label.skylab:
+      # Initialize command executer on DUT.
+      run_on_dut = self.DutWrapper(machine, label.chromeos_root)
     for i in range(0, benchmark.retries + 1):
       if label.skylab:
         # TODO: need to migrate DisableASLR and PinGovernorExecutionFrequencies
@@ -79,11 +117,36 @@ class SuiteRunner(object):
         # Unless the user turns on ASLR in the flag, we first disable ASLR
         # before running the benchmarks
         if not self.enable_aslr:
-          self.DisableASLR(machine, label.chromeos_root)
-        self.PinGovernorExecutionFrequencies(machine, label.chromeos_root)
-        self.SetupCpuUsage(machine, label.chromeos_root)
+          self.DisableASLR(run_on_dut)
+
+        if self.dut_config['cooldown_time']:
+          # Setup power conservative mode for effective cool down.
+          # Set ignore status since powersave may no be available
+          # on all platforms and we are going to handle it.
+          ret = self.SetCpuGovernor('powersave', run_on_dut, ignore_status=True)
+          if ret:
+            # "powersave" is not available, use "ondemand".
+            # Still not a fatal error if it fails.
+            ret = self.SetCpuGovernor(
+                'ondemand', run_on_dut, ignore_status=True)
+          # TODO(denik): Run comparison test for 'powersave' and 'ondemand'
+          # on scarlet and kevin64.
+          # We might have to consider reducing freq manually to the min
+          # if it helps to reduce waiting time.
+          self.cooldown_wait_time += self.WaitCooldown(run_on_dut)
+
+        # Setup CPU governor for the benchmark run.
+        # It overwrites the previous governor settings.
+        governor = self.dut_config['governor']
+        self.SetCpuGovernor(governor, run_on_dut, ignore_status=False)
+        self.DisableTurbo(run_on_dut)
+        self.SetupCpuUsage(run_on_dut)
+        # FIXME(denik): Currently we are not recovering the previous cpufreq
+        # settings since we do reboot/setup every time anyway.
+        # But it may change in the future and then we have to recover the
+        # settings.
         if benchmark.suite == 'telemetry_Crosperf':
-          self.DecreaseWaitTime(machine, label.chromeos_root)
+          self.DecreaseWaitTime(run_on_dut)
           ret_tup = self.Telemetry_Crosperf_Run(machine, label, benchmark,
                                                 test_args, profiler_args)
         else:
@@ -103,79 +166,76 @@ class SuiteRunner(object):
         break
     return ret_tup
 
-  def DisableASLR(self, machine_name, chromeos_root):
+  def DisableASLR(self, run_on_dut):
     disable_aslr = ('set -e && '
                     'stop ui; '
                     'if [[ -e /proc/sys/kernel/randomize_va_space ]]; then '
                     '  echo 0 > /proc/sys/kernel/randomize_va_space; '
                     'fi; '
                     'start ui ')
-    self.logger.LogOutput('Disable ASLR for %s' % machine_name)
-    self._ce.CrosRunCommand(
-        disable_aslr, machine=machine_name, chromeos_root=chromeos_root)
+    if self.log_level == 'average':
+      self.logger.LogOutput('Disable ASLR.')
+    run_on_dut(disable_aslr)
 
-  def PinGovernorExecutionFrequencies(self, machine_name, chromeos_root):
-    """Setup Intel CPU frequency.
-
-    Manages the cpu governor and other performance settings.
-    Includes support for setting cpu frequency to a static value.
-    """
-    # pyformat: disable
-    set_cpu_freq = (
-        # Disable Intel Opportunistic Processor
-        # Commented out because wrmsr requires kernel change
-        # to enable white-listed write access to msr 0x199.
-        # See Intel 64 and IA-32 Archtectures
-        # Software Developer's Manual, 14.3.2.2.
-        #'awk \'$1 ~ /^processor/ { print $NF }\' /proc/cpuinfo '
-        #'   | while read c; do '
-        # 'iotools wrmsr $c 0x199 $(printf "0x%x\n" $(( (1 << 32) '
-        # '   | $(iotools rdmsr $c 0x199) )));'
-        #'done;'
-        # Set up intel_pstate governor to performance if enabled.
+  def SetCpuGovernor(self, governor, run_on_dut, ignore_status=False):
+    set_gov_cmd = (
         'for f in `ls -d /sys/devices/system/cpu/cpu*/cpufreq 2>/dev/null`; do '
-        # Skip writing scaling_governor if cpu is not online.
+        # Skip writing scaling_governor if cpu is offline.
         ' [[ -e ${f/cpufreq/online} ]] && grep -q 0 ${f/cpufreq/online} '
         '   && continue; '
-        # The cpu is online, can update.
         ' cd $f; '
         ' if [[ -e scaling_governor ]]; then '
-        '  echo performance > scaling_governor; fi; '
-        #
-        # Uncomment rest of lines to enable setting frequency by crosperf.
-        # It sets the cpu to the second highest supported frequency.
-        #'val=0; '
-        #'if [[ -e scaling_available_frequencies ]]; then '
-        # pylint: disable=line-too-long
-        #'  val=`cat scaling_available_frequencies | tr " " "\\n" | sort -n -b -r`; '
-        #'else '
-        #'  val=`cat scaling_max_freq | tr " " "\\n" | sort -n -b -r`; fi ; '
-        #'set -- $val; '
-        #'highest=$1; '
-        #'if [[ $# -gt 1 ]]; then '
-        #'  case $highest in *1000) highest=$2;; esac; '
-        #'fi ;'
-        #'echo $highest > scaling_max_freq; '
-        #'echo $highest > scaling_min_freq; '
-        'done; '
-        # Disable Turbo in Intel pstate driver
-        # no_turbo should follow governor setup.
-        # Otherwise it can be overwritten.
+        '  echo %s > scaling_governor; fi; '
+        'done; ')
+    if self.log_level == 'average':
+      self.logger.LogOutput('Setup CPU Governor: %s.' % governor)
+    ret, _, _ = run_on_dut(set_gov_cmd % governor, ignore_status=ignore_status)
+    return ret
+
+  def DisableTurbo(self, run_on_dut):
+    dis_turbo_cmd = (
         'if [[ -e /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then '
         '  if grep -q 0 /sys/devices/system/cpu/intel_pstate/no_turbo;  then '
         '    echo -n 1 > /sys/devices/system/cpu/intel_pstate/no_turbo; '
         '  fi; '
         'fi; ')
-    # pyformat: enable
     if self.log_level == 'average':
-      self.logger.LogOutput(
-          'Pinning governor execution frequencies for %s' % machine_name)
-    ret = self._ce.CrosRunCommand(
-        set_cpu_freq, machine=machine_name, chromeos_root=chromeos_root)
-    self.logger.LogFatalIf(
-        ret, 'Could not pin frequencies on machine: %s' % machine_name)
+      self.logger.LogOutput('Disable Turbo.')
+    run_on_dut(dis_turbo_cmd)
 
-  def SetupCpuUsage(self, machine_name, chromeos_root):
+  def WaitCooldown(self, run_on_dut):
+    waittime = 0
+    timeout_in_sec = int(self.dut_config['cooldown_time']) * 60
+    # Temperature from sensors come in uCelsius units.
+    temp_in_ucels = int(self.dut_config['cooldown_temp']) * 1000
+    sleep_interval = 30
+
+    # Wait until any of two events occurs:
+    # 1. CPU cools down to a specified temperature.
+    # 2. Timeout cooldown_time expires.
+    # For the case when targeted temperature is not reached within specified
+    # timeout the benchmark is going to start with higher initial CPU temp.
+    # In the worst case it may affect test results.
+    # TODO(denik): Report (or highlight) "high" CPU temperature in test results.
+    # "high" should be calculated based on empirical data per platform.
+    # Based on such reports we can adjust CPU configuration or
+    # cooldown limits accordingly.
+    while waittime < timeout_in_sec:
+      _, temp_output, _ = run_on_dut(
+          'cat /sys/class/thermal/thermal_zone*/temp')
+      if any(int(temp) > temp_in_ucels for temp in temp_output.split()):
+        time.sleep(sleep_interval)
+        waittime += sleep_interval
+      else:
+        # Reported temp numbers from all sensors do not exceed
+        # 'cooldown_temp'. Exit the loop.
+        break
+
+    self.logger.LogOutput(
+        'Cooldown wait time: %.1f min' % (float(waittime) / 60))
+    return waittime
+
+  def SetupCpuUsage(self, run_on_dut):
     """Setup CPU usage.
 
     Based on self.dut_config['cpu_usage'] configure CPU cores
@@ -184,15 +244,12 @@ class SuiteRunner(object):
 
     if (self.dut_config['cpu_usage'] == 'big_only' or
         self.dut_config['cpu_usage'] == 'little_only'):
-      ret, arch, _ = self._ce.CrosRunCommandWOutput(
-          'uname -m', machine=machine_name, chromeos_root=chromeos_root)
-      self.logger.LogFatalIf(
-          ret, 'Setup CPU failed. Could not retrieve architecture model.')
+      _, arch, _ = run_on_dut('uname -m')
 
       if arch.lower().startswith('arm') or arch.lower().startswith('aarch64'):
-        self.SetupArmCores(machine_name, chromeos_root)
+        self.SetupArmCores(run_on_dut)
 
-  def SetupArmCores(self, machine_name, chromeos_root):
+  def SetupArmCores(self, run_on_dut):
     """Setup ARM big/little cores."""
 
     # CPU implemeters/part numbers of big/LITTLE CPU.
@@ -228,10 +285,7 @@ class SuiteRunner(object):
     # CPU part        : 0xd03
     # CPU revision    : 4
 
-    ret, cpuinfo, _ = self._ce.CrosRunCommandWOutput(
-        'cat /proc/cpuinfo', machine=machine_name, chromeos_root=chromeos_root)
-    self.logger.LogFatalIf(ret,
-                           'Setup ARM CPU failed. Could not retrieve cpuinfo.')
+    _, cpuinfo, _ = run_on_dut('cat /proc/cpuinfo')
 
     # List of all CPU cores: 0, 1, ..
     proc_matches = re.findall(r'^processor\s*: (\d+)$', cpuinfo, re.MULTILINE)
@@ -278,12 +332,7 @@ class SuiteRunner(object):
             'echo 0 | tee /sys/devices/system/cpu/cpu{%s}/online' % ','.join(
                 sorted(cores_to_disable)))
 
-      ret = self._ce.CrosRunCommand(
-          '; '.join([cmd_enable_cores, cmd_disable_cores]),
-          machine=machine_name,
-          chromeos_root=chromeos_root)
-      self.logger.LogFatalIf(
-          ret, 'Setup ARM CPU failed. Could not retrieve cpuinfo.')
+      run_on_dut('; '.join([cmd_enable_cores, cmd_disable_cores]))
     else:
       # If there are no cores enabled by dut_config then configuration
       # is invalid for current platform and should be ignored.
@@ -295,20 +344,14 @@ class SuiteRunner(object):
           'Ignore ARM CPU setup and continue.' % (self.dut_config['cpu_usage'],
                                                   dut_big_cores, dut_lit_cores))
 
-  def DecreaseWaitTime(self, machine_name, chromeos_root):
+  def DecreaseWaitTime(self, run_on_dut):
     """Change the ten seconds wait time for pagecycler to two seconds."""
     FILE = '/usr/local/telemetry/src/tools/perf/page_sets/page_cycler_story.py'
-    ret = self._ce.CrosRunCommand(
-        'ls ' + FILE, machine=machine_name, chromeos_root=chromeos_root)
-    self.logger.LogFatalIf(
-        ret, 'Could not find {} on machine: {}'.format(FILE, machine_name))
+    ret = run_on_dut('ls ' + FILE)
 
     if not ret:
       sed_command = 'sed -i "s/_TTI_WAIT_TIME = 10/_TTI_WAIT_TIME = 2/g" '
-      ret = self._ce.CrosRunCommand(
-          sed_command + FILE, machine=machine_name, chromeos_root=chromeos_root)
-      self.logger.LogFatalIf(
-          ret, 'Could not modify {} on machine: {}'.format(FILE, machine_name))
+      run_on_dut(sed_command + FILE)
 
   def RestartUI(self, machine_name, chromeos_root):
     command = 'stop ui; sleep 5; start ui'
@@ -371,7 +414,6 @@ class SuiteRunner(object):
     t = 0
     RETRY_LIMIT = 5
     while t < RETRY_LIMIT:
-      self.logger.LogOutput('Downloading test results.')
       t += 1
       status = self._ce.RunCommand(ls_command, print_to_console=False)
       if status == 0:
@@ -503,7 +545,7 @@ class SuiteRunner(object):
     # process group.
     chrome_root_options = ('--no-ns-pid '
                            '--chrome_root={} --chrome_root_mount={} '
-                           "FEATURES=\"-usersandbox\" "
+                           'FEATURES="-usersandbox" '
                            'CHROME_ROOT={}'.format(label.chrome_src,
                                                    CHROME_MOUNT_DIR,
                                                    CHROME_MOUNT_DIR))
