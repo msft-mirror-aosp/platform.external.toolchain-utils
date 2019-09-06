@@ -95,10 +95,15 @@ def _autodetect_python_tests_for(test_file):
   if not test_file.endswith('.py'):
     return []
 
-  base = test_file[:-3]
-  candidates = [base + '_test.py', '_unittest.py']
-  tests_to_run = (c for c in candidates if os.path.exists(c))
-  return [_python_test_to_spec(test_file) for test_file in tests_to_run]
+  test_suffixes = ['_test.py', '_unittest.py']
+  if any(test_file.endswith(x) for x in test_suffixes):
+    test_files = [test_file]
+  else:
+    base = test_file[:-3]
+    candidates = (base + x for x in test_suffixes)
+    test_files = (x for x in candidates if os.path.exists(x))
+
+  return [_python_test_to_spec(test_file) for test_file in test_files]
 
 
 def _run_test_scripts(all_tests, show_successful_output=False):
@@ -198,8 +203,8 @@ def _find_go_tests(test_paths):
   assert all(os.path.isabs(path) for path in test_paths)
 
   dirs_with_gofiles = set(
-      os.path.dirname(p) for p in test_paths if p.endswith(".go"))
-  command = ["go", "test", "-vet=all"]
+      os.path.dirname(p) for p in test_paths if p.endswith('.go'))
+  command = ['go', 'test', '-vet=all']
   # Note: We sort the directories to be deterministic.
   return [
       TestSpec(directory=d, command=command) for d in sorted(dirs_with_gofiles)
