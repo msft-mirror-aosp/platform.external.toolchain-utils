@@ -12,19 +12,18 @@ for review.
 
 from __future__ import print_function
 
-from collections import namedtuple
 import argparse
 import os
 import re
 import subprocess
+from collections import namedtuple
 
+import get_llvm_hash
+import llvm_patch_management
 from assert_not_in_chroot import VerifyOutsideChroot
 from failure_modes import FailureModes
-from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption
-from get_llvm_hash import is_svn_option
-from subprocess_helpers import ChrootRunCommand
-from subprocess_helpers import ExecCommandAndCaptureOutput
-import llvm_patch_management
+from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption, is_svn_option
+from subprocess_helpers import ChrootRunCommand, ExecCommandAndCaptureOutput
 
 # If set to `True`, then the contents of `stdout` after executing a command will
 # be displayed to the terminal.
@@ -78,10 +77,8 @@ def GetCommandLineArgs():
       '--llvm_version',
       type=is_svn_option,
       required=True,
-      help='which git hash of LLVM to find '
-      '{google3, ToT, <svn_version>} '
-      '(default: finds the git hash of the google3 LLVM '
-      'version)')
+      help='which git hash of LLVM to find. Either a svn revision, or one '
+      'of %s' % sorted(get_llvm_hash.KNOWN_HASH_SOURCES))
 
   # Add argument for the mode of the patch management when handling patches.
   parser.add_argument(
@@ -167,8 +164,8 @@ def _ConvertChrootPathsToSymLinkPaths(chromeos_root, chroot_file_paths):
   # and combine the chroot path with the result and add it to the list.
   for cur_chroot_file_path in chroot_file_paths:
     if not cur_chroot_file_path.startswith(chroot_prefix):
-      raise ValueError(
-          'Invalid prefix for the chroot path: %s' % cur_chroot_file_path)
+      raise ValueError('Invalid prefix for the chroot path: %s' %
+                       cur_chroot_file_path)
 
     rel_path = cur_chroot_file_path[len(chroot_prefix):]
 
@@ -533,8 +530,8 @@ def StagePatchMetadataFileForCommit(patch_metadata_file_path):
   """
 
   if not os.path.isfile(patch_metadata_file_path):
-    raise ValueError(
-        'Invalid patch metadata file provided: %s' % patch_metadata_file_path)
+    raise ValueError('Invalid patch metadata file provided: %s' %
+                     patch_metadata_file_path)
 
   # Cmd to stage the patch metadata file for commit.
   stage_patch_file = [
@@ -630,12 +627,9 @@ def UpdatePackages(packages, llvm_hash, llvm_version, chroot_path,
   _CreateRepo(repo_path, llvm_hash)
 
   try:
-    if svn_option == 'google3':
-      commit_message_header = (
-          'llvm-next/google3: Update packages to r%d' % llvm_version)
-    elif svn_option == 'tot':
-      commit_message_header = (
-          'llvm-next/tot: Update packages to r%d' % llvm_version)
+    if svn_option in get_llvm_hash.KNOWN_HASH_SOURCES:
+      commit_message_header = ('llvm-next/%s: Update packages to r%d' %
+                               (svn_option, llvm_version))
     else:
       commit_message_header = 'llvm-next: Update packages to r%d' % llvm_version
 
@@ -699,10 +693,11 @@ def main():
 
   llvm_hash, llvm_version = GetLLVMHashAndVersionFromSVNOption(svn_option)
 
-  change_list = UpdatePackages(
-      args_output.update_packages, llvm_hash, llvm_version,
-      args_output.chroot_path, args_output.patch_metadata_file,
-      FailureModes(args_output.failure_mode), svn_option)
+  change_list = UpdatePackages(args_output.update_packages, llvm_hash,
+                               llvm_version, args_output.chroot_path,
+                               args_output.patch_metadata_file,
+                               FailureModes(args_output.failure_mode),
+                               svn_option)
 
   print('Successfully updated packages to %d' % llvm_version)
   print('Gerrit URL: %s' % change_list.url)

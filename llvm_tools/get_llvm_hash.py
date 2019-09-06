@@ -25,7 +25,7 @@ import requests
 _LLVM_GIT_URL = ('https://chromium.googlesource.com/external/github.com/llvm'
                  '/llvm-project')
 
-_KNOWN_HASH_SOURCES = {'google3', 'google3-unstable', 'tot'}
+KNOWN_HASH_SOURCES = {'google3', 'google3-unstable', 'tot'}
 
 
 @contextmanager
@@ -160,7 +160,7 @@ def is_svn_option(svn_option):
     ValueError: Invalid svn option provided.
   """
 
-  if svn_option.lower() in _KNOWN_HASH_SOURCES:
+  if svn_option.lower() in KNOWN_HASH_SOURCES:
     return svn_option.lower()
 
   try:
@@ -410,7 +410,7 @@ def main():
       type=is_svn_option,
       required=True,
       help='which git hash of LLVM to find. Either a svn revision, or one '
-      'of %s' % sorted(_KNOWN_HASH_SOURCES))
+      'of %s' % sorted(KNOWN_HASH_SOURCES))
 
   # Parse command-line arguments.
   args_output = parser.parse_args()
