@@ -10,7 +10,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"syscall"
 )
 
 type env interface {
@@ -73,7 +72,7 @@ func (env *processEnv) stderr() io.Writer {
 
 func (env *processEnv) exec(cmd *command) error {
 	execCmd := newExecCmd(env, cmd)
-	return syscall.Exec(execCmd.Path, execCmd.Args, execCmd.Env)
+	return libcExecve(execCmd.Path, execCmd.Args, execCmd.Env)
 }
 
 func (env *processEnv) run(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {

@@ -27,18 +27,19 @@ def parse_args():
 
 
 def calc_go_args(args, version):
-  # See https://github.com/golang/go/issues/26492 for how to
-  # build a fully static binary in go.
   ldFlags = [
-      '-X', 'main.ConfigName=' + args.config, '-X',
-      'main.UseCCache=' + args.use_ccache, '-X',
-      'main.OldWrapperPath=' + args.old_wrapper_path, '-X',
-      'main.Version=' + version, "-extldflags '-static'"
+      '-X',
+      'main.ConfigName=' + args.config,
+      '-X',
+      'main.UseCCache=' + args.use_ccache,
+      '-X',
+      'main.OldWrapperPath=' + args.old_wrapper_path,
+      '-X',
+      'main.Version=' + version,
   ]
   return [
       'go', 'build', '-o',
-      os.path.abspath(args.output_file), '-ldflags', ' '.join(ldFlags), '-tags',
-      'osusergo netgo static_build'
+      os.path.abspath(args.output_file), '-ldflags', ' '.join(ldFlags)
   ]
 
 
