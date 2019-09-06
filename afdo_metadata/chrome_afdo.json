@@ -1,14 +1,14 @@
 {
-    "benchmark": {
-	"name": "chromeos-chrome-amd64-78.0.3877.0_rc-r1.afdo"
-    },
     "silvermont": {
-	"name": "R78-3849.0-1565003983.afdo"
-    },
+        "name": "R78-3877.0-1567418235.afdo"
+    }, 
+    "benchmark": {
+        "name": "chromeos-chrome-amd64-78.0.3902.0_rc-r1.afdo"
+    }, 
     "airmont": {
-	"name": "R78-3849.0-1564999971.afdo"
-    },
+        "name": "R78-3877.0-1567416920.afdo"
+    }, 
     "broadwell": {
-	"name": "R78-3849.0-1565001978.afdo"
+        "name": "R78-3877.0-1567419040.afdo"
     }
 }
