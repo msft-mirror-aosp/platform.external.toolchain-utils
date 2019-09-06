@@ -12,9 +12,9 @@ import subprocess
 import unittest
 
 import get_llvm_hash
-from get_llvm_hash import LLVMHash
 import mock
 import test_helpers
+from get_llvm_hash import LLVMHash
 
 # We grab protected stuff from get_llvm_hash. That's OK.
 # pylint: disable=protected-access
@@ -128,6 +128,15 @@ class TestGetLLVMHash(unittest.TestCase):
     mock_get_llvm_hash.return_value = 'a13testhash3'
     mock_google3_llvm_version.return_value = 1000
     self.assertEqual(LLVMHash().GetGoogle3LLVMHash(), 'a13testhash3')
+    mock_get_llvm_hash.assert_called_once_with(1000)
+
+  @mock.patch.object(LLVMHash, 'GetLLVMHash')
+  @mock.patch.object(get_llvm_hash, 'GetGoogle3LLVMVersion')
+  def testReturnGoogle3UnstableLLVMHash(self, mock_google3_llvm_version,
+                                        mock_get_llvm_hash):
+    mock_get_llvm_hash.return_value = 'a13testhash3'
+    mock_google3_llvm_version.return_value = 1000
+    self.assertEqual(LLVMHash().GetGoogle3UnstableLLVMHash(), 'a13testhash3')
     mock_get_llvm_hash.assert_called_once_with(1000)
 
   @mock.patch.object(subprocess, 'check_output')

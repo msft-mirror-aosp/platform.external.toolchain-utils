@@ -13,6 +13,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 
 from contextlib import contextmanager
@@ -23,6 +24,8 @@ import requests
 
 _LLVM_GIT_URL = ('https://chromium.googlesource.com/external/github.com/llvm'
                  '/llvm-project')
+
+_KNOWN_HASH_SOURCES = {'google3', 'google3-unstable', 'tot'}
 
 
 @contextmanager
@@ -89,6 +92,9 @@ def GetAndUpdateLLVMProjectInLLVMTools():
                                               'llvm-project-copy')
 
   if not os.path.isdir(abs_path_to_llvm_project_dir):
+    print(
+        'Checking out LLVM from scratch. This could take a while...',
+        file=sys.stderr)
     os.mkdir(abs_path_to_llvm_project_dir)
 
     LLVMHash().CloneLLVMRepo(abs_path_to_llvm_project_dir)
@@ -116,7 +122,7 @@ def GetAndUpdateLLVMProjectInLLVMTools():
   return abs_path_to_llvm_project_dir
 
 
-def GetGoogle3LLVMVersion():
+def GetGoogle3LLVMVersion(stable):
   """Gets the latest google3 LLVM version.
 
   Returns:
@@ -127,9 +133,10 @@ def GetGoogle3LLVMVersion():
     `cat` command.
   """
 
-  path_to_google3_llvm_version = ('/google/src/head/depot/google3/third_party'
-                                  '/crosstool/v18/stable/installs/llvm/'
-                                  'revision')
+  subdir = 'stable' if stable else 'llvm_unstable'
+  path_to_google3_llvm_version = os.path.join(
+      '/google/src/head/depot/google3/third_party/crosstool/v18', subdir,
+      'installs/llvm/revision')
 
   # Cmd to get latest google3 LLVM version.
   cat_cmd = ['cat', path_to_google3_llvm_version]
@@ -153,7 +160,7 @@ def is_svn_option(svn_option):
     ValueError: Invalid svn option provided.
   """
 
-  if svn_option.lower() in ('google3', 'tot'):
+  if svn_option.lower() in _KNOWN_HASH_SOURCES:
     return svn_option.lower()
 
   try:
@@ -191,11 +198,11 @@ def GetLLVMHashAndVersionFromSVNOption(svn_option):
 
     llvm_version = new_llvm_hash.GetSVNVersionFromCommitMessage(
         tot_commit_message)
+  elif isinstance(svn_option, int):
+    llvm_version = svn_option
   else:
-    if isinstance(svn_option, int):
-      llvm_version = svn_option
-    else:
-      llvm_version = GetGoogle3LLVMVersion()
+    assert svn_option in ('google3', 'google3-unstable')
+    llvm_version = GetGoogle3LLVMVersion(stable=svn_option == 'google3')
 
     llvm_hash = new_llvm_hash.GetGitHashForVersion(
         GetAndUpdateLLVMProjectInLLVMTools(), llvm_version)
@@ -369,7 +376,11 @@ class LLVMHash(object):
   def GetGoogle3LLVMHash(self):
     """Retrieves the google3 LLVM hash."""
 
-    return self.GetLLVMHash(GetGoogle3LLVMVersion())
+    return self.GetLLVMHash(GetGoogle3LLVMVersion(stable=True))
+
+  def GetGoogle3UnstableLLVMHash(self):
+    """Retrieves the LLVM hash of google3's unstable compiler."""
+    return self.GetLLVMHash(GetGoogle3LLVMVersion(stable=False))
 
   def GetTopOfTrunkGitHash(self):
     """Gets the latest git hash from top of trunk of LLVM."""
@@ -398,8 +409,8 @@ def main():
       '--llvm_version',
       type=is_svn_option,
       required=True,
-      help='which git hash of LLVM to find '
-      '{google3, ToT, <svn_version>}')
+      help='which git hash of LLVM to find. Either a svn revision, or one '
+      'of %s' % sorted(_KNOWN_HASH_SOURCES))
 
   # Parse command-line arguments.
   args_output = parser.parse_args()
@@ -413,7 +424,10 @@ def main():
     print(new_llvm_hash.GetLLVMHash(cur_llvm_version))
   elif cur_llvm_version == 'google3':
     print(new_llvm_hash.GetGoogle3LLVMHash())
-  else:  # Find the top of trunk git hash of LLVM.
+  elif cur_llvm_version == 'google3-unstable':
+    print(new_llvm_hash.GetGoogle3UnstableLLVMHash())
+  else:
+    assert cur_llvm_version == 'tot'
     print(new_llvm_hash.GetTopOfTrunkGitHash())
 
 

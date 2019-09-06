@@ -419,5 +419,5 @@ For example, to retrieve the latest google3 LLVM version:
 ```
 from get_llvm_hash import GetGoogle3LLVMVersion
 
-GetGoogle3LLVMVersion()
+GetGoogle3LLVMVersion(stable=True)
 ```

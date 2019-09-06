@@ -10,8 +10,9 @@ from __future__ import print_function
 
 import argparse
 import os
-import patch_manager
+from pipes import quote
 
+import patch_manager
 from assert_not_in_chroot import VerifyOutsideChroot
 from failure_modes import FailureModes
 from get_llvm_hash import CreateTempLLVMRepo
@@ -65,8 +66,8 @@ def GetCommandLineArgs():
   parser.add_argument(
       '--llvm_version',
       type=int,
-      help='the LLVM version to use for patch management ' \
-          '(default: uses the google3 LLVM version)')
+      help='the LLVM version to use for patch management. Alternatively, you '
+      'can pass "google3" or "google3-unstable". (Default: "google3")')
 
   # Add argument for the mode of the patch management when handling patches.
   parser.add_argument(
@@ -96,8 +97,8 @@ def GetCommandLineArgs():
 
   # Duplicate packages were passed into the command line
   if len(unique_packages) != len(args_output.packages):
-    raise ValueError('Duplicate packages were passed in: %s' % ' '.join(
-        args_output.packages))
+    raise ValueError('Duplicate packages were passed in: %s' %
+                     ' '.join(args_output.packages))
 
   args_output.packages = unique_packages
 
@@ -231,8 +232,10 @@ def UpdatePackagesPatchMetadataFile(chroot_path, svn_version,
         patch_manager.CleanSrcTree(src_path)
 
         # Get the patch results for the current package.
-        patches_info = patch_manager.HandlePatches(
-            svn_version, patch_metadata_path, filesdir_path, src_path, mode)
+        patches_info = patch_manager.HandlePatches(svn_version,
+                                                   patch_metadata_path,
+                                                   filesdir_path, src_path,
+                                                   mode)
 
         package_info[cur_package] = patches_info._asdict()
 
@@ -251,13 +254,15 @@ def main():
   args_output = GetCommandLineArgs()
 
   # Get the google3 LLVM version if a LLVM version was not provided.
-  if not args_output.llvm_version:
-    args_output.llvm_version = GetGoogle3LLVMVersion()
+  llvm_version = args_output.llvm_version
+  if llvm_version in ('', 'google3', 'google3-unstable'):
+    llvm_version = GetGoogle3LLVMVersion(
+        stable=llvm_version != 'google3-unstable')
 
-  UpdatePackagesPatchMetadataFile(
-      args_output.chroot_path, args_output.llvm_version,
-      args_output.patch_metadata_file, args_output.packages,
-      FailureModes(args_output.failure_mode))
+  UpdatePackagesPatchMetadataFile(args_output.chroot_path, llvm_version,
+                                  args_output.patch_metadata_file,
+                                  args_output.packages,
+                                  FailureModes(args_output.failure_mode))
 
   # Only 'disable_patches' and 'remove_patches' can potentially modify the patch
   # metadata file.
