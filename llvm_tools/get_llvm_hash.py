@@ -8,14 +8,18 @@
 
 from __future__ import print_function
 
-from contextlib import contextmanager
 import argparse
 import os
 import re
-import requests
 import shutil
 import subprocess
 import tempfile
+from contextlib import contextmanager
+
+import requests
+
+_LLVM_GIT_URL = ('https://chromium.googlesource.com/external/github.com/llvm'
+                 '/llvm-project')
 
 
 def CheckCommand(cmd):
@@ -210,11 +214,7 @@ def GetLLVMHashAndVersionFromSVNOption(svn_option):
 
 
 class LLVMHash(object):
-  """Provides three methods to retrieve a LLVM hash."""
-
-  def __init__(self):
-    self._llvm_url = 'https://chromium.googlesource.com/external' \
-        '/github.com/llvm/llvm-project'
+  """Provides methods to retrieve a LLVM hash."""
 
   @staticmethod
   @contextmanager
@@ -237,7 +237,7 @@ class LLVMHash(object):
       ValueError: Failed to clone the LLVM repo.
     """
 
-    clone_cmd = ['git', 'clone', self._llvm_url, temp_dir]
+    clone_cmd = ['git', 'clone', _LLVM_GIT_URL, temp_dir]
 
     clone_cmd_obj = subprocess.Popen(clone_cmd, stderr=subprocess.PIPE)
     _, stderr = clone_cmd_obj.communicate()
@@ -387,7 +387,7 @@ class LLVMHash(object):
     path_to_master_branch = 'refs/heads/master'
 
     llvm_tot_git_hash_cmd = [
-        'git', 'ls-remote', self._llvm_url, path_to_master_branch
+        'git', 'ls-remote', _LLVM_GIT_URL, path_to_master_branch
     ]
 
     llvm_tot_git_hash = subprocess.check_output(llvm_tot_git_hash_cmd)
