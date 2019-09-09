@@ -11,7 +11,6 @@ from __future__ import print_function
 from collections import namedtuple
 from pipes import quote
 from tempfile import mkstemp
-import mock
 import os
 import unittest
 
@@ -19,7 +18,11 @@ from cros_utils import command_executer
 from failure_modes import FailureModes
 from test_helpers import CallCountsToMockFunctions
 import llvm_patch_management
+import mock
 import update_chromeos_llvm_next_hash
+
+# These are unittests; protected access is OK to a point.
+# pylint: disable=protected-access
 
 
 class UpdateLLVMNextHashTest(unittest.TestCase):
@@ -356,7 +359,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def testSuccessfullyCreatedRepo(self, mock_command_output, mock_isdir):
     # Test function to simulate 'RunCommandWOutput' when 'repo start' succeeds.
-    def GoodRepoStart(create_repo_cmd, print_to_console):
+    def GoodRepoStart(create_repo_cmd, _print_to_console):
       self.assertEqual(create_repo_cmd.split()[-1],
                        'llvm-next-update-a123testhash1')
 
@@ -415,7 +418,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
   def testSuccessfullyDeletedRepo(self, mock_command_output, mock_isdir):
     # Test function to simulate 'RunCommandWOutput' when successfully deleted a
     # repo.
-    def GoodRepoDelete(create_repo_cmd, print_to_console):
+    def GoodRepoDelete(create_repo_cmd, _print_to_console):
       self.assertEqual(create_repo_cmd.split()[-1],
                        'llvm-next-update-a123testhash2')
 
@@ -506,7 +509,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     # Test function to simulate 'RunCommandWOutput' when attempting to create
     # a commit and upload the changes for review.
     @CallCountsToMockFunctions
-    def MultipleCallsToUploadACommit(call_count, cmd, print_to_console):
+    def MultipleCallsToUploadACommit(call_count, cmd, _print_to_console):
       # Creating a commit for the changes.
       if call_count == 0:  # first call to 'RunCommandWOutput'
         self.assertEqual(
@@ -551,7 +554,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     # Test function to simulate 'RunCommandWOutput' when creating a commit for
     # the changes and uploading the changes for review.
     @CallCountsToMockFunctions
-    def MultipleCallsToUploadACommit(call_count, cmd, print_to_console):
+    def MultipleCallsToUploadACommit(call_count, cmd, _print_to_console):
       # Creating a commit in the repo path.
       if call_count == 0:  # first call to 'RunCommandWOutput'
         self.assertEqual(
@@ -599,7 +602,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     # Test function to simulate '_ConvertChrootPathsToSymLinkPaths' when a
     # symlink does not start with the prefix '/mnt/host/source'.
-    def BadPrefixChrootPath(chroot_path, chroot_file_paths):
+    def BadPrefixChrootPath(_chroot_path, _chroot_file_paths):
       raise ValueError('Invalid prefix for the chroot path: '
                        '/some/chroot/path/to/package-r1.ebuild')
 
@@ -769,7 +772,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
   @mock.patch.object(os.path, 'isfile', return_value=True)
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def testFailedToStagePatchMetadataFileForCommit(self, mock_run_cmd,
-                                                  mock_isfile):
+                                                  _mock_isfile):
 
     # Simulate the behavior of 'RunCommandWOutput()' when failed to stage the
     # patch metadata file for commit.
@@ -797,7 +800,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
   @mock.patch.object(os.path, 'isfile', return_value=True)
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def testSuccessfullyStagedPatchMetadataFileForCommit(self, mock_run_cmd,
-                                                       mock_isfile):
+                                                       _mock_isfile):
 
     # Simulate the behavior of 'RunCommandWOutput()' when successfully staged
     # the patch metadata file for commit.
@@ -909,7 +912,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     # Test function to simulate '_CreateRepo' when successfully created the
     # repo on a valid repo path.
-    def SuccessfullyCreateRepoForChanges(repo_path, llvm_hash):
+    def SuccessfullyCreateRepoForChanges(_repo_path, llvm_hash):
       self.assertEqual(llvm_hash, 'a123testhash4')
       return
 
@@ -924,18 +927,19 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     # Test function to simulate 'UprevEbuild' when the symlink to the ebuild
     # does not have a revision number.
-    def FailedToUprevEbuild(symlink_path):
+    def FailedToUprevEbuild(_symlink_path):
       # Raises a 'ValueError' exception because the symlink did not have have a
       # revision number.
       raise ValueError('Failed to uprev the ebuild.')
 
     # Test function to fail on 'UploadChanges' if the function gets called
     # when an exception is raised.
-    def ShouldNotExecuteUploadChanges(repo_path, llvm_hash, commit_messages):
+    def ShouldNotExecuteUploadChanges(_repo_path, _llvm_hash,
+                                      _commit_messages):
       # Test function should not be called (i.e. execution should resume in the
       # 'finally' block) because 'UprevEbuild()' raised an
       # exception.
-      assert False, 'Failed to go to \'finally\' block ' \
+      assert False, "Failed to go to 'finally' block " \
           'after the exception was raised.'
 
     test_package_path_dict = {
@@ -999,7 +1003,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     # Test function to simulate '_CreateRepo' when successfully created the repo
     # for the changes to be made to the ebuild files.
-    def SuccessfullyCreateRepoForChanges(repo_path, llvm_hash):
+    def SuccessfullyCreateRepoForChanges(_repo_path, llvm_hash):
       self.assertEqual(llvm_hash, 'a123testhash5')
       return
 
@@ -1054,7 +1058,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     # Test function to simulate 'UploadChanges()' when successfully created a
     # commit for the changes made to the packages and their patches and
     # retrieved the change list of the commit.
-    def SuccessfullyUploadedChanges(repo_path, llvm_hash, commit_messages):
+    def SuccessfullyUploadedChanges(_repo_path, _llvm_hash, _commit_messages):
       commit_url = 'https://some_name/path/to/commit/+/12345'
 
       return update_chromeos_llvm_next_hash.CommitContents(

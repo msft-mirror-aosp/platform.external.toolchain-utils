@@ -18,11 +18,11 @@ import re
 import subprocess
 from collections import namedtuple
 
-import get_llvm_hash
-import llvm_patch_management
 from assert_not_in_chroot import VerifyOutsideChroot
 from failure_modes import FailureModes
 from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption, is_svn_option
+import get_llvm_hash
+import llvm_patch_management
 from subprocess_helpers import ChrootRunCommand, ExecCommandAndCaptureOutput
 
 # If set to `True`, then the contents of `stdout` after executing a command will
@@ -48,7 +48,7 @@ def GetCommandLineArgs():
 
   # Create parser and add optional command-line arguments.
   parser = argparse.ArgumentParser(
-      description='Updates the build\'s hash for llvm-next.')
+      description="Updates the build's hash for llvm-next.")
 
   # Add argument for a specific chroot path.
   parser.add_argument(
@@ -100,6 +100,9 @@ def GetCommandLineArgs():
   # Parse the command line.
   args_output = parser.parse_args()
 
+  # FIXME: We shouldn't be using globals here, but until we fix it, make pylint
+  # stop complaining about it.
+  # pylint: disable=global-statement
   global verbose
 
   verbose = args_output.verbose
@@ -410,7 +413,7 @@ def GetGerritRepoUploadContents(repo_upload_contents):
 
   found_url = re.search(
       r'https://chromium-review.googlesource.com/c/'
-      'chromiumos/overlays/chromiumos-overlay/\+/([0-9]+)',
+      r'chromiumos/overlays/chromiumos-overlay/\+/([0-9]+)',
       repo_upload_contents)
 
   if not found_url:
@@ -453,6 +456,10 @@ def UploadChanges(path_to_repo_dir, llvm_hash, commit_messages):
   # Upload the changes for review.
   upload_change_cmd = (
       'yes | repo upload --br=llvm-next-update-%s --no-verify' % llvm_hash)
+
+  # Pylint currently doesn't lint things in py3 mode, and py2 didn't allow
+  # users to specify `encoding`s for Popen. Hence, pylint is "wrong" here.
+  # pylint: disable=unexpected-keyword-arg
 
   # NOTE: Need `shell=True` in order to pipe `yes` into `repo upload ...`.
   #

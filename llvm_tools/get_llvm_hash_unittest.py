@@ -12,9 +12,9 @@ import subprocess
 import unittest
 
 import get_llvm_hash
+from get_llvm_hash import LLVMHash
 import mock
 import test_helpers
-from get_llvm_hash import LLVMHash
 
 # We grab protected stuff from get_llvm_hash. That's OK.
 # pylint: disable=protected-access
