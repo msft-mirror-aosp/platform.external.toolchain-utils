@@ -19,6 +19,25 @@ from update_all_tryjobs_with_auto import GetPathToUpdateAllTryjobsWithAutoScript
 from llvm_bisection import BisectionExitStatus
 import llvm_bisection
 
+# Used to re-try for 'llvm_bisection.py' to attempt to launch more tryjobs.
+BISECTION_RETRY_TIME_SECS = 10 * 60
+
+# Wait time to then poll each tryjob whose 'status' value is 'pending'.
+POLL_RETRY_TIME_SECS = 30 * 60
+
+# The number of attempts for 'llvm_bisection.py' to launch more tryjobs.
+#
+# It is reset (break out of the `for` loop/ exit the program) if successfully
+# launched more tryjobs or bisection is finished (no more revisions between
+# start and end of the bisection).
+BISECTION_ATTEMPTS = 3
+
+# The limit for updating all tryjobs whose 'status' is 'pending'.
+#
+# If the time that has passed for polling exceeds this value, then the program
+# will exit with the appropriate exit code.
+POLLING_LIMIT_SECS = 18 * 60 * 60
+
 
 def main():
   """Bisects LLVM using the result of `cros buildresult` of each tryjob.
@@ -35,25 +54,6 @@ def main():
       GetPathToUpdateAllTryjobsWithAutoScript(), '--chroot_path',
       args_output.chroot_path, '--last_tested', args_output.last_tested
   ]
-
-  # Used to re-try for 'llvm_bisection.py' to attempt to launch more tryjobs.
-  BISECTION_RETRY_TIME_SECS = 10 * 60
-
-  # Wait time to then poll each tryjob whose 'status' value is 'pending'.
-  POLL_RETRY_TIME_SECS = 30 * 60
-
-  # The number of attempts for 'llvm_bisection.py' to launch more tryjobs.
-  #
-  # It is reset (break out of the `for` loop/ exit the program) if successfully
-  # launched more tryjobs or bisection is finished (no more revisions between
-  # start and end of the bisection).
-  BISECTION_ATTEMPTS = 3
-
-  # The limit for updating all tryjobs whose 'status' is 'pending'.
-  #
-  # If the time that has passed for polling exceeds this value, then the program
-  # will exit with the appropriate exit code.
-  POLLING_LIMIT_SECS = 18 * 60 * 60
 
   if os.path.isfile(args_output.last_tested):
     print('Resuming bisection for %s' % args_output.last_tested)
