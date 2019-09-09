@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -71,8 +72,18 @@ func (env *processEnv) stderr() io.Writer {
 }
 
 func (env *processEnv) exec(cmd *command) error {
-	execCmd := newExecCmd(env, cmd)
-	return libcExecve(execCmd.Path, execCmd.Args, execCmd.Env)
+	execCmd := exec.Command(cmd.Path, cmd.Args...)
+	// Note: We are not using execve and pass the new environment here
+	// as that sometimes doesn't work well with the gentoo sandbox to
+	// pick update changes to SANDBOX_WRITE env variable (needed for ccache).
+	// Instead, we are updating our own environment and call execv.
+	// This update of global state is ok as we won't execute anything else
+	// after the exec.
+	for _, update := range cmd.EnvUpdates {
+		parts := strings.Split(update, "=")
+		os.Setenv(parts[0], parts[1])
+	}
+	return libcExecv(execCmd.Path, execCmd.Args)
 }
 
 func (env *processEnv) run(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {

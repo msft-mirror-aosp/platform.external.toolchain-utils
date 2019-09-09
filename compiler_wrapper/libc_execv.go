@@ -7,9 +7,8 @@ package main
 // #include <stdlib.h>
 // #include <unistd.h>
 // #include <errno.h>
-// int libc_execve(const char *pathname, char *const argv[],
-//   char *const envp[]) {
-//   if (execve(pathname, argv, envp) != 0) {
+// int libc_execv(const char *pathname, char *const argv[]) {
+//   if (execv(pathname, argv) != 0) {
 //	   return errno;
 //   }
 //   return 0;
@@ -24,7 +23,7 @@ import (
 // LD_PRELOAD to work properly (e.g. gentoo sandbox).
 // Note that this changes the go binary to be a dynamically linked one.
 // See crbug.com/1000863 for details.
-func libcExecve(argv0 string, argv []string, envv []string) error {
+func libcExecv(argv0 string, argv []string) error {
 	freeList := []unsafe.Pointer{}
 	defer func() {
 		for _, ptr := range freeList {
@@ -55,7 +54,7 @@ func libcExecve(argv0 string, argv []string, envv []string) error {
 		return (**C.char)(cArray)
 	}
 
-	if errno := C.libc_execve(goStrToC(argv0), goSliceToC(argv), goSliceToC(envv)); errno != 0 {
+	if errno := C.libc_execv(goStrToC(argv0), goSliceToC(argv)); errno != 0 {
 		return newErrorwithSourceLocf("exec error: %d", errno)
 	}
 
