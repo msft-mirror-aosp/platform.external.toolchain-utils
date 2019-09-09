@@ -167,6 +167,11 @@ def GetTryJobCommand(change_list, extra_change_lists, options, builder):
   return tryjob_cmd
 
 
+def GetCurrentTimeInUTC():
+  """Returns the current time via `datetime.datetime.utcnow()`."""
+  return datetime.datetime.utcnow()
+
+
 def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
                verbose):
   """Runs a tryjob/tryjobs.
@@ -204,7 +209,7 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
 
     out = ChrootRunCommand(chroot_path, tryjob_cmd, verbose=verbose)
 
-    tryjob_launch_time = datetime.datetime.utcnow()
+    tryjob_launch_time = GetCurrentTimeInUTC()
 
     tryjob_contents = json.loads(out)
 

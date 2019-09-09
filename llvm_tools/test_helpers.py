@@ -13,6 +13,19 @@ import json
 import os
 
 
+class ArgsOutputTest(object):
+  """Testing class to simulate a argument parser object."""
+
+  def __init__(self, svn_option='google3'):
+    self.chroot_path = '/abs/path/to/chroot'
+    self.last_tested = '/abs/path/to/last_tested_file.json'
+    self.llvm_version = svn_option
+    self.verbose = False
+    self.extra_change_lists = None
+    self.options = ['latest-toolchain']
+    self.builders = ['some-builder']
+
+
 # FIXME: Migrate modules with similar helper to use this module.
 def CallCountsToMockFunctions(mock_function):
   """A decorator that passes a call count to the function it decorates.
@@ -25,15 +38,19 @@ def CallCountsToMockFunctions(mock_function):
     ...
     [foo(), foo(), foo()]
     [0, 1, 2]
-
-  NOTE: This decorator will not handle recursive functions properly.
   """
 
   counter = [0]
 
   def Result(*args, **kwargs):
-    ret_value = mock_function(counter[0], *args, **kwargs)
+    # For some values of `counter`, the mock function would simulate raising
+    # an exception, so let the test case catch the exception via
+    # `unittest.TestCase.assertRaises()` and to also handle recursive functions.
+    prev_counter = counter[0]
     counter[0] += 1
+
+    ret_value = mock_function(prev_counter, *args, **kwargs)
+
     return ret_value
 
   return Result
@@ -50,22 +67,23 @@ def WritePrettyJsonFile(file_name, json_object):
   json.dump(file_name, json_object, indent=4, separators=(',', ': '))
 
 
-@contextmanager
 def CreateTemporaryJsonFile():
   """Makes a temporary .json file."""
 
-  # Create a temporary file to simulate a .json file.
-  fd, temp_file_path = mkstemp()
+  return CreateTemporaryFile(suffix='.json')
 
-  temp_json_file = '%s.json' % temp_file_path
+
+@contextmanager
+def CreateTemporaryFile(suffix=''):
+  """Makes a temporary file."""
+
+  fd, temp_file_path = mkstemp(suffix=suffix)
 
   os.close(fd)
-  os.remove(temp_file_path)
 
   try:
-    yield temp_json_file
+    yield temp_file_path
 
   finally:
-    # Make sure that the file was created.
-    if os.path.isfile(temp_json_file):
-      os.remove(temp_json_file)
+    if os.path.isfile(temp_file_path):
+      os.remove(temp_file_path)
