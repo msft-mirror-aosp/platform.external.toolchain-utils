@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"syscall"
 )
 
 func shouldForceDisableWError(env env) bool {
@@ -65,6 +66,11 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 	// reasonable for that to fail the build. This is all meant for FYI-like
 	// builders in the first place.
 
+	// Buildbots use a nonzero umask, which isn't quite what we want: these directories should
+	// be world-readable and world-writable.
+	oldMask := syscall.Umask(0)
+	defer syscall.Umask(oldMask)
+
 	// Allow root and regular users to write to this without issue.
 	if err := os.MkdirAll(cfg.newWarningsDir, 0777); err != nil {
 		return 0, wrapErrorwithSourceLocf(err, "error creating warnings directory %s", cfg.newWarningsDir)
@@ -81,6 +87,10 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 	tmpFile, err := ioutil.TempFile(cfg.newWarningsDir, "warnings_report*.json"+incompleteSuffix)
 	if err != nil {
 		return 0, wrapErrorwithSourceLocf(err, "error creating warnings file")
+	}
+
+	if err := tmpFile.Chmod(0666); err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "error chmoding the file to be world-readable/writeable")
 	}
 
 	lines := []string{}

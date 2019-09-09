@@ -311,3 +311,64 @@ func readLoggedWarnings(ctx *testContext) *warningsJSONData {
 	}
 	return &jsonData
 }
+
+func TestDoubleBuildWerrorChmodsThingsAppropriately(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			switch ctx.cmdCount {
+			case 1:
+				if err := verifyArgCount(cmd, 0, "-Wno-error"); err != nil {
+					return err
+				}
+				fmt.Fprint(stderr, "-Werror originalerror")
+				return newExitCodeError(1)
+			case 2:
+				if err := verifyArgCount(cmd, 1, "-Wno-error"); err != nil {
+					return err
+				}
+				return nil
+			default:
+				t.Fatalf("unexpected command: %#v", cmd)
+				return nil
+			}
+		}
+		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, mainCc)))
+		if ctx.cmdCount != 2 {
+			// Later errors are likely senseless if we didn't get called twice.
+			t.Fatalf("expected 2 calls. Got: %d", ctx.cmdCount)
+		}
+
+		t.Logf("Warnings dir is at %q", ctx.cfg.newWarningsDir)
+		warningsDir, err := os.Open(ctx.cfg.newWarningsDir)
+		if err != nil {
+			t.Fatalf("failed to open the new warnings dir: %v", err)
+		}
+		defer warningsDir.Close()
+
+		fi, err := warningsDir.Stat()
+		if err != nil {
+			t.Fatalf("failed stat'ing the warnings dir: %v", err)
+		}
+
+		permBits := func(mode os.FileMode) int { return int(mode & 0777) }
+
+		if perms := permBits(fi.Mode()); perms != 0777 {
+			t.Errorf("mode for tempdir are %#o; expected 0777", perms)
+		}
+
+		entries, err := warningsDir.Readdir(0)
+		if err != nil {
+			t.Fatalf("failed reading entries of the tempdir: %v", err)
+		}
+
+		if len(entries) != 1 {
+			t.Errorf("found %d tempfiles in the tempdir; expected 1", len(entries))
+		}
+
+		for _, e := range entries {
+			if perms := permBits(e.Mode()); perms != 0666 {
+				t.Errorf("mode for %q is %#o; expected 0666", e.Name(), perms)
+			}
+		}
+	})
+}
