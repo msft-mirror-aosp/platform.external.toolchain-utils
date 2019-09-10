@@ -371,6 +371,19 @@ def _NoteCompletedBisection(last_tested, src_path, end):
       'The bad revision is %d and its commit hash is %s' % (end, bad_llvm_hash))
 
 
+def LoadStatusFile(last_tested, start, end):
+  """Loads the status file for bisection."""
+
+  try:
+    with open(last_tested) as f:
+      return json.load(f)
+  except IOError as err:
+    if err.errno != errno.ENOENT:
+      raise
+
+  return {'start': start, 'end': end, 'jobs': []}
+
+
 def main(args_output):
   """Bisects LLVM based off of a .JSON file.
 
@@ -390,13 +403,7 @@ def main(args_output):
   start = args_output.start_rev
   end = args_output.end_rev
 
-  try:
-    with open(args_output.last_tested) as f:
-      bisect_contents = json.load(f)
-  except IOError as err:
-    if err.errno != errno.ENOENT:
-      raise
-    bisect_contents = {'start': start, 'end': end, 'jobs': []}
+  bisect_contents = LoadStatusFile(args_output.last_tested, start, end)
 
   _ValidateStartAndEndAgainstJSONStartAndEnd(
       start, end, bisect_contents['start'], bisect_contents['end'])
