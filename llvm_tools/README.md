@@ -253,6 +253,39 @@ For help with the command line arguments of the script, run:
 $ ./llvm_bisection.py --help
 ```
 
+### `auto_llvm_bisection.py`
+
+#### Usage
+
+This script automates the LLVM bisection process by using `cros buildresult` to
+update the status of each tryjob.
+
+An example when this script would be used to do LLVM bisection overnight
+because tryjobs take very long to finish.
+
+For example, assuming the good revision is 369410 and the bad revision is
+369420, then:
+
+```
+$ ./auto_llvm_bisection.py --start_rev 369410 --end_rev 369420 \
+  --last_tested /abs/path/to/last_tested_file.json \
+  --extra_change_lists 513590 1394249 \
+  --options latest-toolchain nochromesdk \
+  --builder eve-release-tryjob
+```
+
+The example above bisects LLVM between revision 369410 and 369420. If the file
+exists, the script resumes bisection. Otherwise, the script creates the file
+provided by `--last_tested`. `--extra_change_lists` and `--options` are used for
+each tryjob when being submitted. Lastly, the tryjobs are launched for the board
+provided by `--builder` (in this example, for the eve board).
+
+For help with the command line arguments of the script, run:
+
+```
+$ ./auto_llvm_bisection.py --help
+```
+
 ### `update_tryjob_status.py`
 
 #### Usage
@@ -317,6 +350,30 @@ $ ./update_tryjob_status.py \
   --revision 369412 \
   --status_file /abs/path/to/tryjob/file \
   --custom_script /abs/path/to/script.py
+```
+
+### `update_all_tryjobs_with_auto.py`
+
+#### Usage
+
+This script updates all tryjobs that are 'pending' to the result provided by
+`cros buildresult`.
+
+For example:
+
+```
+$ ./update_all_tryjobs_with_auto.py \
+  --last_tested /abs/path/to/last_tested_file.json \
+  --chroot_path /abs/path/to/chroot
+```
+
+The above example will update all tryjobs whose 'status' is 'pending' in the
+file provided by `--last_tested`.
+
+For help with the command line arguments of the script, run:
+
+```
+$ ./update_all_tryjobs_with_auto.py --help
 ```
 
 ### `modify_a_tryjob.py`
