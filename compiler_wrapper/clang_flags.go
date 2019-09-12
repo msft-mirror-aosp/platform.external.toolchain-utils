@@ -13,7 +13,7 @@ import (
 
 func processClangFlags(builder *commandBuilder) error {
 	env := builder.env
-	clangDir := env.getenv("CLANG")
+	clangDir, _ := env.getenv("CLANG")
 
 	if clangDir == "" {
 		if builder.cfg.isHostWrapper {

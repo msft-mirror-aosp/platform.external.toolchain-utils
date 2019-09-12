@@ -11,7 +11,8 @@ import (
 )
 
 func processClangTidyFlags(builder *commandBuilder) (cSrcFile string, useClangTidy bool) {
-	if builder.env.getenv("WITH_TIDY") == "" {
+	withTidy, _ := builder.env.getenv("WITH_TIDY")
+	if withTidy == "" {
 		return "", false
 	}
 	srcFileSuffixes := []string{

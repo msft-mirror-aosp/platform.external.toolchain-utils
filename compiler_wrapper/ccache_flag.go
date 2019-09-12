@@ -38,7 +38,7 @@ func processCCacheFlag(sysroot string, builder *commandBuilder) {
 		// All of those will get cache hits (ignoring the first one
 		// which will seed the cache) due to this setting.
 		builder.updateEnv("CCACHE_BASEDIR=" + sysroot)
-		if builder.env.getenv("CCACHE_DISABLE") != "" {
+		if _, present := builder.env.getenv("CCACHE_DISABLE"); present {
 			// Portage likes to set this for us when it has FEATURES=-ccache.
 			// The other vars we need to setup manually because of tools like
 			// scons that scrubs the env before we get executed.
@@ -46,7 +46,7 @@ func processCCacheFlag(sysroot string, builder *commandBuilder) {
 		}
 		// If RESTRICT=sandbox is enabled, then sandbox won't be setup,
 		// and the env vars won't be available for appending.
-		if sandboxRewrite := builder.env.getenv("SANDBOX_WRITE"); sandboxRewrite != "" {
+		if sandboxRewrite, present := builder.env.getenv("SANDBOX_WRITE"); present {
 			builder.updateEnv("SANDBOX_WRITE=" + sandboxRewrite + ":" + ccacheDir)
 		}
 

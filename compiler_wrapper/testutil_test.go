@@ -66,14 +66,14 @@ func withTestContext(t *testing.T, work func(ctx *testContext)) {
 
 var _ env = (*testContext)(nil)
 
-func (ctx *testContext) getenv(key string) string {
+func (ctx *testContext) getenv(key string) (string, bool) {
 	for i := len(ctx.env) - 1; i >= 0; i-- {
 		entry := ctx.env[i]
 		if strings.HasPrefix(entry, key+"=") {
-			return entry[len(key)+1:]
+			return entry[len(key)+1:], true
 		}
 	}
-	return ""
+	return "", false
 }
 
 func (ctx *testContext) environ() []string {
@@ -108,10 +108,7 @@ func (ctx *testContext) run(cmd *command, stdin io.Reader, stdout io.Writer, std
 	// Keep calling the old wrapper when we are comparing the output of the
 	// old wrapper to the new wrapper.
 	if isCompareToOldWrapperCmd(cmd) {
-		execCmd := newExecCmd(ctx, cmd)
-		execCmd.Stdout = stdout
-		execCmd.Stderr = stderr
-		return execCmd.Run()
+		return runCmd(ctx, cmd, nil, stdout, stderr)
 	}
 	ctx.cmdCount++
 	ctx.lastCmd = cmd

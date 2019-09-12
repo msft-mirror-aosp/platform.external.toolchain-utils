@@ -9,12 +9,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"strings"
 )
 
 type env interface {
-	getenv(key string) string
+	getenv(key string) (string, bool)
 	environ() []string
 	getwd() string
 	stdin() io.Reader
@@ -47,8 +46,8 @@ func newProcessEnv() (env, error) {
 
 var _ env = (*processEnv)(nil)
 
-func (env *processEnv) getenv(key string) string {
-	return os.Getenv(key)
+func (env *processEnv) getenv(key string) (string, bool) {
+	return os.LookupEnv(key)
 }
 
 func (env *processEnv) environ() []string {
@@ -72,26 +71,11 @@ func (env *processEnv) stderr() io.Writer {
 }
 
 func (env *processEnv) exec(cmd *command) error {
-	execCmd := exec.Command(cmd.Path, cmd.Args...)
-	// Note: We are not using execve and pass the new environment here
-	// as that sometimes doesn't work well with the gentoo sandbox to
-	// pick update changes to SANDBOX_WRITE env variable (needed for ccache).
-	// Instead, we are updating our own environment and call execv.
-	// This update of global state is ok as we won't execute anything else
-	// after the exec.
-	for _, update := range cmd.EnvUpdates {
-		parts := strings.Split(update, "=")
-		os.Setenv(parts[0], parts[1])
-	}
-	return libcExecv(execCmd.Path, execCmd.Args)
+	return libcExec(cmd)
 }
 
 func (env *processEnv) run(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-	execCmd := newExecCmd(env, cmd)
-	execCmd.Stdin = stdin
-	execCmd.Stdout = stdout
-	execCmd.Stderr = stderr
-	return execCmd.Run()
+	return runCmd(env, cmd, stdin, stdout, stderr)
 }
 
 type commandRecordingEnv struct {

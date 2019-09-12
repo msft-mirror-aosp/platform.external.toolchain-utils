@@ -14,7 +14,8 @@ import (
 )
 
 func shouldForceDisableWError(env env) bool {
-	return env.getenv("FORCE_DISABLE_WERROR") != ""
+	value, _ := env.getenv("FORCE_DISABLE_WERROR")
+	return value != ""
 }
 
 func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCode int, err error) {

@@ -14,7 +14,8 @@ import (
 )
 
 func getRusageLogFilename(env env) string {
-	return env.getenv("GETRUSAGE")
+	value, _ := env.getenv("GETRUSAGE")
+	return value
 }
 
 func logRusage(env env, logFileName string, compilerCmd *command) (exitCode int, err error) {

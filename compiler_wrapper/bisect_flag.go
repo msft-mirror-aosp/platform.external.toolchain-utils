@@ -7,11 +7,12 @@ package main
 const bisectPythonCommand = "import bisect_driver; sys.exit(bisect_driver.bisect_driver(sys.argv[1], sys.argv[2], sys.argv[3:]))"
 
 func getBisectStage(env env) string {
-	return env.getenv("BISECT_STAGE")
+	value, _ := env.getenv("BISECT_STAGE")
+	return value
 }
 
 func calcBisectCommand(env env, bisectStage string, compilerCmd *command) *command {
-	bisectDir := env.getenv("BISECT_DIR")
+	bisectDir, _ := env.getenv("BISECT_DIR")
 	if bisectDir == "" {
 		bisectDir = "/tmp/sysroot_bisect"
 	}

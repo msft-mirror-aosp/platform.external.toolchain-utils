@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,8 +14,12 @@ import (
 )
 
 type command struct {
-	Path       string   `json:"path"`
-	Args       []string `json:"args"`
+	Path string   `json:"path"`
+	Args []string `json:"args"`
+	// Updates and additions have the form:
+	// `NAME=VALUE`
+	// Removals have the form:
+	// `NAME=`.
 	EnvUpdates []string `json:"env_updates,omitempty"`
 }
 
@@ -25,25 +30,42 @@ func newProcessCommand() *command {
 	}
 }
 
-func newExecCmd(env env, cmd *command) *exec.Cmd {
-	execCmd := exec.Command(cmd.Path, cmd.Args...)
-	execCmd.Env = append(env.environ(), cmd.EnvUpdates...)
-	ensurePathEnv(execCmd)
-	execCmd.Dir = env.getwd()
-	return execCmd
-}
-
-func ensurePathEnv(cmd *exec.Cmd) {
-	for _, env := range cmd.Env {
-		if strings.HasPrefix(env, "PATH=") {
-			return
+func mergeEnvValues(values []string, updates []string) []string {
+	envMap := map[string]string{}
+	for _, entry := range values {
+		equalPos := strings.IndexRune(entry, '=')
+		envMap[entry[:equalPos]] = entry[equalPos+1:]
+	}
+	for _, update := range updates {
+		equalPos := strings.IndexRune(update, '=')
+		key := update[:equalPos]
+		value := update[equalPos+1:]
+		if value == "" {
+			delete(envMap, key)
+		} else {
+			envMap[key] = value
 		}
 	}
-	cmd.Env = append(cmd.Env, "PATH=")
+	env := []string{}
+	for key, value := range envMap {
+		env = append(env, key+"="+value)
+	}
+	return env
+}
+
+func runCmd(env env, cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	execCmd := exec.Command(cmd.Path, cmd.Args...)
+	execCmd.Env = mergeEnvValues(env.environ(), cmd.EnvUpdates)
+	execCmd.Dir = env.getwd()
+	execCmd.Stdin = stdin
+	execCmd.Stdout = stdout
+	execCmd.Stderr = stderr
+	return execCmd.Run()
 }
 
 func resolveAgainstPathEnv(env env, cmd string) (string, error) {
-	for _, path := range strings.Split(env.getenv("PATH"), ":") {
+	path, _ := env.getenv("PATH")
+	for _, path := range strings.Split(path, ":") {
 		resolvedPath := filepath.Join(path, cmd)
 		if _, err := os.Lstat(resolvedPath); err == nil {
 			return resolvedPath, nil

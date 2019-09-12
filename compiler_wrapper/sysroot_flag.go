@@ -17,10 +17,11 @@ func processSysrootFlag(builder *commandBuilder) string {
 			break
 		}
 	}
-	sysroot := builder.env.getenv("SYSROOT")
-	if sysroot != "" {
+	sysroot, syrootPresent := builder.env.getenv("SYSROOT")
+	if syrootPresent {
 		builder.updateEnv("SYSROOT=")
-	} else {
+	}
+	if sysroot == "" {
 		// Use the bundled sysroot by default.
 		sysroot = filepath.Join(builder.rootPath, "usr", builder.target.target)
 	}

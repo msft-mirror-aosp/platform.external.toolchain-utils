@@ -75,7 +75,7 @@ func TestSetCacheUmask(t *testing.T) {
 	})
 }
 
-func TestUpdateSandboxRewrite(t *testing.T) {
+func TestUpdateSandboxRewriteWithValue(t *testing.T) {
 	withCCacheEnabledTestContext(t, func(ctx *testContext) {
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
@@ -93,7 +93,7 @@ func TestUpdateSandboxRewrite(t *testing.T) {
 	})
 }
 
-func TestClearCacheDisable(t *testing.T) {
+func TestUpdateSandboxRewriteWithoutValue(t *testing.T) {
 	withCCacheEnabledTestContext(t, func(ctx *testContext) {
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
@@ -101,7 +101,42 @@ func TestClearCacheDisable(t *testing.T) {
 			t.Error(err)
 		}
 
+		ctx.env = []string{"SANDBOX_WRITE="}
+		cmd = ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyEnvUpdate(cmd,
+			"SANDBOX_WRITE=:/var/cache/distfiles/ccache"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestClearCCacheDisableWithValue(t *testing.T) {
+	withCCacheEnabledTestContext(t, func(ctx *testContext) {
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyNoEnvUpdate(cmd, "CCACHE_DISABLE"); err != nil {
+			t.Error(err)
+		}
+
 		ctx.env = []string{"CCACHE_DISABLE=true"}
+		cmd = ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyEnvUpdate(cmd, "CCACHE_DISABLE="); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestClearCCacheDisableWithoutValue(t *testing.T) {
+	withCCacheEnabledTestContext(t, func(ctx *testContext) {
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyNoEnvUpdate(cmd, "CCACHE_DISABLE"); err != nil {
+			t.Error(err)
+		}
+
+		ctx.env = []string{"CCACHE_DISABLE="}
 		cmd = ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyEnvUpdate(cmd, "CCACHE_DISABLE="); err != nil {

@@ -32,7 +32,24 @@ func TestSetSysrootFlagFromEnv(t *testing.T) {
 		ctx.env = []string{"SYSROOT=/envpath"}
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyEnvUpdate(cmd, "SYSROOT="); err != nil {
+			t.Error(err)
+		}
 		if err := verifyArgOrder(cmd, "--sysroot=/envpath", mainCc); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestClearEmptySysrootFlagInEnv(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.env = []string{"SYSROOT="}
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyEnvUpdate(cmd, "SYSROOT="); err != nil {
+			t.Error(err)
+		}
+		if err := verifyArgOrder(cmd, "--sysroot=.*/x86_64-cros-linux-gnu", mainCc); err != nil {
 			t.Error(err)
 		}
 	})
