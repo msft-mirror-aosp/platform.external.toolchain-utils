@@ -24,8 +24,15 @@ type command struct {
 }
 
 func newProcessCommand() *command {
+	// This is a workaround for the fact that ld.so does not support
+	// passing in the executable name when ld.so is invoked as
+	// an executable (crbug/1003841).
+	path := os.Getenv("LD_ARGV0")
+	if path == "" {
+		path = os.Args[0]
+	}
 	return &command{
-		Path: os.Args[0],
+		Path: path,
 		Args: os.Args[1:],
 	}
 }
