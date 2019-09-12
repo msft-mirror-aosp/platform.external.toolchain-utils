@@ -3,6 +3,7 @@
 # Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Tests for the experiment runner module."""
 
 from __future__ import print_function
@@ -10,9 +11,10 @@ from __future__ import print_function
 import StringIO
 import getpass
 import os
+import time
 
-import mock
 import unittest
+import mock
 
 import experiment_runner
 import experiment_status
@@ -137,12 +139,18 @@ class ExperimentRunnerTest(unittest.TestCase):
         cmd_exec=self.mock_cmd_exec)
     self.assertEqual(er.STATUS_TIME_DELAY, 30)
 
+  @mock.patch.object(time, 'time')
+  @mock.patch.object(time, 'sleep')
   @mock.patch.object(experiment_status.ExperimentStatus, 'GetStatusString')
   @mock.patch.object(experiment_status.ExperimentStatus, 'GetProgressString')
-  def test_run(self, mock_progress_string, mock_status_string):
+  def test_run(self, mock_progress_string, mock_status_string, mock_sleep,
+               mock_time):
 
     self.run_count = 0
     self.is_complete_count = 0
+    mock_sleep.return_value = None
+    # pylint: disable=range-builtin-not-iterating
+    mock_time.side_effect = range(1, 50, 1)
 
     def reset():
       self.run_count = 0
@@ -154,7 +162,7 @@ class ExperimentRunnerTest(unittest.TestCase):
 
     def FakeIsComplete():
       self.is_complete_count += 1
-      if self.is_complete_count < 3:
+      if self.is_complete_count < 6:
         return False
       else:
         return True
@@ -304,8 +312,8 @@ class ExperimentRunnerTest(unittest.TestCase):
     self.assertEqual(mock_html_report.call_count, 1)
     self.assertEqual(len(mock_emailer.call_args), 2)
     self.assertEqual(mock_emailer.call_args[0],
-                     (['jane.doe@google.com',
-                       'john.smith@google.com'], ': image1 vs. image2',
+                     (['jane.doe@google.com', 'john.smith@google.com'
+                      ], ': image1 vs. image2',
                       "<pre style='font-size: 13px'>This is a fake text "
                       'report.\nResults are stored in _results.\n</pre>'))
     self.assertTrue(type(mock_emailer.call_args[1]) is dict)
