@@ -200,7 +200,7 @@ func runAndEcho(ctx *testContext, cmd *command) []string {
 
 func createEcho(ctx *testContext, cmd *command) *command {
 	content := `
-/usr/bin/echo "$0" "$@"
+/bin/echo "$0" "$@"
 /usr/bin/env
 `
 	fullPath := filepath.Join(ctx.tempDir, cmd.Path)

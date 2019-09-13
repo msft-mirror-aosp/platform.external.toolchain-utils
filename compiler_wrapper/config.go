@@ -110,6 +110,7 @@ var crosHardenedConfig = &config{
 		"-Wno-unknown-warning-option",
 		"-Wno-section",
 		"-static-libgcc",
+		"-fuse-ld=lld",
 	},
 	newWarningsDir: "/tmp/fatal_clang_warnings",
 }
@@ -154,6 +155,7 @@ var crosHostConfig = &config{
 		"-Qunused-arguments",
 		"-grecord-gcc-switches",
 		"-fno-addrsig",
+		"-fuse-ld=lld",
 		"-Wno-unused-local-typedefs",
 		"-Wno-deprecated-declarations",
 		"-Wno-tautological-constant-compare",
