@@ -71,7 +71,7 @@ func (env *processEnv) stderr() io.Writer {
 }
 
 func (env *processEnv) exec(cmd *command) error {
-	return libcExec(cmd)
+	return libcExec(env, cmd)
 }
 
 func (env *processEnv) run(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
