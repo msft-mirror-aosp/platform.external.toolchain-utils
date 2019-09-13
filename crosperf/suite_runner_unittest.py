@@ -153,7 +153,7 @@ class SuiteRunnerTest(unittest.TestCase):
         {}, self.mock_logger, 'verbose', self.mock_cmd_exec, self.mock_cmd_term)
 
   def test_get_profiler_args(self):
-    input_str = ('--profiler=custom_perf --profiler_args=\'perf_options'
+    input_str = ("--profiler=custom_perf --profiler_args='perf_options"
                  '="record -a -e cycles,instructions"\'')
     output_str = ("profiler=custom_perf profiler_args='record -a -e "
                   "cycles,instructions'")
@@ -173,6 +173,8 @@ class SuiteRunnerTest(unittest.TestCase):
       self.telemetry_crosperf_args = []
 
     def FakeDisableASLR(runner):
+      # pylint fix for unused variable.
+      del runner
       self.call_disable_aslr = True
 
     def FakeSkylabRun(test_label, benchmark, test_args, profiler_args):
@@ -197,6 +199,8 @@ class SuiteRunnerTest(unittest.TestCase):
       return 'Ran FakeTestThatRun'
 
     def FakeRunner(command, ignore_status=False):
+      # pylint fix for unused variable.
+      del command, ignore_status
       return 0, '', ''
 
     self.runner.DisableASLR = FakeDisableASLR
@@ -204,12 +208,15 @@ class SuiteRunnerTest(unittest.TestCase):
     self.runner.Telemetry_Crosperf_Run = FakeTelemetryCrosperfRun
     self.runner.Test_That_Run = FakeTestThatRun
     self.runner.SetupCpuUsage = mock.Mock()
+    self.runner.SetupCpuFreq = mock.Mock()
     self.runner.DutWrapper = mock.Mock(return_value=FakeRunner)
     self.runner.DisableTurbo = mock.Mock()
     self.runner.SetCpuGovernor = mock.Mock()
     self.runner.WaitCooldown = mock.Mock(return_value=0)
+    self.runner.GetCpuOnline = mock.Mock(return_value={0: 1, 1: 1, 2: 0})
     self.runner.dut_config['cooldown_time'] = 0
     self.runner.dut_config['governor'] = 'fake_governor'
+    self.runner.dut_config['cpu_freq_pct'] = 65
     machine = 'fake_machine'
     test_args = ''
     profiler_args = ''
@@ -225,6 +232,8 @@ class SuiteRunnerTest(unittest.TestCase):
     self.assertEqual(self.skylab_run_args,
                      [self.mock_label, self.telemetry_bench, '', ''])
     self.runner.SetupCpuUsage.assert_not_called()
+    self.runner.SetupCpuFreq.assert_not_called()
+    self.runner.GetCpuOnline.assert_not_called()
     self.runner.DutWrapper.assert_not_called()
     self.runner.SetCpuGovernor.assert_not_called()
     self.runner.DisableTurbo.assert_not_called()
@@ -241,6 +250,8 @@ class SuiteRunnerTest(unittest.TestCase):
         self.test_that_args,
         ['fake_machine', self.mock_label, self.test_that_bench, '', ''])
     self.runner.SetupCpuUsage.assert_called_once_with(FakeRunner)
+    self.runner.SetupCpuFreq.assert_called_once_with(FakeRunner, [0, 1])
+    self.runner.GetCpuOnline.assert_called_once_with(FakeRunner)
     self.runner.DutWrapper.assert_called_once_with(
         machine, self.mock_label.chromeos_root)
     self.runner.SetCpuGovernor.assert_called_once_with(
@@ -263,6 +274,8 @@ class SuiteRunnerTest(unittest.TestCase):
   def test_run_with_cooldown(self):
 
     def FakeRunner(command, ignore_status=False):
+      # pylint fix for unused variable.
+      del command, ignore_status
       return 0, '', ''
 
     self.runner.DisableASLR = mock.Mock()
@@ -270,10 +283,13 @@ class SuiteRunnerTest(unittest.TestCase):
     self.runner.DisableTurbo = mock.Mock()
     self.runner.SetCpuGovernor = mock.Mock()
     self.runner.SetupCpuUsage = mock.Mock()
+    self.runner.SetupCpuFreq = mock.Mock()
     self.runner.WaitCooldown = mock.Mock(return_value=0)
+    self.runner.GetCpuOnline = mock.Mock(return_value={0: 0, 1: 1})
     self.runner.Telemetry_Crosperf_Run = mock.Mock(return_value=(0, '', ''))
     self.runner.dut_config['cooldown_time'] = 10
     self.runner.dut_config['governor'] = 'fake_governor'
+    self.runner.dut_config['cpu_freq_pct'] = 75
 
     self.runner.Run('fake_machine', self.mock_label,
                     self.telemetry_crosperf_bench, '', '')
@@ -283,7 +299,9 @@ class SuiteRunnerTest(unittest.TestCase):
     self.runner.Telemetry_Crosperf_Run.assert_called_once()
     self.runner.DisableTurbo.assert_called_once_with(FakeRunner)
     self.runner.SetupCpuUsage.assert_called_once_with(FakeRunner)
+    self.runner.SetupCpuFreq.assert_called_once_with(FakeRunner, [1])
     self.runner.SetCpuGovernor.assert_called()
+    self.runner.GetCpuOnline.assert_called_once_with(FakeRunner)
     self.assertGreater(self.runner.SetCpuGovernor.call_count, 1)
     self.assertEqual(
         self.runner.SetCpuGovernor.call_args,
@@ -390,6 +408,7 @@ class SuiteRunnerTest(unittest.TestCase):
         'done; ')
     dut_runner.assert_called_once_with(
         set_cpu_cmd % 'non-exist_governor', ignore_status=True)
+    self.assertEqual(ret_code, 1)
 
   def test_disable_turbo(self):
     dut_runner = mock.Mock(return_value=(0, '', ''))
@@ -402,6 +421,57 @@ class SuiteRunnerTest(unittest.TestCase):
         '  fi; '
         'fi; ')
     dut_runner.assert_called_once_with(set_cpu_cmd)
+
+  def test_get_cpu_online_two(self):
+    """Test one digit CPU #."""
+    dut_runner = mock.Mock(
+        return_value=(0, '/sys/devices/system/cpu/cpu0/online 0\n'
+                      '/sys/devices/system/cpu/cpu1/online 1\n', ''))
+    cpu_online = self.runner.GetCpuOnline(dut_runner)
+    self.assertEqual(cpu_online, {0: 0, 1: 1})
+
+  def test_get_cpu_online_twelve(self):
+    """Test two digit CPU #."""
+    dut_runner = mock.Mock(
+        return_value=(0, '/sys/devices/system/cpu/cpu0/online 1\n'
+                      '/sys/devices/system/cpu/cpu1/online 0\n'
+                      '/sys/devices/system/cpu/cpu10/online 1\n'
+                      '/sys/devices/system/cpu/cpu11/online 1\n'
+                      '/sys/devices/system/cpu/cpu2/online 1\n'
+                      '/sys/devices/system/cpu/cpu3/online 0\n'
+                      '/sys/devices/system/cpu/cpu4/online 1\n'
+                      '/sys/devices/system/cpu/cpu5/online 0\n'
+                      '/sys/devices/system/cpu/cpu6/online 1\n'
+                      '/sys/devices/system/cpu/cpu7/online 0\n'
+                      '/sys/devices/system/cpu/cpu8/online 1\n'
+                      '/sys/devices/system/cpu/cpu9/online 0\n', ''))
+    cpu_online = self.runner.GetCpuOnline(dut_runner)
+    self.assertEqual(cpu_online, {
+        0: 1,
+        1: 0,
+        2: 1,
+        3: 0,
+        4: 1,
+        5: 0,
+        6: 1,
+        7: 0,
+        8: 1,
+        9: 0,
+        10: 1,
+        11: 1
+    })
+
+  def test_get_cpu_online_no_output(self):
+    """Test error case, no output."""
+    dut_runner = mock.Mock(return_value=(0, '', ''))
+    with self.assertRaises(AssertionError):
+      self.runner.GetCpuOnline(dut_runner)
+
+  def test_get_cpu_online_command_error(self):
+    """Test error case, command error."""
+    dut_runner = mock.Mock(side_effect=AssertionError)
+    with self.assertRaises(AssertionError):
+      self.runner.GetCpuOnline(dut_runner)
 
   @mock.patch.object(suite_runner.SuiteRunner, 'SetupArmCores')
   def test_setup_cpu_usage_little_on_arm(self, mock_setup_arm):
@@ -486,6 +556,106 @@ class SuiteRunnerTest(unittest.TestCase):
     # Check that setup command is not sent when trying to use
     # 'exclusive_cores' on ARM CPU setup.
     dut_runner.assert_called_once_with('cat /proc/cpuinfo')
+
+  def test_setup_cpu_freq_single_full(self):
+    online = [0]
+    dut_runner = mock.Mock(side_effect=[
+        (0,
+         '/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies\n',
+         ''),
+        (0, '1 2 3 4 5 6 7 8 9 10', ''),
+        (0, '', '')])
+    self.runner.dut_config['cpu_freq_pct'] = 100
+    self.runner.SetupCpuFreq(dut_runner, online)
+    self.assertGreaterEqual(dut_runner.call_count, 3)
+    self.assertEqual(
+        dut_runner.call_args,
+        mock.call('echo 10 | tee '
+                  '/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq '
+                  '/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq'))
+
+  def test_setup_cpu_freq_middle(self):
+    online = [0]
+    dut_runner = mock.Mock(side_effect=[
+        (0,
+         '/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies\n',
+         ''),
+        (0, '1 2 3 4 5 6 7 8 9 10', ''),
+        (0, '', '')])
+    self.runner.dut_config['cpu_freq_pct'] = 60
+    self.runner.SetupCpuFreq(dut_runner, online)
+    self.assertGreaterEqual(dut_runner.call_count, 2)
+    self.assertEqual(
+        dut_runner.call_args,
+        mock.call('echo 6 | tee '
+                  '/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq '
+                  '/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq'))
+
+  def test_setup_cpu_freq_lowest(self):
+    online = [0]
+    dut_runner = mock.Mock(side_effect=[
+        (0,
+         '/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies\n',
+         ''),
+        (0, '1 2 3 4 5 6 7 8 9 10', ''),
+        (0, '', '')])
+    self.runner.dut_config['cpu_freq_pct'] = 0
+    self.runner.SetupCpuFreq(dut_runner, online)
+    self.assertGreaterEqual(dut_runner.call_count, 2)
+    self.assertEqual(
+        dut_runner.call_args,
+        mock.call('echo 1 | tee '
+                  '/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq '
+                  '/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq'))
+
+  def test_setup_cpu_freq_multiple_middle(self):
+    online = [0, 1]
+    dut_runner = mock.Mock(side_effect=[
+        (0,
+         '/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies\n'
+         '/sys/devices/system/cpu/cpu1/cpufreq/scaling_available_frequencies\n',
+         ''),
+        (0, '1 2 3 4 5 6 7 8 9 10', ''),
+        (0, '', ''),
+        (0, '1 4 6 8 10 12 14 16 18 20', ''),
+        (0, '', '')])
+    self.runner.dut_config['cpu_freq_pct'] = 70
+    self.runner.SetupCpuFreq(dut_runner, online)
+    self.assertEqual(dut_runner.call_count, 5)
+    self.assertEqual(
+        dut_runner.call_args_list[2],
+        mock.call('echo 7 | tee '
+                  '/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq '
+                  '/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq'))
+    self.assertEqual(
+        dut_runner.call_args_list[4],
+        mock.call('echo 14 | tee '
+                  '/sys/devices/system/cpu/cpu1/cpufreq/scaling_max_freq '
+                  '/sys/devices/system/cpu/cpu1/cpufreq/scaling_min_freq'))
+
+  def test_setup_cpu_freq_no_scaling_available(self):
+    online = [0, 1]
+    dut_runner = mock.Mock(return_value=(2, '', 'No such file or directory'))
+    self.runner.dut_config['cpu_freq_pct'] = 50
+    self.runner.SetupCpuFreq(dut_runner, online)
+    dut_runner.assert_called_once()
+    self.assertNotRegexpMatches(dut_runner.call_args_list[0][0][0],
+                                '^echo.*scaling_max_freq$')
+
+  def test_setup_cpu_freq_multiple_no_access(self):
+    online = [0, 1]
+    dut_runner = mock.Mock(side_effect=[
+        (0,
+         '/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies\n'
+         '/sys/devices/system/cpu/cpu1/cpufreq/scaling_available_frequencies\n',
+         ''),
+        (0, '1 4 6 8 10 12 14 16 18 20', ''),
+        AssertionError(),
+    ])
+    self.runner.dut_config['cpu_freq_pct'] = 30
+    # Error status causes log fatal.
+    with self.assertRaises(AssertionError):
+      self.runner.SetupCpuFreq(dut_runner, online)
 
   def test_wait_cooldown_nowait(self):
     dut_runner = mock.Mock(return_value=(0, '39000', ''))
@@ -607,7 +777,7 @@ class SuiteRunnerTest(unittest.TestCase):
     mock_isdir.return_value = True
     mock_chroot_runcmd.return_value = 0
     self.mock_cmd_exec.ChrootRunCommandWOutput = mock_chroot_runcmd
-    profiler_args = ('--profiler=custom_perf --profiler_args=\'perf_options'
+    profiler_args = ("--profiler=custom_perf --profiler_args='perf_options"
                      '="record -a -e cycles,instructions"\'')
     res = self.runner.Telemetry_Crosperf_Run('lumpy1.cros', self.mock_label,
                                              self.telemetry_crosperf_bench, '',

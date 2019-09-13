@@ -105,6 +105,7 @@ class BenchmarkRunTest(unittest.TestCase):
         'cooldown_temp': 45,
         'governor': 'powersave',
         'cpu_usage': 'big_only',
+        'cpu_freq_pct': 80,
     }
     b = benchmark_run.MockBenchmarkRun('test run', bench, my_label, 1, [], m,
                                        logger.GetLogger(), logging_level, '',

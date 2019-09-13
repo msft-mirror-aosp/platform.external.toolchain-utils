@@ -165,6 +165,7 @@ class ExperimentFactory(object):
         'cooldown_temp': global_settings.GetField('cooldown_temp'),
         'governor': global_settings.GetField('governor'),
         'cpu_usage': global_settings.GetField('cpu_usage'),
+        'cpu_freq_pct': global_settings.GetField('cpu_freq_pct'),
     }
 
     # Default cache hit conditions. The image checksum in the cache and the

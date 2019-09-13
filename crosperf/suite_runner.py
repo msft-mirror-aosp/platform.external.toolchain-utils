@@ -119,6 +119,13 @@ class SuiteRunner(object):
         if not self.enable_aslr:
           self.DisableASLR(run_on_dut)
 
+        # CPU usage setup comes first where we enable/disable cores.
+        self.SetupCpuUsage(run_on_dut)
+        cpu_online_status = self.GetCpuOnline(run_on_dut)
+        # List of online cores of type int (core number).
+        online_cores = [
+            core for core, status in cpu_online_status.items() if status
+        ]
         if self.dut_config['cooldown_time']:
           # Setup power conservative mode for effective cool down.
           # Set ignore status since powersave may no be available
@@ -138,13 +145,20 @@ class SuiteRunner(object):
         # Setup CPU governor for the benchmark run.
         # It overwrites the previous governor settings.
         governor = self.dut_config['governor']
+        # FIXME(denik): Pass online cores to governor setup.
         self.SetCpuGovernor(governor, run_on_dut, ignore_status=False)
+
+        # Disable Turbo and Setup CPU freq should ALWAYS proceed governor setup
+        # since governor may change:
+        # - frequency;
+        # - turbo/boost.
         self.DisableTurbo(run_on_dut)
-        self.SetupCpuUsage(run_on_dut)
+        self.SetupCpuFreq(run_on_dut, online_cores)
         # FIXME(denik): Currently we are not recovering the previous cpufreq
         # settings since we do reboot/setup every time anyway.
         # But it may change in the future and then we have to recover the
         # settings.
+
         if benchmark.suite == 'telemetry_Crosperf':
           self.DecreaseWaitTime(run_on_dut)
           ret_tup = self.Telemetry_Crosperf_Run(machine, label, benchmark,
@@ -231,8 +245,7 @@ class SuiteRunner(object):
         # 'cooldown_temp'. Exit the loop.
         break
 
-    self.logger.LogOutput(
-        'Cooldown wait time: %.1f min' % (float(waittime) / 60))
+    self.logger.LogOutput('Cooldown wait time: %.1f min' % (waittime / 60))
     return waittime
 
   def SetupCpuUsage(self, run_on_dut):
@@ -343,6 +356,87 @@ class SuiteRunner(object):
           'dut little cores: %s\n'
           'Ignore ARM CPU setup and continue.' % (self.dut_config['cpu_usage'],
                                                   dut_big_cores, dut_lit_cores))
+
+  def GetCpuOnline(self, run_on_dut):
+    """Get online status of CPU cores.
+
+    Return dict of {int(cpu_num): <0|1>}.
+    """
+    get_cpu_online_cmd = ('paste -d" "'
+                          ' <(ls /sys/devices/system/cpu/cpu*/online)'
+                          ' <(cat /sys/devices/system/cpu/cpu*/online)')
+    _, online_output_str, _ = run_on_dut(get_cpu_online_cmd)
+
+    # Here is the output we expect to see:
+    # -----------------
+    # /sys/devices/system/cpu/cpu0/online 0
+    # /sys/devices/system/cpu/cpu1/online 1
+
+    cpu_online = {}
+    cpu_online_match = re.compile(r'^[/\S]+/cpu(\d+)/[/\S]+\s+(\d+)$')
+    for line in online_output_str.splitlines():
+      match = cpu_online_match.match(line)
+      if match:
+        cpu = int(match.group(1))
+        status = int(match.group(2))
+        cpu_online[cpu] = status
+    # At least one CPU has to be online.
+    assert cpu_online
+
+    return cpu_online
+
+  def SetupCpuFreq(self, run_on_dut, online_cores):
+    """Setup CPU frequency.
+
+    Based on self.dut_config['cpu_freq_pct'] setup frequency of online CPU cores
+    to a supported value which is less or equal to (freq_pct * max_freq / 100)
+    limited by min_freq.
+
+    NOTE: scaling_available_frequencies support is required.
+    Otherwise the function has no effect.
+    """
+    freq_percent = self.dut_config['cpu_freq_pct']
+    list_all_avail_freq_cmd = (
+        'ls /sys/devices/system/cpu/cpu{%s}/cpufreq/'
+        'scaling_available_frequencies'
+    )
+    # Ignore error to support general usage of frequency setup.
+    # Not all platforms support scaling_available_frequencies.
+    ret, all_avail_freq_str, _ = run_on_dut(
+        list_all_avail_freq_cmd % ','.join(str(core) for core in online_cores),
+        ignore_status=True)
+    if ret or not all_avail_freq_str:
+      # No scalable frequencies available for the core.
+      return ret
+    for avail_freq_path in all_avail_freq_str.split():
+      # Get available freq from every scaling_available_frequency path.
+      # Error is considered fatal in run_on_dut().
+      _, avail_freq_str, _ = run_on_dut('cat ' + avail_freq_path)
+      assert avail_freq_str
+
+      all_avail_freq = sorted(
+          int(freq_str) for freq_str in avail_freq_str.split())
+      min_freq = all_avail_freq[0]
+      max_freq = all_avail_freq[-1]
+      # Calculate the frequency we are targeting.
+      target_freq = round(max_freq * freq_percent / 100)
+      # More likely it's not in the list of supported frequencies
+      # and our goal is to find the one which is less or equal.
+      # Default is min and we will try to maximize it.
+      avail_ngt_target = min_freq
+      # Find the largest not greater than the target.
+      for next_largest in reversed(all_avail_freq):
+        if next_largest <= target_freq:
+          avail_ngt_target = next_largest
+          break
+
+      max_freq_path = avail_freq_path.replace('scaling_available_frequencies',
+                                              'scaling_max_freq')
+      min_freq_path = avail_freq_path.replace('scaling_available_frequencies',
+                                              'scaling_min_freq')
+      # With default ignore_status=False we expect 0 status or Fatal error.
+      run_on_dut('echo %s | tee %s %s' % (avail_ngt_target, max_freq_path,
+                                          min_freq_path))
 
   def DecreaseWaitTime(self, run_on_dut):
     """Change the ten seconds wait time for pagecycler to two seconds."""

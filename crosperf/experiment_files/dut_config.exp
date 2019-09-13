@@ -34,6 +34,9 @@ governor: <one-of-scaling_available_governors-values>
 # Restrict CPU usage to predefined "models":
 # all, big_only, little_only, exclusive_cores.
 cpu_usage: <usage-model>
+# Setup CPU frequency as percent of max_freq.
+# Default: 100
+cpu_freq_pct: <0-100>
 
 # The example below will run Telemetry toolchain performance benchmarks.
 # The exact list of benchmarks that will be run can be seen in

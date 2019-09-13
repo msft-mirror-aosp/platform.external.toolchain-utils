@@ -50,7 +50,7 @@ class GlobalSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.GlobalSettings('g_settings')
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 35)
+    self.assertEqual(len(res.fields), 36)
     self.assertEqual(res.GetField('name'), '')
     self.assertEqual(res.GetField('board'), '')
     self.assertEqual(res.GetField('skylab'), False)
@@ -82,6 +82,7 @@ class GlobalSettingsTest(unittest.TestCase):
     self.assertEqual(res.GetField('cooldown_temp'), 40)
     self.assertEqual(res.GetField('governor'), 'performance')
     self.assertEqual(res.GetField('cpu_usage'), 'all')
+    self.assertEqual(res.GetField('cpu_freq_pct'), 100)
 
 
 class SettingsFactoryTest(unittest.TestCase):
@@ -104,7 +105,7 @@ class SettingsFactoryTest(unittest.TestCase):
     g_settings = settings_factory.SettingsFactory().GetSettings(
         'global', 'global')
     self.assertIsInstance(g_settings, settings_factory.GlobalSettings)
-    self.assertEqual(len(g_settings.fields), 35)
+    self.assertEqual(len(g_settings.fields), 36)
 
 
 if __name__ == '__main__':

@@ -360,7 +360,7 @@ class GlobalSettings(Settings):
             required=False,
             default=0,
             description='Wait specified time in minutes allowing'
-            ' CPU to cool down. Zero value disables cooldown,'))
+            ' CPU to cool down. Zero value disables cooldown.'))
     self.AddField(
         EnumField(
             'governor',
@@ -396,6 +396,13 @@ class GlobalSettings(Settings):
             ' applicable only on ARM;\n'
             'exclusive-cores - (for future use)'
             ' isolate cores for exclusive use of benchmark processes.'))
+    self.AddField(
+        IntegerField(
+            'cpu_freq_pct',
+            required=False,
+            default=100,
+            description='Setup CPU frequency to a supported value less than'
+            ' or equal to a percent of max_freq.'))
 
 
 class SettingsFactory(object):
