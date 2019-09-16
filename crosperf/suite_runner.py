@@ -93,7 +93,8 @@ class SuiteRunner(object):
                    'returned %d\n'
                    'Error message: %s' % (machine_name, command, ret, err_msg))
         if ignore_status:
-          self.logger.LogError(err_msg)
+          self.logger.LogError(err_msg +
+                               '\n(Failure is considered non-fatal. Continue.)')
         else:
           self.logger.LogFatal(err_msg)
 
@@ -229,20 +230,23 @@ class SuiteRunner(object):
     # 2. Timeout cooldown_time expires.
     # For the case when targeted temperature is not reached within specified
     # timeout the benchmark is going to start with higher initial CPU temp.
-    # In the worst case it may affect test results.
+    # In the worst case it may affect test results but at the same time we
+    # guarantee the upper bound of waiting time.
     # TODO(denik): Report (or highlight) "high" CPU temperature in test results.
     # "high" should be calculated based on empirical data per platform.
     # Based on such reports we can adjust CPU configuration or
     # cooldown limits accordingly.
     while waittime < timeout_in_sec:
       _, temp_output, _ = run_on_dut(
-          'cat /sys/class/thermal/thermal_zone*/temp')
+          'cat /sys/class/thermal/thermal_zone*/temp', ignore_status=True)
       if any(int(temp) > temp_in_ucels for temp in temp_output.split()):
         time.sleep(sleep_interval)
         waittime += sleep_interval
       else:
-        # Reported temp numbers from all sensors do not exceed
-        # 'cooldown_temp'. Exit the loop.
+        # Exit the loop when:
+        # 1. Reported temp numbers from all thermal sensors do not exceed
+        # 'cooldown_temp' or
+        # 2. No data from the sensors.
         break
 
     self.logger.LogOutput('Cooldown wait time: %.1f min' % (waittime / 60))
@@ -396,10 +400,8 @@ class SuiteRunner(object):
     Otherwise the function has no effect.
     """
     freq_percent = self.dut_config['cpu_freq_pct']
-    list_all_avail_freq_cmd = (
-        'ls /sys/devices/system/cpu/cpu{%s}/cpufreq/'
-        'scaling_available_frequencies'
-    )
+    list_all_avail_freq_cmd = ('ls /sys/devices/system/cpu/cpu{%s}/cpufreq/'
+                               'scaling_available_frequencies')
     # Ignore error to support general usage of frequency setup.
     # Not all platforms support scaling_available_frequencies.
     ret, all_avail_freq_str, _ = run_on_dut(

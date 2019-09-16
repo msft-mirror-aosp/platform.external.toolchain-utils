@@ -348,7 +348,8 @@ class SuiteRunnerTest(unittest.TestCase):
         self.mock_logger.method_calls[-1],
         mock.call.LogError('Command execution on DUT lumpy.cros2 failed.\n'
                            'Failing command: run command;\nreturned 1\n'
-                           'Error message: Error!'))
+                           'Error message: Error!\n'
+                           '(Failure is considered non-fatal. Continue.)'))
 
   def test_disable_aslr(self):
     run_on_dut = mock.Mock()
@@ -657,14 +658,18 @@ class SuiteRunnerTest(unittest.TestCase):
     with self.assertRaises(AssertionError):
       self.runner.SetupCpuFreq(dut_runner, online)
 
-  def test_wait_cooldown_nowait(self):
+  @mock.patch.object(time, 'sleep')
+  def test_wait_cooldown_nowait(self, mock_sleep):
+    mock_sleep.return_value = 0
     dut_runner = mock.Mock(return_value=(0, '39000', ''))
     self.runner.dut_config['cooldown_time'] = 10
     self.runner.dut_config['cooldown_temp'] = 40
-    self.runner.WaitCooldown(dut_runner)
+    wait_time = self.runner.WaitCooldown(dut_runner)
     # Send command to DUT only once to check temperature
     # and make sure it does not exceed the threshold.
     dut_runner.assert_called_once()
+    mock_sleep.assert_not_called()
+    self.assertEqual(wait_time, 0)
 
   @mock.patch.object(time, 'sleep')
   def test_wait_cooldown_needwait_once(self, mock_sleep):
@@ -679,9 +684,11 @@ class SuiteRunnerTest(unittest.TestCase):
     dut_runner = mock.Mock(side_effect=[(0, '41000', ''), (0, '39999', '')])
     self.runner.dut_config['cooldown_time'] = 100
     self.runner.dut_config['cooldown_temp'] = 40
-    self.runner.WaitCooldown(dut_runner)
+    wait_time = self.runner.WaitCooldown(dut_runner)
     dut_runner.assert_called()
     self.assertEqual(dut_runner.call_count, 2)
+    mock_sleep.assert_called()
+    self.assertGreater(wait_time, 0)
 
   @mock.patch.object(time, 'sleep')
   def test_wait_cooldown_needwait(self, mock_sleep):
@@ -695,9 +702,11 @@ class SuiteRunnerTest(unittest.TestCase):
     dut_runner = mock.Mock(return_value=(0, '41000', ''))
     self.runner.dut_config['cooldown_time'] = 60
     self.runner.dut_config['cooldown_temp'] = 40
-    self.runner.WaitCooldown(dut_runner)
+    wait_time = self.runner.WaitCooldown(dut_runner)
     dut_runner.assert_called()
     self.assertGreater(dut_runner.call_count, 2)
+    mock_sleep.assert_called()
+    self.assertGreater(wait_time, 0)
 
   @mock.patch.object(time, 'sleep')
   def test_wait_cooldown_needwait_multtemp(self, mock_sleep):
@@ -715,9 +724,69 @@ class SuiteRunnerTest(unittest.TestCase):
         (0, '39000\n20000\n30000\n31000', '')])
     self.runner.dut_config['cooldown_time'] = 100
     self.runner.dut_config['cooldown_temp'] = 40
-    self.runner.WaitCooldown(dut_runner)
+    wait_time = self.runner.WaitCooldown(dut_runner)
     dut_runner.assert_called()
     self.assertEqual(dut_runner.call_count, 3)
+    mock_sleep.assert_called()
+    self.assertGreater(wait_time, 0)
+
+  @mock.patch.object(time, 'sleep')
+  def test_wait_cooldown_thermal_error(self, mock_sleep):
+    """Handle error status.
+
+    Any error should be considered non-fatal.
+    """
+    mock_sleep.return_value = 0
+    dut_runner = mock.Mock(side_effect=[
+        (1, '39000\n20000\n30000\n41000', 'Thermal error'),
+        (1, '39000\n20000\n30000\n31000', 'Thermal error')])
+    self.runner.dut_config['cooldown_time'] = 10
+    self.runner.dut_config['cooldown_temp'] = 40
+    wait_time = self.runner.WaitCooldown(dut_runner)
+    # Check that errors are ignored.
+    dut_runner.assert_called_with(
+        'cat /sys/class/thermal/thermal_zone*/temp', ignore_status=True)
+    self.assertEqual(dut_runner.call_count, 2)
+    # Check that we are waiting even when an error is returned
+    # as soon as data is coming.
+    mock_sleep.assert_called()
+    self.assertGreater(wait_time, 0)
+
+  @mock.patch.object(time, 'sleep')
+  def test_wait_cooldown_thermal_no_output(self, mock_sleep):
+    """Handle no output.
+
+    Check handling of empty stdout.
+    """
+    mock_sleep.return_value = 0
+    dut_runner = mock.Mock(side_effect=[(1, '', 'Thermal error')])
+    self.runner.dut_config['cooldown_time'] = 10
+    self.runner.dut_config['cooldown_temp'] = 40
+    wait_time = self.runner.WaitCooldown(dut_runner)
+    # Check that errors are ignored.
+    dut_runner.assert_called_once_with(
+        'cat /sys/class/thermal/thermal_zone*/temp', ignore_status=True)
+    # No wait.
+    mock_sleep.assert_not_called()
+    self.assertEqual(wait_time, 0)
+
+  @mock.patch.object(time, 'sleep')
+  def test_wait_cooldown_thermal_ws_output(self, mock_sleep):
+    """Handle whitespace output.
+
+    Check handling of whitespace only.
+    """
+    mock_sleep.return_value = 0
+    dut_runner = mock.Mock(side_effect=[(1, '\n', 'Thermal error')])
+    self.runner.dut_config['cooldown_time'] = 10
+    self.runner.dut_config['cooldown_temp'] = 40
+    wait_time = self.runner.WaitCooldown(dut_runner)
+    # Check that errors are ignored.
+    dut_runner.assert_called_once_with(
+        'cat /sys/class/thermal/thermal_zone*/temp', ignore_status=True)
+    # No wait.
+    mock_sleep.assert_not_called()
+    self.assertEqual(wait_time, 0)
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
   def test_restart_ui(self, mock_cros_runcmd):
