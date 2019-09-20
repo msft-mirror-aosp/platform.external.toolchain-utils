@@ -10,7 +10,6 @@ from __future__ import print_function
 import os
 import time
 
-import afe_lock_machine
 from threading import Lock
 
 from cros_utils import logger
@@ -56,6 +55,7 @@ class Experiment(object):
     # locking mechanism.
     self.locks_dir = locks_directory
     self.locked_machines = []
+    self.lock_mgr = None
     self.cwp_dso = cwp_dso
     self.enable_aslr = enable_aslr
     self.ignore_min_max = ignore_min_max
@@ -97,22 +97,10 @@ class Experiment(object):
     if not self.remote:
       raise RuntimeError('No machine available for running experiment.')
 
-    for label in labels:
-      # We filter out label remotes that are not reachable (not in
-      # self.remote). So each label.remote is a sublist of experiment.remote.
-      label.remote = [r for r in label.remote if r in self.remote]
-      try:
-        self.machine_manager.ComputeCommonCheckSum(label)
-      except BadChecksum:
-        # Force same image on all machines, then we do checksum again. No
-        # bailout if checksums still do not match.
-        # TODO: It's not a good idea to force flashing the image when we are
-        # running with skylab... Although for now it even helps us getting
-        # that machine...
-        self.machine_manager.ForceSameImageToAllMachines(label)
-        self.machine_manager.ComputeCommonCheckSum(label)
-
-      self.machine_manager.ComputeCommonCheckSumString(label)
+    # Initialize checksums for all machines, ignore errors at this time.
+    # The checksum will be double checked, and image will be flashed after
+    # duts are locked/leased.
+    self.SetCheckSums()
 
     self.start_time = None
     self.benchmark_runs = self._GenerateBenchmarkRuns(dut_config)
@@ -146,6 +134,24 @@ class Experiment(object):
                                          dut_config, self.enable_aslr))
 
     return benchmark_runs
+
+  def SetCheckSums(self, forceSameImage=False):
+    for label in self.labels:
+      # We filter out label remotes that are not reachable (not in
+      # self.remote). So each label.remote is a sublist of experiment.remote.
+      label.remote = [r for r in label.remote if r in self.remote]
+      try:
+        self.machine_manager.ComputeCommonCheckSum(label)
+      except BadChecksum:
+        # Force same image on all machines, then we do checksum again. No
+        # bailout if checksums still do not match.
+        # TODO (zhizhouy): Need to figure out how flashing image will influence
+        # the new checksum.
+        if forceSameImage:
+          self.machine_manager.ForceSameImageToAllMachines(label)
+          self.machine_manager.ComputeCommonCheckSum(label)
+
+      self.machine_manager.ComputeCommonCheckSumString(label)
 
   def Build(self):
     pass
@@ -209,18 +215,19 @@ class Experiment(object):
       # We are using the file locks mechanism, so call machine_manager.Cleanup
       # to unlock everything.
       self.machine_manager.Cleanup()
-    else:
-      if test_flag.GetTestMode():
-        return
 
-      all_machines = self.locked_machines
-      if not all_machines:
-        return
+    if test_flag.GetTestMode() or not self.locked_machines:
+      return
 
-      # If we locked any machines earlier, make sure we unlock them now.
-      lock_mgr = afe_lock_machine.AFELockManager(
-          all_machines, '', self.labels[0].chromeos_root, None)
-      machine_states = lock_mgr.GetMachineStates('unlock')
-      for k, state in machine_states.items():
-        if state['locked']:
-          lock_mgr.UpdateLockInAFE(False, k)
+    # If we locked any machines earlier, make sure we unlock them now.
+    if self.lock_mgr:
+      machine_states = self.lock_mgr.GetMachineStates('unlock')
+      self.lock_mgr.CheckMachineLocks(machine_states, 'unlock')
+      unlocked_machines = self.lock_mgr.UpdateMachines(False)
+      failed_machines = [
+          m for m in self.locked_machines if m not in unlocked_machines
+      ]
+      if failed_machines:
+        raise RuntimeError(
+            'These machines are not unlocked correctly: %s' % failed_machines)
+      self.lock_mgr = None
