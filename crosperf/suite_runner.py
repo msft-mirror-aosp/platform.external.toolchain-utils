@@ -630,11 +630,12 @@ class SuiteRunner(object):
         test_args = test_args[1:-1]
       args_string = "test_args='%s'" % test_args
 
+    top_interval = self.dut_config['top_interval']
     cmd = ('{} {} {} --board={} --args="{} run_local={} test={} '
-           'turbostat={} {}" {} telemetry_Crosperf'.format(
+           'turbostat={} top_interval={} {}" {} telemetry_Crosperf'.format(
                TEST_THAT_PATH, autotest_dir_arg, fast_arg, label.board,
                args_string, benchmark.run_local, benchmark.test_name,
-               benchmark.turbostat, profiler_args, machine))
+               benchmark.turbostat, top_interval, profiler_args, machine))
 
     # Use --no-ns-pid so that cros_sdk does not create a different
     # process namespace and we can kill process created easily by their

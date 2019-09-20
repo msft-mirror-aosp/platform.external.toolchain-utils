@@ -94,6 +94,7 @@ DUT_CONFIG_EXPERIMENT_FILE_GOOD = """
   governor: powersave
   cpu_usage: exclusive_cores
   cpu_freq_pct: 50
+  top_interval: 5
 
   benchmark: speedometer {
     iterations: 3
@@ -221,6 +222,7 @@ class ExperimentFileTest(unittest.TestCase):
     self.assertEqual(global_settings.GetField('cpu_freq_pct'), 50)
     self.assertEqual(global_settings.GetField('cooldown_time'), 5)
     self.assertEqual(global_settings.GetField('cooldown_temp'), 38)
+    self.assertEqual(global_settings.GetField('top_interval'), 5)
 
   def testLoadDutConfigExperimentFile_WrongGovernor(self):
     input_file = StringIO.StringIO(DUT_CONFIG_EXPERIMENT_FILE_BAD_GOV)

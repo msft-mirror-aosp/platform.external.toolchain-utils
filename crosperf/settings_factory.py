@@ -347,6 +347,19 @@ class GlobalSettings(Settings):
             required=False,
             default=True))
     self.AddField(
+        FloatField(
+            'top_interval',
+            description='Run top command in the background of a benchmark with'
+            ' interval of sampling specified in seconds.\n'
+            'Recommended values 1-5. Lower number provides more accurate'
+            ' data.\n'
+            'With 0 - do not run top.\n'
+            'NOTE: Running top with interval 1-5 sec has insignificant'
+            ' performance impact (performance degradation does not exceed 0.3%,'
+            ' measured on x86_64, ARM32, and ARM64).',
+            required=False,
+            default=0))
+    self.AddField(
         IntegerField(
             'cooldown_temp',
             required=False,

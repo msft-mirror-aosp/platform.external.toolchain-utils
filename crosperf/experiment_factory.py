@@ -166,6 +166,7 @@ class ExperimentFactory(object):
         'governor': global_settings.GetField('governor'),
         'cpu_usage': global_settings.GetField('cpu_usage'),
         'cpu_freq_pct': global_settings.GetField('cpu_freq_pct'),
+        'top_interval': global_settings.GetField('top_interval'),
     }
 
     # Default cache hit conditions. The image checksum in the cache and the

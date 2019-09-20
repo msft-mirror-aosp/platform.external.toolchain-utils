@@ -848,6 +848,7 @@ class SuiteRunnerTest(unittest.TestCase):
     self.mock_cmd_exec.ChrootRunCommandWOutput = mock_chroot_runcmd
     profiler_args = ("--profiler=custom_perf --profiler_args='perf_options"
                      '="record -a -e cycles,instructions"\'')
+    self.runner.dut_config['top_interval'] = 3
     res = self.runner.Telemetry_Crosperf_Run('lumpy1.cros', self.mock_label,
                                              self.telemetry_crosperf_bench, '',
                                              profiler_args)
@@ -860,7 +861,7 @@ class SuiteRunnerTest(unittest.TestCase):
                      ('/usr/bin/test_that --autotest_dir '
                       '~/trunk/src/third_party/autotest/files --fast '
                       '--board=lumpy --args=" run_local=False test=octane '
-                      'turbostat=True profiler=custom_perf '
+                      'turbostat=True top_interval=3 profiler=custom_perf '
                       'profiler_args=\'record -a -e cycles,instructions\'" '
                       'lumpy1.cros telemetry_Crosperf'))
     self.assertEqual(args_dict['cros_sdk_options'],

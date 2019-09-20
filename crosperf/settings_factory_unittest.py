@@ -50,7 +50,7 @@ class GlobalSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.GlobalSettings('g_settings')
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 36)
+    self.assertEqual(len(res.fields), 37)
     self.assertEqual(res.GetField('name'), '')
     self.assertEqual(res.GetField('board'), '')
     self.assertEqual(res.GetField('skylab'), False)
@@ -78,6 +78,7 @@ class GlobalSettingsTest(unittest.TestCase):
     self.assertEqual(res.GetField('ignore_min_max'), False)
     self.assertEqual(res.GetField('intel_pstate'), '')
     self.assertEqual(res.GetField('turbostat'), True)
+    self.assertEqual(res.GetField('top_interval'), 0)
     self.assertEqual(res.GetField('cooldown_time'), 0)
     self.assertEqual(res.GetField('cooldown_temp'), 40)
     self.assertEqual(res.GetField('governor'), 'performance')
@@ -105,7 +106,7 @@ class SettingsFactoryTest(unittest.TestCase):
     g_settings = settings_factory.SettingsFactory().GetSettings(
         'global', 'global')
     self.assertIsInstance(g_settings, settings_factory.GlobalSettings)
-    self.assertEqual(len(g_settings.fields), 36)
+    self.assertEqual(len(g_settings.fields), 37)
 
 
 if __name__ == '__main__':
