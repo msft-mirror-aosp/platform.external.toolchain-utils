@@ -133,7 +133,6 @@ class ExperimentRunner(object):
           self._GetMachineList(),
           '',
           experiment.labels[0].chromeos_root,
-          None,
           experiment.locks_dir,
           log=self.l,
       )

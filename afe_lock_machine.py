@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
+#
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -12,7 +13,6 @@ import argparse
 import getpass
 import os
 import sys
-import traceback
 
 import file_lock_machine
 
@@ -27,22 +27,6 @@ class AFELockException(Exception):
 
 class MachineNotPingable(AFELockException):
   """Raised when machine does not respond to ping."""
-
-
-class MissingHostInfo(AFELockException):
-  """Raised when cannot find info about machine on machine servers."""
-
-
-class UpdateNonLocalMachine(AFELockException):
-  """Raised when user requests to add/remove a ChromeOS HW Lab machine.."""
-
-
-class DuplicateAdd(AFELockException):
-  """Raised when user requests to add a machine that's already on the server."""
-
-
-class UpdateServerError(AFELockException):
-  """Raised when attempt to add/remove a machine from local server fails."""
 
 
 class LockingError(AFELockException):
@@ -65,14 +49,10 @@ class AFEAccessError(AFELockException):
 class AFELockManager(object):
   """Class for locking/unlocking machines vie Autotest Front End servers.
 
-  This class contains methods for checking the locked status of machines
-  on both the ChromeOS HW Lab AFE server and a local AFE server.  It also
-  has methods for adding/removing machines from the local server, and for
-  changing the lock status of machines on either server.  For the ChromeOS
-  HW Lab, it only allows access to the toolchain team lab machines, as
-  defined in toolchain-utils/crosperf/default_remotes.  By default it will
-  look for a local server on chrotomation2.svl.corp.google.com, but an
-  alternative local AFE server can be supplied, if desired.
+  This class contains methods for checking the locked status of machines,
+  and for changing the locked status.  It handles HW lab machines (both AFE
+  and Skylab), and local machines, using appropriate locking mechanisms for
+  each.
 
   !!!IMPORTANT NOTE!!!  The AFE server can only be called from the main
   thread/process of a program.  If you launch threads and try to call it
@@ -80,7 +60,6 @@ class AFELockManager(object):
   in the Python virtual machine (and signal handling) and cannot be changed.
   """
 
-  LOCAL_SERVER = 'chrotomation2.svl.corp.google.com'
   SKYLAB_PATH = '/usr/local/bin/skylab'
   LEASE_MINS = 600
   SKYLAB_CREDENTIAL = '/usr/local/google/home/mobiletc-prebuild/' \
@@ -92,9 +71,7 @@ class AFELockManager(object):
                remotes,
                force_option,
                chromeos_root,
-               local_server,
                locks_dir='',
-               use_local=False,
                log=None):
     """Initializes an AFELockManager object.
 
@@ -105,13 +82,7 @@ class AFELockManager(object):
       force_option: A Boolean indicating whether or not to force an unlock of
         a machine that was locked by someone else.
       chromeos_root: The ChromeOS chroot to use for the autotest scripts.
-      local_server: A string containing the name or ip address of the machine
-        that is running an AFE server, which is to be used for managing
-        machines that are not in the ChromeOS HW lab.
       locks_dir: A directory used for file locking local devices.
-      local: A Boolean indicating whether or not to use/allow a local AFE
-        server to be used (see local_server argument).
-      use_local: Use the local server instead of the official one.
       log: If not None, this is the logger object to be used for writing out
         informational output messages.  It is expected to be an instance of
         Logger class from cros_utils/logger.py.
@@ -141,38 +112,15 @@ class AFELockManager(object):
     self.afe = frontend_wrappers.RetryingAFE(
         timeout_min=30, delay_sec=10, debug=False, server='cautotest')
 
-    self.local = use_local
     self.machines = list(set(remotes)) or []
     self.toolchain_lab_machines = self.GetAllToolchainLabMachines()
-    if self.machines and self.AllLabMachines():
-      self.local = False
 
-    if not self.local:
-      self.local_afe = None
-    else:
-      dargs = {}
-      dargs['server'] = local_server or AFELockManager.LOCAL_SERVER
-      # Make sure local server is pingable.
-      error_msg = ('Local autotest server machine %s not responding to ping.' %
-                   dargs['server'])
-      self.CheckMachine(dargs['server'], error_msg)
-      self.local_afe = frontend_wrappers.RetryingAFE(
-          timeout_min=30, delay_sec=10, debug=False, **dargs)
     if not self.machines:
-      self.machines = self.toolchain_lab_machines + self.GetAllNonlabMachines()
+      self.machines = self.toolchain_lab_machines
     self.force = force_option
 
     self.local_machines = []
     self.skylab_machines = []
-
-  def AllLabMachines(self):
-    """Check to see if all machines being used are HW Lab machines."""
-    all_lab = True
-    for m in self.machines:
-      if m not in self.toolchain_lab_machines:
-        all_lab = False
-        break
-    return all_lab
 
   def CheckMachine(self, machine, error_msg):
     """Verifies that machine is responding to ping.
@@ -188,23 +136,6 @@ class AFELockManager(object):
       cros_machine = machine + '.cros'
       if not machines.MachineIsPingable(cros_machine, logging_level='none'):
         raise MachineNotPingable(error_msg)
-
-  def MachineIsKnown(self, machine):
-    """Checks to see if either AFE server knows the given machine.
-
-    Args:
-      machine: String containing name or ip address of machine to check.
-
-    Returns:
-      Boolean indicating if the machine is in the list of known machines for
-        either AFE server.
-    """
-    if machine in self.toolchain_lab_machines:
-      return True
-    elif self.local_afe and machine in self.GetAllNonlabMachines():
-      return True
-
-    return False
 
   def GetAllToolchainLabMachines(self):
     """Gets a list of all the toolchain machines in the ChromeOS HW lab.
@@ -223,17 +154,6 @@ class AFELockManager(object):
         for r in remotes.split():
           machine_list.append(r.strip())
     return machine_list
-
-  def GetAllNonlabMachines(self):
-    """Gets a list of all known machines on the local AFE server.
-
-    Returns:
-      A list of the names of the machines on the local AFE server.
-    """
-    non_lab_machines = []
-    if self.local_afe:
-      non_lab_machines = self.local_afe.get_hostnames()
-    return non_lab_machines
 
   def PrintStatusHeader(self, is_lab_machine):
     """Prints the status header lines for machines.
@@ -266,89 +186,6 @@ class AFELockManager(object):
     """
     if machine not in self.skylab_machines:
       self.skylab_machines.append(machine)
-
-  def RemoveLocalMachine(self, m):
-    """Removes a machine from the local AFE server.
-
-    Args:
-      m: The machine to remove.
-
-    Raises:
-      MissingHostInfo:  Can't find machine to be removed.
-    """
-    if self.local_afe:
-      host_info = self.local_afe.get_hosts(hostname=m)
-      if host_info:
-        host_info = host_info[0]
-        host_info.delete()
-      else:
-        raise MissingHostInfo('Cannot find/delete machine %s.' % m)
-
-  def AddLocalMachine(self, m):
-    """Adds a machine to the local AFE server.
-
-    Args:
-      m: The machine to be added.
-    """
-    if self.local_afe:
-      error_msg = 'Machine %s is not responding to ping.' % m
-      self.CheckMachine(m, error_msg)
-      self.local_afe.create_host(m)
-
-  def AddMachinesToLocalServer(self):
-    """Adds one or more machines to the local AFE server.
-
-    Verify that the requested machines are legal to add to the local server,
-    i.e. that they are not ChromeOS HW lab machines, and they are not already
-    on the local server.  Call AddLocalMachine for each valid machine.
-
-    Raises:
-      DuplicateAdd: Attempt to add a machine that is already on the server.
-      UpdateNonLocalMachine:  Attempt to add a ChromeOS HW lab machine.
-      UpdateServerError:  Something went wrong while attempting to add a
-        machine.
-    """
-    for m in self.machines:
-      for cros_name in [m, m + '.cros']:
-        if cros_name in self.toolchain_lab_machines:
-          raise UpdateNonLocalMachine(
-              'Machine %s is already in the ChromeOS HW'
-              'Lab.  Cannot add it to local server.' % cros_name)
-      host_info = self.local_afe.get_hosts(hostname=m)
-      if host_info:
-        raise DuplicateAdd('Machine %s is already on the local server.' % m)
-      try:
-        self.AddLocalMachine(m)
-        self.logger.LogOutput('Successfully added %s to local server.' % m)
-      except Exception as e:
-        traceback.print_exc()
-        raise UpdateServerError(
-            'Error occurred while attempting to add %s. %s' % (m, str(e)))
-
-  def RemoveMachinesFromLocalServer(self):
-    """Removes one or more machines from the local AFE server.
-
-    Verify that the requested machines are legal to remove from the local
-    server, i.e. that they are not ChromeOS HW lab machines.  Call
-    RemoveLocalMachine for each valid machine.
-
-    Raises:
-      UpdateServerError:  Something went wrong while attempting to remove a
-        machine.
-    """
-    for m in self.machines:
-      for cros_name in [m, m + '.cros']:
-        if cros_name in self.toolchain_lab_machines:
-          raise UpdateNonLocalMachine(
-              'Machine %s is in the ChromeOS HW Lab. '
-              'This script cannot remove lab machines.' % cros_name)
-      try:
-        self.RemoveLocalMachine(m)
-        self.logger.LogOutput('Successfully removed %s from local server.' % m)
-      except Exception as e:
-        traceback.print_exc()
-        raise UpdateServerError('Error occurred while attempting to remove %s '
-                                '(%s).' % (m, str(e)))
 
   def ListMachineStates(self, machine_states):
     """Gets and prints the current status for a list of machines.
@@ -411,9 +248,6 @@ class AFELockManager(object):
     if machine in self.toolchain_lab_machines:
       m = machine.split('.')[0]
       afe_server = self.afe
-    else:
-      m = machine
-      afe_server = self.local_afe
 
     try:
       afe_server.run(
@@ -553,27 +387,11 @@ class AFELockManager(object):
               'Attempt to lock already locked machine (%s)' % k)
           self._InternalRemoveMachine(k)
 
-  def HasAFEServer(self, local):
-    """Verifies that the AFELockManager has appropriate AFE server.
-
-    Args:
-      local: Boolean indicating whether we are checking for the local server
-        (True) or for the global server (False).
-
-    Returns:
-      A boolean indicating if the AFELockManager has the requested AFE server.
-    """
-    if local:
-      return self.local_afe is not None
-    else:
-      return self.afe is not None
-
   def GetMachineStates(self, cmd=''):
     """Gets the current state of all the requested machines.
 
-    Gets the current state of all the requested machines, both from the HW lab
-    sever and from the local server.  Stores the data in a dictionary keyed
-    by machine name.
+    Gets the current state of all the requested machines. Stores the data in a
+    dictionary keyed by machine name.
 
     Args:
       cmd: The command for which we are getting the machine states. This is
@@ -585,15 +403,12 @@ class AFELockManager(object):
       object.
 
     Raises:
-      NoAFEServer:  Cannot find the HW Lab or local AFE server.
+      NoAFEServer:  Cannot find the HW Lab AFE server.
       AFEAccessError:  An error occurred when querying the server about a
         machine.
     """
-    if not self.HasAFEServer(False):
+    if not self.afe:
       raise NoAFEServer('Error: Cannot connect to main AFE server.')
-
-    if self.local and not self.HasAFEServer(True):
-      raise NoAFEServer('Error: Cannot connect to local AFE server.')
 
     machine_list = {}
     for m in self.machines:
@@ -603,23 +418,13 @@ class AFELockManager(object):
       # supports that.
       if m in self.local_machines or m in self.skylab_machines:
         machine_list[m] = {'locked': 0 if cmd == 'lock' else 1}
-        continue
-
-      host_info = None
-      cros_name = m + '.cros'
-      if (m in self.toolchain_lab_machines or
-          cros_name in self.toolchain_lab_machines):
+      else:
+        # For autotest machines, we use afe APIs to get locking info.
         mod_host = m.split('.')[0]
         host_info = self.afe.get_hosts(hostname=mod_host)
         if not host_info:
           raise AFEAccessError('Unable to get information about %s from main'
                                ' autotest server.' % m)
-      else:
-        host_info = self.local_afe.get_hosts(hostname=m)
-        if not host_info and cmd != 'add':
-          raise AFEAccessError('Unable to get information about %s from '
-                               'local autotest server.' % m)
-      if host_info:
         host_info = host_info[0]
         name = host_info.hostname
         values = {}
@@ -632,8 +437,7 @@ class AFELockManager(object):
           values['locked_by'] = ''
           values['lock_time'] = ''
         machine_list[name] = values
-      else:
-        machine_list[m] = {}
+
     return machine_list
 
   def CheckMachineInSkylab(self, machine):
@@ -738,35 +542,12 @@ def Main(argv):
       const='status',
       help='List current status of given machine(s).')
   parser.add_argument(
-      '--add_machine',
-      dest='cmd',
-      action='store_const',
-      const='add',
-      help='Add machine to local machine server.')
-  parser.add_argument(
-      '--remove_machine',
-      dest='cmd',
-      action='store_const',
-      const='remove',
-      help='Remove machine from the local machine server.')
-  parser.add_argument(
-      '--nolocal',
-      dest='local',
-      action='store_false',
-      default=True,
-      help='Do not try to use local machine server.')
-  parser.add_argument(
       '--remote', dest='remote', help='machines on which to operate')
   parser.add_argument(
       '--chromeos_root',
       dest='chromeos_root',
       required=True,
       help='ChromeOS root to use for autotest scripts.')
-  parser.add_argument(
-      '--local_server',
-      dest='local_server',
-      default=None,
-      help='Alternate local autotest server to use.')
   parser.add_argument(
       '--force',
       dest='force',
@@ -792,8 +573,7 @@ def Main(argv):
     machine_list = options.remote.split()
 
   lock_manager = AFELockManager(machine_list, options.force,
-                                options.chromeos_root, options.local_server,
-                                options.local)
+                                options.chromeos_root)
 
   machine_states = lock_manager.GetMachineStates(cmd=options.cmd)
   cmd = options.cmd
