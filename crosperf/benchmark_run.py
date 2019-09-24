@@ -204,7 +204,7 @@ class BenchmarkRun(threading.Thread):
         raise SyntaxError('perf_args must start with either record or stat')
       extra_test_args = [
           '--profiler=custom_perf',
-          ("--profiler_args='perf_options=\"%s\"'" % perf_args)
+          ('--profiler_args=\'perf_options="%s"\'' % perf_args)
       ]
       return ' '.join(extra_test_args)
     else:

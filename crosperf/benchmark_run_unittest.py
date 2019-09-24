@@ -9,14 +9,14 @@
 
 from __future__ import print_function
 
-import mock
 import unittest
 import inspect
 
-from cros_utils import logger
+import mock
 
 import benchmark_run
 
+from cros_utils import logger
 from suite_runner import MockSuiteRunner
 from suite_runner import SuiteRunner
 from label import MockLabel
@@ -363,8 +363,8 @@ class BenchmarkRunTest(unittest.TestCase):
     result = br.GetExtraAutotestArgs()
     self.assertEqual(
         result,
-        "--profiler=custom_perf --profiler_args='perf_options=\"record -a -e "
-        "cycles\"'")
+        '--profiler=custom_perf --profiler_args=\'perf_options="record -a -e '
+        'cycles"\'')
 
     self.test_benchmark.suite = 'telemetry'
     result = br.GetExtraAutotestArgs()

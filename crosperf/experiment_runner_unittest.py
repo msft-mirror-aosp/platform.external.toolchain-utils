@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 #
 # Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -8,8 +9,8 @@
 
 from __future__ import print_function
 
-import StringIO
 import getpass
+import io
 import os
 import time
 
@@ -107,7 +108,7 @@ class ExperimentRunnerTest(unittest.TestCase):
 
   def make_fake_experiment(self):
     test_flag.SetTestMode(True)
-    experiment_file = ExperimentFile(StringIO.StringIO(EXPERIMENT_FILE_1))
+    experiment_file = ExperimentFile(io.BytesIO(EXPERIMENT_FILE_1))
     experiment = ExperimentFactory().GetExperiment(
         experiment_file, working_directory='', log_dir='')
     return experiment
@@ -316,7 +317,7 @@ class ExperimentRunnerTest(unittest.TestCase):
                       ], ': image1 vs. image2',
                       "<pre style='font-size: 13px'>This is a fake text "
                       'report.\nResults are stored in _results.\n</pre>'))
-    self.assertTrue(type(mock_emailer.call_args[1]) is dict)
+    self.assertTrue(isinstance(mock_emailer.call_args[1], dict))
     self.assertEqual(len(mock_emailer.call_args[1]), 2)
     self.assertTrue('attachments' in mock_emailer.call_args[1].keys())
     self.assertEqual(mock_emailer.call_args[1]['msg_type'], 'html')
@@ -348,7 +349,7 @@ class ExperimentRunnerTest(unittest.TestCase):
                      ], ': image1 vs. image2',
                       "<pre style='font-size: 13px'>This is a fake text "
                       'report.\nResults are stored in _results.\n</pre>'))
-    self.assertTrue(type(mock_emailer.call_args[1]) is dict)
+    self.assertTrue(isinstance(mock_emailer.call_args[1], dict))
     self.assertEqual(len(mock_emailer.call_args[1]), 2)
     self.assertTrue('attachments' in mock_emailer.call_args[1].keys())
     self.assertEqual(mock_emailer.call_args[1]['msg_type'], 'html')
@@ -375,7 +376,7 @@ class ExperimentRunnerTest(unittest.TestCase):
                      (['john.smith@google.com'], ': image1 vs. image2',
                       "<pre style='font-size: 13px'>This is a fake text "
                       'report.\nResults are stored in _results.\n</pre>'))
-    self.assertTrue(type(mock_emailer.call_args[1]) is dict)
+    self.assertTrue(isinstance(mock_emailer.call_args[1], dict))
     self.assertEqual(len(mock_emailer.call_args[1]), 2)
     self.assertTrue('attachments' in mock_emailer.call_args[1].keys())
     self.assertEqual(mock_emailer.call_args[1]['msg_type'], 'html')
@@ -412,8 +413,8 @@ class ExperimentRunnerTest(unittest.TestCase):
     self.mock_logger.Reset()
     self.exp.results_directory = '/usr/local/crosperf-results'
     bench_run = self.exp.benchmark_runs[5]
-    bench_path = '/usr/local/crosperf-results/' + filter(
-        str.isalnum, bench_run.name)
+    bench_path = '/usr/local/crosperf-results/' + ''.join(
+        ch for ch in bench_run.name if ch.isalnum())
     self.assertEqual(len(self.exp.benchmark_runs), 6)
 
     er = experiment_runner.ExperimentRunner(
@@ -442,9 +443,9 @@ class ExperimentRunnerTest(unittest.TestCase):
     er._terminated = False
     er._StoreResults(self.exp)
     self.assertEqual(mock_cleanup.call_count, 6)
-    mock_cleanup.called_with(bench_run.benchmark.rm_chroot_tmp)
+    mock_cleanup.assert_called_with(bench_run.benchmark.rm_chroot_tmp)
     self.assertEqual(mock_copy.call_count, 6)
-    mock_copy.called_with(bench_path)
+    mock_copy.assert_called_with(bench_path)
     self.assertEqual(mock_writefile.call_count, 3)
     self.assertEqual(len(mock_writefile.call_args_list), 3)
     first_args = mock_writefile.call_args_list[0]
@@ -454,9 +455,9 @@ class ExperimentRunnerTest(unittest.TestCase):
     self.assertEqual(second_args[0][0],
                      '/usr/local/crosperf-results/results.html')
     self.assertEqual(mock_mkdir.call_count, 1)
-    mock_mkdir.called_with('/usr/local/crosperf-results')
+    mock_mkdir.assert_called_with('/usr/local/crosperf-results')
     self.assertEqual(mock_rmdir.call_count, 1)
-    mock_rmdir.called_with('/usr/local/crosperf-results')
+    mock_rmdir.assert_called_with('/usr/local/crosperf-results')
     self.assertEqual(self.mock_logger.LogOutputCount, 4)
     self.assertEqual(self.mock_logger.output_msgs, [
         'Storing experiment file in /usr/local/crosperf-results.',

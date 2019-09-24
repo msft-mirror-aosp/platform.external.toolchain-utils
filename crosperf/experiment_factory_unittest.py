@@ -9,11 +9,12 @@
 
 from __future__ import print_function
 
-import mock
+import io
 import os
-import StringIO
 import socket
 import unittest
+
+import mock
 
 from cros_utils import command_executer
 from cros_utils.file_utils import FileUtils
@@ -82,7 +83,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.append_benchmark_call_args = []
 
   def testLoadExperimentFile1(self):
-    experiment_file = ExperimentFile(StringIO.StringIO(EXPERIMENT_FILE_1))
+    experiment_file = ExperimentFile(io.BytesIO(EXPERIMENT_FILE_1))
     exp = ExperimentFactory().GetExperiment(
         experiment_file, working_directory='', log_dir='')
     self.assertEqual(exp.remote, ['chromeos-alex3'])
@@ -101,7 +102,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertEqual(exp.labels[0].board, 'x86-alex')
 
   def testLoadExperimentFile2CWP(self):
-    experiment_file = ExperimentFile(StringIO.StringIO(EXPERIMENT_FILE_2))
+    experiment_file = ExperimentFile(io.BytesIO(EXPERIMENT_FILE_2))
     exp = ExperimentFactory().GetExperiment(
         experiment_file, working_directory='', log_dir='')
     self.assertEqual(exp.cwp_dso, 'kallsyms')
@@ -110,7 +111,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertEqual(exp.benchmarks[1].weight, 0.2)
 
   def testDuplecateBenchmark(self):
-    mock_experiment_file = ExperimentFile(StringIO.StringIO(''))
+    mock_experiment_file = ExperimentFile(io.BytesIO(''))
     mock_experiment_file.all_settings = []
     benchmark_settings1 = settings_factory.BenchmarkSettings('name')
     mock_experiment_file.all_settings.append(benchmark_settings1)
@@ -122,7 +123,7 @@ class ExperimentFactoryTest(unittest.TestCase):
       ef.GetExperiment(mock_experiment_file, '', '')
 
   def testCWPExceptions(self):
-    mock_experiment_file = ExperimentFile(StringIO.StringIO(''))
+    mock_experiment_file = ExperimentFile(io.BytesIO(''))
     mock_experiment_file.all_settings = []
     global_settings = settings_factory.GlobalSettings('test_name')
 
@@ -301,7 +302,7 @@ class ExperimentFactoryTest(unittest.TestCase):
 
     label_settings.GetXbuddyPath = FakeGetXbuddyPath
 
-    mock_experiment_file = ExperimentFile(StringIO.StringIO(''))
+    mock_experiment_file = ExperimentFile(io.BytesIO(''))
     mock_experiment_file.all_settings = []
 
     test_flag.SetTestMode(True)

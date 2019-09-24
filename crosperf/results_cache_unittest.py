@@ -15,6 +15,8 @@ import tempfile
 import unittest
 import mock
 
+import mock
+
 import image_checksummer
 import machine_manager
 import test_flag

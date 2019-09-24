@@ -1,10 +1,16 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Define a type that wraps a Benchmark instance."""
+
+from __future__ import division
 from __future__ import print_function
 
 import math
+#FIXME(denik): Fix the import in chroot.
+#pylint: disable=import-error
 from scipy import stats
 
 # See crbug.com/673558 for how these are estimated.

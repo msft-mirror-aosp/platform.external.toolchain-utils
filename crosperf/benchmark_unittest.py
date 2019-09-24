@@ -1,14 +1,18 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 #
-# Copyright 2014 Google Inc.  All Rights Reserved
+# Copyright 2014 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """Unit tests for the Crosperf Benchmark class."""
 
 from __future__ import print_function
 
 import inspect
-from benchmark import Benchmark
-
 import unittest
+
+from benchmark import Benchmark
 
 
 class BenchmarkTestCase(unittest.TestCase):

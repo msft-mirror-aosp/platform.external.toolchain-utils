@@ -7,14 +7,16 @@
 
 """Unittest for crosperf."""
 
+from __future__ import division
 from __future__ import print_function
 
 import argparse
-import mock
-import tempfile
+import io
 import os
-import StringIO
+import tempfile
 import unittest
+
+import mock
 
 import crosperf
 import settings_factory
@@ -43,7 +45,7 @@ class CrosperfTest(unittest.TestCase):
   """Crosperf test class."""
 
   def setUp(self):
-    input_file = StringIO.StringIO(EXPERIMENT_FILE_1)
+    input_file = io.BytesIO(EXPERIMENT_FILE_1)
     self.exp_file = experiment_file.ExperimentFile(input_file)
 
   def testDryRun(self):
@@ -83,8 +85,7 @@ class CrosperfTest(unittest.TestCase):
     with mock.patch('crosperf.RunCrosperf', new=mock_RunCrosperf):
       with self.assertRaises(ZeroDivisionError) as context:
         crosperf.Main([])
-      self.assertEqual('integer division or modulo by zero',
-                       str(context.exception))
+      self.assertEqual('division by zero', str(context.exception))
 
 
 if __name__ == '__main__':

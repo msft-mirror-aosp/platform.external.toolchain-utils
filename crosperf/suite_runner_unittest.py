@@ -509,9 +509,10 @@ class SuiteRunnerTest(unittest.TestCase):
     self.runner.SetupArmCores.assert_not_called()
 
   def test_setup_arm_cores_big_on_big_little(self):
-    dut_runner = mock.Mock(
-        side_effect=[(0, BIG_LITTLE_CPUINFO, ''),
-                     (0, '', '')])
+    dut_runner = mock.Mock(side_effect=[
+        (0, BIG_LITTLE_CPUINFO, ''),
+        (0, '', ''),
+    ])
     self.runner.dut_config['cpu_usage'] = 'big_only'
     self.runner.SetupArmCores(dut_runner)
     dut_runner.assert_called_with(
@@ -519,9 +520,10 @@ class SuiteRunnerTest(unittest.TestCase):
         'echo 0 | tee /sys/devices/system/cpu/cpu{0,1}/online')
 
   def test_setup_arm_cores_little_on_big_little(self):
-    dut_runner = mock.Mock(
-        side_effect=[(0, BIG_LITTLE_CPUINFO, ''),
-                     (0, '', '')])
+    dut_runner = mock.Mock(side_effect=[
+        (0, BIG_LITTLE_CPUINFO, ''),
+        (0, '', ''),
+    ])
     self.runner.dut_config['cpu_usage'] = 'little_only'
     self.runner.SetupArmCores(dut_runner)
     dut_runner.assert_called_with(
@@ -529,9 +531,10 @@ class SuiteRunnerTest(unittest.TestCase):
         'echo 0 | tee /sys/devices/system/cpu/cpu{2}/online')
 
   def test_setup_arm_cores_invalid_config(self):
-    dut_runner = mock.Mock(
-        side_effect=[(0, LITTLE_ONLY_CPUINFO, ''),
-                     (0, '', '')])
+    dut_runner = mock.Mock(side_effect=[
+        (0, LITTLE_ONLY_CPUINFO, ''),
+        (0, '', ''),
+    ])
     self.runner.dut_config['cpu_usage'] = 'big_only'
     self.runner.SetupArmCores(dut_runner)
     # Check that setup command is not sent when trying
@@ -539,9 +542,10 @@ class SuiteRunnerTest(unittest.TestCase):
     dut_runner.assert_called_once_with('cat /proc/cpuinfo')
 
   def test_setup_arm_cores_not_big_little(self):
-    dut_runner = mock.Mock(
-        side_effect=[(0, NOT_BIG_LITTLE_CPUINFO, ''),
-                     (0, '', '')])
+    dut_runner = mock.Mock(side_effect=[
+        (0, NOT_BIG_LITTLE_CPUINFO, ''),
+        (0, '', ''),
+    ])
     self.runner.dut_config['cpu_usage'] = 'big_only'
     self.runner.SetupArmCores(dut_runner)
     # Check that setup command is not sent when trying
@@ -549,9 +553,10 @@ class SuiteRunnerTest(unittest.TestCase):
     dut_runner.assert_called_once_with('cat /proc/cpuinfo')
 
   def test_setup_arm_cores_unsupported_cpu_usage(self):
-    dut_runner = mock.Mock(
-        side_effect=[(0, BIG_LITTLE_CPUINFO, ''),
-                     (0, '', '')])
+    dut_runner = mock.Mock(side_effect=[
+        (0, BIG_LITTLE_CPUINFO, ''),
+        (0, '', ''),
+    ])
     self.runner.dut_config['cpu_usage'] = 'exclusive_cores'
     self.runner.SetupArmCores(dut_runner)
     # Check that setup command is not sent when trying to use
@@ -565,7 +570,8 @@ class SuiteRunnerTest(unittest.TestCase):
          '/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies\n',
          ''),
         (0, '1 2 3 4 5 6 7 8 9 10', ''),
-        (0, '', '')])
+        (0, '', ''),
+    ])
     self.runner.dut_config['cpu_freq_pct'] = 100
     self.runner.SetupCpuFreq(dut_runner, online)
     self.assertGreaterEqual(dut_runner.call_count, 3)
@@ -582,7 +588,8 @@ class SuiteRunnerTest(unittest.TestCase):
          '/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies\n',
          ''),
         (0, '1 2 3 4 5 6 7 8 9 10', ''),
-        (0, '', '')])
+        (0, '', ''),
+    ])
     self.runner.dut_config['cpu_freq_pct'] = 60
     self.runner.SetupCpuFreq(dut_runner, online)
     self.assertGreaterEqual(dut_runner.call_count, 2)
@@ -599,7 +606,8 @@ class SuiteRunnerTest(unittest.TestCase):
          '/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies\n',
          ''),
         (0, '1 2 3 4 5 6 7 8 9 10', ''),
-        (0, '', '')])
+        (0, '', ''),
+    ])
     self.runner.dut_config['cpu_freq_pct'] = 0
     self.runner.SetupCpuFreq(dut_runner, online)
     self.assertGreaterEqual(dut_runner.call_count, 2)
@@ -619,7 +627,8 @@ class SuiteRunnerTest(unittest.TestCase):
         (0, '1 2 3 4 5 6 7 8 9 10', ''),
         (0, '', ''),
         (0, '1 4 6 8 10 12 14 16 18 20', ''),
-        (0, '', '')])
+        (0, '', ''),
+    ])
     self.runner.dut_config['cpu_freq_pct'] = 70
     self.runner.SetupCpuFreq(dut_runner, online)
     self.assertEqual(dut_runner.call_count, 5)
@@ -721,7 +730,8 @@ class SuiteRunnerTest(unittest.TestCase):
     dut_runner = mock.Mock(side_effect=[
         (0, '41000\n20000\n30000\n45000', ''),
         (0, '39000\n20000\n30000\n41000', ''),
-        (0, '39000\n20000\n30000\n31000', '')])
+        (0, '39000\n20000\n30000\n31000', ''),
+    ])
     self.runner.dut_config['cooldown_time'] = 100
     self.runner.dut_config['cooldown_temp'] = 40
     wait_time = self.runner.WaitCooldown(dut_runner)
@@ -739,7 +749,8 @@ class SuiteRunnerTest(unittest.TestCase):
     mock_sleep.return_value = 0
     dut_runner = mock.Mock(side_effect=[
         (1, '39000\n20000\n30000\n41000', 'Thermal error'),
-        (1, '39000\n20000\n30000\n31000', 'Thermal error')])
+        (1, '39000\n20000\n30000\n31000', 'Thermal error'),
+    ])
     self.runner.dut_config['cooldown_time'] = 10
     self.runner.dut_config['cooldown_temp'] = 40
     wait_time = self.runner.WaitCooldown(dut_runner)
