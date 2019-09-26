@@ -200,6 +200,11 @@ def OrganizeResults(benchmark_runs, labels, benchmarks=None, json_report=False):
       if 'samples' in benchmark_run.result.keyvals:
         cur_dict['samples'] = benchmark_run.result.keyvals['samples']
       cur_dict['retval'] = benchmark_run.result.keyvals['retval']
+      for key, value in benchmark_run.result.keyvals.items():
+        if any(
+            key.startswith(cpustat_keyword)
+            for cpustat_keyword in ['cpufreq', 'cputemp']):
+          cur_dict[key] = value
     else:
       for test_key in benchmark_run.result.keyvals:
         if show_all_results or test_key in summary_list:
