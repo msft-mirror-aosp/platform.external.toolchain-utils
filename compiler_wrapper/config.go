@@ -35,14 +35,15 @@ type config struct {
 // Values fills config.version.
 var Version = ""
 
-// OldWrapperPath can be set via a linker flag.
-// Value fills config.oldWrapperPath.
-var OldWrapperPath = ""
-
 // UseCCache can be set via a linker flag.
 // Value will be passed to strconv.ParseBool.
 // E.g. go build -ldflags '-X config.UseCCache=true'.
 var UseCCache = "unknown"
+
+// UseLlvmNext can be set via a linker flag.
+// Value will be passed to strconv.ParseBool.
+// E.g. go build -ldflags '-X config.UseLlvmNext=true'.
+var UseLlvmNext = "unknown"
 
 // ConfigName can be set via a linker flag.
 // Value has to be one of:
@@ -56,29 +57,45 @@ func getRealConfig() (*config, error) {
 	if err != nil {
 		return nil, wrapErrorwithSourceLocf(err, "invalid format for UseCCache")
 	}
-	config, err := getConfig(ConfigName, useCCache, OldWrapperPath, Version)
+	useLlvmNext, err := strconv.ParseBool(UseLlvmNext)
+	if err != nil {
+		return nil, wrapErrorwithSourceLocf(err, "invalid format for UseLLvmNext")
+	}
+	// FIXME: Remove comparison to old wrapper once the new wrapper has landed.
+	oldWrapperPath := ""
+	config, err := getConfig(ConfigName, useCCache, useLlvmNext, oldWrapperPath, Version)
 	if err != nil {
 		return nil, err
 	}
 	return config, nil
 }
 
-func getConfig(configName string, useCCache bool, oldWrapperPath string, version string) (*config, error) {
-	var cfg *config
+func getConfig(configName string, useCCache bool, useLlvmNext bool, oldWrapperPath string, version string) (*config, error) {
+	cfg := config{}
 	switch configName {
 	case "cros.hardened":
-		cfg = crosHardenedConfig
+		cfg = *crosHardenedConfig
 	case "cros.nonhardened":
-		cfg = crosNonHardenedConfig
+		cfg = *crosNonHardenedConfig
 	case "cros.host":
-		cfg = crosHostConfig
+		cfg = *crosHostConfig
 	default:
 		return nil, newErrorwithSourceLocf("unknown config name: %s", configName)
 	}
 	cfg.useCCache = useCCache
+	if useLlvmNext {
+		cfg.clangFlags = append(cfg.clangFlags, llvmNextFlags...)
+	}
 	cfg.oldWrapperPath = oldWrapperPath
 	cfg.version = version
-	return cfg, nil
+	return &cfg, nil
+}
+
+var llvmNextFlags = []string{
+	"-Wno-reorder-init-list",
+	"-Wno-final-dtor-non-final-class",
+	"-Wno-implicit-int-float-conversion",
+	"-Wno-return-stack-address",
 }
 
 // Full hardening.

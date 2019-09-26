@@ -13,8 +13,9 @@ const crosNonHardenedGoldenDir = "testdata/cros_nonhardened_golden"
 
 func TestCrosNonHardenedConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
+		useLlvmNext := false
 		useCCache := true
-		cfg, err := getConfig("cros.nonhardened", useCCache, oldNonHardenedWrapperPathForTest, "123")
+		cfg, err := getConfig("cros.nonhardened", useCCache, useLlvmNext, oldNonHardenedWrapperPathForTest, "123")
 		if err != nil {
 			t.Fatal(err)
 		}

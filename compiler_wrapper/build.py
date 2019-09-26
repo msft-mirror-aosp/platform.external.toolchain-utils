@@ -21,7 +21,8 @@ def parse_args():
       required=True,
       choices=['cros.hardened', 'cros.nonhardened', 'cros.host'])
   parser.add_argument('--use_ccache', required=True, choices=['true', 'false'])
-  parser.add_argument('--old_wrapper_path', required=True)
+  parser.add_argument(
+      '--use_llvm_next', required=True, choices=['true', 'false'])
   parser.add_argument('--output_file', required=True, type=str)
   return parser.parse_args()
 
@@ -33,7 +34,7 @@ def calc_go_args(args, version):
       '-X',
       'main.UseCCache=' + args.use_ccache,
       '-X',
-      'main.OldWrapperPath=' + args.old_wrapper_path,
+      'main.UseLlvmNext=' + args.use_llvm_next,
       '-X',
       'main.Version=' + version,
   ]

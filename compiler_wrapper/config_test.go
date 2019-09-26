@@ -12,6 +12,7 @@ func TestRealConfigWithUseCCacheFlag(t *testing.T) {
 	resetGlobals()
 	defer resetGlobals()
 	ConfigName = "cros.hardened"
+	UseLlvmNext = "false"
 
 	UseCCache = "false"
 	cfg, err := getRealConfig()
@@ -32,9 +33,39 @@ func TestRealConfigWithUseCCacheFlag(t *testing.T) {
 	}
 
 	UseCCache = "invalid"
-	_, err = getRealConfig()
-	if err == nil {
+	if _, err := getRealConfig(); err == nil {
 		t.Fatalf("UseCCache: Expected an error, got none")
+	}
+}
+
+func TestRealConfigWithUseLLvmFlag(t *testing.T) {
+	resetGlobals()
+	defer resetGlobals()
+	ConfigName = "cros.hardened"
+	UseCCache = "false"
+
+	UseLlvmNext = "false"
+	cfg, err := getRealConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isUsingLLvmNext(cfg) {
+		t.Fatal("UseLLvmNext: Expected not to be used")
+	}
+
+	UseLlvmNext = "true"
+	cfg, err = getRealConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !isUsingLLvmNext(cfg) {
+		t.Fatal("UseLLvmNext: Expected to be used")
+	}
+
+	UseLlvmNext = "invalid"
+	if _, err := getRealConfig(); err == nil {
+		t.Fatalf("UseLlvmNext: Expected an error, got none")
 	}
 }
 
@@ -42,6 +73,7 @@ func TestRealConfigWithConfigNameFlag(t *testing.T) {
 	resetGlobals()
 	defer resetGlobals()
 	UseCCache = "false"
+	UseLlvmNext = "false"
 
 	ConfigName = "cros.hardened"
 	cfg, err := getRealConfig()
@@ -71,26 +103,8 @@ func TestRealConfigWithConfigNameFlag(t *testing.T) {
 	}
 
 	ConfigName = "invalid"
-	_, err = getRealConfig()
-	if err == nil {
+	if _, err := getRealConfig(); err == nil {
 		t.Fatalf("ConfigName: Expected an error, got none")
-	}
-}
-
-func TestRealConfigWithOldWrapperPath(t *testing.T) {
-	resetGlobals()
-	defer resetGlobals()
-	UseCCache = "false"
-	ConfigName = "cros.hardened"
-
-	OldWrapperPath = "somepath"
-
-	cfg, err := getRealConfig()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg.oldWrapperPath != "somepath" {
-		t.Fatalf("OldWrapperPath: Expected somepath, got %s", cfg.oldWrapperPath)
 	}
 }
 
@@ -103,9 +117,18 @@ func isSysrootHardened(cfg *config) bool {
 	return false
 }
 
+func isUsingLLvmNext(cfg *config) bool {
+	for _, arg := range cfg.clangFlags {
+		if arg == "-Wno-reorder-init-list" {
+			return true
+		}
+	}
+	return false
+}
+
 func resetGlobals() {
 	// Set all global variables to a defined state.
-	OldWrapperPath = ""
+	UseLlvmNext = "unknown"
 	ConfigName = "unknown"
 	UseCCache = "unknown"
 }

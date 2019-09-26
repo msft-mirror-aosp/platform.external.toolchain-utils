@@ -108,6 +108,17 @@ func (ctx *testContext) run(cmd *command, stdin io.Reader, stdout io.Writer, std
 	// Keep calling the old wrapper when we are comparing the output of the
 	// old wrapper to the new wrapper.
 	if isCompareToOldWrapperCmd(cmd) {
+		// Make sure we have a PATH in the env as the old wrapper needs that.
+		pathFound := false
+		for _, arg := range ctx.env {
+			if arg == "PATH" {
+				pathFound = true
+				break
+			}
+		}
+		if !pathFound {
+			ctx.env = append(ctx.env, "PATH=")
+		}
 		return runCmd(ctx, cmd, nil, stdout, stderr)
 	}
 	ctx.cmdCount++
