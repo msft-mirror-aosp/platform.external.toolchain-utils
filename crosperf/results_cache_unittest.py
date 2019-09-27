@@ -13,7 +13,6 @@ import os
 import shutil
 import tempfile
 import unittest
-import mock
 
 import mock
 
@@ -30,6 +29,7 @@ from cros_utils import command_executer
 from cros_utils import logger
 from cros_utils import misc
 
+# pylint: disable=line-too-long
 OUTPUT = """CMD (True): ./test_that.sh\
  --remote=172.17.128.241  --board=lumpy   LibCBench
 CMD (None): cd /usr/local/google/home/yunlian/gd/src/build/images/lumpy/latest/../../../../..; cros_sdk  -- ./in_chroot_cmd6X7Cxu.sh
@@ -198,6 +198,79 @@ TURBOSTAT_DATA = {
     },
 }
 
+TOP_LOG = \
+"""
+  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+ 4102 chronos   12  -8 3454472 238300 118188 R  41.8   6.1   0:08.37 chrome
+ 4204 chronos   12  -8 2492716 205728 179016 S  11.8   5.3   0:03.89 chrome
+ 4890 root      20   0    3396   2064   1596 R  11.8   0.1   0:00.03 top
+  375 root       0 -20       0      0      0 S   5.9   0.0   0:00.17 kworker/u13
+  617 syslog    20   0   25332   8372   7888 S   5.9   0.2   0:00.77 sys-journal
+
+  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+ 5745 chronos   20   0 5438580 139328  67988 R 122.8   3.6   0:04.26 chrome
+  912 root     -51   0       0      0      0 S   2.0   0.0   0:01.04 irq/cros-ec
+  121 root      20   0       0      0      0 S   1.0   0.0   0:00.45 spi5
+ 4811 root      20   0    6808   4084   3492 S   1.0   0.1   0:00.02 sshd
+ 4890 root      20   0    3364   2148   1596 R   1.0   0.1   0:00.36 top
+ 5205 chronos   12  -8 3673780 240928 130864 S   1.0   6.2   0:07.30 chrome
+
+
+  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+ 5745 chronos   20   0 5434484 139432  63892 R 107.9   3.6   0:05.35 chrome
+ 5713 chronos   20   0 5178652 103120  50372 S  17.8   2.6   0:01.13 chrome
+    7 root      20   0       0      0      0 S   1.0   0.0   0:00.73 rcu_preempt
+  855 root      20   0       0      0      0 S   1.0   0.0   0:00.01 kworker/4:2
+"""
+TOP_DATA = [
+    {
+        'cmd': 'chrome',
+        'cpu_avg': 124.75,
+        'count': 4,
+        'top5': [122.8, 107.9, 17.8, 1.0],
+    },
+    {
+        'cmd': 'irq/cros-ec',
+        'cpu_avg': 1.0,
+        'count': 1,
+        'top5': [2.0],
+    },
+    {
+        'cmd': 'sshd',
+        'cpu_avg': 0.5,
+        'count': 1,
+        'top5': [1.0],
+    },
+    {
+        'cmd': 'spi5',
+        'cpu_avg': 0.5,
+        'count': 1,
+        'top5': [1.0],
+    },
+    {
+        'cmd': 'rcu_preempt',
+        'cpu_avg': 0.5,
+        'count': 1,
+        'top5': [1.0],
+    },
+    {
+        'cmd': 'kworker/4:2',
+        'cpu_avg': 0.5,
+        'count': 1,
+        'top5': [1.0],
+    },
+]
+TOP_OUTPUT = \
+"""             COMMAND     AVG CPU%  SEEN   HIGHEST 5
+              chrome   128.250000     6   [122.8, 107.9, 17.8, 5.0, 2.0]
+     irq/230-cros-ec     1.000000     1   [2.0]
+                sshd     0.500000     1   [1.0]
+     irq/231-cros-ec     0.500000     1   [1.0]
+                spi5     0.500000     1   [1.0]
+         rcu_preempt     0.500000     1   [1.0]
+         kworker/4:2     0.500000     1   [1.0]
+"""
+
 CPUSTATS_UNIQ_OUTPUT = \
 """
 /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq 1512000
@@ -324,6 +397,8 @@ HISTOGRAMSET = \
 ]
 """
 
+# pylint: enable=line-too-long
+
 
 class MockResult(Result):
   """Mock result class."""
@@ -358,6 +433,7 @@ class ResultTest(unittest.TestCase):
     self.callGetPerfDataFiles = False
     self.callGetTurbostatFile = False
     self.callGetCpustatsFile = False
+    self.callGetTopFile = False
     self.args = None
     self.callGatherPerfResults = False
     self.mock_logger = mock.Mock(spec=logger.Logger)
@@ -759,6 +835,33 @@ class ResultTest(unittest.TestCase):
       self.result.GetTurbostatFile()
 
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
+  def test_get_top_file_finds_single_log(self, mock_runcmd):
+    """Expected behavior when a single top log file found."""
+    self.result.results_dir = '/tmp/test_results'
+    self.result.ce.RunCommandWOutput = mock_runcmd
+    mock_runcmd.return_value = (0, 'some/long/path/top.log', '')
+    found_single_log = self.result.GetTopFile()
+    self.assertEqual(found_single_log, 'some/long/path/top.log')
+
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
+  def test_get_top_file_finds_multiple_logs(self, mock_runcmd):
+    """The case when multiple top files found."""
+    self.result.results_dir = '/tmp/test_results'
+    self.result.ce.RunCommandWOutput = mock_runcmd
+    mock_runcmd.return_value = (0, 'some/long/path/top.log\ntop.log', '')
+    found_first_logs = self.result.GetTopFile()
+    self.assertEqual(found_first_logs, 'some/long/path/top.log')
+
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
+  def test_get_top_file_finds_no_logs(self, mock_runcmd):
+    """Error case when no log file found."""
+    self.result.results_dir = '/tmp/test_results'
+    self.result.ce.RunCommandWOutput = mock_runcmd
+    mock_runcmd.return_value = (0, '', '')
+    found_no_logs = self.result.GetTopFile()
+    self.assertEqual(found_no_logs, '')
+
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def test_get_cpustats_file_finds_single_log(self, mock_runcmd):
     """Expected behavior when a single log file found."""
     self.result.results_dir = '/tmp/test_results'
@@ -827,7 +930,6 @@ class ResultTest(unittest.TestCase):
     Expecting that data for all cores will be present in
     returned cpustats.
     """
-    self.maxDiff = None
     self.result.cpustats_log_file = '/tmp/somelogfile.log'
     with mock.patch('__builtin__.open',
                     mock.mock_open(read_data=CPUSTATS_UNIQ_OUTPUT)) as mo:
@@ -864,6 +966,29 @@ class ResultTest(unittest.TestCase):
       calls = [mock.call('/tmp/emptylogfile.log')]
       mo.assert_has_calls(calls)
       self.assertEqual(cpustats, {})
+
+  def test_process_top_results_with_valid_data(self):
+    """Process top log with valid data."""
+
+    self.result.top_log_file = '/tmp/fakelogfile.log'
+    with mock.patch('__builtin__.open',
+                    mock.mock_open(read_data=TOP_LOG)) as mo:
+      topproc = self.result.ProcessTopResults()
+      # Check that the log got opened and data were read/parsed.
+      calls = [mock.call('/tmp/fakelogfile.log')]
+      mo.assert_has_calls(calls)
+      self.assertEqual(topproc, TOP_DATA)
+
+  def test_process_top_results_from_empty_file(self):
+    """Error case when log exists but file is empty."""
+    self.result.top_log_file = '/tmp/emptylogfile.log'
+    with mock.patch('__builtin__.open', mock.mock_open(read_data='')) as mo:
+      topcalls = self.result.ProcessTopResults()
+      # Check that the log got opened and parsed successfully and empty data
+      # returned.
+      calls = [mock.call('/tmp/emptylogfile.log')]
+      mo.assert_has_calls(calls)
+      self.assertEqual(topcalls, [])
 
   @mock.patch.object(misc, 'GetInsideChrootPath')
   @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommand')
@@ -928,6 +1053,10 @@ class ResultTest(unittest.TestCase):
       self.callGetCpustatsFile = True
       return []
 
+    def FakeGetTopFile():
+      self.callGetTopFile = True
+      return []
+
     def FakeProcessResults(show_results=False):
       if show_results:
         pass
@@ -944,6 +1073,7 @@ class ResultTest(unittest.TestCase):
     self.callGetPerfReportFiles = False
     self.callGetTurbostatFile = False
     self.callGetCpustatsFile = False
+    self.callGetTopFile = False
     self.callProcessResults = False
 
     self.result.GetResultsDir = FakeGetResultsDir
@@ -952,6 +1082,7 @@ class ResultTest(unittest.TestCase):
     self.result.GeneratePerfReportFiles = FakeGetPerfReportFiles
     self.result.GetTurbostatFile = FakeGetTurbostatFile
     self.result.GetCpustatsFile = FakeGetCpustatsFile
+    self.result.GetTopFile = FakeGetTopFile
     self.result.ProcessResults = FakeProcessResults
 
     self.result.PopulateFromRun(OUTPUT, '', 0, 'test', 'telemetry_Crosperf',
@@ -962,6 +1093,7 @@ class ResultTest(unittest.TestCase):
     self.assertTrue(self.callGetPerfReportFiles)
     self.assertTrue(self.callGetTurbostatFile)
     self.assertTrue(self.callGetCpustatsFile)
+    self.assertTrue(self.callGetTopFile)
     self.assertTrue(self.callProcessResults)
 
   def FakeGetKeyvals(self, show_all=False):

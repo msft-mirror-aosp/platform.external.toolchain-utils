@@ -10,6 +10,7 @@ from __future__ import print_function
 
 import glob
 import hashlib
+import heapq
 import json
 import os
 import pickle
@@ -55,6 +56,7 @@ class Result(object):
     self.results_file = []
     self.turbostat_log_file = ''
     self.cpustats_log_file = ''
+    self.top_log_file = ''
     self.chrome_version = ''
     self.err = None
     self.chroot_results_dir = ''
@@ -65,6 +67,11 @@ class Result(object):
     self.cwp_dso = ''
     self.retval = None
     self.out = None
+    self.top_cmds = []
+
+  def GetTopCmds(self):
+    """Get the list of top commands consuming CPU on the machine."""
+    return self.top_cmds
 
   def CopyFilesTo(self, dest_dir, files_to_copy):
     file_index = 0
@@ -283,6 +290,10 @@ class Result(object):
     """Get cpustats log path string."""
     return self.FindFilesInResultsDir('-name cpustats.log').split('\n')[0]
 
+  def GetTopFile(self):
+    """Get cpustats log path string."""
+    return self.FindFilesInResultsDir('-name top.log').split('\n')[0]
+
   def _CheckDebugPath(self, option, path):
     relative_path = path[1:]
     out_chroot_path = os.path.join(self.chromeos_root, 'chroot', relative_path)
@@ -381,6 +392,7 @@ class Result(object):
     self.perf_report_files = self.GeneratePerfReportFiles()
     self.turbostat_log_file = self.GetTurbostatFile()
     self.cpustats_log_file = self.GetCpustatsFile()
+    self.top_log_file = self.GetTopFile()
     # TODO(asharif): Do something similar with perf stat.
 
     # Grab keyvals from the directory.
@@ -447,7 +459,7 @@ class Result(object):
       read_data = f.readlines()
 
     if not read_data:
-      self._logger.LogError('Turbostat output file is empty.')
+      self._logger.LogOutput('WARNING: Turbostat output file is empty.')
       return {}
 
     # First line always contains the header.
@@ -455,10 +467,12 @@ class Result(object):
 
     # Mandatory parameters.
     if 'CPU' not in stats:
-      self._logger.LogError('Missing data for CPU# in Turbostat output.')
+      self._logger.LogOutput(
+          'WARNING: Missing data for CPU# in Turbostat output.')
       return {}
     if 'Bzy_MHz' not in stats:
-      self._logger.LogError('Missing data for Bzy_MHz in Turbostat output.')
+      self._logger.LogOutput(
+          'WARNING: Missing data for Bzy_MHz in Turbostat output.')
       return {}
     cpu_index = stats.index('CPU')
     cpufreq_index = stats.index('Bzy_MHz')
@@ -487,6 +501,123 @@ class Result(object):
         cputemp['all'].append(int(numbers[cputemp_index]))
     return cpustats
 
+  def ProcessTopResults(self):
+    """Given self.top_log_file process top log data.
+
+    Returns:
+      List of dictionaries with the following keyvals:
+       'cmd': command name (string),
+       'cpu_avg': average cpu usage (float),
+       'count': number of occurrences (int),
+       'top5': up to 5 highest cpu usages (descending list of floats)
+
+    Example of the top log:
+      PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+     4102 chronos   12  -8 3454472 238300 118188 R  41.8   6.1   0:08.37 chrome
+      375 root       0 -20       0      0      0 S   5.9   0.0   0:00.17 kworker
+      617 syslog    20   0   25332   8372   7888 S   5.9   0.2   0:00.77 systemd
+
+      PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+     5745 chronos   20   0 5438580 139328  67988 R 122.8   3.6   0:04.26 chrome
+      912 root     -51   0       0      0      0 S   2.0   0.0   0:01.04 irq/cro
+      121 root      20   0       0      0      0 S   1.0   0.0   0:00.45 spi5
+    """
+    all_data = ''
+    with open(self.top_log_file) as f:
+      all_data = f.read()
+
+    if not all_data:
+      self._logger.LogOutput('WARNING: Top log file is empty.')
+      return []
+
+    top_line_regex = re.compile(
+        r"""
+        ^\s*(?P<pid>\d+)\s+         # Group 1: PID
+        \S+\s+\S+\s+-?\d+\s+        # Ignore: user, prio, nice
+        \d+\s+\d+\s+\d+\s+          # Ignore: virt/res/shared mem
+        \S+\s+                      # Ignore: state
+        (?P<cpu_use>\d+\.\d+)\s+    # Group 2: CPU usage
+        \d+\.\d+\s+\d+:\d+\.\d+\s+  # Ignore: mem usage, time
+        (?P<cmd>\S+)$               # Group 3: command
+        """, re.VERBOSE)
+    # Page represents top log data per one measurement within time interval
+    # 'top_interval'.
+    # Pages separated by empty line.
+    pages = all_data.split('\n\n')
+    # Snapshots are structured representation of the pages.
+    snapshots = []
+    for page in pages:
+      if not page:
+        continue
+
+      # Snapshot list will contain all processes (command duplicates are
+      # allowed).
+      snapshot = []
+      for line in page.splitlines():
+        match = top_line_regex.match(line)
+        if match:
+          # Top line is valid, collect data.
+          process = {
+              # NOTE: One command may be represented by multiple processes.
+              'cmd': match.group('cmd'),
+              'pid': int(match.group('pid')),
+              'cpu_use': float(match.group('cpu_use')),
+          }
+
+          # Filter out processes with 0 CPU usage and top command.
+          if process['cpu_use'] > 0 and process['cmd'] != 'top':
+            snapshot.append(process)
+
+      # If page contained meaningful data add snapshot to the list.
+      if snapshot:
+        snapshots.append(snapshot)
+
+    # Threshold of CPU usage when Chrome is busy, i.e. benchmark is running.
+    # FIXME(denik): 70 is just a guess and needs empirical evidence.
+    # (It does not need to be configurable.)
+    chrome_high_cpu_load = 70
+    # Number of snapshots where chrome is heavily used.
+    active_snapshots = 0
+    # Total CPU use per process in ALL active snapshots.
+    cmd_total_cpu_use = {}
+    # Top CPU usages per command.
+    cmd_top5_cpu_use = {}
+    # List of Top Commands to be returned.
+    topcmds = []
+
+    for snapshot_processes in snapshots:
+      if any(chrome_proc['cpu_use'] > chrome_high_cpu_load
+             for chrome_proc in snapshot_processes
+             if chrome_proc['cmd'] == 'chrome'):
+        # This is a snapshot where at least one chrome command
+        # has CPU usage above the threshold.
+        active_snapshots += 1
+        for process in snapshot_processes:
+          cmd = process['cmd']
+          cpu_use = process['cpu_use']
+
+          # Update total CPU usage.
+          total_cpu_use = cmd_total_cpu_use.setdefault(cmd, 0.0)
+          cmd_total_cpu_use[cmd] = total_cpu_use + cpu_use
+
+          # Add cpu_use into command top cpu usages, sorted in descending
+          # order.
+          top5_list = cmd_top5_cpu_use.setdefault(cmd, [])
+          heapq.heappush(top5_list, cpu_use)
+
+    for consumer, usage in sorted(
+        cmd_total_cpu_use.items(), key=lambda x: x[1], reverse=True):
+      # Iterate through commands by descending order of total CPU usage.
+      topcmd = {
+          'cmd': consumer,
+          'cpu_avg': usage / active_snapshots,
+          'count': len(cmd_top5_cpu_use[consumer]),
+          'top5': heapq.nlargest(5, cmd_top5_cpu_use[consumer]),
+      }
+      topcmds.append(topcmd)
+
+    return topcmds
+
   def ProcessCpustatsResults(self):
     """Given cpustats_log_file non-null parse cpu data from file.
 
@@ -513,7 +644,7 @@ class Result(object):
       read_data = f.readlines()
 
     if not read_data:
-      self._logger.LogError('Cpustats output file is empty.')
+      self._logger.LogOutput('WARNING: Cpustats output file is empty.')
       return {}
 
     cpufreq_regex = re.compile(r'^[/\S]+/(cpu\d+)/[/\S]+\s+(\d+)$')
@@ -583,8 +714,8 @@ class Result(object):
         vals = obj['sampleValues']
         if isinstance(vals, list):
           # Remove None elements from the list
-          vals = list(filter(None, vals))
-          if len(vals):
+          vals = [val for val in vals if val is not None]
+          if vals:
             result = float(sum(vals)) / len(vals)
           else:
             result = 0
@@ -654,6 +785,8 @@ class Result(object):
     # Process cpustats output only if turbostat has no data.
     if not cpustats and self.cpustats_log_file:
       cpustats = self.ProcessCpustatsResults()
+    if self.top_log_file:
+      self.top_cmds = self.ProcessTopResults()
 
     for param_key, param in cpustats.items():
       for param_type, param_values in param.items():

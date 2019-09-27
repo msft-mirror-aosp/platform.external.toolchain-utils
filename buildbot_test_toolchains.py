@@ -159,6 +159,7 @@ class ToolchainComparator(object):
     cooldown_temp: 40
     cooldown_time: 10
     cpu_freq_pct: 95
+    top_interval: 1
     """ % (self._board, self._remotes)
     experiment_tests = """
     benchmark: all_toolchain_perf {
