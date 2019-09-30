@@ -64,7 +64,7 @@ func TestCrosHardenedConfigWithoutCCache(t *testing.T) {
 			createGccPathGoldenInputs(ctx, gomaEnv),
 			createClangPathGoldenInputs(ctx, gomaEnv),
 			createClangSyntaxGoldenInputs(gomaEnv),
-			createBisectGoldenInputs(),
+			createBisectGoldenInputs(clangX86_64),
 			createForceDisableWErrorGoldenInputs(),
 			createClangTidyGoldenInputs(gomaEnv),
 		})
@@ -108,7 +108,7 @@ LLVM_NEXT_FLAGS_TO_ADD = set(['-Wno-reorder-init-list',
 			createGccPathGoldenInputs(ctx, gomaEnv),
 			createClangPathGoldenInputs(ctx, gomaEnv),
 			createClangSyntaxGoldenInputs(gomaEnv),
-			createBisectGoldenInputs(),
+			createBisectGoldenInputs(clangX86_64),
 			createForceDisableWErrorGoldenInputs(),
 			createClangTidyGoldenInputs(gomaEnv),
 		})
@@ -133,7 +133,7 @@ func createSyswrapperGoldenInputs(ctx *testContext) []goldenFile {
 		createSysrootWrapperCommonGoldenInputs("clang", gomaEnv),
 		createSanitizerGoldenInputs("clang"),
 		createClangArgsGoldenInputs(),
-		createBisectGoldenInputs(),
+		createBisectGoldenInputs(clangX86_64),
 		createForceDisableWErrorGoldenInputs(),
 		createClangTidyGoldenInputs(gomaEnv),
 	}
@@ -184,7 +184,7 @@ func createGoldenInputsForAllTargets(compiler string, args ...string) goldenFile
 	}
 }
 
-func createBisectGoldenInputs() goldenFile {
+func createBisectGoldenInputs(compiler string) goldenFile {
 	return goldenFile{
 		Name: "bisect.json",
 		// Disable comparing to the old wrapper as that calls the bisect_driver
@@ -193,7 +193,14 @@ func createBisectGoldenInputs() goldenFile {
 		ignoreOldWrapper: true,
 		Records: []goldenRecord{
 			{
-				WrapperCmd: newGoldenCmd(clangX86_64, mainCc),
+				WrapperCmd: newGoldenCmd(compiler, mainCc),
+				Env: []string{
+					"BISECT_STAGE=someBisectStage",
+				},
+				Cmds: okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(compiler, mainCc),
 				Env: []string{
 					"BISECT_STAGE=someBisectStage",
 					"BISECT_DIR=someBisectDir",
@@ -201,7 +208,7 @@ func createBisectGoldenInputs() goldenFile {
 				Cmds: okResults,
 			},
 			{
-				WrapperCmd: newGoldenCmd(clangX86_64, mainCc),
+				WrapperCmd: newGoldenCmd(compiler, mainCc),
 				Env: []string{
 					"BISECT_STAGE=someBisectStage",
 					"BISECT_DIR=someBisectDir",

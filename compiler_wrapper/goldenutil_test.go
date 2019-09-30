@@ -175,10 +175,11 @@ func fillGoldenResults(ctx *testContext, files []goldenFile) []goldenFile {
 func writeGoldenRecords(ctx *testContext, writer io.Writer, records []goldenRecord) {
 	// Replace the temp dir with a stable path so that the goldens stay stable.
 	stableTempDir := filepath.Join(filepath.Dir(ctx.tempDir), "stable")
+	homeDir, _ := os.UserHomeDir()
 	writer = &replacingWriter{
 		Writer: writer,
-		old:    []byte(ctx.tempDir),
-		new:    []byte(stableTempDir),
+		old:    [][]byte{[]byte(ctx.tempDir), []byte(homeDir)},
+		new:    [][]byte{[]byte(stableTempDir), []byte("$HOME")},
 	}
 	enc := json.NewEncoder(writer)
 	enc.SetIndent("", "  ")
@@ -189,12 +190,14 @@ func writeGoldenRecords(ctx *testContext, writer io.Writer, records []goldenReco
 
 type replacingWriter struct {
 	io.Writer
-	old []byte
-	new []byte
+	old [][]byte
+	new [][]byte
 }
 
 func (writer *replacingWriter) Write(p []byte) (n int, err error) {
 	// TODO: Use bytes.ReplaceAll once cros sdk uses golang >= 1.12
-	p = bytes.Replace(p, writer.old, writer.new, -1)
+	for i, old := range writer.old {
+		p = bytes.Replace(p, old, writer.new[i], -1)
+	}
 	return writer.Writer.Write(p)
 }

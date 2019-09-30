@@ -8,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 )
@@ -20,12 +20,31 @@ func TestCallBisectDriver(t *testing.T) {
 			"BISECT_STAGE=someBisectStage",
 			"BISECT_DIR=someBisectDir",
 		}
-		cmd := ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
-		if err := verifyPath(cmd, "/usr/bin/python2"); err != nil {
+		cmd := mustCallBisectDriver(ctx, callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyPath(cmd, "bisect_driver"); err != nil {
 			t.Error(err)
 		}
-		if err := verifyArgOrder(cmd, "-c", regexp.QuoteMeta(bisectPythonCommand),
+		if err := verifyArgOrder(cmd,
 			"someBisectStage", "someBisectDir", filepath.Join(ctx.tempDir, gccX86_64+".real"), "--sysroot=.*", mainCc); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestCallBisectDriverWithParamsFile(t *testing.T) {
+	withBisectTestContext(t, func(ctx *testContext) {
+		ctx.env = []string{
+			"BISECT_STAGE=someBisectStage",
+			"BISECT_DIR=someBisectDir",
+		}
+		paramsFile1 := filepath.Join(ctx.tempDir, "params1")
+		ctx.writeFile(paramsFile1, "a\n#comment\n@params2")
+		paramsFile2 := filepath.Join(ctx.tempDir, "params2")
+		ctx.writeFile(paramsFile2, "b\n"+mainCc)
+
+		cmd := mustCallBisectDriver(ctx, callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, "@"+paramsFile1)))
+		if err := verifyArgOrder(cmd,
+			"a", "b", mainCc); err != nil {
 			t.Error(err)
 		}
 	})
@@ -35,10 +54,10 @@ func TestCallBisectDriverWithCCache(t *testing.T) {
 	withBisectTestContext(t, func(ctx *testContext) {
 		ctx.cfg.useCCache = true
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
-		if err := verifyPath(cmd, "/usr/bin/python2"); err != nil {
+		if err := verifyPath(cmd, "/usr/bin/env"); err != nil {
 			t.Error(err)
 		}
-		if err := verifyArgCount(cmd, 1, "/usr/bin/ccache"); err != nil {
+		if err := verifyArgOrder(cmd, "python", "/usr/bin/ccache"); err != nil {
 			t.Error(err)
 		}
 		if err := verifyEnvUpdate(cmd, "CCACHE_DIR=.*"); err != nil {
@@ -47,14 +66,29 @@ func TestCallBisectDriverWithCCache(t *testing.T) {
 	})
 }
 
-func TestDefaultBisectDir(t *testing.T) {
+func TestDefaultBisectDirCros(t *testing.T) {
 	withBisectTestContext(t, func(ctx *testContext) {
 		ctx.env = []string{
 			"BISECT_STAGE=someBisectStage",
 		}
-		cmd := ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
-		if err := verifyArgOrder(cmd, "-c", regexp.QuoteMeta(bisectPythonCommand),
+		cmd := mustCallBisectDriver(ctx, callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyArgOrder(cmd,
 			"someBisectStage", "/tmp/sysroot_bisect"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestDefaultBisectDirAndroid(t *testing.T) {
+	withBisectTestContext(t, func(ctx *testContext) {
+		ctx.env = []string{
+			"BISECT_STAGE=someBisectStage",
+		}
+		ctx.cfg.isAndroidWrapper = true
+		cmd := mustCallBisectDriver(ctx, callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
+		userHome, _ := os.UserHomeDir()
+		if err := verifyArgOrder(cmd,
+			"someBisectStage", filepath.Join(userHome, "ANDROID_BISECT")); err != nil {
 			t.Error(err)
 		}
 	})
@@ -103,6 +137,47 @@ func withBisectTestContext(t *testing.T, work func(ctx *testContext)) {
 		// sub command.
 		ctx.cfg.oldWrapperPath = ""
 		ctx.env = []string{"BISECT_STAGE=xyz"}
+		// We execute the python script but replace the call to the bisect_driver with
+		// a mock that logs the data in the same way as the oldwrapper. This way
+		// we can reuse the parseOldWrapperCommands to get the values.
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			if err := verifyPath(cmd, "/usr/bin/env"); err != nil {
+				return err
+			}
+			if cmd.Args[0] != "python" {
+				return fmt.Errorf("expected a call to python. Got: %s", cmd.Args[0])
+			}
+			if cmd.Args[1] != "-c" {
+				return fmt.Errorf("expected an inline python script. Got: %s", cmd.Args)
+			}
+			script := cmd.Args[2]
+			mock := `
+class BisectDriver:
+	def __init__(self):
+		self.VALID_MODES = ['POPULATE_GOOD', 'POPULATE_BAD', 'TRIAGE']
+	def bisect_driver(self, bisect_stage, bisect_dir, execargs):
+		print('command bisect_driver')
+		print('arg %s' % bisect_stage)
+		print('arg %s' % bisect_dir)
+		for arg in execargs:
+			print('arg %s' % arg)
+
+bisect_driver = BisectDriver()
+`
+			script = mock + script
+			script = strings.Replace(script, "import bisect_driver", "", -1)
+			cmdCopy := *cmd
+			cmdCopy.Args = append(append(cmd.Args[:2], script), cmd.Args[3:]...)
+			// Evaluate the python script, but replace the call to the bisect_driver
+			// with a log statement so that we can assert it.
+			return runCmd(ctx, &cmdCopy, nil, stdout, stderr)
+		}
 		work(ctx)
 	})
+}
+
+func mustCallBisectDriver(ctx *testContext, exitCode int) *command {
+	ctx.must(exitCode)
+	cmds, _ := parseOldWrapperCommands(ctx.stdoutString())
+	return cmds[0]
 }

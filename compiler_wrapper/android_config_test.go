@@ -25,6 +25,7 @@ func TestAndroidConfig(t *testing.T) {
 
 		runGoldenRecords(ctx, androidGoldenDir, []goldenFile{
 			createAndroidClangPathGoldenInputs(ctx),
+			createBisectGoldenInputs(filepath.Join(ctx.tempDir, "clang")),
 		})
 	})
 }

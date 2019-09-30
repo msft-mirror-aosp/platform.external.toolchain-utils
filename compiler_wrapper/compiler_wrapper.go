@@ -125,7 +125,10 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		return logRusage(env, rusageLogfileName, compilerCmd)
 	}
 	if bisectStage != "" {
-		compilerCmd = calcBisectCommand(env, bisectStage, compilerCmd)
+		compilerCmd, err = calcBisectCommand(env, cfg, bisectStage, compilerCmd)
+		if err != nil {
+			return 0, err
+		}
 	}
 	// Note: We return an exit code only if the underlying env is not
 	// really doing an exec, e.g. commandRecordingEnv.

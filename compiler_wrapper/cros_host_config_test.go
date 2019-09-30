@@ -34,7 +34,7 @@ func TestCrosClangHostConfig(t *testing.T) {
 			createGoldenInputsForAllTargets("clang", "-ftrapv", mainCc),
 			createSanitizerGoldenInputs("clang"),
 			createClangArgsGoldenInputs(),
-			createBisectGoldenInputs(),
+			createBisectGoldenInputs(clangX86_64),
 			createForceDisableWErrorGoldenInputs(),
 			createClangTidyGoldenInputs(gomaEnv),
 			createClangHostWrapperInputs(),
