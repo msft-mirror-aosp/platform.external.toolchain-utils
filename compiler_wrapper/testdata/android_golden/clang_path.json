@@ -133,5 +133,29 @@
         }
       }
     ]
+  },
+  {
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "path": "/tmp/stable/clang",
+        "args": [
+          "main.cc",
+          "--gomacc-path",
+          "/tmp/stable/gomacc"
+        ]
+      }
+    },
+    "cmds": [
+      {
+        "cmd": {
+          "path": "/tmp/stable/gomacc",
+          "args": [
+            "/tmp/stable/clang.real",
+            "main.cc"
+          ]
+        }
+      }
+    ]
   }
 ]

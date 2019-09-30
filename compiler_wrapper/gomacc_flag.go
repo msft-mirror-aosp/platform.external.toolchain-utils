@@ -8,12 +8,34 @@ import (
 	"os"
 )
 
-func processGomaCccFlags(builder *commandBuilder) (gomaUsed bool) {
-	if gomaPath, _ := builder.env.getenv("GOMACC_PATH"); gomaPath != "" {
+func processGomaCccFlags(builder *commandBuilder) (gomaUsed bool, err error) {
+	gomaPath := ""
+	nextArgIsGomaPath := false
+	builder.transformArgs(func(arg builderArg) string {
+		if arg.fromUser {
+			if arg.value == "--gomacc-path" {
+				nextArgIsGomaPath = true
+				return ""
+			}
+			if nextArgIsGomaPath {
+				gomaPath = arg.value
+				nextArgIsGomaPath = false
+				return ""
+			}
+		}
+		return arg.value
+	})
+	if nextArgIsGomaPath {
+		return false, newUserErrorf("--gomacc-path given without value")
+	}
+	if gomaPath == "" {
+		gomaPath, _ = builder.env.getenv("GOMACC_PATH")
+	}
+	if gomaPath != "" {
 		if _, err := os.Lstat(gomaPath); err == nil {
 			builder.wrapPath(gomaPath)
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }

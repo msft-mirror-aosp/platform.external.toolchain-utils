@@ -5,6 +5,7 @@
 package main
 
 import (
+	"path"
 	"path/filepath"
 	"testing"
 )
@@ -29,6 +30,10 @@ func TestAndroidConfig(t *testing.T) {
 }
 
 func createAndroidClangPathGoldenInputs(ctx *testContext) goldenFile {
+	gomaPath := path.Join(ctx.tempDir, "gomacc")
+	ctx.writeFile(gomaPath, "")
+	defaultPath := filepath.Join(ctx.tempDir, "clang")
+
 	deepPath := "a/b/c/d/e/f/g/clang"
 	linkedDeepPath := "symlinked/clang_other"
 	ctx.writeFile(filepath.Join(ctx.tempDir, "/pathenv/clang"), "")
@@ -37,11 +42,11 @@ func createAndroidClangPathGoldenInputs(ctx *testContext) goldenFile {
 		Name: "clang_path.json",
 		Records: []goldenRecord{
 			{
-				WrapperCmd: newGoldenCmd(filepath.Join(ctx.tempDir, "clang"), mainCc),
+				WrapperCmd: newGoldenCmd(defaultPath, mainCc),
 				Cmds:       okResults,
 			},
 			{
-				WrapperCmd: newGoldenCmd(filepath.Join(ctx.tempDir, "clang"), mainCc),
+				WrapperCmd: newGoldenCmd(defaultPath, mainCc),
 				Cmds:       errorResults,
 			},
 			{
@@ -59,6 +64,10 @@ func createAndroidClangPathGoldenInputs(ctx *testContext) goldenFile {
 			{
 				Env:        []string{"PATH=" + filepath.Join(ctx.tempDir, "/pathenv")},
 				WrapperCmd: newGoldenCmd("clang", mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(defaultPath, mainCc, "--gomacc-path", gomaPath),
 				Cmds:       okResults,
 			},
 		},

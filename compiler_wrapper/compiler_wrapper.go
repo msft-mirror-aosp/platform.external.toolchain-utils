@@ -85,7 +85,9 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 				return 0, err
 			}
 		}
-		processGomaCCacheFlags(sysroot, allowCCache, mainBuilder)
+		if err := processGomaCCacheFlags(sysroot, allowCCache, mainBuilder); err != nil {
+			return 0, err
+		}
 		compilerCmd = mainBuilder.build()
 	} else {
 		if clangSyntax {
@@ -94,10 +96,16 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			if err != nil {
 				return 0, err
 			}
-			gccCmd := calcGccCommand(mainBuilder)
+			gccCmd, err := calcGccCommand(mainBuilder)
+			if err != nil {
+				return 0, err
+			}
 			return checkClangSyntax(env, clangCmd, gccCmd)
 		}
-		compilerCmd = calcGccCommand(mainBuilder)
+		compilerCmd, err = calcGccCommand(mainBuilder)
+		if err != nil {
+			return 0, err
+		}
 	}
 	rusageLogfileName := getRusageLogFilename(env)
 	bisectStage := getBisectStage(env)
@@ -142,11 +150,13 @@ func calcClangCommand(allowCCache bool, builder *commandBuilder) (*command, erro
 	if err != nil {
 		return nil, err
 	}
-	processGomaCCacheFlags(sysroot, allowCCache, builder)
+	if err := processGomaCCacheFlags(sysroot, allowCCache, builder); err != nil {
+		return nil, err
+	}
 	return builder.build(), nil
 }
 
-func calcGccCommand(builder *commandBuilder) *command {
+func calcGccCommand(builder *commandBuilder) (*command, error) {
 	sysroot := ""
 	if !builder.cfg.isHostWrapper {
 		sysroot = processSysrootFlag(builder)
@@ -158,9 +168,11 @@ func calcGccCommand(builder *commandBuilder) *command {
 	processGccFlags(builder)
 	if !builder.cfg.isHostWrapper {
 		allowCCache := true
-		processGomaCCacheFlags(sysroot, allowCCache, builder)
+		if err := processGomaCCacheFlags(sysroot, allowCCache, builder); err != nil {
+			return nil, err
+		}
 	}
-	return builder.build()
+	return builder.build(), nil
 }
 
 func calcCommonPreUserArgs(builder *commandBuilder) {
@@ -176,14 +188,18 @@ func calcCommonPreUserArgs(builder *commandBuilder) {
 	}
 }
 
-func processGomaCCacheFlags(sysroot string, allowCCache bool, builder *commandBuilder) {
+func processGomaCCacheFlags(sysroot string, allowCCache bool, builder *commandBuilder) (err error) {
 	gomaccUsed := false
 	if !builder.cfg.isHostWrapper {
-		gomaccUsed = processGomaCccFlags(builder)
+		gomaccUsed, err = processGomaCccFlags(builder)
+		if err != nil {
+			return err
+		}
 	}
 	if !gomaccUsed && allowCCache {
 		processCCacheFlag(sysroot, builder)
 	}
+	return nil
 }
 
 func getAbsWrapperPath(env env, wrapperCmd *command) (string, error) {
