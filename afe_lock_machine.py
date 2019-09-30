@@ -10,6 +10,7 @@
 from __future__ import print_function
 
 import argparse
+import enum
 import getpass
 import os
 import sys
@@ -44,6 +45,13 @@ class NoAFEServer(AFELockException):
 
 class AFEAccessError(AFELockException):
   """Raised when cannot get information about lab machine from lab server."""
+
+
+class MachineType(enum.Enum):
+  """Enum class to hold machine type."""
+  AFE = 'afe'
+  LOCAL = 'local'
+  SKYLAB = 'skylab'
 
 
 class AFELockManager(object):
@@ -155,19 +163,45 @@ class AFELockManager(object):
           machine_list.append(r.strip())
     return machine_list
 
-  def PrintStatusHeader(self, is_lab_machine):
-    """Prints the status header lines for machines.
+  def GetMachineType(self, m):
+    """Get where the machine is located.
 
     Args:
-      is_lab_machine: Boolean indicating whether to print HW Lab header or
-        local machine header (different spacing).
+      m: String containing the name or ip address of machine.
+
+    Returns:
+      Value of the type in MachineType Enum.
     """
-    if is_lab_machine:
-      print('\nMachine (Board)\t\t\t\t\tStatus')
-      print('---------------\t\t\t\t\t------\n')
+    if m in self.local_machines:
+      return MachineType.LOCAL
+    if m in self.skylab_machines:
+      return MachineType.SKYLAB
+    return MachineType.AFE
+
+  def PrintStatusHeader(self):
+    """Prints the status header lines for machines."""
+    print('\nMachine (Board)\t\t\t\t\tStatus')
+    print('---------------\t\t\t\t\t------')
+
+  def PrintStatus(self, m, state, machine_type):
+    """Prints status for a single machine.
+
+    Args:
+      m: String containing the name or ip address of machine.
+      state: A dictionary of the current state of the machine.
+      machine_type: MachineType to determine where the machine is located.
+    """
+    if state['locked']:
+      if (machine_type == MachineType.AFE and
+          m not in self.toolchain_lab_machines):
+        m += '.cros'
+      print('%s (%s)\t%slocked by %s since %s' %
+            (m, state['board'], '\t\t\t' if machine_type == MachineType.LOCAL
+             else '', state['locked_by'], state['lock_time']))
     else:
-      print('\nMachine (Board)\t\tStatus')
-      print('---------------\t\t------\n')
+      print(
+          '%s (%s)\t\t%sunlocked' % (m, state['board'], '\t\t' if
+                                     machine_type == MachineType.LOCAL else ''))
 
   def AddMachineToLocal(self, machine):
     """Adds a machine to local machine list.
@@ -198,34 +232,11 @@ class AFELockManager(object):
         the current AFELockManager's list of machines.  Normally obtained by
         calling AFELockManager::GetMachineStates.
     """
-    local_machines = []
-    printed_hdr = False
+    self.PrintStatusHeader()
     for m in machine_states:
-      cros_name = m + '.cros'
-      if (m in self.toolchain_lab_machines or
-          cros_name in self.toolchain_lab_machines):
-        name = m if m in self.toolchain_lab_machines else cros_name
-        if not printed_hdr:
-          self.PrintStatusHeader(True)
-          printed_hdr = True
-        state = machine_states[m]
-        if state['locked']:
-          print('%s (%s)\tlocked by %s since %s' %
-                (name, state['board'], state['locked_by'], state['lock_time']))
-        else:
-          print('%s (%s)\tunlocked' % (name, state['board']))
-      else:
-        local_machines.append(m)
-
-    if local_machines:
-      self.PrintStatusHeader(False)
-      for m in local_machines:
-        state = machine_states[m]
-        if state['locked']:
-          print('%s (%s)\tlocked by %s since %s' %
-                (m, state['board'], state['locked_by'], state['lock_time']))
-        else:
-          print('%s (%s)\tunlocked' % (m, state['board']))
+      machine_type = self.GetMachineType(m)
+      state = machine_states[m]
+      self.PrintStatus(m, state, machine_type)
 
   def UpdateLockInAFE(self, should_lock_machine, machine):
     """Calls an AFE server to lock/unlock a machine.
@@ -317,23 +328,21 @@ class AFELockManager(object):
     for m in self.machines:
       # TODO(zhizhouy): Handling exceptions with more details when locking
       # doesn't succeed.
-      machine_type = 'afe'
-      if m in self.skylab_machines:
+      machine_type = self.GetMachineType(m)
+      if machine_type == MachineType.SKYLAB:
         ret = self.UpdateLockInSkylab(lock_machines, m)
-        machine_type = 'skylab'
-      elif m in self.local_machines:
+      elif machine_type == MachineType.LOCAL:
         ret = self.UpdateFileLock(lock_machines, m)
-        machine_type = 'local'
       else:
         ret = self.UpdateLockInAFE(lock_machines, m)
 
       if ret:
         self.logger.LogOutput(
-            '%s %s machine succeeded: %s.' % (action, machine_type, m))
+            '%s %s machine succeeded: %s.' % (action, machine_type.value, m))
         updated_machines.append(m)
       else:
         self.logger.LogOutput(
-            '%s %s machine failed: %s.' % (action, machine_type, m))
+            '%s %s machine failed: %s.' % (action, machine_type.value, m))
 
     self.machines = updated_machines
     return updated_machines
@@ -377,8 +386,10 @@ class AFELockManager(object):
                                  '(%s).' % k)
           self._InternalRemoveMachine(k)
 
-        if state['locked'] and 'locked_by' in state and \
-          state['locked_by'] != self.user:
+        # TODO(zhizhouy): Skylab doesn't support host info such as locked_by.
+        # Need to update this when skylab supports it.
+        if (state['locked'] and state['locked_by'] and
+            state['locked_by'] != self.user):
           raise DontOwnLock('Attempt to unlock machine (%s) locked by someone '
                             'else (%s).' % (k, state['locked_by']))
       elif cmd == 'lock':
@@ -417,7 +428,13 @@ class AFELockManager(object):
       # as afe does. We need to get more info such as locked_by when skylab
       # supports that.
       if m in self.local_machines or m in self.skylab_machines:
-        machine_list[m] = {'locked': 0 if cmd == 'lock' else 1}
+        values = {
+            'locked': 0 if cmd == 'lock' else 1,
+            'board': '??',
+            'locked_by': '',
+            'lock_time': ''
+        }
+        machine_list[m] = values
       else:
         # For autotest machines, we use afe APIs to get locking info.
         mod_host = m.split('.')[0]
