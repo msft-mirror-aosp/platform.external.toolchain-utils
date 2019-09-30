@@ -126,7 +126,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 
 func prepareClangCommand(builder *commandBuilder) (sysroot string, err error) {
 	sysroot = ""
-	if !builder.cfg.isHostWrapper {
+	if !builder.cfg.isHostWrapper && !builder.cfg.isAndroidWrapper {
 		sysroot = processSysrootFlag(builder)
 	}
 	builder.addPreUserArgs(builder.cfg.clangFlags...)
@@ -165,13 +165,15 @@ func calcGccCommand(builder *commandBuilder) *command {
 
 func calcCommonPreUserArgs(builder *commandBuilder) {
 	builder.addPreUserArgs(builder.cfg.commonFlags...)
-	if !builder.cfg.isHostWrapper {
+	if !builder.cfg.isHostWrapper && !builder.cfg.isAndroidWrapper {
 		processPieFlags(builder)
 		processThumbCodeFlags(builder)
 		processStackProtectorFlags(builder)
 		processX86Flags(builder)
 	}
-	processSanitizerFlags(builder)
+	if !builder.cfg.isAndroidWrapper {
+		processSanitizerFlags(builder)
+	}
 }
 
 func processGomaCCacheFlags(sysroot string, allowCCache bool, builder *commandBuilder) {

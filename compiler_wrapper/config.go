@@ -10,7 +10,8 @@ import (
 
 type config struct {
 	// TODO: Refactor this flag into more generic configuration properties.
-	isHostWrapper bool
+	isHostWrapper    bool
+	isAndroidWrapper bool
 	// Whether to use ccache.
 	useCCache bool
 	// Flags to add to gcc and clang.
@@ -79,6 +80,8 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, oldWrapperPa
 		cfg = *crosNonHardenedConfig
 	case "cros.host":
 		cfg = *crosHostConfig
+	case "android":
+		cfg = *androidConfig
 	default:
 		return nil, newErrorwithSourceLocf("unknown config name: %s", configName)
 	}
@@ -180,4 +183,14 @@ var crosHostConfig = &config{
 		"-Wno-unknown-warning-option",
 	},
 	newWarningsDir: "/tmp/fatal_clang_warnings",
+}
+
+var androidConfig = &config{
+	isHostWrapper:    false,
+	isAndroidWrapper: true,
+	rootRelPath:      "./",
+	commonFlags:      []string{},
+	gccFlags:         []string{},
+	clangFlags:       []string{},
+	newWarningsDir:   "/tmp/fatal_clang_warnings",
 }

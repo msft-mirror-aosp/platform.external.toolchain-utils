@@ -102,6 +102,30 @@ func TestClangPathForClangHostWrapper(t *testing.T) {
 	})
 }
 
+func TestClangPathForAndroidWrapper(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.cfg.isAndroidWrapper = true
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand("somedir/clang", mainCc)))
+		if err := verifyPath(cmd, "somedir/clang.real"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestClangPathForAndroidWrapperWithSymlinks(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.cfg.isAndroidWrapper = true
+		ctx.writeFile("base/come_clang", "")
+		ctx.symlink("base/some_clang", "linked/clang")
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand("linked/clang", mainCc)))
+		if err := verifyPath(cmd, "linked/some_clang.real"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
 func TestUseXclangPathAndCalcResourceDirByNestedClangCall(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.rootRelPath = "somepath"

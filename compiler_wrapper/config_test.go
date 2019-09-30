@@ -102,6 +102,15 @@ func TestRealConfigWithConfigNameFlag(t *testing.T) {
 		t.Fatalf("ConfigName: Expected clang host config. Got: %#v", cfg)
 	}
 
+	ConfigName = "android"
+	cfg, err = getRealConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.isAndroidWrapper {
+		t.Fatalf("ConfigName: Expected clang host config. Got: %#v", cfg)
+	}
+
 	ConfigName = "invalid"
 	if _, err := getRealConfig(); err == nil {
 		t.Fatalf("ConfigName: Expected an error, got none")

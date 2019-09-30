@@ -19,6 +19,7 @@ import (
 )
 
 var crosRootDirFlag = flag.String("crosroot", "", "root dir of the chrome os toolchain")
+var androidPrebuiltsDirFlag = flag.String("androidprebuilts", "", "prebuilts dir of android")
 
 const mainCc = "main.cc"
 const clangX86_64 = "./x86_64-cros-linux-gnu-clang"
@@ -157,10 +158,18 @@ func (ctx *testContext) updateConfig(cfg *config) {
 	*ctx.cfg = *cfg
 	ctx.cfg.mockOldWrapperCmds = true
 	ctx.cfg.newWarningsDir = filepath.Join(ctx.tempDir, "fatal_clang_warnings")
-	if *crosRootDirFlag != "" && ctx.cfg.oldWrapperPath != "" {
-		ctx.cfg.oldWrapperPath = strings.Replace(ctx.cfg.oldWrapperPath, "$CHROOT", *crosRootDirFlag, -1)
-	} else {
-		ctx.cfg.oldWrapperPath = ""
+	if strings.HasPrefix(ctx.cfg.oldWrapperPath, "$CHROOT") {
+		if *crosRootDirFlag != "" && ctx.cfg.oldWrapperPath != "" {
+			ctx.cfg.oldWrapperPath = strings.Replace(ctx.cfg.oldWrapperPath, "$CHROOT", *crosRootDirFlag, -1)
+		} else {
+			ctx.cfg.oldWrapperPath = ""
+		}
+	} else if strings.HasPrefix(ctx.cfg.oldWrapperPath, "$ANDROID_PREBUILTS") {
+		if *androidPrebuiltsDirFlag != "" && ctx.cfg.oldWrapperPath != "" {
+			ctx.cfg.oldWrapperPath = strings.Replace(ctx.cfg.oldWrapperPath, "$ANDROID_PREBUILTS", *androidPrebuiltsDirFlag, -1)
+		} else {
+			ctx.cfg.oldWrapperPath = ""
+		}
 	}
 }
 

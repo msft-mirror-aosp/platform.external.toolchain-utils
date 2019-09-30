@@ -19,7 +19,7 @@ def parse_args():
   parser.add_argument(
       '--config',
       required=True,
-      choices=['cros.hardened', 'cros.nonhardened', 'cros.host'])
+      choices=['cros.hardened', 'cros.nonhardened', 'cros.host', 'android'])
   parser.add_argument('--use_ccache', required=True, choices=['true', 'false'])
   parser.add_argument(
       '--use_llvm_next', required=True, choices=['true', 'false'])
