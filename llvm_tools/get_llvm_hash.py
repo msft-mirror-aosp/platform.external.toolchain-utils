@@ -200,6 +200,8 @@ def GetLLVMHashAndVersionFromSVNOption(svn_option):
         tot_commit_message)
   elif isinstance(svn_option, int):
     llvm_version = svn_option
+    llvm_hash = new_llvm_hash.GetGitHashForVersion(
+        GetAndUpdateLLVMProjectInLLVMTools(), llvm_version)
   else:
     assert svn_option in ('google3', 'google3-unstable')
     llvm_version = GetGoogle3LLVMVersion(stable=svn_option == 'google3')
