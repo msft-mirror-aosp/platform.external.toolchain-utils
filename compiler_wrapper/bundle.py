@@ -33,10 +33,11 @@ def copy_files(input_dir, output_dir):
 def read_change_id(input_dir):
   last_commit_msg = subprocess.check_output(
       ['git', '-C', input_dir, 'log', '-1', '--pretty=%B'])
-  match = re.search('Change-Id: (\\w+)', last_commit_msg)
-  if not match:
+  # Use last found change id to support reverts as well.
+  change_ids = re.findall(r'Change-Id: (\w+)', last_commit_msg)
+  if not change_ids:
     sys.exit("Couldn't find Change-Id in last commit message.")
-  return match.group(1)
+  return change_ids[-1]
 
 
 def write_readme(input_dir, output_dir, change_id):
