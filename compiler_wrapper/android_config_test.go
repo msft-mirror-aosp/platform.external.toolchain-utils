@@ -26,6 +26,7 @@ func TestAndroidConfig(t *testing.T) {
 		runGoldenRecords(ctx, androidGoldenDir, []goldenFile{
 			createAndroidClangPathGoldenInputs(ctx),
 			createBisectGoldenInputs(filepath.Join(ctx.tempDir, "clang")),
+			createAndroidCompileWithFallbackGoldenInputs(ctx),
 		})
 	})
 }
@@ -70,6 +71,47 @@ func createAndroidClangPathGoldenInputs(ctx *testContext) goldenFile {
 			{
 				WrapperCmd: newGoldenCmd(defaultPath, mainCc, "--gomacc-path", gomaPath),
 				Cmds:       okResults,
+			},
+		},
+	}
+}
+
+func createAndroidCompileWithFallbackGoldenInputs(ctx *testContext) goldenFile {
+	env := []string{
+		"ANDROID_LLVM_PREBUILT_COMPILER_PATH=fallback_compiler",
+		"ANDROID_LLVM_STDERR_REDIRECT=" + filepath.Join(ctx.tempDir, "fallback_stderr"),
+		"ANDROID_LLVM_FALLBACK_DISABLED_WARNINGS=-a -b",
+	}
+	defaultPath := filepath.Join(ctx.tempDir, "clang")
+	return goldenFile{
+		Name: "compile_with_fallback.json",
+		Records: []goldenRecord{
+			{
+				WrapperCmd: newGoldenCmd(defaultPath, mainCc),
+				Env:        env,
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(defaultPath, mainCc),
+				Env:        env,
+				Cmds: []commandResult{
+					{
+						ExitCode: 1,
+					},
+					okResult,
+				},
+			},
+			{
+				WrapperCmd: newGoldenCmd(defaultPath, mainCc),
+				Env:        env,
+				Cmds: []commandResult{
+					{
+						ExitCode: 1,
+					},
+					{
+						ExitCode: 1,
+					},
+				},
 			},
 		},
 	}

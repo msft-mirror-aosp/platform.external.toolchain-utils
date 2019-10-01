@@ -118,6 +118,15 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		}
 		return doubleBuildWithWNoError(env, cfg, compilerCmd)
 	}
+	if shouldCompileWithFallback(env) {
+		if rusageLogfileName != "" {
+			return 0, newUserErrorf("GETRUSAGE is meaningless with FORCE_DISABLE_WERROR")
+		}
+		if bisectStage != "" {
+			return 0, newUserErrorf("BISECT_STAGE is meaningless with FORCE_DISABLE_WERROR")
+		}
+		return compileWithFallback(env, cfg, compilerCmd, mainBuilder.absWrapperPath)
+	}
 	if rusageLogfileName != "" {
 		if bisectStage != "" {
 			return 0, newUserErrorf("BISECT_STAGE is meaningless with GETRUSAGE")

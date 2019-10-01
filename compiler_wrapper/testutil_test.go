@@ -22,6 +22,7 @@ var crosRootDirFlag = flag.String("crosroot", "", "root dir of the chrome os too
 var androidPrebuiltsDirFlag = flag.String("androidprebuilts", "", "prebuilts dir of android")
 
 const mainCc = "main.cc"
+const clangAndroid = "./clang"
 const clangX86_64 = "./x86_64-cros-linux-gnu-clang"
 const gccX86_64 = "./x86_64-cros-linux-gnu-gcc"
 const gccX86_64Eabi = "./x86_64-cros-eabi-gcc"
