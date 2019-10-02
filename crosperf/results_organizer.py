@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Parse data from benchmark_runs for tabulator."""
 
 from __future__ import print_function
@@ -44,7 +46,7 @@ def _GetMaxDup(data):
 
 def _Repeat(func, times):
   """Returns the result of running func() n times."""
-  return [func() for _ in xrange(times)]
+  return [func() for _ in range(times)]
 
 
 def _DictWithReturnValues(retval, pass_fail):
@@ -169,6 +171,7 @@ def OrganizeResults(benchmark_runs, labels, benchmarks=None, json_report=False):
   label_names = [label.name for label in labels]
   label_indices = {name: i for i, name in enumerate(label_names)}
   summary_file = _ReadSummaryFile(sys.argv[0])
+
   if benchmarks is None:
     benchmarks = []
 
@@ -182,15 +185,30 @@ def OrganizeResults(benchmark_runs, labels, benchmarks=None, json_report=False):
 
     show_all_results = json_report or benchmark.show_all_results
     if not show_all_results:
-      summary_list = summary_file.get(benchmark.test_name)
+      summary_list = summary_file.get(benchmark.name)
       if summary_list:
-        summary_list.append('retval')
+        for key in benchmark_run.result.keyvals.keys():
+          if any(
+              key.startswith(added_key)
+              for added_key in ['retval', 'cpufreq', 'cputemp']):
+            summary_list.append(key)
       else:
         # Did not find test_name in json file; show everything.
         show_all_results = True
-    for test_key in benchmark_run.result.keyvals:
-      if show_all_results or test_key in summary_list:
-        cur_dict[test_key] = benchmark_run.result.keyvals[test_key]
+    if benchmark_run.result.cwp_dso:
+      # If we are in cwp approximation mode, we only care about samples
+      if 'samples' in benchmark_run.result.keyvals:
+        cur_dict['samples'] = benchmark_run.result.keyvals['samples']
+      cur_dict['retval'] = benchmark_run.result.keyvals['retval']
+      for key, value in benchmark_run.result.keyvals.items():
+        if any(
+            key.startswith(cpustat_keyword)
+            for cpustat_keyword in ['cpufreq', 'cputemp']):
+          cur_dict[key] = value
+    else:
+      for test_key in benchmark_run.result.keyvals:
+        if show_all_results or test_key in summary_list:
+          cur_dict[test_key] = benchmark_run.result.keyvals[test_key]
     # Occasionally Telemetry tests will not fail but they will not return a
     # result, either.  Look for those cases, and force them to be a fail.
     # (This can happen if, for example, the test has been disabled.)

@@ -85,7 +85,7 @@ def Main(argv):
   f.close()
 
   obj_num = len(obj_list)
-  bad_obj_num = obj_list.count('1')
+  bad_obj_num = obj_list.count(1)
   print('Generated {0} object files, with {1} bad ones.'.format(
       obj_num, bad_obj_num))
 
