@@ -203,6 +203,22 @@ def _BuildArgsDict(args):
            'For now it only supports one single bad item, so to use it, '
            'prune must be set to False.')
   # No input (evals to False),
+  # --ir_diff (evals to True),
+  # --ir_diff=False,
+  # --ir_diff=True
+  args.AddArgument(
+      '-d',
+      '--ir_diff',
+      dest='ir_diff',
+      nargs='?',
+      const=True,
+      default=False,
+      type=StrToBool,
+      metavar='bool',
+      help='Whether to print IR differences before and after bad '
+           'pass/transformation to verbose output. Defaults to False, '
+           'only works when pass_bisect is enabled.')
+  # No input (evals to False),
   # --noincremental (evals to True),
   # --noincremental=False,
   # --noincremental=True

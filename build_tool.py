@@ -564,9 +564,8 @@ class Bootstrapper(object):
       True if operation succeeds.
     """
 
-    cmd = ('cd {0} && cros_sdk -- -- ./setup_board --board=amd64-host '
-           '--accept_licenses=@CHROMEOS --skip_chroot_upgrade --nousepkg '
-           '--reuse_pkgs_from_local_boards').format(self._chromeos_root)
+    cmd = 'cd {0} && cros_sdk -- -- ./build_sdk_board'.format(
+        self._chromeos_root)
     rv = self._ce.RunCommand(cmd, print_to_console=True)
     if rv:
       self._logger.LogError('Build amd64-host failed.')

@@ -1,15 +1,19 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+# Copyright 2011 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
-# Copyright 2011 Google Inc. All Rights Reserved.
 """The driver script for running performance benchmarks on ChromeOS."""
 
 from __future__ import print_function
 
-import atexit
 import argparse
+import atexit
 import os
 import signal
 import sys
+
 from experiment_runner import ExperimentRunner
 from experiment_runner import MockExperimentRunner
 from experiment_factory import ExperimentFactory
@@ -86,6 +90,11 @@ def RunCrosperf(argv):
       dest='log_dir',
       default='',
       help='The log_dir, default is under <crosperf_logs>/logs')
+  parser.add_argument(
+      '--no_hwp',
+      default=False,
+      action='store_true',
+      help='Disable intel_pstate on Intel CPU with HWP support.')
 
   SetupParserOptions(parser)
   options, args = parser.parse_known_args(argv)
@@ -112,6 +121,8 @@ def RunCrosperf(argv):
     experiment_file.GetGlobalSettings().SetField('name', experiment_name)
   experiment = ExperimentFactory().GetExperiment(experiment_file,
                                                  working_directory, log_dir)
+  if options.no_hwp:
+    experiment.intel_pstate = 'no_hwp'
 
   json_report = experiment_file.GetGlobalSettings().GetField('json_report')
 
@@ -130,14 +141,11 @@ def RunCrosperf(argv):
 def Main(argv):
   try:
     RunCrosperf(argv)
-  except Exception as ex:
+  except Exception:
     # Flush buffers before exiting to avoid out of order printing
     sys.stdout.flush()
-    sys.stderr.flush()
-    print('Crosperf error: %s' % repr(ex))
-    sys.stdout.flush()
-    sys.stderr.flush()
-    sys.exit(1)
+    # Raise exception prints out traceback
+    raise
 
 
 if __name__ == '__main__':
