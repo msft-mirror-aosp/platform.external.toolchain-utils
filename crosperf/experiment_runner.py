@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """The experiment runner module."""
 from __future__ import print_function
 
@@ -97,65 +99,68 @@ class ExperimentRunner(object):
         if m not in locked_machines:
           l.remote.remove(m)
 
+  def _GetMachineType(self, lock_mgr, machine):
+    """Get where is the machine from.
+
+    Returns:
+      The location of the machine: local, skylab or afe
+    """
+    # We assume that lab machine always starts with chromeos*, and local
+    # machines are ip address.
+    if 'chromeos' in machine:
+      if lock_mgr.CheckMachineInSkylab(machine):
+        return 'skylab'
+      else:
+        return 'afe'
+    return 'local'
+
   def _LockAllMachines(self, experiment):
     """Attempt to globally lock all of the machines requested for run.
 
-    This method will use the AFE server to globally lock all of the machines
-    requested for this crosperf run, to prevent any other crosperf runs from
-    being able to update/use the machines while this experiment is running.
+    This method tries to lock all machines requested for this crosperf run
+    in three different modes automatically, to prevent any other crosperf runs
+    from being able to update/use the machines while this experiment is
+    running:
+      - Skylab machines: Use skylab lease-dut mechanism to lease
+      - AFE machines: Use AFE lock mechanism to lock
+      - Local machines: Use file lock mechanism to lock
     """
     if test_flag.GetTestMode():
       self.locked_machines = self._GetMachineList()
-      self._experiment.locked_machines = self.locked_machines
+      experiment.locked_machines = self.locked_machines
     else:
-      lock_mgr = afe_lock_machine.AFELockManager(
+      experiment.lock_mgr = afe_lock_machine.AFELockManager(
           self._GetMachineList(),
           '',
           experiment.labels[0].chromeos_root,
-          None,
-          log=self.l,)
-      for m in lock_mgr.machines:
-        if not lock_mgr.MachineIsKnown(m):
-          lock_mgr.AddLocalMachine(m)
-      machine_states = lock_mgr.GetMachineStates('lock')
-      lock_mgr.CheckMachineLocks(machine_states, 'lock')
-      self.locked_machines = lock_mgr.UpdateMachines(True)
-      self._experiment.locked_machines = self.locked_machines
+          experiment.locks_dir,
+          log=self.l,
+      )
+      for m in experiment.lock_mgr.machines:
+        machine_type = self._GetMachineType(experiment.lock_mgr, m)
+        if machine_type == 'local':
+          experiment.lock_mgr.AddMachineToLocal(m)
+        elif machine_type == 'skylab':
+          experiment.lock_mgr.AddMachineToSkylab(m)
+      machine_states = experiment.lock_mgr.GetMachineStates('lock')
+      experiment.lock_mgr.CheckMachineLocks(machine_states, 'lock')
+      self.locked_machines = experiment.lock_mgr.UpdateMachines(True)
+      experiment.locked_machines = self.locked_machines
       self._UpdateMachineList(self.locked_machines)
-      self._experiment.machine_manager.RemoveNonLockedMachines(
-          self.locked_machines)
+      experiment.machine_manager.RemoveNonLockedMachines(self.locked_machines)
       if len(self.locked_machines) == 0:
         raise RuntimeError('Unable to lock any machines.')
-
-  def _UnlockAllMachines(self, experiment):
-    """Attempt to globally unlock all of the machines requested for run.
-
-    The method will use the AFE server to globally unlock all of the machines
-    requested for this crosperf run.
-    """
-    if not self.locked_machines or test_flag.GetTestMode():
-      return
-
-    lock_mgr = afe_lock_machine.AFELockManager(
-        self.locked_machines,
-        '',
-        experiment.labels[0].chromeos_root,
-        None,
-        log=self.l,)
-    machine_states = lock_mgr.GetMachineStates('unlock')
-    lock_mgr.CheckMachineLocks(machine_states, 'unlock')
-    lock_mgr.UpdateMachines(False)
 
   def _ClearCacheEntries(self, experiment):
     for br in experiment.benchmark_runs:
       cache = ResultsCache()
-      cache.Init(br.label.chromeos_image, br.label.chromeos_root,
-                 br.benchmark.test_name, br.iteration, br.test_args,
-                 br.profiler_args, br.machine_manager, br.machine,
-                 br.label.board, br.cache_conditions,
-                 br.logger(), br.log_level, br.label, br.share_cache,
-                 br.benchmark.suite, br.benchmark.show_all_results,
-                 br.benchmark.run_local)
+      cache.Init(
+          br.label.chromeos_image, br.label.chromeos_root,
+          br.benchmark.test_name, br.iteration, br.test_args, br.profiler_args,
+          br.machine_manager, br.machine, br.label.board, br.cache_conditions,
+          br.logger(), br.log_level, br.label, br.share_cache,
+          br.benchmark.suite, br.benchmark.show_all_results,
+          br.benchmark.run_local, br.benchmark.cwp_dso)
       cache_dir = cache.GetCacheDirForWrite()
       if os.path.exists(cache_dir):
         self.l.LogOutput('Removing cache dir: %s' % cache_dir)
@@ -163,8 +168,10 @@ class ExperimentRunner(object):
 
   def _Run(self, experiment):
     try:
-      if not experiment.locks_dir:
-        self._LockAllMachines(experiment)
+      self._LockAllMachines(experiment)
+      # Calculate all checksums of avaiable/locked machines, to ensure same
+      # label has same machines for testing
+      experiment.SetCheckSums(forceSameImage=True)
       if self._using_schedv2:
         schedv2 = Schedv2(experiment)
         experiment.set_schedv2(schedv2)
@@ -208,8 +215,7 @@ class ExperimentRunner(object):
         experiment.Terminate()
         raise
     finally:
-      if not experiment.locks_dir:
-        self._UnlockAllMachines(experiment)
+      experiment.Cleanup()
 
   def _PrintTable(self, experiment):
     self.l.LogOutput(TextResultsReport.FromExperiment(experiment).GetReport())

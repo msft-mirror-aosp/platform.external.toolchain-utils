@@ -1,0 +1,91 @@
+#!/bin/bash -ue
+# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# This script runs `cros lint` on everything it's handed.
+
+if [[ $# -eq 0 ]]; then
+  echo "No files were given to lint." >&2
+  echo "Usage: $0 file1 file2 ..." >&2
+  exit 1
+fi
+
+cros=cros
+golint=golint
+
+if ! type "${cros}" >&/dev/null; then
+  echo "${cros} isn't on your \$PATH. Please either enter a chroot, or place" \
+    "depot_tools on your \$PATH." >&2
+  exit 1
+fi
+
+lint_args=( "$@" )
+
+# Trys to lint our sources. If `cros` tooling isn't properly found, returns. If
+# anything else happens, this will exit the script with the exit code of
+# `cros`.
+try_lint() {
+  local output last_exit_code cros_binary
+
+  cros_binary="$1"
+
+  set +e
+  output="$("${cros_binary}" lint -- "${lint_args[@]}" 2>&1)"
+  last_exit_code="$?"
+  set -e
+
+  # `cros` exits with 127 specifically if it failed due to not finding a Chrome
+  # OS checkout.
+  if [[ "${last_exit_code}" -ne 127 ]]; then
+    if [[ -n "${output}" ]]; then
+      echo "${output}"
+    fi
+    exit "${last_exit_code}"
+  fi
+}
+
+try_lint "${cros}"
+
+# If the user's given us a root directory to fall back on, try that
+if [[ -n "${CHROMEOS_ROOT_DIRECTORY:-}" ]]; then
+  user_cros="${CHROMEOS_ROOT_DIRECTORY}/chromite/bin/cros"
+  if [[ -x "${user_cros}" ]]; then
+    try_lint "${user_cros}"
+  fi
+fi
+
+# So, `cros` outside of the chroot defers to other tools inside of Chromite. If
+# `cros` couldn't find the real `cros` tool, we fall back to pylint on each
+# Python file. It appears that `cros` uses depot_tools' pylint configuration, so
+# this should get us most of the way there, and is probably the best we can
+# reasonably expect to do for users who want to develop without the source
+# tree.
+echo "WARNING: No Chrome OS checkout detected, and no viable CrOS tree " >&2
+echo "found; falling back to linting only python and go. If you have a " >&2
+echo "Chrome OS checkout, please either develop from inside of the source ">&2
+echo "tree, or set \$CHROMEOS_ROOT_DIRECTORY to the root of it." >&2
+
+python_files=()
+go_files=()
+for file in "$@"; do
+  if [[ "${file}" == *.py ]]; then
+    python_files+=( "${file}" )
+  fi
+  if [[ "${file}" == *.go ]]; then
+    go_files+=( "${file}" )
+  fi
+done
+
+if [[ "${#python_files[@]}" -ne 0 ]]; then
+  # We saw `cros` above, so assume that `pylint` is in our PATH (depot_tools
+  # packages it, and provides a reasonable default config).
+  pylint "${python_files[@]}"
+fi
+
+if ! type "${golint}" >/dev/null 2>&1; then
+  echo "Warning: go linting disabled. ${golint} isn't on your \$PATH. "\
+    "Please either enter a chroot, or install go locally. Continuing." >&2
+elif [[ "${#go_files[@]}" -ne 0 ]]; then
+  "${golint}" -set_exit_status "${go_files[@]}"
+fi
