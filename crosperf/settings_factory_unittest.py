@@ -1,8 +1,10 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 #
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Unittest for crosperf."""
 
 from __future__ import print_function
@@ -18,7 +20,7 @@ class BenchmarkSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.BenchmarkSettings('b_settings')
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 6)
+    self.assertEqual(len(res.fields), 7)
     self.assertEqual(res.GetField('test_name'), '')
     self.assertEqual(res.GetField('test_args'), '')
     self.assertEqual(res.GetField('iterations'), 0)
@@ -31,7 +33,7 @@ class LabelSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.LabelSettings('l_settings')
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 9)
+    self.assertEqual(len(res.fields), 10)
     self.assertEqual(res.GetField('chromeos_image'), '')
     self.assertEqual(res.GetField('autotest_path'), '')
     self.assertEqual(res.GetField('chromeos_root'), '')
@@ -48,9 +50,10 @@ class GlobalSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.GlobalSettings('g_settings')
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 25)
+    self.assertEqual(len(res.fields), 37)
     self.assertEqual(res.GetField('name'), '')
     self.assertEqual(res.GetField('board'), '')
+    self.assertEqual(res.GetField('skylab'), False)
     self.assertEqual(res.GetField('remote'), None)
     self.assertEqual(res.GetField('rerun_if_failed'), False)
     self.assertEqual(res.GetField('rm_chroot_tmp'), False)
@@ -70,6 +73,17 @@ class GlobalSettingsTest(unittest.TestCase):
     self.assertEqual(res.GetField('share_cache'), '')
     self.assertEqual(res.GetField('results_dir'), '')
     self.assertEqual(res.GetField('chrome_src'), '')
+    self.assertEqual(res.GetField('cwp_dso'), '')
+    self.assertEqual(res.GetField('enable_aslr'), False)
+    self.assertEqual(res.GetField('ignore_min_max'), False)
+    self.assertEqual(res.GetField('intel_pstate'), '')
+    self.assertEqual(res.GetField('turbostat'), True)
+    self.assertEqual(res.GetField('top_interval'), 0)
+    self.assertEqual(res.GetField('cooldown_time'), 0)
+    self.assertEqual(res.GetField('cooldown_temp'), 40)
+    self.assertEqual(res.GetField('governor'), 'performance')
+    self.assertEqual(res.GetField('cpu_usage'), 'all')
+    self.assertEqual(res.GetField('cpu_freq_pct'), 100)
 
 
 class SettingsFactoryTest(unittest.TestCase):
@@ -82,17 +96,17 @@ class SettingsFactoryTest(unittest.TestCase):
     l_settings = settings_factory.SettingsFactory().GetSettings(
         'label', 'label')
     self.assertIsInstance(l_settings, settings_factory.LabelSettings)
-    self.assertEqual(len(l_settings.fields), 9)
+    self.assertEqual(len(l_settings.fields), 10)
 
     b_settings = settings_factory.SettingsFactory().GetSettings(
         'benchmark', 'benchmark')
     self.assertIsInstance(b_settings, settings_factory.BenchmarkSettings)
-    self.assertEqual(len(b_settings.fields), 6)
+    self.assertEqual(len(b_settings.fields), 7)
 
     g_settings = settings_factory.SettingsFactory().GetSettings(
         'global', 'global')
     self.assertIsInstance(g_settings, settings_factory.GlobalSettings)
-    self.assertEqual(len(g_settings.fields), 25)
+    self.assertEqual(len(g_settings.fields), 37)
 
 
 if __name__ == '__main__':
