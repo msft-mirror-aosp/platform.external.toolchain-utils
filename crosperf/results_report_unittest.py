@@ -1,8 +1,10 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 #
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Unittest for the results reporter."""
 
 from __future__ import division
@@ -126,21 +128,21 @@ def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0,
   machine_manager = MockMachineManager(
       FakePath('chromeos_root'), 0, log_level, locks_dir)
   machine_manager.AddMachine('testing_machine')
-  machine = next(m for m in machine_manager.GetMachines()
-                 if m.name == 'testing_machine')
+  machine = next(
+      m for m in machine_manager.GetMachines() if m.name == 'testing_machine')
   for label in experiment.labels:
 
     def MakeSuccessfulRun(n):
       run = MockBenchmarkRun('mock_success%d' % (n,), bench, label,
                              1 + n + num_runs, cache_conditions,
-                             machine_manager, log, log_level, share_cache)
+                             machine_manager, log, log_level, share_cache, {})
       mock_result = MockResult(log, label, log_level, machine)
       mock_result.keyvals = keyvals
       run.result = mock_result
       return run
 
     experiment.benchmark_runs.extend(
-        MakeSuccessfulRun(n) for n in xrange(how_many))
+        MakeSuccessfulRun(n) for n in range(how_many))
   return experiment
 
 
@@ -319,8 +321,11 @@ class JSONResultsReportTest(unittest.TestCase):
 
   def testFailedJSONReportOutputWithoutExperiment(self):
     labels = ['label1']
+    # yapf:disable
     benchmark_names_and_iterations = [('bench1', 1), ('bench2', 2),
                                       ('bench3', 1), ('bench4', 0)]
+    # yapf:enable
+
     benchmark_keyvals = {
         'bench1': [[{
             'retval': 1,
