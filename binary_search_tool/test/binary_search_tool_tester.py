@@ -132,7 +132,7 @@ class BisectingUtilsTest(unittest.TestCase):
 
     cleanup_list = [
         './is_setup', binary_search_state.STATE_FILE, 'noinc_prune_bad',
-        'noinc_prune_good'
+        'noinc_prune_good', './cmd_script.sh'
     ]
     for f in cleanup_list:
       if os.path.exists(f):
@@ -304,24 +304,6 @@ class BisectingUtilsTest(unittest.TestCase):
     found_obj = int(bss.found_items.pop())
     self.assertEquals(bad_objs[found_obj], 1)
 
-  def test_pass_bisect(self):
-    bss = binary_search_state.MockBinarySearchState(
-        get_initial_items='./gen_init_list.py',
-        switch_to_good='./switch_to_good.py',
-        switch_to_bad='./switch_to_bad.py',
-        pass_bisect='./generate_cmd.py',
-        test_script='./is_good.py',
-        test_setup_script='./test_setup.py',
-        prune=False,
-        file_args=True)
-    # TODO: Need to design unit tests for pass level bisection
-    bss.DoSearchBadItems()
-    self.assertEquals(len(bss.found_items), 1)
-
-    bad_objs = common.ReadObjectsFile()
-    found_obj = int(bss.found_items.pop())
-    self.assertEquals(bad_objs[found_obj], 1)
-
   def test_set_file(self):
     binary_search_state.Run(
         get_initial_items='./gen_init_list.py',
@@ -365,6 +347,131 @@ class BisectingUtilsTest(unittest.TestCase):
       actual_result[int(bad_obj)] = 1
 
     self.assertEqual(actual_result, expected_result)
+
+
+class BisectingUtilsPassTest(BisectingUtilsTest):
+  """Tests for bisecting tool at pass/transformation level."""
+
+  def check_pass_output(self, pass_name, pass_num, trans_num):
+    _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
+        ('grep "Bad pass: " logs/binary_search_tool_tester.py.out | '
+         'tail -n1'))
+    ls = out.splitlines()
+    self.assertEqual(len(ls), 1)
+    line = ls[0]
+    _, _, bad_info = line.partition('Bad pass: ')
+    actual_info = pass_name + ' at number ' + str(pass_num)
+    self.assertEqual(actual_info, bad_info)
+
+    _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
+        ('grep "Bad transformation number: '
+         '" logs/binary_search_tool_tester.py.out | '
+         'tail -n1'))
+    ls = out.splitlines()
+    self.assertEqual(len(ls), 1)
+    line = ls[0]
+    _, _, bad_info = line.partition('Bad transformation number: ')
+    actual_info = str(trans_num)
+    self.assertEqual(actual_info, bad_info)
+
+  def test_with_prune(self):
+    ret = binary_search_state.Run(
+        get_initial_items='./gen_init_list.py',
+        switch_to_good='./switch_to_good.py',
+        switch_to_bad='./switch_to_bad.py',
+        test_script='./is_good.py',
+        pass_bisect='./generate_cmd.py',
+        prune=True,
+        file_args=True)
+    self.assertEquals(ret, 1)
+
+  def test_gen_cmd_script(self):
+    bss = binary_search_state.MockBinarySearchState(
+        get_initial_items='./gen_init_list.py',
+        switch_to_good='./switch_to_good.py',
+        switch_to_bad='./switch_to_bad.py',
+        test_script='./is_good.py',
+        pass_bisect='./generate_cmd.py',
+        prune=False,
+        file_args=True)
+    bss.DoSearchBadItems()
+    cmd_script_path = bss.cmd_script
+    self.assertTrue(os.path.exists(cmd_script_path))
+
+  def test_no_pass_support(self):
+    bss = binary_search_state.MockBinarySearchState(
+        get_initial_items='./gen_init_list.py',
+        switch_to_good='./switch_to_good.py',
+        switch_to_bad='./switch_to_bad.py',
+        test_script='./is_good.py',
+        pass_bisect='./generate_cmd.py',
+        prune=False,
+        file_args=True)
+    bss.cmd_script = './cmd_script_no_support.py'
+    # No support for -opt-bisect-limit
+    with self.assertRaises(RuntimeError):
+      bss.BuildWithPassLimit(-1)
+
+  def test_no_transform_support(self):
+    bss = binary_search_state.MockBinarySearchState(
+        get_initial_items='./gen_init_list.py',
+        switch_to_good='./switch_to_good.py',
+        switch_to_bad='./switch_to_bad.py',
+        test_script='./is_good.py',
+        pass_bisect='./generate_cmd.py',
+        prune=False,
+        file_args=True)
+    bss.cmd_script = './cmd_script_no_support.py'
+    # No support for -print-debug-counter
+    with self.assertRaises(RuntimeError):
+      bss.BuildWithTransformLimit(-1, 'counter_name')
+
+  def test_pass_transform_bisect(self):
+    bss = binary_search_state.MockBinarySearchState(
+        get_initial_items='./gen_init_list.py',
+        switch_to_good='./switch_to_good.py',
+        switch_to_bad='./switch_to_bad.py',
+        test_script='./is_good.py',
+        pass_bisect='./generate_cmd.py',
+        prune=False,
+        file_args=True)
+    pass_num = 4
+    trans_num = 19
+    bss.cmd_script = './cmd_script.py %d %d' % (pass_num, trans_num)
+    bss.DoSearchBadPass()
+    self.check_pass_output('instcombine-visit', pass_num, trans_num)
+
+  def test_result_not_reproduced_pass(self):
+    bss = binary_search_state.MockBinarySearchState(
+        get_initial_items='./gen_init_list.py',
+        switch_to_good='./switch_to_good.py',
+        switch_to_bad='./switch_to_bad.py',
+        test_script='./is_good.py',
+        pass_bisect='./generate_cmd.py',
+        prune=False,
+        file_args=True)
+    # Fails reproducing at pass level.
+    pass_num = 0
+    trans_num = 19
+    bss.cmd_script = './cmd_script.py %d %d' % (pass_num, trans_num)
+    with self.assertRaises(ValueError):
+      bss.DoSearchBadPass()
+
+  def test_result_not_reproduced_transform(self):
+    bss = binary_search_state.MockBinarySearchState(
+        get_initial_items='./gen_init_list.py',
+        switch_to_good='./switch_to_good.py',
+        switch_to_bad='./switch_to_bad.py',
+        test_script='./is_good.py',
+        pass_bisect='./generate_cmd.py',
+        prune=False,
+        file_args=True)
+    # Fails reproducing at transformation level.
+    pass_num = 4
+    trans_num = 0
+    bss.cmd_script = './cmd_script.py %d %d' % (pass_num, trans_num)
+    with self.assertRaises(ValueError):
+      bss.DoSearchBadPass()
 
 
 class BisectStressTest(unittest.TestCase):
@@ -442,6 +549,13 @@ def Main(argv):
   suite.addTest(BisectingUtilsTest('test_no_prune'))
   suite.addTest(BisectingUtilsTest('test_set_file'))
   suite.addTest(BisectingUtilsTest('test_noincremental_prune'))
+  suite.addTest(BisectingUtilsPassTest('test_with_prune'))
+  suite.addTest(BisectingUtilsPassTest('test_gen_cmd_script'))
+  suite.addTest(BisectingUtilsPassTest('test_no_pass_support'))
+  suite.addTest(BisectingUtilsPassTest('test_no_transform_support'))
+  suite.addTest(BisectingUtilsPassTest('test_pass_transform_bisect'))
+  suite.addTest(BisectingUtilsPassTest('test_result_not_reproduced_pass'))
+  suite.addTest(BisectingUtilsPassTest('test_result_not_reproduced_transform'))
   suite.addTest(BisectTest('test_full_bisector'))
   suite.addTest(BisectStressTest('test_every_obj_bad'))
   suite.addTest(BisectStressTest('test_every_index_is_bad'))

@@ -316,7 +316,7 @@ class NonAddressableNodeList(VirtualNodeList):  # pylint: disable=W0223
   @property
   def cached_children(self):
     if self.parent.cached_data is not None:
-      for i in xrange(len(self.parent.cached_data[self.subkey])):
+      for i in range(len(self.parent.cached_data[self.subkey])):
         yield self[i]
 
   @property
@@ -352,7 +352,7 @@ class NonAddressableNodeList(VirtualNodeList):  # pylint: disable=W0223
   def __iter__(self):
     """Enables 'for i in obj:'. It returns children."""
     if self.data:
-      for i in xrange(len(self.data)):
+      for i in range(len(self.data)):
         yield self[i]
 
   def __getitem__(self, key):
@@ -868,7 +868,7 @@ class Builds(AddressableNodeList):
     # Only cache keys here.
     self.cache_keys()
     if self._keys:
-      for i in xrange(max(self._keys), -1, -1):
+      for i in range(max(self._keys), -1, -1):
         yield self[i]
 
   def cache_keys(self):

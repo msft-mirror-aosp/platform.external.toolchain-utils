@@ -1,14 +1,22 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 #
-# Copyright 2014 Google Inc. All Rights Reserved.
+# Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """Unittest for crosperf."""
 
+from __future__ import division
 from __future__ import print_function
 
 import argparse
-import StringIO
-
+import io
+import os
+import tempfile
 import unittest
+
+import mock
 
 import crosperf
 import settings_factory
@@ -37,10 +45,16 @@ class CrosperfTest(unittest.TestCase):
   """Crosperf test class."""
 
   def setUp(self):
-    input_file = StringIO.StringIO(EXPERIMENT_FILE_1)
+    input_file = io.BytesIO(EXPERIMENT_FILE_1)
     self.exp_file = experiment_file.ExperimentFile(input_file)
 
-  def test_convert_options_to_settings(self):
+  def testDryRun(self):
+    filehandle, filename = tempfile.mkstemp()
+    os.write(filehandle, EXPERIMENT_FILE_1)
+    crosperf.Main(['', filename, '--dry_run'])
+    os.remove(filename)
+
+  def testConvertOptionsToSettings(self):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-l',
@@ -55,12 +69,23 @@ class CrosperfTest(unittest.TestCase):
     settings = crosperf.ConvertOptionsToSettings(options)
     self.assertIsNotNone(settings)
     self.assertIsInstance(settings, settings_factory.GlobalSettings)
-    self.assertEqual(len(settings.fields), 25)
+    self.assertEqual(len(settings.fields), 37)
     self.assertTrue(settings.GetField('rerun'))
     argv = ['crosperf/crosperf.py', 'temp.exp']
     options, _ = parser.parse_known_args(argv)
     settings = crosperf.ConvertOptionsToSettings(options)
     self.assertFalse(settings.GetField('rerun'))
+
+  def testExceptionPrintTraceback(self):
+    """Test the main function can print traceback in exception."""
+
+    def mock_RunCrosperf(*_args, **_kwargs):
+      return 10 / 0
+
+    with mock.patch('crosperf.RunCrosperf', new=mock_RunCrosperf):
+      with self.assertRaises(ZeroDivisionError) as context:
+        crosperf.Main([])
+      self.assertEqual('division by zero', str(context.exception))
 
 
 if __name__ == '__main__':
