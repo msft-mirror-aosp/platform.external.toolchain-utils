@@ -1,13 +1,19 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 
-# Copyright 2015 Google Inc. All Rights Reserved.
+# Copyright 2015 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """This contains the unit tests for the new Crosperf task scheduler."""
 
 from __future__ import print_function
 
-import mock
+import functools
+import io
 import unittest
-import StringIO
+
+import mock
 
 import benchmark_run
 import test_flag
@@ -73,7 +79,7 @@ class Schedv2Test(unittest.TestCase):
 
         Note - we mock out BenchmarkRun in this step.
     """
-    experiment_file = ExperimentFile(StringIO.StringIO(expstr))
+    experiment_file = ExperimentFile(io.BytesIO(expstr))
     experiment = ExperimentFactory().GetExperiment(
         experiment_file, working_directory='', log_dir='')
     return experiment
@@ -191,8 +197,8 @@ class Schedv2Test(unittest.TestCase):
       self.assertEquals(len(my_schedv2.get_cached_run_list()), 30)
       # The non-cache-hit brs are put into Schedv2._label_brl_map.
       self.assertEquals(
-          reduce(lambda a, x: a + len(x[1]),
-                 my_schedv2.get_label_map().iteritems(), 0), 30)
+          functools.reduce(lambda a, x: a + len(x[1]),
+                           my_schedv2.get_label_map().iteritems(), 0), 30)
 
   def test_nocachehit(self):
     """Test no cache-hit."""
@@ -209,8 +215,8 @@ class Schedv2Test(unittest.TestCase):
       self.assertEquals(len(my_schedv2.get_cached_run_list()), 0)
       # The non-cache-hit brs are put into Schedv2._label_brl_map.
       self.assertEquals(
-          reduce(lambda a, x: a + len(x[1]),
-                 my_schedv2.get_label_map().iteritems(), 0), 60)
+          functools.reduce(lambda a, x: a + len(x[1]),
+                           my_schedv2.get_label_map().iteritems(), 0), 60)
 
 
 if __name__ == '__main__':

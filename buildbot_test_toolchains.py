@@ -1,8 +1,10 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 #
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Script for running nightly compiler tests on ChromeOS.
 
 This script launches a buildbot to build ChromeOS with the latest compiler on
@@ -92,7 +94,7 @@ class ToolchainComparator(object):
 
     Args:
       trybot_image: artifact name such as
-          'daisy-release-tryjob/R40-6394.0.0-b1389'
+        'daisy-release-tryjob/R40-6394.0.0-b1389'
 
     Returns:
       Latest official image name, e.g. 'daisy-release/R57-9089.0.0'.
@@ -117,7 +119,7 @@ class ToolchainComparator(object):
 
     Args:
       trybot_image: artifact name such as
-          'daisy-release-tryjob/R40-6394.0.0-b1389'
+        'daisy-release-tryjob/R40-6394.0.0-b1389'
 
     Returns:
       Corresponding chrome PFQ image name, e.g.
@@ -128,7 +130,7 @@ class ToolchainComparator(object):
     assert mo
     image_dict = mo.groupdict()
     image_dict['image_type'] = 'chrome-pfq'
-    for _ in xrange(2):
+    for _ in range(2):
       image_dict['tip'] = str(int(image_dict['tip']) - 1)
       nonafdo_image = PFQ_IMAGE_FS.replace('\\', '').format(**image_dict)
       if buildbot_utils.DoesImageExist(self._chromeos_root, nonafdo_image):
@@ -141,7 +143,7 @@ class ToolchainComparator(object):
     Given the names of the trybot, vanilla and non-AFDO images, create the
     appropriate crosperf experiment file and launch crosperf on it.
     """
-    experiment_file_dir = os.path.join(self._chromeos_root, '..', self._weekday)
+    experiment_file_dir = os.path.join(CROSTC_ROOT, self._weekday)
     experiment_file_name = '%s_toolchain_experiment.txt' % self._board
 
     compiler_string = 'llvm'
@@ -154,19 +156,38 @@ class ToolchainComparator(object):
     board: %s
     remote: %s
     retries: 1
+    cooldown_temp: 40
+    cooldown_time: 10
+    cpu_freq_pct: 95
+    top_interval: 1
     """ % (self._board, self._remotes)
     experiment_tests = """
     benchmark: all_toolchain_perf {
       suite: telemetry_Crosperf
-      iterations: 0
+      iterations: 5
       run_local: False
     }
 
-    benchmark: page_cycler_v2.typical_25 {
+    benchmark: loading.desktop {
       suite: telemetry_Crosperf
-      iterations: 0
+      test_args: --story-tag-filter=typical
+      iterations: 3
       run_local: False
       retries: 0
+    }
+
+    benchmark: rendering.desktop {
+      run_local: False
+      suite: telemetry_Crosperf
+      test_args: --story-filter=aquarium$
+      iterations: 5
+    }
+
+    benchmark: rendering.desktop {
+      run_local: False
+      suite: telemetry_Crosperf
+      test_args: --story-filter=aquarium_20k$
+      iterations: 3
     }
     """
 
@@ -212,7 +233,7 @@ class ToolchainComparator(object):
 
     crosperf = os.path.join(TOOLCHAIN_DIR, 'crosperf', 'crosperf')
     noschedv2_opts = '--noschedv2' if self._noschedv2 else ''
-    command = ('{crosperf} --no_email=True --results_dir={r_dir} '
+    command = ('{crosperf} --no_email=True --results_dir={r_dir} --no_hwp '
                '--json_report=True {noschedv2_opts} {exp_file}').format(
                    crosperf=crosperf,
                    r_dir=self._reports_dir,
