@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -68,7 +68,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
     # Verify we called RunCommand once, with proper arguments.
     self.assertEqual(mock_cmd_exec.RunCommand.call_count, 1)
     expected_args = (
-        '/usr/local/home/chromeos/chromium/tools/depot_tools/gsutil.py '
+        '/usr/local/home/chromeos/src/chromium/depot_tools/gsutil.py '
         'cp gs://chromeos-image-archive/lumpy-release/R36-5814.0.0/'
         'chromiumos_test_image.tar.xz '
         '/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0')

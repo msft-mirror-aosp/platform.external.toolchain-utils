@@ -14,7 +14,7 @@ import test_flag
 
 from cros_utils import command_executer
 
-GS_UTIL = 'chromium/tools/depot_tools/gsutil.py'
+GS_UTIL = 'src/chromium/depot_tools/gsutil.py'
 
 
 class MissingImage(Exception):

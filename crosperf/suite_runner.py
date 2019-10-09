@@ -18,7 +18,7 @@ from cros_utils import command_executer
 TEST_THAT_PATH = '/usr/bin/test_that'
 # TODO: Need to check whether Skylab is installed and set up correctly.
 SKYLAB_PATH = '/usr/local/bin/skylab'
-GS_UTIL = 'chromium/tools/depot_tools/gsutil.py'
+GS_UTIL = 'src/chromium/depot_tools/gsutil.py'
 AUTOTEST_DIR = '~/trunk/src/third_party/autotest/files'
 CHROME_MOUNT_DIR = '/tmp/chrome_root'
 
