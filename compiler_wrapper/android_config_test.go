@@ -56,6 +56,10 @@ func createAndroidClangPathGoldenInputs(ctx *testContext) goldenFile {
 				Cmds:       okResults,
 			},
 			{
+				WrapperCmd: newGoldenCmd(filepath.Join(ctx.tempDir, "clang-tidy"), mainCc),
+				Cmds:       okResults,
+			},
+			{
 				WrapperCmd: newGoldenCmd(deepPath, mainCc),
 				Cmds:       okResults,
 			},
