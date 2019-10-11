@@ -72,10 +72,10 @@ telemetry_crosbolt_perf_tests = [
     'loading.desktop',
     #'rendering.desktop',
 ]
-# TODO: replace video_PlaybackPerf.vp9 with the tast version
+
 crosbolt_perf_tests = [
     'graphics_WebGLAquarium',
-    'video_PlaybackPerf.vp9',
+    'tast.video.PlaybackPerfVP91080P30FPS',
 ]
 
 #    'cheets_AntutuTest',

@@ -192,13 +192,12 @@ class AFELockManager(object):
       state: A dictionary of the current state of the machine.
       machine_type: MachineType to determine where the machine is located.
     """
+    if machine_type == MachineType.AFE and not m.endswith('.cros'):
+      m += '.cros'
     if state['locked']:
-      if (machine_type == MachineType.AFE and
-          m not in self.toolchain_lab_machines):
-        m += '.cros'
-      print('%s (%s)\t%slocked by %s since %s' %
-            (m, state['board'], '\t\t\t' if machine_type == MachineType.LOCAL
-             else '', state['locked_by'], state['lock_time']))
+      print('%s (%s)\t\t%slocked by %s since %s' %
+            (m, state['board'], '\t\t' if machine_type == MachineType.LOCAL else
+             '', state['locked_by'], state['lock_time']))
     else:
       print(
           '%s (%s)\t\t%sunlocked' % (m, state['board'], '\t\t' if
@@ -254,12 +253,8 @@ class AFELockManager(object):
     if should_lock_machine:
       kwargs['lock_reason'] = 'toolchain user request (%s)' % self.user
 
-    cros_name = machine + '.cros'
-    if cros_name in self.toolchain_lab_machines:
-      machine = cros_name
-    if machine in self.toolchain_lab_machines:
-      m = machine.split('.')[0]
-      afe_server = self.afe
+    m = machine.split('.')[0]
+    afe_server = self.afe
 
     try:
       afe_server.run(
@@ -455,6 +450,8 @@ class AFELockManager(object):
           values['locked_by'] = ''
           values['lock_time'] = ''
         machine_list[name] = values
+
+    self.ListMachineStates(machine_list)
 
     return machine_list
 
