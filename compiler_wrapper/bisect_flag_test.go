@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -83,12 +82,12 @@ func TestDefaultBisectDirAndroid(t *testing.T) {
 	withBisectTestContext(t, func(ctx *testContext) {
 		ctx.env = []string{
 			"BISECT_STAGE=someBisectStage",
+			"HOME=/somehome",
 		}
 		ctx.cfg.isAndroidWrapper = true
 		cmd := mustCallBisectDriver(ctx, callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
-		userHome, _ := os.UserHomeDir()
 		if err := verifyArgOrder(cmd,
-			"someBisectStage", filepath.Join(userHome, "ANDROID_BISECT")); err != nil {
+			"someBisectStage", filepath.Join("/somehome", "ANDROID_BISECT")); err != nil {
 			t.Error(err)
 		}
 	})

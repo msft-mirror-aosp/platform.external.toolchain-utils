@@ -196,6 +196,7 @@ func createBisectGoldenInputs(compiler string) goldenFile {
 				WrapperCmd: newGoldenCmd(compiler, mainCc),
 				Env: []string{
 					"BISECT_STAGE=someBisectStage",
+					"HOME=/user/home",
 				},
 				Cmds: okResults,
 			},
@@ -204,6 +205,7 @@ func createBisectGoldenInputs(compiler string) goldenFile {
 				Env: []string{
 					"BISECT_STAGE=someBisectStage",
 					"BISECT_DIR=someBisectDir",
+					"HOME=/user/home",
 				},
 				Cmds: okResults,
 			},
@@ -212,6 +214,7 @@ func createBisectGoldenInputs(compiler string) goldenFile {
 				Env: []string{
 					"BISECT_STAGE=someBisectStage",
 					"BISECT_DIR=someBisectDir",
+					"HOME=/user/home",
 				},
 				Cmds: errorResults,
 			},
