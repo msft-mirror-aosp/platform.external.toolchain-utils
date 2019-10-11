@@ -282,10 +282,23 @@ class ExperimentRunner(object):
     self.l.LogOutput('Storing results of each benchmark run.')
     for benchmark_run in experiment.benchmark_runs:
       if benchmark_run.result:
-        benchmark_run_name = filter(str.isalnum, benchmark_run.name)
+        benchmark_run_name = ''.join(
+            ch for ch in benchmark_run.name if ch.isalnum())
         benchmark_run_path = os.path.join(results_directory, benchmark_run_name)
         benchmark_run.result.CopyResultsTo(benchmark_run_path)
         benchmark_run.result.CleanUp(benchmark_run.benchmark.rm_chroot_tmp)
+
+    topstats_file = os.path.join(results_directory, 'topstats.log')
+    self.l.LogOutput('Storing top5 statistics of each benchmark run into %s.' %
+                     topstats_file)
+    with open(topstats_file, 'w') as top_fd:
+      for benchmark_run in experiment.benchmark_runs:
+        if benchmark_run.result:
+          # Header with benchmark run name.
+          top_fd.write('%s\n' % str(benchmark_run))
+          # Formatted string with top statistics.
+          top_fd.write(benchmark_run.result.FormatStringTop5())
+          top_fd.write('\n\n')
 
   def Run(self):
     try:

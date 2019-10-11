@@ -243,10 +243,14 @@ class DutWorker(Thread):
           if self._kerncmd_update_needed(intel_pstate):
             self._update_kerncmd_intel_pstate(intel_pstate)
 
+          # When calculating cooldown wait time we assume that suite_runner is
+          # never reused so we can sum up the values across all benchmark_runs.
+          # If implementation changes causing the assert below to fail the
+          # calculation should be adjusted accordingly.
+          assert br.suite_runner.GetCooldownWaitTime() == 0
           # Execute the br.
           self._execute_benchmark_run(br)
           total_waittime += br.suite_runner.GetCooldownWaitTime()
-          br.suite_runner.ResetCooldownWaitTime()
     finally:
       self._logger.LogOutput(
           'Total wait time for cooldown: %d min' % (total_waittime // 60))
