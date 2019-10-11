@@ -9,15 +9,20 @@ import (
 )
 
 func processSanitizerFlags(builder *commandBuilder) {
+	hasCoverageFlags := false
 	hasSanitizeFlags := false
 	hasSanitizeFuzzerFlags := false
 	for _, arg := range builder.args {
 		// TODO: This should probably be -fsanitize= to not match on
 		// e.g. -fsanitize-blacklist
-		if arg.fromUser && strings.HasPrefix(arg.value, "-fsanitize") {
-			hasSanitizeFlags = true
-			if strings.Contains(arg.value, "fuzzer") {
-				hasSanitizeFuzzerFlags = true
+		if arg.fromUser {
+			if strings.HasPrefix(arg.value, "-fsanitize") {
+				hasSanitizeFlags = true
+				if strings.Contains(arg.value, "fuzzer") {
+					hasSanitizeFuzzerFlags = true
+				}
+			} else if arg.value == "-fprofile-instr-generate" {
+				hasCoverageFlags = true
 			}
 		}
 	}
@@ -39,12 +44,15 @@ func processSanitizerFlags(builder *commandBuilder) {
 			}
 			return arg.value
 		})
-		if hasSanitizeFuzzerFlags && builder.target.compilerType == clangType {
-			fuzzerFlagsToAdd := []string{
-				// TODO: This flag should be removed once fuzzer works with new pass manager
-				"-fno-experimental-new-pass-manager",
+		if builder.target.compilerType == clangType {
+			// hasSanitizeFlags && hasCoverageFlags is to work around crbug.com/1013622
+			if hasSanitizeFuzzerFlags || (hasSanitizeFlags && hasCoverageFlags) {
+				fuzzerFlagsToAdd := []string{
+					// TODO: This flag should be removed once fuzzer works with new pass manager
+					"-fno-experimental-new-pass-manager",
+				}
+				builder.addPreUserArgs(fuzzerFlagsToAdd...)
 			}
-			builder.addPreUserArgs(fuzzerFlagsToAdd...)
 		}
 	}
 }

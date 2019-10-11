@@ -515,6 +515,18 @@ func createSanitizerGoldenInputs(compiler string) goldenFile {
 				WrapperCmd: newGoldenCmd(wrapperPath, "-fsanitize=fuzzer", mainCc),
 				Cmds:       okResults,
 			},
+			{
+				WrapperCmd: newGoldenCmd(wrapperPath, "-fsanitize=address", "-fprofile-instr-generate", mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(wrapperPath, "-fsanitize=address", mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(wrapperPath, "-fprofile-instr-generate", mainCc),
+				Cmds:       okResults,
+			},
 		},
 	}
 }
