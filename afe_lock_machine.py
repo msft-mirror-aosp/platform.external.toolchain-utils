@@ -70,8 +70,9 @@ class AFELockManager(object):
 
   SKYLAB_PATH = '/usr/local/bin/skylab'
   LEASE_MINS = 600
-  SKYLAB_CREDENTIAL = '/usr/local/google/home/mobiletc-prebuild/' \
-                      'chromeos-swarming-1adbe355c97c.json'
+  SKYLAB_CREDENTIAL = '/usr/local/google/home/mobiletc-prebuild' \
+                      '/sheriff_utils/skylab_credential' \
+                      '/chromeos-swarming-credential.json'
   SWARMING = 'chromite/third_party/swarming.client/swarming.py'
   SUCCESS = 0
 
