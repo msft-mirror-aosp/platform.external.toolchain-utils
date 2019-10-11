@@ -1,4 +1,10 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+#
+# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """A crontab script to delete night test data."""
 
 from __future__ import print_function
@@ -21,7 +27,8 @@ DIR_BY_WEEKDAY = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 def CleanNumberedDir(s, dry_run=False):
   """Deleted directories under each dated_dir."""
   chromeos_dirs = [
-      os.path.join(s, x) for x in os.listdir(s)
+      os.path.join(s, x)
+      for x in os.listdir(s)
       if misc.IsChromeOsTree(os.path.join(s, x))
   ]
   ce = command_executer.GetCommandExecuter(log_level='none')
@@ -62,7 +69,8 @@ def CleanNumberedDir(s, dry_run=False):
 def CleanDatedDir(dated_dir, dry_run=False):
   # List subdirs under dir
   subdirs = [
-      os.path.join(dated_dir, x) for x in os.listdir(dated_dir)
+      os.path.join(dated_dir, x)
+      for x in os.listdir(dated_dir)
       if os.path.isdir(os.path.join(dated_dir, x))
   ]
   all_succeeded = True
@@ -104,6 +112,7 @@ def CleanChromeOsTmpFiles(chroot_tmp, days_to_preserve, dry_run):
   cmd = (r'find {0} -maxdepth 1 -type d '
          r'\( -name "test_that_*"  -amin +{1} -o '
          r'   -name "cros-update*" -amin +{1} -o '
+         r'   -name "CrAU_temp_data*" -amin +{1} -o '
          r' -regex "{0}/tmp......" -amin +{1} \) '
          r'-exec bash -c "echo rm -fr {{}}" \; '
          r'-exec bash -c "rm -fr {{}}" \;').format(chroot_tmp, minutes)
@@ -189,6 +198,7 @@ def Main(argv):
     rv += 0 if CleanDatedDir(
         os.path.join(constants.CROSTC_WORKSPACE, dated_dir),
         options.dry_run) else 1
+
 
 ## Finally clean temporaries, images under crostc/chromeos
   rv2 = CleanChromeOsTmpAndImages(

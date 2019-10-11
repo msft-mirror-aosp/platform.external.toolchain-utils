@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Utilities for launching and accessing ChromeOS buildbots."""
 
 from __future__ import print_function
@@ -17,9 +19,9 @@ from cros_utils import logger
 INITIAL_SLEEP_TIME = 7200  # 2 hours; wait time before polling buildbot.
 SLEEP_TIME = 600  # 10 minutes; time between polling of buildbot.
 
-# Some of our slower builders (llmv-next) are taking more
-# than 8 hours. So, increase this TIME_OUT to 9 hours.
-TIME_OUT = 32400  # Decide the build is dead or will never finish
+# Some of our slower builders (llvm-next) are taking more
+# than 11 hours. So, increase this TIME_OUT to 12 hours.
+TIME_OUT = 43200  # Decide the build is dead or will never finish
 
 
 class BuildbotTimeout(Exception):
@@ -58,6 +60,10 @@ def PeekTrybotImage(chromeos_root, buildbucket_id):
     return ('running', None)
 
   results = json.loads(out)[buildbucket_id]
+
+  # Handle the case where the tryjob failed to launch correctly.
+  if results['artifacts_url'] is None:
+    return (results['status'], '')
 
   return (results['status'], results['artifacts_url'].rstrip('/'))
 
@@ -110,7 +116,7 @@ def SubmitTryjob(chromeos_root,
 
   # Launch buildbot with appropriate flags.
   build = buildbot_name
-  command = ('cros tryjob --yes --json --nochromesdk  %s %s %s' %
+  command = ('cros_sdk -- cros tryjob --yes --json --nochromesdk  %s %s %s' %
              (tryjob_flags, patch_arg, build))
   print('CMD: %s' % command)
   _, out, _ = RunCommandInPath(chromeos_root, command)
@@ -245,5 +251,10 @@ def GetLatestImage(chromeos_root, path):
   candidates.sort(reverse=True)
   for c in candidates:
     build = '%s/R%d-%d.%d.%d' % (path, c[0], c[1], c[2], c[3])
+    # Blacklist "R79-12384.0.0" image released by mistake.
+    # TODO(crbug.com/992242): Remove the filter by 2019-09-05.
+    if c == [79, 12384, 0, 0]:
+      continue
+
     if DoesImageExist(chromeos_root, build):
       return build
