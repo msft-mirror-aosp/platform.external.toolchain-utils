@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/python2
 """Cleans output from other scripts to eliminate duplicates.
 
 When frequently sampling data, we see that records occasionally will contain

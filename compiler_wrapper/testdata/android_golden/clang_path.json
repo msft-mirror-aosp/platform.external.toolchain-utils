@@ -72,6 +72,27 @@
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
+        "path": "/tmp/stable/clang-tidy",
+        "args": [
+          "main.cc"
+        ]
+      }
+    },
+    "cmds": [
+      {
+        "cmd": {
+          "path": "/tmp/stable/clang-tidy.real",
+          "args": [
+            "main.cc"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
         "path": "a/b/c/d/e/f/g/clang",
         "args": [
           "main.cc"
