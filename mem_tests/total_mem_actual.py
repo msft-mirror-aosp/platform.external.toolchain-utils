@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/python2
 """Parses the actual memory usage from TCMalloc.
 
 This goes through logs that have the actual allocated memory (not sampled) in

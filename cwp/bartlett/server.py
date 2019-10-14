@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # Copyright 2012 Google Inc. All Rights Reserved.
 # Author: mrdmnd@ (Matt Redmond)
 # Based off of code in //depot/google3/experimental/mobile_gwp
