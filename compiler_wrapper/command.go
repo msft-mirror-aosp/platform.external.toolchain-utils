@@ -91,7 +91,12 @@ func getAbsCmdPath(env env, cmd *command) string {
 
 func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, error) {
 	basename := filepath.Base(cmd.Path)
-	nameParts := strings.Split(basename, "-")
+	var nameParts []string
+	if basename == "clang-tidy" {
+		nameParts = []string{basename}
+	} else {
+		nameParts = strings.Split(basename, "-")
+	}
 	target := builderTarget{}
 	switch len(nameParts) {
 	case 1:
