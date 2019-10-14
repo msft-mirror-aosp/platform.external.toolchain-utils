@@ -99,6 +99,7 @@ var llvmNextFlags = []string{
 	"-Wno-final-dtor-non-final-class",
 	"-Wno-implicit-int-float-conversion",
 	"-Wno-return-stack-address",
+	"-Werror=poison-system-directories",
 }
 
 // Full hardening.
