@@ -22,28 +22,28 @@ from cros_utils import logger
 from cros_utils import machines
 
 
-class AFELockException(Exception):
+class LockException(Exception):
   """Base class for exceptions in this module."""
 
 
-class MachineNotPingable(AFELockException):
+class MachineNotPingable(LockException):
   """Raised when machine does not respond to ping."""
 
 
-class LockingError(AFELockException):
+class LockingError(LockException):
   """Raised when server fails to lock/unlock machine as requested."""
 
 
-class DontOwnLock(AFELockException):
+class DontOwnLock(LockException):
   """Raised when user attmepts to unlock machine locked by someone else."""
   # This should not be raised if the user specified '--force'
 
 
-class NoAFEServer(AFELockException):
+class NoAFEServer(LockException):
   """Raised when cannot find/access the autotest server."""
 
 
-class AFEAccessError(AFELockException):
+class AFEAccessError(LockException):
   """Raised when cannot get information about lab machine from lab server."""
 
 
@@ -54,8 +54,8 @@ class MachineType(enum.Enum):
   SKYLAB = 'skylab'
 
 
-class AFELockManager(object):
-  """Class for locking/unlocking machines vie Autotest Front End servers.
+class LockManager(object):
+  """Class for locking/unlocking machines vie three different modes.
 
   This class contains methods for checking the locked status of machines,
   and for changing the locked status.  It handles HW lab machines (both AFE
@@ -82,7 +82,7 @@ class AFELockManager(object):
                chromeos_root,
                locks_dir='',
                log=None):
-    """Initializes an AFELockManager object.
+    """Initializes an LockManager object.
 
     Args:
       remotes: A list of machine names or ip addresses to be managed.  Names
@@ -225,12 +225,12 @@ class AFELockManager(object):
     """Gets and prints the current status for a list of machines.
 
     Prints out the current status for all of the machines in the current
-    AFELockManager's list of machines (set when the object is initialized).
+    LockManager's list of machines (set when the object is initialized).
 
     Args:
       machine_states: A dictionary of the current state of every machine in
-        the current AFELockManager's list of machines.  Normally obtained by
-        calling AFELockManager::GetMachineStates.
+        the current LockManager's list of machines.  Normally obtained by
+        calling LockManager::GetMachineStates.
     """
     self.PrintStatusHeader()
     for m in machine_states:
@@ -368,8 +368,8 @@ class AFELockManager(object):
 
     Args:
       machine_states: A dictionary of the current state of every machine in
-        the current AFELockManager's list of machines.  Normally obtained by
-        calling AFELockManager::GetMachineStates.
+        the current LockManager's list of machines.  Normally obtained by
+        calling LockManager::GetMachineStates.
       cmd: The user-requested action for the machines: 'lock' or 'unlock'.
 
     Raises:
@@ -406,7 +406,7 @@ class AFELockManager(object):
         an exception, unless the requested command is 'add'.
 
     Returns:
-      A dictionary of machine states for all the machines in the AFELockManager
+      A dictionary of machine states for all the machines in the LockManager
       object.
 
     Raises:
@@ -587,8 +587,7 @@ def Main(argv):
   if options.remote:
     machine_list = options.remote.split()
 
-  lock_manager = AFELockManager(machine_list, options.force,
-                                options.chromeos_root)
+  lock_manager = LockManager(machine_list, options.force, options.chromeos_root)
 
   machine_states = lock_manager.GetMachineStates(cmd=options.cmd)
   cmd = options.cmd

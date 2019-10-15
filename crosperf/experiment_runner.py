@@ -11,7 +11,7 @@ import os
 import shutil
 import time
 
-import afe_lock_machine
+import lock_machine
 import test_flag
 
 from cros_utils import command_executer
@@ -129,7 +129,7 @@ class ExperimentRunner(object):
       self.locked_machines = self._GetMachineList()
       experiment.locked_machines = self.locked_machines
     else:
-      experiment.lock_mgr = afe_lock_machine.AFELockManager(
+      experiment.lock_mgr = lock_machine.LockManager(
           self._GetMachineList(),
           '',
           experiment.labels[0].chromeos_root,
