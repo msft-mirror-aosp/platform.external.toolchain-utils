@@ -1,14 +1,14 @@
 {
     "silvermont": {
-        "name": "R79-3904.19-1569836348.afdo"
+        "name": "R79-3904.41-1570446057.afdo"
     }, 
     "benchmark": {
         "name": "chromeos-chrome-amd64-79.0.3931.2_rc-r1.afdo"
     }, 
     "airmont": {
-        "name": "R79-3904.19-1569838411.afdo"
+        "name": "R79-3904.35-1570450409.afdo"
     }, 
     "broadwell": {
-        "name": "R79-3903.0-1569840015.afdo"
+        "name": "R79-3904.35-1570441307.afdo"
     }
 }

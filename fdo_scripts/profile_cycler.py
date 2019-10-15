@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 #
 # Copyright 2011 Google Inc. All Rights Reserved.
 """Script to profile a page cycler, and get it back to the host."""

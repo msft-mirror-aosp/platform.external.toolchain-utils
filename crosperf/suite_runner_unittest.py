@@ -927,12 +927,12 @@ class SuiteRunnerTest(unittest.TestCase):
     self.assertEqual(mock_runcmd.call_count, 2)
     cmd = mock_runcmd.call_args_list[0][0][0]
     self.assertEqual(cmd,
-                     ('/tmp/chromeos/chromium/tools/depot_tools/gsutil.py ls '
+                     ('/tmp/chromeos/src/chromium/depot_tools/gsutil.py ls '
                       'gs://chromeos-autotest-results/swarming-12345/'
                       'autoserv_test'))
     cmd = mock_runcmd.call_args_list[1][0][0]
     self.assertEqual(cmd,
-                     ('/tmp/chromeos/chromium/tools/depot_tools/gsutil.py -mq '
+                     ('/tmp/chromeos/src/chromium/depot_tools/gsutil.py -mq '
                       'cp -r gs://chromeos-autotest-results/swarming-12345 '
                       '/tmp/chromeos/chroot/tmp'))
 
