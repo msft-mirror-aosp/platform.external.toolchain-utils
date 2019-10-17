@@ -371,6 +371,11 @@ class TextResultsReport(ResultsReport):
     cell_table = TableFormatter(table, columns).GetCellTable('status')
     return [cell_table]
 
+  def _GetTotalWaitCooldownTime(self):
+    """Get cooldown wait time in seconds from experiment benchmark runs."""
+    return sum(br.suite_runner.GetCooldownWaitTime()
+               for br in self.experiment.benchmark_runs)
+
   def GetReport(self):
     """Generate the report for email and console."""
     output_type = 'EMAIL' if self.email else 'CONSOLE'
@@ -405,6 +410,9 @@ class TextResultsReport(ResultsReport):
 
       cpu_info = experiment.machine_manager.GetAllCPUInfo(experiment.labels)
       sections.append(self._MakeSection('CPUInfo', cpu_info))
+
+      waittime_str = '%d min' % (self._GetTotalWaitCooldownTime() // 60)
+      sections.append(self._MakeSection('Cooldown wait time', waittime_str))
 
     return '\n'.join(sections)
 
@@ -511,8 +519,11 @@ def ParseStandardPerfReport(report_data):
   """
   # This function fails silently on its if it's handed a string (as opposed to a
   # list of lines). So, auto-split if we do happen to get a string.
-  if isinstance(report_data, basestring):
+  if isinstance(report_data, str):
     report_data = report_data.splitlines()
+  # When switching to python3 catch the case when bytes are passed.
+  elif isinstance(report_data, bytes):
+    raise TypeError()
 
   # Samples: N{K,M,G} of event 'event-name'
   samples_regex = re.compile(r"#\s+Samples: \d+\S? of event '([^']+)'")

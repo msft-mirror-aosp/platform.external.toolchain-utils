@@ -71,7 +71,27 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	env = mainBuilder.env
 	var compilerCmd *command
 	clangSyntax := processClangSyntaxFlag(mainBuilder)
-	if mainBuilder.target.compilerType == clangType {
+	if cfg.isAndroidWrapper {
+		// FIXME: This combination of using the directory of the symlink but the
+		// basename of the link target is strange but is the logic that old android
+		// wrapper uses. Change this to use directory and basename either from the
+		// absWrapperPath or from the builder.path, but don't mix anymore.
+		mainBuilder.path = filepath.Join(filepath.Dir(mainBuilder.path), filepath.Base(mainBuilder.absWrapperPath)+".real")
+
+		switch mainBuilder.target.compilerType {
+		case clangType:
+			mainBuilder.addPreUserArgs(mainBuilder.cfg.clangFlags...)
+			mainBuilder.addPreUserArgs(mainBuilder.cfg.commonFlags...)
+			if _, err := processGomaCccFlags(mainBuilder); err != nil {
+				return 0, err
+			}
+			compilerCmd = mainBuilder.build()
+		case clangTidyType:
+			compilerCmd = mainBuilder.build()
+		default:
+			return 0, newErrorwithSourceLocf("unsupported compiler: %s", mainBuilder.target.compiler)
+		}
+	} else if mainBuilder.target.compilerType == clangType {
 		cSrcFile, useClangTidy := processClangTidyFlags(mainBuilder)
 		sysroot, err := prepareClangCommand(mainBuilder)
 		if err != nil {
@@ -146,7 +166,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 
 func prepareClangCommand(builder *commandBuilder) (sysroot string, err error) {
 	sysroot = ""
-	if !builder.cfg.isHostWrapper && !builder.cfg.isAndroidWrapper {
+	if !builder.cfg.isHostWrapper {
 		sysroot = processSysrootFlag(builder)
 	}
 	builder.addPreUserArgs(builder.cfg.clangFlags...)
@@ -189,15 +209,13 @@ func calcGccCommand(builder *commandBuilder) (*command, error) {
 
 func calcCommonPreUserArgs(builder *commandBuilder) {
 	builder.addPreUserArgs(builder.cfg.commonFlags...)
-	if !builder.cfg.isHostWrapper && !builder.cfg.isAndroidWrapper {
+	if !builder.cfg.isHostWrapper {
 		processPieFlags(builder)
 		processThumbCodeFlags(builder)
 		processStackProtectorFlags(builder)
 		processX86Flags(builder)
 	}
-	if !builder.cfg.isAndroidWrapper {
-		processSanitizerFlags(builder)
-	}
+	processSanitizerFlags(builder)
 }
 
 func processGomaCCacheFlags(sysroot string, allowCCache bool, builder *commandBuilder) (err error) {

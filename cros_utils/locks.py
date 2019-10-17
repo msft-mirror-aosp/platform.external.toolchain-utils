@@ -10,20 +10,20 @@ from __future__ import print_function
 
 import time
 
-import afe_lock_machine
+import lock_machine
 
 import logger
 
 
 def AcquireLock(machines, chromeos_root, timeout=1200):
-  """Acquire lock for machine(s) with timeout, using AFE server for locking."""
+  """Acquire lock for machine(s) with timeout."""
   start_time = time.time()
   locked = True
   sleep_time = min(10, timeout / 10.0)
   while True:
     try:
-      afe_lock_machine.AFELockManager(machines, False,
-                                      chromeos_root).UpdateMachines(True)
+      lock_machine.LockManager(machines, False,
+                               chromeos_root).UpdateMachines(True)
       break
     except Exception as e:
       if time.time() - start_time > timeout:
@@ -37,11 +37,11 @@ def AcquireLock(machines, chromeos_root, timeout=1200):
 
 
 def ReleaseLock(machines, chromeos_root):
-  """Release locked machine(s), using AFE server for locking."""
+  """Release locked machine(s)."""
   unlocked = True
   try:
-    afe_lock_machine.AFELockManager(machines, False,
-                                    chromeos_root).UpdateMachines(False)
+    lock_machine.LockManager(machines, False,
+                             chromeos_root).UpdateMachines(False)
   except Exception as e:
     unlocked = False
     logger.GetLogger().LogWarning(
