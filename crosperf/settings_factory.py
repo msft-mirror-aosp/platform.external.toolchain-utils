@@ -202,9 +202,8 @@ class GlobalSettings(Settings):
         BooleanField(
             'use_file_locks',
             default=False,
-            description='Whether to use the file locks '
-            'mechanism (deprecated) instead of the AFE '
-            'server lock mechanism.'))
+            description='DEPRECATED: Whether to use the file locks '
+            'or AFE server lock mechanism.'))
     self.AddField(
         IntegerField(
             'iterations',
@@ -286,8 +285,9 @@ class GlobalSettings(Settings):
             'locks_dir',
             default='',
             description='An alternate directory to use for '
-            'storing/checking machine locks. Using this field '
-            'automatically sets use_file_locks to True.\n'
+            'storing/checking machine file locks for local machines. '
+            'By default the file locks directory is '
+            '/google/data/rw/users/mo/mobiletc-prebuild/locks.\n'
             'WARNING: If you use your own locks directory, '
             'there is no guarantee that someone else might not '
             'hold a lock on the same machine in a different '

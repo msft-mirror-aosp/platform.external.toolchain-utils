@@ -5,7 +5,7 @@
 package main
 
 import (
-	"os"
+	"errors"
 	"path/filepath"
 )
 
@@ -41,9 +41,9 @@ func calcBisectCommand(env env, cfg *config, bisectStage string, compilerCmd *co
 	bisectDir, _ := env.getenv("BISECT_DIR")
 	if bisectDir == "" {
 		if cfg.isAndroidWrapper {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return nil, err
+			homeDir, ok := env.getenv("HOME")
+			if !ok {
+				return nil, errors.New("$HOME is not set")
 			}
 			bisectDir = filepath.Join(homeDir, "ANDROID_BISECT")
 		} else {

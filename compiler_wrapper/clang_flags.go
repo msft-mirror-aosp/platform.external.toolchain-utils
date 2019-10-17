@@ -12,15 +12,6 @@ import (
 )
 
 func processClangFlags(builder *commandBuilder) error {
-	if builder.cfg.isAndroidWrapper {
-		// FIXME: This combination of using the directory of the symlink but the
-		// basename of the link target is strange but is the logic that old android
-		// wrapper uses. Change this to use directory and basename either from the
-		// absWrapperPath or from the builder.path, but don't mix anymore.
-		builder.path = filepath.Join(filepath.Dir(builder.path), filepath.Base(builder.absWrapperPath)+".real")
-		return nil
-	}
-
 	env := builder.env
 	clangDir, _ := env.getenv("CLANG")
 
