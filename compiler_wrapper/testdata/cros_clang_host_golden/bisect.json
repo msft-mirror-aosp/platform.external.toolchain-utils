@@ -2,7 +2,8 @@
   {
     "wd": "/tmp/stable",
     "env": [
-      "BISECT_STAGE=someBisectStage"
+      "BISECT_STAGE=someBisectStage",
+      "HOME=/user/home"
     ],
     "wrapper": {
       "cmd": {
@@ -42,7 +43,8 @@
     "wd": "/tmp/stable",
     "env": [
       "BISECT_STAGE=someBisectStage",
-      "BISECT_DIR=someBisectDir"
+      "BISECT_DIR=someBisectDir",
+      "HOME=/user/home"
     ],
     "wrapper": {
       "cmd": {
@@ -82,7 +84,8 @@
     "wd": "/tmp/stable",
     "env": [
       "BISECT_STAGE=someBisectStage",
-      "BISECT_DIR=someBisectDir"
+      "BISECT_DIR=someBisectDir",
+      "HOME=/user/home"
     ],
     "wrapper": {
       "cmd": {

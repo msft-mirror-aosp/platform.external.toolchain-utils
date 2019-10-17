@@ -119,3 +119,34 @@ func TestOmitFuzzerFlagsForGcc(t *testing.T) {
 		}
 	})
 }
+
+func TestAddSanitizerCoverageFlagsForClang(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, "-fsanitize=address", "-fprofile-instr-generate", mainCc)))
+		if err := verifyArgOrder(cmd, "-fno-experimental-new-pass-manager",
+			"-fsanitize=address", "-fprofile-instr-generate", mainCc); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestOmitSanitizerCoverageFlagsForClang(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, "-fsanitize=address", mainCc)))
+		if err := verifyArgCount(cmd, 0, "-fno-experimental-new-pass-manager"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestKeepSanitizerCoverageFlagsForClang(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, "-fprofile-instr-generate", mainCc)))
+		if err := verifyArgCount(cmd, 0, "-fno-experimental-new-pass-manager"); err != nil {
+			t.Error(err)
+		}
+	})
+}

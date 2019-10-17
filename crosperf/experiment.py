@@ -50,9 +50,6 @@ class Experiment(object):
     self.num_run_complete = 0
     self.share_cache = share_cache
     self.active_threads = []
-    # If locks_directory (self.lock_dir) not blank, we will use the file
-    # locking mechanism; if it is blank then we will use the AFE server
-    # locking mechanism.
     self.locks_dir = locks_directory
     self.locked_machines = []
     self.lock_mgr = None

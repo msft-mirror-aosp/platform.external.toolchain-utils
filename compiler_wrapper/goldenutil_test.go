@@ -175,11 +175,10 @@ func fillGoldenResults(ctx *testContext, files []goldenFile) []goldenFile {
 func writeGoldenRecords(ctx *testContext, writer io.Writer, records []goldenRecord) {
 	// Replace the temp dir with a stable path so that the goldens stay stable.
 	stableTempDir := filepath.Join(filepath.Dir(ctx.tempDir), "stable")
-	homeDir, _ := os.UserHomeDir()
 	writer = &replacingWriter{
 		Writer: writer,
-		old:    [][]byte{[]byte(ctx.tempDir), []byte(homeDir)},
-		new:    [][]byte{[]byte(stableTempDir), []byte("$HOME")},
+		old:    [][]byte{[]byte(ctx.tempDir)},
+		new:    [][]byte{[]byte(stableTempDir)},
 	}
 	enc := json.NewEncoder(writer)
 	enc.SetIndent("", "  ")
