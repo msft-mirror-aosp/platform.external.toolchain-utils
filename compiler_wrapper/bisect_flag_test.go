@@ -85,7 +85,7 @@ func TestDefaultBisectDirAndroid(t *testing.T) {
 			"HOME=/somehome",
 		}
 		ctx.cfg.isAndroidWrapper = true
-		cmd := mustCallBisectDriver(ctx, callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
+		cmd := mustCallBisectDriver(ctx, callCompiler(ctx, ctx.cfg, ctx.newCommand(clangAndroid, mainCc)))
 		if err := verifyArgOrder(cmd,
 			"someBisectStage", filepath.Join("/somehome", "ANDROID_BISECT")); err != nil {
 			t.Error(err)

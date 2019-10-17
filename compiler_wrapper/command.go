@@ -129,6 +129,8 @@ func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, err
 
 	var compilerType compilerType
 	switch {
+	case strings.HasPrefix(target.compiler, "clang-tidy"):
+		compilerType = clangTidyType
 	case strings.HasPrefix(target.compiler, "clang"):
 		compilerType = clangType
 	default:
@@ -172,6 +174,7 @@ type compilerType int32
 const (
 	gccType compilerType = iota
 	clangType
+	clangTidyType
 )
 
 type builderTarget struct {
