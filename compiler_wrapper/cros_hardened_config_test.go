@@ -196,6 +196,7 @@ func createBisectGoldenInputs(compiler string) goldenFile {
 				WrapperCmd: newGoldenCmd(compiler, mainCc),
 				Env: []string{
 					"BISECT_STAGE=someBisectStage",
+					"HOME=/user/home",
 				},
 				Cmds: okResults,
 			},
@@ -204,6 +205,7 @@ func createBisectGoldenInputs(compiler string) goldenFile {
 				Env: []string{
 					"BISECT_STAGE=someBisectStage",
 					"BISECT_DIR=someBisectDir",
+					"HOME=/user/home",
 				},
 				Cmds: okResults,
 			},
@@ -212,6 +214,7 @@ func createBisectGoldenInputs(compiler string) goldenFile {
 				Env: []string{
 					"BISECT_STAGE=someBisectStage",
 					"BISECT_DIR=someBisectDir",
+					"HOME=/user/home",
 				},
 				Cmds: errorResults,
 			},
@@ -510,6 +513,18 @@ func createSanitizerGoldenInputs(compiler string) goldenFile {
 			},
 			{
 				WrapperCmd: newGoldenCmd(wrapperPath, "-fsanitize=fuzzer", mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(wrapperPath, "-fsanitize=address", "-fprofile-instr-generate", mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(wrapperPath, "-fsanitize=address", mainCc),
+				Cmds:       okResults,
+			},
+			{
+				WrapperCmd: newGoldenCmd(wrapperPath, "-fprofile-instr-generate", mainCc),
 				Cmds:       okResults,
 			},
 		},

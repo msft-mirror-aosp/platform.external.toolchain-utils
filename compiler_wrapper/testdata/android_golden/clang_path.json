@@ -49,6 +49,30 @@
   },
   {
     "wd": "/tmp/stable",
+    "env": [
+      "WITH_TIDY=1"
+    ],
+    "wrapper": {
+      "cmd": {
+        "path": "/tmp/stable/clang",
+        "args": [
+          "main.cc"
+        ]
+      }
+    },
+    "cmds": [
+      {
+        "cmd": {
+          "path": "/tmp/stable/clang.real",
+          "args": [
+            "main.cc"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
         "path": "/tmp/stable/clang++",
@@ -70,6 +94,30 @@
   },
   {
     "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "path": "/tmp/stable/clang-tidy",
+        "args": [
+          "main.cc"
+        ]
+      }
+    },
+    "cmds": [
+      {
+        "cmd": {
+          "path": "/tmp/stable/clang-tidy.real",
+          "args": [
+            "main.cc"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "wd": "/tmp/stable",
+    "env": [
+      "WITH_TIDY=1"
+    ],
     "wrapper": {
       "cmd": {
         "path": "/tmp/stable/clang-tidy",
