@@ -137,6 +137,10 @@ class ExperimentFactory(object):
     remote = new_remote
     rm_chroot_tmp = global_settings.GetField('rm_chroot_tmp')
     perf_args = global_settings.GetField('perf_args')
+    download_debug = global_settings.GetField('download_debug')
+    # Do not download debug symbols when perf_args is not specified.
+    if not perf_args and download_debug:
+      download_debug = False
     acquire_timeout = global_settings.GetField('acquire_timeout')
     cache_dir = global_settings.GetField('cache_dir')
     cache_only = global_settings.GetField('cache_only')
@@ -433,7 +437,7 @@ class ExperimentFactory(object):
           raise RuntimeError("Can not have empty 'build' field!")
         image, autotest_path, debug_path = label_settings.GetXbuddyPath(
             build, autotest_path, debug_path, board, chromeos_root, log_level,
-            perf_args)
+            download_debug)
 
       cache_dir = label_settings.GetField('cache_dir')
       chrome_src = label_settings.GetField('chrome_src')
