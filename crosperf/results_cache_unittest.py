@@ -226,8 +226,8 @@ TOP_DATA = [
     {
         'cmd': 'chrome',
         'cpu_avg': 124.75,
-        'count': 4,
-        'top5': [122.8, 107.9, 17.8, 1.0],
+        'count': 2,
+        'top5': [125.7, 123.8],
     },
     {
         'cmd': 'irq/cros-ec',
@@ -470,7 +470,7 @@ class ResultTest(unittest.TestCase):
 
     mock_copyfiles.return_value = 0
 
-    #test 1. dest_dir exists; CopyFiles returns 0.
+    # test 1. dest_dir exists; CopyFiles returns 0.
     mock_isdir.return_value = True
     self.result.CopyFilesTo(dest_dir, files)
     self.assertEqual(mock_runcmd.call_count, 0)
@@ -484,7 +484,7 @@ class ResultTest(unittest.TestCase):
 
     mock_runcmd.reset_mock()
     mock_copyfiles.reset_mock()
-    #test 2. dest_dir does not exist; CopyFiles returns 0.
+    # test 2. dest_dir does not exist; CopyFiles returns 0.
     mock_isdir.return_value = False
     self.result.CopyFilesTo(dest_dir, files)
     self.assertEqual(mock_runcmd.call_count, 3)
@@ -495,7 +495,7 @@ class ResultTest(unittest.TestCase):
                      mock_runcmd.call_args_list[2])
     self.assertEqual(mock_runcmd.call_args_list[0][0], ('mkdir -p /tmp/test',))
 
-    #test 3. CopyFiles returns 1 (fails).
+    # test 3. CopyFiles returns 1 (fails).
     mock_copyfiles.return_value = 1
     self.assertRaises(Exception, self.result.CopyFilesTo, dest_dir, files)
 
@@ -989,6 +989,75 @@ class ResultTest(unittest.TestCase):
       calls = [mock.call('/tmp/emptylogfile.log')]
       mo.assert_has_calls(calls)
       self.assertEqual(topcalls, [])
+
+  def test_format_string_top5_cmds(self):
+    """Test formatted string with top5 commands."""
+    self.result.top_cmds = [
+        {
+            'cmd': 'chrome',
+            'cpu_avg': 119.753453465,
+            'count': 44444,
+            'top5': [222.8, 217.9, 217.8, 191.0, 189.9],
+        },
+        {
+            'cmd': 'irq/230-cros-ec',
+            'cpu_avg': 10.000000000000001,
+            'count': 1000,
+            'top5': [11.5, 11.4, 11.3, 11.2, 11.1],
+        },
+        {
+            'cmd': 'powerd',
+            'cpu_avg': 2.0,
+            'count': 2,
+            'top5': [3.0, 1.0]
+        },
+        {
+            'cmd': 'cmd1',
+            'cpu_avg': 1.0,
+            'count': 1,
+            'top5': [1.0],
+        },
+        {
+            'cmd': 'cmd2',
+            'cpu_avg': 1.0,
+            'count': 1,
+            'top5': [1.0],
+        },
+        {
+            'cmd': 'not_for_print',
+            'cpu_avg': 1.0,
+            'count': 1,
+            'top5': [1.0],
+        },
+    ]
+    form_str = self.result.FormatStringTop5()
+    self.assertEqual(
+        form_str, '\n'.join([
+            'Top 5 commands with highest CPU usage:',
+            '             COMMAND  AVG CPU%  COUNT   HIGHEST 5',
+            '-' * 50,
+            '              chrome    119.75  44444   '
+            '[222.8, 217.9, 217.8, 191.0, 189.9]',
+            '     irq/230-cros-ec     10.00   1000   '
+            '[11.5, 11.4, 11.3, 11.2, 11.1]',
+            '              powerd      2.00      2   [3.0, 1.0]',
+            '                cmd1      1.00      1   [1.0]',
+            '                cmd2      1.00      1   [1.0]',
+            '-' * 50,
+        ]))
+
+  def test_format_string_top5_calls_no_data(self):
+    """Test formatted string of top5 with no data."""
+    self.result.top_cmds = []
+    form_str = self.result.FormatStringTop5()
+    self.assertEqual(
+        form_str, '\n'.join([
+            'Top 5 commands with highest CPU usage:',
+            '             COMMAND  AVG CPU%  COUNT   HIGHEST 5',
+            '-' * 50,
+            '[NO DATA FROM THE TOP LOG]',
+            '-' * 50,
+        ]))
 
   @mock.patch.object(misc, 'GetInsideChrootPath')
   @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommand')

@@ -1,4 +1,10 @@
-# Copyright 2010 Google Inc. All Rights Reserved.
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+
+# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """lock_machine.py related unit-tests.
 
 MachineManagerTest tests MachineManager.
@@ -16,7 +22,7 @@ import file_lock_machine
 
 
 def LockAndSleep(machine):
-  file_lock_machine.Machine(machine, auto=True).Lock(exclusive=True)
+  file_lock_machine.Machine(machine, '/tmp', auto=True).Lock(exclusive=True)
   time.sleep(1)
 
 
@@ -27,12 +33,12 @@ class MachineTest(unittest.TestCase):
     pass
 
   def testRepeatedUnlock(self):
-    mach = file_lock_machine.Machine('qqqraymes.mtv')
+    mach = file_lock_machine.Machine('qqqraymes.mtv', '/tmp')
     for _ in range(10):
-      self.assertFalse(mach.Unlock())
-    mach = file_lock_machine.Machine('qqqraymes.mtv', auto=True)
+      self.assertTrue(mach.Unlock())
+    mach = file_lock_machine.Machine('qqqraymes.mtv', '/tmp', auto=True)
     for _ in range(10):
-      self.assertFalse(mach.Unlock())
+      self.assertTrue(mach.Unlock())
 
   def testLockUnlock(self):
     mach = file_lock_machine.Machine('otter.mtv', '/tmp')
@@ -46,7 +52,7 @@ class MachineTest(unittest.TestCase):
       self.assertTrue(mach.Unlock(exclusive=True))
 
   def testSharedLock(self):
-    mach = file_lock_machine.Machine('chrotomation.mtv')
+    mach = file_lock_machine.Machine('chrotomation.mtv', '/tmp')
     for _ in range(10):
       self.assertTrue(mach.Lock(exclusive=False))
     for _ in range(10):
@@ -54,7 +60,7 @@ class MachineTest(unittest.TestCase):
     self.assertTrue(mach.Lock(exclusive=True))
     self.assertTrue(mach.Unlock(exclusive=True))
 
-    mach = file_lock_machine.Machine('chrotomation.mtv', auto=True)
+    mach = file_lock_machine.Machine('chrotomation.mtv', '/tmp', auto=True)
     for _ in range(10):
       self.assertTrue(mach.Lock(exclusive=False))
     for _ in range(10):
@@ -63,14 +69,14 @@ class MachineTest(unittest.TestCase):
     self.assertTrue(mach.Unlock(exclusive=True))
 
   def testExclusiveLock(self):
-    mach = file_lock_machine.Machine('atree.mtv')
+    mach = file_lock_machine.Machine('atree.mtv', '/tmp')
     self.assertTrue(mach.Lock(exclusive=True))
     for _ in range(10):
       self.assertFalse(mach.Lock(exclusive=True))
       self.assertFalse(mach.Lock(exclusive=False))
     self.assertTrue(mach.Unlock(exclusive=True))
 
-    mach = file_lock_machine.Machine('atree.mtv', auto=True)
+    mach = file_lock_machine.Machine('atree.mtv', '/tmp', auto=True)
     self.assertTrue(mach.Lock(exclusive=True))
     for _ in range(10):
       self.assertFalse(mach.Lock(exclusive=True))
@@ -78,20 +84,20 @@ class MachineTest(unittest.TestCase):
     self.assertTrue(mach.Unlock(exclusive=True))
 
   def testExclusiveState(self):
-    mach = file_lock_machine.Machine('testExclusiveState')
+    mach = file_lock_machine.Machine('testExclusiveState', '/tmp')
     self.assertTrue(mach.Lock(exclusive=True))
     for _ in range(10):
       self.assertFalse(mach.Lock(exclusive=False))
     self.assertTrue(mach.Unlock(exclusive=True))
 
-    mach = file_lock_machine.Machine('testExclusiveState', auto=True)
+    mach = file_lock_machine.Machine('testExclusiveState', '/tmp', auto=True)
     self.assertTrue(mach.Lock(exclusive=True))
     for _ in range(10):
       self.assertFalse(mach.Lock(exclusive=False))
     self.assertTrue(mach.Unlock(exclusive=True))
 
   def testAutoLockGone(self):
-    mach = file_lock_machine.Machine('lockgone', auto=True)
+    mach = file_lock_machine.Machine('lockgone', '/tmp', auto=True)
     p = Process(target=LockAndSleep, args=('lockgone',))
     p.start()
     time.sleep(1.1)
@@ -99,7 +105,7 @@ class MachineTest(unittest.TestCase):
     self.assertTrue(mach.Lock(exclusive=True))
 
   def testAutoLockFromOther(self):
-    mach = file_lock_machine.Machine('other_lock', auto=True)
+    mach = file_lock_machine.Machine('other_lock', '/tmp', auto=True)
     p = Process(target=LockAndSleep, args=('other_lock',))
     p.start()
     time.sleep(0.5)
@@ -109,7 +115,7 @@ class MachineTest(unittest.TestCase):
     self.assertTrue(mach.Lock(exclusive=True))
 
   def testUnlockByOthers(self):
-    mach = file_lock_machine.Machine('other_unlock', auto=True)
+    mach = file_lock_machine.Machine('other_unlock', '/tmp', auto=True)
     p = Process(target=LockAndSleep, args=('other_unlock',))
     p.start()
     time.sleep(0.5)

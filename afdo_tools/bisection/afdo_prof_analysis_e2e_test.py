@@ -6,18 +6,30 @@
 
 """End-to-end test for afdo_prof_analysis."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
+import json
+import os
+import shutil
+import tempfile
+import unittest
 from datetime import date
 
 import afdo_prof_analysis as analysis
 
-import json
-import shutil
-import tempfile
-import os
-import unittest
+
+class ObjectWithFields(object):
+  """Turns kwargs given to the constructor into fields on an object.
+
+  Example usage:
+    x = ObjectWithFields(a=1, b=2)
+    assert x.a == 1
+    assert x.b == 2
+  """
+
+  def __init__(self, **kwargs):
+    for key, val in kwargs.items():
+      setattr(self, key, val)
 
 
 class AfdoProfAnalysisE2ETest(unittest.TestCase):
@@ -233,27 +245,33 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
     with open(bad_prof_file, 'w') as f:
       f.write(bad_prof_text)
 
-    analysis.FLAGS.good_prof = good_prof_file
-    analysis.FLAGS.bad_prof = bad_prof_file
-    if state_file:
-      actual_state_file = analysis.FLAGS.state_file
-
-      def cleanup():
-        analysis.FLAGS.state_file = actual_state_file
-
-      self.addCleanup(cleanup)
-
-      analysis.FLAGS.state_file = state_file
-
-    analysis.FLAGS.seed = seed
-    analysis.FLAGS.no_resume = no_resume
-    analysis.FLAGS.analysis_output_file = out_file or '/dev/null'
-
     dir_path = os.path.dirname(os.path.realpath(__file__))  # dir of this file
     external_script = '%s/%s' % (dir_path, extern_decider or 'e2e_external.sh')
-    analysis.FLAGS.external_decider = external_script
 
-    actual = analysis.main(None)
+    # FIXME: This test ideally shouldn't be writing to $PWD
+    if state_file is None:
+      state_file = '%s/afdo_analysis_state.json' % os.getcwd()
+
+      def rm_state():
+        try:
+          os.unlink(state_file)
+        except OSError:
+          # Probably because the file DNE. That's fine.
+          pass
+
+      self.addCleanup(rm_state)
+
+    actual = analysis.main(
+        ObjectWithFields(
+            good_prof=good_prof_file,
+            bad_prof=bad_prof_file,
+            external_decider=external_script,
+            analysis_output_file=out_file or '/dev/null',
+            state_file=state_file,
+            no_resume=no_resume,
+            remove_state_on_completion=False,
+            seed=seed,
+        ))
     actual_seed = actual.pop('seed')  # nothing to check
     self.assertEqual(actual, expected)
     return actual_seed

@@ -169,7 +169,7 @@ func TestCompileWithFallbackExtraArgs(t *testing.T) {
 		}{
 			{"./clang", true},
 			{"./clang++", true},
-			{"./some_clang", false},
+			{"./clang-tidy", false},
 		}
 		ctx.env = append(ctx.env, "ANDROID_LLVM_FALLBACK_DISABLED_WARNINGS=-a -b")
 		extraArgs := []string{"-fno-color-diagnostics", "-a", "-b"}
