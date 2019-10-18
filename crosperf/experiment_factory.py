@@ -72,10 +72,10 @@ telemetry_crosbolt_perf_tests = [
     'loading.desktop',
     #'rendering.desktop',
 ]
-# TODO: replace video_PlaybackPerf.vp9 with the tast version
+
 crosbolt_perf_tests = [
     'graphics_WebGLAquarium',
-    'video_PlaybackPerf.vp9',
+    'tast.video.PlaybackPerfVP91080P30FPS',
 ]
 
 #    'cheets_AntutuTest',
@@ -143,14 +143,20 @@ class ExperimentFactory(object):
     config.AddConfig('no_email', global_settings.GetField('no_email'))
     share_cache = global_settings.GetField('share_cache')
     results_dir = global_settings.GetField('results_dir')
+    # Warn user that option use_file_locks is deprecated.
     use_file_locks = global_settings.GetField('use_file_locks')
+    if use_file_locks:
+      l = logger.GetLogger()
+      l.LogWarning('Option use_file_locks is deprecated, please remove it '
+                   'from your experiment settings.')
     locks_dir = global_settings.GetField('locks_dir')
-    # If we pass a blank locks_dir to the Experiment, it will use the AFE server
-    # lock mechanism.  So if the user specified use_file_locks, but did not
-    # specify a locks dir, set the locks  dir to the default locks dir in
+    # If not specified, set the locks dir to the default locks dir in
     # file_lock_machine.
-    if use_file_locks and not locks_dir:
+    if not locks_dir:
       locks_dir = file_lock_machine.Machine.LOCKS_DIR
+    if not os.path.exists(locks_dir):
+      raise RuntimeError('Cannot access default lock directory. '
+                         'Please run prodaccess or specify a local directory')
     chrome_src = global_settings.GetField('chrome_src')
     show_all_results = global_settings.GetField('show_all_results')
     cwp_dso = global_settings.GetField('cwp_dso')

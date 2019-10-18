@@ -2,7 +2,8 @@
   {
     "wd": "/tmp/stable",
     "env": [
-      "BISECT_STAGE=someBisectStage"
+      "BISECT_STAGE=someBisectStage",
+      "HOME=/user/home"
     ],
     "wrapper": {
       "cmd": {
@@ -38,6 +39,7 @@
             "-Wno-final-dtor-non-final-class",
             "-Wno-implicit-int-float-conversion",
             "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "-fstack-protector-strong",
             "-fPIE",
             "-pie",
@@ -62,7 +64,8 @@
     "wd": "/tmp/stable",
     "env": [
       "BISECT_STAGE=someBisectStage",
-      "BISECT_DIR=someBisectDir"
+      "BISECT_DIR=someBisectDir",
+      "HOME=/user/home"
     ],
     "wrapper": {
       "cmd": {
@@ -98,6 +101,7 @@
             "-Wno-final-dtor-non-final-class",
             "-Wno-implicit-int-float-conversion",
             "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "-fstack-protector-strong",
             "-fPIE",
             "-pie",
@@ -122,7 +126,8 @@
     "wd": "/tmp/stable",
     "env": [
       "BISECT_STAGE=someBisectStage",
-      "BISECT_DIR=someBisectDir"
+      "BISECT_DIR=someBisectDir",
+      "HOME=/user/home"
     ],
     "wrapper": {
       "cmd": {
@@ -161,6 +166,7 @@
             "-Wno-final-dtor-non-final-class",
             "-Wno-implicit-int-float-conversion",
             "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "-fstack-protector-strong",
             "-fPIE",
             "-pie",

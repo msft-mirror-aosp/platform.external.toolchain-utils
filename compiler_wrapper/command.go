@@ -91,7 +91,12 @@ func getAbsCmdPath(env env, cmd *command) string {
 
 func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, error) {
 	basename := filepath.Base(cmd.Path)
-	nameParts := strings.Split(basename, "-")
+	var nameParts []string
+	if basename == "clang-tidy" {
+		nameParts = []string{basename}
+	} else {
+		nameParts = strings.Split(basename, "-")
+	}
 	target := builderTarget{}
 	switch len(nameParts) {
 	case 1:
@@ -124,6 +129,8 @@ func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, err
 
 	var compilerType compilerType
 	switch {
+	case strings.HasPrefix(target.compiler, "clang-tidy"):
+		compilerType = clangTidyType
 	case strings.HasPrefix(target.compiler, "clang"):
 		compilerType = clangType
 	default:
@@ -167,6 +174,7 @@ type compilerType int32
 const (
 	gccType compilerType = iota
 	clangType
+	clangTidyType
 )
 
 type builderTarget struct {

@@ -91,25 +91,6 @@ class BenchmarkRun(threading.Thread):
     self.cache_hit = (self.result is not None)
     self.cache_has_been_read = True
 
-  def PrintTop5Cmds(self, topcmds):
-    """Print top 5 commands into log."""
-
-    self._logger.LogOutput('%s' % str(self))
-    self._logger.LogOutput('Top 5 commands with highest CPU usage:')
-    # Header.
-    print_line = '%20s %9s %6s   %s' % ('COMMAND', 'AVG CPU%', 'COUNT',
-                                        'HIGHEST 5')
-    self._logger.LogOutput(print_line)
-    self._logger.LogOutput('-' * 50)
-    if topcmds:
-      for topcmd in topcmds[:5]:
-        print_line = '%20s %9.2f %6s   %s' % (topcmd['cmd'], topcmd['cpu_avg'],
-                                              topcmd['count'], topcmd['top5'])
-        self._logger.LogOutput(print_line)
-    else:
-      self._logger.LogOutput('[NO DATA FROM THE TOP LOG]')
-    self._logger.LogOutput('-' * 50)
-
   def run(self):
     try:
       if not self.cache_has_been_read:
@@ -138,8 +119,6 @@ class BenchmarkRun(threading.Thread):
         self.cache.machine = self.machine
         self.result = self.RunTest(self.machine)
         # TODO(denik): Add Top5 report into html.
-        if self.result:
-          self.PrintTop5Cmds(self.result.GetTopCmds())
 
         self.cache.remote = self.machine.name
         self.label.chrome_version = self.machine_manager.GetChromeVersion(
