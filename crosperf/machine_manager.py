@@ -1,6 +1,7 @@
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Machine Manager module."""
 
 from __future__ import print_function
@@ -184,10 +185,10 @@ class MachineManager(object):
   This class contains methods and calls to lock, unlock and image
   machines and distribute machines to each benchmark run.  The assumption is
   that all of the machines for the experiment have been globally locked
-  (using an AFE server) in the ExperimentRunner, but the machines still need
-  to be locally locked/unlocked (allocated to benchmark runs) to prevent
-  multiple benchmark runs within the same experiment from trying to use the
-  same machine at the same time.
+  in the ExperimentRunner, but the machines still need to be locally
+  locked/unlocked (allocated to benchmark runs) to prevent multiple benchmark
+  runs within the same experiment from trying to use the same machine at the
+  same time.
   """
 
   def __init__(self,
@@ -254,7 +255,8 @@ class MachineManager(object):
         image_chromeos.__file__, '--no_lock',
         '--chromeos_root=%s' % chromeos_root,
         '--image=%s' % label.chromeos_image,
-        '--image_args=%s' % label.image_args, '--remote=%s' % machine.name,
+        '--image_args=%s' % label.image_args,
+        '--remote=%s' % machine.name,
         '--logging_level=%s' % self.log_level
     ]
     if label.board:
@@ -401,10 +403,10 @@ class MachineManager(object):
         self.acquire_timeout -= sleep_time
 
       if self.acquire_timeout < 0:
-        self.logger.LogFatal(
-            'Could not acquire any of the '
-            "following machines: '%s'" % ', '.join(machine.name
-                                                   for machine in machines))
+        self.logger.LogFatal('Could not acquire any of the '
+                             "following machines: '%s'" % ', '.join(
+                                 machine.name for machine in machines))
+
 
 ###      for m in self._machines:
 ###        if (m.locked and time.time() - m.released_time < 10 and

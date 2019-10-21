@@ -8,6 +8,7 @@
 from __future__ import division
 from __future__ import print_function
 
+import collections
 import glob
 import hashlib
 import heapq
@@ -72,6 +73,27 @@ class Result(object):
   def GetTopCmds(self):
     """Get the list of top commands consuming CPU on the machine."""
     return self.top_cmds
+
+  def FormatStringTop5(self):
+    """Get formatted top5 string.
+
+    Get the formatted string with top5 commands consuming CPU on DUT machine.
+    """
+    format_list = [
+        'Top 5 commands with highest CPU usage:',
+        # Header.
+        '%20s %9s %6s   %s' % ('COMMAND', 'AVG CPU%', 'COUNT', 'HIGHEST 5'),
+        '-' * 50,
+    ]
+    if self.top_cmds:
+      for topcmd in self.top_cmds[:5]:
+        print_line = '%20s %9.2f %6s   %s' % (topcmd['cmd'], topcmd['cpu_avg'],
+                                              topcmd['count'], topcmd['top5'])
+        format_list.append(print_line)
+    else:
+      format_list.append('[NO DATA FROM THE TOP LOG]')
+    format_list.append('-' * 50)
+    return '\n'.join(format_list)
 
   def CopyFilesTo(self, dest_dir, files_to_copy):
     file_index = 0
@@ -572,45 +594,54 @@ class Result(object):
       if snapshot:
         snapshots.append(snapshot)
 
-    # Threshold of CPU usage when Chrome is busy, i.e. benchmark is running.
-    # FIXME(denik): 70 is just a guess and needs empirical evidence.
-    # (It does not need to be configurable.)
-    chrome_high_cpu_load = 70
+    # Define threshold of CPU usage when Chrome is busy, i.e. benchmark is
+    # running.
+    # Ideally it should be 100% but it will be hardly reachable with 1 core.
+    # Statistics on DUT with 2-6 cores shows that chrome load of 100%, 95% and
+    # 90% equally occurs in 72-74% of all top log snapshots.
+    # Further decreasing of load threshold leads to a shifting percent of
+    # "high load" snapshots which might include snapshots when benchmark is
+    # not running.
+    # On 1-core DUT 90% chrome cpu load occurs in 55%, 95% in 33% and 100% in 2%
+    # of snapshots accordingly.
+    CHROME_HIGH_CPU_LOAD = 90
     # Number of snapshots where chrome is heavily used.
-    active_snapshots = 0
+    high_load_snapshots = 0
     # Total CPU use per process in ALL active snapshots.
-    cmd_total_cpu_use = {}
+    cmd_total_cpu_use = collections.defaultdict(float)
     # Top CPU usages per command.
-    cmd_top5_cpu_use = {}
+    cmd_top5_cpu_use = collections.defaultdict(list)
     # List of Top Commands to be returned.
     topcmds = []
 
     for snapshot_processes in snapshots:
-      if any(chrome_proc['cpu_use'] > chrome_high_cpu_load
-             for chrome_proc in snapshot_processes
-             if chrome_proc['cmd'] == 'chrome'):
-        # This is a snapshot where at least one chrome command
-        # has CPU usage above the threshold.
-        active_snapshots += 1
-        for process in snapshot_processes:
-          cmd = process['cmd']
-          cpu_use = process['cpu_use']
+      # CPU usage per command in one snapshot.
+      cmd_cpu_use_per_snapshot = collections.defaultdict(float)
+      for process in snapshot_processes:
+        cmd = process['cmd']
+        cpu_use = process['cpu_use']
 
+        # Collect CPU usage per command.
+        cmd_cpu_use_per_snapshot[cmd] += cpu_use
+
+      if cmd_cpu_use_per_snapshot.setdefault('chrome',
+                                             0.0) > CHROME_HIGH_CPU_LOAD:
+        # Combined CPU usage of "chrome" command exceeds "High load" threshold
+        # which means DUT is busy running a benchmark.
+        high_load_snapshots += 1
+        for cmd, cpu_use in cmd_cpu_use_per_snapshot.items():
           # Update total CPU usage.
-          total_cpu_use = cmd_total_cpu_use.setdefault(cmd, 0.0)
-          cmd_total_cpu_use[cmd] = total_cpu_use + cpu_use
+          cmd_total_cpu_use[cmd] += cpu_use
 
-          # Add cpu_use into command top cpu usages, sorted in descending
-          # order.
-          top5_list = cmd_top5_cpu_use.setdefault(cmd, [])
-          heapq.heappush(top5_list, cpu_use)
+          # Add cpu_use into command top cpu usages, sorted in descending order.
+          heapq.heappush(cmd_top5_cpu_use[cmd], round(cpu_use, 1))
 
     for consumer, usage in sorted(
         cmd_total_cpu_use.items(), key=lambda x: x[1], reverse=True):
       # Iterate through commands by descending order of total CPU usage.
       topcmd = {
           'cmd': consumer,
-          'cpu_avg': usage / active_snapshots,
+          'cpu_avg': usage / high_load_snapshots,
           'count': len(cmd_top5_cpu_use[consumer]),
           'top5': heapq.nlargest(5, cmd_top5_cpu_use[consumer]),
       }

@@ -10,13 +10,13 @@
 from __future__ import division
 from __future__ import print_function
 
-from StringIO import StringIO
-
 import collections
-import mock
+import io
 import os
-import test_flag
 import unittest
+
+import mock
+import test_flag
 
 from benchmark_run import MockBenchmarkRun
 from cros_utils import logger
@@ -83,7 +83,7 @@ def FakePath(ext):
 
 def MakeMockExperiment(compiler='gcc'):
   """Mocks an experiment using the given compiler."""
-  mock_experiment_file = StringIO("""
+  mock_experiment_file = io.BytesIO("""
       board: x86-alex
       remote: 127.0.0.1
       perf_args: record -a -e cycles
@@ -146,6 +146,12 @@ def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0,
   return experiment
 
 
+def _InjectCooldownTime(experiment, cooldown_time):
+  """Inject cooldown wait time in every benchmark run."""
+  for br in experiment.benchmark_runs:
+    br.suite_runner.cooldown_wait_time = cooldown_time
+
+
 class TextResultsReportTest(unittest.TestCase):
   """Tests that the output of a text report contains the things we pass in.
 
@@ -158,11 +164,18 @@ class TextResultsReportTest(unittest.TestCase):
     success_keyvals = {'retval': 0, 'machine': 'some bot', 'a_float': 3.96}
     experiment = _InjectSuccesses(MakeMockExperiment(), num_success,
                                   success_keyvals)
-    text_report = TextResultsReport.FromExperiment(experiment, email=email) \
-                                   .GetReport()
+    # Set 120 sec cooldown time for every benchmark run.
+    cooldown_time = 120
+    _InjectCooldownTime(experiment, cooldown_time)
+    text_report = TextResultsReport.FromExperiment(
+        experiment, email=email).GetReport()
     self.assertIn(str(success_keyvals['a_float']), text_report)
     self.assertIn(success_keyvals['machine'], text_report)
     self.assertIn(MockCrosMachine.CPUINFO_STRING, text_report)
+    self.assertIn('Cooldown wait time', text_report)
+    self.assertIn(
+        '%d min' % (len(experiment.benchmark_runs) * cooldown_time // 60),
+        text_report)
     return text_report
 
   def testOutput(self):
@@ -229,7 +242,7 @@ class HTMLResultsReportTest(unittest.TestCase):
         _InjectSuccesses(MakeMockExperiment(), num_success, success_keyvals))
 
     self.assertNotIn('no result', output.summary_table)
-    #self.assertIn(success_keyvals['machine'], output.summary_table)
+    # self.assertIn(success_keyvals['machine'], output.summary_table)
     self.assertIn('a_float', output.summary_table)
     self.assertIn(str(success_keyvals['a_float']), output.summary_table)
     self.assertIn('a_float', output.full_table)
@@ -418,7 +431,7 @@ class PerfReportParserTest(unittest.TestCase):
     }
     report_cycles = report['cycles']
     self.assertEqual(len(report_cycles), 214)
-    for k, v in known_cycles_percentages.iteritems():
+    for k, v in known_cycles_percentages.items():
       self.assertIn(k, report_cycles)
       self.assertEqual(v, report_cycles[k])
 
@@ -430,7 +443,7 @@ class PerfReportParserTest(unittest.TestCase):
     }
     report_instructions = report['instructions']
     self.assertEqual(len(report_instructions), 492)
-    for k, v in known_instrunctions_percentages.iteritems():
+    for k, v in known_instrunctions_percentages.items():
       self.assertIn(k, report_instructions)
       self.assertEqual(v, report_instructions[k])
 
