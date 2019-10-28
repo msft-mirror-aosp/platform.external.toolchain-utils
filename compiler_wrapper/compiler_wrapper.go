@@ -5,7 +5,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -29,33 +28,13 @@ func callCompiler(env env, cfg *config, inputCmd *command) int {
 	}
 	exitCode := 0
 	if compilerErr == nil {
-		if cfg.oldWrapperPath != "" {
-			exitCode, compilerErr = callCompilerWithRunAndCompareToOldWrapper(env, cfg, inputCmd)
-		} else {
-			exitCode, compilerErr = callCompilerInternal(env, cfg, inputCmd)
-		}
+		exitCode, compilerErr = callCompilerInternal(env, cfg, inputCmd)
 	}
 	if compilerErr != nil {
 		printCompilerError(env.stderr(), compilerErr)
 		exitCode = 1
 	}
 	return exitCode
-}
-
-func callCompilerWithRunAndCompareToOldWrapper(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
-	stdinBuffer := &bytes.Buffer{}
-	recordingEnv := &commandRecordingEnv{
-		env:         env,
-		stdinReader: teeStdinIfNeeded(env, inputCmd, stdinBuffer),
-	}
-	// Note: this won't do a real exec as recordingEnv redirects exec to run.
-	if exitCode, err = callCompilerInternal(recordingEnv, cfg, inputCmd); err != nil {
-		return 0, err
-	}
-	if err = compareToOldWrapper(env, cfg, inputCmd, stdinBuffer.Bytes(), recordingEnv.cmdResults, exitCode); err != nil {
-		return exitCode, err
-	}
-	return exitCode, nil
 }
 
 func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int, err error) {

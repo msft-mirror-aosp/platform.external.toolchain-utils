@@ -21,9 +21,8 @@ var updateGoldenFiles = flag.Bool("updategolden", false, "update golden files")
 var filterGoldenTests = flag.String("rungolden", "", "regex filter for golden tests to run")
 
 type goldenFile struct {
-	Name             string `json:"name"`
-	ignoreOldWrapper bool
-	Records          []goldenRecord `json:"records"`
+	Name    string         `json:"name"`
+	Records []goldenRecord `json:"records"`
 }
 
 type goldenRecord struct {
@@ -115,14 +114,8 @@ func filterGoldenRecords(pattern string, files []goldenFile) []goldenFile {
 }
 
 func fillGoldenResults(ctx *testContext, files []goldenFile) []goldenFile {
-	oldWrapperPath := ctx.cfg.oldWrapperPath
 	newFiles := []goldenFile{}
 	for _, file := range files {
-		ctx.cfg.oldWrapperPath = oldWrapperPath
-		if file.ignoreOldWrapper {
-			ctx.cfg.oldWrapperPath = ""
-		}
-
 		newRecords := []goldenRecord{}
 		for _, record := range file.Records {
 			newCmds := []commandResult{}

@@ -25,10 +25,6 @@ type config struct {
 	clangPostFlags []string
 	// Toolchain root path relative to the wrapper binary.
 	rootRelPath string
-	// Path of the old wrapper using the toolchain root.
-	oldWrapperPath string
-	// Whether to mock out the calls that the old wrapper does.
-	mockOldWrapperCmds bool
 	// Directory to store errors that were prevented with -Wno-error.
 	newWarningsDir string
 	// Version. Only used for printing via -print-cmd.
@@ -65,16 +61,14 @@ func getRealConfig() (*config, error) {
 	if err != nil {
 		return nil, wrapErrorwithSourceLocf(err, "invalid format for UseLLvmNext")
 	}
-	// FIXME: Remove comparison to old wrapper once the new wrapper has landed.
-	oldWrapperPath := ""
-	config, err := getConfig(ConfigName, useCCache, useLlvmNext, oldWrapperPath, Version)
+	config, err := getConfig(ConfigName, useCCache, useLlvmNext, Version)
 	if err != nil {
 		return nil, err
 	}
 	return config, nil
 }
 
-func getConfig(configName string, useCCache bool, useLlvmNext bool, oldWrapperPath string, version string) (*config, error) {
+func getConfig(configName string, useCCache bool, useLlvmNext bool, version string) (*config, error) {
 	cfg := config{}
 	switch configName {
 	case "cros.hardened":
@@ -92,7 +86,6 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, oldWrapperPa
 	if useLlvmNext {
 		cfg.clangFlags = append(cfg.clangFlags, llvmNextFlags...)
 	}
-	cfg.oldWrapperPath = oldWrapperPath
 	cfg.version = version
 	return &cfg, nil
 }
