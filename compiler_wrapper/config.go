@@ -20,6 +20,9 @@ type config struct {
 	gccFlags []string
 	// Flags to add to clang only.
 	clangFlags []string
+	// Flags to add to clang only, AFTER user flags (cannot be overridden
+	// by the user).
+	clangPostFlags []string
 	// Toolchain root path relative to the wrapper binary.
 	rootRelPath string
 	// Path of the old wrapper using the toolchain root.
@@ -88,6 +91,7 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, oldWrapperPa
 	cfg.useCCache = useCCache
 	if useLlvmNext {
 		cfg.clangFlags = append(cfg.clangFlags, llvmNextFlags...)
+		cfg.clangPostFlags = append(cfg.clangPostFlags, llvmNextPostFlags...)
 	}
 	cfg.oldWrapperPath = oldWrapperPath
 	cfg.version = version
@@ -97,9 +101,12 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, oldWrapperPa
 var llvmNextFlags = []string{
 	"-Wno-reorder-init-list",
 	"-Wno-final-dtor-non-final-class",
-	"-Wno-implicit-int-float-conversion",
 	"-Wno-return-stack-address",
 	"-Werror=poison-system-directories",
+}
+
+var llvmNextPostFlags = []string{
+	"-Wno-implicit-int-float-conversion",
 }
 
 // Full hardening.
@@ -193,5 +200,6 @@ var androidConfig = &config{
 	commonFlags:      []string{},
 	gccFlags:         []string{},
 	clangFlags:       []string{},
+	clangPostFlags:   []string{},
 	newWarningsDir:   "/tmp/fatal_clang_warnings",
 }

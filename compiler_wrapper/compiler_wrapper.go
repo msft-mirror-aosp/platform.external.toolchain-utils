@@ -170,6 +170,7 @@ func prepareClangCommand(builder *commandBuilder) (sysroot string, err error) {
 		sysroot = processSysrootFlag(builder)
 	}
 	builder.addPreUserArgs(builder.cfg.clangFlags...)
+	builder.addPostUserArgs(builder.cfg.clangPostFlags...)
 	calcCommonPreUserArgs(builder)
 	if err := processClangFlags(builder); err != nil {
 		return "", err
