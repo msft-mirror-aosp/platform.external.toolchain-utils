@@ -91,23 +91,16 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, oldWrapperPa
 	cfg.useCCache = useCCache
 	if useLlvmNext {
 		cfg.clangFlags = append(cfg.clangFlags, llvmNextFlags...)
-		cfg.clangPostFlags = append(cfg.clangPostFlags, llvmNextPostFlags...)
 	}
 	cfg.oldWrapperPath = oldWrapperPath
 	cfg.version = version
 	return &cfg, nil
 }
 
-var llvmNextFlags = []string{
-	"-Wno-reorder-init-list",
-	"-Wno-final-dtor-non-final-class",
-	"-Wno-return-stack-address",
-	"-Werror=poison-system-directories",
-}
+// TODO: Enable test in config_test.go, once we have new llvm-next flags.
+var llvmNextFlags = []string{}
 
-var llvmNextPostFlags = []string{
-	"-Wno-implicit-int-float-conversion",
-}
+var llvmNextPostFlags = []string{}
 
 // Full hardening.
 // Temporarily disable function splitting because of chromium:434751.
@@ -139,6 +132,13 @@ var crosHardenedConfig = &config{
 		"-Wno-section",
 		"-static-libgcc",
 		"-fuse-ld=lld",
+		"-Wno-reorder-init-list",
+		"-Wno-final-dtor-non-final-class",
+		"-Wno-return-stack-address",
+		"-Werror=poison-system-directories",
+	},
+	clangPostFlags: []string{
+		"-Wno-implicit-int-float-conversion",
 	},
 	newWarningsDir: "/tmp/fatal_clang_warnings",
 }
@@ -163,6 +163,13 @@ var crosNonHardenedConfig = &config{
 		"-Wno-unknown-warning-option",
 		"-Wno-section",
 		"-static-libgcc",
+		"-Wno-reorder-init-list",
+		"-Wno-final-dtor-non-final-class",
+		"-Wno-return-stack-address",
+		"-Werror=poison-system-directories",
+	},
+	clangPostFlags: []string{
+		"-Wno-implicit-int-float-conversion",
 	},
 	newWarningsDir: "/tmp/fatal_clang_warnings",
 }
@@ -188,7 +195,14 @@ var crosHostConfig = &config{
 		"-Wno-deprecated-declarations",
 		"-Wno-tautological-constant-compare",
 		"-Wno-tautological-unsigned-enum-zero-compare",
+		"-Wno-reorder-init-list",
+		"-Wno-final-dtor-non-final-class",
+		"-Wno-return-stack-address",
+		"-Werror=poison-system-directories",
 		"-Wno-unknown-warning-option",
+	},
+	clangPostFlags: []string{
+		"-Wno-implicit-int-float-conversion",
 	},
 	newWarningsDir: "/tmp/fatal_clang_warnings",
 }
