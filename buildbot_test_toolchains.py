@@ -198,7 +198,7 @@ class ToolchainComparator(object):
       f.write(experiment_header)
       f.write(experiment_tests)
 
-      if self.board not in TELEMETRY_AQUARIUM_UNSUPPORTED:
+      if self._board not in TELEMETRY_AQUARIUM_UNSUPPORTED:
         f.write(telemetry_aquarium_tests)
 
       # Now add vanilla to test file.
