@@ -118,7 +118,6 @@ class BenchmarkRun(threading.Thread):
         self.machine = self.AcquireMachine()
         self.cache.machine = self.machine
         self.result = self.RunTest(self.machine)
-        # TODO(denik): Add Top5 report into html.
 
         self.cache.remote = self.machine.name
         self.label.chrome_version = self.machine_manager.GetChromeVersion(
@@ -220,9 +219,8 @@ class BenchmarkRun(threading.Thread):
     else:
       self.machine_manager.ImageMachine(machine, self.label)
     self.timeline.Record(STATUS_RUNNING)
-    retval, out, err = self.suite_runner.Run(machine.name, self.label,
-                                             self.benchmark, self.test_args,
-                                             self.profiler_args)
+    retval, out, err = self.suite_runner.Run(
+        machine, self.label, self.benchmark, self.test_args, self.profiler_args)
     self.run_completed = True
     return Result.CreateFromRun(self._logger, self.log_level, self.label,
                                 self.machine, out, err, retval,
@@ -270,9 +268,8 @@ class MockBenchmarkRun(BenchmarkRun):
     self.timeline.Record(STATUS_IMAGING)
     self.machine_manager.ImageMachine(machine, self.label)
     self.timeline.Record(STATUS_RUNNING)
-    [retval, out,
-     err] = self.suite_runner.Run(machine.name, self.label, self.benchmark,
-                                  self.test_args, self.profiler_args)
+    [retval, out, err] = self.suite_runner.Run(
+        machine, self.label, self.benchmark, self.test_args, self.profiler_args)
     self.run_completed = True
     rr = MockResult('logger', self.label, self.log_level, machine)
     rr.out = out

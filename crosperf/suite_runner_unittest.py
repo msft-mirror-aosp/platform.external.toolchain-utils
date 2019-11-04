@@ -22,6 +22,7 @@ from benchmark import Benchmark
 
 from cros_utils import command_executer
 from cros_utils import logger
+from machine_manager import MockCrosMachine
 
 BIG_LITTLE_CPUINFO = """processor       : 0
 model name      : ARMv8 Processor rev 4 (v8l)
@@ -218,13 +219,15 @@ class SuiteRunnerTest(unittest.TestCase):
     self.runner.dut_config['governor'] = 'fake_governor'
     self.runner.dut_config['cpu_freq_pct'] = 65
     machine = 'fake_machine'
+    cros_machine = MockCrosMachine(machine, self.mock_label.chromeos_root,
+                                   self.mock_logger)
     test_args = ''
     profiler_args = ''
 
     reset()
     self.mock_label.skylab = True
-    self.runner.Run(machine, self.mock_label, self.telemetry_bench, test_args,
-                    profiler_args)
+    self.runner.Run(cros_machine, self.mock_label, self.telemetry_bench,
+                    test_args, profiler_args)
     self.assertFalse(self.call_disable_aslr)
     self.assertTrue(self.call_skylab_run)
     self.assertFalse(self.call_test_that_run)
@@ -241,8 +244,8 @@ class SuiteRunnerTest(unittest.TestCase):
     self.mock_label.skylab = False
 
     reset()
-    self.runner.Run(machine, self.mock_label, self.test_that_bench, test_args,
-                    profiler_args)
+    self.runner.Run(cros_machine, self.mock_label, self.test_that_bench,
+                    test_args, profiler_args)
     self.assertTrue(self.call_disable_aslr)
     self.assertTrue(self.call_test_that_run)
     self.assertFalse(self.call_telemetry_crosperf_run)
@@ -260,8 +263,8 @@ class SuiteRunnerTest(unittest.TestCase):
     self.runner.WaitCooldown.assert_not_called()
 
     reset()
-    self.runner.Run(machine, self.mock_label, self.telemetry_crosperf_bench,
-                    test_args, profiler_args)
+    self.runner.Run(cros_machine, self.mock_label,
+                    self.telemetry_crosperf_bench, test_args, profiler_args)
     self.assertTrue(self.call_disable_aslr)
     self.assertFalse(self.call_test_that_run)
     self.assertTrue(self.call_telemetry_crosperf_run)
@@ -291,7 +294,10 @@ class SuiteRunnerTest(unittest.TestCase):
     self.runner.dut_config['governor'] = 'fake_governor'
     self.runner.dut_config['cpu_freq_pct'] = 75
 
-    self.runner.Run('fake_machine', self.mock_label,
+    machine = 'fake_machine'
+    cros_machine = MockCrosMachine(machine, self.mock_label.chromeos_root,
+                                   self.mock_logger)
+    self.runner.Run(cros_machine, self.mock_label,
                     self.telemetry_crosperf_bench, '', '')
 
     self.runner.WaitCooldown.assert_called_once_with(FakeRunner)
@@ -356,11 +362,9 @@ class SuiteRunnerTest(unittest.TestCase):
     self.runner.DisableASLR(run_on_dut)
     # pyformat: disable
     set_cpu_cmd = ('set -e && '
-                   'stop ui; '
                    'if [[ -e /proc/sys/kernel/randomize_va_space ]]; then '
                    '  echo 0 > /proc/sys/kernel/randomize_va_space; '
-                   'fi; '
-                   'start ui ')
+                   'fi')
     run_on_dut.assert_called_once_with(set_cpu_cmd)
 
   def test_set_cpu_governor(self):
@@ -799,14 +803,15 @@ class SuiteRunnerTest(unittest.TestCase):
     mock_sleep.assert_not_called()
     self.assertEqual(wait_time, 0)
 
-  @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
-  def test_restart_ui(self, mock_cros_runcmd):
-    self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
-    self.runner.RestartUI('lumpy1.cros', '/tmp/chromeos')
-    mock_cros_runcmd.assert_called_once_with(
-        'stop ui; sleep 5; start ui',
-        chromeos_root='/tmp/chromeos',
-        machine='lumpy1.cros')
+  def test_stop_ui(self):
+    dut_runner = mock.Mock(return_value=(0, '', ''))
+    self.runner.StopUI(dut_runner)
+    dut_runner.assert_called_once_with('stop ui')
+
+  def test_start_ui(self):
+    dut_runner = mock.Mock(return_value=(0, '', ''))
+    self.runner.StartUI(dut_runner)
+    dut_runner.assert_called_once_with('start ui')
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
   @mock.patch.object(command_executer.CommandExecuter,
@@ -834,7 +839,7 @@ class SuiteRunnerTest(unittest.TestCase):
     self.mock_cmd_exec.CrosRunCommand = mock_cros_runcmd
     res = self.runner.Test_That_Run('lumpy1.cros', self.mock_label,
                                     self.test_that_bench, '--iterations=2', '')
-    self.assertEqual(mock_cros_runcmd.call_count, 2)
+    self.assertEqual(mock_cros_runcmd.call_count, 1)
     self.assertEqual(mock_chroot_runcmd.call_count, 1)
     self.assertEqual(res, 0)
     self.assertEqual(mock_cros_runcmd.call_args_list[0][0],

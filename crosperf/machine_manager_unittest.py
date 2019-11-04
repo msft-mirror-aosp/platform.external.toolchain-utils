@@ -840,6 +840,15 @@ class CrosMachineTest(unittest.TestCase):
     mock_run_cmd.return_value = [0, 'invalid hardware config', '']
     self.assertRaises(cm._GetMachineID)
 
+  def test_add_cooldown_waittime(self):
+    cm = machine_manager.CrosMachine('1.2.3.4.cros', '/usr/local/chromeos',
+                                     'average')
+    self.assertEqual(cm.GetCooldownWaitTime(), 0)
+    cm.AddCooldownWaitTime(250)
+    self.assertEqual(cm.GetCooldownWaitTime(), 250)
+    cm.AddCooldownWaitTime(1)
+    self.assertEqual(cm.GetCooldownWaitTime(), 251)
+
 
 if __name__ == '__main__':
   unittest.main()

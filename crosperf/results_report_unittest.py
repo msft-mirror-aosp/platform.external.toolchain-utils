@@ -146,12 +146,6 @@ def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0,
   return experiment
 
 
-def _InjectCooldownTime(experiment, cooldown_time):
-  """Inject cooldown wait time in every benchmark run."""
-  for br in experiment.benchmark_runs:
-    br.suite_runner.cooldown_wait_time = cooldown_time
-
-
 class TextResultsReportTest(unittest.TestCase):
   """Tests that the output of a text report contains the things we pass in.
 
@@ -159,32 +153,47 @@ class TextResultsReportTest(unittest.TestCase):
   things are displayed. It just cares that they're present.
   """
 
-  def _checkReport(self, email):
+  def _checkReport(self, mock_getcooldown, email):
     num_success = 2
     success_keyvals = {'retval': 0, 'machine': 'some bot', 'a_float': 3.96}
     experiment = _InjectSuccesses(MakeMockExperiment(), num_success,
                                   success_keyvals)
-    # Set 120 sec cooldown time for every benchmark run.
-    cooldown_time = 120
-    _InjectCooldownTime(experiment, cooldown_time)
+    SECONDS_IN_MIN = 60
+    mock_getcooldown.return_value = {
+        experiment.remote[0]: 12 * SECONDS_IN_MIN,
+        experiment.remote[1]: 8 * SECONDS_IN_MIN
+    }
+
     text_report = TextResultsReport.FromExperiment(
         experiment, email=email).GetReport()
     self.assertIn(str(success_keyvals['a_float']), text_report)
     self.assertIn(success_keyvals['machine'], text_report)
     self.assertIn(MockCrosMachine.CPUINFO_STRING, text_report)
-    self.assertIn('Cooldown wait time', text_report)
-    self.assertIn(
-        '%d min' % (len(experiment.benchmark_runs) * cooldown_time // 60),
-        text_report)
+    self.assertIn('\nDuration\n', text_report)
+    self.assertIn('Total experiment time:\n', text_report)
+    self.assertIn('Cooldown wait time:\n', text_report)
+    self.assertIn('DUT %s: %d min' % (experiment.remote[0], 12), text_report)
+    self.assertIn('DUT %s: %d min' % (experiment.remote[1], 8), text_report)
     return text_report
 
-  def testOutput(self):
-    email_report = self._checkReport(email=True)
-    text_report = self._checkReport(email=False)
+  @mock.patch.object(TextResultsReport, 'GetTotalWaitCooldownTime')
+  def testOutput(self, mock_getcooldown):
+    email_report = self._checkReport(mock_getcooldown, email=True)
+    text_report = self._checkReport(mock_getcooldown, email=False)
 
     # Ensure that the reports somehow different. Otherwise, having the
     # distinction is useless.
     self.assertNotEqual(email_report, text_report)
+
+  def test_get_totalwait_cooldowntime(self):
+    experiment = MakeMockExperiment()
+    cros_machines = experiment.machine_manager.GetMachines()
+    cros_machines[0].AddCooldownWaitTime(120)
+    cros_machines[1].AddCooldownWaitTime(240)
+    text_results = TextResultsReport.FromExperiment(experiment, email=False)
+    total = text_results.GetTotalWaitCooldownTime()
+    self.assertEqual(total[experiment.remote[0]], 120)
+    self.assertEqual(total[experiment.remote[1]], 240)
 
 
 class HTMLResultsReportTest(unittest.TestCase):

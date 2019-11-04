@@ -68,13 +68,6 @@ class SuiteRunner(object):
     self._ct = cmd_term or command_executer.CommandTerminator()
     self.enable_aslr = enable_aslr
     self.dut_config = dut_config
-    self.cooldown_wait_time = 0
-
-  def ResetCooldownWaitTime(self):
-    self.cooldown_wait_time = 0
-
-  def GetCooldownWaitTime(self):
-    return self.cooldown_wait_time
 
   def DutWrapper(self, machine_name, chromeos_root):
     """Wrap DUT parameters inside.
@@ -102,10 +95,11 @@ class SuiteRunner(object):
 
     return RunCommandOnDut
 
-  def Run(self, machine, label, benchmark, test_args, profiler_args):
+  def Run(self, cros_machine, label, benchmark, test_args, profiler_args):
+    machine_name = cros_machine.name
     if not label.skylab:
       # Initialize command executer on DUT.
-      run_on_dut = self.DutWrapper(machine, label.chromeos_root)
+      run_on_dut = self.DutWrapper(machine_name, label.chromeos_root)
     for i in range(0, benchmark.retries + 1):
       if label.skylab:
         # TODO: need to migrate DisableASLR and PinGovernorExecutionFrequencies
@@ -115,6 +109,11 @@ class SuiteRunner(object):
         # it before running.
         ret_tup = self.Skylab_Run(label, benchmark, test_args, profiler_args)
       else:
+        # Stop UI before configuring the DUT.
+        # This will accelerate setup (waiting for cooldown has x10 drop)
+        # and help to reset a Chrome state left after the previous test.
+        self.StopUI(run_on_dut)
+
         # Unless the user turns on ASLR in the flag, we first disable ASLR
         # before running the benchmarks
         if not self.enable_aslr:
@@ -141,7 +140,8 @@ class SuiteRunner(object):
           # on scarlet and kevin64.
           # We might have to consider reducing freq manually to the min
           # if it helps to reduce waiting time.
-          self.cooldown_wait_time += self.WaitCooldown(run_on_dut)
+          wait_time = self.WaitCooldown(run_on_dut)
+          cros_machine.AddCooldownWaitTime(wait_time)
 
         # Setup CPU governor for the benchmark run.
         # It overwrites the previous governor settings.
@@ -160,13 +160,16 @@ class SuiteRunner(object):
         # But it may change in the future and then we have to recover the
         # settings.
 
+        # DUT setup is done. Start a fresh new shiny UI.
+        self.StartUI(run_on_dut)
+
         if benchmark.suite == 'telemetry_Crosperf':
           self.DecreaseWaitTime(run_on_dut)
-          ret_tup = self.Telemetry_Crosperf_Run(machine, label, benchmark,
+          ret_tup = self.Telemetry_Crosperf_Run(machine_name, label, benchmark,
                                                 test_args, profiler_args)
         else:
-          ret_tup = self.Test_That_Run(machine, label, benchmark, test_args,
-                                       profiler_args)
+          ret_tup = self.Test_That_Run(machine_name, label, benchmark,
+                                       test_args, profiler_args)
 
       if ret_tup[0] != 0:
         self.logger.LogOutput('benchmark %s failed. Retries left: %s' %
@@ -183,11 +186,9 @@ class SuiteRunner(object):
 
   def DisableASLR(self, run_on_dut):
     disable_aslr = ('set -e && '
-                    'stop ui; '
                     'if [[ -e /proc/sys/kernel/randomize_va_space ]]; then '
                     '  echo 0 > /proc/sys/kernel/randomize_va_space; '
-                    'fi; '
-                    'start ui ')
+                    'fi')
     if self.log_level == 'average':
       self.logger.LogOutput('Disable ASLR.')
     run_on_dut(disable_aslr)
@@ -449,10 +450,11 @@ class SuiteRunner(object):
       sed_command = 'sed -i "s/_TTI_WAIT_TIME = 10/_TTI_WAIT_TIME = 2/g" '
       run_on_dut(sed_command + FILE)
 
-  def RestartUI(self, machine_name, chromeos_root):
-    command = 'stop ui; sleep 5; start ui'
-    self._ce.CrosRunCommand(
-        command, machine=machine_name, chromeos_root=chromeos_root)
+  def StopUI(self, run_on_dut):
+    run_on_dut('stop ui')
+
+  def StartUI(self, run_on_dut):
+    run_on_dut('start ui')
 
   def Test_That_Run(self, machine, label, benchmark, test_args, profiler_args):
     """Run the test_that test.."""
@@ -466,11 +468,6 @@ class SuiteRunner(object):
     command = 'rm -rf /usr/local/autotest/results/*'
     self._ce.CrosRunCommand(
         command, machine=machine, chromeos_root=label.chromeos_root)
-
-    # We do this because some tests leave the machine in weird states.
-    # Rebooting between iterations has proven to help with this.
-    # But the beep is anoying, we will try restart ui.
-    self.RestartUI(machine, label.chromeos_root)
 
     autotest_dir = AUTOTEST_DIR
     if label.autotest_path != '':
