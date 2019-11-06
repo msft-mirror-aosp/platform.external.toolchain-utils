@@ -206,7 +206,6 @@ class BenchmarkRunTest(unittest.TestCase):
     br.ReadCache = FakeReadCache
     br.RunTest = FakeRunTest
     br.AcquireMachine = FakeAcquireMachine
-    br.PrintTop5Cmds = mock.Mock()
 
     # First test:  No cache hit, all goes well.
     ResetTestValues()
@@ -219,7 +218,6 @@ class BenchmarkRunTest(unittest.TestCase):
     ])
     self.assertEqual(len(self.log_error), 0)
     self.assertEqual(self.status, ['WAITING', 'SUCCEEDED'])
-    br.PrintTop5Cmds.assert_called_once()
 
     # Second test: No cached result found; test run was "terminated" for some
     # reason.
@@ -435,89 +433,6 @@ class BenchmarkRunTest(unittest.TestCase):
 
     br.SetCacheConditions(self.test_cache_conditions)
     self.assertEqual(br.cache_conditions, self.test_cache_conditions)
-
-  def test_print_top5_cmds(self):
-    """Test print of top5 commands."""
-    topcmds = [
-        {
-            'cmd': 'chrome',
-            'cpu_avg': 119.753453465,
-            'count': 4,
-            'top5': [122.8, 107.9, 17.8, 1.0],
-        },
-        {
-            'cmd': 'irq/230-cros-ec',
-            'cpu_avg': 10.000000000000001,
-            'count': 1000,
-            'top5': [0.5, 0.4, 0.3, 0.2, 0.1],
-        },
-        {
-            'cmd': 'powerd',
-            'cpu_avg': 2.0,
-            'count': 2,
-            'top5': [3.0, 1.0]
-        },
-        {
-            'cmd': 'cmd1',
-            'cpu_avg': 1.0,
-            'count': 1,
-            'top5': [1.0],
-        },
-        {
-            'cmd': 'cmd2',
-            'cpu_avg': 1.0,
-            'count': 1,
-            'top5': [1.0],
-        },
-        {
-            'cmd': 'not_for_print',
-            'cpu_avg': 1.0,
-            'count': 1,
-            'top5': [1.0],
-        },
-    ]
-    mock_logger = mock.Mock()
-    br = benchmark_run.BenchmarkRun(
-        'test_run', self.test_benchmark, self.test_label, 1,
-        self.test_cache_conditions, self.mock_machine_manager, mock_logger,
-        'average', '', {})
-    br.PrintTop5Cmds(topcmds)
-    # pylint: disable=line-too-long
-    self.assertEqual(mock_logger.LogOutput.call_args_list, [
-        mock.call('BenchmarkRun[name="test_run"]'),
-        mock.call('Top 5 commands with highest CPU usage:'),
-        mock.call('             COMMAND  AVG CPU%  COUNT   HIGHEST 5'),
-        mock.call('-' * 50),
-        mock.call(
-            '              chrome    119.75      4   [122.8, 107.9, 17.8, 1.0]'
-        ),
-        mock.call(
-            '     irq/230-cros-ec     10.00   1000   [0.5, 0.4, 0.3, 0.2, 0.1]'
-        ),
-        mock.call('              powerd      2.00      2   [3.0, 1.0]'),
-        mock.call('                cmd1      1.00      1   [1.0]'),
-        mock.call('                cmd2      1.00      1   [1.0]'),
-        mock.call('-' * 50),
-    ])
-    # pylint: enable=line-too-long
-
-  def test_print_top5_calls_no_data(self):
-    """Test print of top5 with no data."""
-    topcmds = []
-    mock_logger = mock.Mock()
-    br = benchmark_run.BenchmarkRun(
-        'test_run', self.test_benchmark, self.test_label, 1,
-        self.test_cache_conditions, self.mock_machine_manager, mock_logger,
-        'average', '', {})
-    br.PrintTop5Cmds(topcmds)
-    self.assertEqual(mock_logger.LogOutput.call_args_list, [
-        mock.call('BenchmarkRun[name="test_run"]'),
-        mock.call('Top 5 commands with highest CPU usage:'),
-        mock.call('             COMMAND  AVG CPU%  COUNT   HIGHEST 5'),
-        mock.call('-' * 50),
-        mock.call('[NO DATA FROM THE TOP LOG]'),
-        mock.call('-' * 50),
-    ])
 
 
 if __name__ == '__main__':

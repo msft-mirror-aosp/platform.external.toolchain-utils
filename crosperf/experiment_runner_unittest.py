@@ -407,8 +407,11 @@ class ExperimentRunnerTest(unittest.TestCase):
   @mock.patch.object(TextResultsReport, 'FromExperiment')
   @mock.patch.object(Result, 'CopyResultsTo')
   @mock.patch.object(Result, 'CleanUp')
-  def test_store_results(self, mock_cleanup, mock_copy, _mock_text_report,
-                         mock_report, mock_writefile, mock_mkdir, mock_rmdir):
+  @mock.patch.object(Result, 'FormatStringTop5')
+  @mock.patch('__builtin__.open', new_callable=mock.mock_open)
+  def test_store_results(self, mock_open, mock_top5, mock_cleanup, mock_copy,
+                         _mock_text_report, mock_report, mock_writefile,
+                         mock_mkdir, mock_rmdir):
 
     self.mock_logger.Reset()
     self.exp.results_directory = '/usr/local/crosperf-results'
@@ -434,6 +437,8 @@ class ExperimentRunnerTest(unittest.TestCase):
     self.assertEqual(mock_mkdir.call_count, 0)
     self.assertEqual(mock_rmdir.call_count, 0)
     self.assertEqual(self.mock_logger.LogOutputCount, 0)
+    self.assertEqual(mock_open.call_count, 0)
+    self.assertEqual(mock_top5.call_count, 0)
 
     # Test 2. _terminated is false; everything works properly.
     fake_result = Result(self.mock_logger, self.exp.labels[0], 'average',
@@ -458,13 +463,24 @@ class ExperimentRunnerTest(unittest.TestCase):
     mock_mkdir.assert_called_with('/usr/local/crosperf-results')
     self.assertEqual(mock_rmdir.call_count, 1)
     mock_rmdir.assert_called_with('/usr/local/crosperf-results')
-    self.assertEqual(self.mock_logger.LogOutputCount, 4)
+    self.assertEqual(self.mock_logger.LogOutputCount, 5)
     self.assertEqual(self.mock_logger.output_msgs, [
         'Storing experiment file in /usr/local/crosperf-results.',
         'Storing results report in /usr/local/crosperf-results.',
         'Storing email message body in /usr/local/crosperf-results.',
-        'Storing results of each benchmark run.'
+        'Storing results of each benchmark run.',
+        'Storing top5 statistics of each benchmark run into'
+        ' /usr/local/crosperf-results/topstats.log.',
     ])
+    self.assertEqual(mock_open.call_count, 1)
+    # Check write to a topstats.log file.
+    mock_open.assert_called_with('/usr/local/crosperf-results/topstats.log',
+                                 'w')
+    mock_open().write.assert_called()
+
+    # Check top5 calls with no arguments.
+    top5calls = [mock.call()] * 6
+    self.assertEqual(mock_top5.call_args_list, top5calls)
 
 
 if __name__ == '__main__':

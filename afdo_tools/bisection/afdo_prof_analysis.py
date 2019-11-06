@@ -13,14 +13,9 @@ to try and determine what exactly is bad about the bad profile. It does this
 with three main techniques: bisecting search, range search, and rough diff-ing.
 """
 
-from __future__ import print_function
+from __future__ import division, print_function
 
-from absl import app
-from absl import flags
-from datetime import date
-from enum import IntEnum
-from tempfile import mkstemp
-
+import argparse
 import json
 # Pylint recommends we use "from chromite.lib import cros_logging as logging".
 # Chromite specific policy message, we want to keep using the standard logging
@@ -29,29 +24,10 @@ import logging
 import os
 import random
 import subprocess
-import sys
 import time
-
-flags.DEFINE_string('good_prof', None, 'Text-based "Good" profile for'
-                    'analysis')
-flags.DEFINE_string('bad_prof', None, 'Text-based "Bad" profile for' 'analysis')
-flags.DEFINE_string(
-    'external_decider', None, 'External script that, given an'
-    'AFDO profile, returns GOOD/BAD/SKIP')
-flags.DEFINE_string('analysis_output_file', None,
-                    'File to output JSON results to')
-flags.DEFINE_string(
-    'state_file', '%s/afdo_analysis_state.json' % os.getcwd(),
-    'File path containing state to load from initially, and '
-    'will be overwritten with new state on each iteration')
-flags.DEFINE_boolean(
-    'no_resume', False, 'If enabled, no initial state will be '
-    'loaded and the program will run from the beginning')
-flags.DEFINE_boolean(
-    'remove_state_on_completion', False, 'If enabled, state '
-    'file will be removed once profile analysis is completed')
-flags.DEFINE_float('seed', None, 'Float specifying seed for randomness')
-FLAGS = flags.FLAGS
+from datetime import date
+from enum import IntEnum
+from tempfile import mkstemp
 
 
 class StatusEnum(IntEnum):
@@ -113,11 +89,12 @@ def prof_to_tmp(prof):
 class DeciderState(object):
   """Class for the external decider."""
 
-  def __init__(self, state_file):
+  def __init__(self, state_file, external_decider, seed):
     self.accumulated_results = []  # over this run of the script
+    self.external_decider = external_decider
     self.saved_results = []  # imported from a previous run of this script
     self.state_file = state_file
-    self.seed = FLAGS.seed or time.time()
+    self.seed = seed if seed is not None else time.time()
 
   def load_state(self):
     if not os.path.exists(self.state_file):
@@ -142,8 +119,7 @@ class DeciderState(object):
 
   def save_state(self):
     state = {'seed': self.seed, 'accumulated_results': self.accumulated_results}
-    fd, tmp_file = mkstemp()
-    os.close(fd)
+    tmp_file = self.state_file + '.new'
     with open(tmp_file, 'w') as f:
       json.dump(state, f, indent=2)
     os.rename(tmp_file, self.state_file)
@@ -160,7 +136,7 @@ class DeciderState(object):
     filename = prof_to_tmp(prof)
 
     try:
-      return_code = subprocess.call([FLAGS.external_decider, filename])
+      return_code = subprocess.call([self.external_decider, filename])
     finally:
       os.remove(filename)
 
@@ -174,7 +150,7 @@ class DeciderState(object):
       if save_run:
         self.accumulated_results.append(status.value)
       logging.info('Run %d of external script %s returned %s',
-                   len(self.accumulated_results), FLAGS.external_decider,
+                   len(self.accumulated_results), self.external_decider,
                    status.name)
       self.save_state()
       return status
@@ -209,7 +185,7 @@ def bisect_profiles(decider, good, bad, common_funcs, lo, hi):
     results['individuals'].append(common_funcs[lo])
     return results
 
-  mid = (lo + hi) / 2
+  mid = (lo + hi) // 2
   lo_mid_prof = good.copy()  # covers bad from lo:mid
   mid_hi_prof = good.copy()  # covers bad from mid:hi
   for func in common_funcs[lo:mid]:
@@ -248,9 +224,9 @@ def bisect_profiles_wrapper(decider, good, bad, perform_check=True):
   # Note that while decider is a random mock, these assertions may fail.
   if perform_check:
     if decider.run(good, save_run=False) != StatusEnum.GOOD_STATUS:
-      raise ValueError("Supplied good profile is not actually GOOD")
+      raise ValueError('Supplied good profile is not actually GOOD')
     if decider.run(bad, save_run=False) != StatusEnum.BAD_STATUS:
-      raise ValueError("Supplied bad profile is not actually BAD")
+      raise ValueError('Supplied bad profile is not actually BAD')
 
   common_funcs = sorted(func for func in good if func in bad)
   if not common_funcs:
@@ -282,7 +258,7 @@ def range_search(decider, good, bad, common_funcs, lo, hi):
   of functions in a reasonable timeframe.
   """
 
-  average = lambda x, y: int(round((x + y) / 2.0))
+  average = lambda x, y: int(round((x + y) // 2.0))
 
   def find_upper_border(good_copy, funcs, lo, hi, last_bad_val=None):
     """Finds the upper border of problematic range."""
@@ -329,7 +305,7 @@ def range_search(decider, good, bad, common_funcs, lo, hi):
       random.shuffle(lo_mid_funcs)
       random.shuffle(mid_hi_funcs)
     else:  # consider lo-mid and mid-hi separately bc must cross border
-      mid = (lo + hi) / 2
+      mid = (lo + hi) // 2
       lo_mid_funcs = common_funcs[lo:mid]
       mid_hi_funcs = common_funcs[mid:hi]
 
@@ -380,20 +356,58 @@ def check_bad_not_good(decider, good, bad):
   return decider.run(good_copy) == StatusEnum.BAD_STATUS
 
 
-def main(_):
+def parse_args():
+  parser = argparse.ArgumentParser(
+      description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+  parser.add_argument(
+      '--good_prof',
+      required=True,
+      help='Text-based "Good" profile for analysis')
+  parser.add_argument(
+      '--bad_prof', required=True, help='Text-based "Bad" profile for analysis')
+  parser.add_argument(
+      '--external_decider',
+      required=True,
+      help='External script that, given an AFDO profile, returns '
+      'GOOD/BAD/SKIP')
+  parser.add_argument(
+      '--analysis_output_file',
+      required=True,
+      help='File to output JSON results to')
+  parser.add_argument(
+      '--state_file',
+      default='%s/afdo_analysis_state.json' % os.getcwd(),
+      help='File path containing state to load from initially, and will be '
+      'overwritten with new state on each iteration')
+  parser.add_argument(
+      '--no_resume',
+      action='store_true',
+      help='If enabled, no initial state will be loaded and the program will '
+      'run from the beginning')
+  parser.add_argument(
+      '--remove_state_on_completion',
+      action='store_true',
+      help='If enabled, state file will be removed once profile analysis is '
+      'completed')
+  parser.add_argument(
+      '--seed', type=float, help='Float specifying seed for randomness')
+  return parser.parse_args()
 
-  if not FLAGS.no_resume and FLAGS.seed:  # conflicting seeds
+
+def main(flags):
+  if not flags.no_resume and flags.seed:  # conflicting seeds
     raise RuntimeError('Ambiguous seed value; do not resume from existing '
                        'state and also specify seed by command line flag')
 
-  decider = DeciderState(FLAGS.state_file)
-  if not FLAGS.no_resume:
+  decider = DeciderState(
+      flags.state_file, flags.external_decider, seed=flags.seed)
+  if not flags.no_resume:
     decider.load_state()
   random.seed(decider.seed)
 
-  with open(FLAGS.good_prof) as good_f:
+  with open(flags.good_prof) as good_f:
     good_items = text_to_json(good_f)
-  with open(FLAGS.bad_prof) as bad_f:
+  with open(flags.bad_prof) as bad_f:
     bad_items = text_to_json(bad_f)
 
   bisect_results = bisect_profiles_wrapper(decider, good_items, bad_items)
@@ -406,25 +420,19 @@ def main(_):
       'good_only_functions': gnb_result,
       'bad_only_functions': bng_result
   }
-  with open(FLAGS.analysis_output_file, 'wb') as f:
+  with open(flags.analysis_output_file, 'wb') as f:
     json.dump(results, f, indent=2)
-  if FLAGS.remove_state_on_completion:
-    os.remove(FLAGS.state_file)
+  if flags.remove_state_on_completion:
+    os.remove(flags.state_file)
     logging.info('Removed state file %s following completion of script...',
-                 FLAGS.state_file)
+                 flags.state_file)
   else:
-    completed_state_file = '%s.completed.%s' % (FLAGS.state_file,
+    completed_state_file = '%s.completed.%s' % (flags.state_file,
                                                 str(date.today()))
-    os.rename(FLAGS.state_file, completed_state_file)
+    os.rename(flags.state_file, completed_state_file)
     logging.info('Stored completed state file as %s...', completed_state_file)
   return results
 
 
 if __name__ == '__main__':
-  flags.mark_flag_as_required('good_prof')
-  flags.mark_flag_as_required('bad_prof')
-  flags.mark_flag_as_required('external_decider')
-  flags.mark_flag_as_required('analysis_output_file')
-  app.run(main)
-else:
-  FLAGS(sys.argv)
+  main(parse_args())
