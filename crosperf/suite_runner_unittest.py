@@ -9,6 +9,7 @@
 
 from __future__ import print_function
 
+import json
 import os.path
 import time
 
@@ -30,6 +31,7 @@ class SuiteRunnerTest(unittest.TestCase):
   """Class of SuiteRunner test."""
   real_logger = logger.GetLogger()
 
+  mock_json = mock.Mock(spec=json)
   mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
   mock_cmd_term = mock.Mock(spec=command_executer.CommandTerminator)
   mock_logger = mock.Mock(spec=logger.Logger)
@@ -324,7 +326,8 @@ class SuiteRunnerTest(unittest.TestCase):
     self.assertEqual(len(args_dict), 2)
 
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
-  def test_skylab_run(self, mock_runcmd):
+  @mock.patch.object(json, 'loads')
+  def test_skylab_run(self, mock_json_loads, mock_runcmd):
 
     def FakeDownloadResult(l, task_id):
       if l and task_id:
@@ -333,9 +336,18 @@ class SuiteRunnerTest(unittest.TestCase):
 
     mock_runcmd.return_value = \
       (0,
-       '"success":true\nCreated Swarming task https://swarming/task?id=12345',
+       'Created Swarming task https://swarming/task/b12345',
        '')
     self.mock_cmd_exec.RunCommandWOutput = mock_runcmd
+
+    mock_json_loads.return_value = {
+        'child-results': [{
+            'success': True,
+            'task-run-url': 'https://swarming/task?id=12345'
+        }]
+    }
+    self.mock_json.loads = mock_json_loads
+
     self.mock_label.skylab = True
     self.runner.DownloadResult = FakeDownloadResult
     res = self.runner.Skylab_Run(self.mock_label, self.test_that_bench, '', '')
@@ -346,14 +358,14 @@ class SuiteRunnerTest(unittest.TestCase):
     args_list = mock_runcmd.call_args_list[0][0]
     args_dict = mock_runcmd.call_args_list[0][1]
     self.assertEqual(args_list[0],
-                     ('/usr/local/bin/skylab create-test  '
+                     ('/usr/local/bin/skylab create-test '
                       '-dim dut_name:lumpy1 -dim dut_name:lumpy.cros2 '
-                      '-bb=false -client-test -board=lumpy -image=build '
-                      '-pool=DUT_POOL_QUOTA octane'))
+                      '-board=lumpy -image=build '
+                      '-pool=toolchain octane'))
     self.assertEqual(args_dict['command_terminator'], self.mock_cmd_term)
 
     args_list = mock_runcmd.call_args_list[1][0]
-    self.assertEqual(args_list[0], ('skylab wait-task -bb=false 12345'))
+    self.assertEqual(args_list[0], ('skylab wait-task 12345'))
     self.assertEqual(args_dict['command_terminator'], self.mock_cmd_term)
 
   @mock.patch.object(time, 'sleep')

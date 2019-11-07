@@ -8,6 +8,7 @@
 from __future__ import division
 from __future__ import print_function
 
+import json
 import os
 import shlex
 import time
@@ -212,9 +213,10 @@ class SuiteRunner(object):
     cp_command = '%s -mq cp -r %s %s' % (gsutil_cmd, result_dir, download_path)
 
     # Server sometimes will not be able to generate the result directory right
-    # after the test. Will try to access this gs location every 60s for 5 mins.
+    # after the test. Will try to access this gs location every 60s for
+    # RETRY_LIMIT mins.
     t = 0
-    RETRY_LIMIT = 5
+    RETRY_LIMIT = 10
     while t < RETRY_LIMIT:
       t += 1
       status = self._ce.RunCommand(ls_command, print_to_console=False)
@@ -234,23 +236,20 @@ class SuiteRunner(object):
     status = self._ce.RunCommand(cp_command)
     if status != 0:
       self.logger.LogOutput('Cannot download results from task %s' % task_id)
+    else:
+      self.logger.LogOutput('Result downloaded for task %s' % task_id)
     return status
 
   def Skylab_Run(self, label, benchmark, test_args, profiler_args):
     """Run the test via skylab.."""
-    # Skylab by default uses cros_test_platform to start test.
-    # We don't use it for now since we want to directly interact with dut.
-    options = '-bb=false'
-
-    if benchmark.suite != 'telemetry_Crosperf':
-      options += ' -client-test'
+    options = ''
     if label.board:
-      options += ' -board=%s' % label.board
+      options += '-board=%s' % label.board
     if label.build:
       options += ' -image=%s' % label.build
-    # TODO: now only put quota pool here, user need to be able to specify which
-    # pool to use. Need to request feature to not use this option at all.
-    options += ' -pool=DUT_POOL_QUOTA'
+    # TODO: now only put toolchain pool here, user need to be able to specify
+    # which pool to use. Need to request feature to not use this option at all.
+    options += ' -pool=toolchain'
     if benchmark.suite == 'telemetry_Crosperf':
       if test_args:
         # Strip double quotes off args (so we can wrap them in single
@@ -273,7 +272,7 @@ class SuiteRunner(object):
     for dut in label.remote:
       dimensions += ' -dim dut_name:%s' % dut.rstrip('.cros')
 
-    command = (('%s create-test %s %s %s') % \
+    command = (('%s create-test%s %s %s') % \
               (SKYLAB_PATH, dimensions, options, benchmark.test_name))
 
     if self.log_level != 'verbose':
@@ -286,17 +285,40 @@ class SuiteRunner(object):
       return ret_tup
 
     # Std output of the command will look like:
-    # Created Swarming task https://chromeos-swarming.appspot.com/task?id=12345
-    # We want to parse it and get the id number of the task.
-    task_id = ret_tup[1].strip().split('id=')[1]
+    # Created request at https://ci.chromium.org/../cros_test_platform/b12345
+    # We want to parse it and get the id number of the task, which is the
+    # number in the very end of the link address.
+    task_id = ret_tup[1].strip().split('b')[-1]
 
-    command = ('skylab wait-task -bb=false %s' % (task_id))
+    command = ('skylab wait-task %s' % task_id)
     if self.log_level != 'verbose':
       self.logger.LogOutput('Waiting for skylab test to finish.')
       self.logger.LogOutput('CMD: %s' % command)
 
     ret_tup = self._ce.RunCommandWOutput(command, command_terminator=self._ct)
-    if '"success":true' in ret_tup[1]:
+
+    # The output of `wait-task` command will be a combination of verbose and a
+    # json format result in the end. The json result looks like this:
+    # {"task-result":
+    #   {"name":"Test Platform Invocation",
+    #    "state":"", "failure":false, "success":true,
+    #    "task-run-id":"12345",
+    #    "task-run-url":"https://ci.chromium.org/.../cros_test_platform/b12345",
+    #    "task-logs-url":""
+    #    },
+    #  "stdout":"",
+    #  "child-results":
+    #    [{"name":"graphics_WebGLAquarium",
+    #      "state":"", "failure":false, "success":true, "task-run-id":"",
+    #      "task-run-url":"https://chromeos-swarming.appspot.com/task?id=1234",
+    #      "task-logs-url":"https://stainless.corp.google.com/1234/"}
+    #    ]
+    # }
+    # We need the task id of the child-results to download result.
+    output = json.loads(ret_tup[1].split('\n')[-1])
+    output = output['child-results'][0]
+    if output['success']:
+      task_id = output['task-run-url'].split('=')[-1]
       if self.DownloadResult(label, task_id) == 0:
         result_dir = '\nResults placed in tmp/swarming-%s\n' % task_id
         return (ret_tup[0], result_dir, ret_tup[2])
