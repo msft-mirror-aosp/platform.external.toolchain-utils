@@ -86,6 +86,7 @@ def MakeMockExperiment(compiler='gcc'):
   mock_experiment_file = io.BytesIO("""
       board: x86-alex
       remote: 127.0.0.1
+      locks_dir: /tmp
       perf_args: record -a -e cycles
       benchmark: PageCycler {
         iterations: 3
@@ -109,8 +110,7 @@ def MakeMockExperiment(compiler='gcc'):
   return experiment
 
 
-def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0,
-                     label=None):
+def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0):
   """Injects successful experiment runs (for each label) into the experiment."""
   # Defensive copy of keyvals, so if it's modified, we'll know.
   keyvals = dict(keyvals)
@@ -231,9 +231,9 @@ class HTMLResultsReportTest(unittest.TestCase):
       else:
         HTMLResultsReport(benchmark_results).GetReport()
       mod_mock = standin
-    self.assertEquals(mod_mock.call_count, 1)
+    self.assertEqual(mod_mock.call_count, 1)
     # call_args[0] is positional args, call_args[1] is kwargs.
-    self.assertEquals(mod_mock.call_args[0], tuple())
+    self.assertEqual(mod_mock.call_args[0], tuple())
     fmt_args = mod_mock.call_args[1]
     return self._GetTestOutput(**fmt_args)
 

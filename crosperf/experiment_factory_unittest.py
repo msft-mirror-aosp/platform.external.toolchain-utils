@@ -29,6 +29,7 @@ import settings_factory
 EXPERIMENT_FILE_1 = """
   board: x86-alex
   remote: chromeos-alex3
+  locks_dir: /tmp
 
   benchmark: PageCycler {
     iterations: 3
@@ -51,6 +52,7 @@ EXPERIMENT_FILE_1 = """
 EXPERIMENT_FILE_2 = """
   board: x86-alex
   remote: chromeos-alex3
+  locks_dir: /tmp
 
   cwp_dso: kallsyms
 
@@ -111,7 +113,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertEqual(exp.benchmarks[1].weight, 0.2)
 
   def testDuplecateBenchmark(self):
-    mock_experiment_file = ExperimentFile(io.BytesIO(''))
+    mock_experiment_file = ExperimentFile(io.BytesIO(EXPERIMENT_FILE_1))
     mock_experiment_file.all_settings = []
     benchmark_settings1 = settings_factory.BenchmarkSettings('name')
     mock_experiment_file.all_settings.append(benchmark_settings1)
@@ -126,6 +128,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     mock_experiment_file = ExperimentFile(io.BytesIO(''))
     mock_experiment_file.all_settings = []
     global_settings = settings_factory.GlobalSettings('test_name')
+    global_settings.SetField('locks_dir', '/tmp')
 
     # Test 1: DSO type not supported
     global_settings.SetField('cwp_dso', 'test')
@@ -309,6 +312,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     # Basic test.
     global_settings.SetField('name', 'unittest_test')
     global_settings.SetField('board', 'lumpy')
+    global_settings.SetField('locks_dir', '/tmp')
     global_settings.SetField('remote', '123.45.67.89 123.45.76.80')
     benchmark_settings.SetField('test_name', 'kraken')
     benchmark_settings.SetField('suite', 'telemetry_Crosperf')

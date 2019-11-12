@@ -25,6 +25,7 @@ import experiment_file
 EXPERIMENT_FILE_1 = """
   board: x86-alex
   remote: chromeos-alex3
+  locks_dir: /tmp
   perf_args: record -a -e cycles
   benchmark: PageCycler {
     iterations: 3
