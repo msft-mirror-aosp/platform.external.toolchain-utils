@@ -463,14 +463,6 @@ from get_llvm_hash import LLVMHash
 LLVMHash().GetLLVMHash(<svn_version>)
 ```
 
-For example, to retrieve the commit message of a git hash of LLVM:
-
-```
-from get_llvm_hash import LLVMHash
-
-LLVMHash.GetCommitMessageForHash(<git_hash>)
-```
-
 For example, to retrieve the latest google3 LLVM version:
 
 ```
