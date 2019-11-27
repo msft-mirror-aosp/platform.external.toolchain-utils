@@ -327,10 +327,13 @@ class DutWrapper(object):
       self.RunCommandOnDut(sed_command + FILE)
 
   def StopUI(self):
-    self.RunCommandOnDut('stop ui')
+    # Added "ignore_status" for the case when crosperf stops ui service which
+    # was already stopped. Command is going to fail with 1.
+    self.RunCommandOnDut('stop ui', ignore_status=True)
 
   def StartUI(self):
-    self.RunCommandOnDut('start ui')
+    # Similar to StopUI, `start ui` fails if the service is already started.
+    self.RunCommandOnDut('start ui', ignore_status=True)
 
   def KerncmdUpdateNeeded(self, intel_pstate):
     """Check whether kernel cmdline update is needed.

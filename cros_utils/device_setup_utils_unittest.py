@@ -606,12 +606,14 @@ class DutWrapperTest(unittest.TestCase):
   def test_stop_ui(self):
     self.dw.RunCommandOnDut = mock.Mock(return_value=(0, '', ''))
     self.dw.StopUI()
-    self.dw.RunCommandOnDut.assert_called_once_with('stop ui')
+    self.dw.RunCommandOnDut.assert_called_once_with(
+        'stop ui', ignore_status=True)
 
   def test_start_ui(self):
     self.dw.RunCommandOnDut = mock.Mock(return_value=(0, '', ''))
     self.dw.StartUI()
-    self.dw.RunCommandOnDut.assert_called_once_with('start ui')
+    self.dw.RunCommandOnDut.assert_called_once_with(
+        'start ui', ignore_status=True)
 
 
 if __name__ == '__main__':

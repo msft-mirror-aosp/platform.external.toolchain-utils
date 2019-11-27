@@ -13,6 +13,8 @@ import os
 import shlex
 import time
 
+from contextlib import contextmanager
+
 from cros_utils import command_executer
 from cros_utils.device_setup_utils import DutWrapper
 
@@ -112,59 +114,68 @@ class SuiteRunner(object):
         break
     return ret_tup
 
+  @contextmanager
+  def PauseUI(self, run_on_dut):
+    """Stop UI before and Start UI after the context block.
+
+    Context manager will make sure UI is always resumed at the end.
+    """
+    run_on_dut.StopUI()
+    try:
+      yield
+
+    finally:
+      run_on_dut.StartUI()
+
   def SetupDevice(self, run_on_dut, cros_machine):
-    # Stop UI before configuring the DUT.
+    # Pause UI while configuring the DUT.
     # This will accelerate setup (waiting for cooldown has x10 drop)
     # and help to reset a Chrome state left after the previous test.
-    run_on_dut.StopUI()
+    with self.PauseUI(run_on_dut):
+      # Unless the user turns on ASLR in the flag, we first disable ASLR
+      # before running the benchmarks
+      if not self.enable_aslr:
+        run_on_dut.DisableASLR()
 
-    # Unless the user turns on ASLR in the flag, we first disable ASLR
-    # before running the benchmarks
-    if not self.enable_aslr:
-      run_on_dut.DisableASLR()
+      # CPU usage setup comes first where we enable/disable cores.
+      run_on_dut.SetupCpuUsage()
+      cpu_online_status = run_on_dut.GetCpuOnline()
+      # List of online cores of type int (core number).
+      online_cores = [
+          core for core, status in cpu_online_status.items() if status
+      ]
+      if self.dut_config['cooldown_time']:
+        # Setup power conservative mode for effective cool down.
+        # Set ignore status since powersave may no be available
+        # on all platforms and we are going to handle it.
+        ret = run_on_dut.SetCpuGovernor('powersave', ignore_status=True)
+        if ret:
+          # "powersave" is not available, use "ondemand".
+          # Still not a fatal error if it fails.
+          ret = run_on_dut.SetCpuGovernor('ondemand', ignore_status=True)
+        # TODO(denik): Run comparison test for 'powersave' and 'ondemand'
+        # on scarlet and kevin64.
+        # We might have to consider reducing freq manually to the min
+        # if it helps to reduce waiting time.
+        wait_time = run_on_dut.WaitCooldown()
+        cros_machine.AddCooldownWaitTime(wait_time)
 
-    # CPU usage setup comes first where we enable/disable cores.
-    run_on_dut.SetupCpuUsage()
-    cpu_online_status = run_on_dut.GetCpuOnline()
-    # List of online cores of type int (core number).
-    online_cores = [
-        core for core, status in cpu_online_status.items() if status
-    ]
-    if self.dut_config['cooldown_time']:
-      # Setup power conservative mode for effective cool down.
-      # Set ignore status since powersave may no be available
-      # on all platforms and we are going to handle it.
-      ret = run_on_dut.SetCpuGovernor('powersave', ignore_status=True)
-      if ret:
-        # "powersave" is not available, use "ondemand".
-        # Still not a fatal error if it fails.
-        ret = run_on_dut.SetCpuGovernor('ondemand', ignore_status=True)
-      # TODO(denik): Run comparison test for 'powersave' and 'ondemand'
-      # on scarlet and kevin64.
-      # We might have to consider reducing freq manually to the min
-      # if it helps to reduce waiting time.
-      wait_time = run_on_dut.WaitCooldown()
-      cros_machine.AddCooldownWaitTime(wait_time)
+      # Setup CPU governor for the benchmark run.
+      # It overwrites the previous governor settings.
+      governor = self.dut_config['governor']
+      # FIXME(denik): Pass online cores to governor setup.
+      run_on_dut.SetCpuGovernor(governor, ignore_status=False)
 
-    # Setup CPU governor for the benchmark run.
-    # It overwrites the previous governor settings.
-    governor = self.dut_config['governor']
-    # FIXME(denik): Pass online cores to governor setup.
-    run_on_dut.SetCpuGovernor(governor, ignore_status=False)
-
-    # Disable Turbo and Setup CPU freq should ALWAYS proceed governor setup
-    # since governor may change:
-    # - frequency;
-    # - turbo/boost.
-    run_on_dut.DisableTurbo()
-    run_on_dut.SetupCpuFreq(online_cores)
-    # FIXME(denik): Currently we are not recovering the previous cpufreq
-    # settings since we do reboot/setup every time anyway.
-    # But it may change in the future and then we have to recover the
-    # settings.
-
-    # DUT setup is done. Start a fresh new shiny UI.
-    run_on_dut.StartUI()
+      # Disable Turbo and Setup CPU freq should ALWAYS proceed governor setup
+      # since governor may change:
+      # - frequency;
+      # - turbo/boost.
+      run_on_dut.DisableTurbo()
+      run_on_dut.SetupCpuFreq(online_cores)
+      # FIXME(denik): Currently we are not recovering the previous cpufreq
+      # settings since we do reboot/setup every time anyway.
+      # But it may change in the future and then we have to recover the
+      # settings.
 
   def Test_That_Run(self, machine, label, benchmark, test_args, profiler_args):
     """Run the test_that test.."""
