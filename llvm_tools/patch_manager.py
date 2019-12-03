@@ -8,17 +8,17 @@
 
 from __future__ import print_function
 
+from collections import namedtuple
+from failure_modes import FailureModes
+from subprocess_helpers import check_call
+from subprocess_helpers import check_output
+
 import argparse
 import json
+import get_llvm_hash
 import os
 import subprocess
 import sys
-
-from collections import namedtuple
-from failure_modes import FailureModes
-from get_llvm_hash import LLVMHash
-from subprocess_helpers import check_call
-from subprocess_helpers import check_output
 
 
 def is_directory(dir_path):
@@ -151,7 +151,7 @@ def GetHEADSVNVersion(src_path):
 
   git_hash = check_output(cmd)
 
-  version = GetVersionFrom(src_path, git_hash)
+  version = get_llvm_hash.GetVersionFrom(src_path, git_hash.rstrip())
 
   return version
 
@@ -322,7 +322,7 @@ def PerformBisection(src_path, good_commit, bad_commit, svn_version,
   check_output(end_cmd)
 
   # `git bisect run` returns the bad commit hash and the commit message.
-  version = GetVersionFrom(src_path, git_hash)
+  version = get_llvm_hash.GetVersionFrom(src_path, git_hash)
 
   return version
 

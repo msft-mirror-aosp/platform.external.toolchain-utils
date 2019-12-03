@@ -39,10 +39,11 @@ def GetVersionFrom(src_dir, git_hash):
     An SVN-style version number associated with the git hash.
   """
 
-  args = ['--llvm_dir', src_dir, '--sha', git_hash]
-  version = git_llvm_rev.main(args).strip()
-  assert version.startswith('r')
-  return int(version[1:])
+  version = git_llvm_rev.translate_sha_to_rev(
+      git_llvm_rev.LLVMConfig(remote='origin', dir=src_dir), git_hash)
+  # Note: branches aren't supported
+  assert version.branch == 'master', version.branch
+  return version.number
 
 
 def GetGitHashFrom(src_dir, version):
@@ -59,12 +60,9 @@ def GetGitHashFrom(src_dir, version):
     subprocess.CalledProcessError: Failed to find a git hash.
   """
 
-  assert isinstance(version, int)
-  args = ['--llvm_dir', src_dir, '--rev', 'r' + str(version)]
-
-  git_hash = git_llvm_rev.main(args).rstrip()
-
-  return git_hash
+  return git_llvm_rev.translate_rev_to_sha(
+      git_llvm_rev.LLVMConfig(remote='origin', dir=src_dir),
+      git_llvm_rev.Rev(branch='master', number=version))
 
 
 @contextmanager
@@ -185,7 +183,7 @@ def GetGoogle3LLVMVersion(stable):
   git_hash = check_output(cmd)
 
   # Change type to an integer
-  return GetVersionFrom(GetAndUpdateLLVMProjectInLLVMTools(), git_hash.strip())
+  return GetVersionFrom(GetAndUpdateLLVMProjectInLLVMTools(), git_hash)
 
 
 def is_svn_option(svn_option):

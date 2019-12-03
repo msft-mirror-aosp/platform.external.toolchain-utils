@@ -343,13 +343,11 @@ def main(argv: t.List[str]) -> None:
   )
 
   if opts.sha:
-    rev = str(translate_sha_to_rev(config, opts.sha))
+    rev = translate_sha_to_rev(config, opts.sha)
     print(rev)
-    return rev
   else:
-    sha = str(translate_rev_to_sha(config, Rev.parse(opts.rev)))
+    sha = translate_rev_to_sha(config, Rev.parse(opts.rev))
     print(sha)
-    return sha
 
 
 if __name__ == '__main__':
