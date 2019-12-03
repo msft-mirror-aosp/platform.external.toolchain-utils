@@ -243,7 +243,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     bench_list = []
     ef.AppendBenchmarkSet(bench_list, experiment_factory.telemetry_perfv2_tests,
                           '', 1, False, '', 'telemetry_Crosperf', False, 0,
-                          False, '', 0, False)
+                          False, '', 0)
     self.assertEqual(
         len(bench_list), len(experiment_factory.telemetry_perfv2_tests))
     self.assertTrue(isinstance(bench_list[0], benchmark.Benchmark))
@@ -251,7 +251,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     bench_list = []
     ef.AppendBenchmarkSet(
         bench_list, experiment_factory.telemetry_pagecycler_tests, '', 1, False,
-        '', 'telemetry_Crosperf', False, 0, False, '', 0, False)
+        '', 'telemetry_Crosperf', False, 0, False, '', 0)
     self.assertEqual(
         len(bench_list), len(experiment_factory.telemetry_pagecycler_tests))
     self.assertTrue(isinstance(bench_list[0], benchmark.Benchmark))
@@ -259,7 +259,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     bench_list = []
     ef.AppendBenchmarkSet(
         bench_list, experiment_factory.telemetry_toolchain_perf_tests, '', 1,
-        False, '', 'telemetry_Crosperf', False, 0, False, '', 0, False)
+        False, '', 'telemetry_Crosperf', False, 0, False, '', 0)
     self.assertEqual(
         len(bench_list), len(experiment_factory.telemetry_toolchain_perf_tests))
     self.assertTrue(isinstance(bench_list[0], benchmark.Benchmark))

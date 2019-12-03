@@ -60,8 +60,7 @@ class SuiteRunner(object):
                logger_to_use=None,
                log_level='verbose',
                cmd_exec=None,
-               cmd_term=None,
-               enable_aslr=False):
+               cmd_term=None):
     self.logger = logger_to_use
     self.log_level = log_level
     self._ce = cmd_exec or command_executer.GetCommandExecuter(
@@ -69,7 +68,6 @@ class SuiteRunner(object):
     # DUT command executer.
     # Will be initialized and used within Run.
     self._ct = cmd_term or command_executer.CommandTerminator()
-    self.enable_aslr = enable_aslr
     self.dut_config = dut_config
 
   def Run(self, cros_machine, label, benchmark, test_args, profiler_args):
@@ -134,7 +132,7 @@ class SuiteRunner(object):
     with self.PauseUI(run_on_dut):
       # Unless the user turns on ASLR in the flag, we first disable ASLR
       # before running the benchmarks
-      if not self.enable_aslr:
+      if not self.dut_config['enable_aslr']:
         run_on_dut.DisableASLR()
 
       # CPU usage setup comes first where we enable/disable cores.
@@ -370,11 +368,12 @@ class SuiteRunner(object):
       args_string = "test_args='%s'" % test_args
 
     top_interval = self.dut_config['top_interval']
+    turbostat = self.dut_config['turbostat']
     cmd = ('{} {} {} --board={} --args="{} run_local={} test={} '
            'turbostat={} top_interval={} {}" {} telemetry_Crosperf'.format(
                TEST_THAT_PATH, autotest_dir_arg, fast_arg, label.board,
-               args_string, benchmark.run_local, benchmark.test_name,
-               benchmark.turbostat, top_interval, profiler_args, machine))
+               args_string, benchmark.run_local, benchmark.test_name, turbostat,
+               top_interval, profiler_args, machine))
 
     # Use --no-ns-pid so that cros_sdk does not create a different
     # process namespace and we can kill process created easily by their

@@ -31,18 +31,9 @@ STATUS_PENDING = 'PENDING'
 class BenchmarkRun(threading.Thread):
   """The benchmarkrun class."""
 
-  def __init__(self,
-               name,
-               benchmark,
-               label,
-               iteration,
-               cache_conditions,
-               machine_manager,
-               logger_to_use,
-               log_level,
-               share_cache,
-               dut_config,
-               enable_aslr=False):
+  def __init__(self, name, benchmark, label, iteration, cache_conditions,
+               machine_manager, logger_to_use, log_level, share_cache,
+               dut_config):
     threading.Thread.__init__(self)
     self.name = name
     self._logger = logger_to_use
@@ -55,8 +46,7 @@ class BenchmarkRun(threading.Thread):
     self.retval = None
     self.run_completed = False
     self.machine_manager = machine_manager
-    self.suite_runner = SuiteRunner(
-        dut_config, self._logger, self.log_level, enable_aslr=enable_aslr)
+    self.suite_runner = SuiteRunner(dut_config, self._logger, self.log_level)
     self.machine = None
     self.cache_conditions = cache_conditions
     self.runs_complete = 0

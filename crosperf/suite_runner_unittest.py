@@ -132,6 +132,7 @@ class SuiteRunnerTest(unittest.TestCase):
     self.runner.SetupDevice = mock.Mock()
     DutWrapper.RunCommandOnDut = mock.Mock(return_value=FakeRunner)
 
+    self.runner.dut_config['enable_aslr'] = False
     self.runner.dut_config['cooldown_time'] = 0
     self.runner.dut_config['governor'] = 'fake_governor'
     self.runner.dut_config['cpu_freq_pct'] = 65
@@ -186,6 +187,8 @@ class SuiteRunnerTest(unittest.TestCase):
     mock_run_on_dut.RunCommandOnDut = mock.Mock(return_value=FakeRunner)
     mock_run_on_dut.WaitCooldown = mock.Mock(return_value=0)
     mock_run_on_dut.GetCpuOnline = mock.Mock(return_value={0: 1, 1: 1, 2: 0})
+
+    self.runner.dut_config['enable_aslr'] = False
     self.runner.dut_config['cooldown_time'] = 0
     self.runner.dut_config['governor'] = 'fake_governor'
     self.runner.dut_config['cpu_freq_pct'] = 65
@@ -218,6 +221,7 @@ class SuiteRunnerTest(unittest.TestCase):
     mock_run_on_dut.WaitCooldown = mock.Mock(return_value=0)
     mock_run_on_dut.GetCpuOnline = mock.Mock(return_value={0: 0, 1: 1})
 
+    self.runner.dut_config['enable_aslr'] = False
     self.runner.dut_config['cooldown_time'] = 10
     self.runner.dut_config['governor'] = 'fake_governor'
     self.runner.dut_config['cpu_freq_pct'] = 75
@@ -246,6 +250,7 @@ class SuiteRunnerTest(unittest.TestCase):
                                    self.mock_logger)
 
     mock_run_on_dut.SetupCpuUsage = mock.Mock(side_effect=RuntimeError())
+    self.runner.dut_config['enable_aslr'] = False
 
     with self.assertRaises(RuntimeError):
       self.runner.SetupDevice(mock_run_on_dut, cros_machine)
@@ -313,6 +318,7 @@ class SuiteRunnerTest(unittest.TestCase):
     self.mock_cmd_exec.ChrootRunCommandWOutput = mock_chroot_runcmd
     profiler_args = ("--profiler=custom_perf --profiler_args='perf_options"
                      '="record -a -e cycles,instructions"\'')
+    self.runner.dut_config['turbostat'] = True
     self.runner.dut_config['top_interval'] = 3
     res = self.runner.Telemetry_Crosperf_Run('lumpy1.cros', self.mock_label,
                                              self.telemetry_crosperf_bench, '',
