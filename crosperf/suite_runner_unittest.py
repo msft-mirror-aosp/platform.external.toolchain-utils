@@ -57,16 +57,6 @@ class SuiteRunnerTest(unittest.TestCase):
       False,  # rm_chroot_tmp
       'record -e cycles')  # perf_args
 
-  telemetry_bench = Benchmark(
-      'b3_test',  # name
-      'octane',  # test_name
-      '',  # test_args
-      3,  # iterations
-      False,  # rm_chroot_tmp
-      'record -e cycles',  # perf_args
-      'telemetry',  # suite
-      False)  # show_all_results
-
   def __init__(self, *args, **kwargs):
     super(SuiteRunnerTest, self).__init__(*args, **kwargs)
     self.call_test_that_run = False
@@ -129,13 +119,14 @@ class SuiteRunnerTest(unittest.TestCase):
     self.runner.Skylab_Run = FakeSkylabRun
     self.runner.Telemetry_Crosperf_Run = FakeTelemetryCrosperfRun
     self.runner.Test_That_Run = FakeTestThatRun
-    self.runner.SetupDevice = mock.Mock()
+    DutWrapper.SetupDevice = mock.Mock(return_value=0)
     DutWrapper.RunCommandOnDut = mock.Mock(return_value=FakeRunner)
 
     self.runner.dut_config['enable_aslr'] = False
     self.runner.dut_config['cooldown_time'] = 0
     self.runner.dut_config['governor'] = 'fake_governor'
     self.runner.dut_config['cpu_freq_pct'] = 65
+    self.runner.dut_config['intel_pstate'] = 'no_hwp'
     machine = 'fake_machine'
     cros_machine = MockCrosMachine(machine, self.mock_label.chromeos_root,
                                    self.mock_logger)
@@ -144,14 +135,14 @@ class SuiteRunnerTest(unittest.TestCase):
 
     reset()
     self.mock_label.skylab = True
-    self.runner.Run(cros_machine, self.mock_label, self.telemetry_bench,
+    self.runner.Run(cros_machine, self.mock_label, self.test_that_bench,
                     test_args, profiler_args)
     self.assertTrue(self.call_skylab_run)
     self.assertFalse(self.call_test_that_run)
     self.assertFalse(self.call_telemetry_crosperf_run)
     self.assertEqual(self.skylab_run_args,
-                     [self.mock_label, self.telemetry_bench, '', ''])
-    self.runner.SetupDevice.assert_not_called()
+                     [self.mock_label, self.test_that_bench, '', ''])
+    DutWrapper.SetupDevice.assert_called_once()
     self.mock_label.skylab = False
 
     reset()
@@ -171,101 +162,6 @@ class SuiteRunnerTest(unittest.TestCase):
     self.assertEqual(self.telemetry_crosperf_args, [
         'fake_machine', self.mock_label, self.telemetry_crosperf_bench, '', ''
     ])
-
-  def test_setup_device(self):
-
-    def FakeRunner(command, ignore_status=False):
-      # pylint fix for unused variable.
-      del command, ignore_status
-      return 0, '', ''
-
-    machine = 'fake_machine'
-    mock_run_on_dut = mock.Mock(spec=DutWrapper)
-    cros_machine = MockCrosMachine(machine, self.mock_label.chromeos_root,
-                                   self.mock_logger)
-
-    mock_run_on_dut.RunCommandOnDut = mock.Mock(return_value=FakeRunner)
-    mock_run_on_dut.WaitCooldown = mock.Mock(return_value=0)
-    mock_run_on_dut.GetCpuOnline = mock.Mock(return_value={0: 1, 1: 1, 2: 0})
-
-    self.runner.dut_config['enable_aslr'] = False
-    self.runner.dut_config['cooldown_time'] = 0
-    self.runner.dut_config['governor'] = 'fake_governor'
-    self.runner.dut_config['cpu_freq_pct'] = 65
-
-    self.runner.SetupDevice(mock_run_on_dut, cros_machine)
-
-    mock_run_on_dut.SetupCpuUsage.assert_called_once_with()
-    mock_run_on_dut.SetupCpuFreq.assert_called_once_with([0, 1])
-    mock_run_on_dut.GetCpuOnline.assert_called_once_with()
-    mock_run_on_dut.SetCpuGovernor.assert_called_once_with(
-        'fake_governor', ignore_status=False)
-    mock_run_on_dut.DisableTurbo.assert_called_once_with()
-    mock_run_on_dut.StopUI.assert_called_once_with()
-    mock_run_on_dut.StartUI.assert_called_once_with()
-    mock_run_on_dut.WaitCooldown.assert_not_called()
-
-  def test_setup_device_with_cooldown(self):
-
-    def FakeRunner(command, ignore_status=False):
-      # pylint fix for unused variable.
-      del command, ignore_status
-      return 0, '', ''
-
-    machine = 'fake_machine'
-    mock_run_on_dut = mock.Mock(spec=DutWrapper)
-    cros_machine = MockCrosMachine(machine, self.mock_label.chromeos_root,
-                                   self.mock_logger)
-
-    mock_run_on_dut.RunCommandOnDut = mock.Mock(return_value=FakeRunner)
-    mock_run_on_dut.WaitCooldown = mock.Mock(return_value=0)
-    mock_run_on_dut.GetCpuOnline = mock.Mock(return_value={0: 0, 1: 1})
-
-    self.runner.dut_config['enable_aslr'] = False
-    self.runner.dut_config['cooldown_time'] = 10
-    self.runner.dut_config['governor'] = 'fake_governor'
-    self.runner.dut_config['cpu_freq_pct'] = 75
-
-    self.runner.SetupDevice(mock_run_on_dut, cros_machine)
-
-    mock_run_on_dut.WaitCooldown.assert_called_once_with()
-    mock_run_on_dut.DisableASLR.assert_called_once()
-    mock_run_on_dut.DisableTurbo.assert_called_once_with()
-    mock_run_on_dut.SetupCpuUsage.assert_called_once_with()
-    mock_run_on_dut.SetupCpuFreq.assert_called_once_with([1])
-    mock_run_on_dut.SetCpuGovernor.assert_called()
-    mock_run_on_dut.GetCpuOnline.assert_called_once_with()
-    mock_run_on_dut.StopUI.assert_called_once_with()
-    mock_run_on_dut.StartUI.assert_called_once_with()
-    self.assertGreater(mock_run_on_dut.SetCpuGovernor.call_count, 1)
-    self.assertEqual(mock_run_on_dut.SetCpuGovernor.call_args,
-                     mock.call('fake_governor', ignore_status=False))
-
-  def test_setup_device_with_exception(self):
-    """Test SetupDevice with an exception."""
-
-    machine = 'fake_machine'
-    mock_run_on_dut = mock.Mock(spec=DutWrapper)
-    cros_machine = MockCrosMachine(machine, self.mock_label.chromeos_root,
-                                   self.mock_logger)
-
-    mock_run_on_dut.SetupCpuUsage = mock.Mock(side_effect=RuntimeError())
-    self.runner.dut_config['enable_aslr'] = False
-
-    with self.assertRaises(RuntimeError):
-      self.runner.SetupDevice(mock_run_on_dut, cros_machine)
-
-    # This called injected an exception.
-    mock_run_on_dut.SetupCpuUsage.assert_called_once_with()
-    # Calls following the expeption are skipped.
-    mock_run_on_dut.WaitCooldown.assert_not_called()
-    mock_run_on_dut.DisableTurbo.assert_not_called()
-    mock_run_on_dut.SetupCpuFreq.assert_not_called()
-    mock_run_on_dut.SetCpuGovernor.assert_not_called()
-    mock_run_on_dut.GetCpuOnline.assert_not_called()
-    # Check that Stop/Start UI are always called.
-    mock_run_on_dut.StopUI.assert_called_once_with()
-    mock_run_on_dut.StartUI.assert_called_once_with()
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommand')
   @mock.patch.object(command_executer.CommandExecuter,
@@ -328,13 +224,14 @@ class SuiteRunnerTest(unittest.TestCase):
     args_list = mock_chroot_runcmd.call_args_list[0][0]
     args_dict = mock_chroot_runcmd.call_args_list[0][1]
     self.assertEqual(args_list[0], '/tmp/chromeos')
-    self.assertEqual(args_list[1],
-                     ('/usr/bin/test_that --autotest_dir '
-                      '~/trunk/src/third_party/autotest/files --fast '
-                      '--board=lumpy --args=" run_local=False test=octane '
-                      'turbostat=True top_interval=3 profiler=custom_perf '
-                      'profiler_args=\'record -a -e cycles,instructions\'" '
-                      'lumpy1.cros telemetry_Crosperf'))
+    self.assertEqual(
+        args_list[1],
+        ('/usr/bin/test_that --autotest_dir '
+         '~/trunk/src/third_party/autotest/files --fast '
+         "--board=lumpy --args=' run_local=False test=octane "
+         'dut_config=\'"\'"\'{"turbostat": true, "top_interval": 3}\'"\'"\' '
+         'profiler=custom_perf profiler_args=\'"\'"\'record -a -e '
+         'cycles,instructions\'"\'"\'\' lumpy1.cros telemetry_Crosperf'))
     self.assertEqual(args_dict['cros_sdk_options'],
                      ('--no-ns-pid --chrome_root= '
                       '--chrome_root_mount=/tmp/chrome_root '

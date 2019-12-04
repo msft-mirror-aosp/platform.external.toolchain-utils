@@ -20,7 +20,6 @@ import test_flag
 from machine_image_manager import MachineImageManager
 from cros_utils import command_executer
 from cros_utils import logger
-from cros_utils.device_setup_utils import DutWrapper
 
 
 class DutWorker(Thread):
@@ -55,7 +54,6 @@ class DutWorker(Thread):
         Note - 'br' below means 'benchmark_run'.
     """
 
-    intel_pstate = self._sched.get_experiment().intel_pstate
     # Firstly, handle benchmarkruns that have cache hit.
     br = self._sched.get_cached_benchmark_run()
     while br:
@@ -89,15 +87,6 @@ class DutWorker(Thread):
                                     'working thread {}.'.format(self))
             break
         else:
-          self._logger.LogOutput('Update kernel cmdline if necessary '
-                                 'and reboot')
-          run_on_dut = DutWrapper(
-              self._sched.get_labels(0).chromeos_root,
-              self._dut.name,
-              logger=self._logger)
-          if run_on_dut.KerncmdUpdateNeeded(intel_pstate):
-            run_on_dut.UpdateKerncmdIntelPstate(intel_pstate)
-
           # Execute the br.
           self._execute_benchmark_run(br)
     finally:

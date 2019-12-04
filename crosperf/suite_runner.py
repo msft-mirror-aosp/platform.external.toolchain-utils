@@ -10,10 +10,9 @@ from __future__ import print_function
 
 import json
 import os
+import pipes
 import shlex
 import time
-
-from contextlib import contextmanager
 
 from cros_utils import command_executer
 from cros_utils.device_setup_utils import DutWrapper
@@ -52,6 +51,10 @@ def GetProfilerArgs(profiler_args):
   return ' '.join(args_list)
 
 
+def GetDutConfigArgs(dut_config):
+  return 'dut_config={}'.format(pipes.quote(json.dumps(dut_config)))
+
+
 class SuiteRunner(object):
   """This defines the interface from crosperf to test script."""
 
@@ -72,8 +75,8 @@ class SuiteRunner(object):
 
   def Run(self, cros_machine, label, benchmark, test_args, profiler_args):
     machine_name = cros_machine.name
-    if not label.skylab:
-      # Initialize command executer on DUT.
+    if benchmark.suite != 'telemetry_Crosperf':
+      # Initialize command executer on DUT for test_that runs.
       run_on_dut = DutWrapper(
           label.chromeos_root,
           machine_name,
@@ -82,22 +85,23 @@ class SuiteRunner(object):
           ce=self._ce,
           dut_config=self.dut_config)
     for i in range(0, benchmark.retries + 1):
+      # TODO: For telemetry_Crosperf run, device setup has been moved into
+      # server test script; for client runs, need to figure out wrapper to do
+      # it before running, now it is still setup here.
+      if benchmark.suite != 'telemetry_Crosperf':
+        wait_time = run_on_dut.SetupDevice()
+        # This is for accumulating wait time for test_that runs only,
+        # for telemetry_Cropserf runs, please refer to result_cache.
+        cros_machine.AddCooldownWaitTime(wait_time)
+
       if label.skylab:
-        # TODO: need to migrate Device setups to autotest for skylab.
-        # Since in skylab mode, we may not know the DUT until one is assigned
-        # to the test. For telemetry_Crosperf run, we can move them into the
-        # server test script, for client runs, need to figure out wrapper to do
-        # it before running.
         ret_tup = self.Skylab_Run(label, benchmark, test_args, profiler_args)
+      elif benchmark.suite == 'telemetry_Crosperf':
+        ret_tup = self.Telemetry_Crosperf_Run(machine_name, label, benchmark,
+                                              test_args, profiler_args)
       else:
-        self.SetupDevice(run_on_dut, cros_machine)
-        if benchmark.suite == 'telemetry_Crosperf':
-          run_on_dut.DecreaseWaitTime()
-          ret_tup = self.Telemetry_Crosperf_Run(machine_name, label, benchmark,
-                                                test_args, profiler_args)
-        else:
-          ret_tup = self.Test_That_Run(machine_name, label, benchmark,
-                                       test_args, profiler_args)
+        ret_tup = self.Test_That_Run(machine_name, label, benchmark, test_args,
+                                     profiler_args)
 
       if ret_tup[0] != 0:
         self.logger.LogOutput('benchmark %s failed. Retries left: %s' %
@@ -111,69 +115,6 @@ class SuiteRunner(object):
             'benchmark %s succeded on first try' % benchmark.name)
         break
     return ret_tup
-
-  @contextmanager
-  def PauseUI(self, run_on_dut):
-    """Stop UI before and Start UI after the context block.
-
-    Context manager will make sure UI is always resumed at the end.
-    """
-    run_on_dut.StopUI()
-    try:
-      yield
-
-    finally:
-      run_on_dut.StartUI()
-
-  def SetupDevice(self, run_on_dut, cros_machine):
-    # Pause UI while configuring the DUT.
-    # This will accelerate setup (waiting for cooldown has x10 drop)
-    # and help to reset a Chrome state left after the previous test.
-    with self.PauseUI(run_on_dut):
-      # Unless the user turns on ASLR in the flag, we first disable ASLR
-      # before running the benchmarks
-      if not self.dut_config['enable_aslr']:
-        run_on_dut.DisableASLR()
-
-      # CPU usage setup comes first where we enable/disable cores.
-      run_on_dut.SetupCpuUsage()
-      cpu_online_status = run_on_dut.GetCpuOnline()
-      # List of online cores of type int (core number).
-      online_cores = [
-          core for core, status in cpu_online_status.items() if status
-      ]
-      if self.dut_config['cooldown_time']:
-        # Setup power conservative mode for effective cool down.
-        # Set ignore status since powersave may no be available
-        # on all platforms and we are going to handle it.
-        ret = run_on_dut.SetCpuGovernor('powersave', ignore_status=True)
-        if ret:
-          # "powersave" is not available, use "ondemand".
-          # Still not a fatal error if it fails.
-          ret = run_on_dut.SetCpuGovernor('ondemand', ignore_status=True)
-        # TODO(denik): Run comparison test for 'powersave' and 'ondemand'
-        # on scarlet and kevin64.
-        # We might have to consider reducing freq manually to the min
-        # if it helps to reduce waiting time.
-        wait_time = run_on_dut.WaitCooldown()
-        cros_machine.AddCooldownWaitTime(wait_time)
-
-      # Setup CPU governor for the benchmark run.
-      # It overwrites the previous governor settings.
-      governor = self.dut_config['governor']
-      # FIXME(denik): Pass online cores to governor setup.
-      run_on_dut.SetCpuGovernor(governor, ignore_status=False)
-
-      # Disable Turbo and Setup CPU freq should ALWAYS proceed governor setup
-      # since governor may change:
-      # - frequency;
-      # - turbo/boost.
-      run_on_dut.DisableTurbo()
-      run_on_dut.SetupCpuFreq(online_cores)
-      # FIXME(denik): Currently we are not recovering the previous cpufreq
-      # settings since we do reboot/setup every time anyway.
-      # But it may change in the future and then we have to recover the
-      # settings.
 
   def Test_That_Run(self, machine, label, benchmark, test_args, profiler_args):
     """Run the test_that test.."""
@@ -267,6 +208,8 @@ class SuiteRunner(object):
           test_args = test_args[1:-1]
       if profiler_args:
         test_args += GetProfilerArgs(profiler_args)
+      if self.dut_config:
+        test_args += GetDutConfigArgs(self.dut_config)
       test_args += ' run_local={} test={}'.format(
           benchmark.run_local,
           benchmark.test_name,
@@ -275,7 +218,7 @@ class SuiteRunner(object):
       if profiler_args:
         self.logger.LogFatal('Client tests do not support profiler.')
     if test_args:
-      options += ' -test-args="%s"' % test_args
+      options += ' -test-args=%s' % pipes.quote(test_args)
 
     dimensions = ''
     for dut in label.remote:
@@ -357,6 +300,7 @@ class SuiteRunner(object):
       autotest_dir_arg = '--autotest_dir %s' % label.autotest_path
 
     profiler_args = GetProfilerArgs(profiler_args)
+    dut_config_args = GetDutConfigArgs(self.dut_config)
     # --fast avoids unnecessary copies of syslogs.
     fast_arg = '--fast'
     args_string = ''
@@ -367,13 +311,13 @@ class SuiteRunner(object):
         test_args = test_args[1:-1]
       args_string = "test_args='%s'" % test_args
 
-    top_interval = self.dut_config['top_interval']
-    turbostat = self.dut_config['turbostat']
-    cmd = ('{} {} {} --board={} --args="{} run_local={} test={} '
-           'turbostat={} top_interval={} {}" {} telemetry_Crosperf'.format(
-               TEST_THAT_PATH, autotest_dir_arg, fast_arg, label.board,
-               args_string, benchmark.run_local, benchmark.test_name, turbostat,
-               top_interval, profiler_args, machine))
+    args = '{} run_local={} test={} {} {}'.format(
+        args_string, benchmark.run_local, benchmark.test_name, dut_config_args,
+        profiler_args)
+
+    cmd = ('{} {} {} --board={} --args={} {} telemetry_Crosperf'.format(
+        TEST_THAT_PATH, autotest_dir_arg, fast_arg, label.board,
+        pipes.quote(args), machine))
 
     # Use --no-ns-pid so that cros_sdk does not create a different
     # process namespace and we can kill process created easily by their

@@ -434,6 +434,7 @@ class ResultTest(unittest.TestCase):
     self.callGetTurbostatFile = False
     self.callGetCpustatsFile = False
     self.callGetTopFile = False
+    self.callGetWaitTimeFile = False
     self.args = None
     self.callGatherPerfResults = False
     self.mock_logger = mock.Mock(spec=logger.Logger)
@@ -1126,6 +1127,10 @@ class ResultTest(unittest.TestCase):
       self.callGetTopFile = True
       return []
 
+    def FakeGetWaitTimeFile():
+      self.callGetWaitTimeFile = True
+      return []
+
     def FakeProcessResults(show_results=False):
       if show_results:
         pass
@@ -1143,6 +1148,7 @@ class ResultTest(unittest.TestCase):
     self.callGetTurbostatFile = False
     self.callGetCpustatsFile = False
     self.callGetTopFile = False
+    self.callGetWaitTimeFile = False
     self.callProcessResults = False
 
     self.result.GetResultsDir = FakeGetResultsDir
@@ -1152,6 +1158,7 @@ class ResultTest(unittest.TestCase):
     self.result.GetTurbostatFile = FakeGetTurbostatFile
     self.result.GetCpustatsFile = FakeGetCpustatsFile
     self.result.GetTopFile = FakeGetTopFile
+    self.result.GetWaitTimeFile = FakeGetWaitTimeFile
     self.result.ProcessResults = FakeProcessResults
 
     self.result.PopulateFromRun(OUTPUT, '', 0, 'test', 'telemetry_Crosperf',
@@ -1163,6 +1170,7 @@ class ResultTest(unittest.TestCase):
     self.assertTrue(self.callGetTurbostatFile)
     self.assertTrue(self.callGetCpustatsFile)
     self.assertTrue(self.callGetTopFile)
+    self.assertTrue(self.callGetWaitTimeFile)
     self.assertTrue(self.callProcessResults)
 
   def FakeGetKeyvals(self, show_all=False):
