@@ -108,6 +108,11 @@ class DutWorker(Thread):
     if self._terminated:
       return 1
 
+    if self._sched.get_experiment().skylab:
+      self._logger.LogOutput('Skylab mode, do not image before testing.')
+      self._dut.label = label
+      return 0
+
     self._logger.LogOutput('Reimaging {} using {}'.format(self, label))
     self._stat_num_reimage += 1
     self._stat_annotation = 'reimaging using "{}"'.format(label.name)
