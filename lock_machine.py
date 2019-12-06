@@ -69,7 +69,11 @@ class LockManager(object):
   """
 
   SKYLAB_PATH = '/usr/local/bin/skylab'
-  LEASE_MINS = 600
+
+  # TODO(zhizhouy): lease time may needs to be dynamically adjusted. For now we
+  # set it long enough to cover the period to finish nightly rotation tests.
+  LEASE_MINS = 1440
+
   SKYLAB_CREDENTIAL = '/usr/local/google/home/mobiletc-prebuild' \
                       '/sheriff_utils/skylab_credential' \
                       '/chromeos-swarming-credential.json'

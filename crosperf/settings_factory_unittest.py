@@ -50,7 +50,7 @@ class GlobalSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.GlobalSettings('g_settings')
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 37)
+    self.assertEqual(len(res.fields), 38)
     self.assertEqual(res.GetField('name'), '')
     self.assertEqual(res.GetField('board'), '')
     self.assertEqual(res.GetField('skylab'), False)
@@ -66,6 +66,7 @@ class GlobalSettingsTest(unittest.TestCase):
     self.assertEqual(res.GetField('logging_level'), 'average')
     self.assertEqual(res.GetField('acquire_timeout'), 0)
     self.assertEqual(res.GetField('perf_args'), '')
+    self.assertEqual(res.GetField('download_debug'), True)
     self.assertEqual(res.GetField('cache_dir'), '')
     self.assertEqual(res.GetField('cache_only'), False)
     self.assertEqual(res.GetField('no_email'), False)
@@ -106,7 +107,7 @@ class SettingsFactoryTest(unittest.TestCase):
     g_settings = settings_factory.SettingsFactory().GetSettings(
         'global', 'global')
     self.assertIsInstance(g_settings, settings_factory.GlobalSettings)
-    self.assertEqual(len(g_settings.fields), 37)
+    self.assertEqual(len(g_settings.fields), 38)
 
 
 if __name__ == '__main__':

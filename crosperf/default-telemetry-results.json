@@ -163,9 +163,11 @@
     "Event.Latency.ScrollUpdate.Touch.TimeToScrollUpdateSwapBegin4_avg"
   ],
   "rendering.desktop@@aquarium$": [
-    "avg_surface_fps"
+    "avg_surface_fps",
+    "exp_avg_surface_fps"
   ],
   "rendering.desktop@@aquarium_20k$": [
-    "avg_surface_fps"
+    "avg_surface_fps",
+    "exp_avg_surface_fps"
   ]
 }

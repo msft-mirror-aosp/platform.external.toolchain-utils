@@ -131,14 +131,9 @@ func TestForwardGeneralErrorFromBisect(t *testing.T) {
 
 func withBisectTestContext(t *testing.T, work func(ctx *testContext)) {
 	withTestContext(t, func(ctx *testContext) {
-		// Disable comparing to the old wrapper as that calls the bisect_driver
-		// directly from python, and the new wrapper calls it via a separate
-		// sub command.
-		ctx.cfg.oldWrapperPath = ""
 		ctx.env = []string{"BISECT_STAGE=xyz"}
 		// We execute the python script but replace the call to the bisect_driver with
-		// a mock that logs the data in the same way as the oldwrapper. This way
-		// we can reuse the parseOldWrapperCommands to get the values.
+		// a mock that logs the data.
 		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			if err := verifyPath(cmd, "/usr/bin/env"); err != nil {
 				return err
@@ -177,6 +172,13 @@ bisect_driver = BisectDriver()
 
 func mustCallBisectDriver(ctx *testContext, exitCode int) *command {
 	ctx.must(exitCode)
-	cmds, _ := parseOldWrapperCommands(ctx.stdoutString())
-	return cmds[0]
+	cmd := &command{}
+	for _, line := range strings.Split(ctx.stdoutString(), "\n") {
+		if prefix := "command "; strings.HasPrefix(line, prefix) {
+			cmd.Path = line[len(prefix):]
+		} else if prefix := "arg "; strings.HasPrefix(line, prefix) {
+			cmd.Args = append(cmd.Args, line[len(prefix):])
+		}
+	}
+	return cmd
 }
