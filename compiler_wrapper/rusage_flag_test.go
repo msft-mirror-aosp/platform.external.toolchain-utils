@@ -164,10 +164,6 @@ func TestLogRusageAppendsToFile(t *testing.T) {
 
 func withLogRusageTestContext(t *testing.T, work func(ctx *testContext)) {
 	withTestContext(t, func(ctx *testContext) {
-		// Disable comparing to the old wrapper as that uses fork + wait3
-		// to calculate resource usage, and the new wrapper uses the getrusage
-		// syscall.
-		ctx.cfg.oldWrapperPath = ""
 		ctx.env = []string{"GETRUSAGE=" + filepath.Join(ctx.tempDir, "rusage.log")}
 		work(ctx)
 	})

@@ -293,7 +293,7 @@ class ImageDownloader(object):
     return debug_rel_path
 
   def Run(self, chromeos_root, xbuddy_label, autotest_path, debug_path,
-          perf_args):
+          download_debug):
     build_id = self.GetBuildID(chromeos_root, xbuddy_label)
     image_name = ('gs://chromeos-image-archive/%s/chromiumos_test_image.tar.xz'
                   % build_id)
@@ -317,7 +317,7 @@ class ImageDownloader(object):
     if autotest_path == '':
       autotest_path = self.DownloadAutotestFiles(chromeos_root, build_id)
 
-    if debug_path == '' and perf_args:
+    if debug_path == '' and download_debug:
       debug_path = self.DownloadDebugFile(chromeos_root, build_id)
 
     return image_path, autotest_path, debug_path

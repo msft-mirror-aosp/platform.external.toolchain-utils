@@ -62,6 +62,7 @@ class CrosMachine(object):
     self.checksum_string = None
     self.meminfo = None
     self.phys_kbytes = None
+    self.cooldown_wait_time = 0
     self.ce = cmd_exec or command_executer.GetCommandExecuter(
         log_level=self.log_level)
     self.SetUpChecksumInfo()
@@ -84,6 +85,12 @@ class CrosMachine(object):
     if ret:
       return False
     return True
+
+  def AddCooldownWaitTime(self, wait_time):
+    self.cooldown_wait_time += wait_time
+
+  def GetCooldownWaitTime(self):
+    return self.cooldown_wait_time
 
   def _ParseMemoryInfo(self):
     line = self.meminfo.splitlines()[0]
@@ -627,6 +634,7 @@ power management:
     self.machine_checksum = self._GetMD5Checksum(self.checksum_string)
     self.log_level = log_level
     self.label = None
+    self.cooldown_wait_time = 0
     self.ce = command_executer.GetCommandExecuter(log_level=self.log_level)
     self._GetCPUInfo()
 

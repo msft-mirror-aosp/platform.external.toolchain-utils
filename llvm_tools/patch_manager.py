@@ -147,14 +147,13 @@ def GetCommandLineArgs():
 def GetHEADSVNVersion(src_path):
   """Gets the SVN version of HEAD in the src tree."""
 
-  get_head_cmd = ['git', '-C', src_path, 'log', '-1', '--pretty=%B']
+  cmd = ['git', '-C', src_path, 'rev-parse', 'HEAD']
 
-  head_commit_message = check_output(get_head_cmd)
+  git_hash = check_output(cmd)
 
-  head_svn_version = LLVMHash().GetSVNVersionFromCommitMessage(
-      head_commit_message)
+  version = GetVersionFrom(src_path, git_hash)
 
-  return head_svn_version
+  return version
 
 
 def VerifyHEADIsTheSameAsSVNVersion(src_path, svn_version):
@@ -282,11 +281,9 @@ def GetCommitHashesForBisection(src_path, good_svn_version, bad_svn_version):
 
   new_llvm_hash = LLVMHash()
 
-  bad_commit_hash = new_llvm_hash.GetGitHashForVersion(src_path,
-                                                       bad_svn_version)
+  bad_commit_hash = get_llvm_hash.GetGitHashFrom(src_path, bad_svn_version)
 
-  good_commit_hash = new_llvm_hash.GetGitHashForVersion(src_path,
-                                                        good_svn_version)
+  good_commit_hash = get_llvm_hash.GetGitHashFrom(src_path, good_svn_version)
 
   return good_commit_hash, bad_commit_hash
 
@@ -295,13 +292,13 @@ def PerformBisection(src_path, good_commit, bad_commit, svn_version,
                      patch_metadata_file, filesdir_path, num_patches):
   """Performs bisection to determine where a patch stops applying."""
 
-  bisect_start_cmd = [
+  start_cmd = [
       'git', '-C', src_path, 'bisect', 'start', bad_commit, good_commit
   ]
 
-  check_output(bisect_start_cmd)
+  check_output(start_cmd)
 
-  bisect_run_cmd = [
+  run_cmd = [
       'git', '-C', src_path, 'bisect', 'run',
       os.path.abspath(__file__), '--svn_version',
       '%d' % svn_version, '--patch_metadata_file', patch_metadata_file,
@@ -310,25 +307,24 @@ def PerformBisection(src_path, good_commit, bad_commit, svn_version,
       '%d' % num_patches
   ]
 
-  check_call(bisect_run_cmd)
+  check_call(run_cmd)
 
   # Successfully bisected the patch, so retrieve the SVN version from the
   # commit message.
-  get_bad_commit_from_bisect_run_cmd = [
-      'git', '-C', src_path, 'show', 'refs/bisect/bad'
+  get_bad_commit_hash_cmd = [
+      'git', '-C', src_path, 'rev-parse', 'refs/bisect/bad'
   ]
 
-  bad_commit_message = check_output(get_bad_commit_from_bisect_run_cmd)
+  git_hash = check_output(get_bad_commit_hash_cmd)
 
-  end_bisection_cmd = ['git', '-C', src_path, 'bisect', 'reset']
+  end_cmd = ['git', '-C', src_path, 'bisect', 'reset']
 
-  check_output(end_bisection_cmd)
+  check_output(end_cmd)
 
   # `git bisect run` returns the bad commit hash and the commit message.
-  bad_version = LLVMHash().GetSVNVersionFromCommitMessage(
-      bad_commit_message.rstrip())
+  version = GetVersionFrom(src_path, git_hash)
 
-  return bad_version
+  return version
 
 
 def CleanSrcTree(src_path):

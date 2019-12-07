@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -8,8 +8,8 @@
 
 from __future__ import print_function
 
-import mock
 import unittest
+import mock
 
 import settings
 import settings_factory
@@ -201,33 +201,34 @@ class TestSettings(unittest.TestCase):
     xbuddy_str = 'latest-dev'
     autotest_path = ''
     debug_path = ''
-    perf_args = '-a'
+    download_debug = False
 
     self.settings.GetXbuddyPath(trybot_str, autotest_path, debug_path, board,
-                                chromeos_root, log_level, perf_args)
+                                chromeos_root, log_level, download_debug)
     self.assertEqual(mock_run.call_count, 1)
     self.assertEqual(mock_run.call_args_list[0][0], (
         '/tmp/chromeos',
         'remote/trybot-lumpy-paladin/R34-5417.0.0-b1506',
         '',
         '',
-        '-a',
+        False,
     ))
 
     mock_run.reset_mock()
     self.settings.GetXbuddyPath(official_str, autotest_path, debug_path, board,
-                                chromeos_root, log_level, perf_args)
+                                chromeos_root, log_level, download_debug)
     self.assertEqual(mock_run.call_count, 1)
     self.assertEqual(
         mock_run.call_args_list[0][0],
-        ('/tmp/chromeos', 'remote/lumpy-release/R34-5417.0.0', '', '', '-a'))
+        ('/tmp/chromeos', 'remote/lumpy-release/R34-5417.0.0', '', '', False))
 
     mock_run.reset_mock()
     self.settings.GetXbuddyPath(xbuddy_str, autotest_path, debug_path, board,
-                                chromeos_root, log_level, perf_args)
+                                chromeos_root, log_level, download_debug)
     self.assertEqual(mock_run.call_count, 1)
-    self.assertEqual(mock_run.call_args_list[0][0],
-                     ('/tmp/chromeos', 'remote/lumpy/latest-dev', '', '', '-a'))
+    self.assertEqual(
+        mock_run.call_args_list[0][0],
+        ('/tmp/chromeos', 'remote/lumpy/latest-dev', '', '', False))
 
     if mock_logger:
       return
