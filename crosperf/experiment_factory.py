@@ -70,7 +70,7 @@ telemetry_crosbolt_perf_tests = [
     'speedometer2',
     'jetstream',
     'loading.desktop',
-    #'rendering.desktop',
+    # 'rendering.desktop',
 ]
 
 crosbolt_perf_tests = [
@@ -82,7 +82,7 @@ crosbolt_perf_tests = [
 #    'cheets_PerfBootServer',
 #    'cheets_CandyCrushTest',
 #    'cheets_LinpackTest',
-#]
+# ]
 
 dso_list = [
     'all',
@@ -101,14 +101,12 @@ class ExperimentFactory(object):
 
   def AppendBenchmarkSet(self, benchmarks, benchmark_list, test_args,
                          iterations, rm_chroot_tmp, perf_args, suite,
-                         show_all_results, retries, run_local, cwp_dso, weight,
-                         turbostat):
+                         show_all_results, retries, run_local, cwp_dso, weight):
     """Add all the tests in a set to the benchmarks list."""
     for test_name in benchmark_list:
-      telemetry_benchmark = Benchmark(test_name, test_name, test_args,
-                                      iterations, rm_chroot_tmp, perf_args,
-                                      suite, show_all_results, retries,
-                                      run_local, cwp_dso, weight, turbostat)
+      telemetry_benchmark = Benchmark(
+          test_name, test_name, test_args, iterations, rm_chroot_tmp, perf_args,
+          suite, show_all_results, retries, run_local, cwp_dso, weight)
       benchmarks.append(telemetry_benchmark)
 
   def GetExperiment(self, experiment_file, working_directory, log_dir):
@@ -137,6 +135,10 @@ class ExperimentFactory(object):
     remote = new_remote
     rm_chroot_tmp = global_settings.GetField('rm_chroot_tmp')
     perf_args = global_settings.GetField('perf_args')
+    download_debug = global_settings.GetField('download_debug')
+    # Do not download debug symbols when perf_args is not specified.
+    if not perf_args and download_debug:
+      download_debug = False
     acquire_timeout = global_settings.GetField('acquire_timeout')
     cache_dir = global_settings.GetField('cache_dir')
     cache_only = global_settings.GetField('cache_only')
@@ -162,16 +164,16 @@ class ExperimentFactory(object):
     cwp_dso = global_settings.GetField('cwp_dso')
     if cwp_dso and not cwp_dso in dso_list:
       raise RuntimeError('The DSO specified is not supported')
-    enable_aslr = global_settings.GetField('enable_aslr')
     ignore_min_max = global_settings.GetField('ignore_min_max')
-    turbostat_opt = global_settings.GetField('turbostat')
     dut_config = {
+        'enable_aslr': global_settings.GetField('enable_aslr'),
         'intel_pstate': global_settings.GetField('intel_pstate'),
         'cooldown_time': global_settings.GetField('cooldown_time'),
         'cooldown_temp': global_settings.GetField('cooldown_temp'),
         'governor': global_settings.GetField('governor'),
         'cpu_usage': global_settings.GetField('cpu_usage'),
         'cpu_freq_pct': global_settings.GetField('cpu_freq_pct'),
+        'turbostat': global_settings.GetField('turbostat'),
         'top_interval': global_settings.GetField('top_interval'),
     }
 
@@ -253,50 +255,20 @@ class ExperimentFactory(object):
 
       if suite == 'telemetry_Crosperf':
         if test_name == 'all_perfv2':
-          self.AppendBenchmarkSet(
-              benchmarks,
-              telemetry_perfv2_tests,
-              test_args,
-              iterations,
-              rm_chroot_tmp,
-              perf_args,
-              suite,
-              show_all_results,
-              retries,
-              run_local,
-              cwp_dso,
-              weight,
-              turbostat=turbostat_opt)
+          self.AppendBenchmarkSet(benchmarks, telemetry_perfv2_tests, test_args,
+                                  iterations, rm_chroot_tmp, perf_args, suite,
+                                  show_all_results, retries, run_local, cwp_dso,
+                                  weight)
         elif test_name == 'all_pagecyclers':
-          self.AppendBenchmarkSet(
-              benchmarks,
-              telemetry_pagecycler_tests,
-              test_args,
-              iterations,
-              rm_chroot_tmp,
-              perf_args,
-              suite,
-              show_all_results,
-              retries,
-              run_local,
-              cwp_dso,
-              weight,
-              turbostat=turbostat_opt)
+          self.AppendBenchmarkSet(benchmarks, telemetry_pagecycler_tests,
+                                  test_args, iterations, rm_chroot_tmp,
+                                  perf_args, suite, show_all_results, retries,
+                                  run_local, cwp_dso, weight)
         elif test_name == 'all_crosbolt_perf':
           self.AppendBenchmarkSet(
-              benchmarks,
-              telemetry_crosbolt_perf_tests,
-              test_args,
-              iterations,
-              rm_chroot_tmp,
-              perf_args,
-              'telemetry_Crosperf',
-              show_all_results,
-              retries,
-              run_local,
-              cwp_dso,
-              weight,
-              turbostat=turbostat_opt)
+              benchmarks, telemetry_crosbolt_perf_tests, test_args, iterations,
+              rm_chroot_tmp, perf_args, 'telemetry_Crosperf', show_all_results,
+              retries, run_local, cwp_dso, weight)
           self.AppendBenchmarkSet(
               benchmarks,
               crosbolt_perf_tests,
@@ -309,23 +281,12 @@ class ExperimentFactory(object):
               retries,
               run_local=False,
               cwp_dso=cwp_dso,
-              weight=weight,
-              turbostat=turbostat_opt)
+              weight=weight)
         elif test_name == 'all_toolchain_perf':
-          self.AppendBenchmarkSet(
-              benchmarks,
-              telemetry_toolchain_perf_tests,
-              test_args,
-              iterations,
-              rm_chroot_tmp,
-              perf_args,
-              suite,
-              show_all_results,
-              retries,
-              run_local,
-              cwp_dso,
-              weight,
-              turbostat=turbostat_opt)
+          self.AppendBenchmarkSet(benchmarks, telemetry_toolchain_perf_tests,
+                                  test_args, iterations, rm_chroot_tmp,
+                                  perf_args, suite, show_all_results, retries,
+                                  run_local, cwp_dso, weight)
           # Add non-telemetry toolchain-perf benchmarks:
           benchmarks.append(
               Benchmark(
@@ -340,28 +301,17 @@ class ExperimentFactory(object):
                   retries,
                   run_local=False,
                   cwp_dso=cwp_dso,
-                  weight=weight,
-                  turbostat=turbostat_opt))
+                  weight=weight))
         elif test_name == 'all_toolchain_perf_old':
           self.AppendBenchmarkSet(
-              benchmarks,
-              telemetry_toolchain_old_perf_tests,
-              test_args,
-              iterations,
-              rm_chroot_tmp,
-              perf_args,
-              suite,
-              show_all_results,
-              retries,
-              run_local,
-              cwp_dso,
-              weight,
-              turbostat=turbostat_opt)
+              benchmarks, telemetry_toolchain_old_perf_tests, test_args,
+              iterations, rm_chroot_tmp, perf_args, suite, show_all_results,
+              retries, run_local, cwp_dso, weight)
         else:
           benchmark = Benchmark(benchmark_name, test_name, test_args,
                                 iterations, rm_chroot_tmp, perf_args, suite,
                                 show_all_results, retries, run_local, cwp_dso,
-                                weight, turbostat_opt)
+                                weight)
           benchmarks.append(benchmark)
       else:
         if test_name == 'all_graphics_perf':
@@ -377,8 +327,7 @@ class ExperimentFactory(object):
               retries,
               run_local=False,
               cwp_dso=cwp_dso,
-              weight=weight,
-              turbostat=turbostat_opt)
+              weight=weight)
         else:
           # Add the single benchmark.
           benchmark = Benchmark(
@@ -393,8 +342,7 @@ class ExperimentFactory(object):
               retries,
               run_local=False,
               cwp_dso=cwp_dso,
-              weight=weight,
-              turbostat=turbostat_opt)
+              weight=weight)
           benchmarks.append(benchmark)
 
     if not benchmarks:
@@ -433,7 +381,7 @@ class ExperimentFactory(object):
           raise RuntimeError("Can not have empty 'build' field!")
         image, autotest_path, debug_path = label_settings.GetXbuddyPath(
             build, autotest_path, debug_path, board, chromeos_root, log_level,
-            perf_args)
+            download_debug)
 
       cache_dir = label_settings.GetField('cache_dir')
       chrome_src = label_settings.GetField('chrome_src')
@@ -473,8 +421,8 @@ class ExperimentFactory(object):
                             chromeos_root, cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(), email,
                             acquire_timeout, log_dir, log_level, share_cache,
-                            results_dir, locks_dir, cwp_dso, enable_aslr,
-                            ignore_min_max, skylab, dut_config)
+                            results_dir, locks_dir, cwp_dso, ignore_min_max,
+                            skylab, dut_config)
 
     return experiment
 

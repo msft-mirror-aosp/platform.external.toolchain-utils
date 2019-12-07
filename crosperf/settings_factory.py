@@ -241,6 +241,14 @@ class GlobalSettings(Settings):
             'related counters. It must start with perf '
             'command record or stat followed by arguments.'))
     self.AddField(
+        BooleanField(
+            'download_debug',
+            default=True,
+            description='Download compressed debug symbols alongwith '
+            'image. This can provide more info matching symbols for'
+            'profiles, but takes larger space. By default, download'
+            'it only when perf_args is specified.'))
+    self.AddField(
         TextField(
             'cache_dir',
             default='',

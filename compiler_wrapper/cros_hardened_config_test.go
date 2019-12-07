@@ -6,15 +6,12 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 )
 
-const oldHardenedWrapperPathForTest = "$CHROOT/usr/x86_64-pc-linux-gnu/x86_64-cros-linux-gnu/gcc-bin/4.9.x/sysroot_wrapper.hardened"
 const crosHardenedGoldenDir = "testdata/cros_hardened_golden"
 const crosHardenedNoCCacheGoldenDir = "testdata/cros_hardened_noccache_golden"
 const crosHardenedLlvmNextGoldenDir = "testdata/cros_hardened_llvmnext_golden"
@@ -23,7 +20,7 @@ func TestCrosHardenedConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		useLlvmNext := false
 		useCCache := true
-		cfg, err := getConfig("cros.hardened", useCCache, useLlvmNext, oldHardenedWrapperPathForTest, "123")
+		cfg, err := getConfig("cros.hardened", useCCache, useLlvmNext, "123")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -37,24 +34,11 @@ func TestCrosHardenedConfigWithoutCCache(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		useLlvmNext := false
 		useCCache := false
-		cfg, err := getConfig("cros.hardened", useCCache, useLlvmNext, oldHardenedWrapperPathForTest, "123")
+		cfg, err := getConfig("cros.hardened", useCCache, useLlvmNext, "123")
 		if err != nil {
 			t.Fatal(err)
 		}
 		ctx.updateConfig(cfg)
-
-		// Create a copy of the old wrapper where the CCACHE_DEFAULT is false.
-		if ctx.cfg.oldWrapperPath != "" {
-			oldWrapperContent, err := ioutil.ReadFile(ctx.cfg.oldWrapperPath)
-			if err != nil {
-				t.Fatal(err)
-			}
-			oldWrapperContent = regexp.MustCompile(`True\s+#\s+@CCACHE_DEFAULT@`).ReplaceAll(oldWrapperContent, []byte("False #"))
-			ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "oldwrapper_noccache")
-			if err := ioutil.WriteFile(ctx.cfg.oldWrapperPath, oldWrapperContent, 0666); err != nil {
-				t.Fatal(err)
-			}
-		}
 
 		// Only run the subset of the sysroot wrapper tests that execute commands.
 		gomaPath := path.Join(ctx.tempDir, "gomacc")
@@ -75,30 +59,11 @@ func TestCrosHardenedConfigWithLlvmNext(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		useLlvmNext := true
 		useCCache := true
-		cfg, err := getConfig("cros.hardened", useCCache, useLlvmNext, oldHardenedWrapperPathForTest, "123")
+		cfg, err := getConfig("cros.hardened", useCCache, useLlvmNext, "123")
 		if err != nil {
 			t.Fatal(err)
 		}
 		ctx.updateConfig(cfg)
-
-		// Create a copy of the old wrapper where we add the llvm next flags
-		if ctx.cfg.oldWrapperPath != "" {
-			oldWrapperContent, err := ioutil.ReadFile(ctx.cfg.oldWrapperPath)
-			if err != nil {
-				t.Fatal(err)
-			}
-			oldWrapperLlvmNextFlags := `
-LLVM_NEXT_FLAGS_TO_ADD = set(['-Wno-reorder-init-list',
-'-Wno-final-dtor-non-final-class',
-'-Wno-implicit-int-float-conversion',
-'-Wno-return-stack-address'
-])`
-			oldWrapperContent = regexp.MustCompile(`LLVM_NEXT_FLAGS_TO_ADD = set\(\[\]\)`).ReplaceAll(oldWrapperContent, []byte(oldWrapperLlvmNextFlags))
-			ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "oldwrapper_llvmnext")
-			if err := ioutil.WriteFile(ctx.cfg.oldWrapperPath, oldWrapperContent, 0666); err != nil {
-				t.Fatal(err)
-			}
-		}
 
 		// Only run the subset of the sysroot wrapper tests that execute commands.
 		gomaPath := path.Join(ctx.tempDir, "gomacc")
@@ -187,10 +152,6 @@ func createGoldenInputsForAllTargets(compiler string, args ...string) goldenFile
 func createBisectGoldenInputs(compiler string) goldenFile {
 	return goldenFile{
 		Name: "bisect.json",
-		// Disable comparing to the old wrapper as that calls the bisect_driver
-		// directly from python, and the new wrapper calls it via a separate
-		// sub command.
-		ignoreOldWrapper: true,
 		Records: []goldenRecord{
 			{
 				WrapperCmd: newGoldenCmd(compiler, mainCc),

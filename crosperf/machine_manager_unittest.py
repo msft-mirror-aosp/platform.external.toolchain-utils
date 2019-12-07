@@ -12,9 +12,9 @@ from __future__ import print_function
 import os.path
 import time
 import hashlib
+import unittest
 
 import mock
-import unittest
 
 import label
 import machine_manager
@@ -184,7 +184,7 @@ class MachineManagerTest(unittest.TestCase):
     self.assertEqual(mock_run_cmd.call_count, 0)
     self.assertEqual(mock_run_croscmd.call_count, 0)
 
-    #Test 2: label.image_type == "trybot"
+    # Test 2: label.image_type == "trybot"
     ResetValues()
     LABEL_LUMPY.image_type = 'trybot'
     mock_run_cmd.return_value = 0
@@ -456,7 +456,7 @@ class MachineManagerTest(unittest.TestCase):
         suite='telemetry_Crosperf')  # suite
 
     test_run = MockBenchmarkRun('test run', bench, LABEL_LUMPY, 1, [], self.mm,
-                                mock_logger, 'verbose', '', {}, False)
+                                mock_logger, 'verbose', '', {})
 
     self.mm._machines = [
         self.mock_lumpy1, self.mock_lumpy2, self.mock_lumpy3, self.mock_daisy1,
@@ -839,6 +839,15 @@ class CrosMachineTest(unittest.TestCase):
 
     mock_run_cmd.return_value = [0, 'invalid hardware config', '']
     self.assertRaises(cm._GetMachineID)
+
+  def test_add_cooldown_waittime(self):
+    cm = machine_manager.CrosMachine('1.2.3.4.cros', '/usr/local/chromeos',
+                                     'average')
+    self.assertEqual(cm.GetCooldownWaitTime(), 0)
+    cm.AddCooldownWaitTime(250)
+    self.assertEqual(cm.GetCooldownWaitTime(), 250)
+    cm.AddCooldownWaitTime(1)
+    self.assertEqual(cm.GetCooldownWaitTime(), 251)
 
 
 if __name__ == '__main__':
