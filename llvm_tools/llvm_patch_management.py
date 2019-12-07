@@ -9,10 +9,10 @@
 from __future__ import print_function
 
 import argparse
+import get_llvm_hash
 import os
-from pipes import quote
-
 import patch_manager
+
 from assert_not_in_chroot import VerifyOutsideChroot
 from failure_modes import FailureModes
 from get_llvm_hash import CreateTempLLVMRepo
@@ -97,8 +97,8 @@ def GetCommandLineArgs():
 
   # Duplicate packages were passed into the command line
   if len(unique_packages) != len(args_output.packages):
-    raise ValueError('Duplicate packages were passed in: %s' %
-                     ' '.join(args_output.packages))
+    raise ValueError('Duplicate packages were passed in: %s' % ' '.join(
+        args_output.packages))
 
   args_output.packages = unique_packages
 
@@ -212,7 +212,7 @@ def UpdatePackagesPatchMetadataFile(chroot_path, svn_version,
     with CreateTempLLVMRepo(temp_dir) as src_path:
       # Ensure that 'svn_version' exists in the chromiumum mirror of LLVM by
       # finding its corresponding git hash.
-      git_hash = llvm_hash.GetGitHashForVersion(src_path, svn_version)
+      git_hash = get_llvm_hash.GetGitHashFrom(src_path, svn_version)
 
       # Git hash of 'svn_version' exists, so move the source tree's HEAD to
       # 'git_hash' via `git checkout`.
@@ -232,10 +232,8 @@ def UpdatePackagesPatchMetadataFile(chroot_path, svn_version,
         patch_manager.CleanSrcTree(src_path)
 
         # Get the patch results for the current package.
-        patches_info = patch_manager.HandlePatches(svn_version,
-                                                   patch_metadata_path,
-                                                   filesdir_path, src_path,
-                                                   mode)
+        patches_info = patch_manager.HandlePatches(
+            svn_version, patch_metadata_path, filesdir_path, src_path, mode)
 
         package_info[cur_package] = patches_info._asdict()
 

@@ -10,14 +10,13 @@ import (
 	"testing"
 )
 
-const oldAndroidPathForTest = "$ANDROID_PREBUILTS/clang/host/linux-x86/clang-r353983c/bin/clang"
 const androidGoldenDir = "testdata/android_golden"
 
 func TestAndroidConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		useLlvmNext := false
 		useCCache := false
-		cfg, err := getConfig("android", useCCache, useLlvmNext, oldAndroidPathForTest, "123")
+		cfg, err := getConfig("android", useCCache, useLlvmNext, "123")
 		if err != nil {
 			t.Fatal(err)
 		}

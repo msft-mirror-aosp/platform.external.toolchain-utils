@@ -9,8 +9,6 @@ import (
 	"testing"
 )
 
-const oldClangHostWrapperPathForTest = "$CHROOT/usr/bin/clang_host_wrapper"
-const oldGccHostWrapperPathForTest = "$CHROOT/../src/third_party/chromiumos-overlay/sys-devel/gcc/files/host_wrapper"
 const crosClangHostGoldenDir = "testdata/cros_clang_host_golden"
 const crosGccHostGoldenDir = "testdata/cros_gcc_host_golden"
 
@@ -18,7 +16,7 @@ func TestCrosClangHostConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		useLlvmNext := false
 		useCCache := false
-		cfg, err := getConfig("cros.host", useCCache, useLlvmNext, oldClangHostWrapperPathForTest, "123")
+		cfg, err := getConfig("cros.host", useCCache, useLlvmNext, "123")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -48,7 +46,7 @@ func TestCrosGccHostConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		useLlvmNext := false
 		useCCache := false
-		cfg, err := getConfig("cros.host", useCCache, useLlvmNext, oldGccHostWrapperPathForTest, "123")
+		cfg, err := getConfig("cros.host", useCCache, useLlvmNext, "123")
 		if err != nil {
 			t.Fatal(err)
 		}

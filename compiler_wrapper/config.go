@@ -20,12 +20,11 @@ type config struct {
 	gccFlags []string
 	// Flags to add to clang only.
 	clangFlags []string
+	// Flags to add to clang only, AFTER user flags (cannot be overridden
+	// by the user).
+	clangPostFlags []string
 	// Toolchain root path relative to the wrapper binary.
 	rootRelPath string
-	// Path of the old wrapper using the toolchain root.
-	oldWrapperPath string
-	// Whether to mock out the calls that the old wrapper does.
-	mockOldWrapperCmds bool
 	// Directory to store errors that were prevented with -Wno-error.
 	newWarningsDir string
 	// Version. Only used for printing via -print-cmd.
@@ -62,16 +61,14 @@ func getRealConfig() (*config, error) {
 	if err != nil {
 		return nil, wrapErrorwithSourceLocf(err, "invalid format for UseLLvmNext")
 	}
-	// FIXME: Remove comparison to old wrapper once the new wrapper has landed.
-	oldWrapperPath := ""
-	config, err := getConfig(ConfigName, useCCache, useLlvmNext, oldWrapperPath, Version)
+	config, err := getConfig(ConfigName, useCCache, useLlvmNext, Version)
 	if err != nil {
 		return nil, err
 	}
 	return config, nil
 }
 
-func getConfig(configName string, useCCache bool, useLlvmNext bool, oldWrapperPath string, version string) (*config, error) {
+func getConfig(configName string, useCCache bool, useLlvmNext bool, version string) (*config, error) {
 	cfg := config{}
 	switch configName {
 	case "cros.hardened":
@@ -89,18 +86,14 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, oldWrapperPa
 	if useLlvmNext {
 		cfg.clangFlags = append(cfg.clangFlags, llvmNextFlags...)
 	}
-	cfg.oldWrapperPath = oldWrapperPath
 	cfg.version = version
 	return &cfg, nil
 }
 
-var llvmNextFlags = []string{
-	"-Wno-reorder-init-list",
-	"-Wno-final-dtor-non-final-class",
-	"-Wno-implicit-int-float-conversion",
-	"-Wno-return-stack-address",
-	"-Werror=poison-system-directories",
-}
+// TODO: Enable test in config_test.go, once we have new llvm-next flags.
+var llvmNextFlags = []string{}
+
+var llvmNextPostFlags = []string{}
 
 // Full hardening.
 // Temporarily disable function splitting because of chromium:434751.
@@ -132,6 +125,13 @@ var crosHardenedConfig = &config{
 		"-Wno-section",
 		"-static-libgcc",
 		"-fuse-ld=lld",
+		"-Wno-reorder-init-list",
+		"-Wno-final-dtor-non-final-class",
+		"-Wno-return-stack-address",
+		"-Werror=poison-system-directories",
+	},
+	clangPostFlags: []string{
+		"-Wno-implicit-int-float-conversion",
 	},
 	newWarningsDir: "/tmp/fatal_clang_warnings",
 }
@@ -156,6 +156,13 @@ var crosNonHardenedConfig = &config{
 		"-Wno-unknown-warning-option",
 		"-Wno-section",
 		"-static-libgcc",
+		"-Wno-reorder-init-list",
+		"-Wno-final-dtor-non-final-class",
+		"-Wno-return-stack-address",
+		"-Werror=poison-system-directories",
+	},
+	clangPostFlags: []string{
+		"-Wno-implicit-int-float-conversion",
 	},
 	newWarningsDir: "/tmp/fatal_clang_warnings",
 }
@@ -181,7 +188,14 @@ var crosHostConfig = &config{
 		"-Wno-deprecated-declarations",
 		"-Wno-tautological-constant-compare",
 		"-Wno-tautological-unsigned-enum-zero-compare",
+		"-Wno-reorder-init-list",
+		"-Wno-final-dtor-non-final-class",
+		"-Wno-return-stack-address",
+		"-Werror=poison-system-directories",
 		"-Wno-unknown-warning-option",
+	},
+	clangPostFlags: []string{
+		"-Wno-implicit-int-float-conversion",
 	},
 	newWarningsDir: "/tmp/fatal_clang_warnings",
 }
@@ -193,5 +207,6 @@ var androidConfig = &config{
 	commonFlags:      []string{},
 	gccFlags:         []string{},
 	clangFlags:       []string{},
+	clangPostFlags:   []string{},
 	newWarningsDir:   "/tmp/fatal_clang_warnings",
 }

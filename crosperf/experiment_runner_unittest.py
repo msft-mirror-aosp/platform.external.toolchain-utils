@@ -36,6 +36,7 @@ from cros_utils.file_utils import FileUtils
 EXPERIMENT_FILE_1 = """
   board: parrot
   remote: chromeos-parrot1.cros chromreos-parrot2.cros
+  locks_dir: /tmp
 
   benchmark: kraken {
     suite: telemetry_Crosperf

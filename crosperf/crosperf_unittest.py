@@ -25,6 +25,7 @@ import experiment_file
 EXPERIMENT_FILE_1 = """
   board: x86-alex
   remote: chromeos-alex3
+  locks_dir: /tmp
   perf_args: record -a -e cycles
   benchmark: PageCycler {
     iterations: 3
@@ -69,7 +70,7 @@ class CrosperfTest(unittest.TestCase):
     settings = crosperf.ConvertOptionsToSettings(options)
     self.assertIsNotNone(settings)
     self.assertIsInstance(settings, settings_factory.GlobalSettings)
-    self.assertEqual(len(settings.fields), 37)
+    self.assertEqual(len(settings.fields), 38)
     self.assertTrue(settings.GetField('rerun'))
     argv = ['crosperf/crosperf.py', 'temp.exp']
     options, _ = parser.parse_known_args(argv)
