@@ -8,7 +8,9 @@
 
 from __future__ import print_function
 
+import get_llvm_hash
 import json
+import llvm_bisection
 import unittest
 import unittest.mock as mock
 
@@ -17,7 +19,6 @@ from test_helpers import ArgsOutputTest
 from test_helpers import CallCountsToMockFunctions
 from test_helpers import CreateTemporaryJsonFile
 from test_helpers import WritePrettyJsonFile
-import llvm_bisection
 
 
 class LLVMBisectionTest(unittest.TestCase):
@@ -144,7 +145,7 @@ class LLVMBisectionTest(unittest.TestCase):
         llvm_bisection.GetStartAndEndRevision(start, end, test_tryjobs),
         expected_revisions_tuple)
 
-  @mock.patch.object(LLVMHash, 'GetGitHashForVersion')
+  @mock.patch.object(get_llvm_hash, 'GetGitHashFrom')
   def testNoRevisionsBetweenStartAndEnd(self, mock_get_git_hash):
     start = 100
     end = 110
@@ -152,7 +153,7 @@ class LLVMBisectionTest(unittest.TestCase):
     test_pending_revisions = {107}
     test_skip_revisions = {101, 102, 103, 104, 108, 109}
 
-    # Simulate behavior of `GetGitHashForVersion()` when the revision does not
+    # Simulate behavior of `GetGitHashFrom()` when the revision does not
     # exist in the LLVM source tree.
     def MockGetGitHashForRevisionRaiseException(src_path, revision):
       raise ValueError('Revision does not exist')
@@ -168,7 +169,8 @@ class LLVMBisectionTest(unittest.TestCase):
             start, end, parallel, abs_path_to_src, test_pending_revisions,
             test_skip_revisions), [])
 
-  @mock.patch.object(LLVMHash, 'GetGitHashForVersion')
+  # Assume llvm_bisection module has imported GetGitHashFrom
+  @mock.patch.object(get_llvm_hash, 'GetGitHashFrom')
   def testSuccessfullyRetrievedRevisionsBetweenStartAndEnd(
       self, mock_get_git_hash):
 
@@ -193,9 +195,10 @@ class LLVMBisectionTest(unittest.TestCase):
 
     self.assertEqual(mock_get_git_hash.call_count, 2)
 
-  # Simulate behavior of `GetGitHashForVersion()` when successfully retrieved
+  # Simulate behavior of `GetGitHashFrom()` when successfully retrieved
   # a list git hashes for each revision in the revisions list.
-  @mock.patch.object(LLVMHash, 'GetGitHashForVersion')
+  # Assume llvm_bisection module has imported GetGitHashFrom
+  @mock.patch.object(get_llvm_hash, 'GetGitHashFrom')
   # Simulate behavior of `GetRevisionsBetweenBisection()` when successfully
   # retrieved a list of valid revisions between 'start' and 'end'.
   @mock.patch.object(llvm_bisection, 'GetRevisionsBetweenBisection')
@@ -216,7 +219,7 @@ class LLVMBisectionTest(unittest.TestCase):
       if call_count < 3:
         return expected_revisions_and_hash_tuple[1][call_count]
 
-      assert False, 'Called `GetGitHashForVersion()` more than expected.'
+      assert False, 'Called `GetGitHashFrom()` more than expected.'
 
     temp_worktree = '/abs/path/to/tmpDir'
 
@@ -227,7 +230,7 @@ class LLVMBisectionTest(unittest.TestCase):
     mock_get_revisions_between_bisection.return_value = \
         expected_revisions_and_hash_tuple[0]
 
-    # Simulate behavior of `GetGitHashForVersion()` by using the testing
+    # Simulate behavior of `GetGitHashFrom()` by using the testing
     # function.
     mock_get_git_hash.side_effect = MockGetGitHashForRevision
 
@@ -370,10 +373,11 @@ class LLVMBisectionTest(unittest.TestCase):
 
     self.assertEqual(mock_add_tryjob.call_count, 3)
 
-  # Simulate behavior of `GetGitHashForVersion()` when successfully retrieved
-  # the git hash of the bad revision.
+  # Simulate behavior of `GetGitHashFrom()` when successfully retrieved
+  # the git hash of the bad revision. Assume llvm_bisection has imported
+  # GetGitHashFrom
   @mock.patch.object(
-      LLVMHash, 'GetGitHashForVersion', return_value='a123testhash4')
+      get_llvm_hash, 'GetGitHashFrom', return_value='a123testhash4')
   def testCompletedBisectionWhenProvidedSrcPath(self, mock_get_git_hash):
     last_tested = '/some/last/tested_file.json'
 

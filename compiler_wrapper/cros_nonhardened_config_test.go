@@ -8,14 +8,13 @@ import (
 	"testing"
 )
 
-const oldNonHardenedWrapperPathForTest = "$CHROOT/usr/x86_64-pc-linux-gnu/arm-none-eabi/gcc-bin/4.9.x/sysroot_wrapper"
 const crosNonHardenedGoldenDir = "testdata/cros_nonhardened_golden"
 
 func TestCrosNonHardenedConfig(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		useLlvmNext := false
 		useCCache := true
-		cfg, err := getConfig("cros.nonhardened", useCCache, useLlvmNext, oldNonHardenedWrapperPathForTest, "123")
+		cfg, err := getConfig("cros.nonhardened", useCCache, useLlvmNext, "123")
 		if err != nil {
 			t.Fatal(err)
 		}

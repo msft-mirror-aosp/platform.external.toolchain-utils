@@ -9,8 +9,8 @@ from __future__ import division
 from __future__ import print_function
 
 import math
-#FIXME(denik): Fix the import in chroot.
-#pylint: disable=import-error
+# FIXME(denik): Fix the import in chroot.
+# pylint: disable=import-error
 from scipy import stats
 
 # See crbug.com/673558 for how these are estimated.
@@ -65,12 +65,11 @@ class Benchmark(object):
                retries=0,
                run_local=False,
                cwp_dso='',
-               weight=0,
-               turbostat=True):
+               weight=0):
     self.name = name
-    #For telemetry, this is the benchmark name.
+    # For telemetry, this is the benchmark name.
     self.test_name = test_name
-    #For telemetry, this is the data.
+    # For telemetry, this is the data.
     self.test_args = test_args
     self.iterations = iterations if iterations > 0 else _samples(name)
     self.perf_args = perf_args
@@ -86,4 +85,3 @@ class Benchmark(object):
     self.run_local = run_local
     self.cwp_dso = cwp_dso
     self.weight = weight
-    self.turbostat = turbostat
