@@ -183,7 +183,7 @@ def GetGoogle3LLVMVersion(stable):
   git_hash = check_output(cmd)
 
   # Change type to an integer
-  return GetVersionFrom(GetAndUpdateLLVMProjectInLLVMTools(), git_hash)
+  return GetVersionFrom(GetAndUpdateLLVMProjectInLLVMTools(), git_hash.rstrip())
 
 
 def is_svn_option(svn_option):

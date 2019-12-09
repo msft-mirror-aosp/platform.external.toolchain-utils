@@ -322,7 +322,7 @@ def PerformBisection(src_path, good_commit, bad_commit, svn_version,
   check_output(end_cmd)
 
   # `git bisect run` returns the bad commit hash and the commit message.
-  version = get_llvm_hash.GetVersionFrom(src_path, git_hash)
+  version = get_llvm_hash.GetVersionFrom(src_path, git_hash.rstrip())
 
   return version
 
