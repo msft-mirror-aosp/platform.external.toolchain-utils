@@ -49,6 +49,7 @@ def main():
   clone_files = [
       'failure_modes.py',
       'get_llvm_hash.py',
+      'git_llvm_rev.py',
       'patch_manager.py',
       'subprocess_helpers.py',
   ]
