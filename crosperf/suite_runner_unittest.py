@@ -199,7 +199,7 @@ class SuiteRunnerTest(unittest.TestCase):
     self.assertEqual(len(args_list), 2)
     self.assertEqual(args_list[0], '/tmp/chromeos')
     self.assertEqual(args_list[1], ('/usr/bin/test_that  '
-                                    '--fast  --board=lumpy '
+                                    '--fast --board=lumpy '
                                     '--iterations=2 lumpy1.cros octane'))
     self.assertEqual(args_dict['command_terminator'], self.mock_cmd_term)
     self.real_logger.LogMsg = save_log_msg
@@ -241,17 +241,18 @@ class SuiteRunnerTest(unittest.TestCase):
 
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   @mock.patch.object(json, 'loads')
-  def test_skylab_run(self, mock_json_loads, mock_runcmd):
+  def test_skylab_run_client(self, mock_json_loads, mock_runcmd):
 
     def FakeDownloadResult(l, task_id):
       if l and task_id:
         self.assertEqual(task_id, '12345')
         return 0
 
-    mock_runcmd.return_value = \
-      (0,
-       'Created Swarming task https://swarming/task/b12345',
-       '')
+    mock_runcmd.return_value = (
+        0,
+        'Created Swarming task https://swarming/task/b12345',
+        '',
+    )
     self.mock_cmd_exec.RunCommandWOutput = mock_runcmd
 
     mock_json_loads.return_value = {
@@ -281,6 +282,43 @@ class SuiteRunnerTest(unittest.TestCase):
     args_list = mock_runcmd.call_args_list[1][0]
     self.assertEqual(args_list[0], ('skylab wait-task 12345'))
     self.assertEqual(args_dict['command_terminator'], self.mock_cmd_term)
+
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
+  @mock.patch.object(json, 'loads')
+  def test_skylab_run_telemetry_Crosperf(self, mock_json_loads, mock_runcmd):
+
+    def FakeDownloadResult(l, task_id):
+      if l and task_id:
+        self.assertEqual(task_id, '12345')
+        return None
+
+    mock_runcmd.return_value = (
+        0,
+        'Created Swarming task https://swarming/task/b12345',
+        '',
+    )
+    self.mock_cmd_exec.RunCommandWOutput = mock_runcmd
+
+    mock_json_loads.return_value = {
+        'child-results': [{
+            'success': True,
+            'task-run-url': 'https://swarming/task?id=12345'
+        }]
+    }
+    self.mock_json.loads = mock_json_loads
+
+    self.mock_label.skylab = True
+    self.runner.DownloadResult = FakeDownloadResult
+    self.runner.Skylab_Run(self.mock_label, self.telemetry_crosperf_bench, '',
+                           '')
+    args_list = mock_runcmd.call_args_list[0][0]
+    self.assertEqual(
+        args_list[0],
+        ('/usr/local/bin/skylab create-test '
+         '-dim dut_name:lumpy1 -dim dut_name:lumpy.cros2 '
+         '-board=lumpy -image=build '
+         "-pool=toolchain -test-args='run_local=False test=octane' "
+         'telemetry_Crosperf'))
 
   @mock.patch.object(time, 'sleep')
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommand')

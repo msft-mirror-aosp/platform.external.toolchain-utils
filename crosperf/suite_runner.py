@@ -118,11 +118,11 @@ class SuiteRunner(object):
 
   def Test_That_Run(self, machine, label, benchmark, test_args, profiler_args):
     """Run the test_that test.."""
-    options = ''
+    options = []
     if label.board:
-      options += ' --board=%s' % label.board
+      options.append('--board=%s' % label.board)
     if test_args:
-      options += ' %s' % test_args
+      options.append(test_args)
     if profiler_args:
       self.logger.LogFatal('test_that does not support profiler.')
     command = 'rm -rf /usr/local/autotest/results/*'
@@ -140,8 +140,8 @@ class SuiteRunner(object):
       autotest_dir_arg = ''
 
     command = (('%s %s --fast '
-                '%s %s %s') % (TEST_THAT_PATH, autotest_dir_arg, options,
-                               machine, benchmark.test_name))
+                '%s %s %s') % (TEST_THAT_PATH, autotest_dir_arg,
+                               ' '.join(options), machine, benchmark.test_name))
     if self.log_level != 'verbose':
       self.logger.LogOutput('Running test.')
       self.logger.LogOutput('CMD: %s' % command)
@@ -192,40 +192,43 @@ class SuiteRunner(object):
 
   def Skylab_Run(self, label, benchmark, test_args, profiler_args):
     """Run the test via skylab.."""
-    options = ''
+    options = []
     if label.board:
-      options += '-board=%s' % label.board
+      options.append('-board=%s' % label.board)
     if label.build:
-      options += ' -image=%s' % label.build
+      options.append('-image=%s' % label.build)
     # TODO: now only put toolchain pool here, user need to be able to specify
     # which pool to use. Need to request feature to not use this option at all.
-    options += ' -pool=toolchain'
+    options.append('-pool=toolchain')
+    test_args_list = []
     if benchmark.suite == 'telemetry_Crosperf':
       if test_args:
         # Strip double quotes off args (so we can wrap them in single
         # quotes, to pass through to Telemetry).
         if test_args[0] == '"' and test_args[-1] == '"':
-          test_args = test_args[1:-1]
+          test_args_list.append(test_args[1:-1])
       if profiler_args:
-        test_args += GetProfilerArgs(profiler_args)
+        test_args_list.append(GetProfilerArgs(profiler_args))
       if self.dut_config:
-        test_args += GetDutConfigArgs(self.dut_config)
-      test_args += ' run_local={} test={}'.format(
-          benchmark.run_local,
-          benchmark.test_name,
-      )
+        test_args_list.append(GetDutConfigArgs(self.dut_config))
+      test_args_list.append('run_local=%s' % benchmark.run_local)
+      test_args_list.append('test=%s' % benchmark.test_name)
     else:
       if profiler_args:
         self.logger.LogFatal('Client tests do not support profiler.')
-    if test_args:
-      options += ' -test-args=%s' % pipes.quote(test_args)
+      if test_args:
+        test_args_list.append(test_args)
+    if test_args_list:
+      options.append('-test-args=%s' % pipes.quote(' '.join(test_args_list)))
 
-    dimensions = ''
+    dimensions = []
     for dut in label.remote:
-      dimensions += ' -dim dut_name:%s' % dut.rstrip('.cros')
+      dimensions.append('-dim dut_name:%s' % dut.rstrip('.cros'))
 
-    command = (('%s create-test%s %s %s') % \
-              (SKYLAB_PATH, dimensions, options, benchmark.test_name))
+    command = (('%s create-test %s %s %s') % \
+              (SKYLAB_PATH, ' '.join(dimensions), ' '.join(options),
+               'telemetry_Crosperf' if benchmark.suite == 'telemetry_Crosperf'
+               else benchmark.test_name))
 
     if self.log_level != 'verbose':
       self.logger.LogOutput('Starting skylab test.')
