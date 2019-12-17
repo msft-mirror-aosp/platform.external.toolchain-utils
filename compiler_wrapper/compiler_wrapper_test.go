@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -50,27 +49,18 @@ func TestAddClangConfigFlags(t *testing.T) {
 
 func TestLogGeneralExecError(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		testOldWrapperPaths := []string{
-			"",
-			filepath.Join(ctx.tempDir, "fakewrapper"),
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			return errors.New("someerror")
 		}
-		for _, testOldWrapperPath := range testOldWrapperPaths {
-			ctx.cfg.oldWrapperPath = testOldWrapperPath
-			// Note: No need to write the old wrapper as we don't execute
-			// it due to the general error from the new error.
-			ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-				return errors.New("someerror")
-			}
-			stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
-			if err := verifyInternalError(stderr); err != nil {
-				t.Fatal(err)
-			}
-			if !strings.Contains(stderr, gccX86_64) {
-				t.Errorf("could not find compiler path on stderr. Got: %s", stderr)
-			}
-			if !strings.Contains(stderr, "someerror") {
-				t.Errorf("could not find original error on stderr. Got: %s", stderr)
-			}
+		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyInternalError(stderr); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(stderr, gccX86_64) {
+			t.Errorf("could not find compiler path on stderr. Got: %s", stderr)
+		}
+		if !strings.Contains(stderr, "someerror") {
+			t.Errorf("could not find original error on stderr. Got: %s", stderr)
 		}
 	})
 }
@@ -93,50 +83,12 @@ func TestLogMissingCCacheExecError(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.useCCache = true
 
-		testOldWrapperPaths := []string{
-			"",
-			filepath.Join(ctx.tempDir, "fakewrapper"),
-		}
-		for _, testOldWrapperPath := range testOldWrapperPaths {
-			ctx.cfg.oldWrapperPath = testOldWrapperPath
-			// Note: No need to write the old wrapper as we don't execute
-			// it due to the general error from the new error.
-			ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-				return syscall.ENOENT
-			}
-			ctx.stderrBuffer.Reset()
-			stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
-			if err := verifyNonInternalError(stderr, "ccache not found under .*. Please install it"); err != nil {
-				t.Fatal(err)
-			}
-		}
-	})
-}
-
-func TestLogExitCodeErrorWhenComparingToOldWrapper(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
-		ctx.cfg.mockOldWrapperCmds = false
-		ctx.cfg.oldWrapperPath = filepath.Join(ctx.tempDir, "fakewrapper")
-
 		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			writePythonMockWrapper(ctx, &mockWrapperConfig{
-				Cmds: []*mockWrapperCmd{
-					{
-						Path:     cmd.Path,
-						Args:     cmd.Args,
-						ExitCode: 2,
-					},
-				},
-			})
-			fmt.Fprint(stderr, "someerror")
-			return newExitCodeError(2)
+			return syscall.ENOENT
 		}
-
-		exitCode := callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc))
-		if exitCode != 2 {
-			t.Fatalf("Expected exit code 2. Got: %d", exitCode)
-		}
-		if err := verifyNonInternalError(ctx.stderrString(), "someerror"); err != nil {
+		ctx.stderrBuffer.Reset()
+		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyNonInternalError(stderr, "ccache not found under .*. Please install it"); err != nil {
 			t.Fatal(err)
 		}
 	})

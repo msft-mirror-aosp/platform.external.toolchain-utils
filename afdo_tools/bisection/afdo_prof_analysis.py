@@ -11,6 +11,13 @@ script which deems particular AFDO profiles as GOOD/BAD/SKIP, and an output
 file as arguments. Given these pieces of information, it analyzes the profiles
 to try and determine what exactly is bad about the bad profile. It does this
 with three main techniques: bisecting search, range search, and rough diff-ing.
+
+The external script communicates the 'goodness' of an AFDO profile through its
+exit code. The codes known to this script are:
+  - 0: the AFDO profile produced a good binary
+  - 1: the AFDO profile produced a bad binary
+  - 125: no result could be determined; just try another profile
+  - >127: quit immediately
 """
 
 from __future__ import division, print_function
@@ -395,6 +402,7 @@ def parse_args():
 
 
 def main(flags):
+  logging.getLogger().setLevel(logging.INFO)
   if not flags.no_resume and flags.seed:  # conflicting seeds
     raise RuntimeError('Ambiguous seed value; do not resume from existing '
                        'state and also specify seed by command line flag')

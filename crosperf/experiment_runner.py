@@ -148,7 +148,7 @@ class ExperimentRunner(object):
       experiment.locked_machines = self.locked_machines
       self._UpdateMachineList(self.locked_machines)
       experiment.machine_manager.RemoveNonLockedMachines(self.locked_machines)
-      if len(self.locked_machines) == 0:
+      if not self.locked_machines:
         raise RuntimeError('Unable to lock any machines.')
 
   def _ClearCacheEntries(self, experiment):
@@ -168,7 +168,13 @@ class ExperimentRunner(object):
 
   def _Run(self, experiment):
     try:
-      self._LockAllMachines(experiment)
+      # We should not lease machines if tests are launched via `skylab
+      # create-test`. This is because leasing DUT in skylab will create a
+      # dummy task on the DUT and new test created will be hanging there.
+      # TODO(zhizhouy): Need to check whether machine is ready or not before
+      # assigning a test to it.
+      if not experiment.skylab:
+        self._LockAllMachines(experiment)
       # Calculate all checksums of avaiable/locked machines, to ensure same
       # label has same machines for testing
       experiment.SetCheckSums(forceSameImage=True)

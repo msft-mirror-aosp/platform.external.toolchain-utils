@@ -7,16 +7,17 @@
 """Unit tests when creating the arguments for the patch manager."""
 
 from __future__ import print_function
-
 from collections import namedtuple
+from failure_modes import FailureModes
+
+import get_llvm_hash
+import llvm_patch_management
 import os
+import patch_manager
+import subprocess
 import unittest
 import unittest.mock as mock
 
-from failure_modes import FailureModes
-from get_llvm_hash import LLVMHash
-import llvm_patch_management
-import patch_manager
 
 
 class LlvmPatchManagementTest(unittest.TestCase):
@@ -142,10 +143,10 @@ class LlvmPatchManagementTest(unittest.TestCase):
 
     mock_isfile.assert_called_once()
 
-  # Simulate `GetGitHashForVersion()` when successfully retrieved the git hash
+  # Simulate `GetGitHashFrom()` when successfully retrieved the git hash
   # of the version passed in.
   @mock.patch.object(
-      LLVMHash, 'GetGitHashForVersion', return_value='a123testhash1')
+      get_llvm_hash, 'GetGitHashFrom', return_value='a123testhash1')
   # Simulate `CreateTempLLVMRepo()` when successfully created a work tree from
   # the LLVM repo copy in `llvm_tools` directory.
   @mock.patch.object(llvm_patch_management, 'CreateTempLLVMRepo')
@@ -215,10 +216,10 @@ class LlvmPatchManagementTest(unittest.TestCase):
   # Simulate `CleanSrcTree()` when successfully removed changes from the
   # worktree.
   @mock.patch.object(patch_manager, 'CleanSrcTree')
-  # Simulate `GetGitHashForVersion()` when successfully retrieved the git hash
+  # Simulate `GetGitHashFrom()` when successfully retrieved the git hash
   # of the version passed in.
   @mock.patch.object(
-      LLVMHash, 'GetGitHashForVersion', return_value='a123testhash1')
+      get_llvm_hash, 'GetGitHashFrom', return_value='a123testhash1')
   # Simulate `CreateTempLLVMRepo()` when successfully created a work tree from
   # the LLVM repo copy in `llvm_tools` directory.
   @mock.patch.object(llvm_patch_management, 'CreateTempLLVMRepo')
