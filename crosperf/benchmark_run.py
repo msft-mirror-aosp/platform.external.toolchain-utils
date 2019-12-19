@@ -178,12 +178,10 @@ class BenchmarkRun(threading.Thread):
     return machine
 
   def GetExtraAutotestArgs(self):
-    if self.benchmark.perf_args and self.benchmark.suite == 'telemetry':
-      self._logger.LogError('Telemetry does not support profiler.')
-      self.benchmark.perf_args = ''
-
-    if self.benchmark.perf_args and self.benchmark.suite == 'test_that':
-      self._logger.LogError('test_that does not support profiler.')
+    if (self.benchmark.perf_args and
+        self.benchmark.suite != 'telemetry_Crosperf'):
+      self._logger.LogError(
+          'Non-telemetry benchmark does not support profiler.')
       self.benchmark.perf_args = ''
 
     if self.benchmark.perf_args:

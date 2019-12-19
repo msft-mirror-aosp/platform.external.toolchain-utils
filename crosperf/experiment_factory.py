@@ -296,7 +296,7 @@ class ExperimentFactory(object):
                   iterations,
                   rm_chroot_tmp,
                   perf_args,
-                  '',
+                  'crosperf_Wrapper',  # Use client wrapper in Autotest
                   show_all_results,
                   retries,
                   run_local=False,
