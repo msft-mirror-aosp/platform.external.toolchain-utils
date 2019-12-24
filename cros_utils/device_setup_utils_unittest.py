@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
@@ -12,7 +12,7 @@ from __future__ import print_function
 import time
 
 import unittest
-import mock
+from unittest import mock
 
 from device_setup_utils import DutWrapper
 
@@ -450,8 +450,8 @@ class DutWrapperTest(unittest.TestCase):
     self.dw.dut_config['cpu_freq_pct'] = 50
     self.dw.SetupCpuFreq(online)
     self.dw.RunCommandOnDut.assert_called_once()
-    self.assertNotRegexpMatches(self.dw.RunCommandOnDut.call_args_list[0][0][0],
-                                '^echo.*scaling_max_freq$')
+    self.assertNotRegex(self.dw.RunCommandOnDut.call_args_list[0][0][0],
+                        '^echo.*scaling_max_freq$')
 
   def test_setup_cpu_freq_multiple_no_access(self):
     online = [0, 1]

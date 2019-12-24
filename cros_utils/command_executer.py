@@ -124,7 +124,7 @@ class CommandExecuter(object):
       terminated_time = None
       started_time = time.time()
 
-      while len(pipes):
+      while pipes:
         if command_terminator and command_terminator.IsTerminated():
           os.killpg(os.getpgid(p.pid), signal.SIGTERM)
           if self.logger:
@@ -136,7 +136,7 @@ class CommandExecuter(object):
         l = my_poll.poll(100)
         for (fd, _) in l:
           if fd == p.stdout.fileno():
-            out = os.read(p.stdout.fileno(), 16384)
+            out = os.read(p.stdout.fileno(), 16384).decode('utf8')
             if return_output:
               full_stdout += out
             if self.logger:
@@ -145,7 +145,7 @@ class CommandExecuter(object):
               pipes.remove(p.stdout)
               my_poll.unregister(p.stdout)
           if fd == p.stderr.fileno():
-            err = os.read(p.stderr.fileno(), 16384)
+            err = os.read(p.stderr.fileno(), 16384).decode('utf8')
             if return_output:
               full_stderr += err
             if self.logger:
@@ -182,8 +182,8 @@ class CommandExecuter(object):
       if return_output:
         return (p.returncode, full_stdout, full_stderr)
       return (p.returncode, '', '')
-    except BaseException as e:
-      except_handler(p, e)
+    except BaseException as err:
+      except_handler(p, err)
       raise
 
   def RunCommand(self, *args, **kwargs):
@@ -233,7 +233,7 @@ class CommandExecuter(object):
     command += '\n. ' + chromeos_root + '/src/scripts/common.sh'
     command += '\n. ' + chromeos_root + '/src/scripts/remote_access.sh'
     command += '\nTMP=$(mktemp -d)'
-    command += "\nFLAGS \"$@\" || exit 1"
+    command += '\nFLAGS "$@" || exit 1'
     command += '\nremote_access_init'
     return command
 
@@ -300,7 +300,7 @@ class CommandExecuter(object):
 
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
     command += '\nremote_sh bash %s' % command_file
-    command += "\nl_retval=$?; echo \"$REMOTE_OUT\"; exit $l_retval"
+    command += '\nl_retval=$?; echo "$REMOTE_OUT"; exit $l_retval'
     retval = self.RunCommandGeneric(
         command,
         return_output,
@@ -371,7 +371,7 @@ class CommandExecuter(object):
     os.write(handle, '\n')
     os.close(handle)
 
-    os.chmod(command_file, 0777)
+    os.chmod(command_file, 0o777)
 
     # if return_output is set, run a dummy command first to make sure that
     # the chroot already exists. We want the final returned output to skip
@@ -474,7 +474,7 @@ class CommandExecuter(object):
       ssh_command = (
           'ssh -p ${FLAGS_ssh_port}' + ' -o StrictHostKeyChecking=no' +
           ' -o UserKnownHostsFile=$(mktemp)' + ' -i $TMP_PRIVATE_KEY')
-      rsync_prefix = "\nrsync -r -e \"%s\" " % ssh_command
+      rsync_prefix = '\nrsync -r -e "%s" ' % ssh_command
       if dest_cros:
         command += rsync_prefix + '%s root@%s:%s' % (src, dest_machine, dest)
         return self.RunCommand(
@@ -627,7 +627,7 @@ class CommandExecuter(object):
         poll.register(errfd, select.POLLIN | select.POLLPRI)
         handlermap[errfd] = StreamHandler(pobject, errfd, 'stderr',
                                           line_consumer)
-      while len(handlermap):
+      while handlermap:
         readables = poll.poll(300)
         for (fd, evt) in readables:
           handler = handlermap[fd]
@@ -642,16 +642,13 @@ class CommandExecuter(object):
           os.killpg(os.getpgid(pobject.pid), signal.SIGTERM)
 
       return pobject.wait()
-    except BaseException as e:
-      except_handler(pobject, e)
+    except BaseException as err:
+      except_handler(pobject, err)
       raise
 
 
 class MockCommandExecuter(CommandExecuter):
   """Mock class for class CommandExecuter."""
-
-  def __init__(self, log_level, logger_to_set=None):
-    super(MockCommandExecuter, self).__init__(log_level, logger_to_set)
 
   def RunCommandGeneric(self,
                         cmd,

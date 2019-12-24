@@ -1,6 +1,10 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-# Copyright 2011 Google Inc. All Rights Reserved.
+# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """Utilities to send email either through SMTP or SendGMR."""
 
 from __future__ import print_function
@@ -72,7 +76,7 @@ class EmailSender(object):
         part.set_payload(attachment.content)
         Encoders.encode_base64(part)
         part.add_header('Content-Disposition',
-                        "attachment; filename=\"%s\"" % attachment.name)
+                        'attachment; filename="%s"' % attachment.name)
         msg.attach(part)
 
     # Send the message via our own SMTP server, but don't include the
