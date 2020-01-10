@@ -129,7 +129,13 @@ def translate_sha_to_rev(llvm_config: LLVMConfig, sha_or_ref: str) -> Rev:
 
   if merge_base == base_llvm_sha:
     result = check_output(
-        ['git', 'rev-list', '--count', f'{base_llvm_sha}..{sha}'],
+        [
+            'git',
+            'rev-list',
+            '--count',
+            '--first-parent',
+            f'{base_llvm_sha}..{sha}',
+        ],
         cwd=llvm_config.dir,
     )
     count = int(result.strip())
@@ -145,7 +151,13 @@ def translate_sha_to_rev(llvm_config: LLVMConfig, sha_or_ref: str) -> Rev:
     return Rev(branch='master', number=merge_base_number)
 
   distance_from_base = check_output(
-      ['git', 'rev-list', '--count', f'{merge_base}..{sha}'],
+      [
+          'git',
+          'rev-list',
+          '--count',
+          '--first-parent',
+          f'{merge_base}..{sha}',
+      ],
       cwd=llvm_config.dir,
   )
 
@@ -283,7 +295,13 @@ def translate_rev_to_sha(llvm_config: LLVMConfig, rev: Rev) -> str:
 
   commit_number = number - base_revision_number
   revs_between_str = check_output(
-      ['git', 'rev-list', '--count', f'{base_sha}..{branch_head_sha}'],
+      [
+          'git',
+          'rev-list',
+          '--count',
+          '--first-parent',
+          f'{base_sha}..{branch_head_sha}',
+      ],
       cwd=llvm_config.dir,
   )
   revs_between = int(revs_between_str.strip())

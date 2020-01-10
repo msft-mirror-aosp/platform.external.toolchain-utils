@@ -4,6 +4,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+"""Tests for git_llvm_rev."""
+
+from __future__ import print_function
+
 import os
 import sys
 import unittest
@@ -21,6 +25,7 @@ def get_llvm_config() -> git_llvm_rev.LLVMConfig:
 
 
 class Test(unittest.TestCase):
+  """Test cases for git_llvm_rev."""
 
   def rev_to_sha_with_round_trip(self, rev: git_llvm_rev.Rev) -> str:
     config = get_llvm_config()
@@ -65,6 +70,22 @@ class Test(unittest.TestCase):
           get_llvm_config(), git_llvm_rev.Rev(branch='master', number=9999999))
 
     self.assertIn('Try updating your tree?', str(r.exception))
+
+  def test_merge_commits_count_as_one_commit_crbug1041079(self) -> None:
+    # This CL merged _a lot_ of commits in. Verify a few hand-computed
+    # properties about it.
+    merge_sha_rev_number = 4496 + git_llvm_rev.base_llvm_revision
+    sha = self.rev_to_sha_with_round_trip(
+        git_llvm_rev.Rev(branch='master', number=merge_sha_rev_number))
+    self.assertEqual(sha, '0f0d0ed1c78f1a80139a1f2133fad5284691a121')
+
+    sha = self.rev_to_sha_with_round_trip(
+        git_llvm_rev.Rev(branch='master', number=merge_sha_rev_number - 1))
+    self.assertEqual(sha, '6f635f90929da9545dd696071a829a1a42f84b30')
+
+    sha = self.rev_to_sha_with_round_trip(
+        git_llvm_rev.Rev(branch='master', number=merge_sha_rev_number + 1))
+    self.assertEqual(sha, '199700a5cfeedf227619f966aa3125cef18bc958')
 
   # NOTE: The below tests have _zz_ in their name as an optimization. Iterating
   # on a quick test is painful when these larger tests come before it and take
