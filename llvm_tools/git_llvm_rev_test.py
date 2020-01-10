@@ -8,16 +8,57 @@
 
 from __future__ import print_function
 
+import datetime
 import os
+import subprocess
 import sys
 import unittest
 
+import get_llvm_hash
 import git_llvm_rev
 
 
 def get_llvm_checkout() -> str:
   my_dir = os.path.dirname(os.path.abspath(__file__))
   return os.path.join(my_dir, 'llvm-project-copy')
+
+
+def ensure_llvm_project_up_to_date():
+  checkout = get_llvm_checkout()
+  if not os.path.isdir(checkout):
+    print(
+        'No llvm-project exists locally; syncing it. This takes a while.',
+        file=sys.stderr)
+    actual_checkout = get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools()
+    assert checkout == actual_checkout, '%s != %s' % (actual_checkout, checkout)
+
+  commit_timestamp = git_llvm_rev.check_output(
+      ['git', 'log', '-n1', '--format=%ct', 'origin/master'], cwd=checkout)
+
+  commit_time = datetime.datetime.fromtimestamp(int(commit_timestamp.strip()))
+  now = datetime.datetime.now()
+
+  time_since_last_commit = now - commit_time
+
+  # Arbitrary, but if it's been more than 2d since we've seen a commit, it's
+  # probably best to bring us up-to-date.
+  if time_since_last_commit <= datetime.timedelta(days=2):
+    return
+
+  print(
+      '%d days have elapsed since the last commit to %s; auto-syncing' %
+      (time_since_last_commit.days, checkout),
+      file=sys.stderr)
+
+  result = subprocess.run(
+      ['git', 'fetch', 'origin'],
+      cwd=checkout,
+      check=True,
+  )
+  if result.returncode:
+    print(
+        'Sync failed somehow; hoping that things are fresh enough, then...',
+        file=sys.stderr)
 
 
 def get_llvm_config() -> git_llvm_rev.LLVMConfig:
@@ -131,13 +172,5 @@ class Test(unittest.TestCase):
 # back to the base commit for.
 
 if __name__ == '__main__':
-  # We have exactly one concrete target that we often have checked out anyway.
-  # Rather than building tests that hopefully match that target, use it
-  # directly.
-  if not os.path.isdir(get_llvm_checkout()):
-    print(
-        'Please checkout llvm-project-copy to run these tests. A simple way '
-        'to do that is running `./get_llvm_hash.py --llvm_version 370000`',
-        file=sys.stderr)
-    sys.exit(1)
+  ensure_llvm_project_up_to_date()
   unittest.main()

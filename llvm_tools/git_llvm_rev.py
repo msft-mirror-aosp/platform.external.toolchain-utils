@@ -10,6 +10,8 @@ Revision numbers are all of the form '(branch_name, r1234)'. As a shorthand,
 r1234 is parsed as '(master, 1234)'.
 """
 
+from __future__ import print_function
+
 import argparse
 import re
 import subprocess
@@ -184,8 +186,7 @@ def translate_sha_to_rev(llvm_config: LLVMConfig, sha_or_ref: str) -> Rev:
         f'Ambiguity: multiple branches from {llvm_config.remote} have {sha}: '
         f'{sorted(candidates)}')
 
-  branch, = candidates
-  return Rev(branch=branch, number=revision_number)
+  return Rev(branch=candidates[0], number=revision_number)
 
 
 def parse_git_commit_messages(stream: t.Iterable[str],
@@ -208,6 +209,8 @@ def parse_git_commit_messages(stream: t.Iterable[str],
 
   lines = iter(stream)
   while True:
+    # Looks like a potential bug in pylint? crbug.com/1041148
+    # pylint: disable=stop-iteration-return
     sha = next(lines, None)
     if sha is None:
       return
