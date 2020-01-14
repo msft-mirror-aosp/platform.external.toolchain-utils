@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
@@ -27,6 +27,7 @@ class NoPsuedoTerminalTest(unittest.TestCase):
     """Attaches strace to the current process."""
     args = ['sudo', 'strace', '-o', output_file, '-p', str(os.getpid())]
     print(args)
+    # pylint: disable=bad-option-value, subprocess-popen-preexec-fn
     self._strace_process = subprocess.Popen(args, preexec_fn=os.setpgrp)
     # Wait until we see some activity.
     start_time = time.time()

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
@@ -9,10 +9,10 @@
 
 from __future__ import print_function
 
-from mock import patch
-
 import time
+
 import unittest
+from unittest.mock import patch
 
 from cros_utils import buildbot_utils
 from cros_utils import command_executer
@@ -82,7 +82,7 @@ class TrybotTest(unittest.TestCase):
 
           # async
           buildbucket_id, image = buildbot_utils.GetTrybotImage(
-              '/tmp', 'falco-release-tryjob', [], async=True)
+              '/tmp', 'falco-release-tryjob', [], asynchronous=True)
           self.assertEqual(buildbucket_id, self.buildbucket_id)
           self.assertEqual(' ', image)
 

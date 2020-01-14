@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Tests for the tabulator module."""
 
 from __future__ import print_function
@@ -71,7 +73,7 @@ class TabulatorTest(unittest.TestCase):
     a = [1.0e+308] * 3
     # pylint: disable=protected-access
     b = tabulator.Result()._GetGmean(a)
-    self.assertTrue(b >= 0.99e+308 and b <= 1.01e+308)
+    self.assertTrue(0.99e+308 <= b <= 1.01e+308)
 
   def testIgnoreMinMax(self):
     amr = tabulator.AmeanResult(ignore_min_max=True)

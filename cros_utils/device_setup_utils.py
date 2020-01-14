@@ -1,4 +1,3 @@
-#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 #
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
@@ -18,15 +17,13 @@ __author__ = 'zhizhouy@google.com (Zhizhou Yang)'
 import re
 import time
 
+from contextlib import contextmanager
+
 from cros_utils import command_executer
 
 
 class DutWrapper(object):
-  """Wrap DUT parameters inside.
-
-  Eventially CommandExecuter will reqiure only one
-  argument - command.
-  """
+  """Wrap DUT parameters inside."""
 
   def __init__(self,
                chromeos_root,
@@ -43,6 +40,7 @@ class DutWrapper(object):
     self.dut_config = dut_config
 
   def RunCommandOnDut(self, command, ignore_status=False):
+    """Helper function to run command on DUT."""
     ret, msg, err_msg = self.ce.CrosRunCommandWOutput(
         command, machine=self.remote, chromeos_root=self.chromeos_root)
 
@@ -60,15 +58,17 @@ class DutWrapper(object):
     return ret, msg, err_msg
 
   def DisableASLR(self):
+    """Disable ASLR on DUT."""
     disable_aslr = ('set -e; '
                     'if [[ -e /proc/sys/kernel/randomize_va_space ]]; then '
                     '  echo 0 > /proc/sys/kernel/randomize_va_space; '
                     'fi')
     if self.log_level == 'average':
       self.logger.LogOutput('Disable ASLR.')
-    self.RunCommandOnDut(disable_aslr, ignore_status=False)
+    self.RunCommandOnDut(disable_aslr)
 
   def SetCpuGovernor(self, governor, ignore_status=False):
+    """Setup CPU Governor on DUT."""
     set_gov_cmd = (
         'for f in `ls -d /sys/devices/system/cpu/cpu*/cpufreq 2>/dev/null`; do '
         # Skip writing scaling_governor if cpu is offline.
@@ -85,6 +85,7 @@ class DutWrapper(object):
     return ret
 
   def DisableTurbo(self):
+    """Disable Turbo on DUT."""
     dis_turbo_cmd = (
         'if [[ -e /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then '
         '  if grep -q 0 /sys/devices/system/cpu/intel_pstate/no_turbo;  then '
@@ -284,6 +285,7 @@ class DutWrapper(object):
                            (avail_ngt_target, max_freq_path, min_freq_path))
 
   def WaitCooldown(self):
+    """Wait for DUT to cool down to certain temperature."""
     waittime = 0
     timeout_in_sec = int(self.dut_config['cooldown_time']) * 60
     # Temperature from sensors come in uCelsius units.
@@ -327,11 +329,13 @@ class DutWrapper(object):
       self.RunCommandOnDut(sed_command + FILE)
 
   def StopUI(self):
+    """Stop UI on DUT."""
     # Added "ignore_status" for the case when crosperf stops ui service which
     # was already stopped. Command is going to fail with 1.
     self.RunCommandOnDut('stop ui', ignore_status=True)
 
   def StartUI(self):
+    """Start UI on DUT."""
     # Similar to StopUI, `start ui` fails if the service is already started.
     self.RunCommandOnDut('start ui', ignore_status=True)
 
@@ -456,3 +460,78 @@ class DutWrapper(object):
           'Final verification failed with status %d' % ret_code)
 
     self.logger.LogOutput('Kernel cmdline updated successfully.')
+
+  @contextmanager
+  def PauseUI(self):
+    """Stop UI before and Start UI after the context block.
+
+    Context manager will make sure UI is always resumed at the end.
+    """
+    self.StopUI()
+    try:
+      yield
+
+    finally:
+      self.StartUI()
+
+  def SetupDevice(self):
+    """Setup device to get it ready for testing.
+
+    @Returns Wait time of cool down for this benchmark run.
+    """
+    self.logger.LogOutput('Update kernel cmdline if necessary and reboot')
+    intel_pstate = self.dut_config['intel_pstate']
+    if intel_pstate and self.KerncmdUpdateNeeded(intel_pstate):
+      self.UpdateKerncmdIntelPstate(intel_pstate)
+
+    wait_time = 0
+    # Pause UI while configuring the DUT.
+    # This will accelerate setup (waiting for cooldown has x10 drop)
+    # and help to reset a Chrome state left after the previous test.
+    with self.PauseUI():
+      # Unless the user turns on ASLR in the flag, we first disable ASLR
+      # before running the benchmarks
+      if not self.dut_config['enable_aslr']:
+        self.DisableASLR()
+
+      # CPU usage setup comes first where we enable/disable cores.
+      self.SetupCpuUsage()
+      cpu_online_status = self.GetCpuOnline()
+      # List of online cores of type int (core number).
+      online_cores = [
+          core for core, status in cpu_online_status.items() if status
+      ]
+      if self.dut_config['cooldown_time']:
+        # Setup power conservative mode for effective cool down.
+        # Set ignore status since powersave may no be available
+        # on all platforms and we are going to handle it.
+        ret = self.SetCpuGovernor('powersave', ignore_status=True)
+        if ret:
+          # "powersave" is not available, use "ondemand".
+          # Still not a fatal error if it fails.
+          ret = self.SetCpuGovernor('ondemand', ignore_status=True)
+        # TODO(denik): Run comparison test for 'powersave' and 'ondemand'
+        # on scarlet and kevin64.
+        # We might have to consider reducing freq manually to the min
+        # if it helps to reduce waiting time.
+        wait_time = self.WaitCooldown()
+
+      # Setup CPU governor for the benchmark run.
+      # It overwrites the previous governor settings.
+      governor = self.dut_config['governor']
+      # FIXME(denik): Pass online cores to governor setup.
+      self.SetCpuGovernor(governor)
+
+      # Disable Turbo and Setup CPU freq should ALWAYS proceed governor setup
+      # since governor may change:
+      # - frequency;
+      # - turbo/boost.
+      self.DisableTurbo()
+      self.SetupCpuFreq(online_cores)
+
+      self.DecreaseWaitTime()
+      # FIXME(denik): Currently we are not recovering the previous cpufreq
+      # settings since we do reboot/setup every time anyway.
+      # But it may change in the future and then we have to recover the
+      # settings.
+    return wait_time
