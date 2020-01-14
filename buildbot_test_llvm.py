@@ -116,7 +116,7 @@ class ToolchainVerifier(object):
         self._build,
         self._patches,
         tryjob_flags=['--hwtest'],
-        async=True)
+        asynchronous=True)
 
     return buildbucket_id
 
