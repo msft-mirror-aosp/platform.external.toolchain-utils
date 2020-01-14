@@ -58,6 +58,7 @@ class Result(object):
     self.turbostat_log_file = ''
     self.cpustats_log_file = ''
     self.top_log_file = ''
+    self.wait_time_log_file = ''
     self.chrome_version = ''
     self.err = None
     self.chroot_results_dir = ''
@@ -110,7 +111,7 @@ class Result(object):
   def CopyResultsTo(self, dest_dir):
     self.CopyFilesTo(dest_dir, self.perf_data_files)
     self.CopyFilesTo(dest_dir, self.perf_report_files)
-    if len(self.perf_data_files) or len(self.perf_report_files):
+    if self.perf_data_files or self.perf_report_files:
       self._logger.LogOutput('Perf results files stored in %s.' % dest_dir)
 
   def GetNewKeyvals(self, keyvals_dict):
@@ -316,6 +317,10 @@ class Result(object):
     """Get cpustats log path string."""
     return self.FindFilesInResultsDir('-name top.log').split('\n')[0]
 
+  def GetWaitTimeFile(self):
+    """Get wait time log path string."""
+    return self.FindFilesInResultsDir('-name wait_time.log').split('\n')[0]
+
   def _CheckDebugPath(self, option, path):
     relative_path = path[1:]
     out_chroot_path = os.path.join(self.chromeos_root, 'chroot', relative_path)
@@ -415,6 +420,7 @@ class Result(object):
     self.turbostat_log_file = self.GetTurbostatFile()
     self.cpustats_log_file = self.GetCpustatsFile()
     self.top_log_file = self.GetTopFile()
+    self.wait_time_log_file = self.GetWaitTimeFile()
     # TODO(asharif): Do something similar with perf stat.
 
     # Grab keyvals from the directory.
@@ -818,6 +824,16 @@ class Result(object):
       cpustats = self.ProcessCpustatsResults()
     if self.top_log_file:
       self.top_cmds = self.ProcessTopResults()
+    if self.wait_time_log_file:
+      with open(self.wait_time_log_file) as f:
+        wait_time = f.readline().strip()
+        try:
+          wait_time = float(wait_time)
+        except ValueError:
+          raise ValueError('Wait time in log file is not a number.')
+      # This is for accumulating wait time for telemtry_Crosperf runs only,
+      # for test_that runs, please refer to suite_runner.
+      self.machine.AddCooldownWaitTime(wait_time)
 
     for param_key, param in cpustats.items():
       for param_type, param_values in param.items():
@@ -979,10 +995,6 @@ class Result(object):
 
 class TelemetryResult(Result):
   """Class to hold the results of a single Telemetry run."""
-
-  def __init__(self, logger, label, log_level, machine, cmd_exec=None):
-    super(TelemetryResult, self).__init__(logger, label, log_level, machine,
-                                          cmd_exec)
 
   def PopulateFromRun(self, out, err, retval, test, suite, cwp_dso):
     self.out = out
@@ -1237,6 +1249,9 @@ class ResultsCache(object):
 class MockResultsCache(ResultsCache):
   """Class for mock testing, corresponding to ResultsCache class."""
 
+  # FIXME: pylint complains about this mock init method, we should probably
+  # replace all Mock classes in Crosperf with simple Mock.mock().
+  # pylint: disable=arguments-differ
   def Init(self, *args):
     pass
 
