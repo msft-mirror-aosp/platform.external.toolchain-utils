@@ -917,8 +917,8 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     mock_uprev_ebuild.assert_called_once_with(symlink_path_to_package)
 
     expected_commit_messages = [
-        '-m %s' % 'llvm-next/tot: Update packages to r1000',
-        '-m %s' % 'Following packages have been updated:',
+        '-m %s' % 'llvm-next/tot: upgrade to a123testhash5 (r1000)',
+        '-m %s' % 'The following packages have been updated:',
         '-m %s' % 'path/to',
         '-m %s' % 'For the package path/to:',
         '-m %s' % 'The patch metadata file PATCHES.json was modified',
