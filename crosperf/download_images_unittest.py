@@ -9,8 +9,9 @@
 from __future__ import print_function
 
 import os
-import mock
 import unittest
+
+import mock
 
 import download_images
 from cros_utils import command_executer
