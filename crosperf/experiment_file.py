@@ -129,7 +129,7 @@ class ExperimentFile(object):
           self.global_settings.SetField(field[0], field[1], field[2])
         else:
           raise IOError('Unexpected line.')
-    except Exception, err:
+    except Exception as err:
       raise RuntimeError('Line %d: %s\n==> %s' % (reader.LineNo(), str(err),
                                                   reader.CurrentLine(False)))
 
