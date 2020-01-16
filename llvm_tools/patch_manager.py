@@ -8,17 +8,17 @@
 
 from __future__ import print_function
 
-from collections import namedtuple
-from failure_modes import FailureModes
-from subprocess_helpers import check_call
-from subprocess_helpers import check_output
-
 import argparse
 import json
-import get_llvm_hash
 import os
 import subprocess
 import sys
+from collections import namedtuple
+
+import get_llvm_hash
+from failure_modes import FailureModes
+from subprocess_helpers import check_call
+from subprocess_helpers import check_output
 
 
 def is_directory(dir_path):
@@ -278,8 +278,6 @@ def UpdatePatchMetadataFile(patch_metadata_file, patches):
 
 def GetCommitHashesForBisection(src_path, good_svn_version, bad_svn_version):
   """Gets the good and bad commit hashes required by `git bisect start`."""
-
-  new_llvm_hash = LLVMHash()
 
   bad_commit_hash = get_llvm_hash.GetGitHashFrom(src_path, bad_svn_version)
 

@@ -14,11 +14,11 @@ import subprocess
 import unittest
 import unittest.mock as mock
 
+import patch_manager
 from failure_modes import FailureModes
 from test_helpers import CallCountsToMockFunctions
 from test_helpers import CreateTemporaryJsonFile
 from test_helpers import WritePrettyJsonFile
-import patch_manager
 
 
 class PatchManagerTest(unittest.TestCase):
@@ -326,8 +326,8 @@ class PatchManagerTest(unittest.TestCase):
     # Simulate behavior of 'GetPathToPatch()' when the absolute path to the
     # patch does not exist.
     def PathToPatchDoesNotExist(filesdir_path, rel_patch_path):
-      raise ValueError(
-          'The absolute path to %s does not exist' % abs_patch_path)
+      raise ValueError('The absolute path to %s does not exist' % os.path.join(
+          filesdir_path, rel_patch_path))
 
     # Use the test function to simulate the behavior of 'GetPathToPatch()'.
     mock_get_path_to_patch.side_effect = PathToPatchDoesNotExist
@@ -463,7 +463,7 @@ class PatchManagerTest(unittest.TestCase):
     # Simulate behavior for 'ApplyPatch()' when applying multiple applicable
     # patches.
     @CallCountsToMockFunctions
-    def MultipleCallsToApplyPatches(call_count, src_path, path_to_patch):
+    def MultipleCallsToApplyPatches(call_count, _, path_to_patch):
       if call_count < 3:
         self.assertEqual(
             path_to_patch,
@@ -569,7 +569,7 @@ class PatchManagerTest(unittest.TestCase):
     # Simulate behavior for 'ApplyPatch()' when applying multiple applicable
     # patches.
     @CallCountsToMockFunctions
-    def MultipleCallsToApplyPatches(call_count, src_path, path_to_patch):
+    def MultipleCallsToApplyPatches(call_count, _, path_to_patch):
       if call_count < 3:
         self.assertEqual(
             path_to_patch,
