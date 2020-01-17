@@ -463,7 +463,7 @@ class PatchManagerTest(unittest.TestCase):
     # Simulate behavior for 'ApplyPatch()' when applying multiple applicable
     # patches.
     @CallCountsToMockFunctions
-    def MultipleCallsToApplyPatches(call_count, _, path_to_patch):
+    def MultipleCallsToApplyPatches(call_count, _src_path, path_to_patch):
       if call_count < 3:
         self.assertEqual(
             path_to_patch,
@@ -569,7 +569,7 @@ class PatchManagerTest(unittest.TestCase):
     # Simulate behavior for 'ApplyPatch()' when applying multiple applicable
     # patches.
     @CallCountsToMockFunctions
-    def MultipleCallsToApplyPatches(call_count, _, path_to_patch):
+    def MultipleCallsToApplyPatches(call_count, _src_path, path_to_patch):
       if call_count < 3:
         self.assertEqual(
             path_to_patch,
