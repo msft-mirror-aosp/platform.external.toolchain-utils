@@ -39,6 +39,9 @@
             "-Wno-unknown-warning-option",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
+          ],
+          "env_updates": [
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         }
       }
@@ -85,6 +88,9 @@
             "-Wno-unknown-warning-option",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
+          ],
+          "env_updates": [
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         }
       }
@@ -134,6 +140,9 @@
             "-Wno-unknown-warning-option",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
+          ],
+          "env_updates": [
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         },
         "stdout": "somemessage",

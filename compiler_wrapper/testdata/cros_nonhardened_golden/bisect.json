@@ -46,7 +46,8 @@
             "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
-            "CCACHE_CPP2=yes"
+            "CCACHE_CPP2=yes",
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         }
       }
@@ -100,7 +101,8 @@
             "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
-            "CCACHE_CPP2=yes"
+            "CCACHE_CPP2=yes",
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         }
       }
@@ -157,7 +159,8 @@
             "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
-            "CCACHE_CPP2=yes"
+            "CCACHE_CPP2=yes",
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         },
         "stdout": "somemessage",

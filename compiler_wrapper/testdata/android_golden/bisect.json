@@ -25,6 +25,9 @@
             "/user/home/ANDROID_BISECT",
             "/tmp/stable/clang.real",
             "main.cc"
+          ],
+          "env_updates": [
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         }
       }
@@ -57,6 +60,9 @@
             "someBisectDir",
             "/tmp/stable/clang.real",
             "main.cc"
+          ],
+          "env_updates": [
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         }
       }
@@ -92,6 +98,9 @@
             "someBisectDir",
             "/tmp/stable/clang.real",
             "main.cc"
+          ],
+          "env_updates": [
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         },
         "stdout": "somemessage",
