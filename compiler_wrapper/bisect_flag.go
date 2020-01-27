@@ -6,6 +6,7 @@ package main
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 )
 
@@ -51,6 +52,15 @@ func calcBisectCommand(env env, cfg *config, bisectStage string, compilerCmd *co
 		}
 	}
 	absCompilerPath := getAbsCmdPath(env, compilerCmd)
+	pythonPath, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	pythonPath, err = filepath.EvalSymlinks(pythonPath)
+	if err != nil {
+		return nil, err
+	}
+	pythonPath = filepath.Dir(pythonPath)
 	return &command{
 		Path: "/usr/bin/env",
 		Args: append([]string{
@@ -61,6 +71,6 @@ func calcBisectCommand(env env, cfg *config, bisectStage string, compilerCmd *co
 			bisectDir,
 			absCompilerPath,
 		}, compilerCmd.Args...),
-		EnvUpdates: compilerCmd.EnvUpdates,
+		EnvUpdates: append(compilerCmd.EnvUpdates, "PYTHONPATH="+pythonPath),
 	}, nil
 }

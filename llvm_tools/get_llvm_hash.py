@@ -10,18 +10,14 @@ from __future__ import print_function
 
 import argparse
 import os
-import re
 import shutil
 import subprocess
 import sys
 import tempfile
-import git_llvm_rev
-
 from contextlib import contextmanager
-from subprocess_helpers import CheckCommand
-from subprocess_helpers import check_output
 
-import requests
+import git_llvm_rev
+from subprocess_helpers import CheckCommand, check_output
 
 _LLVM_GIT_URL = ('https://chromium.googlesource.com/external/github.com/llvm'
                  '/llvm-project')
@@ -33,6 +29,7 @@ def GetVersionFrom(src_dir, git_hash):
   """Obtain an SVN-style version number based on the LLVM git hash passed in.
 
   Args:
+    src_dir: LLVM's source directory.
     git_hash: The git hash.
 
   Returns:

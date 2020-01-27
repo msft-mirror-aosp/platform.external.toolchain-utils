@@ -103,7 +103,7 @@ class ExperimentRunner(object):
     """Get where is the machine from.
 
     Returns:
-      The location of the machine: local, skylab or afe
+      The location of the machine: local or skylab
     """
     # We assume that lab machine always starts with chromeos*, and local
     # machines are ip address.
@@ -111,7 +111,7 @@ class ExperimentRunner(object):
       if lock_mgr.CheckMachineInSkylab(machine):
         return 'skylab'
       else:
-        return 'afe'
+        raise RuntimeError('Lab machine not in Skylab.')
     return 'local'
 
   def _LockAllMachines(self, experiment):
@@ -122,7 +122,6 @@ class ExperimentRunner(object):
     from being able to update/use the machines while this experiment is
     running:
       - Skylab machines: Use skylab lease-dut mechanism to lease
-      - AFE machines: Use AFE lock mechanism to lock
       - Local machines: Use file lock mechanism to lock
     """
     if test_flag.GetTestMode():

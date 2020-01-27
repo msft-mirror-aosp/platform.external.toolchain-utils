@@ -375,8 +375,8 @@ class TextResultsReport(ResultsReport):
   def GetTotalWaitCooldownTime(self):
     """Get cooldown wait time in seconds from experiment benchmark runs.
 
-      Returns:
-        Dictionary {'dut': int(wait_time_in_seconds)}
+    Returns:
+      Dictionary {'dut': int(wait_time_in_seconds)}
     """
     waittime_dict = {}
     for dut in self.experiment.machine_manager.GetMachines():
