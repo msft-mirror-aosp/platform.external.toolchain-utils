@@ -172,7 +172,8 @@ func getClangResourceDir(env env, clangPath string) (string, error) {
 			"failed to call clang to read the resouce-dir: %#v",
 			readResourceCmd)
 	}
-	return stdoutBuffer.String(), nil
+	resourceDir := strings.TrimRight(stdoutBuffer.String(), "\n")
+	return resourceDir, nil
 }
 
 // Return the a directory which contains an 'ld' that gcc is using.

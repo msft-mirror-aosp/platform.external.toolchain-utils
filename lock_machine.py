@@ -39,17 +39,8 @@ class DontOwnLock(LockException):
   # This should not be raised if the user specified '--force'
 
 
-class NoAFEServer(LockException):
-  """Raised when cannot find/access the autotest server."""
-
-
-class AFEAccessError(LockException):
-  """Raised when cannot get information about lab machine from lab server."""
-
-
 class MachineType(enum.Enum):
   """Enum class to hold machine type."""
-  AFE = 'afe'
   LOCAL = 'local'
   SKYLAB = 'skylab'
 
@@ -58,14 +49,8 @@ class LockManager(object):
   """Class for locking/unlocking machines vie three different modes.
 
   This class contains methods for checking the locked status of machines,
-  and for changing the locked status.  It handles HW lab machines (both AFE
-  and Skylab), and local machines, using appropriate locking mechanisms for
-  each.
-
-  !!!IMPORTANT NOTE!!!  The AFE server can only be called from the main
-  thread/process of a program.  If you launch threads and try to call it
-  from a thread, you will get an error.  This has to do with restrictions
-  in the Python virtual machine (and signal handling) and cannot be changed.
+  and for changing the locked status.  It handles HW lab machines and local
+  machines, using appropriate locking mechanisms for each.
   """
 
   SKYLAB_PATH = '/usr/local/bin/skylab'
@@ -104,26 +89,10 @@ class LockManager(object):
     self.user = getpass.getuser()
     self.logger = log or logger.GetLogger()
     self.ce = command_executer.GetCommandExecuter(self.logger)
-    autotest_path = os.path.join(chromeos_root,
-                                 'src/third_party/autotest/files')
 
     sys.path.append(chromeos_root)
-    sys.path.append(autotest_path)
-    sys.path.append(os.path.join(autotest_path, 'server', 'cros'))
 
     self.locks_dir = locks_dir
-
-    # We have to wait to do these imports until the paths above have
-    # been fixed.
-    # pylint: disable=import-error
-    from client import setup_modules
-    setup_modules.setup(
-        base_path=autotest_path, root_module_name='autotest_lib')
-
-    from dynamic_suite import frontend_wrappers
-
-    self.afe = frontend_wrappers.RetryingAFE(
-        timeout_min=30, delay_sec=10, debug=False, server='cautotest')
 
     self.machines = list(set(remotes)) or []
     self.toolchain_lab_machines = self.GetAllToolchainLabMachines()
@@ -181,7 +150,6 @@ class LockManager(object):
       return MachineType.LOCAL
     if m in self.skylab_machines:
       return MachineType.SKYLAB
-    return MachineType.AFE
 
   def PrintStatusHeader(self):
     """Prints the status header lines for machines."""
@@ -196,8 +164,6 @@ class LockManager(object):
       state: A dictionary of the current state of the machine.
       machine_type: MachineType to determine where the machine is located.
     """
-    if machine_type == MachineType.AFE and not m.endswith('.cros'):
-      m += '.cros'
     if state['locked']:
       print('%s (%s)\t\t%slocked by %s since %s' %
             (m, state['board'], '\t\t' if machine_type == MachineType.LOCAL else
@@ -241,33 +207,6 @@ class LockManager(object):
       machine_type = self.GetMachineType(m)
       state = machine_states[m]
       self.PrintStatus(m, state, machine_type)
-
-  def UpdateLockInAFE(self, should_lock_machine, machine):
-    """Calls an AFE server to lock/unlock a machine.
-
-    Args:
-      should_lock_machine: Boolean indicating whether to lock the machine (True)
-        or unlock the machine (False).
-      machine: The machine to update.
-
-    Returns:
-      True if requested action succeeded, else False.
-    """
-    kwargs = {'locked': should_lock_machine}
-    if should_lock_machine:
-      kwargs['lock_reason'] = 'toolchain user request (%s)' % self.user
-
-    m = machine.split('.')[0]
-    afe_server = self.afe
-
-    try:
-      afe_server.run(
-          'modify_hosts',
-          host_filter_data={'hostname__in': [m]},
-          update_data=kwargs)
-    except Exception:
-      return False
-    return True
 
   def UpdateLockInSkylab(self, should_lock_machine, machine):
     """Ask skylab to lease/release a machine.
@@ -333,8 +272,6 @@ class LockManager(object):
         ret = self.UpdateLockInSkylab(lock_machines, m)
       elif machine_type == MachineType.LOCAL:
         ret = self.UpdateFileLock(lock_machines, m)
-      else:
-        ret = self.UpdateLockInAFE(lock_machines, m)
 
       if ret:
         self.logger.LogOutput(
@@ -412,48 +349,20 @@ class LockManager(object):
     Returns:
       A dictionary of machine states for all the machines in the LockManager
       object.
-
-    Raises:
-      NoAFEServer:  Cannot find the HW Lab AFE server.
-      AFEAccessError:  An error occurred when querying the server about a
-        machine.
     """
-    if not self.afe:
-      raise NoAFEServer('Error: Cannot connect to main AFE server.')
-
     machine_list = {}
     for m in self.machines:
       # For local or skylab machines, we simply set {'locked': status} for them
       # TODO(zhizhouy): This is a quick fix since skylab cannot return host info
       # as afe does. We need to get more info such as locked_by when skylab
       # supports that.
-      if m in self.local_machines or m in self.skylab_machines:
-        values = {
-            'locked': 0 if cmd == 'lock' else 1,
-            'board': '??',
-            'locked_by': '',
-            'lock_time': ''
-        }
-        machine_list[m] = values
-      else:
-        # For autotest machines, we use afe APIs to get locking info.
-        mod_host = m.split('.')[0]
-        host_info = self.afe.get_hosts(hostname=mod_host)
-        if not host_info:
-          raise AFEAccessError('Unable to get information about %s from main'
-                               ' autotest server.' % m)
-        host_info = host_info[0]
-        name = host_info.hostname
-        values = {}
-        values['board'] = host_info.platform if host_info.platform else '??'
-        values['locked'] = host_info.locked
-        if host_info.locked:
-          values['locked_by'] = host_info.locked_by
-          values['lock_time'] = host_info.lock_time
-        else:
-          values['locked_by'] = ''
-          values['lock_time'] = ''
-        machine_list[name] = values
+      values = {
+          'locked': 0 if cmd == 'lock' else 1,
+          'board': '??',
+          'locked_by': '',
+          'lock_time': ''
+      }
+      machine_list[m] = values
 
     self.ListMachineStates(machine_list)
 
