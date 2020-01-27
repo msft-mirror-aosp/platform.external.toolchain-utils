@@ -1,8 +1,9 @@
 #!/usr/bin/env python2
-#
+# -*- coding: utf-8 -*-
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Given a specially-formatted JSON object, generates results report(s).
 
 The JSON object should look like:
@@ -67,8 +68,7 @@ def CountBenchmarks(benchmark_runs):
   def _MaxLen(results):
     return 0 if not results else max(len(r) for r in results)
 
-  return [(name, _MaxLen(results))
-          for name, results in benchmark_runs.iteritems()]
+  return [(name, _MaxLen(results)) for name, results in benchmark_runs.items()]
 
 
 def CutResultsInPlace(results, max_keys=50, complain_on_update=True):
@@ -130,9 +130,14 @@ def CutResultsInPlace(results, max_keys=50, complain_on_update=True):
 def _ConvertToASCII(obj):
   """Convert an object loaded from JSON to ASCII; JSON gives us unicode."""
 
+  # In python 3, we can directly return the unicode loaded from json.
+  if sys.version_info.major == 3:
+    return obj
+  # TODO(zhizhouy): Drop the following code once migrated to python 3.
   # Using something like `object_hook` is insufficient, since it only fires on
   # actual JSON objects. `encoding` fails, too, since the default decoder always
   # uses unicode() to decode strings.
+  # pylint: disable=unicode-builtin
   if isinstance(obj, unicode):
     return str(obj)
   if isinstance(obj, dict):

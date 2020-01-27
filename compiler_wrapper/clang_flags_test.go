@@ -139,7 +139,7 @@ func TestUseXclangPathAndCalcResourceDirByNestedClangCall(t *testing.T) {
 			if err := verifyArgOrder(cmd, "--print-resource-dir"); err != nil {
 				t.Error(err)
 			}
-			fmt.Fprint(stdout, "someResourcePath")
+			fmt.Fprint(stdout, "someResourcePath\n")
 			return nil
 		}
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
