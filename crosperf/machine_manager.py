@@ -1,15 +1,15 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Machine Manager module."""
 
+from __future__ import division
 from __future__ import print_function
 
 import collections
-import file_lock_machine
 import hashlib
-import image_chromeos
 import math
 import os.path
 import re
@@ -17,6 +17,8 @@ import sys
 import threading
 import time
 
+import file_lock_machine
+import image_chromeos
 import test_flag
 from cros_utils import command_executer
 from cros_utils import logger
@@ -124,8 +126,8 @@ class CrosMachine(object):
     self.phys_kbytes = phys_kbytes
 
   def _GetMemoryInfo(self):
-    #TODO yunlian: when the machine in rebooting, it will not return
-    #meminfo, the assert does not catch it either
+    # TODO yunlian: when the machine in rebooting, it will not return
+    # meminfo, the assert does not catch it either
     command = 'cat /proc/meminfo'
     ret, self.meminfo, _ = self.ce.CrosRunCommandWOutput(
         command, machine=self.name, chromeos_root=self.chromeos_root)
@@ -159,7 +161,7 @@ class CrosMachine(object):
         command, machine=self.name, chromeos_root=self.chromeos_root)
     b = if_out.splitlines()
     a = [l for l in b if 'Product' in l]
-    if len(a):
+    if a:
       self.machine_id = a[0]
       return
     command = 'ifconfig'
@@ -167,11 +169,11 @@ class CrosMachine(object):
         command, machine=self.name, chromeos_root=self.chromeos_root)
     b = if_out.splitlines()
     a = [l for l in b if 'HWaddr' in l]
-    if len(a):
+    if a:
       self.machine_id = '_'.join(a)
       return
     a = [l for l in b if 'ether' in l]
-    if len(a):
+    if a:
       self.machine_id = '_'.join(a)
       return
     assert 0, 'Could not get machine_id from machine: %s' % self.name
@@ -515,7 +517,7 @@ class MachineManager(object):
           dic[machine.cpuinfo].append(label.name)
           break
     output_segs = []
-    for key, v in dic.iteritems():
+    for key, v in dic.items():
       output = ' '.join(v)
       output += '\n-------------------\n'
       output += key
@@ -630,7 +632,7 @@ power management:
     self.test_run = None
     self.chromeos_root = chromeos_root
     self.checksum_string = re.sub(r'\d', '', name)
-    #In test, we assume "lumpy1", "lumpy2" are the same machine.
+    # In test, we assume "lumpy1", "lumpy2" are the same machine.
     self.machine_checksum = self._GetMD5Checksum(self.checksum_string)
     self.log_level = log_level
     self.label = None
@@ -684,8 +686,8 @@ class MockMachineManager(MachineManager):
         return machine
     return None
 
-  def ImageMachine(self, machine_name, label):
-    if machine_name or label:
+  def ImageMachine(self, machine, label):
+    if machine or label:
       return 0
     return 1
 

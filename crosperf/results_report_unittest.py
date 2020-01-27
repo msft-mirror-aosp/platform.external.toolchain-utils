@@ -130,19 +130,19 @@ def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0):
   machine_manager.AddMachine('testing_machine')
   machine = next(
       m for m in machine_manager.GetMachines() if m.name == 'testing_machine')
+
+  def MakeSuccessfulRun(n, label):
+    run = MockBenchmarkRun('mock_success%d' % (n,), bench, label,
+                           1 + n + num_runs, cache_conditions, machine_manager,
+                           log, log_level, share_cache, {})
+    mock_result = MockResult(log, label, log_level, machine)
+    mock_result.keyvals = keyvals
+    run.result = mock_result
+    return run
+
   for label in experiment.labels:
-
-    def MakeSuccessfulRun(n):
-      run = MockBenchmarkRun('mock_success%d' % (n,), bench, label,
-                             1 + n + num_runs, cache_conditions,
-                             machine_manager, log, log_level, share_cache, {})
-      mock_result = MockResult(log, label, log_level, machine)
-      mock_result.keyvals = keyvals
-      run.result = mock_result
-      return run
-
     experiment.benchmark_runs.extend(
-        MakeSuccessfulRun(n) for n in range(how_many))
+        MakeSuccessfulRun(n, label) for n in range(how_many))
   return experiment
 
 
@@ -429,7 +429,7 @@ class PerfReportParserTest(unittest.TestCase):
 
   def testParserParsesRealWorldPerfReport(self):
     report = ParseStandardPerfReport(self._ReadRealPerfReport())
-    self.assertItemsEqual(['cycles', 'instructions'], report.keys())
+    self.assertItemsEqual(['cycles', 'instructions'], sorted(report.keys()))
 
     # Arbitrarily selected known percentages from the perf report.
     known_cycles_percentages = {
