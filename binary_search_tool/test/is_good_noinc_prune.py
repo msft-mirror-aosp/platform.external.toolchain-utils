@@ -1,4 +1,9 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """Check to see if the working set produces a good executable.
 
 This test script is made for the noincremental-prune test. This makes sure

@@ -1,10 +1,10 @@
-# Copyright 2016 Googie Inc.  All rights Reserved.
+# -*- coding: utf-8 -*-
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 #
 # This script is used to help the compiler wrapper in the ChromeOS and
 # Android build systems bisect for bad object files.
-#
-# pylint: disable=not-callable
-# pylint: disable=indentation
 
 """Utilities for bisection of ChromeOS and Android object files.
 
@@ -278,7 +278,8 @@ def cache_file(execargs, bisect_dir, cache, abs_file_path):
       os.chmod(bisect_path, 0o444)
       return True
     else:
-      # File not found (happens when compilation fails but error code is still 0)
+      # File not found (happens when compilation fails but error code is still
+      # 0)
       return False
   except Exception:
     print('Could not cache file %s' % abs_file_path, file=sys.stderr)

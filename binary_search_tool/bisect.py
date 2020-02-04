@@ -1,27 +1,31 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """The unified package/object bisecting tool."""
 
 from __future__ import print_function
 
 import abc
 import argparse
+from argparse import RawTextHelpFormatter
 import os
 import sys
-from argparse import RawTextHelpFormatter
 
+import six
+
+import binary_search_state
 import common
 
 from cros_utils import command_executer
 from cros_utils import logger
 
-import binary_search_state
 
-
+@six.add_metaclass(abc.ABCMeta)
 class Bisector(object):
   """The abstract base class for Bisectors."""
-
-  # Make Bisector an abstract class
-  __metaclass__ = abc.ABCMeta
 
   def __init__(self, options, overrides=None):
     """Constructor for Bisector abstract base class
@@ -84,9 +88,7 @@ class Bisector(object):
     max_key_len = max([len(str(x)) for x in args.keys()])
     # Print args in common._ArgsDict order
     args_order = [x['dest'] for x in common.GetArgsDict().itervalues()]
-    compare = lambda x, y: cmp(args_order.index(x), args_order.index(y))
-
-    for key in sorted(args, cmp=compare):
+    for key in sorted(args, key=args_order.index):
       val = args[key]
       key_str = str(key).rjust(max_key_len)
       val_str = str(val)
@@ -193,9 +195,9 @@ class BisectObject(Bisector):
     if options.dir:
       os.environ['BISECT_DIR'] = options.dir
     self.options.dir = os.environ.get('BISECT_DIR', '/tmp/sysroot_bisect')
-    self.setup_cmd = ('%s %s %s %s' %
-                      (self.sysroot_wrapper_setup, self.options.board,
-                       self.options.remote, self.options.package))
+    self.setup_cmd = (
+        '%s %s %s %s' % (self.sysroot_wrapper_setup, self.options.board,
+                         self.options.remote, self.options.package))
 
     self.ArgOverride(self.default_kwargs, overrides)
 

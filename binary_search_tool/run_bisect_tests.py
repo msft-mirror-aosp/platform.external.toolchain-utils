@@ -1,4 +1,9 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """Run full bisection test."""
 
 from __future__ import print_function
@@ -81,7 +86,7 @@ def verify_compiler_and_wrapper():
   # We don't need to do any special setup if running inside a ChromeOS
   # chroot.
   if os.path.exists('/usr/bin/x86_64-cros-linux-gnu-gcc'):
-    return
+    return True
 
   message = """
 *** IMPORTANT --- READ THIS CAREFULLY!! ***

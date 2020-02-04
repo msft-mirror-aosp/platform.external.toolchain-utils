@@ -1,4 +1,9 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """Script to generate a list of object files.
 
 0 represents a good object file.

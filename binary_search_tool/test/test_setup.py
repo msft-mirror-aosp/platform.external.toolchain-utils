@@ -1,4 +1,9 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """Emulate running of test setup script, is_good.py should fail without this."""
 
 from __future__ import print_function
