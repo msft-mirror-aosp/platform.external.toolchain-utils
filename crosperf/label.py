@@ -93,7 +93,8 @@ class Label(object):
     if self.image_type == 'local':
       self.checksum = ImageChecksummer().Checksum(self, self.log_level)
     elif self.image_type == 'trybot':
-      self.checksum = hashlib.md5(self.chromeos_image).hexdigest()
+      self.checksum = hashlib.md5(
+          self.chromeos_image.encode('utf-8')).hexdigest()
 
   def _GetImageType(self, chromeos_image):
     image_type = None

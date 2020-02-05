@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -12,7 +12,7 @@ from __future__ import print_function
 import copy
 import json
 import unittest
-import mock
+import unittest.mock as mock
 
 import generate_report
 import results_report
@@ -49,7 +49,7 @@ class GenerateReportTests(unittest.TestCase):
     }
     results = generate_report.CountBenchmarks(runs)
     expected_results = [('foo', 4), ('bar', 0), ('baz', 3)]
-    self.assertEqual(sorted(expected_results), sorted(results))
+    self.assertCountEqual(expected_results, results)
 
   def testCutResultsInPlace(self):
     bench_data = {
@@ -82,8 +82,8 @@ class GenerateReportTests(unittest.TestCase):
         bench_data, max_keys=max_keys, complain_on_update=False)
     # Cuts should be in-place.
     self.assertIs(results, bench_data)
-    self.assertEqual(
-        sorted(original_bench_data.keys()), sorted(bench_data.keys()))
+    self.assertCountEqual(
+        list(original_bench_data.keys()), list(bench_data.keys()))
     for bench_name, original_runs in original_bench_data.items():
       bench_runs = bench_data[bench_name]
       self.assertEqual(len(original_runs), len(bench_runs))
@@ -135,13 +135,11 @@ class GenerateReportTests(unittest.TestCase):
     self.assertEqual(0, return_code)
     self.assertEqual(mock_run_actions.call_count, 1)
     ctors = [ctor for ctor, _ in mock_run_actions.call_args[0][0]]
-    self.assertEqual(
-        sorted(ctors),
-        sorted([
-            results_report.JSONResultsReport,
-            results_report.TextResultsReport,
-            results_report.HTMLResultsReport,
-        ]))
+    self.assertEqual(ctors, [
+        results_report.JSONResultsReport,
+        results_report.TextResultsReport,
+        results_report.HTMLResultsReport,
+    ])
 
   @mock.patch('generate_report.RunActions')
   def testMainSelectsHTMLIfNoReportsGiven(self, mock_run_actions):
