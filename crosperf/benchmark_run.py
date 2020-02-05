@@ -131,7 +131,7 @@ class BenchmarkRun(threading.Thread):
           self.failure_reason = 'Return value of test suite was non-zero.'
           self.timeline.Record(STATUS_FAILED)
 
-    except Exception, e:
+    except Exception as e:
       self._logger.LogError("Benchmark run: '%s' failed: %s" % (self.name, e))
       traceback.print_exc()
       if self.timeline.GetLastEvent() != STATUS_FAILED:

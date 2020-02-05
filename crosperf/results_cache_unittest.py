@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
@@ -13,8 +13,7 @@ import os
 import shutil
 import tempfile
 import unittest
-
-import mock
+import unittest.mock as mock
 
 import image_checksummer
 import machine_manager
@@ -236,13 +235,13 @@ TOP_DATA = [
         'top5': [2.0],
     },
     {
-        'cmd': 'sshd',
+        'cmd': 'spi5',
         'cpu_avg': 0.5,
         'count': 1,
         'top5': [1.0],
     },
     {
-        'cmd': 'spi5',
+        'cmd': 'sshd',
         'cpu_avg': 0.5,
         'count': 1,
         'top5': [1.0],
@@ -689,8 +688,7 @@ class ResultTest(unittest.TestCase):
     self.assertEqual(mock_chrootruncmd.call_count, 1)
     self.assertEqual(
         mock_chrootruncmd.call_args_list[0][0],
-        ('/tmp',
-         ('python generate_test_report --no-color --csv %s') % TMP_DIR1))
+        ('/tmp', ('./generate_test_report --no-color --csv %s') % TMP_DIR1))
     self.assertEqual(mock_getpath.call_count, 1)
     self.assertEqual(mock_mkdtemp.call_count, 1)
     self.assertEqual(res, {'Total': [10, 'score'], 'first_time': [680, 'ms']})
@@ -893,7 +891,7 @@ class ResultTest(unittest.TestCase):
   def test_process_turbostat_results_with_valid_data(self):
     """Normal case when log exists and contains valid data."""
     self.result.turbostat_log_file = '/tmp/somelogfile.log'
-    with mock.patch('__builtin__.open',
+    with mock.patch('builtins.open',
                     mock.mock_open(read_data=TURBOSTAT_LOG_OUTPUT)) as mo:
       cpustats = self.result.ProcessTurbostatResults()
       # Check that the log got opened and data were read/parsed.
@@ -904,7 +902,7 @@ class ResultTest(unittest.TestCase):
   def test_process_turbostat_results_from_empty_file(self):
     """Error case when log exists but file is empty."""
     self.result.turbostat_log_file = '/tmp/emptylogfile.log'
-    with mock.patch('__builtin__.open', mock.mock_open(read_data='')) as mo:
+    with mock.patch('builtins.open', mock.mock_open(read_data='')) as mo:
       cpustats = self.result.ProcessTurbostatResults()
       # Check that the log got opened and parsed successfully and empty data
       # returned.
@@ -932,7 +930,7 @@ class ResultTest(unittest.TestCase):
     returned cpustats.
     """
     self.result.cpustats_log_file = '/tmp/somelogfile.log'
-    with mock.patch('__builtin__.open',
+    with mock.patch('builtins.open',
                     mock.mock_open(read_data=CPUSTATS_UNIQ_OUTPUT)) as mo:
       cpustats = self.result.ProcessCpustatsResults()
       # Check that the log got opened and data were read/parsed.
@@ -949,7 +947,7 @@ class ResultTest(unittest.TestCase):
     returned cpustats.
     """
     self.result.cpustats_log_file = '/tmp/somelogfile.log'
-    with mock.patch('__builtin__.open',
+    with mock.patch('builtins.open',
                     mock.mock_open(read_data=CPUSTATS_DUPL_OUTPUT)) as mo:
       cpustats = self.result.ProcessCpustatsResults()
       # Check that the log got opened and data were read/parsed.
@@ -960,7 +958,7 @@ class ResultTest(unittest.TestCase):
   def test_process_cpustats_results_from_empty_file(self):
     """Error case when log exists but file is empty."""
     self.result.cpustats_log_file = '/tmp/emptylogfile.log'
-    with mock.patch('__builtin__.open', mock.mock_open(read_data='')) as mo:
+    with mock.patch('builtins.open', mock.mock_open(read_data='')) as mo:
       cpustats = self.result.ProcessCpustatsResults()
       # Check that the log got opened and parsed successfully and empty data
       # returned.
@@ -972,8 +970,7 @@ class ResultTest(unittest.TestCase):
     """Process top log with valid data."""
 
     self.result.top_log_file = '/tmp/fakelogfile.log'
-    with mock.patch('__builtin__.open',
-                    mock.mock_open(read_data=TOP_LOG)) as mo:
+    with mock.patch('builtins.open', mock.mock_open(read_data=TOP_LOG)) as mo:
       topproc = self.result.ProcessTopResults()
       # Check that the log got opened and data were read/parsed.
       calls = [mock.call('/tmp/fakelogfile.log')]
@@ -983,7 +980,7 @@ class ResultTest(unittest.TestCase):
   def test_process_top_results_from_empty_file(self):
     """Error case when log exists but file is empty."""
     self.result.top_log_file = '/tmp/emptylogfile.log'
-    with mock.patch('__builtin__.open', mock.mock_open(read_data='')) as mo:
+    with mock.patch('builtins.open', mock.mock_open(read_data='')) as mo:
       topcalls = self.result.ProcessTopResults()
       # Check that the log got opened and parsed successfully and empty data
       # returned.

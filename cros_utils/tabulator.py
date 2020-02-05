@@ -72,8 +72,8 @@ import sys
 import numpy
 import scipy
 
-from email_sender import EmailSender
-import misc
+from cros_utils.email_sender import EmailSender
+from cros_utils import misc
 
 
 def _AllFloat(values):

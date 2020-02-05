@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
@@ -13,8 +13,7 @@ import os.path
 import time
 import hashlib
 import unittest
-
-import mock
+import unittest.mock as mock
 
 import label
 import machine_manager
@@ -778,7 +777,7 @@ class CrosMachineTest(unittest.TestCase):
     self.assertEqual(cm.phys_kbytes, 4194304)
 
     mock_run_cmd.return_value = [1, MEMINFO_STRING, '']
-    self.assertRaises(cm._GetMemoryInfo)
+    self.assertRaises(Exception, cm._GetMemoryInfo)
 
   @mock.patch.object(command_executer.CommandExecuter, 'CrosRunCommandWOutput')
   @mock.patch.object(machine_manager.CrosMachine, 'SetUpChecksumInfo')
@@ -838,7 +837,7 @@ class CrosMachineTest(unittest.TestCase):
         '44:6d:57:20:4a:c5  txqueuelen 1000  (Ethernet)')
 
     mock_run_cmd.return_value = [0, 'invalid hardware config', '']
-    self.assertRaises(cm._GetMachineID)
+    self.assertRaises(Exception, cm._GetMachineID)
 
   def test_add_cooldown_waittime(self):
     cm = machine_manager.CrosMachine('1.2.3.4.cros', '/usr/local/chromeos',

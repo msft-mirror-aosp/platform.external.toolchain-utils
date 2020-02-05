@@ -17,10 +17,10 @@ import shutil
 import sys
 import traceback
 
-import command_executer
-import logger
+from cros_utils import command_executer
+from cros_utils import logger
 
-CHROMEOS_SCRIPTS_DIR = '~/trunk/src/scripts'
+CHROMEOS_SCRIPTS_DIR = '/mnt/host/source/src/scripts'
 TOOLCHAIN_UTILS_PATH = ('/mnt/host/source/src/third_party/toolchain-utils/'
                         'cros_utils/toolchain_utils.sh')
 

@@ -12,7 +12,7 @@ import time
 
 import lock_machine
 
-import logger
+from cros_utils import logger
 
 
 def AcquireLock(machines, chromeos_root, timeout=1200):
