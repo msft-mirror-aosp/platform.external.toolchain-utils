@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
@@ -260,7 +260,7 @@ def DoImage(argv):
       command = ' '.join(cros_flash_args)
 
       # Workaround for crosbug.com/35684.
-      os.chmod(misc.GetChromeOSKeyFile(options.chromeos_root), 0600)
+      os.chmod(misc.GetChromeOSKeyFile(options.chromeos_root), 0o600)
 
       if log_level == 'average':
         cmd_executer.SetLogLevel('verbose')
@@ -369,7 +369,7 @@ def LocateOrCopyImage(chromeos_root, image, board=None):
 def GetImageMountCommand(image, rootfs_mp, stateful_mp):
   image_dir = os.path.dirname(image)
   image_file = os.path.basename(image)
-  mount_command = ('cd ~/trunk/src/scripts &&'
+  mount_command = ('cd /mnt/host/source/src/scripts &&'
                    './mount_gpt_image.sh --from=%s --image=%s'
                    ' --safe --read_only'
                    ' --rootfs_mountpt=%s'
@@ -462,7 +462,7 @@ def TryRemountPartitionAsRW(chromeos_root, remote, log_level):
     ## Safely ignore.
     l.LogWarning('Failed to remount partition as rw, '
                  'probably the image was not built with '
-                 "\"--noenable_rootfs_verification\", "
+                 '"--noenable_rootfs_verification", '
                  'you can safely ignore this.')
   else:
     l.LogOutput('Re-mounted partition as writable.')
