@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
@@ -12,11 +12,9 @@ from __future__ import print_function
 
 import argparse
 import io
-import os
 import tempfile
 import unittest
-
-import mock
+import unittest.mock as mock
 
 import crosperf
 import settings_factory
@@ -46,14 +44,14 @@ class CrosperfTest(unittest.TestCase):
   """Crosperf test class."""
 
   def setUp(self):
-    input_file = io.BytesIO(EXPERIMENT_FILE_1)
+    input_file = io.StringIO(EXPERIMENT_FILE_1)
     self.exp_file = experiment_file.ExperimentFile(input_file)
 
   def testDryRun(self):
-    filehandle, filename = tempfile.mkstemp()
-    os.write(filehandle, EXPERIMENT_FILE_1)
-    crosperf.Main(['', filename, '--dry_run'])
-    os.remove(filename)
+    with tempfile.NamedTemporaryFile('w', encoding='utf-8') as f:
+      f.write(EXPERIMENT_FILE_1)
+      f.flush()
+      crosperf.Main(['', f.name, '--dry_run'])
 
   def testConvertOptionsToSettings(self):
     parser = argparse.ArgumentParser()

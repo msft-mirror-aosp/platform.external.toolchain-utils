@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -110,7 +110,7 @@ def RunCrosperf(argv):
     test_flag.SetTestMode(True)
 
   experiment_file = ExperimentFile(
-      open(experiment_filename, 'rb'), option_settings)
+      open(experiment_filename, encoding='utf-8'), option_settings)
   if not experiment_file.GetGlobalSettings().GetField('name'):
     experiment_name = os.path.basename(experiment_filename)
     experiment_file.GetGlobalSettings().SetField('name', experiment_name)

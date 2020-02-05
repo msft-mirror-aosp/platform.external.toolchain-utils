@@ -80,7 +80,7 @@ def _GetNonDupLabel(max_dup, runs):
     # pylint: disable=cell-var-from-loop
     added_runs = _Repeat(
         lambda: _DictWithReturnValues(run_retval, run_pass_fail), max_dup)
-    for key, value in run.iteritems():
+    for key, value in run.items():
       match = _DUP_KEY_REGEX.match(key)
       if not match:
         new_run[key] = value
@@ -94,7 +94,7 @@ def _GetNonDupLabel(max_dup, runs):
 
 def _DuplicatePass(result, benchmarks):
   """Properly expands keys like `foo{1}` in `result`."""
-  for bench, data in result.iteritems():
+  for bench, data in result.items():
     max_dup = _GetMaxDup(data)
     # If there's nothing to expand, there's nothing to do.
     if not max_dup:
