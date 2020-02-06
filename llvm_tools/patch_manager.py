@@ -95,6 +95,13 @@ def GetCommandLineArgs():
       'bisecting a patch (default: %(default)s) - only used for '
       '"bisect_patches"')
 
+  # Trust src_path HEAD and svn_version.
+  parser.add_argument(
+      '--use_src_head',
+      action='store_true',
+      help='Use the HEAD of src_path directory as is, not necessarily the same '
+      'as the svn_version of upstream.')
+
   # Add argument for the LLVM version to use for patch management.
   parser.add_argument(
       '--svn_version',
@@ -718,8 +725,9 @@ def main():
     # patches that fail to apply could successfully apply if HEAD's SVN version
     # was the same as 'svn_version'. In other words, HEAD's git hash should be
     # what is being updated to (e.g. LLVM_NEXT_HASH).
-    VerifyHEADIsTheSameAsSVNVersion(args_output.src_path,
-                                    args_output.svn_version)
+    if not args_output.use_src_head:
+      VerifyHEADIsTheSameAsSVNVersion(args_output.src_path,
+                                      args_output.svn_version)
   else:
     # `git bisect run` called this script.
     #

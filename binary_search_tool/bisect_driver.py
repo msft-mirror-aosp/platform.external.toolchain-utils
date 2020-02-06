@@ -5,6 +5,7 @@
 #
 # pylint: disable=not-callable
 # pylint: disable=indentation
+
 """Utilities for bisection of ChromeOS and Android object files.
 
 This module contains a set of utilities to allow bisection between
@@ -25,6 +26,7 @@ import fcntl
 import os
 import shutil
 import subprocess
+import stat
 import sys
 
 VALID_MODES = ('POPULATE_GOOD', 'POPULATE_BAD', 'TRIAGE')
@@ -33,6 +35,8 @@ BAD_CACHE = 'bad'
 LIST_FILE = os.path.join(GOOD_CACHE, '_LIST')
 
 CONTINUE_ON_MISSING = os.environ.get('BISECT_CONTINUE_ON_MISSING', None) == '1'
+CONTINUE_ON_REDUNDANCY = os.environ.get('BISECT_CONTINUE_ON_REDUNDANCY',
+                                        None) == '1'
 WRAPPER_SAFE_MODE = os.environ.get('BISECT_WRAPPER_SAFE_MODE', None) == '1'
 
 
@@ -260,8 +264,13 @@ def cache_file(execargs, bisect_dir, cache, abs_file_path):
         with lock_file(os.path.join(population_dir, '_DUPS'),
                        'a') as dup_object_list:
           dup_object_list.write('%s\n' % abs_file_path)
+        if CONTINUE_ON_REDUNDANCY:
+          return True
         raise Exception(
-            'Trying to cache file %s multiple times.' % abs_file_path)
+            'Trying to cache file %s multiple times. To avoid the error, set \
+            CONTINUE_ON_REDUNDANCY to 1. For reference, the list of such files \
+            will be written to %s' % (abs_file_path,
+                                      os.path.join(population_dir, '_DUPS')))
 
       shutil.copy2(abs_file_path, bisect_path)
       # Set cache object to be read-only so later compilations can't
@@ -289,7 +298,10 @@ def restore_file(bisect_dir, cache, abs_file_path):
   if os.path.exists(cached_path):
     if os.path.exists(abs_file_path):
       os.remove(abs_file_path)
-    os.link(cached_path, abs_file_path)
+    shutil.copy2(cached_path, abs_file_path)
+    # Add write permission to the restored object files as some packages
+    # (such as kernels) may need write permission to delete files.
+    os.chmod(abs_file_path, os.stat(abs_file_path).st_mode | stat.S_IWUSR)
   else:
     raise Error(('%s is missing from %s cache! Unsure how to proceed. Make '
                  'will now crash.' % (cache, cached_path)))

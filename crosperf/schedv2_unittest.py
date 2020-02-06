@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright 2015 The Chromium OS Authors. All rights reserved.
@@ -12,8 +12,7 @@ from __future__ import print_function
 import functools
 import io
 import unittest
-
-import mock
+import unittest.mock as mock
 
 import benchmark_run
 import test_flag
@@ -81,7 +80,7 @@ class Schedv2Test(unittest.TestCase):
 
         Note - we mock out BenchmarkRun in this step.
     """
-    experiment_file = ExperimentFile(io.BytesIO(expstr))
+    experiment_file = ExperimentFile(io.StringIO(expstr))
     experiment = ExperimentFactory().GetExperiment(
         experiment_file, working_directory='', log_dir='')
     return experiment
@@ -200,7 +199,7 @@ class Schedv2Test(unittest.TestCase):
       # The non-cache-hit brs are put into Schedv2._label_brl_map.
       self.assertEqual(
           functools.reduce(lambda a, x: a + len(x[1]),
-                           my_schedv2.get_label_map().iteritems(), 0), 30)
+                           my_schedv2.get_label_map().items(), 0), 30)
 
   def test_nocachehit(self):
     """Test no cache-hit."""
@@ -218,7 +217,7 @@ class Schedv2Test(unittest.TestCase):
       # The non-cache-hit brs are put into Schedv2._label_brl_map.
       self.assertEqual(
           functools.reduce(lambda a, x: a + len(x[1]),
-                           my_schedv2.get_label_map().iteritems(), 0), 60)
+                           my_schedv2.get_label_map().items(), 0), 60)
 
 
 if __name__ == '__main__':

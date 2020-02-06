@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
@@ -14,7 +14,7 @@ import os.path
 import time
 
 import unittest
-import mock
+import unittest.mock as mock
 
 import suite_runner
 import label
@@ -227,7 +227,7 @@ class SuiteRunnerTest(unittest.TestCase):
     self.assertEqual(
         args_list[1],
         ('/usr/bin/test_that --autotest_dir '
-         '~/trunk/src/third_party/autotest/files --fast '
+         '/mnt/host/source/src/third_party/autotest/files --fast '
          "--board=lumpy --args=' run_local=False test=octane "
          'dut_config=\'"\'"\'{"turbostat": true, "top_interval": 3}\'"\'"\' '
          'profiler=custom_perf profiler_args=\'"\'"\'record -a -e '
