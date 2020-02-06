@@ -8,14 +8,14 @@
 This module serves two main purposes:
   1. Programatically include the utils module in PYTHONPATH
   2. Create the argument parsing shared between binary_search_state.py and
-     bisect.py
+     run_bisect.py
 
 The argument parsing is handled by populating _ArgsDict with all arguments.
-_ArgsDict is required so that binary_search_state.py and bisect.py can share
-the argument parsing, but treat them slightly differently. For example,
-bisect.py requires that all argument defaults are suppressed so that overriding
-can occur properly (i.e. only options that are explicitly entered by the user
-end up in the resultant options dictionary).
+_ArgsDict is required so that binary_search_state.py and run_bisect.py can
+share the argument parsing, but treat them slightly differently. For example,
+run_bisect.py requires that all argument defaults are suppressed so that
+overriding can occur properly (i.e. only options that are explicitly entered
+by the user end up in the resultant options dictionary).
 
 ArgumentDict inherits OrderedDict in order to preserve the order the args are
 created so the help text is made properly.
@@ -109,8 +109,8 @@ def BuildArgParser(parser, override=False):
   Args:
     parser: type argparse.ArgumentParser, will call add_argument for every item
             in _ArgsDict
-    override: True if being called from bisect.py. Used to say that default and
-              required options are to be ignored
+    override: True if being called from run_bisect.py. Used to say that default
+              and required options are to be ignored
 
   Returns:
     None
@@ -118,7 +118,7 @@ def BuildArgParser(parser, override=False):
   ArgsDict = GetArgsDict()
 
   # Have no defaults when overriding
-  for arg_names, arg_options in ArgsDict.iteritems():
+  for arg_names, arg_options in ArgsDict.items():
     if override:
       arg_options = arg_options.copy()
       arg_options.pop('default', None)

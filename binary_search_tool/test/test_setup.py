@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -13,7 +13,7 @@ import sys
 
 def Main():
   # create ./is_setup
-  with open('./is_setup', 'w'):
+  with open('./is_setup', 'w', encoding='utf-8'):
     pass
 
   return 0

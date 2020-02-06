@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -14,17 +14,14 @@ from argparse import RawTextHelpFormatter
 import os
 import sys
 
-import six
-
-import binary_search_state
-import common
+from binary_search_tool import binary_search_state
+from binary_search_tool import common
 
 from cros_utils import command_executer
 from cros_utils import logger
 
 
-@six.add_metaclass(abc.ABCMeta)
-class Bisector(object):
+class Bisector(object, metaclass=abc.ABCMeta):
   """The abstract base class for Bisectors."""
 
   def __init__(self, options, overrides=None):
@@ -48,7 +45,7 @@ class Bisector(object):
     which arguments have been overridden.
 
     Example output:
-      ./bisect.py package daisy 172.17.211.184 -I "" -t cros_pkg/my_test.sh
+      ./run_bisect.py package daisy 172.17.211.184 -I "" -t cros_pkg/my_test.sh
       Performing ChromeOS Package bisection
       Method Config:
         board : daisy
@@ -87,7 +84,7 @@ class Bisector(object):
     out += '\nBisection Config: (* = overridden)\n'
     max_key_len = max([len(str(x)) for x in args.keys()])
     # Print args in common._ArgsDict order
-    args_order = [x['dest'] for x in common.GetArgsDict().itervalues()]
+    args_order = [x['dest'] for x in common.GetArgsDict().values()]
     for key in sorted(args, key=args_order.index):
       val = args[key]
       key_str = str(key).rjust(max_key_len)
@@ -308,7 +305,7 @@ def Run(bisector):
 
 
 _HELP_EPILOG = """
-Run ./bisect.py {method} --help for individual method help/args
+Run ./run_bisect.py {method} --help for individual method help/args
 
 ------------------
 
@@ -322,7 +319,7 @@ def Main(argv):
   override_parser = argparse.ArgumentParser(
       add_help=False,
       argument_default=argparse.SUPPRESS,
-      usage='bisect.py {mode} [options]')
+      usage='run_bisect.py {mode} [options]')
   common.BuildArgParser(override_parser, override=True)
 
   epilog = _HELP_EPILOG + override_parser.format_help()

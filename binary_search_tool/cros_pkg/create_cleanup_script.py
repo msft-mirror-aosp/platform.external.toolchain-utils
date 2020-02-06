@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -87,7 +87,7 @@ def Main(argv):
 
   out_filename = 'cros_pkg/' + options.board + '_cleanup.sh'
 
-  with open(out_filename, 'w') as out_file:
+  with open(out_filename, 'w', encoding='utf-8') as out_file:
     out_file.write('#!/bin/bash\n\n')
     # First, remove the 'new' soft link.
     out_file.write('sudo rm /build/%s\n' % options.board)

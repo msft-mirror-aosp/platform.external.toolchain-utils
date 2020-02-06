@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -16,7 +16,7 @@ from __future__ import print_function
 
 import sys
 
-import common
+from binary_search_tool.test import common
 
 
 def Main(argv):
@@ -28,7 +28,7 @@ def Main(argv):
     working_set[int(oi)] = 42
 
   common.WriteWorkingSet(working_set)
-  with open('tmp_file', 'w') as f:
+  with open('tmp_file', 'w', encoding='utf-8') as f:
     f.write(argv[1])
 
   return 0

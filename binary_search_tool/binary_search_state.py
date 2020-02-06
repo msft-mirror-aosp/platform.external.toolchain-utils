@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -22,9 +22,9 @@ import tempfile
 import time
 
 # Adds cros_utils to PYTHONPATH
-import binary_search_perforce
-import common
-import pass_mapping
+from binary_search_tool import binary_search_perforce
+from binary_search_tool import common
+from binary_search_tool import pass_mapping
 
 # Now we do import from cros_utils
 from cros_utils import command_executer
@@ -36,11 +36,6 @@ BAD_SET_VAR = 'BISECT_BAD_SET'
 STATE_FILE = '%s.state' % sys.argv[0]
 HIDDEN_STATE_FILE = os.path.join(
     os.path.dirname(STATE_FILE), '.%s' % os.path.basename(STATE_FILE))
-
-
-class Error(Exception):
-  """The general binary search tool error class."""
-  pass
 
 
 @contextlib.contextmanager
@@ -60,7 +55,7 @@ def SetFile(env_var, items):
     env_var: What environment variable to store the file name in.
     items: What items are in this set.
   """
-  with tempfile.NamedTemporaryFile() as f:
+  with tempfile.NamedTemporaryFile('w', encoding='utf-8') as f:
     os.environ[env_var] = f.name
     f.write('\n'.join(items))
     f.flush()
@@ -162,7 +157,7 @@ class BinarySearchState(object):
       item_list: list of all items to be switched
     """
     if self.file_args:
-      with tempfile.NamedTemporaryFile() as f:
+      with tempfile.NamedTemporaryFile('w', encoding='utf-8') as f:
         f.write('\n'.join(item_list))
         f.flush()
         command = '%s %s' % (switch_script, f.name)
@@ -175,9 +170,8 @@ class BinarySearchState(object):
             command, print_to_console=self.verbose)
       except OSError as e:
         if e.errno == errno.E2BIG:
-          raise Error('Too many arguments for switch script! Use --file_args')
-        else:
-          raise
+          raise RuntimeError('Too many arguments for switch script! Use '
+                             '--file_args')
     assert ret == 0, 'Switch script %s returned %d' % (switch_script, ret)
 
   def TestScript(self):
@@ -390,7 +384,7 @@ class BinarySearchState(object):
           break
         pass_num += 1
         last_pass = l
-    if limit != -1 and pass_num != limit:
+    if limit not in (-1, pass_num):
       raise ValueError('[Error] While building, limit number does not match.')
     return pass_num, self.CollectPassName(last_pass)
 
@@ -615,7 +609,7 @@ class BinarySearchState(object):
     new data.
 
     Raises:
-      Error if STATE_FILE already exists but is not a symlink.
+      OSError if STATE_FILE already exists but is not a symlink.
     """
     ce, l = self.ce, self.l
     self.ce, self.l, self.binary_search.logger = None, None, None
@@ -629,8 +623,8 @@ class BinarySearchState(object):
       if os.path.islink(STATE_FILE):
         old_state = os.readlink(STATE_FILE)
       else:
-        raise Error(('%s already exists and is not a symlink!\n'
-                     'State file saved to %s' % (STATE_FILE, path)))
+        raise OSError(('%s already exists and is not a symlink!\n'
+                       'State file saved to %s' % (STATE_FILE, path)))
 
     # Create new link and atomically overwrite old link
     temp_link = '%s.link' % HIDDEN_STATE_FILE
@@ -693,8 +687,8 @@ class BinarySearchState(object):
     """Return h m s format of elapsed time since execution has started."""
     diff = int(time.time() - self.start_time)
     seconds = diff % 60
-    minutes = (diff / 60) % 60
-    hours = diff / (60 * 60)
+    minutes = (diff // 60) % 60
+    hours = diff // (60 * 60)
 
     seconds = str(seconds).rjust(2)
     minutes = str(minutes).rjust(2)
@@ -878,16 +872,12 @@ def Run(get_initial_items,
                             verify, file_args, verbose)
     bss.DoVerify()
 
-  try:
-    bss.DoSearchBadItems()
-    if pass_bisect:
-      bss.DoSearchBadPass()
-    bss.RemoveState()
-    logger.GetLogger().LogOutput(
-        'Total execution time: %s' % bss.ElapsedTimeString())
-  except Error as e:
-    logger.GetLogger().LogError(e)
-    return 1
+  bss.DoSearchBadItems()
+  if pass_bisect:
+    bss.DoSearchBadPass()
+  bss.RemoveState()
+  logger.GetLogger().LogOutput(
+      'Total execution time: %s' % bss.ElapsedTimeString())
 
   return 0
 

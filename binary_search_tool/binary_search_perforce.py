@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -106,7 +106,7 @@ class BinarySearcherForPass(object):
       True if we find the bad pass/transformation, or cannot find bad one after
       decreasing to the first pass/transformation. Otherwise False.
     """
-    assert status == 0 or status == 1 or status == 125
+    assert status in (0, 1, 125), status
 
     if self.current == 0:
       message = ('Runtime error occurs before first pass/transformation. '
@@ -161,7 +161,7 @@ class BinarySearcher(object):
     message = ('Revision: %s index: %d returned: %d' %
                (self.sorted_list[self.current], self.current, status))
     self.logger.LogOutput(message, print_to_console=verbose)
-    assert status == 0 or status == 1 or status == 125
+    assert status in (0, 1, 125), status
     self.index_log.append(self.current)
     self.status_log.append(status)
     bsp = BinarySearchPoint(self.sorted_list[self.current], status, tag)
@@ -170,7 +170,7 @@ class BinarySearcher(object):
     if status == 125:
       self.skipped_indices.append(self.current)
 
-    if status == 0 or status == 1:
+    if status in (0, 1):
       if status == 0:
         self.lo = self.current + 1
       elif status == 1:
@@ -415,9 +415,8 @@ class P4GCCBinarySearcher(P4BinarySearcher):
     for pr in problematic_ranges:
       if cr in range(pr[0], pr[1]):
         patch_file = '/home/asharif/triage_tool/%d-%d.patch' % (pr[0], pr[1])
-        f = open(patch_file)
-        patch = f.read()
-        f.close()
+        with open(patch_file, encoding='utf-8') as f:
+          patch = f.read()
         files = re.findall('--- (//.*)', patch)
         command += '; cd %s' % self.checkout_dir
         for f in files:
@@ -507,7 +506,7 @@ def Main(argv):
     logger.GetLogger().LogOutput('Cleaning up...')
   finally:
     logger.GetLogger().LogOutput(str(p4gccbs.bs), print_to_console=verbose)
-    status = p4gccbs.Cleanup()
+    p4gccbs.Cleanup()
 
 
 if __name__ == '__main__':
