@@ -34,6 +34,7 @@ from cros_utils import buildbot_utils
 USE_LLVM_NEXT_PATCH = '513590'
 
 CROSTC_ROOT = '/usr/local/google/crostc'
+NIGHTLY_TESTS_DIR = os.path.join(CROSTC_ROOT, 'nightly-tests')
 ROLE_ACCOUNT = 'mobiletc-prebuild'
 TOOLCHAIN_DIR = os.path.dirname(os.path.realpath(__file__))
 MAIL_PROGRAM = '~/var/bin/mail-sheriff'
@@ -145,7 +146,7 @@ class ToolchainComparator(object):
     Given the names of the trybot, vanilla and non-AFDO images, create the
     appropriate crosperf experiment file and launch crosperf on it.
     """
-    experiment_file_dir = os.path.join(CROSTC_ROOT, self._weekday)
+    experiment_file_dir = os.path.join(NIGHTLY_TESTS_DIR, self._weekday)
     experiment_file_name = '%s_toolchain_experiment.txt' % self._board
 
     compiler_string = 'llvm'

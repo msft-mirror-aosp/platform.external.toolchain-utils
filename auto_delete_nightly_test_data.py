@@ -22,6 +22,8 @@ from cros_utils import constants
 from cros_utils import misc
 
 DIR_BY_WEEKDAY = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
+NIGHTLY_TESTS_WORKSPACE = os.path.join(constants.CROSTC_WORKSPACE,
+                                       'nightly-tests')
 
 
 def CleanNumberedDir(s, dry_run=False):
@@ -48,7 +50,7 @@ def CleanNumberedDir(s, dry_run=False):
   ## check 's' to make sure it is sane.  A valid dir to be removed must be
   ## '/usr/local/google/crostc/(SUN|MON|TUE...|SAT)'.
   valid_dir_pattern = (
-      '^' + constants.CROSTC_WORKSPACE + '/(' + '|'.join(DIR_BY_WEEKDAY) + ')')
+      '^' + NIGHTLY_TESTS_WORKSPACE + '/(' + '|'.join(DIR_BY_WEEKDAY) + ')')
   if not re.search(valid_dir_pattern, s):
     print('Trying to delete an invalid dir "{0}" (must match "{1}"), '
           'please check.'.format(s, valid_dir_pattern))
@@ -196,7 +198,7 @@ def Main(argv):
       dated_dir = DIR_BY_WEEKDAY[i - 1]
 
     rv += 0 if CleanDatedDir(
-        os.path.join(constants.CROSTC_WORKSPACE, dated_dir),
+        os.path.join(NIGHTLY_TESTS_WORKSPACE, dated_dir),
         options.dry_run) else 1
 
 
