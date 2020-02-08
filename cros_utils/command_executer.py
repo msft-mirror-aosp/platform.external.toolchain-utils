@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -17,11 +18,11 @@ import sys
 import tempfile
 import time
 
-import logger
-import misc
+from cros_utils import logger
 
 mock_default = False
 
+CHROMEOS_SCRIPTS_DIR = '/mnt/host/source/src/scripts'
 LOG_LEVEL = ('none', 'quiet', 'average', 'verbose')
 
 
@@ -101,6 +102,7 @@ class CommandExecuter(object):
     # In this way the child cannot mess the parent's terminal.
     p = None
     try:
+      # pylint: disable=bad-option-value, subprocess-popen-preexec-fn
       p = subprocess.Popen(
           cmd,
           stdout=subprocess.PIPE,
@@ -238,11 +240,14 @@ class CommandExecuter(object):
     return command
 
   def WriteToTempShFile(self, contents):
-    handle, command_file = tempfile.mkstemp(prefix=os.uname()[1], suffix='.sh')
-    os.write(handle, '#!/bin/bash\n')
-    os.write(handle, contents)
-    os.close(handle)
-    return command_file
+    # TODO(crbug.com/1048938): use encoding='utf-8' when all dependencies have
+    # migrated to python 3.
+    with tempfile.NamedTemporaryFile(
+        'w', delete=False, prefix=os.uname()[1], suffix='.sh') as f:
+      f.write('#!/bin/bash\n')
+      f.write(contents)
+      f.flush()
+    return f.name
 
   def CrosLearnBoard(self, chromeos_root, machine):
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
@@ -362,15 +367,20 @@ class CommandExecuter(object):
     if self.logger:
       self.logger.LogCmd(command, print_to_console=print_to_console)
 
-    handle, command_file = tempfile.mkstemp(
+    # TODO(crbug.com/1048938): use encoding='utf-8' when all dependencies have
+    # migrated to python 3.
+    with tempfile.NamedTemporaryFile(
+        'w',
+        delete=False,
         dir=os.path.join(chromeos_root, 'src/scripts'),
         suffix='.sh',
-        prefix='in_chroot_cmd')
-    os.write(handle, '#!/bin/bash\n')
-    os.write(handle, command)
-    os.write(handle, '\n')
-    os.close(handle)
+        prefix='in_chroot_cmd') as f:
+      f.write('#!/bin/bash\n')
+      f.write(command)
+      f.write('\n')
+      f.flush()
 
+    command_file = f.name
     os.chmod(command_file, 0o777)
 
     # if return_output is set, run a dummy command first to make sure that
@@ -386,7 +396,7 @@ class CommandExecuter(object):
     # Run command_file inside the chroot, making sure that any "~" is expanded
     # by the shell inside the chroot, not outside.
     command = ("cd %s; cros_sdk %s -- bash -c '%s/%s'" %
-               (chromeos_root, cros_sdk_options, misc.CHROMEOS_SCRIPTS_DIR,
+               (chromeos_root, cros_sdk_options, CHROMEOS_SCRIPTS_DIR,
                 os.path.basename(command_file)))
     ret = self.RunCommandGeneric(
         command,
@@ -601,6 +611,7 @@ class CommandExecuter(object):
     # In this way the child cannot mess the parent's terminal.
     pobject = None
     try:
+      # pylint: disable=bad-option-value, subprocess-popen-preexec-fn
       pobject = subprocess.Popen(
           cmd,
           cwd=cwd,

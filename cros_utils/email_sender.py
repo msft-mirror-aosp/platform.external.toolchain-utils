@@ -97,12 +97,14 @@ class EmailSender(object):
 
     if not text_to_send:
       text_to_send = 'Empty message body.'
-    body_fd, body_filename = tempfile.mkstemp()
-    to_be_deleted = [body_filename]
 
+    to_be_deleted = []
     try:
-      os.write(body_fd, text_to_send)
-      os.close(body_fd)
+      with tempfile.NamedTemporaryFile(
+          'w', encoding='utf-8', delete=False) as f:
+        f.write(text_to_send)
+        f.flush()
+      to_be_deleted.append(f.name)
 
       # Fix single-quotes inside the subject. In bash, to escape a single quote
       # (e.g 'don't') you need to replace it with '\'' (e.g. 'don'\''t'). To
@@ -113,11 +115,10 @@ class EmailSender(object):
       if msg_type == 'html':
         command = ("sendgmr --to='%s' --from='%s' --subject='%s' "
                    "--html_file='%s' --body_file=/dev/null" %
-                   (to_list, email_from, subject, body_filename))
+                   (to_list, email_from, subject, f.name))
       else:
-        command = (
-            "sendgmr --to='%s' --from='%s' --subject='%s' "
-            "--body_file='%s'" % (to_list, email_from, subject, body_filename))
+        command = ("sendgmr --to='%s' --from='%s' --subject='%s' "
+                   "--body_file='%s'" % (to_list, email_from, subject, f.name))
 
       if email_cc:
         cc_list = ','.join(email_cc)
@@ -133,10 +134,11 @@ class EmailSender(object):
             report_suffix = '_report.html'
           else:
             report_suffix = '_report.txt'
-          fd, fname = tempfile.mkstemp(suffix=report_suffix)
-          os.write(fd, attachment.content)
-          os.close(fd)
-          attachment_files.append(fname)
+          with tempfile.NamedTemporaryFile(
+              'w', encoding='utf-8', delete=False, suffix=report_suffix) as f:
+            f.write(attachment.content)
+            f.flush()
+          attachment_files.append(f.name)
         files = ','.join(attachment_files)
         command += " --attachment_files='%s'" % files
         to_be_deleted += attachment_files

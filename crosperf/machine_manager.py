@@ -151,9 +151,8 @@ class CrosMachine(object):
 
   def _GetMD5Checksum(self, ss):
     if ss:
-      return hashlib.md5(ss).hexdigest()
-    else:
-      return ''
+      return hashlib.md5(ss.encode('utf-8')).hexdigest()
+    return ''
 
   def _GetMachineID(self):
     command = 'dump_vpd_log --full --stdout'
