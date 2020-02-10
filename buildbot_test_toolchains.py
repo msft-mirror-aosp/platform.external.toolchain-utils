@@ -39,7 +39,7 @@ ROLE_ACCOUNT = 'mobiletc-prebuild'
 TOOLCHAIN_DIR = os.path.dirname(os.path.realpath(__file__))
 MAIL_PROGRAM = '~/var/bin/mail-sheriff'
 PENDING_ARCHIVES_DIR = os.path.join(CROSTC_ROOT, 'pending_archives')
-NIGHTLY_TESTS_DIR = os.path.join(CROSTC_ROOT, 'nightly_test_reports')
+NIGHTLY_TESTS_RESULTS = os.path.join(CROSTC_ROOT, 'nightly_test_reports')
 
 IMAGE_DIR = '{board}-{image_type}'
 IMAGE_VERSION_STR = r'{chrome_version}-{tip}\.{branch}\.{branch_branch}'
@@ -88,7 +88,7 @@ class ToolchainComparator(object):
     timestamp = datetime.datetime.strftime(datetime.datetime.now(),
                                            '%Y-%m-%d_%H:%M:%S')
     self._reports_dir = os.path.join(
-        NIGHTLY_TESTS_DIR,
+        NIGHTLY_TESTS_RESULTS,
         '%s.%s' % (timestamp, board),
     )
 
