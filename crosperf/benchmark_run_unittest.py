@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
@@ -9,10 +9,9 @@
 
 from __future__ import print_function
 
-import unittest
 import inspect
-
-import mock
+import unittest
+import unittest.mock as mock
 
 import benchmark_run
 
@@ -119,9 +118,9 @@ class BenchmarkRunTest(unittest.TestCase):
     args_list = [
         'self', 'name', 'benchmark', 'label', 'iteration', 'cache_conditions',
         'machine_manager', 'logger_to_use', 'log_level', 'share_cache',
-        'dut_config', 'enable_aslr'
+        'dut_config'
     ]
-    arg_spec = inspect.getargspec(benchmark_run.BenchmarkRun.__init__)
+    arg_spec = inspect.getfullargspec(benchmark_run.BenchmarkRun.__init__)
     self.assertEqual(len(arg_spec.args), len(args_list))
     self.assertEqual(arg_spec.args, args_list)
 
@@ -410,8 +409,8 @@ class BenchmarkRunTest(unittest.TestCase):
     br.machine_manager.ImageMachine.assert_called_with(mock_machine,
                                                        self.test_label)
     self.assertEqual(mock_runner.call_count, 1)
-    mock_runner.assert_called_with(mock_machine.name, br.label, br.benchmark,
-                                   '', br.profiler_args)
+    mock_runner.assert_called_with(mock_machine, br.label, br.benchmark, '',
+                                   br.profiler_args)
 
     self.assertEqual(mock_result.call_count, 1)
     mock_result.assert_called_with(

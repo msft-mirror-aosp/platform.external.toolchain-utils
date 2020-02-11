@@ -12,6 +12,7 @@ import itertools
 import json
 import os
 import re
+import time
 
 from cros_utils.tabulator import AmeanResult
 from cros_utils.tabulator import Cell
@@ -99,10 +100,10 @@ def _FilterPerfReport(event_threshold, report):
 
   def filter_dict(m):
     return {
-        fn_name: pct for fn_name, pct in m.iteritems() if pct >= event_threshold
+        fn_name: pct for fn_name, pct in m.items() if pct >= event_threshold
     }
 
-  return {event: filter_dict(m) for event, m in report.iteritems()}
+  return {event: filter_dict(m) for event, m in report.items()}
 
 
 class _PerfTable(object):
@@ -185,7 +186,7 @@ def _GetTables(benchmark_results, columns, table_type):
   iter_counts = benchmark_results.iter_counts
   result = benchmark_results.run_keyvals
   tables = []
-  for bench_name, runs in result.iteritems():
+  for bench_name, runs in result.items():
     iterations = iter_counts[bench_name]
     ben_table = _GetResultsTableHeader(bench_name, iterations)
 
@@ -371,10 +372,16 @@ class TextResultsReport(ResultsReport):
     cell_table = TableFormatter(table, columns).GetCellTable('status')
     return [cell_table]
 
-  def _GetTotalWaitCooldownTime(self):
-    """Get cooldown wait time in seconds from experiment benchmark runs."""
-    return sum(br.suite_runner.GetCooldownWaitTime()
-               for br in self.experiment.benchmark_runs)
+  def GetTotalWaitCooldownTime(self):
+    """Get cooldown wait time in seconds from experiment benchmark runs.
+
+    Returns:
+      Dictionary {'dut': int(wait_time_in_seconds)}
+    """
+    waittime_dict = {}
+    for dut in self.experiment.machine_manager.GetMachines():
+      waittime_dict[dut.name] = dut.GetCooldownWaitTime()
+    return waittime_dict
 
   def GetReport(self):
     """Generate the report for email and console."""
@@ -411,15 +418,27 @@ class TextResultsReport(ResultsReport):
       cpu_info = experiment.machine_manager.GetAllCPUInfo(experiment.labels)
       sections.append(self._MakeSection('CPUInfo', cpu_info))
 
-      waittime_str = '%d min' % (self._GetTotalWaitCooldownTime() // 60)
-      sections.append(self._MakeSection('Cooldown wait time', waittime_str))
+      totaltime = (
+          time.time() - experiment.start_time) if experiment.start_time else 0
+      totaltime_str = 'Total experiment time:\n%d min' % (totaltime // 60)
+      cooldown_waittime_list = ['Cooldown wait time:']
+      # When running experiment on multiple DUTs cooldown wait time may vary
+      # on different devices. In addition its combined time may exceed total
+      # experiment time which will look weird but it is reasonable.
+      # For this matter print cooldown time per DUT.
+      for dut, waittime in sorted(self.GetTotalWaitCooldownTime().items()):
+        cooldown_waittime_list.append('DUT %s: %d min' % (dut, waittime // 60))
+      cooldown_waittime_str = '\n'.join(cooldown_waittime_list)
+      sections.append(
+          self._MakeSection('Duration', '\n\n'.join(
+              [totaltime_str, cooldown_waittime_str])))
 
     return '\n'.join(sections)
 
 
 def _GetHTMLCharts(label_names, test_results):
   charts = []
-  for item, runs in test_results.iteritems():
+  for item, runs in test_results.items():
     # Fun fact: label_names is actually *entirely* useless as a param, since we
     # never add headers. We still need to pass it anyway.
     table = TableGenerator(runs, label_names).GetTable()
@@ -667,8 +686,8 @@ class JSONResultsReport(ResultsReport):
 
   def __init__(self,
                benchmark_results,
-               date=None,
-               time=None,
+               benchmark_date=None,
+               benchmark_time=None,
                experiment=None,
                json_args=None):
     """Construct a JSONResultsReport.
@@ -689,19 +708,22 @@ class JSONResultsReport(ResultsReport):
     self.json_args = json_args
 
     self.experiment = experiment
-    if not date:
+    if not benchmark_date:
       timestamp = datetime.datetime.strftime(datetime.datetime.now(),
                                              '%Y-%m-%d %H:%M:%S')
-      date, time = timestamp.split(' ')
-    self.date = date
-    self.time = time
+      benchmark_date, benchmark_time = timestamp.split(' ')
+    self.date = benchmark_date
+    self.time = benchmark_time
 
   @staticmethod
-  def FromExperiment(experiment, date=None, time=None, json_args=None):
+  def FromExperiment(experiment,
+                     benchmark_date=None,
+                     benchmark_time=None,
+                     json_args=None):
     benchmark_results = BenchmarkResults.FromExperiment(
         experiment, for_json_report=True)
-    return JSONResultsReport(benchmark_results, date, time, experiment,
-                             json_args)
+    return JSONResultsReport(benchmark_results, benchmark_date, benchmark_time,
+                             experiment, json_args)
 
   def GetReportObjectIgnoringExperiment(self):
     """Gets the JSON report object specifically for the output data.
@@ -712,7 +734,7 @@ class JSONResultsReport(ResultsReport):
     label_names = benchmark_results.label_names
     summary_field_defaults = self.summary_field_defaults
     final_results = []
-    for test, test_results in benchmark_results.run_keyvals.iteritems():
+    for test, test_results in benchmark_results.run_keyvals.items():
       for label_name, label_results in zip(label_names, test_results):
         for iter_results in label_results:
           passed = iter_results.get('retval') == 0
@@ -745,7 +767,7 @@ class JSONResultsReport(ResultsReport):
           # Get detailed results.
           detail_results = {}
           json_results['detailed_results'] = detail_results
-          for k, v in iter_results.iteritems():
+          for k, v in iter_results.items():
             if k == 'retval' or k == 'PASS' or k == ['PASS'] or v == 'PASS':
               continue
 

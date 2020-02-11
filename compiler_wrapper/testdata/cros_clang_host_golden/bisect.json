@@ -32,8 +32,16 @@
             "-Wno-deprecated-declarations",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-reorder-init-list",
+            "-Wno-final-dtor-non-final-class",
+            "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
-            "main.cc"
+            "main.cc",
+            "-Wno-implicit-int-float-conversion"
+          ],
+          "env_updates": [
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         }
       }
@@ -73,8 +81,16 @@
             "-Wno-deprecated-declarations",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-reorder-init-list",
+            "-Wno-final-dtor-non-final-class",
+            "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
-            "main.cc"
+            "main.cc",
+            "-Wno-implicit-int-float-conversion"
+          ],
+          "env_updates": [
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         }
       }
@@ -117,8 +133,16 @@
             "-Wno-deprecated-declarations",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-reorder-init-list",
+            "-Wno-final-dtor-non-final-class",
+            "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
-            "main.cc"
+            "main.cc",
+            "-Wno-implicit-int-float-conversion"
+          ],
+          "env_updates": [
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         },
         "stdout": "somemessage",

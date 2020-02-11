@@ -61,15 +61,19 @@ table:
   print tp.Print()
 """
 
+from __future__ import division
 from __future__ import print_function
 
 import getpass
 import math
 import sys
+# TODO(zhizhouy): Drop numpy in the future
+# pylint: disable=import-error
 import numpy
+import scipy
 
-from email_sender import EmailSender
-import misc
+from cros_utils.email_sender import EmailSender
+from cros_utils import misc
 
 
 def _AllFloat(values):
@@ -162,7 +166,7 @@ class TableGenerator(object):
     keys = self._AggregateKeys()
     return self._SortKeys(keys)
 
-  def GetTable(self, number_of_rows=sys.maxint):
+  def GetTable(self, number_of_rows=sys.maxsize):
     """Returns a table from a list of list of dicts.
 
     Examples:
@@ -239,7 +243,7 @@ class SamplesTableGenerator(TableGenerator):
     keys = self._runs.keys()
     return self._SortKeys(keys)
 
-  def GetTable(self, number_of_rows=sys.maxint):
+  def GetTable(self, number_of_rows=sys.maxsize):
     """Returns a tuple, which contains three args:
 
       1) a table from a list of list of dicts.
@@ -660,8 +664,7 @@ class PValueResult(ComparisonResult):
     if len(values) < 2 or len(baseline_values) < 2:
       cell.value = float('nan')
       return
-    import stats
-    _, cell.value = stats.lttest_ind(values, baseline_values)
+    _, cell.value = scipy.stats.ttest_ind(values, baseline_values)
 
   def _ComputeString(self, cell, values, baseline_values):
     return float('nan')
@@ -877,7 +880,7 @@ class WeightFormat(Format):
 class StorageFormat(Format):
   """Format the cell as a storage number.
 
-  Example:
+  Examples:
     If the cell contains a value of 1024, the string_value will be 1.0K.
   """
 
@@ -899,7 +902,7 @@ class StorageFormat(Format):
 class CoeffVarFormat(Format):
   """Format the cell as a percent.
 
-  Example:
+  Examples:
     If the cell contains a value of 1.5, the string_value will be +150%.
   """
 
@@ -917,7 +920,7 @@ class CoeffVarFormat(Format):
 class PercentFormat(Format):
   """Format the cell as a percent.
 
-  Example:
+  Examples:
     If the cell contains a value of 1.5, the string_value will be +50%.
   """
 
@@ -930,7 +933,7 @@ class PercentFormat(Format):
 class RatioFormat(Format):
   """Format the cell as a ratio.
 
-  Example:
+  Examples:
     If the cell contains a value of 1.5642, the string_value will be 1.56.
   """
 
@@ -943,7 +946,7 @@ class RatioFormat(Format):
 class ColorBoxFormat(Format):
   """Format the cell as a color box.
 
-  Example:
+  Examples:
     If the cell contains a value of 1.5, it will get a green color.
     If the cell contains a value of 0.5, it will get a red color.
     The intensity of the green/red will be determined by how much above or below
@@ -989,7 +992,7 @@ class Cell(object):
     # Entire row inherits this color.
     self.color_row = False
     self.bgcolor_row = False
-    self.width = None
+    self.width = 0
     self.colspan = 1
     self.name = None
     self.header = False
@@ -1297,7 +1300,7 @@ class TablePrinter(object):
       suffix = '\033[0m'
     elif self._output_type in [self.EMAIL, self.HTML]:
       rgb = color.GetRGB()
-      prefix = ("<FONT style=\"BACKGROUND-COLOR:#{0}\">".format(rgb))
+      prefix = ('<FONT style="BACKGROUND-COLOR:#{0}">'.format(rgb))
       suffix = '</FONT>'
     elif self._output_type in [self.PLAIN, self.TSV]:
       prefix = ''
@@ -1365,7 +1368,7 @@ class TablePrinter(object):
         tag = 'th'
       else:
         tag = 'td'
-      out = "<{0} colspan = \"{2}\"> {1} </{0}>".format(tag, out, cell.colspan)
+      out = '<{0} colspan = "{2}"> {1} </{0}>'.format(tag, out, cell.colspan)
 
     return out
 
@@ -1387,7 +1390,7 @@ class TablePrinter(object):
     if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV, self.EMAIL]:
       return ''
     if self._output_type == self.HTML:
-      return "<p></p><table id=\"box-table-a\">\n<tr>"
+      return '<p></p><table id="box-table-a">\n<tr>'
 
   def _GetSuffix(self):
     if self._output_type in [self.PLAIN, self.CONSOLE, self.TSV, self.EMAIL]:

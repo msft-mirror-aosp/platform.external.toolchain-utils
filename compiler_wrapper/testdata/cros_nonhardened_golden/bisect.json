@@ -32,7 +32,12 @@
             "-Wno-unknown-warning-option",
             "-Wno-section",
             "-static-libgcc",
+            "-Wno-reorder-init-list",
+            "-Wno-final-dtor-non-final-class",
+            "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "main.cc",
+            "-Wno-implicit-int-float-conversion",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -41,7 +46,8 @@
             "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
-            "CCACHE_CPP2=yes"
+            "CCACHE_CPP2=yes",
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         }
       }
@@ -81,7 +87,12 @@
             "-Wno-unknown-warning-option",
             "-Wno-section",
             "-static-libgcc",
+            "-Wno-reorder-init-list",
+            "-Wno-final-dtor-non-final-class",
+            "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "main.cc",
+            "-Wno-implicit-int-float-conversion",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -90,7 +101,8 @@
             "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
-            "CCACHE_CPP2=yes"
+            "CCACHE_CPP2=yes",
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         }
       }
@@ -133,7 +145,12 @@
             "-Wno-unknown-warning-option",
             "-Wno-section",
             "-static-libgcc",
+            "-Wno-reorder-init-list",
+            "-Wno-final-dtor-non-final-class",
+            "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "main.cc",
+            "-Wno-implicit-int-float-conversion",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -142,7 +159,8 @@
             "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
-            "CCACHE_CPP2=yes"
+            "CCACHE_CPP2=yes",
+            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
           ]
         },
         "stdout": "somemessage",

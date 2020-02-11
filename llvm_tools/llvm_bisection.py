@@ -11,6 +11,7 @@ from __future__ import print_function
 import argparse
 import enum
 import errno
+import get_llvm_hash
 import json
 import os
 import sys
@@ -268,7 +269,7 @@ def GetRevisionsBetweenBisection(start, end, parallel, src_path,
           cur_revision not in skip_revisions:
         # Verify that the current revision exists by finding its corresponding
         # git hash in the LLVM source tree.
-        new_llvm.GetGitHashForVersion(src_path, cur_revision)
+        get_llvm_hash.GetGitHashFrom(src_path, cur_revision)
         valid_revisions.append(cur_revision)
     except ValueError:
       # Could not find the git hash for the current revision.
@@ -302,9 +303,7 @@ def GetRevisionsListAndHashList(start, end, parallel, src_path,
       revisions = GetRevisionsBetweenBisection(
           start, end, parallel, src_path, pending_revisions, skip_revisions)
 
-      git_hashes = [
-          new_llvm.GetGitHashForVersion(src_path, rev) for rev in revisions
-      ]
+      git_hashes = [get_llvm_hash.GetGitHashFrom(src_path, rev) for rev in revisions]
 
   return revisions, git_hashes
 
@@ -363,7 +362,7 @@ def _NoteCompletedBisection(last_tested, src_path, end):
   print('Finished bisecting for %s' % last_tested)
 
   if src_path:
-    bad_llvm_hash = LLVMHash().GetGitHashForVersion(src_path, end)
+    bad_llvm_hash = get_llvm_hash.GetGitHashFrom(src_path, end)
   else:
     bad_llvm_hash = LLVMHash().GetLLVMHash(end)
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -9,8 +9,8 @@
 from __future__ import print_function
 
 import os
-import mock
 import unittest
+import unittest.mock as mock
 
 import download_images
 from cros_utils import command_executer
@@ -167,7 +167,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
     test_empty_debug_path = ''
     test_autotest_path = '/tmp/autotest'
     test_debug_path = '/tmp/debug'
-    perf_args = '-a'
+    download_debug = True
 
     # Set values to test/check.
     self.called_download_image = False
@@ -224,7 +224,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
     # Call Run.
     image_path, autotest_path, debug_path = downloader.Run(
         test_chroot, test_build_id, test_empty_autotest_path,
-        test_empty_debug_path, perf_args)
+        test_empty_debug_path, download_debug)
 
     # Make sure it called both _DownloadImage and _UncompressImage
     self.assertTrue(self.called_download_image)
@@ -244,7 +244,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
 
     image_path, autotest_path, debug_path = downloader.Run(
         test_chroot, test_build_id, test_autotest_path, test_debug_path,
-        perf_args)
+        download_debug)
 
     # Verify that downloadAutotestFiles was not called
     self.assertFalse(self.called_download_autotest_files)
@@ -263,7 +263,7 @@ class ImageDownloaderTestcast(unittest.TestCase):
     # Call Run again.
     self.assertRaises(download_images.MissingImage, downloader.Run, test_chroot,
                       test_autotest_path, test_debug_path, test_build_id,
-                      perf_args)
+                      download_debug)
 
     # Verify that UncompressImage and downloadAutotestFiles were not called,
     # since _DownloadImage "failed"

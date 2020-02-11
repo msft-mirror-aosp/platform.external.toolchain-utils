@@ -10,22 +10,56 @@ from __future__ import print_function
 
 import argparse
 import os
-import re
 import shutil
 import subprocess
 import sys
 import tempfile
-
 from contextlib import contextmanager
-from subprocess_helpers import CheckCommand
-from subprocess_helpers import check_output
 
-import requests
+import git_llvm_rev
+from subprocess_helpers import CheckCommand, check_output
 
 _LLVM_GIT_URL = ('https://chromium.googlesource.com/external/github.com/llvm'
                  '/llvm-project')
 
 KNOWN_HASH_SOURCES = {'google3', 'google3-unstable', 'tot'}
+
+
+def GetVersionFrom(src_dir, git_hash):
+  """Obtain an SVN-style version number based on the LLVM git hash passed in.
+
+  Args:
+    src_dir: LLVM's source directory.
+    git_hash: The git hash.
+
+  Returns:
+    An SVN-style version number associated with the git hash.
+  """
+
+  version = git_llvm_rev.translate_sha_to_rev(
+      git_llvm_rev.LLVMConfig(remote='origin', dir=src_dir), git_hash)
+  # Note: branches aren't supported
+  assert version.branch == 'master', version.branch
+  return version.number
+
+
+def GetGitHashFrom(src_dir, version):
+  """Finds the commit hash(es) of the LLVM version in the git log history.
+
+  Args:
+    src_dir: The LLVM source tree.
+    version: The version number.
+
+  Returns:
+    A git hash string corresponding to the version number.
+
+  Raises:
+    subprocess.CalledProcessError: Failed to find a git hash.
+  """
+
+  return git_llvm_rev.translate_rev_to_sha(
+      git_llvm_rev.LLVMConfig(remote='origin', dir=src_dir),
+      git_llvm_rev.Rev(branch='master', number=version))
 
 
 @contextmanager
@@ -134,18 +168,19 @@ def GetGoogle3LLVMVersion(stable):
   """
 
   subdir = 'stable' if stable else 'llvm_unstable'
-  path_to_google3_llvm_version = os.path.join(
-      '/google/src/head/depot/google3/third_party/crosstool/v18', subdir,
-      'installs/llvm/revision')
 
   # Cmd to get latest google3 LLVM version.
-  cat_cmd = ['cat', path_to_google3_llvm_version]
+  cmd = [
+      'cat',
+      os.path.join('/google/src/head/depot/google3/third_party/crosstool/v18',
+                   subdir, 'installs/llvm/git_origin_rev_id')
+  ]
 
   # Get latest version.
-  g3_version = check_output(cat_cmd)
+  git_hash = check_output(cmd)
 
   # Change type to an integer
-  return int(g3_version.rstrip())
+  return GetVersionFrom(GetAndUpdateLLVMProjectInLLVMTools(), git_hash.rstrip())
 
 
 def is_svn_option(svn_option):
@@ -192,24 +227,18 @@ def GetLLVMHashAndVersionFromSVNOption(svn_option):
 
   # Determine which LLVM git hash to retrieve.
   if svn_option == 'tot':
-    llvm_hash = new_llvm_hash.GetTopOfTrunkGitHash()
-
-    tot_commit_message = new_llvm_hash.GetCommitMessageForHash(llvm_hash)
-
-    llvm_version = new_llvm_hash.GetSVNVersionFromCommitMessage(
-        tot_commit_message)
+    git_hash = new_llvm_hash.GetTopOfTrunkGitHash()
+    version = GetVersionFrom(GetAndUpdateLLVMProjectInLLVMTools(), git_hash)
   elif isinstance(svn_option, int):
-    llvm_version = svn_option
-    llvm_hash = new_llvm_hash.GetGitHashForVersion(
-        GetAndUpdateLLVMProjectInLLVMTools(), llvm_version)
+    version = svn_option
+    git_hash = GetGitHashFrom(GetAndUpdateLLVMProjectInLLVMTools(), version)
   else:
     assert svn_option in ('google3', 'google3-unstable')
-    llvm_version = GetGoogle3LLVMVersion(stable=svn_option == 'google3')
+    version = GetGoogle3LLVMVersion(stable=svn_option == 'google3')
 
-    llvm_hash = new_llvm_hash.GetGitHashForVersion(
-        GetAndUpdateLLVMProjectInLLVMTools(), llvm_version)
+    git_hash = GetGitHashFrom(GetAndUpdateLLVMProjectInLLVMTools(), version)
 
-  return llvm_hash, llvm_version
+  return git_hash, version
 
 
 class LLVMHash(object):
@@ -244,135 +273,17 @@ class LLVMHash(object):
     if clone_cmd_obj.returncode:
       raise ValueError('Failed to clone the LLVM repo: %s' % stderr)
 
-  def GetCommitMessageForHash(self, git_hash):
-    """Gets the commit message from the git hash.
-
-    Args:
-      git_hash: A git hash of LLVM.
-
-    Returns:
-      The commit message of the git hash.
-
-    Raises:
-      ValueError: Unable to retrieve json contents from the LLVM commit URL.
-    """
-
-    llvm_commit_url = ('https://api.github.com/repos/llvm/llvm-project/git/'
-                       'commits/')
-
-    commit_url = os.path.join(llvm_commit_url, git_hash)
-
-    url_response = requests.get(commit_url)
-
-    if not url_response:
-      raise ValueError('Failed to get response from url %s: Status Code %d' %
-                       (commit_url, url_response.status_code))
-
-    unicode_json_contents = url_response.json()
-
-    return str(unicode_json_contents['message'])
-
-  def GetSVNVersionFromCommitMessage(self, commit_message):
-    """Gets the 'llvm-svn' from the commit message.
-
-    A commit message may contain multiple 'llvm-svn' (reverting commits), so
-    the last 'llvm-svn' is the real 'llvm-svn' for that commit message.
-
-    Args:
-      commit_message: A commit message that contains a 'llvm-svn:'.
-
-    Returns:
-      The last LLVM version as an integer or 'None' if there is no 'llvm-svn'.
-    """
-
-    # Find all "llvm-svn:" instances.
-    llvm_versions = re.findall(r'llvm-svn: ([0-9]+)', commit_message)
-
-    if llvm_versions:
-      return int(llvm_versions[-1])
-
-    return None
-
-  def _ParseCommitMessages(self, subdir, hash_vals, llvm_version):
-    """Parses the hashes that match the LLVM version.
-
-    Args:
-      subdir: The directory where the git history resides.
-      hash_vals: All the hashes that match the LLVM version.
-      llvm_version: The version to compare to in the commit message.
-
-    Returns:
-      The hash that matches the LLVM version.
-
-    Raises:
-      subprocess.CalledProcessError: Failed to retrieve the commit message body.
-      ValueError: Failed to parse a commit message or did not find a commit
-      hash.
-    """
-
-    # For each hash, grab the last "llvm-svn:" line
-    # and compare the llvm version of that line against
-    # the llvm version we are looking for and return
-    # that hash only if they match.
-    for cur_commit in hash_vals.splitlines():
-      cur_hash = cur_commit.split()[0]  # Get hash.
-
-      # Cmd to output the commit body.
-      find_llvm_cmd = [
-          'git', '-C', subdir, 'log', '--format=%B', '-n', '1', cur_hash
-      ]
-
-      out = check_output(find_llvm_cmd)
-
-      commit_svn_version = self.GetSVNVersionFromCommitMessage(out.rstrip())
-
-      # Check the svn version from the commit message against the llvm version
-      # we are looking for.
-      if commit_svn_version and commit_svn_version == llvm_version:
-        return cur_hash
-
-    # Failed to find the commit hash.
-    raise ValueError('Could not find commit hash.')
-
-  def GetGitHashForVersion(self, llvm_git_dir, llvm_version):
-    """Finds the commit hash(es) of the LLVM version in the git log history.
-
-    Args:
-      llvm_git_dir: The LLVM git directory.
-      llvm_version: The version to search for in the git log history.
-
-    Returns:
-      A string of the hash corresponding to the LLVM version.
-
-    Raises:
-      subprocess.CalledProcessError: Failed to retrieve git hashes that match
-      'llvm_version'.
-    """
-
-    # Get all the git hashes that match 'llvm_version'.
-    hash_cmd = [
-        'git', '-C', llvm_git_dir, 'log', '--oneline', '--no-abbrev', '--grep',
-        'llvm-svn: %d' % llvm_version
-    ]
-
-    hash_vals = check_output(hash_cmd)
-
-    return self._ParseCommitMessages(llvm_git_dir, hash_vals.rstrip(),
-                                     llvm_version)
-
-  def GetLLVMHash(self, llvm_version):
+  def GetLLVMHash(self, version):
     """Retrieves the LLVM hash corresponding to the LLVM version passed in.
 
     Args:
-      llvm_version: The LLVM version to use as a delimiter.
+      version: The LLVM version to use as a delimiter.
 
     Returns:
       The hash as a string that corresponds to the LLVM version.
     """
 
-    hash_value = self.GetGitHashForVersion(GetAndUpdateLLVMProjectInLLVMTools(),
-                                           llvm_version)
-
+    hash_value = GetGitHashFrom(GetAndUpdateLLVMProjectInLLVMTools(), version)
     return hash_value
 
   def GetGoogle3LLVMHash(self):

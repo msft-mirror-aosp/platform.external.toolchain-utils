@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
@@ -14,8 +14,8 @@ import collections
 import io
 import os
 import unittest
+import unittest.mock as mock
 
-import mock
 import test_flag
 
 from benchmark_run import MockBenchmarkRun
@@ -83,9 +83,10 @@ def FakePath(ext):
 
 def MakeMockExperiment(compiler='gcc'):
   """Mocks an experiment using the given compiler."""
-  mock_experiment_file = io.BytesIO("""
+  mock_experiment_file = io.StringIO("""
       board: x86-alex
       remote: 127.0.0.1
+      locks_dir: /tmp
       perf_args: record -a -e cycles
       benchmark: PageCycler {
         iterations: 3
@@ -109,8 +110,7 @@ def MakeMockExperiment(compiler='gcc'):
   return experiment
 
 
-def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0,
-                     label=None):
+def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0):
   """Injects successful experiment runs (for each label) into the experiment."""
   # Defensive copy of keyvals, so if it's modified, we'll know.
   keyvals = dict(keyvals)
@@ -130,26 +130,20 @@ def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0,
   machine_manager.AddMachine('testing_machine')
   machine = next(
       m for m in machine_manager.GetMachines() if m.name == 'testing_machine')
+
+  def MakeSuccessfulRun(n, label):
+    run = MockBenchmarkRun('mock_success%d' % (n,), bench, label,
+                           1 + n + num_runs, cache_conditions, machine_manager,
+                           log, log_level, share_cache, {})
+    mock_result = MockResult(log, label, log_level, machine)
+    mock_result.keyvals = keyvals
+    run.result = mock_result
+    return run
+
   for label in experiment.labels:
-
-    def MakeSuccessfulRun(n):
-      run = MockBenchmarkRun('mock_success%d' % (n,), bench, label,
-                             1 + n + num_runs, cache_conditions,
-                             machine_manager, log, log_level, share_cache, {})
-      mock_result = MockResult(log, label, log_level, machine)
-      mock_result.keyvals = keyvals
-      run.result = mock_result
-      return run
-
     experiment.benchmark_runs.extend(
-        MakeSuccessfulRun(n) for n in range(how_many))
+        MakeSuccessfulRun(n, label) for n in range(how_many))
   return experiment
-
-
-def _InjectCooldownTime(experiment, cooldown_time):
-  """Inject cooldown wait time in every benchmark run."""
-  for br in experiment.benchmark_runs:
-    br.suite_runner.cooldown_wait_time = cooldown_time
 
 
 class TextResultsReportTest(unittest.TestCase):
@@ -159,32 +153,47 @@ class TextResultsReportTest(unittest.TestCase):
   things are displayed. It just cares that they're present.
   """
 
-  def _checkReport(self, email):
+  def _checkReport(self, mock_getcooldown, email):
     num_success = 2
     success_keyvals = {'retval': 0, 'machine': 'some bot', 'a_float': 3.96}
     experiment = _InjectSuccesses(MakeMockExperiment(), num_success,
                                   success_keyvals)
-    # Set 120 sec cooldown time for every benchmark run.
-    cooldown_time = 120
-    _InjectCooldownTime(experiment, cooldown_time)
+    SECONDS_IN_MIN = 60
+    mock_getcooldown.return_value = {
+        experiment.remote[0]: 12 * SECONDS_IN_MIN,
+        experiment.remote[1]: 8 * SECONDS_IN_MIN
+    }
+
     text_report = TextResultsReport.FromExperiment(
         experiment, email=email).GetReport()
     self.assertIn(str(success_keyvals['a_float']), text_report)
     self.assertIn(success_keyvals['machine'], text_report)
     self.assertIn(MockCrosMachine.CPUINFO_STRING, text_report)
-    self.assertIn('Cooldown wait time', text_report)
-    self.assertIn(
-        '%d min' % (len(experiment.benchmark_runs) * cooldown_time // 60),
-        text_report)
+    self.assertIn('\nDuration\n', text_report)
+    self.assertIn('Total experiment time:\n', text_report)
+    self.assertIn('Cooldown wait time:\n', text_report)
+    self.assertIn('DUT %s: %d min' % (experiment.remote[0], 12), text_report)
+    self.assertIn('DUT %s: %d min' % (experiment.remote[1], 8), text_report)
     return text_report
 
-  def testOutput(self):
-    email_report = self._checkReport(email=True)
-    text_report = self._checkReport(email=False)
+  @mock.patch.object(TextResultsReport, 'GetTotalWaitCooldownTime')
+  def testOutput(self, mock_getcooldown):
+    email_report = self._checkReport(mock_getcooldown, email=True)
+    text_report = self._checkReport(mock_getcooldown, email=False)
 
     # Ensure that the reports somehow different. Otherwise, having the
     # distinction is useless.
     self.assertNotEqual(email_report, text_report)
+
+  def test_get_totalwait_cooldowntime(self):
+    experiment = MakeMockExperiment()
+    cros_machines = experiment.machine_manager.GetMachines()
+    cros_machines[0].AddCooldownWaitTime(120)
+    cros_machines[1].AddCooldownWaitTime(240)
+    text_results = TextResultsReport.FromExperiment(experiment, email=False)
+    total = text_results.GetTotalWaitCooldownTime()
+    self.assertEqual(total[experiment.remote[0]], 120)
+    self.assertEqual(total[experiment.remote[1]], 240)
 
 
 class HTMLResultsReportTest(unittest.TestCase):
@@ -222,9 +231,9 @@ class HTMLResultsReportTest(unittest.TestCase):
       else:
         HTMLResultsReport(benchmark_results).GetReport()
       mod_mock = standin
-    self.assertEquals(mod_mock.call_count, 1)
+    self.assertEqual(mod_mock.call_count, 1)
     # call_args[0] is positional args, call_args[1] is kwargs.
-    self.assertEquals(mod_mock.call_args[0], tuple())
+    self.assertEqual(mod_mock.call_args[0], tuple())
     fmt_args = mod_mock.call_args[1]
     return self._GetTestOutput(**fmt_args)
 
@@ -303,7 +312,7 @@ class JSONResultsReportTest(unittest.TestCase):
     # Nothing succeeded; we don't send anything more than what's required.
     required_keys = self._GetRequiredKeys(is_experiment=True)
     for result in results:
-      self.assertItemsEqual(result.iterkeys(), required_keys)
+      self.assertCountEqual(result.keys(), required_keys)
 
   def testJSONReportOutputWithSuccesses(self):
     success_keyvals = {
@@ -420,7 +429,7 @@ class PerfReportParserTest(unittest.TestCase):
 
   def testParserParsesRealWorldPerfReport(self):
     report = ParseStandardPerfReport(self._ReadRealPerfReport())
-    self.assertItemsEqual(['cycles', 'instructions'], report.keys())
+    self.assertCountEqual(['cycles', 'instructions'], list(report.keys()))
 
     # Arbitrarily selected known percentages from the perf report.
     known_cycles_percentages = {

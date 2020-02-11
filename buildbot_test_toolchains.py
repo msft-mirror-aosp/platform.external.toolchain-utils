@@ -56,6 +56,8 @@ IMAGE_RE_GROUPS = {
 }
 TRYBOT_IMAGE_RE = TRYBOT_IMAGE_FS.format(**IMAGE_RE_GROUPS)
 
+TELEMETRY_AQUARIUM_UNSUPPORTED = ['bob', 'elm', 'veyron_minnie']
+
 
 class ToolchainComparator(object):
   """Class for doing the nightly tests work."""
@@ -175,7 +177,8 @@ class ToolchainComparator(object):
       run_local: False
       retries: 0
     }
-
+    """
+    telemetry_aquarium_tests = """
     benchmark: rendering.desktop {
       run_local: False
       suite: telemetry_Crosperf
@@ -194,6 +197,9 @@ class ToolchainComparator(object):
     with open(experiment_file, 'w') as f:
       f.write(experiment_header)
       f.write(experiment_tests)
+
+      if self._board not in TELEMETRY_AQUARIUM_UNSUPPORTED:
+        f.write(telemetry_aquarium_tests)
 
       # Now add vanilla to test file.
       official_image = """
@@ -233,7 +239,8 @@ class ToolchainComparator(object):
 
     crosperf = os.path.join(TOOLCHAIN_DIR, 'crosperf', 'crosperf')
     noschedv2_opts = '--noschedv2' if self._noschedv2 else ''
-    command = ('{crosperf} --no_email=True --results_dir={r_dir} --no_hwp '
+    command = ('{crosperf} --no_email=True --results_dir={r_dir} '
+               '--intel_pstate=no_hwp '
                '--json_report=True {noschedv2_opts} {exp_file}').format(
                    crosperf=crosperf,
                    r_dir=self._reports_dir,
@@ -277,7 +284,7 @@ class ToolchainComparator(object):
     print('trybot_url: \
           http://cros-goldeneye/chromeos/healthmonitoring/buildDetails?buildbucketId=%s'
           % buildbucket_id)
-    if len(trybot_image) == 0:
+    if not trybot_image:
       self._l.LogError('Unable to find trybot_image!')
       return 2
 

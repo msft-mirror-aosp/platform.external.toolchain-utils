@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -17,11 +18,11 @@ import sys
 import tempfile
 import time
 
-import logger
-import misc
+from cros_utils import logger
 
 mock_default = False
 
+CHROMEOS_SCRIPTS_DIR = '/mnt/host/source/src/scripts'
 LOG_LEVEL = ('none', 'quiet', 'average', 'verbose')
 
 
@@ -101,6 +102,7 @@ class CommandExecuter(object):
     # In this way the child cannot mess the parent's terminal.
     p = None
     try:
+      # pylint: disable=bad-option-value, subprocess-popen-preexec-fn
       p = subprocess.Popen(
           cmd,
           stdout=subprocess.PIPE,
@@ -124,7 +126,7 @@ class CommandExecuter(object):
       terminated_time = None
       started_time = time.time()
 
-      while len(pipes):
+      while pipes:
         if command_terminator and command_terminator.IsTerminated():
           os.killpg(os.getpgid(p.pid), signal.SIGTERM)
           if self.logger:
@@ -136,7 +138,7 @@ class CommandExecuter(object):
         l = my_poll.poll(100)
         for (fd, _) in l:
           if fd == p.stdout.fileno():
-            out = os.read(p.stdout.fileno(), 16384)
+            out = os.read(p.stdout.fileno(), 16384).decode('utf8')
             if return_output:
               full_stdout += out
             if self.logger:
@@ -145,7 +147,7 @@ class CommandExecuter(object):
               pipes.remove(p.stdout)
               my_poll.unregister(p.stdout)
           if fd == p.stderr.fileno():
-            err = os.read(p.stderr.fileno(), 16384)
+            err = os.read(p.stderr.fileno(), 16384).decode('utf8')
             if return_output:
               full_stderr += err
             if self.logger:
@@ -182,8 +184,8 @@ class CommandExecuter(object):
       if return_output:
         return (p.returncode, full_stdout, full_stderr)
       return (p.returncode, '', '')
-    except BaseException as e:
-      except_handler(p, e)
+    except BaseException as err:
+      except_handler(p, err)
       raise
 
   def RunCommand(self, *args, **kwargs):
@@ -233,16 +235,19 @@ class CommandExecuter(object):
     command += '\n. ' + chromeos_root + '/src/scripts/common.sh'
     command += '\n. ' + chromeos_root + '/src/scripts/remote_access.sh'
     command += '\nTMP=$(mktemp -d)'
-    command += "\nFLAGS \"$@\" || exit 1"
+    command += '\nFLAGS "$@" || exit 1'
     command += '\nremote_access_init'
     return command
 
   def WriteToTempShFile(self, contents):
-    handle, command_file = tempfile.mkstemp(prefix=os.uname()[1], suffix='.sh')
-    os.write(handle, '#!/bin/bash\n')
-    os.write(handle, contents)
-    os.close(handle)
-    return command_file
+    # TODO(crbug.com/1048938): use encoding='utf-8' when all dependencies have
+    # migrated to python 3.
+    with tempfile.NamedTemporaryFile(
+        'w', delete=False, prefix=os.uname()[1], suffix='.sh') as f:
+      f.write('#!/bin/bash\n')
+      f.write(contents)
+      f.flush()
+    return f.name
 
   def CrosLearnBoard(self, chromeos_root, machine):
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
@@ -300,7 +305,7 @@ class CommandExecuter(object):
 
     command = self.RemoteAccessInitCommand(chromeos_root, machine)
     command += '\nremote_sh bash %s' % command_file
-    command += "\nl_retval=$?; echo \"$REMOTE_OUT\"; exit $l_retval"
+    command += '\nl_retval=$?; echo "$REMOTE_OUT"; exit $l_retval'
     retval = self.RunCommandGeneric(
         command,
         return_output,
@@ -362,16 +367,21 @@ class CommandExecuter(object):
     if self.logger:
       self.logger.LogCmd(command, print_to_console=print_to_console)
 
-    handle, command_file = tempfile.mkstemp(
+    # TODO(crbug.com/1048938): use encoding='utf-8' when all dependencies have
+    # migrated to python 3.
+    with tempfile.NamedTemporaryFile(
+        'w',
+        delete=False,
         dir=os.path.join(chromeos_root, 'src/scripts'),
         suffix='.sh',
-        prefix='in_chroot_cmd')
-    os.write(handle, '#!/bin/bash\n')
-    os.write(handle, command)
-    os.write(handle, '\n')
-    os.close(handle)
+        prefix='in_chroot_cmd') as f:
+      f.write('#!/bin/bash\n')
+      f.write(command)
+      f.write('\n')
+      f.flush()
 
-    os.chmod(command_file, 0777)
+    command_file = f.name
+    os.chmod(command_file, 0o777)
 
     # if return_output is set, run a dummy command first to make sure that
     # the chroot already exists. We want the final returned output to skip
@@ -386,7 +396,7 @@ class CommandExecuter(object):
     # Run command_file inside the chroot, making sure that any "~" is expanded
     # by the shell inside the chroot, not outside.
     command = ("cd %s; cros_sdk %s -- bash -c '%s/%s'" %
-               (chromeos_root, cros_sdk_options, misc.CHROMEOS_SCRIPTS_DIR,
+               (chromeos_root, cros_sdk_options, CHROMEOS_SCRIPTS_DIR,
                 os.path.basename(command_file)))
     ret = self.RunCommandGeneric(
         command,
@@ -474,7 +484,7 @@ class CommandExecuter(object):
       ssh_command = (
           'ssh -p ${FLAGS_ssh_port}' + ' -o StrictHostKeyChecking=no' +
           ' -o UserKnownHostsFile=$(mktemp)' + ' -i $TMP_PRIVATE_KEY')
-      rsync_prefix = "\nrsync -r -e \"%s\" " % ssh_command
+      rsync_prefix = '\nrsync -r -e "%s" ' % ssh_command
       if dest_cros:
         command += rsync_prefix + '%s root@%s:%s' % (src, dest_machine, dest)
         return self.RunCommand(
@@ -601,6 +611,7 @@ class CommandExecuter(object):
     # In this way the child cannot mess the parent's terminal.
     pobject = None
     try:
+      # pylint: disable=bad-option-value, subprocess-popen-preexec-fn
       pobject = subprocess.Popen(
           cmd,
           cwd=cwd,
@@ -627,7 +638,7 @@ class CommandExecuter(object):
         poll.register(errfd, select.POLLIN | select.POLLPRI)
         handlermap[errfd] = StreamHandler(pobject, errfd, 'stderr',
                                           line_consumer)
-      while len(handlermap):
+      while handlermap:
         readables = poll.poll(300)
         for (fd, evt) in readables:
           handler = handlermap[fd]
@@ -642,16 +653,13 @@ class CommandExecuter(object):
           os.killpg(os.getpgid(pobject.pid), signal.SIGTERM)
 
       return pobject.wait()
-    except BaseException as e:
-      except_handler(pobject, e)
+    except BaseException as err:
+      except_handler(pobject, err)
       raise
 
 
 class MockCommandExecuter(CommandExecuter):
   """Mock class for class CommandExecuter."""
-
-  def __init__(self, log_level, logger_to_set=None):
-    super(MockCommandExecuter, self).__init__(log_level, logger_to_set)
 
   def RunCommandGeneric(self,
                         cmd,

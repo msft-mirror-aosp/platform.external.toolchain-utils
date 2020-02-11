@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
@@ -15,7 +15,7 @@ import os
 import time
 
 import unittest
-import mock
+import unittest.mock as mock
 
 import experiment_runner
 import experiment_status
@@ -36,6 +36,7 @@ from cros_utils.file_utils import FileUtils
 EXPERIMENT_FILE_1 = """
   board: parrot
   remote: chromeos-parrot1.cros chromreos-parrot2.cros
+  locks_dir: /tmp
 
   benchmark: kraken {
     suite: telemetry_Crosperf
@@ -108,7 +109,7 @@ class ExperimentRunnerTest(unittest.TestCase):
 
   def make_fake_experiment(self):
     test_flag.SetTestMode(True)
-    experiment_file = ExperimentFile(io.BytesIO(EXPERIMENT_FILE_1))
+    experiment_file = ExperimentFile(io.StringIO(EXPERIMENT_FILE_1))
     experiment = ExperimentFactory().GetExperiment(
         experiment_file, working_directory='', log_dir='')
     return experiment
@@ -408,7 +409,7 @@ class ExperimentRunnerTest(unittest.TestCase):
   @mock.patch.object(Result, 'CopyResultsTo')
   @mock.patch.object(Result, 'CleanUp')
   @mock.patch.object(Result, 'FormatStringTop5')
-  @mock.patch('__builtin__.open', new_callable=mock.mock_open)
+  @mock.patch('builtins.open', new_callable=mock.mock_open)
   def test_store_results(self, mock_open, mock_top5, mock_cleanup, mock_copy,
                          _mock_text_report, mock_report, mock_writefile,
                          mock_mkdir, mock_rmdir):

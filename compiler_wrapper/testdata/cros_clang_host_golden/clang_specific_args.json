@@ -33,8 +33,13 @@
             "-Wno-deprecated-declarations",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-reorder-init-list",
+            "-Wno-final-dtor-non-final-class",
+            "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
-            "main.cc"
+            "main.cc",
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -64,9 +69,14 @@
             "-Wno-deprecated-declarations",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-reorder-init-list",
+            "-Wno-final-dtor-non-final-class",
+            "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-Wno-#warnings",
-            "main.cc"
+            "main.cc",
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -96,9 +106,14 @@
             "-Wno-deprecated-declarations",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-reorder-init-list",
+            "-Wno-final-dtor-non-final-class",
+            "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-Wno-error=uninitialized",
-            "main.cc"
+            "main.cc",
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -128,9 +143,14 @@
             "-Wno-deprecated-declarations",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-reorder-init-list",
+            "-Wno-final-dtor-non-final-class",
+            "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-Wno-error=unused-variable",
-            "main.cc"
+            "main.cc",
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -160,9 +180,14 @@
             "-Wno-deprecated-declarations",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-reorder-init-list",
+            "-Wno-final-dtor-non-final-class",
+            "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-Wno-unused-variable",
-            "main.cc"
+            "main.cc",
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -192,9 +217,14 @@
             "-Wno-deprecated-declarations",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-reorder-init-list",
+            "-Wno-final-dtor-non-final-class",
+            "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-Wunused-variable",
-            "main.cc"
+            "main.cc",
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -224,9 +254,14 @@
             "-Wno-deprecated-declarations",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
+            "-Wno-reorder-init-list",
+            "-Wno-final-dtor-non-final-class",
+            "-Wno-return-stack-address",
+            "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-someflag",
-            "main.cc"
+            "main.cc",
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }

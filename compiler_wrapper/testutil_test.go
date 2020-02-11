@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,9 +16,6 @@ import (
 	"strings"
 	"testing"
 )
-
-var crosRootDirFlag = flag.String("crosroot", "", "root dir of the chrome os toolchain")
-var androidPrebuiltsDirFlag = flag.String("androidprebuilts", "", "prebuilts dir of android")
 
 const mainCc = "main.cc"
 const clangAndroid = "./clang"
@@ -107,22 +103,6 @@ func (ctx *testContext) stderrString() string {
 }
 
 func (ctx *testContext) run(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-	// Keep calling the old wrapper when we are comparing the output of the
-	// old wrapper to the new wrapper.
-	if isCompareToOldWrapperCmd(cmd) {
-		// Make sure we have a PATH in the env as the old wrapper needs that.
-		pathFound := false
-		for _, arg := range ctx.env {
-			if arg == "PATH" {
-				pathFound = true
-				break
-			}
-		}
-		if !pathFound {
-			ctx.env = append(ctx.env, "PATH=")
-		}
-		return runCmd(ctx, cmd, nil, stdout, stderr)
-	}
 	ctx.cmdCount++
 	ctx.lastCmd = cmd
 	if ctx.cmdMock != nil {
@@ -157,21 +137,7 @@ func (ctx *testContext) mustFail(exitCode int) string {
 
 func (ctx *testContext) updateConfig(cfg *config) {
 	*ctx.cfg = *cfg
-	ctx.cfg.mockOldWrapperCmds = true
 	ctx.cfg.newWarningsDir = filepath.Join(ctx.tempDir, "fatal_clang_warnings")
-	if strings.HasPrefix(ctx.cfg.oldWrapperPath, "$CHROOT") {
-		if *crosRootDirFlag != "" && ctx.cfg.oldWrapperPath != "" {
-			ctx.cfg.oldWrapperPath = strings.Replace(ctx.cfg.oldWrapperPath, "$CHROOT", *crosRootDirFlag, -1)
-		} else {
-			ctx.cfg.oldWrapperPath = ""
-		}
-	} else if strings.HasPrefix(ctx.cfg.oldWrapperPath, "$ANDROID_PREBUILTS") {
-		if *androidPrebuiltsDirFlag != "" && ctx.cfg.oldWrapperPath != "" {
-			ctx.cfg.oldWrapperPath = strings.Replace(ctx.cfg.oldWrapperPath, "$ANDROID_PREBUILTS", *androidPrebuiltsDirFlag, -1)
-		} else {
-			ctx.cfg.oldWrapperPath = ""
-		}
-	}
 }
 
 func (ctx *testContext) newCommand(path string, args ...string) *command {
@@ -324,13 +290,4 @@ func newExitCodeError(exitCode int) error {
 	// with exit code. Using a real command instead.
 	tmpCmd := exec.Command("/bin/sh", "-c", fmt.Sprintf("exit %d", exitCode))
 	return tmpCmd.Run()
-}
-
-func isCompareToOldWrapperCmd(cmd *command) bool {
-	for _, arg := range cmd.Args {
-		if strings.Contains(arg, compareToOldWrapperFilePattern) {
-			return true
-		}
-	}
-	return false
 }

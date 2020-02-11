@@ -28,8 +28,8 @@ class Experiment(object):
   def __init__(self, name, remote, working_directory, chromeos_root,
                cache_conditions, labels, benchmarks, experiment_file, email_to,
                acquire_timeout, log_dir, log_level, share_cache,
-               results_directory, locks_directory, cwp_dso, enable_aslr,
-               ignore_min_max, skylab, dut_config):
+               results_directory, locks_directory, cwp_dso, ignore_min_max,
+               skylab, dut_config):
     self.name = name
     self.working_directory = working_directory
     self.remote = remote
@@ -54,11 +54,9 @@ class Experiment(object):
     self.locked_machines = []
     self.lock_mgr = None
     self.cwp_dso = cwp_dso
-    self.enable_aslr = enable_aslr
     self.ignore_min_max = ignore_min_max
     self.skylab = skylab
     self.l = logger.GetLogger(log_dir)
-    self.intel_pstate = dut_config['intel_pstate']
 
     if not self.benchmarks:
       raise RuntimeError('No benchmarks specified')
@@ -124,11 +122,10 @@ class Experiment(object):
           logger_to_use = logger.Logger(self.log_dir, 'run.%s' % (full_name),
                                         True)
           benchmark_runs.append(
-              benchmark_run.BenchmarkRun(benchmark_run_name, benchmark, label,
-                                         iteration, self.cache_conditions,
-                                         self.machine_manager, logger_to_use,
-                                         self.log_level, self.share_cache,
-                                         dut_config, self.enable_aslr))
+              benchmark_run.BenchmarkRun(
+                  benchmark_run_name, benchmark, label, iteration,
+                  self.cache_conditions, self.machine_manager, logger_to_use,
+                  self.log_level, self.share_cache, dut_config))
 
     return benchmark_runs
 

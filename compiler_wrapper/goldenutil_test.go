@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -21,9 +22,8 @@ var updateGoldenFiles = flag.Bool("updategolden", false, "update golden files")
 var filterGoldenTests = flag.String("rungolden", "", "regex filter for golden tests to run")
 
 type goldenFile struct {
-	Name             string `json:"name"`
-	ignoreOldWrapper bool
-	Records          []goldenRecord `json:"records"`
+	Name    string         `json:"name"`
+	Records []goldenRecord `json:"records"`
 }
 
 type goldenRecord struct {
@@ -115,14 +115,8 @@ func filterGoldenRecords(pattern string, files []goldenFile) []goldenFile {
 }
 
 func fillGoldenResults(ctx *testContext, files []goldenFile) []goldenFile {
-	oldWrapperPath := ctx.cfg.oldWrapperPath
 	newFiles := []goldenFile{}
 	for _, file := range files {
-		ctx.cfg.oldWrapperPath = oldWrapperPath
-		if file.ignoreOldWrapper {
-			ctx.cfg.oldWrapperPath = ""
-		}
-
 		newRecords := []goldenRecord{}
 		for _, record := range file.Records {
 			newCmds := []commandResult{}
@@ -152,7 +146,13 @@ func fillGoldenResults(ctx *testContext, files []goldenFile) []goldenFile {
 			// Create an empty wrapper at the given path.
 			// Needed as we are resolving symlinks which stats the wrapper file.
 			ctx.writeFile(record.WrapperCmd.Cmd.Path, "")
+			// Assign a fixed path to os.Args[0] to pass the test.
+			tmp := os.Args[0]
+			// callCompiler verifies os.Args[0] exists, so use a real file.
+			_, file, _, _ := runtime.Caller(1)
+			os.Args[0] = file
 			record.WrapperCmd.ExitCode = callCompiler(ctx, ctx.cfg, record.WrapperCmd.Cmd)
+			os.Args[0] = tmp
 			if hasInternalError(ctx.stderrString()) {
 				ctx.t.Errorf("found an internal error for wrapperCmd %#v and env #%v. Got: %s",
 					record.WrapperCmd.Cmd, record.Env, ctx.stderrString())

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
@@ -13,8 +13,7 @@ import io
 import os
 import socket
 import unittest
-
-import mock
+import unittest.mock as mock
 
 from cros_utils import command_executer
 from cros_utils.file_utils import FileUtils
@@ -29,6 +28,7 @@ import settings_factory
 EXPERIMENT_FILE_1 = """
   board: x86-alex
   remote: chromeos-alex3
+  locks_dir: /tmp
 
   benchmark: PageCycler {
     iterations: 3
@@ -51,6 +51,7 @@ EXPERIMENT_FILE_1 = """
 EXPERIMENT_FILE_2 = """
   board: x86-alex
   remote: chromeos-alex3
+  locks_dir: /tmp
 
   cwp_dso: kallsyms
 
@@ -83,7 +84,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.append_benchmark_call_args = []
 
   def testLoadExperimentFile1(self):
-    experiment_file = ExperimentFile(io.BytesIO(EXPERIMENT_FILE_1))
+    experiment_file = ExperimentFile(io.StringIO(EXPERIMENT_FILE_1))
     exp = ExperimentFactory().GetExperiment(
         experiment_file, working_directory='', log_dir='')
     self.assertEqual(exp.remote, ['chromeos-alex3'])
@@ -102,7 +103,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertEqual(exp.labels[0].board, 'x86-alex')
 
   def testLoadExperimentFile2CWP(self):
-    experiment_file = ExperimentFile(io.BytesIO(EXPERIMENT_FILE_2))
+    experiment_file = ExperimentFile(io.StringIO(EXPERIMENT_FILE_2))
     exp = ExperimentFactory().GetExperiment(
         experiment_file, working_directory='', log_dir='')
     self.assertEqual(exp.cwp_dso, 'kallsyms')
@@ -111,7 +112,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertEqual(exp.benchmarks[1].weight, 0.2)
 
   def testDuplecateBenchmark(self):
-    mock_experiment_file = ExperimentFile(io.BytesIO(''))
+    mock_experiment_file = ExperimentFile(io.StringIO(EXPERIMENT_FILE_1))
     mock_experiment_file.all_settings = []
     benchmark_settings1 = settings_factory.BenchmarkSettings('name')
     mock_experiment_file.all_settings.append(benchmark_settings1)
@@ -123,9 +124,10 @@ class ExperimentFactoryTest(unittest.TestCase):
       ef.GetExperiment(mock_experiment_file, '', '')
 
   def testCWPExceptions(self):
-    mock_experiment_file = ExperimentFile(io.BytesIO(''))
+    mock_experiment_file = ExperimentFile(io.StringIO(''))
     mock_experiment_file.all_settings = []
     global_settings = settings_factory.GlobalSettings('test_name')
+    global_settings.SetField('locks_dir', '/tmp')
 
     # Test 1: DSO type not supported
     global_settings.SetField('cwp_dso', 'test')
@@ -240,7 +242,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     bench_list = []
     ef.AppendBenchmarkSet(bench_list, experiment_factory.telemetry_perfv2_tests,
                           '', 1, False, '', 'telemetry_Crosperf', False, 0,
-                          False, '', 0, False)
+                          False, '', 0)
     self.assertEqual(
         len(bench_list), len(experiment_factory.telemetry_perfv2_tests))
     self.assertTrue(isinstance(bench_list[0], benchmark.Benchmark))
@@ -248,7 +250,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     bench_list = []
     ef.AppendBenchmarkSet(
         bench_list, experiment_factory.telemetry_pagecycler_tests, '', 1, False,
-        '', 'telemetry_Crosperf', False, 0, False, '', 0, False)
+        '', 'telemetry_Crosperf', False, 0, False, '', 0)
     self.assertEqual(
         len(bench_list), len(experiment_factory.telemetry_pagecycler_tests))
     self.assertTrue(isinstance(bench_list[0], benchmark.Benchmark))
@@ -256,7 +258,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     bench_list = []
     ef.AppendBenchmarkSet(
         bench_list, experiment_factory.telemetry_toolchain_perf_tests, '', 1,
-        False, '', 'telemetry_Crosperf', False, 0, False, '', 0, False)
+        False, '', 'telemetry_Crosperf', False, 0, False, '', 0)
     self.assertEqual(
         len(bench_list), len(experiment_factory.telemetry_toolchain_perf_tests))
     self.assertTrue(isinstance(bench_list[0], benchmark.Benchmark))
@@ -302,13 +304,14 @@ class ExperimentFactoryTest(unittest.TestCase):
 
     label_settings.GetXbuddyPath = FakeGetXbuddyPath
 
-    mock_experiment_file = ExperimentFile(io.BytesIO(''))
+    mock_experiment_file = ExperimentFile(io.StringIO(''))
     mock_experiment_file.all_settings = []
 
     test_flag.SetTestMode(True)
     # Basic test.
     global_settings.SetField('name', 'unittest_test')
     global_settings.SetField('board', 'lumpy')
+    global_settings.SetField('locks_dir', '/tmp')
     global_settings.SetField('remote', '123.45.67.89 123.45.76.80')
     benchmark_settings.SetField('test_name', 'kraken')
     benchmark_settings.SetField('suite', 'telemetry_Crosperf')
@@ -328,7 +331,7 @@ class ExperimentFactoryTest(unittest.TestCase):
 
     # First test. General test.
     exp = ef.GetExperiment(mock_experiment_file, '', '')
-    self.assertEqual(exp.remote, ['123.45.67.89', '123.45.76.80'])
+    self.assertCountEqual(exp.remote, ['123.45.67.89', '123.45.76.80'])
     self.assertEqual(exp.cache_conditions, [0, 2, 1])
     self.assertEqual(exp.log_level, 'average')
 
@@ -350,9 +353,9 @@ class ExperimentFactoryTest(unittest.TestCase):
     test_flag.SetTestMode(True)
     label_settings.SetField('remote', 'chromeos1.cros chromeos2.cros')
     exp = ef.GetExperiment(mock_experiment_file, '', '')
-    self.assertEqual(
+    self.assertCountEqual(
         exp.remote,
-        ['chromeos1.cros', 'chromeos2.cros', '123.45.67.89', '123.45.76.80'])
+        ['123.45.67.89', '123.45.76.80', 'chromeos1.cros', 'chromeos2.cros'])
 
     # Third test: Automatic fixing of bad  logging_level param:
     global_settings.SetField('logging_level', 'really loud!')
@@ -388,7 +391,7 @@ class ExperimentFactoryTest(unittest.TestCase):
     self.assertEqual(len(exp.labels), 2)
     self.assertEqual(exp.labels[1].chromeos_image, 'fake_image_path')
     self.assertEqual(exp.labels[1].autotest_path, 'fake_autotest_path')
-    self.assertEqual(
+    self.assertCountEqual(
         exp.remote,
         ['fake_chromeos_machine1.cros', 'fake_chromeos_machine2.cros'])
 
@@ -427,7 +430,7 @@ class ExperimentFactoryTest(unittest.TestCase):
       ef.CheckSkylabTool(chromeos_root, log_level)
     self.assertEqual(mock_runcmd.call_count, 1)
     self.assertEqual(
-        err.exception.message, 'Skylab tool not installed '
+        str(err.exception), 'Skylab tool not installed '
         'correctly, please try to manually install it from '
         '/tmp/chromeos/chromeos-admin/lab-tools/setup_lab_tools')
 

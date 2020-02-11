@@ -13,10 +13,10 @@ import json
 import os
 import subprocess
 import sys
-
 from collections import namedtuple
+
+import get_llvm_hash
 from failure_modes import FailureModes
-from get_llvm_hash import LLVMHash
 from subprocess_helpers import check_call
 from subprocess_helpers import check_output
 
@@ -95,6 +95,13 @@ def GetCommandLineArgs():
       'bisecting a patch (default: %(default)s) - only used for '
       '"bisect_patches"')
 
+  # Trust src_path HEAD and svn_version.
+  parser.add_argument(
+      '--use_src_head',
+      action='store_true',
+      help='Use the HEAD of src_path directory as is, not necessarily the same '
+      'as the svn_version of upstream.')
+
   # Add argument for the LLVM version to use for patch management.
   parser.add_argument(
       '--svn_version',
@@ -147,14 +154,13 @@ def GetCommandLineArgs():
 def GetHEADSVNVersion(src_path):
   """Gets the SVN version of HEAD in the src tree."""
 
-  get_head_cmd = ['git', '-C', src_path, 'log', '-1', '--pretty=%B']
+  cmd = ['git', '-C', src_path, 'rev-parse', 'HEAD']
 
-  head_commit_message = check_output(get_head_cmd)
+  git_hash = check_output(cmd)
 
-  head_svn_version = LLVMHash().GetSVNVersionFromCommitMessage(
-      head_commit_message)
+  version = get_llvm_hash.GetVersionFrom(src_path, git_hash.rstrip())
 
-  return head_svn_version
+  return version
 
 
 def VerifyHEADIsTheSameAsSVNVersion(src_path, svn_version):
@@ -280,13 +286,9 @@ def UpdatePatchMetadataFile(patch_metadata_file, patches):
 def GetCommitHashesForBisection(src_path, good_svn_version, bad_svn_version):
   """Gets the good and bad commit hashes required by `git bisect start`."""
 
-  new_llvm_hash = LLVMHash()
+  bad_commit_hash = get_llvm_hash.GetGitHashFrom(src_path, bad_svn_version)
 
-  bad_commit_hash = new_llvm_hash.GetGitHashForVersion(src_path,
-                                                       bad_svn_version)
-
-  good_commit_hash = new_llvm_hash.GetGitHashForVersion(src_path,
-                                                        good_svn_version)
+  good_commit_hash = get_llvm_hash.GetGitHashFrom(src_path, good_svn_version)
 
   return good_commit_hash, bad_commit_hash
 
@@ -295,13 +297,13 @@ def PerformBisection(src_path, good_commit, bad_commit, svn_version,
                      patch_metadata_file, filesdir_path, num_patches):
   """Performs bisection to determine where a patch stops applying."""
 
-  bisect_start_cmd = [
+  start_cmd = [
       'git', '-C', src_path, 'bisect', 'start', bad_commit, good_commit
   ]
 
-  check_output(bisect_start_cmd)
+  check_output(start_cmd)
 
-  bisect_run_cmd = [
+  run_cmd = [
       'git', '-C', src_path, 'bisect', 'run',
       os.path.abspath(__file__), '--svn_version',
       '%d' % svn_version, '--patch_metadata_file', patch_metadata_file,
@@ -310,25 +312,24 @@ def PerformBisection(src_path, good_commit, bad_commit, svn_version,
       '%d' % num_patches
   ]
 
-  check_call(bisect_run_cmd)
+  check_call(run_cmd)
 
   # Successfully bisected the patch, so retrieve the SVN version from the
   # commit message.
-  get_bad_commit_from_bisect_run_cmd = [
-      'git', '-C', src_path, 'show', 'refs/bisect/bad'
+  get_bad_commit_hash_cmd = [
+      'git', '-C', src_path, 'rev-parse', 'refs/bisect/bad'
   ]
 
-  bad_commit_message = check_output(get_bad_commit_from_bisect_run_cmd)
+  git_hash = check_output(get_bad_commit_hash_cmd)
 
-  end_bisection_cmd = ['git', '-C', src_path, 'bisect', 'reset']
+  end_cmd = ['git', '-C', src_path, 'bisect', 'reset']
 
-  check_output(end_bisection_cmd)
+  check_output(end_cmd)
 
   # `git bisect run` returns the bad commit hash and the commit message.
-  bad_version = LLVMHash().GetSVNVersionFromCommitMessage(
-      bad_commit_message.rstrip())
+  version = get_llvm_hash.GetVersionFrom(src_path, git_hash.rstrip())
 
-  return bad_version
+  return version
 
 
 def CleanSrcTree(src_path):
@@ -724,8 +725,9 @@ def main():
     # patches that fail to apply could successfully apply if HEAD's SVN version
     # was the same as 'svn_version'. In other words, HEAD's git hash should be
     # what is being updated to (e.g. LLVM_NEXT_HASH).
-    VerifyHEADIsTheSameAsSVNVersion(args_output.src_path,
-                                    args_output.svn_version)
+    if not args_output.use_src_head:
+      VerifyHEADIsTheSameAsSVNVersion(args_output.src_path,
+                                      args_output.svn_version)
   else:
     # `git bisect run` called this script.
     #

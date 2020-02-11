@@ -103,7 +103,7 @@ class ExperimentRunner(object):
     """Get where is the machine from.
 
     Returns:
-      The location of the machine: local, skylab or afe
+      The location of the machine: local or skylab
     """
     # We assume that lab machine always starts with chromeos*, and local
     # machines are ip address.
@@ -111,7 +111,7 @@ class ExperimentRunner(object):
       if lock_mgr.CheckMachineInSkylab(machine):
         return 'skylab'
       else:
-        return 'afe'
+        raise RuntimeError('Lab machine not in Skylab.')
     return 'local'
 
   def _LockAllMachines(self, experiment):
@@ -122,7 +122,6 @@ class ExperimentRunner(object):
     from being able to update/use the machines while this experiment is
     running:
       - Skylab machines: Use skylab lease-dut mechanism to lease
-      - AFE machines: Use AFE lock mechanism to lock
       - Local machines: Use file lock mechanism to lock
     """
     if test_flag.GetTestMode():
@@ -148,7 +147,7 @@ class ExperimentRunner(object):
       experiment.locked_machines = self.locked_machines
       self._UpdateMachineList(self.locked_machines)
       experiment.machine_manager.RemoveNonLockedMachines(self.locked_machines)
-      if len(self.locked_machines) == 0:
+      if not self.locked_machines:
         raise RuntimeError('Unable to lock any machines.')
 
   def _ClearCacheEntries(self, experiment):
@@ -168,7 +167,13 @@ class ExperimentRunner(object):
 
   def _Run(self, experiment):
     try:
-      self._LockAllMachines(experiment)
+      # We should not lease machines if tests are launched via `skylab
+      # create-test`. This is because leasing DUT in skylab will create a
+      # dummy task on the DUT and new test created will be hanging there.
+      # TODO(zhizhouy): Need to check whether machine is ready or not before
+      # assigning a test to it.
+      if not experiment.skylab:
+        self._LockAllMachines(experiment)
       # Calculate all checksums of avaiable/locked machines, to ensure same
       # label has same machines for testing
       experiment.SetCheckSums(forceSameImage=True)

@@ -129,7 +129,7 @@ class ExperimentFile(object):
           self.global_settings.SetField(field[0], field[1], field[2])
         else:
           raise IOError('Unexpected line.')
-    except Exception, err:
+    except Exception as err:
       raise RuntimeError('Line %d: %s\n==> %s' % (reader.LineNo(), str(err),
                                                   reader.CurrentLine(False)))
 
@@ -170,13 +170,12 @@ class ExperimentFile(object):
               debug_path = ''
               if debug_field.assigned:
                 debug_path = autotest_field.GetString()
-              perf_args_field = self.global_settings.fields['perf_args']
-              perf_args = ''
-              if perf_args_field.assigned:
-                perf_args = perf_args_field.GetString()
+              # Do not download the debug symbols since this function is for
+              # canonicalizing experiment file.
+              downlad_debug = False
               image_path, autotest_path, debug_path = settings.GetXbuddyPath(
                   value, autotest_path, debug_path, board, chromeos_root,
-                  'quiet', perf_args)
+                  'quiet', downlad_debug)
               res += '\t#actual_image: %s\n' % image_path
               if not autotest_field.assigned:
                 res += '\t#actual_autotest_path: %s\n' % autotest_path

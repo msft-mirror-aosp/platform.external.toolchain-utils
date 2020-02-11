@@ -1,6 +1,10 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-# Copyright 2011 Google Inc. All Rights Reserved.
+# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """Utilities to send email either through SMTP or SendGMR."""
 
 from __future__ import print_function
@@ -72,7 +76,7 @@ class EmailSender(object):
         part.set_payload(attachment.content)
         Encoders.encode_base64(part)
         part.add_header('Content-Disposition',
-                        "attachment; filename=\"%s\"" % attachment.name)
+                        'attachment; filename="%s"' % attachment.name)
         msg.attach(part)
 
     # Send the message via our own SMTP server, but don't include the
@@ -93,12 +97,14 @@ class EmailSender(object):
 
     if not text_to_send:
       text_to_send = 'Empty message body.'
-    body_fd, body_filename = tempfile.mkstemp()
-    to_be_deleted = [body_filename]
 
+    to_be_deleted = []
     try:
-      os.write(body_fd, text_to_send)
-      os.close(body_fd)
+      with tempfile.NamedTemporaryFile(
+          'w', encoding='utf-8', delete=False) as f:
+        f.write(text_to_send)
+        f.flush()
+      to_be_deleted.append(f.name)
 
       # Fix single-quotes inside the subject. In bash, to escape a single quote
       # (e.g 'don't') you need to replace it with '\'' (e.g. 'don'\''t'). To
@@ -109,11 +115,10 @@ class EmailSender(object):
       if msg_type == 'html':
         command = ("sendgmr --to='%s' --from='%s' --subject='%s' "
                    "--html_file='%s' --body_file=/dev/null" %
-                   (to_list, email_from, subject, body_filename))
+                   (to_list, email_from, subject, f.name))
       else:
-        command = (
-            "sendgmr --to='%s' --from='%s' --subject='%s' "
-            "--body_file='%s'" % (to_list, email_from, subject, body_filename))
+        command = ("sendgmr --to='%s' --from='%s' --subject='%s' "
+                   "--body_file='%s'" % (to_list, email_from, subject, f.name))
 
       if email_cc:
         cc_list = ','.join(email_cc)
@@ -129,10 +134,11 @@ class EmailSender(object):
             report_suffix = '_report.html'
           else:
             report_suffix = '_report.txt'
-          fd, fname = tempfile.mkstemp(suffix=report_suffix)
-          os.write(fd, attachment.content)
-          os.close(fd)
-          attachment_files.append(fname)
+          with tempfile.NamedTemporaryFile(
+              'w', encoding='utf-8', delete=False, suffix=report_suffix) as f:
+            f.write(attachment.content)
+            f.flush()
+          attachment_files.append(f.name)
         files = ','.join(attachment_files)
         command += " --attachment_files='%s'" % files
         to_be_deleted += attachment_files
