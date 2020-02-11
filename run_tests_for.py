@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
@@ -68,7 +68,8 @@ def _run_test(test_spec):
       cwd=test_spec.directory,
       stdin=open('/dev/null'),
       stdout=subprocess.PIPE,
-      stderr=subprocess.STDOUT)
+      stderr=subprocess.STDOUT,
+      encoding='utf-8')
   stdout, _ = p.communicate()
   exit_code = p.wait()
   return exit_code, stdout
@@ -84,8 +85,8 @@ def _python_test_to_spec(test_file):
   if os.access(test_file, os.X_OK):
     command = ['./' + file_name]
   else:
-    # Assume the user wanted py2.
-    command = ['python2', file_name]
+    # Assume the user wanted py3.
+    command = ['python3', file_name]
 
   return TestSpec(directory=test_directory, command=command)
 

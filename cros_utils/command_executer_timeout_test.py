@@ -1,6 +1,10 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 #
-# Copyright 2010 Google Inc. All Rights Reserved.
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """Timeout test for command_executer."""
 
 from __future__ import print_function
