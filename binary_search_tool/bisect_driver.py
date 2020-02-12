@@ -267,10 +267,10 @@ def cache_file(execargs, bisect_dir, cache, abs_file_path):
         if CONTINUE_ON_REDUNDANCY:
           return True
         raise Exception(
-            'Trying to cache file %s multiple times. To avoid the error, set \
-            CONTINUE_ON_REDUNDANCY to 1. For reference, the list of such files \
-            will be written to %s' % (abs_file_path,
-                                      os.path.join(population_dir, '_DUPS')))
+            'Trying to cache file %s multiple times. To avoid the error, set ' \
+            'BISECT_CONTINUE_ON_REDUNDANCY to 1. For reference, the list of ' \
+            'such files will be written to %s' % (abs_file_path, os.path.join(
+                population_dir, '_DUPS')))
 
       shutil.copy2(abs_file_path, bisect_path)
       # Set cache object to be read-only so later compilations can't
