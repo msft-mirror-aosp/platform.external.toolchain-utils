@@ -39,10 +39,16 @@ def calc_go_args(args, version):
       '-X',
       'main.Version=' + version,
   ]
+
+  # If the wrapper is intended for Chrome OS, we need to use libc's exec.
+  extra_args = []
+  if 'cros' in args.config:
+    extra_args = ['-tags', 'libc_exec']
+
   return [
       'go', 'build', '-o',
       os.path.abspath(args.output_file), '-ldflags', ' '.join(ldFlags)
-  ]
+  ] + extra_args
 
 
 def read_version(build_dir):
