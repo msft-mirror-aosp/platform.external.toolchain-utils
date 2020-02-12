@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -41,7 +41,7 @@ def _cleanup(files):
 class Tests(unittest.TestCase):
   """All of our tests for post_process_orderfile."""
 
-  #pylint: disable=protected-access
+  # pylint: disable=protected-access
   def test__parse_nm_output(self):
     temp_dir = tempfile.mkdtemp()
     self.addCleanup(_cleanup, [temp_dir])

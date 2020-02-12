@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -29,6 +29,7 @@ from __future__ import division, print_function
 import collections
 import re
 import sys
+
 
 def _count_samples(samples):
   """Count the total number of samples in a function."""
@@ -132,7 +133,7 @@ def _read_textual_afdo_profile(stream):
       continue
 
     if line[0].isspace():
-      assert function_line is not None, "sample exists outside of a function?"
+      assert function_line is not None, 'sample exists outside of a function?'
       samples.append(line)
       continue
 
@@ -170,12 +171,13 @@ def dedup_records(profile_records, summary_file, max_repeats=100):
     counts[_normalize_samples(record.samples)].append(record)
 
   # Be sure that we didn't see any duplicate functions, since that's bad...
-  total_functions_recorded = sum(len(records)
-                                 for records in counts.itervalues())
+  total_functions_recorded = sum(len(records) for records in counts.values())
 
-  unique_function_names = set(record.function_line.split(':')[0]
-                              for records in counts.itervalues()
-                              for record in records)
+  unique_function_names = {
+      record.function_line.split(':')[0]
+      for records in counts.values()
+      for record in records
+  }
 
   assert len(unique_function_names) == total_functions_recorded, \
       'duplicate function names?'
@@ -187,7 +189,7 @@ def dedup_records(profile_records, summary_file, max_repeats=100):
   num_samples_total = 0
   num_top_samples_total = 0
 
-  for normalized_samples, records in counts.iteritems():
+  for normalized_samples, records in counts.items():
     top_sample_count, all_sample_count = _count_samples(normalized_samples)
     top_sample_count *= len(records)
     all_sample_count *= len(records)
@@ -205,11 +207,13 @@ def dedup_records(profile_records, summary_file, max_repeats=100):
     for record in records:
       yield record
 
-  print('Retained {:,}/{:,} functions'.format(num_kept, num_total),
-        file=summary_file)
-  print('Retained {:,}/{:,} samples, total'.format(num_samples_kept,
-                                                   num_samples_total),
-        file=summary_file)
+  print(
+      'Retained {:,}/{:,} functions'.format(num_kept, num_total),
+      file=summary_file)
+  print(
+      'Retained {:,}/{:,} samples, total'.format(num_samples_kept,
+                                                 num_samples_total),
+      file=summary_file)
   print('Retained {:,}/{:,} top-level samples' \
             .format(num_top_samples_kept, num_top_samples_total),
         file=summary_file)
@@ -220,15 +224,17 @@ def run(profile_input_file, summary_output_file, profile_output_file):
 
   # Sort this so we get deterministic output. AFDO doesn't care what order it's
   # in.
-  deduped = sorted(dedup_records(profile_records, summary_output_file),
-                   key=lambda r: r.function_line)
+  deduped = sorted(
+      dedup_records(profile_records, summary_output_file),
+      key=lambda r: r.function_line)
   for function_line, samples in deduped:
     print(function_line, file=profile_output_file)
     print('\n'.join(samples), file=profile_output_file)
 
 
 def _main():
-  run(profile_input_file=sys.stdin, summary_output_file=sys.stderr,
+  run(profile_input_file=sys.stdin,
+      summary_output_file=sys.stderr,
       profile_output_file=sys.stdout)
 
 

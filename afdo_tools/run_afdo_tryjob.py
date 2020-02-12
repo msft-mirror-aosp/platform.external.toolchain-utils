@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -94,7 +94,7 @@ def main():
   user_patches = args.patch
 
   if tag_profiles_with_current_time and use_afdo_generation_stage:
-    raise ValueError('You can\'t tag profiles with the time + have '
+    raise ValueError("You can't tag profiles with the time + have "
                      'afdo-generate')
 
   if not tag_profiles_with_current_time and not use_afdo_generation_stage:

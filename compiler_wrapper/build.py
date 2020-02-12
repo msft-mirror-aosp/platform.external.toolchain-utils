@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -52,7 +52,7 @@ def read_version(build_dir):
       return r.read()
 
   last_commit_msg = subprocess.check_output(
-      ['git', '-C', build_dir, 'log', '-1', '--pretty=%B'])
+      ['git', '-C', build_dir, 'log', '-1', '--pretty=%B'], encoding='utf-8')
   # Use last found change id to support reverts as well.
   change_ids = re.findall(r'Change-Id: (\w+)', last_commit_msg)
   if not change_ids:
