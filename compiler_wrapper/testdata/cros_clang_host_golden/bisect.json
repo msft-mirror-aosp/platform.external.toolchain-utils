@@ -41,7 +41,7 @@
             "-Wno-implicit-int-float-conversion"
           ],
           "env_updates": [
-            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
+            "PYTHONPATH=/somepath/test_binary"
           ]
         }
       }
@@ -90,7 +90,7 @@
             "-Wno-implicit-int-float-conversion"
           ],
           "env_updates": [
-            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
+            "PYTHONPATH=/somepath/test_binary"
           ]
         }
       }
@@ -142,7 +142,7 @@
             "-Wno-implicit-int-float-conversion"
           ],
           "env_updates": [
-            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
+            "PYTHONPATH=/somepath/test_binary"
           ]
         },
         "stdout": "somemessage",

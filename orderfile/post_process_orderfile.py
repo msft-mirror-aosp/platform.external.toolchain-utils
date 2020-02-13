@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -79,7 +79,7 @@ def main(argv):
   options = parser.parse_args(argv)
 
   if not os.path.exists(options.input_file):
-    sys.exit('Input orderfile doesn\'t exist.')
+    sys.exit("Input orderfile doesn\'t exist.")
 
   with open(options.input_file) as in_stream, \
   open(options.chrome_nm) as chrome_nm_stream, \

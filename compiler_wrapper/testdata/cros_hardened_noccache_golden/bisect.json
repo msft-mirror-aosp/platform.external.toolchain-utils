@@ -50,7 +50,7 @@
             "x86_64-cros-linux-gnu"
           ],
           "env_updates": [
-            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
+            "PYTHONPATH=/somepath/test_binary"
           ]
         }
       }
@@ -108,7 +108,7 @@
             "x86_64-cros-linux-gnu"
           ],
           "env_updates": [
-            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
+            "PYTHONPATH=/somepath/test_binary"
           ]
         }
       }
@@ -169,7 +169,7 @@
             "x86_64-cros-linux-gnu"
           ],
           "env_updates": [
-            "PYTHONPATH=/media/storage/jiancai/chromeos/src/third_party/toolchain-utils/compiler_wrapper"
+            "PYTHONPATH=/somepath/test_binary"
           ]
         },
         "stdout": "somemessage",

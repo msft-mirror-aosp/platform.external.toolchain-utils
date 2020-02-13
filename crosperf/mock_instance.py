@@ -46,10 +46,10 @@ label2 = MockLabel(
     chrome_src=None)
 
 benchmark1 = Benchmark('benchmark1', 'autotest_name_1', 'autotest_args', 2, '',
-                       perf_args, '', '')
+                       perf_args, 'telemetry_Crosperf', '')
 
 benchmark2 = Benchmark('benchmark2', 'autotest_name_2', 'autotest_args', 2, '',
-                       perf_args, '', '')
+                       perf_args, 'telemetry_Crosperf', '')
 
 keyval = {}
 keyval[0] = {

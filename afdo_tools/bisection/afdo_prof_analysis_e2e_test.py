@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -15,13 +15,13 @@ import tempfile
 import unittest
 from datetime import date
 
-import afdo_prof_analysis as analysis
+from afdo_tools.bisection import afdo_prof_analysis as analysis
 
 
 class ObjectWithFields(object):
   """Turns kwargs given to the constructor into fields on an object.
 
-  Example usage:
+  Examples:
     x = ObjectWithFields(a=1, b=2)
     assert x.a == 1
     assert x.b == 2
