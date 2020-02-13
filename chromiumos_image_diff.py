@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
@@ -86,7 +86,7 @@ class CrosImage(object):
                '{r}/var {r}/mnt/stateful_partition {r}; sudo umount {s} ; '
                'rmdir {r} ; rmdir {s}\n').format(
                    r=self.rootfs, s=self.stateful)
-    f = open(self.unmount_script, 'w')
+    f = open(self.unmount_script, 'w', encoding='utf-8')
     f.write(command)
     f.close()
     self._ce.RunCommand(
@@ -160,9 +160,9 @@ class ImageComparator(object):
     i1 = self.images[0]
     i2 = self.images[1]
     t1 = i1.rootfs + '/'
-    elfset1 = set([e.replace(t1, '') for e in i1.elf_files])
+    elfset1 = {e.replace(t1, '') for e in i1.elf_files}
     t2 = i2.rootfs + '/'
-    elfset2 = set([e.replace(t2, '') for e in i2.elf_files])
+    elfset2 = {e.replace(t2, '') for e in i2.elf_files}
     dif1 = elfset1.difference(elfset2)
     msg = None
     if dif1:
@@ -210,15 +210,15 @@ class ImageComparator(object):
 
       if full_path1 == full_path2:
         self.logger.LogError(
-            'Error:  We\'re comparing the SAME file - {0}'.format(f1))
+            "Error:  We're comparing the SAME file - {0}".format(f1))
         continue
 
       command = (
           'objdump -d "{f1}" > {tempf1} ; '
           'objdump -d "{f2}" > {tempf2} ; '
           # Remove path string inside the dissemble
-          'sed -i \'s!{rootfs1}!!g\' {tempf1} ; '
-          'sed -i \'s!{rootfs2}!!g\' {tempf2} ; '
+          "sed -i 's!{rootfs1}!!g' {tempf1} ; "
+          "sed -i 's!{rootfs2}!!g' {tempf2} ; "
           'diff {tempf1} {tempf2} 1>/dev/null 2>&1').format(
               f1=full_path1,
               f2=full_path2,

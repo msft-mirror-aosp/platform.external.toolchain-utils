@@ -40,7 +40,9 @@ class BenchmarkSettings(Settings):
             'times to get a stable result.'))
     self.AddField(
         TextField(
-            'suite', default='', description='The type of the benchmark.'))
+            'suite',
+            default='test_that',
+            description='The type of the benchmark.'))
     self.AddField(
         IntegerField(
             'retries',

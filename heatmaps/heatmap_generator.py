@@ -13,7 +13,7 @@ performed by another script perf-to-inst-page.sh). It can also analyze
 the symbol names in hot pages.
 """
 
-from __future__ import print_function
+from __future__ import division, print_function
 
 import bisect
 import collections
@@ -93,10 +93,10 @@ class HeatmapGenerator(object):
     self.max_addr = 1024 * 1024 * 1024
     self.ce = command_executer.GetCommandExecuter(log_level=log_level)
     self.dir = os.path.dirname(os.path.realpath(__file__))
-    with open(perf_report) as f:
+    with open(perf_report, 'r', encoding='utf-8') as f:
       self.perf_report_contents = f.readlines()
     # Write histogram results to a text file, in order to use gnu plot to draw
-    self.hist_temp_output = open('out.txt', 'w')
+    self.hist_temp_output = open('out.txt', 'w', encoding='utf-8')
     self.processes = {}
     self.deleted_processes = {}
     self.count = 0
@@ -277,7 +277,7 @@ class HeatmapGenerator(object):
     if address < self.max_addr:
       self.count += 1
       line = '%d/%d: %d %d' % (pid[0], pid[1], self.count,
-                               address / self.page_size * self.page_size)
+                               address // self.page_size * self.page_size)
       if self.hugepage:
         if self.hugepage.start <= address < self.hugepage.end:
           line += ' hugepage'
@@ -321,7 +321,7 @@ class HeatmapGenerator(object):
     names = [x for x in os.listdir('.') if 'inst-histo' in x and '.txt' in x]
     hist = {}
     for n in names:
-      with open(n) as f:
+      with open(n, encoding='utf-8') as f:
         for l in f.readlines():
           num, addr = l.strip().split(' ')
           assert int(addr) not in hist
@@ -354,7 +354,7 @@ class HeatmapGenerator(object):
       if 't' not in symbol_type and 'T' not in symbol_type:
         # Filter out symbols not in text sections
         continue
-      if len(self.symbol_addresses) == 0:
+      if not self.symbol_addresses:
         # The first symbol in text sections
         text_section_start = addr
         self.symbol_addresses.append(0)
@@ -374,9 +374,9 @@ class HeatmapGenerator(object):
 
   def _map_addr_to_symbol(self, addr):
     # Find out the symbol name
-    assert len(self.symbol_addresses) > 0
+    assert self.symbol_addresses
     index = bisect.bisect(self.symbol_addresses, addr)
-    assert index > 0 and index <= len(self.symbol_names), \
+    assert 0 < index <= len(self.symbol_names), \
     'Failed to find an index (%d) in the list (len=%d)' % (
         index, len(self.symbol_names))
     return self.symbol_names[index - 1]
@@ -387,7 +387,7 @@ class HeatmapGenerator(object):
       print(
           '----------------------------------------------------------', file=fp)
       print(
-          'Page Offset: %d MB, Count: %d' % (page_num / 1024 / 1024,
+          'Page Offset: %d MB, Count: %d' % (page_num // 1024 // 1024,
                                              sample_num),
           file=fp)
 
@@ -400,8 +400,8 @@ class HeatmapGenerator(object):
           if pid is None:
             # The sampling is not on Chrome
             continue
-          if addr / self.page_size != (
-              self.processes[pid].start_address + page_num) / self.page_size:
+          if addr // self.page_size != (
+              self.processes[pid].start_address + page_num) // self.page_size:
             # Sampling not in the current page
             continue
 
@@ -410,14 +410,14 @@ class HeatmapGenerator(object):
           assert name, 'Failed to find symbol name of addr %x' % addr
           symbol_counts[name] += 1
 
-      assert sum(symbol_counts.itervalues()) == sample_num, \
+      assert sum(symbol_counts.values()) == sample_num, \
       'Symbol name matching missing for some addresses: %d vs %d' % (
-          sum(symbol_counts.itervalues()), sample_num)
+          sum(symbol_counts.values()), sample_num)
 
       # Print out the symbol names sorted by the number of samples in
       # the page
       for name, count in sorted(
-          symbol_counts.iteritems(), key=lambda kv: kv[1], reverse=True):
+          symbol_counts.items(), key=lambda kv: kv[1], reverse=True):
         if count == 0:
           break
         print('> %s : %d' % (name, count), file=fp)
@@ -434,20 +434,19 @@ class HeatmapGenerator(object):
     # Read histogram from histo.txt
     hist = self._restore_histogram()
     # Sort the pages in histogram
-    sorted_hist = sorted(
-        hist.iteritems(), key=lambda value: value[1], reverse=True)
+    sorted_hist = sorted(hist.items(), key=lambda value: value[1], reverse=True)
 
     # Generate symbolizations
     self._read_symbols_from_binary(binary)
 
     # Write hottest pages
-    with open('addr2symbol.txt', 'w') as fp:
+    with open('addr2symbol.txt', 'w', encoding='utf-8') as fp:
       if self.hugepage:
         # Print hugepage region first
         print(
             'Hugepage top %d hot pages (%d MB - %d MB):' %
-            (top_n, self.hugepage.start / 1024 / 1024,
-             self.hugepage.end / 1024 / 1024),
+            (top_n, self.hugepage.start // 1024 // 1024,
+             self.hugepage.end // 1024 // 1024),
             file=fp)
         pages_to_print = [(k, v)
                           for k, v in sorted_hist
@@ -464,5 +463,5 @@ class HeatmapGenerator(object):
         self._print_symbols_in_hot_pages(fp, pages_to_print)
       else:
         # Print top_n hottest pages.
-        pages_to_print = [(k, v) for k, v in sorted_hist][:top_n]
+        pages_to_print = sorted_hist[:top_n]
         self._print_symbols_in_hot_pages(fp, pages_to_print)

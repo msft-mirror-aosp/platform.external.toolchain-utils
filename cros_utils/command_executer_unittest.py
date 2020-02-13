@@ -11,7 +11,7 @@ from __future__ import print_function
 import time
 import unittest
 
-import command_executer
+from cros_utils import command_executer
 
 
 class CommandExecuterTest(unittest.TestCase):
