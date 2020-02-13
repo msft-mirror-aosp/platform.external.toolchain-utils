@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -8,11 +8,11 @@
 
 from __future__ import print_function
 
-import afdo_prof_analysis as analysis
-
 import random
-import StringIO
+import io
 import unittest
+
+from afdo_tools.bisection import afdo_prof_analysis as analysis
 
 
 class AfdoProfAnalysisTest(unittest.TestCase):
@@ -33,17 +33,17 @@ class AfdoProfAnalysisTest(unittest.TestCase):
   analysis.random.seed(5)  # 5 is an arbitrary choice. For consistent testing
 
   def test_text_to_json(self):
-    test_data = StringIO.StringIO('deflate_slow:87460059:3\n'
-                                  ' 3: 24\n'
-                                  ' 14: 54767\n'
-                                  ' 15: 664 fill_window:22\n'
-                                  ' 16: 661\n'
-                                  ' 19: 637\n'
-                                  ' 41: 36692 longest_match:36863\n'
-                                  ' 44: 36692\n'
-                                  ' 44.2: 5861\n'
-                                  ' 46: 13942\n'
-                                  ' 46.1: 14003\n')
+    test_data = io.StringIO('deflate_slow:87460059:3\n'
+                            ' 3: 24\n'
+                            ' 14: 54767\n'
+                            ' 15: 664 fill_window:22\n'
+                            ' 16: 661\n'
+                            ' 19: 637\n'
+                            ' 41: 36692 longest_match:36863\n'
+                            ' 44: 36692\n'
+                            ' 44.2: 5861\n'
+                            ' 46: 13942\n'
+                            ' 46.1: 14003\n')
     expected = {
         'deflate_slow': ':87460059:3\n'
                         ' 3: 24\n'
@@ -115,7 +115,7 @@ class AfdoProfAnalysisTest(unittest.TestCase):
                                           self.bad_items, common_funcs, 0,
                                           len(common_funcs))
 
-    self.assertEquals(['func_a', 'func_b'], problem_range)
+    self.assertEqual(['func_a', 'func_b'], problem_range)
 
   def test_check_good_not_bad(self):
     func_in_good = 'func_c'

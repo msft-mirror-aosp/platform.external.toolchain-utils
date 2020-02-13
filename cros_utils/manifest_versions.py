@@ -16,8 +16,8 @@ import shutil
 import tempfile
 import time
 
-import command_executer
-import logger
+from cros_utils import command_executer
+from cros_utils import logger
 
 
 def IsCrosVersion(version):

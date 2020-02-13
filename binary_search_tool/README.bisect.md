@@ -1,6 +1,6 @@
-# `bisect.py`
+# `run_bisect.py`
 
-`bisect.py` is a wrapper around the general purpose
+`run_bisect.py` is a wrapper around the general purpose
 `binary_search_state.py`. It provides a user friendly interface for
 bisecting various compilation errors.  The 2 currently provided
 methods of bisecting are ChromeOS package and object bisection. Each
@@ -33,8 +33,8 @@ pings the machine and prompts the user if the machine is good.
     /build/${board}.work - A full copy of /build/${board}.bad
     ```
 
-1.  Cleanup: bisect.py does most cleanup for you, the only thing required by the
-    user is to cleanup all built images and the three build trees made in
+1.  Cleanup: run_bisect.py does most cleanup for you, the only thing required by
+    the user is to cleanup all built images and the three build trees made in
     `/build/`
 
 1.  Default Arguments:
@@ -58,13 +58,13 @@ pings the machine and prompts the user if the machine is good.
     1.  Basic interactive test package bisection, on daisy board:
 
         ```
-        ./bisect.py package daisy 172.17.211.184
+        ./run_bisect.py package daisy 172.17.211.184
         ```
 
     2.  Basic boot test package bisection, on daisy board:
 
         ```
-        ./bisect.py package daisy 172.17.211.184 -t cros_pkg/boot_test.sh
+        ./run_bisect.py package daisy 172.17.211.184 -t cros_pkg/boot_test.sh
         ```
 
 ### ChromeOS Object
@@ -125,10 +125,10 @@ pings the machine and prompts the user if the machine is good.
 1.  Examples:
 
     1.  Basic interactive test object bisection, on daisy board for cryptohome
-        package: `./bisect.py object daisy 172.17.211.184 cryptohome`
+        package: `./run_bisect.py object daisy 172.17.211.184 cryptohome`
 
     2.  Basic boot test package bisection, on daisy board for cryptohome
-        package: `./bisect.py object daisy 172.17.211.184 cryptohome
+        package: `./run_bisect.py object daisy 172.17.211.184 cryptohome
         --test_script=sysroot_wrapper/boot_test.sh`
 
 ### Android object
@@ -202,16 +202,17 @@ the following arguments:
 1.  Examples:
 
     1.  Basic interactive test android bisection, where the android source is at
-        ~/android_src: `./bisect.py android ~/android_src`
+        ~/android_src: `./run_bisect.py android ~/android_src`
 
     2. Basic boot test android bisection, where the android source is at
-       `~/android_src`, and 10 jobs will be used to build android: `./bisect.py
+       `~/android_src`, and 10 jobs will be used to build android:
+       `./run_bisect.py
        android ~/android_src --num_jobs=10
        --test_script=sysroot_wrapper/boot_test.sh`
 
 ### Resuming
 
-`bisect.py` and `binary_search_state.py` offer the
+`run_bisect.py` and `binary_search_state.py` offer the
 ability to resume a bisection in case it was interrupted by a
 SIGINT, power failure, etc. Every time the tool completes a
 bisection iteration its state is saved to disk (usually to the file
@@ -221,14 +222,14 @@ completed iteration.
 
 ### Overriding
 
-You can run `./bisect.py --help` or `./binary_search_state.py
+You can run `./run_bisect.py --help` or `./binary_search_state.py
 --help` for a full list of arguments that can be overriden. Here are
 a couple of examples:
 
 Example 1 (do boot test instead of interactive test):
 
 ```
-./bisect.py package daisy 172.17.211.182 --test_script=cros_pkg/boot_test.sh
+./run_bisect.py package daisy 172.17.211.182 --test_script=cros_pkg/boot_test.sh
 ```
 
 Example 2 (do package bisector system test instead of interactive test, this
@@ -236,13 +237,13 @@ Example 2 (do package bisector system test instead of interactive test, this
            hash_test.sh for more details):
 
 ```
-./bisect.py package daisy 172.17.211.182 \
+./run_bisect.py package daisy 172.17.211.182 \
     --test_script=common/hash_test.sh --test_setup_script=""
 ```
 
 Example 3 (enable verbose mode, disable pruning, and disable verification):
 
 ```
-./bisect.py package daisy 172.17.211.182
+./run_bisect.py package daisy 172.17.211.182
       --verbose --prune=False --verify=False
 ```

@@ -13,7 +13,7 @@ __author__ = 'yunlian@google.com (Yunlian Jiang)'
 import time
 import unittest
 
-import timeline
+from cros_utils import timeline
 
 
 class TimeLineTest(unittest.TestCase):

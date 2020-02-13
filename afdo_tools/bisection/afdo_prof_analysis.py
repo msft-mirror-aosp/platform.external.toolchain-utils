@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -109,7 +109,7 @@ class DeciderState(object):
                    self.state_file)
       return
 
-    with open(self.state_file) as f:
+    with open(self.state_file, encoding='utf-8') as f:
       try:
         data = json.load(f)
       except:
@@ -127,7 +127,7 @@ class DeciderState(object):
   def save_state(self):
     state = {'seed': self.seed, 'accumulated_results': self.accumulated_results}
     tmp_file = self.state_file + '.new'
-    with open(tmp_file, 'w') as f:
+    with open(tmp_file, 'w', encoding='utf-8') as f:
       json.dump(state, f, indent=2)
     os.rename(tmp_file, self.state_file)
     logging.info('Logged state to %s...', self.state_file)
@@ -270,7 +270,7 @@ def range_search(decider, good, bad, common_funcs, lo, hi):
   def find_upper_border(good_copy, funcs, lo, hi, last_bad_val=None):
     """Finds the upper border of problematic range."""
     mid = average(lo, hi)
-    if mid == lo or mid == hi:
+    if mid in (lo, hi):
       return last_bad_val or hi
 
     for func in funcs[lo:mid]:
@@ -288,7 +288,7 @@ def range_search(decider, good, bad, common_funcs, lo, hi):
   def find_lower_border(good_copy, funcs, lo, hi, last_bad_val=None):
     """Finds the lower border of problematic range."""
     mid = average(lo, hi)
-    if mid == lo or mid == hi:
+    if mid in (lo, hi):
       return last_bad_val or lo
 
     for func in funcs[lo:mid]:
@@ -428,7 +428,7 @@ def main(flags):
       'good_only_functions': gnb_result,
       'bad_only_functions': bng_result
   }
-  with open(flags.analysis_output_file, 'wb') as f:
+  with open(flags.analysis_output_file, 'w', encoding='utf-8') as f:
     json.dump(results, f, indent=2)
   if flags.remove_state_on_completion:
     os.remove(flags.state_file)
