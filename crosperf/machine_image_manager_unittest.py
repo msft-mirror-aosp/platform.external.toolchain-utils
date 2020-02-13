@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2015 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -52,13 +52,6 @@ class MachineImageManagerTester(unittest.TestCase):
     for n in names:
       duts.append(MockDut(n))
     return duts
-
-  def print_matrix(self, matrix):
-    # pylint: disable=expression-not-assigned
-    for r in matrix:
-      for v in r:
-        print('{} '.format('.' if v == ' ' else v)),
-      print('')
 
   def create_labels_and_duts_from_pattern(self, pattern):
     labels = []

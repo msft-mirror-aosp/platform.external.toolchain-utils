@@ -56,8 +56,8 @@ class ImageDownloader(object):
   def GetBuildID(self, chromeos_root, xbuddy_label):
     # Get the translation of the xbuddy_label into the real Google Storage
     # image name.
-    command = ('cd ~/trunk/src/third_party/toolchain-utils/crosperf; '
-               "python translate_xbuddy.py '%s'" % xbuddy_label)
+    command = ('cd /mnt/host/source/src/third_party/toolchain-utils/crosperf; '
+               "./translate_xbuddy.py '%s'" % xbuddy_label)
     _, build_id_tuple_str, _ = self._ce.ChrootRunCommandWOutput(
         chromeos_root, command)
     if not build_id_tuple_str:
@@ -226,7 +226,7 @@ class ImageDownloader(object):
       status = self.VerifyFileExists(chromeos_root, build_id,
                                      autotest_packages_name)
       if status != 0:
-        default_autotest_dir = '~/trunk/src/third_party/autotest/files'
+        default_autotest_dir = '/mnt/host/source/src/third_party/autotest/files'
         print(
             '(Warning: Could not find autotest packages .)\n'
             '(Warning: Defaulting autotest path to %s .' % default_autotest_dir)

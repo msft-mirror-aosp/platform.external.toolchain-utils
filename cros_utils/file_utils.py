@@ -10,7 +10,8 @@ from __future__ import print_function
 import errno
 import os
 import shutil
-import command_executer
+
+from cros_utils import command_executer
 
 
 class FileUtils(object):
@@ -65,7 +66,7 @@ class FileUtils(object):
     shutil.rmtree(path, ignore_errors=True)
 
   def WriteFile(self, path, contents):
-    with open(path, 'wb') as f:
+    with open(path, 'w', encoding='utf-8') as f:
       f.write(contents)
 
 

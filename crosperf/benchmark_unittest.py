@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2014 The Chromium OS Authors. All rights reserved.
@@ -62,7 +62,7 @@ class BenchmarkTestCase(unittest.TestCase):
         'perf_args', 'suite', 'show_all_results', 'retries', 'run_local',
         'cwp_dso', 'weight'
     ]
-    arg_spec = inspect.getargspec(Benchmark.__init__)
+    arg_spec = inspect.getfullargspec(Benchmark.__init__)
     self.assertEqual(len(arg_spec.args), len(args_list))
     for arg in args_list:
       self.assertIn(arg, arg_spec.args)

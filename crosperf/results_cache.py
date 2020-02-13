@@ -198,8 +198,8 @@ class Result(object):
       command = 'cp -r {0}/* {1}'.format(self.results_dir, self.temp_dir)
       self.ce.RunCommand(command, print_to_console=False)
 
-    command = ('python generate_test_report --no-color --csv %s' %
-               (os.path.join('/tmp', os.path.basename(self.temp_dir))))
+    command = ('./generate_test_report --no-color --csv %s' % (os.path.join(
+        '/tmp', os.path.basename(self.temp_dir))))
     _, out, _ = self.ce.ChrootRunCommandWOutput(
         self.chromeos_root, command, print_to_console=False)
     keyvals_dict = {}
@@ -869,7 +869,7 @@ class Result(object):
     self.suite = suite
     self.cwp_dso = cwp_dso
     # Read in everything from the cache directory.
-    with open(os.path.join(cache_dir, RESULTS_FILE), 'r') as f:
+    with open(os.path.join(cache_dir, RESULTS_FILE), 'rb') as f:
       self.out = pickle.load(f)
       self.err = pickle.load(f)
       self.retval = pickle.load(f)
@@ -907,7 +907,7 @@ class Result(object):
     temp_dir = tempfile.mkdtemp()
 
     # Store to the temp directory.
-    with open(os.path.join(temp_dir, RESULTS_FILE), 'w') as f:
+    with open(os.path.join(temp_dir, RESULTS_FILE), 'wb') as f:
       pickle.dump(self.out, f)
       pickle.dump(self.err, f)
       pickle.dump(self.retval, f)
@@ -1040,7 +1040,7 @@ class TelemetryResult(Result):
     self.test_name = test
     self.suite = suite
     self.cwp_dso = cwp_dso
-    with open(os.path.join(cache_dir, RESULTS_FILE), 'r') as f:
+    with open(os.path.join(cache_dir, RESULTS_FILE), 'rb') as f:
       self.out = pickle.load(f)
       self.err = pickle.load(f)
       self.retval = pickle.load(f)
@@ -1183,7 +1183,8 @@ class ResultsCache(object):
     if read and CacheConditions.CHECKSUMS_MATCH not in self.cache_conditions:
       checksum = '*'
     elif self.label.image_type == 'trybot':
-      checksum = hashlib.md5(self.label.chromeos_image).hexdigest()
+      checksum = hashlib.md5(
+          self.label.chromeos_image.encode('utf-8')).hexdigest()
     elif self.label.image_type == 'official':
       checksum = '*'
     else:
@@ -1192,7 +1193,8 @@ class ResultsCache(object):
     if read and CacheConditions.IMAGE_PATH_MATCH not in self.cache_conditions:
       image_path_checksum = '*'
     else:
-      image_path_checksum = hashlib.md5(self.chromeos_image).hexdigest()
+      image_path_checksum = hashlib.md5(
+          self.chromeos_image.encode('utf-8')).hexdigest()
 
     machine_id_checksum = ''
     if read and CacheConditions.SAME_MACHINE_MATCH not in self.cache_conditions:
@@ -1208,7 +1210,7 @@ class ResultsCache(object):
 
     temp_test_args = '%s %s %s' % (self.test_args, self.profiler_args,
                                    self.run_local)
-    test_args_checksum = hashlib.md5(temp_test_args).hexdigest()
+    test_args_checksum = hashlib.md5(temp_test_args.encode('utf-8')).hexdigest()
     return (image_path_checksum, self.test_name, str(self.iteration),
             test_args_checksum, checksum, machine_checksum, machine_id_checksum,
             str(self.CACHE_VERSION))

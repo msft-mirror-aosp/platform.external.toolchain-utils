@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
@@ -298,7 +298,7 @@ class LockManager(object):
         cros_machine = cros_machine + '.cros'
 
     self.machines = [
-        m for m in self.machines if m != cros_machine and m != machine
+        m for m in self.machines if m not in (cros_machine, machine)
     ]
 
   def CheckMachineLocks(self, machine_states, cmd):
@@ -316,7 +316,7 @@ class LockManager(object):
     Raises:
       DontOwnLock: The lock on a requested machine is owned by someone else.
     """
-    for k, state in machine_states.iteritems():
+    for k, state in machine_states.items():
       if cmd == 'unlock':
         if not state['locked']:
           self.logger.LogWarning('Attempt to unlock already unlocked machine '
