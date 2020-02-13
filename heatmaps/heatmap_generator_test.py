@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -8,11 +8,12 @@
 
 from __future__ import division, print_function
 
-import mock
-import os
+import unittest.mock as mock
 import unittest
 
-import heatmap_generator
+import os
+
+from heatmaps import heatmap_generator
 
 
 def _write_perf_mmap(pid, tid, addr, size, fp):

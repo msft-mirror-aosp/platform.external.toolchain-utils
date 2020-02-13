@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
@@ -37,6 +37,12 @@ import sys
 
 TestSpec = collections.namedtuple('TestSpec', ['directory', 'command'])
 
+# List of python scripts that are not test with relative path to
+# toolchain-utils.
+non_test_py_files = {
+    'debug_info_test/debug_info_test.py',
+}
+
 
 def _make_relative_to_toolchain_utils(toolchain_utils, path):
   """Cleans & makes a path relative to toolchain_utils.
@@ -52,13 +58,26 @@ def _make_relative_to_toolchain_utils(toolchain_utils, path):
   return result
 
 
-def _gather_python_tests_in(subdir):
+def _filter_python_tests(test_files, toolchain_utils):
+  """Returns all files that are real python tests."""
+  python_tests = []
+  for test_file in test_files:
+    rel_path = _make_relative_to_toolchain_utils(toolchain_utils, test_file)
+    if rel_path not in non_test_py_files:
+      python_tests.append(_python_test_to_spec(test_file))
+    else:
+      print('## %s ... NON_TEST_PY_FILE' % rel_path)
+  return python_tests
+
+
+def _gather_python_tests_in(rel_subdir, toolchain_utils):
   """Returns all files that appear to be Python tests in a given directory."""
+  subdir = os.path.join(toolchain_utils, rel_subdir)
   test_files = (
       os.path.join(subdir, file_name)
       for file_name in os.listdir(subdir)
       if file_name.endswith('_test.py') or file_name.endswith('_unittest.py'))
-  return [_python_test_to_spec(test_file) for test_file in test_files]
+  return _filter_python_tests(test_files, toolchain_utils)
 
 
 def _run_test(test_spec):
@@ -68,7 +87,8 @@ def _run_test(test_spec):
       cwd=test_spec.directory,
       stdin=open('/dev/null'),
       stdout=subprocess.PIPE,
-      stderr=subprocess.STDOUT)
+      stderr=subprocess.STDOUT,
+      encoding='utf-8')
   stdout, _ = p.communicate()
   exit_code = p.wait()
   return exit_code, stdout
@@ -84,13 +104,13 @@ def _python_test_to_spec(test_file):
   if os.access(test_file, os.X_OK):
     command = ['./' + file_name]
   else:
-    # Assume the user wanted py2.
-    command = ['python2', file_name]
+    # Assume the user wanted py3.
+    command = ['python3', file_name]
 
   return TestSpec(directory=test_directory, command=command)
 
 
-def _autodetect_python_tests_for(test_file):
+def _autodetect_python_tests_for(test_file, toolchain_utils):
   """Given a test file, detect if there may be related tests."""
   if not test_file.endswith('.py'):
     return []
@@ -102,8 +122,7 @@ def _autodetect_python_tests_for(test_file):
     base = test_file[:-3]
     candidates = (base + x for x in test_suffixes)
     test_files = (x for x in candidates if os.path.exists(x))
-
-  return [_python_test_to_spec(test_file) for test_file in test_files]
+  return _filter_python_tests(test_files, toolchain_utils)
 
 
 def _run_test_scripts(all_tests, show_successful_output=False):
@@ -194,7 +213,7 @@ def _find_forced_subdir_python_tests(test_paths, toolchain_utils):
 
   results = []
   for d in sorted(gather_test_dirs):
-    results += _gather_python_tests_in(os.path.join(toolchain_utils, d))
+    results += _gather_python_tests_in(d, toolchain_utils)
   return results
 
 
@@ -240,7 +259,7 @@ def main(argv):
   tests_to_run = _find_forced_subdir_python_tests(modified_files,
                                                   toolchain_utils)
   for f in modified_files:
-    tests_to_run += _autodetect_python_tests_for(f)
+    tests_to_run += _autodetect_python_tests_for(f, toolchain_utils)
   tests_to_run += _find_go_tests(modified_files)
 
   # TestSpecs have lists, so we can't use a set. We'd likely want to keep them

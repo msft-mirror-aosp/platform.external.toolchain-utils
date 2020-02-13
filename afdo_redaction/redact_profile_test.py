@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -8,12 +8,12 @@
 
 from __future__ import division, print_function
 
-import StringIO
+import io
 import unittest
 
-import redact_profile
+from afdo_redaction import redact_profile
 
-_redact_limit = redact_profile.dedup_records.func_defaults[0]
+_redact_limit = redact_profile.dedup_records.__defaults__[0]
 
 
 def _redact(input_lines, summary_to=None):
@@ -21,17 +21,18 @@ def _redact(input_lines, summary_to=None):
     input_lines = input_lines.splitlines()
 
   if summary_to is None:
-    summary_to = StringIO.StringIO()
+    summary_to = io.StringIO()
 
-  output_to = StringIO.StringIO()
-  redact_profile.run(profile_input_file=input_lines,
-                     summary_output_file=summary_to,
-                     profile_output_file=output_to)
+  output_to = io.StringIO()
+  redact_profile.run(
+      profile_input_file=input_lines,
+      summary_output_file=summary_to,
+      profile_output_file=output_to)
   return output_to.getvalue()
 
 
 def _redact_with_summary(input_lines):
-  summary = StringIO.StringIO()
+  summary = io.StringIO()
   result = _redact(input_lines, summary_to=summary)
   return result, summary.getvalue()
 
@@ -64,6 +65,7 @@ def _generate_repeated_function_body(repeats, fn_name='_some_name'):
 
 class Tests(unittest.TestCase):
   """All of our tests for redact_profile."""
+
   def test_no_input_works(self):
     self.assertEqual(_redact(''), '')
 
@@ -93,13 +95,13 @@ class Tests(unittest.TestCase):
 
     result_file = '\n'.join(kept_lines) + '\n'
 
-    lines = _generate_repeated_function_body(_redact_limit,
-                                             fn_name='_discard_me')
+    lines = _generate_repeated_function_body(
+        _redact_limit, fn_name='_discard_me')
     self.assertEqual(_redact(kept_lines + lines), result_file)
     self.assertEqual(_redact(lines + kept_lines), result_file)
 
-    more_lines = _generate_repeated_function_body(_redact_limit,
-                                                  fn_name='_and_discard_me')
+    more_lines = _generate_repeated_function_body(
+        _redact_limit, fn_name='_and_discard_me')
     self.assertEqual(_redact(lines + kept_lines + more_lines), result_file)
     self.assertEqual(_redact(lines + more_lines), '')
 

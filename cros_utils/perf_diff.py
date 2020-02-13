@@ -18,8 +18,8 @@ import functools
 import re
 import sys
 
-import misc
-import tabulator
+from cros_utils import misc
+from cros_utils import tabulator
 
 ROWS_TO_SHOW = 'Rows_to_show_in_the_perf_table'
 TOTAL_EVENTS = 'Total_events_of_this_profile'

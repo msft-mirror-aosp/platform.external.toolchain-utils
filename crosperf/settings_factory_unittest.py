@@ -24,7 +24,7 @@ class BenchmarkSettingsTest(unittest.TestCase):
     self.assertEqual(res.GetField('test_name'), '')
     self.assertEqual(res.GetField('test_args'), '')
     self.assertEqual(res.GetField('iterations'), 0)
-    self.assertEqual(res.GetField('suite'), '')
+    self.assertEqual(res.GetField('suite'), 'test_that')
 
 
 class LabelSettingsTest(unittest.TestCase):

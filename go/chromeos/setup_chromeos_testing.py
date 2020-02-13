@@ -1,7 +1,9 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# Copyright 2018 Google Inc. All Rightes Reserved
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """Generate board-specific scripts for Go compiler testing."""
 
 from __future__ import print_function
@@ -73,7 +75,7 @@ def log(msg):
 
 
 def WriteFile(file_content, file_name):
-  with open(file_name, 'w') as out_file:
+  with open(file_name, 'w', encoding='utf-8') as out_file:
     out_file.write(file_content)
 
 
@@ -82,7 +84,7 @@ def GenerateGoHelperScripts(ce, arm_board, x86_board, chromeos_root):
   names = {
       'x86_64': x86_board,
       'arm64': arm_board,
-      'arm32': ("%s32" % arm_board)
+      'arm32': ('%s32' % arm_board)
   }
 
   toolchain_dir = os.path.join(chromeos_root, 'src', 'third_party',
@@ -93,17 +95,17 @@ def GenerateGoHelperScripts(ce, arm_board, x86_board, chromeos_root):
     toolchain = CROS_TOOLCHAIN_DATA[k]
     glibc = GLIBC_DATA[k]
 
-    base_file = os.path.join(toolchain_dir, ("go_%s" % name))
+    base_file = os.path.join(toolchain_dir, ('go_%s' % name))
     base_file_content = BASE_TEMPLATE % (name, arch, arch, toolchain, toolchain,
                                          toolchain)
     WriteFile(base_file_content, base_file)
-    cmd = "chmod 755 %s" % base_file
+    cmd = 'chmod 755 %s' % base_file
     ce.RunCommand(cmd)
 
-    exec_file = os.path.join(toolchain_dir, ("go_%s_exec" % name))
+    exec_file = os.path.join(toolchain_dir, ('go_%s_exec' % name))
     exec_file_content = EXEC_TEMPLATE % (name, arch, glibc, name)
     WriteFile(exec_file_content, exec_file)
-    cmd = "chmod 755 %s" % exec_file
+    cmd = 'chmod 755 %s' % exec_file
     ce.RunCommand(cmd)
 
   return 0
@@ -111,7 +113,7 @@ def GenerateGoHelperScripts(ce, arm_board, x86_board, chromeos_root):
 
 def UpdateChrootSshConfig(ce, arm_board, arm_dut, x86_board, x86_dut,
                           chromeos_root):
-  log("Entering UpdateChrootSshConfig")
+  log('Entering UpdateChrootSshConfig')
   # Copy testing_rsa to .ssh and set file protections properly.
   user = getpass.getuser()
   ssh_dir = os.path.join(chromeos_root, 'chroot', 'home', user, '.ssh')
@@ -133,22 +135,22 @@ def UpdateChrootSshConfig(ce, arm_board, arm_dut, x86_board, x86_dut,
       print('Cannot find %s; you will need to update testing_rsa by hand.' %
             src_file)
   else:
-    log("testing_rsa exists already.")
+    log('testing_rsa exists already.')
 
   # Save ~/.ssh/config file, if not already done.
-  config_file = os.path.expanduser("~/.ssh/config")
+  config_file = os.path.expanduser('~/.ssh/config')
   saved_config_file = os.path.join(
-      os.path.expanduser("~/.ssh"), "config.save.go-scripts")
+      os.path.expanduser('~/.ssh'), 'config.save.go-scripts')
   if not os.path.exists(saved_config_file):
-    cmd = "cp %s %s" % (config_file, saved_config_file)
+    cmd = 'cp %s %s' % (config_file, saved_config_file)
     ret = ce.RunCommand(cmd)
     if ret != SUCCESS:
-      print("Error making save copy of ~/.ssh/config. Exiting...")
+      print('Error making save copy of ~/.ssh/config. Exiting...')
       sys.exit(1)
 
   # Update ~/.ssh/config file
-  log("Reading ssh config file")
-  with open(config_file, "r") as input_file:
+  log('Reading ssh config file')
+  with open(config_file, 'r') as input_file:
     config_lines = input_file.read()
 
   x86_host_config = CONFIG_TEMPLATE % (x86_board, x86_dut)
@@ -158,7 +160,7 @@ def UpdateChrootSshConfig(ce, arm_board, arm_dut, x86_board, x86_dut,
   config_lines += x86_host_config
   config_lines += arm_host_config
 
-  log("Writing ~/.ssh/config")
+  log('Writing ~/.ssh/config')
   WriteFile(config_lines, config_file)
 
   return 0
@@ -170,27 +172,27 @@ def CleanUp(ce, x86_board, arm_board, chromeos_root):
   names = {
       'x86_64': x86_board,
       'arm64': arm_board,
-      'arm32': ("%s32" % arm_board)
+      'arm32': ('%s32' % arm_board)
   }
 
   toolchain_dir = os.path.join(chromeos_root, 'src', 'third_party',
                                'toolchain-utils', 'go', 'chromeos')
   for k in keys:
     name = names[k]
-    base_file = os.path.join(toolchain_dir, ("go_%s" % name))
-    exec_file = os.path.join(toolchain_dir, ("go_%s_exec" % name))
+    base_file = os.path.join(toolchain_dir, ('go_%s' % name))
+    exec_file = os.path.join(toolchain_dir, ('go_%s_exec' % name))
     cmd = ('rm -f %s; rm -f %s' % (base_file, exec_file))
     ce.RunCommand(cmd)
 
   # Restore saved config_file
-  config_file = os.path.expanduser("~/.ssh/config")
+  config_file = os.path.expanduser('~/.ssh/config')
   saved_config_file = os.path.join(
-      os.path.expanduser("~/.ssh"), "config.save.go-scripts")
+      os.path.expanduser('~/.ssh'), 'config.save.go-scripts')
   if not os.path.exists(saved_config_file):
-    print("Could not find file: %s; unable to restore ~/.ssh/config ." %
+    print('Could not find file: %s; unable to restore ~/.ssh/config .' %
           saved_config_file)
   else:
-    cmd = "mv %s %s" % (saved_config_file, config_file)
+    cmd = 'mv %s %s' % (saved_config_file, config_file)
     ce.RunCommand(cmd)
 
   return 0
@@ -219,7 +221,7 @@ def Main(argv):
     DEBUG = True
 
   if not os.path.exists(options.chromeos_root):
-    print("Invalid ChromeOS Root: %s" % options.chromeos_root)
+    print('Invalid ChromeOS Root: %s' % options.chromeos_root)
 
   ce = command_executer.GetCommandExecuter()
   all_good = True
@@ -245,6 +247,6 @@ def Main(argv):
   return 0
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   val = Main(sys.argv)
   sys.exit(val)
