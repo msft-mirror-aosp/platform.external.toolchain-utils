@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
@@ -9,14 +9,15 @@
 
 from __future__ import print_function
 
-import mock
+import unittest.mock as mock
 import unittest
 
 import os
 
 from cros_utils import command_executer
 
-import heat_map
+from heatmaps import heat_map
+from heatmaps import heatmap_generator
 
 
 def make_heatmap(chromeos_root='/path/to/fake/chromeos_root/',
@@ -41,7 +42,7 @@ def fake_generate_perf_report_exception(_):
 class HeatmapTest(unittest.TestCase):
   """All of our tests for heat_map."""
 
-  #pylint: disable=protected-access
+  # pylint: disable=protected-access
   @mock.patch('shutil.copy2')
   @mock.patch('tempfile.mkdtemp')
   def test_EnsureFileInChrootAlreadyInside(self, mock_mkdtemp, mock_copy):
@@ -81,7 +82,7 @@ class HeatmapTest(unittest.TestCase):
     self.assertEqual(heatmap.perf_report,
                      '/fake/chroot/inchroot_path/perf_report.txt')
 
-  @mock.patch('heatmap_generator.HeatmapGenerator')
+  @mock.patch.object(heatmap_generator, 'HeatmapGenerator')
   def test_GetHeatMap(self, mock_heatmap_generator):
     heatmap = make_heatmap()
     heatmap._GetHeatMap(10)
@@ -107,7 +108,7 @@ class HeatmapTest(unittest.TestCase):
       new=fake_generate_perf_report_exception)
   @mock.patch.object(heat_map.HeatMapProducer, '_GetHeatMap')
   @mock.patch.object(heat_map.HeatMapProducer, '_RemoveFiles')
-  @mock.patch('__builtin__.print')
+  @mock.patch('builtins.print')
   def test_Run_with_exception(self, mock_print, mock_remove_files,
                               mock_get_heatmap, mock_ensure_file_in_chroot):
     heatmap = make_heatmap()

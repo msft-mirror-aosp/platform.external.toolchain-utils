@@ -14,7 +14,7 @@ __author__ = 'asharif@google.com (Ahmad Sharif)'
 import unittest
 
 # Local modules
-import misc
+from cros_utils import misc
 
 
 class UtilsTest(unittest.TestCase):

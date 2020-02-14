@@ -1,6 +1,8 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 #
 # Copyright Google Inc. 2014
+
 """Module to generate the 7-day crosperf reports."""
 
 from __future__ import print_function
@@ -205,7 +207,7 @@ def Main(argv):
       '%s.%s' % (timestamp, options.board), 'weekly_tests')
 
   for day in WEEKDAYS:
-    startdir = os.path.join(constants.CROSTC_WORKSPACE, day)
+    startdir = os.path.join(constants.CROSTC_WORKSPACE, 'nightly-tests', day)
     num_dirs = os.listdir(startdir)
     for d in num_dirs:
       exp_file = os.path.join(startdir, d, 'toolchain_experiment.txt')
