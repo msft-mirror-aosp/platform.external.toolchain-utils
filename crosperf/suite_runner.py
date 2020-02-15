@@ -15,7 +15,6 @@ import shlex
 import time
 
 from cros_utils import command_executer
-from cros_utils.device_setup_utils import DutWrapper
 
 TEST_THAT_PATH = '/usr/bin/test_that'
 # TODO: Need to check whether Skylab is installed and set up correctly.
@@ -75,34 +74,12 @@ class SuiteRunner(object):
 
   def Run(self, cros_machine, label, benchmark, test_args, profiler_args):
     machine_name = cros_machine.name
-    if benchmark.suite != 'telemetry_Crosperf':
-      # Initialize command executer on DUT for test_that runs.
-      run_on_dut = DutWrapper(
-          label.chromeos_root,
-          machine_name,
-          logger=self.logger,
-          log_level=self.log_level,
-          ce=self._ce,
-          dut_config=self.dut_config)
     for i in range(0, benchmark.retries + 1):
-      # TODO: For telemetry_Crosperf run, device setup has been moved into
-      # server test script; for client runs, need to figure out wrapper to do
-      # it before running, now it is still setup here.
-      if benchmark.suite != 'telemetry_Crosperf':
-        wait_time = run_on_dut.SetupDevice()
-        # This is for accumulating wait time for test_that runs only,
-        # for telemetry_Cropserf runs, please refer to result_cache.
-        cros_machine.AddCooldownWaitTime(wait_time)
-
       if label.skylab:
         ret_tup = self.Skylab_Run(label, benchmark, test_args, profiler_args)
-      elif benchmark.suite == 'telemetry_Crosperf':
-        ret_tup = self.Telemetry_Crosperf_Run(machine_name, label, benchmark,
-                                              test_args, profiler_args)
       else:
         ret_tup = self.Test_That_Run(machine_name, label, benchmark, test_args,
                                      profiler_args)
-
       if ret_tup[0] != 0:
         self.logger.LogOutput('benchmark %s failed. Retries left: %s' %
                               (benchmark.name, benchmark.retries - i))
@@ -116,43 +93,94 @@ class SuiteRunner(object):
         break
     return ret_tup
 
+  def RemoveTelemetryTempFile(self, machine, chromeos_root):
+    filename = 'telemetry@%s' % machine
+    fullname = os.path.join(chromeos_root, 'chroot', 'tmp', filename)
+    if os.path.exists(fullname):
+      os.remove(fullname)
+
+  def GenTestArgs(self, benchmark, test_args, profiler_args):
+    args_list = []
+
+    if benchmark.suite != 'telemetry_Crosperf' and profiler_args:
+      self.logger.LogFatal('Tests other than telemetry_Crosperf do not '
+                           'support profiler.')
+
+    if test_args:
+      # Strip double quotes off args (so we can wrap them in single
+      # quotes, to pass through to Telemetry).
+      if test_args[0] == '"' and test_args[-1] == '"':
+        test_args = test_args[1:-1]
+      args_list.append("test_args='%s'" % test_args)
+
+    args_list.append(GetDutConfigArgs(self.dut_config))
+
+    if not (benchmark.suite == 'telemetry_Crosperf' or
+            benchmark.suite == 'crosperf_Wrapper'):
+      self.logger.LogWarning('Please make sure the server test has stage for '
+                             'device setup.\n')
+    else:
+      args_list.append('test=%s' % benchmark.test_name)
+      if benchmark.suite == 'telemetry_Crosperf':
+        args_list.append('run_local=%s' % benchmark.run_local)
+        args_list.append(GetProfilerArgs(profiler_args))
+
+    return args_list
+
   def Test_That_Run(self, machine, label, benchmark, test_args, profiler_args):
     """Run the test_that test.."""
-    options = []
-    if label.board:
-      options.append('--board=%s' % label.board)
-    if test_args:
-      options.append(test_args)
-    if profiler_args:
-      self.logger.LogFatal('test_that does not support profiler.')
+
+    # Remove existing test_that results
     command = 'rm -rf /usr/local/autotest/results/*'
     self._ce.CrosRunCommand(
         command, machine=machine, chromeos_root=label.chromeos_root)
 
-    autotest_dir = AUTOTEST_DIR
-    if label.autotest_path != '':
-      autotest_dir = label.autotest_path
+    if benchmark.suite == 'telemetry_Crosperf':
+      if not os.path.isdir(label.chrome_src):
+        self.logger.LogFatal('Cannot find chrome src dir to '
+                             'run telemetry: %s' % label.chrome_src)
+      # Check for and remove temporary file that may have been left by
+      # previous telemetry runs (and which might prevent this run from
+      # working).
+      self.RemoveTelemetryTempFile(machine, label.chromeos_root)
 
-    autotest_dir_arg = '--autotest_dir %s' % autotest_dir
-    # For non-telemetry tests, specify an autotest directory only if the
-    # specified directory is different from default (crosbug.com/679001).
-    if autotest_dir == AUTOTEST_DIR:
-      autotest_dir_arg = ''
+    # --autotest_dir specifies which autotest directory to use.
+    autotest_dir_arg = '--autotest_dir=%s' % (
+        label.autotest_path if label.autotest_path else AUTOTEST_DIR)
 
-    command = (('%s %s --fast '
-                '%s %s %s') % (TEST_THAT_PATH, autotest_dir_arg,
-                               ' '.join(options), machine, benchmark.test_name))
+    # --fast avoids unnecessary copies of syslogs.
+    fast_arg = '--fast'
+    board_arg = '--board=%s' % label.board
+
+    args_list = self.GenTestArgs(benchmark, test_args, profiler_args)
+    args_arg = '--args=%s' % pipes.quote(' '.join(args_list))
+
+    command = ' '.join([
+        TEST_THAT_PATH, autotest_dir_arg, fast_arg, board_arg, args_arg,
+        machine, benchmark.suite if
+        (benchmark.suite == 'telemetry_Crosperf' or
+         benchmark.suite == 'crosperf_Wrapper') else benchmark.test_name
+    ])
+
+    # Use --no-ns-pid so that cros_sdk does not create a different
+    # process namespace and we can kill process created easily by their
+    # process group.
+    chrome_root_options = ('--no-ns-pid '
+                           '--chrome_root={} --chrome_root_mount={} '
+                           'FEATURES="-usersandbox" '
+                           'CHROME_ROOT={}'.format(label.chrome_src,
+                                                   CHROME_MOUNT_DIR,
+                                                   CHROME_MOUNT_DIR))
+
     if self.log_level != 'verbose':
       self.logger.LogOutput('Running test.')
       self.logger.LogOutput('CMD: %s' % command)
-    # Use --no-ns-pid so that cros_sdk does not create a different
-    # process namespace and we can kill process created easily by
-    # their process group.
+
     return self._ce.ChrootRunCommandWOutput(
         label.chromeos_root,
         command,
         command_terminator=self._ct,
-        cros_sdk_options='--no-ns-pid')
+        cros_sdk_options=chrome_root_options)
 
   def DownloadResult(self, label, task_id):
     gsutil_cmd = os.path.join(label.chromeos_root, GS_UTIL)
@@ -200,26 +228,9 @@ class SuiteRunner(object):
     # TODO: now only put toolchain pool here, user need to be able to specify
     # which pool to use. Need to request feature to not use this option at all.
     options.append('-pool=toolchain')
-    test_args_list = []
-    if benchmark.suite == 'telemetry_Crosperf':
-      if test_args:
-        # Strip double quotes off args (so we can wrap them in single
-        # quotes, to pass through to Telemetry).
-        if test_args[0] == '"' and test_args[-1] == '"':
-          test_args_list.append(test_args[1:-1])
-      if profiler_args:
-        test_args_list.append(GetProfilerArgs(profiler_args))
-      if self.dut_config:
-        test_args_list.append(GetDutConfigArgs(self.dut_config))
-      test_args_list.append('run_local=%s' % benchmark.run_local)
-      test_args_list.append('test=%s' % benchmark.test_name)
-    else:
-      if profiler_args:
-        self.logger.LogFatal('Client tests do not support profiler.')
-      if test_args:
-        test_args_list.append(test_args)
-    if test_args_list:
-      options.append('-test-args=%s' % pipes.quote(' '.join(test_args_list)))
+
+    args_list = self.GenTestArgs(benchmark, test_args, profiler_args)
+    options.append('-test-args=%s' % pipes.quote(' '.join(args_list)))
 
     dimensions = []
     for dut in label.remote:
@@ -227,7 +238,9 @@ class SuiteRunner(object):
 
     command = (('%s create-test %s %s %s') % \
               (SKYLAB_PATH, ' '.join(dimensions), ' '.join(options),
-               'telemetry_Crosperf' if benchmark.suite == 'telemetry_Crosperf'
+               benchmark.suite if
+               (benchmark.suite == 'telemetry_Crosperf' or
+                benchmark.suite == 'crosperf_Wrapper')
                else benchmark.test_name))
 
     if self.log_level != 'verbose':
@@ -278,67 +291,6 @@ class SuiteRunner(object):
         result_dir = '\nResults placed in tmp/swarming-%s\n' % task_id
         return (ret_tup[0], result_dir, ret_tup[2])
     return ret_tup
-
-  def RemoveTelemetryTempFile(self, machine, chromeos_root):
-    filename = 'telemetry@%s' % machine
-    fullname = os.path.join(chromeos_root, 'chroot', 'tmp', filename)
-    if os.path.exists(fullname):
-      os.remove(fullname)
-
-  def Telemetry_Crosperf_Run(self, machine, label, benchmark, test_args,
-                             profiler_args):
-    if not os.path.isdir(label.chrome_src):
-      self.logger.LogFatal('Cannot find chrome src dir to'
-                           ' run telemetry: %s' % label.chrome_src)
-
-    # Check for and remove temporary file that may have been left by
-    # previous telemetry runs (and which might prevent this run from
-    # working).
-    self.RemoveTelemetryTempFile(machine, label.chromeos_root)
-
-    # For telemetry runs, we can use the autotest copy from the source
-    # location. No need to have one under /build/<board>.
-    autotest_dir_arg = '--autotest_dir %s' % AUTOTEST_DIR
-    if label.autotest_path != '':
-      autotest_dir_arg = '--autotest_dir %s' % label.autotest_path
-
-    profiler_args = GetProfilerArgs(profiler_args)
-    dut_config_args = GetDutConfigArgs(self.dut_config)
-    # --fast avoids unnecessary copies of syslogs.
-    fast_arg = '--fast'
-    args_string = ''
-    if test_args:
-      # Strip double quotes off args (so we can wrap them in single
-      # quotes, to pass through to Telemetry).
-      if test_args[0] == '"' and test_args[-1] == '"':
-        test_args = test_args[1:-1]
-      args_string = "test_args='%s'" % test_args
-
-    args = '{} run_local={} test={} {} {}'.format(
-        args_string, benchmark.run_local, benchmark.test_name, dut_config_args,
-        profiler_args)
-
-    cmd = ('{} {} {} --board={} --args={} {} telemetry_Crosperf'.format(
-        TEST_THAT_PATH, autotest_dir_arg, fast_arg, label.board,
-        pipes.quote(args), machine))
-
-    # Use --no-ns-pid so that cros_sdk does not create a different
-    # process namespace and we can kill process created easily by their
-    # process group.
-    chrome_root_options = ('--no-ns-pid '
-                           '--chrome_root={} --chrome_root_mount={} '
-                           'FEATURES="-usersandbox" '
-                           'CHROME_ROOT={}'.format(label.chrome_src,
-                                                   CHROME_MOUNT_DIR,
-                                                   CHROME_MOUNT_DIR))
-    if self.log_level != 'verbose':
-      self.logger.LogOutput('Running test.')
-      self.logger.LogOutput('CMD: %s' % cmd)
-    return self._ce.ChrootRunCommandWOutput(
-        label.chromeos_root,
-        cmd,
-        command_terminator=self._ct,
-        cros_sdk_options=chrome_root_options)
 
   def CommandTerminator(self):
     return self._ct

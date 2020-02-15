@@ -28,7 +28,7 @@ To run the basic unit tests:
 
 ```
 $ cd toolchain-utils/binary_search_tool/test
-$ ./binary_search_tool_tester.py
+$ ./binary_search_tool_test.py
 ```
 
 # Running the bisection tests, testing the compiler wrapper.
@@ -59,7 +59,7 @@ Move to the correct directory, then run the test script:
 
 ```
 $ cd toolchain-utils/binary_search_tool
-$ ./run_bisect_test.py
+$ ./run_bisect_tests.py
 ```
 
 If you are testing with the CHROMEOS COMPILER WRAPPER, you MUST run the
@@ -82,7 +82,7 @@ $ export PYTHONPATH=`pwd`:${PYTHONPATH}
 Run the test script:
 
 ```
-$ ./run_bisect_test.py
+$ ./run_bisect_tests.py
 ```
 
 
