@@ -31,6 +31,16 @@ func getNewWarningsDir(env env, cfg *config) (dirName string, ok bool) {
 	return "", false
 }
 
+func disableWerrorFlags(originalArgs []string) []string {
+	noErrors := []string{"-Wno-error"}
+	for _, flag := range originalArgs {
+		if strings.HasPrefix(flag, "-Werror=") {
+			noErrors = append(noErrors, strings.Replace(flag, "-Werror", "-Wno-error", 1))
+		}
+	}
+	return noErrors
+}
+
 func doubleBuildWithWNoError(env env, cfg *config, newWarningsDir string, originalCmd *command) (exitCode int, err error) {
 	originalStdoutBuffer := &bytes.Buffer{}
 	originalStderrBuffer := &bytes.Buffer{}
@@ -57,7 +67,7 @@ func doubleBuildWithWNoError(env env, cfg *config, newWarningsDir string, origin
 	retryStderrBuffer := &bytes.Buffer{}
 	retryCommand := &command{
 		Path:       originalCmd.Path,
-		Args:       append(originalCmd.Args, "-Wno-error"),
+		Args:       append(originalCmd.Args, disableWerrorFlags(originalCmd.Args)...),
 		EnvUpdates: originalCmd.EnvUpdates,
 	}
 	retryExitCode, err := wrapSubprocessErrorWithSourceLoc(retryCommand,
