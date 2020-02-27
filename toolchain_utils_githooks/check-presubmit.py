@@ -226,7 +226,7 @@ def check_cros_lint(toolchain_utils_root, thread_pool, files):
   # pylint+golint.
   def try_run_cros_lint(cros_binary):
     exit_code, output = run_command_unchecked(
-        [cros_binary, 'lint', '--'] + files,
+        [cros_binary, 'lint', '--py3', '--'] + files,
         toolchain_utils_root,
         env=fixed_env)
 

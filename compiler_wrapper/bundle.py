@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -32,7 +32,7 @@ def copy_files(input_dir, output_dir):
 
 def read_change_id(input_dir):
   last_commit_msg = subprocess.check_output(
-      ['git', '-C', input_dir, 'log', '-1', '--pretty=%B'])
+      ['git', '-C', input_dir, 'log', '-1', '--pretty=%B'], encoding='utf-8')
   # Use last found change id to support reverts as well.
   change_ids = re.findall(r'Change-Id: (\w+)', last_commit_msg)
   if not change_ids:
@@ -41,14 +41,15 @@ def read_change_id(input_dir):
 
 
 def write_readme(input_dir, output_dir, change_id):
-  with open(os.path.join(input_dir, 'bundle.README'), 'r') as r, \
-       open(os.path.join(output_dir, 'README'), 'w') as w:
-    content = r.read()
-    w.write(content.format(change_id=change_id))
+  with open(
+      os.path.join(input_dir, 'bundle.README'), 'r', encoding='utf-8') as r:
+    with open(os.path.join(output_dir, 'README'), 'w', encoding='utf-8') as w:
+      content = r.read()
+      w.write(content.format(change_id=change_id))
 
 
 def write_version(output_dir, change_id):
-  with open(os.path.join(output_dir, 'VERSION'), 'w') as w:
+  with open(os.path.join(output_dir, 'VERSION'), 'w', encoding='utf-8') as w:
     w.write(change_id)
 
 
