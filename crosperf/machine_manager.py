@@ -28,12 +28,10 @@ CHECKSUM_FILE = '/usr/local/osimage_checksum_file'
 
 class BadChecksum(Exception):
   """Raised if all machines for a label don't have the same checksum."""
-  pass
 
 
 class BadChecksumString(Exception):
   """Raised if all machines for a label don't have the same checksum string."""
-  pass
 
 
 class MissingLocksDirectory(Exception):
@@ -298,8 +296,8 @@ class MachineManager(object):
         retval = image_chromeos.DoImage(image_chromeos_args)
       if retval:
         raise RuntimeError("Could not image machine: '%s'." % machine.name)
-      else:
-        self.num_reimages += 1
+
+      self.num_reimages += 1
       machine.checksum = checksum
       machine.image = label.chromeos_image
       machine.label = label

@@ -166,11 +166,10 @@ class SuiteRunner(object):
     # process namespace and we can kill process created easily by their
     # process group.
     chrome_root_options = ('--no-ns-pid '
-                           '--chrome_root={} --chrome_root_mount={} '
+                           '--chrome_root={0} --chrome_root_mount={1} '
                            'FEATURES="-usersandbox" '
-                           'CHROME_ROOT={}'.format(label.chrome_src,
-                                                   CHROME_MOUNT_DIR,
-                                                   CHROME_MOUNT_DIR))
+                           'CHROME_ROOT={1}'.format(label.chrome_src,
+                                                    CHROME_MOUNT_DIR))
 
     if self.log_level != 'verbose':
       self.logger.LogOutput('Running test.')

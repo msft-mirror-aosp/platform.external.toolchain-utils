@@ -20,7 +20,7 @@ import sys
 def ExpandArgs(args, target):
 	for arg in args:
 		if arg[0] == '@':
-			with open(arg[1:], 'rb') as f:
+			with open(arg[1:], 'r', encoding='utf-8') as f:
 				ExpandArgs(shlex.split(f.read()), target)
 		else:
 			target.append(arg)
@@ -64,7 +64,7 @@ func calcBisectCommand(env env, cfg *config, bisectStage string, compilerCmd *co
 	return &command{
 		Path: "/usr/bin/env",
 		Args: append([]string{
-			"python",
+			"python3",
 			"-c",
 			bisectPythonCommand,
 			bisectStage,
