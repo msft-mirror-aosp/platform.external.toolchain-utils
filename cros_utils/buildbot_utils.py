@@ -27,7 +27,6 @@ TIME_OUT = 43200  # Decide the build is dead or will never finish
 
 class BuildbotTimeout(Exception):
   """Exception to throw when a buildbot operation timesout."""
-  pass
 
 
 def RunCommandInPath(path, cmd):

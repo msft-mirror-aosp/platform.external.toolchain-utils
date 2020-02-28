@@ -14,6 +14,8 @@ type config struct {
 	isAndroidWrapper bool
 	// Whether to use ccache.
 	useCCache bool
+	// Whether llvmNext wrapper.
+	useLlvmNext bool
 	// Flags to add to gcc and clang.
 	commonFlags []string
 	// Flags to add to gcc only.
@@ -83,6 +85,7 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, version stri
 		return nil, newErrorwithSourceLocf("unknown config name: %s", configName)
 	}
 	cfg.useCCache = useCCache
+	cfg.useLlvmNext = useLlvmNext
 	if useLlvmNext {
 		cfg.clangFlags = append(cfg.clangFlags, llvmNextFlags...)
 	}
@@ -208,5 +211,5 @@ var androidConfig = &config{
 	gccFlags:         []string{},
 	clangFlags:       []string{},
 	clangPostFlags:   []string{},
-	newWarningsDir:   "/tmp/fatal_clang_warnings",
+	newWarningsDir:   "",
 }
