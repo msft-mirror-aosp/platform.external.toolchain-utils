@@ -112,7 +112,8 @@
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu",
-            "-Wno-error"
+            "-Wno-error",
+            "-Wno-error=poison-system-directories"
           ],
           "env_updates": [
             "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
@@ -193,7 +194,8 @@
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu",
-            "-Wno-error"
+            "-Wno-error",
+            "-Wno-error=poison-system-directories"
           ],
           "env_updates": [
             "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",

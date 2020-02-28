@@ -462,7 +462,7 @@ def ApplyGerritPatches(chromeos_root, gerrit_patch_string,
   sys.path.append(os.path.join(chromeos_root, 'chromite'))
   # Imports below are ok after modifying path to add chromite.
   # Pylint cannot detect that and complains.
-  # pylint: disable=import-error
+  # pylint: disable=import-error, import-outside-toplevel
   from lib import git
   from lib import gerrit
   manifest = git.ManifestCheckout(chromeos_root)

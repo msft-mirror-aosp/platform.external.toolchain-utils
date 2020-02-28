@@ -318,7 +318,7 @@ class SamplesTableGenerator(TableGenerator):
               v.append(None)
               run_fail += 1
           one_tuple = ((run_pass, run_fail), v)
-          if iterations != 0 and iterations != run_pass + run_fail:
+          if iterations not in (0, run_pass + run_fail):
             raise ValueError('Iterations of each benchmark run ' \
                              'are not the same')
           iterations = run_pass + run_fail
@@ -358,7 +358,7 @@ class SamplesTableGenerator(TableGenerator):
             # Accumulate each run result to composite benchmark run
             # If any run fails, then we set this run for composite benchmark
             # to None so that we know it fails.
-            if bench_runs[index] and row[label_index][index] != None:
+            if bench_runs[index] and row[label_index][index] is not None:
               row[label_index][index] += bench_runs[index]
             else:
               row[label_index][index] = None
@@ -557,12 +557,10 @@ class AmeanResult(StringMeanResult):
 
 class RawResult(Result):
   """Raw result."""
-  pass
 
 
 class IterationResult(Result):
   """Iteration result."""
-  pass
 
 
 class MinResult(Result):
