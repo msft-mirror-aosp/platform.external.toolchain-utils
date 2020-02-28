@@ -94,7 +94,8 @@
             "-Wno-unknown-warning-option",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-error"
+            "-Wno-error",
+            "-Wno-error=poison-system-directories"
           ]
         }
       }
@@ -159,7 +160,8 @@
             "-Wno-unknown-warning-option",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-error"
+            "-Wno-error",
+            "-Wno-error=poison-system-directories"
           ]
         },
         "stdout": "somemessage",

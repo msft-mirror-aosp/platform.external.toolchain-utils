@@ -204,23 +204,23 @@ class ToolchainComparator(object):
 
       # Now add vanilla to test file.
       official_image = """
-          vanilla_image {
-            chromeos_root: %s
-            build: %s
-            compiler: llvm
-          }
-          """ % (self._chromeos_root, vanilla_image)
+      vanilla_image {
+        chromeos_root: %s
+        build: %s
+        compiler: llvm
+      }
+      """ % (self._chromeos_root, vanilla_image)
       f.write(official_image)
 
       # Now add non-AFDO image to test file.
       if nonafdo_image:
         official_nonafdo_image = """
-          nonafdo_image {
-            chromeos_root: %s
-            build: %s
-            compiler: llvm
-          }
-          """ % (self._chromeos_root, nonafdo_image)
+        nonafdo_image {
+          chromeos_root: %s
+          build: %s
+          compiler: llvm
+        }
+        """ % (self._chromeos_root, nonafdo_image)
         f.write(official_nonafdo_image)
 
       label_string = '%s_trybot_image' % compiler_string
@@ -228,14 +228,14 @@ class ToolchainComparator(object):
       # Reuse autotest files from vanilla image for trybot images
       autotest_files = os.path.join('/tmp', vanilla_image, 'autotest_files')
       experiment_image = """
-          %s {
-            chromeos_root: %s
-            build: %s
-            autotest_path: %s
-            compiler: %s
-          }
-          """ % (label_string, self._chromeos_root, trybot_image,
-                 autotest_files, compiler_string)
+      %s {
+        chromeos_root: %s
+        build: %s
+        autotest_path: %s
+        compiler: %s
+      }
+      """ % (label_string, self._chromeos_root, trybot_image, autotest_files,
+             compiler_string)
       f.write(experiment_image)
 
     crosperf = os.path.join(TOOLCHAIN_DIR, 'crosperf', 'crosperf')
