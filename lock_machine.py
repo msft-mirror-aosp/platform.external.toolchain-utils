@@ -518,12 +518,6 @@ def Main(argv):
       lock_manager.CheckMachineLocks(machine_states, cmd)
       lock_manager.UpdateMachines(False)
 
-  elif cmd == 'add':
-    lock_manager.AddMachinesToLocalServer()
-
-  elif cmd == 'remove':
-    lock_manager.RemoveMachinesFromLocalServer()
-
   return 0
 
 
