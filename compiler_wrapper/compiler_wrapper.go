@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -231,16 +232,30 @@ func printCompilerError(writer io.Writer, compilerErr error) {
 	}
 }
 
-func teeStdinIfNeeded(env env, inputCmd *command, dest io.Writer) io.Reader {
-	// We can't use io.TeeReader unconditionally, as that would block
-	// calls to exec.Cmd.Run(), even if the underlying process has already
-	// terminated. See https://github.com/golang/go/issues/7990 for more details.
+func needStdinTee(inputCmd *command) bool {
 	lastArg := ""
 	for _, arg := range inputCmd.Args {
 		if arg == "-" && lastArg != "-o" {
-			return io.TeeReader(env.stdin(), dest)
+			return true
 		}
 		lastArg = arg
 	}
-	return env.stdin()
+	return false
+}
+
+func prebufferStdinIfNeeded(env env, inputCmd *command) (getStdin func() io.Reader, err error) {
+	// We pre-buffer the entirety of stdin, since the compiler may exit mid-invocation with an
+	// error, which may leave stdin partially read.
+	if !needStdinTee(inputCmd) {
+		// This won't produce deterministic input to the compiler, but stdin shouldn't
+		// matter in this case, so...
+		return env.stdin, nil
+	}
+
+	stdinBuffer := &bytes.Buffer{}
+	if _, err := stdinBuffer.ReadFrom(env.stdin()); err != nil {
+		return nil, wrapErrorwithSourceLocf(err, "prebuffering stdin")
+	}
+
+	return func() io.Reader { return bytes.NewReader(stdinBuffer.Bytes()) }, nil
 }
