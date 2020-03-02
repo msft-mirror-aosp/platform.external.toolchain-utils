@@ -240,10 +240,9 @@ class CommandExecuter(object):
     return command
 
   def WriteToTempShFile(self, contents):
-    # TODO(crbug.com/1048938): use encoding='utf-8' when all dependencies have
-    # migrated to python 3.
     with tempfile.NamedTemporaryFile(
-        'w', delete=False, prefix=os.uname()[1], suffix='.sh') as f:
+        'w', encoding='utf-8', delete=False, prefix=os.uname()[1],
+        suffix='.sh') as f:
       f.write('#!/bin/bash\n')
       f.write(contents)
       f.flush()
@@ -367,10 +366,9 @@ class CommandExecuter(object):
     if self.logger:
       self.logger.LogCmd(command, print_to_console=print_to_console)
 
-    # TODO(crbug.com/1048938): use encoding='utf-8' when all dependencies have
-    # migrated to python 3.
     with tempfile.NamedTemporaryFile(
         'w',
+        encoding='utf-8',
         delete=False,
         dir=os.path.join(chromeos_root, 'src/scripts'),
         suffix='.sh',
