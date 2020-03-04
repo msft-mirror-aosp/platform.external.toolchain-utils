@@ -59,9 +59,9 @@ class LockManager(object):
   # set it long enough to cover the period to finish nightly rotation tests.
   LEASE_MINS = 1440
 
-  SKYLAB_CREDENTIAL = '/usr/local/google/home/mobiletc-prebuild' \
-                      '/sheriff_utils/skylab_credential' \
-                      '/chromeos-swarming-credential.json'
+  SKYLAB_CREDENTIAL = ('/usr/local/google/home/mobiletc-prebuild'
+                       '/sheriff_utils/credentials/skylab'
+                       '/chromeos-swarming-credential.json')
   SWARMING = 'chromite/third_party/swarming.client/swarming.py'
   SUCCESS = 0
 
@@ -517,12 +517,6 @@ def Main(argv):
     if not lock_manager.force:
       lock_manager.CheckMachineLocks(machine_states, cmd)
       lock_manager.UpdateMachines(False)
-
-  elif cmd == 'add':
-    lock_manager.AddMachinesToLocalServer()
-
-  elif cmd == 'remove':
-    lock_manager.RemoveMachinesFromLocalServer()
 
   return 0
 

@@ -1,4 +1,9 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """Prototype compiler wrapper.
 
 Only tested with: gcc, g++, clang, clang++
@@ -21,7 +26,7 @@ import os
 import shlex
 import sys
 
-import bisect_driver
+from binary_search_tool import bisect_driver
 
 WRAPPED = '%s.real' % sys.argv[0]
 BISECT_STAGE = os.environ.get('BISECT_STAGE')
@@ -32,7 +37,7 @@ BISECT_DIR = os.environ.get('BISECT_DIR') or DEFAULT_BISECT_DIR
 def ProcessArgFile(arg_file):
   args = []
   # Read in entire file at once and parse as if in shell
-  with open(arg_file, 'rb') as f:
+  with open(arg_file, 'r', encoding='utf-8') as f:
     args.extend(shlex.split(f.read()))
 
   return args

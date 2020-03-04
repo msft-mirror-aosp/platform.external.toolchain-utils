@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -115,7 +115,7 @@ def main():
       '--tryjob',
       required=True,
       type=_tryjob_arg,
-      help='Path to our tryjob\'s artifacts. Accepts a gs:// path, pantheon '
+      help="Path to our tryjob's artifacts. Accepts a gs:// path, pantheon "
       'link, or tryjob ID, e.g. R75-11965.0.0-b3648595. In the last case, '
       'the assumption is that you ran a chell-chrome-pfq-tryjob.')
   parser.add_argument(
@@ -127,7 +127,7 @@ def main():
       '-k',
       '--keep_artifacts_on_failure',
       action='store_true',
-      help='Don\'t remove the tempdir on failure')
+      help="Don't remove the tempdir on failure")
   args = parser.parse_args()
 
   if not distutils.spawn.find_executable(_CREATE_LLVM_PROF):

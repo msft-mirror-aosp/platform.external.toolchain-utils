@@ -14,7 +14,7 @@ __author__ = 'asharif@google.com (Ahmad Sharif)'
 import unittest
 
 # Local modules
-import tabulator
+from cros_utils import tabulator
 
 
 class TabulatorTest(unittest.TestCase):

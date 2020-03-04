@@ -365,16 +365,12 @@ class BenchmarkRunTest(unittest.TestCase):
         '--profiler=custom_perf --profiler_args=\'perf_options="record -a -e '
         'cycles"\'')
 
-    self.test_benchmark.suite = 'telemetry'
-    result = br.GetExtraAutotestArgs()
-    self.assertEqual(result, '')
-    self.assertEqual(self.err_msg, 'Telemetry does not support profiler.')
-
     self.test_benchmark.perf_args = 'record -e cycles'
     self.test_benchmark.suite = 'test_that'
     result = br.GetExtraAutotestArgs()
     self.assertEqual(result, '')
-    self.assertEqual(self.err_msg, 'test_that does not support profiler.')
+    self.assertEqual(self.err_msg,
+                     'Non-telemetry benchmark does not support profiler.')
 
     self.test_benchmark.perf_args = 'junk args'
     self.test_benchmark.suite = 'telemetry_Crosperf'

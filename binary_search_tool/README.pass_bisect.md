@@ -41,7 +41,7 @@ them.
     bisection:
 
     ```
-    ./bisect.py android PATH_TO_ANDROID_HOME_DIR
+    ./run_bisect.py android PATH_TO_ANDROID_HOME_DIR
                 --pass_bisect=’android/generate_cmd.sh’
                 --prune=False
                 --ir_diff
