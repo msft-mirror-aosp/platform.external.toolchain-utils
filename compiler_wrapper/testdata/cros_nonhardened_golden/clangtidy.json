@@ -26,7 +26,7 @@
         "cmd": {
           "path": "../../usr/bin/clang-tidy",
           "args": [
-            "-checks=*,google*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-build-using-namespace,-google-default-arguments,-google-explicit-constructor,-google-readability*,-google-runtime-int,-google-runtime-references,-hicpp-avoid-c-arrays,-hicpp-braces-around-statements,-hicpp-no-array-decay,-hicpp-signed-bitwise,-hicpp-uppercase-literal-suffix,-hicpp-use-auto,-llvm-namespace-comment,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
+            "-checks=*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-readability*,-google-runtime-references,-hicpp-*,-llvm-*,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
             "main.cc",
             "--",
             "-resource-dir=someResourceDir",
@@ -98,7 +98,7 @@
         "cmd": {
           "path": "../../usr/bin/clang-tidy",
           "args": [
-            "-checks=*,google*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-build-using-namespace,-google-default-arguments,-google-explicit-constructor,-google-readability*,-google-runtime-int,-google-runtime-references,-hicpp-avoid-c-arrays,-hicpp-braces-around-statements,-hicpp-no-array-decay,-hicpp-signed-bitwise,-hicpp-uppercase-literal-suffix,-hicpp-use-auto,-llvm-namespace-comment,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
+            "-checks=*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-readability*,-google-runtime-references,-hicpp-*,-llvm-*,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
             "main.cc",
             "--",
             "-resource-dir=someResourceDir",
@@ -173,7 +173,7 @@
         "cmd": {
           "path": "../../usr/bin/clang-tidy",
           "args": [
-            "-checks=*,google*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-build-using-namespace,-google-default-arguments,-google-explicit-constructor,-google-readability*,-google-runtime-int,-google-runtime-references,-hicpp-avoid-c-arrays,-hicpp-braces-around-statements,-hicpp-no-array-decay,-hicpp-signed-bitwise,-hicpp-uppercase-literal-suffix,-hicpp-use-auto,-llvm-namespace-comment,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
+            "-checks=*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-readability*,-google-runtime-references,-hicpp-*,-llvm-*,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
             "main.cc",
             "--",
             "-resource-dir=someResourceDir",
@@ -252,7 +252,7 @@
         "cmd": {
           "path": "../../usr/bin/clang-tidy",
           "args": [
-            "-checks=*,google*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-build-using-namespace,-google-default-arguments,-google-explicit-constructor,-google-readability*,-google-runtime-int,-google-runtime-references,-hicpp-avoid-c-arrays,-hicpp-braces-around-statements,-hicpp-no-array-decay,-hicpp-signed-bitwise,-hicpp-uppercase-literal-suffix,-hicpp-use-auto,-llvm-namespace-comment,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
+            "-checks=*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-readability*,-google-runtime-references,-hicpp-*,-llvm-*,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
             "main.cc",
             "--",
             "-resource-dir=someResourceDir",
