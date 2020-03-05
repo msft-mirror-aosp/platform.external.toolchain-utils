@@ -49,9 +49,14 @@ func doubleBuildWithWNoError(env env, cfg *config, newWarningsDir string, origin
 	if originalCmd.Path == "/usr/bin/ccache" {
 		originalCmd.Path = "ccache"
 	}
-	originalStdinBuffer := &bytes.Buffer{}
+
+	getStdin, err := prebufferStdinIfNeeded(env, originalCmd)
+	if err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "prebuffering stdin: %v", err)
+	}
+
 	originalExitCode, err := wrapSubprocessErrorWithSourceLoc(originalCmd,
-		env.run(originalCmd, teeStdinIfNeeded(env, originalCmd, originalStdinBuffer), originalStdoutBuffer, originalStderrBuffer))
+		env.run(originalCmd, getStdin(), originalStdoutBuffer, originalStderrBuffer))
 	if err != nil {
 		return 0, err
 	}
@@ -71,7 +76,7 @@ func doubleBuildWithWNoError(env env, cfg *config, newWarningsDir string, origin
 		EnvUpdates: originalCmd.EnvUpdates,
 	}
 	retryExitCode, err := wrapSubprocessErrorWithSourceLoc(retryCommand,
-		env.run(retryCommand, bytes.NewReader(originalStdinBuffer.Bytes()), retryStdoutBuffer, retryStderrBuffer))
+		env.run(retryCommand, getStdin(), retryStdoutBuffer, retryStderrBuffer))
 	if err != nil {
 		return 0, err
 	}
