@@ -455,7 +455,8 @@ def UploadChanges(path_to_repo_dir, llvm_hash, commit_messages):
 
   # Upload the changes for review.
   upload_change_cmd = (
-      'yes | repo upload --br=llvm-next-update-%s --no-verify' % llvm_hash)
+      'yes | repo upload --wip --ne --br=llvm-next-update-%s --no-verify' %
+      llvm_hash)
 
   # Pylint currently doesn't lint things in py3 mode, and py2 didn't allow
   # users to specify `encoding`s for Popen. Hence, pylint is "wrong" here.
