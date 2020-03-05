@@ -38,6 +38,29 @@ func callCompiler(env env, cfg *config, inputCmd *command) int {
 	return exitCode
 }
 
+// Given the main builder path and the absolute path to our wrapper, returns the path to the
+// 'real' compiler we should invoke.
+func calculateAndroidWrapperPath(mainBuilderPath string, absWrapperPath string) string {
+	// FIXME: This combination of using the directory of the symlink but the basename of the
+	// link target is strange but is the logic that old android wrapper uses. Change this to use
+	// directory and basename either from the absWrapperPath or from the builder.path, but don't
+	// mix anymore.
+
+	// We need to be careful here: path.Join Clean()s its result, so `./foo` will get
+	// transformed to `foo`, which isn't good since we're passing this path to exec.
+	basePart := filepath.Base(absWrapperPath) + ".real"
+	if !strings.ContainsRune(mainBuilderPath, filepath.Separator) {
+		return basePart
+	}
+
+	dirPart := filepath.Dir(mainBuilderPath)
+	if cleanResult := filepath.Join(dirPart, basePart); strings.ContainsRune(cleanResult, filepath.Separator) {
+		return cleanResult
+	}
+
+	return "." + string(filepath.Separator) + basePart
+}
+
 func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
 	if err := checkUnsupportedFlags(inputCmd); err != nil {
 		return 0, err
@@ -52,12 +75,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	var compilerCmd *command
 	clangSyntax := processClangSyntaxFlag(mainBuilder)
 	if cfg.isAndroidWrapper {
-		// FIXME: This combination of using the directory of the symlink but the
-		// basename of the link target is strange but is the logic that old android
-		// wrapper uses. Change this to use directory and basename either from the
-		// absWrapperPath or from the builder.path, but don't mix anymore.
-		mainBuilder.path = filepath.Join(filepath.Dir(mainBuilder.path), filepath.Base(mainBuilder.absWrapperPath)+".real")
-
+		mainBuilder.path = calculateAndroidWrapperPath(mainBuilder.path, mainBuilder.absWrapperPath)
 		switch mainBuilder.target.compilerType {
 		case clangType:
 			mainBuilder.addPreUserArgs(mainBuilder.cfg.clangFlags...)

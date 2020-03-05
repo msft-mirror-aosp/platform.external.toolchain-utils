@@ -229,7 +229,7 @@ func TestCompileWithFallbackLogCommandAndErrors(t *testing.T) {
 
 		log := readCompileWithFallbackErrorLog(ctx)
 		if log != `==================COMMAND:====================
-clang.real main.cc -fno-color-diagnostics -a -b
+./clang.real main.cc -fno-color-diagnostics -a -b
 
 someerror
 ==============================================
