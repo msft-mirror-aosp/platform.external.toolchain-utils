@@ -21,8 +21,8 @@ INITIAL_SLEEP_TIME = 7200  # 2 hours; wait time before polling buildbot.
 SLEEP_TIME = 600  # 10 minutes; time between polling of buildbot.
 
 # Some of our slower builders (llvm-next) are taking more
-# than 11 hours. So, increase this TIME_OUT to 12 hours.
-TIME_OUT = 43200  # Decide the build is dead or will never finish
+# than 12 hours. So, increase this TIME_OUT to 15 hours.
+TIME_OUT = 15 * 60 * 60  # Decide the build is dead or will never finish
 
 
 class BuildbotTimeout(Exception):
