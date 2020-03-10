@@ -288,20 +288,24 @@ class ExperimentFactory(object):
                                   perf_args, suite, show_all_results, retries,
                                   run_local, cwp_dso, weight)
           # Add non-telemetry toolchain-perf benchmarks:
-          benchmarks.append(
-              Benchmark(
-                  'graphics_WebGLAquarium',
-                  'graphics_WebGLAquarium',
-                  '',
-                  iterations,
-                  rm_chroot_tmp,
-                  perf_args,
-                  'crosperf_Wrapper',  # Use client wrapper in Autotest
-                  show_all_results,
-                  retries,
-                  run_local=False,
-                  cwp_dso=cwp_dso,
-                  weight=weight))
+
+          # TODO: crbug.com/1057755 Do not enable graphics_WebGLAquarium until
+          # it gets fixed.
+          #
+          # benchmarks.append(
+          #     Benchmark(
+          #         'graphics_WebGLAquarium',
+          #         'graphics_WebGLAquarium',
+          #         '',
+          #         iterations,
+          #         rm_chroot_tmp,
+          #         perf_args,
+          #         'crosperf_Wrapper',  # Use client wrapper in Autotest
+          #         show_all_results,
+          #         retries,
+          #         run_local=False,
+          #         cwp_dso=cwp_dso,
+          #         weight=weight))
         elif test_name == 'all_toolchain_perf_old':
           self.AppendBenchmarkSet(
               benchmarks, telemetry_toolchain_old_perf_tests, test_args,
