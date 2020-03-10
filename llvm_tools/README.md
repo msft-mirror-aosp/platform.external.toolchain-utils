@@ -470,3 +470,20 @@ from get_llvm_hash import GetGoogle3LLVMVersion
 
 GetGoogle3LLVMVersion(stable=True)
 ```
+
+### `cherrypick_cl.py`
+
+#### Usage
+
+This script updates sys-devel/llvm with an LLVM cherrypick of your choosing, and
+copies the cherrypick into sys-devel/llvm/files/cherry.
+
+Usage:
+
+```
+./cherrypick_cl.py --sha 174c3eb69f19ff2d6a3eeae31d04afe77e62c021
+```
+
+It tries to autodetect a lot of things (e.g., sys-devel/llvm's path, the
+"start"/"end" revisions to set, etc.) For more information, please see the
+`--help`
