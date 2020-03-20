@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -9,7 +9,7 @@
 from __future__ import print_function
 
 import unittest
-import mock
+import unittest.mock as mock
 
 import settings
 import settings_factory
@@ -37,7 +37,7 @@ class TestSettings(unittest.TestCase):
     settings_parent = {'fake_parent_entry': 0}
     self.settings.SetParentSettings(settings_parent)
     self.assertIsNotNone(self.settings.parent)
-    self.assertEqual(type(self.settings.parent), dict)
+    self.assertTrue(isinstance(self.settings.parent, dict))
     self.assertEqual(self.settings.parent, settings_parent)
 
   def test_add_field(self):
@@ -88,7 +88,7 @@ class TestSettings(unittest.TestCase):
             description="A comma-separated list of ip's of "
             'chromeos devices to run '
             'experiments on.'))
-    self.assertEqual(type(self.settings.fields), dict)
+    self.assertTrue(isinstance(self.settings.fields, dict))
     self.assertEqual(len(self.settings.fields), 2)
     res = self.settings.fields['remote']
     self.assertEqual(res.Get(), [])

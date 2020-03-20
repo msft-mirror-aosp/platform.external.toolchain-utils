@@ -1,10 +1,12 @@
-#!/usr/bin/env python2
-
-# Copyright 2018 The Chromium OS Authors. All rights reserved.
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """Tests for bisecting tool."""
 
+from __future__ import division
 from __future__ import print_function
 
 __author__ = 'shenhan@google.com (Han Shen)'
@@ -16,15 +18,15 @@ import unittest
 
 from cros_utils import command_executer
 from binary_search_tool import binary_search_state
-from binary_search_tool import bisect
+from binary_search_tool import run_bisect
 
-import common
-import gen_obj
+from binary_search_tool.test import common
+from binary_search_tool.test import gen_obj
 
 
 def GenObj():
   obj_num = random.randint(100, 1000)
-  bad_obj_num = random.randint(obj_num / 100, obj_num / 20)
+  bad_obj_num = random.randint(obj_num // 100, obj_num // 20)
   if bad_obj_num == 0:
     bad_obj_num = 1
   gen_obj.Main(['--obj_num', str(obj_num), '--bad_obj_num', str(bad_obj_num)])
@@ -38,10 +40,10 @@ def CleanObj():
 
 
 class BisectTest(unittest.TestCase):
-  """Tests for bisect.py"""
+  """Tests for run_bisect.py"""
 
   def setUp(self):
-    with open('./is_setup', 'w'):
+    with open('./is_setup', 'w', encoding='utf-8'):
       pass
 
     try:
@@ -57,8 +59,8 @@ class BisectTest(unittest.TestCase):
     except OSError:
       pass
 
-  class FullBisector(bisect.Bisector):
-    """Test bisector to test bisect.py with"""
+  class FullBisector(run_bisect.Bisector):
+    """Test bisector to test run_bisect.py with"""
 
     def __init__(self, options, overrides):
       super(BisectTest.FullBisector, self).__init__(options, overrides)
@@ -81,14 +83,14 @@ class BisectTest(unittest.TestCase):
       return 0
 
   def test_full_bisector(self):
-    ret = bisect.Run(self.FullBisector({}, {}))
-    self.assertEquals(ret, 0)
+    ret = run_bisect.Run(self.FullBisector({}, {}))
+    self.assertEqual(ret, 0)
     self.assertFalse(os.path.exists(common.OBJECTS_FILE))
     self.assertFalse(os.path.exists(common.WORKING_SET_FILE))
 
   def check_output(self):
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
-        ('grep "Bad items are: " logs/binary_search_tool_tester.py.out | '
+        ('grep "Bad items are: " logs/binary_search_tool_test.py.out | '
          'tail -n1'))
     ls = out.splitlines()
     self.assertEqual(len(ls), 1)
@@ -113,7 +115,7 @@ class BisectingUtilsTest(unittest.TestCase):
     """Generate [100-1000] object files, and 1-5% of which are bad ones."""
     GenObj()
 
-    with open('./is_setup', 'w'):
+    with open('./is_setup', 'w', encoding='utf-8'):
       pass
 
     try:
@@ -146,7 +148,7 @@ class BisectingUtilsTest(unittest.TestCase):
         test_script='./is_good.py',
         prune=True,
         file_args=True)
-    self.assertEquals(ret, 0)
+    self.assertEqual(ret, 0)
     self.check_output()
 
   def test_arg_parse(self):
@@ -156,7 +158,7 @@ class BisectingUtilsTest(unittest.TestCase):
         '--test_script', './is_good.py', '--prune', '--file_args'
     ]
     ret = binary_search_state.Main(args)
-    self.assertEquals(ret, 0)
+    self.assertEqual(ret, 0)
     self.check_output()
 
   def test_test_setup_script(self):
@@ -178,7 +180,7 @@ class BisectingUtilsTest(unittest.TestCase):
         test_setup_script='./test_setup.py',
         prune=True,
         file_args=True)
-    self.assertEquals(ret, 0)
+    self.assertEqual(ret, 0)
     self.check_output()
 
   def test_bad_test_setup_script(self):
@@ -196,15 +198,15 @@ class BisectingUtilsTest(unittest.TestCase):
     state_file = binary_search_state.STATE_FILE
     hidden_state_file = os.path.basename(binary_search_state.HIDDEN_STATE_FILE)
 
-    with open(state_file, 'w') as f:
+    with open(state_file, 'w', encoding='utf-8') as f:
       f.write('test123')
 
     bss = binary_search_state.MockBinarySearchState()
-    with self.assertRaises(binary_search_state.Error):
+    with self.assertRaises(OSError):
       bss.SaveState()
 
-    with open(state_file, 'r') as f:
-      self.assertEquals(f.read(), 'test123')
+    with open(state_file, 'r', encoding='utf-8') as f:
+      self.assertEqual(f.read(), 'test123')
 
     os.remove(state_file)
 
@@ -243,9 +245,9 @@ class BisectingUtilsTest(unittest.TestCase):
     bss = None
 
     bss2 = binary_search_state.MockBinarySearchState.LoadState()
-    self.assertEquals(bss2.all_items, test_items)
-    self.assertEquals(bss2.currently_good_items, set([]))
-    self.assertEquals(bss2.currently_bad_items, set([]))
+    self.assertEqual(bss2.all_items, test_items)
+    self.assertEqual(bss2.currently_good_items, set([]))
+    self.assertEqual(bss2.currently_bad_items, set([]))
 
   def test_tmp_cleanup(self):
     bss = binary_search_state.MockBinarySearchState(
@@ -255,14 +257,14 @@ class BisectingUtilsTest(unittest.TestCase):
     bss.SwitchToGood(['0', '1', '2', '3'])
 
     tmp_file = None
-    with open('tmp_file', 'r') as f:
+    with open('tmp_file', 'r', encoding='utf-8') as f:
       tmp_file = f.read()
     os.remove('tmp_file')
 
     self.assertFalse(os.path.exists(tmp_file))
     ws = common.ReadWorkingSet()
     for i in range(3):
-      self.assertEquals(ws[i], 42)
+      self.assertEqual(ws[i], 42)
 
   def test_verify_fail(self):
     bss = binary_search_state.MockBinarySearchState(
@@ -298,11 +300,11 @@ class BisectingUtilsTest(unittest.TestCase):
         prune=False,
         file_args=True)
     bss.DoSearchBadItems()
-    self.assertEquals(len(bss.found_items), 1)
+    self.assertEqual(len(bss.found_items), 1)
 
     bad_objs = common.ReadObjectsFile()
     found_obj = int(bss.found_items.pop())
-    self.assertEquals(bad_objs[found_obj], 1)
+    self.assertEqual(bad_objs[found_obj], 1)
 
   def test_set_file(self):
     binary_search_state.Run(
@@ -326,12 +328,12 @@ class BisectingUtilsTest(unittest.TestCase):
         noincremental=True,
         file_args=True,
         verify=False)
-    self.assertEquals(ret, 0)
+    self.assertEqual(ret, 0)
     self.check_output()
 
   def check_output(self):
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
-        ('grep "Bad items are: " logs/binary_search_tool_tester.py.out | '
+        ('grep "Bad items are: " logs/binary_search_tool_test.py.out | '
          'tail -n1'))
     ls = out.splitlines()
     self.assertEqual(len(ls), 1)
@@ -354,7 +356,7 @@ class BisectingUtilsPassTest(BisectingUtilsTest):
 
   def check_pass_output(self, pass_name, pass_num, trans_num):
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
-        ('grep "Bad pass: " logs/binary_search_tool_tester.py.out | '
+        ('grep "Bad pass: " logs/binary_search_tool_test.py.out | '
          'tail -n1'))
     ls = out.splitlines()
     self.assertEqual(len(ls), 1)
@@ -365,7 +367,7 @@ class BisectingUtilsPassTest(BisectingUtilsTest):
 
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
         ('grep "Bad transformation number: '
-         '" logs/binary_search_tool_tester.py.out | '
+         '" logs/binary_search_tool_test.py.out | '
          'tail -n1'))
     ls = out.splitlines()
     self.assertEqual(len(ls), 1)
@@ -383,7 +385,7 @@ class BisectingUtilsPassTest(BisectingUtilsTest):
         pass_bisect='./generate_cmd.py',
         prune=True,
         file_args=True)
-    self.assertEquals(ret, 1)
+    self.assertEqual(ret, 1)
 
   def test_gen_cmd_script(self):
     bss = binary_search_state.MockBinarySearchState(
@@ -488,7 +490,7 @@ class BisectStressTest(unittest.TestCase):
         prune=True,
         file_args=True,
         verify=False)
-    self.assertEquals(ret, 0)
+    self.assertEqual(ret, 0)
     self.check_output()
 
   def test_every_index_is_bad(self):
@@ -506,12 +508,12 @@ class BisectStressTest(unittest.TestCase):
           test_script='./is_good.py',
           prune=True,
           file_args=True)
-      self.assertEquals(ret, 0)
+      self.assertEqual(ret, 0)
       self.check_output()
 
   def check_output(self):
     _, out, _ = command_executer.GetCommandExecuter().RunCommandWOutput(
-        ('grep "Bad items are: " logs/binary_search_tool_tester.py.out | '
+        ('grep "Bad items are: " logs/binary_search_tool_test.py.out | '
          'tail -n1'))
     ls = out.splitlines()
     self.assertEqual(len(ls), 1)

@@ -127,6 +127,11 @@ func fillGoldenResults(ctx *testContext, files []goldenFile) []goldenFile {
 				}
 				cmdResult := record.Cmds[len(newCmds)]
 				cmdResult.Cmd = cmd
+				if numEnvUpdates := len(cmdResult.Cmd.EnvUpdates); numEnvUpdates > 0 {
+					if strings.HasPrefix(cmdResult.Cmd.EnvUpdates[numEnvUpdates-1], "PYTHONPATH") {
+						cmdResult.Cmd.EnvUpdates[numEnvUpdates-1] = "PYTHONPATH=/somepath/test_binary"
+					}
+				}
 				newCmds = append(newCmds, cmdResult)
 				io.WriteString(stdout, cmdResult.Stdout)
 				io.WriteString(stderr, cmdResult.Stderr)

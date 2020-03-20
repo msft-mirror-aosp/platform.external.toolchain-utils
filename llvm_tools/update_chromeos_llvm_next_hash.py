@@ -167,8 +167,8 @@ def _ConvertChrootPathsToSymLinkPaths(chromeos_root, chroot_file_paths):
   # and combine the chroot path with the result and add it to the list.
   for cur_chroot_file_path in chroot_file_paths:
     if not cur_chroot_file_path.startswith(chroot_prefix):
-      raise ValueError('Invalid prefix for the chroot path: %s' %
-                       cur_chroot_file_path)
+      raise ValueError(
+          'Invalid prefix for the chroot path: %s' % cur_chroot_file_path)
 
     rel_path = cur_chroot_file_path[len(chroot_prefix):]
 
@@ -455,7 +455,8 @@ def UploadChanges(path_to_repo_dir, llvm_hash, commit_messages):
 
   # Upload the changes for review.
   upload_change_cmd = (
-      'yes | repo upload --br=llvm-next-update-%s --no-verify' % llvm_hash)
+      'yes | repo upload --wip --ne --br=llvm-next-update-%s --no-verify' %
+      llvm_hash)
 
   # Pylint currently doesn't lint things in py3 mode, and py2 didn't allow
   # users to specify `encoding`s for Popen. Hence, pylint is "wrong" here.
@@ -537,8 +538,8 @@ def StagePatchMetadataFileForCommit(patch_metadata_file_path):
   """
 
   if not os.path.isfile(patch_metadata_file_path):
-    raise ValueError('Invalid patch metadata file provided: %s' %
-                     patch_metadata_file_path)
+    raise ValueError(
+        'Invalid patch metadata file provided: %s' % patch_metadata_file_path)
 
   # Cmd to stage the patch metadata file for commit.
   stage_patch_file = [
@@ -635,14 +636,15 @@ def UpdatePackages(packages, llvm_hash, llvm_version, chroot_path,
 
   try:
     if svn_option in get_llvm_hash.KNOWN_HASH_SOURCES:
-      commit_message_header = ('llvm-next/%s: Update packages to r%d' %
-                               (svn_option, llvm_version))
+      commit_message_header = ('llvm-next/%s: upgrade to %s (r%d)' %
+                               (svn_option, llvm_hash, llvm_version))
     else:
-      commit_message_header = 'llvm-next: Update packages to r%d' % llvm_version
+      commit_message_header = (
+          'llvm-next: upgrade to %s (r%d)' % (llvm_hash, llvm_version))
 
     commit_messages = ['-m %s' % commit_message_header]
 
-    commit_messages.append('-m %s' % 'Following packages have been updated:')
+    commit_messages.append('-m The following packages have been updated:')
 
     # Holds the list of packages that are updating.
     packages = []
@@ -700,11 +702,10 @@ def main():
 
   llvm_hash, llvm_version = GetLLVMHashAndVersionFromSVNOption(svn_option)
 
-  change_list = UpdatePackages(args_output.update_packages, llvm_hash,
-                               llvm_version, args_output.chroot_path,
-                               args_output.patch_metadata_file,
-                               FailureModes(args_output.failure_mode),
-                               svn_option)
+  change_list = UpdatePackages(
+      args_output.update_packages, llvm_hash, llvm_version,
+      args_output.chroot_path, args_output.patch_metadata_file,
+      FailureModes(args_output.failure_mode), svn_option)
 
   print('Successfully updated packages to %d' % llvm_version)
   print('Gerrit URL: %s' % change_list.url)

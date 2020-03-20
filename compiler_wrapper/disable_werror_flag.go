@@ -9,16 +9,39 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"path"
 	"strings"
 	"syscall"
 )
 
-func shouldForceDisableWError(env env) bool {
-	value, _ := env.getenv("FORCE_DISABLE_WERROR")
-	return value != ""
+func getNewWarningsDir(env env, cfg *config) (dirName string, ok bool) {
+	if cfg.isAndroidWrapper {
+		if cfg.useLlvmNext {
+			value, _ := env.getenv("OUT_DIR")
+			if value != "" {
+				return path.Join(value, "warnings_reports"), true
+			}
+		}
+	} else {
+		value, _ := env.getenv("FORCE_DISABLE_WERROR")
+		if value != "" {
+			return cfg.newWarningsDir, true
+		}
+	}
+	return "", false
 }
 
-func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCode int, err error) {
+func disableWerrorFlags(originalArgs []string) []string {
+	noErrors := []string{"-Wno-error"}
+	for _, flag := range originalArgs {
+		if strings.HasPrefix(flag, "-Werror=") {
+			noErrors = append(noErrors, strings.Replace(flag, "-Werror", "-Wno-error", 1))
+		}
+	}
+	return noErrors
+}
+
+func doubleBuildWithWNoError(env env, cfg *config, newWarningsDir string, originalCmd *command) (exitCode int, err error) {
 	originalStdoutBuffer := &bytes.Buffer{}
 	originalStderrBuffer := &bytes.Buffer{}
 	// TODO: This is a bug in the old wrapper that it drops the ccache path
@@ -26,9 +49,14 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 	if originalCmd.Path == "/usr/bin/ccache" {
 		originalCmd.Path = "ccache"
 	}
-	originalStdinBuffer := &bytes.Buffer{}
+
+	getStdin, err := prebufferStdinIfNeeded(env, originalCmd)
+	if err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "prebuffering stdin: %v", err)
+	}
+
 	originalExitCode, err := wrapSubprocessErrorWithSourceLoc(originalCmd,
-		env.run(originalCmd, teeStdinIfNeeded(env, originalCmd, originalStdinBuffer), originalStdoutBuffer, originalStderrBuffer))
+		env.run(originalCmd, getStdin(), originalStdoutBuffer, originalStderrBuffer))
 	if err != nil {
 		return 0, err
 	}
@@ -44,11 +72,11 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 	retryStderrBuffer := &bytes.Buffer{}
 	retryCommand := &command{
 		Path:       originalCmd.Path,
-		Args:       append(originalCmd.Args, "-Wno-error"),
+		Args:       append(originalCmd.Args, disableWerrorFlags(originalCmd.Args)...),
 		EnvUpdates: originalCmd.EnvUpdates,
 	}
 	retryExitCode, err := wrapSubprocessErrorWithSourceLoc(retryCommand,
-		env.run(retryCommand, bytes.NewReader(originalStdinBuffer.Bytes()), retryStdoutBuffer, retryStderrBuffer))
+		env.run(retryCommand, getStdin(), retryStdoutBuffer, retryStderrBuffer))
 	if err != nil {
 		return 0, err
 	}
@@ -73,8 +101,8 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 	defer syscall.Umask(oldMask)
 
 	// Allow root and regular users to write to this without issue.
-	if err := os.MkdirAll(cfg.newWarningsDir, 0777); err != nil {
-		return 0, wrapErrorwithSourceLocf(err, "error creating warnings directory %s", cfg.newWarningsDir)
+	if err := os.MkdirAll(newWarningsDir, 0777); err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "error creating warnings directory %s", newWarningsDir)
 	}
 
 	// Have some tag to show that files aren't fully written. It would be sad if
@@ -85,7 +113,7 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 	// Coming up with a consistent name for this is difficult (compiler command's
 	// SHA can clash in the case of identically named files in different
 	// directories, or similar); let's use a random one.
-	tmpFile, err := ioutil.TempFile(cfg.newWarningsDir, "warnings_report*.json"+incompleteSuffix)
+	tmpFile, err := ioutil.TempFile(newWarningsDir, "warnings_report*.json"+incompleteSuffix)
 	if err != nil {
 		return 0, wrapErrorwithSourceLocf(err, "error creating warnings file")
 	}

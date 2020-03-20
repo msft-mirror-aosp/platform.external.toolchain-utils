@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
@@ -12,12 +12,11 @@ from __future__ import print_function
 import time
 
 import unittest
-import mock
-
-from device_setup_utils import DutWrapper
+from unittest import mock
 
 from cros_utils import command_executer
 from cros_utils import logger
+from cros_utils.device_setup_utils import DutWrapper
 
 BIG_LITTLE_CPUINFO = """processor       : 0
 model name      : ARMv8 Processor rev 4 (v8l)
@@ -162,8 +161,7 @@ class DutWrapperTest(unittest.TestCase):
                    'if [[ -e /proc/sys/kernel/randomize_va_space ]]; then '
                    '  echo 0 > /proc/sys/kernel/randomize_va_space; '
                    'fi')
-    self.dw.RunCommandOnDut.assert_called_once_with(
-        set_cpu_cmd, ignore_status=False)
+    self.dw.RunCommandOnDut.assert_called_once_with(set_cpu_cmd)
 
   def test_set_cpu_governor(self):
     self.dw.RunCommandOnDut = mock.Mock(return_value=(0, '', ''))
@@ -451,8 +449,8 @@ class DutWrapperTest(unittest.TestCase):
     self.dw.dut_config['cpu_freq_pct'] = 50
     self.dw.SetupCpuFreq(online)
     self.dw.RunCommandOnDut.assert_called_once()
-    self.assertNotRegexpMatches(self.dw.RunCommandOnDut.call_args_list[0][0][0],
-                                '^echo.*scaling_max_freq$')
+    self.assertNotRegex(self.dw.RunCommandOnDut.call_args_list[0][0][0],
+                        '^echo.*scaling_max_freq$')
 
   def test_setup_cpu_freq_multiple_no_access(self):
     online = [0, 1]
@@ -614,6 +612,90 @@ class DutWrapperTest(unittest.TestCase):
     self.dw.StartUI()
     self.dw.RunCommandOnDut.assert_called_once_with(
         'start ui', ignore_status=True)
+
+  def test_setup_device(self):
+
+    def FakeRunner(command, ignore_status=False):
+      # pylint fix for unused variable.
+      del command, ignore_status
+      return 0, '', ''
+
+    def SetupMockFunctions():
+      self.dw.RunCommandOnDut = mock.Mock(return_value=FakeRunner)
+      self.dw.KerncmdUpdateNeeded = mock.Mock(return_value=True)
+      self.dw.UpdateKerncmdIntelPstate = mock.Mock(return_value=0)
+      self.dw.DisableASLR = mock.Mock(return_value=0)
+      self.dw.SetupCpuUsage = mock.Mock(return_value=0)
+      self.dw.SetupCpuFreq = mock.Mock(return_value=0)
+      self.dw.GetCpuOnline = mock.Mock(return_value={0: 1, 1: 1, 2: 0})
+      self.dw.SetCpuGovernor = mock.Mock(return_value=0)
+      self.dw.DisableTurbo = mock.Mock(return_value=0)
+      self.dw.StopUI = mock.Mock(return_value=0)
+      self.dw.StartUI = mock.Mock(return_value=0)
+      self.dw.WaitCooldown = mock.Mock(return_value=0)
+      self.dw.DecreaseWaitTime = mock.Mock(return_value=0)
+
+    self.dw.dut_config['enable_aslr'] = False
+    self.dw.dut_config['cooldown_time'] = 0
+    self.dw.dut_config['governor'] = 'fake_governor'
+    self.dw.dut_config['cpu_freq_pct'] = 65
+    self.dw.dut_config['intel_pstate'] = 'no_hwp'
+
+    SetupMockFunctions()
+    self.dw.SetupDevice()
+
+    self.dw.KerncmdUpdateNeeded.assert_called_once()
+    self.dw.UpdateKerncmdIntelPstate.assert_called_once()
+    self.dw.DisableASLR.assert_called_once()
+    self.dw.SetupCpuUsage.assert_called_once_with()
+    self.dw.SetupCpuFreq.assert_called_once_with([0, 1])
+    self.dw.GetCpuOnline.assert_called_once_with()
+    self.dw.SetCpuGovernor.assert_called_once_with('fake_governor')
+    self.dw.DisableTurbo.assert_called_once_with()
+    self.dw.DecreaseWaitTime.assert_called_once_with()
+    self.dw.StopUI.assert_called_once_with()
+    self.dw.StartUI.assert_called_once_with()
+    self.dw.WaitCooldown.assert_not_called()
+
+    # Test SetupDevice with cooldown
+    self.dw.dut_config['cooldown_time'] = 10
+
+    SetupMockFunctions()
+    self.dw.GetCpuOnline = mock.Mock(return_value={0: 0, 1: 1})
+
+    self.dw.SetupDevice()
+
+    self.dw.WaitCooldown.assert_called_once_with()
+    self.dw.DisableASLR.assert_called_once()
+    self.dw.DisableTurbo.assert_called_once_with()
+    self.dw.SetupCpuUsage.assert_called_once_with()
+    self.dw.SetupCpuFreq.assert_called_once_with([1])
+    self.dw.SetCpuGovernor.assert_called()
+    self.dw.GetCpuOnline.assert_called_once_with()
+    self.dw.StopUI.assert_called_once_with()
+    self.dw.StartUI.assert_called_once_with()
+    self.assertGreater(self.dw.SetCpuGovernor.call_count, 1)
+    self.assertEqual(self.dw.SetCpuGovernor.call_args,
+                     mock.call('fake_governor'))
+
+    # Test SetupDevice with cooldown
+    SetupMockFunctions()
+    self.dw.SetupCpuUsage = mock.Mock(side_effect=RuntimeError())
+
+    with self.assertRaises(RuntimeError):
+      self.dw.SetupDevice()
+
+    # This call injected an exception.
+    self.dw.SetupCpuUsage.assert_called_once_with()
+    # Calls following the expeption are skipped.
+    self.dw.WaitCooldown.assert_not_called()
+    self.dw.DisableTurbo.assert_not_called()
+    self.dw.SetupCpuFreq.assert_not_called()
+    self.dw.SetCpuGovernor.assert_not_called()
+    self.dw.GetCpuOnline.assert_not_called()
+    # Check that Stop/Start UI are always called.
+    self.dw.StopUI.assert_called_once_with()
+    self.dw.StartUI.assert_called_once_with()
 
 
 if __name__ == '__main__':

@@ -13,10 +13,10 @@ import json
 import os
 import subprocess
 import sys
-
 from collections import namedtuple
+
+import get_llvm_hash
 from failure_modes import FailureModes
-from get_llvm_hash import LLVMHash
 from subprocess_helpers import check_call
 from subprocess_helpers import check_output
 
@@ -95,6 +95,13 @@ def GetCommandLineArgs():
       'bisecting a patch (default: %(default)s) - only used for '
       '"bisect_patches"')
 
+  # Trust src_path HEAD and svn_version.
+  parser.add_argument(
+      '--use_src_head',
+      action='store_true',
+      help='Use the HEAD of src_path directory as is, not necessarily the same '
+      'as the svn_version of upstream.')
+
   # Add argument for the LLVM version to use for patch management.
   parser.add_argument(
       '--svn_version',
@@ -151,7 +158,7 @@ def GetHEADSVNVersion(src_path):
 
   git_hash = check_output(cmd)
 
-  version = GetVersionFrom(src_path, git_hash)
+  version = get_llvm_hash.GetVersionFrom(src_path, git_hash.rstrip())
 
   return version
 
@@ -279,8 +286,6 @@ def UpdatePatchMetadataFile(patch_metadata_file, patches):
 def GetCommitHashesForBisection(src_path, good_svn_version, bad_svn_version):
   """Gets the good and bad commit hashes required by `git bisect start`."""
 
-  new_llvm_hash = LLVMHash()
-
   bad_commit_hash = get_llvm_hash.GetGitHashFrom(src_path, bad_svn_version)
 
   good_commit_hash = get_llvm_hash.GetGitHashFrom(src_path, good_svn_version)
@@ -322,7 +327,7 @@ def PerformBisection(src_path, good_commit, bad_commit, svn_version,
   check_output(end_cmd)
 
   # `git bisect run` returns the bad commit hash and the commit message.
-  version = GetVersionFrom(src_path, git_hash)
+  version = get_llvm_hash.GetVersionFrom(src_path, git_hash.rstrip())
 
   return version
 
@@ -720,8 +725,9 @@ def main():
     # patches that fail to apply could successfully apply if HEAD's SVN version
     # was the same as 'svn_version'. In other words, HEAD's git hash should be
     # what is being updated to (e.g. LLVM_NEXT_HASH).
-    VerifyHEADIsTheSameAsSVNVersion(args_output.src_path,
-                                    args_output.svn_version)
+    if not args_output.use_src_head:
+      VerifyHEADIsTheSameAsSVNVersion(args_output.src_path,
+                                      args_output.svn_version)
   else:
     # `git bisect run` called this script.
     #

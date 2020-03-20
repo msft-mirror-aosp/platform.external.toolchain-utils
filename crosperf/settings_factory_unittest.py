@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
@@ -24,7 +24,7 @@ class BenchmarkSettingsTest(unittest.TestCase):
     self.assertEqual(res.GetField('test_name'), '')
     self.assertEqual(res.GetField('test_args'), '')
     self.assertEqual(res.GetField('iterations'), 0)
-    self.assertEqual(res.GetField('suite'), '')
+    self.assertEqual(res.GetField('suite'), 'test_that')
 
 
 class LabelSettingsTest(unittest.TestCase):

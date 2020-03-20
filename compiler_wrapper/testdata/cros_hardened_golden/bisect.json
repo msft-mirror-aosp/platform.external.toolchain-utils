@@ -18,9 +18,9 @@
         "cmd": {
           "path": "/usr/bin/env",
           "args": [
-            "python",
+            "python3",
             "-c",
-            "\nimport bisect_driver\nimport shlex\nimport sys\n\ndef ExpandArgs(args, target):\n\tfor arg in args:\n\t\tif arg[0] == '@':\n\t\t\twith open(arg[1:], 'rb') as f:\n\t\t\t\tExpandArgs(shlex.split(f.read()), target)\n\t\telse:\n\t\t\ttarget.append(arg)\n\treturn target\n\nstage = sys.argv[1]\ndir = sys.argv[2]\nexecargs = ExpandArgs(sys.argv[3:], [])\n\nsys.exit(bisect_driver.bisect_driver(stage, dir, execargs))\n",
+            "\nimport bisect_driver\nimport shlex\nimport sys\n\ndef ExpandArgs(args, target):\n\tfor arg in args:\n\t\tif arg[0] == '@':\n\t\t\twith open(arg[1:], 'r', encoding='utf-8') as f:\n\t\t\t\tExpandArgs(shlex.split(f.read()), target)\n\t\telse:\n\t\t\ttarget.append(arg)\n\treturn target\n\nstage = sys.argv[1]\ndir = sys.argv[2]\nexecargs = ExpandArgs(sys.argv[3:], [])\n\nsys.exit(bisect_driver.bisect_driver(stage, dir, execargs))\n",
             "someBisectStage",
             "/tmp/sysroot_bisect",
             "/usr/bin/ccache",
@@ -35,9 +35,7 @@
             "-Wno-section",
             "-static-libgcc",
             "-fuse-ld=lld",
-            "-Wno-reorder-init-list",
             "-Wno-final-dtor-non-final-class",
-            "-Wno-return-stack-address",
             "-Werror=poison-system-directories",
             "-fstack-protector-strong",
             "-fPIE",
@@ -54,7 +52,8 @@
             "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
-            "CCACHE_CPP2=yes"
+            "CCACHE_CPP2=yes",
+            "PYTHONPATH=/somepath/test_binary"
           ]
         }
       }
@@ -80,9 +79,9 @@
         "cmd": {
           "path": "/usr/bin/env",
           "args": [
-            "python",
+            "python3",
             "-c",
-            "\nimport bisect_driver\nimport shlex\nimport sys\n\ndef ExpandArgs(args, target):\n\tfor arg in args:\n\t\tif arg[0] == '@':\n\t\t\twith open(arg[1:], 'rb') as f:\n\t\t\t\tExpandArgs(shlex.split(f.read()), target)\n\t\telse:\n\t\t\ttarget.append(arg)\n\treturn target\n\nstage = sys.argv[1]\ndir = sys.argv[2]\nexecargs = ExpandArgs(sys.argv[3:], [])\n\nsys.exit(bisect_driver.bisect_driver(stage, dir, execargs))\n",
+            "\nimport bisect_driver\nimport shlex\nimport sys\n\ndef ExpandArgs(args, target):\n\tfor arg in args:\n\t\tif arg[0] == '@':\n\t\t\twith open(arg[1:], 'r', encoding='utf-8') as f:\n\t\t\t\tExpandArgs(shlex.split(f.read()), target)\n\t\telse:\n\t\t\ttarget.append(arg)\n\treturn target\n\nstage = sys.argv[1]\ndir = sys.argv[2]\nexecargs = ExpandArgs(sys.argv[3:], [])\n\nsys.exit(bisect_driver.bisect_driver(stage, dir, execargs))\n",
             "someBisectStage",
             "someBisectDir",
             "/usr/bin/ccache",
@@ -97,9 +96,7 @@
             "-Wno-section",
             "-static-libgcc",
             "-fuse-ld=lld",
-            "-Wno-reorder-init-list",
             "-Wno-final-dtor-non-final-class",
-            "-Wno-return-stack-address",
             "-Werror=poison-system-directories",
             "-fstack-protector-strong",
             "-fPIE",
@@ -116,7 +113,8 @@
             "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
-            "CCACHE_CPP2=yes"
+            "CCACHE_CPP2=yes",
+            "PYTHONPATH=/somepath/test_binary"
           ]
         }
       }
@@ -145,9 +143,9 @@
         "cmd": {
           "path": "/usr/bin/env",
           "args": [
-            "python",
+            "python3",
             "-c",
-            "\nimport bisect_driver\nimport shlex\nimport sys\n\ndef ExpandArgs(args, target):\n\tfor arg in args:\n\t\tif arg[0] == '@':\n\t\t\twith open(arg[1:], 'rb') as f:\n\t\t\t\tExpandArgs(shlex.split(f.read()), target)\n\t\telse:\n\t\t\ttarget.append(arg)\n\treturn target\n\nstage = sys.argv[1]\ndir = sys.argv[2]\nexecargs = ExpandArgs(sys.argv[3:], [])\n\nsys.exit(bisect_driver.bisect_driver(stage, dir, execargs))\n",
+            "\nimport bisect_driver\nimport shlex\nimport sys\n\ndef ExpandArgs(args, target):\n\tfor arg in args:\n\t\tif arg[0] == '@':\n\t\t\twith open(arg[1:], 'r', encoding='utf-8') as f:\n\t\t\t\tExpandArgs(shlex.split(f.read()), target)\n\t\telse:\n\t\t\ttarget.append(arg)\n\treturn target\n\nstage = sys.argv[1]\ndir = sys.argv[2]\nexecargs = ExpandArgs(sys.argv[3:], [])\n\nsys.exit(bisect_driver.bisect_driver(stage, dir, execargs))\n",
             "someBisectStage",
             "someBisectDir",
             "/usr/bin/ccache",
@@ -162,9 +160,7 @@
             "-Wno-section",
             "-static-libgcc",
             "-fuse-ld=lld",
-            "-Wno-reorder-init-list",
             "-Wno-final-dtor-non-final-class",
-            "-Wno-return-stack-address",
             "-Werror=poison-system-directories",
             "-fstack-protector-strong",
             "-fPIE",
@@ -181,7 +177,8 @@
             "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
-            "CCACHE_CPP2=yes"
+            "CCACHE_CPP2=yes",
+            "PYTHONPATH=/somepath/test_binary"
           ]
         },
         "stdout": "somemessage",

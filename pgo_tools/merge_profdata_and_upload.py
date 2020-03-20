@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -56,7 +56,8 @@ _LLVMMetadata = collections.namedtuple('_LLVMMetadata', ['head_sha'])
 def _get_gs_latest(remote_lastest):
   assert remote_lastest.startswith(_GS_PREFIX)
   try:
-    return subprocess.check_output(['gsutil', 'cat', remote_lastest])
+    return subprocess.check_output(['gsutil', 'cat', remote_lastest],
+                                   encoding='utf-8')
   except subprocess.CalledProcessError:
     raise RuntimeError('Lastest artifacts not found: %s' % remote_lastest)
 
@@ -142,7 +143,8 @@ def _tar_and_upload_profdata(profdata, name_suffix):
   print('Uploading tarball to gs.\nCMD: %s\n' % upload_cmd)
 
   # gsutil prints all status to stderr, oddly enough.
-  gs_output = subprocess.check_output(upload_cmd, stderr=subprocess.STDOUT)
+  gs_output = subprocess.check_output(
+      upload_cmd, stderr=subprocess.STDOUT, encoding='utf-8')
   print(gs_output)
 
   # gsutil exits successfully even if it uploaded nothing. It prints a summary
@@ -227,7 +229,7 @@ def main():
       for tryjob in args.tryjob:
         fetch_and_append_artifacts(tryjob)
 
-    assert heads, 'Didn\'t fetch anything?'
+    assert heads, "Didn't fetch anything?"
 
     def die_with_head_complaint(complaint):
       extra = ' (HEADs found: %s)' % sorted(heads)
@@ -239,7 +241,7 @@ def main():
         die_with_head_complaint(
             '%d LLVM HEADs were found, which is more than one. You probably '
             'want a consistent set of HEADs for a profile. If you know you '
-            'don\'t, please specify --llvm_hash, and note that *all* profiles '
+            "don't, please specify --llvm_hash, and note that *all* profiles "
             'will be merged into this final profile, regardless of their '
             'reported HEAD.' % len(heads))
       llvm_hash, = heads
@@ -247,7 +249,7 @@ def main():
     if llvm_hash not in heads:
       assert llvm_hash == args.llvm_hash
       die_with_head_complaint(
-          'HEAD %s wasn\'t found in any fetched artifacts.' % llvm_hash)
+          "HEAD %s wasn't found in any fetched artifacts." % llvm_hash)
 
     print('Using LLVM hash: %s' % llvm_hash)
 

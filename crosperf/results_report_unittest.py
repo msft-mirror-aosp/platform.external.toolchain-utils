@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
@@ -14,8 +14,8 @@ import collections
 import io
 import os
 import unittest
+import unittest.mock as mock
 
-import mock
 import test_flag
 
 from benchmark_run import MockBenchmarkRun
@@ -83,7 +83,7 @@ def FakePath(ext):
 
 def MakeMockExperiment(compiler='gcc'):
   """Mocks an experiment using the given compiler."""
-  mock_experiment_file = io.BytesIO("""
+  mock_experiment_file = io.StringIO("""
       board: x86-alex
       remote: 127.0.0.1
       locks_dir: /tmp
@@ -130,19 +130,19 @@ def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0):
   machine_manager.AddMachine('testing_machine')
   machine = next(
       m for m in machine_manager.GetMachines() if m.name == 'testing_machine')
+
+  def MakeSuccessfulRun(n, label):
+    run = MockBenchmarkRun('mock_success%d' % (n,), bench, label,
+                           1 + n + num_runs, cache_conditions, machine_manager,
+                           log, log_level, share_cache, {})
+    mock_result = MockResult(log, label, log_level, machine)
+    mock_result.keyvals = keyvals
+    run.result = mock_result
+    return run
+
   for label in experiment.labels:
-
-    def MakeSuccessfulRun(n):
-      run = MockBenchmarkRun('mock_success%d' % (n,), bench, label,
-                             1 + n + num_runs, cache_conditions,
-                             machine_manager, log, log_level, share_cache, {})
-      mock_result = MockResult(log, label, log_level, machine)
-      mock_result.keyvals = keyvals
-      run.result = mock_result
-      return run
-
     experiment.benchmark_runs.extend(
-        MakeSuccessfulRun(n) for n in range(how_many))
+        MakeSuccessfulRun(n, label) for n in range(how_many))
   return experiment
 
 
@@ -312,7 +312,7 @@ class JSONResultsReportTest(unittest.TestCase):
     # Nothing succeeded; we don't send anything more than what's required.
     required_keys = self._GetRequiredKeys(is_experiment=True)
     for result in results:
-      self.assertItemsEqual(result.iterkeys(), required_keys)
+      self.assertCountEqual(result.keys(), required_keys)
 
   def testJSONReportOutputWithSuccesses(self):
     success_keyvals = {
@@ -429,7 +429,7 @@ class PerfReportParserTest(unittest.TestCase):
 
   def testParserParsesRealWorldPerfReport(self):
     report = ParseStandardPerfReport(self._ReadRealPerfReport())
-    self.assertItemsEqual(['cycles', 'instructions'], report.keys())
+    self.assertCountEqual(['cycles', 'instructions'], list(report.keys()))
 
     # Arbitrarily selected known percentages from the perf report.
     known_cycles_percentages = {

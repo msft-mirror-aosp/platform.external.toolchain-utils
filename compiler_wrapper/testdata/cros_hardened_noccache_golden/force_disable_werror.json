@@ -27,9 +27,7 @@
             "-Wno-section",
             "-static-libgcc",
             "-fuse-ld=lld",
-            "-Wno-reorder-init-list",
             "-Wno-final-dtor-non-final-class",
-            "-Wno-return-stack-address",
             "-Werror=poison-system-directories",
             "-fstack-protector-strong",
             "-fPIE",
@@ -74,9 +72,7 @@
             "-Wno-section",
             "-static-libgcc",
             "-fuse-ld=lld",
-            "-Wno-reorder-init-list",
             "-Wno-final-dtor-non-final-class",
-            "-Wno-return-stack-address",
             "-Werror=poison-system-directories",
             "-fstack-protector-strong",
             "-fPIE",
@@ -107,9 +103,7 @@
             "-Wno-section",
             "-static-libgcc",
             "-fuse-ld=lld",
-            "-Wno-reorder-init-list",
             "-Wno-final-dtor-non-final-class",
-            "-Wno-return-stack-address",
             "-Werror=poison-system-directories",
             "-fstack-protector-strong",
             "-fPIE",
@@ -121,7 +115,8 @@
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu",
-            "-Wno-error"
+            "-Wno-error",
+            "-Wno-error=poison-system-directories"
           ]
         }
       }
@@ -157,9 +152,7 @@
             "-Wno-section",
             "-static-libgcc",
             "-fuse-ld=lld",
-            "-Wno-reorder-init-list",
             "-Wno-final-dtor-non-final-class",
-            "-Wno-return-stack-address",
             "-Werror=poison-system-directories",
             "-fstack-protector-strong",
             "-fPIE",
@@ -190,9 +183,7 @@
             "-Wno-section",
             "-static-libgcc",
             "-fuse-ld=lld",
-            "-Wno-reorder-init-list",
             "-Wno-final-dtor-non-final-class",
-            "-Wno-return-stack-address",
             "-Werror=poison-system-directories",
             "-fstack-protector-strong",
             "-fPIE",
@@ -204,7 +195,8 @@
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu",
-            "-Wno-error"
+            "-Wno-error",
+            "-Wno-error=poison-system-directories"
           ]
         },
         "stdout": "somemessage",

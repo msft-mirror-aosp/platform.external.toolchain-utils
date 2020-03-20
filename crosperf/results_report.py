@@ -100,10 +100,10 @@ def _FilterPerfReport(event_threshold, report):
 
   def filter_dict(m):
     return {
-        fn_name: pct for fn_name, pct in m.iteritems() if pct >= event_threshold
+        fn_name: pct for fn_name, pct in m.items() if pct >= event_threshold
     }
 
-  return {event: filter_dict(m) for event, m in report.iteritems()}
+  return {event: filter_dict(m) for event, m in report.items()}
 
 
 class _PerfTable(object):
@@ -186,7 +186,7 @@ def _GetTables(benchmark_results, columns, table_type):
   iter_counts = benchmark_results.iter_counts
   result = benchmark_results.run_keyvals
   tables = []
-  for bench_name, runs in result.iteritems():
+  for bench_name, runs in result.items():
     iterations = iter_counts[bench_name]
     ben_table = _GetResultsTableHeader(bench_name, iterations)
 
@@ -375,8 +375,8 @@ class TextResultsReport(ResultsReport):
   def GetTotalWaitCooldownTime(self):
     """Get cooldown wait time in seconds from experiment benchmark runs.
 
-      Returns:
-        Dictionary {'dut': int(wait_time_in_seconds)}
+    Returns:
+      Dictionary {'dut': int(wait_time_in_seconds)}
     """
     waittime_dict = {}
     for dut in self.experiment.machine_manager.GetMachines():
@@ -438,7 +438,7 @@ class TextResultsReport(ResultsReport):
 
 def _GetHTMLCharts(label_names, test_results):
   charts = []
-  for item, runs in test_results.iteritems():
+  for item, runs in test_results.items():
     # Fun fact: label_names is actually *entirely* useless as a param, since we
     # never add headers. We still need to pass it anyway.
     table = TableGenerator(runs, label_names).GetTable()
@@ -734,7 +734,7 @@ class JSONResultsReport(ResultsReport):
     label_names = benchmark_results.label_names
     summary_field_defaults = self.summary_field_defaults
     final_results = []
-    for test, test_results in benchmark_results.run_keyvals.iteritems():
+    for test, test_results in benchmark_results.run_keyvals.items():
       for label_name, label_results in zip(label_names, test_results):
         for iter_results in label_results:
           passed = iter_results.get('retval') == 0
@@ -767,7 +767,7 @@ class JSONResultsReport(ResultsReport):
           # Get detailed results.
           detail_results = {}
           json_results['detailed_results'] = detail_results
-          for k, v in iter_results.iteritems():
+          for k, v in iter_results.items():
             if k == 'retval' or k == 'PASS' or k == ['PASS'] or v == 'PASS':
               continue
 

@@ -14,6 +14,8 @@ type config struct {
 	isAndroidWrapper bool
 	// Whether to use ccache.
 	useCCache bool
+	// Whether llvmNext wrapper.
+	useLlvmNext bool
 	// Flags to add to gcc and clang.
 	commonFlags []string
 	// Flags to add to gcc only.
@@ -83,6 +85,7 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, version stri
 		return nil, newErrorwithSourceLocf("unknown config name: %s", configName)
 	}
 	cfg.useCCache = useCCache
+	cfg.useLlvmNext = useLlvmNext
 	if useLlvmNext {
 		cfg.clangFlags = append(cfg.clangFlags, llvmNextFlags...)
 	}
@@ -125,9 +128,7 @@ var crosHardenedConfig = &config{
 		"-Wno-section",
 		"-static-libgcc",
 		"-fuse-ld=lld",
-		"-Wno-reorder-init-list",
 		"-Wno-final-dtor-non-final-class",
-		"-Wno-return-stack-address",
 		"-Werror=poison-system-directories",
 	},
 	clangPostFlags: []string{
@@ -156,9 +157,7 @@ var crosNonHardenedConfig = &config{
 		"-Wno-unknown-warning-option",
 		"-Wno-section",
 		"-static-libgcc",
-		"-Wno-reorder-init-list",
 		"-Wno-final-dtor-non-final-class",
-		"-Wno-return-stack-address",
 		"-Werror=poison-system-directories",
 	},
 	clangPostFlags: []string{
@@ -188,9 +187,7 @@ var crosHostConfig = &config{
 		"-Wno-deprecated-declarations",
 		"-Wno-tautological-constant-compare",
 		"-Wno-tautological-unsigned-enum-zero-compare",
-		"-Wno-reorder-init-list",
 		"-Wno-final-dtor-non-final-class",
-		"-Wno-return-stack-address",
 		"-Werror=poison-system-directories",
 		"-Wno-unknown-warning-option",
 	},
@@ -208,5 +205,5 @@ var androidConfig = &config{
 	gccFlags:         []string{},
 	clangFlags:       []string{},
 	clangPostFlags:   []string{},
-	newWarningsDir:   "/tmp/fatal_clang_warnings",
+	newWarningsDir:   "",
 }

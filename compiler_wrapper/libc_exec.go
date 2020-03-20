@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// +build libc_exec
+
 package main
 
 // #include <errno.h>
@@ -26,7 +28,10 @@ import (
 // LD_PRELOAD to work properly (e.g. gentoo sandbox).
 // Note that this changes the go binary to be a dynamically linked one.
 // See crbug.com/1000863 for details.
-func libcExec(env env, cmd *command) error {
+// To use this version of exec, please add '-tags libc_exec' when building Go binary.
+// Without the tags, libc_exec.go will be used.
+
+func execCmd(env env, cmd *command) error {
 	freeList := []unsafe.Pointer{}
 	defer func() {
 		for _, ptr := range freeList {

@@ -5,6 +5,7 @@
 
 """Utilities for launching and accessing ChromeOS buildbots."""
 
+from __future__ import division
 from __future__ import print_function
 
 import ast
@@ -20,13 +21,12 @@ INITIAL_SLEEP_TIME = 7200  # 2 hours; wait time before polling buildbot.
 SLEEP_TIME = 600  # 10 minutes; time between polling of buildbot.
 
 # Some of our slower builders (llvm-next) are taking more
-# than 11 hours. So, increase this TIME_OUT to 12 hours.
-TIME_OUT = 43200  # Decide the build is dead or will never finish
+# than 12 hours. So, increase this TIME_OUT to 15 hours.
+TIME_OUT = 15 * 60 * 60  # Decide the build is dead or will never finish
 
 
 class BuildbotTimeout(Exception):
   """Exception to throw when a buildbot operation timesout."""
-  pass
 
 
 def RunCommandInPath(path, cmd):
@@ -133,7 +133,7 @@ def GetTrybotImage(chromeos_root,
                    patch_list,
                    tryjob_flags=None,
                    build_toolchain=False,
-                   async=False):
+                   asynchronous=False):
   """Launch buildbot and get resulting trybot artifact name.
 
   This function launches a buildbot with the appropriate flags to
@@ -151,7 +151,7 @@ def GetTrybotImage(chromeos_root,
     tryjob_flags: See cros tryjob --help for available options.
     build_toolchain: builds and uses the latest toolchain, rather than the
                      prebuilt one in SDK.
-    async: don't wait for artifacts; just return the buildbucket id
+    asynchronous: don't wait for artifacts; just return the buildbucket id
 
   Returns:
     (buildbucket id, partial image url) e.g.
@@ -159,7 +159,7 @@ def GetTrybotImage(chromeos_root,
   """
   buildbucket_id = SubmitTryjob(chromeos_root, buildbot_name, patch_list,
                                 tryjob_flags, build_toolchain)
-  if async:
+  if asynchronous:
     return buildbucket_id, ' '
 
   # The trybot generally takes more than 2 hours to finish.
@@ -246,7 +246,7 @@ def GetLatestImage(chromeos_root, path):
   _, out, _ = ce.ChrootRunCommandWOutput(
       chromeos_root, command, print_to_console=False)
   candidates = [l.split('/')[-2] for l in out.split()]
-  candidates = map(fmt.match, candidates)
+  candidates = [fmt.match(c) for c in candidates]
   candidates = [[int(r) for r in m.group(1, 2, 3, 4)] for m in candidates if m]
   candidates.sort(reverse=True)
   for c in candidates:

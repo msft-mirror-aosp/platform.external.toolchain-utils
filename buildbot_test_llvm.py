@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
@@ -116,7 +116,7 @@ class ToolchainVerifier(object):
         self._build,
         self._patches,
         tryjob_flags=['--hwtest'],
-        async=True)
+        asynchronous=True)
 
     return buildbucket_id
 
@@ -125,7 +125,7 @@ def WriteRotatingReportsData(results_dict, date):
   """Write data for waterfall report."""
   fname = '%d-%02d-%02d.builds' % (date.year, date.month, date.day)
   filename = os.path.join(DATA_DIR, 'rotating-builders', fname)
-  with open(filename, 'w') as out_file:
+  with open(filename, 'w', encoding='utf-8') as out_file:
     for board in results_dict.keys():
       buildbucket_id = results_dict[board]
       out_file.write('%s,%s\n' % (buildbucket_id, board))
@@ -172,7 +172,7 @@ def Main(argv):
   if options.board:
     fv = ToolchainVerifier(options.board, options.chromeos_root,
                            options.weekday, options.patches, options.compiler)
-    return fv.Doall()
+    return fv.DoAll()
 
   today = datetime.date.today()
   delta = today - START_DATE
@@ -190,7 +190,7 @@ def Main(argv):
         results_dict[board] = buildbucket_id
     except SystemExit:
       logfile = os.path.join(VALIDATION_RESULT_DIR, options.compiler, board)
-      with open(logfile, 'w') as f:
+      with open(logfile, 'w', encoding='utf-8') as f:
         f.write('Verifier got an exception, please check the log.\n')
   WriteRotatingReportsData(results_dict, today)
 

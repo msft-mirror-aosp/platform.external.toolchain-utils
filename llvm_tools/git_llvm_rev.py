@@ -10,6 +10,8 @@ Revision numbers are all of the form '(branch_name, r1234)'. As a shorthand,
 r1234 is parsed as '(master, 1234)'.
 """
 
+from __future__ import print_function
+
 import argparse
 import re
 import subprocess
@@ -129,7 +131,13 @@ def translate_sha_to_rev(llvm_config: LLVMConfig, sha_or_ref: str) -> Rev:
 
   if merge_base == base_llvm_sha:
     result = check_output(
-        ['git', 'rev-list', '--count', f'{base_llvm_sha}..{sha}'],
+        [
+            'git',
+            'rev-list',
+            '--count',
+            '--first-parent',
+            f'{base_llvm_sha}..{sha}',
+        ],
         cwd=llvm_config.dir,
     )
     count = int(result.strip())
@@ -145,7 +153,13 @@ def translate_sha_to_rev(llvm_config: LLVMConfig, sha_or_ref: str) -> Rev:
     return Rev(branch='master', number=merge_base_number)
 
   distance_from_base = check_output(
-      ['git', 'rev-list', '--count', f'{merge_base}..{sha}'],
+      [
+          'git',
+          'rev-list',
+          '--count',
+          '--first-parent',
+          f'{merge_base}..{sha}',
+      ],
       cwd=llvm_config.dir,
   )
 
@@ -172,8 +186,7 @@ def translate_sha_to_rev(llvm_config: LLVMConfig, sha_or_ref: str) -> Rev:
         f'Ambiguity: multiple branches from {llvm_config.remote} have {sha}: '
         f'{sorted(candidates)}')
 
-  branch, = candidates
-  return Rev(branch=branch, number=revision_number)
+  return Rev(branch=candidates[0], number=revision_number)
 
 
 def parse_git_commit_messages(stream: t.Iterable[str],
@@ -196,6 +209,8 @@ def parse_git_commit_messages(stream: t.Iterable[str],
 
   lines = iter(stream)
   while True:
+    # Looks like a potential bug in pylint? crbug.com/1041148
+    # pylint: disable=stop-iteration-return
     sha = next(lines, None)
     if sha is None:
       return
@@ -283,7 +298,13 @@ def translate_rev_to_sha(llvm_config: LLVMConfig, rev: Rev) -> str:
 
   commit_number = number - base_revision_number
   revs_between_str = check_output(
-      ['git', 'rev-list', '--count', f'{base_sha}..{branch_head_sha}'],
+      [
+          'git',
+          'rev-list',
+          '--count',
+          '--first-parent',
+          f'{base_sha}..{branch_head_sha}',
+      ],
       cwd=llvm_config.dir,
   )
   revs_between = int(revs_between_str.strip())
@@ -343,13 +364,11 @@ def main(argv: t.List[str]) -> None:
   )
 
   if opts.sha:
-    rev = str(translate_sha_to_rev(config, opts.sha))
+    rev = translate_sha_to_rev(config, opts.sha)
     print(rev)
-    return rev
   else:
-    sha = str(translate_rev_to_sha(config, Rev.parse(opts.rev)))
+    sha = translate_rev_to_sha(config, Rev.parse(opts.rev))
     print(sha)
-    return sha
 
 
 if __name__ == '__main__':

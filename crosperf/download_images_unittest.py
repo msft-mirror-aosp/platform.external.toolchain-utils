@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -9,8 +9,8 @@
 from __future__ import print_function
 
 import os
-import mock
 import unittest
+import unittest.mock as mock
 
 import download_images
 from cros_utils import command_executer

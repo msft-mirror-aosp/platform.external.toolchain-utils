@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -11,12 +11,12 @@ from __future__ import print_function
 import io
 import unittest
 
-import remove_indirect_calls
+from afdo_redaction import remove_indirect_calls
 
 
 def _run_test(input_lines):
-  input_buf = io.BytesIO('\n'.join(input_lines))
-  output_buf = io.BytesIO()
+  input_buf = io.StringIO('\n'.join(input_lines))
+  output_buf = io.StringIO()
   remove_indirect_calls.run(input_buf, output_buf)
   return output_buf.getvalue().splitlines()
 

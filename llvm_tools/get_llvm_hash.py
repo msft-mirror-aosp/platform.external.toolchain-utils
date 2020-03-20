@@ -10,18 +10,14 @@ from __future__ import print_function
 
 import argparse
 import os
-import re
 import shutil
 import subprocess
 import sys
 import tempfile
-import git_llvm_rev
-
 from contextlib import contextmanager
-from subprocess_helpers import CheckCommand
-from subprocess_helpers import check_output
 
-import requests
+import git_llvm_rev
+from subprocess_helpers import CheckCommand, check_output
 
 _LLVM_GIT_URL = ('https://chromium.googlesource.com/external/github.com/llvm'
                  '/llvm-project')
@@ -33,16 +29,18 @@ def GetVersionFrom(src_dir, git_hash):
   """Obtain an SVN-style version number based on the LLVM git hash passed in.
 
   Args:
+    src_dir: LLVM's source directory.
     git_hash: The git hash.
 
   Returns:
     An SVN-style version number associated with the git hash.
   """
 
-  args = ['--llvm_dir', src_dir, '--sha', git_hash]
-  version = git_llvm_rev.main(args).strip()
-  assert version.startswith('r')
-  return int(version[1:])
+  version = git_llvm_rev.translate_sha_to_rev(
+      git_llvm_rev.LLVMConfig(remote='origin', dir=src_dir), git_hash)
+  # Note: branches aren't supported
+  assert version.branch == 'master', version.branch
+  return version.number
 
 
 def GetGitHashFrom(src_dir, version):
@@ -59,12 +57,9 @@ def GetGitHashFrom(src_dir, version):
     subprocess.CalledProcessError: Failed to find a git hash.
   """
 
-  assert isinstance(version, int)
-  args = ['--llvm_dir', src_dir, '--rev', 'r' + str(version)]
-
-  git_hash = git_llvm_rev.main(args).rstrip()
-
-  return git_hash
+  return git_llvm_rev.translate_rev_to_sha(
+      git_llvm_rev.LLVMConfig(remote='origin', dir=src_dir),
+      git_llvm_rev.Rev(branch='master', number=version))
 
 
 @contextmanager
@@ -185,7 +180,7 @@ def GetGoogle3LLVMVersion(stable):
   git_hash = check_output(cmd)
 
   # Change type to an integer
-  return GetVersionFrom(GetAndUpdateLLVMProjectInLLVMTools(), git_hash.strip())
+  return GetVersionFrom(GetAndUpdateLLVMProjectInLLVMTools(), git_hash.rstrip())
 
 
 def is_svn_option(svn_option):

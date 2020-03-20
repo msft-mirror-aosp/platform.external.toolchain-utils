@@ -58,6 +58,7 @@ class Result(object):
     self.turbostat_log_file = ''
     self.cpustats_log_file = ''
     self.top_log_file = ''
+    self.wait_time_log_file = ''
     self.chrome_version = ''
     self.err = None
     self.chroot_results_dir = ''
@@ -110,7 +111,7 @@ class Result(object):
   def CopyResultsTo(self, dest_dir):
     self.CopyFilesTo(dest_dir, self.perf_data_files)
     self.CopyFilesTo(dest_dir, self.perf_report_files)
-    if len(self.perf_data_files) or len(self.perf_report_files):
+    if self.perf_data_files or self.perf_report_files:
       self._logger.LogOutput('Perf results files stored in %s.' % dest_dir)
 
   def GetNewKeyvals(self, keyvals_dict):
@@ -197,8 +198,8 @@ class Result(object):
       command = 'cp -r {0}/* {1}'.format(self.results_dir, self.temp_dir)
       self.ce.RunCommand(command, print_to_console=False)
 
-    command = ('python generate_test_report --no-color --csv %s' %
-               (os.path.join('/tmp', os.path.basename(self.temp_dir))))
+    command = ('./generate_test_report --no-color --csv %s' % (os.path.join(
+        '/tmp', os.path.basename(self.temp_dir))))
     _, out, _ = self.ce.ChrootRunCommandWOutput(
         self.chromeos_root, command, print_to_console=False)
     keyvals_dict = {}
@@ -316,6 +317,10 @@ class Result(object):
     """Get cpustats log path string."""
     return self.FindFilesInResultsDir('-name top.log').split('\n')[0]
 
+  def GetWaitTimeFile(self):
+    """Get wait time log path string."""
+    return self.FindFilesInResultsDir('-name wait_time.log').split('\n')[0]
+
   def _CheckDebugPath(self, option, path):
     relative_path = path[1:]
     out_chroot_path = os.path.join(self.chromeos_root, 'chroot', relative_path)
@@ -415,6 +420,7 @@ class Result(object):
     self.turbostat_log_file = self.GetTurbostatFile()
     self.cpustats_log_file = self.GetCpustatsFile()
     self.top_log_file = self.GetTopFile()
+    self.wait_time_log_file = self.GetWaitTimeFile()
     # TODO(asharif): Do something similar with perf stat.
 
     # Grab keyvals from the directory.
@@ -818,6 +824,16 @@ class Result(object):
       cpustats = self.ProcessCpustatsResults()
     if self.top_log_file:
       self.top_cmds = self.ProcessTopResults()
+    if self.wait_time_log_file:
+      with open(self.wait_time_log_file) as f:
+        wait_time = f.readline().strip()
+        try:
+          wait_time = float(wait_time)
+        except ValueError:
+          raise ValueError('Wait time in log file is not a number.')
+      # This is for accumulating wait time for telemtry_Crosperf runs only,
+      # for test_that runs, please refer to suite_runner.
+      self.machine.AddCooldownWaitTime(wait_time)
 
     for param_key, param in cpustats.items():
       for param_type, param_values in param.items():
@@ -853,7 +869,7 @@ class Result(object):
     self.suite = suite
     self.cwp_dso = cwp_dso
     # Read in everything from the cache directory.
-    with open(os.path.join(cache_dir, RESULTS_FILE), 'r') as f:
+    with open(os.path.join(cache_dir, RESULTS_FILE), 'rb') as f:
       self.out = pickle.load(f)
       self.err = pickle.load(f)
       self.retval = pickle.load(f)
@@ -891,7 +907,7 @@ class Result(object):
     temp_dir = tempfile.mkdtemp()
 
     # Store to the temp directory.
-    with open(os.path.join(temp_dir, RESULTS_FILE), 'w') as f:
+    with open(os.path.join(temp_dir, RESULTS_FILE), 'wb') as f:
       pickle.dump(self.out, f)
       pickle.dump(self.err, f)
       pickle.dump(self.retval, f)
@@ -980,10 +996,6 @@ class Result(object):
 class TelemetryResult(Result):
   """Class to hold the results of a single Telemetry run."""
 
-  def __init__(self, logger, label, log_level, machine, cmd_exec=None):
-    super(TelemetryResult, self).__init__(logger, label, log_level, machine,
-                                          cmd_exec)
-
   def PopulateFromRun(self, out, err, retval, test, suite, cwp_dso):
     self.out = out
     self.err = err
@@ -1028,7 +1040,7 @@ class TelemetryResult(Result):
     self.test_name = test
     self.suite = suite
     self.cwp_dso = cwp_dso
-    with open(os.path.join(cache_dir, RESULTS_FILE), 'r') as f:
+    with open(os.path.join(cache_dir, RESULTS_FILE), 'rb') as f:
       self.out = pickle.load(f)
       self.err = pickle.load(f)
       self.retval = pickle.load(f)
@@ -1171,7 +1183,8 @@ class ResultsCache(object):
     if read and CacheConditions.CHECKSUMS_MATCH not in self.cache_conditions:
       checksum = '*'
     elif self.label.image_type == 'trybot':
-      checksum = hashlib.md5(self.label.chromeos_image).hexdigest()
+      checksum = hashlib.md5(
+          self.label.chromeos_image.encode('utf-8')).hexdigest()
     elif self.label.image_type == 'official':
       checksum = '*'
     else:
@@ -1180,7 +1193,8 @@ class ResultsCache(object):
     if read and CacheConditions.IMAGE_PATH_MATCH not in self.cache_conditions:
       image_path_checksum = '*'
     else:
-      image_path_checksum = hashlib.md5(self.chromeos_image).hexdigest()
+      image_path_checksum = hashlib.md5(
+          self.chromeos_image.encode('utf-8')).hexdigest()
 
     machine_id_checksum = ''
     if read and CacheConditions.SAME_MACHINE_MATCH not in self.cache_conditions:
@@ -1196,7 +1210,7 @@ class ResultsCache(object):
 
     temp_test_args = '%s %s %s' % (self.test_args, self.profiler_args,
                                    self.run_local)
-    test_args_checksum = hashlib.md5(temp_test_args).hexdigest()
+    test_args_checksum = hashlib.md5(temp_test_args.encode('utf-8')).hexdigest()
     return (image_path_checksum, self.test_name, str(self.iteration),
             test_args_checksum, checksum, machine_checksum, machine_id_checksum,
             str(self.CACHE_VERSION))
@@ -1237,6 +1251,9 @@ class ResultsCache(object):
 class MockResultsCache(ResultsCache):
   """Class for mock testing, corresponding to ResultsCache class."""
 
+  # FIXME: pylint complains about this mock init method, we should probably
+  # replace all Mock classes in Crosperf with simple Mock.mock().
+  # pylint: disable=arguments-differ
   def Init(self, *args):
     pass
 
