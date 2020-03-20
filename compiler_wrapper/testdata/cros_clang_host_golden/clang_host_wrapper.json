@@ -17,6 +17,7 @@
             "-Qunused-arguments",
             "-grecord-gcc-switches",
             "-fno-addrsig",
+            "-fcommon",
             "-fuse-ld=lld",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
