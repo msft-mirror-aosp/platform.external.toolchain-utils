@@ -64,6 +64,7 @@ table:
 from __future__ import division
 from __future__ import print_function
 
+import collections
 import getpass
 import math
 import sys
@@ -112,21 +113,22 @@ class TableGenerator(object):
   SORT_BY_KEYS_DESC = 1
   SORT_BY_VALUES = 2
   SORT_BY_VALUES_DESC = 3
+  NO_SORT = 4
 
   MISSING_VALUE = 'x'
 
-  def __init__(self, d, l, sort=SORT_BY_KEYS, key_name='keys'):
+  def __init__(self, d, l, sort=NO_SORT, key_name='keys'):
     self._runs = d
     self._labels = l
     self._sort = sort
     self._key_name = key_name
 
   def _AggregateKeys(self):
-    keys = set([])
+    keys = collections.OrderedDict()
     for run_list in self._runs:
       for run in run_list:
-        keys = keys.union(run.keys())
-    return keys
+        keys.update(dict.fromkeys(run.keys()))
+    return list(keys.keys())
 
   def _GetHighestValue(self, key):
     values = []
@@ -159,6 +161,8 @@ class TableGenerator(object):
     elif self._sort == self.SORT_BY_VALUES_DESC:
       # pylint: disable=unnecessary-lambda
       return sorted(keys, key=lambda x: self._GetHighestValue(x), reverse=True)
+    elif self._sort == self.NO_SORT:
+      return keys
     else:
       assert 0, 'Unimplemented sort %s' % self._sort
 
