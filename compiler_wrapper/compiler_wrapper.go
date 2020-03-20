@@ -91,7 +91,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		}
 	} else if mainBuilder.target.compilerType == clangType {
 		cSrcFile, useClangTidy := processClangTidyFlags(mainBuilder)
-		sysroot, err := prepareClangCommand(mainBuilder)
+		err := prepareClangCommand(mainBuilder)
 		if err != nil {
 			return 0, err
 		}
@@ -103,7 +103,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 				return 0, err
 			}
 		}
-		if err := processGomaCCacheFlags(sysroot, allowCCache, mainBuilder); err != nil {
+		if err := processGomaCCacheFlags(allowCCache, mainBuilder); err != nil {
 			return 0, err
 		}
 		compilerCmd = mainBuilder.build()
@@ -162,35 +162,30 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	return wrapSubprocessErrorWithSourceLoc(compilerCmd, env.exec(compilerCmd))
 }
 
-func prepareClangCommand(builder *commandBuilder) (sysroot string, err error) {
-	sysroot = ""
+func prepareClangCommand(builder *commandBuilder) (err error) {
 	if !builder.cfg.isHostWrapper {
-		sysroot = processSysrootFlag(builder)
+		processSysrootFlag(builder)
 	}
 	builder.addPreUserArgs(builder.cfg.clangFlags...)
 	builder.addPostUserArgs(builder.cfg.clangPostFlags...)
 	calcCommonPreUserArgs(builder)
-	if err := processClangFlags(builder); err != nil {
-		return "", err
-	}
-	return sysroot, nil
+	return processClangFlags(builder)
 }
 
 func calcClangCommand(allowCCache bool, builder *commandBuilder) (*command, error) {
-	sysroot, err := prepareClangCommand(builder)
+	err := prepareClangCommand(builder)
 	if err != nil {
 		return nil, err
 	}
-	if err := processGomaCCacheFlags(sysroot, allowCCache, builder); err != nil {
+	if err := processGomaCCacheFlags(allowCCache, builder); err != nil {
 		return nil, err
 	}
 	return builder.build(), nil
 }
 
 func calcGccCommand(builder *commandBuilder) (*command, error) {
-	sysroot := ""
 	if !builder.cfg.isHostWrapper {
-		sysroot = processSysrootFlag(builder)
+		processSysrootFlag(builder)
 	}
 	builder.addPreUserArgs(builder.cfg.gccFlags...)
 	if !builder.cfg.isHostWrapper {
@@ -199,7 +194,7 @@ func calcGccCommand(builder *commandBuilder) (*command, error) {
 	processGccFlags(builder)
 	if !builder.cfg.isHostWrapper {
 		allowCCache := true
-		if err := processGomaCCacheFlags(sysroot, allowCCache, builder); err != nil {
+		if err := processGomaCCacheFlags(allowCCache, builder); err != nil {
 			return nil, err
 		}
 	}
@@ -217,7 +212,7 @@ func calcCommonPreUserArgs(builder *commandBuilder) {
 	processSanitizerFlags(builder)
 }
 
-func processGomaCCacheFlags(sysroot string, allowCCache bool, builder *commandBuilder) (err error) {
+func processGomaCCacheFlags(allowCCache bool, builder *commandBuilder) (err error) {
 	gomaccUsed := false
 	if !builder.cfg.isHostWrapper {
 		gomaccUsed, err = processGomaCccFlags(builder)
@@ -226,7 +221,7 @@ func processGomaCCacheFlags(sysroot string, allowCCache bool, builder *commandBu
 		}
 	}
 	if !gomaccUsed && allowCCache {
-		processCCacheFlag(sysroot, builder)
+		processCCacheFlag(builder)
 	}
 	return nil
 }

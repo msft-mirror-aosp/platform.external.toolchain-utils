@@ -19,6 +19,7 @@
             "-Qunused-arguments",
             "-grecord-gcc-switches",
             "-fno-addrsig",
+            "-fcommon",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-unknown-warning-option",
@@ -60,7 +61,6 @@
             "-mno-movbe"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002"
           ]
@@ -92,6 +92,7 @@
             "-Qunused-arguments",
             "-grecord-gcc-switches",
             "-fno-addrsig",
+            "-fcommon",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-unknown-warning-option",
@@ -159,6 +160,7 @@
             "-Qunused-arguments",
             "-grecord-gcc-switches",
             "-fno-addrsig",
+            "-fcommon",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-unknown-warning-option",
@@ -210,6 +212,7 @@
             "-Qunused-arguments",
             "-grecord-gcc-switches",
             "-fno-addrsig",
+            "-fcommon",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-unknown-warning-option",
@@ -251,7 +254,6 @@
             "-mno-movbe"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002"
           ]

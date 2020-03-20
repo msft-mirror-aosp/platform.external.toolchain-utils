@@ -471,6 +471,23 @@ from get_llvm_hash import GetGoogle3LLVMVersion
 GetGoogle3LLVMVersion(stable=True)
 ```
 
+### `git_llvm_rev.py`
+
+This script is meant to synthesize LLVM revision numbers, and translate between
+these synthesized numbers and git SHAs. Usage should be straightforward:
+
+```
+~> ./git_llvm_rev.py --llvm_dir llvm-project-copy/ --rev r380000
+6f635f90929da9545dd696071a829a1a42f84b30
+~> ./git_llvm_rev.py --llvm_dir llvm-project-copy/ --sha 6f635f90929da9545dd696071a829a1a42f84b30
+r380000
+~> ./git_llvm_rev.py --llvm_dir llvm-project-copy/ --sha origin/master
+r387778
+```
+
+**Tip**: if you put a symlink called `git-llvm-rev` to this script somewhere on
+your `$PATH`, you can also use it as `git llvm-rev`.
+
 ### `cherrypick_cl.py`
 
 #### Usage
