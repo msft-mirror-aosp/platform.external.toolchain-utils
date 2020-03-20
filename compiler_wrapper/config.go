@@ -118,10 +118,13 @@ var crosHardenedConfig = &config{
 	// Temporarily add no-unknown-warning-option to deal with old clang versions.
 	// Temporarily disable Wsection since kernel gets a bunch of these. chromium:778867
 	// Disable "-faddrsig" since it produces object files that strip doesn't understand, chromium:915742.
+	// Pass "-fcommon" till the packages are fixed to work with new clang default
+	// "-fno-common", crbug.com/1060413.
 	clangFlags: []string{
 		"-Qunused-arguments",
 		"-grecord-gcc-switches",
 		"-fno-addrsig",
+		"-fcommon",
 		"-Wno-tautological-constant-compare",
 		"-Wno-tautological-unsigned-enum-zero-compare",
 		"-Wno-unknown-warning-option",
@@ -178,10 +181,13 @@ var crosHostConfig = &config{
 	},
 	// Temporarily disable tautological-*-compare chromium:778316.
 	// Temporarily add no-unknown-warning-option to deal with old clang versions.
+	// Pass "-fcommon" till the packages are fixed to work with new clang default
+	// "-fno-common", crbug.com/1060413.
 	clangFlags: []string{
 		"-Qunused-arguments",
 		"-grecord-gcc-switches",
 		"-fno-addrsig",
+		"-fcommon",
 		"-fuse-ld=lld",
 		"-Wno-unused-local-typedefs",
 		"-Wno-deprecated-declarations",
