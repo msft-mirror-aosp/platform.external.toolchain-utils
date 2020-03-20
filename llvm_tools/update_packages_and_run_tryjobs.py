@@ -38,8 +38,8 @@ def GetCommandLineArgs():
 
   # Create parser and add optional command-line arguments.
   parser = argparse.ArgumentParser(
-      description='Runs a tryjob if successfully updated packages\''
-      '"LLVM_NEXT_HASH".')
+      description=
+      'Runs a tryjob if successfully updated LLVM_NEXT_HASH of packages.')
 
   # Add argument for the absolute path to the file that contains information on
   # the previous tested svn version.
@@ -287,8 +287,9 @@ def main():
   update_chromeos_llvm_next_hash.verbose = args_output.verbose
 
   change_list = update_chromeos_llvm_next_hash.UpdatePackages(
-      update_packages, git_hash, svn_version, args_output.chroot_path,
-      patch_metadata_file, FailureModes.DISABLE_PATCHES, svn_option)
+      update_packages, update_chromeos_llvm_next_hash.LLVMVariant.next,
+      git_hash, svn_version, args_output.chroot_path, patch_metadata_file,
+      FailureModes.DISABLE_PATCHES, svn_option)
 
   print('Successfully updated packages to %d' % svn_version)
   print('Gerrit URL: %s' % change_list.url)

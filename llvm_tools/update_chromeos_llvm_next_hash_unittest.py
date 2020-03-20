@@ -4,7 +4,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Unit tests for updating the LLVM next hash."""
+"""Unit tests for updating LLVM hashes."""
 
 from __future__ import print_function
 
@@ -23,8 +23,8 @@ import update_chromeos_llvm_next_hash
 # pylint: disable=protected-access
 
 
-class UpdateLLVMNextHashTest(unittest.TestCase):
-  """Test class for updating 'LLVM_NEXT_HASH' of packages."""
+class UpdateLLVMHashTest(unittest.TestCase):
+  """Test class for updating LLVM hashes of packages."""
 
   @mock.patch.object(update_chromeos_llvm_next_hash, 'ChrootRunCommand')
   def testSucceedsToGetChrootPathForPackage(self, mock_chroot_command):
@@ -108,21 +108,49 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
   # Simulate behavior of 'os.path.isfile()' when the ebuild path to a package
   # does not exist.
   @mock.patch.object(os.path, 'isfile', return_value=False)
-  def testFailedToUpdateLLVMNextHashForInvalidEbuildPath(self, mock_isfile):
+  def testFailedToUpdateLLVMHashForInvalidEbuildPath(self, mock_isfile):
     ebuild_path = '/some/path/to/package.ebuild'
-
-    llvm_hash = 'a123testhash1'
-    llvm_revision = 1000
+    llvm_variant = update_chromeos_llvm_next_hash.LLVMVariant.current
+    git_hash = 'a123testhash1'
+    svn_version = 1000
 
     # Verify the exception is raised when the ebuild path does not exist.
     with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_next_hash.UpdateBuildLLVMNextHash(
-          ebuild_path, llvm_hash, llvm_revision)
+      update_chromeos_llvm_next_hash.UpdateEbuildLLVMHash(
+          ebuild_path, llvm_variant, git_hash, svn_version)
 
     self.assertEqual(
         str(err.exception), 'Invalid ebuild path provided: %s' % ebuild_path)
 
     mock_isfile.assert_called_once()
+
+  # Simulate 'os.path.isfile' behavior on a valid ebuild path.
+  @mock.patch.object(os.path, 'isfile', return_value=True)
+  def testFailedToUpdateLLVMHash(self, mock_isfile):
+    # Create a temporary file to simulate an ebuild file of a package.
+    with CreateTemporaryJsonFile() as ebuild_file:
+      with open(ebuild_file, 'w') as f:
+        f.write('\n'.join([
+            'First line in the ebuild', 'Second line in the ebuild',
+            'Last line in the ebuild'
+        ]))
+
+      llvm_variant = update_chromeos_llvm_next_hash.LLVMVariant.current
+      git_hash = 'a123testhash1'
+      svn_version = 1000
+
+      # Verify the exception is raised when the ebuild file does not have
+      # 'LLVM_HASH'.
+      with self.assertRaises(ValueError) as err:
+        update_chromeos_llvm_next_hash.UpdateEbuildLLVMHash(
+            ebuild_file, llvm_variant, git_hash, svn_version)
+
+        self.assertEqual(
+            str(err.exception), ('Failed to update %s.', 'LLVM_HASH'))
+
+      llvm_variant = update_chromeos_llvm_next_hash.LLVMVariant.next
+
+    self.assertEqual(mock_isfile.call_count, 2)
 
   # Simulate 'os.path.isfile' behavior on a valid ebuild path.
   @mock.patch.object(os.path, 'isfile', return_value=True)
@@ -135,18 +163,63 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
             'Last line in the ebuild'
         ]))
 
-      llvm_hash = 'a123testhash1'
-      llvm_revision = 1000
+      llvm_variant = update_chromeos_llvm_next_hash.LLVMVariant.next
+      git_hash = 'a123testhash1'
+      svn_version = 1000
 
       # Verify the exception is raised when the ebuild file does not have
       # 'LLVM_NEXT_HASH'.
       with self.assertRaises(ValueError) as err:
-        update_chromeos_llvm_next_hash.UpdateBuildLLVMNextHash(
-            ebuild_file, llvm_hash, llvm_revision)
+        update_chromeos_llvm_next_hash.UpdateEbuildLLVMHash(
+            ebuild_file, llvm_variant, git_hash, svn_version)
 
-      self.assertEqual(str(err.exception), 'Failed to update the LLVM hash.')
+        self.assertEqual(
+            str(err.exception), ('Failed to update %s.', 'LLVM_NEXT_HASH'))
 
     self.assertEqual(mock_isfile.call_count, 2)
+
+  # Simulate 'os.path.isfile' behavior on a valid ebuild path.
+  @mock.patch.object(os.path, 'isfile', return_value=True)
+  # Simulate 'ExecCommandAndCaptureOutput()' when successfully staged the
+  # ebuild file for commit.
+  @mock.patch.object(
+      update_chromeos_llvm_next_hash,
+      'ExecCommandAndCaptureOutput',
+      return_value=None)
+  def testSuccessfullyStageTheEbuildForCommitForLLVMHashUpdate(
+      self, mock_stage_commit_command, mock_isfile):
+
+    # Create a temporary file to simulate an ebuild file of a package.
+    with CreateTemporaryJsonFile() as ebuild_file:
+      # Updates LLVM_HASH to 'git_hash' and revision to
+      # 'svn_version'.
+      llvm_variant = update_chromeos_llvm_next_hash.LLVMVariant.current
+      git_hash = 'a123testhash1'
+      svn_version = 1000
+
+      with open(ebuild_file, 'w') as f:
+        f.write('\n'.join([
+            'First line in the ebuild', 'Second line in the ebuild',
+            'LLVM_HASH=\"a12b34c56d78e90\" # r500', 'Last line in the ebuild'
+        ]))
+
+      update_chromeos_llvm_next_hash.UpdateEbuildLLVMHash(
+          ebuild_file, llvm_variant, git_hash, svn_version)
+
+      expected_file_contents = [
+          'First line in the ebuild\n', 'Second line in the ebuild\n',
+          'LLVM_HASH=\"a123testhash1\" # r1000\n', 'Last line in the ebuild'
+      ]
+
+      # Verify the new file contents of the ebuild file match the expected file
+      # contents.
+      with open(ebuild_file) as new_file:
+        file_contents_as_a_list = [cur_line for cur_line in new_file]
+        self.assertListEqual(file_contents_as_a_list, expected_file_contents)
+
+    self.assertEqual(mock_isfile.call_count, 2)
+
+    mock_stage_commit_command.assert_called_once()
 
   # Simulate 'os.path.isfile' behavior on a valid ebuild path.
   @mock.patch.object(os.path, 'isfile', return_value=True)
@@ -161,6 +234,12 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     # Create a temporary file to simulate an ebuild file of a package.
     with CreateTemporaryJsonFile() as ebuild_file:
+      # Updates LLVM_NEXT_HASH to 'git_hash' and revision to
+      # 'svn_version'.
+      llvm_variant = update_chromeos_llvm_next_hash.LLVMVariant.next
+      git_hash = 'a123testhash1'
+      svn_version = 1000
+
       with open(ebuild_file, 'w') as f:
         f.write('\n'.join([
             'First line in the ebuild', 'Second line in the ebuild',
@@ -168,13 +247,8 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
             'Last line in the ebuild'
         ]))
 
-      # Updates the ebuild's git hash to 'llvm_hash' and revision to
-      # 'llvm_revision'.
-      llvm_hash = 'a123testhash1'
-      llvm_revision = 1000
-
-      update_chromeos_llvm_next_hash.UpdateBuildLLVMNextHash(
-          ebuild_file, llvm_hash, llvm_revision)
+      update_chromeos_llvm_next_hash.UpdateEbuildLLVMHash(
+          ebuild_file, llvm_variant, git_hash, svn_version)
 
       expected_file_contents = [
           'First line in the ebuild\n', 'Second line in the ebuild\n',
@@ -250,13 +324,11 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
   @mock.patch.object(os.path, 'isdir', return_value=False)
   def testFailedToCreateRepoForInvalidDirectoryPath(self, mock_isdir):
     path_to_repo = '/path/to/repo'
-
-    # The name to use for the repo name.
-    llvm_hash = 'a123testhash1'
+    branch = 'update-LLVM_NEXT_HASH-a123testhash1'
 
     # Verify the exception is raised when provided an invalid directory path.
     with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_next_hash._CreateRepo(path_to_repo, llvm_hash)
+      update_chromeos_llvm_next_hash._CreateRepo(path_to_repo, branch)
 
     self.assertEqual(
         str(err.exception),
@@ -274,11 +346,9 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
       return_value=None)
   def testSuccessfullyCreatedRepo(self, mock_command_output, mock_isdir):
     path_to_repo = '/path/to/repo'
+    branch = 'update-LLVM_NEXT_HASH-a123testhash1'
 
-    # The name to use for the repo name.
-    llvm_hash = 'a123testhash1'
-
-    update_chromeos_llvm_next_hash._CreateRepo(path_to_repo, llvm_hash)
+    update_chromeos_llvm_next_hash._CreateRepo(path_to_repo, branch)
 
     mock_isdir.assert_called_once_with(path_to_repo)
 
@@ -289,13 +359,11 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
   @mock.patch.object(os.path, 'isdir', return_value=False)
   def testFailedToDeleteRepoForInvalidDirectoryPath(self, mock_isdir):
     path_to_repo = '/some/path/to/repo'
-
-    # The name to use for the repo name.
-    llvm_hash = 'a123testhash2'
+    branch = 'update-LLVM_NEXT_HASH-a123testhash2'
 
     # Verify the exception is raised on an invalid repo path.
     with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_next_hash._DeleteRepo(path_to_repo, llvm_hash)
+      update_chromeos_llvm_next_hash._DeleteRepo(path_to_repo, branch)
 
     self.assertEqual(
         str(err.exception),
@@ -313,11 +381,9 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
       return_value=None)
   def testSuccessfullyDeletedRepo(self, mock_command_output, mock_isdir):
     path_to_repo = '/some/path/to/repo'
+    branch = 'update-LLVM_NEXT_HASH-a123testhash2'
 
-    # The name of the repo to be deleted.
-    llvm_hash = 'a123testhash2'
-
-    update_chromeos_llvm_next_hash._DeleteRepo(path_to_repo, llvm_hash)
+    update_chromeos_llvm_next_hash._DeleteRepo(path_to_repo, branch)
 
     mock_isdir.assert_called_once_with(path_to_repo)
 
@@ -354,16 +420,12 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
   @mock.patch.object(os.path, 'isdir', return_value=False)
   def testFailedToUploadChangesForInvalidPathDirectory(self, mock_isdir):
     path_to_repo = '/some/path/to/repo'
-
-    # The name of repo to upload for review.
-    llvm_hash = 'a123testhash3'
-
-    # Commit messages to add to the CL.
+    branch = 'update-LLVM_NEXT_HASH-a123testhash3'
     commit_messages = ['-m Test message']
 
     # Verify exception is raised when on an invalid repo path.
     with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_next_hash.UploadChanges(path_to_repo, llvm_hash,
+      update_chromeos_llvm_next_hash.UploadChanges(path_to_repo, branch,
                                                    commit_messages)
 
     self.assertEqual(
@@ -395,16 +457,12 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     mock_repo_upload.return_value.returncode = 1
 
     path_to_repo = '/some/path/to/repo'
-
-    # The name of repo to upload for review.
-    llvm_hash = 'a123testhash3'
-
-    # Commit messages to add to the CL.
+    branch = 'update-LLVM_NEXT_HASH-a123testhash3'
     commit_messages = ['-m Test message']
 
     # Verify exception is raised when failed to upload the changes for review.
     with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_next_hash.UploadChanges(path_to_repo, llvm_hash,
+      update_chromeos_llvm_next_hash.UploadChanges(path_to_repo, branch,
                                                    commit_messages)
 
     self.assertEqual(str(err.exception), 'Failed to upload changes for review')
@@ -443,15 +501,11 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     mock_repo_upload.return_value.returncode = 0
 
     path_to_repo = '/some/path/to/repo'
-
-    # The name of the hash to upload for review.
-    llvm_hash = 'a123testhash3'
-
-    # Commit messages to add to the CL.
+    branch = 'update-LLVM_NEXT_HASH-a123testhash3'
     commit_messages = ['-m Test message']
 
     change_list = update_chromeos_llvm_next_hash.UploadChanges(
-        path_to_repo, llvm_hash, commit_messages)
+        path_to_repo, branch, commit_messages)
 
     self.assertEqual(
         change_list.url,
@@ -701,7 +755,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
   @mock.patch.object(update_chromeos_llvm_next_hash,
                      'CreatePathDictionaryFromPackages')
   @mock.patch.object(update_chromeos_llvm_next_hash, '_CreateRepo')
-  @mock.patch.object(update_chromeos_llvm_next_hash, 'UpdateBuildLLVMNextHash')
+  @mock.patch.object(update_chromeos_llvm_next_hash, 'UpdateEbuildLLVMHash')
   @mock.patch.object(update_chromeos_llvm_next_hash, 'UprevEbuild')
   @mock.patch.object(update_chromeos_llvm_next_hash, 'UploadChanges')
   @mock.patch.object(update_chromeos_llvm_next_hash, '_DeleteRepo')
@@ -718,16 +772,16 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     # Test function to simulate '_CreateRepo' when successfully created the
     # repo on a valid repo path.
-    def SuccessfullyCreateRepoForChanges(_repo_path, llvm_hash):
-      self.assertEqual(llvm_hash, 'a123testhash4')
+    def SuccessfullyCreateRepoForChanges(_repo_path, branch):
+      self.assertEqual(branch, 'update-LLVM_NEXT_HASH-a123testhash4')
       return
 
-    # Test function to simulate 'UpdateBuildLLVMNextHash' when successfully
+    # Test function to simulate 'UpdateEbuildLLVMHash' when successfully
     # updated the ebuild's 'LLVM_NEXT_HASH'.
-    def SuccessfullyUpdatedLLVMNextHash(ebuild_path, llvm_hash, llvm_version):
+    def SuccessfullyUpdatedLLVMHash(ebuild_path, _, git_hash, svn_version):
       self.assertEqual(ebuild_path, abs_path_to_package)
-      self.assertEqual(llvm_hash, 'a123testhash4')
-      self.assertEqual(llvm_version, 1000)
+      self.assertEqual(git_hash, 'a123testhash4')
+      self.assertEqual(svn_version, 1000)
       return
 
     # Test function to simulate 'UprevEbuild' when the symlink to the ebuild
@@ -739,7 +793,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     # Test function to fail on 'UploadChanges' if the function gets called
     # when an exception is raised.
-    def ShouldNotExecuteUploadChanges(_repo_path, _llvm_hash, _commit_messages):
+    def ShouldNotExecuteUploadChanges(_repo_path, _git_hash, _commit_messages):
       # Test function should not be called (i.e. execution should resume in the
       # 'finally' block) because 'UprevEbuild()' raised an
       # exception.
@@ -756,44 +810,46 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     # Use test function to simulate behavior.
     mock_create_repo.side_effect = SuccessfullyCreateRepoForChanges
-    mock_update_llvm_next.side_effect = SuccessfullyUpdatedLLVMNextHash
+    mock_update_llvm_next.side_effect = SuccessfullyUpdatedLLVMHash
     mock_uprev_ebuild.side_effect = FailedToUprevEbuild
     mock_upload_changes.side_effect = ShouldNotExecuteUploadChanges
 
     packages_to_update = ['test-packages/package1']
-    patch_metadata_file = 'PATCHES.json'
-    llvm_hash = 'a123testhash4'
-    llvm_version = 1000
+    llvm_variant = update_chromeos_llvm_next_hash.LLVMVariant.next
+    git_hash = 'a123testhash4'
+    svn_version = 1000
     chroot_path = '/some/path/to/chroot'
-    svn_option = 'google3'
+    patch_metadata_file = 'PATCHES.json'
+    git_hash_source = 'google3'
+    branch = 'update-LLVM_NEXT_HASH-a123testhash4'
 
     # Verify exception is raised when an exception is thrown within
     # the 'try' block by UprevEbuild function.
     with self.assertRaises(ValueError) as err:
       update_chromeos_llvm_next_hash.UpdatePackages(
-          packages_to_update, llvm_hash, llvm_version, chroot_path,
-          patch_metadata_file, FailureModes.FAIL, svn_option)
+          packages_to_update, llvm_variant, git_hash, svn_version, chroot_path,
+          patch_metadata_file, FailureModes.FAIL, git_hash_source)
 
     self.assertEqual(str(err.exception), 'Failed to uprev the ebuild.')
 
     mock_create_path_dict.assert_called_once_with(chroot_path,
                                                   packages_to_update)
 
-    mock_create_repo.assert_called_once_with(path_to_package_dir, llvm_hash)
+    mock_create_repo.assert_called_once_with(path_to_package_dir, branch)
 
-    mock_update_llvm_next.assert_called_once_with(abs_path_to_package,
-                                                  llvm_hash, llvm_version)
+    mock_update_llvm_next.assert_called_once_with(
+        abs_path_to_package, llvm_variant, git_hash, svn_version)
 
     mock_uprev_ebuild.assert_called_once_with(symlink_path_to_package)
 
     mock_upload_changes.assert_not_called()
 
-    mock_delete_repo.assert_called_once_with(path_to_package_dir, llvm_hash)
+    mock_delete_repo.assert_called_once_with(path_to_package_dir, branch)
 
   @mock.patch.object(update_chromeos_llvm_next_hash,
                      'CreatePathDictionaryFromPackages')
   @mock.patch.object(update_chromeos_llvm_next_hash, '_CreateRepo')
-  @mock.patch.object(update_chromeos_llvm_next_hash, 'UpdateBuildLLVMNextHash')
+  @mock.patch.object(update_chromeos_llvm_next_hash, 'UpdateEbuildLLVMHash')
   @mock.patch.object(update_chromeos_llvm_next_hash, 'UprevEbuild')
   @mock.patch.object(update_chromeos_llvm_next_hash, 'UploadChanges')
   @mock.patch.object(update_chromeos_llvm_next_hash, '_DeleteRepo')
@@ -814,17 +870,17 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     # Test function to simulate '_CreateRepo' when successfully created the repo
     # for the changes to be made to the ebuild files.
-    def SuccessfullyCreateRepoForChanges(_repo_path, llvm_hash):
-      self.assertEqual(llvm_hash, 'a123testhash5')
+    def SuccessfullyCreateRepoForChanges(_repo_path, branch):
+      self.assertEqual(branch, 'update-LLVM_NEXT_HASH-a123testhash5')
       return
 
     # Test function to simulate 'UploadChanges' after a successfull update of
     # 'LLVM_NEXT_HASH" of the ebuild file.
-    def SuccessfullyUpdatedLLVMNextHash(ebuild_path, llvm_hash, llvm_version):
+    def SuccessfullyUpdatedLLVMHash(ebuild_path, _, git_hash, svn_version):
       self.assertEqual(ebuild_path,
                        '/some/path/to/chroot/src/path/to/package.ebuild')
-      self.assertEqual(llvm_hash, 'a123testhash5')
-      self.assertEqual(llvm_version, 1000)
+      self.assertEqual(git_hash, 'a123testhash5')
+      self.assertEqual(svn_version, 1000)
       return
 
     # Test function to simulate 'UprevEbuild' when successfully incremented
@@ -837,11 +893,11 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     # Test function to simulate 'UpdatePackagesPatchMetadataFile()' when the
     # patch results contains a disabled patch in 'disable_patches' mode.
-    def RetrievedPatchResults(chroot_path, llvm_version, patch_metadata_file,
+    def RetrievedPatchResults(chroot_path, svn_version, patch_metadata_file,
                               packages, mode):
 
       self.assertEqual(chroot_path, '/some/path/to/chroot')
-      self.assertEqual(llvm_version, 1000)
+      self.assertEqual(svn_version, 1000)
       self.assertEqual(patch_metadata_file, 'PATCHES.json')
       self.assertListEqual(packages, ['path/to'])
       self.assertEqual(mode, FailureModes.DISABLE_PATCHES)
@@ -869,7 +925,7 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     # Test function to simulate 'UploadChanges()' when successfully created a
     # commit for the changes made to the packages and their patches and
     # retrieved the change list of the commit.
-    def SuccessfullyUploadedChanges(_repo_path, _llvm_hash, _commit_messages):
+    def SuccessfullyUploadedChanges(_repo_path, _branch, _commit_messages):
       commit_url = 'https://some_name/path/to/commit/+/12345'
 
       return update_chromeos_llvm_next_hash.CommitContents(
@@ -885,21 +941,23 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
 
     # Use test function to simulate behavior.
     mock_create_repo.side_effect = SuccessfullyCreateRepoForChanges
-    mock_update_llvm_next.side_effect = SuccessfullyUpdatedLLVMNextHash
+    mock_update_llvm_next.side_effect = SuccessfullyUpdatedLLVMHash
     mock_uprev_ebuild.side_effect = SuccessfullyUprevedEbuild
     mock_update_package_metadata_file.side_effect = RetrievedPatchResults
     mock_upload_changes.side_effect = SuccessfullyUploadedChanges
 
     packages_to_update = ['test-packages/package1']
-    patch_metadata_file = 'PATCHES.json'
-    llvm_hash = 'a123testhash5'
-    llvm_version = 1000
+    llvm_variant = update_chromeos_llvm_next_hash.LLVMVariant.next
+    git_hash = 'a123testhash5'
+    svn_version = 1000
     chroot_path = '/some/path/to/chroot'
-    svn_option = 'tot'
+    patch_metadata_file = 'PATCHES.json'
+    git_hash_source = 'tot'
+    branch = 'update-LLVM_NEXT_HASH-a123testhash5'
 
     change_list = update_chromeos_llvm_next_hash.UpdatePackages(
-        packages_to_update, llvm_hash, llvm_version, chroot_path,
-        patch_metadata_file, FailureModes.DISABLE_PATCHES, svn_option)
+        packages_to_update, llvm_variant, git_hash, svn_version, chroot_path,
+        patch_metadata_file, FailureModes.DISABLE_PATCHES, git_hash_source)
 
     self.assertEqual(change_list.url,
                      'https://some_name/path/to/commit/+/12345')
@@ -909,10 +967,10 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     mock_create_path_dict.assert_called_once_with(chroot_path,
                                                   packages_to_update)
 
-    mock_create_repo.assert_called_once_with(path_to_package_dir, llvm_hash)
+    mock_create_repo.assert_called_once_with(path_to_package_dir, branch)
 
-    mock_update_llvm_next.assert_called_once_with(abs_path_to_package,
-                                                  llvm_hash, llvm_version)
+    mock_update_llvm_next.assert_called_once_with(
+        abs_path_to_package, llvm_variant, git_hash, svn_version)
 
     mock_uprev_ebuild.assert_called_once_with(symlink_path_to_package)
 
@@ -931,10 +989,10 @@ class UpdateLLVMNextHashTest(unittest.TestCase):
     mock_stage_patch_file.assert_called_once_with(
         '/abs/path/to/filesdir/PATCHES.json')
 
-    mock_upload_changes.assert_called_once_with(path_to_package_dir, llvm_hash,
+    mock_upload_changes.assert_called_once_with(path_to_package_dir, branch,
                                                 expected_commit_messages)
 
-    mock_delete_repo.assert_called_once_with(path_to_package_dir, llvm_hash)
+    mock_delete_repo.assert_called_once_with(path_to_package_dir, branch)
 
 
 if __name__ == '__main__':

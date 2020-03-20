@@ -4,26 +4,38 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Updates LLVM_NEXT_HASH and uprevs the build of a package or packages.
+"""Updates the LLVM hash and uprevs the build of the specified
+
+packages.
 
 For each package, a temporary repo is created and the changes are uploaded
 for review.
 """
 
 from __future__ import print_function
+from collections import namedtuple
+from enum import Enum
 
 import argparse
 import os
 import re
 import subprocess
-from collections import namedtuple
 
 from assert_not_in_chroot import VerifyOutsideChroot
 from failure_modes import FailureModes
+from subprocess_helpers import ChrootRunCommand, ExecCommandAndCaptureOutput
 from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption, is_svn_option
 import get_llvm_hash
 import llvm_patch_management
-from subprocess_helpers import ChrootRunCommand, ExecCommandAndCaptureOutput
+
+
+# Specify which LLVM hash to update
+class LLVMVariant(Enum):
+  """Represent the LLVM hash in an ebuild file to update."""
+
+  current = 'LLVM_HASH'
+  next = 'LLVM_NEXT_HASH'
+
 
 # If set to `True`, then the contents of `stdout` after executing a command will
 # be displayed to the terminal.
@@ -72,12 +84,21 @@ def GetCommandLineArgs():
       help='display contents of a command to the terminal '
       '(default: %(default)s)')
 
+  # Add argument for the LLVM hash to update
+  parser.add_argument(
+      '--is_llvm_next',
+      action='store_true',
+      help=
+      'which llvm hash to update. Update LLVM_NEXT_HASH specified. ' \
+      'Otherwise, update LLVM_HASH'
+  )
+
   # Add argument for the LLVM version to use.
   parser.add_argument(
       '--llvm_version',
       type=is_svn_option,
       required=True,
-      help='which git hash of LLVM to find. Either a svn revision, or one '
+      help='which git hash to use. Either a svn revision, or one '
       'of %s' % sorted(get_llvm_hash.KNOWN_HASH_SOURCES))
 
   # Add argument for the mode of the patch management when handling patches.
@@ -218,15 +239,16 @@ def GetEbuildPathsFromSymLinkPaths(symlinks):
   return resolved_paths
 
 
-def UpdateBuildLLVMNextHash(ebuild_path, llvm_hash, llvm_version):
-  """Updates the build's LLVM_NEXT_HASH.
+def UpdateEbuildLLVMHash(ebuild_path, llvm_variant, git_hash, svn_version):
+  """Updates the LLVM hash in the ebuild.
 
   The build changes are staged for commit in the temporary repo.
 
   Args:
     ebuild_path: The absolute path to the ebuild.
-    llvm_hash: The new LLVM hash to use for LLVM_NEXT_HASH.
-    llvm_version: The revision number of 'llvm_hash'.
+    llvm_variant: Which LLVM hash to update.
+    git_hash: The new git hash.
+    svn_version: The SVN-style revision number of git_hash.
 
   Raises:
     ValueError: Invalid ebuild path provided or failed to stage the commit
@@ -244,19 +266,13 @@ def UpdateBuildLLVMNextHash(ebuild_path, llvm_hash, llvm_version):
   if not os.path.isfile(ebuild_path):
     raise ValueError('Invalid ebuild path provided: %s' % ebuild_path)
 
-  # Create regex that finds 'LLVM_NEXT_HASH'.
-  llvm_regex = re.compile('^LLVM_NEXT_HASH=\"[a-z0-9]+\"')
-
   temp_ebuild_file = '%s.temp' % ebuild_path
-
-  # A flag for whether 'LLVM_NEXT_HASH=...' was updated.
-  is_updated = False
 
   with open(ebuild_path) as ebuild_file:
     # write updates to a temporary file in case of interrupts
     with open(temp_ebuild_file, 'w') as temp_file:
-      for cur_line in ReplaceLLVMNextHash(ebuild_file, is_updated, llvm_regex,
-                                          llvm_hash, llvm_version):
+      for cur_line in ReplaceLLVMHash(ebuild_file, llvm_variant, git_hash,
+                                      svn_version):
         temp_file.write(cur_line)
 
   os.rename(temp_ebuild_file, ebuild_path)
@@ -270,30 +286,30 @@ def UpdateBuildLLVMNextHash(ebuild_path, llvm_hash, llvm_version):
   ExecCommandAndCaptureOutput(stage_changes_cmd, verbose=verbose)
 
 
-def ReplaceLLVMNextHash(ebuild_lines, is_updated, llvm_regex, llvm_hash,
-                        llvm_version):
-  """Iterates through the ebuild file and updates the 'LLVM_NEXT_HASH'.
+def ReplaceLLVMHash(ebuild_lines, llvm_variant, git_hash, svn_version):
+  """Updates the LLVM git hash.
 
   Args:
     ebuild_lines: The contents of the ebuild file.
-    is_updated: A flag for whether 'LLVM_NEXT_HASH' was updated.
-    llvm_regex: The regex object for finding 'LLVM_NEXT_HASH=...' when
-    iterating through the contents of the file.
-    llvm_hash: The new LLVM hash to use for LLVM_NEXT_HASH.
-    llvm_version: The revision number of 'llvm_hash'.
+    llvm_variant: The LLVM hash to update.
+    git_hash: The new git hash.
+    svn_version: The SVN-style revision number of git_hash.
   """
-
+  is_updated = False
+  llvm_regex = re.compile('^' + re.escape(llvm_variant.value) +
+                          '=\"[a-z0-9]+\"')
   for cur_line in ebuild_lines:
     if not is_updated and llvm_regex.search(cur_line):
-      # Update the LLVM next hash and revision number.
-      cur_line = 'LLVM_NEXT_HASH=\"%s\" # r%d\n' % (llvm_hash, llvm_version)
+      # Update the git hash and revision number.
+      cur_line = '%s=\"%s\" # r%d\n' % (llvm_variant.value, git_hash,
+                                        svn_version)
 
       is_updated = True
 
     yield cur_line
 
-  if not is_updated:  # failed to update 'LLVM_NEXT_HASH'
-    raise ValueError('Failed to update the LLVM hash.')
+  if not is_updated:
+    raise ValueError('Failed to update %s' % llvm_variant.value)
 
 
 def UprevEbuild(symlink):
@@ -333,12 +349,14 @@ def UprevEbuild(symlink):
   ExecCommandAndCaptureOutput(stage_symlink_cmd, verbose=verbose)
 
 
-def _CreateRepo(path_to_repo_dir, llvm_hash):
+def _CreateRepo(path_to_repo_dir, branch):
   """Creates a temporary repo for the changes.
 
   Args:
     path_to_repo_dir: The absolute path to the repo.
-    llvm_hash: The LLVM hash to use for the name of the repo.
+    branch: The name of the branch to create.
+    llvm_variant: The LLVM hash to update.
+    git_hash: The new git hash.
 
   Raises:
     ValueError: Failed to create a repo in that directory.
@@ -358,18 +376,18 @@ def _CreateRepo(path_to_repo_dir, llvm_hash):
 
   ExecCommandAndCaptureOutput(reset_changes_cmd, verbose=verbose)
 
-  create_repo_cmd = ['repo', 'start', 'llvm-next-update-%s' % llvm_hash]
+  create_repo_cmd = ['repo', 'start', branch]
 
   ExecCommandAndCaptureOutput(
       create_repo_cmd, cwd=path_to_repo_dir, verbose=verbose)
 
 
-def _DeleteRepo(path_to_repo_dir, llvm_hash):
+def _DeleteRepo(path_to_repo_dir, branch):
   """Deletes the temporary repo.
 
   Args:
     path_to_repo_dir: The absolute path of the repo.
-    llvm_hash: The LLVM hash used for the name of the repo.
+    branch: The name of the branch to delete.
 
   Raises:
     ValueError: Failed to delete the repo in that directory.
@@ -388,10 +406,7 @@ def _DeleteRepo(path_to_repo_dir, llvm_hash):
 
   ExecCommandAndCaptureOutput(reset_head_cmd, verbose=verbose)
 
-  delete_repo_cmd = [
-      'git', '-C', path_to_repo_dir, 'branch', '-D',
-      'llvm-next-update-%s' % llvm_hash
-  ]
+  delete_repo_cmd = ['git', '-C', path_to_repo_dir, 'branch', '-D', branch]
 
   ExecCommandAndCaptureOutput(delete_repo_cmd, verbose=verbose)
 
@@ -424,12 +439,12 @@ def GetGerritRepoUploadContents(repo_upload_contents):
   return CommitContents(url=found_url.group(0), cl_number=cl_number)
 
 
-def UploadChanges(path_to_repo_dir, llvm_hash, commit_messages):
+def UploadChanges(path_to_repo_dir, branch, commit_messages):
   """Uploads the changes (updating LLVM next hash and uprev symlink) for review.
 
   Args:
     path_to_repo_dir: The absolute path to the repo where changes were made.
-    llvm_hash: The LLVM hash used for the name of the repo.
+    branch: The name of the branch to upload.
     commit_messages: A string of commit message(s) (i.e. '-m [message]'
     of the changes made.
 
@@ -455,8 +470,7 @@ def UploadChanges(path_to_repo_dir, llvm_hash, commit_messages):
 
   # Upload the changes for review.
   upload_change_cmd = (
-      'yes | repo upload --wip --ne --br=llvm-next-update-%s --no-verify' %
-      llvm_hash)
+      'yes | repo upload --wip --ne --br=%s --no-verify' % branch)
 
   # Pylint currently doesn't lint things in py3 mode, and py2 didn't allow
   # users to specify `encoding`s for Popen. Hence, pylint is "wrong" here.
@@ -598,25 +612,26 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
   return commit_messages
 
 
-def UpdatePackages(packages, llvm_hash, llvm_version, chroot_path,
-                   patch_metadata_file, mode, svn_option):
-  """Updates the package's LLVM_NEXT_HASH and uprevs the ebuild.
+def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
+                   patch_metadata_file, mode, git_hash_source):
+  """Updates an LLVM hash and uprevs the ebuild of the packages.
 
   A temporary repo is created for the changes. The changes are
   then uploaded for review.
 
   Args:
     packages: A list of all the packages that are going to be updated.
-    llvm_hash: The LLVM hash to use for 'LLVM_NEXT_HASH'.
-    llvm_version: The LLVM version of the 'llvm_hash'.
+    llvm_variant: The LLVM hash to update.
+    git_hash: The new git hash.
+    svn_version: The SVN-style revision number of git_hash.
     chroot_path: The absolute path to the chroot.
     patch_metadata_file: The name of the .json file in '$FILESDIR/' that has
     the patches and its metadata.
     mode: The mode of the patch manager when handling an applicable patch
     that failed to apply.
       Ex: 'FailureModes.FAIL'
-    svn_option: The git hash to use based off of the svn option.
-      Ex: 'google3', 'tot', or <svn_version> such as 365123
+    git_hash_source: The source of which git hash to use based off of.
+      Ex: 'google3', 'tot', or <version> such as 365123
 
   Returns:
     A nametuple that has two (key, value) pairs, where the first pair is the
@@ -632,15 +647,20 @@ def UpdatePackages(packages, llvm_hash, llvm_version, chroot_path,
 
   repo_path = os.path.dirname(next(iter(paths_dict.values())))
 
-  _CreateRepo(repo_path, llvm_hash)
+  branch = 'update-' + llvm_variant.value + '-' + git_hash
+
+  _CreateRepo(repo_path, branch)
 
   try:
-    if svn_option in get_llvm_hash.KNOWN_HASH_SOURCES:
-      commit_message_header = ('llvm-next/%s: upgrade to %s (r%d)' %
-                               (svn_option, llvm_hash, llvm_version))
+    commit_message_header = 'llvm'
+    if llvm_variant == LLVMVariant.next:
+      commit_message_header = 'llvm-next'
+    if git_hash_source in get_llvm_hash.KNOWN_HASH_SOURCES:
+      commit_message_header += (
+          '/%s: upgrade to %s (r%d)' % (git_hash_source, git_hash, svn_version))
     else:
-      commit_message_header = (
-          'llvm-next: upgrade to %s (r%d)' % (llvm_hash, llvm_version))
+      commit_message_header += (
+          ': upgrade to %s (r%d)' % (git_hash, svn_version))
 
     commit_messages = ['-m %s' % commit_message_header]
 
@@ -652,13 +672,13 @@ def UpdatePackages(packages, llvm_hash, llvm_version, chroot_path,
     # Iterate through the dictionary.
     #
     # For each iteration:
-    # 1) Update the ebuild's LLVM_NEXT_HASH.
+    # 1) Update the ebuild's LLVM hash.
     # 2) Uprev the ebuild (symlink).
     # 3) Add the modified package to the commit message.
     for symlink_path, ebuild_path in paths_dict.items():
       path_to_ebuild_dir = os.path.dirname(ebuild_path)
 
-      UpdateBuildLLVMNextHash(ebuild_path, llvm_hash, llvm_version)
+      UpdateEbuildLLVMHash(ebuild_path, llvm_variant, git_hash, svn_version)
 
       UprevEbuild(symlink_path)
 
@@ -673,16 +693,16 @@ def UpdatePackages(packages, llvm_hash, llvm_version, chroot_path,
 
     # Handle the patches for each package.
     package_info_dict = llvm_patch_management.UpdatePackagesPatchMetadataFile(
-        chroot_path, llvm_version, patch_metadata_file, packages, mode)
+        chroot_path, svn_version, patch_metadata_file, packages, mode)
 
     # Update the commit message if changes were made to a package's patches.
     commit_messages = StagePackagesPatchResultsForCommit(
         package_info_dict, commit_messages)
 
-    change_list = UploadChanges(repo_path, llvm_hash, commit_messages)
+    change_list = UploadChanges(repo_path, branch, commit_messages)
 
   finally:
-    _DeleteRepo(repo_path, llvm_hash)
+    _DeleteRepo(repo_path, branch)
 
   return change_list
 
@@ -698,16 +718,20 @@ def main():
 
   args_output = GetCommandLineArgs()
 
-  svn_option = args_output.llvm_version
+  llvm_variant = LLVMVariant.current
+  if args_output.is_llvm_next:
+    llvm_variant = LLVMVariant.next
 
-  llvm_hash, llvm_version = GetLLVMHashAndVersionFromSVNOption(svn_option)
+  git_hash_source = args_output.llvm_version
+
+  git_hash, svn_version = GetLLVMHashAndVersionFromSVNOption(git_hash_source)
 
   change_list = UpdatePackages(
-      args_output.update_packages, llvm_hash, llvm_version,
+      args_output.update_packages, llvm_variant, git_hash, svn_version,
       args_output.chroot_path, args_output.patch_metadata_file,
-      FailureModes(args_output.failure_mode), svn_option)
+      FailureModes(args_output.failure_mode), git_hash_source)
 
-  print('Successfully updated packages to %d' % llvm_version)
+  print('Successfully updated packages to %s (%d)' % (git_hash, svn_version))
   print('Gerrit URL: %s' % change_list.url)
   print('Change list number: %d' % change_list.cl_number)
 
