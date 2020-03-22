@@ -22,6 +22,7 @@
             "-Qunused-arguments",
             "-grecord-gcc-switches",
             "-fno-addrsig",
+            "-fcommon",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-unknown-warning-option",
@@ -42,7 +43,6 @@
             "x86_64-cros-linux-gnu"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
@@ -74,6 +74,7 @@
             "-Qunused-arguments",
             "-grecord-gcc-switches",
             "-fno-addrsig",
+            "-fcommon",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-unknown-warning-option",
@@ -94,7 +95,6 @@
             "x86_64-cros-linux-gnu"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
@@ -112,6 +112,7 @@
             "-Qunused-arguments",
             "-grecord-gcc-switches",
             "-fno-addrsig",
+            "-fcommon",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-unknown-warning-option",
@@ -134,7 +135,6 @@
             "-Wno-error=poison-system-directories"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
@@ -168,6 +168,7 @@
             "-Qunused-arguments",
             "-grecord-gcc-switches",
             "-fno-addrsig",
+            "-fcommon",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-unknown-warning-option",
@@ -188,7 +189,6 @@
             "x86_64-cros-linux-gnu"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
@@ -206,6 +206,7 @@
             "-Qunused-arguments",
             "-grecord-gcc-switches",
             "-fno-addrsig",
+            "-fcommon",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-unknown-warning-option",
@@ -228,7 +229,6 @@
             "-Wno-error=poison-system-directories"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
