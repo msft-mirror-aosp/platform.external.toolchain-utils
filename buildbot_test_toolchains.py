@@ -241,7 +241,7 @@ class ToolchainComparator(object):
     crosperf = os.path.join(TOOLCHAIN_DIR, 'crosperf', 'crosperf')
     noschedv2_opts = '--noschedv2' if self._noschedv2 else ''
     command = ('{crosperf} --no_email=True --results_dir={r_dir} '
-               '--intel_pstate=no_hwp '
+               '--intel_pstate=no_hwp --logging_level=verbose '
                '--json_report=True {noschedv2_opts} {exp_file}').format(
                    crosperf=crosperf,
                    r_dir=self._reports_dir,
