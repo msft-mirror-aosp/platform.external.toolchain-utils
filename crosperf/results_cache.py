@@ -109,10 +109,11 @@ class Result(object):
         raise IOError('Could not copy results file: %s' % file_to_copy)
 
   def CopyResultsTo(self, dest_dir):
+    self.CopyFilesTo(dest_dir, self.results_file)
     self.CopyFilesTo(dest_dir, self.perf_data_files)
     self.CopyFilesTo(dest_dir, self.perf_report_files)
-    if self.perf_data_files or self.perf_report_files:
-      self._logger.LogOutput('Perf results files stored in %s.' % dest_dir)
+    if self.results_file or self.perf_data_files or self.perf_report_files:
+      self._logger.LogOutput('Results files stored in %s.' % dest_dir)
 
   def GetNewKeyvals(self, keyvals_dict):
     # Initialize 'units' dictionary.

@@ -501,6 +501,9 @@ class ResultTest(unittest.TestCase):
 
   @mock.patch.object(Result, 'CopyFilesTo')
   def test_copy_results_to(self, mockCopyFilesTo):
+    results_file = [
+        '/tmp/result.json.0', '/tmp/result.json.1', '/tmp/result.json.2'
+    ]
     perf_data_files = [
         '/tmp/perf.data.0', '/tmp/perf.data.1', '/tmp/perf.data.2'
     ]
@@ -508,16 +511,19 @@ class ResultTest(unittest.TestCase):
         '/tmp/perf.report.0', '/tmp/perf.report.1', '/tmp/perf.report.2'
     ]
 
+    self.result.results_file = results_file
     self.result.perf_data_files = perf_data_files
     self.result.perf_report_files = perf_report_files
 
     self.result.CopyFilesTo = mockCopyFilesTo
     self.result.CopyResultsTo('/tmp/results/')
-    self.assertEqual(mockCopyFilesTo.call_count, 2)
-    self.assertEqual(len(mockCopyFilesTo.call_args_list), 2)
+    self.assertEqual(mockCopyFilesTo.call_count, 3)
+    self.assertEqual(len(mockCopyFilesTo.call_args_list), 3)
     self.assertEqual(mockCopyFilesTo.call_args_list[0][0],
-                     ('/tmp/results/', perf_data_files))
+                     ('/tmp/results/', results_file))
     self.assertEqual(mockCopyFilesTo.call_args_list[1][0],
+                     ('/tmp/results/', perf_data_files))
+    self.assertEqual(mockCopyFilesTo.call_args_list[2][0],
                      ('/tmp/results/', perf_report_files))
 
   def test_get_new_keyvals(self):

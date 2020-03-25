@@ -467,9 +467,9 @@ class ExperimentRunnerTest(unittest.TestCase):
     self.assertEqual(self.mock_logger.LogOutputCount, 5)
     self.assertEqual(self.mock_logger.output_msgs, [
         'Storing experiment file in /usr/local/crosperf-results.',
+        'Storing results of each benchmark run.',
         'Storing results report in /usr/local/crosperf-results.',
         'Storing email message body in /usr/local/crosperf-results.',
-        'Storing results of each benchmark run.',
         'Storing top5 statistics of each benchmark run into'
         ' /usr/local/crosperf-results/topstats.log.',
     ])
