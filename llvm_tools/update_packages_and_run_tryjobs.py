@@ -19,7 +19,7 @@ from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption
 from get_llvm_hash import is_svn_option
 from subprocess_helpers import ChrootRunCommand
 from subprocess_helpers import ExecCommandAndCaptureOutput
-import update_chromeos_llvm_next_hash
+import update_chromeos_llvm_hash
 
 
 def GetCommandLineArgs():
@@ -284,11 +284,11 @@ def main():
           (svn_version, last_svn_version, args_output.last_tested))
     return
 
-  update_chromeos_llvm_next_hash.verbose = args_output.verbose
+  update_chromeos_llvm_hash.verbose = args_output.verbose
 
-  change_list = update_chromeos_llvm_next_hash.UpdatePackages(
-      update_packages, update_chromeos_llvm_next_hash.LLVMVariant.next,
-      git_hash, svn_version, args_output.chroot_path, patch_metadata_file,
+  change_list = update_chromeos_llvm_hash.UpdatePackages(
+      update_packages, update_chromeos_llvm_hash.LLVMVariant.next, git_hash,
+      svn_version, args_output.chroot_path, patch_metadata_file,
       FailureModes.DISABLE_PATCHES, svn_option)
 
   print('Successfully updated packages to %d' % svn_version)

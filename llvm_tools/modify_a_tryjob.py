@@ -20,7 +20,7 @@ from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption
 from update_packages_and_run_tryjobs import RunTryJobs
 from update_tryjob_status import FindTryjobIndex
 from update_tryjob_status import TryjobStatus
-import update_chromeos_llvm_next_hash
+import update_chromeos_llvm_hash
 
 
 class ModifyTryjob(enum.Enum):
@@ -117,8 +117,8 @@ def GetCLAfterUpdatingPackages(packages, git_hash, svn_version, chroot_path,
                                patch_metadata_file, svn_option):
   """Updates the packages' LLVM_NEXT."""
 
-  change_list = update_chromeos_llvm_next_hash.UpdatePackages(
-      packages, update_chromeos_llvm_next_hash.LLVMVariant.next, git_hash,
+  change_list = update_chromeos_llvm_hash.UpdatePackages(
+      packages, update_chromeos_llvm_hash.LLVMVariant.next, git_hash,
       svn_version, chroot_path, patch_metadata_file,
       FailureModes.DISABLE_PATCHES, svn_option)
 
@@ -162,7 +162,7 @@ def AddTryjob(packages, git_hash, revision, chroot_path, patch_metadata_file,
               extra_cls, options, builder, verbose, svn_option):
   """Submits a tryjob."""
 
-  update_chromeos_llvm_next_hash.verbose = verbose
+  update_chromeos_llvm_hash.verbose = verbose
 
   change_list = GetCLAfterUpdatingPackages(packages, git_hash, revision,
                                            chroot_path, patch_metadata_file,

@@ -14,8 +14,8 @@ import unittest.mock as mock
 
 from test_helpers import ArgsOutputTest
 from test_helpers import CreateTemporaryFile
-from update_chromeos_llvm_next_hash import CommitContents
-import update_chromeos_llvm_next_hash
+from update_chromeos_llvm_hash import CommitContents
+import update_chromeos_llvm_hash
 import update_packages_and_run_tryjobs
 
 
@@ -36,7 +36,7 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
 
   def testLastTestFileDoesNotExist(self):
     # Simulate 'open()' on a lasted tested file that does not exist.
-    mock_open = mock.mock_open(read_data='')
+    mock.mock_open(read_data='')
 
     self.assertEqual(
         update_packages_and_run_tryjobs.GetLastTestedSVNVersion(
@@ -219,7 +219,7 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
   @mock.patch.object(update_packages_and_run_tryjobs, 'RunTryJobs')
   # Simulate behavior of `UpdatePackages()` when successfully updated the
   # packages and uploaded a CL for review.
-  @mock.patch.object(update_chromeos_llvm_next_hash, 'UpdatePackages')
+  @mock.patch.object(update_chromeos_llvm_hash, 'UpdatePackages')
   # Simulate behavior of `GetCommandLineArgs()` when successfully parsed the
   # command line for the optional/required arguments for the script.
   @mock.patch.object(update_packages_and_run_tryjobs, 'GetCommandLineArgs')
