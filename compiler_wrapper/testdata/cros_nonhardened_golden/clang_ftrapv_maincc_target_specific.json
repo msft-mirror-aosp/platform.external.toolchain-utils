@@ -33,7 +33,6 @@
             "x86_64-cros-linux-gnu"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
@@ -76,7 +75,6 @@
             "x86_64-cros-eabi"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/x86_64-cros-eabi",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
@@ -119,7 +117,6 @@
             "x86_64-cros-win-gnu"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/x86_64-cros-win-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
@@ -163,7 +160,6 @@
             "armv7m-cros-linux-gnu"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/armv7m-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
@@ -206,7 +202,6 @@
             "armv7m-cros-eabi"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/armv7m-cros-eabi",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
@@ -250,7 +245,6 @@
             "armv7m-cros-win-gnu"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/armv7m-cros-win-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
@@ -294,7 +288,6 @@
             "armv8m-cros-linux-gnu"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/armv8m-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
@@ -337,7 +330,6 @@
             "armv8m-cros-eabi"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/armv8m-cros-eabi",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
@@ -381,7 +373,6 @@
             "armv8m-cros-win-gnu"
           ],
           "env_updates": [
-            "CCACHE_BASEDIR=/usr/armv8m-cros-win-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
