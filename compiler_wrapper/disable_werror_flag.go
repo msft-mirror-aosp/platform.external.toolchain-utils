@@ -80,16 +80,16 @@ func doubleBuildWithWNoError(env env, cfg *config, newWarningsDir string, origin
 	if err != nil {
 		return 0, err
 	}
-	// If -Wno-error fixed us, pretend that we never ran without -Wno-error.
-	// Otherwise, pretend that we never ran the second invocation. Since -Werror
-	// is an issue, log in either case.
-	if retryExitCode == 0 {
-		retryStdoutBuffer.WriteTo(env.stdout())
-		retryStderrBuffer.WriteTo(env.stderr())
-	} else {
+	// If -Wno-error fixed us, pretend that we never ran without -Wno-error. Otherwise, pretend
+	// that we never ran the second invocation.
+	if retryExitCode != 0 {
 		originalStdoutBuffer.WriteTo(env.stdout())
 		originalStderrBuffer.WriteTo(env.stderr())
+		return originalExitCode, nil
 	}
+
+	retryStdoutBuffer.WriteTo(env.stdout())
+	retryStderrBuffer.WriteTo(env.stderr())
 
 	// All of the below is basically logging. If we fail at any point, it's
 	// reasonable for that to fail the build. This is all meant for FYI-like

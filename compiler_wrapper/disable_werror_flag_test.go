@@ -146,7 +146,7 @@ func TestForwardStdoutAndStderrWhenDoubleBuildFails(t *testing.T) {
 			}
 		}
 		exitCode := callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, mainCc))
-		if exitCode != 5 {
+		if exitCode != 3 {
 			t.Errorf("unexpected exitcode. Got: %d", exitCode)
 		}
 		if err := verifyNonInternalError(ctx.stderrString(), "-Werror originalerror"); err != nil {
@@ -278,8 +278,8 @@ func TestLogWarningsWhenDoubleBuildFails(t *testing.T) {
 		}
 		ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, mainCc)))
 		loggedWarnings := readLoggedWarnings(ctx)
-		if loggedWarnings == nil {
-			t.Fatal("expected logged warnings")
+		if loggedWarnings != nil {
+			t.Fatal("expected no warnings to be logged")
 		}
 	})
 }
