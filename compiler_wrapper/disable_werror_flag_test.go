@@ -71,6 +71,39 @@ func TestDoubleBuildWithWNoErrorFlag(t *testing.T) {
 	})
 }
 
+func TestKnownConfigureFileParsing(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		for _, f := range []string{"conftest.c", "conftest.cpp"} {
+			if !isLikelyAConfTest(ctx.cfg, ctx.newCommand(clangX86_64, f)) {
+				t.Errorf("%q isn't considered a conf test file", f)
+			}
+		}
+	})
+}
+
+func TestDoubleBuildWithKnownConfigureFile(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			switch ctx.cmdCount {
+			case 1:
+				if err := verifyArgCount(cmd, 0, "-Wno-error"); err != nil {
+					return err
+				}
+				fmt.Fprint(stderr, "-Werror originalerror")
+				return newExitCodeError(1)
+			default:
+				t.Fatalf("unexpected command: %#v", cmd)
+				return nil
+			}
+		}
+
+		ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, "conftest.c")))
+		if ctx.cmdCount != 1 {
+			t.Errorf("expected 1 call. Got: %d", ctx.cmdCount)
+		}
+	})
+}
+
 func TestDoubleBuildWithWNoErrorAndCCache(t *testing.T) {
 	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
 		ctx.cfg.useCCache = true
