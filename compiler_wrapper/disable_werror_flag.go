@@ -62,7 +62,7 @@ func doubleBuildWithWNoError(env env, cfg *config, newWarningsDir string, origin
 	}
 	// The only way we can do anything useful is if it looks like the failure
 	// was -Werror-related.
-	if originalExitCode == 0 || !strings.Contains(originalStderrBuffer.String(), "-Werror") {
+	if originalExitCode == 0 || !bytes.Contains(originalStderrBuffer.Bytes(), []byte("-Werror")) {
 		originalStdoutBuffer.WriteTo(env.stdout())
 		originalStderrBuffer.WriteTo(env.stderr())
 		return originalExitCode, nil
