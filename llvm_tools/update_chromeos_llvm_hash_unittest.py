@@ -420,7 +420,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
   def testFailedToUploadChangesForInvalidPathDirectory(self, mock_isdir):
     path_to_repo = '/some/path/to/repo'
     branch = 'update-LLVM_NEXT_HASH-a123testhash3'
-    commit_messages = ['-m Test message']
+    commit_messages = ['Test message']
 
     # Verify exception is raised when on an invalid repo path.
     with self.assertRaises(ValueError) as err:
@@ -457,7 +457,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     path_to_repo = '/some/path/to/repo'
     branch = 'update-LLVM_NEXT_HASH-a123testhash3'
-    commit_messages = ['-m Test message']
+    commit_messages = ['Test message']
 
     # Verify exception is raised when failed to upload the changes for review.
     with self.assertRaises(ValueError) as err:
@@ -469,6 +469,11 @@ class UpdateLLVMHashTest(unittest.TestCase):
     mock_isdir.assert_called_once_with(path_to_repo)
 
     mock_command_output.assert_called_once()
+    mock_command_output_args = mock_command_output.call_args_list[0][0][0]
+    expected_mock_command_output_prefix = ['git', 'commit', '-F']
+    self.assertEqual(
+        mock_command_output_args[:len(expected_mock_command_output_prefix)],
+        expected_mock_command_output_prefix)
 
     mock_repo_upload.assert_called_once()
 
@@ -501,7 +506,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     path_to_repo = '/some/path/to/repo'
     branch = 'update-LLVM_NEXT_HASH-a123testhash3'
-    commit_messages = ['-m Test message']
+    commit_messages = ['Test message']
 
     change_list = update_chromeos_llvm_hash.UploadChanges(
         path_to_repo, branch, commit_messages)
@@ -689,7 +694,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
         'test-packages/package2': package_2_patch_info_dict
     }
 
-    test_commit_message = ['-m %s' % 'Updated packages']
+    test_commit_message = ['Updated packages']
 
     self.assertListEqual(
         update_chromeos_llvm_hash.StagePackagesPatchResultsForCommit(
@@ -724,18 +729,15 @@ class UpdateLLVMHashTest(unittest.TestCase):
         'test-packages/package2': package_2_patch_info_dict
     }
 
-    test_commit_message = ['-m %s' % 'Updated packages']
+    test_commit_message = ['Updated packages']
 
     expected_commit_messages = [
-        '-m %s' % 'Updated packages',
-        '-m %s' % 'For the package test-packages/package1:',
-        '-m %s' % 'The patch metadata file PATCHES.json was modified',
-        '-m %s' % 'The following patches were disabled:',
-        '-m %s' % 'fixes_output.patch',
-        '-m %s' % 'For the package test-packages/package2:',
-        '-m %s' % 'The patch metadata file PATCHES.json was modified',
-        '-m %s' % 'The following patches were removed:',
-        '-m %s' % 'redirect_stdout.patch'
+        'Updated packages', '\nFor the package test-packages/package1:',
+        'The patch metadata file PATCHES.json was modified',
+        'The following patches were disabled:', 'fixes_output.patch',
+        '\nFor the package test-packages/package2:',
+        'The patch metadata file PATCHES.json was modified',
+        'The following patches were removed:', 'redirect_stdout.patch'
     ]
 
     self.assertListEqual(
@@ -972,13 +974,11 @@ class UpdateLLVMHashTest(unittest.TestCase):
     mock_uprev_ebuild.assert_called_once_with(symlink_path_to_package)
 
     expected_commit_messages = [
-        '-m %s' % 'llvm-next/tot: upgrade to a123testhash5 (r1000)',
-        '-m %s' % 'The following packages have been updated:',
-        '-m %s' % 'path/to',
-        '-m %s' % 'For the package path/to:',
-        '-m %s' % 'The patch metadata file PATCHES.json was modified',
-        '-m %s' % 'The following patches were disabled:',
-        '-m %s' % 'fix_stdout.patch'
+        'llvm-next/tot: upgrade to a123testhash5 (r1000)\n',
+        'The following packages have been updated:', 'path/to',
+        '\nFor the package path/to:',
+        'The patch metadata file PATCHES.json was modified',
+        'The following patches were disabled:', 'fix_stdout.patch'
     ]
 
     mock_update_package_metadata_file.assert_called_once()

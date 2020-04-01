@@ -20,6 +20,7 @@ import argparse
 import os
 import re
 import subprocess
+import tempfile
 
 from assert_not_in_chroot import VerifyOutsideChroot
 from failure_modes import FailureModes
@@ -445,7 +446,7 @@ def UploadChanges(path_to_repo_dir, branch, commit_messages):
   Args:
     path_to_repo_dir: The absolute path to the repo where changes were made.
     branch: The name of the branch to upload.
-    commit_messages: A string of commit message(s) (i.e. '-m [message]'
+    commit_messages: A string of commit message(s) (i.e. '[message]'
     of the changes made.
 
   Returns:
@@ -460,13 +461,15 @@ def UploadChanges(path_to_repo_dir, branch, commit_messages):
   if not os.path.isdir(path_to_repo_dir):
     raise ValueError('Invalid directory path provided: %s' % path_to_repo_dir)
 
-  commit_cmd = [
-      'git',
-      'commit',
-  ]
-  commit_cmd.extend(commit_messages)
+  # Create a git commit.
+  with tempfile.NamedTemporaryFile(mode='w+t') as commit_msg_file:
+    commit_msg_file.write('\n'.join(commit_messages))
+    commit_msg_file.flush()
 
-  ExecCommandAndCaptureOutput(commit_cmd, cwd=path_to_repo_dir, verbose=verbose)
+    commit_cmd = ['git', 'commit', '-F', commit_msg_file.name]
+
+    ExecCommandAndCaptureOutput(
+        commit_cmd, cwd=path_to_repo_dir, verbose=verbose)
 
   # Upload the changes for review.
   upload_change_cmd = (
@@ -582,30 +585,30 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
     if patch_info_dict['disabled_patches'] or \
         patch_info_dict['removed_patches'] or \
         patch_info_dict['modified_metadata']:
-      cur_package_header = 'For the package %s:' % package_name
-      commit_messages.append('-m %s' % cur_package_header)
+      cur_package_header = '\nFor the package %s:' % package_name
+      commit_messages.append(cur_package_header)
 
     # Add to the commit message that the patch metadata file was modified.
     if patch_info_dict['modified_metadata']:
       patch_metadata_path = patch_info_dict['modified_metadata']
-      commit_messages.append('-m %s' % 'The patch metadata file %s was '
-                             'modified' % os.path.basename(patch_metadata_path))
+      commit_messages.append('The patch metadata file %s was modified' %
+                             os.path.basename(patch_metadata_path))
 
       StagePatchMetadataFileForCommit(patch_metadata_path)
 
     # Add each disabled patch to the commit message.
     if patch_info_dict['disabled_patches']:
-      commit_messages.append('-m %s' % 'The following patches were disabled:')
+      commit_messages.append('The following patches were disabled:')
 
       for patch_path in patch_info_dict['disabled_patches']:
-        commit_messages.append('-m %s' % os.path.basename(patch_path))
+        commit_messages.append(os.path.basename(patch_path))
 
     # Add each removed patch to the commit message.
     if patch_info_dict['removed_patches']:
-      commit_messages.append('-m %s' % 'The following patches were removed:')
+      commit_messages.append('The following patches were removed:')
 
       for patch_path in patch_info_dict['removed_patches']:
-        commit_messages.append('-m %s' % os.path.basename(patch_path))
+        commit_messages.append(os.path.basename(patch_path))
 
       RemovePatchesFromFilesDir(patch_info_dict['removed_patches'])
 
@@ -662,9 +665,10 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
       commit_message_header += (
           ': upgrade to %s (r%d)' % (git_hash, svn_version))
 
-    commit_messages = ['-m %s' % commit_message_header]
-
-    commit_messages.append('-m The following packages have been updated:')
+    commit_messages = [
+        commit_message_header + '\n',
+        'The following packages have been updated:',
+    ]
 
     # Holds the list of packages that are updating.
     packages = []
@@ -686,10 +690,7 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
       parent_dir_name = os.path.basename(os.path.dirname(path_to_ebuild_dir))
 
       packages.append('%s/%s' % (parent_dir_name, cur_dir_name))
-
-      new_commit_message = '%s/%s' % (parent_dir_name, cur_dir_name)
-
-      commit_messages.append('-m %s' % new_commit_message)
+      commit_messages.append('%s/%s' % (parent_dir_name, cur_dir_name))
 
     # Handle the patches for each package.
     package_info_dict = llvm_patch_management.UpdatePackagesPatchMetadataFile(
