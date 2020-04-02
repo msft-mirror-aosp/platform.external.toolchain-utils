@@ -63,6 +63,20 @@ def GetCommandLineArgs():
       default=cros_root,
       help='the path to the chroot (default: %(default)s)')
 
+  # Add argument to choose between llvm and llvm-next.
+  parser.add_argument(
+      '--is_llvm_next',
+      action='store_true',
+      help=
+      'which llvm hash to update. Update LLVM_NEXT_HASH if specified. '
+      'Otherwise, update LLVM_HASH'  )
+
+  # Add argument to add reviewers for the created CL.
+  parser.add_argument(
+      '--reviewers',
+      nargs='+',
+      help='The reviewers for the package update changelist')
+
   # Add argument for whether to display command contents to `stdout`.
   parser.add_argument(
       '--verbose',
@@ -125,7 +139,17 @@ def GetCQDependString(dependent_cls):
   return '\nCq-Depend: ' + ', '.join(('chromium:%s' % i) for i in dependent_cls)
 
 
-def startCQDryRun(cl, dependent_cls, chroot_path):
+def AddReviewers(cl, reviewers, chroot_path):
+  """Add reviewers for the created CL."""
+
+  gerrit_abs_path = os.path.join(chroot_path, 'chromite/bin/gerrit')
+  for reviewer in reviewers:
+    cmd = [gerrit_abs_path, 'reviewers', str(cl), reviewer]
+
+    ExecCommandAndCaptureOutput(cmd)
+
+
+def StartCQDryRun(cl, dependent_cls, chroot_path):
   """Start CQ dry run for the changelist and dependencies."""
 
   gerrit_abs_path = os.path.join(chroot_path, 'chromite/bin/gerrit')
@@ -170,19 +194,24 @@ def main():
           (svn_version, last_svn_version, args_output.last_tested))
     return
 
+  llvm_variant = update_chromeos_llvm_hash.LLVMVariant.current
+  if args_output.is_llvm_next:
+    llvm_variant = update_chromeos_llvm_hash.LLVMVariant.next
   update_chromeos_llvm_hash.verbose = args_output.verbose
   extra_commit_msg = GetCQDependString(args_output.extra_change_lists)
 
   change_list = update_chromeos_llvm_hash.UpdatePackages(
-      update_packages, update_chromeos_llvm_hash.LLVMVariant.next, git_hash,
-      svn_version, args_output.chroot_path, patch_metadata_file,
+      update_packages, llvm_variant, git_hash, svn_version,
+      args_output.chroot_path, patch_metadata_file,
       FailureModes.DISABLE_PATCHES, svn_option, extra_commit_msg)
 
   print('Successfully updated packages to %d' % svn_version)
   print('Gerrit URL: %s' % change_list.url)
   print('Change list number: %d' % change_list.cl_number)
 
-  startCQDryRun(change_list.cl_number, args_output.extra_change_lists,
+  AddReviewers(change_list.cl_number, args_output.reviewers,
+               args_output.chroot_path)
+  StartCQDryRun(change_list.cl_number, args_output.extra_change_lists,
                 args_output.chroot_path)
 
   # Updated the packages and submitted tryjobs successfully, so the file will

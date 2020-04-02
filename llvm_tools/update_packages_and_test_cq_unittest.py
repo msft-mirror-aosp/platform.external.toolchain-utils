@@ -45,13 +45,13 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
       update_packages_and_test_cq,
       'ExecCommandAndCaptureOutput',
       return_value=None)
-  def teststartCQDryRunNoDeps(self, mock_exec_cmd):
+  def testStartCQDryRunNoDeps(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'
     test_cl_number = 1000
 
     # test with no deps cls.
     extra_cls = []
-    update_packages_and_test_cq.startCQDryRun(test_cl_number, extra_cls,
+    update_packages_and_test_cq.StartCQDryRun(test_cl_number, extra_cls,
                                               chroot_path)
 
     expected_gerrit_message = [
@@ -67,12 +67,12 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
       'ExecCommandAndCaptureOutput',
       return_value=None)
   # test with a single deps cl.
-  def teststartCQDryRunSingleDep(self, mock_exec_cmd):
+  def testStartCQDryRunSingleDep(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'
     test_cl_number = 1000
 
     extra_cls = [2000]
-    update_packages_and_test_cq.startCQDryRun(test_cl_number, extra_cls,
+    update_packages_and_test_cq.StartCQDryRun(test_cl_number, extra_cls,
                                               chroot_path)
 
     expected_gerrit_cmd_1 = [
@@ -95,13 +95,13 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
       update_packages_and_test_cq,
       'ExecCommandAndCaptureOutput',
       return_value=None)
-  def teststartCQDryRunMultipleDep(self, mock_exec_cmd):
+  def testStartCQDryRunMultipleDep(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'
     test_cl_number = 1000
 
     # test with multiple deps cls.
     extra_cls = [3000, 4000]
-    update_packages_and_test_cq.startCQDryRun(test_cl_number, extra_cls,
+    update_packages_and_test_cq.StartCQDryRun(test_cl_number, extra_cls,
                                               chroot_path)
 
     expected_gerrit_cmd_1 = [
@@ -124,6 +124,50 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
                      expected_gerrit_cmd_2)
     self.assertEqual(mock_exec_cmd.call_args_list[2][0][0],
                      expected_gerrit_cmd_3)
+
+  # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
+  @mock.patch.object(
+      update_packages_and_test_cq,
+      'ExecCommandAndCaptureOutput',
+      return_value=None)
+  # test with no reviewers.
+  def testAddReviewersNone(self, mock_exec_cmd):
+    chroot_path = '/abs/path/to/chroot'
+    reviewers = []
+    test_cl_number = 1000
+
+    update_packages_and_test_cq.AddReviewers(test_cl_number, reviewers,
+                                             chroot_path)
+    self.assertTrue(mock_exec_cmd.not_called)
+
+  # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
+  @mock.patch.object(
+      update_packages_and_test_cq,
+      'ExecCommandAndCaptureOutput',
+      return_value=None)
+  # test with multiple reviewers.
+  def testAddReviewersMultiple(self, mock_exec_cmd):
+    chroot_path = '/abs/path/to/chroot'
+    reviewers = ['none1@chromium.org', 'none2@chromium.org']
+    test_cl_number = 1000
+
+    update_packages_and_test_cq.AddReviewers(test_cl_number, reviewers,
+                                             chroot_path)
+
+    expected_gerrit_cmd_1 = [
+        '%s/chromite/bin/gerrit' % chroot_path, 'reviewers',
+        str(test_cl_number), 'none1@chromium.org'
+    ]
+    expected_gerrit_cmd_2 = [
+        '%s/chromite/bin/gerrit' % chroot_path, 'reviewers',
+        str(test_cl_number), 'none2@chromium.org'
+    ]
+
+    self.assertEqual(mock_exec_cmd.call_count, 2)
+    self.assertEqual(mock_exec_cmd.call_args_list[0][0][0],
+                     expected_gerrit_cmd_1)
+    self.assertEqual(mock_exec_cmd.call_args_list[1][0][0],
+                     expected_gerrit_cmd_2)
 
 
 if __name__ == '__main__':
