@@ -616,7 +616,8 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
 
 
 def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
-                   patch_metadata_file, mode, git_hash_source):
+                   patch_metadata_file, mode, git_hash_source,
+                   extra_commit_msg):
   """Updates an LLVM hash and uprevs the ebuild of the packages.
 
   A temporary repo is created for the changes. The changes are
@@ -700,6 +701,9 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
     commit_messages = StagePackagesPatchResultsForCommit(
         package_info_dict, commit_messages)
 
+    if extra_commit_msg:
+      commit_messages.append(extra_commit_msg)
+
     change_list = UploadChanges(repo_path, branch, commit_messages)
 
   finally:
@@ -728,9 +732,15 @@ def main():
   git_hash, svn_version = GetLLVMHashAndVersionFromSVNOption(git_hash_source)
 
   change_list = UpdatePackages(
-      args_output.update_packages, llvm_variant, git_hash, svn_version,
-      args_output.chroot_path, args_output.patch_metadata_file,
-      FailureModes(args_output.failure_mode), git_hash_source)
+      args_output.update_packages,
+      llvm_variant,
+      git_hash,
+      svn_version,
+      args_output.chroot_path,
+      args_output.patch_metadata_file,
+      FailureModes(args_output.failure_mode),
+      git_hash_source,
+      extra_commit_msg=None)
 
   print('Successfully updated packages to %s (%d)' % (git_hash, svn_version))
   print('Gerrit URL: %s' % change_list.url)

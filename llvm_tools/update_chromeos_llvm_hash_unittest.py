@@ -821,13 +821,15 @@ class UpdateLLVMHashTest(unittest.TestCase):
     patch_metadata_file = 'PATCHES.json'
     git_hash_source = 'google3'
     branch = 'update-LLVM_NEXT_HASH-a123testhash4'
+    extra_commit_msg = None
 
     # Verify exception is raised when an exception is thrown within
     # the 'try' block by UprevEbuild function.
     with self.assertRaises(ValueError) as err:
       update_chromeos_llvm_hash.UpdatePackages(
           packages_to_update, llvm_variant, git_hash, svn_version, chroot_path,
-          patch_metadata_file, FailureModes.FAIL, git_hash_source)
+          patch_metadata_file, FailureModes.FAIL, git_hash_source,
+          extra_commit_msg)
 
     self.assertEqual(str(err.exception), 'Failed to uprev the ebuild.')
 
@@ -953,10 +955,12 @@ class UpdateLLVMHashTest(unittest.TestCase):
     patch_metadata_file = 'PATCHES.json'
     git_hash_source = 'tot'
     branch = 'update-LLVM_NEXT_HASH-a123testhash5'
+    extra_commit_msg = '\ncommit-message-end'
 
     change_list = update_chromeos_llvm_hash.UpdatePackages(
         packages_to_update, llvm_variant, git_hash, svn_version, chroot_path,
-        patch_metadata_file, FailureModes.DISABLE_PATCHES, git_hash_source)
+        patch_metadata_file, FailureModes.DISABLE_PATCHES, git_hash_source,
+        extra_commit_msg)
 
     self.assertEqual(change_list.url,
                      'https://some_name/path/to/commit/+/12345')
@@ -978,7 +982,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
         'The following packages have been updated:', 'path/to',
         '\nFor the package path/to:',
         'The patch metadata file PATCHES.json was modified',
-        'The following patches were disabled:', 'fix_stdout.patch'
+        'The following patches were disabled:', 'fix_stdout.patch',
+        '\ncommit-message-end'
     ]
 
     mock_update_package_metadata_file.assert_called_once()

@@ -287,9 +287,15 @@ def main():
   update_chromeos_llvm_hash.verbose = args_output.verbose
 
   change_list = update_chromeos_llvm_hash.UpdatePackages(
-      update_packages, update_chromeos_llvm_hash.LLVMVariant.next, git_hash,
-      svn_version, args_output.chroot_path, patch_metadata_file,
-      FailureModes.DISABLE_PATCHES, svn_option)
+      update_packages,
+      update_chromeos_llvm_hash.LLVMVariant.next,
+      git_hash,
+      svn_version,
+      args_output.chroot_path,
+      patch_metadata_file,
+      FailureModes.DISABLE_PATCHES,
+      svn_option,
+      extra_commit_msg=None)
 
   print('Successfully updated packages to %d' % svn_version)
   print('Gerrit URL: %s' % change_list.url)
