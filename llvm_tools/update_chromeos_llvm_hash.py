@@ -14,6 +14,7 @@ for review.
 
 from __future__ import print_function
 from collections import namedtuple
+from datetime import datetime
 from enum import Enum
 
 import argparse
@@ -89,10 +90,8 @@ def GetCommandLineArgs():
   parser.add_argument(
       '--is_llvm_next',
       action='store_true',
-      help=
-      'which llvm hash to update. Update LLVM_NEXT_HASH specified. ' \
-      'Otherwise, update LLVM_HASH'
-  )
+      help='which llvm hash to update. If specified, update LLVM_NEXT_HASH. '
+      'Otherwise, update LLVM_HASH')
 
   # Add argument for the LLVM version to use.
   parser.add_argument(
@@ -313,15 +312,14 @@ def ReplaceLLVMHash(ebuild_lines, llvm_variant, git_hash, svn_version):
     raise ValueError('Failed to update %s' % llvm_variant.value)
 
 
-def UprevEbuild(symlink):
-  """Uprevs the ebuild's revision number.
+def UprevEbuildSymlink(symlink):
+  """Uprevs the symlink's revision number.
 
   Increases the revision number by 1 and stages the change in
   the temporary repo.
 
   Args:
-    symlink: The absolute path of the symlink that points to
-    the ebuild of the package.
+    symlink: The absolute path of an ebuild symlink.
 
   Raises:
     ValueError: Failed to uprev the symlink or failed to stage the changes.
@@ -330,24 +328,84 @@ def UprevEbuild(symlink):
   if not os.path.islink(symlink):
     raise ValueError('Invalid symlink provided: %s' % symlink)
 
-  # Find the revision number and increment it by 1.
   new_symlink, is_changed = re.subn(
       r'r([0-9]+).ebuild',
       lambda match: 'r%s.ebuild' % str(int(match.group(1)) + 1),
       symlink,
       count=1)
 
+  if not is_changed:
+    raise ValueError('Failed to uprev the symlink.')
+
+  symlink_dirname = os.path.dirname(symlink)
+
+  # rename the symlink
+  cmd = ['git', '-C', symlink_dirname, 'mv', symlink, new_symlink]
+
+  ExecCommandAndCaptureOutput(cmd, verbose=verbose)
+
+
+def UprevEbuildToVersion(symlink, svn_version):
+  """Uprevs the ebuild's revision number.
+
+  Increases the revision number by 1 and stages the change in
+  the temporary repo.
+
+  Args:
+    symlink: The absolute path of an ebuild symlink.
+    svn_version: The SVN-style revision number of git_hash.
+
+  Raises:
+    ValueError: Failed to uprev the ebuild or failed to stage the changes.
+  """
+
+  if not os.path.islink(symlink):
+    raise ValueError('Invalid symlink provided: %s' % symlink)
+
+  ebuild = os.path.realpath(symlink)
+  # llvm
+  package = os.path.basename(os.path.dirname(symlink))
+  if not package:
+    raise ValueError('Tried to uprev an unknown package')
+  # llvm
+  if package == 'llvm':
+    new_ebuild, is_changed = re.subn(
+        r'pre([0-9]+)_p([0-9]+)',
+        'pre%s_p%s' % (svn_version, \
+            datetime.today().strftime('%Y%m%d')),
+        ebuild,
+        count=1)
+  # any other package
+  else:
+    new_ebuild, is_changed = re.subn(
+        r'pre([0-9]+)',
+        'pre%s' % (datetime.today().strftime('%Y%m%d')),
+        ebuild,
+        count=1)
+
   if not is_changed:  # failed to increment the revision number
     raise ValueError('Failed to uprev the ebuild.')
 
-  path_to_symlink_dir = os.path.dirname(symlink)
+  symlink_dirname = os.path.dirname(symlink)
 
-  # Stage the new symlink for commit.
-  stage_symlink_cmd = [
-      'git', '-C', path_to_symlink_dir, 'mv', symlink, new_symlink
-  ]
+  # Rename the ebuild
+  cmd = ['git', '-C', symlink_dirname, 'mv', ebuild, new_ebuild]
+  ExecCommandAndCaptureOutput(cmd, verbose=verbose)
 
-  ExecCommandAndCaptureOutput(stage_symlink_cmd, verbose=verbose)
+  # Create a symlink of the renamed ebuild
+  new_symlink = new_ebuild[:-len('.ebuild')] + '-r1.ebuild'
+  cmd = ['ln', '-s', new_ebuild, new_symlink]
+  ExecCommandAndCaptureOutput(cmd, verbose=verbose)
+
+  if not os.path.islink(new_symlink):
+    raise ValueError('Invalid symlink name: %s' % new_ebuild[:-len('.ebuild')])
+
+  cmd = ['git', '-C', symlink_dirname, 'add', new_symlink]
+  ExecCommandAndCaptureOutput(cmd, verbose=verbose)
+
+  # Remove the old symlink
+  cmd = ['git', '-C', symlink_dirname, 'rm', symlink]
+  ExecCommandAndCaptureOutput(cmd, verbose=verbose)
 
 
 def _CreateRepo(path_to_repo_dir, branch):
@@ -636,6 +694,7 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
       Ex: 'FailureModes.FAIL'
     git_hash_source: The source of which git hash to use based off of.
       Ex: 'google3', 'tot', or <version> such as 365123
+    extra_commit_msg: extra test to append to the commit message.
 
   Returns:
     A nametuple that has two (key, value) pairs, where the first pair is the
@@ -685,7 +744,10 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
 
       UpdateEbuildLLVMHash(ebuild_path, llvm_variant, git_hash, svn_version)
 
-      UprevEbuild(symlink_path)
+      if llvm_variant == LLVMVariant.current:
+        UprevEbuildToVersion(symlink_path, svn_version)
+      else:
+        UprevEbuildSymlink(symlink_path)
 
       cur_dir_name = os.path.basename(path_to_ebuild_dir)
       parent_dir_name = os.path.basename(os.path.dirname(path_to_ebuild_dir))

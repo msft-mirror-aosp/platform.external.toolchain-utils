@@ -9,7 +9,9 @@
 from __future__ import print_function
 
 from collections import namedtuple
+from datetime import datetime
 import os
+import re
 import subprocess
 import unittest
 import unittest.mock as mock
@@ -88,10 +90,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
                                                   mock_islink):
 
     symlink_path = '/path/to/chroot/src/package-r1.ebuild'
-
     abs_path_to_package = '/abs/path/to/src/package.ebuild'
-
-    # Simulate 'os.path.realpath' when a valid path is passed in.
     mock_realpath.return_value = abs_path_to_package
 
     expected_resolved_paths = {symlink_path: abs_path_to_package}
@@ -265,61 +264,137 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     mock_stage_commit_command.assert_called_once()
 
-  # Simulate behavior of 'os.path.islink()' when the argument passed in is not a
-  # symbolic link.
   @mock.patch.object(os.path, 'islink', return_value=False)
-  def testFailedToUprevEbuildForInvalidSymlink(self, mock_islink):
-    symlink_to_uprev = '/symlink/to/package.ebuild'
+  def testFailedToUprevEbuildToVersionForInvalidSymlink(self, mock_islink):
+    symlink_path = '/path/to/chroot/package/package.ebuild'
+    svn_version = 1000
 
-    # Verify the exception is raised when a symbolic link is not passed in.
+    # Verify the exception is raised when a invalid symbolic link is passed in.
     with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_hash.UprevEbuild(symlink_to_uprev)
+      update_chromeos_llvm_hash.UprevEbuildToVersion(symlink_path, svn_version)
 
     self.assertEqual(
-        str(err.exception), 'Invalid symlink provided: %s' % symlink_to_uprev)
+        str(err.exception), 'Invalid symlink provided: %s' % symlink_path)
+
+    mock_islink.assert_called_once()
+
+  @mock.patch.object(os.path, 'islink', return_value=False)
+  def testFailedToUprevEbuildSymlinkForInvalidSymlink(self, mock_islink):
+    symlink_path = '/path/to/chroot/package/package.ebuild'
+
+    # Verify the exception is raised when a invalid symbolic link is passed in.
+    with self.assertRaises(ValueError) as err:
+      update_chromeos_llvm_hash.UprevEbuildSymlink(symlink_path)
+
+    self.assertEqual(
+        str(err.exception), 'Invalid symlink provided: %s' % symlink_path)
 
     mock_islink.assert_called_once()
 
   # Simulate 'os.path.islink' when a symbolic link is passed in.
   @mock.patch.object(os.path, 'islink', return_value=True)
-  def testFailedToUprevEbuild(self, mock_islink):
-    symlink_to_uprev = '/symlink/to/package.ebuild'
+  # Simulate 'os.path.realpath' when a symbolic link is passed in.
+  @mock.patch.object(os.path, 'realpath', return_value=True)
+  def testFailedToUprevEbuildToVersion(self, mock_realpath, mock_islink):
+    symlink_path = '/path/to/chroot/llvm/llvm_pre123_p.ebuild'
+    mock_realpath.return_value = '/abs/path/to/llvm/llvm_pre123_p.ebuild'
+    svn_version = 1000
 
-    # Verify the exception is raised when the symlink does not have a revision
-    # number.
+    # Verify the exception is raised when the symlink does not match the
+    # expected pattern
     with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_hash.UprevEbuild(symlink_to_uprev)
+      update_chromeos_llvm_hash.UprevEbuildToVersion(symlink_path, svn_version)
 
     self.assertEqual(str(err.exception), 'Failed to uprev the ebuild.')
 
-    mock_islink.assert_called_once_with(symlink_to_uprev)
+    mock_islink.assert_called_once_with(symlink_path)
+
+  # Simulate 'os.path.islink' when a symbolic link is passed in.
+  @mock.patch.object(os.path, 'islink', return_value=True)
+  def testFailedToUprevEbuildSymlink(self, mock_islink):
+    symlink_path = '/path/to/chroot/llvm/llvm_pre123_p.ebuild'
+
+    # Verify the exception is raised when the symlink does not match the
+    # expected pattern
+    with self.assertRaises(ValueError) as err:
+      update_chromeos_llvm_hash.UprevEbuildSymlink(symlink_path)
+
+    self.assertEqual(str(err.exception), 'Failed to uprev the symlink.')
+
+    mock_islink.assert_called_once_with(symlink_path)
 
   # Simulate 'os.path.islink' when a valid symbolic link is passed in.
   @mock.patch.object(os.path, 'islink', return_value=True)
-  # Simulate 'os.path.dirname' when returning a path to the directory of a
-  # valid symbolic link.
-  @mock.patch.object(os.path, 'dirname', return_value='/symlink/to')
+  @mock.patch.object(os.path, 'realpath')
   # Simulate 'RunCommandWOutput' when successfully added the upreved symlink
   # for commit.
   @mock.patch.object(
       update_chromeos_llvm_hash,
       'ExecCommandAndCaptureOutput',
       return_value=None)
-  def testSuccessfullyUprevEbuild(self, mock_command_output, mock_dirname,
-                                  mock_islink):
+  def testSuccessfullyUprevEbuildToVersion(self, mock_command_output,
+                                           mock_realpath, mock_islink):
+    symlink = '/symlink/to/llvm/llvm_pre3_p2-r10.ebuild'
+    ebuild = '/abs/path/to/llvm_pre3_p2.ebuild'
+    mock_realpath.return_value = ebuild
+    svn_version = 1000
 
+    update_chromeos_llvm_hash.UprevEbuildToVersion(symlink, svn_version)
+
+    mock_islink.assert_called()
+
+    mock_realpath.assert_called_once_with(symlink)
+
+    mock_command_output.assert_called()
+
+    # Verify commands
+    symlink_dir = os.path.dirname(symlink)
+    new_ebuild, _is_changed = re.subn(
+        r'pre([0-9]+)_p([0-9]+)',
+        'pre%s_p%s' % (svn_version, \
+            datetime.today().strftime('%Y%m%d')),
+        ebuild,
+        count=1)
+    new_symlink = new_ebuild[:-len('.ebuild')] + '-r1.ebuild'
+
+    expected_cmd = ['git', '-C', symlink_dir, 'mv', ebuild, new_ebuild]
+    self.assertEqual(mock_command_output.call_args_list[0],
+                     mock.call(expected_cmd, verbose=False))
+
+    expected_cmd = ['ln', '-s', new_ebuild, new_symlink]
+    self.assertEqual(mock_command_output.call_args_list[1],
+                     mock.call(expected_cmd, verbose=False))
+
+    expected_cmd = ['git', '-C', symlink_dir, 'add', new_symlink]
+    self.assertEqual(mock_command_output.call_args_list[2],
+                     mock.call(expected_cmd, verbose=False))
+
+    expected_cmd = ['git', '-C', symlink_dir, 'rm', symlink]
+    self.assertEqual(mock_command_output.call_args_list[3],
+                     mock.call(expected_cmd, verbose=False))
+
+  # Simulate 'os.path.islink' when a valid symbolic link is passed in.
+  @mock.patch.object(os.path, 'islink', return_value=True)
+  # Simulate 'RunCommandWOutput' when successfully added the upreved symlink
+  # for commit.
+  @mock.patch.object(
+      update_chromeos_llvm_hash,
+      'ExecCommandAndCaptureOutput',
+      return_value=None)
+  def testSuccessfullyUprevEbuildSymlink(self, mock_command_output,
+                                         mock_islink):
     symlink_to_uprev = '/symlink/to/package-r1.ebuild'
 
-    update_chromeos_llvm_hash.UprevEbuild(symlink_to_uprev)
+    update_chromeos_llvm_hash.UprevEbuildSymlink(symlink_to_uprev)
 
     mock_islink.assert_called_once_with(symlink_to_uprev)
-
-    mock_dirname.assert_called_once_with(symlink_to_uprev)
 
     mock_command_output.assert_called_once()
 
   # Simulate behavior of 'os.path.isdir()' when the path to the repo is not a
+
   # directory.
+
   @mock.patch.object(os.path, 'isdir', return_value=False)
   def testFailedToCreateRepoForInvalidDirectoryPath(self, mock_isdir):
     path_to_repo = '/path/to/repo'
@@ -755,12 +830,14 @@ class UpdateLLVMHashTest(unittest.TestCase):
                      'CreatePathDictionaryFromPackages')
   @mock.patch.object(update_chromeos_llvm_hash, '_CreateRepo')
   @mock.patch.object(update_chromeos_llvm_hash, 'UpdateEbuildLLVMHash')
-  @mock.patch.object(update_chromeos_llvm_hash, 'UprevEbuild')
+  @mock.patch.object(update_chromeos_llvm_hash, 'UprevEbuildSymlink')
   @mock.patch.object(update_chromeos_llvm_hash, 'UploadChanges')
   @mock.patch.object(update_chromeos_llvm_hash, '_DeleteRepo')
+  @mock.patch.object(os.path, 'realpath')
   def testExceptionRaisedWhenUpdatingPackages(
-      self, mock_delete_repo, mock_upload_changes, mock_uprev_ebuild,
-      mock_update_llvm_next, mock_create_repo, mock_create_path_dict):
+      self, mock_realpath, mock_delete_repo, mock_upload_changes,
+      mock_uprev_symlink, mock_update_llvm_next, mock_create_repo,
+      mock_create_path_dict):
 
     abs_path_to_package = '/some/path/to/chroot/src/path/to/package.ebuild'
 
@@ -783,9 +860,9 @@ class UpdateLLVMHashTest(unittest.TestCase):
       self.assertEqual(svn_version, 1000)
       return
 
-    # Test function to simulate 'UprevEbuild' when the symlink to the ebuild
-    # does not have a revision number.
-    def FailedToUprevEbuild(_symlink_path):
+    # Test function to simulate 'UprevEbuildSymlink' when the symlink to the
+    # ebuild does not have a revision number.
+    def FailedToUprevEbuildSymlink(_symlink_path):
       # Raises a 'ValueError' exception because the symlink did not have have a
       # revision number.
       raise ValueError('Failed to uprev the ebuild.')
@@ -794,7 +871,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     # when an exception is raised.
     def ShouldNotExecuteUploadChanges(_repo_path, _git_hash, _commit_messages):
       # Test function should not be called (i.e. execution should resume in the
-      # 'finally' block) because 'UprevEbuild()' raised an
+      # 'finally' block) because 'UprevEbuildSymlink' raised an
       # exception.
       assert False, 'Failed to go to "finally" block ' \
           'after the exception was raised.'
@@ -810,8 +887,9 @@ class UpdateLLVMHashTest(unittest.TestCase):
     # Use test function to simulate behavior.
     mock_create_repo.side_effect = SuccessfullyCreateRepoForChanges
     mock_update_llvm_next.side_effect = SuccessfullyUpdatedLLVMHash
-    mock_uprev_ebuild.side_effect = FailedToUprevEbuild
+    mock_uprev_symlink.side_effect = FailedToUprevEbuildSymlink
     mock_upload_changes.side_effect = ShouldNotExecuteUploadChanges
+    mock_realpath.return_value = '/abs/path/to/test-packages/package1.ebuild'
 
     packages_to_update = ['test-packages/package1']
     llvm_variant = update_chromeos_llvm_hash.LLVMVariant.next
@@ -824,7 +902,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     extra_commit_msg = None
 
     # Verify exception is raised when an exception is thrown within
-    # the 'try' block by UprevEbuild function.
+    # the 'try' block by UprevEbuildSymlink function.
     with self.assertRaises(ValueError) as err:
       update_chromeos_llvm_hash.UpdatePackages(
           packages_to_update, llvm_variant, git_hash, svn_version, chroot_path,
@@ -841,7 +919,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     mock_update_llvm_next.assert_called_once_with(
         abs_path_to_package, llvm_variant, git_hash, svn_version)
 
-    mock_uprev_ebuild.assert_called_once_with(symlink_path_to_package)
+    mock_uprev_symlink.assert_called_once_with(symlink_path_to_package)
 
     mock_upload_changes.assert_not_called()
 
@@ -851,7 +929,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
                      'CreatePathDictionaryFromPackages')
   @mock.patch.object(update_chromeos_llvm_hash, '_CreateRepo')
   @mock.patch.object(update_chromeos_llvm_hash, 'UpdateEbuildLLVMHash')
-  @mock.patch.object(update_chromeos_llvm_hash, 'UprevEbuild')
+  @mock.patch.object(update_chromeos_llvm_hash, 'UprevEbuildSymlink')
   @mock.patch.object(update_chromeos_llvm_hash, 'UploadChanges')
   @mock.patch.object(update_chromeos_llvm_hash, '_DeleteRepo')
   @mock.patch.object(llvm_patch_management, 'UpdatePackagesPatchMetadataFile')
@@ -859,7 +937,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
                      'StagePatchMetadataFileForCommit')
   def testSuccessfullyUpdatedPackages(
       self, mock_stage_patch_file, mock_update_package_metadata_file,
-      mock_delete_repo, mock_upload_changes, mock_uprev_ebuild,
+      mock_delete_repo, mock_upload_changes, mock_uprev_symlink,
       mock_update_llvm_next, mock_create_repo, mock_create_path_dict):
 
     abs_path_to_package = '/some/path/to/chroot/src/path/to/package.ebuild'
@@ -884,9 +962,9 @@ class UpdateLLVMHashTest(unittest.TestCase):
       self.assertEqual(svn_version, 1000)
       return
 
-    # Test function to simulate 'UprevEbuild' when successfully incremented
-    # the revision number by 1.
-    def SuccessfullyUprevedEbuild(symlink_path):
+    # Test function to simulate 'UprevEbuildSymlink' when successfully
+    # incremented the revision number by 1.
+    def SuccessfullyUprevedEbuildSymlink(symlink_path):
       self.assertEqual(symlink_path,
                        '/some/path/to/chroot/src/path/to/package-r1.ebuild')
 
@@ -943,7 +1021,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     # Use test function to simulate behavior.
     mock_create_repo.side_effect = SuccessfullyCreateRepoForChanges
     mock_update_llvm_next.side_effect = SuccessfullyUpdatedLLVMHash
-    mock_uprev_ebuild.side_effect = SuccessfullyUprevedEbuild
+    mock_uprev_symlink.side_effect = SuccessfullyUprevedEbuildSymlink
     mock_update_package_metadata_file.side_effect = RetrievedPatchResults
     mock_upload_changes.side_effect = SuccessfullyUploadedChanges
 
@@ -975,7 +1053,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     mock_update_llvm_next.assert_called_once_with(
         abs_path_to_package, llvm_variant, git_hash, svn_version)
 
-    mock_uprev_ebuild.assert_called_once_with(symlink_path_to_package)
+    mock_uprev_symlink.assert_called_once_with(symlink_path_to_package)
 
     expected_commit_messages = [
         'llvm-next/tot: upgrade to a123testhash5 (r1000)\n',

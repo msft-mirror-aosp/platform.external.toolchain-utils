@@ -64,11 +64,11 @@ $ ./update_packages_and_run_tryjobs.py \
   --builders kevin-release-tryjob nocturne-release-tryjob
 ```
 
-## `update_chromeos_llvm_next_hash.py`
+## `update_chromeos_llvm_hash.py`
 
 ### Usage
 
-This script is used for updating a package's/packages' `LLVM_NEXT_HASH` and
+This script is used for updating a package's/packages' LLVM hashes and
 creating a change list of those changes which will uploaded for review. For
 example, some changes that would be included in the change list are
 the updated ebuilds, changes made to the patches of the updated packages such
@@ -81,13 +81,14 @@ have their `LLVM_NEXT_HASH` updated.
 For example:
 
 ```
-$ ./update_chromeos_llvm_next_hash.py \
+$ ./update_chromeos_llvm_hash.py \
   --update_packages sys-devel/llvm sys-libs/compiler-rt \
+  --is_llvm_next \
   --llvm_version google3 \
   --failure_mode disable_patches
 ```
 
-The example above would update sys-devel/llvm and sys-libs/compiler-rt
+The example above would update sys-devel/llvm and sys-libs/compiler-rt's
 `LLVM_NEXT_HASH` to the latest google3's git hash of LLVM. And the change list
 may include patches that were disabled for either sys-devel/llvm or
 sys-libs/compiler-rt.
@@ -95,23 +96,24 @@ sys-libs/compiler-rt.
 For help with the command line arguments of the script, run:
 
 ```
-$ ./update_chromeos_llvm_next.py --help
+$ ./update_chromeos_llvm_hash.py --help
 ```
 
-For example, to update `LLVM_NEXT_HASH` to top of trunk of LLVM:
+For example, to update `LLVM_HASH` to top of trunk of LLVM:
 
 ```
-$ ./update_chromeos_llvm_next_hash.py \
+$ ./update_chromeos_llvm_hash.py \
   --update_packages sys-devel/llvm sys-libs/compiler-rt \
   --llvm_version tot \
   --failure_mode disable_patches
 ```
 
-For example, to update `LLVM_NEXT_HASH` to the git hash of revision 367622:
+For example, to create a roll CL to the git hash of revision 367622:
 
 ```
-$ ./update_chromeos_llvm_next_hash.py \
+$ ./update_chromeos_llvm_hash.py \
   --update_packages sys-devel/llvm sys-libs/compiler-rt \
+  sys-libs/libcxx sys-libs/libcxxabi sys-libs/llvm-libunwind \
   --llvm_version 367622 \
   --failure_mode disable_patches
 ```
