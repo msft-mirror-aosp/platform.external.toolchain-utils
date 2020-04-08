@@ -73,7 +73,7 @@ func TestDoubleBuildWithWNoErrorFlag(t *testing.T) {
 
 func TestKnownConfigureFileParsing(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		for _, f := range []string{"conftest.c", "conftest.cpp"} {
+		for _, f := range []string{"conftest.c", "conftest.cpp", "/dev/null"} {
 			if !isLikelyAConfTest(ctx.cfg, ctx.newCommand(clangX86_64, f)) {
 				t.Errorf("%q isn't considered a conf test file", f)
 			}

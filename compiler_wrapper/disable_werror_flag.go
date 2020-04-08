@@ -48,7 +48,8 @@ func isLikelyAConfTest(cfg *config, cmd *command) bool {
 	}
 
 	for _, a := range cmd.Args {
-		if strings.HasPrefix(a, "conftest.c") {
+		// The kernel, for example, will do configure tests with /dev/null as a source file.
+		if a == "/dev/null" || strings.HasPrefix(a, "conftest.c") {
 			return true
 		}
 	}
