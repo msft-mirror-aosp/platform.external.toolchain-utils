@@ -394,7 +394,7 @@ def UprevEbuildToVersion(symlink, svn_version):
 
   # Create a symlink of the renamed ebuild
   new_symlink = new_ebuild[:-len('.ebuild')] + '-r1.ebuild'
-  cmd = ['ln', '-s', new_ebuild, new_symlink]
+  cmd = ['ln', '-s', '-r', new_ebuild, new_symlink]
   ExecCommandAndCaptureOutput(cmd, verbose=verbose)
 
   if not os.path.islink(new_symlink):

@@ -361,7 +361,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     self.assertEqual(mock_command_output.call_args_list[0],
                      mock.call(expected_cmd, verbose=False))
 
-    expected_cmd = ['ln', '-s', new_ebuild, new_symlink]
+    expected_cmd = ['ln', '-s', '-r', new_ebuild, new_symlink]
     self.assertEqual(mock_command_output.call_args_list[1],
                      mock.call(expected_cmd, verbose=False))
 
