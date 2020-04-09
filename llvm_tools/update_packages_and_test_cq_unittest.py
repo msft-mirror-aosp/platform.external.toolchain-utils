@@ -85,10 +85,10 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
     ]
 
     self.assertEqual(mock_exec_cmd.call_count, 2)
-    self.assertEqual(mock_exec_cmd.call_args_list[0][0][0],
-                     expected_gerrit_cmd_1)
-    self.assertEqual(mock_exec_cmd.call_args_list[1][0][0],
-                     expected_gerrit_cmd_2)
+    self.assertEqual(mock_exec_cmd.call_args_list[0],
+                     mock.call(expected_gerrit_cmd_1))
+    self.assertEqual(mock_exec_cmd.call_args_list[1],
+                     mock.call(expected_gerrit_cmd_2))
 
   # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
   @mock.patch.object(
@@ -118,12 +118,12 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
     ]
 
     self.assertEqual(mock_exec_cmd.call_count, 3)
-    self.assertEqual(mock_exec_cmd.call_args_list[0][0][0],
-                     expected_gerrit_cmd_1)
-    self.assertEqual(mock_exec_cmd.call_args_list[1][0][0],
-                     expected_gerrit_cmd_2)
-    self.assertEqual(mock_exec_cmd.call_args_list[2][0][0],
-                     expected_gerrit_cmd_3)
+    self.assertEqual(mock_exec_cmd.call_args_list[0],
+                     mock.call(expected_gerrit_cmd_1))
+    self.assertEqual(mock_exec_cmd.call_args_list[1],
+                     mock.call(expected_gerrit_cmd_2))
+    self.assertEqual(mock_exec_cmd.call_args_list[2],
+                     mock.call(expected_gerrit_cmd_3))
 
   # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
   @mock.patch.object(
@@ -164,10 +164,10 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
     ]
 
     self.assertEqual(mock_exec_cmd.call_count, 2)
-    self.assertEqual(mock_exec_cmd.call_args_list[0][0][0],
-                     expected_gerrit_cmd_1)
-    self.assertEqual(mock_exec_cmd.call_args_list[1][0][0],
-                     expected_gerrit_cmd_2)
+    self.assertEqual(mock_exec_cmd.call_args_list[0],
+                     mock.call(expected_gerrit_cmd_1))
+    self.assertEqual(mock_exec_cmd.call_args_list[1],
+                     mock.call(expected_gerrit_cmd_2))
 
 
 if __name__ == '__main__':

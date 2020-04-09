@@ -67,14 +67,14 @@ def GetCommandLineArgs():
   parser.add_argument(
       '--is_llvm_next',
       action='store_true',
-      help=
-      'which llvm hash to update. Update LLVM_NEXT_HASH if specified. '
-      'Otherwise, update LLVM_HASH'  )
+      help='which llvm hash to update. Update LLVM_NEXT_HASH if specified. '
+      'Otherwise, update LLVM_HASH')
 
   # Add argument to add reviewers for the created CL.
   parser.add_argument(
       '--reviewers',
       nargs='+',
+      default=[],
       help='The reviewers for the package update changelist')
 
   # Add argument for whether to display command contents to `stdout`.
