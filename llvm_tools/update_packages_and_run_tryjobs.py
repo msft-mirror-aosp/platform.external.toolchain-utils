@@ -46,7 +46,7 @@ def GetCommandLineArgs():
   parser.add_argument(
       '--last_tested',
       help='the absolute path to the file that contains the last tested '
-      'svn version')
+      'arguments.')
 
   # Add argument for other change lists that want to run alongside the tryjob
   # which has a change list of updating a package's git hash.
@@ -106,36 +106,32 @@ def GetCommandLineArgs():
   return args_output
 
 
-def GetLastTestedSVNVersion(last_tested_file):
-  """Gets the lasted tested svn version from the file.
+def UnchangedSinceLastRun(last_tested_file, arg_dict):
+  """Gets the arguments used for last run
 
   Args:
-    last_tested_file: The absolute path to the file that contains the last
-    tested svn version.
+    last_tested_file: The absolute path to the file that contains the
+    arguments for the last run.
+    arg_dict: The arguments used for this run.
 
   Returns:
-    The last tested svn version or 'None' if the file did not have a last tested
-    svn version (the file exists, but failed to convert the contents to an
-    integer) or the file does not exist.
+    Return true if the arguments used for last run exist and are the
+    same as the arguments used for this run. Otherwise return false.
   """
 
   if not last_tested_file:
-    return None
-
-  last_svn_version = None
+    return False
 
   # Get the last tested svn version if the file exists.
+  last_arg_dict = None
   try:
-    with open(last_tested_file) as file_obj:
-      # For now, the first line contains the last tested svn version.
-      return int(file_obj.read().rstrip())
+    with open(last_tested_file) as f:
+      last_arg_dict = json.load(f)
 
-  except IOError:
-    pass
-  except ValueError:
-    pass
+  except (IOError, ValueError):
+    return False
 
-  return last_svn_version
+  return arg_dict == last_arg_dict
 
 
 def GetTryJobCommand(change_list, extra_change_lists, options, builder):
@@ -264,8 +260,6 @@ def main():
 
   args_output = GetCommandLineArgs()
 
-  last_svn_version = GetLastTestedSVNVersion(args_output.last_tested)
-
   update_packages = [
       'sys-devel/llvm', 'sys-libs/compiler-rt', 'sys-libs/libcxx',
       'sys-libs/libcxxabi', 'sys-libs/llvm-libunwind'
@@ -277,12 +271,25 @@ def main():
 
   git_hash, svn_version = GetLLVMHashAndVersionFromSVNOption(svn_option)
 
-  # There is no need to run tryjobs when the SVN version matches the last tested
-  # SVN version.
-  if last_svn_version == svn_version:
-    print('svn version (%d) matches the last tested svn version (%d) in %s' %
-          (svn_version, last_svn_version, args_output.last_tested))
-    return
+  # There is no need to run tryjobs when all the key parameters remain unchanged
+  # from last time.
+
+  # If --last_tested is specified, check if the current run has the same
+  # arguments last time --last_tested is used.
+  if args_output.last_tested:
+    chroot_file_paths = update_chromeos_llvm_hash.GetChrootBuildPaths(
+        args_output.chroot_path, update_packages)
+    arg_dict = {
+        'svn_version': svn_version,
+        'ebuilds': chroot_file_paths,
+        'builders': args_output.builders,
+        'extra_cls': args_output.extra_change_lists,
+        'tryjob_options': args_output.options
+    }
+    if UnchangedSinceLastRun(args_output.last_tested, arg_dict):
+      print('svn version (%d) matches the last tested svn version in %s' %
+            (svn_version, args_output.last_tested))
+      return
 
   update_chromeos_llvm_hash.verbose = args_output.verbose
 
@@ -310,11 +317,10 @@ def main():
   for tryjob in tryjob_results:
     print(tryjob)
 
-  # Updated the packages and submitted tryjobs successfully, so the file will
-  # contain 'svn_version' which will now become the last tested svn version.
+  # If --last_tested is specified, record the arguments used
   if args_output.last_tested:
-    with open(args_output.last_tested, 'w') as file_obj:
-      file_obj.write(str(svn_version))
+    with open(args_output.last_tested, 'w') as f:
+      json.dump(arg_dict, f, indent=2)
 
 
 if __name__ == '__main__':

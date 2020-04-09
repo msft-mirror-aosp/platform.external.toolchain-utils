@@ -24,33 +24,45 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
 
   def testNoLastTestedFile(self):
     self.assertEqual(
-        update_packages_and_run_tryjobs.GetLastTestedSVNVersion(None), None)
+        update_packages_and_run_tryjobs.UnchangedSinceLastRun(None, {}), False)
 
-  def testFailedToGetIntegerFromLastTestedFile(self):
-    # Create a temporary file to simulate the behavior of the last tested file
-    # when the file does not have a SVN version (i.e. int() failed).
+  def testEmptyLastTestedFile(self):
     with CreateTemporaryFile() as temp_file:
       self.assertEqual(
-          update_packages_and_run_tryjobs.GetLastTestedSVNVersion(temp_file),
-          None)
+          update_packages_and_run_tryjobs.UnchangedSinceLastRun(temp_file, {}),
+          False)
 
-  def testLastTestFileDoesNotExist(self):
+  def testLastTestedFileDoesNotExist(self):
     # Simulate 'open()' on a lasted tested file that does not exist.
     mock.mock_open(read_data='')
 
     self.assertEqual(
-        update_packages_and_run_tryjobs.GetLastTestedSVNVersion(
-            '/some/file/that/does/not/exist.txt'), None)
+        update_packages_and_run_tryjobs.UnchangedSinceLastRun(
+            '/some/file/that/does/not/exist.txt', {}), False)
 
-  def testSuccessfullyRetrievedLastTestedSVNVersion(self):
-    with CreateTemporaryFile() as temp_file:
-      # Simulate behavior when the last tested file contains a SVN version.
-      with open(temp_file, 'w') as svn_file:
-        svn_file.write('1234')
+  def testMatchedLastTestedFile(self):
+    with CreateTemporaryFile() as last_tested_file:
+      arg_dict = {
+          'svn_version':
+              1234,
+          'ebuilds': [
+              '/path/to/package1-r2.ebuild',
+              '/path/to/package2/package2-r3.ebuild'
+          ],
+          'builders': [
+              'kevin-llvm-next-toolchain-tryjob',
+              'eve-llvm-next-toolchain-tryjob'
+          ],
+          'extra_cls': [10, 1],
+          'tryjob_options': ['latest-toolchain', 'hwtest']
+      }
+
+      with open(last_tested_file, 'w') as f:
+        f.write(json.dumps(arg_dict, indent=2))
 
       self.assertEqual(
-          update_packages_and_run_tryjobs.GetLastTestedSVNVersion(temp_file),
-          1234)
+          update_packages_and_run_tryjobs.UnchangedSinceLastRun(
+              last_tested_file, arg_dict), True)
 
   def testGetTryJobCommandWithNoExtraInformation(self):
     test_change_list = 1234
@@ -94,17 +106,11 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
             test_change_list, test_extra_cls, test_options, test_builder),
         expected_tryjob_cmd_list)
 
-  # Simulate `datetime.datetime.utcnow()` when retrieving the current time when
-  # submitted a tryjob.
   @mock.patch.object(
       update_packages_and_run_tryjobs,
       'GetCurrentTimeInUTC',
       return_value='2019-09-09')
-  # Simulate the behavior of `AddTryjobLinkToCL()` when successfully added the
-  # tryjob url to the CL that was uploaded to Gerrit for review.
   @mock.patch.object(update_packages_and_run_tryjobs, 'AddTryjobLinkToCL')
-  # Simulate behavior of `ChrootRunCommand()` when successfully submitted a
-  # tryjob via `cros tryjob`.
   @mock.patch.object(update_packages_and_run_tryjobs, 'ChrootRunCommand')
   def testSuccessfullySubmittedTryJob(
       self, mock_chroot_cmd, mock_add_tryjob_link_to_cl, mock_launch_time):
@@ -151,8 +157,6 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
 
     mock_launch_time.assert_called_once()
 
-  # Simulate behavior of `ExecCommandAndCaptureOutput()` when successfully added
-  # the tryjob link to the CL via `gerrit message <CL> <message>`.
   @mock.patch.object(
       update_packages_and_run_tryjobs,
       'ExecCommandAndCaptureOutput',
@@ -175,111 +179,76 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
 
     mock_exec_cmd.assert_called_once_with(expected_gerrit_message)
 
-  # Simulate behavior of `GetCommandLineArgs()` when successfully parsed the
-  # command line for the optional/required arguments for the script.
-  @mock.patch.object(update_packages_and_run_tryjobs, 'GetCommandLineArgs')
-  # Simulate behavior of `GetLLVMHashAndVersionFromSVNOption()` when
-  # successfully retrieved the LLVM hash and version for google3.
-  @mock.patch.object(update_packages_and_run_tryjobs,
-                     'GetLLVMHashAndVersionFromSVNOption')
-  # Simulate behavior of `GetLastTestedSVNVersion()` when successfully retrieved
-  # the last tested revision from the last tested file.
-  @mock.patch.object(
-      update_packages_and_run_tryjobs,
-      'GetLastTestedSVNVersion',
-      return_value=100)
-  # Simulate behavior of `VerifyOutsideChroot()` when successfully invoked the
-  # script outside of the chroot.
-  @mock.patch.object(
-      update_packages_and_run_tryjobs, 'VerifyOutsideChroot', return_value=True)
-  def testLastTestSVNVersionMatchesSVNVersion(
-      self, mock_outside_chroot, mock_get_last_tested_version,
-      mock_get_hash_and_version, mock_get_commandline_args):
-
-    args_output_obj = ArgsOutputTest()
-
-    mock_get_commandline_args.return_value = args_output_obj
-
-    mock_get_hash_and_version.return_value = ('a123testhash1', 100)
-
-    update_packages_and_run_tryjobs.main()
-
-    mock_outside_chroot.assert_called_once()
-
-    mock_get_commandline_args.assert_called_once()
-
-    mock_get_last_tested_version.assert_called_once_with(
-        args_output_obj.last_tested)
-
-    mock_get_hash_and_version.assert_called_once_with(
-        args_output_obj.llvm_version)
-
-  # Simulate the behavior of `RunTryJobs()` when successfully submitted a
-  # tryjob.
   @mock.patch.object(update_packages_and_run_tryjobs, 'RunTryJobs')
-  # Simulate behavior of `UpdatePackages()` when successfully updated the
-  # packages and uploaded a CL for review.
   @mock.patch.object(update_chromeos_llvm_hash, 'UpdatePackages')
-  # Simulate behavior of `GetCommandLineArgs()` when successfully parsed the
-  # command line for the optional/required arguments for the script.
   @mock.patch.object(update_packages_and_run_tryjobs, 'GetCommandLineArgs')
-  # Simulate behavior of `GetLLVMHashAndVersionFromSVNOption()` when
-  # successfully retrieved the LLVM hash and version for google3.
   @mock.patch.object(update_packages_and_run_tryjobs,
                      'GetLLVMHashAndVersionFromSVNOption')
-  # Simulate behavior of `GetLastTestedSVNVersion()` when successfully retrieved
-  # the last tested revision from the last tested file.
-  @mock.patch.object(
-      update_packages_and_run_tryjobs,
-      'GetLastTestedSVNVersion',
-      return_value=100)
-  # Simulate behavior of `VerifyOutsideChroot()` when successfully invoked the
-  # script outside of the chroot.
   @mock.patch.object(
       update_packages_and_run_tryjobs, 'VerifyOutsideChroot', return_value=True)
+  @mock.patch.object(update_chromeos_llvm_hash, 'GetChrootBuildPaths')
   def testUpdatedLastTestedFileWithNewTestedRevision(
-      self, mock_outside_chroot, mock_get_last_tested_version,
+      self, mock_get_chroot_build_paths, mock_outside_chroot,
       mock_get_hash_and_version, mock_get_commandline_args,
       mock_update_packages, mock_run_tryjobs):
-
-    mock_get_hash_and_version.return_value = ('a123testhash2', 200)
-
-    test_cl_url = 'https://some_cl_url.com'
-
-    test_cl_number = 12345
-
-    mock_update_packages.return_value = CommitContents(
-        url=test_cl_url, cl_number=test_cl_number)
-
-    tryjob_test_results = [{
-        'link': 'https://some_tryjob_url.com',
-        'buildbucket_id': 1234
-    }]
-
-    mock_run_tryjobs.return_value = tryjob_test_results
 
     # Create a temporary file to simulate the last tested file that contains a
     # revision.
     with CreateTemporaryFile() as last_tested_file:
-      args_output_obj = ArgsOutputTest(svn_option=200)
-      args_output_obj.last_tested = last_tested_file
+      builders = [
+          'kevin-llvm-next-toolchain-tryjob', 'eve-llvm-next-toolchain-tryjob'
+      ]
+      extra_cls = [10, 1]
+      tryjob_options = ['latest-toolchain', 'hwtest']
+      ebuilds = [
+          '/path/to/package1/package1-r2.ebuild',
+          '/path/to/package2/package2-r3.ebuild'
+      ]
 
-      mock_get_commandline_args.return_value = args_output_obj
+      arg_dict = {
+          'svn_version': 100,
+          'ebuilds': ebuilds,
+          'builders': builders,
+          'extra_cls': extra_cls,
+          'tryjob_options': tryjob_options
+      }
+      # Parepared last tested file
+      with open(last_tested_file, 'w') as f:
+        json.dump(arg_dict, f, indent=2)
+
+      # Call with a changed LLVM svn version
+      args_output = ArgsOutputTest()
+      args_output.builders = builders
+      args_output.extra_change_lists = extra_cls
+      args_output.options = tryjob_options
+      args_output.last_tested = last_tested_file
+
+      mock_get_commandline_args.return_value = args_output
+
+      mock_get_chroot_build_paths.return_value = ebuilds
+
+      mock_get_hash_and_version.return_value = ('a123testhash2', 200)
+
+      mock_update_packages.return_value = CommitContents(
+          url='https://some_cl_url.com', cl_number=12345)
+
+      mock_run_tryjobs.return_value = [{
+          'link': 'https://some_tryjob_url.com',
+          'buildbucket_id': 1234
+      }]
 
       update_packages_and_run_tryjobs.main()
 
       # Verify that the lasted tested file has been updated to the new LLVM
       # revision.
-      with open(last_tested_file) as update_revision:
-        new_revision = update_revision.readline()
+      with open(last_tested_file) as f:
+        arg_dict = json.load(f)
 
-        self.assertEqual(int(new_revision.rstrip()), 200)
+        self.assertEqual(arg_dict['svn_version'], 200)
 
     mock_outside_chroot.assert_called_once()
 
     mock_get_commandline_args.assert_called_once()
-
-    mock_get_last_tested_version.assert_called_once()
 
     mock_get_hash_and_version.assert_called_once()
 
