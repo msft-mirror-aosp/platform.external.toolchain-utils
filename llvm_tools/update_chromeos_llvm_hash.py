@@ -378,18 +378,15 @@ def UprevEbuildToVersion(symlink, svn_version):
   # any other package
   else:
     new_ebuild, is_changed = re.subn(
-        r'pre([0-9]+)',
-        'pre%s' % (datetime.today().strftime('%Y%m%d')),
-        ebuild,
-        count=1)
+        r'pre([0-9]+)', 'pre%s' % svn_version, ebuild, count=1)
 
   if not is_changed:  # failed to increment the revision number
     raise ValueError('Failed to uprev the ebuild.')
 
-  symlink_dirname = os.path.dirname(symlink)
+  symlink_dir = os.path.dirname(symlink)
 
   # Rename the ebuild
-  cmd = ['git', '-C', symlink_dirname, 'mv', ebuild, new_ebuild]
+  cmd = ['git', '-C', symlink_dir, 'mv', ebuild, new_ebuild]
   ExecCommandAndCaptureOutput(cmd, verbose=verbose)
 
   # Create a symlink of the renamed ebuild
@@ -400,11 +397,11 @@ def UprevEbuildToVersion(symlink, svn_version):
   if not os.path.islink(new_symlink):
     raise ValueError('Invalid symlink name: %s' % new_ebuild[:-len('.ebuild')])
 
-  cmd = ['git', '-C', symlink_dirname, 'add', new_symlink]
+  cmd = ['git', '-C', symlink_dir, 'add', new_symlink]
   ExecCommandAndCaptureOutput(cmd, verbose=verbose)
 
   # Remove the old symlink
-  cmd = ['git', '-C', symlink_dirname, 'rm', symlink]
+  cmd = ['git', '-C', symlink_dir, 'rm', symlink]
   ExecCommandAndCaptureOutput(cmd, verbose=verbose)
 
 

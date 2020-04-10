@@ -323,19 +323,16 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     mock_islink.assert_called_once_with(symlink_path)
 
-  # Simulate 'os.path.islink' when a valid symbolic link is passed in.
   @mock.patch.object(os.path, 'islink', return_value=True)
   @mock.patch.object(os.path, 'realpath')
-  # Simulate 'RunCommandWOutput' when successfully added the upreved symlink
-  # for commit.
   @mock.patch.object(
       update_chromeos_llvm_hash,
       'ExecCommandAndCaptureOutput',
       return_value=None)
-  def testSuccessfullyUprevEbuildToVersion(self, mock_command_output,
-                                           mock_realpath, mock_islink):
-    symlink = '/symlink/to/llvm/llvm_pre3_p2-r10.ebuild'
-    ebuild = '/abs/path/to/llvm_pre3_p2.ebuild'
+  def testSuccessfullyUprevEbuildToVersionLLVM(self, mock_command_output,
+                                               mock_realpath, mock_islink):
+    symlink = '/path/to/llvm/llvm_pre3_p2-r10.ebuild'
+    ebuild = '/abs/path/to/llvm/llvm_pre3_p2.ebuild'
     mock_realpath.return_value = ebuild
     svn_version = 1000
 
@@ -355,6 +352,49 @@ class UpdateLLVMHashTest(unittest.TestCase):
             datetime.today().strftime('%Y%m%d')),
         ebuild,
         count=1)
+    new_symlink = new_ebuild[:-len('.ebuild')] + '-r1.ebuild'
+
+    expected_cmd = ['git', '-C', symlink_dir, 'mv', ebuild, new_ebuild]
+    self.assertEqual(mock_command_output.call_args_list[0],
+                     mock.call(expected_cmd, verbose=False))
+
+    expected_cmd = ['ln', '-s', '-r', new_ebuild, new_symlink]
+    self.assertEqual(mock_command_output.call_args_list[1],
+                     mock.call(expected_cmd, verbose=False))
+
+    expected_cmd = ['git', '-C', symlink_dir, 'add', new_symlink]
+    self.assertEqual(mock_command_output.call_args_list[2],
+                     mock.call(expected_cmd, verbose=False))
+
+    expected_cmd = ['git', '-C', symlink_dir, 'rm', symlink]
+    self.assertEqual(mock_command_output.call_args_list[3],
+                     mock.call(expected_cmd, verbose=False))
+
+  @mock.patch.object(os.path, 'islink', return_value=True)
+  @mock.patch.object(os.path, 'realpath')
+  @mock.patch.object(
+      update_chromeos_llvm_hash,
+      'ExecCommandAndCaptureOutput',
+      return_value=None)
+  def testSuccessfullyUprevEbuildToVersionNonLLVM(self, mock_command_output,
+                                                  mock_realpath, mock_islink):
+    symlink = '/path/to/compiler-rt/compiler-rt_pre3_p2-r10.ebuild'
+    ebuild = '/abs/path/to/compiler-rt/compiler-rt_pre3_p2.ebuild'
+    mock_realpath.return_value = ebuild
+    svn_version = 1000
+
+    update_chromeos_llvm_hash.UprevEbuildToVersion(symlink, svn_version)
+
+    mock_islink.assert_called()
+
+    mock_realpath.assert_called_once_with(symlink)
+
+    mock_command_output.assert_called()
+
+    # Verify commands
+    symlink_dir = os.path.dirname(symlink)
+    new_ebuild, _is_changed = re.subn(
+        r'pre([0-9]+)', 'pre%s' % svn_version, ebuild, count=1)
     new_symlink = new_ebuild[:-len('.ebuild')] + '-r1.ebuild'
 
     expected_cmd = ['git', '-C', symlink_dir, 'mv', ebuild, new_ebuild]
