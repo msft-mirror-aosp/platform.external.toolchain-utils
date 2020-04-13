@@ -53,6 +53,7 @@ def GetCommandLineArgs():
   parser.add_argument(
       '--extra_change_lists',
       type=int,
+      default=[],
       nargs='+',
       help='change lists that would like to be run alongside the change list '
       'of updating the packages')
