@@ -527,20 +527,19 @@ def UploadChanges(path_to_repo_dir, branch, commit_messages):
         commit_cmd, cwd=path_to_repo_dir, verbose=verbose)
 
   # Upload the changes for review.
-  upload_change_cmd = (
-      'yes | repo upload --wip --ne --br=%s --no-verify' % branch)
+  # Use --ne to avoid sending email notifications.
+  upload_change_cmd = [
+      'repo', 'upload', '--yes', '--ne', '--no-verify',
+      '--br=%s' % branch
+  ]
 
   # Pylint currently doesn't lint things in py3 mode, and py2 didn't allow
   # users to specify `encoding`s for Popen. Hence, pylint is "wrong" here.
   # pylint: disable=unexpected-keyword-arg
-
-  # NOTE: Need `shell=True` in order to pipe `yes` into `repo upload ...`.
-  #
   # The CL URL is sent to 'stderr', so need to redirect 'stderr' to 'stdout'.
   upload_changes_obj = subprocess.Popen(
       upload_change_cmd,
       cwd=path_to_repo_dir,
-      shell=True,
       encoding='UTF-8',
       stdout=subprocess.PIPE,
       stderr=subprocess.STDOUT)
