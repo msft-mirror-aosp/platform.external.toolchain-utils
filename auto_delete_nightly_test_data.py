@@ -179,6 +179,29 @@ def CleanChromeOsTmpAndImages(days_to_preserve=1, dry_run=False):
   return rv
 
 
+def CleanOldCLs(days_to_preserve='1', dry_run=False):
+  """Abandon old CLs created by automation tooling."""
+  ce = command_executer.GetCommandExecuter()
+  chromeos_root = os.path.join(constants.CROSTC_WORKSPACE, 'chromeos')
+  # Find Old CLs.
+  old_cls_cmd = (
+      'gerrit --raw search "owner:me status:open age:%sd"' % days_to_preserve)
+  _, cls, _ = ce.ChrootRunCommandWOutput(
+      chromeos_root, old_cls_cmd, print_to_console=False)
+  # Convert any whitespaces to spaces.
+  cls = ' '.join(cls.split())
+  if not cls:
+    return 0
+
+  abandon_cls_cmd = ('gerrit abandon %s' % cls)
+  if dry_run:
+    print('Going to execute: %s' % abandon_cls_cmd)
+    return 0
+
+  return ce.ChrootRunCommand(
+      chromeos_chroot, abandon_cls_cmd, print_to_console=False)
+
+
 def Main(argv):
   """Delete nightly test data directories, tmps and test images."""
   options = ProcessArguments(argv)
@@ -201,12 +224,15 @@ def Main(argv):
         os.path.join(NIGHTLY_TESTS_WORKSPACE, dated_dir),
         options.dry_run) else 1
 
-
-## Finally clean temporaries, images under crostc/chromeos
+  ## Clean temporaries, images under crostc/chromeos
   rv2 = CleanChromeOsTmpAndImages(
       int(options.days_to_preserve), options.dry_run)
 
-  return rv + rv2
+  # Clean CLs that are not updated in last 2 weeks.
+  rv3 = CleanOldCLs('14', options.dry_run)
+
+  return rv + rv2 + rv3
+
 
 if __name__ == '__main__':
   retval = Main(sys.argv[1:])
