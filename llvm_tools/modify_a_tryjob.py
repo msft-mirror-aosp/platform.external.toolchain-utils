@@ -17,7 +17,7 @@ import sys
 from assert_not_in_chroot import VerifyOutsideChroot
 from failure_modes import FailureModes
 from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption
-from update_packages_and_run_tryjobs import RunTryJobs
+from update_packages_and_run_tests import RunTryJobs
 from update_tryjob_status import FindTryjobIndex
 from update_tryjob_status import TryjobStatus
 import update_chromeos_llvm_hash

@@ -14,13 +14,13 @@ version.
 **NOTE: sudo must be permissive (i.e. **`cros_sdk`** should NOT prompt for a
 password)**
 
-## `update_packages_and_run_tryjobs.py`
+## `update_packages_and_run_tests.py`
 
 ### Usage
 
-This script is used for updating a package's `LLVM_NEXT_HASH` (sys-devel/llvm,
+This script is used for updating a package's LLVM hash (sys-devel/llvm,
 sys-libs/compiler-rt, sys-libs/libcxx, sys-libs/libcxxabi, and
-sys-libs/llvm-libunwind) and then run tryjobs after updating the git hash.
+sys-libs/llvm-libunwind) and then run tests after updating the git hash.
 
 An example when this script should be run is when certain boards would like
 to be tested with the updated `LLVM_NEXT_HASH`.
@@ -28,8 +28,10 @@ to be tested with the updated `LLVM_NEXT_HASH`.
 For example:
 
 ```
-$ ./update_packages_and_run_tryjobs.py \
+$ ./update_packages_and_run_tests.py \
+  --is_llvm_next \
   --llvm_version tot \
+  tryjobs \
   --options nochromesdk latest-toolchain \
   --builders kevin-release-tryjob nocturne-release-tryjob
 ```
@@ -41,25 +43,26 @@ in 'nochromesdk' and 'latest-toolchain' for each tryjob.
 For help with the command line arguments of the script, run:
 
 ```
-$ ./update_packages_and_run_tryjobs.py --help
+$ ./update_packages_and_run_tests.py --help
 ```
 
-Similarly as the previous example, but for updating `LLVM_NEXT_HASH` to
-google3:
+Similarly as the previous example, but for updating `LLVM_HASH` to
+google3 and test with cq+1:
 
 ```
-$ ./update_packages_and_run_tryjobs.py \
+$ ./update_packages_and_run_tests.py \
   --llvm_version google3 \
-  --options nochromesdk latest-toolchain \
-  --builders kevin-release-tryjob nocturne-release-tryjob
+  cq
 ```
 
 Similarly as the previous example, but for updating `LLVM_NEXT_HASH` to
-the git hash of revision 367622:
+the git hash of revision 367622 and test with tryobs:
 
 ```
-$ ./update_packages_and_run_tryjobs.py \
+$ ./update_packages_and_run_tests.py \
+  --is_llvm_next \
   --llvm_version 367622 \
+  tryjobs \
   --options nochromesdk latest-toolchain \
   --builders kevin-release-tryjob nocturne-release-tryjob
 ```

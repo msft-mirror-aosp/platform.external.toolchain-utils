@@ -38,15 +38,7 @@ def GetCommandLineArgs():
 
   # Create parser and add optional command-line arguments.
   parser = argparse.ArgumentParser(
-      description=
-      'Runs a tryjob if successfully updated LLVM_NEXT_HASH of packages.')
-
-  # Add argument for the absolute path to the file that contains information on
-  # the previous tested svn version.
-  parser.add_argument(
-      '--last_tested',
-      help='the absolute path to the file that contains the last tested '
-      'arguments.')
+      description='Update an LLVM hash of packages and run tests.')
 
   # Add argument for other change lists that want to run alongside the tryjob
   # which has a change list of updating a package's git hash.
@@ -54,29 +46,9 @@ def GetCommandLineArgs():
       '--extra_change_lists',
       type=int,
       nargs='+',
+      default=[],
       help='change lists that would like to be run alongside the change list '
       'of updating the packages')
-
-  # Add argument for custom options for the tryjob.
-  parser.add_argument(
-      '--options',
-      required=False,
-      nargs='+',
-      help='options to use for the tryjob testing')
-
-  # Add argument for builders for the tryjob.
-  parser.add_argument(
-      '--builders',
-      required=True,
-      nargs='+',
-      help='builders to use for the tryjob testing')
-
-  # Add argument for the description of the tryjob.
-  parser.add_argument(
-      '--description',
-      required=False,
-      nargs='+',
-      help='the description of the tryjob')
 
   # Add argument for a specific chroot path.
   parser.add_argument(
@@ -84,12 +56,19 @@ def GetCommandLineArgs():
       default=cros_root,
       help='the path to the chroot (default: %(default)s)')
 
-  # Add argument for whether to display command contents to `stdout`.
+  # Add argument to choose between llvm and llvm-next.
   parser.add_argument(
-      '--verbose',
+      '--is_llvm_next',
       action='store_true',
-      help='display contents of a command to the terminal '
-      '(default: %(default)s)')
+      help='which llvm hash to update. Update LLVM_NEXT_HASH if specified. '
+      'Otherwise, update LLVM_HASH')
+
+  # Add argument for the absolute path to the file that contains information on
+  # the previous tested svn version.
+  parser.add_argument(
+      '--last_tested',
+      help='the absolute path to the file that contains the last tested '
+      'arguments.')
 
   # Add argument for the LLVM version to use.
   parser.add_argument(
@@ -101,7 +80,46 @@ def GetCommandLineArgs():
       '(default: finds the git hash of the google3 LLVM '
       'version)')
 
+  # Add argument to add reviewers for the created CL.
+  parser.add_argument(
+      '--reviewers',
+      nargs='+',
+      default=[],
+      help='The reviewers for the package update changelist')
+
+  # Add argument for whether to display command contents to `stdout`.
+  parser.add_argument(
+      '--verbose',
+      action='store_true',
+      help='display contents of a command to the terminal '
+      '(default: %(default)s)')
+
+  subparsers = parser.add_subparsers(dest='subparser_name')
+  # Testing with the tryjobs.
+  tryjob_subparser = subparsers.add_parser('tryjobs')
+  tryjob_subparser.add_argument(
+      '--builders',
+      required=True,
+      nargs='+',
+      default=[],
+      help='builders to use for the tryjob testing')
+
+  # Add argument for custom options for the tryjob.
+  tryjob_subparser.add_argument(
+      '--options',
+      required=False,
+      nargs='+',
+      default=[],
+      help='options to use for the tryjob testing')
+
+  # Testing with CQ.
+  subparsers.add_parser('cq')
+
   args_output = parser.parse_args()
+
+  subparser_names = ['tryjobs', 'cq']
+  if args_output.subparser_name not in subparser_names:
+    parser.error('one of %s must be specified' % subparser_names)
 
   return args_output
 
@@ -134,6 +152,44 @@ def UnchangedSinceLastRun(last_tested_file, arg_dict):
   return arg_dict == last_arg_dict
 
 
+def AddReviewers(cl, reviewers, chroot_path):
+  """Add reviewers for the created CL."""
+
+  gerrit_abs_path = os.path.join(chroot_path, 'chromite/bin/gerrit')
+  for reviewer in reviewers:
+    cmd = [gerrit_abs_path, 'reviewers', str(cl), reviewer]
+
+    ExecCommandAndCaptureOutput(cmd)
+
+
+def AddTryjobLinkToCL(tryjobs, cl, chroot_path):
+  """Adds the tryjob link(s) to the CL as a comment."""
+
+  # NOTE: Invoking `cros_sdk` does not make each tryjob link appear on its own
+  # line, so invoking the `gerrit` command directly instead of using `cros_sdk`
+  # to do it for us.
+  #
+  # FIXME: Need to figure out why `cros_sdk` does not add each tryjob link as a
+  # newline.
+  gerrit_abs_path = os.path.join(chroot_path, 'chromite/bin/gerrit')
+
+  tryjob_links = ['Started the following tryjobs:']
+  tryjob_links.extend(tryjob['link'] for tryjob in tryjobs)
+
+  add_message_cmd = [
+      gerrit_abs_path, 'message',
+      str(cl), '\n'.join(tryjob_links)
+  ]
+
+  ExecCommandAndCaptureOutput(add_message_cmd)
+
+
+# Testing with tryjobs
+def GetCurrentTimeInUTC():
+  """Returns the current time via `datetime.datetime.utcnow()`."""
+  return datetime.datetime.utcnow()
+
+
 def GetTryJobCommand(change_list, extra_change_lists, options, builder):
   """Constructs the 'tryjob' command.
 
@@ -161,11 +217,6 @@ def GetTryJobCommand(change_list, extra_change_lists, options, builder):
     tryjob_cmd.extend('--%s' % option for option in options)
 
   return tryjob_cmd
-
-
-def GetCurrentTimeInUTC():
-  """Returns the current time via `datetime.datetime.utcnow()`."""
-  return datetime.datetime.utcnow()
 
 
 def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
@@ -227,30 +278,33 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
   return tryjob_results
 
 
-def AddTryjobLinkToCL(tryjobs, cl, chroot_path):
-  """Adds the tryjob link(s) to the CL via `gerrit message <CL> <message>`."""
+# Testing with CQ
+def GetCQDependString(dependent_cls):
+  """Get CQ dependency string e.g. `Cq-Depend: chromium:MM, chromium:NN`."""
 
-  # NOTE: Invoking `cros_sdk` does not make each tryjob link appear on its own
-  # line, so invoking the `gerrit` command directly instead of using `cros_sdk`
-  # to do it for us.
-  #
-  # FIXME: Need to figure out why `cros_sdk` does not add each tryjob link as a
-  # newline.
+  if not dependent_cls:
+    return None
+
+  # Cq-Depend must start a new paragraph prefixed with "Cq-Depend".
+  return '\nCq-Depend: ' + ', '.join(('chromium:%s' % i) for i in dependent_cls)
+
+
+def StartCQDryRun(cl, dependent_cls, chroot_path):
+  """Start CQ dry run for the changelist and dependencies."""
+
   gerrit_abs_path = os.path.join(chroot_path, 'chromite/bin/gerrit')
 
-  tryjob_links = ['Started the following tryjobs:']
-  tryjob_links.extend(tryjob['link'] for tryjob in tryjobs)
+  cl_list = [cl]
+  cl_list.extend(dependent_cls)
 
-  add_message_cmd = [
-      gerrit_abs_path, 'message',
-      str(cl), '\n'.join(tryjob_links)
-  ]
+  for changes in cl_list:
+    cq_dry_run_cmd = [gerrit_abs_path, 'label-cq', str(changes), '1']
 
-  ExecCommandAndCaptureOutput(add_message_cmd)
+    ExecCommandAndCaptureOutput(cq_dry_run_cmd)
 
 
 def main():
-  """Updates the packages' 'LLVM_NEXT_HASH' and submits tryjobs.
+  """Updates the packages' LLVM hash and run tests.
 
   Raises:
     AssertionError: The script was run inside the chroot.
@@ -282,40 +336,53 @@ def main():
     arg_dict = {
         'svn_version': svn_version,
         'ebuilds': chroot_file_paths,
-        'builders': args_output.builders,
         'extra_cls': args_output.extra_change_lists,
-        'tryjob_options': args_output.options
     }
+    if args_output.subparser_name == 'tryjobs':
+      arg_dict['builders'] = args_output.builders
+      arg_dict['tryjob_options'] = args_output.options
     if UnchangedSinceLastRun(args_output.last_tested, arg_dict):
       print('svn version (%d) matches the last tested svn version in %s' %
             (svn_version, args_output.last_tested))
       return
 
+  llvm_variant = update_chromeos_llvm_hash.LLVMVariant.current
+  if args_output.is_llvm_next:
+    llvm_variant = update_chromeos_llvm_hash.LLVMVariant.next
   update_chromeos_llvm_hash.verbose = args_output.verbose
+  extra_commit_msg = None
+  if args_output.subparser_name == 'cq':
+    extra_commit_msg = GetCQDependString(args_output.extra_change_lists)
 
   change_list = update_chromeos_llvm_hash.UpdatePackages(
       update_packages,
-      update_chromeos_llvm_hash.LLVMVariant.next,
+      llvm_variant,
       git_hash,
       svn_version,
       args_output.chroot_path,
       patch_metadata_file,
       FailureModes.DISABLE_PATCHES,
       svn_option,
-      extra_commit_msg=None)
+      extra_commit_msg=extra_commit_msg)
+
+  AddReviewers(change_list.cl_number, args_output.reviewers,
+               args_output.chroot_path)
 
   print('Successfully updated packages to %d' % svn_version)
   print('Gerrit URL: %s' % change_list.url)
   print('Change list number: %d' % change_list.cl_number)
 
-  tryjob_results = RunTryJobs(change_list.cl_number,
-                              args_output.extra_change_lists,
-                              args_output.options, args_output.builders,
-                              args_output.chroot_path, args_output.verbose)
-
-  print('Tryjobs:')
-  for tryjob in tryjob_results:
-    print(tryjob)
+  if args_output.subparser_name == 'tryjobs':
+    tryjob_results = RunTryJobs(change_list.cl_number,
+                                args_output.extra_change_lists,
+                                args_output.options, args_output.builders,
+                                args_output.chroot_path, args_output.verbose)
+    print('Tryjobs:')
+    for tryjob in tryjob_results:
+      print(tryjob)
+  else:
+    StartCQDryRun(change_list.cl_number, args_output.extra_change_lists,
+                  args_output.chroot_path)
 
   # If --last_tested is specified, record the arguments used
   if args_output.last_tested:
