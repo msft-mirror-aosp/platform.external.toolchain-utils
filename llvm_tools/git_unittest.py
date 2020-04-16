@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+"""Unit tests for git helper functions."""
+
+from __future__ import print_function
+
+import os
+import subprocess
+import unittest
+import unittest.mock as mock
+
+import git
+
+# These are unittests; protected access is OK to a point.
+# pylint: disable=protected-access
+
+
+class HelperFunctionsTest(unittest.TestCase):
+  """Test class for updating LLVM hashes of packages."""
+
+  @mock.patch.object(os.path, 'isdir', return_value=False)
+  def testFailedToCreateBranchForInvalidDirectoryPath(self, mock_isdir):
+    path_to_repo = '/invalid/path/to/repo'
+    branch = 'branch-name'
+
+    # Verify the exception is raised when provided an invalid directory path.
+    with self.assertRaises(ValueError) as err:
+      git.CreateBranch(path_to_repo, branch)
+
+    self.assertEqual(
+        str(err.exception),
+        'Invalid directory path provided: %s' % path_to_repo)
+
+    mock_isdir.assert_called_once()
+
+  @mock.patch.object(os.path, 'isdir', return_value=True)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
+  def testSuccessfullyCreatedBranch(self, mock_command_output, mock_isdir):
+    path_to_repo = '/path/to/repo'
+    branch = 'branch-name'
+
+    git.CreateBranch(path_to_repo, branch)
+
+    mock_isdir.assert_called_once_with(path_to_repo)
+
+    self.assertEqual(mock_command_output.call_count, 2)
+
+  @mock.patch.object(os.path, 'isdir', return_value=False)
+  def testFailedToDeleteBranchForInvalidDirectoryPath(self, mock_isdir):
+    path_to_repo = '/invalid/path/to/repo'
+    branch = 'branch-name'
+
+    # Verify the exception is raised on an invalid repo path.
+    with self.assertRaises(ValueError) as err:
+      git.DeleteBranch(path_to_repo, branch)
+
+    self.assertEqual(
+        str(err.exception),
+        'Invalid directory path provided: %s' % path_to_repo)
+
+    mock_isdir.assert_called_once()
+
+  @mock.patch.object(os.path, 'isdir', return_value=True)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
+  def testSuccessfullyDeletedBranch(self, mock_command_output, mock_isdir):
+    path_to_repo = '/valid/path/to/repo'
+    branch = 'branch-name'
+
+    git.DeleteBranch(path_to_repo, branch)
+
+    mock_isdir.assert_called_once_with(path_to_repo)
+
+    self.assertEqual(mock_command_output.call_count, 3)
+
+  @mock.patch.object(os.path, 'isdir', return_value=False)
+  def testFailedToUploadChangesForInvalidDirectoryPath(self, mock_isdir):
+    path_to_repo = '/some/path/to/repo'
+    branch = 'update-LLVM_NEXT_HASH-a123testhash3'
+    commit_messages = ['Test message']
+
+    # Verify exception is raised when on an invalid repo path.
+    with self.assertRaises(ValueError) as err:
+      git.UploadChanges(path_to_repo, branch, commit_messages)
+
+    self.assertEqual(
+        str(err.exception), 'Invalid path provided: %s' % path_to_repo)
+
+    mock_isdir.assert_called_once()
+
+  @mock.patch.object(os.path, 'isdir', return_value=True)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
+  @mock.patch.object(subprocess, 'Popen')
+  def testFailedToUploadChangesForReview(self, mock_repo_upload,
+                                         mock_command_output, mock_isdir):
+
+    # Simulate the behavior of 'subprocess.Popen()' when uploading the changes
+    # for review
+    #
+    # `Popen.communicate()` returns a tuple of `stdout` and `stderr`.
+    mock_repo_upload.return_value.communicate.return_value = (
+        None, 'Branch does not exist.')
+
+    # Exit code of 1 means failed to upload changes for review.
+    mock_repo_upload.return_value.returncode = 1
+
+    path_to_repo = '/some/path/to/repo'
+    branch = 'invalid-branch-name'
+    commit_messages = ['Test message']
+
+    # Verify exception is raised when failed to upload the changes for review.
+    with self.assertRaises(ValueError) as err:
+      git.UploadChanges(path_to_repo, branch, commit_messages)
+
+    self.assertEqual(str(err.exception), 'Failed to upload changes for review')
+
+    mock_isdir.assert_called_once_with(path_to_repo)
+
+    mock_command_output.assert_called_once()
+    mock_command_output_args = mock_command_output.call_args_list[0][0][0]
+    expected_mock_command_output_prefix = ['git', 'commit', '-F']
+    self.assertEqual(
+        mock_command_output_args[:len(expected_mock_command_output_prefix)],
+        expected_mock_command_output_prefix)
+
+    mock_repo_upload.assert_called_once()
+
+  @mock.patch.object(os.path, 'isdir', return_value=True)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
+  @mock.patch.object(subprocess, 'Popen')
+  def testSuccessfullyUploadedChangesForReview(self, mock_repo_upload,
+                                               mock_command_output, mock_isdir):
+
+    # A test CL generated by `repo upload`.
+    repo_upload_contents = ('remote: https://chromium-review.googlesource.'
+                            'com/c/chromiumos/overlays/chromiumos-overlay/'
+                            '+/193147 Fix stdout')
+
+    # Simulate the behavior of 'subprocess.Popen()' when uploading the changes
+    # for review
+    #
+    # `Popen.communicate()` returns a tuple of `stdout` and `stderr`.
+    mock_repo_upload.return_value.communicate.return_value = (
+        repo_upload_contents, None)
+
+    # Exit code of 0 means successfully uploaded changes for review.
+    mock_repo_upload.return_value.returncode = 0
+
+    path_to_repo = '/some/path/to/repo'
+    branch = 'branch-name'
+    commit_messages = ['Test message']
+
+    change_list = git.UploadChanges(path_to_repo, branch, commit_messages)
+
+    self.assertEqual(
+        change_list.url,
+        'https://chromium-review.googlesource.com/c/chromiumos/overlays/'
+        'chromiumos-overlay/+/193147')
+
+    self.assertEqual(change_list.cl_number, 193147)
+
+    mock_isdir.assert_called_once_with(path_to_repo)
+
+    mock_command_output.assert_called_once()
+
+    mock_repo_upload.assert_called_once()
+
+
+if __name__ == '__main__':
+  unittest.main()

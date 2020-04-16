@@ -13,21 +13,18 @@ for review.
 """
 
 from __future__ import print_function
-from collections import namedtuple
 from datetime import datetime
 from enum import Enum
 
 import argparse
 import os
 import re
-import subprocess
-import tempfile
 
-from assert_not_in_chroot import VerifyOutsideChroot
 from failure_modes import FailureModes
-from subprocess_helpers import ChrootRunCommand, ExecCommandAndCaptureOutput
-from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption, is_svn_option
+from subprocess_helpers import ExecCommandAndCaptureOutput
+import chroot
 import get_llvm_hash
+import git
 import llvm_patch_management
 
 
@@ -42,8 +39,6 @@ class LLVMVariant(Enum):
 # If set to `True`, then the contents of `stdout` after executing a command will
 # be displayed to the terminal.
 verbose = False
-
-CommitContents = namedtuple('CommitContents', ['url', 'cl_number'])
 
 
 def GetCommandLineArgs():
@@ -96,7 +91,7 @@ def GetCommandLineArgs():
   # Add argument for the LLVM version to use.
   parser.add_argument(
       '--llvm_version',
-      type=is_svn_option,
+      type=get_llvm_hash.is_svn_option,
       required=True,
       help='which git hash to use. Either a svn revision, or one '
       'of %s' % sorted(get_llvm_hash.KNOWN_HASH_SOURCES))
@@ -129,76 +124,6 @@ def GetCommandLineArgs():
   verbose = args_output.verbose
 
   return args_output
-
-
-def GetChrootBuildPaths(chromeos_root, package_list):
-  """Gets the chroot path(s) of the package(s).
-
-  Args:
-    chromeos_root: The absolute path to the chroot to
-    use for executing chroot commands.
-    package_list: A list of a package/packages to
-    be used to find their chroot path.
-
-  Returns:
-    A list of a chroot path/chroot paths of the package's ebuild file.
-
-  Raises:
-    ValueError: Failed to get the chroot path of a package.
-  """
-
-  chroot_paths = []
-
-  # Find the chroot path for each package's ebuild.
-  for cur_package in sorted(set(package_list)):
-    # Cmd to find the chroot path for the package.
-    equery_cmd = ['equery', 'w', cur_package]
-
-    chroot_path = ChrootRunCommand(chromeos_root, equery_cmd, verbose=verbose)
-
-    chroot_paths.append(chroot_path.strip())
-
-  return chroot_paths
-
-
-def _ConvertChrootPathsToSymLinkPaths(chromeos_root, chroot_file_paths):
-  """Converts the chroot path(s) to absolute symlink path(s).
-
-  Args:
-    chromeos_root: The absolute path to the chroot.
-    chroot_file_paths: A list of a chroot path/chroot paths to convert to
-    a absolute symlink path/symlink paths.
-
-  Returns:
-    A list of absolute path(s) which are symlinks that point to
-    the ebuild of the package(s).
-
-  Raises:
-    ValueError: Invalid prefix for the chroot path or
-    invalid chroot path(s) were provided.
-  """
-
-  symlink_file_paths = []
-
-  chroot_prefix = '/mnt/host/source/'
-
-  # Iterate through the chroot paths.
-  #
-  # For each chroot file path, remove '/mnt/host/source/' prefix
-  # and combine the chroot path with the result and add it to the list.
-  for cur_chroot_file_path in chroot_file_paths:
-    if not cur_chroot_file_path.startswith(chroot_prefix):
-      raise ValueError(
-          'Invalid prefix for the chroot path: %s' % cur_chroot_file_path)
-
-    rel_path = cur_chroot_file_path[len(chroot_prefix):]
-
-    # combine the chromeos root path + '/src/...'
-    absolute_symlink_path = os.path.join(chromeos_root, rel_path)
-
-    symlink_file_paths.append(absolute_symlink_path)
-
-  return symlink_file_paths
 
 
 def GetEbuildPathsFromSymLinkPaths(symlinks):
@@ -405,154 +330,6 @@ def UprevEbuildToVersion(symlink, svn_version):
   ExecCommandAndCaptureOutput(cmd, verbose=verbose)
 
 
-def _CreateRepo(path_to_repo_dir, branch):
-  """Creates a temporary repo for the changes.
-
-  Args:
-    path_to_repo_dir: The absolute path to the repo.
-    branch: The name of the branch to create.
-    llvm_variant: The LLVM hash to update.
-    git_hash: The new git hash.
-
-  Raises:
-    ValueError: Failed to create a repo in that directory.
-  """
-
-  if not os.path.isdir(path_to_repo_dir):
-    raise ValueError('Invalid directory path provided: %s' % path_to_repo_dir)
-
-  reset_changes_cmd = [
-      'git',
-      '-C',
-      path_to_repo_dir,
-      'reset',
-      'HEAD',
-      '--hard',
-  ]
-
-  ExecCommandAndCaptureOutput(reset_changes_cmd, verbose=verbose)
-
-  create_repo_cmd = ['repo', 'start', branch]
-
-  ExecCommandAndCaptureOutput(
-      create_repo_cmd, cwd=path_to_repo_dir, verbose=verbose)
-
-
-def _DeleteRepo(path_to_repo_dir, branch):
-  """Deletes the temporary repo.
-
-  Args:
-    path_to_repo_dir: The absolute path of the repo.
-    branch: The name of the branch to delete.
-
-  Raises:
-    ValueError: Failed to delete the repo in that directory.
-  """
-
-  if not os.path.isdir(path_to_repo_dir):
-    raise ValueError('Invalid directory path provided: %s' % path_to_repo_dir)
-
-  checkout_to_master_cmd = [
-      'git', '-C', path_to_repo_dir, 'checkout', 'cros/master'
-  ]
-
-  ExecCommandAndCaptureOutput(checkout_to_master_cmd, verbose=verbose)
-
-  reset_head_cmd = ['git', '-C', path_to_repo_dir, 'reset', 'HEAD', '--hard']
-
-  ExecCommandAndCaptureOutput(reset_head_cmd, verbose=verbose)
-
-  delete_repo_cmd = ['git', '-C', path_to_repo_dir, 'branch', '-D', branch]
-
-  ExecCommandAndCaptureOutput(delete_repo_cmd, verbose=verbose)
-
-
-def GetGerritRepoUploadContents(repo_upload_contents):
-  """Parses 'repo upload' to get the Gerrit commit URL and CL number.
-
-  Args:
-    repo_upload_contents: The contents of the 'repo upload' command.
-
-  Returns:
-    A nametuple that has two (key, value) pairs, where the first pair is the
-    Gerrit commit URL and the second pair is the change list number.
-
-  Raises:
-    ValueError: The contents of the 'repo upload' command did not contain a
-    Gerrit commit URL.
-  """
-
-  found_url = re.search(
-      r'https://chromium-review.googlesource.com/c/'
-      r'chromiumos/overlays/chromiumos-overlay/\+/([0-9]+)',
-      repo_upload_contents)
-
-  if not found_url:
-    raise ValueError('Failed to find change list URL.')
-
-  cl_number = int(found_url.group(1))
-
-  return CommitContents(url=found_url.group(0), cl_number=cl_number)
-
-
-def UploadChanges(path_to_repo_dir, branch, commit_messages):
-  """Uploads the changes (updating LLVM next hash and uprev symlink) for review.
-
-  Args:
-    path_to_repo_dir: The absolute path to the repo where changes were made.
-    branch: The name of the branch to upload.
-    commit_messages: A string of commit message(s) (i.e. '[message]'
-    of the changes made.
-
-  Returns:
-    A nametuple that has two (key, value) pairs, where the first pair is the
-    Gerrit commit URL and the second pair is the change list number.
-
-  Raises:
-    ValueError: Failed to create a commit or failed to upload the
-    changes for review.
-  """
-
-  if not os.path.isdir(path_to_repo_dir):
-    raise ValueError('Invalid directory path provided: %s' % path_to_repo_dir)
-
-  # Create a git commit.
-  with tempfile.NamedTemporaryFile(mode='w+t') as commit_msg_file:
-    commit_msg_file.write('\n'.join(commit_messages))
-    commit_msg_file.flush()
-
-    commit_cmd = ['git', 'commit', '-F', commit_msg_file.name]
-
-    ExecCommandAndCaptureOutput(
-        commit_cmd, cwd=path_to_repo_dir, verbose=verbose)
-
-  # Upload the changes for review.
-  # Use --ne to avoid sending email notifications.
-  upload_change_cmd = [
-      'repo', 'upload', '--yes', '--ne', '--no-verify',
-      '--br=%s' % branch
-  ]
-
-  # Pylint currently doesn't lint things in py3 mode, and py2 didn't allow
-  # users to specify `encoding`s for Popen. Hence, pylint is "wrong" here.
-  # pylint: disable=unexpected-keyword-arg
-  # The CL URL is sent to 'stderr', so need to redirect 'stderr' to 'stdout'.
-  upload_changes_obj = subprocess.Popen(
-      upload_change_cmd,
-      cwd=path_to_repo_dir,
-      encoding='UTF-8',
-      stdout=subprocess.PIPE,
-      stderr=subprocess.STDOUT)
-
-  out, _ = upload_changes_obj.communicate()
-
-  if upload_changes_obj.returncode:  # Failed to upload changes.
-    print(out)
-    raise ValueError('Failed to upload changes for review')
-
-  return GetGerritRepoUploadContents(out.rstrip())
-
-
 def CreatePathDictionaryFromPackages(chroot_path, update_packages):
   """Creates a symlink and ebuild path pair dictionary from the packages.
 
@@ -567,10 +344,10 @@ def CreatePathDictionaryFromPackages(chroot_path, update_packages):
   """
 
   # Construct a list containing the chroot file paths of the package(s).
-  chroot_file_paths = GetChrootBuildPaths(chroot_path, update_packages)
+  chroot_file_paths = chroot.GetChrootEbuildPaths(chroot_path, update_packages)
 
   # Construct a list containing the symlink(s) of the package(s).
-  symlink_file_paths = _ConvertChrootPathsToSymLinkPaths(
+  symlink_file_paths = chroot.ConvertChrootPathsToAbsolutePaths(
       chroot_path, chroot_file_paths)
 
   # Create a dictionary where the key is the absolute path of the symlink to
@@ -708,7 +485,7 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
 
   branch = 'update-' + llvm_variant.value + '-' + git_hash
 
-  _CreateRepo(repo_path, branch)
+  git.CreateBranch(repo_path, branch)
 
   try:
     commit_message_header = 'llvm'
@@ -762,10 +539,10 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
     if extra_commit_msg:
       commit_messages.append(extra_commit_msg)
 
-    change_list = UploadChanges(repo_path, branch, commit_messages)
+    change_list = git.UploadChanges(repo_path, branch, commit_messages)
 
   finally:
-    _DeleteRepo(repo_path, branch)
+    git.DeleteBranch(repo_path, branch)
 
   return change_list
 
@@ -777,7 +554,7 @@ def main():
     AssertionError: The script was run inside the chroot.
   """
 
-  VerifyOutsideChroot()
+  chroot.VerifyOutsideChroot()
 
   args_output = GetCommandLineArgs()
 
@@ -787,7 +564,8 @@ def main():
 
   git_hash_source = args_output.llvm_version
 
-  git_hash, svn_version = GetLLVMHashAndVersionFromSVNOption(git_hash_source)
+  git_hash, svn_version = get_llvm_hash.GetLLVMHashAndVersionFromSVNOption(
+      git_hash_source)
 
   change_list = UpdatePackages(
       args_output.update_packages,

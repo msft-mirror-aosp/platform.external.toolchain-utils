@@ -12,9 +12,11 @@ import json
 import unittest
 import unittest.mock as mock
 
-from test_helpers import ArgsOutputTest
-from test_helpers import CreateTemporaryFile
-from update_chromeos_llvm_hash import CommitContents
+import chroot
+import get_llvm_hash
+import git
+import subprocess_helpers
+import test_helpers
 import update_chromeos_llvm_hash
 import update_packages_and_run_tests
 
@@ -28,7 +30,7 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
         update_packages_and_run_tests.UnchangedSinceLastRun(None, {}), False)
 
   def testEmptyLastTestedFile(self):
-    with CreateTemporaryFile() as temp_file:
+    with test_helpers.CreateTemporaryFile() as temp_file:
       self.assertEqual(
           update_packages_and_run_tests.UnchangedSinceLastRun(temp_file, {}),
           False)
@@ -42,7 +44,7 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
             '/some/file/that/does/not/exist.txt', {}), False)
 
   def testMatchedLastTestedFile(self):
-    with CreateTemporaryFile() as last_tested_file:
+    with test_helpers.CreateTemporaryFile() as last_tested_file:
       arg_dict = {
           'svn_version':
               1234,
@@ -112,7 +114,7 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
       'GetCurrentTimeInUTC',
       return_value='2019-09-09')
   @mock.patch.object(update_packages_and_run_tests, 'AddTryjobLinkToCL')
-  @mock.patch.object(update_packages_and_run_tests, 'ChrootRunCommand')
+  @mock.patch.object(subprocess_helpers, 'ChrootRunCommand')
   def testSuccessfullySubmittedTryJob(
       self, mock_chroot_cmd, mock_add_tryjob_link_to_cl, mock_launch_time):
 
@@ -157,9 +159,7 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
     mock_add_tryjob_link_to_cl.assert_called_once()
 
   @mock.patch.object(
-      update_packages_and_run_tests,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
+      subprocess_helpers, 'ExecCommandAndCaptureOutput', return_value=None)
   def testSuccessfullyAddedTryjobLinkToCL(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'
 
@@ -181,11 +181,9 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
   @mock.patch.object(update_packages_and_run_tests, 'RunTryJobs')
   @mock.patch.object(update_chromeos_llvm_hash, 'UpdatePackages')
   @mock.patch.object(update_packages_and_run_tests, 'GetCommandLineArgs')
-  @mock.patch.object(update_packages_and_run_tests,
-                     'GetLLVMHashAndVersionFromSVNOption')
-  @mock.patch.object(
-      update_packages_and_run_tests, 'VerifyOutsideChroot', return_value=True)
-  @mock.patch.object(update_chromeos_llvm_hash, 'GetChrootBuildPaths')
+  @mock.patch.object(get_llvm_hash, 'GetLLVMHashAndVersionFromSVNOption')
+  @mock.patch.object(chroot, 'VerifyOutsideChroot', return_value=True)
+  @mock.patch.object(chroot, 'GetChrootEbuildPaths')
   def testUpdatedLastTestedFileWithNewTestedRevision(
       self, mock_get_chroot_build_paths, mock_outside_chroot,
       mock_get_hash_and_version, mock_get_commandline_args,
@@ -193,7 +191,7 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
 
     # Create a temporary file to simulate the last tested file that contains a
     # revision.
-    with CreateTemporaryFile() as last_tested_file:
+    with test_helpers.CreateTemporaryFile() as last_tested_file:
       builders = [
           'kevin-llvm-next-toolchain-tryjob', 'eve-llvm-next-toolchain-tryjob'
       ]
@@ -216,7 +214,7 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
         json.dump(arg_dict, f, indent=2)
 
       # Call with a changed LLVM svn version
-      args_output = ArgsOutputTest()
+      args_output = test_helpers.ArgsOutputTest()
       args_output.is_llvm_next = True
       args_output.extra_change_lists = extra_cls
       args_output.last_tested = last_tested_file
@@ -232,7 +230,7 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
 
       mock_get_hash_and_version.return_value = ('a123testhash2', 200)
 
-      mock_update_packages.return_value = CommitContents(
+      mock_update_packages.return_value = git.CommitContents(
           url='https://some_cl_url.com', cl_number=12345)
 
       mock_run_tryjobs.return_value = [{
@@ -283,9 +281,7 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
 
   # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
   @mock.patch.object(
-      update_packages_and_run_tests,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
+      subprocess_helpers, 'ExecCommandAndCaptureOutput', return_value=None)
   def testStartCQDryRunNoDeps(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'
     test_cl_number = 1000
@@ -304,9 +300,7 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
 
   # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
   @mock.patch.object(
-      update_packages_and_run_tests,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
+      subprocess_helpers, 'ExecCommandAndCaptureOutput', return_value=None)
   # test with a single deps cl.
   def testStartCQDryRunSingleDep(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'
@@ -333,9 +327,7 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
 
   # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
   @mock.patch.object(
-      update_packages_and_run_tests,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
+      subprocess_helpers, 'ExecCommandAndCaptureOutput', return_value=None)
   def testStartCQDryRunMultipleDep(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'
     test_cl_number = 1000
@@ -368,9 +360,7 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
 
   # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
   @mock.patch.object(
-      update_packages_and_run_tests,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
+      subprocess_helpers, 'ExecCommandAndCaptureOutput', return_value=None)
   # test with no reviewers.
   def testAddReviewersNone(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'
@@ -383,9 +373,7 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
 
   # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
   @mock.patch.object(
-      update_packages_and_run_tests,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
+      subprocess_helpers, 'ExecCommandAndCaptureOutput', return_value=None)
   # test with multiple reviewers.
   def testAddReviewersMultiple(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'

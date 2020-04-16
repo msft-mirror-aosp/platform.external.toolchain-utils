@@ -14,12 +14,11 @@ import json
 import os
 import sys
 
-from assert_not_in_chroot import VerifyOutsideChroot
-from failure_modes import FailureModes
-from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption
-from update_packages_and_run_tests import RunTryJobs
-from update_tryjob_status import FindTryjobIndex
-from update_tryjob_status import TryjobStatus
+import chroot
+import failure_modes
+import get_llvm_hash
+import update_packages_and_run_tests
+import update_tryjob_status
 import update_chromeos_llvm_hash
 
 
@@ -124,7 +123,7 @@ def GetCLAfterUpdatingPackages(packages, git_hash, svn_version, chroot_path,
       svn_version,
       chroot_path,
       patch_metadata_file,
-      FailureModes.DISABLE_PATCHES,
+      failure_modes.FailureModes.DISABLE_PATCHES,
       svn_option,
       extra_commit_msg=None)
 
@@ -150,15 +149,15 @@ def CreateNewTryjobEntryForBisection(cl, extra_cls, options, builder,
   #     'builder' : [BUILDER_AS_A_LIST]
   #   }
   # ]
-  tryjob_results = RunTryJobs(cl, extra_cls, options, [builder], chroot_path,
-                              verbose)
+  tryjob_results = update_packages_and_run_tests.RunTryJobs(
+      cl, extra_cls, options, [builder], chroot_path, verbose)
   print('\nTryjob:')
   print(tryjob_results[0])
 
   # Add necessary information about the tryjob.
   tryjob_results[0]['url'] = cl_url
   tryjob_results[0]['rev'] = revision
-  tryjob_results[0]['status'] = TryjobStatus.PENDING.value
+  tryjob_results[0]['status'] = update_tryjob_status.TryjobStatus.PENDING.value
   tryjob_results[0]['cl'] = cl
 
   return tryjob_results[0]
@@ -215,7 +214,8 @@ def PerformTryjobModification(revision, modify_tryjob, status_file, extra_cls,
   if not bisect_contents['jobs'] and modify_tryjob != ModifyTryjob.ADD:
     sys.exit('No tryjobs in %s' % status_file)
 
-  tryjob_index = FindTryjobIndex(revision, bisect_contents['jobs'])
+  tryjob_index = update_tryjob_status.FindTryjobIndex(revision,
+                                                      bisect_contents['jobs'])
 
   # 'FindTryjobIndex()' returns None if the tryjob was not found.
   if tryjob_index is None and modify_tryjob != ModifyTryjob.ADD:
@@ -229,13 +229,14 @@ def PerformTryjobModification(revision, modify_tryjob, status_file, extra_cls,
     print('Successfully deleted the tryjob of revision %d' % revision)
   elif modify_tryjob == ModifyTryjob.RELAUNCH:
     # Need to update the tryjob link and buildbucket ID.
-    tryjob_results = RunTryJobs(
+    tryjob_results = update_packages_and_run_tests.RunTryJobs(
         bisect_contents['jobs'][tryjob_index]['cl'],
         bisect_contents['jobs'][tryjob_index]['extra_cls'],
         bisect_contents['jobs'][tryjob_index]['options'],
         bisect_contents['jobs'][tryjob_index]['builder'], chroot_path, verbose)
 
-    bisect_contents['jobs'][tryjob_index]['status'] = TryjobStatus.PENDING.value
+    bisect_contents['jobs'][tryjob_index][
+        'status'] = update_tryjob_status.TryjobStatus.PENDING.value
     bisect_contents['jobs'][tryjob_index]['link'] = tryjob_results[0]['link']
     bisect_contents['jobs'][tryjob_index]['buildbucket_id'] = tryjob_results[0][
         'buildbucket_id']
@@ -258,7 +259,8 @@ def PerformTryjobModification(revision, modify_tryjob, status_file, extra_cls,
 
       patch_metadata_file = 'PATCHES.json'
 
-      git_hash, revision = GetLLVMHashAndVersionFromSVNOption(revision)
+      git_hash, revision = get_llvm_hash.GetLLVMHashAndVersionFromSVNOption(
+          revision)
 
       tryjob_dict = AddTryjob(update_packages, git_hash, revision, chroot_path,
                               patch_metadata_file, extra_cls, options, builder,
@@ -280,7 +282,7 @@ def PerformTryjobModification(revision, modify_tryjob, status_file, extra_cls,
 def main():
   """Removes, relaunches, or adds a tryjob."""
 
-  VerifyOutsideChroot()
+  chroot.VerifyOutsideChroot()
 
   args_output = GetCommandLineArgs()
 

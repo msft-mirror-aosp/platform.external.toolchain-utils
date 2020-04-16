@@ -12,13 +12,14 @@ from collections import namedtuple
 from datetime import datetime
 import os
 import re
-import subprocess
 import unittest
 import unittest.mock as mock
 
-from failure_modes import FailureModes
-from test_helpers import CreateTemporaryJsonFile
+import chroot
+import failure_modes
+import git
 import llvm_patch_management
+import test_helpers
 import update_chromeos_llvm_hash
 
 # These are unittests; protected access is OK to a point.
@@ -27,81 +28,6 @@ import update_chromeos_llvm_hash
 
 class UpdateLLVMHashTest(unittest.TestCase):
   """Test class for updating LLVM hashes of packages."""
-
-  @mock.patch.object(update_chromeos_llvm_hash, 'ChrootRunCommand')
-  def testSucceedsToGetChrootPathForPackage(self, mock_chroot_command):
-    package_chroot_path = '/chroot/path/to/package.ebuild'
-
-    # Emulate ChrootRunCommandWOutput behavior when a chroot path is found for
-    # a valid package.
-    mock_chroot_command.return_value = package_chroot_path
-
-    chroot_path = '/test/chroot/path'
-    package_list = ['new-test/package']
-
-    self.assertEqual(
-        update_chromeos_llvm_hash.GetChrootBuildPaths(
-            chroot_path, package_list), [package_chroot_path])
-
-    mock_chroot_command.assert_called_once()
-
-  def testFailedToConvertChrootPathWithInvalidPrefixToSymlinkPath(self):
-    chroot_path = '/path/to/chroot'
-    chroot_file_path = '/src/package.ebuild'
-
-    # Verify the exception is raised when a symlink does not have the prefix
-    # '/mnt/host/source/'.
-    with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_hash._ConvertChrootPathsToSymLinkPaths(
-          chroot_path, [chroot_file_path])
-
-    self.assertEqual(
-        str(err.exception), 'Invalid prefix for the chroot path: '
-        '%s' % chroot_file_path)
-
-  def testSucceedsToConvertChrootPathToSymlinkPath(self):
-    chroot_path = '/path/to/chroot'
-    chroot_file_paths = ['/mnt/host/source/src/package.ebuild']
-
-    expected_symlink_path = '/path/to/chroot/src/package.ebuild'
-
-    self.assertEqual(
-        update_chromeos_llvm_hash._ConvertChrootPathsToSymLinkPaths(
-            chroot_path, chroot_file_paths), [expected_symlink_path])
-
-  # Simulate 'os.path.islink' when a path is not a symbolic link.
-  @mock.patch.object(os.path, 'islink', return_value=False)
-  def testFailedToGetEbuildPathFromInvalidSymlink(self, mock_islink):
-    symlink_path = '/symlink/path/src/to/package-r1.ebuild'
-
-    # Verify the exception is raised when the argument is not a symbolic link.
-    with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_hash.GetEbuildPathsFromSymLinkPaths([symlink_path])
-
-    self.assertEqual(
-        str(err.exception), 'Invalid symlink provided: %s' % symlink_path)
-
-    mock_islink.assert_called_once_with(symlink_path)
-
-  # Simulate 'os.path.islink' when a path is a symbolic link.
-  @mock.patch.object(os.path, 'islink', return_value=True)
-  @mock.patch.object(os.path, 'realpath')
-  def testSucceedsToGetEbuildPathFromValidSymlink(self, mock_realpath,
-                                                  mock_islink):
-
-    symlink_path = '/path/to/chroot/src/package-r1.ebuild'
-    abs_path_to_package = '/abs/path/to/src/package.ebuild'
-    mock_realpath.return_value = abs_path_to_package
-
-    expected_resolved_paths = {symlink_path: abs_path_to_package}
-
-    self.assertEqual(
-        update_chromeos_llvm_hash.GetEbuildPathsFromSymLinkPaths(
-            [symlink_path]), expected_resolved_paths)
-
-    mock_realpath.assert_called_once_with(symlink_path)
-
-    mock_islink.assert_called_once_with(symlink_path)
 
   # Simulate behavior of 'os.path.isfile()' when the ebuild path to a package
   # does not exist.
@@ -126,7 +52,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
   @mock.patch.object(os.path, 'isfile', return_value=True)
   def testFailedToUpdateLLVMHash(self, mock_isfile):
     # Create a temporary file to simulate an ebuild file of a package.
-    with CreateTemporaryJsonFile() as ebuild_file:
+    with test_helpers.CreateTemporaryJsonFile() as ebuild_file:
       with open(ebuild_file, 'w') as f:
         f.write('\n'.join([
             'First line in the ebuild', 'Second line in the ebuild',
@@ -154,7 +80,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
   @mock.patch.object(os.path, 'isfile', return_value=True)
   def testFailedToUpdateLLVMNextHash(self, mock_isfile):
     # Create a temporary file to simulate an ebuild file of a package.
-    with CreateTemporaryJsonFile() as ebuild_file:
+    with test_helpers.CreateTemporaryJsonFile() as ebuild_file:
       with open(ebuild_file, 'w') as f:
         f.write('\n'.join([
             'First line in the ebuild', 'Second line in the ebuild',
@@ -188,7 +114,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
       self, mock_stage_commit_command, mock_isfile):
 
     # Create a temporary file to simulate an ebuild file of a package.
-    with CreateTemporaryJsonFile() as ebuild_file:
+    with test_helpers.CreateTemporaryJsonFile() as ebuild_file:
       # Updates LLVM_HASH to 'git_hash' and revision to
       # 'svn_version'.
       llvm_variant = update_chromeos_llvm_hash.LLVMVariant.current
@@ -231,7 +157,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
       self, mock_stage_commit_command, mock_isfile):
 
     # Create a temporary file to simulate an ebuild file of a package.
-    with CreateTemporaryJsonFile() as ebuild_file:
+    with test_helpers.CreateTemporaryJsonFile() as ebuild_file:
       # Updates LLVM_NEXT_HASH to 'git_hash' and revision to
       # 'svn_version'.
       llvm_variant = update_chromeos_llvm_hash.LLVMVariant.next
@@ -435,213 +361,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
   # directory.
 
-  @mock.patch.object(os.path, 'isdir', return_value=False)
-  def testFailedToCreateRepoForInvalidDirectoryPath(self, mock_isdir):
-    path_to_repo = '/path/to/repo'
-    branch = 'update-LLVM_NEXT_HASH-a123testhash1'
-
-    # Verify the exception is raised when provided an invalid directory path.
-    with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_hash._CreateRepo(path_to_repo, branch)
-
-    self.assertEqual(
-        str(err.exception),
-        'Invalid directory path provided: %s' % path_to_repo)
-
-    mock_isdir.assert_called_once()
-
-  # Simulate 'os.path.isdir' when a valid repo path is provided.
-  @mock.patch.object(os.path, 'isdir', return_value=True)
-  # Simulate behavior of 'ExecCommandAndCaptureOutput()' when successfully reset
-  # changes and created a repo.
-  @mock.patch.object(
-      update_chromeos_llvm_hash,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
-  def testSuccessfullyCreatedRepo(self, mock_command_output, mock_isdir):
-    path_to_repo = '/path/to/repo'
-    branch = 'update-LLVM_NEXT_HASH-a123testhash1'
-
-    update_chromeos_llvm_hash._CreateRepo(path_to_repo, branch)
-
-    mock_isdir.assert_called_once_with(path_to_repo)
-
-    self.assertEqual(mock_command_output.call_count, 2)
-
-  # Simulate behavior of 'os.path.isdir()' when the path to the repo is not a
-  # directory.
-  @mock.patch.object(os.path, 'isdir', return_value=False)
-  def testFailedToDeleteRepoForInvalidDirectoryPath(self, mock_isdir):
-    path_to_repo = '/some/path/to/repo'
-    branch = 'update-LLVM_NEXT_HASH-a123testhash2'
-
-    # Verify the exception is raised on an invalid repo path.
-    with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_hash._DeleteRepo(path_to_repo, branch)
-
-    self.assertEqual(
-        str(err.exception),
-        'Invalid directory path provided: %s' % path_to_repo)
-
-    mock_isdir.assert_called_once()
-
-  # Simulate 'os.path.isdir' on valid directory path.
-  @mock.patch.object(os.path, 'isdir', return_value=True)
-  # Simulate 'ExecCommandAndCaptureOutput()' when successfully checkout to
-  # cros/master, reset changes, and deleted the repo.
-  @mock.patch.object(
-      update_chromeos_llvm_hash,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
-  def testSuccessfullyDeletedRepo(self, mock_command_output, mock_isdir):
-    path_to_repo = '/some/path/to/repo'
-    branch = 'update-LLVM_NEXT_HASH-a123testhash2'
-
-    update_chromeos_llvm_hash._DeleteRepo(path_to_repo, branch)
-
-    mock_isdir.assert_called_once_with(path_to_repo)
-
-    self.assertEqual(mock_command_output.call_count, 3)
-
-  def testFailedToFindChangeListURL(self):
-    repo_upload_contents = 'remote:   https://some_url'
-
-    # Verify the exception is raised when failed to find the Gerrit URL when
-    # parsing the 'repo upload' contents.
-    with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_hash.GetGerritRepoUploadContents(
-          repo_upload_contents)
-
-    self.assertEqual(str(err.exception), 'Failed to find change list URL.')
-
-  def testSuccessfullyGetGerritRepoUploadContents(self):
-    repo_upload_contents = ('remote:   https://chromium-review.googlesource.com'
-                            '/c/chromiumos/overlays/chromiumos-overlay/+/'
-                            '193147 Some commit header')
-
-    change_list = update_chromeos_llvm_hash.GetGerritRepoUploadContents(
-        repo_upload_contents)
-
-    self.assertEqual(
-        change_list.url,
-        'https://chromium-review.googlesource.com/c/chromiumos/overlays/'
-        'chromiumos-overlay/+/193147')
-
-    self.assertEqual(change_list.cl_number, 193147)
-
-  # Simulate behavior of 'os.path.isdir()' when the path to the repo is not a
-  # directory.
-  @mock.patch.object(os.path, 'isdir', return_value=False)
-  def testFailedToUploadChangesForInvalidPathDirectory(self, mock_isdir):
-    path_to_repo = '/some/path/to/repo'
-    branch = 'update-LLVM_NEXT_HASH-a123testhash3'
-    commit_messages = ['Test message']
-
-    # Verify exception is raised when on an invalid repo path.
-    with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_hash.UploadChanges(path_to_repo, branch,
-                                              commit_messages)
-
-    self.assertEqual(
-        str(err.exception),
-        'Invalid directory path provided: %s' % path_to_repo)
-
-    mock_isdir.assert_called_once()
-
-  # Simulate 'os.path.isdir' on a valid repo path.
-  @mock.patch.object(os.path, 'isdir', return_value=True)
-  # Simulate behavior of 'ExecCommandAndCaptureOutput()' when successfully
-  # committed the changes.
-  @mock.patch.object(
-      update_chromeos_llvm_hash,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
-  @mock.patch.object(subprocess, 'Popen')
-  def testFailedToUploadChangesForReview(self, mock_repo_upload,
-                                         mock_command_output, mock_isdir):
-
-    # Simulate the behavior of 'subprocess.Popen()' when uploading the changes
-    # for review
-    #
-    # `Popen.communicate()` returns a tuple of `stdout` and `stderr`.
-    mock_repo_upload.return_value.communicate.return_value = (
-        None, 'Branch does not exist.')
-
-    # Exit code of 1 means failed to upload changes for review.
-    mock_repo_upload.return_value.returncode = 1
-
-    path_to_repo = '/some/path/to/repo'
-    branch = 'update-LLVM_NEXT_HASH-a123testhash3'
-    commit_messages = ['Test message']
-
-    # Verify exception is raised when failed to upload the changes for review.
-    with self.assertRaises(ValueError) as err:
-      update_chromeos_llvm_hash.UploadChanges(path_to_repo, branch,
-                                              commit_messages)
-
-    self.assertEqual(str(err.exception), 'Failed to upload changes for review')
-
-    mock_isdir.assert_called_once_with(path_to_repo)
-
-    mock_command_output.assert_called_once()
-    mock_command_output_args = mock_command_output.call_args_list[0][0][0]
-    expected_mock_command_output_prefix = ['git', 'commit', '-F']
-    self.assertEqual(
-        mock_command_output_args[:len(expected_mock_command_output_prefix)],
-        expected_mock_command_output_prefix)
-
-    mock_repo_upload.assert_called_once()
-
-  # Simulate 'os.path.isdir' when a valid repo path is passed in.
-  @mock.patch.object(os.path, 'isdir', return_value=True)
-  # Simulate behavior of 'ExecCommandAndCaptureOutput()' when successfully
-  # committed the changes.
-  @mock.patch.object(
-      update_chromeos_llvm_hash,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
-  @mock.patch.object(subprocess, 'Popen')
-  def testSuccessfullyUploadedChangesForReview(self, mock_repo_upload,
-                                               mock_command_output, mock_isdir):
-
-    # A test CL generated by `repo upload`.
-    repo_upload_contents = ('remote: https://chromium-review.googlesource.'
-                            'com/c/chromiumos/overlays/chromiumos-overlay/'
-                            '+/193147 Fix stdout')
-
-    # Simulate the behavior of 'subprocess.Popen()' when uploading the changes
-    # for review
-    #
-    # `Popen.communicate()` returns a tuple of `stdout` and `stderr`.
-    mock_repo_upload.return_value.communicate.return_value = (
-        repo_upload_contents, None)
-
-    # Exit code of 0 means successfully uploaded changes for review.
-    mock_repo_upload.return_value.returncode = 0
-
-    path_to_repo = '/some/path/to/repo'
-    branch = 'update-LLVM_NEXT_HASH-a123testhash3'
-    commit_messages = ['Test message']
-
-    change_list = update_chromeos_llvm_hash.UploadChanges(
-        path_to_repo, branch, commit_messages)
-
-    self.assertEqual(
-        change_list.url,
-        'https://chromium-review.googlesource.com/c/chromiumos/overlays/'
-        'chromiumos-overlay/+/193147')
-
-    self.assertEqual(change_list.cl_number, 193147)
-
-    mock_isdir.assert_called_once_with(path_to_repo)
-
-    mock_command_output.assert_called_once()
-
-    mock_repo_upload.assert_called_once()
-
-  @mock.patch.object(update_chromeos_llvm_hash, 'GetChrootBuildPaths')
-  @mock.patch.object(update_chromeos_llvm_hash,
-                     '_ConvertChrootPathsToSymLinkPaths')
+  @mock.patch.object(chroot, 'GetChrootEbuildPaths')
+  @mock.patch.object(chroot, 'ConvertChrootPathsToAbsolutePaths')
   def testExceptionRaisedWhenCreatingPathDictionaryFromPackages(
       self, mock_chroot_paths_to_symlinks, mock_get_chroot_paths):
 
@@ -650,18 +371,18 @@ class UpdateLLVMHashTest(unittest.TestCase):
     package_name = 'test-pckg/package'
     package_chroot_path = '/some/chroot/path/to/package-r1.ebuild'
 
-    # Test function to simulate '_ConvertChrootPathsToSymLinkPaths' when a
+    # Test function to simulate 'ConvertChrootPathsToAbsolutePaths' when a
     # symlink does not start with the prefix '/mnt/host/source'.
     def BadPrefixChrootPath(_chroot_path, _chroot_file_paths):
       raise ValueError('Invalid prefix for the chroot path: '
                        '%s' % package_chroot_path)
 
-    # Simulate 'GetChrootBuildPaths' when valid packages are passed in.
+    # Simulate 'GetChrootEbuildPaths' when valid packages are passed in.
     #
     # Returns a list of chroot paths.
     mock_get_chroot_paths.return_value = [package_chroot_path]
 
-    # Use test function to simulate '_ConvertChrootPathsToSymLinkPaths'
+    # Use test function to simulate 'ConvertChrootPathsToAbsolutePaths'
     # behavior.
     mock_chroot_paths_to_symlinks.side_effect = BadPrefixChrootPath
 
@@ -679,9 +400,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
     mock_chroot_paths_to_symlinks.assert_called_once_with(
         chroot_path, [package_chroot_path])
 
-  @mock.patch.object(update_chromeos_llvm_hash, 'GetChrootBuildPaths')
-  @mock.patch.object(update_chromeos_llvm_hash,
-                     '_ConvertChrootPathsToSymLinkPaths')
+  @mock.patch.object(chroot, 'GetChrootEbuildPaths')
+  @mock.patch.object(chroot, 'ConvertChrootPathsToAbsolutePaths')
   @mock.patch.object(update_chromeos_llvm_hash,
                      'GetEbuildPathsFromSymLinkPaths')
   def testSuccessfullyCreatedPathDictionaryFromPackages(
@@ -690,7 +410,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     package_chroot_path = '/mnt/host/source/src/path/to/package-r1.ebuild'
 
-    # Simulate 'GetChrootBuildPaths' when returning a chroot path for a valid
+    # Simulate 'GetChrootEbuildPaths' when returning a chroot path for a valid
     # package.
     #
     # Returns a list of chroot paths.
@@ -698,7 +418,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     package_symlink_path = '/some/path/to/chroot/src/path/to/package-r1.ebuild'
 
-    # Simulate '_ConvertChrootPathsToSymLinkPaths' when returning a symlink to
+    # Simulate 'ConvertChrootPathsToAbsolutePaths' when returning a symlink to
     # a chroot path that points to a package.
     #
     # Returns a list of symlink file paths.
@@ -868,11 +588,11 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
   @mock.patch.object(update_chromeos_llvm_hash,
                      'CreatePathDictionaryFromPackages')
-  @mock.patch.object(update_chromeos_llvm_hash, '_CreateRepo')
+  @mock.patch.object(git, 'CreateBranch')
   @mock.patch.object(update_chromeos_llvm_hash, 'UpdateEbuildLLVMHash')
   @mock.patch.object(update_chromeos_llvm_hash, 'UprevEbuildSymlink')
-  @mock.patch.object(update_chromeos_llvm_hash, 'UploadChanges')
-  @mock.patch.object(update_chromeos_llvm_hash, '_DeleteRepo')
+  @mock.patch.object(git, 'UploadChanges')
+  @mock.patch.object(git, 'DeleteBranch')
   @mock.patch.object(os.path, 'realpath')
   def testExceptionRaisedWhenUpdatingPackages(
       self, mock_realpath, mock_delete_repo, mock_upload_changes,
@@ -886,9 +606,9 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     path_to_package_dir = '/some/path/to/chroot/src/path/to'
 
-    # Test function to simulate '_CreateRepo' when successfully created the
-    # repo on a valid repo path.
-    def SuccessfullyCreateRepoForChanges(_repo_path, branch):
+    # Test function to simulate 'CreateBranch' when successfully created the
+    # branch on a valid repo path.
+    def SuccessfullyCreateBranchForChanges(_repo_path, branch):
       self.assertEqual(branch, 'update-LLVM_NEXT_HASH-a123testhash4')
       return
 
@@ -925,7 +645,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     mock_create_path_dict.return_value = test_package_path_dict
 
     # Use test function to simulate behavior.
-    mock_create_repo.side_effect = SuccessfullyCreateRepoForChanges
+    mock_create_repo.side_effect = SuccessfullyCreateBranchForChanges
     mock_update_llvm_next.side_effect = SuccessfullyUpdatedLLVMHash
     mock_uprev_symlink.side_effect = FailedToUprevEbuildSymlink
     mock_upload_changes.side_effect = ShouldNotExecuteUploadChanges
@@ -946,7 +666,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     with self.assertRaises(ValueError) as err:
       update_chromeos_llvm_hash.UpdatePackages(
           packages_to_update, llvm_variant, git_hash, svn_version, chroot_path,
-          patch_metadata_file, FailureModes.FAIL, git_hash_source,
+          patch_metadata_file, failure_modes.FailureModes.FAIL, git_hash_source,
           extra_commit_msg)
 
     self.assertEqual(str(err.exception), 'Failed to uprev the ebuild.')
@@ -967,11 +687,11 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
   @mock.patch.object(update_chromeos_llvm_hash,
                      'CreatePathDictionaryFromPackages')
-  @mock.patch.object(update_chromeos_llvm_hash, '_CreateRepo')
+  @mock.patch.object(git, 'CreateBranch')
   @mock.patch.object(update_chromeos_llvm_hash, 'UpdateEbuildLLVMHash')
   @mock.patch.object(update_chromeos_llvm_hash, 'UprevEbuildSymlink')
-  @mock.patch.object(update_chromeos_llvm_hash, 'UploadChanges')
-  @mock.patch.object(update_chromeos_llvm_hash, '_DeleteRepo')
+  @mock.patch.object(git, 'UploadChanges')
+  @mock.patch.object(git, 'DeleteBranch')
   @mock.patch.object(llvm_patch_management, 'UpdatePackagesPatchMetadataFile')
   @mock.patch.object(update_chromeos_llvm_hash,
                      'StagePatchMetadataFileForCommit')
@@ -987,9 +707,9 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     path_to_package_dir = '/some/path/to/chroot/src/path/to'
 
-    # Test function to simulate '_CreateRepo' when successfully created the repo
-    # for the changes to be made to the ebuild files.
-    def SuccessfullyCreateRepoForChanges(_repo_path, branch):
+    # Test function to simulate 'CreateBranch' when successfully created the
+    # branch for the changes to be made to the ebuild files.
+    def SuccessfullyCreateBranchForChanges(_repo_path, branch):
       self.assertEqual(branch, 'update-LLVM_NEXT_HASH-a123testhash5')
       return
 
@@ -1019,7 +739,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
       self.assertEqual(svn_version, 1000)
       self.assertEqual(patch_metadata_file, 'PATCHES.json')
       self.assertListEqual(packages, ['path/to'])
-      self.assertEqual(mode, FailureModes.DISABLE_PATCHES)
+      self.assertEqual(mode, failure_modes.FailureModes.DISABLE_PATCHES)
 
       PatchInfo = namedtuple('PatchInfo', [
           'applied_patches', 'failed_patches', 'non_applicable_patches',
@@ -1047,8 +767,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     def SuccessfullyUploadedChanges(_repo_path, _branch, _commit_messages):
       commit_url = 'https://some_name/path/to/commit/+/12345'
 
-      return update_chromeos_llvm_hash.CommitContents(
-          url=commit_url, cl_number=12345)
+      return git.CommitContents(url=commit_url, cl_number=12345)
 
     test_package_path_dict = {symlink_path_to_package: abs_path_to_package}
 
@@ -1059,7 +778,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     mock_create_path_dict.return_value = test_package_path_dict
 
     # Use test function to simulate behavior.
-    mock_create_repo.side_effect = SuccessfullyCreateRepoForChanges
+    mock_create_repo.side_effect = SuccessfullyCreateBranchForChanges
     mock_update_llvm_next.side_effect = SuccessfullyUpdatedLLVMHash
     mock_uprev_symlink.side_effect = SuccessfullyUprevedEbuildSymlink
     mock_update_package_metadata_file.side_effect = RetrievedPatchResults
@@ -1077,8 +796,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     change_list = update_chromeos_llvm_hash.UpdatePackages(
         packages_to_update, llvm_variant, git_hash, svn_version, chroot_path,
-        patch_metadata_file, FailureModes.DISABLE_PATCHES, git_hash_source,
-        extra_commit_msg)
+        patch_metadata_file, failure_modes.FailureModes.DISABLE_PATCHES,
+        git_hash_source, extra_commit_msg)
 
     self.assertEqual(change_list.url,
                      'https://some_name/path/to/commit/+/12345')

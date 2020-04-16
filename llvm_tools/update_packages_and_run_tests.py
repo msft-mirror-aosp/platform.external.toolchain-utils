@@ -13,12 +13,10 @@ import datetime
 import json
 import os
 
-from assert_not_in_chroot import VerifyOutsideChroot
-from failure_modes import FailureModes
-from get_llvm_hash import GetLLVMHashAndVersionFromSVNOption
-from get_llvm_hash import is_svn_option
-from subprocess_helpers import ChrootRunCommand
-from subprocess_helpers import ExecCommandAndCaptureOutput
+import chroot
+import failure_modes
+import get_llvm_hash
+import subprocess_helpers
 import update_chromeos_llvm_hash
 
 
@@ -73,7 +71,7 @@ def GetCommandLineArgs():
   # Add argument for the LLVM version to use.
   parser.add_argument(
       '--llvm_version',
-      type=is_svn_option,
+      type=get_llvm_hash.is_svn_option,
       required=True,
       help='which git hash of LLVM to find '
       '{google3, ToT, <svn_version>} '
@@ -159,7 +157,7 @@ def AddReviewers(cl, reviewers, chroot_path):
   for reviewer in reviewers:
     cmd = [gerrit_abs_path, 'reviewers', str(cl), reviewer]
 
-    ExecCommandAndCaptureOutput(cmd)
+    subprocess_helpers.ExecCommandAndCaptureOutput(cmd)
 
 
 def AddTryjobLinkToCL(tryjobs, cl, chroot_path):
@@ -181,7 +179,7 @@ def AddTryjobLinkToCL(tryjobs, cl, chroot_path):
       str(cl), '\n'.join(tryjob_links)
   ]
 
-  ExecCommandAndCaptureOutput(add_message_cmd)
+  subprocess_helpers.ExecCommandAndCaptureOutput(add_message_cmd)
 
 
 # Testing with tryjobs
@@ -254,7 +252,8 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
     tryjob_cmd = GetTryJobCommand(cl_number, extra_change_lists, options,
                                   cur_builder)
 
-    out = ChrootRunCommand(chroot_path, tryjob_cmd, verbose=verbose)
+    out = subprocess_helpers.ChrootRunCommand(
+        chroot_path, tryjob_cmd, verbose=verbose)
 
     tryjob_launch_time = GetCurrentTimeInUTC()
 
@@ -300,7 +299,7 @@ def StartCQDryRun(cl, dependent_cls, chroot_path):
   for changes in cl_list:
     cq_dry_run_cmd = [gerrit_abs_path, 'label-cq', str(changes), '1']
 
-    ExecCommandAndCaptureOutput(cq_dry_run_cmd)
+    subprocess_helpers.ExecCommandAndCaptureOutput(cq_dry_run_cmd)
 
 
 def main():
@@ -310,7 +309,7 @@ def main():
     AssertionError: The script was run inside the chroot.
   """
 
-  VerifyOutsideChroot()
+  chroot.VerifyOutsideChroot()
 
   args_output = GetCommandLineArgs()
 
@@ -323,7 +322,8 @@ def main():
 
   svn_option = args_output.llvm_version
 
-  git_hash, svn_version = GetLLVMHashAndVersionFromSVNOption(svn_option)
+  git_hash, svn_version = get_llvm_hash.GetLLVMHashAndVersionFromSVNOption(
+      svn_option)
 
   # There is no need to run tryjobs when all the key parameters remain unchanged
   # from last time.
@@ -331,8 +331,8 @@ def main():
   # If --last_tested is specified, check if the current run has the same
   # arguments last time --last_tested is used.
   if args_output.last_tested:
-    chroot_file_paths = update_chromeos_llvm_hash.GetChrootBuildPaths(
-        args_output.chroot_path, update_packages)
+    chroot_file_paths = chroot.GetChrootEbuildPaths(args_output.chroot_path,
+                                                    update_packages)
     arg_dict = {
         'svn_version': svn_version,
         'ebuilds': chroot_file_paths,
@@ -361,7 +361,7 @@ def main():
       svn_version,
       args_output.chroot_path,
       patch_metadata_file,
-      FailureModes.DISABLE_PATCHES,
+      failure_modes.FailureModes.DISABLE_PATCHES,
       svn_option,
       extra_commit_msg=extra_commit_msg)
 
