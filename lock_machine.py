@@ -378,7 +378,10 @@ class LockManager(object):
     if os.path.exists(self.SKYLAB_CREDENTIAL):
       credential = '--auth-service-account-json %s' % self.SKYLAB_CREDENTIAL
     swarming = os.path.join(self.chromeos_root, self.SWARMING)
-    cmd = (('%s query --swarming https://chromeos-swarming.appspot.com ' \
+    # TODO(zhizhouy): Swarming script doesn't support python3 so explicitly
+    # launch it with python2 until migrated.
+    cmd = (('python2 %s ' \
+            'query --swarming https://chromeos-swarming.appspot.com ' \
             "%s 'bots/list?is_dead=FALSE&dimensions=dut_name:%s'") % \
            (swarming,
             credential,
