@@ -18,6 +18,7 @@ import shlex
 import subprocess
 import sys
 
+import chroot
 import get_llvm_hash
 import git_llvm_rev
 
@@ -58,18 +59,18 @@ def add_cherrypick(patches_json_path: str, patches_dir: str,
   os.rename(temp_file, patches_json_path)
 
 
-def parse_ebuild_for_assignment(llvm_path: str, var_name: str) -> str:
+def parse_ebuild_for_assignment(ebuild_path: str, var_name: str) -> str:
   # '_pre' filters the LLVM 9.0 ebuild, which we never want to target, from
   # this list.
   candidates = [
-      x for x in os.listdir(llvm_path)
-      if x.endswith('.ebuild') and x.startswith('llvm') and '_pre' in x
+      x for x in os.listdir(ebuild_path)
+      if x.endswith('.ebuild') and '_pre' in x
   ]
 
   if not candidates:
-    raise ValueError('No LLVM ebuilds found under %r' % llvm_path)
+    raise ValueError('No ebuilds found under %r' % ebuild_path)
 
-  ebuild = os.path.join(llvm_path, max(candidates))
+  ebuild = os.path.join(ebuild_path, max(candidates))
   with open(ebuild, encoding='utf-8') as f:
     var_name_eq = var_name + '='
     for orig_line in f:
@@ -99,6 +100,7 @@ def resolve_llvm_ref(llvm_dir: str, sha: str) -> str:
 
 
 def main():
+  chroot.VerifyOutsideChroot()
   logging.basicConfig(
       format='%(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: %(message)s',
       level=logging.INFO,
@@ -106,7 +108,10 @@ def main():
 
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument(
-      '--llvm', help='Path to sys-devel/llvm. Will autodetect if not provided.')
+      '--chroot_path',
+      default=os.path.join(os.path.expanduser('~'), 'chromiumos'),
+      help='the path to the chroot (default: %(default)s)')
+  parser.add_argument('--package', help='target package to apply the patch to.')
   parser.add_argument(
       '--start_sha',
       default='llvm-next',
@@ -116,30 +121,27 @@ def main():
       '--sha', help='LLVM git SHA. Either this or --sha must be specified.')
   args = parser.parse_args()
 
-  if args.llvm:
-    llvm = args.llvm
-  else:
-    my_dir = os.path.dirname(os.path.realpath(__file__))
-    llvm = os.path.join(
-        my_dir, '../../../third_party/chromiumos-overlay/sys-devel/llvm')
-    if not os.path.isdir(llvm):
-      raise ValueError("Couldn't autodetect llvm")
+  symlink = chroot.GetChrootEbuildPaths(args.chroot_path, [args.package])[0]
 
-  llvm = os.path.realpath(llvm)
+  symlink = chroot.ConvertChrootPathsToAbsolutePaths(args.chroot_path,
+                                                     [symlink])[0]
+  symlink_dir = os.path.dirname(symlink)
 
-  patches_json_path = os.path.join(llvm, 'files/PATCHES.json')
-  relative_patches_dir = 'cherry'
-  patches_dir = os.path.join(llvm, 'files', relative_patches_dir)
+  patches_json_path = os.path.join(symlink_dir, 'files/PATCHES.json')
+  relative_patches_dir = ''
+  if 'llvm' in args.package:
+    relative_patches_dir = 'cherry'
+  patches_dir = os.path.join(symlink_dir, 'files', relative_patches_dir)
 
   llvm_config = git_llvm_rev.LLVMConfig(
       remote='origin', dir=get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools())
 
   start_sha = args.start_sha
   if start_sha == 'llvm':
-    start_sha = parse_ebuild_for_assignment(llvm, 'LLVM_HASH')
+    start_sha = parse_ebuild_for_assignment(symlink_dir, 'LLVM_HASH')
     logging.info('Autodetected llvm hash == %s', start_sha)
   elif start_sha == 'llvm-next':
-    start_sha = parse_ebuild_for_assignment(llvm, 'LLVM_NEXT_HASH')
+    start_sha = parse_ebuild_for_assignment(symlink_dir, 'LLVM_NEXT_HASH')
     logging.info('Autodetected llvm-next hash == %s', start_sha)
 
   start_sha = resolve_llvm_ref(llvm_config.dir, start_sha)
