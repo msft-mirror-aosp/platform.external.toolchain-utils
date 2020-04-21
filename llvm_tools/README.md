@@ -21,6 +21,8 @@ password)**
 This script is used for updating a package's LLVM hash (sys-devel/llvm,
 sys-libs/compiler-rt, sys-libs/libcxx, sys-libs/libcxxabi, and
 sys-libs/llvm-libunwind) and then run tests after updating the git hash.
+There are three ways to test the change, including starting tryjobs,
+recipe builders or using cq+1.
 
 An example when this script should be run is when certain boards would like
 to be tested with the updated `LLVM_NEXT_HASH`.
@@ -56,15 +58,15 @@ $ ./update_packages_and_run_tests.py \
 ```
 
 Similarly as the previous example, but for updating `LLVM_NEXT_HASH` to
-the git hash of revision 367622 and test with tryobs:
+the git hash of revision 367622 and test with recipe builders:
 
 ```
 $ ./update_packages_and_run_tests.py \
   --is_llvm_next \
   --llvm_version 367622 \
-  tryjobs \
-  --options nochromesdk latest-toolchain \
-  --builders kevin-release-tryjob nocturne-release-tryjob
+  recipe \
+  --options -nocanary \
+  --builders chromeos/toolchain/kevin-llvm chromeos/toolchain/nocturne-llvm
 ```
 
 ## `update_chromeos_llvm_hash.py`

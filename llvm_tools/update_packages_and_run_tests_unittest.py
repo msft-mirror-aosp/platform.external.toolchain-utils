@@ -9,13 +9,13 @@
 from __future__ import print_function
 
 import json
+import subprocess
 import unittest
 import unittest.mock as mock
 
 import chroot
 import get_llvm_hash
 import git
-import subprocess_helpers
 import test_helpers
 import update_chromeos_llvm_hash
 import update_packages_and_run_tests
@@ -68,112 +68,146 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
               last_tested_file, arg_dict), True)
 
   def testGetTryJobCommandWithNoExtraInformation(self):
-    test_change_list = 1234
+    change_list = 1234
 
-    test_builder = 'nocturne'
+    builder = 'nocturne'
 
-    expected_tryjob_cmd_list = [
+    expected_cmd = [
         'cros', 'tryjob', '--yes', '--json', '-g',
-        '%d' % test_change_list, test_builder
+        '%d' % change_list, builder
     ]
 
     self.assertEqual(
-        update_packages_and_run_tests.GetTryJobCommand(test_change_list, None,
-                                                       None, test_builder),
-        expected_tryjob_cmd_list)
+        update_packages_and_run_tests.GetTryJobCommand(change_list, None, None,
+                                                       builder), expected_cmd)
 
   def testGetTryJobCommandWithExtraInformation(self):
-    test_change_list = 4321
-    test_extra_cls = [1000, 10]
-    test_options = ['report_error', 'delete_tryjob']
-    test_builder = 'kevin'
+    change_list = 4321
+    extra_cls = [1000, 10]
+    options = ['option1', 'option2']
+    builder = 'kevin'
 
-    expected_tryjob_cmd_list = [
+    expected_cmd = [
         'cros',
         'tryjob',
         '--yes',
         '--json',
         '-g',
-        '%d' % test_change_list,
+        '%d' % change_list,
         '-g',
-        '%d' % test_extra_cls[0],
+        '%d' % extra_cls[0],
         '-g',
-        '%d' % test_extra_cls[1],
-        test_builder,
-        '--%s' % test_options[0],
-        '--%s' % test_options[1],
+        '%d' % extra_cls[1],
+        '--%s' % options[0],
+        '--%s' % options[1],
+        builder,
     ]
 
     self.assertEqual(
         update_packages_and_run_tests.GetTryJobCommand(
-            test_change_list, test_extra_cls, test_options, test_builder),
-        expected_tryjob_cmd_list)
+            change_list, extra_cls, options, builder), expected_cmd)
 
   @mock.patch.object(
       update_packages_and_run_tests,
       'GetCurrentTimeInUTC',
       return_value='2019-09-09')
-  @mock.patch.object(update_packages_and_run_tests, 'AddTryjobLinkToCL')
-  @mock.patch.object(subprocess_helpers, 'ChrootRunCommand')
-  def testSuccessfullySubmittedTryJob(
-      self, mock_chroot_cmd, mock_add_tryjob_link_to_cl, mock_launch_time):
+  @mock.patch.object(update_packages_and_run_tests, 'AddLinksToCL')
+  @mock.patch.object(subprocess, 'check_output')
+  def testSuccessfullySubmittedTryJob(self, mock_cmd, mock_add_links_to_cl,
+                                      mock_launch_time):
 
-    expected_tryjob_cmd_list = [
+    expected_cmd = [
         'cros', 'tryjob', '--yes', '--json', '-g',
         '%d' % 900, '-g',
-        '%d' % 1200, 'builder1', '--some_option'
+        '%d' % 1200, '--some_option', 'builder1'
     ]
 
-    buildbucket_id = '1234'
+    bb_id = '1234'
     url = 'https://some_tryjob_url.com'
 
-    tryjob_launch_contents = [{'buildbucket_id': buildbucket_id, 'url': url}]
+    mock_cmd.return_value = json.dumps([{'buildbucket_id': bb_id, 'url': url}])
 
-    mock_chroot_cmd.return_value = json.dumps(tryjob_launch_contents)
-
-    extra_cls = [1200]
-    tryjob_options = ['some_option']
-    builder_list = ['builder1']
     chroot_path = '/some/path/to/chroot'
-    cl_to_launch_tryjob = 900
-    verbose = False
+    cl = 900
+    extra_cls = [1200]
+    options = ['some_option']
+    builders = ['builder1']
 
-    tryjob_results_list = update_packages_and_run_tests.RunTryJobs(
-        cl_to_launch_tryjob, extra_cls, tryjob_options, builder_list,
-        chroot_path, verbose)
+    tests = update_packages_and_run_tests.RunTryJobs(cl, extra_cls, options,
+                                                     builders, chroot_path)
 
-    expected_tryjob_dict = {
+    expected_tests = [{
         'launch_time': mock_launch_time.return_value,
         'link': url,
-        'buildbucket_id': int(buildbucket_id),
+        'buildbucket_id': int(bb_id),
         'extra_cls': extra_cls,
-        'options': tryjob_options,
-        'builder': builder_list
-    }
+        'options': options,
+        'builder': builders
+    }]
 
-    self.assertEqual(tryjob_results_list, [expected_tryjob_dict])
+    self.assertEqual(tests, expected_tests)
 
-    mock_chroot_cmd.assert_called_once_with(
-        chroot_path, expected_tryjob_cmd_list, verbose=False)
+    mock_cmd.assert_called_once_with(
+        expected_cmd, cwd=chroot_path, encoding='utf-8')
 
-    mock_add_tryjob_link_to_cl.assert_called_once()
+    mock_add_links_to_cl.assert_called_once()
 
-  @mock.patch.object(
-      subprocess_helpers, 'ExecCommandAndCaptureOutput', return_value=None)
-  def testSuccessfullyAddedTryjobLinkToCL(self, mock_exec_cmd):
+  @mock.patch.object(update_packages_and_run_tests, 'AddLinksToCL')
+  @mock.patch.object(subprocess, 'check_output')
+  def testSuccessfullySubmittedRecipeBuilders(self, mock_cmd,
+                                              mock_add_links_to_cl):
+
+    expected_cmd = [
+        'bb', 'add', '-json', '-cl',
+        'crrev.com/c/%s' % 900, '-cl',
+        'crrev.com/c/%s' % 1200, 'some_option', 'builder1'
+    ]
+
+    bb_id = '1234'
+    create_time = '2020-04-18T00:03:53.978767Z'
+
+    mock_cmd.return_value = json.dumps({'id': bb_id, 'createTime': create_time})
+
+    chroot_path = '/some/path/to/chroot'
+    cl = 900
+    extra_cls = [1200]
+    options = ['some_option']
+    builders = ['builder1']
+
+    tests = update_packages_and_run_tests.StartRecipeBuilders(
+        cl, extra_cls, options, builders, chroot_path)
+
+    expected_tests = [{
+        'launch_time': create_time,
+        'link': 'http://ci.chromium.org/b/%s' % bb_id,
+        'buildbucket_id': bb_id,
+        'extra_cls': extra_cls,
+        'options': options,
+        'builder': builders
+    }]
+
+    self.assertEqual(tests, expected_tests)
+
+    mock_cmd.assert_called_once_with(
+        expected_cmd, cwd=chroot_path, encoding='utf-8')
+
+    mock_add_links_to_cl.assert_called_once()
+
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
+  def testSuccessfullyAddedTestLinkToCL(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'
 
     test_cl_number = 1000
 
-    tryjob_result = [{'link': 'https://some_tryjob_link.com'}]
+    tests = [{'link': 'https://some_tryjob_link.com'}]
 
-    update_packages_and_run_tests.AddTryjobLinkToCL(tryjob_result,
-                                                    test_cl_number, chroot_path)
+    update_packages_and_run_tests.AddLinksToCL(tests, test_cl_number,
+                                               chroot_path)
 
     expected_gerrit_message = [
         '%s/chromite/bin/gerrit' % chroot_path, 'message',
         str(test_cl_number),
-        'Started the following tryjobs:\n%s' % tryjob_result[0]['link']
+        'Started the following tests:\n%s' % tests[0]['link']
     ]
 
     mock_exec_cmd.assert_called_once_with(expected_gerrit_message)
@@ -280,8 +314,7 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
         '\nCq-Depend: chromium:1234, chromium:5678')
 
   # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
-  @mock.patch.object(
-      subprocess_helpers, 'ExecCommandAndCaptureOutput', return_value=None)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
   def testStartCQDryRunNoDeps(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'
     test_cl_number = 1000
@@ -299,8 +332,7 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
     mock_exec_cmd.assert_called_once_with(expected_gerrit_message)
 
   # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
-  @mock.patch.object(
-      subprocess_helpers, 'ExecCommandAndCaptureOutput', return_value=None)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
   # test with a single deps cl.
   def testStartCQDryRunSingleDep(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'
@@ -326,8 +358,7 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
                      mock.call(expected_gerrit_cmd_2))
 
   # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
-  @mock.patch.object(
-      subprocess_helpers, 'ExecCommandAndCaptureOutput', return_value=None)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
   def testStartCQDryRunMultipleDep(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'
     test_cl_number = 1000
@@ -359,8 +390,7 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
                      mock.call(expected_gerrit_cmd_3))
 
   # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
-  @mock.patch.object(
-      subprocess_helpers, 'ExecCommandAndCaptureOutput', return_value=None)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
   # test with no reviewers.
   def testAddReviewersNone(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'
@@ -372,8 +402,7 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
     self.assertTrue(mock_exec_cmd.not_called)
 
   # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
-  @mock.patch.object(
-      subprocess_helpers, 'ExecCommandAndCaptureOutput', return_value=None)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
   # test with multiple reviewers.
   def testAddReviewersMultiple(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'

@@ -12,11 +12,11 @@ import argparse
 import datetime
 import json
 import os
+import subprocess
 
 import chroot
 import failure_modes
 import get_llvm_hash
-import subprocess_helpers
 import update_chromeos_llvm_hash
 
 
@@ -93,8 +93,10 @@ def GetCommandLineArgs():
       '(default: %(default)s)')
 
   subparsers = parser.add_subparsers(dest='subparser_name')
+  subparser_names = []
   # Testing with the tryjobs.
   tryjob_subparser = subparsers.add_parser('tryjobs')
+  subparser_names.append('tryjobs')
   tryjob_subparser.add_argument(
       '--builders',
       required=True,
@@ -110,12 +112,29 @@ def GetCommandLineArgs():
       default=[],
       help='options to use for the tryjob testing')
 
+  # Testing with the recipe builders
+  recipe_subparser = subparsers.add_parser('recipe')
+  subparser_names.append('recipe')
+  recipe_subparser.add_argument(
+      '--options',
+      required=False,
+      nargs='+',
+      default=[],
+      help='options passed to the recipe builders')
+
+  recipe_subparser.add_argument(
+      '--builders',
+      required=True,
+      nargs='+',
+      default=[],
+      help='recipe builders to launch')
+
   # Testing with CQ.
   subparsers.add_parser('cq')
+  subparser_names.append('cq')
 
   args_output = parser.parse_args()
 
-  subparser_names = ['tryjobs', 'cq']
   if args_output.subparser_name not in subparser_names:
     parser.error('one of %s must be specified' % subparser_names)
 
@@ -157,11 +176,11 @@ def AddReviewers(cl, reviewers, chroot_path):
   for reviewer in reviewers:
     cmd = [gerrit_abs_path, 'reviewers', str(cl), reviewer]
 
-    subprocess_helpers.ExecCommandAndCaptureOutput(cmd)
+    subprocess.check_output(cmd)
 
 
-def AddTryjobLinkToCL(tryjobs, cl, chroot_path):
-  """Adds the tryjob link(s) to the CL as a comment."""
+def AddLinksToCL(tests, cl, chroot_path):
+  """Adds the test link(s) to the CL as a comment."""
 
   # NOTE: Invoking `cros_sdk` does not make each tryjob link appear on its own
   # line, so invoking the `gerrit` command directly instead of using `cros_sdk`
@@ -171,15 +190,12 @@ def AddTryjobLinkToCL(tryjobs, cl, chroot_path):
   # newline.
   gerrit_abs_path = os.path.join(chroot_path, 'chromite/bin/gerrit')
 
-  tryjob_links = ['Started the following tryjobs:']
-  tryjob_links.extend(tryjob['link'] for tryjob in tryjobs)
+  links = ['Started the following tests:']
+  links.extend(test['link'] for test in tests)
 
-  add_message_cmd = [
-      gerrit_abs_path, 'message',
-      str(cl), '\n'.join(tryjob_links)
-  ]
+  add_message_cmd = [gerrit_abs_path, 'message', str(cl), '\n'.join(links)]
 
-  subprocess_helpers.ExecCommandAndCaptureOutput(add_message_cmd)
+  subprocess.check_output(add_message_cmd)
 
 
 # Testing with tryjobs
@@ -209,16 +225,15 @@ def GetTryJobCommand(change_list, extra_change_lists, options, builder):
     for extra_cl in extra_change_lists:
       tryjob_cmd.extend(['-g', '%d' % extra_cl])
 
-  tryjob_cmd.append(builder)
-
   if options:
     tryjob_cmd.extend('--%s' % option for option in options)
+
+  tryjob_cmd.append(builder)
 
   return tryjob_cmd
 
 
-def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
-               verbose):
+def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path):
   """Runs a tryjob/tryjobs.
 
   Args:
@@ -228,7 +243,6 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
     options: Any options to be passed into the 'tryjob' command.
     builders: All the builders to run the 'tryjob' with.
     chroot_path: The absolute path to the chroot.
-    verbose: Print command contents to `stdout`.
 
   Returns:
     A list that contains stdout contents of each tryjob, where stdout is
@@ -239,42 +253,91 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path,
     ValueError: Failed to submit a tryjob.
   """
 
-  # Contains the results of each tryjob. The results are retrieved from 'out'
-  # which is stdout of the command executer.
-  tryjob_results = []
+  # Contains the results of each builder.
+  tests = []
 
-  # For each builder passed into the command line:
-  #
-  # Run a tryjob with the change list number obtained from updating the
+  # Run tryjobs with the change list number obtained from updating the
   # packages and append additional changes lists and options obtained from the
   # command line.
-  for cur_builder in builders:
-    tryjob_cmd = GetTryJobCommand(cl_number, extra_change_lists, options,
-                                  cur_builder)
+  for builder in builders:
+    cmd = GetTryJobCommand(cl_number, extra_change_lists, options, builder)
 
-    out = subprocess_helpers.ChrootRunCommand(
-        chroot_path, tryjob_cmd, verbose=verbose)
+    out = subprocess.check_output(cmd, cwd=chroot_path, encoding='utf-8')
 
-    tryjob_launch_time = GetCurrentTimeInUTC()
+    test_output = json.loads(out)
 
-    tryjob_contents = json.loads(out)
-
-    buildbucket_id = int(tryjob_contents[0]['buildbucket_id'])
-
-    new_tryjob = {
-        'launch_time': str(tryjob_launch_time),
-        'link': str(tryjob_contents[0]['url']),
-        'buildbucket_id': buildbucket_id,
+    tests.append({
+        'launch_time': str(GetCurrentTimeInUTC()),
+        'link': str(test_output[0]['url']),
+        'buildbucket_id': int(test_output[0]['buildbucket_id']),
         'extra_cls': extra_change_lists,
         'options': options,
-        'builder': [cur_builder]
-    }
+        'builder': [builder]
+    })
 
-    tryjob_results.append(new_tryjob)
+  AddLinksToCL(tests, cl_number, chroot_path)
 
-  AddTryjobLinkToCL(tryjob_results, cl_number, chroot_path)
+  return tests
 
-  return tryjob_results
+
+def StartRecipeBuilders(cl_number, extra_change_lists, options, builders,
+                        chroot_path):
+  """Launch recipe builders.
+
+  Args:
+    cl_number: The CL created by updating the packages.
+    extra_change_lists: Any extra change lists that would run alongside the CL
+    that was created by updating the packages ('cl_number').
+    options: Any options to be passed into the 'tryjob' command.
+    builders: All the builders to run the 'tryjob' with.
+    chroot_path: The absolute path to the chroot.
+
+  Returns:
+    A list that contains stdout contents of each builder, where stdout is
+    information (a hashmap) about the tryjob. The hashmap also contains stderr
+    if there was an error when running a tryjob.
+
+  Raises:
+    ValueError: Failed to start a builder.
+  """
+
+  # Contains the results of each builder.
+  tests = []
+
+  # Launch a builders with the change list number obtained from updating the
+  # packages and append additional changes lists and options obtained from the
+  # command line.
+  for builder in builders:
+    cmd = ['bb', 'add', '-json']
+
+    if cl_number:
+      cmd.extend(['-cl', 'crrev.com/c/%d' % cl_number])
+
+    if extra_change_lists:
+      for cl in extra_change_lists:
+        cmd.extend(['-cl', 'crrev.com/c/%d' % cl])
+
+    if options:
+      cmd.extend(options)
+
+    cmd.append(builder)
+
+    out = subprocess.check_output(cmd, cwd=chroot_path, encoding='utf-8')
+
+    test_output = json.loads(out)
+
+    tests.append({
+        'launch_time': test_output['createTime'],
+        'link': 'http://ci.chromium.org/b/%s' % test_output['id'],
+        'buildbucket_id': test_output['id'],
+        'extra_cls': extra_change_lists,
+        'options': options,
+        'builder': [builder]
+    })
+
+  AddLinksToCL(tests, cl_number, chroot_path)
+
+  return tests
 
 
 # Testing with CQ
@@ -299,7 +362,7 @@ def StartCQDryRun(cl, dependent_cls, chroot_path):
   for changes in cl_list:
     cq_dry_run_cmd = [gerrit_abs_path, 'label-cq', str(changes), '1']
 
-    subprocess_helpers.ExecCommandAndCaptureOutput(cq_dry_run_cmd)
+    subprocess.check_output(cq_dry_run_cmd)
 
 
 def main():
@@ -338,7 +401,7 @@ def main():
         'ebuilds': chroot_file_paths,
         'extra_cls': args_output.extra_change_lists,
     }
-    if args_output.subparser_name == 'tryjobs':
+    if args_output.subparser_name in ('tryjobs', 'recipe'):
       arg_dict['builders'] = args_output.builders
       arg_dict['tryjob_options'] = args_output.options
     if UnchangedSinceLastRun(args_output.last_tested, arg_dict):
@@ -373,13 +436,20 @@ def main():
   print('Change list number: %d' % change_list.cl_number)
 
   if args_output.subparser_name == 'tryjobs':
-    tryjob_results = RunTryJobs(change_list.cl_number,
-                                args_output.extra_change_lists,
-                                args_output.options, args_output.builders,
-                                args_output.chroot_path, args_output.verbose)
-    print('Tryjobs:')
-    for tryjob in tryjob_results:
-      print(tryjob)
+    tests = RunTryJobs(change_list.cl_number, args_output.extra_change_lists,
+                       args_output.options, args_output.builders,
+                       args_output.chroot_path)
+    print('Tests:')
+    for test in tests:
+      print(test)
+  elif args_output.subparser_name == 'recipe':
+    tests = StartRecipeBuilders(
+        change_list.cl_number, args_output.extra_change_lists,
+        args_output.options, args_output.builders, args_output.chroot_path)
+    print('Tests:')
+    for test in tests:
+      print(test)
+
   else:
     StartCQDryRun(change_list.cl_number, args_output.extra_change_lists,
                   args_output.chroot_path)
