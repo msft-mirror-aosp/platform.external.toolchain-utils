@@ -268,7 +268,10 @@ class Result(object):
     return [samples, u'samples']
 
   def GetResultsDir(self):
-    mo = re.search(r'Results placed in (\S+)', self.out)
+    if self.suite == 'tast':
+      mo = re.search(r'Writing results to (\S+)', self.out)
+    else:
+      mo = re.search(r'Results placed in (\S+)', self.out)
     if mo:
       result = mo.group(1)
       return result

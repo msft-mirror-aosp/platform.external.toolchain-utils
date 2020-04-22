@@ -709,7 +709,7 @@ class KeyAwareComparisonResult(ComparisonResult):
         'dropped_percent', '(ms)', '(seconds)', '--ms',
         '--average_num_missing_tiles', '--experimental_jank',
         '--experimental_mean_frame', '--experimental_median_frame_time',
-        '--total_deferred_image_decode_count', '--seconds', 'samples'
+        '--total_deferred_image_decode_count', '--seconds', 'samples', 'bytes'
     ]
 
     return any([l in key for l in lower_is_better_keys])
