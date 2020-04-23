@@ -19,6 +19,8 @@ import failure_modes
 import get_llvm_hash
 import update_chromeos_llvm_hash
 
+VALID_CQ_TRYBOTS = ['llvm', 'llvm-next', 'llvm-tot']
+
 
 def GetCommandLineArgs():
   """Parses the command line for the command line arguments.
@@ -130,8 +132,16 @@ def GetCommandLineArgs():
       help='recipe builders to launch')
 
   # Testing with CQ.
-  subparsers.add_parser('cq')
+  cq_subparser = subparsers.add_parser('cq')
   subparser_names.append('cq')
+
+  # Add argument for specify a cq trybot to test along with other cq builders
+  # e.g. llvm, llvm-next or llvm-tot
+  cq_subparser.add_argument(
+      '--cq_trybot',
+      choices=VALID_CQ_TRYBOTS,
+      help='include the trybot to test together with other cq builders '
+      'available: %(choices)s')
 
   args_output = parser.parse_args()
 
@@ -351,6 +361,20 @@ def GetCQDependString(dependent_cls):
   return '\nCq-Depend: ' + ', '.join(('chromium:%s' % i) for i in dependent_cls)
 
 
+def GetCQIncludeTrybotsString(trybot):
+  """Get Cq-Include-Trybots string, for more llvm testings"""
+
+  if not trybot:
+    return None
+
+  if trybot not in VALID_CQ_TRYBOTS:
+    raise ValueError('%s is not a valid llvm trybot' % trybot)
+
+  # Cq-Include-Trybots must start a new paragraph prefixed
+  # with "Cq-Include-Trybots".
+  return '\nCq-Include-Trybots:chromeos/cq:cq-%s-orchestrator' % trybot
+
+
 def StartCQDryRun(cl, dependent_cls, chroot_path):
   """Start CQ dry run for the changelist and dependencies."""
 
@@ -415,7 +439,12 @@ def main():
   update_chromeos_llvm_hash.verbose = args_output.verbose
   extra_commit_msg = None
   if args_output.subparser_name == 'cq':
-    extra_commit_msg = GetCQDependString(args_output.extra_change_lists)
+    cq_depend_msg = GetCQDependString(args_output.extra_change_lists)
+    if cq_depend_msg:
+      extra_commit_msg = cq_depend_msg
+    cq_trybot_msg = GetCQIncludeTrybotsString(args_output.cq_trybot)
+    if cq_trybot_msg:
+      extra_commit_msg += cq_trybot_msg
 
   change_list = update_chromeos_llvm_hash.UpdatePackages(
       update_packages,

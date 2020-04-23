@@ -300,9 +300,8 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
     test_single_changelist = [1234]
     test_multiple_changelists = [1234, 5678]
 
-    self.assertEqual(
-        update_packages_and_run_tests.GetCQDependString(test_no_changelists),
-        None)
+    self.assertIsNone(
+        update_packages_and_run_tests.GetCQDependString(test_no_changelists))
 
     self.assertEqual(
         update_packages_and_run_tests.GetCQDependString(test_single_changelist),
@@ -312,6 +311,25 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
         update_packages_and_run_tests.GetCQDependString(
             test_multiple_changelists),
         '\nCq-Depend: chromium:1234, chromium:5678')
+
+  def testGetCQIncludeTrybotsString(self):
+    test_no_trybot = None
+    test_valid_trybot = 'llvm-next'
+    test_invalid_trybot = 'invalid-name'
+
+    self.assertIsNone(
+        update_packages_and_run_tests.GetCQIncludeTrybotsString(test_no_trybot))
+
+    self.assertEqual(
+        update_packages_and_run_tests.GetCQIncludeTrybotsString(
+            test_valid_trybot),
+        '\nCq-Include-Trybots:chromeos/cq:cq-llvm-next-orchestrator')
+
+    with self.assertRaises(ValueError) as context:
+      update_packages_and_run_tests.GetCQIncludeTrybotsString(
+          test_invalid_trybot)
+
+    self.assertIn('is not a valid llvm trybot', str(context.exception))
 
   # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
   @mock.patch.object(subprocess, 'check_output', return_value=None)
