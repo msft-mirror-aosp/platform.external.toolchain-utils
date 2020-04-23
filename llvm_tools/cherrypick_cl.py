@@ -20,7 +20,9 @@ import sys
 
 import chroot
 import get_llvm_hash
+import git
 import git_llvm_rev
+import update_chromeos_llvm_hash
 
 
 def add_cherrypick(patches_json_path: str, patches_dir: str,
@@ -107,22 +109,22 @@ def resolve_llvm_ref(llvm_dir: str, sha: str) -> str:
   ).strip()
 
 
-# Get the package name of an upstream project
+# Get the package name of an LLVM project
 def project_to_package(project: str) -> str:
   if project == 'libunwind':
     return 'llvm-libunwind'
   return project
 
 
-# Get the upstream project name of a package
+# Get the LLVM project name of a package
 def package_to_project(package: str) -> str:
   if package == 'llvm-libunwind':
     return 'libunwind'
   return package
 
 
-def cherry_pick(chroot_path: str, llvm_dir: str, start_rev: str, sha: str,
-                rev: str):
+# Get the LLVM projects change in the specifed sha
+def get_package_names(sha: str, llvm_dir: str) -> list:
   paths = subprocess.check_output(
       ['git', 'show', '--name-only', '--format=', sha],
       cwd=llvm_dir,
@@ -136,23 +138,7 @@ def cherry_pick(chroot_path: str, llvm_dir: str, start_rev: str, sha: str,
     if package in ('compiler-rt', 'libcxx', 'libcxxabi', 'llvm-libunwind'):
       packages.add(package)
   packages = list(sorted(packages))
-
-  for package in packages:
-    # Use full package name to prevent equery from getting confused
-    symlink = chroot.GetChrootEbuildPaths(
-        chroot_path,
-        ['sys-devel/llvm' if package == 'llvm' else 'sys-libs/' + package])[0]
-    symlink = chroot.ConvertChrootPathsToAbsolutePaths(chroot_path,
-                                                       [symlink])[0]
-    symlink_dir = os.path.dirname(symlink)
-
-    patches_json_path = os.path.join(symlink_dir, 'files/PATCHES.json')
-    relative_patches_dir = 'cherry' if package == 'llvm' else ''
-    patches_dir = os.path.join(symlink_dir, 'files', relative_patches_dir)
-
-    logging.info('Cherrypicking %s (%s) into %s', rev, sha, package)
-    add_cherrypick(patches_json_path, patches_dir, relative_patches_dir,
-                   start_rev, llvm_dir, rev, sha, package)
+  return packages
 
 
 def main():
@@ -177,6 +163,11 @@ def main():
       required=True,
       action='append',
       help='The LLVM git SHA to cherry-pick.')
+  parser.add_argument(
+      '--create_cl',
+      default=False,
+      action='store_true',
+      help='Automatically create a CL if specified')
   args = parser.parse_args()
 
   llvm_config = git_llvm_rev.LLVMConfig(
@@ -197,11 +188,60 @@ def main():
   start_sha = resolve_llvm_ref(llvm_config.dir, start_sha)
   start_rev = git_llvm_rev.translate_sha_to_rev(llvm_config, start_sha)
 
+  if args.create_cl:
+    branch = 'cherry-pick'
+    symlink = os.path.dirname(
+        chroot.GetChrootEbuildPaths(args.chroot_path, ['sys-devel/llvm'])[0])
+    symlink = chroot.ConvertChrootPathsToAbsolutePaths(args.chroot_path,
+                                                       [symlink])[0]
+    symlink_dir = os.path.dirname(symlink)
+    git.CreateBranch(symlink_dir, branch)
+    symlinks_to_uprev = []
+    commit_messages = [
+        'llvm: cherry-pick CLs from upstream\n',
+    ]
+
   for sha in args.sha:
     sha = resolve_llvm_ref(llvm_config.dir, sha)
     rev = git_llvm_rev.translate_sha_to_rev(llvm_config, sha)
-    cherry_pick(args.chroot_path, llvm_config.dir, start_rev, sha, rev)
+    # Find out the llvm projects changed in this commit
+    packages = get_package_names(sha, llvm_config.dir)
+    # Find out the ebuild symlinks of the corresponding ChromeOS packages
+    symlinks = chroot.GetChrootEbuildPaths(args.chroot_path, [
+        'sys-devel/llvm' if package == 'llvm' else 'sys-libs/' + package
+        for package in packages
+    ])
+    symlinks = chroot.ConvertChrootPathsToAbsolutePaths(args.chroot_path,
+                                                        symlinks)
+
+    # Create a patch and add its metadata for each package
+    for package, symlink in zip(packages, symlinks):
+      symlink_dir = os.path.dirname(symlink)
+      patches_json_path = os.path.join(symlink_dir, 'files/PATCHES.json')
+      relative_patches_dir = 'cherry' if package == 'llvm' else ''
+      patches_dir = os.path.join(symlink_dir, 'files', relative_patches_dir)
+      logging.info('Cherrypicking %s (%s) into %s', rev, sha, package)
+      add_cherrypick(patches_json_path, patches_dir, relative_patches_dir,
+                     start_rev, llvm_config.dir, rev, sha, package)
+
+    if args.create_cl:
+      symlinks_to_uprev.extend(symlinks)
+      commit_messages.extend([
+          '\n\nreviews.llvm.org/rG%s\n' % sha,
+          subprocess.check_output(['git', 'log', '-n1', '--oneline', sha],
+                                  cwd=llvm_config.dir,
+                                  encoding='utf-8')
+      ])
+
   logging.info('Complete.')
+
+  if args.create_cl:
+    symlinks_to_uprev = list(sorted(set(symlinks_to_uprev)))
+    for symlink in symlinks_to_uprev:
+      update_chromeos_llvm_hash.UprevEbuildSymlink(symlink)
+    subprocess.check_output(['git', 'add', '--all'], cwd=symlink_dir)
+    git.UploadChanges(symlink_dir, branch, commit_messages)
+    git.DeleteBranch(symlink_dir, branch)
 
 
 if __name__ == '__main__':

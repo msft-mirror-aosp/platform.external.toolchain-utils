@@ -49,7 +49,7 @@ def GetChrootEbuildPaths(chromeos_root, packages):
   chroot_paths = []
 
   # Find the chroot path for each package's ebuild.
-  for package in sorted(set(packages)):
+  for package in packages:
     chroot_path = subprocess.check_output(
         ['cros_sdk', '--', 'equery', 'w', package],
         cwd=chromeos_root,
