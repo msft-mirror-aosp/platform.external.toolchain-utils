@@ -511,3 +511,26 @@ Usage:
 It tries to autodetect a lot of things (e.g., sys-devel/llvm's path, the
 "start"/"end" revisions to set, etc.) For more information, please see the
 `--help`
+
+### `revert_checker.py`
+
+This script reports reverts which happen 'across' a certain LLVM commit.
+
+To clarify the meaning of 'across' with an example, if we had the following
+commit history (where `a -> b` notes that `b` is a direct child of `a`):
+
+123abc -> 223abc -> 323abc -> 423abc -> 523abc
+
+And where 423abc is a revert of 223abc, this revert is considered to be 'across'
+323abc. More generally, a revert A of a parent commit B is considered to be
+'across' a commit C if C is a parent of A and B is a parent of C.
+
+Usage example:
+
+```
+./revert_checker.py -C llvm-project-copy 123abc 223abc 323abc
+```
+
+In the above example, the tool will scan all commits between 123abc and 223abc,
+and all commits between 123abc and 323abc for reverts of commits which are
+parents of 123abc.
