@@ -534,3 +534,17 @@ Usage example:
 In the above example, the tool will scan all commits between 123abc and 223abc,
 and all commits between 123abc and 323abc for reverts of commits which are
 parents of 123abc.
+
+### `nightly_revert_checker.py`
+
+This is an automated wrapper around `revert_checker.py`. It checks to see if any
+new reverts happened across toolchains that we're trying to ship since it was
+last run. If so, it sends emails to appropriate groups.
+
+Usage example:
+```
+PYTHONPATH=../ ./nightly_revert_checker.py \
+  --state_file state.json \
+  --llvm_dir llvm-project-copy \
+  --chromeos_dir ../../../../
+```
