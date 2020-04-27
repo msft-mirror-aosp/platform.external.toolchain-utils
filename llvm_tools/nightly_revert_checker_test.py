@@ -8,22 +8,28 @@
 
 from __future__ import print_function
 
-# pylint: disable=protected-access
-
 import io
 import unittest
 
+import cros_utils.tiny_render as tiny_render
 import nightly_revert_checker
 import revert_checker
+
+# pylint: disable=protected-access
 
 
 class Test(unittest.TestCase):
   """Tests for nightly_revert_checker."""
 
   def test_email_rendering_works_for_singular_revert(self):
+
+    def prettify_sha(sha: str) -> tiny_render.Piece:
+      return 'pretty_' + sha
+
     email = nightly_revert_checker._generate_revert_email(
         friendly_name='${name}',
         sha='${sha}',
+        prettify_sha=prettify_sha,
         new_reverts=[
             revert_checker.Revert(
                 sha='${revert_sha}', reverted_sha='${reverted_sha}')
@@ -31,21 +37,34 @@ class Test(unittest.TestCase):
 
     expected_email = nightly_revert_checker._Email(
         subject='[revert-checker] new revert discovered across ${name}',
-        body='\n'.join((
-            'It looks like there may be a new revert across ${name} (${sha}).',
-            '',
+        body=[
+            'It looks like there may be a new revert across ${name} (',
+            'pretty_${sha}',
+            ').',
+            tiny_render.line_break,
+            tiny_render.line_break,
             'That is:',
-            '\t- ${revert_sha} (appears to revert ${reverted_sha})',
-            '',
+            tiny_render.UnorderedList([[
+                'pretty_${revert_sha}',
+                ' (appears to revert ',
+                'pretty_${reverted_sha}',
+                ')',
+            ]]),
+            tiny_render.line_break,
             'PTAL and consider reverting them locally.',
-        )))
+        ])
 
     self.assertEqual(email, expected_email)
 
   def test_email_rendering_works_for_multiple_reverts(self):
+
+    def prettify_sha(sha: str) -> tiny_render.Piece:
+      return 'pretty_' + sha
+
     email = nightly_revert_checker._generate_revert_email(
         friendly_name='${name}',
         sha='${sha}',
+        prettify_sha=prettify_sha,
         new_reverts=[
             revert_checker.Revert(
                 sha='${revert_sha1}', reverted_sha='${reverted_sha1}'),
@@ -58,16 +77,36 @@ class Test(unittest.TestCase):
 
     expected_email = nightly_revert_checker._Email(
         subject='[revert-checker] new reverts discovered across ${name}',
-        body='\n'.join((
-            'It looks like there may be new reverts across ${name} (${sha}).',
-            '',
+        body=[
+            'It looks like there may be new reverts across ${name} (',
+            'pretty_${sha}',
+            ').',
+            tiny_render.line_break,
+            tiny_render.line_break,
             'These are:',
-            '\t- ${revert_sha0} (appears to revert ${reverted_sha0})',
-            '\t- ${revert_sha1} (appears to revert ${reverted_sha1})',
-            '\t- ${revert_sha2} (appears to revert ${reverted_sha2})',
-            '',
+            tiny_render.UnorderedList([
+                [
+                    'pretty_${revert_sha0}',
+                    ' (appears to revert ',
+                    'pretty_${reverted_sha0}',
+                    ')',
+                ],
+                [
+                    'pretty_${revert_sha1}',
+                    ' (appears to revert ',
+                    'pretty_${reverted_sha1}',
+                    ')',
+                ],
+                [
+                    'pretty_${revert_sha2}',
+                    ' (appears to revert ',
+                    'pretty_${reverted_sha2}',
+                    ')',
+                ],
+            ]),
+            tiny_render.line_break,
             'PTAL and consider reverting them locally.',
-        )))
+        ])
 
     self.assertEqual(email, expected_email)
 

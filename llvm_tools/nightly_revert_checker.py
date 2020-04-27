@@ -24,6 +24,8 @@ import sys
 import typing as t
 
 import cros_utils.email_sender as email_sender
+import cros_utils.tiny_render as tiny_render
+import get_llvm_hash
 import revert_checker
 
 State = t.Any
@@ -77,35 +79,46 @@ def _find_interesting_shas(chromeos_base: str) -> t.List[t.Tuple[str]]:
 
 _Email = t.NamedTuple('_Email', [
     ('subject', str),
-    ('body', str),
+    ('body', tiny_render.Piece),
 ])
 
 
 def _generate_revert_email(
     friendly_name: str, sha: str,
+    prettify_sha: t.Callable[[str], tiny_render.Piece],
     new_reverts: t.List[revert_checker.Revert]) -> _Email:
-  email_lines = [
-      'It looks like there may be %s across %s (%s).' % (
+  email_pieces = [
+      'It looks like there may be %s across %s (' % (
           'a new revert' if len(new_reverts) == 1 else 'new reverts',
           friendly_name,
-          sha,
       ),
-      '',
+      prettify_sha(sha),
+      ').',
+      tiny_render.line_break,
+      tiny_render.line_break,
       'That is:' if len(new_reverts) == 1 else 'These are:',
   ]
 
+  revert_listing = []
   for revert in sorted(new_reverts, key=lambda r: r.sha):
-    email_lines.append(
-        '\t- %s (appears to revert %s)' % (revert.sha, revert.reverted_sha))
+    revert_listing.append([
+        prettify_sha(revert.sha),
+        ' (appears to revert ',
+        prettify_sha(revert.reverted_sha),
+        ')',
+    ])
 
-  email_lines.append('')
-  email_lines.append('PTAL and consider reverting them locally.')
+  email_pieces.append(tiny_render.UnorderedList(items=revert_listing))
+  email_pieces += [
+      tiny_render.line_break,
+      'PTAL and consider reverting them locally.',
+  ]
   return _Email(
       subject='[revert-checker] new %s discovered across %s' % (
           'revert' if len(new_reverts) == 1 else 'reverts',
           friendly_name,
       ),
-      body='\n'.join(email_lines),
+      body=email_pieces,
   )
 
 
@@ -113,9 +126,11 @@ def _send_revert_email(email: _Email) -> None:
   email_sender.EmailSender().SendX20Email(
       subject=email.subject,
       identifier='revert-checker',
-      well_known_recipients=['mage'],
+      well_known_recipients=[],
       direct_recipients=['gbiv@google.com'],
-      text_body=email.body)
+      text_body=tiny_render.render_text_pieces(email.body),
+      html_body=tiny_render.render_html_pieces(email.body),
+  )
 
 
 def _write_state(state_file: str, new_state: State) -> None:
@@ -165,11 +180,23 @@ def main(argv: t.List[str]) -> None:
 
   state_file = opts.state_file
   dry_run = opts.dry_run
+  llvm_dir = opts.llvm_dir
 
   state = _read_state(state_file)
 
   interesting_shas = _find_interesting_shas(opts.chromeos_dir)
   logging.info('Interesting SHAs were %r', interesting_shas)
+
+  def prettify_sha(sha: str) -> tiny_render.Piece:
+    rev = get_llvm_hash.GetVersionFrom(llvm_dir, sha)
+
+    # 12 is arbitrary, but should be unambiguous enough.
+    short_sha = sha[:12]
+    return tiny_render.Switch(
+        text='r%s (%s)' % (rev, short_sha),
+        html=tiny_render.Link(
+            href='https://reviews.llvm.org/rG' + sha, inner='r' + str(rev)),
+    )
 
   new_state: State = {}
   revert_emails_to_send: t.List[t.Tuple[str, t.List[revert_checker
@@ -177,7 +204,7 @@ def main(argv: t.List[str]) -> None:
   for friendly_name, sha in interesting_shas:
     logging.info('Finding reverts across %s (%s)', friendly_name, sha)
     all_reverts = revert_checker.find_reverts(
-        opts.llvm_dir, sha, root='origin/master')
+        llvm_dir, sha, root='origin/master')
     logging.info('Detected the following revert(s) across %s:\n%s',
                  friendly_name, pprint.pformat(all_reverts))
 
@@ -195,14 +222,14 @@ def main(argv: t.List[str]) -> None:
       continue
 
     revert_emails_to_send.append(
-        _generate_revert_email(friendly_name, sha, new_reverts))
+        _generate_revert_email(friendly_name, sha, prettify_sha, new_reverts))
 
   # We want to be as free of obvious side-effects as possible in case something
   # above breaks. Hence, send the email as late as possible.
   for email in revert_emails_to_send:
     if dry_run:
       logging.info('Would send email:\nSubject: %s\nBody:\n%s\n', email.subject,
-                   email.body)
+                   tiny_render.render_text_pieces(email.body))
     else:
       logging.info('Sending email with subject %r...', email.subject)
       _send_revert_email(email)
