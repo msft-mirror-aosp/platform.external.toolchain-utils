@@ -47,7 +47,33 @@ class Test(unittest.TestCase):
         '//interesting:b': items['//interesting:b'],
     }
 
-    self.assertDictEqual(fetch_gn_descs._fix_result(items), expected_items)
+    self.assertDictEqual(
+        fetch_gn_descs._fix_result('/', '/', '/', items), expected_items)
+
+  def test_fix_result_translates_paths_in_out_dir(self):
+    items = {
+        '//interesting:a': {
+            'sources': ['//out_dir/foo', '//out_dir'],
+            'configs': ['b'],
+        },
+    }
+
+    expected_items = {
+        '//interesting:a': {
+            'sources': ['//out_translated/foo', '//out_translated/'],
+            'configs': ['b'],
+        },
+    }
+
+    self.assertDictEqual(
+        fetch_gn_descs._fix_result(
+            rename_out='//out_translated',
+            out_dir='/chromium/src/out_dir',
+            chromium_root='/chromium',
+            gn_desc=items,
+        ),
+        expected_items,
+    )
 
   def test_gn_desc_output_parsing_skips_pre_json_warnings(self):
     gn_desc = io.StringIO('\n'.join((
