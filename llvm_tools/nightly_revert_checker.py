@@ -126,7 +126,7 @@ def _send_revert_email(email: _Email) -> None:
   email_sender.EmailSender().SendX20Email(
       subject=email.subject,
       identifier='revert-checker',
-      well_known_recipients=[],
+      well_known_recipients=['mage'],
       direct_recipients=['gbiv@google.com'],
       text_body=tiny_render.render_text_pieces(email.body),
       html_body=tiny_render.render_html_pieces(email.body),
