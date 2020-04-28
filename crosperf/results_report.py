@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """A module to handle the report format."""
 from __future__ import print_function
 
@@ -18,9 +16,7 @@ from cros_utils.tabulator import Cell
 from cros_utils.tabulator import CoeffVarFormat
 from cros_utils.tabulator import CoeffVarResult
 from cros_utils.tabulator import Column
-from cros_utils.tabulator import SamplesTableGenerator
 from cros_utils.tabulator import Format
-from cros_utils.tabulator import IterationResult
 from cros_utils.tabulator import GmeanRatioResult
 from cros_utils.tabulator import LiteralResult
 from cros_utils.tabulator import MaxResult
@@ -56,12 +52,12 @@ def ParseChromeosImage(chromeos_image):
   part after '/chroot/tmp' in the second case.
 
   Args:
-    chromeos_image: string containing the path to the chromeos_image that
-    crosperf used for the test.
+      chromeos_image: string containing the path to the chromeos_image that
+      crosperf used for the test.
 
   Returns:
-    version, image: The results of parsing the input string, as explained
-    above.
+      version, image: The results of parsing the input string, as explained
+      above.
   """
   # Find the Chromeos Version, e.g. R45-2345.0.0.....
   # chromeos_image should have been something like:
@@ -90,7 +86,7 @@ def _AppendUntilLengthIs(gen, the_list, target_len):
 
   Uses `gen` to generate elements.
   """
-  the_list.extend(gen() for _ in range(target_len - len(the_list)))
+  the_list.extend(gen() for _ in xrange(target_len - len(the_list)))
   return the_list
 
 
@@ -99,7 +95,8 @@ def _FilterPerfReport(event_threshold, report):
 
   def filter_dict(m):
     return {
-        fn_name: pct for fn_name, pct in m.iteritems() if pct >= event_threshold
+        fn_name: pct
+        for fn_name, pct in m.iteritems() if pct >= event_threshold
     }
 
   return {event: filter_dict(m) for event, m in report.iteritems()}
@@ -132,7 +129,7 @@ class _PerfTable(object):
     self.perf_data = {}
     for label in label_names:
       for bench_name, bench_iterations in benchmark_names_and_iterations:
-        for i in range(bench_iterations):
+        for i in xrange(bench_iterations):
           report = read_perf_report(label, bench_name, i)
           self._ProcessPerfReport(report, label, bench_name, i)
 
@@ -161,14 +158,6 @@ def _GetResultsTableHeader(ben_name, iterations):
   return [[cell]]
 
 
-def _GetDSOHeader(cwp_dso):
-  info = 'CWP_DSO: %s' % cwp_dso
-  cell = Cell()
-  cell.string_value = info
-  cell.header = False
-  return [[cell]]
-
-
 def _ParseColumn(columns, iteration):
   new_column = []
   for column in columns:
@@ -177,7 +166,7 @@ def _ParseColumn(columns, iteration):
     else:
       new_column.extend(
           Column(LiteralResult(i), Format(), str(i + 1))
-          for i in range(iteration))
+          for i in xrange(iteration))
   return new_column
 
 
@@ -234,20 +223,6 @@ def _GetPerfTables(benchmark_results, columns, table_type):
   return tables
 
 
-def _GetSamplesTables(benchmark_results, columns, table_type):
-  tables = []
-  dso_header_table = _GetDSOHeader(benchmark_results.cwp_dso)
-  tables.append(dso_header_table)
-  (table, new_keyvals, iter_counts) = SamplesTableGenerator(
-      benchmark_results.run_keyvals, benchmark_results.label_names,
-      benchmark_results.iter_counts, benchmark_results.weights).GetTable()
-  parsed_columns = _ParseColumn(columns, 1)
-  tf = TableFormatter(table, parsed_columns, samples_table=True)
-  cell_table = tf.GetCellTable(table_type)
-  tables.append(cell_table)
-  return (tables, new_keyvals, iter_counts)
-
-
 class ResultsReport(object):
   """Class to handle the report format."""
   MAX_COLOR_CODE = 255
@@ -256,52 +231,30 @@ class ResultsReport(object):
   def __init__(self, results):
     self.benchmark_results = results
 
-  def _GetTablesWithColumns(self, columns, table_type, summary_type):
-    if summary_type == 'perf':
-      get_tables = _GetPerfTables
-    elif summary_type == 'samples':
-      get_tables = _GetSamplesTables
-    else:
-      get_tables = _GetTables
-    ret = get_tables(self.benchmark_results, columns, table_type)
-    # If we are generating a samples summary table, the return value of
-    # get_tables will be a tuple, and we will update the benchmark_results for
-    # composite benchmark so that full table can use it.
-    if isinstance(ret, tuple):
-      self.benchmark_results.run_keyvals = ret[1]
-      self.benchmark_results.iter_counts = ret[2]
-      ret = ret[0]
-    return ret
+  def _GetTablesWithColumns(self, columns, table_type, perf):
+    get_tables = _GetPerfTables if perf else _GetTables
+    return get_tables(self.benchmark_results, columns, table_type)
 
   def GetFullTables(self, perf=False):
-    ignore_min_max = self.benchmark_results.ignore_min_max
     columns = [
-        Column(RawResult(), Format()),
-        Column(MinResult(), Format()),
-        Column(MaxResult(), Format()),
-        Column(AmeanResult(ignore_min_max), Format()),
-        Column(StdResult(ignore_min_max), Format(), 'StdDev'),
-        Column(CoeffVarResult(ignore_min_max), CoeffVarFormat(), 'StdDev/Mean'),
-        Column(GmeanRatioResult(ignore_min_max), RatioFormat(), 'GmeanSpeedup'),
-        Column(PValueResult(ignore_min_max), PValueFormat(), 'p-value')
+        Column(RawResult(), Format()), Column(MinResult(), Format()), Column(
+            MaxResult(), Format()), Column(AmeanResult(), Format()), Column(
+                StdResult(), Format(), 'StdDev'),
+        Column(CoeffVarResult(), CoeffVarFormat(), 'StdDev/Mean'), Column(
+            GmeanRatioResult(), RatioFormat(), 'GmeanSpeedup'), Column(
+                PValueResult(), PValueFormat(), 'p-value')
     ]
     return self._GetTablesWithColumns(columns, 'full', perf)
 
-  def GetSummaryTables(self, summary_type=''):
-    ignore_min_max = self.benchmark_results.ignore_min_max
-    columns = []
-    if summary_type == 'samples':
-      columns += [Column(IterationResult(), Format(), 'Iterations [Pass:Fail]')]
-    columns += [
-        Column(
-            AmeanResult(ignore_min_max), Format(),
-            'Weighted Samples Amean' if summary_type == 'samples' else ''),
-        Column(StdResult(ignore_min_max), Format(), 'StdDev'),
-        Column(CoeffVarResult(ignore_min_max), CoeffVarFormat(), 'StdDev/Mean'),
-        Column(GmeanRatioResult(ignore_min_max), RatioFormat(), 'GmeanSpeedup'),
-        Column(PValueResult(ignore_min_max), PValueFormat(), 'p-value')
+  def GetSummaryTables(self, perf=False):
+    columns = [
+        Column(AmeanResult(), Format()), Column(StdResult(), Format(),
+                                                'StdDev'),
+        Column(CoeffVarResult(), CoeffVarFormat(), 'StdDev/Mean'), Column(
+            GmeanRatioResult(), RatioFormat(), 'GmeanSpeedup'), Column(
+                PValueResult(), PValueFormat(), 'p-value')
     ]
-    return self._GetTablesWithColumns(columns, 'summary', summary_type)
+    return self._GetTablesWithColumns(columns, 'summary', perf)
 
 
 def _PrintTable(tables, out_to):
@@ -358,8 +311,8 @@ class TextResultsReport(ResultsReport):
     """Generate the status table by the tabulator."""
     table = [['', '']]
     columns = [
-        Column(LiteralResult(iteration=0), Format(), 'Status'),
-        Column(LiteralResult(iteration=1), Format(), 'Failing Reason')
+        Column(LiteralResult(iteration=0), Format(), 'Status'), Column(
+            LiteralResult(iteration=1), Format(), 'Failing Reason')
     ]
 
     for benchmark_run in self.experiment.benchmark_runs:
@@ -370,11 +323,6 @@ class TextResultsReport(ResultsReport):
       table.append(status)
     cell_table = TableFormatter(table, columns).GetCellTable('status')
     return [cell_table]
-
-  def _GetTotalWaitCooldownTime(self):
-    """Get cooldown wait time in seconds from experiment benchmark runs."""
-    return sum(br.suite_runner.GetCooldownWaitTime()
-               for br in self.experiment.benchmark_runs)
 
   def GetReport(self):
     """Generate the report for email and console."""
@@ -388,20 +336,15 @@ class TextResultsReport(ResultsReport):
       title_contents = 'Results report'
     sections.append(self._MakeTitle(title_contents))
 
-    if not self.benchmark_results.cwp_dso:
-      summary_table = _PrintTable(self.GetSummaryTables(), output_type)
-    else:
-      summary_table = _PrintTable(
-          self.GetSummaryTables(summary_type='samples'), output_type)
+    summary_table = _PrintTable(self.GetSummaryTables(perf=False), output_type)
     sections.append(self._MakeSection('Summary', summary_table))
 
     if experiment is not None:
       table = _PrintTable(self.GetStatusTable(), output_type)
       sections.append(self._MakeSection('Benchmark Run Status', table))
 
-    if not self.benchmark_results.cwp_dso:
-      perf_table = _PrintTable(
-          self.GetSummaryTables(summary_type='perf'), output_type)
+    perf_table = _PrintTable(self.GetSummaryTables(perf=True), output_type)
+    if perf_table:
       sections.append(self._MakeSection('Perf Data', perf_table))
 
     if experiment is not None:
@@ -410,9 +353,6 @@ class TextResultsReport(ResultsReport):
 
       cpu_info = experiment.machine_manager.GetAllCPUInfo(experiment.labels)
       sections.append(self._MakeSection('CPUInfo', cpu_info))
-
-      waittime_str = '%d min' % (self._GetTotalWaitCooldownTime() // 60)
-      sections.append(self._MakeSection('Cooldown wait time', waittime_str))
 
     return '\n'.join(sections)
 
@@ -424,9 +364,8 @@ def _GetHTMLCharts(label_names, test_results):
     # never add headers. We still need to pass it anyway.
     table = TableGenerator(runs, label_names).GetTable()
     columns = [
-        Column(AmeanResult(), Format()),
-        Column(MinResult(), Format()),
-        Column(MaxResult(), Format())
+        Column(AmeanResult(), Format()), Column(MinResult(), Format()), Column(
+            MaxResult(), Format())
     ]
     tf = TableFormatter(table, columns)
     data_table = tf.GetCellTable('full', headers=False)
@@ -475,14 +414,9 @@ class HTMLResultsReport(ResultsReport):
     chart_javascript = ''.join(chart.GetJavascript() for chart in charts)
     chart_divs = ''.join(chart.GetDiv() for chart in charts)
 
-    if not self.benchmark_results.cwp_dso:
-      summary_table = self.GetSummaryTables()
-      perf_table = self.GetSummaryTables(summary_type='perf')
-    else:
-      summary_table = self.GetSummaryTables(summary_type='samples')
-      perf_table = None
+    summary_table = self.GetSummaryTables()
     full_table = self.GetFullTables()
-
+    perf_table = self.GetSummaryTables(perf=True)
     experiment_file = ''
     if self.experiment is not None:
       experiment_file = self.experiment.experiment_file
@@ -519,11 +453,8 @@ def ParseStandardPerfReport(report_data):
   """
   # This function fails silently on its if it's handed a string (as opposed to a
   # list of lines). So, auto-split if we do happen to get a string.
-  if isinstance(report_data, str):
+  if isinstance(report_data, basestring):
     report_data = report_data.splitlines()
-  # When switching to python3 catch the case when bytes are passed.
-  elif isinstance(report_data, bytes):
-    raise TypeError()
 
   # Samples: N{K,M,G} of event 'event-name'
   samples_regex = re.compile(r"#\s+Samples: \d+\S? of event '([^']+)'")
@@ -609,10 +540,7 @@ class BenchmarkResults(object):
                label_names,
                benchmark_names_and_iterations,
                run_keyvals,
-               ignore_min_max=False,
-               read_perf_report=None,
-               cwp_dso=None,
-               weights=None):
+               read_perf_report=None):
     if read_perf_report is None:
 
       def _NoPerfReport(*_args, **_kwargs):
@@ -624,10 +552,7 @@ class BenchmarkResults(object):
     self.benchmark_names_and_iterations = benchmark_names_and_iterations
     self.iter_counts = dict(benchmark_names_and_iterations)
     self.run_keyvals = run_keyvals
-    self.ignore_min_max = ignore_min_max
     self.read_perf_report = read_perf_report
-    self.cwp_dso = cwp_dso
-    self.weights = dict(weights) if weights else None
 
   @staticmethod
   def FromExperiment(experiment, for_json_report=False):
@@ -635,15 +560,10 @@ class BenchmarkResults(object):
     benchmark_names_and_iterations = [(benchmark.name, benchmark.iterations)
                                       for benchmark in experiment.benchmarks]
     run_keyvals = _ExperimentToKeyvals(experiment, for_json_report)
-    ignore_min_max = experiment.ignore_min_max
     read_perf_report = functools.partial(_ReadExperimentPerfReport,
                                          experiment.results_directory)
-    cwp_dso = experiment.cwp_dso
-    weights = [(benchmark.name, benchmark.weight)
-               for benchmark in experiment.benchmarks]
     return BenchmarkResults(label_names, benchmark_names_and_iterations,
-                            run_keyvals, ignore_min_max, read_perf_report,
-                            cwp_dso, weights)
+                            run_keyvals, read_perf_report)
 
 
 def _GetElemByName(name, from_list):

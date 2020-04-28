@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 # Copyright 2011 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Utilities to run commands in outside/inside chroot and on the board."""
 
 from __future__ import print_function
@@ -68,7 +66,6 @@ class CommandExecuter(object):
                         command_timeout=None,
                         terminated_timeout=10,
                         print_to_console=True,
-                        env=None,
                         except_handler=lambda p, e: None):
     """Run a command.
 
@@ -107,8 +104,7 @@ class CommandExecuter(object):
           stderr=subprocess.PIPE,
           shell=True,
           preexec_fn=os.setsid,
-          executable='/bin/bash',
-          env=env)
+          executable='/bin/bash')
 
       full_stdout = ''
       full_stderr = ''
@@ -128,9 +124,9 @@ class CommandExecuter(object):
         if command_terminator and command_terminator.IsTerminated():
           os.killpg(os.getpgid(p.pid), signal.SIGTERM)
           if self.logger:
-            self.logger.LogError(
-                'Command received termination request. '
-                'Killed child process group.', print_to_console)
+            self.logger.LogError('Command received termination request. '
+                                 'Killed child process group.',
+                                 print_to_console)
           break
 
         l = my_poll.poll(100)
@@ -160,19 +156,18 @@ class CommandExecuter(object):
           elif (terminated_timeout is not None and
                 time.time() - terminated_time > terminated_timeout):
             if self.logger:
-              self.logger.LogWarning(
-                  'Timeout of %s seconds reached since '
-                  'process termination.' % terminated_timeout, print_to_console)
+              self.logger.LogWarning('Timeout of %s seconds reached since '
+                                     'process termination.' %
+                                     terminated_timeout, print_to_console)
             break
 
         if (command_timeout is not None and
             time.time() - started_time > command_timeout):
           os.killpg(os.getpgid(p.pid), signal.SIGTERM)
           if self.logger:
-            self.logger.LogWarning(
-                'Timeout of %s seconds reached since process'
-                'started. Killed child process group.' % command_timeout,
-                print_to_console)
+            self.logger.LogWarning('Timeout of %s seconds reached since process'
+                                   'started. Killed child process group.' %
+                                   command_timeout, print_to_console)
           break
 
         if out == err == '':
@@ -349,8 +344,7 @@ class CommandExecuter(object):
                               command_timeout=None,
                               terminated_timeout=10,
                               print_to_console=True,
-                              cros_sdk_options='',
-                              env=None):
+                              cros_sdk_options=''):
     """Runs a command within the chroot.
 
     Returns triplet (returncode, stdout, stderr).
@@ -377,9 +371,8 @@ class CommandExecuter(object):
     # the chroot already exists. We want the final returned output to skip
     # the output from chroot creation steps.
     if return_output:
-      ret = self.RunCommand(
-          'cd %s; cros_sdk %s -- true' % (chromeos_root, cros_sdk_options),
-          env=env)
+      ret = self.RunCommand('cd %s; cros_sdk %s -- true' % (chromeos_root,
+                                                            cros_sdk_options))
       if ret:
         return (ret, '', '')
 
@@ -394,8 +387,7 @@ class CommandExecuter(object):
         command_terminator=command_terminator,
         command_timeout=command_timeout,
         terminated_timeout=terminated_timeout,
-        print_to_console=print_to_console,
-        env=env)
+        print_to_console=print_to_console)
     os.remove(command_file)
     return ret
 
@@ -457,15 +449,15 @@ class CommandExecuter(object):
       src = src + '/'
       dest = dest + '/'
 
-    if src_cros or dest_cros:
+    if src_cros == True or dest_cros == True:
       if self.logger:
-        self.logger.LogFatalIf(
-            src_cros == dest_cros, 'Only one of src_cros and desc_cros can '
-            'be True.')
+        self.logger.LogFatalIf(src_cros == dest_cros,
+                               'Only one of src_cros and desc_cros can '
+                               'be True.')
         self.logger.LogFatalIf(not chromeos_root, 'chromeos_root not given!')
       elif src_cros == dest_cros or not chromeos_root:
         sys.exit(1)
-      if src_cros:
+      if src_cros == True:
         cros_machine = src_machine
       else:
         cros_machine = dest_machine
@@ -475,7 +467,7 @@ class CommandExecuter(object):
           'ssh -p ${FLAGS_ssh_port}' + ' -o StrictHostKeyChecking=no' +
           ' -o UserKnownHostsFile=$(mktemp)' + ' -i $TMP_PRIVATE_KEY')
       rsync_prefix = "\nrsync -r -e \"%s\" " % ssh_command
-      if dest_cros:
+      if dest_cros == True:
         command += rsync_prefix + '%s root@%s:%s' % (src, dest_machine, dest)
         return self.RunCommand(
             command,
@@ -662,7 +654,6 @@ class MockCommandExecuter(CommandExecuter):
                         command_timeout=None,
                         terminated_timeout=10,
                         print_to_console=True,
-                        env=None,
                         except_handler=lambda p, e: None):
     assert not command_timeout
     cmd = str(cmd)

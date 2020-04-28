@@ -161,10 +161,18 @@ def GetBuildImageCommand(board, dev=False):
 
 
 def GetSetupBoardCommand(board,
+                         gcc_version=None,
+                         binutils_version=None,
                          usepkg=None,
                          force=None):
   """Get setup_board command."""
   options = []
+
+  if gcc_version:
+    options.append('--gcc_version=%s' % gcc_version)
+
+  if binutils_version:
+    options.append('--binutils_version=%s' % binutils_version)
 
   if usepkg:
     options.append('--usepkg')
@@ -174,9 +182,10 @@ def GetSetupBoardCommand(board,
   if force:
     options.append('--force')
 
-  options.append('--accept-licenses=@CHROMEOS')
+  options.append('--accept_licenses=@CHROMEOS')
 
-  return 'setup_board --board=%s %s' % (board, ' '.join(options))
+  return ('%s/setup_board --board=%s %s' % (CHROMEOS_SCRIPTS_DIR, board,
+                                            ' '.join(options)))
 
 
 def CanonicalizePath(path):

@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#! /usr/bin/python
 """Parses the total amount of sampled memory from log files.
 
 This file outputs the total amount of memory that has been sampled by tcmalloc.

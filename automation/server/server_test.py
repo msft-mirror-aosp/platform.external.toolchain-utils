@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 #
 # Copyright 2010 Google Inc. All Rights Reserved.
 """Machine manager unittest.

@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#! /usr/bin/python
 
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -196,7 +196,7 @@ class DejagnuExecuter(object):
     self.PrepareGdbserverDefault()
 
   def PrepareGdbserverDefault(self):
-    cmd = ('setup_board --board {0}; '
+    cmd = ('./setup_board --board {0}; '
            '{1} emerge-{0} gdb'.format(self._board, self._mount_flag))
     ret = self._executer.ChrootRunCommand(self._chromeos_root,
                                           cmd,

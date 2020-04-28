@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 #
 # Copyright 2012 Google Inc. All Rights Reserved.
 """dejagnu_compiler.py: Run dejagnu test."""

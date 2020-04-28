@@ -9,7 +9,6 @@ from email import encoders as Encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import getpass
 import os
 import smtplib
 import tempfile
@@ -87,7 +86,7 @@ class EmailSender(object):
     ce = command_executer.GetCommandExecuter(log_level='none')
 
     if not email_from:
-      email_from = getpass.getuser() + '@google.com'
+      email_from = os.path.basename(__file__)
 
     to_list = ','.join(email_to)
 
@@ -107,14 +106,13 @@ class EmailSender(object):
       subject = subject.replace("'", "'\\''")
 
       if msg_type == 'html':
-        command = ("sendgmr --to='%s' --from='%s' --subject='%s' "
-                   "--html_file='%s' --body_file=/dev/null" %
-                   (to_list, email_from, subject, body_filename))
+        command = ("sendgmr --to='%s' --subject='%s' --html_file='%s' "
+                   '--body_file=/dev/null' % (to_list, subject, body_filename))
       else:
-        command = (
-            "sendgmr --to='%s' --from='%s' --subject='%s' "
-            "--body_file='%s'" % (to_list, email_from, subject, body_filename))
-
+        command = ("sendgmr --to='%s' --subject='%s' --body_file='%s'" %
+                   (to_list, subject, body_filename))
+      if email_from:
+        command += ' --from=%s' % email_from
       if email_cc:
         cc_list = ','.join(email_cc)
         command += " --cc='%s'" % cc_list

@@ -1,18 +1,14 @@
 #!/usr/bin/env python2
-# -*- coding: utf-8 -*-
 #
-# Copyright 2014 The Chromium OS Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
+# Copyright 2014 Google Inc.  All Rights Reserved
 """Unit tests for the Crosperf Benchmark class."""
 
 from __future__ import print_function
 
 import inspect
-import unittest
-
 from benchmark import Benchmark
+
+import unittest
 
 
 class BenchmarkTestCase(unittest.TestCase):
@@ -59,8 +55,7 @@ class BenchmarkTestCase(unittest.TestCase):
     # this test was updated.
     args_list = [
         'self', 'name', 'test_name', 'test_args', 'iterations', 'rm_chroot_tmp',
-        'perf_args', 'suite', 'show_all_results', 'retries', 'run_local',
-        'cwp_dso', 'weight', 'turbostat'
+        'perf_args', 'suite', 'show_all_results', 'retries', 'run_local'
     ]
     arg_spec = inspect.getargspec(Benchmark.__init__)
     self.assertEqual(len(arg_spec.args), len(args_list))

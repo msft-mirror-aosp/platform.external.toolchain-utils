@@ -1,10 +1,3 @@
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-#
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
 """Test to ensure we're not touching /dev/ptmx when running commands."""
 
 from __future__ import print_function
@@ -25,9 +18,9 @@ class NoPsuedoTerminalTest(unittest.TestCase):
 
   def _AttachStraceToSelf(self, output_file):
     """Attaches strace to the current process."""
-    args = ['sudo', 'strace', '-o', output_file, '-p', str(os.getpid())]
+    args = ['strace', '-o', output_file, '-p', str(os.getpid())]
     print(args)
-    self._strace_process = subprocess.Popen(args, preexec_fn=os.setpgrp)
+    self._strace_process = subprocess.Popen(args)
     # Wait until we see some activity.
     start_time = time.time()
     while time.time() - start_time < self.STRACE_TIMEOUT:
@@ -38,12 +31,9 @@ class NoPsuedoTerminalTest(unittest.TestCase):
 
   def _KillStraceProcess(self):
     """Kills strace that was started by _AttachStraceToSelf()."""
-    pgid = os.getpgid(self._strace_process.pid)
-    args = ['sudo', 'kill', str(pgid)]
-    if subprocess.call(args) == 0:
-      os.waitpid(pgid, 0)
-      return True
-    return False
+    self._strace_process.terminate()
+    self._strace_process.wait()
+    return True
 
   def testNoPseudoTerminalWhenRunningCommand(self):
     """Test to make sure we're not touching /dev/ptmx when running commands."""

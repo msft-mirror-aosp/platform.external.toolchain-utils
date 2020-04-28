@@ -55,7 +55,7 @@ class DejagnuAdapter(object):
       raise RuntimeError('Failed to create chroot.')
 
   def SetupBoard(self):
-    cmd = 'setup_board --board=' + self._board
+    cmd = './setup_board --board=' + self._board
     ret = self._cmd_exec.ChrootRunCommand(
         self._chromeos_root, cmd, terminated_timeout=4000)
     if ret:

@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#! /usr/bin/python
 """Groups memory by allocation sizes.
 
 Takes a log entry and sorts sorts everything into groups based on what size

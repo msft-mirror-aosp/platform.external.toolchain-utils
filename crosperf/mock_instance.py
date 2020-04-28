@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """This contains some mock instances for testing."""
 
 from __future__ import print_function
@@ -13,10 +11,8 @@ from label import MockLabel
 perf_args = 'record -a -e cycles'
 label1 = MockLabel(
     'test1',
-    'build1',
     'image1',
     'autotest_dir',
-    'debug_dir',
     '/tmp/test_benchmark_run',
     'x86-alex',
     'chromeos-alex1',
@@ -24,16 +20,12 @@ label1 = MockLabel(
     cache_dir='',
     cache_only=False,
     log_level='average',
-    compiler='gcc',
-    skylab=False,
-    chrome_src=None)
+    compiler='gcc')
 
 label2 = MockLabel(
     'test2',
-    'build2',
     'image2',
     'autotest_dir',
-    'debug_dir',
     '/tmp/test_benchmark_run_2',
     'x86-alex',
     'chromeos-alex2',
@@ -41,9 +33,7 @@ label2 = MockLabel(
     cache_dir='',
     cache_only=False,
     log_level='average',
-    compiler='gcc',
-    skylab=False,
-    chrome_src=None)
+    compiler='gcc')
 
 benchmark1 = Benchmark('benchmark1', 'autotest_name_1', 'autotest_args', 2, '',
                        perf_args, '', '')

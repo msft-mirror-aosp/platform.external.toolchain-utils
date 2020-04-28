@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Module of benchmark runs."""
 from __future__ import print_function
 
@@ -31,18 +29,8 @@ STATUS_PENDING = 'PENDING'
 class BenchmarkRun(threading.Thread):
   """The benchmarkrun class."""
 
-  def __init__(self,
-               name,
-               benchmark,
-               label,
-               iteration,
-               cache_conditions,
-               machine_manager,
-               logger_to_use,
-               log_level,
-               share_cache,
-               dut_config,
-               enable_aslr=False):
+  def __init__(self, name, benchmark, label, iteration, cache_conditions,
+               machine_manager, logger_to_use, log_level, share_cache):
     threading.Thread.__init__(self)
     self.name = name
     self._logger = logger_to_use
@@ -55,8 +43,7 @@ class BenchmarkRun(threading.Thread):
     self.retval = None
     self.run_completed = False
     self.machine_manager = machine_manager
-    self.suite_runner = SuiteRunner(
-        dut_config, self._logger, self.log_level, enable_aslr=enable_aslr)
+    self.suite_runner = SuiteRunner(self._logger, self.log_level)
     self.machine = None
     self.cache_conditions = cache_conditions
     self.runs_complete = 0
@@ -85,7 +72,7 @@ class BenchmarkRun(threading.Thread):
                     self.label.board, self.cache_conditions, self._logger,
                     self.log_level, self.label, self.share_cache,
                     self.benchmark.suite, self.benchmark.show_all_results,
-                    self.benchmark.run_local, self.benchmark.cwp_dso)
+                    self.benchmark.run_local)
 
     self.result = self.cache.ReadResult()
     self.cache_hit = (self.result is not None)
@@ -108,8 +95,7 @@ class BenchmarkRun(threading.Thread):
         err = 'No cache hit.'
         self.result = Result.CreateFromRun(
             self._logger, self.log_level, self.label, self.machine, output, err,
-            retval, self.benchmark.test_name, self.benchmark.suite,
-            self.benchmark.cwp_dso)
+            retval, self.benchmark.test_name, self.benchmark.suite)
 
       else:
         self._logger.LogOutput('%s: No cache hit.' % self.name)
@@ -118,7 +104,6 @@ class BenchmarkRun(threading.Thread):
         self.machine = self.AcquireMachine()
         self.cache.machine = self.machine
         self.result = self.RunTest(self.machine)
-        # TODO(denik): Add Top5 report into html.
 
         self.cache.remote = self.machine.name
         self.label.chrome_version = self.machine_manager.GetChromeVersion(
@@ -181,9 +166,9 @@ class BenchmarkRun(threading.Thread):
       machine = self.machine_manager.AcquireMachine(self.label)
 
       if machine:
-        self._logger.LogOutput(
-            '%s: Machine %s acquired at %s' % (self.name, machine.name,
-                                               datetime.datetime.now()))
+        self._logger.LogOutput('%s: Machine %s acquired at %s' %
+                               (self.name, machine.name,
+                                datetime.datetime.now()))
         break
       time.sleep(10)
     return machine
@@ -205,7 +190,7 @@ class BenchmarkRun(threading.Thread):
         raise SyntaxError('perf_args must start with either record or stat')
       extra_test_args = [
           '--profiler=custom_perf',
-          ('--profiler_args=\'perf_options="%s"\'' % perf_args)
+          ("--profiler_args='perf_options=\"%s\"'" % perf_args)
       ]
       return ' '.join(extra_test_args)
     else:
@@ -226,8 +211,7 @@ class BenchmarkRun(threading.Thread):
     self.run_completed = True
     return Result.CreateFromRun(self._logger, self.log_level, self.label,
                                 self.machine, out, err, retval,
-                                self.benchmark.test_name, self.benchmark.suite,
-                                self.benchmark.cwp_dso)
+                                self.benchmark.test_name, self.benchmark.suite)
 
   def SetCacheConditions(self, cache_conditions):
     self.cache_conditions = cache_conditions
@@ -260,7 +244,7 @@ class MockBenchmarkRun(BenchmarkRun):
                     self.label.board, self.cache_conditions, self._logger,
                     self.log_level, self.label, self.share_cache,
                     self.benchmark.suite, self.benchmark.show_all_results,
-                    self.benchmark.run_local, self.benchmark.cwp_dso)
+                    self.benchmark.run_local)
 
     self.result = self.cache.ReadResult()
     self.cache_hit = (self.result is not None)

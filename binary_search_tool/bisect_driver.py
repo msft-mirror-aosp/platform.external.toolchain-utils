@@ -2,9 +2,6 @@
 #
 # This script is used to help the compiler wrapper in the ChromeOS and
 # Android build systems bisect for bad object files.
-#
-# pylint: disable=not-callable
-# pylint: disable=indentation
 """Utilities for bisection of ChromeOS and Android object files.
 
 This module contains a set of utilities to allow bisection between
@@ -142,8 +139,7 @@ def get_obj_path(execargs):
   # Ignore args that do not create a file.
   if obj_path in (
       '-',
-      '/dev/null',
-  ):
+      '/dev/null',):
     return ''
   # Ignore files ending in .tmp.
   if obj_path.endswith(('.tmp',)):
@@ -241,7 +237,6 @@ def cache_file(execargs, bisect_dir, cache, abs_file_path):
     bisect_dir: The directory where bisection caches live.
     cache: Which cache the file will be cached to (GOOD/BAD).
     abs_file_path: Absolute path to file being cached.
-
   Returns:
     True if caching was successful, False otherwise.
   """

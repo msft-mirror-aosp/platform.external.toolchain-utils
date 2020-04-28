@@ -1,10 +1,4 @@
 #!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-#
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
 """Diff 2 chromiumos images by comparing each elf file.
 
    The script diffs every *ELF* files by dissembling every *executable*
@@ -72,8 +66,8 @@ class CrosImage(object):
         self.image, self.rootfs, self.stateful))
     ## First of all creating an unmount image
     self.CreateUnmountScript()
-    command = image_chromeos.GetImageMountCommand(self.image, self.rootfs,
-                                                  self.stateful)
+    command = image_chromeos.GetImageMountCommand(
+        self.chromeos_root, self.image, self.rootfs, self.stateful)
     rv = self._ce.RunCommand(command, print_to_console=True)
     self.mounted = (rv == 0)
     if not self.mounted:
@@ -91,8 +85,8 @@ class CrosImage(object):
     f.close()
     self._ce.RunCommand(
         'chmod +x {}'.format(self.unmount_script), print_to_console=False)
-    self.logger.LogOutput('Created an unmount script - "{0}"'.format(
-        self.unmount_script))
+    self.logger.LogOutput(
+        'Created an unmount script - "{0}"'.format(self.unmount_script))
 
   def UnmountImage(self):
     """Unmount the image and delete mount point."""
@@ -121,8 +115,8 @@ class CrosImage(object):
       Always true
     """
 
-    self.logger.LogOutput('Finding all elf files in "{0}" ...'.format(
-        self.rootfs))
+    self.logger.LogOutput(
+        'Finding all elf files in "{0}" ...'.format(self.rootfs))
     # Note '\;' must be prefixed by 'r'.
     command = ('find "{0}" -type f -exec '
                'bash -c \'file -b "{{}}" | grep -q "ELF"\''
@@ -131,8 +125,8 @@ class CrosImage(object):
     self.logger.LogCmd(command)
     _, out, _ = self._ce.RunCommandWOutput(command, print_to_console=False)
     self.elf_files = out.splitlines()
-    self.logger.LogOutput('Total {0} elf files found.'.format(
-        len(self.elf_files)))
+    self.logger.LogOutput(
+        'Total {0} elf files found.'.format(len(self.elf_files)))
     return True
 
 
@@ -148,10 +142,10 @@ class ImageComparator(object):
 
   def Cleanup(self):
     if self.tempf1 and self.tempf2:
-      command_executer.GetCommandExecuter().RunCommand('rm {0} {1}'.format(
-          self.tempf1, self.tempf2))
-      logger.GetLogger('Removed "{0}" and "{1}".'.format(
-          self.tempf1, self.tempf2))
+      command_executer.GetCommandExecuter().RunCommand(
+          'rm {0} {1}'.format(self.tempf1, self.tempf2))
+      logger.GetLogger(
+          'Removed "{0}" and "{1}".'.format(self.tempf1, self.tempf2))
 
   def CheckElfFileSetEquality(self):
     """Checking whether images have exactly number of elf files."""
@@ -191,8 +185,8 @@ class ImageComparator(object):
     match_count = 0
     i1 = self.images[0]
     i2 = self.images[1]
-    self.logger.LogOutput('Start comparing {0} elf file by file ...'.format(
-        len(i1.elf_files)))
+    self.logger.LogOutput(
+        'Start comparing {0} elf file by file ...'.format(len(i1.elf_files)))
     ## Note - i1.elf_files and i2.elf_files have exactly the same entries here.
 
     ## Create 2 temp files to be used for all disassembed files.
@@ -228,8 +222,8 @@ class ImageComparator(object):
               tempf2=self.tempf2)
       ret = cmde.RunCommand(command, print_to_console=False)
       if ret != 0:
-        self.logger.LogOutput('*** Not match - "{0}" "{1}"'.format(
-            full_path1, full_path2))
+        self.logger.LogOutput(
+            '*** Not match - "{0}" "{1}"'.format(full_path1, full_path2))
         mismatch_list.append(f1)
         if self.diff_file:
           command = ('echo "Diffs of disassemble of \"{f1}\" and \"{f2}\"" '

@@ -1,10 +1,8 @@
 #!/usr/bin/env python2
-# -*- coding: utf-8 -*-
 #
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Script for running llvm validation tests on ChromeOS.
 
 This script launches a buildbot to build ChromeOS with the llvm on
@@ -39,49 +37,55 @@ TEST_PER_DAY = 4
 DATA_DIR = '/google/data/rw/users/mo/mobiletc-prebuild/waterfall-report-data/'
 
 # Information about Rotating Boards
-#  Board         Arch     Reference    Platform      Kernel
-#                         Board                      Version
-#  ------------  -------  ------------ ------------- -------
-#  atlas         x86_64   poppy        kabylake-y    4.4.*
-#  cave          x86_64   glados       skylake-y     3.18
-#  coral         x86_64   reef         apollo lake   4.4.*
-#  cyan          x86_64   strago       braswell      3.18
-#  elm           aarch64  oak          mediatek-8173 3.18 arm32 userspace
-#  eve           x86_64   poppy        kabylake-u/r  4.4.*
-#  gale          armv7                               3.18
-#  grunt         x86_64   grunt        stoney ridge  4.14.*
-#  fizz-moblab   x86_64                              4.4
-#  kevin         aarch64  gru          rockchip-3399 4.4.* arm32 userspace
-#  kevin64       aarch64  gru          rockchip-3399 4.4.* arm64 userspace
-#  lakitu        x86_64                              4.4.*
-#  nyan_kitty    armv7    nyan         tegra         3.10.18
-#  octopus       x86_64   octopus      GLK           4.14.*
-#  sentry        x86_64   kunimitsu    skylake-u     3.18
-#  tidus         x86_64   auron        broadwell     3.14
-#  veyron_mighty armv7    veyron-pinky rockchip-3288 3.14
-#  whirlwind     armv7                               3.14
-#  winky         x86_64   rambi        baytrail      4.4.*
+#  Board        Arch     Reference    Platform      Kernel
+#                        Board                      Version
+#  ------------ -------  ------------ ------------- -------
+#  cave         x86_64   glados       skylake-y     3.18
+#  daisy        armv7    daisy        exynos-5250   3.8.11
+#  elm          aarch64  oak          mediatek-8173 3.18
+#  fizz         x86_64   fizz         kabylake-u/r  4.4.*
+#  gale         armv7                               3.18
+#  grunt        x86_64   grunt        stoney ridge  4.14.*
+#  guado_moblab x86_64                              3.14
+#  kevin        aarch64  gru          rockchip-3399 4.4.*
+#  lakitu       x86_64                              4.4.*
+#  lars         x86_64   kunimitsu    skylake-u     3.18
+#  link         x86_64   ivybridge    ivybridge     3.8.11
+#  nautilus     x86_64   poppy        kabylake-y    4.4.*
+#  nyan_big     armv7    nyan         tegra         3.10.18
+#  peach_pit    armv7    peach        exynos-5420   3.8.11
+#  peppy        x86_64   slippy       haswell       3.8.11
+#  samus        x86_64   auron        broadwell     3.14
+#  snappy       x86_64   reef         apollo lake   4.4.*
+#  swanky       x86_64   rambi        baytrail      4.4.*
+#  terra        x86_64   strago       braswell      3.18
+#  veyron_jaq   armv7    veyron-pinky rockchip-3288 3.14
+#  whirlwind    armv7                               3.14
+#  zoombini     x86_64   zoombini     cannonlake-y  4.14.*
 
 TEST_BOARD = [
-    'atlas',
     'cave',
-    'coral',
-    'cyan',
-    'elm',
-    # 'eve', tested by amd64-llvm-next-toolchain builder.
+    'daisy',
+    # 'elm', tested by arm64-llvm-next-toolchain builder.
+    'fizz',
     'gale',
     'grunt',
-    'fizz-moblab',
-    # 'kevin', tested by arm64-llvm-next-toolchain builder.
-    'kevin64',
+    'guado_moblab',
+    'kevin',
     'lakitu',
-    'nyan_kitty',
-    'octopus',
-    'sentry',
-    'tidus',
-    # 'veyron_mighty', tested by arm-llvm-next-toolchain builder.
+    'lars',
+    'link',
+    'nautilus',
+    'nyan_big',
+    'peach_pit',
+    'peppy',
+    # 'samus', tested by amd64-llvm-next-toolchain builder.
+    'snappy',
+    'swanky',
+    'terra',
+    # 'veyron_jaq', tested by arm-llvm-next-toolchain builder.
     'whirlwind',
-    'winky',
+    'zoombini',
 ]
 
 

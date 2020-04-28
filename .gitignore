@@ -1,4 +1,3 @@
 logs
 *.pyc
-llvm-project-copy/
-compiler_wrapper/compiler_wrapper
+

@@ -1,22 +1,20 @@
 #!/usr/bin/env python2
-# -*- coding: utf-8 -*-
 #
 # Copyright 2016 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Unittest for the results reporter."""
 
 from __future__ import division
 from __future__ import print_function
 
-import collections
-import io
-import os
-import unittest
+from StringIO import StringIO
 
+import collections
 import mock
+import os
 import test_flag
+import unittest
 
 from benchmark_run import MockBenchmarkRun
 from cros_utils import logger
@@ -83,7 +81,7 @@ def FakePath(ext):
 
 def MakeMockExperiment(compiler='gcc'):
   """Mocks an experiment using the given compiler."""
-  mock_experiment_file = io.BytesIO("""
+  mock_experiment_file = StringIO("""
       board: x86-alex
       remote: 127.0.0.1
       perf_args: record -a -e cycles
@@ -128,28 +126,22 @@ def _InjectSuccesses(experiment, how_many, keyvals, for_benchmark=0,
   machine_manager = MockMachineManager(
       FakePath('chromeos_root'), 0, log_level, locks_dir)
   machine_manager.AddMachine('testing_machine')
-  machine = next(
-      m for m in machine_manager.GetMachines() if m.name == 'testing_machine')
+  machine = next(m for m in machine_manager.GetMachines()
+                 if m.name == 'testing_machine')
   for label in experiment.labels:
 
     def MakeSuccessfulRun(n):
       run = MockBenchmarkRun('mock_success%d' % (n,), bench, label,
                              1 + n + num_runs, cache_conditions,
-                             machine_manager, log, log_level, share_cache, {})
+                             machine_manager, log, log_level, share_cache)
       mock_result = MockResult(log, label, log_level, machine)
       mock_result.keyvals = keyvals
       run.result = mock_result
       return run
 
     experiment.benchmark_runs.extend(
-        MakeSuccessfulRun(n) for n in range(how_many))
+        MakeSuccessfulRun(n) for n in xrange(how_many))
   return experiment
-
-
-def _InjectCooldownTime(experiment, cooldown_time):
-  """Inject cooldown wait time in every benchmark run."""
-  for br in experiment.benchmark_runs:
-    br.suite_runner.cooldown_wait_time = cooldown_time
 
 
 class TextResultsReportTest(unittest.TestCase):
@@ -164,18 +156,11 @@ class TextResultsReportTest(unittest.TestCase):
     success_keyvals = {'retval': 0, 'machine': 'some bot', 'a_float': 3.96}
     experiment = _InjectSuccesses(MakeMockExperiment(), num_success,
                                   success_keyvals)
-    # Set 120 sec cooldown time for every benchmark run.
-    cooldown_time = 120
-    _InjectCooldownTime(experiment, cooldown_time)
-    text_report = TextResultsReport.FromExperiment(
-        experiment, email=email).GetReport()
+    text_report = TextResultsReport.FromExperiment(experiment, email=email) \
+                                   .GetReport()
     self.assertIn(str(success_keyvals['a_float']), text_report)
     self.assertIn(success_keyvals['machine'], text_report)
     self.assertIn(MockCrosMachine.CPUINFO_STRING, text_report)
-    self.assertIn('Cooldown wait time', text_report)
-    self.assertIn(
-        '%d min' % (len(experiment.benchmark_runs) * cooldown_time // 60),
-        text_report)
     return text_report
 
   def testOutput(self):
@@ -242,7 +227,7 @@ class HTMLResultsReportTest(unittest.TestCase):
         _InjectSuccesses(MakeMockExperiment(), num_success, success_keyvals))
 
     self.assertNotIn('no result', output.summary_table)
-    # self.assertIn(success_keyvals['machine'], output.summary_table)
+    #self.assertIn(success_keyvals['machine'], output.summary_table)
     self.assertIn('a_float', output.summary_table)
     self.assertIn(str(success_keyvals['a_float']), output.summary_table)
     self.assertIn('a_float', output.full_table)
@@ -334,11 +319,8 @@ class JSONResultsReportTest(unittest.TestCase):
 
   def testFailedJSONReportOutputWithoutExperiment(self):
     labels = ['label1']
-    # yapf:disable
     benchmark_names_and_iterations = [('bench1', 1), ('bench2', 2),
                                       ('bench3', 1), ('bench4', 0)]
-    # yapf:enable
-
     benchmark_keyvals = {
         'bench1': [[{
             'retval': 1,
@@ -431,7 +413,7 @@ class PerfReportParserTest(unittest.TestCase):
     }
     report_cycles = report['cycles']
     self.assertEqual(len(report_cycles), 214)
-    for k, v in known_cycles_percentages.items():
+    for k, v in known_cycles_percentages.iteritems():
       self.assertIn(k, report_cycles)
       self.assertEqual(v, report_cycles[k])
 
@@ -443,7 +425,7 @@ class PerfReportParserTest(unittest.TestCase):
     }
     report_instructions = report['instructions']
     self.assertEqual(len(report_instructions), 492)
-    for k, v in known_instrunctions_percentages.items():
+    for k, v in known_instrunctions_percentages.iteritems():
       self.assertIn(k, report_instructions)
       self.assertEqual(v, report_instructions[k])
 

@@ -81,7 +81,7 @@ def main(argv):
   iteration = arguments.iterations
 
   result = []
-  for i in range(iteration):
+  for i in xrange(iteration):
     result += collect_data(infile, bench, i)
 
   with get_outfile(outfile, bench) as fout:
