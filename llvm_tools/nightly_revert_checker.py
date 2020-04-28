@@ -57,7 +57,11 @@ def _parse_llvm_ebuild_for_shas(
   if not llvm_next_hash or not llvm_hash:
     raise ValueError('Failed to detect SHAs for llvm/llvm_next. Got: '
                      'llvm=%s; llvm_next=%s' % (llvm_hash, llvm_next_hash))
-  return [('llvm', llvm_hash), ('llvm-next', llvm_next_hash)]
+
+  results = [('llvm', llvm_hash)]
+  if llvm_next_hash != llvm_hash:
+    results.append(('llvm-next', llvm_next_hash))
+  return results
 
 
 def _find_interesting_shas(chromeos_base: str) -> t.List[t.Tuple[str]]:
