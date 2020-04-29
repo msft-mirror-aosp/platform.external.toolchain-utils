@@ -199,7 +199,7 @@ def CleanOldCLs(days_to_preserve='1', dry_run=False):
     return 0
 
   return ce.ChrootRunCommand(
-      chromeos_chroot, abandon_cls_cmd, print_to_console=False)
+      chromeos_root, abandon_cls_cmd, print_to_console=False)
 
 
 def Main(argv):
