@@ -27,6 +27,7 @@ class Test(unittest.TestCase):
       return 'pretty_' + sha
 
     email = nightly_revert_checker._generate_revert_email(
+        repository_name='${repo}',
         friendly_name='${name}',
         sha='${sha}',
         prettify_sha=prettify_sha,
@@ -36,7 +37,7 @@ class Test(unittest.TestCase):
         ])
 
     expected_email = nightly_revert_checker._Email(
-        subject='[revert-checker] new revert discovered across ${name}',
+        subject='[revert-checker/${repo}] new revert discovered across ${name}',
         body=[
             'It looks like there may be a new revert across ${name} (',
             'pretty_${sha}',
@@ -62,6 +63,7 @@ class Test(unittest.TestCase):
       return 'pretty_' + sha
 
     email = nightly_revert_checker._generate_revert_email(
+        repository_name='${repo}',
         friendly_name='${name}',
         sha='${sha}',
         prettify_sha=prettify_sha,
@@ -76,7 +78,8 @@ class Test(unittest.TestCase):
         ])
 
     expected_email = nightly_revert_checker._Email(
-        subject='[revert-checker] new reverts discovered across ${name}',
+        subject='[revert-checker/${repo}] new reverts discovered across '
+        '${name}',
         body=[
             'It looks like there may be new reverts across ${name} (',
             'pretty_${sha}',

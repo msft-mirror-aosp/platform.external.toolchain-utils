@@ -64,7 +64,7 @@ def _parse_llvm_ebuild_for_shas(
   return results
 
 
-def _find_interesting_shas(chromeos_base: str) -> t.List[t.Tuple[str]]:
+def _find_interesting_chromeos_shas(chromeos_base: str) -> t.List[t.Tuple[str]]:
   llvm_dir = os.path.join(chromeos_base,
                           'src/third_party/chromiumos-overlay/sys-devel/llvm')
   candidate_ebuilds = [
@@ -88,7 +88,7 @@ _Email = t.NamedTuple('_Email', [
 
 
 def _generate_revert_email(
-    friendly_name: str, sha: str,
+    repository_name: str, friendly_name: str, sha: str,
     prettify_sha: t.Callable[[str], tiny_render.Piece],
     new_reverts: t.List[revert_checker.Revert]) -> _Email:
   email_pieces = [
@@ -118,7 +118,8 @@ def _generate_revert_email(
       'PTAL and consider reverting them locally.',
   ]
   return _Email(
-      subject='[revert-checker] new %s discovered across %s' % (
+      subject='[revert-checker/%s] new %s discovered across %s' % (
+          repository_name,
           'revert' if len(new_reverts) == 1 else 'reverts',
           friendly_name,
       ),
@@ -126,12 +127,21 @@ def _generate_revert_email(
   )
 
 
-def _send_revert_email(email: _Email) -> None:
+_EmailRecipients = t.NamedTuple(
+    '_EmailRecipients',
+    [
+        ('well_known', t.List[str]),
+        ('direct', t.List[str]),
+    ],
+)
+
+
+def _send_revert_email(recipients: _EmailRecipients, email: _Email) -> None:
   email_sender.EmailSender().SendX20Email(
       subject=email.subject,
       identifier='revert-checker',
-      well_known_recipients=['mage'],
-      direct_recipients=['gbiv@google.com'],
+      well_known_recipients=recipients.well_known,
+      direct_recipients=['gbiv@google.com'] + recipients.direct,
       text_body=tiny_render.render_text_pieces(email.body),
       html_body=tiny_render.render_html_pieces(email.body),
   )
@@ -169,12 +179,18 @@ def main(argv: t.List[str]) -> None:
   parser.add_argument(
       '--llvm_dir', required=True, help='Up-to-date LLVM directory to use.')
   parser.add_argument(
-      '--chromeos_dir', required=True, help='Up-to-date CrOS directory to use.')
-  parser.add_argument(
       '--dry_run',
       action='store_true',
       help='Print email contents, rather than sending them.')
   parser.add_argument('--debug', action='store_true')
+
+  subparsers = parser.add_subparsers(dest='repository')
+  subparsers.required = True
+
+  chromeos_subparser = subparsers.add_parser('chromeos')
+  chromeos_subparser.add_argument(
+      '--chromeos_dir', required=True, help='Up-to-date CrOS directory to use.')
+
   opts = parser.parse_args(argv)
 
   logging.basicConfig(
@@ -182,14 +198,20 @@ def main(argv: t.List[str]) -> None:
       level=logging.DEBUG if opts.debug else logging.INFO,
   )
 
-  state_file = opts.state_file
   dry_run = opts.dry_run
   llvm_dir = opts.llvm_dir
+  repository = opts.repository
+  state_file = opts.state_file
+
+  if repository == 'chromeos':
+    interesting_shas = _find_interesting_chromeos_shas(opts.chromeos_dir)
+    recipients = _EmailRecipients(well_known=['mage'], direct=[])
+  else:
+    raise ValueError('Unknown repository %s' % opts.repository)
+
+  logging.info('Interesting SHAs were %r', interesting_shas)
 
   state = _read_state(state_file)
-
-  interesting_shas = _find_interesting_shas(opts.chromeos_dir)
-  logging.info('Interesting SHAs were %r', interesting_shas)
 
   def prettify_sha(sha: str) -> tiny_render.Piece:
     rev = get_llvm_hash.GetVersionFrom(llvm_dir, sha)
@@ -226,7 +248,8 @@ def main(argv: t.List[str]) -> None:
       continue
 
     revert_emails_to_send.append(
-        _generate_revert_email(friendly_name, sha, prettify_sha, new_reverts))
+        _generate_revert_email(repository, friendly_name, sha, prettify_sha,
+                               new_reverts))
 
   # We want to be as free of obvious side-effects as possible in case something
   # above breaks. Hence, send the email as late as possible.
@@ -236,7 +259,7 @@ def main(argv: t.List[str]) -> None:
                    tiny_render.render_text_pieces(email.body))
     else:
       logging.info('Sending email with subject %r...', email.subject)
-      _send_revert_email(email)
+      _send_revert_email(recipients, email)
       logging.info('Email sent.')
 
   _write_state(state_file, new_state)
