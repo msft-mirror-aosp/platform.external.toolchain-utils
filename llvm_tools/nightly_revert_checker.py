@@ -20,6 +20,7 @@ import json
 import logging
 import os
 import pprint
+import subprocess
 import sys
 import typing as t
 
@@ -30,9 +31,27 @@ import revert_checker
 
 State = t.Any
 
-# FIXME(gbiv): we probably want to have Android compat here, too. Should be
-# easy to nab their testing version automatically with:
-# git merge-base m/llvm-toolchain aosp/upstream-master
+
+def _find_interesting_android_shas(
+    android_llvm_toolchain_dir: str) -> t.List[t.Tuple[str]]:
+  llvm_project = os.path.join(android_llvm_toolchain_dir,
+                              'toolchain/llvm-project')
+
+  def get_llvm_merge_base(branch: str) -> str:
+    return subprocess.check_output(
+        ['git', 'merge-base', branch, 'aosp/upstream-master'],
+        cwd=llvm_project,
+        encoding='utf-8',
+    ).strip()
+
+  master_legacy = get_llvm_merge_base('aosp/master-legacy')
+  testing_upstream = get_llvm_merge_base('aosp/testing-upstream')
+  result = [('master-legacy', master_legacy)]
+
+  # If these are the same SHA, there's no point in tracking both.
+  if master_legacy != testing_upstream:
+    result.append(('testing-upstream', testing_upstream))
+  return result
 
 
 def _parse_llvm_ebuild_for_shas(
@@ -191,6 +210,12 @@ def main(argv: t.List[str]) -> None:
   chromeos_subparser.add_argument(
       '--chromeos_dir', required=True, help='Up-to-date CrOS directory to use.')
 
+  android_subparser = subparsers.add_parser('android')
+  android_subparser.add_argument(
+      '--android_llvm_toolchain_dir',
+      required=True,
+      help='Up-to-date android-llvm-toolchain directory to use.')
+
   opts = parser.parse_args(argv)
 
   logging.basicConfig(
@@ -206,6 +231,11 @@ def main(argv: t.List[str]) -> None:
   if repository == 'chromeos':
     interesting_shas = _find_interesting_chromeos_shas(opts.chromeos_dir)
     recipients = _EmailRecipients(well_known=['mage'], direct=[])
+  elif repository == 'android':
+    interesting_shas = _find_interesting_android_shas(
+        opts.android_llvm_toolchain_dir)
+    recipients = _EmailRecipients(
+        well_known=[], direct=['android-llvm-dev@google.com'])
   else:
     raise ValueError('Unknown repository %s' % opts.repository)
 
