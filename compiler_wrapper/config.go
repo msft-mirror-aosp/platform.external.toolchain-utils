@@ -120,7 +120,6 @@ var crosHardenedConfig = &config{
 	// Disable "-faddrsig" since it produces object files that strip doesn't understand, chromium:915742.
 	// Pass "-fcommon" till the packages are fixed to work with new clang default
 	// "-fno-common", crbug.com/1060413.
-	// Temporary/Backup solutions to roll compiler to r387436. FIXME(tcwang): Remove after crbug.com/1072209 is fixed.
 	clangFlags: []string{
 		"-Qunused-arguments",
 		"-grecord-gcc-switches",
@@ -134,7 +133,6 @@ var crosHardenedConfig = &config{
 		"-fuse-ld=lld",
 		"-Wno-final-dtor-non-final-class",
 		"-Werror=poison-system-directories",
-		"-Wno-max-tokens",
 	},
 	clangPostFlags: []string{
 		"-Wno-implicit-int-float-conversion",
