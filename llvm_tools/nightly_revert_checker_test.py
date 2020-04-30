@@ -26,11 +26,15 @@ class Test(unittest.TestCase):
     def prettify_sha(sha: str) -> tiny_render.Piece:
       return 'pretty_' + sha
 
+    def get_sha_description(sha: str) -> tiny_render.Piece:
+      return 'subject_' + sha
+
     email = nightly_revert_checker._generate_revert_email(
         repository_name='${repo}',
         friendly_name='${name}',
         sha='${sha}',
         prettify_sha=prettify_sha,
+        get_sha_description=get_sha_description,
         new_reverts=[
             revert_checker.Revert(
                 sha='${revert_sha}', reverted_sha='${reverted_sha}')
@@ -49,7 +53,8 @@ class Test(unittest.TestCase):
                 'pretty_${revert_sha}',
                 ' (appears to revert ',
                 'pretty_${reverted_sha}',
-                ')',
+                '): ',
+                'subject_${revert_sha}',
             ]]),
             tiny_render.line_break,
             'PTAL and consider reverting them locally.',
@@ -62,11 +67,15 @@ class Test(unittest.TestCase):
     def prettify_sha(sha: str) -> tiny_render.Piece:
       return 'pretty_' + sha
 
+    def get_sha_description(sha: str) -> tiny_render.Piece:
+      return 'subject_' + sha
+
     email = nightly_revert_checker._generate_revert_email(
         repository_name='${repo}',
         friendly_name='${name}',
         sha='${sha}',
         prettify_sha=prettify_sha,
+        get_sha_description=get_sha_description,
         new_reverts=[
             revert_checker.Revert(
                 sha='${revert_sha1}', reverted_sha='${reverted_sha1}'),
@@ -92,19 +101,22 @@ class Test(unittest.TestCase):
                     'pretty_${revert_sha0}',
                     ' (appears to revert ',
                     'pretty_${reverted_sha0}',
-                    ')',
+                    '): ',
+                    'subject_${revert_sha0}',
                 ],
                 [
                     'pretty_${revert_sha1}',
                     ' (appears to revert ',
                     'pretty_${reverted_sha1}',
-                    ')',
+                    '): ',
+                    'subject_${revert_sha1}',
                 ],
                 [
                     'pretty_${revert_sha2}',
                     ' (appears to revert ',
                     'pretty_${reverted_sha2}',
-                    ')',
+                    '): ',
+                    'subject_${revert_sha2}',
                 ],
             ]),
             tiny_render.line_break,

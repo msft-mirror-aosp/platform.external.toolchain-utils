@@ -109,6 +109,7 @@ _Email = t.NamedTuple('_Email', [
 def _generate_revert_email(
     repository_name: str, friendly_name: str, sha: str,
     prettify_sha: t.Callable[[str], tiny_render.Piece],
+    get_sha_description: t.Callable[[str], tiny_render.Piece],
     new_reverts: t.List[revert_checker.Revert]) -> _Email:
   email_pieces = [
       'It looks like there may be %s across %s (' % (
@@ -128,7 +129,8 @@ def _generate_revert_email(
         prettify_sha(revert.sha),
         ' (appears to revert ',
         prettify_sha(revert.reverted_sha),
-        ')',
+        '): ',
+        get_sha_description(revert.sha),
     ])
 
   email_pieces.append(tiny_render.UnorderedList(items=revert_listing))
@@ -254,6 +256,13 @@ def main(argv: t.List[str]) -> None:
             href='https://reviews.llvm.org/rG' + sha, inner='r' + str(rev)),
     )
 
+  def get_sha_description(sha: str) -> tiny_render.Piece:
+    return subprocess.check_output(
+        ['git', 'log', '-n1', '--format=%s', sha],
+        cwd=llvm_dir,
+        encoding='utf-8',
+    ).strip()
+
   new_state: State = {}
   revert_emails_to_send: t.List[t.Tuple[str, t.List[revert_checker
                                                     .Revert]]] = []
@@ -279,7 +288,7 @@ def main(argv: t.List[str]) -> None:
 
     revert_emails_to_send.append(
         _generate_revert_email(repository, friendly_name, sha, prettify_sha,
-                               new_reverts))
+                               get_sha_description, new_reverts))
 
   # We want to be as free of obvious side-effects as possible in case something
   # above breaks. Hence, send the email as late as possible.
