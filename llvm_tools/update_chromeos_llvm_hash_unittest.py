@@ -12,6 +12,7 @@ from collections import namedtuple
 from datetime import datetime
 import os
 import re
+import subprocess
 import unittest
 import unittest.mock as mock
 
@@ -102,14 +103,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     self.assertEqual(mock_isfile.call_count, 2)
 
-  # Simulate 'os.path.isfile' behavior on a valid ebuild path.
   @mock.patch.object(os.path, 'isfile', return_value=True)
-  # Simulate 'ExecCommandAndCaptureOutput()' when successfully staged the
-  # ebuild file for commit.
-  @mock.patch.object(
-      update_chromeos_llvm_hash,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
   def testSuccessfullyStageTheEbuildForCommitForLLVMHashUpdate(
       self, mock_stage_commit_command, mock_isfile):
 
@@ -145,14 +140,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     mock_stage_commit_command.assert_called_once()
 
-  # Simulate 'os.path.isfile' behavior on a valid ebuild path.
   @mock.patch.object(os.path, 'isfile', return_value=True)
-  # Simulate 'ExecCommandAndCaptureOutput()' when successfully staged the
-  # ebuild file for commit.
-  @mock.patch.object(
-      update_chromeos_llvm_hash,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
   def testSuccessfullyStageTheEbuildForCommitForLLVMNextHashUpdate(
       self, mock_stage_commit_command, mock_isfile):
 
@@ -251,10 +240,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
   @mock.patch.object(os.path, 'islink', return_value=True)
   @mock.patch.object(os.path, 'realpath')
-  @mock.patch.object(
-      update_chromeos_llvm_hash,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
   def testSuccessfullyUprevEbuildToVersionLLVM(self, mock_command_output,
                                                mock_realpath, mock_islink):
     symlink = '/path/to/llvm/llvm_pre3_p2-r10.ebuild'
@@ -282,26 +268,23 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     expected_cmd = ['git', '-C', symlink_dir, 'mv', ebuild, new_ebuild]
     self.assertEqual(mock_command_output.call_args_list[0],
-                     mock.call(expected_cmd, verbose=False))
+                     mock.call(expected_cmd))
 
     expected_cmd = ['ln', '-s', '-r', new_ebuild, new_symlink]
     self.assertEqual(mock_command_output.call_args_list[1],
-                     mock.call(expected_cmd, verbose=False))
+                     mock.call(expected_cmd))
 
     expected_cmd = ['git', '-C', symlink_dir, 'add', new_symlink]
     self.assertEqual(mock_command_output.call_args_list[2],
-                     mock.call(expected_cmd, verbose=False))
+                     mock.call(expected_cmd))
 
     expected_cmd = ['git', '-C', symlink_dir, 'rm', symlink]
     self.assertEqual(mock_command_output.call_args_list[3],
-                     mock.call(expected_cmd, verbose=False))
+                     mock.call(expected_cmd))
 
   @mock.patch.object(os.path, 'islink', return_value=True)
   @mock.patch.object(os.path, 'realpath')
-  @mock.patch.object(
-      update_chromeos_llvm_hash,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
   def testSuccessfullyUprevEbuildToVersionNonLLVM(self, mock_command_output,
                                                   mock_realpath, mock_islink):
     symlink = '/path/to/compiler-rt/compiler-rt_pre3_p2-r10.ebuild'
@@ -325,28 +308,22 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     expected_cmd = ['git', '-C', symlink_dir, 'mv', ebuild, new_ebuild]
     self.assertEqual(mock_command_output.call_args_list[0],
-                     mock.call(expected_cmd, verbose=False))
+                     mock.call(expected_cmd))
 
     expected_cmd = ['ln', '-s', '-r', new_ebuild, new_symlink]
     self.assertEqual(mock_command_output.call_args_list[1],
-                     mock.call(expected_cmd, verbose=False))
+                     mock.call(expected_cmd))
 
     expected_cmd = ['git', '-C', symlink_dir, 'add', new_symlink]
     self.assertEqual(mock_command_output.call_args_list[2],
-                     mock.call(expected_cmd, verbose=False))
+                     mock.call(expected_cmd))
 
     expected_cmd = ['git', '-C', symlink_dir, 'rm', symlink]
     self.assertEqual(mock_command_output.call_args_list[3],
-                     mock.call(expected_cmd, verbose=False))
+                     mock.call(expected_cmd))
 
-  # Simulate 'os.path.islink' when a valid symbolic link is passed in.
   @mock.patch.object(os.path, 'islink', return_value=True)
-  # Simulate 'RunCommandWOutput' when successfully added the upreved symlink
-  # for commit.
-  @mock.patch.object(
-      update_chromeos_llvm_hash,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
   def testSuccessfullyUprevEbuildSymlink(self, mock_command_output,
                                          mock_islink):
     symlink_to_uprev = '/symlink/to/package-r1.ebuild'
@@ -452,12 +429,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     mock_ebuild_paths_from_symlink_paths.assert_called_once_with(
         [package_symlink_path])
 
-  # Simulate behavior of 'ExecCommandAndCaptureOutput()' when successfully
-  # removed patches.
-  @mock.patch.object(
-      update_chromeos_llvm_hash,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
   def testSuccessfullyRemovedPatchesFromFilesDir(self, mock_run_cmd):
     patches_to_remove_list = [
         '/abs/path/to/filesdir/cherry/fix_output.patch',
@@ -468,8 +440,6 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     self.assertEqual(mock_run_cmd.call_count, 2)
 
-  # Simulate behavior of 'os.path.isfile()' when the absolute path to the patch
-  # metadata file does not exist.
   @mock.patch.object(os.path, 'isfile', return_value=False)
   def testInvalidPatchMetadataFileStagedForCommit(self, mock_isfile):
     patch_metadata_path = '/abs/path/to/filesdir/PATCHES'
@@ -486,15 +456,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     mock_isfile.assert_called_once()
 
-  # Simulate the behavior of 'os.path.isfile()' when the absolute path to the
-  # patch metadata file exists.
   @mock.patch.object(os.path, 'isfile', return_value=True)
-  # Simulate the behavior of 'ExecCommandAndCaptureOutput()' when successfully
-  # staged the patch metadata file for commit.
-  @mock.patch.object(
-      update_chromeos_llvm_hash,
-      'ExecCommandAndCaptureOutput',
-      return_value=None)
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
   def testSuccessfullyStagedPatchMetadataFileForCommit(self, mock_run_cmd,
                                                        _mock_isfile):
 

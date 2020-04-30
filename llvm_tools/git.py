@@ -46,10 +46,9 @@ def CreateBranch(repo, branch):
   if not os.path.isdir(repo):
     raise ValueError('Invalid directory path provided: %s' % repo)
 
-  subprocess.check_output(['git', '-C', repo, 'reset', 'HEAD', '--hard'],
-                          encoding='utf-8')
+  subprocess.check_output(['git', '-C', repo, 'reset', 'HEAD', '--hard'])
 
-  subprocess.check_output(['repo', 'start', branch], cwd=repo, encoding='utf-8')
+  subprocess.check_output(['repo', 'start', branch], cwd=repo)
 
 
 def DeleteBranch(repo, branch):
@@ -66,14 +65,11 @@ def DeleteBranch(repo, branch):
   if not os.path.isdir(repo):
     raise ValueError('Invalid directory path provided: %s' % repo)
 
-  subprocess.check_output(['git', '-C', repo, 'checkout', 'cros/master'],
-                          encoding='utf-8')
+  subprocess.check_output(['git', '-C', repo, 'checkout', 'cros/master'])
 
-  subprocess.check_output(['git', '-C', repo, 'reset', 'HEAD', '--hard'],
-                          encoding='utf-8')
+  subprocess.check_output(['git', '-C', repo, 'reset', 'HEAD', '--hard'])
 
-  subprocess.check_output(['git', '-C', repo, 'branch', '-D', branch],
-                          encoding='utf-8')
+  subprocess.check_output(['git', '-C', repo, 'branch', '-D', branch])
 
 
 def UploadChanges(repo, branch, commit_messages):
@@ -102,28 +98,17 @@ def UploadChanges(repo, branch, commit_messages):
     f.write('\n'.join(commit_messages))
     f.flush()
 
-    subprocess.check_output(['git', 'commit', '-F', f.name],
-                            cwd=repo,
-                            encoding='utf-8')
+    subprocess.check_output(['git', 'commit', '-F', f.name], cwd=repo)
 
   # Upload the changes for review.
-  # Pylint currently doesn't lint things in py3 mode, and py2 didn't allow
-  # users to specify `encoding`s for Popen. Hence, pylint is "wrong" here.
-  # pylint: disable=unexpected-keyword-arg
-  # The CL URL is sent to 'stderr', so need to redirect 'stderr' to 'stdout'.
-  upload_changes_obj = subprocess.Popen(
+  out = subprocess.check_output(
       ['repo', 'upload', '--yes', '--ne', '--no-verify',
        '--br=%s' % branch],
-      cwd=repo,
-      stdout=subprocess.PIPE,
       stderr=subprocess.STDOUT,
+      cwd=repo,
       encoding='utf-8')
 
-  out, _ = upload_changes_obj.communicate()
-
-  if upload_changes_obj.returncode:  # Failed to upload changes.
-    print(out)
-    raise ValueError('Failed to upload changes for review')
+  print(out)
 
   found_url = re.search(
       r'https://chromium-review.googlesource.com/c/'

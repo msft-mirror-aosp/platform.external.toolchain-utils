@@ -331,7 +331,6 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
 
     self.assertIn('is not a valid llvm trybot', str(context.exception))
 
-  # Mock ExecCommandAndCaptureOutput for the gerrit command execution.
   @mock.patch.object(subprocess, 'check_output', return_value=None)
   def testStartCQDryRunNoDeps(self, mock_exec_cmd):
     chroot_path = '/abs/path/to/chroot'

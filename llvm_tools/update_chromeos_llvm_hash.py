@@ -19,9 +19,9 @@ from enum import Enum
 import argparse
 import os
 import re
+import subprocess
 
 from failure_modes import FailureModes
-from subprocess_helpers import ExecCommandAndCaptureOutput
 import chroot
 import get_llvm_hash
 import git
@@ -206,9 +206,7 @@ def UpdateEbuildLLVMHash(ebuild_path, llvm_variant, git_hash, svn_version):
   parent_dir = os.path.dirname(ebuild_path)
 
   # Stage the changes.
-  stage_changes_cmd = ['git', '-C', parent_dir, 'add', ebuild_path]
-
-  ExecCommandAndCaptureOutput(stage_changes_cmd, verbose=verbose)
+  subprocess.check_output(['git', '-C', parent_dir, 'add', ebuild_path])
 
 
 def ReplaceLLVMHash(ebuild_lines, llvm_variant, git_hash, svn_version):
@@ -262,12 +260,10 @@ def UprevEbuildSymlink(symlink):
   if not is_changed:
     raise ValueError('Failed to uprev the symlink.')
 
-  symlink_dirname = os.path.dirname(symlink)
-
   # rename the symlink
-  cmd = ['git', '-C', symlink_dirname, 'mv', symlink, new_symlink]
-
-  ExecCommandAndCaptureOutput(cmd, verbose=verbose)
+  subprocess.check_output(
+      ['git', '-C',
+       os.path.dirname(symlink), 'mv', symlink, new_symlink])
 
 
 def UprevEbuildToVersion(symlink, svn_version):
@@ -311,23 +307,19 @@ def UprevEbuildToVersion(symlink, svn_version):
   symlink_dir = os.path.dirname(symlink)
 
   # Rename the ebuild
-  cmd = ['git', '-C', symlink_dir, 'mv', ebuild, new_ebuild]
-  ExecCommandAndCaptureOutput(cmd, verbose=verbose)
+  subprocess.check_output(['git', '-C', symlink_dir, 'mv', ebuild, new_ebuild])
 
   # Create a symlink of the renamed ebuild
   new_symlink = new_ebuild[:-len('.ebuild')] + '-r1.ebuild'
-  cmd = ['ln', '-s', '-r', new_ebuild, new_symlink]
-  ExecCommandAndCaptureOutput(cmd, verbose=verbose)
+  subprocess.check_output(['ln', '-s', '-r', new_ebuild, new_symlink])
 
   if not os.path.islink(new_symlink):
     raise ValueError('Invalid symlink name: %s' % new_ebuild[:-len('.ebuild')])
 
-  cmd = ['git', '-C', symlink_dir, 'add', new_symlink]
-  ExecCommandAndCaptureOutput(cmd, verbose=verbose)
+  subprocess.check_output(['git', '-C', symlink_dir, 'add', new_symlink])
 
   # Remove the old symlink
-  cmd = ['git', '-C', symlink_dir, 'rm', symlink]
-  ExecCommandAndCaptureOutput(cmd, verbose=verbose)
+  subprocess.check_output(['git', '-C', symlink_dir, 'rm', symlink])
 
 
 def CreatePathDictionaryFromPackages(chroot_path, update_packages):
@@ -355,23 +347,19 @@ def CreatePathDictionaryFromPackages(chroot_path, update_packages):
   return GetEbuildPathsFromSymLinkPaths(symlink_file_paths)
 
 
-def RemovePatchesFromFilesDir(patches_to_remove):
+def RemovePatchesFromFilesDir(patches):
   """Removes the patches from $FILESDIR of a package.
 
   Args:
-    patches_to_remove: A list where each entry is the absolute path to a patch.
+    patches: A list of absolute pathes of patches to remove
 
   Raises:
     ValueError: Failed to remove a patch in $FILESDIR.
   """
 
-  for cur_patch in patches_to_remove:
-    remove_patch_cmd = [
-        'git', '-C',
-        os.path.dirname(cur_patch), 'rm', '-f', cur_patch
-    ]
-
-    ExecCommandAndCaptureOutput(remove_patch_cmd, verbose=verbose)
+  for patch in patches:
+    subprocess.check_output(
+        ['git', '-C', os.path.dirname(patch), 'rm', '-f', patch])
 
 
 def StagePatchMetadataFileForCommit(patch_metadata_file_path):
@@ -390,12 +378,10 @@ def StagePatchMetadataFileForCommit(patch_metadata_file_path):
         'Invalid patch metadata file provided: %s' % patch_metadata_file_path)
 
   # Cmd to stage the patch metadata file for commit.
-  stage_patch_file = [
+  subprocess.check_output([
       'git', '-C',
       os.path.dirname(patch_metadata_file_path), 'add', patch_metadata_file_path
-  ]
-
-  ExecCommandAndCaptureOutput(stage_patch_file, verbose=verbose)
+  ])
 
 
 def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
