@@ -266,8 +266,12 @@ class ToolchainComparator(object):
     """
     if self._recipe:
       print('Using recipe buckets to get latest image.')
+      # crbug.com/1077313: Some boards are not consistently
+      # spelled, having underscores in some places and dashes in others.
+      # The image directories consistenly use dashes, so convert underscores
+      # to dashes to work around this.
       trybot_image = buildbot_utils.GetLatestRecipeImage(
-          self._chromeos_root, '%s-llvm-next-nightly' % self._board)
+          self._chromeos_root, '%s-llvm-next-nightly' % self._board.replace('_', '-'))
     else:
       # Launch tryjob and wait to get image location.
       buildbucket_id, trybot_image = buildbot_utils.GetTrybotImage(
