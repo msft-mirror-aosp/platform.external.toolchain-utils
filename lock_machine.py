@@ -53,7 +53,7 @@ class LockManager(object):
   machines, using appropriate locking mechanisms for each.
   """
 
-  SKYLAB_PATH = '/usr/local/bin/skylab'
+  SKYLAB_PATH = 'skylab'
 
   # TODO(zhizhouy): lease time may needs to be dynamically adjusted. For now we
   # set it long enough to cover the period to finish nightly rotation tests.
