@@ -57,7 +57,7 @@ class LockManager(object):
 
   # TODO(zhizhouy): lease time may needs to be dynamically adjusted. For now we
   # set it long enough to cover the period to finish nightly rotation tests.
-  LEASE_MINS = 1440
+  LEASE_MINS = 1439
 
   SKYLAB_CREDENTIAL = ('/usr/local/google/home/mobiletc-prebuild'
                        '/sheriff_utils/credentials/skylab'
