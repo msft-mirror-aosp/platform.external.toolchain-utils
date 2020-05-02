@@ -386,7 +386,11 @@ class LockManager(object):
            (swarming,
             credential,
             machine.rstrip('.cros')))
-    ret_tup = self.ce.RunCommandWOutput(cmd)
+    exit_code, stdout, stderr = self.ce.RunCommandWOutput(cmd)
+    if exit_code:
+      raise ValueError(
+          'Querying bots failed (2); stdout: %r; stderr: %r' % (stdout, stderr))
+
     # The command will return a json output as stdout. If machine not in skylab
     # stdout will look like this:
     #  {
@@ -395,10 +399,7 @@ class LockManager(object):
     #  }
     # Otherwise there will be a tuple starting with 'items', we simply detect
     # this keyword for result.
-    if 'items' not in ret_tup[1]:
-      return False
-    else:
-      return True
+    return 'items' in stdout
 
   def LeaseSkylabMachine(self, machine):
     """Run command to lease dut from skylab.
