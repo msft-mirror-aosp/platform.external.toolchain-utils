@@ -122,6 +122,11 @@ class ToolchainComparator(object):
     Returns:
       Latest official image name, e.g. 'daisy-release/R57-9089.0.0'.
     """
+    # For board names with underscores, we need to fix the trybot image name
+    # to replace the hyphen (for the recipe builder) with the underscore.
+    # Currently the only such board we use is 'veyron_minnie'.
+    if trybot_image.find('veyron-minnie') != -1:
+      trybot_image = trybot_image.replace('veyron-minnie', 'veyron_minnie')
     # We need to filter out -tryjob in the trybot_image.
     if self._recipe:
       trybot = re.sub('-llvm-next-nightly', '-release', trybot_image)
@@ -271,7 +276,8 @@ class ToolchainComparator(object):
       # The image directories consistenly use dashes, so convert underscores
       # to dashes to work around this.
       trybot_image = buildbot_utils.GetLatestRecipeImage(
-          self._chromeos_root, '%s-llvm-next-nightly' % self._board.replace('_', '-'))
+          self._chromeos_root,
+          '%s-llvm-next-nightly' % self._board.replace('_', '-'))
     else:
       # Launch tryjob and wait to get image location.
       buildbucket_id, trybot_image = buildbot_utils.GetTrybotImage(
