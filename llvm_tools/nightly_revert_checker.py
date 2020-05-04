@@ -244,6 +244,7 @@ def main(argv: t.List[str]) -> None:
   logging.info('Interesting SHAs were %r', interesting_shas)
 
   state = _read_state(state_file)
+  logging.info('Loaded state\n%s', pprint.pformat(state))
 
   def prettify_sha(sha: str) -> tiny_render.Piece:
     rev = get_llvm_hash.GetVersionFrom(llvm_dir, sha)
