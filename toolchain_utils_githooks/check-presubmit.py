@@ -23,6 +23,7 @@ import subprocess
 import sys
 import threading
 import traceback
+import typing as t
 
 
 def run_command_unchecked(command, cwd, env=None):
@@ -459,19 +460,78 @@ def try_autofix(all_autofix_commands, toolchain_utils_root):
           'some lints may now be fixed')
 
 
+def find_repo_root(base_dir: str) -> t.Optional[str]:
+  current = base_dir
+  while current != '/':
+    if os.path.isdir(os.path.join(current, '.repo')):
+      return current
+    current = os.path.dirname(current)
+  return None
+
+
+def maybe_reexec_inside_chroot(autofix: bool, files: t.List[str]) -> None:
+  if os.path.exists('/etc/cros_chroot_version'):
+    return
+
+  enter_chroot = True
+  toolchain_utils = detect_toolchain_utils_root()
+  if find_repo_root(toolchain_utils) is None:
+    print('Standalone toolchain-utils checkout detected; cannot enter chroot.')
+    enter_chroot = False
+
+  if not has_executable_on_path('cros_sdk'):
+    print('No `cros_sdk` detected on $PATH; cannot enter chroot.')
+    enter_chroot = False
+
+  if not enter_chroot:
+    print('Giving up on entering the chroot; be warned that some presubmits '
+          'may be broken.')
+    return
+
+  # We'll be changing ${PWD}, so make everything relative to toolchain-utils,
+  # which resides at a well-known place inside of the chroot.
+  chroot_toolchain_utils = '/mnt/host/source/src/third_party/toolchain-utils'
+
+  def rebase_path(path: str) -> str:
+    return os.path.join(chroot_toolchain_utils,
+                        os.path.relpath(path, toolchain_utils))
+
+  args = [
+      'cros_sdk',
+      '--enter',
+      '--',
+      rebase_path(__file__),
+  ]
+
+  if not autofix:
+    args.append('--no_autofix')
+  args.extend(rebase_path(x) for x in files)
+
+  print('Attempting to enter the chroot...')
+  os.execvp(args[0], args)
+
+
 def main(argv):
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument(
       '--no_autofix',
       dest='autofix',
       action='store_false',
-      help="Don't run any autofix commands")
+      help="Don't run any autofix commands.")
+  parser.add_argument(
+      '--no_enter_chroot',
+      dest='enter_chroot',
+      action='store_false',
+      help="Prevent auto-entering the chroot if we're not already in it.")
   parser.add_argument('files', nargs='*')
   opts = parser.parse_args(argv)
 
   files = opts.files
   if not files:
     return 0
+
+  if opts.enter_chroot:
+    maybe_reexec_inside_chroot(opts.autofix, opts.files)
 
   files = [os.path.abspath(f) for f in files]
 
