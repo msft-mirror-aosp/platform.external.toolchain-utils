@@ -135,7 +135,7 @@ def GetCLAfterUpdatingPackages(packages, git_hash, svn_version, chroot_path,
 
 
 def CreateNewTryjobEntryForBisection(cl, extra_cls, options, builder,
-                                     chroot_path, verbose, cl_url, revision):
+                                     chroot_path, cl_url, revision):
   """Submits a tryjob and adds additional information."""
 
   # Get the tryjob results after submitting the tryjob.
@@ -150,7 +150,7 @@ def CreateNewTryjobEntryForBisection(cl, extra_cls, options, builder,
   #   }
   # ]
   tryjob_results = update_packages_and_run_tests.RunTryJobs(
-      cl, extra_cls, options, [builder], chroot_path, verbose)
+      cl, extra_cls, options, [builder], chroot_path)
   print('\nTryjob:')
   print(tryjob_results[0])
 
@@ -173,9 +173,10 @@ def AddTryjob(packages, git_hash, revision, chroot_path, patch_metadata_file,
                                            chroot_path, patch_metadata_file,
                                            svn_option)
 
-  tryjob_dict = CreateNewTryjobEntryForBisection(
-      change_list.cl_number, extra_cls, options, builder, chroot_path, verbose,
-      change_list.url, revision)
+  tryjob_dict = CreateNewTryjobEntryForBisection(change_list.cl_number,
+                                                 extra_cls, options, builder,
+                                                 chroot_path, change_list.url,
+                                                 revision)
 
   return tryjob_dict
 
@@ -219,8 +220,8 @@ def PerformTryjobModification(revision, modify_tryjob, status_file, extra_cls,
 
   # 'FindTryjobIndex()' returns None if the tryjob was not found.
   if tryjob_index is None and modify_tryjob != ModifyTryjob.ADD:
-    raise ValueError(
-        'Unable to find tryjob for %d in %s' % (revision, status_file))
+    raise ValueError('Unable to find tryjob for %d in %s' %
+                     (revision, status_file))
 
   # Determine the action to take based off of 'modify_tryjob'.
   if modify_tryjob == ModifyTryjob.REMOVE:
@@ -272,8 +273,8 @@ def PerformTryjobModification(revision, modify_tryjob, status_file, extra_cls,
     else:
       raise ValueError('Failed to add tryjob to %s' % status_file)
   else:
-    raise ValueError(
-        'Invalid "modify_tryjob" option provided: %s' % modify_tryjob)
+    raise ValueError('Invalid "modify_tryjob" option provided: %s' %
+                     modify_tryjob)
 
   with open(status_file, 'w') as update_tryjobs:
     json.dump(bisect_contents, update_tryjobs, indent=4, separators=(',', ': '))
@@ -286,11 +287,12 @@ def main():
 
   args_output = GetCommandLineArgs()
 
-  PerformTryjobModification(
-      args_output.revision, ModifyTryjob(
-          args_output.modify_tryjob), args_output.status_file,
-      args_output.extra_change_lists, args_output.options, args_output.builder,
-      args_output.chroot_path, args_output.verbose)
+  PerformTryjobModification(args_output.revision,
+                            ModifyTryjob(args_output.modify_tryjob),
+                            args_output.status_file,
+                            args_output.extra_change_lists, args_output.options,
+                            args_output.builder, args_output.chroot_path,
+                            args_output.verbose)
 
 
 if __name__ == '__main__':
