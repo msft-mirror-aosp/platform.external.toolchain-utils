@@ -469,8 +469,12 @@ def find_repo_root(base_dir: str) -> t.Optional[str]:
   return None
 
 
+def is_in_chroot() -> bool:
+  return os.path.exists('/etc/cros_chroot_version')
+
+
 def maybe_reexec_inside_chroot(autofix: bool, files: t.List[str]) -> None:
-  if os.path.exists('/etc/cros_chroot_version'):
+  if is_in_chroot():
     return
 
   enter_chroot = True
@@ -511,6 +515,25 @@ def maybe_reexec_inside_chroot(autofix: bool, files: t.List[str]) -> None:
   os.execvp(args[0], args)
 
 
+# FIXME(crbug.com/980719): we probably want a better way of handling this. For
+# now, as a workaround, ensure we have all dependencies installed as a part of
+# presubmits. pip and scipy are fast enough to install (they take <1min
+# combined on my machine), so hoooopefully users won't get too impatient.
+def ensure_scipy_installed() -> None:
+  if not has_executable_on_path('pip'):
+    print('Autoinstalling `pip`...')
+    subprocess.check_call(['sudo', 'emerge', 'dev-python/pip'])
+
+  exit_code = subprocess.call(
+      ['python3', '-c', 'import scipy'],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL,
+  )
+  if exit_code != 0:
+    print('Autoinstalling `scipy`...')
+    subprocess.check_call(['pip', 'install', '--user', 'scipy'])
+
+
 def main(argv):
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument(
@@ -532,6 +555,11 @@ def main(argv):
 
   if opts.enter_chroot:
     maybe_reexec_inside_chroot(opts.autofix, opts.files)
+
+  # If you ask for --no_enter_chroot, you're on your own for installing these
+  # things.
+  if is_in_chroot():
+    ensure_scipy_installed()
 
   files = [os.path.abspath(f) for f in files]
 
