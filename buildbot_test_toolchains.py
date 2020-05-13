@@ -160,10 +160,6 @@ class ToolchainComparator(object):
     board: %s
     remote: %s
     retries: 1
-    cooldown_temp: 40
-    cooldown_time: 10
-    cpu_freq_pct: 95
-    top_interval: 1
     """ % (self._board, self._remotes)
     experiment_tests = """
     benchmark: all_toolchain_perf {
@@ -231,8 +227,8 @@ class ToolchainComparator(object):
     crosperf = os.path.join(TOOLCHAIN_DIR, 'crosperf', 'crosperf')
     noschedv2_opts = '--noschedv2' if self._noschedv2 else ''
     command = ('{crosperf} --no_email={no_email} --results_dir={r_dir} '
-               '--intel_pstate=no_hwp --logging_level=verbose '
-               '--json_report=True {noschedv2_opts} {exp_file}').format(
+               '--logging_level=verbose --json_report=True {noschedv2_opts} '
+               '{exp_file}').format(
                    crosperf=crosperf,
                    no_email=not self._test,
                    r_dir=self._reports_dir,

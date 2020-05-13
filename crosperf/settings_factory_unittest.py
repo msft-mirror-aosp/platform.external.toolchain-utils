@@ -77,14 +77,14 @@ class GlobalSettingsTest(unittest.TestCase):
     self.assertEqual(res.GetField('cwp_dso'), '')
     self.assertEqual(res.GetField('enable_aslr'), False)
     self.assertEqual(res.GetField('ignore_min_max'), False)
-    self.assertEqual(res.GetField('intel_pstate'), '')
+    self.assertEqual(res.GetField('intel_pstate'), 'no_hwp')
     self.assertEqual(res.GetField('turbostat'), True)
-    self.assertEqual(res.GetField('top_interval'), 0)
-    self.assertEqual(res.GetField('cooldown_time'), 0)
+    self.assertEqual(res.GetField('top_interval'), 1)
+    self.assertEqual(res.GetField('cooldown_time'), 10)
     self.assertEqual(res.GetField('cooldown_temp'), 40)
     self.assertEqual(res.GetField('governor'), 'performance')
     self.assertEqual(res.GetField('cpu_usage'), 'all')
-    self.assertEqual(res.GetField('cpu_freq_pct'), 100)
+    self.assertEqual(res.GetField('cpu_freq_pct'), 95)
 
 
 class SettingsFactoryTest(unittest.TestCase):
