@@ -499,18 +499,20 @@ your `$PATH`, you can also use it as `git llvm-rev`.
 
 #### Usage
 
-This script updates sys-devel/llvm with an LLVM cherrypick of your choosing, and
-copies the cherrypick into sys-devel/llvm/files/cherry.
+This script updates the proper ChromeOS packages with an LLVM cherrypick of your choosing, and
+copies the cherrypick into patch folders of the packages.
 
 Usage:
 
 ```
-./cherrypick_cl.py --sha 174c3eb69f19ff2d6a3eeae31d04afe77e62c021
+./cherrypick_cl.py --chroot_path /abs/path/to/chroot --start_sha llvm
+--sha 174c3eb69f19ff2d6a3eeae31d04afe77e62c021 --sha 174c3eb69f19ff2d6a3eeae31d04afe77e62c021
 ```
 
-It tries to autodetect a lot of things (e.g., sys-devel/llvm's path, the
-"start"/"end" revisions to set, etc.) For more information, please see the
-`--help`
+It tries to autodetect a lot of things (e.g., packages changed by each sha,
+their ebuild paths, the "start"/"end" revisions to set, etc.) By default the
+script creates a local patch. Use --create_cl option to create a CL instead. For
+more information, please see the `--help`
 
 ### `revert_checker.py`
 
