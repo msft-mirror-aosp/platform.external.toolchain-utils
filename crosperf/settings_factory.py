@@ -291,6 +291,12 @@ class GlobalSettings(Settings):
     self.AddField(
         TextField('results_dir', default='', description='The results dir.'))
     self.AddField(
+        BooleanField(
+            'compress_results',
+            default=True,
+            description='Whether to compress all test results other than '
+            'reports into a tarball to save disk space.'))
+    self.AddField(
         TextField(
             'locks_dir',
             default='',

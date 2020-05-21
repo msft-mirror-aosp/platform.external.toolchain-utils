@@ -30,6 +30,7 @@ SCRATCH_DIR = os.path.expanduser('~/cros_scratch')
 RESULTS_FILE = 'results.txt'
 MACHINE_FILE = 'machine.txt'
 AUTOTEST_TARBALL = 'autotest.tbz2'
+RESULTS_TARBALL = 'results.tbz2'
 PERF_RESULTS_FILE = 'perf-results.txt'
 CACHE_KEYS_FILE = 'cache_keys.txt'
 
@@ -114,6 +115,14 @@ class Result(object):
     self.CopyFilesTo(dest_dir, self.perf_report_files)
     if self.results_file or self.perf_data_files or self.perf_report_files:
       self._logger.LogOutput('Results files stored in %s.' % dest_dir)
+
+  def CompressResultsTo(self, dest_dir):
+    tarball = os.path.join(self.results_dir, RESULTS_TARBALL)
+    results_dir = self.FindFilesInResultsDir('-name results').split('\n')[0]
+    self.CreateTarball(results_dir, tarball)
+    self.CopyFilesTo(dest_dir, [tarball])
+    if results_dir:
+      self._logger.LogOutput('Results files compressed into %s.' % dest_dir)
 
   def GetNewKeyvals(self, keyvals_dict):
     # Initialize 'units' dictionary.
@@ -906,6 +915,15 @@ class Result(object):
       command = 'rm -rf %s' % self.temp_dir
       self.ce.RunCommand(command)
 
+  def CreateTarball(self, results_dir, tarball):
+    ret = self.ce.RunCommand('cd %s && '
+                             'tar '
+                             '--exclude=var/spool '
+                             '--exclude=var/log '
+                             '-cjf %s .' % (results_dir, tarball))
+    if ret:
+      raise RuntimeError("Couldn't compress test output directory.")
+
   def StoreToCacheDir(self, cache_dir, machine_manager, key_list):
     # Create the dir if it doesn't exist.
     temp_dir = tempfile.mkdtemp()
@@ -927,14 +945,8 @@ class Result(object):
 
     if self.results_dir:
       tarball = os.path.join(temp_dir, AUTOTEST_TARBALL)
-      command = ('cd %s && '
-                 'tar '
-                 '--exclude=var/spool '
-                 '--exclude=var/log '
-                 '-cjf %s .' % (self.results_dir, tarball))
-      ret = self.ce.RunCommand(command)
-      if ret:
-        raise RuntimeError("Couldn't store autotest output directory.")
+      self.CreateTarball(self.results_dir, tarball)
+
     # Store machine info.
     # TODO(asharif): Make machine_manager a singleton, and don't pass it into
     # this function.

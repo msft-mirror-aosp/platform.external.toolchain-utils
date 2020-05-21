@@ -273,21 +273,41 @@ class ExperimentRunner(object):
 
     has_failure = False
     all_failed = True
-    self.l.LogOutput('Storing results of each benchmark run.')
-    for benchmark_run in experiment.benchmark_runs:
-      if benchmark_run.result:
-        if benchmark_run.result.retval:
-          has_failure = True
-        else:
-          all_failed = False
-        benchmark_run_name = ''.join(
-            ch for ch in benchmark_run.name if ch.isalnum())
-        benchmark_run_path = os.path.join(results_directory, benchmark_run_name)
-        benchmark_run.result.CopyResultsTo(benchmark_run_path)
-        benchmark_run.result.CleanUp(benchmark_run.benchmark.rm_chroot_tmp)
+
+    topstats_file = os.path.join(results_directory, 'topstats.log')
+    self.l.LogOutput('Storing top5 statistics of each benchmark run into %s.' %
+                     topstats_file)
+    with open(topstats_file, 'w') as top_fd:
+      for benchmark_run in experiment.benchmark_runs:
+        if benchmark_run.result:
+          # FIXME: Pylint has a bug suggesting the following change, which
+          # should be fixed in pylint 2.0. Resolve this after pylint >= 2.0.
+          # Bug: https://github.com/PyCQA/pylint/issues/1984
+          # pylint: disable=simplifiable-if-statement
+          if benchmark_run.result.retval:
+            has_failure = True
+          else:
+            all_failed = False
+          # Header with benchmark run name.
+          top_fd.write('%s\n' % str(benchmark_run))
+          # Formatted string with top statistics.
+          top_fd.write(benchmark_run.result.FormatStringTop5())
+          top_fd.write('\n\n')
 
     if all_failed:
       return self.ALL_FAILED
+
+    self.l.LogOutput('Storing results of each benchmark run.')
+    for benchmark_run in experiment.benchmark_runs:
+      if benchmark_run.result:
+        benchmark_run_name = ''.join(
+            ch for ch in benchmark_run.name if ch.isalnum())
+        benchmark_run_path = os.path.join(results_directory, benchmark_run_name)
+        if experiment.compress_results:
+          benchmark_run.result.CompressResultsTo(benchmark_run_path)
+        else:
+          benchmark_run.result.CopyResultsTo(benchmark_run_path)
+        benchmark_run.result.CleanUp(benchmark_run.benchmark.rm_chroot_tmp)
 
     self.l.LogOutput('Storing results report in %s.' % results_directory)
     results_table_path = os.path.join(results_directory, 'results.html')
@@ -306,18 +326,6 @@ class ExperimentRunner(object):
         '\nResults are stored in %s.\n' % experiment.results_directory)
     msg_body = "<pre style='font-size: 13px'>%s</pre>" % text_report
     FileUtils().WriteFile(msg_file_path, msg_body)
-
-    topstats_file = os.path.join(results_directory, 'topstats.log')
-    self.l.LogOutput('Storing top5 statistics of each benchmark run into %s.' %
-                     topstats_file)
-    with open(topstats_file, 'w') as top_fd:
-      for benchmark_run in experiment.benchmark_runs:
-        if benchmark_run.result:
-          # Header with benchmark run name.
-          top_fd.write('%s\n' % str(benchmark_run))
-          # Formatted string with top statistics.
-          top_fd.write(benchmark_run.result.FormatStringTop5())
-          top_fd.write('\n\n')
 
     return self.SUCCEEDED if not has_failure else self.HAS_FAILURE
 

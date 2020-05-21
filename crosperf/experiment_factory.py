@@ -145,6 +145,7 @@ class ExperimentFactory(object):
     config.AddConfig('no_email', global_settings.GetField('no_email'))
     share_cache = global_settings.GetField('share_cache')
     results_dir = global_settings.GetField('results_dir')
+    compress_results = global_settings.GetField('compress_results')
     # Warn user that option use_file_locks is deprecated.
     use_file_locks = global_settings.GetField('use_file_locks')
     if use_file_locks:
@@ -438,8 +439,8 @@ class ExperimentFactory(object):
                             chromeos_root, cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(), email,
                             acquire_timeout, log_dir, log_level, share_cache,
-                            results_dir, locks_dir, cwp_dso, ignore_min_max,
-                            skylab, dut_config)
+                            results_dir, compress_results, locks_dir, cwp_dso,
+                            ignore_min_max, skylab, dut_config)
 
     return experiment
 
