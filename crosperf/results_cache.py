@@ -128,6 +128,7 @@ class Result(object):
     if not results_dir:
       self._logger.LogOutput(
           'WARNING: No results dir matching %r found' % result_dir_name)
+      return
 
     self.CreateTarball(results_dir, tarball)
     self.CopyFilesTo(dest_dir, [tarball])
