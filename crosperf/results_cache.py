@@ -118,7 +118,12 @@ class Result(object):
 
   def CompressResultsTo(self, dest_dir):
     tarball = os.path.join(self.results_dir, RESULTS_TARBALL)
-    results_dir = self.FindFilesInResultsDir('-name results').split('\n')[0]
+    # Test_that runs hold all output under TEST_NAME_HASHTAG/results/,
+    # while tast runs hold output under TEST_NAME/.
+    # Both ensure to be unique.
+    result_dir_name = self.test_name if self.suite == 'tast' else 'results'
+    results_dir = self.FindFilesInResultsDir(
+        '-name %s' % result_dir_name).split('\n')[0]
     self.CreateTarball(results_dir, tarball)
     self.CopyFilesTo(dest_dir, [tarball])
     if results_dir:
