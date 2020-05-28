@@ -124,6 +124,11 @@ class Result(object):
     result_dir_name = self.test_name if self.suite == 'tast' else 'results'
     results_dir = self.FindFilesInResultsDir(
         '-name %s' % result_dir_name).split('\n')[0]
+
+    if not results_dir:
+      self._logger.LogOutput(
+          'WARNING: No results dir matching %r found' % result_dir_name)
+
     self.CreateTarball(results_dir, tarball)
     self.CopyFilesTo(dest_dir, [tarball])
     if results_dir:
@@ -921,6 +926,10 @@ class Result(object):
       self.ce.RunCommand(command)
 
   def CreateTarball(self, results_dir, tarball):
+    if not results_dir.strip():
+      raise ValueError(
+          'Refusing to `tar` an empty results_dir: %r' % results_dir)
+
     ret = self.ce.RunCommand('cd %s && '
                              'tar '
                              '--exclude=var/spool '
