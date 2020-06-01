@@ -449,3 +449,72 @@ func TestChromeOSGetNewWarningsDirOff(t *testing.T) {
 		}
 	})
 }
+
+func TestClangTidyNoDoubleBuild(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.cfg.isAndroidWrapper = true
+		ctx.cfg.useLlvmNext = true
+		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangTidyAndroid, "--", mainCc)))
+		if ctx.cmdCount != 1 {
+			t.Errorf("expected 1 call. Got: %d", ctx.cmdCount)
+		}
+	})
+}
+
+func withAndroidClangTidyTestContext(t *testing.T, work func(ctx *testContext)) {
+	withTestContext(t, func(ctx *testContext) {
+		ctx.cfg.isAndroidWrapper = true
+		ctx.cfg.useLlvmNext = true
+		ctx.env = []string{"OUT_DIR=/tmp"}
+
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			hasArg := func(s string) bool {
+				for _, e := range cmd.Args {
+					if strings.Contains(e, s) {
+						return true
+					}
+				}
+				return false
+			}
+			switch ctx.cmdCount {
+			case 1:
+				if hasArg("-Werror") {
+					fmt.Fprint(stdout, "clang-diagnostic-")
+					return newExitCodeError(1)
+				}
+				if hasArg("-warnings-as-errors") {
+					fmt.Fprint(stdout, "warnings-as-errors")
+					return newExitCodeError(1)
+				}
+				return nil
+			case 2:
+				if hasArg("warnings-as-errors") {
+					return fmt.Errorf("Unexpected arg warnings-as-errors found.  All args: %s", cmd.Args)
+				}
+				return nil
+			default:
+				t.Fatalf("unexpected command: %#v", cmd)
+				return nil
+			}
+		}
+		work(ctx)
+	})
+}
+
+func TestClangTidyDoubleBuildClangTidyError(t *testing.T) {
+	withAndroidClangTidyTestContext(t, func(ctx *testContext) {
+		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangTidyAndroid, "-warnings-as-errors=*", "--", mainCc)))
+		if ctx.cmdCount != 2 {
+			t.Errorf("expected 2 calls. Got: %d", ctx.cmdCount)
+		}
+	})
+}
+
+func TestClangTidyDoubleBuildClangError(t *testing.T) {
+	withAndroidClangTidyTestContext(t, func(ctx *testContext) {
+		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangTidyAndroid, "-Werrors=*", "--", mainCc)))
+		if ctx.cmdCount != 2 {
+			t.Errorf("expected 2 calls. Got: %d", ctx.cmdCount)
+		}
+	})
+}

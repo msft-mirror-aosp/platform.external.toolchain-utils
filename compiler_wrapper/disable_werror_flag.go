@@ -14,6 +14,8 @@ import (
 	"syscall"
 )
 
+const numWErrorEstimate = 30
+
 func getNewWarningsDir(env env, cfg *config) (dirName string, ok bool) {
 	if cfg.isAndroidWrapper {
 		if cfg.useLlvmNext {
@@ -32,13 +34,17 @@ func getNewWarningsDir(env env, cfg *config) (dirName string, ok bool) {
 }
 
 func disableWerrorFlags(originalArgs []string) []string {
-	noErrors := []string{"-Wno-error"}
+	extraArgs := []string{"-Wno-error"}
+	newArgs := make([]string, 0, len(originalArgs)+numWErrorEstimate)
 	for _, flag := range originalArgs {
 		if strings.HasPrefix(flag, "-Werror=") {
-			noErrors = append(noErrors, strings.Replace(flag, "-Werror", "-Wno-error", 1))
+			extraArgs = append(extraArgs, strings.Replace(flag, "-Werror", "-Wno-error", 1))
+		}
+		if !strings.Contains(flag, "-warnings-as-errors") {
+			newArgs = append(newArgs, flag)
 		}
 	}
-	return noErrors
+	return append(newArgs, extraArgs...)
 }
 
 func isLikelyAConfTest(cfg *config, cmd *command) bool {
@@ -75,9 +81,16 @@ func doubleBuildWithWNoError(env env, cfg *config, newWarningsDir string, origin
 	if err != nil {
 		return 0, err
 	}
+
 	// The only way we can do anything useful is if it looks like the failure
 	// was -Werror-related.
-	if originalExitCode == 0 || !bytes.Contains(originalStderrBuffer.Bytes(), []byte("-Werror")) || isLikelyAConfTest(cfg, originalCmd) {
+	originalStdoutBufferBytes := originalStdoutBuffer.Bytes()
+	shouldRetry := originalExitCode != 0 &&
+		!isLikelyAConfTest(cfg, originalCmd) &&
+		(bytes.Contains(originalStderrBuffer.Bytes(), []byte("-Werror")) ||
+			bytes.Contains(originalStdoutBufferBytes, []byte("warnings-as-errors")) ||
+			bytes.Contains(originalStdoutBufferBytes, []byte("clang-diagnostic-")))
+	if !shouldRetry {
 		originalStdoutBuffer.WriteTo(env.stdout())
 		originalStderrBuffer.WriteTo(env.stderr())
 		return originalExitCode, nil
@@ -87,7 +100,7 @@ func doubleBuildWithWNoError(env env, cfg *config, newWarningsDir string, origin
 	retryStderrBuffer := &bytes.Buffer{}
 	retryCommand := &command{
 		Path:       originalCmd.Path,
-		Args:       append(originalCmd.Args, disableWerrorFlags(originalCmd.Args)...),
+		Args:       disableWerrorFlags(originalCmd.Args),
 		EnvUpdates: originalCmd.EnvUpdates,
 	}
 	retryExitCode, err := wrapSubprocessErrorWithSourceLoc(retryCommand,
