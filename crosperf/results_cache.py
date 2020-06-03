@@ -76,22 +76,34 @@ class Result(object):
     """Get the list of top commands consuming CPU on the machine."""
     return self.top_cmds
 
-  def FormatStringTop5(self):
-    """Get formatted top5 string.
+  def FormatStringTopCommands(self):
+    """Get formatted string of top commands.
 
-    Get the formatted string with top5 commands consuming CPU on DUT machine.
+    Get the formatted string with top commands consuming CPU on DUT machine.
+    Number of "non-chrome" processes in the list is limited to 5.
     """
     format_list = [
-        'Top 5 commands with highest CPU usage:',
+        'Top commands with highest CPU usage:',
         # Header.
         '%20s %9s %6s   %s' % ('COMMAND', 'AVG CPU%', 'COUNT', 'HIGHEST 5'),
         '-' * 50,
     ]
     if self.top_cmds:
-      for topcmd in self.top_cmds[:5]:
-        print_line = '%20s %9.2f %6s   %s' % (topcmd['cmd'], topcmd['cpu_avg'],
-                                              topcmd['count'], topcmd['top5'])
+      # After switching to top processes we have to expand the list since there
+      # will be a lot of 'chrome' processes (up to 10, sometimes more) in the
+      # top.
+      # Let's limit the list size by the number of non-chrome processes.
+      limit_of_non_chrome_procs = 5
+      num_of_non_chrome_procs = 0
+      for topcmd in self.top_cmds:
+        print_line = '%20s %9.2f %6s   %s' % (
+            topcmd['cmd'], topcmd['cpu_use_avg'], topcmd['count'],
+            topcmd['top5_cpu_use'])
         format_list.append(print_line)
+        if not topcmd['cmd'].startswith('chrome'):
+          num_of_non_chrome_procs += 1
+          if num_of_non_chrome_procs >= limit_of_non_chrome_procs:
+            break
     else:
       format_list.append('[NO DATA FROM THE TOP LOG]')
     format_list.append('-' * 50)
@@ -559,9 +571,9 @@ class Result(object):
     Returns:
       List of dictionaries with the following keyvals:
        'cmd': command name (string),
-       'cpu_avg': average cpu usage (float),
+       'cpu_use_avg': average cpu usage (float),
        'count': number of occurrences (int),
-       'top5': up to 5 highest cpu usages (descending list of floats)
+       'top5_cpu_use': up to 5 highest cpu usages (descending list of floats)
 
     Example of the top log:
       PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
@@ -612,7 +624,7 @@ class Result(object):
           process = {
               # NOTE: One command may be represented by multiple processes.
               'cmd': match.group('cmd'),
-              'pid': int(match.group('pid')),
+              'pid': match.group('pid'),
               'cpu_use': float(match.group('cpu_use')),
           }
 
@@ -634,7 +646,10 @@ class Result(object):
     # not running.
     # On 1-core DUT 90% chrome cpu load occurs in 55%, 95% in 33% and 100% in 2%
     # of snapshots accordingly.
-    CHROME_HIGH_CPU_LOAD = 90
+    # Threshold of "high load" is reduced to 70% (from 90) when we switched to
+    # topstats per process. From experiment data the rest 20% are distributed
+    # among other chrome processes.
+    CHROME_HIGH_CPU_LOAD = 70
     # Number of snapshots where chrome is heavily used.
     high_load_snapshots = 0
     # Total CPU use per process in ALL active snapshots.
@@ -645,35 +660,41 @@ class Result(object):
     topcmds = []
 
     for snapshot_processes in snapshots:
-      # CPU usage per command in one snapshot.
-      cmd_cpu_use_per_snapshot = collections.defaultdict(float)
+      # CPU usage per command, per PID in one snapshot.
+      cmd_cpu_use_per_snapshot = collections.defaultdict(dict)
       for process in snapshot_processes:
         cmd = process['cmd']
         cpu_use = process['cpu_use']
+        pid = process['pid']
+        cmd_cpu_use_per_snapshot[cmd][pid] = cpu_use
 
-        # Collect CPU usage per command.
-        cmd_cpu_use_per_snapshot[cmd] += cpu_use
+      # Chrome processes, pid: cpu_usage.
+      chrome_processes = cmd_cpu_use_per_snapshot.get('chrome', {})
+      chrome_cpu_use_list = chrome_processes.values()
 
-      if cmd_cpu_use_per_snapshot.setdefault('chrome',
-                                             0.0) > CHROME_HIGH_CPU_LOAD:
-        # Combined CPU usage of "chrome" command exceeds "High load" threshold
-        # which means DUT is busy running a benchmark.
+      if chrome_cpu_use_list and max(
+          chrome_cpu_use_list) > CHROME_HIGH_CPU_LOAD:
+        # CPU usage of any of the "chrome" processes exceeds "High load"
+        # threshold which means DUT is busy running a benchmark.
         high_load_snapshots += 1
-        for cmd, cpu_use in cmd_cpu_use_per_snapshot.items():
-          # Update total CPU usage.
-          cmd_total_cpu_use[cmd] += cpu_use
+        for cmd, cpu_use_per_pid in cmd_cpu_use_per_snapshot.items():
+          for pid, cpu_use in cpu_use_per_pid.items():
+            # Append PID to the name of the command.
+            cmd_with_pid = cmd + '-' + pid
+            cmd_total_cpu_use[cmd_with_pid] += cpu_use
 
-          # Add cpu_use into command top cpu usages, sorted in descending order.
-          heapq.heappush(cmd_top5_cpu_use[cmd], round(cpu_use, 1))
+            # Add cpu_use into command top cpu usages, sorted in descending
+            # order.
+            heapq.heappush(cmd_top5_cpu_use[cmd_with_pid], round(cpu_use, 1))
 
     for consumer, usage in sorted(
         cmd_total_cpu_use.items(), key=lambda x: x[1], reverse=True):
       # Iterate through commands by descending order of total CPU usage.
       topcmd = {
           'cmd': consumer,
-          'cpu_avg': usage / high_load_snapshots,
+          'cpu_use_avg': usage / high_load_snapshots,
           'count': len(cmd_top5_cpu_use[consumer]),
-          'top5': heapq.nlargest(5, cmd_top5_cpu_use[consumer]),
+          'top5_cpu_use': heapq.nlargest(5, cmd_top5_cpu_use[consumer]),
       }
       topcmds.append(topcmd)
 

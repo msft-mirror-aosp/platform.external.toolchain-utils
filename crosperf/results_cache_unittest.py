@@ -223,40 +223,52 @@ TOP_LOG = \
 """
 TOP_DATA = [
     {
-        'cmd': 'chrome',
-        'cpu_avg': 124.75,
+        'cmd': 'chrome-5745',
+        'cpu_use_avg': 115.35,
         'count': 2,
-        'top5': [125.7, 123.8],
+        'top5_cpu_use': [122.8, 107.9],
     },
     {
-        'cmd': 'irq/cros-ec',
-        'cpu_avg': 1.0,
+        'cmd': 'chrome-5713',
+        'cpu_use_avg': 8.9,
         'count': 1,
-        'top5': [2.0],
+        'top5_cpu_use': [17.8]
     },
     {
-        'cmd': 'spi5',
-        'cpu_avg': 0.5,
+        'cmd': 'irq/cros-ec-912',
+        'cpu_use_avg': 1.0,
         'count': 1,
-        'top5': [1.0],
+        'top5_cpu_use': [2.0],
     },
     {
-        'cmd': 'sshd',
-        'cpu_avg': 0.5,
+        'cmd': 'chrome-5205',
+        'cpu_use_avg': 0.5,
         'count': 1,
-        'top5': [1.0],
+        'top5_cpu_use': [1.0]
     },
     {
-        'cmd': 'rcu_preempt',
-        'cpu_avg': 0.5,
+        'cmd': 'spi5-121',
+        'cpu_use_avg': 0.5,
         'count': 1,
-        'top5': [1.0],
+        'top5_cpu_use': [1.0],
     },
     {
-        'cmd': 'kworker/4:2',
-        'cpu_avg': 0.5,
+        'cmd': 'sshd-4811',
+        'cpu_use_avg': 0.5,
         'count': 1,
-        'top5': [1.0],
+        'top5_cpu_use': [1.0],
+    },
+    {
+        'cmd': 'rcu_preempt-7',
+        'cpu_use_avg': 0.5,
+        'count': 1,
+        'top5_cpu_use': [1.0],
+    },
+    {
+        'cmd': 'kworker/4:2-855',
+        'cpu_use_avg': 0.5,
+        'count': 1,
+        'top5_cpu_use': [1.0],
     },
 ]
 TOP_OUTPUT = \
@@ -994,69 +1006,84 @@ class ResultTest(unittest.TestCase):
       mo.assert_has_calls(calls)
       self.assertEqual(topcalls, [])
 
-  def test_format_string_top5_cmds(self):
-    """Test formatted string with top5 commands."""
+  def test_format_string_top_cmds(self):
+    """Test formatted string with top commands."""
     self.result.top_cmds = [
         {
-            'cmd': 'chrome',
-            'cpu_avg': 119.753453465,
+            'cmd': 'chrome-111',
+            'cpu_use_avg': 119.753453465,
             'count': 44444,
-            'top5': [222.8, 217.9, 217.8, 191.0, 189.9],
+            'top5_cpu_use': [222.8, 217.9, 217.8, 191.0, 189.9],
+        },
+        {
+            'cmd': 'chrome-222',
+            'cpu_use_avg': 100,
+            'count': 33333,
+            'top5_cpu_use': [200.0, 195.0, 190.0, 185.0, 180.0],
         },
         {
             'cmd': 'irq/230-cros-ec',
-            'cpu_avg': 10.000000000000001,
+            'cpu_use_avg': 10.000000000000001,
             'count': 1000,
-            'top5': [11.5, 11.4, 11.3, 11.2, 11.1],
+            'top5_cpu_use': [11.5, 11.4, 11.3, 11.2, 11.1],
         },
         {
             'cmd': 'powerd',
-            'cpu_avg': 2.0,
+            'cpu_use_avg': 2.0,
             'count': 2,
-            'top5': [3.0, 1.0]
+            'top5_cpu_use': [3.0, 1.0]
         },
         {
-            'cmd': 'cmd1',
-            'cpu_avg': 1.0,
+            'cmd': 'cmd3',
+            'cpu_use_avg': 1.0,
             'count': 1,
-            'top5': [1.0],
+            'top5_cpu_use': [1.0],
         },
         {
-            'cmd': 'cmd2',
-            'cpu_avg': 1.0,
+            'cmd': 'cmd4',
+            'cpu_use_avg': 1.0,
             'count': 1,
-            'top5': [1.0],
+            'top5_cpu_use': [1.0],
         },
         {
-            'cmd': 'not_for_print',
+            'cmd': 'cmd5',
+            'cpu_use_avg': 1.0,
+            'count': 1,
+            'top5_cpu_use': [1.0],
+        },
+        {
+            'cmd': 'cmd6_not_for_print',
             'cpu_avg': 1.0,
             'count': 1,
             'top5': [1.0],
         },
     ]
-    form_str = self.result.FormatStringTop5()
+    form_str = self.result.FormatStringTopCommands()
     self.assertEqual(
         form_str, '\n'.join([
-            'Top 5 commands with highest CPU usage:',
+            'Top commands with highest CPU usage:',
             '             COMMAND  AVG CPU%  COUNT   HIGHEST 5',
             '-' * 50,
-            '              chrome    119.75  44444   '
+            '          chrome-111    119.75  44444   '
             '[222.8, 217.9, 217.8, 191.0, 189.9]',
+            '          chrome-222    100.00  33333   '
+            '[200.0, 195.0, 190.0, 185.0, 180.0]',
             '     irq/230-cros-ec     10.00   1000   '
             '[11.5, 11.4, 11.3, 11.2, 11.1]',
             '              powerd      2.00      2   [3.0, 1.0]',
-            '                cmd1      1.00      1   [1.0]',
-            '                cmd2      1.00      1   [1.0]',
+            '                cmd3      1.00      1   [1.0]',
+            '                cmd4      1.00      1   [1.0]',
+            '                cmd5      1.00      1   [1.0]',
             '-' * 50,
         ]))
 
-  def test_format_string_top5_calls_no_data(self):
-    """Test formatted string of top5 with no data."""
+  def test_format_string_top_calls_no_data(self):
+    """Test formatted string of top with no data."""
     self.result.top_cmds = []
-    form_str = self.result.FormatStringTop5()
+    form_str = self.result.FormatStringTopCommands()
     self.assertEqual(
         form_str, '\n'.join([
-            'Top 5 commands with highest CPU usage:',
+            'Top commands with highest CPU usage:',
             '             COMMAND  AVG CPU%  COUNT   HIGHEST 5',
             '-' * 50,
             '[NO DATA FROM THE TOP LOG]',

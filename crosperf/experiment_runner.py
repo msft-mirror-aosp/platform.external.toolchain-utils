@@ -275,8 +275,8 @@ class ExperimentRunner(object):
     all_failed = True
 
     topstats_file = os.path.join(results_directory, 'topstats.log')
-    self.l.LogOutput('Storing top5 statistics of each benchmark run into %s.' %
-                     topstats_file)
+    self.l.LogOutput(
+        'Storing top statistics of each benchmark run into %s.' % topstats_file)
     with open(topstats_file, 'w') as top_fd:
       for benchmark_run in experiment.benchmark_runs:
         if benchmark_run.result:
@@ -291,7 +291,7 @@ class ExperimentRunner(object):
           # Header with benchmark run name.
           top_fd.write('%s\n' % str(benchmark_run))
           # Formatted string with top statistics.
-          top_fd.write(benchmark_run.result.FormatStringTop5())
+          top_fd.write(benchmark_run.result.FormatStringTopCommands())
           top_fd.write('\n\n')
 
     if all_failed:
