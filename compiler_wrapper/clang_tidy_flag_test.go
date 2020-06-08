@@ -273,6 +273,66 @@ func TestPartiallyOmitGomaWithClangTidy(t *testing.T) {
 	})
 }
 
+func TestTriciumClangTidyIsProperlyDetectedFromEnv(t *testing.T) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
+		ctx.env = []string{"WITH_TIDY=tricium"}
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			switch ctx.cmdCount {
+			case 1:
+				if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
+					t.Error(err)
+				}
+				return nil
+			case 2:
+				if err := verifyPath(cmd, "usr/bin/clang-tidy"); err != nil {
+					return err
+				}
+
+				hasFixesFile := false
+				for _, arg := range cmd.Args {
+					if path := strings.TrimPrefix(arg, "--export-fixes="); path != arg {
+						hasFixesFile = true
+						if !strings.HasPrefix(path, ctx.cfg.triciumNitsDir+"/") {
+							t.Errorf("fixes file was %q; expected it to be in %q", path, ctx.cfg.triciumNitsDir)
+						}
+						break
+					}
+				}
+
+				if !hasFixesFile {
+					t.Error("no fixes file was provided to a tricium invocation")
+				}
+
+				return nil
+			default:
+				return nil
+			}
+		}
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, mainCc)))
+		if ctx.cmdCount != 3 {
+			t.Errorf("expected 3 calls. Got: %d", ctx.cmdCount)
+		}
+		if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestTriciumClangTidySkipsProtobufFiles(t *testing.T) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
+		ctx.env = []string{"WITH_TIDY=tricium"}
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, mainCc+".pb.cc")))
+		if ctx.cmdCount != 1 {
+			t.Errorf("expected tricium clang-tidy to not execute on a protobuf file")
+		}
+		if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
 func withClangTidyTestContext(t *testing.T, work func(ctx *testContext)) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.env = []string{"WITH_TIDY=1"}

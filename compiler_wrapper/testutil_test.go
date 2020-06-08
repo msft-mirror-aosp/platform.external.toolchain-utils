@@ -141,6 +141,7 @@ func (ctx *testContext) mustFail(exitCode int) string {
 func (ctx *testContext) updateConfig(cfg *config) {
 	*ctx.cfg = *cfg
 	ctx.cfg.newWarningsDir = filepath.Join(ctx.tempDir, "fatal_clang_warnings")
+	ctx.cfg.triciumNitsDir = filepath.Join(ctx.tempDir, "tricium_nits")
 }
 
 func (ctx *testContext) newCommand(path string, args ...string) *command {

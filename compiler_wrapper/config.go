@@ -29,6 +29,8 @@ type config struct {
 	rootRelPath string
 	// Directory to store errors that were prevented with -Wno-error.
 	newWarningsDir string
+	// Directory to store nits in when using `WITH_TIDY=tricium`.
+	triciumNitsDir string
 	// Version. Only used for printing via -print-cmd.
 	version string
 }
@@ -137,6 +139,7 @@ var crosHardenedConfig = &config{
 		"-Wno-implicit-int-float-conversion",
 	},
 	newWarningsDir: "/tmp/fatal_clang_warnings",
+	triciumNitsDir: "/tmp/linting_output/clang-tidy",
 }
 
 // Flags to be added to non-hardened toolchain.
@@ -166,6 +169,7 @@ var crosNonHardenedConfig = &config{
 		"-Wno-implicit-int-float-conversion",
 	},
 	newWarningsDir: "/tmp/fatal_clang_warnings",
+	triciumNitsDir: "/tmp/linting_output/clang-tidy",
 }
 
 // Flags to be added to host toolchain.
@@ -200,6 +204,7 @@ var crosHostConfig = &config{
 		"-Wno-implicit-int-float-conversion",
 	},
 	newWarningsDir: "/tmp/fatal_clang_warnings",
+	triciumNitsDir: "/tmp/linting_output/clang-tidy",
 }
 
 var androidConfig = &config{
@@ -211,4 +216,5 @@ var androidConfig = &config{
 	clangFlags:       []string{},
 	clangPostFlags:   []string{},
 	newWarningsDir:   "",
+	triciumNitsDir:   "",
 }
