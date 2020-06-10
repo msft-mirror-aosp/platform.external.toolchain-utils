@@ -11,7 +11,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -407,45 +406,28 @@ func TestDoubleBuildWerrorChmodsThingsAppropriately(t *testing.T) {
 	})
 }
 
-func TestAndroidGetNewWarningsDir(t *testing.T) {
+func TestAndroidDisableWerror(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		outDir := "/foo/bar"
-		expectedDir := path.Join(outDir, "warnings_reports")
-
-		ctx.env = []string{"OUT_DIR=" + outDir}
 		ctx.cfg.isAndroidWrapper = true
 
 		// Disable werror ON
 		ctx.cfg.useLlvmNext = true
-		dir, ok := getNewWarningsDir(ctx, ctx.cfg)
-		if !ok || dir != expectedDir {
-			t.Errorf("disable Werror not enabled for Android with useLlvmNext (dirName=%q ok=%t), expectedDir=%q", dir, ok, expectedDir)
+		if !shouldForceDisableWerror(ctx, ctx.cfg) {
+			t.Errorf("disable Werror not enabled for Android with useLlvmNext")
 		}
 
 		// Disable werror OFF
 		ctx.cfg.useLlvmNext = false
-		dir, ok = getNewWarningsDir(ctx, ctx.cfg)
-		if ok || dir != "" {
-			t.Errorf("disable Werror incorrectly enabled for Android without useLlvmNext (dirName=%q ok=%t)", dir, ok)
+		if shouldForceDisableWerror(ctx, ctx.cfg) {
+			t.Errorf("disable-Werror enabled for Android without useLlvmNext")
 		}
 	})
 }
 
-func TestChromeOSGetNewWarningsDirOn(t *testing.T) {
-	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
-		dir, ok := getNewWarningsDir(ctx, ctx.cfg)
-		if !ok || dir != ctx.cfg.newWarningsDir {
-			t.Errorf("disable Werror not enabled for ChromeOS with FORCE_DISABLE_WERROR set (dirName=%q ok=%t) expectedDir=%q", dir, ok, ctx.cfg.newWarningsDir)
-		}
-
-	})
-}
-
-func TestChromeOSGetNewWarningsDirOff(t *testing.T) {
+func TestChromeOSNoForceDisableWerror(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		dir, ok := getNewWarningsDir(ctx, ctx.cfg)
-		if ok || dir != "" {
-			t.Errorf("disable Werror incorrectly enabled for ChromeOS without FORCE_DISABLE_WERROR set (dirName=%q ok=%t)", dir, ok)
+		if shouldForceDisableWerror(ctx, ctx.cfg) {
+			t.Errorf("disable Werror enabled for ChromeOS without FORCE_DISABLE_WERROR set")
 		}
 	})
 }

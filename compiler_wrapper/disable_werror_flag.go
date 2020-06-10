@@ -7,30 +7,21 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"strings"
 	"syscall"
 )
 
 const numWErrorEstimate = 30
 
-func getNewWarningsDir(env env, cfg *config) (dirName string, ok bool) {
+func shouldForceDisableWerror(env env, cfg *config) bool {
 	if cfg.isAndroidWrapper {
-		if cfg.useLlvmNext {
-			value, _ := env.getenv("OUT_DIR")
-			if value != "" {
-				return path.Join(value, "warnings_reports"), true
-			}
-		}
-	} else {
-		value, _ := env.getenv("FORCE_DISABLE_WERROR")
-		if value != "" {
-			return cfg.newWarningsDir, true
-		}
+		return cfg.useLlvmNext
 	}
-	return "", false
+	value, _ := env.getenv("FORCE_DISABLE_WERROR")
+	return value != ""
 }
 
 func disableWerrorFlags(originalArgs []string) []string {
@@ -62,7 +53,7 @@ func isLikelyAConfTest(cfg *config, cmd *command) bool {
 	return false
 }
 
-func doubleBuildWithWNoError(env env, cfg *config, newWarningsDir string, originalCmd *command) (exitCode int, err error) {
+func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCode int, err error) {
 	originalStdoutBuffer := &bytes.Buffer{}
 	originalStderrBuffer := &bytes.Buffer{}
 	// TODO: This is a bug in the old wrapper that it drops the ccache path
@@ -119,37 +110,6 @@ func doubleBuildWithWNoError(env env, cfg *config, newWarningsDir string, origin
 	retryStdoutBuffer.WriteTo(env.stdout())
 	retryStderrBuffer.WriteTo(env.stderr())
 
-	// All of the below is basically logging. If we fail at any point, it's
-	// reasonable for that to fail the build. This is all meant for FYI-like
-	// builders in the first place.
-
-	// Buildbots use a nonzero umask, which isn't quite what we want: these directories should
-	// be world-readable and world-writable.
-	oldMask := syscall.Umask(0)
-	defer syscall.Umask(oldMask)
-
-	// Allow root and regular users to write to this without issue.
-	if err := os.MkdirAll(newWarningsDir, 0777); err != nil {
-		return 0, wrapErrorwithSourceLocf(err, "error creating warnings directory %s", newWarningsDir)
-	}
-
-	// Have some tag to show that files aren't fully written. It would be sad if
-	// an interrupted build (or out of disk space, or similar) caused tools to
-	// have to be overly-defensive.
-	incompleteSuffix := ".incomplete"
-
-	// Coming up with a consistent name for this is difficult (compiler command's
-	// SHA can clash in the case of identically named files in different
-	// directories, or similar); let's use a random one.
-	tmpFile, err := ioutil.TempFile(newWarningsDir, "warnings_report*.json"+incompleteSuffix)
-	if err != nil {
-		return 0, wrapErrorwithSourceLocf(err, "error creating warnings file")
-	}
-
-	if err := tmpFile.Chmod(0666); err != nil {
-		return 0, wrapErrorwithSourceLocf(err, "error chmoding the file to be world-readable/writeable")
-	}
-
 	lines := []string{}
 	if originalStderrBuffer.Len() > 0 {
 		lines = append(lines, originalStderrBuffer.String())
@@ -164,6 +124,51 @@ func doubleBuildWithWNoError(env env, cfg *config, newWarningsDir string, origin
 		Command: append([]string{originalCmd.Path}, originalCmd.Args...),
 		Stdout:  outputToLog,
 	}
+
+	// Write warning report to stdout for Android.  On Android,
+	// double-build can be requested on remote builds as well, where there
+	// is no canonical place to write the warnings report.
+	if cfg.isAndroidWrapper {
+		stdout := env.stdout()
+		io.WriteString(stdout, "<LLVM_NEXT_ERROR_REPORT>")
+		if err := json.NewEncoder(stdout).Encode(jsonData); err != nil {
+			return 0, wrapErrorwithSourceLocf(err, "error in json.Marshal")
+		}
+		io.WriteString(stdout, "</LLVM_NEXT_ERROR_REPORT>")
+		return retryExitCode, nil
+	}
+
+	// All of the below is basically logging. If we fail at any point, it's
+	// reasonable for that to fail the build. This is all meant for FYI-like
+	// builders in the first place.
+
+	// Buildbots use a nonzero umask, which isn't quite what we want: these directories should
+	// be world-readable and world-writable.
+	oldMask := syscall.Umask(0)
+	defer syscall.Umask(oldMask)
+
+	// Allow root and regular users to write to this without issue.
+	if err := os.MkdirAll(cfg.newWarningsDir, 0777); err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "error creating warnings directory %s", cfg.newWarningsDir)
+	}
+
+	// Have some tag to show that files aren't fully written. It would be sad if
+	// an interrupted build (or out of disk space, or similar) caused tools to
+	// have to be overly-defensive.
+	incompleteSuffix := ".incomplete"
+
+	// Coming up with a consistent name for this is difficult (compiler command's
+	// SHA can clash in the case of identically named files in different
+	// directories, or similar); let's use a random one.
+	tmpFile, err := ioutil.TempFile(cfg.newWarningsDir, "warnings_report*.json"+incompleteSuffix)
+	if err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "error creating warnings file")
+	}
+
+	if err := tmpFile.Chmod(0666); err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "error chmoding the file to be world-readable/writeable")
+	}
+
 	enc := json.NewEncoder(tmpFile)
 	if err := enc.Encode(jsonData); err != nil {
 		_ = tmpFile.Close()
