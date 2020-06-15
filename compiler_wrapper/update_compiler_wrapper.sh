@@ -1,4 +1,8 @@
 #!/bin/bash
+#
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
 # This script rebuilds and installs compiler wrappers
 
@@ -17,7 +21,14 @@ sudo cp ../binary_search_tool/bisect_driver.py /usr/bin
 echo "/usr/bin/clang_host_wrapper/bisect_driver.py"
 # Update the target wrappers
 for GCC in cross-x86_64-cros-linux-gnu/gcc cross-armv7a-cros-linux-gnueabihf/gcc cross-aarch64-cros-linux-gnu/gcc; do
-  FILES="$(equery f $GCC)"
+  if ! FILES="$(equery f $GCC)"; then
+    if equery l "${GCC}" 2>&1 | grep -q "No installed packages"; then
+      echo "no $GCC package found; skipping" >&2
+      continue
+    fi
+    # Something went wrong, and the equery above probably diagnosed it.
+    exit 1
+  fi
   ./build.py --config=cros.hardened --use_ccache=false --use_llvm_next=false --output_file=./sysroot_wrapper.hardened.noccache
   sudo mv ./sysroot_wrapper.hardened.noccache "$(grep sysroot_wrapper.hardened.noccache <<< "${FILES}")"
   echo "$(grep sysroot_wrapper.hardened.noccache <<< "${FILES}")"

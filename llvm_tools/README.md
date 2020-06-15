@@ -14,13 +14,15 @@ version.
 **NOTE: sudo must be permissive (i.e. **`cros_sdk`** should NOT prompt for a
 password)**
 
-## `update_packages_and_run_tryjobs.py`
+## `update_packages_and_run_tests.py`
 
 ### Usage
 
-This script is used for updating a package's `LLVM_NEXT_HASH` (sys-devel/llvm,
+This script is used for updating a package's LLVM hash (sys-devel/llvm,
 sys-libs/compiler-rt, sys-libs/libcxx, sys-libs/libcxxabi, and
-sys-libs/llvm-libunwind) and then run tryjobs after updating the git hash.
+sys-libs/llvm-libunwind) and then run tests after updating the git hash.
+There are three ways to test the change, including starting tryjobs,
+recipe builders or using cq+1.
 
 An example when this script should be run is when certain boards would like
 to be tested with the updated `LLVM_NEXT_HASH`.
@@ -28,8 +30,10 @@ to be tested with the updated `LLVM_NEXT_HASH`.
 For example:
 
 ```
-$ ./update_packages_and_run_tryjobs.py \
+$ ./update_packages_and_run_tests.py \
+  --is_llvm_next \
   --llvm_version tot \
+  tryjobs \
   --options nochromesdk latest-toolchain \
   --builders kevin-release-tryjob nocturne-release-tryjob
 ```
@@ -41,34 +45,35 @@ in 'nochromesdk' and 'latest-toolchain' for each tryjob.
 For help with the command line arguments of the script, run:
 
 ```
-$ ./update_packages_and_run_tryjobs.py --help
+$ ./update_packages_and_run_tests.py --help
 ```
 
-Similarly as the previous example, but for updating `LLVM_NEXT_HASH` to
-google3:
+Similarly as the previous example, but for updating `LLVM_HASH` to
+google3 and test with cq+1:
 
 ```
-$ ./update_packages_and_run_tryjobs.py \
+$ ./update_packages_and_run_tests.py \
   --llvm_version google3 \
-  --options nochromesdk latest-toolchain \
-  --builders kevin-release-tryjob nocturne-release-tryjob
+  cq
 ```
 
 Similarly as the previous example, but for updating `LLVM_NEXT_HASH` to
-the git hash of revision 367622:
+the git hash of revision 367622 and test with recipe builders:
 
 ```
-$ ./update_packages_and_run_tryjobs.py \
+$ ./update_packages_and_run_tests.py \
+  --is_llvm_next \
   --llvm_version 367622 \
-  --options nochromesdk latest-toolchain \
-  --builders kevin-release-tryjob nocturne-release-tryjob
+  recipe \
+  --options -nocanary \
+  --builders chromeos/toolchain/kevin-llvm chromeos/toolchain/nocturne-llvm
 ```
 
-## `update_chromeos_llvm_next_hash.py`
+## `update_chromeos_llvm_hash.py`
 
 ### Usage
 
-This script is used for updating a package's/packages' `LLVM_NEXT_HASH` and
+This script is used for updating a package's/packages' LLVM hashes and
 creating a change list of those changes which will uploaded for review. For
 example, some changes that would be included in the change list are
 the updated ebuilds, changes made to the patches of the updated packages such
@@ -81,13 +86,14 @@ have their `LLVM_NEXT_HASH` updated.
 For example:
 
 ```
-$ ./update_chromeos_llvm_next_hash.py \
+$ ./update_chromeos_llvm_hash.py \
   --update_packages sys-devel/llvm sys-libs/compiler-rt \
+  --is_llvm_next \
   --llvm_version google3 \
   --failure_mode disable_patches
 ```
 
-The example above would update sys-devel/llvm and sys-libs/compiler-rt
+The example above would update sys-devel/llvm and sys-libs/compiler-rt's
 `LLVM_NEXT_HASH` to the latest google3's git hash of LLVM. And the change list
 may include patches that were disabled for either sys-devel/llvm or
 sys-libs/compiler-rt.
@@ -95,23 +101,24 @@ sys-libs/compiler-rt.
 For help with the command line arguments of the script, run:
 
 ```
-$ ./update_chromeos_llvm_next.py --help
+$ ./update_chromeos_llvm_hash.py --help
 ```
 
-For example, to update `LLVM_NEXT_HASH` to top of trunk of LLVM:
+For example, to update `LLVM_HASH` to top of trunk of LLVM:
 
 ```
-$ ./update_chromeos_llvm_next_hash.py \
+$ ./update_chromeos_llvm_hash.py \
   --update_packages sys-devel/llvm sys-libs/compiler-rt \
   --llvm_version tot \
   --failure_mode disable_patches
 ```
 
-For example, to update `LLVM_NEXT_HASH` to the git hash of revision 367622:
+For example, to create a roll CL to the git hash of revision 367622:
 
 ```
-$ ./update_chromeos_llvm_next_hash.py \
+$ ./update_chromeos_llvm_hash.py \
   --update_packages sys-devel/llvm sys-libs/compiler-rt \
+  sys-libs/libcxx sys-libs/libcxxabi sys-libs/llvm-libunwind \
   --llvm_version 367622 \
   --failure_mode disable_patches
 ```
@@ -492,15 +499,54 @@ your `$PATH`, you can also use it as `git llvm-rev`.
 
 #### Usage
 
-This script updates sys-devel/llvm with an LLVM cherrypick of your choosing, and
-copies the cherrypick into sys-devel/llvm/files/cherry.
+This script updates the proper ChromeOS packages with an LLVM cherrypick of your choosing, and
+copies the cherrypick into patch folders of the packages.
 
 Usage:
 
 ```
-./cherrypick_cl.py --sha 174c3eb69f19ff2d6a3eeae31d04afe77e62c021
+./cherrypick_cl.py --chroot_path /abs/path/to/chroot --start_sha llvm
+--sha 174c3eb69f19ff2d6a3eeae31d04afe77e62c021 --sha 174c3eb69f19ff2d6a3eeae31d04afe77e62c021
 ```
 
-It tries to autodetect a lot of things (e.g., sys-devel/llvm's path, the
-"start"/"end" revisions to set, etc.) For more information, please see the
-`--help`
+It tries to autodetect a lot of things (e.g., packages changed by each sha,
+their ebuild paths, the "start"/"end" revisions to set, etc.) By default the
+script creates a local patch. Use --create_cl option to create a CL instead. For
+more information, please see the `--help`
+
+### `revert_checker.py`
+
+This script reports reverts which happen 'across' a certain LLVM commit.
+
+To clarify the meaning of 'across' with an example, if we had the following
+commit history (where `a -> b` notes that `b` is a direct child of `a`):
+
+123abc -> 223abc -> 323abc -> 423abc -> 523abc
+
+And where 423abc is a revert of 223abc, this revert is considered to be 'across'
+323abc. More generally, a revert A of a parent commit B is considered to be
+'across' a commit C if C is a parent of A and B is a parent of C.
+
+Usage example:
+
+```
+./revert_checker.py -C llvm-project-copy 123abc 223abc 323abc
+```
+
+In the above example, the tool will scan all commits between 123abc and 223abc,
+and all commits between 123abc and 323abc for reverts of commits which are
+parents of 123abc.
+
+### `nightly_revert_checker.py`
+
+This is an automated wrapper around `revert_checker.py`. It checks to see if any
+new reverts happened across toolchains that we're trying to ship since it was
+last run. If so, it sends emails to appropriate groups.
+
+Usage example:
+```
+PYTHONPATH=../ ./nightly_revert_checker.py \
+  --state_file state.json \
+  --llvm_dir llvm-project-copy \
+  --chromeos_dir ../../../../
+```
