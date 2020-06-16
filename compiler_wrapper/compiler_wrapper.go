@@ -127,14 +127,14 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	}
 	rusageLogfileName := getRusageLogFilename(env)
 	bisectStage := getBisectStage(env)
-	if newWarningsDir, ok := getNewWarningsDir(env, cfg); ok {
+	if shouldForceDisableWerror(env, cfg) {
 		if rusageLogfileName != "" {
 			return 0, newUserErrorf("GETRUSAGE is meaningless with FORCE_DISABLE_WERROR")
 		}
 		if bisectStage != "" {
 			return 0, newUserErrorf("BISECT_STAGE is meaningless with FORCE_DISABLE_WERROR")
 		}
-		return doubleBuildWithWNoError(env, cfg, newWarningsDir, compilerCmd)
+		return doubleBuildWithWNoError(env, cfg, compilerCmd)
 	}
 	if shouldCompileWithFallback(env) {
 		if rusageLogfileName != "" {

@@ -49,6 +49,10 @@ class ExperimentRunner(object):
   STATUS_TIME_DELAY = 30
   THREAD_MONITOR_DELAY = 2
 
+  SUCCEEDED = 0
+  HAS_FAILURE = 1
+  ALL_FAILED = 2
+
   def __init__(self,
                experiment,
                json_report,
@@ -258,13 +262,52 @@ class ExperimentRunner(object):
 
   def _StoreResults(self, experiment):
     if self._terminated:
-      return
+      return self.ALL_FAILED
+
     results_directory = experiment.results_directory
     FileUtils().RmDir(results_directory)
     FileUtils().MkDirP(results_directory)
     self.l.LogOutput('Storing experiment file in %s.' % results_directory)
     experiment_file_path = os.path.join(results_directory, 'experiment.exp')
     FileUtils().WriteFile(experiment_file_path, experiment.experiment_file)
+
+    has_failure = False
+    all_failed = True
+
+    topstats_file = os.path.join(results_directory, 'topstats.log')
+    self.l.LogOutput(
+        'Storing top statistics of each benchmark run into %s.' % topstats_file)
+    with open(topstats_file, 'w') as top_fd:
+      for benchmark_run in experiment.benchmark_runs:
+        if benchmark_run.result:
+          # FIXME: Pylint has a bug suggesting the following change, which
+          # should be fixed in pylint 2.0. Resolve this after pylint >= 2.0.
+          # Bug: https://github.com/PyCQA/pylint/issues/1984
+          # pylint: disable=simplifiable-if-statement
+          if benchmark_run.result.retval:
+            has_failure = True
+          else:
+            all_failed = False
+          # Header with benchmark run name.
+          top_fd.write('%s\n' % str(benchmark_run))
+          # Formatted string with top statistics.
+          top_fd.write(benchmark_run.result.FormatStringTopCommands())
+          top_fd.write('\n\n')
+
+    if all_failed:
+      return self.ALL_FAILED
+
+    self.l.LogOutput('Storing results of each benchmark run.')
+    for benchmark_run in experiment.benchmark_runs:
+      if benchmark_run.result:
+        benchmark_run_name = ''.join(
+            ch for ch in benchmark_run.name if ch.isalnum())
+        benchmark_run_path = os.path.join(results_directory, benchmark_run_name)
+        if experiment.compress_results:
+          benchmark_run.result.CompressResultsTo(benchmark_run_path)
+        else:
+          benchmark_run.result.CopyResultsTo(benchmark_run_path)
+        benchmark_run.result.CleanUp(benchmark_run.benchmark.rm_chroot_tmp)
 
     self.l.LogOutput('Storing results report in %s.' % results_directory)
     results_table_path = os.path.join(results_directory, 'results.html')
@@ -284,26 +327,7 @@ class ExperimentRunner(object):
     msg_body = "<pre style='font-size: 13px'>%s</pre>" % text_report
     FileUtils().WriteFile(msg_file_path, msg_body)
 
-    self.l.LogOutput('Storing results of each benchmark run.')
-    for benchmark_run in experiment.benchmark_runs:
-      if benchmark_run.result:
-        benchmark_run_name = ''.join(
-            ch for ch in benchmark_run.name if ch.isalnum())
-        benchmark_run_path = os.path.join(results_directory, benchmark_run_name)
-        benchmark_run.result.CopyResultsTo(benchmark_run_path)
-        benchmark_run.result.CleanUp(benchmark_run.benchmark.rm_chroot_tmp)
-
-    topstats_file = os.path.join(results_directory, 'topstats.log')
-    self.l.LogOutput('Storing top5 statistics of each benchmark run into %s.' %
-                     topstats_file)
-    with open(topstats_file, 'w') as top_fd:
-      for benchmark_run in experiment.benchmark_runs:
-        if benchmark_run.result:
-          # Header with benchmark run name.
-          top_fd.write('%s\n' % str(benchmark_run))
-          # Formatted string with top statistics.
-          top_fd.write(benchmark_run.result.FormatStringTop5())
-          top_fd.write('\n\n')
+    return self.SUCCEEDED if not has_failure else self.HAS_FAILURE
 
   def Run(self):
     try:
@@ -311,9 +335,10 @@ class ExperimentRunner(object):
     finally:
       # Always print the report at the end of the run.
       self._PrintTable(self._experiment)
-      if not self._terminated:
-        self._StoreResults(self._experiment)
+      ret = self._StoreResults(self._experiment)
+      if ret != self.ALL_FAILED:
         self._Email(self._experiment)
+    return ret
 
 
 class MockExperimentRunner(ExperimentRunner):
