@@ -17,15 +17,18 @@ import (
 	"testing"
 )
 
-const mainCc = "main.cc"
-const clangAndroid = "./clang"
-const clangX86_64 = "./x86_64-cros-linux-gnu-clang"
-const gccX86_64 = "./x86_64-cros-linux-gnu-gcc"
-const gccX86_64Eabi = "./x86_64-cros-eabi-gcc"
-const gccArmV7 = "./armv7m-cros-linux-gnu-gcc"
-const gccArmV7Eabi = "./armv7m-cros-eabi-gcc"
-const gccArmV8 = "./armv8m-cros-linux-gnu-gcc"
-const gccArmV8Eabi = "./armv8m-cros-eabi-gcc"
+const (
+	mainCc           = "main.cc"
+	clangAndroid     = "./clang"
+	clangTidyAndroid = "./clang-tidy"
+	clangX86_64      = "./x86_64-cros-linux-gnu-clang"
+	gccX86_64        = "./x86_64-cros-linux-gnu-gcc"
+	gccX86_64Eabi    = "./x86_64-cros-eabi-gcc"
+	gccArmV7         = "./armv7m-cros-linux-gnu-gcc"
+	gccArmV7Eabi     = "./armv7m-cros-eabi-gcc"
+	gccArmV8         = "./armv8m-cros-linux-gnu-gcc"
+	gccArmV8Eabi     = "./armv8m-cros-eabi-gcc"
+)
 
 type testContext struct {
 	t            *testing.T
