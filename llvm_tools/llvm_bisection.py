@@ -11,17 +11,14 @@ from __future__ import print_function
 import argparse
 import enum
 import errno
-import get_llvm_hash
 import json
 import os
 import sys
 
-from assert_not_in_chroot import VerifyOutsideChroot
-from get_llvm_hash import CreateTempLLVMRepo
-from get_llvm_hash import LLVMHash
-from modify_a_tryjob import AddTryjob
-from update_tryjob_status import FindTryjobIndex
-from update_tryjob_status import TryjobStatus
+import chroot
+import get_llvm_hash
+import modify_a_tryjob
+import update_tryjob_status
 
 
 class BisectionExitStatus(enum.Enum):
@@ -182,18 +179,20 @@ def GetStartAndEndRevision(start, end, tryjobs):
                        'go to %s and update it' % cur_tryjob_dict['link'])
 
   all_bad_revisions = [end]
-  all_bad_revisions.extend(cur_tryjob['rev']
-                           for cur_tryjob in tryjobs
-                           if cur_tryjob['status'] == TryjobStatus.BAD.value)
+  all_bad_revisions.extend(
+      cur_tryjob['rev']
+      for cur_tryjob in tryjobs
+      if cur_tryjob['status'] == update_tryjob_status.TryjobStatus.BAD.value)
 
   # The minimum value for the 'bad' field in the tryjobs is the new end
   # version.
   bad_rev = min(all_bad_revisions)
 
   all_good_revisions = [start]
-  all_good_revisions.extend(cur_tryjob['rev']
-                            for cur_tryjob in tryjobs
-                            if cur_tryjob['status'] == TryjobStatus.GOOD.value)
+  all_good_revisions.extend(
+      cur_tryjob['rev']
+      for cur_tryjob in tryjobs
+      if cur_tryjob['status'] == update_tryjob_status.TryjobStatus.GOOD.value)
 
   # The maximum value for the 'good' field in the tryjobs is the new start
   # version.
@@ -212,7 +211,7 @@ def GetStartAndEndRevision(start, end, tryjobs):
   pending_revisions = {
       tryjob['rev']
       for tryjob in tryjobs
-      if tryjob['status'] == TryjobStatus.PENDING.value and
+      if tryjob['status'] == update_tryjob_status.TryjobStatus.PENDING.value and
       good_rev < tryjob['rev'] < bad_rev
   }
 
@@ -224,7 +223,7 @@ def GetStartAndEndRevision(start, end, tryjobs):
   skip_revisions = {
       tryjob['rev']
       for tryjob in tryjobs
-      if tryjob['status'] == TryjobStatus.SKIP.value and
+      if tryjob['status'] == update_tryjob_status.TryjobStatus.SKIP.value and
       good_rev < tryjob['rev'] < bad_rev
   }
 
@@ -253,8 +252,6 @@ def GetRevisionsBetweenBisection(start, end, parallel, src_path,
   Returns:
     A list of revisions between 'start' and 'end'.
   """
-
-  new_llvm = LLVMHash()
 
   valid_revisions = []
 
@@ -292,10 +289,10 @@ def GetRevisionsListAndHashList(start, end, parallel, src_path,
                                 pending_revisions, skip_revisions):
   """Determines the revisions between start and end."""
 
-  new_llvm = LLVMHash()
+  new_llvm = get_llvm_hash.LLVMHash()
 
   with new_llvm.CreateTempDirectory() as temp_dir:
-    with CreateTempLLVMRepo(temp_dir) as new_repo:
+    with get_llvm_hash.CreateTempLLVMRepo(temp_dir) as new_repo:
       if not src_path:
         src_path = new_repo
 
@@ -303,7 +300,9 @@ def GetRevisionsListAndHashList(start, end, parallel, src_path,
       revisions = GetRevisionsBetweenBisection(
           start, end, parallel, src_path, pending_revisions, skip_revisions)
 
-      git_hashes = [get_llvm_hash.GetGitHashFrom(src_path, rev) for rev in revisions]
+      git_hashes = [
+          get_llvm_hash.GetGitHashFrom(src_path, rev) for rev in revisions
+      ]
 
   return revisions, git_hashes
 
@@ -329,7 +328,7 @@ def CheckForExistingTryjobsInRevisionsToLaunch(revisions, jobs):
   """Checks if a revision in 'revisions' exists in 'jobs' list."""
 
   for rev in revisions:
-    if FindTryjobIndex(rev, jobs) is not None:
+    if update_tryjob_status.FindTryjobIndex(rev, jobs) is not None:
       raise ValueError('Revision %d exists already in "jobs"' % rev)
 
 
@@ -340,10 +339,10 @@ def UpdateBisection(revisions, git_hashes, bisect_contents, last_tested,
 
   try:
     for svn_revision, git_hash in zip(revisions, git_hashes):
-      tryjob_dict = AddTryjob(update_packages, git_hash, svn_revision,
-                              chroot_path, patch_metadata_file,
-                              extra_change_lists, options, builder, verbose,
-                              svn_revision)
+      tryjob_dict = modify_a_tryjob.AddTryjob(
+          update_packages, git_hash, svn_revision, chroot_path,
+          patch_metadata_file, extra_change_lists, options, builder, verbose,
+          svn_revision)
 
       bisect_contents['jobs'].append(tryjob_dict)
   finally:
@@ -364,7 +363,7 @@ def _NoteCompletedBisection(last_tested, src_path, end):
   if src_path:
     bad_llvm_hash = get_llvm_hash.GetGitHashFrom(src_path, end)
   else:
-    bad_llvm_hash = LLVMHash().GetLLVMHash(end)
+    bad_llvm_hash = get_llvm_hash.LLVMHash().GetLLVMHash(end)
 
   print(
       'The bad revision is %d and its commit hash is %s' % (end, bad_llvm_hash))
@@ -390,7 +389,7 @@ def main(args_output):
     AssertionError: The script was run inside the chroot.
   """
 
-  VerifyOutsideChroot()
+  chroot.VerifyOutsideChroot()
 
   update_packages = [
       'sys-devel/llvm', 'sys-libs/compiler-rt', 'sys-libs/libcxx',
@@ -458,5 +457,4 @@ def main(args_output):
 
 
 if __name__ == '__main__':
-  args_output = GetCommandLineArgs()
-  sys.exit(main(args_output))
+  sys.exit(main(GetCommandLineArgs()))
