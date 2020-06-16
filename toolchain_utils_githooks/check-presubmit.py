@@ -23,6 +23,7 @@ import subprocess
 import sys
 import threading
 import traceback
+import typing as t
 
 
 def run_command_unchecked(command, cwd, env=None):
@@ -459,19 +460,106 @@ def try_autofix(all_autofix_commands, toolchain_utils_root):
           'some lints may now be fixed')
 
 
+def find_repo_root(base_dir: str) -> t.Optional[str]:
+  current = base_dir
+  while current != '/':
+    if os.path.isdir(os.path.join(current, '.repo')):
+      return current
+    current = os.path.dirname(current)
+  return None
+
+
+def is_in_chroot() -> bool:
+  return os.path.exists('/etc/cros_chroot_version')
+
+
+def maybe_reexec_inside_chroot(autofix: bool, files: t.List[str]) -> None:
+  if is_in_chroot():
+    return
+
+  enter_chroot = True
+  toolchain_utils = detect_toolchain_utils_root()
+  if find_repo_root(toolchain_utils) is None:
+    print('Standalone toolchain-utils checkout detected; cannot enter chroot.')
+    enter_chroot = False
+
+  if not has_executable_on_path('cros_sdk'):
+    print('No `cros_sdk` detected on $PATH; cannot enter chroot.')
+    enter_chroot = False
+
+  if not enter_chroot:
+    print('Giving up on entering the chroot; be warned that some presubmits '
+          'may be broken.')
+    return
+
+  # We'll be changing ${PWD}, so make everything relative to toolchain-utils,
+  # which resides at a well-known place inside of the chroot.
+  chroot_toolchain_utils = '/mnt/host/source/src/third_party/toolchain-utils'
+
+  def rebase_path(path: str) -> str:
+    return os.path.join(chroot_toolchain_utils,
+                        os.path.relpath(path, toolchain_utils))
+
+  args = [
+      'cros_sdk',
+      '--enter',
+      '--',
+      rebase_path(__file__),
+  ]
+
+  if not autofix:
+    args.append('--no_autofix')
+  args.extend(rebase_path(x) for x in files)
+
+  print('Attempting to enter the chroot...')
+  os.execvp(args[0], args)
+
+
+# FIXME(crbug.com/980719): we probably want a better way of handling this. For
+# now, as a workaround, ensure we have all dependencies installed as a part of
+# presubmits. pip and scipy are fast enough to install (they take <1min
+# combined on my machine), so hoooopefully users won't get too impatient.
+def ensure_scipy_installed() -> None:
+  if not has_executable_on_path('pip'):
+    print('Autoinstalling `pip`...')
+    subprocess.check_call(['sudo', 'emerge', 'dev-python/pip'])
+
+  exit_code = subprocess.call(
+      ['python3', '-c', 'import scipy'],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL,
+  )
+  if exit_code != 0:
+    print('Autoinstalling `scipy`...')
+    subprocess.check_call(['pip', 'install', '--user', 'scipy'])
+
+
 def main(argv):
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument(
       '--no_autofix',
       dest='autofix',
       action='store_false',
-      help="Don't run any autofix commands")
+      help="Don't run any autofix commands.")
+  parser.add_argument(
+      '--no_enter_chroot',
+      dest='enter_chroot',
+      action='store_false',
+      help="Prevent auto-entering the chroot if we're not already in it.")
   parser.add_argument('files', nargs='*')
   opts = parser.parse_args(argv)
 
   files = opts.files
   if not files:
     return 0
+
+  if opts.enter_chroot:
+    maybe_reexec_inside_chroot(opts.autofix, opts.files)
+
+  # If you ask for --no_enter_chroot, you're on your own for installing these
+  # things.
+  if is_in_chroot():
+    ensure_scipy_installed()
 
   files = [os.path.abspath(f) for f in files]
 

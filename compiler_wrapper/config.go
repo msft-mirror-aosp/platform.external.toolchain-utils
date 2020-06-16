@@ -93,11 +93,6 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, version stri
 	return &cfg, nil
 }
 
-// TODO: Enable test in config_test.go, once we have new llvm-next flags.
-var llvmNextFlags = []string{}
-
-var llvmNextPostFlags = []string{}
-
 // Full hardening.
 // Temporarily disable function splitting because of chromium:434751.
 var crosHardenedConfig = &config{

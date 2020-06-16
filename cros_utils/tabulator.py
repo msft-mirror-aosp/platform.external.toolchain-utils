@@ -299,8 +299,8 @@ class SamplesTableGenerator(TableGenerator):
       all_runs_empty = all(not dict for label in bench_runs for dict in label)
       if all_runs_empty:
         cell = Cell()
-        cell.string_value = 'Benchmark %s contains no result.' + \
-                            ' Is the benchmark name valid?' % k
+        cell.string_value = ('Benchmark %s contains no result.'
+                             ' Is the benchmark name valid?' % k)
         table.append([cell])
       else:
         row = [k]
@@ -709,7 +709,7 @@ class KeyAwareComparisonResult(ComparisonResult):
         'dropped_percent', '(ms)', '(seconds)', '--ms',
         '--average_num_missing_tiles', '--experimental_jank',
         '--experimental_mean_frame', '--experimental_median_frame_time',
-        '--total_deferred_image_decode_count', '--seconds', 'samples'
+        '--total_deferred_image_decode_count', '--seconds', 'samples', 'bytes'
     ]
 
     return any([l in key for l in lower_is_better_keys])
@@ -1150,8 +1150,10 @@ class TableFormatter(object):
         result_name = column.result.__class__.__name__
         format_name = column.fmt.__class__.__name__
 
-        cell.string_value = '%s %s' % (result_name.replace('Result', ''),
-                                       format_name.replace('Format', ''))
+        cell.string_value = '%s %s' % (
+            result_name.replace('Result', ''),
+            format_name.replace('Format', ''),
+        )
 
       header.append(cell)
 
@@ -1493,39 +1495,41 @@ def GetComplexTable(runs, labels, out_to=TablePrinter.CONSOLE):
 
 if __name__ == '__main__':
   # Run a few small tests here.
-  runs = [[{
-      'k1': '10',
-      'k2': '12',
-      'k5': '40',
-      'k6': '40',
-      'ms_1': '20',
-      'k7': 'FAIL',
-      'k8': 'PASS',
-      'k9': 'PASS',
-      'k10': '0'
-  },
-           {
-               'k1': '13',
-               'k2': '14',
-               'k3': '15',
-               'ms_1': '10',
-               'k8': 'PASS',
-               'k9': 'FAIL',
-               'k10': '0'
-           }],
-          [{
-              'k1': '50',
-              'k2': '51',
-              'k3': '52',
-              'k4': '53',
-              'k5': '35',
-              'k6': '45',
-              'ms_1': '200',
-              'ms_2': '20',
-              'k7': 'FAIL',
-              'k8': 'PASS',
-              'k9': 'PASS'
-          }]]
+  runs = [
+      [{
+          'k1': '10',
+          'k2': '12',
+          'k5': '40',
+          'k6': '40',
+          'ms_1': '20',
+          'k7': 'FAIL',
+          'k8': 'PASS',
+          'k9': 'PASS',
+          'k10': '0'
+      },
+       {
+           'k1': '13',
+           'k2': '14',
+           'k3': '15',
+           'ms_1': '10',
+           'k8': 'PASS',
+           'k9': 'FAIL',
+           'k10': '0'
+       }],
+      [{
+          'k1': '50',
+          'k2': '51',
+          'k3': '52',
+          'k4': '53',
+          'k5': '35',
+          'k6': '45',
+          'ms_1': '200',
+          'ms_2': '20',
+          'k7': 'FAIL',
+          'k8': 'PASS',
+          'k9': 'PASS'
+      }],
+  ]
   labels = ['vanilla', 'modified']
   t = GetComplexTable(runs, labels, TablePrinter.CONSOLE)
   print(t)
