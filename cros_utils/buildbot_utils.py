@@ -243,8 +243,10 @@ def GetLatestImage(chromeos_root, path):
 
   ce = command_executer.GetCommandExecuter()
   command = ('gsutil ls gs://chromeos-image-archive/%s' % path)
-  _, out, _ = ce.ChrootRunCommandWOutput(
+  ret, out, _ = ce.ChrootRunCommandWOutput(
       chromeos_root, command, print_to_console=False)
+  if ret != 0:
+    raise RuntimeError('Failed to list buckets with command: %s.' % command)
   candidates = [l.split('/')[-2] for l in out.split()]
   candidates = [fmt.match(c) for c in candidates]
   candidates = [[int(r) for r in m.group(1, 2, 3, 4)] for m in candidates if m]
@@ -256,5 +258,35 @@ def GetLatestImage(chromeos_root, path):
     if c == [79, 12384, 0, 0]:
       continue
 
+    if DoesImageExist(chromeos_root, build):
+      return build
+
+
+def GetLatestRecipeImage(chromeos_root, path):
+  """Get latest nightly test image from recipe bucket.
+
+  Image location example:
+  $ARCHIVE/lulu-llvm-next-nightly/R84-13037.0.0-31011-8883172717979984032
+  """
+
+  fmt = re.compile(r'R([0-9]+)-([0-9]+).([0-9]+).([0-9]+)-([0-9]+)')
+
+  ce = command_executer.GetCommandExecuter()
+  command = ('gsutil ls gs://chromeos-image-archive/%s' % path)
+  ret, out, _ = ce.ChrootRunCommandWOutput(
+      chromeos_root, command, print_to_console=False)
+  if ret != 0:
+    raise RuntimeError('Failed to list buckets with command: %s.' % command)
+  candidates = [l.split('/')[-2] for l in out.split()]
+  candidates = [(fmt.match(c), c) for c in candidates]
+  candidates = [([int(r)
+                  for r in m[0].group(1, 2, 3, 4, 5)], m[1])
+                for m in candidates
+                if m]
+  candidates.sort(key=lambda x: x[0], reverse=True)
+  # Try to get ony last two days of images since nightly tests are run once
+  # another day.
+  for c in candidates[:2]:
+    build = '%s/%s' % (path, c[1])
     if DoesImageExist(chromeos_root, build):
       return build

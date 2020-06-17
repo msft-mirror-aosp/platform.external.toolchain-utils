@@ -15,7 +15,9 @@ import argparse
 import datetime
 import os
 import re
+import shutil
 import sys
+import time
 
 from cros_utils import command_executer
 from cros_utils import constants
@@ -134,30 +136,33 @@ def CleanChromeOsTmpFiles(chroot_tmp, days_to_preserve, dry_run):
 
 def CleanChromeOsImageFiles(chroot_tmp, subdir_suffix, days_to_preserve,
                             dry_run):
-  rv = 0
-  rv2 = 0
-  ce = command_executer.GetCommandExecuter()
-  minutes = 1440 * days_to_preserve
   # Clean files that were last accessed more than the specified time.
-  rv2 = 0
-  cmd = (r'find {0}/*{1}/* -maxdepth 1 -type d '
-         r'-amin +{2} '
-         r'-exec bash -c "echo rm -fr {{}}" \; '
-         r'-exec bash -c "rm -fr {{}}" \;').format(chroot_tmp, subdir_suffix,
-                                                   minutes)
-  if dry_run:
-    print('Going to execute:\n%s' % cmd)
-  else:
-    rv2 = ce.RunCommand(cmd, print_to_console=False)
-    if rv2 == 0:
-      print('Successfully cleaned chromeos image autotest directories from '
-            '"{0}/*{1}".'.format(chroot_tmp, subdir_suffix))
-    else:
-      print('Some image autotest directories were not removed from '
-            '"{0}/*{1}".'.format(chroot_tmp, subdir_suffix))
+  seconds_delta = days_to_preserve * 24 * 3600
+  now = time.time()
+  errors = 0
 
-  rv += rv2
-  return rv
+  for tmp_dir in os.listdir(chroot_tmp):
+    # Directory under /tmp
+    tmp_dir = os.path.join(chroot_tmp, tmp_dir)
+    if tmp_dir.endswith(subdir_suffix):
+      # Tmp directory which ends with subdir_suffix.
+      for subdir in os.listdir(tmp_dir):
+        # Subdirectories targeted for deletion.
+        subdir_path = os.path.join(tmp_dir, subdir)
+        if now - os.path.getatime(subdir_path) > seconds_delta:
+          if dry_run:
+            print('Will run:\nshutil.rmtree({})'.format(subdir_path))
+          else:
+            try:
+              shutil.rmtree(subdir_path)
+              print('Successfully cleaned chromeos image autotest directories '
+                    'from "{}".'.format(subdir_path))
+            except OSError:
+              print('Some image autotest directories were not removed from '
+                    '"{}".'.format(subdir_path))
+              errors += 1
+
+  return errors
 
 
 def CleanChromeOsTmpAndImages(days_to_preserve=1, dry_run=False):
@@ -175,8 +180,34 @@ def CleanChromeOsTmpAndImages(days_to_preserve=1, dry_run=False):
   # Clean image files in *-pfq directories
   rv += CleanChromeOsImageFiles(chromeos_chroot_tmp, '-pfq', days_to_preserve,
                                 dry_run)
+  # Clean image files in *-llvm-next-nightly directories
+  rv += CleanChromeOsImageFiles(chromeos_chroot_tmp, '-llvm-next-nightly',
+                                days_to_preserve, dry_run)
 
   return rv
+
+
+def CleanOldCLs(days_to_preserve='1', dry_run=False):
+  """Abandon old CLs created by automation tooling."""
+  ce = command_executer.GetCommandExecuter()
+  chromeos_root = os.path.join(constants.CROSTC_WORKSPACE, 'chromeos')
+  # Find Old CLs.
+  old_cls_cmd = (
+      'gerrit --raw search "owner:me status:open age:%sd"' % days_to_preserve)
+  _, cls, _ = ce.ChrootRunCommandWOutput(
+      chromeos_root, old_cls_cmd, print_to_console=False)
+  # Convert any whitespaces to spaces.
+  cls = ' '.join(cls.split())
+  if not cls:
+    return 0
+
+  abandon_cls_cmd = ('gerrit abandon %s' % cls)
+  if dry_run:
+    print('Going to execute: %s' % abandon_cls_cmd)
+    return 0
+
+  return ce.ChrootRunCommand(
+      chromeos_root, abandon_cls_cmd, print_to_console=False)
 
 
 def Main(argv):
@@ -201,12 +232,15 @@ def Main(argv):
         os.path.join(NIGHTLY_TESTS_WORKSPACE, dated_dir),
         options.dry_run) else 1
 
-
-## Finally clean temporaries, images under crostc/chromeos
+  ## Clean temporaries, images under crostc/chromeos
   rv2 = CleanChromeOsTmpAndImages(
       int(options.days_to_preserve), options.dry_run)
 
-  return rv + rv2
+  # Clean CLs that are not updated in last 2 weeks.
+  rv3 = CleanOldCLs('14', options.dry_run)
+
+  return rv + rv2 + rv3
+
 
 if __name__ == '__main__':
   retval = Main(sys.argv[1:])
