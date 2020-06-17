@@ -134,6 +134,7 @@ var crosHardenedConfig = &config{
 		"-fuse-ld=lld",
 		"-Wno-final-dtor-non-final-class",
 		"-Werror=poison-system-directories",
+		"-fcrash-diagnostics-dir=/tmp/clang_crash_diagnostics",
 	},
 	clangPostFlags: []string{
 		"-Wno-implicit-int-float-conversion",
@@ -164,6 +165,7 @@ var crosNonHardenedConfig = &config{
 		"-static-libgcc",
 		"-Wno-final-dtor-non-final-class",
 		"-Werror=poison-system-directories",
+		"-fcrash-diagnostics-dir=/tmp/clang_crash_diagnostics",
 	},
 	clangPostFlags: []string{
 		"-Wno-implicit-int-float-conversion",
@@ -199,6 +201,7 @@ var crosHostConfig = &config{
 		"-Wno-final-dtor-non-final-class",
 		"-Werror=poison-system-directories",
 		"-Wno-unknown-warning-option",
+		"-fcrash-diagnostics-dir=/tmp/clang_crash_diagnostics",
 	},
 	clangPostFlags: []string{
 		"-Wno-implicit-int-float-conversion",
