@@ -445,6 +445,7 @@ class ResultTest(unittest.TestCase):
     self.callGetTurbostatFile = False
     self.callGetCpustatsFile = False
     self.callGetTopFile = False
+    self.callGetCpuinfoFile = False
     self.callGetWaitTimeFile = False
     self.args = None
     self.callGatherPerfResults = False
@@ -879,6 +880,15 @@ class ResultTest(unittest.TestCase):
     self.assertEqual(found_no_logs, '')
 
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
+  def test_get_cpuinfo_file_finds_single_log(self, mock_runcmd):
+    """Expected behavior when a single cpuinfo file found."""
+    self.result.results_dir = '/tmp/test_results'
+    self.result.ce.RunCommandWOutput = mock_runcmd
+    mock_runcmd.return_value = (0, 'some/long/path/cpuinfo.log', '')
+    found_single_log = self.result.GetCpuinfoFile()
+    self.assertEqual(found_single_log, 'some/long/path/cpuinfo.log')
+
+  @mock.patch.object(command_executer.CommandExecuter, 'RunCommandWOutput')
   def test_get_cpustats_file_finds_single_log(self, mock_runcmd):
     """Expected behavior when a single log file found."""
     self.result.results_dir = '/tmp/test_results'
@@ -1157,6 +1167,10 @@ class ResultTest(unittest.TestCase):
       self.callGetTopFile = True
       return []
 
+    def FakeGetCpuinfoFile():
+      self.callGetCpuinfoFile = True
+      return []
+
     def FakeGetWaitTimeFile():
       self.callGetWaitTimeFile = True
       return []
@@ -1178,6 +1192,7 @@ class ResultTest(unittest.TestCase):
     self.callGetTurbostatFile = False
     self.callGetCpustatsFile = False
     self.callGetTopFile = False
+    self.callGetCpuinfoFile = False
     self.callGetWaitTimeFile = False
     self.callProcessResults = False
 
@@ -1188,6 +1203,7 @@ class ResultTest(unittest.TestCase):
     self.result.GetTurbostatFile = FakeGetTurbostatFile
     self.result.GetCpustatsFile = FakeGetCpustatsFile
     self.result.GetTopFile = FakeGetTopFile
+    self.result.GetCpuinfoFile = FakeGetCpuinfoFile
     self.result.GetWaitTimeFile = FakeGetWaitTimeFile
     self.result.ProcessResults = FakeProcessResults
 
@@ -1200,6 +1216,7 @@ class ResultTest(unittest.TestCase):
     self.assertTrue(self.callGetTurbostatFile)
     self.assertTrue(self.callGetCpustatsFile)
     self.assertTrue(self.callGetTopFile)
+    self.assertTrue(self.callGetCpuinfoFile)
     self.assertTrue(self.callGetWaitTimeFile)
     self.assertTrue(self.callProcessResults)
 

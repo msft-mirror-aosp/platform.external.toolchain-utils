@@ -58,6 +58,7 @@ class Result(object):
     self.results_file = []
     self.turbostat_log_file = ''
     self.cpustats_log_file = ''
+    self.cpuinfo_file = ''
     self.top_log_file = ''
     self.wait_time_log_file = ''
     self.chrome_version = ''
@@ -125,6 +126,13 @@ class Result(object):
     self.CopyFilesTo(dest_dir, self.results_file)
     self.CopyFilesTo(dest_dir, self.perf_data_files)
     self.CopyFilesTo(dest_dir, self.perf_report_files)
+    extra_files = []
+    if self.top_log_file:
+      extra_files.append(self.top_log_file)
+    if self.cpuinfo_file:
+      extra_files.append(self.cpuinfo_file)
+    if extra_files:
+      self.CopyFilesTo(dest_dir, extra_files)
     if self.results_file or self.perf_data_files or self.perf_report_files:
       self._logger.LogOutput('Results files stored in %s.' % dest_dir)
 
@@ -349,6 +357,10 @@ class Result(object):
     """Get cpustats log path string."""
     return self.FindFilesInResultsDir('-name cpustats.log').split('\n')[0]
 
+  def GetCpuinfoFile(self):
+    """Get cpustats log path string."""
+    return self.FindFilesInResultsDir('-name cpuinfo.log').split('\n')[0]
+
   def GetTopFile(self):
     """Get cpustats log path string."""
     return self.FindFilesInResultsDir('-name top.log').split('\n')[0]
@@ -455,6 +467,7 @@ class Result(object):
     self.perf_report_files = self.GeneratePerfReportFiles()
     self.turbostat_log_file = self.GetTurbostatFile()
     self.cpustats_log_file = self.GetCpustatsFile()
+    self.cpuinfo_file = self.GetCpuinfoFile()
     self.top_log_file = self.GetTopFile()
     self.wait_time_log_file = self.GetWaitTimeFile()
     # TODO(asharif): Do something similar with perf stat.
