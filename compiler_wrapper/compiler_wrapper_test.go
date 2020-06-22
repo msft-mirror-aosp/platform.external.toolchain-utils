@@ -149,6 +149,19 @@ func TestPrintOtherCompilerError(t *testing.T) {
 	}
 }
 
+func TestPrintOtherCompilerErrorForAndroidLLVM(t *testing.T) {
+	buffer := bytes.Buffer{}
+
+	oldConfigName := ConfigName
+	defer func() { ConfigName = oldConfigName }()
+
+	ConfigName = "android"
+	printCompilerError(&buffer, errors.New("abcd"))
+	if buffer.String() != "Internal error. Please report to android-llvm@google.com.\nabcd\n" {
+		t.Errorf("Unexpected string. Got: %s", buffer.String())
+	}
+}
+
 func TestCalculateAndroidWrapperPath(t *testing.T) {
 	t.Parallel()
 
