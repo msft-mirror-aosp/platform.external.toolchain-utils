@@ -239,9 +239,13 @@ func printCompilerError(writer io.Writer, compilerErr error) {
 	if _, ok := compilerErr.(userError); ok {
 		fmt.Fprintf(writer, "%s\n", compilerErr)
 	} else {
+		emailAccount := "chromeos-toolchain"
+		if isAndroidConfig() {
+			emailAccount = "android-llvm"
+		}
 		fmt.Fprintf(writer,
-			"Internal error. Please report to chromeos-toolchain@google.com.\n%s\n",
-			compilerErr)
+			"Internal error. Please report to %s@google.com.\n%s\n",
+			emailAccount, compilerErr)
 	}
 }
 
