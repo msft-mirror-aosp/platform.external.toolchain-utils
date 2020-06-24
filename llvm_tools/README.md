@@ -488,7 +488,7 @@ these synthesized numbers and git SHAs. Usage should be straightforward:
 6f635f90929da9545dd696071a829a1a42f84b30
 ~> ./git_llvm_rev.py --llvm_dir llvm-project-copy/ --sha 6f635f90929da9545dd696071a829a1a42f84b30
 r380000
-~> ./git_llvm_rev.py --llvm_dir llvm-project-copy/ --sha origin/master
+~> ./git_llvm_rev.py --llvm_dir llvm-project-copy/ --sha origin/some-branch
 r387778
 ```
 
