@@ -43,11 +43,10 @@ def prepare_allowlist(patterns):
   return re.compile('|'.join(patterns))
 
 
-# FIXME: s/whitelist/allowlist/ in the file extension.
 def load_allowlists(dirname):
   """Load allowlists under dirname.
 
-  An allowlist ends with .whitelist.
+  An allowlist ends with .allowlist.
 
   Args:
     dirname: path to the dir.
@@ -56,7 +55,7 @@ def load_allowlists(dirname):
     A dictionary of 'filename' -> allowlist matcher.
   """
   wlist = {}
-  for fn in glob.glob(os.path.join(dirname, '*.whitelist')):
+  for fn in glob.glob(os.path.join(dirname, '*.allowlist')):
     key = os.path.splitext(os.path.basename(fn))[0]
     with open(fn, 'r', encoding='utf-8') as f:
       patterns = f.read().splitlines()
