@@ -24,6 +24,8 @@ CHROMEOS_SCRIPTS_DIR = '/mnt/host/source/src/scripts'
 TOOLCHAIN_UTILS_PATH = ('/mnt/host/source/src/third_party/toolchain-utils/'
                         'cros_utils/toolchain_utils.sh')
 
+CROS_MAIN_BRANCH = 'cros/master'
+
 
 def GetChromeOSVersionFromLSBVersion(lsb_version):
   """Get Chromeos version from Lsb version."""
@@ -444,8 +446,9 @@ def DeleteChromeOsTree(chromeos_root, dry_run=False):
       cmd1, print_to_console=True) == 0
 
 
-def ApplyGerritPatches(chromeos_root, gerrit_patch_string,
-                       branch='cros/master'):
+def ApplyGerritPatches(chromeos_root,
+                       gerrit_patch_string,
+                       branch=CROS_MAIN_BRANCH):
   """Apply gerrit patches on a chromeos tree.
 
   Args:
