@@ -228,6 +228,10 @@ def check_py_format(toolchain_utils_root: str,
   return [(name, get_check_result_or_catch(task)) for name, task in tasks]
 
 
+def find_chromeos_root_directory() -> t.Optional[str]:
+  return os.getenv('CHROMEOS_ROOT_DIRECTORY')
+
+
 def check_cros_lint(
     toolchain_utils_root: str, thread_pool: multiprocessing.pool.ThreadPool,
     files: t.Iterable[str]) -> t.Union[t.List[CheckResult], CheckResult]:
@@ -259,7 +263,7 @@ def check_cros_lint(
   if cros_lint is not None:
     return cros_lint
 
-  cros_root = os.getenv('CHROMEOS_ROOT_DIRECTORY')
+  cros_root = find_chromeos_root_directory()
   if cros_root:
     cros_lint = try_run_cros_lint(os.path.join(cros_root, 'chromite/bin/cros'))
     if cros_lint is not None:
@@ -496,10 +500,16 @@ def maybe_reexec_inside_chroot(autofix: bool, files: t.List[str]) -> None:
     return
 
   enter_chroot = True
+  chdir_to = None
   toolchain_utils = detect_toolchain_utils_root()
   if find_repo_root(toolchain_utils) is None:
-    print('Standalone toolchain-utils checkout detected; cannot enter chroot.')
-    enter_chroot = False
+    chromeos_root_dir = find_chromeos_root_directory()
+    if chromeos_root_dir is None:
+      print('Standalone toolchain-utils checkout detected; cannot enter '
+            'chroot.')
+      enter_chroot = False
+    else:
+      chdir_to = chromeos_root_dir
 
   if not has_executable_on_path('cros_sdk'):
     print('No `cros_sdk` detected on $PATH; cannot enter chroot.')
@@ -529,7 +539,11 @@ def maybe_reexec_inside_chroot(autofix: bool, files: t.List[str]) -> None:
     args.append('--no_autofix')
   args.extend(rebase_path(x) for x in files)
 
-  print('Attempting to enter the chroot...')
+  if chdir_to is None:
+    print('Attempting to enter the chroot...')
+  else:
+    print(f'Attempting to enter the chroot for tree at {chdir_to}...')
+    os.chdir(chdir_to)
   os.execvp(args[0], args)
 
 
