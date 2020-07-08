@@ -70,6 +70,10 @@ func getRealConfig() (*config, error) {
 	return config, nil
 }
 
+func isAndroidConfig() bool {
+	return ConfigName == "android"
+}
+
 func getConfig(configName string, useCCache bool, useLlvmNext bool, version string) (*config, error) {
 	cfg := config{}
 	switch configName {
@@ -92,11 +96,6 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, version stri
 	cfg.version = version
 	return &cfg, nil
 }
-
-// TODO: Enable test in config_test.go, once we have new llvm-next flags.
-var llvmNextFlags = []string{}
-
-var llvmNextPostFlags = []string{}
 
 // Full hardening.
 // Temporarily disable function splitting because of chromium:434751.

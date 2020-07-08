@@ -480,8 +480,8 @@ class CommandExecuter(object):
 
       command = self.RemoteAccessInitCommand(chromeos_root, cros_machine)
       ssh_command = (
-          'ssh -p ${FLAGS_ssh_port}' + ' -o StrictHostKeyChecking=no' +
-          ' -o UserKnownHostsFile=$(mktemp)' + ' -i $TMP_PRIVATE_KEY')
+          'ssh -o StrictHostKeyChecking=no' + ' -o UserKnownHostsFile=$(mktemp)'
+          + ' -i $TMP_PRIVATE_KEY')
       rsync_prefix = '\nrsync -r -e "%s" ' % ssh_command
       if dest_cros:
         command += rsync_prefix + '%s root@%s:%s' % (src, dest_machine, dest)
