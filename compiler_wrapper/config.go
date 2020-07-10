@@ -121,9 +121,10 @@ var crosHardenedConfig = &config{
 	// Disable "-faddrsig" since it produces object files that strip doesn't understand, chromium:915742.
 	// Pass "-fcommon" till the packages are fixed to work with new clang default
 	// "-fno-common", crbug.com/1060413.
+	// crbug.com/1103065: -grecord-gcc-switches pollutes the Goma cache;
+	//   removed that flag for now.
 	clangFlags: []string{
 		"-Qunused-arguments",
-		"-grecord-gcc-switches",
 		"-fno-addrsig",
 		"-fcommon",
 		"-Wno-tautological-constant-compare",
@@ -188,9 +189,10 @@ var crosHostConfig = &config{
 	// Temporarily add no-unknown-warning-option to deal with old clang versions.
 	// Pass "-fcommon" till the packages are fixed to work with new clang default
 	// "-fno-common", crbug.com/1060413.
+	// crbug.com/1103065: -grecord-gcc-switches pollutes the Goma cache;
+	//   removed that flag for now.
 	clangFlags: []string{
 		"-Qunused-arguments",
-		"-grecord-gcc-switches",
 		"-fno-addrsig",
 		"-fcommon",
 		"-fuse-ld=lld",

@@ -16,7 +16,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -52,7 +51,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -88,7 +86,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -124,7 +121,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -160,7 +156,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -196,7 +191,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -232,7 +226,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -268,7 +261,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -304,7 +296,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",

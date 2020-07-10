@@ -17,7 +17,6 @@
           "args": [
             "--sysroot=/usr/x86_64-cros-linux-gnu",
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-Wno-tautological-constant-compare",
@@ -86,7 +85,6 @@
             "../../usr/bin/clang",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-Wno-tautological-constant-compare",
@@ -155,7 +153,6 @@
           "args": [
             "--sysroot=/usr/x86_64-cros-linux-gnu",
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-Wno-tautological-constant-compare",
@@ -208,7 +205,6 @@
           "args": [
             "--sysroot=/usr/x86_64-cros-linux-gnu",
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-Wno-tautological-constant-compare",

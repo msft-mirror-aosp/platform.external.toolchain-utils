@@ -15,7 +15,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -53,7 +52,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -91,7 +89,6 @@
           "path": "/tmp/stable/clang++",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -129,7 +126,6 @@
           "path": "somepath/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -174,7 +170,6 @@
           "path": "/somedir/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -224,7 +219,6 @@
           "path": "/somedir/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -274,7 +268,6 @@
           "path": "/somedir/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -314,7 +307,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -349,7 +341,6 @@
           "path": "/tmp/stable/a/b/c/d/e/f/g/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -384,7 +375,6 @@
           "path": "/tmp/stable/a/b/c/d/e/f/g/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -419,7 +409,6 @@
           "path": "/tmp/stable/somedir/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -457,7 +446,6 @@
           "path": "/tmp/stable/pathenv/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
