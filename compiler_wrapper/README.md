@@ -12,25 +12,31 @@ package, including the build script, and then
 build from there without a dependency on toolchain-utils
 itself.
 
-## Update Chrome OS
+## Update source files
 
 Copy over sources and `build.py` to Chrome OS:
 ```
-(chroot) /mnt/host/source/src/third_party/chromiumos-overlay/sys-devel/llvm/files/update_compiler_wrapper.sh
+(chroot) /mnt/host/source/src/third_party/chromiumos-overlay/sys-devel/llvm/files/update\_compiler\_wrapper.sh
 ```
 
 `build.py` is called by these ebuilds:
 
-- third_party/chromiumos-overlay/sys-devel/llvm/llvm-9.0_pre361749_p20190714.ebuild
-- third_party/chromiumos-overlay/sys-devel/gcc/gcc-*.ebuild
+- third_party/chromiumos-overlay/sys-devel/llvm/llvm-11.0\_pre394483\_p20200618-r3.ebuild
+- third_party/chromiumos-overlay/sys-devel/gcc/gcc-\*.ebuild
 
+## Update compiler wrappers
+```
+(chroot) /mnt/host/source/src/third|_party/toolchain-utils/compiler\_wrapper/install\_compiler\_wrapper.sh
+```
 Generated wrappers are stored here:
 
 - Sysroot wrapper with ccache:
-  `/usr/x86_64-pc-linux-gnu/<arch>/gcc-bin/4.9.x/sysroot_wrapper.hardened.ccache`
+  `/usr/x86_64-pc-linux-gnu/<arch>/gcc-bin/4.9.x/sysroot\_wrapper.hardened.ccache`
 - Sysroot wrapper without ccache:
-  `/usr/x86_64-pc-linux-gnu/<arch>/gcc-bin/4.9.x/sysroot_wrapper.hardened.noccache`
+  `/usr/x86_64-pc-linux-gnu/<arch>/gcc-bin/4.9.x/sysroot\_wrapper.hardened.noccache`
 - Clang host wrapper:
-  `/usr/bin/clang_host_wrapper`
+  `/usr/bin/clang\_host\_wrapper`
 - Gcc host wrapper:
-  `/usr/x86_64-pc-linux-gnu/gcc-bin/4.9.x/host_wrapper`
+  `/usr/x86_64-pc-linux-gnu/gcc-bin/4.9.x/host\_wrapper`
+
+
