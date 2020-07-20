@@ -333,6 +333,59 @@ func TestTriciumClangTidySkipsProtobufFiles(t *testing.T) {
 	})
 }
 
+func testClangTidyFiltersClangTidySpecificFlagsWithPresetEnv(t *testing.T, ctx *testContext) {
+	addedFlag := "--some_clang_tidy=flag"
+	ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		switch ctx.cmdCount {
+		case 1:
+			if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
+				t.Error(err)
+			} else if err := verifyArgCount(cmd, 0, addedFlag); err != nil {
+				t.Error(err)
+			}
+			return nil
+		case 2:
+			if err := verifyPath(cmd, "usr/bin/clang-tidy"); err != nil {
+				t.Error(err)
+			} else if verifyArgCount(cmd, 1, addedFlag); err != nil {
+				t.Error(err)
+			}
+			return nil
+		default:
+			return nil
+		}
+	}
+	cmd := ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, mainCc, "-clang-tidy-flag="+addedFlag)))
+	if ctx.cmdCount != 3 {
+		t.Errorf("expected 3 calls. Got: %d", ctx.cmdCount)
+	}
+	if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestClangTidyFiltersClangTidySpecificFlagsForTricium(t *testing.T) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
+		ctx.env = []string{"WITH_TIDY=tricium"}
+		testClangTidyFiltersClangTidySpecificFlagsWithPresetEnv(t, ctx)
+	})
+}
+
+func TestClangTidyFiltersClangTidySpecificFlags(t *testing.T) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
+		testClangTidyFiltersClangTidySpecificFlagsWithPresetEnv(t, ctx)
+	})
+}
+
+func TestClangTidyFlagsAreFilteredFromGccInvocations(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc, "-clang-tidy-flag=--foo")))
+		if err := verifyArgCount(cmd, 0, ".*--foo.*"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
 func withClangTidyTestContext(t *testing.T, work func(ctx *testContext)) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.env = []string{"WITH_TIDY=1"}

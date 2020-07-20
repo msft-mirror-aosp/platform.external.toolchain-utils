@@ -21,10 +21,20 @@ const (
 	tidyModeTricium
 )
 
-func processClangTidyFlags(builder *commandBuilder) (cSrcFile string, mode useTidyMode) {
+func processClangTidyFlags(builder *commandBuilder) (cSrcFile string, clangTidyFlags []string, mode useTidyMode) {
+	builder.transformArgs(func(arg builderArg) string {
+		const prefix = "-clang-tidy-flag="
+		if !strings.HasPrefix(arg.value, prefix) {
+			return arg.value
+		}
+
+		clangTidyFlags = append(clangTidyFlags, arg.value[len(prefix):])
+		return ""
+	})
+
 	withTidy, _ := builder.env.getenv("WITH_TIDY")
 	if withTidy == "" {
-		return "", tidyModeNone
+		return "", clangTidyFlags, tidyModeNone
 	}
 	srcFileSuffixes := []string{
 		".c",
@@ -51,7 +61,7 @@ func processClangTidyFlags(builder *commandBuilder) (cSrcFile string, mode useTi
 	}
 
 	if cSrcFile == "" {
-		return "", tidyModeNone
+		return "", clangTidyFlags, tidyModeNone
 	}
 
 	if withTidy == "tricium" {
@@ -65,7 +75,7 @@ func processClangTidyFlags(builder *commandBuilder) (cSrcFile string, mode useTi
 	} else {
 		mode = tidyModeAll
 	}
-	return cSrcFile, mode
+	return cSrcFile, clangTidyFlags, mode
 }
 
 func calcClangTidyInvocation(env env, clangCmd *command, cSrcFile string, tidyFlags ...string) (*command, error) {
@@ -85,7 +95,7 @@ func calcClangTidyInvocation(env env, clangCmd *command, cSrcFile string, tidyFl
 	}, nil
 }
 
-func runClangTidyForTricium(env env, clangCmd *command, cSrcFile, fixesDir string) error {
+func runClangTidyForTricium(env env, clangCmd *command, cSrcFile, fixesDir string, extraTidyFlags []string) error {
 	if err := os.MkdirAll(fixesDir, 0777); err != nil {
 		return fmt.Errorf("creating fixes directory at %q: %v", fixesDir, err)
 	}
@@ -103,7 +113,8 @@ func runClangTidyForTricium(env env, clangCmd *command, cSrcFile, fixesDir strin
 
 	// FIXME(gbiv): Remove `-checks=*` when testing is complete; we should defer to .clang-tidy
 	// files, which are both more expressive and more approachable than `-checks=*`.
-	clangTidyCmd, err := calcClangTidyInvocation(env, clangCmd, cSrcFile, "-checks=*", "--export-fixes="+fixesFilePath)
+	extraTidyFlags = append(extraTidyFlags, "-checks=*", "--export-fixes="+fixesFilePath)
+	clangTidyCmd, err := calcClangTidyInvocation(env, clangCmd, cSrcFile, extraTidyFlags...)
 	if err != nil {
 		return fmt.Errorf("calculating tidy invocation: %v", err)
 	}
@@ -149,9 +160,9 @@ func runClangTidyForTricium(env env, clangCmd *command, cSrcFile, fixesDir strin
 	return nil
 }
 
-func runClangTidy(env env, clangCmd *command, cSrcFile string) error {
-	clangTidyCmd, err := calcClangTidyInvocation(env, clangCmd, cSrcFile, "-checks="+
-		strings.Join([]string{
+func runClangTidy(env env, clangCmd *command, cSrcFile string, extraTidyFlags []string) error {
+	extraTidyFlags = append(extraTidyFlags,
+		"-checks="+strings.Join([]string{
 			"*",
 			"-bugprone-narrowing-conversions",
 			"-cppcoreguidelines-*",
@@ -165,6 +176,7 @@ func runClangTidy(env env, clangCmd *command, cSrcFile string) error {
 			"-modernize-*",
 			"-readability-*",
 		}, ","))
+	clangTidyCmd, err := calcClangTidyInvocation(env, clangCmd, cSrcFile, extraTidyFlags...)
 	if err != nil {
 		return fmt.Errorf("calculating clang-tidy invocation: %v", err)
 	}

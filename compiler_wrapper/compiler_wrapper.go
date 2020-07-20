@@ -89,53 +89,55 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		default:
 			return 0, newErrorwithSourceLocf("unsupported compiler: %s", mainBuilder.target.compiler)
 		}
-	} else if mainBuilder.target.compilerType == clangType {
-		cSrcFile, tidyMode := processClangTidyFlags(mainBuilder)
-		err := prepareClangCommand(mainBuilder)
-		if err != nil {
-			return 0, err
-		}
-		allowCCache := true
-		if tidyMode != tidyModeNone {
-			allowCCache = false
-			clangCmdWithoutGomaAndCCache := mainBuilder.build()
-			var err error
-			switch tidyMode {
-			case tidyModeTricium:
-				if cfg.triciumNitsDir == "" {
-					return 0, newErrorwithSourceLocf("tricium linting was requested, but no nits directory is configured")
-				}
-				err = runClangTidyForTricium(env, clangCmdWithoutGomaAndCCache, cSrcFile, cfg.triciumNitsDir)
-			case tidyModeAll:
-				err = runClangTidy(env, clangCmdWithoutGomaAndCCache, cSrcFile)
-			default:
-				panic(fmt.Sprintf("Unknown tidy mode: %v", tidyMode))
-			}
-
-			if err != nil {
-				return 0, err
-			}
-		}
-		if err := processGomaCCacheFlags(allowCCache, mainBuilder); err != nil {
-			return 0, err
-		}
-		compilerCmd = mainBuilder.build()
 	} else {
-		if clangSyntax {
-			allowCCache := false
-			clangCmd, err := calcClangCommand(allowCCache, mainBuilder.clone())
+		cSrcFile, tidyFlags, tidyMode := processClangTidyFlags(mainBuilder)
+		if mainBuilder.target.compilerType == clangType {
+			err := prepareClangCommand(mainBuilder)
 			if err != nil {
 				return 0, err
 			}
-			gccCmd, err := calcGccCommand(mainBuilder)
+			allowCCache := true
+			if tidyMode != tidyModeNone {
+				allowCCache = false
+				clangCmdWithoutGomaAndCCache := mainBuilder.build()
+				var err error
+				switch tidyMode {
+				case tidyModeTricium:
+					if cfg.triciumNitsDir == "" {
+						return 0, newErrorwithSourceLocf("tricium linting was requested, but no nits directory is configured")
+					}
+					err = runClangTidyForTricium(env, clangCmdWithoutGomaAndCCache, cSrcFile, cfg.triciumNitsDir, tidyFlags)
+				case tidyModeAll:
+					err = runClangTidy(env, clangCmdWithoutGomaAndCCache, cSrcFile, tidyFlags)
+				default:
+					panic(fmt.Sprintf("Unknown tidy mode: %v", tidyMode))
+				}
+
+				if err != nil {
+					return 0, err
+				}
+			}
+			if err := processGomaCCacheFlags(allowCCache, mainBuilder); err != nil {
+				return 0, err
+			}
+			compilerCmd = mainBuilder.build()
+		} else {
+			if clangSyntax {
+				allowCCache := false
+				clangCmd, err := calcClangCommand(allowCCache, mainBuilder.clone())
+				if err != nil {
+					return 0, err
+				}
+				gccCmd, err := calcGccCommand(mainBuilder)
+				if err != nil {
+					return 0, err
+				}
+				return checkClangSyntax(env, clangCmd, gccCmd)
+			}
+			compilerCmd, err = calcGccCommand(mainBuilder)
 			if err != nil {
 				return 0, err
 			}
-			return checkClangSyntax(env, clangCmd, gccCmd)
-		}
-		compilerCmd, err = calcGccCommand(mainBuilder)
-		if err != nil {
-			return 0, err
 		}
 	}
 	rusageLogfileName := getRusageLogFilename(env)
