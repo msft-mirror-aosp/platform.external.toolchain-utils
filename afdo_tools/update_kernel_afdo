@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/bash
 
 # Due to crbug.com/1081332, we need to update AFDO metadata
 # manually. This script performs a few checks and generates a
@@ -24,6 +24,7 @@
 #
 
 set -eu
+set -o pipefail
 
 GS_BASE=gs://chromeos-prebuilt/afdo-job/vetted/kernel
 KVERS="3.18 4.4 4.14 4.19"
@@ -43,11 +44,17 @@ else
   expected_time=$(date +%s -d "last Monday")
 fi
 
+# Get the current master branch number (using beta + 1)
+beta=$(git ls-remote -h https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay | sed -n -e "s/^.*release-R\([0-9][0-9]*\).*$/\1/p" | sort -g | tail -1)
+master="$(($beta + 1))"
+
 json="{"
 sep=""
 for kver in $KVERS
 do
-  latest=$(gsutil ls -l "$GS_BASE/$kver/" | tail -n 2 | head -n 1)
+  # Sort the gs output by timestamp (default ordering is by name, so
+  # R86-13310.3-1594633089.gcov.xz goes after R86-13310.18-1595237847.gcov.xz)
+  latest=$(gsutil ls -l "$GS_BASE/$kver/" | sort -k2 | grep "R${master}" | tail -1)
 
   # Verify that the file has the expected date.
   file_time=$(echo "$latest" | awk '{print $2}')
