@@ -125,7 +125,8 @@ def GetAndUpdateLLVMProjectInLLVMTools():
 
   if not os.path.isdir(abs_path_to_llvm_project_dir):
     print(
-        'Checking out LLVM from scratch. This could take a while...',
+        'Checking out LLVM from scratch. This could take a while...\n'
+        '(This should only need to be done once, though.)',
         file=sys.stderr)
     os.mkdir(abs_path_to_llvm_project_dir)
 
