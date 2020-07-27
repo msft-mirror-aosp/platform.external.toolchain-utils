@@ -6,8 +6,6 @@
 
 """Tests for git_llvm_rev."""
 
-from __future__ import print_function
-
 import unittest
 
 import git_llvm_rev
@@ -63,8 +61,8 @@ class Test(unittest.TestCase):
   def test_imaginary_revs_raise(self) -> None:
     with self.assertRaises(ValueError) as r:
       git_llvm_rev.translate_rev_to_sha(
-          get_llvm_config(), git_llvm_rev.Rev(
-              branch=MAIN_BRANCH, number=9999999))
+          get_llvm_config(),
+          git_llvm_rev.Rev(branch=MAIN_BRANCH, number=9999999))
 
     self.assertIn('Try updating your tree?', str(r.exception))
 
