@@ -550,3 +550,21 @@ PYTHONPATH=../ ./nightly_revert_checker.py \
   --llvm_dir llvm-project-copy \
   --chromeos_dir ../../../../
 ```
+
+### `bisect_clang_crashes.py`
+
+This script downloads clang crash diagnoses from
+gs://chrome-toolchain-artifacts/clang-crash-diagnoses and send them to 4c for
+bisectiton.
+
+Usage example:
+
+```
+$ ./bisect_clang_crashes.py --4c 4c-cli --state_file ./output/state.json
+```
+
+The above command downloads the artifacts of clang crash diagnoses and send them
+to 4c server for bisection. The summary of submitted jobs will be saved in
+output/state.json under the current path. The output directory will be created
+automatically if it does not exist yet. To get more information of the submitted
+jobs, please refer to go/4c-cli.
