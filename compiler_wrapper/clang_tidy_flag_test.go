@@ -386,6 +386,63 @@ func TestClangTidyFlagsAreFilteredFromGccInvocations(t *testing.T) {
 	})
 }
 
+func TestTriciumReportsClangTidyCrashesGracefully(t *testing.T) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
+		ctx.env = []string{"WITH_TIDY=tricium"}
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			switch ctx.cmdCount {
+			case 1:
+				if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
+					t.Error(err)
+				}
+				return nil
+			case 2:
+				if err := verifyPath(cmd, "usr/bin/clang-tidy"); err != nil {
+					return err
+				}
+
+				if _, err := io.WriteString(stdout, clangTidyCrashSubstring); err != nil {
+					return err
+				}
+				return nil
+			case 3:
+				if err := verifyPath(cmd, "usr/bin/clang"); err != nil {
+					t.Error(err)
+				}
+
+				args := cmd.Args
+				if len(args) < 3 {
+					t.Errorf("insufficient number of args provided; got %d; want at least 3", len(args))
+					return nil
+				}
+
+				lastArgs := args[len(args)-3:]
+				eArg, oArg, outFileArg := lastArgs[0], lastArgs[1], lastArgs[2]
+				if eArg != "-E" {
+					t.Errorf("got eArg=%q; wanted -E", eArg)
+				}
+
+				if oArg != "-o" {
+					t.Errorf("got oArg=%q; wanted -o", oArg)
+				}
+
+				wantPrefix := path.Join(ctx.cfg.crashArtifactsDir, "clang-tidy")
+				if !strings.HasPrefix(outFileArg, wantPrefix) {
+					t.Errorf("got out file %q; wanted one starting with %q", outFileArg, wantPrefix)
+				}
+
+				return nil
+			default:
+				return nil
+			}
+		}
+		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, mainCc)))
+		if ctx.cmdCount != 4 {
+			t.Errorf("expected 3 calls. Got: %d", ctx.cmdCount)
+		}
+	})
+}
+
 func withClangTidyTestContext(t *testing.T, work func(ctx *testContext)) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.env = []string{"WITH_TIDY=1"}

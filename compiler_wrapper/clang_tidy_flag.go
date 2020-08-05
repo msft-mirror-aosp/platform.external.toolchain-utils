@@ -9,11 +9,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
 
 type useTidyMode int
+
+const clangTidyCrashSubstring = "PLEASE submit a bug report"
 
 const (
 	tidyModeNone useTidyMode = iota
@@ -95,7 +98,7 @@ func calcClangTidyInvocation(env env, clangCmd *command, cSrcFile string, tidyFl
 	}, nil
 }
 
-func runClangTidyForTricium(env env, clangCmd *command, cSrcFile, fixesDir string, extraTidyFlags []string) error {
+func runClangTidyForTricium(env env, clangCmd *command, cSrcFile, fixesDir string, extraTidyFlags []string, crashArtifactsDir string) error {
 	if err := os.MkdirAll(fixesDir, 0777); err != nil {
 		return fmt.Errorf("creating fixes directory at %q: %v", fixesDir, err)
 	}
@@ -128,13 +131,58 @@ func runClangTidyForTricium(env env, clangCmd *command, cSrcFile, fixesDir strin
 		return err
 	}
 
+	type crashOutput struct {
+		CrashReproducerPath string `json:"crash_reproducer_path"`
+		Stdstreams          string `json:"stdstreams"`
+	}
+
 	type metadata struct {
-		Args       []string `json:"args"`
-		Executable string   `json:"executable"`
-		ExitCode   int      `json:"exit_code"`
-		LintTarget string   `json:"lint_target"`
-		Stdstreams string   `json:"stdstreams"`
-		Wd         string   `json:"wd"`
+		Args        []string     `json:"args"`
+		CrashOutput *crashOutput `json:"crash_output"`
+		Executable  string       `json:"executable"`
+		ExitCode    int          `json:"exit_code"`
+		LintTarget  string       `json:"lint_target"`
+		Stdstreams  string       `json:"stdstreams"`
+		Wd          string       `json:"wd"`
+	}
+
+	meta := &metadata{
+		Args:        clangTidyCmd.Args,
+		CrashOutput: nil,
+		Executable:  clangTidyCmd.Path,
+		ExitCode:    exitCode,
+		LintTarget:  cSrcFile,
+		Stdstreams:  stdstreams.String(),
+		Wd:          env.getwd(),
+	}
+
+	// Sometimes, clang-tidy crashes. Unfortunately, these don't get funnelled through the
+	// standard clang crash machinery. :(. Try to work with our own.
+	if crashArtifactsDir != "" && strings.Contains(meta.Stdstreams, clangTidyCrashSubstring) {
+		tidyCrashArtifacts := path.Join(crashArtifactsDir, "clang-tidy")
+		if err := os.MkdirAll(tidyCrashArtifacts, 0777); err != nil {
+			return fmt.Errorf("creating crash artifacts directory at %q: %v", tidyCrashArtifacts, err)
+		}
+
+		f, err := ioutil.TempFile(tidyCrashArtifacts, "crash-")
+		if err != nil {
+			return fmt.Errorf("making tempfile for crash output: %v", err)
+		}
+		f.Close()
+
+		reproCmd := &command{}
+		*reproCmd = *clangCmd
+		reproCmd.Args = append(reproCmd.Args, "-E", "-o", f.Name())
+
+		reproOut := &strings.Builder{}
+		_, err = wrapSubprocessErrorWithSourceLoc(reproCmd, env.run(reproCmd, nil, reproOut, reproOut))
+		if err != nil {
+			return fmt.Errorf("attempting to produce a clang-tidy crash reproducer: %v", err)
+		}
+		meta.CrashOutput = &crashOutput{
+			CrashReproducerPath: f.Name(),
+			Stdstreams:          reproOut.String(),
+		}
 	}
 
 	f, err = os.Create(fixesMetadataPath)
@@ -142,14 +190,6 @@ func runClangTidyForTricium(env env, clangCmd *command, cSrcFile, fixesDir strin
 		return fmt.Errorf("creating fixes metadata: %v", err)
 	}
 
-	meta := &metadata{
-		Args:       clangTidyCmd.Args,
-		Executable: clangTidyCmd.Path,
-		ExitCode:   exitCode,
-		LintTarget: cSrcFile,
-		Stdstreams: stdstreams.String(),
-		Wd:         env.getwd(),
-	}
 	if err := json.NewEncoder(f).Encode(meta); err != nil {
 		return fmt.Errorf("writing fixes metadata: %v", err)
 	}

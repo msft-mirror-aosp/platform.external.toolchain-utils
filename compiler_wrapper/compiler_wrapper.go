@@ -106,7 +106,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 					if cfg.triciumNitsDir == "" {
 						return 0, newErrorwithSourceLocf("tricium linting was requested, but no nits directory is configured")
 					}
-					err = runClangTidyForTricium(env, clangCmdWithoutGomaAndCCache, cSrcFile, cfg.triciumNitsDir, tidyFlags)
+					err = runClangTidyForTricium(env, clangCmdWithoutGomaAndCCache, cSrcFile, cfg.triciumNitsDir, tidyFlags, cfg.crashArtifactsDir)
 				case tidyModeAll:
 					err = runClangTidy(env, clangCmdWithoutGomaAndCCache, cSrcFile, tidyFlags)
 				default:
