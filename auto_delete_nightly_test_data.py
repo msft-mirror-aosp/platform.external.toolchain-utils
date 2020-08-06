@@ -16,6 +16,7 @@ import datetime
 import os
 import re
 import shutil
+import shlex
 import sys
 import time
 
@@ -217,15 +218,15 @@ def CleanChromeTelemetryTmpFiles(dry_run):
                          'tmp');
   cmd = f'rm -fr {shlex.quote(tmp_dir)}/tmp*telemetry_Crosperf'
   if dry_run:
-    print(f'Going to execute:\n{shlex.quote(cmd)}')
+    print(f'Going to execute:\n{cmd}')
   else:
     rv = ce.RunCommand(cmd, print_to_console=False)
     if rv == 0:
       print(f'Successfully cleaned chrome tree tmp directory '
-              '"{shlex.quote(tmp_dir)}".'
+            f'{tmp_dir!r} .')
     else:
       print(f'Some directories were not removed under chrome tree '
-            'tmp directory -"{shlex.quote(tmp_dir)}".')
+            f'tmp directory {tmp_dir!r}.')
   return rv
 
 
