@@ -209,6 +209,25 @@ def CleanOldCLs(days_to_preserve='1', dry_run=False):
   return ce.ChrootRunCommand(
       chromeos_root, abandon_cls_cmd, print_to_console=False)
 
+def CleanChromeTelemetryTmpFiles(dry_run):
+  rv = 0
+  ce = command_executer.GetCommandExecuter()
+  tmp_dir = os.path.join(constants.CROSTC_WORKSPACE, 'chromeos', '.cache',
+                         'distfiles', 'target', 'chrome-src-internal', 'src',
+                         'tmp');
+  cmd = f'rm -fr {shlex.quote(tmp_dir)}/tmp*telemetry_Crosperf'
+  if dry_run:
+    print(f'Going to execute:\n{shlex.quote(cmd)}')
+  else:
+    rv = ce.RunCommand(cmd, print_to_console=False)
+    if rv == 0:
+      print(f'Successfully cleaned chrome tree tmp directory '
+              '"{shlex.quote(tmp_dir)}".'
+    else:
+      print(f'Some directories were not removed under chrome tree '
+            'tmp directory -"{shlex.quote(tmp_dir)}".')
+  return rv
+
 
 def Main(argv):
   """Delete nightly test data directories, tmps and test images."""
@@ -239,7 +258,10 @@ def Main(argv):
   # Clean CLs that are not updated in last 2 weeks.
   rv3 = CleanOldCLs('14', options.dry_run)
 
-  return rv + rv2 + rv3
+  # Clean telemetry temporaries from chrome source tree inside chroot.
+  rv4 = CleanChromeTelemetryTmpFiles(options.dry_run)
+
+  return rv + rv2 + rv3 + rv4
 
 
 if __name__ == '__main__':
