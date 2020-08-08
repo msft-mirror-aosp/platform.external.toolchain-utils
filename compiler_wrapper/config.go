@@ -137,7 +137,6 @@ var crosHardenedConfig = &config{
 		"-fuse-ld=lld",
 		"-Wno-final-dtor-non-final-class",
 		"-Werror=poison-system-directories",
-		"-fcrash-diagnostics-dir=/tmp/clang_crash_diagnostics",
 		"-fexperimental-new-pass-manager",
 	},
 	clangPostFlags: []string{
@@ -145,7 +144,6 @@ var crosHardenedConfig = &config{
 	},
 	newWarningsDir: "/tmp/fatal_clang_warnings",
 	triciumNitsDir: "/tmp/linting_output/clang-tidy",
-	// FIXME(gbiv): apply -fcrash-diagnostics-dir based on this.
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
 }
 
@@ -171,7 +169,6 @@ var crosNonHardenedConfig = &config{
 		"-static-libgcc",
 		"-Wno-final-dtor-non-final-class",
 		"-Werror=poison-system-directories",
-		"-fcrash-diagnostics-dir=/tmp/clang_crash_diagnostics",
 		"-fexperimental-new-pass-manager",
 	},
 	clangPostFlags: []string{
@@ -210,7 +207,6 @@ var crosHostConfig = &config{
 		"-Wno-final-dtor-non-final-class",
 		"-Werror=poison-system-directories",
 		"-Wno-unknown-warning-option",
-		"-fcrash-diagnostics-dir=/tmp/clang_crash_diagnostics",
 		"-fexperimental-new-pass-manager",
 	},
 	clangPostFlags: []string{

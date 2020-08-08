@@ -182,6 +182,9 @@ func prepareClangCommand(builder *commandBuilder) (err error) {
 		processSysrootFlag(builder)
 	}
 	builder.addPreUserArgs(builder.cfg.clangFlags...)
+	if builder.cfg.crashArtifactsDir != "" {
+		builder.addPreUserArgs("-fcrash-diagnostics-dir=" + builder.cfg.crashArtifactsDir)
+	}
 	builder.addPostUserArgs(builder.cfg.clangPostFlags...)
 	calcCommonPreUserArgs(builder)
 	return processClangFlags(builder)

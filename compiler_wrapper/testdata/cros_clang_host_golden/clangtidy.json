@@ -41,8 +41,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
-            "-fcrash-diagnostics-dir=/tmp/clang_crash_diagnostics",
             "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -63,8 +63,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
-            "-fcrash-diagnostics-dir=/tmp/clang_crash_diagnostics",
             "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -115,8 +115,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
-            "-fcrash-diagnostics-dir=/tmp/clang_crash_diagnostics",
             "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -137,8 +137,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
-            "-fcrash-diagnostics-dir=/tmp/clang_crash_diagnostics",
             "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -191,8 +191,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
-            "-fcrash-diagnostics-dir=/tmp/clang_crash_diagnostics",
             "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -216,8 +216,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
-            "-fcrash-diagnostics-dir=/tmp/clang_crash_diagnostics",
             "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -271,8 +271,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
-            "-fcrash-diagnostics-dir=/tmp/clang_crash_diagnostics",
             "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -293,8 +293,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
-            "-fcrash-diagnostics-dir=/tmp/clang_crash_diagnostics",
             "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
