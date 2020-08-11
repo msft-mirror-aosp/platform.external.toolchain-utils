@@ -38,6 +38,14 @@
             "-Wno-unknown-warning-option",
             "-fexperimental-new-pass-manager",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
+            "-mno-movbe",
+            "-Wclobbered",
+            "-Wno-psabi",
+            "-Wlogical-op",
+            "-Wmissing-parameter-type",
+            "-Wold-style-declaration",
+            "-Woverride-init",
+            "-Wunsafe-loop-optimizations",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]

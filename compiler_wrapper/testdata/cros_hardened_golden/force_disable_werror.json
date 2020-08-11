@@ -39,6 +39,7 @@
             "-fno-omit-frame-pointer",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -92,6 +93,7 @@
             "-fno-omit-frame-pointer",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -131,6 +133,7 @@
             "-fno-omit-frame-pointer",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu",
@@ -188,6 +191,7 @@
             "-fno-omit-frame-pointer",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -227,6 +231,7 @@
             "-fno-omit-frame-pointer",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu",

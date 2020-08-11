@@ -38,6 +38,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -92,6 +93,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -149,6 +151,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"

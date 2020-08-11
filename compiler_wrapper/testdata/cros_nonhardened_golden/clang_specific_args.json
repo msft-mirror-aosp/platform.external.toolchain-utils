@@ -37,8 +37,17 @@
             "-Werror=poison-system-directories",
             "-fexperimental-new-pass-manager",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
+            "-mno-movbe",
+            "-Wclobbered",
+            "-Wno-psabi",
+            "-Wlogical-op",
+            "-Wmissing-parameter-type",
+            "-Wold-style-declaration",
+            "-Woverride-init",
+            "-Wunsafe-loop-optimizations",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -83,6 +92,7 @@
             "-Wno-#warnings",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -127,6 +137,7 @@
             "-Wno-error=uninitialized",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -171,6 +182,7 @@
             "-Wno-error=unused-variable",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -215,6 +227,7 @@
             "-Wno-unused-variable",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -259,6 +272,7 @@
             "-Wunused-variable",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -303,6 +317,7 @@
             "-someflag",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"

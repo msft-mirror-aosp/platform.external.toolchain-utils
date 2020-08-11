@@ -38,6 +38,7 @@
             "-fsanitize=kernel-address",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -90,6 +91,7 @@
             "-fsanitize=kernel-address",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -142,6 +144,7 @@
             "-fsanitize=kernel-address",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -194,6 +197,7 @@
             "-fsanitize=kernel-address",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -246,6 +250,7 @@
             "-fsanitize=fuzzer",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -300,6 +305,7 @@
             "-fprofile-instr-generate",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -351,6 +357,7 @@
             "-fsanitize=address",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -403,6 +410,7 @@
             "-fprofile-instr-generate",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"

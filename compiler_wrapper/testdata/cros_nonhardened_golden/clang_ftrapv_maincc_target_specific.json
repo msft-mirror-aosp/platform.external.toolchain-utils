@@ -30,6 +30,7 @@
             "-ftrapv",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
@@ -74,6 +75,7 @@
             "-ftrapv",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-eabi"
@@ -118,6 +120,7 @@
             "-ftrapv",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
+            "-mno-movbe",
             "-B../../bin",
             "-target",
             "x86_64-cros-win-gnu"
