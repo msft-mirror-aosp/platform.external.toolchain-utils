@@ -7,17 +7,24 @@
 """Tool to automatically generate a new Rust uprev CL.
 
 This tool is intended to automatically generate a CL to uprev Rust to a
-newer version in Chrome OS. It's based on
+newer version in Chrome OS, including creating a new Rust version or
+removing an old version. It's based on
 src/third_party/chromiumos-overlay/dev-lang/rust/UPGRADE.md. When using
 the tool, the progress can be saved to a JSON file, so the user can resume
-the process after a failing step is fixed. Example usage:
+the process after a failing step is fixed. Example usage to create a new
+version:
 
-1. (inside chroot) $ ./rust_tools/rust_uprev.py --rust_version 1.45.0 \
-                   --state_file /tmp/state-file.json
+1. (inside chroot) $ ./rust_tools/rust_uprev.py
+                     --state_file /tmp/state-file.json
+                     create --rust_version 1.45.0
 2. Step "compile rust" failed due to the patches can't apply to new version
 3. Manually fix the patches
 4. Execute the command in step 1 again.
 5. Iterate 1-4 for each failed step until the tool passes.
+
+Replace `create --rust_version 1.45.0` with `remove --rust_version 1.43.0`
+if you want to remove all 1.43.0 related stuff in the same CL. Remember to
+use a different state file if you choose to run different subcommands.
 
 See `--help` for all available options.
 """
@@ -36,7 +43,8 @@ import sys
 import tempfile
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, T, Tuple
 
-from llvm_tools import chroot, git
+from llvm_tools import chroot
+RUST_PATH = '/mnt/host/source/src/third_party/chromiumos-overlay/dev-lang/rust'
 
 
 def get_command_output(command: List[str]) -> str:
@@ -77,6 +85,84 @@ class RustVersion(NamedTuple):
         int(m.group('major')), int(m.group('minor')), int(m.group('patch')))
 
 
+def parse_commandline_args() -> argparse.Namespace:
+  parser = argparse.ArgumentParser(
+      description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+  parser.add_argument(
+      '--state_file',
+      required=True,
+      help='A state file to hold previous completed steps. If the file '
+      'exists, it needs to be used together with --continue or --restart. '
+      'If not exist (do not use --continue in this case), we will create a '
+      'file for you.',
+  )
+  parser.add_argument(
+      '--restart',
+      action='store_true',
+      help='Restart from the first step. Ignore the completed steps in '
+      'the state file',
+  )
+  parser.add_argument(
+      '--continue',
+      dest='cont',
+      action='store_true',
+      help='Continue the steps from the state file',
+  )
+
+  subparsers = parser.add_subparsers(dest='subparser_name')
+  subparser_names = []
+
+  create_parser = subparsers.add_parser('create')
+  subparser_names.append('create')
+  create_parser.add_argument(
+      '--rust_version',
+      type=RustVersion.parse,
+      required=True,
+      help='Rust version to upgrade to, in the form a.b.c',
+  )
+  create_parser.add_argument(
+      '--template',
+      type=RustVersion.parse,
+      default=None,
+      help='A template to use for creating a Rust uprev from, in the form '
+      'a.b.c The ebuild has to exist in the chroot. If not specified, the '
+      'tool will use the current Rust version in the chroot as template.',
+  )
+  create_parser.add_argument(
+      '--skip_compile',
+      action='store_true',
+      help='Skip compiling rust to test the tool. Only for testing',
+  )
+
+  subparser_names.append('remove')
+  remove_parser = subparsers.add_parser('remove')
+  remove_parser.add_argument(
+      '--rust_version',
+      type=RustVersion.parse,
+      required=True,
+      help='Rust version to upgrade to, in the form a.b.c',
+  )
+
+  args = parser.parse_args()
+  if args.subparser_name not in subparser_names:
+    parser.error('one of %s must be specified' % subparser_names)
+
+  if args.cont and args.restart:
+    parser.error('Please select either --continue or --restart')
+
+  if os.path.exists(args.state_file):
+    if not args.cont and not args.restart:
+      parser.error('State file exists, so you should either --continue '
+                   'or --restart')
+  if args.cont and not os.path.exists(args.state_file):
+    parser.error('Indicate --continue but the state file does not exist')
+
+  if args.restart and os.path.exists(args.state_file):
+    os.remove(args.state_file)
+
+  return args
+
+
 def parse_stage0_file(new_version: RustVersion) -> Tuple[str, str, str]:
   # Find stage0 date, rustc and cargo
   stage0_file = get_command_output([
@@ -94,76 +180,55 @@ def parse_stage0_file(new_version: RustVersion) -> Tuple[str, str, str]:
   return stage0_date, stage0_rustc, stage0_cargo
 
 
-def prepare_uprev_from_json(json_input: Any
-                           ) -> Tuple[str, RustVersion, RustVersion]:
-  a, b, c = json_input
-  return a, RustVersion(*b), RustVersion(*c)
+def prepare_uprev_from_json(json_input: Any) -> RustVersion:
+  return RustVersion(*json_input)
 
 
 def prepare_uprev(rust_version: RustVersion,
-                  reset: bool) -> Tuple[str, RustVersion, RustVersion]:
-  ebuild_path = get_command_output(['equery', 'w', 'rust'])
-  rust_path, ebuild_name = os.path.split(ebuild_path)
-  if reset:
-    subprocess.check_call(['git', 'reset', '--hard'], cwd=rust_path)
+                  template: Optional[RustVersion]) -> RustVersion:
+  if template is None:
     ebuild_path = get_command_output(['equery', 'w', 'rust'])
-    _, ebuild_name = os.path.split(ebuild_path)
+    ebuild_name = os.path.basename(ebuild_path)
+    template_version = RustVersion.parse(ebuild_name)
+  else:
+    if not os.path.exists(os.path.join(RUST_PATH, f'rust-{template}.ebuild')):
+      raise ValueError(f'Template ebuild file {template} does not exist')
+    template_version = template
+  if rust_version <= template_version:
+    logging.info(
+        'Requested version %s is not newer than the template version %s.',
+        rust_version, template_version)
+    return None
 
-  current_version = RustVersion.parse(ebuild_name)
-  if rust_version <= current_version:
-    logging.info('Requested version %s is not newer than existing version %s.',
-                 rust_version, current_version)
-    return '', None, None
-
-  logging.info('Current Rust version is %s', current_version)
-  other_ebuilds = [
-      x for x in os.listdir(rust_path) if '.ebuild' in x and x != ebuild_name
-  ]
-  if len(other_ebuilds) != 1:
-    raise Exception('Expect exactly 1 previous version ebuild, '
-                    f'but actually found {other_ebuilds}')
-  # TODO(tcwang): Only support uprev from the older ebuild; need support to
-  # pick either version of the Rust to uprev from
-  old_version = RustVersion.parse(other_ebuilds[0])
-  # Prepare a repo branch for uprev
-  branch_name = f'rust-to-{rust_version}'
-  git.CreateBranch(rust_path, branch_name)
-  logging.info('Create a new repo branch %s', branch_name)
-  return rust_path, current_version, old_version
+  logging.info('Template Rust version is %s', template_version)
+  return template_version
 
 
-def copy_patches(rust_path: str, old_version: RustVersion,
-                 current_version: RustVersion,
+def copy_patches(template_version: RustVersion,
                  new_version: RustVersion) -> None:
-  patch_path = os.path.join(rust_path, 'files')
+  patch_path = os.path.join(RUST_PATH, 'files')
   for f in os.listdir(patch_path):
-    if f'rust-{current_version}' not in f:
+    if f'rust-{template_version}' not in f:
       continue
     logging.info('Rename patch %s to new version', f)
-    new_name = f.replace(str(current_version), str(new_version))
+    new_name = f.replace(str(template_version), str(new_version))
     shutil.copyfile(
         os.path.join(patch_path, f),
         os.path.join(patch_path, new_name),
     )
 
   subprocess.check_call(['git', 'add', f'files/rust-{new_version}-*.patch'],
-                        cwd=rust_path)
-
-  subprocess.check_call(['git', 'rm', f'files/rust-{old_version}-*.patch'],
-                        cwd=rust_path)
+                        cwd=RUST_PATH)
 
 
-def rename_ebuild(rust_path: str, old_version: RustVersion,
-                  current_version: RustVersion,
+def create_ebuild(template_version: RustVersion,
                   new_version: RustVersion) -> str:
   shutil.copyfile(
-      os.path.join(rust_path, f'rust-{current_version}.ebuild'),
-      os.path.join(rust_path, f'rust-{new_version}.ebuild'))
+      os.path.join(RUST_PATH, f'rust-{template_version}.ebuild'),
+      os.path.join(RUST_PATH, f'rust-{new_version}.ebuild'))
   subprocess.check_call(['git', 'add', f'rust-{new_version}.ebuild'],
-                        cwd=rust_path)
-  subprocess.check_call(['git', 'rm', f'rust-{old_version}.ebuild'],
-                        cwd=rust_path)
-  return os.path.join(rust_path, f'rust-{new_version}.ebuild')
+                        cwd=RUST_PATH)
+  return os.path.join(RUST_PATH, f'rust-{new_version}.ebuild')
 
 
 def update_ebuild(ebuild_file: str, stage0_info: Tuple[str, str, str]) -> None:
@@ -235,38 +300,39 @@ def update_manifest(ebuild_file: str) -> None:
   flip_mirror_in_ebuild(ebuild_file, add=False)
 
 
-def upgrade_rust_packages(ebuild_file: str, old_version: RustVersion,
-                          current_version: RustVersion,
-                          new_version: RustVersion) -> None:
+def update_rust_packages(rust_version: RustVersion, add: bool) -> None:
   package_file = os.path.join(
-      os.path.dirname(ebuild_file),
-      '../../profiles/targets/chromeos/package.provided')
+      RUST_PATH, '../../profiles/targets/chromeos/package.provided')
   with open(package_file, encoding='utf-8') as f:
     contents = f.read()
-  old_str = f'dev-lang/rust-{old_version}'
-  current_str = f'dev-lang/rust-{current_version}'
-  new_str = f'dev-lang/rust-{new_version}'
-  if old_str not in contents or current_str not in contents:
-    raise Exception(f'Expect {old_str} and {current_str} to be in '
-                    'profiles/targets/chromeos/package.provided')
-  # Replace the two strings (old_str, current_str) with (current_str, new_str),
-  # so they are still ordered by rust versions
-  new_contents = contents.replace(current_str,
-                                  new_str).replace(old_str, current_str)
+  if add:
+    rust_packages_re = re.compile(r'dev-lang/rust-(\d+\.\d+\.\d+)')
+    rust_packages = rust_packages_re.findall(contents)
+    # Assume all the rust packages are in alphabetical order, so insert the new
+    # version to the place after the last rust_packages
+    new_str = f'dev-lang/rust-{rust_version}'
+    new_contents = contents.replace(rust_packages[-1],
+                                    f'{rust_packages[-1]}\n{new_str}')
+    logging.info('%s has been inserted into package.provided', new_str)
+  else:
+    old_str = f'dev-lang/rust-{rust_version}\n'
+    assert old_str in contents, f'{old_str!r} not found in package.provided'
+    new_contents = contents.replace(old_str, '')
+    logging.info('%s has been removed from package.provided', old_str)
+
   with open(package_file, 'w', encoding='utf-8') as f:
     f.write(new_contents)
-  logging.info('package.provided has been updated from %s, %s to %s, %s',
-               old_str, current_str, current_str, new_str)
 
 
-def update_virtual_rust(ebuild_file: str, old_version: RustVersion,
+def update_virtual_rust(template_version: RustVersion,
                         new_version: RustVersion) -> None:
-  virtual_rust_dir = os.path.join(
-      os.path.dirname(ebuild_file), '../../virtual/rust')
+  virtual_rust_dir = os.path.join(RUST_PATH, '../../virtual/rust')
   assert os.path.exists(virtual_rust_dir)
-  subprocess.check_call(
-      ['git', 'mv', f'rust-{old_version}.ebuild', f'rust-{new_version}.ebuild'],
-      cwd=virtual_rust_dir)
+  shutil.copyfile(
+      os.path.join(virtual_rust_dir, f'rust-{template_version}.ebuild'),
+      os.path.join(virtual_rust_dir, f'rust-{new_version}.ebuild'))
+  subprocess.check_call(['git', 'add', f'rust-{new_version}.ebuild'],
+                        cwd=virtual_rust_dir)
 
 
 def upload_to_localmirror(tempdir: str, rust_version: RustVersion) -> None:
@@ -310,64 +376,72 @@ def perform_step(state_file: pathlib.Path,
   return val
 
 
-def main():
+def create_rust_uprev(rust_version: RustVersion,
+                      template: Optional[RustVersion], skip_compile: bool,
+                      run_step: Callable[[
+                          str, Callable[[], T], Optional[Callable[[Any], T]],
+                          Optional[Callable[[T], Any]]
+                      ], T]) -> None:
+  stage0_info = run_step(
+      'parse stage0 file', lambda: parse_stage0_file(rust_version))
+  template_version = run_step(
+      'prepare uprev',
+      lambda: prepare_uprev(rust_version, template),
+      result_from_json=prepare_uprev_from_json,
+  )
+  if template_version is None:
+    return
+
+  run_step('copy patches', lambda: copy_patches(template_version, rust_version))
+  ebuild_file = run_step(
+      'create ebuild', lambda: create_ebuild(template_version, rust_version))
+  run_step('update ebuild', lambda: update_ebuild(ebuild_file, stage0_info))
+  with tempfile.TemporaryDirectory(dir='/tmp') as tempdir:
+    run_step('upload_to_localmirror', lambda: upload_to_localmirror(
+        tempdir, rust_version))
+  run_step('update manifest', lambda: update_manifest(ebuild_file))
+  if not skip_compile:
+    run_step('compile rust', lambda: rust_ebuild_command('compile'))
+    run_step('merge rust', lambda: rust_ebuild_command('merge', sudo=True))
+  run_step('insert version into rust packages', lambda: update_rust_packages(
+      rust_version, add=True))
+  run_step('upgrade virtual/rust', lambda: update_virtual_rust(
+      template_version, rust_version))
+
+
+def remove_files(filename: str, path: str) -> None:
+  subprocess.check_call(['git', 'rm', filename], cwd=path)
+
+
+def remove_rust_uprev(rust_version: RustVersion, run_step: Callable[[
+    str, Callable[[], T], Optional[Callable[[Any], T]], Optional[
+        Callable[[T], Any]]
+], T]) -> None:
+  run_step(
+      'remove patches', lambda: remove_files(
+          f'files/rust-{rust_version}-*.patch', RUST_PATH))
+  run_step('remove ebuild', lambda: remove_files(f'rust-{rust_version}.ebuild',
+                                                 RUST_PATH))
+  ebuild_file = get_command_output(['equery', 'w', 'rust'])
+  run_step('update manifest', lambda: update_manifest(ebuild_file))
+  run_step('remove version from rust packages', lambda: update_rust_packages(
+      rust_version, add=False))
+  run_step(
+      'remove virtual/rust', lambda: remove_files(
+          f'rust-{rust_version}.ebuild',
+          os.path.join(RUST_PATH, '../../virtual/rust')))
+
+
+def main() -> None:
   if not chroot.InChroot():
     raise RuntimeError('This script must be executed inside chroot')
 
   logging.basicConfig(level=logging.INFO)
 
-  parser = argparse.ArgumentParser(
-      description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-  parser.add_argument(
-      '--rust_version',
-      type=RustVersion.parse,
-      required=True,
-      help='Rust version to upgrade to, in the form a.b.c',
-  )
-  parser.add_argument(
-      '--state_file',
-      required=True,
-      help='A state file to hold previous completed steps. If the file '
-      'exists, it needs to be used together with --continue or --restart. '
-      'If not exist (do not use --continue in this case), we will create a '
-      'file for you.',
-  )
-  parser.add_argument(
-      '--skip_compile',
-      action='store_true',
-      help='Skip compiling rust to test the tool. Only for testing',
-  )
-  parser.add_argument(
-      '--restart',
-      action='store_true',
-      help='Restart from the first step. Ignore the completed steps in '
-      'the state file',
-  )
-  parser.add_argument(
-      '--continue',
-      dest='cont',
-      action='store_true',
-      help='Continue the steps from the state file',
-  )
+  args = parse_commandline_args()
 
-  args = parser.parse_args()
-
-  rust_version = args.rust_version
   state_file = pathlib.Path(args.state_file)
-  tmp_state_file = pathlib.Path(args.state_file + '.tmp')
-
-  if args.cont and args.restart:
-    parser.error('Please select either --continue or --restart')
-
-  if os.path.exists(state_file):
-    if not args.cont and not args.restart:
-      parser.error('State file exists, so you should either --continue '
-                   'or --restart')
-  if args.cont and not os.path.exists(state_file):
-    parser.error('Indicate --continue but the state file does not exist')
-
-  if args.restart and os.path.exists(state_file):
-    os.remove(state_file)
+  tmp_state_file = state_file.with_suffix('.tmp')
 
   try:
     with state_file.open(encoding='utf-8') as f:
@@ -384,38 +458,11 @@ def main():
     return perform_step(state_file, tmp_state_file, completed_steps, step_name,
                         step_fn, result_from_json, result_to_json)
 
-  stage0_info = run_step(
-      'parse stage0 file', lambda: parse_stage0_file(rust_version))
-  rust_path, current_version, old_version = run_step(
-      'prepare uprev',
-      lambda: prepare_uprev(rust_version, args.restart),
-      result_from_json=prepare_uprev_from_json,
-  )
-  if current_version is None:
-    return
-
-  current_version = RustVersion(*current_version)
-  old_version = RustVersion(*old_version)
-
-  run_step(
-      'copy patches', lambda: copy_patches(rust_path, old_version,
-                                           current_version, rust_version))
-  ebuild_file = run_step(
-      'rename ebuild', lambda: rename_ebuild(rust_path, old_version,
-                                             current_version, rust_version))
-  run_step('update ebuild', lambda: update_ebuild(ebuild_file, stage0_info))
-  with tempfile.TemporaryDirectory(dir='/tmp') as tempdir:
-    run_step('upload_to_localmirror', lambda: upload_to_localmirror(
-        tempdir, rust_version))
-  run_step('update manifest', lambda: update_manifest(ebuild_file))
-  if not args.skip_compile:
-    run_step('compile rust', lambda: rust_ebuild_command('compile'))
-    run_step('merge rust', lambda: rust_ebuild_command('merge', sudo=True))
-  run_step(
-      'upgrade rust packages', lambda: upgrade_rust_packages(
-          ebuild_file, old_version, current_version, rust_version))
-  run_step('upgrade virtual/rust', lambda: update_virtual_rust(
-      ebuild_file, old_version, rust_version))
+  if args.subparser_name == 'create':
+    create_rust_uprev(args.rust_version, args.template, args.skip_compile,
+                      run_step)
+  else:
+    remove_rust_uprev(args.rust_version, run_step)
 
 
 if __name__ == '__main__':
