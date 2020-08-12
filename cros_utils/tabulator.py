@@ -67,10 +67,10 @@ from __future__ import print_function
 import collections
 import getpass
 import math
+import statistics
 import sys
-# TODO(zhizhouy): Drop numpy in the future
+# TODO(crbug.com/980719): Drop scipy in the future.
 # pylint: disable=import-error
-import numpy
 import scipy
 
 from cros_utils.email_sender import EmailSender
@@ -556,7 +556,7 @@ class AmeanResult(StringMeanResult):
   def _ComputeFloat(self, cell, values, baseline_values):
     if self.ignore_min_max:
       values = _RemoveMinMax(cell, values)
-    cell.value = numpy.mean(values)
+    cell.value = statistics.mean(values)
 
 
 class RawResult(Result):
@@ -610,7 +610,7 @@ class StdResult(NumericalResult):
   def _ComputeFloat(self, cell, values, baseline_values):
     if self.ignore_min_max:
       values = _RemoveMinMax(cell, values)
-    cell.value = numpy.std(values)
+    cell.value = statistics.stdev(values)
 
 
 class CoeffVarResult(NumericalResult):
@@ -623,8 +623,8 @@ class CoeffVarResult(NumericalResult):
   def _ComputeFloat(self, cell, values, baseline_values):
     if self.ignore_min_max:
       values = _RemoveMinMax(cell, values)
-    if numpy.mean(values) != 0.0:
-      noise = numpy.abs(numpy.std(values) / numpy.mean(values))
+    if statistics.mean(values) != 0.0:
+      noise = abs(statistics.stdev(values) / statistics.mean(values))
     else:
       noise = 0.0
     cell.value = noise
@@ -731,9 +731,12 @@ class AmeanRatioResult(KeyAwareComparisonResult):
     if self.ignore_min_max:
       values = _RemoveMinMax(cell, values)
       baseline_values = _RemoveMinMax(cell, baseline_values)
-    if numpy.mean(baseline_values) != 0:
-      cell.value = numpy.mean(values) / numpy.mean(baseline_values)
-    elif numpy.mean(values) != 0:
+
+    baseline_mean = statistics.mean(baseline_values)
+    values_mean = statistics.mean(values)
+    if baseline_mean != 0:
+      cell.value = values_mean / baseline_mean
+    elif values_mean != 0:
       cell.value = 0.00
       # cell.value = 0 means the values and baseline_values have big difference
     else:
@@ -1506,16 +1509,15 @@ if __name__ == '__main__':
           'k8': 'PASS',
           'k9': 'PASS',
           'k10': '0'
-      },
-       {
-           'k1': '13',
-           'k2': '14',
-           'k3': '15',
-           'ms_1': '10',
-           'k8': 'PASS',
-           'k9': 'FAIL',
-           'k10': '0'
-       }],
+      }, {
+          'k1': '13',
+          'k2': '14',
+          'k3': '15',
+          'ms_1': '10',
+          'k8': 'PASS',
+          'k9': 'FAIL',
+          'k10': '0'
+      }],
       [{
           'k1': '50',
           'k2': '51',
