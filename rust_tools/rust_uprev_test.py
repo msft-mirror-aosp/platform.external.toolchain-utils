@@ -13,6 +13,8 @@ import subprocess
 import unittest
 from unittest import mock
 
+from llvm_tools import git
+
 import rust_uprev
 
 
@@ -223,6 +225,67 @@ class UpdateRustPackagesTests(unittest.TestCase):
         package_after)
 
 
+class UploadToLocalmirrorTests(unittest.TestCase):
+  """Tests for upload_to_localmirror"""
+
+  def setUp(self):
+    self.tempdir = '/tmp/any/dir'
+    self.new_version = rust_uprev.RustVersion(1, 3, 5)
+    self.tarfile_name = f'rustc-{self.new_version}-src.tar.gz'
+    self.rust_src = f'https://static.rust-lang.org/dist/{self.tarfile_name}'
+    self.gsurl = f'gs://chromeos-localmirror/distfiles/{self.tarfile_name}'
+    self.rust_file = os.path.join(self.tempdir, self.tarfile_name)
+    self.sig_file = os.path.join(self.tempdir, 'rustc_sig.asc')
+
+  @mock.patch.object(subprocess, 'check_call')
+  @mock.patch.object(subprocess, 'check_output')
+  @mock.patch.object(subprocess, 'run')
+  def test_pass_without_retry(self, mock_run, mock_output, mock_call):
+    rust_uprev.upload_to_localmirror(self.tempdir, self.new_version)
+    mock_output.assert_called_once_with(
+        ['gpg', '--verify', self.sig_file, self.rust_file],
+        encoding='utf-8',
+        stderr=subprocess.STDOUT)
+    mock_call.assert_has_calls([
+        mock.call(['curl', '-f', '-o', self.rust_file, self.rust_src]),
+        mock.call(['curl', '-f', '-o', self.sig_file, f'{self.rust_src}.asc']),
+        mock.call([
+            'gsutil', 'cp', '-n', '-a', 'public-read', self.rust_file,
+            self.gsurl
+        ])
+    ])
+    mock_run.assert_not_called()
+
+  @mock.patch.object(subprocess, 'check_call')
+  @mock.patch.object(subprocess, 'check_output')
+  @mock.patch.object(subprocess, 'run')
+  @mock.patch.object(rust_uprev, 'get_command_output')
+  def test_pass_with_retry(self, mock_output, mock_run, mock_check, mock_call):
+    mock_check.side_effect = subprocess.CalledProcessError(
+        returncode=2, cmd=None, output="gpg: Can't check signature")
+    mock_output.return_value = 'some_gpg_keys'
+    rust_uprev.upload_to_localmirror(self.tempdir, self.new_version)
+    mock_check.assert_called_once_with(
+        ['gpg', '--verify', self.sig_file, self.rust_file],
+        encoding='utf-8',
+        stderr=subprocess.STDOUT)
+    mock_output.assert_called_once_with(
+        ['curl', '-f', 'https://keybase.io/rust/pgp_keys.asc'])
+    mock_run.assert_called_once_with(['gpg', '--import'],
+                                     input='some_gpg_keys',
+                                     encoding='utf-8',
+                                     check=True)
+    mock_call.assert_has_calls([
+        mock.call(['curl', '-f', '-o', self.rust_file, self.rust_src]),
+        mock.call(['curl', '-f', '-o', self.sig_file, f'{self.rust_src}.asc']),
+        mock.call(['gpg', '--verify', self.sig_file, self.rust_file]),
+        mock.call([
+            'gsutil', 'cp', '-n', '-a', 'public-read', self.rust_file,
+            self.gsurl
+        ])
+    ])
+
+
 class RustUprevOtherStagesTests(unittest.TestCase):
   """Tests for other steps in rust_uprev"""
 
@@ -305,20 +368,52 @@ class RustUprevOtherStagesTests(unittest.TestCase):
         os.path.join(virtual_rust_dir, f'rust-{self.new_version}.ebuild'))
     mock_exists.assert_called_once_with(virtual_rust_dir)
 
-  @mock.patch.object(subprocess, 'check_call')
-  def test_upload_to_localmirror(self, mock_call):
-    tempdir = '/tmp/any/dir'
-    rust_uprev.upload_to_localmirror(tempdir, self.new_version)
+  @mock.patch.object(os, 'listdir')
+  def test_find_oldest_rust_version_inchroot_pass(self, mock_ls):
+    mock_ls.return_value = [
+        f'rust-{self.old_version}.ebuild',
+        f'rust-{self.current_version}.ebuild', f'rust-{self.new_version}.ebuild'
+    ]
+    actual = rust_uprev.find_oldest_rust_version_inchroot()
+    expected = self.old_version
+    self.assertEqual(expected, actual)
 
-    tarfile_name = f'rustc-{self.new_version}-src.tar.gz'
-    rust_src = f'https://static.rust-lang.org/dist/{tarfile_name}'
-    gsurl = f'gs://chromeos-localmirror/distfiles/{tarfile_name}'
-    local_file = os.path.join(tempdir, tarfile_name)
-    mock_call.assert_has_calls([
-        mock.call(['curl', '-f', '-o', local_file, rust_src]),
-        mock.call(
-            ['gsutil', 'cp', '-n', '-a', 'public-read', local_file, gsurl])
-    ])
+  @mock.patch.object(os, 'listdir')
+  def test_find_oldest_rust_version_inchroot_fail_with_only_one_ebuild(
+      self, mock_ls):
+    mock_ls.return_value = [f'rust-{self.new_version}.ebuild']
+    with self.assertRaises(RuntimeError) as context:
+      rust_uprev.find_oldest_rust_version_inchroot()
+    self.assertEqual('Expect to find more than one Rust versions',
+                     str(context.exception))
+
+  @mock.patch.object(rust_uprev, 'get_command_output')
+  @mock.patch.object(git, 'CreateBranch')
+  def test_create_new_repo(self, mock_branch, mock_output):
+    mock_output.return_value = ''
+    rust_uprev.create_new_repo(self.new_version)
+    mock_branch.assert_called_once_with(rust_uprev.RUST_PATH,
+                                        f'rust-to-{self.new_version}')
+
+  @mock.patch.object(rust_uprev, 'get_command_output')
+  @mock.patch.object(subprocess, 'check_call')
+  def test_build_cross_compiler(self, mock_call, mock_output):
+    mock_output.return_value = f'rust-{self.new_version}.ebuild'
+    cros_targets = [
+        'x86_64-cros-linux-gnu', 'armv7a-cros-linux-gnueabihf',
+        'aarch64-cros-linux-gnu'
+    ]
+    all_triples = ['x86_64-pc-linux-gnu'] + cros_targets
+    rust_ebuild = 'RUSTC_TARGET_TRIPLES=(' + '\n\t'.join(all_triples) + ')'
+    mock_open = mock.mock_open(read_data=rust_ebuild)
+    with mock.patch('builtins.open', mock_open):
+      rust_uprev.build_cross_compiler()
+
+    emerge_calls = [
+        mock.call(['sudo', 'emerge', '-G', f'cross-{x}/gcc'])
+        for x in cros_targets
+    ]
+    mock_call.assert_has_calls(emerge_calls)
 
 
 if __name__ == '__main__':

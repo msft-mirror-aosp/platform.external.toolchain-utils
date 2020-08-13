@@ -26,6 +26,10 @@ Replace `create --rust_version 1.45.0` with `remove --rust_version 1.43.0`
 if you want to remove all 1.43.0 related stuff in the same CL. Remember to
 use a different state file if you choose to run different subcommands.
 
+If you want a hammer that can do everything for you, use the subcommand
+`roll`. It can create a Rust uprev CL with `create` and `remove` and upload
+the CL to chromium code review.
+
 See `--help` for all available options.
 """
 
@@ -43,12 +47,13 @@ import sys
 import tempfile
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, T, Tuple
 
-from llvm_tools import chroot
+from llvm_tools import chroot, git
 RUST_PATH = '/mnt/host/source/src/third_party/chromiumos-overlay/dev-lang/rust'
 
 
-def get_command_output(command: List[str]) -> str:
-  return subprocess.check_output(command, encoding='utf-8').strip()
+def get_command_output(command: List[str], *args, **kwargs) -> str:
+  return subprocess.check_output(
+      command, encoding='utf-8', *args, **kwargs).strip()
 
 
 class RustVersion(NamedTuple):
@@ -109,18 +114,8 @@ def parse_commandline_args() -> argparse.Namespace:
       help='Continue the steps from the state file',
   )
 
-  subparsers = parser.add_subparsers(dest='subparser_name')
-  subparser_names = []
-
-  create_parser = subparsers.add_parser('create')
-  subparser_names.append('create')
-  create_parser.add_argument(
-      '--rust_version',
-      type=RustVersion.parse,
-      required=True,
-      help='Rust version to upgrade to, in the form a.b.c',
-  )
-  create_parser.add_argument(
+  create_parser_template = argparse.ArgumentParser(add_help=False)
+  create_parser_template.add_argument(
       '--template',
       type=RustVersion.parse,
       default=None,
@@ -128,19 +123,70 @@ def parse_commandline_args() -> argparse.Namespace:
       'a.b.c The ebuild has to exist in the chroot. If not specified, the '
       'tool will use the current Rust version in the chroot as template.',
   )
-  create_parser.add_argument(
+  create_parser_template.add_argument(
       '--skip_compile',
       action='store_true',
       help='Skip compiling rust to test the tool. Only for testing',
   )
 
-  subparser_names.append('remove')
-  remove_parser = subparsers.add_parser('remove')
-  remove_parser.add_argument(
+  subparsers = parser.add_subparsers(dest='subparser_name')
+  subparser_names = []
+  subparser_names.append('create')
+  create_parser = subparsers.add_parser(
+      'create',
+      parents=[create_parser_template],
+      help='Create changes uprevs Rust to a new version',
+  )
+  create_parser.add_argument(
       '--rust_version',
       type=RustVersion.parse,
       required=True,
-      help='Rust version to upgrade to, in the form a.b.c',
+      help='Rust version to uprev to, in the form a.b.c',
+  )
+
+  subparser_names.append('remove')
+  remove_parser = subparsers.add_parser(
+      'remove',
+      help='Clean up old Rust version from chroot',
+  )
+  remove_parser.add_argument(
+      '--rust_version',
+      type=RustVersion.parse,
+      default=None,
+      help='Rust version to remove, in the form a.b.c If not '
+      'specified, the tool will remove the oldest version in the chroot',
+  )
+
+  subparser_names.append('roll')
+  roll_parser = subparsers.add_parser(
+      'roll',
+      parents=[create_parser_template],
+      help='A command can create and upload a Rust uprev CL, including '
+      'preparing the repo, creating new Rust uprev, deleting old uprev, '
+      'and upload a CL to crrev.',
+  )
+  roll_parser.add_argument(
+      '--uprev',
+      type=RustVersion.parse,
+      required=True,
+      help='Rust version to uprev to, in the form a.b.c',
+  )
+  roll_parser.add_argument(
+      '--remove',
+      type=RustVersion.parse,
+      default=None,
+      help='Rust version to remove, in the form a.b.c If not '
+      'specified, the tool will remove the oldest version in the chroot',
+  )
+  roll_parser.add_argument(
+      '--skip_cross_compiler',
+      action='store_true',
+      help='Skip updating cross-compiler in the chroot',
+  )
+  roll_parser.add_argument(
+      '--no_upload',
+      action='store_true',
+      help='If specified, the tool will not upload the CL for review',
   )
 
   args = parser.parse_args()
@@ -341,12 +387,34 @@ def upload_to_localmirror(tempdir: str, rust_version: RustVersion) -> None:
   logging.info('Downloading Rust from %s', rust_src)
   gsutil_location = f'gs://chromeos-localmirror/distfiles/{tarfile_name}'
 
-  local_file = os.path.join(tempdir, tarfile_name)
-  subprocess.check_call(['curl', '-f', '-o', local_file, rust_src])
+  # Download Rust's source
+  rust_file = os.path.join(tempdir, tarfile_name)
+  subprocess.check_call(['curl', '-f', '-o', rust_file, rust_src])
+
+  # Verify the signature of the source
+  sig_file = os.path.join(tempdir, 'rustc_sig.asc')
+  subprocess.check_call(['curl', '-f', '-o', sig_file, f'{rust_src}.asc'])
+  try:
+    subprocess.check_output(['gpg', '--verify', sig_file, rust_file],
+                            encoding='utf-8',
+                            stderr=subprocess.STDOUT)
+  except subprocess.CalledProcessError as e:
+    if "gpg: Can't check signature" not in e.output:
+      raise RuntimeError(f'Failed to execute `gpg --verify`, {e.output}')
+
+    # If it fails to verify the signature, try import rustc key, and retry.
+    keys = get_command_output(
+        ['curl', '-f', 'https://keybase.io/rust/pgp_keys.asc'])
+    subprocess.run(['gpg', '--import'],
+                   input=keys,
+                   encoding='utf-8',
+                   check=True)
+    subprocess.check_call(['gpg', '--verify', sig_file, rust_file])
+
   # Since we are using `-n` to skip an item if it already exists, there's no
   # need to check if the file exists on GS bucket or not.
   subprocess.check_call(
-      ['gsutil', 'cp', '-n', '-a', 'public-read', local_file, gsutil_location])
+      ['gsutil', 'cp', '-n', '-a', 'public-read', rust_file, gsutil_location])
 
 
 def perform_step(state_file: pathlib.Path,
@@ -378,10 +446,7 @@ def perform_step(state_file: pathlib.Path,
 
 def create_rust_uprev(rust_version: RustVersion,
                       template: Optional[RustVersion], skip_compile: bool,
-                      run_step: Callable[[
-                          str, Callable[[], T], Optional[Callable[[Any], T]],
-                          Optional[Callable[[T], Any]]
-                      ], T]) -> None:
+                      run_step: Callable[[], T]) -> None:
   stage0_info = run_step(
       'parse stage0 file', lambda: parse_stage0_file(rust_version))
   template_version = run_step(
@@ -409,27 +474,80 @@ def create_rust_uprev(rust_version: RustVersion,
       template_version, rust_version))
 
 
+def find_oldest_rust_version_inchroot() -> RustVersion:
+  rust_versions = [
+      RustVersion.parse(x) for x in os.listdir(RUST_PATH) if '.ebuild' in x
+  ]
+
+  if len(rust_versions) <= 1:
+    raise RuntimeError('Expect to find more than one Rust versions')
+  return min(rust_versions)
+
+
 def remove_files(filename: str, path: str) -> None:
   subprocess.check_call(['git', 'rm', filename], cwd=path)
 
 
-def remove_rust_uprev(rust_version: RustVersion, run_step: Callable[[
-    str, Callable[[], T], Optional[Callable[[Any], T]], Optional[
-        Callable[[T], Any]]
-], T]) -> None:
+def remove_rust_uprev(rust_version: Optional[RustVersion],
+                      run_step: Callable[[], T]) -> None:
+  delete_version = run_step(
+      'find rust version to delete',
+      lambda: rust_version or find_oldest_rust_version_inchroot(),
+      result_from_json=prepare_uprev_from_json,
+  )
   run_step(
       'remove patches', lambda: remove_files(
-          f'files/rust-{rust_version}-*.patch', RUST_PATH))
-  run_step('remove ebuild', lambda: remove_files(f'rust-{rust_version}.ebuild',
-                                                 RUST_PATH))
+          f'files/rust-{delete_version}-*.patch', RUST_PATH))
+  run_step('remove ebuild', lambda: remove_files(
+      f'rust-{delete_version}.ebuild', RUST_PATH))
   ebuild_file = get_command_output(['equery', 'w', 'rust'])
   run_step('update manifest', lambda: update_manifest(ebuild_file))
   run_step('remove version from rust packages', lambda: update_rust_packages(
-      rust_version, add=False))
+      delete_version, add=False))
   run_step(
       'remove virtual/rust', lambda: remove_files(
-          f'rust-{rust_version}.ebuild',
+          f'rust-{delete_version}.ebuild',
           os.path.join(RUST_PATH, '../../virtual/rust')))
+
+
+def create_new_repo(rust_version: RustVersion) -> None:
+  output = get_command_output(['git', 'status', '--porcelain'], cwd=RUST_PATH)
+  if output:
+    raise RuntimeError(
+        f'{RUST_PATH} has uncommitted changes, please either discard them '
+        'or commit them.')
+  git.CreateBranch(RUST_PATH, f'rust-to-{rust_version}')
+
+
+def build_cross_compiler() -> None:
+  # Get target triples in ebuild
+  rust_ebuild = get_command_output(['equery', 'w', 'rust'])
+  with open(rust_ebuild, encoding='utf-8') as f:
+    contents = f.read()
+
+  target_triples_re = re.compile(r'RUSTC_TARGET_TRIPLES=\(([^)]+)\)')
+  m = target_triples_re.search(contents)
+  assert m, 'RUST_TARGET_TRIPLES not found in rust ebuild'
+  target_triples = m.group(1).strip().split('\n')
+  for target in target_triples:
+    if 'cros-' not in target:
+      continue
+    target = target.strip()
+    logging.info('Emerging cross compiler %s', target)
+    subprocess.check_call(['sudo', 'emerge', '-G', f'cross-{target}/gcc'])
+
+
+def create_new_commit(rust_version: RustVersion) -> None:
+  subprocess.check_call(['git', 'add', '-A'], cwd=RUST_PATH)
+  messages = [
+      f'[DO NOT SUBMIT] dev-lang/rust: upgrade to Rust {rust_version}',
+      '',
+      'This CL is created by rust_uprev tool automatically.'
+      '',
+      'BUG=None',
+      'TEST=Use CQ to test the new Rust version',
+  ]
+  git.UploadChanges(RUST_PATH, f'rust-to-{rust_version}', messages)
 
 
 def main() -> None:
@@ -461,8 +579,18 @@ def main() -> None:
   if args.subparser_name == 'create':
     create_rust_uprev(args.rust_version, args.template, args.skip_compile,
                       run_step)
-  else:
+  elif args.subparser_name == 'remove':
     remove_rust_uprev(args.rust_version, run_step)
+  else:
+    # If you have added more subparser_name, please also add the handlers above
+    assert args.subparser_name == 'roll'
+    run_step('create new repo', lambda: create_new_repo(args.uprev))
+    if not args.skip_cross_compiler:
+      run_step('build cross compiler', build_cross_compiler)
+    create_rust_uprev(args.uprev, args.template, args.skip_compile, run_step)
+    remove_rust_uprev(args.remove, run_step)
+    if not args.no_upload:
+      run_step('create rust uprev CL', lambda: create_new_commit(args.uprev))
 
 
 if __name__ == '__main__':
