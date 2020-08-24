@@ -11,6 +11,8 @@
 from __future__ import print_function
 
 import json
+import os
+import subprocess
 import unittest
 import unittest.mock as mock
 
@@ -237,6 +239,7 @@ class LLVMBisectionTest(unittest.TestCase):
 
     self.assertEqual(mock_add_tryjob.call_count, 3)
 
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
   @mock.patch.object(
       get_llvm_hash.LLVMHash, 'GetLLVMHash', return_value='a123testhash4')
   @mock.patch.object(llvm_bisection, 'GetCommitsBetween')
@@ -245,7 +248,7 @@ class LLVMBisectionTest(unittest.TestCase):
   @mock.patch.object(chroot, 'VerifyOutsideChroot', return_value=True)
   def testMainPassed(self, mock_outside_chroot, mock_load_status_file,
                      mock_get_range, mock_get_revision_and_hash_list,
-                     _mock_get_bad_llvm_hash):
+                     _mock_get_bad_llvm_hash, mock_abandon_cl):
 
     start = 500
     end = 502
@@ -277,6 +280,7 @@ class LLVMBisectionTest(unittest.TestCase):
     args_output.parallel = 3
     args_output.src_path = None
     args_output.chroot_path = 'somepath'
+    args_output.cleanup = True
 
     self.assertEqual(
         llvm_bisection.main(args_output),
@@ -289,6 +293,19 @@ class LLVMBisectionTest(unittest.TestCase):
     mock_get_range.assert_called_once()
 
     mock_get_revision_and_hash_list.assert_called_once()
+
+    mock_abandon_cl.assert_called_once()
+    self.assertEqual(
+        mock_abandon_cl.call_args,
+        mock.call(
+            [
+                os.path.join(args_output.chroot_path, 'chromite/bin/gerrit'),
+                'abandon',
+                cl,
+            ],
+            stderr=subprocess.STDOUT,
+            encoding='utf-8',
+        ))
 
   @mock.patch.object(llvm_bisection, 'LoadStatusFile')
   @mock.patch.object(chroot, 'VerifyOutsideChroot', return_value=True)
@@ -429,6 +446,63 @@ class LLVMBisectionTest(unittest.TestCase):
     mock_get_range.assert_called_once()
 
     mock_get_revision_and_hash_list.assert_called_once()
+
+  @mock.patch.object(subprocess, 'check_output', return_value=None)
+  @mock.patch.object(
+      get_llvm_hash.LLVMHash, 'GetLLVMHash', return_value='a123testhash4')
+  @mock.patch.object(llvm_bisection, 'GetCommitsBetween')
+  @mock.patch.object(llvm_bisection, 'GetRemainingRange')
+  @mock.patch.object(llvm_bisection, 'LoadStatusFile')
+  @mock.patch.object(chroot, 'VerifyOutsideChroot', return_value=True)
+  def testMainFailedToAbandonCL(self, mock_outside_chroot,
+                                mock_load_status_file, mock_get_range,
+                                mock_get_revision_and_hash_list,
+                                _mock_get_bad_llvm_hash, mock_abandon_cl):
+
+    start = 500
+    end = 502
+
+    bisect_state = {
+        'start': start,
+        'end': end,
+        'jobs': [{
+            'rev': 501,
+            'status': 'bad',
+            'cl': 0
+        }]
+    }
+
+    skip_revisions = {501}
+    pending_revisions = {}
+
+    mock_load_status_file.return_value = bisect_state
+
+    mock_get_range.return_value = (start, end, pending_revisions,
+                                   skip_revisions)
+
+    mock_get_revision_and_hash_list.return_value = ([], [])
+
+    error_message = 'Error message.'
+    mock_abandon_cl.side_effect = subprocess.CalledProcessError(
+        returncode=1, cmd=[], output=error_message)
+
+    args_output = test_helpers.ArgsOutputTest()
+    args_output.start_rev = start
+    args_output.end_rev = end
+    args_output.parallel = 3
+    args_output.src_path = None
+    args_output.cleanup = True
+
+    with self.assertRaises(subprocess.CalledProcessError) as err:
+      llvm_bisection.main(args_output)
+
+    self.assertEqual(err.exception.output, error_message)
+
+    mock_outside_chroot.assert_called_once()
+
+    mock_load_status_file.assert_called_once()
+
+    mock_get_range.assert_called_once()
 
 
 if __name__ == '__main__':

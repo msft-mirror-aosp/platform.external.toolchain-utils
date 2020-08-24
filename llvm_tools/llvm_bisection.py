@@ -13,6 +13,7 @@ import enum
 import errno
 import json
 import os
+import subprocess
 import sys
 
 import chroot
@@ -116,6 +117,13 @@ def GetCommandLineArgs():
       action='store_true',
       help='display contents of a command to the terminal '
       '(default: %(default)s)')
+
+  # Add argument for whether to display command contents to `stdout`.
+  parser.add_argument(
+      '--nocleanup',
+      action='store_false',
+      dest='cleanup',
+      help='Abandon CLs created for bisectoin')
 
   args_output = parser.parse_args()
 
@@ -347,6 +355,19 @@ def main(args_output):
       skip_revisions_message = ('\nThe following revisions were skipped:\n' +
                                 '\n'.join(str(rev) for rev in skip_revisions))
       print(skip_revisions_message)
+
+    if args_output.cleanup:
+      # Abondon all the CLs created for bisection
+      gerrit = os.path.join(args_output.chroot_path, 'chromite/bin/gerrit')
+      for build in bisect_state['jobs']:
+        try:
+          subprocess.check_output([gerrit, 'abandon', build['cl']],
+                                  stderr=subprocess.STDOUT,
+                                  encoding='utf-8')
+        except subprocess.CalledProcessError as err:
+          # the CL may have been abandoned
+          if 'chromite.lib.gob_util.GOBError' not in err.output:
+            raise
 
     return BisectionExitStatus.BISECTION_COMPLETE.value
 
