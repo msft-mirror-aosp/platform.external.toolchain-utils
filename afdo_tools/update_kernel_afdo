@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
 # Due to crbug.com/1081332, we need to update AFDO metadata
 # manually. This script performs a few checks and generates a
@@ -26,6 +29,7 @@
 set -eu
 set -o pipefail
 
+CROS_REPO=https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay
 GS_BASE=gs://chromeos-prebuilt/afdo-job/vetted/kernel
 KVERS="3.18 4.4 4.14 4.19"
 errs=""
@@ -44,9 +48,11 @@ else
   expected_time=$(date +%s -d "last Monday")
 fi
 
-# Get the current master branch number (using beta + 1)
-beta=$(git ls-remote -h https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay | sed -n -e "s/^.*release-R\([0-9][0-9]*\).*$/\1/p" | sort -g | tail -1)
-master="$(($beta + 1))"
+# Get the current canary branch number (using beta + 1)
+beta=$(git ls-remote -h $CROS_REPO | \
+       sed -n -e "s/^.*release-R\([0-9][0-9]*\).*$/\1/p" | \
+       sort -g | tail -1)
+canary="$(($beta + 1))"
 
 json="{"
 sep=""
@@ -54,7 +60,14 @@ for kver in $KVERS
 do
   # Sort the gs output by timestamp (default ordering is by name, so
   # R86-13310.3-1594633089.gcov.xz goes after R86-13310.18-1595237847.gcov.xz)
-  latest=$(gsutil ls -l "$GS_BASE/$kver/" | sort -k2 | grep "R${master}" | tail -1)
+  latest=$(gsutil ls -l "$GS_BASE/$kver/" | sort -k2 | \
+           grep "R${canary}" | tail -1 || true)
+  if [ -z $latest ]
+  then
+    # if no profiles exist for R${canary}, try the previous branch
+    latest=$(gsutil ls -l "$GS_BASE/$kver/" | sort -k2 | \
+             grep "R${beta}" | tail -1)
+  fi
 
   # Verify that the file has the expected date.
   file_time=$(echo "$latest" | awk '{print $2}')
