@@ -4,21 +4,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# pylint: disable=protected-access
+
 """Tests for LLVM bisection."""
 
 from __future__ import print_function
 
-import get_llvm_hash
 import json
-import llvm_bisection
 import unittest
 import unittest.mock as mock
 
-from get_llvm_hash import LLVMHash
-from test_helpers import ArgsOutputTest
-from test_helpers import CallCountsToMockFunctions
-from test_helpers import CreateTemporaryJsonFile
-from test_helpers import WritePrettyJsonFile
+import chroot
+import get_llvm_hash
+import llvm_bisection
+import modify_a_tryjob
+import test_helpers
+import update_tryjob_status
 
 
 class LLVMBisectionTest(unittest.TestCase):
@@ -155,7 +156,7 @@ class LLVMBisectionTest(unittest.TestCase):
 
     # Simulate behavior of `GetGitHashFrom()` when the revision does not
     # exist in the LLVM source tree.
-    def MockGetGitHashForRevisionRaiseException(src_path, revision):
+    def MockGetGitHashForRevisionRaiseException(_src_path, _revision):
       raise ValueError('Revision does not exist')
 
     mock_get_git_hash.side_effect = MockGetGitHashForRevisionRaiseException
@@ -204,7 +205,7 @@ class LLVMBisectionTest(unittest.TestCase):
   @mock.patch.object(llvm_bisection, 'GetRevisionsBetweenBisection')
   # Simulate behavior of `CreatTempLLVMRepo()` when successfully created a
   # worktree when a source path was not provided.
-  @mock.patch.object(llvm_bisection, 'CreateTempLLVMRepo')
+  @mock.patch.object(get_llvm_hash, 'CreateTempLLVMRepo')
   def testSuccessfullyGetRevisionsListAndHashList(
       self, mock_create_temp_llvm_repo, mock_get_revisions_between_bisection,
       mock_get_git_hash):
@@ -213,8 +214,8 @@ class LLVMBisectionTest(unittest.TestCase):
         'a123testhash1', 'a123testhash2', 'a123testhash3'
     ])
 
-    @CallCountsToMockFunctions
-    def MockGetGitHashForRevision(call_count, src_path, rev):
+    @test_helpers.CallCountsToMockFunctions
+    def MockGetGitHashForRevision(call_count, _src_path, _rev):
       # Simulate retrieving the git hash for the revision.
       if call_count < 3:
         return expected_revisions_and_hash_tuple[1][call_count]
@@ -276,7 +277,7 @@ class LLVMBisectionTest(unittest.TestCase):
 
   # Simulate behavior of `FindTryjobIndex()` when the index of the tryjob was
   # found.
-  @mock.patch.object(llvm_bisection, 'FindTryjobIndex', return_value=0)
+  @mock.patch.object(update_tryjob_status, 'FindTryjobIndex', return_value=0)
   def testTryjobExistsInRevisionsToLaunch(self, mock_find_tryjob_index):
     test_existing_jobs = [{'rev': 102, 'status': 'good'}]
 
@@ -297,7 +298,7 @@ class LLVMBisectionTest(unittest.TestCase):
 
     mock_find_tryjob_index.assert_called_once()
 
-  @mock.patch.object(llvm_bisection, 'AddTryjob')
+  @mock.patch.object(modify_a_tryjob, 'AddTryjob')
   def testSuccessfullyUpdatedStatusFileWhenExceptionIsRaised(
       self, mock_add_tryjob):
 
@@ -306,10 +307,10 @@ class LLVMBisectionTest(unittest.TestCase):
 
     # Simulate behavior of `AddTryjob()` when successfully launched a tryjob for
     # the updated packages.
-    @CallCountsToMockFunctions
-    def MockAddTryjob(call_count, packages, git_hash, revision, chroot_path,
-                      patch_file, extra_cls, options, builder, verbose,
-                      svn_revision):
+    @test_helpers.CallCountsToMockFunctions
+    def MockAddTryjob(call_count, _packages, _git_hash, _revision, _chroot_path,
+                      _patch_file, _extra_cls, _options, _builder, _verbose,
+                      _svn_revision):
 
       if call_count < 2:
         return {'rev': revisions_list[call_count], 'status': 'pending'}
@@ -329,15 +330,15 @@ class LLVMBisectionTest(unittest.TestCase):
 
     bisection_contents = {'start': start, 'end': end, 'jobs': []}
 
-    args_output = ArgsOutputTest()
+    args_output = test_helpers.ArgsOutputTest()
 
     packages = ['sys-devel/llvm']
     patch_file = '/abs/path/to/PATCHES.json'
 
     # Create a temporary .JSON file to simulate a status file for bisection.
-    with CreateTemporaryJsonFile() as temp_json_file:
+    with test_helpers.CreateTemporaryJsonFile() as temp_json_file:
       with open(temp_json_file, 'w') as f:
-        WritePrettyJsonFile(bisection_contents, f)
+        test_helpers.WritePrettyJsonFile(bisection_contents, f)
 
       # Verify that the status file is updated when an exception happened when
       # attempting to launch a revision (i.e. progress is not lost).
@@ -392,7 +393,8 @@ class LLVMBisectionTest(unittest.TestCase):
 
   # Simulate behavior of `GetLLVMHash()` when successfully retrieved
   # the git hash of the bad revision.
-  @mock.patch.object(LLVMHash, 'GetLLVMHash', return_value='a123testhash5')
+  @mock.patch.object(
+      get_llvm_hash.LLVMHash, 'GetLLVMHash', return_value='a123testhash5')
   def testCompletedBisectionWhenNotProvidedSrcPath(self, mock_get_git_hash):
     last_tested = '/some/last/tested_file.json'
 
@@ -412,9 +414,9 @@ class LLVMBisectionTest(unittest.TestCase):
     test_bisect_contents = {'start': start, 'end': end, 'jobs': []}
 
     # Simulate that the status file exists.
-    with CreateTemporaryJsonFile() as temp_json_file:
+    with test_helpers.CreateTemporaryJsonFile() as temp_json_file:
       with open(temp_json_file, 'w') as f:
-        WritePrettyJsonFile(test_bisect_contents, f)
+        test_helpers.WritePrettyJsonFile(test_bisect_contents, f)
 
       self.assertDictEqual(
           llvm_bisection.LoadStatusFile(temp_json_file, start, end),
@@ -444,7 +446,7 @@ class LLVMBisectionTest(unittest.TestCase):
   @mock.patch.object(llvm_bisection, 'LoadStatusFile')
   # Simulate behavior of `VerifyOutsideChroot()` when successfully invoked the
   # script outside of the chroot.
-  @mock.patch.object(llvm_bisection, 'VerifyOutsideChroot', return_value=True)
+  @mock.patch.object(chroot, 'VerifyOutsideChroot', return_value=True)
   def testSuccessfullyBisectedLLVM(
       self, mock_outside_chroot, mock_load_status_file,
       mock_validate_start_and_end, mock_get_start_and_end_revision,
@@ -483,7 +485,7 @@ class LLVMBisectionTest(unittest.TestCase):
     # end (in this case, none).
     mock_get_revision_and_hash_list.return_value = [], []
 
-    args_output = ArgsOutputTest()
+    args_output = test_helpers.ArgsOutputTest()
     args_output.start_rev = start
     args_output.end_rev = end
     args_output.parallel = 3
@@ -517,7 +519,7 @@ class LLVMBisectionTest(unittest.TestCase):
   @mock.patch.object(llvm_bisection, 'LoadStatusFile')
   # Simulate behavior of `VerifyOutsideChroot()` when successfully invoked the
   # script outside of the chroot.
-  @mock.patch.object(llvm_bisection, 'VerifyOutsideChroot', return_value=True)
+  @mock.patch.object(chroot, 'VerifyOutsideChroot', return_value=True)
   def testNoMoreTryjobsToLaunch(
       self, mock_outside_chroot, mock_load_status_file,
       mock_validate_start_and_end, mock_get_start_and_end_revision,
@@ -541,7 +543,7 @@ class LLVMBisectionTest(unittest.TestCase):
     no_revisions_error_message = ('No more tryjobs to launch between %d and '
                                   '%d' % (start, end))
 
-    def MockNoRevisionsErrorException(start, end, skip, pending):
+    def MockNoRevisionsErrorException(_start, _end, _skip, _pending):
       raise ValueError(no_revisions_error_message)
 
     # Simulate behavior of `LoadStatusFile()` when successfully loaded the
@@ -567,7 +569,7 @@ class LLVMBisectionTest(unittest.TestCase):
     mock_die_with_no_revisions_error.side_effect = MockNoRevisionsErrorException
 
     # Simulate behavior of arguments passed into the command line.
-    args_output = ArgsOutputTest()
+    args_output = test_helpers.ArgsOutputTest()
     args_output.start_rev = start
     args_output.end_rev = end
     args_output.parallel = 3

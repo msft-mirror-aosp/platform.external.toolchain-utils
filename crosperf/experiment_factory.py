@@ -145,6 +145,7 @@ class ExperimentFactory(object):
     config.AddConfig('no_email', global_settings.GetField('no_email'))
     share_cache = global_settings.GetField('share_cache')
     results_dir = global_settings.GetField('results_dir')
+    compress_results = global_settings.GetField('compress_results')
     # Warn user that option use_file_locks is deprecated.
     use_file_locks = global_settings.GetField('use_file_locks')
     if use_file_locks:
@@ -289,6 +290,19 @@ class ExperimentFactory(object):
                                   run_local, cwp_dso, weight)
           # Add non-telemetry toolchain-perf benchmarks:
 
+          # Tast test platform.ReportDiskUsage for image size.
+          benchmarks.append(
+              Benchmark(
+                  'platform.ReportDiskUsage',
+                  'platform.ReportDiskUsage',
+                  '',
+                  1,  # This is not a performance benchmark, only run once.
+                  rm_chroot_tmp,
+                  '',
+                  'tast',  # Specify the suite to be 'tast'
+                  show_all_results,
+                  retries))
+
           # TODO: crbug.com/1057755 Do not enable graphics_WebGLAquarium until
           # it gets fixed.
           #
@@ -425,8 +439,8 @@ class ExperimentFactory(object):
                             chromeos_root, cache_conditions, labels, benchmarks,
                             experiment_file.Canonicalize(), email,
                             acquire_timeout, log_dir, log_level, share_cache,
-                            results_dir, locks_dir, cwp_dso, ignore_min_max,
-                            skylab, dut_config)
+                            results_dir, compress_results, locks_dir, cwp_dso,
+                            ignore_min_max, skylab, dut_config)
 
     return experiment
 
