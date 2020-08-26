@@ -610,7 +610,7 @@ class StdResult(NumericalResult):
   def _ComputeFloat(self, cell, values, baseline_values):
     if self.ignore_min_max:
       values = _RemoveMinMax(cell, values)
-    cell.value = statistics.stdev(values)
+    cell.value = statistics.pstdev(values)
 
 
 class CoeffVarResult(NumericalResult):
@@ -624,7 +624,7 @@ class CoeffVarResult(NumericalResult):
     if self.ignore_min_max:
       values = _RemoveMinMax(cell, values)
     if statistics.mean(values) != 0.0:
-      noise = abs(statistics.stdev(values) / statistics.mean(values))
+      noise = abs(statistics.pstdev(values) / statistics.mean(values))
     else:
       noise = 0.0
     cell.value = noise
@@ -1498,40 +1498,40 @@ def GetComplexTable(runs, labels, out_to=TablePrinter.CONSOLE):
 
 if __name__ == '__main__':
   # Run a few small tests here.
-  runs = [
-      [{
-          'k1': '10',
-          'k2': '12',
-          'k5': '40',
-          'k6': '40',
-          'ms_1': '20',
-          'k7': 'FAIL',
-          'k8': 'PASS',
-          'k9': 'PASS',
-          'k10': '0'
-      }, {
-          'k1': '13',
-          'k2': '14',
-          'k3': '15',
-          'ms_1': '10',
-          'k8': 'PASS',
-          'k9': 'FAIL',
-          'k10': '0'
-      }],
-      [{
-          'k1': '50',
-          'k2': '51',
-          'k3': '52',
-          'k4': '53',
-          'k5': '35',
-          'k6': '45',
-          'ms_1': '200',
-          'ms_2': '20',
-          'k7': 'FAIL',
-          'k8': 'PASS',
-          'k9': 'PASS'
-      }],
-  ]
+  run1 = {
+      'k1': '10',
+      'k2': '12',
+      'k5': '40',
+      'k6': '40',
+      'ms_1': '20',
+      'k7': 'FAIL',
+      'k8': 'PASS',
+      'k9': 'PASS',
+      'k10': '0'
+  }
+  run2 = {
+      'k1': '13',
+      'k2': '14',
+      'k3': '15',
+      'ms_1': '10',
+      'k8': 'PASS',
+      'k9': 'FAIL',
+      'k10': '0'
+  }
+  run3 = {
+      'k1': '50',
+      'k2': '51',
+      'k3': '52',
+      'k4': '53',
+      'k5': '35',
+      'k6': '45',
+      'ms_1': '200',
+      'ms_2': '20',
+      'k7': 'FAIL',
+      'k8': 'PASS',
+      'k9': 'PASS'
+  }
+  runs = [[run1, run2], [run3]]
   labels = ['vanilla', 'modified']
   t = GetComplexTable(runs, labels, TablePrinter.CONSOLE)
   print(t)
