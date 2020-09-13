@@ -21,6 +21,8 @@ import test_flag
 
 from label import MockLabel
 from results_cache import CacheConditions
+from results_cache import PerfDataReadError
+from results_cache import PidVerificationError
 from results_cache import Result
 from results_cache import ResultsCache
 from results_cache import TelemetryResult
@@ -157,6 +159,34 @@ keyvals = {
     'b_malloc_tiny1__0_': '0.000768474333333',
     'b_string_strstr___abcdefghijklmnopqrstuvwxyz__': '0.0134553343333'
 }
+
+PERF_DATA_HEADER = """
+# ========
+# captured on    : Thu Jan 01 00:00:00 1980
+# header version : 1
+# data offset    : 536
+# data size      : 737678672
+# feat offset    : 737679208
+# hostname : localhost
+# os release : 5.4.61
+# perf version :
+# arch : aarch64
+# nrcpus online : 8
+# nrcpus avail : 8
+# total memory : 5911496 kB
+# cmdline : /usr/bin/perf record -e instructions -p {pid}
+# event : name = instructions, , id = ( 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193 ), type = 8, size = 112
+# event : name = dummy:u, , id = ( 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204 ), type = 1, size = 112, config = 0x9
+# CPU_TOPOLOGY info available, use -I to display
+# pmu mappings: software = 1, uprobe = 6, cs_etm = 8, breakpoint = 5, tracepoint = 2, armv8_pmuv3 = 7
+# contains AUX area data (e.g. instruction trace)
+# time of first sample : 0.000000
+# time of last sample : 0.000000
+# sample duration :      0.000 ms
+# missing features: TRACING_DATA CPUDESC CPUID NUMA_TOPOLOGY BRANCH_STACK GROUP_DESC STAT CACHE MEM_TOPOLOGY CLOCKID DIR_FORMAT
+# ========
+#
+"""
 
 TURBOSTAT_LOG_OUTPUT = \
 """CPU     Avg_MHz Busy%   Bzy_MHz TSC_MHz IRQ     CoreTmp
@@ -470,6 +500,7 @@ class ResultTest(unittest.TestCase):
   def setUp(self):
     self.result = Result(self.mock_logger, self.mock_label, 'average',
                          self.mock_cmd_exec)
+    self.result.chromeos_root = '/tmp/chromeos'
 
   @mock.patch.object(os.path, 'isdir')
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommand')
@@ -707,7 +738,8 @@ class ResultTest(unittest.TestCase):
     self.assertEqual(mock_chrootruncmd.call_count, 1)
     self.assertEqual(
         mock_chrootruncmd.call_args_list[0][0],
-        ('/tmp', ('./generate_test_report --no-color --csv %s') % TMP_DIR1))
+        (self.result.chromeos_root,
+         ('./generate_test_report --no-color --csv %s') % TMP_DIR1))
     self.assertEqual(mock_getpath.call_count, 1)
     self.assertEqual(mock_mkdtemp.call_count, 1)
     self.assertEqual(res, {'Total': [10, 'score'], 'first_time': [680, 'ms']})
@@ -916,6 +948,101 @@ class ResultTest(unittest.TestCase):
     found_no_logs = self.result.GetCpustatsFile()
     self.assertEqual(found_no_logs, '')
 
+  def test_verify_perf_data_pid_ok(self):
+    """Verify perf PID which is present in TOP_DATA."""
+    self.result.top_cmds = TOP_DATA
+    # pid is present in TOP_DATA.
+    with mock.patch.object(
+        Result, 'ReadPidFromPerfData', return_value=['5713']):
+      self.result.VerifyPerfDataPID()
+
+  def test_verify_perf_data_pid_fail(self):
+    """Test perf PID missing in top raises the error."""
+    self.result.top_cmds = TOP_DATA
+    # pid is not in the list of top processes.
+    with mock.patch.object(
+        Result, 'ReadPidFromPerfData', return_value=['9999']):
+      with self.assertRaises(PidVerificationError):
+        self.result.VerifyPerfDataPID()
+
+  @mock.patch.object(command_executer.CommandExecuter,
+                     'ChrootRunCommandWOutput')
+  def test_read_pid_from_perf_data_ok(self, mock_runcmd):
+    """Test perf header parser, normal flow."""
+    self.result.ce.ChrootRunCommandWOutput = mock_runcmd
+    self.result.perf_data_files = ['/tmp/chromeos/chroot/tmp/results/perf.data']
+    exp_pid = '12345'
+    mock_runcmd.return_value = (0, PERF_DATA_HEADER.format(pid=exp_pid), '')
+    pids = self.result.ReadPidFromPerfData()
+    self.assertEqual(pids, [exp_pid])
+
+  @mock.patch.object(command_executer.CommandExecuter,
+                     'ChrootRunCommandWOutput')
+  def test_read_pid_from_perf_data_mult_profiles(self, mock_runcmd):
+    """Test multiple perf.data files with PID."""
+    self.result.ce.ChrootRunCommandWOutput = mock_runcmd
+    # self.result.chromeos_root = '/tmp/chromeos'
+    self.result.perf_data_files = [
+        '/tmp/chromeos/chroot/tmp/results/perf.data.0',
+        '/tmp/chromeos/chroot/tmp/results/perf.data.1',
+    ]
+    # There is '-p <pid>' in command line but it's still system-wide: '-a'.
+    cmd_line = '# cmdline : /usr/bin/perf record -e instructions -p {pid}'
+    exp_perf_pids = ['1111', '2222']
+    mock_runcmd.side_effect = [
+        (0, cmd_line.format(pid=exp_perf_pids[0]), ''),
+        (0, cmd_line.format(pid=exp_perf_pids[1]), ''),
+    ]
+    pids = self.result.ReadPidFromPerfData()
+    self.assertEqual(pids, exp_perf_pids)
+
+  @mock.patch.object(command_executer.CommandExecuter,
+                     'ChrootRunCommandWOutput')
+  def test_read_pid_from_perf_data_no_pid(self, mock_runcmd):
+    """Test perf.data without PID."""
+    self.result.ce.ChrootRunCommandWOutput = mock_runcmd
+    self.result.perf_data_files = ['/tmp/chromeos/chroot/tmp/results/perf.data']
+    cmd_line = '# cmdline : /usr/bin/perf record -e instructions'
+    mock_runcmd.return_value = (0, cmd_line, '')
+    pids = self.result.ReadPidFromPerfData()
+    # pids is empty.
+    self.assertEqual(pids, [])
+
+  @mock.patch.object(command_executer.CommandExecuter,
+                     'ChrootRunCommandWOutput')
+  def test_read_pid_from_perf_data_system_wide(self, mock_runcmd):
+    """Test reading from system-wide profile with PID."""
+    self.result.ce.ChrootRunCommandWOutput = mock_runcmd
+    self.result.perf_data_files = ['/tmp/chromeos/chroot/tmp/results/perf.data']
+    # There is '-p <pid>' in command line but it's still system-wide: '-a'.
+    cmd_line = '# cmdline : /usr/bin/perf record -e instructions -a -p 1234'
+    mock_runcmd.return_value = (0, cmd_line, '')
+    pids = self.result.ReadPidFromPerfData()
+    # pids should be empty since it's not a per-process profiling.
+    self.assertEqual(pids, [])
+
+  @mock.patch.object(command_executer.CommandExecuter,
+                     'ChrootRunCommandWOutput')
+  def test_read_pid_from_perf_data_read_fail(self, mock_runcmd):
+    """Failure to read perf.data raises the error."""
+    self.result.ce.ChrootRunCommandWOutput = mock_runcmd
+    self.result.perf_data_files = ['/tmp/chromeos/chroot/tmp/results/perf.data']
+    # Error status of the profile read.
+    mock_runcmd.return_value = (1, '', '')
+    with self.assertRaises(PerfDataReadError):
+      self.result.ReadPidFromPerfData()
+
+  @mock.patch.object(command_executer.CommandExecuter,
+                     'ChrootRunCommandWOutput')
+  def test_read_pid_from_perf_data_fail(self, mock_runcmd):
+    """Failure to find cmdline in perf.data header raises the error."""
+    self.result.ce.ChrootRunCommandWOutput = mock_runcmd
+    self.result.perf_data_files = ['/tmp/chromeos/chroot/tmp/results/perf.data']
+    # Empty output.
+    mock_runcmd.return_value = (0, '', '')
+    with self.assertRaises(PerfDataReadError):
+      self.result.ReadPidFromPerfData()
+
   def test_process_turbostat_results_with_valid_data(self):
     """Normal case when log exists and contains valid data."""
     self.result.turbostat_log_file = '/tmp/somelogfile.log'
@@ -1112,10 +1239,11 @@ class ResultTest(unittest.TestCase):
     # Debug path not found
     self.result.label.debug_path = ''
     tmp = self.result.GeneratePerfReportFiles()
-    self.assertEqual(tmp, ['/tmp/chroot%s' % fake_file])
+    self.assertEqual(tmp, ['/tmp/chromeos/chroot%s' % fake_file])
     self.assertEqual(mock_chrootruncmd.call_args_list[0][0],
-                     ('/tmp', ('/usr/sbin/perf report -n    '
-                               '-i %s --stdio > %s') % (fake_file, fake_file)))
+                     (self.result.chromeos_root,
+                      ('/usr/sbin/perf report -n    '
+                       '-i %s --stdio > %s') % (fake_file, fake_file)))
 
   @mock.patch.object(misc, 'GetInsideChrootPath')
   @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommand')
@@ -1130,11 +1258,12 @@ class ResultTest(unittest.TestCase):
     # Debug path found
     self.result.label.debug_path = '/tmp/debug'
     tmp = self.result.GeneratePerfReportFiles()
-    self.assertEqual(tmp, ['/tmp/chroot%s' % fake_file])
+    self.assertEqual(tmp, ['/tmp/chromeos/chroot%s' % fake_file])
     self.assertEqual(mock_chrootruncmd.call_args_list[0][0],
-                     ('/tmp', ('/usr/sbin/perf report -n --symfs /tmp/debug '
-                               '--vmlinux /tmp/debug/boot/vmlinux  '
-                               '-i %s --stdio > %s') % (fake_file, fake_file)))
+                     (self.result.chromeos_root,
+                      ('/usr/sbin/perf report -n --symfs /tmp/debug '
+                       '--vmlinux /tmp/debug/boot/vmlinux  '
+                       '-i %s --stdio > %s') % (fake_file, fake_file)))
 
   @mock.patch.object(misc, 'GetOutsideChrootPath')
   def test_populate_from_run(self, mock_getpath):
@@ -1183,7 +1312,6 @@ class ResultTest(unittest.TestCase):
     if mock_getpath:
       pass
     mock.get_path = '/tmp/chromeos/tmp/results_dir'
-    self.result.chromeos_root = '/tmp/chromeos'
 
     self.callGetResultsDir = False
     self.callGetResultsFile = False
@@ -1453,8 +1581,7 @@ class ResultTest(unittest.TestCase):
             u'crypto-md5__crypto-md5': [10.5, u'ms'],
             u'string-tagcloud__string-tagcloud': [52.8, u'ms'],
             u'access-nbody__access-nbody': [8.5, u'ms'],
-            'retval':
-                0,
+            'retval': 0,
             u'math-spectral-norm__math-spectral-norm': [6.6, u'ms'],
             u'math-cordic__math-cordic': [8.7, u'ms'],
             u'access-binary-trees__access-binary-trees': [4.5, u'ms'],
@@ -1492,8 +1619,7 @@ class ResultTest(unittest.TestCase):
             u'crypto-md5__crypto-md5': [10.5, u'ms'],
             u'string-tagcloud__string-tagcloud': [52.8, u'ms'],
             u'access-nbody__access-nbody': [8.5, u'ms'],
-            'retval':
-                0,
+            'retval': 0,
             u'math-spectral-norm__math-spectral-norm': [6.6, u'ms'],
             u'math-cordic__math-cordic': [8.7, u'ms'],
             u'access-binary-trees__access-binary-trees': [4.5, u'ms'],
@@ -1722,8 +1848,9 @@ class TelemetryResultTest(unittest.TestCase):
                                 'autotest_dir', 'debug_dir', '/tmp', 'lumpy',
                                 'remote', 'image_args', 'cache_dir', 'average',
                                 'gcc', False, None)
-    self.mock_machine = machine_manager.MockCrosMachine(
-        'falco.cros', '/tmp/chromeos', 'average')
+    self.mock_machine = machine_manager.MockCrosMachine('falco.cros',
+                                                        '/tmp/chromeos',
+                                                        'average')
 
   def test_populate_from_run(self):
 
@@ -1803,10 +1930,12 @@ class ResultsCacheTest(unittest.TestCase):
     def FakeGetMachines(label):
       if label:
         pass
-      m1 = machine_manager.MockCrosMachine(
-          'lumpy1.cros', self.results_cache.chromeos_root, 'average')
-      m2 = machine_manager.MockCrosMachine(
-          'lumpy2.cros', self.results_cache.chromeos_root, 'average')
+      m1 = machine_manager.MockCrosMachine('lumpy1.cros',
+                                           self.results_cache.chromeos_root,
+                                           'average')
+      m2 = machine_manager.MockCrosMachine('lumpy2.cros',
+                                           self.results_cache.chromeos_root,
+                                           'average')
       return [m1, m2]
 
     mock_checksum.return_value = 'FakeImageChecksumabc123'
@@ -1848,10 +1977,12 @@ class ResultsCacheTest(unittest.TestCase):
     def FakeGetMachines(label):
       if label:
         pass
-      m1 = machine_manager.MockCrosMachine(
-          'lumpy1.cros', self.results_cache.chromeos_root, 'average')
-      m2 = machine_manager.MockCrosMachine(
-          'lumpy2.cros', self.results_cache.chromeos_root, 'average')
+      m1 = machine_manager.MockCrosMachine('lumpy1.cros',
+                                           self.results_cache.chromeos_root,
+                                           'average')
+      m2 = machine_manager.MockCrosMachine('lumpy2.cros',
+                                           self.results_cache.chromeos_root,
+                                           'average')
       return [m1, m2]
 
     mock_checksum.return_value = 'FakeImageChecksumabc123'

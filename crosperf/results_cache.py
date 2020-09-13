@@ -35,6 +35,14 @@ PERF_RESULTS_FILE = 'perf-results.txt'
 CACHE_KEYS_FILE = 'cache_keys.txt'
 
 
+class PidVerificationError(Exception):
+  """Error of perf PID verification in per-process mode."""
+
+
+class PerfDataReadError(Exception):
+  """Error of reading a perf.data header."""
+
+
 class Result(object):
   """Class for holding the results of a single test run.
 
@@ -142,12 +150,12 @@ class Result(object):
     # while tast runs hold output under TEST_NAME/.
     # Both ensure to be unique.
     result_dir_name = self.test_name if self.suite == 'tast' else 'results'
-    results_dir = self.FindFilesInResultsDir(
-        '-name %s' % result_dir_name).split('\n')[0]
+    results_dir = self.FindFilesInResultsDir('-name %s' %
+                                             result_dir_name).split('\n')[0]
 
     if not results_dir:
-      self._logger.LogOutput(
-          'WARNING: No results dir matching %r found' % result_dir_name)
+      self._logger.LogOutput('WARNING: No results dir matching %r found' %
+                             result_dir_name)
       return
 
     self.CreateTarball(results_dir, tarball)
@@ -239,8 +247,8 @@ class Result(object):
       command = 'cp -r {0}/* {1}'.format(self.results_dir, self.temp_dir)
       self.ce.RunCommand(command, print_to_console=False)
 
-    command = ('./generate_test_report --no-color --csv %s' % (os.path.join(
-        '/tmp', os.path.basename(self.temp_dir))))
+    command = ('./generate_test_report --no-color --csv %s' %
+               (os.path.join('/tmp', os.path.basename(self.temp_dir))))
     _, out, _ = self.ce.ChrootRunCommandWOutput(
         self.chromeos_root, command, print_to_console=False)
     keyvals_dict = {}
@@ -390,8 +398,8 @@ class Result(object):
                                                        perf_data_file)
       perf_report_file = '%s.report' % perf_data_file
       if os.path.exists(perf_report_file):
-        raise RuntimeError(
-            'Perf report file already exists: %s' % perf_report_file)
+        raise RuntimeError('Perf report file already exists: %s' %
+                           perf_report_file)
       chroot_perf_report_file = misc.GetInsideChrootPath(
           self.chromeos_root, perf_report_file)
       perf_path = os.path.join(self.chromeos_root, 'chroot', 'usr/bin/perf')
@@ -429,8 +437,8 @@ class Result(object):
         if self.log_level != 'verbose':
           self._logger.LogOutput('Perf report generated successfully.')
       else:
-        raise RuntimeError(
-            'Perf report not generated correctly. CMD: %s' % command)
+        raise RuntimeError('Perf report not generated correctly. CMD: %s' %
+                           command)
 
       # Add a keyval to the dictionary for the events captured.
       perf_report_files.append(
@@ -844,6 +852,88 @@ class Result(object):
       keyvals[key] = [result, unit]
     return keyvals
 
+  def ReadPidFromPerfData(self):
+    """Read PIDs from perf.data files.
+
+    Extract PID from perf.data if "perf record" was running per process,
+    i.e. with "-p <PID>" and no "-a".
+
+    Returns:
+      pids: list of PIDs.
+
+    Raises:
+      PerfDataReadError when perf.data header reading fails.
+    """
+    cmd = ['/usr/bin/perf', 'report', '--header-only', '-i']
+    pids = []
+
+    for perf_data_path in self.perf_data_files:
+      perf_data_path_in_chroot = misc.GetInsideChrootPath(
+          self.chromeos_root, perf_data_path)
+      path_str = ' '.join(cmd + [perf_data_path_in_chroot])
+      status, output, _ = self.ce.ChrootRunCommandWOutput(
+          self.chromeos_root, path_str)
+      if status:
+        # Error of reading a perf.data profile is fatal.
+        raise PerfDataReadError(f'Failed to read perf.data profile: {path_str}')
+
+      # Pattern to search a line with "perf record" command line:
+      # # cmdline : /usr/bin/perf record -e instructions -p 123"
+      cmdline_regex = re.compile(
+          r'^\#\scmdline\s:\s+(?P<cmd>.*perf\s+record\s+.*)$')
+      # Pattern to search PID in a command line.
+      pid_regex = re.compile(r'^.*\s-p\s(?P<pid>\d+)\s*.*$')
+      for line in output.splitlines():
+        cmd_match = cmdline_regex.match(line)
+        if cmd_match:
+          # Found a perf command line.
+          cmdline = cmd_match.group('cmd')
+          # '-a' is a system-wide mode argument.
+          if '-a' not in cmdline.split():
+            # It can be that perf was attached to PID and was still running in
+            # system-wide mode.
+            # We filter out this case here since it's not per-process.
+            pid_match = pid_regex.match(cmdline)
+            if pid_match:
+              pids.append(pid_match.group('pid'))
+          # Stop the search and move to the next perf.data file.
+          break
+      else:
+        # cmdline wasn't found in the header. It's a fatal error.
+        raise PerfDataReadError(f'Perf command line is not found in {path_str}')
+    return pids
+
+  def VerifyPerfDataPID(self):
+    """Verify PIDs in per-process perf.data profiles.
+
+    Check that at list one top process is profiled if perf was running in
+    per-process mode.
+
+    Raises:
+      PidVerificationError if PID verification of per-process perf.data profiles
+      fail.
+    """
+    perf_data_pids = self.ReadPidFromPerfData()
+    if not perf_data_pids:
+      # In system-wide mode there are no PIDs.
+      self._logger.LogOutput('System-wide perf mode. Skip verification.')
+      return
+
+    # PIDs will be present only in per-process profiles.
+    # In this case we need to verify that profiles are collected on the
+    # hottest processes.
+    top_processes = [top_cmd['cmd'] for top_cmd in self.top_cmds]
+    # top_process structure: <cmd>-<pid>
+    top_pids = [top_process.split('-')[-1] for top_process in top_processes]
+    for top_pid in top_pids:
+      if top_pid in perf_data_pids:
+        self._logger.LogOutput('PID verification passed! '
+                               f'Top process {top_pid} is profiled.')
+        return
+    raise PidVerificationError(
+        f'top processes {top_processes} are missing in perf.data traces with'
+        f' PID: {perf_data_pids}.')
+
   def ProcessResults(self, use_cache=False):
     # Note that this function doesn't know anything about whether there is a
     # cache hit or miss. It should process results agnostic of the cache hit
@@ -882,6 +972,9 @@ class Result(object):
       cpustats = self.ProcessCpustatsResults()
     if self.top_log_file:
       self.top_cmds = self.ProcessTopResults()
+    # Verify that PID in non system-wide perf.data and top_cmds are matching.
+    if self.perf_data_files and self.top_cmds:
+      self.VerifyPerfDataPID()
     if self.wait_time_log_file:
       with open(self.wait_time_log_file) as f:
         wait_time = f.readline().strip()
@@ -962,8 +1055,8 @@ class Result(object):
 
   def CreateTarball(self, results_dir, tarball):
     if not results_dir.strip():
-      raise ValueError(
-          'Refusing to `tar` an empty results_dir: %r' % results_dir)
+      raise ValueError('Refusing to `tar` an empty results_dir: %r' %
+                       results_dir)
 
     ret = self.ce.RunCommand('cd %s && '
                              'tar '
@@ -1013,8 +1106,8 @@ class Result(object):
     if ret:
       command = 'rm -rf {0}'.format(temp_dir)
       self.ce.RunCommand(command)
-      raise RuntimeError(
-          'Could not move dir %s to dir %s' % (temp_dir, cache_dir))
+      raise RuntimeError('Could not move dir %s to dir %s' %
+                         (temp_dir, cache_dir))
 
   @classmethod
   def CreateFromRun(cls,
