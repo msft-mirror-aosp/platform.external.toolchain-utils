@@ -70,12 +70,17 @@ def main(argv):
   os.makedirs(temporary_directory, exist_ok=True)
   urls = get_artifacts('gs://chromeos-toolchain-artifacts/clang-crash-diagnoses'
                        '/**/*clang_crash_diagnoses.tar.xz')
+  logging.info('%d crash URLs found', len(urls))
+
   visited = {}
   if os.path.exists(state_file):
     buildbucket_ids = {url.split('/')[-2] for url in urls}
     with open(state_file, encoding='utf-8') as f:
       data = json.load(f)
       visited = {k: v for k, v in data.items() if k in buildbucket_ids}
+    logging.info('Successfully loaded %d previously-submitted crashes',
+                 len(visited))
+
   for url in urls:
     splits = url.split('/')
     buildbucket_id = splits[-2]
@@ -85,7 +90,9 @@ def main(argv):
     visited[buildbucket_id] = '%s' % url
     dest_dir = os.path.join(temporary_directory, buildbucket_id)
     dest_file = os.path.join(dest_dir, splits[-1])
-    subprocess.check_output(['gsutil', 'cp', url, dest_file])
+    logging.info('Downloading and submitting %r...', url)
+    subprocess.check_output(['gsutil', 'cp', url, dest_file],
+                            stderr=subprocess.STDOUT)
     subprocess.check_output(['tar', '-xJf', dest_file], cwd=dest_dir)
 
     for src, script in get_crash_reproducers(dest_dir):
