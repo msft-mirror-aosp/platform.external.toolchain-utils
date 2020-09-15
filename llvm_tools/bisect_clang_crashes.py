@@ -26,7 +26,7 @@ def get_artifacts(pattern):
   results = subprocess.check_output(['gsutil', 'ls', pattern],
                                     stderr=subprocess.STDOUT,
                                     encoding='utf-8')
-  return [l.strip() for l in results.splitlines()]
+  return sorted(l.strip() for l in results.splitlines())
 
 
 def get_crash_reproducers(working_dir):
@@ -41,6 +41,21 @@ def get_crash_reproducers(working_dir):
     else:
       results.append((src, script))
   return results
+
+
+def submit_crash_to_forcey(forcey: str, temporary_directory: str,
+                           buildbucket_id: str, url: str) -> None:
+  dest_dir = os.path.join(temporary_directory, buildbucket_id)
+  dest_file = os.path.join(dest_dir, os.path.basename(url))
+  logging.info('Downloading and submitting %r...', url)
+  subprocess.check_output(['gsutil', 'cp', url, dest_file],
+                          stderr=subprocess.STDOUT)
+  subprocess.check_output(['tar', '-xJf', dest_file], cwd=dest_dir)
+  for src, script in get_crash_reproducers(dest_dir):
+    subprocess.check_output([
+        forcey, 'reduce', '-wait=false', '-note',
+        '%s:%s' % (url, src), '-sh_file', script, '-src_file', src
+    ])
 
 
 def main(argv):
@@ -81,33 +96,41 @@ def main(argv):
     logging.info('Successfully loaded %d previously-submitted crashes',
                  len(visited))
 
-  for url in urls:
-    splits = url.split('/')
-    buildbucket_id = splits[-2]
-    # Skip the builds that has been processed
-    if buildbucket_id in visited:
-      continue
-    visited[buildbucket_id] = '%s' % url
-    dest_dir = os.path.join(temporary_directory, buildbucket_id)
-    dest_file = os.path.join(dest_dir, splits[-1])
-    logging.info('Downloading and submitting %r...', url)
-    subprocess.check_output(['gsutil', 'cp', url, dest_file],
-                            stderr=subprocess.STDOUT)
-    subprocess.check_output(['tar', '-xJf', dest_file], cwd=dest_dir)
-
-    for src, script in get_crash_reproducers(dest_dir):
-      subprocess.check_output(
-          [
-              opts.forcey, 'reduce', '-wait=false', '-note',
-              '%s:%s' % (url, src), '-sh_file', script, '-src_file', src
-          ],
-          encoding='utf-8',
+  try:
+    for url in urls:
+      splits = url.split('/')
+      buildbucket_id = splits[-2]
+      # Skip the builds that has been processed
+      if buildbucket_id in visited:
+        continue
+      submit_crash_to_forcey(
+          forcey=opts.forcey,
+          temporary_directory=temporary_directory,
+          buildbucket_id=buildbucket_id,
+          url=url,
       )
+      visited[buildbucket_id] = url
 
-  tmp_state_file = state_file + '.tmp'
-  with open(tmp_state_file, 'w', encoding='utf-8') as f:
-    json.dump(visited, f, indent=2)
-  os.rename(tmp_state_file, state_file)
+    exception_in_flight = False
+  except:
+    exception_in_flight = True
+    raise
+  finally:
+    if exception_in_flight:
+      # This is best-effort. If the machine powers off or similar, we'll just
+      # resubmit the same crashes, which is suboptimal, but otherwise
+      # acceptable.
+      logging.error('Something went wrong; attempting to save our work...')
+    else:
+      logging.info('Persisting state...')
+
+    tmp_state_file = state_file + '.tmp'
+    with open(tmp_state_file, 'w', encoding='utf-8') as f:
+      json.dump(visited, f, indent=2)
+    os.rename(tmp_state_file, state_file)
+
+    logging.info('State successfully persisted')
+
   if opts.cleanup:
     shutil.rmtree(temporary_directory)
 
