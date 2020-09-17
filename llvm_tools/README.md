@@ -278,6 +278,7 @@ $ ./auto_llvm_bisection.py --start_rev 369410 --end_rev 369420 \
   --last_tested /abs/path/to/last_tested_file.json \
   --extra_change_lists 513590 1394249 \
   --options latest-toolchain nochromesdk \
+  --chroot_path /path/to/chromeos/chroot \
   --builder eve-release-tryjob
 ```
 
@@ -554,8 +555,8 @@ PYTHONPATH=../ ./nightly_revert_checker.py \
 ### `bisect_clang_crashes.py`
 
 This script downloads clang crash diagnoses from
-gs://chrome-toolchain-artifacts/clang-crash-diagnoses and send them to 4c for
-bisectiton.
+gs://chromeos-toolchain-artifacts/clang-crash-diagnoses and send them to 4c for
+bisection.
 
 Usage example:
 
