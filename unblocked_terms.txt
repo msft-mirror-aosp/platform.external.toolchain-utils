@@ -1,0 +1,6 @@
+dummy
+insane
+master
+native
+sane
+sanity
