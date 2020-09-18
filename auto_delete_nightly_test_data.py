@@ -50,8 +50,8 @@ def CleanNumberedDir(s, dry_run=False):
     return False
 
   ## Now delete the numbered dir Before forcibly removing the directory, just
-  ## check 's' to make sure it is sane.  A valid dir to be removed must be
-  ## '/usr/local/google/crostc/(SUN|MON|TUE...|SAT)'.
+  ## check 's' to make sure it matches the expected pattern.  A valid dir to be
+  ## removed must be '/usr/local/google/crostc/(SUN|MON|TUE...|SAT)'.
   valid_dir_pattern = (
       '^' + NIGHTLY_TESTS_WORKSPACE + '/(' + '|'.join(DIR_BY_WEEKDAY) + ')')
   if not re.search(valid_dir_pattern, s):

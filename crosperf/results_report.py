@@ -505,7 +505,7 @@ class HTMLResultsReport(ResultsReport):
     experiment_file = ''
     if self.experiment is not None:
       experiment_file = self.experiment.experiment_file
-    # Use kwargs for sanity, and so that testing is a bit easier.
+    # Use kwargs for code readability, and so that testing is a bit easier.
     return templates.GenerateHTMLPage(
         perf_table=perf_table,
         chart_js=chart_javascript,

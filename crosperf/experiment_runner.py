@@ -173,7 +173,7 @@ class ExperimentRunner(object):
     try:
       # We should not lease machines if tests are launched via `skylab
       # create-test`. This is because leasing DUT in skylab will create a
-      # dummy task on the DUT and new test created will be hanging there.
+      # no-op task on the DUT and new test created will be hanging there.
       # TODO(zhizhouy): Need to check whether machine is ready or not before
       # assigning a test to it.
       if not experiment.skylab:

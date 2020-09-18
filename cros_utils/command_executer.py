@@ -387,7 +387,7 @@ class CommandExecuter(object):
     command_file = f.name
     os.chmod(command_file, 0o777)
 
-    # if return_output is set, run a dummy command first to make sure that
+    # if return_output is set, run a test command first to make sure that
     # the chroot already exists. We want the final returned output to skip
     # the output from chroot creation steps.
     if return_output:
