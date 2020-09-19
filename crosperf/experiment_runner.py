@@ -35,8 +35,8 @@ def _WriteJSONReportToFile(experiment, results_dir, json_report):
   compiler_string = 'llvm' if has_llvm else 'gcc'
   board = experiment.labels[0].board
   filename = 'report_%s_%s_%s.%s.json' % (board, json_report.date,
-                                          json_report.time.replace(':', '.'),
-                                          compiler_string)
+                                          json_report.time.replace(
+                                              ':', '.'), compiler_string)
   fullname = os.path.join(results_dir, filename)
   report_text = json_report.GetReport()
   with open(fullname, 'w') as out_file:
@@ -157,13 +157,13 @@ class ExperimentRunner(object):
   def _ClearCacheEntries(self, experiment):
     for br in experiment.benchmark_runs:
       cache = ResultsCache()
-      cache.Init(
-          br.label.chromeos_image, br.label.chromeos_root,
-          br.benchmark.test_name, br.iteration, br.test_args, br.profiler_args,
-          br.machine_manager, br.machine, br.label.board, br.cache_conditions,
-          br.logger(), br.log_level, br.label, br.share_cache,
-          br.benchmark.suite, br.benchmark.show_all_results,
-          br.benchmark.run_local, br.benchmark.cwp_dso)
+      cache.Init(br.label.chromeos_image, br.label.chromeos_root,
+                 br.benchmark.test_name, br.iteration, br.test_args,
+                 br.profiler_args, br.machine_manager, br.machine,
+                 br.label.board, br.cache_conditions, br.logger(), br.log_level,
+                 br.label, br.share_cache, br.benchmark.suite,
+                 br.benchmark.show_all_results, br.benchmark.run_local,
+                 br.benchmark.cwp_dso)
       cache_dir = cache.GetCacheDirForWrite()
       if os.path.exists(cache_dir):
         self.l.LogOutput('Removing cache dir: %s' % cache_dir)
@@ -246,8 +246,8 @@ class ExperimentRunner(object):
     subject = '%s: %s' % (experiment.name, ' vs. '.join(label_names))
 
     text_report = TextResultsReport.FromExperiment(experiment, True).GetReport()
-    text_report += (
-        '\nResults are stored in %s.\n' % experiment.results_directory)
+    text_report += ('\nResults are stored in %s.\n' %
+                    experiment.results_directory)
     text_report = "<pre style='font-size: 13px'>%s</pre>" % text_report
     html_report = HTMLResultsReport.FromExperiment(experiment).GetReport()
     attachment = EmailSender.Attachment('report.html', html_report)
@@ -275,8 +275,8 @@ class ExperimentRunner(object):
     all_failed = True
 
     topstats_file = os.path.join(results_directory, 'topstats.log')
-    self.l.LogOutput(
-        'Storing top statistics of each benchmark run into %s.' % topstats_file)
+    self.l.LogOutput('Storing top statistics of each benchmark run into %s.' %
+                     topstats_file)
     with open(topstats_file, 'w') as top_fd:
       for benchmark_run in experiment.benchmark_runs:
         if benchmark_run.result:
@@ -322,8 +322,8 @@ class ExperimentRunner(object):
     self.l.LogOutput('Storing email message body in %s.' % results_directory)
     msg_file_path = os.path.join(results_directory, 'msg_body.html')
     text_report = TextResultsReport.FromExperiment(experiment, True).GetReport()
-    text_report += (
-        '\nResults are stored in %s.\n' % experiment.results_directory)
+    text_report += ('\nResults are stored in %s.\n' %
+                    experiment.results_directory)
     msg_body = "<pre style='font-size: 13px'>%s</pre>" % text_report
     FileUtils().WriteFile(msg_file_path, msg_body)
 
@@ -348,8 +348,8 @@ class MockExperimentRunner(ExperimentRunner):
     super(MockExperimentRunner, self).__init__(experiment, json_report)
 
   def _Run(self, experiment):
-    self.l.LogOutput(
-        "Would run the following experiment: '%s'." % experiment.name)
+    self.l.LogOutput("Would run the following experiment: '%s'." %
+                     experiment.name)
 
   def _PrintTable(self, experiment):
     self.l.LogOutput('Would print the experiment table.')
