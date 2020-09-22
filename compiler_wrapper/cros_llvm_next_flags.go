@@ -15,4 +15,6 @@ package main
 // TODO: Enable test in config_test.go, once we have new llvm-next flags.
 var llvmNextFlags = []string{}
 
-var llvmNextPostFlags = []string{}
+var llvmNextPostFlags = []string{
+	"-Wno-compound-token-split-by-space",
+}
