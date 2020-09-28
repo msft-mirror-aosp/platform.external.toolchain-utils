@@ -62,7 +62,7 @@ do
   # R86-13310.3-1594633089.gcov.xz goes after R86-13310.18-1595237847.gcov.xz)
   latest=$(gsutil ls -l "$GS_BASE/$kver/" | sort -k2 | \
            grep "R${canary}" | tail -1 || true)
-  if [ -z $latest ]
+  if [ -z "$latest" ]
   then
     # if no profiles exist for R${canary}, try the previous branch
     latest=$(gsutil ls -l "$GS_BASE/$kver/" | sort -k2 | \
