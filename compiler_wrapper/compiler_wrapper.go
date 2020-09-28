@@ -187,6 +187,7 @@ func prepareClangCommand(builder *commandBuilder) (err error) {
 	}
 	builder.addPostUserArgs(builder.cfg.clangPostFlags...)
 	calcCommonPreUserArgs(builder)
+	processAarch64Flags(builder)
 	return processClangFlags(builder)
 }
 
