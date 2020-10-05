@@ -555,7 +555,7 @@ PYTHONPATH=../ ./nightly_revert_checker.py \
 ### `bisect_clang_crashes.py`
 
 This script downloads clang crash diagnoses from
-gs://chromeos-toolchain-artifacts/clang-crash-diagnoses and send them to 4c for
+gs://chromeos-toolchain-artifacts/clang-crash-diagnoses and sends them to 4c for
 bisection.
 
 Usage example:
@@ -569,3 +569,26 @@ to 4c server for bisection. The summary of submitted jobs will be saved in
 output/state.json under the current path. The output directory will be created
 automatically if it does not exist yet. To get more information of the submitted
 jobs, please refer to go/4c-cli.
+
+### `upload_lexan_crashes_to_forcey.py`
+
+This script downloads clang crash diagnoses from Lexan's bucket and sends them
+to 4c for bisection.
+
+Usage example:
+
+```
+$ ./upload_lexan_crashes_to_forcey.py --4c 4c-cli \
+    --state_file ./output/state.json
+```
+
+The above command downloads the artifacts of clang crash diagnoses and send them
+to 4c server for bisection. The summary of submitted jobs will be saved in
+output/state.json under the current path. The output directory will be created
+automatically if it does not exist yet. To get more information of the submitted
+jobs, please refer to go/4c-cli.
+
+Note that it's recommended to 'seed' the state file with a most recent upload
+date. This can be done by running this tool *once* with a `--last_date` flag.
+This flag has the script override whatever's in the state file (if anything) and
+start submitting all crashes uploaded starting at the given day.
