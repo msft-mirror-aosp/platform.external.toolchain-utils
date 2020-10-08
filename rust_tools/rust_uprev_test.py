@@ -436,8 +436,9 @@ class RustUprevOtherStagesTests(unittest.TestCase):
   def test_build_cross_compiler(self, mock_call, mock_output):
     mock_output.return_value = f'rust-{self.new_version}.ebuild'
     cros_targets = [
-        'x86_64-cros-linux-gnu', 'armv7a-cros-linux-gnueabihf',
-        'aarch64-cros-linux-gnu'
+        'x86_64-cros-linux-gnu',
+        'armv7a-cros-linux-gnueabihf',
+        'aarch64-cros-linux-gnu',
     ]
     all_triples = ['x86_64-pc-linux-gnu'] + cros_targets
     rust_ebuild = 'RUSTC_TARGET_TRIPLES=(' + '\n\t'.join(all_triples) + ')'
@@ -445,11 +446,9 @@ class RustUprevOtherStagesTests(unittest.TestCase):
     with mock.patch('builtins.open', mock_open):
       rust_uprev.build_cross_compiler()
 
-    emerge_calls = [
-        mock.call(['sudo', 'emerge', '-G', f'cross-{x}/gcc'])
-        for x in cros_targets
-    ]
-    mock_call.assert_has_calls(emerge_calls)
+    mock_call.assert_called_once_with(
+        ['sudo', 'emerge', '-j', '-G'] +
+        [f'cross-{x}/gcc' for x in cros_targets + ['arm-none-eabi']])
 
 
 if __name__ == '__main__':

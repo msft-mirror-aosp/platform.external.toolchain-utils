@@ -594,12 +594,23 @@ def build_cross_compiler() -> None:
   m = target_triples_re.search(contents)
   assert m, 'RUST_TARGET_TRIPLES not found in rust ebuild'
   target_triples = m.group(1).strip().split('\n')
+
+  compiler_targets_to_install = [
+      target.strip() for target in target_triples if 'cros-' in target
+  ]
   for target in target_triples:
     if 'cros-' not in target:
       continue
     target = target.strip()
-    logging.info('Emerging cross compiler %s', target)
-    subprocess.check_call(['sudo', 'emerge', '-G', f'cross-{target}/gcc'])
+
+  # We also always need arm-none-eabi, though it's not mentioned in
+  # RUSTC_TARGET_TRIPLES.
+  compiler_targets_to_install.append('arm-none-eabi')
+
+  logging.info('Emerging cross compilers %s', compiler_targets_to_install)
+  subprocess.check_call(
+      ['sudo', 'emerge', '-j', '-G'] +
+      [f'cross-{target}/gcc' for target in compiler_targets_to_install])
 
 
 def create_new_commit(rust_version: RustVersion) -> None:
