@@ -71,6 +71,7 @@ class RustVersion(NamedTuple):
                           r'(?P<major>\d+)\.'
                           r'(?P<minor>\d+)\.'
                           r'(?P<patch>\d+)'
+                          r'(:?-r\d+)?'
                           r'\.ebuild$')
     m = input_re.match(ebuild_name)
     assert m, f'failed to parse {ebuild_name!r}'
@@ -226,28 +227,25 @@ def parse_stage0_file(new_version: RustVersion) -> Tuple[str, str, str]:
   return stage0_date, stage0_rustc, stage0_cargo
 
 
-def prepare_uprev_from_json(json_input: Any) -> RustVersion:
-  return RustVersion(*json_input)
-
-
-def prepare_uprev(rust_version: RustVersion,
-                  template: Optional[RustVersion]) -> RustVersion:
+def prepare_uprev(rust_version: RustVersion, template: Optional[RustVersion]
+                 ) -> Optional[Tuple[RustVersion, str]]:
   if template is None:
     ebuild_path = get_command_output(['equery', 'w', 'rust'])
     ebuild_name = os.path.basename(ebuild_path)
-    template_version = RustVersion.parse(ebuild_name)
+    template_version = RustVersion.parse_from_ebuild(ebuild_name)
   else:
-    if not os.path.exists(os.path.join(RUST_PATH, f'rust-{template}.ebuild')):
-      raise ValueError(f'Template ebuild file {template} does not exist')
+    ebuild_path = find_ebuild_for_rust_version(template)
     template_version = template
+
   if rust_version <= template_version:
     logging.info(
         'Requested version %s is not newer than the template version %s.',
         rust_version, template_version)
     return None
 
-  logging.info('Template Rust version is %s', template_version)
-  return template_version
+  logging.info('Template Rust version is %s (ebuild: %r)', template_version,
+               ebuild_path)
+  return template_version, ebuild_path
 
 
 def copy_patches(template_version: RustVersion,
@@ -267,11 +265,9 @@ def copy_patches(template_version: RustVersion,
                         cwd=RUST_PATH)
 
 
-def create_ebuild(template_version: RustVersion,
-                  new_version: RustVersion) -> str:
-  shutil.copyfile(
-      os.path.join(RUST_PATH, f'rust-{template_version}.ebuild'),
-      os.path.join(RUST_PATH, f'rust-{new_version}.ebuild'))
+def create_ebuild(template_ebuild: str, new_version: RustVersion) -> str:
+  shutil.copyfile(template_ebuild,
+                  os.path.join(RUST_PATH, f'rust-{new_version}.ebuild'))
   subprocess.check_call(['git', 'add', f'rust-{new_version}.ebuild'],
                         cwd=RUST_PATH)
   return os.path.join(RUST_PATH, f'rust-{new_version}.ebuild')
@@ -473,22 +469,29 @@ def perform_step(state_file: pathlib.Path,
   return val
 
 
+def prepare_uprev_from_json(obj: Any) -> Optional[Tuple[RustVersion, str]]:
+  if not obj:
+    return None
+  version, ebuild_path = obj
+  return RustVersion(*version), ebuild_path
+
+
 def create_rust_uprev(rust_version: RustVersion,
-                      template: Optional[RustVersion], skip_compile: bool,
-                      run_step: Callable[[], T]) -> None:
+                      maybe_template_version: Optional[RustVersion],
+                      skip_compile: bool, run_step: Callable[[], T]) -> None:
   stage0_info = run_step(
       'parse stage0 file', lambda: parse_stage0_file(rust_version))
-  template_version = run_step(
+  template_version, template_ebuild = run_step(
       'prepare uprev',
-      lambda: prepare_uprev(rust_version, template),
+      lambda: prepare_uprev(rust_version, maybe_template_version),
       result_from_json=prepare_uprev_from_json,
   )
-  if template_version is None:
+  if template_ebuild is None:
     return
 
   run_step('copy patches', lambda: copy_patches(template_version, rust_version))
   ebuild_file = run_step(
-      'create ebuild', lambda: create_ebuild(template_version, rust_version))
+      'create ebuild', lambda: create_ebuild(template_ebuild, rust_version))
   run_step('update ebuild', lambda: update_ebuild(ebuild_file, stage0_info))
   with tempfile.TemporaryDirectory(dir='/tmp') as tempdir:
     run_step('upload_to_localmirror', lambda: upload_to_localmirror(
@@ -504,14 +507,29 @@ def create_rust_uprev(rust_version: RustVersion,
       template_version, rust_version))
 
 
-def find_oldest_rust_version_inchroot() -> RustVersion:
-  rust_versions = [
-      RustVersion.parse(x) for x in os.listdir(RUST_PATH) if '.ebuild' in x
-  ]
+def find_rust_versions_in_chroot() -> List[Tuple[RustVersion, str]]:
+  return [(RustVersion.parse_from_ebuild(x), os.path.join(RUST_PATH, x))
+          for x in os.listdir(RUST_PATH)
+          if x.endswith('.ebuild')]
 
+
+def find_oldest_rust_version_in_chroot() -> Tuple[RustVersion, str]:
+  rust_versions = find_rust_versions_in_chroot()
   if len(rust_versions) <= 1:
     raise RuntimeError('Expect to find more than one Rust versions')
   return min(rust_versions)
+
+
+def find_ebuild_for_rust_version(version: RustVersion) -> str:
+  rust_ebuilds = [
+      ebuild for x, ebuild in find_rust_versions_in_chroot() if x == version
+  ]
+  if not rust_ebuilds:
+    raise ValueError(f'No Rust ebuilds found matching {version}')
+  if len(rust_ebuilds) > 1:
+    raise ValueError(f'Multiple Rust ebuilds found matching {version}: '
+                     f'{rust_ebuilds}')
+  return rust_ebuilds[0]
 
 
 def remove_files(filename: str, path: str) -> None:
@@ -520,16 +538,21 @@ def remove_files(filename: str, path: str) -> None:
 
 def remove_rust_uprev(rust_version: Optional[RustVersion],
                       run_step: Callable[[], T]) -> None:
-  delete_version = run_step(
+
+  def find_desired_rust_version():
+    if rust_version:
+      return rust_version, find_ebuild_for_rust_version(rust_version)
+    return find_oldest_rust_version_in_chroot()
+
+  delete_version, delete_ebuild = run_step(
       'find rust version to delete',
-      lambda: rust_version or find_oldest_rust_version_inchroot(),
+      find_desired_rust_version,
       result_from_json=prepare_uprev_from_json,
   )
   run_step(
       'remove patches', lambda: remove_files(
           f'files/rust-{delete_version}-*.patch', RUST_PATH))
-  run_step('remove ebuild', lambda: remove_files(
-      f'rust-{delete_version}.ebuild', RUST_PATH))
+  run_step('remove ebuild', lambda: remove_files(delete_ebuild, RUST_PATH))
   ebuild_file = get_command_output(['equery', 'w', 'rust'])
   run_step('update manifest to delete old version', lambda: update_manifest(
       ebuild_file))

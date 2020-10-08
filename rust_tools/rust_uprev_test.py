@@ -35,6 +35,9 @@ class RustVersionTest(unittest.TestCase):
     actual = rust_uprev.RustVersion.parse_from_ebuild('rust-1.2.3.ebuild')
     self.assertEqual(expected, actual)
 
+    actual = rust_uprev.RustVersion.parse_from_ebuild('rust-1.2.3-r1.ebuild')
+    self.assertEqual(expected, actual)
+
   def test_parse_fail(self):
     with self.assertRaises(AssertionError) as context:
       rust_uprev.RustVersion.parse('invalid-rust-1.2.3')
@@ -49,32 +52,25 @@ class PrepareUprevTest(unittest.TestCase):
     self.version_old = rust_uprev.RustVersion(1, 2, 3)
     self.version_new = rust_uprev.RustVersion(1, 3, 5)
 
-  @mock.patch.object(os.path, 'exists')
+  @mock.patch.object(
+      rust_uprev,
+      'find_ebuild_for_rust_version',
+      return_value='/path/to/ebuild')
   @mock.patch.object(rust_uprev, 'get_command_output')
-  def test_success_with_template(self, mock_command, mock_exists):
-    mock_exists.return_value = True
-    expected = self.version_old
+  def test_success_with_template(self, mock_command, mock_find_ebuild):
+    expected = (self.version_old, '/path/to/ebuild')
     actual = rust_uprev.prepare_uprev(
         rust_version=self.version_new, template=self.version_old)
     self.assertEqual(expected, actual)
     mock_command.assert_not_called()
 
-  @mock.patch.object(os.path, 'exists')
-  @mock.patch.object(rust_uprev, 'get_command_output')
-  def test_fail_with_template_not_exist(self, mock_command, mock_exists):
-    mock_exists.return_value = False
-    with self.assertRaises(ValueError) as context:
-      rust_uprev.prepare_uprev(
-          rust_version=self.version_new, template=self.version_old)
-    self.assertEqual(f'Template ebuild file {self.version_old} does not exist',
-                     str(context.exception))
-    mock_command.assert_not_called()
-
-  @mock.patch.object(os.path, 'exists')
+  @mock.patch.object(
+      rust_uprev,
+      'find_ebuild_for_rust_version',
+      return_value='/path/to/ebuild')
   @mock.patch.object(rust_uprev, 'get_command_output')
   def test_return_none_with_template_larger_than_input(self, mock_command,
-                                                       mock_exists):
-    mock_exists.return_value = True
+                                                       _mock_find_ebuild):
     ret = rust_uprev.prepare_uprev(
         rust_version=self.version_old, template=self.version_new)
     self.assertIsNone(ret)
@@ -83,8 +79,9 @@ class PrepareUprevTest(unittest.TestCase):
   @mock.patch.object(os.path, 'exists')
   @mock.patch.object(rust_uprev, 'get_command_output')
   def test_success_without_template(self, mock_command, mock_exists):
-    mock_command.return_value = f'/path/to/rust/rust-{self.version_old}.ebuild'
-    expected = self.version_old
+    rust_ebuild_path = f'/path/to/rust/rust-{self.version_old}-r3.ebuild'
+    mock_command.return_value = rust_ebuild_path
+    expected = (self.version_old, rust_ebuild_path)
     actual = rust_uprev.prepare_uprev(
         rust_version=self.version_new, template=None)
     self.assertEqual(expected, actual)
@@ -101,8 +98,9 @@ class PrepareUprevTest(unittest.TestCase):
     mock_exists.assert_not_called()
 
   def test_prepare_uprev_from_json(self):
-    json_result = list(self.version_new)
-    expected = self.version_new
+    ebuild_path = '/path/to/the/ebuild'
+    json_result = (list(self.version_new), ebuild_path)
+    expected = (self.version_new, ebuild_path)
     actual = rust_uprev.prepare_uprev_from_json(json_result)
     self.assertEqual(expected, actual)
 
@@ -368,10 +366,10 @@ class RustUprevOtherStagesTests(unittest.TestCase):
   @mock.patch.object(shutil, 'copyfile')
   @mock.patch.object(subprocess, 'check_call')
   def test_create_ebuild(self, mock_call, mock_copy):
-    rust_uprev.create_ebuild(self.current_version, self.new_version)
+    template_ebuild = f'/path/to/rust-{self.current_version}-r2.ebuild'
+    rust_uprev.create_ebuild(template_ebuild, self.new_version)
     mock_copy.assert_called_once_with(
-        os.path.join(rust_uprev.RUST_PATH,
-                     f'rust-{self.current_version}.ebuild'),
+        template_ebuild,
         os.path.join(rust_uprev.RUST_PATH, f'rust-{self.new_version}.ebuild'))
     mock_call.assert_called_once_with(
         ['git', 'add', f'rust-{self.new_version}.ebuild'],
@@ -391,21 +389,23 @@ class RustUprevOtherStagesTests(unittest.TestCase):
     mock_exists.assert_called_once_with(virtual_rust_dir)
 
   @mock.patch.object(os, 'listdir')
-  def test_find_oldest_rust_version_inchroot_pass(self, mock_ls):
+  def test_find_oldest_rust_version_in_chroot_pass(self, mock_ls):
+    oldest_version_name = f'rust-{self.old_version}.ebuild'
     mock_ls.return_value = [
-        f'rust-{self.old_version}.ebuild',
-        f'rust-{self.current_version}.ebuild', f'rust-{self.new_version}.ebuild'
+        oldest_version_name, f'rust-{self.current_version}.ebuild',
+        f'rust-{self.new_version}.ebuild'
     ]
-    actual = rust_uprev.find_oldest_rust_version_inchroot()
-    expected = self.old_version
+    actual = rust_uprev.find_oldest_rust_version_in_chroot()
+    expected = (self.old_version,
+                os.path.join(rust_uprev.RUST_PATH, oldest_version_name))
     self.assertEqual(expected, actual)
 
   @mock.patch.object(os, 'listdir')
-  def test_find_oldest_rust_version_inchroot_fail_with_only_one_ebuild(
+  def test_find_oldest_rust_version_in_chroot_fail_with_only_one_ebuild(
       self, mock_ls):
     mock_ls.return_value = [f'rust-{self.new_version}.ebuild']
     with self.assertRaises(RuntimeError) as context:
-      rust_uprev.find_oldest_rust_version_inchroot()
+      rust_uprev.find_oldest_rust_version_in_chroot()
     self.assertEqual('Expect to find more than one Rust versions',
                      str(context.exception))
 
