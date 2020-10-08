@@ -40,7 +40,7 @@ class Test(unittest.TestCase):
     mock_gsutil_ls.return_value = 'artifact1\nartifact2\nartifact3'
     results = bisect_clang_crashes.get_artifacts(pattern)
     self.assertEqual(results, ['artifact1', 'artifact2', 'artifact3'])
-    mock_gsutil_ls.assert_called_once_with(['gsutil', 'ls', pattern],
+    mock_gsutil_ls.assert_called_once_with(['gsutil.py', 'ls', pattern],
                                            stderr=subprocess.STDOUT,
                                            encoding='utf-8')
 

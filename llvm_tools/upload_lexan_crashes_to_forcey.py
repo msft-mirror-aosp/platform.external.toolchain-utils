@@ -24,7 +24,7 @@ gsurl_base = 'gs://chrome-clang-crash-reports/v1'
 
 
 def gsutil_ls(loc: str) -> List[str]:
-  results = subprocess.run(['gsutil', 'ls', loc],
+  results = subprocess.run(['gsutil.py', 'ls', loc],
                            stdout=subprocess.PIPE,
                            check=True,
                            encoding='utf-8')
@@ -107,7 +107,7 @@ def submit_test_case(gs_url: str, cr_tool: str) -> None:
   with temp_dir() as tempdir:
     target_name = 'test_case' + suffix
     target = os.path.join(tempdir, target_name)
-    subprocess.run(['gsutil', 'cp', gs_url, target], check=True)
+    subprocess.run(['gsutil.py', 'cp', gs_url, target], check=True)
     subprocess.run(['tar', 'xaf', target_name], check=True, cwd=tempdir)
     os.unlink(target)
 

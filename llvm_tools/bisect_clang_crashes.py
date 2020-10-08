@@ -23,7 +23,7 @@ import chroot
 
 
 def get_artifacts(pattern):
-  results = subprocess.check_output(['gsutil', 'ls', pattern],
+  results = subprocess.check_output(['gsutil.py', 'ls', pattern],
                                     stderr=subprocess.STDOUT,
                                     encoding='utf-8')
   return sorted(l.strip() for l in results.splitlines())
@@ -48,7 +48,7 @@ def submit_crash_to_forcey(forcey: str, temporary_directory: str,
   dest_dir = os.path.join(temporary_directory, buildbucket_id)
   dest_file = os.path.join(dest_dir, os.path.basename(url))
   logging.info('Downloading and submitting %r...', url)
-  subprocess.check_output(['gsutil', 'cp', url, dest_file],
+  subprocess.check_output(['gsutil.py', 'cp', url, dest_file],
                           stderr=subprocess.STDOUT)
   subprocess.check_output(['tar', '-xJf', dest_file], cwd=dest_dir)
   for src, script in get_crash_reproducers(dest_dir):
