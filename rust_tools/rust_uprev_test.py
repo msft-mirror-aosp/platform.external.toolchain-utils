@@ -180,11 +180,11 @@ class UpdateManifestTest(unittest.TestCase):
         expect_write=False)
 
   @mock.patch.object(rust_uprev, 'flip_mirror_in_ebuild')
-  @mock.patch.object(rust_uprev, 'rust_ebuild_command')
+  @mock.patch.object(rust_uprev, 'rust_ebuild_actions')
   def test_update_manifest(self, mock_run, mock_flip):
     ebuild_file = '/path/to/rust/rust-1.1.1.ebuild'
     rust_uprev.update_manifest(ebuild_file)
-    mock_run.assert_called_once_with('manifest')
+    mock_run.assert_called_once_with(['manifest'])
     mock_flip.assert_has_calls(
         [mock.call(ebuild_file, add=True),
          mock.call(ebuild_file, add=False)])
@@ -231,6 +231,7 @@ class UploadToLocalmirrorTests(unittest.TestCase):
   def setUp(self):
     self.tempdir = '/tmp/any/dir'
     self.new_version = rust_uprev.RustVersion(1, 3, 5)
+    self.rust_url = 'https://static.rust-lang.org/dist'
     self.tarfile_name = f'rustc-{self.new_version}-src.tar.gz'
     self.rust_src = f'https://static.rust-lang.org/dist/{self.tarfile_name}'
     self.gsurl = f'gs://chromeos-localmirror/distfiles/{self.tarfile_name}'
@@ -241,7 +242,8 @@ class UploadToLocalmirrorTests(unittest.TestCase):
   @mock.patch.object(subprocess, 'check_output')
   @mock.patch.object(subprocess, 'run')
   def test_pass_without_retry(self, mock_run, mock_output, mock_call):
-    rust_uprev.upload_to_localmirror(self.tempdir, self.new_version)
+    rust_uprev.upload_single_tarball(self.rust_url, self.tarfile_name,
+                                     self.tempdir)
     mock_output.assert_called_once_with(
         ['gpg', '--verify', self.sig_file, self.rust_file],
         encoding='utf-8',
@@ -264,7 +266,8 @@ class UploadToLocalmirrorTests(unittest.TestCase):
     mock_check.side_effect = subprocess.CalledProcessError(
         returncode=2, cmd=None, output="gpg: Can't check signature")
     mock_output.return_value = 'some_gpg_keys'
-    rust_uprev.upload_to_localmirror(self.tempdir, self.new_version)
+    rust_uprev.upload_single_tarball(self.rust_url, self.tarfile_name,
+                                     self.tempdir)
     mock_check.assert_called_once_with(
         ['gpg', '--verify', self.sig_file, self.rust_file],
         encoding='utf-8',
@@ -283,6 +286,25 @@ class UploadToLocalmirrorTests(unittest.TestCase):
             'gsutil', 'cp', '-n', '-a', 'public-read', self.rust_file,
             self.gsurl
         ])
+    ])
+
+  @mock.patch.object(rust_uprev, 'upload_single_tarball')
+  def test_upload_to_mirror(self, mock_upload):
+    stage0_info = '2020-01-01', '1.1.1', '0.1.0'
+    rust_uprev.upload_to_localmirror(self.tempdir, self.new_version,
+                                     stage0_info)
+    mock_upload.assert_has_calls([
+        mock.call(self.rust_url, f'rustc-{self.new_version}-src.tar.gz',
+                  self.tempdir),
+        mock.call(f'{self.rust_url}/{stage0_info[0]}',
+                  f'rust-std-{stage0_info[1]}-x86_64-unknown-linux-gnu.tar.gz',
+                  self.tempdir),
+        mock.call(self.rust_url,
+                  f'rustc-{stage0_info[1]}-x86_64-unknown-linux-gnu.tar.gz',
+                  self.tempdir),
+        mock.call(self.rust_url,
+                  f'cargo-{stage0_info[2]}-x86_64-unknown-linux-gnu.tar.gz',
+                  self.tempdir),
     ])
 
 

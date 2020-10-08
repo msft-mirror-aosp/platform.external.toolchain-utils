@@ -306,7 +306,6 @@ def update_ebuild(ebuild_file: str, stage0_info: Tuple[str, str, str]) -> None:
       'Rust ebuild file has STAGE0_DATE, STAGE0_VERSION, STAGE0_VERSION_CARGO '
       'updated to %s, %s, %s respectively', stage0_date, stage0_rustc,
       stage0_cargo)
-  return ebuild_file
 
 
 def flip_mirror_in_ebuild(ebuild_file: str, add: bool) -> None:
@@ -330,18 +329,18 @@ def flip_mirror_in_ebuild(ebuild_file: str, add: bool) -> None:
     f.write(new_contents)
 
 
-def rust_ebuild_command(command: str, sudo: bool = False) -> None:
+def rust_ebuild_actions(actions: List[str], sudo: bool = False) -> None:
   ebuild_path_inchroot = get_command_output(['equery', 'w', 'rust'])
-  cmd = ['ebuild', ebuild_path_inchroot, command]
+  cmd = ['ebuild', ebuild_path_inchroot] + actions
   if sudo:
     cmd = ['sudo'] + cmd
-  subprocess.check_call(cmd, stderr=subprocess.STDOUT)
+  subprocess.check_call(cmd)
 
 
 def update_manifest(ebuild_file: str) -> None:
   logging.info('Added "mirror" to RESTRICT to Rust ebuild')
   flip_mirror_in_ebuild(ebuild_file, add=True)
-  rust_ebuild_command('manifest')
+  rust_ebuild_actions(['manifest'])
   logging.info('Removed "mirror" to RESTRICT from Rust ebuild')
   flip_mirror_in_ebuild(ebuild_file, add=False)
 
@@ -381,10 +380,10 @@ def update_virtual_rust(template_version: RustVersion,
                         cwd=virtual_rust_dir)
 
 
-def upload_to_localmirror(tempdir: str, rust_version: RustVersion) -> None:
-  tarfile_name = f'rustc-{rust_version}-src.tar.gz'
-  rust_src = f'https://static.rust-lang.org/dist/{tarfile_name}'
-  logging.info('Downloading Rust from %s', rust_src)
+def upload_single_tarball(rust_url: str, tarfile_name: str,
+                          tempdir: str) -> None:
+  rust_src = f'{rust_url}/{tarfile_name}'
+  logging.info('Downloading Rust artifact from %s', rust_src)
   gsutil_location = f'gs://chromeos-localmirror/distfiles/{tarfile_name}'
 
   # Download Rust's source
@@ -415,6 +414,36 @@ def upload_to_localmirror(tempdir: str, rust_version: RustVersion) -> None:
   # need to check if the file exists on GS bucket or not.
   subprocess.check_call(
       ['gsutil', 'cp', '-n', '-a', 'public-read', rust_file, gsutil_location])
+
+
+def upload_to_localmirror(tempdir: str, rust_version: RustVersion,
+                          stage0_info: Tuple[str, str, str]) -> None:
+  stage0_date, stage0_rustc, stage0_cargo = stage0_info
+  rust_url = 'https://static.rust-lang.org/dist'
+  # Upload rustc source
+  upload_single_tarball(
+      rust_url,
+      f'rustc-{rust_version}-src.tar.gz',
+      tempdir,
+  )
+  # Upload stage0 toolchain
+  upload_single_tarball(
+      f'{rust_url}/{stage0_date}',
+      f'rust-std-{stage0_rustc}-x86_64-unknown-linux-gnu.tar.gz',
+      tempdir,
+  )
+  # Upload stage0 source
+  upload_single_tarball(
+      rust_url,
+      f'rustc-{stage0_rustc}-x86_64-unknown-linux-gnu.tar.gz',
+      tempdir,
+  )
+  # Upload stage0 cargo
+  upload_single_tarball(
+      rust_url,
+      f'cargo-{stage0_cargo}-x86_64-unknown-linux-gnu.tar.gz',
+      tempdir,
+  )
 
 
 def perform_step(state_file: pathlib.Path,
@@ -463,11 +492,12 @@ def create_rust_uprev(rust_version: RustVersion,
   run_step('update ebuild', lambda: update_ebuild(ebuild_file, stage0_info))
   with tempfile.TemporaryDirectory(dir='/tmp') as tempdir:
     run_step('upload_to_localmirror', lambda: upload_to_localmirror(
-        tempdir, rust_version))
-  run_step('update manifest', lambda: update_manifest(ebuild_file))
+        tempdir, rust_version, stage0_info))
+  run_step('update manifest to add new version', lambda: update_manifest(
+      ebuild_file))
   if not skip_compile:
-    run_step('compile rust', lambda: rust_ebuild_command('compile'))
-    run_step('merge rust', lambda: rust_ebuild_command('merge', sudo=True))
+    run_step('compile rust', lambda: rust_ebuild_actions(['clean', 'compile']))
+    run_step('merge rust', lambda: rust_ebuild_actions(['merge'], sudo=True))
   run_step('insert version into rust packages', lambda: update_rust_packages(
       rust_version, add=True))
   run_step('upgrade virtual/rust', lambda: update_virtual_rust(
@@ -501,7 +531,8 @@ def remove_rust_uprev(rust_version: Optional[RustVersion],
   run_step('remove ebuild', lambda: remove_files(
       f'rust-{delete_version}.ebuild', RUST_PATH))
   ebuild_file = get_command_output(['equery', 'w', 'rust'])
-  run_step('update manifest', lambda: update_manifest(ebuild_file))
+  run_step('update manifest to delete old version', lambda: update_manifest(
+      ebuild_file))
   run_step('remove version from rust packages', lambda: update_rust_packages(
       delete_version, add=False))
   run_step(
