@@ -379,8 +379,19 @@ def update_virtual_rust(template_version: RustVersion,
 def upload_single_tarball(rust_url: str, tarfile_name: str,
                           tempdir: str) -> None:
   rust_src = f'{rust_url}/{tarfile_name}'
-  logging.info('Downloading Rust artifact from %s', rust_src)
   gsutil_location = f'gs://chromeos-localmirror/distfiles/{tarfile_name}'
+
+  missing_file = subprocess.call(
+      ['gsutil', 'ls', gsutil_location],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL,
+  )
+  if not missing_file:
+    logging.info('Rust artifact at %s already exists; skipping download',
+                 gsutil_location)
+    return
+
+  logging.info('Downloading Rust artifact from %s', rust_src)
 
   # Download Rust's source
   rust_file = os.path.join(tempdir, tarfile_name)

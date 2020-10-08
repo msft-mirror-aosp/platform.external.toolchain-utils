@@ -236,16 +236,23 @@ class UploadToLocalmirrorTests(unittest.TestCase):
     self.rust_file = os.path.join(self.tempdir, self.tarfile_name)
     self.sig_file = os.path.join(self.tempdir, 'rustc_sig.asc')
 
+  @mock.patch.object(subprocess, 'call', return_value=1)
   @mock.patch.object(subprocess, 'check_call')
   @mock.patch.object(subprocess, 'check_output')
   @mock.patch.object(subprocess, 'run')
-  def test_pass_without_retry(self, mock_run, mock_output, mock_call):
+  def test_pass_without_retry(self, mock_run, mock_output, mock_call,
+                              mock_raw_call):
     rust_uprev.upload_single_tarball(self.rust_url, self.tarfile_name,
                                      self.tempdir)
     mock_output.assert_called_once_with(
         ['gpg', '--verify', self.sig_file, self.rust_file],
         encoding='utf-8',
         stderr=subprocess.STDOUT)
+    mock_raw_call.assert_has_calls([
+        mock.call(['gsutil', 'ls', self.gsurl],
+                  stdout=subprocess.DEVNULL,
+                  stderr=subprocess.DEVNULL)
+    ])
     mock_call.assert_has_calls([
         mock.call(['curl', '-f', '-o', self.rust_file, self.rust_src]),
         mock.call(['curl', '-f', '-o', self.sig_file, f'{self.rust_src}.asc']),
@@ -256,11 +263,13 @@ class UploadToLocalmirrorTests(unittest.TestCase):
     ])
     mock_run.assert_not_called()
 
+  @mock.patch.object(subprocess, 'call')
   @mock.patch.object(subprocess, 'check_call')
   @mock.patch.object(subprocess, 'check_output')
   @mock.patch.object(subprocess, 'run')
   @mock.patch.object(rust_uprev, 'get_command_output')
-  def test_pass_with_retry(self, mock_output, mock_run, mock_check, mock_call):
+  def test_pass_with_retry(self, mock_output, mock_run, mock_check, mock_call,
+                           mock_raw_call):
     mock_check.side_effect = subprocess.CalledProcessError(
         returncode=2, cmd=None, output="gpg: Can't check signature")
     mock_output.return_value = 'some_gpg_keys'
@@ -276,6 +285,11 @@ class UploadToLocalmirrorTests(unittest.TestCase):
                                      input='some_gpg_keys',
                                      encoding='utf-8',
                                      check=True)
+    mock_raw_call.assert_has_calls([
+        mock.call(['gsutil', 'ls', self.gsurl],
+                  stdout=subprocess.DEVNULL,
+                  stderr=subprocess.DEVNULL)
+    ])
     mock_call.assert_has_calls([
         mock.call(['curl', '-f', '-o', self.rust_file, self.rust_src]),
         mock.call(['curl', '-f', '-o', self.sig_file, f'{self.rust_src}.asc']),
