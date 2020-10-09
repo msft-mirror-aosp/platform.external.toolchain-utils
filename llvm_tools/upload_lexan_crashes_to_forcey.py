@@ -227,7 +227,7 @@ def main(argv: List[str]):
   state_file = opts.state_file
   last_date_str = opts.last_date
 
-  os.makedirs(os.path.dirname(state_file), 0o755)
+  os.makedirs(os.path.dirname(state_file), 0o755, exist_ok=True)
 
   if last_date_str is None:
     with open(state_file, encoding='utf-8') as f:
