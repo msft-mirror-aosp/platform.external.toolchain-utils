@@ -510,8 +510,8 @@ def create_rust_uprev(rust_version: RustVersion,
   run_step('update manifest to add new version', lambda: update_manifest(
       ebuild_file))
   if not skip_compile:
-    run_step('compile rust', lambda: rust_ebuild_actions(['clean', 'compile']))
-    run_step('merge rust', lambda: rust_ebuild_actions(['merge'], sudo=True))
+    run_step('emerge rust', lambda: subprocess.check_call(
+        ['sudo', 'emerge', 'dev-lang/rust']))
   run_step('insert version into rust packages', lambda: update_rust_packages(
       rust_version, add=True))
   run_step('upgrade virtual/rust', lambda: update_virtual_rust(
