@@ -37,7 +37,7 @@ def parse_date(date: str) -> datetime.datetime:
 def fetch_most_recent_profdata(arch: str) -> ProfdataInfo:
   result = subprocess.run(
       [
-          'gsutil',
+          'gsutil.py',
           'ls',
           '-l',
           f'gs://chromeos-toolchain-artifacts/llvm-pgo/{arch}/'
