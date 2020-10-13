@@ -22,7 +22,6 @@ const (
 	clangAndroid     = "./clang"
 	clangTidyAndroid = "./clang-tidy"
 	clangX86_64      = "./x86_64-cros-linux-gnu-clang"
-	clangAarch64     = "./aarch64-cros-linux-gnu-clang"
 	gccX86_64        = "./x86_64-cros-linux-gnu-gcc"
 	gccX86_64Eabi    = "./x86_64-cros-eabi-gcc"
 	gccArmV7         = "./armv7m-cros-linux-gnu-gcc"
