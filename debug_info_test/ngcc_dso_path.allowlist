@@ -1,5 +1,5 @@
 # DSOs specified here are not CrOS packages compiled within CrOS SDK.
-# CrOS packages should be whitelisted in *_comp_path.whitelist
+# CrOS packages should be allowlisted in *_comp_path.allowlist
 # modules we don't care:
 .*/binutils/.*
 .*/binutils-bin/.*
