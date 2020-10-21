@@ -80,6 +80,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		case clangType:
 			mainBuilder.addPreUserArgs(mainBuilder.cfg.clangFlags...)
 			mainBuilder.addPreUserArgs(mainBuilder.cfg.commonFlags...)
+			mainBuilder.addPostUserArgs(mainBuilder.cfg.clangPostFlags...)
 			if _, err := processGomaCccFlags(mainBuilder); err != nil {
 				return 0, err
 			}
