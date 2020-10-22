@@ -278,6 +278,7 @@ $ ./auto_llvm_bisection.py --start_rev 369410 --end_rev 369420 \
   --last_tested /abs/path/to/last_tested_file.json \
   --extra_change_lists 513590 1394249 \
   --options latest-toolchain nochromesdk \
+  --chroot_path /path/to/chromeos/chroot \
   --builder eve-release-tryjob
 ```
 
@@ -488,7 +489,7 @@ these synthesized numbers and git SHAs. Usage should be straightforward:
 6f635f90929da9545dd696071a829a1a42f84b30
 ~> ./git_llvm_rev.py --llvm_dir llvm-project-copy/ --sha 6f635f90929da9545dd696071a829a1a42f84b30
 r380000
-~> ./git_llvm_rev.py --llvm_dir llvm-project-copy/ --sha origin/master
+~> ./git_llvm_rev.py --llvm_dir llvm-project-copy/ --sha origin/some-branch
 r387778
 ```
 
@@ -550,3 +551,44 @@ PYTHONPATH=../ ./nightly_revert_checker.py \
   --llvm_dir llvm-project-copy \
   --chromeos_dir ../../../../
 ```
+
+### `bisect_clang_crashes.py`
+
+This script downloads clang crash diagnoses from
+gs://chromeos-toolchain-artifacts/clang-crash-diagnoses and sends them to 4c for
+bisection.
+
+Usage example:
+
+```
+$ ./bisect_clang_crashes.py --4c 4c-cli --state_file ./output/state.json
+```
+
+The above command downloads the artifacts of clang crash diagnoses and send them
+to 4c server for bisection. The summary of submitted jobs will be saved in
+output/state.json under the current path. The output directory will be created
+automatically if it does not exist yet. To get more information of the submitted
+jobs, please refer to go/4c-cli.
+
+### `upload_lexan_crashes_to_forcey.py`
+
+This script downloads clang crash diagnoses from Lexan's bucket and sends them
+to 4c for bisection.
+
+Usage example:
+
+```
+$ ./upload_lexan_crashes_to_forcey.py --4c 4c-cli \
+    --state_file ./output/state.json
+```
+
+The above command downloads the artifacts of clang crash diagnoses and send them
+to 4c server for bisection. The summary of submitted jobs will be saved in
+output/state.json under the current path. The output directory will be created
+automatically if it does not exist yet. To get more information of the submitted
+jobs, please refer to go/4c-cli.
+
+Note that it's recommended to 'seed' the state file with a most recent upload
+date. This can be done by running this tool *once* with a `--last_date` flag.
+This flag has the script override whatever's in the state file (if anything) and
+start submitting all crashes uploaded starting at the given day.
