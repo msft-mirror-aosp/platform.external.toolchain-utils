@@ -250,6 +250,8 @@ class ToolchainComparator(object):
       self._ce.RunCommand(command)
 
   def _CopyJson(self):
+    # Make sure a destination directory exists.
+    os.makedirs(PENDING_ARCHIVES_DIR, exist_ok=True)
     # Copy json report to pending archives directory.
     command = 'cp %s/*.json %s/.' % (self._reports_dir, PENDING_ARCHIVES_DIR)
     ret = self._ce.RunCommand(command)
