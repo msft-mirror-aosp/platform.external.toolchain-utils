@@ -170,32 +170,34 @@ def main():
       help='Automatically create a CL if specified')
   args = parser.parse_args()
 
-  llvm_config = git_llvm_rev.LLVMConfig(
-      remote='origin', dir=get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools())
-
   llvm_symlink = chroot.ConvertChrootPathsToAbsolutePaths(
       args.chroot_path,
       chroot.GetChrootEbuildPaths(args.chroot_path, ['sys-devel/llvm']))[0]
+  llvm_symlink_dir = os.path.dirname(llvm_symlink)
+
+  git_status = subprocess.check_output(['git', 'status', '-s'],
+                                       cwd=llvm_symlink_dir,
+                                       encoding='utf-8')
+  if git_status:
+    raise ValueError('Uncommited changes detected in %s' %
+                     os.path.dirname(os.path.dirname(llvm_symlink_dir)))
+
   start_sha = args.start_sha
   if start_sha == 'llvm':
-    start_sha = parse_ebuild_for_assignment(
-        os.path.dirname(llvm_symlink), 'LLVM_HASH')
+    start_sha = parse_ebuild_for_assignment(llvm_symlink_dir, 'LLVM_HASH')
   elif start_sha == 'llvm-next':
-    start_sha = parse_ebuild_for_assignment(
-        os.path.dirname(llvm_symlink), 'LLVM_NEXT_HASH')
+    start_sha = parse_ebuild_for_assignment(llvm_symlink_dir, 'LLVM_NEXT_HASH')
   logging.info('Base llvm hash == %s', start_sha)
+
+  llvm_config = git_llvm_rev.LLVMConfig(
+      remote='origin', dir=get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools())
 
   start_sha = resolve_llvm_ref(llvm_config.dir, start_sha)
   start_rev = git_llvm_rev.translate_sha_to_rev(llvm_config, start_sha)
 
   if args.create_cl:
     branch = 'cherry-pick'
-    symlink = os.path.dirname(
-        chroot.GetChrootEbuildPaths(args.chroot_path, ['sys-devel/llvm'])[0])
-    symlink = chroot.ConvertChrootPathsToAbsolutePaths(args.chroot_path,
-                                                       [symlink])[0]
-    symlink_dir = os.path.dirname(symlink)
-    git.CreateBranch(symlink_dir, branch)
+    git.CreateBranch(llvm_symlink_dir, branch)
     symlinks_to_uprev = []
     commit_messages = [
         'llvm: cherry-pick CLs from upstream\n',
@@ -221,9 +223,9 @@ def main():
       relative_patches_dir = 'cherry' if package == 'llvm' else ''
       patches_dir = os.path.join(symlink_dir, 'files', relative_patches_dir)
       logging.info('Cherrypicking %s (%s) into %s', rev, sha, package)
+
       add_cherrypick(patches_json_path, patches_dir, relative_patches_dir,
                      start_rev, llvm_config.dir, rev, sha, package)
-
     if args.create_cl:
       symlinks_to_uprev.extend(symlinks)
       commit_messages.extend([
@@ -240,8 +242,8 @@ def main():
     for symlink in symlinks_to_uprev:
       update_chromeos_llvm_hash.UprevEbuildSymlink(symlink)
     subprocess.check_output(['git', 'add', '--all'], cwd=symlink_dir)
-    git.UploadChanges(symlink_dir, branch, commit_messages)
-    git.DeleteBranch(symlink_dir, branch)
+    git.UploadChanges(llvm_symlink_dir, branch, commit_messages)
+    git.DeleteBranch(llvm_symlink_dir, branch)
 
 
 if __name__ == '__main__':
