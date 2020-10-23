@@ -15,7 +15,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -26,6 +25,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
+            "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -52,7 +53,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -63,6 +63,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
+            "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -89,7 +91,6 @@
           "path": "/tmp/stable/clang++",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -100,6 +101,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
+            "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -126,7 +129,6 @@
           "path": "somepath/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -137,6 +139,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
+            "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -170,7 +174,6 @@
           "path": "/somedir/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -181,6 +184,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
+            "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
             "main.cc",
@@ -219,7 +224,6 @@
           "path": "/somedir/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -230,6 +234,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
+            "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
             "main.cc",
@@ -268,7 +274,6 @@
           "path": "/somedir/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -279,6 +284,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
+            "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
             "main.cc",
@@ -307,7 +314,6 @@
           "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -318,6 +324,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
+            "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -341,7 +349,6 @@
           "path": "/tmp/stable/a/b/c/d/e/f/g/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -352,6 +359,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
+            "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -375,7 +384,6 @@
           "path": "/tmp/stable/a/b/c/d/e/f/g/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -386,6 +394,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
+            "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -409,7 +419,6 @@
           "path": "/tmp/stable/somedir/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -420,6 +429,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
+            "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
@@ -446,7 +457,6 @@
           "path": "/tmp/stable/pathenv/clang",
           "args": [
             "-Qunused-arguments",
-            "-grecord-gcc-switches",
             "-fno-addrsig",
             "-fcommon",
             "-fuse-ld=lld",
@@ -457,6 +467,8 @@
             "-Wno-final-dtor-non-final-class",
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
+            "-fexperimental-new-pass-manager",
+            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
             "-Wno-implicit-int-float-conversion"
           ]
