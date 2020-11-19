@@ -360,30 +360,6 @@ $ ./update_tryjob_status.py \
   --custom_script /abs/path/to/script.py
 ```
 
-### `update_all_tryjobs_with_auto.py`
-
-#### Usage
-
-This script updates all tryjobs that are 'pending' to the result provided by
-`cros buildresult`.
-
-For example:
-
-```
-$ ./update_all_tryjobs_with_auto.py \
-  --last_tested /abs/path/to/last_tested_file.json \
-  --chroot_path /abs/path/to/chroot
-```
-
-The above example will update all tryjobs whose 'status' is 'pending' in the
-file provided by `--last_tested`.
-
-For help with the command line arguments of the script, run:
-
-```
-$ ./update_all_tryjobs_with_auto.py --help
-```
-
 ### `modify_a_tryjob.py`
 
 #### Usage
