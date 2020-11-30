@@ -3,12 +3,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Whitelist functions."""
+"""Allowlist functions."""
 
 from __future__ import print_function
 
-import os
 import glob
+import os
 import re
 
 
@@ -18,20 +18,20 @@ import re
 #
 # The performance bottleneck of this script is readelf. Unless this becomes
 # slower than readelf, don't waste time here.
-def is_whitelisted(list_name, pattern):
-  """Check whether the given pattern is specified in the whitelist.
+def is_allowlisted(list_name, pattern):
+  """Check whether the given pattern is specified in the allowlist.
 
   Args:
-    list_name: name of the whitelist.
+    list_name: name of the allowlist.
     pattern: the target string.
 
   Returns:
     True if matched otherwise False.
   """
-  return pattern and whitelists[list_name].match(pattern)
+  return pattern and allowlists[list_name].match(pattern)
 
 
-def prepare_whitelist(patterns):
+def prepare_allowlist(patterns):
   """Join and compile the re patterns.
 
   Args:
@@ -43,26 +43,26 @@ def prepare_whitelist(patterns):
   return re.compile('|'.join(patterns))
 
 
-def load_whitelists(dirname):
-  """Load whitelists under dirname.
+def load_allowlists(dirname):
+  """Load allowlists under dirname.
 
-  A whitelist ends with .whitelist.
+  An allowlist ends with .allowlist.
 
   Args:
     dirname: path to the dir.
 
   Returns:
-    A dictionary of 'filename' -> whitelist matcher.
+    A dictionary of 'filename' -> allowlist matcher.
   """
   wlist = {}
-  for fn in glob.glob(os.path.join(dirname, '*.whitelist')):
+  for fn in glob.glob(os.path.join(dirname, '*.allowlist')):
     key = os.path.splitext(os.path.basename(fn))[0]
     with open(fn, 'r', encoding='utf-8') as f:
       patterns = f.read().splitlines()
       patterns = [l for l in patterns if l != '']
       patterns = [l for l in patterns if l[0] != '#']
-    wlist[key] = prepare_whitelist(patterns)
+    wlist[key] = prepare_allowlist(patterns)
   return wlist
 
 
-whitelists = load_whitelists(os.path.dirname(__file__))
+allowlists = load_allowlists(os.path.dirname(__file__))
