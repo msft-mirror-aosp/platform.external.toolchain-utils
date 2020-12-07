@@ -7,7 +7,7 @@
 """Maps LLVM git SHAs to synthetic revision numbers and back.
 
 Revision numbers are all of the form '(branch_name, r1234)'. As a shorthand,
-r1234 is parsed as '(master, 1234)'.
+r1234 is parsed as '(main, 1234)'.
 """
 
 from __future__ import print_function
@@ -18,7 +18,7 @@ import subprocess
 import sys
 import typing as t
 
-MAIN_BRANCH = 'master'
+MAIN_BRANCH = 'main'
 
 # Note that after base_llvm_sha, we reach The Wild West(TM) of commits.
 # So reasonable input that could break us includes:
