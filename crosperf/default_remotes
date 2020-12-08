@@ -6,4 +6,4 @@ kefka         : chromeos2-row9-rack9-host21.cros  chromeos2-row10-rack9-host13.c
 lulu          : chromeos2-row9-rack9-host5.cros   chromeos2-row9-rack9-host7.cros
 nautilus      : chromeos2-row10-rack9-host9.cros  chromeos2-row10-rack9-host11.cros
 snappy        : chromeos2-row10-rack9-host5.cros  chromeos2-row10-rack9-host7.cros
-veyron_tigger : chromeos2-row9-rack9-host17.cros chromeos2-row9-rack9-host19.cros
+veyron_tiger : chromeos2-row9-rack9-host17.cros chromeos2-row9-rack9-host19.cros
