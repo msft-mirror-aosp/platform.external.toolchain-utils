@@ -5,10 +5,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -36,6 +36,16 @@ func lockFileExclusive(fd uintptr) error {
 		}
 	}
 	return fmt.Errorf("locking file failed after %d tries", maxTries)
+}
+
+type rusageLog struct {
+	ExitCode        int      `json:"exit_code"`
+	ElapsedRealTime float64  `json:"elapsed_real_time"`
+	ElapsedUserTime float64  `json:"elapsed_user_time"`
+	ElapsedSysTime  float64  `json:"elapsed_sys_time"`
+	MaxMemUsed      int64    `json:"max_mem_used"`
+	Compiler        string   `json:"compiler"`
+	CompilerArgs    []string `json:"compiler_args"`
 }
 
 func logRusage(env env, logFileName string, compilerCmd *command) (exitCode int, err error) {
@@ -71,10 +81,16 @@ func logRusage(env env, logFileName string, compilerCmd *command) (exitCode int,
 	}
 
 	timeUnit := float64(time.Second)
-	data := fmt.Sprintf("%.5f : %.5f : %.5f : %d : %s : %s\n",
-		float64(elapsedRealTime)/timeUnit, float64(elapsedUserTime)/timeUnit, float64(elapsedSysTime)/timeUnit,
-		maxMemUsed, absCompilerPath,
-		strings.Join(append([]string{filepath.Base(absCompilerPath)}, compilerCmd.Args...), " "))
+
+	logEntry := rusageLog{
+		ExitCode:        exitCode,
+		ElapsedRealTime: float64(elapsedRealTime) / timeUnit,
+		ElapsedUserTime: float64(elapsedUserTime) / timeUnit,
+		ElapsedSysTime:  float64(elapsedSysTime) / timeUnit,
+		MaxMemUsed:      maxMemUsed,
+		Compiler:        absCompilerPath,
+		CompilerArgs:    compilerCmd.Args,
+	}
 
 	// Note: using file mode 0666 so that a root-created log is writable by others.
 	logFile, err := os.OpenFile(logFileName, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
@@ -91,7 +107,11 @@ func logRusage(env env, logFileName string, compilerCmd *command) (exitCode int,
 		return 0, wrapErrorwithSourceLocf(err, "locking rusage logfile %s: %v", logFileName, err)
 	}
 
-	_, err = logFile.WriteString(data)
+	if err := json.NewEncoder(logFile).Encode(logEntry); err != nil {
+		_ = logFile.Close()
+		return 0, wrapErrorwithSourceLocf(err, "converting rusage logfile entry to JSON %v", logEntry)
+	}
+
 	closeErr := logFile.Close()
 	if err != nil {
 		return 0, wrapErrorwithSourceLocf(err, "writing to rusage logfile %s: %v", logFileName, err)
