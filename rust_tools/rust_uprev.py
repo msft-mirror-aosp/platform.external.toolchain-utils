@@ -36,6 +36,7 @@ See `--help` for all available options.
 # pylint: disable=cros-logging-import
 
 import argparse
+import glob
 import pathlib
 import json
 import logging
@@ -89,6 +90,20 @@ class RustVersion(NamedTuple):
     assert m, f'failed to parse {x!r}'
     return RustVersion(
         int(m.group('major')), int(m.group('minor')), int(m.group('patch')))
+
+
+def find_virtual_rust_ebuild(version: RustVersion) -> str:
+  """Finds the virtual/rust ebuild for a given RustVersion.
+
+  This finds 1.2.3 and also 1.2.3-r4. It expects that there will
+  be exactly one match, and will assert if that is not the case.
+  """
+  virtual_rust_dir = os.path.join(RUST_PATH, '../../virtual/rust')
+  pattern = os.path.join(virtual_rust_dir, f'rust-{version}*.ebuild')
+  matches = glob.glob(pattern)
+  # We expect exactly one match.
+  assert len(matches) == 1, matches
+  return matches[0]
 
 
 def parse_commandline_args() -> argparse.Namespace:
@@ -367,13 +382,12 @@ def update_rust_packages(rust_version: RustVersion, add: bool) -> None:
 
 def update_virtual_rust(template_version: RustVersion,
                         new_version: RustVersion) -> None:
-  virtual_rust_dir = os.path.join(RUST_PATH, '../../virtual/rust')
-  assert os.path.exists(virtual_rust_dir)
-  shutil.copyfile(
-      os.path.join(virtual_rust_dir, f'rust-{template_version}.ebuild'),
-      os.path.join(virtual_rust_dir, f'rust-{new_version}.ebuild'))
-  subprocess.check_call(['git', 'add', f'rust-{new_version}.ebuild'],
-                        cwd=virtual_rust_dir)
+  template_ebuild = find_virtual_rust_ebuild(template_version)
+  virtual_rust_dir = os.path.dirname(template_ebuild)
+  new_name = f'rust-{new_version}.ebuild'
+  new_ebuild = os.path.join(virtual_rust_dir, new_name)
+  shutil.copyfile(template_ebuild, new_ebuild)
+  subprocess.check_call(['git', 'add', new_name], cwd=virtual_rust_dir)
 
 
 def upload_single_tarball(rust_url: str, tarfile_name: str,
@@ -569,10 +583,12 @@ def remove_rust_uprev(rust_version: Optional[RustVersion],
       ebuild_file))
   run_step('remove version from rust packages', lambda: update_rust_packages(
       delete_version, add=False))
-  run_step(
-      'remove virtual/rust', lambda: remove_files(
-          f'rust-{delete_version}.ebuild',
-          os.path.join(RUST_PATH, '../../virtual/rust')))
+  run_step('remove virtual/rust', lambda: remove_virtual_rust(delete_version))
+
+
+def remove_virtual_rust(delete_version: RustVersion) -> None:
+  dirname, basename = os.path.split(find_virtual_rust_ebuild(delete_version))
+  subprocess.check_call(['git', 'rm', basename], cwd=dirname)
 
 
 def create_new_repo(rust_version: RustVersion) -> None:

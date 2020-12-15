@@ -7,6 +7,7 @@
 """Tests for rust_uprev.py"""
 
 # pylint: disable=cros-logging-import
+import glob
 import os
 import shutil
 import subprocess
@@ -389,18 +390,60 @@ class RustUprevOtherStagesTests(unittest.TestCase):
         ['git', 'add', f'rust-{self.new_version}.ebuild'],
         cwd=rust_uprev.RUST_PATH)
 
-  @mock.patch.object(os.path, 'exists', return_value=True)
+  @mock.patch.object(glob, 'glob')
+  @mock.patch.object(subprocess, 'check_call')
+  def test_remove_virtual_rust(self, mock_call, mock_glob):
+    virtual_rust_dir = os.path.join(rust_uprev.RUST_PATH, '../../virtual/rust')
+    mock_glob.return_value = [
+        os.path.join(virtual_rust_dir, f'rust-{self.old_version}.ebuild'),
+    ]
+    rust_uprev.remove_virtual_rust(self.old_version)
+    mock_call.assert_called_once_with(
+        ['git', 'rm', f'rust-{self.old_version}.ebuild'], cwd=virtual_rust_dir)
+
+  @mock.patch.object(glob, 'glob')
+  @mock.patch.object(subprocess, 'check_call')
+  def test_remove_virtual_rust_patch(self, mock_call, mock_glob):
+    virtual_rust_dir = os.path.join(rust_uprev.RUST_PATH, '../../virtual/rust')
+    mock_glob.return_value = [
+        os.path.join(virtual_rust_dir, f'rust-{self.old_version}-r3.ebuild'),
+    ]
+    rust_uprev.remove_virtual_rust(self.old_version)
+    mock_call.assert_called_once_with(
+        ['git', 'rm', f'rust-{self.old_version}-r3.ebuild'],
+        cwd=virtual_rust_dir)
+
+  @mock.patch.object(glob, 'glob')
   @mock.patch.object(shutil, 'copyfile')
   @mock.patch.object(subprocess, 'check_call')
-  def test_update_virtual_rust(self, mock_call, mock_copy, mock_exists):
+  def test_update_virtual_rust(self, mock_call, mock_copy, mock_glob):
     virtual_rust_dir = os.path.join(rust_uprev.RUST_PATH, '../../virtual/rust')
+    mock_glob.return_value = [
+        os.path.join(virtual_rust_dir, f'rust-{self.current_version}.ebuild'),
+    ]
     rust_uprev.update_virtual_rust(self.current_version, self.new_version)
     mock_call.assert_called_once_with(
         ['git', 'add', f'rust-{self.new_version}.ebuild'], cwd=virtual_rust_dir)
     mock_copy.assert_called_once_with(
         os.path.join(virtual_rust_dir, f'rust-{self.current_version}.ebuild'),
         os.path.join(virtual_rust_dir, f'rust-{self.new_version}.ebuild'))
-    mock_exists.assert_called_once_with(virtual_rust_dir)
+
+  @mock.patch.object(glob, 'glob')
+  @mock.patch.object(shutil, 'copyfile')
+  @mock.patch.object(subprocess, 'check_call')
+  def test_update_virtual_rust_patched(self, mock_call, mock_copy, mock_glob):
+    virtual_rust_dir = os.path.join(rust_uprev.RUST_PATH, '../../virtual/rust')
+    mock_glob.return_value = [
+        os.path.join(virtual_rust_dir,
+                     f'rust-{self.current_version}-r3.ebuild'),
+    ]
+    rust_uprev.update_virtual_rust(self.current_version, self.new_version)
+    mock_call.assert_called_once_with(
+        ['git', 'add', f'rust-{self.new_version}.ebuild'], cwd=virtual_rust_dir)
+    mock_copy.assert_called_once_with(
+        os.path.join(virtual_rust_dir,
+                     f'rust-{self.current_version}-r3.ebuild'),
+        os.path.join(virtual_rust_dir, f'rust-{self.new_version}.ebuild'))
 
   @mock.patch.object(os, 'listdir')
   def test_find_oldest_rust_version_in_chroot_pass(self, mock_ls):
