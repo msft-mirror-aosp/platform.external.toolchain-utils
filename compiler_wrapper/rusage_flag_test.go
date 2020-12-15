@@ -73,7 +73,7 @@ func TestReportGeneralErrorsFromLogRusage(t *testing.T) {
 func TestCreateDirAndFileForLogRusage(t *testing.T) {
 	withLogRusageTestContext(t, func(ctx *testContext) {
 		logFileName := filepath.Join(ctx.tempDir, "somedir", "rusage.log")
-		ctx.env = []string{"GETRUSAGE=" + logFileName}
+		ctx.env = []string{"TOOLCHAIN_RUSAGE_OUTPUT=" + logFileName}
 		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
 
 		if _, err := os.Stat(logFileName); err != nil {
@@ -85,7 +85,7 @@ func TestCreateDirAndFileForLogRusage(t *testing.T) {
 func TestLogRusageFileContent(t *testing.T) {
 	withLogRusageTestContext(t, func(ctx *testContext) {
 		logFileName := filepath.Join(ctx.tempDir, "rusage.log")
-		ctx.env = []string{"GETRUSAGE=" + logFileName}
+		ctx.env = []string{"TOOLCHAIN_RUSAGE_OUTPUT=" + logFileName}
 		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
 
 		data, err := ioutil.ReadFile(logFileName)
@@ -111,7 +111,7 @@ func TestLogRusageFileContent(t *testing.T) {
 func TestLogRusageAppendsToFile(t *testing.T) {
 	withLogRusageTestContext(t, func(ctx *testContext) {
 		logFileName := filepath.Join(ctx.tempDir, "rusage.log")
-		ctx.env = []string{"GETRUSAGE=" + logFileName}
+		ctx.env = []string{"TOOLCHAIN_RUSAGE_OUTPUT=" + logFileName}
 
 		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
 		data, err := ioutil.ReadFile(logFileName)
@@ -152,7 +152,7 @@ func TestLogRusageAppendsToFile(t *testing.T) {
 
 func withLogRusageTestContext(t *testing.T, work func(ctx *testContext)) {
 	withTestContext(t, func(ctx *testContext) {
-		ctx.env = []string{"GETRUSAGE=" + filepath.Join(ctx.tempDir, "rusage.log")}
+		ctx.env = []string{"TOOLCHAIN_RUSAGE_OUTPUT=" + filepath.Join(ctx.tempDir, "rusage.log")}
 		work(ctx)
 	})
 }

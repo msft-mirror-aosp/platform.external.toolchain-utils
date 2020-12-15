@@ -14,7 +14,7 @@ import (
 )
 
 func getRusageLogFilename(env env) string {
-	value, _ := env.getenv("GETRUSAGE")
+	value, _ := env.getenv("TOOLCHAIN_RUSAGE_OUTPUT")
 	return value
 }
 
@@ -56,7 +56,7 @@ func logRusage(env env, logFileName string, compilerCmd *command) (exitCode int,
 	compilerCmdWithoutRusage := &command{
 		Path:       compilerCmd.Path,
 		Args:       compilerCmd.Args,
-		EnvUpdates: append(compilerCmd.EnvUpdates, "GETRUSAGE="),
+		EnvUpdates: append(compilerCmd.EnvUpdates, "TOOLCHAIN_RUSAGE_OUTPUT="),
 	}
 	startTime := time.Now()
 	exitCode, err = wrapSubprocessErrorWithSourceLoc(compilerCmdWithoutRusage,

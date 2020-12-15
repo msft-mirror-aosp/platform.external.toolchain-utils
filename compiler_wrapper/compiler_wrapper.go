@@ -145,7 +145,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	bisectStage := getBisectStage(env)
 	if shouldForceDisableWerror(env, cfg) {
 		if rusageLogfileName != "" {
-			return 0, newUserErrorf("GETRUSAGE is meaningless with FORCE_DISABLE_WERROR")
+			return 0, newUserErrorf("TOOLCHAIN_RUSAGE_OUTPUT is meaningless with FORCE_DISABLE_WERROR")
 		}
 		if bisectStage != "" {
 			return 0, newUserErrorf("BISECT_STAGE is meaningless with FORCE_DISABLE_WERROR")
@@ -154,7 +154,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	}
 	if shouldCompileWithFallback(env) {
 		if rusageLogfileName != "" {
-			return 0, newUserErrorf("GETRUSAGE is meaningless with FORCE_DISABLE_WERROR")
+			return 0, newUserErrorf("TOOLCHAIN_RUSAGE_OUTPUT is meaningless with FORCE_DISABLE_WERROR")
 		}
 		if bisectStage != "" {
 			return 0, newUserErrorf("BISECT_STAGE is meaningless with FORCE_DISABLE_WERROR")
@@ -163,7 +163,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	}
 	if rusageLogfileName != "" {
 		if bisectStage != "" {
-			return 0, newUserErrorf("BISECT_STAGE is meaningless with GETRUSAGE")
+			return 0, newUserErrorf("BISECT_STAGE is meaningless with TOOLCHAIN_RUSAGE_OUTPUT")
 		}
 		return logRusage(env, rusageLogfileName, compilerCmd)
 	}

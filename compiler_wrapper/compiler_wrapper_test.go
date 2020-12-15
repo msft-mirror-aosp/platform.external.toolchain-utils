@@ -98,10 +98,10 @@ func TestErrorOnLogRusageAndForceDisableWError(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.env = []string{
 			"FORCE_DISABLE_WERROR=1",
-			"GETRUSAGE=rusage.log",
+			"TOOLCHAIN_RUSAGE_OUTPUT=rusage.log",
 		}
 		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
-		if err := verifyNonInternalError(stderr, "GETRUSAGE is meaningless with FORCE_DISABLE_WERROR"); err != nil {
+		if err := verifyNonInternalError(stderr, "TOOLCHAIN_RUSAGE_OUTPUT is meaningless with FORCE_DISABLE_WERROR"); err != nil {
 			t.Error(err)
 		}
 	})
@@ -111,10 +111,10 @@ func TestErrorOnLogRusageAndBisect(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.env = []string{
 			"BISECT_STAGE=xyz",
-			"GETRUSAGE=rusage.log",
+			"TOOLCHAIN_RUSAGE_OUTPUT=rusage.log",
 		}
 		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
-		if err := verifyNonInternalError(stderr, "BISECT_STAGE is meaningless with GETRUSAGE"); err != nil {
+		if err := verifyNonInternalError(stderr, "BISECT_STAGE is meaningless with TOOLCHAIN_RUSAGE_OUTPUT"); err != nil {
 			t.Error(err)
 		}
 	})
