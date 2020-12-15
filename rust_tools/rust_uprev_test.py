@@ -57,7 +57,7 @@ class PrepareUprevTest(unittest.TestCase):
       'find_ebuild_for_rust_version',
       return_value='/path/to/ebuild')
   @mock.patch.object(rust_uprev, 'get_command_output')
-  def test_success_with_template(self, mock_command, mock_find_ebuild):
+  def test_success_with_template(self, mock_command, _mock_find_ebuild):
     expected = (self.version_old, '/path/to/ebuild')
     actual = rust_uprev.prepare_uprev(
         rust_version=self.version_new, template=self.version_old)
