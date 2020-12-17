@@ -46,9 +46,7 @@ func processClangFlags(builder *commandBuilder) error {
 	//
 	// Use of -Qunused-arguments allows this set to be small, just those
 	// that clang still warns about.
-	unsupported := map[string]bool{
-		"-pass-exit-codes": true,
-	}
+	unsupported := make(map[string]bool)
 
 	unsupportedPrefixes := []string{"-Wstrict-aliasing=", "-finline-limit="}
 

@@ -211,7 +211,6 @@ func TestFilterUnsupportedClangFlags(t *testing.T) {
 			flag          string
 			expectedCount int
 		}{
-			{clangX86_64, "-pass-exit-codes", 0},
 			{clangX86_64, "-Wstrict-aliasing=xyz", 0},
 			{clangX86_64, "-finline-limit=xyz", 0},
 			{"./armv7a-cros-linux-gnu-clang", "-ftrapv", 0},

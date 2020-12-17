@@ -6,7 +6,6 @@
         "path": "./x86_64-cros-linux-gnu-clang",
         "args": [
           "-mno-movbe",
-          "-pass-exit-codes",
           "-Wclobbered",
           "-Wno-psabi",
           "-Wlogical-op",
