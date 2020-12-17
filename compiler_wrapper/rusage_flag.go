@@ -76,6 +76,11 @@ func logRusage(env env, logFileName string, compilerCmd *command) (exitCode int,
 	maxMemUsed := rusageAfter.Maxrss
 	absCompilerPath := getAbsCmdPath(env, compilerCmd)
 
+	// We need to temporarily set umask to 0 to ensure 777 permissions are actually 777
+	// This effects builderbots in particular
+	oldMask := syscall.Umask(0)
+	defer syscall.Umask(oldMask)
+
 	if err := os.MkdirAll(filepath.Dir(logFileName), 0777); err != nil {
 		return 0, wrapErrorwithSourceLocf(err, "error creating rusage log directory %s", logFileName)
 	}
