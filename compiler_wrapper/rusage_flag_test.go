@@ -105,6 +105,13 @@ func TestLogRusageFileContent(t *testing.T) {
 		if matched, _ := regexp.MatchString("--sysroot=.*", rlog.CompilerArgs[0]); !matched {
 			t.Errorf("unexpected compiler args. Got: %s", rlog.CompilerArgs)
 		}
+		cwd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("Failed to get current working directory: %v", err)
+		}
+		if rlog.WorkingDirectory != cwd {
+			t.Errorf("Unexpected working directory. Got: %q, Want: %q", rlog.WorkingDirectory, cwd)
+		}
 	})
 }
 

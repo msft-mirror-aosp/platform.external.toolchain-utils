@@ -39,13 +39,14 @@ func lockFileExclusive(fd uintptr) error {
 }
 
 type rusageLog struct {
-	ExitCode        int      `json:"exit_code"`
-	ElapsedRealTime float64  `json:"elapsed_real_time"`
-	ElapsedUserTime float64  `json:"elapsed_user_time"`
-	ElapsedSysTime  float64  `json:"elapsed_sys_time"`
-	MaxMemUsed      int64    `json:"max_mem_used"`
-	Compiler        string   `json:"compiler"`
-	CompilerArgs    []string `json:"compiler_args"`
+	ExitCode         int      `json:"exit_code"`
+	ElapsedRealTime  float64  `json:"elapsed_real_time"`
+	ElapsedUserTime  float64  `json:"elapsed_user_time"`
+	ElapsedSysTime   float64  `json:"elapsed_sys_time"`
+	MaxMemUsed       int64    `json:"max_mem_used"`
+	Compiler         string   `json:"compiler"`
+	CompilerArgs     []string `json:"compiler_args"`
+	WorkingDirectory string   `json:"working_directory"`
 }
 
 func logRusage(env env, logFileName string, compilerCmd *command) (exitCode int, err error) {
@@ -87,14 +88,21 @@ func logRusage(env env, logFileName string, compilerCmd *command) (exitCode int,
 
 	timeUnit := float64(time.Second)
 
+	// We want to know what package is being compiled. The working directory gives us a good clue.
+	cwd, err := os.Getwd()
+	if err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "error getting working directory for rusage log")
+	}
+
 	logEntry := rusageLog{
-		ExitCode:        exitCode,
-		ElapsedRealTime: float64(elapsedRealTime) / timeUnit,
-		ElapsedUserTime: float64(elapsedUserTime) / timeUnit,
-		ElapsedSysTime:  float64(elapsedSysTime) / timeUnit,
-		MaxMemUsed:      maxMemUsed,
-		Compiler:        absCompilerPath,
-		CompilerArgs:    compilerCmd.Args,
+		ExitCode:         exitCode,
+		ElapsedRealTime:  float64(elapsedRealTime) / timeUnit,
+		ElapsedUserTime:  float64(elapsedUserTime) / timeUnit,
+		ElapsedSysTime:   float64(elapsedSysTime) / timeUnit,
+		MaxMemUsed:       maxMemUsed,
+		Compiler:         absCompilerPath,
+		CompilerArgs:     compilerCmd.Args,
+		WorkingDirectory: cwd,
 	}
 
 	// Note: using file mode 0666 so that a root-created log is writable by others.
