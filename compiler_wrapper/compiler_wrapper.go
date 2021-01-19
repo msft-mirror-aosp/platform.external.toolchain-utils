@@ -141,41 +141,53 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			}
 		}
 	}
+
 	rusageLogfileName := getRusageLogFilename(env)
 	bisectStage := getBisectStage(env)
+
+	if rusageLogfileName != "" {
+		compilerCmd = removeRusageFromCommand(compilerCmd)
+	}
+
 	if shouldForceDisableWerror(env, cfg) {
-		if rusageLogfileName != "" {
-			return 0, newUserErrorf("TOOLCHAIN_RUSAGE_OUTPUT is meaningless with FORCE_DISABLE_WERROR")
-		}
 		if bisectStage != "" {
 			return 0, newUserErrorf("BISECT_STAGE is meaningless with FORCE_DISABLE_WERROR")
 		}
-		return doubleBuildWithWNoError(env, cfg, compilerCmd)
+		return doubleBuildWithWNoError(env, cfg, compilerCmd, rusageLogfileName)
 	}
 	if shouldCompileWithFallback(env) {
 		if rusageLogfileName != "" {
-			return 0, newUserErrorf("TOOLCHAIN_RUSAGE_OUTPUT is meaningless with FORCE_DISABLE_WERROR")
+			return 0, newUserErrorf("TOOLCHAIN_RUSAGE_OUTPUT is meaningless with ANDROID_LLVM_PREBUILT_COMPILER_PATH")
 		}
 		if bisectStage != "" {
-			return 0, newUserErrorf("BISECT_STAGE is meaningless with FORCE_DISABLE_WERROR")
+			return 0, newUserErrorf("BISECT_STAGE is meaningless with ANDROID_LLVM_PREBUILT_COMPILER_PATH")
 		}
 		return compileWithFallback(env, cfg, compilerCmd, mainBuilder.absWrapperPath)
 	}
-	if rusageLogfileName != "" {
-		if bisectStage != "" {
-			return 0, newUserErrorf("BISECT_STAGE is meaningless with TOOLCHAIN_RUSAGE_OUTPUT")
-		}
-		return logRusage(env, rusageLogfileName, compilerCmd)
-	}
 	if bisectStage != "" {
+		if rusageLogfileName != "" {
+			return 0, newUserErrorf("TOOLCHAIN_RUSAGE_OUTPUT is meaningless with BISECT_STAGE")
+		}
 		compilerCmd, err = calcBisectCommand(env, cfg, bisectStage, compilerCmd)
 		if err != nil {
 			return 0, err
 		}
 	}
-	// Note: We return an exit code only if the underlying env is not
-	// really doing an exec, e.g. commandRecordingEnv.
-	return wrapSubprocessErrorWithSourceLoc(compilerCmd, env.exec(compilerCmd))
+
+	commitRusage, err := maybeCaptureRusage(env, rusageLogfileName, compilerCmd, func() error {
+		// Note: We return an exit code only if the underlying env is not
+		// really doing an exec, e.g. commandRecordingEnv.
+		exitCode, err = wrapSubprocessErrorWithSourceLoc(compilerCmd, env.exec(compilerCmd))
+		return err
+	})
+	if err != nil {
+		return exitCode, err
+	}
+	if err := commitRusage(exitCode); err != nil {
+		return exitCode, fmt.Errorf("commiting rusage: %v", err)
+	}
+
+	return exitCode, err
 }
 
 func prepareClangCommand(builder *commandBuilder) (err error) {

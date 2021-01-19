@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -94,15 +96,33 @@ func TestLogMissingCCacheExecError(t *testing.T) {
 	})
 }
 
-func TestErrorOnLogRusageAndForceDisableWError(t *testing.T) {
+func TestLogRusageAndForceDisableWError(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
+		logFileName := filepath.Join(ctx.tempDir, "rusage.log")
 		ctx.env = []string{
 			"FORCE_DISABLE_WERROR=1",
-			"TOOLCHAIN_RUSAGE_OUTPUT=rusage.log",
+			"TOOLCHAIN_RUSAGE_OUTPUT=" + logFileName,
 		}
-		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
-		if err := verifyNonInternalError(stderr, "TOOLCHAIN_RUSAGE_OUTPUT is meaningless with FORCE_DISABLE_WERROR"); err != nil {
-			t.Error(err)
+		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			switch ctx.cmdCount {
+			case 1:
+				io.WriteString(stderr, "-Werror originalerror")
+				return newExitCodeError(1)
+			case 2:
+				return nil
+			default:
+				t.Fatalf("unexpected command: %#v", cmd)
+				return nil
+			}
+		}
+		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
+		if _, err := os.Stat(logFileName); os.IsNotExist(err) {
+			t.Errorf("no logfile created at TOOLCHAIN_RUSAGE_OUTPUT path %q", logFileName)
+		} else if err != nil {
+			t.Fatalf("error checking for rusage logfile at %q: %v", logFileName, err)
+		}
+		if ctx.cmdCount != 2 {
+			t.Errorf("expected 2 calls. Got: %d", ctx.cmdCount)
 		}
 	})
 }
@@ -114,7 +134,7 @@ func TestErrorOnLogRusageAndBisect(t *testing.T) {
 			"TOOLCHAIN_RUSAGE_OUTPUT=rusage.log",
 		}
 		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
-		if err := verifyNonInternalError(stderr, "BISECT_STAGE is meaningless with TOOLCHAIN_RUSAGE_OUTPUT"); err != nil {
+		if err := verifyNonInternalError(stderr, "TOOLCHAIN_RUSAGE_OUTPUT is meaningless with BISECT_STAGE"); err != nil {
 			t.Error(err)
 		}
 	})
