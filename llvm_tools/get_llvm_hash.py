@@ -88,7 +88,8 @@ def CreateTempLLVMRepo(temp_dir):
   abs_path_to_llvm_project_dir = GetAndUpdateLLVMProjectInLLVMTools()
   CheckCommand([
       'git', '-C', abs_path_to_llvm_project_dir, 'worktree', 'add', '--detach',
-      temp_dir, git_llvm_rev.MAIN_BRANCH
+      temp_dir,
+      'origin/%s' % git_llvm_rev.MAIN_BRANCH
   ])
 
   try:
@@ -124,10 +125,9 @@ def GetAndUpdateLLVMProjectInLLVMTools():
                                               'llvm-project-copy')
 
   if not os.path.isdir(abs_path_to_llvm_project_dir):
-    print(
-        'Checking out LLVM from scratch. This could take a while...\n'
-        '(This should only need to be done once, though.)',
-        file=sys.stderr)
+    print('Checking out LLVM from scratch. This could take a while...\n'
+          '(This should only need to be done once, though.)',
+          file=sys.stderr)
     os.mkdir(abs_path_to_llvm_project_dir)
 
     LLVMHash().CloneLLVMRepo(abs_path_to_llvm_project_dir)

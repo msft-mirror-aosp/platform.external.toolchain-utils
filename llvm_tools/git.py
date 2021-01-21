@@ -65,7 +65,7 @@ def DeleteBranch(repo, branch):
   if not os.path.isdir(repo):
     raise ValueError('Invalid directory path provided: %s' % repo)
 
-  subprocess.check_output(['git', '-C', repo, 'checkout', 'cros/master'])
+  subprocess.check_output(['git', '-C', repo, 'checkout', 'cros/main'])
 
   subprocess.check_output(['git', '-C', repo, 'reset', 'HEAD', '--hard'])
 
