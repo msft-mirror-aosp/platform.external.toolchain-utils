@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -74,6 +75,8 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	env = mainBuilder.env
 	var compilerCmd *command
 	clangSyntax := processClangSyntaxFlag(mainBuilder)
+
+	workAroundKernelBugWithRetries := false
 	if cfg.isAndroidWrapper {
 		mainBuilder.path = calculateAndroidWrapperPath(mainBuilder.path, mainBuilder.absWrapperPath)
 		switch mainBuilder.target.compilerType {
@@ -139,6 +142,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			if err != nil {
 				return 0, err
 			}
+			workAroundKernelBugWithRetries = true
 		}
 	}
 
@@ -174,26 +178,75 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		}
 	}
 
-	commitRusage, err := maybeCaptureRusage(env, rusageLogfileName, compilerCmd, func(willLogRusage bool) error {
-		var err error
-		if willLogRusage {
-			err = env.run(compilerCmd, env.stdin(), env.stdout(), env.stderr())
-		} else {
-			// Note: We return from this in non-fatal circumstances only if the
-			// underlying env is not really doing an exec, e.g. commandRecordingEnv.
-			err = env.exec(compilerCmd)
+	errRetryCompilation := errors.New("compilation retry requested")
+	var runCompiler func(willLogRusage bool) (int, error)
+	if !workAroundKernelBugWithRetries {
+		runCompiler = func(willLogRusage bool) (int, error) {
+			var err error
+			if willLogRusage {
+				err = env.run(compilerCmd, env.stdin(), env.stdout(), env.stderr())
+			} else {
+				// Note: We return from this in non-fatal circumstances only if the
+				// underlying env is not really doing an exec, e.g. commandRecordingEnv.
+				err = env.exec(compilerCmd)
+			}
+			return wrapSubprocessErrorWithSourceLoc(compilerCmd, err)
 		}
-		exitCode, err = wrapSubprocessErrorWithSourceLoc(compilerCmd, err)
-		return err
-	})
-	if err != nil {
-		return exitCode, err
-	}
-	if err := commitRusage(exitCode); err != nil {
-		return exitCode, fmt.Errorf("commiting rusage: %v", err)
+	} else {
+		getStdin, err := prebufferStdinIfNeeded(env, compilerCmd)
+		if err != nil {
+			return 0, wrapErrorwithSourceLocf(err, "prebuffering stdin: %v", err)
+		}
+
+		stdoutBuffer := &bytes.Buffer{}
+		stderrBuffer := &bytes.Buffer{}
+		retryAttempt := 0
+		runCompiler = func(willLogRusage bool) (int, error) {
+			retryAttempt++
+			stdoutBuffer.Reset()
+			stderrBuffer.Reset()
+
+			exitCode, compilerErr := wrapSubprocessErrorWithSourceLoc(compilerCmd,
+				env.run(compilerCmd, getStdin(), stdoutBuffer, stderrBuffer))
+
+			if compilerErr != nil || exitCode != 0 {
+				if retryAttempt < kernelBugRetryLimit && (errorContainsTracesOfKernelBug(compilerErr) || containsTracesOfKernelBug(stdoutBuffer.Bytes()) || containsTracesOfKernelBug(stderrBuffer.Bytes())) {
+					return exitCode, errRetryCompilation
+				}
+			}
+			_, stdoutErr := stdoutBuffer.WriteTo(env.stdout())
+			_, stderrErr := stderrBuffer.WriteTo(env.stderr())
+			if stdoutErr != nil {
+				return exitCode, wrapErrorwithSourceLocf(err, "writing stdout: %v", stdoutErr)
+			}
+			if stderrErr != nil {
+				return exitCode, wrapErrorwithSourceLocf(err, "writing stderr: %v", stderrErr)
+			}
+			return exitCode, compilerErr
+		}
 	}
 
-	return exitCode, err
+	for {
+		var exitCode int
+		commitRusage, err := maybeCaptureRusage(env, rusageLogfileName, compilerCmd, func(willLogRusage bool) error {
+			var err error
+			exitCode, err = runCompiler(willLogRusage)
+			return err
+		})
+
+		switch {
+		case err == errRetryCompilation:
+			// Loop around again.
+		case err != nil:
+			return exitCode, err
+		default:
+			if err := commitRusage(exitCode); err != nil {
+				return exitCode, fmt.Errorf("commiting rusage: %v", err)
+			}
+
+			return exitCode, err
+		}
+	}
 }
 
 func prepareClangCommand(builder *commandBuilder) (err error) {
