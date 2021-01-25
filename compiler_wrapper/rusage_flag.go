@@ -61,9 +61,10 @@ func removeRusageFromCommand(compilerCmd *command) *command {
 // 	unless action returns an error or logFileName is ""
 // a function is returned which saves the rusage log data at logFileName unless logFileName is ""
 // an error is returned if action returns an error, or rusage commands in syscall fails
-func maybeCaptureRusage(env env, logFileName string, compilerCmd *command, action func() error) (maybeCommitToFile func(exitCode int) error, err error) {
-	if logFileName == "" {
-		if err := action(); err != nil {
+func maybeCaptureRusage(env env, logFileName string, compilerCmd *command, action func(willLogRusage bool) error) (maybeCommitToFile func(exitCode int) error, err error) {
+	willLogRusage := logFileName != ""
+	if !willLogRusage {
+		if err := action(willLogRusage); err != nil {
 			return nil, err
 		}
 		return func(int) error { return nil }, nil
@@ -75,7 +76,7 @@ func maybeCaptureRusage(env env, logFileName string, compilerCmd *command, actio
 	}
 	startTime := time.Now()
 
-	if err := action(); err != nil {
+	if err := action(willLogRusage); err != nil {
 		return nil, err
 	}
 

@@ -174,10 +174,16 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		}
 	}
 
-	commitRusage, err := maybeCaptureRusage(env, rusageLogfileName, compilerCmd, func() error {
-		// Note: We return an exit code only if the underlying env is not
-		// really doing an exec, e.g. commandRecordingEnv.
-		exitCode, err = wrapSubprocessErrorWithSourceLoc(compilerCmd, env.exec(compilerCmd))
+	commitRusage, err := maybeCaptureRusage(env, rusageLogfileName, compilerCmd, func(willLogRusage bool) error {
+		var err error
+		if willLogRusage {
+			err = env.run(compilerCmd, env.stdin(), env.stdout(), env.stderr())
+		} else {
+			// Note: We return from this in non-fatal circumstances only if the
+			// underlying env is not really doing an exec, e.g. commandRecordingEnv.
+			err = env.exec(compilerCmd)
+		}
+		exitCode, err = wrapSubprocessErrorWithSourceLoc(compilerCmd, err)
 		return err
 	})
 	if err != nil {

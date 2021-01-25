@@ -71,7 +71,7 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command, rusageL
 	}
 
 	var originalExitCode int
-	commitOriginalRusage, err := maybeCaptureRusage(env, rusageLogfileName, originalCmd, func() error {
+	commitOriginalRusage, err := maybeCaptureRusage(env, rusageLogfileName, originalCmd, func(willLogRusage bool) error {
 		originalExitCode, err = wrapSubprocessErrorWithSourceLoc(originalCmd,
 			env.run(originalCmd, getStdin(), originalStdoutBuffer, originalStderrBuffer))
 		return err
@@ -106,7 +106,7 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command, rusageL
 	}
 
 	var retryExitCode int
-	commitRetryRusage, err := maybeCaptureRusage(env, rusageLogfileName, retryCommand, func() error {
+	commitRetryRusage, err := maybeCaptureRusage(env, rusageLogfileName, retryCommand, func(willLogRusage bool) error {
 		retryExitCode, err = wrapSubprocessErrorWithSourceLoc(retryCommand,
 			env.run(retryCommand, getStdin(), retryStdoutBuffer, retryStderrBuffer))
 		return err
