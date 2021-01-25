@@ -19,9 +19,14 @@ import (
 
 const numWErrorEstimate = 30
 
-func shouldForceDisableWerror(env env, cfg *config) bool {
+func shouldForceDisableWerror(env env, cfg *config, ty compilerType) bool {
 	if cfg.isAndroidWrapper {
 		return cfg.useLlvmNext
+	}
+
+	// We only want this functionality for clang.
+	if ty != clangType {
+		return false
 	}
 	value, _ := env.getenv("FORCE_DISABLE_WERROR")
 	return value != ""

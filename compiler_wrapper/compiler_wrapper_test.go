@@ -115,7 +115,7 @@ func TestLogRusageAndForceDisableWError(t *testing.T) {
 				return nil
 			}
 		}
-		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
+		ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, mainCc)))
 		if _, err := os.Stat(logFileName); os.IsNotExist(err) {
 			t.Errorf("no logfile created at TOOLCHAIN_RUSAGE_OUTPUT path %q", logFileName)
 		} else if err != nil {
@@ -146,7 +146,7 @@ func TestErrorOnBisectAndForceDisableWError(t *testing.T) {
 			"BISECT_STAGE=xyz",
 			"FORCE_DISABLE_WERROR=1",
 		}
-		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
+		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(clangX86_64, mainCc)))
 		if err := verifyNonInternalError(stderr, "BISECT_STAGE is meaningless with FORCE_DISABLE_WERROR"); err != nil {
 			t.Error(err)
 		}

@@ -149,7 +149,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		compilerCmd = removeRusageFromCommand(compilerCmd)
 	}
 
-	if shouldForceDisableWerror(env, cfg) {
+	if shouldForceDisableWerror(env, cfg, mainBuilder.target.compilerType) {
 		if bisectStage != "" {
 			return 0, newUserErrorf("BISECT_STAGE is meaningless with FORCE_DISABLE_WERROR")
 		}
