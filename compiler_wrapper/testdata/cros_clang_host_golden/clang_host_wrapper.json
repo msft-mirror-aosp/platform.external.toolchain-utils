@@ -16,7 +16,6 @@
           "args": [
             "-Qunused-arguments",
             "-fno-addrsig",
-            "-fcommon",
             "-fuse-ld=lld",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
@@ -28,6 +27,7 @@
             "-fexperimental-new-pass-manager",
             "-Wno-compound-token-split-by-macro",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
+            "-fcommon",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
