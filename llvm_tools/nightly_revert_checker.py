@@ -27,6 +27,7 @@ import typing as t
 import cros_utils.email_sender as email_sender
 import cros_utils.tiny_render as tiny_render
 import get_llvm_hash
+import git_llvm_rev
 import revert_checker
 
 State = t.Any
@@ -44,12 +45,12 @@ def _find_interesting_android_shas(
         encoding='utf-8',
     ).strip()
 
-  master_legacy = get_llvm_merge_base('aosp/master-legacy')
+  main_legacy = get_llvm_merge_base('aosp/master-legacy')
   testing_upstream = get_llvm_merge_base('aosp/testing-upstream')
-  result = [('master-legacy', master_legacy)]
+  result = [('main-legacy', main_legacy)]
 
   # If these are the same SHA, there's no point in tracking both.
-  if master_legacy != testing_upstream:
+  if main_legacy != testing_upstream:
     result.append(('testing-upstream', testing_upstream))
   return result
 
@@ -270,7 +271,7 @@ def main(argv: t.List[str]) -> None:
   for friendly_name, sha in interesting_shas:
     logging.info('Finding reverts across %s (%s)', friendly_name, sha)
     all_reverts = revert_checker.find_reverts(
-        llvm_dir, sha, root='origin/master')
+        llvm_dir, sha, root='origin/' + git_llvm_rev.MAIN_BRANCH)
     logging.info('Detected the following revert(s) across %s:\n%s',
                  friendly_name, pprint.pformat(all_reverts))
 
