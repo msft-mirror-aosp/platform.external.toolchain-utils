@@ -219,9 +219,7 @@ func calcGccCommand(builder *commandBuilder) (*command, error) {
 		processSysrootFlag(builder)
 	}
 	builder.addPreUserArgs(builder.cfg.gccFlags...)
-	if !builder.cfg.isHostWrapper {
-		calcCommonPreUserArgs(builder)
-	}
+	calcCommonPreUserArgs(builder)
 	processGccFlags(builder)
 	if !builder.cfg.isHostWrapper {
 		allowCCache := true
