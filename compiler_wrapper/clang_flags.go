@@ -135,18 +135,7 @@ func processClangFlags(builder *commandBuilder) error {
 				linkerPath, env.getwd())
 		}
 		builder.addPostUserArgs("-B" + relLinkerPath)
-		if startswithI86(builder.target.arch) {
-			// TODO: -target i686-pc-linux-gnu causes clang to search for
-			// libclang_rt.asan-i686.a which doesn't exist because it's packaged
-			// as libclang_rt.asan-i386.a. We can't use -target i386-pc-linux-gnu
-			// because then it would try to run i386-pc-linux-gnu-ld which doesn't
-			// exist. Consider renaming the runtime library to use i686 in its name.
-			builder.addPostUserArgs("-m32")
-			// clang does not support -mno-movbe. This is the alternate way to do it.
-			builder.addPostUserArgs("-Xclang", "-target-feature", "-Xclang", "-movbe")
-		} else {
-			builder.addPostUserArgs("-target", builder.target.target)
-		}
+		builder.addPostUserArgs("-target", builder.target.target)
 	}
 	return nil
 }

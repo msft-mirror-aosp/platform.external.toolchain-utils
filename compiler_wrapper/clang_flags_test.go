@@ -235,7 +235,7 @@ func TestClangArchFlags(t *testing.T) {
 			compiler string
 			flags    []string
 		}{
-			{"./i686_64-cros-linux-gnu-clang", []string{mainCc, "-m32", "-Xclang", "-target-feature", "-Xclang", "-movbe"}},
+			{"./i686_64-cros-linux-gnu-clang", []string{mainCc, "-target", "i686_64-cros-linux-gnu"}},
 			{"./x86_64-cros-linux-gnu-clang", []string{mainCc, "-target", "x86_64-cros-linux-gnu"}},
 		}
 		for _, tt := range tests {
