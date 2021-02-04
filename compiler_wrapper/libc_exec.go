@@ -21,7 +21,8 @@ package main
 //		// crbug.com/1166017: we're (very rarely) getting ERESTARTSYS on some builders.
 //		// Documentation indicates that this is a bug in the kernel. Work around it by
 //		// retrying. 25 is an arbitrary retry number that Should Be Enough For Anyone(TM).
-//		for (int i = 0; i < 25; i++) {
+//		int i = 0;
+//		for (; i < 25; i++) {
 //			execve(pathname, argv, envp);
 //			if (errno != 512) {
 //				break;
