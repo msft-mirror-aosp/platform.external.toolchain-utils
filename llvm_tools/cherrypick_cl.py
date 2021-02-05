@@ -17,6 +17,8 @@ import os
 import shlex
 import subprocess
 import sys
+import typing as t
+from datetime import datetime
 
 import chroot
 import get_llvm_hash
@@ -141,6 +143,123 @@ def get_package_names(sha: str, llvm_dir: str) -> list:
   return packages
 
 
+def add_cherrypicks_for_packages(packages: t.List[str], symlinks: t.List[str],
+                                 start_rev: git_llvm_rev.Rev,
+                                 rev: git_llvm_rev.Rev, sha: str,
+                                 llvm_config: git_llvm_rev.LLVMConfig):
+  """Create a patch and add its metadata for each package"""
+  for package, symlink in zip(packages, symlinks):
+    symlink_dir = os.path.dirname(symlink)
+    patches_json_path = os.path.join(symlink_dir, 'files/PATCHES.json')
+    relative_patches_dir = 'cherry' if package == 'llvm' else ''
+    patches_dir = os.path.join(symlink_dir, 'files', relative_patches_dir)
+    logging.info('Cherrypicking %s (%s) into %s', rev, sha, package)
+    add_cherrypick(patches_json_path, patches_dir, relative_patches_dir,
+                   start_rev, llvm_config.dir, rev, sha, package)
+
+
+def make_cl(symlinks_to_uprev: t.List[str], llvm_symlink_dir: str, branch: str,
+            commit_messages: t.List[str], reviewers: t.Optional[t.List[str]],
+            cc: t.Optional[t.List[str]]):
+  symlinks_to_uprev = sorted(set(symlinks_to_uprev))
+  for symlink in symlinks_to_uprev:
+    update_chromeos_llvm_hash.UprevEbuildSymlink(symlink)
+    subprocess.check_output(['git', 'add', '--all'],
+                            cwd=os.path.dirname(symlink))
+  git.UploadChanges(llvm_symlink_dir, branch, commit_messages, reviewers, cc)
+  git.DeleteBranch(llvm_symlink_dir, branch)
+
+
+def resolve_symbolic_sha(start_sha: str, llvm_symlink_dir: str) -> str:
+  if start_sha == 'llvm':
+    return parse_ebuild_for_assignment(llvm_symlink_dir, 'LLVM_HASH')
+
+  if start_sha == 'llvm-next':
+    return parse_ebuild_for_assignment(llvm_symlink_dir, 'LLVM_NEXT_HASH')
+
+  return start_sha
+
+
+def find_commits_and_make_cl(chroot_path: str, shas: t.List[str],
+                             start_rev: git_llvm_rev.Rev,
+                             llvm_config: git_llvm_rev.LLVMConfig,
+                             llvm_symlink_dir: str, create_cl: bool,
+                             reviewers: t.Optional[t.List[str]],
+                             cc: t.Optional[t.List[str]]):
+  if create_cl:
+    branch = f'cherry-pick-{datetime.now().strftime("%Y%m%d%H%M%S%f")}'
+    git.CreateBranch(llvm_symlink_dir, branch)
+    symlinks_to_uprev = []
+    commit_messages = [
+        'llvm: cherry-pick CLs from upstream\n',
+    ]
+
+  for sha in shas:
+    sha = resolve_llvm_ref(llvm_config.dir, sha)
+    rev = git_llvm_rev.translate_sha_to_rev(llvm_config, sha)
+    # Find out the llvm projects changed in this commit
+    packages = get_package_names(sha, llvm_config.dir)
+    # Find out the ebuild symlinks of the corresponding ChromeOS packages
+    symlinks = chroot.GetChrootEbuildPaths(chroot_path, [
+        'sys-devel/llvm' if package == 'llvm' else 'sys-libs/' + package
+        for package in packages
+    ])
+    symlinks = chroot.ConvertChrootPathsToAbsolutePaths(chroot_path, symlinks)
+
+    add_cherrypicks_for_packages(packages, symlinks, start_rev, rev, sha,
+                                 llvm_config)
+    if create_cl:
+      symlinks_to_uprev.extend(symlinks)
+      commit_messages.extend([
+          '\n\nreviews.llvm.org/rG%s\n' % sha,
+          subprocess.check_output(['git', 'log', '-n1', '--oneline', sha],
+                                  cwd=llvm_config.dir,
+                                  encoding='utf-8')
+      ])
+
+  if create_cl:
+    make_cl(symlinks_to_uprev, llvm_symlink_dir, branch, commit_messages,
+            reviewers, cc)
+
+
+def do_cherrypick(chroot_path: str,
+                  create_cl: bool,
+                  start_sha: str,
+                  shas: t.List[str],
+                  reviewers: t.List[str] = None,
+                  cc: t.List[str] = None):
+  llvm_symlink = chroot.ConvertChrootPathsToAbsolutePaths(
+      chroot_path, chroot.GetChrootEbuildPaths(chroot_path,
+                                               ['sys-devel/llvm']))[0]
+  llvm_symlink_dir = os.path.dirname(llvm_symlink)
+
+  git_status = subprocess.check_output(['git', 'status', '-s'],
+                                       cwd=llvm_symlink_dir,
+                                       encoding='utf-8')
+
+  if git_status:
+    error_path = os.path.dirname(os.path.dirname(llvm_symlink_dir))
+    raise ValueError(f'Uncommited changes detected in {error_path}')
+
+  start_sha = resolve_symbolic_sha(start_sha, llvm_symlink_dir)
+  logging.info('Base llvm hash == %s', start_sha)
+
+  llvm_config = git_llvm_rev.LLVMConfig(
+      remote='origin', dir=get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools())
+  start_sha = resolve_llvm_ref(llvm_config.dir, start_sha)
+
+  find_commits_and_make_cl(
+      chroot_path=chroot_path,
+      shas=shas,
+      start_rev=git_llvm_rev.translate_sha_to_rev(llvm_config, start_sha),
+      llvm_config=llvm_config,
+      llvm_symlink_dir=llvm_symlink_dir,
+      create_cl=create_cl,
+      reviewers=reviewers,
+      cc=cc)
+  logging.info('Complete.')
+
+
 def main():
   chroot.VerifyOutsideChroot()
   logging.basicConfig(
@@ -170,80 +289,11 @@ def main():
       help='Automatically create a CL if specified')
   args = parser.parse_args()
 
-  llvm_symlink = chroot.ConvertChrootPathsToAbsolutePaths(
-      args.chroot_path,
-      chroot.GetChrootEbuildPaths(args.chroot_path, ['sys-devel/llvm']))[0]
-  llvm_symlink_dir = os.path.dirname(llvm_symlink)
-
-  git_status = subprocess.check_output(['git', 'status', '-s'],
-                                       cwd=llvm_symlink_dir,
-                                       encoding='utf-8')
-  if git_status:
-    raise ValueError('Uncommited changes detected in %s' %
-                     os.path.dirname(os.path.dirname(llvm_symlink_dir)))
-
-  start_sha = args.start_sha
-  if start_sha == 'llvm':
-    start_sha = parse_ebuild_for_assignment(llvm_symlink_dir, 'LLVM_HASH')
-  elif start_sha == 'llvm-next':
-    start_sha = parse_ebuild_for_assignment(llvm_symlink_dir, 'LLVM_NEXT_HASH')
-  logging.info('Base llvm hash == %s', start_sha)
-
-  llvm_config = git_llvm_rev.LLVMConfig(
-      remote='origin', dir=get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools())
-
-  start_sha = resolve_llvm_ref(llvm_config.dir, start_sha)
-  start_rev = git_llvm_rev.translate_sha_to_rev(llvm_config, start_sha)
-
-  if args.create_cl:
-    branch = 'cherry-pick'
-    git.CreateBranch(llvm_symlink_dir, branch)
-    symlinks_to_uprev = []
-    commit_messages = [
-        'llvm: cherry-pick CLs from upstream\n',
-    ]
-
-  for sha in args.sha:
-    sha = resolve_llvm_ref(llvm_config.dir, sha)
-    rev = git_llvm_rev.translate_sha_to_rev(llvm_config, sha)
-    # Find out the llvm projects changed in this commit
-    packages = get_package_names(sha, llvm_config.dir)
-    # Find out the ebuild symlinks of the corresponding ChromeOS packages
-    symlinks = chroot.GetChrootEbuildPaths(args.chroot_path, [
-        'sys-devel/llvm' if package == 'llvm' else 'sys-libs/' + package
-        for package in packages
-    ])
-    symlinks = chroot.ConvertChrootPathsToAbsolutePaths(args.chroot_path,
-                                                        symlinks)
-
-    # Create a patch and add its metadata for each package
-    for package, symlink in zip(packages, symlinks):
-      symlink_dir = os.path.dirname(symlink)
-      patches_json_path = os.path.join(symlink_dir, 'files/PATCHES.json')
-      relative_patches_dir = 'cherry' if package == 'llvm' else ''
-      patches_dir = os.path.join(symlink_dir, 'files', relative_patches_dir)
-      logging.info('Cherrypicking %s (%s) into %s', rev, sha, package)
-
-      add_cherrypick(patches_json_path, patches_dir, relative_patches_dir,
-                     start_rev, llvm_config.dir, rev, sha, package)
-    if args.create_cl:
-      symlinks_to_uprev.extend(symlinks)
-      commit_messages.extend([
-          '\n\nreviews.llvm.org/rG%s\n' % sha,
-          subprocess.check_output(['git', 'log', '-n1', '--oneline', sha],
-                                  cwd=llvm_config.dir,
-                                  encoding='utf-8')
-      ])
-
-  logging.info('Complete.')
-
-  if args.create_cl:
-    symlinks_to_uprev = list(sorted(set(symlinks_to_uprev)))
-    for symlink in symlinks_to_uprev:
-      update_chromeos_llvm_hash.UprevEbuildSymlink(symlink)
-    subprocess.check_output(['git', 'add', '--all'], cwd=symlink_dir)
-    git.UploadChanges(llvm_symlink_dir, branch, commit_messages)
-    git.DeleteBranch(llvm_symlink_dir, branch)
+  do_cherrypick(
+      chroot_path=args.chroot_path,
+      create_cl=args.create_cl,
+      start_sha=args.start_sha,
+      shas=args.sha)
 
 
 if __name__ == '__main__':

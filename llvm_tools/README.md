@@ -542,11 +542,23 @@ parents of 123abc.
 
 This is an automated wrapper around `revert_checker.py`. It checks to see if any
 new reverts happened across toolchains that we're trying to ship since it was
-last run. If so, it sends emails to appropriate groups.
+last run. If so, it either automatically cherry-picks the reverts, or sends
+emails to appropriate groups.
 
-Usage example:
+Usage example for cherry-picking:
 ```
 PYTHONPATH=../ ./nightly_revert_checker.py \
+  cherry-pick
+  --state_file state.json \
+  --llvm_dir llvm-project-copy \
+  --chromeos_dir ../../../../
+  --reviewers=chromium-os-mage@google.com
+```
+
+Usage example for email:
+```
+PYTHONPATH=../ ./nightly_revert_checker.py \
+  email
   --state_file state.json \
   --llvm_dir llvm-project-copy \
   --chromeos_dir ../../../../
