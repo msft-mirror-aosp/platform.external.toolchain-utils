@@ -17,6 +17,7 @@
             "-Qunused-arguments",
             "-fno-addrsig",
             "-fuse-ld=lld",
+            "-fdebug-default-version=5",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wno-tautological-constant-compare",

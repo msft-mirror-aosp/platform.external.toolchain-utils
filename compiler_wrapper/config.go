@@ -130,6 +130,7 @@ var crosHardenedConfig = &config{
 	clangFlags: []string{
 		"-Qunused-arguments",
 		"-fno-addrsig",
+		"-fdebug-default-version=5",
 		"-Wno-tautological-constant-compare",
 		"-Wno-tautological-unsigned-enum-zero-compare",
 		"-Wno-unknown-warning-option",
@@ -166,6 +167,7 @@ var crosNonHardenedConfig = &config{
 	// Temporarily disable Wsection since kernel gets a bunch of these. chromium:778867
 	clangFlags: []string{
 		"-Qunused-arguments",
+		"-fdebug-default-version=5",
 		"-Wno-tautological-constant-compare",
 		"-Wno-tautological-unsigned-enum-zero-compare",
 		"-Wno-unknown-warning-option",
@@ -208,6 +210,7 @@ var crosHostConfig = &config{
 		"-Qunused-arguments",
 		"-fno-addrsig",
 		"-fuse-ld=lld",
+		"-fdebug-default-version=5",
 		"-Wno-unused-local-typedefs",
 		"-Wno-deprecated-declarations",
 		"-Wno-tautological-constant-compare",
