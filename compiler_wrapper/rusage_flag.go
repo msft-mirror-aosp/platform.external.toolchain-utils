@@ -18,6 +18,10 @@ func getRusageLogFilename(env env) string {
 	return value
 }
 
+func isRusageEnabled(env env) bool {
+	return getRusageLogFilename(env) != ""
+}
+
 func lockFileExclusive(fd uintptr) error {
 	maxTries := 100
 	for i := 0; i < maxTries; i++ {
@@ -61,8 +65,9 @@ func removeRusageFromCommand(compilerCmd *command) *command {
 // 	unless action returns an error or logFileName is ""
 // a function is returned which saves the rusage log data at logFileName unless logFileName is ""
 // an error is returned if action returns an error, or rusage commands in syscall fails
-func maybeCaptureRusage(env env, logFileName string, compilerCmd *command, action func(willLogRusage bool) error) (maybeCommitToFile func(exitCode int) error, err error) {
-	willLogRusage := logFileName != ""
+func maybeCaptureRusage(env env, compilerCmd *command, action func(willLogRusage bool) error) (maybeCommitToFile func(exitCode int) error, err error) {
+	logFileName := getRusageLogFilename(env)
+	willLogRusage := isRusageEnabled(env)
 	if !willLogRusage {
 		if err := action(willLogRusage); err != nil {
 			return nil, err

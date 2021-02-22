@@ -76,6 +76,12 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	var compilerCmd *command
 	clangSyntax := processClangSyntaxFlag(mainBuilder)
 
+	rusageEnabled := isRusageEnabled(env)
+
+	// Disable goma for rusage logs
+	allowGoma := !rusageEnabled
+	allowCCache := !rusageEnabled
+
 	workAroundKernelBugWithRetries := false
 	if cfg.isAndroidWrapper {
 		mainBuilder.path = calculateAndroidWrapperPath(mainBuilder.path, mainBuilder.absWrapperPath)
@@ -84,7 +90,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			mainBuilder.addPreUserArgs(mainBuilder.cfg.clangFlags...)
 			mainBuilder.addPreUserArgs(mainBuilder.cfg.commonFlags...)
 			mainBuilder.addPostUserArgs(mainBuilder.cfg.clangPostFlags...)
-			if _, err := processGomaCccFlags(mainBuilder); err != nil {
+			if _, err := processGomaCccFlags(allowGoma, mainBuilder); err != nil {
 				return 0, err
 			}
 			compilerCmd = mainBuilder.build()
@@ -100,7 +106,6 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			if err != nil {
 				return 0, err
 			}
-			allowCCache := true
 			if tidyMode != tidyModeNone {
 				allowCCache = false
 				clangCmdWithoutGomaAndCCache := mainBuilder.build()
@@ -121,24 +126,24 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 					return 0, err
 				}
 			}
-			if err := processGomaCCacheFlags(allowCCache, mainBuilder); err != nil {
+			if err := processGomaCCacheFlags(allowGoma, allowCCache, mainBuilder); err != nil {
 				return 0, err
 			}
 			compilerCmd = mainBuilder.build()
 		} else {
 			if clangSyntax {
-				allowCCache := false
-				clangCmd, err := calcClangCommand(allowCCache, mainBuilder.clone())
+				allowCCache = false
+				clangCmd, err := calcClangCommand(allowGoma, allowCCache, mainBuilder.clone())
 				if err != nil {
 					return 0, err
 				}
-				gccCmd, err := calcGccCommand(mainBuilder)
+				gccCmd, err := calcGccCommand(rusageEnabled, mainBuilder)
 				if err != nil {
 					return 0, err
 				}
 				return checkClangSyntax(env, clangCmd, gccCmd)
 			}
-			compilerCmd, err = calcGccCommand(mainBuilder)
+			compilerCmd, err = calcGccCommand(rusageEnabled, mainBuilder)
 			if err != nil {
 				return 0, err
 			}
@@ -146,10 +151,9 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		}
 	}
 
-	rusageLogfileName := getRusageLogFilename(env)
 	bisectStage := getBisectStage(env)
 
-	if rusageLogfileName != "" {
+	if rusageEnabled {
 		compilerCmd = removeRusageFromCommand(compilerCmd)
 	}
 
@@ -157,10 +161,10 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		if bisectStage != "" {
 			return 0, newUserErrorf("BISECT_STAGE is meaningless with FORCE_DISABLE_WERROR")
 		}
-		return doubleBuildWithWNoError(env, cfg, compilerCmd, rusageLogfileName)
+		return doubleBuildWithWNoError(env, cfg, compilerCmd)
 	}
 	if shouldCompileWithFallback(env) {
-		if rusageLogfileName != "" {
+		if rusageEnabled {
 			return 0, newUserErrorf("TOOLCHAIN_RUSAGE_OUTPUT is meaningless with ANDROID_LLVM_PREBUILT_COMPILER_PATH")
 		}
 		if bisectStage != "" {
@@ -169,7 +173,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		return compileWithFallback(env, cfg, compilerCmd, mainBuilder.absWrapperPath)
 	}
 	if bisectStage != "" {
-		if rusageLogfileName != "" {
+		if rusageEnabled {
 			return 0, newUserErrorf("TOOLCHAIN_RUSAGE_OUTPUT is meaningless with BISECT_STAGE")
 		}
 		compilerCmd, err = calcBisectCommand(env, cfg, bisectStage, compilerCmd)
@@ -228,7 +232,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 
 	for {
 		var exitCode int
-		commitRusage, err := maybeCaptureRusage(env, rusageLogfileName, compilerCmd, func(willLogRusage bool) error {
+		commitRusage, err := maybeCaptureRusage(env, compilerCmd, func(willLogRusage bool) error {
 			var err error
 			exitCode, err = runCompiler(willLogRusage)
 			return err
@@ -262,18 +266,18 @@ func prepareClangCommand(builder *commandBuilder) (err error) {
 	return processClangFlags(builder)
 }
 
-func calcClangCommand(allowCCache bool, builder *commandBuilder) (*command, error) {
+func calcClangCommand(allowGoma bool, allowCCache bool, builder *commandBuilder) (*command, error) {
 	err := prepareClangCommand(builder)
 	if err != nil {
 		return nil, err
 	}
-	if err := processGomaCCacheFlags(allowCCache, builder); err != nil {
+	if err := processGomaCCacheFlags(allowGoma, allowCCache, builder); err != nil {
 		return nil, err
 	}
 	return builder.build(), nil
 }
 
-func calcGccCommand(builder *commandBuilder) (*command, error) {
+func calcGccCommand(enableRusage bool, builder *commandBuilder) (*command, error) {
 	if !builder.cfg.isHostWrapper {
 		processSysrootFlag(builder)
 	}
@@ -281,8 +285,7 @@ func calcGccCommand(builder *commandBuilder) (*command, error) {
 	calcCommonPreUserArgs(builder)
 	processGccFlags(builder)
 	if !builder.cfg.isHostWrapper {
-		allowCCache := true
-		if err := processGomaCCacheFlags(allowCCache, builder); err != nil {
+		if err := processGomaCCacheFlags(!enableRusage, !enableRusage, builder); err != nil {
 			return nil, err
 		}
 	}
@@ -300,10 +303,10 @@ func calcCommonPreUserArgs(builder *commandBuilder) {
 	processSanitizerFlags(builder)
 }
 
-func processGomaCCacheFlags(allowCCache bool, builder *commandBuilder) (err error) {
+func processGomaCCacheFlags(allowGoma bool, allowCCache bool, builder *commandBuilder) (err error) {
 	gomaccUsed := false
 	if !builder.cfg.isHostWrapper {
-		gomaccUsed, err = processGomaCccFlags(builder)
+		gomaccUsed, err = processGomaCccFlags(allowGoma, builder)
 		if err != nil {
 			return err
 		}

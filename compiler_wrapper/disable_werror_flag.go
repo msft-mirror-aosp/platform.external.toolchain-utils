@@ -61,7 +61,7 @@ func isLikelyAConfTest(cfg *config, cmd *command) bool {
 	return false
 }
 
-func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command, rusageLogfileName string) (exitCode int, err error) {
+func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCode int, err error) {
 	originalStdoutBuffer := &bytes.Buffer{}
 	originalStderrBuffer := &bytes.Buffer{}
 	// TODO: This is a bug in the old wrapper that it drops the ccache path
@@ -76,7 +76,7 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command, rusageL
 	}
 
 	var originalExitCode int
-	commitOriginalRusage, err := maybeCaptureRusage(env, rusageLogfileName, originalCmd, func(willLogRusage bool) error {
+	commitOriginalRusage, err := maybeCaptureRusage(env, originalCmd, func(willLogRusage bool) error {
 		originalExitCode, err = wrapSubprocessErrorWithSourceLoc(originalCmd,
 			env.run(originalCmd, getStdin(), originalStdoutBuffer, originalStderrBuffer))
 		return err
@@ -111,7 +111,7 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command, rusageL
 	}
 
 	var retryExitCode int
-	commitRetryRusage, err := maybeCaptureRusage(env, rusageLogfileName, retryCommand, func(willLogRusage bool) error {
+	commitRetryRusage, err := maybeCaptureRusage(env, retryCommand, func(willLogRusage bool) error {
 		retryExitCode, err = wrapSubprocessErrorWithSourceLoc(retryCommand,
 			env.run(retryCommand, getStdin(), retryStdoutBuffer, retryStderrBuffer))
 		return err
