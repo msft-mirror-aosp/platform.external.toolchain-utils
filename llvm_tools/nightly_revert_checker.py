@@ -231,13 +231,16 @@ def do_cherrypick(chroot_path: str, llvm_dir: str,
       continue
     seen.add(friendly_name)
     for sha, reverted_sha in reverts:
-      cherrypick_cl.do_cherrypick(
-          chroot_path=chroot_path,
-          create_cl=True,
-          start_sha=reverted_sha,
-          shas=[sha],
-          reviewers=reviewers,
-          cc=cc)
+      try:
+        cherrypick_cl.do_cherrypick(
+            chroot_path=chroot_path,
+            create_cl=True,
+            start_sha=reverted_sha,
+            shas=[sha],
+            reviewers=reviewers,
+            cc=cc)
+      except cherrypick_cl.CherrypickError as e:
+        logging.info('%s, skipping...', str(e))
   return new_state
 
 

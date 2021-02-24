@@ -27,6 +27,10 @@ import git_llvm_rev
 import update_chromeos_llvm_hash
 
 
+class CherrypickError(ValueError):
+  """A ValueError that highlights the cherry-pick has been seen before"""
+
+
 def add_cherrypick(patches_json_path: str, patches_dir: str,
                    relative_patches_dir: str, start_version: git_llvm_rev.Rev,
                    llvm_dir: str, rev: git_llvm_rev.Rev, sha: str,
@@ -40,7 +44,8 @@ def add_cherrypick(patches_json_path: str, patches_dir: str,
   for p in patches_json:
     rel_path = p['rel_patch_path']
     if rel_path == rel_patch_path:
-      raise ValueError('Patch at %r already exists in PATCHES.json' % rel_path)
+      raise CherrypickError(
+          f'Patch at {rel_path} already exists in PATCHES.json')
     if sha in rel_path:
       logging.warning(
           'Similarly-named patch already exists in PATCHES.json: %r', rel_path)

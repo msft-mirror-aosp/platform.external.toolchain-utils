@@ -12,6 +12,7 @@ import io
 import unittest
 from unittest.mock import patch
 
+import cherrypick_cl
 import cros_utils.tiny_render as tiny_render
 import nightly_revert_checker
 import revert_checker
@@ -160,6 +161,26 @@ class Test(unittest.TestCase):
     find_reverts.return_value = [
         revert_checker.Revert('12345abcdef', 'fedcba54321')
     ]
+    nightly_revert_checker.do_cherrypick(
+        chroot_path='/path/to/chroot',
+        llvm_dir='/path/to/llvm',
+        interesting_shas=[('12345abcdef', 'fedcba54321')],
+        state={},
+        reviewers=['meow@chromium.org'],
+        cc=['purr@chromium.org'])
+
+    do_cherrypick.assert_called_once()
+    find_reverts.assert_called_once()
+
+  @patch('revert_checker.find_reverts')
+  @patch('cherrypick_cl.do_cherrypick')
+  def test_do_cherrypick_handles_cherrypick_error(self, do_cherrypick,
+                                                  find_reverts):
+    find_reverts.return_value = [
+        revert_checker.Revert('12345abcdef', 'fedcba54321')
+    ]
+    do_cherrypick.side_effect = cherrypick_cl.CherrypickError(
+        'Patch at 12345abcdef already exists in PATCHES.json')
     nightly_revert_checker.do_cherrypick(
         chroot_path='/path/to/chroot',
         llvm_dir='/path/to/llvm',
