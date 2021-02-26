@@ -258,6 +258,10 @@ func TestClangLinkerPathProbesBinariesOnPath(t *testing.T) {
 		if err := verifyArgOrder(cmd, "-Ba/b/c"); err != nil {
 			t.Error(err)
 		}
+		if err := verifyArgOrder(cmd, "--prefix=a/b/c/x86_64-cros-linux-gnu-"); err != nil {
+			t.Error(err)
+		}
+
 	})
 }
 
@@ -276,6 +280,10 @@ func TestClangLinkerPathEvaluatesSymlinksForBinariesOnPath(t *testing.T) {
 		if err := verifyArgOrder(cmd, "-Ba/first"); err != nil {
 			t.Error(err)
 		}
+		if err := verifyArgOrder(cmd, "--prefix=a/first/x86_64-cros-linux-gnu-"); err != nil {
+			t.Error(err)
+		}
+
 	})
 }
 
@@ -284,6 +292,9 @@ func TestClangFallbackLinkerPathRelativeToRootDir(t *testing.T) {
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(clangX86_64, mainCc)))
 		if err := verifyArgOrder(cmd, "-Bbin"); err != nil {
+			t.Error(err)
+		}
+		if err := verifyArgOrder(cmd, "--prefix=bin/x86_64-cros-linux-gnu-"); err != nil {
 			t.Error(err)
 		}
 	})
@@ -295,6 +306,9 @@ func TestClangLinkerPathRelativeToRootDir(t *testing.T) {
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(clangX86_64, mainCc)))
 		if err := verifyArgOrder(cmd, "-Bsomepath/bin"); err != nil {
+			t.Error(err)
+		}
+		if err := verifyArgOrder(cmd, "--prefix=somepath/bin/x86_64-cros-linux-gnu-"); err != nil {
 			t.Error(err)
 		}
 	})

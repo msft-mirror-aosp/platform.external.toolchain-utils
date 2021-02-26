@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -134,6 +135,8 @@ func processClangFlags(builder *commandBuilder) error {
 			return wrapErrorwithSourceLocf(err, "failed to make linker path %s relative to %s",
 				linkerPath, env.getwd())
 		}
+		prefixPath := path.Join(relLinkerPath, builder.target.target+"-")
+		builder.addPreUserArgs("--prefix=" + prefixPath)
 		builder.addPostUserArgs("-B" + relLinkerPath)
 		builder.addPostUserArgs("-target", builder.target.target)
 	}
