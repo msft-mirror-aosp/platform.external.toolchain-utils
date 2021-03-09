@@ -41,7 +41,7 @@ def _find_interesting_android_shas(android_llvm_toolchain_dir: str
 
   def get_llvm_merge_base(branch: str) -> str:
     return subprocess.check_output(
-        ['git', 'merge-base', branch, 'aosp/upstream-master'],
+        ['git', 'merge-base', branch, 'aosp/upstream-main'],
         cwd=llvm_project,
         encoding='utf-8',
     ).strip()
