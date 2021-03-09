@@ -301,7 +301,7 @@ class LLVMBisectionTest(unittest.TestCase):
             [
                 os.path.join(args_output.chroot_path, 'chromite/bin/gerrit'),
                 'abandon',
-                cl,
+                str(cl),
             ],
             stderr=subprocess.STDOUT,
             encoding='utf-8',

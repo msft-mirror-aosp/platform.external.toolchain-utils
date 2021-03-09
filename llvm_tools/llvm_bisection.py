@@ -357,13 +357,14 @@ def main(args_output):
       print(skip_revisions_message)
 
     if args_output.cleanup:
-      # Abondon all the CLs created for bisection
+      # Abandon all the CLs created for bisection
       gerrit = os.path.join(args_output.chroot_path, 'chromite/bin/gerrit')
       for build in bisect_state['jobs']:
         try:
-          subprocess.check_output([gerrit, 'abandon', build['cl']],
-                                  stderr=subprocess.STDOUT,
-                                  encoding='utf-8')
+          subprocess.check_output(
+              [gerrit, 'abandon', str(build['cl'])],
+              stderr=subprocess.STDOUT,
+              encoding='utf-8')
         except subprocess.CalledProcessError as err:
           # the CL may have been abandoned
           if 'chromite.lib.gob_util.GOBError' not in err.output:
