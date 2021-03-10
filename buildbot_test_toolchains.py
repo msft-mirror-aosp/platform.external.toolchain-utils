@@ -71,7 +71,7 @@ RECIPE_IMAGE_RE_GROUPS = {
 }
 RECIPE_IMAGE_RE = RECIPE_IMAGE_FS.format(**RECIPE_IMAGE_RE_GROUPS)
 
-TELEMETRY_AQUARIUM_UNSUPPORTED = ['bob', 'elm', 'veyron_minnie']
+TELEMETRY_AQUARIUM_UNSUPPORTED = ['bob', 'elm', 'veyron_tiger']
 
 
 class ToolchainComparator(object):
@@ -124,9 +124,9 @@ class ToolchainComparator(object):
     """
     # For board names with underscores, we need to fix the trybot image name
     # to replace the hyphen (for the recipe builder) with the underscore.
-    # Currently the only such board we use is 'veyron_minnie'.
-    if trybot_image.find('veyron-minnie') != -1:
-      trybot_image = trybot_image.replace('veyron-minnie', 'veyron_minnie')
+    # Currently the only such board we use is 'veyron_tiger'.
+    if trybot_image.find('veyron-tiger') != -1:
+      trybot_image = trybot_image.replace('veyron-tiger', 'veyron_tiger')
     # We need to filter out -tryjob in the trybot_image.
     if self._recipe:
       trybot = re.sub('-llvm-next-nightly', '-release', trybot_image)
