@@ -293,7 +293,7 @@ class LLVMHash(object):
   def GetTopOfTrunkGitHash(self):
     """Gets the latest git hash from top of trunk of LLVM."""
 
-    path_to_main_branch = 'refs/heads/master'
+    path_to_main_branch = 'refs/heads/main'
     llvm_tot_git_hash = check_output(
         ['git', 'ls-remote', _LLVM_GIT_URL, path_to_main_branch])
     return llvm_tot_git_hash.rstrip().split()[0]

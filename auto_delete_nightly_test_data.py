@@ -215,8 +215,7 @@ def CleanChromeTelemetryTmpFiles(dry_run):
   rv = 0
   ce = command_executer.GetCommandExecuter()
   tmp_dir = os.path.join(constants.CROSTC_WORKSPACE, 'chromeos', '.cache',
-                         'distfiles', 'target', 'chrome-src-internal', 'src',
-                         'tmp')
+                         'distfiles', 'chrome-src-internal', 'src', 'tmp')
   cmd = f'rm -fr {shlex.quote(tmp_dir)}/tmp*telemetry_Crosperf'
   if dry_run:
     print(f'Going to execute:\n{cmd}')
