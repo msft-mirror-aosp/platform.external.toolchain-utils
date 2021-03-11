@@ -500,3 +500,68 @@ func TestClangTidyDoubleBuildClangError(t *testing.T) {
 		}
 	})
 }
+
+func TestProcPidStatParsingWorksAsIntended(t *testing.T) {
+	t.Parallel()
+
+	type expected struct {
+		parent int
+		ok     bool
+	}
+
+	testCases := []struct {
+		input    string
+		expected expected
+	}{
+		{
+			input: "2556041 (cat) R 2519408 2556041 2519408 34818 2556041 4194304",
+			expected: expected{
+				parent: 2519408,
+				ok:     true,
+			},
+		},
+		{
+			input: "2556041 (c a t) R 2519408 2556041 2519408 34818 2556041 4194304",
+			expected: expected{
+				parent: 2519408,
+				ok:     true,
+			},
+		},
+		{
+			input: "",
+			expected: expected{
+				ok: false,
+			},
+		},
+		{
+			input: "foo (bar)",
+			expected: expected{
+				ok: false,
+			},
+		},
+		{
+			input: "foo (bar) baz",
+			expected: expected{
+				ok: false,
+			},
+		},
+		{
+			input: "foo (bar) baz 1qux2",
+			expected: expected{
+				ok: false,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		parent, ok := parseParentPidFromPidStat(tc.input)
+		if tc.expected.ok != ok {
+			t.Errorf("Got ok=%v when parsing %q; expected %v", ok, tc.input, tc.expected.ok)
+			continue
+		}
+
+		if tc.expected.parent != parent {
+			t.Errorf("Got parent=%v when parsing %q; expected %v", parent, tc.input, tc.expected.parent)
+		}
+	}
+}
