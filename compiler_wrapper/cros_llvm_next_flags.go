@@ -13,11 +13,6 @@ package main
 // tag is set.
 
 // TODO: Enable test in config_test.go, once we have new llvm-next flags.
-var llvmNextFlags = []string{
-	"-Wno-compound-token-split-by-macro",
-}
+var llvmNextFlags = []string{}
 
-var llvmNextPostFlags = []string{
-	"-Wno-compound-token-split-by-space",
-	"-Wno-string-concatenation",
-}
+var llvmNextPostFlags = []string{}
