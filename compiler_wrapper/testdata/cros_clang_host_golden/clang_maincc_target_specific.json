@@ -26,9 +26,12 @@
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-fexperimental-new-pass-manager",
+            "-Wno-compound-token-split-by-macro",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-compound-token-split-by-space",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -61,9 +64,12 @@
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-fexperimental-new-pass-manager",
+            "-Wno-compound-token-split-by-macro",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-compound-token-split-by-space",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -96,9 +102,12 @@
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-fexperimental-new-pass-manager",
+            "-Wno-compound-token-split-by-macro",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-compound-token-split-by-space",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -131,9 +140,12 @@
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-fexperimental-new-pass-manager",
+            "-Wno-compound-token-split-by-macro",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-compound-token-split-by-space",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -166,9 +178,12 @@
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-fexperimental-new-pass-manager",
+            "-Wno-compound-token-split-by-macro",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-compound-token-split-by-space",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -201,9 +216,12 @@
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-fexperimental-new-pass-manager",
+            "-Wno-compound-token-split-by-macro",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-compound-token-split-by-space",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -236,9 +254,12 @@
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-fexperimental-new-pass-manager",
+            "-Wno-compound-token-split-by-macro",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-compound-token-split-by-space",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -271,9 +292,12 @@
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-fexperimental-new-pass-manager",
+            "-Wno-compound-token-split-by-macro",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-compound-token-split-by-space",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -306,9 +330,12 @@
             "-Werror=poison-system-directories",
             "-Wno-unknown-warning-option",
             "-fexperimental-new-pass-manager",
+            "-Wno-compound-token-split-by-macro",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "main.cc",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-compound-token-split-by-space",
+            "-Wno-string-concatenation"
           ]
         }
       }
