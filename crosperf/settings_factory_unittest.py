@@ -53,7 +53,7 @@ class GlobalSettingsTest(unittest.TestCase):
     self.assertEqual(len(res.fields), 39)
     self.assertEqual(res.GetField('name'), '')
     self.assertEqual(res.GetField('board'), '')
-    self.assertEqual(res.GetField('skylab'), False)
+    self.assertEqual(res.GetField('crosfleet'), False)
     self.assertEqual(res.GetField('remote'), None)
     self.assertEqual(res.GetField('rerun_if_failed'), False)
     self.assertEqual(res.GetField('rm_chroot_tmp'), False)

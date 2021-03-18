@@ -417,28 +417,28 @@ class ExperimentFactoryTest(unittest.TestCase):
 
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommand')
   @mock.patch.object(os.path, 'exists')
-  def test_check_skylab_tool(self, mock_exists, mock_runcmd):
+  def test_check_crosfleet_tool(self, mock_exists, mock_runcmd):
     ef = ExperimentFactory()
     chromeos_root = '/tmp/chromeos'
     log_level = 'average'
 
     mock_exists.return_value = True
-    ret = ef.CheckSkylabTool(chromeos_root, log_level)
+    ret = ef.CheckCrosfleetTool(chromeos_root, log_level)
     self.assertTrue(ret)
 
     mock_exists.return_value = False
     mock_runcmd.return_value = 1
     with self.assertRaises(RuntimeError) as err:
-      ef.CheckSkylabTool(chromeos_root, log_level)
+      ef.CheckCrosfleetTool(chromeos_root, log_level)
     self.assertEqual(mock_runcmd.call_count, 1)
     self.assertEqual(
-        str(err.exception), 'Skylab tool not installed '
+        str(err.exception), 'Crosfleet tool not installed '
         'correctly, please try to manually install it from '
         '/tmp/chromeos/chromeos-admin/lab-tools/setup_lab_tools')
 
     mock_runcmd.return_value = 0
     mock_runcmd.call_count = 0
-    ret = ef.CheckSkylabTool(chromeos_root, log_level)
+    ret = ef.CheckCrosfleetTool(chromeos_root, log_level)
     self.assertEqual(mock_runcmd.call_count, 1)
     self.assertFalse(ret)
 
