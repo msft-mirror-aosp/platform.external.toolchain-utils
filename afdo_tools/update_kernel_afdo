@@ -21,6 +21,7 @@
 #   Update chromeos-kernel-4_4 to R84-13080.0-1589189726
 #   Update chromeos-kernel-4_14 to R84-13080.0-1589190025
 #   Update chromeos-kernel-4_19 to R84-13080.0-1589189550
+#   Update chromeos-kernel-5_4 to R84-13080.0-1589189550
 #
 #   BUG=None
 #   TEST=Verified in kernel-release-afdo-verify-orchestrator.
@@ -31,7 +32,7 @@ set -o pipefail
 
 CROS_REPO=https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay
 GS_BASE=gs://chromeos-prebuilt/afdo-job/vetted/kernel
-KVERS="3.18 4.4 4.14 4.19"
+KVERS="3.18 4.4 4.14 4.19 5.4"
 errs=""
 successes=0
 
