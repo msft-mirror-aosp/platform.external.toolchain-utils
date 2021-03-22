@@ -78,8 +78,9 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 
 	rusageEnabled := isRusageEnabled(env)
 
-	// Disable goma for rusage logs
-	allowGoma := !rusageEnabled
+	// Disable CCache for rusage logs
+	// Note: Disabling Goma causes timeout related INFRA_FAILUREs in builders
+	allowGoma := true
 	allowCCache := !rusageEnabled
 
 	workAroundKernelBugWithRetries := false
