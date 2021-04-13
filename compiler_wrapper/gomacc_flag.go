@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func processGomaCccFlags(allowGoma bool, builder *commandBuilder) (gomaUsed bool, err error) {
+func processGomaCccFlags(builder *commandBuilder) (gomaUsed bool, err error) {
 	gomaPath := ""
 	nextArgIsGomaPath := false
 	builder.transformArgs(func(arg builderArg) string {
@@ -31,7 +31,7 @@ func processGomaCccFlags(allowGoma bool, builder *commandBuilder) (gomaUsed bool
 	if gomaPath == "" {
 		gomaPath, _ = builder.env.getenv("GOMACC_PATH")
 	}
-	if allowGoma && gomaPath != "" {
+	if gomaPath != "" {
 		if _, err := os.Lstat(gomaPath); err == nil {
 			builder.wrapPath(gomaPath)
 			return true, nil

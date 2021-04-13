@@ -6,7 +6,6 @@ package main
 
 import (
 	"path"
-	"path/filepath"
 	"testing"
 )
 
@@ -86,22 +85,6 @@ func TestErrorOnGomaccArgWithoutValue(t *testing.T) {
 
 func TestOmitGomaccByDefault(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
-			ctx.newCommand(gccX86_64, mainCc)))
-		if err := verifyPath(cmd, gccX86_64+".real"); err != nil {
-			t.Error(err)
-		}
-	})
-}
-
-func TestRusagePreventsGoma(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
-		gomaPath := path.Join(ctx.tempDir, "gomacc")
-		ctx.writeFile(gomaPath, "")
-		ctx.env = []string{
-			"GOMACC_PATH=" + gomaPath,
-			"TOOLCHAIN_RUSAGE_OUTPUT=" + filepath.Join(ctx.tempDir, "rusage.log"),
-		}
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyPath(cmd, gccX86_64+".real"); err != nil {

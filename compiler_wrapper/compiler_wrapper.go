@@ -80,7 +80,6 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 
 	// Disable CCache for rusage logs
 	// Note: Disabling Goma causes timeout related INFRA_FAILUREs in builders
-	allowGoma := true
 	allowCCache := !rusageEnabled
 
 	workAroundKernelBugWithRetries := false
@@ -91,7 +90,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			mainBuilder.addPreUserArgs(mainBuilder.cfg.clangFlags...)
 			mainBuilder.addPreUserArgs(mainBuilder.cfg.commonFlags...)
 			mainBuilder.addPostUserArgs(mainBuilder.cfg.clangPostFlags...)
-			if _, err := processGomaCccFlags(allowGoma, mainBuilder); err != nil {
+			if _, err := processGomaCccFlags(mainBuilder); err != nil {
 				return 0, err
 			}
 			compilerCmd = mainBuilder.build()
@@ -127,14 +126,14 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 					return 0, err
 				}
 			}
-			if err := processGomaCCacheFlags(allowGoma, allowCCache, mainBuilder); err != nil {
+			if err := processGomaCCacheFlags(allowCCache, mainBuilder); err != nil {
 				return 0, err
 			}
 			compilerCmd = mainBuilder.build()
 		} else {
 			if clangSyntax {
 				allowCCache = false
-				clangCmd, err := calcClangCommand(allowGoma, allowCCache, mainBuilder.clone())
+				clangCmd, err := calcClangCommand(allowCCache, mainBuilder.clone())
 				if err != nil {
 					return 0, err
 				}
@@ -267,12 +266,12 @@ func prepareClangCommand(builder *commandBuilder) (err error) {
 	return processClangFlags(builder)
 }
 
-func calcClangCommand(allowGoma bool, allowCCache bool, builder *commandBuilder) (*command, error) {
+func calcClangCommand(allowCCache bool, builder *commandBuilder) (*command, error) {
 	err := prepareClangCommand(builder)
 	if err != nil {
 		return nil, err
 	}
-	if err := processGomaCCacheFlags(allowGoma, allowCCache, builder); err != nil {
+	if err := processGomaCCacheFlags(allowCCache, builder); err != nil {
 		return nil, err
 	}
 	return builder.build(), nil
@@ -286,7 +285,7 @@ func calcGccCommand(enableRusage bool, builder *commandBuilder) (*command, error
 	calcCommonPreUserArgs(builder)
 	processGccFlags(builder)
 	if !builder.cfg.isHostWrapper {
-		if err := processGomaCCacheFlags(!enableRusage, !enableRusage, builder); err != nil {
+		if err := processGomaCCacheFlags(!enableRusage, builder); err != nil {
 			return nil, err
 		}
 	}
@@ -304,10 +303,10 @@ func calcCommonPreUserArgs(builder *commandBuilder) {
 	processSanitizerFlags(builder)
 }
 
-func processGomaCCacheFlags(allowGoma bool, allowCCache bool, builder *commandBuilder) (err error) {
+func processGomaCCacheFlags(allowCCache bool, builder *commandBuilder) (err error) {
 	gomaccUsed := false
 	if !builder.cfg.isHostWrapper {
-		gomaccUsed, err = processGomaCccFlags(allowGoma, builder)
+		gomaccUsed, err = processGomaCccFlags(builder)
 		if err != nil {
 			return err
 		}
