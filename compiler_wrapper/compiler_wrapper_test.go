@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -92,6 +93,33 @@ func TestLogMissingCCacheExecError(t *testing.T) {
 		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
 		if err := verifyNonInternalError(stderr, "ccache not found under .*. Please install it"); err != nil {
 			t.Fatal(err)
+		}
+	})
+}
+
+func TestGomaDisablesRusage(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		gomaPath := path.Join(ctx.tempDir, "gomacc")
+		ctx.writeFile(gomaPath, "")
+		ctx.env = []string{"GOMACC_PATH=" + gomaPath}
+		logFileName := filepath.Join(ctx.tempDir, "rusage.log")
+		ctx.env = []string{
+			"TOOLCHAIN_RUSAGE_OUTPUT=" + logFileName,
+			"GOMACC_PATH=" + gomaPath,
+		}
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc)))
+		// Ensure Goma was used
+		if err := verifyPath(cmd, gomaPath); err != nil {
+			t.Fatal(err)
+		}
+		if err := verifyArgOrder(cmd, gccX86_64+".real", mainCc); err != nil {
+			t.Error(err)
+		}
+		// Ensure rusage log was not created
+		if _, err := os.Stat(logFileName); err == nil {
+			t.Errorf("Logfile shouldn't have been created at TOOLCHAIN_RUSAGE_OUTPUT path %q but was", logFileName)
+		} else if !os.IsNotExist(err) {
+			t.Fatalf("error checking for rusage logfile at %q: %v", logFileName, err)
 		}
 	})
 }
