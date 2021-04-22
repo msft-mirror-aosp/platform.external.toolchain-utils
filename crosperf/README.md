@@ -1,4 +1,4 @@
-# Experiment files
+# experiment_files
 
 To use these experiment files, replace the board, remote and images
 placeholders and run crosperf on them.
@@ -37,3 +37,9 @@ benchmark: page_cycler_v2.morejs {
    iterations: 1
 }
 ```
+
+# default_remotes
+
+This is the list of machines allocated for toolchain team.
+This should be kept in sync with:
+https://chromeos-swarming.appspot.com/botlist?c=id&c=task&c=label-board&c=label-pool&c=os&c=status&d=asc&f=label-pool%3Atoolchain&k=label-pool&s=id

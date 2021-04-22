@@ -399,21 +399,17 @@ class ExperimentFactoryTest(unittest.TestCase):
 
   def test_get_default_remotes(self):
     board_list = [
-        'elm', 'bob', 'chell', 'kefka', 'lulu', 'nautilus', 'snappy',
+        'bob', 'chell', 'coral', 'elm', 'kefka', 'lulu', 'nautilus', 'snappy',
         'veyron_tiger'
     ]
 
     ef = ExperimentFactory()
     self.assertRaises(Exception, ef.GetDefaultRemotes, 'bad-board')
 
-    # Verify that we have entries for every board, and that we get at least
-    # two machines for each board.
+    # Verify that we have entries for every board
     for b in board_list:
       remotes = ef.GetDefaultRemotes(b)
-      if b == 'daisy':
-        self.assertEqual(len(remotes), 1)
-      else:
-        self.assertGreaterEqual(len(remotes), 2)
+      self.assertGreaterEqual(len(remotes), 1)
 
   @mock.patch.object(command_executer.CommandExecuter, 'RunCommand')
   @mock.patch.object(os.path, 'exists')
