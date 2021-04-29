@@ -472,18 +472,20 @@ r387778
 **Tip**: if you put a symlink called `git-llvm-rev` to this script somewhere on
 your `$PATH`, you can also use it as `git llvm-rev`.
 
-### `cherrypick_cl.py`
+### `get_upstream_patch.py`
 
 #### Usage
 
-This script updates the proper ChromeOS packages with an LLVM cherrypick of your choosing, and
-copies the cherrypick into patch folders of the packages.
+This script updates the proper ChromeOS packages with LLVM patches of your choosing, and
+copies the patches into patch folders of the packages. This tool supports both git hash
+of commits as well as differential reviews.
 
 Usage:
 
 ```
-./cherrypick_cl.py --chroot_path /abs/path/to/chroot --start_sha llvm
+./get_upstream_patch.py --chroot_path /abs/path/to/chroot --start_sha llvm
 --sha 174c3eb69f19ff2d6a3eeae31d04afe77e62c021 --sha 174c3eb69f19ff2d6a3eeae31d04afe77e62c021
+--differential D123456
 ```
 
 It tries to autodetect a lot of things (e.g., packages changed by each sha,

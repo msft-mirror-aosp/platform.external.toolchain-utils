@@ -6,7 +6,7 @@
 
 # pylint: disable=cros-logging-import
 
-"""Adds a cherrypick to LLVM's PATCHES.json."""
+"""Get an upstream patch to LLVM's PATCHES.json."""
 
 from __future__ import print_function
 
@@ -31,14 +31,38 @@ class CherrypickError(ValueError):
   """A ValueError that highlights the cherry-pick has been seen before"""
 
 
-def add_cherrypick(patches_json_path: str, patches_dir: str,
-                   relative_patches_dir: str, start_version: git_llvm_rev.Rev,
-                   llvm_dir: str, rev: git_llvm_rev.Rev, sha: str,
-                   package: str):
+def add_patch(patches_json_path: str, patches_dir: str,
+              relative_patches_dir: str, start_version: git_llvm_rev.Rev,
+              llvm_dir: str, rev: t.Union[git_llvm_rev.Rev, str], sha: str,
+              package: str):
+  """Gets the start and end intervals in 'json_file'.
+
+  Args:
+    patches_json_path: The absolute path to PATCHES.json.
+    patches_dir: The aboslute path to the directory patches are in.
+    relative_patches_dir: The relative path to PATCHES.json.
+    start_version: The base LLVM revision this patch applies to.
+    llvm_dir: The path to LLVM checkout.
+    rev: An LLVM revision (git_llvm_rev.Rev) for a cherrypicking, or a
+    differential revision (str) otherwise.
+    sha: The LLVM git sha that corresponds to the patch. For differential
+    revisions, the git sha from  the local commit created by 'arc patch'
+    is used.
+    package: The LLVM project name this patch applies to.
+
+  Raises:
+    CherrypickError: A ValueError that highlights the cherry-pick has been
+    seen before.
+  """
+
   with open(patches_json_path, encoding='utf-8') as f:
     patches_json = json.load(f)
 
-  file_name = sha + '.patch'
+  is_cherrypick = isinstance(rev, git_llvm_rev.Rev)
+  if is_cherrypick:
+    file_name = f'{sha}.patch'
+  else:
+    file_name = f'{rev}.patch'
   rel_patch_path = os.path.join(relative_patches_dir, file_name)
 
   for p in patches_json:
@@ -46,9 +70,11 @@ def add_cherrypick(patches_json_path: str, patches_dir: str,
     if rel_path == rel_patch_path:
       raise CherrypickError(
           f'Patch at {rel_path} already exists in PATCHES.json')
-    if sha in rel_path:
-      logging.warning(
-          'Similarly-named patch already exists in PATCHES.json: %r', rel_path)
+    if is_cherrypick:
+      if sha in rel_path:
+        logging.warning(
+            'Similarly-named patch already exists in PATCHES.json: %r',
+            rel_path)
 
   with open(os.path.join(patches_dir, file_name), 'wb') as f:
     cmd = ['git', 'show', sha]
@@ -63,12 +89,14 @@ def add_cherrypick(patches_json_path: str, patches_dir: str,
   commit_subject = subprocess.check_output(
       ['git', 'log', '-n1', '--format=%s', sha], cwd=llvm_dir, encoding='utf-8')
 
-  patches_json.append({
+  patch_metadata = {
       'comment': commit_subject.strip(),
       'rel_patch_path': rel_patch_path,
       'start_version': start_version.number,
-      'end_version': rev.number,
-  })
+  }
+  if isinstance(rev, git_llvm_rev.Rev):
+    patch_metadata['end_version'] = rev.number
+  patches_json.append(patch_metadata)
 
   temp_file = patches_json_path + '.tmp'
   with open(temp_file, 'w', encoding='utf-8') as f:
@@ -148,19 +176,19 @@ def get_package_names(sha: str, llvm_dir: str) -> list:
   return packages
 
 
-def add_cherrypicks_for_packages(packages: t.List[str], symlinks: t.List[str],
-                                 start_rev: git_llvm_rev.Rev,
-                                 rev: git_llvm_rev.Rev, sha: str,
-                                 llvm_config: git_llvm_rev.LLVMConfig):
+def create_patch_for_packages(packages: t.List[str], symlinks: t.List[str],
+                              start_rev: git_llvm_rev.Rev,
+                              rev: t.Union[git_llvm_rev.Rev, str], sha: str,
+                              llvm_dir: str):
   """Create a patch and add its metadata for each package"""
   for package, symlink in zip(packages, symlinks):
     symlink_dir = os.path.dirname(symlink)
     patches_json_path = os.path.join(symlink_dir, 'files/PATCHES.json')
     relative_patches_dir = 'cherry' if package == 'llvm' else ''
     patches_dir = os.path.join(symlink_dir, 'files', relative_patches_dir)
-    logging.info('Cherrypicking %s (%s) into %s', rev, sha, package)
-    add_cherrypick(patches_json_path, patches_dir, relative_patches_dir,
-                   start_rev, llvm_config.dir, rev, sha, package)
+    logging.info('Getting %s (%s) into %s', rev, sha, package)
+    add_patch(patches_json_path, patches_dir, relative_patches_dir, start_rev,
+              llvm_dir, rev, sha, package)
 
 
 def make_cl(symlinks_to_uprev: t.List[str], llvm_symlink_dir: str, branch: str,
@@ -185,23 +213,33 @@ def resolve_symbolic_sha(start_sha: str, llvm_symlink_dir: str) -> str:
   return start_sha
 
 
-def find_commits_and_make_cl(chroot_path: str, shas: t.List[str],
+def find_patches_and_make_cl(chroot_path: str, patches: t.List[str],
                              start_rev: git_llvm_rev.Rev,
                              llvm_config: git_llvm_rev.LLVMConfig,
                              llvm_symlink_dir: str, create_cl: bool,
                              reviewers: t.Optional[t.List[str]],
                              cc: t.Optional[t.List[str]]):
   if create_cl:
-    branch = f'cherry-pick-{datetime.now().strftime("%Y%m%d%H%M%S%f")}'
+    branch = f'get-upstream-{datetime.now().strftime("%Y%m%d%H%M%S%f")}'
     git.CreateBranch(llvm_symlink_dir, branch)
     symlinks_to_uprev = []
     commit_messages = [
-        'llvm: cherry-pick CLs from upstream\n',
+        'llvm: get patches from upstream\n',
     ]
 
-  for sha in shas:
-    sha = resolve_llvm_ref(llvm_config.dir, sha)
-    rev = git_llvm_rev.translate_sha_to_rev(llvm_config, sha)
+  for patch in patches:
+    # git hash should only have lower-case letters
+    is_differential = patch.startswith('D')
+    if is_differential:
+      subprocess.check_output(
+          ['arc', 'patch', '--nobranch', '--revision', patch],
+          cwd=llvm_config.dir,
+      )
+      sha = resolve_llvm_ref(llvm_config.dir, 'HEAD')
+      rev = patch
+    else:
+      sha = resolve_llvm_ref(llvm_config.dir, patch)
+      rev = git_llvm_rev.translate_sha_to_rev(llvm_config, sha)
     # Find out the llvm projects changed in this commit
     packages = get_package_names(sha, llvm_config.dir)
     # Find out the ebuild symlinks of the corresponding ChromeOS packages
@@ -210,29 +248,38 @@ def find_commits_and_make_cl(chroot_path: str, shas: t.List[str],
         for package in packages
     ])
     symlinks = chroot.ConvertChrootPathsToAbsolutePaths(chroot_path, symlinks)
-
-    add_cherrypicks_for_packages(packages, symlinks, start_rev, rev, sha,
-                                 llvm_config)
+    # Create a local patch for all the affected llvm projects
+    create_patch_for_packages(packages, symlinks, start_rev, rev, sha,
+                              llvm_config.dir)
     if create_cl:
       symlinks_to_uprev.extend(symlinks)
+
+      if is_differential:
+        msg = f'\n\nreviews.llvm.org/{patch}\n'
+      else:
+        msg = f'\n\nreviews.llvm.org/rG{sha}\n'
       commit_messages.extend([
-          '\n\nreviews.llvm.org/rG%s\n' % sha,
+          msg,
           subprocess.check_output(['git', 'log', '-n1', '--oneline', sha],
                                   cwd=llvm_config.dir,
                                   encoding='utf-8')
       ])
+
+    if is_differential:
+      subprocess.check_output(['git', 'reset', '--hard', 'HEAD^'],
+                              cwd=llvm_config.dir)
 
   if create_cl:
     make_cl(symlinks_to_uprev, llvm_symlink_dir, branch, commit_messages,
             reviewers, cc)
 
 
-def do_cherrypick(chroot_path: str,
-                  create_cl: bool,
-                  start_sha: str,
-                  shas: t.List[str],
-                  reviewers: t.List[str] = None,
-                  cc: t.List[str] = None):
+def get_from_upstream(chroot_path: str,
+                      create_cl: bool,
+                      start_sha: str,
+                      patches: t.List[str],
+                      reviewers: t.List[str] = None,
+                      cc: t.List[str] = None):
   llvm_symlink = chroot.ConvertChrootPathsToAbsolutePaths(
       chroot_path, chroot.GetChrootEbuildPaths(chroot_path,
                                                ['sys-devel/llvm']))[0]
@@ -253,9 +300,9 @@ def do_cherrypick(chroot_path: str,
       remote='origin', dir=get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools())
   start_sha = resolve_llvm_ref(llvm_config.dir, start_sha)
 
-  find_commits_and_make_cl(
+  find_patches_and_make_cl(
       chroot_path=chroot_path,
-      shas=shas,
+      patches=patches,
       start_rev=git_llvm_rev.translate_sha_to_rev(llvm_config, start_sha),
       llvm_config=llvm_config,
       llvm_symlink_dir=llvm_symlink_dir,
@@ -288,17 +335,21 @@ def main():
       action='append',
       help='The LLVM git SHA to cherry-pick.')
   parser.add_argument(
+      '--differential',
+      action='append',
+      help='The LLVM differential revision to apply. Example: D1234')
+  parser.add_argument(
       '--create_cl',
       default=False,
       action='store_true',
       help='Automatically create a CL if specified')
   args = parser.parse_args()
 
-  do_cherrypick(
+  get_from_upstream(
       chroot_path=args.chroot_path,
       create_cl=args.create_cl,
       start_sha=args.start_sha,
-      shas=args.sha)
+      patches=args.sha + args.differential)
 
 
 if __name__ == '__main__':

@@ -29,7 +29,7 @@ import cros_utils.tiny_render as tiny_render
 import get_llvm_hash
 import git_llvm_rev
 import revert_checker
-import cherrypick_cl
+import get_upstream_patch
 
 State = t.Any
 
@@ -232,14 +232,14 @@ def do_cherrypick(chroot_path: str, llvm_dir: str,
     seen.add(friendly_name)
     for sha, reverted_sha in reverts:
       try:
-        cherrypick_cl.do_cherrypick(
+        get_upstream_patch.get_from_upstream(
             chroot_path=chroot_path,
             create_cl=True,
             start_sha=reverted_sha,
-            shas=[sha],
+            patches=[sha],
             reviewers=reviewers,
             cc=cc)
-      except cherrypick_cl.CherrypickError as e:
+      except get_upstream_patch.CherrypickError as e:
         logging.info('%s, skipping...', str(e))
   return new_state
 
