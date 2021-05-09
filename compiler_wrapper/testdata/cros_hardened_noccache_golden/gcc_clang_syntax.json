@@ -23,7 +23,6 @@
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-unknown-warning-option",
             "-Wno-section",
-            "-static-libgcc",
             "-fuse-ld=lld",
             "--unwindlib=libgcc",
             "-Wno-final-dtor-non-final-class",
@@ -38,6 +37,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "--prefix=../../bin/x86_64-cros-linux-gnu-",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
@@ -67,6 +67,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ]
@@ -102,7 +103,6 @@
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-unknown-warning-option",
             "-Wno-section",
-            "-static-libgcc",
             "-fuse-ld=lld",
             "--unwindlib=libgcc",
             "-Wno-final-dtor-non-final-class",
@@ -117,6 +117,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "--prefix=../../bin/x86_64-cros-linux-gnu-",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
@@ -147,6 +148,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ]
@@ -181,7 +183,6 @@
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-unknown-warning-option",
             "-Wno-section",
-            "-static-libgcc",
             "-fuse-ld=lld",
             "--unwindlib=libgcc",
             "-Wno-final-dtor-non-final-class",
@@ -196,6 +197,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "--prefix=../../bin/x86_64-cros-linux-gnu-",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
@@ -243,7 +245,6 @@
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-unknown-warning-option",
             "-Wno-section",
-            "-static-libgcc",
             "-fuse-ld=lld",
             "--unwindlib=libgcc",
             "-Wno-final-dtor-non-final-class",
@@ -258,6 +259,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "--prefix=../../bin/x86_64-cros-linux-gnu-",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
@@ -287,6 +289,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ]
