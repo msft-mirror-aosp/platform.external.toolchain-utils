@@ -331,12 +331,13 @@ def main():
       '"llvm" or "llvm-next", as well. Defaults to %(default)s.')
   parser.add_argument(
       '--sha',
-      required=True,
       action='append',
+      default=[],
       help='The LLVM git SHA to cherry-pick.')
   parser.add_argument(
       '--differential',
       action='append',
+      default=[],
       help='The LLVM differential revision to apply. Example: D1234')
   parser.add_argument(
       '--create_cl',
@@ -344,6 +345,9 @@ def main():
       action='store_true',
       help='Automatically create a CL if specified')
   args = parser.parse_args()
+
+  if not (args.sha or args.differential):
+    parser.error('--sha or --differential required')
 
   get_from_upstream(
       chroot_path=args.chroot_path,
