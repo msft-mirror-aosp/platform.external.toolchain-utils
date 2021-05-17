@@ -412,13 +412,21 @@ func TestAndroidDisableWerror(t *testing.T) {
 
 		// Disable werror ON
 		ctx.cfg.useLlvmNext = true
-		if !shouldForceDisableWerror(ctx, ctx.cfg) {
+		if !shouldForceDisableWerror(ctx, ctx.cfg, gccType) {
+			t.Errorf("disable Werror not enabled for Android with useLlvmNext")
+		}
+
+		if !shouldForceDisableWerror(ctx, ctx.cfg, clangType) {
 			t.Errorf("disable Werror not enabled for Android with useLlvmNext")
 		}
 
 		// Disable werror OFF
 		ctx.cfg.useLlvmNext = false
-		if shouldForceDisableWerror(ctx, ctx.cfg) {
+		if shouldForceDisableWerror(ctx, ctx.cfg, gccType) {
+			t.Errorf("disable-Werror enabled for Android without useLlvmNext")
+		}
+
+		if shouldForceDisableWerror(ctx, ctx.cfg, clangType) {
 			t.Errorf("disable-Werror enabled for Android without useLlvmNext")
 		}
 	})
@@ -426,8 +434,24 @@ func TestAndroidDisableWerror(t *testing.T) {
 
 func TestChromeOSNoForceDisableWerror(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		if shouldForceDisableWerror(ctx, ctx.cfg) {
+		if shouldForceDisableWerror(ctx, ctx.cfg, gccType) {
 			t.Errorf("disable Werror enabled for ChromeOS without FORCE_DISABLE_WERROR set")
+		}
+
+		if shouldForceDisableWerror(ctx, ctx.cfg, clangType) {
+			t.Errorf("disable Werror enabled for ChromeOS without FORCE_DISABLE_WERROR set")
+		}
+	})
+}
+
+func TestChromeOSForceDisableWerrorOnlyAppliesToClang(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		if !shouldForceDisableWerror(ctx, ctx.cfg, clangType) {
+			t.Errorf("Disable -Werror should be enabled for clang.")
+		}
+
+		if shouldForceDisableWerror(ctx, ctx.cfg, gccType) {
+			t.Errorf("Disable -Werror should be disabled for gcc.")
 		}
 	})
 }

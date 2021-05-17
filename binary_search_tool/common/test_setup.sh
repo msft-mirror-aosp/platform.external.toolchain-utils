@@ -94,10 +94,10 @@ echo
 
 if [[ "${BISECT_MODE}" == "OBJECT_MODE" ]]; then
   echo "EMERGING ${BISECT_PACKAGE}"
-  echo "sudo rm -rf /build/${BISECT_BOARD}/var/cache/portage/*"
+  set -x
   sudo rm -rf /build/${BISECT_BOARD}/var/cache/portage/*
-  echo "sudo rm -rf /build/${BISECT_BOARD}/tmp/portage/${BISECT_PACKAGE}*"
   sudo rm -rf /build/${BISECT_BOARD}/tmp/portage/${BISECT_PACKAGE}*
+  set +x
   CLEAN_DELAY=0 emerge-${BISECT_BOARD} -C ${BISECT_PACKAGE}
   emerge-${BISECT_BOARD} ${BISECT_PACKAGE}
   emerge_status=$?
@@ -110,11 +110,17 @@ if [[ "${BISECT_MODE}" == "OBJECT_MODE" ]]; then
   echo
   echo "DEPLOYING"
 
-  if [[ ${BISECT_PACKAGE} == sys-kernel/chromeos-kernel-* ]]; then
-    echo "/mnt/host/source/src/scripts/update_kernel.sh " \
-      "--remote=${BISECT_REMOTE} --board=${BISECT_BOARD}"
+  if [[ ${BISECT_PACKAGE} == *chromeos-kernel-* ]]; then
+    cmd="/mnt/host/source/src/scripts/update_kernel.sh --board=${BISECT_BOARD} --remote=${BISECT_REMOTE}"
+    if [[ ${BISECT_REMOTE} == *:* ]]; then
+      IP=$(echo $1 | cut -d ":" -f1)
+      PORT=$(echo $1 | cut -d ":" -f2)
+      cmd="/mnt/host/source/src/scripts/update_kernel.sh --board=${BISECT_BOARD} --remote=${IP} --ssh_port=${PORT}"
+    fi
+    set -x
     # exec the command to make sure it always exit after
-    exec /mnt/host/source/src/scripts/update_kernel.sh --remote=${BISECT_REMOTE} --board=${BISECT_BOARD}
+    exec $cmd
+    set +x
   fi
 
   echo "cros deploy ${BISECT_REMOTE} ${BISECT_PACKAGE}"

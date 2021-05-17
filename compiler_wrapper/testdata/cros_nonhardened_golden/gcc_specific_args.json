@@ -21,7 +21,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-march=silvermont",
+            "-march=goldmont",
             "main.cc",
             "-mno-movbe"
           ],
@@ -55,7 +55,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-march=silvermont",
+            "-march=goldmont-plus",
             "main.cc",
             "-mno-movbe"
           ],
@@ -89,7 +89,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-march=corei7",
+            "-march=skylake",
             "main.cc",
             "-mno-movbe"
           ],
