@@ -523,8 +523,8 @@ class ResultTest(unittest.TestCase):
     second_args = mock_copyfiles.call_args_list[1][0]
     third_args = mock_copyfiles.call_args_list[2][0]
     self.assertEqual(first_args, ('src_file_1', '/tmp/test/src_file_1.0'))
-    self.assertEqual(second_args, ('src_file_2', '/tmp/test/src_file_2.0'))
-    self.assertEqual(third_args, ('src_file_3', '/tmp/test/src_file_3.0'))
+    self.assertEqual(second_args, ('src_file_2', '/tmp/test/src_file_2.1'))
+    self.assertEqual(third_args, ('src_file_3', '/tmp/test/src_file_3.2'))
 
     mock_runcmd.reset_mock()
     mock_copyfiles.reset_mock()
