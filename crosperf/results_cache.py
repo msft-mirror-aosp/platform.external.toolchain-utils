@@ -129,6 +129,7 @@ class Result(object):
       ret = self.ce.CopyFiles(file_to_copy, dest_file, recursive=False)
       if ret:
         raise IOError('Could not copy results file: %s' % file_to_copy)
+      file_index += 1
 
   def CopyResultsTo(self, dest_dir):
     self.CopyFilesTo(dest_dir, self.results_file)

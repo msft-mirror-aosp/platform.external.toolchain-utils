@@ -156,8 +156,8 @@ class GlobalSettings(Settings):
             'experiments on, e.g. x86-alex.'))
     self.AddField(
         BooleanField(
-            'skylab',
-            description='Whether to run experiments via skylab.',
+            'crosfleet',
+            description='Whether to run experiments via crosfleet.',
             default=False))
     self.AddField(
         ListField(
