@@ -276,10 +276,12 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path):
 
     test_output = json.loads(out)
 
+    buildbucket_id = int(test_output[0]['id'])
+
     tests.append({
         'launch_time': str(GetCurrentTimeInUTC()),
-        'link': str(test_output[0]['url']),
-        'buildbucket_id': int(test_output[0]['buildbucket_id']),
+        'link': 'http://ci.chromium.org/b/%s' % buildbucket_id,
+        'buildbucket_id': buildbucket_id,
         'extra_cls': extra_change_lists,
         'options': options,
         'builder': [builder]
@@ -472,9 +474,10 @@ def main():
     for test in tests:
       print(test)
   elif args_output.subparser_name == 'recipe':
-    tests = StartRecipeBuilders(
-        change_list.cl_number, args_output.extra_change_lists,
-        args_output.options, args_output.builders, args_output.chroot_path)
+    tests = StartRecipeBuilders(change_list.cl_number,
+                                args_output.extra_change_lists,
+                                args_output.options, args_output.builders,
+                                args_output.chroot_path)
     print('Tests:')
     for test in tests:
       print(test)
