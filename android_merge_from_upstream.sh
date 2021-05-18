@@ -13,7 +13,7 @@
 local_branch_name="merge_with_upstream"
 local_upstream="aosp/master"
 remote="aosp"
-remote_branch="${remote}/upstream-mirror-master"
+remote_branch="${remote}/upstream-main"
 
 my_dir="$(dirname "$(readlink -m "$0")")"
 cd "${my_dir}"
