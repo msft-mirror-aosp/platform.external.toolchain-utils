@@ -5,6 +5,7 @@
 package main
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -158,5 +159,16 @@ func withCCacheEnabledTestContext(t *testing.T, work func(ctx *testContext)) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.useCCache = true
 		work(ctx)
+	})
+}
+
+func TestRusagePreventsCCache(t *testing.T) {
+	withCCacheEnabledTestContext(t, func(ctx *testContext) {
+		ctx.env = append(ctx.env, "TOOLCHAIN_RUSAGE_OUTPUT="+filepath.Join(ctx.tempDir, "rusage.log"))
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyPath(cmd, gccX86_64+".real"); err != nil {
+			t.Error(err)
+		}
 	})
 }
