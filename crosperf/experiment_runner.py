@@ -107,15 +107,15 @@ class ExperimentRunner(object):
     """Get where is the machine from.
 
     Returns:
-      The location of the machine: local or skylab
+      The location of the machine: local or crosfleet
     """
     # We assume that lab machine always starts with chromeos*, and local
     # machines are ip address.
     if 'chromeos' in machine:
-      if lock_mgr.CheckMachineInSkylab(machine):
-        return 'skylab'
+      if lock_mgr.CheckMachineInCrosfleet(machine):
+        return 'crosfleet'
       else:
-        raise RuntimeError('Lab machine not in Skylab.')
+        raise RuntimeError('Lab machine not in Crosfleet.')
     return 'local'
 
   def _LockAllMachines(self, experiment):
@@ -125,7 +125,7 @@ class ExperimentRunner(object):
     in three different modes automatically, to prevent any other crosperf runs
     from being able to update/use the machines while this experiment is
     running:
-      - Skylab machines: Use skylab lease-dut mechanism to lease
+      - Crosfleet machines: Use crosfleet lease-dut mechanism to lease
       - Local machines: Use file lock mechanism to lock
     """
     if test_flag.GetTestMode():
@@ -143,8 +143,8 @@ class ExperimentRunner(object):
         machine_type = self._GetMachineType(experiment.lock_mgr, m)
         if machine_type == 'local':
           experiment.lock_mgr.AddMachineToLocal(m)
-        elif machine_type == 'skylab':
-          experiment.lock_mgr.AddMachineToSkylab(m)
+        elif machine_type == 'crosfleet':
+          experiment.lock_mgr.AddMachineToCrosfleet(m)
       machine_states = experiment.lock_mgr.GetMachineStates('lock')
       experiment.lock_mgr.CheckMachineLocks(machine_states, 'lock')
       self.locked_machines = experiment.lock_mgr.UpdateMachines(True)
@@ -171,12 +171,12 @@ class ExperimentRunner(object):
 
   def _Run(self, experiment):
     try:
-      # We should not lease machines if tests are launched via `skylab
-      # create-test`. This is because leasing DUT in skylab will create a
+      # We should not lease machines if tests are launched via `crosfleet
+      # create-test`. This is because leasing DUT in crosfleet will create a
       # no-op task on the DUT and new test created will be hanging there.
       # TODO(zhizhouy): Need to check whether machine is ready or not before
       # assigning a test to it.
-      if not experiment.skylab:
+      if not experiment.crosfleet:
         self._LockAllMachines(experiment)
       # Calculate all checksums of avaiable/locked machines, to ensure same
       # label has same machines for testing
