@@ -199,7 +199,6 @@ def UpdateEbuildLLVMHash(ebuild_path, llvm_variant, git_hash, svn_version):
       for cur_line in ReplaceLLVMHash(ebuild_file, llvm_variant, git_hash,
                                       svn_version):
         temp_file.write(cur_line)
-
   os.rename(temp_ebuild_file, ebuild_path)
 
   # Get the path to the parent directory.
@@ -266,7 +265,7 @@ def UprevEbuildSymlink(symlink):
        os.path.dirname(symlink), 'mv', symlink, new_symlink])
 
 
-def UprevEbuildToVersion(symlink, svn_version):
+def UprevEbuildToVersion(symlink, svn_version, git_hash):
   """Uprevs the ebuild's revision number.
 
   Increases the revision number by 1 and stages the change in
@@ -275,9 +274,11 @@ def UprevEbuildToVersion(symlink, svn_version):
   Args:
     symlink: The absolute path of an ebuild symlink.
     svn_version: The SVN-style revision number of git_hash.
+    git_hash: The new git hash.
 
   Raises:
     ValueError: Failed to uprev the ebuild or failed to stage the changes.
+    AssertionError: No llvm version provided for an LLVM uprev
   """
 
   if not os.path.islink(symlink):
@@ -290,10 +291,11 @@ def UprevEbuildToVersion(symlink, svn_version):
     raise ValueError('Tried to uprev an unknown package')
   # llvm
   if package == 'llvm':
+    llvm_major_version = get_llvm_hash.GetLLVMMajorVersion(git_hash)
     new_ebuild, is_changed = re.subn(
-        r'pre([0-9]+)_p([0-9]+)',
-        'pre%s_p%s' % (svn_version, \
-            datetime.today().strftime('%Y%m%d')),
+        r'(\d+)\.(\d+)_pre([0-9]+)_p([0-9]+)',
+        '%s.\\2_pre%s_p%s' %
+        (llvm_major_version, svn_version, datetime.today().strftime('%Y%m%d')),
         ebuild,
         count=1)
   # any other package
@@ -374,8 +376,8 @@ def StagePatchMetadataFileForCommit(patch_metadata_file_path):
   """
 
   if not os.path.isfile(patch_metadata_file_path):
-    raise ValueError(
-        'Invalid patch metadata file provided: %s' % patch_metadata_file_path)
+    raise ValueError('Invalid patch metadata file provided: %s' %
+                     patch_metadata_file_path)
 
   # Cmd to stage the patch metadata file for commit.
   subprocess.check_output([
@@ -432,8 +434,8 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
   return commit_messages
 
 
-def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
-                   patch_metadata_file, mode, git_hash_source,
+def UpdatePackages(packages, llvm_variant, git_hash, svn_version,
+                   chroot_path, patch_metadata_file, mode, git_hash_source,
                    extra_commit_msg):
   """Updates an LLVM hash and uprevs the ebuild of the packages.
 
@@ -478,11 +480,11 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
     if llvm_variant == LLVMVariant.next:
       commit_message_header = 'llvm-next'
     if git_hash_source in get_llvm_hash.KNOWN_HASH_SOURCES:
-      commit_message_header += (
-          '/%s: upgrade to %s (r%d)' % (git_hash_source, git_hash, svn_version))
+      commit_message_header += ('/%s: upgrade to %s (r%d)' %
+                                (git_hash_source, git_hash, svn_version))
     else:
-      commit_message_header += (
-          ': upgrade to %s (r%d)' % (git_hash, svn_version))
+      commit_message_header += (': upgrade to %s (r%d)' %
+                                (git_hash, svn_version))
 
     commit_messages = [
         commit_message_header + '\n',
@@ -504,7 +506,7 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
       UpdateEbuildLLVMHash(ebuild_path, llvm_variant, git_hash, svn_version)
 
       if llvm_variant == LLVMVariant.current:
-        UprevEbuildToVersion(symlink_path, svn_version)
+        UprevEbuildToVersion(symlink_path, svn_version, git_hash)
       else:
         UprevEbuildSymlink(symlink_path)
 
@@ -513,6 +515,8 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
 
       packages.append('%s/%s' % (parent_dir_name, cur_dir_name))
       commit_messages.append('%s/%s' % (parent_dir_name, cur_dir_name))
+
+    EnsurePackageMaskContains(chroot_path, git_hash)
 
     # Handle the patches for each package.
     package_info_dict = llvm_patch_management.UpdatePackagesPatchMetadataFile(
@@ -531,6 +535,31 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
     git.DeleteBranch(repo_path, branch)
 
   return change_list
+
+
+def EnsurePackageMaskContains(chroot_path, git_hash):
+  """Adds the major version of llvm to package.mask if it's not already present.
+
+  Args:
+    chroot_path: The absolute path to the chroot.
+    git_hash: The new git hash.
+
+  Raises:
+    FileExistsError: package.mask not found in ../../chromiumos-overlay
+  """
+
+  llvm_major_version = get_llvm_hash.GetLLVMMajorVersion(git_hash)
+
+  overlay_dir = os.path.join(chroot_path, 'src/third_party/chromiumos-overlay')
+  mask_path = os.path.join(overlay_dir,
+                           'profiles/targets/chromeos/package.mask')
+  with open(mask_path, 'r+') as mask_file:
+    mask_contents = mask_file.read()
+    expected_line = '=sys-devel/llvm-%s.0_pre*\n' % llvm_major_version
+    if expected_line not in mask_contents:
+      mask_file.write(expected_line)
+
+  subprocess.check_output(['git', '-C', overlay_dir, 'add', mask_path])
 
 
 def main():

@@ -9,7 +9,9 @@
 from __future__ import print_function
 
 import argparse
+import functools
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -61,6 +63,65 @@ def GetGitHashFrom(src_dir, version):
   return git_llvm_rev.translate_rev_to_sha(
       git_llvm_rev.LLVMConfig(remote='origin', dir=src_dir),
       git_llvm_rev.Rev(branch=git_llvm_rev.MAIN_BRANCH, number=version))
+
+
+def CheckoutBranch(src_dir, branch):
+  """Checks out and pulls from a branch in a git repo.
+
+  Args:
+    src_dir: The LLVM source tree.
+    branch: The git branch to checkout in src_dir.
+
+  Raises:
+    ValueError: Failed to checkout or pull branch version
+  """
+  CheckCommand(['git', '-C', src_dir, 'checkout', branch])
+  CheckCommand(['git', '-C', src_dir, 'pull'])
+
+
+def ParseLLVMMajorVersion(cmakelist):
+  """Reads CMakeList.txt file contents for LLVMMajor Version.
+
+  Args:
+    cmakelist: contents of CMakeList.txt
+
+  Returns:
+    The major version number as a string
+
+  Raises:
+    ValueError: The major version cannot be parsed from cmakelist
+  """
+  match = re.search(r'\n\s+set\(LLVM_VERSION_MAJOR (?P<major>\d+)\)', cmakelist)
+  if not match:
+    raise ValueError('Failed to parse CMakeList for llvm major version')
+  return match.group('major')
+
+
+@functools.lru_cache(maxsize=1)
+def GetLLVMMajorVersion(git_hash=None):
+  """Reads llvm/CMakeList.txt file contents for LLVMMajor Version.
+
+  Args:
+    git_hash: git hash of llvm version as string or None for top of trunk
+
+  Returns:
+    The major version number as a string
+
+  Raises:
+    ValueError: The major version cannot be parsed from cmakelist or
+      there was a failure to checkout git_hash version
+    FileExistsError: The src directory doe not contain CMakeList.txt
+  """
+  src_dir = GetAndUpdateLLVMProjectInLLVMTools()
+  cmakelists_path = os.path.join(src_dir, 'llvm', 'CMakeLists.txt')
+  if git_hash:
+    CheckCommand(['git', '-C', src_dir, 'checkout', git_hash])
+  try:
+    with open(cmakelists_path) as cmakelists_file:
+      return ParseLLVMMajorVersion(cmakelists_file.read())
+  finally:
+    if git_hash:
+      CheckoutBranch(src_dir, git_llvm_rev.MAIN_BRANCH)
 
 
 @contextmanager
@@ -125,9 +186,10 @@ def GetAndUpdateLLVMProjectInLLVMTools():
                                               'llvm-project-copy')
 
   if not os.path.isdir(abs_path_to_llvm_project_dir):
-    print('Checking out LLVM from scratch. This could take a while...\n'
-          '(This should only need to be done once, though.)',
-          file=sys.stderr)
+    print(
+        'Checking out LLVM from scratch. This could take a while...\n'
+        '(This should only need to be done once, though.)',
+        file=sys.stderr)
     os.mkdir(abs_path_to_llvm_project_dir)
 
     LLVMHash().CloneLLVMRepo(abs_path_to_llvm_project_dir)
@@ -142,11 +204,7 @@ def GetAndUpdateLLVMProjectInLLVMTools():
       raise ValueError('LLVM repo in %s has changes, please remove.' %
                        abs_path_to_llvm_project_dir)
 
-    CheckCommand([
-        'git', '-C', abs_path_to_llvm_project_dir, 'checkout',
-        git_llvm_rev.MAIN_BRANCH
-    ])
-    CheckCommand(['git', '-C', abs_path_to_llvm_project_dir, 'pull'])
+    CheckoutBranch(abs_path_to_llvm_project_dir, git_llvm_rev.MAIN_BRANCH)
 
   return abs_path_to_llvm_project_dir
 
