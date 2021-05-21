@@ -31,6 +31,19 @@ import update_chromeos_llvm_hash
 class UpdateLLVMHashTest(unittest.TestCase):
   """Test class for updating LLVM hashes of packages."""
 
+  @mock.patch.object(os.path, 'realpath')
+  def testDefaultCrosRootFromCrOSCheckout(self, mock_llvm_tools):
+    llvm_tools_path = '/path/to/cros/src/third_party/toolchain-utils/llvm_tools'
+    mock_llvm_tools.return_value = llvm_tools_path
+    self.assertEqual(update_chromeos_llvm_hash.defaultCrosRoot(),
+                     '%s/../../../../' % llvm_tools_path)
+
+  @mock.patch.object(os.path, 'realpath')
+  def testDefaultCrosRootFromOutsideCrOSCheckout(self, mock_llvm_tools):
+    mock_llvm_tools.return_value = '~/toolchain-utils/llvm_tools'
+    self.assertEqual(update_chromeos_llvm_hash.defaultCrosRoot(),
+                     '~/chromiumos')
+
   # Simulate behavior of 'os.path.isfile()' when the ebuild path to a package
   # does not exist.
   @mock.patch.object(os.path, 'isfile', return_value=False)

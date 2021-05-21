@@ -39,6 +39,21 @@ class LLVMVariant(enum.Enum):
 verbose = False
 
 
+def defaultCrosRoot():
+  """Get default location of chroot_path.
+
+  The logic assumes that the cros_root is ~/chromiumos, unless llvm_tools is
+  inside of a CrOS checkout, in which case that checkout should be used.
+
+  Returns:
+    The best guess location for the cros checkout.
+  """
+  llvm_tools_path = os.path.realpath(os.path.dirname(__file__))
+  if llvm_tools_path.endswith('src/third_party/toolchain-utils/llvm_tools'):
+    return os.path.join(llvm_tools_path, '../../../../')
+  return '~/chromiumos'
+
+
 def GetCommandLineArgs():
   """Parses the command line for the optional command line arguments.
 
@@ -49,10 +64,6 @@ def GetCommandLineArgs():
     and the LLVM version to use when retrieving the LLVM hash.
   """
 
-  # Default path to the chroot if a path is not specified.
-  cros_root = os.path.expanduser('~')
-  cros_root = os.path.join(cros_root, 'chromiumos')
-
   # Create parser and add optional command-line arguments.
   parser = argparse.ArgumentParser(
       description="Updates the build's hash for llvm-next.")
@@ -60,7 +71,7 @@ def GetCommandLineArgs():
   # Add argument for a specific chroot path.
   parser.add_argument(
       '--chroot_path',
-      default=cros_root,
+      default=defaultCrosRoot(),
       help='the path to the chroot (default: %(default)s)')
 
   # Add argument for specific builds to uprev and update their llvm-next hash.
