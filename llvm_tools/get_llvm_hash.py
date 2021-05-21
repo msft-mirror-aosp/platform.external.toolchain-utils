@@ -9,6 +9,7 @@
 from __future__ import print_function
 
 import argparse
+import contextlib
 import functools
 import os
 import re
@@ -16,11 +17,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from contextlib import contextmanager
 
 import git_llvm_rev
-from subprocess_helpers import CheckCommand
 from subprocess_helpers import check_output
+from subprocess_helpers import CheckCommand
 
 _LLVM_GIT_URL = ('https://chromium.googlesource.com/external/github.com/llvm'
                  '/llvm-project')
@@ -124,7 +124,7 @@ def GetLLVMMajorVersion(git_hash=None):
       CheckoutBranch(src_dir, git_llvm_rev.MAIN_BRANCH)
 
 
-@contextmanager
+@contextlib.contextmanager
 def CreateTempLLVMRepo(temp_dir):
   """Adds a LLVM worktree to 'temp_dir'.
 
@@ -138,7 +138,7 @@ def CreateTempLLVMRepo(temp_dir):
     temp_dir: An absolute path to the temporary directory to put the worktree in
     (obtained via 'tempfile.mkdtemp()').
 
-  Returns:
+  Yields:
     The absolute path to 'temp_dir'.
 
   Raises:
@@ -174,6 +174,9 @@ def GetAndUpdateLLVMProjectInLLVMTools():
   it will clean the contents of that directory and then fetch from the chromium
   LLVM mirror. In either case, this function will return the absolute path to
   'llvm-project-copy' directory.
+
+  Returns:
+    Absolute path to 'llvm-project-copy' directory in 'llvm_tools'
 
   Raises:
     ValueError: LLVM repo (in 'llvm-project-copy' dir.) has changes or failed to
@@ -212,6 +215,9 @@ def GetAndUpdateLLVMProjectInLLVMTools():
 def GetGoogle3LLVMVersion(stable):
   """Gets the latest google3 LLVM version.
 
+  Args:
+    stable: boolean, use the stable version or the unstable version
+
   Returns:
     The latest LLVM SVN version as an integer.
 
@@ -236,13 +242,17 @@ def GetGoogle3LLVMVersion(stable):
   return GetVersionFrom(GetAndUpdateLLVMProjectInLLVMTools(), git_hash.rstrip())
 
 
-def is_svn_option(svn_option):
+def IsSvnOption(svn_option):
   """Validates whether the argument (string) is a git hash option.
 
   The argument is used to find the git hash of LLVM.
 
   Args:
     svn_option: The option passed in as a command line argument.
+
+  Returns:
+    lowercase svn_option if it is a known hash source, otherwise the svn_option
+    as an int
 
   Raises:
     ValueError: Invalid svn option provided.
@@ -270,7 +280,7 @@ def GetLLVMHashAndVersionFromSVNOption(svn_option):
 
   Args:
     svn_option: A valid svn option obtained from the command line.
-      Ex: 'google3', 'tot', or <svn_version> such as 365123.
+      Ex. 'google3', 'tot', or <svn_version> such as 365123.
 
   Returns:
     A tuple that is the LLVM git hash and LLVM version.
@@ -298,7 +308,7 @@ class LLVMHash(object):
   """Provides methods to retrieve a LLVM hash."""
 
   @staticmethod
-  @contextmanager
+  @contextlib.contextmanager
   def CreateTempDirectory():
     temp_dir = tempfile.mkdtemp()
 
@@ -368,7 +378,7 @@ def main():
   parser = argparse.ArgumentParser(description='Finds the LLVM hash.')
   parser.add_argument(
       '--llvm_version',
-      type=is_svn_option,
+      type=IsSvnOption,
       required=True,
       help='which git hash of LLVM to find. Either a svn revision, or one '
       'of %s' % sorted(KNOWN_HASH_SOURCES))

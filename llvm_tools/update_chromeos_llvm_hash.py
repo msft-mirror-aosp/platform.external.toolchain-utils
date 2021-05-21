@@ -4,32 +4,30 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Updates the LLVM hash and uprevs the build of the specified
-
-packages.
+"""Updates the LLVM hash and uprevs the build of the specified packages.
 
 For each package, a temporary repo is created and the changes are uploaded
 for review.
 """
 
 from __future__ import print_function
-from datetime import datetime
-from enum import Enum
 
 import argparse
+import datetime
+import enum
 import os
 import re
 import subprocess
 
-from failure_modes import FailureModes
 import chroot
+import failure_modes
 import get_llvm_hash
 import git
 import llvm_patch_management
 
 
 # Specify which LLVM hash to update
-class LLVMVariant(Enum):
+class LLVMVariant(enum.Enum):
   """Represent the LLVM hash in an ebuild file to update."""
 
   current = 'LLVM_HASH'
@@ -71,8 +69,8 @@ def GetCommandLineArgs():
       default=['sys-devel/llvm'],
       required=False,
       nargs='+',
-      help='the ebuilds to update their hash for llvm-next ' \
-          '(default: %(default)s)')
+      help='the ebuilds to update their hash for llvm-next '
+      '(default: %(default)s)')
 
   # Add argument for whether to display command contents to `stdout`.
   parser.add_argument(
@@ -91,7 +89,7 @@ def GetCommandLineArgs():
   # Add argument for the LLVM version to use.
   parser.add_argument(
       '--llvm_version',
-      type=get_llvm_hash.is_svn_option,
+      type=get_llvm_hash.IsSvnOption,
       required=True,
       help='which git hash to use. Either a svn revision, or one '
       'of %s' % sorted(get_llvm_hash.KNOWN_HASH_SOURCES))
@@ -99,12 +97,15 @@ def GetCommandLineArgs():
   # Add argument for the mode of the patch management when handling patches.
   parser.add_argument(
       '--failure_mode',
-      default=FailureModes.FAIL.value,
-      choices=[FailureModes.FAIL.value, FailureModes.CONTINUE.value,
-               FailureModes.DISABLE_PATCHES.value,
-               FailureModes.REMOVE_PATCHES.value],
-      help='the mode of the patch manager when handling failed patches ' \
-          '(default: %(default)s)')
+      default=failure_modes.FailureModes.FAIL.value,
+      choices=[
+          failure_modes.FailureModes.FAIL.value,
+          failure_modes.FailureModes.CONTINUE.value,
+          failure_modes.FailureModes.DISABLE_PATCHES.value,
+          failure_modes.FailureModes.REMOVE_PATCHES.value
+      ],
+      help='the mode of the patch manager when handling failed patches '
+      '(default: %(default)s)')
 
   # Add argument for the patch metadata file.
   parser.add_argument(
@@ -216,6 +217,9 @@ def ReplaceLLVMHash(ebuild_lines, llvm_variant, git_hash, svn_version):
     llvm_variant: The LLVM hash to update.
     git_hash: The new git hash.
     svn_version: The SVN-style revision number of git_hash.
+
+  Yields:
+    lines of the modified ebuild file
   """
   is_updated = False
   llvm_regex = re.compile('^' + re.escape(llvm_variant.value) +
@@ -294,8 +298,8 @@ def UprevEbuildToVersion(symlink, svn_version, git_hash):
     llvm_major_version = get_llvm_hash.GetLLVMMajorVersion(git_hash)
     new_ebuild, is_changed = re.subn(
         r'(\d+)\.(\d+)_pre([0-9]+)_p([0-9]+)',
-        '%s.\\2_pre%s_p%s' %
-        (llvm_major_version, svn_version, datetime.today().strftime('%Y%m%d')),
+        '%s.\\2_pre%s_p%s' % (llvm_major_version, svn_version,
+                              datetime.datetime.today().strftime('%Y%m%d')),
         ebuild,
         count=1)
   # any other package
@@ -395,15 +399,18 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
     package (key).
     commit_messages: The commit message that has the updated ebuilds and
     upreving information.
+
+  Returns:
+    commit_messages with new additions
   """
 
   # For each package, check if any patches for that package have
   # changed, if so, add which patches have changed to the commit
   # message.
   for package_name, patch_info_dict in package_info_dict.items():
-    if patch_info_dict['disabled_patches'] or \
-        patch_info_dict['removed_patches'] or \
-        patch_info_dict['modified_metadata']:
+    if (patch_info_dict['disabled_patches'] or
+        patch_info_dict['removed_patches'] or
+        patch_info_dict['modified_metadata']):
       cur_package_header = '\nFor the package %s:' % package_name
       commit_messages.append(cur_package_header)
 
@@ -434,8 +441,8 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
   return commit_messages
 
 
-def UpdatePackages(packages, llvm_variant, git_hash, svn_version,
-                   chroot_path, patch_metadata_file, mode, git_hash_source,
+def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
+                   patch_metadata_file, mode, git_hash_source,
                    extra_commit_msg):
   """Updates an LLVM hash and uprevs the ebuild of the packages.
 
@@ -452,9 +459,9 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version,
     the patches and its metadata.
     mode: The mode of the patch manager when handling an applicable patch
     that failed to apply.
-      Ex: 'FailureModes.FAIL'
+      Ex. 'FailureModes.FAIL'
     git_hash_source: The source of which git hash to use based off of.
-      Ex: 'google3', 'tot', or <version> such as 365123
+      Ex. 'google3', 'tot', or <version> such as 365123
     extra_commit_msg: extra test to append to the commit message.
 
   Returns:
@@ -589,7 +596,7 @@ def main():
       svn_version,
       args_output.chroot_path,
       args_output.patch_metadata_file,
-      FailureModes(args_output.failure_mode),
+      failure_modes.FailureModes(args_output.failure_mode),
       git_hash_source,
       extra_commit_msg=None)
 
