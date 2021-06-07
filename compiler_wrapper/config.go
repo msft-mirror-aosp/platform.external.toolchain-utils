@@ -137,6 +137,7 @@ var crosHardenedConfig = &config{
 		"-Wno-section",
 		"-static-libgcc",
 		"-fuse-ld=lld",
+		"--unwindlib=libgcc",
 		"-Wno-final-dtor-non-final-class",
 		"-Werror=poison-system-directories",
 		"-fexperimental-new-pass-manager",
