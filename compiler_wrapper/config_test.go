@@ -38,7 +38,6 @@ func TestRealConfigWithUseCCacheFlag(t *testing.T) {
 	}
 }
 
-/* TODO: Re-enable this, when llvm-next is different than llvm
 func TestRealConfigWithUseLLvmFlag(t *testing.T) {
 	resetGlobals()
 	defer resetGlobals()
@@ -69,7 +68,6 @@ func TestRealConfigWithUseLLvmFlag(t *testing.T) {
 		t.Fatalf("UseLlvmNext: Expected an error, got none")
 	}
 }
-*/
 
 func TestRealConfigWithConfigNameFlag(t *testing.T) {
 	resetGlobals()
@@ -128,10 +126,9 @@ func isSysrootHardened(cfg *config) bool {
 	return false
 }
 
-// TODO: Update this with correct flag when we change llvm-next.
 func isUsingLLvmNext(cfg *config) bool {
 	for _, arg := range cfg.clangFlags {
-		if arg == "-Wno-reorder-init-list" {
+		if arg == "-Wl,-z,nostart-stop-gc" {
 			return true
 		}
 	}
