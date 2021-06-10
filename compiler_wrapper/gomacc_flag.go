@@ -5,32 +5,104 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
+	"strings"
 )
 
-func processGomaCccFlags(builder *commandBuilder) (gomaUsed bool, err error) {
-	gomaPath := ""
-	nextArgIsGomaPath := false
+var errNoSuchCmdlineArg = errors.New("no such commandline argument")
+
+// Removes one flag from `builder`, assuming that a value follows the flag. Two formats are
+// supported for this: `--foo=bar` and `--foo bar`. In either case, "bar" will be returned as the
+// `value`.
+//
+// If no flag is found on the commandline, this returns the `errNoSuchCmdlineArg` error. `builder`
+// is unmodified if this error is returned, but its contents are unspecified if any other error is
+// returned.
+//
+// In the case of multiple such flags, only the first encountered will be removed.
+func removeOneUserCmdlineFlagWithValue(builder *commandBuilder, flagName string) (flagValue string, err error) {
+	const (
+		searchingForFlag uint8 = iota
+		searchingForValue
+		searchComplete
+	)
+
+	flagRequiresAValue := func() error { return newUserErrorf("flag %q requires a value", flagName) }
+	searchState := searchingForFlag
 	builder.transformArgs(func(arg builderArg) string {
-		if arg.fromUser {
-			if arg.value == "--gomacc-path" {
-				nextArgIsGomaPath = true
-				return ""
-			}
-			if nextArgIsGomaPath {
-				gomaPath = arg.value
-				nextArgIsGomaPath = false
-				return ""
-			}
+		if err != nil {
+			return arg.value
 		}
-		return arg.value
+
+		switch searchState {
+		case searchingForFlag:
+			if !arg.fromUser {
+				return arg.value
+			}
+
+			if arg.value == flagName {
+				searchState = searchingForValue
+				return ""
+			}
+
+			isArgEq := strings.HasPrefix(arg.value, flagName) && arg.value[len(flagName)] == '='
+			if !isArgEq {
+				return arg.value
+			}
+
+			flagValue = arg.value[len(flagName)+1:]
+			searchState = searchComplete
+			return ""
+
+		case searchingForValue:
+			if !arg.fromUser {
+				err = flagRequiresAValue()
+				return arg.value
+			}
+
+			flagValue = arg.value
+			searchState = searchComplete
+			return ""
+
+		case searchComplete:
+			return arg.value
+
+		default:
+			panic(fmt.Sprintf("unknown search state: %v", searchState))
+		}
 	})
-	if nextArgIsGomaPath {
-		return false, newUserErrorf("--gomacc-path given without value")
+
+	if err != nil {
+		return "", err
 	}
-	if gomaPath == "" {
+
+	switch searchState {
+	case searchingForFlag:
+		return "", errNoSuchCmdlineArg
+
+	case searchingForValue:
+		return "", flagRequiresAValue()
+
+	case searchComplete:
+		return flagValue, nil
+
+	default:
+		panic(fmt.Sprintf("unknown search state: %v", searchState))
+	}
+}
+
+func processGomaCccFlags(builder *commandBuilder) (gomaUsed bool, err error) {
+	gomaPath, err := removeOneUserCmdlineFlagWithValue(builder, "--gomacc-path")
+	if err != nil && err != errNoSuchCmdlineArg {
+		return false, err
+	}
+
+	if err == errNoSuchCmdlineArg || gomaPath == "" {
 		gomaPath, _ = builder.env.getenv("GOMACC_PATH")
 	}
+
 	if gomaPath != "" {
 		if _, err := os.Lstat(gomaPath); err == nil {
 			builder.wrapPath(gomaPath)

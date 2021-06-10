@@ -7,8 +7,100 @@ package main
 import (
 	"os"
 	"path"
+	"reflect"
 	"testing"
 )
+
+func TestCommandlineFlagParsing(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		type testCase struct {
+			extraFlags []string
+			// If this is nonempty, expectedValue is ignored. Otherwise, expectedValue
+			// has the expected value for the flag, and expectedCommand has the expected
+			// (extra) flags in the builder after filtering.
+			expectedError      string
+			expectedValue      string
+			expectedExtraFlags []string
+		}
+
+		const flagName = "--flag"
+		testCases := []testCase{
+			{
+				extraFlags:    nil,
+				expectedError: errNoSuchCmdlineArg.Error(),
+			},
+			{
+				extraFlags:    []string{flagName + "a"},
+				expectedError: errNoSuchCmdlineArg.Error(),
+			},
+			{
+				extraFlags:    []string{flagName},
+				expectedError: "flag \"" + flagName + "\" requires a value",
+			},
+			{
+				extraFlags:         []string{flagName, "foo"},
+				expectedValue:      "foo",
+				expectedExtraFlags: nil,
+			},
+			{
+				extraFlags:         []string{flagName + "=foo"},
+				expectedValue:      "foo",
+				expectedExtraFlags: nil,
+			},
+			{
+				extraFlags:         []string{flagName + "="},
+				expectedValue:      "",
+				expectedExtraFlags: nil,
+			},
+			{
+				extraFlags:         []string{flagName + "=foo", flagName + "=bar"},
+				expectedValue:      "foo",
+				expectedExtraFlags: []string{flagName + "=bar"},
+			},
+		}
+
+		for _, testCase := range testCases {
+			cmd := ctx.newCommand(gccX86_64, testCase.extraFlags...)
+			builder, err := newCommandBuilder(ctx, ctx.cfg, cmd)
+			if err != nil {
+				t.Fatalf("Failed creating a command builder: %v", err)
+			}
+
+			flagValue, err := removeOneUserCmdlineFlagWithValue(builder, flagName)
+			if err != nil {
+				if testCase.expectedError == "" {
+					t.Errorf("given extra flags %q, got unexpected error removing %q: %v", testCase.extraFlags, flagName, err)
+					continue
+				}
+
+				if e := err.Error(); e != testCase.expectedError {
+					t.Errorf("given extra flags %q, got error %q; wanted %q", testCase.extraFlags, e, testCase.expectedError)
+				}
+				continue
+			}
+
+			if testCase.expectedError != "" {
+				t.Errorf("given extra flags %q, got no error, but expected %q", testCase.extraFlags, testCase.expectedError)
+				continue
+			}
+
+			if flagValue != testCase.expectedValue {
+				t.Errorf("given extra flags %q, got value %q, but expected %q", testCase.extraFlags, flagValue, testCase.expectedValue)
+			}
+
+			currentFlags := []string{}
+			// Chop off the first arg, which should just be the compiler
+			for _, a := range builder.args {
+				currentFlags = append(currentFlags, a.value)
+			}
+
+			sameFlags := (len(currentFlags) == 0 && len(testCase.expectedExtraFlags) == 0) || reflect.DeepEqual(currentFlags, testCase.expectedExtraFlags)
+			if !sameFlags {
+				t.Errorf("given extra flags %q, got post-removal flags %q, but expected %q", testCase.extraFlags, currentFlags, testCase.expectedExtraFlags)
+			}
+		}
+	})
+}
 
 func TestCallGomaccIfEnvIsGivenAndValid(t *testing.T) {
 	withGomaccTestContext(t, func(ctx *testContext, gomaPath string) {
@@ -76,7 +168,7 @@ func TestErrorOnGomaccArgWithoutValue(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc, "--gomacc-path")))
-		if err := verifyNonInternalError(stderr, "--gomacc-path given without value"); err != nil {
+		if err := verifyNonInternalError(stderr, "flag \"--gomacc-path\" requires a value"); err != nil {
 			t.Error(err)
 		}
 	})
