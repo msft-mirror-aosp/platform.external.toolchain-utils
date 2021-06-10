@@ -111,3 +111,26 @@ func processGomaCccFlags(builder *commandBuilder) (gomaUsed bool, err error) {
 	}
 	return false, nil
 }
+
+func processRewrapperCcFlags(builder *commandBuilder) (rewrapperUsed bool, err error) {
+	// FIXME(gbiv): Add parsing and such for this.
+	return false, nil
+}
+
+func processRemoteBuildFlags(builder *commandBuilder) (remoteBuildUsed bool, err error) {
+	rewrapperUsed, err := processRewrapperCcFlags(builder)
+	if err != nil {
+		return rewrapperUsed, err
+	}
+
+	gomaUsed, err := processGomaCccFlags(builder)
+	remoteBuildUsed = gomaUsed || rewrapperUsed
+	if err != nil {
+		return remoteBuildUsed, err
+	}
+
+	if gomaUsed && rewrapperUsed {
+		return true, newUserErrorf("rewrapper and gomacc are mutually exclusive")
+	}
+	return remoteBuildUsed, nil
+}
