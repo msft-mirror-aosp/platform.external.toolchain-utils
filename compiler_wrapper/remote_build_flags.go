@@ -93,13 +93,13 @@ func removeOneUserCmdlineFlagWithValue(builder *commandBuilder, flagName string)
 	}
 }
 
-func processGomaCccFlags(builder *commandBuilder) (gomaUsed bool, err error) {
+func processGomaCccFlags(builder *commandBuilder, inheritFromEnv bool) (gomaUsed bool, err error) {
 	gomaPath, err := removeOneUserCmdlineFlagWithValue(builder, "--gomacc-path")
 	if err != nil && err != errNoSuchCmdlineArg {
 		return false, err
 	}
 
-	if err == errNoSuchCmdlineArg || gomaPath == "" {
+	if inheritFromEnv && (err == errNoSuchCmdlineArg || gomaPath == "") {
 		gomaPath, _ = builder.env.getenv("GOMACC_PATH")
 	}
 
@@ -113,8 +113,31 @@ func processGomaCccFlags(builder *commandBuilder) (gomaUsed bool, err error) {
 }
 
 func processRewrapperCcFlags(builder *commandBuilder) (rewrapperUsed bool, err error) {
-	// FIXME(gbiv): Add parsing and such for this.
-	return false, nil
+	rewrapperPath, pathErr := removeOneUserCmdlineFlagWithValue(builder, "--rewrapper-path")
+	if pathErr != nil && pathErr != errNoSuchCmdlineArg {
+		return false, err
+	}
+
+	rewrapperCfg, cfgErr := removeOneUserCmdlineFlagWithValue(builder, "--rewrapper-cfg")
+	if cfgErr != nil && cfgErr != errNoSuchCmdlineArg {
+		return false, err
+	}
+
+	if pathErr == errNoSuchCmdlineArg {
+		if cfgErr != errNoSuchCmdlineArg {
+			return false, newUserErrorf("--rewrapper-path must be specified if --rewrapper-cfg is")
+		}
+		return false, nil
+	}
+
+	if cfgErr == errNoSuchCmdlineArg {
+		return false, newUserErrorf("--rewrapper-cfg must be specified if --rewrapper-path is")
+	}
+
+	// It's unclear that we should have a similar fallback to gomacc if --rewrapper-path doesn't
+	// exist, so don't until it's obviously necessary.
+	builder.wrapPath(rewrapperPath, "-cfg", rewrapperCfg)
+	return true, nil
 }
 
 func processRemoteBuildFlags(builder *commandBuilder) (remoteBuildUsed bool, err error) {
@@ -123,7 +146,8 @@ func processRemoteBuildFlags(builder *commandBuilder) (remoteBuildUsed bool, err
 		return rewrapperUsed, err
 	}
 
-	gomaUsed, err := processGomaCccFlags(builder)
+	inheritGomaFromEnv := !rewrapperUsed
+	gomaUsed, err := processGomaCccFlags(builder, inheritGomaFromEnv)
 	remoteBuildUsed = gomaUsed || rewrapperUsed
 	if err != nil {
 		return remoteBuildUsed, err

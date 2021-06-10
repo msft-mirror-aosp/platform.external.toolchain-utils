@@ -200,8 +200,10 @@ func (builder *commandBuilder) clone() *commandBuilder {
 	}
 }
 
-func (builder *commandBuilder) wrapPath(path string) {
-	builder.args = append([]builderArg{{value: builder.path, fromUser: false}}, builder.args...)
+func (builder *commandBuilder) wrapPath(path string, extraFlags ...string) {
+	newArgs := createBuilderArgs( /*fromUser=*/ false, extraFlags)
+	newArgs = append(newArgs, builderArg{value: builder.path, fromUser: false})
+	builder.args = append(newArgs, builder.args...)
 	builder.path = path
 }
 

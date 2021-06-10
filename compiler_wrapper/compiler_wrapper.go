@@ -91,8 +91,9 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			mainBuilder.addPreUserArgs(mainBuilder.cfg.clangFlags...)
 			mainBuilder.addPreUserArgs(mainBuilder.cfg.commonFlags...)
 			mainBuilder.addPostUserArgs(mainBuilder.cfg.clangPostFlags...)
+			inheritGomaFromEnv := true
 			// Android doesn't support rewrapper; don't try to use it.
-			if remoteBuildUsed, err = processGomaCccFlags(mainBuilder); err != nil {
+			if remoteBuildUsed, err = processGomaCccFlags(mainBuilder, inheritGomaFromEnv); err != nil {
 				return 0, err
 			}
 			compilerCmd = mainBuilder.build()

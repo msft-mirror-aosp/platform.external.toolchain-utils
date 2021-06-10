@@ -192,3 +192,60 @@ func withGomaccTestContext(t *testing.T, f func(*testContext, string)) {
 		f(ctx, gomaPath)
 	})
 }
+
+func TestRewrapperDefersToTheWrapperProperly(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc, "--rewrapper-path", "/rewrapper", "--rewrapper-cfg", "/some-cfg", "some", "other", "args")))
+		if err := verifyPath(cmd, "/rewrapper"); err != nil {
+			t.Error(err)
+		}
+		if err := verifyArgOrder(cmd, "-cfg", "/some-cfg", gccX86_64+".real", mainCc, "some", "other", "args"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestRewrapperCfgMustBePrsentIfRewrapperPathIs(t *testing.T) {
+	withGomaccTestContext(t, func(ctx *testContext, gomaPath string) {
+		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc, "--rewrapper-path", "/rewrapper")))
+		if err := verifyNonInternalError(stderr, "--rewrapper-cfg must be specified if --rewrapper-path is"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestRewrapperPathMustBePrsentIfRewrapperCfgIs(t *testing.T) {
+	withGomaccTestContext(t, func(ctx *testContext, gomaPath string) {
+		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc, "--rewrapper-cfg", "/some-cfg")))
+		if err := verifyNonInternalError(stderr, "--rewrapper-path must be specified if --rewrapper-cfg is"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestRewrapperAndGomaAreMutuallyExclusive(t *testing.T) {
+	withGomaccTestContext(t, func(ctx *testContext, gomaPath string) {
+		stderr := ctx.mustFail(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc, "--rewrapper-path", "/rewrapper", "--rewrapper-cfg", "/some-cfg", "--gomacc-path", gomaPath)))
+		if err := verifyNonInternalError(stderr, "rewrapper and gomacc are mutually exclusive"); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestRewrapperBlocksGomaInheritanceFromEnv(t *testing.T) {
+	withGomaccTestContext(t, func(ctx *testContext, gomaPath string) {
+		ctx.env = []string{"GOMACC_PATH=" + gomaPath}
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc, "--rewrapper-path", "/rewrapper", "--rewrapper-cfg", "/some-cfg")))
+		if err := verifyPath(cmd, "/rewrapper"); err != nil {
+			t.Error(err)
+		}
+		if err := verifyArgOrder(cmd, "-cfg", "/some-cfg", gccX86_64+".real", mainCc); err != nil {
+			t.Error(err)
+		}
+	})
+}
