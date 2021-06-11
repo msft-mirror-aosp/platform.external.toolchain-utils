@@ -5,15 +5,13 @@
 package main
 
 import (
+	"os"
 	"path"
 	"testing"
 )
 
 func TestCallGomaccIfEnvIsGivenAndValid(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
-		gomaPath := path.Join(ctx.tempDir, "gomacc")
-		// Create a file so the gomacc path is valid.
-		ctx.writeFile(gomaPath, "")
+	withGomaccTestContext(t, func(ctx *testContext, gomaPath string) {
 		ctx.env = []string{"GOMACC_PATH=" + gomaPath}
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
@@ -27,9 +25,11 @@ func TestCallGomaccIfEnvIsGivenAndValid(t *testing.T) {
 }
 
 func TestOmitGomaccIfEnvIsGivenButInvalid(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
-		// Note: This path does not point to a valid file.
-		gomaPath := path.Join(ctx.tempDir, "gomacc")
+	withGomaccTestContext(t, func(ctx *testContext, gomaPath string) {
+		if err := os.Remove(gomaPath); err != nil {
+			t.Fatalf("failed removing fake goma file at %q: %v", gomaPath, err)
+		}
+
 		ctx.env = []string{"GOMACC_PATH=" + gomaPath}
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
@@ -40,10 +40,7 @@ func TestOmitGomaccIfEnvIsGivenButInvalid(t *testing.T) {
 }
 
 func TestCallGomaccIfArgIsGivenAndValid(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
-		gomaPath := path.Join(ctx.tempDir, "gomacc")
-		// Create a file so the gomacc path is valid.
-		ctx.writeFile(gomaPath, "")
+	withGomaccTestContext(t, func(ctx *testContext, gomaPath string) {
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc, "--gomacc-path", gomaPath)))
 		if err := verifyPath(cmd, gomaPath); err != nil {
@@ -62,9 +59,11 @@ func TestCallGomaccIfArgIsGivenAndValid(t *testing.T) {
 }
 
 func TestOmitGomaccIfArgIsGivenButInvalid(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
-		// Note: This path does not point to a valid file.
-		gomaPath := path.Join(ctx.tempDir, "gomacc")
+	withGomaccTestContext(t, func(ctx *testContext, gomaPath string) {
+		if err := os.Remove(gomaPath); err != nil {
+			t.Fatalf("failed removing fake goma file at %q: %v", gomaPath, err)
+		}
+
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc, "--gomacc-path", gomaPath)))
 		if err := verifyPath(cmd, gccX86_64+".real"); err != nil {
@@ -90,5 +89,14 @@ func TestOmitGomaccByDefault(t *testing.T) {
 		if err := verifyPath(cmd, gccX86_64+".real"); err != nil {
 			t.Error(err)
 		}
+	})
+}
+
+func withGomaccTestContext(t *testing.T, f func(*testContext, string)) {
+	withTestContext(t, func(ctx *testContext) {
+		gomaPath := path.Join(ctx.tempDir, "gomacc")
+		// Create a file so the gomacc path is valid.
+		ctx.writeFile(gomaPath, "")
+		f(ctx, gomaPath)
 	})
 }
