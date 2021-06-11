@@ -10,9 +10,11 @@ import (
 	"io"
 	"os"
 	"strings"
+	"syscall"
 )
 
 type env interface {
+	umask(int) int
 	getenv(key string) (string, bool)
 	environ() []string
 	getwd() string
@@ -51,6 +53,10 @@ func newProcessEnv() (env, error) {
 }
 
 var _ env = (*processEnv)(nil)
+
+func (env *processEnv) umask(newmask int) (oldmask int) {
+	return syscall.Umask(newmask)
+}
 
 func (env *processEnv) getenv(key string) (string, bool) {
 	return os.LookupEnv(key)
