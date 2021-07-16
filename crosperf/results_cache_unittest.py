@@ -188,8 +188,8 @@ PERF_DATA_HEADER = """
 #
 """
 
-TURBOSTAT_LOG_OUTPUT = \
-"""CPU     Avg_MHz Busy%   Bzy_MHz TSC_MHz IRQ     CoreTmp
+TURBOSTAT_LOG_OUTPUT = (
+    """CPU     Avg_MHz Busy%   Bzy_MHz TSC_MHz IRQ     CoreTmp
 -       329     12.13   2723    2393    10975   77
 0       336     12.41   2715    2393    6328    77
 2       323     11.86   2731    2393    4647    69
@@ -217,7 +217,7 @@ CPU     Avg_MHz Busy%   Bzy_MHz TSC_MHz IRQ     CoreTmp
 -       843     29.83   2832    2393    28161   47
 0       827     29.35   2826    2393    16093   47
 2       858     30.31   2838    2393    12068   46
-"""
+""")
 TURBOSTAT_DATA = {
     'cpufreq': {
         'all': [2723, 2884, 2927, 2937, 2932, 2933, 2832]
@@ -227,8 +227,7 @@ TURBOSTAT_DATA = {
     },
 }
 
-TOP_LOG = \
-"""
+TOP_LOG = ("""
   PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
  4102 chronos   12  -8 3454472 238300 118188 R  41.8   6.1   0:08.37 chrome
  4204 chronos   12  -8 2492716 205728 179016 S  11.8   5.3   0:03.89 chrome
@@ -250,7 +249,7 @@ TOP_LOG = \
  5713 chronos   20   0 5178652 103120  50372 S  17.8   2.6   0:01.13 chrome
     7 root      20   0       0      0      0 S   1.0   0.0   0:00.73 rcu_preempt
   855 root      20   0       0      0      0 S   1.0   0.0   0:00.01 kworker/4:2
-"""
+""")
 TOP_DATA = [
     {
         'cmd': 'chrome-5745',
@@ -301,8 +300,7 @@ TOP_DATA = [
         'top5_cpu_use': [1.0],
     },
 ]
-TOP_OUTPUT = \
-"""             COMMAND     AVG CPU%  SEEN   HIGHEST 5
+TOP_OUTPUT = ("""             COMMAND     AVG CPU%  SEEN   HIGHEST 5
               chrome   128.250000     6   [122.8, 107.9, 17.8, 5.0, 2.0]
      irq/230-cros-ec     1.000000     1   [2.0]
                 sshd     0.500000     1   [1.0]
@@ -310,10 +308,9 @@ TOP_OUTPUT = \
                 spi5     0.500000     1   [1.0]
          rcu_preempt     0.500000     1   [1.0]
          kworker/4:2     0.500000     1   [1.0]
-"""
+""")
 
-CPUSTATS_UNIQ_OUTPUT = \
-"""
+CPUSTATS_UNIQ_OUTPUT = ("""
 /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq 1512000
 /sys/devices/system/cpu/cpu1/cpufreq/cpuinfo_cur_freq 1512000
 /sys/devices/system/cpu/cpu3/cpufreq/cpuinfo_cur_freq 2016000
@@ -326,7 +323,7 @@ big-cpu 51234
 soc-thermal 45456
 little-cpu 42555
 big-cpu 61724
-"""
+""")
 CPUSTATS_UNIQ_DATA = {
     'cpufreq': {
         'cpu0': [1512, 1500],
@@ -339,8 +336,7 @@ CPUSTATS_UNIQ_DATA = {
         'big-cpu': [51.2, 61.7]
     }
 }
-CPUSTATS_DUPL_OUTPUT = \
-"""
+CPUSTATS_DUPL_OUTPUT = ("""
 /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq 1512000
 /sys/devices/system/cpu/cpu1/cpufreq/cpuinfo_cur_freq 1512000
 /sys/devices/system/cpu/cpu2/cpufreq/cpuinfo_cur_freq 1512000
@@ -353,7 +349,7 @@ CPUSTATS_DUPL_OUTPUT = \
 /sys/devices/system/cpu/cpu1/cpufreq/cpuinfo_cur_freq 1614000
 /sys/devices/system/cpu/cpu2/cpufreq/cpuinfo_cur_freq 1614000
 /sys/devices/system/cpu/cpu3/cpufreq/cpuinfo_cur_freq 1982000
-"""
+""")
 CPUSTATS_DUPL_DATA = {
     'cpufreq': {
         'cpu0': [1512, 1500, 1614],
@@ -363,8 +359,7 @@ CPUSTATS_DUPL_DATA = {
 
 TMP_DIR1 = '/tmp/tmpAbcXyz'
 
-HISTOGRAMSET = \
-"""
+HISTOGRAMSET = ("""
 [
     {
         "values": [
@@ -436,7 +431,7 @@ HISTOGRAMSET = \
     }
 
 ]
-"""
+""")
 
 # pylint: enable=line-too-long
 
@@ -1262,7 +1257,7 @@ class ResultTest(unittest.TestCase):
     self.assertEqual(mock_chrootruncmd.call_args_list[0][0],
                      (self.result.chromeos_root,
                       ('/usr/sbin/perf report -n --symfs /tmp/debug '
-                       '--vmlinux /tmp/debug/boot/vmlinux  '
+                       '--vmlinux /tmp/debug/usr/lib/debug/boot/vmlinux  '
                        '-i %s --stdio > %s') % (fake_file, fake_file)))
 
   @mock.patch.object(misc, 'GetOutsideChrootPath')
@@ -1940,8 +1935,8 @@ class ResultsCacheTest(unittest.TestCase):
 
     mock_checksum.return_value = 'FakeImageChecksumabc123'
     self.results_cache.machine_manager.GetMachines = FakeGetMachines
-    self.results_cache.machine_manager.machine_checksum['mock_label'] = \
-        'FakeMachineChecksumabc987'
+    self.results_cache.machine_manager.machine_checksum['mock_label'] = (
+        'FakeMachineChecksumabc987')
     # Based on the label, benchmark and machines, get the directory in which
     # to store the cache information for this test run.
     result_path = self.results_cache.GetCacheDirForWrite()
@@ -1987,8 +1982,8 @@ class ResultsCacheTest(unittest.TestCase):
 
     mock_checksum.return_value = 'FakeImageChecksumabc123'
     self.results_cache.machine_manager.GetMachines = FakeGetMachines
-    self.results_cache.machine_manager.machine_checksum['mock_label'] = \
-        'FakeMachineChecksumabc987'
+    self.results_cache.machine_manager.machine_checksum['mock_label'] = (
+        'FakeMachineChecksumabc987')
 
     # Test 1. Generating cache name for reading (not writing).
     key_list = self.results_cache.GetCacheKeyList(True)

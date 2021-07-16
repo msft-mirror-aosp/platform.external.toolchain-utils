@@ -351,11 +351,11 @@ class Result(object):
     result = self.FindFilesInResultsDir('-name perf_measurements').splitlines()
     if not result:
       if self.suite == 'telemetry_Crosperf':
-        result = \
-            self.FindFilesInResultsDir('-name histograms.json').splitlines()
+        result = (
+            self.FindFilesInResultsDir('-name histograms.json').splitlines())
       else:
-        result = \
-            self.FindFilesInResultsDir('-name results-chart.json').splitlines()
+        result = (
+            self.FindFilesInResultsDir('-name results-chart.json').splitlines())
     return result
 
   def GetTurbostatFile(self):
@@ -413,7 +413,8 @@ class Result(object):
 
       if debug_path:
         symfs = '--symfs ' + debug_path
-        vmlinux = '--vmlinux ' + os.path.join(debug_path, 'boot', 'vmlinux')
+        vmlinux = '--vmlinux ' + os.path.join(debug_path, 'usr', 'lib', 'debug',
+                                              'boot', 'vmlinux')
         kallsyms = ''
         print('** WARNING **: --kallsyms option not applied, no System.map-* '
               'for downloaded image.')
@@ -1204,8 +1205,8 @@ class TelemetryResult(Result):
       self.err = pickle.load(f)
       self.retval = pickle.load(f)
 
-    self.chrome_version = \
-        super(TelemetryResult, self).GetChromeVersionFromCache(cache_dir)
+    self.chrome_version = (
+        super(TelemetryResult, self).GetChromeVersionFromCache(cache_dir))
     self.ProcessResults()
 
 
