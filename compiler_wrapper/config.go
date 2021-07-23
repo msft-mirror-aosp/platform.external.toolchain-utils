@@ -26,7 +26,8 @@ type config struct {
 	// by the user).
 	clangPostFlags []string
 	// Toolchain root path relative to the wrapper binary.
-	rootRelPath string
+	clangRootRelPath string
+	gccRootRelPath   string
 	// Directory to store errors that were prevented with -Wno-error.
 	newWarningsDir string
 	// Directory to store nits in when using `WITH_TIDY=tricium`.
@@ -105,7 +106,8 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, version stri
 // Full hardening.
 // Temporarily disable function splitting because of chromium:434751.
 var crosHardenedConfig = &config{
-	rootRelPath: "../../../../..",
+	clangRootRelPath: "../..",
+	gccRootRelPath:   "../../../../..",
 	// Pass "-fcommon" till the packages are fixed to work with new clang/gcc
 	// default of "-fno-common", crbug.com/1060413.
 	commonFlags: []string{
@@ -161,8 +163,9 @@ var crosHardenedConfig = &config{
 
 // Flags to be added to non-hardened toolchain.
 var crosNonHardenedConfig = &config{
-	rootRelPath: "../../../../..",
-	commonFlags: []string{},
+	clangRootRelPath: "../..",
+	gccRootRelPath:   "../../../../..",
+	commonFlags:      []string{},
 	gccFlags: []string{
 		"-Wno-maybe-uninitialized",
 		"-Wno-unused-local-typedefs",
@@ -202,8 +205,9 @@ var crosNonHardenedConfig = &config{
 
 // Flags to be added to host toolchain.
 var crosHostConfig = &config{
-	isHostWrapper: true,
-	rootRelPath:   "../..",
+	isHostWrapper:    true,
+	clangRootRelPath: "../..",
+	gccRootRelPath:   "../..",
 	// Pass "-fcommon" till the packages are fixed to work with new clang/gcc
 	// default of "-fno-common", crbug.com/1060413.
 	commonFlags: []string{
@@ -250,7 +254,8 @@ var crosHostConfig = &config{
 var androidConfig = &config{
 	isHostWrapper:     false,
 	isAndroidWrapper:  true,
-	rootRelPath:       "./",
+	gccRootRelPath:    "./",
+	clangRootRelPath:  "./",
 	commonFlags:       []string{},
 	gccFlags:          []string{},
 	clangFlags:        []string{},

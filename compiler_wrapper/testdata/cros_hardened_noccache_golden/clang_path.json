@@ -491,9 +491,9 @@
     "cmds": [
       {
         "cmd": {
-          "path": "a/b/usr/bin/clang",
+          "path": "a/b/c/d/e/usr/bin/clang",
           "args": [
-            "--sysroot=/tmp/stable/a/b/usr/x86_64-cros-linux-gnu",
+            "--sysroot=/tmp/stable/a/b/c/d/e/usr/x86_64-cros-linux-gnu",
             "-Qunused-arguments",
             "-fno-addrsig",
             "-fdebug-default-version=5",
@@ -516,14 +516,14 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
-            "--prefix=a/b/bin/x86_64-cros-linux-gnu-",
+            "--prefix=a/b/c/d/e/bin/x86_64-cros-linux-gnu-",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
             "-Wno-deprecated-copy",
             "-mno-movbe",
-            "-Ba/b/bin",
+            "-Ba/b/c/d/e/bin",
             "-target",
             "x86_64-cros-linux-gnu"
           ]
@@ -544,9 +544,9 @@
     "cmds": [
       {
         "cmd": {
-          "path": "a/b/usr/bin/clang",
+          "path": "a/b/c/d/e/usr/bin/clang",
           "args": [
-            "--sysroot=/tmp/stable/a/b/usr/x86_64-cros-linux-gnu",
+            "--sysroot=/tmp/stable/a/b/c/d/e/usr/x86_64-cros-linux-gnu",
             "-Qunused-arguments",
             "-fno-addrsig",
             "-fdebug-default-version=5",
@@ -569,14 +569,14 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
-            "--prefix=a/b/bin/x86_64-cros-linux-gnu-",
+            "--prefix=a/b/c/d/e/bin/x86_64-cros-linux-gnu-",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
             "-Wno-deprecated-copy",
             "-mno-movbe",
-            "-Ba/b/bin",
+            "-Ba/b/c/d/e/bin",
             "-target",
             "x86_64-cros-linux-gnu"
           ]
@@ -597,9 +597,9 @@
     "cmds": [
       {
         "cmd": {
-          "path": "../../usr/bin/clang",
+          "path": "../usr/bin/clang",
           "args": [
-            "--sysroot=/usr/x86_64-cros-linux-gnu",
+            "--sysroot=/tmp/usr/x86_64-cros-linux-gnu",
             "-Qunused-arguments",
             "-fno-addrsig",
             "-fdebug-default-version=5",
@@ -622,14 +622,14 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
-            "--prefix=../../bin/x86_64-cros-linux-gnu-",
+            "--prefix=../bin/x86_64-cros-linux-gnu-",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
             "-Wno-deprecated-copy",
             "-mno-movbe",
-            "-B../../bin",
+            "-B../bin",
             "-target",
             "x86_64-cros-linux-gnu"
           ]
@@ -653,9 +653,9 @@
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/clang",
+          "path": "/tmp/usr/bin/clang",
           "args": [
-            "--sysroot=/usr/x86_64-cros-linux-gnu",
+            "--sysroot=/tmp/usr/x86_64-cros-linux-gnu",
             "-Qunused-arguments",
             "-fno-addrsig",
             "-fdebug-default-version=5",
@@ -678,14 +678,14 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
-            "--prefix=../../bin/x86_64-cros-linux-gnu-",
+            "--prefix=../bin/x86_64-cros-linux-gnu-",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
             "-Wno-deprecated-copy",
             "-mno-movbe",
-            "-B../../bin",
+            "-B../bin",
             "-target",
             "x86_64-cros-linux-gnu"
           ]

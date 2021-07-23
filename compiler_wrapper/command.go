@@ -134,7 +134,12 @@ func newCommandBuilder(env env, cfg *config, cmd *command) (*commandBuilder, err
 	if err != nil {
 		return nil, err
 	}
-	rootPath := filepath.Join(filepath.Dir(absWrapperPath), cfg.rootRelPath)
+	var rootPath string
+	if compilerType == gccType {
+		rootPath = filepath.Join(filepath.Dir(absWrapperPath), cfg.gccRootRelPath)
+	} else {
+		rootPath = filepath.Join(filepath.Dir(absWrapperPath), cfg.clangRootRelPath)
+	}
 	return &commandBuilder{
 		path:           cmd.Path,
 		args:           createBuilderArgs( /*fromUser=*/ true, cmd.Args),
