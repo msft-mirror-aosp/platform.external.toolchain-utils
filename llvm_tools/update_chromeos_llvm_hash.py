@@ -483,11 +483,6 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
   # Determines whether to print the result of each executed command.
   llvm_patch_management.verbose = verbose
 
-  # Unconditionally update sys-devel/gcc
-  sys_devel_gcc = 'sys-devel/gcc'
-  if sys_devel_gcc not in packages:
-    packages.append(sys_devel_gcc)
-
   # Construct a dictionary where the key is the absolute path of the symlink to
   # the package and the value is the absolute path to the ebuild of the package.
   paths_dict = CreatePathDictionaryFromPackages(chroot_path, packages)
