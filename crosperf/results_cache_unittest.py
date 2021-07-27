@@ -9,6 +9,7 @@
 
 from __future__ import print_function
 
+import io
 import os
 import shutil
 import tempfile
@@ -768,15 +769,26 @@ class ResultTest(unittest.TestCase):
   @mock.patch.object(misc, 'GetInsideChrootPath')
   @mock.patch.object(command_executer.CommandExecuter,
                      'ChrootRunCommandWOutput')
-  def test_get_samples(self, mock_chrootruncmd, mock_getpath):
-    fake_file = '/usr/chromeos/chroot/tmp/results/fake_file'
+  @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommand')
+  def test_get_samples(self, mock_get_idle_samples, mock_get_total_samples,
+                       mock_getpath):
     self.result.perf_data_files = ['/tmp/results/perf.data']
     self.result.board = 'samus'
-    mock_getpath.return_value = fake_file
-    self.result.ce.ChrootRunCommandWOutput = mock_chrootruncmd
-    mock_chrootruncmd.return_value = ['', '45.42%        237210  chrome ', '']
-    samples = self.result.GetSamples()
-    self.assertEqual(samples, [237210, u'samples'])
+    mock_getpath.return_value = '/usr/chromeos/chroot/tmp/results/perf.data'
+    mock_get_total_samples.return_value = [
+        '', '45.42%        237210  chrome ', ''
+    ]
+    mock_get_idle_samples.return_value = 0
+
+    # mock_open does not seem to support iteration.
+    # pylint: disable=line-too-long
+    content = """1.63%            66  dav1d-tile       chrome                [.] decode_coefs
+    1.48%            60  swapper          [kernel.kallsyms]     [k] intel_idle
+    1.16%            47  dav1d-tile       chrome                [.] decode_sb"""
+
+    with mock.patch('builtins.open', return_value=io.StringIO(content)):
+      samples = self.result.GetSamples()
+    self.assertEqual(samples, [237210 - 60, u'samples'])
 
   def test_get_results_dir(self):
 
