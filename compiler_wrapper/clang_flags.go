@@ -63,11 +63,8 @@ func processClangFlags(builder *commandBuilder) error {
 
 	// Clang may use different options for the same or similar functionality.
 	gccToClang := map[string]string{
-		"-Wno-error=cpp":                     "-Wno-#warnings",
-		"-Wno-error=maybe-uninitialized":     "-Wno-error=uninitialized",
-		"-Wno-error=unused-but-set-variable": "-Wno-error=unused-variable",
-		"-Wno-unused-but-set-variable":       "-Wno-unused-variable",
-		"-Wunused-but-set-variable":          "-Wunused-variable",
+		"-Wno-error=cpp":                 "-Wno-#warnings",
+		"-Wno-error=maybe-uninitialized": "-Wno-error=uninitialized",
 	}
 
 	// Note: not using builder.transformArgs as we need to add multiple arguments

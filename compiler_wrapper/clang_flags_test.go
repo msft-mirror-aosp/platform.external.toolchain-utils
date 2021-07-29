@@ -183,10 +183,7 @@ func TestConvertGccToClangFlags(t *testing.T) {
 			in  string
 			out string
 		}{
-			{"-Wno-error=unused-but-set-variable", "-Wno-error=unused-variable"},
 			{"-Wno-error=maybe-uninitialized", "-Wno-error=uninitialized"},
-			{"-Wno-unused-but-set-variable", "-Wno-unused-variable"},
-			{"-Wunused-but-set-variable", "-Wunused-variable"},
 			{"-Wno-error=cpp", "-Wno-#warnings"},
 			{"-Xclang-only=-abc=xyz", "-abc=xyz"},
 		}

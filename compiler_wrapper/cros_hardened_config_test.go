@@ -538,18 +538,6 @@ func createClangArgsGoldenInputs() goldenFile {
 				Cmds:       okResults,
 			},
 			{
-				WrapperCmd: newGoldenCmd(clangX86_64, "-Wno-error=unused-but-set-variable", mainCc),
-				Cmds:       okResults,
-			},
-			{
-				WrapperCmd: newGoldenCmd(clangX86_64, "-Wno-unused-but-set-variable", mainCc),
-				Cmds:       okResults,
-			},
-			{
-				WrapperCmd: newGoldenCmd(clangX86_64, "-Wunused-but-set-variable", mainCc),
-				Cmds:       okResults,
-			},
-			{
 				WrapperCmd: newGoldenCmd(clangX86_64, "-Xclang-only=-someflag", mainCc),
 				Cmds:       okResults,
 			},
