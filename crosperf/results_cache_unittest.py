@@ -769,16 +769,15 @@ class ResultTest(unittest.TestCase):
   @mock.patch.object(misc, 'GetInsideChrootPath')
   @mock.patch.object(command_executer.CommandExecuter,
                      'ChrootRunCommandWOutput')
-  @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommand')
-  def test_get_samples(self, mock_get_idle_samples, mock_get_total_samples,
-                       mock_getpath):
+  @mock.patch.object(os.path, 'exists')
+  def test_get_samples(self, mock_exists, mock_get_total_samples, mock_getpath):
     self.result.perf_data_files = ['/tmp/results/perf.data']
     self.result.board = 'samus'
     mock_getpath.return_value = '/usr/chromeos/chroot/tmp/results/perf.data'
     mock_get_total_samples.return_value = [
         '', '45.42%        237210  chrome ', ''
     ]
-    mock_get_idle_samples.return_value = 0
+    mock_exists.return_value = True
 
     # mock_open does not seem to support iteration.
     # pylint: disable=line-too-long

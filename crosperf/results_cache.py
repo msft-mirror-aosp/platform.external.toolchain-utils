@@ -277,12 +277,6 @@ class Result(object):
     for perf_data_file in self.perf_data_files:
       chroot_perf_data_file = misc.GetInsideChrootPath(self.chromeos_root,
                                                        perf_data_file)
-      perf_report_file = '%s.report' % perf_data_file
-      if os.path.exists(perf_report_file):
-        raise RuntimeError('Perf report file already exists: %s' %
-                           perf_report_file)
-      chroot_perf_report_file = misc.GetInsideChrootPath(
-          self.chromeos_root, perf_report_file)
       perf_path = os.path.join(self.chromeos_root, 'chroot', 'usr/bin/perf')
       perf_file = '/usr/sbin/perf'
       if os.path.exists(perf_path):
@@ -322,38 +316,9 @@ class Result(object):
       actual_samples += samples
 
       # Remove idle cycles from the accumulated sample count.
-      debug_path = self.label.debug_path
-
-      if debug_path:
-        symfs = '--symfs ' + debug_path
-        vmlinux = '--vmlinux ' + os.path.join(debug_path, 'usr', 'lib', 'debug',
-                                              'boot', 'vmlinux')
-        kallsyms = ''
-        print('** WARNING **: --kallsyms option not applied, no System.map-* '
-              'for downloaded image.')
-      else:
-        if self.label.image_type != 'local':
-          print('** WARNING **: Using local debug info in /build, this may '
-                'not match the downloaded image.')
-        build_path = os.path.join('/build', self.board)
-        symfs = self._CheckDebugPath('symfs', build_path)
-        vmlinux_path = os.path.join(build_path, 'usr/lib/debug/boot/vmlinux')
-        vmlinux = self._CheckDebugPath('vmlinux', vmlinux_path)
-        kallsyms_path = os.path.join(build_path, 'boot')
-        kallsyms = self._CheckDebugPath('kallsyms', kallsyms_path)
-
-      command = ('%s report -n %s %s %s -i %s --stdio --quiet > %s' %
-                 (perf_file, symfs, vmlinux, kallsyms, chroot_perf_data_file,
-                  chroot_perf_report_file))
-      if self.log_level != 'verbose':
-        self._logger.LogOutput('Generating perf report...\nCMD: %s' % command)
-      exit_code = self.ce.ChrootRunCommand(self.chromeos_root, command)
-      if exit_code == 0:
-        if self.log_level != 'verbose':
-          self._logger.LogOutput('Perf report generated successfully.')
-      else:
-        raise RuntimeError('Perf report not generated correctly. CMD: %s' %
-                           command)
+      perf_report_file = f'{perf_data_file}.report'
+      if not os.path.exists(perf_report_file):
+        raise RuntimeError(f'Missing perf report file: {perf_report_file}')
 
       idle_functions = {
           '[kernel.kallsyms]':
@@ -362,15 +327,21 @@ class Result(object):
       }
       idle_samples = 0
 
-      with open(chroot_perf_report_file) as f:
+      with open(perf_report_file) as f:
         try:
           for line in f:
+            line = line.strip()
+            if not line or line[0] == '#':
+              continue
             # Each line has the following fields,
             # pylint: disable=line-too-long
             # Overhead       Samples  Command          Shared Object         Symbol
             # pylint: disable=line-too-long
             # 1.48%          60       swapper          [kernel.kallsyms]     [k] intel_idle
-            (_, samples, _, dso, _, function) = line.strip().split()
+            # pylint: disable=line-too-long
+            # 0.00%          1        shill            libshill-net.so       [.] std::__1::vector<unsigned char, std::__1::allocator<unsigned char> >::vector<unsigned char const*>
+            _, samples, _, dso, _, function = line.split(None, 5)
+
             if dso in idle_functions and function in idle_functions[dso]:
               if self.log_level != 'verbose':
                 self._logger.LogOutput('Removing %s samples from %s in %s' %
