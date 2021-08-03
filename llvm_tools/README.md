@@ -495,6 +495,10 @@ more information, please see the `--help`
 
 ### `revert_checker.py`
 
+**This script is copied from upstream LLVM. Please prefer to make upstream edits,
+rather than modifying this script. It's kept in a CrOS repo so we don't need an
+LLVM tree to `import` this from scripts here.**
+
 This script reports reverts which happen 'across' a certain LLVM commit.
 
 To clarify the meaning of 'across' with an example, if we had the following
