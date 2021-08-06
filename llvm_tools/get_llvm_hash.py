@@ -190,8 +190,9 @@ def GetAndUpdateLLVMProjectInLLVMTools():
 
   if not os.path.isdir(abs_path_to_llvm_project_dir):
     print(
-        'Checking out LLVM from scratch. This could take a while...\n'
-        '(This should only need to be done once, though.)',
+        (f'Checking out LLVM to {abs_path_to_llvm_project_dir}\n'
+         'so that we can map between commit hashes and revision numbers.\n'
+         'This may take a while, but only has to be done once.'),
         file=sys.stderr)
     os.mkdir(abs_path_to_llvm_project_dir)
 
