@@ -311,16 +311,19 @@ class UpdateLLVMHashTest(unittest.TestCase):
     self.assertEqual(mock_command_output.call_args_list[3],
                      mock.call(expected_cmd))
 
+  @mock.patch.object(get_llvm_hash, 'GetLLVMMajorVersion')
   @mock.patch.object(os.path, 'islink', return_value=True)
   @mock.patch.object(os.path, 'realpath')
   @mock.patch.object(subprocess, 'check_output', return_value=None)
   def testSuccessfullyUprevEbuildToVersionNonLLVM(self, mock_command_output,
-                                                  mock_realpath, mock_islink):
-    symlink = '/path/to/compiler-rt/compiler-rt_pre3_p2-r10.ebuild'
-    ebuild = '/abs/path/to/compiler-rt/compiler-rt_pre3_p2.ebuild'
+                                                  mock_realpath, mock_islink,
+                                                  mock_llvm_version):
+    symlink = '/abs/path/to/compiler-rt/compiler-rt-12.0_pre314159265-r4.ebuild'
+    ebuild = '/abs/path/to/compiler-rt/compiler-rt-12.0_pre314159265.ebuild'
     mock_realpath.return_value = ebuild
+    mock_llvm_version.return_value = '1234'
     svn_version = 1000
-    git_hash = '1234'
+    git_hash = '5678'
 
     update_chromeos_llvm_hash.UprevEbuildToVersion(symlink, svn_version,
                                                    git_hash)
@@ -329,12 +332,13 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     mock_realpath.assert_called_once_with(symlink)
 
+    mock_llvm_version.assert_called_once_with(git_hash)
+
     mock_command_output.assert_called()
 
     # Verify commands
     symlink_dir = os.path.dirname(symlink)
-    new_ebuild, _ = re.subn(
-        r'pre([0-9]+)', 'pre%s' % svn_version, ebuild, count=1)
+    new_ebuild = '/abs/path/to/compiler-rt/compiler-rt-1234.0_pre1000.ebuild'
     new_symlink = new_ebuild[:-len('.ebuild')] + '-r1.ebuild'
 
     expected_cmd = ['git', '-C', symlink_dir, 'mv', ebuild, new_ebuild]

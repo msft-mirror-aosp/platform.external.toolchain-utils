@@ -300,13 +300,12 @@ def UprevEbuildToVersion(symlink, svn_version, git_hash):
     raise ValueError('Invalid symlink provided: %s' % symlink)
 
   ebuild = os.path.realpath(symlink)
+  llvm_major_version = get_llvm_hash.GetLLVMMajorVersion(git_hash)
   # llvm
   package = os.path.basename(os.path.dirname(symlink))
   if not package:
     raise ValueError('Tried to uprev an unknown package')
-  # llvm
   if package == 'llvm':
-    llvm_major_version = get_llvm_hash.GetLLVMMajorVersion(git_hash)
     new_ebuild, is_changed = re.subn(
         r'(\d+)\.(\d+)_pre([0-9]+)_p([0-9]+)',
         '%s.\\2_pre%s_p%s' % (llvm_major_version, svn_version,
@@ -316,7 +315,8 @@ def UprevEbuildToVersion(symlink, svn_version, git_hash):
   # any other package
   else:
     new_ebuild, is_changed = re.subn(
-        r'pre([0-9]+)', 'pre%s' % svn_version, ebuild, count=1)
+        r'(\d+)\.(\d+)_pre([0-9]+)',
+        '%s.\\2_pre%s' % (llvm_major_version, svn_version), ebuild, count=1)
 
   if not is_changed:  # failed to increment the revision number
     raise ValueError('Failed to uprev the ebuild.')
