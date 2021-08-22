@@ -517,7 +517,7 @@ func createClangArgsGoldenInputs() goldenFile {
 		Name: "clang_specific_args.json",
 		Records: []goldenRecord{
 			{
-				WrapperCmd: newGoldenCmd(clangX86_64, "-mno-movbe", "-pass-exit-codes", "-Wclobbered", "-Wno-psabi", "-Wlogical-op",
+				WrapperCmd: newGoldenCmd(clangX86_64, "-mno-movbe", "-Wclobbered", "-Wno-psabi", "-Wlogical-op",
 					"-Wmissing-parameter-type", "-Wold-style-declaration", "-Woverride-init", "-Wunsafe-loop-optimizations",
 					"-Wstrict-aliasing=abc", "-finline-limit=abc", mainCc),
 				Cmds: okResults,
