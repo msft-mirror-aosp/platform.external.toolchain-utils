@@ -25,7 +25,7 @@ def parse_args():
 def copy_files(input_dir, output_dir):
   for filename in os.listdir(input_dir):
     if ((filename.endswith('.go') and not filename.endswith('_test.go')) or
-        filename == 'build.py'):
+        filename in ('build.py', 'go.mod')):
       shutil.copy(
           os.path.join(input_dir, filename), os.path.join(output_dir, filename))
 
