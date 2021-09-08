@@ -14,7 +14,7 @@ package main
 
 // TODO: Enable test in config_test.go, once we have new llvm-next flags.
 var llvmNextFlags = []string{
-	"-Wl,-z,nostart-stop-gc",
+	"-Wno-unused-but-set-variable",
 }
 
 var llvmNextPostFlags = []string{}
