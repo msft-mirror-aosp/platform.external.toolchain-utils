@@ -49,7 +49,7 @@ func TestRealConfigWithUseLLvmFlag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if isUsingLLvmNext(cfg) {
+	if cfg.useLlvmNext {
 		t.Fatal("UseLLvmNext: Expected not to be used")
 	}
 
@@ -59,7 +59,7 @@ func TestRealConfigWithUseLLvmFlag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !isUsingLLvmNext(cfg) {
+	if !cfg.useLlvmNext {
 		t.Fatal("UseLLvmNext: Expected to be used")
 	}
 
@@ -120,15 +120,6 @@ func TestRealConfigWithConfigNameFlag(t *testing.T) {
 func isSysrootHardened(cfg *config) bool {
 	for _, arg := range cfg.commonFlags {
 		if arg == "-pie" {
-			return true
-		}
-	}
-	return false
-}
-
-func isUsingLLvmNext(cfg *config) bool {
-	for _, arg := range cfg.clangFlags {
-		if arg == "-Wl,-z,nostart-stop-gc" {
 			return true
 		}
 	}
