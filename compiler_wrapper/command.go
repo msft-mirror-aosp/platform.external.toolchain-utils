@@ -5,12 +5,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type command struct {
@@ -61,6 +63,26 @@ func runCmd(env env, cmd *command, stdin io.Reader, stdout io.Writer, stderr io.
 	execCmd.Stdout = stdout
 	execCmd.Stderr = stderr
 	return execCmd.Run()
+}
+
+func runCmdWithTimeout(env env, cmd *command, t time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), t)
+	defer cancel()
+	cmdCtx := exec.CommandContext(ctx, cmd.Path, cmd.Args...)
+	cmdCtx.Env = mergeEnvValues(env.environ(), cmd.EnvUpdates)
+	cmdCtx.Dir = env.getwd()
+	cmdCtx.Stdin = env.stdin()
+	cmdCtx.Stdout = env.stdout()
+	cmdCtx.Stderr = env.stderr()
+
+	if err := cmdCtx.Start(); err != nil {
+		return newErrorwithSourceLocf("exec error: %v", err)
+	}
+	err := cmdCtx.Wait()
+	if ctx.Err() == nil {
+		return err
+	}
+	return ctx.Err()
 }
 
 func resolveAgainstPathEnv(env env, cmd string) (string, error) {

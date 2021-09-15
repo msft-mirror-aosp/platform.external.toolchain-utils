@@ -17,6 +17,7 @@ import (
 	"sync"
 	"syscall"
 	"testing"
+	"time"
 )
 
 const (
@@ -158,6 +159,10 @@ func (ctx *testContext) run(cmd *command, stdin io.Reader, stdout io.Writer, std
 		return ctx.cmdMock(cmd, stdin, stdout, stderr)
 	}
 	return nil
+}
+
+func (ctx *testContext) runWithTimeout(cmd *command, duration time.Duration) error {
+	return ctx.exec(cmd)
 }
 
 func (ctx *testContext) exec(cmd *command) error {

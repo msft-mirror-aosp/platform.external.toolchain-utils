@@ -6,11 +6,14 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 )
 
 func callCompiler(env env, cfg *config, inputCmd *command) int {
@@ -60,6 +63,39 @@ func calculateAndroidWrapperPath(mainBuilderPath string, absWrapperPath string) 
 	}
 
 	return "." + string(filepath.Separator) + basePart
+}
+
+func runAndroidClangTidy(env env, cmd *command) error {
+	timeout, found := env.getenv("TIDY_TIMEOUT")
+	if !found {
+		return env.exec(cmd)
+	}
+	seconds, err := strconv.Atoi(timeout)
+	if err != nil || seconds == 0 {
+		return env.exec(cmd)
+	}
+	err = env.runWithTimeout(cmd, time.Duration(seconds)*time.Second)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		return err
+	}
+	// When DeadllineExceeded, print warning messages.
+	// Note: This depends on Android build system's clang-tidy command line format.
+	// Last non-flag before "--" in cmd.Args is used as the source file name.
+	sourceFile := "unknown_file"
+	for _, arg := range cmd.Args {
+		if arg == "--" {
+			break
+		}
+		if strings.HasPrefix(arg, "-") {
+			continue
+		}
+		sourceFile = arg
+	}
+	warning := "%s:1:1: warning: clang-tidy aborted after %d seconds.\n"
+	fmt.Fprintf(env.stdout(), warning, sourceFile, seconds)
+	fmt.Fprintf(env.stdout(), "TIMEOUT: %s %s\n", cmd.Path, strings.Join(cmd.Args, " "))
+	// Do not stop Android build. Just give a warning and return no error.
+	return nil
 }
 
 func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
@@ -192,6 +228,9 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			var err error
 			if willLogRusage {
 				err = env.run(compilerCmd, env.stdin(), env.stdout(), env.stderr())
+			} else if cfg.isAndroidWrapper && mainBuilder.target.compilerType == clangTidyType {
+				// Only clang-tidy has timeout feature now.
+				err = runAndroidClangTidy(env, compilerCmd)
 			} else {
 				// Note: We return from this in non-fatal circumstances only if the
 				// underlying env is not really doing an exec, e.g. commandRecordingEnv.
