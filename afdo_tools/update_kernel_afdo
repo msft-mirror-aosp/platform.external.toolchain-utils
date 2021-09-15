@@ -25,7 +25,7 @@ set -eu
 set -o pipefail
 
 GS_BASE=gs://chromeos-prebuilt/afdo-job/vetted/kernel
-KVERS="3.18 4.4 4.14 4.19 5.4"
+KVERS="4.4 4.14 4.19 5.4"
 failed_channels=""
 
 script_dir=$(dirname "$0")
@@ -180,7 +180,6 @@ EOT
     canary )
       commit_contents="afdo_metadata: Publish the new kernel profiles
 
-Update chromeos-kernel-3_18
 Update chromeos-kernel-4_4
 Update chromeos-kernel-4_14
 Update chromeos-kernel-4_19
