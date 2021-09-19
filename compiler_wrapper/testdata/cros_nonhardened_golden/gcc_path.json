@@ -20,6 +20,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ],
@@ -55,6 +56,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ],
@@ -90,6 +92,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ],
@@ -122,6 +125,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ],
@@ -154,6 +158,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ],
@@ -189,6 +194,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ],
