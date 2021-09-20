@@ -36,13 +36,8 @@ outfile="$(realpath --relative-to="${tc_utils_dir}" \
 # Convert toolchain_utils into the absolute path.
 abs_tc_utils_dir="$(realpath ${tc_utils_dir})"
 
-# The most recent Monday, in Unix timestamp format.
-if [ $(date +%a) = "Mon" ]
-then
-  expected_time=$(date +%s -d 00:00:00)
-else
-  expected_time=$(date +%s -d "last Monday")
-fi
+# Check profiles uploaded within the last week.
+expected_time=$(date +%s -d "week ago")
 
 declare -A branch branch_number commit
 remote_repo=$(git -C "${tc_utils_dir}" remote)
