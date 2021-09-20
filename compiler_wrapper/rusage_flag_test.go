@@ -159,6 +159,8 @@ func TestLogRusageAppendsToFile(t *testing.T) {
 
 func withLogRusageTestContext(t *testing.T, work func(ctx *testContext)) {
 	withTestContext(t, func(ctx *testContext) {
+		ctx.NoteTestWritesToUmask()
+
 		ctx.env = []string{"TOOLCHAIN_RUSAGE_OUTPUT=" + filepath.Join(ctx.tempDir, "rusage.log")}
 		work(ctx)
 	})
