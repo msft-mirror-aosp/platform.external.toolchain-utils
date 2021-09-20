@@ -4,8 +4,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# pylint: disable=cros-logging-import
-
 """Get an upstream patch to LLVM's PATCHES.json."""
 
 from __future__ import print_function
@@ -101,6 +99,7 @@ def add_patch(patches_json_path: str, patches_dir: str,
   temp_file = patches_json_path + '.tmp'
   with open(temp_file, 'w', encoding='utf-8') as f:
     json.dump(patches_json, f, indent=4, separators=(',', ': '))
+    f.write('\n')
   os.rename(temp_file, patches_json_path)
 
 

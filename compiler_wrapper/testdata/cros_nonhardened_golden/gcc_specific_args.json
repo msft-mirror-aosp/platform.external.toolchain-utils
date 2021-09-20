@@ -21,6 +21,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
+            "-static-libgcc",
             "-march=goldmont",
             "main.cc",
             "-mno-movbe"
@@ -55,6 +56,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
+            "-static-libgcc",
             "-march=goldmont-plus",
             "main.cc",
             "-mno-movbe"
@@ -89,6 +91,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
+            "-static-libgcc",
             "-march=skylake",
             "main.cc",
             "-mno-movbe"

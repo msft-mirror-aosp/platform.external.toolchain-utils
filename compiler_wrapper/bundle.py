@@ -18,7 +18,18 @@ import sys
 
 def parse_args():
   parser = argparse.ArgumentParser()
-  parser.add_argument('output_dir')
+  default_output_dir = os.path.normpath(
+      os.path.join(
+          os.path.dirname(os.path.realpath(__file__)),
+          '../../chromiumos-overlay/sys-devel/llvm/files/compiler_wrapper'))
+  parser.add_argument(
+      '--output_dir',
+      default=default_output_dir,
+      help='Output directory to place bundled files (default: %(default)s)')
+  parser.add_argument(
+      '--create',
+      action='store_true',
+      help='Create output_dir if it does not already exist')
   return parser.parse_args()
 
 
@@ -57,6 +68,10 @@ def main():
   args = parse_args()
   input_dir = os.path.dirname(__file__)
   change_id = read_change_id(input_dir)
+  if not args.create:
+    assert os.path.exists(
+        args.output_dir
+    ), f'Specified output directory ({args.output_dir}) does not exist'
   shutil.rmtree(args.output_dir, ignore_errors=True)
   os.makedirs(args.output_dir)
   copy_files(input_dir, args.output_dir)

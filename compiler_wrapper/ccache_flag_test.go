@@ -164,6 +164,8 @@ func withCCacheEnabledTestContext(t *testing.T, work func(ctx *testContext)) {
 
 func TestRusagePreventsCCache(t *testing.T) {
 	withCCacheEnabledTestContext(t, func(ctx *testContext) {
+		ctx.NoteTestWritesToUmask()
+
 		ctx.env = append(ctx.env, "TOOLCHAIN_RUSAGE_OUTPUT="+filepath.Join(ctx.tempDir, "rusage.log"))
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, mainCc)))
