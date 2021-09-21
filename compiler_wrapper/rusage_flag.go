@@ -101,8 +101,8 @@ func maybeCaptureRusage(env env, compilerCmd *command, action func(willLogRusage
 
 		// We need to temporarily set umask to 0 to ensure 777 permissions are actually 777
 		// This effects builderbots in particular
-		oldMask := syscall.Umask(0)
-		defer syscall.Umask(oldMask)
+		oldMask := env.umask(0)
+		defer env.umask(oldMask)
 
 		// We want to know what package is being compiled. The working directory gives us a good clue.
 		cwd, err := os.Getwd()

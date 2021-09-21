@@ -33,8 +33,6 @@ the CL to chromium code review.
 See `--help` for all available options.
 """
 
-# pylint: disable=cros-logging-import
-
 import argparse
 import pathlib
 import json
@@ -53,8 +51,8 @@ RUST_PATH = Path(
 
 
 def get_command_output(command: List[str], *args, **kwargs) -> str:
-  return subprocess.check_output(
-      command, encoding='utf-8', *args, **kwargs).strip()
+  return subprocess.check_output(command, encoding='utf-8', *args,
+                                 **kwargs).strip()
 
 
 class RustVersion(NamedTuple):
@@ -76,8 +74,8 @@ class RustVersion(NamedTuple):
                           r'\.ebuild$')
     m = input_re.match(ebuild_name)
     assert m, f'failed to parse {ebuild_name!r}'
-    return RustVersion(
-        int(m.group('major')), int(m.group('minor')), int(m.group('patch')))
+    return RustVersion(int(m.group('major')), int(m.group('minor')),
+                       int(m.group('patch')))
 
   @staticmethod
   def parse(x: str) -> 'RustVersion':
@@ -88,8 +86,8 @@ class RustVersion(NamedTuple):
                           r'(?:.ebuild)?$')
     m = input_re.match(x)
     assert m, f'failed to parse {x!r}'
-    return RustVersion(
-        int(m.group('major')), int(m.group('minor')), int(m.group('patch')))
+    return RustVersion(int(m.group('major')), int(m.group('minor')),
+                       int(m.group('patch')))
 
 
 def find_ebuild_path(directory: Path,
@@ -103,9 +101,9 @@ def find_ebuild_path(directory: Path,
   1.3.4 can match rust-1.3.4.ebuild but also rust-1.3.4-r6.ebuild.
   """
   if version:
-    pattern = '%s-%s*.ebuild' % (name, version)
+    pattern = f'{name}-{version}*.ebuild'
   else:
-    pattern = '%s-*.ebuild' % (name,)
+    pattern = f'{name}-*.ebuild'
   matches = list(Path(directory).glob(pattern))
   assert len(matches) == 1, matches
   return matches[0]
@@ -121,7 +119,8 @@ def get_rust_bootstrap_version():
 
 def parse_commandline_args() -> argparse.Namespace:
   parser = argparse.ArgumentParser(
-      description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+      description=__doc__,
+      formatter_class=argparse.RawDescriptionHelpFormatter)
   parser.add_argument(
       '--state_file',
       required=True,
@@ -251,7 +250,7 @@ def parse_commandline_args() -> argparse.Namespace:
 
 
 def prepare_uprev(rust_version: RustVersion, template: Optional[RustVersion]
-                 ) -> Optional[Tuple[RustVersion, str, RustVersion]]:
+                  ) -> Optional[Tuple[RustVersion, str, RustVersion]]:
   if template is None:
     ebuild_path = get_command_output(['equery', 'w', 'rust'])
     ebuild_name = os.path.basename(ebuild_path)
@@ -309,22 +308,22 @@ def update_bootstrap_ebuild(new_bootstrap_version: RustVersion) -> None:
   new_ebuild = old_ebuild.parent.joinpath(
       f'rust-bootstrap-{new_bootstrap_version}.ebuild')
   old_text = old_ebuild.read_text(encoding='utf-8')
-  new_text, changes = re.subn(
-      r'(RUSTC_FULL_BOOTSTRAP_SEQUENCE=\([^)]*)',
-      f'\\1\t{old_version}\n',
-      old_text,
-      flags=re.MULTILINE)
-  assert changes == 1, 'Failed to update RUSTC_FULL_BOOTSTRAP_SEQUENCE'
+  new_text, changes = re.subn(r'(RUSTC_RAW_FULL_BOOTSTRAP_SEQUENCE=\([^)]*)',
+                              f'\\1\t{old_version}\n',
+                              old_text,
+                              flags=re.MULTILINE)
+  assert changes == 1, 'Failed to update RUSTC_RAW_FULL_BOOTSTRAP_SEQUENCE'
   new_ebuild.write_text(new_text, encoding='utf-8')
 
 
-def update_ebuild(ebuild_file: str, new_bootstrap_version: RustVersion) -> None:
+def update_ebuild(ebuild_file: str,
+                  new_bootstrap_version: RustVersion) -> None:
   contents = open(ebuild_file, encoding='utf-8').read()
-  contents, subs = re.subn(
-      r'^BOOTSTRAP_VERSION=.*$',
-      'BOOTSTRAP_VERSION="%s"' % (new_bootstrap_version,),
-      contents,
-      flags=re.MULTILINE)
+  contents, subs = re.subn(r'^BOOTSTRAP_VERSION=.*$',
+                           'BOOTSTRAP_VERSION="%s"' %
+                           (new_bootstrap_version, ),
+                           contents,
+                           flags=re.MULTILINE)
   if not subs:
     raise RuntimeError('BOOTSTRAP_VERSION not found in rust ebuild')
   open(ebuild_file, 'w', encoding='utf-8').write(contents)
@@ -397,8 +396,8 @@ def update_rust_packages(rust_version: RustVersion, add: bool) -> None:
 
 def update_virtual_rust(template_version: RustVersion,
                         new_version: RustVersion) -> None:
-  template_ebuild = find_ebuild_path(
-      RUST_PATH.joinpath('../../virtual/rust'), 'rust', template_version)
+  template_ebuild = find_ebuild_path(RUST_PATH.joinpath('../../virtual/rust'),
+                                     'rust', template_version)
   virtual_rust_dir = template_ebuild.parent
   new_name = f'rust-{new_version}.ebuild'
   new_ebuild = virtual_rust_dir.joinpath(new_name)
@@ -433,8 +432,8 @@ def perform_step(state_file: pathlib.Path,
   return val
 
 
-def prepare_uprev_from_json(obj: Any
-                           ) -> Optional[Tuple[RustVersion, str, RustVersion]]:
+def prepare_uprev_from_json(
+    obj: Any) -> Optional[Tuple[RustVersion, str, RustVersion]]:
   if not obj:
     return None
   version, ebuild_path, bootstrap_version = obj
@@ -444,7 +443,7 @@ def prepare_uprev_from_json(obj: Any
 def create_rust_uprev(rust_version: RustVersion,
                       maybe_template_version: Optional[RustVersion],
                       skip_compile: bool, run_step: Callable[[], T]) -> None:
-  template_version, template_ebuild, old_bootstrap_version = run_step(
+  template_version, template_ebuild, _old_bootstrap_version = run_step(
       'prepare uprev',
       lambda: prepare_uprev(rust_version, maybe_template_version),
       result_from_json=prepare_uprev_from_json,
@@ -452,9 +451,6 @@ def create_rust_uprev(rust_version: RustVersion,
   if template_ebuild is None:
     return
 
-  run_step(
-      'copy bootstrap patches', lambda: copy_patches(rust_bootstrap_path(
-      ), old_bootstrap_version, template_version))
   run_step('update bootstrap ebuild', lambda: update_bootstrap_ebuild(
       template_version))
   run_step(
@@ -469,8 +465,9 @@ def create_rust_uprev(rust_version: RustVersion,
   run_step('update manifest to add new version', lambda: update_manifest(
       Path(ebuild_file)))
   if not skip_compile:
-    run_step('emerge rust', lambda: subprocess.check_call(
-        ['sudo', 'emerge', 'dev-lang/rust']))
+    run_step(
+        'emerge rust', lambda: subprocess.check_call(
+            ['sudo', 'emerge', 'dev-lang/rust']))
   run_step('insert version into rust packages', lambda: update_rust_packages(
       rust_version, add=True))
   run_step('upgrade virtual/rust', lambda: update_virtual_rust(
@@ -479,8 +476,7 @@ def create_rust_uprev(rust_version: RustVersion,
 
 def find_rust_versions_in_chroot() -> List[Tuple[RustVersion, str]]:
   return [(RustVersion.parse_from_ebuild(x), os.path.join(RUST_PATH, x))
-          for x in os.listdir(RUST_PATH)
-          if x.endswith('.ebuild')]
+          for x in os.listdir(RUST_PATH) if x.endswith('.ebuild')]
 
 
 def find_oldest_rust_version_in_chroot() -> Tuple[RustVersion, str]:
@@ -509,9 +505,6 @@ def remove_files(filename: str, path: str) -> None:
 def remove_rust_bootstrap_version(version: RustVersion,
                                   run_step: Callable[[], T]) -> None:
   prefix = f'rust-bootstrap-{version}'
-  run_step(
-      'remove old bootstrap patches', lambda: remove_files(
-          f'files/{prefix}-*.patch', rust_bootstrap_path()))
   run_step('remove old bootstrap ebuild', lambda: remove_files(
       f'{prefix}*.ebuild', rust_bootstrap_path()))
   ebuild_file = get_command_output(['equery', 'w', 'rust-bootstrap'])
@@ -521,7 +514,6 @@ def remove_rust_bootstrap_version(version: RustVersion,
 
 def remove_rust_uprev(rust_version: Optional[RustVersion],
                       run_step: Callable[[], T]) -> None:
-
   def find_desired_rust_version():
     if rust_version:
       return rust_version, find_ebuild_for_rust_version(rust_version)
@@ -549,8 +541,8 @@ def remove_rust_uprev(rust_version: Optional[RustVersion],
 
 
 def remove_virtual_rust(delete_version: RustVersion) -> None:
-  ebuild = find_ebuild_path(
-      RUST_PATH.joinpath('../../virtual/rust'), 'rust', delete_version)
+  ebuild = find_ebuild_path(RUST_PATH.joinpath('../../virtual/rust'), 'rust',
+                            delete_version)
   subprocess.check_call(['git', 'rm', str(ebuild.name)], cwd=ebuild.parent)
 
 

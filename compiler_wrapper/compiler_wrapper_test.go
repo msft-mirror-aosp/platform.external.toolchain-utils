@@ -126,6 +126,8 @@ func TestGomaDisablesRusage(t *testing.T) {
 
 func TestLogRusageAndForceDisableWError(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
+		ctx.NoteTestWritesToUmask()
+
 		logFileName := filepath.Join(ctx.tempDir, "rusage.log")
 		ctx.env = []string{
 			"FORCE_DISABLE_WERROR=1",
@@ -157,6 +159,8 @@ func TestLogRusageAndForceDisableWError(t *testing.T) {
 
 func TestErrorOnLogRusageAndBisect(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
+		ctx.NoteTestWritesToUmask()
+
 		ctx.env = []string{
 			"BISECT_STAGE=xyz",
 			"TOOLCHAIN_RUSAGE_OUTPUT=rusage.log",
@@ -170,6 +174,8 @@ func TestErrorOnLogRusageAndBisect(t *testing.T) {
 
 func TestErrorOnBisectAndForceDisableWError(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
+		ctx.NoteTestWritesToUmask()
+
 		ctx.env = []string{
 			"BISECT_STAGE=xyz",
 			"FORCE_DISABLE_WERROR=1",
