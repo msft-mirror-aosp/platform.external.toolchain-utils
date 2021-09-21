@@ -25,6 +25,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ]
@@ -61,6 +62,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ],
@@ -101,6 +103,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ]
@@ -133,6 +136,7 @@
             "-fstack-protector-strong",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ],
@@ -168,6 +172,7 @@
             "-fcommon",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "-fno-stack-protector",
             "-D__KERNEL__",
             "main.cc",
@@ -204,6 +209,7 @@
             "-Wno-maybe-uninitialized",
             "-fcommon",
             "-D_FORTIFY_SOURCE=2",
+            "-static-libgcc",
             "-mthumb",
             "-fno-stack-protector",
             "-D__KERNEL__",
@@ -243,6 +249,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "--sysroot=xyz",
             "main.cc",
             "-mno-movbe"

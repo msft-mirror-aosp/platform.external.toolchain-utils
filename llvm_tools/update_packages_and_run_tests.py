@@ -73,7 +73,7 @@ def GetCommandLineArgs():
   # Add argument for the LLVM version to use.
   parser.add_argument(
       '--llvm_version',
-      type=get_llvm_hash.is_svn_option,
+      type=get_llvm_hash.IsSvnOption,
       required=True,
       help='which git hash of LLVM to find '
       '{google3, ToT, <svn_version>} '

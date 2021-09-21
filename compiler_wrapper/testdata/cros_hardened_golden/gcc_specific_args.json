@@ -26,6 +26,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "-march=goldmont",
             "main.cc",
             "-mno-movbe"
@@ -65,6 +66,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "-march=goldmont-plus",
             "main.cc",
             "-mno-movbe"
@@ -104,6 +106,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "-march=skylake",
             "main.cc",
             "-mno-movbe"
