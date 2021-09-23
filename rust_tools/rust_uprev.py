@@ -46,6 +46,9 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, T, Tuple
 
 from llvm_tools import chroot, git
+
+EQUERY = 'equery'
+GSUTIL = 'gsutil.py'
 RUST_PATH = Path(
     '/mnt/host/source/src/third_party/chromiumos-overlay/dev-lang/rust')
 
@@ -88,6 +91,11 @@ class RustVersion(NamedTuple):
     assert m, f'failed to parse {x!r}'
     return RustVersion(int(m.group('major')), int(m.group('minor')),
                        int(m.group('patch')))
+
+
+def find_ebuild_for_package(name: str) -> os.PathLike:
+  """Returns the path to the ebuild for the named package."""
+  return get_command_output([EQUERY, 'w', name])
 
 
 def find_ebuild_path(directory: Path,
@@ -252,7 +260,7 @@ def parse_commandline_args() -> argparse.Namespace:
 def prepare_uprev(rust_version: RustVersion, template: Optional[RustVersion]
                   ) -> Optional[Tuple[RustVersion, str, RustVersion]]:
   if template is None:
-    ebuild_path = get_command_output(['equery', 'w', 'rust'])
+    ebuild_path = find_ebuild_for_package('rust')
     ebuild_name = os.path.basename(ebuild_path)
     template_version = RustVersion.parse_from_ebuild(ebuild_name)
   else:
@@ -354,7 +362,7 @@ def flip_mirror_in_ebuild(ebuild_file: Path, add: bool) -> None:
 
 def ebuild_actions(package: str, actions: List[str],
                    sudo: bool = False) -> None:
-  ebuild_path_inchroot = get_command_output(['equery', 'w', package])
+  ebuild_path_inchroot = find_ebuild_for_package(package)
   cmd = ['ebuild', ebuild_path_inchroot] + actions
   if sudo:
     cmd = ['sudo'] + cmd
@@ -507,7 +515,7 @@ def remove_rust_bootstrap_version(version: RustVersion,
   prefix = f'rust-bootstrap-{version}'
   run_step('remove old bootstrap ebuild', lambda: remove_files(
       f'{prefix}*.ebuild', rust_bootstrap_path()))
-  ebuild_file = get_command_output(['equery', 'w', 'rust-bootstrap'])
+  ebuild_file = find_ebuild_for_package('rust-bootstrap')
   run_step('update bootstrap manifest to delete old version', lambda:
            update_manifest(ebuild_file))
 
@@ -532,7 +540,7 @@ def remove_rust_uprev(rust_version: Optional[RustVersion],
       'remove patches', lambda: remove_files(
           f'files/rust-{delete_version}-*.patch', RUST_PATH))
   run_step('remove ebuild', lambda: remove_files(delete_ebuild, RUST_PATH))
-  ebuild_file = get_command_output(['equery', 'w', 'rust'])
+  ebuild_file = find_ebuild_for_package('rust')
   run_step('update manifest to delete old version', lambda: update_manifest(
       ebuild_file))
   run_step('remove version from rust packages', lambda: update_rust_packages(
@@ -561,7 +569,7 @@ def create_new_repo(rust_version: RustVersion) -> None:
 
 def build_cross_compiler() -> None:
   # Get target triples in ebuild
-  rust_ebuild = get_command_output(['equery', 'w', 'rust'])
+  rust_ebuild = find_ebuild_for_package('rust')
   with open(rust_ebuild, encoding='utf-8') as f:
     contents = f.read()
 
