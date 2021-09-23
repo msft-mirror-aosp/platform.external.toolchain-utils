@@ -24,6 +24,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ]
@@ -59,6 +60,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ]
@@ -94,6 +96,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ]
@@ -126,6 +129,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ]
@@ -158,6 +162,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ]
@@ -193,6 +198,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ]
