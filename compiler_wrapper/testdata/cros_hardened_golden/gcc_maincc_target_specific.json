@@ -25,6 +25,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ],
@@ -62,6 +63,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ],
@@ -99,6 +101,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc",
             "-mno-movbe"
           ],
@@ -135,6 +138,7 @@
             "-fPIE",
             "-pie",
             "-D_FORTIFY_SOURCE=2",
+            "-static-libgcc",
             "-mthumb",
             "main.cc"
           ],
@@ -172,6 +176,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc"
           ],
           "env_updates": [
@@ -207,6 +212,7 @@
             "-fPIE",
             "-pie",
             "-D_FORTIFY_SOURCE=2",
+            "-static-libgcc",
             "-mthumb",
             "main.cc"
           ],
@@ -243,6 +249,7 @@
             "-fPIE",
             "-pie",
             "-D_FORTIFY_SOURCE=2",
+            "-static-libgcc",
             "-mthumb",
             "main.cc"
           ],
@@ -280,6 +287,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "main.cc"
           ],
           "env_updates": [
@@ -315,6 +323,7 @@
             "-fPIE",
             "-pie",
             "-D_FORTIFY_SOURCE=2",
+            "-static-libgcc",
             "-mthumb",
             "main.cc"
           ],

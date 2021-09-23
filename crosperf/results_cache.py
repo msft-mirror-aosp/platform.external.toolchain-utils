@@ -273,7 +273,7 @@ class Result(object):
     return keyvals_dict
 
   def GetSamples(self):
-    samples = 0
+    actual_samples = 0
     for perf_data_file in self.perf_data_files:
       chroot_perf_data_file = misc.GetInsideChrootPath(self.chromeos_root,
                                                        perf_data_file)
@@ -304,17 +304,53 @@ class Result(object):
       # Each line looks like this:
       #     45.42%        237210  chrome
       # And we want the second number which is the sample count.
-      sample = 0
+      samples = 0
       try:
         for line in result.split('\n'):
           attr = line.split()
           if len(attr) == 3 and '%' in attr[0]:
-            sample += int(attr[1])
+            samples += int(attr[1])
       except:
         raise RuntimeError('Cannot parse perf dso result')
 
-      samples += sample
-    return [samples, u'samples']
+      actual_samples += samples
+
+      # Remove idle cycles from the accumulated sample count.
+      perf_report_file = f'{perf_data_file}.report'
+      if not os.path.exists(perf_report_file):
+        raise RuntimeError(f'Missing perf report file: {perf_report_file}')
+
+      idle_functions = {
+          '[kernel.kallsyms]':
+              ('intel_idle', 'arch_cpu_idle', 'intel_idle', 'cpu_startup_entry',
+               'default_idle', 'cpu_idle_loop', 'do_idle'),
+      }
+      idle_samples = 0
+
+      with open(perf_report_file) as f:
+        try:
+          for line in f:
+            line = line.strip()
+            if not line or line[0] == '#':
+              continue
+            # Each line has the following fields,
+            # pylint: disable=line-too-long
+            # Overhead       Samples  Command          Shared Object         Symbol
+            # pylint: disable=line-too-long
+            # 1.48%          60       swapper          [kernel.kallsyms]     [k] intel_idle
+            # pylint: disable=line-too-long
+            # 0.00%          1        shill            libshill-net.so       [.] std::__1::vector<unsigned char, std::__1::allocator<unsigned char> >::vector<unsigned char const*>
+            _, samples, _, dso, _, function = line.split(None, 5)
+
+            if dso in idle_functions and function in idle_functions[dso]:
+              if self.log_level != 'verbose':
+                self._logger.LogOutput('Removing %s samples from %s in %s' %
+                                       (samples, function, dso))
+              idle_samples += int(samples)
+        except:
+          raise RuntimeError('Cannot parse perf report')
+      actual_samples -= idle_samples
+    return [actual_samples, u'samples']
 
   def GetResultsDir(self):
     if self.suite == 'tast':
@@ -351,11 +387,11 @@ class Result(object):
     result = self.FindFilesInResultsDir('-name perf_measurements').splitlines()
     if not result:
       if self.suite == 'telemetry_Crosperf':
-        result = \
-            self.FindFilesInResultsDir('-name histograms.json').splitlines()
+        result = (
+            self.FindFilesInResultsDir('-name histograms.json').splitlines())
       else:
-        result = \
-            self.FindFilesInResultsDir('-name results-chart.json').splitlines()
+        result = (
+            self.FindFilesInResultsDir('-name results-chart.json').splitlines())
     return result
 
   def GetTurbostatFile(self):
@@ -413,7 +449,8 @@ class Result(object):
 
       if debug_path:
         symfs = '--symfs ' + debug_path
-        vmlinux = '--vmlinux ' + os.path.join(debug_path, 'boot', 'vmlinux')
+        vmlinux = '--vmlinux ' + os.path.join(debug_path, 'usr', 'lib', 'debug',
+                                              'boot', 'vmlinux')
         kallsyms = ''
         print('** WARNING **: --kallsyms option not applied, no System.map-* '
               'for downloaded image.')
@@ -1204,8 +1241,8 @@ class TelemetryResult(Result):
       self.err = pickle.load(f)
       self.retval = pickle.load(f)
 
-    self.chrome_version = \
-        super(TelemetryResult, self).GetChromeVersionFromCache(cache_dir)
+    self.chrome_version = (
+        super(TelemetryResult, self).GetChromeVersionFromCache(cache_dir))
     self.ProcessResults()
 
 

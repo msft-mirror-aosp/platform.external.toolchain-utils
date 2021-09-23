@@ -14,7 +14,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 const numWErrorEstimate = 30
@@ -176,8 +175,8 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 
 	// Buildbots use a nonzero umask, which isn't quite what we want: these directories should
 	// be world-readable and world-writable.
-	oldMask := syscall.Umask(0)
-	defer syscall.Umask(oldMask)
+	oldMask := env.umask(0)
+	defer env.umask(oldMask)
 
 	// Allow root and regular users to write to this without issue.
 	if err := os.MkdirAll(cfg.newWarningsDir, 0777); err != nil {
