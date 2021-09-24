@@ -20,6 +20,53 @@ import rust_uprev
 from rust_uprev import RustVersion
 
 
+def _fail_command(cmd, *_args, **_kwargs):
+  err = subprocess.CalledProcessError(returncode=1, cmd=cmd)
+  err.stderr = b'mock failure'
+  raise err
+
+
+class FetchDistfileTest(unittest.TestCase):
+  """Tests rust_uprev.fetch_distfile_from_mirror()"""
+
+  @mock.patch.object(rust_uprev, 'get_distdir', return_value='/fake/distfiles')
+  @mock.patch.object(subprocess, 'call', side_effect=_fail_command)
+  def test_fetch_difstfile_fail(self, *_args) -> None:
+    with self.assertRaises(subprocess.CalledProcessError):
+      rust_uprev.fetch_distfile_from_mirror('test_distfile.tar.gz')
+
+  @mock.patch.object(rust_uprev,
+                     'get_command_output_unchecked',
+                     return_value='AccessDeniedException: Access denied.')
+  @mock.patch.object(rust_uprev, 'get_distdir', return_value='/fake/distfiles')
+  @mock.patch.object(subprocess, 'call', return_value=0)
+  def test_fetch_distfile_acl_access_denied(self, *_args) -> None:
+    rust_uprev.fetch_distfile_from_mirror('test_distfile.tar.gz')
+
+  @mock.patch.object(
+      rust_uprev,
+      'get_command_output_unchecked',
+      return_value='[ { "entity": "allUsers", "role": "READER" } ]')
+  @mock.patch.object(rust_uprev, 'get_distdir', return_value='/fake/distfiles')
+  @mock.patch.object(subprocess, 'call', return_value=0)
+  def test_fetch_distfile_acl_ok(self, *_args) -> None:
+    rust_uprev.fetch_distfile_from_mirror('test_distfile.tar.gz')
+
+  @mock.patch.object(
+      rust_uprev,
+      'get_command_output_unchecked',
+      return_value='[ { "entity": "___fake@google.com", "role": "OWNER" } ]')
+  @mock.patch.object(rust_uprev, 'get_distdir', return_value='/fake/distfiles')
+  @mock.patch.object(subprocess, 'call', return_value=0)
+  def test_fetch_distfile_acl_wrong(self, *_args) -> None:
+    with self.assertRaisesRegex(Exception, 'allUsers.*READER'):
+      with self.assertLogs(level='ERROR') as log:
+        rust_uprev.fetch_distfile_from_mirror('test_distfile.tar.gz')
+        self.assertIn(
+            '[ { "entity": "___fake@google.com", "role": "OWNER" } ]',
+            '\n'.join(log.output))
+
+
 class FindEbuildPathTest(unittest.TestCase):
   """Tests for rust_uprev.find_ebuild_path()"""
 
