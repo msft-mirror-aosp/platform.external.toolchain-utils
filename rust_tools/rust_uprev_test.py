@@ -6,7 +6,6 @@
 
 """Tests for rust_uprev.py"""
 
-# pylint: disable=cros-logging-import
 import os
 import shutil
 import subprocess
@@ -84,10 +83,9 @@ class PrepareUprevTest(unittest.TestCase):
     self.version_old = rust_uprev.RustVersion(1, 2, 3)
     self.version_new = rust_uprev.RustVersion(1, 3, 5)
 
-  @mock.patch.object(
-      rust_uprev,
-      'find_ebuild_for_rust_version',
-      return_value='/path/to/ebuild')
+  @mock.patch.object(rust_uprev,
+                     'find_ebuild_for_rust_version',
+                     return_value='/path/to/ebuild')
   @mock.patch.object(rust_uprev, 'find_ebuild_path')
   @mock.patch.object(rust_uprev, 'get_command_output')
   def test_success_with_template(self, mock_command, mock_find_ebuild,
@@ -97,20 +95,19 @@ class PrepareUprevTest(unittest.TestCase):
         f'rust-bootstrap-{self.bootstrap_version}.ebuild')
     mock_find_ebuild.return_value = bootstrap_ebuild_path
     expected = (self.version_old, '/path/to/ebuild', self.bootstrap_version)
-    actual = rust_uprev.prepare_uprev(
-        rust_version=self.version_new, template=self.version_old)
+    actual = rust_uprev.prepare_uprev(rust_version=self.version_new,
+                                      template=self.version_old)
     self.assertEqual(expected, actual)
     mock_command.assert_not_called()
 
-  @mock.patch.object(
-      rust_uprev,
-      'find_ebuild_for_rust_version',
-      return_value='/path/to/ebuild')
+  @mock.patch.object(rust_uprev,
+                     'find_ebuild_for_rust_version',
+                     return_value='/path/to/ebuild')
   @mock.patch.object(rust_uprev, 'get_command_output')
   def test_return_none_with_template_larger_than_input(self, mock_command,
                                                        _mock_find_ebuild):
-    ret = rust_uprev.prepare_uprev(
-        rust_version=self.version_old, template=self.version_new)
+    ret = rust_uprev.prepare_uprev(rust_version=self.version_old,
+                                   template=self.version_new)
     self.assertIsNone(ret)
     mock_command.assert_not_called()
 
@@ -126,8 +123,8 @@ class PrepareUprevTest(unittest.TestCase):
         f'rust-bootstrap-{self.bootstrap_version}.ebuild')
     mock_find_ebuild.return_value = bootstrap_ebuild_path
     expected = (self.version_old, rust_ebuild_path, self.bootstrap_version)
-    actual = rust_uprev.prepare_uprev(
-        rust_version=self.version_new, template=None)
+    actual = rust_uprev.prepare_uprev(rust_version=self.version_new,
+                                      template=None)
     self.assertEqual(expected, actual)
     mock_command.assert_called_once_with(['equery', 'w', 'rust'])
     mock_exists.assert_not_called()
@@ -137,7 +134,8 @@ class PrepareUprevTest(unittest.TestCase):
   def test_return_none_with_ebuild_larger_than_input(self, mock_command,
                                                      mock_exists):
     mock_command.return_value = f'/path/to/rust/rust-{self.version_new}.ebuild'
-    ret = rust_uprev.prepare_uprev(rust_version=self.version_old, template=None)
+    ret = rust_uprev.prepare_uprev(rust_version=self.version_old,
+                                   template=None)
     self.assertIsNone(ret)
     mock_exists.assert_not_called()
 
@@ -193,32 +191,28 @@ class UpdateManifestTest(unittest.TestCase):
           f'RESTRICT="{after}"')
 
   def test_add_mirror_in_ebuild(self):
-    self._run_test_flip_mirror(
-        before='variable1 variable2',
-        after='variable1 variable2 mirror',
-        add=True,
-        expect_write=True)
+    self._run_test_flip_mirror(before='variable1 variable2',
+                               after='variable1 variable2 mirror',
+                               add=True,
+                               expect_write=True)
 
   def test_remove_mirror_in_ebuild(self):
-    self._run_test_flip_mirror(
-        before='variable1 variable2 mirror',
-        after='variable1 variable2',
-        add=False,
-        expect_write=True)
+    self._run_test_flip_mirror(before='variable1 variable2 mirror',
+                               after='variable1 variable2',
+                               add=False,
+                               expect_write=True)
 
   def test_add_mirror_when_exists(self):
-    self._run_test_flip_mirror(
-        before='variable1 variable2 mirror',
-        after='variable1 variable2 mirror',
-        add=True,
-        expect_write=False)
+    self._run_test_flip_mirror(before='variable1 variable2 mirror',
+                               after='variable1 variable2 mirror',
+                               add=True,
+                               expect_write=False)
 
   def test_remove_mirror_when_not_exists(self):
-    self._run_test_flip_mirror(
-        before='variable1 variable2',
-        after='variable1 variable2',
-        add=False,
-        expect_write=False)
+    self._run_test_flip_mirror(before='variable1 variable2',
+                               after='variable1 variable2',
+                               add=False,
+                               expect_write=False)
 
   @mock.patch.object(rust_uprev, 'flip_mirror_in_ebuild')
   @mock.patch.object(rust_uprev, 'ebuild_actions')
@@ -237,18 +231,17 @@ class UpdateBootstrapEbuildTest(unittest.TestCase):
   def test_update_bootstrap_ebuild(self):
     # The update should do two things:
     # 1. Create a copy of rust-bootstrap's ebuild with the new version number.
-    # 2. Add the old PV to RUSTC_FULL_BOOTSTRAP_SEQUENCE.
+    # 2. Add the old PV to RUSTC_RAW_FULL_BOOTSTRAP_SEQUENCE.
     with tempfile.TemporaryDirectory() as tmpdir_str, \
          mock.patch.object(rust_uprev, 'find_ebuild_path') as mock_find_ebuild:
       tmpdir = Path(tmpdir_str)
       bootstrapdir = Path.joinpath(tmpdir, 'rust-bootstrap')
       bootstrapdir.mkdir()
       old_ebuild = bootstrapdir.joinpath('rust-bootstrap-1.45.2.ebuild')
-      old_ebuild.write_text(
-          encoding='utf-8',
-          data="""
+      old_ebuild.write_text(encoding='utf-8',
+                            data="""
 some text
-RUSTC_FULL_BOOTSTRAP_SEQUENCE=(
+RUSTC_RAW_FULL_BOOTSTRAP_SEQUENCE=(
 \t1.43.1
 \t1.44.1
 )
@@ -262,7 +255,7 @@ some more text
       self.assertEqual(
           text, """
 some text
-RUSTC_FULL_BOOTSTRAP_SEQUENCE=(
+RUSTC_RAW_FULL_BOOTSTRAP_SEQUENCE=(
 \t1.43.1
 \t1.44.1
 \t1.45.2
@@ -377,7 +370,8 @@ class RustUprevOtherStagesTests(unittest.TestCase):
   @mock.patch.object(rust_uprev, 'find_ebuild_path')
   @mock.patch.object(subprocess, 'check_call')
   def test_remove_virtual_rust(self, mock_call, mock_find_ebuild):
-    ebuild_path = Path(f'/some/dir/virtual/rust/rust-{self.old_version}.ebuild')
+    ebuild_path = Path(
+        f'/some/dir/virtual/rust/rust-{self.old_version}.ebuild')
     mock_find_ebuild.return_value = Path(ebuild_path)
     rust_uprev.remove_virtual_rust(self.old_version)
     mock_call.assert_called_once_with(

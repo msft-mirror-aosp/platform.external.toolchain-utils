@@ -6,11 +6,14 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 )
 
 func callCompiler(env env, cfg *config, inputCmd *command) int {
@@ -62,6 +65,39 @@ func calculateAndroidWrapperPath(mainBuilderPath string, absWrapperPath string) 
 	return "." + string(filepath.Separator) + basePart
 }
 
+func runAndroidClangTidy(env env, cmd *command) error {
+	timeout, found := env.getenv("TIDY_TIMEOUT")
+	if !found {
+		return env.exec(cmd)
+	}
+	seconds, err := strconv.Atoi(timeout)
+	if err != nil || seconds == 0 {
+		return env.exec(cmd)
+	}
+	err = env.runWithTimeout(cmd, time.Duration(seconds)*time.Second)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		return err
+	}
+	// When DeadllineExceeded, print warning messages.
+	// Note: This depends on Android build system's clang-tidy command line format.
+	// Last non-flag before "--" in cmd.Args is used as the source file name.
+	sourceFile := "unknown_file"
+	for _, arg := range cmd.Args {
+		if arg == "--" {
+			break
+		}
+		if strings.HasPrefix(arg, "-") {
+			continue
+		}
+		sourceFile = arg
+	}
+	warning := "%s:1:1: warning: clang-tidy aborted after %d seconds.\n"
+	fmt.Fprintf(env.stdout(), warning, sourceFile, seconds)
+	fmt.Fprintf(env.stdout(), "TIMEOUT: %s %s\n", cmd.Path, strings.Join(cmd.Args, " "))
+	// Do not stop Android build. Just give a warning and return no error.
+	return nil
+}
+
 func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
 	if err := checkUnsupportedFlags(inputCmd); err != nil {
 		return 0, err
@@ -81,7 +117,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	// Disable CCache for rusage logs
 	// Note: Disabling Goma causes timeout related INFRA_FAILUREs in builders
 	allowCCache := !rusageEnabled
-	gomaUsed := false
+	remoteBuildUsed := false
 
 	workAroundKernelBugWithRetries := false
 	if cfg.isAndroidWrapper {
@@ -91,7 +127,9 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			mainBuilder.addPreUserArgs(mainBuilder.cfg.clangFlags...)
 			mainBuilder.addPreUserArgs(mainBuilder.cfg.commonFlags...)
 			mainBuilder.addPostUserArgs(mainBuilder.cfg.clangPostFlags...)
-			if gomaUsed, err = processGomaCccFlags(mainBuilder); err != nil {
+			inheritGomaFromEnv := true
+			// Android doesn't support rewrapper; don't try to use it.
+			if remoteBuildUsed, err = processGomaCccFlags(mainBuilder, inheritGomaFromEnv); err != nil {
 				return 0, err
 			}
 			compilerCmd = mainBuilder.build()
@@ -109,16 +147,16 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			}
 			if tidyMode != tidyModeNone {
 				allowCCache = false
-				clangCmdWithoutGomaAndCCache := mainBuilder.build()
+				clangCmdWithoutRemoteBuildAndCCache := mainBuilder.build()
 				var err error
 				switch tidyMode {
 				case tidyModeTricium:
 					if cfg.triciumNitsDir == "" {
 						return 0, newErrorwithSourceLocf("tricium linting was requested, but no nits directory is configured")
 					}
-					err = runClangTidyForTricium(env, clangCmdWithoutGomaAndCCache, cSrcFile, cfg.triciumNitsDir, tidyFlags, cfg.crashArtifactsDir)
+					err = runClangTidyForTricium(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, cfg.triciumNitsDir, tidyFlags, cfg.crashArtifactsDir)
 				case tidyModeAll:
-					err = runClangTidy(env, clangCmdWithoutGomaAndCCache, cSrcFile, tidyFlags)
+					err = runClangTidy(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, tidyFlags)
 				default:
 					panic(fmt.Sprintf("Unknown tidy mode: %v", tidyMode))
 				}
@@ -127,7 +165,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 					return 0, err
 				}
 			}
-			if gomaUsed, err = processGomaCCacheFlags(allowCCache, mainBuilder); err != nil {
+			if remoteBuildUsed, err = processRemoteBuildAndCCacheFlags(allowCCache, mainBuilder); err != nil {
 				return 0, err
 			}
 			compilerCmd = mainBuilder.build()
@@ -144,7 +182,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 				}
 				return checkClangSyntax(env, clangCmd, gccCmd)
 			}
-			gomaUsed, compilerCmd, err = calcGccCommand(rusageEnabled, mainBuilder)
+			remoteBuildUsed, compilerCmd, err = calcGccCommand(rusageEnabled, mainBuilder)
 			if err != nil {
 				return 0, err
 			}
@@ -190,6 +228,9 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			var err error
 			if willLogRusage {
 				err = env.run(compilerCmd, env.stdin(), env.stdout(), env.stderr())
+			} else if cfg.isAndroidWrapper && mainBuilder.target.compilerType == clangTidyType {
+				// Only clang-tidy has timeout feature now.
+				err = runAndroidClangTidy(env, compilerCmd)
 			} else {
 				// Note: We return from this in non-fatal circumstances only if the
 				// underlying env is not really doing an exec, e.g. commandRecordingEnv.
@@ -245,7 +286,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		case err != nil:
 			return exitCode, err
 		default:
-			if !gomaUsed {
+			if !remoteBuildUsed {
 				if err := commitRusage(exitCode); err != nil {
 					return exitCode, fmt.Errorf("commiting rusage: %v", err)
 				}
@@ -273,11 +314,11 @@ func calcClangCommand(allowCCache bool, builder *commandBuilder) (bool, *command
 	if err != nil {
 		return false, nil, err
 	}
-	gomaUsed, err := processGomaCCacheFlags(allowCCache, builder)
+	remoteBuildUsed, err := processRemoteBuildAndCCacheFlags(allowCCache, builder)
 	if err != nil {
-		return gomaUsed, nil, err
+		return remoteBuildUsed, nil, err
 	}
-	return gomaUsed, builder.build(), nil
+	return remoteBuildUsed, builder.build(), nil
 }
 
 func calcGccCommand(enableRusage bool, builder *commandBuilder) (bool, *command, error) {
@@ -288,19 +329,20 @@ func calcGccCommand(enableRusage bool, builder *commandBuilder) (bool, *command,
 	calcCommonPreUserArgs(builder)
 	processGccFlags(builder)
 
-	gomaUsed := false
+	remoteBuildUsed := false
 	if !builder.cfg.isHostWrapper {
 		var err error
-		if gomaUsed, err = processGomaCCacheFlags(!enableRusage, builder); err != nil {
-			return gomaUsed, nil, err
+		if remoteBuildUsed, err = processRemoteBuildAndCCacheFlags(!enableRusage, builder); err != nil {
+			return remoteBuildUsed, nil, err
 		}
 	}
-	return gomaUsed, builder.build(), nil
+	return remoteBuildUsed, builder.build(), nil
 }
 
 func calcCommonPreUserArgs(builder *commandBuilder) {
 	builder.addPreUserArgs(builder.cfg.commonFlags...)
 	if !builder.cfg.isHostWrapper {
+		processLibGCCFlags(builder)
 		processPieFlags(builder)
 		processThumbCodeFlags(builder)
 		processStackProtectorFlags(builder)
@@ -309,19 +351,18 @@ func calcCommonPreUserArgs(builder *commandBuilder) {
 	processSanitizerFlags(builder)
 }
 
-func processGomaCCacheFlags(allowCCache bool, builder *commandBuilder) (gomaccUsed bool, err error) {
-
-	gomaccUsed = false
+func processRemoteBuildAndCCacheFlags(allowCCache bool, builder *commandBuilder) (remoteBuildUsed bool, err error) {
+	remoteBuildUsed = false
 	if !builder.cfg.isHostWrapper {
-		gomaccUsed, err = processGomaCccFlags(builder)
+		remoteBuildUsed, err = processRemoteBuildFlags(builder)
 		if err != nil {
-			return gomaccUsed, err
+			return remoteBuildUsed, err
 		}
 	}
-	if !gomaccUsed && allowCCache {
+	if !remoteBuildUsed && allowCCache {
 		processCCacheFlag(builder)
 	}
-	return gomaccUsed, nil
+	return remoteBuildUsed, nil
 }
 
 func getAbsWrapperPath(env env, wrapperCmd *command) (string, error) {

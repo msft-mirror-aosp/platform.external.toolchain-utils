@@ -27,6 +27,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "-fsanitize=kernel-address",
             "main.cc",
             "-mno-movbe"
@@ -67,6 +68,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "-fsanitize=kernel-address",
             "main.cc",
             "-mno-movbe"
@@ -107,6 +109,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "-fsanitize=kernel-address",
             "main.cc",
             "-mno-movbe"
@@ -147,6 +150,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "-fsanitize=kernel-address",
             "main.cc",
             "-mno-movbe"
@@ -186,6 +190,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "-fsanitize=fuzzer",
             "main.cc",
             "-mno-movbe"
@@ -226,6 +231,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "-fsanitize=address",
             "-fprofile-instr-generate",
             "main.cc",
@@ -266,6 +272,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "-fsanitize=address",
             "main.cc",
             "-mno-movbe"
@@ -305,6 +312,7 @@
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
+            "-static-libgcc",
             "-fprofile-instr-generate",
             "main.cc",
             "-mno-movbe"

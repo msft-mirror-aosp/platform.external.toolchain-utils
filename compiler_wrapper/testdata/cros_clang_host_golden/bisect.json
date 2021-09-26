@@ -29,7 +29,6 @@
             "-fuse-ld=lld",
             "-fdebug-default-version=5",
             "-Wno-unused-local-typedefs",
-            "-Wno-deprecated-declarations",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-final-dtor-non-final-class",
@@ -37,12 +36,14 @@
             "-Wno-unknown-warning-option",
             "-fexperimental-new-pass-manager",
             "-Wno-compound-token-split-by-macro",
+            "-Wno-deprecated-declarations",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation"
+            "-Wno-string-concatenation",
+            "-Wno-deprecated-copy"
           ],
           "env_updates": [
             "PYTHONPATH=/somepath/test_binary"
@@ -82,7 +83,6 @@
             "-fuse-ld=lld",
             "-fdebug-default-version=5",
             "-Wno-unused-local-typedefs",
-            "-Wno-deprecated-declarations",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-final-dtor-non-final-class",
@@ -90,12 +90,14 @@
             "-Wno-unknown-warning-option",
             "-fexperimental-new-pass-manager",
             "-Wno-compound-token-split-by-macro",
+            "-Wno-deprecated-declarations",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation"
+            "-Wno-string-concatenation",
+            "-Wno-deprecated-copy"
           ],
           "env_updates": [
             "PYTHONPATH=/somepath/test_binary"
@@ -138,7 +140,6 @@
             "-fuse-ld=lld",
             "-fdebug-default-version=5",
             "-Wno-unused-local-typedefs",
-            "-Wno-deprecated-declarations",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",
             "-Wno-final-dtor-non-final-class",
@@ -146,12 +147,14 @@
             "-Wno-unknown-warning-option",
             "-fexperimental-new-pass-manager",
             "-Wno-compound-token-split-by-macro",
+            "-Wno-deprecated-declarations",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation"
+            "-Wno-string-concatenation",
+            "-Wno-deprecated-copy"
           ],
           "env_updates": [
             "PYTHONPATH=/somepath/test_binary"
