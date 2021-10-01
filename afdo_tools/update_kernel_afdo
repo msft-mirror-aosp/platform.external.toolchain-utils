@@ -27,6 +27,8 @@ set -o pipefail
 GS_BASE=gs://chromeos-prebuilt/afdo-job/vetted/kernel
 KVERS="4.4 4.14 4.19 5.4"
 failed_channels=""
+# Add skipped chrome branches in ascending order here.
+SKIPPED_BRANCHES="95"
 
 script_dir=$(dirname "$0")
 tc_utils_dir="${script_dir}/.."
@@ -57,8 +59,14 @@ branch["canary"]=${canary_ref##*/}
 # Get current branch numbers (number which goes after R).
 branch_number["stable"]=$(echo "${branch["stable"]}" | \
   sed -n -e "s/^release-R\([0-9][0-9]*\).*$/\1/p")
-branch_number["beta"]="$((branch_number[stable] + 1))"
+branch_number["beta"]=$(echo "${branch["beta"]}" | \
+  sed -n -e "s/^release-R\([0-9][0-9]*\).*$/\1/p")
 branch_number["canary"]="$((branch_number[beta] + 1))"
+for skipped_branch in $SKIPPED_BRANCHES ; do
+  if [[ ${branch_number["canary"]} == $skipped_branch ]] ; then
+    ((branch_number[canary]++))
+  fi
+done
 
 # Without arguments the script updates all branches.
 channels=${1:-"all"}
