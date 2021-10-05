@@ -74,25 +74,36 @@ func runAndroidClangTidy(env env, cmd *command) error {
 	if err != nil || seconds == 0 {
 		return env.exec(cmd)
 	}
+	getSourceFile := func() string {
+		// Note: This depends on Android build system's clang-tidy command line format.
+		// Last non-flag before "--" in cmd.Args is used as the source file name.
+		sourceFile := "unknown_file"
+		for _, arg := range cmd.Args {
+			if arg == "--" {
+				break
+			}
+			if strings.HasPrefix(arg, "-") {
+				continue
+			}
+			sourceFile = arg
+		}
+		return sourceFile
+	}
+	startTime := time.Now()
 	err = env.runWithTimeout(cmd, time.Duration(seconds)*time.Second)
 	if !errors.Is(err, context.DeadlineExceeded) {
+		// When used time is over half of TIDY_TIMEOUT, give a warning.
+		// These warnings allow users to fix slow jobs before they get worse.
+		usedSeconds := int(time.Now().Sub(startTime) / time.Second)
+		if usedSeconds > seconds/2 {
+			warning := "%s:1:1: warning: clang-tidy used %d seconds.\n"
+			fmt.Fprintf(env.stdout(), warning, getSourceFile(), usedSeconds)
+		}
 		return err
 	}
 	// When DeadllineExceeded, print warning messages.
-	// Note: This depends on Android build system's clang-tidy command line format.
-	// Last non-flag before "--" in cmd.Args is used as the source file name.
-	sourceFile := "unknown_file"
-	for _, arg := range cmd.Args {
-		if arg == "--" {
-			break
-		}
-		if strings.HasPrefix(arg, "-") {
-			continue
-		}
-		sourceFile = arg
-	}
 	warning := "%s:1:1: warning: clang-tidy aborted after %d seconds.\n"
-	fmt.Fprintf(env.stdout(), warning, sourceFile, seconds)
+	fmt.Fprintf(env.stdout(), warning, getSourceFile(), seconds)
 	fmt.Fprintf(env.stdout(), "TIMEOUT: %s %s\n", cmd.Path, strings.Join(cmd.Args, " "))
 	// Do not stop Android build. Just give a warning and return no error.
 	return nil
