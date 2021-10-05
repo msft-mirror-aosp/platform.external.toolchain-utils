@@ -6,8 +6,6 @@
 
 """Fetches and submits the latest test-cases from Lexan's crash bucket."""
 
-# pylint: disable=cros-logging-import
-
 import argparse
 import contextlib
 import datetime

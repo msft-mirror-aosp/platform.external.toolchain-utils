@@ -5,8 +5,6 @@
 
 """Emails the mage if PGO profile generation hasn't succeeded recently."""
 
-# pylint: disable=cros-logging-import
-
 import argparse
 import datetime
 import sys
