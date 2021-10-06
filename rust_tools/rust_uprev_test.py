@@ -17,6 +17,54 @@ from unittest import mock
 from llvm_tools import git
 
 import rust_uprev
+from rust_uprev import RustVersion
+
+
+def _fail_command(cmd, *_args, **_kwargs):
+  err = subprocess.CalledProcessError(returncode=1, cmd=cmd)
+  err.stderr = b'mock failure'
+  raise err
+
+
+class FetchDistfileTest(unittest.TestCase):
+  """Tests rust_uprev.fetch_distfile_from_mirror()"""
+
+  @mock.patch.object(rust_uprev, 'get_distdir', return_value='/fake/distfiles')
+  @mock.patch.object(subprocess, 'call', side_effect=_fail_command)
+  def test_fetch_difstfile_fail(self, *_args) -> None:
+    with self.assertRaises(subprocess.CalledProcessError):
+      rust_uprev.fetch_distfile_from_mirror('test_distfile.tar.gz')
+
+  @mock.patch.object(rust_uprev,
+                     'get_command_output_unchecked',
+                     return_value='AccessDeniedException: Access denied.')
+  @mock.patch.object(rust_uprev, 'get_distdir', return_value='/fake/distfiles')
+  @mock.patch.object(subprocess, 'call', return_value=0)
+  def test_fetch_distfile_acl_access_denied(self, *_args) -> None:
+    rust_uprev.fetch_distfile_from_mirror('test_distfile.tar.gz')
+
+  @mock.patch.object(
+      rust_uprev,
+      'get_command_output_unchecked',
+      return_value='[ { "entity": "allUsers", "role": "READER" } ]')
+  @mock.patch.object(rust_uprev, 'get_distdir', return_value='/fake/distfiles')
+  @mock.patch.object(subprocess, 'call', return_value=0)
+  def test_fetch_distfile_acl_ok(self, *_args) -> None:
+    rust_uprev.fetch_distfile_from_mirror('test_distfile.tar.gz')
+
+  @mock.patch.object(
+      rust_uprev,
+      'get_command_output_unchecked',
+      return_value='[ { "entity": "___fake@google.com", "role": "OWNER" } ]')
+  @mock.patch.object(rust_uprev, 'get_distdir', return_value='/fake/distfiles')
+  @mock.patch.object(subprocess, 'call', return_value=0)
+  def test_fetch_distfile_acl_wrong(self, *_args) -> None:
+    with self.assertRaisesRegex(Exception, 'allUsers.*READER'):
+      with self.assertLogs(level='ERROR') as log:
+        rust_uprev.fetch_distfile_from_mirror('test_distfile.tar.gz')
+        self.assertIn(
+            '[ { "entity": "___fake@google.com", "role": "OWNER" } ]',
+            '\n'.join(log.output))
 
 
 class FindEbuildPathTest(unittest.TestCase):
@@ -103,9 +151,12 @@ class PrepareUprevTest(unittest.TestCase):
   @mock.patch.object(rust_uprev,
                      'find_ebuild_for_rust_version',
                      return_value='/path/to/ebuild')
+  @mock.patch.object(rust_uprev,
+                     'get_rust_bootstrap_version',
+                     return_value=RustVersion(0, 41, 12))
   @mock.patch.object(rust_uprev, 'get_command_output')
   def test_return_none_with_template_larger_than_input(self, mock_command,
-                                                       _mock_find_ebuild):
+                                                       *_args):
     ret = rust_uprev.prepare_uprev(rust_version=self.version_old,
                                    template=self.version_new)
     self.assertIsNone(ret)
@@ -129,10 +180,13 @@ class PrepareUprevTest(unittest.TestCase):
     mock_command.assert_called_once_with(['equery', 'w', 'rust'])
     mock_exists.assert_not_called()
 
+  @mock.patch.object(rust_uprev,
+                     'get_rust_bootstrap_version',
+                     return_value=RustVersion(0, 41, 12))
   @mock.patch.object(os.path, 'exists')
   @mock.patch.object(rust_uprev, 'get_command_output')
   def test_return_none_with_ebuild_larger_than_input(self, mock_command,
-                                                     mock_exists):
+                                                     mock_exists, *_args):
     mock_command.return_value = f'/path/to/rust/rust-{self.version_new}.ebuild'
     ret = rust_uprev.prepare_uprev(rust_version=self.version_old,
                                    template=None)
@@ -350,8 +404,9 @@ class RustUprevOtherStagesTests(unittest.TestCase):
         ['git', 'add', f'rust-{self.new_version}.ebuild'],
         cwd=rust_uprev.RUST_PATH)
 
+  @mock.patch.object(rust_uprev, 'find_ebuild_for_package')
   @mock.patch.object(subprocess, 'check_call')
-  def test_remove_rust_bootstrap_version(self, mock_call):
+  def test_remove_rust_bootstrap_version(self, mock_call, *_args):
     bootstrap_path = os.path.join(rust_uprev.RUST_PATH, '..', 'rust-bootstrap')
     rust_uprev.remove_rust_bootstrap_version(self.old_version, lambda *x: ())
     mock_call.has_calls([
