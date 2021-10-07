@@ -9,8 +9,6 @@
 Sends an email if something interesting (probably) happened.
 """
 
-# pylint: disable=cros-logging-import
-
 import argparse
 import itertools
 import json
