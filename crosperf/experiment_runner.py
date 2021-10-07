@@ -176,7 +176,7 @@ class ExperimentRunner(object):
       # no-op task on the DUT and new test created will be hanging there.
       # TODO(zhizhouy): Need to check whether machine is ready or not before
       # assigning a test to it.
-      if not experiment.crosfleet:
+      if not experiment.no_lock and not experiment.crosfleet:
         self._LockAllMachines(experiment)
       # Calculate all checksums of avaiable/locked machines, to ensure same
       # label has same machines for testing

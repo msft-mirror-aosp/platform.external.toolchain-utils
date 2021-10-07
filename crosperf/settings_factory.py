@@ -439,6 +439,13 @@ class GlobalSettings(Settings):
             ' or equal to a percent of max_freq. '
             'CPU frequency is reduced to 95%% by default to reduce thermal '
             'throttling.'))
+    self.AddField(
+        BooleanField(
+            'no_lock',
+            default=False,
+            description='Do not attempt to lock the DUT.'
+            ' Useful when lock is held externally, say with crosfleet.'
+        ))
 
 
 class SettingsFactory(object):

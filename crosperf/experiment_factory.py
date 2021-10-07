@@ -121,6 +121,7 @@ class ExperimentFactory(object):
       log_level = 'verbose'
 
     crosfleet = global_settings.GetField('crosfleet')
+    no_lock = bool(global_settings.GetField('no_lock'))
     # Check whether crosfleet tool is installed correctly for crosfleet mode.
     if crosfleet and not self.CheckCrosfleetTool(chromeos_root, log_level):
       sys.exit(0)
@@ -444,7 +445,8 @@ class ExperimentFactory(object):
                             experiment_file.Canonicalize(), email,
                             acquire_timeout, log_dir, log_level, share_cache,
                             results_dir, compress_results, locks_dir, cwp_dso,
-                            ignore_min_max, crosfleet, dut_config)
+                            ignore_min_max, crosfleet, dut_config,
+                            no_lock=no_lock)
 
     return experiment
 
