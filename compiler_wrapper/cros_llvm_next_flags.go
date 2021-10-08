@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !android_llvm_next_flags
 // +build !android_llvm_next_flags
 
 package main
@@ -13,8 +14,8 @@ package main
 // tag is set.
 
 // TODO: Enable test in config_test.go, once we have new llvm-next flags.
-var llvmNextFlags = []string{
+var llvmNextFlags = []string{}
+
+var llvmNextPostFlags = []string{
 	"-Wno-unused-but-set-variable",
 }
-
-var llvmNextPostFlags = []string{}
