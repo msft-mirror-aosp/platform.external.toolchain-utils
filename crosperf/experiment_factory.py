@@ -101,7 +101,8 @@ class ExperimentFactory(object):
 
   def AppendBenchmarkSet(self, benchmarks, benchmark_list, test_args,
                          iterations, rm_chroot_tmp, perf_args, suite,
-                         show_all_results, retries, run_local, cwp_dso, weight):
+                         show_all_results, retries, run_local, cwp_dso,
+                         weight):
     """Add all the tests in a set to the benchmarks list."""
     for test_name in benchmark_list:
       telemetry_benchmark = Benchmark(test_name, test_name, test_args,
@@ -258,10 +259,10 @@ class ExperimentFactory(object):
 
       if suite == 'telemetry_Crosperf':
         if test_name == 'all_perfv2':
-          self.AppendBenchmarkSet(benchmarks, telemetry_perfv2_tests, test_args,
-                                  iterations, rm_chroot_tmp, perf_args, suite,
-                                  show_all_results, retries, run_local, cwp_dso,
-                                  weight)
+          self.AppendBenchmarkSet(benchmarks, telemetry_perfv2_tests,
+                                  test_args, iterations, rm_chroot_tmp,
+                                  perf_args, suite, show_all_results, retries,
+                                  run_local, cwp_dso, weight)
         elif test_name == 'all_pagecyclers':
           self.AppendBenchmarkSet(benchmarks, telemetry_pagecycler_tests,
                                   test_args, iterations, rm_chroot_tmp,
@@ -271,21 +272,20 @@ class ExperimentFactory(object):
           self.AppendBenchmarkSet(benchmarks, telemetry_crosbolt_perf_tests,
                                   test_args, iterations, rm_chroot_tmp,
                                   perf_args, 'telemetry_Crosperf',
-                                  show_all_results, retries, run_local, cwp_dso,
-                                  weight)
-          self.AppendBenchmarkSet(
-              benchmarks,
-              crosbolt_perf_tests,
-              '',
-              iterations,
-              rm_chroot_tmp,
-              perf_args,
-              '',
-              show_all_results,
-              retries,
-              run_local=False,
-              cwp_dso=cwp_dso,
-              weight=weight)
+                                  show_all_results, retries, run_local,
+                                  cwp_dso, weight)
+          self.AppendBenchmarkSet(benchmarks,
+                                  crosbolt_perf_tests,
+                                  '',
+                                  iterations,
+                                  rm_chroot_tmp,
+                                  perf_args,
+                                  '',
+                                  show_all_results,
+                                  retries,
+                                  run_local=False,
+                                  cwp_dso=cwp_dso,
+                                  weight=weight)
         elif test_name == 'all_toolchain_perf':
           self.AppendBenchmarkSet(benchmarks, telemetry_toolchain_perf_tests,
                                   test_args, iterations, rm_chroot_tmp,
@@ -325,10 +325,10 @@ class ExperimentFactory(object):
           #         weight=weight))
         elif test_name == 'all_toolchain_perf_old':
           self.AppendBenchmarkSet(benchmarks,
-                                  telemetry_toolchain_old_perf_tests, test_args,
-                                  iterations, rm_chroot_tmp, perf_args, suite,
-                                  show_all_results, retries, run_local, cwp_dso,
-                                  weight)
+                                  telemetry_toolchain_old_perf_tests,
+                                  test_args, iterations, rm_chroot_tmp,
+                                  perf_args, suite, show_all_results, retries,
+                                  run_local, cwp_dso, weight)
         else:
           benchmark = Benchmark(benchmark_name, test_name, test_args,
                                 iterations, rm_chroot_tmp, perf_args, suite,
@@ -337,34 +337,32 @@ class ExperimentFactory(object):
           benchmarks.append(benchmark)
       else:
         if test_name == 'all_graphics_perf':
-          self.AppendBenchmarkSet(
-              benchmarks,
-              graphics_perf_tests,
-              '',
-              iterations,
-              rm_chroot_tmp,
-              perf_args,
-              '',
-              show_all_results,
-              retries,
-              run_local=False,
-              cwp_dso=cwp_dso,
-              weight=weight)
+          self.AppendBenchmarkSet(benchmarks,
+                                  graphics_perf_tests,
+                                  '',
+                                  iterations,
+                                  rm_chroot_tmp,
+                                  perf_args,
+                                  '',
+                                  show_all_results,
+                                  retries,
+                                  run_local=False,
+                                  cwp_dso=cwp_dso,
+                                  weight=weight)
         else:
           # Add the single benchmark.
-          benchmark = Benchmark(
-              benchmark_name,
-              test_name,
-              test_args,
-              iterations,
-              rm_chroot_tmp,
-              perf_args,
-              suite,
-              show_all_results,
-              retries,
-              run_local=False,
-              cwp_dso=cwp_dso,
-              weight=weight)
+          benchmark = Benchmark(benchmark_name,
+                                test_name,
+                                test_args,
+                                iterations,
+                                rm_chroot_tmp,
+                                perf_args,
+                                suite,
+                                show_all_results,
+                                retries,
+                                run_local=False,
+                                cwp_dso=cwp_dso,
+                                weight=weight)
           benchmarks.append(benchmark)
 
     if not benchmarks:
@@ -411,8 +409,8 @@ class ExperimentFactory(object):
 
       # TODO(yunlian): We should consolidate code in machine_manager.py
       # to derermine whether we are running from within google or not
-      if ('corp.google.com' in socket.gethostname() and not my_remote and
-          not crosfleet):
+      if ('corp.google.com' in socket.gethostname() and not my_remote
+          and not crosfleet):
         my_remote = self.GetDefaultRemotes(board)
       if global_settings.GetField('same_machine') and len(my_remote) > 1:
         raise RuntimeError('Only one remote is allowed when same_machine '
@@ -423,8 +421,8 @@ class ExperimentFactory(object):
         # pylint: disable=too-many-function-args
         label = MockLabel(label_name, build, image, autotest_path, debug_path,
                           chromeos_root, board, my_remote, image_args,
-                          cache_dir, cache_only, log_level, compiler, crosfleet,
-                          chrome_src)
+                          cache_dir, cache_only, log_level, compiler,
+                          crosfleet, chrome_src)
       else:
         label = Label(label_name, build, image, autotest_path, debug_path,
                       chromeos_root, board, my_remote, image_args, cache_dir,
@@ -440,19 +438,33 @@ class ExperimentFactory(object):
     if crosfleet:
       for remote in all_remote:
         self.CheckRemotesInCrosfleet(remote)
-    experiment = Experiment(experiment_name, all_remote, working_directory,
-                            chromeos_root, cache_conditions, labels, benchmarks,
-                            experiment_file.Canonicalize(), email,
-                            acquire_timeout, log_dir, log_level, share_cache,
-                            results_dir, compress_results, locks_dir, cwp_dso,
-                            ignore_min_max, crosfleet, dut_config,
+    experiment = Experiment(experiment_name,
+                            all_remote,
+                            working_directory,
+                            chromeos_root,
+                            cache_conditions,
+                            labels,
+                            benchmarks,
+                            experiment_file.Canonicalize(),
+                            email,
+                            acquire_timeout,
+                            log_dir,
+                            log_level,
+                            share_cache,
+                            results_dir,
+                            compress_results,
+                            locks_dir,
+                            cwp_dso,
+                            ignore_min_max,
+                            crosfleet,
+                            dut_config,
                             no_lock=no_lock)
 
     return experiment
 
   def GetDefaultRemotes(self, board):
-    default_remotes_file = os.path.join(
-        os.path.dirname(__file__), 'default_remotes')
+    default_remotes_file = os.path.join(os.path.dirname(__file__),
+                                        'default_remotes')
     try:
       with open(default_remotes_file) as f:
         for line in f:
@@ -482,8 +494,8 @@ class ExperimentFactory(object):
     l = logger.GetLogger()
     l.LogOutput('Crosfleet tool not installed, trying to install it.')
     ce = command_executer.GetCommandExecuter(l, log_level=log_level)
-    setup_lab_tools = os.path.join(chromeos_root, 'chromeos-admin', 'lab-tools',
-                                   'setup_lab_tools')
+    setup_lab_tools = os.path.join(chromeos_root, 'chromeos-admin',
+                                   'lab-tools', 'setup_lab_tools')
     cmd = '%s' % setup_lab_tools
     status = ce.RunCommand(cmd)
     if status != 0:
