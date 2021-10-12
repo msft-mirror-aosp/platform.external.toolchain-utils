@@ -6,8 +6,6 @@
 
 """Tests for rust_watch.py."""
 
-# pylint: disable=cros-logging-import
-
 import logging
 import pathlib
 import subprocess

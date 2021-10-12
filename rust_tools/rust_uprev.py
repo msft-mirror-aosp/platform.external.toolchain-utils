@@ -46,6 +46,10 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, T, Tuple
 
 from llvm_tools import chroot, git
+
+EQUERY = 'equery'
+GSUTIL = 'gsutil.py'
+MIRROR_PATH = 'gs://chromeos-localmirror/distfiles'
 RUST_PATH = Path(
     '/mnt/host/source/src/third_party/chromiumos-overlay/dev-lang/rust')
 
@@ -53,6 +57,15 @@ RUST_PATH = Path(
 def get_command_output(command: List[str], *args, **kwargs) -> str:
   return subprocess.check_output(command, encoding='utf-8', *args,
                                  **kwargs).strip()
+
+
+def get_command_output_unchecked(command: List[str], *args, **kwargs) -> str:
+  return subprocess.run(command,
+                        check=False,
+                        stdout=subprocess.PIPE,
+                        encoding='utf-8',
+                        *args,
+                        **kwargs).stdout.strip()
 
 
 class RustVersion(NamedTuple):
@@ -88,6 +101,19 @@ class RustVersion(NamedTuple):
     assert m, f'failed to parse {x!r}'
     return RustVersion(int(m.group('major')), int(m.group('minor')),
                        int(m.group('patch')))
+
+
+def compute_rustc_src_name(version: RustVersion) -> str:
+  return f'rustc-{version}-src.tar.gz'
+
+
+def compute_rust_bootstrap_prebuilt_name(version: RustVersion) -> str:
+  return f'rust-bootstrap-{version}.tbz2'
+
+
+def find_ebuild_for_package(name: str) -> os.PathLike:
+  """Returns the path to the ebuild for the named package."""
+  return get_command_output([EQUERY, 'w', name])
 
 
 def find_ebuild_path(directory: Path,
@@ -252,7 +278,7 @@ def parse_commandline_args() -> argparse.Namespace:
 def prepare_uprev(rust_version: RustVersion, template: Optional[RustVersion]
                   ) -> Optional[Tuple[RustVersion, str, RustVersion]]:
   if template is None:
-    ebuild_path = get_command_output(['equery', 'w', 'rust'])
+    ebuild_path = find_ebuild_for_package('rust')
     ebuild_name = os.path.basename(ebuild_path)
     template_version = RustVersion.parse_from_ebuild(ebuild_name)
   else:
@@ -354,14 +380,103 @@ def flip_mirror_in_ebuild(ebuild_file: Path, add: bool) -> None:
 
 def ebuild_actions(package: str, actions: List[str],
                    sudo: bool = False) -> None:
-  ebuild_path_inchroot = get_command_output(['equery', 'w', package])
+  ebuild_path_inchroot = find_ebuild_for_package(package)
   cmd = ['ebuild', ebuild_path_inchroot] + actions
   if sudo:
     cmd = ['sudo'] + cmd
   subprocess.check_call(cmd)
 
 
+def fetch_distfile_from_mirror(name: str) -> None:
+  """Gets the named file from the local mirror.
+
+  This ensures that the file exists on the mirror, and
+  that we can read it. We overwrite any existing distfile
+  to ensure the checksums that update_manifest() records
+  match the file as it exists on the mirror.
+
+  This function also attempts to verify the ACL for
+  the file (which is expected to have READER permission
+  for allUsers). We can only see the ACL if the user
+  gsutil runs with is the owner of the file. If not,
+  we get an access denied error. We also count this
+  as a success, because it means we were able to fetch
+  the file even though we don't own it.
+  """
+  mirror_file = MIRROR_PATH + '/' + name
+  local_file = Path(get_distdir(), name)
+  cmd = [GSUTIL, 'cp', mirror_file, local_file]
+  logging.info('Running %r', cmd)
+  rc = subprocess.call(cmd)
+  if rc != 0:
+    logging.error(
+        """Could not fetch %s
+
+If the file does not yet exist at %s
+please download the file, verify its integrity
+with something like:
+
+curl -O https://static.rust-lang.org/dist/%s
+gpg --verify %s.asc
+
+You may need to import the signing key first, e.g.:
+
+gpg --recv-keys 85AB96E6FA1BE5FE
+
+Once you have verify the integrity of the file, upload
+it to the local mirror using gsutil cp.
+""", mirror_file, MIRROR_PATH, name, name)
+    raise Exception(f'Could not fetch {mirror_file}')
+  # Check that the ACL allows allUsers READER access.
+  # If we get an AccessDeniedAcception here, that also
+  # counts as a success, because we were able to fetch
+  # the file as a non-owner.
+  cmd = [GSUTIL, 'acl', 'get', mirror_file]
+  logging.info('Running %r', cmd)
+  output = get_command_output_unchecked(cmd, stderr=subprocess.STDOUT)
+  acl_verified = False
+  if 'AccessDeniedException:' in output:
+    acl_verified = True
+  else:
+    acl = json.loads(output)
+    for x in acl:
+      if x['entity'] == 'allUsers' and x['role'] == 'READER':
+        acl_verified = True
+        break
+  if not acl_verified:
+    logging.error('Output from acl get:\n%s', output)
+    raise Exception('Could not verify that allUsers has READER permission')
+
+
+def fetch_bootstrap_distfiles(old_version: RustVersion,
+                              new_version: RustVersion) -> None:
+  """Fetches rust-bootstrap distfiles from the local mirror
+
+  Fetches the distfiles for a rust-bootstrap ebuild to ensure they
+  are available on the mirror and the local copies are the same as
+  the ones on the mirror.
+  """
+  fetch_distfile_from_mirror(compute_rust_bootstrap_prebuilt_name(old_version))
+  fetch_distfile_from_mirror(compute_rustc_src_name(new_version))
+
+
+def fetch_rust_distfiles(version: RustVersion) -> None:
+  """Fetches rust distfiles from the local mirror
+
+  Fetches the distfiles for a rust ebuild to ensure they
+  are available on the mirror and the local copies are
+  the same as the ones on the mirror.
+  """
+  fetch_distfile_from_mirror(compute_rustc_src_name(version))
+
+
+def get_distdir() -> os.PathLike:
+  """Returns portage's distdir."""
+  return get_command_output(['portageq', 'distdir'])
+
+
 def update_manifest(ebuild_file: os.PathLike) -> None:
+  """Updates the MANIFEST for the ebuild at the given path."""
   ebuild = Path(ebuild_file)
   logging.info('Added "mirror" to RESTRICT to %s', ebuild.name)
   flip_mirror_in_ebuild(ebuild, add=True)
@@ -443,7 +558,7 @@ def prepare_uprev_from_json(
 def create_rust_uprev(rust_version: RustVersion,
                       maybe_template_version: Optional[RustVersion],
                       skip_compile: bool, run_step: Callable[[], T]) -> None:
-  template_version, template_ebuild, _old_bootstrap_version = run_step(
+  template_version, template_ebuild, old_bootstrap_version = run_step(
       'prepare uprev',
       lambda: prepare_uprev(rust_version, maybe_template_version),
       result_from_json=prepare_uprev_from_json,
@@ -451,6 +566,14 @@ def create_rust_uprev(rust_version: RustVersion,
   if template_ebuild is None:
     return
 
+  # The fetch steps will fail (on purpose) if the files they check for
+  # are not available on the mirror. To make them pass, fetch the
+  # required files yourself, verify their checksums, then upload them
+  # to the mirror.
+  run_step(
+      'fetch bootstrap distfiles', lambda: fetch_bootstrap_distfiles(
+          old_bootstrap_version, template_version))
+  run_step('fetch rust distfiles', lambda: fetch_rust_distfiles(rust_version))
   run_step('update bootstrap ebuild', lambda: update_bootstrap_ebuild(
       template_version))
   run_step(
@@ -507,7 +630,7 @@ def remove_rust_bootstrap_version(version: RustVersion,
   prefix = f'rust-bootstrap-{version}'
   run_step('remove old bootstrap ebuild', lambda: remove_files(
       f'{prefix}*.ebuild', rust_bootstrap_path()))
-  ebuild_file = get_command_output(['equery', 'w', 'rust-bootstrap'])
+  ebuild_file = find_ebuild_for_package('rust-bootstrap')
   run_step('update bootstrap manifest to delete old version', lambda:
            update_manifest(ebuild_file))
 
@@ -532,7 +655,7 @@ def remove_rust_uprev(rust_version: Optional[RustVersion],
       'remove patches', lambda: remove_files(
           f'files/rust-{delete_version}-*.patch', RUST_PATH))
   run_step('remove ebuild', lambda: remove_files(delete_ebuild, RUST_PATH))
-  ebuild_file = get_command_output(['equery', 'w', 'rust'])
+  ebuild_file = find_ebuild_for_package('rust')
   run_step('update manifest to delete old version', lambda: update_manifest(
       ebuild_file))
   run_step('remove version from rust packages', lambda: update_rust_packages(
@@ -561,7 +684,7 @@ def create_new_repo(rust_version: RustVersion) -> None:
 
 def build_cross_compiler() -> None:
   # Get target triples in ebuild
-  rust_ebuild = get_command_output(['equery', 'w', 'rust'])
+  rust_ebuild = find_ebuild_for_package('rust')
   with open(rust_ebuild, encoding='utf-8') as f:
     contents = f.read()
 
