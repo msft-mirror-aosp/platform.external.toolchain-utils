@@ -44,6 +44,7 @@
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
             "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable",
             "-mno-movbe",
             "-B../../bin",
             "-target",
@@ -103,6 +104,7 @@
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
             "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable",
             "-mno-movbe",
             "-B../../bin",
             "-target",
@@ -162,6 +164,7 @@
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
             "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable",
             "-mno-movbe",
             "-B../../bin",
             "-target",
@@ -221,6 +224,7 @@
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
             "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable",
             "-B../../bin",
             "-target",
             "armv7m-cros-linux-gnu"
@@ -279,6 +283,7 @@
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
             "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable",
             "-B../../bin",
             "-target",
             "armv7m-cros-eabi"
@@ -337,6 +342,7 @@
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
             "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable",
             "-B../../bin",
             "-target",
             "armv7m-cros-win-gnu"
@@ -395,6 +401,7 @@
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
             "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable",
             "-B../../bin",
             "-target",
             "armv8m-cros-linux-gnu"
@@ -453,6 +460,7 @@
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
             "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable",
             "-B../../bin",
             "-target",
             "armv8m-cros-eabi"
@@ -511,6 +519,7 @@
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
             "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable",
             "-B../../bin",
             "-target",
             "armv8m-cros-win-gnu"
