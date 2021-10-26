@@ -11,6 +11,7 @@ from __future__ import print_function
 
 import io
 import os
+import pickle
 import shutil
 import tempfile
 import unittest
@@ -31,6 +32,8 @@ from cros_utils import command_executer
 from cros_utils import logger
 from cros_utils import misc
 
+# The following hardcoded string has blocked words replaced, and thus
+# is not representative of a true crosperf output.
 # pylint: disable=line-too-long
 OUTPUT = """CMD (True): ./test_that.sh\
  --remote=172.17.128.241  --board=lumpy   LibCBench
@@ -42,13 +45,13 @@ INFO    : Running the following control files 1 times:
 INFO    :  * 'client/site_tests/platform_LibCBench/control'
 
 INFO    : Running client test client/site_tests/platform_LibCBench/control
-./server/autoserv -m 172.17.128.241 --ssh-port 22 -c client/site_tests/platform_LibCBench/control -r /tmp/test_that.PO1234567/platform_LibCBench --test-retry=0 --args 
+./server/autoserv -m 172.17.128.241 --ssh-port 22 -c client/site_tests/platform_LibCBench/control -r /tmp/test_that.PO1234567/platform_LibCBench --test-retry=0 --args
 ERROR:root:import statsd failed, no stats will be reported.
 14:20:22 INFO | Results placed in /tmp/test_that.PO1234567/platform_LibCBench
 14:20:22 INFO | Processing control file
-14:20:23 INFO | Starting master ssh connection '/usr/bin/ssh -a -x -N -o ControlMaster=yes -o ControlPath=/tmp/_autotmp_VIIP67ssh-master/socket -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=180 -o ServerAliveCountMax=3 -o ConnectionAttempts=4 -o Protocol=2 -l root -p 22 172.17.128.241'
+14:20:23 INFO | Starting main ssh connection '/usr/bin/ssh -a -x -N -o ControlMain=yes -o ControlPath=/tmp/_autotmp_VIIP67ssh-main/socket -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=180 -o ServerAliveCountMax=3 -o ConnectionAttempts=4 -o Protocol=2 -l root -p 22 172.17.128.241'
 14:20:23 ERROR| [stderr] Warning: Permanently added '172.17.128.241' (RSA) to the list of known hosts.
-14:20:23 INFO | INFO	----	----	kernel=3.8.11	localtime=May 22 14:20:23	timestamp=1369257623	
+14:20:23 INFO | INFO\t----\t----\tkernel=3.8.11\tlocaltime=May 22 14:20:23\ttimestamp=1369257623
 14:20:23 INFO | Installing autotest on 172.17.128.241
 14:20:23 INFO | Using installation dir /usr/local/autotest
 14:20:23 WARNI| No job_repo_url for <remote host: 172.17.128.241>
@@ -59,11 +62,11 @@ ERROR:root:import statsd failed, no stats will be reported.
 14:20:24 INFO | Entered autotestd_monitor.
 14:20:24 INFO | Finished launching tail subprocesses.
 14:20:24 INFO | Finished waiting on autotestd to start.
-14:20:26 INFO | START	----	----	timestamp=1369257625	localtime=May 22 14:20:25	
-14:20:26 INFO | 	START	platform_LibCBench	platform_LibCBench	timestamp=1369257625	localtime=May 22 14:20:25	
-14:20:30 INFO | 		GOOD	platform_LibCBench	platform_LibCBench	timestamp=1369257630	localtime=May 22 14:20:30	completed successfully
-14:20:30 INFO | 	END GOOD	platform_LibCBench	platform_LibCBench	timestamp=1369257630	localtime=May 22 14:20:30	
-14:20:31 INFO | END GOOD	----	----	timestamp=1369257630	localtime=May 22 14:20:30	
+14:20:26 INFO | START\t----\t----\ttimestamp=1369257625\tlocaltime=May 22 14:20:25
+14:20:26 INFO | \tSTART\tplatform_LibCBench\tplatform_LibCBench\ttimestamp=1369257625\tlocaltime=May 22 14:20:25
+14:20:30 INFO | \t\tGOOD\tplatform_LibCBench\tplatform_LibCBench\ttimestamp=1369257630\tlocaltime=May 22 14:20:30\tcompleted successfully
+14:20:30 INFO | \tEND GOOD\tplatform_LibCBench\tplatform_LibCBench\ttimestamp=1369257630\tlocaltime=May 22 14:20:30
+14:20:31 INFO | END GOOD\t----\t----\ttimestamp=1369257630\tlocaltime=May 22 14:20:30
 14:20:31 INFO | Got lock of exit_code_file.
 14:20:31 INFO | Released lock of exit_code_file and closed it.
 OUTPUT: ==============================
@@ -72,14 +75,14 @@ Done: 0% [                                                  ]
 OUTPUT: Thread Status:
 RUNNING:  1 ('ttt: LibCBench (1)' 0:01:21)
 Machine Status:
-Machine                        Thread     Lock Status                    Checksum                        
+Machine                        Thread     Lock Status                    Checksum
 172.17.128.241                 ttt: LibCBench (1) True RUNNING                   3ba9f2ecbb222f20887daea5583d86ba
 
 OUTPUT: ==============================
 14:20:33 INFO | Killing child processes.
 14:20:33 INFO | Client complete
 14:20:33 INFO | Finished processing control file
-14:20:33 INFO | Starting master ssh connection '/usr/bin/ssh -a -x -N -o ControlMaster=yes -o ControlPath=/tmp/_autotmp_aVJUgmssh-master/socket -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=180 -o ServerAliveCountMax=3 -o ConnectionAttempts=4 -o Protocol=2 -l root -p 22 172.17.128.241'
+14:20:33 INFO | Starting main ssh connection '/usr/bin/ssh -a -x -N -o ControlMain=yes -o ControlPath=/tmp/_autotmp_aVJUgmssh-main/socket -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=180 -o ServerAliveCountMax=3 -o ConnectionAttempts=4 -o Protocol=2 -l root -p 22 172.17.128.241'
 14:20:33 ERROR| [stderr] Warning: Permanently added '172.17.128.241' (RSA) to the list of known hosts.
 
 INFO    : Test results:
@@ -116,7 +119,7 @@ platform_LibCBench/platform_LibCBench                     b_utf8_onebyone__0_   
 -------------------------------------------------------------------
 Total PASS: 2/2 (100%)
 
-INFO    : Elapsed time: 0m16s 
+INFO    : Elapsed time: 0m16s
 """
 
 error = """
@@ -484,8 +487,8 @@ class ResultTest(unittest.TestCase):
 
   def testCreateFromRun(self):
     result = MockResult.CreateFromRun(logger.GetLogger(), 'average',
-                                      self.mock_label, 'remote1', OUTPUT, error,
-                                      0, True)
+                                      self.mock_label, 'remote1', OUTPUT,
+                                      error, 0, True)
     self.assertEqual(result.keyvals, keyvals)
     self.assertEqual(result.chroot_results_dir,
                      '/tmp/test_that.PO1234567/platform_LibCBench')
@@ -533,7 +536,8 @@ class ResultTest(unittest.TestCase):
                      mock_runcmd.call_args_list[1])
     self.assertEqual(mock_runcmd.call_args_list[0],
                      mock_runcmd.call_args_list[2])
-    self.assertEqual(mock_runcmd.call_args_list[0][0], ('mkdir -p /tmp/test',))
+    self.assertEqual(mock_runcmd.call_args_list[0][0],
+                     ('mkdir -p /tmp/test', ))
 
     # test 3. CopyFiles returns 1 (fails).
     mock_copyfiles.return_value = 1
@@ -715,7 +719,8 @@ class ResultTest(unittest.TestCase):
 
     mock_mkdtemp.return_value = TMP_DIR1
     mock_chrootruncmd.return_value = [
-        '', ('%s,PASS\n%s/telemetry_Crosperf,PASS\n') % (TMP_DIR1, TMP_DIR1), ''
+        '', ('%s,PASS\n%s/telemetry_Crosperf,PASS\n') % (TMP_DIR1, TMP_DIR1),
+        ''
     ]
     mock_getpath.return_value = TMP_DIR1
     self.result.ce.ChrootRunCommandWOutput = mock_chrootruncmd
@@ -730,7 +735,7 @@ class ResultTest(unittest.TestCase):
     self.assertEqual(self.kv_dict, {'': 'PASS', 'telemetry_Crosperf': 'PASS'})
     self.assertEqual(mock_runcmd.call_count, 1)
     self.assertEqual(mock_runcmd.call_args_list[0][0],
-                     ('cp -r /tmp/test_that_resultsNmq/* %s' % TMP_DIR1,))
+                     ('cp -r /tmp/test_that_resultsNmq/* %s' % TMP_DIR1, ))
     self.assertEqual(mock_chrootruncmd.call_count, 1)
     self.assertEqual(
         mock_chrootruncmd.call_args_list[0][0],
@@ -770,7 +775,8 @@ class ResultTest(unittest.TestCase):
   @mock.patch.object(command_executer.CommandExecuter,
                      'ChrootRunCommandWOutput')
   @mock.patch.object(os.path, 'exists')
-  def test_get_samples(self, mock_exists, mock_get_total_samples, mock_getpath):
+  def test_get_samples(self, mock_exists, mock_get_total_samples,
+                       mock_getpath):
     self.result.perf_data_files = ['/tmp/results/perf.data']
     self.result.board = 'samus'
     mock_getpath.return_value = '/usr/chromeos/chroot/tmp/results/perf.data'
@@ -811,7 +817,7 @@ class ResultTest(unittest.TestCase):
     res = self.result.FindFilesInResultsDir('-name perf.data')
     self.assertEqual(mock_runcmd.call_count, 1)
     self.assertEqual(mock_runcmd.call_args_list[0][0],
-                     ('find /tmp/test_results -name perf.data',))
+                     ('find /tmp/test_results -name perf.data', ))
     self.assertEqual(res, '/tmp/test_results/perf.data')
 
     mock_runcmd.reset_mock()
@@ -827,7 +833,8 @@ class ResultTest(unittest.TestCase):
     self.result.FindFilesInResultsDir = mock_findfiles
     res = self.result.GetPerfDataFiles()
     self.assertEqual(res, ['line1', 'line1'])
-    self.assertEqual(mock_findfiles.call_args_list[0][0], ('-name perf.data',))
+    self.assertEqual(mock_findfiles.call_args_list[0][0],
+                     ('-name perf.data', ))
 
   def test_get_perf_report_files(self):
     self.args = None
@@ -958,16 +965,18 @@ class ResultTest(unittest.TestCase):
     """Verify perf PID which is present in TOP_DATA."""
     self.result.top_cmds = TOP_DATA
     # pid is present in TOP_DATA.
-    with mock.patch.object(
-        Result, 'ReadPidFromPerfData', return_value=['5713']):
+    with mock.patch.object(Result,
+                           'ReadPidFromPerfData',
+                           return_value=['5713']):
       self.result.VerifyPerfDataPID()
 
   def test_verify_perf_data_pid_fail(self):
     """Test perf PID missing in top raises the error."""
     self.result.top_cmds = TOP_DATA
     # pid is not in the list of top processes.
-    with mock.patch.object(
-        Result, 'ReadPidFromPerfData', return_value=['9999']):
+    with mock.patch.object(Result,
+                           'ReadPidFromPerfData',
+                           return_value=['9999']):
       with self.assertRaises(PidVerificationError):
         self.result.VerifyPerfDataPID()
 
@@ -976,7 +985,9 @@ class ResultTest(unittest.TestCase):
   def test_read_pid_from_perf_data_ok(self, mock_runcmd):
     """Test perf header parser, normal flow."""
     self.result.ce.ChrootRunCommandWOutput = mock_runcmd
-    self.result.perf_data_files = ['/tmp/chromeos/chroot/tmp/results/perf.data']
+    self.result.perf_data_files = [
+        '/tmp/chromeos/chroot/tmp/results/perf.data'
+    ]
     exp_pid = '12345'
     mock_runcmd.return_value = (0, PERF_DATA_HEADER.format(pid=exp_pid), '')
     pids = self.result.ReadPidFromPerfData()
@@ -1007,7 +1018,9 @@ class ResultTest(unittest.TestCase):
   def test_read_pid_from_perf_data_no_pid(self, mock_runcmd):
     """Test perf.data without PID."""
     self.result.ce.ChrootRunCommandWOutput = mock_runcmd
-    self.result.perf_data_files = ['/tmp/chromeos/chroot/tmp/results/perf.data']
+    self.result.perf_data_files = [
+        '/tmp/chromeos/chroot/tmp/results/perf.data'
+    ]
     cmd_line = '# cmdline : /usr/bin/perf record -e instructions'
     mock_runcmd.return_value = (0, cmd_line, '')
     pids = self.result.ReadPidFromPerfData()
@@ -1019,7 +1032,9 @@ class ResultTest(unittest.TestCase):
   def test_read_pid_from_perf_data_system_wide(self, mock_runcmd):
     """Test reading from system-wide profile with PID."""
     self.result.ce.ChrootRunCommandWOutput = mock_runcmd
-    self.result.perf_data_files = ['/tmp/chromeos/chroot/tmp/results/perf.data']
+    self.result.perf_data_files = [
+        '/tmp/chromeos/chroot/tmp/results/perf.data'
+    ]
     # There is '-p <pid>' in command line but it's still system-wide: '-a'.
     cmd_line = '# cmdline : /usr/bin/perf record -e instructions -a -p 1234'
     mock_runcmd.return_value = (0, cmd_line, '')
@@ -1032,7 +1047,9 @@ class ResultTest(unittest.TestCase):
   def test_read_pid_from_perf_data_read_fail(self, mock_runcmd):
     """Failure to read perf.data raises the error."""
     self.result.ce.ChrootRunCommandWOutput = mock_runcmd
-    self.result.perf_data_files = ['/tmp/chromeos/chroot/tmp/results/perf.data']
+    self.result.perf_data_files = [
+        '/tmp/chromeos/chroot/tmp/results/perf.data'
+    ]
     # Error status of the profile read.
     mock_runcmd.return_value = (1, '', '')
     with self.assertRaises(PerfDataReadError):
@@ -1043,7 +1060,9 @@ class ResultTest(unittest.TestCase):
   def test_read_pid_from_perf_data_fail(self, mock_runcmd):
     """Failure to find cmdline in perf.data header raises the error."""
     self.result.ce.ChrootRunCommandWOutput = mock_runcmd
-    self.result.perf_data_files = ['/tmp/chromeos/chroot/tmp/results/perf.data']
+    self.result.perf_data_files = [
+        '/tmp/chromeos/chroot/tmp/results/perf.data'
+    ]
     # Empty output.
     mock_runcmd.return_value = (0, '', '')
     with self.assertRaises(PerfDataReadError):
@@ -1273,7 +1292,6 @@ class ResultTest(unittest.TestCase):
 
   @mock.patch.object(misc, 'GetOutsideChrootPath')
   def test_populate_from_run(self, mock_getpath):
-
     def FakeGetResultsDir():
       self.callGetResultsDir = True
       return '/tmp/results_dir'
@@ -1361,7 +1379,6 @@ class ResultTest(unittest.TestCase):
       return {'Total': 10}
 
   def test_process_results(self):
-
     def FakeGatherPerfResults():
       self.callGatherPerfResults = True
 
@@ -1407,16 +1424,17 @@ class ResultTest(unittest.TestCase):
     self.result.ProcessResults()
     shutil.rmtree(os.path.dirname(self.result.results_file[0]))
     # Verify the summary for the story is correct
-    self.assertEqual(self.result.keyvals['timeToFirstContentfulPaint__typical'],
-                     [880.000, u'ms_smallerIsBetter'])
+    self.assertEqual(
+        self.result.keyvals['timeToFirstContentfulPaint__typical'],
+        [880.000, u'ms_smallerIsBetter'])
     # Veirfy the summary for a certain stroy tag is correct
     self.assertEqual(
-        self.result
-        .keyvals['timeToFirstContentfulPaint__cache_temperature:cold'],
+        self.result.
+        keyvals['timeToFirstContentfulPaint__cache_temperature:cold'],
         [1000.000, u'ms_smallerIsBetter'])
     self.assertEqual(
-        self.result
-        .keyvals['timeToFirstContentfulPaint__cache_temperature:warm'],
+        self.result.
+        keyvals['timeToFirstContentfulPaint__cache_temperature:warm'],
         [800.000, u'ms_smallerIsBetter'])
 
   @mock.patch.object(Result, 'ProcessCpustatsResults')
@@ -1572,7 +1590,8 @@ class ResultTest(unittest.TestCase):
             u'telemetry_page_measurement_results__num_errored': [0, u'count'],
             u'string-fasta__string-fasta': [23.2, u'ms'],
             u'crypto-sha1__crypto-sha1': [11.6, u'ms'],
-            u'bitops-3bit-bits-in-byte__bitops-3bit-bits-in-byte': [3.2, u'ms'],
+            u'bitops-3bit-bits-in-byte__bitops-3bit-bits-in-byte':
+            [3.2, u'ms'],
             u'access-nsieve__access-nsieve': [7.9, u'ms'],
             u'bitops-nsieve-bits__bitops-nsieve-bits': [9.4, u'ms'],
             u'string-validate-input__string-validate-input': [19.3, u'ms'],
@@ -1610,7 +1629,8 @@ class ResultTest(unittest.TestCase):
             u'telemetry_page_measurement_results__num_errored': [0, u'count'],
             u'string-fasta__string-fasta': [23.2, u'ms'],
             u'crypto-sha1__crypto-sha1': [11.6, u'ms'],
-            u'bitops-3bit-bits-in-byte__bitops-3bit-bits-in-byte': [3.2, u'ms'],
+            u'bitops-3bit-bits-in-byte__bitops-3bit-bits-in-byte':
+            [3.2, u'ms'],
             u'access-nsieve__access-nsieve': [7.9, u'ms'],
             u'bitops-nsieve-bits__bitops-nsieve-bits': [9.4, u'ms'],
             u'string-validate-input__string-validate-input': [19.3, u'ms'],
@@ -1657,8 +1677,9 @@ class ResultTest(unittest.TestCase):
     self.assertEqual(mock_getroot.call_count, 1)
     self.assertEqual(mock_runcmd.call_count, 2)
     self.assertEqual(mock_runcmd.call_args_list[0][0],
-                     ('rm -rf test_results_dir',))
-    self.assertEqual(mock_runcmd.call_args_list[1][0], ('rm -rf testtemp_dir',))
+                     ('rm -rf test_results_dir', ))
+    self.assertEqual(mock_runcmd.call_args_list[1][0],
+                     ('rm -rf testtemp_dir', ))
 
     # Test 2. Same, except ath results_dir name does not contain
     # 'test_that_results_'
@@ -1672,8 +1693,9 @@ class ResultTest(unittest.TestCase):
     self.assertEqual(mock_getroot.call_count, 1)
     self.assertEqual(mock_runcmd.call_count, 2)
     self.assertEqual(mock_runcmd.call_args_list[0][0],
-                     ('rm -rf /tmp/tmp_AbcXyz',))
-    self.assertEqual(mock_runcmd.call_args_list[1][0], ('rm -rf testtemp_dir',))
+                     ('rm -rf /tmp/tmp_AbcXyz', ))
+    self.assertEqual(mock_runcmd.call_args_list[1][0],
+                     ('rm -rf testtemp_dir', ))
 
     # Test 3. mock_getroot returns nothing; 'rm_chroot_tmp' is False.
     mock_getroot.reset_mock()
@@ -1681,7 +1703,8 @@ class ResultTest(unittest.TestCase):
     self.result.CleanUp(False)
     self.assertEqual(mock_getroot.call_count, 0)
     self.assertEqual(mock_runcmd.call_count, 1)
-    self.assertEqual(mock_runcmd.call_args_list[0][0], ('rm -rf testtemp_dir',))
+    self.assertEqual(mock_runcmd.call_args_list[0][0],
+                     ('rm -rf testtemp_dir', ))
 
     # Test 4. 'rm_chroot_tmp' is True, but result_dir & temp_dir are None.
     mock_getroot.reset_mock()
@@ -1695,7 +1718,6 @@ class ResultTest(unittest.TestCase):
   @mock.patch.object(misc, 'GetInsideChrootPath')
   @mock.patch.object(command_executer.CommandExecuter, 'ChrootRunCommand')
   def test_store_to_cache_dir(self, mock_chrootruncmd, mock_getpath):
-
     def FakeMkdtemp(directory=''):
       if directory:
         pass
@@ -1730,7 +1752,7 @@ class ResultTest(unittest.TestCase):
     base_dir = os.path.join(os.getcwd(), 'test_cache/compare_output')
     self.assertTrue(os.path.exists(os.path.join(test_dir, 'autotest.tbz2')))
     self.assertTrue(os.path.exists(os.path.join(test_dir, 'machine.txt')))
-    self.assertTrue(os.path.exists(os.path.join(test_dir, 'results.txt')))
+    self.assertTrue(os.path.exists(os.path.join(test_dir, 'results.pickle')))
 
     f1 = os.path.join(test_dir, 'machine.txt')
     f2 = os.path.join(base_dir, 'machine.txt')
@@ -1738,11 +1760,13 @@ class ResultTest(unittest.TestCase):
     [_, out, _] = self.result.ce.RunCommandWOutput(cmd)
     self.assertEqual(len(out), 0)
 
-    f1 = os.path.join(test_dir, 'results.txt')
-    f2 = os.path.join(base_dir, 'results.txt')
-    cmd = 'diff %s %s' % (f1, f2)
-    [_, out, _] = self.result.ce.RunCommandWOutput(cmd)
-    self.assertEqual(len(out), 0)
+    f1 = os.path.join(test_dir, 'results.pickle')
+    f2 = os.path.join(base_dir, 'results.pickle')
+    with open(f1, 'rb') as f:
+      f1_obj = pickle.load(f)
+    with open(f2, 'rb') as f:
+      f2_obj = pickle.load(f)
+    self.assertEqual(f1_obj, f2_obj)
 
     # Clean up after test.
     tempfile.mkdtemp = save_real_mkdtemp
@@ -1753,87 +1777,87 @@ class ResultTest(unittest.TestCase):
 TELEMETRY_RESULT_KEYVALS = {
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'math-cordic (ms)':
-        '11.4',
+    '11.4',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'access-nbody (ms)':
-        '6.9',
+    '6.9',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'access-fannkuch (ms)':
-        '26.3',
+    '26.3',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'math-spectral-norm (ms)':
-        '6.3',
+    '6.3',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'bitops-nsieve-bits (ms)':
-        '9.3',
+    '9.3',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'math-partial-sums (ms)':
-        '32.8',
+    '32.8',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'regexp-dna (ms)':
-        '16.1',
+    '16.1',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     '3d-cube (ms)':
-        '42.7',
+    '42.7',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'crypto-md5 (ms)':
-        '10.8',
+    '10.8',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'crypto-sha1 (ms)':
-        '12.4',
+    '12.4',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'string-tagcloud (ms)':
-        '47.2',
+    '47.2',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'string-fasta (ms)':
-        '36.3',
+    '36.3',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'access-binary-trees (ms)':
-        '7.3',
+    '7.3',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'date-format-xparb (ms)':
-        '138.1',
+    '138.1',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'crypto-aes (ms)':
-        '19.2',
+    '19.2',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'Total (ms)':
-        '656.5',
+    '656.5',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'string-base64 (ms)':
-        '17.5',
+    '17.5',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'string-validate-input (ms)':
-        '24.8',
+    '24.8',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     '3d-raytrace (ms)':
-        '28.7',
+    '28.7',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'controlflow-recursive (ms)':
-        '5.3',
+    '5.3',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'bitops-bits-in-byte (ms)':
-        '9.8',
+    '9.8',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     '3d-morph (ms)':
-        '50.2',
+    '50.2',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'bitops-bitwise-and (ms)':
-        '8.8',
+    '8.8',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'access-nsieve (ms)':
-        '8.6',
+    '8.6',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'date-format-tofte (ms)':
-        '31.2',
+    '31.2',
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'bitops-3bit-bits-in-byte (ms)':
-        '3.5',
+    '3.5',
     'retval':
-        0,
+    0,
     'http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html '
     'string-unpack-code (ms)':
-        '45.0'
+    '45.0'
 }
 
 PURE_TELEMETRY_OUTPUT = """
@@ -1854,12 +1878,10 @@ class TelemetryResultTest(unittest.TestCase):
                                 'autotest_dir', 'debug_dir', '/tmp', 'lumpy',
                                 'remote', 'image_args', 'cache_dir', 'average',
                                 'gcc', False, None)
-    self.mock_machine = machine_manager.MockCrosMachine('falco.cros',
-                                                        '/tmp/chromeos',
-                                                        'average')
+    self.mock_machine = machine_manager.MockCrosMachine(
+        'falco.cros', '/tmp/chromeos', 'average')
 
   def test_populate_from_run(self):
-
     def FakeProcessResults():
       self.callFakeProcessResults = True
 
@@ -1932,7 +1954,6 @@ class ResultsCacheTest(unittest.TestCase):
 
   @mock.patch.object(image_checksummer.ImageChecksummer, 'Checksum')
   def test_get_cache_dir_for_write(self, mock_checksum):
-
     def FakeGetMachines(label):
       if label:
         pass
@@ -2041,7 +2062,8 @@ class ResultsCacheTest(unittest.TestCase):
     # Test 5. Generating cache name for writing, with local image type, and
     # specifying that the image path must match the cached image path.
     self.results_cache.label.image_type = 'local'
-    self.results_cache.cache_conditions.append(CacheConditions.IMAGE_PATH_MATCH)
+    self.results_cache.cache_conditions.append(
+        CacheConditions.IMAGE_PATH_MATCH)
     key_list = self.results_cache.GetCacheKeyList(False)
     self.assertEqual(key_list[0], '54524606abaae4fdf7b02f49f7ae7127')
     self.assertEqual(key_list[3], 'fda29412ceccb72977516c4785d08e2c')

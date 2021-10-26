@@ -162,7 +162,7 @@ def get_new_gentoo_commits(git_dir: pathlib.Path,
           'git',
           'log',
           '--format=%H %s',
-          f'{most_recent_sha}..origin/master',
+          f'{most_recent_sha}..origin/master',  # nocheck
           '--',
           'dev-lang/rust',
       ],
@@ -225,7 +225,7 @@ def atomically_write_state(state_file: pathlib.Path, state: State) -> None:
 
 def maybe_compose_email(old_state: State, newest_release: RustReleaseVersion,
                         new_gentoo_commits: List[GitCommit]
-                       ) -> Optional[Tuple[str, List[tiny_render.Piece]]]:
+                        ) -> Optional[Tuple[str, List[tiny_render.Piece]]]:
   """Creates an email given our new state, if doing so is appropriate."""
   subject_pieces = []
   body_pieces = []
@@ -269,11 +269,14 @@ def main(argv: List[str]) -> None:
   logging.basicConfig(level=logging.INFO)
 
   parser = argparse.ArgumentParser(
-      description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-  parser.add_argument(
-      '--state_dir', required=True, help='Directory to store state in.')
-  parser.add_argument(
-      '--skip_email', action='store_true', help="Don't send an email.")
+      description=__doc__,
+      formatter_class=argparse.RawDescriptionHelpFormatter)
+  parser.add_argument('--state_dir',
+                      required=True,
+                      help='Directory to store state in.')
+  parser.add_argument('--skip_email',
+                      action='store_true',
+                      help="Don't send an email.")
   parser.add_argument(
       '--skip_state_update',
       action='store_true',
@@ -334,8 +337,8 @@ def main(argv: List[str]) -> None:
     logging.info('Skipping state update, as requested')
     return
 
-  newest_sha = (
-      new_commits[-1].sha if new_commits else prior_state.last_gentoo_sha)
+  newest_sha = (new_commits[-1].sha
+                if new_commits else prior_state.last_gentoo_sha)
   atomically_write_state(
       state_file,
       State(

@@ -14,7 +14,7 @@ func processSanitizerFlags(builder *commandBuilder) {
 	hasSanitizeFuzzerFlags := false
 	for _, arg := range builder.args {
 		// TODO: This should probably be -fsanitize= to not match on
-		// e.g. -fsanitize-blacklist
+		// e.g. -fsanitize-blocklist
 		if arg.fromUser {
 			if strings.HasPrefix(arg.value, "-fsanitize") {
 				hasSanitizeFlags = true
