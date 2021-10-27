@@ -34,6 +34,7 @@ DEFAULT_PACKAGES = [
     'sys-libs/llvm-libunwind',
 ]
 
+
 # Specify which LLVM hash to update
 class LLVMVariant(enum.Enum):
   """Represent the LLVM hash in an ebuild file to update."""
@@ -77,26 +78,23 @@ def GetCommandLineArgs():
       description="Updates the build's hash for llvm-next.")
 
   # Add argument for a specific chroot path.
-  parser.add_argument(
-      '--chroot_path',
-      default=defaultCrosRoot(),
-      help='the path to the chroot (default: %(default)s)')
+  parser.add_argument('--chroot_path',
+                      default=defaultCrosRoot(),
+                      help='the path to the chroot (default: %(default)s)')
 
   # Add argument for specific builds to uprev and update their llvm-next hash.
-  parser.add_argument(
-      '--update_packages',
-      default=DEFAULT_PACKAGES,
-      required=False,
-      nargs='+',
-      help='the ebuilds to update their hash for llvm-next '
-      '(default: %(default)s)')
+  parser.add_argument('--update_packages',
+                      default=DEFAULT_PACKAGES,
+                      required=False,
+                      nargs='+',
+                      help='the ebuilds to update their hash for llvm-next '
+                      '(default: %(default)s)')
 
   # Add argument for whether to display command contents to `stdout`.
-  parser.add_argument(
-      '--verbose',
-      action='store_true',
-      help='display contents of a command to the terminal '
-      '(default: %(default)s)')
+  parser.add_argument('--verbose',
+                      action='store_true',
+                      help='display contents of a command to the terminal '
+                      '(default: %(default)s)')
 
   # Add argument for the LLVM hash to update
   parser.add_argument(
@@ -322,9 +320,11 @@ def UprevEbuildToVersion(symlink, svn_version, git_hash):
         count=1)
   # any other package
   else:
-    new_ebuild, is_changed = re.subn(
-        r'(\d+)\.(\d+)_pre([0-9]+)',
-        '%s.\\2_pre%s' % (llvm_major_version, svn_version), ebuild, count=1)
+    new_ebuild, is_changed = re.subn(r'(\d+)\.(\d+)_pre([0-9]+)',
+                                     '%s.\\2_pre%s' %
+                                     (llvm_major_version, svn_version),
+                                     ebuild,
+                                     count=1)
 
   if not is_changed:  # failed to increment the revision number
     raise ValueError('Failed to uprev the ebuild.')
@@ -405,7 +405,8 @@ def StagePatchMetadataFileForCommit(patch_metadata_file_path):
   # Cmd to stage the patch metadata file for commit.
   subprocess.check_output([
       'git', '-C',
-      os.path.dirname(patch_metadata_file_path), 'add', patch_metadata_file_path
+      os.path.dirname(patch_metadata_file_path), 'add',
+      patch_metadata_file_path
   ])
 
 
@@ -427,9 +428,9 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
   # changed, if so, add which patches have changed to the commit
   # message.
   for package_name, patch_info_dict in package_info_dict.items():
-    if (patch_info_dict['disabled_patches'] or
-        patch_info_dict['removed_patches'] or
-        patch_info_dict['modified_metadata']):
+    if (patch_info_dict['disabled_patches']
+        or patch_info_dict['removed_patches']
+        or patch_info_dict['modified_metadata']):
       cur_package_header = '\nFor the package %s:' % package_name
       commit_messages.append(cur_package_header)
 
@@ -608,16 +609,16 @@ def main():
   git_hash, svn_version = get_llvm_hash.GetLLVMHashAndVersionFromSVNOption(
       git_hash_source)
 
-  change_list = UpdatePackages(
-      args_output.update_packages,
-      llvm_variant,
-      git_hash,
-      svn_version,
-      args_output.chroot_path,
-      args_output.patch_metadata_file,
-      failure_modes.FailureModes(args_output.failure_mode),
-      git_hash_source,
-      extra_commit_msg=None)
+  change_list = UpdatePackages(args_output.update_packages,
+                               llvm_variant,
+                               git_hash,
+                               svn_version,
+                               args_output.chroot_path,
+                               args_output.patch_metadata_file,
+                               failure_modes.FailureModes(
+                                   args_output.failure_mode),
+                               git_hash_source,
+                               extra_commit_msg=None)
 
   print('Successfully updated packages to %s (%d)' % (git_hash, svn_version))
   print('Gerrit URL: %s' % change_list.url)
