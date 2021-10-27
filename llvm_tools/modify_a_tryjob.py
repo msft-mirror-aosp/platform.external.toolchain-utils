@@ -17,9 +17,9 @@ import sys
 import chroot
 import failure_modes
 import get_llvm_hash
+import update_chromeos_llvm_hash
 import update_packages_and_run_tests
 import update_tryjob_status
-import update_chromeos_llvm_hash
 
 
 class ModifyTryjob(enum.Enum):
@@ -253,17 +253,14 @@ def PerformTryjobModification(revision, modify_tryjob, status_file, extra_cls,
     # Make sure the revision is within the bounds of the start and end of the
     # bisection.
     elif bisect_contents['start'] < revision < bisect_contents['end']:
-      update_packages = [
-          'sys-devel/llvm', 'sys-libs/compiler-rt', 'sys-libs/libcxx',
-          'sys-libs/libcxxabi', 'sys-libs/llvm-libunwind'
-      ]
 
       patch_metadata_file = 'PATCHES.json'
 
       git_hash, revision = get_llvm_hash.GetLLVMHashAndVersionFromSVNOption(
           revision)
 
-      tryjob_dict = AddTryjob(update_packages, git_hash, revision, chroot_path,
+      tryjob_dict = AddTryjob(update_chromeos_llvm_hash.DEFAULT_PACKAGES,
+                              git_hash, revision, chroot_path,
                               patch_metadata_file, extra_cls, options, builder,
                               verbose, revision)
 

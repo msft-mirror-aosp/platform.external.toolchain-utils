@@ -21,7 +21,6 @@ import update_chromeos_llvm_hash
 
 VALID_CQ_TRYBOTS = ['llvm', 'llvm-next', 'llvm-tot']
 
-
 def GetCommandLineArgs():
   """Parses the command line for the command line arguments.
 
@@ -402,11 +401,6 @@ def main():
 
   args_output = GetCommandLineArgs()
 
-  update_packages = [
-      'sys-devel/llvm', 'sys-libs/compiler-rt', 'sys-libs/libcxx',
-      'sys-libs/libcxxabi', 'sys-libs/llvm-libunwind'
-  ]
-
   patch_metadata_file = 'PATCHES.json'
 
   svn_option = args_output.llvm_version
@@ -420,8 +414,8 @@ def main():
   # If --last_tested is specified, check if the current run has the same
   # arguments last time --last_tested is used.
   if args_output.last_tested:
-    chroot_file_paths = chroot.GetChrootEbuildPaths(args_output.chroot_path,
-                                                    update_packages)
+    chroot_file_paths = chroot.GetChrootEbuildPaths(
+        args_output.chroot_path, update_chromeos_llvm_hash.DEFAULT_PACKAGES)
     arg_dict = {
         'svn_version': svn_version,
         'ebuilds': chroot_file_paths,
@@ -449,7 +443,7 @@ def main():
       extra_commit_msg += cq_trybot_msg
 
   change_list = update_chromeos_llvm_hash.UpdatePackages(
-      update_packages,
+      update_chromeos_llvm_hash.DEFAULT_PACKAGES,
       llvm_variant,
       git_hash,
       svn_version,

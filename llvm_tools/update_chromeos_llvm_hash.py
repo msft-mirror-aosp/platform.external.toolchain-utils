@@ -25,6 +25,14 @@ import get_llvm_hash
 import git
 import llvm_patch_management
 
+DEFAULT_PACKAGES = [
+    'dev-util/lldb-server',
+    'sys-devel/llvm',
+    'sys-libs/compiler-rt',
+    'sys-libs/libcxx',
+    'sys-libs/libcxxabi',
+    'sys-libs/llvm-libunwind',
+]
 
 # Specify which LLVM hash to update
 class LLVMVariant(enum.Enum):
@@ -77,7 +85,7 @@ def GetCommandLineArgs():
   # Add argument for specific builds to uprev and update their llvm-next hash.
   parser.add_argument(
       '--update_packages',
-      default=['sys-devel/llvm'],
+      default=DEFAULT_PACKAGES,
       required=False,
       nargs='+',
       help='the ebuilds to update their hash for llvm-next '

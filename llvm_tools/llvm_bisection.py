@@ -20,8 +20,8 @@ import chroot
 import get_llvm_hash
 import git_llvm_rev
 import modify_a_tryjob
+import update_chromeos_llvm_hash
 import update_tryjob_status
-
 
 class BisectionExitStatus(enum.Enum):
   """Exit code when performing bisection."""
@@ -295,10 +295,6 @@ def main(args_output):
   """
 
   chroot.VerifyOutsideChroot()
-  update_packages = [
-      'sys-devel/llvm', 'sys-libs/compiler-rt', 'sys-libs/libcxx',
-      'sys-libs/libcxxabi', 'sys-libs/llvm-libunwind'
-  ]
   patch_metadata_file = 'PATCHES.json'
   start = args_output.start_rev
   end = args_output.end_rev
@@ -378,7 +374,8 @@ def main(args_output):
       raise ValueError(f'Revision {rev} exists already in "jobs"')
 
   Bisect(revisions, git_hashes, bisect_state, args_output.last_tested,
-         update_packages, args_output.chroot_path, patch_metadata_file,
+         update_chromeos_llvm_hash.DEFAULT_PACKAGES,
+         args_output.chroot_path, patch_metadata_file,
          args_output.extra_change_lists, args_output.options,
          args_output.builder, args_output.verbose)
 
