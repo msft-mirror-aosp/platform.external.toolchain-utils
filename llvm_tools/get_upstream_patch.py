@@ -31,8 +31,8 @@ class CherrypickError(ValueError):
 
 def add_patch(patches_json_path: str, patches_dir: str,
               relative_patches_dir: str, start_version: git_llvm_rev.Rev,
-              llvm_dir: str, rev: t.Union[git_llvm_rev.Rev, str], sha: str,
-              package: str):
+              llvm_dir: str, rev: t.Union[git_llvm_rev.Rev,
+                                          str], sha: str, package: str):
   """Gets the start and end intervals in 'json_file'.
 
   Args:
@@ -85,7 +85,9 @@ def add_patch(patches_json_path: str, patches_dir: str,
     subprocess.check_call(cmd, stdout=f, cwd=llvm_dir)
 
   commit_subject = subprocess.check_output(
-      ['git', 'log', '-n1', '--format=%s', sha], cwd=llvm_dir, encoding='utf-8')
+      ['git', 'log', '-n1', '--format=%s', sha],
+      cwd=llvm_dir,
+      encoding='utf-8')
 
   patch_metadata = {
       'comment': commit_subject.strip(),
@@ -177,8 +179,8 @@ def get_package_names(sha: str, llvm_dir: str) -> list:
 
 def create_patch_for_packages(packages: t.List[str], symlinks: t.List[str],
                               start_rev: git_llvm_rev.Rev,
-                              rev: t.Union[git_llvm_rev.Rev, str], sha: str,
-                              llvm_dir: str):
+                              rev: t.Union[git_llvm_rev.Rev,
+                                           str], sha: str, llvm_dir: str):
   """Create a patch and add its metadata for each package"""
   for package, symlink in zip(packages, symlinks):
     symlink_dir = os.path.dirname(symlink)
@@ -212,12 +214,11 @@ def resolve_symbolic_sha(start_sha: str, llvm_symlink_dir: str) -> str:
   return start_sha
 
 
-def find_patches_and_make_cl(chroot_path: str, patches: t.List[str],
-                             start_rev: git_llvm_rev.Rev,
-                             llvm_config: git_llvm_rev.LLVMConfig,
-                             llvm_symlink_dir: str, create_cl: bool,
-                             reviewers: t.Optional[t.List[str]],
-                             cc: t.Optional[t.List[str]]):
+def find_patches_and_make_cl(
+    chroot_path: str, patches: t.List[str], start_rev: git_llvm_rev.Rev,
+    llvm_config: git_llvm_rev.LLVMConfig, llvm_symlink_dir: str,
+    create_cl: bool, skip_dependencies: bool,
+    reviewers: t.Optional[t.List[str]], cc: t.Optional[t.List[str]]):
   if create_cl:
     branch = f'get-upstream-{datetime.now().strftime("%Y%m%d%H%M%S%f")}'
     git.CreateBranch(llvm_symlink_dir, branch)
@@ -231,7 +232,11 @@ def find_patches_and_make_cl(chroot_path: str, patches: t.List[str],
     is_differential = patch.startswith('D')
     if is_differential:
       subprocess.check_output(
-          ['arc', 'patch', '--nobranch', '--revision', patch],
+          [
+              'arc', 'patch', '--nobranch',
+              '--skip-dependencies' if skip_dependencies else '--revision',
+              patch
+          ],
           cwd=llvm_config.dir,
       )
       sha = resolve_llvm_ref(llvm_config.dir, 'HEAD')
@@ -275,6 +280,7 @@ def find_patches_and_make_cl(chroot_path: str, patches: t.List[str],
 
 def get_from_upstream(chroot_path: str,
                       create_cl: bool,
+                      skip_dependencies: bool,
                       start_sha: str,
                       patches: t.List[str],
                       reviewers: t.List[str] = None,
@@ -299,15 +305,16 @@ def get_from_upstream(chroot_path: str,
       remote='origin', dir=get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools())
   start_sha = resolve_llvm_ref(llvm_config.dir, start_sha)
 
-  find_patches_and_make_cl(
-      chroot_path=chroot_path,
-      patches=patches,
-      start_rev=git_llvm_rev.translate_sha_to_rev(llvm_config, start_sha),
-      llvm_config=llvm_config,
-      llvm_symlink_dir=llvm_symlink_dir,
-      create_cl=create_cl,
-      reviewers=reviewers,
-      cc=cc)
+  find_patches_and_make_cl(chroot_path=chroot_path,
+                           patches=patches,
+                           start_rev=git_llvm_rev.translate_sha_to_rev(
+                               llvm_config, start_sha),
+                           llvm_config=llvm_config,
+                           llvm_symlink_dir=llvm_symlink_dir,
+                           create_cl=create_cl,
+                           skip_dependencies=skip_dependencies,
+                           reviewers=reviewers,
+                           cc=cc)
   logging.info('Complete.')
 
 
@@ -319,40 +326,46 @@ def main():
   )
 
   parser = argparse.ArgumentParser(description=__doc__)
-  parser.add_argument(
-      '--chroot_path',
-      default=os.path.join(os.path.expanduser('~'), 'chromiumos'),
-      help='the path to the chroot (default: %(default)s)')
+  parser.add_argument('--chroot_path',
+                      default=os.path.join(os.path.expanduser('~'),
+                                           'chromiumos'),
+                      help='the path to the chroot (default: %(default)s)')
   parser.add_argument(
       '--start_sha',
       default='llvm-next',
       help='LLVM SHA that the patch should start applying at. You can specify '
       '"llvm" or "llvm-next", as well. Defaults to %(default)s.')
-  parser.add_argument(
-      '--sha',
-      action='append',
-      default=[],
-      help='The LLVM git SHA to cherry-pick.')
+  parser.add_argument('--sha',
+                      action='append',
+                      default=[],
+                      help='The LLVM git SHA to cherry-pick.')
   parser.add_argument(
       '--differential',
       action='append',
       default=[],
       help='The LLVM differential revision to apply. Example: D1234')
+  parser.add_argument('--create_cl',
+                      action='store_true',
+                      help='Automatically create a CL if specified')
   parser.add_argument(
-      '--create_cl',
-      default=False,
+      '--skip_dependencies',
       action='store_true',
-      help='Automatically create a CL if specified')
+      help="Skips a LLVM differential revision's dependencies. Only valid "
+      'when --differential appears exactly once.')
   args = parser.parse_args()
 
   if not (args.sha or args.differential):
     parser.error('--sha or --differential required')
 
-  get_from_upstream(
-      chroot_path=args.chroot_path,
-      create_cl=args.create_cl,
-      start_sha=args.start_sha,
-      patches=args.sha + args.differential)
+  if args.skip_dependencies and len(args.differential) != 1:
+    parser.error("--skip_dependencies is only valid when there's exactly one "
+                 'supplied differential')
+
+  get_from_upstream(chroot_path=args.chroot_path,
+                    create_cl=args.create_cl,
+                    skip_dependencies=args.skip_dependencies,
+                    start_sha=args.start_sha,
+                    patches=args.sha + args.differential)
 
 
 if __name__ == '__main__':
