@@ -180,7 +180,7 @@ PERF_DATA_HEADER = """
 # total memory : 5911496 kB
 # cmdline : /usr/bin/perf record -e instructions -p {pid}
 # event : name = instructions, , id = ( 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193 ), type = 8, size = 112
-# event : name = dummy:u, , id = ( 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204 ), type = 1, size = 112, config = 0x9
+# event : name = placeholder:u, , id = ( 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204 ), type = 1, size = 112, config = 0x9
 # CPU_TOPOLOGY info available, use -I to display
 # pmu mappings: software = 1, uprobe = 6, cs_etm = 8, breakpoint = 5, tracepoint = 2, armv8_pmuv3 = 7
 # contains AUX area data (e.g. instruction trace)
@@ -442,7 +442,6 @@ HISTOGRAMSET = ("""
 
 class MockResult(Result):
   """Mock result class."""
-
   def __init__(self, mylogger, label, logging_level, machine):
     super(MockResult, self).__init__(mylogger, label, logging_level, machine)
 
@@ -458,7 +457,6 @@ class MockResult(Result):
 
 class ResultTest(unittest.TestCase):
   """Result test class."""
-
   def __init__(self, *args, **kwargs):
     super(ResultTest, self).__init__(*args, **kwargs)
     self.callFakeProcessResults = False
@@ -1867,7 +1865,6 @@ page_name,3d-cube (ms),3d-morph (ms),3d-raytrace (ms),Total (ms),access-binary-t
 
 class TelemetryResultTest(unittest.TestCase):
   """Telemetry result test."""
-
   def __init__(self, *args, **kwargs):
     super(TelemetryResultTest, self).__init__(*args, **kwargs)
     self.callFakeProcessResults = False
@@ -1912,7 +1909,6 @@ class TelemetryResultTest(unittest.TestCase):
 
 class ResultsCacheTest(unittest.TestCase):
   """Resultcache test class."""
-
   def __init__(self, *args, **kwargs):
     super(ResultsCacheTest, self).__init__(*args, **kwargs)
     self.fakeCacheReturnResult = None
