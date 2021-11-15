@@ -280,9 +280,9 @@ def find_patches_and_make_cl(
 
 def get_from_upstream(chroot_path: str,
                       create_cl: bool,
-                      skip_dependencies: bool,
                       start_sha: str,
                       patches: t.List[str],
+                      skip_dependencies: bool = False,
                       reviewers: t.List[str] = None,
                       cc: t.List[str] = None):
   llvm_symlink = chroot.ConvertChrootPathsToAbsolutePaths(
@@ -361,11 +361,13 @@ def main():
     parser.error("--skip_dependencies is only valid when there's exactly one "
                  'supplied differential')
 
-  get_from_upstream(chroot_path=args.chroot_path,
-                    create_cl=args.create_cl,
-                    skip_dependencies=args.skip_dependencies,
-                    start_sha=args.start_sha,
-                    patches=args.sha + args.differential)
+  get_from_upstream(
+      chroot_path=args.chroot_path,
+      create_cl=args.create_cl,
+      start_sha=args.start_sha,
+      patches=args.sha + args.differential,
+      skip_dependencies=args.skip_dependencies,
+  )
 
 
 if __name__ == '__main__':
