@@ -245,6 +245,7 @@ var crosHostConfig = &config{
 		"-Wno-compound-token-split-by-space",
 		"-Wno-string-concatenation",
 		"-Wno-deprecated-copy",
+		"-Wno-unused-but-set-variable",
 	},
 	newWarningsDir:    "/tmp/fatal_clang_warnings",
 	triciumNitsDir:    "/tmp/linting_output/clang-tidy",
