@@ -31,6 +31,7 @@
             "-static-libgcc",
             "--prefix=../../bin/x86_64-cros-linux-gnu-",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
@@ -57,6 +58,7 @@
             "-Wtrampolines",
             "-static-libgcc",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -103,6 +105,7 @@
             "-static-libgcc",
             "--prefix=../../bin/x86_64-cros-linux-gnu-",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
@@ -129,6 +132,7 @@
             "-Wtrampolines",
             "-static-libgcc",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ]
         }
@@ -170,6 +174,7 @@
             "-static-libgcc",
             "--prefix=../../bin/x86_64-cros-linux-gnu-",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
@@ -224,6 +229,7 @@
             "-static-libgcc",
             "--prefix=../../bin/x86_64-cros-linux-gnu-",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
@@ -250,6 +256,7 @@
             "-Wtrampolines",
             "-static-libgcc",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [

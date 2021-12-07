@@ -22,6 +22,7 @@
             "-Wtrampolines",
             "-static-libgcc",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -55,6 +56,7 @@
             "-Wtrampolines",
             "-static-libgcc",
             "main.cc",
+            "-L/usr/x86_64-cros-eabi/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -88,6 +90,7 @@
             "-Wtrampolines",
             "-static-libgcc",
             "main.cc",
+            "-L/usr/x86_64-cros-win-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -121,7 +124,8 @@
             "-Wtrampolines",
             "-static-libgcc",
             "-mthumb",
-            "main.cc"
+            "main.cc",
+            "-L/usr/armv7m-cros-linux-gnu/usr/lib"
           ],
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
@@ -153,7 +157,8 @@
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
             "-static-libgcc",
-            "main.cc"
+            "main.cc",
+            "-L/usr/armv7m-cros-eabi/usr/lib"
           ],
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
@@ -186,7 +191,8 @@
             "-Wtrampolines",
             "-static-libgcc",
             "-mthumb",
-            "main.cc"
+            "main.cc",
+            "-L/usr/armv7m-cros-win-gnu/usr/lib"
           ],
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
@@ -219,7 +225,8 @@
             "-Wtrampolines",
             "-static-libgcc",
             "-mthumb",
-            "main.cc"
+            "main.cc",
+            "-L/usr/armv8m-cros-linux-gnu/usr/lib"
           ],
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
@@ -251,7 +258,8 @@
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
             "-static-libgcc",
-            "main.cc"
+            "main.cc",
+            "-L/usr/armv8m-cros-eabi/usr/lib"
           ],
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
@@ -284,7 +292,8 @@
             "-Wtrampolines",
             "-static-libgcc",
             "-mthumb",
-            "main.cc"
+            "main.cc",
+            "-L/usr/armv8m-cros-win-gnu/usr/lib"
           ],
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
