@@ -1,3 +1,4 @@
+mod patch_parsing;
 mod version_control;
 
 use anyhow::{Context, Result};
@@ -45,13 +46,43 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
         sync_before: false,
     };
     ctx.setup()?;
-    let _cros_patches_path = ctx.cros_patches_path();
-    let _android_patches_path = ctx.android_patches_path();
+    let cros_patches_path = ctx.cros_patches_path();
+    let android_patches_path = ctx.android_patches_path();
+
+    // Chromium OS Patches ----------------------------------------------------
+    let mut cur_cros_collection =
+        patch_parsing::PatchCollection::parse_from_file(&cros_patches_path)
+            .context("parsing cros PATCHES.json")?;
+    let new_cros_patches: patch_parsing::PatchCollection = {
+        let cros_old_patches_json = ctx.old_cros_patch_contents(&args.old_cros_ref)?;
+        let old_cros_collection = patch_parsing::PatchCollection::parse_from_str(
+            cros_patches_path.parent().unwrap().to_path_buf(),
+            &cros_old_patches_json,
+        )?;
+        cur_cros_collection.subtract(&old_cros_collection)?
+    };
+
+    // Android Patches -------------------------------------------------------
+    let mut cur_android_collection =
+        patch_parsing::PatchCollection::parse_from_file(&android_patches_path)
+            .context("parsing android PATCHES.json")?;
+    let new_android_patches: patch_parsing::PatchCollection = {
+        let android_old_patches_json = ctx.old_android_patch_contents(&args.old_android_ref)?;
+        let old_android_collection = patch_parsing::PatchCollection::parse_from_str(
+            android_patches_path.parent().unwrap().to_path_buf(),
+            &android_old_patches_json,
+        )?;
+        cur_android_collection.subtract(&old_android_collection)?
+    };
+
+    // Transpose Patches -----------------------------------------------------
+    new_cros_patches.transpose_write(&mut cur_cros_collection)?;
+    new_android_patches.transpose_write(&mut cur_android_collection)?;
 
     if !args.no_commit {
         return Ok(());
     }
-    // Commit and upload for review.
+    // Commit and upload for review ------------------------------------------
     ctx.cros_repo_upload()
         .context("uploading chromiumos changes")?;
     ctx.android_repo_upload()
@@ -73,34 +104,34 @@ enum Opt {
     /// Transpose patches from two PATCHES.json files
     /// to each other.
     Transpose {
-        #[structopt(long = "cros-checkout", parse(from_os_str))]
         /// Path to the ChromiumOS source repo checkout.
+        #[structopt(long = "cros-checkout", parse(from_os_str))]
         cros_checkout_path: PathBuf,
 
-        #[structopt(long = "overlay-base-ref")]
         /// Git ref (e.g. hash) for the ChromiumOS overlay to use as the base.
+        #[structopt(long = "overlay-base-ref")]
         old_cros_ref: String,
 
-        #[structopt(long = "aosp-checkout", parse(from_os_str))]
         /// Path to the Android Open Source Project source repo checkout.
+        #[structopt(long = "aosp-checkout", parse(from_os_str))]
         android_checkout_path: PathBuf,
 
-        #[structopt(long = "aosp-base-ref")]
         /// Git ref (e.g. hash) for the llvm_android repo to use as the base.
+        #[structopt(long = "aosp-base-ref")]
         old_android_ref: String,
 
-        #[structopt(short, long)]
         /// Print information to stdout
+        #[structopt(short, long)]
         verbose: bool,
 
-        #[structopt(long)]
         /// Do not change any files. Useful in combination with `--verbose`
         /// Implies `--no-commit` and `--no-upload`.
+        #[structopt(long)]
         dry_run: bool,
 
-        #[structopt(long)]
         /// Do not commit any changes made.
         /// Implies `--no-upload`.
+        #[structopt(long)]
         no_commit: bool,
     },
 }
