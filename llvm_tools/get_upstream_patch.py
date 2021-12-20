@@ -6,8 +6,6 @@
 
 """Get an upstream patch to LLVM's PATCHES.json."""
 
-from __future__ import print_function
-
 import argparse
 import json
 import logging
@@ -17,6 +15,8 @@ import subprocess
 import sys
 import typing as t
 from datetime import datetime
+
+import dataclasses
 
 import chroot
 import get_llvm_hash
@@ -219,33 +219,29 @@ def find_patches_and_make_cl(
     llvm_config: git_llvm_rev.LLVMConfig, llvm_symlink_dir: str,
     create_cl: bool, skip_dependencies: bool,
     reviewers: t.Optional[t.List[str]], cc: t.Optional[t.List[str]]):
-  if create_cl:
-    branch = f'get-upstream-{datetime.now().strftime("%Y%m%d%H%M%S%f")}'
-    git.CreateBranch(llvm_symlink_dir, branch)
-    symlinks_to_uprev = []
-    commit_messages = [
-        'llvm: get patches from upstream\n',
-    ]
 
-  for patch in patches:
-    # git hash should only have lower-case letters
-    is_differential = patch.startswith('D')
-    if is_differential:
-      subprocess.check_output(
-          [
-              'arc', 'patch', '--nobranch',
-              '--skip-dependencies' if skip_dependencies else '--revision',
-              patch
-          ],
-          cwd=llvm_config.dir,
-      )
-      sha = resolve_llvm_ref(llvm_config.dir, 'HEAD')
-      rev = patch
-    else:
-      sha = resolve_llvm_ref(llvm_config.dir, patch)
-      rev = git_llvm_rev.translate_sha_to_rev(llvm_config, sha)
+  converted_patches = [
+      _convert_patch(llvm_config, skip_dependencies, p) for p in patches
+  ]
+  potential_duplicates = _get_duplicate_shas(converted_patches)
+  if potential_duplicates:
+    err_msg = '\n'.join(f'{a.patch} == {b.patch}'
+                        for a, b in potential_duplicates)
+    raise RuntimeError(f'Found Duplicate SHAs:\n{err_msg}')
+
+  # CL Related variables, only used if `create_cl`
+  symlinks_to_uprev = []
+  commit_messages = [
+      'llvm: get patches from upstream\n',
+  ]
+  branch = f'get-upstream-{datetime.now().strftime("%Y%m%d%H%M%S%f")}'
+
+  if create_cl:
+    git.CreateBranch(llvm_symlink_dir, branch)
+
+  for parsed_patch in converted_patches:
     # Find out the llvm projects changed in this commit
-    packages = get_package_names(sha, llvm_config.dir)
+    packages = get_package_names(parsed_patch.sha, llvm_config.dir)
     # Find out the ebuild symlinks of the corresponding ChromeOS packages
     symlinks = chroot.GetChrootEbuildPaths(chroot_path, [
         'sys-devel/llvm' if package == 'llvm' else 'sys-libs/' + package
@@ -253,29 +249,81 @@ def find_patches_and_make_cl(
     ])
     symlinks = chroot.ConvertChrootPathsToAbsolutePaths(chroot_path, symlinks)
     # Create a local patch for all the affected llvm projects
-    create_patch_for_packages(packages, symlinks, start_rev, rev, sha,
-                              llvm_config.dir)
+    create_patch_for_packages(packages, symlinks, start_rev, parsed_patch.rev,
+                              parsed_patch.sha, llvm_config.dir)
     if create_cl:
       symlinks_to_uprev.extend(symlinks)
 
-      if is_differential:
-        msg = f'\n\nreviews.llvm.org/{patch}\n'
-      else:
-        msg = f'\n\nreviews.llvm.org/rG{sha}\n'
       commit_messages.extend([
-          msg,
-          subprocess.check_output(['git', 'log', '-n1', '--oneline', sha],
-                                  cwd=llvm_config.dir,
-                                  encoding='utf-8')
+          parsed_patch.git_msg(),
+          subprocess.check_output(
+              ['git', 'log', '-n1', '--oneline', parsed_patch.sha],
+              cwd=llvm_config.dir,
+              encoding='utf-8')
       ])
 
-    if is_differential:
+    if parsed_patch.is_differential:
       subprocess.check_output(['git', 'reset', '--hard', 'HEAD^'],
                               cwd=llvm_config.dir)
 
   if create_cl:
     make_cl(symlinks_to_uprev, llvm_symlink_dir, branch, commit_messages,
             reviewers, cc)
+
+
+@dataclasses.dataclass(frozen=True)
+class ParsedPatch:
+  """Class to keep track of bundled patch info."""
+  patch: str
+  sha: str
+  is_differential: bool
+  rev: t.Union[git_llvm_rev.Rev, str]
+
+  def git_msg(self) -> str:
+    if self.is_differential:
+      return f'\n\nreviews.llvm.org/{self.patch}\n'
+    return f'\n\nreviews.llvm.org/rG{self.sha}\n'
+
+
+def _convert_patch(llvm_config: git_llvm_rev.LLVMConfig,
+                   skip_dependencies: bool, patch: str) -> ParsedPatch:
+  """Extract git revision info from a patch.
+
+  Args:
+    llvm_config: LLVM configuration object.
+    skip_dependencies: Pass --skip-dependecies for to `arc`
+    patch: A single patch referent string.
+
+  Returns:
+    A [ParsedPatch] object.
+  """
+
+  # git hash should only have lower-case letters
+  is_differential = patch.startswith('D')
+  if is_differential:
+    subprocess.check_output(
+        [
+            'arc', 'patch', '--nobranch',
+            '--skip-dependencies' if skip_dependencies else '--revision', patch
+        ],
+        cwd=llvm_config.dir,
+    )
+    sha = resolve_llvm_ref(llvm_config.dir, 'HEAD')
+    rev = patch
+  else:
+    sha = resolve_llvm_ref(llvm_config.dir, patch)
+    rev = git_llvm_rev.translate_sha_to_rev(llvm_config, sha)
+  return ParsedPatch(patch=patch,
+                     sha=sha,
+                     rev=rev,
+                     is_differential=is_differential)
+
+
+def _get_duplicate_shas(
+    patches: t.List[ParsedPatch]) -> t.List[t.Tuple[ParsedPatch, ParsedPatch]]:
+  """Return a list of Patches which have duplicate SHA's"""
+  return [(left, right) for i, left in enumerate(patches)
+          for right in patches[i + 1:] if left.sha == right.sha]
 
 
 def get_from_upstream(chroot_path: str,
