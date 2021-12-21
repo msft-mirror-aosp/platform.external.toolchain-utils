@@ -24,6 +24,12 @@ import git
 import git_llvm_rev
 import update_chromeos_llvm_hash
 
+__DOC_EPILOGUE = """
+Example Usage:
+  get_upstream_patch --chroot_path ~/chromiumos --platform chromiumos \
+--sha 1234567 --sha 890abdc
+"""
+
 
 class CherrypickError(ValueError):
   """A ValueError that highlights the cherry-pick has been seen before"""
@@ -31,8 +37,8 @@ class CherrypickError(ValueError):
 
 def add_patch(patches_json_path: str, patches_dir: str,
               relative_patches_dir: str, start_version: git_llvm_rev.Rev,
-              llvm_dir: str, rev: t.Union[git_llvm_rev.Rev,
-                                          str], sha: str, package: str):
+              llvm_dir: str, rev: t.Union[git_llvm_rev.Rev, str], sha: str,
+              package: str, platforms: t.List[str]):
   """Gets the start and end intervals in 'json_file'.
 
   Args:
@@ -47,6 +53,7 @@ def add_patch(patches_json_path: str, patches_dir: str,
     revisions, the git sha from  the local commit created by 'arc patch'
     is used.
     package: The LLVM project name this patch applies to.
+    platforms: List of platforms this patch applies to.
 
   Raises:
     CherrypickError: A ValueError that highlights the cherry-pick has been
@@ -89,18 +96,25 @@ def add_patch(patches_json_path: str, patches_dir: str,
       cwd=llvm_dir,
       encoding='utf-8')
 
-  patch_metadata = {
-      'comment': commit_subject.strip(),
+  patch_props = {
       'rel_patch_path': rel_patch_path,
       'start_version': start_version.number,
+      'metadata': {
+          'title': commit_subject.strip(),
+          'info': [],
+      },
+      'platforms': sorted(platforms),
+      'end_version': rev.number if isinstance(rev, git_llvm_rev.Rev) else None,
   }
-  if isinstance(rev, git_llvm_rev.Rev):
-    patch_metadata['end_version'] = rev.number
-  patches_json.append(patch_metadata)
+  patches_json.append(patch_props)
 
   temp_file = patches_json_path + '.tmp'
   with open(temp_file, 'w', encoding='utf-8') as f:
-    json.dump(patches_json, f, indent=4, separators=(',', ': '))
+    json.dump(patches_json,
+              f,
+              indent=4,
+              separators=(',', ': '),
+              sort_keys=True)
     f.write('\n')
   os.rename(temp_file, patches_json_path)
 
@@ -179,8 +193,8 @@ def get_package_names(sha: str, llvm_dir: str) -> list:
 
 def create_patch_for_packages(packages: t.List[str], symlinks: t.List[str],
                               start_rev: git_llvm_rev.Rev,
-                              rev: t.Union[git_llvm_rev.Rev,
-                                           str], sha: str, llvm_dir: str):
+                              rev: t.Union[git_llvm_rev.Rev, str], sha: str,
+                              llvm_dir: str, platforms: t.List[str]):
   """Create a patch and add its metadata for each package"""
   for package, symlink in zip(packages, symlinks):
     symlink_dir = os.path.dirname(symlink)
@@ -188,8 +202,15 @@ def create_patch_for_packages(packages: t.List[str], symlinks: t.List[str],
     relative_patches_dir = 'cherry' if package == 'llvm' else ''
     patches_dir = os.path.join(symlink_dir, 'files', relative_patches_dir)
     logging.info('Getting %s (%s) into %s', rev, sha, package)
-    add_patch(patches_json_path, patches_dir, relative_patches_dir, start_rev,
-              llvm_dir, rev, sha, package)
+    add_patch(patches_json_path,
+              patches_dir,
+              relative_patches_dir,
+              start_rev,
+              llvm_dir,
+              rev,
+              sha,
+              package,
+              platforms=platforms)
 
 
 def make_cl(symlinks_to_uprev: t.List[str], llvm_symlink_dir: str, branch: str,
@@ -218,7 +239,8 @@ def find_patches_and_make_cl(
     chroot_path: str, patches: t.List[str], start_rev: git_llvm_rev.Rev,
     llvm_config: git_llvm_rev.LLVMConfig, llvm_symlink_dir: str,
     create_cl: bool, skip_dependencies: bool,
-    reviewers: t.Optional[t.List[str]], cc: t.Optional[t.List[str]]):
+    reviewers: t.Optional[t.List[str]], cc: t.Optional[t.List[str]],
+    platforms: t.List[str]):
 
   converted_patches = [
       _convert_patch(llvm_config, skip_dependencies, p) for p in patches
@@ -249,8 +271,13 @@ def find_patches_and_make_cl(
     ])
     symlinks = chroot.ConvertChrootPathsToAbsolutePaths(chroot_path, symlinks)
     # Create a local patch for all the affected llvm projects
-    create_patch_for_packages(packages, symlinks, start_rev, parsed_patch.rev,
-                              parsed_patch.sha, llvm_config.dir)
+    create_patch_for_packages(packages,
+                              symlinks,
+                              start_rev,
+                              parsed_patch.rev,
+                              parsed_patch.sha,
+                              llvm_config.dir,
+                              platforms=platforms)
     if create_cl:
       symlinks_to_uprev.extend(symlinks)
 
@@ -330,6 +357,7 @@ def get_from_upstream(chroot_path: str,
                       create_cl: bool,
                       start_sha: str,
                       patches: t.List[str],
+                      platforms: t.List[str],
                       skip_dependencies: bool = False,
                       reviewers: t.List[str] = None,
                       cc: t.List[str] = None):
@@ -355,6 +383,7 @@ def get_from_upstream(chroot_path: str,
 
   find_patches_and_make_cl(chroot_path=chroot_path,
                            patches=patches,
+                           platforms=platforms,
                            start_rev=git_llvm_rev.translate_sha_to_rev(
                                llvm_config, start_sha),
                            llvm_config=llvm_config,
@@ -373,7 +402,10 @@ def main():
       level=logging.INFO,
   )
 
-  parser = argparse.ArgumentParser(description=__doc__)
+  parser = argparse.ArgumentParser(
+      description=__doc__,
+      formatter_class=argparse.RawDescriptionHelpFormatter,
+      epilog=__DOC_EPILOGUE)
   parser.add_argument('--chroot_path',
                       default=os.path.join(os.path.expanduser('~'),
                                            'chromiumos'),
@@ -392,6 +424,13 @@ def main():
       action='append',
       default=[],
       help='The LLVM differential revision to apply. Example: D1234')
+  parser.add_argument(
+      '--platform',
+      action='append',
+      required=True,
+      help='Apply this patch to the give platform. Common options include '
+      '"chromiumos" and "android". Can be specified multiple times to '
+      'apply to multiple platforms')
   parser.add_argument('--create_cl',
                       action='store_true',
                       help='Automatically create a CL if specified')
@@ -415,6 +454,7 @@ def main():
       start_sha=args.start_sha,
       patches=args.sha + args.differential,
       skip_dependencies=args.skip_dependencies,
+      platforms=args.platform,
   )
 
 
