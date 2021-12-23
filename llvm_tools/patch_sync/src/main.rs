@@ -7,12 +7,17 @@ use structopt::StructOpt;
 
 fn main() -> Result<()> {
     match Opt::from_args() {
-        Opt::Show { .. } => todo!("Opt show is not implemented yet"),
+        Opt::Show {
+            cros_checkout_path,
+            android_checkout_path,
+            sync,
+        } => show_subcmd(cros_checkout_path, android_checkout_path, sync),
         Opt::Transpose {
             cros_checkout_path,
             old_cros_ref,
             android_checkout_path,
             old_android_ref,
+            sync,
             verbose,
             dry_run,
             no_commit,
@@ -21,11 +26,35 @@ fn main() -> Result<()> {
             old_cros_ref,
             android_checkout_path,
             old_android_ref,
+            sync,
             verbose,
             dry_run,
             no_commit,
         }),
     }
+}
+
+fn show_subcmd(
+    cros_checkout_path: PathBuf,
+    android_checkout_path: PathBuf,
+    sync: bool,
+) -> Result<()> {
+    let ctx = version_control::RepoSetupContext {
+        cros_checkout: cros_checkout_path,
+        android_checkout: android_checkout_path,
+        sync_before: sync,
+    };
+    ctx.setup()?;
+    let cros_patches_path = ctx.cros_patches_path();
+    let android_patches_path = ctx.android_patches_path();
+    let cur_cros_collection = patch_parsing::PatchCollection::parse_from_file(&cros_patches_path)
+        .context("could not parse cros PATCHES.json")?;
+    let cur_android_collection =
+        patch_parsing::PatchCollection::parse_from_file(&android_patches_path)
+            .context("could not parse android PATCHES.json")?;
+    let merged = cur_cros_collection.union(&cur_android_collection)?;
+    println!("{}", merged.serialize_patches()?);
+    Ok(())
 }
 
 #[allow(dead_code)]
@@ -34,6 +63,7 @@ struct TransposeOpt {
     old_cros_ref: String,
     android_checkout_path: PathBuf,
     old_android_ref: String,
+    sync: bool,
     verbose: bool,
     dry_run: bool,
     no_commit: bool,
@@ -43,7 +73,7 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
     let ctx = version_control::RepoSetupContext {
         cros_checkout: args.cros_checkout_path,
         android_checkout: args.android_checkout_path,
-        sync_before: false,
+        sync_before: args.sync,
     };
     ctx.setup()?;
     let cros_patches_path = ctx.cros_patches_path();
@@ -100,6 +130,8 @@ enum Opt {
         cros_checkout_path: PathBuf,
         #[structopt(parse(from_os_str))]
         android_checkout_path: PathBuf,
+        #[structopt(short, long)]
+        sync: bool,
     },
     /// Transpose patches from two PATCHES.json files
     /// to each other.
@@ -119,6 +151,10 @@ enum Opt {
         /// Git ref (e.g. hash) for the llvm_android repo to use as the base.
         #[structopt(long = "aosp-base-ref")]
         old_android_ref: String,
+
+        /// Run repo sync before transposing.
+        #[structopt(short, long)]
+        sync: bool,
 
         /// Print information to stdout
         #[structopt(short, long)]

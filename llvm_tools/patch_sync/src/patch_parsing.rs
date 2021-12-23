@@ -39,7 +39,7 @@ impl PatchCollection {
     /// Create a `PatchCollection` from a string literal and a workdir.
     pub fn parse_from_str(workdir: PathBuf, contents: &str) -> Result<Self> {
         Ok(Self {
-            patches: serde_json::from_str(contents)?,
+            patches: serde_json::from_str(contents).context("parsing from str")?,
             workdir,
         })
     }
@@ -76,6 +76,78 @@ impl PatchCollection {
         })
     }
 
+    pub fn union(&self, other: &Self) -> Result<Self> {
+        self.union_helper(
+            other,
+            |p| self.hash_from_rel_patch(p),
+            |p| other.hash_from_rel_patch(p),
+        )
+    }
+
+    fn union_helper(
+        &self,
+        other: &Self,
+        our_hash_f: impl Fn(&PatchDictSchema) -> Result<String>,
+        their_hash_f: impl Fn(&PatchDictSchema) -> Result<String>,
+    ) -> Result<Self> {
+        // 1. For all our patches:
+        //   a. If there exists a matching patch hash from `other`:
+        //     i. Create a new patch with merged platform info,
+        //     ii. add the new patch to our new collection.
+        //     iii. Mark the other patch as "merged"
+        //   b. Otherwise, copy our patch to the new collection
+        // 2. For all unmerged patches from the `other`
+        //   a. Copy their patch into the new collection
+        let mut combined_patches = Vec::new();
+        let mut other_merged = vec![false; other.patches.len()];
+
+        // 1.
+        for p in &self.patches {
+            let our_hash = our_hash_f(p)?;
+            let mut found = false;
+            // a.
+            for (idx, merged) in other_merged.iter_mut().enumerate() {
+                if !*merged {
+                    let other_p = &other.patches[idx];
+                    let their_hash = their_hash_f(other_p)?;
+                    if our_hash == their_hash {
+                        // i.
+                        let new_platforms =
+                            p.platforms.union(&other_p.platforms).cloned().collect();
+                        // ii.
+                        combined_patches.push(PatchDictSchema {
+                            rel_patch_path: p.rel_patch_path.clone(),
+                            start_version: p.start_version,
+                            end_version: p.end_version,
+                            platforms: new_platforms,
+                            metadata: p.metadata.clone(),
+                        });
+                        // iii.
+                        *merged = true;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            // b.
+            if !found {
+                combined_patches.push(p.clone());
+            }
+        }
+        // 2.
+        // Add any remaining, other-only patches.
+        for (idx, merged) in other_merged.iter().enumerate() {
+            if !*merged {
+                combined_patches.push(other.patches[idx].clone());
+            }
+        }
+
+        Ok(Self {
+            workdir: self.workdir.clone(),
+            patches: combined_patches,
+        })
+    }
+
     /// Copy all patches from this collection into another existing collection, and write that
     /// to the existing collection's file.
     pub fn transpose_write(&self, existing_collection: &mut Self) -> Result<()> {
@@ -93,7 +165,11 @@ impl PatchCollection {
         let write_path = self.workdir.join(filename);
         let mut new_patches_file = File::create(&write_path)
             .with_context(|| format!("writing to {}", write_path.display()))?;
+        new_patches_file.write_all(self.serialize_patches()?.as_bytes())?;
+        Ok(())
+    }
 
+    pub fn serialize_patches(&self) -> Result<String> {
         let mut serialization_buffer = Vec::<u8>::new();
         // Four spaces to indent json serialization.
         let mut serializer = serde_json::Serializer::with_formatter(
@@ -102,14 +178,13 @@ impl PatchCollection {
         );
         self.patches
             .serialize(&mut serializer)
-            .with_context(|| format!("Could not serialize JSON at {}", write_path.display()))?;
+            .context("serializing patches to JSON")?;
         // Append a newline at the end if not present. This is necessary to get
         // past some pre-upload hooks.
         if serialization_buffer.last() != Some(&b'\n') {
             serialization_buffer.push(b'\n');
         }
-        new_patches_file.write_all(&serialization_buffer)?;
-        Ok(())
+        Ok(std::str::from_utf8(&serialization_buffer)?.to_string())
     }
 
     fn hash_from_rel_patch(&self, patch: &PatchDictSchema) -> Result<String> {
@@ -153,18 +228,13 @@ fn hash_from_patch_path(patch: &Path) -> Result<String> {
 fn copy_create_parents(from: &Path, to: &Path) -> Result<()> {
     let to_parent = to
         .parent()
-        .with_context(|| format!("{} has no parent", to.display()))?;
+        .with_context(|| format!("getting parent of {}", to.display()))?;
     if !to_parent.exists() {
         std::fs::create_dir_all(to_parent)?;
     }
 
-    copy(&from, &to).with_context(|| {
-        format!(
-            "tried to copy file from {} to {}",
-            &from.display(),
-            &to.display()
-        )
-    })?;
+    copy(&from, &to)
+        .with_context(|| format!("copying file from {} to {}", &from.display(), &to.display()))?;
     Ok(())
 }
 
@@ -194,6 +264,50 @@ mod test {
         assert_eq!(
             &hash_from_patch(test_file_contents.as_bytes()).unwrap(),
             desired_hash
+        );
+    }
+
+    #[test]
+    fn test_union() {
+        let patch1 = PatchDictSchema {
+            start_version: Some(0),
+            end_version: Some(1),
+            rel_patch_path: "a".into(),
+            metadata: None,
+            platforms: BTreeSet::from(["x".into()]),
+        };
+        let patch2 = PatchDictSchema {
+            rel_patch_path: "b".into(),
+            platforms: BTreeSet::from(["x".into(), "y".into()]),
+            ..patch1.clone()
+        };
+        let patch3 = PatchDictSchema {
+            platforms: BTreeSet::from(["z".into(), "x".into()]),
+            ..patch1.clone()
+        };
+        let collection1 = PatchCollection {
+            workdir: PathBuf::new(),
+            patches: vec![patch1, patch2],
+        };
+        let collection2 = PatchCollection {
+            workdir: PathBuf::new(),
+            patches: vec![patch3],
+        };
+        let union = collection1
+            .union_helper(
+                &collection2,
+                |p| Ok(p.rel_patch_path.to_string()),
+                |p| Ok(p.rel_patch_path.to_string()),
+            )
+            .expect("could not create union");
+        assert_eq!(union.patches.len(), 2);
+        assert_eq!(
+            union.patches[0].platforms.iter().collect::<Vec<&String>>(),
+            vec!["x", "z"]
+        );
+        assert_eq!(
+            union.patches[1].platforms.iter().collect::<Vec<&String>>(),
+            vec!["x", "y"]
         );
     }
 }
