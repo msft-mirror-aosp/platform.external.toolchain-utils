@@ -1,4 +1,4 @@
-bob           : chromeos6-row4-rack13-host6.cros    chromeos6-row3-rack13-host15.cros
+bob           : chromeos6-row4-rack13-host6.cros
 chell         : chromeos2-row1-rack10-host2.cros    chromeos2-row1-rack10-host4.cros
 coral         : chromeos6-row5-rack6-host1.cros     chromeos6-row5-rack6-host3.cros    chromeos6-row5-rack6-host5.cros
 elm           : chromeos6-row14-rack15-host21.cros
