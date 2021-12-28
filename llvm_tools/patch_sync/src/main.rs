@@ -82,7 +82,8 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
     // Chromium OS Patches ----------------------------------------------------
     let mut cur_cros_collection =
         patch_parsing::PatchCollection::parse_from_file(&cros_patches_path)
-            .context("parsing cros PATCHES.json")?;
+            .context("parsing cros PATCHES.json")?
+            .filter_patches(|p| p.platforms.contains("chromiumos"));
     let new_cros_patches: patch_parsing::PatchCollection = {
         let cros_old_patches_json = ctx.old_cros_patch_contents(&args.old_cros_ref)?;
         let old_cros_collection = patch_parsing::PatchCollection::parse_from_str(
@@ -95,7 +96,8 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
     // Android Patches -------------------------------------------------------
     let mut cur_android_collection =
         patch_parsing::PatchCollection::parse_from_file(&android_patches_path)
-            .context("parsing android PATCHES.json")?;
+            .context("parsing android PATCHES.json")?
+            .filter_patches(|p| p.platforms.contains("android"));
     let new_android_patches: patch_parsing::PatchCollection = {
         let android_old_patches_json = ctx.old_android_patch_contents(&args.old_android_ref)?;
         let old_android_collection = patch_parsing::PatchCollection::parse_from_str(
@@ -105,18 +107,34 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
         cur_android_collection.subtract(&old_android_collection)?
     };
 
-    // Transpose Patches -----------------------------------------------------
-    new_cros_patches.transpose_write(&mut cur_cros_collection)?;
-    new_android_patches.transpose_write(&mut cur_android_collection)?;
+    if args.dry_run {
+        println!("--dry-run specified; skipping modifications");
+        return Ok(());
+    }
 
-    if !args.no_commit {
+    // Transpose Patches -----------------------------------------------------
+    if !new_cros_patches.is_empty() {
+        new_cros_patches.transpose_write(&mut cur_android_collection)?;
+    }
+    if !new_android_patches.is_empty() {
+        new_android_patches.transpose_write(&mut cur_cros_collection)?;
+    }
+
+    if args.no_commit {
+        println!("--no-commit specified; not committing or uploading");
         return Ok(());
     }
     // Commit and upload for review ------------------------------------------
-    ctx.cros_repo_upload()
-        .context("uploading chromiumos changes")?;
-    ctx.android_repo_upload()
-        .context("uploading android changes")?;
+    // Note we want to check if the android patches are empty for CrOS, and
+    // vice versa. This is a little counterintuitive.
+    if !new_android_patches.is_empty() {
+        ctx.cros_repo_upload()
+            .context("uploading chromiumos changes")?;
+    }
+    if !new_cros_patches.is_empty() {
+        ctx.android_repo_upload()
+            .context("uploading android changes")?;
+    }
     Ok(())
 }
 

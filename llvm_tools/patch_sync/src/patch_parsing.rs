@@ -44,6 +44,14 @@ impl PatchCollection {
         })
     }
 
+    /// Copy this collection with patches filtered by given criterion.
+    pub fn filter_patches(&self, f: impl FnMut(&PatchDictSchema) -> bool) -> Self {
+        Self {
+            patches: self.patches.iter().cloned().filter(f).collect(),
+            workdir: self.workdir.clone(),
+        }
+    }
+
     #[allow(dead_code)]
     /// Return true if the collection is tracking any patches.
     pub fn is_empty(&self) -> bool {
