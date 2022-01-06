@@ -51,7 +51,8 @@
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ]
         }
       }
@@ -93,7 +94,8 @@
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ]
         }
       }
@@ -135,7 +137,8 @@
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ]
         }
       }
@@ -177,7 +180,8 @@
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ]
         }
       }
