@@ -248,7 +248,7 @@ func TestClangArchFlags(t *testing.T) {
 func TestClangLinkerPathProbesBinariesOnPath(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		linkerPath := filepath.Join(ctx.tempDir, "a/b/c")
-		ctx.writeFile(filepath.Join(linkerPath, "x86_64-cros-linux-gnu-ld"), "")
+		ctx.writeFile(filepath.Join(linkerPath, "x86_64-cros-linux-gnu-ld.bfd"), "")
 		ctx.env = []string{"PATH=nonExistantPath:" + linkerPath}
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand("./x86_64-cros-linux-gnu-clang", mainCc)))
@@ -268,7 +268,7 @@ func TestClangLinkerPathEvaluatesSymlinksForBinariesOnPath(t *testing.T) {
 		ctx.writeFile(realLinkerPath, "")
 		firstLinkLinkerPath := filepath.Join(ctx.tempDir, "a/first/somelinker")
 		ctx.symlink(realLinkerPath, firstLinkLinkerPath)
-		secondLinkLinkerPath := filepath.Join(ctx.tempDir, "a/second/x86_64-cros-linux-gnu-ld")
+		secondLinkLinkerPath := filepath.Join(ctx.tempDir, "a/second/x86_64-cros-linux-gnu-ld.bfd")
 		ctx.symlink(firstLinkLinkerPath, secondLinkLinkerPath)
 
 		ctx.env = []string{"PATH=nonExistantPath:" + filepath.Dir(secondLinkLinkerPath)}
