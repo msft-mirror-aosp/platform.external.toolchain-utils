@@ -50,7 +50,7 @@ class GlobalSettingsTest(unittest.TestCase):
   def test_init(self):
     res = settings_factory.GlobalSettings('g_settings')
     self.assertIsNotNone(res)
-    self.assertEqual(len(res.fields), 39)
+    self.assertEqual(len(res.fields), 40)
     self.assertEqual(res.GetField('name'), '')
     self.assertEqual(res.GetField('board'), '')
     self.assertEqual(res.GetField('crosfleet'), False)
@@ -108,7 +108,7 @@ class SettingsFactoryTest(unittest.TestCase):
     g_settings = settings_factory.SettingsFactory().GetSettings(
         'global', 'global')
     self.assertIsInstance(g_settings, settings_factory.GlobalSettings)
-    self.assertEqual(len(g_settings.fields), 39)
+    self.assertEqual(len(g_settings.fields), 40)
 
 
 if __name__ == '__main__':

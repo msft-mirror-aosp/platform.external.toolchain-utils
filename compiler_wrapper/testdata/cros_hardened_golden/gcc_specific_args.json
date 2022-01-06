@@ -29,6 +29,7 @@
             "-static-libgcc",
             "-march=goldmont",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -69,6 +70,7 @@
             "-static-libgcc",
             "-march=goldmont-plus",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -109,6 +111,7 @@
             "-static-libgcc",
             "-march=skylake",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [

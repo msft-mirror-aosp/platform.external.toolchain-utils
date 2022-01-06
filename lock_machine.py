@@ -125,8 +125,8 @@ class LockManager(object):
     Returns:
       A list of names of the toolchain machines in the ChromeOS HW lab.
     """
-    machines_file = os.path.join(
-        os.path.dirname(__file__), 'crosperf', 'default_remotes')
+    machines_file = os.path.join(os.path.dirname(__file__), 'crosperf',
+                                 'default_remotes')
     machine_list = []
     with open(machines_file, 'r') as input_file:
       lines = input_file.readlines()
@@ -166,8 +166,8 @@ class LockManager(object):
     """
     if state['locked']:
       print('%s (%s)\t\t%slocked by %s since %s' %
-            (m, state['board'], '\t\t' if machine_type == MachineType.LOCAL else
-             '', state['locked_by'], state['lock_time']))
+            (m, state['board'], '\t\t' if machine_type == MachineType.LOCAL
+             else '', state['locked_by'], state['lock_time']))
     else:
       print('%s (%s)\t\t%sunlocked' %
             (m, state['board'],
@@ -241,8 +241,8 @@ class LockManager(object):
     """
     try:
       if should_lock_machine:
-        ret = file_lock_machine.Machine(machine,
-                                        self.locks_dir).Lock(True, sys.argv[0])
+        ret = file_lock_machine.Machine(machine, self.locks_dir).Lock(
+            True, sys.argv[0])
       else:
         ret = file_lock_machine.Machine(machine, self.locks_dir).Unlock(True)
     except Exception:
@@ -325,14 +325,14 @@ class LockManager(object):
 
         # TODO(zhizhouy): Crosfleet doesn't support host info such as locked_by.
         # Need to update this when crosfleet supports it.
-        if (state['locked'] and state['locked_by'] and
-            state['locked_by'] != self.user):
+        if (state['locked'] and state['locked_by']
+            and state['locked_by'] != self.user):
           raise DontOwnLock('Attempt to unlock machine (%s) locked by someone '
                             'else (%s).' % (k, state['locked_by']))
       elif cmd == 'lock':
         if state['locked']:
-          self.logger.LogWarning('Attempt to lock already locked machine (%s)' %
-                                 k)
+          self.logger.LogWarning(
+              'Attempt to lock already locked machine (%s)' % k)
           self._InternalRemoveMachine(k)
 
   def GetMachineStates(self, cmd=''):
@@ -381,12 +381,10 @@ class LockManager(object):
     swarming = os.path.join(self.chromeos_root, self.SWARMING)
     # TODO(zhizhouy): Swarming script doesn't support python3 so explicitly
     # launch it with python2 until migrated.
-    cmd = (('python2 %s ' \
-            'query --swarming https://chromeos-swarming.appspot.com ' \
-            "%s 'bots/list?is_dead=FALSE&dimensions=dut_name:%s'") % \
-           (swarming,
-            credential,
-            machine.rstrip('.cros')))
+    cmd = (('python2 %s '
+            'query --swarming https://chromeos-swarming.appspot.com '
+            "%s 'bots/list?is_dead=FALSE&dimensions=dut_name:%s'") %
+           (swarming, credential, machine.rstrip('.cros')))
     exit_code, stdout, stderr = self.ce.RunCommandWOutput(cmd)
     if exit_code:
       raise ValueError('Querying bots failed (2); stdout: %r; stderr: %r' %
@@ -411,15 +409,12 @@ class LockManager(object):
     credential = ''
     if os.path.exists(self.CROSFLEET_CREDENTIAL):
       credential = '-service-account-json %s' % self.CROSFLEET_CREDENTIAL
-    cmd = (('%s dut lease -minutes %s %s %s %s') % \
-           (self.CROSFLEET_PATH,
-            self.LEASE_MINS,
-            credential,
-            '-host' if '.cros' in machine else '-board',
-            machine.rstrip('.cros')))
-    # Wait 120 seconds for server to start the lease task, if not started,
+    cmd = (('%s dut lease -minutes %s %s %s %s') %
+           (self.CROSFLEET_PATH, self.LEASE_MINS, credential, '-host'
+            if '.cros' in machine else '-board', machine.rstrip('.cros')))
+    # Wait 8 minutes for server to start the lease task, if not started,
     # we will treat it as unavailable.
-    check_interval_time = 120
+    check_interval_time = 480
     retval = self.ce.RunCommand(cmd, command_timeout=check_interval_time)
     return retval == self.SUCCESS
 
@@ -432,10 +427,8 @@ class LockManager(object):
     credential = ''
     if os.path.exists(self.CROSFLEET_CREDENTIAL):
       credential = '-service-account-json %s' % self.CROSFLEET_CREDENTIAL
-    cmd = (('%s dut abandon %s %s') % \
-           (self.CROSFLEET_PATH,
-            credential,
-            machine.rstrip('.cros')))
+    cmd = (('%s dut abandon %s %s') %
+           (self.CROSFLEET_PATH, credential, machine.rstrip('.cros')))
     retval = self.ce.RunCommand(cmd)
     return retval == self.SUCCESS
 
@@ -451,44 +444,39 @@ def Main(argv):
   """
   parser = argparse.ArgumentParser()
 
-  parser.add_argument(
-      '--list',
-      dest='cmd',
-      action='store_const',
-      const='status',
-      help='List current status of all known machines.')
-  parser.add_argument(
-      '--lock',
-      dest='cmd',
-      action='store_const',
-      const='lock',
-      help='Lock given machine(s).')
-  parser.add_argument(
-      '--unlock',
-      dest='cmd',
-      action='store_const',
-      const='unlock',
-      help='Unlock given machine(s).')
-  parser.add_argument(
-      '--status',
-      dest='cmd',
-      action='store_const',
-      const='status',
-      help='List current status of given machine(s).')
-  parser.add_argument(
-      '--remote', dest='remote', help='machines on which to operate')
-  parser.add_argument(
-      '--chromeos_root',
-      dest='chromeos_root',
-      required=True,
-      help='ChromeOS root to use for autotest scripts.')
-  parser.add_argument(
-      '--force',
-      dest='force',
-      action='store_true',
-      default=False,
-      help='Force lock/unlock of machines, even if not'
-      ' current lock owner.')
+  parser.add_argument('--list',
+                      dest='cmd',
+                      action='store_const',
+                      const='status',
+                      help='List current status of all known machines.')
+  parser.add_argument('--lock',
+                      dest='cmd',
+                      action='store_const',
+                      const='lock',
+                      help='Lock given machine(s).')
+  parser.add_argument('--unlock',
+                      dest='cmd',
+                      action='store_const',
+                      const='unlock',
+                      help='Unlock given machine(s).')
+  parser.add_argument('--status',
+                      dest='cmd',
+                      action='store_const',
+                      const='status',
+                      help='List current status of given machine(s).')
+  parser.add_argument('--remote',
+                      dest='remote',
+                      help='machines on which to operate')
+  parser.add_argument('--chromeos_root',
+                      dest='chromeos_root',
+                      required=True,
+                      help='ChromeOS root to use for autotest scripts.')
+  parser.add_argument('--force',
+                      dest='force',
+                      action='store_true',
+                      default=False,
+                      help='Force lock/unlock of machines, even if not'
+                      ' current lock owner.')
 
   options = parser.parse_args(argv)
 
@@ -506,7 +494,8 @@ def Main(argv):
   if options.remote:
     machine_list = options.remote.split()
 
-  lock_manager = LockManager(machine_list, options.force, options.chromeos_root)
+  lock_manager = LockManager(machine_list, options.force,
+                             options.chromeos_root)
 
   machine_states = lock_manager.GetMachineStates(cmd=options.cmd)
   cmd = options.cmd

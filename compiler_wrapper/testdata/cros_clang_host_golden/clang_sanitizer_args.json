@@ -36,7 +36,8 @@
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ]
         }
       }
@@ -79,7 +80,8 @@
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ]
         }
       }
@@ -122,7 +124,8 @@
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ]
         }
       }
@@ -165,7 +168,8 @@
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ]
         }
       }
@@ -202,13 +206,13 @@
             "-Wno-deprecated-declarations",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "-fno-experimental-new-pass-manager",
             "-fsanitize=fuzzer",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ]
         }
       }
@@ -246,14 +250,14 @@
             "-Wno-deprecated-declarations",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "-fno-experimental-new-pass-manager",
             "-fsanitize=address",
             "-fprofile-instr-generate",
             "main.cc",
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ]
         }
       }
@@ -295,7 +299,8 @@
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ]
         }
       }
@@ -337,7 +342,8 @@
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ]
         }
       }
