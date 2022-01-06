@@ -119,6 +119,7 @@ For example, to create a roll CL to the git hash of revision 367622:
 $ ./update_chromeos_llvm_hash.py \
   --update_packages sys-devel/llvm sys-libs/compiler-rt \
   sys-libs/libcxx sys-libs/libcxxabi sys-libs/llvm-libunwind \
+  'dev-util/lldb-server' \
   --llvm_version 367622 \
   --failure_mode disable_patches
 ```

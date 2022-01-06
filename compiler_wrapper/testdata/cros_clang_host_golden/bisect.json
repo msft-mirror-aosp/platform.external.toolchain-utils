@@ -43,7 +43,8 @@
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ],
           "env_updates": [
             "PYTHONPATH=/somepath/test_binary"
@@ -97,7 +98,8 @@
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ],
           "env_updates": [
             "PYTHONPATH=/somepath/test_binary"
@@ -154,7 +156,8 @@
             "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
             "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-unused-but-set-variable"
           ],
           "env_updates": [
             "PYTHONPATH=/somepath/test_binary"
