@@ -126,7 +126,7 @@ func processClangFlags(builder *commandBuilder) error {
 
 	// Specify the target for clang.
 	if !builder.cfg.isHostWrapper {
-		linkerPath := getLinkerPath(env, builder.target.target+"-ld", builder.rootPath)
+		linkerPath := getLinkerPath(env, builder.target.target+"-ld.bfd", builder.rootPath)
 		relLinkerPath, err := filepath.Rel(env.getwd(), linkerPath)
 		if err != nil {
 			return wrapErrorwithSourceLocf(err, "failed to make linker path %s relative to %s",

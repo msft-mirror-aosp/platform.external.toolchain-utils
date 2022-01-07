@@ -79,14 +79,14 @@ EXPERIMENT_FILE_2 = """
 
 class ExperimentFactoryTest(unittest.TestCase):
   """Class for running experiment factory unittests."""
-
   def setUp(self):
     self.append_benchmark_call_args = []
 
   def testLoadExperimentFile1(self):
     experiment_file = ExperimentFile(io.StringIO(EXPERIMENT_FILE_1))
-    exp = ExperimentFactory().GetExperiment(
-        experiment_file, working_directory='', log_dir='')
+    exp = ExperimentFactory().GetExperiment(experiment_file,
+                                            working_directory='',
+                                            log_dir='')
     self.assertEqual(exp.remote, ['chromeos-alex3'])
 
     self.assertEqual(len(exp.benchmarks), 2)
@@ -104,8 +104,9 @@ class ExperimentFactoryTest(unittest.TestCase):
 
   def testLoadExperimentFile2CWP(self):
     experiment_file = ExperimentFile(io.StringIO(EXPERIMENT_FILE_2))
-    exp = ExperimentFactory().GetExperiment(
-        experiment_file, working_directory='', log_dir='')
+    exp = ExperimentFactory().GetExperiment(experiment_file,
+                                            working_directory='',
+                                            log_dir='')
     self.assertEqual(exp.cwp_dso, 'kallsyms')
     self.assertEqual(len(exp.benchmarks), 2)
     self.assertEqual(exp.benchmarks[0].weight, 0.8)
@@ -240,11 +241,12 @@ class ExperimentFactoryTest(unittest.TestCase):
     ef = ExperimentFactory()
 
     bench_list = []
-    ef.AppendBenchmarkSet(bench_list, experiment_factory.telemetry_perfv2_tests,
-                          '', 1, False, '', 'telemetry_Crosperf', False, 0,
-                          False, '', 0)
-    self.assertEqual(
-        len(bench_list), len(experiment_factory.telemetry_perfv2_tests))
+    ef.AppendBenchmarkSet(bench_list,
+                          experiment_factory.telemetry_perfv2_tests, '', 1,
+                          False, '', 'telemetry_Crosperf', False, 0, False, '',
+                          0)
+    self.assertEqual(len(bench_list),
+                     len(experiment_factory.telemetry_perfv2_tests))
     self.assertTrue(isinstance(bench_list[0], benchmark.Benchmark))
 
     bench_list = []
@@ -252,17 +254,17 @@ class ExperimentFactoryTest(unittest.TestCase):
                           experiment_factory.telemetry_pagecycler_tests, '', 1,
                           False, '', 'telemetry_Crosperf', False, 0, False, '',
                           0)
-    self.assertEqual(
-        len(bench_list), len(experiment_factory.telemetry_pagecycler_tests))
+    self.assertEqual(len(bench_list),
+                     len(experiment_factory.telemetry_pagecycler_tests))
     self.assertTrue(isinstance(bench_list[0], benchmark.Benchmark))
 
     bench_list = []
     ef.AppendBenchmarkSet(bench_list,
-                          experiment_factory.telemetry_toolchain_perf_tests, '',
-                          1, False, '', 'telemetry_Crosperf', False, 0, False,
-                          '', 0)
-    self.assertEqual(
-        len(bench_list), len(experiment_factory.telemetry_toolchain_perf_tests))
+                          experiment_factory.telemetry_toolchain_perf_tests,
+                          '', 1, False, '', 'telemetry_Crosperf', False, 0,
+                          False, '', 0)
+    self.assertEqual(len(bench_list),
+                     len(experiment_factory.telemetry_toolchain_perf_tests))
     self.assertTrue(isinstance(bench_list[0], benchmark.Benchmark))
 
   @mock.patch.object(socket, 'gethostname')
@@ -370,7 +372,8 @@ class ExperimentFactoryTest(unittest.TestCase):
     global_settings.SetField('same_machine', 'true')
     global_settings.SetField('same_specs', 'true')
 
-    self.assertRaises(Exception, ef.GetExperiment, mock_experiment_file, '', '')
+    self.assertRaises(Exception, ef.GetExperiment, mock_experiment_file, '',
+                      '')
     label_settings.SetField('remote', '')
     global_settings.SetField('remote', '123.45.67.89')
     exp = ef.GetExperiment(mock_experiment_file, '', '')
@@ -399,7 +402,7 @@ class ExperimentFactoryTest(unittest.TestCase):
 
   def test_get_default_remotes(self):
     board_list = [
-        'bob', 'chell', 'coral', 'elm', 'kefka', 'lulu', 'nautilus', 'snappy',
+        'bob', 'chell', 'coral', 'elm', 'kefka', 'nautilus', 'snappy',
         'veyron_tiger'
     ]
 
