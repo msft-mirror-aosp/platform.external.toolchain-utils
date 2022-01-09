@@ -33,7 +33,7 @@ State = t.Any
 
 
 def _find_interesting_android_shas(android_llvm_toolchain_dir: str
-                                  ) -> t.List[t.Tuple[str, str]]:
+                                   ) -> t.List[t.Tuple[str, str]]:
   llvm_project = os.path.join(android_llvm_toolchain_dir,
                               'toolchain/llvm-project')
 
@@ -44,7 +44,7 @@ def _find_interesting_android_shas(android_llvm_toolchain_dir: str
         encoding='utf-8',
     ).strip()
 
-  main_legacy = get_llvm_merge_base('aosp/master-legacy')
+  main_legacy = get_llvm_merge_base('aosp/master-legacy')  # nocheck
   testing_upstream = get_llvm_merge_base('aosp/testing-upstream')
   result = [('main-legacy', main_legacy)]
 
@@ -55,8 +55,7 @@ def _find_interesting_android_shas(android_llvm_toolchain_dir: str
 
 
 def _parse_llvm_ebuild_for_shas(ebuild_file: io.TextIOWrapper
-                               ) -> t.List[t.Tuple[str, str]]:
-
+                                ) -> t.List[t.Tuple[str, str]]:
   def parse_ebuild_assignment(line: str) -> str:
     no_comments = line.split('#')[0]
     no_assign = no_comments.split('=', 1)[1].strip()
@@ -84,12 +83,11 @@ def _parse_llvm_ebuild_for_shas(ebuild_file: io.TextIOWrapper
 
 
 def _find_interesting_chromeos_shas(chromeos_base: str
-                                   ) -> t.List[t.Tuple[str, str]]:
+                                    ) -> t.List[t.Tuple[str, str]]:
   llvm_dir = os.path.join(chromeos_base,
                           'src/third_party/chromiumos-overlay/sys-devel/llvm')
   candidate_ebuilds = [
-      os.path.join(llvm_dir, x)
-      for x in os.listdir(llvm_dir)
+      os.path.join(llvm_dir, x) for x in os.listdir(llvm_dir)
       if '_pre' in x and not os.path.islink(os.path.join(llvm_dir, x))
   ]
 
@@ -197,8 +195,10 @@ def find_shas(llvm_dir: str, interesting_shas: t.List[t.Tuple[str, str]],
               state: State, new_state: State):
   for friendly_name, sha in interesting_shas:
     logging.info('Finding reverts across %s (%s)', friendly_name, sha)
-    all_reverts = revert_checker.find_reverts(
-        llvm_dir, sha, root='origin/' + git_llvm_rev.MAIN_BRANCH)
+    all_reverts = revert_checker.find_reverts(llvm_dir,
+                                              sha,
+                                              root='origin/' +
+                                              git_llvm_rev.MAIN_BRANCH)
     logging.info('Detected the following revert(s) across %s:\n%s',
                  friendly_name, pprint.pformat(all_reverts))
 
@@ -230,13 +230,12 @@ def do_cherrypick(chroot_path: str, llvm_dir: str,
     seen.add(friendly_name)
     for sha, reverted_sha in reverts:
       try:
-        get_upstream_patch.get_from_upstream(
-            chroot_path=chroot_path,
-            create_cl=True,
-            start_sha=reverted_sha,
-            patches=[sha],
-            reviewers=reviewers,
-            cc=cc)
+        get_upstream_patch.get_from_upstream(chroot_path=chroot_path,
+                                             create_cl=True,
+                                             start_sha=reverted_sha,
+                                             patches=[sha],
+                                             reviewers=reviewers,
+                                             cc=cc)
       except get_upstream_patch.CherrypickError as e:
         logging.info('%s, skipping...', str(e))
   return new_state
@@ -245,7 +244,6 @@ def do_cherrypick(chroot_path: str, llvm_dir: str,
 def do_email(is_dry_run: bool, llvm_dir: str, repository: str,
              interesting_shas: t.List[t.Tuple[str, str]], state: State,
              recipients: _EmailRecipients) -> State:
-
   def prettify_sha(sha: str) -> tiny_render.Piece:
     rev = get_llvm_hash.GetVersionFrom(llvm_dir, sha)
 
@@ -253,8 +251,8 @@ def do_email(is_dry_run: bool, llvm_dir: str, repository: str,
     short_sha = sha[:12]
     return tiny_render.Switch(
         text=f'r{rev} ({short_sha})',
-        html=tiny_render.Link(
-            href='https://reviews.llvm.org/rG' + sha, inner='r' + str(rev)),
+        html=tiny_render.Link(href='https://reviews.llvm.org/rG' + sha,
+                              inner='r' + str(rev)),
     )
 
   def get_sha_description(sha: str) -> tiny_render.Piece:
@@ -267,11 +265,12 @@ def do_email(is_dry_run: bool, llvm_dir: str, repository: str,
   new_state: State = {}
   for friendly_name, sha, new_reverts in find_shas(llvm_dir, interesting_shas,
                                                    state, new_state):
-    email = _generate_revert_email(repository, friendly_name, sha, prettify_sha,
-                                   get_sha_description, new_reverts)
+    email = _generate_revert_email(repository, friendly_name, sha,
+                                   prettify_sha, get_sha_description,
+                                   new_reverts)
     if is_dry_run:
-      logging.info('Would send email:\nSubject: %s\nBody:\n%s\n', email.subject,
-                   tiny_render.render_text_pieces(email.body))
+      logging.info('Would send email:\nSubject: %s\nBody:\n%s\n',
+                   email.subject, tiny_render.render_text_pieces(email.body))
     else:
       logging.info('Sending email with subject %r...', email.subject)
       _send_revert_email(recipients, email)
@@ -281,16 +280,19 @@ def do_email(is_dry_run: bool, llvm_dir: str, repository: str,
 
 def parse_args(argv: t.List[str]) -> t.Any:
   parser = argparse.ArgumentParser(
-      description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+      description=__doc__,
+      formatter_class=argparse.RawDescriptionHelpFormatter)
   parser.add_argument(
       'action',
       choices=['cherry-pick', 'email', 'dry-run'],
       help='Automatically cherry-pick upstream reverts, send an email, or '
       'write to stdout.')
-  parser.add_argument(
-      '--state_file', required=True, help='File to store persistent state in.')
-  parser.add_argument(
-      '--llvm_dir', required=True, help='Up-to-date LLVM directory to use.')
+  parser.add_argument('--state_file',
+                      required=True,
+                      help='File to store persistent state in.')
+  parser.add_argument('--llvm_dir',
+                      required=True,
+                      help='Up-to-date LLVM directory to use.')
   parser.add_argument('--debug', action='store_true')
   parser.add_argument(
       '--reviewers',
@@ -309,8 +311,9 @@ def parse_args(argv: t.List[str]) -> t.Any:
   subparsers.required = True
 
   chromeos_subparser = subparsers.add_parser('chromeos')
-  chromeos_subparser.add_argument(
-      '--chromeos_dir', required=True, help='Up-to-date CrOS directory to use.')
+  chromeos_subparser.add_argument('--chromeos_dir',
+                                  required=True,
+                                  help='Up-to-date CrOS directory to use.')
 
   android_subparser = subparsers.add_parser('android')
   android_subparser.add_argument(
@@ -322,7 +325,7 @@ def parse_args(argv: t.List[str]) -> t.Any:
 
 
 def find_chroot(opts: t.Any, reviewers: t.List[str], cc: t.List[str]
-               ) -> t.Tuple[str, t.List[t.Tuple[str, str]], _EmailRecipients]:
+                ) -> t.Tuple[str, t.List[t.Tuple[str, str]], _EmailRecipients]:
   recipients = reviewers + cc
   if opts.repository == 'chromeos':
     chroot_path = opts.chromeos_dir
@@ -335,9 +338,9 @@ def find_chroot(opts: t.Any, reviewers: t.List[str], cc: t.List[str]
 
     chroot_path = opts.android_llvm_toolchain_dir
     return (chroot_path, _find_interesting_android_shas(chroot_path),
-            _EmailRecipients(
-                well_known=[],
-                direct=['android-llvm-dev@google.com'] + recipients))
+            _EmailRecipients(well_known=[],
+                             direct=['android-llvm-dev@google.com'] +
+                             recipients))
   else:
     raise ValueError(f'Unknown repository {opts.repository}')
 
@@ -366,21 +369,19 @@ def main(argv: t.List[str]) -> int:
   # We want to be as free of obvious side-effects as possible in case something
   # above breaks. Hence, action as late as possible.
   if action == 'cherry-pick':
-    new_state = do_cherrypick(
-        chroot_path=chroot_path,
-        llvm_dir=llvm_dir,
-        interesting_shas=interesting_shas,
-        state=state,
-        reviewers=reviewers,
-        cc=cc)
+    new_state = do_cherrypick(chroot_path=chroot_path,
+                              llvm_dir=llvm_dir,
+                              interesting_shas=interesting_shas,
+                              state=state,
+                              reviewers=reviewers,
+                              cc=cc)
   else:
-    new_state = do_email(
-        is_dry_run=action == 'dry-run',
-        llvm_dir=llvm_dir,
-        repository=repository,
-        interesting_shas=interesting_shas,
-        state=state,
-        recipients=recipients)
+    new_state = do_email(is_dry_run=action == 'dry-run',
+                         llvm_dir=llvm_dir,
+                         repository=repository,
+                         interesting_shas=interesting_shas,
+                         state=state,
+                         recipients=recipients)
 
   _write_state(state_file, new_state)
   return 0
