@@ -223,20 +223,44 @@ For questions about this job, contact chromeos-toolchain@google.com\n\n
 
 /// Return the path of an ebuild located within the given directory.
 fn find_ebuild(dir: &Path) -> Result<PathBuf> {
-    // TODO(ajordanr): Maybe use OnceCell for this regex?
-    let ebuild_matcher = Regex::new(r"(-r[0-9]+)?\.ebuild").unwrap();
-    for entry in fs::read_dir(dir)? {
-        let path = entry?.path();
-        if let Some(name) = path.file_name() {
-            if ebuild_matcher.is_match(
-                name.to_str()
-                    .ok_or_else(|| anyhow!("converting filepath to UTF-8"))?,
-            ) {
-                return Ok(path);
-            }
+    // The logic here is that we create an iterator over all file paths to ebuilds
+    // with _pre in the name. Then we sort those ebuilds based on their revision numbers.
+    // Then we return the highest revisioned one.
+
+    let ebuild_rev_matcher = Regex::new(r"-r([0-9]+)\.ebuild").unwrap();
+    // For LLVM ebuilds, we only want to check for ebuilds that have this in their file name.
+    let per_heuristic = "_pre";
+    // Get an iterator over all ebuilds with a _per in the file name.
+    let ebuild_candidates = fs::read_dir(dir)?.filter_map(|entry| {
+        let entry = entry.ok()?;
+        let path = entry.path();
+        if path.extension()? != "ebuild" {
+            // Not an ebuild, ignore.
+            return None;
         }
-    }
-    bail!("could not find ebuild")
+        let stem = path.file_stem()?.to_str()?;
+        if stem.contains(per_heuristic) {
+            return Some(path);
+        }
+        None
+    });
+    let try_parse_ebuild_rev = |path: PathBuf| -> Option<(u64, PathBuf)> {
+        let name = path.file_name()?;
+        if let Some(rev_match) = ebuild_rev_matcher.captures(name.to_str()?) {
+            let rev_str = rev_match.get(1)?;
+            let rev_num = rev_str.as_str().parse::<u64>().ok()?;
+            return Some((rev_num, path));
+        }
+        // If it doesn't have a revision, then it's revision 0.
+        Some((0, path))
+    };
+    let mut sorted_candidates: Vec<_> =
+        ebuild_candidates.filter_map(try_parse_ebuild_rev).collect();
+    sorted_candidates.sort_unstable_by_key(|x| x.0);
+    let highest_rev_ebuild = sorted_candidates
+        .pop()
+        .ok_or_else(|| anyhow!("could not find ebuild"))?;
+    Ok(highest_rev_ebuild.1)
 }
 
 /// Run a given git command from inside a specified git dir.
@@ -294,7 +318,11 @@ mod test {
             File::create(&ebuild_path).expect("creating test ebuild file");
             let new_ebuild_path =
                 RepoSetupContext::rev_bump_llvm(&llvm_dir).expect("rev bumping the ebuild");
-            assert!(new_ebuild_path.ends_with("llvm-13.0_pre433403_p20211019-r11.ebuild"));
+            assert!(
+                new_ebuild_path.ends_with("llvm-13.0_pre433403_p20211019-r11.ebuild"),
+                "{}",
+                new_ebuild_path.display()
+            );
             fs::remove_file(new_ebuild_path).expect("removing renamed ebuild file");
         }
         {
@@ -304,8 +332,30 @@ mod test {
             File::create(&ebuild_path).expect("creating test ebuild file");
             let new_ebuild_path =
                 RepoSetupContext::rev_bump_llvm(&llvm_dir).expect("rev bumping the ebuild");
-            assert!(new_ebuild_path.ends_with("llvm-13.0_pre433403_p20211019-r1.ebuild"));
+            assert!(
+                new_ebuild_path.ends_with("llvm-13.0_pre433403_p20211019-r1.ebuild"),
+                "{}",
+                new_ebuild_path.display()
+            );
             fs::remove_file(new_ebuild_path).expect("removing renamed ebuild file");
+        }
+        {
+            // With both
+            let ebuild_name = "llvm-13.0_pre433403_p20211019.ebuild";
+            let ebuild_path = llvm_dir.join(ebuild_name);
+            File::create(&ebuild_path).expect("creating test ebuild file");
+            let ebuild_link_name = "llvm-13.0_pre433403_p20211019-r2.ebuild";
+            let ebuild_link_path = llvm_dir.join(ebuild_link_name);
+            File::create(&ebuild_link_path).expect("creating test ebuild link file");
+            let new_ebuild_path =
+                RepoSetupContext::rev_bump_llvm(&llvm_dir).expect("rev bumping the ebuild");
+            assert!(
+                new_ebuild_path.ends_with("llvm-13.0_pre433403_p20211019-r3.ebuild"),
+                "{}",
+                new_ebuild_path.display()
+            );
+            fs::remove_file(new_ebuild_path).expect("removing renamed ebuild link file");
+            fs::remove_file(ebuild_path).expect("removing renamed ebuild file");
         }
 
         fs::remove_dir(&llvm_dir).expect("removing temp test dir");
