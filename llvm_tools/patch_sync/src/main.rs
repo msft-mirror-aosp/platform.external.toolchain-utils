@@ -2,6 +2,7 @@ mod patch_parsing;
 mod version_control;
 
 use anyhow::{Context, Result};
+use std::borrow::ToOwned;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -14,8 +15,10 @@ fn main() -> Result<()> {
         } => show_subcmd(cros_checkout_path, android_checkout_path, sync),
         Opt::Transpose {
             cros_checkout_path,
+            cros_reviewers,
             old_cros_ref,
             android_checkout_path,
+            android_reviewers,
             old_android_ref,
             sync,
             verbose,
@@ -23,8 +26,13 @@ fn main() -> Result<()> {
             no_commit,
         } => transpose_subcmd(TransposeOpt {
             cros_checkout_path,
+            cros_reviewers: cros_reviewers.split(',').map(ToOwned::to_owned).collect(),
             old_cros_ref,
             android_checkout_path,
+            android_reviewers: android_reviewers
+                .split(',')
+                .map(ToOwned::to_owned)
+                .collect(),
             old_android_ref,
             sync,
             verbose,
@@ -67,6 +75,8 @@ struct TransposeOpt {
     verbose: bool,
     dry_run: bool,
     no_commit: bool,
+    cros_reviewers: Vec<String>,
+    android_reviewers: Vec<String>,
 }
 
 fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
@@ -128,11 +138,11 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
     // Note we want to check if the android patches are empty for CrOS, and
     // vice versa. This is a little counterintuitive.
     if !new_android_patches.is_empty() {
-        ctx.cros_repo_upload()
+        ctx.cros_repo_upload(&args.cros_reviewers)
             .context("uploading chromiumos changes")?;
     }
     if !new_cros_patches.is_empty() {
-        ctx.android_repo_upload()
+        ctx.android_repo_upload(&args.android_reviewers)
             .context("uploading android changes")?;
     }
     Ok(())
@@ -158,6 +168,11 @@ enum Opt {
         #[structopt(long = "cros-checkout", parse(from_os_str))]
         cros_checkout_path: PathBuf,
 
+        /// Emails to send review requests to during Chromium OS upload.
+        /// Comma separated.
+        #[structopt(long = "cros-rev")]
+        cros_reviewers: String,
+
         /// Git ref (e.g. hash) for the ChromiumOS overlay to use as the base.
         #[structopt(long = "overlay-base-ref")]
         old_cros_ref: String,
@@ -165,6 +180,11 @@ enum Opt {
         /// Path to the Android Open Source Project source repo checkout.
         #[structopt(long = "aosp-checkout", parse(from_os_str))]
         android_checkout_path: PathBuf,
+
+        /// Emails to send review requests to during Android upload.
+        /// Comma separated.
+        #[structopt(long = "aosp-rev")]
+        android_reviewers: String,
 
         /// Git ref (e.g. hash) for the llvm_android repo to use as the base.
         #[structopt(long = "aosp-base-ref")]
@@ -179,12 +199,11 @@ enum Opt {
         verbose: bool,
 
         /// Do not change any files. Useful in combination with `--verbose`
-        /// Implies `--no-commit` and `--no-upload`.
+        /// Implies `--no-commit`.
         #[structopt(long)]
         dry_run: bool,
 
-        /// Do not commit any changes made.
-        /// Implies `--no-upload`.
+        /// Do not commit or upload any changes made.
         #[structopt(long)]
         no_commit: bool,
     },

@@ -8,6 +8,9 @@ use std::process::{Command, Output};
 const CHROMIUMOS_OVERLAY_REL_PATH: &str = "src/third_party/chromiumos-overlay";
 const ANDROID_LLVM_REL_PATH: &str = "toolchain/llvm_android";
 
+const CROS_MAIN_BRANCH: &str = "main";
+const ANDROID_MAIN_BRANCH: &str = "master"; // nocheck
+
 /// Context struct to keep track of both Chromium OS and Android checkouts.
 #[derive(Debug)]
 pub struct RepoSetupContext {
@@ -20,13 +23,23 @@ pub struct RepoSetupContext {
 impl RepoSetupContext {
     pub fn setup(&self) -> Result<()> {
         if self.sync_before {
+            {
+                let crpp = self.cros_patches_path();
+                let cros_git = crpp.parent().unwrap();
+                git_cd_cmd(cros_git, ["checkout", CROS_MAIN_BRANCH])?;
+            }
+            {
+                let anpp = self.android_patches_path();
+                let android_git = anpp.parent().unwrap();
+                git_cd_cmd(android_git, ["checkout", ANDROID_MAIN_BRANCH])?;
+            }
             repo_cd_cmd(&self.cros_checkout, &["sync", CHROMIUMOS_OVERLAY_REL_PATH])?;
             repo_cd_cmd(&self.android_checkout, &["sync", ANDROID_LLVM_REL_PATH])?;
         }
         Ok(())
     }
 
-    pub fn cros_repo_upload(&self) -> Result<()> {
+    pub fn cros_repo_upload<S: AsRef<str>>(&self, reviewers: &[S]) -> Result<()> {
         let llvm_dir = self
             .cros_checkout
             .join(&CHROMIUMOS_OVERLAY_REL_PATH)
@@ -37,34 +50,46 @@ impl RepoSetupContext {
             llvm_dir.display()
         );
         Self::rev_bump_llvm(&llvm_dir)?;
+        let mut extra_args = vec!["--label=Commit-Queue+1"];
+        for reviewer in reviewers {
+            extra_args.push("--re");
+            extra_args.push(reviewer.as_ref());
+        }
         Self::repo_upload(
             &self.cros_checkout,
+            CROS_MAIN_BRANCH,
             CHROMIUMOS_OVERLAY_REL_PATH,
-            &Self::build_commit_msg("android", "chromiumos", "BUG=None\nTEST=CQ"),
+            &Self::build_commit_msg(
+                "llvm: Synchronize patches from android",
+                "android",
+                "chromiumos",
+                "BUG=None\nTEST=CQ",
+            ),
+            extra_args,
         )
     }
 
-    pub fn android_repo_upload(&self) -> Result<()> {
+    pub fn android_repo_upload<S: AsRef<str>>(&self, reviewers: &[S]) -> Result<()> {
+        let mut extra_args = Vec::new();
+        // TODO(ajordanr): Presubmit ready can only be enabled if we
+        // have the permissions.
+        // extra_args.push("--label=Presubmit-Ready+1");
+        for reviewer in reviewers {
+            extra_args.push("--re");
+            extra_args.push(reviewer.as_ref());
+        }
         Self::repo_upload(
             &self.android_checkout,
+            ANDROID_MAIN_BRANCH,
             ANDROID_LLVM_REL_PATH,
-            &Self::build_commit_msg("chromiumos", "android", "Test: N/A"),
+            &Self::build_commit_msg(
+                "Synchronize patches from chromiumos",
+                "chromiumos",
+                "android",
+                "Test: N/A",
+            ),
+            extra_args,
         )
-    }
-
-    fn repo_upload(path: &Path, git_wd: &str, commit_msg: &str) -> Result<()> {
-        // TODO(ajordanr): Need to clean up if there's any failures during upload.
-        let git_path = &path.join(&git_wd);
-        ensure!(
-            git_path.is_dir(),
-            "git_path {} is not a directory",
-            git_path.display()
-        );
-        repo_cd_cmd(path, &["start", "patch_sync_branch", git_wd])?;
-        git_cd_cmd(git_path, &["add", "."])?;
-        git_cd_cmd(git_path, &["commit", "-m", commit_msg])?;
-        repo_cd_cmd(path, &["upload", "-y", "--verify", git_wd])?;
-        Ok(())
     }
 
     pub fn android_patches_path(&self) -> PathBuf {
@@ -77,6 +102,46 @@ impl RepoSetupContext {
         self.cros_checkout
             .join(&CHROMIUMOS_OVERLAY_REL_PATH)
             .join("sys-devel/llvm/files/PATCHES.json")
+    }
+
+    fn repo_upload<'a, I: IntoIterator<Item = &'a str>>(
+        path: &Path,
+        base_branch: &str,
+        git_wd: &'a str,
+        commit_msg: &str,
+        extra_flags: I,
+    ) -> Result<()> {
+        let git_path = &path.join(&git_wd);
+        ensure!(
+            git_path.is_dir(),
+            "git_path {} is not a directory",
+            git_path.display()
+        );
+        let branch_name = "__patch_sync_tmp_branch";
+        repo_cd_cmd(path, &["start", branch_name, git_wd])?;
+        let res: Result<()> = {
+            let base_args = ["upload", "--br", branch_name, "-y", "--verify"];
+            let new_args = base_args
+                .iter()
+                .copied()
+                .chain(extra_flags)
+                .chain(["--", git_wd]);
+            git_cd_cmd(git_path, &["add", "."])
+                .and_then(|_| git_cd_cmd(git_path, &["commit", "-m", commit_msg]))
+                .and_then(|_| repo_cd_cmd(path, new_args))
+        };
+        Self::cleanup_branch(git_path, base_branch, branch_name)
+            .with_context(|| format!("cleaning up branch {}", branch_name))?;
+        res
+    }
+
+    /// Clean up the git repo after we're done with it.
+    fn cleanup_branch(git_path: &Path, base_branch: &str, rm_branch: &str) -> Result<()> {
+        git_cd_cmd(git_path, ["restore", "."])?;
+        git_cd_cmd(git_path, ["clean", "-fd"])?;
+        git_cd_cmd(git_path, ["checkout", base_branch])?;
+        git_cd_cmd(git_path, ["branch", "-D", rm_branch])?;
+        Ok(())
     }
 
     /// Increment LLVM's revision number
@@ -146,11 +211,13 @@ impl RepoSetupContext {
     }
 
     /// Create the commit message
-    fn build_commit_msg(from: &str, to: &str, footer: &str) -> String {
+    fn build_commit_msg(subj: &str, from: &str, to: &str, footer: &str) -> String {
         format!(
-            "[patch_sync] Synchronize patches from {}\n\n\
-        Copies new PATCHES.json changes from {} to {}\n\n{}",
-            from, from, to, footer
+            "[patch_sync] {}\n\n\
+Copies new PATCHES.json changes from {} to {}.\n
+For questions about this job, contact chromeos-toolchain@google.com\n\n
+{}",
+            subj, from, to, footer
         )
     }
 }
