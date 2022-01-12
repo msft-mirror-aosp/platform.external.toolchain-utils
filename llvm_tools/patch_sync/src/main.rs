@@ -2,6 +2,7 @@ mod patch_parsing;
 mod version_control;
 
 use anyhow::{Context, Result};
+use patch_parsing::PatchCollection;
 use std::borrow::ToOwned;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -55,11 +56,10 @@ fn show_subcmd(
     ctx.setup()?;
     let cros_patches_path = ctx.cros_patches_path();
     let android_patches_path = ctx.android_patches_path();
-    let cur_cros_collection = patch_parsing::PatchCollection::parse_from_file(&cros_patches_path)
+    let cur_cros_collection = PatchCollection::parse_from_file(&cros_patches_path)
         .context("could not parse cros PATCHES.json")?;
-    let cur_android_collection =
-        patch_parsing::PatchCollection::parse_from_file(&android_patches_path)
-            .context("could not parse android PATCHES.json")?;
+    let cur_android_collection = PatchCollection::parse_from_file(&android_patches_path)
+        .context("could not parse android PATCHES.json")?;
     let merged = cur_cros_collection.union(&cur_android_collection)?;
     println!("{}", merged.serialize_patches()?);
     Ok(())
@@ -89,33 +89,24 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
     let cros_patches_path = ctx.cros_patches_path();
     let android_patches_path = ctx.android_patches_path();
 
-    // Chromium OS Patches ----------------------------------------------------
-    let mut cur_cros_collection =
-        patch_parsing::PatchCollection::parse_from_file(&cros_patches_path)
-            .context("parsing cros PATCHES.json")?
-            .filter_patches(|p| p.platforms.contains("chromiumos"));
-    let new_cros_patches: patch_parsing::PatchCollection = {
-        let cros_old_patches_json = ctx.old_cros_patch_contents(&args.old_cros_ref)?;
-        let old_cros_collection = patch_parsing::PatchCollection::parse_from_str(
-            cros_patches_path.parent().unwrap().to_path_buf(),
-            &cros_old_patches_json,
-        )?;
-        cur_cros_collection.subtract(&old_cros_collection)?
-    };
+    // Get new Patches -------------------------------------------------------
+    let (mut cur_cros_collection, new_cros_patches) = patch_parsing::new_patches(
+        &cros_patches_path,
+        &ctx.old_cros_patch_contents(&args.old_cros_ref)?,
+        "chromiumos",
+    )
+    .context("finding new patches for chromiumos")?;
+    let (mut cur_android_collection, new_android_patches) = patch_parsing::new_patches(
+        &android_patches_path,
+        &ctx.old_android_patch_contents(&args.old_android_ref)?,
+        "android",
+    )
+    .context("finding new patches for android")?;
 
-    // Android Patches -------------------------------------------------------
-    let mut cur_android_collection =
-        patch_parsing::PatchCollection::parse_from_file(&android_patches_path)
-            .context("parsing android PATCHES.json")?
-            .filter_patches(|p| p.platforms.contains("android"));
-    let new_android_patches: patch_parsing::PatchCollection = {
-        let android_old_patches_json = ctx.old_android_patch_contents(&args.old_android_ref)?;
-        let old_android_collection = patch_parsing::PatchCollection::parse_from_str(
-            android_patches_path.parent().unwrap().to_path_buf(),
-            &android_old_patches_json,
-        )?;
-        cur_android_collection.subtract(&old_android_collection)?
-    };
+    if args.verbose {
+        display_patches("New patches from Chromium OS", &new_cros_patches);
+        display_patches("New patches from Android", &new_android_patches);
+    }
 
     if args.dry_run {
         println!("--dry-run specified; skipping modifications");
@@ -146,6 +137,15 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
             .context("uploading android changes")?;
     }
     Ok(())
+}
+
+fn display_patches(prelude: &str, collection: &PatchCollection) {
+    println!("{}", prelude);
+    if collection.patches.is_empty() {
+        println!("  [No Patches]");
+        return;
+    }
+    println!("{}", collection);
 }
 
 #[derive(Debug, structopt::StructOpt)]

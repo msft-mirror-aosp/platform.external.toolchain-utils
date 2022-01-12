@@ -53,7 +53,14 @@ impl PatchCollection {
         }
     }
 
-    #[allow(dead_code)]
+    /// Map over the patches.
+    pub fn map_patches(&self, f: impl FnMut(&PatchDictSchema) -> PatchDictSchema) -> Self {
+        Self {
+            patches: self.patches.iter().map(f).collect(),
+            workdir: self.workdir.clone(),
+        }
+    }
+
     /// Return true if the collection is tracking any patches.
     pub fn is_empty(&self) -> bool {
         self.patches.is_empty()
@@ -196,9 +203,65 @@ impl PatchCollection {
         Ok(std::str::from_utf8(&serialization_buffer)?.to_string())
     }
 
+    /// Return whether a given patch actually exists on the file system.
+    pub fn patch_exists(&self, patch: &PatchDictSchema) -> bool {
+        self.workdir.join(&patch.rel_patch_path).exists()
+    }
+
     fn hash_from_rel_patch(&self, patch: &PatchDictSchema) -> Result<String> {
         hash_from_patch_path(&self.workdir.join(&patch.rel_patch_path))
     }
+}
+
+impl std::fmt::Display for PatchCollection {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        for (i, p) in self.patches.iter().enumerate() {
+            let title = p
+                .metadata
+                .as_ref()
+                .and_then(|x| x.get("title"))
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("[No Title]");
+            let path = self.workdir.join(&p.rel_patch_path);
+            writeln!(f, "* {}", title)?;
+            if i == self.patches.len() - 1 {
+                write!(f, "  {}", path.display())?;
+            } else {
+                writeln!(f, "  {}", path.display())?;
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Generate a PatchCollection incorporating only the diff between current patches and old patch
+/// contents.
+pub fn new_patches(
+    patches_path: &Path,
+    old_patch_contents: &str,
+    platform: &str,
+) -> Result<(PatchCollection, PatchCollection)> {
+    let cur_collection = PatchCollection::parse_from_file(patches_path)
+        .with_context(|| format!("parsing {} PATCHES.json", platform))?
+        .filter_patches(|p| p.platforms.contains(platform));
+    let cur_collection = cur_collection.filter_patches(|p| cur_collection.patch_exists(p));
+    let new_patches: PatchCollection = {
+        let old_collection = PatchCollection::parse_from_str(
+            patches_path.parent().unwrap().to_path_buf(),
+            old_patch_contents,
+        )?;
+        let old_collection = old_collection.filter_patches(|p| old_collection.patch_exists(p));
+        cur_collection.subtract(&old_collection)?
+    };
+    let new_patches = new_patches.map_patches(|p| PatchDictSchema {
+        platforms: BTreeSet::from(["android".to_string(), "chromiumos".to_string()])
+            .union(&p.platforms)
+            .cloned()
+            .collect(),
+
+        ..p.to_owned()
+    });
+    Ok((cur_collection, new_patches))
 }
 
 /// Get the hash from the patch file contents.
@@ -228,7 +291,7 @@ fn hash_from_patch(patch_contents: impl Read) -> Result<String> {
 }
 
 fn hash_from_patch_path(patch: &Path) -> Result<String> {
-    let f = File::open(patch)?;
+    let f = File::open(patch).with_context(|| format!("opening patch file {}", patch.display()))?;
     hash_from_patch(f)
 }
 

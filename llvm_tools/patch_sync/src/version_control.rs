@@ -92,16 +92,36 @@ impl RepoSetupContext {
         )
     }
 
+    /// Get the Android path to the PATCHES.json file
     pub fn android_patches_path(&self) -> PathBuf {
         self.android_checkout
             .join(&ANDROID_LLVM_REL_PATH)
             .join("patches/PATCHES.json")
     }
 
+    /// Get the Chromium OS path to the PATCHES.json file
     pub fn cros_patches_path(&self) -> PathBuf {
         self.cros_checkout
             .join(&CHROMIUMOS_OVERLAY_REL_PATH)
             .join("sys-devel/llvm/files/PATCHES.json")
+    }
+
+    /// Return the contents of the old PATCHES.json from Chromium OS
+    pub fn old_cros_patch_contents(&self, hash: &str) -> Result<String> {
+        Self::old_file_contents(
+            hash,
+            &self.cros_checkout.join(CHROMIUMOS_OVERLAY_REL_PATH),
+            Path::new("sys-devel/llvm/files/PATCHES.json"),
+        )
+    }
+
+    /// Return the contents of the old PATCHES.json from android
+    pub fn old_android_patch_contents(&self, hash: &str) -> Result<String> {
+        Self::old_file_contents(
+            hash,
+            &self.android_checkout.join(ANDROID_LLVM_REL_PATH),
+            Path::new("patches/PATCHES.json"),
+        )
     }
 
     fn repo_upload<'a, I: IntoIterator<Item = &'a str>>(
@@ -173,28 +193,7 @@ impl RepoSetupContext {
         Ok(new_path)
     }
 
-    /// Return the contents of the old PATCHES.json from Chromium OS
-    #[allow(dead_code)]
-    pub fn old_cros_patch_contents(&self, hash: &str) -> Result<String> {
-        Self::old_file_contents(
-            hash,
-            &self.cros_checkout.join(CHROMIUMOS_OVERLAY_REL_PATH),
-            Path::new("sys-devel/llvm/files/PATCHES.json"),
-        )
-    }
-
-    /// Return the contents of the old PATCHES.json from android
-    #[allow(dead_code)]
-    pub fn old_android_patch_contents(&self, hash: &str) -> Result<String> {
-        Self::old_file_contents(
-            hash,
-            &self.android_checkout.join(ANDROID_LLVM_REL_PATH),
-            Path::new("patches/PATCHES.json"),
-        )
-    }
-
     /// Return the contents of an old file in git
-    #[allow(dead_code)]
     fn old_file_contents(hash: &str, pwd: &Path, file: &Path) -> Result<String> {
         let git_ref = format!(
             "{}:{}",
