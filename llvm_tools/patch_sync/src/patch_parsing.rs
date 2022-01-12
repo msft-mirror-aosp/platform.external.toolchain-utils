@@ -10,11 +10,12 @@ use sha2::{Digest, Sha256};
 /// JSON serde struct.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PatchDictSchema {
+    pub end_version: Option<u64>,
+    pub metadata: Option<BTreeMap<String, serde_json::Value>>,
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub platforms: BTreeSet<String>,
     pub rel_patch_path: String,
     pub start_version: Option<u64>,
-    pub end_version: Option<u64>,
-    pub platforms: BTreeSet<String>,
-    pub metadata: Option<BTreeMap<String, serde_json::Value>>,
 }
 
 /// Struct to keep track of patches and their relative paths.
@@ -59,7 +60,7 @@ impl PatchCollection {
     }
 
     /// Compute the set-set subtraction, returning a new `PatchCollection` which
-    /// keeps the minuend's wordir.
+    /// keeps the minuend's workdir.
     pub fn subtract(&self, subtrahend: &Self) -> Result<Self> {
         let mut new_patches = Vec::new();
         // This is O(n^2) when it could be much faster, but n is always going to be less
@@ -248,6 +249,7 @@ fn copy_create_parents(from: &Path, to: &Path) -> Result<()> {
 
 #[cfg(test)]
 mod test {
+
     use super::*;
 
     /// Test we can extract the hash from patch files.
@@ -317,5 +319,33 @@ mod test {
             union.patches[1].platforms.iter().collect::<Vec<&String>>(),
             vec!["x", "y"]
         );
+    }
+
+    #[test]
+    fn test_union_empties() {
+        let patch1 = PatchDictSchema {
+            start_version: Some(0),
+            end_version: Some(1),
+            rel_patch_path: "a".into(),
+            metadata: None,
+            platforms: Default::default(),
+        };
+        let collection1 = PatchCollection {
+            workdir: PathBuf::new(),
+            patches: vec![patch1.clone()],
+        };
+        let collection2 = PatchCollection {
+            workdir: PathBuf::new(),
+            patches: vec![patch1],
+        };
+        let union = collection1
+            .union_helper(
+                &collection2,
+                |p| Ok(p.rel_patch_path.to_string()),
+                |p| Ok(p.rel_patch_path.to_string()),
+            )
+            .expect("could not create union");
+        assert_eq!(union.patches.len(), 1);
+        assert_eq!(union.patches[0].platforms.len(), 0);
     }
 }
