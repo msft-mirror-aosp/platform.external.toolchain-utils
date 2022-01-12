@@ -1,3 +1,4 @@
+mod android_utils;
 mod patch_parsing;
 mod version_control;
 
@@ -102,6 +103,31 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
         "android",
     )
     .context("finding new patches for android")?;
+
+    // Have to ignore patches that are already at the destination, even if
+    // the patches are new.
+    let new_cros_patches = new_cros_patches.subtract(&cur_android_collection)?;
+    let new_android_patches = new_android_patches.subtract(&cur_cros_collection)?;
+
+    // Need to do an extra filtering step for Android, as AOSP doesn't
+    // want patches outside of the start/end bounds.
+    let android_llvm_version: u64 = {
+        let android_llvm_version_str =
+            android_utils::get_android_llvm_version(&ctx.android_checkout)?;
+        android_llvm_version_str.parse::<u64>().with_context(|| {
+            format!(
+                "converting llvm version to u64: '{}'",
+                android_llvm_version_str
+            )
+        })?
+    };
+    let new_android_patches =
+        new_android_patches.filter_patches(|p| match (p.start_version, p.end_version) {
+            (Some(start), Some(end)) => start <= android_llvm_version && android_llvm_version < end,
+            (Some(start), None) => start <= android_llvm_version,
+            (None, Some(end)) => android_llvm_version < end,
+            (None, None) => true,
+        });
 
     if args.verbose {
         display_patches("New patches from Chromium OS", &new_cros_patches);
