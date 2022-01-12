@@ -179,9 +179,16 @@ where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
 {
-    let output = Command::new("git").current_dir(&pwd).args(args).output()?;
+    let mut command = Command::new("git");
+    command.current_dir(&pwd).args(args);
+    let output = command.output()?;
     if !output.status.success() {
-        bail!("git command failed")
+        bail!(
+            "git command failed:\n  {:?}\nstdout --\n{}\nstderr --\n{}",
+            command,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
     }
     Ok(output)
 }
@@ -191,9 +198,11 @@ where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
 {
-    let status = Command::new("repo").current_dir(&pwd).args(args).status()?;
+    let mut command = Command::new("repo");
+    command.current_dir(&pwd).args(args);
+    let status = command.status()?;
     if !status.success() {
-        bail!("repo command failed")
+        bail!("repo command failed:\n  {:?}  \n", command)
     }
     Ok(())
 }
