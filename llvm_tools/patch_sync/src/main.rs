@@ -2,11 +2,14 @@ mod android_utils;
 mod patch_parsing;
 mod version_control;
 
-use anyhow::{Context, Result};
-use patch_parsing::PatchCollection;
 use std::borrow::ToOwned;
-use std::path::PathBuf;
+use std::collections::BTreeSet;
+use std::path::{Path, PathBuf};
+
+use anyhow::{Context, Result};
 use structopt::StructOpt;
+
+use patch_parsing::{filter_patches_by_platform, PatchCollection, PatchDictSchema};
 
 fn main() -> Result<()> {
     match Opt::from_args() {
@@ -14,7 +17,13 @@ fn main() -> Result<()> {
             cros_checkout_path,
             android_checkout_path,
             sync,
-        } => show_subcmd(cros_checkout_path, android_checkout_path, sync),
+            keep_unmerged,
+        } => show_subcmd(ShowOpt {
+            cros_checkout_path,
+            android_checkout_path,
+            sync,
+            keep_unmerged,
+        }),
         Opt::Transpose {
             cros_checkout_path,
             cros_reviewers,
@@ -44,29 +53,47 @@ fn main() -> Result<()> {
     }
 }
 
-fn show_subcmd(
+struct ShowOpt {
     cros_checkout_path: PathBuf,
     android_checkout_path: PathBuf,
+    keep_unmerged: bool,
     sync: bool,
-) -> Result<()> {
+}
+
+fn show_subcmd(args: ShowOpt) -> Result<()> {
+    let ShowOpt {
+        cros_checkout_path,
+        android_checkout_path,
+        keep_unmerged,
+        sync,
+    } = args;
     let ctx = version_control::RepoSetupContext {
         cros_checkout: cros_checkout_path,
         android_checkout: android_checkout_path,
         sync_before: sync,
     };
     ctx.setup()?;
-    let cros_patches_path = ctx.cros_patches_path();
-    let android_patches_path = ctx.android_patches_path();
-    let cur_cros_collection = PatchCollection::parse_from_file(&cros_patches_path)
-        .context("could not parse cros PATCHES.json")?;
-    let cur_android_collection = PatchCollection::parse_from_file(&android_patches_path)
-        .context("could not parse android PATCHES.json")?;
+    let make_collection = |platform: &str, patches_fp: &Path| -> Result<PatchCollection> {
+        let parsed_collection = PatchCollection::parse_from_file(patches_fp)
+            .with_context(|| format!("could not parse {} PATCHES.json", platform))?;
+        Ok(if keep_unmerged {
+            parsed_collection
+        } else {
+            filter_patches_by_platform(&parsed_collection, platform).map_patches(|p| {
+                PatchDictSchema {
+                    platforms: BTreeSet::from([platform.to_string()]),
+                    ..p.clone()
+                }
+            })
+        })
+    };
+    let cur_cros_collection = make_collection("chromiumos", &ctx.cros_patches_path())?;
+    let cur_android_collection = make_collection("android", &ctx.android_patches_path())?;
     let merged = cur_cros_collection.union(&cur_android_collection)?;
     println!("{}", merged.serialize_patches()?);
     Ok(())
 }
 
-#[allow(dead_code)]
 struct TransposeOpt {
     cros_checkout_path: PathBuf,
     old_cros_ref: String,
@@ -184,6 +211,12 @@ enum Opt {
         cros_checkout_path: PathBuf,
         #[structopt(parse(from_os_str))]
         android_checkout_path: PathBuf,
+
+        /// Keep a patch's platform field even if it's not merged at that platform.
+        #[structopt(long)]
+        keep_unmerged: bool,
+
+        /// Run repo sync before transposing.
         #[structopt(short, long)]
         sync: bool,
     },

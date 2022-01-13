@@ -242,8 +242,8 @@ pub fn new_patches(
     platform: &str,
 ) -> Result<(PatchCollection, PatchCollection)> {
     let cur_collection = PatchCollection::parse_from_file(patches_path)
-        .with_context(|| format!("parsing {} PATCHES.json", platform))?
-        .filter_patches(|p| p.platforms.contains(platform));
+        .with_context(|| format!("parsing {} PATCHES.json", platform))?;
+    let cur_collection = filter_patches_by_platform(&cur_collection, platform);
     let cur_collection = cur_collection.filter_patches(|p| cur_collection.patch_exists(p));
     let new_patches: PatchCollection = {
         let old_collection = PatchCollection::parse_from_str(
@@ -262,6 +262,16 @@ pub fn new_patches(
         ..p.to_owned()
     });
     Ok((cur_collection, new_patches))
+}
+
+/// Create a new collection with only the patches that apply to the
+/// given platform.
+///
+/// If there's no platform listed, the patch should still apply if the patch file exists.
+pub fn filter_patches_by_platform(collection: &PatchCollection, platform: &str) -> PatchCollection {
+    collection.filter_patches(|p| {
+        p.platforms.contains(platform) || (p.platforms.is_empty() && collection.patch_exists(p))
+    })
 }
 
 /// Get the hash from the patch file contents.
