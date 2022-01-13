@@ -22,6 +22,7 @@
             "-Wtrampolines",
             "-static-libgcc",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ]
         }
@@ -54,6 +55,7 @@
             "-Wtrampolines",
             "-static-libgcc",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -90,6 +92,7 @@
             "-Wtrampolines",
             "-static-libgcc",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ]
         }
@@ -120,6 +123,7 @@
             "-Wtrampolines",
             "-static-libgcc",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -156,6 +160,7 @@
             "-fno-stack-protector",
             "-D__KERNEL__",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -192,7 +197,8 @@
             "-mthumb",
             "-fno-stack-protector",
             "-D__KERNEL__",
-            "main.cc"
+            "main.cc",
+            "-L/usr/armv7a-cros-linux-gnueabihf/usr/lib"
           ],
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
@@ -226,6 +232,7 @@
             "-static-libgcc",
             "--sysroot=xyz",
             "main.cc",
+            "-Lxyz/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [

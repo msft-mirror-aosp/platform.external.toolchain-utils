@@ -30,6 +30,7 @@
             "-static-libgcc",
             "-fsanitize=kernel-address",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -71,6 +72,7 @@
             "-static-libgcc",
             "-fsanitize=kernel-address",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -112,6 +114,7 @@
             "-static-libgcc",
             "-fsanitize=kernel-address",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -153,6 +156,7 @@
             "-static-libgcc",
             "-fsanitize=kernel-address",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -193,6 +197,7 @@
             "-static-libgcc",
             "-fsanitize=fuzzer",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -235,6 +240,7 @@
             "-fsanitize=address",
             "-fprofile-instr-generate",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -275,6 +281,7 @@
             "-static-libgcc",
             "-fsanitize=address",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -315,6 +322,7 @@
             "-static-libgcc",
             "-fprofile-instr-generate",
             "main.cc",
+            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
