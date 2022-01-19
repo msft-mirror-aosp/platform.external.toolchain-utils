@@ -37,13 +37,14 @@ fn main() -> Result<()> {
             no_commit,
         } => transpose_subcmd(TransposeOpt {
             cros_checkout_path,
-            cros_reviewers: cros_reviewers.split(',').map(ToOwned::to_owned).collect(),
+            cros_reviewers: cros_reviewers
+                .map(|r| r.split(',').map(ToOwned::to_owned).collect())
+                .unwrap_or_default(),
             old_cros_ref,
             android_checkout_path,
             android_reviewers: android_reviewers
-                .split(',')
-                .map(ToOwned::to_owned)
-                .collect(),
+                .map(|r| r.split(',').map(ToOwned::to_owned).collect())
+                .unwrap_or_default(),
             old_android_ref,
             sync,
             verbose,
@@ -80,8 +81,11 @@ fn show_subcmd(args: ShowOpt) -> Result<()> {
             parsed_collection
         } else {
             filter_patches_by_platform(&parsed_collection, platform).map_patches(|p| {
+                // Need to do this platforms creation as Rust 1.55 cannot use "from".
+                let mut platforms = BTreeSet::new();
+                platforms.insert(platform.to_string());
                 PatchDictSchema {
-                    platforms: BTreeSet::from([platform.to_string()]),
+                    platforms,
                     ..p.clone()
                 }
             })
@@ -230,7 +234,7 @@ enum Opt {
         /// Emails to send review requests to during Chromium OS upload.
         /// Comma separated.
         #[structopt(long = "cros-rev")]
-        cros_reviewers: String,
+        cros_reviewers: Option<String>,
 
         /// Git ref (e.g. hash) for the ChromiumOS overlay to use as the base.
         #[structopt(long = "overlay-base-ref")]
@@ -243,7 +247,7 @@ enum Opt {
         /// Emails to send review requests to during Android upload.
         /// Comma separated.
         #[structopt(long = "aosp-rev")]
-        android_reviewers: String,
+        android_reviewers: Option<String>,
 
         /// Git ref (e.g. hash) for the llvm_android repo to use as the base.
         #[structopt(long = "aosp-base-ref")]

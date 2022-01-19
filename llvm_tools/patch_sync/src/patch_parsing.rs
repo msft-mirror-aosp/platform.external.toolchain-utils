@@ -253,13 +253,13 @@ pub fn new_patches(
         let old_collection = old_collection.filter_patches(|p| old_collection.patch_exists(p));
         cur_collection.subtract(&old_collection)?
     };
-    let new_patches = new_patches.map_patches(|p| PatchDictSchema {
-        platforms: BTreeSet::from(["android".to_string(), "chromiumos".to_string()])
-            .union(&p.platforms)
-            .cloned()
-            .collect(),
-
-        ..p.to_owned()
+    let new_patches = new_patches.map_patches(|p| {
+        let mut platforms = BTreeSet::new();
+        platforms.extend(["android".to_string(), "chromiumos".to_string()]);
+        PatchDictSchema {
+            platforms: platforms.union(&p.platforms).cloned().collect(),
+            ..p.to_owned()
+        }
     });
     Ok((cur_collection, new_patches))
 }
