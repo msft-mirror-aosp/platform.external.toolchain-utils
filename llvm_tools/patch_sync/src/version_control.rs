@@ -10,6 +10,7 @@ const ANDROID_LLVM_REL_PATH: &str = "toolchain/llvm_android";
 
 const CROS_MAIN_BRANCH: &str = "main";
 const ANDROID_MAIN_BRANCH: &str = "master"; // nocheck
+const WORK_BRANCH_NAME: &str = "__patch_sync_tmp";
 
 /// Context struct to keep track of both Chromium OS and Android checkouts.
 #[derive(Debug)]
@@ -18,6 +19,7 @@ pub struct RepoSetupContext {
     pub android_checkout: PathBuf,
     /// Run `repo sync` before doing any comparisons.
     pub sync_before: bool,
+    pub wip_mode: bool,
 }
 
 impl RepoSetupContext {
@@ -55,9 +57,12 @@ impl RepoSetupContext {
             extra_args.push("--re");
             extra_args.push(reviewer.as_ref());
         }
+        if self.wip_mode {
+            extra_args.push("--wip");
+            extra_args.push("--no-emails");
+        }
         Self::repo_upload(
             &self.cros_checkout,
-            CROS_MAIN_BRANCH,
             CHROMIUMOS_OVERLAY_REL_PATH,
             &Self::build_commit_msg(
                 "llvm: Synchronize patches from android",
@@ -78,9 +83,12 @@ impl RepoSetupContext {
             extra_args.push("--re");
             extra_args.push(reviewer.as_ref());
         }
+        if self.wip_mode {
+            extra_args.push("--wip");
+            extra_args.push("--no-emails");
+        }
         Self::repo_upload(
             &self.android_checkout,
-            ANDROID_MAIN_BRANCH,
             ANDROID_LLVM_REL_PATH,
             &Self::build_commit_msg(
                 "Synchronize patches from chromiumos",
@@ -90,6 +98,30 @@ impl RepoSetupContext {
             ),
             extra_args,
         )
+    }
+
+    fn cros_cleanup(&self) -> Result<()> {
+        let git_path = self.cros_checkout.join(CHROMIUMOS_OVERLAY_REL_PATH);
+        Self::cleanup_branch(&git_path, CROS_MAIN_BRANCH, WORK_BRANCH_NAME)
+            .with_context(|| format!("cleaning up branch {}", WORK_BRANCH_NAME))?;
+        Ok(())
+    }
+
+    fn android_cleanup(&self) -> Result<()> {
+        let git_path = self.android_checkout.join(ANDROID_LLVM_REL_PATH);
+        Self::cleanup_branch(&git_path, ANDROID_MAIN_BRANCH, WORK_BRANCH_NAME)
+            .with_context(|| format!("cleaning up branch {}", WORK_BRANCH_NAME))?;
+        Ok(())
+    }
+
+    /// Wrapper around cleanups to ensure both get run, even if errors appear.
+    pub fn cleanup(&self) {
+        if let Err(e) = self.cros_cleanup() {
+            eprintln!("Failed to clean up chromiumos, continuing: {}", e);
+        }
+        if let Err(e) = self.android_cleanup() {
+            eprintln!("Failed to clean up android, continuing: {}", e);
+        }
     }
 
     /// Get the Android path to the PATCHES.json file
@@ -125,34 +157,31 @@ impl RepoSetupContext {
     }
 
     fn repo_upload<'a, I: IntoIterator<Item = &'a str>>(
-        path: &Path,
-        base_branch: &str,
-        git_wd: &'a str,
+        checkout_path: &Path,
+        subproject_git_wd: &'a str,
         commit_msg: &str,
         extra_flags: I,
     ) -> Result<()> {
-        let git_path = &path.join(&git_wd);
+        let git_path = &checkout_path.join(&subproject_git_wd);
         ensure!(
             git_path.is_dir(),
             "git_path {} is not a directory",
             git_path.display()
         );
-        let branch_name = "__patch_sync_tmp_branch";
-        repo_cd_cmd(path, &["start", branch_name, git_wd])?;
-        let res: Result<()> = {
-            let base_args = ["upload", "--br", branch_name, "-y", "--verify"];
-            let new_args = base_args
-                .iter()
-                .copied()
-                .chain(extra_flags)
-                .chain(["--", git_wd]);
-            git_cd_cmd(git_path, &["add", "."])
-                .and_then(|_| git_cd_cmd(git_path, &["commit", "-m", commit_msg]))
-                .and_then(|_| repo_cd_cmd(path, new_args))
-        };
-        Self::cleanup_branch(git_path, base_branch, branch_name)
-            .with_context(|| format!("cleaning up branch {}", branch_name))?;
-        res
+        repo_cd_cmd(
+            checkout_path,
+            &["start", WORK_BRANCH_NAME, subproject_git_wd],
+        )?;
+        let base_args = ["upload", "--br", WORK_BRANCH_NAME, "-y", "--verify"];
+        let new_args = base_args
+            .iter()
+            .copied()
+            .chain(extra_flags)
+            .chain(["--", subproject_git_wd]);
+        git_cd_cmd(git_path, &["add", "."])
+            .and_then(|_| git_cd_cmd(git_path, &["commit", "-m", commit_msg]))
+            .and_then(|_| repo_cd_cmd(checkout_path, new_args))?;
+        Ok(())
     }
 
     /// Clean up the git repo after we're done with it.
@@ -160,7 +189,11 @@ impl RepoSetupContext {
         git_cd_cmd(git_path, ["restore", "."])?;
         git_cd_cmd(git_path, ["clean", "-fd"])?;
         git_cd_cmd(git_path, ["checkout", base_branch])?;
-        git_cd_cmd(git_path, ["branch", "-D", rm_branch])?;
+        // It's acceptable to be able to not delete the branch. This may be
+        // because the branch does not exist, which is an expected result.
+        // Since this is a very common case, we won't report any failures related
+        // to this command failure as it'll pollute the stderr logs.
+        let _ = git_cd_cmd(git_path, ["branch", "-D", rm_branch]);
         Ok(())
     }
 

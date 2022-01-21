@@ -10,6 +10,7 @@ use anyhow::{Context, Result};
 use structopt::StructOpt;
 
 use patch_parsing::{filter_patches_by_platform, PatchCollection, PatchDictSchema};
+use version_control::RepoSetupContext;
 
 fn main() -> Result<()> {
     match Opt::from_args() {
@@ -35,6 +36,7 @@ fn main() -> Result<()> {
             verbose,
             dry_run,
             no_commit,
+            wip,
         } => transpose_subcmd(TransposeOpt {
             cros_checkout_path,
             cros_reviewers: cros_reviewers
@@ -50,6 +52,7 @@ fn main() -> Result<()> {
             verbose,
             dry_run,
             no_commit,
+            wip,
         }),
     }
 }
@@ -68,10 +71,11 @@ fn show_subcmd(args: ShowOpt) -> Result<()> {
         keep_unmerged,
         sync,
     } = args;
-    let ctx = version_control::RepoSetupContext {
+    let ctx = RepoSetupContext {
         cros_checkout: cros_checkout_path,
         android_checkout: android_checkout_path,
         sync_before: sync,
+        wip_mode: true,
     };
     ctx.setup()?;
     let make_collection = |platform: &str, patches_fp: &Path| -> Result<PatchCollection> {
@@ -109,26 +113,28 @@ struct TransposeOpt {
     no_commit: bool,
     cros_reviewers: Vec<String>,
     android_reviewers: Vec<String>,
+    wip: bool,
 }
 
 fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
-    let ctx = version_control::RepoSetupContext {
+    let ctx = RepoSetupContext {
         cros_checkout: args.cros_checkout_path,
         android_checkout: args.android_checkout_path,
         sync_before: args.sync,
+        wip_mode: args.wip,
     };
     ctx.setup()?;
     let cros_patches_path = ctx.cros_patches_path();
     let android_patches_path = ctx.android_patches_path();
 
     // Get new Patches -------------------------------------------------------
-    let (mut cur_cros_collection, new_cros_patches) = patch_parsing::new_patches(
+    let (cur_cros_collection, new_cros_patches) = patch_parsing::new_patches(
         &cros_patches_path,
         &ctx.old_cros_patch_contents(&args.old_cros_ref)?,
         "chromiumos",
     )
     .context("finding new patches for chromiumos")?;
-    let (mut cur_android_collection, new_android_patches) = patch_parsing::new_patches(
+    let (cur_android_collection, new_android_patches) = patch_parsing::new_patches(
         &android_patches_path,
         &ctx.old_android_patch_contents(&args.old_android_ref)?,
         "android",
@@ -170,27 +176,59 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
         return Ok(());
     }
 
-    // Transpose Patches -----------------------------------------------------
-    if !new_cros_patches.is_empty() {
-        new_cros_patches.transpose_write(&mut cur_android_collection)?;
+    modify_repos(
+        &ctx,
+        args.no_commit,
+        ModifyOpt {
+            new_cros_patches,
+            cur_cros_collection,
+            cros_reviewers: args.cros_reviewers,
+            new_android_patches,
+            cur_android_collection,
+            android_reviewers: args.android_reviewers,
+        },
+    )
+}
+
+struct ModifyOpt {
+    new_cros_patches: PatchCollection,
+    cur_cros_collection: PatchCollection,
+    cros_reviewers: Vec<String>,
+    new_android_patches: PatchCollection,
+    cur_android_collection: PatchCollection,
+    android_reviewers: Vec<String>,
+}
+
+fn modify_repos(ctx: &RepoSetupContext, no_commit: bool, opt: ModifyOpt) -> Result<()> {
+    // Cleanup on scope exit.
+    scopeguard::defer! {
+        ctx.cleanup();
     }
-    if !new_android_patches.is_empty() {
-        new_android_patches.transpose_write(&mut cur_cros_collection)?;
+    // Transpose Patches -----------------------------------------------------
+    let mut cur_android_collection = opt.cur_android_collection;
+    let mut cur_cros_collection = opt.cur_cros_collection;
+    if !opt.new_cros_patches.is_empty() {
+        opt.new_cros_patches
+            .transpose_write(&mut cur_android_collection)?;
+    }
+    if !opt.new_android_patches.is_empty() {
+        opt.new_android_patches
+            .transpose_write(&mut cur_cros_collection)?;
     }
 
-    if args.no_commit {
+    if no_commit {
         println!("--no-commit specified; not committing or uploading");
         return Ok(());
     }
     // Commit and upload for review ------------------------------------------
     // Note we want to check if the android patches are empty for CrOS, and
     // vice versa. This is a little counterintuitive.
-    if !new_android_patches.is_empty() {
-        ctx.cros_repo_upload(&args.cros_reviewers)
+    if !opt.new_android_patches.is_empty() {
+        ctx.cros_repo_upload(&opt.cros_reviewers)
             .context("uploading chromiumos changes")?;
     }
-    if !new_cros_patches.is_empty() {
-        ctx.android_repo_upload(&args.android_reviewers)
+    if !opt.new_cros_patches.is_empty() {
+        ctx.android_repo_upload(&opt.android_reviewers)
             .context("uploading android changes")?;
     }
     Ok(())
@@ -269,5 +307,10 @@ enum Opt {
         /// Do not commit or upload any changes made.
         #[structopt(long)]
         no_commit: bool,
+
+        /// Upload and send things for review, but mark as WIP and send no
+        /// emails.
+        #[structopt(long)]
+        wip: bool,
     },
 }
