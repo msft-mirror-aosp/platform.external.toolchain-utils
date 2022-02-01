@@ -32,8 +32,8 @@ import get_upstream_patch
 State = t.Any
 
 
-def _find_interesting_android_shas(android_llvm_toolchain_dir: str
-                                   ) -> t.List[t.Tuple[str, str]]:
+def _find_interesting_android_shas(
+    android_llvm_toolchain_dir: str) -> t.List[t.Tuple[str, str]]:
   llvm_project = os.path.join(android_llvm_toolchain_dir,
                               'toolchain/llvm-project')
 
@@ -54,8 +54,8 @@ def _find_interesting_android_shas(android_llvm_toolchain_dir: str
   return result
 
 
-def _parse_llvm_ebuild_for_shas(ebuild_file: io.TextIOWrapper
-                                ) -> t.List[t.Tuple[str, str]]:
+def _parse_llvm_ebuild_for_shas(
+    ebuild_file: io.TextIOWrapper) -> t.List[t.Tuple[str, str]]:
   def parse_ebuild_assignment(line: str) -> str:
     no_comments = line.split('#')[0]
     no_assign = no_comments.split('=', 1)[1].strip()
@@ -82,8 +82,8 @@ def _parse_llvm_ebuild_for_shas(ebuild_file: io.TextIOWrapper
   return results
 
 
-def _find_interesting_chromeos_shas(chromeos_base: str
-                                    ) -> t.List[t.Tuple[str, str]]:
+def _find_interesting_chromeos_shas(
+    chromeos_base: str) -> t.List[t.Tuple[str, str]]:
   llvm_dir = os.path.join(chromeos_base,
                           'src/third_party/chromiumos-overlay/sys-devel/llvm')
   candidate_ebuilds = [
@@ -230,12 +230,15 @@ def do_cherrypick(chroot_path: str, llvm_dir: str,
     seen.add(friendly_name)
     for sha, reverted_sha in reverts:
       try:
+        # We upload reverts for all platforms by default, since there's no
+        # real reason for them to be CrOS-specific.
         get_upstream_patch.get_from_upstream(chroot_path=chroot_path,
                                              create_cl=True,
                                              start_sha=reverted_sha,
                                              patches=[sha],
                                              reviewers=reviewers,
-                                             cc=cc)
+                                             cc=cc,
+                                             platforms=())
       except get_upstream_patch.CherrypickError as e:
         logging.info('%s, skipping...', str(e))
   return new_state
@@ -324,8 +327,9 @@ def parse_args(argv: t.List[str]) -> t.Any:
   return parser.parse_args(argv)
 
 
-def find_chroot(opts: t.Any, reviewers: t.List[str], cc: t.List[str]
-                ) -> t.Tuple[str, t.List[t.Tuple[str, str]], _EmailRecipients]:
+def find_chroot(
+    opts: t.Any, reviewers: t.List[str], cc: t.List[str]
+) -> t.Tuple[str, t.List[t.Tuple[str, str]], _EmailRecipients]:
   recipients = reviewers + cc
   if opts.repository == 'chromeos':
     chroot_path = opts.chromeos_dir
