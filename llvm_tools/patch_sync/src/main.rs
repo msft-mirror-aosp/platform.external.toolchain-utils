@@ -228,6 +228,12 @@ fn modify_repos(ctx: &RepoSetupContext, no_commit: bool, opt: ModifyOpt) -> Resu
             .context("uploading chromiumos changes")?;
     }
     if !opt.new_cros_patches.is_empty() {
+        if let Err(e) = android_utils::sort_android_patches(&ctx.android_checkout) {
+            eprintln!(
+                "Couldn't sort Android patches; continuing. Caused by: {}",
+                e
+            );
+        }
         ctx.android_repo_upload(&opt.android_reviewers)
             .context("uploading android changes")?;
     }
