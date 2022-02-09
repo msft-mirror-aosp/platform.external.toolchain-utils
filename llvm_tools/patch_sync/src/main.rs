@@ -37,6 +37,7 @@ fn main() -> Result<()> {
             dry_run,
             no_commit,
             wip,
+            disable_cq,
         } => transpose_subcmd(TransposeOpt {
             cros_checkout_path,
             cros_reviewers: cros_reviewers
@@ -53,6 +54,7 @@ fn main() -> Result<()> {
             dry_run,
             no_commit,
             wip,
+            disable_cq,
         }),
     }
 }
@@ -75,7 +77,8 @@ fn show_subcmd(args: ShowOpt) -> Result<()> {
         cros_checkout: cros_checkout_path,
         android_checkout: android_checkout_path,
         sync_before: sync,
-        wip_mode: true,
+        wip_mode: true,   // Has no effect, as we're not making changes
+        enable_cq: false, // Has no effect, as we're not uploading anything
     };
     ctx.setup()?;
     let make_collection = |platform: &str, patches_fp: &Path| -> Result<PatchCollection> {
@@ -114,6 +117,7 @@ struct TransposeOpt {
     cros_reviewers: Vec<String>,
     android_reviewers: Vec<String>,
     wip: bool,
+    disable_cq: bool,
 }
 
 fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
@@ -122,6 +126,7 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
         android_checkout: args.android_checkout_path,
         sync_before: args.sync,
         wip_mode: args.wip,
+        enable_cq: !args.disable_cq,
     };
     ctx.setup()?;
     let cros_patches_path = ctx.cros_patches_path();
@@ -318,5 +323,9 @@ enum Opt {
         /// emails.
         #[structopt(long)]
         wip: bool,
+
+        /// Don't run CQ if set. Only has an effect if uploading.
+        #[structopt(long)]
+        disable_cq: bool,
     },
 }

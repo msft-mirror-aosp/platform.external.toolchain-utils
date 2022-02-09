@@ -20,6 +20,7 @@ pub struct RepoSetupContext {
     /// Run `repo sync` before doing any comparisons.
     pub sync_before: bool,
     pub wip_mode: bool,
+    pub enable_cq: bool,
 }
 
 impl RepoSetupContext {
@@ -52,7 +53,7 @@ impl RepoSetupContext {
             llvm_dir.display()
         );
         Self::rev_bump_llvm(&llvm_dir)?;
-        let mut extra_args = vec!["--label=Commit-Queue+1"];
+        let mut extra_args = Vec::new();
         for reviewer in reviewers {
             extra_args.push("--re");
             extra_args.push(reviewer.as_ref());
@@ -60,6 +61,9 @@ impl RepoSetupContext {
         if self.wip_mode {
             extra_args.push("--wip");
             extra_args.push("--no-emails");
+        }
+        if self.enable_cq {
+            extra_args.push("--label=Commit-Queue+1");
         }
         Self::repo_upload(
             &self.cros_checkout,
@@ -76,9 +80,6 @@ impl RepoSetupContext {
 
     pub fn android_repo_upload<S: AsRef<str>>(&self, reviewers: &[S]) -> Result<()> {
         let mut extra_args = Vec::new();
-        // TODO(ajordanr): Presubmit ready can only be enabled if we
-        // have the permissions.
-        // extra_args.push("--label=Presubmit-Ready+1");
         for reviewer in reviewers {
             extra_args.push("--re");
             extra_args.push(reviewer.as_ref());
@@ -86,6 +87,9 @@ impl RepoSetupContext {
         if self.wip_mode {
             extra_args.push("--wip");
             extra_args.push("--no-emails");
+        }
+        if self.enable_cq {
+            extra_args.push("--label=Presubmit-Ready+1");
         }
         Self::repo_upload(
             &self.android_checkout,
