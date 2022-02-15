@@ -29,7 +29,7 @@ class Experiment(object):
                cache_conditions, labels, benchmarks, experiment_file, email_to,
                acquire_timeout, log_dir, log_level, share_cache,
                results_directory, compress_results, locks_directory, cwp_dso,
-               ignore_min_max, crosfleet, dut_config):
+               ignore_min_max, crosfleet, dut_config, no_lock: bool):
     self.name = name
     self.working_directory = working_directory
     self.remote = remote
@@ -57,6 +57,7 @@ class Experiment(object):
     self.cwp_dso = cwp_dso
     self.ignore_min_max = ignore_min_max
     self.crosfleet = crosfleet
+    self.no_lock = no_lock
     self.l = logger.GetLogger(log_dir)
 
     if not self.benchmarks:
