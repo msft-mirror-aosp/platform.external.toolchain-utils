@@ -20,9 +20,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-static-libgcc",
             "main.cc",
-            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -54,9 +52,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-static-libgcc",
             "main.cc",
-            "-L/usr/x86_64-cros-eabi/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -88,9 +84,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-static-libgcc",
             "main.cc",
-            "-L/usr/x86_64-cros-win-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -122,10 +116,8 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-static-libgcc",
             "-mthumb",
-            "main.cc",
-            "-L/usr/armv7m-cros-linux-gnu/usr/lib"
+            "main.cc"
           ],
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
@@ -156,9 +148,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-static-libgcc",
-            "main.cc",
-            "-L/usr/armv7m-cros-eabi/usr/lib"
+            "main.cc"
           ],
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
@@ -189,10 +179,8 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-static-libgcc",
             "-mthumb",
-            "main.cc",
-            "-L/usr/armv7m-cros-win-gnu/usr/lib"
+            "main.cc"
           ],
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
@@ -223,10 +211,8 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-static-libgcc",
             "-mthumb",
-            "main.cc",
-            "-L/usr/armv8m-cros-linux-gnu/usr/lib"
+            "main.cc"
           ],
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
@@ -257,9 +243,7 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-static-libgcc",
-            "main.cc",
-            "-L/usr/armv8m-cros-eabi/usr/lib"
+            "main.cc"
           ],
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
@@ -290,10 +274,8 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-static-libgcc",
             "-mthumb",
-            "main.cc",
-            "-L/usr/armv8m-cros-win-gnu/usr/lib"
+            "main.cc"
           ],
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
