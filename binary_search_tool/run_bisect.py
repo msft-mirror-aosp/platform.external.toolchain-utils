@@ -12,7 +12,6 @@ import abc
 import argparse
 from argparse import RawTextHelpFormatter
 import os
-import shlex
 import sys
 
 from binary_search_tool import binary_search_state
@@ -142,8 +141,8 @@ class BisectPackage(Bisector):
         'prune': True,
         'file_args': True
     }
-    self.setup_cmd = ' '.join(
-        (self.cros_pkg_setup, self.options.board, self.options.remote))
+    self.setup_cmd = ('%s %s %s' % (self.cros_pkg_setup, self.options.board,
+                                    self.options.remote))
     self.ArgOverride(self.default_kwargs, self.overrides)
 
   def PreRun(self):
@@ -193,10 +192,9 @@ class BisectObject(Bisector):
     if options.dir:
       os.environ['BISECT_DIR'] = options.dir
     self.options.dir = os.environ.get('BISECT_DIR', '/tmp/sysroot_bisect')
-    self.setup_cmd = ' '.join(
-        (self.sysroot_wrapper_setup, self.options.board, self.options.remote,
-         self.options.package, str(self.options.reboot).lower(),
-         shlex.quote(self.options.use_flags)))
+    self.setup_cmd = (
+        '%s %s %s %s' % (self.sysroot_wrapper_setup, self.options.board,
+                         self.options.remote, self.options.package))
 
     self.ArgOverride(self.default_kwargs, overrides)
 
@@ -255,8 +253,8 @@ class BisectAndroid(Bisector):
     if self.options.device_id:
       device_id = "ANDROID_SERIAL='%s'" % self.options.device_id
 
-    self.setup_cmd = ' '.join(
-        (num_jobs, device_id, self.android_setup, self.options.android_src))
+    self.setup_cmd = ('%s %s %s %s' % (num_jobs, device_id, self.android_setup,
+                                       self.options.android_src))
 
     self.ArgOverride(self.default_kwargs, overrides)
 
@@ -345,16 +343,6 @@ def Main(argv):
   parser_object.add_argument('board', help='Board to target')
   parser_object.add_argument('remote', help='Remote machine to test on')
   parser_object.add_argument('package', help='Package to emerge and test')
-  parser_object.add_argument(
-      '--use_flags',
-      required=False,
-      default='',
-      help='Use flags passed to emerge')
-  parser_object.add_argument(
-      '--noreboot',
-      action='store_false',
-      dest='reboot',
-      help='Do not reboot after updating the package (default: False)')
   parser_object.add_argument(
       '--dir',
       help=('Bisection directory to use, sets '

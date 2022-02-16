@@ -10,6 +10,9 @@
 #  each compiler.  It writes out these statistics when it is done.
 #
 #  For a locally-built ChromeOS image, the debug directory is usually:
+#  ${chromeos_root}/chroot/build/${board}/usr/lib/debug (from outside
+#   chroot)
+#  or
 #  /build/${board}/usr/lib/debug (from inside chroot)
 #
 #  For a buildbot-built image you can usually download the debug tree
@@ -41,7 +44,7 @@ fi
 
 cd ${DEBUG_TREE}
 for f in `find . -name "*.debug" -type f` ; do
-    at_producer=`llvm-dwarfdump $f | head -25 | grep AT_producer `;
+    at_producer=`readelf --debug-dump=info $f | head -25 | grep AT_producer `;
     if echo ${at_producer} | grep -q 'GNU C' ; then
         ((gcc_count++))
     elif echo ${at_producer} | grep -q 'clang'; then
