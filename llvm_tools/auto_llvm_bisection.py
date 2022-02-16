@@ -8,8 +8,6 @@
 
 from __future__ import print_function
 
-import enum
-import json
 import os
 import subprocess
 import sys
@@ -19,7 +17,7 @@ import traceback
 import chroot
 from llvm_bisection import BisectionExitStatus
 import llvm_bisection
-import update_tryjob_status
+from update_all_tryjobs_with_auto import GetPathToUpdateAllTryjobsWithAutoScript
 
 # Used to re-try for 'llvm_bisection.py' to attempt to launch more tryjobs.
 BISECTION_RETRY_TIME_SECS = 10 * 60
@@ -41,52 +39,6 @@ BISECTION_ATTEMPTS = 3
 POLLING_LIMIT_SECS = 18 * 60 * 60
 
 
-class BuilderStatus(enum.Enum):
-  """Actual values given via 'cros buildresult'."""
-
-  PASS = 'pass'
-  FAIL = 'fail'
-  RUNNING = 'running'
-
-
-builder_status_mapping = {
-    BuilderStatus.PASS.value: update_tryjob_status.TryjobStatus.GOOD.value,
-    BuilderStatus.FAIL.value: update_tryjob_status.TryjobStatus.BAD.value,
-    BuilderStatus.RUNNING.value: update_tryjob_status.TryjobStatus.PENDING.value
-}
-
-
-def GetBuildResult(chroot_path, buildbucket_id):
-  """Returns the conversion of the result of 'cros buildresult'."""
-
-  # Calls 'cros buildresult' to get the status of the tryjob.
-  try:
-    tryjob_json = subprocess.check_output(
-        [
-            'cros_sdk', '--', 'cros', 'buildresult', '--buildbucket-id',
-            str(buildbucket_id), '--report', 'json'
-        ],
-        cwd=chroot_path,
-        stderr=subprocess.STDOUT,
-        encoding='UTF-8',
-    )
-  except subprocess.CalledProcessError as err:
-    if 'No build found. Perhaps not started' not in err.output:
-      raise
-    return None
-
-  tryjob_content = json.loads(tryjob_json)
-
-  build_result = str(tryjob_content['%d' % buildbucket_id]['status'])
-
-  # The string returned by 'cros buildresult' might not be in the mapping.
-  if build_result not in builder_status_mapping:
-    raise ValueError('"cros buildresult" return value is invalid: %s' %
-                     build_result)
-
-  return builder_status_mapping[build_result]
-
-
 def main():
   """Bisects LLVM using the result of `cros buildresult` of each tryjob.
 
@@ -98,58 +50,51 @@ def main():
 
   args_output = llvm_bisection.GetCommandLineArgs()
 
+  exec_update_tryjobs = [
+      GetPathToUpdateAllTryjobsWithAutoScript(), '--chroot_path',
+      args_output.chroot_path, '--last_tested', args_output.last_tested
+  ]
+
   if os.path.isfile(args_output.last_tested):
     print('Resuming bisection for %s' % args_output.last_tested)
   else:
     print('Starting a new bisection for %s' % args_output.last_tested)
 
   while True:
-    # Update the status of existing tryjobs
     if os.path.isfile(args_output.last_tested):
       update_start_time = time.time()
-      with open(args_output.last_tested) as json_file:
-        json_dict = json.load(json_file)
+
+      # Update all tryjobs whose status is 'pending' to the result of `cros
+      # buildresult`.
       while True:
         print('\nAttempting to update all tryjobs whose "status" is '
               '"pending":')
         print('-' * 40)
 
-        completed = True
-        for tryjob in json_dict['jobs']:
-          if tryjob[
-              'status'] == update_tryjob_status.TryjobStatus.PENDING.value:
-            status = GetBuildResult(args_output.chroot_path,
-                                    tryjob['buildbucket_id'])
-            if status:
-              tryjob['status'] = status
-            else:
-              completed = False
+        update_ret = subprocess.call(exec_update_tryjobs)
 
         print('-' * 40)
 
-        # Proceed to the next step if all the existing tryjobs have completed.
-        if completed:
+        # Successfully updated all tryjobs whose 'status' was 'pending'/ no
+        # updates were needed (all tryjobs already have been updated).
+        if update_ret == 0:
           break
 
         delta_time = time.time() - update_start_time
 
         if delta_time > POLLING_LIMIT_SECS:
+          print('Unable to update tryjobs whose status is "pending" to '
+                'the result of `cros buildresult`.')
+
           # Something is wrong with updating the tryjobs's 'status' via
           # `cros buildresult` (e.g. network issue, etc.).
-          sys.exit('Failed to update pending tryjobs.')
+          sys.exit(1)
 
-        print('-' * 40)
         print('Sleeping for %d minutes.' % (POLL_RETRY_TIME_SECS // 60))
         time.sleep(POLL_RETRY_TIME_SECS)
 
-      # There should always be update from the tryjobs launched in the
-      # last iteration.
-      temp_filename = '%s.new' % args_output.last_tested
-      with open(temp_filename, 'w') as temp_file:
-        json.dump(json_dict, temp_file, indent=4, separators=(',', ': '))
-      os.rename(temp_filename, args_output.last_tested)
-
-    # Launch more tryjobs.
+    # Launch more tryjobs if possible to narrow down the bad commit/revision or
+    # terminate the bisection because the bad commit/revision was found.
     for cur_try in range(1, BISECTION_ATTEMPTS + 1):
       try:
         print('\nAttempting to launch more tryjobs if possible:')
@@ -159,7 +104,8 @@ def main():
 
         print('-' * 40)
 
-        # Stop if the bisection has completed.
+        # Exit code 126 means that there are no more revisions to test between
+        # 'start' and 'end', so bisection is complete.
         if bisection_ret == BisectionExitStatus.BISECTION_COMPLETE.value:
           sys.exit(0)
 
@@ -172,7 +118,9 @@ def main():
 
         # Exceeded the number of times to launch more tryjobs.
         if cur_try == BISECTION_ATTEMPTS:
-          sys.exit('Unable to continue bisection.')
+          print('Unable to continue bisection.')
+
+          sys.exit(1)
 
         num_retries_left = BISECTION_ATTEMPTS - cur_try
 
