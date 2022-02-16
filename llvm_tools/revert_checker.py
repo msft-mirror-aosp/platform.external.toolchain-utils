@@ -1,17 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#===----------------------------------------------------------------------===##
-#
-# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-# See https://llvm.org/LICENSE.txt for license information.
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#
-#===----------------------------------------------------------------------===##
-#
-# !!!!!!!!!!!! NOTE !!!!!!!!!!!!
-# This is copied directly from upstream LLVM. Please make any changes upstream,
-# rather than to this file directly. Once changes are made there, you're free
-# to integrate them here.
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
 """Checks for reverts of commits across a given git commit.
 
@@ -29,21 +20,11 @@ conflicts/etc always introduce _some_ amount of fuzziness. This script just
 uses a bundle of heuristics, and is bound to ignore / incorrectly flag some
 reverts. The hope is that it'll easily catch the vast majority (>90%) of them,
 though.
-
-This is designed to be used in one of two ways: an import in Python, or run
-directly from a shell. If you want to import this, the `find_reverts`
-function is the thing to look at. If you'd rather use this from a shell, have a
-usage example:
-
-```
-./revert_checker.py c47f97169 origin/main origin/release/12.x
-```
-
-This checks for all reverts from the tip of origin/main to c47f97169, which are
-across the latter. It then does the same for origin/release/12.x to c47f97169.
-Duplicate reverts discovered when walking both roots (origin/main and
-origin/release/12.x) are deduplicated in output.
 """
+
+# pylint: disable=cros-logging-import
+
+from __future__ import print_function
 
 import argparse
 import collections
@@ -51,9 +32,7 @@ import logging
 import re
 import subprocess
 import sys
-from typing import Generator, List, NamedTuple, Iterable
-
-assert sys.version_info >= (3, 6), 'Only Python 3.6+ is supported.'
+import typing as t
 
 # People are creative with their reverts, and heuristics are a bit difficult.
 # Like 90% of of reverts have "This reverts commit ${full_sha}".
@@ -64,7 +43,7 @@ assert sys.version_info >= (3, 6), 'Only Python 3.6+ is supported.'
 # starts involving human intervention, which is probably not worth it for now.
 
 
-def _try_parse_reverts_from_commit_message(commit_message: str) -> List[str]:
+def _try_parse_reverts_from_commit_message(commit_message: str) -> t.List[str]:
   if not commit_message:
     return []
 
@@ -77,10 +56,9 @@ def _try_parse_reverts_from_commit_message(commit_message: str) -> List[str]:
   return results
 
 
-def _stream_stdout(command: List[str]) -> Generator[str, None, None]:
+def _stream_stdout(command: t.List[str]) -> t.Generator[str, None, None]:
   with subprocess.Popen(
       command, stdout=subprocess.PIPE, encoding='utf-8', errors='replace') as p:
-    assert p.stdout is not None  # for mypy's happiness.
     yield from p.stdout
 
 
@@ -95,14 +73,14 @@ def _resolve_sha(git_dir: str, sha: str) -> str:
   ).strip()
 
 
-_LogEntry = NamedTuple('_LogEntry', [
+_LogEntry = t.NamedTuple('_LogEntry', [
     ('sha', str),
-    ('commit_message', str),
+    ('commit_message', t.List[str]),
 ])
 
 
 def _log_stream(git_dir: str, root_sha: str,
-                end_at_sha: str) -> Iterable[_LogEntry]:
+                end_at_sha: str) -> t.Iterable[_LogEntry]:
   sep = 50 * '<>'
   log_command = [
       'git',
@@ -125,6 +103,8 @@ def _log_stream(git_dir: str, root_sha: str,
       break
 
   while found_commit_header:
+    # crbug.com/1041148
+    # pylint: disable=stop-iteration-return
     sha = next(stdout_stream, None)
     assert sha is not None, 'git died?'
     sha = sha.rstrip()
@@ -142,54 +122,52 @@ def _log_stream(git_dir: str, root_sha: str,
     yield _LogEntry(sha, '\n'.join(commit_message).rstrip())
 
 
-def _shas_between(git_dir: str, base_ref: str, head_ref: str) -> Iterable[str]:
+def _shas_between(git_dir: str, base_ref: str,
+                  head_ref: str) -> t.Iterable[str]:
   rev_list = [
       'git',
       '-C',
       git_dir,
       'rev-list',
       '--first-parent',
-      f'{base_ref}..{head_ref}',
+      '%s..%s' % (base_ref, head_ref),
   ]
   return (x.strip() for x in _stream_stdout(rev_list))
 
 
 def _rev_parse(git_dir: str, ref: str) -> str:
-  return subprocess.check_output(
+  result = subprocess.check_output(
       ['git', '-C', git_dir, 'rev-parse', ref],
       encoding='utf-8',
   ).strip()
+  return t.cast(str, result)
 
 
-Revert = NamedTuple('Revert', [
+Revert = t.NamedTuple('Revert', [
     ('sha', str),
     ('reverted_sha', str),
 ])
 
 
-def _find_common_parent_commit(git_dir: str, ref_a: str, ref_b: str) -> str:
-  """Finds the closest common parent commit between `ref_a` and `ref_b`."""
+def find_common_parent_commit(git_dir: str, ref_a: str, ref_b: str) -> str:
   return subprocess.check_output(
       ['git', '-C', git_dir, 'merge-base', ref_a, ref_b],
       encoding='utf-8',
   ).strip()
 
 
-def find_reverts(git_dir: str, across_ref: str, root: str) -> List[Revert]:
-  """Finds reverts across `across_ref` in `git_dir`, starting from `root`.
-
-  These reverts are returned in order of oldest reverts first.
-  """
+def find_reverts(git_dir: str, across_ref: str, root: str) -> t.List[Revert]:
+  """Finds reverts across `across_ref` in `git_dir`, starting from `root`."""
   across_sha = _rev_parse(git_dir, across_ref)
   root_sha = _rev_parse(git_dir, root)
 
-  common_ancestor = _find_common_parent_commit(git_dir, across_sha, root_sha)
+  common_ancestor = find_common_parent_commit(git_dir, across_sha, root_sha)
   if common_ancestor != across_sha:
-    raise ValueError(f"{across_sha} isn't an ancestor of {root_sha} "
-                     '(common ancestor: {common_ancestor})')
+    raise ValueError("%s isn't an ancestor of %s (common ancestor: %s)" %
+                     (across_sha, root_sha, common_ancestor))
 
   intermediate_commits = set(_shas_between(git_dir, across_sha, root_sha))
-  assert across_sha not in intermediate_commits
+  assert across_ref not in intermediate_commits
 
   logging.debug('%d commits appear between %s and %s',
                 len(intermediate_commits), across_sha, root_sha)
@@ -226,14 +204,10 @@ def find_reverts(git_dir: str, across_ref: str, root: str) -> List[Revert]:
       logging.error("%s claims to revert %s -- which isn't a commit -- %s", sha,
                     object_type, reverted_sha)
 
-  # Since `all_reverts` contains reverts in log order (e.g., newer comes before
-  # older), we need to reverse this to keep with our guarantee of older =
-  # earlier in the result.
-  all_reverts.reverse()
   return all_reverts
 
 
-def _main() -> None:
+def main(args: t.List[str]) -> int:
   parser = argparse.ArgumentParser(
       description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
   parser.add_argument(
@@ -243,7 +217,7 @@ def _main() -> None:
   parser.add_argument(
       'root', nargs='+', help='Root(s) to search for commits from.')
   parser.add_argument('--debug', action='store_true')
-  opts = parser.parse_args()
+  opts = parser.parse_args(args)
 
   logging.basicConfig(
       format='%(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: %(message)s',
@@ -254,17 +228,14 @@ def _main() -> None:
   # out. The overwhelmingly common case is also to have one root, and it's way
   # easier to reason about output that comes in an order that's meaningful to
   # git.
-  seen_reverts = set()
-  all_reverts = []
+  all_reverts = collections.OrderedDict()
   for root in opts.root:
     for revert in find_reverts(opts.git_dir, opts.base_ref, root):
-      if revert not in seen_reverts:
-        seen_reverts.add(revert)
-        all_reverts.append(revert)
+      all_reverts[revert] = None
 
-  for revert in all_reverts:
-    print(f'{revert.sha} claims to revert {revert.reverted_sha}')
+  for revert in all_reverts.keys():
+    print('%s claims to revert %s' % (revert.sha, revert.reverted_sha))
 
 
 if __name__ == '__main__':
-  _main()
+  sys.exit(main(sys.argv[1:]))
