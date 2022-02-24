@@ -393,7 +393,11 @@ class CommandExecuter(object):
     if return_output:
       ret = self.RunCommand(
           'cd %s; cros_sdk %s -- true' % (chromeos_root, cros_sdk_options),
-          env=env)
+          env=env,
+          # Give this command a long time to execute; it might involve setting
+          # the chroot up, or running fstrim on its image file. Both of these
+          # operations can take well over the timeout default of 10 seconds.
+          terminated_timeout=5 * 60)
       if ret:
         return (ret, '', '')
 
