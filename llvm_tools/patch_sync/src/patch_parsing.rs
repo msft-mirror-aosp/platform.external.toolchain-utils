@@ -8,14 +8,43 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 /// JSON serde struct.
+// FIXME(b/221489531): Remove when we clear out start_version and
+// end_version.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PatchDictSchema {
+    /// [deprecated(since = "1.1", note = "Use version_range")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub end_version: Option<u64>,
     pub metadata: Option<BTreeMap<String, serde_json::Value>>,
     #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
     pub platforms: BTreeSet<String>,
     pub rel_patch_path: String,
+    /// [deprecated(since = "1.1", note = "Use version_range")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub start_version: Option<u64>,
+    pub version_range: Option<VersionRange>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct VersionRange {
+    pub from: Option<u64>,
+    pub until: Option<u64>,
+}
+
+// FIXME(b/221489531): Remove when we clear out start_version and
+// end_version.
+impl PatchDictSchema {
+    pub fn get_start_version(&self) -> Option<u64> {
+        self.version_range
+            .map(|x| x.from)
+            .unwrap_or(self.start_version)
+    }
+
+    pub fn get_end_version(&self) -> Option<u64> {
+        self.version_range
+            .map(|x| x.until)
+            .unwrap_or(self.end_version)
+    }
 }
 
 /// Struct to keep track of patches and their relative paths.
@@ -137,6 +166,7 @@ impl PatchCollection {
                             end_version: p.end_version,
                             platforms: new_platforms,
                             metadata: p.metadata.clone(),
+                            version_range: p.version_range,
                         });
                         // iii.
                         *merged = true;
@@ -358,6 +388,10 @@ mod test {
             rel_patch_path: "a".into(),
             metadata: None,
             platforms: BTreeSet::from(["x".into()]),
+            version_range: Some(VersionRange {
+                from: Some(0),
+                until: Some(1),
+            }),
         };
         let patch2 = PatchDictSchema {
             rel_patch_path: "b".into(),
@@ -402,6 +436,10 @@ mod test {
             rel_patch_path: "a".into(),
             metadata: None,
             platforms: Default::default(),
+            version_range: Some(VersionRange {
+                from: Some(0),
+                until: Some(1),
+            }),
         };
         let collection1 = PatchCollection {
             workdir: PathBuf::new(),

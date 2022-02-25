@@ -1,6 +1,6 @@
 [package]
 name = "patch_sync"
-version = "0.1.0"
+version = "1.1.0"
 authors = ["Jordan R Abrahams-Whitehead <ajordanr@google.com>"]
 edition = "2018"
 

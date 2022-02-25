@@ -163,13 +163,14 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
             )
         })?
     };
-    let new_android_patches =
-        new_android_patches.filter_patches(|p| match (p.start_version, p.end_version) {
+    let new_android_patches = new_android_patches.filter_patches(|p| {
+        match (p.get_start_version(), p.get_end_version()) {
             (Some(start), Some(end)) => start <= android_llvm_version && android_llvm_version < end,
             (Some(start), None) => start <= android_llvm_version,
             (None, Some(end)) => android_llvm_version < end,
             (None, None) => true,
-        });
+        }
+    });
 
     if args.verbose {
         display_patches("New patches from Chromium OS", &new_cros_patches);
