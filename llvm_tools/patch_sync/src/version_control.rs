@@ -8,8 +8,9 @@ use std::process::{Command, Output};
 const CHROMIUMOS_OVERLAY_REL_PATH: &str = "src/third_party/chromiumos-overlay";
 const ANDROID_LLVM_REL_PATH: &str = "toolchain/llvm_android";
 
-const CROS_MAIN_BRANCH: &str = "main";
-const ANDROID_MAIN_BRANCH: &str = "master"; // nocheck
+// Need to checkout the upstream, rather than the local clone.
+const CROS_MAIN_BRANCH: &str = "cros/main";
+const ANDROID_MAIN_BRANCH: &str = "aosp/master"; // nocheck
 const WORK_BRANCH_NAME: &str = "__patch_sync_tmp";
 
 /// Context struct to keep track of both Chromium OS and Android checkouts.
