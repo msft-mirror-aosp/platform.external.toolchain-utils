@@ -24,25 +24,34 @@ import typing as t
 
 import cros_utils.email_sender as email_sender
 import cros_utils.tiny_render as tiny_render
+
 import get_llvm_hash
+import get_upstream_patch
 import git_llvm_rev
 import revert_checker
-import get_upstream_patch
 
 State = t.Any
 
 
-def _find_interesting_android_shas(
-    android_llvm_toolchain_dir: str) -> t.List[t.Tuple[str, str]]:
+def _find_interesting_android_shas(android_llvm_toolchain_dir: str
+                                   ) -> t.List[t.Tuple[str, str]]:
   llvm_project = os.path.join(android_llvm_toolchain_dir,
                               'toolchain/llvm-project')
 
   def get_llvm_merge_base(branch: str) -> str:
-    return subprocess.check_output(
+    head_sha = subprocess.check_output(
+        ['git', 'rev-parse', branch],
+        cwd=llvm_project,
+        encoding='utf-8',
+    ).strip()
+    merge_base = subprocess.check_output(
         ['git', 'merge-base', branch, 'aosp/upstream-main'],
         cwd=llvm_project,
         encoding='utf-8',
     ).strip()
+    logging.info('Merge-base for %s (HEAD == %s) and upstream-main is %s',
+                 branch, head_sha, merge_base)
+    return merge_base
 
   main_legacy = get_llvm_merge_base('aosp/master-legacy')  # nocheck
   testing_upstream = get_llvm_merge_base('aosp/testing-upstream')
@@ -51,11 +60,14 @@ def _find_interesting_android_shas(
   # If these are the same SHA, there's no point in tracking both.
   if main_legacy != testing_upstream:
     result.append(('testing-upstream', testing_upstream))
+  else:
+    logging.info('main-legacy and testing-upstream are identical; ignoring '
+                 'the latter.')
   return result
 
 
-def _parse_llvm_ebuild_for_shas(
-    ebuild_file: io.TextIOWrapper) -> t.List[t.Tuple[str, str]]:
+def _parse_llvm_ebuild_for_shas(ebuild_file: io.TextIOWrapper
+                                ) -> t.List[t.Tuple[str, str]]:
   def parse_ebuild_assignment(line: str) -> str:
     no_comments = line.split('#')[0]
     no_assign = no_comments.split('=', 1)[1].strip()
@@ -82,8 +94,8 @@ def _parse_llvm_ebuild_for_shas(
   return results
 
 
-def _find_interesting_chromeos_shas(
-    chromeos_base: str) -> t.List[t.Tuple[str, str]]:
+def _find_interesting_chromeos_shas(chromeos_base: str
+                                    ) -> t.List[t.Tuple[str, str]]:
   llvm_dir = os.path.join(chromeos_base,
                           'src/third_party/chromiumos-overlay/sys-devel/llvm')
   candidate_ebuilds = [
@@ -327,9 +339,8 @@ def parse_args(argv: t.List[str]) -> t.Any:
   return parser.parse_args(argv)
 
 
-def find_chroot(
-    opts: t.Any, reviewers: t.List[str], cc: t.List[str]
-) -> t.Tuple[str, t.List[t.Tuple[str, str]], _EmailRecipients]:
+def find_chroot(opts: t.Any, reviewers: t.List[str], cc: t.List[str]
+                ) -> t.Tuple[str, t.List[t.Tuple[str, str]], _EmailRecipients]:
   recipients = reviewers + cc
   if opts.repository == 'chromeos':
     chroot_path = opts.chromeos_dir
