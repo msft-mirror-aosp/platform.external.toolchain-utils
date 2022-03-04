@@ -164,7 +164,7 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
         })?
     };
     let new_android_patches = new_android_patches.filter_patches(|p| {
-        match (p.get_start_version(), p.get_end_version()) {
+        match (p.get_from_version(), p.get_until_version()) {
             (Some(start), Some(end)) => start <= android_llvm_version && android_llvm_version < end,
             (Some(start), None) => start <= android_llvm_version,
             (None, Some(end)) => android_llvm_version < end,

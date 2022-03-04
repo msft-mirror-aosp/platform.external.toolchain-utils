@@ -34,9 +34,8 @@ class PatchManagerTest(unittest.TestCase):
     with self.assertRaises(ValueError) as err:
       patch_manager.is_directory(test_dir)
 
-    self.assertEqual(
-        str(err.exception), 'Path is not a directory: '
-        '%s' % test_dir)
+    self.assertEqual(str(err.exception), 'Path is not a directory: '
+                     '%s' % test_dir)
 
     mock_isdir.assert_called_once()
 
@@ -173,8 +172,8 @@ class PatchManagerTest(unittest.TestCase):
         'rel_patch_path': 'cherry/fixes_stdout.patch'
     }
 
-    self.assertEqual(
-        patch_manager.GetPatchMetadata(test_patch), expected_patch_metadata)
+    self.assertEqual(patch_manager.GetPatchMetadata(test_patch),
+                     expected_patch_metadata)
 
   def testSuccessfullyGetPatchMetdataForPatchWithSomeMetadata(self):
     expected_patch_metadata = 0, 1000, False
@@ -187,8 +186,8 @@ class PatchManagerTest(unittest.TestCase):
         }
     }
 
-    self.assertEqual(
-        patch_manager.GetPatchMetadata(test_patch), expected_patch_metadata)
+    self.assertEqual(patch_manager.GetPatchMetadata(test_patch),
+                     expected_patch_metadata)
 
   def testFailedToApplyPatchWhenInvalidSrcPathIsPassedIn(self):
     src_path = '/abs/path/to/src'
@@ -200,8 +199,8 @@ class PatchManagerTest(unittest.TestCase):
     with self.assertRaises(ValueError) as err:
       patch_manager.ApplyPatch(src_path, abs_patch_path)
 
-      self.assertEqual(
-          str(err.exception), 'Invalid src path provided: %s' % src_path)
+      self.assertEqual(str(err.exception),
+                       'Invalid src path provided: %s' % src_path)
 
   # Simulate behavior of 'os.path.isdir()' when the absolute path to the
   # unpacked sources of the package is valid and exists.
@@ -216,9 +215,8 @@ class PatchManagerTest(unittest.TestCase):
     with self.assertRaises(ValueError) as err:
       patch_manager.ApplyPatch(src_path, abs_patch_path)
 
-    self.assertEqual(
-        str(err.exception), 'Invalid patch file provided: '
-        '%s' % abs_patch_path)
+    self.assertEqual(str(err.exception), 'Invalid patch file provided: '
+                     '%s' % abs_patch_path)
 
     mock_isdir.assert_called_once()
 
@@ -260,7 +258,8 @@ class PatchManagerTest(unittest.TestCase):
   # Simulate behavior of 'os.path.isfile()' when the absolute path to the
   # patch exists and is a file.
   @mock.patch.object(patch_manager, 'check_output')
-  def testSuccessfullyAppliedPatch(self, mock_dry_run, mock_isfile, mock_isdir):
+  def testSuccessfullyAppliedPatch(self, mock_dry_run, mock_isfile,
+                                   mock_isdir):
     src_path = '/abs/path/to/src'
 
     abs_patch_path = '/abs/path/to/filesdir/cherry/fixes_stdout.patch'
@@ -289,9 +288,8 @@ class PatchManagerTest(unittest.TestCase):
     with self.assertRaises(ValueError) as err:
       patch_manager.UpdatePatchMetadataFile(abs_patch_path, patch)
 
-    self.assertEqual(
-        str(err.exception), 'File does not end in ".json": '
-        '%s' % abs_patch_path)
+    self.assertEqual(str(err.exception), 'File does not end in ".json": '
+                     '%s' % abs_patch_path)
 
   def testSuccessfullyUpdatedPatchMetadataFile(self):
     test_updated_patch_metadata = [{
@@ -334,8 +332,8 @@ class PatchManagerTest(unittest.TestCase):
     # Simulate behavior of 'GetPathToPatch()' when the absolute path to the
     # patch does not exist.
     def PathToPatchDoesNotExist(filesdir_path, rel_patch_path):
-      raise ValueError('The absolute path to %s does not exist' % os.path.join(
-          filesdir_path, rel_patch_path))
+      raise ValueError('The absolute path to %s does not exist' %
+                       os.path.join(filesdir_path, rel_patch_path))
 
     # Use the test function to simulate the behavior of 'GetPathToPatch()'.
     mock_get_path_to_patch.side_effect = PathToPatchDoesNotExist
@@ -363,9 +361,8 @@ class PatchManagerTest(unittest.TestCase):
         patch_manager.HandlePatches(revision, json_test_file, filesdir_path,
                                     src_path, FailureModes.FAIL)
 
-    self.assertEqual(
-        str(err.exception),
-        'The absolute path to %s does not exist' % abs_patch_path)
+    self.assertEqual(str(err.exception),
+                     'The absolute path to %s does not exist' % abs_patch_path)
 
     mock_get_path_to_patch.assert_called_once_with(filesdir_path,
                                                    rel_patch_path)
@@ -411,8 +408,8 @@ class PatchManagerTest(unittest.TestCase):
         patch_manager.HandlePatches(revision, json_test_file, filesdir_path,
                                     src_path, FailureModes.FAIL)
 
-        self.assertEqual(
-            str(err.exception), 'Failed to apply patch: %s' % patch_name)
+        self.assertEqual(str(err.exception),
+                         'Failed to apply patch: %s' % patch_name)
 
     mock_get_path_to_patch.assert_called_once_with(filesdir_path,
                                                    rel_patch_path)
@@ -602,7 +599,8 @@ class PatchManagerTest(unittest.TestCase):
         self.assertEqual(
             path_to_patch,
             os.path.join(abs_path_to_filesdir,
-                         test_patch_metadata[call_count + 1]['rel_patch_path']))
+                         test_patch_metadata[call_count +
+                                             1]['rel_patch_path']))
 
         # Simulate that the second patch applied successfully.
         return call_count == 1
@@ -653,10 +651,10 @@ class PatchManagerTest(unittest.TestCase):
 
       # 'test_patch_1' and 'test_patch_3' were not modified/disabled, so their
       # dictionary is the same, but 'test_patch_2' and 'test_patch_4' were
-      # disabled, so their 'end_version' would be set to 1200, which was the
+      # disabled, so their 'until' would be set to 1200, which was the
       # value passed into 'HandlePatches()' for the 'svn_version'.
-      test_patch_2['end_version'] = 1200
-      test_patch_4['end_version'] = 1200
+      test_patch_2['version_range']['until'] = 1200
+      test_patch_4['version_range']['until'] = 1200
 
       expected_json_file = [
           test_patch_1, test_patch_2, test_patch_3, test_patch_4
@@ -675,10 +673,11 @@ class PatchManagerTest(unittest.TestCase):
 
   @mock.patch.object(patch_manager, 'GetPathToPatch')
   @mock.patch.object(patch_manager, 'ApplyPatch')
-  def testSomePatchesAreRemoved(self, mock_apply_patch, mock_get_path_to_patch):
+  def testSomePatchesAreRemoved(self, mock_apply_patch,
+                                mock_get_path_to_patch):
     # For the 'remove_patches' mode, this patch is expected to be in the
     # 'non_applicable_patches' list and 'removed_patches' list because
-    # the 'svn_version' (1500) >= 'end_version' (1190).
+    # the 'svn_version' (1500) >= 'until' (1190).
     test_patch_1 = {
         'comment': 'Redirects output to stdout',
         'rel_patch_path': 'cherry/fixes_output.patch',
@@ -691,7 +690,7 @@ class PatchManagerTest(unittest.TestCase):
     # For the 'remove_patches' mode, this patch is expected to be in the
     # 'applicable_patches' list (which is the list that the .json file will be
     # updated with) because the 'svn_version' < 'inf' (this patch does not have
-    # an 'end_version' value which implies 'end_version' == 'inf').
+    # an 'until' value which implies 'until' == 'inf').
     test_patch_2 = {
         'comment': 'Fixes input',
         'rel_patch_path': 'cherry/fixes_input.patch',
@@ -702,7 +701,7 @@ class PatchManagerTest(unittest.TestCase):
 
     # For the 'remove_patches' mode, this patch is expected to be in the
     # 'non_applicable_patches' list and 'removed_patches' list because
-    # the 'svn_version' (1500) >= 'end_version' (1500).
+    # the 'svn_version' (1500) >= 'until' (1500).
     test_patch_3 = {
         'comment': 'Adds a warning',
         'rel_patch_path': 'add_warning.patch',
@@ -714,7 +713,7 @@ class PatchManagerTest(unittest.TestCase):
 
     # For the 'remove_patches' mode, this patch is expected to be in the
     # 'non_applicable_patches' list and 'removed_patches' list because
-    # the 'svn_version' (1500) >= 'end_version' (1400).
+    # the 'svn_version' (1500) >= 'until' (1400).
     test_patch_4 = {
         'comment': 'Adds a helper function',
         'rel_patch_path': 'add_helper.patch',
@@ -818,7 +817,7 @@ class PatchManagerTest(unittest.TestCase):
 
     # For the 'remove_patches' mode, this patch is expected to be in the
     # 'non_applicable_patches' list and 'removed_patches' list because
-    # the 'svn_version' (1200) >= 'end_version' (1190).
+    # the 'svn_version' (1200) >= 'until' (1190).
     test_patch_1 = {
         'comment': 'Redirects output to stdout',
         'rel_patch_path': 'cherry/fixes_output.patch',
@@ -831,7 +830,7 @@ class PatchManagerTest(unittest.TestCase):
     # For the 'remove_patches' mode, this patch is expected to be in the
     # 'applicable_patches' list (which is the list that the .json file will be
     # updated with) because the 'svn_version' < 'inf' (this patch does not have
-    # an 'end_version' value which implies 'end_version' == 'inf').
+    # an 'until' value which implies 'until' == 'inf').
     test_patch_2 = {
         'comment': 'Fixes input',
         'rel_patch_path': 'cherry/fixes_input.patch',
@@ -841,8 +840,8 @@ class PatchManagerTest(unittest.TestCase):
     }
 
     # For the 'remove_patches' mode, this patch is expected to be in the
-    # 'applicable_patches' list because 'svn_version' >= 'start_version' and
-    # 'svn_version' < 'end_version'.
+    # 'applicable_patches' list because 'svn_version' >= 'from' and
+    # 'svn_version' < 'until'.
     test_patch_3 = {
         'comment': 'Adds a warning',
         'rel_patch_path': 'add_warning.patch',
@@ -854,7 +853,7 @@ class PatchManagerTest(unittest.TestCase):
 
     # For the 'remove_patches' mode, this patch is expected to be in the
     # 'applicable_patches' list because the patch is from the future (e.g.
-    # 'start_version' > 'svn_version' (1200), so it should NOT be removed.
+    # 'from' > 'svn_version' (1200), so it should NOT be removed.
     test_patch_4 = {
         'comment': 'Adds a helper function',
         'rel_patch_path': 'add_helper.patch',
@@ -896,7 +895,9 @@ class PatchManagerTest(unittest.TestCase):
     # 'add_helper.patch' is still a 'non applicable' patch meaning it does not
     # apply in revision 1200 but it will NOT be removed because it is a future
     # patch.
-    expected_non_applicable_patches = ['fixes_output.patch', 'add_helper.patch']
+    expected_non_applicable_patches = [
+        'fixes_output.patch', 'add_helper.patch'
+    ]
     expected_removed_patches = [
         '/abs/path/to/filesdir/cherry/fixes_output.patch'
     ]

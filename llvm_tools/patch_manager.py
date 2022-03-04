@@ -211,17 +211,15 @@ def GetPatchMetadata(patch_dict):
     A tuple that contains the metadata values.
   """
 
-  # Get the metadata values of a patch if possible.
-  # FIXME(b/221489531): Remove  start_version & end_version
   if 'version_range' in patch_dict:
-    start_version = patch_dict['version_range'].get('from', 0)
-    end_version = patch_dict['version_range'].get('until', None)
+    from_version = patch_dict['version_range'].get('from', 0)
+    until_version = patch_dict['version_range'].get('until', None)
   else:
-    start_version = patch_dict.get('start_version', 0)
-    end_version = patch_dict.get('end_version', None)
+    from_version = 0
+    until_version = None
   is_critical = patch_dict.get('is_critical', False)
 
-  return start_version, end_version, is_critical
+  return from_version, until_version, is_critical
 
 
 def ApplyPatch(src_path, patch_path):
@@ -475,19 +473,20 @@ def HandlePatches(svn_version,
       # Get the patch's metadata.
       #
       # Index information of 'patch_metadata':
-      #   [0]: start_version
-      #   [1]: end_version
+      #   [0]: from_version
+      #   [1]: until_version
       #   [2]: is_critical
       patch_metadata = GetPatchMetadata(cur_patch_dict)
 
       if not patch_metadata[1]:
-        # Patch does not have an 'end_version' value which implies 'end_version'
-        # == 'inf' ('svn_version' will always be less than 'end_version'), so
-        # the patch is applicable if 'svn_version' >= 'start_version'.
+        # Patch does not have an 'until' value which implies
+        # 'until' == 'inf' ('svn_version' will always be less
+        # than 'until'), so the patch is applicable if
+        # 'svn_version' >= 'from'.
         patch_applicable = svn_version >= patch_metadata[0]
       else:
-        # Patch is applicable if 'svn_version' >= 'start_version' &&
-        # "svn_version" < "end_version".
+        # Patch is applicable if 'svn_version' >= 'from' &&
+        # "svn_version" < "until".
         patch_applicable = (svn_version >= patch_metadata[0] and \
                             svn_version < patch_metadata[1])
 
@@ -524,12 +523,14 @@ def HandlePatches(svn_version,
           # Check the mode to determine what action to take on the failing
           # patch.
           if mode == FailureModes.DISABLE_PATCHES:
-            # Set the patch's 'end_version' to 'svn_version' so the patch
-            # would not be applicable anymore (i.e. the patch's 'end_version'
+            # Set the patch's 'until' to 'svn_version' so the patch
+            # would not be applicable anymore (i.e. the patch's 'until'
             # would not be greater than 'svn_version').
 
             # Last element in 'applicable_patches' is the current patch.
-            applicable_patches[-1]['end_version'] = svn_version
+            new_version_range = applicable_patches[-1].get('version_range', {})
+            new_version_range['until'] = svn_version
+            applicable_patches[-1]['version_range'] = new_version_range
 
             disabled_patches.append(os.path.basename(path_to_patch))
 
@@ -541,7 +542,7 @@ def HandlePatches(svn_version,
               modified_metadata = patch_metadata_file
           elif mode == FailureModes.BISECT_PATCHES:
             # Figure out where the patch's stops applying and set the patch's
-            # 'end_version' to that version.
+            # 'until' to that version.
 
             # Do not want to overwrite the changes to the current progress of
             # 'bisect_patches' on the source tree.
@@ -566,14 +567,17 @@ def HandlePatches(svn_version,
                   'at %d\n' % (os.path.basename(
                       cur_patch_dict['rel_patch_path']), bad_svn_version))
 
-            # Overwrite the .JSON file with the new 'end_version' for the
+            # Overwrite the .JSON file with the new 'until' for the
             # current failed patch so that if there are other patches that
-            # fail to apply, then the 'end_version' for the current patch could
+            # fail to apply, then the 'until' for the current patch could
             # be applicable when `git bisect run` is performed on the next
             # failed patch because the same .JSON file is used for `git bisect
             # run`.
+            new_version_range = patch_file_contents[patch_dict_index].get(
+                'version_range', {})
+            new_version_range['until'] = bad_svn_version
             patch_file_contents[patch_dict_index][
-                'end_version'] = bad_svn_version
+                'version_range'] = new_version_range
             UpdatePatchMetadataFile(patch_metadata_file, patch_file_contents)
 
             # Clear the changes made to the source tree by `git bisect run`.
@@ -591,7 +595,7 @@ def HandlePatches(svn_version,
             RestoreSrcTreeState(src_path, bad_commit)
 
             if not modified_metadata:
-              # At least one patch's 'end_version' has been updated.
+              # At least one patch's 'until' has been updated.
               modified_metadata = patch_metadata_file
 
           elif mode == FailureModes.FAIL:

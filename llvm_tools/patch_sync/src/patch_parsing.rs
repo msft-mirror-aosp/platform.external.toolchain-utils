@@ -8,20 +8,12 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 /// JSON serde struct.
-// FIXME(b/221489531): Remove when we clear out start_version and
-// end_version.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PatchDictSchema {
-    /// [deprecated(since = "1.1", note = "Use version_range")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub end_version: Option<u64>,
     pub metadata: Option<BTreeMap<String, serde_json::Value>>,
     #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
     pub platforms: BTreeSet<String>,
     pub rel_patch_path: String,
-    /// [deprecated(since = "1.1", note = "Use version_range")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub start_version: Option<u64>,
     pub version_range: Option<VersionRange>,
 }
 
@@ -31,19 +23,16 @@ pub struct VersionRange {
     pub until: Option<u64>,
 }
 
-// FIXME(b/221489531): Remove when we clear out start_version and
-// end_version.
 impl PatchDictSchema {
-    pub fn get_start_version(&self) -> Option<u64> {
-        self.version_range
-            .map(|x| x.from)
-            .unwrap_or(self.start_version)
+    /// Return the first version this patch applies to.
+    pub fn get_from_version(&self) -> Option<u64> {
+        self.version_range.and_then(|x| x.from)
     }
 
-    pub fn get_end_version(&self) -> Option<u64> {
-        self.version_range
-            .map(|x| x.until)
-            .unwrap_or(self.end_version)
+    /// Return the version after the last version this patch
+    /// applies to.
+    pub fn get_until_version(&self) -> Option<u64> {
+        self.version_range.and_then(|x| x.until)
     }
 }
 
@@ -162,8 +151,6 @@ impl PatchCollection {
                         // ii.
                         combined_patches.push(PatchDictSchema {
                             rel_patch_path: p.rel_patch_path.clone(),
-                            start_version: p.start_version,
-                            end_version: p.end_version,
                             platforms: new_platforms,
                             metadata: p.metadata.clone(),
                             version_range: p.version_range,
@@ -383,8 +370,6 @@ mod test {
     #[test]
     fn test_union() {
         let patch1 = PatchDictSchema {
-            start_version: Some(0),
-            end_version: Some(1),
             rel_patch_path: "a".into(),
             metadata: None,
             platforms: BTreeSet::from(["x".into()]),
@@ -431,8 +416,6 @@ mod test {
     #[test]
     fn test_union_empties() {
         let patch1 = PatchDictSchema {
-            start_version: Some(0),
-            end_version: Some(1),
             rel_patch_path: "a".into(),
             metadata: None,
             platforms: Default::default(),
