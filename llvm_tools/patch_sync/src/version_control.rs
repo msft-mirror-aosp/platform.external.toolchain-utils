@@ -8,6 +8,10 @@ use std::process::{Command, Output};
 const CHROMIUMOS_OVERLAY_REL_PATH: &str = "src/third_party/chromiumos-overlay";
 const ANDROID_LLVM_REL_PATH: &str = "toolchain/llvm_android";
 
+const CROS_MAIN_BRANCH: &str = "main";
+const ANDROID_MAIN_BRANCH: &str = "master"; // nocheck
+const WORK_BRANCH_NAME: &str = "__patch_sync_tmp";
+
 /// Context struct to keep track of both Chromium OS and Android checkouts.
 #[derive(Debug)]
 pub struct RepoSetupContext {
@@ -15,18 +19,30 @@ pub struct RepoSetupContext {
     pub android_checkout: PathBuf,
     /// Run `repo sync` before doing any comparisons.
     pub sync_before: bool,
+    pub wip_mode: bool,
+    pub enable_cq: bool,
 }
 
 impl RepoSetupContext {
     pub fn setup(&self) -> Result<()> {
         if self.sync_before {
+            {
+                let crpp = self.cros_patches_path();
+                let cros_git = crpp.parent().unwrap();
+                git_cd_cmd(cros_git, ["checkout", CROS_MAIN_BRANCH])?;
+            }
+            {
+                let anpp = self.android_patches_path();
+                let android_git = anpp.parent().unwrap();
+                git_cd_cmd(android_git, ["checkout", ANDROID_MAIN_BRANCH])?;
+            }
             repo_cd_cmd(&self.cros_checkout, &["sync", CHROMIUMOS_OVERLAY_REL_PATH])?;
             repo_cd_cmd(&self.android_checkout, &["sync", ANDROID_LLVM_REL_PATH])?;
         }
         Ok(())
     }
 
-    pub fn cros_repo_upload(&self) -> Result<()> {
+    pub fn cros_repo_upload<S: AsRef<str>>(&self, reviewers: &[S]) -> Result<()> {
         let llvm_dir = self
             .cros_checkout
             .join(&CHROMIUMOS_OVERLAY_REL_PATH)
@@ -37,46 +53,152 @@ impl RepoSetupContext {
             llvm_dir.display()
         );
         Self::rev_bump_llvm(&llvm_dir)?;
+        let mut extra_args = Vec::new();
+        for reviewer in reviewers {
+            extra_args.push("--re");
+            extra_args.push(reviewer.as_ref());
+        }
+        if self.wip_mode {
+            extra_args.push("--wip");
+            extra_args.push("--no-emails");
+        }
+        if self.enable_cq {
+            extra_args.push("--label=Commit-Queue+1");
+        }
         Self::repo_upload(
             &self.cros_checkout,
             CHROMIUMOS_OVERLAY_REL_PATH,
-            &Self::build_commit_msg("android", "chromiumos", "BUG=None\nTEST=CQ"),
+            &Self::build_commit_msg(
+                "llvm: Synchronize patches from android",
+                "android",
+                "chromiumos",
+                "BUG=None\nTEST=CQ",
+            ),
+            extra_args,
         )
     }
 
-    pub fn android_repo_upload(&self) -> Result<()> {
+    pub fn android_repo_upload<S: AsRef<str>>(&self, reviewers: &[S]) -> Result<()> {
+        let mut extra_args = Vec::new();
+        for reviewer in reviewers {
+            extra_args.push("--re");
+            extra_args.push(reviewer.as_ref());
+        }
+        if self.wip_mode {
+            extra_args.push("--wip");
+            extra_args.push("--no-emails");
+        }
+        if self.enable_cq {
+            extra_args.push("--label=Presubmit-Ready+1");
+        }
         Self::repo_upload(
             &self.android_checkout,
             ANDROID_LLVM_REL_PATH,
-            &Self::build_commit_msg("chromiumos", "android", "Test: N/A"),
+            &Self::build_commit_msg(
+                "Synchronize patches from chromiumos",
+                "chromiumos",
+                "android",
+                "Test: N/A",
+            ),
+            extra_args,
         )
     }
 
-    fn repo_upload(path: &Path, git_wd: &str, commit_msg: &str) -> Result<()> {
-        // TODO(ajordanr): Need to clean up if there's any failures during upload.
-        let git_path = &path.join(&git_wd);
-        ensure!(
-            git_path.is_dir(),
-            "git_path {} is not a directory",
-            git_path.display()
-        );
-        repo_cd_cmd(path, &["start", "patch_sync_branch", git_wd])?;
-        git_cd_cmd(git_path, &["add", "."])?;
-        git_cd_cmd(git_path, &["commit", "-m", commit_msg])?;
-        repo_cd_cmd(path, &["upload", "-y", "--verify", git_wd])?;
+    fn cros_cleanup(&self) -> Result<()> {
+        let git_path = self.cros_checkout.join(CHROMIUMOS_OVERLAY_REL_PATH);
+        Self::cleanup_branch(&git_path, CROS_MAIN_BRANCH, WORK_BRANCH_NAME)
+            .with_context(|| format!("cleaning up branch {}", WORK_BRANCH_NAME))?;
         Ok(())
     }
 
+    fn android_cleanup(&self) -> Result<()> {
+        let git_path = self.android_checkout.join(ANDROID_LLVM_REL_PATH);
+        Self::cleanup_branch(&git_path, ANDROID_MAIN_BRANCH, WORK_BRANCH_NAME)
+            .with_context(|| format!("cleaning up branch {}", WORK_BRANCH_NAME))?;
+        Ok(())
+    }
+
+    /// Wrapper around cleanups to ensure both get run, even if errors appear.
+    pub fn cleanup(&self) {
+        if let Err(e) = self.cros_cleanup() {
+            eprintln!("Failed to clean up chromiumos, continuing: {}", e);
+        }
+        if let Err(e) = self.android_cleanup() {
+            eprintln!("Failed to clean up android, continuing: {}", e);
+        }
+    }
+
+    /// Get the Android path to the PATCHES.json file
     pub fn android_patches_path(&self) -> PathBuf {
         self.android_checkout
             .join(&ANDROID_LLVM_REL_PATH)
             .join("patches/PATCHES.json")
     }
 
+    /// Get the Chromium OS path to the PATCHES.json file
     pub fn cros_patches_path(&self) -> PathBuf {
         self.cros_checkout
             .join(&CHROMIUMOS_OVERLAY_REL_PATH)
             .join("sys-devel/llvm/files/PATCHES.json")
+    }
+
+    /// Return the contents of the old PATCHES.json from Chromium OS
+    pub fn old_cros_patch_contents(&self, hash: &str) -> Result<String> {
+        Self::old_file_contents(
+            hash,
+            &self.cros_checkout.join(CHROMIUMOS_OVERLAY_REL_PATH),
+            Path::new("sys-devel/llvm/files/PATCHES.json"),
+        )
+    }
+
+    /// Return the contents of the old PATCHES.json from android
+    pub fn old_android_patch_contents(&self, hash: &str) -> Result<String> {
+        Self::old_file_contents(
+            hash,
+            &self.android_checkout.join(ANDROID_LLVM_REL_PATH),
+            Path::new("patches/PATCHES.json"),
+        )
+    }
+
+    fn repo_upload<'a, I: IntoIterator<Item = &'a str>>(
+        checkout_path: &Path,
+        subproject_git_wd: &'a str,
+        commit_msg: &str,
+        extra_flags: I,
+    ) -> Result<()> {
+        let git_path = &checkout_path.join(&subproject_git_wd);
+        ensure!(
+            git_path.is_dir(),
+            "git_path {} is not a directory",
+            git_path.display()
+        );
+        repo_cd_cmd(
+            checkout_path,
+            &["start", WORK_BRANCH_NAME, subproject_git_wd],
+        )?;
+        let base_args = ["upload", "--br", WORK_BRANCH_NAME, "-y", "--verify"];
+        let new_args = base_args
+            .iter()
+            .copied()
+            .chain(extra_flags)
+            .chain(["--", subproject_git_wd]);
+        git_cd_cmd(git_path, &["add", "."])
+            .and_then(|_| git_cd_cmd(git_path, &["commit", "-m", commit_msg]))
+            .and_then(|_| repo_cd_cmd(checkout_path, new_args))?;
+        Ok(())
+    }
+
+    /// Clean up the git repo after we're done with it.
+    fn cleanup_branch(git_path: &Path, base_branch: &str, rm_branch: &str) -> Result<()> {
+        git_cd_cmd(git_path, ["restore", "."])?;
+        git_cd_cmd(git_path, ["clean", "-fd"])?;
+        git_cd_cmd(git_path, ["checkout", base_branch])?;
+        // It's acceptable to be able to not delete the branch. This may be
+        // because the branch does not exist, which is an expected result.
+        // Since this is a very common case, we won't report any failures related
+        // to this command failure as it'll pollute the stderr logs.
+        let _ = git_cd_cmd(git_path, ["branch", "-D", rm_branch]);
+        Ok(())
     }
 
     /// Increment LLVM's revision number
@@ -108,28 +230,7 @@ impl RepoSetupContext {
         Ok(new_path)
     }
 
-    /// Return the contents of the old PATCHES.json from Chromium OS
-    #[allow(dead_code)]
-    pub fn old_cros_patch_contents(&self, hash: &str) -> Result<String> {
-        Self::old_file_contents(
-            hash,
-            &self.cros_checkout.join(CHROMIUMOS_OVERLAY_REL_PATH),
-            Path::new("sys-devel/llvm/files/PATCHES.json"),
-        )
-    }
-
-    /// Return the contents of the old PATCHES.json from android
-    #[allow(dead_code)]
-    pub fn old_android_patch_contents(&self, hash: &str) -> Result<String> {
-        Self::old_file_contents(
-            hash,
-            &self.android_checkout.join(ANDROID_LLVM_REL_PATH),
-            Path::new("patches/PATCHES.json"),
-        )
-    }
-
     /// Return the contents of an old file in git
-    #[allow(dead_code)]
     fn old_file_contents(hash: &str, pwd: &Path, file: &Path) -> Result<String> {
         let git_ref = format!(
             "{}:{}",
@@ -146,31 +247,57 @@ impl RepoSetupContext {
     }
 
     /// Create the commit message
-    fn build_commit_msg(from: &str, to: &str, footer: &str) -> String {
+    fn build_commit_msg(subj: &str, from: &str, to: &str, footer: &str) -> String {
         format!(
-            "[patch_sync] Synchronize patches from {}\n\n\
-        Copies new PATCHES.json changes from {} to {}\n\n{}",
-            from, from, to, footer
+            "[patch_sync] {}\n\n\
+Copies new PATCHES.json changes from {} to {}.\n
+For questions about this job, contact chromeos-toolchain@google.com\n\n
+{}",
+            subj, from, to, footer
         )
     }
 }
 
 /// Return the path of an ebuild located within the given directory.
 fn find_ebuild(dir: &Path) -> Result<PathBuf> {
-    // TODO(ajordanr): Maybe use OnceCell for this regex?
-    let ebuild_matcher = Regex::new(r"(-r[0-9]+)?\.ebuild").unwrap();
-    for entry in fs::read_dir(dir)? {
-        let path = entry?.path();
-        if let Some(name) = path.file_name() {
-            if ebuild_matcher.is_match(
-                name.to_str()
-                    .ok_or_else(|| anyhow!("converting filepath to UTF-8"))?,
-            ) {
-                return Ok(path);
-            }
+    // The logic here is that we create an iterator over all file paths to ebuilds
+    // with _pre in the name. Then we sort those ebuilds based on their revision numbers.
+    // Then we return the highest revisioned one.
+
+    let ebuild_rev_matcher = Regex::new(r"-r([0-9]+)\.ebuild").unwrap();
+    // For LLVM ebuilds, we only want to check for ebuilds that have this in their file name.
+    let per_heuristic = "_pre";
+    // Get an iterator over all ebuilds with a _per in the file name.
+    let ebuild_candidates = fs::read_dir(dir)?.filter_map(|entry| {
+        let entry = entry.ok()?;
+        let path = entry.path();
+        if path.extension()? != "ebuild" {
+            // Not an ebuild, ignore.
+            return None;
         }
-    }
-    bail!("could not find ebuild")
+        let stem = path.file_stem()?.to_str()?;
+        if stem.contains(per_heuristic) {
+            return Some(path);
+        }
+        None
+    });
+    let try_parse_ebuild_rev = |path: PathBuf| -> Option<(u64, PathBuf)> {
+        let name = path.file_name()?;
+        if let Some(rev_match) = ebuild_rev_matcher.captures(name.to_str()?) {
+            let rev_str = rev_match.get(1)?;
+            let rev_num = rev_str.as_str().parse::<u64>().ok()?;
+            return Some((rev_num, path));
+        }
+        // If it doesn't have a revision, then it's revision 0.
+        Some((0, path))
+    };
+    let mut sorted_candidates: Vec<_> =
+        ebuild_candidates.filter_map(try_parse_ebuild_rev).collect();
+    sorted_candidates.sort_unstable_by_key(|x| x.0);
+    let highest_rev_ebuild = sorted_candidates
+        .pop()
+        .ok_or_else(|| anyhow!("could not find ebuild"))?;
+    Ok(highest_rev_ebuild.1)
 }
 
 /// Run a given git command from inside a specified git dir.
@@ -179,9 +306,16 @@ where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
 {
-    let output = Command::new("git").current_dir(&pwd).args(args).output()?;
+    let mut command = Command::new("git");
+    command.current_dir(&pwd).args(args);
+    let output = command.output()?;
     if !output.status.success() {
-        bail!("git command failed")
+        bail!(
+            "git command failed:\n  {:?}\nstdout --\n{}\nstderr --\n{}",
+            command,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
     }
     Ok(output)
 }
@@ -191,9 +325,11 @@ where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
 {
-    let status = Command::new("repo").current_dir(&pwd).args(args).status()?;
+    let mut command = Command::new("repo");
+    command.current_dir(&pwd).args(args);
+    let status = command.status()?;
     if !status.success() {
-        bail!("repo command failed")
+        bail!("repo command failed:\n  {:?}  \n", command)
     }
     Ok(())
 }
@@ -219,7 +355,11 @@ mod test {
             File::create(&ebuild_path).expect("creating test ebuild file");
             let new_ebuild_path =
                 RepoSetupContext::rev_bump_llvm(&llvm_dir).expect("rev bumping the ebuild");
-            assert!(new_ebuild_path.ends_with("llvm-13.0_pre433403_p20211019-r11.ebuild"));
+            assert!(
+                new_ebuild_path.ends_with("llvm-13.0_pre433403_p20211019-r11.ebuild"),
+                "{}",
+                new_ebuild_path.display()
+            );
             fs::remove_file(new_ebuild_path).expect("removing renamed ebuild file");
         }
         {
@@ -229,8 +369,30 @@ mod test {
             File::create(&ebuild_path).expect("creating test ebuild file");
             let new_ebuild_path =
                 RepoSetupContext::rev_bump_llvm(&llvm_dir).expect("rev bumping the ebuild");
-            assert!(new_ebuild_path.ends_with("llvm-13.0_pre433403_p20211019-r1.ebuild"));
+            assert!(
+                new_ebuild_path.ends_with("llvm-13.0_pre433403_p20211019-r1.ebuild"),
+                "{}",
+                new_ebuild_path.display()
+            );
             fs::remove_file(new_ebuild_path).expect("removing renamed ebuild file");
+        }
+        {
+            // With both
+            let ebuild_name = "llvm-13.0_pre433403_p20211019.ebuild";
+            let ebuild_path = llvm_dir.join(ebuild_name);
+            File::create(&ebuild_path).expect("creating test ebuild file");
+            let ebuild_link_name = "llvm-13.0_pre433403_p20211019-r2.ebuild";
+            let ebuild_link_path = llvm_dir.join(ebuild_link_name);
+            File::create(&ebuild_link_path).expect("creating test ebuild link file");
+            let new_ebuild_path =
+                RepoSetupContext::rev_bump_llvm(&llvm_dir).expect("rev bumping the ebuild");
+            assert!(
+                new_ebuild_path.ends_with("llvm-13.0_pre433403_p20211019-r3.ebuild"),
+                "{}",
+                new_ebuild_path.display()
+            );
+            fs::remove_file(new_ebuild_path).expect("removing renamed ebuild link file");
+            fs::remove_file(ebuild_path).expect("removing renamed ebuild file");
         }
 
         fs::remove_dir(&llvm_dir).expect("removing temp test dir");
