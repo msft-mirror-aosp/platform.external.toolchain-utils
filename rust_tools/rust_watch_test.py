@@ -129,7 +129,7 @@ class Test(unittest.TestCase):
         ),
         newest_release=rust_watch.RustReleaseVersion(1, 0, 1),
     )
-    self.assertEqual(title, 'New rustc release detected: v1.0.1')
+    self.assertEqual(title, '[Rust] Update to 1.0.1')
     self.assertTrue(body.startswith('A new release has been detected;'))
 
     title, body = rust_watch.maybe_compose_bug(
@@ -139,7 +139,7 @@ class Test(unittest.TestCase):
         ),
         newest_release=rust_watch.RustReleaseVersion(1, 1, 0),
     )
-    self.assertEqual(title, 'New rustc release detected: v1.1.0')
+    self.assertEqual(title, '[Rust] Update to 1.1.0')
     self.assertTrue(body.startswith('A new release has been detected;'))
 
     title, body = rust_watch.maybe_compose_bug(
@@ -149,7 +149,7 @@ class Test(unittest.TestCase):
         ),
         newest_release=rust_watch.RustReleaseVersion(2, 0, 0),
     )
-    self.assertEqual(title, 'New rustc release detected: v2.0.0')
+    self.assertEqual(title, '[Rust] Update to 2.0.0')
     self.assertTrue(body.startswith('A new release has been detected;'))
 
   def test_compose_bug_does_nothing_when_no_new_updates_exist(self):
