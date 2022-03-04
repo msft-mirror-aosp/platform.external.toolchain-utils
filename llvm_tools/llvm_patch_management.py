@@ -36,7 +36,8 @@ def GetCommandLineArgs():
   cros_root = os.path.join(cros_root, 'chromiumos')
 
   # Create parser and add optional command-line arguments.
-  parser = argparse.ArgumentParser(description='Patch management for packages.')
+  parser = argparse.ArgumentParser(
+      description='Patch management for packages.')
 
   # Add argument for a specific chroot path.
   parser.add_argument(
@@ -54,11 +55,10 @@ def GetCommandLineArgs():
       help='the packages to manage their patches (default: %(default)s)')
 
   # Add argument for whether to display command contents to `stdout`.
-  parser.add_argument(
-      '--verbose',
-      action='store_true',
-      help='display contents of a command to the terminal '
-      '(default: %(default)s)')
+  parser.add_argument('--verbose',
+                      action='store_true',
+                      help='display contents of a command to the terminal '
+                      '(default: %(default)s)')
 
   # Add argument for the LLVM version to use for patch management.
   parser.add_argument(
@@ -95,8 +95,8 @@ def GetCommandLineArgs():
 
   # Duplicate packages were passed into the command line
   if len(unique_packages) != len(args_output.packages):
-    raise ValueError('Duplicate packages were passed in: %s' % ' '.join(
-        args_output.packages))
+    raise ValueError('Duplicate packages were passed in: %s' %
+                     ' '.join(args_output.packages))
 
   args_output.packages = unique_packages
 
@@ -178,7 +178,8 @@ def _MoveSrcTreeHEADToGitHash(src_path, git_hash):
 
   move_head_cmd = ['git', '-C', src_path, 'checkout', git_hash]
 
-  subprocess_helpers.ExecCommandAndCaptureOutput(move_head_cmd, verbose=verbose)
+  subprocess_helpers.ExecCommandAndCaptureOutput(move_head_cmd,
+                                                 verbose=verbose)
 
 
 def UpdatePackagesPatchMetadataFile(chroot_path, svn_version,
@@ -230,8 +231,10 @@ def UpdatePackagesPatchMetadataFile(chroot_path, svn_version,
         patch_manager.CleanSrcTree(src_path)
 
         # Get the patch results for the current package.
-        patches_info = patch_manager.HandlePatches(
-            svn_version, patch_metadata_path, filesdir_path, src_path, mode)
+        patches_info = patch_manager.HandlePatches(svn_version,
+                                                   patch_metadata_path,
+                                                   filesdir_path, src_path,
+                                                   mode)
 
         package_info[cur_package] = patches_info._asdict()
 
@@ -262,8 +265,8 @@ def main():
 
   # Only 'disable_patches' and 'remove_patches' can potentially modify the patch
   # metadata file.
-  if args_output.failure_mode == FailureModes.DISABLE_PATCHES.value or \
-      args_output.failure_mode == FailureModes.REMOVE_PATCHES.value:
+  if (args_output.failure_mode == FailureModes.DISABLE_PATCHES.value
+      or args_output.failure_mode == FailureModes.REMOVE_PATCHES.value):
     print('The patch file %s has been modified for the packages:' %
           args_output.patch_metadata_file)
     print('\n'.join(args_output.packages))

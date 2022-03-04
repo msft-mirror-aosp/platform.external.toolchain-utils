@@ -13,8 +13,10 @@ import subprocess
 def CheckCommand(cmd):
   """Executes the command using Popen()."""
 
-  cmd_obj = subprocess.Popen(
-      cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding='UTF-8')
+  cmd_obj = subprocess.Popen(cmd,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             encoding='UTF-8')
 
   stdout, _ = cmd_obj.communicate()
 
@@ -43,8 +45,9 @@ def ChrootRunCommand(chroot_path, cmd, verbose=False):
   exec_chroot_cmd = ['cros_sdk', '--']
   exec_chroot_cmd.extend(cmd)
 
-  return ExecCommandAndCaptureOutput(
-      exec_chroot_cmd, cwd=chroot_path, verbose=verbose)
+  return ExecCommandAndCaptureOutput(exec_chroot_cmd,
+                                     cwd=chroot_path,
+                                     verbose=verbose)
 
 
 def ExecCommandAndCaptureOutput(cmd, cwd=None, verbose=False):

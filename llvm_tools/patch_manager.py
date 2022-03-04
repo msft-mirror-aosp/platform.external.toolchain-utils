@@ -34,12 +34,12 @@ def is_patch_metadata_file(patch_metadata_file):
   """Valides the argument into 'argparse' is a patch file."""
 
   if not os.path.isfile(patch_metadata_file):
-    raise ValueError(
-        'Invalid patch metadata file provided: %s' % patch_metadata_file)
+    raise ValueError('Invalid patch metadata file provided: %s' %
+                     patch_metadata_file)
 
   if not patch_metadata_file.endswith('.json'):
-    raise ValueError(
-        'Patch metadata file does not end in ".json": %s' % patch_metadata_file)
+    raise ValueError('Patch metadata file does not end in ".json": %s' %
+                     patch_metadata_file)
 
   return patch_metadata_file
 
@@ -61,8 +61,8 @@ def EnsureBisectModeAndSvnVersionAreSpecifiedTogether(failure_mode,
 
   if failure_mode != FailureModes.BISECT_PATCHES.value and good_svn_version:
     raise ValueError('"good_svn_version" is only available for bisection.')
-  elif failure_mode == FailureModes.BISECT_PATCHES.value and \
-      not good_svn_version:
+  elif (failure_mode == FailureModes.BISECT_PATCHES.value
+        and not good_svn_version):
     raise ValueError('A good SVN version is required for bisection (used by'
                      '"git bisect start".')
 
@@ -75,15 +75,15 @@ def GetCommandLineArgs():
 
   # Add argument for the last good SVN version which is required by
   # `git bisect start` (only valid for bisection mode).
-  parser.add_argument(
-      '--good_svn_version',
-      type=int,
-      help='INTERNAL USE ONLY... (used for bisection.)')
+  parser.add_argument('--good_svn_version',
+                      type=int,
+                      help='INTERNAL USE ONLY... (used for bisection.)')
 
   # Add argument for the number of patches it iterate. Only used when performing
   # `git bisect run`.
-  parser.add_argument(
-      '--num_patches_to_iterate', type=int, help=argparse.SUPPRESS)
+  parser.add_argument('--num_patches_to_iterate',
+                      type=int,
+                      help=argparse.SUPPRESS)
 
   # Add argument for whether bisection should continue. Only used for
   # 'bisect_patches.'
@@ -127,11 +127,10 @@ def GetCommandLineArgs():
       help='the absolute path to the ebuild "files/" directory')
 
   # Add argument for the absolute path to the unpacked sources.
-  parser.add_argument(
-      '--src_path',
-      required=True,
-      type=is_directory,
-      help='the absolute path to the unpacked LLVM sources')
+  parser.add_argument('--src_path',
+                      required=True,
+                      type=is_directory,
+                      help='the absolute path to the unpacked LLVM sources')
 
   # Add argument for the mode of the patch manager when handling failing
   # applicable patches.
@@ -139,8 +138,8 @@ def GetCommandLineArgs():
       '--failure_mode',
       default=FailureModes.FAIL.value,
       type=is_valid_failure_mode,
-      help='the mode of the patch manager when handling failed patches ' \
-          '(default: %(default)s)')
+      help='the mode of the patch manager when handling failed patches '
+      '(default: %(default)s)')
 
   # Parse the command line.
   args_output = parser.parse_args()
@@ -462,8 +461,8 @@ def HandlePatches(svn_version,
     for patch_dict_index, cur_patch_dict in enumerate(patch_file_contents):
       # Used by the internal bisection. All the patches in the interval [0, N]
       # have been iterated.
-      if num_patches_to_iterate and \
-          (patch_dict_index + 1) > num_patches_to_iterate:
+      if (num_patches_to_iterate
+          and (patch_dict_index + 1) > num_patches_to_iterate):
         break
 
       # Get the absolute path to the patch in $FILESDIR.
@@ -487,8 +486,8 @@ def HandlePatches(svn_version,
       else:
         # Patch is applicable if 'svn_version' >= 'from' &&
         # "svn_version" < "until".
-        patch_applicable = (svn_version >= patch_metadata[0] and \
-                            svn_version < patch_metadata[1])
+        patch_applicable = (svn_version >= patch_metadata[0]
+                            and svn_version < patch_metadata[1])
 
       if can_modify_patches:
         # Add to the list only if the mode can potentially modify a patch.
@@ -498,8 +497,8 @@ def HandlePatches(svn_version,
         # file and all patches that are not applicable will be added to the
         # remove patches list which will not be included in the updated .json
         # file.
-        if patch_applicable or svn_version < patch_metadata[0] or \
-            mode != FailureModes.REMOVE_PATCHES:
+        if (patch_applicable or svn_version < patch_metadata[0]
+            or mode != FailureModes.REMOVE_PATCHES):
           applicable_patches.append(cur_patch_dict)
         elif mode == FailureModes.REMOVE_PATCHES:
           removed_patches.append(path_to_patch)
@@ -553,15 +552,17 @@ def HandlePatches(svn_version,
             CleanSrcTree(src_path)
 
             print('\nStarting to bisect patch %s for SVN version %d:\n' %
-                  (os.path.basename(cur_patch_dict['rel_patch_path']),
-                   svn_version))
+                  (os.path.basename(
+                      cur_patch_dict['rel_patch_path']), svn_version))
 
             # Performs the bisection: calls `git bisect start` and
             # `git bisect run`, where `git bisect run` is going to call this
             # script as many times as needed with specific arguments.
-            bad_svn_version = PerformBisection(
-                src_path, good_commit, bad_commit, svn_version,
-                patch_metadata_file, filesdir_path, patch_dict_index + 1)
+            bad_svn_version = PerformBisection(src_path, good_commit,
+                                               bad_commit, svn_version,
+                                               patch_metadata_file,
+                                               filesdir_path,
+                                               patch_dict_index + 1)
 
             print('\nSuccessfully bisected patch %s, starts to fail to apply '
                   'at %d\n' % (os.path.basename(
@@ -605,8 +606,8 @@ def HandlePatches(svn_version,
               print('\n'.join(applied_patches))
 
             # Throw an exception on the first patch that failed to apply.
-            raise ValueError(
-                'Failed to apply patch: %s' % os.path.basename(path_to_patch))
+            raise ValueError('Failed to apply patch: %s' %
+                             os.path.basename(path_to_patch))
           elif mode == FailureModes.INTERNAL_BISECTION:
             # Determine the exit status for `git bisect run` because of the
             # failed patch in the interval [0, N].
@@ -662,13 +663,12 @@ def HandlePatches(svn_version,
       'disabled_patches', 'removed_patches', 'modified_metadata'
   ])
 
-  patch_info = PatchInfo(
-      applied_patches=applied_patches,
-      failed_patches=failed_patches,
-      non_applicable_patches=non_applicable_patches,
-      disabled_patches=disabled_patches,
-      removed_patches=removed_patches,
-      modified_metadata=modified_metadata)
+  patch_info = PatchInfo(applied_patches=applied_patches,
+                         failed_patches=failed_patches,
+                         non_applicable_patches=non_applicable_patches,
+                         disabled_patches=disabled_patches,
+                         removed_patches=removed_patches,
+                         modified_metadata=modified_metadata)
 
   # Determine post actions after iterating through the patches.
   if mode == FailureModes.REMOVE_PATCHES:
@@ -711,8 +711,8 @@ def PrintPatchResults(patch_info):
     print('\n'.join(patch_info.non_applicable_patches))
 
   if patch_info.modified_metadata:
-    print('\nThe patch metadata file %s has been modified' % os.path.basename(
-        patch_info.modified_metadata))
+    print('\nThe patch metadata file %s has been modified' %
+          os.path.basename(patch_info.modified_metadata))
 
   if patch_info.disabled_patches:
     print('\nThe following patches were disabled:')
@@ -746,11 +746,13 @@ def main():
     args_output.svn_version = GetHEADSVNVersion(args_output.src_path)
 
   # Get the results of handling the patches of the package.
-  patch_info = HandlePatches(
-      args_output.svn_version, args_output.patch_metadata_file,
-      args_output.filesdir_path, args_output.src_path,
-      FailureModes(args_output.failure_mode), args_output.good_svn_version,
-      args_output.num_patches_to_iterate, args_output.continue_bisection)
+  patch_info = HandlePatches(args_output.svn_version,
+                             args_output.patch_metadata_file,
+                             args_output.filesdir_path, args_output.src_path,
+                             FailureModes(args_output.failure_mode),
+                             args_output.good_svn_version,
+                             args_output.num_patches_to_iterate,
+                             args_output.continue_bisection)
 
   PrintPatchResults(patch_info)
 

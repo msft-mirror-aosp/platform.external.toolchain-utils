@@ -246,8 +246,8 @@ def translate_prebase_rev_to_sha(llvm_config: LLVMConfig, rev: Rev) -> str:
   looking_for = f'llvm-svn: {rev.number}'
 
   git_command = [
-      'git', 'log', '--grep', f'^{looking_for}$', f'--format=%H%n%B{separator}',
-      base_llvm_sha
+      'git', 'log', '--grep', f'^{looking_for}$',
+      f'--format=%H%n%B{separator}', base_llvm_sha
   ]
 
   subp = subprocess.Popen(
@@ -353,8 +353,8 @@ def main(argv: t.List[str]) -> None:
       default='origin',
       help="LLVM upstream's remote name. Defaults to %(default)s.")
   sha_or_rev = parser.add_mutually_exclusive_group(required=True)
-  sha_or_rev.add_argument(
-      '--sha', help='A git SHA (or ref) to convert to a rev')
+  sha_or_rev.add_argument('--sha',
+                          help='A git SHA (or ref) to convert to a rev')
   sha_or_rev.add_argument('--rev', help='A rev to convert into a sha')
   opts = parser.parse_args(argv)
 

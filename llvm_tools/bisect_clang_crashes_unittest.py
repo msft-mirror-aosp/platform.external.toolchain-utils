@@ -63,7 +63,6 @@ class Test(unittest.TestCase):
   @mock.patch.object(glob, 'glob')
   def test_get_crash_reproducers_no_matching_script(self, mock_file_search,
                                                     mock_file_check):
-
     def silence_logging():
       root = logging.getLogger()
       filt = self._SilencingFilter()

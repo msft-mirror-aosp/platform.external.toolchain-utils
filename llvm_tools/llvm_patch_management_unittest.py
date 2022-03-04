@@ -36,8 +36,8 @@ class LlvmPatchManagementTest(unittest.TestCase):
     with self.assertRaises(ValueError) as err:
       llvm_patch_management.GetPathToFilesDirectory(chroot_path, package)
 
-    self.assertEqual(
-        str(err.exception), 'Invalid chroot provided: %s' % chroot_path)
+    self.assertEqual(str(err.exception),
+                     'Invalid chroot provided: %s' % chroot_path)
 
     mock_isdir.assert_called_once()
 
@@ -46,8 +46,9 @@ class LlvmPatchManagementTest(unittest.TestCase):
   @mock.patch.object(os.path, 'isdir', return_value=True)
   @mock.patch.object(subprocess_helpers, 'ChrootRunCommand')
   @mock.patch.object(llvm_patch_management, '_GetRelativePathOfChrootPath')
-  def testSuccessfullyGetPathToFilesDir(
-      self, mock_get_relative_path_of_chroot_path, mock_chroot_cmd, mock_isdir):
+  def testSuccessfullyGetPathToFilesDir(self,
+                                        mock_get_relative_path_of_chroot_path,
+                                        mock_chroot_cmd, mock_isdir):
 
     package_chroot_path = '/mnt/host/source/path/to/llvm/llvm.ebuild'
 
@@ -95,8 +96,8 @@ class LlvmPatchManagementTest(unittest.TestCase):
     package_rel_path = 'path/to/llvm'
 
     self.assertEqual(
-        llvm_patch_management._GetRelativePathOfChrootPath(package_chroot_path),
-        package_rel_path)
+        llvm_patch_management._GetRelativePathOfChrootPath(
+            package_chroot_path), package_rel_path)
 
   # Simulate behavior of 'os.path.isfile()' when the patch metadata file does
   # not exist.
@@ -109,9 +110,8 @@ class LlvmPatchManagementTest(unittest.TestCase):
     with self.assertRaises(ValueError) as err:
       llvm_patch_management._CheckPatchMetadataPath(abs_path_to_patch_file)
 
-    self.assertEqual(
-        str(err.exception),
-        'Invalid file provided: %s' % abs_path_to_patch_file)
+    self.assertEqual(str(err.exception),
+                     'Invalid file provided: %s' % abs_path_to_patch_file)
 
     mock_isfile.assert_called_once()
 
@@ -146,8 +146,9 @@ class LlvmPatchManagementTest(unittest.TestCase):
 
   # Simulate `GetGitHashFrom()` when successfully retrieved the git hash
   # of the version passed in.
-  @mock.patch.object(
-      get_llvm_hash, 'GetGitHashFrom', return_value='a123testhash1')
+  @mock.patch.object(get_llvm_hash,
+                     'GetGitHashFrom',
+                     return_value='a123testhash1')
   # Simulate `CreateTempLLVMRepo()` when successfully created a work tree from
   # the LLVM repo copy in `llvm_tools` directory.
   @mock.patch.object(get_llvm_hash, 'CreateTempLLVMRepo')
@@ -160,16 +161,16 @@ class LlvmPatchManagementTest(unittest.TestCase):
       self, mock_check_patch_metadata_path, mock_get_filesdir_path,
       mock_move_head_pointer, mock_create_temp_llvm_repo, mock_get_git_hash):
 
-    abs_path_to_patch_file = \
-        '/some/path/to/chroot/some/path/to/filesdir/PATCHES'
+    abs_path_to_patch_file = (
+        '/some/path/to/chroot/some/path/to/filesdir/PATCHES')
 
     # Simulate the behavior of '_CheckPatchMetadataPath()' when the patch
     # metadata file in $FILESDIR does not exist or does not end in '.json'.
     def InvalidPatchMetadataFile(patch_metadata_path):
       self.assertEqual(patch_metadata_path, abs_path_to_patch_file)
 
-      raise ValueError(
-          'File does not end in ".json": %s' % abs_path_to_patch_file)
+      raise ValueError('File does not end in ".json": %s' %
+                       abs_path_to_patch_file)
 
     # Use the test function to simulate behavior of '_CheckPatchMetadataPath()'.
     mock_check_patch_metadata_path.side_effect = InvalidPatchMetadataFile
@@ -184,8 +185,8 @@ class LlvmPatchManagementTest(unittest.TestCase):
 
     # Simulate the behavior of returning the absolute path to a worktree via
     # `git worktree add`.
-    mock_create_temp_llvm_repo.return_value.__enter__.return_value.name = \
-        temp_work_tree
+    mock_create_temp_llvm_repo.return_value.__enter__.return_value.name = (
+        temp_work_tree)
 
     chroot_path = '/some/path/to/chroot'
     revision = 1000
@@ -219,8 +220,9 @@ class LlvmPatchManagementTest(unittest.TestCase):
   @mock.patch.object(patch_manager, 'CleanSrcTree')
   # Simulate `GetGitHashFrom()` when successfully retrieved the git hash
   # of the version passed in.
-  @mock.patch.object(
-      get_llvm_hash, 'GetGitHashFrom', return_value='a123testhash1')
+  @mock.patch.object(get_llvm_hash,
+                     'GetGitHashFrom',
+                     return_value='a123testhash1')
   # Simulate `CreateTempLLVMRepo()` when successfully created a work tree from
   # the LLVM repo copy in `llvm_tools` directory.
   @mock.patch.object(get_llvm_hash, 'CreateTempLLVMRepo')
@@ -237,8 +239,8 @@ class LlvmPatchManagementTest(unittest.TestCase):
 
     abs_path_to_filesdir = '/some/path/to/chroot/some/path/to/filesdir'
 
-    abs_path_to_patch_file = \
-        '/some/path/to/chroot/some/path/to/filesdir/PATCHES.json'
+    abs_path_to_patch_file = (
+        '/some/path/to/chroot/some/path/to/filesdir/PATCHES.json')
 
     # Simulate the behavior of 'GetPathToFilesDirectory()' when successfully
     # constructed the absolute path to $FILESDIR of a package.
@@ -264,8 +266,8 @@ class LlvmPatchManagementTest(unittest.TestCase):
 
     # Simulate the behavior of returning the absolute path to a worktree via
     # `git worktree add`.
-    mock_create_temp_llvm_repo.return_value.__enter__.return_value.name = \
-        temp_work_tree
+    mock_create_temp_llvm_repo.return_value.__enter__.return_value.name = (
+        temp_work_tree)
 
     expected_patch_results = {
         'applied_patches': ['fixes_something.patch'],

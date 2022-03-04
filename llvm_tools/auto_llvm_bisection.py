@@ -52,7 +52,8 @@ class BuilderStatus(enum.Enum):
 builder_status_mapping = {
     BuilderStatus.PASS.value: update_tryjob_status.TryjobStatus.GOOD.value,
     BuilderStatus.FAIL.value: update_tryjob_status.TryjobStatus.BAD.value,
-    BuilderStatus.RUNNING.value: update_tryjob_status.TryjobStatus.PENDING.value
+    BuilderStatus.RUNNING.value:
+    update_tryjob_status.TryjobStatus.PENDING.value
 }
 
 
