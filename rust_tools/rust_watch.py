@@ -241,7 +241,7 @@ def maybe_compose_bug(
   if newest_release == old_state.last_seen_release:
     return None
 
-  title = f'New rustc release detected: v{newest_release}'
+  title = f'[Rust] Update to {newest_release}'
   body = ('A new release has been detected; we should probably roll to it. '
           "Please see go/crostc-rust-rotation for who's turn it is.")
   return title, body
