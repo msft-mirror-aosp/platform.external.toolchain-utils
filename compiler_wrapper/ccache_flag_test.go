@@ -174,3 +174,16 @@ func TestRusagePreventsCCache(t *testing.T) {
 		}
 	})
 }
+
+func TestCcacheIsDisabledInSrcConfigure(t *testing.T) {
+	withCCacheEnabledTestContext(t, func(ctx *testContext) {
+		ctx.NoteTestWritesToUmask()
+
+		ctx.env = append(ctx.env, "EBUILD_PHASE=configure")
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, mainCc)))
+		if err := verifyPath(cmd, gccX86_64+".real"); err != nil {
+			t.Error(err)
+		}
+	})
+}
