@@ -25,7 +25,7 @@ set -eu
 set -o pipefail
 
 GS_BASE=gs://chromeos-prebuilt/afdo-job/vetted/kernel
-KVERS="4.4 4.14 4.19 5.4"
+KVERS="4.4 4.14 4.19 5.4 5.10"
 failed_channels=""
 # Add skipped chrome branches in ascending order here.
 SKIPPED_BRANCHES="95"
@@ -98,7 +98,7 @@ echo "-> Working in ${worktree_dir}"
 # This way we don't need to clean-up and sync toolchain_utils before the
 # change. Neither we should care about clean-up after the submit.
 git -C "${tc_utils_dir}" worktree add --detach "${worktree_dir}"
-trap 'git -C "${abs_tc_utils_dir}" worktree remove "${worktree_dir}"' EXIT
+trap 'git -C "${abs_tc_utils_dir}" worktree remove -f "${worktree_dir}"' EXIT
 cd "${worktree_dir}"
 
 for channel in ${channels}
@@ -141,6 +141,11 @@ do
     # b/147370213 (migrating profiles from gcov format) may result in the
     # pattern below no longer doing the right thing.
     name="$(basename "${latest%.gcov.*}")"
+    # Skip kernels with no AFDO support in the current channel.
+    if [[ "${name}" == "" ]]
+    then
+      continue
+    fi
     json=$(cat <<EOT
 ${json}${sep}
     "chromeos-kernel-${json_kver}": {
