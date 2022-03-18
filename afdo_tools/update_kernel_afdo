@@ -30,6 +30,22 @@ failed_channels=""
 # Add skipped chrome branches in ascending order here.
 SKIPPED_BRANCHES="95"
 
+# NOTE: We enable/disable kernel AFDO starting from a particular branch.
+#   For example if we want to enable kernel AFDO in 5.15, first, we do it
+#   in main. In this case we want to disable it in beta and stable branches.
+#   The second scenario is when we want to disable kernel AFDO (when all devices
+#   move to kernelnext and there are no new profiles from the field). In this
+#   case we disable AFDO in main but still keep it live in beta and stable.
+declare -A SKIPPED_KVERS_IN_BRANCHES
+# In SKIPPED_KVERS_IN_BRANCHES
+# - key is a branch number string;
+# - value is the list of kernels separated by space.
+# Example: SKIPPED_KVERS_IN_BRANCHES["105"]="4.4 4.14"
+
+# b/223115767. In M-100 there are no new profiles in 5.10. And AFDO is not
+# enabled on any 5.10 board in M-100 either.
+SKIPPED_KVERS_IN_BRANCHES["100"]="5.10"
+
 script_dir=$(dirname "$0")
 tc_utils_dir="${script_dir}/.."
 metadata_dir="${tc_utils_dir}/afdo_metadata"
@@ -114,6 +130,29 @@ do
   sep=""
   for kver in ${KVERS}
   do
+    # Skip kernels disabled in this branch.
+    skipped=false
+    for skipped_branch in "${!SKIPPED_KVERS_IN_BRANCHES[@]}"
+    do
+      if [[ ${curr_branch_number} == "${skipped_branch}" ]]
+      then
+        # Current branch is in the keys of SKIPPED_KVERS_IN_BRANCHES.
+        # Now lets check if $kver is in the list.
+        for skipped_kver in ${SKIPPED_KVERS_IN_BRANCHES[${skipped_branch}]}
+        do
+          if [[ ${kver} == "${skipped_kver}" ]]
+          then
+            skipped=true
+            break
+          fi
+        done
+      fi
+    done
+    if ${skipped}
+    then
+      echo "${kver} is skipped in branch ${curr_branch_number}. Skip it."
+      continue
+    fi
     # Sort the gs output by timestamp (default ordering is by name, so
     # R86-13310.3-1594633089.gcov.xz goes after R86-13310.18-1595237847.gcov.xz)
     latest=$(gsutil.py ls -l "${GS_BASE}/${kver}/" | sort -k2 | \
