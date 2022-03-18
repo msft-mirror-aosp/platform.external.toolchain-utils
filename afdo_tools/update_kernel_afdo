@@ -16,7 +16,7 @@ Description:
 to update the kernel afdo and creates a commit (or commits with \"all\"
 channels) in the corresponding branch.
   No arguments defaults to \"all\".
-  Follow the prompt to submit the changes.
+  Follow the prompt to upload the changes.
   NO CLEAN-UP NEEDED. The script ignores any local changes and keeps
 the current branch unchanged.
 "
@@ -190,12 +190,11 @@ EOT
   git add afdo_metadata/kernel_afdo.json
   case "${channel}" in
     canary )
-      commit_contents="afdo_metadata: Publish the new kernel profiles
-
-Update chromeos-kernel-4_4
-Update chromeos-kernel-4_14
-Update chromeos-kernel-4_19
-Update chromeos-kernel-5_4
+      commit_contents=$'afdo_metadata: Publish the new kernel profiles\n\n'
+      for kver in ${KVERS} ; do
+        commit_contents="${commit_contents}Update chromeos-kernel-${kver}"$'\n'
+      done
+      commit_contents="${commit_contents}
 
 BUG=None
 TEST=Verified in kernel-release-afdo-verify-orchestrator"
@@ -226,7 +225,7 @@ if [[ ${#commit[@]} -gt 0 ]]
 then
   set -u
   echo "The change is applied in ${!commit[*]}."
-  echo "Run these commands to submit the change:"
+  echo "Run these commands to upload the change:"
   echo
   for channel in "${!commit[@]}"
   do
