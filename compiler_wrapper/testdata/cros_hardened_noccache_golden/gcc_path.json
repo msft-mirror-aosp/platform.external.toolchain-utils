@@ -18,15 +18,12 @@
             "-fno-reorder-blocks-and-partition",
             "-Wno-unused-local-typedefs",
             "-Wno-maybe-uninitialized",
-            "-fcommon",
             "-fstack-protector-strong",
             "-fPIE",
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
-            "-static-libgcc",
             "main.cc",
-            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ]
         }
@@ -55,15 +52,12 @@
             "-fno-reorder-blocks-and-partition",
             "-Wno-unused-local-typedefs",
             "-Wno-maybe-uninitialized",
-            "-fcommon",
             "-fstack-protector-strong",
             "-fPIE",
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
-            "-static-libgcc",
             "main.cc",
-            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ]
         },
@@ -92,15 +86,12 @@
             "-fno-reorder-blocks-and-partition",
             "-Wno-unused-local-typedefs",
             "-Wno-maybe-uninitialized",
-            "-fcommon",
             "-fstack-protector-strong",
             "-fPIE",
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
-            "-static-libgcc",
             "main.cc",
-            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ]
         }
@@ -126,15 +117,12 @@
             "-fno-reorder-blocks-and-partition",
             "-Wno-unused-local-typedefs",
             "-Wno-maybe-uninitialized",
-            "-fcommon",
             "-fstack-protector-strong",
             "-fPIE",
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
-            "-static-libgcc",
             "main.cc",
-            "-L/tmp/stable/a/b/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ]
         }
@@ -160,15 +148,12 @@
             "-fno-reorder-blocks-and-partition",
             "-Wno-unused-local-typedefs",
             "-Wno-maybe-uninitialized",
-            "-fcommon",
             "-fstack-protector-strong",
             "-fPIE",
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
-            "-static-libgcc",
             "main.cc",
-            "-L/tmp/stable/a/b/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ]
         }
@@ -197,15 +182,12 @@
             "-fno-reorder-blocks-and-partition",
             "-Wno-unused-local-typedefs",
             "-Wno-maybe-uninitialized",
-            "-fcommon",
             "-fstack-protector-strong",
             "-fPIE",
             "-pie",
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
-            "-static-libgcc",
             "main.cc",
-            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ]
         }
