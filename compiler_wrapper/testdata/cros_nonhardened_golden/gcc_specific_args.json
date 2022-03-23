@@ -21,10 +21,8 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-static-libgcc",
-            "-march=goldmont",
+            "-march=silvermont",
             "main.cc",
-            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -57,10 +55,8 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-static-libgcc",
-            "-march=goldmont-plus",
+            "-march=silvermont",
             "main.cc",
-            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
@@ -93,10 +89,8 @@
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
             "-Wtrampolines",
-            "-static-libgcc",
-            "-march=skylake",
+            "-march=corei7",
             "main.cc",
-            "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
           ],
           "env_updates": [
