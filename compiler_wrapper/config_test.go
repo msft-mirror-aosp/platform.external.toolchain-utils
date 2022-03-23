@@ -38,6 +38,7 @@ func TestRealConfigWithUseCCacheFlag(t *testing.T) {
 	}
 }
 
+/* TODO: Re-enable this, when llvm-next is different than llvm
 func TestRealConfigWithUseLLvmFlag(t *testing.T) {
 	resetGlobals()
 	defer resetGlobals()
@@ -49,7 +50,7 @@ func TestRealConfigWithUseLLvmFlag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.useLlvmNext {
+	if isUsingLLvmNext(cfg) {
 		t.Fatal("UseLLvmNext: Expected not to be used")
 	}
 
@@ -59,7 +60,7 @@ func TestRealConfigWithUseLLvmFlag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !cfg.useLlvmNext {
+	if !isUsingLLvmNext(cfg) {
 		t.Fatal("UseLLvmNext: Expected to be used")
 	}
 
@@ -68,6 +69,7 @@ func TestRealConfigWithUseLLvmFlag(t *testing.T) {
 		t.Fatalf("UseLlvmNext: Expected an error, got none")
 	}
 }
+*/
 
 func TestRealConfigWithConfigNameFlag(t *testing.T) {
 	resetGlobals()
@@ -120,6 +122,16 @@ func TestRealConfigWithConfigNameFlag(t *testing.T) {
 func isSysrootHardened(cfg *config) bool {
 	for _, arg := range cfg.commonFlags {
 		if arg == "-pie" {
+			return true
+		}
+	}
+	return false
+}
+
+// TODO: Update this with correct flag when we change llvm-next.
+func isUsingLLvmNext(cfg *config) bool {
+	for _, arg := range cfg.clangFlags {
+		if arg == "-Wno-reorder-init-list" {
 			return true
 		}
 	}

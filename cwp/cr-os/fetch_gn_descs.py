@@ -23,6 +23,7 @@ from __future__ import print_function
 
 import argparse
 import json
+# pylint: disable=cros-logging-import
 import logging
 import os
 import subprocess

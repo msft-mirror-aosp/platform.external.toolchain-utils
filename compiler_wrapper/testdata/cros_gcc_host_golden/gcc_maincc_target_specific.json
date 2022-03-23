@@ -17,7 +17,6 @@
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
-            "-fcommon",
             "main.cc"
           ]
         }
@@ -42,7 +41,6 @@
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
-            "-fcommon",
             "main.cc"
           ]
         }
@@ -67,7 +65,6 @@
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
-            "-fcommon",
             "main.cc"
           ]
         }
@@ -92,7 +89,6 @@
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
-            "-fcommon",
             "main.cc"
           ]
         }
@@ -117,7 +113,6 @@
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
-            "-fcommon",
             "main.cc"
           ]
         }
@@ -142,7 +137,6 @@
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
-            "-fcommon",
             "main.cc"
           ]
         }
@@ -167,7 +161,6 @@
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
-            "-fcommon",
             "main.cc"
           ]
         }
@@ -192,7 +185,6 @@
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
-            "-fcommon",
             "main.cc"
           ]
         }
@@ -217,7 +209,6 @@
             "-Wno-maybe-uninitialized",
             "-Wno-unused-local-typedefs",
             "-Wno-deprecated-declarations",
-            "-fcommon",
             "main.cc"
           ]
         }
