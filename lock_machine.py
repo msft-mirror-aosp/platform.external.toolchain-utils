@@ -379,8 +379,8 @@ class LockManager(object):
     if os.path.exists(self.CROSFLEET_CREDENTIAL):
       credential = '--auth-service-account-json %s' % self.CROSFLEET_CREDENTIAL
     swarming = os.path.join(self.chromeos_root, self.SWARMING)
-    cmd = (('%s query --swarming https://chromeos-swarming.appspot.com '
-            "%s 'bots/list?is_dead=FALSE&dimensions=dut_name:%s'") %
+    cmd = (('python3 %s query --swarming https://chromeos-swarming.appspot.com'
+            " %s 'bots/list?is_dead=FALSE&dimensions=dut_name:%s'") %
            (swarming, credential, machine.rstrip('.cros')))
     exit_code, stdout, stderr = self.ce.RunCommandWOutput(cmd)
     if exit_code:
