@@ -62,7 +62,7 @@ class LockManager(object):
   CROSFLEET_CREDENTIAL = ('/usr/local/google/home/mobiletc-prebuild'
                           '/sheriff_utils/credentials/skylab'
                           '/chromeos-swarming-credential.json')
-  SWARMING = 'chromite/third_party/swarming.client/swarming.py'
+  SWARMING = '~/cipd_binaries/swarming'
   SUCCESS = 0
 
   def __init__(self,
@@ -377,11 +377,11 @@ class LockManager(object):
     """
     credential = ''
     if os.path.exists(self.CROSFLEET_CREDENTIAL):
-      credential = '--auth-service-account-json %s' % self.CROSFLEET_CREDENTIAL
-    swarming = os.path.join(self.chromeos_root, self.SWARMING)
-    cmd = (('python3 %s query --swarming https://chromeos-swarming.appspot.com'
-            " %s 'bots/list?is_dead=FALSE&dimensions=dut_name:%s'") %
-           (swarming, credential, machine.rstrip('.cros')))
+      credential = '--service-account-json %s' % self.CROSFLEET_CREDENTIAL
+    server = '--server https://chromeos-swarming.appspot.com'
+    dimensions = '--dimension dut_name=%s' % machine.rstrip('.cros')
+
+    cmd = f'{self.SWARMING} bots {server} {credential} {dimensions}'
     exit_code, stdout, stderr = self.ce.RunCommandWOutput(cmd)
     if exit_code:
       raise ValueError('Querying bots failed (2); stdout: %r; stderr: %r' %
@@ -395,7 +395,7 @@ class LockManager(object):
     #  }
     # Otherwise there will be a tuple starting with 'items', we simply detect
     # this keyword for result.
-    return 'items' in stdout
+    return stdout != '[]'
 
   def LeaseCrosfleetMachine(self, machine):
     """Run command to lease dut from crosfleet.
@@ -424,6 +424,7 @@ class LockManager(object):
     credential = ''
     if os.path.exists(self.CROSFLEET_CREDENTIAL):
       credential = '-service-account-json %s' % self.CROSFLEET_CREDENTIAL
+
     cmd = (('%s dut abandon %s %s') %
            (self.CROSFLEET_PATH, credential, machine.rstrip('.cros')))
     retval = self.ce.RunCommand(cmd)
