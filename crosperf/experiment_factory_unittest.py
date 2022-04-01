@@ -79,6 +79,7 @@ EXPERIMENT_FILE_2 = """
 
 class ExperimentFactoryTest(unittest.TestCase):
   """Class for running experiment factory unittests."""
+
   def setUp(self):
     self.append_benchmark_call_args = []
 
@@ -402,8 +403,13 @@ class ExperimentFactoryTest(unittest.TestCase):
 
   def test_get_default_remotes(self):
     board_list = [
-        'bob', 'chell', 'coral', 'elm', 'kefka', 'nautilus', 'snappy',
-        'veyron_tiger'
+        'bob',
+        'chell',
+        'coral',
+        'elm',
+        'kefka',
+        'nautilus',
+        'snappy',
     ]
 
     ef = ExperimentFactory()
