@@ -17,7 +17,7 @@ import time
 from cros_utils import command_executer
 
 TEST_THAT_PATH = '/usr/bin/test_that'
-TAST_PATH = '/usr/bin/tast'
+# TODO: Need to check whether Skylab is installed and set up correctly.
 SKYLAB_PATH = '/usr/local/bin/skylab'
 GS_UTIL = 'src/chromium/depot_tools/gsutil.py'
 AUTOTEST_DIR = '/mnt/host/source/src/third_party/autotest/files'
@@ -78,11 +78,8 @@ class SuiteRunner(object):
       if label.skylab:
         ret_tup = self.Skylab_Run(label, benchmark, test_args, profiler_args)
       else:
-        if benchmark.suite == 'tast':
-          ret_tup = self.Tast_Run(machine_name, label, benchmark)
-        else:
-          ret_tup = self.Test_That_Run(machine_name, label, benchmark,
-                                       test_args, profiler_args)
+        ret_tup = self.Test_That_Run(machine_name, label, benchmark, test_args,
+                                     profiler_args)
       if ret_tup[0] != 0:
         self.logger.LogOutput('benchmark %s failed. Retries left: %s' %
                               (benchmark.name, benchmark.retries - i))
@@ -130,24 +127,6 @@ class SuiteRunner(object):
 
     return args_list
 
-  # TODO(zhizhouy): Currently do not support passing arguments or running
-  # customized tast tests, as we do not have such requirements.
-  def Tast_Run(self, machine, label, benchmark):
-    # Remove existing tast results
-    command = 'rm -rf /usr/local/autotest/results/*'
-    self._ce.CrosRunCommand(
-        command, machine=machine, chromeos_root=label.chromeos_root)
-
-    command = ' '.join(
-        [TAST_PATH, 'run', '-build=False', machine, benchmark.test_name])
-
-    if self.log_level != 'verbose':
-      self.logger.LogOutput('Running test.')
-      self.logger.LogOutput('CMD: %s' % command)
-
-    return self._ce.ChrootRunCommandWOutput(
-        label.chromeos_root, command, command_terminator=self._ct)
-
   def Test_That_Run(self, machine, label, benchmark, test_args, profiler_args):
     """Run the test_that test.."""
 
@@ -187,10 +166,11 @@ class SuiteRunner(object):
     # process namespace and we can kill process created easily by their
     # process group.
     chrome_root_options = ('--no-ns-pid '
-                           '--chrome_root={0} --chrome_root_mount={1} '
+                           '--chrome_root={} --chrome_root_mount={} '
                            'FEATURES="-usersandbox" '
-                           'CHROME_ROOT={1}'.format(label.chrome_src,
-                                                    CHROME_MOUNT_DIR))
+                           'CHROME_ROOT={}'.format(label.chrome_src,
+                                                   CHROME_MOUNT_DIR,
+                                                   CHROME_MOUNT_DIR))
 
     if self.log_level != 'verbose':
       self.logger.LogOutput('Running test.')

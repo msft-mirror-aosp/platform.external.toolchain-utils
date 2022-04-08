@@ -12,17 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
 )
-
-// Save this off before goroutines start running, since this necessarily involves modifying the
-// value for our umask, and that screams subtle race conditions. :)
-var umaskAtStartup = func() os.FileMode {
-	umask := syscall.Umask(0)
-	syscall.Umask(umask)
-	return os.FileMode(umask)
-}()
 
 func TestOmitFallbackCompileForSuccessfulCall(t *testing.T) {
 	withCompileWithFallbackTestContext(t, func(ctx *testContext) {
@@ -238,7 +229,7 @@ func TestCompileWithFallbackLogCommandAndErrors(t *testing.T) {
 
 		log := readCompileWithFallbackErrorLog(ctx)
 		if log != `==================COMMAND:====================
-./clang.real main.cc -fno-color-diagnostics -a -b
+clang.real main.cc -fno-color-diagnostics -a -b
 
 someerror
 ==============================================
@@ -248,7 +239,7 @@ someerror
 		}
 
 		entry, _ := os.Lstat(filepath.Join(ctx.tempDir, "fallback_stderr"))
-		if entry.Mode()&0777 != 0644 & ^umaskAtStartup {
+		if entry.Mode()&0777 != 0644 {
 			t.Errorf("unexpected mode for logfile. Got: %#o", entry.Mode())
 		}
 	})

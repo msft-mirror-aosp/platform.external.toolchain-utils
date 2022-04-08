@@ -169,8 +169,5 @@
   "rendering.desktop@@aquarium_20k$": [
     "avg_surface_fps",
     "exp_avg_surface_fps"
-  ],
-  "platform.ReportDiskUsage": [
-    "bytes_rootfs_prod__summary"
   ]
 }

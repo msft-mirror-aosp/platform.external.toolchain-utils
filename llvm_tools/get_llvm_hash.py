@@ -17,8 +17,7 @@ import tempfile
 from contextlib import contextmanager
 
 import git_llvm_rev
-from subprocess_helpers import CheckCommand
-from subprocess_helpers import check_output
+from subprocess_helpers import CheckCommand, check_output
 
 _LLVM_GIT_URL = ('https://chromium.googlesource.com/external/github.com/llvm'
                  '/llvm-project')
@@ -40,7 +39,7 @@ def GetVersionFrom(src_dir, git_hash):
   version = git_llvm_rev.translate_sha_to_rev(
       git_llvm_rev.LLVMConfig(remote='origin', dir=src_dir), git_hash)
   # Note: branches aren't supported
-  assert version.branch == git_llvm_rev.MAIN_BRANCH, version.branch
+  assert version.branch == 'master', version.branch
   return version.number
 
 
@@ -60,7 +59,7 @@ def GetGitHashFrom(src_dir, version):
 
   return git_llvm_rev.translate_rev_to_sha(
       git_llvm_rev.LLVMConfig(remote='origin', dir=src_dir),
-      git_llvm_rev.Rev(branch=git_llvm_rev.MAIN_BRANCH, number=version))
+      git_llvm_rev.Rev(branch='master', number=version))
 
 
 @contextmanager
@@ -86,10 +85,13 @@ def CreateTempLLVMRepo(temp_dir):
   """
 
   abs_path_to_llvm_project_dir = GetAndUpdateLLVMProjectInLLVMTools()
-  CheckCommand([
+
+  add_worktree_cmd = [
       'git', '-C', abs_path_to_llvm_project_dir, 'worktree', 'add', '--detach',
-      temp_dir, git_llvm_rev.MAIN_BRANCH
-  ])
+      temp_dir, 'master'
+  ]
+
+  CheckCommand(add_worktree_cmd)
 
   try:
     yield temp_dir
@@ -115,7 +117,7 @@ def GetAndUpdateLLVMProjectInLLVMTools():
 
   Raises:
     ValueError: LLVM repo (in 'llvm-project-copy' dir.) has changes or failed to
-    checkout to main or failed to fetch from chromium mirror of LLVM.
+    checkout to master or failed to fetch from chromium mirror of LLVM.
   """
 
   abs_path_to_llvm_tools_dir = os.path.dirname(os.path.abspath(__file__))
@@ -125,8 +127,7 @@ def GetAndUpdateLLVMProjectInLLVMTools():
 
   if not os.path.isdir(abs_path_to_llvm_project_dir):
     print(
-        'Checking out LLVM from scratch. This could take a while...\n'
-        '(This should only need to be done once, though.)',
+        'Checking out LLVM from scratch. This could take a while...',
         file=sys.stderr)
     os.mkdir(abs_path_to_llvm_project_dir)
 
@@ -142,11 +143,15 @@ def GetAndUpdateLLVMProjectInLLVMTools():
       raise ValueError('LLVM repo in %s has changes, please remove.' %
                        abs_path_to_llvm_project_dir)
 
-    CheckCommand([
-        'git', '-C', abs_path_to_llvm_project_dir, 'checkout',
-        git_llvm_rev.MAIN_BRANCH
-    ])
-    CheckCommand(['git', '-C', abs_path_to_llvm_project_dir, 'pull'])
+    checkout_to_master_cmd = [
+        'git', '-C', abs_path_to_llvm_project_dir, 'checkout', 'master'
+    ]
+
+    CheckCommand(checkout_to_master_cmd)
+
+    update_master_cmd = ['git', '-C', abs_path_to_llvm_project_dir, 'pull']
+
+    CheckCommand(update_master_cmd)
 
   return abs_path_to_llvm_project_dir
 
@@ -293,9 +298,14 @@ class LLVMHash(object):
   def GetTopOfTrunkGitHash(self):
     """Gets the latest git hash from top of trunk of LLVM."""
 
-    path_to_main_branch = 'refs/heads/main'
-    llvm_tot_git_hash = check_output(
-        ['git', 'ls-remote', _LLVM_GIT_URL, path_to_main_branch])
+    path_to_master_branch = 'refs/heads/master'
+
+    llvm_tot_git_hash_cmd = [
+        'git', 'ls-remote', _LLVM_GIT_URL, path_to_master_branch
+    ]
+
+    llvm_tot_git_hash = check_output(llvm_tot_git_hash_cmd)
+
     return llvm_tot_git_hash.rstrip().split()[0]
 
 

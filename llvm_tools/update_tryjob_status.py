@@ -15,7 +15,7 @@ import os
 import subprocess
 import sys
 
-import chroot
+from assert_not_in_chroot import VerifyOutsideChroot
 from subprocess_helpers import ChrootRunCommand
 from test_helpers import CreateTemporaryJsonFile
 
@@ -310,7 +310,7 @@ def UpdateTryjobStatus(revision, set_status, status_file, chroot_path,
 def main():
   """Updates the status of a tryjob."""
 
-  chroot.VerifyOutsideChroot()
+  VerifyOutsideChroot()
 
   args_output = GetCommandLineArgs()
 

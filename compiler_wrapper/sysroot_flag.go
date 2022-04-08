@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func processSysrootFlag(builder *commandBuilder) {
+func processSysrootFlag(builder *commandBuilder) string {
 	fromUser := false
 	for _, arg := range builder.args {
 		if arg.fromUser && strings.HasPrefix(arg.value, "--sysroot=") {
@@ -28,4 +28,5 @@ func processSysrootFlag(builder *commandBuilder) {
 	if !fromUser {
 		builder.addPreUserArgs("--sysroot=" + sysroot)
 	}
+	return sysroot
 }

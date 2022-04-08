@@ -4,6 +4,10 @@
 
 package main
 
+import (
+	"bytes"
+)
+
 func processClangSyntaxFlag(builder *commandBuilder) (clangSyntax bool) {
 	builder.transformArgs(func(arg builderArg) string {
 		if arg.value == "-clang-syntax" {
@@ -22,16 +26,12 @@ func checkClangSyntax(env env, clangCmd *command, gccCmd *command) (exitCode int
 		EnvUpdates: clangCmd.EnvUpdates,
 	}
 
-	getStdin, err := prebufferStdinIfNeeded(env, clangCmd)
-	if err != nil {
-		return 0, wrapErrorwithSourceLocf(err, "prebuffering stdin: %v", err)
-	}
-
+	stdinBuffer := &bytes.Buffer{}
 	exitCode, err = wrapSubprocessErrorWithSourceLoc(clangSyntaxCmd,
-		env.run(clangSyntaxCmd, getStdin(), env.stdout(), env.stderr()))
+		env.run(clangSyntaxCmd, teeStdinIfNeeded(env, clangCmd, stdinBuffer), env.stdout(), env.stderr()))
 	if err != nil || exitCode != 0 {
 		return exitCode, err
 	}
 	return wrapSubprocessErrorWithSourceLoc(gccCmd,
-		env.run(gccCmd, getStdin(), env.stdout(), env.stderr()))
+		env.run(gccCmd, bytes.NewReader(stdinBuffer.Bytes()), env.stdout(), env.stderr()))
 }

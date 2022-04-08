@@ -207,6 +207,7 @@ class MockLogger(object):
   def __init__(self, *_args, **_kwargs):
     self.stdout = sys.stdout
     self.stderr = sys.stderr
+    return None
 
   def _AddSuffix(self, basename, suffix):
     return '%s%s' % (basename, suffix)

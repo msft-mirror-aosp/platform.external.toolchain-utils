@@ -63,6 +63,7 @@
             "-mno-movbe"
           ],
           "env_updates": [
+            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002"
           ]
@@ -133,6 +134,7 @@
             "-mno-movbe"
           ],
           "env_updates": [
+            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002"
           ]
@@ -169,6 +171,7 @@
             "-mno-movbe"
           ],
           "env_updates": [
+            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002"
           ]
@@ -204,6 +207,7 @@
             "main.cc"
           ],
           "env_updates": [
+            "CCACHE_BASEDIR=/usr/armv7a-cros-linux-gnueabihf",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002"
           ]
@@ -241,6 +245,7 @@
             "-mno-movbe"
           ],
           "env_updates": [
+            "CCACHE_BASEDIR=/usr/x86_64-cros-linux-gnu",
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002"
           ]

@@ -27,9 +27,6 @@ from cros_utils import logger
 
 import test_flag
 
-HAS_FAILURE = 1
-ALL_FAILED = 2
-
 
 def SetupParserOptions(parser):
   """Add all options to the parser."""
@@ -131,11 +128,7 @@ def RunCrosperf(argv):
     runner = ExperimentRunner(
         experiment, json_report, using_schedv2=(not options.noschedv2))
 
-  ret = runner.Run()
-  if ret == HAS_FAILURE:
-    raise RuntimeError('One or more benchmarks failed.')
-  if ret == ALL_FAILED:
-    raise RuntimeError('All benchmarks failed to run.')
+  runner.Run()
 
 
 def Main(argv):

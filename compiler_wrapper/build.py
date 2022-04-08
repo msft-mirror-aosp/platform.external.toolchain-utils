@@ -25,22 +25,10 @@ def parse_args():
   parser.add_argument(
       '--use_llvm_next', required=True, choices=['true', 'false'])
   parser.add_argument('--output_file', required=True, type=str)
-  parser.add_argument(
-      '--static',
-      choices=['true', 'false'],
-      help='If true, produce a static wrapper. Autodetects a good value if '
-      'unspecified.')
-  args = parser.parse_args()
-
-  if args.static is None:
-    args.static = 'cros' not in args.config
-  else:
-    args.static = args.static == 'true'
-
-  return args
+  return parser.parse_args()
 
 
-def calc_go_args(args, version, build_dir):
+def calc_go_args(args, version):
   ldFlags = [
       '-X',
       'main.ConfigName=' + args.config,
@@ -54,18 +42,8 @@ def calc_go_args(args, version, build_dir):
 
   # If the wrapper is intended for Chrome OS, we need to use libc's exec.
   extra_args = []
-  if not args.static:
-    extra_args += ['-tags', 'libc_exec']
-
-  if args.config == 'android':
-    # If android_llvm_next_flags.go DNE, we'll get an obscure "no
-    # llvmNextFlags" build error; complaining here is clearer.
-    if not os.path.exists(
-        os.path.join(build_dir, 'android_llvm_next_flags.go')):
-      sys.exit('In order to build the Android wrapper, you must have a local '
-               'android_llvm_next_flags.go file; please see '
-               'cros_llvm_next_flags.go.')
-    extra_args += ['-tags', 'android_llvm_next_flags']
+  if 'cros' in args.config:
+    extra_args = ['-tags', 'libc_exec']
 
   return [
       'go', 'build', '-o',
@@ -94,8 +72,7 @@ def main():
   version = read_version(build_dir)
   # Note: Go does not support using absolute package names.
   # So we run go inside the directory of the the build file.
-  sys.exit(
-      subprocess.call(calc_go_args(args, version, build_dir), cwd=build_dir))
+  sys.exit(subprocess.call(calc_go_args(args, version), cwd=build_dir))
 
 
 if __name__ == '__main__':

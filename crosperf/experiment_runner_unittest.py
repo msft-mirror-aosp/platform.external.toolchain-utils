@@ -406,14 +406,13 @@ class ExperimentRunnerTest(unittest.TestCase):
   @mock.patch.object(FileUtils, 'WriteFile')
   @mock.patch.object(HTMLResultsReport, 'FromExperiment')
   @mock.patch.object(TextResultsReport, 'FromExperiment')
-  @mock.patch.object(Result, 'CompressResultsTo')
   @mock.patch.object(Result, 'CopyResultsTo')
   @mock.patch.object(Result, 'CleanUp')
-  @mock.patch.object(Result, 'FormatStringTopCommands')
+  @mock.patch.object(Result, 'FormatStringTop5')
   @mock.patch('builtins.open', new_callable=mock.mock_open)
-  def test_store_results(self, mock_open, mock_top_commands, mock_cleanup,
-                         mock_copy, mock_compress, _mock_text_report,
-                         mock_report, mock_writefile, mock_mkdir, mock_rmdir):
+  def test_store_results(self, mock_open, mock_top5, mock_cleanup, mock_copy,
+                         _mock_text_report, mock_report, mock_writefile,
+                         mock_mkdir, mock_rmdir):
 
     self.mock_logger.Reset()
     self.exp.results_directory = '/usr/local/crosperf-results'
@@ -434,14 +433,13 @@ class ExperimentRunnerTest(unittest.TestCase):
     er._StoreResults(self.exp)
     self.assertEqual(mock_cleanup.call_count, 0)
     self.assertEqual(mock_copy.call_count, 0)
-    self.assertEqual(mock_compress.call_count, 0)
     self.assertEqual(mock_report.call_count, 0)
     self.assertEqual(mock_writefile.call_count, 0)
     self.assertEqual(mock_mkdir.call_count, 0)
     self.assertEqual(mock_rmdir.call_count, 0)
     self.assertEqual(self.mock_logger.LogOutputCount, 0)
     self.assertEqual(mock_open.call_count, 0)
-    self.assertEqual(mock_top_commands.call_count, 0)
+    self.assertEqual(mock_top5.call_count, 0)
 
     # Test 2. _terminated is false; everything works properly.
     fake_result = Result(self.mock_logger, self.exp.labels[0], 'average',
@@ -449,7 +447,6 @@ class ExperimentRunnerTest(unittest.TestCase):
     for r in self.exp.benchmark_runs:
       r.result = fake_result
     er._terminated = False
-    self.exp.compress_results = False
     er._StoreResults(self.exp)
     self.assertEqual(mock_cleanup.call_count, 6)
     mock_cleanup.assert_called_with(bench_run.benchmark.rm_chroot_tmp)
@@ -470,11 +467,11 @@ class ExperimentRunnerTest(unittest.TestCase):
     self.assertEqual(self.mock_logger.LogOutputCount, 5)
     self.assertEqual(self.mock_logger.output_msgs, [
         'Storing experiment file in /usr/local/crosperf-results.',
-        'Storing top statistics of each benchmark run into'
-        ' /usr/local/crosperf-results/topstats.log.',
-        'Storing results of each benchmark run.',
         'Storing results report in /usr/local/crosperf-results.',
         'Storing email message body in /usr/local/crosperf-results.',
+        'Storing results of each benchmark run.',
+        'Storing top5 statistics of each benchmark run into'
+        ' /usr/local/crosperf-results/topstats.log.',
     ])
     self.assertEqual(mock_open.call_count, 1)
     # Check write to a topstats.log file.
@@ -482,19 +479,9 @@ class ExperimentRunnerTest(unittest.TestCase):
                                  'w')
     mock_open().write.assert_called()
 
-    # Check top calls with no arguments.
-    topcalls = [mock.call()] * 6
-    self.assertEqual(mock_top_commands.call_args_list, topcalls)
-
-    # Test 3. Test compress_results.
-    self.exp.compress_results = True
-    mock_copy.call_count = 0
-    mock_compress.call_count = 0
-    er._StoreResults(self.exp)
-    self.assertEqual(mock_copy.call_count, 0)
-    mock_copy.assert_called_with(bench_path)
-    self.assertEqual(mock_compress.call_count, 6)
-    mock_compress.assert_called_with(bench_path)
+    # Check top5 calls with no arguments.
+    top5calls = [mock.call()] * 6
+    self.assertEqual(mock_top5.call_args_list, top5calls)
 
 
 if __name__ == '__main__':
