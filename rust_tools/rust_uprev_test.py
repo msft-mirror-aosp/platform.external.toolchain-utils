@@ -242,8 +242,8 @@ class PrepareUprevTest(unittest.TestCase):
         self.assertEqual(expected, actual)
 
 
-class UpdateEbuildTest(unittest.TestCase):
-    """Tests for update_ebuild step in rust_uprev"""
+class UpdateBootstrapVersionTest(unittest.TestCase):
+    """Tests for update_bootstrap_version step in rust_uprev"""
 
     ebuild_file_before = """
 BOOTSTRAP_VERSION="1.2.0"
@@ -255,9 +255,9 @@ BOOTSTRAP_VERSION="1.3.6"
     def test_success(self):
         mock_open = mock.mock_open(read_data=self.ebuild_file_before)
         # ebuild_file and new bootstrap version are deliberately different
-        ebuild_file = "/path/to/rust/rust-1.3.5.ebuild"
+        ebuild_file = "/path/to/rust/cros-rustc.eclass"
         with mock.patch("builtins.open", mock_open):
-            rust_uprev.update_ebuild(
+            rust_uprev.update_bootstrap_version(
                 ebuild_file, rust_uprev.RustVersion.parse("1.3.6")
             )
         mock_open.return_value.__enter__().write.assert_called_once_with(
@@ -269,11 +269,12 @@ BOOTSTRAP_VERSION="1.3.6"
         ebuild_file = "/path/to/rust/rust-1.3.5.ebuild"
         with mock.patch("builtins.open", mock_open):
             with self.assertRaises(RuntimeError) as context:
-                rust_uprev.update_ebuild(
+                rust_uprev.update_bootstrap_version(
                     ebuild_file, rust_uprev.RustVersion.parse("1.2.0")
                 )
         self.assertEqual(
-            "BOOTSTRAP_VERSION not found in rust ebuild", str(context.exception)
+            "BOOTSTRAP_VERSION not found in /path/to/rust/rust-1.3.5.ebuild",
+            str(context.exception),
         )
 
 
@@ -354,7 +355,9 @@ class UpdateRustPackagesTests(unittest.TestCase):
         )
         mock_open = mock.mock_open(read_data=package_before)
         with mock.patch("builtins.open", mock_open):
-            rust_uprev.update_rust_packages(self.new_version, add=True)
+            rust_uprev.update_rust_packages(
+                "dev-lang/rust", self.new_version, add=True
+            )
         mock_open.return_value.__enter__().write.assert_called_once_with(
             package_after
         )
@@ -371,7 +374,9 @@ class UpdateRustPackagesTests(unittest.TestCase):
         )
         mock_open = mock.mock_open(read_data=package_before)
         with mock.patch("builtins.open", mock_open):
-            rust_uprev.update_rust_packages(self.old_version, add=False)
+            rust_uprev.update_rust_packages(
+                "dev-lang/rust", self.old_version, add=False
+            )
         mock_open.return_value.__enter__().write.assert_called_once_with(
             package_after
         )
@@ -436,9 +441,11 @@ class RustUprevOtherStagesTests(unittest.TestCase):
 
     @mock.patch.object(shutil, "copyfile")
     @mock.patch.object(subprocess, "check_call")
-    def test_create_ebuild(self, mock_call, mock_copy):
+    def test_create_rust_ebuild(self, mock_call, mock_copy):
         template_ebuild = f"/path/to/rust-{self.current_version}-r2.ebuild"
-        rust_uprev.create_ebuild(template_ebuild, self.new_version)
+        rust_uprev.create_ebuild(
+            template_ebuild, "dev-lang/rust", self.new_version
+        )
         mock_copy.assert_called_once_with(
             template_ebuild,
             rust_uprev.RUST_PATH.joinpath(f"rust-{self.new_version}.ebuild"),
@@ -446,6 +453,24 @@ class RustUprevOtherStagesTests(unittest.TestCase):
         mock_call.assert_called_once_with(
             ["git", "add", f"rust-{self.new_version}.ebuild"],
             cwd=rust_uprev.RUST_PATH,
+        )
+
+    @mock.patch.object(shutil, "copyfile")
+    @mock.patch.object(subprocess, "check_call")
+    def test_create_rust_host_ebuild(self, mock_call, mock_copy):
+        template_ebuild = f"/path/to/rust-host-{self.current_version}-r2.ebuild"
+        rust_uprev.create_ebuild(
+            template_ebuild, "dev-lang/rust-host", self.new_version
+        )
+        mock_copy.assert_called_once_with(
+            template_ebuild,
+            rust_uprev.EBUILD_PREFIX.joinpath(
+                f"dev-lang/rust-host/rust-host-{self.new_version}.ebuild"
+            ),
+        )
+        mock_call.assert_called_once_with(
+            ["git", "add", f"rust-host-{self.new_version}.ebuild"],
+            cwd=rust_uprev.EBUILD_PREFIX.joinpath("dev-lang/rust-host"),
         )
 
     @mock.patch.object(rust_uprev, "find_ebuild_for_package")
@@ -541,7 +566,7 @@ class RustUprevOtherStagesTests(unittest.TestCase):
         mock_output.return_value = ""
         rust_uprev.create_new_repo(self.new_version)
         mock_branch.assert_called_once_with(
-            rust_uprev.RUST_PATH, f"rust-to-{self.new_version}"
+            rust_uprev.EBUILD_PREFIX, f"rust-to-{self.new_version}"
         )
 
     @mock.patch.object(rust_uprev, "get_command_output")

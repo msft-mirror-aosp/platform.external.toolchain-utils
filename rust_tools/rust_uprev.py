@@ -6,29 +6,22 @@
 
 """Tool to automatically generate a new Rust uprev CL.
 
-This tool is intended to automatically generate a CL to uprev Rust to a
-newer version in ChromeOS, including creating a new Rust version or
-removing an old version. It's based on
-src/third_party/chromiumos-overlay/dev-lang/rust/UPGRADE.md. When using
-the tool, the progress can be saved to a JSON file, so the user can resume
-the process after a failing step is fixed. Example usage to create a new
-version:
+This tool is intended to automatically generate a CL to uprev Rust to
+a newer version in Chrome OS, including creating a new Rust version or
+removing an old version. When using the tool, the progress can be
+saved to a JSON file, so the user can resume the process after a
+failing step is fixed. Example usage to create a new version:
 
-1. (inside chroot) $ ./rust_tools/rust_uprev.py
-                     --state_file /tmp/state-file.json
-                     create --rust_version 1.45.0
-2. Step "compile rust" failed due to the patches can't apply to new version
-3. Manually fix the patches
-4. Execute the command in step 1 again.
+1. (inside chroot) $ ./rust_tools/rust_uprev.py             \\
+                     --state_file /tmp/rust-to-1.60.0.json  \\
+                     roll --uprev 1.60.0
+2. Step "compile rust" failed due to the patches can't apply to new version.
+3. Manually fix the patches.
+4. Execute the command in step 1 again, but add "--continue" before "roll".
 5. Iterate 1-4 for each failed step until the tool passes.
 
-Replace `create --rust_version 1.45.0` with `remove --rust_version 1.43.0`
-if you want to remove all 1.43.0 related stuff in the same CL. Remember to
-use a different state file if you choose to run different subcommands.
-
-If you want a hammer that can do everything for you, use the subcommand
-`roll`. It can create a Rust uprev CL with `create` and `remove` and upload
-the CL to chromium code review.
+Besides "roll", the tool also support subcommands that perform
+various parts of an uprev.
 
 See `--help` for all available options.
 """
@@ -52,9 +45,8 @@ from llvm_tools import git
 EQUERY = "equery"
 GSUTIL = "gsutil.py"
 MIRROR_PATH = "gs://chromeos-localmirror/distfiles"
-RUST_PATH = Path(
-    "/mnt/host/source/src/third_party/chromiumos-overlay/dev-lang/rust"
-)
+EBUILD_PREFIX = Path("/mnt/host/source/src/third_party/chromiumos-overlay")
+RUST_PATH = Path(EBUILD_PREFIX, "dev-lang", "rust")
 
 
 def get_command_output(command: List[str], *args, **kwargs) -> str:
@@ -343,14 +335,14 @@ def copy_patches(
     )
 
 
-def create_ebuild(template_ebuild: str, new_version: RustVersion) -> str:
-    shutil.copyfile(
-        template_ebuild, RUST_PATH.joinpath(f"rust-{new_version}.ebuild")
-    )
-    subprocess.check_call(
-        ["git", "add", f"rust-{new_version}.ebuild"], cwd=RUST_PATH
-    )
-    return os.path.join(RUST_PATH, f"rust-{new_version}.ebuild")
+def create_ebuild(
+    template_ebuild: str, pkgatom: str, new_version: RustVersion
+) -> str:
+    filename = f"{Path(pkgatom).name}-{new_version}.ebuild"
+    ebuild = EBUILD_PREFIX.joinpath(f"{pkgatom}/{filename}")
+    shutil.copyfile(template_ebuild, ebuild)
+    subprocess.check_call(["git", "add", filename], cwd=ebuild.parent)
+    return str(ebuild)
 
 
 def update_bootstrap_ebuild(new_bootstrap_version: RustVersion) -> None:
@@ -372,8 +364,10 @@ def update_bootstrap_ebuild(new_bootstrap_version: RustVersion) -> None:
     new_ebuild.write_text(new_text, encoding="utf-8")
 
 
-def update_ebuild(ebuild_file: str, new_bootstrap_version: RustVersion) -> None:
-    contents = open(ebuild_file, encoding="utf-8").read()
+def update_bootstrap_version(
+    path: str, new_bootstrap_version: RustVersion
+) -> None:
+    contents = open(path, encoding="utf-8").read()
     contents, subs = re.subn(
         r"^BOOTSTRAP_VERSION=.*$",
         'BOOTSTRAP_VERSION="%s"' % (new_bootstrap_version,),
@@ -381,12 +375,9 @@ def update_ebuild(ebuild_file: str, new_bootstrap_version: RustVersion) -> None:
         flags=re.MULTILINE,
     )
     if not subs:
-        raise RuntimeError("BOOTSTRAP_VERSION not found in rust ebuild")
-    open(ebuild_file, "w", encoding="utf-8").write(contents)
-    logging.info(
-        "Rust ebuild file has BOOTSTRAP_VERSION updated to %s",
-        new_bootstrap_version,
-    )
+        raise RuntimeError(f"BOOTSTRAP_VERSION not found in {path}")
+    open(path, "w", encoding="utf-8").write(contents)
+    logging.info("Rust BOOTSTRAP_VERSION updated to %s", new_bootstrap_version)
 
 
 def ebuild_actions(
@@ -501,24 +492,28 @@ def update_manifest(ebuild_file: os.PathLike) -> None:
     ebuild_actions(ebuild.parent.name, ["manifest"])
 
 
-def update_rust_packages(rust_version: RustVersion, add: bool) -> None:
-    package_file = RUST_PATH.joinpath(
-        "../../profiles/targets/chromeos/package.provided"
+def update_rust_packages(
+    pkgatom: str, rust_version: RustVersion, add: bool
+) -> None:
+    package_file = EBUILD_PREFIX.joinpath(
+        "profiles/targets/chromeos/package.provided"
     )
     with open(package_file, encoding="utf-8") as f:
         contents = f.read()
     if add:
-        rust_packages_re = re.compile(r"dev-lang/rust-(\d+\.\d+\.\d+)")
+        rust_packages_re = re.compile(
+            "^" + re.escape(pkgatom) + r"-\d+\.\d+\.\d+$", re.MULTILINE
+        )
         rust_packages = rust_packages_re.findall(contents)
-        # Assume all the rust packages are in alphabetical order, so insert the new
-        # version to the place after the last rust_packages
-        new_str = f"dev-lang/rust-{rust_version}"
+        # Assume all the rust packages are in alphabetical order, so insert
+        # the new version to the place after the last rust_packages
+        new_str = f"{pkgatom}-{rust_version}"
         new_contents = contents.replace(
             rust_packages[-1], f"{rust_packages[-1]}\n{new_str}"
         )
         logging.info("%s has been inserted into package.provided", new_str)
     else:
-        old_str = f"dev-lang/rust-{rust_version}\n"
+        old_str = f"{pkgatom}-{rust_version}\n"
         assert old_str in contents, f"{old_str!r} not found in package.provided"
         new_contents = contents.replace(old_str, "")
         logging.info("%s has been removed from package.provided", old_str)
@@ -531,7 +526,7 @@ def update_virtual_rust(
     template_version: RustVersion, new_version: RustVersion
 ) -> None:
     template_ebuild = find_ebuild_path(
-        RUST_PATH.joinpath("../../virtual/rust"), "rust", template_version
+        EBUILD_PREFIX.joinpath("virtual/rust"), "rust", template_version
     )
     virtual_rust_dir = template_ebuild.parent
     new_name = f"rust-{new_version}.ebuild"
@@ -616,18 +611,35 @@ def create_rust_uprev(
         ),
     )
     run_step(
+        "update bootstrap version",
+        lambda: update_bootstrap_version(
+            EBUILD_PREFIX.joinpath("eclass/cros-rustc.eclass"), template_version
+        ),
+    )
+    run_step(
         "copy patches",
         lambda: copy_patches(RUST_PATH, template_version, rust_version),
     )
-    ebuild_file = run_step(
-        "create ebuild", lambda: create_ebuild(template_ebuild, rust_version)
+    template_host_ebuild = EBUILD_PREFIX.joinpath(
+        f"dev-lang/rust-host/rust-host-{template_version}.ebuild"
+    )
+    host_file = run_step(
+        "create host ebuild",
+        lambda: create_ebuild(
+            template_host_ebuild, "dev-lang/rust-host", rust_version
+        ),
     )
     run_step(
-        "update ebuild", lambda: update_ebuild(ebuild_file, template_version)
+        "update host manifest to add new version",
+        lambda: update_manifest(Path(host_file)),
+    )
+    target_file = run_step(
+        "create target ebuild",
+        lambda: create_ebuild(template_ebuild, "dev-lang/rust", rust_version),
     )
     run_step(
-        "update manifest to add new version",
-        lambda: update_manifest(Path(ebuild_file)),
+        "update target manifest to add new version",
+        lambda: update_manifest(Path(target_file)),
     )
     if not skip_compile:
         run_step(
@@ -635,8 +647,14 @@ def create_rust_uprev(
             lambda: subprocess.check_call(["sudo", "emerge", "dev-lang/rust"]),
         )
     run_step(
-        "insert version into rust packages",
-        lambda: update_rust_packages(rust_version, add=True),
+        "insert host version into rust packages",
+        lambda: update_rust_packages(
+            "dev-lang/rust-host", rust_version, add=True
+        ),
+    )
+    run_step(
+        "insert target version into rust packages",
+        lambda: update_rust_packages("dev-lang/rust", rust_version, add=True),
     )
     run_step(
         "upgrade virtual/rust",
@@ -715,38 +733,62 @@ def remove_rust_uprev(
         "remove patches",
         lambda: remove_files(f"files/rust-{delete_version}-*.patch", RUST_PATH),
     )
-    run_step("remove ebuild", lambda: remove_files(delete_ebuild, RUST_PATH))
-    ebuild_file = find_ebuild_for_package("rust")
     run_step(
-        "update manifest to delete old version",
-        lambda: update_manifest(ebuild_file),
+        "remove target ebuild", lambda: remove_files(delete_ebuild, RUST_PATH)
     )
     run_step(
-        "remove version from rust packages",
-        lambda: update_rust_packages(delete_version, add=False),
+        "remove host ebuild",
+        lambda: remove_files(
+            f"rust-host-{delete_version}.ebuild",
+            EBUILD_PREFIX.joinpath("dev-lang/rust-host"),
+        ),
+    )
+    target_file = find_ebuild_for_package("rust")
+    run_step(
+        "update target manifest to delete old version",
+        lambda: update_manifest(target_file),
+    )
+    run_step(
+        "remove target version from rust packages",
+        lambda: update_rust_packages(
+            "dev-lang/rust", delete_version, add=False
+        ),
+    )
+    host_file = find_ebuild_for_package("rust-host")
+    run_step(
+        "update host manifest to delete old version",
+        lambda: update_manifest(host_file),
+    )
+    run_step(
+        "remove host version from rust packages",
+        lambda: update_rust_packages(
+            "dev-lang/rust-host", delete_version, add=False
+        ),
     )
     run_step("remove virtual/rust", lambda: remove_virtual_rust(delete_version))
 
 
 def remove_virtual_rust(delete_version: RustVersion) -> None:
     ebuild = find_ebuild_path(
-        RUST_PATH.joinpath("../../virtual/rust"), "rust", delete_version
+        EBUILD_PREFIX.joinpath("virtual/rust"), "rust", delete_version
     )
     subprocess.check_call(["git", "rm", str(ebuild.name)], cwd=ebuild.parent)
 
 
 def rust_bootstrap_path() -> Path:
-    return RUST_PATH.joinpath("../rust-bootstrap")
+    return EBUILD_PREFIX.joinpath("dev-lang/rust-bootstrap")
 
 
 def create_new_repo(rust_version: RustVersion) -> None:
-    output = get_command_output(["git", "status", "--porcelain"], cwd=RUST_PATH)
+    output = get_command_output(
+        ["git", "status", "--porcelain"], cwd=EBUILD_PREFIX
+    )
     if output:
         raise RuntimeError(
-            f"{RUST_PATH} has uncommitted changes, please either discard them "
-            "or commit them."
+            f"{EBUILD_PREFIX} has uncommitted changes, please either discard "
+            "them or commit them."
         )
-    git.CreateBranch(RUST_PATH, f"rust-to-{rust_version}")
+    git.CreateBranch(EBUILD_PREFIX, f"rust-to-{rust_version}")
 
 
 def build_cross_compiler() -> None:
@@ -780,7 +822,7 @@ def build_cross_compiler() -> None:
 
 
 def create_new_commit(rust_version: RustVersion) -> None:
-    subprocess.check_call(["git", "add", "-A"], cwd=RUST_PATH)
+    subprocess.check_call(["git", "add", "-A"], cwd=EBUILD_PREFIX)
     messages = [
         f"[DO NOT SUBMIT] dev-lang/rust: upgrade to Rust {rust_version}",
         "",
@@ -788,7 +830,7 @@ def create_new_commit(rust_version: RustVersion) -> None:
         "BUG=None",
         "TEST=Use CQ to test the new Rust version",
     ]
-    git.UploadChanges(RUST_PATH, f"rust-to-{rust_version}", messages)
+    git.UploadChanges(EBUILD_PREFIX, f"rust-to-{rust_version}", messages)
 
 
 def main() -> None:
