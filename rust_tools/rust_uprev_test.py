@@ -234,48 +234,11 @@ BOOTSTRAP_VERSION="1.3.6"
 class UpdateManifestTest(unittest.TestCase):
   """Tests for update_manifest step in rust_uprev"""
 
-  # pylint: disable=protected-access
-  def _run_test_flip_mirror(self, before, after, add, expect_write):
-    mock_open = mock.mock_open(read_data=f'RESTRICT="{before}"')
-    with mock.patch('builtins.open', mock_open):
-      rust_uprev.flip_mirror_in_ebuild('', add=add)
-    if expect_write:
-      mock_open.return_value.__enter__().write.assert_called_once_with(
-          f'RESTRICT="{after}"')
-
-  def test_add_mirror_in_ebuild(self):
-    self._run_test_flip_mirror(before='variable1 variable2',
-                               after='variable1 variable2 mirror',
-                               add=True,
-                               expect_write=True)
-
-  def test_remove_mirror_in_ebuild(self):
-    self._run_test_flip_mirror(before='variable1 variable2 mirror',
-                               after='variable1 variable2',
-                               add=False,
-                               expect_write=True)
-
-  def test_add_mirror_when_exists(self):
-    self._run_test_flip_mirror(before='variable1 variable2 mirror',
-                               after='variable1 variable2 mirror',
-                               add=True,
-                               expect_write=False)
-
-  def test_remove_mirror_when_not_exists(self):
-    self._run_test_flip_mirror(before='variable1 variable2',
-                               after='variable1 variable2',
-                               add=False,
-                               expect_write=False)
-
-  @mock.patch.object(rust_uprev, 'flip_mirror_in_ebuild')
   @mock.patch.object(rust_uprev, 'ebuild_actions')
-  def test_update_manifest(self, mock_run, mock_flip):
+  def test_update_manifest(self, mock_run):
     ebuild_file = Path('/path/to/rust/rust-1.1.1.ebuild')
     rust_uprev.update_manifest(ebuild_file)
     mock_run.assert_called_once_with('rust', ['manifest'])
-    mock_flip.assert_has_calls(
-        [mock.call(ebuild_file, add=True),
-         mock.call(ebuild_file, add=False)])
 
 
 class UpdateBootstrapEbuildTest(unittest.TestCase):

@@ -360,27 +360,6 @@ def update_ebuild(ebuild_file: str,
                new_bootstrap_version)
 
 
-def flip_mirror_in_ebuild(ebuild_file: Path, add: bool) -> None:
-  restrict_re = re.compile(
-      r'(?P<before>RESTRICT=")(?P<values>"[^"]*"|.*)(?P<after>")')
-  with open(ebuild_file, encoding='utf-8') as f:
-    contents = f.read()
-  m = restrict_re.search(contents)
-  assert m, 'failed to find RESTRICT variable in Rust ebuild'
-  values = m.group('values')
-  if add:
-    if 'mirror' in values:
-      return
-    values += ' mirror'
-  else:
-    if 'mirror' not in values:
-      return
-    values = values.replace(' mirror', '')
-  new_contents = restrict_re.sub(r'\g<before>%s\g<after>' % values, contents)
-  with open(ebuild_file, 'w', encoding='utf-8') as f:
-    f.write(new_contents)
-
-
 def ebuild_actions(package: str,
                    actions: List[str],
                    sudo: bool = False) -> None:
@@ -482,11 +461,7 @@ def get_distdir() -> os.PathLike:
 def update_manifest(ebuild_file: os.PathLike) -> None:
   """Updates the MANIFEST for the ebuild at the given path."""
   ebuild = Path(ebuild_file)
-  logging.info('Added "mirror" to RESTRICT to %s', ebuild.name)
-  flip_mirror_in_ebuild(ebuild, add=True)
   ebuild_actions(ebuild.parent.name, ['manifest'])
-  logging.info('Removed "mirror" to RESTRICT from %s', ebuild.name)
-  flip_mirror_in_ebuild(ebuild, add=False)
 
 
 def update_rust_packages(rust_version: RustVersion, add: bool) -> None:
