@@ -13,7 +13,7 @@ const CROS_MAIN_BRANCH: &str = "cros/main";
 const ANDROID_MAIN_BRANCH: &str = "aosp/master"; // nocheck
 const WORK_BRANCH_NAME: &str = "__patch_sync_tmp";
 
-/// Context struct to keep track of both Chromium OS and Android checkouts.
+/// Context struct to keep track of both ChromiumOS and Android checkouts.
 #[derive(Debug)]
 pub struct RepoSetupContext {
     pub cros_checkout: PathBuf,
@@ -136,14 +136,14 @@ impl RepoSetupContext {
             .join("patches/PATCHES.json")
     }
 
-    /// Get the Chromium OS path to the PATCHES.json file
+    /// Get the ChromiumOS path to the PATCHES.json file
     pub fn cros_patches_path(&self) -> PathBuf {
         self.cros_checkout
             .join(&CHROMIUMOS_OVERLAY_REL_PATH)
             .join("sys-devel/llvm/files/PATCHES.json")
     }
 
-    /// Return the contents of the old PATCHES.json from Chromium OS
+    /// Return the contents of the old PATCHES.json from ChromiumOS
     pub fn old_cros_patch_contents(&self, hash: &str) -> Result<String> {
         Self::old_file_contents(
             hash,

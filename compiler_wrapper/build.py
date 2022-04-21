@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Copyright 2019 The ChromiumOS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -52,7 +52,7 @@ def calc_go_args(args, version, build_dir):
       'main.Version=' + version,
   ]
 
-  # If the wrapper is intended for Chrome OS, we need to use libc's exec.
+  # If the wrapper is intended for ChromeOS, we need to use libc's exec.
   extra_args = []
   if not args.static:
     extra_args += ['-tags', 'libc_exec']

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Copyright 2019 The Chromium OS Authors. All rights reserved.
+# Copyright 2019 The ChromiumOS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -248,7 +248,7 @@ def check_cros_lint(
         toolchain_utils_root,
         env=fixed_env)
 
-    # This is returned specifically if cros couldn't find the Chrome OS tree
+    # This is returned specifically if cros couldn't find the ChromeOS tree
     # root.
     if exit_code == 127:
       return None
@@ -310,9 +310,9 @@ def check_cros_lint(
     tasks.append(('golint', thread_pool.apply_async(run_golint)))
 
   complaint = '\n'.join((
-      'WARNING: No Chrome OS checkout detected, and no viable CrOS tree',
+      'WARNING: No ChromeOS checkout detected, and no viable CrOS tree',
       'found; falling back to linting only python and go. If you have a',
-      'Chrome OS checkout, please either develop from inside of the source',
+      'ChromeOS checkout, please either develop from inside of the source',
       'tree, or set $CHROMEOS_ROOT_DIRECTORY to the root of it.',
   ))
 

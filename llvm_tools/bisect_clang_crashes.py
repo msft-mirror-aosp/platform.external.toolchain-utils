@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Copyright 2020 The ChromiumOS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Fetches and submits the artifacts from Chrome OS toolchain's crash bucket.
+"""Fetches and submits the artifacts from ChromeOS toolchain's crash bucket.
 """
 
 import argparse

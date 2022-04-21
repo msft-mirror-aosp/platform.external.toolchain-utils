@@ -173,7 +173,7 @@ fn transpose_subcmd(args: TransposeOpt) -> Result<()> {
     });
 
     if args.verbose {
-        display_patches("New patches from Chromium OS", &new_cros_patches);
+        display_patches("New patches from ChromiumOS", &new_cros_patches);
         display_patches("New patches from Android", &new_android_patches);
     }
 
@@ -281,7 +281,7 @@ enum Opt {
         #[structopt(long = "cros-checkout", parse(from_os_str))]
         cros_checkout_path: PathBuf,
 
-        /// Emails to send review requests to during Chromium OS upload.
+        /// Emails to send review requests to during ChromiumOS upload.
         /// Comma separated.
         #[structopt(long = "cros-rev")]
         cros_reviewers: Option<String>,

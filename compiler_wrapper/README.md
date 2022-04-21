@@ -7,7 +7,7 @@ Build is split into 2 steps via separate commands:
 - build: builds the actual go binary, assuming it is executed
   from the folder created by `bundle.py`.
 
-This allows to copy the sources to a Chrome OS / Android
+This allows to copy the sources to a ChromeOS / Android
 package, including the build script, and then
 build from there without a dependency on toolchain-utils
 itself.
@@ -24,7 +24,7 @@ Run `install_compiler_wrapper.sh` to install the new wrapper in the chroot:
 Then perform the tests, e.g. build with the new compiler.
 
 
-## Updating the Wrapper for Chrome OS
+## Updating the Wrapper for ChromeOS
 
 To update the wrapper for everyone, the new wrapper configuration must be copied
 into chromiumos-overlay, and new revisions of the gcc and llvm ebuilds must be
