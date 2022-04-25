@@ -15,14 +15,12 @@ import argparse
 import datetime
 import os
 import re
-import shutil
 import shlex
+import shutil
 import sys
 import time
 
-from cros_utils import command_executer
-from cros_utils import constants
-from cros_utils import misc
+from cros_utils import command_executer, constants, misc
 
 DIR_BY_WEEKDAY = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 NIGHTLY_TESTS_WORKSPACE = os.path.join(constants.CROSTC_WORKSPACE,
@@ -32,8 +30,7 @@ NIGHTLY_TESTS_WORKSPACE = os.path.join(constants.CROSTC_WORKSPACE,
 def CleanNumberedDir(s, dry_run=False):
   """Deleted directories under each dated_dir."""
   chromeos_dirs = [
-      os.path.join(s, x)
-      for x in os.listdir(s)
+      os.path.join(s, x) for x in os.listdir(s)
       if misc.IsChromeOsTree(os.path.join(s, x))
   ]
   ce = command_executer.GetCommandExecuter(log_level='none')
@@ -74,8 +71,7 @@ def CleanNumberedDir(s, dry_run=False):
 def CleanDatedDir(dated_dir, dry_run=False):
   # List subdirs under dir
   subdirs = [
-      os.path.join(dated_dir, x)
-      for x in os.listdir(dated_dir)
+      os.path.join(dated_dir, x) for x in os.listdir(dated_dir)
       if os.path.isdir(os.path.join(dated_dir, x))
   ]
   all_succeeded = True
@@ -90,20 +86,18 @@ def ProcessArguments(argv):
   parser = argparse.ArgumentParser(
       description='Automatically delete nightly test data directories.',
       usage='auto_delete_nightly_test_data.py options')
-  parser.add_argument(
-      '-d',
-      '--dry_run',
-      dest='dry_run',
-      default=False,
-      action='store_true',
-      help='Only print command line, do not execute anything.')
-  parser.add_argument(
-      '--days_to_preserve',
-      dest='days_to_preserve',
-      default=3,
-      help=('Specify the number of days (not including today),'
-            ' test data generated on these days will *NOT* be '
-            'deleted. Defaults to 3.'))
+  parser.add_argument('-d',
+                      '--dry_run',
+                      dest='dry_run',
+                      default=False,
+                      action='store_true',
+                      help='Only print command line, do not execute anything.')
+  parser.add_argument('--days_to_preserve',
+                      dest='days_to_preserve',
+                      default=3,
+                      help=('Specify the number of days (not including today),'
+                            ' test data generated on these days will *NOT* be '
+                            'deleted. Defaults to 3.'))
   options = parser.parse_args(argv)
   return options
 
@@ -195,8 +189,9 @@ def CleanOldCLs(days_to_preserve='1', dry_run=False):
   # Find Old CLs.
   old_cls_cmd = ('gerrit --raw search "owner:me status:open age:%sd"' %
                  days_to_preserve)
-  _, cls, _ = ce.ChrootRunCommandWOutput(
-      chromeos_root, old_cls_cmd, print_to_console=False)
+  _, cls, _ = ce.ChrootRunCommandWOutput(chromeos_root,
+                                         old_cls_cmd,
+                                         print_to_console=False)
   # Convert any whitespaces to spaces.
   cls = ' '.join(cls.split())
   if not cls:
@@ -207,8 +202,9 @@ def CleanOldCLs(days_to_preserve='1', dry_run=False):
     print('Going to execute: %s' % abandon_cls_cmd)
     return 0
 
-  return ce.ChrootRunCommand(
-      chromeos_root, abandon_cls_cmd, print_to_console=False)
+  return ce.ChrootRunCommand(chromeos_root,
+                             abandon_cls_cmd,
+                             print_to_console=False)
 
 
 def CleanChromeTelemetryTmpFiles(dry_run):
@@ -222,7 +218,8 @@ def CleanChromeTelemetryTmpFiles(dry_run):
   else:
     rv = ce.RunCommand(cmd, print_to_console=False)
     if rv == 0:
-      print(f'Successfully cleaned chrome tree tmp directory ' f'{tmp_dir!r} .')
+      print(f'Successfully cleaned chrome tree tmp directory '
+            f'{tmp_dir!r} .')
     else:
       print(f'Some directories were not removed under chrome tree '
             f'tmp directory {tmp_dir!r}.')
@@ -247,13 +244,12 @@ def Main(argv):
     else:
       dated_dir = DIR_BY_WEEKDAY[i - 1]
 
-    rv += 0 if CleanDatedDir(
-        os.path.join(NIGHTLY_TESTS_WORKSPACE, dated_dir),
-        options.dry_run) else 1
+    rv += 0 if CleanDatedDir(os.path.join(NIGHTLY_TESTS_WORKSPACE, dated_dir),
+                             options.dry_run) else 1
 
   ## Clean temporaries, images under crostc/chromeos
-  rv2 = CleanChromeOsTmpAndImages(
-      int(options.days_to_preserve), options.dry_run)
+  rv2 = CleanChromeOsTmpAndImages(int(options.days_to_preserve),
+                                  options.dry_run)
 
   # Clean CLs that are not updated in last 2 weeks.
   rv3 = CleanOldCLs('14', options.dry_run)
