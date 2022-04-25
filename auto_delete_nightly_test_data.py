@@ -17,8 +17,11 @@ import os
 import re
 import shlex
 import shutil
+import stat
 import sys
 import time
+import traceback
+from pathlib import Path
 
 from cros_utils import command_executer, constants, misc
 
@@ -102,31 +105,67 @@ def ProcessArguments(argv):
   return options
 
 
+def IsChromeOsTmpDeletionCandidate(file_name: str):
+  """Returns whether the given basename can be deleted from a chroot's /tmp."""
+  name_prefixes = (
+      'test_that_',
+      'cros-update',
+      'CrAU_temp_data',
+  )
+  if any(file_name.startswith(x) for x in name_prefixes):
+    return True
+  # Remove files that look like `tmpABCDEFGHI`.
+  return len(file_name) == 9 and file_name.startswith('tmp')
+
+
 def CleanChromeOsTmpFiles(chroot_tmp, days_to_preserve, dry_run):
-  rv = 0
-  ce = command_executer.GetCommandExecuter()
   # Clean chroot/tmp/test_that_* and chroot/tmp/tmpxxxxxx, that were last
   # accessed more than specified time.
-  minutes = 1440 * days_to_preserve
-  cmd = (r'find {0} -maxdepth 1 -type d '
-         r'\( -name "test_that_*"  -amin +{1} -o '
-         r'   -name "cros-update*" -amin +{1} -o '
-         r'   -name "CrAU_temp_data*" -amin +{1} -o '
-         r' -regex "{0}/tmp......" -amin +{1} \) '
-         r'-exec bash -c "echo rm -fr {{}}" \; '
-         r'-exec bash -c "rm -fr {{}}" \;').format(chroot_tmp, minutes)
-  if dry_run:
-    print('Going to execute:\n%s' % cmd)
-  else:
-    rv = ce.RunCommand(cmd, print_to_console=False)
-    if rv == 0:
-      print('Successfully cleaned chromeos tree tmp directory '
-            '"{0}".'.format(chroot_tmp))
-    else:
-      print('Some directories were not removed under chromeos tree '
-            'tmp directory -"{0}".'.format(chroot_tmp))
+  secs_to_preserve = 60 * 60 * 24 * days_to_preserve
+  now = time.time()
+  remove_older_than_time = now - secs_to_preserve
 
-  return rv
+  had_errors = False
+  for file in Path(chroot_tmp).iterdir():
+    if not IsChromeOsTmpDeletionCandidate(file.name):
+      continue
+
+    try:
+      # Take the stat here and use that later, so we only need to check for a
+      # nonexistent file once.
+      st = file.stat()
+    except FileNotFoundError:
+      # This was deleted while were checking; ignore it.
+      continue
+
+    if not stat.S_ISDIR(st.st_mode):
+      continue
+
+    if st.st_atime >= remove_older_than_time:
+      continue
+
+    if dry_run:
+      print(f'Would remove {file}')
+      continue
+
+    this_iteration_had_errors = False
+
+    def OnError(_func, path_name, excinfo):
+      nonlocal this_iteration_had_errors
+      this_iteration_had_errors = True
+      print(f'Failed removing path at {path_name}; traceback:')
+      traceback.print_exception(*excinfo)
+
+    shutil.rmtree(file, onerror=OnError)
+
+    # Some errors can be other processes racing with us to delete things. Don't
+    # count those as an error which we complain loudly about.
+    if this_iteration_had_errors and file.exists():
+      had_errors = True
+    else:
+      print(f'Discarding removal errors for {file}; dir was still removed.')
+
+  return 1 if had_errors else 0
 
 
 def CleanChromeOsImageFiles(chroot_tmp, subdir_suffix, days_to_preserve,
