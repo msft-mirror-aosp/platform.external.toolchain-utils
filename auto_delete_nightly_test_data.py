@@ -37,10 +37,10 @@ def CleanNumberedDir(s, dry_run=False):
   all_succeeded = True
   for cd in chromeos_dirs:
     if misc.DeleteChromeOsTree(cd, dry_run=dry_run):
-      print('Successfully removed chromeos tree "{0}".'.format(cd))
+      print(f'Successfully removed chromeos tree {cd!r}.')
     else:
       all_succeeded = False
-      print('Failed to remove chromeos tree "{0}", please check.'.format(cd))
+      print(f'Failed to remove chromeos tree {cd!r}, please check.')
 
   if not all_succeeded:
     print('Failed to delete at least one chromeos tree, please check.')
@@ -52,19 +52,19 @@ def CleanNumberedDir(s, dry_run=False):
   valid_dir_pattern = ('^' + NIGHTLY_TESTS_WORKSPACE + '/(' +
                        '|'.join(DIR_BY_WEEKDAY) + ')')
   if not re.search(valid_dir_pattern, s):
-    print('Trying to delete an invalid dir "{0}" (must match "{1}"), '
-          'please check.'.format(s, valid_dir_pattern))
+    print(f'Trying to delete an invalid dir {s!r} (must match '
+          f'{valid_dir_pattern!r}), please check.')
     return False
 
-  cmd = 'rm -fr {0}'.format(s)
+  cmd = f'rm -fr {s}'
   if dry_run:
     print(cmd)
   else:
     if ce.RunCommand(cmd, print_to_console=False, terminated_timeout=480) == 0:
-      print('Successfully removed "{0}".'.format(s))
+      print(f'Successfully removed {s!r}.')
     else:
       all_succeeded = False
-      print('Failed to remove "{0}", please check.'.format(s))
+      print(f'Failed to remove {s!r}, please check.')
   return all_succeeded
 
 
@@ -146,15 +146,15 @@ def CleanChromeOsImageFiles(chroot_tmp, subdir_suffix, days_to_preserve,
         subdir_path = os.path.join(tmp_dir, subdir)
         if now - os.path.getatime(subdir_path) > seconds_delta:
           if dry_run:
-            print('Will run:\nshutil.rmtree({})'.format(subdir_path))
+            print(f'Will run:\nshutil.rmtree({subdir_path!r})')
           else:
             try:
               shutil.rmtree(subdir_path)
               print('Successfully cleaned chromeos image autotest directories '
-                    'from "{}".'.format(subdir_path))
+                    f'from {subdir_path!r}.')
             except OSError:
               print('Some image autotest directories were not removed from '
-                    '"{}".'.format(subdir_path))
+                    f'"{subdir_path}".')
               errors += 1
 
   return errors
