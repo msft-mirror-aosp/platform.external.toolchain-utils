@@ -160,10 +160,11 @@ def CleanChromeOsTmpFiles(chroot_tmp, days_to_preserve, dry_run):
 
     # Some errors can be other processes racing with us to delete things. Don't
     # count those as an error which we complain loudly about.
-    if this_iteration_had_errors and file.exists():
-      had_errors = True
-    else:
-      print(f'Discarding removal errors for {file}; dir was still removed.')
+    if this_iteration_had_errors:
+      if file.exists():
+        had_errors = True
+      else:
+        print(f'Discarding removal errors for {file}; dir was still removed.')
 
   return 1 if had_errors else 0
 
