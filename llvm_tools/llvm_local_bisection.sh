@@ -25,7 +25,7 @@
 LLVM_CLONE_PATH="${HOME}/chromiumos/src/third_party/llvm-project"
 
 main () {
-  # Note this builds with USE="llvm-next debug -thinlto -llvm_pgo_use"
+  # Note this builds with USE="llvm-next debug -thinlto -llvm_pgo_use continue-on-patch-failure"
   build_llvm || exit
 
   # FIXME: Write your actual bisection command here which uses
@@ -74,8 +74,9 @@ build_llvm () {
 
   local logfile="/tmp/build-llvm.${CURRENT}.out"
   log "Writing logs to ${logfile}"
-  log "sudo USE='llvm-next debug -thinlto -llvm_use_pgo' emerge sys-devel/llvm"
-  logdo sudo USE='llvm-next debug -thinlto -llvm_use_pgo' emerge \
+  log "sudo USE='llvm-next debug -thinlto -llvm_use_pgo continue-on-patch-failure'" \
+      " emerge sys-devel/llvm"
+  logdo sudo USE='llvm-next debug -thinlto -llvm_use_pgo continue-on-patch-failure' emerge \
     sys-devel/llvm \
     &> "${logfile}"
   local emerge_exit_code="$?"
