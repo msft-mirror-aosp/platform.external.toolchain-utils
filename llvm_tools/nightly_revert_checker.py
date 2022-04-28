@@ -24,10 +24,11 @@ import typing as t
 
 import cros_utils.email_sender as email_sender
 import cros_utils.tiny_render as tiny_render
+
 import get_llvm_hash
+import get_upstream_patch
 import git_llvm_rev
 import revert_checker
-import get_upstream_patch
 
 State = t.Any
 
@@ -38,11 +39,19 @@ def _find_interesting_android_shas(android_llvm_toolchain_dir: str
                               'toolchain/llvm-project')
 
   def get_llvm_merge_base(branch: str) -> str:
-    return subprocess.check_output(
+    head_sha = subprocess.check_output(
+        ['git', 'rev-parse', branch],
+        cwd=llvm_project,
+        encoding='utf-8',
+    ).strip()
+    merge_base = subprocess.check_output(
         ['git', 'merge-base', branch, 'aosp/upstream-main'],
         cwd=llvm_project,
         encoding='utf-8',
     ).strip()
+    logging.info('Merge-base for %s (HEAD == %s) and upstream-main is %s',
+                 branch, head_sha, merge_base)
+    return merge_base
 
   main_legacy = get_llvm_merge_base('aosp/master-legacy')  # nocheck
   testing_upstream = get_llvm_merge_base('aosp/testing-upstream')
@@ -51,6 +60,9 @@ def _find_interesting_android_shas(android_llvm_toolchain_dir: str
   # If these are the same SHA, there's no point in tracking both.
   if main_legacy != testing_upstream:
     result.append(('testing-upstream', testing_upstream))
+  else:
+    logging.info('main-legacy and testing-upstream are identical; ignoring '
+                 'the latter.')
   return result
 
 
@@ -230,12 +242,15 @@ def do_cherrypick(chroot_path: str, llvm_dir: str,
     seen.add(friendly_name)
     for sha, reverted_sha in reverts:
       try:
+        # We upload reverts for all platforms by default, since there's no
+        # real reason for them to be CrOS-specific.
         get_upstream_patch.get_from_upstream(chroot_path=chroot_path,
                                              create_cl=True,
                                              start_sha=reverted_sha,
                                              patches=[sha],
                                              reviewers=reviewers,
-                                             cc=cc)
+                                             cc=cc,
+                                             platforms=())
       except get_upstream_patch.CherrypickError as e:
         logging.info('%s, skipping...', str(e))
   return new_state
