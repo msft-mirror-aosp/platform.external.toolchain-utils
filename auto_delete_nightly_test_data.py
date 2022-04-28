@@ -15,13 +15,13 @@ import argparse
 import datetime
 import os
 import re
-import shlex
 import shutil
 import stat
 import sys
 import time
 import traceback
 from pathlib import Path
+from typing import Callable
 
 from cros_utils import command_executer, constants, misc
 
@@ -105,29 +105,17 @@ def ProcessArguments(argv):
   return options
 
 
-def IsChromeOsTmpDeletionCandidate(file_name: str):
-  """Returns whether the given basename can be deleted from a chroot's /tmp."""
-  name_prefixes = (
-      'test_that_',
-      'cros-update',
-      'CrAU_temp_data',
-  )
-  if any(file_name.startswith(x) for x in name_prefixes):
-    return True
-  # Remove files that look like `tmpABCDEFGHI`.
-  return len(file_name) == 9 and file_name.startswith('tmp')
-
-
-def CleanChromeOsTmpFiles(chroot_tmp, days_to_preserve, dry_run):
-  # Clean chroot/tmp/test_that_* and chroot/tmp/tmpxxxxxx, that were last
-  # accessed more than specified time.
+def RemoveAllSubdirsMatchingPredicate(
+    base_dir: Path, days_to_preserve: int, dry_run: bool,
+    is_name_removal_worthy: Callable[[str], bool]) -> bool:
+  """Removes all subdirs of base_dir that match the given predicate."""
   secs_to_preserve = 60 * 60 * 24 * days_to_preserve
   now = time.time()
   remove_older_than_time = now - secs_to_preserve
 
   had_errors = False
-  for file in Path(chroot_tmp).iterdir():
-    if not IsChromeOsTmpDeletionCandidate(file.name):
+  for file in base_dir.iterdir():
+    if not is_name_removal_worthy(file.name):
       continue
 
     try:
@@ -167,6 +155,31 @@ def CleanChromeOsTmpFiles(chroot_tmp, days_to_preserve, dry_run):
         print(f'Discarding removal errors for {file}; dir was still removed.')
 
   return 1 if had_errors else 0
+
+
+def IsChromeOsTmpDeletionCandidate(file_name: str):
+  """Returns whether the given basename can be deleted from a chroot's /tmp."""
+  name_prefixes = (
+      'test_that_',
+      'cros-update',
+      'CrAU_temp_data',
+  )
+  if any(file_name.startswith(x) for x in name_prefixes):
+    return True
+  # Remove files that look like `tmpABCDEFGHI`.
+  return len(file_name) == 9 and file_name.startswith('tmp')
+
+
+def CleanChromeOsTmpFiles(chroot_tmp: str, days_to_preserve: int,
+                          dry_run: bool) -> int:
+  # Clean chroot/tmp/test_that_* and chroot/tmp/tmpxxxxxx, that were last
+  # accessed more than specified time ago.
+  return RemoveAllSubdirsMatchingPredicate(
+      Path(chroot_tmp),
+      days_to_preserve,
+      dry_run,
+      IsChromeOsTmpDeletionCandidate,
+  )
 
 
 def CleanChromeOsImageFiles(chroot_tmp, subdir_suffix, days_to_preserve,
@@ -247,23 +260,14 @@ def CleanOldCLs(days_to_preserve='1', dry_run=False):
                              print_to_console=False)
 
 
-def CleanChromeTelemetryTmpFiles(dry_run):
-  rv = 0
-  ce = command_executer.GetCommandExecuter()
-  tmp_dir = os.path.join(constants.CROSTC_WORKSPACE, 'chromeos', '.cache',
-                         'distfiles', 'chrome-src-internal', 'src', 'tmp')
-  cmd = f'rm -fr {shlex.quote(tmp_dir)}/tmp*telemetry_Crosperf'
-  if dry_run:
-    print(f'Going to execute:\n{cmd}')
-  else:
-    rv = ce.RunCommand(cmd, print_to_console=False)
-    if rv == 0:
-      print(f'Successfully cleaned chrome tree tmp directory '
-            f'{tmp_dir!r} .')
-    else:
-      print(f'Some directories were not removed under chrome tree '
-            f'tmp directory {tmp_dir!r}.')
-  return rv
+def CleanChromeTelemetryTmpFiles(dry_run: bool) -> int:
+  return RemoveAllSubdirsMatchingPredicate(
+      Path(constants.CROSTC_WORKSPACE),
+      days_to_preserve=1,
+      dry_run=dry_run,
+      is_name_removal_worthy=lambda x: x.startswith('tmp') and x.endswith(
+          'telemetry_Crosperf'),
+  )
 
 
 def Main(argv):
