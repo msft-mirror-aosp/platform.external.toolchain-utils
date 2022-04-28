@@ -96,15 +96,18 @@ def add_patch(patches_json_path: str, patches_dir: str,
       cwd=llvm_dir,
       encoding='utf-8')
 
+  end_vers = rev.number if isinstance(rev, git_llvm_rev.Rev) else None
   patch_props = {
       'rel_patch_path': rel_patch_path,
-      'start_version': start_version.number,
       'metadata': {
           'title': commit_subject.strip(),
           'info': [],
       },
       'platforms': sorted(platforms),
-      'end_version': rev.number if isinstance(rev, git_llvm_rev.Rev) else None,
+      'version_range': {
+          'from': start_version.number,
+          'until': end_vers,
+      },
   }
   patches_json.append(patch_props)
 
@@ -346,8 +349,8 @@ def _convert_patch(llvm_config: git_llvm_rev.LLVMConfig,
                      is_differential=is_differential)
 
 
-def _get_duplicate_shas(
-    patches: t.List[ParsedPatch]) -> t.List[t.Tuple[ParsedPatch, ParsedPatch]]:
+def _get_duplicate_shas(patches: t.List[ParsedPatch]
+                        ) -> t.List[t.Tuple[ParsedPatch, ParsedPatch]]:
   """Return a list of Patches which have duplicate SHA's"""
   return [(left, right) for i, left in enumerate(patches)
           for right in patches[i + 1:] if left.sha == right.sha]
