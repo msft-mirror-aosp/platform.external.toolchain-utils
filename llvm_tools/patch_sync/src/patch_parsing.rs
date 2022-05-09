@@ -8,13 +8,43 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 /// JSON serde struct.
+// FIXME(b/221489531): Remove when we clear out start_version and
+// end_version.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PatchDictSchema {
-    pub rel_patch_path: String,
-    pub start_version: Option<u64>,
+    /// [deprecated(since = "1.1", note = "Use version_range")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub end_version: Option<u64>,
-    pub platforms: BTreeSet<String>,
     pub metadata: Option<BTreeMap<String, serde_json::Value>>,
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub platforms: BTreeSet<String>,
+    pub rel_patch_path: String,
+    /// [deprecated(since = "1.1", note = "Use version_range")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_version: Option<u64>,
+    pub version_range: Option<VersionRange>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct VersionRange {
+    pub from: Option<u64>,
+    pub until: Option<u64>,
+}
+
+// FIXME(b/221489531): Remove when we clear out start_version and
+// end_version.
+impl PatchDictSchema {
+    pub fn get_start_version(&self) -> Option<u64> {
+        self.version_range
+            .map(|x| x.from)
+            .unwrap_or(self.start_version)
+    }
+
+    pub fn get_end_version(&self) -> Option<u64> {
+        self.version_range
+            .map(|x| x.until)
+            .unwrap_or(self.end_version)
+    }
 }
 
 /// Struct to keep track of patches and their relative paths.
@@ -44,14 +74,29 @@ impl PatchCollection {
         })
     }
 
-    #[allow(dead_code)]
+    /// Copy this collection with patches filtered by given criterion.
+    pub fn filter_patches(&self, f: impl FnMut(&PatchDictSchema) -> bool) -> Self {
+        Self {
+            patches: self.patches.iter().cloned().filter(f).collect(),
+            workdir: self.workdir.clone(),
+        }
+    }
+
+    /// Map over the patches.
+    pub fn map_patches(&self, f: impl FnMut(&PatchDictSchema) -> PatchDictSchema) -> Self {
+        Self {
+            patches: self.patches.iter().map(f).collect(),
+            workdir: self.workdir.clone(),
+        }
+    }
+
     /// Return true if the collection is tracking any patches.
     pub fn is_empty(&self) -> bool {
         self.patches.is_empty()
     }
 
     /// Compute the set-set subtraction, returning a new `PatchCollection` which
-    /// keeps the minuend's wordir.
+    /// keeps the minuend's workdir.
     pub fn subtract(&self, subtrahend: &Self) -> Result<Self> {
         let mut new_patches = Vec::new();
         // This is O(n^2) when it could be much faster, but n is always going to be less
@@ -121,6 +166,7 @@ impl PatchCollection {
                             end_version: p.end_version,
                             platforms: new_platforms,
                             metadata: p.metadata.clone(),
+                            version_range: p.version_range,
                         });
                         // iii.
                         *merged = true;
@@ -187,9 +233,75 @@ impl PatchCollection {
         Ok(std::str::from_utf8(&serialization_buffer)?.to_string())
     }
 
+    /// Return whether a given patch actually exists on the file system.
+    pub fn patch_exists(&self, patch: &PatchDictSchema) -> bool {
+        self.workdir.join(&patch.rel_patch_path).exists()
+    }
+
     fn hash_from_rel_patch(&self, patch: &PatchDictSchema) -> Result<String> {
         hash_from_patch_path(&self.workdir.join(&patch.rel_patch_path))
     }
+}
+
+impl std::fmt::Display for PatchCollection {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        for (i, p) in self.patches.iter().enumerate() {
+            let title = p
+                .metadata
+                .as_ref()
+                .and_then(|x| x.get("title"))
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("[No Title]");
+            let path = self.workdir.join(&p.rel_patch_path);
+            writeln!(f, "* {}", title)?;
+            if i == self.patches.len() - 1 {
+                write!(f, "  {}", path.display())?;
+            } else {
+                writeln!(f, "  {}", path.display())?;
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Generate a PatchCollection incorporating only the diff between current patches and old patch
+/// contents.
+pub fn new_patches(
+    patches_path: &Path,
+    old_patch_contents: &str,
+    platform: &str,
+) -> Result<(PatchCollection, PatchCollection)> {
+    let cur_collection = PatchCollection::parse_from_file(patches_path)
+        .with_context(|| format!("parsing {} PATCHES.json", platform))?;
+    let cur_collection = filter_patches_by_platform(&cur_collection, platform);
+    let cur_collection = cur_collection.filter_patches(|p| cur_collection.patch_exists(p));
+    let new_patches: PatchCollection = {
+        let old_collection = PatchCollection::parse_from_str(
+            patches_path.parent().unwrap().to_path_buf(),
+            old_patch_contents,
+        )?;
+        let old_collection = old_collection.filter_patches(|p| old_collection.patch_exists(p));
+        cur_collection.subtract(&old_collection)?
+    };
+    let new_patches = new_patches.map_patches(|p| {
+        let mut platforms = BTreeSet::new();
+        platforms.extend(["android".to_string(), "chromiumos".to_string()]);
+        PatchDictSchema {
+            platforms: platforms.union(&p.platforms).cloned().collect(),
+            ..p.to_owned()
+        }
+    });
+    Ok((cur_collection, new_patches))
+}
+
+/// Create a new collection with only the patches that apply to the
+/// given platform.
+///
+/// If there's no platform listed, the patch should still apply if the patch file exists.
+pub fn filter_patches_by_platform(collection: &PatchCollection, platform: &str) -> PatchCollection {
+    collection.filter_patches(|p| {
+        p.platforms.contains(platform) || (p.platforms.is_empty() && collection.patch_exists(p))
+    })
 }
 
 /// Get the hash from the patch file contents.
@@ -219,7 +331,7 @@ fn hash_from_patch(patch_contents: impl Read) -> Result<String> {
 }
 
 fn hash_from_patch_path(patch: &Path) -> Result<String> {
-    let f = File::open(patch)?;
+    let f = File::open(patch).with_context(|| format!("opening patch file {}", patch.display()))?;
     hash_from_patch(f)
 }
 
@@ -240,6 +352,7 @@ fn copy_create_parents(from: &Path, to: &Path) -> Result<()> {
 
 #[cfg(test)]
 mod test {
+
     use super::*;
 
     /// Test we can extract the hash from patch files.
@@ -275,6 +388,10 @@ mod test {
             rel_patch_path: "a".into(),
             metadata: None,
             platforms: BTreeSet::from(["x".into()]),
+            version_range: Some(VersionRange {
+                from: Some(0),
+                until: Some(1),
+            }),
         };
         let patch2 = PatchDictSchema {
             rel_patch_path: "b".into(),
@@ -309,5 +426,37 @@ mod test {
             union.patches[1].platforms.iter().collect::<Vec<&String>>(),
             vec!["x", "y"]
         );
+    }
+
+    #[test]
+    fn test_union_empties() {
+        let patch1 = PatchDictSchema {
+            start_version: Some(0),
+            end_version: Some(1),
+            rel_patch_path: "a".into(),
+            metadata: None,
+            platforms: Default::default(),
+            version_range: Some(VersionRange {
+                from: Some(0),
+                until: Some(1),
+            }),
+        };
+        let collection1 = PatchCollection {
+            workdir: PathBuf::new(),
+            patches: vec![patch1.clone()],
+        };
+        let collection2 = PatchCollection {
+            workdir: PathBuf::new(),
+            patches: vec![patch1],
+        };
+        let union = collection1
+            .union_helper(
+                &collection2,
+                |p| Ok(p.rel_patch_path.to_string()),
+                |p| Ok(p.rel_patch_path.to_string()),
+            )
+            .expect("could not create union");
+        assert_eq!(union.patches.len(), 1);
+        assert_eq!(union.patches[0].platforms.len(), 0);
     }
 }
