@@ -14,16 +14,18 @@ __author__ = 'shenhan@google.com (Han Shen)'
 import argparse
 import datetime
 import os
+from pathlib import Path
 import re
 import shutil
 import stat
 import sys
 import time
 import traceback
-from pathlib import Path
 from typing import Callable
 
-from cros_utils import command_executer, constants, misc
+from cros_utils import command_executer
+from cros_utils import constants
+from cros_utils import misc
 
 DIR_BY_WEEKDAY = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 NIGHTLY_TESTS_WORKSPACE = os.path.join(constants.CROSTC_WORKSPACE,
@@ -129,7 +131,7 @@ def RemoveAllSubdirsMatchingPredicate(
     if not stat.S_ISDIR(st.st_mode):
       continue
 
-    if st.st_atime >= remove_older_than_time:
+    if secs_to_preserve and st.st_atime >= remove_older_than_time:
       continue
 
     if dry_run:
@@ -261,9 +263,11 @@ def CleanOldCLs(days_to_preserve='1', dry_run=False):
 
 
 def CleanChromeTelemetryTmpFiles(dry_run: bool) -> int:
+  tmp_dir = (Path(constants.CROSTC_WORKSPACE) / 'chromeos' / '.cache' /
+             'distfiles' / 'chrome-src-internal' / 'src' / 'tmp')
   return RemoveAllSubdirsMatchingPredicate(
-      Path(constants.CROSTC_WORKSPACE),
-      days_to_preserve=1,
+      tmp_dir,
+      days_to_preserve=0,
       dry_run=dry_run,
       is_name_removal_worthy=lambda x: x.startswith('tmp') and x.endswith(
           'telemetry_Crosperf'),
