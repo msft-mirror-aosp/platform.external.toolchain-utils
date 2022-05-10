@@ -83,13 +83,13 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, version stri
 	cfg := config{}
 	switch configName {
 	case "cros.hardened":
-		cfg = *crosHardenedConfig
+		cfg = crosHardenedConfig
 	case "cros.nonhardened":
-		cfg = *crosNonHardenedConfig
+		cfg = crosNonHardenedConfig
 	case "cros.host":
-		cfg = *crosHostConfig
+		cfg = crosHostConfig
 	case "android":
-		cfg = *androidConfig
+		cfg = androidConfig
 	default:
 		return nil, newErrorwithSourceLocf("unknown config name: %s", configName)
 	}
@@ -105,7 +105,7 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, version stri
 
 // Full hardening.
 // Temporarily disable function splitting because of chromium:434751.
-var crosHardenedConfig = &config{
+var crosHardenedConfig = config{
 	clangRootRelPath: "../..",
 	gccRootRelPath:   "../../../../..",
 	// Pass "-fcommon" till the packages are fixed to work with new clang/gcc
@@ -163,7 +163,7 @@ var crosHardenedConfig = &config{
 }
 
 // Flags to be added to non-hardened toolchain.
-var crosNonHardenedConfig = &config{
+var crosNonHardenedConfig = config{
 	clangRootRelPath: "../..",
 	gccRootRelPath:   "../../../../..",
 	commonFlags:      []string{},
@@ -206,7 +206,7 @@ var crosNonHardenedConfig = &config{
 }
 
 // Flags to be added to host toolchain.
-var crosHostConfig = &config{
+var crosHostConfig = config{
 	isHostWrapper:    true,
 	clangRootRelPath: "../..",
 	gccRootRelPath:   "../..",
@@ -255,7 +255,7 @@ var crosHostConfig = &config{
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
 }
 
-var androidConfig = &config{
+var androidConfig = config{
 	isHostWrapper:     false,
 	isAndroidWrapper:  true,
 	gccRootRelPath:    "./",
