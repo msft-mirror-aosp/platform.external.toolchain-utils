@@ -103,6 +103,26 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, version stri
 	return &cfg, nil
 }
 
+func crosCommonClangFlags() []string {
+	// Temporarily disable tautological-*-compare chromium:778316.
+	// Temporarily add no-unknown-warning-option to deal with old clang versions.
+	// Temporarily disable Wdeprecated-declarations. b/193860318
+	// b/230345382: Temporarily disable Wimplicit-function-declaration.
+	return []string{
+		"-Qunused-arguments",
+		"-Werror=poison-system-directories",
+		"-Wno-compound-token-split-by-macro",
+		"-Wno-deprecated-declarations",
+		"-Wno-error=implicit-function-declaration",
+		"-Wno-final-dtor-non-final-class",
+		"-Wno-tautological-constant-compare",
+		"-Wno-tautological-unsigned-enum-zero-compare",
+		"-Wno-unknown-warning-option",
+		"-fdebug-default-version=5",
+		"-fexperimental-new-pass-manager",
+	}
+}
+
 func crosCommonClangPostFlags() []string {
 	// Temporarily disable Wdeprecated-copy. b/191479033
 	return []string{
@@ -133,34 +153,17 @@ var crosHardenedConfig = config{
 		"-Wno-unused-local-typedefs",
 		"-Wno-maybe-uninitialized",
 	},
-	// Temporarily disable tautological-*-compare chromium:778316.
-	// Temporarily add no-unknown-warning-option to deal with old clang versions.
 	// Temporarily disable Wsection since kernel gets a bunch of these. chromium:778867
 	// Disable "-faddrsig" since it produces object files that strip doesn't understand, chromium:915742.
 	// crbug.com/1103065: -grecord-gcc-switches pollutes the Goma cache;
 	//   removed that flag for now.
-	// Temporarily disable Wdeprecated-declarations. b/193860318
-	// b/230345382: Temporarily disable Wimplicit-function-declaration.
-
-	clangFlags: []string{
-		"-Qunused-arguments",
-		"-Werror=poison-system-directories",
-		"-Wno-compound-token-split-by-macro",
-		"-Wno-deprecated-declarations",
-		"-Wno-error=implicit-function-declaration",
-		"-Wno-final-dtor-non-final-class",
-		"-Wno-tautological-constant-compare",
-		"-Wno-tautological-unsigned-enum-zero-compare",
-		"-Wno-unknown-warning-option",
-		"-fdebug-default-version=5",
-		"-fexperimental-new-pass-manager",
-
+	clangFlags: append(
+		crosCommonClangFlags(),
 		"--unwindlib=libunwind",
 		"-Wno-section",
 		"-fno-addrsig",
 		"-fuse-ld=lld",
-	},
-
+	),
 	clangPostFlags:    crosCommonClangPostFlags(),
 	newWarningsDir:    "/tmp/fatal_clang_warnings",
 	triciumNitsDir:    "/tmp/linting_output/clang-tidy",
@@ -178,27 +181,11 @@ var crosNonHardenedConfig = config{
 		"-Wno-deprecated-declarations",
 		"-Wtrampolines",
 	},
-	// Temporarily disable tautological-*-compare chromium:778316.
-	// Temporarily add no-unknown-warning-option to deal with old clang versions.
 	// Temporarily disable Wsection since kernel gets a bunch of these. chromium:778867
-	// Temporarily disable Wdeprecated-declarations. b/193860318
-	// b/230345382: Temporarily disable Wimplicit-function-declaration.
-	clangFlags: []string{
-		"-Qunused-arguments",
-		"-Werror=poison-system-directories",
-		"-Wno-compound-token-split-by-macro",
-		"-Wno-deprecated-declarations",
-		"-Wno-error=implicit-function-declaration",
-		"-Wno-final-dtor-non-final-class",
-		"-Wno-tautological-constant-compare",
-		"-Wno-tautological-unsigned-enum-zero-compare",
-		"-Wno-unknown-warning-option",
-		"-fdebug-default-version=5",
-		"-fexperimental-new-pass-manager",
-
+	clangFlags: append(
+		crosCommonClangFlags(),
 		"-Wno-section",
-	},
-
+	),
 	clangPostFlags:    crosCommonClangPostFlags(),
 	newWarningsDir:    "/tmp/fatal_clang_warnings",
 	triciumNitsDir:    "/tmp/linting_output/clang-tidy",
@@ -220,30 +207,14 @@ var crosHostConfig = config{
 		"-Wno-unused-local-typedefs",
 		"-Wno-deprecated-declarations",
 	},
-	// Temporarily disable tautological-*-compare chromium:778316.
-	// Temporarily add no-unknown-warning-option to deal with old clang versions.
 	// crbug.com/1103065: -grecord-gcc-switches pollutes the Goma cache;
 	//   removed that flag for now.
-	// Temporarily disable Wdeprecated-declarations. b/193860318
-	// b/230345382: Temporarily disable Wimplicit-function-declaration.
-	clangFlags: []string{
-		"-Qunused-arguments",
-		"-Werror=poison-system-directories",
-		"-Wno-compound-token-split-by-macro",
-		"-Wno-deprecated-declarations",
-		"-Wno-error=implicit-function-declaration",
-		"-Wno-final-dtor-non-final-class",
-		"-Wno-tautological-constant-compare",
-		"-Wno-tautological-unsigned-enum-zero-compare",
-		"-Wno-unknown-warning-option",
-		"-fdebug-default-version=5",
-		"-fexperimental-new-pass-manager",
-
+	clangFlags: append(
+		crosCommonClangFlags(),
 		"-Wno-unused-local-typedefs",
 		"-fno-addrsig",
 		"-fuse-ld=lld",
-	},
-
+	),
 	// Temporarily disable Wdeprecated-copy. b/191479033
 	clangPostFlags:    crosCommonClangPostFlags(),
 	newWarningsDir:    "/tmp/fatal_clang_warnings",
