@@ -103,6 +103,16 @@ func getConfig(configName string, useCCache bool, useLlvmNext bool, version stri
 	return &cfg, nil
 }
 
+func crosCommonClangPostFlags() []string {
+	// Temporarily disable Wdeprecated-copy. b/191479033
+	return []string{
+		"-Wno-compound-token-split-by-space",
+		"-Wno-deprecated-copy",
+		"-Wno-implicit-int-float-conversion",
+		"-Wno-string-concatenation",
+	}
+}
+
 // Full hardening.
 // Temporarily disable function splitting because of chromium:434751.
 var crosHardenedConfig = config{
@@ -150,13 +160,7 @@ var crosHardenedConfig = config{
 		"-Wno-error=implicit-function-declaration",
 	},
 
-	// Temporarily disable Wdeprecated-copy. b/191479033
-	clangPostFlags: []string{
-		"-Wno-implicit-int-float-conversion",
-		"-Wno-compound-token-split-by-space",
-		"-Wno-string-concatenation",
-		"-Wno-deprecated-copy",
-	},
+	clangPostFlags:    crosCommonClangPostFlags(),
 	newWarningsDir:    "/tmp/fatal_clang_warnings",
 	triciumNitsDir:    "/tmp/linting_output/clang-tidy",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
@@ -193,13 +197,7 @@ var crosNonHardenedConfig = config{
 		"-Wno-error=implicit-function-declaration",
 	},
 
-	// Temporarily disable Wdeprecated-copy. b/191479033
-	clangPostFlags: []string{
-		"-Wno-implicit-int-float-conversion",
-		"-Wno-compound-token-split-by-space",
-		"-Wno-string-concatenation",
-		"-Wno-deprecated-copy",
-	},
+	clangPostFlags:    crosCommonClangPostFlags(),
 	newWarningsDir:    "/tmp/fatal_clang_warnings",
 	triciumNitsDir:    "/tmp/linting_output/clang-tidy",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
@@ -244,12 +242,7 @@ var crosHostConfig = config{
 	},
 
 	// Temporarily disable Wdeprecated-copy. b/191479033
-	clangPostFlags: []string{
-		"-Wno-implicit-int-float-conversion",
-		"-Wno-compound-token-split-by-space",
-		"-Wno-string-concatenation",
-		"-Wno-deprecated-copy",
-	},
+	clangPostFlags:    crosCommonClangPostFlags(),
 	newWarningsDir:    "/tmp/fatal_clang_warnings",
 	triciumNitsDir:    "/tmp/linting_output/clang-tidy",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",

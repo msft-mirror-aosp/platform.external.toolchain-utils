@@ -31,10 +31,10 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -75,10 +75,10 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         },
         "stdout": "somemessage",
@@ -119,10 +119,10 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -163,10 +163,10 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -216,10 +216,10 @@
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -272,10 +272,10 @@
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -328,10 +328,10 @@
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         },
         "stdout": "somemessage",
@@ -372,10 +372,10 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -413,10 +413,10 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -454,10 +454,10 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -495,10 +495,10 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -539,10 +539,10 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         }
       }

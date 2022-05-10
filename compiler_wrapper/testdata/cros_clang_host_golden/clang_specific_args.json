@@ -49,10 +49,10 @@
             "-Woverride-init",
             "-Wunsafe-loop-optimizations",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -92,10 +92,10 @@
             "-fcommon",
             "-Wno-#warnings",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -135,10 +135,10 @@
             "-fcommon",
             "-Wno-error=uninitialized",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         }
       }
@@ -178,10 +178,10 @@
             "-fcommon",
             "-someflag",
             "main.cc",
-            "-Wno-implicit-int-float-conversion",
             "-Wno-compound-token-split-by-space",
-            "-Wno-string-concatenation",
-            "-Wno-deprecated-copy"
+            "-Wno-deprecated-copy",
+            "-Wno-implicit-int-float-conversion",
+            "-Wno-string-concatenation"
           ]
         }
       }
