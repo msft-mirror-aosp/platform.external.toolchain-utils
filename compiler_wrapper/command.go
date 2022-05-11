@@ -265,6 +265,21 @@ func (builder *commandBuilder) transformArgs(transform func(arg builderArg) stri
 	builder.args = newArgs
 }
 
+// Allows to filter arg pairs, useful for eg when having adjacent unsupported args
+// like "-Wl,-z -Wl,defs"
+func (builder *commandBuilder) filterArgPairs(keepPair func(arg1, arg2 builderArg) bool) {
+	newArgs := builder.args[:0]
+	for i := 0; i < len(builder.args); i++ {
+		if i == len(builder.args)-1 || keepPair(builder.args[i], builder.args[i+1]) {
+			newArgs = append(newArgs, builder.args[i])
+		} else {
+			// skip builder.args[i]) as well as next item
+			i++
+		}
+	}
+	builder.args = newArgs
+}
+
 func (builder *commandBuilder) updateEnv(updates ...string) {
 	builder.envUpdates = append(builder.envUpdates, updates...)
 }

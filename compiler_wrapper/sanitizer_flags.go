@@ -37,5 +37,9 @@ func processSanitizerFlags(builder *commandBuilder) {
 			}
 			return arg.value
 		})
+
+		builder.filterArgPairs(func(arg1, arg2 builderArg) bool {
+			return !(arg1.value == "-Wl,-z" && arg2.value == "-Wl,defs")
+		})
 	}
 }
