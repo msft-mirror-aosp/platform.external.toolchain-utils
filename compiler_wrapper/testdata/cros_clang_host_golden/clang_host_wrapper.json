@@ -19,6 +19,7 @@
             "-Wno-compound-token-split-by-macro",
             "-Wno-deprecated-declarations",
             "-Wno-error=implicit-function-declaration",
+            "-Wno-error=implicit-int",
             "-Wno-final-dtor-non-final-class",
             "-Wno-tautological-constant-compare",
             "-Wno-tautological-unsigned-enum-zero-compare",

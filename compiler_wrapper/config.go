@@ -108,12 +108,14 @@ func crosCommonClangFlags() []string {
 	// Temporarily add no-unknown-warning-option to deal with old clang versions.
 	// Temporarily disable Wdeprecated-declarations. b/193860318
 	// b/230345382: Temporarily disable Wimplicit-function-declaration.
+	// b/231987783: Temporarily disable Wimplicit-int.
 	return []string{
 		"-Qunused-arguments",
 		"-Werror=poison-system-directories",
 		"-Wno-compound-token-split-by-macro",
 		"-Wno-deprecated-declarations",
 		"-Wno-error=implicit-function-declaration",
+		"-Wno-error=implicit-int",
 		"-Wno-final-dtor-non-final-class",
 		"-Wno-tautological-constant-compare",
 		"-Wno-tautological-unsigned-enum-zero-compare",
