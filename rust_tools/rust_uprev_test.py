@@ -83,31 +83,108 @@ class FindEbuildPathTest(unittest.TestCase):
     """Tests for rust_uprev.find_ebuild_path()"""
 
     def test_exact_version(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            ebuild = Path(tmpdir, "test-1.3.4.ebuild")
+        with tempfile.TemporaryDirectory() as t:
+            tmpdir = Path(t)
+            ebuild = tmpdir / "test-1.3.4.ebuild"
             ebuild.touch()
-            Path(tmpdir, "test-1.2.3.ebuild").touch()
+            (tmpdir / "test-1.2.3.ebuild").touch()
             result = rust_uprev.find_ebuild_path(
                 tmpdir, "test", rust_uprev.RustVersion(1, 3, 4)
             )
             self.assertEqual(result, ebuild)
 
     def test_no_version(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            ebuild = Path(tmpdir, "test-1.2.3.ebuild")
+        with tempfile.TemporaryDirectory() as t:
+            tmpdir = Path(t)
+            ebuild = tmpdir / "test-1.2.3.ebuild"
             ebuild.touch()
             result = rust_uprev.find_ebuild_path(tmpdir, "test")
             self.assertEqual(result, ebuild)
 
     def test_patch_version(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            ebuild = Path(tmpdir, "test-1.3.4-r3.ebuild")
+        with tempfile.TemporaryDirectory() as t:
+            tmpdir = Path(t)
+            ebuild = tmpdir / "test-1.3.4-r3.ebuild"
             ebuild.touch()
-            Path(tmpdir, "test-1.2.3.ebuild").touch()
+            (tmpdir / "test-1.2.3.ebuild").touch()
             result = rust_uprev.find_ebuild_path(
                 tmpdir, "test", rust_uprev.RustVersion(1, 3, 4)
             )
             self.assertEqual(result, ebuild)
+
+    def test_multiple_versions(self):
+        with tempfile.TemporaryDirectory() as t:
+            tmpdir = Path(t)
+            (tmpdir / "test-1.3.4-r3.ebuild").touch()
+            (tmpdir / "test-1.3.5.ebuild").touch()
+            with self.assertRaises(AssertionError):
+                rust_uprev.find_ebuild_path(tmpdir, "test")
+
+    def test_selected_version(self):
+        with tempfile.TemporaryDirectory() as t:
+            tmpdir = Path(t)
+            ebuild = tmpdir / "test-1.3.4-r3.ebuild"
+            ebuild.touch()
+            (tmpdir / "test-1.3.5.ebuild").touch()
+            result = rust_uprev.find_ebuild_path(
+                tmpdir, "test", rust_uprev.RustVersion(1, 3, 4)
+            )
+            self.assertEqual(result, ebuild)
+
+    def test_symlink(self):
+        # Symlinks to ebuilds in the same directory are allowed, and the return
+        # value is the regular file.
+        with tempfile.TemporaryDirectory() as t:
+            tmpdir = Path(t)
+            ebuild = tmpdir / "test-1.3.4.ebuild"
+            ebuild.touch()
+            (tmpdir / "test-1.3.4-r1.ebuild").symlink_to("test-1.3.4.ebuild")
+            result = rust_uprev.find_ebuild_path(tmpdir, "test")
+            self.assertEqual(result, ebuild)
+
+
+class RemoveEbuildVersionTest(unittest.TestCase):
+    """Tests for rust_uprev.remove_ebuild_version()"""
+
+    @mock.patch.object(subprocess, "check_call")
+    def test_single(self, check_call):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ebuild_dir = Path(tmpdir, "test-ebuilds")
+            ebuild_dir.mkdir()
+            ebuild = Path(ebuild_dir, "test-3.1.4.ebuild")
+            ebuild.touch()
+            Path(ebuild_dir, "unrelated-1.0.0.ebuild").touch()
+            rust_uprev.remove_ebuild_version(
+                ebuild_dir, "test", rust_uprev.RustVersion(3, 1, 4)
+            )
+            check_call.assert_called_once_with(
+                ["git", "rm", "test-3.1.4.ebuild"], cwd=ebuild_dir
+            )
+
+    @mock.patch.object(subprocess, "check_call")
+    def test_symlink(self, check_call):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ebuild_dir = Path(tmpdir, "test-ebuilds")
+            ebuild_dir.mkdir()
+            ebuild = Path(ebuild_dir, "test-3.1.4.ebuild")
+            ebuild.touch()
+            symlink = Path(ebuild_dir, "test-3.1.4-r5.ebuild")
+            symlink.symlink_to(ebuild.name)
+            Path(ebuild_dir, "unrelated-1.0.0.ebuild").touch()
+            rust_uprev.remove_ebuild_version(
+                ebuild_dir, "test", rust_uprev.RustVersion(3, 1, 4)
+            )
+            check_call.assert_has_calls(
+                [
+                    mock.call(
+                        ["git", "rm", "test-3.1.4.ebuild"], cwd=ebuild_dir
+                    ),
+                    mock.call(
+                        ["git", "rm", "test-3.1.4-r5.ebuild"], cwd=ebuild_dir
+                    ),
+                ],
+                any_order=True,
+            )
 
 
 class RustVersionTest(unittest.TestCase):
@@ -504,17 +581,47 @@ class RustUprevOtherStagesTests(unittest.TestCase):
             ]
         )
 
-    @mock.patch.object(rust_uprev, "find_ebuild_path")
     @mock.patch.object(subprocess, "check_call")
-    def test_remove_virtual_rust(self, mock_call, mock_find_ebuild):
-        ebuild_path = Path(
-            f"/some/dir/virtual/rust/rust-{self.old_version}.ebuild"
-        )
-        mock_find_ebuild.return_value = Path(ebuild_path)
-        rust_uprev.remove_virtual_rust(self.old_version)
-        mock_call.assert_called_once_with(
-            ["git", "rm", str(ebuild_path.name)], cwd=ebuild_path.parent
-        )
+    def test_remove_virtual_rust(self, mock_call):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ebuild_path = Path(
+                tmpdir, f"virtual/rust/rust-{self.old_version}.ebuild"
+            )
+            os.makedirs(ebuild_path.parent)
+            ebuild_path.touch()
+            with mock.patch("rust_uprev.EBUILD_PREFIX", Path(tmpdir)):
+                rust_uprev.remove_virtual_rust(self.old_version)
+                mock_call.assert_called_once_with(
+                    ["git", "rm", str(ebuild_path.name)], cwd=ebuild_path.parent
+                )
+
+    @mock.patch.object(subprocess, "check_call")
+    def test_remove_virtual_rust_with_symlink(self, mock_call):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ebuild_path = Path(
+                tmpdir, f"virtual/rust/rust-{self.old_version}.ebuild"
+            )
+            symlink_path = Path(
+                tmpdir, f"virtual/rust/rust-{self.old_version}-r14.ebuild"
+            )
+            os.makedirs(ebuild_path.parent)
+            ebuild_path.touch()
+            symlink_path.symlink_to(ebuild_path.name)
+            with mock.patch("rust_uprev.EBUILD_PREFIX", Path(tmpdir)):
+                rust_uprev.remove_virtual_rust(self.old_version)
+                mock_call.assert_has_calls(
+                    [
+                        mock.call(
+                            ["git", "rm", ebuild_path.name],
+                            cwd=ebuild_path.parent,
+                        ),
+                        mock.call(
+                            ["git", "rm", symlink_path.name],
+                            cwd=ebuild_path.parent,
+                        ),
+                    ],
+                    any_order=True,
+                )
 
     @mock.patch.object(rust_uprev, "find_ebuild_path")
     @mock.patch.object(shutil, "copyfile")
@@ -543,10 +650,7 @@ class RustUprevOtherStagesTests(unittest.TestCase):
             f"rust-{self.new_version}.ebuild",
         ]
         actual = rust_uprev.find_oldest_rust_version_in_chroot()
-        expected = (
-            self.old_version,
-            os.path.join(rust_uprev.RUST_PATH, oldest_version_name),
-        )
+        expected = self.old_version
         self.assertEqual(expected, actual)
 
     @mock.patch.object(os, "listdir")

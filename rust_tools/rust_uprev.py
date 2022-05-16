@@ -126,18 +126,35 @@ def find_ebuild_path(
 ) -> Path:
     """Finds an ebuild in a directory.
 
-    Returns the path to the ebuild file. Asserts if there is not
-    exactly one match. The match is constrained by name and optionally
-    by version, but can match any patch level. E.g. "rust" version
-    1.3.4 can match rust-1.3.4.ebuild but also rust-1.3.4-r6.ebuild.
+    Returns the path to the ebuild file.  The match is constrained by
+    name and optionally by version, but can match any patch level.
+    E.g. "rust" version 1.3.4 can match rust-1.3.4.ebuild but also
+    rust-1.3.4-r6.ebuild.
+
+    The expectation is that there is only one matching ebuild, and
+    an assert is raised if this is not the case. However, symlinks to
+    ebuilds in the same directory are ignored, so having a
+    rust-x.y.z-rn.ebuild symlink to rust-x.y.z.ebuild is allowed.
     """
     if version:
         pattern = f"{name}-{version}*.ebuild"
     else:
         pattern = f"{name}-*.ebuild"
-    matches = list(Path(directory).glob(pattern))
-    assert len(matches) == 1, matches
-    return matches[0]
+    matches = set(directory.glob(pattern))
+    result = []
+    # Only count matches that are not links to other matches.
+    for m in matches:
+        try:
+            target = os.readlink(directory / m)
+        except OSError:
+            # Getting here means the match is not a symlink to one of
+            # the matching ebuilds, so add it to the result list.
+            result.append(m)
+            continue
+        if directory / target not in matches:
+            result.append(m)
+    assert len(result) == 1, result
+    return result[0]
 
 
 def get_rust_bootstrap_version():
@@ -317,7 +334,7 @@ def prepare_uprev(
 def copy_patches(
     directory: Path, template_version: RustVersion, new_version: RustVersion
 ) -> None:
-    patch_path = directory.joinpath("files")
+    patch_path = directory / "files"
     prefix = "%s-%s-" % (directory.name, template_version)
     new_prefix = "%s-%s-" % (directory.name, new_version)
     for f in os.listdir(patch_path):
@@ -670,11 +687,11 @@ def find_rust_versions_in_chroot() -> List[Tuple[RustVersion, str]]:
     ]
 
 
-def find_oldest_rust_version_in_chroot() -> Tuple[RustVersion, str]:
+def find_oldest_rust_version_in_chroot() -> RustVersion:
     rust_versions = find_rust_versions_in_chroot()
     if len(rust_versions) <= 1:
         raise RuntimeError("Expect to find more than one Rust versions")
-    return min(rust_versions)
+    return min(rust_versions)[0]
 
 
 def find_ebuild_for_rust_version(version: RustVersion) -> str:
@@ -691,6 +708,31 @@ def find_ebuild_for_rust_version(version: RustVersion) -> str:
     return rust_ebuilds[0]
 
 
+def remove_ebuild_version(path: os.PathLike, name: str, version: RustVersion):
+    """Remove the specified version of an ebuild.
+
+    Removes {path}/{name}-{version}.ebuild and {path}/{name}-{version}-*.ebuild
+    using git rm.
+
+    Args:
+      path: The directory in which the ebuild files are.
+      name: The name of the package (e.g. 'rust').
+      version: The version of the ebuild to remove.
+    """
+    path = Path(path)
+    pattern = f"{name}-{version}-*.ebuild"
+    matches = list(path.glob(pattern))
+    ebuild = path / f"{name}-{version}.ebuild"
+    if ebuild.exists():
+        matches.append(ebuild)
+    if not matches:
+        logging.warning(
+            "No ebuilds matching %s version %s in %r", name, version, str(path)
+        )
+    for m in matches:
+        remove_files(m.name, path)
+
+
 def remove_files(filename: str, path: str) -> None:
     subprocess.check_call(["git", "rm", filename], cwd=path)
 
@@ -698,10 +740,11 @@ def remove_files(filename: str, path: str) -> None:
 def remove_rust_bootstrap_version(
     version: RustVersion, run_step: Callable[[], T]
 ) -> None:
-    prefix = f"rust-bootstrap-{version}"
     run_step(
         "remove old bootstrap ebuild",
-        lambda: remove_files(f"{prefix}*.ebuild", rust_bootstrap_path()),
+        lambda: remove_ebuild_version(
+            rust_bootstrap_path(), "rust-bootstrap", version
+        ),
     )
     ebuild_file = find_ebuild_for_package("rust-bootstrap")
     run_step(
@@ -713,18 +756,15 @@ def remove_rust_bootstrap_version(
 def remove_rust_uprev(
     rust_version: Optional[RustVersion], run_step: Callable[[], T]
 ) -> None:
-    def find_desired_rust_version():
+    def find_desired_rust_version() -> RustVersion:
         if rust_version:
-            return rust_version, find_ebuild_for_rust_version(rust_version)
+            return rust_version
         return find_oldest_rust_version_in_chroot()
 
-    def find_desired_rust_version_from_json(
-        obj: Any,
-    ) -> Tuple[RustVersion, str]:
-        version, ebuild_path = obj
-        return RustVersion(*version), ebuild_path
+    def find_desired_rust_version_from_json(obj: Any) -> RustVersion:
+        return RustVersion(*obj)
 
-    delete_version, delete_ebuild = run_step(
+    delete_version = run_step(
         "find rust version to delete",
         find_desired_rust_version,
         result_from_json=find_desired_rust_version_from_json,
@@ -734,13 +774,15 @@ def remove_rust_uprev(
         lambda: remove_files(f"files/rust-{delete_version}-*.patch", RUST_PATH),
     )
     run_step(
-        "remove target ebuild", lambda: remove_files(delete_ebuild, RUST_PATH)
+        "remove target ebuild",
+        lambda: remove_ebuild_version(RUST_PATH, "rust", delete_version),
     )
     run_step(
         "remove host ebuild",
-        lambda: remove_files(
-            f"rust-host-{delete_version}.ebuild",
+        lambda: remove_ebuild_version(
             EBUILD_PREFIX.joinpath("dev-lang/rust-host"),
+            "rust-host",
+            delete_version,
         ),
     )
     target_file = find_ebuild_for_package("rust")
@@ -769,10 +811,9 @@ def remove_rust_uprev(
 
 
 def remove_virtual_rust(delete_version: RustVersion) -> None:
-    ebuild = find_ebuild_path(
+    remove_ebuild_version(
         EBUILD_PREFIX.joinpath("virtual/rust"), "rust", delete_version
     )
-    subprocess.check_call(["git", "rm", str(ebuild.name)], cwd=ebuild.parent)
 
 
 def rust_bootstrap_path() -> Path:
