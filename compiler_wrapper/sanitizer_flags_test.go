@@ -84,7 +84,7 @@ func TestKeepSanitizerFlagsIfNoSanitizeGiven(t *testing.T) {
 		}
 
 		cmd = ctx.must(callCompiler(ctx, ctx.cfg,
-			ctx.newCommand(gccX86_64, "-Wl,-z -Wl,defs", mainCc)))
+			ctx.newCommand(gccX86_64, "-Wl,-z", "-Wl,defs", mainCc)))
 		if err := verifyArgCount(cmd, 1, "-Wl,-z"); err != nil {
 			t.Error(err)
 		}
