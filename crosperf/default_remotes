@@ -4,4 +4,4 @@ coral         : chromeos6-row5-rack6-host1.cros     chromeos6-row5-rack6-host3.c
 elm           : chromeos6-row14-rack15-host21.cros
 kefka         : chromeos6-row6-rack22-host2.cros    chromeos6-row6-rack22-host3.cros   chromeos6-row11-rack22-host7.cros
 nautilus      : chromeos6-row5-rack10-host1.cros    chromeos6-row5-rack10-host3.cros
-snappy        : chromeos8-row12-rack17-host2
+snappy        : chromeos8-row12-rack17-host1        chromeos8-row12-rack17-host2

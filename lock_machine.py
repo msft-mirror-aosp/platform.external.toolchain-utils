@@ -15,11 +15,10 @@ import getpass
 import os
 import sys
 
-import file_lock_machine
-
 from cros_utils import command_executer
 from cros_utils import logger
 from cros_utils import machines
+import file_lock_machine
 
 
 class LockException(Exception):
@@ -407,8 +406,8 @@ class LockManager(object):
     if os.path.exists(self.CROSFLEET_CREDENTIAL):
       credential = '-service-account-json %s' % self.CROSFLEET_CREDENTIAL
     cmd = (('%s dut lease -minutes %s %s %s %s') %
-           (self.CROSFLEET_PATH, self.LEASE_MINS, credential, '-host'
-            if '.cros' in machine else '-board', machine.rstrip('.cros')))
+           (self.CROSFLEET_PATH, self.LEASE_MINS, credential, '-host',
+            machine.rstrip('.cros')))
     # Wait 8 minutes for server to start the lease task, if not started,
     # we will treat it as unavailable.
     check_interval_time = 480
