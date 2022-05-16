@@ -33,6 +33,7 @@ import os
 import pathlib
 from pathlib import Path
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -552,6 +553,20 @@ def update_virtual_rust(
     subprocess.check_call(["git", "add", new_name], cwd=virtual_rust_dir)
 
 
+def unmerge_package_if_installed(pkgatom: str) -> None:
+    """Unmerges a package if it is installed."""
+    shpkg = shlex.quote(pkgatom)
+    subprocess.check_call(
+        [
+            "sudo",
+            "bash",
+            "-c",
+            f"! emerge --pretend --quiet --unmerge {shpkg}"
+            f" || emerge --rage-clean {shpkg}",
+        ]
+    )
+
+
 def perform_step(
     state_file: pathlib.Path,
     tmp_state_file: pathlib.Path,
@@ -659,10 +674,7 @@ def create_rust_uprev(
         lambda: update_manifest(Path(target_file)),
     )
     if not skip_compile:
-        run_step(
-            "emerge rust",
-            lambda: subprocess.check_call(["sudo", "emerge", "dev-lang/rust"]),
-        )
+        run_step("build packages", lambda: rebuild_packages(rust_version))
     run_step(
         "insert host version into rust packages",
         lambda: update_rust_packages(
@@ -706,6 +718,41 @@ def find_ebuild_for_rust_version(version: RustVersion) -> str:
             f"{rust_ebuilds}"
         )
     return rust_ebuilds[0]
+
+
+def rebuild_packages(version: RustVersion):
+    """Rebuild packages modified by this script."""
+    # Remove all packages we modify to avoid depending on preinstalled
+    # versions. This ensures that the packages can really be built.
+    packages = [
+        "dev-lang/rust",
+        "dev-lang/rust-host",
+        "dev-lang/rust-bootstrap",
+    ]
+    for pkg in packages:
+        unmerge_package_if_installed(pkg)
+    # Mention only dev-lang/rust explicitly, so that others are pulled
+    # in as dependencies (letting us detect dependency errors).
+    # Packages we modify are listed in --usepkg-exclude to ensure they
+    # are built from source.
+    try:
+        subprocess.check_call(
+            [
+                "sudo",
+                "emerge",
+                "--quiet-build",
+                "--usepkg-exclude",
+                " ".join(packages),
+                f"=dev-lang/rust-{version}",
+            ]
+        )
+    except:
+        logging.warning(
+            "Failed to build dev-lang/rust or one of its dependencies."
+            " If necessary, you can restore rust and rust-host from"
+            " binary packages:\n  sudo emerge --getbinpkgonly dev-lang/rust"
+        )
+        raise
 
 
 def remove_ebuild_version(path: os.PathLike, name: str, version: RustVersion):
