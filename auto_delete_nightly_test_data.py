@@ -7,8 +7,6 @@
 
 """A crontab script to delete night test data."""
 
-from __future__ import print_function
-
 __author__ = 'shenhan@google.com (Han Shen)'
 
 import argparse
@@ -26,6 +24,7 @@ from typing import Callable
 from cros_utils import command_executer
 from cros_utils import constants
 from cros_utils import misc
+
 
 DIR_BY_WEEKDAY = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 NIGHTLY_TESTS_WORKSPACE = os.path.join(constants.CROSTC_WORKSPACE,
@@ -109,14 +108,24 @@ def ProcessArguments(argv):
 
 def RemoveAllSubdirsMatchingPredicate(
     base_dir: Path, days_to_preserve: int, dry_run: bool,
-    is_name_removal_worthy: Callable[[str], bool]) -> bool:
+    is_name_removal_worthy: Callable[[str], bool]) -> int:
   """Removes all subdirs of base_dir that match the given predicate."""
   secs_to_preserve = 60 * 60 * 24 * days_to_preserve
   now = time.time()
   remove_older_than_time = now - secs_to_preserve
 
+  try:
+    dir_entries = list(base_dir.iterdir())
+  except FileNotFoundError as e:
+    # We get this if the directory itself doesn't exist. Since we're cleaning
+    # tempdirs, that's as good as a success. Further, the prior approach here
+    # was using the `find` binary, which exits successfully if nothing is
+    # found.
+    print(f"Error enumerating {base_dir}'s contents; skipping removal: {e}")
+    return 0
+
   had_errors = False
-  for file in base_dir.iterdir():
+  for file in dir_entries:
     if not is_name_removal_worthy(file.name):
       continue
 
