@@ -7,6 +7,8 @@
 """Get an upstream patch to LLVM's PATCHES.json."""
 
 import argparse
+import dataclasses
+from datetime import datetime
 import json
 import logging
 import os
@@ -14,15 +16,13 @@ import shlex
 import subprocess
 import sys
 import typing as t
-from datetime import datetime
-
-import dataclasses
 
 import chroot
 import get_llvm_hash
 import git
 import git_llvm_rev
 import update_chromeos_llvm_hash
+
 
 __DOC_EPILOGUE = """
 Example Usage:
@@ -33,6 +33,10 @@ Example Usage:
 
 class CherrypickError(ValueError):
   """A ValueError that highlights the cherry-pick has been seen before"""
+
+
+class CherrypickVersionError(ValueError):
+  """A ValueError that highlights the cherry-pick is before the start_sha"""
 
 
 def add_patch(patches_json_path: str, patches_dir: str,
@@ -58,10 +62,9 @@ def add_patch(patches_json_path: str, patches_dir: str,
   Raises:
     CherrypickError: A ValueError that highlights the cherry-pick has been
     seen before.
+    CherrypickRangeError: A ValueError that's raised when the given patch
+    is from before the start_sha.
   """
-
-  with open(patches_json_path, encoding='utf-8') as f:
-    patches_json = json.load(f)
 
   is_cherrypick = isinstance(rev, git_llvm_rev.Rev)
   if is_cherrypick:
@@ -69,6 +72,17 @@ def add_patch(patches_json_path: str, patches_dir: str,
   else:
     file_name = f'{rev}.patch'
   rel_patch_path = os.path.join(relative_patches_dir, file_name)
+
+  # Check that we haven't grabbed a patch range that's nonsensical.
+  end_vers = rev.number if isinstance(rev, git_llvm_rev.Rev) else None
+  if end_vers is not None and end_vers <= start_version.number:
+    raise CherrypickVersionError(
+        f'`until` version {end_vers} is earlier or equal to'
+        f' `from` version {start_version.number} for patch'
+        f' {rel_patch_path}')
+
+  with open(patches_json_path, encoding='utf-8') as f:
+    patches_json = json.load(f)
 
   for p in patches_json:
     rel_path = p['rel_patch_path']
@@ -95,8 +109,6 @@ def add_patch(patches_json_path: str, patches_dir: str,
       ['git', 'log', '-n1', '--format=%s', sha],
       cwd=llvm_dir,
       encoding='utf-8')
-
-  end_vers = rev.number if isinstance(rev, git_llvm_rev.Rev) else None
   patch_props = {
       'rel_patch_path': rel_patch_path,
       'metadata': {
@@ -349,8 +361,8 @@ def _convert_patch(llvm_config: git_llvm_rev.LLVMConfig,
                      is_differential=is_differential)
 
 
-def _get_duplicate_shas(patches: t.List[ParsedPatch]
-                        ) -> t.List[t.Tuple[ParsedPatch, ParsedPatch]]:
+def _get_duplicate_shas(
+    patches: t.List[ParsedPatch]) -> t.List[t.Tuple[ParsedPatch, ParsedPatch]]:
   """Return a list of Patches which have duplicate SHA's"""
   return [(left, right) for i, left in enumerate(patches)
           for right in patches[i + 1:] if left.sha == right.sha]
@@ -426,7 +438,9 @@ def main():
       '--differential',
       action='append',
       default=[],
-      help='The LLVM differential revision to apply. Example: D1234')
+      help='The LLVM differential revision to apply. Example: D1234.'
+      ' Cannot be used for changes already merged upstream; use --sha'
+      ' instead for those.')
   parser.add_argument(
       '--platform',
       action='append',
