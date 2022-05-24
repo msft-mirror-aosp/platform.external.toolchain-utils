@@ -1,25 +1,41 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """A manager for patches."""
 
-from __future__ import print_function
-
 import argparse
+import dataclasses
 import json
 import os
 import subprocess
 import sys
-from collections import namedtuple
+from typing import Any, Dict, IO, List, Optional, Tuple
 
-import get_llvm_hash
 from failure_modes import FailureModes
+import get_llvm_hash
 from subprocess_helpers import check_call
 from subprocess_helpers import check_output
 
+@dataclasses.dataclass
+class PatchInfo:
+  """Holds info for a round of patch applications."""
+  # str types are legacy. Patch lists should
+  # probably be PatchEntries,
+  applied_patches: List[str]
+  failed_patches: List[str]
+  # Can be deleted once legacy code is removed.
+  non_applicable_patches: List[str]
+  # Can be deleted once legacy code is removed.
+  disabled_patches: List[str]
+  # Can be deleted once legacy code is removed.
+  removed_patches: List[str]
+  # Can be deleted once legacy code is removed.
+  modified_metadata: Optional[str]
+
+  def _asdict(self):
+    return dataclasses.asdict(self)
 
 def is_directory(dir_path):
   """Validates that the argument passed into 'argparse' is a directory."""
@@ -136,8 +152,8 @@ def GetCommandLineArgs():
   # applicable patches.
   parser.add_argument(
       '--failure_mode',
-      default=FailureModes.FAIL.value,
-      type=is_valid_failure_mode,
+      default=FailureModes.FAIL,
+      type=FailureModes,
       help='the mode of the patch manager when handling failed patches '
       '(default: %(default)s)')
 
@@ -657,12 +673,6 @@ def HandlePatches(svn_version,
     # NOTE: Exit code 0 is similar to `git bisect good`.
     sys.exit(0)
 
-  # Create a namedtuple of the patch results.
-  PatchInfo = namedtuple('PatchInfo', [
-      'applied_patches', 'failed_patches', 'non_applicable_patches',
-      'disabled_patches', 'removed_patches', 'modified_metadata'
-  ])
-
   patch_info = PatchInfo(applied_patches=applied_patches,
                          failed_patches=failed_patches,
                          non_applicable_patches=non_applicable_patches,
@@ -695,7 +705,7 @@ def PrintPatchResults(patch_info):
   """Prints the results of handling the patches of a package.
 
   Args:
-    patch_info: A namedtuple that has information on the patches.
+    patch_info: A dataclass that has information on the patches.
   """
 
   if patch_info.applied_patches:
@@ -728,8 +738,7 @@ def main():
   """Applies patches to the source tree and takes action on a failed patch."""
 
   args_output = GetCommandLineArgs()
-
-  if args_output.failure_mode != FailureModes.INTERNAL_BISECTION.value:
+  if args_output.failure_mode != FailureModes.INTERNAL_BISECTION:
     # If the SVN version of HEAD is not the same as 'svn_version', then some
     # patches that fail to apply could successfully apply if HEAD's SVN version
     # was the same as 'svn_version'. In other words, HEAD's git hash should be
