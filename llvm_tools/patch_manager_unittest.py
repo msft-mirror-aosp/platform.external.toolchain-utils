@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Unit tests when handling patches."""
 
-from __future__ import print_function
-
 import json
 import os
+from pathlib import Path
 import subprocess
+import tempfile
+from typing import Callable
 import unittest
 import unittest.mock as mock
 
-import patch_manager
 from failure_modes import FailureModes
+import patch_manager
 from test_helpers import CallCountsToMockFunctions
 from test_helpers import CreateTemporaryJsonFile
 from test_helpers import WritePrettyJsonFile
@@ -188,6 +188,83 @@ class PatchManagerTest(unittest.TestCase):
 
     self.assertEqual(patch_manager.GetPatchMetadata(test_patch),
                      expected_patch_metadata)
+
+  def testRemoveOldPatches(self):
+    """Can remove old patches from PATCHES.json."""
+    one_patch_dict = {
+        'metadata': {
+            'title': '[some label] hello world',
+        },
+        'platforms': [
+            'chromiumos',
+        ],
+        'rel_patch_path': 'x/y/z',
+        'version_range': {
+            'from': 4,
+            'until': 5,
+        }
+    }
+    patches = [
+        one_patch_dict,
+        {
+            **one_patch_dict, 'version_range': {
+                'until': None
+            }
+        },
+        {
+            **one_patch_dict, 'version_range': {
+                'from': 100
+            }
+        },
+        {
+            **one_patch_dict, 'version_range': {
+                'until': 8
+            }
+        },
+    ]
+    cases = [
+        (0, lambda x: self.assertEqual(len(x), 4)),
+        (6, lambda x: self.assertEqual(len(x), 3)),
+        (8, lambda x: self.assertEqual(len(x), 2)),
+        (1000, lambda x: self.assertEqual(len(x), 2)),
+    ]
+
+    def _t(dirname: str, svn_version: int, assertion_f: Callable):
+      json_filepath = Path(dirname) / 'PATCHES.json'
+      with json_filepath.open('w', encoding='utf-8') as f:
+        json.dump(patches, f)
+      patch_manager.RemoveOldPatches(svn_version, Path(), json_filepath)
+      with json_filepath.open('r', encoding='utf-8') as f:
+        result = json.load(f)
+      assertion_f(result)
+
+    with tempfile.TemporaryDirectory(
+        prefix='patch_manager_unittest') as dirname:
+      for r, a in cases:
+        _t(dirname, r, a)
+
+  def testIsGitDirty(self):
+    """Test if a git directory has uncommitted changes."""
+    with tempfile.TemporaryDirectory(
+        prefix='patch_manager_unittest') as dirname:
+      dirpath = Path(dirname)
+
+      def _run_h(cmd):
+        subprocess.run(cmd, cwd=dirpath, stdout=subprocess.DEVNULL, check=True)
+
+      _run_h(['git', 'init'])
+      self.assertFalse(patch_manager.IsGitDirty(dirpath))
+      test_file = dirpath / 'test_file'
+      test_file.touch()
+      self.assertTrue(patch_manager.IsGitDirty(dirpath))
+      _run_h(['git', 'add', '.'])
+      _run_h(['git', 'commit', '-m', 'test'])
+      self.assertFalse(patch_manager.IsGitDirty(dirpath))
+      test_file.touch()
+      self.assertFalse(patch_manager.IsGitDirty(dirpath))
+      with test_file.open('w', encoding='utf-8'):
+        test_file.write_text('abc')
+      self.assertTrue(patch_manager.IsGitDirty(dirpath))
 
   def testFailedToApplyPatchWhenInvalidSrcPathIsPassedIn(self):
     src_path = '/abs/path/to/src'
