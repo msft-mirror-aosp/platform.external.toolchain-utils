@@ -5,13 +5,14 @@
 """Provides patch utilities for PATCHES.json file handling."""
 
 import collections
+import contextlib
 import dataclasses
 import io
 from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 
 CHECKED_FILE_RE = re.compile(r'^checking file\s+(.*)$')
@@ -19,6 +20,38 @@ HUNK_FAILED_RE = re.compile(r'^Hunk #(\d+) FAILED at.*')
 HUNK_HEADER_RE = re.compile(r'^@@\s+-(\d+),(\d+)\s+\+(\d+),(\d+)\s+@@')
 HUNK_END_RE = re.compile(r'^--\s*$')
 PATCH_SUBFILE_HEADER_RE = re.compile(r'^\+\+\+ [ab]/(.*)$')
+
+
+@contextlib.contextmanager
+def atomic_write(fp: Union[Path, str], mode='w', *args, **kwargs):
+  """Write to a filepath atomically.
+
+  This works by a temp file swap, created with a .tmp suffix in
+  the same directory briefly until being renamed to the desired
+  filepath.
+
+  Args:
+    fp: Filepath to open.
+    mode: File mode; can be 'w', 'wb'. Default 'w'.
+    *args: Passed to Path.open as nargs.
+    **kwargs: Passed to Path.open as kwargs.
+
+  Raises:
+    ValueError when the mode is invalid.
+  """
+  if isinstance(fp, str):
+    fp = Path(fp)
+  if mode not in ('w', 'wb'):
+    raise ValueError(f'mode {mode} not accepted')
+  temp_fp = fp.with_suffix(fp.suffix + '.tmp')
+  try:
+    with temp_fp.open(mode, *args, **kwargs) as f:
+      yield f
+  except:
+    if temp_fp.is_file():
+      temp_fp.unlink()
+    raise
+  temp_fp.rename(fp)
 
 
 @dataclasses.dataclass
