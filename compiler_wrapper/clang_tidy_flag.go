@@ -114,7 +114,7 @@ func runClangTidyForTricium(env env, clangCmd *command, cSrcFile, fixesDir strin
 	fixesFilePath := f.Name() + ".yaml"
 	fixesMetadataPath := f.Name() + ".json"
 
-	extraTidyFlags = append(extraTidyFlags, "--export-fixes="+fixesFilePath)
+	extraTidyFlags = append(extraTidyFlags, "--export-fixes="+fixesFilePath, "--header-filter=.*")
 	clangTidyCmd, err := calcClangTidyInvocation(env, clangCmd, cSrcFile, extraTidyFlags...)
 	if err != nil {
 		return fmt.Errorf("calculating tidy invocation: %v", err)
