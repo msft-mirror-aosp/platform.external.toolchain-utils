@@ -7,12 +7,12 @@
 import collections
 import contextlib
 import dataclasses
-import io
+import json
 from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, IO, List, Optional, Union
 
 
 CHECKED_FILE_RE = re.compile(r'^checking file\s+(.*)$')
@@ -67,7 +67,7 @@ class Hunk:
   patch_hunk_lineno_end: Optional[int]
 
 
-def parse_patch_stream(patch_stream: io.TextIOBase) -> Dict[str, List[Hunk]]:
+def parse_patch_stream(patch_stream: IO[str]) -> Dict[str, List[Hunk]]:
   """Parse a patch file-like into Hunks.
 
   Args:
@@ -144,10 +144,11 @@ class PatchResult:
 class PatchEntry:
   """Object mapping of an entry of PATCHES.json."""
   workdir: Path
+  """Storage location for the patches."""
   metadata: Dict[str, Any]
   platforms: List[str]
   rel_patch_path: str
-  version_range: Dict[str, int]
+  version_range: Dict[str, Optional[int]]
   _parsed_hunks = None
 
   def __post_init__(self):
@@ -245,3 +246,13 @@ class PatchEntry:
 
   def title(self) -> str:
     return self.metadata['title']
+
+
+def json_to_patch_entries(workdir: Path, json_fd: IO[str]) -> List[PatchEntry]:
+  """Convert a json IO object to List[PatchEntry].
+
+  Examples:
+    >>> f = open('PATCHES.json')
+    >>> patch_entries = json_to_patch_entries(Path(), f)
+  """
+  return [PatchEntry.from_dict(workdir, d) for d in json.load(json_fd)]
