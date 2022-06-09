@@ -34,7 +34,7 @@ type config struct {
 	triciumNitsDir string
 	// Directory to store crash artifacts in.
 	crashArtifactsDir string
-	// Version. Only used for printing via -print-cmd.
+	// Version. Only exposed via -print-config.
 	version string
 }
 
