@@ -481,12 +481,15 @@ def RemoveOldPatches(svn_version: int, llvm_src_dir: Path,
     patches_list = json.load(f)
   patch_entries = (patch_utils.PatchEntry.from_dict(llvm_src_dir, elem)
                    for elem in patches_list)
-  filtered_entries = [
-      entry.to_dict() for entry in patch_entries
-      if not entry.is_old(svn_version)
-  ]
+  oldness = [(entry, entry.is_old(svn_version)) for entry in patch_entries]
+  filtered_entries = [entry.to_dict() for entry, old in oldness if not old]
   with patch_utils.atomic_write(patches_json_fp, encoding='utf-8') as f:
     _WriteJsonChanges(filtered_entries, f)
+  removed_entries = [entry for entry, old in oldness if old]
+  plural_patches = 'patch' if len(removed_entries) == 1 else 'patches'
+  print(f'Removed {len(removed_entries)} old {plural_patches}:')
+  for r in removed_entries:
+    print(f'- {r.rel_patch_path}: {r.title()}')
 
 
 def UpdateVersionRanges(svn_version: int, llvm_src_dir: Path,
