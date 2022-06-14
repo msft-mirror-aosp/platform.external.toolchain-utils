@@ -5,6 +5,7 @@
 
 """Unit tests for the patch_utils.py file."""
 
+import io
 from pathlib import Path
 import tempfile
 import unittest
@@ -84,6 +85,33 @@ class TestPatchUtils(unittest.TestCase):
     self.assertTrue(e5.can_patch_version(5))
     self.assertFalse(e5.can_patch_version(9))
 
+  def test_can_parse_from_json(self):
+    """Test that patches be loaded from json."""
+    json = """
+[
+  {
+    "metadata": {},
+    "platforms": [],
+    "rel_patch_path": "cherry/nowhere.patch",
+    "version_range": {}
+  },
+  {
+    "metadata": {},
+    "rel_patch_path": "cherry/somewhere.patch",
+    "version_range": {}
+  },
+  {
+    "rel_patch_path": "where.patch",
+    "version_range": null
+  },
+  {
+    "rel_patch_path": "cherry/anywhere.patch"
+  }
+]
+    """
+    result = pu.json_to_patch_entries(Path(), io.StringIO(json))
+    self.assertEqual(len(result), 4)
+
   def test_parsed_hunks(self):
     """Test that we can parse patch file hunks."""
     m = mock.mock_open(read_data=_EXAMPLE_PATCH)
@@ -137,7 +165,7 @@ Hunk #1 SUCCEEDED at 96 with fuzz 1.
         'metadata': {
             'title': 'hello world',
         },
-        'platforms': [],
+        'platforms': ['a'],
         'rel_patch_path': 'x/y/z',
         'version_range': {
             'from': 4,

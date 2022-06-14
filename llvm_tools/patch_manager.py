@@ -512,6 +512,8 @@ def UpdateVersionRanges(svn_version: int, llvm_src_dir: Path,
   for pe in patch_entries:
     test_result = pe.test_apply(llvm_src_dir)
     if not test_result:
+      if pe.version_range is None:
+        pe.version_range = {}
       pe.version_range['until'] = svn_version
       modified_entries.append(pe)
     else:

@@ -145,10 +145,10 @@ class PatchEntry:
   """Object mapping of an entry of PATCHES.json."""
   workdir: Path
   """Storage location for the patches."""
-  metadata: Dict[str, Any]
-  platforms: List[str]
+  metadata: Optional[Dict[str, Any]]
+  platforms: Optional[List[str]]
   rel_patch_path: str
-  version_range: Dict[str, Optional[int]]
+  version_range: Optional[Dict[str, Optional[int]]]
   _parsed_hunks = None
 
   def __post_init__(self):
@@ -159,33 +159,29 @@ class PatchEntry:
   def from_dict(cls, workdir: Path, data: Dict[str, Any]):
     """Instatiate from a dictionary.
 
-    Dictionary must have at least the following keys:
+    Dictionary must have at least the following key:
 
       {
-        'metadata': {
-          'title': '<title>'
-        },
-        'platforms': ['<platform>'],
         'rel_patch_path': '<relative patch path to workdir>',
-        'version_range': {
-          'from': <int>,
-          'until': <int>,
-        },
       }
 
     Returns:
       A new PatchEntry.
     """
-    return cls(workdir, data['metadata'], data['platforms'],
-               data['rel_patch_path'], data['version_range'])
+    return cls(workdir, data.get('metadata'), data.get('platforms'),
+               data['rel_patch_path'], data.get('version_range'))
 
   def to_dict(self) -> Dict[str, Any]:
-    return {
+    out = {
         'metadata': self.metadata,
-        'platforms': self.platforms,
         'rel_patch_path': self.rel_patch_path,
         'version_range': self.version_range,
     }
+    if self.platforms:
+      # To match patch_sync, only serialized when
+      # non-empty and non-null.
+      out['platforms'] = sorted(self.platforms)
+    return out
 
   def parsed_hunks(self) -> Dict[str, List[Hunk]]:
     # Minor caching here because IO is slow.
@@ -200,6 +196,8 @@ class PatchEntry:
   def can_patch_version(self, svn_version: int) -> bool:
     """Is this patch meant to apply to `svn_version`?"""
     # Sometimes the key is there, but it's set to None.
+    if not self.version_range:
+      return True
     from_v = self.version_range.get('from') or 0
     until_v = self.version_range.get('until')
     if until_v is None:
@@ -208,6 +206,8 @@ class PatchEntry:
 
   def is_old(self, svn_version: int) -> bool:
     """Is this patch old compared to `svn_version`?"""
+    if not self.version_range:
+      return False
     until_v = self.version_range.get('until')
     # Sometimes the key is there, but it's set to None.
     if until_v is None:
@@ -245,7 +245,9 @@ class PatchEntry:
     return self.apply(root_dir, ['--dry-run'])
 
   def title(self) -> str:
-    return self.metadata['title']
+    if not self.metadata:
+      return ''
+    return self.metadata.get('title', '')
 
 
 def json_to_patch_entries(workdir: Path, json_fd: IO[str]) -> List[PatchEntry]:
