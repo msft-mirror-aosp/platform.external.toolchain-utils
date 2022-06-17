@@ -13,11 +13,13 @@ from __future__ import print_function
 import argparse
 import os
 
-from failure_modes import FailureModes
 import chroot
+from failure_modes import FailureModes
 import get_llvm_hash
 import patch_manager
+import patch_utils
 import subprocess_helpers
+
 
 # If set to `True`, then the contents of `stdout` after executing a command will
 # be displayed to the terminal.
@@ -228,7 +230,7 @@ def UpdatePackagesPatchMetadataFile(chroot_path, svn_version,
         # Make sure the patch metadata path is valid.
         _CheckPatchMetadataPath(patch_metadata_path)
 
-        patch_manager.CleanSrcTree(src_path)
+        patch_utils.clean_src_tree(src_path)
 
         # Get the patch results for the current package.
         patches_info = patch_manager.HandlePatches(svn_version,

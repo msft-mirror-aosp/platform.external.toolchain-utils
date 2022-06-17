@@ -6,41 +6,19 @@
 """A manager for patches."""
 
 import argparse
-import contextlib
-import dataclasses
 import enum
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
-from typing import Any, Dict, IO, Iterable, List, Optional, Tuple
+from typing import Any, Dict, IO, Iterable, List, Tuple
 
 from failure_modes import FailureModes
 import get_llvm_hash
 import patch_utils
 from subprocess_helpers import check_call
 from subprocess_helpers import check_output
-
-
-@dataclasses.dataclass(frozen=True)
-class PatchInfo:
-  """Holds info for a round of patch applications."""
-  # str types are legacy. Patch lists should
-  # probably be PatchEntries,
-  applied_patches: List[patch_utils.PatchEntry]
-  failed_patches: List[patch_utils.PatchEntry]
-  # Can be deleted once legacy code is removed.
-  non_applicable_patches: List[str]
-  # Can be deleted once legacy code is removed.
-  disabled_patches: List[str]
-  # Can be deleted once legacy code is removed.
-  removed_patches: List[str]
-  # Can be deleted once legacy code is removed.
-  modified_metadata: Optional[str]
-
-  def _asdict(self):
-    return dataclasses.asdict(self)
 
 
 class GitBisectionCode(enum.IntEnum):
@@ -382,18 +360,6 @@ def PerformBisection(src_path, good_commit, bad_commit, svn_version,
   return version
 
 
-def CleanSrcTree(src_path):
-  """Cleans the source tree of the changes made in 'src_path'."""
-
-  reset_src_tree_cmd = ['git', '-C', src_path, 'reset', 'HEAD', '--hard']
-
-  check_output(reset_src_tree_cmd)
-
-  clean_src_tree_cmd = ['git', '-C', src_path, 'clean', '-fd']
-
-  check_output(clean_src_tree_cmd)
-
-
 def SaveSrcTreeState(src_path):
   """Stashes the changes made so far to the source tree."""
 
@@ -412,81 +378,6 @@ def RestoreSrcTreeState(src_path, bad_commit_hash):
   get_changes_cmd = ['git', '-C', src_path, 'stash', 'pop']
 
   check_output(get_changes_cmd)
-
-
-def ApplyAllFromJson(svn_version: int,
-                     llvm_src_dir: Path,
-                     patches_json_fp: Path,
-                     continue_on_failure: bool = False) -> PatchInfo:
-  """Attempt to apply some patches to a given LLVM source tree.
-
-  This relies on a PATCHES.json file to be the primary way
-  the patches are applied.
-
-  Args:
-    svn_version: LLVM Subversion revision to patch.
-    llvm_src_dir: llvm-project root-level source directory to patch.
-    patches_json_fp: Filepath to the PATCHES.json file.
-    continue_on_failure: Skip any patches which failed to apply,
-      rather than throw an Exception.
-  """
-  with patches_json_fp.open(encoding='utf-8') as f:
-    patches = patch_utils.json_to_patch_entries(patches_json_fp.parent, f)
-  skipped_patches = []
-  failed_patches = []
-  applied_patches = []
-  for pe in patches:
-    applied, failed_hunks = ApplySinglePatchEntry(svn_version, llvm_src_dir,
-                                                  pe)
-    if applied:
-      applied_patches.append(pe)
-      continue
-    if failed_hunks is not None:
-      if continue_on_failure:
-        failed_patches.append(pe)
-        continue
-      else:
-        _PrintFailedPatch(pe, failed_hunks)
-        raise RuntimeError('failed to apply patch '
-                           f'{pe.patch_path()}: {pe.title()}')
-    # Didn't apply, didn't fail, it was skipped.
-    skipped_patches.append(pe)
-  return PatchInfo(
-      non_applicable_patches=skipped_patches,
-      applied_patches=applied_patches,
-      failed_patches=failed_patches,
-      disabled_patches=[],
-      removed_patches=[],
-      modified_metadata=None,
-  )
-
-
-def ApplySinglePatchEntry(
-    svn_version: int,
-    llvm_src_dir: Path,
-    pe: patch_utils.PatchEntry,
-    ignore_version_range: bool = False
-) -> Tuple[bool, Optional[Dict[str, List[patch_utils.Hunk]]]]:
-  """Try to apply a single PatchEntry object.
-
-  Returns:
-    Tuple where the first element indicates whether the patch applied,
-    and the second element is a faild hunk mapping from file name to lists of
-    hunks (if the patch didn't apply).
-  """
-  # Don't apply patches outside of the version range.
-  if not ignore_version_range and not pe.can_patch_version(svn_version):
-    return False, None
-  # Test first to avoid making changes.
-  test_application = pe.test_apply(llvm_src_dir)
-  if not test_application:
-    return False, test_application.failed_hunks
-  # Now actually make changes.
-  application_result = pe.apply(llvm_src_dir)
-  if not application_result:
-    # This should be very rare/impossible.
-    return False, application_result.failed_hunks
-  return True, None
 
 
 def RemoveOldPatches(svn_version: int, llvm_src_dir: Path,
@@ -536,7 +427,7 @@ def UpdateVersionRanges(svn_version: int, llvm_src_dir: Path,
         f,
     )
   modified_entries: List[patch_utils.PatchEntry] = []
-  with _GitCleanContext(llvm_src_dir):
+  with patch_utils.git_clean_context(llvm_src_dir):
     for pe in patch_entries:
       test_result = pe.test_apply(llvm_src_dir)
       if not test_result:
@@ -554,18 +445,6 @@ def UpdateVersionRanges(svn_version: int, llvm_src_dir: Path,
   for entry in modified_entries:
     print(f'Stopped applying {entry.rel_patch_path} ({entry.title()}) '
           f'for r{svn_version}')
-
-
-def IsGitDirty(git_root_dir: Path) -> bool:
-  """Return whether the given git directory has uncommitted changes."""
-  if not git_root_dir.is_dir():
-    raise ValueError(f'git_root_dir {git_root_dir} is not a directory')
-  cmd = ['git', 'ls-files', '-m', '--other', '--exclude-standard']
-  return (subprocess.run(cmd,
-                         stdout=subprocess.PIPE,
-                         check=True,
-                         cwd=git_root_dir,
-                         encoding='utf-8').stdout != '')
 
 
 def CheckPatchApplies(svn_version: int, llvm_src_dir: Path,
@@ -590,7 +469,7 @@ def CheckPatchApplies(svn_version: int, llvm_src_dir: Path,
         patches_json_fp.parent,
         f,
     )
-  with _GitCleanContext(llvm_src_dir):
+  with patch_utils.git_clean_context(llvm_src_dir):
     success, _, failed_patches = ApplyPatchAndPrior(
         svn_version,
         llvm_src_dir,
@@ -635,7 +514,7 @@ def ApplyPatchAndPrior(
   # as patches can stack.
   for pe in patch_entries:
     is_patch_of_interest = pe.rel_patch_path == rel_patch_path
-    applied, failed_hunks = ApplySinglePatchEntry(
+    applied, failed_hunks = patch_utils.apply_single_patch_entry(
         svn_version, src_dir, pe, ignore_version_range=is_patch_of_interest)
     meant_to_apply = bool(failed_hunks) or is_patch_of_interest
     if is_patch_of_interest:
@@ -656,36 +535,6 @@ def ApplyPatchAndPrior(
         return False, applied_patches, failed_patches
   raise ValueError(f'Did not find patch {rel_patch_path}. '
                    'Does it exist?')
-
-
-def _PrintFailedPatch(pe: patch_utils.PatchEntry,
-                      failed_hunks: Dict[str, List[patch_utils.Hunk]]):
-  """Print information about a single failing PatchEntry.
-
-  Args:
-    pe: A PatchEntry that failed.
-    failed_hunks: Hunks for pe which failed as dict:
-      filepath: [Hunk...]
-  """
-  print(f'Could not apply {pe.rel_patch_path}: {pe.title()}', file=sys.stderr)
-  for fp, hunks in failed_hunks.items():
-    print(f'{fp}:', file=sys.stderr)
-    for h in hunks:
-      print(
-          f'- {pe.rel_patch_path} '
-          f'l:{h.patch_hunk_lineno_begin}...{h.patch_hunk_lineno_end}',
-          file=sys.stderr)
-
-
-@contextlib.contextmanager
-def _GitCleanContext(git_root_dir: Path):
-  """Cleans up a git directory when the context exits."""
-  if IsGitDirty(git_root_dir):
-    raise RuntimeError('Cannot setup clean context; git_root_dir is dirty')
-  try:
-    yield
-  finally:
-    CleanSrcTree(git_root_dir)
 
 
 def HandlePatches(svn_version,
@@ -871,7 +720,7 @@ def HandlePatches(svn_version,
 
             # Need a clean source tree for `git bisect run` to avoid unnecessary
             # fails for patches.
-            CleanSrcTree(src_path)
+            patch_utils.clean_src_tree(src_path)
 
             print('\nStarting to bisect patch %s for SVN version %d:\n' %
                   (os.path.basename(
@@ -904,7 +753,7 @@ def HandlePatches(svn_version,
             UpdatePatchMetadataFile(patch_metadata_file, patch_file_contents)
 
             # Clear the changes made to the source tree by `git bisect run`.
-            CleanSrcTree(src_path)
+            patch_utils.clean_src_tree(src_path)
 
             if not continue_bisection:
               # Exiting program early because 'continue_bisection' is not set.
@@ -952,7 +801,7 @@ def HandlePatches(svn_version,
             # Changes to the source tree need to be removed, otherwise some
             # patches may fail when applying the patch to the source tree when
             # `git bisect run` calls this script again.
-            CleanSrcTree(src_path)
+            patch_utils.clean_src_tree(src_path)
 
             # The last patch in the interval [0, N] failed to apply, so let
             # `git bisect run` know that the last patch (the patch that failed
@@ -974,17 +823,18 @@ def HandlePatches(svn_version,
     # complain that the changes would need to be 'stashed' or 'removed' in
     # order to reset HEAD back to the bad commit's git hash, so HEAD will remain
     # on the last git hash used by `git bisect run`.
-    CleanSrcTree(src_path)
+    patch_utils.clean_src_tree(src_path)
 
     # NOTE: Exit code 0 is similar to `git bisect good`.
     sys.exit(0)
 
-  patch_info = PatchInfo(applied_patches=applied_patches,
-                         failed_patches=failed_patches,
-                         non_applicable_patches=non_applicable_patches,
-                         disabled_patches=disabled_patches,
-                         removed_patches=removed_patches,
-                         modified_metadata=modified_metadata)
+  patch_info = patch_utils.PatchInfo(
+      applied_patches=applied_patches,
+      failed_patches=failed_patches,
+      non_applicable_patches=non_applicable_patches,
+      disabled_patches=disabled_patches,
+      removed_patches=removed_patches,
+      modified_metadata=modified_metadata)
 
   # Determine post actions after iterating through the patches.
   if mode == FailureModes.REMOVE_PATCHES:
@@ -1007,7 +857,7 @@ def HandlePatches(svn_version,
   return patch_info
 
 
-def PrintPatchResults(patch_info: PatchInfo):
+def PrintPatchResults(patch_info: patch_utils.PatchInfo):
   """Prints the results of handling the patches of a package.
 
   Args:
@@ -1049,7 +899,7 @@ def main():
   args_output = GetCommandLineArgs()
 
   def _apply_all(args):
-    result = ApplyAllFromJson(
+    result = patch_utils.apply_all_from_json(
         svn_version=args.svn_version,
         llvm_src_dir=Path(args.src_path),
         patches_json_fp=Path(args.patch_metadata_file),

@@ -7,6 +7,7 @@
 
 import io
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 import unittest.mock as mock
@@ -158,6 +159,29 @@ Hunk #1 SUCCEEDED at 96 with fuzz 1.
     self.assertEqual(result['a/b/c.cpp'], [12, 42])
     self.assertEqual(result['x/y/z.h'], [4])
     self.assertNotIn('works.cpp', result)
+
+  def test_is_git_dirty(self):
+    """Test if a git directory has uncommitted changes."""
+    with tempfile.TemporaryDirectory(
+        prefix='patch_utils_unittest') as dirname:
+      dirpath = Path(dirname)
+
+      def _run_h(cmd):
+        subprocess.run(cmd, cwd=dirpath, stdout=subprocess.DEVNULL, check=True)
+
+      _run_h(['git', 'init'])
+      self.assertFalse(pu.is_git_dirty(dirpath))
+      test_file = dirpath / 'test_file'
+      test_file.touch()
+      self.assertTrue(pu.is_git_dirty(dirpath))
+      _run_h(['git', 'add', '.'])
+      _run_h(['git', 'commit', '-m', 'test'])
+      self.assertFalse(pu.is_git_dirty(dirpath))
+      test_file.touch()
+      self.assertFalse(pu.is_git_dirty(dirpath))
+      with test_file.open('w', encoding='utf-8'):
+        test_file.write_text('abc')
+      self.assertTrue(pu.is_git_dirty(dirpath))
 
   @staticmethod
   def _default_json_dict():

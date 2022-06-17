@@ -12,6 +12,7 @@ from datetime import datetime
 import json
 import logging
 import os
+from pathlib import Path
 import shlex
 import subprocess
 import sys
@@ -21,6 +22,7 @@ import chroot
 import get_llvm_hash
 import git
 import git_llvm_rev
+import patch_utils
 import update_chromeos_llvm_hash
 
 
@@ -37,6 +39,36 @@ class CherrypickError(ValueError):
 
 class CherrypickVersionError(ValueError):
   """A ValueError that highlights the cherry-pick is before the start_sha"""
+
+
+class PatchApplicationError(ValueError):
+  """A ValueError indicating that a test patch application was unsuccessful"""
+
+
+def validate_patch_application(llvm_dir: Path, svn_version: int,
+                               patches_json_fp: Path, patch_props):
+
+  start_sha = get_llvm_hash.GetGitHashFrom(llvm_dir, svn_version)
+  subprocess.run(['git', '-C', llvm_dir, 'checkout', start_sha], check=True)
+
+  predecessor_apply_results = patch_utils.apply_all_from_json(
+      svn_version, llvm_dir, patches_json_fp, continue_on_failure=True)
+
+  if predecessor_apply_results.failed_patches:
+    logging.error('Failed to apply patches from PATCHES.json:')
+    for p in predecessor_apply_results.failed_patches:
+      logging.error(f'Patch title: {p.title()}')
+    raise PatchApplicationError('Failed to apply patch from PATCHES.json')
+
+  patch_entry = patch_utils.PatchEntry.from_dict(patches_json_fp.parent,
+                                                 patch_props)
+  test_apply_result = patch_entry.test_apply(Path(llvm_dir))
+
+  if not test_apply_result:
+    logging.error('Could not apply requested patch')
+    logging.error(test_apply_result.failure_info())
+    raise PatchApplicationError(
+        f'Failed to apply patch: {patch_props["metadata"]["title"]}')
 
 
 def add_patch(patches_json_path: str, patches_dir: str,
@@ -121,6 +153,11 @@ def add_patch(patches_json_path: str, patches_dir: str,
           'until': end_vers,
       },
   }
+
+  with patch_utils.git_clean_context(Path(llvm_dir)):
+    validate_patch_application(Path(llvm_dir), start_version.number,
+                               Path(patches_json_path), patch_props)
+
   patches_json.append(patch_props)
 
   temp_file = patches_json_path + '.tmp'

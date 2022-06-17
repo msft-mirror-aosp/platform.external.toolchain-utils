@@ -9,6 +9,7 @@
 """Unit tests when creating the arguments for the patch manager."""
 
 from __future__ import print_function
+
 from collections import namedtuple
 import os
 import unittest
@@ -18,6 +19,7 @@ from failure_modes import FailureModes
 import get_llvm_hash
 import llvm_patch_management
 import patch_manager
+import patch_utils
 import subprocess_helpers
 
 
@@ -217,7 +219,7 @@ class LlvmPatchManagementTest(unittest.TestCase):
 
   # Simulate `CleanSrcTree()` when successfully removed changes from the
   # worktree.
-  @mock.patch.object(patch_manager, 'CleanSrcTree')
+  @mock.patch.object(patch_utils, 'clean_src_tree')
   # Simulate `GetGitHashFrom()` when successfully retrieved the git hash
   # of the version passed in.
   @mock.patch.object(get_llvm_hash,

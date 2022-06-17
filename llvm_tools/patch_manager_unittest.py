@@ -245,31 +245,8 @@ class PatchManagerTest(unittest.TestCase):
       for r, a in cases:
         _t(dirname, r, a)
 
-  def testIsGitDirty(self):
-    """Test if a git directory has uncommitted changes."""
-    with tempfile.TemporaryDirectory(
-        prefix='patch_manager_unittest') as dirname:
-      dirpath = Path(dirname)
-
-      def _run_h(cmd):
-        subprocess.run(cmd, cwd=dirpath, stdout=subprocess.DEVNULL, check=True)
-
-      _run_h(['git', 'init'])
-      self.assertFalse(patch_manager.IsGitDirty(dirpath))
-      test_file = dirpath / 'test_file'
-      test_file.touch()
-      self.assertTrue(patch_manager.IsGitDirty(dirpath))
-      _run_h(['git', 'add', '.'])
-      _run_h(['git', 'commit', '-m', 'test'])
-      self.assertFalse(patch_manager.IsGitDirty(dirpath))
-      test_file.touch()
-      self.assertFalse(patch_manager.IsGitDirty(dirpath))
-      with test_file.open('w', encoding='utf-8'):
-        test_file.write_text('abc')
-      self.assertTrue(patch_manager.IsGitDirty(dirpath))
-
   @mock.patch('builtins.print')
-  @mock.patch.object(patch_manager, '_GitCleanContext')
+  @mock.patch.object(patch_utils, 'git_clean_context')
   def testCheckPatchApplies(self, _, mock_git_clean_context):
     """Tests whether we can apply a single patch for a given svn_version."""
     mock_git_clean_context.return_value = mock.MagicMock()
@@ -334,8 +311,8 @@ class PatchManagerTest(unittest.TestCase):
       def _harness2(version: int, application_func: Callable,
                     expected: patch_manager.GitBisectionCode):
         with mock.patch.object(
-            patch_manager,
-            'ApplySinglePatchEntry',
+            patch_utils,
+            'apply_single_patch_entry',
             application_func,
         ):
           result = patch_manager.CheckPatchApplies(
