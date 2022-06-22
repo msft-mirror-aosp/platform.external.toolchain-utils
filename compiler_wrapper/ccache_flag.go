@@ -4,6 +4,11 @@
 
 package main
 
+func isInConfigureStage(env env) bool {
+	val, present := env.getenv("EBUILD_PHASE")
+	return present && val == "configure"
+}
+
 func processCCacheFlag(builder *commandBuilder) {
 	// We should be able to share the objects across compilers as
 	// the pre-processed output will differ.  This allows boards
@@ -22,7 +27,7 @@ func processCCacheFlag(builder *commandBuilder) {
 	// Disable ccache during portage's src_configure phase. Using ccache here is generally a
 	// waste of time, since these files are very small. Experimentally, this speeds up
 	// configuring by ~13%.
-	if val, present := builder.env.getenv("EBUILD_PHASE"); present && val == "configure" {
+	if isInConfigureStage(builder.env) {
 		useCCache = false
 	}
 

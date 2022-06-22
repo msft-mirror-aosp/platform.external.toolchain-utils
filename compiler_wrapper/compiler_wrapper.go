@@ -201,6 +201,12 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		}
 	}
 
+	// If builds matching some heuristic should crash, crash them. Since this is purely a
+	// debugging tool, don't offer any nice features with it (e.g., rusage, ...).
+	if shouldUseCrashBuildsHeuristic && mainBuilder.target.compilerType == clangType {
+		return buildWithAutocrash(env, cfg, compilerCmd)
+	}
+
 	bisectStage := getBisectStage(env)
 
 	if rusageEnabled {
