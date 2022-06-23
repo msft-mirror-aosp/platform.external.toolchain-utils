@@ -170,6 +170,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-static-libgcc",
             "--prefix=../../bin/x86_64-cros-linux-gnu-",
+            "-nopie",
             "main.cc",
             "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-Wno-compound-token-split-by-space",
