@@ -1,3 +1,7 @@
+// Copyright 2022 The ChromiumOS Authors.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{copy, File};
 use std::io::{BufRead, BufReader, Read, Write};
