@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 /// JSON serde struct.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PatchDictSchema {
     pub metadata: Option<BTreeMap<String, serde_json::Value>>,
     #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
@@ -21,7 +21,7 @@ pub struct PatchDictSchema {
     pub version_range: Option<VersionRange>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct VersionRange {
     pub from: Option<u64>,
     pub until: Option<u64>,
@@ -120,6 +120,61 @@ impl PatchCollection {
             |p| self.hash_from_rel_patch(p),
             |p| other.hash_from_rel_patch(p),
         )
+    }
+
+    /// Vec of every PatchDictSchema with differing
+    /// version ranges but the same rel_patch_paths.
+    fn version_range_diffs(&self, other: &Self) -> Vec<(String, Option<VersionRange>)> {
+        let other_map: BTreeMap<_, _> = other
+            .patches
+            .iter()
+            .map(|p| (p.rel_patch_path.clone(), p))
+            .collect();
+        self.patches
+            .iter()
+            .filter_map(|ours| match other_map.get(&ours.rel_patch_path) {
+                Some(theirs) => {
+                    if ours.get_from_version() != theirs.get_from_version()
+                        || ours.get_until_version() != theirs.get_until_version()
+                    {
+                        Some((ours.rel_patch_path.clone(), ours.version_range))
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Given a vector of tuples with (rel_patch_path, Option<VersionRange>), replace
+    /// all version ranges in this collection with a matching one in the new_versions parameter.
+    pub fn update_version_ranges(&self, new_versions: &[(String, Option<VersionRange>)]) -> Self {
+        // new_versions should be really tiny (len() <= 2 for the most part), so
+        // the overhead of O(1) lookups is not worth it.
+        let get_updated_version = |rel_patch_path: &str| -> Option<Option<VersionRange>> {
+            // The first Option indicates whether we are updating it at all.
+            // The second Option indicates we can update it with None.
+            new_versions
+                .iter()
+                .find(|i| i.0 == rel_patch_path)
+                .map(|x| x.1)
+        };
+        let cloned_patches = self
+            .patches
+            .iter()
+            .map(|p| match get_updated_version(&p.rel_patch_path) {
+                Some(version_range) => PatchDictSchema {
+                    version_range,
+                    ..p.clone()
+                },
+                _ => p.clone(),
+            })
+            .collect();
+        Self {
+            workdir: self.workdir.clone(),
+            patches: cloned_patches,
+        }
     }
 
     fn union_helper(
@@ -255,25 +310,38 @@ impl std::fmt::Display for PatchCollection {
     }
 }
 
+/// Represents information which changed between now and an old version of a PATCHES.json file.
+pub struct PatchTemporalDiff {
+    pub cur_collection: PatchCollection,
+    pub new_patches: PatchCollection,
+    // Store version_updates as a vec, not a map, as it's likely to be very small (<=2),
+    // and the overhead of using a O(1) look up structure isn't worth it.
+    pub version_updates: Vec<(String, Option<VersionRange>)>,
+}
+
 /// Generate a PatchCollection incorporating only the diff between current patches and old patch
 /// contents.
 pub fn new_patches(
     patches_path: &Path,
     old_patch_contents: &str,
     platform: &str,
-) -> Result<(PatchCollection, PatchCollection)> {
+) -> Result<PatchTemporalDiff> {
+    // Set up the current patch collection.
     let cur_collection = PatchCollection::parse_from_file(patches_path)
         .with_context(|| format!("parsing {} PATCHES.json", platform))?;
     let cur_collection = filter_patches_by_platform(&cur_collection, platform);
     let cur_collection = cur_collection.filter_patches(|p| cur_collection.patch_exists(p));
-    let new_patches: PatchCollection = {
-        let old_collection = PatchCollection::parse_from_str(
-            patches_path.parent().unwrap().to_path_buf(),
-            old_patch_contents,
-        )?;
-        let old_collection = old_collection.filter_patches(|p| old_collection.patch_exists(p));
-        cur_collection.subtract(&old_collection)?
-    };
+
+    // Set up the old patch collection.
+    let old_collection = PatchCollection::parse_from_str(
+        patches_path.parent().unwrap().to_path_buf(),
+        old_patch_contents,
+    )?;
+    let old_collection = old_collection.filter_patches(|p| old_collection.patch_exists(p));
+
+    // Set up the differential values
+    let version_updates = cur_collection.version_range_diffs(&old_collection);
+    let new_patches: PatchCollection = cur_collection.subtract(&old_collection)?;
     let new_patches = new_patches.map_patches(|p| {
         let mut platforms = BTreeSet::new();
         platforms.extend(["android".to_string(), "chromiumos".to_string()]);
@@ -282,7 +350,11 @@ pub fn new_patches(
             ..p.to_owned()
         }
     });
-    Ok((cur_collection, new_patches))
+    Ok(PatchTemporalDiff {
+        cur_collection,
+        new_patches,
+        version_updates,
+    })
 }
 
 /// Create a new collection with only the patches that apply to the
@@ -445,5 +517,75 @@ mod test {
             .expect("could not create union");
         assert_eq!(union.patches.len(), 1);
         assert_eq!(union.patches[0].platforms.len(), 0);
+    }
+
+    #[test]
+    fn test_version_differentials() {
+        let fixture = version_range_fixture();
+        let diff = fixture[0].version_range_diffs(&fixture[1]);
+        assert_eq!(diff.len(), 1);
+        assert_eq!(
+            &diff,
+            &[(
+                "a".to_string(),
+                Some(VersionRange {
+                    from: Some(0),
+                    until: Some(1)
+                })
+            )]
+        );
+        let diff = fixture[1].version_range_diffs(&fixture[2]);
+        assert_eq!(diff.len(), 0);
+    }
+
+    #[test]
+    fn test_version_updates() {
+        let fixture = version_range_fixture();
+        let collection = fixture[0].update_version_ranges(&[("a".into(), None)]);
+        assert_eq!(collection.patches[0].version_range, None);
+        assert_eq!(collection.patches[1], fixture[1].patches[1]);
+        let new_version_range = Some(VersionRange {
+            from: Some(42),
+            until: Some(43),
+        });
+        let collection = fixture[0].update_version_ranges(&[("a".into(), new_version_range)]);
+        assert_eq!(collection.patches[0].version_range, new_version_range);
+        assert_eq!(collection.patches[1], fixture[1].patches[1]);
+    }
+
+    fn version_range_fixture() -> Vec<PatchCollection> {
+        let patch1 = PatchDictSchema {
+            rel_patch_path: "a".into(),
+            metadata: None,
+            platforms: Default::default(),
+            version_range: Some(VersionRange {
+                from: Some(0),
+                until: Some(1),
+            }),
+        };
+        let patch1_updated = PatchDictSchema {
+            version_range: Some(VersionRange {
+                from: Some(0),
+                until: Some(3),
+            }),
+            ..patch1.clone()
+        };
+        let patch2 = PatchDictSchema {
+            rel_patch_path: "b".into(),
+            ..patch1.clone()
+        };
+        let collection1 = PatchCollection {
+            workdir: PathBuf::new(),
+            patches: vec![patch1, patch2.clone()],
+        };
+        let collection2 = PatchCollection {
+            workdir: PathBuf::new(),
+            patches: vec![patch1_updated, patch2.clone()],
+        };
+        let collection3 = PatchCollection {
+            workdir: PathBuf::new(),
+            patches: vec![patch2],
+        };
+        vec![collection1, collection2, collection3]
     }
 }
