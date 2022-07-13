@@ -232,10 +232,18 @@ class PatchEntry:
     if not extra_args:
       extra_args = []
     # Cmd to apply a patch in the src unpack path.
+    abs_patch_path = self.patch_path().absolute()
+    if not abs_patch_path.is_file():
+      raise RuntimeError(f'Cannot apply: patch {abs_patch_path} is not a file')
     cmd = [
-        'patch', '-d',
-        root_dir.absolute(), '-f', '-p1', '--no-backup-if-mismatch', '-i',
-        self.patch_path().absolute()
+        'patch',
+        '-d',
+        root_dir.absolute(),
+        '-f',
+        '-p1',
+        '--no-backup-if-mismatch',
+        '-i',
+        abs_patch_path,
     ] + extra_args
     try:
       subprocess.run(cmd, encoding='utf-8', check=True, stdout=subprocess.PIPE)

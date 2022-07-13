@@ -10,7 +10,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
-import unittest.mock as mock
+from unittest import mock
 
 import patch_utils as pu
 
@@ -55,6 +55,14 @@ class TestPatchUtils(unittest.TestCase):
     }
     e = pu.PatchEntry.from_dict(TestPatchUtils._mock_dir(), d)
     self.assertEqual(d, e.to_dict())
+
+  def test_patch_path(self):
+    """Test that we can get the full path from a PatchEntry."""
+    d = TestPatchUtils._default_json_dict()
+    with mock.patch.object(Path, 'is_dir', return_value=True):
+      entry = pu.PatchEntry.from_dict(Path('/home/dir'), d)
+      self.assertEqual(entry.patch_path(),
+                       Path('/home/dir') / d['rel_patch_path'])
 
   def test_can_patch_version(self):
     """Test that patch application based on version is correct."""
@@ -134,13 +142,22 @@ class TestPatchUtils(unittest.TestCase):
     self.assertEqual(len(hunk_list1), 1)
     self.assertEqual(len(hunk_list2), 2)
 
+  def test_apply_when_patch_nonexistent(self):
+    """Test that we error out when we try to apply a non-existent patch."""
+    src_dir = TestPatchUtils._mock_dir('somewhere/llvm-project')
+    patch_dir = TestPatchUtils._mock_dir()
+    e = pu.PatchEntry.from_dict(patch_dir, TestPatchUtils._default_json_dict())
+    with mock.patch('subprocess.run', mock.MagicMock()):
+      self.assertRaises(RuntimeError, lambda: e.apply(src_dir))
+
   def test_apply_success(self):
     """Test that we can call apply."""
     src_dir = TestPatchUtils._mock_dir('somewhere/llvm-project')
     patch_dir = TestPatchUtils._mock_dir()
     e = pu.PatchEntry.from_dict(patch_dir, TestPatchUtils._default_json_dict())
-    with mock.patch('subprocess.run', mock.MagicMock()):
-      result = e.apply(src_dir)
+    with mock.patch('pathlib.Path.is_file', return_value=True):
+      with mock.patch('subprocess.run', mock.MagicMock()):
+        result = e.apply(src_dir)
     self.assertTrue(result.succeeded)
 
   def test_parse_failed_patch_output(self):
@@ -162,12 +179,15 @@ Hunk #1 SUCCEEDED at 96 with fuzz 1.
 
   def test_is_git_dirty(self):
     """Test if a git directory has uncommitted changes."""
-    with tempfile.TemporaryDirectory(
-        prefix='patch_utils_unittest') as dirname:
+    with tempfile.TemporaryDirectory(prefix='patch_utils_unittest') as dirname:
       dirpath = Path(dirname)
 
       def _run_h(cmd):
-        subprocess.run(cmd, cwd=dirpath, stdout=subprocess.DEVNULL, check=True)
+        subprocess.run(cmd,
+                       cwd=dirpath,
+                       stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL,
+                       check=True)
 
       _run_h(['git', 'init'])
       self.assertFalse(pu.is_git_dirty(dirpath))
