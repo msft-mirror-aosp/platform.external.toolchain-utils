@@ -16,14 +16,18 @@ import argparse
 import datetime
 import enum
 import os
+from pathlib import Path
 import re
 import subprocess
+from typing import Dict, List
 
 import chroot
 import failure_modes
 import get_llvm_hash
 import git
-import llvm_patch_management
+import patch_utils
+import subprocess_helpers
+
 
 DEFAULT_PACKAGES = [
     'dev-util/lldb-server',
@@ -48,7 +52,7 @@ class LLVMVariant(enum.Enum):
 verbose = False
 
 
-def defaultCrosRoot():
+def defaultCrosRoot() -> Path:
   """Get default location of chroot_path.
 
   The logic assumes that the cros_root is ~/chromiumos, unless llvm_tools is
@@ -59,8 +63,8 @@ def defaultCrosRoot():
   """
   llvm_tools_path = os.path.realpath(os.path.dirname(__file__))
   if llvm_tools_path.endswith('src/third_party/toolchain-utils/llvm_tools'):
-    return os.path.join(llvm_tools_path, '../../../../')
-  return '~/chromiumos'
+    return Path(llvm_tools_path).parent.parent.parent.parent
+  return Path.home() / 'chromiumos'
 
 
 def GetCommandLineArgs():
@@ -79,6 +83,7 @@ def GetCommandLineArgs():
 
   # Add argument for a specific chroot path.
   parser.add_argument('--chroot_path',
+                      type=Path,
                       default=defaultCrosRoot(),
                       help='the path to the chroot (default: %(default)s)')
 
@@ -461,9 +466,9 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
   return commit_messages
 
 
-def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
-                   patch_metadata_file, mode, git_hash_source,
-                   extra_commit_msg):
+def UpdatePackages(packages, llvm_variant, git_hash, svn_version,
+                   chroot_path: Path, patch_metadata_file, mode,
+                   git_hash_source, extra_commit_msg):
   """Updates an LLVM hash and uprevs the ebuild of the packages.
 
   A temporary repo is created for the changes. The changes are
@@ -488,9 +493,6 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
     A nametuple that has two (key, value) pairs, where the first pair is the
     Gerrit commit URL and the second pair is the change list number.
   """
-
-  # Determines whether to print the result of each executed command.
-  llvm_patch_management.verbose = verbose
 
   # Construct a dictionary where the key is the absolute path of the symlink to
   # the package and the value is the absolute path to the ebuild of the package.
@@ -546,8 +548,8 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version, chroot_path,
     EnsurePackageMaskContains(chroot_path, git_hash)
 
     # Handle the patches for each package.
-    package_info_dict = llvm_patch_management.UpdatePackagesPatchMetadataFile(
-        chroot_path, svn_version, patch_metadata_file, packages, mode)
+    package_info_dict = UpdatePackagesPatchMetadataFile(
+        chroot_path, svn_version, packages, mode)
 
     # Update the commit message if changes were made to a package's patches.
     commit_messages = StagePackagesPatchResultsForCommit(
@@ -587,6 +589,62 @@ def EnsurePackageMaskContains(chroot_path, git_hash):
       mask_file.write(expected_line)
 
   subprocess.check_output(['git', '-C', overlay_dir, 'add', mask_path])
+
+
+def UpdatePackagesPatchMetadataFile(
+    chroot_path: Path, svn_version: int, packages: List[str],
+    mode: failure_modes.FailureModes) -> Dict[str, patch_utils.PatchInfo]:
+  """Updates the packages metadata file.
+
+  Args:
+    chroot_path: The absolute path to the chroot.
+    svn_version: The version to use for patch management.
+    packages: All the packages to update their patch metadata file.
+    mode: The mode for the patch manager to use when an applicable patch
+    fails to apply.
+      Ex: 'FailureModes.FAIL'
+
+  Returns:
+    A dictionary where the key is the package name and the value is a dictionary
+    that has information on the patches.
+  """
+
+  # A dictionary where the key is the package name and the value is a dictionary
+  # that has information on the patches.
+  package_info = {}
+
+  llvm_hash = get_llvm_hash.LLVMHash()
+
+  with llvm_hash.CreateTempDirectory() as temp_dir:
+    with get_llvm_hash.CreateTempLLVMRepo(temp_dir) as src_path:
+      # Ensure that 'svn_version' exists in the chromiumum mirror of LLVM by
+      # finding its corresponding git hash.
+      git_hash = get_llvm_hash.GetGitHashFrom(src_path, svn_version)
+      move_head_cmd = ['git', '-C', src_path, 'checkout', git_hash, '-q']
+      subprocess.run(move_head_cmd, stdout=subprocess.DEVNULL, check=True)
+
+      for cur_package in packages:
+        # Get the absolute path to $FILESDIR of the package.
+        chroot_ebuild_str = subprocess_helpers.ChrootRunCommand(
+            chroot_path, ['equery', 'w', cur_package]).strip()
+        if not chroot_ebuild_str:
+          raise RuntimeError(f'could not find ebuild for {cur_package}')
+        chroot_ebuild_path = Path(
+            chroot.ConvertChrootPathsToAbsolutePaths(chroot_path,
+                                                     [chroot_ebuild_str])[0])
+        patches_json_fp = chroot_ebuild_path.parent / 'files' / 'PATCHES.json'
+        if not patches_json_fp.is_file():
+          raise RuntimeError(f'patches file {patches_json_fp} is not a file')
+
+        patches_info = patch_utils.apply_all_from_json(
+            svn_version=svn_version,
+            llvm_src_dir=Path(src_path),
+            patches_json_fp=patches_json_fp,
+            continue_on_failure=mode == failure_modes.FailureModes.CONTINUE,
+        )
+        package_info[cur_package] = patches_info._asdict()
+
+  return package_info
 
 
 def main():

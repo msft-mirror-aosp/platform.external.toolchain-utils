@@ -11,6 +11,7 @@ from __future__ import print_function
 import collections
 import datetime
 import os
+from pathlib import Path
 import subprocess
 import unittest
 import unittest.mock as mock
@@ -19,9 +20,9 @@ import chroot
 import failure_modes
 import get_llvm_hash
 import git
-import llvm_patch_management
 import test_helpers
 import update_chromeos_llvm_hash
+
 
 # These are unittests; protected access is OK to a point.
 # pylint: disable=protected-access
@@ -35,13 +36,13 @@ class UpdateLLVMHashTest(unittest.TestCase):
     llvm_tools_path = '/path/to/cros/src/third_party/toolchain-utils/llvm_tools'
     mock_llvm_tools.return_value = llvm_tools_path
     self.assertEqual(update_chromeos_llvm_hash.defaultCrosRoot(),
-                     '%s/../../../../' % llvm_tools_path)
+                     Path('/path/to/cros'))
 
   @mock.patch.object(os.path, 'realpath')
   def testDefaultCrosRootFromOutsideCrOSCheckout(self, mock_llvm_tools):
     mock_llvm_tools.return_value = '~/toolchain-utils/llvm_tools'
     self.assertEqual(update_chromeos_llvm_hash.defaultCrosRoot(),
-                     '~/chromiumos')
+                     Path.home() / 'chromiumos')
 
   # Simulate behavior of 'os.path.isfile()' when the ebuild path to a package
   # does not exist.
@@ -692,7 +693,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
   @mock.patch.object(update_chromeos_llvm_hash, 'UprevEbuildSymlink')
   @mock.patch.object(git, 'UploadChanges')
   @mock.patch.object(git, 'DeleteBranch')
-  @mock.patch.object(llvm_patch_management, 'UpdatePackagesPatchMetadataFile')
+  @mock.patch.object(update_chromeos_llvm_hash,
+                     'UpdatePackagesPatchMetadataFile')
   @mock.patch.object(update_chromeos_llvm_hash,
                      'StagePatchMetadataFileForCommit')
   def testSuccessfullyUpdatedPackages(
@@ -727,8 +729,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     # Test function to simulate 'UpdatePackagesPatchMetadataFile()' when the
     # patch results contains a disabled patch in 'disable_patches' mode.
-    def RetrievedPatchResults(chroot_path, svn_version, patch_metadata_file,
-                              packages, mode):
+    def RetrievedPatchResults(chroot_path, svn_version, packages, mode):
 
       self.assertEqual(chroot_path, '/some/path/to/chroot')
       self.assertEqual(svn_version, 1000)
