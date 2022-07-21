@@ -616,11 +616,11 @@ def UpdatePackagesPatchMetadataFile(
   llvm_hash = get_llvm_hash.LLVMHash()
 
   with llvm_hash.CreateTempDirectory() as temp_dir:
-    with get_llvm_hash.CreateTempLLVMRepo(temp_dir) as src_path:
+    with get_llvm_hash.CreateTempLLVMRepo(temp_dir) as dirname:
       # Ensure that 'svn_version' exists in the chromiumum mirror of LLVM by
       # finding its corresponding git hash.
-      git_hash = get_llvm_hash.GetGitHashFrom(src_path, svn_version)
-      move_head_cmd = ['git', '-C', src_path, 'checkout', git_hash, '-q']
+      git_hash = get_llvm_hash.GetGitHashFrom(dirname, svn_version)
+      move_head_cmd = ['git', '-C', dirname, 'checkout', git_hash, '-q']
       subprocess.run(move_head_cmd, stdout=subprocess.DEVNULL, check=True)
 
       for cur_package in packages:
@@ -636,12 +636,14 @@ def UpdatePackagesPatchMetadataFile(
         if not patches_json_fp.is_file():
           raise RuntimeError(f'patches file {patches_json_fp} is not a file')
 
-        patches_info = patch_utils.apply_all_from_json(
-            svn_version=svn_version,
-            llvm_src_dir=Path(src_path),
-            patches_json_fp=patches_json_fp,
-            continue_on_failure=mode == failure_modes.FailureModes.CONTINUE,
-        )
+        src_path = Path(dirname)
+        with patch_utils.git_clean_context(src_path):
+          patches_info = patch_utils.apply_all_from_json(
+              svn_version=svn_version,
+              llvm_src_dir=src_path,
+              patches_json_fp=patches_json_fp,
+              continue_on_failure=mode == failure_modes.FailureModes.CONTINUE,
+          )
         package_info[cur_package] = patches_info._asdict()
 
   return package_info
