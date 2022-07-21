@@ -119,7 +119,6 @@ def GetCLAfterUpdatingPackages(packages, git_hash, svn_version, chroot_path,
       git_hash,
       svn_version,
       chroot_path,
-      patch_metadata_file,
       failure_modes.FailureModes.DISABLE_PATCHES,
       svn_option,
       extra_commit_msg=None)

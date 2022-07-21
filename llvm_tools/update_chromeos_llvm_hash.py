@@ -467,8 +467,7 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
 
 
 def UpdatePackages(packages, llvm_variant, git_hash, svn_version,
-                   chroot_path: Path, patch_metadata_file, mode,
-                   git_hash_source, extra_commit_msg):
+                   chroot_path: Path, mode, git_hash_source, extra_commit_msg):
   """Updates an LLVM hash and uprevs the ebuild of the packages.
 
   A temporary repo is created for the changes. The changes are
@@ -480,8 +479,6 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version,
     git_hash: The new git hash.
     svn_version: The SVN-style revision number of git_hash.
     chroot_path: The absolute path to the chroot.
-    patch_metadata_file: The name of the .json file in '$FILESDIR/' that has
-    the patches and its metadata.
     mode: The mode of the patch manager when handling an applicable patch
     that failed to apply.
       Ex. 'FailureModes.FAIL'
@@ -674,7 +671,6 @@ def main():
                                git_hash,
                                svn_version,
                                args_output.chroot_path,
-                               args_output.patch_metadata_file,
                                failure_modes.FailureModes(
                                    args_output.failure_mode),
                                git_hash_source,

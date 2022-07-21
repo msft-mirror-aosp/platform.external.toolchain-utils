@@ -654,7 +654,6 @@ class UpdateLLVMHashTest(unittest.TestCase):
     git_hash = 'a123testhash4'
     svn_version = 1000
     chroot_path = Path('/some/path/to/chroot')
-    patch_metadata_file = 'PATCHES.json'
     git_hash_source = 'google3'
     branch = 'update-LLVM_NEXT_HASH-a123testhash4'
     extra_commit_msg = None
@@ -664,8 +663,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     with self.assertRaises(ValueError) as err:
       update_chromeos_llvm_hash.UpdatePackages(
           packages_to_update, llvm_variant, git_hash, svn_version, chroot_path,
-          patch_metadata_file, failure_modes.FailureModes.FAIL,
-          git_hash_source, extra_commit_msg)
+          failure_modes.FailureModes.FAIL, git_hash_source, extra_commit_msg)
 
     self.assertEqual(str(err.exception), 'Failed to uprev the ebuild.')
 
@@ -733,10 +731,10 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
       self.assertEqual(chroot_path, Path('/some/path/to/chroot'))
       self.assertEqual(svn_version, 1000)
-      self.assertEqual(patch_metadata_file, 'PATCHES.json')
       self.assertListEqual(packages, ['path/to'])
       self.assertEqual(mode, failure_modes.FailureModes.DISABLE_PATCHES)
 
+      patch_metadata_file = 'PATCHES.json'
       PatchInfo = collections.namedtuple('PatchInfo', [
           'applied_patches', 'failed_patches', 'non_applicable_patches',
           'disabled_patches', 'removed_patches', 'modified_metadata'
@@ -786,7 +784,6 @@ class UpdateLLVMHashTest(unittest.TestCase):
     llvm_variant = update_chromeos_llvm_hash.LLVMVariant.next
     git_hash = 'a123testhash5'
     svn_version = 1000
-    patch_metadata_file = 'PATCHES.json'
     chroot_path = Path('/some/path/to/chroot')
     git_hash_source = 'tot'
     branch = 'update-LLVM_NEXT_HASH-a123testhash5'
@@ -794,8 +791,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     change_list = update_chromeos_llvm_hash.UpdatePackages(
         packages_to_update, llvm_variant, git_hash, svn_version, chroot_path,
-        patch_metadata_file, failure_modes.FailureModes.DISABLE_PATCHES,
-        git_hash_source, extra_commit_msg)
+        failure_modes.FailureModes.DISABLE_PATCHES, git_hash_source,
+        extra_commit_msg)
 
     self.assertEqual(change_list.url,
                      'https://some_name/path/to/commit/+/12345')

@@ -19,6 +19,7 @@ import failure_modes
 import get_llvm_hash
 import update_chromeos_llvm_hash
 
+
 VALID_CQ_TRYBOTS = ['llvm', 'llvm-next', 'llvm-tot']
 
 
@@ -395,8 +396,6 @@ def main():
 
   args_output = GetCommandLineArgs()
 
-  patch_metadata_file = 'PATCHES.json'
-
   svn_option = args_output.llvm_version
 
   git_hash, svn_version = get_llvm_hash.GetLLVMHashAndVersionFromSVNOption(
@@ -442,7 +441,6 @@ def main():
       git_hash,
       svn_version,
       args_output.chroot_path,
-      patch_metadata_file,
       failure_modes.FailureModes.DISABLE_PATCHES,
       svn_option,
       extra_commit_msg=extra_commit_msg)
