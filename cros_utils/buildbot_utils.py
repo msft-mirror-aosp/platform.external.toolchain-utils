@@ -17,6 +17,7 @@ import time
 from cros_utils import command_executer
 from cros_utils import logger
 
+
 INITIAL_SLEEP_TIME = 7200  # 2 hours; wait time before polling buildbot.
 SLEEP_TIME = 600  # 10 minutes; time between polling of buildbot.
 
@@ -177,8 +178,8 @@ def GetTrybotImage(chromeos_root,
       else:
         wait_msg = 'Unable to find build result; job may be running.'
         logger.GetLogger().LogOutput(wait_msg)
-      logger.GetLogger().LogOutput('{0} minutes elapsed.'.format(elapsed / 60))
-      logger.GetLogger().LogOutput('Sleeping {0} seconds.'.format(SLEEP_TIME))
+      logger.GetLogger().LogOutput(f'{elapsed / 60} minutes elapsed.')
+      logger.GetLogger().LogOutput(f'Sleeping {SLEEP_TIME} seconds.')
       time.sleep(SLEEP_TIME)
       elapsed += SLEEP_TIME
     else:
@@ -243,8 +244,9 @@ def GetLatestImage(chromeos_root, path):
 
   ce = command_executer.GetCommandExecuter()
   command = ('gsutil ls gs://chromeos-image-archive/%s' % path)
-  ret, out, _ = ce.ChrootRunCommandWOutput(
-      chromeos_root, command, print_to_console=False)
+  ret, out, _ = ce.ChrootRunCommandWOutput(chromeos_root,
+                                           command,
+                                           print_to_console=False)
   if ret != 0:
     raise RuntimeError('Failed to list buckets with command: %s.' % command)
   candidates = [l.split('/')[-2] for l in out.split()]
@@ -253,11 +255,6 @@ def GetLatestImage(chromeos_root, path):
   candidates.sort(reverse=True)
   for c in candidates:
     build = '%s/R%d-%d.%d.%d' % (path, c[0], c[1], c[2], c[3])
-    # Denylist "R79-12384.0.0" image released by mistake.
-    # TODO(crbug.com/992242): Remove the filter by 2019-09-05.
-    if c == [79, 12384, 0, 0]:
-      continue
-
     if DoesImageExist(chromeos_root, build):
       return build
 
@@ -273,16 +270,15 @@ def GetLatestRecipeImage(chromeos_root, path):
 
   ce = command_executer.GetCommandExecuter()
   command = ('gsutil ls gs://chromeos-image-archive/%s' % path)
-  ret, out, _ = ce.ChrootRunCommandWOutput(
-      chromeos_root, command, print_to_console=False)
+  ret, out, _ = ce.ChrootRunCommandWOutput(chromeos_root,
+                                           command,
+                                           print_to_console=False)
   if ret != 0:
     raise RuntimeError('Failed to list buckets with command: %s.' % command)
   candidates = [l.split('/')[-2] for l in out.split()]
   candidates = [(fmt.match(c), c) for c in candidates]
-  candidates = [([int(r)
-                  for r in m[0].group(1, 2, 3, 4, 5)], m[1])
-                for m in candidates
-                if m]
+  candidates = [([int(r) for r in m[0].group(1, 2, 3, 4, 5)], m[1])
+                for m in candidates if m]
   candidates.sort(key=lambda x: x[0], reverse=True)
   # Try to get ony last two days of images since nightly tests are run once
   # another day.
