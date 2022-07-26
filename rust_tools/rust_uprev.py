@@ -34,18 +34,20 @@ See `--help` for all available options.
 """
 
 import argparse
-import pathlib
 import json
 import logging
 import os
+import pathlib
+from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
-from pathlib import Path
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, T, Tuple
 
-from llvm_tools import chroot, git
+from llvm_tools import chroot
+from llvm_tools import git
+
 
 EQUERY = 'equery'
 GSUTIL = 'gsutil.py'
@@ -275,8 +277,9 @@ def parse_commandline_args() -> argparse.Namespace:
   return args
 
 
-def prepare_uprev(rust_version: RustVersion, template: Optional[RustVersion]
-                  ) -> Optional[Tuple[RustVersion, str, RustVersion]]:
+def prepare_uprev(
+    rust_version: RustVersion, template: Optional[RustVersion]
+) -> Optional[Tuple[RustVersion, str, RustVersion]]:
   if template is None:
     ebuild_path = find_ebuild_for_package('rust')
     ebuild_name = os.path.basename(ebuild_path)
@@ -378,7 +381,8 @@ def flip_mirror_in_ebuild(ebuild_file: Path, add: bool) -> None:
     f.write(new_contents)
 
 
-def ebuild_actions(package: str, actions: List[str],
+def ebuild_actions(package: str,
+                   actions: List[str],
                    sudo: bool = False) -> None:
   ebuild_path_inchroot = find_ebuild_for_package(package)
   cmd = ['ebuild', ebuild_path_inchroot] + actions
@@ -574,27 +578,27 @@ def create_rust_uprev(rust_version: RustVersion,
       'fetch bootstrap distfiles', lambda: fetch_bootstrap_distfiles(
           old_bootstrap_version, template_version))
   run_step('fetch rust distfiles', lambda: fetch_rust_distfiles(rust_version))
-  run_step('update bootstrap ebuild', lambda: update_bootstrap_ebuild(
-      template_version))
+  run_step('update bootstrap ebuild',
+           lambda: update_bootstrap_ebuild(template_version))
   run_step(
       'update bootstrap manifest', lambda: update_manifest(rust_bootstrap_path(
       ).joinpath(f'rust-bootstrap-{template_version}.ebuild')))
-  run_step('copy patches', lambda: copy_patches(RUST_PATH, template_version,
-                                                rust_version))
-  ebuild_file = run_step(
-      'create ebuild', lambda: create_ebuild(template_ebuild, rust_version))
-  run_step(
-      'update ebuild', lambda: update_ebuild(ebuild_file, template_version))
-  run_step('update manifest to add new version', lambda: update_manifest(
-      Path(ebuild_file)))
+  run_step('copy patches',
+           lambda: copy_patches(RUST_PATH, template_version, rust_version))
+  ebuild_file = run_step('create ebuild',
+                         lambda: create_ebuild(template_ebuild, rust_version))
+  run_step('update ebuild',
+           lambda: update_ebuild(ebuild_file, template_version))
+  run_step('update manifest to add new version',
+           lambda: update_manifest(Path(ebuild_file)))
   if not skip_compile:
     run_step(
-        'emerge rust', lambda: subprocess.check_call(
-            ['sudo', 'emerge', 'dev-lang/rust']))
-  run_step('insert version into rust packages', lambda: update_rust_packages(
-      rust_version, add=True))
-  run_step('upgrade virtual/rust', lambda: update_virtual_rust(
-      template_version, rust_version))
+        'emerge rust',
+        lambda: subprocess.check_call(['sudo', 'emerge', 'dev-lang/rust']))
+  run_step('insert version into rust packages',
+           lambda: update_rust_packages(rust_version, add=True))
+  run_step('upgrade virtual/rust',
+           lambda: update_virtual_rust(template_version, rust_version))
 
 
 def find_rust_versions_in_chroot() -> List[Tuple[RustVersion, str]]:
@@ -628,15 +632,16 @@ def remove_files(filename: str, path: str) -> None:
 def remove_rust_bootstrap_version(version: RustVersion,
                                   run_step: Callable[[], T]) -> None:
   prefix = f'rust-bootstrap-{version}'
-  run_step('remove old bootstrap ebuild', lambda: remove_files(
-      f'{prefix}*.ebuild', rust_bootstrap_path()))
+  run_step('remove old bootstrap ebuild',
+           lambda: remove_files(f'{prefix}*.ebuild', rust_bootstrap_path()))
   ebuild_file = find_ebuild_for_package('rust-bootstrap')
-  run_step('update bootstrap manifest to delete old version', lambda:
-           update_manifest(ebuild_file))
+  run_step('update bootstrap manifest to delete old version',
+           lambda: update_manifest(ebuild_file))
 
 
 def remove_rust_uprev(rust_version: Optional[RustVersion],
                       run_step: Callable[[], T]) -> None:
+
   def find_desired_rust_version():
     if rust_version:
       return rust_version, find_ebuild_for_rust_version(rust_version)
@@ -652,14 +657,14 @@ def remove_rust_uprev(rust_version: Optional[RustVersion],
       result_from_json=find_desired_rust_version_from_json,
   )
   run_step(
-      'remove patches', lambda: remove_files(
-          f'files/rust-{delete_version}-*.patch', RUST_PATH))
+      'remove patches',
+      lambda: remove_files(f'files/rust-{delete_version}-*.patch', RUST_PATH))
   run_step('remove ebuild', lambda: remove_files(delete_ebuild, RUST_PATH))
   ebuild_file = find_ebuild_for_package('rust')
-  run_step('update manifest to delete old version', lambda: update_manifest(
-      ebuild_file))
-  run_step('remove version from rust packages', lambda: update_rust_packages(
-      delete_version, add=False))
+  run_step('update manifest to delete old version',
+           lambda: update_manifest(ebuild_file))
+  run_step('remove version from rust packages',
+           lambda: update_rust_packages(delete_version, add=False))
   run_step('remove virtual/rust', lambda: remove_virtual_rust(delete_version))
 
 

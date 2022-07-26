@@ -7,15 +7,14 @@
 """Tests for rust_uprev.py"""
 
 import os
+from pathlib import Path
 import shutil
 import subprocess
 import tempfile
 import unittest
-from pathlib import Path
 from unittest import mock
 
 from llvm_tools import git
-
 import rust_uprev
 from rust_uprev import RustVersion
 
