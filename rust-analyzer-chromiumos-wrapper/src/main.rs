@@ -20,11 +20,7 @@ use simplelog::{Config, LevelFilter, WriteLogger};
 use serde_json::{from_slice, to_writer, Value};
 
 fn main() -> Result<()> {
-    if env::args().len() > 1 {
-        bail!("rust-analyzer-chromiumos-wrapper doesn't support command line arguments");
-    }
-
-    init_log()?;
+    let args = env::args().skip(1);
 
     let d = env::current_dir()?;
     let chromiumos_root = match find_chromiumos_root(&d) {
@@ -32,9 +28,45 @@ fn main() -> Result<()> {
         None => {
             // It doesn't appear that we're in a chroot. Run the
             // regular rust-analyzer.
-            return Err(process::Command::new("rust-analyzer").exec())?;
+            return Err(process::Command::new("rust-analyzer").args(args).exec())?;
         }
     };
+
+    let args: Vec<String> = args.collect();
+    if !args.is_empty() {
+        // We've received command line arguments, and there are 3 possibilities:
+        // * We just forward the arguments to rust-analyzer and exit.
+        // * We don't support the arguments, so we bail.
+        // * We still need to do our path translation in the LSP protocol.
+        fn run(args: &[String]) -> Result<()> {
+            return Err(process::Command::new("cros_sdk")
+                .args(["--", "rust-analyzer"])
+                .args(args)
+                .exec())?;
+        }
+
+        if args.iter().any(|x| match x.as_str() {
+            "--version" | "--help" | "-h" | "--print-config-schema" => true,
+            _ => false,
+        }) {
+            // With any of these options rust-analyzer will just print something and exit.
+            return run(&args);
+        }
+
+        if !args[0].starts_with("-") {
+            // It's a subcommand, and seemingly none of these need the path translation
+            // rust-analyzer-chromiumos-wrapper provides.
+            return run(&args);
+        }
+
+        if args.iter().any(|x| x == "--log-file") {
+            bail!("rust-analyzer-chromiums_wrapper doesn't support --log-file");
+        }
+
+        // Otherwise it seems we're probably OK to proceed.
+    }
+
+    init_log()?;
 
     let outside_prefix: &'static str = {
         let path = chromiumos_root
@@ -55,8 +87,10 @@ fn main() -> Result<()> {
     let inside_prefix: &'static str = "file:///mnt/host/source/";
 
     let cmd = "cros_sdk";
-    let args: [&str; 2] = ["--", "rust-analyzer"];
-    let mut child = KillOnDrop(run_command(cmd, args)?);
+    let all_args = ["--", "rust-analyzer"]
+        .into_iter()
+        .chain(args.iter().map(|x| x.as_str()));
+    let mut child = KillOnDrop(run_command(cmd, all_args)?);
 
     let mut child_stdin = BufWriter::new(child.0.stdin.take().unwrap());
     let mut child_stdout = BufReader::new(child.0.stdout.take().unwrap());
