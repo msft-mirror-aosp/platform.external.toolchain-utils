@@ -6,14 +6,15 @@
 
 """Wrapper script to automatically lock devices for crosperf."""
 
-import os
-import sys
 import argparse
-import subprocess
 import contextlib
-import json
-from typing import Optional, Any
 import dataclasses
+import json
+import os
+import subprocess
+import sys
+from typing import Any, Dict, List, Optional, Tuple
+
 
 # Have to do sys.path hackery because crosperf relies on PYTHONPATH
 # modifications.
@@ -21,7 +22,7 @@ PARENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PARENT_DIR)
 
 
-def main(sys_args: list[str]) -> Optional[str]:
+def main(sys_args: List[str]) -> Optional[str]:
   """Run crosperf_autolock. Returns error msg or None"""
   args, leftover_args = parse_args(sys_args)
   fleet_params = [
@@ -48,7 +49,7 @@ def main(sys_args: list[str]) -> Optional[str]:
   return None
 
 
-def parse_args(args: list[str]) -> tuple[Any, list]:
+def parse_args(args: List[str]) -> Tuple[Any, List]:
   """Parse the CLI arguments."""
   parser = argparse.ArgumentParser(
       'crosperf_autolock',
@@ -115,8 +116,8 @@ def _eprint(*msg, **kwargs):
   print(*msg, file=sys.stderr, **kwargs)
 
 
-def _run_crosperf(crosfleet_params: list[CrosfleetParams], lock_timeout: float,
-                  leftover_args: list[str]):
+def _run_crosperf(crosfleet_params: List[CrosfleetParams], lock_timeout: float,
+                  leftover_args: List[str]):
   """Autolock devices and run crosperf with leftover arguments.
 
   Raises:
@@ -167,7 +168,7 @@ def _run_crosperf(crosfleet_params: list[CrosfleetParams], lock_timeout: float,
 def crosfleet_machine_ctx(board: str,
                           lease_minutes: int,
                           lock_timeout: float,
-                          dims: dict[str, Any],
+                          dims: Dict[str, Any],
                           abandon_timeout: float = 120.0) -> Any:
   """Acquire dut from crosfleet, and release once it leaves the context.
 
@@ -176,7 +177,7 @@ def crosfleet_machine_ctx(board: str,
     lease_minutes: Length of lease, in minutes.
     lock_timeout: How long to wait for a lock until quitting.
     dims: Dictionary of dimension arguments to pass to crosfleet's '-dims'
-    abandon_timeout (optional): How long to wait for releasing until quitting.
+    abandon_timeout: How long to wait for releasing until quitting.
 
   Yields:
     A string representing the crosfleet DUT hostname.
@@ -195,7 +196,7 @@ def crosfleet_machine_ctx(board: str,
       crosfleet_release(dut_hostname, abandon_timeout)
 
 
-def crosfleet_autolock(board: str, lease_minutes: int, dims: dict[str, Any],
+def crosfleet_autolock(board: str, lease_minutes: int, dims: Dict[str, Any],
                        timeout_sec: float) -> str:
   """Lock a device using crosfleet, paramaterized by the board type.
 
@@ -221,7 +222,7 @@ def crosfleet_autolock(board: str, lease_minutes: int, dims: dict[str, Any],
       f'-minutes={lease_minutes}',
   ]
   if dims:
-    dims_arg = ','.join('{}={}'.format(k, v) for k, v in dims.items())
+    dims_arg = ','.join(f'{k}={v}' for k, v in dims.items())
     crosfleet_cmd_args.extend(['-dims', f'{dims_arg}'])
 
   try:
