@@ -27,7 +27,7 @@
           "path": "../../usr/bin/clang-tidy",
           "args": [
             "-checks=*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-readability*,-google-runtime-references,-hicpp-*,-llvm-*,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
-            "main.cc",
+            "",
             "--",
             "-resource-dir=someResourceDir",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -127,7 +127,7 @@
           "path": "../../usr/bin/clang-tidy",
           "args": [
             "-checks=*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-readability*,-google-runtime-references,-hicpp-*,-llvm-*,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
-            "main.cc",
+            "",
             "--",
             "-resource-dir=someResourceDir",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -230,7 +230,7 @@
           "path": "../../usr/bin/clang-tidy",
           "args": [
             "-checks=*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-readability*,-google-runtime-references,-hicpp-*,-llvm-*,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
-            "main.cc",
+            "",
             "--",
             "-resource-dir=someResourceDir",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -337,7 +337,7 @@
           "path": "../../usr/bin/clang-tidy",
           "args": [
             "-checks=*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-readability*,-google-runtime-references,-hicpp-*,-llvm-*,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
-            "main.cc",
+            "",
             "--",
             "-resource-dir=someResourceDir",
             "--sysroot=/usr/x86_64-cros-linux-gnu",

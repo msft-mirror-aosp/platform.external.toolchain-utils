@@ -27,7 +27,7 @@
           "path": "/tmp/stable/clang-tidy",
           "args": [
             "-checks=*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-readability*,-google-runtime-references,-hicpp-*,-llvm-*,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
-            "main.cc",
+            "",
             "--",
             "-resource-dir=someResourceDir",
             "-Qunused-arguments",
@@ -117,7 +117,7 @@
           "path": "/tmp/stable/clang-tidy",
           "args": [
             "-checks=*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-readability*,-google-runtime-references,-hicpp-*,-llvm-*,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
-            "main.cc",
+            "",
             "--",
             "-resource-dir=someResourceDir",
             "-Qunused-arguments",
@@ -209,7 +209,7 @@
           "path": "/tmp/stable/clang-tidy",
           "args": [
             "-checks=*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-readability*,-google-runtime-references,-hicpp-*,-llvm-*,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
-            "main.cc",
+            "",
             "--",
             "-resource-dir=someResourceDir",
             "-Qunused-arguments",
@@ -305,7 +305,7 @@
           "path": "/tmp/stable/clang-tidy",
           "args": [
             "-checks=*,-bugprone-narrowing-conversions,-cppcoreguidelines-*,-fuchsia-*,-google-readability*,-google-runtime-references,-hicpp-*,-llvm-*,-misc-non-private-member-variables-in-classes,-misc-unused-parameters,-modernize-*,-readability-*",
-            "main.cc",
+            "",
             "--",
             "-resource-dir=someResourceDir",
             "-Qunused-arguments",
