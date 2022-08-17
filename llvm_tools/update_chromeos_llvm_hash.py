@@ -34,7 +34,6 @@ DEFAULT_PACKAGES = [
     'sys-devel/llvm',
     'sys-libs/compiler-rt',
     'sys-libs/libcxx',
-    'sys-libs/libcxxabi',
     'sys-libs/llvm-libunwind',
 ]
 
