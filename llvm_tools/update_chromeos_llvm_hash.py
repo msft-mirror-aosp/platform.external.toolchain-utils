@@ -10,8 +10,6 @@ For each package, a temporary repo is created and the changes are uploaded
 for review.
 """
 
-from __future__ import print_function
-
 import argparse
 import datetime
 import enum
@@ -36,6 +34,8 @@ DEFAULT_PACKAGES = [
     'sys-libs/libcxx',
     'sys-libs/llvm-libunwind',
 ]
+
+DEFAULT_MANIFEST_PACKAGES = ['sys-devel/llvm']
 
 
 # Specify which LLVM hash to update
@@ -87,11 +87,15 @@ def GetCommandLineArgs():
                       help='the path to the chroot (default: %(default)s)')
 
   # Add argument for specific builds to uprev and update their llvm-next hash.
-  parser.add_argument('--update_packages',
-                      default=DEFAULT_PACKAGES,
-                      required=False,
-                      nargs='+',
-                      help='the ebuilds to update their hash for llvm-next '
+  parser.add_argument(
+      '--update_packages',
+      default=','.join(DEFAULT_PACKAGES),
+      help='Comma-separated ebuilds to update llvm-next hash for '
+      '(default: %(default)s)')
+
+  parser.add_argument('--manifest_packages',
+                      default=','.join(DEFAULT_MANIFEST_PACKAGES),
+                      help='Comma-separated ebuilds to update manifests for '
                       '(default: %(default)s)')
 
   # Add argument for whether to display command contents to `stdout`.
@@ -113,7 +117,7 @@ def GetCommandLineArgs():
       type=get_llvm_hash.IsSvnOption,
       required=True,
       help='which git hash to use. Either a svn revision, or one '
-      'of %s' % sorted(get_llvm_hash.KNOWN_HASH_SOURCES))
+      f'of {sorted(get_llvm_hash.KNOWN_HASH_SOURCES)}')
 
   # Add argument for the mode of the patch management when handling patches.
   parser.add_argument(
@@ -175,7 +179,7 @@ def GetEbuildPathsFromSymLinkPaths(symlinks):
   # then add the ebuild path to the dict.
   for cur_symlink in symlinks:
     if not os.path.islink(cur_symlink):
-      raise ValueError('Invalid symlink provided: %s' % cur_symlink)
+      raise ValueError(f'Invalid symlink provided: {cur_symlink}')
 
     # Construct the absolute path to the ebuild.
     ebuild_path = os.path.realpath(cur_symlink)
@@ -211,9 +215,9 @@ def UpdateEbuildLLVMHash(ebuild_path, llvm_variant, git_hash, svn_version):
   # gets updated to the temporary file.
 
   if not os.path.isfile(ebuild_path):
-    raise ValueError('Invalid ebuild path provided: %s' % ebuild_path)
+    raise ValueError(f'Invalid ebuild path provided: {ebuild_path}')
 
-  temp_ebuild_file = '%s.temp' % ebuild_path
+  temp_ebuild_file = f'{ebuild_path}.temp'
 
   with open(ebuild_path) as ebuild_file:
     # write updates to a temporary file in case of interrupts
@@ -248,15 +252,14 @@ def ReplaceLLVMHash(ebuild_lines, llvm_variant, git_hash, svn_version):
   for cur_line in ebuild_lines:
     if not is_updated and llvm_regex.search(cur_line):
       # Update the git hash and revision number.
-      cur_line = '%s=\"%s\" # r%d\n' % (llvm_variant.value, git_hash,
-                                        svn_version)
+      cur_line = f'{llvm_variant.value}=\"{git_hash}\" # r{svn_version}\n'
 
       is_updated = True
 
     yield cur_line
 
   if not is_updated:
-    raise ValueError('Failed to update %s' % llvm_variant.value)
+    raise ValueError(f'Failed to update {llvm_variant.value}')
 
 
 def UprevEbuildSymlink(symlink):
@@ -273,7 +276,7 @@ def UprevEbuildSymlink(symlink):
   """
 
   if not os.path.islink(symlink):
-    raise ValueError('Invalid symlink provided: %s' % symlink)
+    raise ValueError(f'Invalid symlink provided: {symlink}')
 
   new_symlink, is_changed = re.subn(
       r'r([0-9]+).ebuild',
@@ -307,7 +310,7 @@ def UprevEbuildToVersion(symlink, svn_version, git_hash):
   """
 
   if not os.path.islink(symlink):
-    raise ValueError('Invalid symlink provided: %s' % symlink)
+    raise ValueError(f'Invalid symlink provided: {symlink}')
 
   ebuild = os.path.realpath(symlink)
   llvm_major_version = get_llvm_hash.GetLLVMMajorVersion(git_hash)
@@ -343,7 +346,7 @@ def UprevEbuildToVersion(symlink, svn_version, git_hash):
   subprocess.check_output(['ln', '-s', '-r', new_ebuild, new_symlink])
 
   if not os.path.islink(new_symlink):
-    raise ValueError('Invalid symlink name: %s' % new_ebuild[:-len('.ebuild')])
+    raise ValueError(f'Invalid symlink name: {new_ebuild[:-len(".ebuild")]}')
 
   subprocess.check_output(['git', '-C', symlink_dir, 'add', new_symlink])
 
@@ -403,8 +406,8 @@ def StagePatchMetadataFileForCommit(patch_metadata_file_path):
   """
 
   if not os.path.isfile(patch_metadata_file_path):
-    raise ValueError('Invalid patch metadata file provided: %s' %
-                     patch_metadata_file_path)
+    raise ValueError(
+        f'Invalid patch metadata file provided: {patch_metadata_file_path}')
 
   # Cmd to stage the patch metadata file for commit.
   subprocess.check_output([
@@ -435,14 +438,15 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
     if (patch_info_dict['disabled_patches']
         or patch_info_dict['removed_patches']
         or patch_info_dict['modified_metadata']):
-      cur_package_header = '\nFor the package %s:' % package_name
+      cur_package_header = f'\nFor the package {package_name}:'
       commit_messages.append(cur_package_header)
 
     # Add to the commit message that the patch metadata file was modified.
     if patch_info_dict['modified_metadata']:
       patch_metadata_path = patch_info_dict['modified_metadata']
-      commit_messages.append('The patch metadata file %s was modified' %
-                             os.path.basename(patch_metadata_path))
+      metadata_file_name = os.path.basename(patch_metadata_path)
+      commit_messages.append(
+          f'The patch metadata file {metadata_file_name} was modified')
 
       StagePatchMetadataFileForCommit(patch_metadata_path)
 
@@ -465,8 +469,25 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
   return commit_messages
 
 
-def UpdatePackages(packages, llvm_variant, git_hash, svn_version,
-                   chroot_path: Path, mode, git_hash_source, extra_commit_msg):
+def UpdateManifests(packages: List[str], chroot_path: Path):
+  """Updates manifest files for packages.
+
+  Args:
+    packages: A list of packages to update manifests for.
+    chroot_path: The absolute path to the chroot.
+
+  Raises:
+    CalledProcessError: ebuild failed to update manifest.
+  """
+  manifest_ebuilds = chroot.GetChrootEbuildPaths(chroot_path, packages)
+  for ebuild_path in manifest_ebuilds:
+    subprocess_helpers.ChrootRunCommand(chroot_path,
+                                        ['ebuild', ebuild_path, 'manifest'])
+
+
+def UpdatePackages(packages, manifest_packages: List[str], llvm_variant,
+                   git_hash, svn_version, chroot_path: Path, mode,
+                   git_hash_source, extra_commit_msg):
   """Updates an LLVM hash and uprevs the ebuild of the packages.
 
   A temporary repo is created for the changes. The changes are
@@ -474,6 +495,7 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version,
 
   Args:
     packages: A list of all the packages that are going to be updated.
+    manifest_packages: A list of packages to update manifests for.
     llvm_variant: The LLVM hash to update.
     git_hash: The new git hash.
     svn_version: The SVN-style revision number of git_hash.
@@ -505,13 +527,12 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version,
     if llvm_variant == LLVMVariant.next:
       commit_message_header = 'llvm-next'
     if git_hash_source in get_llvm_hash.KNOWN_HASH_SOURCES:
-      commit_message_header += ('/%s: upgrade to %s (r%d)' %
-                                (git_hash_source, git_hash, svn_version))
+      commit_message_header += (
+          f'/{git_hash_source}: upgrade to {git_hash} (r{svn_version})')
     else:
-      commit_message_header += (': upgrade to %s (r%d)' %
-                                (git_hash, svn_version))
+      commit_message_header += (f': upgrade to {git_hash} (r{svn_version})')
 
-    commit_messages = [
+    commit_lines = [
         commit_message_header + '\n',
         'The following packages have been updated:',
     ]
@@ -538,8 +559,13 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version,
       cur_dir_name = os.path.basename(path_to_ebuild_dir)
       parent_dir_name = os.path.basename(os.path.dirname(path_to_ebuild_dir))
 
-      packages.append('%s/%s' % (parent_dir_name, cur_dir_name))
-      commit_messages.append('%s/%s' % (parent_dir_name, cur_dir_name))
+      packages.append(f'{parent_dir_name}/{cur_dir_name}')
+      commit_lines.append(f'{parent_dir_name}/{cur_dir_name}')
+
+    if manifest_packages:
+      UpdateManifests(manifest_packages, chroot_path)
+      commit_lines.append('Updated manifest for:')
+      commit_lines.extend(manifest_packages)
 
     EnsurePackageMaskContains(chroot_path, git_hash)
 
@@ -548,13 +574,13 @@ def UpdatePackages(packages, llvm_variant, git_hash, svn_version,
         chroot_path, svn_version, packages, mode)
 
     # Update the commit message if changes were made to a package's patches.
-    commit_messages = StagePackagesPatchResultsForCommit(
-        package_info_dict, commit_messages)
+    commit_lines = StagePackagesPatchResultsForCommit(package_info_dict,
+                                                      commit_lines)
 
     if extra_commit_msg:
-      commit_messages.append(extra_commit_msg)
+      commit_lines.append(extra_commit_msg)
 
-    change_list = git.UploadChanges(repo_path, branch, commit_messages)
+    change_list = git.UploadChanges(repo_path, branch, commit_lines)
 
   finally:
     git.DeleteBranch(repo_path, branch)
@@ -580,7 +606,7 @@ def EnsurePackageMaskContains(chroot_path, git_hash):
                            'profiles/targets/chromeos/package.mask')
   with open(mask_path, 'r+') as mask_file:
     mask_contents = mask_file.read()
-    expected_line = '=sys-devel/llvm-%s.0_pre*\n' % llvm_major_version
+    expected_line = f'=sys-devel/llvm-{llvm_major_version}.0_pre*\n'
     if expected_line not in mask_contents:
       mask_file.write(expected_line)
 
@@ -665,19 +691,22 @@ def main():
   git_hash, svn_version = get_llvm_hash.GetLLVMHashAndVersionFromSVNOption(
       git_hash_source)
 
-  change_list = UpdatePackages(args_output.update_packages,
-                               llvm_variant,
-                               git_hash,
-                               svn_version,
-                               args_output.chroot_path,
-                               failure_modes.FailureModes(
+  packages = args_output.update_packages.split(',')
+  manifest_packages = args_output.manifest_packages.split(',')
+  change_list = UpdatePackages(packages=packages,
+                               manifest_packages=manifest_packages,
+                               llvm_variant=llvm_variant,
+                               git_hash=git_hash,
+                               svn_version=svn_version,
+                               chroot_path=args_output.chroot_path,
+                               mode=failure_modes.FailureModes(
                                    args_output.failure_mode),
-                               git_hash_source,
+                               git_hash_source=git_hash_source,
                                extra_commit_msg=None)
 
-  print('Successfully updated packages to %s (%d)' % (git_hash, svn_version))
-  print('Gerrit URL: %s' % change_list.url)
-  print('Change list number: %d' % change_list.cl_number)
+  print(f'Successfully updated packages to {git_hash} ({svn_version})')
+  print(f'Gerrit URL: {change_list.url}')
+  print(f'Change list number: {change_list.cl_number}')
 
 
 if __name__ == '__main__':

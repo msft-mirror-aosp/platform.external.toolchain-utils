@@ -20,9 +20,9 @@ import chroot
 import failure_modes
 import get_llvm_hash
 import git
+import subprocess_helpers
 import test_helpers
 import update_chromeos_llvm_hash
-
 
 # These are unittests; protected access is OK to a point.
 # pylint: disable=protected-access
@@ -310,6 +310,22 @@ class UpdateLLVMHashTest(unittest.TestCase):
     expected_cmd = ['git', '-C', symlink_dir, 'rm', symlink]
     self.assertEqual(mock_command_output.call_args_list[3],
                      mock.call(expected_cmd))
+
+  @mock.patch.object(chroot,
+                     'GetChrootEbuildPaths',
+                     return_value=['/chroot/path/test.ebuild'])
+  @mock.patch.object(subprocess, 'check_output', return_value='')
+  def testManifestUpdate(self, mock_subprocess, mock_ebuild_paths):
+    manifest_packages = ['sys-devel/llvm']
+    chroot_path = '/path/to/chroot'
+    update_chromeos_llvm_hash.UpdateManifests(manifest_packages, chroot_path)
+
+    args = mock_subprocess.call_args[0][-1]
+    manifest_cmd = [
+        'cros_sdk', '--', 'ebuild', '/chroot/path/test.ebuild', 'manifest'
+    ]
+    self.assertEqual(args, manifest_cmd)
+    mock_ebuild_paths.assert_called_once()
 
   @mock.patch.object(get_llvm_hash, 'GetLLVMMajorVersion')
   @mock.patch.object(os.path, 'islink', return_value=True)
@@ -662,8 +678,15 @@ class UpdateLLVMHashTest(unittest.TestCase):
     # the 'try' block by UprevEbuildSymlink function.
     with self.assertRaises(ValueError) as err:
       update_chromeos_llvm_hash.UpdatePackages(
-          packages_to_update, llvm_variant, git_hash, svn_version, chroot_path,
-          failure_modes.FailureModes.FAIL, git_hash_source, extra_commit_msg)
+          packages=packages_to_update,
+          manifest_packages=[],
+          llvm_variant=llvm_variant,
+          git_hash=git_hash,
+          svn_version=svn_version,
+          chroot_path=chroot_path,
+          mode=failure_modes.FailureModes.FAIL,
+          git_hash_source=git_hash_source,
+          extra_commit_msg=extra_commit_msg)
 
     self.assertEqual(str(err.exception), 'Failed to uprev the ebuild.')
 
@@ -790,9 +813,15 @@ class UpdateLLVMHashTest(unittest.TestCase):
     extra_commit_msg = '\ncommit-message-end'
 
     change_list = update_chromeos_llvm_hash.UpdatePackages(
-        packages_to_update, llvm_variant, git_hash, svn_version, chroot_path,
-        failure_modes.FailureModes.DISABLE_PATCHES, git_hash_source,
-        extra_commit_msg)
+        packages=packages_to_update,
+        manifest_packages=[],
+        llvm_variant=llvm_variant,
+        git_hash=git_hash,
+        svn_version=svn_version,
+        chroot_path=chroot_path,
+        mode=failure_modes.FailureModes.DISABLE_PATCHES,
+        git_hash_source=git_hash_source,
+        extra_commit_msg=extra_commit_msg)
 
     self.assertEqual(change_list.url,
                      'https://some_name/path/to/commit/+/12345')
