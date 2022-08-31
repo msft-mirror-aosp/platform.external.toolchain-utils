@@ -114,13 +114,14 @@ def GetCLAfterUpdatingPackages(packages, git_hash, svn_version, chroot_path,
   """Updates the packages' LLVM_NEXT."""
 
   change_list = update_chromeos_llvm_hash.UpdatePackages(
-      packages,
-      update_chromeos_llvm_hash.LLVMVariant.next,
-      git_hash,
-      svn_version,
-      chroot_path,
-      failure_modes.FailureModes.DISABLE_PATCHES,
-      svn_option,
+      packages=packages,
+      manifest_packages=[],
+      llvm_variant=update_chromeos_llvm_hash.LLVMVariant.next,
+      git_hash=git_hash,
+      svn_version=svn_version,
+      chroot_path=chroot_path,
+      mode=failure_modes.FailureModes.DISABLE_PATCHES,
+      git_hash_source=svn_option,
       extra_commit_msg=None)
 
   print('\nSuccessfully updated packages to %d' % svn_version)

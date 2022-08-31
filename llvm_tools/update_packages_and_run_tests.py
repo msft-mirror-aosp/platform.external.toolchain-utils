@@ -436,13 +436,14 @@ def main():
       extra_commit_msg += cq_trybot_msg
 
   change_list = update_chromeos_llvm_hash.UpdatePackages(
-      update_chromeos_llvm_hash.DEFAULT_PACKAGES,
-      llvm_variant,
-      git_hash,
-      svn_version,
-      args_output.chroot_path,
-      failure_modes.FailureModes.DISABLE_PATCHES,
-      svn_option,
+      packages=update_chromeos_llvm_hash.DEFAULT_PACKAGES,
+      manifest_packages=[],
+      llvm_variant=llvm_variant,
+      git_hash=git_hash,
+      svn_version=svn_version,
+      chroot_path=args_output.chroot_path,
+      mode=failure_modes.FailureModes.DISABLE_PATCHES,
+      git_hash_source=svn_option,
       extra_commit_msg=extra_commit_msg)
 
   AddReviewers(change_list.cl_number, args_output.reviewers,
