@@ -130,6 +130,7 @@ func crosCommonClangPostFlags() []string {
 	return []string{
 		"-Wno-compound-token-split-by-space",
 		"-Wno-deprecated-copy",
+		"-Wno-unused-but-set-variable",
 		"-Wno-implicit-int-float-conversion",
 		"-Wno-string-concatenation",
 	}
