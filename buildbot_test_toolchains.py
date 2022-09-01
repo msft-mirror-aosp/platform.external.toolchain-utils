@@ -26,13 +26,10 @@ import shutil
 import sys
 import time
 
+from cros_utils import buildbot_utils
 from cros_utils import command_executer
 from cros_utils import logger
 
-from cros_utils import buildbot_utils
-
-# CL that uses LLVM-Next to build the images (includes chrome).
-USE_LLVM_NEXT_PATCH = '513590'
 
 CROSTC_ROOT = '/usr/local/google/crostc'
 NIGHTLY_TESTS_DIR = os.path.join(CROSTC_ROOT, 'nightly-tests')
@@ -72,6 +69,9 @@ RECIPE_IMAGE_RE_GROUPS = {
 RECIPE_IMAGE_RE = RECIPE_IMAGE_FS.format(**RECIPE_IMAGE_RE_GROUPS)
 
 TELEMETRY_AQUARIUM_UNSUPPORTED = ['bob', 'elm', 'veyron_tiger']
+
+# CL that uses LLVM-Next to build the images (includes chrome).
+USE_LLVM_NEXT_PATCH = '513590'
 
 
 class ToolchainComparator(object):
@@ -226,13 +226,10 @@ class ToolchainComparator(object):
 
     crosperf = os.path.join(TOOLCHAIN_DIR, 'crosperf', 'crosperf')
     noschedv2_opts = '--noschedv2' if self._noschedv2 else ''
-    command = ('{crosperf} --no_email={no_email} --results_dir={r_dir} '
-               '--logging_level=verbose --json_report=True {noschedv2_opts} '
-               '{exp_file}').format(crosperf=crosperf,
-                                    no_email=not self._test,
-                                    r_dir=self._reports_dir,
-                                    noschedv2_opts=noschedv2_opts,
-                                    exp_file=experiment_file)
+    no_email = not self._test
+    command = (f'{crosperf} --no_email={no_email} '
+               f'--results_dir={self._reports_dir} --logging_level=verbose '
+               f'--json_report=True {noschedv2_opts} {experiment_file}')
 
     return self._ce.RunCommand(command)
 
