@@ -68,8 +68,6 @@ RECIPE_IMAGE_RE_GROUPS = {
 }
 RECIPE_IMAGE_RE = RECIPE_IMAGE_FS.format(**RECIPE_IMAGE_RE_GROUPS)
 
-TELEMETRY_AQUARIUM_UNSUPPORTED = ['bob', 'elm', 'veyron_tiger']
-
 # CL that uses LLVM-Next to build the images (includes chrome).
 USE_LLVM_NEXT_PATCH = '513590'
 
@@ -161,6 +159,7 @@ class ToolchainComparator(object):
     remote: %s
     retries: 1
     """ % (self._board, self._remotes)
+    # TODO(b/244607231): Add graphic benchmarks removed in crrev.com/c/3869851.
     experiment_tests = """
     benchmark: all_toolchain_perf {
       suite: telemetry_Crosperf
@@ -176,28 +175,10 @@ class ToolchainComparator(object):
       retries: 0
     }
     """
-    telemetry_aquarium_tests = """
-    benchmark: rendering.desktop {
-      run_local: False
-      suite: telemetry_Crosperf
-      test_args: --story-filter=aquarium$
-      iterations: 5
-    }
-
-    benchmark: rendering.desktop {
-      run_local: False
-      suite: telemetry_Crosperf
-      test_args: --story-filter=aquarium_20k$
-      iterations: 3
-    }
-    """
 
     with open(experiment_file, 'w', encoding='utf-8') as f:
       f.write(experiment_header)
       f.write(experiment_tests)
-
-      if self._board not in TELEMETRY_AQUARIUM_UNSUPPORTED:
-        f.write(telemetry_aquarium_tests)
 
       # Now add vanilla to test file.
       official_image = """
