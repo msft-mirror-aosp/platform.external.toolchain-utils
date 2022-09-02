@@ -8,8 +8,8 @@ config = {}
 
 
 def GetConfig(key):
-  return config.get(key)
+    return config.get(key)
 
 
 def AddConfig(key, value):
-  config[key] = value
+    config[key] = value

@@ -23,22 +23,22 @@ from binary_search_tool.test import common
 
 
 def Main(_):
-  working_set = common.ReadWorkingSet()
+    working_set = common.ReadWorkingSet()
 
-  if not os.path.exists(os.environ['BISECT_GOOD_SET']):
-    print('Good set file does not exist!')
-    return 1
+    if not os.path.exists(os.environ["BISECT_GOOD_SET"]):
+        print("Good set file does not exist!")
+        return 1
 
-  object_index = common.ReadObjectIndex(os.environ['BISECT_GOOD_SET'])
+    object_index = common.ReadObjectIndex(os.environ["BISECT_GOOD_SET"])
 
-  for oi in object_index:
-    working_set[int(oi)] = 0
+    for oi in object_index:
+        working_set[int(oi)] = 0
 
-  common.WriteWorkingSet(working_set)
+    common.WriteWorkingSet(working_set)
 
-  return 0
+    return 0
 
 
-if __name__ == '__main__':
-  retval = Main(sys.argv)
-  sys.exit(retval)
+if __name__ == "__main__":
+    retval = Main(sys.argv)
+    sys.exit(retval)

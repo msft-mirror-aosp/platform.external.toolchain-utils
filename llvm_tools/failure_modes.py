@@ -11,13 +11,13 @@ import enum
 
 
 class FailureModes(enum.Enum):
-  """Different modes for the patch manager when handling a failed patch."""
+    """Different modes for the patch manager when handling a failed patch."""
 
-  FAIL = 'fail'
-  CONTINUE = 'continue'
-  DISABLE_PATCHES = 'disable_patches'
-  BISECT_PATCHES = 'bisect_patches'
-  REMOVE_PATCHES = 'remove_patches'
+    FAIL = "fail"
+    CONTINUE = "continue"
+    DISABLE_PATCHES = "disable_patches"
+    BISECT_PATCHES = "bisect_patches"
+    REMOVE_PATCHES = "remove_patches"
 
-  # Only used by 'bisect_patches'.
-  INTERNAL_BISECTION = 'internal_bisection'
+    # Only used by 'bisect_patches'.
+    INTERNAL_BISECTION = "internal_bisection"

@@ -9,8 +9,8 @@ is_test = [False]
 
 
 def SetTestMode(flag):
-  is_test[0] = flag
+    is_test[0] = flag
 
 
 def GetTestMode():
-  return is_test[0]
+    return is_test[0]

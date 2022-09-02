@@ -16,14 +16,15 @@ import sys
 
 
 def Main():
-  if not os.path.exists('./is_setup'):
-    return 1
-  print(
-      'No support for -opt-bisect-limit or -print-debug-counter.',
-      file=sys.stderr)
-  return 0
+    if not os.path.exists("./is_setup"):
+        return 1
+    print(
+        "No support for -opt-bisect-limit or -print-debug-counter.",
+        file=sys.stderr,
+    )
+    return 0
 
 
-if __name__ == '__main__':
-  retval = Main()
-  sys.exit(retval)
+if __name__ == "__main__":
+    retval = Main()
+    sys.exit(retval)

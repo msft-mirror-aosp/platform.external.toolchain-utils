@@ -11,20 +11,20 @@ from allowlist import is_allowlisted
 
 
 def not_by_gcc(dso_path, producer, comp_path):
-  """Check whether the compile unit is not built by gcc.
+    """Check whether the compile unit is not built by gcc.
 
-  Args:
-    dso_path: path to the elf/dso.
-    producer: DW_AT_producer contains the compiler command line.
-    comp_path: DW_AT_comp_dir + DW_AT_name.
+    Args:
+      dso_path: path to the elf/dso.
+      producer: DW_AT_producer contains the compiler command line.
+      comp_path: DW_AT_comp_dir + DW_AT_name.
 
-  Returns:
-    False if compiled by gcc otherwise True.
-  """
-  if is_allowlisted('ngcc_comp_path', comp_path):
-    return True
+    Returns:
+      False if compiled by gcc otherwise True.
+    """
+    if is_allowlisted("ngcc_comp_path", comp_path):
+        return True
 
-  if is_allowlisted('ngcc_dso_path', dso_path):
-    return True
+    if is_allowlisted("ngcc_dso_path", dso_path):
+        return True
 
-  return 'GNU C' not in producer
+    return "GNU C" not in producer

@@ -12,9 +12,9 @@ import sys
 
 
 def Main():
-  return 1  ## False, flashing failure
+    return 1  ## False, flashing failure
 
 
-if __name__ == '__main__':
-  retval = Main()
-  sys.exit(retval)
+if __name__ == "__main__":
+    retval = Main()
+    sys.exit(retval)

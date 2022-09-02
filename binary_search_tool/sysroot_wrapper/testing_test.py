@@ -17,26 +17,30 @@ import subprocess
 import sys
 import os
 
-base_path = ('/var/cache/chromeos-chrome/chrome-src-internal/src/out_daisy/'
-             'Release/obj/')
+base_path = (
+    "/var/cache/chromeos-chrome/chrome-src-internal/src/out_daisy/"
+    "Release/obj/"
+)
 bad_files = [
-    os.path.join(base_path, 'base/base.cpu.o'),
-    os.path.join(base_path, 'base/base.version.o'),
-    os.path.join(base_path, 'apps/apps.launcher.o')
+    os.path.join(base_path, "base/base.cpu.o"),
+    os.path.join(base_path, "base/base.version.o"),
+    os.path.join(base_path, "apps/apps.launcher.o"),
 ]
 
-bisect_dir = os.environ.get('BISECT_DIR', '/tmp/sysroot_bisect')
+bisect_dir = os.environ.get("BISECT_DIR", "/tmp/sysroot_bisect")
 
 
 def Main(_):
-  for test_file in bad_files:
-    test_file = test_file.strip()
-    cmd = ['grep', test_file, os.path.join(bisect_dir, 'BAD_SET')]
-    ret = subprocess.call(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if not ret:
-      return 1
-  return 0
+    for test_file in bad_files:
+        test_file = test_file.strip()
+        cmd = ["grep", test_file, os.path.join(bisect_dir, "BAD_SET")]
+        ret = subprocess.call(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        if not ret:
+            return 1
+    return 0
 
 
-if __name__ == '__main__':
-  sys.exit(Main(sys.argv[1:]))
+if __name__ == "__main__":
+    sys.exit(Main(sys.argv[1:]))

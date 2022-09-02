@@ -17,20 +17,22 @@ poll: 1
 foobar: 1
 """
 
-TEST_FP = 'foo'
+TEST_FP = "foo"
 
 
 class TestMassSeccompEditor(unittest.TestCase):
-  """Test the mass_seccomp_editor."""
+    """Test the mass_seccomp_editor."""
 
-  def test_check_missing_sycalls(self):
-    """Test we can find missing syscalls."""
-    with mock.patch('builtins.open',
-                    mock.mock_open(read_data=BASE_SECCOMP_CONTENTS)):
-      out = mass_seccomp_editor.check_missing_syscalls(
-          ['fstat', 'dup', 'fizzbuzz'], TEST_FP)
-    self.assertEqual(out, set(['dup', 'fizzbuzz']))
+    def test_check_missing_sycalls(self):
+        """Test we can find missing syscalls."""
+        with mock.patch(
+            "builtins.open", mock.mock_open(read_data=BASE_SECCOMP_CONTENTS)
+        ):
+            out = mass_seccomp_editor.check_missing_syscalls(
+                ["fstat", "dup", "fizzbuzz"], TEST_FP
+            )
+        self.assertEqual(out, set(["dup", "fizzbuzz"]))
 
 
-if __name__ == '__main__':
-  unittest.main()
+if __name__ == "__main__":
+    unittest.main()

@@ -15,20 +15,12 @@ pass_name = {
     # For users who make local changes to passes, please add a map from pass
     # description to newly introduced DebugCounter name for transformation
     # level bisection purpose.
-    'Hoist/decompose integer division and remainder':
-        'div-rem-pairs-transform',
-    'Early CSE':
-        'early-cse',
-    'Falkor HW Prefetch Fix Late Phase':
-        'falkor-hwpf',
-    'Combine redundant instructions':
-        'instcombine-visit',
-    'Machine Copy Propagation Pass':
-        'machine-cp-fwd',
-    'Global Value Numbering':
-        'newgvn-phi',
-    'PredicateInfo Printer':
-        'predicateinfo-rename',
-    'SI Insert Waitcnts':
-        'si-insert-waitcnts-forceexp',
+    "Hoist/decompose integer division and remainder": "div-rem-pairs-transform",
+    "Early CSE": "early-cse",
+    "Falkor HW Prefetch Fix Late Phase": "falkor-hwpf",
+    "Combine redundant instructions": "instcombine-visit",
+    "Machine Copy Propagation Pass": "machine-cp-fwd",
+    "Global Value Numbering": "newgvn-phi",
+    "PredicateInfo Printer": "predicateinfo-rename",
+    "SI Insert Waitcnts": "si-insert-waitcnts-forceexp",
 }
