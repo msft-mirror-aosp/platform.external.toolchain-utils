@@ -12,7 +12,6 @@ import datetime
 import multiprocessing
 import multiprocessing.pool
 import os
-from pathlib import Path
 import re
 import shlex
 import shutil
@@ -21,6 +20,7 @@ import sys
 import threading
 import traceback
 import typing as t
+from pathlib import Path
 
 
 def run_command_unchecked(command: t.List[str],
@@ -164,71 +164,77 @@ def check_isort(toolchain_utils_root: str,
   )
 
 
-def check_yapf(toolchain_utils_root: str, yapf: Path,
-               python_files: t.Iterable[str]) -> CheckResult:
-  """Subchecker of check_py_format. Checks python file formats with yapf"""
-  # Folks have been bitten by accidentally using multiple yapf versions in the
-  # past. This is an issue, since newer versions of yapf sometimes format
-  # things differently. Make the version obvious.
-  command = [yapf, '--version']
+def check_black(toolchain_utils_root: str, black: Path,
+                python_files: t.Iterable[str]) -> CheckResult:
+  """Subchecker of check_py_format. Checks python file formats with black"""
+  # Folks have been bitten by accidentally using multiple formatter versions in
+  # the past. This is an issue, since newer versions of black may format things
+  # differently. Make the version obvious.
+  command = [black, '--version']
   exit_code, stdout_and_stderr = run_command_unchecked(
       command, cwd=toolchain_utils_root)
   if exit_code:
     return CheckResult(
         ok=False,
-        output=f'Failed getting yapf version; stdstreams: {stdout_and_stderr}',
+        output=f'Failed getting black version; stdstreams: {stdout_and_stderr}',
         autofix_commands=[],
     )
 
-  yapf_version = stdout_and_stderr.strip()
-  # This is the depot_tools version. If folks have this, things will break for
-  # them. Ask them to upgrade. Peephole this rather than making some
-  # complicated version-parsing scheme, since it's likely that everyone with a
-  # too-old version is using specifically the depot_tools one.
-  if yapf_version == 'yapf 0.27.0':
-    return CheckResult(
-        ok=False,
-        output='YAPF is too old; please upgrade it: `pip install --user yapf`',
-        autofix_commands=[],
-    )
-
-  command = [yapf, '-d'] + python_files
+  black_version = stdout_and_stderr.strip()
+  command = [black, '--line-length=80', '--check'] + python_files
   exit_code, stdout_and_stderr = run_command_unchecked(
       command, cwd=toolchain_utils_root)
-
-  # yapf fails when files are poorly formatted.
+  # black fails when files are poorly formatted.
   if exit_code == 0:
     return CheckResult(
         ok=True,
-        output=f'Using {yapf_version}, no issues were found.',
+        output=f'Using {black_version!r}, no issues were found.',
+        autofix_commands=[],
+    )
+
+  # Output format looks something like:
+  # f'{complaints}\nOh no!{emojis}\n{summary}'
+  # Whittle it down to complaints.
+  complaints = stdout_and_stderr.split('\nOh no!', 1)
+  if len(complaints) != 2:
+    return CheckResult(
+        ok=False,
+        output=f'Unparseable `black` output:\n{stdout_and_stderr}',
         autofix_commands=[],
     )
 
   bad_files = []
-  bad_file_re = re.compile(r'^--- (.*)\s+\(original\)\s*$')
-  for line in stdout_and_stderr.splitlines():
-    m = bad_file_re.match(line)
-    if not m:
+  errors = []
+  refmt_prefix = 'would reformat '
+  for line in complaints[0].strip().splitlines():
+    line = line.strip()
+    if line.startswith('error:'):
+      errors.append(line)
       continue
 
-    file_name, = m.groups()
-    bad_files.append(file_name.strip())
+    if not line.startswith(refmt_prefix):
+      return CheckResult(
+          ok=False,
+          output=f'Unparseable `black` output:\n{stdout_and_stderr}',
+          autofix_commands=[],
+      )
 
-  # ... and doesn't really differentiate "your files have broken formatting"
-  # errors from general ones. So if we see nothing diffed, assume that a
-  # general error happened.
-  if not bad_files:
+    bad_files.append(line[len(refmt_prefix):].strip())
+
+  # If black had internal errors that it could handle, print them out and exit
+  # without an autofix.
+  if errors:
+    err_str = "\n".join(errors)
     return CheckResult(
         ok=False,
-        output='`%s` failed; stdout/stderr:\n%s' %
-        (escape_command(command), stdout_and_stderr),
+        output=f'Using {black_version!r} had the following errors:\n{err_str}',
         autofix_commands=[],
     )
 
-  autofix = [str(yapf), '-i'] + bad_files
+  autofix = [black] + bad_files
   return CheckResult(
       ok=False,
-      output=f'Using {yapf_version}, these file(s) have formatting errors: '
+      output=f'Using {black_version!r}, these file(s) have formatting errors: '
       f'{bad_files}',
       autofix_commands=[autofix],
   )
@@ -280,18 +286,14 @@ def check_py_format(toolchain_utils_root: str,
                     thread_pool: multiprocessing.pool.ThreadPool,
                     files: t.Iterable[str]) -> t.List[CheckResult]:
   """Runs yapf on files to check for style bugs. Also checks for #!s."""
-  pip_yapf = Path('~/.local/bin/yapf').expanduser()
-  if pip_yapf.exists():
-    yapf = pip_yapf
-  else:
-    yapf = 'yapf'
-    if not has_executable_on_path(yapf):
-      return CheckResult(
-          ok=False,
-          output="yapf isn't available on your $PATH. Please either "
-          'enter a chroot, or place depot_tools on your $PATH.',
-          autofix_commands=[],
-      )
+  black = 'black'
+  if not has_executable_on_path(black):
+    return CheckResult(
+        ok=False,
+        output="black isn't available on your $PATH. Please either "
+        'enter a chroot, or place depot_tools on your $PATH.',
+        autofix_commands=[],
+    )
 
   python_files = [f for f in remove_deleted_files(files) if f.endswith('.py')]
   if not python_files:
@@ -302,9 +304,9 @@ def check_py_format(toolchain_utils_root: str,
     )
 
   tasks = [
-      ('check_yapf',
-       thread_pool.apply_async(check_yapf,
-                               (toolchain_utils_root, yapf, python_files))),
+      ('check_black',
+       thread_pool.apply_async(check_black,
+                               (toolchain_utils_root, black, python_files))),
       ('check_isort',
        thread_pool.apply_async(check_isort,
                                (toolchain_utils_root, python_files))),
