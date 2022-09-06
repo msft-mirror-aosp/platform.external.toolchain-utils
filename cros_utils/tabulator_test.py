@@ -6,7 +6,6 @@
 
 """Tests for the tabulator module."""
 
-from __future__ import print_function
 
 __author__ = 'asharif@google.com (Ahmad Sharif)'
 

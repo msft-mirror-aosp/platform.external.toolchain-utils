@@ -10,8 +10,6 @@
 This script images a remote ChromeOS device with a specific image."
 """
 
-from __future__ import print_function
-
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 

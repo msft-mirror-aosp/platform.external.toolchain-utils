@@ -5,7 +5,6 @@
 
 """Check whether the compile unit is not built by gcc."""
 
-from __future__ import print_function
 
 from allowlist import is_allowlisted
 

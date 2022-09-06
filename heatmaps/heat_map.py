@@ -6,7 +6,6 @@
 
 """Wrapper to generate heat maps for chrome."""
 
-from __future__ import print_function
 
 import argparse
 import os

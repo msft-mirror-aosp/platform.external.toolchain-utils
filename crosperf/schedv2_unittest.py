@@ -7,7 +7,6 @@
 
 """This contains the unit tests for the new Crosperf task scheduler."""
 
-from __future__ import print_function
 
 import functools
 import io

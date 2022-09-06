@@ -49,7 +49,6 @@ If you provide neither --use_afdo_generation_stage nor
 since it's safer.
 """
 
-from __future__ import print_function
 
 import argparse
 import collections

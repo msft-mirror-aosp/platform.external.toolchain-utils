@@ -6,7 +6,6 @@
 
 """unittest for settings."""
 
-from __future__ import print_function
 
 import unittest
 import unittest.mock as mock

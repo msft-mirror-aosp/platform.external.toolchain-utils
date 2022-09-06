@@ -90,7 +90,6 @@ diff -Nuar llvm-pre7.0_pre335547_p20180529.ebuild newly-created-file.ebuild
         # some users may find it useful
 """
 
-from __future__ import print_function
 
 import os
 import sys

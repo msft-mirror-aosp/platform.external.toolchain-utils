@@ -7,7 +7,6 @@
 
 """Utilities to send email either through SMTP or SendGMR."""
 
-from __future__ import print_function
 
 import base64
 import contextlib

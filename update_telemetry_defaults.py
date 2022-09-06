@@ -11,8 +11,6 @@ results to be used in generating reports from running the Telemetry
 benchmarks.
 """
 
-from __future__ import print_function
-
 
 __author__ = "cmtice@google.com (Caroline Tice)"
 

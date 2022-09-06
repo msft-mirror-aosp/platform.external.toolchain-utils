@@ -13,7 +13,6 @@ undo the changes made by setup.sh, returning everything to its
 original state.
 """
 
-from __future__ import print_function
 
 import argparse
 import sys

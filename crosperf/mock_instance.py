@@ -5,7 +5,6 @@
 
 """This contains some mock instances for testing."""
 
-from __future__ import print_function
 
 from benchmark import Benchmark
 from label import MockLabel

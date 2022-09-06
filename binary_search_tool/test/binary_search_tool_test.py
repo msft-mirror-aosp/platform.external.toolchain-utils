@@ -6,8 +6,6 @@
 
 """Tests for bisecting tool."""
 
-from __future__ import division
-from __future__ import print_function
 
 __author__ = "shenhan@google.com (Han Shen)"
 

@@ -7,8 +7,6 @@
 
 """Timeout test for command_executer."""
 
-from __future__ import print_function
-
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 

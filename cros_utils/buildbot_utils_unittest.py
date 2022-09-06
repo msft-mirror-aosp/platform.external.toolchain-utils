@@ -7,7 +7,6 @@
 
 """Unittest for buildbot_utils.py."""
 
-from __future__ import print_function
 
 import time
 import unittest

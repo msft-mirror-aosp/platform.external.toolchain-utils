@@ -6,7 +6,6 @@
 
 """Tests when updating a tryjob's status."""
 
-from __future__ import print_function
 
 import json
 import os

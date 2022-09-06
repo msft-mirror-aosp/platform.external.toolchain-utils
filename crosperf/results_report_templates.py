@@ -4,7 +4,6 @@
 # found in the LICENSE file.
 
 """Text templates used by various parts of results_report."""
-from __future__ import print_function
 
 import html
 from string import Template

@@ -5,7 +5,6 @@
 
 """Module to get the settings from experiment file."""
 
-from __future__ import print_function
 
 from cros_utils import logger
 from cros_utils import misc

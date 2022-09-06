@@ -6,7 +6,6 @@
 
 """Updates the status of a tryjob."""
 
-from __future__ import print_function
 
 import argparse
 import enum

@@ -7,7 +7,6 @@
 
 """Test to ensure we're not touching /dev/ptmx when running commands."""
 
-from __future__ import print_function
 
 import os
 import subprocess

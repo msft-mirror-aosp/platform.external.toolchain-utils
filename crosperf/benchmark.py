@@ -5,8 +5,6 @@
 
 """Define a type that wraps a Benchmark instance."""
 
-from __future__ import division
-from __future__ import print_function
 
 import math
 

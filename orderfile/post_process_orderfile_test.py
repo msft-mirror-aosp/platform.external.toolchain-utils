@@ -6,8 +6,6 @@
 
 """Tests for post_process_orderfile.py."""
 
-from __future__ import division
-from __future__ import print_function
 
 import os
 import shutil

@@ -9,8 +9,6 @@
 This script enters the chroot with mounted sources.
 """
 
-from __future__ import print_function
-
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 

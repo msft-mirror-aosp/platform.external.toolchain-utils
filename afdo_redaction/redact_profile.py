@@ -24,8 +24,6 @@ It reads a textual AFDO profile from stdin, and prints a 'fixed' version of it
 to stdout. A summary of what the script actually did is printed to stderr.
 """
 
-from __future__ import division
-from __future__ import print_function
 
 import collections
 import re

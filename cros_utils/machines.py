@@ -5,7 +5,6 @@
 
 """Utilities relating to machine-specific functions."""
 
-from __future__ import print_function
 
 from cros_utils import command_executer
 

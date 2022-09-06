@@ -6,7 +6,6 @@
 
 """Tests for afdo_prof_analysis."""
 
-from __future__ import print_function
 
 import random
 import io

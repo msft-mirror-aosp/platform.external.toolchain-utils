@@ -6,7 +6,6 @@
 
 """Emulate test setup that fails (i.e. failed flash to device)"""
 
-from __future__ import print_function
 
 import sys
 

@@ -10,7 +10,6 @@ If any reverts are found that were previously unknown, this cherry-picks them or
 fires off an email. All LLVM SHAs to monitor are autodetected.
 """
 
-from __future__ import print_function
 
 import argparse
 import io

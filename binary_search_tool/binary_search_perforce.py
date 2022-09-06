@@ -5,8 +5,6 @@
 # found in the LICENSE file.
 
 """Module of binary serch for perforce."""
-from __future__ import division
-from __future__ import print_function
 
 import argparse
 import math

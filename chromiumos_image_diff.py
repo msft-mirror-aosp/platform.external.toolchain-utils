@@ -20,8 +20,6 @@
    And this script should be executed outside chroot.
 """
 
-from __future__ import print_function
-
 
 __author__ = "shenhan@google.com (Han Shen)"
 

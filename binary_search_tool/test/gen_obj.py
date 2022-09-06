@@ -10,7 +10,6 @@
 1 represents a bad object file.
 """
 
-from __future__ import print_function
 
 import argparse
 import os

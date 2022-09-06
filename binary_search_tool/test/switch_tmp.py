@@ -12,7 +12,6 @@ this script) content. Every line in the file is an object index, which will be
 set to good (mark as 42).
 """
 
-from __future__ import print_function
 
 import sys
 

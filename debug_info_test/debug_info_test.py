@@ -6,7 +6,6 @@
 
 """Test for debug info."""
 
-from __future__ import print_function
 
 import os
 import subprocess

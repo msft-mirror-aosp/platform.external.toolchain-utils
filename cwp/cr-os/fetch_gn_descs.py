@@ -19,7 +19,6 @@ The result is of the form:
 }
 """
 
-from __future__ import print_function
 
 import argparse
 import json

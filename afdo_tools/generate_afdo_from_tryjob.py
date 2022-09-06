@@ -6,7 +6,6 @@
 
 """Given a tryjob and perf profile, generates an AFDO profile."""
 
-from __future__ import print_function
 
 import argparse
 import distutils.spawn

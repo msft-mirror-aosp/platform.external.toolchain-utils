@@ -6,7 +6,6 @@
 
 """Tests for nightly_revert_checker."""
 
-from __future__ import print_function
 
 import io
 import unittest

@@ -17,8 +17,6 @@ objects as Chrome, this can become problematic, and lead to NaCl doubling in
 size (or worse). See crbug.com/1005023 and crbug.com/916130.
 """
 
-from __future__ import division
-from __future__ import print_function
 
 import argparse
 import re

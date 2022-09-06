@@ -16,7 +16,6 @@ well as copying the images into the seven-day reports directory.
 
 # Script to test different toolchains against ChromeOS benchmarks.
 
-from __future__ import print_function
 
 import argparse
 import datetime

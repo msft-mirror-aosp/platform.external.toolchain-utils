@@ -6,7 +6,6 @@
 
 """Emulate running of test setup script, is_good.py should fail without this."""
 
-from __future__ import print_function
 
 import sys
 

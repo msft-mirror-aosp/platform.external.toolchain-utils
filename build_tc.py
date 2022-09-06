@@ -9,8 +9,6 @@
 This script sets up the toolchain if you give it the gcctools directory.
 """
 
-from __future__ import print_function
-
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 

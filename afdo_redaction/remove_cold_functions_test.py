@@ -6,7 +6,6 @@
 
 """Tests for remove_cold_functions."""
 
-from __future__ import print_function
 
 import io
 import unittest

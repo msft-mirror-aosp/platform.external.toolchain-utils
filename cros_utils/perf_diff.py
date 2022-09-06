@@ -9,8 +9,6 @@
 A detailed description of perf_diff.
 """
 
-from __future__ import print_function
-
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 

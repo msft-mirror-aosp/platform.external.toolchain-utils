@@ -6,7 +6,6 @@
 # found in the LICENSE file.
 
 """The unittest of experiment_file."""
-from __future__ import print_function
 
 import io
 import unittest

@@ -5,7 +5,6 @@
 
 """Failure mode constants avaiable to the patch manager."""
 
-from __future__ import print_function
 
 import enum
 

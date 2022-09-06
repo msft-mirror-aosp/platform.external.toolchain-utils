@@ -4,7 +4,6 @@
 # found in the LICENSE file.
 
 """A module to handle the report format."""
-from __future__ import print_function
 
 import datetime
 import functools

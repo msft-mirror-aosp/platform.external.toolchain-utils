@@ -5,8 +5,6 @@
 
 """SuiteRunner defines the interface from crosperf to test script."""
 
-from __future__ import division
-from __future__ import print_function
 
 import json
 import os

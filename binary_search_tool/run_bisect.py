@@ -6,7 +6,6 @@
 
 """The unified package/object bisecting tool."""
 
-from __future__ import print_function
 
 import abc
 import argparse

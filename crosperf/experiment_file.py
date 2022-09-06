@@ -5,7 +5,6 @@
 
 """The experiment file module. It manages the input file of crosperf."""
 
-from __future__ import print_function
 
 import os.path
 import re

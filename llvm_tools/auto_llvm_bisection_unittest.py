@@ -6,7 +6,6 @@
 
 """Tests for auto bisection of LLVM."""
 
-from __future__ import print_function
 
 import json
 import os

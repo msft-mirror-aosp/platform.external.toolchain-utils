@@ -6,7 +6,6 @@
 
 """Modifies a tryjob based off of arguments."""
 
-from __future__ import print_function
 
 import argparse
 import enum

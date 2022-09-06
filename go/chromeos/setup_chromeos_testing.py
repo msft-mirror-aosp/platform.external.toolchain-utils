@@ -6,7 +6,6 @@
 
 """Generate board-specific scripts for Go compiler testing."""
 
-from __future__ import print_function
 
 import argparse
 import getpass

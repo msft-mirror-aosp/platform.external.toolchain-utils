@@ -6,7 +6,6 @@
 
 """Build script that copies the go sources to a build destination."""
 
-from __future__ import print_function
 
 import argparse
 import os.path

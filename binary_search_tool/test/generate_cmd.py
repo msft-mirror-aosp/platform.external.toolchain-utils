@@ -10,7 +10,6 @@ This is a required argument for pass level bisecting. For unit test, we use
 this script to verify if cmd_script.sh is generated correctly.
 """
 
-from __future__ import print_function
 
 import os
 import sys

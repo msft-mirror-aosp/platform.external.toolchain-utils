@@ -51,7 +51,6 @@ Turns into
 The rendering functions should never mutate your input.
 """
 
-from __future__ import print_function
 
 import collections
 import html

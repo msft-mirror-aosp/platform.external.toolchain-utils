@@ -6,7 +6,6 @@
 
 """Runs a tryjob/tryjobs after updating the packages."""
 
-from __future__ import print_function
 
 import argparse
 import datetime

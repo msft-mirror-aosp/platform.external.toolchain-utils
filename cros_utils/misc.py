@@ -5,9 +5,6 @@
 
 """Utilities for toolchain build."""
 
-from __future__ import division
-from __future__ import print_function
-
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 

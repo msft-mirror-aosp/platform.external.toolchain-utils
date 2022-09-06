@@ -9,7 +9,6 @@ This script generates a pseudo log when certain bisecting flags are not
 supported by compiler.
 """
 
-from __future__ import print_function
 
 import os
 import sys

@@ -10,7 +10,6 @@ Revision numbers are all of the form '(branch_name, r1234)'. As a shorthand,
 r1234 is parsed as '(main, 1234)'.
 """
 
-from __future__ import print_function
 
 import argparse
 import re

@@ -6,9 +6,6 @@
 
 """Script to lock/unlock machines."""
 
-from __future__ import division
-from __future__ import print_function
-
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 

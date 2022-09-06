@@ -16,7 +16,6 @@ well as copying the result into a directory.
 
 # Script to test different toolchains against ChromeOS benchmarks.
 
-from __future__ import print_function
 
 import argparse
 import datetime

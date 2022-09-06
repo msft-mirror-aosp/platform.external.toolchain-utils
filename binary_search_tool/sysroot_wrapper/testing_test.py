@@ -11,7 +11,6 @@ chromeos-chrome built for a daisy board, if you are using another package you
 will need to change the base_path accordingly.
 """
 
-from __future__ import print_function
 
 import subprocess
 import sys

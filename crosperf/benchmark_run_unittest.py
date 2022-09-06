@@ -7,7 +7,6 @@
 
 """Testing of benchmark_run."""
 
-from __future__ import print_function
 
 import inspect
 import unittest

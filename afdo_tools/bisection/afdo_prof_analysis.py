@@ -20,7 +20,6 @@ exit code. The codes known to this script are:
   - >127: quit immediately
 """
 
-from __future__ import division, print_function
 
 import argparse
 import json

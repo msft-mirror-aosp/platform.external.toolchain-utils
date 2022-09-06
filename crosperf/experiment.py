@@ -5,7 +5,6 @@
 
 """The experiment setting module."""
 
-from __future__ import print_function
 
 import os
 from threading import Lock

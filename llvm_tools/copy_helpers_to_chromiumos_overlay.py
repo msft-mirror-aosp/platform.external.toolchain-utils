@@ -11,7 +11,6 @@ patch_manager ones). This script simplifies the copying of those around.
 """
 
 # Necessary until crbug.com/1006448 is fixed
-from __future__ import print_function
 
 import argparse
 import os

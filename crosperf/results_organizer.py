@@ -5,7 +5,6 @@
 
 """Parse data from benchmark_runs for tabulator."""
 
-from __future__ import print_function
 
 import errno
 import json

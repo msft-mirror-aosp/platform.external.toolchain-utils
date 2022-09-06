@@ -7,7 +7,6 @@
 
 """Unittest for machine_manager."""
 
-from __future__ import print_function
 
 import hashlib
 import os.path

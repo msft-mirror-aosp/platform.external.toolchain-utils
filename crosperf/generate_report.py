@@ -44,8 +44,6 @@ Peppy's runs took 1.321ms and 1.920ms, while peppy-new-crosstool's took 1.221ms
   and 1.423ms. None of the runs failed to complete.
 """
 
-from __future__ import division
-from __future__ import print_function
 
 import argparse
 import functools

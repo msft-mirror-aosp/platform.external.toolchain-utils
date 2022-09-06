@@ -6,7 +6,6 @@
 
 """End-to-end test for afdo_prof_analysis."""
 
-from __future__ import absolute_import, division, print_function
 
 import json
 import os

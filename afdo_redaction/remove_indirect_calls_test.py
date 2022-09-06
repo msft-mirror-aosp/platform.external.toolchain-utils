@@ -6,7 +6,6 @@
 
 """Tests for remove_indirect_calls"""
 
-from __future__ import print_function
 
 import io
 import unittest

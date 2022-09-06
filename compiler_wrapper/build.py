@@ -6,7 +6,6 @@
 
 """Build script that builds a binary from a bundle."""
 
-from __future__ import print_function
 
 import argparse
 import os.path

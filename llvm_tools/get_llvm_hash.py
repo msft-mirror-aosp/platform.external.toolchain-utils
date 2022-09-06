@@ -6,7 +6,6 @@
 
 """Returns the latest LLVM version's hash."""
 
-from __future__ import print_function
 
 import argparse
 import contextlib

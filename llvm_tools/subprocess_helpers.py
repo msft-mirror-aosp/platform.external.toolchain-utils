@@ -5,7 +5,6 @@
 
 """Helpers/wrappers for the subprocess module for migration to python3."""
 
-from __future__ import print_function
 
 import subprocess
 

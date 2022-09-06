@@ -11,7 +11,6 @@ It assumes that -opt-bisect-limit and -print-debug-counter are supported by the
 compiler.
 """
 
-from __future__ import print_function
 
 import os
 import sys

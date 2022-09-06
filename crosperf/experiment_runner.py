@@ -4,7 +4,6 @@
 # found in the LICENSE file.
 
 """The experiment runner module."""
-from __future__ import print_function
 
 import getpass
 import os

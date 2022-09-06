@@ -6,7 +6,6 @@
 
 """Unit tests for config.py"""
 
-from __future__ import print_function
 
 import unittest
 

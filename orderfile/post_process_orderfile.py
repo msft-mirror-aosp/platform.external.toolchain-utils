@@ -19,8 +19,6 @@ The results of the file is intended to be uploaded and consumed when linking
 Chrome in ChromeOS.
 """
 
-from __future__ import division
-from __future__ import print_function
 
 import argparse
 import os

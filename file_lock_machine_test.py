@@ -10,8 +10,6 @@
 MachineManagerTest tests MachineManager.
 """
 
-from __future__ import print_function
-
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 

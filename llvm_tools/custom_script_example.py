@@ -6,7 +6,6 @@
 
 """A custom script example that utilizes the .JSON contents of the tryjob."""
 
-from __future__ import print_function
 
 import json
 import sys

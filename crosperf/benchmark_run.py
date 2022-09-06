@@ -4,7 +4,6 @@
 # found in the LICENSE file.
 
 """Module of benchmark runs."""
-from __future__ import print_function
 
 import datetime
 import threading

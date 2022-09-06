@@ -6,7 +6,6 @@
 
 """Tests for fetch_gn_descs.py."""
 
-from __future__ import print_function
 
 import io
 import unittest

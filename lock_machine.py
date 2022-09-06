@@ -7,7 +7,6 @@
 
 """This module controls locking and unlocking of test machines."""
 
-from __future__ import print_function
 
 import argparse
 import enum

@@ -9,9 +9,6 @@
 This script provides utils to set device specs.
 """
 
-from __future__ import division
-from __future__ import print_function
-
 
 __author__ = "zhizhouy@google.com (Zhizhou Yang)"
 

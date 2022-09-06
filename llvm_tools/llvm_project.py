@@ -5,7 +5,6 @@
 
 """Module for manipulating llvm-project-copy. Generally intended for tests."""
 
-from __future__ import print_function
 
 import datetime
 import os

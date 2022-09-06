@@ -6,7 +6,6 @@
 
 """Unittests for running tests after updating packages."""
 
-from __future__ import print_function
 
 import json
 import subprocess

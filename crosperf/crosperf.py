@@ -6,7 +6,6 @@
 
 """The driver script for running performance benchmarks on ChromeOS."""
 
-from __future__ import print_function
 
 import argparse
 import atexit

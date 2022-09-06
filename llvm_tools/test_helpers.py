@@ -5,7 +5,6 @@
 
 """Helper functions for unit testing."""
 
-from __future__ import print_function
 
 from contextlib import contextmanager
 import json

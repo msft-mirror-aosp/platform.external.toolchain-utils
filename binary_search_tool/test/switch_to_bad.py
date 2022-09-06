@@ -6,7 +6,6 @@
 
 """Switch part of the objects file in working set to (possible) bad ones."""
 
-from __future__ import print_function
 
 import sys
 

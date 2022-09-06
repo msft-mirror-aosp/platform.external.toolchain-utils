@@ -13,8 +13,6 @@ performed by another script perf-to-inst-page.sh). It can also analyze
 the symbol names in hot pages.
 """
 
-from __future__ import division
-from __future__ import print_function
 
 import bisect
 import collections

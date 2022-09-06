@@ -6,7 +6,6 @@
 
 """The unittest of flags."""
 
-from __future__ import print_function
 
 import unittest
 

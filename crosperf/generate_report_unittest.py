@@ -6,8 +6,6 @@
 
 """Test for generate_report.py."""
 
-from __future__ import division
-from __future__ import print_function
 
 import copy
 import json

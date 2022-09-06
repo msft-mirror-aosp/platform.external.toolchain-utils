@@ -11,8 +11,6 @@ This script sets up the ChromeOS source in the given directory, matching a
 particular release of ChromeOS.
 """
 
-from __future__ import print_function
-
 
 __author__ = (
     "asharif@google.com (Ahmad Sharif) "

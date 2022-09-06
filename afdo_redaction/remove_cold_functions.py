@@ -24,8 +24,6 @@ This is part of the effort to stablize the impact of AFDO profile on
 Chrome binary size. See crbug.com/1062014 for more context.
 """
 
-from __future__ import division
-from __future__ import print_function
 
 import argparse
 import collections

@@ -20,7 +20,6 @@ Design doc:
 https://docs.google.com/document/d/1yDgaUIa2O5w6dc3sSTe1ry-1ehKajTGJGQCbyn0fcEM
 """
 
-from __future__ import print_function
 
 import os
 import shlex

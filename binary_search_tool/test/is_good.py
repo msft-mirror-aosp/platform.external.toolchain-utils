@@ -6,7 +6,6 @@
 
 """Check to see if the working set produces a good executable."""
 
-from __future__ import print_function
 
 import os
 import sys

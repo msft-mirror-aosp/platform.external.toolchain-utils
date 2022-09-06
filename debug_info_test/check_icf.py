@@ -5,7 +5,6 @@
 
 """check whether chrome was built with identical code folding."""
 
-from __future__ import print_function
 
 import os
 import re

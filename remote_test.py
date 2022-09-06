@@ -10,8 +10,6 @@
 This script can login to the chromeos machine using the test private key.
 """
 
-from __future__ import print_function
-
 
 __author__ = "asharif@google.com (Ahmad Sharif)"
 

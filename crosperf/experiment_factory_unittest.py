@@ -7,7 +7,6 @@
 
 """Unit test for experiment_factory.py"""
 
-from __future__ import print_function
 
 import io
 import os

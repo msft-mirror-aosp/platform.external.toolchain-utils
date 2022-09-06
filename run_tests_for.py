@@ -24,7 +24,6 @@ All tests are run in parallel.
 # of the chroot a bit more obnoxious?), but might be worth exploring if this
 # starts to grow quite complex on its own.
 
-from __future__ import print_function
 
 import argparse
 import collections

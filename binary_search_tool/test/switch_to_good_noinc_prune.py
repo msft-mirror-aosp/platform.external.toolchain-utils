@@ -18,7 +18,6 @@ that noincremental always holds).
 Warning: This switch script assumes the --file_args option
 """
 
-from __future__ import print_function
 
 import shutil
 import sys

@@ -5,7 +5,6 @@
 
 """Setting files for global, benchmark and labels."""
 
-from __future__ import print_function
 
 from field import BooleanField
 from field import EnumField

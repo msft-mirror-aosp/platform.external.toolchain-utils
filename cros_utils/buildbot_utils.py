@@ -5,8 +5,6 @@
 
 """Utilities for launching and accessing ChromeOS buildbots."""
 
-from __future__ import division
-from __future__ import print_function
 
 import ast
 import json

@@ -6,7 +6,6 @@
 
 """Unit tests for chroot helper functions."""
 
-from __future__ import print_function
 
 import subprocess
 import unittest

@@ -11,7 +11,6 @@
    after that, we compare the result of ResultOrganizer.
 """
 
-from __future__ import print_function
 
 import unittest
 

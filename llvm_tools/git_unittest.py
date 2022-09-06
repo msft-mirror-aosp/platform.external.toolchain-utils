@@ -6,7 +6,6 @@
 
 """Unit tests for git helper functions."""
 
-from __future__ import print_function
 
 import os
 import subprocess

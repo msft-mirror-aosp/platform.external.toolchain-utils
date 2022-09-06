@@ -12,7 +12,6 @@ to the switch scripts is equals to the actual number of items (i.e. checking
 that noincremental always holds).
 """
 
-from __future__ import print_function
 
 import os
 import sys

@@ -5,7 +5,6 @@
 
 """check whether intended components exists in the given dso."""
 
-from __future__ import print_function
 
 import os
 import subprocess

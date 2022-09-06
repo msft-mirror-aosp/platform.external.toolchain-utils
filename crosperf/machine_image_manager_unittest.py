@@ -6,7 +6,6 @@
 
 """Unit tests for the MachineImageManager class."""
 
-from __future__ import print_function
 
 import random
 import unittest

@@ -6,7 +6,6 @@
 
 """Performs bisection on LLVM based off a .JSON file."""
 
-from __future__ import print_function
 
 import argparse
 import enum

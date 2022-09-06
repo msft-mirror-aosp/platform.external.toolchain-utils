@@ -5,7 +5,6 @@
 
 """The label of benchamrks."""
 
-from __future__ import print_function
 
 import hashlib
 import os

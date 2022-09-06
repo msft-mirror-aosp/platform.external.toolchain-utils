@@ -35,7 +35,6 @@ In this example, the script will merge profdata from arm and amd64 builder, and
 profdata from an arm64 buildbucket task.
 """
 
-from __future__ import print_function
 
 import argparse
 import collections

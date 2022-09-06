@@ -10,8 +10,6 @@
 This script updates a remote chromebook to make the / directory writable."
 """
 
-from __future__ import print_function
-
 
 __author__ = "cmtice@google.com (Caroline Tice)"
 
