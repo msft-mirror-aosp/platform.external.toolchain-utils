@@ -28,12 +28,14 @@ from __future__ import print_function
 
 import argparse
 import collections
-import contextlib
+import signal
 import multiprocessing.pool
 import os
 import pipes
 import subprocess
 import sys
+from typing import Tuple, Optional
+
 
 TestSpec = collections.namedtuple("TestSpec", ["directory", "command"])
 
@@ -81,19 +83,49 @@ def _gather_python_tests_in(rel_subdir, toolchain_utils):
     return _filter_python_tests(test_files, toolchain_utils)
 
 
-def _run_test(test_spec):
-    """Runs a test."""
+def _run_test(test_spec: TestSpec, timeout: int) -> Tuple[Optional[int], str]:
+    """Runs a test.
+
+    Returns a tuple indicating the process' exit code, and the combined
+    stdout+stderr of the process. If the exit code is None, the process timed
+    out.
+    """
+    # Each subprocess gets its own process group, since many of these tests
+    # spawn subprocesses for a variety of reasons. If these tests time out, we
+    # want to be able to clean up all of the children swiftly.
     p = subprocess.Popen(
         test_spec.command,
         cwd=test_spec.directory,
-        stdin=open("/dev/null"),
+        stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         encoding="utf-8",
+        preexec_fn=lambda: os.setpgid(0, 0),
     )
-    stdout, _ = p.communicate()
-    exit_code = p.wait()
-    return exit_code, stdout
+
+    child_pgid = p.pid
+    try:
+        out, _ = p.communicate(timeout=timeout)
+        return p.returncode, out
+    except BaseException as e:
+        # Try to shut the processes down gracefully.
+        os.killpg(child_pgid, signal.SIGINT)
+        try:
+            # 2 seconds is arbitrary, but given that these are unittests,
+            # should be plenty of time for them to shut down.
+            p.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            os.killpg(child_pgid, signal.SIGKILL)
+        except:
+            os.killpg(child_pgid, signal.SIGKILL)
+            raise
+
+        if isinstance(e, subprocess.TimeoutExpired):
+            # We just killed the entire process group. This should complete
+            # ~immediately. If it doesn't, something is very wrong.
+            out, _ = p.communicate(timeout=5)
+            return (None, out)
+        raise
 
 
 def _python_test_to_spec(test_file):
@@ -139,10 +171,11 @@ def _autodetect_python_tests_for(test_file, toolchain_utils):
     return _filter_python_tests(test_files, toolchain_utils)
 
 
-def _run_test_scripts(all_tests, show_successful_output=False):
+def _run_test_scripts(pool, all_tests, timeout, show_successful_output=False):
     """Runs a list of TestSpecs. Returns whether all of them succeeded."""
-    with contextlib.closing(multiprocessing.pool.ThreadPool()) as pool:
-        results = [pool.apply_async(_run_test, (test,)) for test in all_tests]
+    results = [
+        pool.apply_async(_run_test, (test, timeout)) for test in all_tests
+    ]
 
     failures = []
     for i, (test, future) in enumerate(zip(all_tests, results)):
@@ -164,18 +197,25 @@ def _run_test_scripts(all_tests, show_successful_output=False):
         sys.stdout.flush()
 
         exit_code, stdout = future.get()
-        if not exit_code:
+        if exit_code == 0:
             print("PASS")
+            is_failure = False
         else:
-            print("FAIL")
-            failures.append(pretty_test)
+            print("TIMEOUT" if exit_code is None else "FAIL")
+            failures.append(test_message)
+            is_failure = True
 
-        if show_successful_output or exit_code:
-            sys.stdout.write(stdout)
+        if show_successful_output or is_failure:
+            if stdout:
+                print("-- Stdout:\n", stdout)
+            else:
+                print("-- No stdout was produced.")
 
     if failures:
         word = "tests" if len(failures) > 1 else "test"
-        print("%d %s failed: %s" % (len(failures), word, failures))
+        print(f"{len(failures)} {word} failed:")
+        for failure in failures:
+            print(f"\t{failure}")
 
     return not failures
 
@@ -265,6 +305,13 @@ def main(argv):
     parser.add_argument(
         "file", nargs="*", help="a file that we should run tests for"
     )
+    parser.add_argument(
+        "--timeout",
+        default=120,
+        type=int,
+        help="Time to allow a test to execute before timing it out, in "
+        "seconds.",
+    )
     args = parser.parse_args(argv)
 
     modified_files = [os.path.abspath(f) for f in args.file]
@@ -289,7 +336,10 @@ def main(argv):
     tests_to_run.sort()
     tests_to_run = _compress_list(tests_to_run)
 
-    success = _run_test_scripts(tests_to_run, show_all_output)
+    with multiprocessing.pool.ThreadPool() as pool:
+        success = _run_test_scripts(
+            pool, tests_to_run, args.timeout, show_all_output
+        )
     return 0 if success else 1
 
 
