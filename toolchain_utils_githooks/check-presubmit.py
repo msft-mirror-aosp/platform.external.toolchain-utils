@@ -12,6 +12,7 @@ import datetime
 import multiprocessing
 import multiprocessing.pool
 import os
+from pathlib import Path
 import re
 import shlex
 import shutil
@@ -20,25 +21,24 @@ import sys
 import threading
 import traceback
 import typing as t
-from pathlib import Path
 
 
 def run_command_unchecked(
     command: t.List[str], cwd: str, env: t.Dict[str, str] = None
 ) -> t.Tuple[int, str]:
     """Runs a command in the given dir, returning its exit code and stdio."""
-    p = subprocess.Popen(
+    p = subprocess.run(
         command,
+        check=False,
         cwd=cwd,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         env=env,
+        encoding="utf-8",
+        errors="replace",
     )
-
-    stdout, _ = p.communicate()
-    exit_code = p.wait()
-    return exit_code, stdout.decode("utf-8", "replace")
+    return p.returncode, p.stdout
 
 
 def has_executable_on_path(exe: str) -> bool:
