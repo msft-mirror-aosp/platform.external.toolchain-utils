@@ -1,4 +1,4 @@
-# Copyright (c) 2013 The ChromiumOS Authors. All rights reserved.
+# Copyright 2013 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Unittest for the pipeline_worker functions in the build/test stage.
