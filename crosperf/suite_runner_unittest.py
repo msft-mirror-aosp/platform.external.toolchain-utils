@@ -8,6 +8,7 @@
 """Unittest for suite_runner."""
 
 
+import contextlib
 import json
 import unittest
 import unittest.mock as mock
@@ -118,7 +119,14 @@ class SuiteRunnerTest(unittest.TestCase):
         res = suite_runner.GetDutConfigArgs(dut_config)
         self.assertEqual(res, output_str)
 
-    def test_run(self):
+    @mock.patch("suite_runner.ssh_tunnel")
+    def test_run(self, ssh_tunnel):
+        @contextlib.contextmanager
+        def mock_ssh_tunnel(_host):
+            yield "fakelocalhost:1234"
+
+        ssh_tunnel.side_effect = mock_ssh_tunnel
+
         def reset():
             self.test_that_args = []
             self.crosfleet_run_args = []
@@ -254,7 +262,8 @@ class SuiteRunnerTest(unittest.TestCase):
         self.assertFalse(self.call_test_that_run)
         self.assertFalse(self.call_crosfleet_run)
         self.assertEqual(
-            self.tast_args, ["fake_machine", self.mock_label, self.tast_bench]
+            self.tast_args,
+            ["fakelocalhost:1234", self.mock_label, self.tast_bench],
         )
 
     def test_gen_test_args(self):

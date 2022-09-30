@@ -6,15 +6,29 @@
 """SuiteRunner defines the interface from crosperf to test script."""
 
 
+import contextlib
 import json
 import os
+from pathlib import Path
 import pipes
+import random
 import shlex
+import subprocess
 import time
 
 from cros_utils import command_executer
 
 
+SSHWATCHER = [
+    "go",
+    "run",
+    str(
+        Path(
+            __file__,
+            "../../../../platform/dev/contrib/sshwatcher/sshwatcher.go",
+        ).resolve()
+    ),
+]
 TEST_THAT_PATH = "/usr/bin/test_that"
 TAST_PATH = "/usr/bin/tast"
 CROSFLEET_PATH = "crosfleet"
@@ -53,6 +67,32 @@ def GetDutConfigArgs(dut_config):
     return f"dut_config={pipes.quote(json.dumps(dut_config))}"
 
 
+@contextlib.contextmanager
+def ssh_tunnel(machinename):
+    """Context manager that forwards a TCP port over SSH while active.
+
+    This class is used to set up port forwarding before entering the
+    chroot, so that the forwarded port can be used from inside
+    the chroot.
+
+    The value yielded by ssh_tunnel is a host:port string.
+    """
+    # We have to tell sshwatcher which port we want to use.
+    # We pick a port that is likely to be available.
+    port = random.randrange(4096, 32768)
+    cmd = SSHWATCHER + [machinename, str(port)]
+    # Pylint wants us to use subprocess.Popen as a context manager,
+    # but we don't, so that we can ask sshwatcher to terminate and
+    # limit the time we wait for it to do so.
+    # pylint: disable=consider-using-with
+    proc = subprocess.Popen(cmd)
+    try:
+        yield f"localhost:{port}"
+    finally:
+        proc.terminate()
+        proc.wait(timeout=5)
+
+
 class SuiteRunner(object):
     """This defines the interface from crosperf to test script."""
 
@@ -83,7 +123,8 @@ class SuiteRunner(object):
                 )
             else:
                 if benchmark.suite == "tast":
-                    ret_tup = self.Tast_Run(machine_name, label, benchmark)
+                    with ssh_tunnel(machine_name) as hostport:
+                        ret_tup = self.Tast_Run(hostport, label, benchmark)
                 else:
                     ret_tup = self.Test_That_Run(
                         machine_name, label, benchmark, test_args, profiler_args
