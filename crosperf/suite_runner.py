@@ -50,7 +50,7 @@ def GetProfilerArgs(profiler_args):
 
 
 def GetDutConfigArgs(dut_config):
-    return "dut_config={}".format(pipes.quote(json.dumps(dut_config)))
+    return f"dut_config={pipes.quote(json.dumps(dut_config))}"
 
 
 class SuiteRunner(object):
@@ -222,10 +222,10 @@ class SuiteRunner(object):
         # process namespace and we can kill process created easily by their
         # process group.
         chrome_root_options = (
-            "--no-ns-pid "
-            "--chrome_root={0} --chrome_root_mount={1} "
-            'FEATURES="-usersandbox" '
-            "CHROME_ROOT={1}".format(label.chrome_src, CHROME_MOUNT_DIR)
+            f"--no-ns-pid "
+            f"--chrome_root={label.chrome_src} --chrome_root_mount={CHROME_MOUNT_DIR} "
+            f'FEATURES="-usersandbox" '
+            f"CHROME_ROOT={CHROME_MOUNT_DIR}"
         )
 
         if self.log_level != "verbose":
