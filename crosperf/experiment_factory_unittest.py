@@ -482,7 +482,6 @@ class ExperimentFactoryTest(unittest.TestCase):
             "chell",
             "coral",
             "elm",
-            "kefka",
             "nautilus",
             "snappy",
         ]
