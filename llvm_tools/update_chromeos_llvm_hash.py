@@ -17,7 +17,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
-from typing import Dict, List
+from typing import Dict, Iterable
 
 import chroot
 import failure_modes
@@ -99,7 +99,7 @@ def GetCommandLineArgs():
 
     parser.add_argument(
         "--manifest_packages",
-        default=",".join(DEFAULT_MANIFEST_PACKAGES),
+        default="",
         help="Comma-separated ebuilds to update manifests for "
         "(default: %(default)s)",
     )
@@ -506,7 +506,7 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
     return commit_messages
 
 
-def UpdateManifests(packages: List[str], chroot_path: Path):
+def UpdateManifests(packages: Iterable[str], chroot_path: Path):
     """Updates manifest files for packages.
 
     Args:
@@ -524,8 +524,8 @@ def UpdateManifests(packages: List[str], chroot_path: Path):
 
 
 def UpdatePackages(
-    packages,
-    manifest_packages: List[str],
+    packages: Iterable[str],
+    manifest_packages: Iterable[str],
     llvm_variant,
     git_hash,
     svn_version,
@@ -672,7 +672,7 @@ def EnsurePackageMaskContains(chroot_path, git_hash):
 def UpdatePackagesPatchMetadataFile(
     chroot_path: Path,
     svn_version: int,
-    packages: List[str],
+    packages: Iterable[str],
     mode: failure_modes.FailureModes,
 ) -> Dict[str, patch_utils.PatchInfo]:
     """Updates the packages metadata file.
@@ -761,8 +761,14 @@ def main():
         git_hash_source
     )
 
-    packages = args_output.update_packages.split(",")
-    manifest_packages = args_output.manifest_packages.split(",")
+    # Filter out empty strings. For example "".split{",") returns [""].
+    packages = set(p for p in args_output.update_packages.split(",") if p)
+    manifest_packages = set(
+        p for p in args_output.manifest_packages.split(",") if p
+    )
+    if not manifest_packages and not args_output.is_llvm_next:
+        # Set default manifest packages only for the current llvm.
+        manifest_packages = set(DEFAULT_MANIFEST_PACKAGES)
     change_list = UpdatePackages(
         packages=packages,
         manifest_packages=manifest_packages,

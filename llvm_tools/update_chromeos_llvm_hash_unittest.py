@@ -12,6 +12,7 @@ import datetime
 import os
 from pathlib import Path
 import subprocess
+import sys
 import unittest
 import unittest.mock as mock
 
@@ -19,7 +20,6 @@ import chroot
 import failure_modes
 import get_llvm_hash
 import git
-import subprocess_helpers
 import test_helpers
 import update_chromeos_llvm_hash
 
@@ -1016,6 +1016,130 @@ class UpdateLLVMHashTest(unittest.TestCase):
         )
 
         mock_delete_repo.assert_called_once_with(path_to_package_dir, branch)
+
+    @mock.patch.object(chroot, "VerifyOutsideChroot")
+    @mock.patch.object(get_llvm_hash, "GetLLVMHashAndVersionFromSVNOption")
+    @mock.patch.object(update_chromeos_llvm_hash, "UpdatePackages")
+    def testMainDefaults(
+        self, mock_update_packages, mock_gethash, mock_outside_chroot
+    ):
+        git_hash = "1234abcd"
+        svn_version = 5678
+        mock_gethash.return_value = (git_hash, svn_version)
+        argv = [
+            "./update_chromeos_llvm_hash_unittest.py",
+            "--llvm_version",
+            "google3",
+        ]
+
+        with mock.patch.object(sys, "argv", argv) as mock.argv:
+            update_chromeos_llvm_hash.main()
+
+        expected_packages = set(update_chromeos_llvm_hash.DEFAULT_PACKAGES)
+        expected_manifest_packages = set(
+            update_chromeos_llvm_hash.DEFAULT_MANIFEST_PACKAGES,
+        )
+        expected_llvm_variant = update_chromeos_llvm_hash.LLVMVariant.current
+        expected_chroot = update_chromeos_llvm_hash.defaultCrosRoot()
+        mock_update_packages.assert_called_once_with(
+            packages=expected_packages,
+            manifest_packages=expected_manifest_packages,
+            llvm_variant=expected_llvm_variant,
+            git_hash=git_hash,
+            svn_version=svn_version,
+            chroot_path=expected_chroot,
+            mode=failure_modes.FailureModes.FAIL,
+            git_hash_source="google3",
+            extra_commit_msg=None,
+        )
+        mock_outside_chroot.assert_called()
+
+    @mock.patch.object(chroot, "VerifyOutsideChroot")
+    @mock.patch.object(get_llvm_hash, "GetLLVMHashAndVersionFromSVNOption")
+    @mock.patch.object(update_chromeos_llvm_hash, "UpdatePackages")
+    def testMainLlvmNext(
+        self, mock_update_packages, mock_gethash, mock_outside_chroot
+    ):
+        git_hash = "1234abcd"
+        svn_version = 5678
+        mock_gethash.return_value = (git_hash, svn_version)
+        argv = [
+            "./update_chromeos_llvm_hash_unittest.py",
+            "--llvm_version",
+            "google3",
+            "--is_llvm_next",
+        ]
+
+        with mock.patch.object(sys, "argv", argv) as mock.argv:
+            update_chromeos_llvm_hash.main()
+
+        expected_packages = set(update_chromeos_llvm_hash.DEFAULT_PACKAGES)
+        expected_llvm_variant = update_chromeos_llvm_hash.LLVMVariant.next
+        expected_chroot = update_chromeos_llvm_hash.defaultCrosRoot()
+        # llvm-next upgrade does not update manifest by default.
+        mock_update_packages.assert_called_once_with(
+            packages=expected_packages,
+            manifest_packages=set(),
+            llvm_variant=expected_llvm_variant,
+            git_hash=git_hash,
+            svn_version=svn_version,
+            chroot_path=expected_chroot,
+            mode=failure_modes.FailureModes.FAIL,
+            git_hash_source="google3",
+            extra_commit_msg=None,
+        )
+        mock_outside_chroot.assert_called()
+
+    @mock.patch.object(chroot, "VerifyOutsideChroot")
+    @mock.patch.object(get_llvm_hash, "GetLLVMHashAndVersionFromSVNOption")
+    @mock.patch.object(update_chromeos_llvm_hash, "UpdatePackages")
+    def testMainAllArgs(
+        self, mock_update_packages, mock_gethash, mock_outside_chroot
+    ):
+        packages_to_update = "test-packages/package1,test-libs/lib1"
+        manifest_packages = "test-libs/lib1,test-libs/lib2"
+        failure_mode = failure_modes.FailureModes.REMOVE_PATCHES
+        chroot_path = Path("/some/path/to/chroot")
+        llvm_ver = 435698
+        git_hash = "1234abcd"
+        svn_version = 5678
+        mock_gethash.return_value = (git_hash, svn_version)
+
+        argv = [
+            "./update_chromeos_llvm_hash_unittest.py",
+            "--llvm_version",
+            str(llvm_ver),
+            "--is_llvm_next",
+            "--chroot_path",
+            str(chroot_path),
+            "--update_packages",
+            packages_to_update,
+            "--manifest_packages",
+            manifest_packages,
+            "--failure_mode",
+            failure_mode.value,
+            "--patch_metadata_file",
+            "META.json",
+        ]
+
+        with mock.patch.object(sys, "argv", argv) as mock.argv:
+            update_chromeos_llvm_hash.main()
+
+        expected_packages = {"test-packages/package1", "test-libs/lib1"}
+        expected_manifest_packages = {"test-libs/lib1", "test-libs/lib2"}
+        expected_llvm_variant = update_chromeos_llvm_hash.LLVMVariant.next
+        mock_update_packages.assert_called_once_with(
+            packages=expected_packages,
+            manifest_packages=expected_manifest_packages,
+            llvm_variant=expected_llvm_variant,
+            git_hash=git_hash,
+            svn_version=svn_version,
+            chroot_path=chroot_path,
+            mode=failure_mode,
+            git_hash_source=llvm_ver,
+            extra_commit_msg=None,
+        )
+        mock_outside_chroot.assert_called()
 
     @mock.patch.object(subprocess, "check_output", return_value=None)
     @mock.patch.object(get_llvm_hash, "GetLLVMMajorVersion")
