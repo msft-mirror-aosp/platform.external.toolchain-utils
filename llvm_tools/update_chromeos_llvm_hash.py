@@ -411,7 +411,7 @@ def RemovePatchesFromFilesDir(patches):
     """Removes the patches from $FILESDIR of a package.
 
     Args:
-      patches: A list of absolute pathes of patches to remove
+      patches: A list of absolute paths of patches to remove
 
     Raises:
       ValueError: Failed to remove a patch in $FILESDIR.
@@ -728,13 +728,26 @@ def UpdatePackagesPatchMetadataFile(
 
                 src_path = Path(dirname)
                 with patch_utils.git_clean_context(src_path):
-                    patches_info = patch_utils.apply_all_from_json(
-                        svn_version=svn_version,
-                        llvm_src_dir=src_path,
-                        patches_json_fp=patches_json_fp,
-                        continue_on_failure=mode
-                        == failure_modes.FailureModes.CONTINUE,
-                    )
+                    if (
+                        mode == failure_modes.FailureModes.FAIL
+                        or mode == failure_modes.FailureModes.CONTINUE
+                    ):
+                        patches_info = patch_utils.apply_all_from_json(
+                            svn_version=svn_version,
+                            llvm_src_dir=src_path,
+                            patches_json_fp=patches_json_fp,
+                            continue_on_failure=mode
+                            == failure_modes.FailureModes.CONTINUE,
+                        )
+                    elif mode == failure_modes.FailureModes.REMOVE_PATCHES:
+                        patches_info = patch_utils.remove_old_patches(
+                            svn_version, src_path, patches_json_fp
+                        )
+                    elif mode == failure_modes.FailureModes.DISABLE_PATCHES:
+                        patches_info = patch_utils.update_version_ranges(
+                            svn_version, src_path, patches_json_fp
+                        )
+
                 package_info[cur_package] = patches_info._asdict()
 
     return package_info

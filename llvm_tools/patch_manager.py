@@ -7,11 +7,10 @@
 
 import argparse
 import enum
-import json
 import os
 from pathlib import Path
 import sys
-from typing import Any, Dict, IO, Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 from failure_modes import FailureModes
 import get_llvm_hash
@@ -97,13 +96,6 @@ def GetHEADSVNVersion(src_path):
     return version
 
 
-def _WriteJsonChanges(patches: List[Dict[str, Any]], file_io: IO[str]):
-    """Write JSON changes to file, does not acquire new file lock."""
-    json.dump(patches, file_io, indent=4, separators=(",", ": "))
-    # Need to add a newline as json.dump omits it.
-    file_io.write("\n")
-
-
 def GetCommitHashesForBisection(src_path, good_svn_version, bad_svn_version):
     """Gets the good and bad commit hashes required by `git bisect start`."""
 
@@ -112,105 +104,6 @@ def GetCommitHashesForBisection(src_path, good_svn_version, bad_svn_version):
     good_commit_hash = get_llvm_hash.GetGitHashFrom(src_path, good_svn_version)
 
     return good_commit_hash, bad_commit_hash
-
-
-def RemoveOldPatches(
-    svn_version: int, llvm_src_dir: Path, patches_json_fp: Path
-):
-    """Remove patches that don't and will never apply for the future.
-
-    Patches are determined to be "old" via the "is_old" method for
-    each patch entry.
-
-    Args:
-      svn_version: LLVM SVN version.
-      llvm_src_dir: LLVM source directory.
-      patches_json_fp: Location to edit patches on.
-    """
-    with patches_json_fp.open(encoding="utf-8") as f:
-        patches_list = json.load(f)
-    patch_entries = (
-        patch_utils.PatchEntry.from_dict(llvm_src_dir, elem)
-        for elem in patches_list
-    )
-    oldness = [(entry, entry.is_old(svn_version)) for entry in patch_entries]
-    filtered_entries = [entry.to_dict() for entry, old in oldness if not old]
-    with patch_utils.atomic_write(patches_json_fp, encoding="utf-8") as f:
-        _WriteJsonChanges(filtered_entries, f)
-    removed_entries = [entry for entry, old in oldness if old]
-    plural_patches = "patch" if len(removed_entries) == 1 else "patches"
-    print(f"Removed {len(removed_entries)} old {plural_patches}:")
-    for r in removed_entries:
-        print(f"- {r.rel_patch_path}: {r.title()}")
-
-
-def UpdateVersionRanges(
-    svn_version: int, llvm_src_dir: Path, patches_json_fp: Path
-):
-    """Reduce the version ranges of failing patches.
-
-    Patches which fail to apply will have their 'version_range.until'
-    field reduced to the passed in svn_version.
-
-    Modifies the contents of patches_json_fp.
-
-    Ars:
-      svn_version: LLVM revision number.
-      llvm_src_dir: llvm-project directory path.
-      patches_json_fp: Filepath to the PATCHES.json file.
-    """
-    with patches_json_fp.open(encoding="utf-8") as f:
-        patch_entries = patch_utils.json_to_patch_entries(
-            patches_json_fp.parent,
-            f,
-        )
-    modified_entries = UpdateVersionRangesWithEntries(
-        svn_version, llvm_src_dir, patch_entries
-    )
-    with patch_utils.atomic_write(patches_json_fp, encoding="utf-8") as f:
-        _WriteJsonChanges([p.to_dict() for p in patch_entries], f)
-    for entry in modified_entries:
-        print(
-            f"Stopped applying {entry.rel_patch_path} ({entry.title()}) "
-            f"for r{svn_version}"
-        )
-
-
-def UpdateVersionRangesWithEntries(
-    svn_version: int,
-    llvm_src_dir: Path,
-    patch_entries: Iterable[patch_utils.PatchEntry],
-) -> List[patch_utils.PatchEntry]:
-    """Test-able helper for UpdateVersionRanges.
-
-    Args:
-      svn_version: LLVM revision number.
-      llvm_src_dir: llvm-project directory path.
-      patch_entries: PatchEntry objects to modify.
-
-    Returns:
-      A list of PatchEntry objects which were modified.
-
-    Post:
-      Modifies patch_entries in place.
-    """
-    modified_entries: List[patch_utils.PatchEntry] = []
-    with patch_utils.git_clean_context(llvm_src_dir):
-        for pe in patch_entries:
-            test_result = pe.test_apply(llvm_src_dir)
-            if not test_result:
-                if pe.version_range is None:
-                    pe.version_range = {}
-                pe.version_range["until"] = svn_version
-                modified_entries.append(pe)
-            else:
-                # We have to actually apply the patch so that future patches
-                # will stack properly.
-                if not pe.apply(llvm_src_dir).succeeded:
-                    raise RuntimeError(
-                        "Could not apply patch that dry ran successfully"
-                    )
-    return modified_entries
 
 
 def CheckPatchApplies(
@@ -374,10 +267,14 @@ def main(sys_argv: List[str]):
         PrintPatchResults(result)
 
     def _remove(args):
-        RemoveOldPatches(args.svn_version, llvm_src_dir, patches_json_fp)
+        patch_utils.remove_old_patches(
+            args.svn_version, llvm_src_dir, patches_json_fp
+        )
 
     def _disable(args):
-        UpdateVersionRanges(args.svn_version, llvm_src_dir, patches_json_fp)
+        patch_utils.update_version_ranges(
+            args.svn_version, llvm_src_dir, patches_json_fp
+        )
 
     def _test_single(args):
         if not args.test_patch:
