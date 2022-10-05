@@ -19,16 +19,8 @@ import time
 from cros_utils import command_executer
 
 
-SSHWATCHER = [
-    "go",
-    "run",
-    str(
-        Path(
-            __file__,
-            "../../../../platform/dev/contrib/sshwatcher/sshwatcher.go",
-        ).resolve()
-    ),
-]
+# sshwatcher path, relative to ChromiumOS source root.
+SSHWATCHER = "src/platform/dev/contrib/sshwatcher/sshwatcher.go"
 TEST_THAT_PATH = "/usr/bin/test_that"
 TAST_PATH = "/usr/bin/tast"
 CROSFLEET_PATH = "crosfleet"
@@ -68,25 +60,34 @@ def GetDutConfigArgs(dut_config):
 
 
 @contextlib.contextmanager
-def ssh_tunnel(machinename):
+def ssh_tunnel(sshwatcher: "os.PathLike", machinename: str) -> str:
     """Context manager that forwards a TCP port over SSH while active.
 
     This class is used to set up port forwarding before entering the
     chroot, so that the forwarded port can be used from inside
     the chroot.
 
-    The value yielded by ssh_tunnel is a host:port string.
+    Args:
+        sshwatcher: Path to sshwatcher.go
+        machinename: Hostname of the machine to connect to.
+
+    Returns:
+        host:port string that can be passed to tast
     """
     # We have to tell sshwatcher which port we want to use.
     # We pick a port that is likely to be available.
     port = random.randrange(4096, 32768)
-    cmd = SSHWATCHER + [machinename, str(port)]
+    cmd = ["go", "run", str(sshwatcher), machinename, str(port)]
     # Pylint wants us to use subprocess.Popen as a context manager,
     # but we don't, so that we can ask sshwatcher to terminate and
     # limit the time we wait for it to do so.
     # pylint: disable=consider-using-with
-    proc = subprocess.Popen(cmd)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     try:
+        # sshwatcher takes a few seconds before it binds to the port,
+        # presumably due to SSH handshaking taking a while.
+        # Give it 12 seconds before we ask the client to connect.
+        time.sleep(12)
         yield f"localhost:{port}"
     finally:
         proc.terminate()
@@ -123,7 +124,9 @@ class SuiteRunner(object):
                 )
             else:
                 if benchmark.suite == "tast":
-                    with ssh_tunnel(machine_name) as hostport:
+                    with ssh_tunnel(
+                        Path(label.chromeos_root, SSHWATCHER), machine_name
+                    ) as hostport:
                         ret_tup = self.Tast_Run(hostport, label, benchmark)
                 else:
                     ret_tup = self.Test_That_Run(

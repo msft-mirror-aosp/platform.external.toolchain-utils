@@ -122,7 +122,7 @@ class SuiteRunnerTest(unittest.TestCase):
     @mock.patch("suite_runner.ssh_tunnel")
     def test_run(self, ssh_tunnel):
         @contextlib.contextmanager
-        def mock_ssh_tunnel(_host):
+        def mock_ssh_tunnel(_watcher, _host):
             yield "fakelocalhost:1234"
 
         ssh_tunnel.side_effect = mock_ssh_tunnel
