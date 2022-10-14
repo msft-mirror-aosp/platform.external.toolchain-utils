@@ -197,15 +197,19 @@ class PatchEntry:
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        out = {
+        out: Dict[str, Any] = {
             "metadata": self.metadata,
-            "rel_patch_path": self.rel_patch_path,
-            "version_range": self.version_range,
         }
         if self.platforms:
             # To match patch_sync, only serialized when
             # non-empty and non-null.
             out["platforms"] = sorted(self.platforms)
+        out.update(
+            {
+                "rel_patch_path": self.rel_patch_path,
+                "version_range": self.version_range,
+            }
+        )
         return out
 
     def parsed_hunks(self) -> Dict[str, List[Hunk]]:
@@ -500,11 +504,11 @@ def update_version_ranges(
         )
     return PatchInfo(
         non_applicable_patches=[],
-        applied_patches=[p.rel_patch_path for p in applied_patches],
+        applied_patches=applied_patches,
         failed_patches=[],
         disabled_patches=[p.rel_patch_path for p in modified_entries],
         removed_patches=[],
-        modified_metadata=patches_json_fp if modified_entries else None,
+        modified_metadata=str(patches_json_fp) if modified_entries else None,
     )
 
 
@@ -528,8 +532,9 @@ def update_version_ranges_with_entries(
     """
     modified_entries: List[PatchEntry] = []
     applied_patches: List[PatchEntry] = []
+    active_patches = (pe for pe in patch_entries if not pe.is_old(svn_version))
     with git_clean_context(llvm_src_dir):
-        for pe in patch_entries:
+        for pe in active_patches:
             test_result = pe.test_apply(llvm_src_dir)
             if not test_result:
                 if pe.version_range is None:
@@ -579,14 +584,11 @@ def remove_old_patches(
     for r in removed_entries:
         print(f"- {r.rel_patch_path}: {r.title()}")
 
-    patches_dir_path = llvm_src_dir / patches_json_fp.parent
     return PatchInfo(
         non_applicable_patches=[],
         applied_patches=[],
         failed_patches=[],
         disabled_patches=[],
-        removed_patches=[
-            patches_dir_path / p.rel_patch_path for p in removed_entries
-        ],
-        modified_metadata=patches_json_fp if removed_entries else None,
+        removed_patches=[p.rel_patch_path for p in removed_entries],
+        modified_metadata=str(patches_json_fp) if removed_entries else None,
     )
