@@ -187,7 +187,8 @@ def check_black(
         )
 
     black_version = stdout_and_stderr.strip()
-    command = [black, "--line-length=80", "--check"] + python_files
+    black_invocation: t.List[str] = [str(black), "--line-length=80"]
+    command = black_invocation + ["--check"] + list(python_files)
     exit_code, stdout_and_stderr = run_command_unchecked(
         command, cwd=toolchain_utils_root
     )
@@ -238,7 +239,7 @@ def check_black(
             autofix_commands=[],
         )
 
-    autofix = [black] + bad_files
+    autofix = black_invocation + bad_files
     return CheckResult(
         ok=False,
         output=f"Using {black_version!r}, these file(s) have formatting errors: "
