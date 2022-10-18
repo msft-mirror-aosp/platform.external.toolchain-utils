@@ -25,7 +25,7 @@ set -eu
 set -o pipefail
 
 GS_BASE=gs://chromeos-prebuilt/afdo-job/vetted/kernel
-KVERS="4.4 4.14 4.19 5.4 5.10"
+KVERS="4.14 4.19 5.4 5.10"
 failed_channels=""
 # Add skipped chrome branches in ascending order here.
 SKIPPED_BRANCHES="95"
