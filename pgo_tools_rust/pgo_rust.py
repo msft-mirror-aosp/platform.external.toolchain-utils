@@ -9,9 +9,12 @@
 This is meant to be done at Rust uprev time. Ultimately profdata files need
 to be placed at
 
-gs://chromeos-localmirror/distfiles/rust-pgo-{rust_version}-frontend.profdata.tz
+gs://chromeos-localmirror/distfiles/rust-pgo-{rust_version}-frontend.profdata{s}.tz
 and
-gs://chromeos-localmirror/distfiles/rust-pgo-{rust_version}-llvm.profdata.tz
+gs://chromeos-localmirror/distfiles/rust-pgo-{rust_version}-llvm.profdata{s}.tz
+
+Here {s} is an optional suffix to distinguish between profdata files on the same
+Rust version.
 
 The intended flow is that you first get the new Rust version in a shape so that
 it builds, for instance modifying or adding patches as necessary. Note that if
@@ -316,7 +319,7 @@ def merge_profdata(llvm_or_frontend, *, source_directory: Path, dest: Path):
 
 
 def do_upload_profdata(*, source: Path, dest: PurePosixPath):
-    new_path = source.parent / source.name / ".xz"
+    new_path = source.parent / (source.name + ".xz")
     run(["xz", "--keep", "--compress", "--force", source])
     upload_file(source=new_path, dest=dest, public_read=True)
 
@@ -424,7 +427,9 @@ def benchmark_nopgo(args):
         )
 
     rust_version = get_rust_version()
-    dest_directory = GS_BASE / "benchmarks" / rust_version / "nopgo"
+    dest_directory = (
+        GS_BASE / "benchmarks" / rust_version / f"nopgo{args.suffix}"
+    )
     logging.info("Uploading benchmark data")
     for file in time_directory.iterdir():
         upload_file(
@@ -492,7 +497,7 @@ def benchmark_pgo(args):
         GS_BASE
         / "benchmarks"
         / rust_version
-        / f"{args.crate_name}-{args.crate_version}"
+        / f"{args.crate_name}-{args.crate_version}{args.suffix}"
     )
     logging.info("Uploading benchmark data")
     for file in time_directory.iterdir():
@@ -503,20 +508,26 @@ def benchmark_pgo(args):
 
 def upload_profdata(args):
     directory = (
-        LOCAL_BASE / "profdata /" f"{args.crate_name}-{args.crate_version}"
+        LOCAL_BASE / "profdata" / f"{args.crate_name}-{args.crate_version}"
     )
     rust_version = get_rust_version()
 
     logging.info("Uploading LLVM profdata")
     do_upload_profdata(
         source=directory / "llvm.profdata",
-        dest=(GS_DISTFILES / f"rust-pgo-{rust_version}-llvm.profdata.xz"),
+        dest=(
+            GS_DISTFILES
+            / f"rust-pgo-{rust_version}-llvm{args.suffix}.profdata.xz"
+        ),
     )
 
     logging.info("Uploading frontend profdata")
     do_upload_profdata(
         source=directory / "frontend.profdata",
-        dest=(GS_DISTFILES / f"rust-pgo-{rust_version}-frontend.profdata.xz"),
+        dest=(
+            GS_DISTFILES
+            / f"rust-pgo-{rust_version}-frontend{args.suffix}.profdata.xz"
+        ),
     )
 
 
@@ -566,6 +577,11 @@ def main():
         default=CRATE_VERSION,
         help="Version of the crate whose benchmark to build",
     )
+    parser_benchmark_nopgo.add_argument(
+        "--suffix",
+        default="",
+        help="Suffix to distinguish benchmarks and profdata with identical rustc versions",
+    )
 
     parser_benchmark_pgo = subparsers.add_parser(
         "benchmark-pgo",
@@ -594,6 +610,11 @@ def main():
         default=CRATE_VERSION,
         help="Version of the crate whose profile to use",
     )
+    parser_benchmark_pgo.add_argument(
+        "--suffix",
+        default="",
+        help="Suffix to distinguish benchmarks and profdata with identical rustc versions",
+    )
 
     parser_upload_profdata = subparsers.add_parser(
         "upload-profdata", help="Upload the profdata files"
@@ -608,6 +629,11 @@ def main():
         "--crate-version",
         default=CRATE_VERSION,
         help="Version of the crate whose profile to use",
+    )
+    parser_upload_profdata.add_argument(
+        "--suffix",
+        default="",
+        help="Suffix to distinguish benchmarks and profdata with identical rustc versions",
     )
 
     args = parser.parse_args()
