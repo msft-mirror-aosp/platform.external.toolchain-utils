@@ -9,7 +9,7 @@
 #
 
 USAGE="
-Usage: $(basename "$0") [main|beta|stable|all] [--help]
+Usage: $(basename "$0") [--noupload|-upload] [main|beta|stable|all] [--help]
 
 Description:
   The script takes one optional argument which is the channel where we want
@@ -19,6 +19,12 @@ channels) in the corresponding branch.
   Follow the prompt to upload the changes.
   NO CLEAN-UP NEEDED. The script ignores any local changes and keeps
 the current branch unchanged.
+
+  Args:
+    --help      Show this help.
+    --upload    Upload CLs when the update succeeded (default).
+    --noupload  Do not upload CLs. Instead, print the upload commands.
+    main|beta|stable  Update metadata only on the specified channel.
 "
 
 set -eu
@@ -60,6 +66,8 @@ abs_tc_utils_dir="$(realpath "${tc_utils_dir}")"
 
 # Check profiles uploaded within the last week.
 expected_time=$(date +%s -d "week ago")
+# Upload CLs on success.
+upload_cl=true
 
 ARCHS="amd arm"
 declare -A arch_gsbase arch_kvers arch_outfile
@@ -97,26 +105,46 @@ for skipped_branch in ${SKIPPED_BRANCHES} ; do
 done
 
 # Without arguments the script updates all branches.
-channels=${1:-"all"}
-case "${channels}" in
+channels=""
+for arg in "$@"
+do
+  case "${arg}" in
   stable | canary | beta )
+    channels="${channels} ${arg}"
     ;;
   main )
-    channels="canary"
+    channels="${channels} canary"
     ;;
   all )
     channels="canary beta stable"
+    ;;
+  --noupload | --no-upload)
+    upload_cl=false
+    ;;
+  --upload)
+    upload_cl=true
     ;;
   --help | help | -h )
     echo "${USAGE}"
     exit 0
     ;;
-  * )
-    echo "Channel \"${channels}\" is not supported.
+  -*)
+    echo "Option \"${arg}\" is not supported." >&2
+    echo "${USAGE}"
+    exit 1
+    ;;
+  *)
+    echo "Channel \"${arg}\" is not supported.
 Must be main (or canary), beta, stable or all." >&2
     echo "${USAGE}"
     exit 1
-esac
+  esac
+done
+
+if [[ -z "${channels}" ]]
+then
+  channels="canary beta stable"
+fi
 
 # Fetch latest branches.
 git -C "${tc_utils_dir}" fetch "${remote_repo}"
@@ -128,10 +156,19 @@ echo "-> Working in ${worktree_dir}"
 # change. Neither we should care about clean-up after the submit.
 git -C "${tc_utils_dir}" worktree add --detach "${worktree_dir}"
 trap 'git -C "${abs_tc_utils_dir}" worktree remove -f "${worktree_dir}"' EXIT
-cd "${worktree_dir}"
+pushd "${worktree_dir}"
 
 for channel in ${channels}
 do
+  set +u
+  if [[ -n "${commit[${channel}]}" ]]
+  then
+    echo "Skipping channel ${channel} which already has commit\
+ ${commit[${channel}]}."
+    continue
+  fi
+  set -u
+
   errs=""
   successes=0
   curr_branch_number=${branch_number[${channel}]}
@@ -280,6 +317,7 @@ TEST=Verified in kernel-release-afdo-verify-orchestrator"
   commit[${channel}]=$(git -C "${worktree_dir}" rev-parse HEAD)
 done
 
+popd
 echo
 # Array size check doesn't play well with the unbound variable option.
 set +u
@@ -287,13 +325,22 @@ if [[ ${#commit[@]} -gt 0 ]]
 then
   set -u
   echo "The change is applied in ${!commit[*]}."
-  echo "Run these commands to upload the change:"
-  echo
-  for channel in "${!commit[@]}"
-  do
-    echo -e "\tgit -C ${tc_utils_dir} push ${remote_repo} \
-${commit[${channel}]}:refs/for/${branch[${channel}]}"
-  done
+  if ${upload_cl}
+  then
+    for channel in "${!commit[@]}"
+    do
+      git -C "${tc_utils_dir}" push "${remote_repo}" \
+        "${commit[${channel}]}:refs/for/${branch[${channel}]}"
+    done
+  else
+    echo "Run these commands to upload the change:"
+    echo
+    for channel in "${!commit[@]}"
+    do
+      echo -e "\tgit -C ${tc_utils_dir} push ${remote_repo} \
+  ${commit[${channel}]}:refs/for/${branch[${channel}]}"
+    done
+  fi
 
   # Report failed channels.
   if [[ -n "${failed_channels}" ]]
