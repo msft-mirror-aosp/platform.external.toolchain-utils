@@ -151,6 +151,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		}
 	} else {
 		cSrcFile, tidyFlags, tidyMode := processClangTidyFlags(mainBuilder)
+		cSrcFile, iwyuFlags, iwyuMode := processIWYUFlags(mainBuilder)
 		if mainBuilder.target.compilerType == clangType {
 			err := prepareClangCommand(mainBuilder)
 			if err != nil {
@@ -176,6 +177,20 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 					return 0, err
 				}
 			}
+
+			if iwyuMode != iwyuModeNone {
+				if iwyuMode == iwyuModeError {
+					panic(fmt.Sprintf("Unknown IWYU mode"))
+				}
+
+				allowCCache = false
+				clangCmdWithoutRemoteBuildAndCCache := mainBuilder.build()
+				err := runIWYU(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, iwyuFlags)
+				if err != nil {
+					return 0, err
+				}
+			}
+
 			if remoteBuildUsed, err = processRemoteBuildAndCCacheFlags(allowCCache, mainBuilder); err != nil {
 				return 0, err
 			}
