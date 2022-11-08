@@ -105,6 +105,8 @@ def main():
 
     args_output = llvm_bisection.GetCommandLineArgs()
 
+    chroot.VerifyChromeOSRoot(args_output.chroot_path)
+
     if os.path.isfile(args_output.last_tested):
         print("Resuming bisection for %s" % args_output.last_tested)
     else:

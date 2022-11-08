@@ -25,6 +25,7 @@ import update_tryjob_status
 class AutoLLVMBisectionTest(unittest.TestCase):
     """Unittests for auto bisection of LLVM."""
 
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     @mock.patch.object(
         llvm_bisection,
@@ -53,6 +54,7 @@ class AutoLLVMBisectionTest(unittest.TestCase):
         mock_sleep,
         mock_get_args,
         mock_outside_chroot,
+        mock_chromeos_root,
     ):
 
         mock_isfile.side_effect = [False, False, True, True]
@@ -90,6 +92,7 @@ class AutoLLVMBisectionTest(unittest.TestCase):
         mock_traceback.assert_called_once()
         mock_sleep.assert_called_once()
 
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     @mock.patch.object(time, "sleep")
     @mock.patch.object(traceback, "print_exc")
@@ -108,6 +111,7 @@ class AutoLLVMBisectionTest(unittest.TestCase):
         mock_traceback,
         mock_sleep,
         mock_outside_chroot,
+        mock_chromeos_root,
     ):
 
         mock_isfile.return_value = False
@@ -123,6 +127,7 @@ class AutoLLVMBisectionTest(unittest.TestCase):
 
         self.assertEqual(err.exception.code, "Unable to continue bisection.")
 
+        mock_chromeos_root.assert_called_once()
         mock_outside_chroot.assert_called_once()
         mock_get_args.assert_called_once()
         self.assertEqual(mock_isfile.call_count, 2)
@@ -130,6 +135,7 @@ class AutoLLVMBisectionTest(unittest.TestCase):
         self.assertEqual(mock_traceback.call_count, 3)
         self.assertEqual(mock_sleep.call_count, 2)
 
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     @mock.patch.object(
         llvm_bisection,
@@ -153,6 +159,7 @@ class AutoLLVMBisectionTest(unittest.TestCase):
         mock_time,
         mock_get_args,
         mock_outside_chroot,
+        mock_chromeos_root,
     ):
 
         # Simulate behavior of `time.time()` for time passed.

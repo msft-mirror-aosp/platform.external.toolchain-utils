@@ -134,7 +134,6 @@ def GetCLAfterUpdatingPackages(
     git_hash,
     svn_version,
     chroot_path,
-    patch_metadata_file,
     svn_option,
 ):
     """Updates the packages' LLVM_NEXT."""
@@ -196,7 +195,6 @@ def AddTryjob(
     git_hash,
     revision,
     chroot_path,
-    patch_metadata_file,
     extra_cls,
     options,
     builder,
@@ -212,7 +210,6 @@ def AddTryjob(
         git_hash,
         revision,
         chroot_path,
-        patch_metadata_file,
         svn_option,
     )
 
@@ -322,8 +319,6 @@ def PerformTryjobModification(
         # bisection.
         elif bisect_contents["start"] < revision < bisect_contents["end"]:
 
-            patch_metadata_file = "PATCHES.json"
-
             (
                 git_hash,
                 revision,
@@ -334,7 +329,6 @@ def PerformTryjobModification(
                 git_hash,
                 revision,
                 chroot_path,
-                patch_metadata_file,
                 extra_cls,
                 options,
                 builder,
@@ -364,6 +358,8 @@ def main():
     chroot.VerifyOutsideChroot()
 
     args_output = GetCommandLineArgs()
+
+    chroot.VerifyChromeOSRoot(args_output.chroot_path)
 
     PerformTryjobModification(
         args_output.revision,

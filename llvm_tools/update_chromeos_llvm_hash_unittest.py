@@ -1017,11 +1017,16 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
         mock_delete_repo.assert_called_once_with(path_to_package_dir, branch)
 
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot")
     @mock.patch.object(get_llvm_hash, "GetLLVMHashAndVersionFromSVNOption")
     @mock.patch.object(update_chromeos_llvm_hash, "UpdatePackages")
     def testMainDefaults(
-        self, mock_update_packages, mock_gethash, mock_outside_chroot
+        self,
+        mock_update_packages,
+        mock_gethash,
+        mock_outside_chroot,
+        mock_chromeos_root,
     ):
         git_hash = "1234abcd"
         svn_version = 5678
@@ -1053,12 +1058,18 @@ class UpdateLLVMHashTest(unittest.TestCase):
             extra_commit_msg=None,
         )
         mock_outside_chroot.assert_called()
+        mock_chromeos_root.assert_called()
 
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot")
     @mock.patch.object(get_llvm_hash, "GetLLVMHashAndVersionFromSVNOption")
     @mock.patch.object(update_chromeos_llvm_hash, "UpdatePackages")
     def testMainLlvmNext(
-        self, mock_update_packages, mock_gethash, mock_outside_chroot
+        self,
+        mock_update_packages,
+        mock_gethash,
+        mock_outside_chroot,
+        mock_chromeos_root,
     ):
         git_hash = "1234abcd"
         svn_version = 5678
@@ -1089,12 +1100,18 @@ class UpdateLLVMHashTest(unittest.TestCase):
             extra_commit_msg=None,
         )
         mock_outside_chroot.assert_called()
+        mock_chromeos_root.assert_called()
 
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot")
     @mock.patch.object(get_llvm_hash, "GetLLVMHashAndVersionFromSVNOption")
     @mock.patch.object(update_chromeos_llvm_hash, "UpdatePackages")
     def testMainAllArgs(
-        self, mock_update_packages, mock_gethash, mock_outside_chroot
+        self,
+        mock_update_packages,
+        mock_gethash,
+        mock_outside_chroot,
+        mock_chromeos_root,
     ):
         packages_to_update = "test-packages/package1,test-libs/lib1"
         manifest_packages = "test-libs/lib1,test-libs/lib2"
@@ -1140,6 +1157,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
             extra_commit_msg=None,
         )
         mock_outside_chroot.assert_called()
+        mock_chromeos_root.assert_called()
 
     @mock.patch.object(subprocess, "check_output", return_value=None)
     @mock.patch.object(get_llvm_hash, "GetLLVMMajorVersion")

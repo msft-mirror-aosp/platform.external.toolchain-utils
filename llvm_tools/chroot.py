@@ -9,6 +9,7 @@
 
 import collections
 import os
+from pathlib import Path
 import subprocess
 
 
@@ -28,6 +29,19 @@ def VerifyOutsideChroot():
     """
 
     assert not InChroot(), "Script should be run outside the chroot."
+
+
+def VerifyChromeOSRoot(chromeos_root):
+    """Checks whether the path actually points to ChromiumOS checkout root.
+
+    Raises:
+      AssertionError: The path is not ChromiumOS checkout root.
+    """
+
+    subdir = "src/third_party/chromiumos-overlay"
+    path = Path(chromeos_root).expanduser() / subdir
+    msg = f"Wrong ChromeOS path. No {subdir} directory in {chromeos_root} ."
+    assert path.is_dir(), msg
 
 
 def GetChrootEbuildPaths(chromeos_root, packages):

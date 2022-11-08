@@ -422,6 +422,8 @@ def main():
 
     args_output = GetCommandLineArgs()
 
+    chroot.VerifyChromeOSRoot(args_output.chroot_path)
+
     svn_option = args_output.llvm_version
 
     git_hash, svn_version = get_llvm_hash.GetLLVMHashAndVersionFromSVNOption(

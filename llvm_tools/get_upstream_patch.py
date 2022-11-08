@@ -576,6 +576,7 @@ def main():
         "when --differential appears exactly once.",
     )
     args = parser.parse_args()
+    chroot.VerifyChromeOSRoot(args.chroot_path)
 
     if not (args.sha or args.differential):
         parser.error("--sha or --differential required")

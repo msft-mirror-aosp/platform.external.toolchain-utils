@@ -764,6 +764,8 @@ def main():
 
     args_output = GetCommandLineArgs()
 
+    chroot.VerifyChromeOSRoot(args_output.chroot_path)
+
     llvm_variant = LLVMVariant.current
     if args_output.is_llvm_next:
         llvm_variant = LLVMVariant.next
@@ -773,7 +775,6 @@ def main():
     git_hash, svn_version = get_llvm_hash.GetLLVMHashAndVersionFromSVNOption(
         git_hash_source
     )
-
     # Filter out empty strings. For example "".split{",") returns [""].
     packages = set(p for p in args_output.update_packages.split(",") if p)
     manifest_packages = set(
