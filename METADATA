@@ -9,11 +9,11 @@ third_party {
     type: GIT
     value: "https://chromium.googlesource.com/chromiumos/third_party/toolchain-utils/"
   }
-  version: "d2dffc5458d2eb6caa25db986aa2c24fdd9ddcd5"
+  version: "2c474af4f370b143032144aff1ff1985f789e20f"
   license_type: NOTICE
   last_upgrade_date {
     year: 2022
     month: 11
-    day: 7
+    day: 8
   }
 }
