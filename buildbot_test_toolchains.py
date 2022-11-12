@@ -178,7 +178,6 @@ class ToolchainComparator(object):
       test_args: --story-tag-filter=typical
       iterations: 3
       run_local: False
-      retries: 0
     }
     """
 
