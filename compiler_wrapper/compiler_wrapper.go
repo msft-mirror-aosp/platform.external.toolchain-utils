@@ -110,6 +110,9 @@ func runAndroidClangTidy(env env, cmd *command) error {
 }
 
 func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
+
+	artifactBaseDir, _ := env.getenv("CROS_ARTIFACTS_TMP_DIR")
+
 	if err := checkUnsupportedFlags(inputCmd); err != nil {
 		return 0, err
 	}
@@ -185,7 +188,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 
 				allowCCache = false
 				clangCmdWithoutRemoteBuildAndCCache := mainBuilder.build()
-				err := runIWYU(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, iwyuFlags)
+				err := runIWYU(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, iwyuFlags, artifactBaseDir)
 				if err != nil {
 					return 0, err
 				}

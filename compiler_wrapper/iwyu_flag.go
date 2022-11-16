@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -113,7 +114,7 @@ func calcIWYUInvocation(env env, clangCmd *command, cSrcFile string, iwyuFlags .
 	}, nil
 }
 
-func runIWYU(env env, clangCmd *command, cSrcFile string, extraIWYUFlags []string) error {
+func runIWYU(env env, clangCmd *command, cSrcFile string, extraIWYUFlags []string, artifactBaseDir string) error {
 	extraIWYUFlags = append(extraIWYUFlags, "-Xiwyu", "--mapping_file=/usr/share/include-what-you-use/libcxx.imp", "-Xiwyu", "--no_fwd_decls")
 	iwyuCmd, err := calcIWYUInvocation(env, clangCmd, cSrcFile, extraIWYUFlags...)
 	if err != nil {
@@ -135,21 +136,21 @@ func runIWYU(env env, clangCmd *command, cSrcFile string, extraIWYUFlags []strin
 		fmt.Fprintln(env.stderr(), "include-what-you-use failed")
 	}
 
-	var path strings.Builder
-	path.WriteString(strings.TrimSuffix(iwyuCmd.Path, "include-what-you-use"))
-	path.WriteString("fix_includes.py")
-	fixIncludesCmd := &command{
-		Path:       path.String(),
-		Args:       []string{"--nocomment"},
-		EnvUpdates: clangCmd.EnvUpdates,
+	iwyuDir := filepath.Join(artifactBaseDir, "linting-output", "iwyu")
+	if err := os.MkdirAll(iwyuDir, 0777); err != nil {
+		return fmt.Errorf("creating fixes directory at %q: %v", iwyuDir, err)
 	}
 
-	exitCode, err = wrapSubprocessErrorWithSourceLoc(fixIncludesCmd,
-		env.run(fixIncludesCmd, strings.NewReader(stderrMessage), env.stdout(), env.stderr()))
-	if err == nil && exitCode != 0 {
-		// Note: We continue on purpose when include-what-you-use fails
-		// to maintain compatibility with the previous wrapper.
-		fmt.Fprint(env.stderr(), "include-what-you-use failed")
+	f, err := os.CreateTemp(iwyuDir, "*.out")
+	if err != nil {
+		return fmt.Errorf("making output file for iwyu: %v", err)
+	}
+	if _, err := bufio.NewWriter(f).WriteString(stderrMessage); err != nil {
+		return fmt.Errorf("writing output file for iwyu: %v", err)
+	}
+
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("finalizing output file for iwyu: %v", err)
 	}
 
 	return err
