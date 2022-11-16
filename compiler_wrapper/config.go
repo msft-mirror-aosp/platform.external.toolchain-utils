@@ -175,7 +175,7 @@ var crosHardenedConfig = config{
 	),
 	clangPostFlags:    crosCommonClangPostFlags(),
 	cppFlags:          crosCommonCppFlags(),
-	newWarningsDir:    "/tmp/fatal_clang_warnings",
+	newWarningsDir:    "fatal_clang_warnings",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
 }
 
@@ -197,7 +197,7 @@ var crosNonHardenedConfig = config{
 	),
 	clangPostFlags:    crosCommonClangPostFlags(),
 	cppFlags:          crosCommonCppFlags(),
-	newWarningsDir:    "/tmp/fatal_clang_warnings",
+	newWarningsDir:    "fatal_clang_warnings",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
 }
 
@@ -227,7 +227,7 @@ var crosHostConfig = config{
 	// Temporarily disable Wdeprecated-copy. b/191479033
 	clangPostFlags:    crosCommonClangPostFlags(),
 	cppFlags:          crosCommonCppFlags(),
-	newWarningsDir:    "/tmp/fatal_clang_warnings",
+	newWarningsDir:    "fatal_clang_warnings",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
 }
 

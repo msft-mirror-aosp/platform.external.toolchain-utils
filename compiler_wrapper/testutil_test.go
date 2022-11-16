@@ -193,6 +193,10 @@ func (ctx *testContext) updateConfig(cfg *config) {
 	*ctx.cfg = *cfg
 	ctx.cfg.newWarningsDir = filepath.Join(ctx.tempDir, "fatal_clang_warnings")
 	ctx.cfg.crashArtifactsDir = filepath.Join(ctx.tempDir, "clang_crash_diagnostics")
+
+	// Ensure this is always empty, so any test that depends on it will see no output unless
+	// it's properly set up.
+	ctx.cfg.newWarningsDir = ""
 }
 
 func (ctx *testContext) newCommand(path string, args ...string) *command {

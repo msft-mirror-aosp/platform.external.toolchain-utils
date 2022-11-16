@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+const artifactsTmpDirEnvName = "CROS_ARTIFACTS_TMP_DIR"
+
 type env interface {
 	umask(int) int
 	getenv(key string) (string, bool)
@@ -173,7 +175,6 @@ func printCmd(env env, cmd *command) {
 }
 
 func getCompilerArtifactsDir(env env) string {
-	const artifactsTmpDirEnvName = "CROS_ARTIFACTS_TMP_DIR"
 	const defaultArtifactDir = "/tmp"
 	value, _ := env.getenv(artifactsTmpDirEnvName)
 	if value == "" {

@@ -79,7 +79,8 @@
         "args": [
           "main.cc"
         ]
-      }
+      },
+      "stdout": "$CROS_ARTIFACTS_TMP_DIR is not set, artifacts will be written to /tmp"
     },
     "cmds": [
       {
