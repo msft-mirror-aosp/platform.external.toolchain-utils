@@ -145,10 +145,13 @@ func runIWYU(env env, clangCmd *command, cSrcFile string, extraIWYUFlags []strin
 	if err != nil {
 		return fmt.Errorf("making output file for iwyu: %v", err)
 	}
-	if _, err := bufio.NewWriter(f).WriteString(stderrMessage); err != nil {
+	writer := bufio.NewWriter(f)
+	if _, err := writer.WriteString(stderrMessage); err != nil {
 		return fmt.Errorf("writing output file for iwyu: %v", err)
 	}
-
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("flushing output file buffer for iwyu: %v", err)
+	}
 	if err := f.Close(); err != nil {
 		return fmt.Errorf("finalizing output file for iwyu: %v", err)
 	}
