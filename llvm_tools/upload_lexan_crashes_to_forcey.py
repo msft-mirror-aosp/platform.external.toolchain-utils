@@ -3,7 +3,6 @@
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Fetches and submits the latest test-cases from Lexan's crash bucket."""
 
 import argparse
@@ -104,6 +103,22 @@ def temp_dir() -> Generator[str, None, None]:
         shutil.rmtree(loc)
 
 
+def fetch_gs_file_size(gs_url: str) -> int:
+    """Returns the size of the file at gs_url, in bytes."""
+    du = subprocess.run(
+        ["gsutil.py", "du", gs_url],
+        check=True,
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
+    ).stdout
+
+    lines = du.splitlines()
+    assert len(lines) == 1, f"{lines}"
+    # Format is `size   file_name`.
+    num_bytes = lines[0].lstrip().split(None, 1)[0]
+    return int(num_bytes)
+
+
 def download_and_unpack_test_case(gs_url: str, tempdir: str) -> None:
     suffix = os.path.splitext(gs_url)[1]
     target_name = "test_case" + suffix
@@ -114,7 +129,18 @@ def download_and_unpack_test_case(gs_url: str, tempdir: str) -> None:
 
 
 def submit_test_case(gs_url: str, cr_tool: str) -> None:
-    logging.info("Submitting %s", gs_url)
+    size_limit = 100 * 1024
+    size_kb = fetch_gs_file_size(gs_url) // 1024
+    if size_kb > size_limit:
+        logging.warning(
+            "Ignoring %s; it's %dKB, and the limit is %dKB",
+            gs_url,
+            size_kb,
+            size_limit,
+        )
+        return
+
+    logging.info("Submitting %s (%dKB)", gs_url, size_kb)
     with temp_dir() as tempdir:
         download_and_unpack_test_case(gs_url, tempdir)
 

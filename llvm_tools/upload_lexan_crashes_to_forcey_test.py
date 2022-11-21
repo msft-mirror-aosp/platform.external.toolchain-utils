@@ -139,9 +139,14 @@ class Test(unittest.TestCase):
         "upload_lexan_crashes_to_forcey.download_and_unpack_test_case"
     )
     @unittest.mock.patch("subprocess.run")
+    @unittest.mock.patch("upload_lexan_crashes_to_forcey.fetch_gs_file_size")
     def test_test_case_submission_functions(
-        self, subprocess_run_mock, download_and_unpack_mock
+        self,
+        fetch_gs_file_size_mock,
+        subprocess_run_mock,
+        download_and_unpack_mock,
     ):
+        fetch_gs_file_size_mock.return_value = 1024
         mock_gs_url = "gs://foo/bar/baz"
 
         def side_effect(gs_url: str, tempdir: str) -> None:
@@ -160,6 +165,21 @@ class Test(unittest.TestCase):
         download_and_unpack_mock.side_effect = side_effect
         upload_lexan_crashes_to_forcey.submit_test_case(mock_gs_url, "4c")
         subprocess_run_mock.assert_not_called()
+
+    @unittest.mock.patch("subprocess.run")
+    def test_file_size_getting_functions(self, subprocess_run_mock):
+        mock_gs_url = "gs://foo/bar/baz"
+
+        def side_effect(cmd, **_kwargs) -> None:
+            self.assertEqual(cmd, ["gsutil.py", "du", mock_gs_url])
+            result = unittest.mock.MagicMock()
+            result.stdout = f"1234 {mock_gs_url}"
+            return result
+
+        subprocess_run_mock.side_effect = side_effect
+        size = upload_lexan_crashes_to_forcey.fetch_gs_file_size(mock_gs_url)
+        self.assertEqual(size, 1234)
+        subprocess_run_mock.assert_called_once()
 
 
 if __name__ == "__main__":
