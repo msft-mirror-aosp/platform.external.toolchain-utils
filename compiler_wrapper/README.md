@@ -96,8 +96,9 @@ error-prone; compile commands may rely on env vars, they may be done within
 rely on intermediate state, etc.
 
 Because of the usefulness of these crash reports, our wrapper supports crashing
-Clang even on files that ordinarily don't cause Clang to crash. For various
-reasons (b/236736327), this support currently requires rebuilding and
-redeploying the wrapper in order to work. That said, this could be a valuable
-tool for devs interested in creating a self-contained reproducer without having
-to manually reproduce the environment in which a particular build was performed.
+Clang even on files that ordinarily don't cause Clang to crash. This requires
+rebuilding and redeploying the wrapper (comments on b/236736327 explain why).
+That said, this could be a valuable tool for devs interested in creating a
+self-contained reproducer without having to manually reproduce the environment
+in which a particular build was performed. See <crash_builds.go>
+for instructions for how to use this functionality.
