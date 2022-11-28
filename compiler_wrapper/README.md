@@ -18,7 +18,7 @@ To test updates to the wrapper locally:
 
 Run `install_compiler_wrapper.sh` to install the new wrapper in the chroot:
 ```
-(chroot) ~/trunk/src/third_party/toolchain-utils/compiler_wrapper/install_compiler_wrapper.sh
+(chroot) ~/chromiumos/src/third_party/toolchain-utils/compiler_wrapper/install_compiler_wrapper.sh
 ```
 
 Then perform the tests, e.g. build with the new compiler.
@@ -39,14 +39,14 @@ Rename chromiumos-overlay/sys-devel/llvm/llvm-${VERSION}.ebuild to the next
 revision number. For example, if the current version is
 11.0_pre394483_p20200618-r2:
 ```
-(chroot) cd ~/trunk/src/third_party/chromiumos-overlay
+(chroot) cd ~/chromiumos/src/third_party/chromiumos-overlay
 (chroot) git mv llvm-11.0_pre394483_p20200618-r2.ebuild llvm-11.0_pre394483_p20200618-r3.ebuild
 ```
 
 Rename chromiumos-overlay/sys-devel/gcc/gcc-${VERSION}.ebuild to the next
 revision number.  For example, if the current version is 10.2.0-r3:
 ```
-(chroot) cd ~/trunk/src/third_party/chromiumos-overlay
+(chroot) cd ~/chromiumos/src/third_party/chromiumos-overlay
 (chroot) git mv sys-devel/gcc/gcc-10.2.0-r3.ebuild sys-devel/gcc/gcc-10.2.0-r4.ebuild
 ```
 
