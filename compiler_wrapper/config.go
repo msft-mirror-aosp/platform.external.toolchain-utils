@@ -121,6 +121,7 @@ func crosCommonClangFlags() []string {
 		"-Wno-tautological-unsigned-enum-zero-compare",
 		"-Wno-unknown-warning-option",
 		"-fdebug-default-version=5",
+		"-Wno-int-conversion",
 	}
 }
 
