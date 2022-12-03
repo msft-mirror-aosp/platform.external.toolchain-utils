@@ -166,7 +166,6 @@ var crosHardenedConfig = config{
 		"-fno-addrsig",
 		"-fuse-ld=lld",
 		"-ftrivial-auto-var-init=zero",
-		"-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang",
 	),
 	clangPostFlags:    crosCommonClangPostFlags(),
 	newWarningsDir:    "/tmp/fatal_clang_warnings",
