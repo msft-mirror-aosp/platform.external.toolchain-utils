@@ -39,6 +39,7 @@ func processClangFlags(builder *commandBuilder) error {
 	clangBasename := "clang"
 	if strings.HasSuffix(builder.target.compiler, "++") {
 		clangBasename = "clang++"
+		builder.addPreUserArgs(builder.cfg.cppFlags...)
 	}
 
 	// GCC flags to remove from the clang command line.

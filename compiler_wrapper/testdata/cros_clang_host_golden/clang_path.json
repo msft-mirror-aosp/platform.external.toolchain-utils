@@ -126,6 +126,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
+            "-std=gnu++14",
             "main.cc",
             "-Wno-compound-token-split-by-space",
             "-Wno-deprecated-copy",

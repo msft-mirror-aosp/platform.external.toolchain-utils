@@ -175,6 +175,7 @@
             "-D_FORTIFY_SOURCE=2",
             "-fno-omit-frame-pointer",
             "-static-libgcc",
+            "-std=gnu++14",
             "--prefix=../../bin/x86_64-cros-linux-gnu-",
             "main.cc",
             "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
