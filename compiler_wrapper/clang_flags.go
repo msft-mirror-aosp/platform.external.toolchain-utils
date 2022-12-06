@@ -36,10 +36,20 @@ func processClangFlags(builder *commandBuilder) error {
 		clangDir = filepath.Dir(clangDir)
 	}
 
+	var languageOverriden = false
+	for _, arg := range builder.args {
+		if arg.value == "-x" {
+			languageOverriden = true
+		}
+	}
+
 	clangBasename := "clang"
 	if strings.HasSuffix(builder.target.compiler, "++") {
 		clangBasename = "clang++"
-		builder.addPreUserArgs(builder.cfg.cppFlags...)
+		// If a package wants to specify the language then it can set the standard too.
+		if !languageOverriden {
+			builder.addPreUserArgs(builder.cfg.cppFlags...)
+		}
 	}
 
 	// GCC flags to remove from the clang command line.
