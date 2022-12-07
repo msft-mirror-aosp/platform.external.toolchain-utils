@@ -839,10 +839,15 @@ class ResultTest(unittest.TestCase):
     ):
         self.result.perf_data_files = ["/tmp/results/perf.data"]
         self.result.board = "samus"
+        self.result.cwp_dso = "kallsyms"
         mock_getpath.return_value = "/usr/chromeos/chroot/tmp/results/perf.data"
         mock_get_total_samples.return_value = [
             "",
-            "45.42%        237210  chrome ",
+            (
+                "45.42%        53721   chrome \n"
+                "10.01%        12345   [kernel.kallsyms] \n"
+                "1.42%         1234    ssh "
+            ),
             "",
         ]
         mock_exists.return_value = True
@@ -855,7 +860,7 @@ class ResultTest(unittest.TestCase):
 
         with mock.patch("builtins.open", return_value=io.StringIO(content)):
             samples = self.result.GetSamples()
-        self.assertEqual(samples, [237210 - 60, "samples"])
+        self.assertEqual(samples, [12345 - 60, "samples"])
 
     def test_get_results_dir(self):
 

@@ -339,8 +339,10 @@ class ExperimentRunner(object):
                     benchmark_run.result.CompressResultsTo(benchmark_run_path)
                 else:
                     benchmark_run.result.CopyResultsTo(benchmark_run_path)
+                # Don't remove benchmark tmp if it was a cache hit.
                 benchmark_run.result.CleanUp(
                     benchmark_run.benchmark.rm_chroot_tmp
+                    and not benchmark_run.cache_hit
                 )
 
         self.l.LogOutput("Storing results report in %s." % results_directory)

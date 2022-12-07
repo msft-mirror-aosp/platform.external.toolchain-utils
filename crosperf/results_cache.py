@@ -308,20 +308,19 @@ class Result(object):
             # We specify exact match for known DSO type, and every sample for `all`.
             exact_match = ""
             if self.cwp_dso == "all":
-                exact_match = '""'
+                exact_match = ""
             elif self.cwp_dso == "chrome":
-                exact_match = '" chrome "'
+                exact_match = "chrome"
             elif self.cwp_dso == "kallsyms":
-                exact_match = '"[kernel.kallsyms]"'
+                exact_match = "[kernel.kallsyms]"
             else:
                 # This will need to be updated once there are more DSO types supported,
                 # if user want an exact match for the field they want.
-                exact_match = '"%s"' % self.cwp_dso
+                exact_match = self.cwp_dso
 
-            command = "%s report -n -s dso -i %s 2> /dev/null | grep %s" % (
-                perf_file,
-                chroot_perf_data_file,
-                exact_match,
+            command = (
+                f"{perf_file} report -n -s dso -i "
+                f"{chroot_perf_data_file} 2> /dev/null"
             )
             _, result, _ = self.ce.ChrootRunCommandWOutput(
                 self.chromeos_root, command
@@ -335,6 +334,8 @@ class Result(object):
                 for line in result.split("\n"):
                     attr = line.split()
                     if len(attr) == 3 and "%" in attr[0]:
+                        if exact_match and exact_match != attr[2]:
+                            continue
                         samples += int(attr[1])
             except:
                 raise RuntimeError("Cannot parse perf dso result")
@@ -357,6 +358,7 @@ class Result(object):
                     "default_idle",
                     "cpu_idle_loop",
                     "do_idle",
+                    "cpuidle_enter_state",
                 ),
             }
             idle_samples = 0
@@ -1202,7 +1204,11 @@ class Result(object):
         self.ProcessResults(use_cache=True)
 
     def CleanUp(self, rm_chroot_tmp):
-        if rm_chroot_tmp and self.results_dir:
+        if (
+            rm_chroot_tmp
+            and self.results_dir
+            and self.results_dir != self.temp_dir
+        ):
             dirname, basename = misc.GetRoot(self.results_dir)
             if basename.find("test_that_results_") != -1:
                 command = "rm -rf %s" % self.results_dir
