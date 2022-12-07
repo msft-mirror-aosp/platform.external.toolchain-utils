@@ -38,7 +38,8 @@ func processClangFlags(builder *commandBuilder) error {
 
 	var languageOverriden = false
 	for _, arg := range builder.args {
-		if arg.value == "-x" {
+		// Reading stdin with "-" requires either -E (which defaults to C) or -x
+		if arg.value == "-x" || arg.value == "-" {
 			languageOverriden = true
 		}
 	}

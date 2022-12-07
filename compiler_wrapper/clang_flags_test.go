@@ -54,6 +54,12 @@ func TestAppendCppFlags(t *testing.T) {
 		if err := verifyArgCount(clangPlusPlusWithXCmd, 0, "cppOnlyFlag"); err != nil {
 			t.Error(err)
 		}
+		// C++ only flags are disabled with " - " .
+		clangPlusPlusWithStdin := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand("./x86_64-cros-linux-gnu-clang++", "-", mainCc)))
+		if err := verifyArgCount(clangPlusPlusWithStdin, 0, "cppOnlyFlag"); err != nil {
+			t.Error(err)
+		}
 	})
 }
 
