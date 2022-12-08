@@ -171,3 +171,15 @@ func printCmd(env env, cmd *command) {
 	}
 	io.WriteString(env.stderr(), "\n")
 }
+
+func getCompilerArtifactsDir(env env) string {
+	const artifactsTmpDirEnvName = "CROS_ARTIFACTS_TMP_DIR"
+	const defaultArtifactDir = "/tmp"
+	value, _ := env.getenv(artifactsTmpDirEnvName)
+	if value == "" {
+		fmt.Fprintf(env.stdout(), "$%s is not set, artifacts will be written to %s", artifactsTmpDirEnvName, defaultArtifactDir)
+		return defaultArtifactDir
+	}
+	return value
+
+}

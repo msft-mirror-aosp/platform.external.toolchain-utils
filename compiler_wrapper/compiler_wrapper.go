@@ -111,8 +111,6 @@ func runAndroidClangTidy(env env, cmd *command) error {
 
 func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
 
-	artifactBaseDir, _ := env.getenv("CROS_ARTIFACTS_TMP_DIR")
-
 	if err := checkUnsupportedFlags(inputCmd); err != nil {
 		return 0, err
 	}
@@ -166,10 +164,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 				var err error
 				switch tidyMode {
 				case tidyModeTricium:
-					if cfg.triciumNitsDir == "" {
-						return 0, newErrorwithSourceLocf("tricium linting was requested, but no nits directory is configured")
-					}
-					err = runClangTidyForTricium(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, cfg.triciumNitsDir, tidyFlags, cfg.crashArtifactsDir)
+					err = runClangTidyForTricium(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, tidyFlags, cfg.crashArtifactsDir)
 				case tidyModeAll:
 					err = runClangTidy(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, tidyFlags)
 				default:
@@ -188,7 +183,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 
 				allowCCache = false
 				clangCmdWithoutRemoteBuildAndCCache := mainBuilder.build()
-				err := runIWYU(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, iwyuFlags, artifactBaseDir)
+				err := runIWYU(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, iwyuFlags)
 				if err != nil {
 					return 0, err
 				}

@@ -114,7 +114,7 @@ func calcIWYUInvocation(env env, clangCmd *command, cSrcFile string, iwyuFlags .
 	}, nil
 }
 
-func runIWYU(env env, clangCmd *command, cSrcFile string, extraIWYUFlags []string, artifactBaseDir string) error {
+func runIWYU(env env, clangCmd *command, cSrcFile string, extraIWYUFlags []string) error {
 	extraIWYUFlags = append(extraIWYUFlags, "-Xiwyu", "--mapping_file=/usr/share/include-what-you-use/libcxx.imp", "-Xiwyu", "--no_fwd_decls")
 	iwyuCmd, err := calcIWYUInvocation(env, clangCmd, cSrcFile, extraIWYUFlags...)
 	if err != nil {
@@ -136,7 +136,7 @@ func runIWYU(env env, clangCmd *command, cSrcFile string, extraIWYUFlags []strin
 		fmt.Fprintln(env.stderr(), "include-what-you-use failed")
 	}
 
-	iwyuDir := filepath.Join(artifactBaseDir, "linting-output", "iwyu")
+	iwyuDir := filepath.Join(getCompilerArtifactsDir(env), "linting-output", "iwyu")
 	if err := os.MkdirAll(iwyuDir, 0777); err != nil {
 		return fmt.Errorf("creating fixes directory at %q: %v", iwyuDir, err)
 	}

@@ -32,8 +32,6 @@ type config struct {
 	gccRootRelPath   string
 	// Directory to store errors that were prevented with -Wno-error.
 	newWarningsDir string
-	// Directory to store nits in when using `WITH_TIDY=tricium`.
-	triciumNitsDir string
 	// Directory to store crash artifacts in.
 	crashArtifactsDir string
 	// Version. Only exposed via -print-config.
@@ -178,7 +176,6 @@ var crosHardenedConfig = config{
 	clangPostFlags:    crosCommonClangPostFlags(),
 	cppFlags:          crosCommonCppFlags(),
 	newWarningsDir:    "/tmp/fatal_clang_warnings",
-	triciumNitsDir:    "/tmp/linting_output/clang-tidy",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
 }
 
@@ -201,7 +198,6 @@ var crosNonHardenedConfig = config{
 	clangPostFlags:    crosCommonClangPostFlags(),
 	cppFlags:          crosCommonCppFlags(),
 	newWarningsDir:    "/tmp/fatal_clang_warnings",
-	triciumNitsDir:    "/tmp/linting_output/clang-tidy",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
 }
 
@@ -232,7 +228,6 @@ var crosHostConfig = config{
 	clangPostFlags:    crosCommonClangPostFlags(),
 	cppFlags:          crosCommonCppFlags(),
 	newWarningsDir:    "/tmp/fatal_clang_warnings",
-	triciumNitsDir:    "/tmp/linting_output/clang-tidy",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
 }
 
@@ -247,6 +242,5 @@ var androidConfig = config{
 	clangPostFlags:    []string{},
 	cppFlags:          []string{},
 	newWarningsDir:    "",
-	triciumNitsDir:    "",
 	crashArtifactsDir: "",
 }
