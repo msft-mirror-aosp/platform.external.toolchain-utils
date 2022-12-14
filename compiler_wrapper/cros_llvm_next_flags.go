@@ -18,6 +18,7 @@ var llvmNextFlags = []string{
 	"-Wno-enum-constexpr-conversion",
 	"-Wno-deprecated-builtins",
 	"-Wno-single-bit-bitfield-constant-conversion",
+	"-Wno-array-parameter",
 }
 
 var llvmNextPostFlags = []string{}
