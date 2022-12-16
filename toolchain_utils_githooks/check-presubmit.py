@@ -23,6 +23,11 @@ import traceback
 import typing as t
 
 
+# TODO(crbug.com/1401441): remove this after Feb 2023. It's here so that
+# external tooling realizes that this script is Py3.
+USE_PYTHON3 = True
+
+
 def run_command_unchecked(
     command: t.List[str], cwd: str, env: t.Dict[str, str] = None
 ) -> t.Tuple[int, str]:
