@@ -92,7 +92,7 @@ build_llvm () {
 build_pkg () {
   local pkg="${1}"
 
-  local logfile="/tmp/build-${pkg}.${CURRENT}.out"
+  local logfile="/tmp/build-${pkg//\//_}.${CURRENT}.out"
   log "Writing logs to ${logfile}"
   log "sudo emerge ${pkg}"
   logdo sudo emerge "${pkg}" \
