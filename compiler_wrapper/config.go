@@ -123,6 +123,7 @@ func crosCommonClangFlags() []string {
 		"-fdebug-default-version=5",
 		"-Wno-int-conversion",
 		"-Wno-incompatible-function-pointer-types",
+		"-D_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES",
 	}
 }
 
