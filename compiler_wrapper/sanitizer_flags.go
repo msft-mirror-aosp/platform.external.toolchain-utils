@@ -73,9 +73,13 @@ func processSanitizerFlags(builder *commandBuilder) {
 	builder.transformArgs(func(arg builderArg) string {
 		// TODO: This is a bug in the old wrapper to not filter
 		// non user args for gcc. Fix this once we don't compare to the old wrapper anymore.
-		if (builder.target.compilerType != gccType || arg.fromUser) &&
-			unsupportedSanitizerFlags[arg.value] {
-			return ""
+		linkerDefinedFlag := ",-z,defs"
+		if builder.target.compilerType != gccType || arg.fromUser {
+			if unsupportedSanitizerFlags[arg.value] {
+				return ""
+			} else if strings.Contains(arg.value, linkerDefinedFlag) {
+				return strings.ReplaceAll(arg.value, linkerDefinedFlag, "")
+			}
 		}
 		return arg.value
 	})

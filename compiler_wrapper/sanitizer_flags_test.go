@@ -45,6 +45,12 @@ func TestFilterUnsupportedSanitizerFlagsIfSanitizeGiven(t *testing.T) {
 		}
 
 		cmd = ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(gccX86_64, "-fsanitize=kernel-address", "-Wl,-z,defs,relro", mainCc)))
+		if err := verifyArgCount(cmd, 1, "-Wl,relro"); err != nil {
+			t.Error(err)
+		}
+
+		cmd = ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(gccX86_64, "-fsanitize=kernel-address", "-Wl,-z -Wl,defs", mainCc)))
 		if err := verifyArgCount(cmd, 0, "-Wl,-z"); err != nil {
 			t.Error(err)
