@@ -113,10 +113,13 @@ func crosCommonClangFlags() []string {
 		"-Qunused-arguments",
 		"-Werror=poison-system-directories",
 		"-Wno-compound-token-split-by-macro",
+		"-Wno-deprecated-builtins",
 		"-Wno-deprecated-declarations",
+		"-Wno-enum-constexpr-conversion",
 		"-Wno-error=implicit-function-declaration",
 		"-Wno-error=implicit-int",
 		"-Wno-final-dtor-non-final-class",
+		"-Wno-single-bit-bitfield-constant-conversion",
 		"-Wno-tautological-constant-compare",
 		"-Wno-tautological-unsigned-enum-zero-compare",
 		"-Wno-unknown-warning-option",
@@ -135,7 +138,9 @@ func crosCommonCppFlags() []string {
 
 func crosCommonClangPostFlags() []string {
 	// Temporarily disable Wdeprecated-copy. b/191479033
+	// Temporarily disabled Wno-array-parameter. b/262076232
 	return []string{
+		"-Wno-array-parameter",
 		"-Wno-compound-token-split-by-space",
 		"-Wno-deprecated-copy",
 		"-Wno-unused-but-set-variable",
