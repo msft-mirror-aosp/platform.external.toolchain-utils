@@ -340,3 +340,13 @@ func TestClangLinkerPathRelativeToRootDir(t *testing.T) {
 		}
 	})
 }
+
+func TestFilterUnsupportedFlags(t *testing.T) {
+	withTestContext(t, func(ctx *testContext) {
+		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, "-Xcompiler", mainCc)))
+		if err := verifyArgCount(cmd, 0, "-Xcompiler"); err != nil {
+			t.Error(err)
+		}
+	})
+}
