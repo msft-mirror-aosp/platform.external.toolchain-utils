@@ -56,7 +56,10 @@ func processClangFlags(builder *commandBuilder) error {
 	// Unsupported flags to remove from the clang command line.
 	// Use of -Qunused-arguments allows this set to be small, just those
 	// that clang still warns about.
-	unsupported := map[string]bool{"-Xcompiler": true}
+	unsupported := map[string]bool{
+		"-Xcompiler":     true,
+		"-avoid-version": true,
+	}
 
 	unsupportedPrefixes := []string{"-Wstrict-aliasing=", "-finline-limit="}
 

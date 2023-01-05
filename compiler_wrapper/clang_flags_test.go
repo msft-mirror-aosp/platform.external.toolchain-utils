@@ -348,5 +348,10 @@ func TestFilterUnsupportedFlags(t *testing.T) {
 		if err := verifyArgCount(cmd, 0, "-Xcompiler"); err != nil {
 			t.Error(err)
 		}
+		cmd = ctx.must(callCompiler(ctx, ctx.cfg,
+			ctx.newCommand(clangX86_64, "-avoid-version", mainCc)))
+		if err := verifyArgCount(cmd, 0, "-avoid-version"); err != nil {
+			t.Error(err)
+		}
 	})
 }
