@@ -518,8 +518,12 @@ def UpdateManifests(packages: Iterable[str], chroot_path: Path):
     """
     manifest_ebuilds = chroot.GetChrootEbuildPaths(chroot_path, packages)
     for ebuild_path in manifest_ebuilds:
+        ebuild_dir = os.path.dirname(ebuild_path)
         subprocess_helpers.ChrootRunCommand(
             chroot_path, ["ebuild", ebuild_path, "manifest"]
+        )
+        subprocess_helpers.ChrootRunCommand(
+            chroot_path, ["git", "-C", ebuild_dir, "add", "Manifest"]
         )
 
 

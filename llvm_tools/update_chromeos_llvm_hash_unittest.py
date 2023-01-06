@@ -378,15 +378,31 @@ class UpdateLLVMHashTest(unittest.TestCase):
             manifest_packages, chroot_path
         )
 
-        args = mock_subprocess.call_args[0][-1]
-        manifest_cmd = [
-            "cros_sdk",
-            "--",
-            "ebuild",
-            "/chroot/path/test.ebuild",
-            "manifest",
-        ]
-        self.assertEqual(args, manifest_cmd)
+        args = mock_subprocess.call_args_list[0]
+        manifest_cmd = (
+            [
+                "cros_sdk",
+                "--",
+                "ebuild",
+                "/chroot/path/test.ebuild",
+                "manifest",
+            ],
+        )
+        self.assertEqual(args[0], manifest_cmd)
+
+        args = mock_subprocess.call_args_list[1]
+        git_add_cmd = (
+            [
+                "cros_sdk",
+                "--",
+                "git",
+                "-C",
+                "/chroot/path",
+                "add",
+                "Manifest",
+            ],
+        )
+        self.assertEqual(args[0], git_add_cmd)
         mock_ebuild_paths.assert_called_once()
 
     @mock.patch.object(get_llvm_hash, "GetLLVMMajorVersion")
