@@ -140,7 +140,7 @@ def submit_test_case(gs_url: str, cr_tool: str) -> None:
         )
         return
 
-    logging.info("Submitting %s (%dKB)", gs_url, size_kb)
+    logging.info("Downloading %s (%dKB)", gs_url, size_kb)
     with temp_dir() as tempdir:
         download_and_unpack_test_case(gs_url, tempdir)
 
@@ -153,6 +153,10 @@ def submit_test_case(gs_url: str, cr_tool: str) -> None:
             for x in os.listdir(tempdir)
             if not x.endswith(".crash")
         ]
+        if len(repro_files) == 1 and repro_files[0].endswith(".tar"):
+            logging.info("Skipping submission of %s; it's a linker crash")
+            return
+
         assert len(repro_files) == 2, repro_files
         if repro_files[0].endswith(".sh"):
             sh_file, src_file = repro_files
@@ -170,6 +174,7 @@ def submit_test_case(gs_url: str, cr_tool: str) -> None:
                 )
                 return
 
+        logging.info("Submitting %s", gs_url)
         subprocess.run(
             [
                 cr_tool,

@@ -152,10 +152,8 @@ class Test(unittest.TestCase):
         def side_effect(gs_url: str, tempdir: str) -> None:
             self.assertEqual(gs_url, mock_gs_url)
 
-            with open(os.path.join(tempdir, "test_case.c"), "w") as f:
-                # All we need is an empty file here.
-                pass
-
+            # All we need is an empty file here.
+            open(os.path.join(tempdir, "test_case.c"), "w").close()
             with open(
                 os.path.join(tempdir, "test_case.sh"), "w", encoding="utf-8"
             ) as f:
@@ -180,6 +178,29 @@ class Test(unittest.TestCase):
         size = upload_lexan_crashes_to_forcey.fetch_gs_file_size(mock_gs_url)
         self.assertEqual(size, 1234)
         subprocess_run_mock.assert_called_once()
+
+    @unittest.mock.patch(
+        "upload_lexan_crashes_to_forcey.download_and_unpack_test_case"
+    )
+    @unittest.mock.patch("subprocess.run")
+    @unittest.mock.patch("upload_lexan_crashes_to_forcey.fetch_gs_file_size")
+    def test_linker_tarballs_are_skipped(
+        self,
+        fetch_gs_file_size_mock,
+        subprocess_run_mock,
+        download_and_unpack_mock,
+    ):
+        fetch_gs_file_size_mock.return_value = 1024
+        mock_gs_url = "gs://foo/bar/baz"
+
+        def side_effect(gs_url: str, tempdir: str) -> None:
+            self.assertEqual(gs_url, mock_gs_url)
+            # All we need is an empty file here.
+            open(os.path.join(tempdir, "test_case.tar"), "w").close()
+
+        download_and_unpack_mock.side_effect = side_effect
+        upload_lexan_crashes_to_forcey.submit_test_case(mock_gs_url, "4c")
+        subprocess_run_mock.assert_not_called()
 
 
 if __name__ == "__main__":
