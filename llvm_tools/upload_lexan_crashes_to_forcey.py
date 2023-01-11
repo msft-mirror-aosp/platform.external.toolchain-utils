@@ -154,7 +154,9 @@ def submit_test_case(gs_url: str, cr_tool: str) -> None:
             if not x.endswith(".crash")
         ]
         if len(repro_files) == 1 and repro_files[0].endswith(".tar"):
-            logging.info("Skipping submission of %s; it's a linker crash")
+            logging.info(
+                "Skipping submission of %s; it's a linker crash", gs_url
+            )
             return
 
         assert len(repro_files) == 2, repro_files
