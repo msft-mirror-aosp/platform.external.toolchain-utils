@@ -126,7 +126,9 @@ def add_patch(
         )
 
     with open(patches_json_path, encoding="utf-8") as f:
-        patches_json = json.load(f)
+        contents = f.read()
+    indent_len = patch_utils.predict_indent(contents.splitlines())
+    patches_json = json.loads(contents)
 
     for p in patches_json:
         rel_path = p["rel_patch_path"]
@@ -182,7 +184,11 @@ def add_patch(
     temp_file = patches_json_path + ".tmp"
     with open(temp_file, "w", encoding="utf-8") as f:
         json.dump(
-            patches_json, f, indent=4, separators=(",", ": "), sort_keys=True
+            patches_json,
+            f,
+            indent=indent_len,
+            separators=(",", ": "),
+            sort_keys=True,
         )
         f.write("\n")
     os.rename(temp_file, patches_json_path)

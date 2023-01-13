@@ -324,6 +324,16 @@ def json_to_patch_entries(workdir: Path, json_fd: IO[str]) -> List[PatchEntry]:
     return [PatchEntry.from_dict(workdir, d) for d in json.load(json_fd)]
 
 
+def json_str_to_patch_entries(workdir: Path, json_str: str) -> List[PatchEntry]:
+    """Convert a json IO object to List[PatchEntry].
+
+    Examples:
+      >>> f = open('PATCHES.json').read()
+      >>> patch_entries = json_str_to_patch_entries(Path(), f)
+    """
+    return [PatchEntry.from_dict(workdir, d) for d in json.loads(json_str)]
+
+
 def _print_failed_patch(pe: PatchEntry, failed_hunks: Dict[str, List[Hunk]]):
     """Print information about a single failing PatchEntry.
 
@@ -462,11 +472,25 @@ def git_clean_context(git_root_dir: Path):
         clean_src_tree(git_root_dir)
 
 
-def _write_json_changes(patches: List[Dict[str, Any]], file_io: IO[str]):
+def _write_json_changes(
+    patches: List[Dict[str, Any]], file_io: IO[str], indent_len=2
+):
     """Write JSON changes to file, does not acquire new file lock."""
-    json.dump(patches, file_io, indent=4, separators=(",", ": "))
+    json.dump(patches, file_io, indent=indent_len, separators=(",", ": "))
     # Need to add a newline as json.dump omits it.
     file_io.write("\n")
+
+
+def predict_indent(patches_lines: List[str]) -> int:
+    """Given file lines, predict and return the max indentation unit."""
+    indents = [len(x) - len(x.lstrip(" ")) for x in patches_lines]
+    if all(x % 4 == 0 for x in indents):
+        return 4
+    if all(x % 2 == 0 for x in indents):
+        return 2
+    if all(x == 0 for x in indents):
+        return 0
+    return 1
 
 
 def update_version_ranges(
@@ -488,15 +512,19 @@ def update_version_ranges(
       PatchInfo for applied and disabled patches.
     """
     with patches_json_fp.open(encoding="utf-8") as f:
-        patch_entries = json_to_patch_entries(
-            patches_json_fp.parent,
-            f,
-        )
+        contents = f.read()
+    indent_len = predict_indent(contents.splitlines())
+    patch_entries = json_str_to_patch_entries(
+        patches_json_fp.parent,
+        contents,
+    )
     modified_entries, applied_patches = update_version_ranges_with_entries(
         svn_version, llvm_src_dir, patch_entries
     )
     with atomic_write(patches_json_fp, encoding="utf-8") as f:
-        _write_json_changes([p.to_dict() for p in patch_entries], f)
+        _write_json_changes(
+            [p.to_dict() for p in patch_entries], f, indent_len=indent_len
+        )
     for entry in modified_entries:
         print(
             f"Stopped applying {entry.rel_patch_path} ({entry.title()}) "
@@ -570,14 +598,16 @@ def remove_old_patches(
       PatchInfo for modified patches.
     """
     with patches_json_fp.open(encoding="utf-8") as f:
-        patches_list = json.load(f)
-    patch_entries = (
-        PatchEntry.from_dict(llvm_src_dir, elem) for elem in patches_list
+        contents = f.read()
+    indent_len = predict_indent(contents.splitlines())
+    patch_entries = json_str_to_patch_entries(
+        llvm_src_dir,
+        contents,
     )
     oldness = [(entry, entry.is_old(svn_version)) for entry in patch_entries]
     filtered_entries = [entry.to_dict() for entry, old in oldness if not old]
     with atomic_write(patches_json_fp, encoding="utf-8") as f:
-        _write_json_changes(filtered_entries, f)
+        _write_json_changes(filtered_entries, f, indent_len=indent_len)
     removed_entries = [entry for entry, old in oldness if old]
     plural_patches = "patch" if len(removed_entries) == 1 else "patches"
     print(f"Removed {len(removed_entries)} old {plural_patches}:")

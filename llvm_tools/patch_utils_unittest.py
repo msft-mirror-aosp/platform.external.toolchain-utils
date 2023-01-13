@@ -47,6 +47,24 @@ class TestPatchUtils(unittest.TestCase):
                 lines = f.readlines()
             self.assertEqual(lines[0], new_contents)
 
+    def test_predict_indent(self):
+        test_str1 = """
+a
+  a
+      a
+  a
+a
+"""
+        self.assertEqual(pu.predict_indent(test_str1.splitlines()), 2)
+        test_str2 = """
+a
+    a
+        a
+    a
+a
+"""
+        self.assertEqual(pu.predict_indent(test_str2.splitlines()), 4)
+
     def test_from_to_dict(self):
         """Test to and from dict conversion."""
         d = TestPatchUtils._default_json_dict()
@@ -123,6 +141,9 @@ class TestPatchUtils(unittest.TestCase):
   }
 ]
     """
+        result = pu.json_str_to_patch_entries(Path(), patches_json)
+        self.assertEqual(len(result), 4)
+
         result = pu.json_to_patch_entries(Path(), io.StringIO(patches_json))
         self.assertEqual(len(result), 4)
 
