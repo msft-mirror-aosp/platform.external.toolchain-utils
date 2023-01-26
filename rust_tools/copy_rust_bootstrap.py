@@ -33,7 +33,7 @@ def _ensure_pbzip2_is_installed():
         return
 
     logging.info("Auto-installing pbzip2...")
-    subprocess.run(["sudo", "emerge", "-G", "pbzip2"], check=True)
+    subprocess.run(["sudo", "emerge", "-g", "pbzip2"], check=True)
 
 
 def _determine_target_path(sdk_path: str) -> str:
