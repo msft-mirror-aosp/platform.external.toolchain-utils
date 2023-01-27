@@ -9,14 +9,17 @@
 #
 
 USAGE="
-Usage: $(basename "$0") [--noupload|-upload] [main|beta|stable|all] [--help]
+Usage: $(basename "$0") [--help] [--(no)upload] [--nointeractive]
+          [main|beta|stable|all]
 
 Description:
   The script takes one optional argument which is the channel where we want
 to update the kernel afdo and creates a commit (or commits with \"all\"
 channels) in the corresponding branch.
   No arguments defaults to \"all\".
-  Follow the prompt to upload the changes.
+  Follow the prompt to upload the changes with --noupload. Otherwise
+  the script will automatically create CL and send to the detective
+  for review.
   NO CLEAN-UP NEEDED. The script ignores any local changes and keeps
 the current branch unchanged.
 
@@ -24,6 +27,7 @@ the current branch unchanged.
     --help      Show this help.
     --upload    Upload CLs when the update succeeded (default).
     --noupload  Do not upload CLs. Instead, print the upload commands.
+    --nointeractive   Runs the script without user interaction.
     main|beta|stable  Update metadata only on the specified channel.
 "
 
@@ -37,6 +41,9 @@ ARM_KVERS="5.15"
 failed_channels=""
 # Add skipped chrome branches in ascending order here.
 SKIPPED_BRANCHES="95"
+# CL reviewers and cc.
+reviewers="c-compiler-chrome@google.com"
+cc="denik@google.com"
 
 # NOTE: We enable/disable kernel AFDO starting from a particular branch.
 #   For example if we want to enable kernel AFDO in 5.15, first, we do it
@@ -68,6 +75,8 @@ abs_tc_utils_dir="$(realpath "${tc_utils_dir}")"
 expected_time=$(date +%s -d "week ago")
 # Upload CLs on success.
 upload_cl=true
+# Interactive mode.
+interactive=true
 
 ARCHS="amd arm"
 declare -A arch_gsbase arch_kvers arch_outfile
@@ -124,6 +133,9 @@ do
   --upload)
     upload_cl=true
     ;;
+  --nointeractive)
+    interactive=false
+    ;;
   --help | help | -h )
     echo "${USAGE}"
     exit 0
@@ -155,7 +167,8 @@ echo "-> Working in ${worktree_dir}"
 # This way we don't need to clean-up and sync toolchain_utils before the
 # change. Neither we should care about clean-up after the submit.
 git -C "${tc_utils_dir}" worktree add --detach "${worktree_dir}"
-trap 'git -C "${abs_tc_utils_dir}" worktree remove -f "${worktree_dir}"' EXIT
+trap 'git -C "${abs_tc_utils_dir}" worktree remove -f "${worktree_dir}" \
+      && git -C "${abs_tc_utils_dir}" branch -D ${channels}' EXIT
 pushd "${worktree_dir}"
 
 for channel in ${channels}
@@ -178,7 +191,7 @@ do
   echo "branch_number=${curr_branch_number} branch=${curr_branch}"
 
   git reset --hard HEAD
-  git checkout "${remote_repo}/${curr_branch}"
+  git checkout -b "${channel}" "${remote_repo}/${curr_branch}"
 
   for arch in ${ARCHS}
   do
@@ -312,7 +325,12 @@ TEST=Verified in kernel-release-afdo-verify-orchestrator"
       exit 2
   esac
 
-  git commit -v -e -m "${commit_contents}"
+  if ${interactive}
+  then
+    git commit -v -e -m "${commit_contents}"
+  else
+    git commit -m "${commit_contents}"
+  fi
 
   commit[${channel}]=$(git -C "${worktree_dir}" rev-parse HEAD)
 done
@@ -329,8 +347,15 @@ then
   then
     for channel in "${!commit[@]}"
     do
-      git -C "${tc_utils_dir}" push "${remote_repo}" \
-        "${commit[${channel}]}:refs/for/${branch[${channel}]}"
+      if ${interactive}
+      then
+        (cd "${tc_utils_dir}" && \
+          repo upload --br="${channel}" --re="${reviewers}" --cc="${cc}" .)
+      else
+        (cd "${tc_utils_dir}" && \
+          repo upload --br="${channel}" --no-verify -y --re="${reviewers}" \
+                      --cc="${cc}" .)
+      fi
     done
   else
     echo "Run these commands to upload the change:"
