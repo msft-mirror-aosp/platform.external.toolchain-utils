@@ -84,10 +84,12 @@ class ToolchainComparator(object):
         recipe=False,
         test=False,
         noschedv2=False,
+        chrome_src="",
     ):
         self._board = board
         self._remotes = remotes
         self._chromeos_root = chromeos_root
+        self._chrome_src = chrome_src
         self._base_dir = os.getcwd()
         self._ce = command_executer.GetCommandExecuter()
         self._l = logger.GetLogger()
@@ -189,11 +191,13 @@ class ToolchainComparator(object):
             official_image = """
       vanilla_image {
         chromeos_root: %s
+        chrome_src: %s
         build: %s
         compiler: llvm
       }
       """ % (
                 self._chromeos_root,
+                self._chrome_src,
                 vanilla_image,
             )
             f.write(official_image)
@@ -207,6 +211,7 @@ class ToolchainComparator(object):
             experiment_image = """
       %s {
         chromeos_root: %s
+        chrome_src: %s
         build: %s
         autotest_path: %s
         compiler: %s
@@ -214,6 +219,7 @@ class ToolchainComparator(object):
       """ % (
                 label_string,
                 self._chromeos_root,
+                self._chrome_src,
                 trybot_image,
                 autotest_files,
                 compiler_string,
@@ -337,6 +343,14 @@ def Main(argv):
         help="The chromeos root from which to run tests.",
     )
     parser.add_argument(
+        "--chrome_src",
+        dest="chrome_src",
+        default="",
+        help="The path to the source of chrome. "
+        "This is used to run telemetry benchmarks. "
+        "The default one is the src inside chroot.",
+    )
+    parser.add_argument(
         "--weekday",
         default="",
         dest="weekday",
@@ -397,6 +411,7 @@ def Main(argv):
         options.recipe,
         options.test,
         options.noschedv2,
+        chrome_src=options.chrome_src,
     )
     return fc.DoAll()
 
