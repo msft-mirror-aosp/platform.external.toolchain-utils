@@ -16,11 +16,14 @@ from typing import Any, Dict, List, Optional
 X20_PATH = "/google/data/rw/teams/c-compiler-chrome/prod_bugs"
 
 
+# These constants are sourced from
+# //google3/googleclient/chrome/chromeos_toolchain/bug_manager/bugs.go
 class WellKnownComponents(enum.IntEnum):
     """A listing of "well-known" components recognized by our infra."""
 
     CrOSToolchainPublic = -1
     CrOSToolchainPrivate = -2
+    AndroidRustToolchain = -3
 
 
 def _WriteBugJSONFile(object_type: str, json_object: Dict[str, Any]):

@@ -236,14 +236,14 @@ def atomically_write_state(state_file: pathlib.Path, state: State) -> None:
 
 
 def file_bug(title: str, body: str) -> None:
-    """Files a bug against gbiv@ with the given title/body."""
-    bugs.CreateNewBug(
-        bugs.WellKnownComponents.CrOSToolchainPublic,
-        title,
-        body,
-        # To either take or reassign depending on the rotation.
-        assignee="gbiv@google.com",
+    """Files update bugs with the given title/body."""
+    # (component, optional_assignee)
+    targets = (
+        (bugs.WellKnownComponents.CrOSToolchainPublic, "gbiv@google.com"),
+        (bugs.WellKnownComponents.AndroidRustToolchain, None),
     )
+    for component, assignee in targets:
+        bugs.CreateNewBug(component, title, body, assignee)
 
 
 def maybe_compose_bug(
@@ -256,12 +256,15 @@ def maybe_compose_bug(
 
     title = f"[Rust] Update to {newest_release}"
     body = (
-        "A new release has been detected; we should probably roll to it. "
-        "Please see go/crostc-rust-rotation for who's turn it is.\n"
+        "A new Rust stable release has been detected; we should probably roll "
+        "to it.\n"
         "\n"
         "The regression-from-stable-to-stable tag might be interesting to "
         "keep an eye on: https://github.com/rust-lang/rust/labels/"
-        "regression-from-stable-to-stable"
+        "regression-from-stable-to-stable\n"
+        "\n"
+        "For questions about this bot, please contact chromeos-toolchain@ and "
+        "CC gbiv@."
     )
     return title, body
 
