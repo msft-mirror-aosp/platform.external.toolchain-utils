@@ -257,7 +257,11 @@ def maybe_compose_bug(
     title = f"[Rust] Update to {newest_release}"
     body = (
         "A new release has been detected; we should probably roll to it. "
-        "Please see go/crostc-rust-rotation for who's turn it is."
+        "Please see go/crostc-rust-rotation for who's turn it is.\n"
+        "\n"
+        "The regression-from-stable-to-stable tag might be interesting to "
+        "keep an eye on: https://github.com/rust-lang/rust/labels/"
+        "regression-from-stable-to-stable"
     )
     return title, body
 
