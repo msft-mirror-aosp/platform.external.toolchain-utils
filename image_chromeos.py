@@ -63,7 +63,7 @@ def DisableCrosBeeps(chromeos_root, remote, log_level):
     """Disable annoying chromebooks beeps after reboots."""
     cmd_executer = command_executer.GetCommandExecuter(log_level=log_level)
 
-    command = "/usr/share/vboot/bin/set_gbb_flags.sh 0x1"
+    command = "/usr/bin/futility gbb --set --flash --flags=0x1"
     logger.GetLogger().LogOutput("Trying to disable beeping.")
 
     ret, o, _ = cmd_executer.CrosRunCommandWOutput(
