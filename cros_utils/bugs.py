@@ -5,16 +5,15 @@
 
 """Utilities to file bugs."""
 
-import base64
 import datetime
 import enum
 import json
 import os
+import threading
 from typing import Any, Dict, List, Optional
 
 
 X20_PATH = "/google/data/rw/teams/c-compiler-chrome/prod_bugs"
-
 
 # These constants are sourced from
 # //google3/googleclient/chrome/chromeos_toolchain/bug_manager/bugs.go
@@ -26,6 +25,47 @@ class WellKnownComponents(enum.IntEnum):
     AndroidRustToolchain = -3
 
 
+class _FileNameGenerator:
+    """Generates unique file names. This container is thread-safe.
+
+    The names generated have the following properties:
+        - successive, sequenced calls to `get_json_file_name()` will produce
+          names that sort later in lists over time (e.g.,
+          [generator.generate_json_file_name() for _ in range(10)] will be in
+          sorted order).
+        - file names cannot collide with file names generated on the same
+          machine (ignoring machines with unreasonable PID reuse).
+        - file names are incredibly unlikely to collide when generated on
+          multiple machines, as they have 8 bytes of entropy in them.
+    """
+
+    _RANDOM_BYTES = 8
+    _MAX_OS_ENTROPY_VALUE = 1 << _RANDOM_BYTES * 8
+    # The intent of this is "the maximum possible size of our entropy string,
+    # so we can zfill properly below." Double the value the OS hands us, since
+    # we add to it in `generate_json_file_name`.
+    _ENTROPY_STR_SIZE = len(str(2 * _MAX_OS_ENTROPY_VALUE))
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._entropy = int.from_bytes(
+            os.getrandom(self._RANDOM_BYTES), byteorder="little", signed=False
+        )
+
+    def generate_json_file_name(self, now: datetime.datetime):
+        with self._lock:
+            my_entropy = self._entropy
+            self._entropy += 1
+
+        now = now.isoformat("T", "seconds") + "Z"
+        entropy_str = str(my_entropy).zfill(self._ENTROPY_STR_SIZE)
+        pid = os.getpid()
+        return f"{now}_{entropy_str}_{pid}.json"
+
+
+_GLOBAL_NAME_GENERATOR = _FileNameGenerator()
+
+
 def _WriteBugJSONFile(object_type: str, json_object: Dict[str, Any]):
     """Writes a JSON file to X20_PATH with the given bug-ish object."""
     final_object = {
@@ -33,15 +73,10 @@ def _WriteBugJSONFile(object_type: str, json_object: Dict[str, Any]):
         "value": json_object,
     }
 
-    # The name of this has two parts:
-    # - An easily sortable time, to provide uniqueness and let our service send
-    #   things in the order they were put into the outbox.
-    # - 64 bits of entropy, so two racing bug writes don't clobber the same file.
-    now = datetime.datetime.utcnow().isoformat("T", "seconds") + "Z"
-    entropy = base64.urlsafe_b64encode(os.getrandom(8))
-    entropy_str = entropy.rstrip(b"=").decode("utf-8")
-    file_path = os.path.join(X20_PATH, f"{now}_{entropy_str}.json")
-
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    file_path = os.path.join(
+        X20_PATH, _GLOBAL_NAME_GENERATOR.generate_json_file_name(now)
+    )
     temp_path = file_path + ".in_progress"
     try:
         with open(temp_path, "w") as f:
