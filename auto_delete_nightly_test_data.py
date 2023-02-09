@@ -305,15 +305,7 @@ def CleanOldCLs(days_to_preserve="1", dry_run=False):
 
 
 def CleanChromeTelemetryTmpFiles(dry_run: bool) -> int:
-    tmp_dir = (
-        Path(constants.CROSTC_WORKSPACE)
-        / "chromeos"
-        / ".cache"
-        / "distfiles"
-        / "chrome-src-internal"
-        / "src"
-        / "tmp"
-    )
+    tmp_dir = Path(constants.CROSTC_WORKSPACE) / "chrome" / "src" / "tmp"
     return RemoveAllSubdirsMatchingPredicate(
         tmp_dir,
         days_to_preserve=0,
