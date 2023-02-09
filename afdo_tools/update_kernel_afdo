@@ -34,7 +34,7 @@ the current branch unchanged.
 set -eu
 set -o pipefail
 
-AMD_GS_BASE=gs://chromeos-prebuilt/afdo-job/vetted/kernel
+AMD_GS_BASE=gs://chromeos-prebuilt/afdo-job/vetted/kernel/amd64
 ARM_GS_BASE=gs://chromeos-prebuilt/afdo-job/vetted/kernel/arm
 AMD_KVERS="4.14 4.19 5.4 5.10"
 ARM_KVERS="5.15"
