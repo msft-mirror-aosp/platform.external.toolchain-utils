@@ -7,7 +7,7 @@ use std::fs::{copy, read_to_string, File};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -340,8 +340,7 @@ pub fn new_patches(
     // Set up the current patch collection.
     let cur_collection = PatchCollection::parse_from_file(patches_path)
         .with_context(|| format!("parsing {} PATCHES.json", platform))?;
-    let cur_collection = filter_patches_by_platform(&cur_collection, platform);
-    let cur_collection = cur_collection.filter_patches(|p| cur_collection.patch_exists(p));
+    validate_patches(&cur_collection, platform)?;
 
     // Set up the old patch collection.
     let old_collection = PatchCollection::parse_from_str(
@@ -376,6 +375,25 @@ pub fn filter_patches_by_platform(collection: &PatchCollection, platform: &str) 
     collection.filter_patches(|p| {
         p.platforms.contains(platform) || (p.platforms.is_empty() && collection.patch_exists(p))
     })
+}
+
+/// Verify the patches all exist and apply to the given platform.
+///
+/// If all good, return Unit. Otherwise, return an Err.
+pub fn validate_patches(collection: &PatchCollection, platform: &str) -> Result<()> {
+    for p in &collection.patches {
+        if !collection.patch_exists(p) {
+            bail!("Patch {} does not exist", p.rel_patch_path);
+        }
+        if !p.platforms.is_empty() && !p.platforms.contains(platform) {
+            bail!(
+                "Patch {} did not apply to platform {}",
+                p.rel_patch_path,
+                platform
+            );
+        }
+    }
+    Ok(())
 }
 
 /// Get the hash from the patch file contents.
