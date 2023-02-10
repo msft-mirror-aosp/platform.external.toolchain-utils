@@ -193,6 +193,7 @@ do
   git reset --hard HEAD
   git checkout -b "${channel}" "${remote_repo}/${curr_branch}"
 
+  new_changes=false
   for arch in ${ARCHS}
   do
     json="{"
@@ -295,7 +296,14 @@ EOT
     fi
 
     git add "${arch_outfile[${arch}]}"
+    new_changes=true
   done # ARCHS loop
+
+  if ! ${new_changes}
+  then
+    echo "Skipping \"${channel}\" - all profiles are up to date"
+    continue
+  fi
 
   case "${channel}" in
     canary )
