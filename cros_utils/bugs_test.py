@@ -10,11 +10,12 @@
 
 import datetime
 import json
+import os
 import tempfile
 import unittest
 from unittest.mock import patch
 
-import bugs
+from cros_utils import bugs
 
 
 _ARBITRARY_DATETIME = datetime.datetime(2020, 1, 1, 23, 0, 0, 0)
@@ -61,7 +62,7 @@ class Tests(unittest.TestCase):
                     },
                 )
 
-    @patch("bugs._WriteBugJSONFile")
+    @patch.object(bugs, "_WriteBugJSONFile")
     def testAppendingToBugsSeemsToWork(self, mock_write_json_file):
         """Tests AppendToExistingBug."""
         bugs.AppendToExistingBug(1234, "hello, world!")
@@ -73,7 +74,7 @@ class Tests(unittest.TestCase):
             },
         )
 
-    @patch("bugs._WriteBugJSONFile")
+    @patch.object(bugs, "_WriteBugJSONFile")
     def testBugCreationSeemsToWork(self, mock_write_json_file):
         """Tests CreateNewBug."""
         test_case_additions = (
@@ -117,12 +118,12 @@ class Tests(unittest.TestCase):
             )
             mock_write_json_file.reset_mock()
 
-    @patch("bugs._WriteBugJSONFile")
+    @patch.object(bugs, "_WriteBugJSONFile")
     def testCronjobLogSendingSeemsToWork(self, mock_write_json_file):
         """Tests SendCronjobLog."""
         bugs.SendCronjobLog("my_name", False, "hello, world!")
         mock_write_json_file.assert_called_once_with(
-            "ChrotomationCronjobUpdate",
+            "CronjobUpdate",
             {
                 "name": "my_name",
                 "message": "hello, world!",
@@ -154,7 +155,7 @@ class Tests(unittest.TestCase):
         fourth = gen.generate_json_file_name(_ARBITRARY_DATETIME)
         self.assertLess(third, fourth)
 
-    @patch("os.getpid")
+    @patch.object(os, "getpid")
     def testForkingProducesADifferentReport(self, mock_getpid):
         """Tests that _FileNameGenerator gives us sorted file names."""
         gen = bugs._FileNameGenerator()

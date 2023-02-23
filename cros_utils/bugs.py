@@ -143,7 +143,7 @@ def SendCronjobLog(cronjob_name: str, failed: bool, message: str):
       the cronjob infra deems it worthy.
     """
     _WriteBugJSONFile(
-        "ChrotomationCronjobUpdate",
+        "CronjobUpdate",
         {
             "name": cronjob_name,
             "message": message,
