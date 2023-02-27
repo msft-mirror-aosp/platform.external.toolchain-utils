@@ -133,7 +133,9 @@ def CreateNewBug(
     _WriteBugJSONFile("FileNewBugRequest", obj)
 
 
-def SendCronjobLog(cronjob_name: str, failed: bool, message: str):
+def SendCronjobLog(
+    cronjob_name: str, failed: bool, message: str, turndown_time_hours: int = 0
+):
     """Sends the record of a cronjob to our bug infra.
 
     cronjob_name: The name of the cronjob. Expected to remain consistent over
@@ -141,12 +143,16 @@ def SendCronjobLog(cronjob_name: str, failed: bool, message: str):
     failed: Whether the job failed or not.
     message: Any seemingly relevant context. This is pasted verbatim in a bug, if
       the cronjob infra deems it worthy.
+    turndown_time_hours: If nonzero, this cronjob will be considered
+      turned down if more than `turndown_time_hours` pass without a report of
+      success or failure. If zero, this job will not automatically be turned
+      down.
     """
-    _WriteBugJSONFile(
-        "CronjobUpdate",
-        {
-            "name": cronjob_name,
-            "message": message,
-            "failed": failed,
-        },
-    )
+    json_object = {
+        "name": cronjob_name,
+        "message": message,
+        "failed": failed,
+    }
+    if turndown_time_hours:
+        json_object["cronjob_turndown_time_hours"] = turndown_time_hours
+    _WriteBugJSONFile("CronjobUpdate", json_object)

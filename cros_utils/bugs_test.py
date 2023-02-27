@@ -131,6 +131,24 @@ class Tests(unittest.TestCase):
             },
         )
 
+    @patch.object(bugs, "_WriteBugJSONFile")
+    def testCronjobLogSendingSeemsToWorkWithTurndown(
+        self, mock_write_json_file
+    ):
+        """Tests SendCronjobLog."""
+        bugs.SendCronjobLog(
+            "my_name", False, "hello, world!", turndown_time_hours=42
+        )
+        mock_write_json_file.assert_called_once_with(
+            "CronjobUpdate",
+            {
+                "name": "my_name",
+                "message": "hello, world!",
+                "failed": False,
+                "cronjob_turndown_time_hours": 42,
+            },
+        )
+
     def testFileNameGenerationProducesFileNamesInSortedOrder(self):
         """Tests that _FileNameGenerator gives us sorted file names."""
         gen = bugs._FileNameGenerator()
