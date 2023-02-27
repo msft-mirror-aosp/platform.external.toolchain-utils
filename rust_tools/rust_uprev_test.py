@@ -471,52 +471,6 @@ class RustUprevOtherStagesTests(unittest.TestCase):
         )
 
     @mock.patch.object(shutil, "copyfile")
-    @mock.patch.object(os, "listdir")
-    @mock.patch.object(subprocess, "check_call")
-    def test_copy_patches(self, mock_call, mock_ls, mock_copy):
-        mock_ls.return_value = [
-            f"rust-{self.old_version}-patch-1.patch",
-            f"rust-{self.old_version}-patch-2-old.patch",
-            f"rust-{self.current_version}-patch-1.patch",
-            f"rust-{self.current_version}-patch-2-new.patch",
-        ]
-        rust_uprev.copy_patches(
-            rust_uprev.RUST_PATH, self.current_version, self.new_version
-        )
-        mock_copy.assert_has_calls(
-            [
-                mock.call(
-                    os.path.join(
-                        rust_uprev.RUST_PATH,
-                        "files",
-                        f"rust-{self.current_version}-patch-1.patch",
-                    ),
-                    os.path.join(
-                        rust_uprev.RUST_PATH,
-                        "files",
-                        f"rust-{self.new_version}-patch-1.patch",
-                    ),
-                ),
-                mock.call(
-                    os.path.join(
-                        rust_uprev.RUST_PATH,
-                        "files",
-                        f"rust-{self.current_version}-patch-2-new.patch",
-                    ),
-                    os.path.join(
-                        rust_uprev.RUST_PATH,
-                        "files",
-                        f"rust-{self.new_version}-patch-2-new.patch",
-                    ),
-                ),
-            ]
-        )
-        mock_call.assert_called_once_with(
-            ["git", "add", f"rust-{self.new_version}-*.patch"],
-            cwd=rust_uprev.RUST_PATH.joinpath("files"),
-        )
-
-    @mock.patch.object(shutil, "copyfile")
     @mock.patch.object(subprocess, "check_call")
     def test_create_rust_ebuild(self, mock_call, mock_copy):
         template_ebuild = f"/path/to/rust-{self.current_version}-r2.ebuild"

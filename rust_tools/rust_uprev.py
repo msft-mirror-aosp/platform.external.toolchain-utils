@@ -332,27 +332,6 @@ def prepare_uprev(
     return template_version, ebuild_path, bootstrap_version
 
 
-def copy_patches(
-    directory: Path, template_version: RustVersion, new_version: RustVersion
-) -> None:
-    patch_path = directory / "files"
-    prefix = "%s-%s-" % (directory.name, template_version)
-    new_prefix = "%s-%s-" % (directory.name, new_version)
-    for f in os.listdir(patch_path):
-        if not f.startswith(prefix):
-            continue
-        logging.info("Copy patch %s to new version", f)
-        new_name = f.replace(str(template_version), str(new_version))
-        shutil.copyfile(
-            os.path.join(patch_path, f),
-            os.path.join(patch_path, new_name),
-        )
-
-    subprocess.check_call(
-        ["git", "add", f"{new_prefix}*.patch"], cwd=patch_path
-    )
-
-
 def create_ebuild(
     template_ebuild: str, pkgatom: str, new_version: RustVersion
 ) -> str:
@@ -647,10 +626,6 @@ def create_rust_uprev(
         lambda: update_bootstrap_version(
             EBUILD_PREFIX.joinpath("eclass/cros-rustc.eclass"), template_version
         ),
-    )
-    run_step(
-        "copy patches",
-        lambda: copy_patches(RUST_PATH, template_version, rust_version),
     )
     template_host_ebuild = EBUILD_PREFIX.joinpath(
         f"dev-lang/rust-host/rust-host-{template_version}.ebuild"
