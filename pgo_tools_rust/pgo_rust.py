@@ -293,7 +293,9 @@ def build_rust(
     if use_llvm_profile:
         use += "rust_profile_llvm_use_local "
 
-    # -E to preserve our USE environment variable.
+    env_use = os.getenv("USE", "").rstrip()
+    use = (env_use + " " + use).strip()
+    # -E to preserve environment variables like USE, FEATURES, etc.
     run(
         ["sudo", "-E", "emerge", "dev-lang/rust", "dev-lang/rust-host"],
         env={"USE": use},
