@@ -90,9 +90,7 @@ def GetRoot(scr_name):
 def GetChromeOSKeyFile(chromeos_root):
     return os.path.join(
         chromeos_root,
-        "src",
-        "scripts",
-        "mod_for_test_scripts",
+        "chromite",
         "ssh_keys",
         "testing_rsa",
     )
