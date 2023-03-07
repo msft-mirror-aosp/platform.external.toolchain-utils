@@ -33,6 +33,7 @@ DEFAULT_PACKAGES = [
     "sys-libs/compiler-rt",
     "sys-libs/libcxx",
     "sys-libs/llvm-libunwind",
+    "sys-libs/scudo",
 ]
 
 DEFAULT_MANIFEST_PACKAGES = ["sys-devel/llvm"]
@@ -231,9 +232,9 @@ def UpdateEbuildLLVMHash(ebuild_path, llvm_variant, git_hash, svn_version):
 
     temp_ebuild_file = f"{ebuild_path}.temp"
 
-    with open(ebuild_path) as ebuild_file:
+    with open(ebuild_path, encoding="utf-8") as ebuild_file:
         # write updates to a temporary file in case of interrupts
-        with open(temp_ebuild_file, "w") as temp_file:
+        with open(temp_ebuild_file, "w", encoding="utf-8") as temp_file:
             for cur_line in ReplaceLLVMHash(
                 ebuild_file, llvm_variant, git_hash, svn_version
             ):
@@ -664,7 +665,7 @@ def EnsurePackageMaskContains(chroot_path, git_hash):
     mask_path = os.path.join(
         overlay_dir, "profiles/targets/chromeos/package.mask"
     )
-    with open(mask_path, "r+") as mask_file:
+    with open(mask_path, "r+", encoding="utf-8") as mask_file:
         mask_contents = mask_file.read()
         expected_line = f"=sys-devel/llvm-{llvm_major_version}.0_pre*\n"
         if expected_line not in mask_contents:
