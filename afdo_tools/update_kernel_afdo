@@ -34,17 +34,18 @@ the current branch unchanged.
 set -eu
 set -o pipefail
 
+# Branch independent constants.
+# Changes here will affect kernel afdo update in cros branches.
+# -------------------
+ARCHS="amd arm"
 AMD_GS_BASE=gs://chromeos-prebuilt/afdo-job/vetted/kernel/amd64
 ARM_GS_BASE=gs://chromeos-prebuilt/afdo-job/vetted/kernel/arm
-AMD_KVERS="4.14 4.19 5.4 5.10 5.15"
-ARM_KVERS="5.15"
-failed_channels=""
+UPDATE_CONFIG_FILE="afdo_tools/update_kernel_afdo.cfg"
+# CL reviewers and cc.
+REVIEWERS="c-compiler-chrome@google.com"
+CC="denik@google.com"
 # Add skipped chrome branches in ascending order here.
 SKIPPED_BRANCHES="95"
-# CL reviewers and cc.
-reviewers="c-compiler-chrome@google.com"
-cc="denik@google.com"
-
 # NOTE: We enable/disable kernel AFDO starting from a particular branch.
 #   For example if we want to enable kernel AFDO in 5.15, first, we do it
 #   in main. In this case we want to disable it in beta and stable branches.
@@ -56,18 +57,21 @@ declare -A SKIPPED_KVERS_IN_BRANCHES
 # - key is a branch number string;
 # - value is the list of kernels separated by space.
 # Example: SKIPPED_KVERS_IN_BRANCHES["105"]="4.4 4.14"
+# -------------------
 
-# b/223115767. In M-100 there are no new profiles in 5.10. And AFDO is not
-# enabled on any 5.10 board in M-100 either.
-SKIPPED_KVERS_IN_BRANCHES["100"]="5.10"
+# Branch dependent constants were moved to UPDATE_CONFIG_FILE.
+# IMPORTANT: Starting from M-113 update_kernel_afdo reads branch-dependent
+# constants from UPDATE_CONFIG_FILE from remote refs.
+# DON'T UPDATE THESE CONSTANTS HERE, THEY WILL BE OVERWRITTEN.
+# -------------------
+AMD_KVERS="4.14 4.19 5.4 5.10"
+ARM_KVERS="5.15"
+AMD_METADATA_FILE="afdo_metadata/kernel_afdo.json"
+ARM_METADATA_FILE="afdo_metadata/kernel_arm_afdo.json"
+# -------------------
 
 script_dir=$(dirname "$0")
 tc_utils_dir="${script_dir}/.."
-metadata_dir="${tc_utils_dir}/afdo_metadata"
-amd_outfile="$(realpath --relative-to="${tc_utils_dir}" \
-  "${metadata_dir}"/kernel_afdo.json)"
-arm_outfile="$(realpath --relative-to="${tc_utils_dir}" \
-  "${metadata_dir}"/kernel_arm_afdo.json)"
 # Convert toolchain_utils into the absolute path.
 abs_tc_utils_dir="$(realpath "${tc_utils_dir}")"
 
@@ -77,16 +81,11 @@ expected_time=$(date +%s -d "week ago")
 upload_cl=true
 # Interactive mode.
 interactive=true
+# Without arguments the script updates all branches.
+channels=""
+failed_channels=""
 
-ARCHS="amd arm"
 declare -A arch_gsbase arch_kvers arch_outfile
-arch_gsbase["amd"]="${AMD_GS_BASE}"
-arch_gsbase["arm"]="${ARM_GS_BASE}"
-arch_kvers["amd"]="${AMD_KVERS}"
-arch_kvers["arm"]="${ARM_KVERS}"
-arch_outfile["amd"]="${amd_outfile}"
-arch_outfile["arm"]="${arm_outfile}"
-
 declare -A branch branch_number commit
 remote_repo=$(git -C "${tc_utils_dir}" remote)
 canary_ref="refs/heads/main"
@@ -112,9 +111,8 @@ for skipped_branch in ${SKIPPED_BRANCHES} ; do
     ((branch_number[canary]++))
   fi
 done
+config_file="${tc_utils_dir}/${UPDATE_CONFIG_FILE}"
 
-# Without arguments the script updates all branches.
-channels=""
 for arg in "$@"
 do
   case "${arg}" in
@@ -192,6 +190,21 @@ do
 
   git reset --hard HEAD
   git checkout -b "${channel}" "${remote_repo}/${curr_branch}"
+
+  # Read branch-dependent constants from $remote_repo.
+  # shellcheck source=afdo_tools/update_kernel_afdo.cfg
+  [[ -e "${config_file}" ]] && source "${config_file}"
+
+  amd_outfile="$(realpath --relative-to="${tc_utils_dir}" \
+    "${tc_utils_dir}/${AMD_METADATA_FILE}")"
+  arm_outfile="$(realpath --relative-to="${tc_utils_dir}" \
+    "${tc_utils_dir}/${ARM_METADATA_FILE}")"
+  arch_gsbase["amd"]="${AMD_GS_BASE}"
+  arch_gsbase["arm"]="${ARM_GS_BASE}"
+  arch_kvers["amd"]="${AMD_KVERS}"
+  arch_kvers["arm"]="${ARM_KVERS}"
+  arch_outfile["amd"]="${amd_outfile}"
+  arch_outfile["arm"]="${arm_outfile}"
 
   new_changes=false
   for arch in ${ARCHS}
@@ -358,11 +371,11 @@ then
       if ${interactive}
       then
         (cd "${tc_utils_dir}" && \
-          repo upload --br="${channel}" --re="${reviewers}" --cc="${cc}" .)
+          repo upload --br="${channel}" --re="${REVIEWERS}" --cc="${CC}" .)
       else
         (cd "${tc_utils_dir}" && \
-          repo upload --br="${channel}" --no-verify -y --re="${reviewers}" \
-                      --cc="${cc}" .)
+          repo upload --br="${channel}" --no-verify -y --re="${REVIEWERS}" \
+                      --cc="${CC}" .)
       fi
     done
   else
