@@ -298,7 +298,6 @@ class ExperimentRunner(object):
         experiment_file_path = os.path.join(results_directory, "experiment.exp")
         FileUtils().WriteFile(experiment_file_path, experiment.experiment_file)
 
-        has_failure = False
         all_failed = True
 
         topstats_file = os.path.join(results_directory, "topstats.log")
@@ -306,17 +305,21 @@ class ExperimentRunner(object):
             "Storing top statistics of each benchmark run into %s."
             % topstats_file
         )
+        # Track if any iterations for a given benchmark has passed for each
+        # label.
+        benchmarks_passes = {}
         with open(topstats_file, "w") as top_fd:
             for benchmark_run in experiment.benchmark_runs:
+                benchmarks_passes.setdefault(
+                    benchmark_run.label.name,
+                    {benchmark_run.benchmark.name: False},
+                )
                 if benchmark_run.result:
-                    # FIXME: Pylint has a bug suggesting the following change, which
-                    # should be fixed in pylint 2.0. Resolve this after pylint >= 2.0.
-                    # Bug: https://github.com/PyCQA/pylint/issues/1984
-                    # pylint: disable=simplifiable-if-statement
-                    if benchmark_run.result.retval:
-                        has_failure = True
-                    else:
+                    if not benchmark_run.result.retval:
                         all_failed = False
+                        benchmarks_passes[benchmark_run.label.name][
+                            benchmark_run.benchmark.name
+                        ] = True
                     # Header with benchmark run name.
                     top_fd.write("%s\n" % str(benchmark_run))
                     # Formatted string with top statistics.
@@ -325,6 +328,11 @@ class ExperimentRunner(object):
 
         if all_failed:
             return self.ALL_FAILED
+        # Set has_passes if atleast one iteration of all benchmarks has passed
+        # for every label.
+        has_passes = True
+        for benchmarks in benchmarks_passes.values():
+            has_passes = has_passes and all(benchmarks.values())
 
         self.l.LogOutput("Storing results of each benchmark run.")
         for benchmark_run in experiment.benchmark_runs:
@@ -369,7 +377,7 @@ class ExperimentRunner(object):
         msg_body = "<pre style='font-size: 13px'>%s</pre>" % text_report
         FileUtils().WriteFile(msg_file_path, msg_body)
 
-        return self.SUCCEEDED if not has_failure else self.HAS_FAILURE
+        return self.SUCCEEDED if has_passes else self.HAS_FAILURE
 
     def Run(self):
         try:
