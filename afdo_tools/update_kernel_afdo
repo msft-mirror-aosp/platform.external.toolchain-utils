@@ -59,17 +59,6 @@ declare -A SKIPPED_KVERS_IN_BRANCHES
 # Example: SKIPPED_KVERS_IN_BRANCHES["105"]="4.4 4.14"
 # -------------------
 
-# Branch dependent constants were moved to UPDATE_CONFIG_FILE.
-# IMPORTANT: Starting from M-113 update_kernel_afdo reads branch-dependent
-# constants from UPDATE_CONFIG_FILE from remote refs.
-# DON'T UPDATE THESE CONSTANTS HERE, THEY WILL BE OVERWRITTEN.
-# -------------------
-AMD_KVERS="4.14 4.19 5.4 5.10"
-ARM_KVERS="5.15"
-AMD_METADATA_FILE="afdo_metadata/kernel_afdo.json"
-ARM_METADATA_FILE="afdo_metadata/kernel_arm_afdo.json"
-# -------------------
-
 script_dir=$(dirname "$0")
 tc_utils_dir="${script_dir}/.."
 # Convert toolchain_utils into the absolute path.
@@ -111,7 +100,8 @@ for skipped_branch in ${SKIPPED_BRANCHES} ; do
     ((branch_number[canary]++))
   fi
 done
-config_file="${tc_utils_dir}/${UPDATE_CONFIG_FILE}"
+config_file="$(realpath --relative-to="${tc_utils_dir}" \
+       "${tc_utils_dir}/${UPDATE_CONFIG_FILE}")"
 
 for arg in "$@"
 do
@@ -193,7 +183,20 @@ do
 
   # Read branch-dependent constants from $remote_repo.
   # shellcheck source=afdo_tools/update_kernel_afdo.cfg
-  [[ -e "${config_file}" ]] && source "${config_file}"
+  if [[ -e "${config_file}" ]]
+  then
+    # Branch dependent constants were moved to config_file.
+    # IMPORTANT: Starting from M-113 update_kernel_afdo reads branch-dependent
+    # constants from config_file from remote refs.
+    source "${config_file}"
+  else
+    # DON'T UPDATE THESE CONSTANTS HERE!
+    # Update config_file instead.
+    AMD_KVERS="4.14 4.19 5.4 5.10"
+    ARM_KVERS="5.15"
+    AMD_METADATA_FILE="afdo_metadata/kernel_afdo.json"
+    ARM_METADATA_FILE="afdo_metadata/kernel_arm_afdo.json"
+  fi
 
   amd_outfile="$(realpath --relative-to="${tc_utils_dir}" \
     "${tc_utils_dir}/${AMD_METADATA_FILE}")"
