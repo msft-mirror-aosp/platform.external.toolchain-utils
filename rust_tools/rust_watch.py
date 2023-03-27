@@ -267,6 +267,9 @@ def maybe_compose_bug(
         "keep an eye on: https://github.com/rust-lang/rust/labels/"
         "regression-from-stable-to-stable\n"
         "\n"
+        "If you notice any bugs or issues you'd like to share, please "
+        "also note them on go/shared-rust-update-notes.\n"
+        "\n"
         "For questions about this bot, please contact chromeos-toolchain@ and "
         "CC gbiv@."
     )
