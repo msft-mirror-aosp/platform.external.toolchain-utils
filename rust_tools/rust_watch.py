@@ -240,7 +240,11 @@ def file_bug(title: str, body: str) -> None:
     # (component, optional_assignee)
     targets = (
         (bugs.WellKnownComponents.CrOSToolchainPublic, "gbiv@google.com"),
-        (bugs.WellKnownComponents.AndroidRustToolchain, None),
+        # b/269170429: Some Android folks said they wanted this before, and
+        # figuring out the correct way to apply permissions has been a pain. No
+        # one seems to be missing these notifications & the Android Rust folks
+        # are keeping on top of their toolchain, so ignore this for now.
+        # (bugs.WellKnownComponents.AndroidRustToolchain, None),
     )
     for component, assignee in targets:
         bugs.CreateNewBug(component, title, body, assignee)
