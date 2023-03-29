@@ -79,7 +79,7 @@ def _WriteBugJSONFile(object_type: str, json_object: Dict[str, Any]):
     )
     temp_path = file_path + ".in_progress"
     try:
-        with open(temp_path, "w") as f:
+        with open(temp_path, "w", encoding="utf-8") as f:
             json.dump(final_object, f)
         os.rename(temp_path, file_path)
     except:

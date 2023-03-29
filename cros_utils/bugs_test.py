@@ -48,7 +48,7 @@ class Tests(unittest.TestCase):
                 f"Expected {file_path} to start with {tempdir}",
             )
 
-            with open(file_path) as f:
+            with open(file_path, encoding="utf-8") as f:
                 self.assertEqual(
                     json.load(f),
                     {
