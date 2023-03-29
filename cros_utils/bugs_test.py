@@ -11,8 +11,10 @@
 import datetime
 import json
 import os
+from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 from unittest.mock import patch
 
 from cros_utils import bugs
@@ -41,6 +43,7 @@ class Tests(unittest.TestCase):
                     "foo": "bar",
                     "baz": bugs.WellKnownComponents.CrOSToolchainPublic,
                 },
+                bugs.X20_PATH,
             )
 
             self.assertTrue(
@@ -72,6 +75,7 @@ class Tests(unittest.TestCase):
                 "body": "hello, world!",
                 "bug_id": 1234,
             },
+            bugs.X20_PATH,
         )
 
     @patch.object(bugs, "_WriteBugJSONFile")
@@ -115,6 +119,7 @@ class Tests(unittest.TestCase):
             mock_write_json_file.assert_called_once_with(
                 "FileNewBugRequest",
                 expected_output,
+                bugs.X20_PATH,
             )
             mock_write_json_file.reset_mock()
 
@@ -129,6 +134,7 @@ class Tests(unittest.TestCase):
                 "message": "hello, world!",
                 "failed": False,
             },
+            bugs.X20_PATH,
         )
 
     @patch.object(bugs, "_WriteBugJSONFile")
@@ -147,6 +153,7 @@ class Tests(unittest.TestCase):
                 "failed": False,
                 "cronjob_turndown_time_hours": 42,
             },
+            bugs.X20_PATH,
         )
 
     def testFileNameGenerationProducesFileNamesInSortedOrder(self):
@@ -186,6 +193,32 @@ class Tests(unittest.TestCase):
         gen._entropy = 0
         child_file = gen.generate_json_file_name(_ARBITRARY_DATETIME)
         self.assertNotEqual(parent_file, child_file)
+
+    @patch.object(bugs, "_WriteBugJSONFile")
+    def testCustomDirectoriesArePassedThrough(self, mock_write_json_file):
+        directory = "/path/to/somewhere/interesting"
+        bugs.AppendToExistingBug(1, "foo", directory=directory)
+        mock_write_json_file.assert_called_once_with(
+            mock.ANY, mock.ANY, directory
+        )
+        mock_write_json_file.reset_mock()
+
+        bugs.CreateNewBug(1, "title", "body", directory=directory)
+        mock_write_json_file.assert_called_once_with(
+            mock.ANY, mock.ANY, directory
+        )
+        mock_write_json_file.reset_mock()
+
+        bugs.SendCronjobLog("cronjob", False, "message", directory=directory)
+        mock_write_json_file.assert_called_once_with(
+            mock.ANY, mock.ANY, directory
+        )
+
+    def testWriteBugJSONFileWritesToGivenDirectory(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            bugs.AppendToExistingBug(1, "body", directory=tmpdir)
+            json_files = list(Path(tmpdir).glob("*.json"))
+            self.assertEqual(len(json_files), 1, json_files)
 
 
 if __name__ == "__main__":

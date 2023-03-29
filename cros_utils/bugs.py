@@ -2,7 +2,6 @@
 # Copyright 2021 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Utilities to file bugs."""
 
 import datetime
@@ -14,6 +13,7 @@ from typing import Any, Dict, List, Optional
 
 
 X20_PATH = "/google/data/rw/teams/c-compiler-chrome/prod_bugs"
+
 
 # These constants are sourced from
 # //google3/googleclient/chrome/chromeos_toolchain/bug_manager/bugs.go
@@ -66,7 +66,9 @@ class _FileNameGenerator:
 _GLOBAL_NAME_GENERATOR = _FileNameGenerator()
 
 
-def _WriteBugJSONFile(object_type: str, json_object: Dict[str, Any]):
+def _WriteBugJSONFile(
+    object_type: str, json_object: Dict[str, Any], directory: os.PathLike
+):
     """Writes a JSON file to X20_PATH with the given bug-ish object."""
     final_object = {
         "type": object_type,
@@ -75,7 +77,7 @@ def _WriteBugJSONFile(object_type: str, json_object: Dict[str, Any]):
 
     now = datetime.datetime.now(tz=datetime.timezone.utc)
     file_path = os.path.join(
-        X20_PATH, _GLOBAL_NAME_GENERATOR.generate_json_file_name(now)
+        directory, _GLOBAL_NAME_GENERATOR.generate_json_file_name(now)
     )
     temp_path = file_path + ".in_progress"
     try:
@@ -88,7 +90,9 @@ def _WriteBugJSONFile(object_type: str, json_object: Dict[str, Any]):
     return file_path
 
 
-def AppendToExistingBug(bug_id: int, body: str):
+def AppendToExistingBug(
+    bug_id: int, body: str, directory: os.PathLike = X20_PATH
+):
     """Sends a reply to an existing bug."""
     _WriteBugJSONFile(
         "AppendToExistingBugRequest",
@@ -96,6 +100,7 @@ def AppendToExistingBug(bug_id: int, body: str):
             "body": body,
             "bug_id": bug_id,
         },
+        directory,
     )
 
 
@@ -105,6 +110,7 @@ def CreateNewBug(
     body: str,
     assignee: Optional[str] = None,
     cc: Optional[List[str]] = None,
+    directory: os.PathLike = X20_PATH,
 ):
     """Sends a request to create a new bug.
 
@@ -117,6 +123,8 @@ def CreateNewBug(
         "well-known" assignee (detective, mage).
       cc: A list of emails to add to the CC list. Must either be an email
         address, or a "well-known" individual (detective, mage).
+      directory: The directory to write the report to. Defaults to our x20 bugs
+        directory.
     """
     obj = {
         "component_id": component_id,
@@ -130,11 +138,15 @@ def CreateNewBug(
     if cc:
         obj["cc"] = cc
 
-    _WriteBugJSONFile("FileNewBugRequest", obj)
+    _WriteBugJSONFile("FileNewBugRequest", obj, directory)
 
 
 def SendCronjobLog(
-    cronjob_name: str, failed: bool, message: str, turndown_time_hours: int = 0
+    cronjob_name: str,
+    failed: bool,
+    message: str,
+    turndown_time_hours: int = 0,
+    directory: os.PathLike = X20_PATH,
 ):
     """Sends the record of a cronjob to our bug infra.
 
@@ -147,6 +159,8 @@ def SendCronjobLog(
       turned down if more than `turndown_time_hours` pass without a report of
       success or failure. If zero, this job will not automatically be turned
       down.
+    directory: The directory to write the report to. Defaults to our x20 bugs
+      directory.
     """
     json_object = {
         "name": cronjob_name,
@@ -155,4 +169,4 @@ def SendCronjobLog(
     }
     if turndown_time_hours:
         json_object["cronjob_turndown_time_hours"] = turndown_time_hours
-    _WriteBugJSONFile("CronjobUpdate", json_object)
+    _WriteBugJSONFile("CronjobUpdate", json_object, directory)
