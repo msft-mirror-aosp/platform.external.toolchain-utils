@@ -43,7 +43,7 @@ class Tests(unittest.TestCase):
                     "foo": "bar",
                     "baz": bugs.WellKnownComponents.CrOSToolchainPublic,
                 },
-                bugs.X20_PATH,
+                None,
             )
 
             self.assertTrue(
@@ -75,7 +75,7 @@ class Tests(unittest.TestCase):
                 "body": "hello, world!",
                 "bug_id": 1234,
             },
-            bugs.X20_PATH,
+            None,
         )
 
     @patch.object(bugs, "_WriteBugJSONFile")
@@ -119,7 +119,7 @@ class Tests(unittest.TestCase):
             mock_write_json_file.assert_called_once_with(
                 "FileNewBugRequest",
                 expected_output,
-                bugs.X20_PATH,
+                None,
             )
             mock_write_json_file.reset_mock()
 
@@ -134,7 +134,7 @@ class Tests(unittest.TestCase):
                 "message": "hello, world!",
                 "failed": False,
             },
-            bugs.X20_PATH,
+            None,
         )
 
     @patch.object(bugs, "_WriteBugJSONFile")
@@ -153,7 +153,7 @@ class Tests(unittest.TestCase):
                 "failed": False,
                 "cronjob_turndown_time_hours": 42,
             },
-            bugs.X20_PATH,
+            None,
         )
 
     def testFileNameGenerationProducesFileNamesInSortedOrder(self):

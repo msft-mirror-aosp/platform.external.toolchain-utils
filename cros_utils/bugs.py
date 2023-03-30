@@ -67,13 +67,24 @@ _GLOBAL_NAME_GENERATOR = _FileNameGenerator()
 
 
 def _WriteBugJSONFile(
-    object_type: str, json_object: Dict[str, Any], directory: os.PathLike
+    object_type: str,
+    json_object: Dict[str, Any],
+    directory: Optional[os.PathLike],
 ):
-    """Writes a JSON file to X20_PATH with the given bug-ish object."""
+    """Writes a JSON file to `directory` with the given bug-ish object.
+
+    Args:
+        object_type: name of the object we're writing.
+        json_object: object to write.
+        directory: the directory to write to. Uses X20_PATH if None.
+    """
     final_object = {
         "type": object_type,
         "value": json_object,
     }
+
+    if directory is None:
+        directory = X20_PATH
 
     now = datetime.datetime.now(tz=datetime.timezone.utc)
     file_path = os.path.join(
@@ -91,7 +102,7 @@ def _WriteBugJSONFile(
 
 
 def AppendToExistingBug(
-    bug_id: int, body: str, directory: os.PathLike = X20_PATH
+    bug_id: int, body: str, directory: Optional[os.PathLike] = None
 ):
     """Sends a reply to an existing bug."""
     _WriteBugJSONFile(
@@ -110,7 +121,7 @@ def CreateNewBug(
     body: str,
     assignee: Optional[str] = None,
     cc: Optional[List[str]] = None,
-    directory: os.PathLike = X20_PATH,
+    directory: Optional[os.PathLike] = None,
 ):
     """Sends a request to create a new bug.
 
@@ -146,7 +157,7 @@ def SendCronjobLog(
     failed: bool,
     message: str,
     turndown_time_hours: int = 0,
-    directory: os.PathLike = X20_PATH,
+    directory: Optional[os.PathLike] = None,
 ):
     """Sends the record of a cronjob to our bug infra.
 
