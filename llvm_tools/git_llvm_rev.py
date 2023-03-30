@@ -263,23 +263,21 @@ def translate_prebase_rev_to_sha(llvm_config: LLVMConfig, rev: Rev) -> str:
         base_llvm_sha,
     ]
 
-    subp = subprocess.Popen(
+    with subprocess.Popen(
         git_command,
         cwd=llvm_config.dir,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         encoding="utf-8",
-    )
-
-    with subp:
+    ) as subp:
         for sha, message in parse_git_commit_messages(subp.stdout, separator):
             last_line = message.splitlines()[-1]
             if last_line.strip() == looking_for:
                 subp.terminate()
                 return sha
+        if subp.wait() != 0:
+            raise subprocess.CalledProcessError(subp.returncode, git_command)
 
-    if subp.returncode:
-        raise subprocess.CalledProcessError(subp.returncode, git_command)
     raise ValueError(f"No commit with revision {rev} found")
 
 
