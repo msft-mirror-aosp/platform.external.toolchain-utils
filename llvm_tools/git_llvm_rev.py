@@ -104,7 +104,7 @@ def translate_prebase_sha_to_rev_number(
     This function assumes that the given SHA is an ancestor of |base_llvm_sha|.
     """
     commit_message = check_output(
-        ["git", "log", "-n1", "--format=%B", sha],
+        ["git", "log", "-n1", "--format=%B", sha, "--"],
         cwd=llvm_config.dir,
     )
     last_line = commit_message.strip().splitlines()[-1]
@@ -125,13 +125,13 @@ def translate_sha_to_rev(llvm_config: LLVMConfig, sha_or_ref: str) -> Rev:
         sha = sha_or_ref
     else:
         sha = check_output(
-            ["git", "rev-parse", sha_or_ref],
+            ["git", "rev-parse", "--revs-only", sha_or_ref, "--"],
             cwd=llvm_config.dir,
         )
         sha = sha.strip()
 
     merge_base = check_output(
-        ["git", "merge-base", base_llvm_sha, sha],
+        ["git", "merge-base", base_llvm_sha, sha, "--"],
         cwd=llvm_config.dir,
     )
     merge_base = merge_base.strip()
@@ -144,6 +144,7 @@ def translate_sha_to_rev(llvm_config: LLVMConfig, sha_or_ref: str) -> Rev:
                 "--count",
                 "--first-parent",
                 f"{base_llvm_sha}..{sha}",
+                "--",
             ],
             cwd=llvm_config.dir,
         )
@@ -167,6 +168,7 @@ def translate_sha_to_rev(llvm_config: LLVMConfig, sha_or_ref: str) -> Rev:
             "--count",
             "--first-parent",
             f"{merge_base}..{sha}",
+            "--",
         ],
         cwd=llvm_config.dir,
     )
@@ -315,7 +317,13 @@ def translate_rev_to_sha(llvm_config: LLVMConfig, rev: Rev) -> str:
     # about rev walking/counting locally compared to long |log|s, so we walk back
     # twice.
     head = check_output(
-        ["git", "rev-parse", f"{llvm_config.remote}/{branch}"],
+        [
+            "git",
+            "rev-parse",
+            "--revs-only",
+            f"{llvm_config.remote}/{branch}",
+            "--",
+        ],
         cwd=llvm_config.dir,
     )
     branch_head_sha = head.strip()
@@ -328,6 +336,7 @@ def translate_rev_to_sha(llvm_config: LLVMConfig, rev: Rev) -> str:
             "--count",
             "--first-parent",
             f"{base_sha}..{branch_head_sha}",
+            "--",
         ],
         cwd=llvm_config.dir,
     )
