@@ -15,7 +15,6 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import argparse
 import filecmp
-import getpass
 import glob
 import os
 import re
@@ -81,37 +80,21 @@ def FindChromeOSImage(image_file, chromeos_root):
     or outside the chroot.  In either case the path needs to be translated
     to an real/absolute path inside the chroot.
     Example input paths:
-    /usr/local/google/home/uname/chromeos/chroot/tmp/my-test-images/image
-    ~/trunk/src/build/images/board/latest/image
+    /usr/local/google/home/uname/chromeos/out/tmp/my-test-images/image
+    ~/chromiumos/src/build/images/board/latest/image
     /tmp/peppy-release/R67-1235.0.0/image
 
     Corresponding example output paths:
     /tmp/my-test-images/image
-    /home/uname/trunk/src/build/images/board/latest/image
+    /mnt/host/source/src/build/images/board/latest/image
     /tmp/peppy-release/R67-1235.0,0/image
     """
 
-    # Get the name of the user, for "/home/<user>" part of the path.
-    whoami = getpass.getuser()
-    # Get the full path for the chroot dir, including 'chroot'
-    real_chroot_dir = os.path.join(os.path.realpath(chromeos_root), "chroot")
-    # Get the full path for the chromeos root, excluding 'chroot'
-    real_chromeos_root = os.path.realpath(chromeos_root)
+    sys.path.insert(0, chromeos_root)
 
-    # If path name starts with real_chroot_dir, remove that piece, but assume
-    # the rest of the path is correct.
-    if image_file.find(real_chroot_dir) != -1:
-        chroot_image = image_file[len(real_chroot_dir) :]
-    # If path name starts with chromeos_root, excluding 'chroot', replace the
-    # chromeos_root with the prefix: '/home/<username>/trunk'.
-    elif image_file.find(real_chromeos_root) != -1:
-        chroot_image = image_file[len(real_chromeos_root) :]
-        chroot_image = "/home/%s/trunk%s" % (whoami, chroot_image)
-    # Else assume the path is already internal, so leave it alone.
-    else:
-        chroot_image = image_file
+    from chromite.lib import path_util
 
-    return chroot_image
+    return path_util.ToChrootPath(image_file, source_path=chromeos_root)
 
 
 def DoImage(argv):
