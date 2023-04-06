@@ -220,7 +220,9 @@ class ExperimentFactory(object):
         ]
         if global_settings.GetField("rerun_if_failed"):
             cache_conditions.append(CacheConditions.RUN_SUCCEEDED)
-        if global_settings.GetField("rerun"):
+        if global_settings.GetField("rerun") or global_settings.GetField(
+            "ignore_cache"
+        ):
             cache_conditions.append(CacheConditions.FALSE)
         if global_settings.GetField("same_machine"):
             cache_conditions.append(CacheConditions.SAME_MACHINE_MATCH)
@@ -623,7 +625,7 @@ class ExperimentFactory(object):
             os.path.dirname(__file__), "default_remotes"
         )
         try:
-            with open(default_remotes_file) as f:
+            with open(default_remotes_file, encoding="utf-8") as f:
                 for line in f:
                     key, v = line.split(":")
                     if key.strip() == board:
@@ -632,15 +634,15 @@ class ExperimentFactory(object):
                             return remotes
                         else:
                             raise RuntimeError(
-                                "There is no remote for {0}".format(board)
+                                f"There is no remote for {board}"
                             )
         except IOError:
             # TODO: rethrow instead of throwing different exception.
             raise RuntimeError(
-                "IOError while reading file {0}".format(default_remotes_file)
+                f"IOError while reading file {default_remotes_file}"
             )
         else:
-            raise RuntimeError("There is no remote for {0}".format(board))
+            raise RuntimeError(f"There is no remote for {board}")
 
     def CheckRemotesInCrosfleet(self, remote):
         # TODO: (AI:zhizhouy) need to check whether a remote is a local or lab

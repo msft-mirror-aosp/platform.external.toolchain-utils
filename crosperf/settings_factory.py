@@ -206,7 +206,7 @@ class GlobalSettings(Settings):
         self.AddField(
             BooleanField(
                 "rerun_if_failed",
-                description="Whether to re-run failed test runs " "or not.",
+                description="Whether to re-run failed test runs or not.",
                 default=False,
             )
         )
@@ -235,6 +235,13 @@ class GlobalSettings(Settings):
         )
         self.AddField(
             BooleanField(
+                "ignore_cache",
+                description='Alias of "rerun" to ignore cache.',
+                default=False,
+            )
+        )
+        self.AddField(
+            BooleanField(
                 "same_specs",
                 default=True,
                 description="Ensure cached runs are run on the "
@@ -246,7 +253,7 @@ class GlobalSettings(Settings):
             BooleanField(
                 "same_machine",
                 default=False,
-                description="Ensure cached runs are run on the " "same remote.",
+                description="Ensure cached runs are run on the same remote.",
             )
         )
         self.AddField(

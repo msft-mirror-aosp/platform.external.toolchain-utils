@@ -49,7 +49,7 @@ class GlobalSettingsTest(unittest.TestCase):
     def test_init(self):
         res = settings_factory.GlobalSettings("g_settings")
         self.assertIsNotNone(res)
-        self.assertEqual(len(res.fields), 40)
+        self.assertEqual(len(res.fields), 41)
         self.assertEqual(res.GetField("name"), "")
         self.assertEqual(res.GetField("board"), "")
         self.assertEqual(res.GetField("crosfleet"), False)
@@ -58,6 +58,7 @@ class GlobalSettingsTest(unittest.TestCase):
         self.assertEqual(res.GetField("rm_chroot_tmp"), False)
         self.assertEqual(res.GetField("email"), None)
         self.assertEqual(res.GetField("rerun"), False)
+        self.assertEqual(res.GetField("ignore_cache"), False)
         self.assertEqual(res.GetField("same_specs"), True)
         self.assertEqual(res.GetField("same_machine"), False)
         self.assertEqual(res.GetField("iterations"), 0)
@@ -114,7 +115,7 @@ class SettingsFactoryTest(unittest.TestCase):
             "global", "global"
         )
         self.assertIsInstance(g_settings, settings_factory.GlobalSettings)
-        self.assertEqual(len(g_settings.fields), 40)
+        self.assertEqual(len(g_settings.fields), 41)
 
 
 if __name__ == "__main__":
