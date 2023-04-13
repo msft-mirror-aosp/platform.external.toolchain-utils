@@ -214,7 +214,7 @@ def download_unpack_crate(*, crate_name: str, crate_version: str):
         local_path / f"{crate_name}-{crate_version}", ignore_errors=True
     )
     with chdir(local_path):
-        run(["gsutil.py", "cp", f"gs:/{gs_path}", "."])
+        run(["gsutil", "cp", f"gs:/{gs_path}", "."])
         run(["xz", "-d", f"{filename_no_extension}.tar.xz"])
         run(["tar", "xvf", f"{filename_no_extension}.tar"])
 
@@ -330,9 +330,9 @@ def upload_file(
     *, source: Path, dest: PurePosixPath, public_read: bool = False
 ):
     if public_read:
-        run(["gsutil.py", "cp", "-a", "public-read", source, f"gs:/{dest}"])
+        run(["gsutil", "cp", "-a", "public-read", source, f"gs:/{dest}"])
     else:
-        run(["gsutil.py", "cp", source, f"gs:/{dest}"])
+        run(["gsutil", "cp", source, f"gs:/{dest}"])
 
 
 def maybe_download_crate(*, crate_name: str, crate_version: str):
