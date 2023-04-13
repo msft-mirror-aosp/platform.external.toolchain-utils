@@ -215,8 +215,7 @@ def download_unpack_crate(*, crate_name: str, crate_version: str):
     )
     with chdir(local_path):
         run(["gsutil", "cp", f"gs:/{gs_path}", "."])
-        run(["xz", "-d", f"{filename_no_extension}.tar.xz"])
-        run(["tar", "xvf", f"{filename_no_extension}.tar"])
+        run(["tar", "xaf", f"{filename_no_extension}.tar.xz"])
 
 
 def build_crate(
@@ -229,7 +228,7 @@ def build_crate(
     local_path = LOCAL_BASE / "crates" / f"{crate_name}-{crate_version}"
     with chdir(local_path):
         Path(".cargo").mkdir(exist_ok=True)
-        with open(".cargo/config.toml", "w") as f:
+        with open(".cargo/config.toml", "w", encoding="utf-8") as f:
             f.write(
                 "\n".join(
                     (
