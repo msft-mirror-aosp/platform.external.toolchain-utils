@@ -6,7 +6,7 @@
 """Copies rust-bootstrap artifacts from an SDK build to localmirror.
 
 We use localmirror to host these artifacts, but they've changed a bit over
-time, so simply `gsutil.py cp $FROM $TO` doesn't work. This script allows the
+time, so simply `gsutil cp $FROM $TO` doesn't work. This script allows the
 convenience of the old `cp` command.
 """
 
@@ -50,7 +50,7 @@ def _download(remote_path: str, local_file: Path):
     """Downloads the given gs:// path to the given local file."""
     logging.info("Downloading %s -> %s", remote_path, local_file)
     subprocess.run(
-        ["gsutil.py", "cp", remote_path, str(local_file)],
+        ["gsutil", "cp", remote_path, str(local_file)],
         check=True,
     )
 
@@ -138,7 +138,7 @@ def _debinpkgify(binpkg_file: Path) -> Path:
 def _upload(local_file: Path, remote_path: str, force: bool):
     """Uploads the local file to the given gs:// path."""
     logging.info("Uploading %s -> %s", local_file, remote_path)
-    cmd_base = ["gsutil.py", "cp", "-a", "public-read"]
+    cmd_base = ["gsutil", "cp", "-a", "public-read"]
     if not force:
         cmd_base.append("-n")
     subprocess.run(
