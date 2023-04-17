@@ -8,6 +8,7 @@
 
 import ast
 import os
+import shlex
 
 from cros_utils import command_executer
 import test_flag
@@ -338,15 +339,11 @@ class ImageDownloader(object):
             # File exists on server, download and uncompress it
             self.DownloadSingleFile(chromeos_root, build_id, debug_archive_name)
 
-            self.UncompressSingleFile(
-                chromeos_root, build_id, debug_archive_name, "tar -xf "
-            )
             # Extract and move debug files into the proper location.
-            debug_dir = "debug_files/usr/lib"
-            command = "cd %s ; mkdir -p %s; mv debug %s" % (
-                download_path,
-                debug_dir,
-                debug_dir,
+            debug_dir = "debug_files/usr/lib/debug"
+            command = (
+                f"cd {shlex.quote(download_path)}; "
+                f"mkdir -p {shlex.quote(debug_dir)}"
             )
             if self.log_level != "verbose":
                 self._logger.LogOutput("CMD: %s" % command)
@@ -357,6 +354,12 @@ class ImageDownloader(object):
                     "Could not create directory %s"
                     % os.path.join(debug_dir, "debug")
                 )
+            self.UncompressSingleFile(
+                chromeos_root,
+                build_id,
+                debug_archive_name,
+                f"tar -C {shlex.quote(debug_dir)} -xf ",
+            )
 
         return debug_rel_path
 

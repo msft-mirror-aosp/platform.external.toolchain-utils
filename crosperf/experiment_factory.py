@@ -383,21 +383,6 @@ class ExperimentFactory(object):
                     )
                     # Add non-telemetry toolchain-perf benchmarks:
 
-                    # Tast test platform.ReportDiskUsage for image size.
-                    benchmarks.append(
-                        Benchmark(
-                            "platform.ReportDiskUsage",
-                            "platform.ReportDiskUsage",
-                            "",
-                            1,  # This is not a performance benchmark, only run once.
-                            rm_chroot_tmp,
-                            "",
-                            "tast",  # Specify the suite to be 'tast'
-                            show_all_results,
-                            retries,
-                        )
-                    )
-
                     # TODO: crbug.com/1057755 Do not enable graphics_WebGLAquarium until
                     # it gets fixed.
                     #

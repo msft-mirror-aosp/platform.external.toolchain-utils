@@ -181,6 +181,12 @@ class ToolchainComparator(object):
       iterations: 3
       run_local: False
     }
+
+    benchmark: platform.ReportDiskUsage {
+      suite: tast
+      iterations: 1
+      run_local: False
+    }
     """
 
         with open(experiment_file, "w", encoding="utf-8") as f:
