@@ -52,12 +52,14 @@ SKIPPED_BRANCHES="95"
 #   The second scenario is when we want to disable kernel AFDO (when all devices
 #   move to kernelnext and there are no new profiles from the field). In this
 #   case we disable AFDO in main but still keep it live in beta and stable.
-declare -A SKIPPED_KVERS_IN_BRANCHES
-# In SKIPPED_KVERS_IN_BRANCHES
+declare -A SKIPPED_ARCHKVERS_IN_BRANCHES
+# In SKIPPED_ARCHKVERS_IN_BRANCHES
 # - key is a branch number string;
-# - value is the list of kernels separated by space.
-# Example: SKIPPED_KVERS_IN_BRANCHES["105"]="4.4 4.14"
+# - value is the list of arch/kver separated by space.
+# Example: SKIPPED_ARCHKVERS_IN_BRANCHES["105"]="amd/4.4 arm/5.15"
 # -------------------
+# Kernel tracing was disabled on arm in 114, b/275560674.
+SKIPPED_ARCHKVERS_IN_BRANCHES["114"]="arm/5.15"
 
 script_dir=$(dirname "$0")
 tc_utils_dir="${script_dir}/.."
@@ -218,15 +220,16 @@ do
     do
       # Skip kernels disabled in this branch.
       skipped=false
-      for skipped_branch in "${!SKIPPED_KVERS_IN_BRANCHES[@]}"
+      for skipped_branch in "${!SKIPPED_ARCHKVERS_IN_BRANCHES[@]}"
       do
         if [[ ${curr_branch_number} == "${skipped_branch}" ]]
         then
-          # Current branch is in the keys of SKIPPED_KVERS_IN_BRANCHES.
-          # Now lets check if $kver is in the list.
-          for skipped_kver in ${SKIPPED_KVERS_IN_BRANCHES[${skipped_branch}]}
+          # Current branch is in the keys of SKIPPED_ARCHKVERS_IN_BRANCHES.
+          # Now lets check if $arch/$kver is in the list.
+          for skipped_archkver in \
+            ${SKIPPED_ARCHKVERS_IN_BRANCHES[${skipped_branch}]}
           do
-            if [[ ${kver} == "${skipped_kver}" ]]
+            if [[ "${arch}/${kver}" == "${skipped_archkver}" ]]
             then
               skipped=true
               break
@@ -236,7 +239,7 @@ do
       done
       if ${skipped}
       then
-        echo "${kver} is skipped in branch ${curr_branch_number}. Skip it."
+        echo "${arch}/${kver} is skipped in branch ${curr_branch_number}."
         continue
       fi
       # Sort the gs output by timestamp, default ordering is by name. So
