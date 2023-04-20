@@ -270,6 +270,8 @@ def maybe_compose_bug(
         "If you notice any bugs or issues you'd like to share, please "
         "also note them on go/shared-rust-update-notes.\n"
         "\n"
+        "See go/crostc-rust-rotation for the current rotation schedule.\n"
+        "\n"
         "For questions about this bot, please contact chromeos-toolchain@ and "
         "CC gbiv@."
     )
