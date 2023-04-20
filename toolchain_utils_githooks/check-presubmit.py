@@ -302,7 +302,7 @@ def check_py_format(
     thread_pool: multiprocessing.pool.ThreadPool,
     files: t.Iterable[str],
 ) -> t.List[CheckResult]:
-    """Runs yapf on files to check for style bugs. Also checks for #!s."""
+    """Runs black on files to check for style bugs. Also checks for #!s."""
     black = "black"
     if not has_executable_on_path(black):
         return CheckResult(
@@ -698,7 +698,10 @@ def ensure_pip_deps_installed() -> None:
         print("Autoinstalling `pip`...")
         subprocess.check_call(["sudo", "emerge", "dev-python/pip"])
 
-    for package in ("scipy", "yapf"):
+    # This was originally written as a loop, but the number of packages we need
+    # has decreaed. Leave it that way so adding new packages is easier in the
+    # future.
+    for package in ("scipy",):
         exit_code = subprocess.call(
             ["python3", "-c", f"import {package}"],
             stdout=subprocess.DEVNULL,
