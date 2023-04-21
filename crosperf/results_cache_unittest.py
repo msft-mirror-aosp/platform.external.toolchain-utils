@@ -11,6 +11,7 @@
 import io
 import os
 import pickle
+import re
 import shutil
 import tempfile
 import unittest
@@ -449,6 +450,16 @@ class MockResult(Result):
         return keyvals
 
 
+class RegexMatcher:
+    """A regex matcher, for passing to mocks."""
+
+    def __init__(self, regex):
+        self._regex = re.compile(regex)
+
+    def __eq__(self, string):
+        return self._regex.search(string) is not None
+
+
 class ResultTest(unittest.TestCase):
     """Result test class."""
 
@@ -490,7 +501,9 @@ class ResultTest(unittest.TestCase):
             None,
         )
 
-    def testCreateFromRun(self):
+    @mock.patch.object(os.path, "exists")
+    def testCreateFromRun(self, mock_path_exists):
+        mock_path_exists.side_effect = lambda x: x != "/etc/cros_chroot_version"
         result = MockResult.CreateFromRun(
             logger.GetLogger(),
             "average",
@@ -508,7 +521,7 @@ class ResultTest(unittest.TestCase):
         )
         self.assertEqual(
             result.results_dir,
-            "/tmp/chroot/tmp/test_that.PO1234567/platform_LibCBench",
+            RegexMatcher("/tmp/.*tmp/test_that.PO1234567/platform_LibCBench"),
         )
         self.assertEqual(result.retval, 0)
 
@@ -517,12 +530,12 @@ class ResultTest(unittest.TestCase):
             self.mock_logger, self.mock_label, "average", self.mock_cmd_exec
         )
         self.result.chromeos_root = "/tmp/chromeos"
+        self.orig_exists = os.path.exists
 
     @mock.patch.object(os.path, "isdir")
     @mock.patch.object(command_executer.CommandExecuter, "RunCommand")
     @mock.patch.object(command_executer.CommandExecuter, "CopyFiles")
     def test_copy_files_to(self, mock_copyfiles, mock_runcmd, mock_isdir):
-
         files = ["src_file_1", "src_file_2", "src_file_3"]
         dest_dir = "/tmp/test"
         self.mock_cmd_exec.RunCommand = mock_runcmd
@@ -738,7 +751,6 @@ class ResultTest(unittest.TestCase):
     def test_get_keyvals(
         self, mock_chrootruncmd, mock_runcmd, mock_mkdtemp, mock_getpath
     ):
-
         self.kv_dict = {}
         self.callGetNewKeyvals = False
 
@@ -863,7 +875,6 @@ class ResultTest(unittest.TestCase):
         self.assertEqual(samples, [12345 - 60, "samples"])
 
     def test_get_results_dir(self):
-
         self.result.out = ""
         self.assertRaises(Exception, self.result.GetResultsDir)
 
@@ -873,7 +884,6 @@ class ResultTest(unittest.TestCase):
 
     @mock.patch.object(command_executer.CommandExecuter, "RunCommandGeneric")
     def test_find_files_in_results_dir(self, mock_runcmd):
-
         self.result.results_dir = None
         res = self.result.FindFilesInResultsDir("-name perf.data")
         self.assertEqual(res, "")
@@ -1347,10 +1357,18 @@ class ResultTest(unittest.TestCase):
             ),
         )
 
+    @mock.patch.object(os.path, "exists")
     @mock.patch.object(misc, "GetInsideChrootPath")
     @mock.patch.object(command_executer.CommandExecuter, "ChrootRunCommand")
-    def test_generate_perf_report_files(self, mock_chrootruncmd, mock_getpath):
-        fake_file = "/usr/chromeos/chroot/tmp/results/fake_file"
+    def test_generate_perf_report_files(
+        self, mock_chrootruncmd, mock_getpath, mock_pathexists
+    ):
+        mock_pathexists.side_effect = (
+            lambda x: self.orig_exists(x)
+            if x != "/etc/cros_chroot_version"
+            else False
+        )
+        fake_file = "/tmp/results/perf.data.report"
         self.result.perf_data_files = ["/tmp/results/perf.data"]
         self.result.board = "lumpy"
         mock_getpath.return_value = fake_file
@@ -1359,7 +1377,8 @@ class ResultTest(unittest.TestCase):
         # Debug path not found
         self.result.label.debug_path = ""
         tmp = self.result.GeneratePerfReportFiles()
-        self.assertEqual(tmp, ["/tmp/chromeos/chroot%s" % fake_file])
+        self.assertEqual(len(tmp), 1)
+        self.assertEqual(tmp[0], RegexMatcher("/tmp/chromeos.*%s" % fake_file))
         self.assertEqual(
             mock_chrootruncmd.call_args_list[0][0],
             (
@@ -1369,12 +1388,18 @@ class ResultTest(unittest.TestCase):
             ),
         )
 
+    @mock.patch.object(os.path, "exists")
     @mock.patch.object(misc, "GetInsideChrootPath")
     @mock.patch.object(command_executer.CommandExecuter, "ChrootRunCommand")
     def test_generate_perf_report_files_debug(
-        self, mock_chrootruncmd, mock_getpath
+        self, mock_chrootruncmd, mock_getpath, mock_pathexists
     ):
-        fake_file = "/usr/chromeos/chroot/tmp/results/fake_file"
+        mock_pathexists.side_effect = (
+            lambda x: self.orig_exists(x)
+            if x != "/etc/cros_chroot_version"
+            else False
+        )
+        fake_file = "/tmp/results/perf.data.report"
         self.result.perf_data_files = ["/tmp/results/perf.data"]
         self.result.board = "lumpy"
         mock_getpath.return_value = fake_file
@@ -1383,7 +1408,8 @@ class ResultTest(unittest.TestCase):
         # Debug path found
         self.result.label.debug_path = "/tmp/debug"
         tmp = self.result.GeneratePerfReportFiles()
-        self.assertEqual(tmp, ["/tmp/chromeos/chroot%s" % fake_file])
+        self.assertEqual(len(tmp), 1)
+        self.assertEqual(tmp[0], RegexMatcher("/tmp/chromeos.*%s" % fake_file))
         self.assertEqual(
             mock_chrootruncmd.call_args_list[0][0],
             (
@@ -1669,7 +1695,6 @@ class ResultTest(unittest.TestCase):
         command_executer.CommandExecuter, "ChrootRunCommandWOutput"
     )
     def test_populate_from_cache_dir(self, mock_runchrootcmd, mock_getpath):
-
         # pylint: disable=redefined-builtin
         def FakeMkdtemp(dir=None):
             if dir:
@@ -1803,7 +1828,6 @@ class ResultTest(unittest.TestCase):
     @mock.patch.object(misc, "GetRoot")
     @mock.patch.object(command_executer.CommandExecuter, "RunCommand")
     def test_cleanup(self, mock_runcmd, mock_getroot):
-
         # Test 1. 'rm_chroot_tmp' is True; self.results_dir exists;
         # self.temp_dir exists; results_dir name contains 'test_that_results_'.
         mock_getroot.return_value = [
@@ -2036,7 +2060,6 @@ class TelemetryResultTest(unittest.TestCase):
         self.assertEqual(self.result.retval, 3)
 
     def test_populate_from_cache_dir_and_process_results(self):
-
         self.result = TelemetryResult(
             self.mock_logger, self.mock_label, "average", self.mock_machine
         )
@@ -2249,7 +2272,6 @@ class ResultsCacheTest(unittest.TestCase):
     @mock.patch.object(os.path, "isdir")
     @mock.patch.object(Result, "CreateFromCacheHit")
     def test_read_result(self, mock_create, mock_isdir, mock_runcmd):
-
         self.fakeCacheReturnResult = None
 
         def FakeGetCacheDirForRead():

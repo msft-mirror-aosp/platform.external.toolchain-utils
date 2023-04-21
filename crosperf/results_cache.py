@@ -185,8 +185,9 @@ class Result(object):
                 # Otherwise get the base filename and create the correct
                 # path for it.
                 _, f_base = misc.GetRoot(f)
-                data_filename = os.path.join(
-                    self.chromeos_root, "chroot/tmp", self.temp_dir, f_base
+                data_filename = misc.GetOutsideChrootPath(
+                    self.chromeos_root,
+                    os.path.join("/tmp", self.temp_dir, f_base),
                 )
             if data_filename.find(".json") > 0:
                 raw_dict = dict()
@@ -258,22 +259,24 @@ class Result(object):
         return results_dict
 
     def GetKeyvals(self):
-        results_in_chroot = os.path.join(self.chromeos_root, "chroot", "tmp")
+        results_in_chroot = misc.GetOutsideChrootPath(
+            self.chromeos_root, "/tmp"
+        )
         if not self.temp_dir:
             self.temp_dir = tempfile.mkdtemp(dir=results_in_chroot)
             command = f"cp -r {self.results_dir}/* {self.temp_dir}"
             self.ce.RunCommand(command, print_to_console=False)
 
+        tmp_dir_in_chroot = misc.GetInsideChrootPath(
+            self.chromeos_root, self.temp_dir
+        )
         command = "./generate_test_report --no-color --csv %s" % (
-            os.path.join("/tmp", os.path.basename(self.temp_dir))
+            tmp_dir_in_chroot
         )
         _, out, _ = self.ce.ChrootRunCommandWOutput(
             self.chromeos_root, command, print_to_console=False
         )
         keyvals_dict = {}
-        tmp_dir_in_chroot = misc.GetInsideChrootPath(
-            self.chromeos_root, self.temp_dir
-        )
         for line in out.splitlines():
             tokens = re.split("=|,", line)
             key = tokens[-2]
@@ -297,8 +300,8 @@ class Result(object):
             chroot_perf_data_file = misc.GetInsideChrootPath(
                 self.chromeos_root, perf_data_file
             )
-            perf_path = os.path.join(
-                self.chromeos_root, "chroot", "usr/bin/perf"
+            perf_path = misc.GetOutsideChrootPath(
+                self.chromeos_root, "/usr/bin/perf"
             )
             perf_file = "/usr/sbin/perf"
             if os.path.exists(perf_path):
@@ -464,10 +467,7 @@ class Result(object):
         return self.FindFilesInResultsDir("-name wait_time.log").split("\n")[0]
 
     def _CheckDebugPath(self, option, path):
-        relative_path = path[1:]
-        out_chroot_path = os.path.join(
-            self.chromeos_root, "chroot", relative_path
-        )
+        out_chroot_path = misc.GetOutsideChrootPath(self.chromeos_root, path)
         if os.path.exists(out_chroot_path):
             if option == "kallsyms":
                 path = os.path.join(path, "System.map-*")
@@ -495,8 +495,8 @@ class Result(object):
             chroot_perf_report_file = misc.GetInsideChrootPath(
                 self.chromeos_root, perf_report_file
             )
-            perf_path = os.path.join(
-                self.chromeos_root, "chroot", "usr/bin/perf"
+            perf_path = misc.GetOutsideChrootPath(
+                self.chromeos_root, "/usr/bin/perf"
             )
 
             perf_file = "/usr/sbin/perf"
@@ -1186,7 +1186,7 @@ class Result(object):
 
         # Untar the tarball to a temporary directory
         self.temp_dir = tempfile.mkdtemp(
-            dir=os.path.join(self.chromeos_root, "chroot", "tmp")
+            dir=misc.GetOutsideChrootPath(self.chromeos_root, "/tmp")
         )
 
         command = "cd %s && tar xf %s" % (
