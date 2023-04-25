@@ -28,33 +28,8 @@ import config
 # specified sets.  Here we define sets of tests that users may want
 # to run together.
 
-telemetry_perfv2_tests = [
-    "kraken",
-    "octane",
-]
-
-telemetry_pagecycler_tests = [
-    "page_cycler_v2.intl_ar_fa_he",
-    "page_cycler_v2.intl_es_fr_pt-BR",
-    "page_cycler_v2.intl_hi_ru",
-    "page_cycler_v2.intl_ja_zh",
-    "page_cycler_v2.intl_ko_th_vi",
-    "page_cycler_v2.typical_25",
-]
-
-telemetry_toolchain_old_perf_tests = [
-    "page_cycler_v2.intl_es_fr_pt-BR",
-    "page_cycler_v2.intl_hi_ru",
-    "page_cycler_v2.intl_ja_zh",
-    "page_cycler_v2.intl_ko_th_vi",
-    "page_cycler_v2.netsim.top_10",
-    "page_cycler_v2.typical_25",
-    "spaceport",
-    "tab_switching.top_10",
-]
 telemetry_toolchain_perf_tests = [
     "octane",
-    "kraken",
     "speedometer",
     "speedometer2",
     "jetstream2",
@@ -68,13 +43,10 @@ graphics_perf_tests = [
 ]
 # TODO: disable rendering.desktop by default as the benchmark is
 # currently in a bad state
-# page_cycler_v2.typical_25 is deprecated and the recommend replacement is
-# loading.desktop@@typical (crbug.com/916340)
 telemetry_crosbolt_perf_tests = [
     "octane",
-    "kraken",
     "speedometer2",
-    "jetstream",
+    "jetstream2",
     "loading.desktop",
     # 'rendering.desktop',
 ]
@@ -83,12 +55,6 @@ crosbolt_perf_tests = [
     "graphics_WebGLAquarium",
     "tast.video.PlaybackPerfVP91080P30FPS",
 ]
-
-#    'cheets_AntutuTest',
-#    'cheets_PerfBootServer',
-#    'cheets_CandyCrushTest',
-#    'cheets_LinpackTest',
-# ]
 
 dso_list = [
     "all",
@@ -307,37 +273,7 @@ class ExperimentFactory(object):
                 )
 
             if suite == "telemetry_Crosperf":
-                if test_name == "all_perfv2":
-                    self.AppendBenchmarkSet(
-                        benchmarks,
-                        telemetry_perfv2_tests,
-                        test_args,
-                        iterations,
-                        rm_chroot_tmp,
-                        perf_args,
-                        suite,
-                        show_all_results,
-                        retries,
-                        run_local,
-                        cwp_dso,
-                        weight,
-                    )
-                elif test_name == "all_pagecyclers":
-                    self.AppendBenchmarkSet(
-                        benchmarks,
-                        telemetry_pagecycler_tests,
-                        test_args,
-                        iterations,
-                        rm_chroot_tmp,
-                        perf_args,
-                        suite,
-                        show_all_results,
-                        retries,
-                        run_local,
-                        cwp_dso,
-                        weight,
-                    )
-                elif test_name == "all_crosbolt_perf":
+                if test_name == "all_crosbolt_perf":
                     self.AppendBenchmarkSet(
                         benchmarks,
                         telemetry_crosbolt_perf_tests,
@@ -400,21 +336,6 @@ class ExperimentFactory(object):
                     #         run_local=False,
                     #         cwp_dso=cwp_dso,
                     #         weight=weight))
-                elif test_name == "all_toolchain_perf_old":
-                    self.AppendBenchmarkSet(
-                        benchmarks,
-                        telemetry_toolchain_old_perf_tests,
-                        test_args,
-                        iterations,
-                        rm_chroot_tmp,
-                        perf_args,
-                        suite,
-                        show_all_results,
-                        retries,
-                        run_local,
-                        cwp_dso,
-                        weight,
-                    )
                 else:
                     benchmark = Benchmark(
                         benchmark_name,
