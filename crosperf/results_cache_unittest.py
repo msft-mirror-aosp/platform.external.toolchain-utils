@@ -1164,11 +1164,12 @@ class ResultTest(unittest.TestCase):
         """Normal case when log exists and contains valid data."""
         self.result.turbostat_log_file = "/tmp/somelogfile.log"
         with mock.patch(
-            "builtins.open", mock.mock_open(read_data=TURBOSTAT_LOG_OUTPUT)
+            "builtins.open",
+            mock.mock_open(read_data=TURBOSTAT_LOG_OUTPUT),
         ) as mo:
             cpustats = self.result.ProcessTurbostatResults()
             # Check that the log got opened and data were read/parsed.
-            calls = [mock.call("/tmp/somelogfile.log")]
+            calls = [mock.call("/tmp/somelogfile.log", encoding="utf-8")]
             mo.assert_has_calls(calls)
             self.assertEqual(cpustats, TURBOSTAT_DATA)
 
@@ -1179,7 +1180,7 @@ class ResultTest(unittest.TestCase):
             cpustats = self.result.ProcessTurbostatResults()
             # Check that the log got opened and parsed successfully and empty
             # data returned.
-            calls = [mock.call("/tmp/emptylogfile.log")]
+            calls = [mock.call("/tmp/emptylogfile.log", encoding="utf-8")]
             mo.assert_has_calls(calls)
             self.assertEqual(cpustats, {})
 
@@ -1204,11 +1205,12 @@ class ResultTest(unittest.TestCase):
         """
         self.result.cpustats_log_file = "/tmp/somelogfile.log"
         with mock.patch(
-            "builtins.open", mock.mock_open(read_data=CPUSTATS_UNIQ_OUTPUT)
+            "builtins.open",
+            mock.mock_open(read_data=CPUSTATS_UNIQ_OUTPUT),
         ) as mo:
             cpustats = self.result.ProcessCpustatsResults()
             # Check that the log got opened and data were read/parsed.
-            calls = [mock.call("/tmp/somelogfile.log")]
+            calls = [mock.call("/tmp/somelogfile.log", encoding="utf-8")]
             mo.assert_has_calls(calls)
             self.assertEqual(cpustats, CPUSTATS_UNIQ_DATA)
 
@@ -1222,11 +1224,12 @@ class ResultTest(unittest.TestCase):
         """
         self.result.cpustats_log_file = "/tmp/somelogfile.log"
         with mock.patch(
-            "builtins.open", mock.mock_open(read_data=CPUSTATS_DUPL_OUTPUT)
+            "builtins.open",
+            mock.mock_open(read_data=CPUSTATS_DUPL_OUTPUT),
         ) as mo:
             cpustats = self.result.ProcessCpustatsResults()
             # Check that the log got opened and data were read/parsed.
-            calls = [mock.call("/tmp/somelogfile.log")]
+            calls = [mock.call("/tmp/somelogfile.log", encoding="utf-8")]
             mo.assert_has_calls(calls)
             self.assertEqual(cpustats, CPUSTATS_DUPL_DATA)
 
@@ -1237,7 +1240,7 @@ class ResultTest(unittest.TestCase):
             cpustats = self.result.ProcessCpustatsResults()
             # Check that the log got opened and parsed successfully and empty
             # data returned.
-            calls = [mock.call("/tmp/emptylogfile.log")]
+            calls = [mock.call("/tmp/emptylogfile.log", encoding="utf-8")]
             mo.assert_has_calls(calls)
             self.assertEqual(cpustats, {})
 
@@ -1250,7 +1253,7 @@ class ResultTest(unittest.TestCase):
         ) as mo:
             topproc = self.result.ProcessTopResults()
             # Check that the log got opened and data were read/parsed.
-            calls = [mock.call("/tmp/fakelogfile.log")]
+            calls = [mock.call("/tmp/fakelogfile.log", encoding="utf-8")]
             mo.assert_has_calls(calls)
             self.assertEqual(topproc, TOP_DATA)
 
@@ -1261,7 +1264,7 @@ class ResultTest(unittest.TestCase):
             topcalls = self.result.ProcessTopResults()
             # Check that the log got opened and parsed successfully and empty
             # data returned.
-            calls = [mock.call("/tmp/emptylogfile.log")]
+            calls = [mock.call("/tmp/emptylogfile.log", encoding="utf-8")]
             mo.assert_has_calls(calls)
             self.assertEqual(topcalls, [])
 
@@ -1552,7 +1555,7 @@ class ResultTest(unittest.TestCase):
         # format
         self.result.suite = "telemetry_Crosperf"
         self.result.results_file = [tempfile.mkdtemp() + "/histograms.json"]
-        with open(self.result.results_file[0], "w") as f:
+        with open(self.result.results_file[0], "w", encoding="utf-8") as f:
             f.write(HISTOGRAMSET)
         self.result.ProcessResults()
         shutil.rmtree(os.path.dirname(self.result.results_file[0]))
