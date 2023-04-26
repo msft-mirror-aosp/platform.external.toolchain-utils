@@ -60,6 +60,7 @@ declare -A SKIPPED_ARCHKVERS_IN_BRANCHES
 # -------------------
 # Kernel tracing was disabled on arm in 114, b/275560674.
 SKIPPED_ARCHKVERS_IN_BRANCHES["114"]="arm/5.15"
+SKIPPED_ARCHKVERS_IN_BRANCHES["115"]="arm/5.15"
 
 script_dir=$(dirname "$0")
 tc_utils_dir="${script_dir}/.."
