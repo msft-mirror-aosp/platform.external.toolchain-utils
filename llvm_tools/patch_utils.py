@@ -560,7 +560,9 @@ def update_version_ranges_with_entries(
     """
     modified_entries: List[PatchEntry] = []
     applied_patches: List[PatchEntry] = []
-    active_patches = (pe for pe in patch_entries if not pe.is_old(svn_version))
+    active_patches = (
+        pe for pe in patch_entries if pe.can_patch_version(svn_version)
+    )
     with git_clean_context(llvm_src_dir):
         for pe in active_patches:
             test_result = pe.test_apply(llvm_src_dir)

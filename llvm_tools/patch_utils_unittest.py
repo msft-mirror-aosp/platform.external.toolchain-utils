@@ -266,6 +266,16 @@ Hunk #1 SUCCEEDED at 96 with fuzz 1.
                         "until": 2,
                     },
                 ),
+                pu.PatchEntry(
+                    workdir=dirpath,
+                    rel_patch_path="z.patch",
+                    metadata=None,
+                    platforms=None,
+                    version_range={
+                        "from": 4,
+                        "until": 5,
+                    },
+                ),
             ]
             patches[0].apply = mock.MagicMock(
                 return_value=pu.PatchResult(
@@ -274,6 +284,9 @@ Hunk #1 SUCCEEDED at 96 with fuzz 1.
             )
             patches[1].apply = mock.MagicMock(
                 return_value=pu.PatchResult(succeeded=True)
+            )
+            patches[2].apply = mock.MagicMock(
+                return_value=pu.PatchResult(succeeded=False)
             )
             results, _ = pu.update_version_ranges_with_entries(
                 1, dirpath, patches
@@ -284,6 +297,7 @@ Hunk #1 SUCCEEDED at 96 with fuzz 1.
             self.assertEqual(results[0].version_range, {"from": 0, "until": 1})
             self.assertEqual(patches[0].version_range, {"from": 0, "until": 1})
             self.assertEqual(patches[1].version_range, {"from": 0, "until": 2})
+            self.assertEqual(patches[2].version_range, {"from": 4, "until": 5})
 
     @mock.patch("builtins.print")
     def test_remove_old_patches(self, _):
