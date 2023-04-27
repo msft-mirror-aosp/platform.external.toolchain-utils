@@ -177,6 +177,7 @@ class ExperimentFactory(object):
             "turbostat": global_settings.GetField("turbostat"),
             "top_interval": global_settings.GetField("top_interval"),
         }
+        keep_stateful = global_settings.GetField("keep_stateful")
 
         # Default cache hit conditions. The image checksum in the cache and the
         # computed checksum of the image must match. Also a cache file must exist.
@@ -521,6 +522,7 @@ class ExperimentFactory(object):
             ignore_min_max,
             crosfleet,
             dut_config,
+            keep_stateful,
             no_lock=no_lock,
         )
 

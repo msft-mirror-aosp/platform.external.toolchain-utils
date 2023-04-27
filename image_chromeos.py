@@ -49,12 +49,12 @@ def CheckForCrosFlash(chromeos_root, remote, log_level):
         command, chromeos_root=chromeos_root, machine=remote
     )
     logger.GetLogger().LogFatalIf(
-        ret == 255, "Failed ssh to %s (for checking cherrypy)" % remote
+        ret == 255, f"Failed ssh to {remote} (for checking cherrypy)"
     )
     logger.GetLogger().LogFatalIf(
         ret != 0,
-        "Failed to find cherrypy or ctypes on remote '{}', "
-        "cros flash cannot work.".format(remote),
+        f"Failed to find cherrypy or ctypes on '{remote}', "
+        "cros flash cannot work.",
     )
 
 
@@ -142,6 +142,13 @@ def DoImage(argv):
         "'quiet', 'average', and 'verbose'.",
     )
     parser.add_argument("-a", "--image_args", dest="image_args")
+    parser.add_argument(
+        "--keep_stateful",
+        dest="keep_stateful",
+        default=False,
+        action="store_true",
+        help="Do not clobber the stateful partition.",
+    )
 
     options = parser.parse_args(argv[1:])
 
@@ -261,9 +268,13 @@ def DoImage(argv):
                 "cros",
                 "flash",
                 "--board=%s" % board,
-                "--clobber-stateful",
-                options.remote,
             ]
+            if not options.keep_stateful:
+                cros_flash_args.append("--clobber-stateful")
+            # New arguments should be added here.
+
+            # The last two arguments are positional and have to be at the end.
+            cros_flash_args.append(options.remote)
             if local_image:
                 cros_flash_args.append(chroot_image)
             else:

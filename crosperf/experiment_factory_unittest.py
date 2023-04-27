@@ -420,10 +420,13 @@ class ExperimentFactoryTest(unittest.TestCase):
         )
         self.assertEqual(exp.labels[0].autotest_path, "/tmp/autotest")
         self.assertEqual(exp.labels[0].board, "lumpy")
+        self.assertEqual(exp.machine_manager.keep_stateful, False)
 
         # Second test: Remotes listed in labels.
         test_flag.SetTestMode(True)
         label_settings.SetField("remote", "chromeos1.cros chromeos2.cros")
+        # Also verify keep_stateful.
+        global_settings.SetField("keep_stateful", "true")
         exp = ef.GetExperiment(mock_experiment_file, "", "")
         self.assertCountEqual(
             exp.remote,
@@ -434,6 +437,9 @@ class ExperimentFactoryTest(unittest.TestCase):
                 "chromeos2.cros",
             ],
         )
+        # keep_stateful is propagated to machine_manager which flashes the
+        # images.
+        self.assertEqual(exp.machine_manager.keep_stateful, True)
 
         # Third test: Automatic fixing of bad  logging_level param:
         global_settings.SetField("logging_level", "really loud!")

@@ -67,7 +67,7 @@ class CrosperfTest(unittest.TestCase):
         settings = crosperf.ConvertOptionsToSettings(options)
         self.assertIsNotNone(settings)
         self.assertIsInstance(settings, settings_factory.GlobalSettings)
-        self.assertEqual(len(settings.fields), 41)
+        self.assertEqual(len(settings.fields), 42)
         self.assertTrue(settings.GetField("rerun"))
         argv = ["crosperf/crosperf.py", "temp.exp"]
         options, _ = parser.parse_known_args(argv)

@@ -559,6 +559,15 @@ class GlobalSettings(Settings):
                 " Useful when lock is held externally, say with crosfleet.",
             )
         )
+        self.AddField(
+            BooleanField(
+                "keep_stateful",
+                default=False,
+                description="When flashing a ChromeOS image keep the stateful"
+                " partition, i.e. don't use --clobber-stateful. This option"
+                " is useful to keep ssh keys, wi-fi settings and so on.",
+            )
+        )
 
 
 class SettingsFactory(object):
