@@ -160,8 +160,14 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			}
 			if tidyMode != tidyModeNone {
 				allowCCache = false
+				// Remove and ignore goma flags.
+				_, err := removeOneUserCmdlineFlagWithValue(mainBuilder, "--gomacc-path")
+				if err != nil && err != errNoSuchCmdlineArg {
+					return 0, err
+				}
+
 				clangCmdWithoutRemoteBuildAndCCache := mainBuilder.build()
-				var err error
+
 				switch tidyMode {
 				case tidyModeTricium:
 					err = runClangTidyForTricium(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, tidyFlags, cfg.crashArtifactsDir)
