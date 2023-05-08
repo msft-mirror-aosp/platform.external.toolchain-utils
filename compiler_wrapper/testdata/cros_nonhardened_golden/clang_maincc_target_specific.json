@@ -45,6 +45,7 @@
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
             "-Wno-string-concatenation",
+            "-Wno-gnu-offsetof-extensions",
             "-mno-movbe",
             "-B../../bin",
             "-target",
@@ -105,6 +106,7 @@
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
             "-Wno-string-concatenation",
+            "-Wno-gnu-offsetof-extensions",
             "-mno-movbe",
             "-B../../bin",
             "-target",
@@ -165,6 +167,7 @@
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
             "-Wno-string-concatenation",
+            "-Wno-gnu-offsetof-extensions",
             "-mno-movbe",
             "-B../../bin",
             "-target",
@@ -226,6 +229,7 @@
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
             "-Wno-string-concatenation",
+            "-Wno-gnu-offsetof-extensions",
             "-B../../bin",
             "-target",
             "armv7m-cros-linux-gnu"
@@ -285,6 +289,7 @@
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
             "-Wno-string-concatenation",
+            "-Wno-gnu-offsetof-extensions",
             "-B../../bin",
             "-target",
             "armv7m-cros-eabi"
@@ -345,6 +350,7 @@
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
             "-Wno-string-concatenation",
+            "-Wno-gnu-offsetof-extensions",
             "-B../../bin",
             "-target",
             "armv7m-cros-win-gnu"
@@ -405,6 +411,7 @@
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
             "-Wno-string-concatenation",
+            "-Wno-gnu-offsetof-extensions",
             "-B../../bin",
             "-target",
             "armv8m-cros-linux-gnu"
@@ -464,6 +471,7 @@
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
             "-Wno-string-concatenation",
+            "-Wno-gnu-offsetof-extensions",
             "-B../../bin",
             "-target",
             "armv8m-cros-eabi"
@@ -524,6 +532,7 @@
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
             "-Wno-string-concatenation",
+            "-Wno-gnu-offsetof-extensions",
             "-B../../bin",
             "-target",
             "armv8m-cros-win-gnu"

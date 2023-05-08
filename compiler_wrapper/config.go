@@ -146,6 +146,7 @@ func crosCommonClangPostFlags() []string {
 		"-Wno-unused-but-set-variable",
 		"-Wno-implicit-int-float-conversion",
 		"-Wno-string-concatenation",
+		"-Wno-gnu-offsetof-extensions",
 	}
 }
 
