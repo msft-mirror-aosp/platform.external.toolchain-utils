@@ -94,14 +94,6 @@ def GetCommandLineArgs():
         help="The reviewers for the package update changelist",
     )
 
-    # Add argument for whether to display command contents to `stdout`.
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="display contents of a command to the terminal "
-        "(default: %(default)s)",
-    )
-
     subparsers = parser.add_subparsers(dest="subparser_name")
     subparser_names = []
     # Testing with the tryjobs.
@@ -457,7 +449,6 @@ def main():
     llvm_variant = update_chromeos_llvm_hash.LLVMVariant.current
     if args_output.is_llvm_next:
         llvm_variant = update_chromeos_llvm_hash.LLVMVariant.next
-    update_chromeos_llvm_hash.verbose = args_output.verbose
     extra_commit_msg = None
     if args_output.subparser_name == "cq":
         cq_depend_msg = GetCQDependString(args_output.extra_change_lists)

@@ -47,11 +47,6 @@ class LLVMVariant(enum.Enum):
     next = "LLVM_NEXT_HASH"
 
 
-# If set to `True`, then the contents of `stdout` after executing a command will
-# be displayed to the terminal.
-verbose = False
-
-
 def defaultCrosRoot() -> Path:
     """Get default location of chroot_path.
 
@@ -105,14 +100,6 @@ def GetCommandLineArgs():
         "(default: %(default)s)",
     )
 
-    # Add argument for whether to display command contents to `stdout`.
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="display contents of a command to the terminal "
-        "(default: %(default)s)",
-    )
-
     # Add argument for the LLVM hash to update
     parser.add_argument(
         "--is_llvm_next",
@@ -153,16 +140,7 @@ def GetCommandLineArgs():
     )
 
     # Parse the command line.
-    args_output = parser.parse_args()
-
-    # FIXME: We shouldn't be using globals here, but until we fix it, make pylint
-    # stop complaining about it.
-    # pylint: disable=global-statement
-    global verbose
-
-    verbose = args_output.verbose
-
-    return args_output
+    return parser.parse_args()
 
 
 def GetEbuildPathsFromSymLinkPaths(symlinks):
