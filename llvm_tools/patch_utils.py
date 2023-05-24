@@ -12,7 +12,9 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import Any, Dict, IO, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, IO, Iterable, List, Optional, Tuple
+
+import atomic_write_file
 
 
 CHECKED_FILE_RE = re.compile(r"^checking file\s+(.*)$")
@@ -20,38 +22,6 @@ HUNK_FAILED_RE = re.compile(r"^Hunk #(\d+) FAILED at.*")
 HUNK_HEADER_RE = re.compile(r"^@@\s+-(\d+),(\d+)\s+\+(\d+),(\d+)\s+@@")
 HUNK_END_RE = re.compile(r"^--\s*$")
 PATCH_SUBFILE_HEADER_RE = re.compile(r"^\+\+\+ [ab]/(.*)$")
-
-
-@contextlib.contextmanager
-def atomic_write(fp: Union[Path, str], mode="w", *args, **kwargs):
-    """Write to a filepath atomically.
-
-    This works by a temp file swap, created with a .tmp suffix in
-    the same directory briefly until being renamed to the desired
-    filepath.
-
-    Args:
-      fp: Filepath to open.
-      mode: File mode; can be 'w', 'wb'. Default 'w'.
-      *args: Passed to Path.open as nargs.
-      **kwargs: Passed to Path.open as kwargs.
-
-    Raises:
-      ValueError when the mode is invalid.
-    """
-    if isinstance(fp, str):
-        fp = Path(fp)
-    if mode not in ("w", "wb"):
-        raise ValueError(f"mode {mode} not accepted")
-    temp_fp = fp.with_suffix(fp.suffix + ".tmp")
-    try:
-        with temp_fp.open(mode, *args, **kwargs) as f:
-            yield f
-    except:
-        if temp_fp.is_file():
-            temp_fp.unlink()
-        raise
-    temp_fp.rename(fp)
 
 
 @dataclasses.dataclass
@@ -521,7 +491,7 @@ def update_version_ranges(
     modified_entries, applied_patches = update_version_ranges_with_entries(
         svn_version, llvm_src_dir, patch_entries
     )
-    with atomic_write(patches_json_fp, encoding="utf-8") as f:
+    with atomic_write_file.atomic_write(patches_json_fp, encoding="utf-8") as f:
         _write_json_changes(
             [p.to_dict() for p in patch_entries], f, indent_len=indent_len
         )
@@ -608,7 +578,7 @@ def remove_old_patches(
     )
     oldness = [(entry, entry.is_old(svn_version)) for entry in patch_entries]
     filtered_entries = [entry.to_dict() for entry, old in oldness if not old]
-    with atomic_write(patches_json_fp, encoding="utf-8") as f:
+    with atomic_write_file.atomic_write(patches_json_fp, encoding="utf-8") as f:
         _write_json_changes(filtered_entries, f, indent_len=indent_len)
     removed_entries = [entry for entry, old in oldness if old]
     plural_patches = "patch" if len(removed_entries) == 1 else "patches"

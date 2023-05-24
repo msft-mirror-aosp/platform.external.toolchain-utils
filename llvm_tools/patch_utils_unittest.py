@@ -20,33 +20,6 @@ import patch_utils as pu
 class TestPatchUtils(unittest.TestCase):
     """Test the patch_utils."""
 
-    def test_atomic_write(self):
-        """Test that atomic write safely writes."""
-        prior_contents = "This is a test written by patch_utils_unittest.py\n"
-        new_contents = "I am a test written by patch_utils_unittest.py\n"
-        with tempfile.TemporaryDirectory(
-            prefix="patch_utils_unittest"
-        ) as dirname:
-            dirpath = Path(dirname)
-            filepath = dirpath / "test_atomic_write.txt"
-            with filepath.open("w", encoding="utf-8") as f:
-                f.write(prior_contents)
-
-            def _t():
-                with pu.atomic_write(filepath, encoding="utf-8") as f:
-                    f.write(new_contents)
-                    raise Exception("Expected failure")
-
-            self.assertRaises(Exception, _t)
-            with filepath.open(encoding="utf-8") as f:
-                lines = f.readlines()
-            self.assertEqual(lines[0], prior_contents)
-            with pu.atomic_write(filepath, encoding="utf-8") as f:
-                f.write(new_contents)
-            with filepath.open(encoding="utf-8") as f:
-                lines = f.readlines()
-            self.assertEqual(lines[0], new_contents)
-
     def test_predict_indent(self):
         test_str1 = """
 a
