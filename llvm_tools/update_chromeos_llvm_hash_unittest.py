@@ -374,8 +374,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
     def testManifestUpdate(self, mock_subprocess, mock_ebuild_paths):
         manifest_packages = ["sys-devel/llvm"]
         chroot_path = "/path/to/chroot"
-        update_chromeos_llvm_hash.UpdateManifests(
-            manifest_packages, chroot_path
+        update_chromeos_llvm_hash.UpdatePortageManifests(
+            manifest_packages, Path(chroot_path)
         )
 
         args = mock_subprocess.call_args_list[0]
