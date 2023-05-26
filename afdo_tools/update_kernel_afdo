@@ -132,7 +132,7 @@ do
     exit 0
     ;;
   -*)
-    echo "Option \"${arg}\" is not supported." >&2
+    echo "ERROR: Option \"${arg}\" is not supported." >&2
     echo "${USAGE}"
     exit 1
     ;;
@@ -248,11 +248,20 @@ do
       # R86-13310.18-1595237847.gcov.xz.
       latest=$(gsutil.py ls -l "${arch_gsbase[${arch}]}/${kver}/" | sort -k2 | \
                grep "R${curr_branch_number}" | tail -1 || true)
+      prev_branch=$((curr_branch_number - 1))
       if [[ -z "${latest}" && "${channel}" != "stable" ]]
       then
         # if no profiles exist for the current branch, try the previous branch
         latest=$(gsutil.py ls -l "${arch_gsbase[${arch}]}/${kver}/" | \
-          sort -k2 | grep "R$((curr_branch_number - 1))" | tail -1)
+          sort -k2 | grep "R${prev_branch}" | tail -1 || true)
+      fi
+      if [[ -z "${latest}" ]]
+      then
+        echo "ERROR: No M${curr_branch_number}, M${prev_branch} profiles in\
+ ${arch_gsbase[${arch}]}/${kver}/" >&2
+        echo "Skipping ${arch}/${kver}" >&2
+        errs="${errs} ${kver}"
+        continue
       fi
 
       # Verify that the file has the expected date.
@@ -261,7 +270,8 @@ do
       if [ "${file_time_unix}" -lt "${expected_time}" ]
       then
         expected=$(env TZ=UTC date +%Y-%m-%dT%H:%M:%SZ -d @"${expected_time}")
-        echo "Wrong date for ${kver}: ${file_time} is before ${expected}" >&2
+        echo "ERROR: Wrong date for ${kver}: ${file_time} is before\
+ ${expected}" >&2
         errs="${errs} ${kver}"
         continue
       fi
@@ -290,7 +300,7 @@ EOT
     # If we did not succeed for any kvers, exit now.
     if [[ ${successes} -eq 0 ]]
     then
-      echo "error: AFDO profiles out of date for all kernel versions" >&2
+      echo "ERROR: AFDO profiles out of date for all kernel versions" >&2
       failed_channels="${failed_channels} ${channel}"
       continue
     fi
@@ -310,7 +320,7 @@ EOT
     # If we had any errors, warn about them.
     if [[ -n "${errs}" ]]
     then
-      echo "warning: failed to update ${errs} in ${channel}" >&2
+      echo "WARNING: failed to update ${errs} in ${channel}" >&2
       failed_channels="${failed_channels} ${channel}"
       continue
     fi
@@ -349,7 +359,7 @@ BUG=None
 TEST=Verified in kernel-release-afdo-verify-orchestrator"
       ;;
     * )
-      echo "internal error: unhandled channel \"${channel}\"" >&2
+      echo "Internal error: unhandled channel \"${channel}\"" >&2
       exit 2
   esac
 
@@ -399,7 +409,7 @@ then
   if [[ -n "${failed_channels}" ]]
   then
     echo
-    echo "error: failed to update kernel afdo in ${failed_channels}" >&2
+    echo "ERROR: failed to update kernel afdo in ${failed_channels}" >&2
     exit 3
   fi
 else
@@ -408,7 +418,7 @@ else
   then
     echo "No changes are applied. It looks like AFDO versions are up to date."
   else
-    echo "error: update in ${failed_channels} failed" >&2
+    echo "ERROR: update in ${failed_channels} failed" >&2
     exit 3
   fi
 fi
