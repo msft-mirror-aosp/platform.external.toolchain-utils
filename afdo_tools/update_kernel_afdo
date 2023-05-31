@@ -43,7 +43,7 @@ ARM_GS_BASE=gs://chromeos-prebuilt/afdo-job/vetted/kernel/arm
 UPDATE_CONFIG_FILE="afdo_tools/update_kernel_afdo.cfg"
 # CL reviewers and cc.
 REVIEWERS="c-compiler-chrome@google.com"
-CC="denik@google.com"
+CC="denik@google.com,gbiv@google.com"
 # Add skipped chrome branches in ascending order here.
 SKIPPED_BRANCHES="95"
 # NOTE: We enable/disable kernel AFDO starting from a particular branch.
