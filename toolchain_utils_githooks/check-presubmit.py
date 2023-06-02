@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
@@ -26,6 +25,11 @@ import typing as t
 # TODO(crbug.com/1401441): remove this after Feb 2023. It's here so that
 # external tooling realizes that this script is Py3.
 USE_PYTHON3 = True
+
+# This was originally had many packages in it (notably scipy)
+# but due to changes in how scipy is built, we can no longer install
+# it in the chroot. See b/284489250
+PIP_DEPENDENCIES = ("numpy",)
 
 
 def run_command_unchecked(
@@ -694,14 +698,15 @@ def maybe_reexec_inside_chroot(autofix: bool, files: t.List[str]) -> None:
 
 
 def ensure_pip_deps_installed() -> None:
+    if not PIP_DEPENDENCIES:
+        # No need to install pip if we don't have any deps.
+        return
+
     if not has_executable_on_path("pip"):
         print("Autoinstalling `pip`...")
         subprocess.check_call(["sudo", "emerge", "dev-python/pip"])
 
-    # This was originally written as a loop, but the number of packages we need
-    # has decreaed. Leave it that way so adding new packages is easier in the
-    # future.
-    for package in ("scipy",):
+    for package in PIP_DEPENDENCIES:
         exit_code = subprocess.call(
             ["python3", "-c", f"import {package}"],
             stdout=subprocess.DEVNULL,
