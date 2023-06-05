@@ -195,11 +195,12 @@ def IsChromeOsTmpDeletionCandidate(file_name: str):
         "test_that_",
         "cros-update",
         "CrAU_temp_data",
+        # This might seem a bit broad, but after using custom heuristics for a
+        # while, `/tmp` was observed to have >75K files that matched all sorts
+        # of different `tmp.*` name patterns. Just remove them all.
+        "tmp",
     )
-    if any(file_name.startswith(x) for x in name_prefixes):
-        return True
-    # Remove files that look like `tmpABCDEFGHI`.
-    return len(file_name) == 9 and file_name.startswith("tmp")
+    return any(file_name.startswith(x) for x in name_prefixes)
 
 
 def CleanChromeOsTmpFiles(
