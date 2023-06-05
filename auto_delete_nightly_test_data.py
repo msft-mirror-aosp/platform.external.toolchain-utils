@@ -254,7 +254,7 @@ def CleanChromeOsImageFiles(
 def CleanChromeOsTmpAndImages(days_to_preserve=1, dry_run=False):
     """Delete temporaries, images under crostc/chromeos."""
     chromeos_chroot_tmp = os.path.join(
-        constants.CROSTC_WORKSPACE, "chromeos", "chroot", "tmp"
+        constants.CROSTC_WORKSPACE, "chromeos", "out", "tmp"
     )
     # Clean files in tmp directory
     rv = CleanChromeOsTmpFiles(chromeos_chroot_tmp, days_to_preserve, dry_run)
