@@ -230,6 +230,7 @@ class PatchEntry:
             "-d",
             root_dir.absolute(),
             "-f",
+            "-E",
             "-p1",
             "--no-backup-if-mismatch",
             "-i",
