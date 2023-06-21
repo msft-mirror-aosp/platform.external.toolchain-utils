@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -13,7 +12,7 @@ import subprocess
 import time
 import traceback
 import unittest
-import unittest.mock as mock
+from unittest import mock
 
 import auto_llvm_bisection
 import chroot
@@ -78,8 +77,8 @@ class AutoLLVMBisectionTest(unittest.TestCase):
             update_tryjob_status.TryjobStatus.GOOD.value
         )
 
-        # Verify the excpetion is raised when successfully found the bad revision.
-        # Uses `sys.exit(0)` to indicate success.
+        # Verify the excpetion is raised when successfully found the bad
+        # revision. Uses `sys.exit(0)` to indicate success.
         with self.assertRaises(SystemExit) as err:
             auto_llvm_bisection.main()
 
@@ -265,8 +264,8 @@ class AutoLLVMBisectionTest(unittest.TestCase):
         tryjob_contents = {buildbucket_id: {"status": invalid_build_status}}
         mock_chroot_command.return_value = json.dumps(tryjob_contents)
 
-        # Verify the exception is raised when the return value of `cros buildresult`
-        # is not in the `builder_status_mapping`.
+        # Verify an exception is raised when the return value of `cros
+        # buildresult` is not in the `builder_status_mapping`.
         with self.assertRaises(ValueError) as err:
             auto_llvm_bisection.GetBuildResult(chroot_path, buildbucket_id)
 

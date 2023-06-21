@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -49,10 +48,15 @@ class BuilderStatus(enum.Enum):
     RUNNING = "running"
 
 
+# Writing a dict with `.value`s spelled out makes `black`'s style conflict with
+# `cros lint`'s diagnostics.
 builder_status_mapping = {
-    BuilderStatus.PASS.value: update_tryjob_status.TryjobStatus.GOOD.value,
-    BuilderStatus.FAIL.value: update_tryjob_status.TryjobStatus.BAD.value,
-    BuilderStatus.RUNNING.value: update_tryjob_status.TryjobStatus.PENDING.value,
+    a.value: b.value
+    for a, b in (
+        (BuilderStatus.PASS, update_tryjob_status.TryjobStatus.GOOD),
+        (BuilderStatus.FAIL, update_tryjob_status.TryjobStatus.BAD),
+        (BuilderStatus.RUNNING, update_tryjob_status.TryjobStatus.PENDING),
+    )
 }
 
 
@@ -98,7 +102,7 @@ def main():
     """Bisects LLVM using the result of `cros buildresult` of each tryjob.
 
     Raises:
-      AssertionError: The script was run inside the chroot.
+        AssertionError: The script was run inside the chroot.
     """
 
     chroot.VerifyOutsideChroot()
@@ -116,7 +120,7 @@ def main():
         # Update the status of existing tryjobs
         if os.path.isfile(args_output.last_tested):
             update_start_time = time.time()
-            with open(args_output.last_tested) as json_file:
+            with open(args_output.last_tested, encoding="utf-8") as json_file:
                 json_dict = json.load(json_file)
             while True:
                 print(
@@ -141,15 +145,16 @@ def main():
 
                 print("-" * 40)
 
-                # Proceed to the next step if all the existing tryjobs have completed.
+                # Proceed to the next step if all the existing tryjobs have
+                # completed.
                 if completed:
                     break
 
                 delta_time = time.time() - update_start_time
 
                 if delta_time > POLLING_LIMIT_SECS:
-                    # Something is wrong with updating the tryjobs's 'status' via
-                    # `cros buildresult` (e.g. network issue, etc.).
+                    # Something is wrong with updating the tryjobs's 'status'
+                    # via `cros buildresult` (e.g. network issue, etc.).
                     sys.exit("Failed to update pending tryjobs.")
 
                 print("-" * 40)
@@ -159,7 +164,7 @@ def main():
             # There should always be update from the tryjobs launched in the
             # last iteration.
             temp_filename = "%s.new" % args_output.last_tested
-            with open(temp_filename, "w") as temp_file:
+            with open(temp_filename, "w", encoding="utf-8") as temp_file:
                 json.dump(
                     json_dict, temp_file, indent=4, separators=(",", ": ")
                 )
