@@ -216,8 +216,6 @@ class AutoLLVMBisectionTest(unittest.TestCase):
 
         mock_chroot_command.assert_called_once_with(
             [
-                "cros_sdk",
-                "--",
                 "cros",
                 "buildresult",
                 "--buildbucket-id",
@@ -240,8 +238,6 @@ class AutoLLVMBisectionTest(unittest.TestCase):
         auto_llvm_bisection.GetBuildResult(chroot_path, buildbucket_id)
         mock_chroot_command.assert_called_once_with(
             [
-                "cros_sdk",
-                "--",
                 "cros",
                 "buildresult",
                 "--buildbucket-id",
@@ -277,8 +273,6 @@ class AutoLLVMBisectionTest(unittest.TestCase):
 
         mock_chroot_command.assert_called_once_with(
             [
-                "cros_sdk",
-                "--",
                 "cros",
                 "buildresult",
                 "--buildbucket-id",

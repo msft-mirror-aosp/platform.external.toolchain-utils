@@ -67,8 +67,6 @@ def GetBuildResult(chroot_path, buildbucket_id):
     try:
         tryjob_json = subprocess.check_output(
             [
-                "cros_sdk",
-                "--",
                 "cros",
                 "buildresult",
                 "--buildbucket-id",
