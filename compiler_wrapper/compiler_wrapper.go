@@ -332,9 +332,25 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	}
 }
 
+// TODO(b/288411201): Add -D_FORTIFY_SOURCE=2 to args if -D_FORITFY_SOURCE=3 is not present.
+// This makes migrating to -D_FORTIFY_SOURCE=3 _way_ easier, since the wrapper's implicit
+// -D_FORTIFY_SOURCE=2 can be ignored.
+func addPreUserFortifyFlag(builder *commandBuilder) {
+	for _, arg := range builder.args {
+		if arg.value == "-D_FORTIFY_SOURCE=3" {
+			return
+		}
+	}
+
+	builder.addPreUserArgs("-D_FORTIFY_SOURCE=2")
+}
+
 func prepareClangCommand(builder *commandBuilder) (err error) {
 	if !builder.cfg.isHostWrapper {
 		processSysrootFlag(builder)
+	}
+	if builder.cfg.isHardened {
+		addPreUserFortifyFlag(builder)
 	}
 	builder.addPreUserArgs(builder.cfg.clangFlags...)
 	if builder.cfg.crashArtifactsDir != "" {
@@ -360,6 +376,9 @@ func calcClangCommand(allowCCache bool, builder *commandBuilder) (bool, *command
 func calcGccCommand(enableRusage bool, builder *commandBuilder) (bool, *command, error) {
 	if !builder.cfg.isHostWrapper {
 		processSysrootFlag(builder)
+	}
+	if builder.cfg.isHardened {
+		addPreUserFortifyFlag(builder)
 	}
 	builder.addPreUserArgs(builder.cfg.gccFlags...)
 	calcCommonPreUserArgs(builder)

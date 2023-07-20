@@ -35,7 +35,8 @@ type config struct {
 	// Directory to store crash artifacts in.
 	crashArtifactsDir string
 	// Version. Only exposed via -print-config.
-	version string
+	version    string
+	isHardened bool
 }
 
 // Version can be set via a linker flag.
@@ -153,6 +154,7 @@ func crosCommonClangPostFlags() []string {
 // Full hardening.
 // Temporarily disable function splitting because of chromium:434751.
 var crosHardenedConfig = config{
+	isHardened:       true,
 	clangRootRelPath: "../..",
 	gccRootRelPath:   "../../../../..",
 	// Pass "-fcommon" till the packages are fixed to work with new clang/gcc
@@ -160,7 +162,6 @@ var crosHardenedConfig = config{
 	commonFlags: []string{
 		"-fcommon",
 		"-fstack-protector-strong",
-		"-D_FORTIFY_SOURCE=2",
 		"-fno-omit-frame-pointer",
 	},
 	gccFlags: []string{
