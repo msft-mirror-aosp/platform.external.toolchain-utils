@@ -11,6 +11,7 @@ import collections
 import os
 from pathlib import Path
 import subprocess
+from typing import List
 
 
 CommitContents = collections.namedtuple("CommitContents", ["url", "cl_number"])
@@ -74,7 +75,10 @@ def GetChrootEbuildPaths(chromeos_root, packages):
     return chroot_paths
 
 
-def ConvertChrootPathsToAbsolutePaths(chromeos_root, chroot_paths):
+def ConvertChrootPathsToAbsolutePaths(
+    chromeos_root: str,
+    chroot_paths: List[str],
+) -> List[str]:
     """Converts the chroot path(s) to absolute symlink path(s).
 
     Args:
@@ -90,11 +94,8 @@ def ConvertChrootPathsToAbsolutePaths(chromeos_root, chroot_paths):
     """
 
     abs_paths = []
-
     chroot_prefix = "/mnt/host/source/"
-
     # Iterate through the chroot paths.
-    #
     # For each chroot file path, remove '/mnt/host/source/' prefix
     # and combine the chroot path with the result and add it to the list.
     for chroot_path in chroot_paths:
@@ -102,12 +103,8 @@ def ConvertChrootPathsToAbsolutePaths(chromeos_root, chroot_paths):
             raise ValueError(
                 "Invalid prefix for the chroot path: %s" % chroot_path
             )
-
         rel_path = chroot_path[len(chroot_prefix) :]
-
         # combine the chromeos root path + '/src/...'
         abs_path = os.path.join(chromeos_root, rel_path)
-
         abs_paths.append(abs_path)
-
     return abs_paths
