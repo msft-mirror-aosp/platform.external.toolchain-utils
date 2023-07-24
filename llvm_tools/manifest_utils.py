@@ -62,8 +62,7 @@ def update_chromeos_manifest(revision: str, src_tree: Path):
 
 def get_chromeos_manifest_path(src_tree: Path) -> Path:
     """Return the path to the toolchain manifest."""
-    # TODO(284281070): This should be updated to be _toolchain.xml
-    return src_tree / "manifest-internal" / "full.xml"
+    return src_tree / "manifest-internal" / "_toolchain.xml"
 
 
 def update_chromeos_manifest_tree(revision: str, xmlroot: ElementTree.Element):
