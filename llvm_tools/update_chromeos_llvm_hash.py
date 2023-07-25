@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -18,7 +17,7 @@ from pathlib import Path
 import re
 import subprocess
 import textwrap
-from typing import Dict, Iterable
+from typing import Dict, Iterable, List, Optional
 
 import chroot
 import failure_modes
@@ -47,6 +46,89 @@ class LLVMVariant(enum.Enum):
 
     current = "LLVM_HASH"
     next = "LLVM_NEXT_HASH"
+
+
+class PortagePackage:
+    """Represents a portage package with location info."""
+
+    def __init__(self, chromeos_root: Path, package: str):
+        """Create a new PortagePackage.
+
+        Args:
+            chromeos_root: Path to the root of the code checkout.
+            package: "category/package" string.
+        """
+        self.package = package
+        potential_ebuild_path = PortagePackage.find_package_ebuild(
+            chromeos_root, package
+        )
+        if potential_ebuild_path.is_symlink():
+            self.uprev_target = potential_ebuild_path.absolute()
+            self.ebuild_path = potential_ebuild_path.resolve()
+        else:
+            # Should have a 9999 ebuild, no uprevs needed.
+            self.uprev_target = None
+            self.ebuild_path = potential_ebuild_path.absolute()
+
+    @staticmethod
+    def find_package_ebuild(chromeos_root: Path, package: str) -> Path:
+        """Look up the package's ebuild location."""
+        chromeos_root_str = str(chromeos_root)
+        ebuild_paths = chroot.GetChrootEbuildPaths(
+            chromeos_root_str,
+            [package],
+        )
+        converted = chroot.ConvertChrootPathsToAbsolutePaths(
+            chromeos_root_str, ebuild_paths
+        )[0]
+        return Path(converted)
+
+    def package_dir(self) -> Path:
+        """Return the package directory."""
+        return self.ebuild_path.parent
+
+    def update(
+        self, llvm_variant: LLVMVariant, git_hash: str, svn_version: int
+    ):
+        """Update the package with the new LLVM git sha and revision.
+
+        Args:
+            llvm_variant: Which LLVM hash to update.
+                Either LLVM_HASH or LLVM_NEXT_HASH.
+            git_hash: Upstream LLVM git hash to update to.
+            svn_version: Matching LLVM revision string for the git_hash.
+        """
+        live_ebuild = self.live_ebuild()
+        if live_ebuild:
+            # Working with a -9999 ebuild package here, no
+            # upreving.
+            UpdateEbuildLLVMHash(
+                live_ebuild, llvm_variant, git_hash, svn_version
+            )
+            return
+        if not self.uprev_target:
+            # We can exit early if we're not working with a live ebuild,
+            # and we don't have something to uprev.
+            raise RuntimeError(
+                f"Cannot update: no live ebuild or symlink found for {self.package}"
+            )
+
+        UpdateEbuildLLVMHash(
+            self.ebuild_path, llvm_variant, git_hash, svn_version
+        )
+        if llvm_variant == LLVMVariant.current:
+            UprevEbuildToVersion(str(self.uprev_target), svn_version, git_hash)
+        else:
+            UprevEbuildSymlink(str(self.uprev_target))
+
+    def live_ebuild(self) -> Optional[Path]:
+        """Path to the live ebuild if it exists.
+
+        Returns:
+            The patch to the live ebuild if it exists. None otherwise.
+        """
+        matches = self.package_dir().glob("*-9999.ebuild")
+        return next(matches, None)
 
 
 def defaultCrosRoot() -> Path:
@@ -149,44 +231,6 @@ def GetCommandLineArgs():
 
     # Parse the command line.
     return parser.parse_args()
-
-
-def GetEbuildPathsFromSymLinkPaths(symlinks):
-    """Reads the symlink(s) to get the ebuild path(s) to the package(s).
-
-    Args:
-      symlinks: A list of absolute path symlink/symlinks that point
-      to the package's ebuild.
-
-    Returns:
-      A dictionary where the key is the absolute path of the symlink and the value
-      is the absolute path to the ebuild that was read from the symlink.
-
-    Raises:
-      ValueError: Invalid symlink(s) were provided.
-    """
-
-    # A dictionary that holds:
-    #   key: absolute symlink path
-    #   value: absolute ebuild path
-    resolved_paths = {}
-
-    # Iterate through each symlink.
-    #
-    # For each symlink, check that it is a valid symlink,
-    # and then construct the ebuild path, and
-    # then add the ebuild path to the dict.
-    for cur_symlink in symlinks:
-        if not os.path.islink(cur_symlink):
-            raise ValueError(f"Invalid symlink provided: {cur_symlink}")
-
-        # Construct the absolute path to the ebuild.
-        ebuild_path = os.path.realpath(cur_symlink)
-
-        if cur_symlink not in resolved_paths:
-            resolved_paths[cur_symlink] = ebuild_path
-
-    return resolved_paths
 
 
 def UpdateEbuildLLVMHash(ebuild_path, llvm_variant, git_hash, svn_version):
@@ -354,44 +398,9 @@ def UprevEbuildToVersion(symlink, svn_version, git_hash):
     # Create a symlink of the renamed ebuild
     new_symlink = new_ebuild[: -len(".ebuild")] + "-r1.ebuild"
     subprocess.check_output(["ln", "-s", "-r", new_ebuild, new_symlink])
-
-    if not os.path.islink(new_symlink):
-        raise ValueError(
-            f'Invalid symlink name: {new_ebuild[:-len(".ebuild")]}'
-        )
-
     subprocess.check_output(["git", "-C", symlink_dir, "add", new_symlink])
-
     # Remove the old symlink
     subprocess.check_output(["git", "-C", symlink_dir, "rm", symlink])
-
-
-def CreatePathDictionaryFromPackages(chroot_path, update_packages):
-    """Creates a symlink and ebuild path pair dictionary from the packages.
-
-    Args:
-      chroot_path: The absolute path to the chroot.
-      update_packages: The filtered packages to be updated.
-
-    Returns:
-      A dictionary where the key is the absolute path to the symlink
-      of the package and the value is the absolute path to the ebuild of
-      the package.
-    """
-
-    # Construct a list containing the chroot file paths of the package(s).
-    chroot_file_paths = chroot.GetChrootEbuildPaths(
-        chroot_path, update_packages
-    )
-
-    # Construct a list containing the symlink(s) of the package(s).
-    symlink_file_paths = chroot.ConvertChrootPathsToAbsolutePaths(
-        chroot_path, chroot_file_paths
-    )
-
-    # Create a dictionary where the key is the absolute path of the symlink to
-    # the package and the value is the absolute path to the ebuild of the package.
-    return GetEbuildPathsFromSymLinkPaths(symlink_file_paths)
 
 
 def RemovePatchesFromFilesDir(patches):
@@ -517,9 +526,9 @@ def UpdatePortageManifests(packages: Iterable[str], chroot_path: Path):
 def UpdatePackages(
     packages: Iterable[str],
     manifest_packages: Iterable[str],
-    llvm_variant,
-    git_hash,
-    svn_version,
+    llvm_variant: LLVMVariant,
+    git_hash: str,
+    svn_version: int,
     chroot_path: Path,
     mode,
     git_hash_source,
@@ -549,86 +558,55 @@ def UpdatePackages(
       Gerrit commit URL and the second pair is the change list number.
     """
 
-    # Construct a dictionary where the key is the absolute path of the symlink to
-    # the package and the value is the absolute path to the ebuild of the package.
-    paths_dict = CreatePathDictionaryFromPackages(chroot_path, packages)
+    portage_packages = (PortagePackage(chroot_path, pkg) for pkg in packages)
+    chromiumos_overlay_path = (
+        chroot_path / "src" / "third_party" / "chromiumos-overlay"
+    )
+    branch_name = "update-" + llvm_variant.value + "-" + git_hash
 
-    repo_path = os.path.dirname(next(iter(paths_dict.values())))
+    commit_message_header = "llvm"
+    if llvm_variant == LLVMVariant.next:
+        commit_message_header = "llvm-next"
+    if git_hash_source in get_llvm_hash.KNOWN_HASH_SOURCES:
+        commit_message_header += (
+            f"/{git_hash_source}: upgrade to {git_hash} (r{svn_version})"
+        )
+    else:
+        commit_message_header += f": upgrade to {git_hash} (r{svn_version})"
 
-    branch = "update-" + llvm_variant.value + "-" + git_hash
+    commit_lines = [
+        commit_message_header + "\n",
+        "The following packages have been updated:",
+    ]
 
-    git.CreateBranch(repo_path, branch)
-
+    # Holds the list of packages that are updating.
+    updated_packages: List[str] = []
+    git.CreateBranch(chromiumos_overlay_path, branch_name)
     try:
-        commit_message_header = "llvm"
-        if llvm_variant == LLVMVariant.next:
-            commit_message_header = "llvm-next"
-        if git_hash_source in get_llvm_hash.KNOWN_HASH_SOURCES:
-            commit_message_header += (
-                f"/{git_hash_source}: upgrade to {git_hash} (r{svn_version})"
-            )
-        else:
-            commit_message_header += f": upgrade to {git_hash} (r{svn_version})"
-
-        commit_lines = [
-            commit_message_header + "\n",
-            "The following packages have been updated:",
-        ]
-
-        # Holds the list of packages that are updating.
-        packages = []
-
-        # Iterate through the dictionary.
-        #
-        # For each iteration:
-        # 1) Update the ebuild's LLVM hash.
-        # 2) Uprev the ebuild (symlink).
-        # 3) Add the modified package to the commit message.
-        for symlink_path, ebuild_path in paths_dict.items():
-            path_to_ebuild_dir = os.path.dirname(ebuild_path)
-
-            UpdateEbuildLLVMHash(
-                ebuild_path, llvm_variant, git_hash, svn_version
-            )
-
-            if llvm_variant == LLVMVariant.current:
-                UprevEbuildToVersion(symlink_path, svn_version, git_hash)
-            else:
-                UprevEbuildSymlink(symlink_path)
-
-            cur_dir_name = os.path.basename(path_to_ebuild_dir)
-            parent_dir_name = os.path.basename(
-                os.path.dirname(path_to_ebuild_dir)
-            )
-
-            packages.append(f"{parent_dir_name}/{cur_dir_name}")
-            commit_lines.append(f"{parent_dir_name}/{cur_dir_name}")
-
+        for pkg in portage_packages:
+            pkg.update(llvm_variant, git_hash, svn_version)
+            updated_packages.append(pkg.package)
+            commit_lines.append(pkg.package)
         if manifest_packages:
             UpdatePortageManifests(manifest_packages, chroot_path)
             commit_lines.append("Updated manifest for:")
             commit_lines.extend(manifest_packages)
-
         EnsurePackageMaskContains(chroot_path, git_hash)
-
         # Handle the patches for each package.
         package_info_dict = UpdatePackagesPatchMetadataFile(
-            chroot_path, svn_version, packages, mode
+            chroot_path, svn_version, updated_packages, mode
         )
-
         # Update the commit message if changes were made to a package's patches.
         commit_lines = StagePackagesPatchResultsForCommit(
             package_info_dict, commit_lines
         )
-
         if extra_commit_msg:
             commit_lines.append(extra_commit_msg)
-
-        change_list = git.UploadChanges(repo_path, branch, commit_lines)
-
+        change_list = git.UploadChanges(
+            chromiumos_overlay_path, branch_name, commit_lines
+        )
     finally:
-        git.DeleteBranch(repo_path, branch)
-
+        git.DeleteBranch(chromiumos_overlay_path, branch_name)
     return change_list
 
 
@@ -706,7 +684,7 @@ def UpdatePackagesPatchMetadataFile(
                     )
                 chroot_ebuild_path = Path(
                     chroot.ConvertChrootPathsToAbsolutePaths(
-                        chroot_path, [chroot_ebuild_str]
+                        str(chroot_path), [chroot_ebuild_str]
                     )[0]
                 )
                 patches_json_fp = (
