@@ -31,6 +31,13 @@ class UpdateManifestError(Exception):
     pass
 
 
+def make_xmlparser():
+    """Return a new xmlparser with custom TreeBuilder."""
+    return ElementTree.XMLParser(
+        target=ElementTree.TreeBuilder(insert_comments=True)
+    )
+
+
 def update_chromeos_manifest(revision: str, src_tree: Path) -> Path:
     """Replaces the manifest project revision with 'revision'.
 
@@ -53,9 +60,7 @@ def update_chromeos_manifest(revision: str, src_tree: Path) -> Path:
         FormattingError: The manifest could not be reformatted.
     """
     manifest_path = get_chromeos_manifest_path(src_tree)
-    parser = ElementTree.XMLParser(
-        target=ElementTree.TreeBuilder(insert_comments=True)
-    )
+    parser = make_xmlparser()
     xmltree = ElementTree.parse(manifest_path, parser)
     update_chromeos_manifest_tree(revision, xmltree.getroot())
     with atomic_write_file.atomic_write(manifest_path, mode="wb") as f:

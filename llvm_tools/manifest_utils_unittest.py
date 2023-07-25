@@ -19,6 +19,8 @@ on toolchain projects (llvm-project, etc.) which are public.
 
 MANIFEST_FIXTURE = """<?xml version="1.0" encoding="UTF-8"?>
 <manifest>
+  <!-- Comment that should not be removed.
+       Multiple lines. -->
   <include name="_remotes.xml" />
   <default revision="refs/heads/main"
            remote="cros"
@@ -54,12 +56,19 @@ class TestManifestUtils(unittest.TestCase):
     """Test manifest_utils."""
 
     def test_update_chromeos_manifest(self):
-        root = ElementTree.fromstring(MANIFEST_FIXTURE)
+        root = ElementTree.fromstring(
+            MANIFEST_FIXTURE,
+            parser=manifest_utils.make_xmlparser(),
+        )
         manifest_utils.update_chromeos_manifest_tree("wxyz", root)
         string_root1 = ElementTree.tostring(root)
         self.assertRegex(
             str(string_root1, encoding="utf-8"),
             r'revision="wxyz"',
+        )
+        self.assertRegex(
+            str(string_root1, encoding="utf-8"),
+            r"<!-- Comment that should not be removed.",
         )
         self.assertNotRegex(
             str(string_root1, encoding="utf-8"),
