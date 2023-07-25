@@ -31,7 +31,7 @@ class UpdateManifestError(Exception):
     pass
 
 
-def update_chromeos_manifest(revision: str, src_tree: Path):
+def update_chromeos_manifest(revision: str, src_tree: Path) -> Path:
     """Replaces the manifest project revision with 'revision'.
 
     Notably, this function reformats the manifest file to preserve
@@ -40,6 +40,9 @@ def update_chromeos_manifest(revision: str, src_tree: Path):
     Args:
         revision: Revision (git sha) to use in the manifest.
         src_tree: Path to the root of the source tree checkout.
+
+    Returns:
+        The manifest path.
 
     Post:
         The llvm-project revision info in the chromeos repo manifest
@@ -58,6 +61,7 @@ def update_chromeos_manifest(revision: str, src_tree: Path):
     with atomic_write_file.atomic_write(manifest_path, mode="wb") as f:
         xmltree.write(f, encoding="UTF-8")
     format_manifest(manifest_path)
+    return manifest_path
 
 
 def get_chromeos_manifest_path(src_tree: Path) -> Path:
