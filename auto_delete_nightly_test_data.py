@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
@@ -10,10 +9,8 @@
 __author__ = "shenhan@google.com (Han Shen)"
 
 import argparse
-import datetime
 import os
 from pathlib import Path
-import re
 import shutil
 import stat
 import sys
@@ -23,7 +20,6 @@ from typing import Callable
 
 from cros_utils import command_executer
 from cros_utils import constants
-from cros_utils import misc
 
 
 def ProcessArguments(argv):
@@ -68,10 +64,10 @@ def RemoveAllSubdirsMatchingPredicate(
     try:
         dir_entries = list(base_dir.iterdir())
     except FileNotFoundError as e:
-        # We get this if the directory itself doesn't exist. Since we're cleaning
-        # tempdirs, that's as good as a success. Further, the prior approach here
-        # was using the `find` binary, which exits successfully if nothing is
-        # found.
+        # We get this if the directory itself doesn't exist. Since we're
+        # cleaning tempdirs, that's as good as a success. Further, the prior
+        # approach here was using the `find` binary, which exits successfully
+        # if nothing is found.
         print(f"Error enumerating {base_dir}'s contents; skipping removal: {e}")
         return 0
 
@@ -81,8 +77,8 @@ def RemoveAllSubdirsMatchingPredicate(
             continue
 
         try:
-            # Take the stat here and use that later, so we only need to check for a
-            # nonexistent file once.
+            # Take the stat here and use that later, so we only need to check
+            # for a nonexistent file once.
             st = file.stat()
         except FileNotFoundError:
             # This was deleted while were checking; ignore it.
@@ -108,21 +104,22 @@ def RemoveAllSubdirsMatchingPredicate(
 
         shutil.rmtree(file, onerror=OnError)
 
-        # Some errors can be other processes racing with us to delete things. Don't
-        # count those as an error which we complain loudly about.
+        # Some errors can be other processes racing with us to delete things.
+        # Don't count those as an error which we complain loudly about.
         if this_iteration_had_errors:
             if file.exists():
                 had_errors = True
             else:
                 print(
-                    f"Discarding removal errors for {file}; dir was still removed."
+                    f"Discarding removal errors for {file}; dir was still "
+                    "removed."
                 )
 
     return 1 if had_errors else 0
 
 
 def IsChromeOsTmpDeletionCandidate(file_name: str):
-    """Returns whether the given basename can be deleted from a chroot's /tmp."""
+    """Returns whether the given basename can be deleted from chroot's /tmp."""
     name_prefixes = (
         "test_that_",
         "cros-update",
@@ -171,13 +168,13 @@ def CleanChromeOsImageFiles(
                         try:
                             shutil.rmtree(subdir_path)
                             print(
-                                "Successfully cleaned chromeos image autotest directories "
-                                f"from {subdir_path!r}."
+                                "Successfully cleaned chromeos image autotest "
+                                f"directories from {subdir_path!r}."
                             )
                         except OSError:
                             print(
-                                "Some image autotest directories were not removed from "
-                                f'"{subdir_path}".'
+                                "Some image autotest directories were not "
+                                f'"removed from {subdir_path}".'
                             )
                             errors += 1
 
