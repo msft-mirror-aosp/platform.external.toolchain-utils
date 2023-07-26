@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -46,11 +45,12 @@ def GetCommandLineArgs():
     parser.add_argument(
         "--status_file",
         required=True,
-        help="The absolute path to the JSON file that contains the tryjobs used "
-        "for bisecting LLVM.",
+        help="The absolute path to the JSON file that contains the tryjobs "
+        "used for bisecting LLVM.",
     )
 
-    # Add argument that determines what action to take on the revision specified.
+    # Add argument that determines what action to take on the revision
+    # specified.
     parser.add_argument(
         "--modify_tryjob",
         required=True,
@@ -67,7 +67,8 @@ def GetCommandLineArgs():
         help="The revision to either remove or relaunch.",
     )
 
-    # Add argument for other change lists that want to run alongside the tryjob.
+    # Add argument for other change lists that want to run alongside the
+    # tryjob.
     parser.add_argument(
         "--extra_change_lists",
         type=int,
@@ -240,16 +241,17 @@ def PerformTryjobModification(
     """Removes, relaunches, or adds a tryjob.
 
     Args:
-      revision: The revision associated with the tryjob.
-      modify_tryjob: What action to take on the tryjob.
-        Ex: ModifyTryjob.REMOVE, ModifyTryjob.RELAUNCH, ModifyTryjob.ADD
-      status_file: The .JSON file that contains the tryjobs.
-      extra_cls: Extra change lists to be run alongside tryjob
-      options: Extra options to pass into 'cros tryjob'.
-      builder: The builder to use for 'cros tryjob'.
-      chroot_path: The absolute path to the chroot (used by 'cros tryjob' when
-      relaunching a tryjob).
-      verbose: Determines whether to print the contents of a command to `stdout`.
+        revision: The revision associated with the tryjob.
+        modify_tryjob: What action to take on the tryjob.
+          Ex: ModifyTryjob.REMOVE, ModifyTryjob.RELAUNCH, ModifyTryjob.ADD
+        status_file: The .JSON file that contains the tryjobs.
+        extra_cls: Extra change lists to be run alongside tryjob
+        options: Extra options to pass into 'cros tryjob'.
+        builder: The builder to use for 'cros tryjob'.
+        chroot_path: The absolute path to the chroot (used by 'cros tryjob'
+          when relaunching a tryjob).
+        verbose: Determines whether to print the contents of a command to
+        `stdout`.
     """
 
     # Format of 'bisect_contents':
@@ -263,7 +265,7 @@ def PerformTryjobModification(
     #       {[TRYJOB_INFORMATION]}
     #   ]
     # }
-    with open(status_file) as tryjobs:
+    with open(status_file, encoding="utf-8") as tryjobs:
         bisect_contents = json.load(tryjobs)
 
     if not bisect_contents["jobs"] and modify_tryjob != ModifyTryjob.ADD:
@@ -316,8 +318,8 @@ def PerformTryjobModification(
                 % (tryjob_index, status_file)
             )
 
-        # Make sure the revision is within the bounds of the start and end of the
-        # bisection.
+        # Make sure the revision is within the bounds of the start and end of
+        # the bisection.
         elif bisect_contents["start"] < revision < bisect_contents["end"]:
 
             (
@@ -347,7 +349,7 @@ def PerformTryjobModification(
             'Invalid "modify_tryjob" option provided: %s' % modify_tryjob
         )
 
-    with open(status_file, "w") as update_tryjobs:
+    with open(status_file, "w", encoding="utf-8") as update_tryjobs:
         json.dump(
             bisect_contents, update_tryjobs, indent=4, separators=(",", ": ")
         )
