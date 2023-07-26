@@ -11,6 +11,7 @@ import argparse
 import enum
 import json
 import os
+from pathlib import Path
 import sys
 
 import chroot
@@ -144,7 +145,7 @@ def GetCLAfterUpdatingPackages(
         llvm_variant=update_chromeos_llvm_hash.LLVMVariant.next,
         git_hash=git_hash,
         svn_version=svn_version,
-        chroot_path=chroot_path,
+        chroot_path=Path(chroot_path),
         mode=failure_modes.FailureModes.DISABLE_PATCHES,
         git_hash_source=svn_option,
         extra_commit_msg=None,

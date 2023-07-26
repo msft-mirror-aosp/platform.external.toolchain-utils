@@ -11,6 +11,7 @@ import argparse
 import datetime
 import json
 import os
+from pathlib import Path
 import subprocess
 
 import chroot
@@ -464,7 +465,7 @@ def main():
         llvm_variant=llvm_variant,
         git_hash=git_hash,
         svn_version=svn_version,
-        chroot_path=args_output.chroot_path,
+        chroot_path=Path(args_output.chroot_path),
         mode=failure_modes.FailureModes.DISABLE_PATCHES,
         git_hash_source=svn_option,
         extra_commit_msg=extra_commit_msg,
