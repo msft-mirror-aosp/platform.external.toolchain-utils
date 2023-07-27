@@ -16,7 +16,7 @@ import stat
 import sys
 import time
 import traceback
-from typing import Callable
+from typing import Callable, List
 
 from cros_utils import command_executer
 from cros_utils import constants
@@ -181,7 +181,7 @@ def CleanChromeOsImageFiles(
     return errors
 
 
-def CleanChromeOsTmpAndImages(days_to_preserve=1, dry_run=False):
+def CleanChromeOsTmpAndImages(days_to_preserve=1, dry_run=False) -> int:
     """Delete temporaries, images under crostc/chromeos."""
     chromeos_chroot_tmp = os.path.join(
         constants.CROSTC_WORKSPACE, "chromeos", "out", "tmp"
@@ -189,26 +189,26 @@ def CleanChromeOsTmpAndImages(days_to_preserve=1, dry_run=False):
     # Clean files in tmp directory
     rv = CleanChromeOsTmpFiles(chromeos_chroot_tmp, days_to_preserve, dry_run)
     # Clean image files in *-tryjob directories
-    rv += CleanChromeOsImageFiles(
+    rv |= CleanChromeOsImageFiles(
         chromeos_chroot_tmp, "-tryjob", days_to_preserve, dry_run
     )
     # Clean image files in *-release directories
-    rv += CleanChromeOsImageFiles(
+    rv |= CleanChromeOsImageFiles(
         chromeos_chroot_tmp, "-release", days_to_preserve, dry_run
     )
     # Clean image files in *-pfq directories
-    rv += CleanChromeOsImageFiles(
+    rv |= CleanChromeOsImageFiles(
         chromeos_chroot_tmp, "-pfq", days_to_preserve, dry_run
     )
     # Clean image files in *-llvm-next-nightly directories
-    rv += CleanChromeOsImageFiles(
+    rv |= CleanChromeOsImageFiles(
         chromeos_chroot_tmp, "-llvm-next-nightly", days_to_preserve, dry_run
     )
 
     return rv
 
 
-def CleanOldCLs(days_to_preserve="1", dry_run=False):
+def CleanOldCLs(days_to_preserve: str = "1", dry_run: bool = False) -> int:
     """Abandon old CLs created by automation tooling."""
     ce = command_executer.GetCommandExecuter()
     chromeos_root = os.path.join(constants.CROSTC_WORKSPACE, "chromeos")
@@ -245,7 +245,7 @@ def CleanChromeTelemetryTmpFiles(dry_run: bool) -> int:
     )
 
 
-def Main(argv):
+def Main(argv: List[str]) -> int:
     """Delete nightly test data directories, tmps and test images."""
     options = ProcessArguments(argv)
     ## Clean temporaries, images under crostc/chromeos
@@ -254,14 +254,13 @@ def Main(argv):
     )
 
     # Clean CLs that are not updated in last 2 weeks.
-    rv += CleanOldCLs("14", options.dry_run)
+    rv |= CleanOldCLs("14", options.dry_run)
 
     # Clean telemetry temporaries from chrome source tree inside chroot.
-    rv += CleanChromeTelemetryTmpFiles(options.dry_run)
+    rv |= CleanChromeTelemetryTmpFiles(options.dry_run)
 
-    return rv
+    return 1 if rv else 0
 
 
 if __name__ == "__main__":
-    retval = Main(sys.argv[1:])
-    sys.exit(retval)
+    sys.exit(Main(sys.argv[1:]))
