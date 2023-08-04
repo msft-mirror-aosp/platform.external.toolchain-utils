@@ -335,6 +335,7 @@ def upload_file(
 
 
 def maybe_download_crate(*, crate_name: str, crate_version: str):
+    """Downloads a crate if its download directory does not already exist."""
     directory = LOCAL_BASE / "crates" / f"{crate_name}-{crate_version}"
     if directory.is_dir():
         logging.info("Crate already downloaded")
@@ -410,6 +411,10 @@ def generate(args):
 
 
 def benchmark_nopgo(args):
+    maybe_download_crate(
+        crate_name=args.bench_crate_name, crate_version=args.bench_crate_version
+    )
+
     logging.info("Building Rust, no PGO")
     build_rust()
 
