@@ -51,6 +51,7 @@ import urllib.request
 
 from llvm_tools import chroot
 from llvm_tools import git
+from pgo_tools_rust import pgo_rust
 
 
 T = TypeVar("T")
@@ -80,6 +81,7 @@ GPG = "gpg"
 GSUTIL = "gsutil"
 MIRROR_PATH = "gs://chromeos-localmirror/distfiles"
 EBUILD_PREFIX = Path("/mnt/host/source/src/third_party/chromiumos-overlay")
+CROS_RUSTC_ECLASS = EBUILD_PREFIX / "eclass/cros-rustc.eclass"
 # Keyserver to use with GPG. Not all keyservers have Rust's signing key;
 # this must be set to a keyserver that does.
 GPG_KEYSERVER = "keyserver.ubuntu.com"
@@ -409,6 +411,33 @@ def create_ebuild(
     shutil.copyfile(template_ebuild, ebuild)
     subprocess.check_call(["git", "add", filename], cwd=ebuild.parent)
     return str(ebuild)
+
+
+def set_include_profdata_src(ebuild_path: os.PathLike, include: bool) -> None:
+    """Changes an ebuild file to include or omit profile data from SRC_URI.
+
+    If include is True, the ebuild file will be rewritten to include
+    profile data in SRC_URI.
+
+    If include is False, the ebuild file will be rewritten to omit profile
+    data from SRC_URI.
+    """
+    if include:
+        old = ""
+        new = "yes"
+    else:
+        old = "yes"
+        new = ""
+    contents = Path(ebuild_path).read_text(encoding="utf-8")
+    contents, subs = re.subn(
+        f"^INCLUDE_PROFDATA_IN_SRC_URI={old}$",
+        f"INCLUDE_PROFDATA_IN_SRC_URI={new}",
+        contents,
+        flags=re.MULTILINE,
+    )
+    # We expect exactly one substitution.
+    assert subs == 1, "Failed to update INCLUDE_PROFDATA_IN_SRC_URI"
+    Path(ebuild_path).write_text(contents, encoding="utf-8")
 
 
 def update_bootstrap_ebuild(new_bootstrap_version: RustVersion) -> None:
@@ -826,9 +855,11 @@ def create_rust_uprev(
     )
     run_step(
         "update bootstrap version",
-        lambda: update_bootstrap_version(
-            EBUILD_PREFIX.joinpath("eclass/cros-rustc.eclass"), template_version
-        ),
+        lambda: update_bootstrap_version(CROS_RUSTC_ECLASS, template_version),
+    )
+    run_step(
+        "turn off profile data sources in cros-rustc.eclass",
+        lambda: set_include_profdata_src(CROS_RUSTC_ECLASS, include=False),
     )
     template_host_ebuild = EBUILD_PREFIX.joinpath(
         f"dev-lang/rust-host/rust-host-{template_version}.ebuild"
@@ -849,6 +880,26 @@ def create_rust_uprev(
     )
     run_step(
         "update target manifest to add new version",
+        lambda: update_manifest(Path(target_file)),
+    )
+    run_step(
+        "generate profile data for rustc",
+        lambda: pgo_rust.main(["pgo_rust", "generate"]),
+    )
+    run_step(
+        "upload profile data for rustc",
+        lambda: pgo_rust.main(["pgo_rust", "upload-profdata"]),
+    )
+    run_step(
+        "turn on profile data sources in cros-rustc.eclass",
+        lambda: set_include_profdata_src(CROS_RUSTC_ECLASS, include=True),
+    )
+    run_step(
+        "update host manifest to add profile data",
+        lambda: update_manifest(Path(host_file)),
+    )
+    run_step(
+        "update target manifest to add profile data",
         lambda: update_manifest(Path(target_file)),
     )
     if not skip_compile:

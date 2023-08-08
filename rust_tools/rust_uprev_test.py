@@ -563,6 +563,61 @@ class PrepareUprevTest(unittest.TestCase):
         self.assertEqual(expected, actual)
 
 
+class ToggleProfileData(unittest.TestCase):
+    """Tests functionality to include or exclude profile data from SRC_URI."""
+
+    ebuild_with_profdata = """
+# Some text here.
+INCLUDE_PROFDATA_IN_SRC_URI=yes
+some code here
+"""
+
+    ebuild_without_profdata = """
+# Some text here.
+INCLUDE_PROFDATA_IN_SRC_URI=
+some code here
+"""
+
+    ebuild_unexpected_content = """
+# Does not contain OMIT_PROFDATA_FROM_SRC_URI assignment
+"""
+
+    def setUp(self):
+        self.mock_read_text = start_mock(self, "pathlib.Path.read_text")
+
+    def test_turn_off_profdata(self):
+        # Test that a file with profdata on is rewritten to a file with
+        # profdata off.
+        self.mock_read_text.return_value = self.ebuild_with_profdata
+        ebuild_file = "/path/to/eclass/cros-rustc.eclass"
+        with mock.patch("pathlib.Path.write_text") as mock_write_text:
+            rust_uprev.set_include_profdata_src(ebuild_file, include=False)
+            mock_write_text.assert_called_once_with(
+                self.ebuild_without_profdata, encoding="utf-8"
+            )
+
+    def test_turn_on_profdata(self):
+        # Test that a file with profdata off is rewritten to a file with
+        # profdata on.
+        self.mock_read_text.return_value = self.ebuild_without_profdata
+        ebuild_file = "/path/to/eclass/cros-rustc.eclass"
+        with mock.patch("pathlib.Path.write_text") as mock_write_text:
+            rust_uprev.set_include_profdata_src(ebuild_file, include=True)
+            mock_write_text.assert_called_once_with(
+                self.ebuild_with_profdata, encoding="utf-8"
+            )
+
+    def test_turn_on_profdata_fails_if_no_assignment(self):
+        # Test that if the string the code expects to find is not found,
+        # this causes an exception and the file is not overwritten.
+        self.mock_read_text.return_value = self.ebuild_unexpected_content
+        ebuild_file = "/path/to/eclass/cros-rustc.eclass"
+        with mock.patch("pathlib.Path.write_text") as mock_write_text:
+            with self.assertRaises(Exception):
+                rust_uprev.set_include_profdata_src(ebuild_file, include=False)
+            mock_write_text.assert_not_called()
+
+
 class UpdateBootstrapVersionTest(unittest.TestCase):
     """Tests for update_bootstrap_version step in rust_uprev"""
 
