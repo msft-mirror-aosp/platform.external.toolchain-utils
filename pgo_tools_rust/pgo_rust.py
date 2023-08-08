@@ -544,13 +544,13 @@ def upload_profdata(args):
     )
 
 
-def main():
+def main(argv: List[str]) -> int:
     logging.basicConfig(
         stream=sys.stdout, level=logging.NOTSET, format="%(message)s"
     )
 
     parser = argparse.ArgumentParser(
-        prog=sys.argv[0],
+        prog=argv[0],
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -652,7 +652,7 @@ def main():
         "rustc versions",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv[1:])
 
     (LOCAL_BASE / "crates").mkdir(parents=True, exist_ok=True)
     (LOCAL_BASE / "llvm-profraw").mkdir(parents=True, exist_ok=True)
@@ -665,4 +665,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv))
