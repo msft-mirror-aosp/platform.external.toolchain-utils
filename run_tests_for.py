@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-#
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -27,13 +25,13 @@ All tests are run in parallel.
 
 import argparse
 import collections
-import signal
 import multiprocessing.pool
 import os
-import pipes
+import shlex
+import signal
 import subprocess
 import sys
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 
 TestSpec = collections.namedtuple("TestSpec", ["directory", "command"])
@@ -182,9 +180,7 @@ def _run_test_scripts(pool, all_tests, timeout, show_successful_output=False):
         if show_successful_output and i:
             print("\n")
 
-        pretty_test = " ".join(
-            pipes.quote(test_arg) for test_arg in test.command
-        )
+        pretty_test = shlex.join(test.command)
         pretty_directory = os.path.relpath(test.directory)
         if pretty_directory == ".":
             test_message = pretty_test
