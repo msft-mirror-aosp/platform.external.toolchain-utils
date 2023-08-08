@@ -48,7 +48,6 @@ class PatchApplicationError(ValueError):
 def validate_patch_application(
     llvm_dir: Path, svn_version: int, patches_json_fp: Path, patch_props
 ):
-
     start_sha = get_llvm_hash.GetGitHashFrom(llvm_dir, svn_version)
     subprocess.run(["git", "-C", llvm_dir, "checkout", start_sha], check=True)
 
@@ -84,7 +83,7 @@ def add_patch(
     rev: t.Union[git_llvm_rev.Rev, str],
     sha: str,
     package: str,
-    platforms: t.List[str],
+    platforms: t.Iterable[str],
 ):
     """Gets the start and end intervals in 'json_file'.
 
@@ -277,7 +276,7 @@ def create_patch_for_packages(
     rev: t.Union[git_llvm_rev.Rev, str],
     sha: str,
     llvm_dir: str,
-    platforms: t.List[str],
+    platforms: t.Iterable[str],
 ):
     """Create a patch and add its metadata for each package"""
     for package, symlink in zip(packages, symlinks):
@@ -338,9 +337,8 @@ def find_patches_and_make_cl(
     skip_dependencies: bool,
     reviewers: t.Optional[t.List[str]],
     cc: t.Optional[t.List[str]],
-    platforms: t.List[str],
+    platforms: t.Iterable[str],
 ):
-
     converted_patches = [
         _convert_patch(llvm_config, skip_dependencies, p) for p in patches
     ]
@@ -506,11 +504,11 @@ def get_from_upstream(
     create_cl: bool,
     start_sha: str,
     patches: t.List[str],
-    platforms: t.List[str],
-    allow_failures: bool,
+    platforms: t.Iterable[str],
+    allow_failures: bool = False,
     skip_dependencies: bool = False,
-    reviewers: t.List[str] = None,
-    cc: t.List[str] = None,
+    reviewers: t.Optional[t.List[str]] = None,
+    cc: t.Optional[t.List[str]] = None,
 ):
     llvm_symlink = chroot.ConvertChrootPathsToAbsolutePaths(
         chroot_path,

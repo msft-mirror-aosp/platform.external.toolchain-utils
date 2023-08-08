@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -21,8 +20,8 @@ import subprocess
 import sys
 import typing as t
 
-import cros_utils.email_sender as email_sender
-import cros_utils.tiny_render as tiny_render
+from cros_utils import email_sender
+from cros_utils import tiny_render
 import get_llvm_hash
 import get_upstream_patch
 import git_llvm_rev
@@ -60,7 +59,7 @@ def _find_interesting_android_shas(
 
     main_legacy = get_llvm_merge_base("aosp/master-legacy")  # nocheck
     testing_upstream = get_llvm_merge_base("aosp/testing-upstream")
-    result = [("main-legacy", main_legacy)]
+    result: t.List[t.Tuple[str, str]] = [("main-legacy", main_legacy)]
 
     # If these are the same SHA, there's no point in tracking both.
     if main_legacy != testing_upstream:
@@ -98,7 +97,7 @@ def _parse_llvm_ebuild_for_shas(
             "llvm=%s; llvm_next=%s" % (llvm_hash, llvm_next_hash)
         )
 
-    results = [("llvm", llvm_hash)]
+    results: t.List[t.Tuple[str, str]] = [("llvm", llvm_hash)]
     if llvm_next_hash != llvm_hash:
         results.append(("llvm-next", llvm_next_hash))
     return results
@@ -205,8 +204,8 @@ def _send_revert_email(recipients: _EmailRecipients, email: _Email) -> None:
 
 
 def _write_state(state_file: str, new_state: State) -> None:
+    tmp_file = state_file + ".new"
     try:
-        tmp_file = state_file + ".new"
         with open(tmp_file, "w", encoding="utf-8") as f:
             json.dump(
                 new_state, f, sort_keys=True, indent=2, separators=(",", ": ")
@@ -222,7 +221,7 @@ def _write_state(state_file: str, new_state: State) -> None:
 
 def _read_state(state_file: str) -> State:
     try:
-        with open(state_file) as f:
+        with open(state_file, encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
         logging.info(
@@ -283,8 +282,8 @@ def do_cherrypick(
         seen.add(friendly_name)
         for sha, reverted_sha in reverts:
             try:
-                # We upload reverts for all platforms by default, since there's no
-                # real reason for them to be CrOS-specific.
+                # We upload reverts for all platforms by default, since there's
+                # no real reason for them to be CrOS-specific.
                 get_upstream_patch.get_from_upstream(
                     chroot_path=chroot_path,
                     create_cl=True,
@@ -373,8 +372,8 @@ def parse_args(argv: t.List[str]) -> t.Any:
         "--reviewers",
         type=str,
         nargs="*",
-        help="Requests reviews from REVIEWERS. All REVIEWERS must have existing "
-        "accounts.",
+        help="Requests reviews from REVIEWERS."
+        " All REVIEWERS must have existing accounts.",
     )
     parser.add_argument(
         "--cc",
@@ -438,7 +437,8 @@ def main(argv: t.List[str]) -> int:
     opts = parse_args(argv)
 
     logging.basicConfig(
-        format="%(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: %(message)s",
+        format="%(asctime)s: %(levelname)s: "
+        "%(filename)s:%(lineno)d: %(message)s",
         level=logging.DEBUG if opts.debug else logging.INFO,
     )
 
@@ -455,8 +455,8 @@ def main(argv: t.List[str]) -> int:
     state = _read_state(state_file)
     logging.info("Loaded state\n%s", pprint.pformat(state))
 
-    # We want to be as free of obvious side-effects as possible in case something
-    # above breaks. Hence, action as late as possible.
+    # We want to be as free of obvious side-effects as possible in case
+    # something above breaks. Hence, action as late as possible.
     if action == "cherry-pick":
         new_state = do_cherrypick(
             chroot_path=chroot_path,
