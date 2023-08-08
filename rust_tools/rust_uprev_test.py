@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -240,7 +239,9 @@ class PrepareUprevTest(unittest.TestCase):
             f"rust-bootstrap-{self.bootstrap_version}.ebuild",
         )
         mock_find_ebuild.return_value = bootstrap_ebuild_path
-        expected = (self.version_old, "/path/to/ebuild", self.bootstrap_version)
+        expected = rust_uprev.PreparedUprev(
+            self.version_old, Path("/path/to/ebuild"), self.bootstrap_version
+        )
         actual = rust_uprev.prepare_uprev(
             rust_version=self.version_new, template=self.version_old
         )
@@ -280,7 +281,11 @@ class PrepareUprevTest(unittest.TestCase):
             f"rust-bootstrap-{self.bootstrap_version}.ebuild",
         )
         mock_find_ebuild.return_value = bootstrap_ebuild_path
-        expected = (self.version_old, rust_ebuild_path, self.bootstrap_version)
+        expected = rust_uprev.PreparedUprev(
+            self.version_old,
+            Path(rust_ebuild_path),
+            self.bootstrap_version,
+        )
         actual = rust_uprev.prepare_uprev(
             rust_version=self.version_new, template=None
         )
@@ -308,13 +313,17 @@ class PrepareUprevTest(unittest.TestCase):
         mock_exists.assert_not_called()
 
     def test_prepare_uprev_from_json(self):
-        ebuild_path = "/path/to/the/ebuild"
+        ebuild_path = Path("/path/to/the/ebuild")
         json_result = (
             list(self.version_new),
             ebuild_path,
             list(self.bootstrap_version),
         )
-        expected = (self.version_new, ebuild_path, self.bootstrap_version)
+        expected = rust_uprev.PreparedUprev(
+            self.version_new,
+            Path(ebuild_path),
+            self.bootstrap_version,
+        )
         actual = rust_uprev.prepare_uprev_from_json(json_result)
         self.assertEqual(expected, actual)
 
@@ -370,7 +379,8 @@ class UpdateBootstrapEbuildTest(unittest.TestCase):
 
     def test_update_bootstrap_ebuild(self):
         # The update should do two things:
-        # 1. Create a copy of rust-bootstrap's ebuild with the new version number.
+        # 1. Create a copy of rust-bootstrap's ebuild with the
+        #    new version number.
         # 2. Add the old PV to RUSTC_RAW_FULL_BOOTSTRAP_SEQUENCE.
         with tempfile.TemporaryDirectory() as tmpdir_str, mock.patch.object(
             rust_uprev, "find_ebuild_path"
@@ -394,7 +404,7 @@ some more text
             rust_uprev.update_bootstrap_ebuild(rust_uprev.RustVersion(1, 46, 0))
             new_ebuild = bootstrapdir.joinpath("rust-bootstrap-1.46.0.ebuild")
             self.assertTrue(new_ebuild.exists())
-            text = new_ebuild.read_text()
+            text = new_ebuild.read_text(encoding="utf-8")
             self.assertEqual(
                 text,
                 """

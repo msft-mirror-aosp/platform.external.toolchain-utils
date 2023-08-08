@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -36,11 +35,43 @@ import re
 import shlex
 import shutil
 import subprocess
-import sys
-from typing import Any, Callable, Dict, List, NamedTuple, Optional, T, Tuple
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Protocol,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 from llvm_tools import chroot
 from llvm_tools import git
+
+
+T = TypeVar("T")
+Command = List[Union[str, os.PathLike]]
+PathOrStr = Union[str, os.PathLike]
+
+
+class RunStepFn(Protocol):
+    """Protocol that corresponds to run_step's type.
+
+    This can be used as the type of a function parameter that accepts
+    run_step as its value.
+    """
+
+    def __call__(
+        self,
+        step_name: str,
+        step_fn: Callable[[], T],
+        result_from_json: Optional[Callable[[Any], T]] = None,
+        result_to_json: Optional[Callable[[T], Any]] = None,
+    ) -> T:
+        ...
 
 
 EQUERY = "equery"
@@ -50,20 +81,25 @@ EBUILD_PREFIX = Path("/mnt/host/source/src/third_party/chromiumos-overlay")
 RUST_PATH = Path(EBUILD_PREFIX, "dev-lang", "rust")
 
 
-def get_command_output(command: List[str], *args, **kwargs) -> str:
+def get_command_output(command: Command, *args, **kwargs) -> str:
     return subprocess.check_output(
         command, encoding="utf-8", *args, **kwargs
     ).strip()
 
 
-def get_command_output_unchecked(command: List[str], *args, **kwargs) -> str:
+def get_command_output_unchecked(command: Command, *args, **kwargs) -> str:
+    # pylint: disable=subprocess-run-check
     return subprocess.run(
         command,
-        check=False,
-        stdout=subprocess.PIPE,
-        encoding="utf-8",
         *args,
-        **kwargs,
+        **dict(
+            {
+                "check": False,
+                "stdout": subprocess.PIPE,
+                "encoding": "utf-8",
+            },
+            **kwargs,
+        ),
     ).stdout.strip()
 
 
@@ -109,6 +145,14 @@ class RustVersion(NamedTuple):
         )
 
 
+class PreparedUprev(NamedTuple):
+    """Container for the information returned by prepare_uprev."""
+
+    template_version: RustVersion
+    ebuild_path: Path
+    bootstrap_version: RustVersion
+
+
 def compute_rustc_src_name(version: RustVersion) -> str:
     return f"rustc-{version}-src.tar.gz"
 
@@ -117,7 +161,7 @@ def compute_rust_bootstrap_prebuilt_name(version: RustVersion) -> str:
     return f"rust-bootstrap-{version}.tbz2"
 
 
-def find_ebuild_for_package(name: str) -> os.PathLike:
+def find_ebuild_for_package(name: str) -> str:
     """Returns the path to the ebuild for the named package."""
     return get_command_output([EQUERY, "w", name])
 
@@ -303,7 +347,7 @@ def parse_commandline_args() -> argparse.Namespace:
 
 def prepare_uprev(
     rust_version: RustVersion, template: Optional[RustVersion]
-) -> Optional[Tuple[RustVersion, str, RustVersion]]:
+) -> Optional[PreparedUprev]:
     if template is None:
         ebuild_path = find_ebuild_for_package("rust")
         ebuild_name = os.path.basename(ebuild_path)
@@ -329,11 +373,11 @@ def prepare_uprev(
     )
     logging.info("rust-bootstrap version is %s", bootstrap_version)
 
-    return template_version, ebuild_path, bootstrap_version
+    return PreparedUprev(template_version, Path(ebuild_path), bootstrap_version)
 
 
 def create_ebuild(
-    template_ebuild: str, pkgatom: str, new_version: RustVersion
+    template_ebuild: PathOrStr, pkgatom: str, new_version: RustVersion
 ) -> str:
     filename = f"{Path(pkgatom).name}-{new_version}.ebuild"
     ebuild = EBUILD_PREFIX.joinpath(f"{pkgatom}/{filename}")
@@ -344,9 +388,9 @@ def create_ebuild(
 
 def update_bootstrap_ebuild(new_bootstrap_version: RustVersion) -> None:
     old_ebuild = find_ebuild_path(rust_bootstrap_path(), "rust-bootstrap")
-    m = re.match(r"^rust-bootstrap-(\d+).(\d+).(\d+)", old_ebuild.name)
+    m = re.match(r"^rust-bootstrap-(\d+.\d+.\d+)", old_ebuild.name)
     assert m, old_ebuild.name
-    old_version = RustVersion(m.group(1), m.group(2), m.group(3))
+    old_version = RustVersion.parse(m.group(1))
     new_ebuild = old_ebuild.parent.joinpath(
         f"rust-bootstrap-{new_bootstrap_version}.ebuild"
     )
@@ -362,8 +406,9 @@ def update_bootstrap_ebuild(new_bootstrap_version: RustVersion) -> None:
 
 
 def update_bootstrap_version(
-    path: str, new_bootstrap_version: RustVersion
+    path: PathOrStr, new_bootstrap_version: RustVersion
 ) -> None:
+    # pylint: disable=consider-using-with
     contents = open(path, encoding="utf-8").read()
     contents, subs = re.subn(
         r"^BOOTSTRAP_VERSION=.*$",
@@ -373,6 +418,7 @@ def update_bootstrap_version(
     )
     if not subs:
         raise RuntimeError(f"BOOTSTRAP_VERSION not found in {path}")
+    # pylint: disable=consider-using-with
     open(path, "w", encoding="utf-8").write(contents)
     logging.info("Rust BOOTSTRAP_VERSION updated to %s", new_bootstrap_version)
 
@@ -405,7 +451,7 @@ def fetch_distfile_from_mirror(name: str) -> None:
     """
     mirror_file = MIRROR_PATH + "/" + name
     local_file = Path(get_distdir(), name)
-    cmd = [GSUTIL, "cp", mirror_file, local_file]
+    cmd: Command = [GSUTIL, "cp", mirror_file, local_file]
     logging.info("Running %r", cmd)
     rc = subprocess.call(cmd)
     if rc != 0:
@@ -478,12 +524,12 @@ def fetch_rust_distfiles(version: RustVersion) -> None:
     fetch_distfile_from_mirror(compute_rustc_src_name(version))
 
 
-def get_distdir() -> os.PathLike:
+def get_distdir() -> str:
     """Returns portage's distdir."""
     return get_command_output(["portageq", "distdir"])
 
 
-def update_manifest(ebuild_file: os.PathLike) -> None:
+def update_manifest(ebuild_file: PathOrStr) -> None:
     """Updates the MANIFEST for the ebuild at the given path."""
     ebuild = Path(ebuild_file)
     ebuild_actions(ebuild.parent.name, ["manifest"])
@@ -575,28 +621,44 @@ def perform_step(
     return val
 
 
-def prepare_uprev_from_json(
-    obj: Any,
-) -> Optional[Tuple[RustVersion, str, RustVersion]]:
+def prepare_uprev_from_json(obj: Any) -> Optional[PreparedUprev]:
     if not obj:
         return None
     version, ebuild_path, bootstrap_version = obj
-    return RustVersion(*version), ebuild_path, RustVersion(*bootstrap_version)
+    return PreparedUprev(
+        RustVersion(*version),
+        Path(ebuild_path),
+        RustVersion(*bootstrap_version),
+    )
+
+
+def prepare_uprev_to_json(
+    prepared_uprev: Optional[PreparedUprev],
+) -> Optional[Tuple[RustVersion, str, RustVersion]]:
+    if prepared_uprev is None:
+        return None
+    return (
+        prepared_uprev.template_version,
+        str(prepared_uprev.ebuild_path),
+        prepared_uprev.bootstrap_version,
+    )
 
 
 def create_rust_uprev(
     rust_version: RustVersion,
     maybe_template_version: Optional[RustVersion],
     skip_compile: bool,
-    run_step: Callable[[], T],
+    run_step: RunStepFn,
 ) -> None:
-    template_version, template_ebuild, old_bootstrap_version = run_step(
+    prepared = run_step(
         "prepare uprev",
         lambda: prepare_uprev(rust_version, maybe_template_version),
         result_from_json=prepare_uprev_from_json,
+        result_to_json=prepare_uprev_to_json,
     )
-    if template_ebuild is None:
+    if prepared is None:
         return
+    template_version, template_ebuild, old_bootstrap_version = prepared
 
     # The fetch steps will fail (on purpose) if the files they check for
     # are not available on the mirror. To make them pass, fetch the
@@ -730,16 +792,16 @@ def rebuild_packages(version: RustVersion):
         raise
 
 
-def remove_ebuild_version(path: os.PathLike, name: str, version: RustVersion):
+def remove_ebuild_version(path: PathOrStr, name: str, version: RustVersion):
     """Remove the specified version of an ebuild.
 
     Removes {path}/{name}-{version}.ebuild and {path}/{name}-{version}-*.ebuild
     using git rm.
 
     Args:
-      path: The directory in which the ebuild files are.
-      name: The name of the package (e.g. 'rust').
-      version: The version of the ebuild to remove.
+        path: The directory in which the ebuild files are.
+        name: The name of the package (e.g. 'rust').
+        version: The version of the ebuild to remove.
     """
     path = Path(path)
     pattern = f"{name}-{version}-*.ebuild"
@@ -755,12 +817,13 @@ def remove_ebuild_version(path: os.PathLike, name: str, version: RustVersion):
         remove_files(m.name, path)
 
 
-def remove_files(filename: str, path: str) -> None:
+def remove_files(filename: PathOrStr, path: PathOrStr) -> None:
     subprocess.check_call(["git", "rm", filename], cwd=path)
 
 
 def remove_rust_bootstrap_version(
-    version: RustVersion, run_step: Callable[[], T]
+    version: RustVersion,
+    run_step: RunStepFn,
 ) -> None:
     run_step(
         "remove old bootstrap ebuild",
@@ -776,7 +839,8 @@ def remove_rust_bootstrap_version(
 
 
 def remove_rust_uprev(
-    rust_version: Optional[RustVersion], run_step: Callable[[], T]
+    rust_version: Optional[RustVersion],
+    run_step: RunStepFn,
 ) -> None:
     def find_desired_rust_version() -> RustVersion:
         if rust_version:
@@ -938,7 +1002,8 @@ def main() -> None:
     elif args.subparser_name == "remove-bootstrap":
         remove_rust_bootstrap_version(args.version, run_step)
     else:
-        # If you have added more subparser_name, please also add the handlers above
+        # If you have added more subparser_name, please also add the handlers
+        # above
         assert args.subparser_name == "roll"
         run_step("create new repo", lambda: create_new_repo(args.uprev))
         if not args.skip_cross_compiler:
@@ -947,10 +1012,9 @@ def main() -> None:
             args.uprev, args.template, args.skip_compile, run_step
         )
         remove_rust_uprev(args.remove, run_step)
-        bootstrap_version = prepare_uprev_from_json(
-            completed_steps["prepare uprev"]
-        )[2]
-        remove_rust_bootstrap_version(bootstrap_version, run_step)
+        prepared = prepare_uprev_from_json(completed_steps["prepare uprev"])
+        assert prepared is not None, "no prepared uprev decoded from JSON"
+        remove_rust_bootstrap_version(prepared.bootstrap_version, run_step)
         if not args.no_upload:
             run_step(
                 "create rust uprev CL", lambda: create_new_commit(args.uprev)
@@ -958,4 +1022,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
