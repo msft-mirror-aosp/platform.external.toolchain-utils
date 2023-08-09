@@ -47,6 +47,7 @@ from typing import (
     TypeVar,
     Union,
 )
+import urllib.request
 
 from llvm_tools import chroot
 from llvm_tools import git
@@ -75,10 +76,34 @@ class RunStepFn(Protocol):
 
 
 EQUERY = "equery"
-GSUTIL = "gsutil.py"
+GPG = "gpg"
+GSUTIL = "gsutil"
 MIRROR_PATH = "gs://chromeos-localmirror/distfiles"
 EBUILD_PREFIX = Path("/mnt/host/source/src/third_party/chromiumos-overlay")
+# Keyserver to use with GPG. Not all keyservers have Rust's signing key;
+# this must be set to a keyserver that does.
+GPG_KEYSERVER = "keyserver.ubuntu.com"
 RUST_PATH = Path(EBUILD_PREFIX, "dev-lang", "rust")
+# This is the signing key used by upstream Rust as of 2023-08-09.
+# If the project switches to a different key, this will have to be updated.
+# We require the key to be updated manually so that we have an opportunity
+# to verify that the key change is legitimate.
+RUST_SIGNING_KEY = "85AB96E6FA1BE5FE"
+RUST_SRC_BASE_URI = "https://static.rust-lang.org/dist/"
+
+
+class SignatureVerificationError(Exception):
+    """Error that indicates verification of a downloaded file failed.
+
+    Attributes:
+        message: explanation of why the verification failed.
+        path: the path to the file whose integrity was being verified.
+    """
+
+    def __init__(self, message: str, path: Path):
+        super(SignatureVerificationError, self).__init__()
+        self.message = message
+        self.path = path
 
 
 def get_command_output(command: Command, *args, **kwargs) -> str:
@@ -523,9 +548,113 @@ def fetch_rust_distfiles(version: RustVersion) -> None:
     fetch_distfile_from_mirror(compute_rustc_src_name(version))
 
 
+def fetch_rust_src_from_upstream(uri: str, local_path: Path) -> None:
+    """Fetches Rust sources from upstream.
+
+    This downloads the source distribution and the .asc file
+    containing the signatures. It then verifies that the sources
+    have the expected signature and have been signed by
+    the expected key.
+    """
+    subprocess.run(
+        [GPG, "--keyserver", GPG_KEYSERVER, "--recv-keys", RUST_SIGNING_KEY],
+        check=True,
+    )
+    subprocess.run(
+        [GPG, "--keyserver", GPG_KEYSERVER, "--refresh-keys", RUST_SIGNING_KEY],
+        check=True,
+    )
+    asc_uri = uri + ".asc"
+    local_asc_path = Path(local_path.parent, local_path.name + ".asc")
+    logging.info("Fetching %s", uri)
+    urllib.request.urlretrieve(uri, local_path)
+    logging.info("%s fetched", uri)
+
+    # Raise SignatureVerificationError if we cannot get the signature.
+    try:
+        logging.info("Fetching %s", asc_uri)
+        urllib.request.urlretrieve(asc_uri, local_asc_path)
+        logging.info("%s fetched", asc_uri)
+    except Exception as e:
+        raise SignatureVerificationError(
+            f"error fetching signature file {asc_uri}",
+            local_path,
+        ) from e
+
+    # Raise SignatureVerificationError if verifying the signature
+    # failed.
+    try:
+        output = get_command_output(
+            [GPG, "--verify", "--status-fd", "1", local_asc_path]
+        )
+    except subprocess.CalledProcessError as e:
+        raise SignatureVerificationError(
+            f"error verifying signature. GPG output:\n{e.stdout}",
+            local_path,
+        ) from e
+
+    # Raise SignatureVerificationError if the file was not signed
+    # with the expected key.
+    if f"GOODSIG {RUST_SIGNING_KEY}" not in output:
+        message = f"GOODSIG {RUST_SIGNING_KEY} not found in output"
+        if f"REVKEYSIG {RUST_SIGNING_KEY}" in output:
+            message = "signing key has been revoked"
+        elif f"EXPKEYSIG {RUST_SIGNING_KEY}" in output:
+            message = "signing key has expired"
+        elif f"EXPSIG {RUST_SIGNING_KEY}" in output:
+            message = "signature has expired"
+        raise SignatureVerificationError(
+            f"{message}. GPG output:\n{output}",
+            local_path,
+        )
+
+
 def get_distdir() -> str:
     """Returns portage's distdir."""
     return get_command_output(["portageq", "distdir"])
+
+
+def mirror_has_file(name: str) -> bool:
+    """Checks if the mirror has the named file."""
+    mirror_file = MIRROR_PATH + "/" + name
+    cmd: Command = [GSUTIL, "ls", mirror_file]
+    proc = subprocess.run(
+        cmd,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        encoding="utf-8",
+    )
+    if "URLs matched no objects" in proc.stdout:
+        return False
+    elif proc.returncode == 0:
+        return True
+
+    raise Exception(
+        "Unexpected result from gsutil ls:"
+        f" rc {proc.returncode} output:\n{proc.stdout}"
+    )
+
+
+def mirror_rust_source(version: RustVersion) -> None:
+    """Ensures source code for a Rust version is on the local mirror.
+
+    If the source code is not found on the mirror, it is fetched
+    from upstream, its integrity is verified, and it is uploaded
+    to the mirror.
+    """
+    filename = compute_rustc_src_name(version)
+    if mirror_has_file(filename):
+        logging.info("%s is present on the mirror", filename)
+        return
+    uri = f"{RUST_SRC_BASE_URI}{filename}"
+    local_path = Path(get_distdir()) / filename
+    mirror_path = f"{MIRROR_PATH}/{filename}"
+    fetch_rust_src_from_upstream(uri, local_path)
+    subprocess.run(
+        [GSUTIL, "cp", "-a", "public-read", local_path, mirror_path],
+        check=True,
+    )
 
 
 def update_manifest(ebuild_file: PathOrStr) -> None:
@@ -658,6 +787,19 @@ def create_rust_uprev(
     if prepared is None:
         return
     template_version, template_ebuild, old_bootstrap_version = prepared
+
+    run_step(
+        "mirror bootstrap sources",
+        lambda: mirror_rust_source(
+            template_version,
+        ),
+    )
+    run_step(
+        "mirror rust sources",
+        lambda: mirror_rust_source(
+            rust_version,
+        ),
+    )
 
     # The fetch steps will fail (on purpose) if the files they check for
     # are not available on the mirror. To make them pass, fetch the

@@ -95,6 +95,151 @@ class FetchDistfileTest(unittest.TestCase):
                 )
 
 
+class FetchRustSrcFromUpstreamTest(unittest.TestCase):
+    """Tests for rust_uprev.fetch_rust_src_from_upstream."""
+
+    def setUp(self) -> None:
+        self._mock_get_distdir = start_mock(
+            self,
+            "rust_uprev.get_distdir",
+            return_value="/fake/distfiles",
+        )
+
+        self._mock_gpg = start_mock(
+            self,
+            "subprocess.run",
+            side_effect=self.fake_gpg,
+        )
+
+        self._mock_urlretrieve = start_mock(
+            self,
+            "urllib.request.urlretrieve",
+            side_effect=self.fake_urlretrieve,
+        )
+
+        self._mock_rust_signing_key = start_mock(
+            self,
+            "rust_uprev.RUST_SIGNING_KEY",
+            "1234567",
+        )
+
+    @staticmethod
+    def fake_urlretrieve(src: str, dest: Path) -> None:
+        pass
+
+    @staticmethod
+    def fake_gpg(cmd, **_kwargs):
+        val = mock.Mock()
+        val.returncode = 0
+        val.stdout = ""
+        if "--verify" in cmd:
+            val.stdout = "GOODSIG 1234567"
+        return val
+
+    def test_success(self):
+        with mock.patch("rust_uprev.GPG", "gnupg"):
+            rust_uprev.fetch_rust_src_from_upstream(
+                "fakehttps://rustc-1.60.3-src.tar.gz",
+                Path("/fake/distfiles/rustc-1.60.3-src.tar.gz"),
+            )
+            self._mock_urlretrieve.has_calls(
+                [
+                    (
+                        "fakehttps://rustc-1.60.3-src.tar.gz",
+                        Path("/fake/distfiles/rustc-1.60.3-src.tar.gz"),
+                    ),
+                    (
+                        "fakehttps://rustc-1.60.3-src.tar.gz.asc",
+                        Path("/fake/distfiles/rustc-1.60.3-src.tar.gz.asc"),
+                    ),
+                ]
+            )
+            self._mock_gpg.has_calls(
+                [
+                    (["gnupg", "--refresh-keys", "1234567"], {"check": True}),
+                ]
+            )
+
+    def test_no_signature_file(self):
+        def _urlretrieve(src, dest):
+            if src.endswith(".asc"):
+                raise Exception("404 not found")
+            return self.fake_urlretrieve(src, dest)
+
+        self._mock_urlretrieve.side_effect = _urlretrieve
+
+        with self.assertRaises(rust_uprev.SignatureVerificationError) as ctx:
+            rust_uprev.fetch_rust_src_from_upstream(
+                "fakehttps://rustc-1.60.3-src.tar.gz",
+                Path("/fake/distfiles/rustc-1.60.3-src.tar.gz"),
+            )
+        self.assertIn("error fetching signature file", ctx.exception.message)
+
+    def test_key_expired(self):
+        def _gpg_verify(cmd, *args, **kwargs):
+            val = self.fake_gpg(cmd, *args, **kwargs)
+            if "--verify" in cmd:
+                val.stdout = "EXPKEYSIG 1234567"
+            return val
+
+        self._mock_gpg.side_effect = _gpg_verify
+
+        with self.assertRaises(rust_uprev.SignatureVerificationError) as ctx:
+            rust_uprev.fetch_rust_src_from_upstream(
+                "fakehttps://rustc-1.60.3-src.tar.gz",
+                Path("/fake/distfiles/rustc-1.60.3-src.tar.gz"),
+            )
+        self.assertIn("key has expired", ctx.exception.message)
+
+    def test_key_revoked(self):
+        def _gpg_verify(cmd, *args, **kwargs):
+            val = self.fake_gpg(cmd, *args, **kwargs)
+            if "--verify" in cmd:
+                val.stdout = "REVKEYSIG 1234567"
+            return val
+
+        self._mock_gpg.side_effect = _gpg_verify
+
+        with self.assertRaises(rust_uprev.SignatureVerificationError) as ctx:
+            rust_uprev.fetch_rust_src_from_upstream(
+                "fakehttps://rustc-1.60.3-src.tar.gz",
+                Path("/fake/distfiles/rustc-1.60.3-src.tar.gz"),
+            )
+        self.assertIn("key has been revoked", ctx.exception.message)
+
+    def test_signature_expired(self):
+        def _gpg_verify(cmd, *args, **kwargs):
+            val = self.fake_gpg(cmd, *args, **kwargs)
+            if "--verify" in cmd:
+                val.stdout = "EXPSIG 1234567"
+            return val
+
+        self._mock_gpg.side_effect = _gpg_verify
+
+        with self.assertRaises(rust_uprev.SignatureVerificationError) as ctx:
+            rust_uprev.fetch_rust_src_from_upstream(
+                "fakehttps://rustc-1.60.3-src.tar.gz",
+                Path("/fake/distfiles/rustc-1.60.3-src.tar.gz"),
+            )
+        self.assertIn("signature has expired", ctx.exception.message)
+
+    def test_wrong_key(self):
+        def _gpg_verify(cmd, *args, **kwargs):
+            val = self.fake_gpg(cmd, *args, **kwargs)
+            if "--verify" in cmd:
+                val.stdout = "GOODSIG 0000000"
+            return val
+
+        self._mock_gpg.side_effect = _gpg_verify
+
+        with self.assertRaises(rust_uprev.SignatureVerificationError) as ctx:
+            rust_uprev.fetch_rust_src_from_upstream(
+                "fakehttps://rustc-1.60.3-src.tar.gz",
+                Path("/fake/distfiles/rustc-1.60.3-src.tar.gz"),
+            )
+        self.assertIn("1234567 not found", ctx.exception.message)
+
+
 class FindEbuildPathTest(unittest.TestCase):
     """Tests for rust_uprev.find_ebuild_path()"""
 
@@ -157,6 +302,79 @@ class FindEbuildPathTest(unittest.TestCase):
             (tmpdir / "test-1.3.4-r1.ebuild").symlink_to("test-1.3.4.ebuild")
             result = rust_uprev.find_ebuild_path(tmpdir, "test")
             self.assertEqual(result, ebuild)
+
+
+class MirrorHasFileTest(unittest.TestCase):
+    """Tests for rust_uprev.mirror_has_file."""
+
+    @mock.patch.object(subprocess, "run")
+    def test_no(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=1,
+            stdout="CommandException: One or more URLs matched no objects.",
+        )
+        self.assertFalse(rust_uprev.mirror_has_file("rustc-1.69.0-src.tar.gz"))
+
+    @mock.patch.object(subprocess, "run")
+    def test_yes(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            # pylint: disable=line-too-long
+            stdout="gs://chromeos-localmirror/distfiles/rustc-1.69.0-src.tar.gz",
+        )
+        self.assertTrue(rust_uprev.mirror_has_file("rustc-1.69.0-src.tar.gz"))
+
+
+class MirrorRustSourceTest(unittest.TestCase):
+    """Tests for rust_uprev.mirror_rust_source."""
+
+    def setUp(self) -> None:
+        start_mock(self, "rust_uprev.GSUTIL", "gsutil")
+        start_mock(self, "rust_uprev.MIRROR_PATH", "fakegs://fakemirror/")
+        start_mock(
+            self, "rust_uprev.get_distdir", return_value="/fake/distfiles"
+        )
+        self.mock_mirror_has_file = start_mock(
+            self,
+            "rust_uprev.mirror_has_file",
+        )
+        self.mock_fetch_rust_src_from_upstream = start_mock(
+            self,
+            "rust_uprev.fetch_rust_src_from_upstream",
+        )
+        self.mock_subprocess_run = start_mock(
+            self,
+            "subprocess.run",
+        )
+
+    def test_already_present(self):
+        self.mock_mirror_has_file.return_value = True
+        rust_uprev.mirror_rust_source(
+            rust_uprev.RustVersion.parse("1.67.3"),
+        )
+        self.mock_fetch_rust_src_from_upstream.assert_not_called()
+        self.mock_subprocess_run.assert_not_called()
+
+    def test_fetch_and_upload(self):
+        self.mock_mirror_has_file.return_value = False
+        rust_uprev.mirror_rust_source(
+            rust_uprev.RustVersion.parse("1.67.3"),
+        )
+        self.mock_fetch_rust_src_from_upstream.called_once()
+        self.mock_subprocess_run.has_calls(
+            [
+                (
+                    [
+                        "gsutil",
+                        "cp",
+                        "-a",
+                        "public-read",
+                        "/fake/distdir/rustc-1.67.3-src.tar.gz",
+                        "fakegs://fakemirror/rustc-1.67.3-src.tar.gz",
+                    ]
+                ),
+            ]
+        )
 
 
 class RemoveEbuildVersionTest(unittest.TestCase):
