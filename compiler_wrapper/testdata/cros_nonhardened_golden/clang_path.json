@@ -164,7 +164,6 @@
             "-Wno-section",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-static-libgcc",
-            "-std=gnu++14",
             "--prefix=../../bin/x86_64-cros-linux-gnu-",
             "main.cc",
             "-L/usr/x86_64-cros-linux-gnu/usr/lib64",

@@ -25,8 +25,6 @@ type config struct {
 	// Flags to add to clang only, AFTER user flags (cannot be overridden
 	// by the user).
 	clangPostFlags []string
-	// Flags to be used only for C++ (not used to compile C code)
-	cppFlags []string
 	// Toolchain root path relative to the wrapper binary.
 	clangRootRelPath string
 	gccRootRelPath   string
@@ -131,12 +129,6 @@ func crosCommonClangFlags() []string {
 	}
 }
 
-func crosCommonCppFlags() []string {
-	return []string{
-		"-std=gnu++14",
-	}
-}
-
 func crosCommonClangPostFlags() []string {
 	// Temporarily disable Wdeprecated-copy. b/191479033
 	// Temporarily disabled Wno-array-parameter. b/262076232
@@ -182,7 +174,6 @@ var crosHardenedConfig = config{
 		"-ftrivial-auto-var-init=zero",
 	),
 	clangPostFlags:    crosCommonClangPostFlags(),
-	cppFlags:          crosCommonCppFlags(),
 	newWarningsDir:    "fatal_clang_warnings",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
 }
@@ -204,7 +195,6 @@ var crosNonHardenedConfig = config{
 		"-Wno-section",
 	),
 	clangPostFlags:    crosCommonClangPostFlags(),
-	cppFlags:          crosCommonCppFlags(),
 	newWarningsDir:    "fatal_clang_warnings",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
 }
@@ -234,7 +224,6 @@ var crosHostConfig = config{
 	),
 	// Temporarily disable Wdeprecated-copy. b/191479033
 	clangPostFlags:    crosCommonClangPostFlags(),
-	cppFlags:          crosCommonCppFlags(),
 	newWarningsDir:    "fatal_clang_warnings",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
 }
@@ -248,7 +237,6 @@ var androidConfig = config{
 	gccFlags:          []string{},
 	clangFlags:        []string{},
 	clangPostFlags:    []string{},
-	cppFlags:          []string{},
 	newWarningsDir:    "",
 	crashArtifactsDir: "",
 }
