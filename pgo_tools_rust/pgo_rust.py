@@ -112,7 +112,7 @@ import re
 import shutil
 import subprocess
 import sys
-from typing import Dict, List, Optional
+from typing import cast, List, Mapping, Optional
 
 
 TARGET_TRIPLES = [
@@ -147,14 +147,14 @@ def run(
     args: List,
     *,
     indent: int = 4,
-    env: Optional[Dict[str, str]] = None,
+    env: Optional[Mapping[str, str]] = None,
     capture_stdout: bool = False,
     message: bool = True,
 ) -> Optional[str]:
     args = [str(arg) for arg in args]
 
     if env is None:
-        new_env = os.environ
+        new_env: Mapping[str, str] = os.environ
     else:
         new_env = os.environ.copy()
         new_env.update(env)
@@ -200,8 +200,13 @@ def run(
     return ret
 
 
+def get_command_output(args: List, **kwargs) -> str:
+    """Runs a command and returns its stdout and stderr as a string."""
+    return cast(str, run(args, capture_stdout=True, **kwargs))
+
+
 def get_rust_version() -> str:
-    s = run(["rustc", "--version"], capture_stdout=True)
+    s = get_command_output(["rustc", "--version"])
     m = re.search(r"\d+\.\d+\.\d+", s)
     assert m is not None, repr(s)
     return m.group(0)
