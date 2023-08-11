@@ -4,6 +4,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# pylint: disable=line-too-long
 """Handle most aspects of creating and benchmarking PGO profiles for Rust.
 
 This is meant to be done at Rust uprev time. Ultimately profdata files need
@@ -274,9 +275,10 @@ def build_rust(
 ):
 
     if use_frontend_profile or use_llvm_profile:
-        assert (
-            not generate_frontend_profile and not generate_llvm_profile
-        ), "Can't build a compiler to both use profile information and generate it"
+        assert not generate_frontend_profile and not generate_llvm_profile, (
+            "Can't build a compiler to both use profile information "
+            "and generate it"
+        )
 
     assert (
         not generate_frontend_profile or not generate_llvm_profile
@@ -304,9 +306,9 @@ def build_rust(
 def merge_profdata(llvm_or_frontend, *, source_directory: Path, dest: Path):
     assert llvm_or_frontend in ("llvm", "frontend")
 
-    # The two `llvm-profdata` programs come from different LLVM versions, and may
-    # support different versions of the profdata format, so make sure to use the
-    # right one.
+    # The two `llvm-profdata` programs come from different LLVM versions, and
+    # may support different versions of the profdata format, so make sure to
+    # use the right one.
     llvm_profdata = (
         "/usr/bin/llvm-profdata"
         if llvm_or_frontend == "llvm"
@@ -586,7 +588,8 @@ def main():
     parser_benchmark_nopgo.add_argument(
         "--suffix",
         default="",
-        help="Suffix to distinguish benchmarks and profdata with identical rustc versions",
+        help="Suffix to distinguish benchmarks and profdata with identical "
+        "rustc versions",
     )
 
     parser_benchmark_pgo = subparsers.add_parser(
@@ -619,7 +622,8 @@ def main():
     parser_benchmark_pgo.add_argument(
         "--suffix",
         default="",
-        help="Suffix to distinguish benchmarks and profdata with identical rustc versions",
+        help="Suffix to distinguish benchmarks and profdata with identical "
+        "rustc versions",
     )
 
     parser_upload_profdata = subparsers.add_parser(
@@ -639,7 +643,8 @@ def main():
     parser_upload_profdata.add_argument(
         "--suffix",
         default="",
-        help="Suffix to distinguish benchmarks and profdata with identical rustc versions",
+        help="Suffix to distinguish benchmarks and profdata with identical "
+        "rustc versions",
     )
 
     args = parser.parse_args()
