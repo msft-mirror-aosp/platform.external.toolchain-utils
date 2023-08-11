@@ -24,6 +24,23 @@ def _fail_command(cmd, *_args, **_kwargs):
     raise err
 
 
+def start_mock(obj, *args, **kwargs):
+    """Creates a patcher, starts it, and registers a cleanup to stop it.
+
+    Args:
+        obj:
+            the object to attach the cleanup to
+        *args:
+            passed to mock.patch()
+        **kwargs:
+            passsed to mock.patch()
+    """
+    patcher = mock.patch(*args, **kwargs)
+    val = patcher.start()
+    obj.addCleanup(patcher.stop)
+    return val
+
+
 class FetchDistfileTest(unittest.TestCase):
     """Tests rust_uprev.fetch_distfile_from_mirror()"""
 
@@ -338,26 +355,28 @@ BOOTSTRAP_VERSION="1.2.0"
 BOOTSTRAP_VERSION="1.3.6"
     """
 
+    def setUp(self):
+        self.mock_read_text = start_mock(self, "pathlib.Path.read_text")
+
     def test_success(self):
-        mock_open = mock.mock_open(read_data=self.ebuild_file_before)
+        self.mock_read_text.return_value = self.ebuild_file_before
         # ebuild_file and new bootstrap version are deliberately different
         ebuild_file = "/path/to/rust/cros-rustc.eclass"
-        with mock.patch("builtins.open", mock_open):
+        with mock.patch("pathlib.Path.write_text") as mock_write_text:
             rust_uprev.update_bootstrap_version(
                 ebuild_file, rust_uprev.RustVersion.parse("1.3.6")
             )
-        mock_open.return_value.__enter__().write.assert_called_once_with(
-            self.ebuild_file_after
-        )
+            mock_write_text.assert_called_once_with(
+                self.ebuild_file_after, encoding="utf-8"
+            )
 
     def test_fail_when_ebuild_misses_a_variable(self):
-        mock_open = mock.mock_open(read_data="")
+        self.mock_read_text.return_value = ""
         ebuild_file = "/path/to/rust/rust-1.3.5.ebuild"
-        with mock.patch("builtins.open", mock_open):
-            with self.assertRaises(RuntimeError) as context:
-                rust_uprev.update_bootstrap_version(
-                    ebuild_file, rust_uprev.RustVersion.parse("1.2.0")
-                )
+        with self.assertRaises(RuntimeError) as context:
+            rust_uprev.update_bootstrap_version(
+                ebuild_file, rust_uprev.RustVersion.parse("1.2.0")
+            )
         self.assertEqual(
             "BOOTSTRAP_VERSION not found in /path/to/rust/rust-1.3.5.ebuild",
             str(context.exception),

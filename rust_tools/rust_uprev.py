@@ -408,8 +408,8 @@ def update_bootstrap_ebuild(new_bootstrap_version: RustVersion) -> None:
 def update_bootstrap_version(
     path: PathOrStr, new_bootstrap_version: RustVersion
 ) -> None:
-    # pylint: disable=consider-using-with
-    contents = open(path, encoding="utf-8").read()
+    path = Path(path)
+    contents = path.read_text(encoding="utf-8")
     contents, subs = re.subn(
         r"^BOOTSTRAP_VERSION=.*$",
         'BOOTSTRAP_VERSION="%s"' % (new_bootstrap_version,),
@@ -418,8 +418,7 @@ def update_bootstrap_version(
     )
     if not subs:
         raise RuntimeError(f"BOOTSTRAP_VERSION not found in {path}")
-    # pylint: disable=consider-using-with
-    open(path, "w", encoding="utf-8").write(contents)
+    path.write_text(contents, encoding="utf-8")
     logging.info("Rust BOOTSTRAP_VERSION updated to %s", new_bootstrap_version)
 
 
