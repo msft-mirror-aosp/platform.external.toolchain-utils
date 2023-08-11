@@ -1048,10 +1048,6 @@ def remove_rust_uprev(
         result_from_json=find_desired_rust_version_from_json,
     )
     run_step(
-        "remove patches",
-        lambda: remove_files(f"files/rust-{delete_version}-*.patch", RUST_PATH),
-    )
-    run_step(
         "remove target ebuild",
         lambda: remove_ebuild_version(RUST_PATH, "rust", delete_version),
     )
