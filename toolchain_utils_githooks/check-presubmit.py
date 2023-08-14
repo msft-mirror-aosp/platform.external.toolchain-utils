@@ -25,11 +25,25 @@ import typing as t
 # This was originally had many packages in it (notably scipy)
 # but due to changes in how scipy is built, we can no longer install
 # it in the chroot. See b/284489250
+#
+# For type checking Python code, we also need mypy. This isn't
+# listed here because (1) only very few files are actually type checked,
+# so we don't pull the dependency in unless needed, and (2) mypy
+# may be installed through other means than pip.
 PIP_DEPENDENCIES = ("numpy",)
 
 
+# The files on which we run the mypy typechecker. The paths are relative
+# to the root of the toolchain-utils repository.
+MYPY_CHECKED_FILES = [
+    "llvm_tools/nightly_revert_checker.py",
+    "pgo_tools_rust/pgo_rust.py",
+    "rust_tools/rust_uprev.py",
+]
+
+
 def run_command_unchecked(
-    command: t.List[str], cwd: str, env: t.Dict[str, str] = None
+    command: t.List[str], cwd: str = None, env: t.Dict[str, str] = None
 ) -> t.Tuple[int, str]:
     """Runs a command in the given dir, returning its exit code and stdio."""
     p = subprocess.run(
@@ -78,6 +92,62 @@ def env_with_pythonpath(toolchain_utils_root: str) -> t.Dict[str, str]:
     else:
         env["PYTHONPATH"] = toolchain_utils_root
     return env
+
+
+def get_mypy() -> t.Optional[t.List[str]]:
+    """Finds the mypy executable and returns a command to invoke it.
+
+    If mypy cannot be found and we're inside the chroot, this
+    function installs mypy and returns a command to invoke it.
+
+    If mypy cannot be found and we're outside the chroot, this
+    returns None.
+    """
+
+    def get_from_pip():
+        rc, output = run_command_unchecked(pip + ["show", "mypy"])
+        if rc == 0:
+            m = re.search(r"^Location: (.*)", output, re.MULTILINE)
+            if m:
+                return [
+                    "env",
+                    "PYTHONPATH=" + m.group(1),
+                    "python3",
+                    "-m",
+                    "mypy",
+                ]
+        return None
+
+    if has_executable_on_path("mypy"):
+        return ["mypy"]
+    pip = get_pip()
+    from_pip = pip and get_from_pip()
+    if from_pip:
+        return from_pip
+    if is_in_chroot():
+        assert pip is not None
+        subprocess.check_call(pip + ["install", "--user", "mypy"])
+        return get_from_pip()
+    return None
+
+
+def get_pip() -> t.Optional[t.List[str]]:
+    """Finds pip and returns a command to invoke it.
+
+    If pip cannot be found, this function attempts to install
+    pip and returns a command to invoke it.
+
+    If pip cannot be found, this function returns None.
+    """
+    have_pip = can_import_py_module("pip")
+    if not have_pip:
+        print("Autoinstalling `pip`...")
+        subprocess.check_call(["python", "-m", "ensurepip"])
+        have_pip = can_import_py_module("pip")
+
+    if have_pip:
+        return ["python", "-m", "pip"]
+    return None
 
 
 # Each checker represents an independent check that's done on our sources.
@@ -256,6 +326,38 @@ def check_black(
     )
 
 
+def check_mypy(
+    toolchain_utils_root: str, mypy: t.List[str], files: t.Iterable[str]
+) -> CheckResult:
+    """Checks type annotations using mypy."""
+    # Show the version number, mainly for troubleshooting purposes.
+    cmd = mypy + ["--version"]
+    exit_code, output = run_command_unchecked(cmd, cwd=toolchain_utils_root)
+    if exit_code:
+        return CheckResult(
+            ok=False,
+            output=f"Failed getting mypy version; stdstreams: {output}",
+            autofix_commands=[],
+        )
+    # Prefix output with the version information.
+    prefix = f"Using {output.strip()}, "
+
+    cmd = mypy + list(files)
+    exit_code, output = run_command_unchecked(cmd, cwd=toolchain_utils_root)
+    if exit_code == 0:
+        return CheckResult(
+            ok=True,
+            output=f"{output}{prefix}checks passed",
+            autofix_commands=[],
+        )
+    else:
+        return CheckResult(
+            ok=False,
+            output=f"{output}{prefix}type errors were found",
+            autofix_commands=[],
+        )
+
+
 def check_python_file_headers(python_files: t.Iterable[str]) -> CheckResult:
     """Subchecker of check_py_format. Checks python #!s"""
     add_hashbang = []
@@ -339,6 +441,43 @@ def check_py_format(
         (
             "check_file_headers",
             thread_pool.apply_async(check_python_file_headers, (python_files,)),
+        ),
+    ]
+    return [(name, get_check_result_or_catch(task)) for name, task in tasks]
+
+
+def check_py_types(
+    toolchain_utils_root: str,
+    thread_pool: multiprocessing.pool.ThreadPool,
+    files: t.Iterable[str],
+) -> t.List[CheckResult]:
+    """Runs static type checking for files in MYPY_CHECKED_FILES."""
+
+    to_check = {
+        os.path.join(toolchain_utils_root, f) for f in MYPY_CHECKED_FILES
+    }.intersection(files)
+    if not to_check:
+        return CheckResult(
+            ok=True,
+            output="no python files to typecheck",
+            autofix_commands=[],
+        )
+
+    mypy = get_mypy()
+    if not mypy:
+        return CheckResult(
+            ok=False,
+            output="mypy not found. Please either enter a chroot "
+            "or install mypy",
+            autofix_commands=[],
+        )
+
+    tasks = [
+        (
+            "check_mypy",
+            thread_pool.apply_async(
+                check_mypy, (toolchain_utils_root, mypy, to_check)
+            ),
         ),
     ]
     return [(name, get_check_result_or_catch(task)) for name, task in tasks]
@@ -708,18 +847,11 @@ def ensure_pip_deps_installed() -> None:
         # No need to install pip if we don't have any deps.
         return
 
-    if not can_import_py_module("pip"):
-        print("Autoinstalling `pip`...")
-        subprocess.check_call(["python", "-m", "ensurepip"])
+    pip = get_pip()
+    assert pip, "pip not found and could not be installed"
 
     for package in PIP_DEPENDENCIES:
-        if can_import_py_module(package):
-            continue
-
-        print(f"Autoinstalling `{package}`...")
-        subprocess.check_call(
-            ["python", "-m", "pip", "install", "--user", package]
-        )
+        subprocess.check_call(pip + ["install", "--user", package])
 
 
 def main(argv: t.List[str]) -> int:
@@ -758,6 +890,7 @@ def main(argv: t.List[str]) -> int:
     checks = [
         check_cros_lint,
         check_py_format,
+        check_py_types,
         check_go_format,
         check_tests,
     ]
