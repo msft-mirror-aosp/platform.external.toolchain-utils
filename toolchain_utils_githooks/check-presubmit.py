@@ -58,7 +58,8 @@ def has_executable_on_path(exe: str) -> bool:
 def escape_command(command: t.Iterable[str]) -> str:
     """Returns a human-readable and copy-pastable shell command.
 
-    Only intended for use in output to users. shell=True is strongly discouraged.
+    Only intended for use in output to users. shell=True is strongly
+    discouraged.
     """
     return " ".join(shlex.quote(x) for x in command)
 
@@ -181,9 +182,9 @@ def check_black(
     toolchain_utils_root: str, black: Path, python_files: t.Iterable[str]
 ) -> CheckResult:
     """Subchecker of check_py_format. Checks python file formats with black"""
-    # Folks have been bitten by accidentally using multiple formatter versions in
-    # the past. This is an issue, since newer versions of black may format things
-    # differently. Make the version obvious.
+    # Folks have been bitten by accidentally using multiple formatter
+    # versions in the past. This is an issue, since newer versions of
+    # black may format things differently. Make the version obvious.
     command = [black, "--version"]
     exit_code, stdout_and_stderr = run_command_unchecked(
         command, cwd=toolchain_utils_root
@@ -191,7 +192,8 @@ def check_black(
     if exit_code:
         return CheckResult(
             ok=False,
-            output=f"Failed getting black version; stdstreams: {stdout_and_stderr}",
+            output="Failed getting black version; "
+            f"stdstreams: {stdout_and_stderr}",
             autofix_commands=[],
         )
 
@@ -244,15 +246,16 @@ def check_black(
         err_str = "\n".join(errors)
         return CheckResult(
             ok=False,
-            output=f"Using {black_version!r} had the following errors:\n{err_str}",
+            output=f"Using {black_version!r} had the following errors:\n"
+            f"{err_str}",
             autofix_commands=[],
         )
 
     autofix = black_invocation + bad_files
     return CheckResult(
         ok=False,
-        output=f"Using {black_version!r}, these file(s) have formatting errors: "
-        f"{bad_files}",
+        output=f"Using {black_version!r}, these file(s) have formatting "
+        f"errors: {bad_files}",
         autofix_commands=[autofix],
     )
 
@@ -421,11 +424,10 @@ def check_cros_lint(
                     ["golint", "-set_exit_status"] + go_files
                 )
 
-            complaint = "\n".join(
-                (
-                    "WARNING: go linting disabled. golint is not on your $PATH.",
-                    "Please either enter a chroot, or install go locally. Continuing.",
-                )
+            complaint = (
+                "WARNING: go linting disabled. golint is not on your $PATH.\n"
+                "Please either enter a chroot, or install go locally. "
+                "Continuing."
             )
             return CheckResult(
                 ok=True,
@@ -435,13 +437,11 @@ def check_cros_lint(
 
         tasks.append(("golint", thread_pool.apply_async(run_golint)))
 
-    complaint = "\n".join(
-        (
-            "WARNING: No ChromeOS checkout detected, and no viable CrOS tree",
-            "found; falling back to linting only python and go. If you have a",
-            "ChromeOS checkout, please either develop from inside of the source",
-            "tree, or set $CHROMEOS_ROOT_DIRECTORY to the root of it.",
-        )
+    complaint = (
+        "WARNING: No ChromeOS checkout detected, and no viable CrOS tree\n"
+        "found; falling back to linting only python and go. If you have a\n"
+        "ChromeOS checkout, please either develop from inside of the source\n"
+        "tree, or set $CHROMEOS_ROOT_DIRECTORY to the root of it."
     )
 
     results = [(name, get_check_result_or_catch(task)) for name, task in tasks]
