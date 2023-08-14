@@ -231,12 +231,3 @@ func runClangTidy(env env, clangCmd *command, cSrcFile string, extraTidyFlags []
 	}
 	return err
 }
-
-func hasAtLeastOneSuffix(s string, suffixes []string) bool {
-	for _, suffix := range suffixes {
-		if strings.HasSuffix(s, suffix) {
-			return true
-		}
-	}
-	return false
-}

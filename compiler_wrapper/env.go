@@ -145,7 +145,7 @@ type printingEnv struct {
 	env
 }
 
-var _env = (*printingEnv)(nil)
+var _ env = (*printingEnv)(nil)
 
 func (env *printingEnv) exec(cmd *command) error {
 	printCmd(env, cmd)

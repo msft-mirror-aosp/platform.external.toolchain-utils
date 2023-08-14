@@ -15,8 +15,6 @@ import (
 
 type useIWYUMode int
 
-const iwyuCrashSubstring = "PLEASE submit a bug report"
-
 const (
 	iwyuModeNone useIWYUMode = iota
 	iwyuModeAll

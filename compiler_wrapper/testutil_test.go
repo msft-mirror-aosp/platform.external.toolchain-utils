@@ -39,7 +39,6 @@ type testContext struct {
 	tempDir      string
 	env          []string
 	cfg          *config
-	inputCmd     *command
 	lastCmd      *command
 	cmdCount     int
 	cmdMock      func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
