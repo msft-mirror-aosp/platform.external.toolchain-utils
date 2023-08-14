@@ -123,7 +123,7 @@ func (env *commandRecordingEnv) exec(cmd *command) error {
 }
 
 func (env *commandRecordingEnv) runWithTimeout(cmd *command, duration time.Duration) error {
-	return env.runWithTimeout(cmd, duration)
+	return runCmdWithTimeout(env, cmd, duration)
 }
 
 func (env *commandRecordingEnv) run(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
