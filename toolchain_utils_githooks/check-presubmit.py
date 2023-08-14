@@ -22,10 +22,6 @@ import traceback
 import typing as t
 
 
-# TODO(crbug.com/1401441): remove this after Feb 2023. It's here so that
-# external tooling realizes that this script is Py3.
-USE_PYTHON3 = True
-
 # This was originally had many packages in it (notably scipy)
 # but due to changes in how scipy is built, we can no longer install
 # it in the chroot. See b/284489250
