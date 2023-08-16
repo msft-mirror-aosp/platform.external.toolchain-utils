@@ -11,7 +11,7 @@ removing an old version. When using the tool, the progress can be
 saved to a JSON file, so the user can resume the process after a
 failing step is fixed. Example usage to create a new version:
 
-1. (inside chroot) $ ./rust_tools/rust_uprev.py             \\
+1. (outside chroot) $ ./rust_tools/rust_uprev.py            \\
                      --state_file /tmp/rust-to-1.60.0.json  \\
                      roll --uprev 1.60.0
 2. Step "compile rust" failed due to the patches can't apply to new version.
@@ -43,6 +43,7 @@ from typing import (
     NamedTuple,
     Optional,
     Protocol,
+    Sequence,
     Tuple,
     TypeVar,
     Union,
@@ -51,11 +52,10 @@ import urllib.request
 
 from llvm_tools import chroot
 from llvm_tools import git
-from pgo_tools_rust import pgo_rust
 
 
 T = TypeVar("T")
-Command = List[Union[str, os.PathLike]]
+Command = Sequence[Union[str, os.PathLike]]
 PathOrStr = Union[str, os.PathLike]
 
 
@@ -76,15 +76,31 @@ class RunStepFn(Protocol):
         ...
 
 
+def get_command_output(command: Command, *args, **kwargs) -> str:
+    return subprocess.check_output(
+        command, encoding="utf-8", *args, **kwargs
+    ).strip()
+
+
+def _get_source_root() -> Path:
+    """Returns the path to the chromiumos directory."""
+    return Path(get_command_output(["repo", "--show-toplevel"]))
+
+
+SOURCE_ROOT = _get_source_root()
 EQUERY = "equery"
 GPG = "gpg"
-GSUTIL = "gsutil"
+GSUTIL = "gsutil.py"
 MIRROR_PATH = "gs://chromeos-localmirror/distfiles"
-EBUILD_PREFIX = Path("/mnt/host/source/src/third_party/chromiumos-overlay")
+EBUILD_PREFIX = SOURCE_ROOT / "src/third_party/chromiumos-overlay"
 CROS_RUSTC_ECLASS = EBUILD_PREFIX / "eclass/cros-rustc.eclass"
 # Keyserver to use with GPG. Not all keyservers have Rust's signing key;
 # this must be set to a keyserver that does.
 GPG_KEYSERVER = "keyserver.ubuntu.com"
+PGO_RUST = Path(
+    "/mnt/host/source"
+    "/src/third_party/toolchain-utils/pgo_tools_rust/pgo_rust.py"
+)
 RUST_PATH = Path(EBUILD_PREFIX, "dev-lang", "rust")
 # This is the signing key used by upstream Rust as of 2023-08-09.
 # If the project switches to a different key, this will have to be updated.
@@ -106,12 +122,6 @@ class SignatureVerificationError(Exception):
         super(SignatureVerificationError, self).__init__()
         self.message = message
         self.path = path
-
-
-def get_command_output(command: Command, *args, **kwargs) -> str:
-    return subprocess.check_output(
-        command, encoding="utf-8", *args, **kwargs
-    ).strip()
 
 
 def get_command_output_unchecked(command: Command, *args, **kwargs) -> str:
@@ -141,7 +151,7 @@ class RustVersion(NamedTuple):
         return f"{self.major}.{self.minor}.{self.patch}"
 
     @staticmethod
-    def parse_from_ebuild(ebuild_name: str) -> "RustVersion":
+    def parse_from_ebuild(ebuild_name: PathOrStr) -> "RustVersion":
         input_re = re.compile(
             r"^rust-"
             r"(?P<major>\d+)\."
@@ -150,7 +160,7 @@ class RustVersion(NamedTuple):
             r"(:?-r\d+)?"
             r"\.ebuild$"
         )
-        m = input_re.match(ebuild_name)
+        m = input_re.match(Path(ebuild_name).name)
         assert m, f"failed to parse {ebuild_name!r}"
         return RustVersion(
             int(m.group("major")), int(m.group("minor")), int(m.group("patch"))
@@ -190,7 +200,9 @@ def compute_rust_bootstrap_prebuilt_name(version: RustVersion) -> str:
 
 def find_ebuild_for_package(name: str) -> str:
     """Returns the path to the ebuild for the named package."""
-    return get_command_output([EQUERY, "w", name])
+    return run_in_chroot(
+        [EQUERY, "w", name], capture_output=True
+    ).stdout.strip()
 
 
 def find_ebuild_path(
@@ -373,34 +385,27 @@ def parse_commandline_args() -> argparse.Namespace:
 
 
 def prepare_uprev(
-    rust_version: RustVersion, template: Optional[RustVersion]
+    rust_version: RustVersion, template: RustVersion
 ) -> Optional[PreparedUprev]:
-    if template is None:
-        ebuild_path = find_ebuild_for_package("rust")
-        ebuild_name = os.path.basename(ebuild_path)
-        template_version = RustVersion.parse_from_ebuild(ebuild_name)
-    else:
-        ebuild_path = find_ebuild_for_rust_version(template)
-        template_version = template
-
+    ebuild_path = find_ebuild_for_rust_version(template)
     bootstrap_version = get_rust_bootstrap_version()
 
-    if rust_version <= template_version:
+    if rust_version <= template:
         logging.info(
             "Requested version %s is not newer than the template version %s.",
             rust_version,
-            template_version,
+            template,
         )
         return None
 
     logging.info(
         "Template Rust version is %s (ebuild: %r)",
-        template_version,
+        template,
         ebuild_path,
     )
     logging.info("rust-bootstrap version is %s", bootstrap_version)
 
-    return PreparedUprev(template_version, Path(ebuild_path), bootstrap_version)
+    return PreparedUprev(template, Path(ebuild_path), bootstrap_version)
 
 
 def create_ebuild(
@@ -483,7 +488,7 @@ def ebuild_actions(
     cmd = ["ebuild", ebuild_path_inchroot] + actions
     if sudo:
         cmd = ["sudo"] + cmd
-    subprocess.check_call(cmd)
+    run_in_chroot(cmd)
 
 
 def fetch_distfile_from_mirror(name: str) -> None:
@@ -503,7 +508,7 @@ def fetch_distfile_from_mirror(name: str) -> None:
     the file even though we don't own it.
     """
     mirror_file = MIRROR_PATH + "/" + name
-    local_file = Path(get_distdir(), name)
+    local_file = get_distdir() / name
     cmd: Command = [GSUTIL, "cp", mirror_file, local_file]
     logging.info("Running %r", cmd)
     rc = subprocess.call(cmd)
@@ -638,9 +643,9 @@ def fetch_rust_src_from_upstream(uri: str, local_path: Path) -> None:
         )
 
 
-def get_distdir() -> str:
-    """Returns portage's distdir."""
-    return get_command_output(["portageq", "distdir"])
+def get_distdir() -> Path:
+    """Returns portage's distdir outside the chroot."""
+    return SOURCE_ROOT / ".cache/distfiles"
 
 
 def mirror_has_file(name: str) -> bool:
@@ -677,7 +682,7 @@ def mirror_rust_source(version: RustVersion) -> None:
         logging.info("%s is present on the mirror", filename)
         return
     uri = f"{RUST_SRC_BASE_URI}{filename}"
-    local_path = Path(get_distdir()) / filename
+    local_path = get_distdir() / filename
     mirror_path = f"{MIRROR_PATH}/{filename}"
     fetch_rust_src_from_upstream(uri, local_path)
     subprocess.run(
@@ -738,14 +743,14 @@ def update_virtual_rust(
 def unmerge_package_if_installed(pkgatom: str) -> None:
     """Unmerges a package if it is installed."""
     shpkg = shlex.quote(pkgatom)
-    subprocess.check_call(
+    run_in_chroot(
         [
             "sudo",
             "bash",
             "-c",
             f"! emerge --pretend --quiet --unmerge {shpkg}"
             f" || emerge --rage-clean {shpkg}",
-        ]
+        ],
     )
 
 
@@ -803,13 +808,13 @@ def prepare_uprev_to_json(
 
 def create_rust_uprev(
     rust_version: RustVersion,
-    maybe_template_version: Optional[RustVersion],
+    template_version: RustVersion,
     skip_compile: bool,
     run_step: RunStepFn,
 ) -> None:
     prepared = run_step(
         "prepare uprev",
-        lambda: prepare_uprev(rust_version, maybe_template_version),
+        lambda: prepare_uprev(rust_version, template_version),
         result_from_json=prepare_uprev_from_json,
         result_to_json=prepare_uprev_to_json,
     )
@@ -884,11 +889,11 @@ def create_rust_uprev(
     )
     run_step(
         "generate profile data for rustc",
-        lambda: pgo_rust.main(["pgo_rust", "generate"]),
+        lambda: run_in_chroot([PGO_RUST, "generate"]),
     )
     run_step(
         "upload profile data for rustc",
-        lambda: pgo_rust.main(["pgo_rust", "upload-profdata"]),
+        lambda: run_in_chroot([PGO_RUST, "upload-profdata"]),
     )
     run_step(
         "turn on profile data sources in cros-rustc.eclass",
@@ -920,7 +925,7 @@ def create_rust_uprev(
     )
 
 
-def find_rust_versions_in_chroot() -> List[Tuple[RustVersion, str]]:
+def find_rust_versions() -> List[Tuple[RustVersion, str]]:
     return [
         (RustVersion.parse_from_ebuild(x), os.path.join(RUST_PATH, x))
         for x in os.listdir(RUST_PATH)
@@ -928,8 +933,8 @@ def find_rust_versions_in_chroot() -> List[Tuple[RustVersion, str]]:
     ]
 
 
-def find_oldest_rust_version_in_chroot() -> RustVersion:
-    rust_versions = find_rust_versions_in_chroot()
+def find_oldest_rust_version() -> RustVersion:
+    rust_versions = find_rust_versions()
     if len(rust_versions) <= 1:
         raise RuntimeError("Expect to find more than one Rust versions")
     return min(rust_versions)[0]
@@ -937,7 +942,7 @@ def find_oldest_rust_version_in_chroot() -> RustVersion:
 
 def find_ebuild_for_rust_version(version: RustVersion) -> str:
     rust_ebuilds = [
-        ebuild for x, ebuild in find_rust_versions_in_chroot() if x == version
+        ebuild for x, ebuild in find_rust_versions() if x == version
     ]
     if not rust_ebuilds:
         raise ValueError(f"No Rust ebuilds found matching {version}")
@@ -965,7 +970,7 @@ def rebuild_packages(version: RustVersion):
     # Packages we modify are listed in --usepkg-exclude to ensure they
     # are built from source.
     try:
-        subprocess.check_call(
+        run_in_chroot(
             [
                 "sudo",
                 "emerge",
@@ -973,7 +978,7 @@ def rebuild_packages(version: RustVersion):
                 "--usepkg-exclude",
                 " ".join(packages),
                 f"=dev-lang/rust-{version}",
-            ]
+            ],
         )
     except:
         logging.warning(
@@ -1037,7 +1042,7 @@ def remove_rust_uprev(
     def find_desired_rust_version() -> RustVersion:
         if rust_version:
             return rust_version
-        return find_oldest_rust_version_in_chroot()
+        return find_oldest_rust_version()
 
     def find_desired_rust_version_from_json(obj: Any) -> RustVersion:
         return RustVersion(*obj)
@@ -1106,11 +1111,10 @@ def create_new_repo(rust_version: RustVersion) -> None:
     git.CreateBranch(EBUILD_PREFIX, f"rust-to-{rust_version}")
 
 
-def build_cross_compiler() -> None:
+def build_cross_compiler(template_version: RustVersion) -> None:
     # Get target triples in ebuild
-    rust_ebuild = find_ebuild_for_package("rust")
-    with open(rust_ebuild, encoding="utf-8") as f:
-        contents = f.read()
+    rust_ebuild = find_ebuild_path(RUST_PATH, "rust", template_version)
+    contents = rust_ebuild.read_text(encoding="utf-8")
 
     target_triples_re = re.compile(r"RUSTC_TARGET_TRIPLES=\(([^)]+)\)")
     m = target_triples_re.search(contents)
@@ -1130,9 +1134,9 @@ def build_cross_compiler() -> None:
     compiler_targets_to_install.append("arm-none-eabi")
 
     logging.info("Emerging cross compilers %s", compiler_targets_to_install)
-    subprocess.check_call(
+    run_in_chroot(
         ["sudo", "emerge", "-j", "-G"]
-        + [f"cross-{target}/gcc" for target in compiler_targets_to_install]
+        + [f"cross-{target}/gcc" for target in compiler_targets_to_install],
     )
 
 
@@ -1148,14 +1152,31 @@ def create_new_commit(rust_version: RustVersion) -> None:
     git.UploadChanges(EBUILD_PREFIX, f"rust-to-{rust_version}", messages)
 
 
+def run_in_chroot(cmd: Command, *args, **kwargs) -> subprocess.CompletedProcess:
+    """Runs a command in the ChromiumOS chroot.
+
+    This takes the same arguments as subprocess.run(). By default,
+    it uses check=True, encoding="utf-8". If needed, these can be
+    overridden by keyword arguments passed to run_in_chroot().
+    """
+    full_kwargs = dict(
+        {
+            "check": True,
+            "encoding": "utf-8",
+        },
+        **kwargs,
+    )
+    full_cmd = ["cros_sdk", "--"] + list(cmd)
+    logging.info("Running %s", shlex.join(str(x) for x in full_cmd))
+    # pylint: disable=subprocess-run-check
+    # (check is actually set above; it defaults to True)
+    return subprocess.run(full_cmd, *args, **full_kwargs)
+
+
 def main() -> None:
-    if not chroot.InChroot():
-        raise RuntimeError("This script must be executed inside chroot")
-
+    chroot.VerifyOutsideChroot()
     logging.basicConfig(level=logging.INFO)
-
     args = parse_commandline_args()
-
     state_file = pathlib.Path(args.state_file)
     tmp_state_file = state_file.with_suffix(".tmp")
 
@@ -1193,11 +1214,21 @@ def main() -> None:
         # If you have added more subparser_name, please also add the handlers
         # above
         assert args.subparser_name == "roll"
+
+        # Determine the template version, if not given.
+        template_version = args.template
+        if template_version is None:
+            rust_ebuild = find_ebuild_for_package("rust")
+            template_version = RustVersion.parse_from_ebuild(rust_ebuild)
+
         run_step("create new repo", lambda: create_new_repo(args.uprev))
         if not args.skip_cross_compiler:
-            run_step("build cross compiler", build_cross_compiler)
+            run_step(
+                "build cross compiler",
+                lambda: build_cross_compiler(template_version),
+            )
         create_rust_uprev(
-            args.uprev, args.template, args.skip_compile, run_step
+            args.uprev, template_version, args.skip_compile, run_step
         )
         remove_rust_uprev(args.remove, run_step)
         prepared = prepare_uprev_from_json(completed_steps["prepare uprev"])
