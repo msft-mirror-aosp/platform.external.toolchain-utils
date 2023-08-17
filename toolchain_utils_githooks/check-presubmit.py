@@ -693,24 +693,33 @@ def maybe_reexec_inside_chroot(autofix: bool, files: t.List[str]) -> None:
     os.execvp(args[0], args)
 
 
+def can_import_py_module(module: str) -> bool:
+    """Returns true if `import {module}` works."""
+    exit_code = subprocess.call(
+        ["python3", "-c", f"import {module}"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return exit_code == 0
+
+
 def ensure_pip_deps_installed() -> None:
     if not PIP_DEPENDENCIES:
         # No need to install pip if we don't have any deps.
         return
 
-    if not has_executable_on_path("pip"):
+    if not can_import_py_module("pip"):
         print("Autoinstalling `pip`...")
-        subprocess.check_call(["sudo", "emerge", "dev-python/pip"])
+        subprocess.check_call(["python", "-m", "ensurepip"])
 
     for package in PIP_DEPENDENCIES:
-        exit_code = subprocess.call(
-            ["python3", "-c", f"import {package}"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+        if can_import_py_module(package):
+            continue
+
+        print(f"Autoinstalling `{package}`...")
+        subprocess.check_call(
+            ["python", "-m", "pip", "install", "--user", package]
         )
-        if exit_code != 0:
-            print(f"Autoinstalling `{package}`...")
-            subprocess.check_call(["pip", "install", "--user", package])
 
 
 def main(argv: t.List[str]) -> int:
