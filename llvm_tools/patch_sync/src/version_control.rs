@@ -14,7 +14,7 @@ const ANDROID_LLVM_REL_PATH: &str = "toolchain/llvm_android";
 
 // Need to checkout the upstream, rather than the local clone.
 const CROS_MAIN_BRANCH: &str = "cros/main";
-const ANDROID_MAIN_BRANCH: &str = "aosp/master"; // nocheck
+const ANDROID_MAIN_BRANCH: &str = "aosp/main";
 const WORK_BRANCH_NAME: &str = "__patch_sync_tmp";
 
 /// Context struct to keep track of both ChromiumOS and Android checkouts.
