@@ -130,9 +130,7 @@ func crosCommonClangFlags() []string {
 }
 
 func crosCommonClangPostFlags() []string {
-	// Temporarily disable Wdeprecated-copy. b/191479033
 	return []string{
-		"-Wno-deprecated-copy",
 		"-Wno-unused-but-set-variable",
 		"-Wno-implicit-int-float-conversion",
 		"-Wno-string-concatenation",
