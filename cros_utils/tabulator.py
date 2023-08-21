@@ -67,13 +67,44 @@ import getpass
 import math
 import statistics
 import sys
+from typing import Tuple, Union
 
 from cros_utils import misc
 from cros_utils.email_sender import EmailSender
+import numpy as np
 
-# TODO(crbug.com/980719): Drop scipy in the future.
-# pylint: disable=import-error
-import scipy
+
+def _ttest_ind(
+    sample: Union[np.ndarray, list], baseline: Union[np.ndarray, list]
+) -> Tuple[float, float]:
+    """Independent, two-sided student's T test.
+
+    Reimplementation of scipy.stats.ttest_ind.
+    """
+    if isinstance(sample, list):
+        sample = np.asarray(sample)
+    if isinstance(baseline, list):
+        baseline = np.asarray(baseline)
+    diff = np.mean(sample) - np.mean(baseline)
+    diff_stderr = np.sqrt(sample.var(ddof=1) + baseline.var(ddof=1))
+    t_value = np.mean(diff) / (diff_stderr / np.sqrt(len(sample)))
+    samples = _sample_student_t(len(sample), 1000)
+    # Assuming two-sided student's t
+    if t_value < 0:
+        # Lower tail
+        return t_value, 2 * np.sum(samples < t_value) / len(samples)
+    # Upper tail
+    return t_value, 2 * np.sum(samples > t_value) / len(samples)
+
+
+def _sample_student_t(
+    dof: float, num_samples: int
+) -> np.ndarray:
+    # In theory this probably should be memoized. However,
+    # that's a lot of data points to store in memory for
+    # the lifetime of the program?
+    sample_generator = np.random.default_rng()
+    return sample_generator.standard_t(dof, num_samples)
 
 
 def _AllFloat(values):
@@ -141,6 +172,15 @@ class TableGenerator(object):
         values = _StripNone(values)
         if _AllFloat(values):
             values = _GetFloats(values)
+        values = [
+            float(v)
+            for v in values
+            if isinstance(v, float)
+            or isinstance(v, int)
+            or v.lower() in ("nan", "inf")
+        ]
+        if not values:
+            return float("nan")
         return max(values)
 
     def _GetLowestValue(self, key):
@@ -152,6 +192,15 @@ class TableGenerator(object):
         values = _StripNone(values)
         if _AllFloat(values):
             values = _GetFloats(values)
+        values = [
+            float(v)
+            for v in values
+            if isinstance(v, float)
+            or isinstance(v, int)
+            or v.lower() in ("nan", "inf")
+        ]
+        if not values:
+            return float("nan")
         return min(values)
 
     def _SortKeys(self, keys):
@@ -415,7 +464,7 @@ class SamplesTableGenerator(TableGenerator):
                 # weighted_samples we added up.
                 one_dict = {}
                 if run:
-                    one_dict[u"weighted_samples"] = [run, u"samples"]
+                    one_dict["weighted_samples"] = [run, "samples"]
                     one_dict["retval"] = 0
                 else:
                     one_dict["retval"] = 1
@@ -682,7 +731,7 @@ class PValueResult(ComparisonResult):
         if len(values) < 2 or len(baseline_values) < 2:
             cell.value = float("nan")
             return
-        _, cell.value = scipy.stats.ttest_ind(values, baseline_values)
+        _, cell.value = _ttest_ind(values, baseline_values)
 
     def _ComputeString(self, cell, values, baseline_values):
         return float("nan")
@@ -940,7 +989,7 @@ class StorageFormat(Format):
             current += 1
 
         if current:
-            divisor = base ** current
+            divisor = base**current
             cell.string_value = "%1.1f%s" % (
                 (v / divisor),
                 suffices[current - 1],

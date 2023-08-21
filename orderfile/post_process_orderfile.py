@@ -59,7 +59,13 @@ def run(c3_ordered_stream, chrome_nm_stream, output_stream):
     head_marker = "chrome_begin_ordered_code"
     tail_marker = "chrome_end_ordered_code"
 
-    c3_ordered_syms = [x.strip() for x in c3_ordered_stream.readlines()]
+    # Filter out $symbols which can come up in the orderfile as well.
+    # Linker ignores the whole orderfile if it finds $symb.
+    c3_ordered_syms = [
+        x.strip()
+        for x in c3_ordered_stream.readlines()
+        if not x.strip().startswith("$")
+    ]
     all_chrome_syms = set(_parse_nm_output(chrome_nm_stream))
     # Sort by name, so it's predictable. Otherwise, these should all land in the
     # same hugepage anyway, so order doesn't matter as much.

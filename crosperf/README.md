@@ -3,8 +3,7 @@
 To use these experiment files, replace the board, remote and images
 placeholders and run crosperf on them.
 
-Further information about crosperf:
-https://sites.google.com/a/google.com/chromeos-toolchain-team-home2/home/team-tools-and-scripts/crosperf-cros-image-performance-comparison-tool
+Further information about crosperf: https://goto.google.com/crostc-crosperf
 
 The final experiment file should look something like the following (but with
 different actual values for the fields):

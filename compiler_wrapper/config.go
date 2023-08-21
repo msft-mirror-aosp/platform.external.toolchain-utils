@@ -25,17 +25,18 @@ type config struct {
 	// Flags to add to clang only, AFTER user flags (cannot be overridden
 	// by the user).
 	clangPostFlags []string
+	// Flags to be used only for C++ (not used to compile C code)
+	cppFlags []string
 	// Toolchain root path relative to the wrapper binary.
 	clangRootRelPath string
 	gccRootRelPath   string
 	// Directory to store errors that were prevented with -Wno-error.
 	newWarningsDir string
-	// Directory to store nits in when using `WITH_TIDY=tricium`.
-	triciumNitsDir string
 	// Directory to store crash artifacts in.
 	crashArtifactsDir string
 	// Version. Only exposed via -print-config.
-	version string
+	version    string
+	isHardened bool
 }
 
 // Version can be set via a linker flag.
@@ -113,32 +114,47 @@ func crosCommonClangFlags() []string {
 		"-Qunused-arguments",
 		"-Werror=poison-system-directories",
 		"-Wno-compound-token-split-by-macro",
+		"-Wno-deprecated-builtins",
 		"-Wno-deprecated-declarations",
+		"-Wno-enum-constexpr-conversion",
 		"-Wno-error=implicit-function-declaration",
 		"-Wno-error=implicit-int",
 		"-Wno-final-dtor-non-final-class",
+		"-Wno-single-bit-bitfield-constant-conversion",
 		"-Wno-tautological-constant-compare",
 		"-Wno-tautological-unsigned-enum-zero-compare",
 		"-Wno-unknown-warning-option",
 		"-fdebug-default-version=5",
-		"-fexperimental-new-pass-manager",
+		"-Wno-int-conversion",
+		"-Wno-incompatible-function-pointer-types",
+		"-D_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES",
+	}
+}
+
+func crosCommonCppFlags() []string {
+	return []string{
+		"-std=gnu++14",
 	}
 }
 
 func crosCommonClangPostFlags() []string {
 	// Temporarily disable Wdeprecated-copy. b/191479033
+	// Temporarily disabled Wno-array-parameter. b/262076232
 	return []string{
+		"-Wno-array-parameter",
 		"-Wno-compound-token-split-by-space",
 		"-Wno-deprecated-copy",
 		"-Wno-unused-but-set-variable",
 		"-Wno-implicit-int-float-conversion",
 		"-Wno-string-concatenation",
+		"-Wno-gnu-offsetof-extensions",
 	}
 }
 
 // Full hardening.
 // Temporarily disable function splitting because of chromium:434751.
 var crosHardenedConfig = config{
+	isHardened:       true,
 	clangRootRelPath: "../..",
 	gccRootRelPath:   "../../../../..",
 	// Pass "-fcommon" till the packages are fixed to work with new clang/gcc
@@ -146,7 +162,6 @@ var crosHardenedConfig = config{
 	commonFlags: []string{
 		"-fcommon",
 		"-fstack-protector-strong",
-		"-D_FORTIFY_SOURCE=2",
 		"-fno-omit-frame-pointer",
 	},
 	gccFlags: []string{
@@ -165,11 +180,10 @@ var crosHardenedConfig = config{
 		"-fno-addrsig",
 		"-fuse-ld=lld",
 		"-ftrivial-auto-var-init=zero",
-		"-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang",
 	),
 	clangPostFlags:    crosCommonClangPostFlags(),
-	newWarningsDir:    "/tmp/fatal_clang_warnings",
-	triciumNitsDir:    "/tmp/linting_output/clang-tidy",
+	cppFlags:          crosCommonCppFlags(),
+	newWarningsDir:    "fatal_clang_warnings",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
 }
 
@@ -190,8 +204,8 @@ var crosNonHardenedConfig = config{
 		"-Wno-section",
 	),
 	clangPostFlags:    crosCommonClangPostFlags(),
-	newWarningsDir:    "/tmp/fatal_clang_warnings",
-	triciumNitsDir:    "/tmp/linting_output/clang-tidy",
+	cppFlags:          crosCommonCppFlags(),
+	newWarningsDir:    "fatal_clang_warnings",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
 }
 
@@ -220,8 +234,8 @@ var crosHostConfig = config{
 	),
 	// Temporarily disable Wdeprecated-copy. b/191479033
 	clangPostFlags:    crosCommonClangPostFlags(),
-	newWarningsDir:    "/tmp/fatal_clang_warnings",
-	triciumNitsDir:    "/tmp/linting_output/clang-tidy",
+	cppFlags:          crosCommonCppFlags(),
+	newWarningsDir:    "fatal_clang_warnings",
 	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
 }
 
@@ -234,7 +248,7 @@ var androidConfig = config{
 	gccFlags:          []string{},
 	clangFlags:        []string{},
 	clangPostFlags:    []string{},
+	cppFlags:          []string{},
 	newWarningsDir:    "",
-	triciumNitsDir:    "",
 	crashArtifactsDir: "",
 }

@@ -8,8 +8,10 @@
 
 import ast
 import os
+import shlex
 
 from cros_utils import command_executer
+from cros_utils import misc
 import test_flag
 
 
@@ -79,7 +81,9 @@ class ImageDownloader(object):
             )
 
         # Make sure the directory for downloading the image exists.
-        download_path = os.path.join(chromeos_root, "chroot/tmp", build_id)
+        download_path = misc.GetOutsideChrootPath(
+            chromeos_root, os.path.join("/tmp", build_id)
+        )
         image_path = os.path.join(download_path, "chromiumos_test_image.bin")
         if not os.path.exists(download_path):
             os.makedirs(download_path)
@@ -105,18 +109,19 @@ class ImageDownloader(object):
 
     def UncompressImage(self, chromeos_root, build_id):
         # Check to see if the file has already been uncompresssed, etc.
-        if os.path.exists(
+        download_path = misc.GetOutsideChrootPath(
+            chromeos_root,
             os.path.join(
-                chromeos_root,
-                "chroot/tmp",
+                "/tmp",
                 build_id,
-                "chromiumos_test_image.bin",
-            )
+            ),
+        )
+        if os.path.exists(
+            os.path.join(download_path, "chromiumos_test_image.bin")
         ):
             return
 
         # Uncompress and untar the downloaded image.
-        download_path = os.path.join(chromeos_root, "chroot/tmp", build_id)
         command = (
             "cd %s ; tar -Jxf chromiumos_test_image.tar.xz " % download_path
         )
@@ -178,7 +183,9 @@ class ImageDownloader(object):
             )
 
         # Make sure the directory for downloading the package exists.
-        download_path = os.path.join(chromeos_root, "chroot/tmp", build_id)
+        download_path = misc.GetOutsideChrootPath(
+            chromeos_root, os.path.join("/tmp", build_id)
+        )
         package_path = os.path.join(download_path, package_file_name)
         if not os.path.exists(download_path):
             os.makedirs(download_path)
@@ -204,7 +211,9 @@ class ImageDownloader(object):
         self, chromeos_root, build_id, package_file_name, uncompress_cmd
     ):
         # Uncompress file
-        download_path = os.path.join(chromeos_root, "chroot/tmp", build_id)
+        download_path = misc.GetOutsideChrootPath(
+            chromeos_root, os.path.join("/tmp", build_id)
+        )
         command = "cd %s ; %s %s" % (
             download_path,
             uncompress_cmd,
@@ -252,13 +261,13 @@ class ImageDownloader(object):
         autotest_server_package_name = "autotest_server_package.tar.bz2"
         autotest_control_files_name = "control_files.tar"
 
-        download_path = os.path.join(chromeos_root, "chroot/tmp", build_id)
+        download_path = misc.GetOutsideChrootPath(
+            chromeos_root, os.path.join("/tmp", build_id)
+        )
         # Autotest directory relative path wrt chroot
         autotest_rel_path = os.path.join("/tmp", build_id, "autotest_files")
         # Absolute Path to download files
-        autotest_path = os.path.join(
-            chromeos_root, "chroot/tmp", build_id, "autotest_files"
-        )
+        autotest_path = os.path.join(download_path, "autotest_files")
 
         if not os.path.exists(autotest_path):
             # Quickly verify if the files are present on server
@@ -315,12 +324,14 @@ class ImageDownloader(object):
         # Download autest package files (3 files)
         debug_archive_name = "debug.tgz"
 
-        download_path = os.path.join(chromeos_root, "chroot/tmp", build_id)
+        download_path = misc.GetOutsideChrootPath(
+            chromeos_root, os.path.join("/tmp", build_id)
+        )
         # Debug directory relative path wrt chroot
         debug_rel_path = os.path.join("/tmp", build_id, "debug_files")
         # Debug path to download files
-        debug_path = os.path.join(
-            chromeos_root, "chroot/tmp", build_id, "debug_files"
+        debug_path = misc.GetOutsideChrootPath(
+            chromeos_root, os.path.join("/tmp", build_id, "debug_files")
         )
 
         if not os.path.exists(debug_path):
@@ -338,15 +349,11 @@ class ImageDownloader(object):
             # File exists on server, download and uncompress it
             self.DownloadSingleFile(chromeos_root, build_id, debug_archive_name)
 
-            self.UncompressSingleFile(
-                chromeos_root, build_id, debug_archive_name, "tar -xf "
-            )
             # Extract and move debug files into the proper location.
-            debug_dir = "debug_files/usr/lib"
-            command = "cd %s ; mkdir -p %s; mv debug %s" % (
-                download_path,
-                debug_dir,
-                debug_dir,
+            debug_dir = "debug_files/usr/lib/debug"
+            command = (
+                f"cd {shlex.quote(download_path)}; "
+                f"mkdir -p {shlex.quote(debug_dir)}"
             )
             if self.log_level != "verbose":
                 self._logger.LogOutput("CMD: %s" % command)
@@ -357,6 +364,12 @@ class ImageDownloader(object):
                     "Could not create directory %s"
                     % os.path.join(debug_dir, "debug")
                 )
+            self.UncompressSingleFile(
+                chromeos_root,
+                build_id,
+                debug_archive_name,
+                f"tar -C {shlex.quote(debug_dir)} -xf ",
+            )
 
         return debug_rel_path
 

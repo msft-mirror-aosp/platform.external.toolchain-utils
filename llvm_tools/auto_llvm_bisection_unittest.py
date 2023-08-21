@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -13,7 +12,7 @@ import subprocess
 import time
 import traceback
 import unittest
-import unittest.mock as mock
+from unittest import mock
 
 import auto_llvm_bisection
 import chroot
@@ -25,6 +24,7 @@ import update_tryjob_status
 class AutoLLVMBisectionTest(unittest.TestCase):
     """Unittests for auto bisection of LLVM."""
 
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     @mock.patch.object(
         llvm_bisection,
@@ -53,6 +53,7 @@ class AutoLLVMBisectionTest(unittest.TestCase):
         mock_sleep,
         mock_get_args,
         mock_outside_chroot,
+        mock_chromeos_root,
     ):
 
         mock_isfile.side_effect = [False, False, True, True]
@@ -76,8 +77,8 @@ class AutoLLVMBisectionTest(unittest.TestCase):
             update_tryjob_status.TryjobStatus.GOOD.value
         )
 
-        # Verify the excpetion is raised when successfully found the bad revision.
-        # Uses `sys.exit(0)` to indicate success.
+        # Verify the excpetion is raised when successfully found the bad
+        # revision. Uses `sys.exit(0)` to indicate success.
         with self.assertRaises(SystemExit) as err:
             auto_llvm_bisection.main()
 
@@ -90,6 +91,7 @@ class AutoLLVMBisectionTest(unittest.TestCase):
         mock_traceback.assert_called_once()
         mock_sleep.assert_called_once()
 
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     @mock.patch.object(time, "sleep")
     @mock.patch.object(traceback, "print_exc")
@@ -108,6 +110,7 @@ class AutoLLVMBisectionTest(unittest.TestCase):
         mock_traceback,
         mock_sleep,
         mock_outside_chroot,
+        mock_chromeos_root,
     ):
 
         mock_isfile.return_value = False
@@ -123,6 +126,7 @@ class AutoLLVMBisectionTest(unittest.TestCase):
 
         self.assertEqual(err.exception.code, "Unable to continue bisection.")
 
+        mock_chromeos_root.assert_called_once()
         mock_outside_chroot.assert_called_once()
         mock_get_args.assert_called_once()
         self.assertEqual(mock_isfile.call_count, 2)
@@ -130,6 +134,7 @@ class AutoLLVMBisectionTest(unittest.TestCase):
         self.assertEqual(mock_traceback.call_count, 3)
         self.assertEqual(mock_sleep.call_count, 2)
 
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     @mock.patch.object(
         llvm_bisection,
@@ -153,6 +158,7 @@ class AutoLLVMBisectionTest(unittest.TestCase):
         mock_time,
         mock_get_args,
         mock_outside_chroot,
+        mock_chromeos_root,
     ):
 
         # Simulate behavior of `time.time()` for time passed.
@@ -210,8 +216,6 @@ class AutoLLVMBisectionTest(unittest.TestCase):
 
         mock_chroot_command.assert_called_once_with(
             [
-                "cros_sdk",
-                "--",
                 "cros",
                 "buildresult",
                 "--buildbucket-id",
@@ -234,8 +238,6 @@ class AutoLLVMBisectionTest(unittest.TestCase):
         auto_llvm_bisection.GetBuildResult(chroot_path, buildbucket_id)
         mock_chroot_command.assert_called_once_with(
             [
-                "cros_sdk",
-                "--",
                 "cros",
                 "buildresult",
                 "--buildbucket-id",
@@ -258,8 +260,8 @@ class AutoLLVMBisectionTest(unittest.TestCase):
         tryjob_contents = {buildbucket_id: {"status": invalid_build_status}}
         mock_chroot_command.return_value = json.dumps(tryjob_contents)
 
-        # Verify the exception is raised when the return value of `cros buildresult`
-        # is not in the `builder_status_mapping`.
+        # Verify an exception is raised when the return value of `cros
+        # buildresult` is not in the `builder_status_mapping`.
         with self.assertRaises(ValueError) as err:
             auto_llvm_bisection.GetBuildResult(chroot_path, buildbucket_id)
 
@@ -271,8 +273,6 @@ class AutoLLVMBisectionTest(unittest.TestCase):
 
         mock_chroot_command.assert_called_once_with(
             [
-                "cros_sdk",
-                "--",
                 "cros",
                 "buildresult",
                 "--buildbucket-id",

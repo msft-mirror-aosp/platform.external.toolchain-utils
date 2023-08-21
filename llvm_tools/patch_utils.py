@@ -12,7 +12,9 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import Any, Dict, IO, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, IO, Iterable, List, Optional, Tuple
+
+import atomic_write_file
 
 
 CHECKED_FILE_RE = re.compile(r"^checking file\s+(.*)$")
@@ -20,38 +22,6 @@ HUNK_FAILED_RE = re.compile(r"^Hunk #(\d+) FAILED at.*")
 HUNK_HEADER_RE = re.compile(r"^@@\s+-(\d+),(\d+)\s+\+(\d+),(\d+)\s+@@")
 HUNK_END_RE = re.compile(r"^--\s*$")
 PATCH_SUBFILE_HEADER_RE = re.compile(r"^\+\+\+ [ab]/(.*)$")
-
-
-@contextlib.contextmanager
-def atomic_write(fp: Union[Path, str], mode="w", *args, **kwargs):
-    """Write to a filepath atomically.
-
-    This works by a temp file swap, created with a .tmp suffix in
-    the same directory briefly until being renamed to the desired
-    filepath.
-
-    Args:
-      fp: Filepath to open.
-      mode: File mode; can be 'w', 'wb'. Default 'w'.
-      *args: Passed to Path.open as nargs.
-      **kwargs: Passed to Path.open as kwargs.
-
-    Raises:
-      ValueError when the mode is invalid.
-    """
-    if isinstance(fp, str):
-        fp = Path(fp)
-    if mode not in ("w", "wb"):
-        raise ValueError(f"mode {mode} not accepted")
-    temp_fp = fp.with_suffix(fp.suffix + ".tmp")
-    try:
-        with temp_fp.open(mode, *args, **kwargs) as f:
-            yield f
-    except:
-        if temp_fp.is_file():
-            temp_fp.unlink()
-        raise
-    temp_fp.rename(fp)
 
 
 @dataclasses.dataclass
@@ -260,6 +230,7 @@ class PatchEntry:
             "-d",
             root_dir.absolute(),
             "-f",
+            "-E",
             "-p1",
             "--no-backup-if-mismatch",
             "-i",
@@ -322,6 +293,16 @@ def json_to_patch_entries(workdir: Path, json_fd: IO[str]) -> List[PatchEntry]:
       >>> patch_entries = json_to_patch_entries(Path(), f)
     """
     return [PatchEntry.from_dict(workdir, d) for d in json.load(json_fd)]
+
+
+def json_str_to_patch_entries(workdir: Path, json_str: str) -> List[PatchEntry]:
+    """Convert a json IO object to List[PatchEntry].
+
+    Examples:
+      >>> f = open('PATCHES.json').read()
+      >>> patch_entries = json_str_to_patch_entries(Path(), f)
+    """
+    return [PatchEntry.from_dict(workdir, d) for d in json.loads(json_str)]
 
 
 def _print_failed_patch(pe: PatchEntry, failed_hunks: Dict[str, List[Hunk]]):
@@ -462,11 +443,25 @@ def git_clean_context(git_root_dir: Path):
         clean_src_tree(git_root_dir)
 
 
-def _write_json_changes(patches: List[Dict[str, Any]], file_io: IO[str]):
+def _write_json_changes(
+    patches: List[Dict[str, Any]], file_io: IO[str], indent_len=2
+):
     """Write JSON changes to file, does not acquire new file lock."""
-    json.dump(patches, file_io, indent=4, separators=(",", ": "))
+    json.dump(patches, file_io, indent=indent_len, separators=(",", ": "))
     # Need to add a newline as json.dump omits it.
     file_io.write("\n")
+
+
+def predict_indent(patches_lines: List[str]) -> int:
+    """Given file lines, predict and return the max indentation unit."""
+    indents = [len(x) - len(x.lstrip(" ")) for x in patches_lines]
+    if all(x % 4 == 0 for x in indents):
+        return 4
+    if all(x % 2 == 0 for x in indents):
+        return 2
+    if all(x == 0 for x in indents):
+        return 0
+    return 1
 
 
 def update_version_ranges(
@@ -488,15 +483,19 @@ def update_version_ranges(
       PatchInfo for applied and disabled patches.
     """
     with patches_json_fp.open(encoding="utf-8") as f:
-        patch_entries = json_to_patch_entries(
-            patches_json_fp.parent,
-            f,
-        )
+        contents = f.read()
+    indent_len = predict_indent(contents.splitlines())
+    patch_entries = json_str_to_patch_entries(
+        patches_json_fp.parent,
+        contents,
+    )
     modified_entries, applied_patches = update_version_ranges_with_entries(
         svn_version, llvm_src_dir, patch_entries
     )
-    with atomic_write(patches_json_fp, encoding="utf-8") as f:
-        _write_json_changes([p.to_dict() for p in patch_entries], f)
+    with atomic_write_file.atomic_write(patches_json_fp, encoding="utf-8") as f:
+        _write_json_changes(
+            [p.to_dict() for p in patch_entries], f, indent_len=indent_len
+        )
     for entry in modified_entries:
         print(
             f"Stopped applying {entry.rel_patch_path} ({entry.title()}) "
@@ -532,7 +531,9 @@ def update_version_ranges_with_entries(
     """
     modified_entries: List[PatchEntry] = []
     applied_patches: List[PatchEntry] = []
-    active_patches = (pe for pe in patch_entries if not pe.is_old(svn_version))
+    active_patches = (
+        pe for pe in patch_entries if pe.can_patch_version(svn_version)
+    )
     with git_clean_context(llvm_src_dir):
         for pe in active_patches:
             test_result = pe.test_apply(llvm_src_dir)
@@ -570,14 +571,16 @@ def remove_old_patches(
       PatchInfo for modified patches.
     """
     with patches_json_fp.open(encoding="utf-8") as f:
-        patches_list = json.load(f)
-    patch_entries = (
-        PatchEntry.from_dict(llvm_src_dir, elem) for elem in patches_list
+        contents = f.read()
+    indent_len = predict_indent(contents.splitlines())
+    patch_entries = json_str_to_patch_entries(
+        llvm_src_dir,
+        contents,
     )
     oldness = [(entry, entry.is_old(svn_version)) for entry in patch_entries]
     filtered_entries = [entry.to_dict() for entry, old in oldness if not old]
-    with atomic_write(patches_json_fp, encoding="utf-8") as f:
-        _write_json_changes(filtered_entries, f)
+    with atomic_write_file.atomic_write(patches_json_fp, encoding="utf-8") as f:
+        _write_json_changes(filtered_entries, f, indent_len=indent_len)
     removed_entries = [entry for entry, old in oldness if old]
     plural_patches = "patch" if len(removed_entries) == 1 else "patches"
     print(f"Removed {len(removed_entries)} old {plural_patches}:")

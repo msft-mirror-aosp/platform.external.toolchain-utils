@@ -221,6 +221,7 @@ class MachineManager(object):
         locks_dir,
         cmd_exec=None,
         lgr=None,
+        keep_stateful: bool = False,
     ):
         self._lock = threading.RLock()
         self._all_machines = []
@@ -233,6 +234,7 @@ class MachineManager(object):
         self.acquire_timeout = acquire_timeout
         self.log_level = log_level
         self.locks_dir = locks_dir
+        self.keep_stateful = keep_stateful
         self.ce = cmd_exec or command_executer.GetCommandExecuter(
             log_level=self.log_level
         )
@@ -282,14 +284,16 @@ class MachineManager(object):
         image_chromeos_args = [
             image_chromeos.__file__,
             "--no_lock",
-            "--chromeos_root=%s" % chromeos_root,
-            "--image=%s" % label.chromeos_image,
-            "--image_args=%s" % label.image_args,
-            "--remote=%s" % machine.name,
-            "--logging_level=%s" % self.log_level,
+            f"--chromeos_root={chromeos_root}",
+            f"--image={label.chromeos_image}",
+            f"--image_args={label.image_args}",
+            f"--remote={machine.name}",
+            f"--logging_level={self.log_level}",
         ]
         if label.board:
-            image_chromeos_args.append("--board=%s" % label.board)
+            image_chromeos_args.append(f"--board={label.board}")
+        if self.keep_stateful:
+            image_chromeos_args.append("--keep_stateful")
 
         # Currently can't image two machines at once.
         # So have to serialized on this lock.
@@ -729,9 +733,20 @@ power management:
 class MockMachineManager(MachineManager):
     """Mock machine manager class."""
 
-    def __init__(self, chromeos_root, acquire_timeout, log_level, locks_dir):
+    def __init__(
+        self,
+        chromeos_root,
+        acquire_timeout,
+        log_level,
+        locks_dir,
+        keep_stateful: bool = False,
+    ):
         super(MockMachineManager, self).__init__(
-            chromeos_root, acquire_timeout, log_level, locks_dir
+            chromeos_root,
+            acquire_timeout,
+            log_level,
+            locks_dir,
+            keep_stateful=keep_stateful,
         )
 
     def _TryToLockMachine(self, cros_machine):
