@@ -98,7 +98,8 @@ func calcClangTidyInvocation(env env, clangCmd *command, cSrcFile string, tidyFl
 	}, nil
 }
 
-func runClangTidyForTricium(env env, clangCmd *command, cSrcFile, fixesDir string, extraTidyFlags []string, crashArtifactsDir string) error {
+func runClangTidyForTricium(env env, clangCmd *command, cSrcFile string, extraTidyFlags []string, crashArtifactsDir string) error {
+	fixesDir := filepath.Join(getCompilerArtifactsDir(env), "linting-output", "clang-tidy")
 	if err := os.MkdirAll(fixesDir, 0777); err != nil {
 		return fmt.Errorf("creating fixes directory at %q: %v", fixesDir, err)
 	}
@@ -229,13 +230,4 @@ func runClangTidy(env env, clangCmd *command, cSrcFile string, extraTidyFlags []
 		fmt.Fprint(env.stderr(), "clang-tidy failed")
 	}
 	return err
-}
-
-func hasAtLeastOneSuffix(s string, suffixes []string) bool {
-	for _, suffix := range suffixes {
-		if strings.HasSuffix(s, suffix) {
-			return true
-		}
-	}
-	return false
 }

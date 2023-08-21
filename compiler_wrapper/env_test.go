@@ -226,6 +226,9 @@ func TestNewProcessEnvResolvesPwdAwayProperly(t *testing.T) {
 	os.Unsetenv(envPwd)
 
 	initialWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed getting working directory: %v", err)
+	}
 	if initialWd == "/proc/self/cwd" {
 		t.Fatalf("Working directory should never be %q when env is unset", initialWd)
 	}

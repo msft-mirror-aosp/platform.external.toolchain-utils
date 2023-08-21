@@ -11,6 +11,7 @@
 import io
 import os
 import pickle
+import re
 import shutil
 import tempfile
 import unittest
@@ -449,6 +450,16 @@ class MockResult(Result):
         return keyvals
 
 
+class RegexMatcher:
+    """A regex matcher, for passing to mocks."""
+
+    def __init__(self, regex):
+        self._regex = re.compile(regex)
+
+    def __eq__(self, string):
+        return self._regex.search(string) is not None
+
+
 class ResultTest(unittest.TestCase):
     """Result test class."""
 
@@ -490,7 +501,9 @@ class ResultTest(unittest.TestCase):
             None,
         )
 
-    def testCreateFromRun(self):
+    @mock.patch.object(os.path, "exists")
+    def testCreateFromRun(self, mock_path_exists):
+        mock_path_exists.side_effect = lambda x: x != "/etc/cros_chroot_version"
         result = MockResult.CreateFromRun(
             logger.GetLogger(),
             "average",
@@ -508,7 +521,7 @@ class ResultTest(unittest.TestCase):
         )
         self.assertEqual(
             result.results_dir,
-            "/tmp/chroot/tmp/test_that.PO1234567/platform_LibCBench",
+            RegexMatcher("/tmp/.*tmp/test_that.PO1234567/platform_LibCBench"),
         )
         self.assertEqual(result.retval, 0)
 
@@ -517,12 +530,12 @@ class ResultTest(unittest.TestCase):
             self.mock_logger, self.mock_label, "average", self.mock_cmd_exec
         )
         self.result.chromeos_root = "/tmp/chromeos"
+        self.orig_exists = os.path.exists
 
     @mock.patch.object(os.path, "isdir")
     @mock.patch.object(command_executer.CommandExecuter, "RunCommand")
     @mock.patch.object(command_executer.CommandExecuter, "CopyFiles")
     def test_copy_files_to(self, mock_copyfiles, mock_runcmd, mock_isdir):
-
         files = ["src_file_1", "src_file_2", "src_file_3"]
         dest_dir = "/tmp/test"
         self.mock_cmd_exec.RunCommand = mock_runcmd
@@ -614,118 +627,118 @@ class ResultTest(unittest.TestCase):
         self.assertEqual(
             kv_dict2,
             {
-                u"Box2D__Box2D": 4775,
-                u"Mandreel__Mandreel": 6620,
-                u"Gameboy__Gameboy": 9901,
-                u"Crypto__Crypto": 8737,
-                u"telemetry_page_measurement_results__num_errored": 0,
-                u"telemetry_page_measurement_results__num_failed": 0,
-                u"PdfJS__PdfJS": 6455,
-                u"Total__Score": 7918,
-                u"EarleyBoyer__EarleyBoyer": 14340,
-                u"MandreelLatency__MandreelLatency": 5188,
-                u"CodeLoad__CodeLoad": 6271,
-                u"DeltaBlue__DeltaBlue": 14401,
-                u"Typescript__Typescript": 9815,
-                u"SplayLatency__SplayLatency": 7653,
-                u"zlib__zlib": 16094,
-                u"Richards__Richards": 10358,
-                u"RegExp__RegExp": 1765,
-                u"NavierStokes__NavierStokes": 9815,
-                u"Splay__Splay": 4425,
-                u"RayTrace__RayTrace": 16600,
+                "Box2D__Box2D": 4775,
+                "Mandreel__Mandreel": 6620,
+                "Gameboy__Gameboy": 9901,
+                "Crypto__Crypto": 8737,
+                "telemetry_page_measurement_results__num_errored": 0,
+                "telemetry_page_measurement_results__num_failed": 0,
+                "PdfJS__PdfJS": 6455,
+                "Total__Score": 7918,
+                "EarleyBoyer__EarleyBoyer": 14340,
+                "MandreelLatency__MandreelLatency": 5188,
+                "CodeLoad__CodeLoad": 6271,
+                "DeltaBlue__DeltaBlue": 14401,
+                "Typescript__Typescript": 9815,
+                "SplayLatency__SplayLatency": 7653,
+                "zlib__zlib": 16094,
+                "Richards__Richards": 10358,
+                "RegExp__RegExp": 1765,
+                "NavierStokes__NavierStokes": 9815,
+                "Splay__Splay": 4425,
+                "RayTrace__RayTrace": 16600,
             },
         )
         self.assertEqual(
             udict,
             {
-                u"Box2D__Box2D": u"score",
-                u"Mandreel__Mandreel": u"score",
-                u"Gameboy__Gameboy": u"score",
-                u"Crypto__Crypto": u"score",
-                u"telemetry_page_measurement_results__num_errored": u"count",
-                u"telemetry_page_measurement_results__num_failed": u"count",
-                u"PdfJS__PdfJS": u"score",
-                u"Total__Score": u"score",
-                u"EarleyBoyer__EarleyBoyer": u"score",
-                u"MandreelLatency__MandreelLatency": u"score",
-                u"CodeLoad__CodeLoad": u"score",
-                u"DeltaBlue__DeltaBlue": u"score",
-                u"Typescript__Typescript": u"score",
-                u"SplayLatency__SplayLatency": u"score",
-                u"zlib__zlib": u"score",
-                u"Richards__Richards": u"score",
-                u"RegExp__RegExp": u"score",
-                u"NavierStokes__NavierStokes": u"score",
-                u"Splay__Splay": u"score",
-                u"RayTrace__RayTrace": u"score",
+                "Box2D__Box2D": "score",
+                "Mandreel__Mandreel": "score",
+                "Gameboy__Gameboy": "score",
+                "Crypto__Crypto": "score",
+                "telemetry_page_measurement_results__num_errored": "count",
+                "telemetry_page_measurement_results__num_failed": "count",
+                "PdfJS__PdfJS": "score",
+                "Total__Score": "score",
+                "EarleyBoyer__EarleyBoyer": "score",
+                "MandreelLatency__MandreelLatency": "score",
+                "CodeLoad__CodeLoad": "score",
+                "DeltaBlue__DeltaBlue": "score",
+                "Typescript__Typescript": "score",
+                "SplayLatency__SplayLatency": "score",
+                "zlib__zlib": "score",
+                "Richards__Richards": "score",
+                "RegExp__RegExp": "score",
+                "NavierStokes__NavierStokes": "score",
+                "Splay__Splay": "score",
+                "RayTrace__RayTrace": "score",
             },
         )
 
     def test_append_telemetry_units(self):
         kv_dict = {
-            u"Box2D__Box2D": 4775,
-            u"Mandreel__Mandreel": 6620,
-            u"Gameboy__Gameboy": 9901,
-            u"Crypto__Crypto": 8737,
-            u"PdfJS__PdfJS": 6455,
-            u"Total__Score": 7918,
-            u"EarleyBoyer__EarleyBoyer": 14340,
-            u"MandreelLatency__MandreelLatency": 5188,
-            u"CodeLoad__CodeLoad": 6271,
-            u"DeltaBlue__DeltaBlue": 14401,
-            u"Typescript__Typescript": 9815,
-            u"SplayLatency__SplayLatency": 7653,
-            u"zlib__zlib": 16094,
-            u"Richards__Richards": 10358,
-            u"RegExp__RegExp": 1765,
-            u"NavierStokes__NavierStokes": 9815,
-            u"Splay__Splay": 4425,
-            u"RayTrace__RayTrace": 16600,
+            "Box2D__Box2D": 4775,
+            "Mandreel__Mandreel": 6620,
+            "Gameboy__Gameboy": 9901,
+            "Crypto__Crypto": 8737,
+            "PdfJS__PdfJS": 6455,
+            "Total__Score": 7918,
+            "EarleyBoyer__EarleyBoyer": 14340,
+            "MandreelLatency__MandreelLatency": 5188,
+            "CodeLoad__CodeLoad": 6271,
+            "DeltaBlue__DeltaBlue": 14401,
+            "Typescript__Typescript": 9815,
+            "SplayLatency__SplayLatency": 7653,
+            "zlib__zlib": 16094,
+            "Richards__Richards": 10358,
+            "RegExp__RegExp": 1765,
+            "NavierStokes__NavierStokes": 9815,
+            "Splay__Splay": 4425,
+            "RayTrace__RayTrace": 16600,
         }
         units_dict = {
-            u"Box2D__Box2D": u"score",
-            u"Mandreel__Mandreel": u"score",
-            u"Gameboy__Gameboy": u"score",
-            u"Crypto__Crypto": u"score",
-            u"PdfJS__PdfJS": u"score",
-            u"Total__Score": u"score",
-            u"EarleyBoyer__EarleyBoyer": u"score",
-            u"MandreelLatency__MandreelLatency": u"score",
-            u"CodeLoad__CodeLoad": u"score",
-            u"DeltaBlue__DeltaBlue": u"score",
-            u"Typescript__Typescript": u"score",
-            u"SplayLatency__SplayLatency": u"score",
-            u"zlib__zlib": u"score",
-            u"Richards__Richards": u"score",
-            u"RegExp__RegExp": u"score",
-            u"NavierStokes__NavierStokes": u"score",
-            u"Splay__Splay": u"score",
-            u"RayTrace__RayTrace": u"score",
+            "Box2D__Box2D": "score",
+            "Mandreel__Mandreel": "score",
+            "Gameboy__Gameboy": "score",
+            "Crypto__Crypto": "score",
+            "PdfJS__PdfJS": "score",
+            "Total__Score": "score",
+            "EarleyBoyer__EarleyBoyer": "score",
+            "MandreelLatency__MandreelLatency": "score",
+            "CodeLoad__CodeLoad": "score",
+            "DeltaBlue__DeltaBlue": "score",
+            "Typescript__Typescript": "score",
+            "SplayLatency__SplayLatency": "score",
+            "zlib__zlib": "score",
+            "Richards__Richards": "score",
+            "RegExp__RegExp": "score",
+            "NavierStokes__NavierStokes": "score",
+            "Splay__Splay": "score",
+            "RayTrace__RayTrace": "score",
         }
 
         results_dict = self.result.AppendTelemetryUnits(kv_dict, units_dict)
         self.assertEqual(
             results_dict,
             {
-                u"Box2D__Box2D": [4775, u"score"],
-                u"Splay__Splay": [4425, u"score"],
-                u"Gameboy__Gameboy": [9901, u"score"],
-                u"Crypto__Crypto": [8737, u"score"],
-                u"PdfJS__PdfJS": [6455, u"score"],
-                u"Total__Score": [7918, u"score"],
-                u"EarleyBoyer__EarleyBoyer": [14340, u"score"],
-                u"MandreelLatency__MandreelLatency": [5188, u"score"],
-                u"DeltaBlue__DeltaBlue": [14401, u"score"],
-                u"SplayLatency__SplayLatency": [7653, u"score"],
-                u"Mandreel__Mandreel": [6620, u"score"],
-                u"Richards__Richards": [10358, u"score"],
-                u"zlib__zlib": [16094, u"score"],
-                u"CodeLoad__CodeLoad": [6271, u"score"],
-                u"Typescript__Typescript": [9815, u"score"],
-                u"RegExp__RegExp": [1765, u"score"],
-                u"RayTrace__RayTrace": [16600, u"score"],
-                u"NavierStokes__NavierStokes": [9815, u"score"],
+                "Box2D__Box2D": [4775, "score"],
+                "Splay__Splay": [4425, "score"],
+                "Gameboy__Gameboy": [9901, "score"],
+                "Crypto__Crypto": [8737, "score"],
+                "PdfJS__PdfJS": [6455, "score"],
+                "Total__Score": [7918, "score"],
+                "EarleyBoyer__EarleyBoyer": [14340, "score"],
+                "MandreelLatency__MandreelLatency": [5188, "score"],
+                "DeltaBlue__DeltaBlue": [14401, "score"],
+                "SplayLatency__SplayLatency": [7653, "score"],
+                "Mandreel__Mandreel": [6620, "score"],
+                "Richards__Richards": [10358, "score"],
+                "zlib__zlib": [16094, "score"],
+                "CodeLoad__CodeLoad": [6271, "score"],
+                "Typescript__Typescript": [9815, "score"],
+                "RegExp__RegExp": [1765, "score"],
+                "RayTrace__RayTrace": [16600, "score"],
+                "NavierStokes__NavierStokes": [9815, "score"],
             },
         )
 
@@ -738,7 +751,6 @@ class ResultTest(unittest.TestCase):
     def test_get_keyvals(
         self, mock_chrootruncmd, mock_runcmd, mock_mkdtemp, mock_getpath
     ):
-
         self.kv_dict = {}
         self.callGetNewKeyvals = False
 
@@ -821,9 +833,9 @@ class ResultTest(unittest.TestCase):
 
         # Test 3. suite != telemetry_Crosperf.  Normally this would be for
         # running non-Telemetry autotests, such as BootPerfServer.  In this test
-        # case, the keyvals we have set up were returned from a Telemetry test run;
-        # so this pass is basically testing that we don't append the units to the
-        # test results (which we do for Telemetry autotest runs).
+        # case, the keyvals we have set up were returned from a Telemetry test
+        # run; so this pass is basically testing that we don't append the units
+        # to the test results (which we do for Telemetry autotest runs).
         reset()
         self.result.suite = ""
         res = self.result.GetKeyvals()
@@ -839,10 +851,15 @@ class ResultTest(unittest.TestCase):
     ):
         self.result.perf_data_files = ["/tmp/results/perf.data"]
         self.result.board = "samus"
+        self.result.cwp_dso = "kallsyms"
         mock_getpath.return_value = "/usr/chromeos/chroot/tmp/results/perf.data"
         mock_get_total_samples.return_value = [
             "",
-            "45.42%        237210  chrome ",
+            (
+                "45.42%        53721   chrome \n"
+                "10.01%        12345   [kernel.kallsyms] \n"
+                "1.42%         1234    ssh "
+            ),
             "",
         ]
         mock_exists.return_value = True
@@ -855,10 +872,9 @@ class ResultTest(unittest.TestCase):
 
         with mock.patch("builtins.open", return_value=io.StringIO(content)):
             samples = self.result.GetSamples()
-        self.assertEqual(samples, [237210 - 60, u"samples"])
+        self.assertEqual(samples, [12345 - 60, "samples"])
 
     def test_get_results_dir(self):
-
         self.result.out = ""
         self.assertRaises(Exception, self.result.GetResultsDir)
 
@@ -868,7 +884,6 @@ class ResultTest(unittest.TestCase):
 
     @mock.patch.object(command_executer.CommandExecuter, "RunCommandGeneric")
     def test_find_files_in_results_dir(self, mock_runcmd):
-
         self.result.results_dir = None
         res = self.result.FindFilesInResultsDir("-name perf.data")
         self.assertEqual(res, "")
@@ -1149,11 +1164,12 @@ class ResultTest(unittest.TestCase):
         """Normal case when log exists and contains valid data."""
         self.result.turbostat_log_file = "/tmp/somelogfile.log"
         with mock.patch(
-            "builtins.open", mock.mock_open(read_data=TURBOSTAT_LOG_OUTPUT)
+            "builtins.open",
+            mock.mock_open(read_data=TURBOSTAT_LOG_OUTPUT),
         ) as mo:
             cpustats = self.result.ProcessTurbostatResults()
             # Check that the log got opened and data were read/parsed.
-            calls = [mock.call("/tmp/somelogfile.log")]
+            calls = [mock.call("/tmp/somelogfile.log", encoding="utf-8")]
             mo.assert_has_calls(calls)
             self.assertEqual(cpustats, TURBOSTAT_DATA)
 
@@ -1162,9 +1178,9 @@ class ResultTest(unittest.TestCase):
         self.result.turbostat_log_file = "/tmp/emptylogfile.log"
         with mock.patch("builtins.open", mock.mock_open(read_data="")) as mo:
             cpustats = self.result.ProcessTurbostatResults()
-            # Check that the log got opened and parsed successfully and empty data
-            # returned.
-            calls = [mock.call("/tmp/emptylogfile.log")]
+            # Check that the log got opened and parsed successfully and empty
+            # data returned.
+            calls = [mock.call("/tmp/emptylogfile.log", encoding="utf-8")]
             mo.assert_has_calls(calls)
             self.assertEqual(cpustats, {})
 
@@ -1189,11 +1205,12 @@ class ResultTest(unittest.TestCase):
         """
         self.result.cpustats_log_file = "/tmp/somelogfile.log"
         with mock.patch(
-            "builtins.open", mock.mock_open(read_data=CPUSTATS_UNIQ_OUTPUT)
+            "builtins.open",
+            mock.mock_open(read_data=CPUSTATS_UNIQ_OUTPUT),
         ) as mo:
             cpustats = self.result.ProcessCpustatsResults()
             # Check that the log got opened and data were read/parsed.
-            calls = [mock.call("/tmp/somelogfile.log")]
+            calls = [mock.call("/tmp/somelogfile.log", encoding="utf-8")]
             mo.assert_has_calls(calls)
             self.assertEqual(cpustats, CPUSTATS_UNIQ_DATA)
 
@@ -1207,11 +1224,12 @@ class ResultTest(unittest.TestCase):
         """
         self.result.cpustats_log_file = "/tmp/somelogfile.log"
         with mock.patch(
-            "builtins.open", mock.mock_open(read_data=CPUSTATS_DUPL_OUTPUT)
+            "builtins.open",
+            mock.mock_open(read_data=CPUSTATS_DUPL_OUTPUT),
         ) as mo:
             cpustats = self.result.ProcessCpustatsResults()
             # Check that the log got opened and data were read/parsed.
-            calls = [mock.call("/tmp/somelogfile.log")]
+            calls = [mock.call("/tmp/somelogfile.log", encoding="utf-8")]
             mo.assert_has_calls(calls)
             self.assertEqual(cpustats, CPUSTATS_DUPL_DATA)
 
@@ -1220,9 +1238,9 @@ class ResultTest(unittest.TestCase):
         self.result.cpustats_log_file = "/tmp/emptylogfile.log"
         with mock.patch("builtins.open", mock.mock_open(read_data="")) as mo:
             cpustats = self.result.ProcessCpustatsResults()
-            # Check that the log got opened and parsed successfully and empty data
-            # returned.
-            calls = [mock.call("/tmp/emptylogfile.log")]
+            # Check that the log got opened and parsed successfully and empty
+            # data returned.
+            calls = [mock.call("/tmp/emptylogfile.log", encoding="utf-8")]
             mo.assert_has_calls(calls)
             self.assertEqual(cpustats, {})
 
@@ -1235,7 +1253,7 @@ class ResultTest(unittest.TestCase):
         ) as mo:
             topproc = self.result.ProcessTopResults()
             # Check that the log got opened and data were read/parsed.
-            calls = [mock.call("/tmp/fakelogfile.log")]
+            calls = [mock.call("/tmp/fakelogfile.log", encoding="utf-8")]
             mo.assert_has_calls(calls)
             self.assertEqual(topproc, TOP_DATA)
 
@@ -1244,9 +1262,9 @@ class ResultTest(unittest.TestCase):
         self.result.top_log_file = "/tmp/emptylogfile.log"
         with mock.patch("builtins.open", mock.mock_open(read_data="")) as mo:
             topcalls = self.result.ProcessTopResults()
-            # Check that the log got opened and parsed successfully and empty data
-            # returned.
-            calls = [mock.call("/tmp/emptylogfile.log")]
+            # Check that the log got opened and parsed successfully and empty
+            # data returned.
+            calls = [mock.call("/tmp/emptylogfile.log", encoding="utf-8")]
             mo.assert_has_calls(calls)
             self.assertEqual(topcalls, [])
 
@@ -1342,10 +1360,18 @@ class ResultTest(unittest.TestCase):
             ),
         )
 
+    @mock.patch.object(os.path, "exists")
     @mock.patch.object(misc, "GetInsideChrootPath")
     @mock.patch.object(command_executer.CommandExecuter, "ChrootRunCommand")
-    def test_generate_perf_report_files(self, mock_chrootruncmd, mock_getpath):
-        fake_file = "/usr/chromeos/chroot/tmp/results/fake_file"
+    def test_generate_perf_report_files(
+        self, mock_chrootruncmd, mock_getpath, mock_pathexists
+    ):
+        mock_pathexists.side_effect = (
+            lambda x: self.orig_exists(x)
+            if x != "/etc/cros_chroot_version"
+            else False
+        )
+        fake_file = "/tmp/results/perf.data.report"
         self.result.perf_data_files = ["/tmp/results/perf.data"]
         self.result.board = "lumpy"
         mock_getpath.return_value = fake_file
@@ -1354,7 +1380,8 @@ class ResultTest(unittest.TestCase):
         # Debug path not found
         self.result.label.debug_path = ""
         tmp = self.result.GeneratePerfReportFiles()
-        self.assertEqual(tmp, ["/tmp/chromeos/chroot%s" % fake_file])
+        self.assertEqual(len(tmp), 1)
+        self.assertEqual(tmp[0], RegexMatcher("/tmp/chromeos.*%s" % fake_file))
         self.assertEqual(
             mock_chrootruncmd.call_args_list[0][0],
             (
@@ -1364,12 +1391,18 @@ class ResultTest(unittest.TestCase):
             ),
         )
 
+    @mock.patch.object(os.path, "exists")
     @mock.patch.object(misc, "GetInsideChrootPath")
     @mock.patch.object(command_executer.CommandExecuter, "ChrootRunCommand")
     def test_generate_perf_report_files_debug(
-        self, mock_chrootruncmd, mock_getpath
+        self, mock_chrootruncmd, mock_getpath, mock_pathexists
     ):
-        fake_file = "/usr/chromeos/chroot/tmp/results/fake_file"
+        mock_pathexists.side_effect = (
+            lambda x: self.orig_exists(x)
+            if x != "/etc/cros_chroot_version"
+            else False
+        )
+        fake_file = "/tmp/results/perf.data.report"
         self.result.perf_data_files = ["/tmp/results/perf.data"]
         self.result.board = "lumpy"
         mock_getpath.return_value = fake_file
@@ -1378,7 +1411,8 @@ class ResultTest(unittest.TestCase):
         # Debug path found
         self.result.label.debug_path = "/tmp/debug"
         tmp = self.result.GeneratePerfReportFiles()
-        self.assertEqual(tmp, ["/tmp/chromeos/chroot%s" % fake_file])
+        self.assertEqual(len(tmp), 1)
+        self.assertEqual(tmp[0], RegexMatcher("/tmp/chromeos.*%s" % fake_file))
         self.assertEqual(
             mock_chrootruncmd.call_args_list[0][0],
             (
@@ -1521,27 +1555,27 @@ class ResultTest(unittest.TestCase):
         # format
         self.result.suite = "telemetry_Crosperf"
         self.result.results_file = [tempfile.mkdtemp() + "/histograms.json"]
-        with open(self.result.results_file[0], "w") as f:
+        with open(self.result.results_file[0], "w", encoding="utf-8") as f:
             f.write(HISTOGRAMSET)
         self.result.ProcessResults()
         shutil.rmtree(os.path.dirname(self.result.results_file[0]))
         # Verify the summary for the story is correct
         self.assertEqual(
             self.result.keyvals["timeToFirstContentfulPaint__typical"],
-            [880.000, u"ms_smallerIsBetter"],
+            [880.000, "ms_smallerIsBetter"],
         )
         # Veirfy the summary for a certain stroy tag is correct
         self.assertEqual(
             self.result.keyvals[
                 "timeToFirstContentfulPaint__cache_temperature:cold"
             ],
-            [1000.000, u"ms_smallerIsBetter"],
+            [1000.000, "ms_smallerIsBetter"],
         )
         self.assertEqual(
             self.result.keyvals[
                 "timeToFirstContentfulPaint__cache_temperature:warm"
             ],
-            [800.000, u"ms_smallerIsBetter"],
+            [800.000, "ms_smallerIsBetter"],
         )
 
     @mock.patch.object(Result, "ProcessCpustatsResults")
@@ -1664,7 +1698,6 @@ class ResultTest(unittest.TestCase):
         command_executer.CommandExecuter, "ChrootRunCommandWOutput"
     )
     def test_populate_from_cache_dir(self, mock_runchrootcmd, mock_getpath):
-
         # pylint: disable=redefined-builtin
         def FakeMkdtemp(dir=None):
             if dir:
@@ -1672,7 +1705,7 @@ class ResultTest(unittest.TestCase):
             return self.tmpdir
 
         def FakeGetSamples():
-            return [1, u"samples"]
+            return [1, "samples"]
 
         current_path = os.getcwd()
         cache_dir = os.path.join(current_path, "test_cache/test_input")
@@ -1696,46 +1729,46 @@ class ResultTest(unittest.TestCase):
         self.assertEqual(
             self.result.keyvals,
             {
-                u"Total__Total": [444.0, u"ms"],
-                u"regexp-dna__regexp-dna": [16.2, u"ms"],
-                u"telemetry_page_measurement_results__num_failed": [
+                "Total__Total": [444.0, "ms"],
+                "regexp-dna__regexp-dna": [16.2, "ms"],
+                "telemetry_page_measurement_results__num_failed": [
                     0,
-                    u"count",
+                    "count",
                 ],
-                u"telemetry_page_measurement_results__num_errored": [
+                "telemetry_page_measurement_results__num_errored": [
                     0,
-                    u"count",
+                    "count",
                 ],
-                u"string-fasta__string-fasta": [23.2, u"ms"],
-                u"crypto-sha1__crypto-sha1": [11.6, u"ms"],
-                u"bitops-3bit-bits-in-byte__bitops-3bit-bits-in-byte": [
+                "string-fasta__string-fasta": [23.2, "ms"],
+                "crypto-sha1__crypto-sha1": [11.6, "ms"],
+                "bitops-3bit-bits-in-byte__bitops-3bit-bits-in-byte": [
                     3.2,
-                    u"ms",
+                    "ms",
                 ],
-                u"access-nsieve__access-nsieve": [7.9, u"ms"],
-                u"bitops-nsieve-bits__bitops-nsieve-bits": [9.4, u"ms"],
-                u"string-validate-input__string-validate-input": [19.3, u"ms"],
-                u"3d-raytrace__3d-raytrace": [24.7, u"ms"],
-                u"3d-cube__3d-cube": [28.0, u"ms"],
-                u"string-unpack-code__string-unpack-code": [46.7, u"ms"],
-                u"date-format-tofte__date-format-tofte": [26.3, u"ms"],
-                u"math-partial-sums__math-partial-sums": [22.0, u"ms"],
+                "access-nsieve__access-nsieve": [7.9, "ms"],
+                "bitops-nsieve-bits__bitops-nsieve-bits": [9.4, "ms"],
+                "string-validate-input__string-validate-input": [19.3, "ms"],
+                "3d-raytrace__3d-raytrace": [24.7, "ms"],
+                "3d-cube__3d-cube": [28.0, "ms"],
+                "string-unpack-code__string-unpack-code": [46.7, "ms"],
+                "date-format-tofte__date-format-tofte": [26.3, "ms"],
+                "math-partial-sums__math-partial-sums": [22.0, "ms"],
                 "\telemetry_Crosperf": ["PASS", ""],
-                u"crypto-aes__crypto-aes": [15.2, u"ms"],
-                u"bitops-bitwise-and__bitops-bitwise-and": [8.4, u"ms"],
-                u"crypto-md5__crypto-md5": [10.5, u"ms"],
-                u"string-tagcloud__string-tagcloud": [52.8, u"ms"],
-                u"access-nbody__access-nbody": [8.5, u"ms"],
+                "crypto-aes__crypto-aes": [15.2, "ms"],
+                "bitops-bitwise-and__bitops-bitwise-and": [8.4, "ms"],
+                "crypto-md5__crypto-md5": [10.5, "ms"],
+                "string-tagcloud__string-tagcloud": [52.8, "ms"],
+                "access-nbody__access-nbody": [8.5, "ms"],
                 "retval": 0,
-                u"math-spectral-norm__math-spectral-norm": [6.6, u"ms"],
-                u"math-cordic__math-cordic": [8.7, u"ms"],
-                u"access-binary-trees__access-binary-trees": [4.5, u"ms"],
-                u"controlflow-recursive__controlflow-recursive": [4.4, u"ms"],
-                u"access-fannkuch__access-fannkuch": [17.8, u"ms"],
-                u"string-base64__string-base64": [16.0, u"ms"],
-                u"date-format-xparb__date-format-xparb": [20.9, u"ms"],
-                u"3d-morph__3d-morph": [22.1, u"ms"],
-                u"bitops-bits-in-byte__bitops-bits-in-byte": [9.1, u"ms"],
+                "math-spectral-norm__math-spectral-norm": [6.6, "ms"],
+                "math-cordic__math-cordic": [8.7, "ms"],
+                "access-binary-trees__access-binary-trees": [4.5, "ms"],
+                "controlflow-recursive__controlflow-recursive": [4.4, "ms"],
+                "access-fannkuch__access-fannkuch": [17.8, "ms"],
+                "string-base64__string-base64": [16.0, "ms"],
+                "date-format-xparb__date-format-xparb": [20.9, "ms"],
+                "3d-morph__3d-morph": [22.1, "ms"],
+                "bitops-bits-in-byte__bitops-bits-in-byte": [9.1, "ms"],
             },
         )
 
@@ -1746,47 +1779,47 @@ class ResultTest(unittest.TestCase):
         self.assertEqual(
             self.result.keyvals,
             {
-                u"Total__Total": [444.0, u"ms"],
-                u"regexp-dna__regexp-dna": [16.2, u"ms"],
-                u"telemetry_page_measurement_results__num_failed": [
+                "Total__Total": [444.0, "ms"],
+                "regexp-dna__regexp-dna": [16.2, "ms"],
+                "telemetry_page_measurement_results__num_failed": [
                     0,
-                    u"count",
+                    "count",
                 ],
-                u"telemetry_page_measurement_results__num_errored": [
+                "telemetry_page_measurement_results__num_errored": [
                     0,
-                    u"count",
+                    "count",
                 ],
-                u"string-fasta__string-fasta": [23.2, u"ms"],
-                u"crypto-sha1__crypto-sha1": [11.6, u"ms"],
-                u"bitops-3bit-bits-in-byte__bitops-3bit-bits-in-byte": [
+                "string-fasta__string-fasta": [23.2, "ms"],
+                "crypto-sha1__crypto-sha1": [11.6, "ms"],
+                "bitops-3bit-bits-in-byte__bitops-3bit-bits-in-byte": [
                     3.2,
-                    u"ms",
+                    "ms",
                 ],
-                u"access-nsieve__access-nsieve": [7.9, u"ms"],
-                u"bitops-nsieve-bits__bitops-nsieve-bits": [9.4, u"ms"],
-                u"string-validate-input__string-validate-input": [19.3, u"ms"],
-                u"3d-raytrace__3d-raytrace": [24.7, u"ms"],
-                u"3d-cube__3d-cube": [28.0, u"ms"],
-                u"string-unpack-code__string-unpack-code": [46.7, u"ms"],
-                u"date-format-tofte__date-format-tofte": [26.3, u"ms"],
-                u"math-partial-sums__math-partial-sums": [22.0, u"ms"],
+                "access-nsieve__access-nsieve": [7.9, "ms"],
+                "bitops-nsieve-bits__bitops-nsieve-bits": [9.4, "ms"],
+                "string-validate-input__string-validate-input": [19.3, "ms"],
+                "3d-raytrace__3d-raytrace": [24.7, "ms"],
+                "3d-cube__3d-cube": [28.0, "ms"],
+                "string-unpack-code__string-unpack-code": [46.7, "ms"],
+                "date-format-tofte__date-format-tofte": [26.3, "ms"],
+                "math-partial-sums__math-partial-sums": [22.0, "ms"],
                 "\telemetry_Crosperf": ["PASS", ""],
-                u"crypto-aes__crypto-aes": [15.2, u"ms"],
-                u"bitops-bitwise-and__bitops-bitwise-and": [8.4, u"ms"],
-                u"crypto-md5__crypto-md5": [10.5, u"ms"],
-                u"string-tagcloud__string-tagcloud": [52.8, u"ms"],
-                u"access-nbody__access-nbody": [8.5, u"ms"],
+                "crypto-aes__crypto-aes": [15.2, "ms"],
+                "bitops-bitwise-and__bitops-bitwise-and": [8.4, "ms"],
+                "crypto-md5__crypto-md5": [10.5, "ms"],
+                "string-tagcloud__string-tagcloud": [52.8, "ms"],
+                "access-nbody__access-nbody": [8.5, "ms"],
                 "retval": 0,
-                u"math-spectral-norm__math-spectral-norm": [6.6, u"ms"],
-                u"math-cordic__math-cordic": [8.7, u"ms"],
-                u"access-binary-trees__access-binary-trees": [4.5, u"ms"],
-                u"controlflow-recursive__controlflow-recursive": [4.4, u"ms"],
-                u"access-fannkuch__access-fannkuch": [17.8, u"ms"],
-                u"string-base64__string-base64": [16.0, u"ms"],
-                u"date-format-xparb__date-format-xparb": [20.9, u"ms"],
-                u"3d-morph__3d-morph": [22.1, u"ms"],
-                u"bitops-bits-in-byte__bitops-bits-in-byte": [9.1, u"ms"],
-                u"samples": [1, u"samples"],
+                "math-spectral-norm__math-spectral-norm": [6.6, "ms"],
+                "math-cordic__math-cordic": [8.7, "ms"],
+                "access-binary-trees__access-binary-trees": [4.5, "ms"],
+                "controlflow-recursive__controlflow-recursive": [4.4, "ms"],
+                "access-fannkuch__access-fannkuch": [17.8, "ms"],
+                "string-base64__string-base64": [16.0, "ms"],
+                "date-format-xparb__date-format-xparb": [20.9, "ms"],
+                "3d-morph__3d-morph": [22.1, "ms"],
+                "bitops-bits-in-byte__bitops-bits-in-byte": [9.1, "ms"],
+                "samples": [1, "samples"],
             },
         )
 
@@ -1798,7 +1831,6 @@ class ResultTest(unittest.TestCase):
     @mock.patch.object(misc, "GetRoot")
     @mock.patch.object(command_executer.CommandExecuter, "RunCommand")
     def test_cleanup(self, mock_runcmd, mock_getroot):
-
         # Test 1. 'rm_chroot_tmp' is True; self.results_dir exists;
         # self.temp_dir exists; results_dir name contains 'test_that_results_'.
         mock_getroot.return_value = [
@@ -2031,7 +2063,6 @@ class TelemetryResultTest(unittest.TestCase):
         self.assertEqual(self.result.retval, 3)
 
     def test_populate_from_cache_dir_and_process_results(self):
-
         self.result = TelemetryResult(
             self.mock_logger, self.mock_label, "average", self.mock_machine
         )
@@ -2244,7 +2275,6 @@ class ResultsCacheTest(unittest.TestCase):
     @mock.patch.object(os.path, "isdir")
     @mock.patch.object(Result, "CreateFromCacheHit")
     def test_read_result(self, mock_create, mock_isdir, mock_runcmd):
-
         self.fakeCacheReturnResult = None
 
         def FakeGetCacheDirForRead():
@@ -2303,7 +2333,8 @@ class ResultsCacheTest(unittest.TestCase):
         self.assertIsNone(res)
 
         # Test 5. os.path.isdir returns true, but mock_create now returns None
-        # (the call to CreateFromCacheHit returns None), so overal result is None.
+        # (the call to CreateFromCacheHit returns None), so overal result is
+        # None.
         mock_isdir.return_value = True
         mock_create.return_value = None
         res = self.results_cache.ReadResult()

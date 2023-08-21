@@ -20,32 +20,23 @@ import patch_utils as pu
 class TestPatchUtils(unittest.TestCase):
     """Test the patch_utils."""
 
-    def test_atomic_write(self):
-        """Test that atomic write safely writes."""
-        prior_contents = "This is a test written by patch_utils_unittest.py\n"
-        new_contents = "I am a test written by patch_utils_unittest.py\n"
-        with tempfile.TemporaryDirectory(
-            prefix="patch_utils_unittest"
-        ) as dirname:
-            dirpath = Path(dirname)
-            filepath = dirpath / "test_atomic_write.txt"
-            with filepath.open("w", encoding="utf-8") as f:
-                f.write(prior_contents)
-
-            def _t():
-                with pu.atomic_write(filepath, encoding="utf-8") as f:
-                    f.write(new_contents)
-                    raise Exception("Expected failure")
-
-            self.assertRaises(Exception, _t)
-            with filepath.open(encoding="utf-8") as f:
-                lines = f.readlines()
-            self.assertEqual(lines[0], prior_contents)
-            with pu.atomic_write(filepath, encoding="utf-8") as f:
-                f.write(new_contents)
-            with filepath.open(encoding="utf-8") as f:
-                lines = f.readlines()
-            self.assertEqual(lines[0], new_contents)
+    def test_predict_indent(self):
+        test_str1 = """
+a
+  a
+      a
+  a
+a
+"""
+        self.assertEqual(pu.predict_indent(test_str1.splitlines()), 2)
+        test_str2 = """
+a
+    a
+        a
+    a
+a
+"""
+        self.assertEqual(pu.predict_indent(test_str2.splitlines()), 4)
 
     def test_from_to_dict(self):
         """Test to and from dict conversion."""
@@ -123,6 +114,9 @@ class TestPatchUtils(unittest.TestCase):
   }
 ]
     """
+        result = pu.json_str_to_patch_entries(Path(), patches_json)
+        self.assertEqual(len(result), 4)
+
         result = pu.json_to_patch_entries(Path(), io.StringIO(patches_json))
         self.assertEqual(len(result), 4)
 
@@ -245,6 +239,16 @@ Hunk #1 SUCCEEDED at 96 with fuzz 1.
                         "until": 2,
                     },
                 ),
+                pu.PatchEntry(
+                    workdir=dirpath,
+                    rel_patch_path="z.patch",
+                    metadata=None,
+                    platforms=None,
+                    version_range={
+                        "from": 4,
+                        "until": 5,
+                    },
+                ),
             ]
             patches[0].apply = mock.MagicMock(
                 return_value=pu.PatchResult(
@@ -253,6 +257,9 @@ Hunk #1 SUCCEEDED at 96 with fuzz 1.
             )
             patches[1].apply = mock.MagicMock(
                 return_value=pu.PatchResult(succeeded=True)
+            )
+            patches[2].apply = mock.MagicMock(
+                return_value=pu.PatchResult(succeeded=False)
             )
             results, _ = pu.update_version_ranges_with_entries(
                 1, dirpath, patches
@@ -263,6 +270,7 @@ Hunk #1 SUCCEEDED at 96 with fuzz 1.
             self.assertEqual(results[0].version_range, {"from": 0, "until": 1})
             self.assertEqual(patches[0].version_range, {"from": 0, "until": 1})
             self.assertEqual(patches[1].version_range, {"from": 0, "until": 2})
+            self.assertEqual(patches[2].version_range, {"from": 4, "until": 5})
 
     @mock.patch("builtins.print")
     def test_remove_old_patches(self, _):

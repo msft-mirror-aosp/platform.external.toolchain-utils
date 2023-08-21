@@ -65,14 +65,17 @@ def DeleteBranch(repo, branch):
     if not os.path.isdir(repo):
         raise ValueError("Invalid directory path provided: %s" % repo)
 
-    subprocess.check_output(["git", "-C", repo, "checkout", "cros/main"])
+    def run_checked(cmd):
+        subprocess.run(["git", "-C", repo] + cmd, check=True)
 
-    subprocess.check_output(["git", "-C", repo, "reset", "HEAD", "--hard"])
+    run_checked(["checkout", "-q", "m/main"])
+    run_checked(["reset", "-q", "HEAD", "--hard"])
+    run_checked(["branch", "-q", "-D", branch])
 
-    subprocess.check_output(["git", "-C", repo, "branch", "-D", branch])
 
-
-def UploadChanges(repo, branch, commit_messages, reviewers=None, cc=None):
+def UploadChanges(
+    repo, branch, commit_messages, reviewers=None, cc=None, wip=False
+):
     """Uploads the changes in the specifed branch of the given repo for review.
 
     Args:
@@ -114,6 +117,8 @@ def UploadChanges(repo, branch, commit_messages, reviewers=None, cc=None):
 
     if cc:
         git_args.append(f'--cc={",".join(cc)}')
+    if wip:
+        git_args.append("--wip")
 
     out = subprocess.check_output(
         git_args,
@@ -123,13 +128,11 @@ def UploadChanges(repo, branch, commit_messages, reviewers=None, cc=None):
     )
 
     print(out)
-
+    # Matches both internal and external CLs.
     found_url = re.search(
-        r"https://chromium-review.googlesource.com/c/"
-        r"chromiumos/overlays/chromiumos-overlay/\+/([0-9]+)",
+        r"https?://[\w-]*-review.googlesource.com/c/.*/([0-9]+)",
         out.rstrip(),
     )
-
     if not found_url:
         raise ValueError("Failed to find change list URL.")
 

@@ -29,6 +29,7 @@ def _write_nm_file(name):
 def _write_orderfile(name):
     with open(name, "w") as out:
         out.write("SymbolOrdered1\n")
+        out.write("$toignore.123\n")
         out.write("SymbolOrdered2\n")
 
 

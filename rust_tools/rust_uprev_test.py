@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -23,6 +22,23 @@ def _fail_command(cmd, *_args, **_kwargs):
     err = subprocess.CalledProcessError(returncode=1, cmd=cmd)
     err.stderr = b"mock failure"
     raise err
+
+
+def start_mock(obj, *args, **kwargs):
+    """Creates a patcher, starts it, and registers a cleanup to stop it.
+
+    Args:
+        obj:
+            the object to attach the cleanup to
+        *args:
+            passed to mock.patch()
+        **kwargs:
+            passsed to mock.patch()
+    """
+    patcher = mock.patch(*args, **kwargs)
+    val = patcher.start()
+    obj.addCleanup(patcher.stop)
+    return val
 
 
 class FetchDistfileTest(unittest.TestCase):
@@ -77,6 +93,151 @@ class FetchDistfileTest(unittest.TestCase):
                     '[ { "entity": "___fake@google.com", "role": "OWNER" } ]',
                     "\n".join(log.output),
                 )
+
+
+class FetchRustSrcFromUpstreamTest(unittest.TestCase):
+    """Tests for rust_uprev.fetch_rust_src_from_upstream."""
+
+    def setUp(self) -> None:
+        self._mock_get_distdir = start_mock(
+            self,
+            "rust_uprev.get_distdir",
+            return_value="/fake/distfiles",
+        )
+
+        self._mock_gpg = start_mock(
+            self,
+            "subprocess.run",
+            side_effect=self.fake_gpg,
+        )
+
+        self._mock_urlretrieve = start_mock(
+            self,
+            "urllib.request.urlretrieve",
+            side_effect=self.fake_urlretrieve,
+        )
+
+        self._mock_rust_signing_key = start_mock(
+            self,
+            "rust_uprev.RUST_SIGNING_KEY",
+            "1234567",
+        )
+
+    @staticmethod
+    def fake_urlretrieve(src: str, dest: Path) -> None:
+        pass
+
+    @staticmethod
+    def fake_gpg(cmd, **_kwargs):
+        val = mock.Mock()
+        val.returncode = 0
+        val.stdout = ""
+        if "--verify" in cmd:
+            val.stdout = "GOODSIG 1234567"
+        return val
+
+    def test_success(self):
+        with mock.patch("rust_uprev.GPG", "gnupg"):
+            rust_uprev.fetch_rust_src_from_upstream(
+                "fakehttps://rustc-1.60.3-src.tar.gz",
+                Path("/fake/distfiles/rustc-1.60.3-src.tar.gz"),
+            )
+            self._mock_urlretrieve.has_calls(
+                [
+                    (
+                        "fakehttps://rustc-1.60.3-src.tar.gz",
+                        Path("/fake/distfiles/rustc-1.60.3-src.tar.gz"),
+                    ),
+                    (
+                        "fakehttps://rustc-1.60.3-src.tar.gz.asc",
+                        Path("/fake/distfiles/rustc-1.60.3-src.tar.gz.asc"),
+                    ),
+                ]
+            )
+            self._mock_gpg.has_calls(
+                [
+                    (["gnupg", "--refresh-keys", "1234567"], {"check": True}),
+                ]
+            )
+
+    def test_no_signature_file(self):
+        def _urlretrieve(src, dest):
+            if src.endswith(".asc"):
+                raise Exception("404 not found")
+            return self.fake_urlretrieve(src, dest)
+
+        self._mock_urlretrieve.side_effect = _urlretrieve
+
+        with self.assertRaises(rust_uprev.SignatureVerificationError) as ctx:
+            rust_uprev.fetch_rust_src_from_upstream(
+                "fakehttps://rustc-1.60.3-src.tar.gz",
+                Path("/fake/distfiles/rustc-1.60.3-src.tar.gz"),
+            )
+        self.assertIn("error fetching signature file", ctx.exception.message)
+
+    def test_key_expired(self):
+        def _gpg_verify(cmd, *args, **kwargs):
+            val = self.fake_gpg(cmd, *args, **kwargs)
+            if "--verify" in cmd:
+                val.stdout = "EXPKEYSIG 1234567"
+            return val
+
+        self._mock_gpg.side_effect = _gpg_verify
+
+        with self.assertRaises(rust_uprev.SignatureVerificationError) as ctx:
+            rust_uprev.fetch_rust_src_from_upstream(
+                "fakehttps://rustc-1.60.3-src.tar.gz",
+                Path("/fake/distfiles/rustc-1.60.3-src.tar.gz"),
+            )
+        self.assertIn("key has expired", ctx.exception.message)
+
+    def test_key_revoked(self):
+        def _gpg_verify(cmd, *args, **kwargs):
+            val = self.fake_gpg(cmd, *args, **kwargs)
+            if "--verify" in cmd:
+                val.stdout = "REVKEYSIG 1234567"
+            return val
+
+        self._mock_gpg.side_effect = _gpg_verify
+
+        with self.assertRaises(rust_uprev.SignatureVerificationError) as ctx:
+            rust_uprev.fetch_rust_src_from_upstream(
+                "fakehttps://rustc-1.60.3-src.tar.gz",
+                Path("/fake/distfiles/rustc-1.60.3-src.tar.gz"),
+            )
+        self.assertIn("key has been revoked", ctx.exception.message)
+
+    def test_signature_expired(self):
+        def _gpg_verify(cmd, *args, **kwargs):
+            val = self.fake_gpg(cmd, *args, **kwargs)
+            if "--verify" in cmd:
+                val.stdout = "EXPSIG 1234567"
+            return val
+
+        self._mock_gpg.side_effect = _gpg_verify
+
+        with self.assertRaises(rust_uprev.SignatureVerificationError) as ctx:
+            rust_uprev.fetch_rust_src_from_upstream(
+                "fakehttps://rustc-1.60.3-src.tar.gz",
+                Path("/fake/distfiles/rustc-1.60.3-src.tar.gz"),
+            )
+        self.assertIn("signature has expired", ctx.exception.message)
+
+    def test_wrong_key(self):
+        def _gpg_verify(cmd, *args, **kwargs):
+            val = self.fake_gpg(cmd, *args, **kwargs)
+            if "--verify" in cmd:
+                val.stdout = "GOODSIG 0000000"
+            return val
+
+        self._mock_gpg.side_effect = _gpg_verify
+
+        with self.assertRaises(rust_uprev.SignatureVerificationError) as ctx:
+            rust_uprev.fetch_rust_src_from_upstream(
+                "fakehttps://rustc-1.60.3-src.tar.gz",
+                Path("/fake/distfiles/rustc-1.60.3-src.tar.gz"),
+            )
+        self.assertIn("1234567 not found", ctx.exception.message)
 
 
 class FindEbuildPathTest(unittest.TestCase):
@@ -141,6 +302,79 @@ class FindEbuildPathTest(unittest.TestCase):
             (tmpdir / "test-1.3.4-r1.ebuild").symlink_to("test-1.3.4.ebuild")
             result = rust_uprev.find_ebuild_path(tmpdir, "test")
             self.assertEqual(result, ebuild)
+
+
+class MirrorHasFileTest(unittest.TestCase):
+    """Tests for rust_uprev.mirror_has_file."""
+
+    @mock.patch.object(subprocess, "run")
+    def test_no(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=1,
+            stdout="CommandException: One or more URLs matched no objects.",
+        )
+        self.assertFalse(rust_uprev.mirror_has_file("rustc-1.69.0-src.tar.gz"))
+
+    @mock.patch.object(subprocess, "run")
+    def test_yes(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            # pylint: disable=line-too-long
+            stdout="gs://chromeos-localmirror/distfiles/rustc-1.69.0-src.tar.gz",
+        )
+        self.assertTrue(rust_uprev.mirror_has_file("rustc-1.69.0-src.tar.gz"))
+
+
+class MirrorRustSourceTest(unittest.TestCase):
+    """Tests for rust_uprev.mirror_rust_source."""
+
+    def setUp(self) -> None:
+        start_mock(self, "rust_uprev.GSUTIL", "gsutil")
+        start_mock(self, "rust_uprev.MIRROR_PATH", "fakegs://fakemirror/")
+        start_mock(
+            self, "rust_uprev.get_distdir", return_value="/fake/distfiles"
+        )
+        self.mock_mirror_has_file = start_mock(
+            self,
+            "rust_uprev.mirror_has_file",
+        )
+        self.mock_fetch_rust_src_from_upstream = start_mock(
+            self,
+            "rust_uprev.fetch_rust_src_from_upstream",
+        )
+        self.mock_subprocess_run = start_mock(
+            self,
+            "subprocess.run",
+        )
+
+    def test_already_present(self):
+        self.mock_mirror_has_file.return_value = True
+        rust_uprev.mirror_rust_source(
+            rust_uprev.RustVersion.parse("1.67.3"),
+        )
+        self.mock_fetch_rust_src_from_upstream.assert_not_called()
+        self.mock_subprocess_run.assert_not_called()
+
+    def test_fetch_and_upload(self):
+        self.mock_mirror_has_file.return_value = False
+        rust_uprev.mirror_rust_source(
+            rust_uprev.RustVersion.parse("1.67.3"),
+        )
+        self.mock_fetch_rust_src_from_upstream.called_once()
+        self.mock_subprocess_run.has_calls(
+            [
+                (
+                    [
+                        "gsutil",
+                        "cp",
+                        "-a",
+                        "public-read",
+                        "/fake/distdir/rustc-1.67.3-src.tar.gz",
+                        "fakegs://fakemirror/rustc-1.67.3-src.tar.gz",
+                    ]
+                ),
+            ]
+        )
 
 
 class RemoveEbuildVersionTest(unittest.TestCase):
@@ -240,7 +474,9 @@ class PrepareUprevTest(unittest.TestCase):
             f"rust-bootstrap-{self.bootstrap_version}.ebuild",
         )
         mock_find_ebuild.return_value = bootstrap_ebuild_path
-        expected = (self.version_old, "/path/to/ebuild", self.bootstrap_version)
+        expected = rust_uprev.PreparedUprev(
+            self.version_old, Path("/path/to/ebuild"), self.bootstrap_version
+        )
         actual = rust_uprev.prepare_uprev(
             rust_version=self.version_new, template=self.version_old
         )
@@ -280,7 +516,11 @@ class PrepareUprevTest(unittest.TestCase):
             f"rust-bootstrap-{self.bootstrap_version}.ebuild",
         )
         mock_find_ebuild.return_value = bootstrap_ebuild_path
-        expected = (self.version_old, rust_ebuild_path, self.bootstrap_version)
+        expected = rust_uprev.PreparedUprev(
+            self.version_old,
+            Path(rust_ebuild_path),
+            self.bootstrap_version,
+        )
         actual = rust_uprev.prepare_uprev(
             rust_version=self.version_new, template=None
         )
@@ -308,15 +548,74 @@ class PrepareUprevTest(unittest.TestCase):
         mock_exists.assert_not_called()
 
     def test_prepare_uprev_from_json(self):
-        ebuild_path = "/path/to/the/ebuild"
+        ebuild_path = Path("/path/to/the/ebuild")
         json_result = (
             list(self.version_new),
             ebuild_path,
             list(self.bootstrap_version),
         )
-        expected = (self.version_new, ebuild_path, self.bootstrap_version)
+        expected = rust_uprev.PreparedUprev(
+            self.version_new,
+            Path(ebuild_path),
+            self.bootstrap_version,
+        )
         actual = rust_uprev.prepare_uprev_from_json(json_result)
         self.assertEqual(expected, actual)
+
+
+class ToggleProfileData(unittest.TestCase):
+    """Tests functionality to include or exclude profile data from SRC_URI."""
+
+    ebuild_with_profdata = """
+# Some text here.
+INCLUDE_PROFDATA_IN_SRC_URI=yes
+some code here
+"""
+
+    ebuild_without_profdata = """
+# Some text here.
+INCLUDE_PROFDATA_IN_SRC_URI=
+some code here
+"""
+
+    ebuild_unexpected_content = """
+# Does not contain OMIT_PROFDATA_FROM_SRC_URI assignment
+"""
+
+    def setUp(self):
+        self.mock_read_text = start_mock(self, "pathlib.Path.read_text")
+
+    def test_turn_off_profdata(self):
+        # Test that a file with profdata on is rewritten to a file with
+        # profdata off.
+        self.mock_read_text.return_value = self.ebuild_with_profdata
+        ebuild_file = "/path/to/eclass/cros-rustc.eclass"
+        with mock.patch("pathlib.Path.write_text") as mock_write_text:
+            rust_uprev.set_include_profdata_src(ebuild_file, include=False)
+            mock_write_text.assert_called_once_with(
+                self.ebuild_without_profdata, encoding="utf-8"
+            )
+
+    def test_turn_on_profdata(self):
+        # Test that a file with profdata off is rewritten to a file with
+        # profdata on.
+        self.mock_read_text.return_value = self.ebuild_without_profdata
+        ebuild_file = "/path/to/eclass/cros-rustc.eclass"
+        with mock.patch("pathlib.Path.write_text") as mock_write_text:
+            rust_uprev.set_include_profdata_src(ebuild_file, include=True)
+            mock_write_text.assert_called_once_with(
+                self.ebuild_with_profdata, encoding="utf-8"
+            )
+
+    def test_turn_on_profdata_fails_if_no_assignment(self):
+        # Test that if the string the code expects to find is not found,
+        # this causes an exception and the file is not overwritten.
+        self.mock_read_text.return_value = self.ebuild_unexpected_content
+        ebuild_file = "/path/to/eclass/cros-rustc.eclass"
+        with mock.patch("pathlib.Path.write_text") as mock_write_text:
+            with self.assertRaises(Exception):
+                rust_uprev.set_include_profdata_src(ebuild_file, include=False)
+            mock_write_text.assert_not_called()
 
 
 class UpdateBootstrapVersionTest(unittest.TestCase):
@@ -329,26 +628,28 @@ BOOTSTRAP_VERSION="1.2.0"
 BOOTSTRAP_VERSION="1.3.6"
     """
 
+    def setUp(self):
+        self.mock_read_text = start_mock(self, "pathlib.Path.read_text")
+
     def test_success(self):
-        mock_open = mock.mock_open(read_data=self.ebuild_file_before)
+        self.mock_read_text.return_value = self.ebuild_file_before
         # ebuild_file and new bootstrap version are deliberately different
         ebuild_file = "/path/to/rust/cros-rustc.eclass"
-        with mock.patch("builtins.open", mock_open):
+        with mock.patch("pathlib.Path.write_text") as mock_write_text:
             rust_uprev.update_bootstrap_version(
                 ebuild_file, rust_uprev.RustVersion.parse("1.3.6")
             )
-        mock_open.return_value.__enter__().write.assert_called_once_with(
-            self.ebuild_file_after
-        )
+            mock_write_text.assert_called_once_with(
+                self.ebuild_file_after, encoding="utf-8"
+            )
 
     def test_fail_when_ebuild_misses_a_variable(self):
-        mock_open = mock.mock_open(read_data="")
+        self.mock_read_text.return_value = ""
         ebuild_file = "/path/to/rust/rust-1.3.5.ebuild"
-        with mock.patch("builtins.open", mock_open):
-            with self.assertRaises(RuntimeError) as context:
-                rust_uprev.update_bootstrap_version(
-                    ebuild_file, rust_uprev.RustVersion.parse("1.2.0")
-                )
+        with self.assertRaises(RuntimeError) as context:
+            rust_uprev.update_bootstrap_version(
+                ebuild_file, rust_uprev.RustVersion.parse("1.2.0")
+            )
         self.assertEqual(
             "BOOTSTRAP_VERSION not found in /path/to/rust/rust-1.3.5.ebuild",
             str(context.exception),
@@ -370,7 +671,8 @@ class UpdateBootstrapEbuildTest(unittest.TestCase):
 
     def test_update_bootstrap_ebuild(self):
         # The update should do two things:
-        # 1. Create a copy of rust-bootstrap's ebuild with the new version number.
+        # 1. Create a copy of rust-bootstrap's ebuild with the
+        #    new version number.
         # 2. Add the old PV to RUSTC_RAW_FULL_BOOTSTRAP_SEQUENCE.
         with tempfile.TemporaryDirectory() as tmpdir_str, mock.patch.object(
             rust_uprev, "find_ebuild_path"
@@ -394,7 +696,7 @@ some more text
             rust_uprev.update_bootstrap_ebuild(rust_uprev.RustVersion(1, 46, 0))
             new_ebuild = bootstrapdir.joinpath("rust-bootstrap-1.46.0.ebuild")
             self.assertTrue(new_ebuild.exists())
-            text = new_ebuild.read_text()
+            text = new_ebuild.read_text(encoding="utf-8")
             self.assertEqual(
                 text,
                 """
@@ -468,52 +770,6 @@ class RustUprevOtherStagesTests(unittest.TestCase):
         self.new_version = rust_uprev.RustVersion(1, 3, 5)
         self.ebuild_file = os.path.join(
             rust_uprev.RUST_PATH, "rust-{self.new_version}.ebuild"
-        )
-
-    @mock.patch.object(shutil, "copyfile")
-    @mock.patch.object(os, "listdir")
-    @mock.patch.object(subprocess, "check_call")
-    def test_copy_patches(self, mock_call, mock_ls, mock_copy):
-        mock_ls.return_value = [
-            f"rust-{self.old_version}-patch-1.patch",
-            f"rust-{self.old_version}-patch-2-old.patch",
-            f"rust-{self.current_version}-patch-1.patch",
-            f"rust-{self.current_version}-patch-2-new.patch",
-        ]
-        rust_uprev.copy_patches(
-            rust_uprev.RUST_PATH, self.current_version, self.new_version
-        )
-        mock_copy.assert_has_calls(
-            [
-                mock.call(
-                    os.path.join(
-                        rust_uprev.RUST_PATH,
-                        "files",
-                        f"rust-{self.current_version}-patch-1.patch",
-                    ),
-                    os.path.join(
-                        rust_uprev.RUST_PATH,
-                        "files",
-                        f"rust-{self.new_version}-patch-1.patch",
-                    ),
-                ),
-                mock.call(
-                    os.path.join(
-                        rust_uprev.RUST_PATH,
-                        "files",
-                        f"rust-{self.current_version}-patch-2-new.patch",
-                    ),
-                    os.path.join(
-                        rust_uprev.RUST_PATH,
-                        "files",
-                        f"rust-{self.new_version}-patch-2-new.patch",
-                    ),
-                ),
-            ]
-        )
-        mock_call.assert_called_once_with(
-            ["git", "add", f"rust-{self.new_version}-*.patch"],
-            cwd=rust_uprev.RUST_PATH.joinpath("files"),
         )
 
     @mock.patch.object(shutil, "copyfile")

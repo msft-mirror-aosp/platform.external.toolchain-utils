@@ -12,6 +12,7 @@ from typing import Callable
 import unittest
 from unittest import mock
 
+import atomic_write_file
 import patch_manager
 import patch_utils
 
@@ -103,7 +104,9 @@ class PatchManagerTest(unittest.TestCase):
                 ),
             ]
             patches_path = dirpath / "PATCHES.json"
-            with patch_utils.atomic_write(patches_path, encoding="utf-8") as f:
+            with atomic_write_file.atomic_write(
+                patches_path, encoding="utf-8"
+            ) as f:
                 json.dump([pe.to_dict() for pe in patch_entries], f)
 
             def _harness1(
