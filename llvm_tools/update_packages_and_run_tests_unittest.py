@@ -263,12 +263,14 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
     @mock.patch.object(update_chromeos_llvm_hash, "UpdatePackages")
     @mock.patch.object(update_packages_and_run_tests, "GetCommandLineArgs")
     @mock.patch.object(get_llvm_hash, "GetLLVMHashAndVersionFromSVNOption")
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     @mock.patch.object(chroot, "GetChrootEbuildPaths")
     def testUpdatedLastTestedFileWithNewTestedRevision(
         self,
         mock_get_chroot_build_paths,
         mock_outside_chroot,
+        mock_chromeos_root,
         mock_get_hash_and_version,
         mock_get_commandline_args,
         mock_update_packages,
@@ -335,6 +337,8 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
                 self.assertEqual(arg_dict["svn_version"], 200)
 
         mock_outside_chroot.assert_called_once()
+
+        mock_chromeos_root.assert_called_once()
 
         mock_get_commandline_args.assert_called_once()
 

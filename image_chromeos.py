@@ -15,7 +15,6 @@ __author__ = "asharif@google.com (Ahmad Sharif)"
 
 import argparse
 import filecmp
-import getpass
 import glob
 import os
 import re
@@ -50,12 +49,12 @@ def CheckForCrosFlash(chromeos_root, remote, log_level):
         command, chromeos_root=chromeos_root, machine=remote
     )
     logger.GetLogger().LogFatalIf(
-        ret == 255, "Failed ssh to %s (for checking cherrypy)" % remote
+        ret == 255, f"Failed ssh to {remote} (for checking cherrypy)"
     )
     logger.GetLogger().LogFatalIf(
         ret != 0,
-        "Failed to find cherrypy or ctypes on remote '{}', "
-        "cros flash cannot work.".format(remote),
+        f"Failed to find cherrypy or ctypes on '{remote}', "
+        "cros flash cannot work.",
     )
 
 
@@ -63,7 +62,7 @@ def DisableCrosBeeps(chromeos_root, remote, log_level):
     """Disable annoying chromebooks beeps after reboots."""
     cmd_executer = command_executer.GetCommandExecuter(log_level=log_level)
 
-    command = "/usr/share/vboot/bin/set_gbb_flags.sh 0x1"
+    command = "/usr/bin/futility gbb --set --flash --flags=0x1"
     logger.GetLogger().LogOutput("Trying to disable beeping.")
 
     ret, o, _ = cmd_executer.CrosRunCommandWOutput(
@@ -81,37 +80,21 @@ def FindChromeOSImage(image_file, chromeos_root):
     or outside the chroot.  In either case the path needs to be translated
     to an real/absolute path inside the chroot.
     Example input paths:
-    /usr/local/google/home/uname/chromeos/chroot/tmp/my-test-images/image
-    ~/trunk/src/build/images/board/latest/image
+    /usr/local/google/home/uname/chromeos/out/tmp/my-test-images/image
+    ~/chromiumos/src/build/images/board/latest/image
     /tmp/peppy-release/R67-1235.0.0/image
 
     Corresponding example output paths:
     /tmp/my-test-images/image
-    /home/uname/trunk/src/build/images/board/latest/image
+    /mnt/host/source/src/build/images/board/latest/image
     /tmp/peppy-release/R67-1235.0,0/image
     """
 
-    # Get the name of the user, for "/home/<user>" part of the path.
-    whoami = getpass.getuser()
-    # Get the full path for the chroot dir, including 'chroot'
-    real_chroot_dir = os.path.join(os.path.realpath(chromeos_root), "chroot")
-    # Get the full path for the chromeos root, excluding 'chroot'
-    real_chromeos_root = os.path.realpath(chromeos_root)
+    sys.path.insert(0, chromeos_root)
 
-    # If path name starts with real_chroot_dir, remove that piece, but assume
-    # the rest of the path is correct.
-    if image_file.find(real_chroot_dir) != -1:
-        chroot_image = image_file[len(real_chroot_dir) :]
-    # If path name starts with chromeos_root, excluding 'chroot', replace the
-    # chromeos_root with the prefix: '/home/<username>/trunk'.
-    elif image_file.find(real_chromeos_root) != -1:
-        chroot_image = image_file[len(real_chromeos_root) :]
-        chroot_image = "/home/%s/trunk%s" % (whoami, chroot_image)
-    # Else assume the path is already internal, so leave it alone.
-    else:
-        chroot_image = image_file
+    from chromite.lib import path_util
 
-    return chroot_image
+    return path_util.ToChrootPath(image_file, source_path=chromeos_root)
 
 
 def DoImage(argv):
@@ -159,6 +142,13 @@ def DoImage(argv):
         "'quiet', 'average', and 'verbose'.",
     )
     parser.add_argument("-a", "--image_args", dest="image_args")
+    parser.add_argument(
+        "--keep_stateful",
+        dest="keep_stateful",
+        default=False,
+        action="store_true",
+        help="Do not clobber the stateful partition.",
+    )
 
     options = parser.parse_args(argv[1:])
 
@@ -278,9 +268,13 @@ def DoImage(argv):
                 "cros",
                 "flash",
                 "--board=%s" % board,
-                "--clobber-stateful",
-                options.remote,
             ]
+            if not options.keep_stateful:
+                cros_flash_args.append("--clobber-stateful")
+            # New arguments should be added here.
+
+            # The last two arguments are positional and have to be at the end.
+            cros_flash_args.append(options.remote)
             if local_image:
                 cros_flash_args.append(chroot_image)
             else:

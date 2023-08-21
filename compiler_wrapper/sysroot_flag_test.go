@@ -6,8 +6,34 @@ package main
 
 import (
 	"path"
+	"regexp"
 	"testing"
 )
+
+func TestOmitSysrootGivenSysrootSuppressionFlag(t *testing.T) {
+	escapedAutodetectionFlag := regexp.QuoteMeta(skipSysrootAutodetectionFlag)
+	withTestContext(t, func(ctx *testContext) {
+		runWithCompiler := func(compiler string) {
+			cmd := ctx.must(callCompiler(ctx, ctx.cfg,
+				ctx.newCommand(compiler, skipSysrootAutodetectionFlag, mainCc)))
+			if err := verifyArgOrder(cmd, mainCc); err != nil {
+				t.Error(err)
+			}
+			if err := verifyArgCount(cmd, 0, "--sysroot.*"); err != nil {
+				t.Error(err)
+			}
+			if err := verifyArgCount(cmd, 0, "-L.*"); err != nil {
+				t.Error(err)
+			}
+			if err := verifyArgCount(cmd, 0, escapedAutodetectionFlag); err != nil {
+				t.Error(err)
+			}
+		}
+
+		runWithCompiler(gccX86_64)
+		runWithCompiler(clangX86_64)
+	})
+}
 
 func TestOmitSysrootGivenUserDefinedSysroot(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {

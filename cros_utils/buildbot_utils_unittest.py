@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-#
 # Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -154,7 +152,7 @@ class TrybotTest(unittest.TestCase):
                 )
                 mocked_imageexist.return_value = True
                 image = buildbot_utils.GetLatestImage("", IMAGE_DIR)
-                self.assertEqual(image, "{0}/R78-12423.0.0".format(IMAGE_DIR))
+                self.assertEqual(image, f"{IMAGE_DIR}/R78-12423.0.0")
 
     def testGetLatestImageInvalid(self):
         with patch.object(
@@ -190,9 +188,7 @@ class TrybotTest(unittest.TestCase):
                 image = buildbot_utils.GetLatestRecipeImage("", IMAGE_DIR)
                 self.assertEqual(
                     image,
-                    "{0}/R83-13003.0.0-30218-8884712858556419".format(
-                        IMAGE_DIR
-                    ),
+                    f"{IMAGE_DIR}/R83-13003.0.0-30218-8884712858556419",
                 )
 
     def testGetLatestRecipeImageInvalid(self):
@@ -232,9 +228,7 @@ class TrybotTest(unittest.TestCase):
                 image = buildbot_utils.GetLatestRecipeImage("", IMAGE_DIR)
                 self.assertEqual(
                     image,
-                    "{0}/R83-13003.0.0-30196-8884755532184725".format(
-                        IMAGE_DIR
-                    ),
+                    f"{IMAGE_DIR}/R83-13003.0.0-30196-8884755532184725",
                 )
 
 

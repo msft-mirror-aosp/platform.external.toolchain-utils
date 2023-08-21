@@ -44,6 +44,7 @@ class Experiment(object):
         ignore_min_max,
         crosfleet,
         dut_config,
+        keep_stateful: bool,
         no_lock: bool,
     ):
         self.name = name
@@ -101,7 +102,11 @@ class Experiment(object):
         if test_flag.GetTestMode():
             machine_manager_fn = MockMachineManager
         self.machine_manager = machine_manager_fn(
-            chromeos_root, acquire_timeout, log_level, locks_directory
+            chromeos_root,
+            acquire_timeout,
+            log_level,
+            locks_directory,
+            keep_stateful=keep_stateful,
         )
         self.l = logger.GetLogger(log_dir)
 
@@ -137,7 +142,6 @@ class Experiment(object):
         for label in self.labels:
             for benchmark in self.benchmarks:
                 for iteration in range(1, benchmark.iterations + 1):
-
                     benchmark_run_name = "%s: %s (%s)" % (
                         label.name,
                         benchmark.name,
