@@ -49,7 +49,7 @@ def parse_args():
     return args
 
 
-def calc_go_args(args, version, build_dir):
+def calc_go_args(args, version, build_dir, output_file):
     # These seem unnecessary, and might lead to breakages with Go's ldflag
     # parsing. Don't allow them.
     if "'" in version:
@@ -89,7 +89,7 @@ def calc_go_args(args, version, build_dir):
         "go",
         "build",
         "-o",
-        os.path.abspath(args.output_file),
+        output_file,
         "-ldflags",
         " ".join(ldFlags),
     ] + extra_args
@@ -119,9 +119,22 @@ def main():
         version += args.version_suffix
     # Note: Go does not support using absolute package names.
     # So we run go inside the directory of the the build file.
-    sys.exit(
-        subprocess.call(calc_go_args(args, version, build_dir), cwd=build_dir)
+    output_file = os.path.abspath(args.output_file)
+    subprocess.check_call(
+        calc_go_args(args, version, build_dir, output_file), cwd=build_dir
     )
+
+    # b/203821449: we're occasionally seeing very small (and non-functional)
+    # compiler-wrapper binaries on SDK builds. To help narrow down why, add a
+    # size check here. Locally, the wrapper is 1.9MB, so warning on <1MB
+    # shouldn't flag false-positives.
+    size = os.path.getsize(output_file)
+    min_size_bytes = 1024 * 1024
+    if size < min_size_bytes:
+        raise ValueError(
+            f"Compiler wrapper is {size:,} bytes; expected at "
+            f"least {min_size_bytes:,}"
+        )
 
 
 if __name__ == "__main__":

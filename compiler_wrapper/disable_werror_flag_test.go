@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -320,13 +321,18 @@ func withForceDisableWErrorTestContext(t *testing.T, work func(ctx *testContext)
 	withTestContext(t, func(ctx *testContext) {
 		ctx.NoteTestWritesToUmask()
 
-		ctx.env = []string{"FORCE_DISABLE_WERROR=1"}
+		ctx.cfg.newWarningsDir = "new_warnings"
+		ctx.env = []string{
+			"FORCE_DISABLE_WERROR=1",
+			artifactsTmpDirEnvName + "=" + path.Join(ctx.tempDir, "artifacts"),
+		}
 		work(ctx)
 	})
 }
 
 func readLoggedWarnings(ctx *testContext) *warningsJSONData {
-	files, err := ioutil.ReadDir(ctx.cfg.newWarningsDir)
+	warningsDir := getForceDisableWerrorDir(ctx, ctx.cfg)
+	files, err := ioutil.ReadDir(warningsDir)
 	if err != nil {
 		if _, ok := err.(*os.PathError); ok {
 			return nil
@@ -336,7 +342,7 @@ func readLoggedWarnings(ctx *testContext) *warningsJSONData {
 	if len(files) != 1 {
 		ctx.t.Fatalf("expected 1 warning log file. Got: %s", files)
 	}
-	data, err := ioutil.ReadFile(filepath.Join(ctx.cfg.newWarningsDir, files[0].Name()))
+	data, err := ioutil.ReadFile(filepath.Join(warningsDir, files[0].Name()))
 	if err != nil {
 		ctx.t.Fatal(err)
 	}
@@ -373,8 +379,9 @@ func TestDoubleBuildWerrorChmodsThingsAppropriately(t *testing.T) {
 			t.Fatalf("expected 2 calls. Got: %d", ctx.cmdCount)
 		}
 
-		t.Logf("Warnings dir is at %q", ctx.cfg.newWarningsDir)
-		warningsDir, err := os.Open(ctx.cfg.newWarningsDir)
+		warningsDirPath := getForceDisableWerrorDir(ctx, ctx.cfg)
+		t.Logf("Warnings dir is at %q", warningsDirPath)
+		warningsDir, err := os.Open(warningsDirPath)
 		if err != nil {
 			t.Fatalf("failed to open the new warnings dir: %v", err)
 		}

@@ -20,6 +20,7 @@ from cros_utils.file_utils import FileUtils
 import experiment_factory
 from experiment_factory import ExperimentFactory
 from experiment_file import ExperimentFile
+from results_cache import CacheConditions
 import settings_factory
 import test_flag
 
@@ -258,7 +259,7 @@ class ExperimentFactoryTest(unittest.TestCase):
         bench_list = []
         ef.AppendBenchmarkSet(
             bench_list,
-            experiment_factory.telemetry_perfv2_tests,
+            experiment_factory.telemetry_crosbolt_perf_tests,
             "",
             1,
             False,
@@ -271,14 +272,15 @@ class ExperimentFactoryTest(unittest.TestCase):
             0,
         )
         self.assertEqual(
-            len(bench_list), len(experiment_factory.telemetry_perfv2_tests)
+            len(bench_list),
+            len(experiment_factory.telemetry_crosbolt_perf_tests),
         )
         self.assertTrue(isinstance(bench_list[0], benchmark.Benchmark))
 
         bench_list = []
         ef.AppendBenchmarkSet(
             bench_list,
-            experiment_factory.telemetry_pagecycler_tests,
+            experiment_factory.telemetry_toolchain_perf_tests,
             "",
             1,
             False,
@@ -291,7 +293,8 @@ class ExperimentFactoryTest(unittest.TestCase):
             0,
         )
         self.assertEqual(
-            len(bench_list), len(experiment_factory.telemetry_pagecycler_tests)
+            len(bench_list),
+            len(experiment_factory.telemetry_toolchain_perf_tests),
         )
         self.assertTrue(isinstance(bench_list[0], benchmark.Benchmark))
 
@@ -318,7 +321,6 @@ class ExperimentFactoryTest(unittest.TestCase):
 
     @mock.patch.object(socket, "gethostname")
     def test_get_experiment(self, mock_socket):
-
         test_flag.SetTestMode(False)
         self.append_benchmark_call_args = []
 
@@ -418,10 +420,13 @@ class ExperimentFactoryTest(unittest.TestCase):
         )
         self.assertEqual(exp.labels[0].autotest_path, "/tmp/autotest")
         self.assertEqual(exp.labels[0].board, "lumpy")
+        self.assertEqual(exp.machine_manager.keep_stateful, False)
 
         # Second test: Remotes listed in labels.
         test_flag.SetTestMode(True)
         label_settings.SetField("remote", "chromeos1.cros chromeos2.cros")
+        # Also verify keep_stateful.
+        global_settings.SetField("keep_stateful", "true")
         exp = ef.GetExperiment(mock_experiment_file, "", "")
         self.assertCountEqual(
             exp.remote,
@@ -432,6 +437,9 @@ class ExperimentFactoryTest(unittest.TestCase):
                 "chromeos2.cros",
             ],
         )
+        # keep_stateful is propagated to machine_manager which flashes the
+        # images.
+        self.assertEqual(exp.machine_manager.keep_stateful, True)
 
         # Third test: Automatic fixing of bad  logging_level param:
         global_settings.SetField("logging_level", "really loud!")
@@ -450,7 +458,47 @@ class ExperimentFactoryTest(unittest.TestCase):
         label_settings.SetField("remote", "")
         global_settings.SetField("remote", "123.45.67.89")
         exp = ef.GetExperiment(mock_experiment_file, "", "")
-        self.assertEqual(exp.cache_conditions, [0, 2, 3, 4, 6, 1])
+        self.assertEqual(
+            exp.cache_conditions,
+            [
+                CacheConditions.CACHE_FILE_EXISTS,
+                CacheConditions.CHECKSUMS_MATCH,
+                CacheConditions.RUN_SUCCEEDED,
+                CacheConditions.FALSE,
+                CacheConditions.SAME_MACHINE_MATCH,
+                CacheConditions.MACHINES_MATCH,
+            ],
+        )
+
+        # Check the alias option to ignore cache.
+        global_settings.SetField("rerun", "false")
+        global_settings.SetField("ignore_cache", "true")
+        exp = ef.GetExperiment(mock_experiment_file, "", "")
+        self.assertEqual(
+            exp.cache_conditions,
+            [
+                CacheConditions.CACHE_FILE_EXISTS,
+                CacheConditions.CHECKSUMS_MATCH,
+                CacheConditions.RUN_SUCCEEDED,
+                CacheConditions.FALSE,
+                CacheConditions.SAME_MACHINE_MATCH,
+                CacheConditions.MACHINES_MATCH,
+            ],
+        )
+        # Check without cache use.
+        global_settings.SetField("rerun", "false")
+        global_settings.SetField("ignore_cache", "false")
+        exp = ef.GetExperiment(mock_experiment_file, "", "")
+        self.assertEqual(
+            exp.cache_conditions,
+            [
+                CacheConditions.CACHE_FILE_EXISTS,
+                CacheConditions.CHECKSUMS_MATCH,
+                CacheConditions.RUN_SUCCEEDED,
+                CacheConditions.SAME_MACHINE_MATCH,
+                CacheConditions.MACHINES_MATCH,
+            ],
+        )
 
         # Fifth Test: Adding a second label; calling GetXbuddyPath; omitting all
         # remotes (Call GetDefaultRemotes).

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2017 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -41,13 +40,13 @@ def PeekTrybotImage(chromeos_root, buildbucket_id):
     """Get the artifact URL of a given tryjob.
 
     Args:
-      buildbucket_id: buildbucket-id
-      chromeos_root: root dir of chrome os checkout
+        buildbucket_id: buildbucket-id
+        chromeos_root: root dir of chrome os checkout
 
     Returns:
-      (status, url) where status can be 'pass', 'fail', 'running',
+        (status, url) where status can be 'pass', 'fail', 'running',
                     and url looks like:
-      gs://chromeos-image-archive/trybot-elm-release-tryjob/R67-10468.0.0-b20789
+        gs://chromeos-image-archive/trybot-elm-release-tryjob/R67-10468.0.0-b20789
     """
     command = (
         "cros buildresult --report json --buildbucket-id %s" % buildbucket_id
@@ -72,10 +71,10 @@ def ParseTryjobBuildbucketId(msg):
     """Find the buildbucket-id in the messages from `cros tryjob`.
 
     Args:
-      msg: messages from `cros tryjob`
+        msg: messages from `cros tryjob`
 
     Returns:
-      buildbucket-id, which will be passed to `cros buildresult`
+        buildbucket-id, which will be passed to `cros buildresult`
     """
     output_list = ast.literal_eval(msg)
     output_dict = output_list[0]
@@ -94,17 +93,17 @@ def SubmitTryjob(
     """Calls `cros tryjob ...`
 
     Args:
-      chromeos_root: the path to the ChromeOS root, needed for finding chromite
-                     and launching the buildbot.
-      buildbot_name: the name of the buildbot queue, such as lumpy-release or
-                     daisy-paladin.
-      patch_list: a python list of the patches, if any, for the buildbot to use.
-      tryjob_flags: See cros tryjob --help for available options.
-      build_toolchain: builds and uses the latest toolchain, rather than the
-                       prebuilt one in SDK.
+        chromeos_root: the path to the ChromeOS root, needed for finding chromite
+            and launching the buildbot.
+        buildbot_name: the name of the buildbot queue, such as lumpy-release or
+            daisy-paladin.
+        patch_list: a python list of the patches, if any, for the buildbot to use.
+        tryjob_flags: See cros tryjob --help for available options.
+        build_toolchain: builds and uses the latest toolchain, rather than the
+            prebuilt one in SDK.
 
     Returns:
-      buildbucket id
+        buildbucket id
     """
     patch_arg = ""
     if patch_list:
@@ -151,19 +150,19 @@ def GetTrybotImage(
     artifact (if one was created), and returns that artifact name.
 
     Args:
-      chromeos_root: the path to the ChromeOS root, needed for finding chromite
-                     and launching the buildbot.
-      buildbot_name: the name of the buildbot queue, such as lumpy-release or
-                     daisy-paladin.
-      patch_list: a python list of the patches, if any, for the buildbot to use.
-      tryjob_flags: See cros tryjob --help for available options.
-      build_toolchain: builds and uses the latest toolchain, rather than the
+        chromeos_root: the path to the ChromeOS root, needed for finding chromite
+            and launching the buildbot.
+        buildbot_name: the name of the buildbot queue, such as lumpy-release or
+            daisy-paladin.
+        patch_list: a python list of the patches, if any, for the buildbot to use.
+        tryjob_flags: See cros tryjob --help for available options.
+        build_toolchain: builds and uses the latest toolchain, rather than the
                        prebuilt one in SDK.
-      asynchronous: don't wait for artifacts; just return the buildbucket id
+        asynchronous: don't wait for artifacts; just return the buildbucket id
 
     Returns:
-      (buildbucket id, partial image url) e.g.
-      (8952271933586980528, trybot-elm-release-tryjob/R67-10480.0.0-b2373596)
+        (buildbucket id, partial image url) e.g.
+        (8952271933586980528, trybot-elm-release-tryjob/R67-10480.0.0-b2373596)
     """
     buildbucket_id = SubmitTryjob(
         chromeos_root, buildbot_name, patch_list, tryjob_flags, build_toolchain

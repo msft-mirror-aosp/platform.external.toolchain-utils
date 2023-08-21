@@ -68,7 +68,7 @@ class HelperFunctionsTest(unittest.TestCase):
         mock_isdir.assert_called_once()
 
     @mock.patch.object(os.path, "isdir", return_value=True)
-    @mock.patch.object(subprocess, "check_output", return_value=None)
+    @mock.patch.object(subprocess, "run", return_value=None)
     def testSuccessfullyDeletedBranch(self, mock_command_output, mock_isdir):
         path_to_repo = "/valid/path/to/repo"
         branch = "branch-name"
