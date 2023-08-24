@@ -890,10 +890,16 @@ def create_rust_uprev(
     run_step(
         "generate profile data for rustc",
         lambda: run_in_chroot([PGO_RUST, "generate"]),
+        # Avoid returning subprocess.CompletedProcess, which cannot be
+        # serialized to JSON.
+        result_to_json=lambda _x: None,
     )
     run_step(
         "upload profile data for rustc",
         lambda: run_in_chroot([PGO_RUST, "upload-profdata"]),
+        # Avoid returning subprocess.CompletedProcess, which cannot be
+        # serialized to JSON.
+        result_to_json=lambda _x: None,
     )
     run_step(
         "turn on profile data sources in cros-rustc.eclass",
