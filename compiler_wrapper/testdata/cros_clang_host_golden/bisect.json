@@ -49,8 +49,7 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation",
-            "-Wno-gnu-offsetof-extensions"
+            "-Wno-string-concatenation"
           ],
           "env_updates": [
             "PYTHONPATH=/somepath/test_binary"
@@ -110,8 +109,7 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation",
-            "-Wno-gnu-offsetof-extensions"
+            "-Wno-string-concatenation"
           ],
           "env_updates": [
             "PYTHONPATH=/somepath/test_binary"
@@ -174,8 +172,7 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation",
-            "-Wno-gnu-offsetof-extensions"
+            "-Wno-string-concatenation"
           ],
           "env_updates": [
             "PYTHONPATH=/somepath/test_binary"
