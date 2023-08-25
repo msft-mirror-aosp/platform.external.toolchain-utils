@@ -43,7 +43,6 @@
             "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation",
             "-mno-movbe",
             "-B../../bin",
             "-target",
@@ -102,7 +101,6 @@
             "-L/usr/x86_64-cros-eabi/usr/lib64",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation",
             "-mno-movbe",
             "-B../../bin",
             "-target",
@@ -161,7 +159,6 @@
             "-L/usr/x86_64-cros-win-gnu/usr/lib64",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation",
             "-mno-movbe",
             "-B../../bin",
             "-target",
@@ -221,7 +218,6 @@
             "-L/usr/armv7m-cros-linux-gnu/usr/lib",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation",
             "-B../../bin",
             "-target",
             "armv7m-cros-linux-gnu"
@@ -279,7 +275,6 @@
             "-L/usr/armv7m-cros-eabi/usr/lib",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation",
             "-B../../bin",
             "-target",
             "armv7m-cros-eabi"
@@ -338,7 +333,6 @@
             "-L/usr/armv7m-cros-win-gnu/usr/lib",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation",
             "-B../../bin",
             "-target",
             "armv7m-cros-win-gnu"
@@ -397,7 +391,6 @@
             "-L/usr/armv8m-cros-linux-gnu/usr/lib",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation",
             "-B../../bin",
             "-target",
             "armv8m-cros-linux-gnu"
@@ -455,7 +448,6 @@
             "-L/usr/armv8m-cros-eabi/usr/lib",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation",
             "-B../../bin",
             "-target",
             "armv8m-cros-eabi"
@@ -514,7 +506,6 @@
             "-L/usr/armv8m-cros-win-gnu/usr/lib",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation",
             "-B../../bin",
             "-target",
             "armv8m-cros-win-gnu"

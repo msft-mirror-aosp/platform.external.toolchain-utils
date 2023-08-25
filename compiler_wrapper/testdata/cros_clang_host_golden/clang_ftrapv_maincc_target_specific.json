@@ -39,8 +39,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -86,8 +85,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -133,8 +131,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -180,8 +177,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -227,8 +223,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -274,8 +269,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -321,8 +315,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -368,8 +361,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -415,8 +407,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }

@@ -56,8 +56,7 @@
             "-Wunsafe-loop-optimizations",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -104,8 +103,7 @@
             "-Wno-#warnings",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -152,8 +150,7 @@
             "-Wno-error=uninitialized",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -200,8 +197,7 @@
             "-someflag",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }

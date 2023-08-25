@@ -41,8 +41,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -91,8 +90,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         },
         "stderr": "-Werror originalerror",
@@ -127,7 +125,6 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation",
             "-Wno-error",
             "-Wno-error=poison-system-directories"
           ]
@@ -179,8 +176,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         },
         "stderr": "-Werror originalerror",
@@ -215,7 +211,6 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation",
             "-Wno-error",
             "-Wno-error=poison-system-directories"
           ]

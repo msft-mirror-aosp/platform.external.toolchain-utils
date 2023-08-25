@@ -48,8 +48,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ],
           "env_updates": [
             "PYTHONPATH=/somepath/test_binary"
@@ -108,8 +107,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ],
           "env_updates": [
             "PYTHONPATH=/somepath/test_binary"
@@ -171,8 +169,7 @@
             "-fcommon",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ],
           "env_updates": [
             "PYTHONPATH=/somepath/test_binary"

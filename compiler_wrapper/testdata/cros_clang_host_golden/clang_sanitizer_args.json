@@ -41,8 +41,7 @@
             "-fsanitize=kernel-address",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -90,8 +89,7 @@
             "-fsanitize=kernel-address",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -139,8 +137,7 @@
             "-fsanitize=kernel-address",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -188,8 +185,7 @@
             "-fsanitize=kernel-address",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -236,8 +232,7 @@
             "-fsanitize=fuzzer",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -286,8 +281,7 @@
             "-fprofile-instr-generate",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -334,8 +328,7 @@
             "-fsanitize=address",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
@@ -382,8 +375,7 @@
             "-fprofile-instr-generate",
             "main.cc",
             "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion",
-            "-Wno-string-concatenation"
+            "-Wno-implicit-int-float-conversion"
           ]
         }
       }
