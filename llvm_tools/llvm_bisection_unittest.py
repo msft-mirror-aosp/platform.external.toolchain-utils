@@ -209,7 +209,6 @@ class LLVMBisectionTest(unittest.TestCase):
             _git_hash,
             _revision,
             _chroot_path,
-            _patch_file,
             _extra_cls,
             _options,
             _builder,
@@ -238,7 +237,6 @@ class LLVMBisectionTest(unittest.TestCase):
         args_output = test_helpers.ArgsOutputTest()
 
         packages = ["sys-devel/llvm"]
-        patch_file = "/abs/path/to/PATCHES.json"
 
         # Create a temporary .JSON file to simulate a status file for bisection.
         with test_helpers.CreateTemporaryJsonFile() as temp_json_file:
@@ -255,7 +253,6 @@ class LLVMBisectionTest(unittest.TestCase):
                     temp_json_file,
                     packages,
                     args_output.chroot_path,
-                    patch_file,
                     args_output.extra_change_lists,
                     args_output.options,
                     args_output.builders,
@@ -289,10 +286,12 @@ class LLVMBisectionTest(unittest.TestCase):
     @mock.patch.object(llvm_bisection, "GetCommitsBetween")
     @mock.patch.object(llvm_bisection, "GetRemainingRange")
     @mock.patch.object(llvm_bisection, "LoadStatusFile")
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     def testMainPassed(
         self,
         mock_outside_chroot,
+        mock_chromeos_root,
         mock_load_status_file,
         mock_get_range,
         mock_get_revision_and_hash_list,
@@ -337,6 +336,8 @@ class LLVMBisectionTest(unittest.TestCase):
             llvm_bisection.BisectionExitStatus.BISECTION_COMPLETE.value,
         )
 
+        mock_chromeos_root.assert_called_once()
+
         mock_outside_chroot.assert_called_once()
 
         mock_load_status_file.assert_called_once()
@@ -362,9 +363,10 @@ class LLVMBisectionTest(unittest.TestCase):
         )
 
     @mock.patch.object(llvm_bisection, "LoadStatusFile")
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     def testMainFailedWithInvalidRange(
-        self, mock_outside_chroot, mock_load_status_file
+        self, mock_chromeos_root, mock_outside_chroot, mock_load_status_file
     ):
 
         start = 500
@@ -394,6 +396,8 @@ class LLVMBisectionTest(unittest.TestCase):
 
         self.assertEqual(str(err.exception), error_message)
 
+        mock_chromeos_root.assert_called_once()
+
         mock_outside_chroot.assert_called_once()
 
         mock_load_status_file.assert_called_once()
@@ -401,9 +405,11 @@ class LLVMBisectionTest(unittest.TestCase):
     @mock.patch.object(llvm_bisection, "GetCommitsBetween")
     @mock.patch.object(llvm_bisection, "GetRemainingRange")
     @mock.patch.object(llvm_bisection, "LoadStatusFile")
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     def testMainFailedWithPendingBuilds(
         self,
+        mock_chromeos_root,
         mock_outside_chroot,
         mock_load_status_file,
         mock_get_range,
@@ -451,6 +457,8 @@ class LLVMBisectionTest(unittest.TestCase):
 
         self.assertEqual(str(err.exception), error_message)
 
+        mock_chromeos_root.assert_called_once()
+
         mock_outside_chroot.assert_called_once()
 
         mock_load_status_file.assert_called_once()
@@ -462,10 +470,12 @@ class LLVMBisectionTest(unittest.TestCase):
     @mock.patch.object(llvm_bisection, "GetCommitsBetween")
     @mock.patch.object(llvm_bisection, "GetRemainingRange")
     @mock.patch.object(llvm_bisection, "LoadStatusFile")
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     def testMainFailedWithDuplicateBuilds(
         self,
         mock_outside_chroot,
+        mock_chromeos_root,
         mock_load_status_file,
         mock_get_range,
         mock_get_revision_and_hash_list,
@@ -508,6 +518,8 @@ class LLVMBisectionTest(unittest.TestCase):
         error_message = 'Revision %d exists already in "jobs"' % rev
         self.assertEqual(str(err.exception), error_message)
 
+        mock_chromeos_root.assert_called_once()
+
         mock_outside_chroot.assert_called_once()
 
         mock_load_status_file.assert_called_once()
@@ -523,10 +535,12 @@ class LLVMBisectionTest(unittest.TestCase):
     @mock.patch.object(llvm_bisection, "GetCommitsBetween")
     @mock.patch.object(llvm_bisection, "GetRemainingRange")
     @mock.patch.object(llvm_bisection, "LoadStatusFile")
+    @mock.patch.object(chroot, "VerifyChromeOSRoot")
     @mock.patch.object(chroot, "VerifyOutsideChroot", return_value=True)
     def testMainFailedToAbandonCL(
         self,
         mock_outside_chroot,
+        mock_chromeos_root,
         mock_load_status_file,
         mock_get_range,
         mock_get_revision_and_hash_list,
@@ -573,6 +587,8 @@ class LLVMBisectionTest(unittest.TestCase):
             llvm_bisection.main(args_output)
 
         self.assertEqual(err.exception.output, error_message)
+
+        mock_chromeos_root.assert_called_once()
 
         mock_outside_chroot.assert_called_once()
 

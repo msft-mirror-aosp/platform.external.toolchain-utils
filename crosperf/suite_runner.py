@@ -17,6 +17,7 @@ import subprocess
 import time
 
 from cros_utils import command_executer
+from cros_utils import misc
 
 
 # sshwatcher path, relative to ChromiumOS source root.
@@ -152,7 +153,9 @@ class SuiteRunner(object):
 
     def RemoveTelemetryTempFile(self, machine, chromeos_root):
         filename = "telemetry@%s" % machine
-        fullname = os.path.join(chromeos_root, "chroot", "tmp", filename)
+        fullname = misc.GetOutsideChrootPath(
+            chromeos_root, os.path.join("/tmp", filename)
+        )
         if os.path.exists(fullname):
             os.remove(fullname)
 
@@ -286,7 +289,7 @@ class SuiteRunner(object):
     def DownloadResult(self, label, task_id):
         gsutil_cmd = os.path.join(label.chromeos_root, GS_UTIL)
         result_dir = "gs://chromeos-autotest-results/swarming-%s" % task_id
-        download_path = os.path.join(label.chromeos_root, "chroot/tmp")
+        download_path = misc.GetOutsideChrootPath(label.chromeos_root, "/tmp")
         ls_command = "%s ls %s" % (
             gsutil_cmd,
             os.path.join(result_dir, "autoserv_test"),
