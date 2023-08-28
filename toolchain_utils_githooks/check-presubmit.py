@@ -33,17 +33,45 @@ import typing as t
 PIP_DEPENDENCIES = ("numpy",)
 
 
+# Each checker represents an independent check that's done on our sources.
+#
+# They should:
+#  - never write to stdout/stderr or read from stdin directly
+#  - return either a CheckResult, or a list of [(subcheck_name, CheckResult)]
+#  - ideally use thread_pool to check things concurrently
+#    - though it's important to note that these *also* live on the threadpool
+#      we've provided. It's the caller's responsibility to guarantee that at
+#      least ${number_of_concurrently_running_checkers}+1 threads are present
+#      in the pool. In order words, blocking on results from the provided
+#      threadpool is OK.
+CheckResult = t.NamedTuple(
+    "CheckResult",
+    (
+        ("ok", bool),
+        ("output", str),
+        ("autofix_commands", t.List[t.List[str]]),
+    ),
+)
+
+
+Command = t.Sequence[t.Union[str, os.PathLike]]
+CheckResults = t.Union[t.List[t.Tuple[str, CheckResult]], CheckResult]
+
+
 # The files on which we run the mypy typechecker. The paths are relative
 # to the root of the toolchain-utils repository.
 MYPY_CHECKED_FILES = [
     "llvm_tools/nightly_revert_checker.py",
     "pgo_tools_rust/pgo_rust.py",
     "rust_tools/rust_uprev.py",
+    "toolchain_utils_githooks/check-presubmit.py",
 ]
 
 
 def run_command_unchecked(
-    command: t.List[str], cwd: str = None, env: t.Dict[str, str] = None
+    command: Command,
+    cwd: t.Optional[str] = None,
+    env: t.Optional[t.Dict[str, str]] = None,
 ) -> t.Tuple[int, str]:
     """Runs a command in the given dir, returning its exit code and stdio."""
     p = subprocess.run(
@@ -150,27 +178,6 @@ def get_pip() -> t.Optional[t.List[str]]:
     return None
 
 
-# Each checker represents an independent check that's done on our sources.
-#
-# They should:
-#  - never write to stdout/stderr or read from stdin directly
-#  - return either a CheckResult, or a list of [(subcheck_name, CheckResult)]
-#  - ideally use thread_pool to check things concurrently
-#    - though it's important to note that these *also* live on the threadpool
-#      we've provided. It's the caller's responsibility to guarantee that at
-#      least ${number_of_concurrently_running_checkers}+1 threads are present
-#      in the pool. In order words, blocking on results from the provided
-#      threadpool is OK.
-CheckResult = t.NamedTuple(
-    "CheckResult",
-    (
-        ("ok", bool),
-        ("output", str),
-        ("autofix_commands", t.List[t.List[str]]),
-    ),
-)
-
-
 def get_check_result_or_catch(
     task: multiprocessing.pool.ApplyResult,
 ) -> CheckResult:
@@ -205,7 +212,7 @@ def check_isort(
         )
 
     config_file_flag = f"--settings-file={config_file}"
-    command = [isort, "-c", config_file_flag] + python_files
+    command = [str(isort), "-c", config_file_flag] + list(python_files)
     exit_code, stdout_and_stderr = run_command_unchecked(
         command, cwd=toolchain_utils_root
     )
@@ -251,7 +258,7 @@ def check_black(
     # Folks have been bitten by accidentally using multiple formatter
     # versions in the past. This is an issue, since newer versions of
     # black may format things differently. Make the version obvious.
-    command = [black, "--version"]
+    command: Command = [black, "--version"]
     exit_code, stdout_and_stderr = run_command_unchecked(
         command, cwd=toolchain_utils_root
     )
@@ -406,7 +413,7 @@ def check_py_format(
     toolchain_utils_root: str,
     thread_pool: multiprocessing.pool.ThreadPool,
     files: t.Iterable[str],
-) -> t.List[CheckResult]:
+) -> CheckResults:
     """Runs black on files to check for style bugs. Also checks for #!s."""
     black = "black"
     if not has_executable_on_path(black):
@@ -450,7 +457,7 @@ def check_py_types(
     toolchain_utils_root: str,
     thread_pool: multiprocessing.pool.ThreadPool,
     files: t.Iterable[str],
-) -> t.List[CheckResult]:
+) -> CheckResults:
     """Runs static type checking for files in MYPY_CHECKED_FILES."""
 
     to_check = {
@@ -491,7 +498,7 @@ def check_cros_lint(
     toolchain_utils_root: str,
     thread_pool: multiprocessing.pool.ThreadPool,
     files: t.Iterable[str],
-) -> t.Union[t.List[CheckResult], CheckResult]:
+) -> CheckResults:
     """Runs `cros lint`"""
 
     fixed_env = env_with_pythonpath(toolchain_utils_root)
@@ -501,7 +508,7 @@ def check_cros_lint(
     # pylint+golint.
     def try_run_cros_lint(cros_binary: str) -> t.Optional[CheckResult]:
         exit_code, output = run_command_unchecked(
-            [cros_binary, "lint", "--"] + files,
+            [cros_binary, "lint", "--"] + list(files),
             toolchain_utils_root,
             env=fixed_env,
         )
@@ -665,7 +672,7 @@ def detect_toolchain_utils_root() -> str:
 
 def process_check_result(
     check_name: str,
-    check_results: t.Union[t.List[CheckResult], CheckResult],
+    check_results: CheckResults,
     start_time: datetime.datetime,
 ) -> t.Tuple[bool, t.List[t.List[str]]]:
     """Prints human-readable output for the given check_results."""
