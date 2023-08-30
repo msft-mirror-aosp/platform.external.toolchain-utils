@@ -19,7 +19,16 @@ import subprocess
 import sys
 import threading
 import traceback
-import typing as t
+from typing import (
+    Dict,
+    Iterable,
+    List,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 
 # This was originally had many packages in it (notably scipy)
@@ -44,18 +53,18 @@ PIP_DEPENDENCIES = ("numpy",)
 #      least ${number_of_concurrently_running_checkers}+1 threads are present
 #      in the pool. In order words, blocking on results from the provided
 #      threadpool is OK.
-CheckResult = t.NamedTuple(
+CheckResult = NamedTuple(
     "CheckResult",
     (
         ("ok", bool),
         ("output", str),
-        ("autofix_commands", t.List[t.List[str]]),
+        ("autofix_commands", List[List[str]]),
     ),
 )
 
 
-Command = t.Sequence[t.Union[str, os.PathLike]]
-CheckResults = t.Union[t.List[t.Tuple[str, CheckResult]], CheckResult]
+Command = Sequence[Union[str, os.PathLike]]
+CheckResults = Union[List[Tuple[str, CheckResult]], CheckResult]
 
 
 # The files on which we run the mypy typechecker. The paths are relative
@@ -70,9 +79,9 @@ MYPY_CHECKED_FILES = [
 
 def run_command_unchecked(
     command: Command,
-    cwd: t.Optional[str] = None,
-    env: t.Optional[t.Dict[str, str]] = None,
-) -> t.Tuple[int, str]:
+    cwd: Optional[str] = None,
+    env: Optional[Dict[str, str]] = None,
+) -> Tuple[int, str]:
     """Runs a command in the given dir, returning its exit code and stdio."""
     p = subprocess.run(
         command,
@@ -93,7 +102,7 @@ def has_executable_on_path(exe: str) -> bool:
     return shutil.which(exe) is not None
 
 
-def escape_command(command: t.Iterable[str]) -> str:
+def escape_command(command: Iterable[str]) -> str:
     """Returns a human-readable and copy-pastable shell command.
 
     Only intended for use in output to users. shell=True is strongly
@@ -102,7 +111,7 @@ def escape_command(command: t.Iterable[str]) -> str:
     return " ".join(shlex.quote(x) for x in command)
 
 
-def remove_deleted_files(files: t.Iterable[str]) -> t.List[str]:
+def remove_deleted_files(files: Iterable[str]) -> List[str]:
     return [f for f in files if os.path.exists(f)]
 
 
@@ -113,7 +122,7 @@ def is_file_executable(file_path: str) -> bool:
 # As noted in our docs, some of our Python code depends on modules that sit in
 # toolchain-utils/. Add that to PYTHONPATH to ensure that things like `cros
 # lint` are kept happy.
-def env_with_pythonpath(toolchain_utils_root: str) -> t.Dict[str, str]:
+def env_with_pythonpath(toolchain_utils_root: str) -> Dict[str, str]:
     env = dict(os.environ)
     if "PYTHONPATH" in env:
         env["PYTHONPATH"] += ":" + toolchain_utils_root
@@ -122,7 +131,7 @@ def env_with_pythonpath(toolchain_utils_root: str) -> t.Dict[str, str]:
     return env
 
 
-def get_mypy() -> t.Optional[t.List[str]]:
+def get_mypy() -> Optional[List[str]]:
     """Finds the mypy executable and returns a command to invoke it.
 
     If mypy cannot be found and we're inside the chroot, this
@@ -159,7 +168,7 @@ def get_mypy() -> t.Optional[t.List[str]]:
     return None
 
 
-def get_pip() -> t.Optional[t.List[str]]:
+def get_pip() -> Optional[List[str]]:
     """Finds pip and returns a command to invoke it.
 
     If pip cannot be found, this function attempts to install
@@ -197,7 +206,7 @@ def get_check_result_or_catch(
 
 
 def check_isort(
-    toolchain_utils_root: str, python_files: t.Iterable[str]
+    toolchain_utils_root: str, python_files: Iterable[str]
 ) -> CheckResult:
     """Subchecker of check_py_format. Checks python file formats with isort"""
     chromite = Path("/mnt/host/source/chromite")
@@ -252,7 +261,7 @@ def check_isort(
 
 
 def check_black(
-    toolchain_utils_root: str, black: Path, python_files: t.Iterable[str]
+    toolchain_utils_root: str, black: Path, python_files: Iterable[str]
 ) -> CheckResult:
     """Subchecker of check_py_format. Checks python file formats with black"""
     # Folks have been bitten by accidentally using multiple formatter
@@ -271,7 +280,7 @@ def check_black(
         )
 
     black_version = stdout_and_stderr.strip()
-    black_invocation: t.List[str] = [str(black), "--line-length=80"]
+    black_invocation: List[str] = [str(black), "--line-length=80"]
     command = black_invocation + ["--check"] + list(python_files)
     exit_code, stdout_and_stderr = run_command_unchecked(
         command, cwd=toolchain_utils_root
@@ -334,7 +343,7 @@ def check_black(
 
 
 def check_mypy(
-    toolchain_utils_root: str, mypy: t.List[str], files: t.Iterable[str]
+    toolchain_utils_root: str, mypy: List[str], files: Iterable[str]
 ) -> CheckResult:
     """Checks type annotations using mypy."""
     # Show the version number, mainly for troubleshooting purposes.
@@ -365,7 +374,7 @@ def check_mypy(
         )
 
 
-def check_python_file_headers(python_files: t.Iterable[str]) -> CheckResult:
+def check_python_file_headers(python_files: Iterable[str]) -> CheckResult:
     """Subchecker of check_py_format. Checks python #!s"""
     add_hashbang = []
     remove_hashbang = []
@@ -412,7 +421,7 @@ def check_python_file_headers(python_files: t.Iterable[str]) -> CheckResult:
 def check_py_format(
     toolchain_utils_root: str,
     thread_pool: multiprocessing.pool.ThreadPool,
-    files: t.Iterable[str],
+    files: Iterable[str],
 ) -> CheckResults:
     """Runs black on files to check for style bugs. Also checks for #!s."""
     black = "black"
@@ -456,7 +465,7 @@ def check_py_format(
 def check_py_types(
     toolchain_utils_root: str,
     thread_pool: multiprocessing.pool.ThreadPool,
-    files: t.Iterable[str],
+    files: Iterable[str],
 ) -> CheckResults:
     """Runs static type checking for files in MYPY_CHECKED_FILES."""
 
@@ -490,14 +499,14 @@ def check_py_types(
     return [(name, get_check_result_or_catch(task)) for name, task in tasks]
 
 
-def find_chromeos_root_directory() -> t.Optional[str]:
+def find_chromeos_root_directory() -> Optional[str]:
     return os.getenv("CHROMEOS_ROOT_DIRECTORY")
 
 
 def check_cros_lint(
     toolchain_utils_root: str,
     thread_pool: multiprocessing.pool.ThreadPool,
-    files: t.Iterable[str],
+    files: Iterable[str],
 ) -> CheckResults:
     """Runs `cros lint`"""
 
@@ -506,7 +515,7 @@ def check_cros_lint(
     # We have to support users who don't have a chroot. So we either run `cros
     # lint` (if it's been made available to us), or we try a mix of
     # pylint+golint.
-    def try_run_cros_lint(cros_binary: str) -> t.Optional[CheckResult]:
+    def try_run_cros_lint(cros_binary: str) -> Optional[CheckResult]:
         exit_code, output = run_command_unchecked(
             [cros_binary, "lint", "--"] + list(files),
             toolchain_utils_root,
@@ -538,7 +547,7 @@ def check_cros_lint(
 
     tasks = []
 
-    def check_result_from_command(command: t.List[str]) -> CheckResult:
+    def check_result_from_command(command: List[str]) -> CheckResult:
         exit_code, output = run_command_unchecked(
             command, toolchain_utils_root, env=fixed_env
         )
@@ -652,7 +661,7 @@ def check_go_format(toolchain_utils_root, _thread_pool, files):
 def check_tests(
     toolchain_utils_root: str,
     _thread_pool: multiprocessing.pool.ThreadPool,
-    files: t.List[str],
+    files: List[str],
 ) -> CheckResult:
     """Runs tests."""
     exit_code, stdout_and_stderr = run_command_unchecked(
@@ -674,7 +683,7 @@ def process_check_result(
     check_name: str,
     check_results: CheckResults,
     start_time: datetime.datetime,
-) -> t.Tuple[bool, t.List[t.List[str]]]:
+) -> Tuple[bool, List[List[str]]]:
     """Prints human-readable output for the given check_results."""
     indent = "  "
 
@@ -727,7 +736,7 @@ def process_check_result(
 
 
 def try_autofix(
-    all_autofix_commands: t.List[t.List[str]], toolchain_utils_root: str
+    all_autofix_commands: List[List[str]], toolchain_utils_root: str
 ) -> None:
     """Tries to run all given autofix commands, if appropriate."""
     if not all_autofix_commands:
@@ -769,7 +778,7 @@ def try_autofix(
         )
 
 
-def find_repo_root(base_dir: str) -> t.Optional[str]:
+def find_repo_root(base_dir: str) -> Optional[str]:
     current = base_dir
     while current != "/":
         if os.path.isdir(os.path.join(current, ".repo")):
@@ -782,7 +791,7 @@ def is_in_chroot() -> bool:
     return os.path.exists("/etc/cros_chroot_version")
 
 
-def maybe_reexec_inside_chroot(autofix: bool, files: t.List[str]) -> None:
+def maybe_reexec_inside_chroot(autofix: bool, files: List[str]) -> None:
     if is_in_chroot():
         return
 
@@ -861,7 +870,7 @@ def ensure_pip_deps_installed() -> None:
         subprocess.check_call(pip + ["install", "--user", package])
 
 
-def main(argv: t.List[str]) -> int:
+def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--no_autofix",
