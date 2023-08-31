@@ -337,10 +337,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
         # Verify commands
         symlink_dir = os.path.dirname(symlink)
-        timestamp = datetime.datetime.today().strftime("%Y%m%d")
-        new_ebuild = (
-            "/abs/path/to/llvm/llvm-1234.0_pre1000_p%s.ebuild" % timestamp
-        )
+        new_ebuild = "/abs/path/to/llvm/llvm-1234.0_pre1000.ebuild"
         new_symlink = new_ebuild[: -len(".ebuild")] + "-r1.ebuild"
 
         expected_cmd = ["git", "-C", symlink_dir, "mv", ebuild, new_ebuild]

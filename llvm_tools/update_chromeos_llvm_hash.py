@@ -365,12 +365,11 @@ def UprevEbuildToVersion(symlink, svn_version, git_hash):
         raise ValueError("Tried to uprev an unknown package")
     if package == "llvm":
         new_ebuild, is_changed = re.subn(
-            r"(\d+)\.(\d+)_pre([0-9]+)_p([0-9]+)",
-            "%s.\\2_pre%s_p%s"
+            r"(\d+)\.(\d+)_pre([0-9]+)(_p[0-9]+)?",
+            "%s.\\2_pre%s"
             % (
                 llvm_major_version,
                 svn_version,
-                datetime.datetime.today().strftime("%Y%m%d"),
             ),
             ebuild,
             count=1,
