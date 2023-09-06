@@ -739,7 +739,7 @@ def ChangeRepoManifest(git_hash: str, src_tree: Path):
             f"""
             manifest: Update llvm-project to {git_hash}
 
-            Upgrade the local LLVM reversion to match the new llvm ebuild
+            Upgrade the local LLVM revision to match the new llvm ebuild
             hash. This must be merged along with any chromiumos-overlay
             changes to LLVM. Automatic uprevs rely on the manifest hash
             to match what is specified by LLVM_HASH.
