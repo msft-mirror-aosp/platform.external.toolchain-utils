@@ -117,6 +117,17 @@ def check_abi(
             run(cmd)
             if not hello_world_output.exists():
                 raise RuntimeError(f"{hello_world_output} does not exist")
+            proc = run(
+                [f"bin/{abi}-clang++", "--version"],
+                stdout=subprocess.PIPE,
+                encoding="utf-8",
+            )
+            logging.info(
+                "%s-clang++ --version:\n%s",
+                abi,
+                "> " + "\n> ".join(proc.stdout.strip().split("\n")),
+            )
+
         logging.info(
             "%s[PASS] %s was validated%s", _COLOR_GREEN, abi, _COLOR_RESET
         )
