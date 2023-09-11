@@ -312,7 +312,8 @@ def make_cl(
         subprocess.check_output(
             ["git", "add", "--all"], cwd=os.path.dirname(symlink)
         )
-    git.UploadChanges(llvm_symlink_dir, branch, commit_messages, reviewers, cc)
+    git.CommitChanges(llvm_symlink_dir, commit_messages)
+    git.UploadChanges(llvm_symlink_dir, branch, reviewers, cc)
     git.DeleteBranch(llvm_symlink_dir, branch)
 
 

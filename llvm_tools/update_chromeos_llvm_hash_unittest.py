@@ -724,6 +724,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
             mode=failure_modes.FailureModes.FAIL,
             git_hash_source="google3",
             extra_commit_msg=None,
+            delete_branch=True,
+            upload_changes=True,
         )
         mock_outside_chroot.assert_called()
         mock_chromeos_root.assert_called()
@@ -766,6 +768,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
             mode=failure_modes.FailureModes.FAIL,
             git_hash_source="google3",
             extra_commit_msg=None,
+            delete_branch=True,
+            upload_changes=True,
         )
         mock_outside_chroot.assert_called()
         mock_chromeos_root.assert_called()
@@ -823,6 +827,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
             mode=failure_mode,
             git_hash_source=llvm_ver,
             extra_commit_msg=None,
+            delete_branch=True,
+            upload_changes=True,
         )
         mock_outside_chroot.assert_called()
         mock_chromeos_root.assert_called()

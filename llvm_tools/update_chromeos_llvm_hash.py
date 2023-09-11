@@ -10,7 +10,6 @@ for review.
 """
 
 import argparse
-import datetime
 import enum
 import os
 from pathlib import Path
@@ -228,6 +227,16 @@ def GetCommandLineArgs():
         action="store_true",
         help="Updates the llvm-project revision attribute"
         " in the internal manifest.",
+    )
+    parser.add_argument(
+        "--no_delete_branch",
+        action="store_true",
+        help="Do not delete the created overlay branch.",
+    )
+    parser.add_argument(
+        "--no_upload_changes",
+        action="store_true",
+        help="Do not upload changes to gerrit.",
     )
 
     # Parse the command line.
@@ -531,7 +540,9 @@ def UpdatePackages(
     mode,
     git_hash_source,
     extra_commit_msg,
-):
+    delete_branch=True,
+    upload_changes=True,
+) -> Optional[git.CommitContents]:
     """Updates an LLVM hash and uprevs the ebuild of the packages.
 
     A temporary repo is created for the changes. The changes are
@@ -550,10 +561,11 @@ def UpdatePackages(
       git_hash_source: The source of which git hash to use based off of.
         Ex. 'google3', 'tot', or <version> such as 365123
       extra_commit_msg: extra test to append to the commit message.
+      delete_branch: Delete the git branch as a final step.
+      upload_changes: Upload the commit to gerrit as a CL.
 
     Returns:
-      A nametuple that has two (key, value) pairs, where the first pair is the
-      Gerrit commit URL and the second pair is the change list number.
+      If upload_changes is set, a git.CommitContents object. Otherwise None.
     """
 
     portage_packages = (PortagePackage(chroot_path, pkg) for pkg in packages)
@@ -579,6 +591,7 @@ def UpdatePackages(
 
     # Holds the list of packages that are updating.
     updated_packages: List[str] = []
+    change_list = None
     git.CreateBranch(chromiumos_overlay_path, branch_name)
     try:
         for pkg in portage_packages:
@@ -600,11 +613,16 @@ def UpdatePackages(
         )
         if extra_commit_msg:
             commit_lines.append(extra_commit_msg)
-        change_list = git.UploadChanges(
-            chromiumos_overlay_path, branch_name, commit_lines
-        )
+        git.CommitChanges(chromiumos_overlay_path, commit_lines)
+        if upload_changes:
+            change_list = git.UploadChanges(
+                chromiumos_overlay_path, branch_name
+            )
     finally:
-        git.DeleteBranch(chromiumos_overlay_path, branch_name)
+        if delete_branch:
+            git.DeleteBranch(chromiumos_overlay_path, branch_name)
+        else:
+            print(f"Not deleting branch {branch_name}")
     return change_list
 
 
@@ -722,12 +740,16 @@ def UpdatePackagesPatchMetadataFile(
     return package_info
 
 
-def ChangeRepoManifest(git_hash: str, src_tree: Path):
+def ChangeRepoManifest(
+    git_hash: str, src_tree: Path, delete_branch=True, upload_changes=True
+):
     """Change the repo internal manifest for llvm-project.
 
     Args:
         git_hash: The LLVM git hash to change to.
         src_tree: ChromiumOS source tree checkout.
+        delete_branch: Delete the branch as a final step.
+        upload_changes: Upload the changes to gerrit.
 
     Returns:
         The uploaded changelist CommitContents.
@@ -754,6 +776,7 @@ def ChangeRepoManifest(git_hash: str, src_tree: Path):
         .splitlines()
     )
 
+    change_list = None
     git.CreateBranch(manifest_dir, branch_name)
     try:
         manifest_path = manifest_utils.update_chromeos_manifest(
@@ -763,9 +786,14 @@ def ChangeRepoManifest(git_hash: str, src_tree: Path):
         subprocess.run(
             ["git", "-C", manifest_dir, "add", manifest_path.name], check=True
         )
-        change_list = git.UploadChanges(manifest_dir, branch_name, commit_lines)
+        git.CommitChanges(manifest_dir, commit_lines)
+        if upload_changes:
+            change_list = git.UploadChanges(manifest_dir, branch_name)
     finally:
-        git.DeleteBranch(manifest_dir, branch_name)
+        if delete_branch:
+            git.DeleteBranch(manifest_dir, branch_name)
+        else:
+            print(f"Not deleting branch {branch_name}")
     return change_list
 
 
@@ -809,22 +837,34 @@ def main():
         mode=failure_modes.FailureModes(args_output.failure_mode),
         git_hash_source=git_hash_source,
         extra_commit_msg=None,
+        delete_branch=not args_output.no_delete_branch,
+        upload_changes=not args_output.no_upload_changes,
     )
-
-    print(f"Successfully updated packages to {git_hash} ({svn_version})")
-    print(f"Gerrit URL: {change_list.url}")
-    print(f"Change list number: {change_list.cl_number}")
+    if change_list:
+        print(f"Successfully updated packages to {git_hash} ({svn_version})")
+        print(f"Gerrit URL: {change_list.url}")
+        print(f"Change list number: {change_list.cl_number}")
+    else:
+        print("--no-upload passed, did not create a change list")
 
     if args_output.repo_manifest:
         print(
             f"Updating internal manifest to {git_hash} ({svn_version})...",
             end="",
         )
-        change_list = ChangeRepoManifest(git_hash, args_output.chroot_path)
+        change_list = ChangeRepoManifest(
+            git_hash,
+            args_output.chroot_path,
+            delete_branch=not args_output.no_delete_branch,
+            upload_changes=not args_output.no_upload_changes,
+        )
         print(" Done!")
-        print("New repo manifest CL:")
-        print(f"  URL: {change_list.url}")
-        print(f"  CL Number: {change_list.cl_number}")
+        if change_list:
+            print("New repo manifest CL:")
+            print(f"  URL: {change_list.url}")
+            print(f"  CL Number: {change_list.cl_number}")
+        else:
+            print("--no-upload passed, did not create a change list")
 
 
 if __name__ == "__main__":

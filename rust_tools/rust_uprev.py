@@ -1155,7 +1155,9 @@ def create_new_commit(rust_version: RustVersion) -> None:
         "BUG=None",
         "TEST=Use CQ to test the new Rust version",
     ]
-    git.UploadChanges(EBUILD_PREFIX, f"rust-to-{rust_version}", messages)
+    branch = f"rust-to-{rust_version}"
+    git.CommitChanges(EBUILD_PREFIX, messages)
+    git.UploadChanges(EBUILD_PREFIX, branch)
 
 
 def run_in_chroot(cmd: Command, *args, **kwargs) -> subprocess.CompletedProcess:
