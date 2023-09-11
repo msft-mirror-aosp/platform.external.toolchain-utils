@@ -539,7 +539,7 @@ def UpdatePackages(
     chroot_path: Path,
     mode,
     git_hash_source,
-    extra_commit_msg,
+    extra_commit_msg: Optional[Iterable[str]],
     delete_branch=True,
     upload_changes=True,
 ) -> Optional[git.CommitContents]:
@@ -612,7 +612,7 @@ def UpdatePackages(
             package_info_dict, commit_lines
         )
         if extra_commit_msg:
-            commit_lines.append(extra_commit_msg)
+            commit_lines.extend(extra_commit_msg)
         git.CommitChanges(chromiumos_overlay_path, commit_lines)
         if upload_changes:
             change_list = git.UploadChanges(
@@ -741,7 +741,11 @@ def UpdatePackagesPatchMetadataFile(
 
 
 def ChangeRepoManifest(
-    git_hash: str, src_tree: Path, delete_branch=True, upload_changes=True
+    git_hash: str,
+    src_tree: Path,
+    extra_commit_msg: Optional[Iterable[str]] = None,
+    delete_branch=True,
+    upload_changes=True,
 ):
     """Change the repo internal manifest for llvm-project.
 
@@ -786,6 +790,8 @@ def ChangeRepoManifest(
         subprocess.run(
             ["git", "-C", manifest_dir, "add", manifest_path.name], check=True
         )
+        if extra_commit_msg:
+            commit_lines.extend(extra_commit_msg)
         git.CommitChanges(manifest_dir, commit_lines)
         if upload_changes:
             change_list = git.UploadChanges(manifest_dir, branch_name)
@@ -852,9 +858,15 @@ def main():
             f"Updating internal manifest to {git_hash} ({svn_version})...",
             end="",
         )
+        cq_depend_line = (
+            [f"Cq-Depend: chromium:{change_list.cl_number}"]
+            if change_list
+            else None
+        )
         change_list = ChangeRepoManifest(
             git_hash,
             args_output.chroot_path,
+            extra_commit_msg=cq_depend_line,
             delete_branch=not args_output.no_delete_branch,
             upload_changes=not args_output.no_upload_changes,
         )
