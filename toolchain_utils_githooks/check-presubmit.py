@@ -68,14 +68,15 @@ Command = Sequence[Union[str, os.PathLike]]
 CheckResults = Union[List[Tuple[str, CheckResult]], CheckResult]
 
 
-# The files on which we run the mypy typechecker. The paths are relative
-# to the root of the toolchain-utils repository.
-MYPY_CHECKED_FILES = [
+# The files and directories on which we run the mypy typechecker. The paths are
+# relative to the root of the toolchain-utils repository.
+MYPY_CHECKED_PATHS = (
     "llvm_tools/nightly_revert_checker.py",
+    "pgo_tools",
     "pgo_tools_rust/pgo_rust.py",
     "rust_tools/rust_uprev.py",
     "toolchain_utils_githooks/check-presubmit.py",
-]
+)
 
 
 def run_command_unchecked(
@@ -463,16 +464,47 @@ def check_py_format(
     return [(name, get_check_result_or_catch(task)) for name, task in tasks]
 
 
+def file_is_relative_to(file: Path, potential_parent: Path) -> bool:
+    """file.is_relative_to(potential_parent), but for Python < 3.9."""
+    try:
+        file.relative_to(potential_parent)
+        return True
+    except ValueError:
+        return False
+
+
+def is_file_in_any_of(file: Path, files_and_dirs: List[Path]) -> bool:
+    """Returns whether `files_and_dirs` encompasses `file`.
+
+    `files_and_dirs` is considered to encompass `file` if `files_and_dirs`
+    contains `file` directly, or if it contains a directory that is a parent of
+    `file`.
+
+    Args:
+        file: a path to check
+        files_and_dirs: a list of directories to check
+    """
+    # This could technically be made sublinear, but it's running at most a few
+    # dozen times on a `files_and_dirs` that's currently < 10 elems.
+    return any(
+        file == x or file_is_relative_to(file, x) for x in files_and_dirs
+    )
+
+
 def check_py_types(
     toolchain_utils_root: str,
     thread_pool: multiprocessing.pool.ThreadPool,
     files: Iterable[str],
 ) -> CheckResults:
     """Runs static type checking for files in MYPY_CHECKED_FILES."""
+    path_root = Path(toolchain_utils_root)
+    check_locations = [path_root / x for x in MYPY_CHECKED_PATHS]
+    to_check = [
+        x
+        for x in files
+        if x.endswith(".py") and is_file_in_any_of(Path(x), check_locations)
+    ]
 
-    to_check = {
-        os.path.join(toolchain_utils_root, f) for f in MYPY_CHECKED_FILES
-    }.intersection(files)
     if not to_check:
         return CheckResult(
             ok=True,
