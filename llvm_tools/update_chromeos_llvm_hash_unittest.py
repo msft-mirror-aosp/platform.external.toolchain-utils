@@ -5,9 +5,6 @@
 
 """Unit tests for updating LLVM hashes."""
 
-
-import collections
-import datetime
 import os
 from pathlib import Path
 import subprocess
@@ -19,7 +16,6 @@ import unittest.mock as mock
 import chroot
 import failure_modes
 import get_llvm_hash
-import git
 import test_helpers
 import update_chromeos_llvm_hash
 
@@ -65,7 +61,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
             )
 
         self.assertEqual(
-            str(err.exception), "Invalid ebuild path provided: %s" % ebuild_path
+            str(err.exception),
+            "Invalid ebuild path provided: %s" % ebuild_path,
         )
 
         mock_isfile.assert_called_once()
@@ -172,8 +169,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
                 "Last line in the ebuild",
             ]
 
-            # Verify the new file contents of the ebuild file match the expected file
-            # contents.
+            # Verify the new file contents of the ebuild file match the expected
+            # file contents.
             with open(ebuild_file) as new_file:
                 file_contents_as_a_list = [cur_line for cur_line in new_file]
                 self.assertListEqual(
@@ -220,8 +217,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
                 "Last line in the ebuild",
             ]
 
-            # Verify the new file contents of the ebuild file match the expected file
-            # contents.
+            # Verify the new file contents of the ebuild file match the expected
+            # file contents.
             with open(ebuild_file) as new_file:
                 file_contents_as_a_list = [cur_line for cur_line in new_file]
                 self.assertListEqual(
@@ -242,7 +239,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
         git_hash = "badf00d"
         mock_llvm_version.return_value = "1234"
 
-        # Verify the exception is raised when a invalid symbolic link is passed in.
+        # Verify the exception is raised when a invalid symbolic link is
+        # passed in.
         with self.assertRaises(ValueError) as err:
             update_chromeos_llvm_hash.UprevEbuildToVersion(
                 symlink_path, svn_version, git_hash
@@ -259,7 +257,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
     def testFailedToUprevEbuildSymlinkForInvalidSymlink(self, mock_islink):
         symlink_path = "/path/to/chroot/package/package.ebuild"
 
-        # Verify the exception is raised when a invalid symbolic link is passed in.
+        # Verify the exception is raised when a invalid symbolic link is
+        # passed in.
         with self.assertRaises(ValueError) as err:
             update_chromeos_llvm_hash.UprevEbuildSymlink(symlink_path)
 
@@ -314,7 +313,11 @@ class UpdateLLVMHashTest(unittest.TestCase):
     @mock.patch.object(os.path, "realpath")
     @mock.patch.object(subprocess, "check_output", return_value=None)
     def testSuccessfullyUprevEbuildToVersionLLVM(
-        self, mock_command_output, mock_realpath, mock_islink, mock_llvm_version
+        self,
+        mock_command_output,
+        mock_realpath,
+        mock_islink,
+        mock_llvm_version,
     ):
         symlink = "/path/to/llvm/llvm-12.0_pre3_p2-r10.ebuild"
         ebuild = "/abs/path/to/llvm/llvm-12.0_pre3_p2.ebuild"

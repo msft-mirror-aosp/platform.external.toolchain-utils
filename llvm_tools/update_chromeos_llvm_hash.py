@@ -110,7 +110,8 @@ class PortagePackage:
             # We can exit early if we're not working with a live ebuild,
             # and we don't have something to uprev.
             raise RuntimeError(
-                f"Cannot update: no live ebuild or symlink found for {self.package}"
+                "Cannot update: no live ebuild or symlink found"
+                f" for {self.package}"
             )
 
         UpdateEbuildLLVMHash(
@@ -150,9 +151,9 @@ def GetCommandLineArgs():
     """Parses the command line for the optional command line arguments.
 
     Returns:
-      The log level to use when retrieving the LLVM hash or google3 LLVM version,
-      the chroot path to use for executing chroot commands,
-      a list of a package or packages to update their LLVM next hash,
+      The log level to use when retrieving the LLVM hash or google3 LLVM
+      version, the chroot path to use for executing chroot commands, a list of
+      a package or packages to update their LLVM next hash,
       and the LLVM version to use when retrieving the LLVM hash.
     """
 
@@ -169,7 +170,8 @@ def GetCommandLineArgs():
         help="the path to the chroot (default: %(default)s)",
     )
 
-    # Add argument for specific builds to uprev and update their llvm-next hash.
+    # Add argument for specific builds to uprev and update their llvm-next
+    # hash.
     parser.add_argument(
         "--update_packages",
         default=",".join(DEFAULT_PACKAGES),
@@ -627,7 +629,7 @@ def UpdatePackages(
 
 
 def EnsurePackageMaskContains(chroot_path, git_hash):
-    """Adds the major version of llvm to package.mask if it's not already present.
+    """Adds the major version of llvm to package.mask if not already present.
 
     Args:
       chroot_path: The absolute path to the chroot.
@@ -671,20 +673,20 @@ def UpdatePackagesPatchMetadataFile(
         Ex: 'FailureModes.FAIL'
 
     Returns:
-      A dictionary where the key is the package name and the value is a dictionary
-      that has information on the patches.
+      A dictionary where the key is the package name and the value is a
+      dictionary that has information on the patches.
     """
 
-    # A dictionary where the key is the package name and the value is a dictionary
-    # that has information on the patches.
+    # A dictionary where the key is the package name and the value is a
+    # dictionary that has information on the patches.
     package_info = {}
 
     llvm_hash = get_llvm_hash.LLVMHash()
 
     with llvm_hash.CreateTempDirectory() as temp_dir:
         with get_llvm_hash.CreateTempLLVMRepo(temp_dir) as dirname:
-            # Ensure that 'svn_version' exists in the chromiumum mirror of LLVM by
-            # finding its corresponding git hash.
+            # Ensure that 'svn_version' exists in the chromiumum mirror of
+            # LLVM by finding its corresponding git hash.
             git_hash = get_llvm_hash.GetGitHashFrom(dirname, svn_version)
             move_head_cmd = ["git", "-C", dirname, "checkout", git_hash, "-q"]
             subprocess.run(move_head_cmd, stdout=subprocess.DEVNULL, check=True)
