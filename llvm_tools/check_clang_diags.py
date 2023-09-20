@@ -18,6 +18,7 @@ import os
 import shutil
 import subprocess
 import sys
+import textwrap
 from typing import Dict, List, Tuple
 
 from cros_utils import bugs
@@ -120,9 +121,9 @@ def _process_new_diagnostics(
             newly_added_diags = [x for x in diags if x not in old_diags]
             if newly_added_diags:
                 new_diagnostics[tool] = newly_added_diags
-            # This specifically tries to make diags sticky: if one is landed, then
-            # reverted, then relanded, we ignore the reland. This might not be
-            # desirable? I don't know.
+            # This specifically tries to make diags sticky: if one is landed,
+            # then reverted, then relanded, we ignore the reland. This might
+            # not be desirable? I don't know.
             new_state_file[tool] = old[tool] + newly_added_diags
 
     # Sort things so we have more predictable output.
@@ -138,12 +139,13 @@ def _file_bugs_for_new_diags(new_diags: Dict[str, List[str]]):
             bugs.CreateNewBug(
                 component_id=bugs.WellKnownComponents.CrOSToolchainPublic,
                 title=f"Investigate {tool} check `{diag}`",
-                body="\n".join(
-                    (
-                        f"It seems that the `{diag}` check was recently added to {tool}.",
-                        "It's probably good to TAL at whether this check would be good",
-                        "for us to enable in e.g., platform2, or across ChromeOS.",
-                    )
+                body=textwrap.dedent(
+                    f"""\
+                    It seems that the `{diag}` check was recently added
+                    to {tool}. It's probably good to TAL at whether this
+                    check would be good for us to enable in e.g., platform2, or
+                    across ChromeOS.
+                    """
                 ),
                 assignee=_DEFAULT_ASSIGNEE,
                 cc=_DEFAULT_CCS,
@@ -191,8 +193,8 @@ def main(argv: List[str]):
         with open(state_file, encoding="utf-8") as f:
             prior_diagnostics = json.load(f)
     except FileNotFoundError:
-        # If the state file didn't exist, just create it without complaining this
-        # time.
+        # If the state file didn't exist, just create it without complaining
+        # this time.
         prior_diagnostics = {}
 
     available_diagnostics = _collect_available_diagnostics(llvm_dir, build_dir)
