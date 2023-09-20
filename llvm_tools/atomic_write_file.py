@@ -34,13 +34,13 @@ def atomic_write(fp: Union[Path, str], mode="w", *args, **kwargs):
         >>> # "f" is closed here, and my_file.txt is written to.
 
     Args:
-      fp: Filepath to open.
-      mode: File mode; can be 'w', 'wb'. Default 'w'.
-      *args: Passed to Path.open as nargs.
-      **kwargs: Passed to Path.open as kwargs.
+        fp: Filepath to open.
+        mode: File mode; can be 'w', 'wb'. Default 'w'.
+        *args: Passed to Path.open as nargs.
+        **kwargs: Passed to Path.open as kwargs.
 
     Raises:
-      ValueError when the mode is invalid.
+        ValueError when the mode is invalid.
     """
     if isinstance(fp, str):
         fp = Path(fp)
