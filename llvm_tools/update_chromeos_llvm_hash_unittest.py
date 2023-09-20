@@ -724,7 +724,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
             chroot_path=expected_chroot,
             mode=failure_modes.FailureModes.FAIL,
             git_hash_source="google3",
-            extra_commit_msg=None,
+            extra_commit_msg_lines=None,
             delete_branch=True,
             upload_changes=True,
         )
@@ -768,7 +768,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
             chroot_path=expected_chroot,
             mode=failure_modes.FailureModes.FAIL,
             git_hash_source="google3",
-            extra_commit_msg=None,
+            extra_commit_msg_lines=None,
             delete_branch=True,
             upload_changes=True,
         )
@@ -827,7 +827,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
             chroot_path=chroot_path,
             mode=failure_mode,
             git_hash_source=llvm_ver,
-            extra_commit_msg=None,
+            extra_commit_msg_lines=None,
             delete_branch=True,
             upload_changes=True,
         )

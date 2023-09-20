@@ -541,7 +541,7 @@ def UpdatePackages(
     chroot_path: Path,
     mode,
     git_hash_source,
-    extra_commit_msg: Optional[Iterable[str]],
+    extra_commit_msg_lines: Optional[Iterable[str]],
     delete_branch=True,
     upload_changes=True,
 ) -> Optional[git.CommitContents]:
@@ -562,7 +562,8 @@ def UpdatePackages(
             Ex. 'FailureModes.FAIL'
         git_hash_source: The source of which git hash to use based off of.
             Ex. 'google3', 'tot', or <version> such as 365123
-        extra_commit_msg: extra test to append to the commit message.
+        extra_commit_msg_lines: extra lines to append to the commit message.
+            Newlines are added automatically.
         delete_branch: Delete the git branch as a final step.
         upload_changes: Upload the commit to gerrit as a CL.
 
@@ -613,8 +614,8 @@ def UpdatePackages(
         commit_lines = StagePackagesPatchResultsForCommit(
             package_info_dict, commit_lines
         )
-        if extra_commit_msg:
-            commit_lines.extend(extra_commit_msg)
+        if extra_commit_msg_lines:
+            commit_lines.extend(extra_commit_msg_lines)
         git.CommitChanges(chromiumos_overlay_path, commit_lines)
         if upload_changes:
             change_list = git.UploadChanges(
@@ -745,7 +746,7 @@ def UpdatePackagesPatchMetadataFile(
 def ChangeRepoManifest(
     git_hash: str,
     src_tree: Path,
-    extra_commit_msg: Optional[Iterable[str]] = None,
+    extra_commit_msg_lines: Optional[Iterable[str]] = None,
     delete_branch=True,
     upload_changes=True,
 ):
@@ -754,7 +755,7 @@ def ChangeRepoManifest(
     Args:
         git_hash: The LLVM git hash to change to.
         src_tree: ChromiumOS source tree checkout.
-        extra_commit_msg: Lines to append to the commit message.
+        extra_commit_msg_lines: Lines to append to the commit message.
         delete_branch: Delete the branch as a final step.
         upload_changes: Upload the changes to gerrit.
 
@@ -793,8 +794,8 @@ def ChangeRepoManifest(
         subprocess.run(
             ["git", "-C", manifest_dir, "add", manifest_path.name], check=True
         )
-        if extra_commit_msg:
-            commit_lines.extend(extra_commit_msg)
+        if extra_commit_msg_lines:
+            commit_lines.extend(extra_commit_msg_lines)
         git.CommitChanges(manifest_dir, commit_lines)
         if upload_changes:
             change_list = git.UploadChanges(manifest_dir, branch_name)
@@ -845,7 +846,7 @@ def main():
         chroot_path=args_output.chroot_path,
         mode=failure_modes.FailureModes(args_output.failure_mode),
         git_hash_source=git_hash_source,
-        extra_commit_msg=None,
+        extra_commit_msg_lines=None,
         delete_branch=not args_output.no_delete_branch,
         upload_changes=not args_output.no_upload_changes,
     )
@@ -862,14 +863,14 @@ def main():
             end="",
         )
         cq_depend_line = (
-            [f"Cq-Depend: chromium:{change_list.cl_number}"]
+            f"Cq-Depend: chromium:{change_list.cl_number}"
             if change_list
             else None
         )
         change_list = ChangeRepoManifest(
             git_hash,
             args_output.chroot_path,
-            extra_commit_msg=cq_depend_line,
+            extra_commit_msg_lines=[cq_depend_line],
             delete_branch=not args_output.no_delete_branch,
             upload_changes=not args_output.no_upload_changes,
         )

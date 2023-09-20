@@ -148,7 +148,7 @@ def GetCLAfterUpdatingPackages(
         chroot_path=Path(chroot_path),
         mode=failure_modes.FailureModes.DISABLE_PATCHES,
         git_hash_source=svn_option,
-        extra_commit_msg=None,
+        extra_commit_msg_lines=None,
     )
 
     print("\nSuccessfully updated packages to %d" % svn_version)
