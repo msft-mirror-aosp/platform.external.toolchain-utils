@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+from typing import List
 
 import chroot
 import failure_modes
@@ -362,16 +363,14 @@ def StartRecipeBuilders(
 
 
 # Testing with CQ
-def GetCQDependString(dependent_cls):
+def GetCQDependString(dependent_cls: List[int]) -> str:
     """Get CQ dependency string e.g. `Cq-Depend: chromium:MM, chromium:NN`."""
 
     if not dependent_cls:
         return None
 
     # Cq-Depend must start a new paragraph prefixed with "Cq-Depend".
-    return "\nCq-Depend: " + ", ".join(
-        ("chromium:%s" % i) for i in dependent_cls
-    )
+    return "\nCq-Depend: " + ", ".join(f"chromium:{x}" for x in dependent_cls)
 
 
 def GetCQIncludeTrybotsString(trybot):
