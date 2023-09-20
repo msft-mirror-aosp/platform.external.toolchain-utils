@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Tests for nightly_revert_checker."""
 
-
 import io
 import unittest
-from unittest.mock import patch
+from unittest import mock
 
-import cros_utils.tiny_render as tiny_render
+from cros_utils import tiny_render
 import get_upstream_patch
 import nightly_revert_checker
 import revert_checker
@@ -44,7 +42,8 @@ class Test(unittest.TestCase):
         )
 
         expected_email = nightly_revert_checker._Email(
-            subject="[revert-checker/${repo}] new revert discovered across ${name}",
+            subject="[revert-checker/${repo}] new revert discovered across "
+            "${name}",
             body=[
                 "It looks like there may be a new revert across ${name} (",
                 "pretty_${sha}",
@@ -176,8 +175,8 @@ class Test(unittest.TestCase):
 
             self.assertIn("Failed to detect SHAs", str(e.exception))
 
-    @patch("revert_checker.find_reverts")
-    @patch("get_upstream_patch.get_from_upstream")
+    @mock.patch("revert_checker.find_reverts")
+    @mock.patch("get_upstream_patch.get_from_upstream")
     def test_do_cherrypick_is_called(self, do_cherrypick, find_reverts):
         find_reverts.return_value = [
             revert_checker.Revert("12345abcdef", "fedcba54321")
@@ -194,8 +193,8 @@ class Test(unittest.TestCase):
         do_cherrypick.assert_called_once()
         find_reverts.assert_called_once()
 
-    @patch("revert_checker.find_reverts")
-    @patch("get_upstream_patch.get_from_upstream")
+    @mock.patch("revert_checker.find_reverts")
+    @mock.patch("get_upstream_patch.get_from_upstream")
     def test_do_cherrypick_handles_cherrypick_error(
         self, do_cherrypick, find_reverts
     ):

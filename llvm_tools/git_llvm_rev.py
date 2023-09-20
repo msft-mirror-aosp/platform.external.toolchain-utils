@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -9,7 +8,6 @@
 Revision numbers are all of the form '(branch_name, r1234)'. As a shorthand,
 r1234 is parsed as '(main, 1234)'.
 """
-
 
 import argparse
 import re
@@ -193,14 +191,15 @@ def translate_sha_to_rev(llvm_config: LLVMConfig, sha_or_ref: str) -> Rev:
         )
 
     # It seems that some `origin/release/.*` branches have
-    # `origin/upstream/release/.*` equivalents, which is... awkward to deal with.
-    # Prefer the latter, since that seems to have newer commits than the former.
-    # Technically n^2, but len(elements) should be like, tens in the worst case.
+    # `origin/upstream/release/.*` equivalents, which is... awkward to deal
+    # with. Prefer the latter, since that seems to have newer commits than the
+    # former. Technically n^2, but len(elements) should be like, tens in the
+    # worst case.
     candidates = [x for x in candidates if f"upstream/{x}" not in candidates]
     if len(candidates) != 1:
         raise ValueError(
-            f"Ambiguity: multiple branches from {llvm_config.remote} have {sha}: "
-            f"{sorted(candidates)}"
+            f"Ambiguity: multiple branches from {llvm_config.remote} have "
+            f"{sha}: {sorted(candidates)}"
         )
 
     return Rev(branch=candidates[0], number=revision_number)
@@ -314,8 +313,8 @@ def translate_rev_to_sha(llvm_config: LLVMConfig, rev: Rev) -> str:
             )
 
     # Alternatively, we could |git log --format=%H|, but git is *super* fast
-    # about rev walking/counting locally compared to long |log|s, so we walk back
-    # twice.
+    # about rev walking/counting locally compared to long |log|s, so we walk
+    # back twice.
     head = check_output(
         [
             "git",
@@ -345,8 +344,8 @@ def translate_rev_to_sha(llvm_config: LLVMConfig, rev: Rev) -> str:
     commits_behind_head = revs_between - commit_number
     if commits_behind_head < 0:
         raise ValueError(
-            f"Revision {rev} is past {llvm_config.remote}/{branch}. Try updating "
-            "your tree?"
+            f"Revision {rev} is past {llvm_config.remote}/{branch}. Try "
+            "updating your tree?"
         )
 
     result = check_output(

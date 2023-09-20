@@ -42,11 +42,11 @@ def parse_patch_stream(patch_stream: IO[str]) -> Dict[str, List[Hunk]]:
     """Parse a patch file-like into Hunks.
 
     Args:
-      patch_stream: A IO stream formatted like a git patch file.
+        patch_stream: A IO stream formatted like a git patch file.
 
     Returns:
-      A dictionary mapping filenames to lists of Hunks present
-      in the patch stream.
+        A dictionary mapping filenames to lists of Hunks present
+        in the patch stream.
     """
 
     current_filepath = None
@@ -124,7 +124,10 @@ class PatchResult:
         for file, hunks in self.failed_hunks.items():
             s += f"{file}:\n"
             for h in hunks:
-                s += f"Lines {h.orig_start} to {h.orig_start + h.orig_hunk_len}\n"
+                s += (
+                    f"Lines {h.orig_start} to "
+                    f"{h.orig_start + h.orig_hunk_len}\n"
+                )
             s += "--------------------\n"
         return s
 
@@ -150,13 +153,12 @@ class PatchEntry:
         """Instatiate from a dictionary.
 
         Dictionary must have at least the following key:
-
-          {
+        {
             'rel_patch_path': '<relative patch path to workdir>',
-          }
+        }
 
         Returns:
-          A new PatchEntry.
+            A new PatchEntry.
         """
         return cls(
             workdir,
@@ -289,8 +291,8 @@ def json_to_patch_entries(workdir: Path, json_fd: IO[str]) -> List[PatchEntry]:
     """Convert a json IO object to List[PatchEntry].
 
     Examples:
-      >>> f = open('PATCHES.json')
-      >>> patch_entries = json_to_patch_entries(Path(), f)
+        >>> f = open('PATCHES.json')
+        >>> patch_entries = json_to_patch_entries(Path(), f)
     """
     return [PatchEntry.from_dict(workdir, d) for d in json.load(json_fd)]
 
@@ -299,8 +301,8 @@ def json_str_to_patch_entries(workdir: Path, json_str: str) -> List[PatchEntry]:
     """Convert a json IO object to List[PatchEntry].
 
     Examples:
-      >>> f = open('PATCHES.json').read()
-      >>> patch_entries = json_str_to_patch_entries(Path(), f)
+        >>> f = open('PATCHES.json').read()
+        >>> patch_entries = json_str_to_patch_entries(Path(), f)
     """
     return [PatchEntry.from_dict(workdir, d) for d in json.loads(json_str)]
 
@@ -309,9 +311,9 @@ def _print_failed_patch(pe: PatchEntry, failed_hunks: Dict[str, List[Hunk]]):
     """Print information about a single failing PatchEntry.
 
     Args:
-      pe: A PatchEntry that failed.
-      failed_hunks: Hunks for pe which failed as dict:
-        filepath: [Hunk...]
+        pe: A PatchEntry that failed.
+        failed_hunks: Hunks for pe which failed as dict:
+          filepath: [Hunk...]
     """
     print(f"Could not apply {pe.rel_patch_path}: {pe.title()}", file=sys.stderr)
     for fp, hunks in failed_hunks.items():
@@ -336,11 +338,11 @@ def apply_all_from_json(
     the patches are applied.
 
     Args:
-      svn_version: LLVM Subversion revision to patch.
-      llvm_src_dir: llvm-project root-level source directory to patch.
-      patches_json_fp: Filepath to the PATCHES.json file.
-      continue_on_failure: Skip any patches which failed to apply,
-        rather than throw an Exception.
+        svn_version: LLVM Subversion revision to patch.
+        llvm_src_dir: llvm-project root-level source directory to patch.
+        patches_json_fp: Filepath to the PATCHES.json file.
+        continue_on_failure: Skip any patches which failed to apply,
+          rather than throw an Exception.
     """
     with patches_json_fp.open(encoding="utf-8") as f:
         patches = json_to_patch_entries(patches_json_fp.parent, f)
@@ -384,9 +386,9 @@ def apply_single_patch_entry(
     """Try to apply a single PatchEntry object.
 
     Returns:
-      Tuple where the first element indicates whether the patch applied,
-      and the second element is a faild hunk mapping from file name to lists of
-      hunks (if the patch didn't apply).
+        Tuple where the first element indicates whether the patch applied, and
+        the second element is a faild hunk mapping from file name to lists of
+        hunks (if the patch didn't apply).
     """
     # Don't apply patches outside of the version range.
     if not ignore_version_range and not pe.can_patch_version(svn_version):
@@ -475,12 +477,12 @@ def update_version_ranges(
     Modifies the contents of patches_json_fp.
 
     Args:
-      svn_version: LLVM revision number.
-      llvm_src_dir: llvm-project directory path.
-      patches_json_fp: Filepath to the PATCHES.json file.
+        svn_version: LLVM revision number.
+        llvm_src_dir: llvm-project directory path.
+        patches_json_fp: Filepath to the PATCHES.json file.
 
     Returns:
-      PatchInfo for applied and disabled patches.
+        PatchInfo for applied and disabled patches.
     """
     with patches_json_fp.open(encoding="utf-8") as f:
         contents = f.read()
@@ -519,15 +521,15 @@ def update_version_ranges_with_entries(
     """Test-able helper for UpdateVersionRanges.
 
     Args:
-      svn_version: LLVM revision number.
-      llvm_src_dir: llvm-project directory path.
-      patch_entries: PatchEntry objects to modify.
+        svn_version: LLVM revision number.
+        llvm_src_dir: llvm-project directory path.
+        patch_entries: PatchEntry objects to modify.
 
     Returns:
-      Tuple of (modified entries, applied patches)
+        Tuple of (modified entries, applied patches)
 
     Post:
-      Modifies patch_entries in place.
+        Modifies patch_entries in place.
     """
     modified_entries: List[PatchEntry] = []
     applied_patches: List[PatchEntry] = []
@@ -563,12 +565,12 @@ def remove_old_patches(
     each patch entry.
 
     Args:
-      svn_version: LLVM SVN version.
-      llvm_src_dir: LLVM source directory.
-      patches_json_fp: Location to edit patches on.
+        svn_version: LLVM SVN version.
+        llvm_src_dir: LLVM source directory.
+        patches_json_fp: Location to edit patches on.
 
     Returns:
-      PatchInfo for modified patches.
+        PatchInfo for modified patches.
     """
     with patches_json_fp.open(encoding="utf-8") as f:
         contents = f.read()

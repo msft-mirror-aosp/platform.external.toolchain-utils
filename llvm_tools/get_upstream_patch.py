@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -8,7 +7,7 @@
 
 import argparse
 import dataclasses
-from datetime import datetime
+import datetime
 import json
 import logging
 import os
@@ -88,24 +87,24 @@ def add_patch(
     """Gets the start and end intervals in 'json_file'.
 
     Args:
-      patches_json_path: The absolute path to PATCHES.json.
-      patches_dir: The aboslute path to the directory patches are in.
-      relative_patches_dir: The relative path to PATCHES.json.
-      start_version: The base LLVM revision this patch applies to.
-      llvm_dir: The path to LLVM checkout.
-      rev: An LLVM revision (git_llvm_rev.Rev) for a cherrypicking, or a
-      differential revision (str) otherwise.
-      sha: The LLVM git sha that corresponds to the patch. For differential
-      revisions, the git sha from  the local commit created by 'arc patch'
-      is used.
-      package: The LLVM project name this patch applies to.
-      platforms: List of platforms this patch applies to.
+        patches_json_path: The absolute path to PATCHES.json.
+        patches_dir: The aboslute path to the directory patches are in.
+        relative_patches_dir: The relative path to PATCHES.json.
+        start_version: The base LLVM revision this patch applies to.
+        llvm_dir: The path to LLVM checkout.
+        rev: An LLVM revision (git_llvm_rev.Rev) for a cherrypicking, or a
+        differential revision (str) otherwise.
+        sha: The LLVM git sha that corresponds to the patch. For differential
+        revisions, the git sha from  the local commit created by 'arc patch'
+        is used.
+        package: The LLVM project name this patch applies to.
+        platforms: List of platforms this patch applies to.
 
     Raises:
-      CherrypickError: A ValueError that highlights the cherry-pick has been
-      seen before.
-      CherrypickRangeError: A ValueError that's raised when the given patch
-      is from before the start_sha.
+        CherrypickError: A ValueError that highlights the cherry-pick has been
+        seen before.
+        CherrypickRangeError: A ValueError that's raised when the given patch
+        is from before the start_sha.
     """
 
     is_cherrypick = isinstance(rev, git_llvm_rev.Rev)
@@ -145,9 +144,9 @@ def add_patch(
     with open(os.path.join(patches_dir, file_name), "wb") as f:
         cmd = ["git", "show", sha]
         # Only apply the part of the patch that belongs to this package, expect
-        # LLVM. This is because some packages are built with LLVM ebuild on X86 but
-        # not on the other architectures. e.g. compiler-rt. Therefore always apply
-        # the entire patch to LLVM ebuild as a workaround.
+        # LLVM. This is because some packages are built with LLVM ebuild on X86
+        # but not on the other architectures. e.g. compiler-rt. Therefore
+        # always apply the entire patch to LLVM ebuild as a workaround.
         if package != "llvm":
             cmd.append(package_to_project(package))
         subprocess.check_call(cmd, stdout=f, cwd=llvm_dir)
@@ -212,7 +211,8 @@ def parse_ebuild_for_assignment(ebuild_path: str, var_name: str) -> str:
             if not orig_line.startswith(var_name_eq):
                 continue
 
-            # We shouldn't see much variety here, so do the simplest thing possible.
+            # We shouldn't see much variety here, so do the simplest thing
+            # possible.
             line = orig_line[len(var_name_eq) :]
             # Remove comments
             line = line.split("#")[0]
@@ -355,7 +355,9 @@ def find_patches_and_make_cl(
     commit_messages = [
         "llvm: get patches from upstream\n",
     ]
-    branch = f'get-upstream-{datetime.now().strftime("%Y%m%d%H%M%S%f")}'
+    branch = (
+        f'get-upstream-{datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")}'
+    )
 
     if create_cl:
         git.CreateBranch(llvm_symlink_dir, branch)
@@ -457,12 +459,12 @@ def _convert_patch(
     """Extract git revision info from a patch.
 
     Args:
-      llvm_config: LLVM configuration object.
-      skip_dependencies: Pass --skip-dependecies for to `arc`
-      patch: A single patch referent string.
+        llvm_config: LLVM configuration object.
+        skip_dependencies: Pass --skip-dependecies for to `arc`
+        patch: A single patch referent string.
 
     Returns:
-      A [ParsedPatch] object.
+        A [ParsedPatch] object.
     """
 
     # git hash should only have lower-case letters
@@ -553,7 +555,8 @@ def get_from_upstream(
 def main():
     chroot.VerifyOutsideChroot()
     logging.basicConfig(
-        format="%(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: %(message)s",
+        format="%(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
+        "%(message)s",
         level=logging.INFO,
     )
 
@@ -570,8 +573,8 @@ def main():
     parser.add_argument(
         "--start_sha",
         default="llvm-next",
-        help="LLVM SHA that the patch should start applying at. You can specify "
-        '"llvm" or "llvm-next", as well. Defaults to %(default)s.',
+        help="LLVM SHA that the patch should start applying at. You can "
+        'specify "llvm" or "llvm-next", as well. Defaults to %(default)s.',
     )
     parser.add_argument(
         "--sha",

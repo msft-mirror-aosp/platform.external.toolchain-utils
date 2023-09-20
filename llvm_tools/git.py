@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Git helper functions."""
-
 
 import collections
 import os
@@ -27,7 +25,7 @@ def VerifyOutsideChroot():
     """Checks whether the script invoked was executed in the chroot.
 
     Raises:
-      AssertionError: The script was run inside the chroot.
+        AssertionError: The script was run inside the chroot.
     """
 
     assert not InChroot(), "Script should be run outside the chroot."
@@ -37,11 +35,11 @@ def CreateBranch(repo, branch):
     """Creates a branch in the given repo.
 
     Args:
-      repo: The absolute path to the repo.
-      branch: The name of the branch to create.
+        repo: The absolute path to the repo.
+        branch: The name of the branch to create.
 
     Raises:
-      ValueError: Failed to create a repo in that directory.
+        ValueError: Failed to create a repo in that directory.
     """
 
     if not os.path.isdir(repo):
@@ -56,11 +54,11 @@ def DeleteBranch(repo, branch):
     """Deletes a branch in the given repo.
 
     Args:
-      repo: The absolute path of the repo.
-      branch: The name of the branch to delete.
+        repo: The absolute path of the repo.
+        branch: The name of the branch to delete.
 
     Raises:
-      ValueError: Failed to delete the repo in that directory.
+        ValueError: Failed to delete the repo in that directory.
     """
 
     if not os.path.isdir(repo):
@@ -92,24 +90,25 @@ def UploadChanges(
     branch: str,
     reviewers: Optional[Iterable[str]] = None,
     cc: Optional[Iterable[str]] = None,
-    wip=False,
+    wip: bool = False,
 ):
     """Uploads the changes in the specifed branch of the given repo for review.
 
     Args:
-      repo: The absolute path to the repo where changes were made.
-      branch: The name of the branch to upload.
-      of the changes made.
-      reviewers: A list of reviewers to add to the CL.
-      cc: A list of contributors to CC about the CL.
+        repo: The absolute path to the repo where changes were made.
+        branch: The name of the branch to upload.
+        of the changes made.
+        reviewers: A list of reviewers to add to the CL.
+        cc: A list of contributors to CC about the CL.
+        wip: Whether to upload the change as a work-in-progress.
 
     Returns:
-      A nametuple that has two (key, value) pairs, where the first pair is the
-      Gerrit commit URL and the second pair is the change list number.
+        A nametuple that has two (key, value) pairs, where the first pair is
+        the Gerrit commit URL and the second pair is the change list number.
 
     Raises:
-      ValueError: Failed to create a commit or failed to upload the
-      changes for review.
+        ValueError: Failed to create a commit or failed to upload the
+        changes for review.
     """
 
     if not os.path.isdir(repo):

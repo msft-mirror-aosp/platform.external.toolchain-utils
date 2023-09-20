@@ -22,13 +22,9 @@ LLVM_PROJECT_PATH = "src/third_party/llvm-project"
 class FormattingError(Exception):
     """Error occurred when formatting the manifest."""
 
-    pass
-
 
 class UpdateManifestError(Exception):
     """Error occurred when updating the manifest."""
-
-    pass
 
 
 def make_xmlparser():

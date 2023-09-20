@@ -12,10 +12,10 @@ from pathlib import Path
 import sys
 from typing import Iterable, List, Optional, Tuple
 
-from failure_modes import FailureModes
+import failure_modes
 import get_llvm_hash
 import patch_utils
-from subprocess_helpers import check_output
+import subprocess_helpers
 
 
 class GitBisectionCode(enum.IntEnum):
@@ -68,8 +68,8 @@ def GetCommandLineArgs(sys_argv: Optional[List[str]]):
     # applicable patches.
     parser.add_argument(
         "--failure_mode",
-        default=FailureModes.FAIL,
-        type=FailureModes,
+        default=failure_modes.FailureModes.FAIL,
+        type=failure_modes.FailureModes,
         help="the mode of the patch manager when handling failed patches "
         "(default: %(default)s)",
     )
@@ -86,14 +86,10 @@ def GetCommandLineArgs(sys_argv: Optional[List[str]]):
 
 def GetHEADSVNVersion(src_path):
     """Gets the SVN version of HEAD in the src tree."""
-
-    cmd = ["git", "-C", src_path, "rev-parse", "HEAD"]
-
-    git_hash = check_output(cmd)
-
-    version = get_llvm_hash.GetVersionFrom(src_path, git_hash.rstrip())
-
-    return version
+    git_hash = subprocess_helpers.check_output(
+        ["git", "-C", src_path, "rev-parse", "HEAD"]
+    )
+    return get_llvm_hash.GetVersionFrom(src_path, git_hash.rstrip())
 
 
 def GetCommitHashesForBisection(src_path, good_svn_version, bad_svn_version):
@@ -120,11 +116,12 @@ def CheckPatchApplies(
     to identify the SVN version
 
     Args:
-      svn_version: SVN version to test at.
-      llvm_src_dir: llvm-project source code diroctory (with a .git).
-      patches_json_fp: PATCHES.json filepath.
-      rel_patch_path: Relative patch path of the patch we want to check. If
-        patches before this patch fail to apply, then the revision is skipped.
+        svn_version: SVN version to test at.
+        llvm_src_dir: llvm-project source code diroctory (with a .git).
+        patches_json_fp: PATCHES.json filepath.
+        rel_patch_path: Relative patch path of the patch we want to check. If
+          patches before this patch fail to apply, then the revision is
+          skipped.
     """
     with patches_json_fp.open(encoding="utf-8") as f:
         patch_entries = patch_utils.json_to_patch_entries(
@@ -163,14 +160,16 @@ def ApplyPatchAndPrior(
     Patches which did not attempt to apply (because their version range didn't
     match and they weren't the patch of interest) do not appear in the output.
 
-    Probably shouldn't be called from outside of CheckPatchApplies, as it modifies
-    the source dir contents.
+    Probably shouldn't be called from outside of CheckPatchApplies, as it
+    modifies the source dir contents.
 
     Returns:
-      A tuple where:
-      [0]: Did the patch of interest succeed in applying?
-      [1]: List of applied patches, potentially containing the patch of interest.
-      [2]: List of failing patches, potentially containing the patch of interest.
+        A tuple where:
+            [0]: Did the patch of interest succeed in applying?
+            [1]: List of applied patches, potentially containing the patch of
+            interest.
+            [2]: List of failing patches, potentially containing the patch of
+            interest.
     """
     failed_patches = []
     applied_patches = []
@@ -205,7 +204,7 @@ def PrintPatchResults(patch_info: patch_utils.PatchInfo):
     """Prints the results of handling the patches of a package.
 
     Args:
-      patch_info: A dataclass that has information on the patches.
+        patch_info: A dataclass that has information on the patches.
     """
 
     def _fmt(patches):
@@ -262,7 +261,8 @@ def main(sys_argv: List[str]):
             svn_version=args.svn_version,
             llvm_src_dir=llvm_src_dir,
             patches_json_fp=patches_json_fp,
-            continue_on_failure=args.failure_mode == FailureModes.CONTINUE,
+            continue_on_failure=args.failure_mode
+            == failure_modes.FailureModes.CONTINUE,
         )
         PrintPatchResults(result)
 
@@ -290,11 +290,11 @@ def main(sys_argv: List[str]):
         sys.exit(int(error_code))
 
     dispatch_table = {
-        FailureModes.FAIL: _apply_all,
-        FailureModes.CONTINUE: _apply_all,
-        FailureModes.REMOVE_PATCHES: _remove,
-        FailureModes.DISABLE_PATCHES: _disable,
-        FailureModes.BISECT_PATCHES: _test_single,
+        failure_modes.FailureModes.FAIL: _apply_all,
+        failure_modes.FailureModes.CONTINUE: _apply_all,
+        failure_modes.FailureModes.REMOVE_PATCHES: _remove,
+        failure_modes.FailureModes.DISABLE_PATCHES: _disable,
+        failure_modes.FailureModes.BISECT_PATCHES: _test_single,
     }
 
     if args_output.failure_mode in dispatch_table:

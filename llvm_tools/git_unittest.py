@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Unit tests for git helper functions."""
 
-
 import os
 import subprocess
 import tempfile
 import unittest
-import unittest.mock as mock
+from unittest import mock
 
 import git
 
@@ -28,7 +26,8 @@ class HelperFunctionsTest(unittest.TestCase):
         path_to_repo = "/invalid/path/to/repo"
         branch = "branch-name"
 
-        # Verify the exception is raised when provided an invalid directory path.
+        # Verify the exception is raised when provided an invalid directory
+        # path.
         with self.assertRaises(ValueError) as err:
             git.CreateBranch(path_to_repo, branch)
 

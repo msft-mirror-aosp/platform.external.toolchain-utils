@@ -39,8 +39,8 @@ class PatchManagerTest(unittest.TestCase):
             )
         mock_isdir.assert_called_once()
 
-    # Simulate behavior of 'os.path.isfile()' when the patch metadata file is does
-    # not exist.
+    # Simulate behavior of 'os.path.isfile()' when the patch metadata file is
+    # does not exist.
     @mock.patch.object(Path, "is_file", return_value=False)
     def testInvalidPathToPatchMetadataFilePassedAsCommandLineArgument(
         self, mock_isfile

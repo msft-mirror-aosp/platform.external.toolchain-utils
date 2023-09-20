@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Chroot helper functions."""
-
 
 import collections
 import os
@@ -26,7 +24,7 @@ def VerifyOutsideChroot():
     """Checks whether the script invoked was executed in the chroot.
 
     Raises:
-      AssertionError: The script was run inside the chroot.
+        AssertionError: The script was run inside the chroot.
     """
 
     assert not InChroot(), "Script should be run outside the chroot."
@@ -36,7 +34,7 @@ def VerifyChromeOSRoot(chromeos_root):
     """Checks whether the path actually points to ChromiumOS checkout root.
 
     Raises:
-      AssertionError: The path is not ChromiumOS checkout root.
+        AssertionError: The path is not ChromiumOS checkout root.
     """
 
     subdir = "src/third_party/chromiumos-overlay"
@@ -49,16 +47,16 @@ def GetChrootEbuildPaths(chromeos_root, packages):
     """Gets the chroot path(s) of the package(s).
 
     Args:
-      chromeos_root: The absolute path to the chroot to
-      use for executing chroot commands.
-      packages: A list of a package/packages to
-      be used to find their chroot path.
+        chromeos_root: The absolute path to the chroot to
+        use for executing chroot commands.
+        packages: A list of a package/packages to
+        be used to find their chroot path.
 
     Returns:
-      A list of chroot paths of the packages' ebuild files.
+        A list of chroot paths of the packages' ebuild files.
 
     Raises:
-      ValueError: Failed to get the chroot path of a package.
+        ValueError: Failed to get the chroot path of a package.
     """
 
     chroot_paths = []
@@ -82,15 +80,15 @@ def ConvertChrootPathsToAbsolutePaths(
     """Converts the chroot path(s) to absolute symlink path(s).
 
     Args:
-      chromeos_root: The absolute path to the chroot.
-      chroot_paths: A list of chroot paths to convert to absolute paths.
+        chromeos_root: The absolute path to the chroot.
+        chroot_paths: A list of chroot paths to convert to absolute paths.
 
     Returns:
-      A list of absolute path(s).
+        A list of absolute path(s).
 
     Raises:
-      ValueError: Invalid prefix for the chroot path or
-      invalid chroot paths were provided.
+        ValueError: Invalid prefix for the chroot path or
+        invalid chroot paths were provided.
     """
 
     abs_paths = []
