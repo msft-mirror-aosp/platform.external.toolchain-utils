@@ -9,12 +9,10 @@ import subprocess
 
 def CheckCommand(cmd):
     """Executes the command using Popen()."""
-
-    cmd_obj = subprocess.Popen(
+    with subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="UTF-8"
-    )
-
-    stdout, _ = cmd_obj.communicate()
+    ) as cmd_obj:
+        stdout, _ = cmd_obj.communicate()
 
     if cmd_obj.returncode:
         print(stdout)
