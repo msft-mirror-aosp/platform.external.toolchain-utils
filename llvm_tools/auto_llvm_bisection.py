@@ -74,7 +74,7 @@ def GetBuildResult(chroot_path, buildbucket_id):
             ],
             cwd=chroot_path,
             stderr=subprocess.STDOUT,
-            encoding="UTF-8",
+            encoding="utf-8",
         )
     except subprocess.CalledProcessError as err:
         if "No build found. Perhaps not started" not in err.output:

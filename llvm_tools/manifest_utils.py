@@ -60,7 +60,7 @@ def update_chromeos_manifest(revision: str, src_tree: Path) -> Path:
     xmltree = ElementTree.parse(manifest_path, parser)
     update_chromeos_manifest_tree(revision, xmltree.getroot())
     with atomic_write_file.atomic_write(manifest_path, mode="wb") as f:
-        xmltree.write(f, encoding="UTF-8")
+        xmltree.write(f, encoding="utf-8")
     format_manifest(manifest_path)
     return manifest_path
 
