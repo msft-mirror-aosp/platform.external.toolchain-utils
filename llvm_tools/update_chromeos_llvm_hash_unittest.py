@@ -11,7 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-import unittest.mock as mock
+from unittest import mock
 
 import chroot
 import failure_modes
@@ -72,7 +72,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     def testFailedToUpdateLLVMHash(self, mock_isfile):
         # Create a temporary file to simulate an ebuild file of a package.
         with test_helpers.CreateTemporaryJsonFile() as ebuild_file:
-            with open(ebuild_file, "w") as f:
+            with open(ebuild_file, "w", encoding="utf-8") as f:
                 f.write(
                     "\n".join(
                         [
@@ -105,7 +105,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     def testFailedToUpdateLLVMNextHash(self, mock_isfile):
         # Create a temporary file to simulate an ebuild file of a package.
         with test_helpers.CreateTemporaryJsonFile() as ebuild_file:
-            with open(ebuild_file, "w") as f:
+            with open(ebuild_file, "w", encoding="utf-8") as f:
                 f.write(
                     "\n".join(
                         [
@@ -146,7 +146,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
             git_hash = "a123testhash1"
             svn_version = 1000
 
-            with open(ebuild_file, "w") as f:
+            with open(ebuild_file, "w", encoding="utf-8") as f:
                 f.write(
                     "\n".join(
                         [
@@ -171,10 +171,9 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
             # Verify the new file contents of the ebuild file match the expected
             # file contents.
-            with open(ebuild_file) as new_file:
-                file_contents_as_a_list = [cur_line for cur_line in new_file]
+            with open(ebuild_file, encoding="utf-8") as new_file:
                 self.assertListEqual(
-                    file_contents_as_a_list, expected_file_contents
+                    new_file.readlines(), expected_file_contents
                 )
 
         self.assertEqual(mock_isfile.call_count, 2)
@@ -194,7 +193,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
             git_hash = "a123testhash1"
             svn_version = 1000
 
-            with open(ebuild_file, "w") as f:
+            with open(ebuild_file, "w", encoding="utf-8") as f:
                 f.write(
                     "\n".join(
                         [
@@ -219,10 +218,9 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
             # Verify the new file contents of the ebuild file match the expected
             # file contents.
-            with open(ebuild_file) as new_file:
-                file_contents_as_a_list = [cur_line for cur_line in new_file]
+            with open(ebuild_file, encoding="utf-8") as new_file:
                 self.assertListEqual(
-                    file_contents_as_a_list, expected_file_contents
+                    new_file.readlines(), expected_file_contents
                 )
 
         self.assertEqual(mock_isfile.call_count, 2)
@@ -661,14 +659,14 @@ class UpdateLLVMHashTest(unittest.TestCase):
     @mock.patch("subprocess.check_output")
     @mock.patch.object(get_llvm_hash, "GetLLVMMajorVersion")
     def testUpdatePackages(
-        self, mock_llvm_major_version, mock_check_output, mock_run
+        self, mock_llvm_major_version, _mock_check_output, _mock_run
     ):
         mock_llvm_major_version.return_value = "17"
         with tempfile.TemporaryDirectory(
             "update_chromeos_llvm_hash.tmp"
         ) as workdir_str:
             src_tree = Path(workdir_str)
-            package_dir, ebuild_path, symlink_path = self.setup_mock_src_tree(
+            _package_dir, _ebuild_path, symlink_path = self.setup_mock_src_tree(
                 src_tree
             )
 

@@ -5,7 +5,6 @@
 
 """Modifies a tryjob based off of arguments."""
 
-
 import argparse
 import enum
 import json
@@ -321,7 +320,6 @@ def PerformTryjobModification(
         # Make sure the revision is within the bounds of the start and end of
         # the bisection.
         elif bisect_contents["start"] < revision < bisect_contents["end"]:
-
             (
                 git_hash,
                 revision,

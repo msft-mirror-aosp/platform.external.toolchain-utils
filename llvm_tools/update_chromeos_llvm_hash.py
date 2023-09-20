@@ -139,7 +139,7 @@ def defaultCrosRoot() -> Path:
     inside of a CrOS checkout, in which case that checkout should be used.
 
     Returns:
-      The best guess location for the cros checkout.
+        The best guess location for the cros checkout.
     """
     llvm_tools_path = os.path.realpath(os.path.dirname(__file__))
     if llvm_tools_path.endswith("src/third_party/toolchain-utils/llvm_tools"):
@@ -151,10 +151,10 @@ def GetCommandLineArgs():
     """Parses the command line for the optional command line arguments.
 
     Returns:
-      The log level to use when retrieving the LLVM hash or google3 LLVM
-      version, the chroot path to use for executing chroot commands, a list of
-      a package or packages to update their LLVM next hash,
-      and the LLVM version to use when retrieving the LLVM hash.
+        The log level to use when retrieving the LLVM hash or google3 LLVM
+        version, the chroot path to use for executing chroot commands, a list
+        of a package or packages to update their LLVM next hash, and the LLVM
+        version to use when retrieving the LLVM hash.
     """
 
     # Create parser and add optional command-line arguments.
@@ -256,14 +256,14 @@ def UpdateEbuildLLVMHash(
     The build changes are staged for commit in the temporary repo.
 
     Args:
-      ebuild_path: The absolute path to the ebuild.
-      llvm_variant: Which LLVM hash to update.
-      git_hash: The new git hash.
-      svn_version: The SVN-style revision number of git_hash.
+        ebuild_path: The absolute path to the ebuild.
+        llvm_variant: Which LLVM hash to update.
+        git_hash: The new git hash.
+        svn_version: The SVN-style revision number of git_hash.
 
     Raises:
-      ValueError: Invalid ebuild path provided or failed to stage the commit
-      of the changes or failed to update the LLVM hash.
+        ValueError: Invalid ebuild path provided or failed to stage the commit
+        of the changes or failed to update the LLVM hash.
     """
 
     # For each ebuild, read the file in
@@ -292,13 +292,13 @@ def ReplaceLLVMHash(ebuild_lines, llvm_variant, git_hash, svn_version):
     """Updates the LLVM git hash.
 
     Args:
-      ebuild_lines: The contents of the ebuild file.
-      llvm_variant: The LLVM hash to update.
-      git_hash: The new git hash.
-      svn_version: The SVN-style revision number of git_hash.
+        ebuild_lines: The contents of the ebuild file.
+        llvm_variant: The LLVM hash to update.
+        git_hash: The new git hash.
+        svn_version: The SVN-style revision number of git_hash.
 
     Yields:
-      lines of the modified ebuild file
+        lines of the modified ebuild file
     """
     is_updated = False
     llvm_regex = re.compile(
@@ -324,10 +324,10 @@ def UprevEbuildSymlink(symlink):
     the temporary repo.
 
     Args:
-      symlink: The absolute path of an ebuild symlink.
+        symlink: The absolute path of an ebuild symlink.
 
     Raises:
-      ValueError: Failed to uprev the symlink or failed to stage the changes.
+        ValueError: Failed to uprev the symlink or failed to stage the changes.
     """
 
     if not os.path.islink(symlink):
@@ -356,13 +356,13 @@ def UprevEbuildToVersion(symlink, svn_version, git_hash):
     the temporary repo.
 
     Args:
-      symlink: The absolute path of an ebuild symlink.
-      svn_version: The SVN-style revision number of git_hash.
-      git_hash: The new git hash.
+        symlink: The absolute path of an ebuild symlink.
+        svn_version: The SVN-style revision number of git_hash.
+        git_hash: The new git hash.
 
     Raises:
-      ValueError: Failed to uprev the ebuild or failed to stage the changes.
-      AssertionError: No llvm version provided for an LLVM uprev
+        ValueError: Failed to uprev the ebuild or failed to stage the changes.
+        AssertionError: No llvm version provided for an LLVM uprev
     """
 
     if not os.path.islink(symlink):
@@ -416,10 +416,10 @@ def RemovePatchesFromFilesDir(patches):
     """Removes the patches from $FILESDIR of a package.
 
     Args:
-      patches: A list of absolute paths of patches to remove
+        patches: A list of absolute paths of patches to remove
 
     Raises:
-      ValueError: Failed to remove a patch in $FILESDIR.
+        ValueError: Failed to remove a patch in $FILESDIR.
     """
 
     for patch in patches:
@@ -432,11 +432,11 @@ def StagePatchMetadataFileForCommit(patch_metadata_file_path):
     """Stages the updated patch metadata file for commit.
 
     Args:
-      patch_metadata_file_path: The absolute path to the patch metadata file.
+        patch_metadata_file_path: The absolute path to the patch metadata file.
 
     Raises:
-      ValueError: Failed to stage the patch metadata file for commit or invalid
-      patch metadata file.
+        ValueError: Failed to stage the patch metadata file for commit or
+        invalid patch metadata file.
     """
 
     if not os.path.isfile(patch_metadata_file_path):
@@ -460,14 +460,14 @@ def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
     """Stages the patch results of the packages to the commit message.
 
     Args:
-      package_info_dict: A dictionary where the key is the package name and the
-      value is a dictionary that contains information about the patches of the
-      package (key).
-      commit_messages: The commit message that has the updated ebuilds and
-      upreving information.
+        package_info_dict: A dictionary where the key is the package name and
+        the value is a dictionary that contains information about the patches
+        of the package (key).
+        commit_messages: The commit message that has the updated ebuilds and
+        upreving information.
 
     Returns:
-      commit_messages with new additions
+        commit_messages with new additions
     """
 
     # For each package, check if any patches for that package have
@@ -515,11 +515,11 @@ def UpdatePortageManifests(packages: Iterable[str], chroot_path: Path):
     """Updates portage manifest files for packages.
 
     Args:
-      packages: A list of packages to update manifests for.
-      chroot_path: The absolute path to the chroot.
+        packages: A list of packages to update manifests for.
+        chroot_path: The absolute path to the chroot.
 
     Raises:
-      CalledProcessError: ebuild failed to update manifest.
+        CalledProcessError: ebuild failed to update manifest.
     """
     manifest_ebuilds = chroot.GetChrootEbuildPaths(chroot_path, packages)
     for ebuild_path in manifest_ebuilds:
@@ -551,23 +551,23 @@ def UpdatePackages(
     then uploaded for review.
 
     Args:
-      packages: A list of all the packages that are going to be updated.
-      manifest_packages: A list of packages to update manifests for.
-      llvm_variant: The LLVM hash to update.
-      git_hash: The new git hash.
-      svn_version: The SVN-style revision number of git_hash.
-      chroot_path: The absolute path to the chroot.
-      mode: The mode of the patch manager when handling an applicable patch
-      that failed to apply.
-        Ex. 'FailureModes.FAIL'
-      git_hash_source: The source of which git hash to use based off of.
-        Ex. 'google3', 'tot', or <version> such as 365123
-      extra_commit_msg: extra test to append to the commit message.
-      delete_branch: Delete the git branch as a final step.
-      upload_changes: Upload the commit to gerrit as a CL.
+        packages: A list of all the packages that are going to be updated.
+        manifest_packages: A list of packages to update manifests for.
+        llvm_variant: The LLVM hash to update.
+        git_hash: The new git hash.
+        svn_version: The SVN-style revision number of git_hash.
+        chroot_path: The absolute path to the chroot.
+        mode: The mode of the patch manager when handling an applicable patch
+        that failed to apply.
+            Ex. 'FailureModes.FAIL'
+        git_hash_source: The source of which git hash to use based off of.
+            Ex. 'google3', 'tot', or <version> such as 365123
+        extra_commit_msg: extra test to append to the commit message.
+        delete_branch: Delete the git branch as a final step.
+        upload_changes: Upload the commit to gerrit as a CL.
 
     Returns:
-      If upload_changes is set, a git.CommitContents object. Otherwise None.
+        If upload_changes is set, a git.CommitContents object. Otherwise None.
     """
 
     portage_packages = (PortagePackage(chroot_path, pkg) for pkg in packages)
@@ -632,11 +632,11 @@ def EnsurePackageMaskContains(chroot_path, git_hash):
     """Adds the major version of llvm to package.mask if not already present.
 
     Args:
-      chroot_path: The absolute path to the chroot.
-      git_hash: The new git hash.
+        chroot_path: The absolute path to the chroot.
+        git_hash: The new git hash.
 
     Raises:
-      FileExistsError: package.mask not found in ../../chromiumos-overlay
+        FileExistsError: package.mask not found in ../../chromiumos-overlay
     """
 
     llvm_major_version = get_llvm_hash.GetLLVMMajorVersion(git_hash)
@@ -665,16 +665,16 @@ def UpdatePackagesPatchMetadataFile(
     """Updates the packages metadata file.
 
     Args:
-      chroot_path: The absolute path to the chroot.
-      svn_version: The version to use for patch management.
-      packages: All the packages to update their patch metadata file.
-      mode: The mode for the patch manager to use when an applicable patch
-      fails to apply.
-        Ex: 'FailureModes.FAIL'
+        chroot_path: The absolute path to the chroot.
+        svn_version: The version to use for patch management.
+        packages: All the packages to update their patch metadata file.
+        mode: The mode for the patch manager to use when an applicable patch
+        fails to apply.
+            Ex: 'FailureModes.FAIL'
 
     Returns:
-      A dictionary where the key is the package name and the value is a
-      dictionary that has information on the patches.
+        A dictionary where the key is the package name and the value is a
+        dictionary that has information on the patches.
     """
 
     # A dictionary where the key is the package name and the value is a
@@ -715,9 +715,9 @@ def UpdatePackagesPatchMetadataFile(
 
                 src_path = Path(dirname)
                 with patch_utils.git_clean_context(src_path):
-                    if (
-                        mode == failure_modes.FailureModes.FAIL
-                        or mode == failure_modes.FailureModes.CONTINUE
+                    if mode in (
+                        failure_modes.FailureModes.FAIL,
+                        failure_modes.FailureModes.CONTINUE,
                     ):
                         patches_info = patch_utils.apply_all_from_json(
                             svn_version=svn_version,
@@ -754,6 +754,7 @@ def ChangeRepoManifest(
     Args:
         git_hash: The LLVM git hash to change to.
         src_tree: ChromiumOS source tree checkout.
+        extra_commit_msg: Lines to append to the commit message.
         delete_branch: Delete the branch as a final step.
         upload_changes: Upload the changes to gerrit.
 
@@ -809,7 +810,7 @@ def main():
     """Updates the LLVM next hash for each package.
 
     Raises:
-      AssertionError: The script was run inside the chroot.
+        AssertionError: The script was run inside the chroot.
     """
 
     chroot.VerifyOutsideChroot()

@@ -5,7 +5,6 @@
 
 """Runs a tryjob/tryjobs after updating the packages."""
 
-
 import argparse
 import datetime
 import json
