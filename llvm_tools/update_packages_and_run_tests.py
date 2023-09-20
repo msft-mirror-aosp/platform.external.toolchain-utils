@@ -465,7 +465,7 @@ def main():
         chroot_path=Path(args_output.chroot_path),
         mode=failure_modes.FailureModes.DISABLE_PATCHES,
         git_hash_source=svn_option,
-        extra_commit_msg_lines=extra_commit_msg,
+        extra_commit_msg_lines=[extra_commit_msg],
     )
 
     AddReviewers(

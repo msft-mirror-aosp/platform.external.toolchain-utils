@@ -342,6 +342,12 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
         mock_run_tryjobs.assert_called_once()
 
         mock_update_packages.assert_called_once()
+        commit_msg_lines = mock_update_packages.call_args[1][
+            "extra_commit_msg_lines"
+        ]
+        self.assertTrue(
+            isinstance(commit_msg_lines, list), repr(commit_msg_lines)
+        )
 
 
 class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
