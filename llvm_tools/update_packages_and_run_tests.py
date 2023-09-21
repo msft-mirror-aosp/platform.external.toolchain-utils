@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -11,6 +10,7 @@ import argparse
 import datetime
 import json
 import os
+from pathlib import Path
 import subprocess
 
 import chroot
@@ -26,10 +26,10 @@ def GetCommandLineArgs():
     """Parses the command line for the command line arguments.
 
     Returns:
-      The log level to use when retrieving the LLVM hash or google3 LLVM version,
-      the chroot path to use for executing chroot commands,
-      a list of a package or packages to update their LLVM next hash,
-      and the LLVM version to use when retrieving the LLVM hash.
+        The log level to use when retrieving the LLVM hash or google3 LLVM
+        version, the chroot path to use for executing chroot commands,
+        a list of a package or packages to update their LLVM next hash,
+        and the LLVM version to use when retrieving the LLVM hash.
     """
 
     # Default path to the chroot if a path is not specified.
@@ -67,8 +67,8 @@ def GetCommandLineArgs():
         "Otherwise, update LLVM_HASH",
     )
 
-    # Add argument for the absolute path to the file that contains information on
-    # the previous tested svn version.
+    # Add argument for the absolute path to the file that contains information
+    # on the previous tested svn version.
     parser.add_argument(
         "--last_tested",
         help="the absolute path to the file that contains the last tested "
@@ -92,14 +92,6 @@ def GetCommandLineArgs():
         nargs="+",
         default=[],
         help="The reviewers for the package update changelist",
-    )
-
-    # Add argument for whether to display command contents to `stdout`.
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="display contents of a command to the terminal "
-        "(default: %(default)s)",
     )
 
     subparsers = parser.add_subparsers(dest="subparser_name")
@@ -168,13 +160,13 @@ def UnchangedSinceLastRun(last_tested_file, arg_dict):
     """Gets the arguments used for last run
 
     Args:
-      last_tested_file: The absolute path to the file that contains the
-      arguments for the last run.
-      arg_dict: The arguments used for this run.
+        last_tested_file: The absolute path to the file that contains the
+          arguments for the last run.
+        arg_dict: The arguments used for this run.
 
     Returns:
-      Return true if the arguments used for last run exist and are the
-      same as the arguments used for this run. Otherwise return false.
+        Return true if the arguments used for last run exist and are the
+        same as the arguments used for this run. Otherwise return false.
     """
 
     if not last_tested_file:
@@ -183,7 +175,7 @@ def UnchangedSinceLastRun(last_tested_file, arg_dict):
     # Get the last tested svn version if the file exists.
     last_arg_dict = None
     try:
-        with open(last_tested_file) as f:
+        with open(last_tested_file, encoding="utf-8") as f:
             last_arg_dict = json.load(f)
 
     except (IOError, ValueError):
@@ -205,12 +197,12 @@ def AddReviewers(cl, reviewers, chroot_path):
 def AddLinksToCL(tests, cl, chroot_path):
     """Adds the test link(s) to the CL as a comment."""
 
-    # NOTE: Invoking `cros_sdk` does not make each tryjob link appear on its own
-    # line, so invoking the `gerrit` command directly instead of using `cros_sdk`
-    # to do it for us.
+    # NOTE: Invoking `cros_sdk` does not make each tryjob link appear on its
+    # own line, so invoking the `gerrit` command directly instead of using
+    # `cros_sdk` to do it for us.
     #
-    # FIXME: Need to figure out why `cros_sdk` does not add each tryjob link as a
-    # newline.
+    # FIXME: Need to figure out why `cros_sdk` does not add each tryjob link as
+    # a newline.
     gerrit_abs_path = os.path.join(chroot_path, "chromite/bin/gerrit")
 
     links = ["Started the following tests:"]
@@ -231,15 +223,15 @@ def GetTryJobCommand(change_list, extra_change_lists, options, builder):
     """Constructs the 'tryjob' command.
 
     Args:
-      change_list: The CL obtained from updating the packages.
-      extra_change_lists: Extra change lists that would like to be run alongside
-      the change list of updating the packages.
-      options: Options to be passed into the tryjob command.
-      builder: The builder to be passed into the tryjob command.
+        change_list: The CL obtained from updating the packages.
+        extra_change_lists: Extra change lists that would like to be run
+          alongside the change list of updating the packages.
+        options: Options to be passed into the tryjob command.
+        builder: The builder to be passed into the tryjob command.
 
     Returns:
-      The 'tryjob' command with the change list of updating the packages and
-      any extra information that was passed into the command line.
+        The 'tryjob' command with the change list of updating the packages and
+        any extra information that was passed into the command line.
     """
 
     tryjob_cmd = ["cros", "tryjob", "--yes", "--json", "-g", "%d" % change_list]
@@ -260,20 +252,20 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path):
     """Runs a tryjob/tryjobs.
 
     Args:
-      cl_number: The CL created by updating the packages.
-      extra_change_lists: Any extra change lists that would run alongside the CL
-      that was created by updating the packages ('cl_number').
-      options: Any options to be passed into the 'tryjob' command.
-      builders: All the builders to run the 'tryjob' with.
-      chroot_path: The absolute path to the chroot.
+        cl_number: The CL created by updating the packages.
+        extra_change_lists: Any extra change lists that would run alongside the
+          CL that was created by updating the packages ('cl_number').
+        options: Any options to be passed into the 'tryjob' command.
+        builders: All the builders to run the 'tryjob' with.
+        chroot_path: The absolute path to the chroot.
 
     Returns:
-      A list that contains stdout contents of each tryjob, where stdout is
-      information (a hashmap) about the tryjob. The hashmap also contains stderr
-      if there was an error when running a tryjob.
+        A list that contains stdout contents of each tryjob, where stdout is
+        information (a hashmap) about the tryjob. The hashmap also contains
+        stderr if there was an error when running a tryjob.
 
     Raises:
-      ValueError: Failed to submit a tryjob.
+        ValueError: Failed to submit a tryjob.
     """
 
     # Contains the results of each builder.
@@ -313,20 +305,20 @@ def StartRecipeBuilders(
     """Launch recipe builders.
 
     Args:
-      cl_number: The CL created by updating the packages.
-      extra_change_lists: Any extra change lists that would run alongside the CL
-      that was created by updating the packages ('cl_number').
-      options: Any options to be passed into the 'tryjob' command.
-      builders: All the builders to run the 'tryjob' with.
-      chroot_path: The absolute path to the chroot.
+        cl_number: The CL created by updating the packages.
+        extra_change_lists: Any extra change lists that would run alongside the
+          CL that was created by updating the packages ('cl_number').
+        options: Any options to be passed into the 'tryjob' command.
+        builders: All the builders to run the 'tryjob' with.
+        chroot_path: The absolute path to the chroot.
 
     Returns:
-      A list that contains stdout contents of each builder, where stdout is
-      information (a hashmap) about the tryjob. The hashmap also contains stderr
-      if there was an error when running a tryjob.
+        A list that contains stdout contents of each builder, where stdout is
+        information (a hashmap) about the tryjob. The hashmap also contains
+        stderr if there was an error when running a tryjob.
 
     Raises:
-      ValueError: Failed to start a builder.
+        ValueError: Failed to start a builder.
     """
 
     # Contains the results of each builder.
@@ -415,12 +407,14 @@ def main():
     """Updates the packages' LLVM hash and run tests.
 
     Raises:
-      AssertionError: The script was run inside the chroot.
+        AssertionError: The script was run inside the chroot.
     """
 
     chroot.VerifyOutsideChroot()
 
     args_output = GetCommandLineArgs()
+
+    chroot.VerifyChromeOSRoot(args_output.chroot_path)
 
     svn_option = args_output.llvm_version
 
@@ -428,8 +422,8 @@ def main():
         svn_option
     )
 
-    # There is no need to run tryjobs when all the key parameters remain unchanged
-    # from last time.
+    # There is no need to run tryjobs when all the key parameters remain
+    # unchanged from last time.
 
     # If --last_tested is specified, check if the current run has the same
     # arguments last time --last_tested is used.
@@ -455,7 +449,6 @@ def main():
     llvm_variant = update_chromeos_llvm_hash.LLVMVariant.current
     if args_output.is_llvm_next:
         llvm_variant = update_chromeos_llvm_hash.LLVMVariant.next
-    update_chromeos_llvm_hash.verbose = args_output.verbose
     extra_commit_msg = None
     if args_output.subparser_name == "cq":
         cq_depend_msg = GetCQDependString(args_output.extra_change_lists)
@@ -471,7 +464,7 @@ def main():
         llvm_variant=llvm_variant,
         git_hash=git_hash,
         svn_version=svn_version,
-        chroot_path=args_output.chroot_path,
+        chroot_path=Path(args_output.chroot_path),
         mode=failure_modes.FailureModes.DISABLE_PATCHES,
         git_hash_source=svn_option,
         extra_commit_msg=extra_commit_msg,
@@ -517,7 +510,7 @@ def main():
 
     # If --last_tested is specified, record the arguments used
     if args_output.last_tested:
-        with open(args_output.last_tested, "w") as f:
+        with open(args_output.last_tested, "w", encoding="utf-8") as f:
             json.dump(arg_dict, f, indent=2)
 
 

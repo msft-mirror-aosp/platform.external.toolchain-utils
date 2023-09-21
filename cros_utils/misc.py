@@ -59,7 +59,7 @@ def ApplySubs(string, *substitutions):
 
 def UnitToNumber(unit_num, base=1000):
     """Convert a number with unit to float."""
-    unit_dict = {"kilo": base, "mega": base ** 2, "giga": base ** 3}
+    unit_dict = {"kilo": base, "mega": base**2, "giga": base**3}
     unit_num = unit_num.lower()
     mo = re.search(r"(\d*)(.+)?", unit_num)
     number = mo.group(1)
@@ -90,29 +90,26 @@ def GetRoot(scr_name):
 def GetChromeOSKeyFile(chromeos_root):
     return os.path.join(
         chromeos_root,
-        "src",
-        "scripts",
-        "mod_for_test_scripts",
+        "chromite",
         "ssh_keys",
         "testing_rsa",
     )
 
 
-def GetChrootPath(chromeos_root):
-    return os.path.join(chromeos_root, "chroot")
-
-
 def GetInsideChrootPath(chromeos_root, file_path):
-    if not file_path.startswith(GetChrootPath(chromeos_root)):
-        raise RuntimeError(
-            "File: %s doesn't seem to be in the chroot: %s"
-            % (file_path, chromeos_root)
-        )
-    return file_path[len(GetChrootPath(chromeos_root)) :]
+    sys.path.insert(0, chromeos_root)
+
+    from chromite.lib import path_util
+
+    return path_util.ToChrootPath(path=file_path, source_path=chromeos_root)
 
 
 def GetOutsideChrootPath(chromeos_root, file_path):
-    return os.path.join(GetChrootPath(chromeos_root), file_path.lstrip("/"))
+    sys.path.insert(0, chromeos_root)
+
+    from chromite.lib import path_util
+
+    return path_util.FromChrootPath(path=file_path, source_path=chromeos_root)
 
 
 def FormatQuotedCommand(command):
@@ -126,7 +123,10 @@ def FormatCommands(commands):
 
 
 def GetImageDir(chromeos_root, board):
-    return os.path.join(chromeos_root, "src", "build", "images", board)
+    return GetOutsideChrootPath(
+        chromeos_root,
+        os.path.join(chromeos_root, "src", "build", "images", board),
+    )
 
 
 def LabelLatestImage(chromeos_root, board, label, vanilla_path=None):
@@ -305,16 +305,16 @@ def IsFloat(text):
 
 def RemoveChromeBrowserObjectFiles(chromeos_root, board):
     """Remove any object files from all the posible locations."""
-    out_dir = os.path.join(
-        GetChrootPath(chromeos_root),
-        "var/cache/chromeos-chrome/chrome-src/src/out_%s" % board,
+    out_dir = GetOutsideChrootPath(
+        chromeos_root,
+        "/var/cache/chromeos-chrome/chrome-src/src/out_%s" % board,
     )
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
         logger.GetLogger().LogCmd("rm -rf %s" % out_dir)
-    out_dir = os.path.join(
-        GetChrootPath(chromeos_root),
-        "var/cache/chromeos-chrome/chrome-src-internal/src/out_%s" % board,
+    out_dir = GetOutsideChrootPath(
+        chromeos_root,
+        "/var/cache/chromeos-chrome/chrome-src-internal/src/out_%s" % board,
     )
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)

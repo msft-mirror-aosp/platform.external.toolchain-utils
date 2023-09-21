@@ -94,7 +94,7 @@ func runAndroidClangTidy(env env, cmd *command) error {
 	if !errors.Is(err, context.DeadlineExceeded) {
 		// When used time is over half of TIDY_TIMEOUT, give a warning.
 		// These warnings allow users to fix slow jobs before they get worse.
-		usedSeconds := int(time.Now().Sub(startTime) / time.Second)
+		usedSeconds := int(time.Since(startTime) / time.Second)
 		if usedSeconds > seconds/2 {
 			warning := "%s:1:1: warning: clang-tidy used %d seconds.\n"
 			fmt.Fprintf(env.stdout(), warning, getSourceFile(), usedSeconds)
@@ -110,6 +110,7 @@ func runAndroidClangTidy(env env, cmd *command) error {
 }
 
 func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
+
 	if err := checkUnsupportedFlags(inputCmd); err != nil {
 		return 0, err
 	}
@@ -150,7 +151,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			return 0, newErrorwithSourceLocf("unsupported compiler: %s", mainBuilder.target.compiler)
 		}
 	} else {
-		cSrcFile, tidyFlags, tidyMode := processClangTidyFlags(mainBuilder)
+		_, tidyFlags, tidyMode := processClangTidyFlags(mainBuilder)
 		cSrcFile, iwyuFlags, iwyuMode := processIWYUFlags(mainBuilder)
 		if mainBuilder.target.compilerType == clangType {
 			err := prepareClangCommand(mainBuilder)
@@ -159,14 +160,17 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 			}
 			if tidyMode != tidyModeNone {
 				allowCCache = false
+				// Remove and ignore goma flags.
+				_, err := removeOneUserCmdlineFlagWithValue(mainBuilder, "--gomacc-path")
+				if err != nil && err != errNoSuchCmdlineArg {
+					return 0, err
+				}
+
 				clangCmdWithoutRemoteBuildAndCCache := mainBuilder.build()
-				var err error
+
 				switch tidyMode {
 				case tidyModeTricium:
-					if cfg.triciumNitsDir == "" {
-						return 0, newErrorwithSourceLocf("tricium linting was requested, but no nits directory is configured")
-					}
-					err = runClangTidyForTricium(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, cfg.triciumNitsDir, tidyFlags, cfg.crashArtifactsDir)
+					err = runClangTidyForTricium(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, tidyFlags, cfg.crashArtifactsDir)
 				case tidyModeAll:
 					err = runClangTidy(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, tidyFlags)
 				default:
@@ -180,7 +184,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 
 			if iwyuMode != iwyuModeNone {
 				if iwyuMode == iwyuModeError {
-					panic(fmt.Sprintf("Unknown IWYU mode"))
+					panic("Unknown IWYU mode")
 				}
 
 				allowCCache = false
@@ -328,9 +332,25 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	}
 }
 
+// TODO(b/288411201): Add -D_FORTIFY_SOURCE=2 to args if -D_FORITFY_SOURCE=3 is not present.
+// This makes migrating to -D_FORTIFY_SOURCE=3 _way_ easier, since the wrapper's implicit
+// -D_FORTIFY_SOURCE=2 can be ignored.
+func addPreUserFortifyFlag(builder *commandBuilder) {
+	for _, arg := range builder.args {
+		if arg.value == "-D_FORTIFY_SOURCE=3" {
+			return
+		}
+	}
+
+	builder.addPreUserArgs("-D_FORTIFY_SOURCE=2")
+}
+
 func prepareClangCommand(builder *commandBuilder) (err error) {
 	if !builder.cfg.isHostWrapper {
 		processSysrootFlag(builder)
+	}
+	if builder.cfg.isHardened {
+		addPreUserFortifyFlag(builder)
 	}
 	builder.addPreUserArgs(builder.cfg.clangFlags...)
 	if builder.cfg.crashArtifactsDir != "" {
@@ -356,6 +376,9 @@ func calcClangCommand(allowCCache bool, builder *commandBuilder) (bool, *command
 func calcGccCommand(enableRusage bool, builder *commandBuilder) (bool, *command, error) {
 	if !builder.cfg.isHostWrapper {
 		processSysrootFlag(builder)
+	}
+	if builder.cfg.isHardened {
+		addPreUserFortifyFlag(builder)
 	}
 	builder.addPreUserArgs(builder.cfg.gccFlags...)
 	calcCommonPreUserArgs(builder)

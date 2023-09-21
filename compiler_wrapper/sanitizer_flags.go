@@ -47,6 +47,15 @@ func isInvasiveSanitizerFlag(flag string) bool {
 	return false
 }
 
+// Returns whether the flag given enables FORTIFY. Notably, this should return false if a flag
+// disables FORTIFY.
+func isFortifyEnableFlag(flag string) bool {
+	prefix := "-D_FORTIFY_SOURCE="
+	// At the time of writing, -D_FORTIFY_SOURCE has the valid values 0, 1, 2, and 3. Seems
+	// unlikely to go past 9, so don't handle past 9.
+	return strings.HasPrefix(flag, prefix) && len(flag) == len(prefix)+1 && flag[len(prefix)] != '0'
+}
+
 func processSanitizerFlags(builder *commandBuilder) {
 	hasSanitizeFlags := false
 	// TODO: This doesn't take -fno-sanitize flags into account. This doesn't seem to be an
@@ -64,18 +73,21 @@ func processSanitizerFlags(builder *commandBuilder) {
 
 	// Flags not supported by sanitizers (ASan etc.)
 	unsupportedSanitizerFlags := map[string]bool{
-		"-D_FORTIFY_SOURCE=1": true,
-		"-D_FORTIFY_SOURCE=2": true,
-		"-Wl,--no-undefined":  true,
-		"-Wl,-z,defs":         true,
+		"-Wl,--no-undefined": true,
+		"-Wl,-z,defs":        true,
 	}
 
 	builder.transformArgs(func(arg builderArg) string {
 		// TODO: This is a bug in the old wrapper to not filter
 		// non user args for gcc. Fix this once we don't compare to the old wrapper anymore.
-		if (builder.target.compilerType != gccType || arg.fromUser) &&
-			unsupportedSanitizerFlags[arg.value] {
-			return ""
+		linkerDefinedFlag := ",-z,defs"
+		if builder.target.compilerType != gccType || arg.fromUser {
+			if unsupportedSanitizerFlags[arg.value] || isFortifyEnableFlag(arg.value) {
+				return ""
+			}
+			if strings.Contains(arg.value, linkerDefinedFlag) {
+				return strings.ReplaceAll(arg.value, linkerDefinedFlag, "")
+			}
 		}
 		return arg.value
 	})
