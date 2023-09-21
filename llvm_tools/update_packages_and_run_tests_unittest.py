@@ -366,14 +366,14 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
             update_packages_and_run_tests.GetCQDependString(
                 test_single_changelist
             ),
-            "\nCq-Depend: chromium:1234",
+            "Cq-Depend: chromium:1234",
         )
 
         self.assertEqual(
             update_packages_and_run_tests.GetCQDependString(
                 test_multiple_changelists
             ),
-            "\nCq-Depend: chromium:1234, chromium:5678",
+            "Cq-Depend: chromium:1234, chromium:5678",
         )
 
     def testGetCQIncludeTrybotsString(self):
@@ -391,7 +391,7 @@ class UpdatePackagesAndRunTestCQTest(unittest.TestCase):
             update_packages_and_run_tests.GetCQIncludeTrybotsString(
                 test_valid_trybot
             ),
-            "\nCq-Include-Trybots:chromeos/cq:cq-llvm-next-orchestrator",
+            "Cq-Include-Trybots:chromeos/cq:cq-llvm-next-orchestrator",
         )
 
         with self.assertRaises(ValueError) as context:

@@ -370,7 +370,7 @@ def GetCQDependString(dependent_cls: List[int]) -> str:
         return None
 
     # Cq-Depend must start a new paragraph prefixed with "Cq-Depend".
-    return "\nCq-Depend: " + ", ".join(f"chromium:{x}" for x in dependent_cls)
+    return "Cq-Depend: " + ", ".join(f"chromium:{x}" for x in dependent_cls)
 
 
 def GetCQIncludeTrybotsString(trybot):
@@ -384,7 +384,7 @@ def GetCQIncludeTrybotsString(trybot):
 
     # Cq-Include-Trybots must start a new paragraph prefixed
     # with "Cq-Include-Trybots".
-    return "\nCq-Include-Trybots:chromeos/cq:cq-%s-orchestrator" % trybot
+    return "Cq-Include-Trybots:chromeos/cq:cq-%s-orchestrator" % trybot
 
 
 def StartCQDryRun(cl, dependent_cls, chroot_path):
@@ -447,14 +447,22 @@ def main():
     llvm_variant = update_chromeos_llvm_hash.LLVMVariant.current
     if args_output.is_llvm_next:
         llvm_variant = update_chromeos_llvm_hash.LLVMVariant.next
-    extra_commit_msg = None
+
+    extra_commit_msg_lines = []
     if args_output.subparser_name == "cq":
+        footers = []
         cq_depend_msg = GetCQDependString(args_output.extra_change_lists)
         if cq_depend_msg:
-            extra_commit_msg = cq_depend_msg
+            footers.append(cq_depend_msg)
         cq_trybot_msg = GetCQIncludeTrybotsString(args_output.cq_trybot)
         if cq_trybot_msg:
-            extra_commit_msg += cq_trybot_msg
+            footers.append(cq_trybot_msg)
+
+        # We want a single blank line before any of these, so Git properly
+        # interprets them as a footer.
+        if footers:
+            extra_commit_msg_lines.append("")
+            extra_commit_msg_lines += footers
 
     change_list = update_chromeos_llvm_hash.UpdatePackages(
         packages=update_chromeos_llvm_hash.DEFAULT_PACKAGES,
@@ -465,7 +473,7 @@ def main():
         chroot_path=Path(args_output.chroot_path),
         mode=failure_modes.FailureModes.DISABLE_PATCHES,
         git_hash_source=svn_option,
-        extra_commit_msg_lines=[extra_commit_msg],
+        extra_commit_msg_lines=extra_commit_msg_lines,
     )
 
     AddReviewers(
