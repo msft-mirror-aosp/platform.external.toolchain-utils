@@ -16,7 +16,7 @@ from pathlib import Path
 import re
 import subprocess
 import textwrap
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Union
 
 import atomic_write_file
 import chroot
@@ -456,7 +456,9 @@ def StagePatchMetadataFileForCommit(patch_metadata_file_path):
     )
 
 
-def StagePackagesPatchResultsForCommit(package_info_dict, commit_messages):
+def StagePackagesPatchResultsForCommit(
+    package_info_dict: Dict[str, patch_utils.PatchInfo], commit_messages: List[str]
+) -> List[str]:
     """Stages the patch results of the packages to the commit message.
 
     Args:
@@ -539,11 +541,11 @@ def UpdatePackages(
     git_hash: str,
     svn_version: int,
     chroot_path: Path,
-    mode,
-    git_hash_source,
+    mode: failure_modes.FailureModes,
+    git_hash_source: Union[int, str],
     extra_commit_msg_lines: Optional[Iterable[str]],
-    delete_branch=True,
-    upload_changes=True,
+    delete_branch: bool = True,
+    upload_changes: bool = True,
 ) -> Optional[git.CommitContents]:
     """Updates an LLVM hash and uprevs the ebuild of the packages.
 
