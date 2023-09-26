@@ -457,7 +457,8 @@ def StagePatchMetadataFileForCommit(patch_metadata_file_path):
 
 
 def StagePackagesPatchResultsForCommit(
-    package_info_dict: Dict[str, patch_utils.PatchInfo], commit_messages: List[str]
+    package_info_dict: Dict[str, patch_utils.PatchInfo],
+    commit_messages: List[str],
 ) -> List[str]:
     """Stages the patch results of the packages to the commit message.
 
@@ -865,14 +866,14 @@ def main():
             end="",
         )
         cq_depend_line = (
-            f"Cq-Depend: chromium:{change_list.cl_number}"
+            [f"Cq-Depend: chromium:{change_list.cl_number}"]
             if change_list
             else None
         )
         change_list = ChangeRepoManifest(
             git_hash,
             args_output.chroot_path,
-            extra_commit_msg_lines=[cq_depend_line],
+            extra_commit_msg_lines=cq_depend_line,
             delete_branch=not args_output.no_delete_branch,
             upload_changes=not args_output.no_upload_changes,
         )
