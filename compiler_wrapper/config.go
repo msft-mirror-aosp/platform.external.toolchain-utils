@@ -145,7 +145,7 @@ var crosHardenedConfig = config{
 	commonFlags: []string{
 		"-fcommon",
 		"-fstack-protector-strong",
-		"-D_FORTIFY_SOURCE=2",
+		"-D_FORTIFY_SOURCE=3",
 		"-fno-omit-frame-pointer",
 	},
 	gccFlags: []string{
