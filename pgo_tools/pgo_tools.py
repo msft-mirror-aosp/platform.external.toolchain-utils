@@ -4,6 +4,7 @@
 
 """A collection of tools used by the PGO scripts here."""
 
+import contextlib
 import logging
 import os
 from pathlib import Path
@@ -11,7 +12,8 @@ import re
 import shlex
 import subprocess
 import sys
-from typing import Any, Dict, IO, List, Optional, Union
+import tempfile
+from typing import Any, Dict, Generator, IO, List, Optional, Union
 
 
 Command = List[Union[str, Path]]
@@ -137,3 +139,22 @@ def exit_if_in_chroot():
     """Calls sys.exit if this script was run inside of the chroot."""
     if is_in_chroot():
         sys.exit("Run me outside of the chroot.")
+
+
+@contextlib.contextmanager
+def temporary_file(prefix: Optional[str] = None) -> Generator[Path, None, None]:
+    """Yields a temporary file name, and cleans it up on exit.
+
+    This differs from NamedTemporaryFile in that it doesn't keep a handle to
+    the file open. This is useful if the temporary file is intended to be
+    passed to another process (e.g., through a flag), since that other process
+    might/might not overwite the file, leading to subtle bugs about reusing the
+    File-like aspects of NamedTemporaryFile.
+    """
+    fd, tmp = tempfile.mkstemp(prefix=prefix)
+    tmp_path = Path(tmp)
+    try:
+        os.close(fd)
+        yield tmp_path
+    finally:
+        tmp_path.unlink(missing_ok=True)

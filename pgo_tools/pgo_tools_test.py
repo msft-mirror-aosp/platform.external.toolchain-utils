@@ -92,6 +92,17 @@ class Test(unittest.TestCase):
             ["sudo", "emerge", "--usepkgonly", "=sys-devel/llvm-1234-r1"],
         )
 
+    def test_temporary_file_creation_works(self):
+        with pgo_tools.temporary_file("foo_bar_") as tmp:
+            self.assertTrue(tmp.name.startswith("foo_bar_"), tmp.name)
+            self.assertTrue(tmp.exists())
+        self.assertFalse(tmp.exists())
+
+    def test_temporary_file_deletion_is_fine_if_file_does_not_exist(self):
+        # This test ensures this `with`'s `__exit__` block doesn't `raise`.
+        with pgo_tools.temporary_file("foo_bar_") as tmp:
+            tmp.unlink()
+
 
 if __name__ == "__main__":
     unittest.main()
