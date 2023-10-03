@@ -403,8 +403,7 @@ def main(argv: List[str]):
     )
     opts = parser.parse_args(argv)
 
-    if not Path("/etc/cros_chroot_version").exists():
-        sys.exit("Run me inside of the chroot.")
+    pgo_tools.exit_if_not_in_chroot()
 
     output = opts.output
 

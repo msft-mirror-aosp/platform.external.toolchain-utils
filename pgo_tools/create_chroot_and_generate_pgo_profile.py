@@ -181,8 +181,7 @@ def main(argv: List[str]):
     )
     opts = parser.parse_args(argv)
 
-    if Path("/etc/cros_chroot_version").exists():
-        sys.exit("Do not run this inside of the chroot.")
+    pgo_tools.assert_not_in_chroot()
 
     repo_root = find_repo_root(Path(os.getcwd()))
     logging.info("Repo root is %s", repo_root)

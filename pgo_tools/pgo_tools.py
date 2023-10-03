@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 import shlex
 import subprocess
+import sys
 from typing import Any, Dict, IO, List, Optional, Union
 
 
@@ -119,3 +120,20 @@ def generate_quickpkg_restoration_command(quickpkg_path: Path) -> Command:
     package_ver = quickpkg_path.stem
     category = quickpkg_path.parent.name
     return ["sudo", "emerge", "--usepkgonly", f"={category}/{package_ver}"]
+
+
+def is_in_chroot() -> bool:
+    """Returns whether this script was invoked inside of the chroot."""
+    return Path("/etc/cros_chroot_version").exists()
+
+
+def exit_if_not_in_chroot():
+    """Calls sys.exit if this script was not run inside of the chroot."""
+    if not is_in_chroot():
+        sys.exit("Run me inside of the chroot.")
+
+
+def exit_if_in_chroot():
+    """Calls sys.exit if this script was run inside of the chroot."""
+    if is_in_chroot():
+        sys.exit("Run me outside of the chroot.")
