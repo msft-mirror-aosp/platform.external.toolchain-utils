@@ -289,7 +289,6 @@ def Bisect(
     last_tested,
     update_packages,
     chroot_path,
-    patch_metadata_file,
     extra_change_lists,
     options,
     builder,
@@ -304,7 +303,6 @@ def Bisect(
                 git_hash,
                 svn_revision,
                 chroot_path,
-                patch_metadata_file,
                 extra_change_lists,
                 options,
                 builder,
@@ -346,7 +344,7 @@ def main(args_output):
     """
 
     chroot.VerifyOutsideChroot()
-    patch_metadata_file = "PATCHES.json"
+    chroot.VerifyChromeOSRoot(args_output.chroot_path)
     start = args_output.start_rev
     end = args_output.end_rev
 
@@ -453,7 +451,6 @@ def main(args_output):
         args_output.last_tested,
         update_chromeos_llvm_hash.DEFAULT_PACKAGES,
         args_output.chroot_path,
-        patch_metadata_file,
         args_output.extra_change_lists,
         args_output.options,
         args_output.builder,

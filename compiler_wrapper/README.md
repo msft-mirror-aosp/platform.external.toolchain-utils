@@ -18,7 +18,7 @@ To test updates to the wrapper locally:
 
 Run `install_compiler_wrapper.sh` to install the new wrapper in the chroot:
 ```
-(chroot) ~/trunk/src/third_party/toolchain-utils/compiler_wrapper/install_compiler_wrapper.sh
+(chroot) ~/chromiumos/src/third_party/toolchain-utils/compiler_wrapper/install_compiler_wrapper.sh
 ```
 
 Then perform the tests, e.g. build with the new compiler.
@@ -39,14 +39,14 @@ Rename chromiumos-overlay/sys-devel/llvm/llvm-${VERSION}.ebuild to the next
 revision number. For example, if the current version is
 11.0_pre394483_p20200618-r2:
 ```
-(chroot) cd ~/trunk/src/third_party/chromiumos-overlay
+(chroot) cd ~/chromiumos/src/third_party/chromiumos-overlay
 (chroot) git mv llvm-11.0_pre394483_p20200618-r2.ebuild llvm-11.0_pre394483_p20200618-r3.ebuild
 ```
 
 Rename chromiumos-overlay/sys-devel/gcc/gcc-${VERSION}.ebuild to the next
 revision number.  For example, if the current version is 10.2.0-r3:
 ```
-(chroot) cd ~/trunk/src/third_party/chromiumos-overlay
+(chroot) cd ~/chromiumos/src/third_party/chromiumos-overlay
 (chroot) git mv sys-devel/gcc/gcc-10.2.0-r3.ebuild sys-devel/gcc/gcc-10.2.0-r4.ebuild
 ```
 
@@ -96,8 +96,9 @@ error-prone; compile commands may rely on env vars, they may be done within
 rely on intermediate state, etc.
 
 Because of the usefulness of these crash reports, our wrapper supports crashing
-Clang even on files that ordinarily don't cause Clang to crash. For various
-reasons (b/236736327), this support currently requires rebuilding and
-redeploying the wrapper in order to work. That said, this could be a valuable
-tool for devs interested in creating a self-contained reproducer without having
-to manually reproduce the environment in which a particular build was performed.
+Clang even on files that ordinarily don't cause Clang to crash. This requires
+rebuilding and redeploying the wrapper (comments on b/236736327 explain why).
+That said, this could be a valuable tool for devs interested in creating a
+self-contained reproducer without having to manually reproduce the environment
+in which a particular build was performed. See <crash_builds.go>
+for instructions for how to use this functionality.

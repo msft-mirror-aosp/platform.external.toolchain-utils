@@ -8,12 +8,19 @@
 
 """Tests bug filing bits."""
 
+import datetime
 import json
+import os
+from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 from unittest.mock import patch
 
-import bugs
+from cros_utils import bugs
+
+
+_ARBITRARY_DATETIME = datetime.datetime(2020, 1, 1, 23, 0, 0, 0)
 
 
 class Tests(unittest.TestCase):
@@ -36,6 +43,7 @@ class Tests(unittest.TestCase):
                     "foo": "bar",
                     "baz": bugs.WellKnownComponents.CrOSToolchainPublic,
                 },
+                None,
             )
 
             self.assertTrue(
@@ -43,7 +51,7 @@ class Tests(unittest.TestCase):
                 f"Expected {file_path} to start with {tempdir}",
             )
 
-            with open(file_path) as f:
+            with open(file_path, encoding="utf-8") as f:
                 self.assertEqual(
                     json.load(f),
                     {
@@ -57,7 +65,7 @@ class Tests(unittest.TestCase):
                     },
                 )
 
-    @patch("bugs._WriteBugJSONFile")
+    @patch.object(bugs, "_WriteBugJSONFile")
     def testAppendingToBugsSeemsToWork(self, mock_write_json_file):
         """Tests AppendToExistingBug."""
         bugs.AppendToExistingBug(1234, "hello, world!")
@@ -67,9 +75,10 @@ class Tests(unittest.TestCase):
                 "body": "hello, world!",
                 "bug_id": 1234,
             },
+            None,
         )
 
-    @patch("bugs._WriteBugJSONFile")
+    @patch.object(bugs, "_WriteBugJSONFile")
     def testBugCreationSeemsToWork(self, mock_write_json_file):
         """Tests CreateNewBug."""
         test_case_additions = (
@@ -110,21 +119,106 @@ class Tests(unittest.TestCase):
             mock_write_json_file.assert_called_once_with(
                 "FileNewBugRequest",
                 expected_output,
+                None,
             )
             mock_write_json_file.reset_mock()
 
-    @patch("bugs._WriteBugJSONFile")
+    @patch.object(bugs, "_WriteBugJSONFile")
     def testCronjobLogSendingSeemsToWork(self, mock_write_json_file):
         """Tests SendCronjobLog."""
         bugs.SendCronjobLog("my_name", False, "hello, world!")
         mock_write_json_file.assert_called_once_with(
-            "ChrotomationCronjobUpdate",
+            "CronjobUpdate",
             {
                 "name": "my_name",
                 "message": "hello, world!",
                 "failed": False,
             },
+            None,
         )
+
+    @patch.object(bugs, "_WriteBugJSONFile")
+    def testCronjobLogSendingSeemsToWorkWithTurndown(
+        self, mock_write_json_file
+    ):
+        """Tests SendCronjobLog."""
+        bugs.SendCronjobLog(
+            "my_name", False, "hello, world!", turndown_time_hours=42
+        )
+        mock_write_json_file.assert_called_once_with(
+            "CronjobUpdate",
+            {
+                "name": "my_name",
+                "message": "hello, world!",
+                "failed": False,
+                "cronjob_turndown_time_hours": 42,
+            },
+            None,
+        )
+
+    def testFileNameGenerationProducesFileNamesInSortedOrder(self):
+        """Tests that _FileNameGenerator gives us sorted file names."""
+        gen = bugs._FileNameGenerator()
+        first = gen.generate_json_file_name(_ARBITRARY_DATETIME)
+        second = gen.generate_json_file_name(_ARBITRARY_DATETIME)
+        self.assertLess(first, second)
+
+    def testFileNameGenerationProtectsAgainstRipplingAdds(self):
+        """Tests that _FileNameGenerator gives us sorted file names."""
+        gen = bugs._FileNameGenerator()
+        gen._entropy = 9
+        first = gen.generate_json_file_name(_ARBITRARY_DATETIME)
+        second = gen.generate_json_file_name(_ARBITRARY_DATETIME)
+        self.assertLess(first, second)
+
+        gen = bugs._FileNameGenerator()
+        all_9s = "9" * (gen._ENTROPY_STR_SIZE - 1)
+        gen._entropy = int(all_9s)
+        third = gen.generate_json_file_name(_ARBITRARY_DATETIME)
+        self.assertLess(second, third)
+
+        fourth = gen.generate_json_file_name(_ARBITRARY_DATETIME)
+        self.assertLess(third, fourth)
+
+    @patch.object(os, "getpid")
+    def testForkingProducesADifferentReport(self, mock_getpid):
+        """Tests that _FileNameGenerator gives us sorted file names."""
+        gen = bugs._FileNameGenerator()
+
+        mock_getpid.return_value = 1
+        gen._entropy = 0
+        parent_file = gen.generate_json_file_name(_ARBITRARY_DATETIME)
+
+        mock_getpid.return_value = 2
+        gen._entropy = 0
+        child_file = gen.generate_json_file_name(_ARBITRARY_DATETIME)
+        self.assertNotEqual(parent_file, child_file)
+
+    @patch.object(bugs, "_WriteBugJSONFile")
+    def testCustomDirectoriesArePassedThrough(self, mock_write_json_file):
+        directory = "/path/to/somewhere/interesting"
+        bugs.AppendToExistingBug(1, "foo", directory=directory)
+        mock_write_json_file.assert_called_once_with(
+            mock.ANY, mock.ANY, directory
+        )
+        mock_write_json_file.reset_mock()
+
+        bugs.CreateNewBug(1, "title", "body", directory=directory)
+        mock_write_json_file.assert_called_once_with(
+            mock.ANY, mock.ANY, directory
+        )
+        mock_write_json_file.reset_mock()
+
+        bugs.SendCronjobLog("cronjob", False, "message", directory=directory)
+        mock_write_json_file.assert_called_once_with(
+            mock.ANY, mock.ANY, directory
+        )
+
+    def testWriteBugJSONFileWritesToGivenDirectory(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            bugs.AppendToExistingBug(1, "body", directory=tmpdir)
+            json_files = list(Path(tmpdir).glob("*.json"))
+            self.assertEqual(len(json_files), 1, json_files)
 
 
 if __name__ == "__main__":

@@ -9,7 +9,9 @@
 
 import collections
 import os
+from pathlib import Path
 import subprocess
+from typing import List
 
 
 CommitContents = collections.namedtuple("CommitContents", ["url", "cl_number"])
@@ -28,6 +30,19 @@ def VerifyOutsideChroot():
     """
 
     assert not InChroot(), "Script should be run outside the chroot."
+
+
+def VerifyChromeOSRoot(chromeos_root):
+    """Checks whether the path actually points to ChromiumOS checkout root.
+
+    Raises:
+      AssertionError: The path is not ChromiumOS checkout root.
+    """
+
+    subdir = "src/third_party/chromiumos-overlay"
+    path = Path(chromeos_root).expanduser() / subdir
+    msg = f"Wrong ChromeOS path. No {subdir} directory in {chromeos_root} ."
+    assert path.is_dir(), msg
 
 
 def GetChrootEbuildPaths(chromeos_root, packages):
@@ -60,7 +75,10 @@ def GetChrootEbuildPaths(chromeos_root, packages):
     return chroot_paths
 
 
-def ConvertChrootPathsToAbsolutePaths(chromeos_root, chroot_paths):
+def ConvertChrootPathsToAbsolutePaths(
+    chromeos_root: str,
+    chroot_paths: List[str],
+) -> List[str]:
     """Converts the chroot path(s) to absolute symlink path(s).
 
     Args:
@@ -76,11 +94,8 @@ def ConvertChrootPathsToAbsolutePaths(chromeos_root, chroot_paths):
     """
 
     abs_paths = []
-
     chroot_prefix = "/mnt/host/source/"
-
     # Iterate through the chroot paths.
-    #
     # For each chroot file path, remove '/mnt/host/source/' prefix
     # and combine the chroot path with the result and add it to the list.
     for chroot_path in chroot_paths:
@@ -88,12 +103,8 @@ def ConvertChrootPathsToAbsolutePaths(chromeos_root, chroot_paths):
             raise ValueError(
                 "Invalid prefix for the chroot path: %s" % chroot_path
             )
-
         rel_path = chroot_path[len(chroot_prefix) :]
-
         # combine the chromeos root path + '/src/...'
         abs_path = os.path.join(chromeos_root, rel_path)
-
         abs_paths.append(abs_path)
-
     return abs_paths
