@@ -17,6 +17,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import textwrap
 import threading
 import traceback
 from typing import (
@@ -658,6 +659,37 @@ def check_go_format(toolchain_utils_root, _thread_pool, files):
     )
 
 
+def check_no_compiler_wrapper_changes(
+    toolchain_utils_root: str,
+    _thread_pool: multiprocessing.pool.ThreadPool,
+    files: List[str],
+) -> CheckResult:
+    compiler_wrapper_prefix = (
+        os.path.join(toolchain_utils_root, "compiler_wrapper") + "/"
+    )
+    if not any(x.startswith(compiler_wrapper_prefix) for x in files):
+        return CheckResult(
+            ok=True,
+            output="no compiler_wrapper changes detected",
+            autofix_commands=[],
+        )
+
+    return CheckResult(
+        ok=False,
+        autofix_commands=[],
+        output=textwrap.dedent(
+            """\
+            Compiler wrapper changes should be made in chromiumos-overlay.
+            If you're a CrOS toolchain maintainer, please make the change
+            directly there now. If you're contributing as part of a downstream
+            (e.g., the Android toolchain team), feel free to bypass this check
+            and note to your reviewer that you received this message. They can
+            review your CL and commit to the right plate for you. Thanks!
+            """
+        ).strip(),
+    )
+
+
 def check_tests(
     toolchain_utils_root: str,
     _thread_pool: multiprocessing.pool.ThreadPool,
@@ -903,13 +935,14 @@ def main(argv: List[str]) -> int:
 
     # Note that we extract .__name__s from these, so please name them in a
     # user-friendly way.
-    checks = [
+    checks = (
         check_cros_lint,
         check_py_format,
         check_py_types,
         check_go_format,
         check_tests,
-    ]
+        check_no_compiler_wrapper_changes,
+    )
 
     toolchain_utils_root = detect_toolchain_utils_root()
 
@@ -928,8 +961,6 @@ def main(argv: List[str]) -> int:
             print("*** Spawning %s" % name)
         return name, check_fn(toolchain_utils_root, pool, files)
 
-    # ThreadPool is a ContextManager in py3.
-    # pylint: disable=not-context-manager
     with multiprocessing.pool.ThreadPool(num_threads) as pool:
         all_checks_ok = True
         all_autofix_commands = []
