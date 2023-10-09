@@ -1,18 +1,8 @@
 [
   {
-    "wd": "/tmp/stable",
-    "wrapper": {
-      "cmd": {
-        "path": "./clang",
-        "args": [
-          "main.cc"
-        ]
-      }
-    },
     "cmds": [
       {
         "cmd": {
-          "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
             "-Werror=poison-system-directories",
@@ -39,9 +29,19 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion"
-          ]
+          ],
+          "path": "/tmp/stable/clang"
         }
       }
-    ]
+    ],
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "args": [
+          "main.cc"
+        ],
+        "path": "./clang"
+      }
+    }
   }
 ]

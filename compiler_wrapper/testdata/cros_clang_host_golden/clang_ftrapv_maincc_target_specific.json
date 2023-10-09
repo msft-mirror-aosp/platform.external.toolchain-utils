@@ -1,19 +1,8 @@
 [
   {
-    "wd": "/tmp/stable",
-    "wrapper": {
-      "cmd": {
-        "path": "./x86_64-cros-linux-gnu-clang",
-        "args": [
-          "-ftrapv",
-          "main.cc"
-        ]
-      }
-    },
     "cmds": [
       {
         "cmd": {
-          "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
             "-Werror=poison-system-directories",
@@ -40,26 +29,26 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion"
-          ]
+          ],
+          "path": "/tmp/stable/clang"
         }
       }
-    ]
+    ],
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "args": [
+          "-ftrapv",
+          "main.cc"
+        ],
+        "path": "./x86_64-cros-linux-gnu-clang"
+      }
+    }
   },
   {
-    "wd": "/tmp/stable",
-    "wrapper": {
-      "cmd": {
-        "path": "./x86_64-cros-eabi-clang",
-        "args": [
-          "-ftrapv",
-          "main.cc"
-        ]
-      }
-    },
     "cmds": [
       {
         "cmd": {
-          "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
             "-Werror=poison-system-directories",
@@ -86,26 +75,26 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion"
-          ]
+          ],
+          "path": "/tmp/stable/clang"
         }
       }
-    ]
+    ],
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "args": [
+          "-ftrapv",
+          "main.cc"
+        ],
+        "path": "./x86_64-cros-eabi-clang"
+      }
+    }
   },
   {
-    "wd": "/tmp/stable",
-    "wrapper": {
-      "cmd": {
-        "path": "./x86_64-cros-win-gnu-clang",
-        "args": [
-          "-ftrapv",
-          "main.cc"
-        ]
-      }
-    },
     "cmds": [
       {
         "cmd": {
-          "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
             "-Werror=poison-system-directories",
@@ -132,26 +121,26 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion"
-          ]
+          ],
+          "path": "/tmp/stable/clang"
         }
       }
-    ]
+    ],
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "args": [
+          "-ftrapv",
+          "main.cc"
+        ],
+        "path": "./x86_64-cros-win-gnu-clang"
+      }
+    }
   },
   {
-    "wd": "/tmp/stable",
-    "wrapper": {
-      "cmd": {
-        "path": "./armv7m-cros-linux-gnu-clang",
-        "args": [
-          "-ftrapv",
-          "main.cc"
-        ]
-      }
-    },
     "cmds": [
       {
         "cmd": {
-          "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
             "-Werror=poison-system-directories",
@@ -178,26 +167,26 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion"
-          ]
+          ],
+          "path": "/tmp/stable/clang"
         }
       }
-    ]
+    ],
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "args": [
+          "-ftrapv",
+          "main.cc"
+        ],
+        "path": "./armv7m-cros-linux-gnu-clang"
+      }
+    }
   },
   {
-    "wd": "/tmp/stable",
-    "wrapper": {
-      "cmd": {
-        "path": "./armv7m-cros-eabi-clang",
-        "args": [
-          "-ftrapv",
-          "main.cc"
-        ]
-      }
-    },
     "cmds": [
       {
         "cmd": {
-          "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
             "-Werror=poison-system-directories",
@@ -224,26 +213,26 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion"
-          ]
+          ],
+          "path": "/tmp/stable/clang"
         }
       }
-    ]
+    ],
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "args": [
+          "-ftrapv",
+          "main.cc"
+        ],
+        "path": "./armv7m-cros-eabi-clang"
+      }
+    }
   },
   {
-    "wd": "/tmp/stable",
-    "wrapper": {
-      "cmd": {
-        "path": "./armv7m-cros-win-gnu-clang",
-        "args": [
-          "-ftrapv",
-          "main.cc"
-        ]
-      }
-    },
     "cmds": [
       {
         "cmd": {
-          "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
             "-Werror=poison-system-directories",
@@ -270,26 +259,26 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion"
-          ]
+          ],
+          "path": "/tmp/stable/clang"
         }
       }
-    ]
+    ],
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "args": [
+          "-ftrapv",
+          "main.cc"
+        ],
+        "path": "./armv7m-cros-win-gnu-clang"
+      }
+    }
   },
   {
-    "wd": "/tmp/stable",
-    "wrapper": {
-      "cmd": {
-        "path": "./armv8m-cros-linux-gnu-clang",
-        "args": [
-          "-ftrapv",
-          "main.cc"
-        ]
-      }
-    },
     "cmds": [
       {
         "cmd": {
-          "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
             "-Werror=poison-system-directories",
@@ -316,26 +305,26 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion"
-          ]
+          ],
+          "path": "/tmp/stable/clang"
         }
       }
-    ]
+    ],
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "args": [
+          "-ftrapv",
+          "main.cc"
+        ],
+        "path": "./armv8m-cros-linux-gnu-clang"
+      }
+    }
   },
   {
-    "wd": "/tmp/stable",
-    "wrapper": {
-      "cmd": {
-        "path": "./armv8m-cros-eabi-clang",
-        "args": [
-          "-ftrapv",
-          "main.cc"
-        ]
-      }
-    },
     "cmds": [
       {
         "cmd": {
-          "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
             "-Werror=poison-system-directories",
@@ -362,26 +351,26 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion"
-          ]
+          ],
+          "path": "/tmp/stable/clang"
         }
       }
-    ]
+    ],
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "args": [
+          "-ftrapv",
+          "main.cc"
+        ],
+        "path": "./armv8m-cros-eabi-clang"
+      }
+    }
   },
   {
-    "wd": "/tmp/stable",
-    "wrapper": {
-      "cmd": {
-        "path": "./armv8m-cros-win-gnu-clang",
-        "args": [
-          "-ftrapv",
-          "main.cc"
-        ]
-      }
-    },
     "cmds": [
       {
         "cmd": {
-          "path": "/tmp/stable/clang",
           "args": [
             "-Qunused-arguments",
             "-Werror=poison-system-directories",
@@ -408,9 +397,20 @@
             "main.cc",
             "-Wno-unused-but-set-variable",
             "-Wno-implicit-int-float-conversion"
-          ]
+          ],
+          "path": "/tmp/stable/clang"
         }
       }
-    ]
+    ],
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "args": [
+          "-ftrapv",
+          "main.cc"
+        ],
+        "path": "./armv8m-cros-win-gnu-clang"
+      }
+    }
   }
 ]

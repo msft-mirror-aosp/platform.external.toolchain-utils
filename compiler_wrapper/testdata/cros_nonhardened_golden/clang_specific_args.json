@@ -1,28 +1,8 @@
 [
   {
-    "wd": "/tmp/stable",
-    "wrapper": {
-      "cmd": {
-        "path": "./x86_64-cros-linux-gnu-clang",
-        "args": [
-          "-mno-movbe",
-          "-Wclobbered",
-          "-Wno-psabi",
-          "-Wlogical-op",
-          "-Wmissing-parameter-type",
-          "-Wold-style-declaration",
-          "-Woverride-init",
-          "-Wunsafe-loop-optimizations",
-          "-Wstrict-aliasing=abc",
-          "-finline-limit=abc",
-          "main.cc"
-        ]
-      }
-    },
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -68,26 +48,35 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-linux-gnu-clang",
         "args": [
-          "-Wno-error=cpp",
+          "-mno-movbe",
+          "-Wclobbered",
+          "-Wno-psabi",
+          "-Wlogical-op",
+          "-Wmissing-parameter-type",
+          "-Wold-style-declaration",
+          "-Woverride-init",
+          "-Wunsafe-loop-optimizations",
+          "-Wstrict-aliasing=abc",
+          "-finline-limit=abc",
           "main.cc"
-        ]
+        ],
+        "path": "./x86_64-cros-linux-gnu-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -126,26 +115,26 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-linux-gnu-clang",
         "args": [
-          "-Wno-error=maybe-uninitialized",
+          "-Wno-error=cpp",
           "main.cc"
-        ]
+        ],
+        "path": "./x86_64-cros-linux-gnu-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -184,26 +173,26 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-linux-gnu-clang",
         "args": [
-          "-Xclang-only=-someflag",
+          "-Wno-error=maybe-uninitialized",
           "main.cc"
-        ]
+        ],
+        "path": "./x86_64-cros-linux-gnu-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -242,9 +231,20 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
+    ],
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "args": [
+          "-Xclang-only=-someflag",
+          "main.cc"
+        ],
+        "path": "./x86_64-cros-linux-gnu-clang"
+      }
+    }
   }
 ]

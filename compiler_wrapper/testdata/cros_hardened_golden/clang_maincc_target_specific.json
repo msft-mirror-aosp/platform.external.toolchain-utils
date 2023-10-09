@@ -1,18 +1,8 @@
 [
   {
-    "wd": "/tmp/stable",
-    "wrapper": {
-      "cmd": {
-        "path": "./x86_64-cros-linux-gnu-clang",
-        "args": [
-          "main.cc"
-        ]
-      }
-    },
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -58,25 +48,25 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-eabi-clang",
         "args": [
           "main.cc"
-        ]
+        ],
+        "path": "./x86_64-cros-linux-gnu-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/x86_64-cros-eabi",
@@ -122,25 +112,25 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-win-gnu-clang",
         "args": [
           "main.cc"
-        ]
+        ],
+        "path": "./x86_64-cros-eabi-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/x86_64-cros-win-gnu",
@@ -186,25 +176,25 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./armv7m-cros-linux-gnu-clang",
         "args": [
           "main.cc"
-        ]
+        ],
+        "path": "./x86_64-cros-win-gnu-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/armv7m-cros-linux-gnu",
@@ -249,25 +239,25 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./armv7m-cros-eabi-clang",
         "args": [
           "main.cc"
-        ]
+        ],
+        "path": "./armv7m-cros-linux-gnu-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/armv7m-cros-eabi",
@@ -312,25 +302,25 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./armv7m-cros-win-gnu-clang",
         "args": [
           "main.cc"
-        ]
+        ],
+        "path": "./armv7m-cros-eabi-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/armv7m-cros-win-gnu",
@@ -375,25 +365,25 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./armv8m-cros-linux-gnu-clang",
         "args": [
           "main.cc"
-        ]
+        ],
+        "path": "./armv7m-cros-win-gnu-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/armv8m-cros-linux-gnu",
@@ -438,25 +428,25 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./armv8m-cros-eabi-clang",
         "args": [
           "main.cc"
-        ]
+        ],
+        "path": "./armv8m-cros-linux-gnu-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/armv8m-cros-eabi",
@@ -501,25 +491,25 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./armv8m-cros-win-gnu-clang",
         "args": [
           "main.cc"
-        ]
+        ],
+        "path": "./armv8m-cros-eabi-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/armv8m-cros-win-gnu",
@@ -564,9 +554,19 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
+    ],
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "args": [
+          "main.cc"
+        ],
+        "path": "./armv8m-cros-win-gnu-clang"
+      }
+    }
   }
 ]

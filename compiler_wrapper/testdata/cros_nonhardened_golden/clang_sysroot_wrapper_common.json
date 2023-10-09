@@ -1,19 +1,8 @@
 [
   {
-    "wd": "/tmp/stable",
-    "wrapper": {
-      "cmd": {
-        "path": "./x86_64-cros-linux-gnu-gcc",
-        "args": [
-          "-noccache",
-          "main.cc"
-        ]
-      }
-    },
     "cmds": [
       {
         "cmd": {
-          "path": "./x86_64-cros-linux-gnu-gcc.real",
           "args": [
             "--sysroot=/usr/x86_64-cros-linux-gnu",
             "-Wno-maybe-uninitialized",
@@ -24,28 +13,26 @@
             "main.cc",
             "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
-          ]
+          ],
+          "path": "./x86_64-cros-linux-gnu-gcc.real"
         }
       }
-    ]
-  },
-  {
-    "wd": "/tmp/stable",
-    "env": [
-      "GOMACC_PATH=someNonExistingPath"
     ],
+    "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-linux-gnu-clang",
         "args": [
+          "-noccache",
           "main.cc"
-        ]
+        ],
+        "path": "./x86_64-cros-linux-gnu-gcc"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -83,28 +70,28 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
-    "wd": "/tmp/stable",
-    "env": [
-      "GOMACC_PATH=/tmp/stable/gomacc"
     ],
+    "env": [
+      "GOMACC_PATH=someNonExistingPath"
+    ],
+    "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-linux-gnu-clang",
         "args": [
           "main.cc"
-        ]
+        ],
+        "path": "./x86_64-cros-linux-gnu-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/tmp/stable/gomacc",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -137,26 +124,28 @@
             "-B../../bin",
             "-target",
             "x86_64-cros-linux-gnu"
-          ]
+          ],
+          "path": "/tmp/stable/gomacc"
         }
       }
-    ]
-  },
-  {
+    ],
+    "env": [
+      "GOMACC_PATH=/tmp/stable/gomacc"
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-linux-gnu-clang",
         "args": [
-          "-nopie",
           "main.cc"
-        ]
+        ],
+        "path": "./x86_64-cros-linux-gnu-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -195,26 +184,26 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-linux-gnu-clang",
         "args": [
-          "-D__KERNEL__",
+          "-nopie",
           "main.cc"
-        ]
+        ],
+        "path": "./x86_64-cros-linux-gnu-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -254,26 +243,26 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./armv7a-cros-linux-gnueabihf-clang",
         "args": [
           "-D__KERNEL__",
           "main.cc"
-        ]
+        ],
+        "path": "./x86_64-cros-linux-gnu-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/armv7a-cros-linux-gnueabihf",
@@ -313,26 +302,26 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-linux-gnu-clang",
         "args": [
-          "--sysroot=xyz",
+          "-D__KERNEL__",
           "main.cc"
-        ]
+        ],
+        "path": "./armv7a-cros-linux-gnueabihf-clang"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "../../usr/bin/clang",
             "-Qunused-arguments",
@@ -370,9 +359,20 @@
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002",
             "CCACHE_CPP2=yes"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
+    ],
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "args": [
+          "--sysroot=xyz",
+          "main.cc"
+        ],
+        "path": "./x86_64-cros-linux-gnu-clang"
+      }
+    }
   }
 ]

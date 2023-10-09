@@ -1,19 +1,8 @@
 [
   {
-    "wd": "/tmp/stable",
-    "wrapper": {
-      "cmd": {
-        "path": "./x86_64-cros-linux-gnu-gcc",
-        "args": [
-          "-clang-syntax",
-          "main.cc"
-        ]
-      }
-    },
     "cmds": [
       {
         "cmd": {
-          "path": "../../usr/bin/clang",
           "args": [
             "--sysroot=/usr/x86_64-cros-linux-gnu",
             "-Qunused-arguments",
@@ -55,12 +44,12 @@
             "x86_64-cros-linux-gnu",
             "-fsyntax-only",
             "-stdlib=libstdc++"
-          ]
+          ],
+          "path": "../../usr/bin/clang"
         }
       },
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "./x86_64-cros-linux-gnu-gcc.real",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -79,29 +68,26 @@
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         }
       }
-    ]
-  },
-  {
-    "wd": "/tmp/stable",
-    "env": [
-      "GOMACC_PATH=/tmp/stable/gomacc"
     ],
+    "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-linux-gnu-gcc",
         "args": [
           "-clang-syntax",
           "main.cc"
-        ]
+        ],
+        "path": "./x86_64-cros-linux-gnu-gcc"
       }
-    },
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "/tmp/stable/gomacc",
           "args": [
             "../../usr/bin/clang",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -144,12 +130,12 @@
             "x86_64-cros-linux-gnu",
             "-fsyntax-only",
             "-stdlib=libstdc++"
-          ]
+          ],
+          "path": "/tmp/stable/gomacc"
         }
       },
       {
         "cmd": {
-          "path": "/tmp/stable/gomacc",
           "args": [
             "./x86_64-cros-linux-gnu-gcc.real",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -164,29 +150,29 @@
             "main.cc",
             "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
             "-mno-movbe"
-          ]
+          ],
+          "path": "/tmp/stable/gomacc"
         }
       }
-    ]
-  },
-  {
+    ],
+    "env": [
+      "GOMACC_PATH=/tmp/stable/gomacc"
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-linux-gnu-gcc",
         "args": [
           "-clang-syntax",
           "main.cc"
-        ]
-      },
-      "stdout": "somemessage",
-      "stderr": "someerror",
-      "exitcode": 1
-    },
+        ],
+        "path": "./x86_64-cros-linux-gnu-gcc"
+      }
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "../../usr/bin/clang",
           "args": [
             "--sysroot=/usr/x86_64-cros-linux-gnu",
             "-Qunused-arguments",
@@ -228,32 +214,32 @@
             "x86_64-cros-linux-gnu",
             "-fsyntax-only",
             "-stdlib=libstdc++"
-          ]
+          ],
+          "path": "../../usr/bin/clang"
         },
-        "stdout": "somemessage",
+        "exitcode": 1,
         "stderr": "someerror",
-        "exitcode": 1
+        "stdout": "somemessage"
       }
-    ]
-  },
-  {
+    ],
     "wd": "/tmp/stable",
     "wrapper": {
       "cmd": {
-        "path": "./x86_64-cros-linux-gnu-gcc",
         "args": [
           "-clang-syntax",
           "main.cc"
-        ]
+        ],
+        "path": "./x86_64-cros-linux-gnu-gcc"
       },
-      "stdout": "somemessage",
+      "exitcode": 1,
       "stderr": "someerror",
-      "exitcode": 1
-    },
+      "stdout": "somemessage"
+    }
+  },
+  {
     "cmds": [
       {
         "cmd": {
-          "path": "../../usr/bin/clang",
           "args": [
             "--sysroot=/usr/x86_64-cros-linux-gnu",
             "-Qunused-arguments",
@@ -295,12 +281,12 @@
             "x86_64-cros-linux-gnu",
             "-fsyntax-only",
             "-stdlib=libstdc++"
-          ]
+          ],
+          "path": "../../usr/bin/clang"
         }
       },
       {
         "cmd": {
-          "path": "/usr/bin/ccache",
           "args": [
             "./x86_64-cros-linux-gnu-gcc.real",
             "--sysroot=/usr/x86_64-cros-linux-gnu",
@@ -319,12 +305,26 @@
           "env_updates": [
             "CCACHE_DIR=/var/cache/distfiles/ccache",
             "CCACHE_UMASK=002"
-          ]
+          ],
+          "path": "/usr/bin/ccache"
         },
-        "stdout": "somemessage",
+        "exitcode": 1,
         "stderr": "someerror",
-        "exitcode": 1
+        "stdout": "somemessage"
       }
-    ]
+    ],
+    "wd": "/tmp/stable",
+    "wrapper": {
+      "cmd": {
+        "args": [
+          "-clang-syntax",
+          "main.cc"
+        ],
+        "path": "./x86_64-cros-linux-gnu-gcc"
+      },
+      "exitcode": 1,
+      "stderr": "someerror",
+      "stdout": "somemessage"
+    }
   }
 ]
