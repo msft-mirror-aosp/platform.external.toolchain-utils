@@ -27,8 +27,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -72,8 +71,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -117,8 +115,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -162,8 +159,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -207,8 +203,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -252,8 +247,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -297,8 +291,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -342,8 +335,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -387,8 +379,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }

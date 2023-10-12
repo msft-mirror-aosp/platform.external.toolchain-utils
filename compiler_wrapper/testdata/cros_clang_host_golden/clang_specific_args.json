@@ -35,8 +35,7 @@
             "-Woverride-init",
             "-Wunsafe-loop-optimizations",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -91,8 +90,7 @@
             "-fcommon",
             "-Wno-#warnings",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -138,8 +136,7 @@
             "-fcommon",
             "-Wno-error=uninitialized",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -185,8 +182,7 @@
             "-fcommon",
             "-someflag",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }

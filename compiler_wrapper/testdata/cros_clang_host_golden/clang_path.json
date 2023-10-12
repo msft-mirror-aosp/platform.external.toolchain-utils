@@ -27,8 +27,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -72,8 +71,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         },
@@ -123,8 +121,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang++"
         }
@@ -168,8 +165,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "somepath/clang"
         }
@@ -227,8 +223,7 @@
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/somedir/clang"
         }
@@ -284,8 +279,7 @@
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/somedir/clang"
         }
@@ -344,8 +338,7 @@
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/somedir/clang"
         },
@@ -396,8 +389,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -441,8 +433,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/a/b/c/d/e/f/g/clang"
         }
@@ -486,8 +477,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/a/b/c/d/e/f/g/clang"
         }
@@ -531,8 +521,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/somedir/clang"
         }
@@ -576,8 +565,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc",
-            "-Wno-unused-but-set-variable",
-            "-Wno-implicit-int-float-conversion"
+            "-Wno-unused-but-set-variable"
           ],
           "path": "/tmp/stable/pathenv/clang"
         }
