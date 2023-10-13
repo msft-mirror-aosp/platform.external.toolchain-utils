@@ -100,6 +100,10 @@ class Test(unittest.TestCase):
         )
         self.assertEqual(sha, "199700a5cfeedf227619f966aa3125cef18bc958")
 
+    def test_known_rev_sha_pairs_are_sorted(self):
+        revs = [rev for rev, _ in git_llvm_rev.known_llvm_rev_sha_pairs]
+        self.assertEqual(revs, sorted(revs))
+
     # NOTE: The below tests have _zz_ in their name as an optimization.
     # Iterating on a quick test is painful when these larger tests come before
     # it and take 7secs to run. Python's unittest module guarantees tests are
@@ -108,6 +112,23 @@ class Test(unittest.TestCase):
     # If you're wondering, the slow part is `git branch -r --contains`. I
     # imagine it's going to be very cold code, so I'm not inclined to optimize
     # it much.
+
+    def test_zz_non_base_rev_sha_pairs_are_correct(self):
+        base_rev_sha_pairs = git_llvm_rev.known_llvm_rev_sha_pairs
+
+        def restore_rev_sha_pairs():
+            git_llvm_rev.known_llvm_rev_sha_pairs = base_rev_sha_pairs
+
+        self.addCleanup(restore_rev_sha_pairs)
+        git_llvm_rev.known_llvm_rev_sha_pairs = (
+            (git_llvm_rev.base_llvm_revision, git_llvm_rev.base_llvm_sha),
+        )
+
+        for rev, cached_sha in base_rev_sha_pairs:
+            got_sha = self.rev_to_sha_with_round_trip(
+                git_llvm_rev.Rev(branch=git_llvm_rev.MAIN_BRANCH, number=rev)
+            )
+            self.assertEqual(cached_sha, got_sha)
 
     def test_zz_branch_revs_work_after_merge_points_and_svn_cutoff(
         self,
