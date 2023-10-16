@@ -35,6 +35,8 @@ import re
 import shlex
 import shutil
 import subprocess
+import threading
+import time
 from typing import (
     Any,
     Callable,
@@ -1181,6 +1183,65 @@ def run_in_chroot(cmd: Command, *args, **kwargs) -> subprocess.CompletedProcess:
     return subprocess.run(full_cmd, *args, **full_kwargs)
 
 
+def sudo_keepalive() -> None:
+    """Ensures we have sudo credentials, and keeps them up-to-date.
+
+    Some operations (notably run_in_chroot) run sudo, which may require
+    user interaction. To avoid blocking progress while we sit waiting
+    for that interaction, sudo_keepalive checks that we have cached
+    sudo credentials, gets them if necessary, then keeps them up-to-date
+    so that the rest of the script can run without needing to get
+    sudo credentials again.
+    """
+    logging.info(
+        "Caching sudo credentials for running commands inside the chroot"
+    )
+    # Exits successfully if cached credentials exist. Otherwise, tries
+    # created cached credentials, prompting for authentication if necessary.
+    subprocess.run(["sudo", "true"], check=True)
+
+    def sudo_keepalive_loop() -> None:
+        # Between credential refreshes, we sleep so that we don't
+        # unnecessarily burn CPU cycles. The sleep time must be shorter
+        # than sudo's configured cached credential expiration time, which
+        # is 15 minutes by default.
+        sleep_seconds = 10 * 60
+        # So as to not keep credentials cached forever, we limit the number
+        # of times we will refresh them.
+        max_seconds = 16 * 3600
+        max_refreshes = max_seconds // sleep_seconds
+        for _x in range(max_refreshes):
+            # Refreshes cached credentials if they exist, but never prompts
+            # for anything. If cached credentials do not exist, this
+            # command exits with an error. We ignore that error to keep the
+            # loop going, so that cached credentials will be kept fresh
+            # again once we have them (e.g. after the next cros_sdk command
+            # successfully authenticates the user).
+            #
+            # The standard file descriptors are all redirected to/from
+            # /dev/null to prevent this command from consuming any input
+            # or mixing its output with that of the other commands rust_uprev
+            # runs (which could be confusing, for example making it look like
+            # errors occurred during a build when they are actually in a
+            # separate task).
+            #
+            # Note: The command specifically uses "true" and not "-v", because
+            # it turns out that "-v" actually will prompt for a password when
+            # sudo is configured with NOPASSWD=all, even though in that case
+            # no password is required to run actual commands.
+            subprocess.run(
+                ["sudo", "-n", "true"],
+                check=False,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            time.sleep(sleep_seconds)
+
+    # daemon=True causes the thread to be killed when the script exits.
+    threading.Thread(target=sudo_keepalive_loop, daemon=True).start()
+
+
 def main() -> None:
     chroot.VerifyOutsideChroot()
     logging.basicConfig(level=logging.INFO)
@@ -1211,6 +1272,7 @@ def main() -> None:
         )
 
     if args.subparser_name == "create":
+        sudo_keepalive()
         create_rust_uprev(
             args.rust_version, args.template, args.skip_compile, run_step
         )
@@ -1223,6 +1285,7 @@ def main() -> None:
         # above
         assert args.subparser_name == "roll"
 
+        sudo_keepalive()
         # Determine the template version, if not given.
         template_version = args.template
         if template_version is None:
