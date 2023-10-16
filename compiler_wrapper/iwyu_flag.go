@@ -8,13 +8,12 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
 
 type useIWYUMode int
-
-const iwyuCrashSubstring = "PLEASE submit a bug report"
 
 const (
 	iwyuModeNone useIWYUMode = iota
@@ -135,21 +134,24 @@ func runIWYU(env env, clangCmd *command, cSrcFile string, extraIWYUFlags []strin
 		fmt.Fprintln(env.stderr(), "include-what-you-use failed")
 	}
 
-	var path strings.Builder
-	path.WriteString(strings.TrimSuffix(iwyuCmd.Path, "include-what-you-use"))
-	path.WriteString("fix_includes.py")
-	fixIncludesCmd := &command{
-		Path:       path.String(),
-		Args:       []string{"--nocomment"},
-		EnvUpdates: clangCmd.EnvUpdates,
+	iwyuDir := filepath.Join(getCompilerArtifactsDir(env), "linting-output", "iwyu")
+	if err := os.MkdirAll(iwyuDir, 0777); err != nil {
+		return fmt.Errorf("creating fixes directory at %q: %v", iwyuDir, err)
 	}
 
-	exitCode, err = wrapSubprocessErrorWithSourceLoc(fixIncludesCmd,
-		env.run(fixIncludesCmd, strings.NewReader(stderrMessage), env.stdout(), env.stderr()))
-	if err == nil && exitCode != 0 {
-		// Note: We continue on purpose when include-what-you-use fails
-		// to maintain compatibility with the previous wrapper.
-		fmt.Fprint(env.stderr(), "include-what-you-use failed")
+	f, err := os.CreateTemp(iwyuDir, "*.out")
+	if err != nil {
+		return fmt.Errorf("making output file for iwyu: %v", err)
+	}
+	writer := bufio.NewWriter(f)
+	if _, err := writer.WriteString(stderrMessage); err != nil {
+		return fmt.Errorf("writing output file for iwyu: %v", err)
+	}
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("flushing output file buffer for iwyu: %v", err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("finalizing output file for iwyu: %v", err)
 	}
 
 	return err

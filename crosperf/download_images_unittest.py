@@ -8,6 +8,7 @@
 
 
 import os
+import re
 import unittest
 import unittest.mock as mock
 
@@ -18,6 +19,16 @@ import test_flag
 
 
 MOCK_LOGGER = logger.GetLogger(log_dir="", mock=True)
+
+
+class RegexMatcher:
+    """A regex matcher, for passing to mocks."""
+
+    def __init__(self, regex):
+        self._regex = re.compile(regex)
+
+    def __eq__(self, string):
+        return self._regex.search(string) is not None
 
 
 class ImageDownloaderTestcast(unittest.TestCase):
@@ -34,7 +45,6 @@ class ImageDownloaderTestcast(unittest.TestCase):
     @mock.patch.object(os, "makedirs")
     @mock.patch.object(os.path, "exists")
     def test_download_image(self, mock_path_exists, mock_mkdirs):
-
         # Set mock and test values.
         mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
         test_chroot = "/usr/local/home/chromeos"
@@ -59,50 +69,63 @@ class ImageDownloaderTestcast(unittest.TestCase):
             image_path,
         )
 
-        # Verify os.path.exists was called twice, with proper arguments.
-        self.assertEqual(mock_path_exists.call_count, 2)
-        mock_path_exists.assert_called_with(
-            "/usr/local/home/chromeos/chroot/tmp/lumpy-release/"
-            "R36-5814.0.0/chromiumos_test_image.bin"
+        # Verify os.path.exists was called thrice, with proper arguments.
+        self.assertEqual(mock_path_exists.call_count, 3)
+        mock_path_exists.assert_any_call(
+            RegexMatcher(
+                "/usr/local/home/chromeos/.*tmp/lumpy-release/"
+                "R36-5814.0.0/chromiumos_test_image.bin"
+            )
         )
         mock_path_exists.assert_any_call(
-            "/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0"
+            RegexMatcher(
+                "/usr/local/home/chromeos/.*tmp/lumpy-release/R36-5814.0.0"
+            )
         )
+        mock_path_exists.assert_any_call("/etc/cros_chroot_version")
 
         # Verify we called os.mkdirs
         self.assertEqual(mock_mkdirs.call_count, 1)
         mock_mkdirs.assert_called_with(
-            "/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0"
+            RegexMatcher(
+                "/usr/local/home/chromeos/.*tmp/lumpy-release/R36-5814.0.0"
+            )
         )
 
         # Verify we called RunCommand once, with proper arguments.
         self.assertEqual(mock_cmd_exec.RunCommand.call_count, 1)
-        expected_args = (
+        expected_args = RegexMatcher(
             "/usr/local/home/chromeos/src/chromium/depot_tools/gsutil.py "
             "cp gs://chromeos-image-archive/lumpy-release/R36-5814.0.0/"
             "chromiumos_test_image.tar.xz "
-            "/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0"
+            "/usr/local/home/chromeos/.*tmp/lumpy-release/R36-5814.0.0"
         )
 
         mock_cmd_exec.RunCommand.assert_called_with(expected_args)
 
-        # Reset the velues in the mocks; set os.path.exists to always return True.
+        # Reset the velues in the mocks; set os.path.exists to always return
+        # True (except for "inside chroot" check).
         mock_path_exists.reset_mock()
         mock_cmd_exec.reset_mock()
-        mock_path_exists.return_value = True
+        mock_path_exists.side_effect = lambda x: x != "/etc/cros_chroot_version"
 
         # Run downloader
         downloader.DownloadImage(test_chroot, test_build_id, image_path)
 
-        # Verify os.path.exists was called twice, with proper arguments.
-        self.assertEqual(mock_path_exists.call_count, 2)
+        # Verify os.path.exists was called thrice, with proper arguments.
+        self.assertEqual(mock_path_exists.call_count, 3)
         mock_path_exists.assert_called_with(
-            "/usr/local/home/chromeos/chroot/tmp/lumpy-release/"
-            "R36-5814.0.0/chromiumos_test_image.bin"
+            RegexMatcher(
+                "/usr/local/home/chromeos/.*tmp/lumpy-release/"
+                "R36-5814.0.0/chromiumos_test_image.bin"
+            )
         )
         mock_path_exists.assert_any_call(
-            "/usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0"
+            RegexMatcher(
+                "/usr/local/home/chromeos/.*tmp/lumpy-release/R36-5814.0.0"
+            )
         )
+        mock_path_exists.assert_any_call("/etc/cros_chroot_version")
 
         # Verify we made no RunCommand or ChrootRunCommand calls (since
         # os.path.exists returned True, there was no work do be done).
@@ -111,7 +134,6 @@ class ImageDownloaderTestcast(unittest.TestCase):
 
     @mock.patch.object(os.path, "exists")
     def test_uncompress_image(self, mock_path_exists):
-
         # set mock and test values.
         mock_cmd_exec = mock.Mock(spec=command_executer.CommandExecuter)
         test_chroot = "/usr/local/home/chromeos"
@@ -130,12 +152,15 @@ class ImageDownloaderTestcast(unittest.TestCase):
             test_build_id,
         )
 
-        # Verify os.path.exists was called once, with correct arguments.
-        self.assertEqual(mock_path_exists.call_count, 1)
+        # Verify os.path.exists was called twice, with correct arguments.
+        self.assertEqual(mock_path_exists.call_count, 2)
         mock_path_exists.assert_called_with(
-            "/usr/local/home/chromeos/chroot/tmp/lumpy-release/"
-            "R36-5814.0.0/chromiumos_test_image.bin"
+            RegexMatcher(
+                "/usr/local/home/chromeos/.*tmp/lumpy-release/"
+                "R36-5814.0.0/chromiumos_test_image.bin"
+            )
         )
+        mock_path_exists.assert_any_call("/etc/cros_chroot_version")
 
         # Verify RunCommand was called twice with correct arguments.
         self.assertEqual(mock_cmd_exec.RunCommand.call_count, 2)
@@ -143,8 +168,10 @@ class ImageDownloaderTestcast(unittest.TestCase):
         self.assertEqual(len(mock_cmd_exec.RunCommand.call_args_list[0]), 2)
         actual_arg = mock_cmd_exec.RunCommand.call_args_list[0][0]
         expected_arg = (
-            "cd /usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0 ; "
-            "tar -Jxf chromiumos_test_image.tar.xz ",
+            RegexMatcher(
+                "cd /usr/local/home/chromeos/.*tmp/lumpy-release/R36-5814.0.0 ; "
+                "tar -Jxf chromiumos_test_image.tar.xz "
+            ),
         )
         self.assertEqual(expected_arg, actual_arg)
         # 2nd arg must be exception handler
@@ -158,8 +185,10 @@ class ImageDownloaderTestcast(unittest.TestCase):
         self.assertEqual(len(mock_cmd_exec.RunCommand.call_args_list[1]), 2)
         actual_arg = mock_cmd_exec.RunCommand.call_args_list[1][0]
         expected_arg = (
-            "cd /usr/local/home/chromeos/chroot/tmp/lumpy-release/R36-5814.0.0 ; "
-            "rm -f chromiumos_test_image.bin ",
+            RegexMatcher(
+                "cd /usr/local/home/chromeos/.*tmp/lumpy-release/R36-5814.0.0 ; "
+                "rm -f chromiumos_test_image.bin "
+            ),
         )
         self.assertEqual(expected_arg, actual_arg)
         # 2nd arg must be empty
@@ -167,24 +196,27 @@ class ImageDownloaderTestcast(unittest.TestCase):
             "{}" in repr(mock_cmd_exec.RunCommand.call_args_list[1][1])
         )
 
-        # Set os.path.exists to always return True and run uncompress.
+        # Set os.path.exists to always return True (except for "inside chroot"
+        # check) and run uncompress.
         mock_path_exists.reset_mock()
         mock_cmd_exec.reset_mock()
-        mock_path_exists.return_value = True
+        mock_path_exists.side_effect = lambda x: x != "/etc/cros_chroot_version"
         downloader.UncompressImage(test_chroot, test_build_id)
 
         # Verify os.path.exists was called once, with correct arguments.
-        self.assertEqual(mock_path_exists.call_count, 1)
+        self.assertEqual(mock_path_exists.call_count, 2)
         mock_path_exists.assert_called_with(
-            "/usr/local/home/chromeos/chroot/tmp/lumpy-release/"
-            "R36-5814.0.0/chromiumos_test_image.bin"
+            RegexMatcher(
+                "/usr/local/home/chromeos/.*tmp/lumpy-release/"
+                "R36-5814.0.0/chromiumos_test_image.bin"
+            )
         )
+        mock_path_exists.assert_any_call("/etc/cros_chroot_version")
 
         # Verify RunCommand was not called.
         self.assertEqual(mock_cmd_exec.RunCommand.call_count, 0)
 
     def test_run(self):
-
         # Set test arguments
         test_chroot = "/usr/local/home/chromeos"
         test_build_id = "remote/lumpy/latest-dev"

@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+const artifactsTmpDirEnvName = "CROS_ARTIFACTS_TMP_DIR"
+
 type env interface {
 	umask(int) int
 	getenv(key string) (string, bool)
@@ -121,7 +123,7 @@ func (env *commandRecordingEnv) exec(cmd *command) error {
 }
 
 func (env *commandRecordingEnv) runWithTimeout(cmd *command, duration time.Duration) error {
-	return env.runWithTimeout(cmd, duration)
+	return runCmdWithTimeout(env, cmd, duration)
 }
 
 func (env *commandRecordingEnv) run(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
@@ -143,7 +145,7 @@ type printingEnv struct {
 	env
 }
 
-var _env = (*printingEnv)(nil)
+var _ env = (*printingEnv)(nil)
 
 func (env *printingEnv) exec(cmd *command) error {
 	printCmd(env, cmd)
@@ -170,4 +172,15 @@ func printCmd(env env, cmd *command) {
 		fmt.Fprintf(env.stderr(), " '%s'", strings.Join(cmd.Args, "' '"))
 	}
 	io.WriteString(env.stderr(), "\n")
+}
+
+func getCompilerArtifactsDir(env env) string {
+	const defaultArtifactDir = "/tmp"
+	value, _ := env.getenv(artifactsTmpDirEnvName)
+	if value == "" {
+		fmt.Fprintf(env.stdout(), "$%s is not set, artifacts will be written to %s", artifactsTmpDirEnvName, defaultArtifactDir)
+		return defaultArtifactDir
+	}
+	return value
+
 }

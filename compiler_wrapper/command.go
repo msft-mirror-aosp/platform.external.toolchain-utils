@@ -93,7 +93,7 @@ func resolveAgainstPathEnv(env env, cmd string) (string, error) {
 			return resolvedPath, nil
 		}
 	}
-	return "", fmt.Errorf("Couldn't find cmd %q in path", cmd)
+	return "", fmt.Errorf("couldn't find cmd %q in path", cmd)
 }
 
 func getAbsCmdPath(env env, cmd *command) string {

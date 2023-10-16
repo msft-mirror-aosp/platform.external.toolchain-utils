@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2013 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,10 +6,10 @@
 
 
 import math
+import statistics
+from typing import Any
 
-# FIXME(denik): Fix the import in chroot.
-# pylint: disable=import-error
-from scipy import stats
+import numpy as np
 
 
 # See crbug.com/673558 for how these are estimated.
@@ -26,10 +25,49 @@ _estimated_stddev = {
     "loading.desktop": 0.021,  # Copied from page_cycler initially
 }
 
+# Numpy makes it hard to know the real type of some inputs
+# and outputs, so this type alias is just for docs.
+FloatLike = Any
+
+
+def isf(x: FloatLike, mu=0.0, sigma=1.0, pitch=0.01) -> FloatLike:
+    """Compute the inverse survival function for value x.
+
+    In the abscence of using scipy.stats.norm's isf(), this function
+    attempts to re-implement the inverse survival function by calculating
+    the numerical inverse of the survival function, interpolating between
+    table values. See bug b/284489250 for details.
+
+    Survival function as defined by:
+    https://en.wikipedia.org/wiki/Survival_function
+
+    Examples:
+        >>> -2.0e-16 < isf(0.5) <  2.0e-16
+        True
+
+    Args:
+        x: float or numpy array-like to compute the ISF for.
+        mu: Center of the underlying normal distribution.
+        sigma: Spread of the underlying normal distribution.
+        pitch: Absolute spacing between y-value interpolation points.
+
+    Returns:
+        float or numpy array-like representing the ISF of `x`.
+    """
+    norm = statistics.NormalDist(mu, sigma)
+    # np.interp requires a monotonically increasing x table.
+    # Because the survival table is monotonically decreasing, we have to
+    # reverse the y_vals too.
+    y_vals = np.flip(np.arange(-4.0, 4.0, pitch))
+    survival_table = np.fromiter(
+        (1.0 - norm.cdf(y) for y in y_vals), y_vals.dtype
+    )
+    return np.interp(x, survival_table, y_vals)
+
 
 # Get #samples needed to guarantee a given confidence interval, assuming the
 # samples follow normal distribution.
-def _samples(b):
+def _samples(b: str) -> int:
     # TODO: Make this an option
     # CI = (0.9, 0.02), i.e., 90% chance that |sample mean - true mean| < 2%.
     p = 0.9
@@ -39,7 +77,7 @@ def _samples(b):
     d = _estimated_stddev[b]
     # Get at least 2 samples so as to calculate standard deviation, which is
     # needed in T-test for p-value.
-    n = int(math.ceil((stats.norm.isf((1 - p) / 2) * d / e) ** 2))
+    n = int(math.ceil((isf((1 - p) / 2) * d / e) ** 2))
     return n if n > 1 else 2
 
 
