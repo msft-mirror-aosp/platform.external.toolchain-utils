@@ -19,7 +19,7 @@ import get_llvm_hash
 import update_chromeos_llvm_hash
 
 
-VALID_CQ_TRYBOTS = ["llvm", "llvm-next", "llvm-tot"]
+VALID_CQ_TRYBOTS = ("llvm", "llvm-next")
 
 
 def GetCommandLineArgs():
