@@ -181,7 +181,7 @@ def main(argv: List[str]):
     )
     opts = parser.parse_args(argv)
 
-    pgo_tools.assert_not_in_chroot()
+    pgo_tools.exit_if_in_chroot()
 
     repo_root = find_repo_root(Path(os.getcwd()))
     logging.info("Repo root is %s", repo_root)
