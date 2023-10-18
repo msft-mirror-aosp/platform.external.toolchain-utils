@@ -372,15 +372,19 @@ def parse_args(argv: t.List[str]) -> t.Any:
         "--reviewers",
         type=str,
         nargs="*",
-        help="Requests reviews from REVIEWERS."
-        " All REVIEWERS must have existing accounts.",
+        help="""
+        Requests reviews from REVIEWERS. All REVIEWERS must have existing
+        accounts.
+        """,
     )
     parser.add_argument(
         "--cc",
         type=str,
         nargs="*",
-        help="CCs the CL to the recipients. All recipients must have existing "
-        "accounts.",
+        help="""
+        CCs the CL or email to the recipients. If in cherry-pick mode, all
+        recipients must have Gerrit accounts.
+        """,
     )
 
     subparsers = parser.add_subparsers(dest="repository")
@@ -404,15 +408,14 @@ def parse_args(argv: t.List[str]) -> t.Any:
 
 
 def find_chroot(
-    opts: t.Any, reviewers: t.List[str], cc: t.List[str]
+    opts: t.Any, cc: t.List[str]
 ) -> t.Tuple[str, t.List[t.Tuple[str, str]], _EmailRecipients]:
-    recipients = reviewers + cc
     if opts.repository == "chromeos":
         chroot_path = opts.chromeos_dir
         return (
             chroot_path,
             _find_interesting_chromeos_shas(chroot_path),
-            _EmailRecipients(well_known=["mage"], direct=recipients),
+            _EmailRecipients(well_known=["mage"], direct=cc),
         )
     elif opts.repository == "android":
         if opts.action == "cherry-pick":
@@ -426,7 +429,7 @@ def find_chroot(
             _find_interesting_android_shas(chroot_path),
             _EmailRecipients(
                 well_known=[],
-                direct=["android-llvm-dev@google.com"] + recipients,
+                direct=["android-llvm-dev@google.com"] + cc,
             ),
         )
     else:
@@ -449,7 +452,7 @@ def main(argv: t.List[str]) -> int:
     reviewers = opts.reviewers if opts.reviewers else []
     cc = opts.cc if opts.cc else []
 
-    chroot_path, interesting_shas, recipients = find_chroot(opts, reviewers, cc)
+    chroot_path, interesting_shas, recipients = find_chroot(opts, cc)
     logging.info("Interesting SHAs were %r", interesting_shas)
 
     state = _read_state(state_file)
