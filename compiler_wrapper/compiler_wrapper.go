@@ -110,7 +110,6 @@ func runAndroidClangTidy(env env, cmd *command) error {
 }
 
 func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
-
 	if err := checkUnsupportedFlags(inputCmd); err != nil {
 		return 0, err
 	}
@@ -365,12 +364,9 @@ func calcGccCommand(enableRusage bool, builder *commandBuilder) (bool, *command,
 	calcCommonPreUserArgs(builder)
 	processGccFlags(builder)
 
-	remoteBuildUsed := false
-	if !builder.cfg.isHostWrapper {
-		var err error
-		if remoteBuildUsed, err = processRemoteBuildAndCCacheFlags(!enableRusage, builder); err != nil {
-			return remoteBuildUsed, nil, err
-		}
+	remoteBuildUsed, err := processRemoteBuildAndCCacheFlags(!enableRusage, builder)
+	if err != nil {
+		return remoteBuildUsed, nil, err
 	}
 	return remoteBuildUsed, builder.build(), nil
 }
@@ -387,12 +383,9 @@ func calcCommonPreUserArgs(builder *commandBuilder) {
 }
 
 func processRemoteBuildAndCCacheFlags(allowCCache bool, builder *commandBuilder) (remoteBuildUsed bool, err error) {
-	remoteBuildUsed = false
-	if !builder.cfg.isHostWrapper {
-		remoteBuildUsed, err = processRemoteBuildFlags(builder)
-		if err != nil {
-			return remoteBuildUsed, err
-		}
+	remoteBuildUsed, err = processRemoteBuildFlags(builder)
+	if err != nil {
+		return remoteBuildUsed, err
 	}
 	if !remoteBuildUsed && allowCCache {
 		processCCacheFlag(builder)

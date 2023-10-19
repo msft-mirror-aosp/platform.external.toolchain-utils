@@ -139,6 +139,7 @@
       {
         "cmd": {
           "args": [
+            "/tmp/stable/clang",
             "-Qunused-arguments",
             "-Werror=poison-system-directories",
             "-Wno-compound-token-split-by-macro",
@@ -164,7 +165,7 @@
             "main.cc",
             "-Wno-unused-but-set-variable"
           ],
-          "path": "/tmp/stable/clang"
+          "path": "/tmp/stable/gomacc"
         }
       }
     ],
@@ -234,6 +235,7 @@
       {
         "cmd": {
           "args": [
+            "/tmp/stable/clang",
             "-Qunused-arguments",
             "-Werror=poison-system-directories",
             "-Wno-compound-token-split-by-macro",
@@ -259,7 +261,7 @@
             "main.cc",
             "-Wno-unused-but-set-variable"
           ],
-          "path": "/tmp/stable/clang"
+          "path": "/tmp/stable/gomacc"
         }
       }
     ],
@@ -328,6 +330,7 @@
       {
         "cmd": {
           "args": [
+            "/tmp/stable/clang",
             "-Qunused-arguments",
             "-Werror=poison-system-directories",
             "-Wno-compound-token-split-by-macro",
@@ -353,7 +356,7 @@
             "main.cc",
             "-Wno-unused-but-set-variable"
           ],
-          "path": "/tmp/stable/clang"
+          "path": "/tmp/stable/gomacc"
         },
         "exitcode": 1,
         "stderr": "someerror",

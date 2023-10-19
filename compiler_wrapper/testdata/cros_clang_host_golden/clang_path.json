@@ -254,6 +254,7 @@
       {
         "cmd": {
           "args": [
+            "/somedir/clang",
             "-Qunused-arguments",
             "-Werror=poison-system-directories",
             "-Wno-compound-token-split-by-macro",
@@ -281,7 +282,7 @@
             "main.cc",
             "-Wno-unused-but-set-variable"
           ],
-          "path": "/somedir/clang"
+          "path": "/tmp/stable/gomacc"
         }
       }
     ],
