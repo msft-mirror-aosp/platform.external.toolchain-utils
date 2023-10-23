@@ -26,11 +26,15 @@ class Test(unittest.TestCase):
 
     def test_path_translation_works(self):
         repo_root = Path("/some/repo")
+        chroot_info = create_chroot_etc.ChrootInfo(
+            chroot_name="my-chroot",
+            out_dir_name="my-out",
+        )
         self.assertEqual(
             create_chroot_etc.translate_chroot_path_to_out_of_chroot(
-                repo_root, "/tmp/file/path"
+                repo_root, "/tmp/file/path", chroot_info
             ),
-            repo_root / "out" / "tmp/file/path",
+            repo_root / "my-out" / "tmp/file/path",
         )
 
     def test_llvm_ebuild_location(self):

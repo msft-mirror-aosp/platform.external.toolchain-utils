@@ -9,6 +9,7 @@ Do not run it inside of a chroot. It establishes a chroot of its own.
 """
 
 import argparse
+import dataclasses
 import logging
 import os
 from pathlib import Path
@@ -19,6 +20,14 @@ import sys
 from typing import List
 
 import pgo_tools
+
+
+@dataclasses.dataclass(frozen=True)
+class ChrootInfo:
+    """Info that describes a unique chroot."""
+
+    chroot_name: str
+    out_dir_name: str
 
 
 def find_repo_root(base_dir: Path) -> Path:
@@ -33,13 +42,14 @@ def find_repo_root(base_dir: Path) -> Path:
     raise ValueError(f"No repo found above {base_dir}")
 
 
-def create_fresh_bootstrap_chroot(repo_root: Path, chroot_name: str):
+def create_fresh_bootstrap_chroot(repo_root: Path, chroot_info: ChrootInfo):
     """Creates a `--bootstrap` chroot without any updates applied."""
     pgo_tools.run(
         [
             "cros_sdk",
             "--replace",
-            f"--chroot={chroot_name}",
+            f"--chroot={chroot_info.chroot_name}",
+            f"--out-dir={chroot_info.out_dir_name}",
             "--bootstrap",
             "--skip-chroot-upgrade",
         ],
@@ -48,13 +58,17 @@ def create_fresh_bootstrap_chroot(repo_root: Path, chroot_name: str):
 
 
 def generate_pgo_profile(
-    repo_root: Path, chroot_name: str, chroot_output_file: Path, use_var: str
+    repo_root: Path,
+    chroot_info: ChrootInfo,
+    chroot_output_file: Path,
+    use_var: str,
 ):
     """Generates a PGO profile to `chroot_output_file`."""
     pgo_tools.run(
         [
             "cros_sdk",
-            f"--chroot={chroot_name}",
+            f"--chroot={chroot_info.chroot_name}",
+            f"--out-dir={chroot_info.out_dir_name}",
             "--skip-chroot-upgrade",
             f"USE={use_var}",
             "--",
@@ -74,12 +88,14 @@ def compress_pgo_profile(pgo_profile: Path) -> Path:
     return Path(str(pgo_profile) + ".xz")
 
 
-def translate_chroot_path_to_out_of_chroot(repo_root: Path, path: Path) -> Path:
+def translate_chroot_path_to_out_of_chroot(
+    repo_root: Path, path: Path, info: ChrootInfo
+) -> Path:
     """Translates a chroot path into an out-of-chroot path."""
     path_str = str(path)
     assert path_str.startswith("/tmp"), path
     # Remove the leading `/` from the output file so it joins properly.
-    return repo_root / "out" / str(path)[1:]
+    return repo_root / info.out_dir_name / str(path)[1:]
 
 
 def locate_current_llvm_ebuild(repo_root: Path) -> Path:
@@ -151,6 +167,14 @@ def main(argv: List[str]):
         """,
     )
     parser.add_argument(
+        "--out-dir",
+        default="llvm-next-pgo-chroot_out",
+        help="""
+        Name of the out/ directory to use. Will be clobbered if it exists
+        already.
+        """,
+    )
+    parser.add_argument(
         "--upload",
         action="store_true",
         help="Upload the profile after creation. Implies --compress.",
@@ -187,35 +211,49 @@ def main(argv: List[str]):
     logging.info("Repo root is %s", repo_root)
 
     logging.info("Creating new SDK")
-    chroot_name = opts.chroot
-    create_fresh_bootstrap_chroot(repo_root, chroot_name)
-    chroot_profile_path = Path("/tmp/llvm-next-pgo-profile.prof")
-    generate_pgo_profile(repo_root, chroot_name, chroot_profile_path, opts.use)
-    profile_path = translate_chroot_path_to_out_of_chroot(
-        repo_root, chroot_profile_path
-    )
-    if opts.output:
-        shutil.copyfile(profile_path, opts.output)
+    chroot_info = ChrootInfo(opts.chroot, opts.out_dir)
+    try:
+        create_fresh_bootstrap_chroot(repo_root, chroot_info)
+        chroot_profile_path = Path("/tmp/llvm-next-pgo-profile.prof")
+        generate_pgo_profile(
+            repo_root, chroot_info, chroot_profile_path, opts.use
+        )
+        profile_path = translate_chroot_path_to_out_of_chroot(
+            repo_root, chroot_profile_path, chroot_info
+        )
+        if opts.output:
+            shutil.copyfile(profile_path, opts.output)
 
-    compressed_profile_path = compress_pgo_profile(profile_path)
-    upload_command = determine_upload_command(
-        repo_root, compressed_profile_path
-    )
-    if opts.upload:
-        pgo_tools.run(upload_command)
+        compressed_profile_path = compress_pgo_profile(profile_path)
+        upload_command = determine_upload_command(
+            repo_root, compressed_profile_path
+        )
+        if opts.upload:
+            pgo_tools.run(upload_command)
+        else:
+            friendly_upload_command = " ".join(
+                shlex.quote(str(x)) for x in upload_command
+            )
+            logging.info(
+                "To upload the profile, run %r in %r",
+                friendly_upload_command,
+                repo_root,
+            )
+    except:
+        logging.warning(
+            "NOTE: Chroot left at %s and out dir is left at %s. "
+            "If you don't plan to rerun this script, delete them.",
+            chroot_info.chroot_name,
+            chroot_info.out_dir_name,
+        )
+        raise
     else:
-        friendly_upload_command = " ".join(
-            shlex.quote(str(x)) for x in upload_command
-        )
         logging.info(
-            "To upload the profile, run %r in %r",
-            friendly_upload_command,
-            repo_root,
+            "Feel free to delete chroot %s and out dir %s when you're done "
+            "with them.",
+            chroot_info.chroot_name,
+            chroot_info.out_dir_name,
         )
-
-    logging.info(
-        "Feel free to delete chroot %s when you're done with it.", chroot_name
-    )
 
 
 if __name__ == "__main__":
