@@ -35,6 +35,8 @@ LOCAL_PROFILE_LOCATION = Path(
     "sys-devel/llvm/files/llvm-local.profdata",
 ).resolve()
 
+CHROOT_HYPERFINE = Path.home() / ".cargo/bin/hyperfine"
+
 
 class SpecialProfile(enum.Enum):
     """An enum representing a 'special' (non-Path) profile."""
@@ -82,7 +84,7 @@ def parse_profile_path(path: str) -> ProfilePath:
 
 
 def ensure_hyperfine_is_installed():
-    if shutil.which("hyperfine"):
+    if CHROOT_HYPERFINE.exists():
         return
 
     logging.info("Installing hyperfine for benchmarking...")
@@ -93,9 +95,9 @@ def ensure_hyperfine_is_installed():
             "hyperfine",
         ]
     )
-    assert shutil.which(
-        "hyperfine"
-    ), "hyperfine was installed, but isn't on PATH?"
+    assert (
+        CHROOT_HYPERFINE.exists()
+    ), f"hyperfine was installed, but wasn't at {CHROOT_HYPERFINE}"
 
 
 def construct_hyperfine_cmd(
@@ -139,7 +141,7 @@ def construct_hyperfine_cmd(
         f"ebuild {shlex.quote(str(llvm_ebuild))}"
     )
     cmd: pgo_tools.Command = [
-        "hyperfine",
+        CHROOT_HYPERFINE,
         "--max-runs=3",
         f"--setup={setup_cmd}",
         f"--prepare={ebuild_llvm} clean prepare",
