@@ -298,6 +298,22 @@ def do_cherrypick(
     return new_state
 
 
+def prettify_sha_for_email(
+    sha: str,
+    rev: int,
+) -> tiny_render.Piece:
+    """Returns a piece of an email representing the given sha and its rev."""
+    # 12 is arbitrary, but should be unambiguous enough.
+    short_sha = sha[:12]
+    return tiny_render.Switch(
+        text=f"r{rev} ({short_sha})",
+        html=tiny_render.Link(
+            href=f"https://github.com/llvm/llvm-project/commit/{sha}",
+            inner=f"r{rev}",
+        ),
+    )
+
+
 def do_email(
     is_dry_run: bool,
     llvm_dir: str,
@@ -308,15 +324,7 @@ def do_email(
 ) -> State:
     def prettify_sha(sha: str) -> tiny_render.Piece:
         rev = get_llvm_hash.GetVersionFrom(llvm_dir, sha)
-
-        # 12 is arbitrary, but should be unambiguous enough.
-        short_sha = sha[:12]
-        return tiny_render.Switch(
-            text=f"r{rev} ({short_sha})",
-            html=tiny_render.Link(
-                href="https://reviews.llvm.org/rG" + sha, inner="r" + str(rev)
-            ),
-        )
+        return prettify_sha_for_email(sha, rev)
 
     def get_sha_description(sha: str) -> tiny_render.Piece:
         return subprocess.check_output(

@@ -216,6 +216,20 @@ class Test(unittest.TestCase):
         do_cherrypick.assert_called_once()
         find_reverts.assert_called_once()
 
+    def test_sha_prettification_for_email(self):
+        sha = "a" * 40
+        rev = 123456
+        self.assertEqual(
+            nightly_revert_checker.prettify_sha_for_email(sha, rev),
+            tiny_render.Switch(
+                text=f"r{rev} ({sha[:12]})",
+                html=tiny_render.Link(
+                    href=f"https://github.com/llvm/llvm-project/commit/{sha}",
+                    inner=f"r{rev}",
+                ),
+            ),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
