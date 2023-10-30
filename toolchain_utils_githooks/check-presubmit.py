@@ -360,7 +360,7 @@ def check_mypy(
     # Prefix output with the version information.
     prefix = f"Using {output.strip()}, "
 
-    cmd = mypy + list(files)
+    cmd = mypy + ["--follow-imports=silent"] + list(files)
     exit_code, output = run_command_unchecked(cmd, cwd=toolchain_utils_root)
     if exit_code == 0:
         return CheckResult(
