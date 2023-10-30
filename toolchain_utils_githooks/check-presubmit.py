@@ -7,6 +7,7 @@
 """Runs presubmit checks against a bundle of files."""
 
 import argparse
+import dataclasses
 import datetime
 import multiprocessing
 import multiprocessing.pool
@@ -133,7 +134,17 @@ def env_with_pythonpath(toolchain_utils_root: str) -> Dict[str, str]:
     return env
 
 
-def get_mypy() -> Optional[List[str]]:
+@dataclasses.dataclass(frozen=True)
+class MyPyInvocation:
+    """An invocation of mypy."""
+
+    command: List[str]
+    # Entries to add to PYTHONPATH, formatted for direct use in the PYTHONPATH
+    # env var.
+    pythonpath_additions: str
+
+
+def get_mypy() -> Optional[MyPyInvocation]:
     """Finds the mypy executable and returns a command to invoke it.
 
     If mypy cannot be found and we're inside the chroot, this
@@ -141,24 +152,34 @@ def get_mypy() -> Optional[List[str]]:
 
     If mypy cannot be found and we're outside the chroot, this
     returns None.
+
+    Returns:
+        An optional tuple containing:
+            - the command to invoke mypy, and
+            - any environment variables to set when invoking mypy
     """
 
-    def get_from_pip():
+    def get_from_pip() -> Optional[MyPyInvocation]:
         rc, output = run_command_unchecked(pip + ["show", "mypy"])
-        if rc == 0:
-            m = re.search(r"^Location: (.*)", output, re.MULTILINE)
-            if m:
-                return [
-                    "env",
-                    "PYTHONPATH=" + m.group(1),
-                    "python3",
-                    "-m",
-                    "mypy",
-                ]
-        return None
+        if rc:
+            return None
+
+        m = re.search(r"^Location: (.*)", output, re.MULTILINE)
+        if not m:
+            return None
+
+        pythonpath = m.group(1)
+        return MyPyInvocation(
+            command=[
+                "python3",
+                "-m",
+                "mypy",
+            ],
+            pythonpath_additions=pythonpath,
+        )
 
     if has_executable_on_path("mypy"):
-        return ["mypy"]
+        return MyPyInvocation(command=["mypy"], pythonpath_additions="")
     pip = get_pip()
     from_pip = pip and get_from_pip()
     if from_pip:
@@ -345,12 +366,23 @@ def check_black(
 
 
 def check_mypy(
-    toolchain_utils_root: str, mypy: List[str], files: Iterable[str]
+    toolchain_utils_root: str,
+    mypy: MyPyInvocation,
+    files: Iterable[str],
 ) -> CheckResult:
     """Checks type annotations using mypy."""
+    fixed_env = env_with_pythonpath(toolchain_utils_root)
+    if mypy.pythonpath_additions:
+        new_pythonpath = (
+            f"{mypy.pythonpath_additions}:{fixed_env['PYTHONPATH']}"
+        )
+        fixed_env["PYTHONPATH"] = new_pythonpath
+
     # Show the version number, mainly for troubleshooting purposes.
-    cmd = mypy + ["--version"]
-    exit_code, output = run_command_unchecked(cmd, cwd=toolchain_utils_root)
+    cmd = mypy.command + ["--version"]
+    exit_code, output = run_command_unchecked(
+        cmd, cwd=toolchain_utils_root, env=fixed_env
+    )
     if exit_code:
         return CheckResult(
             ok=False,
@@ -360,8 +392,10 @@ def check_mypy(
     # Prefix output with the version information.
     prefix = f"Using {output.strip()}, "
 
-    cmd = mypy + ["--follow-imports=silent"] + list(files)
-    exit_code, output = run_command_unchecked(cmd, cwd=toolchain_utils_root)
+    cmd = mypy.command + ["--follow-imports=silent"] + list(files)
+    exit_code, output = run_command_unchecked(
+        cmd, cwd=toolchain_utils_root, env=fixed_env
+    )
     if exit_code == 0:
         return CheckResult(
             ok=True,
