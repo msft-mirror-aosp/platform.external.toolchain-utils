@@ -26,6 +26,8 @@ pub struct RepoSetupContext {
     pub sync_before: bool,
     pub wip_mode: bool,
     pub enable_cq: bool,
+    /// Generally LLVM ebuilds are now 9999 LIVE ebuilds, so only uprev if this is set.
+    pub uprev_ebuilds: bool,
 }
 
 impl RepoSetupContext {
@@ -57,7 +59,11 @@ impl RepoSetupContext {
             "CrOS LLVM dir {} is not a directory",
             llvm_dir.display()
         );
-        Self::rev_bump_llvm(&llvm_dir)?;
+
+        if self.uprev_ebuilds {
+            Self::rev_bump_llvm(&llvm_dir)?;
+        }
+
         let mut extra_args = Vec::new();
         for reviewer in reviewers {
             extra_args.push("--re");
