@@ -158,6 +158,12 @@ def get_mypy() -> Optional[MyPyInvocation]:
             - the command to invoke mypy, and
             - any environment variables to set when invoking mypy
     """
+    if has_executable_on_path("mypy"):
+        return MyPyInvocation(command=["mypy"], pythonpath_additions="")
+    pip = get_pip()
+    if not pip:
+        assert not is_in_chroot()
+        return None
 
     def get_from_pip() -> Optional[MyPyInvocation]:
         rc, output = run_command_unchecked(pip + ["show", "mypy"])
@@ -178,12 +184,10 @@ def get_mypy() -> Optional[MyPyInvocation]:
             pythonpath_additions=pythonpath,
         )
 
-    if has_executable_on_path("mypy"):
-        return MyPyInvocation(command=["mypy"], pythonpath_additions="")
-    pip = get_pip()
-    from_pip = pip and get_from_pip()
+    from_pip = get_from_pip()
     if from_pip:
         return from_pip
+
     if is_in_chroot():
         assert pip is not None
         subprocess.check_call(pip + ["install", "--user", "mypy"])
