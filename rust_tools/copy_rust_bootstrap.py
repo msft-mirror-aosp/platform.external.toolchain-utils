@@ -28,12 +28,12 @@ def _is_in_chroot() -> bool:
     return Path("/etc/cros_chroot_version").exists()
 
 
-def _ensure_pbzip2_is_installed():
-    if shutil.which("pbzip2"):
+def _ensure_lbzip2_is_installed():
+    if shutil.which("lbzip2"):
         return
 
-    logging.info("Auto-installing pbzip2...")
-    subprocess.run(["sudo", "emerge", "-g", "pbzip2"], check=True)
+    logging.info("Auto-installing lbzip2...")
+    subprocess.run(["sudo", "emerge", "-g", "lbzip2"], check=True)
 
 
 def _determine_target_path(sdk_path: str) -> str:
@@ -125,7 +125,7 @@ def _debinpkgify(binpkg_file: Path) -> Path:
     with tbz2_file.open("wb") as f:
         subprocess.run(
             [
-                "pbzip2",
+                "lbzip2",
                 "-9",
                 "-c",
                 str(decompressed_artifacts_file),
@@ -183,7 +183,7 @@ def main(argv: List[str]):
 
     if not _is_in_chroot():
         parser.error("Run me from within the chroot.")
-    _ensure_pbzip2_is_installed()
+    _ensure_lbzip2_is_installed()
 
     target_path = _determine_target_path(opts.sdk_artifact)
     with tempfile.TemporaryDirectory() as tempdir:
