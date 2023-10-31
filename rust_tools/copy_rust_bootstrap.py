@@ -52,6 +52,7 @@ def _download(remote_path: str, local_file: Path):
     subprocess.run(
         ["gsutil", "cp", remote_path, str(local_file)],
         check=True,
+        stdin=subprocess.DEVNULL,
     )
 
 
