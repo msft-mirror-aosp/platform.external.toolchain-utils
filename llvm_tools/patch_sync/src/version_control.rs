@@ -260,11 +260,11 @@ impl RepoSetupContext {
     /// Create the commit message
     fn build_commit_msg(subj: &str, from: &str, to: &str, footer: &str) -> String {
         format!(
-            "[patch_sync] {}\n\n\
-Copies new PATCHES.json changes from {} to {}.\n
-For questions about this job, contact chromeos-toolchain@google.com\n\n
-{}",
-            subj, from, to, footer
+            "[patch_sync] {subj}\n\n\
+Copies new PATCHES.json changes from {from} to {to}.\n
+For questions about this job, contact chromeos-toolchain@google.com\n
+This change is generated automatically by the script go/llvm-patch-sync\n\n
+{footer}",
         )
     }
 }
