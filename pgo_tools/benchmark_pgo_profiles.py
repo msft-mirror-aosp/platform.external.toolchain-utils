@@ -110,9 +110,9 @@ def construct_hyperfine_cmd(
     if isinstance(profile, Path):
         if profile != LOCAL_PROFILE_LOCATION:
             shutil.copyfile(profile, LOCAL_PROFILE_LOCATION)
-        use_flags = "-llvm_pgo_use -llvm_next_pgo_use llvm_pgo_use_local"
+        use_flags = "-llvm_pgo_use llvm_pgo_use_local"
     elif profile is SpecialProfile.NONE:
-        use_flags = "-llvm_pgo_use -llvm_next_pgo_use"
+        use_flags = "-llvm_pgo_use"
     elif profile is SpecialProfile.REMOTE:
         use_flags = "llvm_pgo_use"
     else:

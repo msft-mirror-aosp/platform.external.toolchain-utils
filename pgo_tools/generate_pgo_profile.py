@@ -118,7 +118,7 @@ def ensure_cross_libs_are_installed():
 def emerge_pgo_generate_llvm():
     """Emerges a sys-devel/llvm with PGO instrumentation enabled."""
     force_use = (
-        "llvm_pgo_generate -llvm_pgo_use -llvm-next_pgo_use"
+        "llvm_pgo_generate -llvm_pgo_use"
         # Turn ThinLTO off, since doing so results in way faster builds.
         # This is assumed to be OK, since:
         #   - ThinLTO should have no significant impact on where Clang puts
