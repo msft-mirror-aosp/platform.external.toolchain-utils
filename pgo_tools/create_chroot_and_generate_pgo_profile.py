@@ -135,7 +135,7 @@ def determine_upload_command(
     )
     upload_target = (
         "gs://chromeos-localmirror/distfiles/llvm-profdata-"
-        f"{llvm_next_hash}.tar.xz"
+        f"{llvm_next_hash}.xz"
     )
     return [
         "gsutil",
