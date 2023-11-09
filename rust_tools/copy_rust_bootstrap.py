@@ -36,7 +36,7 @@ def _ensure_lbzip2_is_installed():
     subprocess.run(["sudo", "emerge", "-g", "lbzip2"], check=True)
 
 
-def _determine_target_path(sdk_path: str) -> str:
+def determine_target_path(sdk_path: str) -> str:
     """Determine where `sdk_path` should sit in localmirror."""
     gs_prefix = "gs://"
     if not sdk_path.startswith(gs_prefix):
@@ -185,7 +185,7 @@ def main(argv: List[str]):
         parser.error("Run me from within the chroot.")
     _ensure_lbzip2_is_installed()
 
-    target_path = _determine_target_path(opts.sdk_artifact)
+    target_path = determine_target_path(opts.sdk_artifact)
     with tempfile.TemporaryDirectory() as tempdir:
         download_path = Path(tempdir) / "sdk_artifact"
         _download(opts.sdk_artifact, download_path)
