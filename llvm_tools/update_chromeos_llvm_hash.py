@@ -240,7 +240,11 @@ def GetCommandLineArgs():
         action="store_true",
         help="Do not upload changes to gerrit.",
     )
-
+    parser.add_argument(
+        "--no_patching",
+        action="store_true",
+        help="Do not check or update PATCHES.json.",
+    )
     # Parse the command line.
     return parser.parse_args()
 
@@ -542,7 +546,7 @@ def UpdatePackages(
     git_hash: str,
     svn_version: int,
     chroot_path: Path,
-    mode: failure_modes.FailureModes,
+    mode: Optional[failure_modes.FailureModes],
     git_hash_source: Union[int, str],
     extra_commit_msg_lines: Optional[Iterable[str]],
     delete_branch: bool = True,
@@ -560,7 +564,8 @@ def UpdatePackages(
         git_hash: The new git hash.
         svn_version: The SVN-style revision number of git_hash.
         chroot_path: The absolute path to the chroot.
-        mode: The mode of the patch manager when handling an applicable patch
+        mode: The mode of the patch manager when handling an applicable patch.
+          If None is passed, the patch manager won't be invoked.
         that failed to apply.
             Ex. 'FailureModes.FAIL'
         git_hash_source: The source of which git hash to use based off of.
@@ -610,13 +615,15 @@ def UpdatePackages(
             commit_lines.extend(manifest_packages)
         EnsurePackageMaskContains(chroot_path, git_hash)
         # Handle the patches for each package.
-        package_info_dict = UpdatePackagesPatchMetadataFile(
-            chroot_path, svn_version, updated_packages, mode
-        )
-        # Update the commit message if changes were made to a package's patches.
-        commit_lines = StagePackagesPatchResultsForCommit(
-            package_info_dict, commit_lines
-        )
+        if mode is not None:
+            package_info_dict = UpdatePackagesPatchMetadataFile(
+                chroot_path, svn_version, updated_packages, mode
+            )
+            # Update the commit message if changes were made to a package's
+            # patches.
+            commit_lines = StagePackagesPatchResultsForCommit(
+                package_info_dict, commit_lines
+            )
         if extra_commit_msg_lines:
             commit_lines.extend(extra_commit_msg_lines)
         git.CommitChanges(chromiumos_overlay_path, commit_lines)
@@ -840,6 +847,12 @@ def main():
     if not manifest_packages and not args_output.is_llvm_next:
         # Set default manifest packages only for the current llvm.
         manifest_packages = set(DEFAULT_MANIFEST_PACKAGES)
+
+    if args_output.no_patching:
+        patch_update_mode = None
+    else:
+        patch_update_mode = failure_modes.FailureModes(args_output.failure_mode)
+
     change_list = UpdatePackages(
         packages=packages,
         manifest_packages=manifest_packages,
@@ -847,7 +860,7 @@ def main():
         git_hash=git_hash,
         svn_version=svn_version,
         chroot_path=args_output.chroot_path,
-        mode=failure_modes.FailureModes(args_output.failure_mode),
+        mode=patch_update_mode,
         git_hash_source=git_hash_source,
         extra_commit_msg_lines=None,
         delete_branch=not args_output.no_delete_branch,
