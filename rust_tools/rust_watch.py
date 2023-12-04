@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -94,7 +93,7 @@ class State(NamedTuple):
 
 
 def parse_release_tags(lines: Iterable[str]) -> Iterable[RustReleaseVersion]:
-    """Parses `git ls-remote --tags` output into Rust stable release versions."""
+    """Parses `git ls-remote --tags` output into Rust stable versions."""
     refs_tags = "refs/tags/"
     for line in lines:
         _sha, tag = line.split(None, 1)
@@ -360,8 +359,8 @@ def main(argv: List[str]) -> None:
                 last_gentoo_sha=most_recent_gentoo_commit,
             ),
         )
-        # Running through this _should_ be a nop, but do it anyway. Should make any
-        # bugs more obvious on the first run of the script.
+        # Running through this _should_ be a nop, but do it anyway. Should make
+        # any bugs more obvious on the first run of the script.
 
     prior_state = read_state(state_file)
     logging.info("Last state was %r", prior_state)
