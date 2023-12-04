@@ -76,7 +76,7 @@ MYPY_CHECKED_PATHS = (
     "llvm_tools/nightly_revert_checker.py",
     "pgo_tools",
     "pgo_tools_rust/pgo_rust.py",
-    "rust_tools/rust_uprev.py",
+    "rust_tools",
     "toolchain_utils_githooks/check-presubmit.py",
 )
 
