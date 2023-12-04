@@ -73,7 +73,7 @@ def _debinpkgify(binpkg_file: Path) -> Path:
     # which is what our ebuild expects).
     tmpdir = binpkg_file.parent
 
-    def _mkstemp(suffix=None) -> str:
+    def _mkstemp(suffix=None) -> Path:
         fd, file_path = tempfile.mkstemp(dir=tmpdir, suffix=suffix)
         os.close(fd)
         return Path(file_path)

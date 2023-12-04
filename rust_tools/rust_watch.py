@@ -285,7 +285,7 @@ def maybe_compose_email(
         return None
 
     subject_pieces = []
-    body_pieces = []
+    body_pieces: List[tiny_render.Piece] = []
 
     # Separate the sections a bit for prettier output.
     if body_pieces:
@@ -381,30 +381,30 @@ def main(argv: List[str]) -> None:
     if maybe_bug is None:
         logging.info("No bug to file")
     else:
-        title, body = maybe_bug
+        bug_title, bug_body = maybe_bug
         if opts.skip_side_effects:
             logging.info(
                 "Skipping sending bug with title %r and contents\n%s",
-                title,
-                body,
+                bug_title,
+                bug_body,
             )
         else:
             logging.info("Writing new bug")
-            file_bug(title, body)
+            file_bug(bug_title, bug_body)
 
     if maybe_email is None:
         logging.info("No email to send")
     else:
-        title, body = maybe_email
+        email_title, email_body = maybe_email
         if opts.skip_side_effects:
             logging.info(
                 "Skipping sending email with title %r and contents\n%s",
-                title,
-                tiny_render.render_html_pieces(body),
+                email_title,
+                tiny_render.render_html_pieces(email_body),
             )
         else:
             logging.info("Sending email")
-            send_email(title, body)
+            send_email(email_title, email_body)
 
     if opts.skip_state_update:
         logging.info("Skipping state update, as requested")
@@ -423,4 +423,4 @@ def main(argv: List[str]) -> None:
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    main(sys.argv[1:])

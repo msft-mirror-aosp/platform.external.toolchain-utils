@@ -15,7 +15,7 @@ import re
 import subprocess
 import sys
 import textwrap
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import copy_rust_bootstrap
 
@@ -173,7 +173,7 @@ def collect_rust_bootstrap_ebuilds(
     rust_bootstrap: Path,
 ) -> List[Tuple[EbuildVersion, Path]]:
     ebuilds = rust_bootstrap.glob("*.ebuild")
-    versioned_ebuilds = {}
+    versioned_ebuilds: Dict[EbuildVersion, Tuple[EbuildVersion, Path]] = {}
     for ebuild in ebuilds:
         version = parse_rust_bootstrap_ebuild_version(ebuild.name)
         version_no_rev = version.without_rev()
@@ -202,7 +202,7 @@ def maybe_copy_prebuilt_to_localmirror(
         logging.info("Artifact at %s already exists", upload_to)
         return False
 
-    cmd = [
+    cmd: List[Union[Path, str]] = [
         copy_rust_bootstrap_script,
         prebuilt_gs_path,
     ]
