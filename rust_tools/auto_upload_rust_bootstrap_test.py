@@ -6,11 +6,13 @@
 """Tests for auto_upload_rust_bootstrap."""
 
 
+import os
 from pathlib import Path
 import shutil
 import tempfile
 import textwrap
 import unittest
+from unittest import mock
 
 import auto_upload_rust_bootstrap
 
@@ -121,7 +123,7 @@ class Test(unittest.TestCase):
         self.assertEqual(start, len(ebuild_lines) - 4)
         self.assertEqual(end, len(ebuild_lines) - 1)
 
-    def test_collect_rust_bootstrap_ebuilds_ignores_older_versions(self):
+    def test_collect_ebuilds_by_version_ignores_older_versions(self):
         tempdir = self.make_tempdir()
         ebuild_170 = tempdir / "rust-bootstrap-1.70.0.ebuild"
         ebuild_170.touch()
@@ -131,7 +133,7 @@ class Test(unittest.TestCase):
         ebuild_171_r2.touch()
 
         self.assertEqual(
-            auto_upload_rust_bootstrap.collect_rust_bootstrap_ebuilds(tempdir),
+            auto_upload_rust_bootstrap.collect_ebuilds_by_version(tempdir),
             [
                 (
                     auto_upload_rust_bootstrap.EbuildVersion(
@@ -258,6 +260,111 @@ class Test(unittest.TestCase):
         with self.assertRaises(ValueError):
             auto_upload_rust_bootstrap.parse_ebuild_version(
                 "rust-bootstrap-2.80.3_pre1234.ebuild"
+            )
+
+    def test_raw_ebuild_version_parsing_works(self):
+        self.assertEqual(
+            auto_upload_rust_bootstrap.parse_raw_ebuild_version("1.70.0-r2"),
+            auto_upload_rust_bootstrap.EbuildVersion(
+                major=1, minor=70, patch=0, rev=2
+            ),
+        )
+
+        with self.assertRaises(ValueError):
+            auto_upload_rust_bootstrap.parse_ebuild_version("2.80.3_pre1234")
+
+    def test_ensure_newest_version_does_nothing_if_no_new_rust_version(self):
+        tempdir = self.make_tempdir()
+        rust = tempdir / "rust"
+        rust.mkdir()
+        (rust / "rust-1.70.0-r1.ebuild").touch()
+        rust_bootstrap = tempdir / "rust-bootstrap"
+        rust_bootstrap.mkdir()
+        (rust_bootstrap / "rust-bootstrap-1.70.0.ebuild").touch()
+
+        self.assertFalse(
+            auto_upload_rust_bootstrap.maybe_add_new_rust_bootstrap_version(
+                tempdir, rust_bootstrap, dry_run=True
+            )
+        )
+
+    @mock.patch.object(auto_upload_rust_bootstrap, "update_ebuild_manifest")
+    def test_ensure_newest_version_upgrades_rust_bootstrap_properly(
+        self, update_ebuild_manifest
+    ):
+        tempdir = self.make_tempdir()
+        rust = tempdir / "rust"
+        rust.mkdir()
+        (rust / "rust-1.71.0-r1.ebuild").touch()
+        rust_bootstrap = tempdir / "rust-bootstrap"
+        rust_bootstrap.mkdir()
+        rust_bootstrap_1_70 = rust_bootstrap / "rust-bootstrap-1.70.0-r2.ebuild"
+
+        rust_bootstrap_contents = textwrap.dedent(
+            """\
+            # Some copyright
+            FOO=bar
+            RUSTC_RAW_FULL_BOOTSTRAP_SEQUENCE=(
+            \t1.67.0
+            \t1.68.1
+            \t1.69.0
+            \t1.70.0-r1
+            )
+            """
+        )
+        rust_bootstrap_1_70.write_text(
+            rust_bootstrap_contents, encoding="utf-8"
+        )
+
+        self.assertTrue(
+            auto_upload_rust_bootstrap.maybe_add_new_rust_bootstrap_version(
+                tempdir, rust_bootstrap, dry_run=False, commit=False
+            )
+        )
+        update_ebuild_manifest.assert_called_once()
+        rust_bootstrap_1_71 = rust_bootstrap / "rust-bootstrap-1.71.0.ebuild"
+
+        self.assertTrue(rust_bootstrap_1_70.is_symlink())
+        self.assertEqual(
+            os.readlink(rust_bootstrap_1_70),
+            rust_bootstrap_1_71.name,
+        )
+        self.assertFalse(rust_bootstrap_1_71.is_symlink())
+        self.assertEqual(
+            rust_bootstrap_1_71.read_text(encoding="utf-8"),
+            rust_bootstrap_contents,
+        )
+
+    def test_ensure_newest_version_breaks_if_prebuilt_is_not_available(self):
+        tempdir = self.make_tempdir()
+        rust = tempdir / "rust"
+        rust.mkdir()
+        (rust / "rust-1.71.0-r1.ebuild").touch()
+        rust_bootstrap = tempdir / "rust-bootstrap"
+        rust_bootstrap.mkdir()
+        rust_bootstrap_1_70 = rust_bootstrap / "rust-bootstrap-1.70.0-r2.ebuild"
+
+        rust_bootstrap_contents = textwrap.dedent(
+            """\
+            # Some copyright
+            FOO=bar
+            RUSTC_RAW_FULL_BOOTSTRAP_SEQUENCE=(
+            \t1.67.0
+            \t1.68.1
+            \t1.69.0
+            # Note: Missing 1.70.0 for rust-bootstrap-1.71.1
+            )
+            """
+        )
+        rust_bootstrap_1_70.write_text(
+            rust_bootstrap_contents, encoding="utf-8"
+        )
+
+        with self.assertRaises(
+            auto_upload_rust_bootstrap.MissingRustBootstrapPrebuiltError
+        ):
+            auto_upload_rust_bootstrap.maybe_add_new_rust_bootstrap_version(
+                tempdir, rust_bootstrap, dry_run=True
             )
 
 
