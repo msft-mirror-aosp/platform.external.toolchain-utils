@@ -238,7 +238,7 @@ class Test(unittest.TestCase):
 
     def test_ebuild_version_parsing_works(self):
         self.assertEqual(
-            auto_upload_rust_bootstrap.parse_rust_bootstrap_ebuild_version(
+            auto_upload_rust_bootstrap.parse_ebuild_version(
                 "rust-bootstrap-1.70.0-r2.ebuild"
             ),
             auto_upload_rust_bootstrap.EbuildVersion(
@@ -247,13 +247,18 @@ class Test(unittest.TestCase):
         )
 
         self.assertEqual(
-            auto_upload_rust_bootstrap.parse_rust_bootstrap_ebuild_version(
+            auto_upload_rust_bootstrap.parse_ebuild_version(
                 "rust-bootstrap-2.80.3.ebuild"
             ),
             auto_upload_rust_bootstrap.EbuildVersion(
                 major=2, minor=80, patch=3, rev=0
             ),
         )
+
+        with self.assertRaises(ValueError):
+            auto_upload_rust_bootstrap.parse_ebuild_version(
+                "rust-bootstrap-2.80.3_pre1234.ebuild"
+            )
 
 
 if __name__ == "__main__":

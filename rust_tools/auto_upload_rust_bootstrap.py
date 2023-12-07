@@ -3,7 +3,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Automatically uploads prebuilts for rust-bootstrap & uprevs ebuilds."""
+"""Automatically maintains the rust-bootstrap package.
+
+At the moment, the only responsibility of this script is uploading prebuilts
+for this package, and uploading CLs that land these.
+"""
 
 import argparse
 import dataclasses
@@ -145,10 +149,15 @@ def find_rust_bootstrap_prebuilt(version: EbuildVersion) -> Optional[str]:
     return None
 
 
-def parse_rust_bootstrap_ebuild_version(ebuild_name: str) -> EbuildVersion:
-    """Parses the version from a rust-bootstrap ebuild.
+def parse_ebuild_version(ebuild_name: str) -> EbuildVersion:
+    """Parses the version from an ebuild.
 
-    >>> parse_rust_bootstrap_ebuild_version("rust-bootstrap-1.70.0-r2.ebuild")
+    Raises:
+        ValueError if the `ebuild_name` doesn't contain a parseable version.
+        Notably, version suffixes like `_pre`, `_beta`, etc are unexpected in
+        Rust-y ebuilds, so they're not handled here.
+
+    >>> parse_ebuild_version("rust-bootstrap-1.70.0-r2.ebuild")
     EbuildVersion(major=1, minor=70, patch=0, rev=2)
     """
     rust_boostrap_prefix = "rust-bootstrap-"
@@ -175,7 +184,7 @@ def collect_rust_bootstrap_ebuilds(
     ebuilds = rust_bootstrap.glob("*.ebuild")
     versioned_ebuilds: Dict[EbuildVersion, Tuple[EbuildVersion, Path]] = {}
     for ebuild in ebuilds:
-        version = parse_rust_bootstrap_ebuild_version(ebuild.name)
+        version = parse_ebuild_version(ebuild.name)
         version_no_rev = version.without_rev()
         other = versioned_ebuilds.get(version_no_rev)
         this_is_newer = other is None or other[0] < version
@@ -358,6 +367,83 @@ def upload_changes(git_dir: Path):
         )
 
 
+def maybe_add_newest_prebuilts(rust_bootstrap_dir: Path, dry_run: bool) -> bool:
+    """Ensures that prebuilts in rust-bootstrap ebuilds are up-to-date.
+
+    If dry_run is True, no changes will be made on disk. Otherwise, changes
+    will be committed to git locally.
+
+    Returns:
+        True if changes were made (or would've been made, in the case of
+        dry_run being True). False otherwise.
+    """
+    # A list of (version, maybe_prebuilt_location).
+    versions_updated: List[Tuple[EbuildVersion, Optional[str]]] = []
+    for version, ebuild in collect_rust_bootstrap_ebuilds(rust_bootstrap_dir):
+        logging.info("Inspecting %s.", ebuild)
+        if version_listed_in_bootstrap_sequence(ebuild, version):
+            logging.info("Prebuilt already exists for %s.", ebuild)
+            continue
+
+        logging.info("Prebuilt isn't in ebuild; checking remotely.")
+        prebuilt = find_rust_bootstrap_prebuilt(version)
+        if not prebuilt:
+            # `find_rust_bootstrap_prebuilt` handles logging in this case.
+            continue
+
+        # Houston, we have prebuilt.
+        uploaded = maybe_copy_prebuilt_to_localmirror(
+            my_dir / "copy_rust_bootstrap.py", prebuilt, dry_run
+        )
+        add_version_to_bootstrap_sequence(ebuild, version, dry_run)
+        uprevved_ebuild = uprev_ebuild(ebuild, version, dry_run)
+        versions_updated.append((version, prebuilt if uploaded else None))
+
+    if not versions_updated:
+        logging.info("No updates made; exiting cleanly.")
+        return False
+
+    if dry_run:
+        logging.info("Dry-run specified; quit.")
+        return True
+
+    # Just pick an arbitrary ebuild to run `ebuild ... manifest` on; it always
+    # updates for all ebuilds in the same package.
+    update_ebuild_manifest(uprevved_ebuild)
+
+    pretty_artifact_lines = []
+    for version, maybe_gs_path in versions_updated:
+        if maybe_gs_path:
+            pretty_artifact_lines.append(
+                f"- rust-bootstrap-{version.without_rev()} => {maybe_gs_path}"
+            )
+        else:
+            pretty_artifact_lines.append(
+                f"- rust-bootstrap-{version.without_rev()} was already on "
+                "localmirror"
+            )
+
+    pretty_artifacts = "\n".join(pretty_artifact_lines)
+
+    logging.info("Committing changes.")
+    commit_all_changes(
+        opts.chromiumos_overlay,
+        rust_bootstrap_dir,
+        commit_message=textwrap.dedent(
+            f"""\
+            rust-bootstrap: use prebuilts
+
+            This CL used the following rust-bootstrap artifacts:
+            {pretty_artifacts}
+
+            BUG=None
+            TEST=CQ
+            """
+        ),
+    )
+    return True
+
+
 def main(argv: List[str]):
     logging.basicConfig(
         format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
@@ -399,70 +485,7 @@ def main(argv: List[str]):
 
     rust_bootstrap_dir = opts.chromiumos_overlay / "dev-lang/rust-bootstrap"
 
-    # A list of (version, maybe_prebuilt_location).
-    versions_updated: List[Tuple[EbuildVersion, Optional[str]]] = []
-    for version, ebuild in collect_rust_bootstrap_ebuilds(rust_bootstrap_dir):
-        logging.info("Inspecting %s.", ebuild)
-        if version_listed_in_bootstrap_sequence(ebuild, version):
-            logging.info("Prebuilt already exists for %s.", ebuild)
-            continue
-
-        logging.info("Prebuilt isn't in ebuild; checking remotely.")
-        prebuilt = find_rust_bootstrap_prebuilt(version)
-        if not prebuilt:
-            # `find_rust_bootstrap_prebuilt` handles logging in this case.
-            continue
-
-        # Houston, we have prebuilt.
-        uploaded = maybe_copy_prebuilt_to_localmirror(
-            my_dir / "copy_rust_bootstrap.py", prebuilt, dry_run
-        )
-        add_version_to_bootstrap_sequence(ebuild, version, dry_run)
-        uprevved_ebuild = uprev_ebuild(ebuild, version, dry_run)
-        versions_updated.append((version, prebuilt if uploaded else None))
-
-    if not versions_updated:
-        logging.info("No updates made; exiting cleanly.")
-        return
-
-    if dry_run:
-        logging.info("Dry-run specified; quit.")
-        return
-
-    # Just pick an arbitrary ebuild to run `ebuild ... manifest` on; it always
-    # updates for all ebuilds in the same package.
-    update_ebuild_manifest(uprevved_ebuild)
-
-    pretty_artifact_lines = []
-    for version, maybe_gs_path in versions_updated:
-        if maybe_gs_path:
-            pretty_artifact_lines.append(
-                f"- rust-bootstrap-{version.without_rev()} => {maybe_gs_path}"
-            )
-        else:
-            pretty_artifact_lines.append(
-                f"- rust-bootstrap-{version.without_rev()} was already on "
-                "localmirror"
-            )
-
-    pretty_artifacts = "\n".join(pretty_artifact_lines)
-
-    logging.info("Committing changes.")
-    commit_all_changes(
-        opts.chromiumos_overlay,
-        rust_bootstrap_dir,
-        commit_message=textwrap.dedent(
-            f"""\
-            rust-bootstrap: use prebuilts
-
-            This CL used the following rust-bootstrap artifacts:
-            {pretty_artifacts}
-
-            BUG=None
-            TEST=CQ
-            """
-        ),
-    )
+    made_changes = maybe_add_newest_prebuilts(rust_bootstrap_dir, dry_run)
 
     if not upload:
         logging.info("Changes committed; my work here is done.")
