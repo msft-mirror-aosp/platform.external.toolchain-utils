@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Tests for auto_upload_rust_bootstrap."""
+"""Tests for auto_update_rust_bootstrap."""
 
 
 import os
@@ -14,7 +14,7 @@ import textwrap
 import unittest
 from unittest import mock
 
-import auto_upload_rust_bootstrap
+import auto_update_rust_bootstrap
 
 
 _GIT_PUSH_OUTPUT = r"""
@@ -38,18 +38,18 @@ To https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay
 
 
 class Test(unittest.TestCase):
-    """Tests for auto_upload_rust_bootstrap."""
+    """Tests for auto_update_rust_bootstrap."""
 
     def make_tempdir(self) -> Path:
         tempdir = Path(
-            tempfile.mkdtemp(prefix="auto_upload_rust_bootstrap_test_")
+            tempfile.mkdtemp(prefix="auto_update_rust_bootstrap_test_")
         )
         self.addCleanup(shutil.rmtree, tempdir)
         return tempdir
 
     def test_git_cl_id_scraping(self):
         self.assertEqual(
-            auto_upload_rust_bootstrap.scrape_git_push_cl_id(_GIT_PUSH_OUTPUT),
+            auto_update_rust_bootstrap.scrape_git_push_cl_id(_GIT_PUSH_OUTPUT),
             5018826,
         )
 
@@ -59,7 +59,7 @@ class Test(unittest.TestCase):
         target.touch()
         (tempdir / "symlink.ebuild").symlink_to(target.name)
         self.assertTrue(
-            auto_upload_rust_bootstrap.is_ebuild_linked_to_in_dir(target)
+            auto_update_rust_bootstrap.is_ebuild_linked_to_in_dir(target)
         )
 
     def test_ebuild_linking_logic_handles_direct_absolute_symlinks(self):
@@ -68,7 +68,7 @@ class Test(unittest.TestCase):
         target.touch()
         (tempdir / "symlink.ebuild").symlink_to(target)
         self.assertTrue(
-            auto_upload_rust_bootstrap.is_ebuild_linked_to_in_dir(target)
+            auto_update_rust_bootstrap.is_ebuild_linked_to_in_dir(target)
         )
 
     def test_ebuild_linking_logic_handles_indirect_relative_symlinks(self):
@@ -79,7 +79,7 @@ class Test(unittest.TestCase):
             Path("..") / tempdir.name / target.name
         )
         self.assertTrue(
-            auto_upload_rust_bootstrap.is_ebuild_linked_to_in_dir(target)
+            auto_update_rust_bootstrap.is_ebuild_linked_to_in_dir(target)
         )
 
     def test_ebuild_linking_logic_handles_broken_symlinks(self):
@@ -88,7 +88,7 @@ class Test(unittest.TestCase):
         target.touch()
         (tempdir / "symlink.ebuild").symlink_to("doesnt_exist.ebuild")
         self.assertFalse(
-            auto_upload_rust_bootstrap.is_ebuild_linked_to_in_dir(target)
+            auto_update_rust_bootstrap.is_ebuild_linked_to_in_dir(target)
         )
 
     def test_ebuild_linking_logic_only_steps_through_one_symlink(self):
@@ -97,7 +97,7 @@ class Test(unittest.TestCase):
         target.symlink_to("doesnt_exist.ebuild")
         (tempdir / "symlink.ebuild").symlink_to(target.name)
         self.assertTrue(
-            auto_upload_rust_bootstrap.is_ebuild_linked_to_in_dir(target)
+            auto_update_rust_bootstrap.is_ebuild_linked_to_in_dir(target)
         )
 
     def test_raw_bootstrap_seq_finding_functions(self):
@@ -117,7 +117,7 @@ class Test(unittest.TestCase):
         (
             start,
             end,
-        ) = auto_upload_rust_bootstrap.find_raw_bootstrap_sequence_lines(
+        ) = auto_update_rust_bootstrap.find_raw_bootstrap_sequence_lines(
             ebuild_lines
         )
         self.assertEqual(start, len(ebuild_lines) - 4)
@@ -133,16 +133,16 @@ class Test(unittest.TestCase):
         ebuild_171_r2.touch()
 
         self.assertEqual(
-            auto_upload_rust_bootstrap.collect_ebuilds_by_version(tempdir),
+            auto_update_rust_bootstrap.collect_ebuilds_by_version(tempdir),
             [
                 (
-                    auto_upload_rust_bootstrap.EbuildVersion(
+                    auto_update_rust_bootstrap.EbuildVersion(
                         major=1, minor=70, patch=0, rev=1
                     ),
                     ebuild_170_r1,
                 ),
                 (
-                    auto_upload_rust_bootstrap.EbuildVersion(
+                    auto_update_rust_bootstrap.EbuildVersion(
                         major=1, minor=71, patch=1, rev=2
                     ),
                     ebuild_171_r2,
@@ -170,9 +170,9 @@ class Test(unittest.TestCase):
         )
 
         self.assertTrue(
-            auto_upload_rust_bootstrap.version_listed_in_bootstrap_sequence(
+            auto_update_rust_bootstrap.version_listed_in_bootstrap_sequence(
                 ebuild,
-                auto_upload_rust_bootstrap.EbuildVersion(
+                auto_update_rust_bootstrap.EbuildVersion(
                     major=1,
                     minor=69,
                     patch=0,
@@ -182,9 +182,9 @@ class Test(unittest.TestCase):
         )
 
         self.assertFalse(
-            auto_upload_rust_bootstrap.version_listed_in_bootstrap_sequence(
+            auto_update_rust_bootstrap.version_listed_in_bootstrap_sequence(
                 ebuild,
-                auto_upload_rust_bootstrap.EbuildVersion(
+                auto_update_rust_bootstrap.EbuildVersion(
                     major=1,
                     minor=70,
                     patch=0,
@@ -211,9 +211,9 @@ class Test(unittest.TestCase):
             encoding="utf-8",
         )
 
-        auto_upload_rust_bootstrap.add_version_to_bootstrap_sequence(
+        auto_update_rust_bootstrap.add_version_to_bootstrap_sequence(
             ebuild,
-            auto_upload_rust_bootstrap.EbuildVersion(
+            auto_update_rust_bootstrap.EbuildVersion(
                 major=1,
                 minor=70,
                 patch=1,
@@ -240,38 +240,38 @@ class Test(unittest.TestCase):
 
     def test_ebuild_version_parsing_works(self):
         self.assertEqual(
-            auto_upload_rust_bootstrap.parse_ebuild_version(
+            auto_update_rust_bootstrap.parse_ebuild_version(
                 "rust-bootstrap-1.70.0-r2.ebuild"
             ),
-            auto_upload_rust_bootstrap.EbuildVersion(
+            auto_update_rust_bootstrap.EbuildVersion(
                 major=1, minor=70, patch=0, rev=2
             ),
         )
 
         self.assertEqual(
-            auto_upload_rust_bootstrap.parse_ebuild_version(
+            auto_update_rust_bootstrap.parse_ebuild_version(
                 "rust-bootstrap-2.80.3.ebuild"
             ),
-            auto_upload_rust_bootstrap.EbuildVersion(
+            auto_update_rust_bootstrap.EbuildVersion(
                 major=2, minor=80, patch=3, rev=0
             ),
         )
 
         with self.assertRaises(ValueError):
-            auto_upload_rust_bootstrap.parse_ebuild_version(
+            auto_update_rust_bootstrap.parse_ebuild_version(
                 "rust-bootstrap-2.80.3_pre1234.ebuild"
             )
 
     def test_raw_ebuild_version_parsing_works(self):
         self.assertEqual(
-            auto_upload_rust_bootstrap.parse_raw_ebuild_version("1.70.0-r2"),
-            auto_upload_rust_bootstrap.EbuildVersion(
+            auto_update_rust_bootstrap.parse_raw_ebuild_version("1.70.0-r2"),
+            auto_update_rust_bootstrap.EbuildVersion(
                 major=1, minor=70, patch=0, rev=2
             ),
         )
 
         with self.assertRaises(ValueError):
-            auto_upload_rust_bootstrap.parse_ebuild_version("2.80.3_pre1234")
+            auto_update_rust_bootstrap.parse_ebuild_version("2.80.3_pre1234")
 
     def test_ensure_newest_version_does_nothing_if_no_new_rust_version(self):
         tempdir = self.make_tempdir()
@@ -283,12 +283,12 @@ class Test(unittest.TestCase):
         (rust_bootstrap / "rust-bootstrap-1.70.0.ebuild").touch()
 
         self.assertFalse(
-            auto_upload_rust_bootstrap.maybe_add_new_rust_bootstrap_version(
+            auto_update_rust_bootstrap.maybe_add_new_rust_bootstrap_version(
                 tempdir, rust_bootstrap, dry_run=True
             )
         )
 
-    @mock.patch.object(auto_upload_rust_bootstrap, "update_ebuild_manifest")
+    @mock.patch.object(auto_update_rust_bootstrap, "update_ebuild_manifest")
     def test_ensure_newest_version_upgrades_rust_bootstrap_properly(
         self, update_ebuild_manifest
     ):
@@ -317,7 +317,7 @@ class Test(unittest.TestCase):
         )
 
         self.assertTrue(
-            auto_upload_rust_bootstrap.maybe_add_new_rust_bootstrap_version(
+            auto_update_rust_bootstrap.maybe_add_new_rust_bootstrap_version(
                 tempdir, rust_bootstrap, dry_run=False, commit=False
             )
         )
@@ -361,9 +361,9 @@ class Test(unittest.TestCase):
         )
 
         with self.assertRaises(
-            auto_upload_rust_bootstrap.MissingRustBootstrapPrebuiltError
+            auto_update_rust_bootstrap.MissingRustBootstrapPrebuiltError
         ):
-            auto_upload_rust_bootstrap.maybe_add_new_rust_bootstrap_version(
+            auto_update_rust_bootstrap.maybe_add_new_rust_bootstrap_version(
                 tempdir, rust_bootstrap, dry_run=True
             )
 
