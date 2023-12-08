@@ -28,6 +28,10 @@ from typing import Dict, List, Optional, Tuple, Union
 import copy_rust_bootstrap
 
 
+# The bug to tag in all commit messages.
+TRACKING_BUG = "b:315473495"
+
+# Reviewers for all CLs uploaded.
 DEFAULT_CL_REVIEWERS = (
     "gbiv@chromium.org",
     "inglorion@chromium.org",
@@ -491,7 +495,7 @@ def maybe_add_newest_prebuilts(
             This CL used the following rust-bootstrap artifacts:
             {pretty_artifacts}
 
-            BUG=None
+            BUG={TRACKING_BUG}
             TEST=CQ
             """
         ),
@@ -600,7 +604,7 @@ def maybe_add_new_rust_bootstrap_version(
                 Rust is now at {newest_rust_version.without_rev()}; add a
                 rust-bootstrap version so prebuilts can be generated early.
 
-                BUG=None
+                BUG={TRACKING_BUG}
                 TEST=CQ
                 """
             ),
