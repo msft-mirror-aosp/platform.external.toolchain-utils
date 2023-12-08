@@ -8,14 +8,18 @@
 This script is responsible for:
     - uploading new rust-bootstrap prebuilts
     - adding new versions of rust-bootstrap to keep up with dev-lang/rust
+    - removing versions of rust-bootstrap that are no longer depended on by
+      dev-lang/rust
 
 It's capable of (and intended to primarily be used for) uploading CLs to do
 these things on its own, so it can easily be regularly run by Chrotomation.
 """
 
 import argparse
+import collections
 import dataclasses
 import functools
+import glob
 import logging
 import os
 from pathlib import Path
@@ -23,7 +27,7 @@ import re
 import subprocess
 import sys
 import textwrap
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import copy_rust_bootstrap
 
@@ -49,6 +53,10 @@ class EbuildVersion:
     minor: int
     patch: int
     rev: int
+
+    def prior_minor_version(self) -> "EbuildVersion":
+        """Returns an EbuildVersion with just the major/minor from this one."""
+        return dataclasses.replace(self, minor=self.minor - 1)
 
     def major_minor_only(self) -> "EbuildVersion":
         """Returns an EbuildVersion with just the major/minor from this one."""
@@ -503,6 +511,11 @@ def maybe_add_newest_prebuilts(
     return True
 
 
+def rust_dir_from_rust_bootstrap(rust_bootstrap_dir: Path) -> Path:
+    """Derives dev-lang/rust's dir from dev-lang/rust-bootstrap's dir."""
+    return rust_bootstrap_dir.parent / "rust"
+
+
 class MissingRustBootstrapPrebuiltError(Exception):
     """Raised when rust-bootstrap can't be landed due to a missing prebuilt."""
 
@@ -543,7 +556,7 @@ def maybe_add_new_rust_bootstrap_version(
         "Detected newest rust-bootstrap version: %s", newest_bootstrap_version
     )
 
-    rust_dir = rust_bootstrap_dir.parent / "rust"
+    rust_dir = rust_dir_from_rust_bootstrap(rust_bootstrap_dir)
     newest_rust_version, _ = collect_ebuilds_by_version(rust_dir)[-1]
     logging.info("Detected newest rust version: %s", newest_rust_version)
 
@@ -562,10 +575,7 @@ def maybe_add_new_rust_bootstrap_version(
     available_prebuilts = read_bootstrap_sequence_from_ebuild(
         newest_bootstrap_ebuild
     )
-    need_prebuilt = dataclasses.replace(
-        newest_rust_version.major_minor_only(),
-        minor=newest_rust_version.minor - 1,
-    )
+    need_prebuilt = newest_rust_version.major_minor_only().prior_minor_version()
 
     if all(x.major_minor_only() != need_prebuilt for x in available_prebuilts):
         raise MissingRustBootstrapPrebuiltError(
@@ -603,6 +613,154 @@ def maybe_add_new_rust_bootstrap_version(
 
                 Rust is now at {newest_rust_version.without_rev()}; add a
                 rust-bootstrap version so prebuilts can be generated early.
+
+                BUG={TRACKING_BUG}
+                TEST=CQ
+                """
+            ),
+        )
+    return True
+
+
+class OldEbuildIsLinkedToError(Exception):
+    """Raised when a would-be-removed ebuild has symlinks to it."""
+
+
+def find_external_links_to_files_in_dir(
+    in_dir: Path, files: Iterable[Path]
+) -> Dict[Path, List[Path]]:
+    """Returns all symlinks to `files` in `in_dir`, excluding from `files`.
+
+    Essentially, if this returns an empty dict, nothing in `in_dir` symlinks to
+    any of `files`, _except potentially_ things in `files`.
+    """
+    files_set = {x.absolute() for x in files}
+    linked_to = collections.defaultdict(list)
+    for f in in_dir.iterdir():
+        if f not in files_set and f.is_symlink():
+            target = f.parent / os.readlink(f)
+            if target in files_set:
+                linked_to[target].append(f)
+    return linked_to
+
+
+def maybe_delete_old_rust_bootstrap_ebuilds(
+    chromiumos_overlay: Path,
+    rust_bootstrap_dir: Path,
+    dry_run: bool,
+    commit: bool = True,
+) -> bool:
+    """Deletes versions of rust-bootstrap ebuilds that seem unneeded.
+
+    "Unneeded", in this case, is specifically only referencing whether
+    dev-lang/rust (or similar) obviously relies on the ebuild, or whether it's
+    likely that a future version of dev-lang/rust will rely on it.
+
+    Args:
+        chromiumos_overlay: Path to chromiumos-overlay.
+        rust_bootstrap_dir: Path to rust-bootstrap's directory.
+        dry_run: if True, don't commit to git or write changes to disk.
+            Otherwise, write changes to disk.
+        commit: if True, commit changes to git. This value is meaningless if
+            `dry_run` is True.
+
+    Returns:
+        True if changes were made (or would've been made, in the case of
+        dry_run being True). False otherwise.
+
+    Raises:
+        OldEbuildIsLinkedToError if the deletion of an ebuild was blocked by
+        other ebuilds linking to it. It's still 'needed' in this case, but with
+        some human intervention, it can be removed.
+    """
+    rust_bootstrap_versions = collect_ebuilds_by_version(rust_bootstrap_dir)
+    logging.info(
+        "Current rust-bootstrap versions: %s",
+        [x for x, _ in rust_bootstrap_versions],
+    )
+    rust_versions = collect_ebuilds_by_version(
+        rust_dir_from_rust_bootstrap(rust_bootstrap_dir)
+    )
+    # rust_versions is sorted, so taking the last is the same as max().
+    newest_rust_version = rust_versions[-1][0].major_minor_only()
+    need_rust_bootstrap_versions = {
+        rust_ver.major_minor_only().prior_minor_version()
+        for rust_ver, _ in rust_versions
+    }
+    logging.info(
+        "Needed rust-bootstrap versions (major/minor only): %s",
+        sorted(need_rust_bootstrap_versions),
+    )
+
+    discardable_bootstrap_versions = [
+        (version, ebuild)
+        for version, ebuild in rust_bootstrap_versions
+        # Don't remove newer rust-bootstrap versions, since they're likely to
+        # be needed in the future (& may have been generated by this very
+        # script).
+        if version.major_minor_only() not in need_rust_bootstrap_versions
+        and version.major_minor_only() < newest_rust_version
+    ]
+
+    if not discardable_bootstrap_versions:
+        logging.info("No versions of rust-bootstrap are unneeded.")
+        return False
+
+    discardable_ebuilds = []
+    for version, ebuild in discardable_bootstrap_versions:
+        # We may have other files with the same version at different revisions.
+        # Include those, as well.
+        escaped_ver = glob.escape(str(version.without_rev()))
+        discardable = list(
+            ebuild.parent.glob(f"rust-bootstrap-{escaped_ver}*.ebuild")
+        )
+        assert ebuild in discardable, discardable
+        discardable_ebuilds += discardable
+
+    # We can end up in a case where rust-bootstrap versions are unneeded, but
+    # the ebuild is still required. For example, consider a case where
+    # rust-bootstrap-1.73.0.ebuild is considered 'old', but
+    # rust-bootstrap-1.74.0.ebuild is required. If rust-bootstrap-1.74.0.ebuild
+    # is a symlink to rust-bootstrap-1.73.0.ebuild, the 'old' ebuild can't be
+    # deleted until rust-bootstrap-1.74.0.ebuild is fixed up.
+    #
+    # These cases are expected to be rare (this script should never push
+    # changes that gets us into this case, but human edits can), but uploading
+    # obviously-broken changes isn't a great UX. Opt to detect these and
+    # `raise` on them, since repairing can get complicated in instances where
+    # symlinks link to symlinks, etc.
+    has_links = find_external_links_to_files_in_dir(
+        rust_bootstrap_dir, discardable_ebuilds
+    )
+    if has_links:
+        raise OldEbuildIsLinkedToError(str(has_links))
+
+    logging.info("Plan to remove ebuilds: %s", discardable_ebuilds)
+    if dry_run:
+        logging.info("Dry-run specified; removal skipped.")
+        return True
+
+    for ebuild in discardable_ebuilds:
+        ebuild.unlink()
+
+    remaining_ebuild = next(
+        ebuild
+        for _, ebuild in rust_bootstrap_versions
+        if ebuild not in discardable_ebuilds
+    )
+    update_ebuild_manifest(remaining_ebuild)
+    if commit:
+        many = len(discardable_ebuilds) > 1
+        commit_all_changes(
+            chromiumos_overlay,
+            rust_bootstrap_dir,
+            commit_message=textwrap.dedent(
+                f"""\
+                rust-bootstrap: remove unused ebuild{"s" if many else ""}
+
+                Rust has moved on in ChromeOS, so \
+                {"these ebuilds are" if many else "this ebuild is"} \
+                no longer needed.
 
                 BUG={TRACKING_BUG}
                 TEST=CQ
@@ -663,6 +821,7 @@ def main(argv: List[str]):
         rust_bootstrap_dir,
         dry_run,
     )
+
     try:
         made_changes |= maybe_add_new_rust_bootstrap_version(
             opts.chromiumos_overlay, rust_bootstrap_dir, dry_run
@@ -671,6 +830,14 @@ def main(argv: List[str]):
         logging.exception(
             "Ensuring newest rust-bootstrap ebuild exists failed."
         )
+        had_recoverable_error = True
+
+    try:
+        made_changes |= maybe_delete_old_rust_bootstrap_ebuilds(
+            opts.chromiumos_overlay, rust_bootstrap_dir, dry_run
+        )
+    except OldEbuildIsLinkedToError:
+        logging.exception("An old ebuild is linked to; can't remove it")
         had_recoverable_error = True
 
     if upload:

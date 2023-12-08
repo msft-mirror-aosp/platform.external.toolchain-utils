@@ -367,6 +367,107 @@ class Test(unittest.TestCase):
                 tempdir, rust_bootstrap, dry_run=True
             )
 
+    def test_version_deletion_does_nothing_if_all_versions_are_needed(self):
+        tempdir = self.make_tempdir()
+        rust = tempdir / "rust"
+        rust.mkdir()
+        (rust / "rust-1.71.0-r1.ebuild").touch()
+        rust_bootstrap = tempdir / "rust-bootstrap"
+        rust_bootstrap.mkdir()
+        (rust_bootstrap / "rust-bootstrap-1.70.0-r2.ebuild").touch()
+
+        self.assertFalse(
+            auto_update_rust_bootstrap.maybe_delete_old_rust_bootstrap_ebuilds(
+                tempdir, rust_bootstrap, dry_run=True
+            )
+        )
+
+    def test_version_deletion_ignores_newer_than_needed_versions(self):
+        tempdir = self.make_tempdir()
+        rust = tempdir / "rust"
+        rust.mkdir()
+        (rust / "rust-1.71.0-r1.ebuild").touch()
+        rust_bootstrap = tempdir / "rust-bootstrap"
+        rust_bootstrap.mkdir()
+        (rust_bootstrap / "rust-bootstrap-1.70.0-r2.ebuild").touch()
+        (rust_bootstrap / "rust-bootstrap-1.71.0-r1.ebuild").touch()
+        (rust_bootstrap / "rust-bootstrap-1.72.0.ebuild").touch()
+
+        self.assertFalse(
+            auto_update_rust_bootstrap.maybe_delete_old_rust_bootstrap_ebuilds(
+                tempdir, rust_bootstrap, dry_run=True
+            )
+        )
+
+    @mock.patch.object(auto_update_rust_bootstrap, "update_ebuild_manifest")
+    def test_version_deletion_deletes_old_files(self, update_ebuild_manifest):
+        tempdir = self.make_tempdir()
+        rust = tempdir / "rust"
+        rust.mkdir()
+        (rust / "rust-1.71.0-r1.ebuild").touch()
+        rust_bootstrap = tempdir / "rust-bootstrap"
+        rust_bootstrap.mkdir()
+        needed_rust_bootstrap = (
+            rust_bootstrap / "rust-bootstrap-1.70.0-r2.ebuild"
+        )
+        needed_rust_bootstrap.touch()
+
+        # There are quite a few of these, so corner-cases are tested.
+
+        # Symlink to outside of the group of files to delete.
+        bootstrap_1_68_symlink = rust_bootstrap / "rust-bootstrap-1.68.0.ebuild"
+        bootstrap_1_68_symlink.symlink_to(needed_rust_bootstrap.name)
+        # Ensure that absolute symlinks are caught.
+        bootstrap_1_68_symlink_abs = (
+            rust_bootstrap / "rust-bootstrap-1.68.0-r1.ebuild"
+        )
+        bootstrap_1_68_symlink_abs.symlink_to(needed_rust_bootstrap)
+        # Regular files should be no issue.
+        bootstrap_1_69_regular = rust_bootstrap / "rust-bootstrap-1.69.0.ebuild"
+        bootstrap_1_69_regular.touch()
+        # Symlinks linking back into the set of files to delete should also be
+        # no issue.
+        bootstrap_1_69_symlink = (
+            rust_bootstrap / "rust-bootstrap-1.69.0-r2.ebuild"
+        )
+        bootstrap_1_69_symlink.symlink_to(bootstrap_1_69_regular.name)
+
+        self.assertTrue(
+            auto_update_rust_bootstrap.maybe_delete_old_rust_bootstrap_ebuilds(
+                tempdir,
+                rust_bootstrap,
+                dry_run=False,
+                commit=False,
+            )
+        )
+        update_ebuild_manifest.assert_called_once()
+
+        self.assertFalse(bootstrap_1_68_symlink.exists())
+        self.assertFalse(bootstrap_1_68_symlink_abs.exists())
+        self.assertFalse(bootstrap_1_69_regular.exists())
+        self.assertFalse(bootstrap_1_69_symlink.exists())
+        self.assertTrue(needed_rust_bootstrap.exists())
+
+    def test_version_deletion_raises_when_old_file_has_dep(self):
+        tempdir = self.make_tempdir()
+        rust = tempdir / "rust"
+        rust.mkdir()
+        (rust / "rust-1.71.0-r1.ebuild").touch()
+        rust_bootstrap = tempdir / "rust-bootstrap"
+        rust_bootstrap.mkdir()
+        old_rust_bootstrap = rust_bootstrap / "rust-bootstrap-1.69.0-r1.ebuild"
+        old_rust_bootstrap.touch()
+        (rust_bootstrap / "rust-bootstrap-1.70.0-r2.ebuild").symlink_to(
+            old_rust_bootstrap.name
+        )
+
+        with self.assertRaises(
+            auto_update_rust_bootstrap.OldEbuildIsLinkedToError
+        ):
+            auto_update_rust_bootstrap.maybe_delete_old_rust_bootstrap_ebuilds(
+                tempdir, rust_bootstrap, dry_run=True
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
