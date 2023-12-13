@@ -16,6 +16,16 @@ def InChroot() -> bool:
     return "CROS_WORKON_SRCROOT" in os.environ
 
 
+def VerifyInsideChroot() -> None:
+    """Checks whether the script invoked was executed in the chroot.
+
+    Raises:
+        AssertionError: The script was run outside the chroot.
+    """
+
+    assert InChroot(), "Script should be run inside the chroot."
+
+
 def VerifyOutsideChroot() -> None:
     """Checks whether the script invoked was executed in the chroot.
 
