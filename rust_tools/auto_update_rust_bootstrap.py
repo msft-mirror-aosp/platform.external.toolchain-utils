@@ -370,12 +370,6 @@ def commit_all_changes(
         stdin=subprocess.DEVNULL,
     )
     subprocess.run(
-        ["git", "config", "core.hooksPath"],
-        cwd=git_dir,
-        check=True,
-        stdin=subprocess.DEVNULL,
-    )
-    subprocess.run(
         ["git", "commit", "-m", commit_message],
         cwd=git_dir,
         check=True,
@@ -604,15 +598,16 @@ def maybe_add_new_rust_bootstrap_version(
 
     update_ebuild_manifest(new_ebuild)
     if commit:
+        newest_no_rev = newest_rust_version.without_rev()
         commit_all_changes(
             chromiumos_overlay,
             rust_bootstrap_dir,
             commit_message=textwrap.dedent(
                 f"""\
-                rust-bootstrap: add version {newest_rust_version}
+                rust-bootstrap: add version {newest_no_rev}
 
-                Rust is now at {newest_rust_version.without_rev()}; add a
-                rust-bootstrap version so prebuilts can be generated early.
+                Rust is now at {newest_no_rev}; add a rust-bootstrap version so
+                prebuilts can be generated early.
 
                 BUG={TRACKING_BUG}
                 TEST=CQ
