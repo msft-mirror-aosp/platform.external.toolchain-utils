@@ -10,9 +10,11 @@ when to use this script.
 """
 
 import argparse
+import json
 import logging
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -44,11 +46,20 @@ _COLOR_RESET = "\033[0m"
 
 
 def main() -> int:
+    logging.basicConfig(
+        format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
+        "%(message)s",
+        level=logging.INFO,
+    )
     args = parse_args()
-    logging.basicConfig(level=logging.INFO)
+
+    version = args.version
+    if not version:
+        version = _autodetect_latest_llvm_next_sdk_version()
+
     errors: List[Tuple[str, Exception]] = []
     for abi in ABIS:
-        res = check_abi(args.bucket_prefix, abi, args.version)
+        res = check_abi(args.bucket_prefix, abi, version)
         if res:
             errors.append((abi, res))
     if errors:
@@ -142,6 +153,39 @@ def check_abi(
     return None
 
 
+def _autodetect_latest_llvm_next_sdk_version() -> str:
+    output = subprocess.run(
+        [
+            "bb",
+            "ls",
+            "-json",
+            "-n",
+            "1",
+            "-status",
+            "success",
+            "chromeos/infra/build-chromiumos-sdk-llvm-next",
+        ],
+        check=True,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+    ).stdout
+    builder_summary = json.loads(output)["summaryMarkdown"]
+    # Builder summary looks like:
+    # ```
+    # Built SDK version [2023.12.11.140022](https://link-redacted)
+    # Launched SDK uprev build: https://link-redacted
+    # ```
+    matches = re.findall(r"\[(\d+\.\d+\.\d+\.\d+)\]\(", builder_summary)
+    if len(matches) != 1:
+        raise ValueError(
+            f"Expected exactly 1 match of version in {builder_summary!r}."
+            f" Got {matches}. You can pass --version to disable auto-detection."
+        )
+    version = matches[0]
+    logging.info("Found latest llvm-next SDK version: %s", version)
+    return version
+
+
 def _split_version(version: Version) -> Tuple[str, str, str]:
     y, m, rest = version.split(".", 2)
     return y, m, rest
@@ -158,10 +202,13 @@ def parse_args() -> argparse.Namespace:
         "check_portable_toolchains", description=__doc__
     )
     parser.add_argument(
-        "version",
-        help="Version/Timestamp formatted as 'YYYY.MM.DD.HHMMSS'."
-        " e.g. '2023.09.01.221258'."
-        " Generally this comes from a 'build-chromiumos-sdk' run.",
+        "--version",
+        help="""
+        Version/Timestamp formatted as 'YYYY.MM.DD.HHMMSS'. e.g.
+        '2023.09.01.221258'. Generally this comes from a
+        'build-chromiumos-sdk-llvm-next' run. Will autodetect if none is
+        specified.
+        """,
         type=_verify_version,
     )
     parser.add_argument(
