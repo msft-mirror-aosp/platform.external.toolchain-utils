@@ -72,6 +72,7 @@ CheckResults = Union[List[Tuple[str, CheckResult]], CheckResult]
 # The files and directories on which we run the mypy typechecker. The paths are
 # relative to the root of the toolchain-utils repository.
 MYPY_CHECKED_PATHS = (
+    "llvm_tools/chroot.py",
     "llvm_tools/generate_llvm_revert_report.py",
     "llvm_tools/nightly_revert_checker.py",
     "pgo_tools",

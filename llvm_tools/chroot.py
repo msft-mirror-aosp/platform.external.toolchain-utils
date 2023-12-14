@@ -9,18 +9,18 @@ import collections
 import os
 from pathlib import Path
 import subprocess
-from typing import List
+from typing import List, Union
 
 
 CommitContents = collections.namedtuple("CommitContents", ["url", "cl_number"])
 
 
-def InChroot():
+def InChroot() -> bool:
     """Returns True if currently in the chroot."""
     return "CROS_WORKON_SRCROOT" in os.environ
 
 
-def VerifyOutsideChroot():
+def VerifyOutsideChroot() -> None:
     """Checks whether the script invoked was executed in the chroot.
 
     Raises:
@@ -30,7 +30,7 @@ def VerifyOutsideChroot():
     assert not InChroot(), "Script should be run outside the chroot."
 
 
-def VerifyChromeOSRoot(chromeos_root):
+def VerifyChromeOSRoot(chromeos_root: Union[Path, str]) -> None:
     """Checks whether the path actually points to ChromiumOS checkout root.
 
     Raises:
@@ -43,7 +43,9 @@ def VerifyChromeOSRoot(chromeos_root):
     assert path.is_dir(), msg
 
 
-def GetChrootEbuildPaths(chromeos_root, packages):
+def GetChrootEbuildPaths(
+    chromeos_root: Union[Path, str], packages: List[str]
+) -> List[str]:
     """Gets the chroot path(s) of the package(s).
 
     Args:
