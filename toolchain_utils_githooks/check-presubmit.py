@@ -73,6 +73,8 @@ CheckResults = Union[List[Tuple[str, CheckResult]], CheckResult]
 # relative to the root of the toolchain-utils repository.
 MYPY_CHECKED_PATHS = (
     "llvm_tools/chroot.py",
+    "llvm_tools/git_llvm_rev.py",
+    "llvm_tools/git_llvm_rev_test.py",
     "llvm_tools/generate_llvm_revert_report.py",
     "llvm_tools/nightly_revert_checker.py",
     "pgo_tools",
