@@ -125,6 +125,8 @@ func crosCommonClangFlags() []string {
 		"-Wno-int-conversion",
 		"-Wno-incompatible-function-pointer-types",
 		"-D_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES",
+		// TODO(b/315504245): Temporarily prevents new mangling rules from taking effect.
+		"-fclang-abi-compat=17",
 	}
 }
 
