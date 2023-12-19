@@ -22,7 +22,6 @@ import get_llvm_hash
 import git
 import git_llvm_rev
 import patch_utils
-import update_chromeos_llvm_hash
 
 
 __DOC_EPILOGUE = """
@@ -299,19 +298,13 @@ def create_patch_for_packages(
 
 
 def make_cl(
-    symlinks_to_uprev: t.List[str],
     llvm_symlink_dir: str,
     branch: str,
     commit_messages: t.List[str],
     reviewers: t.Optional[t.List[str]],
     cc: t.Optional[t.List[str]],
 ):
-    symlinks_to_uprev = sorted(set(symlinks_to_uprev))
-    for symlink in symlinks_to_uprev:
-        update_chromeos_llvm_hash.UprevEbuildSymlink(symlink)
-        subprocess.check_output(
-            ["git", "add", "--all"], cwd=os.path.dirname(symlink)
-        )
+    subprocess.check_output(["git", "add", "--all"], cwd=llvm_symlink_dir)
     git.CommitChanges(llvm_symlink_dir, commit_messages)
     git.UploadChanges(llvm_symlink_dir, branch, reviewers, cc)
     git.DeleteBranch(llvm_symlink_dir, branch)
@@ -351,7 +344,6 @@ def find_patches_and_make_cl(
         raise RuntimeError(f"Found Duplicate SHAs:\n{err_msg}")
 
     # CL Related variables, only used if `create_cl`
-    symlinks_to_uprev = []
     commit_messages = [
         "llvm: get patches from upstream\n",
     ]
@@ -367,22 +359,22 @@ def find_patches_and_make_cl(
     for parsed_patch in converted_patches:
         # Find out the llvm projects changed in this commit
         packages = get_package_names(parsed_patch.sha, llvm_config.dir)
-        # Find out the ebuild symlinks of the corresponding ChromeOS packages
-        symlinks = chroot.GetChrootEbuildPaths(
+        # Find out the ebuild of the corresponding ChromeOS packages
+        ebuild_paths = chroot.GetChrootEbuildPaths(
             chroot_path,
             [
                 "sys-devel/llvm" if package == "llvm" else "sys-libs/" + package
                 for package in packages
             ],
         )
-        symlinks = chroot.ConvertChrootPathsToAbsolutePaths(
-            chroot_path, symlinks
+        ebuild_paths = chroot.ConvertChrootPathsToAbsolutePaths(
+            chroot_path, ebuild_paths
         )
         # Create a local patch for all the affected llvm projects
         try:
             create_patch_for_packages(
                 packages,
-                symlinks,
+                ebuild_paths,
                 start_rev,
                 parsed_patch.rev,
                 parsed_patch.sha,
@@ -399,7 +391,6 @@ def find_patches_and_make_cl(
         successes.append(parsed_patch.sha)
 
         if create_cl:
-            symlinks_to_uprev.extend(symlinks)
 
             commit_messages.extend(
                 [
@@ -429,7 +420,6 @@ def find_patches_and_make_cl(
 
     if successes and create_cl:
         make_cl(
-            symlinks_to_uprev,
             llvm_symlink_dir,
             branch,
             commit_messages,
