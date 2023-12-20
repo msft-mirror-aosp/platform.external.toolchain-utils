@@ -74,6 +74,8 @@ CheckResults = Union[List[Tuple[str, CheckResult]], CheckResult]
 MYPY_CHECKED_PATHS = (
     "llvm_tools/atomic_write_file.py",
     "llvm_tools/chroot.py",
+    "llvm_tools/get_llvm_hash.py",
+    "llvm_tools/get_llvm_hash_unittest.py",
     "llvm_tools/git.py",
     "llvm_tools/git_unittest.py",
     "llvm_tools/git_llvm_rev.py",

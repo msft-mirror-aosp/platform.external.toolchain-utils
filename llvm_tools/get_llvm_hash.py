@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from typing import Iterator, Optional, Tuple, Union
 
 import git_llvm_rev
 import subprocess_helpers
@@ -26,7 +27,7 @@ _LLVM_GIT_URL = (
 KNOWN_HASH_SOURCES = {"google3", "google3-unstable", "tot"}
 
 
-def GetVersionFrom(src_dir, git_hash):
+def GetVersionFrom(src_dir: str, git_hash: str) -> int:
     """Obtain an SVN-style version number based on the LLVM git hash passed in.
 
     Args:
@@ -45,7 +46,7 @@ def GetVersionFrom(src_dir, git_hash):
     return version.number
 
 
-def GetGitHashFrom(src_dir, version):
+def GetGitHashFrom(src_dir: str, version: int) -> str:
     """Finds the commit hash(es) of the LLVM version in the git log history.
 
     Args:
@@ -65,7 +66,7 @@ def GetGitHashFrom(src_dir, version):
     )
 
 
-def CheckoutBranch(src_dir, branch):
+def CheckoutBranch(src_dir: str, branch: str) -> None:
     """Checks out and pulls from a branch in a git repo.
 
     Args:
@@ -79,7 +80,7 @@ def CheckoutBranch(src_dir, branch):
     subprocess_helpers.CheckCommand(["git", "-C", src_dir, "pull"])
 
 
-def ParseLLVMMajorVersion(cmakelist):
+def ParseLLVMMajorVersion(cmakelist: str):
     """Reads CMakeList.txt file contents for LLVMMajor Version.
 
     Args:
@@ -100,7 +101,7 @@ def ParseLLVMMajorVersion(cmakelist):
 
 
 @functools.lru_cache(maxsize=1)
-def GetLLVMMajorVersion(git_hash=None):
+def GetLLVMMajorVersion(git_hash: Optional[str] = None) -> str:
     """Reads llvm/CMakeList.txt file contents for LLVMMajor Version.
 
     Args:
@@ -129,7 +130,7 @@ def GetLLVMMajorVersion(git_hash=None):
 
 
 @contextlib.contextmanager
-def CreateTempLLVMRepo(temp_dir):
+def CreateTempLLVMRepo(temp_dir: str) -> Iterator[str]:
     """Adds a LLVM worktree to 'temp_dir'.
 
     Creating a worktree because the LLVM source tree in
@@ -181,7 +182,7 @@ def CreateTempLLVMRepo(temp_dir):
             )
 
 
-def GetAndUpdateLLVMProjectInLLVMTools():
+def GetAndUpdateLLVMProjectInLLVMTools() -> str:
     """Gets the absolute path to 'llvm-project-copy' directory in 'llvm_tools'.
 
     The intent of this function is to avoid cloning the LLVM repo and then
@@ -237,7 +238,7 @@ def GetAndUpdateLLVMProjectInLLVMTools():
     return abs_path_to_llvm_project_dir
 
 
-def GetGoogle3LLVMVersion(stable):
+def GetGoogle3LLVMVersion(stable: bool) -> int:
     """Gets the latest google3 LLVM version.
 
     Args:
@@ -272,7 +273,7 @@ def GetGoogle3LLVMVersion(stable):
     )
 
 
-def IsSvnOption(svn_option):
+def IsSvnOption(svn_option: str) -> Union[int, str]:
     """Validates whether the argument (string) is a git hash option.
 
     The argument is used to find the git hash of LLVM.
@@ -305,7 +306,7 @@ def IsSvnOption(svn_option):
     raise ValueError("Invalid LLVM git hash option provided: %s" % svn_option)
 
 
-def GetLLVMHashAndVersionFromSVNOption(svn_option):
+def GetLLVMHashAndVersionFromSVNOption(svn_option: str) -> Tuple[str, int]:
     """Gets the LLVM hash and LLVM version based off of the svn option.
 
     Args:
@@ -339,7 +340,7 @@ class LLVMHash:
 
     @staticmethod
     @contextlib.contextmanager
-    def CreateTempDirectory():
+    def CreateTempDirectory() -> Iterator:
         temp_dir = tempfile.mkdtemp()
 
         try:
@@ -348,7 +349,7 @@ class LLVMHash:
             if os.path.isdir(temp_dir):
                 shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def CloneLLVMRepo(self, temp_dir):
+    def CloneLLVMRepo(self, temp_dir: str) -> None:
         """Clones the LLVM repo.
 
         Args:
@@ -367,7 +368,7 @@ class LLVMHash:
                 f"{repr(clone_cmd_obj.stderr)}"
             )
 
-    def GetLLVMHash(self, version):
+    def GetLLVMHash(self, version: int) -> str:
         """Retrieves the LLVM hash corresponding to the LLVM version passed in.
 
         Args:
@@ -382,16 +383,16 @@ class LLVMHash:
         )
         return hash_value
 
-    def GetGoogle3LLVMHash(self):
+    def GetGoogle3LLVMHash(self) -> str:
         """Retrieves the google3 LLVM hash."""
 
         return self.GetLLVMHash(GetGoogle3LLVMVersion(stable=True))
 
-    def GetGoogle3UnstableLLVMHash(self):
+    def GetGoogle3UnstableLLVMHash(self) -> str:
         """Retrieves the LLVM hash of google3's unstable compiler."""
         return self.GetLLVMHash(GetGoogle3LLVMVersion(stable=False))
 
-    def GetTopOfTrunkGitHash(self):
+    def GetTopOfTrunkGitHash(self) -> str:
         """Gets the latest git hash from top of trunk of LLVM."""
 
         path_to_main_branch = "refs/heads/main"
@@ -401,7 +402,7 @@ class LLVMHash:
         return llvm_tot_git_hash.rstrip().split()[0]
 
 
-def main():
+def main() -> None:
     """Prints the git hash of LLVM.
 
     Parses the command line for the optional command line
