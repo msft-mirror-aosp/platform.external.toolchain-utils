@@ -11,6 +11,7 @@ on toolchain projects (llvm-project, etc.) which are public.
 from pathlib import Path
 import shutil
 import subprocess
+from typing import List, Union
 from xml.etree import ElementTree
 
 import atomic_write_file
@@ -95,5 +96,5 @@ def format_manifest(repo_manifest: Path):
         raise FormattingError(
             "unable to format manifest, 'cros'" " executable not in PATH"
         )
-    cmd = ["cros", "format", repo_manifest]
+    cmd: List[Union[str, Path]] = ["cros", "format", repo_manifest]
     subprocess.run(cmd, check=True)
