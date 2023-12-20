@@ -171,7 +171,7 @@ def ApplyPatchAndPrior(
             [2]: List of failing patches, potentially containing the patch of
             interest.
     """
-    failed_patches = []
+    failed_patches: List[patch_utils.PatchEntry] = []
     applied_patches = []
     # We have to apply every patch up to the one we care about,
     # as patches can stack.

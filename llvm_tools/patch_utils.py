@@ -219,8 +219,6 @@ class PatchEntry:
         self, root_dir: Path, extra_args: Optional[List[str]] = None
     ) -> PatchResult:
         """Apply a patch to a given directory."""
-        if not extra_args:
-            extra_args = []
         # Cmd to apply a patch in the src unpack path.
         abs_patch_path = self.patch_path().absolute()
         if not abs_patch_path.is_file():
@@ -230,14 +228,14 @@ class PatchEntry:
         cmd = [
             "patch",
             "-d",
-            root_dir.absolute(),
+            str(root_dir.absolute()),
             "-f",
             "-E",
             "-p1",
             "--no-backup-if-mismatch",
             "-i",
-            abs_patch_path,
-        ] + extra_args
+            str(abs_patch_path),
+        ] + (extra_args or [])
         try:
             subprocess.run(
                 cmd, encoding="utf-8", check=True, stdout=subprocess.PIPE
@@ -275,7 +273,7 @@ class PatchInfo:
     applied_patches: List[PatchEntry]
     failed_patches: List[PatchEntry]
     # Can be deleted once legacy code is removed.
-    non_applicable_patches: List[str]
+    non_applicable_patches: List[PatchEntry]
     # Can be deleted once legacy code is removed.
     disabled_patches: List[str]
     # Can be deleted once legacy code is removed.
