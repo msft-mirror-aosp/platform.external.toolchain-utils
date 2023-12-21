@@ -45,7 +45,6 @@ class ModifyATryjobTest(unittest.TestCase):
                     args_output.options,
                     args_output.builders,
                     args_output.chroot_path,
-                    args_output.verbose,
                 )
 
             self.assertEqual(
@@ -90,7 +89,6 @@ class ModifyATryjobTest(unittest.TestCase):
                     args_output.options,
                     args_output.builders,
                     args_output.chroot_path,
-                    args_output.verbose,
                 )
 
             self.assertEqual(
@@ -133,7 +131,6 @@ class ModifyATryjobTest(unittest.TestCase):
                 args_output.options,
                 args_output.builders,
                 args_output.chroot_path,
-                args_output.verbose,
             )
 
             # Verify that the tryjob was removed from the status file.
@@ -202,7 +199,6 @@ class ModifyATryjobTest(unittest.TestCase):
                 args_output.options,
                 args_output.builders,
                 args_output.chroot_path,
-                args_output.verbose,
             )
 
             # Verify that the tryjob's information was updated after submtting
@@ -270,7 +266,6 @@ class ModifyATryjobTest(unittest.TestCase):
                     args_output.options,
                     args_output.builders,
                     args_output.chroot_path,
-                    args_output.verbose,
                 )
 
             self.assertEqual(
@@ -318,7 +313,6 @@ class ModifyATryjobTest(unittest.TestCase):
                     args_output.options,
                     args_output.builders,
                     args_output.chroot_path,
-                    args_output.verbose,
                 )
 
             self.assertEqual(
@@ -383,7 +377,6 @@ class ModifyATryjobTest(unittest.TestCase):
                 args_output.options,
                 args_output.builders,
                 args_output.chroot_path,
-                args_output.verbose,
             )
 
             # Verify that the tryjob was added to the status file.
@@ -437,7 +430,6 @@ class ModifyATryjobTest(unittest.TestCase):
                     args_output.options,
                     args_output.builders,
                     args_output.chroot_path,
-                    args_output.verbose,
                 )
 
             self.assertEqual(

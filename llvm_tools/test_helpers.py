@@ -17,7 +17,6 @@ class ArgsOutputTest:
         self.chroot_path = "/abs/path/to/chroot"
         self.last_tested = "/abs/path/to/last_tested_file.json"
         self.llvm_version = svn_option
-        self.verbose = False
         self.extra_change_lists = None
         self.options = ["latest-toolchain"]
         self.builders = ["some-builder"]

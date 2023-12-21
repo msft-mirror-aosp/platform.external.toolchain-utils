@@ -209,7 +209,6 @@ class LLVMBisectionTest(unittest.TestCase):
             _extra_cls,
             _options,
             _builder,
-            _verbose,
             _svn_revision,
         ):
             if call_count < 2:
@@ -252,7 +251,6 @@ class LLVMBisectionTest(unittest.TestCase):
                     args_output.extra_change_lists,
                     args_output.options,
                     args_output.builders,
-                    args_output.verbose,
                 )
 
             expected_bisection_contents = {

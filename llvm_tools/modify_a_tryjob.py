@@ -96,14 +96,6 @@ def GetCommandLineArgs():
         help="the path to the chroot (default: %(default)s)",
     )
 
-    # Add argument for whether to display command contents to `stdout`.
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="display contents of a command to the terminal "
-        "(default: %(default)s)",
-    )
-
     args_output = parser.parse_args()
 
     if not os.path.isfile(
@@ -199,12 +191,9 @@ def AddTryjob(
     extra_cls,
     options,
     builder,
-    verbose,
     svn_option,
 ):
     """Submits a tryjob."""
-
-    update_chromeos_llvm_hash.verbose = verbose
 
     change_list = GetCLAfterUpdatingPackages(
         packages,
@@ -235,7 +224,6 @@ def PerformTryjobModification(
     options,
     builder,
     chroot_path,
-    verbose,
 ):
     """Removes, relaunches, or adds a tryjob.
 
@@ -249,8 +237,6 @@ def PerformTryjobModification(
         builder: The builder to use for 'cros tryjob'.
         chroot_path: The absolute path to the chroot (used by 'cros tryjob'
           when relaunching a tryjob).
-        verbose: Determines whether to print the contents of a command to
-        `stdout`.
     """
 
     # Format of 'bisect_contents':
@@ -333,7 +319,6 @@ def PerformTryjobModification(
                 extra_cls,
                 options,
                 builder,
-                verbose,
                 revision,
             )
 
@@ -370,7 +355,6 @@ def main():
         args_output.options,
         args_output.builder,
         args_output.chroot_path,
-        args_output.verbose,
     )
 
 

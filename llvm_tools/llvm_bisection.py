@@ -122,14 +122,6 @@ def GetCommandLineArgs():
 
     # Add argument for whether to display command contents to `stdout`.
     parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="display contents of a command to the terminal "
-        "(default: %(default)s)",
-    )
-
-    # Add argument for whether to display command contents to `stdout`.
-    parser.add_argument(
         "--nocleanup",
         action="store_false",
         dest="cleanup",
@@ -291,7 +283,6 @@ def Bisect(
     extra_change_lists,
     options,
     builder,
-    verbose,
 ):
     """Adds tryjobs and updates the status file with the new tryjobs."""
 
@@ -305,7 +296,6 @@ def Bisect(
                 extra_change_lists,
                 options,
                 builder,
-                verbose,
                 svn_revision,
             )
 
@@ -453,7 +443,6 @@ def main(args_output):
         args_output.extra_change_lists,
         args_output.options,
         args_output.builder,
-        args_output.verbose,
     )
 
 
