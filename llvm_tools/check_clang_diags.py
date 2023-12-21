@@ -30,7 +30,7 @@ _DEFAULT_CCS = ["cjdb@google.com"]
 
 # FIXME: clang would be cool to check, too? Doesn't seem to have a super stable
 # way of listing all warnings, unfortunately.
-def _build_llvm(llvm_dir: str, build_dir: str):
+def _build_llvm(llvm_dir: str, build_dir: str) -> None:
     """Builds everything that _collect_available_diagnostics depends on."""
     targets = ["clang-tidy"]
     # use `-C $llvm_dir` so the failure is easier to handle if llvm_dir DNE.
@@ -88,11 +88,11 @@ def _collect_available_diagnostics(
     assert (
         clang_tidy_checks_stdout[0] == "Enabled checks:"
     ), clang_tidy_checks_stdout
-    clang_tidy_checks = clang_tidy_checks_stdout[1:]
+    available_checks = clang_tidy_checks_stdout[1:]
     assert not any(
-        check.isspace() for check in clang_tidy_checks
+        check.isspace() for check in available_checks
     ), clang_tidy_checks
-    return {"clang-tidy": clang_tidy_checks}
+    return {"clang-tidy": available_checks}
 
 
 def _process_new_diagnostics(
@@ -152,7 +152,7 @@ def _file_bugs_for_new_diags(new_diags: Dict[str, List[str]]):
             )
 
 
-def main(argv: List[str]):
+def main(argv: List[str]) -> None:
     logging.basicConfig(
         format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
         "%(message)s",

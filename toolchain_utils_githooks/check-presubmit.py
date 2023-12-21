@@ -75,6 +75,8 @@ MYPY_CHECKED_PATHS = (
     "cros_utils/bugs.py",
     "cros_utils/bugs_test.py",
     "llvm_tools/atomic_write_file.py",
+    "llvm_tools/check_clang_diags.py",
+    "llvm_tools/check_clang_diags_test.py",
     "llvm_tools/chroot.py",
     "llvm_tools/get_llvm_hash.py",
     "llvm_tools/get_llvm_hash_unittest.py",
