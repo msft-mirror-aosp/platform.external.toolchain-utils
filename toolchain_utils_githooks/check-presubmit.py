@@ -85,6 +85,7 @@ MYPY_CHECKED_PATHS = (
     "llvm_tools/git_llvm_rev.py",
     "llvm_tools/git_llvm_rev_test.py",
     "llvm_tools/generate_llvm_revert_report.py",
+    "llvm_tools/llvm_project.py",
     "llvm_tools/manifest_utils.py",
     "llvm_tools/manifest_utils_unittest.py",
     "llvm_tools/modify_a_tryjob.py",
