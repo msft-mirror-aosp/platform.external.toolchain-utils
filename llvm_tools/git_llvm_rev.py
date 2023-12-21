@@ -10,6 +10,7 @@ r1234 is parsed as '(main, 1234)'.
 """
 
 import argparse
+from pathlib import Path
 import re
 import subprocess
 import sys
@@ -48,7 +49,9 @@ known_llvm_rev_sha_pairs = (
 # Represents an LLVM git checkout:
 #  - |dir| is the directory of the LLVM checkout
 #  - |remote| is the name of the LLVM remote. Generally it's "origin".
-LLVMConfig = NamedTuple("LLVMConfig", (("remote", str), ("dir", str)))
+LLVMConfig = NamedTuple(
+    "LLVMConfig", (("remote", str), ("dir", Union[Path, str]))
+)
 
 
 class Rev(NamedTuple("Rev", (("branch", str), ("number", int)))):
@@ -93,7 +96,7 @@ def is_git_sha(xs: str) -> bool:
     )
 
 
-def check_output(command: List[str], cwd: str) -> str:
+def check_output(command: List[str], cwd: Union[Path, str]) -> str:
     """Shorthand for subprocess.check_output. Auto-decodes any stdout."""
     result = subprocess.run(
         command,

@@ -9,6 +9,7 @@ import argparse
 import contextlib
 import functools
 import os
+from pathlib import Path
 import re
 import shutil
 import subprocess
@@ -27,7 +28,7 @@ _LLVM_GIT_URL = (
 KNOWN_HASH_SOURCES = {"google3", "google3-unstable", "tot"}
 
 
-def GetVersionFrom(src_dir: str, git_hash: str) -> int:
+def GetVersionFrom(src_dir: Union[Path, str], git_hash: str) -> int:
     """Obtain an SVN-style version number based on the LLVM git hash passed in.
 
     Args:
@@ -46,7 +47,7 @@ def GetVersionFrom(src_dir: str, git_hash: str) -> int:
     return version.number
 
 
-def GetGitHashFrom(src_dir: str, version: int) -> str:
+def GetGitHashFrom(src_dir: Union[Path, str], version: int) -> str:
     """Finds the commit hash(es) of the LLVM version in the git log history.
 
     Args:
@@ -66,7 +67,7 @@ def GetGitHashFrom(src_dir: str, version: int) -> str:
     )
 
 
-def CheckoutBranch(src_dir: str, branch: str) -> None:
+def CheckoutBranch(src_dir: Union[Path, str], branch: str) -> None:
     """Checks out and pulls from a branch in a git repo.
 
     Args:
