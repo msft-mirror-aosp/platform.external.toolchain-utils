@@ -77,7 +77,7 @@ def add_patch(
     patches_dir: str,
     relative_patches_dir: str,
     start_version: git_llvm_rev.Rev,
-    llvm_dir: str,
+    llvm_dir: t.Union[Path, str],
     rev: t.Union[git_llvm_rev.Rev, str],
     sha: str,
     package: str,
@@ -216,18 +216,18 @@ def parse_ebuild_for_assignment(ebuild_path: str, var_name: str) -> str:
             # Remove comments
             line = line.split("#")[0]
             # Remove quotes
-            line = shlex.split(line)
-            if len(line) != 1:
+            parts = shlex.split(line)
+            if len(parts) != 1:
                 raise ValueError(
                     "Expected exactly one quoted value in %r" % orig_line
                 )
-            return line[0].strip()
+            return parts[0].strip()
 
     raise ValueError("No %s= line found in %r" % (var_name, ebuild))
 
 
 # Resolves a git ref (or similar) to a LLVM SHA.
-def resolve_llvm_ref(llvm_dir: str, sha: str) -> str:
+def resolve_llvm_ref(llvm_dir: t.Union[Path, str], sha: str) -> str:
     return subprocess.check_output(
         ["git", "rev-parse", sha],
         encoding="utf-8",
@@ -250,7 +250,7 @@ def package_to_project(package: str) -> str:
 
 
 # Get the LLVM projects change in the specifed sha
-def get_package_names(sha: str, llvm_dir: str) -> list:
+def get_package_names(sha: str, llvm_dir: t.Union[Path, str]) -> list:
     paths = subprocess.check_output(
         ["git", "show", "--name-only", "--format=", sha],
         cwd=llvm_dir,
@@ -264,8 +264,7 @@ def get_package_names(sha: str, llvm_dir: str) -> list:
         package = project_to_package(path.split("/")[0])
         if package in ("compiler-rt", "libcxx", "libcxxabi", "llvm-libunwind"):
             packages.add(package)
-    packages = list(sorted(packages))
-    return packages
+    return list(sorted(packages))
 
 
 def create_patch_for_packages(
@@ -274,7 +273,7 @@ def create_patch_for_packages(
     start_rev: git_llvm_rev.Rev,
     rev: t.Union[git_llvm_rev.Rev, str],
     sha: str,
-    llvm_dir: str,
+    llvm_dir: t.Union[Path, str],
     platforms: t.Iterable[str],
 ):
     """Create a patch and add its metadata for each package"""
@@ -471,7 +470,7 @@ def _convert_patch(
             cwd=llvm_config.dir,
         )
         sha = resolve_llvm_ref(llvm_config.dir, "HEAD")
-        rev = patch
+        rev: t.Union[git_llvm_rev.Rev, str] = patch
     else:
         sha = resolve_llvm_ref(llvm_config.dir, patch)
         rev = git_llvm_rev.translate_sha_to_rev(llvm_config, sha)
