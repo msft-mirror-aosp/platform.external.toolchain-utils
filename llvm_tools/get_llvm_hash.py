@@ -306,7 +306,9 @@ def IsSvnOption(svn_option: str) -> Union[int, str]:
     raise ValueError("Invalid LLVM git hash option provided: %s" % svn_option)
 
 
-def GetLLVMHashAndVersionFromSVNOption(svn_option: str) -> Tuple[str, int]:
+def GetLLVMHashAndVersionFromSVNOption(
+    svn_option: Union[int, str]
+) -> Tuple[str, int]:
     """Gets the LLVM hash and LLVM version based off of the svn option.
 
     Args:

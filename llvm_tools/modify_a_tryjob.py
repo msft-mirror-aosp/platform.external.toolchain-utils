@@ -11,10 +11,12 @@ import json
 import os
 from pathlib import Path
 import sys
+from typing import Dict, Iterable, List, Union
 
 import chroot
 import failure_modes
 import get_llvm_hash
+import git
 import update_chromeos_llvm_hash
 import update_packages_and_run_tests
 import update_tryjob_status
@@ -28,7 +30,7 @@ class ModifyTryjob(enum.Enum):
     ADD = "add"
 
 
-def GetCommandLineArgs():
+def GetCommandLineArgs() -> argparse.Namespace:
     """Parses the command line for the command line arguments."""
 
     # Default path to the chroot if a path is not specified.
@@ -123,12 +125,12 @@ def GetCommandLineArgs():
 
 
 def GetCLAfterUpdatingPackages(
-    packages,
-    git_hash,
-    svn_version,
-    chroot_path,
-    svn_option,
-):
+    packages: Iterable[str],
+    git_hash: str,
+    svn_version: int,
+    chroot_path: Union[Path, str],
+    svn_option: Union[int, str],
+) -> git.CommitContents:
     """Updates the packages' LLVM_NEXT."""
 
     change_list = update_chromeos_llvm_hash.UpdatePackages(
@@ -143,6 +145,9 @@ def GetCLAfterUpdatingPackages(
         extra_commit_msg_lines=None,
     )
 
+    # We are calling UpdatePackages with upload_changes=True, in
+    # which case it should always return a git.CommitContents value.
+    assert change_list is not None
     print("\nSuccessfully updated packages to %d" % svn_version)
     print("Gerrit URL: %s" % change_list.url)
     print("Change list number: %d" % change_list.cl_number)
@@ -151,8 +156,14 @@ def GetCLAfterUpdatingPackages(
 
 
 def CreateNewTryjobEntryForBisection(
-    cl, extra_cls, options, builder, chroot_path, cl_url, revision
-):
+    cl: int,
+    extra_cls: List[int],
+    options: List[str],
+    builder: str,
+    chroot_path: Union[Path, str],
+    cl_url: str,
+    revision,
+) -> Dict:
     """Submits a tryjob and adds additional information."""
 
     # Get the tryjob results after submitting the tryjob.
@@ -184,14 +195,14 @@ def CreateNewTryjobEntryForBisection(
 
 
 def AddTryjob(
-    packages,
-    git_hash,
-    revision,
-    chroot_path,
-    extra_cls,
-    options,
-    builder,
-    svn_option,
+    packages: Iterable[str],
+    git_hash: str,
+    revision: int,
+    chroot_path: Union[Path, str],
+    extra_cls: List[int],
+    options: List[str],
+    builder: str,
+    svn_option: Union[int, str],
 ):
     """Submits a tryjob."""
 
@@ -217,14 +228,14 @@ def AddTryjob(
 
 
 def PerformTryjobModification(
-    revision,
-    modify_tryjob,
-    status_file,
-    extra_cls,
-    options,
-    builder,
-    chroot_path,
-):
+    revision: int,
+    modify_tryjob: ModifyTryjob,
+    status_file: Union[Path, str],
+    extra_cls: List[int],
+    options: List[str],
+    builder: str,
+    chroot_path: Union[Path, str],
+) -> None:
     """Removes, relaunches, or adds a tryjob.
 
     Args:
@@ -338,7 +349,7 @@ def PerformTryjobModification(
         )
 
 
-def main():
+def main() -> None:
     """Removes, relaunches, or adds a tryjob."""
 
     chroot.VerifyOutsideChroot()
