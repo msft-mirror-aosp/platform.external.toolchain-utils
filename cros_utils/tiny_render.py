@@ -126,7 +126,7 @@ def _render_text_pieces(
 
 def render_text_pieces(piece: Piece) -> str:
     """Renders the given Pieces into text."""
-    into = []
+    into: t.List[str] = []
     _render_text_pieces(piece, 0, into)
     return "".join(into)
 
@@ -176,6 +176,6 @@ def _render_html_pieces(piece: Piece, into: t.List[str]) -> None:
 
 def render_html_pieces(piece: Piece) -> str:
     """Renders the given Pieces into HTML."""
-    into = []
+    into: t.List[str] = []
     _render_html_pieces(piece, into)
     return "".join(into)

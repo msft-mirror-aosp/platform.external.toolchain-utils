@@ -74,6 +74,7 @@ CheckResults = Union[List[Tuple[str, CheckResult]], CheckResult]
 MYPY_CHECKED_PATHS = (
     "cros_utils/bugs.py",
     "cros_utils/bugs_test.py",
+    "cros_utils/tiny_render.py",
     "llvm_tools/atomic_write_file.py",
     "llvm_tools/check_clang_diags.py",
     "llvm_tools/check_clang_diags_test.py",
