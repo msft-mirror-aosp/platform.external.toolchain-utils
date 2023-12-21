@@ -9,7 +9,7 @@ import enum
 import json
 import os
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 
 X20_PATH = "/google/data/rw/teams/c-compiler-chrome/prod_bugs"
@@ -57,10 +57,10 @@ class _FileNameGenerator:
             my_entropy = self._entropy
             self._entropy += 1
 
-        now = now.isoformat("T", "seconds") + "Z"
+        now_str = now.isoformat("T", "seconds") + "Z"
         entropy_str = str(my_entropy).zfill(self._ENTROPY_STR_SIZE)
         pid = os.getpid()
-        return f"{now}_{entropy_str}_{pid}.json"
+        return f"{now_str}_{entropy_str}_{pid}.json"
 
 
 _GLOBAL_NAME_GENERATOR = _FileNameGenerator()
@@ -69,7 +69,7 @@ _GLOBAL_NAME_GENERATOR = _FileNameGenerator()
 def _WriteBugJSONFile(
     object_type: str,
     json_object: Dict[str, Any],
-    directory: Optional[os.PathLike],
+    directory: Optional[Union[os.PathLike, str]],
 ):
     """Writes a JSON file to `directory` with the given bug-ish object.
 

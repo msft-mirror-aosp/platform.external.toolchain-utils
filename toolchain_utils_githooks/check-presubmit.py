@@ -72,6 +72,8 @@ CheckResults = Union[List[Tuple[str, CheckResult]], CheckResult]
 # The files and directories on which we run the mypy typechecker. The paths are
 # relative to the root of the toolchain-utils repository.
 MYPY_CHECKED_PATHS = (
+    "cros_utils/bugs.py",
+    "cros_utils/bugs_test.py",
     "llvm_tools/atomic_write_file.py",
     "llvm_tools/chroot.py",
     "llvm_tools/get_llvm_hash.py",
