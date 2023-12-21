@@ -5,14 +5,10 @@
 
 """Chroot helper functions."""
 
-import collections
 import os
 from pathlib import Path
 import subprocess
 from typing import List, Union
-
-
-CommitContents = collections.namedtuple("CommitContents", ["url", "cl_number"])
 
 
 def InChroot() -> bool:

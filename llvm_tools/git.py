@@ -16,21 +16,6 @@ from typing import Iterable, Optional
 CommitContents = collections.namedtuple("CommitContents", ["url", "cl_number"])
 
 
-def InChroot():
-    """Returns True if currently in the chroot."""
-    return "CROS_WORKON_SRCROOT" in os.environ
-
-
-def VerifyOutsideChroot():
-    """Checks whether the script invoked was executed in the chroot.
-
-    Raises:
-        AssertionError: The script was run inside the chroot.
-    """
-
-    assert not InChroot(), "Script should be run outside the chroot."
-
-
 def CreateBranch(repo, branch):
     """Creates a branch in the given repo.
 
