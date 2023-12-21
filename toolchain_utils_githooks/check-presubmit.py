@@ -86,6 +86,8 @@ MYPY_CHECKED_PATHS = (
     "llvm_tools/nightly_revert_checker.py",
     "llvm_tools/patch_manager.py",
     "llvm_tools/patch_utils.py",
+    "llvm_tools/update_chromeos_llvm_hash.py",
+    "llvm_tools/update_chromeos_llvm_hash_unittest.py",
     "pgo_tools",
     "pgo_tools_rust/pgo_rust.py",
     "rust_tools",

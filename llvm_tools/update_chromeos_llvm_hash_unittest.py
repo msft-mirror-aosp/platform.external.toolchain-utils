@@ -16,6 +16,7 @@ from unittest import mock
 import chroot
 import failure_modes
 import get_llvm_hash
+import patch_utils
 import test_helpers
 import update_chromeos_llvm_hash
 
@@ -512,27 +513,27 @@ class UpdateLLVMHashTest(unittest.TestCase):
         mock_run_cmd.assert_called_once()
 
     def testNoPatchResultsForCommit(self):
-        package_1_patch_info_dict = {
-            "applied_patches": ["display_results.patch"],
-            "failed_patches": ["fixes_output.patch"],
-            "non_applicable_patches": [],
-            "disabled_patches": [],
-            "removed_patches": [],
-            "modified_metadata": None,
-        }
+        package_1_patch_info = patch_utils.PatchInfo(
+            applied_patches=["display_results.patch"],
+            failed_patches=["fixes_output.patch"],
+            non_applicable_patches=[],
+            disabled_patches=[],
+            removed_patches=[],
+            modified_metadata=None,
+        )
 
-        package_2_patch_info_dict = {
-            "applied_patches": ["redirects_stdout.patch", "fix_display.patch"],
-            "failed_patches": [],
-            "non_applicable_patches": [],
-            "disabled_patches": [],
-            "removed_patches": [],
-            "modified_metadata": None,
-        }
+        package_2_patch_info = patch_utils.PatchInfo(
+            applied_patches=["redirects_stdout.patch", "fix_display.patch"],
+            failed_patches=[],
+            non_applicable_patches=[],
+            disabled_patches=[],
+            removed_patches=[],
+            modified_metadata=None,
+        )
 
         test_package_info_dict = {
-            "test-packages/package1": package_1_patch_info_dict,
-            "test-packages/package2": package_2_patch_info_dict,
+            "test-packages/package1": package_1_patch_info,
+            "test-packages/package2": package_2_patch_info,
         }
 
         test_commit_message = ["Updated packages"]
@@ -551,27 +552,27 @@ class UpdateLLVMHashTest(unittest.TestCase):
     def testAddedPatchResultsForCommit(
         self, mock_remove_patches, mock_stage_patches_for_commit
     ):
-        package_1_patch_info_dict = {
-            "applied_patches": [],
-            "failed_patches": [],
-            "non_applicable_patches": [],
-            "disabled_patches": ["fixes_output.patch"],
-            "removed_patches": [],
-            "modified_metadata": "/abs/path/to/filesdir/PATCHES.json",
-        }
+        package_1_patch_info = patch_utils.PatchInfo(
+            applied_patches=[],
+            failed_patches=[],
+            non_applicable_patches=[],
+            disabled_patches=["fixes_output.patch"],
+            removed_patches=[],
+            modified_metadata="/abs/path/to/filesdir/PATCHES.json",
+        )
 
-        package_2_patch_info_dict = {
-            "applied_patches": ["fix_display.patch"],
-            "failed_patches": [],
-            "non_applicable_patches": [],
-            "disabled_patches": [],
-            "removed_patches": ["/abs/path/to/filesdir/redirect_stdout.patch"],
-            "modified_metadata": "/abs/path/to/filesdir/PATCHES.json",
-        }
+        package_2_patch_info = patch_utils.PatchInfo(
+            applied_patches=["fix_display.patch"],
+            failed_patches=[],
+            non_applicable_patches=[],
+            disabled_patches=[],
+            removed_patches=["/abs/path/to/filesdir/redirect_stdout.patch"],
+            modified_metadata="/abs/path/to/filesdir/PATCHES.json",
+        )
 
         test_package_info_dict = {
-            "test-packages/package1": package_1_patch_info_dict,
-            "test-packages/package2": package_2_patch_info_dict,
+            "test-packages/package1": package_1_patch_info,
+            "test-packages/package2": package_2_patch_info,
         }
 
         test_commit_message = ["Updated packages"]

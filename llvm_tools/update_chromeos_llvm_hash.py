@@ -16,7 +16,7 @@ from pathlib import Path
 import re
 import subprocess
 import textwrap
-from typing import Dict, Iterable, List, Optional, Union
+from typing import Dict, Iterable, Iterator, List, Optional, Union
 
 import atomic_write_file
 import chroot
@@ -63,7 +63,7 @@ class PortagePackage:
             chromeos_root, package
         )
         if potential_ebuild_path.is_symlink():
-            self.uprev_target = potential_ebuild_path.absolute()
+            self.uprev_target: Optional[Path] = potential_ebuild_path.absolute()
             self.ebuild_path = potential_ebuild_path.resolve()
         else:
             # Should have a 9999 ebuild, no uprevs needed.
@@ -254,7 +254,7 @@ def UpdateEbuildLLVMHash(
     llvm_variant: LLVMVariant,
     git_hash: str,
     svn_version: int,
-):
+) -> None:
     """Updates the LLVM hash in the ebuild.
 
     The build changes are staged for commit in the temporary repo.
@@ -292,7 +292,12 @@ def UpdateEbuildLLVMHash(
     )
 
 
-def ReplaceLLVMHash(ebuild_lines, llvm_variant, git_hash, svn_version):
+def ReplaceLLVMHash(
+    ebuild_lines: Iterable[str],
+    llvm_variant: LLVMVariant,
+    git_hash: str,
+    svn_version: int,
+) -> Iterator[str]:
     """Updates the LLVM git hash.
 
     Args:
@@ -321,7 +326,7 @@ def ReplaceLLVMHash(ebuild_lines, llvm_variant, git_hash, svn_version):
         raise ValueError(f"Failed to update {llvm_variant.value}")
 
 
-def UprevEbuildSymlink(symlink):
+def UprevEbuildSymlink(symlink: str) -> None:
     """Uprevs the symlink's revision number.
 
     Increases the revision number by 1 and stages the change in
@@ -353,7 +358,7 @@ def UprevEbuildSymlink(symlink):
     )
 
 
-def UprevEbuildToVersion(symlink, svn_version, git_hash):
+def UprevEbuildToVersion(symlink: str, svn_version: int, git_hash: str) -> None:
     """Uprevs the ebuild's revision number.
 
     Increases the revision number by 1 and stages the change in
@@ -384,7 +389,7 @@ def UprevEbuildToVersion(symlink, svn_version, git_hash):
             "%s.\\2_pre%s"
             % (
                 llvm_major_version,
-                svn_version,
+                str(svn_version),
             ),
             ebuild,
             count=1,
@@ -393,7 +398,7 @@ def UprevEbuildToVersion(symlink, svn_version, git_hash):
     else:
         new_ebuild, is_changed = re.subn(
             r"(\d+)\.(\d+)_pre([0-9]+)",
-            "%s.\\2_pre%s" % (llvm_major_version, svn_version),
+            "%s.\\2_pre%s" % (llvm_major_version, str(svn_version)),
             ebuild,
             count=1,
         )
@@ -416,7 +421,7 @@ def UprevEbuildToVersion(symlink, svn_version, git_hash):
     subprocess.check_output(["git", "-C", symlink_dir, "rm", symlink])
 
 
-def RemovePatchesFromFilesDir(patches):
+def RemovePatchesFromFilesDir(patches: Iterable[str]) -> None:
     """Removes the patches from $FILESDIR of a package.
 
     Args:
@@ -432,7 +437,7 @@ def RemovePatchesFromFilesDir(patches):
         )
 
 
-def StagePatchMetadataFileForCommit(patch_metadata_file_path):
+def StagePatchMetadataFileForCommit(patch_metadata_file_path: str) -> None:
     """Stages the updated patch metadata file for commit.
 
     Args:
@@ -480,18 +485,18 @@ def StagePackagesPatchResultsForCommit(
     # For each package, check if any patches for that package have
     # changed, if so, add which patches have changed to the commit
     # message.
-    for package_name, patch_info_dict in package_info_dict.items():
+    for package_name, patch_info in package_info_dict.items():
         if (
-            patch_info_dict["disabled_patches"]
-            or patch_info_dict["removed_patches"]
-            or patch_info_dict["modified_metadata"]
+            patch_info.disabled_patches
+            or patch_info.removed_patches
+            or patch_info.modified_metadata
         ):
             cur_package_header = f"\nFor the package {package_name}:"
             commit_messages.append(cur_package_header)
 
         # Add to the commit message that the patch metadata file was modified.
-        if patch_info_dict["modified_metadata"]:
-            patch_metadata_path = patch_info_dict["modified_metadata"]
+        if patch_info.modified_metadata:
+            patch_metadata_path = patch_info.modified_metadata
             metadata_file_name = os.path.basename(patch_metadata_path)
             commit_messages.append(
                 f"The patch metadata file {metadata_file_name} was modified"
@@ -500,25 +505,25 @@ def StagePackagesPatchResultsForCommit(
             StagePatchMetadataFileForCommit(patch_metadata_path)
 
         # Add each disabled patch to the commit message.
-        if patch_info_dict["disabled_patches"]:
+        if patch_info.disabled_patches:
             commit_messages.append("The following patches were disabled:")
 
-            for patch_path in patch_info_dict["disabled_patches"]:
+            for patch_path in patch_info.disabled_patches:
                 commit_messages.append(os.path.basename(patch_path))
 
         # Add each removed patch to the commit message.
-        if patch_info_dict["removed_patches"]:
+        if patch_info.removed_patches:
             commit_messages.append("The following patches were removed:")
 
-            for patch_path in patch_info_dict["removed_patches"]:
+            for patch_path in patch_info.removed_patches:
                 commit_messages.append(os.path.basename(patch_path))
 
-            RemovePatchesFromFilesDir(patch_info_dict["removed_patches"])
+            RemovePatchesFromFilesDir(patch_info.removed_patches)
 
     return commit_messages
 
 
-def UpdatePortageManifests(packages: Iterable[str], chroot_path: Path):
+def UpdatePortageManifests(packages: Iterable[str], chroot_path: Path) -> None:
     """Updates portage manifest files for packages.
 
     Args:
@@ -639,7 +644,9 @@ def UpdatePackages(
     return change_list
 
 
-def EnsurePackageMaskContains(chroot_path, git_hash):
+def EnsurePackageMaskContains(
+    chroot_path: Union[Path, str], git_hash: str
+) -> None:
     """Adds the major version of llvm to package.mask if not already present.
 
     Args:

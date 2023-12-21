@@ -8,7 +8,7 @@
 import os
 from pathlib import Path
 import subprocess
-from typing import List, Union
+from typing import Iterable, List, Union
 
 
 def InChroot() -> bool:
@@ -40,7 +40,7 @@ def VerifyChromeOSRoot(chromeos_root: Union[Path, str]) -> None:
 
 
 def GetChrootEbuildPaths(
-    chromeos_root: Union[Path, str], packages: List[str]
+    chromeos_root: Union[Path, str], packages: Iterable[str]
 ) -> List[str]:
     """Gets the chroot path(s) of the package(s).
 
