@@ -126,16 +126,16 @@ def CreateNewBug(
     """Sends a request to create a new bug.
 
     Args:
-      component_id: The component ID to add. Anything from WellKnownComponents
-        also works.
-      title: Title of the bug. Must be nonempty.
-      body: Body of the bug. Must be nonempty.
-      assignee: Assignee of the bug. Must be either an email address, or a
-        "well-known" assignee (detective, mage).
-      cc: A list of emails to add to the CC list. Must either be an email
-        address, or a "well-known" individual (detective, mage).
-      directory: The directory to write the report to. Defaults to our x20 bugs
-        directory.
+        component_id: The component ID to add. Anything from WellKnownComponents
+            also works.
+        title: Title of the bug. Must be nonempty.
+        body: Body of the bug. Must be nonempty.
+        assignee: Assignee of the bug. Must be either an email address, or a
+            "well-known" assignee (detective, mage).
+        cc: A list of emails to add to the CC list. Must either be an email
+            address, or a "well-known" individual (detective, mage).
+        directory: The directory to write the report to. Defaults to our x20
+            bugs directory.
     """
     obj = {
         "component_id": component_id,
@@ -162,16 +162,16 @@ def SendCronjobLog(
     """Sends the record of a cronjob to our bug infra.
 
     cronjob_name: The name of the cronjob. Expected to remain consistent over
-      time.
+        time.
     failed: Whether the job failed or not.
-    message: Any seemingly relevant context. This is pasted verbatim in a bug, if
-      the cronjob infra deems it worthy.
+    message: Any seemingly relevant context. This is pasted verbatim in a bug,
+        if the cronjob infra deems it worthy.
     turndown_time_hours: If nonzero, this cronjob will be considered
-      turned down if more than `turndown_time_hours` pass without a report of
-      success or failure. If zero, this job will not automatically be turned
-      down.
+        turned down if more than `turndown_time_hours` pass without a report of
+        success or failure. If zero, this job will not automatically be turned
+        down.
     directory: The directory to write the report to. Defaults to our x20 bugs
-      directory.
+        directory.
     """
     json_object = {
         "name": cronjob_name,
