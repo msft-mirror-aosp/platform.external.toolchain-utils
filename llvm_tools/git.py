@@ -7,16 +7,17 @@
 
 import collections
 import os
+from pathlib import Path
 import re
 import subprocess
 import tempfile
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Union
 
 
 CommitContents = collections.namedtuple("CommitContents", ["url", "cl_number"])
 
 
-def CreateBranch(repo, branch):
+def CreateBranch(repo: Union[Path, str], branch: str) -> None:
     """Creates a branch in the given repo.
 
     Args:
@@ -35,7 +36,7 @@ def CreateBranch(repo, branch):
     subprocess.check_output(["repo", "start", branch], cwd=repo)
 
 
-def DeleteBranch(repo, branch):
+def DeleteBranch(repo: Union[Path, str], branch: str) -> None:
     """Deletes a branch in the given repo.
 
     Args:
@@ -57,8 +58,15 @@ def DeleteBranch(repo, branch):
     run_checked(["branch", "-q", "-D", branch])
 
 
-def CommitChanges(repo, commit_messages: Iterable[str]):
-    """Commit changes without uploading them."""
+def CommitChanges(
+    repo: Union[Path, str], commit_messages: Iterable[str]
+) -> None:
+    """Commit changes without uploading them.
+
+    Args:
+        repo: The absolute path to the repo where changes were made.
+        commit_messages: Messages to concatenate to form the commit message.
+    """
     if not os.path.isdir(repo):
         raise ValueError("Invalid path provided: %s" % repo)
 
@@ -71,12 +79,12 @@ def CommitChanges(repo, commit_messages: Iterable[str]):
 
 
 def UploadChanges(
-    repo,
+    repo: Union[Path, str],
     branch: str,
     reviewers: Optional[Iterable[str]] = None,
     cc: Optional[Iterable[str]] = None,
     wip: bool = False,
-):
+) -> CommitContents:
     """Uploads the changes in the specifed branch of the given repo for review.
 
     Args:
@@ -88,8 +96,7 @@ def UploadChanges(
         wip: Whether to upload the change as a work-in-progress.
 
     Returns:
-        A nametuple that has two (key, value) pairs, where the first pair is
-        the Gerrit commit URL and the second pair is the change list number.
+        A CommitContents value containing the commit URL and change list number.
 
     Raises:
         ValueError: Failed to create a commit or failed to upload the
