@@ -11,7 +11,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
-from typing import List
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import chroot
 import failure_modes
@@ -22,7 +22,7 @@ import update_chromeos_llvm_hash
 VALID_CQ_TRYBOTS = ("llvm", "llvm-next")
 
 
-def GetCommandLineArgs():
+def GetCommandLineArgs() -> argparse.Namespace:
     """Parses the command line for the command line arguments.
 
     Returns:
@@ -156,7 +156,10 @@ def GetCommandLineArgs():
     return args_output
 
 
-def UnchangedSinceLastRun(last_tested_file, arg_dict):
+def UnchangedSinceLastRun(
+    last_tested_file: Optional[Union[Path, str]],
+    arg_dict: Dict,
+) -> bool:
     """Gets the arguments used for last run
 
     Args:
@@ -184,8 +187,18 @@ def UnchangedSinceLastRun(last_tested_file, arg_dict):
     return arg_dict == last_arg_dict
 
 
-def AddReviewers(cl, reviewers, chroot_path):
-    """Add reviewers for the created CL."""
+def AddReviewers(
+    cl: int,
+    reviewers: Iterable[str],
+    chroot_path: Union[Path, str],
+) -> None:
+    """Add reviewers for the created CL.
+
+    Args:
+        cl: The CL number to add reviewers to.
+        reviewers: Email addresses of reviewers to add.
+        chroot_path: The absolute path to the chroot.
+    """
 
     gerrit_abs_path = os.path.join(chroot_path, "chromite/bin/gerrit")
     for reviewer in reviewers:
@@ -194,8 +207,18 @@ def AddReviewers(cl, reviewers, chroot_path):
         subprocess.check_output(cmd)
 
 
-def AddLinksToCL(tests, cl, chroot_path):
-    """Adds the test link(s) to the CL as a comment."""
+def AddLinksToCL(
+    tests: Iterable[Dict[str, Any]],
+    cl: int,
+    chroot_path: Union[Path, str],
+) -> None:
+    """Adds the test link(s) to the CL as a comment.
+
+    Args:
+        tests: Links to the tests.
+        cl: The number of the CL to add the test links to.
+        chroot_path: Absolute path to the chroot.
+    """
 
     # NOTE: Invoking `cros_sdk` does not make each tryjob link appear on its
     # own line, so invoking the `gerrit` command directly instead of using
@@ -214,12 +237,17 @@ def AddLinksToCL(tests, cl, chroot_path):
 
 
 # Testing with tryjobs
-def GetCurrentTimeInUTC():
+def GetCurrentTimeInUTC() -> datetime.datetime:
     """Returns the current time via `datetime.datetime.utcnow()`."""
     return datetime.datetime.utcnow()
 
 
-def GetTryJobCommand(change_list, extra_change_lists, options, builder):
+def GetTryJobCommand(
+    change_list: int,
+    extra_change_lists: Iterable[int],
+    options: Iterable[str],
+    builder: str,
+) -> List[str]:
     """Constructs the 'tryjob' command.
 
     Args:
@@ -248,7 +276,13 @@ def GetTryJobCommand(change_list, extra_change_lists, options, builder):
     return tryjob_cmd
 
 
-def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path):
+def RunTryJobs(
+    cl_number: int,
+    extra_change_lists: List[int],
+    options: List[str],
+    builders: Iterable[str],
+    chroot_path: Union[Path, str],
+) -> List[Dict]:
     """Runs a tryjob/tryjobs.
 
     Args:
@@ -300,8 +334,12 @@ def RunTryJobs(cl_number, extra_change_lists, options, builders, chroot_path):
 
 
 def StartRecipeBuilders(
-    cl_number, extra_change_lists, options, builders, chroot_path
-):
+    cl_number: int,
+    extra_change_lists: List[int],
+    options: List[str],
+    builders: List[str],
+    chroot_path: Union[Path, str],
+) -> List[Dict]:
     """Launch recipe builders.
 
     Args:
@@ -363,7 +401,7 @@ def StartRecipeBuilders(
 
 
 # Testing with CQ
-def GetCQDependString(dependent_cls: List[int]) -> str:
+def GetCQDependString(dependent_cls: List[int]) -> Optional[str]:
     """Get CQ dependency string e.g. `Cq-Depend: chromium:MM, chromium:NN`."""
 
     if not dependent_cls:
@@ -373,7 +411,7 @@ def GetCQDependString(dependent_cls: List[int]) -> str:
     return "Cq-Depend: " + ", ".join(f"chromium:{x}" for x in dependent_cls)
 
 
-def GetCQIncludeTrybotsString(trybot):
+def GetCQIncludeTrybotsString(trybot: Optional[str]) -> Optional[str]:
     """Get Cq-Include-Trybots string, for more llvm testings"""
 
     if not trybot:
@@ -387,7 +425,11 @@ def GetCQIncludeTrybotsString(trybot):
     return "Cq-Include-Trybots:chromeos/cq:cq-%s-orchestrator" % trybot
 
 
-def StartCQDryRun(cl, dependent_cls, chroot_path):
+def StartCQDryRun(
+    cl: int,
+    dependent_cls: List[int],
+    chroot_path: Union[Path, str],
+) -> None:
     """Start CQ dry run for the changelist and dependencies."""
 
     gerrit_abs_path = os.path.join(chroot_path, "chromite/bin/gerrit")

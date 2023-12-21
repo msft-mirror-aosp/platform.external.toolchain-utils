@@ -88,6 +88,8 @@ MYPY_CHECKED_PATHS = (
     "llvm_tools/patch_utils.py",
     "llvm_tools/update_chromeos_llvm_hash.py",
     "llvm_tools/update_chromeos_llvm_hash_unittest.py",
+    "llvm_tools/update_packages_and_run_tests.py",
+    "llvm_tools/update_packages_and_run_tests_unittest.py",
     "pgo_tools",
     "pgo_tools_rust/pgo_rust.py",
     "rust_tools",
