@@ -142,10 +142,12 @@ class PatchEntry:
     platforms: Optional[List[str]]
     rel_patch_path: str
     version_range: Optional[Dict[str, Optional[int]]]
+    verify_workdir: bool = True
+    """Don't verify the workdir exists. Used for testing."""
     _parsed_hunks = None
 
     def __post_init__(self):
-        if not self.workdir.is_dir():
+        if self.verify_workdir and not self.workdir.is_dir():
             raise ValueError(f"workdir {self.workdir} is not a directory")
 
     @classmethod

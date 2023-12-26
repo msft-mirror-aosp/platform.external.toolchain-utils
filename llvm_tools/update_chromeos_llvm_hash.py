@@ -697,7 +697,7 @@ def UpdatePackagesPatchMetadataFile(
 
     # A dictionary where the key is the package name and the value is a
     # dictionary that has information on the patches.
-    package_info = {}
+    package_info: Dict[str, patch_utils.PatchInfo] = {}
 
     llvm_hash = get_llvm_hash.LLVMHash()
 
@@ -755,7 +755,7 @@ def UpdatePackagesPatchMetadataFile(
                     else:
                         raise RuntimeError(f"unsupported failure mode: {mode}")
 
-                package_info[cur_package] = patches_info._asdict()
+                package_info[cur_package] = patches_info
 
     return package_info
 

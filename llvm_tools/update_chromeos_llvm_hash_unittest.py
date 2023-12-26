@@ -10,6 +10,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from typing import Optional, Union
 import unittest
 from unittest import mock
 
@@ -27,6 +28,21 @@ import update_chromeos_llvm_hash
 
 class UpdateLLVMHashTest(unittest.TestCase):
     """Test class for updating LLVM hashes of packages."""
+
+    @staticmethod
+    def _make_patch_entry(
+        relpath: Union[str, Path], workdir: Optional[Path] = None
+    ) -> patch_utils.PatchEntry:
+        if workdir is None:
+            workdir = Path("llvm_tools/update_chromeos_llvm_hash_unittest.py")
+        return patch_utils.PatchEntry(
+            workdir=workdir,
+            rel_patch_path=str(relpath),
+            metadata={},
+            platforms=["chromiumos"],
+            version_range={"from": None, "until": None},
+            verify_workdir=False,
+        )
 
     @mock.patch.object(os.path, "realpath")
     def testDefaultCrosRootFromCrOSCheckout(self, mock_llvm_tools):
@@ -514,8 +530,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
 
     def testNoPatchResultsForCommit(self):
         package_1_patch_info = patch_utils.PatchInfo(
-            applied_patches=["display_results.patch"],
-            failed_patches=["fixes_output.patch"],
+            applied_patches=[self._make_patch_entry("display_results.patch")],
+            failed_patches=[self._make_patch_entry("fixes_output.patch")],
             non_applicable_patches=[],
             disabled_patches=[],
             removed_patches=[],
@@ -523,7 +539,10 @@ class UpdateLLVMHashTest(unittest.TestCase):
         )
 
         package_2_patch_info = patch_utils.PatchInfo(
-            applied_patches=["redirects_stdout.patch", "fix_display.patch"],
+            applied_patches=[
+                self._make_patch_entry("redirects_stdout.patch"),
+                self._make_patch_entry("fix_display.patch"),
+            ],
             failed_patches=[],
             non_applicable_patches=[],
             disabled_patches=[],
@@ -562,7 +581,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
         )
 
         package_2_patch_info = patch_utils.PatchInfo(
-            applied_patches=["fix_display.patch"],
+            applied_patches=[self._make_patch_entry("fix_display.patch")],
             failed_patches=[],
             non_applicable_patches=[],
             disabled_patches=[],
