@@ -14,6 +14,7 @@ builds. While this skew shouldn't result in _huge_ binary size differences,
 it can still account for a few MB of diff in an average case.
 """
 
+import abc
 import argparse
 import dataclasses
 import json
@@ -36,28 +37,82 @@ class SizeDiffInfo:
     new_size_bytes: int
 
 
-def download_and_measure_size(image_zip: str) -> int:
-    """Downloads image_zip into a tempdir dir, and measures its size."""
-    with tempfile.TemporaryDirectory(prefix="fetch_size_diff_") as tempdir_str:
-        into = Path(tempdir_str)
-        local_image_zip = into / "image.zip"
+class ComparableArtifact(abc.ABC):
+    """Artifacts from CQ runs that can be compared."""
+
+    @property
+    @abc.abstractmethod
+    def artifact_name(self) -> str:
+        """Returns the name of the artifact in gs:// e.g., "image.zip"."""
+
+    @abc.abstractmethod
+    def _measure_artifact_size(self, file: Path) -> int:
+        """Given a path to the artifact, extract the relevant size info.
+
+        The directory that `file` is in may be mutated by this function. No
+        guarantees are made about the state of said directory after execution
+        finishes, except that `file` should remain unmodified.
+        """
+
+    def _download_and_measure_size(self, gs_url: str) -> int:
+        with tempfile.TemporaryDirectory(
+            prefix="fetch_size_diff_"
+        ) as tempdir_str:
+            into = Path(tempdir_str)
+            local_file = into / os.path.basename(gs_url)
+            subprocess.run(
+                ["gsutil", "cp", gs_url, local_file],
+                check=True,
+                stdin=subprocess.DEVNULL,
+            )
+            return self._measure_artifact_size(local_file)
+
+    def compare_size_from_gs(self, baseline: str, new: str) -> SizeDiffInfo:
+        return SizeDiffInfo(
+            baseline_size_bytes=self._download_and_measure_size(baseline),
+            new_size_bytes=self._download_and_measure_size(new),
+        )
+
+
+class DebugInfoArtifact(ComparableArtifact):
+    """ComparableArtifact instance for debuginfo."""
+
+    @property
+    def artifact_name(self) -> str:
+        return "debug.tgz"
+
+    def _measure_artifact_size(self, file: Path) -> int:
+        chrome_debug = "./opt/google/chrome/chrome.debug"
+        logging.info("Unpacking debuginfo...")
         subprocess.run(
-            ["gsutil", "cp", image_zip, local_image_zip],
+            ["tar", "xaf", file, chrome_debug],
             check=True,
+            cwd=file.parent,
             stdin=subprocess.DEVNULL,
         )
+        return os.path.getsize(file.parent / chrome_debug)
+
+
+class ImageSizeArtifact(ComparableArtifact):
+    """ComparableArtifact instance for image files."""
+
+    @property
+    def artifact_name(self) -> str:
+        return "image.zip"
+
+    def _measure_artifact_size(self, file: Path) -> int:
         binpkg_sizes_name = "chromiumos_base_image.bin-package-sizes.json"
         subprocess.run(
             [
                 "unzip",
-                local_image_zip.name,
+                file.name,
                 binpkg_sizes_name,
             ],
             check=True,
-            cwd=into,
+            cwd=file.parent,
             stdin=subprocess.DEVNULL,
         )
-        with (into / binpkg_sizes_name).open(encoding="utf-8") as f:
+        with (file.parent / binpkg_sizes_name).open(encoding="utf-8") as f:
             loaded = json.load(f)
             try:
                 size = loaded["total_size"]
@@ -69,16 +124,6 @@ def download_and_measure_size(image_zip: str) -> int:
                     f"total_size was unexpectedly {type(size)}: {size}"
                 )
             return size
-
-
-def compare_gs_images(
-    baseline_image_zip: str, new_image_zip: str
-) -> SizeDiffInfo:
-    """Returns a SizeDiffInfo representing the given image.zip sizes."""
-    return SizeDiffInfo(
-        baseline_size_bytes=download_and_measure_size(baseline_image_zip),
-        new_size_bytes=download_and_measure_size(new_image_zip),
-    )
 
 
 def is_probably_non_production_builder(builder_name: str) -> bool:
@@ -198,6 +243,7 @@ def find_size_diffable_cq_artifacts(
         guessed_paths = [
             (x, guess_release_artifact_path(x)) for x in potential_artifacts
         ]
+        logging.debug("Guessed corresponding artifact files: %s", guessed_paths)
         release_artifacts = try_gsutil_ls([x for _, x in guessed_paths if x])
         if not release_artifacts:
             logging.info(
@@ -220,9 +266,11 @@ def find_size_diffable_cq_artifacts(
     return None
 
 
-def inspect_gs_impl(baseline_gs_url: str, new_gs_url: str) -> None:
+def inspect_gs_impl(
+    baseline_gs_url: str, new_gs_url: str, artifact: ComparableArtifact
+) -> None:
     """Compares the `image.zip`s at the given URLs, logging the results."""
-    size_diff = compare_gs_images(baseline_gs_url, new_gs_url)
+    size_diff = artifact.compare_size_from_gs(baseline_gs_url, new_gs_url)
     # `%d` doesn't support `,` as a modifier, and commas make these numbers
     # much easier to read. Prefer to keep strings interpreted as format strings
     # constant.
@@ -233,20 +281,22 @@ def inspect_gs_impl(baseline_gs_url: str, new_gs_url: str) -> None:
     logging.info("Diff: %.2f%%", diff_pct * 100)
 
 
-def inspect_cl(opts: argparse.Namespace) -> None:
+def inspect_cl(opts: argparse.Namespace, artifact: ComparableArtifact) -> None:
     """Implements the `cl` subcommand of this script."""
     cq_build_ids = cros_cls.fetch_cq_orchestrator_ids(opts.cl)
     if not cq_build_ids:
         sys.exit(f"No completed cq-orchestrators found for {opts.cl}")
 
     # Reverse cq_build_ids so we try the newest first.
-    diffable_zips = find_size_diffable_cq_artifacts(cq_build_ids, "image.zip")
-    if not diffable_zips:
-        sys.exit("No viable images could be found to diff.")
+    diffable_artifacts = find_size_diffable_cq_artifacts(
+        cq_build_ids, artifact.artifact_name
+    )
+    if not diffable_artifacts:
+        sys.exit("No diffable artifacts were found")
 
-    baseline, new = diffable_zips
+    baseline, new = diffable_artifacts
     logging.info("Comparing %s (baseline) to %s (new)", baseline, new)
-    inspect_gs_impl(baseline, new)
+    inspect_gs_impl(baseline, new, artifact)
     logging.warning(
         "Friendly reminder: CL inspection diffs between your CL and a "
         "corresponding release build. Size differences up to a few megabytes "
@@ -255,9 +305,9 @@ def inspect_cl(opts: argparse.Namespace) -> None:
     )
 
 
-def inspect_gs(opts: argparse.Namespace) -> None:
+def inspect_gs(opts: argparse.Namespace, artifact: ComparableArtifact) -> None:
     """Implements the `gs` subcommand of this script."""
-    inspect_gs_impl(opts.baseline, opts.new)
+    inspect_gs_impl(opts.baseline, opts.new, artifact)
 
 
 def main(argv: List[str]) -> None:
@@ -265,6 +315,14 @@ def main(argv: List[str]) -> None:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    what_to_compare = parser.add_mutually_exclusive_group(required=True)
+    what_to_compare.add_argument(
+        "--image", action="store_true", help="Compare image.zip sizes."
+    )
+    what_to_compare.add_argument(
+        "--debuginfo", action="store_true", help="Compare debuginfo sizes."
+    )
+
     parser.add_argument(
         "--debug", action="store_true", help="Enable debug logging"
     )
@@ -295,7 +353,13 @@ def main(argv: List[str]) -> None:
     )
 
     assert getattr(opts, "func", None), "Unknown subcommand?"
-    opts.func(opts)
+    if opts.image:
+        artifact: ComparableArtifact = ImageSizeArtifact()
+    else:
+        assert opts.debuginfo
+        artifact = DebugInfoArtifact()
+
+    opts.func(opts, artifact)
 
 
 if __name__ == "__main__":
