@@ -262,11 +262,11 @@ def maybe_copy_prebuilt_to_localmirror(
     upload_to = copy_rust_bootstrap.determine_target_path(prebuilt_gs_path)
     result = subprocess.run(
         ["gsutil", "ls", upload_to],
-        check=True,
+        check=False,
         encoding="utf-8",
         stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
 
     if not result.returncode:
