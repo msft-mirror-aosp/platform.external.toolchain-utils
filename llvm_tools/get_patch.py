@@ -19,10 +19,13 @@ import dataclasses
 import json
 import logging
 from pathlib import Path
+import random
+import re
 import subprocess
 import tempfile
 import textwrap
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
+from urllib import request
 
 import atomic_write_file
 import git_llvm_rev
@@ -215,8 +218,37 @@ class PatchContext:
     def _make_patches_from_pr(
         self, patch_source: LLVMPullRequest
     ) -> List[patch_utils.PatchEntry]:
-        # TODO: Later commit
-        return []
+        json_response = get_llvm_github_pull(patch_source.number)
+        github_ctx = GitHubPRContext(json_response, self.llvm_project_dir)
+        rel_patch_path = f"{github_ctx.full_title_cleaned}.patch"
+        packages = github_ctx.get_changed_packages()
+        contents = github_ctx.git_squash_chain_patch()
+        new_patch_entries = []
+        for workdir in self._workdirs_for_packages(packages):
+            pe = patch_utils.PatchEntry(
+                workdir=workdir,
+                metadata={
+                    "title": github_ctx.full_title,
+                    "info": [],
+                },
+                rel_patch_path=rel_patch_path,
+                platforms=list(self.platforms),
+                version_range={
+                    "from": self.start_ref.to_rev(self.llvm_project_dir).number,
+                    "until": None,
+                },
+            )
+            # Before we actually do any modifications, check if the patch is
+            # already applied.
+            if self.is_patch_applied(pe):
+                raise CherrypickError(
+                    f"Patch at {pe.rel_patch_path}"
+                    " already exists in PATCHES.json"
+                )
+            if not self.dry_run:
+                _write_patch(pe.title(), contents, pe.patch_path())
+            new_patch_entries.append(pe)
+        return new_patch_entries
 
     def _workdirs_for_packages(self, packages: Iterable[Path]) -> List[Path]:
         return [self.chromiumos_root / pkg / "files" for pkg in packages]
@@ -270,6 +302,177 @@ def git_format_patch(git_root_dir: Path, ref: str) -> str:
         raise ValueError(f"No git diff between {ref}^..{ref}")
     logging.debug("Patch diff is %s lines long", contents.count("\n"))
     return contents
+
+
+def get_llvm_github_pull(pull_number: int) -> Dict[str, Any]:
+    """Get information about an LLVM pull request.
+
+    Returns:
+        A dictionary containing the JSON response from GitHub.
+
+    Raises:
+        RuntimeError when the network response is not OK.
+    """
+
+    pull_url = (
+        f"https://api.github.com/repos/llvm/llvm-project/pulls/{pull_number}"
+    )
+    # TODO(ajordanr): If we are ever allowed to use the 'requests' library
+    # we should move to that instead of urllib.
+    req = request.Request(
+        url=pull_url,
+        headers={
+            "X-GitHub-Api-Version": "2022-11-28",
+            "Accept": "application/vnd.github+json",
+        },
+    )
+    with request.urlopen(req) as f:
+        if f.status >= 400:
+            raise RuntimeError(
+                f"GitHub response was not OK: {f.status} {f.reason}"
+            )
+        response = f.read().decode("utf-8")
+    return json.loads(response)
+
+
+class GitHubPRContext:
+    """Metadata and pathing context for a GitHub pull request checkout."""
+
+    def __init__(
+        self,
+        response: Dict[str, Any],
+        llvm_project_dir: Path,
+    ) -> None:
+        """Create a GitHubPRContext from a GitHub pulls api call.
+
+        Args:
+            response: A dictionary formed from the JSON sent by
+                the github pulls API endpoint.
+            llvm_project_dir: Path to llvm-project git directory.
+        """
+        try:
+            self.clone_url = response["head"]["repo"]["clone_url"]
+            self._title = response["title"]
+            self.body = response["body"]
+            self.base_ref = response["base"]["sha"]
+            self.head_ref = response["head"]["sha"]
+            self.llvm_project_dir = llvm_project_dir
+            self.number = int(response["number"])
+            self._fetched = False
+        except (ValueError, KeyError):
+            logging.error("Failed to parse GitHub response:\n%s", response)
+            raise
+
+    @property
+    def full_title(self) -> str:
+        return f"[PR{self.number}] {self._title}"
+
+    @property
+    def full_title_cleaned(self) -> str:
+        return re.sub(r"\W", "-", self.full_title)
+
+    def get_changed_packages(self) -> Set[Path]:
+        self._fetch()
+        return get_changed_packages(
+            self.llvm_project_dir, (self.base_ref, self.head_ref)
+        )
+
+    def git_squash_chain_patch(self) -> str:
+        """Replicate a squashed merge commit as a patch file.
+
+        Args:
+            git_root_dir: Root directory for a given local git repository
+                which contains the base_ref.
+            output: File path to write the patch to.
+
+        Returns:
+            The patch file contents.
+        """
+        self._fetch()
+        idx = random.randint(0, 2**32)
+        tmpbranch_name = f"squash-branch-{idx}"
+
+        with tempfile.TemporaryDirectory() as dir_str:
+            worktree_parent_dir = Path(dir_str)
+            commit_message_file = worktree_parent_dir / "commit_message"
+            # Need this separate from the commit message, otherwise the
+            # dir will be non-empty.
+            worktree_dir = worktree_parent_dir / "worktree"
+            with commit_message_file.open("w", encoding="utf-8") as f:
+                f.write(self.full_title)
+                f.write("\n\n")
+                f.write(
+                    "\n".join(
+                        textwrap.wrap(
+                            self.body, width=72, replace_whitespace=False
+                        )
+                    )
+                )
+                f.write("\n")
+
+            logging.debug(
+                "Creating worktree at '%s' with branch '%s'",
+                worktree_dir,
+                tmpbranch_name,
+            )
+            self._run(
+                [
+                    "git",
+                    "worktree",
+                    "add",
+                    "-b",
+                    tmpbranch_name,
+                    worktree_dir,
+                    self.base_ref,
+                ],
+                self.llvm_project_dir,
+            )
+            try:
+                self._run(
+                    ["git", "merge", "--squash", self.head_ref], worktree_dir
+                )
+                self._run(
+                    [
+                        "git",
+                        "commit",
+                        "-a",
+                        "-F",
+                        commit_message_file,
+                    ],
+                    worktree_dir,
+                )
+                patch_contents = git_format_patch(worktree_dir, "HEAD")
+            finally:
+                logging.debug("Cleaning up worktree")
+                self._run(
+                    ["git", "worktree", "remove", worktree_dir],
+                    self.llvm_project_dir,
+                )
+            return patch_contents
+
+    def _fetch(self) -> None:
+        if not self._fetched:
+            self._run(
+                ["git", "fetch", self.clone_url, self.head_ref],
+                cwd=self.llvm_project_dir,
+            )
+            self._fetched = True
+
+    @staticmethod
+    def _run(
+        cmd: List[Union[str, Path]],
+        cwd: Path,
+        stdin: int = subprocess.DEVNULL,
+    ) -> subprocess.CompletedProcess:
+        """Helper for subprocess.run."""
+        return subprocess.run(
+            cmd,
+            cwd=cwd,
+            stdin=stdin,
+            stdout=subprocess.PIPE,
+            encoding="utf-8",
+            check=True,
+        )
 
 
 def get_changed_packages(
