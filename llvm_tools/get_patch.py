@@ -184,6 +184,12 @@ class PatchContext:
         )
         new_patch_entries: List[patch_utils.PatchEntry] = []
         for workdir in self._workdirs_for_packages(packages):
+            rel_patch_path = f"cherry/{patch_source.git_ref}.patch"
+            if (workdir / "cherry").is_dir():
+                rel_patch_path = f"cherry/{patch_source.git_ref}.patch"
+            else:
+                # Some packages don't have a cherry directory.
+                rel_patch_path = f"{patch_source.git_ref}.patch"
             pe = patch_utils.PatchEntry(
                 workdir=workdir,
                 metadata={
@@ -193,7 +199,7 @@ class PatchContext:
                     "info": [],
                 },
                 platforms=list(self.platforms),
-                rel_patch_path=f"cherry/{patch_source.git_ref}.patch",
+                rel_patch_path=rel_patch_path,
                 version_range={
                     "from": self.start_ref.to_rev(self.llvm_project_dir).number,
                     "until": patch_source.to_rev(self.llvm_project_dir).number,

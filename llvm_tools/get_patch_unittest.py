@@ -157,6 +157,28 @@ class TestGetPatch(unittest.TestCase):
                 "until": fixture["rev"],
             },
         }
+        cherrydir = self.workdir / "cherry"
+        cherrydir.mkdir()
+        self._apply_patch_to_json_helper(fixture, expected_json_entry)
+        cherrydir.rmdir()
+
+    def test_apply_patch_to_json_no_cherry(self) -> None:
+        """Test we can apply patches to the JSON file, without a cherry dir."""
+
+        fixture = COMMIT_FIXTURES[1]
+        fixture_sha = fixture["sha"]
+        expected_json_entry = {
+            "metadata": {"title": fixture["subject"], "info": []},
+            "platforms": ["some platform"],
+            "rel_patch_path": f"{fixture_sha}.patch",
+            "version_range": {
+                "from": self.ctx.start_ref.to_rev(self.llvm_project_dir).number,
+                "until": fixture["rev"],
+            },
+        }
+        self._apply_patch_to_json_helper(fixture, expected_json_entry)
+
+    def _apply_patch_to_json_helper(self, fixture, expected_json_entry) -> None:
         # We manually write and delete this file because it must have the name
         # as specified by get_patch. tempfile cannot guarantee us this name.
         self.write_json_fixture()
