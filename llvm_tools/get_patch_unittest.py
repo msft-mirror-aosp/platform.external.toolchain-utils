@@ -143,6 +143,57 @@ class TestGetPatch(unittest.TestCase):
         finally:
             self.patches_json_file.unlink()
 
+    def test_apply_patch_to_json(self) -> None:
+        """Test we can apply patches to the JSON file."""
+
+        fixture = COMMIT_FIXTURES[1]
+        fixture_sha = fixture["sha"]
+        expected_json_entry = {
+            "metadata": {"title": fixture["subject"], "info": []},
+            "platforms": ["some platform"],
+            "rel_patch_path": f"cherry/{fixture_sha}.patch",
+            "version_range": {
+                "from": self.ctx.start_ref.to_rev(self.llvm_project_dir).number,
+                "until": fixture["rev"],
+            },
+        }
+        # We manually write and delete this file because it must have the name
+        # as specified by get_patch. tempfile cannot guarantee us this name.
+        self.write_json_fixture()
+        patch_source = get_patch.LLVMGitRef.from_rev(
+            self.llvm_project_dir,
+            git_llvm_rev.Rev("origin", fixture["rev"]),
+        )
+        try:
+            self.ctx.apply_patches(patch_source)
+            with self.patches_json_file.open(encoding="utf-8") as f:
+                edited = json.load(f)
+            self.assertEqual(edited, JSON_FIXTURE + [expected_json_entry])
+        finally:
+            self.patches_json_file.unlink()
+
+    def test_apply_patch_dry_run(self) -> None:
+        """Test dry running patches does nothing."""
+
+        fixture = COMMIT_FIXTURES[1]
+        old_dry_run = self.ctx.dry_run
+        self.ctx.dry_run = True
+        # We manually write and delete this file because it must have the name
+        # as specified by get_patch. tempfile cannot guarantee us this name.
+        self.write_json_fixture()
+        patch_source = get_patch.LLVMGitRef.from_rev(
+            self.llvm_project_dir,
+            git_llvm_rev.Rev("origin", fixture["rev"]),
+        )
+        try:
+            self.ctx.apply_patches(patch_source)
+            with self.patches_json_file.open(encoding="utf-8") as f:
+                maybe_edited = json.load(f)
+            self.assertEqual(maybe_edited, JSON_FIXTURE)
+        finally:
+            self.ctx.dry_run = old_dry_run
+            self.patches_json_file.unlink()
+
 
 if __name__ == "__main__":
     unittest.main()

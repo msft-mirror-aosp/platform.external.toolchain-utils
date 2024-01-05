@@ -16,11 +16,15 @@ Example Usage:
 
 import argparse
 import dataclasses
+import json
 import logging
 from pathlib import Path
 import subprocess
+import tempfile
+import textwrap
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 
+import atomic_write_file
 import git_llvm_rev
 import patch_utils
 
@@ -108,14 +112,37 @@ class PatchContext:
             TypeError: If the patch_source is not a
                 LLVMGitRef or LLVMPullRequest.
         """
-        # TODO: Later commit
+        new_patch_entries = self.make_patches(patch_source)
+        self.apply_entries_to_json(new_patch_entries)
 
     def apply_entries_to_json(
         self,
         new_patch_entries: Iterable[patch_utils.PatchEntry],
     ) -> None:
         """Add some PatchEntries to the appropriate PATCHES.json."""
-        # TODO: Later commit
+        workdir_mappings: Dict[Path, List[patch_utils.PatchEntry]] = {}
+        for pe in new_patch_entries:
+            workdir_mappings[pe.workdir] = workdir_mappings.get(
+                pe.workdir, []
+            ) + [pe]
+        for workdir, pes in workdir_mappings.items():
+            patches_json_file = workdir / PATCH_METADATA_FILENAME
+            with patches_json_file.open(encoding="utf-8") as f:
+                orig_contents = f.read()
+            old_patch_entries = patch_utils.json_str_to_patch_entries(
+                workdir, orig_contents
+            )
+            indent_len = patch_utils.predict_indent(orig_contents.splitlines())
+            if not self.dry_run:
+                with atomic_write_file.atomic_write(
+                    patches_json_file, encoding="utf-8"
+                ) as f:
+                    json.dump(
+                        [pe.to_dict() for pe in old_patch_entries + pes],
+                        f,
+                        indent=indent_len,
+                    )
+                    f.write("\n")
 
     def make_patches(
         self, patch_source: Union[LLVMGitRef, LLVMPullRequest]
