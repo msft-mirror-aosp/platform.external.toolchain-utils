@@ -38,7 +38,6 @@
             "--prefix=../../bin/x86_64-cros-linux-gnu-",
             "main.cc",
             "-L/usr/x86_64-cros-linux-gnu/usr/lib64",
-            "-Wno-unused-but-set-variable",
             "-mno-movbe",
             "-B../../bin",
             "-target",
@@ -102,7 +101,6 @@
             "--prefix=../../bin/x86_64-cros-eabi-",
             "main.cc",
             "-L/usr/x86_64-cros-eabi/usr/lib64",
-            "-Wno-unused-but-set-variable",
             "-mno-movbe",
             "-B../../bin",
             "-target",
@@ -166,7 +164,6 @@
             "--prefix=../../bin/x86_64-cros-win-gnu-",
             "main.cc",
             "-L/usr/x86_64-cros-win-gnu/usr/lib64",
-            "-Wno-unused-but-set-variable",
             "-mno-movbe",
             "-B../../bin",
             "-target",
@@ -230,7 +227,6 @@
             "--prefix=../../bin/armv7m-cros-linux-gnu-",
             "main.cc",
             "-L/usr/armv7m-cros-linux-gnu/usr/lib",
-            "-Wno-unused-but-set-variable",
             "-B../../bin",
             "-target",
             "armv7m-cros-linux-gnu"
@@ -293,7 +289,6 @@
             "--prefix=../../bin/armv7m-cros-eabi-",
             "main.cc",
             "-L/usr/armv7m-cros-eabi/usr/lib",
-            "-Wno-unused-but-set-variable",
             "-B../../bin",
             "-target",
             "armv7m-cros-eabi"
@@ -356,7 +351,6 @@
             "--prefix=../../bin/armv7m-cros-win-gnu-",
             "main.cc",
             "-L/usr/armv7m-cros-win-gnu/usr/lib",
-            "-Wno-unused-but-set-variable",
             "-B../../bin",
             "-target",
             "armv7m-cros-win-gnu"
@@ -419,7 +413,6 @@
             "--prefix=../../bin/armv8m-cros-linux-gnu-",
             "main.cc",
             "-L/usr/armv8m-cros-linux-gnu/usr/lib",
-            "-Wno-unused-but-set-variable",
             "-B../../bin",
             "-target",
             "armv8m-cros-linux-gnu"
@@ -482,7 +475,6 @@
             "--prefix=../../bin/armv8m-cros-eabi-",
             "main.cc",
             "-L/usr/armv8m-cros-eabi/usr/lib",
-            "-Wno-unused-but-set-variable",
             "-B../../bin",
             "-target",
             "armv8m-cros-eabi"
@@ -545,7 +537,6 @@
             "--prefix=../../bin/armv8m-cros-win-gnu-",
             "main.cc",
             "-L/usr/armv8m-cros-win-gnu/usr/lib",
-            "-Wno-unused-but-set-variable",
             "-B../../bin",
             "-target",
             "armv8m-cros-win-gnu"

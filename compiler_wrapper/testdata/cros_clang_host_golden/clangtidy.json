@@ -40,8 +40,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang-tidy"
         }
@@ -72,8 +71,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -133,8 +131,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang-tidy"
         }
@@ -166,8 +163,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/gomacc"
         }
@@ -228,8 +224,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang-tidy"
         },
@@ -264,8 +259,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/gomacc"
         }
@@ -328,8 +322,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang-tidy"
         }
@@ -361,8 +354,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/gomacc"
         },

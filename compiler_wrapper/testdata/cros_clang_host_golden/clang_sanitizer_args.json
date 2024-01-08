@@ -28,8 +28,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fsanitize=kernel-address",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -76,8 +75,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fsanitize=kernel-address",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -124,8 +122,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fsanitize=kernel-address",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -172,8 +169,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fsanitize=kernel-address",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -220,8 +216,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fsanitize=fuzzer",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -268,8 +263,7 @@
             "-fcommon",
             "-fsanitize=address",
             "-fprofile-instr-generate",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -316,8 +310,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fsanitize=address",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -363,8 +356,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fprofile-instr-generate",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }

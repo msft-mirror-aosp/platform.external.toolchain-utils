@@ -27,8 +27,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -72,8 +71,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         },
@@ -123,8 +121,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang++"
         }
@@ -168,8 +165,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "somepath/clang"
         }
@@ -227,8 +223,7 @@
             "-fcommon",
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/somedir/clang"
         }
@@ -285,8 +280,7 @@
             "-fcommon",
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/gomacc"
         }
@@ -345,8 +339,7 @@
             "-fcommon",
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/somedir/clang"
         },
@@ -397,8 +390,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -442,8 +434,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/a/b/c/d/e/f/g/clang"
         }
@@ -487,8 +478,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/a/b/c/d/e/f/g/clang"
         }
@@ -532,8 +522,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/somedir/clang"
         }
@@ -577,8 +566,7 @@
             "-fuse-ld=lld",
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/pathenv/clang"
         }

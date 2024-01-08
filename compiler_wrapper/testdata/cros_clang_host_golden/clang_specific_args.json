@@ -35,8 +35,7 @@
             "-Wold-style-declaration",
             "-Woverride-init",
             "-Wunsafe-loop-optimizations",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -91,8 +90,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-Wno-#warnings",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -138,8 +136,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-Wno-error=uninitialized",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }
@@ -185,8 +182,7 @@
             "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-someflag",
-            "main.cc",
-            "-Wno-unused-but-set-variable"
+            "main.cc"
           ],
           "path": "/tmp/stable/clang"
         }

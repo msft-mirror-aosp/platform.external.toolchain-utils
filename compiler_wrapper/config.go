@@ -131,9 +131,10 @@ func crosCommonClangFlags() []string {
 }
 
 func crosCommonClangPostFlags() []string {
-	return []string{
-		"-Wno-unused-but-set-variable",
-	}
+	// Flags added to the _end_ of every build command. If a flag is added here, file a bug at
+	// go/crostc-bug to clean it up. Use of postflags is discouraged, since it prevents users
+	// from determining their own preferences for warnings/etc.
+	return []string{}
 }
 
 // Full hardening.
