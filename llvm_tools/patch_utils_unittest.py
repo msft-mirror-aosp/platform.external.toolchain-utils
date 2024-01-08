@@ -51,6 +51,15 @@ a
         e = pu.PatchEntry.from_dict(TestPatchUtils._mock_dir(), d)
         self.assertEqual(d, e.to_dict())
 
+        # Test that they aren't serialised the same, as 'd' isn't sorted.
+        self.assertNotEqual(
+            json.dumps(d["metadata"]), json.dumps(e.to_dict()["metadata"])
+        )
+        self.assertEqual(
+            ["info", "other_extra_info", "title"],
+            list(e.to_dict()["metadata"].keys()),
+        )
+
     def test_patch_path(self):
         """Test that we can get the full path from a PatchEntry."""
         d = TestPatchUtils._default_json_dict()

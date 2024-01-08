@@ -171,8 +171,16 @@ class PatchEntry:
         )
 
     def to_dict(self) -> Dict[str, Any]:
+        # We sort the metadata so that it doesn't matter
+        # how it was passed to patch_utils.
+        if self.metadata is None:
+            sorted_metadata = None
+        else:
+            sorted_metadata = dict(
+                sorted(self.metadata.items(), key=lambda x: x[0])
+            )
         out: Dict[str, Any] = {
-            "metadata": self.metadata,
+            "metadata": sorted_metadata,
         }
         if self.platforms:
             # To match patch_sync, only serialized when
