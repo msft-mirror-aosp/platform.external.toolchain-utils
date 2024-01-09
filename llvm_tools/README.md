@@ -552,3 +552,16 @@ Note that it's recommended to 'seed' the state file with a most recent upload
 date. This can be done by running this tool *once* with a `--last_date` flag.
 This flag has the script override whatever's in the state file (if anything) and
 start submitting all crashes uploaded starting at the given day.
+
+### `werror_logs.py`
+
+This tool exists to help devs reason about `-Werror` instances that _would_
+break builds, were the `FORCE_DISABLE_WERROR` support in the compiler wrapper
+not enabled.
+
+Usage example:
+
+```
+$ ./werror_logs.py aggregate \
+    --directory=${repo}/out/sdk/tmp/portage/dev-cpp/gtest-1.13.0-r12/cros-artifacts
+```
