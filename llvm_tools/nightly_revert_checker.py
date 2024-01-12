@@ -9,7 +9,6 @@ If any reverts are found that were previously unknown, this cherry-picks them or
 fires off an email. All LLVM SHAs to monitor are autodetected.
 """
 
-
 import argparse
 import io
 import json
@@ -18,7 +17,7 @@ import os
 import pprint
 import subprocess
 import sys
-import typing as t
+from typing import Any, Callable, List, NamedTuple, Set, Tuple
 
 from cros_utils import email_sender
 from cros_utils import tiny_render
@@ -28,12 +27,12 @@ import git_llvm_rev
 import revert_checker
 
 
-State = t.Any
+State = Any
 
 
 def _find_interesting_android_shas(
     android_llvm_toolchain_dir: str,
-) -> t.List[t.Tuple[str, str]]:
+) -> List[Tuple[str, str]]:
     llvm_project = os.path.join(
         android_llvm_toolchain_dir, "toolchain/llvm-project"
     )
@@ -59,7 +58,7 @@ def _find_interesting_android_shas(
 
     main_legacy = get_llvm_merge_base("aosp/master-legacy")  # nocheck
     testing_upstream = get_llvm_merge_base("aosp/testing-upstream")
-    result: t.List[t.Tuple[str, str]] = [("main-legacy", main_legacy)]
+    result: List[Tuple[str, str]] = [("main-legacy", main_legacy)]
 
     # If these are the same SHA, there's no point in tracking both.
     if main_legacy != testing_upstream:
@@ -74,7 +73,7 @@ def _find_interesting_android_shas(
 
 def _parse_llvm_ebuild_for_shas(
     ebuild_file: io.TextIOWrapper,
-) -> t.List[t.Tuple[str, str]]:
+) -> List[Tuple[str, str]]:
     def parse_ebuild_assignment(line: str) -> str:
         no_comments = line.split("#")[0]
         no_assign = no_comments.split("=", 1)[1].strip()
@@ -97,7 +96,7 @@ def _parse_llvm_ebuild_for_shas(
             "llvm=%s; llvm_next=%s" % (llvm_hash, llvm_next_hash)
         )
 
-    results: t.List[t.Tuple[str, str]] = [("llvm", llvm_hash)]
+    results: List[Tuple[str, str]] = [("llvm", llvm_hash)]
     if llvm_next_hash != llvm_hash:
         results.append(("llvm-next", llvm_next_hash))
     return results
@@ -105,7 +104,7 @@ def _parse_llvm_ebuild_for_shas(
 
 def _find_interesting_chromeos_shas(
     chromeos_base: str,
-) -> t.List[t.Tuple[str, str]]:
+) -> List[Tuple[str, str]]:
     llvm_dir = os.path.join(
         chromeos_base, "src/third_party/chromiumos-overlay/sys-devel/llvm"
     )
@@ -125,7 +124,7 @@ def _find_interesting_chromeos_shas(
         return _parse_llvm_ebuild_for_shas(f)
 
 
-_Email = t.NamedTuple(
+_Email = NamedTuple(
     "_Email",
     [
         ("subject", str),
@@ -138,9 +137,9 @@ def _generate_revert_email(
     repository_name: str,
     friendly_name: str,
     sha: str,
-    prettify_sha: t.Callable[[str], tiny_render.Piece],
-    get_sha_description: t.Callable[[str], tiny_render.Piece],
-    new_reverts: t.List[revert_checker.Revert],
+    prettify_sha: Callable[[str], tiny_render.Piece],
+    get_sha_description: Callable[[str], tiny_render.Piece],
+    new_reverts: List[revert_checker.Revert],
 ) -> _Email:
     email_pieces = [
         "It looks like there may be %s across %s ("
@@ -183,11 +182,11 @@ def _generate_revert_email(
     )
 
 
-_EmailRecipients = t.NamedTuple(
+_EmailRecipients = NamedTuple(
     "_EmailRecipients",
     [
-        ("well_known", t.List[str]),
-        ("direct", t.List[str]),
+        ("well_known", List[str]),
+        ("direct", List[str]),
     ],
 )
 
@@ -233,7 +232,7 @@ def _read_state(state_file: str) -> State:
 
 def find_shas(
     llvm_dir: str,
-    interesting_shas: t.List[t.Tuple[str, str]],
+    interesting_shas: List[Tuple[str, str]],
     state: State,
     new_state: State,
 ):
@@ -267,13 +266,13 @@ def find_shas(
 def do_cherrypick(
     chroot_path: str,
     llvm_dir: str,
-    interesting_shas: t.List[t.Tuple[str, str]],
+    interesting_shas: List[Tuple[str, str]],
     state: State,
-    reviewers: t.List[str],
-    cc: t.List[str],
+    reviewers: List[str],
+    cc: List[str],
 ) -> State:
     new_state: State = {}
-    seen: t.Set[str] = set()
+    seen: Set[str] = set()
     for friendly_name, _sha, reverts in find_shas(
         llvm_dir, interesting_shas, state, new_state
     ):
@@ -318,7 +317,7 @@ def do_email(
     is_dry_run: bool,
     llvm_dir: str,
     repository: str,
-    interesting_shas: t.List[t.Tuple[str, str]],
+    interesting_shas: List[Tuple[str, str]],
     state: State,
     recipients: _EmailRecipients,
 ) -> State:
@@ -358,7 +357,7 @@ def do_email(
     return new_state
 
 
-def parse_args(argv: t.List[str]) -> t.Any:
+def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -416,8 +415,8 @@ def parse_args(argv: t.List[str]) -> t.Any:
 
 
 def find_chroot(
-    opts: t.Any, cc: t.List[str]
-) -> t.Tuple[str, t.List[t.Tuple[str, str]], _EmailRecipients]:
+    opts: argparse.Namespace, cc: List[str]
+) -> Tuple[str, List[Tuple[str, str]], _EmailRecipients]:
     if opts.repository == "chromeos":
         chroot_path = opts.chromeos_dir
         return (
@@ -444,7 +443,7 @@ def find_chroot(
         raise ValueError(f"Unknown repository {opts.repository}")
 
 
-def main(argv: t.List[str]) -> int:
+def main(argv: List[str]) -> int:
     opts = parse_args(argv)
 
     logging.basicConfig(
