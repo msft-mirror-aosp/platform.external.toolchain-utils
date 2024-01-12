@@ -185,7 +185,7 @@ class Test(unittest.TestCase):
             chroot_path="/path/to/chroot",
             llvm_dir="/path/to/llvm",
             interesting_shas=[("12345abcdef", "fedcba54321")],
-            state={},
+            state=nightly_revert_checker.State(),
             reviewers=["meow@chromium.org"],
             cc=["purr@chromium.org"],
         )
@@ -208,7 +208,7 @@ class Test(unittest.TestCase):
             chroot_path="/path/to/chroot",
             llvm_dir="/path/to/llvm",
             interesting_shas=[("12345abcdef", "fedcba54321")],
-            state={},
+            state=nightly_revert_checker.State(),
             reviewers=["meow@chromium.org"],
             cc=["purr@chromium.org"],
         )

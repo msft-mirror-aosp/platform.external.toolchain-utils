@@ -10,6 +10,7 @@ fires off an email. All LLVM SHAs to monitor are autodetected.
 """
 
 import argparse
+import dataclasses
 import io
 import json
 import logging
@@ -17,7 +18,7 @@ import os
 import pprint
 import subprocess
 import sys
-from typing import Any, Callable, List, NamedTuple, Set, Tuple
+from typing import Any, Callable, Dict, List, NamedTuple, Set, Tuple
 
 from cros_utils import email_sender
 from cros_utils import tiny_render
@@ -27,7 +28,19 @@ import git_llvm_rev
 import revert_checker
 
 
-State = Any
+@dataclasses.dataclass(frozen=True)
+class State:
+    """Persistent state for this script."""
+
+    # Mapping of LLVM SHA -> List of reverts that have been seen for it
+    seen_reverts: Dict[str, List[str]] = dataclasses.field(default_factory=dict)
+
+    @classmethod
+    def from_json(cls, json_object: Any) -> "State":
+        return cls(seen_reverts=json_object)
+
+    def to_json(self) -> Any:
+        return self.seen_reverts
 
 
 def _find_interesting_android_shas(
@@ -207,7 +220,11 @@ def _write_state(state_file: str, new_state: State) -> None:
     try:
         with open(tmp_file, "w", encoding="utf-8") as f:
             json.dump(
-                new_state, f, sort_keys=True, indent=2, separators=(",", ": ")
+                new_state.to_json(),
+                f,
+                sort_keys=True,
+                indent=2,
+                separators=(",", ": "),
             )
         os.rename(tmp_file, state_file)
     except:
@@ -221,13 +238,13 @@ def _write_state(state_file: str, new_state: State) -> None:
 def _read_state(state_file: str) -> State:
     try:
         with open(state_file, encoding="utf-8") as f:
-            return json.load(f)
+            return State.from_json(json.load(f))
     except FileNotFoundError:
         logging.info(
             "No state file found at %r; starting with an empty slate",
             state_file,
         )
-        return {}
+        return State()
 
 
 def find_shas(
@@ -247,13 +264,13 @@ def find_shas(
             pprint.pformat(all_reverts),
         )
 
-        new_state[sha] = [r.sha for r in all_reverts]
+        new_state.seen_reverts[sha] = [r.sha for r in all_reverts]
 
-        if sha not in state:
+        if sha not in state.seen_reverts:
             logging.info("SHA %s is new to me", sha)
             existing_reverts = set()
         else:
-            existing_reverts = set(state[sha])
+            existing_reverts = set(state.seen_reverts[sha])
 
         new_reverts = [r for r in all_reverts if r.sha not in existing_reverts]
         if not new_reverts:
@@ -271,7 +288,7 @@ def do_cherrypick(
     reviewers: List[str],
     cc: List[str],
 ) -> State:
-    new_state: State = {}
+    new_state = State()
     seen: Set[str] = set()
     for friendly_name, _sha, reverts in find_shas(
         llvm_dir, interesting_shas, state, new_state
@@ -332,7 +349,7 @@ def do_email(
             encoding="utf-8",
         ).strip()
 
-    new_state: State = {}
+    new_state = State()
     for friendly_name, sha, new_reverts in find_shas(
         llvm_dir, interesting_shas, state, new_state
     ):
