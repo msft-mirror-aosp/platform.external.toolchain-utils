@@ -18,6 +18,7 @@ import os
 import pprint
 import subprocess
 import sys
+import time
 from typing import Any, Callable, Dict, List, NamedTuple, Set, Tuple
 
 from cros_utils import email_sender
@@ -28,19 +29,65 @@ import git_llvm_rev
 import revert_checker
 
 
-@dataclasses.dataclass(frozen=True)
+ONE_DAY_SECS = 24 * 60 * 60
+# How often to send an email about a HEAD not moving.
+HEAD_STALENESS_ALERT_INTERVAL_SECS = 21 * ONE_DAY_SECS
+# How long to wait after a HEAD changes for the first 'update' email to be sent.
+HEAD_STALENESS_ALERT_INITIAL_SECS = 60 * ONE_DAY_SECS
+
+
+# Not frozen, as `next_notification_timestamp` may be mutated.
+@dataclasses.dataclass(frozen=False, eq=True)
+class HeadInfo:
+    """Information about about a HEAD that's tracked by this script."""
+
+    # The most recent SHA observed for this HEAD.
+    last_sha: str
+    # The time at which the current value for this HEAD was first seen.
+    first_seen_timestamp: int
+    # The next timestamp to notify users if this HEAD doesn't move.
+    next_notification_timestamp: int
+
+    @classmethod
+    def from_json(cls, json_object: Any) -> "HeadInfo":
+        return cls(**json_object)
+
+    def to_json(self) -> Any:
+        return dataclasses.asdict(self)
+
+
+@dataclasses.dataclass(frozen=True, eq=True)
 class State:
     """Persistent state for this script."""
 
     # Mapping of LLVM SHA -> List of reverts that have been seen for it
     seen_reverts: Dict[str, List[str]] = dataclasses.field(default_factory=dict)
+    # Mapping of friendly HEAD name (e.g., main-legacy) to last-known info
+    # about it.
+    heads: Dict[str, HeadInfo] = dataclasses.field(default_factory=dict)
 
     @classmethod
     def from_json(cls, json_object: Any) -> "State":
-        return cls(seen_reverts=json_object)
+        # Autoupgrade old JSON files.
+        if "heads" not in json_object:
+            json_object = {
+                "seen_reverts": json_object,
+                "heads": {},
+            }
+
+        return cls(
+            seen_reverts=json_object["seen_reverts"],
+            heads={
+                k: HeadInfo.from_json(v)
+                for k, v in json_object["heads"].items()
+            },
+        )
 
     def to_json(self) -> Any:
-        return self.seen_reverts
+        return {
+            "seen_reverts": self.seen_reverts,
+            "heads": {k: v.to_json() for k, v in self.heads.items()},
+        }
 
 
 def _find_interesting_android_shas(
@@ -277,17 +324,37 @@ def find_shas(
             logging.info("...All of which have been reported.")
             continue
 
-        yield (friendly_name, sha, new_reverts)
+        new_head_info = None
+        if old_head_info := state.heads.get(friendly_name):
+            if old_head_info.last_sha == sha:
+                new_head_info = old_head_info
+
+        if new_head_info is None:
+            now = int(time.time())
+            notify_at = HEAD_STALENESS_ALERT_INITIAL_SECS + now
+            new_head_info = HeadInfo(
+                last_sha=sha,
+                first_seen_timestamp=now,
+                next_notification_timestamp=notify_at,
+            )
+        new_state.heads[friendly_name] = new_head_info
+
+        yield friendly_name, sha, new_reverts
 
 
 def do_cherrypick(
     chroot_path: str,
     llvm_dir: str,
+    repository: str,
     interesting_shas: List[Tuple[str, str]],
     state: State,
     reviewers: List[str],
     cc: List[str],
 ) -> State:
+    def prettify_sha(sha: str) -> tiny_render.Piece:
+        rev = get_llvm_hash.GetVersionFrom(llvm_dir, sha)
+        return prettify_sha_for_email(sha, rev)
+
     new_state = State()
     seen: Set[str] = set()
     for friendly_name, _sha, reverts in find_shas(
@@ -311,6 +378,17 @@ def do_cherrypick(
                 )
             except get_upstream_patch.CherrypickError as e:
                 logging.info("%s, skipping...", str(e))
+
+    maybe_email_about_stale_heads(
+        new_state,
+        repository,
+        recipients=_EmailRecipients(
+            well_known=[],
+            direct=reviewers + cc,
+        ),
+        prettify_sha=prettify_sha,
+        is_dry_run=False,
+    )
     return new_state
 
 
@@ -328,6 +406,73 @@ def prettify_sha_for_email(
             inner=f"r{rev}",
         ),
     )
+
+
+def maybe_email_about_stale_heads(
+    new_state: State,
+    repository_name: str,
+    recipients: _EmailRecipients,
+    prettify_sha: Callable[[str], tiny_render.Piece],
+    is_dry_run: bool,
+) -> bool:
+    """Potentially send an email about stale HEADs in `new_state`.
+
+    These emails are sent to notify users of the current HEADs detected by this
+    script. They:
+    - aren't meant to hurry LLVM rolls along,
+    - are worded to avoid the implication that an LLVM roll is taking an
+      excessive amount of time, and
+    - are initially sent at the 2 month point of seeing the same HEAD.
+
+    We've had multiple instances in the past of upstream changes (e.g., moving
+    to other git branches or repos) leading to this revert checker silently
+    checking a very old HEAD for months. The intent is to send emails when the
+    correctness of the HEADs we're working with _might_ be wrong.
+    """
+    logging.info("Checking HEAD freshness...")
+    now = int(time.time())
+    stale = sorted(
+        (name, info)
+        for name, info in new_state.heads.items()
+        if info.next_notification_timestamp <= now
+    )
+    if not stale:
+        logging.info("All HEADs are fresh-enough; no need to send an email.")
+        return False
+
+    stale_listings = []
+
+    for name, info in stale:
+        days = (now - info.first_seen_timestamp) // ONE_DAY_SECS
+        pretty_rev = prettify_sha(info.last_sha)
+        stale_listings.append(
+            f"{name} at {pretty_rev}, which was last updated ~{days} days ago."
+        )
+
+    shas_are = "SHAs are" if len(stale_listings) > 1 else "SHA is"
+    email_body = [
+        "Hi! This is a friendly notification that the current upstream LLVM "
+        f"{shas_are} being tracked by the LLVM revert checker:",
+        tiny_render.UnorderedList(stale_listings),
+        tiny_render.line_break,
+        "If that's still correct, great! If it looks wrong, the revert "
+        "checker's SHA autodetection may need an update. Please file a bug "
+        "at go/crostc-bug if an update is needed. Thanks!",
+    ]
+
+    email = _Email(
+        subject=f"[revert-checker/{repository_name}] Tracked branch update",
+        body=email_body,
+    )
+    if is_dry_run:
+        logging.info("Dry-run specified; would otherwise send email %s", email)
+    else:
+        _send_revert_email(recipients, email)
+
+    next_notification = now + HEAD_STALENESS_ALERT_INTERVAL_SECS
+    for _, info in stale:
+        info.next_notification_timestamp = next_notification
+    return True
 
 
 def do_email(
@@ -371,6 +516,10 @@ def do_email(
             logging.info("Sending email with subject %r...", email.subject)
             _send_revert_email(recipients, email)
             logging.info("Email sent.")
+
+    maybe_email_about_stale_heads(
+        new_state, repository, recipients, prettify_sha, is_dry_run
+    )
     return new_state
 
 
@@ -488,6 +637,7 @@ def main(argv: List[str]) -> int:
         new_state = do_cherrypick(
             chroot_path=chroot_path,
             llvm_dir=llvm_dir,
+            repository=repository,
             interesting_shas=interesting_shas,
             state=state,
             reviewers=reviewers,
@@ -497,8 +647,8 @@ def main(argv: List[str]) -> int:
         new_state = do_email(
             is_dry_run=action == "dry-run",
             llvm_dir=llvm_dir,
-            repository=repository,
             interesting_shas=interesting_shas,
+            repository=repository,
             state=state,
             recipients=recipients,
         )
