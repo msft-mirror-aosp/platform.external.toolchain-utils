@@ -52,12 +52,6 @@ class CherrypickVersionError(ValueError):
     """ValueError that highlights the cherry-pick is before the start_ref."""
 
 
-class PatchApplicationError(ValueError):
-    """ValueError indicating a test patch application was unsuccessful."""
-
-    # TODO(ajordanr): Actually test that patches apply.
-
-
 @dataclasses.dataclass
 class LLVMGitRef:
     """Represents an LLVM git ref."""
@@ -190,6 +184,11 @@ class PatchContext:
             else:
                 # Some packages don't have a cherry directory.
                 rel_patch_path = f"{patch_source.git_ref}.patch"
+            if not self._is_valid_patch_range(self.start_ref, patch_source):
+                raise CherrypickVersionError(
+                    f"'from' ref {self.start_ref} is later or"
+                    f" same as than 'until' ref {patch_source}"
+                )
             pe = patch_utils.PatchEntry(
                 workdir=workdir,
                 metadata={
@@ -227,8 +226,7 @@ class PatchContext:
         json_response = get_llvm_github_pull(patch_source.number)
         github_ctx = GitHubPRContext(json_response, self.llvm_project_dir)
         rel_patch_path = f"{github_ctx.full_title_cleaned}.patch"
-        packages = github_ctx.get_changed_packages()
-        contents = github_ctx.git_squash_chain_patch()
+        contents, packages = github_ctx.git_squash_chain_patch()
         new_patch_entries = []
         for workdir in self._workdirs_for_packages(packages):
             pe = patch_utils.PatchEntry(
@@ -270,6 +268,14 @@ class PatchContext:
             p.rel_patch_path == to_check.rel_patch_path for p in patch_entries
         )
 
+    def _is_valid_patch_range(
+        self, from_ref: LLVMGitRef, to_ref: LLVMGitRef
+    ) -> bool:
+        return (
+            from_ref.to_rev(self.llvm_project_dir).number
+            < to_ref.to_rev(self.llvm_project_dir).number
+        )
+
 
 def get_commit_subj(git_root_dir: Path, ref: str) -> str:
     """Return a given commit's subject."""
@@ -306,7 +312,7 @@ def git_format_patch(git_root_dir: Path, ref: str) -> str:
     contents = proc.stdout.strip()
     if not contents:
         raise ValueError(f"No git diff between {ref}^..{ref}")
-    logging.debug("Patch diff is %s lines long", contents.count("\n"))
+    logging.debug("Patch diff is %d lines long", contents.count("\n"))
     return contents
 
 
@@ -377,13 +383,7 @@ class GitHubPRContext:
     def full_title_cleaned(self) -> str:
         return re.sub(r"\W", "-", self.full_title)
 
-    def get_changed_packages(self) -> Set[Path]:
-        self._fetch()
-        return get_changed_packages(
-            self.llvm_project_dir, (self.base_ref, self.head_ref)
-        )
-
-    def git_squash_chain_patch(self) -> str:
+    def git_squash_chain_patch(self) -> Tuple[str, Set[Path]]:
         """Replicate a squashed merge commit as a patch file.
 
         Args:
@@ -416,6 +416,8 @@ class GitHubPRContext:
                 )
                 f.write("\n")
 
+            logging.debug("Base ref: %s", self.base_ref)
+            logging.debug("Head ref: %s", self.head_ref)
             logging.debug(
                 "Creating worktree at '%s' with branch '%s'",
                 worktree_dir,
@@ -447,17 +449,32 @@ class GitHubPRContext:
                     ],
                     worktree_dir,
                 )
+                changed_packages = get_changed_packages(
+                    worktree_dir, (self.base_ref, "HEAD")
+                )
                 patch_contents = git_format_patch(worktree_dir, "HEAD")
             finally:
-                logging.debug("Cleaning up worktree")
+                logging.debug(
+                    "Cleaning up worktree and deleting branch %s",
+                    tmpbranch_name,
+                )
                 self._run(
                     ["git", "worktree", "remove", worktree_dir],
                     self.llvm_project_dir,
                 )
-            return patch_contents
+                self._run(
+                    ["git", "branch", "-D", tmpbranch_name],
+                    self.llvm_project_dir,
+                )
+        return (patch_contents, changed_packages)
 
     def _fetch(self) -> None:
         if not self._fetched:
+            logging.debug(
+                "Fetching from %s and setting FETCH_HEAD to %s",
+                self.clone_url,
+                self.head_ref,
+            )
             self._run(
                 ["git", "fetch", self.clone_url, self.head_ref],
                 cwd=self.llvm_project_dir,
@@ -502,6 +519,7 @@ def get_changed_packages(
     else:
         raise TypeError(f"ref was {type(ref)}; need a tuple or a string")
 
+    logging.debug("Getting git diff between %s..%s", ref_from, ref_to)
     proc = subprocess.run(
         ["git", "diff", "--name-only", f"{ref_from}..{ref_to}"],
         check=True,
@@ -510,6 +528,7 @@ def get_changed_packages(
         cwd=llvm_project_dir,
     )
     changed_paths = proc.stdout.splitlines()
+    logging.debug("Found %d changed files", len(changed_paths))
     # Some LLVM projects are built by LLVM ebuild on x86, so always apply the
     # patch to LLVM ebuild
     packages = {LLVM_PKG_PATH}
@@ -633,6 +652,12 @@ def parse_args() -> argparse.Namespace:
         help="Run normally, but don't make any changes. Read-only mode.",
     )
     parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging.",
+    )
+    parser.add_argument(
         "ref_or_pr_num",
         nargs="+",
         help="""Git ref or GitHub PR number to make patches.
@@ -641,6 +666,12 @@ def parse_args() -> argparse.Namespace:
         type=str,
     )
     args = parser.parse_args()
+
+    logging.basicConfig(
+        format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
+        "%(message)s",
+        level=logging.DEBUG if args.verbose else logging.INFO,
+    )
 
     args.patch_sources = validate_patch_args(args.ref_or_pr_num)
     if args.chromiumos_root:
@@ -669,12 +700,6 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     """Entry point for the program."""
-
-    logging.basicConfig(
-        format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
-        "%(message)s",
-        level=logging.INFO,
-    )
 
     args = parse_args()
 

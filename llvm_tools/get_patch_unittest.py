@@ -122,10 +122,22 @@ class TestGetPatch(unittest.TestCase):
             json.dump(JSON_FIXTURE, f)
             f.write("\n")
 
+    def test_bad_cherrypick_version(self) -> None:
+        """Test that bad cherrypick versions raises."""
+        start_sha_fixture = COMMIT_FIXTURES[0]
+
+        def _try_make_patches():
+            # This fixture is the same as the start_sha.
+            self.ctx.make_patches(
+                get_patch.LLVMGitRef(start_sha_fixture["sha"])
+            )
+
+        self.assertRaises(get_patch.CherrypickVersionError, _try_make_patches)
+
     def test_make_patches(self) -> None:
         """Test we can make patch entries from a git commit."""
 
-        fixture = COMMIT_FIXTURES[0]
+        fixture = COMMIT_FIXTURES[1]
         # We manually write and delete this file because it must have the name
         # as specified by get_patch. tempfile cannot guarantee us this name.
         self.write_json_fixture()
