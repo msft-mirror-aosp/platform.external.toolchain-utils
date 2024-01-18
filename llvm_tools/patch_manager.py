@@ -10,7 +10,7 @@ import enum
 import os
 from pathlib import Path
 import sys
-from typing import Iterable, List, Optional, Tuple
+from typing import Callable, Iterable, List, Optional, Tuple
 
 import failure_modes
 import get_llvm_hash
@@ -80,6 +80,14 @@ def GetCommandLineArgs(sys_argv: Optional[List[str]]):
         "application of. Not used in other modes.",
     )
 
+    # Add argument for the option to us git am to commit patch or
+    # just using patch.
+    parser.add_argument(
+        "--git_am",
+        action="store_true",
+        help="If set, use 'git am' to patch instead of GNU 'patch'. ",
+    )
+
     # Parse the command line.
     return parser.parse_args(sys_argv)
 
@@ -107,6 +115,7 @@ def CheckPatchApplies(
     llvm_src_dir: Path,
     patches_json_fp: Path,
     rel_patch_path: str,
+    patch_cmd: Optional[Callable] = None,
 ) -> GitBisectionCode:
     """Check that a given patch with the rel_patch_path applies in the stack.
 
@@ -122,6 +131,7 @@ def CheckPatchApplies(
         rel_patch_path: Relative patch path of the patch we want to check. If
           patches before this patch fail to apply, then the revision is
           skipped.
+        patch_cmd: Use 'git am' to patch instead of GNU 'patch'.
     """
     with patches_json_fp.open(encoding="utf-8") as f:
         patch_entries = patch_utils.json_to_patch_entries(
@@ -134,6 +144,7 @@ def CheckPatchApplies(
             llvm_src_dir,
             patch_entries,
             rel_patch_path,
+            patch_utils.git_am,
         )
     if success:
         # Everything is good, patch applied successfully.
@@ -154,6 +165,7 @@ def ApplyPatchAndPrior(
     src_dir: Path,
     patch_entries: Iterable[patch_utils.PatchEntry],
     rel_patch_path: str,
+    patch_cmd: Optional[Callable] = None,
 ) -> Tuple[bool, List[patch_utils.PatchEntry], List[patch_utils.PatchEntry]]:
     """Apply a patch, and all patches that apply before it in the patch stack.
 
@@ -178,7 +190,11 @@ def ApplyPatchAndPrior(
     for pe in patch_entries:
         is_patch_of_interest = pe.rel_patch_path == rel_patch_path
         applied, failed_hunks = patch_utils.apply_single_patch_entry(
-            svn_version, src_dir, pe, ignore_version_range=is_patch_of_interest
+            svn_version,
+            src_dir,
+            pe,
+            patch_cmd,
+            ignore_version_range=is_patch_of_interest,
         )
         meant_to_apply = bool(failed_hunks) or is_patch_of_interest
         if is_patch_of_interest:
@@ -261,6 +277,9 @@ def main(sys_argv: List[str]):
             svn_version=args.svn_version,
             llvm_src_dir=llvm_src_dir,
             patches_json_fp=patches_json_fp,
+            patch_cmd=patch_utils.git_am
+            if args.git_am
+            else patch_utils.gnu_patch,
             continue_on_failure=args.failure_mode
             == failure_modes.FailureModes.CONTINUE,
         )
@@ -272,8 +291,9 @@ def main(sys_argv: List[str]):
         )
 
     def _disable(args):
+        patch_cmd = patch_utils.git_am if args.git_am else patch_utils.gnu_patch
         patch_utils.update_version_ranges(
-            args.svn_version, llvm_src_dir, patches_json_fp
+            args.svn_version, llvm_src_dir, patches_json_fp, patch_cmd
         )
 
     def _test_single(args):
@@ -282,8 +302,13 @@ def main(sys_argv: List[str]):
                 "Running with bisect_patches requires the " "--test_patch flag."
             )
         svn_version = GetHEADSVNVersion(llvm_src_dir)
+        patch_cmd = patch_utils.git_am if args.git_am else patch_utils.gnu_patch
         error_code = CheckPatchApplies(
-            svn_version, llvm_src_dir, patches_json_fp, args.test_patch
+            svn_version,
+            llvm_src_dir,
+            patches_json_fp,
+            args.test_patch,
+            patch_cmd,
         )
         # Since this is for bisection, we want to exit with the
         # GitBisectionCode enum.

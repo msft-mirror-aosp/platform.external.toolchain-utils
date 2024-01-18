@@ -12,11 +12,22 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import Any, Dict, IO, Iterable, List, Optional, Tuple
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    IO,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import atomic_write_file
 
 
+APPLIED_RE = re.compile(r"^Applying: (.+) \(#(\d+)\)$")
 CHECKED_FILE_RE = re.compile(r"^checking file\s+(.*)$")
 HUNK_FAILED_RE = re.compile(r"^Hunk #(\d+) FAILED at.*")
 HUNK_HEADER_RE = re.compile(r"^@@\s+-(\d+),(\d+)\s+\+(\d+),(\d+)\s+@@")
@@ -102,6 +113,12 @@ def parse_failed_patch_output(text: str) -> Dict[str, List[int]]:
                 raise ValueError("Input stream was not parsable")
             hunk_id = int(failed_match.group(1))
             failed_hunks[current_file].append(hunk_id)
+        else:
+            failed_applied_patches = APPLIED_RE.match(eline)
+            if failed_applied_patches:
+                current_file = failed_applied_patches.group(1)
+                hunk_id = int(failed_applied_patches.group(2))
+                failed_hunks[current_file].append(hunk_id)
     return failed_hunks
 
 
@@ -226,7 +243,10 @@ class PatchEntry:
         return svn_version >= until_v
 
     def apply(
-        self, root_dir: Path, extra_args: Optional[List[str]] = None
+        self,
+        root_dir: Path,
+        patch_cmd: Optional[Callable] = None,
+        extra_args: Optional[List[str]] = None,
     ) -> PatchResult:
         """Apply a patch to a given directory."""
         # Cmd to apply a patch in the src unpack path.
@@ -235,17 +255,15 @@ class PatchEntry:
             raise RuntimeError(
                 f"Cannot apply: patch {abs_patch_path} is not a file"
             )
-        cmd = [
-            "patch",
-            "-d",
-            str(root_dir.absolute()),
-            "-f",
-            "-E",
-            "-p1",
-            "--no-backup-if-mismatch",
-            "-i",
-            str(abs_patch_path),
-        ] + (extra_args or [])
+
+        if not patch_cmd:
+            patch_cmd = gnu_patch
+
+        if patch_cmd == gnu_patch:
+            cmd = patch_cmd(root_dir, abs_patch_path) + (extra_args or [])
+        else:
+            cmd = patch_cmd(abs_patch_path) + (extra_args or [])
+
         try:
             subprocess.run(
                 cmd, encoding="utf-8", check=True, stdout=subprocess.PIPE
@@ -254,19 +272,27 @@ class PatchEntry:
             parsed_hunks = self.parsed_hunks()
             failed_hunks_id_dict = parse_failed_patch_output(e.stdout)
             failed_hunks = {}
-            for path, failed_hunk_ids in failed_hunks_id_dict.items():
-                hunks_for_file = parsed_hunks[path]
-                failed_hunks[path] = [
-                    hunk
-                    for hunk in hunks_for_file
-                    if hunk.hunk_id in failed_hunk_ids
-                ]
+            if patch_cmd == gnu_patch:
+                for path, failed_hunk_ids in failed_hunks_id_dict.items():
+                    hunks_for_file = parsed_hunks[path]
+                    failed_hunks[path] = [
+                        hunk
+                        for hunk in hunks_for_file
+                        if hunk.hunk_id in failed_hunk_ids
+                    ]
+            elif failed_hunks_id_dict:
+                # use git am
+                failed_hunks = parsed_hunks
+
             return PatchResult(succeeded=False, failed_hunks=failed_hunks)
         return PatchResult(succeeded=True)
 
-    def test_apply(self, root_dir: Path) -> PatchResult:
+    def test_apply(
+        self, root_dir: Path, patch_cmd: Optional[Callable] = None
+    ) -> PatchResult:
         """Dry run applying a patch to a given directory."""
-        return self.apply(root_dir, ["--dry-run"])
+        extra_args = [] if patch_cmd == git_am else ["--dry-run"]
+        return self.apply(root_dir, patch_cmd, extra_args)
 
     def title(self) -> str:
         if not self.metadata:
@@ -338,6 +364,7 @@ def apply_all_from_json(
     svn_version: int,
     llvm_src_dir: Path,
     patches_json_fp: Path,
+    patch_cmd: Optional[Callable] = None,
     continue_on_failure: bool = False,
 ) -> PatchInfo:
     """Attempt to apply some patches to a given LLVM source tree.
@@ -359,7 +386,7 @@ def apply_all_from_json(
     applied_patches = []
     for pe in patches:
         applied, failed_hunks = apply_single_patch_entry(
-            svn_version, llvm_src_dir, pe
+            svn_version, llvm_src_dir, pe, patch_cmd
         )
         if applied:
             applied_patches.append(pe)
@@ -389,6 +416,7 @@ def apply_single_patch_entry(
     svn_version: int,
     llvm_src_dir: Path,
     pe: PatchEntry,
+    patch_cmd: Optional[Callable] = None,
     ignore_version_range: bool = False,
 ) -> Tuple[bool, Optional[Dict[str, List[Hunk]]]]:
     """Try to apply a single PatchEntry object.
@@ -402,11 +430,11 @@ def apply_single_patch_entry(
     if not ignore_version_range and not pe.can_patch_version(svn_version):
         return False, None
     # Test first to avoid making changes.
-    test_application = pe.test_apply(llvm_src_dir)
+    test_application = pe.test_apply(llvm_src_dir, patch_cmd)
     if not test_application:
         return False, test_application.failed_hunks
     # Now actually make changes.
-    application_result = pe.apply(llvm_src_dir)
+    application_result = pe.apply(llvm_src_dir, patch_cmd)
     if not application_result:
         # This should be very rare/impossible.
         return False, application_result.failed_hunks
@@ -475,7 +503,10 @@ def predict_indent(patches_lines: List[str]) -> int:
 
 
 def update_version_ranges(
-    svn_version: int, llvm_src_dir: Path, patches_json_fp: Path
+    svn_version: int,
+    llvm_src_dir: Path,
+    patches_json_fp: Path,
+    patch_cmd: Optional[Callable] = None,
 ) -> PatchInfo:
     """Reduce the version ranges of failing patches.
 
@@ -488,6 +519,7 @@ def update_version_ranges(
         svn_version: LLVM revision number.
         llvm_src_dir: llvm-project directory path.
         patches_json_fp: Filepath to the PATCHES.json file.
+        patch_cmd: option to apply patch.
 
     Returns:
         PatchInfo for applied and disabled patches.
@@ -500,7 +532,7 @@ def update_version_ranges(
         contents,
     )
     modified_entries, applied_patches = update_version_ranges_with_entries(
-        svn_version, llvm_src_dir, patch_entries
+        svn_version, llvm_src_dir, patch_entries, patch_cmd
     )
     with atomic_write_file.atomic_write(patches_json_fp, encoding="utf-8") as f:
         _write_json_changes(
@@ -525,6 +557,7 @@ def update_version_ranges_with_entries(
     svn_version: int,
     llvm_src_dir: Path,
     patch_entries: Iterable[PatchEntry],
+    patch_cmd: Optional[Callable] = None,
 ) -> Tuple[List[PatchEntry], List[PatchEntry]]:
     """Test-able helper for UpdateVersionRanges.
 
@@ -546,7 +579,7 @@ def update_version_ranges_with_entries(
     )
     with git_clean_context(llvm_src_dir):
         for pe in active_patches:
-            test_result = pe.test_apply(llvm_src_dir)
+            test_result = pe.test_apply(llvm_src_dir, patch_cmd)
             if not test_result:
                 if pe.version_range is None:
                     pe.version_range = {}
@@ -555,7 +588,7 @@ def update_version_ranges_with_entries(
             else:
                 # We have to actually apply the patch so that future patches
                 # will stack properly.
-                if not pe.apply(llvm_src_dir).succeeded:
+                if not pe.apply(llvm_src_dir, patch_cmd).succeeded:
                     raise RuntimeError(
                         "Could not apply patch that dry ran successfully"
                     )
@@ -605,3 +638,23 @@ def remove_old_patches(
         removed_patches=[p.rel_patch_path for p in removed_entries],
         modified_metadata=str(patches_json_fp) if removed_entries else None,
     )
+
+
+def git_am(patch_path: Path) -> List[Union[str, Path]]:
+    cmd = ["git", "am", "--3way", str(patch_path)]
+    return cmd
+
+
+def gnu_patch(root_dir: Path, patch_path: Path) -> List[Union[str, Path]]:
+    cmd = [
+        "patch",
+        "-d",
+        str(root_dir.absolute()),
+        "-f",
+        "-E",
+        "-p1",
+        "--no-backup-if-mismatch",
+        "-i",
+        str(patch_path),
+    ]
+    return cmd
