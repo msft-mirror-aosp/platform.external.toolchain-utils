@@ -164,7 +164,6 @@ var crosHardenedConfig = config{
 		"--unwindlib=libunwind",
 		"-Wno-section",
 		"-fno-addrsig",
-		"-fuse-ld=lld",
 		"-ftrivial-auto-var-init=zero",
 	),
 	clangPostFlags:    crosCommonClangPostFlags(),
@@ -214,7 +213,6 @@ var crosHostConfig = config{
 		crosCommonClangFlags(),
 		"-Wno-unused-local-typedefs",
 		"-fno-addrsig",
-		"-fuse-ld=lld",
 	),
 	// Temporarily disable Wdeprecated-copy. b/191479033
 	clangPostFlags:    crosCommonClangPostFlags(),
