@@ -12,12 +12,16 @@ use std::str::from_utf8;
 use std::thread;
 
 use anyhow::{anyhow, bail, Context, Result};
-
+use lazy_static::lazy_static;
 use log::trace;
+
+use regex::Regex;
 
 use simplelog::{Config, LevelFilter, WriteLogger};
 
 use serde_json::{from_slice, to_writer, Value};
+
+const CHROOT_SERVER_PATH: &str = "/usr/sbin/rust-analyzer";
 
 fn main() -> Result<()> {
     let args = env::args().skip(1);
@@ -69,25 +73,25 @@ fn main() -> Result<()> {
     init_log()?;
 
     let outside_prefix: &'static str = {
-        let path = chromiumos_root
+        let mut path = chromiumos_root
             .to_str()
-            .ok_or_else(|| anyhow!("Path is not valid UTF-8"))?;
+            .ok_or_else(|| anyhow!("Path is not valid UTF-8"))?
+            .to_owned();
 
-        let mut tmp = format!("file://{}", path);
-        if Some(&b'/') != tmp.as_bytes().last() {
-            tmp.push('/');
+        if Some(&b'/') == path.as_bytes().last() {
+            let _ = path.pop();
         }
 
         // No need to ever free this memory, so let's get a static reference.
-        Box::leak(tmp.into_boxed_str())
+        Box::leak(path.into_boxed_str())
     };
 
     trace!("Found chromiumos root {}", outside_prefix);
 
-    let inside_prefix: &'static str = "file:///mnt/host/source/";
+    let inside_prefix: &'static str = "/mnt/host/source";
 
     let cmd = "cros_sdk";
-    let all_args = ["--", "rust-analyzer"]
+    let all_args = ["--", CHROOT_SERVER_PATH]
         .into_iter()
         .chain(args.iter().map(|x| x.as_str()));
     let mut child = KillOnDrop(run_command(cmd, all_args)?);
@@ -183,6 +187,11 @@ fn replace(contents: &[u8], pattern: &str, replacement: &str, dest: &mut Vec<u8>
             // `s.replace` is very likely doing more work than necessary. Probably we only need
             // to look for the pattern at the beginning of the string.
             {
+                lazy_static! {
+                    static ref SERVER_PATH_REGEX: Regex =
+                        Regex::new(r".*/rust-analyzer-chromiumos-wrapper$").unwrap();
+                }
+                let s = SERVER_PATH_REGEX.replace_all(&s, CHROOT_SERVER_PATH);
                 Value::String(s.replace(pattern, replacement))
             }
             Value::Array(mut v) => {
@@ -359,6 +368,20 @@ mod test {
             // json_expected
             "{\"key0\": \"sometextreplacement\", \"key1\": {\"key2\": 5,\
             \"key3\": \"morereplacementtext\"}, \"key4\": 1}",
+        )
+    }
+
+    #[test]
+    fn test_stream_with_replacement_3() -> Result<()> {
+        test_stream_with_replacement(
+            // read
+            "Content-Length: 55\r\n\r\n{\"path\": \"/my_folder/rust-analyzer-chromiumos-wrapper\"}",
+            // pattern
+            "",
+            // replacement
+            "",
+            // json_expected
+            "{\"path\": \"/usr/sbin/rust-analyzer\"}",
         )
     }
 }
