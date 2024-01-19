@@ -294,12 +294,23 @@ def _read_state(state_file: str) -> State:
         return State()
 
 
-def find_shas(
+@dataclasses.dataclass(frozen=True)
+class NewRevertInfo:
+    """A list of new reverts for a given SHA."""
+
+    friendly_name: str
+    sha: str
+    new_reverts: List[revert_checker.Revert]
+
+
+def locate_new_reverts_across_shas(
     llvm_dir: str,
     interesting_shas: List[Tuple[str, str]],
     state: State,
-    new_state: State,
-):
+) -> Tuple[State, List[NewRevertInfo]]:
+    """Locates and returns yet-unseen reverts across `interesting_shas`."""
+    new_state = State()
+    revert_infos = []
     for friendly_name, sha in interesting_shas:
         logging.info("Finding reverts across %s (%s)", friendly_name, sha)
         all_reverts = revert_checker.find_reverts(
@@ -339,7 +350,14 @@ def find_shas(
             )
         new_state.heads[friendly_name] = new_head_info
 
-        yield friendly_name, sha, new_reverts
+        revert_infos.append(
+            NewRevertInfo(
+                friendly_name=friendly_name,
+                sha=sha,
+                new_reverts=new_reverts,
+            )
+        )
+    return new_state, revert_infos
 
 
 def do_cherrypick(
@@ -357,13 +375,16 @@ def do_cherrypick(
 
     new_state = State()
     seen: Set[str] = set()
-    for friendly_name, _sha, reverts in find_shas(
-        llvm_dir, interesting_shas, state, new_state
-    ):
-        if friendly_name in seen:
+
+    new_state, new_reverts = locate_new_reverts_across_shas(
+        llvm_dir, interesting_shas, state
+    )
+
+    for revert_info in new_reverts:
+        if revert_info.friendly_name in seen:
             continue
-        seen.add(friendly_name)
-        for sha, reverted_sha in reverts:
+        seen.add(revert_info.friendly_name)
+        for sha, reverted_sha in revert_info.new_reverts:
             try:
                 # We upload reverts for all platforms by default, since there's
                 # no real reason for them to be CrOS-specific.
@@ -494,17 +515,18 @@ def do_email(
             encoding="utf-8",
         ).strip()
 
-    new_state = State()
-    for friendly_name, sha, new_reverts in find_shas(
-        llvm_dir, interesting_shas, state, new_state
-    ):
+    new_state, new_reverts = locate_new_reverts_across_shas(
+        llvm_dir, interesting_shas, state
+    )
+
+    for revert_info in new_reverts:
         email = _generate_revert_email(
             repository,
-            friendly_name,
-            sha,
+            revert_info.friendly_name,
+            revert_info.sha,
             prettify_sha,
             get_sha_description,
-            new_reverts,
+            revert_info.new_reverts,
         )
         if is_dry_run:
             logging.info(
