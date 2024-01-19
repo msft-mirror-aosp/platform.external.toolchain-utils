@@ -32,7 +32,7 @@ fn main() -> Result<()> {
         None => {
             // It doesn't appear that we're in a chroot. Run the
             // regular rust-analyzer.
-            return Err(process::Command::new("rust-analyzer").args(args).exec())?;
+            bail!(process::Command::new("rust-analyzer").args(args).exec());
         }
     };
 
@@ -43,21 +43,23 @@ fn main() -> Result<()> {
         // * We don't support the arguments, so we bail.
         // * We still need to do our path translation in the LSP protocol.
         fn run(args: &[String]) -> Result<()> {
-            return Err(process::Command::new("cros_sdk")
+            bail!(process::Command::new("cros_sdk")
                 .args(["--", "rust-analyzer"])
                 .args(args)
-                .exec())?;
+                .exec());
         }
 
-        if args.iter().any(|x| match x.as_str() {
-            "--version" | "--help" | "-h" | "--print-config-schema" => true,
-            _ => false,
+        if args.iter().any(|x| {
+            matches!(
+                x.as_str(),
+                "--version" | "--help" | "-h" | "--print-config-schema"
+            )
         }) {
             // With any of these options rust-analyzer will just print something and exit.
             return run(&args);
         }
 
-        if !args[0].starts_with("-") {
+        if !args[0].starts_with('-') {
             // It's a subcommand, and seemingly none of these need the path translation
             // rust-analyzer-chromiumos-wrapper provides.
             return run(&args);
@@ -239,7 +241,7 @@ fn stream_with_replacement<R: BufRead, W: Write>(
     let mut buf2 = Vec::with_capacity(1024);
     loop {
         read_header(r, &mut head)?;
-        if head.length.is_none() && head.other_fields.len() == 0 {
+        if head.length.is_none() && head.other_fields.is_empty() {
             // No content in the header means we're apparently done.
             return Ok(());
         }
