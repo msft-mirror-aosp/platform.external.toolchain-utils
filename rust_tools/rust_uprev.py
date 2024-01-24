@@ -956,17 +956,8 @@ def find_oldest_rust_version() -> RustVersion:
 
 
 def find_ebuild_for_rust_version(version: RustVersion) -> Path:
-    rust_ebuilds = [
-        ebuild for x, ebuild in find_rust_versions() if x == version
-    ]
-    if not rust_ebuilds:
-        raise ValueError(f"No Rust ebuilds found matching {version}")
-    if len(rust_ebuilds) > 1:
-        raise ValueError(
-            f"Multiple Rust ebuilds found matching {version}: "
-            f"{rust_ebuilds}"
-        )
-    return rust_ebuilds[0]
+    """Returns the path of the ebuild for the given version of dev-lang/rust."""
+    return find_ebuild_path(RUST_PATH, "rust", version)
 
 
 def rebuild_packages(version: RustVersion):
