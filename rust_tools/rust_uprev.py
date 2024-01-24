@@ -934,14 +934,21 @@ def create_rust_uprev(
 
 
 def find_rust_versions() -> List[Tuple[RustVersion, Path]]:
+    """Returns (RustVersion, ebuild_path) for base versions of dev-lang/rust.
+
+    This excludes symlinks to ebuilds, so if rust-1.34.0.ebuild and
+    rust-1.34.0-r1.ebuild both exist and -r1 is a symlink to the other,
+    only rust-1.34.0.ebuild will be in the return value.
+    """
     return [
         (RustVersion.parse_from_ebuild(ebuild), ebuild)
         for ebuild in RUST_PATH.iterdir()
-        if ebuild.suffix == ".ebuild"
+        if ebuild.suffix == ".ebuild" and not ebuild.is_symlink()
     ]
 
 
 def find_oldest_rust_version() -> RustVersion:
+    """Returns the RustVersion of the oldest dev-lang/rust ebuild."""
     rust_versions = find_rust_versions()
     if len(rust_versions) <= 1:
         raise RuntimeError("Expect to find more than one Rust versions")

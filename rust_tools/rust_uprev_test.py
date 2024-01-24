@@ -309,6 +309,27 @@ class FindEbuildPathTest(unittest.TestCase):
             self.assertEqual(result, ebuild)
 
 
+class FindRustVersionsTest(unittest.TestCase):
+    """Tests for rust_uprev.find_rust_versions."""
+
+    def test_with_symlinks(self):
+        with tempfile.TemporaryDirectory() as t:
+            tmpdir = Path(t)
+            rust_1_49_1_ebuild = tmpdir / "rust-1.49.1.ebuild"
+            rust_1_50_0_ebuild = tmpdir / "rust-1.50.0.ebuild"
+            rust_1_50_0_r1_ebuild = tmpdir / "rust-1.50.0-r1.ebuild"
+            rust_1_49_1_ebuild.touch()
+            rust_1_50_0_ebuild.touch()
+            rust_1_50_0_r1_ebuild.symlink_to(rust_1_50_0_ebuild)
+            with mock.patch("rust_uprev.RUST_PATH", tmpdir):
+                actual = rust_uprev.find_rust_versions()
+                expected = [
+                    (rust_uprev.RustVersion(1, 49, 1), rust_1_49_1_ebuild),
+                    (rust_uprev.RustVersion(1, 50, 0), rust_1_50_0_ebuild),
+                ]
+                self.assertEqual(actual, expected)
+
+
 class MirrorHasFileTest(unittest.TestCase):
     """Tests for rust_uprev.mirror_has_file."""
 
