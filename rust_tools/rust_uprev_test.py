@@ -22,8 +22,6 @@ from llvm_tools import git
 with mock.patch("subprocess.check_output", return_value="/fake/chromiumos"):
     import rust_uprev
 
-from rust_uprev import RustVersion
-
 
 def _fail_command(cmd, *_args, **_kwargs):
     err = subprocess.CalledProcessError(returncode=1, cmd=cmd)
@@ -498,7 +496,7 @@ class PrepareUprevTest(unittest.TestCase):
     @mock.patch.object(
         rust_uprev,
         "get_rust_bootstrap_version",
-        return_value=RustVersion(0, 41, 12),
+        return_value=rust_uprev.RustVersion(0, 41, 12),
     )
     @mock.patch.object(rust_uprev, "get_command_output")
     def test_return_none_with_template_larger_than_input(
@@ -903,7 +901,7 @@ class RustUprevOtherStagesTests(unittest.TestCase):
             mock_path = mock.Mock()
             mock_path.read_text.return_value = rust_ebuild
             mock_find_ebuild_path.return_value = mock_path
-            rust_uprev.build_cross_compiler(RustVersion(7, 3, 31))
+            rust_uprev.build_cross_compiler(rust_uprev.RustVersion(7, 3, 31))
 
         mock_run_in_chroot.assert_called_once_with(
             ["sudo", "emerge", "-j", "-G"]
