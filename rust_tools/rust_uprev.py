@@ -401,13 +401,13 @@ def prepare_uprev(
         return None
 
     logging.info(
-        "Template Rust version is %s (ebuild: %r)",
+        "Template Rust version is %s (ebuild: %s)",
         template,
         ebuild_path,
     )
     logging.info("rust-bootstrap version is %s", bootstrap_version)
 
-    return PreparedUprev(template, Path(ebuild_path), bootstrap_version)
+    return PreparedUprev(template, ebuild_path, bootstrap_version)
 
 
 def create_ebuild(
@@ -933,11 +933,11 @@ def create_rust_uprev(
     )
 
 
-def find_rust_versions() -> List[Tuple[RustVersion, str]]:
+def find_rust_versions() -> List[Tuple[RustVersion, Path]]:
     return [
-        (RustVersion.parse_from_ebuild(x), os.path.join(RUST_PATH, x))
-        for x in os.listdir(RUST_PATH)
-        if x.endswith(".ebuild")
+        (RustVersion.parse_from_ebuild(ebuild), ebuild)
+        for ebuild in RUST_PATH.iterdir()
+        if ebuild.suffix == ".ebuild"
     ]
 
 
@@ -948,7 +948,7 @@ def find_oldest_rust_version() -> RustVersion:
     return min(rust_versions)[0]
 
 
-def find_ebuild_for_rust_version(version: RustVersion) -> str:
+def find_ebuild_for_rust_version(version: RustVersion) -> Path:
     rust_ebuilds = [
         ebuild for x, ebuild in find_rust_versions() if x == version
     ]

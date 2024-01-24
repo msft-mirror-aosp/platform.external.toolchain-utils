@@ -467,7 +467,7 @@ class PrepareUprevTest(unittest.TestCase):
     @mock.patch.object(
         rust_uprev,
         "find_ebuild_for_rust_version",
-        return_value="/path/to/ebuild",
+        return_value=Path("/path/to/ebuild"),
     )
     @mock.patch.object(rust_uprev, "find_ebuild_path")
     @mock.patch.object(rust_uprev, "get_command_output")
@@ -858,21 +858,25 @@ class RustUprevOtherStagesTests(unittest.TestCase):
             ebuild_path.parent.joinpath(f"rust-{self.new_version}.ebuild"),
         )
 
-    @mock.patch.object(os, "listdir")
-    def test_find_oldest_rust_version_pass(self, mock_ls):
+    @mock.patch("rust_uprev.find_rust_versions")
+    def test_find_oldest_rust_version_pass(self, rust_versions):
         oldest_version_name = f"rust-{self.old_version}.ebuild"
-        mock_ls.return_value = [
-            oldest_version_name,
-            f"rust-{self.current_version}.ebuild",
-            f"rust-{self.new_version}.ebuild",
+        rust_versions.return_value = [
+            (self.old_version, oldest_version_name),
+            (self.current_version, f"rust-{self.current_version}.ebuild"),
+            (self.new_version, f"rust-{self.new_version}.ebuild"),
         ]
         actual = rust_uprev.find_oldest_rust_version()
         expected = self.old_version
         self.assertEqual(expected, actual)
 
-    @mock.patch.object(os, "listdir")
-    def test_find_oldest_rust_version_fail_with_only_one_ebuild(self, mock_ls):
-        mock_ls.return_value = [f"rust-{self.new_version}.ebuild"]
+    @mock.patch("rust_uprev.find_rust_versions")
+    def test_find_oldest_rust_version_fail_with_only_one_ebuild(
+        self, rust_versions
+    ):
+        rust_versions.return_value = [
+            (self.new_version, f"rust-{self.new_version}.ebuild"),
+        ]
         with self.assertRaises(RuntimeError) as context:
             rust_uprev.find_oldest_rust_version()
         self.assertEqual(
