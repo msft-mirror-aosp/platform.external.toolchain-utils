@@ -638,16 +638,6 @@ BOOTSTRAP_VERSION="1.3.6"
         )
 
 
-class UpdateManifestTest(unittest.TestCase):
-    """Tests for update_manifest step in rust_uprev"""
-
-    @mock.patch.object(rust_uprev, "ebuild_actions")
-    def test_update_manifest(self, mock_run):
-        ebuild_file = Path("/path/to/rust/rust-1.1.1.ebuild")
-        rust_uprev.update_manifest(ebuild_file)
-        mock_run.assert_called_once_with("rust", ["manifest"])
-
-
 class UpdateBootstrapEbuildTest(unittest.TestCase):
     """Tests for rust_uprev.update_bootstrap_ebuild()"""
 

@@ -498,7 +498,7 @@ def fetch_distfile_from_mirror(name: str) -> None:
 
     This ensures that the file exists on the mirror, and
     that we can read it. We overwrite any existing distfile
-    to ensure the checksums that update_manifest() records
+    to ensure the checksums that `ebuild manifest` records
     match the file as it exists on the mirror.
 
     This function also attempts to verify the ACL for
@@ -693,12 +693,6 @@ def mirror_rust_source(version: RustVersion) -> None:
     )
 
 
-def update_manifest(ebuild_file: PathOrStr) -> None:
-    """Updates the MANIFEST for the ebuild at the given path."""
-    ebuild = Path(ebuild_file)
-    ebuild_actions(ebuild.parent.name, ["manifest"])
-
-
 def update_rust_packages(
     pkgatom: str, rust_version: RustVersion, add: bool
 ) -> None:
@@ -854,11 +848,7 @@ def create_rust_uprev(
     )
     run_step(
         "update bootstrap manifest",
-        lambda: update_manifest(
-            rust_bootstrap_path().joinpath(
-                f"rust-bootstrap-{template_version}.ebuild"
-            )
-        ),
+        lambda: ebuild_actions("dev-lang/rust-bootstrap", ["manifest"]),
     )
     run_step(
         "update bootstrap version",
@@ -871,7 +861,7 @@ def create_rust_uprev(
     template_host_ebuild = EBUILD_PREFIX.joinpath(
         f"dev-lang/rust-host/rust-host-{template_version}.ebuild"
     )
-    host_file = run_step(
+    run_step(
         "create host ebuild",
         lambda: create_ebuild(
             template_host_ebuild, "dev-lang/rust-host", rust_version
@@ -879,15 +869,15 @@ def create_rust_uprev(
     )
     run_step(
         "update host manifest to add new version",
-        lambda: update_manifest(Path(host_file)),
+        lambda: ebuild_actions("dev-lang/rust-host", ["manifest"]),
     )
-    target_file = run_step(
+    run_step(
         "create target ebuild",
         lambda: create_ebuild(template_ebuild, "dev-lang/rust", rust_version),
     )
     run_step(
         "update target manifest to add new version",
-        lambda: update_manifest(Path(target_file)),
+        lambda: ebuild_actions("dev-lang/rust", ["manifest"]),
     )
     run_step(
         "generate profile data for rustc",
@@ -908,12 +898,8 @@ def create_rust_uprev(
         lambda: set_include_profdata_src(CROS_RUSTC_ECLASS, include=True),
     )
     run_step(
-        "update host manifest to add profile data",
-        lambda: update_manifest(Path(host_file)),
-    )
-    run_step(
-        "update target manifest to add profile data",
-        lambda: update_manifest(Path(target_file)),
+        "update dev-lang/rust-artifacts manifest to add profile data",
+        lambda: ebuild_actions("dev-lang/rust-artifacts", ["manifest"]),
     )
     if not skip_compile:
         run_step("build packages", lambda: rebuild_packages(rust_version))
@@ -1034,10 +1020,9 @@ def remove_rust_bootstrap_version(
             rust_bootstrap_path(), "rust-bootstrap", version
         ),
     )
-    ebuild_file = find_ebuild_for_package("rust-bootstrap")
     run_step(
         "update bootstrap manifest to delete old version",
-        lambda: update_manifest(ebuild_file),
+        lambda: ebuild_actions("dev-lang/rust-bootstrap", ["manifest"]),
     )
 
 
@@ -1070,10 +1055,9 @@ def remove_rust_uprev(
             delete_version,
         ),
     )
-    target_file = find_ebuild_for_package("rust")
     run_step(
         "update target manifest to delete old version",
-        lambda: update_manifest(target_file),
+        lambda: ebuild_actions("dev-lang/rust", ["manifest"]),
     )
     run_step(
         "remove target version from rust packages",
@@ -1081,10 +1065,9 @@ def remove_rust_uprev(
             "dev-lang/rust", delete_version, add=False
         ),
     )
-    host_file = find_ebuild_for_package("rust-host")
     run_step(
         "update host manifest to delete old version",
-        lambda: update_manifest(host_file),
+        lambda: ebuild_actions("dev-lang/rust-host", ["manifest"]),
     )
     run_step(
         "remove host version from rust packages",
