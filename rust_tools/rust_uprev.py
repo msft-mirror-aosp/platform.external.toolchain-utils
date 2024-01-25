@@ -26,6 +26,7 @@ See `--help` for all available options.
 """
 
 import argparse
+import functools
 import json
 import logging
 import os
@@ -110,6 +111,12 @@ RUST_PATH = Path(EBUILD_PREFIX, "dev-lang", "rust")
 # to verify that the key change is legitimate.
 RUST_SIGNING_KEY = "85AB96E6FA1BE5FE"
 RUST_SRC_BASE_URI = "https://static.rust-lang.org/dist/"
+# Packages that need to be processed like dev-lang/rust.
+RUST_PACKAGES = (
+    ("dev-lang", "rust-artifacts"),
+    ("dev-lang", "rust-host"),
+    ("dev-lang", "rust"),
+)
 
 
 class SignatureVerificationError(Exception):
@@ -864,32 +871,24 @@ def create_rust_uprev(
         "turn off profile data sources in cros-rustc.eclass",
         lambda: set_include_profdata_src(CROS_RUSTC_ECLASS, include=False),
     )
+
+    for category, name in RUST_PACKAGES:
+        run_step(
+            f"create new {category}/{name} ebuild",
+            functools.partial(
+                create_ebuild,
+                category,
+                name,
+                template_version,
+                rust_version,
+            ),
+        )
+
     run_step(
-        "create host ebuild",
-        lambda: create_ebuild(
-            "dev-lang",
-            "rust-host",
-            template_version,
-            rust_version,
-        ),
+        "update dev-lang/rust-artifacts manifest to add new version",
+        lambda: ebuild_actions("dev-lang/rust-artifacts", ["manifest"]),
     )
-    run_step(
-        "update host manifest to add new version",
-        lambda: ebuild_actions("dev-lang/rust-host", ["manifest"]),
-    )
-    run_step(
-        "create target ebuild",
-        lambda: create_ebuild(
-            "dev-lang",
-            "rust",
-            template_version,
-            rust_version,
-        ),
-    )
-    run_step(
-        "update target manifest to add new version",
-        lambda: ebuild_actions("dev-lang/rust", ["manifest"]),
-    )
+
     run_step(
         "generate profile data for rustc",
         lambda: run_in_chroot([PGO_RUST, "generate"]),
@@ -961,11 +960,8 @@ def rebuild_packages(version: RustVersion):
     """Rebuild packages modified by this script."""
     # Remove all packages we modify to avoid depending on preinstalled
     # versions. This ensures that the packages can really be built.
-    packages = [
-        "dev-lang/rust",
-        "dev-lang/rust-host",
-        "dev-lang/rust-bootstrap",
-    ]
+    packages = [f"{category}/{name}" for category, name in RUST_PACKAGES]
+    packages.append("dev-lang/rust-bootstrap")
     for pkg in packages:
         unmerge_package_if_installed(pkg)
     # Mention only dev-lang/rust explicitly, so that others are pulled
@@ -1054,31 +1050,27 @@ def remove_rust_uprev(
         find_desired_rust_version,
         result_from_json=find_desired_rust_version_from_json,
     )
+
+    for category, name in RUST_PACKAGES:
+        run_step(
+            f"remove old {name} ebuild",
+            functools.partial(
+                remove_ebuild_version,
+                EBUILD_PREFIX / category / name,
+                name,
+                delete_version,
+            ),
+        )
+
     run_step(
-        "remove target ebuild",
-        lambda: remove_ebuild_version(RUST_PATH, "rust", delete_version),
-    )
-    run_step(
-        "remove host ebuild",
-        lambda: remove_ebuild_version(
-            EBUILD_PREFIX.joinpath("dev-lang/rust-host"),
-            "rust-host",
-            delete_version,
-        ),
-    )
-    run_step(
-        "update target manifest to delete old version",
-        lambda: ebuild_actions("dev-lang/rust", ["manifest"]),
+        "update dev-lang/rust-artifacts manifest to delete old version",
+        lambda: ebuild_actions("dev-lang/rust-artifacts", ["manifest"]),
     )
     run_step(
         "remove target version from rust packages",
         lambda: update_rust_packages(
             "dev-lang/rust", delete_version, add=False
         ),
-    )
-    run_step(
-        "update host manifest to delete old version",
-        lambda: ebuild_actions("dev-lang/rust-host", ["manifest"]),
     )
     run_step(
         "remove host version from rust packages",
