@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -415,27 +416,39 @@ func TestDoubleBuildWerrorChmodsThingsAppropriately(t *testing.T) {
 	})
 }
 
+type commandBuilderOpts struct {
+	isGcc  bool
+	cflags []string
+}
+
+func newWerrorCommandBuilderOrDie(t *testing.T, ctx *testContext, opts commandBuilderOpts) *commandBuilder {
+	compiler := "clang"
+	if opts.isGcc {
+		compiler = "gcc"
+	}
+	cmd := ctx.newCommand(compiler, opts.cflags...)
+	b, err := newCommandBuilder(ctx, ctx.cfg, cmd)
+	if err != nil {
+		t.Fatalf("Constructing builder unexpectedly failed: %v", err)
+	}
+	return b
+}
+
 func TestAndroidDisableWerror(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
 		ctx.cfg.isAndroidWrapper = true
 
+		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{})
+
 		// Disable werror ON
 		ctx.cfg.useLlvmNext = true
-		if !shouldForceDisableWerror(ctx, ctx.cfg, gccType) {
-			t.Errorf("disable Werror not enabled for Android with useLlvmNext")
-		}
-
-		if !shouldForceDisableWerror(ctx, ctx.cfg, clangType) {
+		if !processForceDisableWerrorFlag(ctx, ctx.cfg, builder).enabled {
 			t.Errorf("disable Werror not enabled for Android with useLlvmNext")
 		}
 
 		// Disable werror OFF
 		ctx.cfg.useLlvmNext = false
-		if shouldForceDisableWerror(ctx, ctx.cfg, gccType) {
-			t.Errorf("disable-Werror enabled for Android without useLlvmNext")
-		}
-
-		if shouldForceDisableWerror(ctx, ctx.cfg, clangType) {
+		if processForceDisableWerrorFlag(ctx, ctx.cfg, builder).enabled {
 			t.Errorf("disable-Werror enabled for Android without useLlvmNext")
 		}
 	})
@@ -443,11 +456,8 @@ func TestAndroidDisableWerror(t *testing.T) {
 
 func TestChromeOSNoForceDisableWerror(t *testing.T) {
 	withTestContext(t, func(ctx *testContext) {
-		if shouldForceDisableWerror(ctx, ctx.cfg, gccType) {
-			t.Errorf("disable Werror enabled for ChromeOS without FORCE_DISABLE_WERROR set")
-		}
-
-		if shouldForceDisableWerror(ctx, ctx.cfg, clangType) {
+		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{})
+		if processForceDisableWerrorFlag(ctx, ctx.cfg, builder).enabled {
 			t.Errorf("disable Werror enabled for ChromeOS without FORCE_DISABLE_WERROR set")
 		}
 	})
@@ -455,12 +465,61 @@ func TestChromeOSNoForceDisableWerror(t *testing.T) {
 
 func TestChromeOSForceDisableWerrorOnlyAppliesToClang(t *testing.T) {
 	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
-		if !shouldForceDisableWerror(ctx, ctx.cfg, clangType) {
+		ctx.env = append(ctx.env, "FORCE_DISABLE_WERROR=1")
+		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{})
+		if !processForceDisableWerrorFlag(ctx, ctx.cfg, builder).enabled {
 			t.Errorf("Disable -Werror should be enabled for clang.")
 		}
 
-		if shouldForceDisableWerror(ctx, ctx.cfg, gccType) {
+		builder = newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{isGcc: true})
+		if processForceDisableWerrorFlag(ctx, ctx.cfg, builder).enabled {
 			t.Errorf("Disable -Werror should be disabled for gcc.")
+		}
+	})
+}
+
+func TestChromeOSForceDisableWerrorWorksAsFlag(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{
+			cflags: []string{"-D_CROSTC_FORCE_DISABLE_WERROR=/foo"},
+		})
+		werrorConfig := processForceDisableWerrorFlag(ctx, ctx.cfg, builder)
+		if !werrorConfig.enabled {
+			t.Fatalf("Disable -Werror should be enabled by flag.")
+		}
+
+		if werrorConfig.reportToStdout {
+			t.Errorf("Stdout reporting should be disabled on ChromeOS")
+		} else if werrorConfig.reportDir != "/foo" {
+			t.Errorf("Got werror report dir %s; want /foo", werrorConfig.reportDir)
+		}
+	})
+}
+
+func TestChromeOSForceDisableWerrorRemovesFlags(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{
+			cflags: []string{
+				"-D_CROSTC_FORCE_DISABLE_WERROR=/foo",
+				"-D_CROSTC_FORCE_DISABLE_WERROR=/bar",
+				"-Wfoo",
+				"-D_CROSTC_FORCE_DISABLE_WERROR=/baz",
+			},
+		})
+		werrorConfig := processForceDisableWerrorFlag(ctx, ctx.cfg, builder)
+		if !werrorConfig.enabled {
+			t.Fatalf("Disable -Werror should be enabled by flag.")
+		}
+
+		if werrorConfig.reportToStdout {
+			t.Errorf("Stdout reporting should be disabled on ChromeOS")
+		} else if werrorConfig.reportDir != "/baz" {
+			t.Errorf("Got werror report dir %s; want /baz", werrorConfig.reportDir)
+		}
+
+		args := builder.build().Args
+		if want := []string{"-Wfoo"}; !reflect.DeepEqual(args, want) {
+			t.Errorf("Got builder args %#v; want %#v", args, want)
 		}
 	})
 }

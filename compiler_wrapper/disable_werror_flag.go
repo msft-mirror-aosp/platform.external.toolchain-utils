@@ -22,17 +22,63 @@ func getForceDisableWerrorDir(env env, cfg *config) string {
 	return path.Join(getCompilerArtifactsDir(env), cfg.newWarningsDir)
 }
 
-func shouldForceDisableWerror(env env, cfg *config, ty compilerType) bool {
+type forceDisableWerrorConfig struct {
+	// If reportToStdout is true, we'll write -Werror reports to stdout. Otherwise, they'll be
+	// written to reportDir. If reportDir is empty, it will be determined via
+	// `getForceDisableWerrorDir`.
+	//
+	// Neither of these have specified values if `enabled == false`.
+	reportDir      string
+	reportToStdout bool
+
+	// If true, `-Werror` reporting should be used.
+	enabled bool
+}
+
+func processForceDisableWerrorFlag(env env, cfg *config, builder *commandBuilder) forceDisableWerrorConfig {
 	if cfg.isAndroidWrapper {
-		return cfg.useLlvmNext
+		return forceDisableWerrorConfig{
+			reportToStdout: true,
+			enabled:        cfg.useLlvmNext,
+		}
 	}
 
-	// We only want this functionality for clang.
-	if ty != clangType {
-		return false
+	// CrOS only wants this functionality for clang.
+	if builder.target.compilerType != clangType {
+		return forceDisableWerrorConfig{enabled: false}
 	}
-	value, _ := env.getenv("FORCE_DISABLE_WERROR")
-	return value != ""
+
+	// CrOS supports two modes for enabling this flag:
+	// 1 (preferred). A CFLAG that specifies the directory to write reports to. e.g.,
+	//   `-D_CROSTC_FORCE_DISABLE_WERROR=/path/to/directory`. This flag will be removed from the
+	//   command before the compiler is invoked. If multiple of these are passed, the last one
+	//   wins, but all are removed from the build command.
+	// 2 (deprecated). An environment variable, FORCE_DISABLE_WERROR, set to any nonempty value.
+	//   In this case, the wrapper will write to either somewhere under
+	//   ${CROS_ARTIFACTS_TMP_DIR}, or to /tmp.
+	const cflagPrefix = "-D_CROSTC_FORCE_DISABLE_WERROR="
+
+	argDir := ""
+	sawArg := false
+	builder.transformArgs(func(arg builderArg) string {
+		value := arg.value
+		if !strings.HasPrefix(value, cflagPrefix) {
+			return value
+		}
+		argDir = value[len(cflagPrefix):]
+		sawArg = true
+		return ""
+	})
+
+	if sawArg {
+		return forceDisableWerrorConfig{
+			reportDir: argDir,
+			enabled:   true,
+		}
+	}
+
+	envValue, _ := env.getenv("FORCE_DISABLE_WERROR")
+	return forceDisableWerrorConfig{enabled: envValue != ""}
 }
 
 func disableWerrorFlags(originalArgs []string) []string {
@@ -64,7 +110,7 @@ func isLikelyAConfTest(cfg *config, cmd *command) bool {
 	return false
 }
 
-func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCode int, err error) {
+func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command, werrorConfig forceDisableWerrorConfig) (exitCode int, err error) {
 	originalStdoutBuffer := &bytes.Buffer{}
 	originalStderrBuffer := &bytes.Buffer{}
 	// TODO: This is a bug in the old wrapper that it drops the ccache path
@@ -163,7 +209,7 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 	// Write warning report to stdout for Android.  On Android,
 	// double-build can be requested on remote builds as well, where there
 	// is no canonical place to write the warnings report.
-	if cfg.isAndroidWrapper {
+	if werrorConfig.reportToStdout {
 		stdout := env.stdout()
 		io.WriteString(stdout, "<LLVM_NEXT_ERROR_REPORT>")
 		if err := json.NewEncoder(stdout).Encode(jsonData); err != nil {
@@ -182,10 +228,14 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 	oldMask := env.umask(0)
 	defer env.umask(oldMask)
 
-	warningsDir := getForceDisableWerrorDir(env, cfg)
+	reportDir := werrorConfig.reportDir
+	if reportDir == "" {
+		reportDir = getForceDisableWerrorDir(env, cfg)
+	}
+
 	// Allow root and regular users to write to this without issue.
-	if err := os.MkdirAll(warningsDir, 0777); err != nil {
-		return 0, wrapErrorwithSourceLocf(err, "error creating warnings directory %s", warningsDir)
+	if err := os.MkdirAll(reportDir, 0777); err != nil {
+		return 0, wrapErrorwithSourceLocf(err, "error creating warnings directory %s", reportDir)
 	}
 
 	// Have some tag to show that files aren't fully written. It would be sad if
@@ -196,7 +246,7 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command) (exitCo
 	// Coming up with a consistent name for this is difficult (compiler command's
 	// SHA can clash in the case of identically named files in different
 	// directories, or similar); let's use a random one.
-	tmpFile, err := ioutil.TempFile(warningsDir, "warnings_report*.json"+incompleteSuffix)
+	tmpFile, err := ioutil.TempFile(reportDir, "warnings_report*.json"+incompleteSuffix)
 	if err != nil {
 		return 0, wrapErrorwithSourceLocf(err, "error creating warnings file")
 	}

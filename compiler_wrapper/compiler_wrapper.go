@@ -121,6 +121,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	processPrintCmdlineFlag(mainBuilder)
 	env = mainBuilder.env
 	var compilerCmd *command
+	disableWerrorConfig := processForceDisableWerrorFlag(env, cfg, mainBuilder)
 	clangSyntax := processClangSyntaxFlag(mainBuilder)
 
 	rusageEnabled := isRusageEnabled(env)
@@ -231,11 +232,11 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		compilerCmd = removeRusageFromCommand(compilerCmd)
 	}
 
-	if shouldForceDisableWerror(env, cfg, mainBuilder.target.compilerType) {
+	if disableWerrorConfig.enabled {
 		if bisectStage != "" {
 			return 0, newUserErrorf("BISECT_STAGE is meaningless with FORCE_DISABLE_WERROR")
 		}
-		return doubleBuildWithWNoError(env, cfg, compilerCmd)
+		return doubleBuildWithWNoError(env, cfg, compilerCmd, disableWerrorConfig)
 	}
 	if shouldCompileWithFallback(env) {
 		if rusageEnabled {
