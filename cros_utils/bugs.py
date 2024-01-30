@@ -122,6 +122,7 @@ def CreateNewBug(
     assignee: Optional[str] = None,
     cc: Optional[List[str]] = None,
     directory: Optional[os.PathLike] = None,
+    parent_bug: int = 0,
 ):
     """Sends a request to create a new bug.
 
@@ -136,6 +137,8 @@ def CreateNewBug(
             address, or a "well-known" individual (detective, mage).
         directory: The directory to write the report to. Defaults to our x20
             bugs directory.
+        parent_bug: The parent bug number for this bug. If none should be
+            specified, pass the value 0.
     """
     obj = {
         "component_id": component_id,
@@ -149,6 +152,9 @@ def CreateNewBug(
     if cc:
         obj["cc"] = cc
 
+    if parent_bug:
+        obj["parent_bug"] = parent_bug
+
     _WriteBugJSONFile("FileNewBugRequest", obj, directory)
 
 
@@ -158,6 +164,7 @@ def SendCronjobLog(
     message: str,
     turndown_time_hours: int = 0,
     directory: Optional[os.PathLike] = None,
+    parent_bug: int = 0,
 ):
     """Sends the record of a cronjob to our bug infra.
 
@@ -173,12 +180,19 @@ def SendCronjobLog(
             turned down.
         directory: The directory to write the report to. Defaults to our x20
             bugs directory.
+        parent_bug: The parent bug number for the bug filed for this cronjob,
+            if any. If none should be specified, pass the value 0.
     """
     json_object = {
         "name": cronjob_name,
         "message": message,
         "failed": failed,
     }
+
     if turndown_time_hours:
         json_object["cronjob_turndown_time_hours"] = turndown_time_hours
+
+    if parent_bug:
+        json_object["parent_bug"] = parent_bug
+
     _WriteBugJSONFile("CronjobUpdate", json_object, directory)

@@ -89,6 +89,9 @@ class Tests(unittest.TestCase):
                 "assignee": "foo@gbiv.com",
                 "cc": ["bar@baz.com"],
             },
+            {
+                "parent_bug": 123,
+            },
         )
 
         for additions in test_case_additions:
@@ -107,13 +110,14 @@ class Tests(unittest.TestCase):
                 "body": test_case["body"],
             }
 
-            assignee = test_case.get("assignee")
-            if assignee:
+            if assignee := test_case.get("assignee"):
                 expected_output["assignee"] = assignee
 
-            cc = test_case.get("cc")
-            if cc:
+            if cc := test_case.get("cc"):
                 expected_output["cc"] = cc
+
+            if parent_bug := test_case.get("parent_bug"):
+                expected_output["parent_bug"] = parent_bug
 
             mock_write_json_file.assert_called_once_with(
                 "FileNewBugRequest",
@@ -151,6 +155,23 @@ class Tests(unittest.TestCase):
                 "message": "hello, world!",
                 "failed": False,
                 "cronjob_turndown_time_hours": 42,
+            },
+            None,
+        )
+
+    @unittest.mock.patch.object(bugs, "_WriteBugJSONFile")
+    def testCronjobLogSendingSeemsToWorkWithParentBug(
+        self, mock_write_json_file
+    ):
+        """Tests SendCronjobLog."""
+        bugs.SendCronjobLog("my_name", False, "hello, world!", parent_bug=42)
+        mock_write_json_file.assert_called_once_with(
+            "CronjobUpdate",
+            {
+                "name": "my_name",
+                "message": "hello, world!",
+                "failed": False,
+                "parent_bug": 42,
             },
             None,
         )
