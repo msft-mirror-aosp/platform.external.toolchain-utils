@@ -161,17 +161,18 @@ def SendCronjobLog(
 ):
     """Sends the record of a cronjob to our bug infra.
 
-    cronjob_name: The name of the cronjob. Expected to remain consistent over
-        time.
-    failed: Whether the job failed or not.
-    message: Any seemingly relevant context. This is pasted verbatim in a bug,
-        if the cronjob infra deems it worthy.
-    turndown_time_hours: If nonzero, this cronjob will be considered
-        turned down if more than `turndown_time_hours` pass without a report of
-        success or failure. If zero, this job will not automatically be turned
-        down.
-    directory: The directory to write the report to. Defaults to our x20 bugs
-        directory.
+    Args:
+        cronjob_name: The name of the cronjob. Expected to remain consistent
+            over time.
+        failed: Whether the job failed or not.
+        message: Any seemingly relevant context. This is pasted verbatim in a
+            bug, if the cronjob infra deems it worthy.
+        turndown_time_hours: If nonzero, this cronjob will be considered turned
+            down if more than `turndown_time_hours` pass without a report of
+            success or failure. If zero, this job will not automatically be
+            turned down.
+        directory: The directory to write the report to. Defaults to our x20
+            bugs directory.
     """
     json_object = {
         "name": cronjob_name,

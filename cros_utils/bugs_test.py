@@ -14,8 +14,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
-from unittest import mock
-from unittest.mock import patch
+import unittest.mock
 
 from cros_utils import bugs
 
@@ -65,7 +64,7 @@ class Tests(unittest.TestCase):
                     },
                 )
 
-    @patch.object(bugs, "_WriteBugJSONFile")
+    @unittest.mock.patch.object(bugs, "_WriteBugJSONFile")
     def testAppendingToBugsSeemsToWork(self, mock_write_json_file):
         """Tests AppendToExistingBug."""
         bugs.AppendToExistingBug(1234, "hello, world!")
@@ -78,7 +77,7 @@ class Tests(unittest.TestCase):
             None,
         )
 
-    @patch.object(bugs, "_WriteBugJSONFile")
+    @unittest.mock.patch.object(bugs, "_WriteBugJSONFile")
     def testBugCreationSeemsToWork(self, mock_write_json_file):
         """Tests CreateNewBug."""
         test_case_additions = (
@@ -123,7 +122,7 @@ class Tests(unittest.TestCase):
             )
             mock_write_json_file.reset_mock()
 
-    @patch.object(bugs, "_WriteBugJSONFile")
+    @unittest.mock.patch.object(bugs, "_WriteBugJSONFile")
     def testCronjobLogSendingSeemsToWork(self, mock_write_json_file):
         """Tests SendCronjobLog."""
         bugs.SendCronjobLog("my_name", False, "hello, world!")
@@ -137,7 +136,7 @@ class Tests(unittest.TestCase):
             None,
         )
 
-    @patch.object(bugs, "_WriteBugJSONFile")
+    @unittest.mock.patch.object(bugs, "_WriteBugJSONFile")
     def testCronjobLogSendingSeemsToWorkWithTurndown(
         self, mock_write_json_file
     ):
@@ -180,7 +179,7 @@ class Tests(unittest.TestCase):
         fourth = gen.generate_json_file_name(_ARBITRARY_DATETIME)
         self.assertLess(third, fourth)
 
-    @patch.object(os, "getpid")
+    @unittest.mock.patch.object(os, "getpid")
     def testForkingProducesADifferentReport(self, mock_getpid):
         """Tests that _FileNameGenerator gives us sorted file names."""
         gen = bugs._FileNameGenerator()
@@ -194,24 +193,24 @@ class Tests(unittest.TestCase):
         child_file = gen.generate_json_file_name(_ARBITRARY_DATETIME)
         self.assertNotEqual(parent_file, child_file)
 
-    @patch.object(bugs, "_WriteBugJSONFile")
+    @unittest.mock.patch.object(bugs, "_WriteBugJSONFile")
     def testCustomDirectoriesArePassedThrough(self, mock_write_json_file):
         directory = "/path/to/somewhere/interesting"
         bugs.AppendToExistingBug(1, "foo", directory=directory)
         mock_write_json_file.assert_called_once_with(
-            mock.ANY, mock.ANY, directory
+            unittest.mock.ANY, unittest.mock.ANY, directory
         )
         mock_write_json_file.reset_mock()
 
         bugs.CreateNewBug(1, "title", "body", directory=directory)
         mock_write_json_file.assert_called_once_with(
-            mock.ANY, mock.ANY, directory
+            unittest.mock.ANY, unittest.mock.ANY, directory
         )
         mock_write_json_file.reset_mock()
 
         bugs.SendCronjobLog("cronjob", False, "message", directory=directory)
         mock_write_json_file.assert_called_once_with(
-            mock.ANY, mock.ANY, directory
+            unittest.mock.ANY, unittest.mock.ANY, directory
         )
 
     def testWriteBugJSONFileWritesToGivenDirectory(self):
