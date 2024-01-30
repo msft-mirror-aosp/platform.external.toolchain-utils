@@ -25,6 +25,9 @@ from cros_utils import email_sender
 from cros_utils import tiny_render
 
 
+RUST_MAINTENANCE_METABUG = 322195383
+
+
 def gentoo_sha_to_link(sha: str) -> str:
     """Gets a URL to a webpage that shows the Gentoo commit at `sha`."""
     return f"https://gitweb.gentoo.org/repo/gentoo.git/commit?id={sha}"
@@ -246,7 +249,13 @@ def file_bug(title: str, body: str) -> None:
         # (bugs.WellKnownComponents.AndroidRustToolchain, None),
     )
     for component, assignee in targets:
-        bugs.CreateNewBug(component, title, body, assignee)
+        bugs.CreateNewBug(
+            component,
+            title,
+            body,
+            assignee,
+            parent_bug=RUST_MAINTENANCE_METABUG,
+        )
 
 
 def maybe_compose_bug(
