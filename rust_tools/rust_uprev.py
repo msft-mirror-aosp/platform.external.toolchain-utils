@@ -188,8 +188,11 @@ class PreparedUprev(NamedTuple):
     """Container for the information returned by prepare_uprev."""
 
     template_version: RustVersion
-    ebuild_path: Path
     bootstrap_version: RustVersion
+
+
+def compute_ebuild_path(category: str, name: str, version: RustVersion) -> Path:
+    return EBUILD_PREFIX / category / name / f"{name}-{version}.ebuild"
 
 
 def compute_rustc_src_name(version: RustVersion) -> str:
@@ -408,17 +411,21 @@ def prepare_uprev(
     )
     logging.info("rust-bootstrap version is %s", bootstrap_version)
 
-    return PreparedUprev(template, ebuild_path, bootstrap_version)
+    return PreparedUprev(template, bootstrap_version)
 
 
 def create_ebuild(
-    template_ebuild: PathOrStr, pkgatom: str, new_version: RustVersion
-) -> str:
-    filename = f"{Path(pkgatom).name}-{new_version}.ebuild"
-    ebuild = EBUILD_PREFIX.joinpath(f"{pkgatom}/{filename}")
-    shutil.copyfile(template_ebuild, ebuild)
-    subprocess.check_call(["git", "add", filename], cwd=ebuild.parent)
-    return str(ebuild)
+    category: str,
+    name: str,
+    template_version: RustVersion,
+    new_version: RustVersion,
+) -> None:
+    template_ebuild = compute_ebuild_path(category, name, template_version)
+    new_ebuild = compute_ebuild_path(category, name, new_version)
+    shutil.copyfile(template_ebuild, new_ebuild)
+    subprocess.check_call(
+        ["git", "add", new_ebuild.name], cwd=new_ebuild.parent
+    )
 
 
 def set_include_profdata_src(ebuild_path: os.PathLike, include: bool) -> None:
@@ -783,22 +790,20 @@ def perform_step(
 def prepare_uprev_from_json(obj: Any) -> Optional[PreparedUprev]:
     if not obj:
         return None
-    version, ebuild_path, bootstrap_version = obj
+    version, bootstrap_version = obj
     return PreparedUprev(
         RustVersion(*version),
-        Path(ebuild_path),
         RustVersion(*bootstrap_version),
     )
 
 
 def prepare_uprev_to_json(
     prepared_uprev: Optional[PreparedUprev],
-) -> Optional[Tuple[RustVersion, str, RustVersion]]:
+) -> Optional[Tuple[RustVersion, RustVersion]]:
     if prepared_uprev is None:
         return None
     return (
         prepared_uprev.template_version,
-        str(prepared_uprev.ebuild_path),
         prepared_uprev.bootstrap_version,
     )
 
@@ -817,7 +822,7 @@ def create_rust_uprev(
     )
     if prepared is None:
         return
-    template_version, template_ebuild, old_bootstrap_version = prepared
+    template_version, old_bootstrap_version = prepared
 
     run_step(
         "mirror bootstrap sources",
@@ -859,13 +864,13 @@ def create_rust_uprev(
         "turn off profile data sources in cros-rustc.eclass",
         lambda: set_include_profdata_src(CROS_RUSTC_ECLASS, include=False),
     )
-    template_host_ebuild = EBUILD_PREFIX.joinpath(
-        f"dev-lang/rust-host/rust-host-{template_version}.ebuild"
-    )
     run_step(
         "create host ebuild",
         lambda: create_ebuild(
-            template_host_ebuild, "dev-lang/rust-host", rust_version
+            "dev-lang",
+            "rust-host",
+            template_version,
+            rust_version,
         ),
     )
     run_step(
@@ -874,7 +879,12 @@ def create_rust_uprev(
     )
     run_step(
         "create target ebuild",
-        lambda: create_ebuild(template_ebuild, "dev-lang/rust", rust_version),
+        lambda: create_ebuild(
+            "dev-lang",
+            "rust",
+            template_version,
+            rust_version,
+        ),
     )
     run_step(
         "update target manifest to add new version",

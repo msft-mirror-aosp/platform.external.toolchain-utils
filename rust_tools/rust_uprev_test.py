@@ -501,7 +501,7 @@ class PrepareUprevTest(unittest.TestCase):
         )
         mock_find_ebuild.return_value = bootstrap_ebuild_path
         expected = rust_uprev.PreparedUprev(
-            self.version_old, Path("/path/to/ebuild"), self.bootstrap_version
+            self.version_old, self.bootstrap_version
         )
         actual = rust_uprev.prepare_uprev(
             rust_version=self.version_new, template=self.version_old
@@ -530,15 +530,12 @@ class PrepareUprevTest(unittest.TestCase):
         mock_command.assert_not_called()
 
     def test_prepare_uprev_from_json(self):
-        ebuild_path = Path("/path/to/the/ebuild")
         json_result = (
             list(self.version_new),
-            ebuild_path,
             list(self.bootstrap_version),
         )
         expected = rust_uprev.PreparedUprev(
             self.version_new,
-            Path(ebuild_path),
             self.bootstrap_version,
         )
         actual = rust_uprev.prepare_uprev_from_json(json_result)
@@ -747,35 +744,47 @@ class RustUprevOtherStagesTests(unittest.TestCase):
     @mock.patch.object(shutil, "copyfile")
     @mock.patch.object(subprocess, "check_call")
     def test_create_rust_ebuild(self, mock_call, mock_copy):
-        template_ebuild = f"/path/to/rust-{self.current_version}-r2.ebuild"
+        template_ebuild = (
+            rust_uprev.EBUILD_PREFIX
+            / f"dev-lang/rust/rust-{self.current_version}.ebuild"
+        )
+        new_ebuild = (
+            rust_uprev.EBUILD_PREFIX
+            / f"dev-lang/rust/rust-{self.new_version}.ebuild"
+        )
         rust_uprev.create_ebuild(
-            template_ebuild, "dev-lang/rust", self.new_version
+            "dev-lang", "rust", self.current_version, self.new_version
         )
         mock_copy.assert_called_once_with(
             template_ebuild,
-            rust_uprev.RUST_PATH.joinpath(f"rust-{self.new_version}.ebuild"),
+            new_ebuild,
         )
         mock_call.assert_called_once_with(
             ["git", "add", f"rust-{self.new_version}.ebuild"],
-            cwd=rust_uprev.RUST_PATH,
+            cwd=new_ebuild.parent,
         )
 
     @mock.patch.object(shutil, "copyfile")
     @mock.patch.object(subprocess, "check_call")
     def test_create_rust_host_ebuild(self, mock_call, mock_copy):
-        template_ebuild = f"/path/to/rust-host-{self.current_version}-r2.ebuild"
+        template_ebuild = (
+            rust_uprev.EBUILD_PREFIX
+            / f"dev-lang/rust-host/rust-host-{self.current_version}.ebuild"
+        )
+        new_ebuild = (
+            rust_uprev.EBUILD_PREFIX
+            / f"dev-lang/rust-host/rust-host-{self.new_version}.ebuild"
+        )
         rust_uprev.create_ebuild(
-            template_ebuild, "dev-lang/rust-host", self.new_version
+            "dev-lang", "rust-host", self.current_version, self.new_version
         )
         mock_copy.assert_called_once_with(
             template_ebuild,
-            rust_uprev.EBUILD_PREFIX.joinpath(
-                f"dev-lang/rust-host/rust-host-{self.new_version}.ebuild"
-            ),
+            new_ebuild,
         )
         mock_call.assert_called_once_with(
             ["git", "add", f"rust-host-{self.new_version}.ebuild"],
-            cwd=rust_uprev.EBUILD_PREFIX.joinpath("dev-lang/rust-host"),
+            cwd=new_ebuild.parent,
         )
 
     @mock.patch.object(rust_uprev, "find_ebuild_for_package")
