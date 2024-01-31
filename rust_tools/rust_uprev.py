@@ -203,7 +203,8 @@ def compute_rust_bootstrap_prebuilt_name(version: RustVersion) -> str:
 def find_ebuild_for_package(name: str) -> str:
     """Returns the path to the ebuild for the named package."""
     return run_in_chroot(
-        [EQUERY, "w", name], capture_output=True
+        [EQUERY, "w", name],
+        stdout=subprocess.PIPE,
     ).stdout.strip()
 
 
