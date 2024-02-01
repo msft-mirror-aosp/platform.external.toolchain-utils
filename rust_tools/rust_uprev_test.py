@@ -481,7 +481,6 @@ class PrepareUprevTest(unittest.TestCase):
     """Tests for prepare_uprev step in rust_uprev"""
 
     def setUp(self):
-        self.bootstrap_version = rust_uprev.RustVersion(1, 1, 0)
         self.version_old = rust_uprev.RustVersion(1, 2, 3)
         self.version_new = rust_uprev.RustVersion(1, 3, 5)
 
@@ -490,19 +489,9 @@ class PrepareUprevTest(unittest.TestCase):
         "find_ebuild_for_rust_version",
         return_value=Path("/path/to/ebuild"),
     )
-    @mock.patch.object(rust_uprev, "find_ebuild_path")
     @mock.patch.object(rust_uprev, "get_command_output")
-    def test_success_with_template(
-        self, mock_command, mock_find_ebuild, _ebuild_for_version
-    ):
-        bootstrap_ebuild_path = Path(
-            "/path/to/rust-bootstrap/",
-            f"rust-bootstrap-{self.bootstrap_version}.ebuild",
-        )
-        mock_find_ebuild.return_value = bootstrap_ebuild_path
-        expected = rust_uprev.PreparedUprev(
-            self.version_old, self.bootstrap_version
-        )
+    def test_success_with_template(self, mock_command, _ebuild_for_version):
+        expected = rust_uprev.PreparedUprev(self.version_old)
         actual = rust_uprev.prepare_uprev(
             rust_version=self.version_new, template=self.version_old
         )
@@ -513,11 +502,6 @@ class PrepareUprevTest(unittest.TestCase):
         rust_uprev,
         "find_ebuild_for_rust_version",
         return_value="/path/to/ebuild",
-    )
-    @mock.patch.object(
-        rust_uprev,
-        "get_rust_bootstrap_version",
-        return_value=rust_uprev.RustVersion(0, 41, 12),
     )
     @mock.patch.object(rust_uprev, "get_command_output")
     def test_return_none_with_template_larger_than_input(
@@ -530,13 +514,9 @@ class PrepareUprevTest(unittest.TestCase):
         mock_command.assert_not_called()
 
     def test_prepare_uprev_from_json(self):
-        json_result = (
-            list(self.version_new),
-            list(self.bootstrap_version),
-        )
+        json_result = (list(self.version_new),)
         expected = rust_uprev.PreparedUprev(
             self.version_new,
-            self.bootstrap_version,
         )
         actual = rust_uprev.prepare_uprev_from_json(json_result)
         self.assertEqual(expected, actual)
@@ -633,51 +613,6 @@ BOOTSTRAP_VERSION="1.3.6"
             "BOOTSTRAP_VERSION not found in /path/to/rust/rust-1.3.5.ebuild",
             str(context.exception),
         )
-
-
-class UpdateBootstrapEbuildTest(unittest.TestCase):
-    """Tests for rust_uprev.update_bootstrap_ebuild()"""
-
-    def test_update_bootstrap_ebuild(self):
-        # The update should do two things:
-        # 1. Create a copy of rust-bootstrap's ebuild with the
-        #    new version number.
-        # 2. Add the old PV to RUSTC_RAW_FULL_BOOTSTRAP_SEQUENCE.
-        with tempfile.TemporaryDirectory() as tmpdir_str, mock.patch.object(
-            rust_uprev, "find_ebuild_path"
-        ) as mock_find_ebuild:
-            tmpdir = Path(tmpdir_str)
-            bootstrapdir = Path.joinpath(tmpdir, "rust-bootstrap")
-            bootstrapdir.mkdir()
-            old_ebuild = bootstrapdir.joinpath("rust-bootstrap-1.45.2.ebuild")
-            old_ebuild.write_text(
-                encoding="utf-8",
-                data="""
-some text
-RUSTC_RAW_FULL_BOOTSTRAP_SEQUENCE=(
-\t1.43.1
-\t1.44.1
-)
-some more text
-""",
-            )
-            mock_find_ebuild.return_value = old_ebuild
-            rust_uprev.update_bootstrap_ebuild(rust_uprev.RustVersion(1, 46, 0))
-            new_ebuild = bootstrapdir.joinpath("rust-bootstrap-1.46.0.ebuild")
-            self.assertTrue(new_ebuild.exists())
-            text = new_ebuild.read_text(encoding="utf-8")
-            self.assertEqual(
-                text,
-                """
-some text
-RUSTC_RAW_FULL_BOOTSTRAP_SEQUENCE=(
-\t1.43.1
-\t1.44.1
-\t1.45.2
-)
-some more text
-""",
-            )
 
 
 class UpdateRustPackagesTests(unittest.TestCase):
@@ -785,37 +720,6 @@ class RustUprevOtherStagesTests(unittest.TestCase):
         mock_call.assert_called_once_with(
             ["git", "add", f"rust-host-{self.new_version}.ebuild"],
             cwd=new_ebuild.parent,
-        )
-
-    @mock.patch.object(rust_uprev, "find_ebuild_for_package")
-    @mock.patch.object(subprocess, "check_call")
-    def test_remove_rust_bootstrap_version(self, mock_call, *_args):
-        bootstrap_path = os.path.join(
-            rust_uprev.RUST_PATH, "..", "rust-bootstrap"
-        )
-        rust_uprev.remove_rust_bootstrap_version(
-            self.old_version, lambda *x: ()
-        )
-        mock_call.has_calls(
-            [
-                [
-                    "git",
-                    "rm",
-                    os.path.join(
-                        bootstrap_path,
-                        "files",
-                        f"rust-bootstrap-{self.old_version}-*.patch",
-                    ),
-                ],
-                [
-                    "git",
-                    "rm",
-                    os.path.join(
-                        bootstrap_path,
-                        f"rust-bootstrap-{self.old_version}.ebuild",
-                    ),
-                ],
-            ]
         )
 
     @mock.patch.object(subprocess, "check_call")

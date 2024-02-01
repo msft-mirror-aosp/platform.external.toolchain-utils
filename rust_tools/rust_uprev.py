@@ -195,7 +195,6 @@ class PreparedUprev(NamedTuple):
     """Container for the information returned by prepare_uprev."""
 
     template_version: RustVersion
-    bootstrap_version: RustVersion
 
 
 def compute_ebuild_path(category: str, name: str, version: RustVersion) -> Path:
@@ -331,18 +330,6 @@ def parse_commandline_args() -> argparse.Namespace:
         "specified, the tool will remove the oldest version in the chroot",
     )
 
-    subparser_names.append("remove-bootstrap")
-    remove_bootstrap_parser = subparsers.add_parser(
-        "remove-bootstrap",
-        help="Remove an old rust-bootstrap version",
-    )
-    remove_bootstrap_parser.add_argument(
-        "--version",
-        type=RustVersion.parse,
-        required=True,
-        help="rust-bootstrap version to remove",
-    )
-
     subparser_names.append("roll")
     roll_parser = subparsers.add_parser(
         "roll",
@@ -401,7 +388,6 @@ def prepare_uprev(
     rust_version: RustVersion, template: RustVersion
 ) -> Optional[PreparedUprev]:
     ebuild_path = find_ebuild_for_rust_version(template)
-    bootstrap_version = get_rust_bootstrap_version()
 
     if rust_version <= template:
         logging.info(
@@ -416,9 +402,8 @@ def prepare_uprev(
         template,
         ebuild_path,
     )
-    logging.info("rust-bootstrap version is %s", bootstrap_version)
 
-    return PreparedUprev(template, bootstrap_version)
+    return PreparedUprev(template)
 
 
 def create_ebuild(
@@ -460,25 +445,6 @@ def set_include_profdata_src(ebuild_path: os.PathLike, include: bool) -> None:
     # We expect exactly one substitution.
     assert subs == 1, "Failed to update INCLUDE_PROFDATA_IN_SRC_URI"
     Path(ebuild_path).write_text(contents, encoding="utf-8")
-
-
-def update_bootstrap_ebuild(new_bootstrap_version: RustVersion) -> None:
-    old_ebuild = find_ebuild_path(rust_bootstrap_path(), "rust-bootstrap")
-    m = re.match(r"^rust-bootstrap-(\d+.\d+.\d+)", old_ebuild.name)
-    assert m, old_ebuild.name
-    old_version = RustVersion.parse(m.group(1))
-    new_ebuild = old_ebuild.parent.joinpath(
-        f"rust-bootstrap-{new_bootstrap_version}.ebuild"
-    )
-    old_text = old_ebuild.read_text(encoding="utf-8")
-    new_text, changes = re.subn(
-        r"(RUSTC_RAW_FULL_BOOTSTRAP_SEQUENCE=\([^)]*)",
-        f"\\1\t{old_version}\n",
-        old_text,
-        flags=re.MULTILINE,
-    )
-    assert changes == 1, "Failed to update RUSTC_RAW_FULL_BOOTSTRAP_SEQUENCE"
-    new_ebuild.write_text(new_text, encoding="utf-8")
 
 
 def update_bootstrap_version(
@@ -574,19 +540,15 @@ it to the local mirror using gsutil cp.
         raise Exception("Could not verify that allUsers has READER permission")
 
 
-def fetch_bootstrap_distfiles(
-    old_version: RustVersion, new_version: RustVersion
-) -> None:
+def fetch_bootstrap_distfiles(version: RustVersion) -> None:
     """Fetches rust-bootstrap distfiles from the local mirror
 
     Fetches the distfiles for a rust-bootstrap ebuild to ensure they
     are available on the mirror and the local copies are the same as
     the ones on the mirror.
     """
-    fetch_distfile_from_mirror(
-        compute_rust_bootstrap_prebuilt_name(old_version)
-    )
-    fetch_distfile_from_mirror(compute_rustc_src_name(new_version))
+    fetch_distfile_from_mirror(compute_rust_bootstrap_prebuilt_name(version))
+    fetch_distfile_from_mirror(compute_rustc_src_name(version))
 
 
 def fetch_rust_distfiles(version: RustVersion) -> None:
@@ -797,22 +759,18 @@ def perform_step(
 def prepare_uprev_from_json(obj: Any) -> Optional[PreparedUprev]:
     if not obj:
         return None
-    version, bootstrap_version = obj
+    version = obj[0]
     return PreparedUprev(
         RustVersion(*version),
-        RustVersion(*bootstrap_version),
     )
 
 
 def prepare_uprev_to_json(
     prepared_uprev: Optional[PreparedUprev],
-) -> Optional[Tuple[RustVersion, RustVersion]]:
+) -> Optional[Tuple[RustVersion]]:
     if prepared_uprev is None:
         return None
-    return (
-        prepared_uprev.template_version,
-        prepared_uprev.bootstrap_version,
-    )
+    return (prepared_uprev.template_version,)
 
 
 def create_rust_uprev(
@@ -829,7 +787,7 @@ def create_rust_uprev(
     )
     if prepared is None:
         return
-    template_version, old_bootstrap_version = prepared
+    template_version = prepared.template_version
 
     run_step(
         "mirror bootstrap sources",
@@ -850,19 +808,9 @@ def create_rust_uprev(
     # to the mirror.
     run_step(
         "fetch bootstrap distfiles",
-        lambda: fetch_bootstrap_distfiles(
-            old_bootstrap_version, template_version
-        ),
+        lambda: fetch_bootstrap_distfiles(template_version),
     )
     run_step("fetch rust distfiles", lambda: fetch_rust_distfiles(rust_version))
-    run_step(
-        "update bootstrap ebuild",
-        lambda: update_bootstrap_ebuild(template_version),
-    )
-    run_step(
-        "update bootstrap manifest",
-        lambda: ebuild_actions("dev-lang/rust-bootstrap", ["manifest"]),
-    )
     run_step(
         "update bootstrap version",
         lambda: update_bootstrap_version(CROS_RUSTC_ECLASS, template_version),
@@ -961,7 +909,6 @@ def rebuild_packages(version: RustVersion):
     # Remove all packages we modify to avoid depending on preinstalled
     # versions. This ensures that the packages can really be built.
     packages = [f"{category}/{name}" for category, name in RUST_PACKAGES]
-    packages.append("dev-lang/rust-bootstrap")
     for pkg in packages:
         unmerge_package_if_installed(pkg)
     # Mention only dev-lang/rust explicitly, so that others are pulled
@@ -1015,22 +962,6 @@ def remove_ebuild_version(path: PathOrStr, name: str, version: RustVersion):
 
 def remove_files(filename: PathOrStr, path: PathOrStr) -> None:
     subprocess.check_call(["git", "rm", filename], cwd=path)
-
-
-def remove_rust_bootstrap_version(
-    version: RustVersion,
-    run_step: RunStepFn,
-) -> None:
-    run_step(
-        "remove old bootstrap ebuild",
-        lambda: remove_ebuild_version(
-            rust_bootstrap_path(), "rust-bootstrap", version
-        ),
-    )
-    run_step(
-        "update bootstrap manifest to delete old version",
-        lambda: ebuild_actions("dev-lang/rust-bootstrap", ["manifest"]),
-    )
 
 
 def remove_rust_uprev(
@@ -1262,8 +1193,6 @@ def main() -> None:
         )
     elif args.subparser_name == "remove":
         remove_rust_uprev(args.rust_version, run_step)
-    elif args.subparser_name == "remove-bootstrap":
-        remove_rust_bootstrap_version(args.version, run_step)
     else:
         # If you have added more subparser_name, please also add the handlers
         # above
@@ -1288,7 +1217,6 @@ def main() -> None:
         remove_rust_uprev(args.remove, run_step)
         prepared = prepare_uprev_from_json(completed_steps["prepare uprev"])
         assert prepared is not None, "no prepared uprev decoded from JSON"
-        remove_rust_bootstrap_version(prepared.bootstrap_version, run_step)
         if not args.no_upload:
             run_step(
                 "create rust uprev CL", lambda: create_new_commit(args.uprev)
