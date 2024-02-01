@@ -746,6 +746,12 @@ def maybe_delete_old_rust_bootstrap_ebuilds(
     update_ebuild_manifest(remaining_ebuild)
     if commit:
         many = len(discardable_ebuilds) > 1
+        message_lines = [
+            "Rust has moved on in ChromeOS, so",
+            "these ebuilds are" if many else "this ebuild is",
+            "no longer needed.",
+        ]
+        message = textwrap.fill("\n".join(message_lines))
         commit_all_changes(
             chromiumos_overlay,
             rust_bootstrap_dir,
@@ -753,9 +759,7 @@ def maybe_delete_old_rust_bootstrap_ebuilds(
                 f"""\
                 rust-bootstrap: remove unused ebuild{"s" if many else ""}
 
-                Rust has moved on in ChromeOS, so \
-                {"these ebuilds are" if many else "this ebuild is"} \
-                no longer needed.
+                {message}
 
                 BUG={TRACKING_BUG}
                 TEST=CQ
