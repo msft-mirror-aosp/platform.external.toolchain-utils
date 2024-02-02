@@ -14,6 +14,10 @@ from typing import Any, Dict, List, Optional, Union
 
 X20_PATH = "/google/data/rw/teams/c-compiler-chrome/prod_bugs"
 
+# List of 'well-known' bug numbers to tag as parents.
+RUST_MAINTENANCE_METABUG = 322195383
+RUST_SECURITY_METABUG = 322195192
+
 
 # These constants are sourced from
 # //google3/googleclient/chrome/chromeos_toolchain/bug_manager/bugs.go
