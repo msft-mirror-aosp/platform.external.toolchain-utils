@@ -776,7 +776,7 @@ def main(argv: List[str]):
         level=logging.INFO,
     )
 
-    my_dir = Path(__name__).parent.resolve()
+    my_dir = Path(__file__).parent.resolve()
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
