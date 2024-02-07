@@ -37,20 +37,6 @@ fn main() -> Result<()> {
         }
     };
 
-    // Get the rust sysroot, this is needed to translate filepaths to sysroot
-    // related files, e.g. crate sources.
-    let rust_sysroot = {
-        let output = process::Command::new("rustc")
-            .arg("--print")
-            .arg("sysroot")
-            .output()?;
-        if !output.status.success() {
-            bail!("Unable to find rustc installation outside of sysroot");
-        }
-        std::str::from_utf8(&output.stdout)?.to_owned()
-    };
-    let rust_sysroot = rust_sysroot.trim();
-
     let args: Vec<String> = args.collect();
     if !args.is_empty() {
         // We've received command line arguments, and there are 3 possibilities:
@@ -89,6 +75,24 @@ fn main() -> Result<()> {
 
     init_log()?;
 
+    // Get the rust sysroot, this is needed to translate filepaths to sysroot
+    // related files, e.g. crate sources.
+    let outside_rust_sysroot = {
+        let output = process::Command::new("rustc")
+            .arg("--print")
+            .arg("sysroot")
+            .output()?;
+        if !output.status.success() {
+            bail!("Unable to find rustc installation outside of sysroot");
+        }
+        std::str::from_utf8(&output.stdout)?.to_owned()
+    };
+    let outside_rust_sysroot = outside_rust_sysroot.trim();
+
+    // The /home path inside the chroot is visible outside through "<chromiumos-root>/out/home".
+    let outside_home: &'static str =
+        Box::leak(format!("{}/out/home", chromiumos_root.display()).into_boxed_str());
+
     let outside_prefix: &'static str = {
         let mut path = chromiumos_root
             .to_str()
@@ -106,7 +110,7 @@ fn main() -> Result<()> {
     trace!("Found chromiumos root {}", outside_prefix);
 
     let outside_sysroot_prefix: &'static str =
-        Box::leak(format!("{rust_sysroot}/lib/rustlib").into_boxed_str());
+        Box::leak(format!("{outside_rust_sysroot}/lib/rustlib").into_boxed_str());
     let inside_prefix: &'static str = "/mnt/host/source";
 
     let cmd = "cros_sdk";
@@ -121,7 +125,8 @@ fn main() -> Result<()> {
     let replacement_map = {
         let mut m = HashMap::new();
         m.insert(outside_prefix, inside_prefix);
-        m.insert(&outside_sysroot_prefix, "/usr/lib/rustlib");
+        m.insert(outside_sysroot_prefix, "/usr/lib/rustlib");
+        m.insert(outside_home, "/home");
         m
     };
 
