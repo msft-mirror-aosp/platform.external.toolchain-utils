@@ -24,7 +24,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fsanitize=kernel-address",
             "main.cc"
@@ -70,7 +69,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fsanitize=kernel-address",
             "main.cc"
@@ -116,7 +114,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fsanitize=kernel-address",
             "main.cc"
@@ -162,7 +159,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fsanitize=kernel-address",
             "main.cc"
@@ -208,7 +204,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fsanitize=fuzzer",
             "main.cc"
@@ -253,7 +248,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fsanitize=address",
             "-fprofile-instr-generate",
@@ -300,7 +294,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fsanitize=address",
             "main.cc"
@@ -345,7 +338,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-fprofile-instr-generate",
             "main.cc"

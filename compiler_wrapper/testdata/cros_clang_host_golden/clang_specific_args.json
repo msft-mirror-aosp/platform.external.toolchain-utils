@@ -24,7 +24,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-mno-movbe",
             "-Wclobbered",
@@ -85,7 +84,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-Wno-#warnings",
             "main.cc"
@@ -130,7 +128,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-Wno-error=uninitialized",
             "main.cc"
@@ -175,7 +172,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-someflag",
             "main.cc"

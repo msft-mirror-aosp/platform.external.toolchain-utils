@@ -16,6 +16,11 @@ import (
 	"time"
 )
 
+const (
+	clangCrashArtifactsSubdir = "toolchain/clang_crash_diagnostics"
+	crosArtifactsEnvVar       = "CROS_ARTIFACTS_TMP_DIR"
+)
+
 func callCompiler(env env, cfg *config, inputCmd *command) int {
 	var compilerErr error
 
@@ -109,6 +114,18 @@ func runAndroidClangTidy(env env, cmd *command) error {
 	return nil
 }
 
+func detectCrashArtifactsDir(env env, cfg *config) string {
+	if cfg.isAndroidWrapper {
+		return ""
+	}
+
+	tmpdir, ok := env.getenv(crosArtifactsEnvVar)
+	if !ok {
+		return ""
+	}
+	return filepath.Join(tmpdir, clangCrashArtifactsSubdir)
+}
+
 func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int, err error) {
 	if err := checkUnsupportedFlags(inputCmd); err != nil {
 		return 0, err
@@ -153,8 +170,9 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	} else {
 		_, tidyFlags, tidyMode := processClangTidyFlags(mainBuilder)
 		cSrcFile, iwyuFlags, iwyuMode := processIWYUFlags(mainBuilder)
+		crashArtifactsDir := detectCrashArtifactsDir(env, cfg)
 		if mainBuilder.target.compilerType == clangType {
-			err := prepareClangCommand(mainBuilder)
+			err := prepareClangCommand(crashArtifactsDir, mainBuilder)
 			if err != nil {
 				return 0, err
 			}
@@ -170,7 +188,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 
 				switch tidyMode {
 				case tidyModeTricium:
-					err = runClangTidyForTricium(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, tidyFlags, cfg.crashArtifactsDir)
+					err = runClangTidyForTricium(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, tidyFlags, crashArtifactsDir)
 				case tidyModeAll:
 					err = runClangTidy(env, clangCmdWithoutRemoteBuildAndCCache, cSrcFile, tidyFlags)
 				default:
@@ -202,7 +220,7 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		} else {
 			if clangSyntax {
 				allowCCache = false
-				_, clangCmd, err := calcClangCommand(allowCCache, mainBuilder.clone())
+				_, clangCmd, err := calcClangCommand(crashArtifactsDir, allowCCache, mainBuilder.clone())
 				if err != nil {
 					return 0, err
 				}
@@ -332,21 +350,21 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	}
 }
 
-func prepareClangCommand(builder *commandBuilder) (err error) {
+func prepareClangCommand(crashArtifactsDir string, builder *commandBuilder) (err error) {
 	if !builder.cfg.isHostWrapper {
 		processSysrootFlag(builder)
 	}
 	builder.addPreUserArgs(builder.cfg.clangFlags...)
-	if builder.cfg.crashArtifactsDir != "" {
-		builder.addPreUserArgs("-fcrash-diagnostics-dir=" + builder.cfg.crashArtifactsDir)
+	if crashArtifactsDir != "" {
+		builder.addPreUserArgs("-fcrash-diagnostics-dir=" + crashArtifactsDir)
 	}
 	builder.addPostUserArgs(builder.cfg.clangPostFlags...)
 	calcCommonPreUserArgs(builder)
 	return processClangFlags(builder)
 }
 
-func calcClangCommand(allowCCache bool, builder *commandBuilder) (bool, *command, error) {
-	err := prepareClangCommand(builder)
+func calcClangCommand(crashArtifactsDir string, allowCCache bool, builder *commandBuilder) (bool, *command, error) {
+	err := prepareClangCommand(crashArtifactsDir, builder)
 	if err != nil {
 		return false, nil, err
 	}

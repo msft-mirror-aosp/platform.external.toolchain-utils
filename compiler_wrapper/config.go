@@ -30,8 +30,6 @@ type config struct {
 	gccRootRelPath   string
 	// Directory to store errors that were prevented with -Wno-error.
 	newWarningsDir string
-	// Directory to store crash artifacts in.
-	crashArtifactsDir string
 	// Version. Only exposed via -print-config.
 	version string
 }
@@ -166,9 +164,8 @@ var crosHardenedConfig = config{
 		"-fno-addrsig",
 		"-ftrivial-auto-var-init=zero",
 	),
-	clangPostFlags:    crosCommonClangPostFlags(),
-	newWarningsDir:    "fatal_clang_warnings",
-	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
+	clangPostFlags: crosCommonClangPostFlags(),
+	newWarningsDir: "fatal_clang_warnings",
 }
 
 // Flags to be added to non-hardened toolchain.
@@ -187,9 +184,8 @@ var crosNonHardenedConfig = config{
 		crosCommonClangFlags(),
 		"-Wno-section",
 	),
-	clangPostFlags:    crosCommonClangPostFlags(),
-	newWarningsDir:    "fatal_clang_warnings",
-	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
+	clangPostFlags: crosCommonClangPostFlags(),
+	newWarningsDir: "fatal_clang_warnings",
 }
 
 // Flags to be added to host toolchain.
@@ -215,20 +211,18 @@ var crosHostConfig = config{
 		"-fno-addrsig",
 	),
 	// Temporarily disable Wdeprecated-copy. b/191479033
-	clangPostFlags:    crosCommonClangPostFlags(),
-	newWarningsDir:    "fatal_clang_warnings",
-	crashArtifactsDir: "/tmp/clang_crash_diagnostics",
+	clangPostFlags: crosCommonClangPostFlags(),
+	newWarningsDir: "fatal_clang_warnings",
 }
 
 var androidConfig = config{
-	isHostWrapper:     false,
-	isAndroidWrapper:  true,
-	gccRootRelPath:    "./",
-	clangRootRelPath:  "./",
-	commonFlags:       []string{},
-	gccFlags:          []string{},
-	clangFlags:        []string{},
-	clangPostFlags:    []string{},
-	newWarningsDir:    "",
-	crashArtifactsDir: "",
+	isHostWrapper:    false,
+	isAndroidWrapper: true,
+	gccRootRelPath:   "./",
+	clangRootRelPath: "./",
+	commonFlags:      []string{},
+	gccFlags:         []string{},
+	clangFlags:       []string{},
+	clangPostFlags:   []string{},
+	newWarningsDir:   "",
 }

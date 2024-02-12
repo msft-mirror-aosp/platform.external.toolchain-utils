@@ -24,7 +24,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc"
           ],
@@ -67,7 +66,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc"
           ],
@@ -116,7 +114,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc"
           ],
@@ -159,7 +156,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc"
           ],
@@ -214,7 +210,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
@@ -270,7 +265,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
@@ -328,7 +322,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "-resource-dir=someResourceDir",
             "--gcc-toolchain=/usr",
@@ -380,7 +373,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc"
           ],
@@ -423,7 +415,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc"
           ],
@@ -466,7 +457,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc"
           ],
@@ -509,7 +499,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc"
           ],
@@ -552,7 +541,6 @@
             "-fclang-abi-compat=17",
             "-Wno-unused-local-typedefs",
             "-fno-addrsig",
-            "-fcrash-diagnostics-dir=/tmp/stable/clang_crash_diagnostics",
             "-fcommon",
             "main.cc"
           ],
