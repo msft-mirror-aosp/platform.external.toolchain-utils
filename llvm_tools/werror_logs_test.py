@@ -95,6 +95,50 @@ class Test(unittest.TestCase):
             ),
         )
 
+    def test_clang_warning_parsing_canonicalizes_correctly(self):
+        canonical_forms = (
+            ("/build/foo/bar/baz.cc", "/build/{board}/bar/baz.cc"),
+            ("///build//foo///bar//baz.cc", "/build/{board}/bar/baz.cc"),
+            ("/build/baz.cc", "/build/baz.cc"),
+            ("/build.cc", "/build.cc"),
+            (".", "."),
+        )
+
+        for before, after in canonical_forms:
+            self.assertEqual(
+                werror_logs.ClangWarning.try_parse_line(
+                    f"{before}:12:34: error: don't do this [-Werror,-Wbar]",
+                    canonicalize_board_root=True,
+                ),
+                werror_logs.ClangWarning(
+                    name="-Wbar",
+                    message="don't do this",
+                    location=werror_logs.ClangWarningLocation(
+                        file=after,
+                        line=12,
+                        column=34,
+                    ),
+                ),
+            )
+
+    def test_clang_warning_parsing_doesnt_canonicalize_if_not_asked(self):
+        self.assertEqual(
+            werror_logs.ClangWarning.try_parse_line(
+                "/build/foo/bar/baz.cc:12:34: error: don't do this "
+                "[-Werror,-Wbar]",
+                canonicalize_board_root=False,
+            ),
+            werror_logs.ClangWarning(
+                name="-Wbar",
+                message="don't do this",
+                location=werror_logs.ClangWarningLocation(
+                    file="/build/foo/bar/baz.cc",
+                    line=12,
+                    column=34,
+                ),
+            ),
+        )
+
     def test_clang_warning_parsing_skips_uninteresting_lines(self):
         self.silence_logs()
 

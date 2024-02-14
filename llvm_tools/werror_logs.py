@@ -20,7 +20,9 @@ It can also be used to fetch warnings reports from CQ runs, for instance,
 $ ./werror_logs.py fetch-cq --cq-orchestrator-id=123456
 
 In this case, it downloads _all -Werror logs_ from children of the given
-cq-orchestrator, and prints the parent directory of all of these reports.
+cq-orchestrator, and prints the parent directory of all of these reports. If
+you run `aggregate` on this directory, it's highly recommended to use the
+`--canonicalize-board-roots` flag.
 """
 
 import argparse
@@ -45,6 +47,17 @@ import cros_cls
 _DEFAULT_FETCH_DIRECTORY = Path("/tmp/werror_logs")
 
 
+def canonicalize_file_path_board_root(file_path: str) -> str:
+    # Get rid of double slashes, unnecessary directory traversal
+    # (foo/../bar/..), etc. Easier to read this way.
+    file_path = os.path.normpath(file_path)
+    if file_path.startswith("/build/"):
+        i = file_path.find("/", len("/build/"))
+        if i != -1:
+            return f"/build/{{board}}/{file_path[i+1:]}"
+    return file_path
+
+
 @dataclasses.dataclass(frozen=True, eq=True, order=True)
 class ClangWarningLocation:
     """Represents a location at which a Clang warning was emitted."""
@@ -54,10 +67,15 @@ class ClangWarningLocation:
     column: int
 
     @classmethod
-    def parse(cls, location: str) -> "ClangWarningLocation":
+    def parse(
+        cls, location: str, canonicalize_board_root: bool = False
+    ) -> "ClangWarningLocation":
         split = location.rsplit(":", 2)
         if len(split) == 3:
-            return cls(file=split[0], line=int(split[1]), column=int(split[2]))
+            file = split[0]
+            if canonicalize_board_root:
+                file = canonicalize_file_path_board_root(file)
+            return cls(file=file, line=int(split[1]), column=int(split[2]))
         raise ValueError(f"Invalid location: {location!r}")
 
 
@@ -85,7 +103,9 @@ class ClangWarning:
     )
 
     @classmethod
-    def try_parse_line(cls, line: str) -> Optional["ClangWarning"]:
+    def try_parse_line(
+        cls, line: str, canonicalize_board_root: bool = False
+    ) -> Optional["ClangWarning"]:
         # Fast path: we can expect "error: " in interesting lines. Break early
         # if that's not present.
         if "error: " not in line:
@@ -119,7 +139,9 @@ class ClangWarning:
         if location is None:
             parsed_location = None
         else:
-            parsed_location = ClangWarningLocation.parse(location)
+            parsed_location = ClangWarningLocation.parse(
+                location, canonicalize_board_root
+            )
         return cls(
             name=individual_warning_flags[0],
             message=message,
@@ -168,7 +190,9 @@ class AggregatedWarnings:
             raise UnknownPackageNameError()
         return m.group(1)
 
-    def add_report_json(self, report_json: Dict[str, Any]) -> int:
+    def add_report_json(
+        self, report_json: Dict[str, Any], canonicalize_board_root: bool = False
+    ) -> int:
         """Adds the given report, returning the number of warnings parsed.
 
         Raises:
@@ -180,18 +204,22 @@ class AggregatedWarnings:
 
         num_warnings = 0
         for line in report_json.get("stdout", "").splitlines():
-            if parsed := ClangWarning.try_parse_line(line):
+            if parsed := ClangWarning.try_parse_line(
+                line, canonicalize_board_root
+            ):
                 self.warnings[parsed].packages[package_name] += 1
                 num_warnings += 1
 
         return num_warnings
 
-    def add_report(self, report_file: Path) -> None:
+    def add_report(
+        self, report_file: Path, canonicalize_board_root: bool = False
+    ) -> None:
         with report_file.open(encoding="utf-8") as f:
             report = json.load(f)
 
         try:
-            n = self.add_report_json(report)
+            n = self.add_report_json(report, canonicalize_board_root)
         except UnknownPackageNameError:
             logging.warning(
                 "Failed guessing package name for report at %r; ignoring file",
@@ -255,7 +283,7 @@ def aggregate_reports(opts: argparse.Namespace) -> None:
     aggregated = AggregatedWarnings()
     for report in directory.glob("**/warnings_report*.json"):
         logging.debug("Discovered report %s", report)
-        aggregated.add_report(report)
+        aggregated.add_report(report, opts.canonicalize_board_roots)
 
     if not aggregated.num_reports:
         raise ValueError(f"Found no warnings report under {directory}")
@@ -495,6 +523,14 @@ def main(argv: List[str]) -> None:
         """,
     )
     aggregate.set_defaults(func=aggregate_reports)
+    aggregate.add_argument(
+        "--canonicalize-board-roots",
+        action="store_true",
+        help="""
+        Converts warnings paths starting with a board root (e.g., /build/atlas)
+        to a form consistent across many boards.
+        """,
+    )
     aggregate.add_argument(
         "--directory", type=Path, required=True, help="Directory to inspect."
     )
