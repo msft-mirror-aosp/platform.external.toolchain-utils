@@ -15,6 +15,12 @@ $ ./werror_logs.py aggregate --directory=/build/foo/var/lib/chromeos
 
 And see a full aggregation of all warnings that were suppressed in that
 `build_packages` invocation.
+
+It can also be used to fetch warnings reports from CQ runs, for instance,
+$ ./werror_logs.py fetch-cq --cq-orchestrator-id=123456
+
+In this case, it downloads _all -Werror logs_ from children of the given
+cq-orchestrator, and prints the parent directory of all of these reports.
 """
 
 import argparse
@@ -22,10 +28,21 @@ import collections
 import dataclasses
 import json
 import logging
+import multiprocessing.pool
+import os
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
+import threading
 from typing import Any, Counter, DefaultDict, Dict, IO, Iterable, List, Optional
+
+import cros_cls
+
+
+_DEFAULT_FETCH_DIRECTORY = Path("/tmp/werror_logs")
 
 
 @dataclasses.dataclass(frozen=True, eq=True, order=True)
@@ -248,6 +265,215 @@ def aggregate_reports(opts: argparse.Namespace) -> None:
     summarize_warnings_by_flag(aggregated.warnings)
 
 
+def fetch_werror_tarball_links(
+    child_builders: Dict[str, cros_cls.BuildID]
+) -> List[str]:
+    outputs = cros_cls.CQBoardBuilderOutput.fetch_many(child_builders.values())
+    artifacts_links = []
+    for builder_name, out in zip(child_builders, outputs):
+        if out.artifacts_link:
+            artifacts_links.append(out.artifacts_link)
+        else:
+            logging.info("%s had no output artifacts; ignoring", builder_name)
+
+    gsutil_stdout = subprocess.run(
+        ["gsutil", "-m", "ls"] + artifacts_links,
+        check=True,
+        encoding="utf-8",
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+    ).stdout
+
+    return [
+        x
+        for x in gsutil_stdout.splitlines()
+        if x.endswith(".fatal_clang_warnings.tar.xz")
+    ]
+
+
+def cq_builder_name_from_werror_logs_path(werror_logs: str) -> str:
+    """Returns the CQ builder given a -Werror logs path.
+
+    >>> cq_builder_name_from_werror_logs_path(
+            "gs://chromeos-image-archive/staryu-cq/"
+            "R123-15771.0.0-94466-8756713501925941617/"
+            "staryu.20240207.fatal_clang_warnings.tar.xz"
+        )
+    "staryu-cq"
+    """
+    return os.path.basename(os.path.dirname(os.path.dirname(werror_logs)))
+
+
+def download_and_unpack_werror_tarballs(
+    unpack_dir: Path, download_dir: Path, gs_urls: List[str]
+):
+    # This is necessary below when we're untarring files. It should trivially
+    # always be the case, and assuming it makes testing easier.
+    assert download_dir.is_absolute(), download_dir
+
+    unpack_dir.mkdir()
+    download_dir.mkdir()
+
+    logging.info(
+        "Fetching and unpacking %d -Werror reports; this may take a bit",
+        len(gs_urls),
+    )
+    # Run the download in a threadpool since we can have >100 logs, and all of
+    # this is heavily I/O-bound.
+    # Max 8 downloads at a time is arbitrary, but should minimize the chance of
+    # rate-limiting. Don't limit `tar xaf`, since those should be short-lived.
+    download_limiter = threading.BoundedSemaphore(8)
+
+    def download_one_url(
+        unpack_dir: Path, download_dir: Path, gs_url: str
+    ) -> Optional[subprocess.CalledProcessError]:
+        """Downloads and unpacks -Werror logs from the given gs_url.
+
+        Leaves the tarball in `download_dir`, and the unpacked version in
+        `unpack_dir`.
+
+        Returns:
+            None if all went well; otherwise, returns the command that failed.
+            All commands have stderr data piped in.
+        """
+        file_targ = download_dir / os.path.basename(gs_url)
+        try:
+            with download_limiter:
+                subprocess.run(
+                    ["gsutil", "cp", gs_url, file_targ],
+                    check=True,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                    encoding="utf-8",
+                    errors="replace",
+                )
+
+            # N.B., file_targ is absolute, so running with `file_targ` while
+            # changing `cwd` is safe.
+            subprocess.run(
+                ["tar", "xaf", file_targ],
+                check=True,
+                cwd=unpack_dir,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                encoding="utf-8",
+                errors="replace",
+            )
+        except subprocess.CalledProcessError as e:
+            return e
+        return None
+
+    with multiprocessing.pool.ThreadPool() as thread_pool:
+        download_futures = []
+        for gs_url in gs_urls:
+            name = cq_builder_name_from_werror_logs_path(gs_url)
+            unpack_to = unpack_dir / name
+            unpack_to.mkdir()
+            download_to = download_dir / name
+            download_to.mkdir()
+            download_futures.append(
+                (
+                    name,
+                    thread_pool.apply_async(
+                        download_one_url, (unpack_to, download_to, gs_url)
+                    ),
+                )
+            )
+
+        num_failures = 0
+        for name, future in download_futures:
+            result = future.get()
+            if not result:
+                continue
+
+            num_failures += 1
+            logging.error(
+                "Downloading %s failed: running %r. Stderr: %r",
+                name,
+                result.cmd,
+                result.stderr,
+            )
+    if num_failures:
+        raise ValueError(f"{num_failures} download(s) failed.")
+
+
+def fetch_cq_reports(opts: argparse.Namespace) -> None:
+    if opts.cl:
+        logging.info(
+            "Fetching most recent completed CQ orchestrator from %s", opts.cl
+        )
+        all_ids = cros_cls.fetch_cq_orchestrator_ids(opts.cl)
+        if not all_ids:
+            raise ValueError(
+                f"No CQ orchestrators found under {opts.cl}. See --help for "
+                "how to pass a build ID directly."
+            )
+        # Note that these cq-orchestrator runs are returned in oldest-to-newest
+        # order. The user probably wants the newest run.
+        cq_orchestrator_id = all_ids[-1]
+        cq_orchestrator_url = cros_cls.builder_url(cq_orchestrator_id)
+        logging.info("Checking CQ run %s", cq_orchestrator_url)
+    else:
+        cq_orchestrator_id = opts.cq_orchestrator_id
+        cq_orchestrator_url = cros_cls.builder_url(cq_orchestrator_id)
+
+    # This is the earliest point at which we can compute this directory with
+    # certainty. Figure it out now and fail early if it exists.
+    output_directory = opts.directory
+    if not output_directory:
+        output_directory = _DEFAULT_FETCH_DIRECTORY / str(cq_orchestrator_id)
+
+    if output_directory.exists():
+        if not opts.force:
+            sys.exit(
+                f"Directory at {output_directory} exists; not overwriting. "
+                "Pass --force to overwrite."
+            )
+        # Actually _remove_ it when we have all logs unpacked and are able to
+        # create the output directory with confidence.
+
+    logging.info("Fetching info on child builders of %s", cq_orchestrator_url)
+    child_builders = cros_cls.CQOrchestratorOutput.fetch(
+        cq_orchestrator_id
+    ).child_builders
+    if not child_builders:
+        raise ValueError(f"No child builders found for {cq_orchestrator_url}")
+
+    logging.info(
+        "%d child builders found; finding associated tarball links",
+        len(child_builders),
+    )
+    werror_links = fetch_werror_tarball_links(child_builders)
+    if not werror_links:
+        raise ValueError(
+            f"No -Werror logs found in children of {cq_orchestrator_url}"
+        )
+
+    logging.info("%d -Werror logs found", len(werror_links))
+    with tempfile.TemporaryDirectory("werror_logs_fetch_cq") as t:
+        tempdir = Path(t)
+        unpack_dir = tempdir / "unpacked"
+        download_and_unpack_werror_tarballs(
+            unpack_dir=unpack_dir,
+            download_dir=tempdir / "tarballs",
+            gs_urls=werror_links,
+        )
+
+        if output_directory.exists():
+            logging.info("Removing output directory at %s", output_directory)
+            shutil.rmtree(output_directory)
+        output_directory.parent.mkdir(parents=True, exist_ok=True)
+        # (Convert these to strs to keep mypy happy.)
+        shutil.move(str(unpack_dir), str(output_directory))
+        logging.info(
+            "CQ logs from %s stored in %s",
+            cq_orchestrator_url,
+            output_directory,
+        )
+
+
 def main(argv: List[str]) -> None:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -271,6 +497,40 @@ def main(argv: List[str]) -> None:
     aggregate.set_defaults(func=aggregate_reports)
     aggregate.add_argument(
         "--directory", type=Path, required=True, help="Directory to inspect."
+    )
+
+    fetch_cq = subparsers.add_parser(
+        "fetch-cq",
+        help="Fetch all -Werror reports for a CQ run.",
+    )
+    fetch_cq.set_defaults(func=fetch_cq_reports)
+    cl_or_cq_orchestrator = fetch_cq.add_mutually_exclusive_group(required=True)
+    cl_or_cq_orchestrator.add_argument(
+        "--cl",
+        type=cros_cls.ChangeListURL.parse_with_patch_set,
+        help="Link to a CL to get the most recent cq-orchestrator from",
+    )
+    cl_or_cq_orchestrator.add_argument(
+        "--cq-orchestrator-id",
+        type=cros_cls.BuildID,
+        help="""
+        Build number for a cq-orchestrator run. Builders invoked by this are
+        examined for -Werror logs.
+        """,
+    )
+    fetch_cq.add_argument(
+        "--directory",
+        type=Path,
+        help=f"""
+        Directory to put downloaded -Werror logs in. Default is a subdirectory
+        of {_DEFAULT_FETCH_DIRECTORY}.
+        """,
+    )
+    fetch_cq.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Remove the directory at `--directory` if it exists",
     )
 
     opts = parser.parse_args(argv)

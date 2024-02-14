@@ -9,7 +9,7 @@ import json
 import logging
 import re
 import subprocess
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 
 BuildID = int
@@ -113,6 +113,11 @@ class ChangeListURL:
         return result
 
 
+def builder_url(build_id: BuildID) -> str:
+    """Returns a builder URL given a build ID."""
+    return f"https://ci.chromium.org/b/{build_id}"
+
+
 def fetch_cq_orchestrator_ids(
     cl: ChangeListURL,
 ) -> List[BuildID]:
@@ -206,7 +211,9 @@ class CQBoardBuilderOutput:
     artifacts_link: Optional[str]
 
     @classmethod
-    def fetch_many(cls, bot_ids: List[BuildID]) -> List["CQBoardBuilderOutput"]:
+    def fetch_many(
+        cls, bot_ids: Iterable[BuildID]
+    ) -> List["CQBoardBuilderOutput"]:
         """Fetches CQBoardBuilderOutput for the given bots."""
         bb_output = _run_bb_decoding_output(
             ["get", "-p"] + [str(x) for x in bot_ids], multiline=True

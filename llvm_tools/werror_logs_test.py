@@ -7,9 +7,15 @@
 
 import io
 import logging
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
 import textwrap
 from typing import Dict
 import unittest
+from unittest import mock
 
 import werror_logs
 
@@ -40,6 +46,11 @@ class Test(unittest.TestCase):
         log = logging.getLogger()
         log.addFilter(f)
         self.addCleanup(log.removeFilter, f)
+
+    def make_tempdir(self) -> Path:
+        tempdir = tempfile.mkdtemp("werror_logs_test_")
+        self.addCleanup(shutil.rmtree, tempdir)
+        return Path(tempdir)
 
     def test_clang_warning_parsing_parses_flag_errors(self):
         self.assertEqual(
@@ -266,6 +277,86 @@ class Test(unittest.TestCase):
                 """
             ),
         )
+
+    def test_cq_builder_determination_works(self):
+        self.assertEqual(
+            werror_logs.cq_builder_name_from_werror_logs_path(
+                "gs://chromeos-image-archive/staryu-cq/"
+                "R123-15771.0.0-94466-8756713501925941617/"
+                "staryu.20240207.fatal_clang_warnings.tar.xz"
+            ),
+            "staryu-cq",
+        )
+
+    @mock.patch.object(subprocess, "run")
+    def test_tarball_downloading_works(self, run_mock):
+        tempdir = self.make_tempdir()
+        unpack_dir = tempdir / "unpack"
+        download_dir = tempdir / "download"
+
+        gs_urls = [
+            "gs://foo/bar-cq/build-number/123.fatal_clang_warnings.tar.xz",
+            "gs://foo/baz-cq/build-number/124.fatal_clang_warnings.tar.xz",
+            "gs://foo/qux-cq/build-number/125.fatal_clang_warnings.tar.xz",
+        ]
+        named_gs_urls = [
+            (werror_logs.cq_builder_name_from_werror_logs_path(x), x)
+            for x in gs_urls
+        ]
+        werror_logs.download_and_unpack_werror_tarballs(
+            unpack_dir, download_dir, gs_urls
+        )
+
+        # Just verify that this executed the correct commands. Normally this is
+        # a bit fragile, but given that this function internally is pretty
+        # complex (starting up a threadpool, etc), extra checking is nice.
+        want_gsutil_commands = [
+            [
+                "gsutil",
+                "cp",
+                gs_url,
+                download_dir / name / os.path.basename(gs_url),
+            ]
+            for name, gs_url in named_gs_urls
+        ]
+        want_untar_commands = [
+            ["tar", "xaf", gsutil_command[-1]]
+            for gsutil_command in want_gsutil_commands
+        ]
+
+        cmds = []
+        for call_args in run_mock.call_args_list:
+            call_positional_args = call_args[0]
+            cmd = call_positional_args[0]
+            cmds.append(cmd)
+        cmds.sort()
+        self.assertEqual(
+            cmds, sorted(want_gsutil_commands + want_untar_commands)
+        )
+
+    @mock.patch.object(subprocess, "run")
+    def test_tarball_downloading_fails_if_exceptions_are_raised(self, run_mock):
+        self.silence_logs()
+
+        def raise_exception(*_args, check=False, **_kwargs):
+            self.assertTrue(check)
+            raise subprocess.CalledProcessError(returncode=1, cmd=[])
+
+        run_mock.side_effect = raise_exception
+        tempdir = self.make_tempdir()
+        unpack_dir = tempdir / "unpack"
+        download_dir = tempdir / "download"
+
+        gs_urls = [
+            "gs://foo/bar-cq/build-number/123.fatal_clang_warnings.tar.xz",
+            "gs://foo/baz-cq/build-number/124.fatal_clang_warnings.tar.xz",
+            "gs://foo/qux-cq/build-number/125.fatal_clang_warnings.tar.xz",
+        ]
+        with self.assertRaisesRegex(ValueError, r"3 download\(s\) failed"):
+            werror_logs.download_and_unpack_werror_tarballs(
+                unpack_dir, download_dir, gs_urls
+            )
+        self.assertEqual(run_mock.call_count, 3)
 
 
 if __name__ == "__main__":
