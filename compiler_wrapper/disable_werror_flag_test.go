@@ -496,7 +496,20 @@ func TestChromeOSForceDisableWerrorWorksAsFlag(t *testing.T) {
 	})
 }
 
-func TestChromeOSForceDisableWerrorRemovesFlags(t *testing.T) {
+func TestChromeOSForceDisableWerrorIsSuppressedInSrcConfigure(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		ctx.env = append(ctx.env, "EBUILD_PHASE=configure")
+		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{
+			cflags: []string{"-D_CROSTC_FORCE_DISABLE_WERROR=/foo"},
+		})
+		werrorConfig := processForceDisableWerrorFlag(ctx, ctx.cfg, builder)
+		if werrorConfig.enabled {
+			t.Fatalf("Disable -Werror should be disabled during src_configure.")
+		}
+	})
+}
+
+func TestChromeOSForceDisableWerrorRemovesClangFlags(t *testing.T) {
 	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
 		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{
 			cflags: []string{
@@ -515,6 +528,29 @@ func TestChromeOSForceDisableWerrorRemovesFlags(t *testing.T) {
 			t.Errorf("Stdout reporting should be disabled on ChromeOS")
 		} else if werrorConfig.reportDir != "/baz" {
 			t.Errorf("Got werror report dir %s; want /baz", werrorConfig.reportDir)
+		}
+
+		args := builder.build().Args
+		if want := []string{"-Wfoo"}; !reflect.DeepEqual(args, want) {
+			t.Errorf("Got builder args %#v; want %#v", args, want)
+		}
+	})
+}
+
+func TestChromeOSForceDisableWerrorRemovesGCCFlagsButDoesNotEnableFeature(t *testing.T) {
+	withForceDisableWErrorTestContext(t, func(ctx *testContext) {
+		builder := newWerrorCommandBuilderOrDie(t, ctx, commandBuilderOpts{
+			cflags: []string{
+				"-D_CROSTC_FORCE_DISABLE_WERROR=/foo",
+				"-D_CROSTC_FORCE_DISABLE_WERROR=/bar",
+				"-Wfoo",
+				"-D_CROSTC_FORCE_DISABLE_WERROR=/baz",
+			},
+		})
+		builder.target.compilerType = gccType
+		werrorConfig := processForceDisableWerrorFlag(ctx, ctx.cfg, builder)
+		if werrorConfig.enabled {
+			t.Fatalf("Disable -Werror should not be enabled for GCC.")
 		}
 
 		args := builder.build().Args

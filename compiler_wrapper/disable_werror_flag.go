@@ -43,11 +43,6 @@ func processForceDisableWerrorFlag(env env, cfg *config, builder *commandBuilder
 		}
 	}
 
-	// CrOS only wants this functionality for clang.
-	if builder.target.compilerType != clangType {
-		return forceDisableWerrorConfig{enabled: false}
-	}
-
 	// CrOS supports two modes for enabling this flag:
 	// 1 (preferred). A CFLAG that specifies the directory to write reports to. e.g.,
 	//   `-D_CROSTC_FORCE_DISABLE_WERROR=/path/to/directory`. This flag will be removed from the
@@ -70,10 +65,19 @@ func processForceDisableWerrorFlag(env env, cfg *config, builder *commandBuilder
 		return ""
 	})
 
+	// CrOS only wants this functionality to apply to clang, though flags should also be removed
+	// for GCC.
+	if builder.target.compilerType != clangType {
+		return forceDisableWerrorConfig{enabled: false}
+	}
+
 	if sawArg {
 		return forceDisableWerrorConfig{
 			reportDir: argDir,
-			enabled:   true,
+			// Skip this when in src_configure: some build systems ignore CFLAGS
+			// modifications after configure, so this flag must be specified before
+			// src_configure, but we only want the flag to apply to actual builds.
+			enabled: !isInConfigureStage(env),
 		}
 	}
 
