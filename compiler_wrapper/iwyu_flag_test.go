@@ -84,7 +84,7 @@ func TestUseIWYUBasedOnFileExtension(t *testing.T) {
 			ctx.cmdCount = 0
 			ctx.must(callCompiler(ctx, ctx.cfg,
 				ctx.newCommand(clangX86_64, tt.args...)))
-			if ctx.cmdCount > 1 && !tt.iwyu {
+			if ctx.cmdCount == 2 && !tt.iwyu {
 				t.Errorf("expected a call to iwyu but got none for args %s", tt.args)
 			}
 			if ctx.cmdCount == 1 && tt.iwyu {
@@ -129,7 +129,8 @@ func TestIWYUFiltersIWYUFlags(t *testing.T) {
 
 func withIWYUTestContext(t *testing.T, work func(ctx *testContext)) {
 	withTestContext(t, func(ctx *testContext) {
-		ctx.env = []string{"WITH_IWYU=1"}
+		artifactDir := t.TempDir()
+		ctx.env = []string{"WITH_IWYU=1", "CROS_ARTIFACTS_TMP_DIR=" + artifactDir}
 		work(ctx)
 	})
 }

@@ -59,7 +59,7 @@ def validate_patch_application(
     if predecessor_apply_results.failed_patches:
         logging.error("Failed to apply patches from PATCHES.json:")
         for p in predecessor_apply_results.failed_patches:
-            logging.error(f"Patch title: {p.title()}")
+            logging.error("Patch title: %s", p.title())
         raise PatchApplicationError("Failed to apply patch from PATCHES.json")
 
     patch_entry = patch_utils.PatchEntry.from_dict(
@@ -126,7 +126,9 @@ def add_patch(
         )
 
     with open(patches_json_path, encoding="utf-8") as f:
-        patches_json = json.load(f)
+        contents = f.read()
+    indent_len = patch_utils.predict_indent(contents.splitlines())
+    patches_json = json.loads(contents)
 
     for p in patches_json:
         rel_path = p["rel_patch_path"]
@@ -182,7 +184,11 @@ def add_patch(
     temp_file = patches_json_path + ".tmp"
     with open(temp_file, "w", encoding="utf-8") as f:
         json.dump(
-            patches_json, f, indent=4, separators=(",", ": "), sort_keys=True
+            patches_json,
+            f,
+            indent=indent_len,
+            separators=(",", ": "),
+            sort_keys=True,
         )
         f.write("\n")
     os.rename(temp_file, patches_json_path)
@@ -327,6 +333,7 @@ def find_patches_and_make_cl(
     start_rev: git_llvm_rev.Rev,
     llvm_config: git_llvm_rev.LLVMConfig,
     llvm_symlink_dir: str,
+    allow_failures: bool,
     create_cl: bool,
     skip_dependencies: bool,
     reviewers: t.Optional[t.List[str]],
@@ -354,6 +361,8 @@ def find_patches_and_make_cl(
     if create_cl:
         git.CreateBranch(llvm_symlink_dir, branch)
 
+    successes = []
+    failures = []
     for parsed_patch in converted_patches:
         # Find out the llvm projects changed in this commit
         packages = get_package_names(parsed_patch.sha, llvm_config.dir)
@@ -369,15 +378,25 @@ def find_patches_and_make_cl(
             chroot_path, symlinks
         )
         # Create a local patch for all the affected llvm projects
-        create_patch_for_packages(
-            packages,
-            symlinks,
-            start_rev,
-            parsed_patch.rev,
-            parsed_patch.sha,
-            llvm_config.dir,
-            platforms=platforms,
-        )
+        try:
+            create_patch_for_packages(
+                packages,
+                symlinks,
+                start_rev,
+                parsed_patch.rev,
+                parsed_patch.sha,
+                llvm_config.dir,
+                platforms=platforms,
+            )
+        except PatchApplicationError as e:
+            if allow_failures:
+                logging.warning(e)
+                failures.append(parsed_patch.sha)
+                continue
+            else:
+                raise e
+        successes.append(parsed_patch.sha)
+
         if create_cl:
             symlinks_to_uprev.extend(symlinks)
 
@@ -397,7 +416,17 @@ def find_patches_and_make_cl(
                 ["git", "reset", "--hard", "HEAD^"], cwd=llvm_config.dir
             )
 
-    if create_cl:
+    if allow_failures:
+        success_list = (":\n\t" + "\n\t".join(successes)) if successes else "."
+        logging.info(
+            "Successfully applied %d patches%s", len(successes), success_list
+        )
+        failure_list = (":\n\t" + "\n\t".join(failures)) if failures else "."
+        logging.info(
+            "Failed to apply %d patches%s", len(failures), failure_list
+        )
+
+    if successes and create_cl:
         make_cl(
             symlinks_to_uprev,
             llvm_symlink_dir,
@@ -478,6 +507,7 @@ def get_from_upstream(
     start_sha: str,
     patches: t.List[str],
     platforms: t.List[str],
+    allow_failures: bool,
     skip_dependencies: bool = False,
     reviewers: t.List[str] = None,
     cc: t.List[str] = None,
@@ -515,7 +545,9 @@ def get_from_upstream(
         skip_dependencies=skip_dependencies,
         reviewers=reviewers,
         cc=cc,
+        allow_failures=allow_failures,
     )
+
     logging.info("Complete.")
 
 
@@ -565,6 +597,11 @@ def main():
         "apply to multiple platforms",
     )
     parser.add_argument(
+        "--allow_failures",
+        action="store_true",
+        help="Skip patches that fail to apply and continue.",
+    )
+    parser.add_argument(
         "--create_cl",
         action="store_true",
         help="Automatically create a CL if specified",
@@ -576,6 +613,7 @@ def main():
         "when --differential appears exactly once.",
     )
     args = parser.parse_args()
+    chroot.VerifyChromeOSRoot(args.chroot_path)
 
     if not (args.sha or args.differential):
         parser.error("--sha or --differential required")
@@ -588,6 +626,7 @@ def main():
 
     get_from_upstream(
         chroot_path=args.chroot_path,
+        allow_failures=args.allow_failures,
         create_cl=args.create_cl,
         start_sha=args.start_sha,
         patches=args.sha + args.differential,

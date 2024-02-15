@@ -4,6 +4,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# pylint: disable=line-too-long
 """Handle most aspects of creating and benchmarking PGO profiles for Rust.
 
 This is meant to be done at Rust uprev time. Ultimately profdata files need
@@ -111,7 +112,7 @@ import re
 import shutil
 import subprocess
 import sys
-from typing import Dict, List, Optional
+from typing import cast, List, Mapping, Optional
 
 
 TARGET_TRIPLES = [
@@ -146,14 +147,14 @@ def run(
     args: List,
     *,
     indent: int = 4,
-    env: Optional[Dict[str, str]] = None,
+    env: Optional[Mapping[str, str]] = None,
     capture_stdout: bool = False,
     message: bool = True,
 ) -> Optional[str]:
     args = [str(arg) for arg in args]
 
     if env is None:
-        new_env = os.environ
+        new_env: Mapping[str, str] = os.environ
     else:
         new_env = os.environ.copy()
         new_env.update(env)
@@ -199,8 +200,13 @@ def run(
     return ret
 
 
+def get_command_output(args: List, **kwargs) -> str:
+    """Runs a command and returns its stdout and stderr as a string."""
+    return cast(str, run(args, capture_stdout=True, **kwargs))
+
+
 def get_rust_version() -> str:
-    s = run(["rustc", "--version"], capture_stdout=True)
+    s = get_command_output(["rustc", "--version"])
     m = re.search(r"\d+\.\d+\.\d+", s)
     assert m is not None, repr(s)
     return m.group(0)
@@ -214,9 +220,8 @@ def download_unpack_crate(*, crate_name: str, crate_version: str):
         local_path / f"{crate_name}-{crate_version}", ignore_errors=True
     )
     with chdir(local_path):
-        run(["gsutil.py", "cp", f"gs:/{gs_path}", "."])
-        run(["xz", "-d", f"{filename_no_extension}.tar.xz"])
-        run(["tar", "xvf", f"{filename_no_extension}.tar"])
+        run(["gsutil", "cp", f"gs:/{gs_path}", "."])
+        run(["tar", "xaf", f"{filename_no_extension}.tar.xz"])
 
 
 def build_crate(
@@ -229,7 +234,7 @@ def build_crate(
     local_path = LOCAL_BASE / "crates" / f"{crate_name}-{crate_version}"
     with chdir(local_path):
         Path(".cargo").mkdir(exist_ok=True)
-        with open(".cargo/config.toml", "w") as f:
+        with open(".cargo/config.toml", "w", encoding="utf-8") as f:
             f.write(
                 "\n".join(
                     (
@@ -275,9 +280,10 @@ def build_rust(
 ):
 
     if use_frontend_profile or use_llvm_profile:
-        assert (
-            not generate_frontend_profile and not generate_llvm_profile
-        ), "Can't build a compiler to both use profile information and generate it"
+        assert not generate_frontend_profile and not generate_llvm_profile, (
+            "Can't build a compiler to both use profile information "
+            "and generate it"
+        )
 
     assert (
         not generate_frontend_profile or not generate_llvm_profile
@@ -293,7 +299,9 @@ def build_rust(
     if use_llvm_profile:
         use += "rust_profile_llvm_use_local "
 
-    # -E to preserve our USE environment variable.
+    env_use = os.getenv("USE", "").rstrip()
+    use = (env_use + " " + use).strip()
+    # -E to preserve environment variables like USE, FEATURES, etc.
     run(
         ["sudo", "-E", "emerge", "dev-lang/rust", "dev-lang/rust-host"],
         env={"USE": use},
@@ -303,9 +311,9 @@ def build_rust(
 def merge_profdata(llvm_or_frontend, *, source_directory: Path, dest: Path):
     assert llvm_or_frontend in ("llvm", "frontend")
 
-    # The two `llvm-profdata` programs come from different LLVM versions, and may
-    # support different versions of the profdata format, so make sure to use the
-    # right one.
+    # The two `llvm-profdata` programs come from different LLVM versions, and
+    # may support different versions of the profdata format, so make sure to
+    # use the right one.
     llvm_profdata = (
         "/usr/bin/llvm-profdata"
         if llvm_or_frontend == "llvm"
@@ -328,12 +336,13 @@ def upload_file(
     *, source: Path, dest: PurePosixPath, public_read: bool = False
 ):
     if public_read:
-        run(["gsutil.py", "cp", "-a", "public-read", source, f"gs:/{dest}"])
+        run(["gsutil", "cp", "-a", "public-read", source, f"gs:/{dest}"])
     else:
-        run(["gsutil.py", "cp", source, f"gs:/{dest}"])
+        run(["gsutil", "cp", source, f"gs:/{dest}"])
 
 
 def maybe_download_crate(*, crate_name: str, crate_version: str):
+    """Downloads a crate if its download directory does not already exist."""
     directory = LOCAL_BASE / "crates" / f"{crate_name}-{crate_version}"
     if directory.is_dir():
         logging.info("Crate already downloaded")
@@ -409,6 +418,10 @@ def generate(args):
 
 
 def benchmark_nopgo(args):
+    maybe_download_crate(
+        crate_name=args.bench_crate_name, crate_version=args.bench_crate_version
+    )
+
     logging.info("Building Rust, no PGO")
     build_rust()
 
@@ -531,13 +544,13 @@ def upload_profdata(args):
     )
 
 
-def main():
+def main(argv: List[str]) -> int:
     logging.basicConfig(
         stream=sys.stdout, level=logging.NOTSET, format="%(message)s"
     )
 
     parser = argparse.ArgumentParser(
-        prog=sys.argv[0],
+        prog=argv[0],
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -580,7 +593,8 @@ def main():
     parser_benchmark_nopgo.add_argument(
         "--suffix",
         default="",
-        help="Suffix to distinguish benchmarks and profdata with identical rustc versions",
+        help="Suffix to distinguish benchmarks and profdata with identical "
+        "rustc versions",
     )
 
     parser_benchmark_pgo = subparsers.add_parser(
@@ -613,7 +627,8 @@ def main():
     parser_benchmark_pgo.add_argument(
         "--suffix",
         default="",
-        help="Suffix to distinguish benchmarks and profdata with identical rustc versions",
+        help="Suffix to distinguish benchmarks and profdata with identical "
+        "rustc versions",
     )
 
     parser_upload_profdata = subparsers.add_parser(
@@ -633,10 +648,11 @@ def main():
     parser_upload_profdata.add_argument(
         "--suffix",
         default="",
-        help="Suffix to distinguish benchmarks and profdata with identical rustc versions",
+        help="Suffix to distinguish benchmarks and profdata with identical "
+        "rustc versions",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv[1:])
 
     (LOCAL_BASE / "crates").mkdir(parents=True, exist_ok=True)
     (LOCAL_BASE / "llvm-profraw").mkdir(parents=True, exist_ok=True)
@@ -649,4 +665,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv))

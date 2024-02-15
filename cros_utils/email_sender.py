@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -19,9 +17,8 @@ import getpass
 import json
 import os
 import smtplib
+import subprocess
 import tempfile
-
-from cros_utils import command_executer
 
 
 X20_PATH = "/google/data/rw/teams/c-compiler-chrome/prod_emails"
@@ -31,7 +28,7 @@ X20_PATH = "/google/data/rw/teams/c-compiler-chrome/prod_emails"
 def AtomicallyWriteFile(file_path):
     temp_path = file_path + ".in_progress"
     try:
-        with open(temp_path, "w") as f:
+        with open(temp_path, "w", encoding="utf-8") as f:
             yield f
         os.rename(temp_path, file_path)
     except:
@@ -39,10 +36,10 @@ def AtomicallyWriteFile(file_path):
         raise
 
 
-class EmailSender(object):
+class EmailSender:
     """Utility class to send email through SMTP or SendGMR."""
 
-    class Attachment(object):
+    class Attachment:
         """Small class to keep track of attachment info."""
 
         def __init__(self, name, content):
@@ -61,27 +58,29 @@ class EmailSender(object):
         """Enqueues an email in our x20 outbox.
 
         These emails ultimately get sent by the machinery in
-        //depot/google3/googleclient/chrome/chromeos_toolchain/mailer/mail.go. This
-        kind of sending is intended for accounts that don't have smtp or gmr access
-        (e.g., role accounts), but can be used by anyone with x20 access.
+        //depot/google3/googleclient/chrome/chromeos_toolchain/mailer/mail.go.
+        This kind of sending is intended for accounts that don't have smtp or
+        gmr access (e.g., role accounts), but can be used by anyone with x20
+        access.
 
-        All emails are sent from `mdb.c-compiler-chrome+${identifier}@google.com`.
+        All emails are sent from
+        `mdb.c-compiler-chrome+${identifier}@google.com`.
 
         Args:
-          subject: email subject. Must be nonempty.
-          identifier: email identifier, or the text that lands after the `+` in the
-                      "From" email address. Must be nonempty.
-          well_known_recipients: a list of well-known recipients for the email.
-                                 These are translated into addresses by our mailer.
-                                 Current potential values for this are ('detective',
-                                 'cwp-team', 'cros-team', 'mage'). Either this or
-                                 direct_recipients must be a nonempty list.
-          direct_recipients: @google.com emails to send addresses to. Either this
-                             or well_known_recipients must be a nonempty list.
-          text_body: a 'text/plain' email body to send. Either this or html_body
-                     must be a nonempty string. Both may be specified
-          html_body: a 'text/html' email body to send. Either this or text_body
-                     must be a nonempty string. Both may be specified
+            subject: email subject. Must be nonempty.
+            identifier: email identifier, or the text that lands after the
+                `+` in the "From" email address. Must be nonempty.
+            well_known_recipients: a list of well-known recipients for the
+                email. These are translated into addresses by our mailer.
+                Current potential values for this are ('detective',
+                'cwp-team', 'cros-team', 'mage'). Either this or
+                direct_recipients must be a nonempty list.
+            direct_recipients: @google.com emails to send addresses to. Either
+                this or well_known_recipients must be a nonempty list.
+            text_body: a 'text/plain' email body to send. Either this or
+                html_body must be a nonempty string. Both may be specified
+            html_body: a 'text/html' email body to send. Either this or
+                text_body must be a nonempty string. Both may be specified
         """
         # `str`s act a lot like tuples/lists. Ensure that we're not accidentally
         # iterating over one of those (or anything else that's sketchy, for that
@@ -241,8 +240,6 @@ class EmailSender(object):
         attachments,
     ):
         """Send email via sendgmr program."""
-        ce = command_executer.GetCommandExecuter(log_level="none")
-
         if not email_from:
             email_from = getpass.getuser() + "@google.com"
 
@@ -260,30 +257,29 @@ class EmailSender(object):
                 f.flush()
             to_be_deleted.append(f.name)
 
-            # Fix single-quotes inside the subject. In bash, to escape a single quote
-            # (e.g 'don't') you need to replace it with '\'' (e.g. 'don'\''t'). To
-            # make Python read the backslash as a backslash rather than an escape
-            # character, you need to double it. So...
+            # Fix single-quotes inside the subject. In bash, to escape a single
+            # quote (e.g 'don't') you need to replace it with '\'' (e.g.
+            # 'don'\''t'). To make Python read the backslash as a backslash
+            # rather than an escape character, you need to double it. So...
             subject = subject.replace("'", "'\\''")
 
+            command = [
+                "sendgmr",
+                f"--to={to_list}",
+                f"--from={email_from}",
+                f"--subject={subject}",
+            ]
             if msg_type == "html":
-                command = (
-                    "sendgmr --to='%s' --from='%s' --subject='%s' "
-                    "--html_file='%s' --body_file=/dev/null"
-                    % (to_list, email_from, subject, f.name)
-                )
+                command += [f"--html_file={f.name}", "--body_file=/dev/null"]
             else:
-                command = (
-                    "sendgmr --to='%s' --from='%s' --subject='%s' "
-                    "--body_file='%s'" % (to_list, email_from, subject, f.name)
-                )
+                command.append(f"--body_file={f.name}")
 
             if email_cc:
                 cc_list = ",".join(email_cc)
-                command += " --cc='%s'" % cc_list
+                command.append(f"--cc={cc_list}")
             if email_bcc:
                 bcc_list = ",".join(email_bcc)
-                command += " --bcc='%s'" % bcc_list
+                command.append(f"--bcc={bcc_list}")
 
             if attachments:
                 attachment_files = []
@@ -302,12 +298,12 @@ class EmailSender(object):
                         f.flush()
                     attachment_files.append(f.name)
                 files = ",".join(attachment_files)
-                command += " --attachment_files='%s'" % files
+                command.append(f"--attachment_files={files}")
                 to_be_deleted += attachment_files
 
             # Send the message via our own GMR server.
-            status = ce.RunCommand(command)
-            return status
+            completed_process = subprocess.run(command, check=False)
+            return completed_process.returncode
 
         finally:
             for f in to_be_deleted:
