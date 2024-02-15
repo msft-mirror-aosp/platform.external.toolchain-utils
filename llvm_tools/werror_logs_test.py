@@ -95,6 +95,24 @@ class Test(unittest.TestCase):
             ),
         )
 
+    def test_clang_warning_parsing_parses_implicit_errors(self):
+        self.assertEqual(
+            werror_logs.ClangWarning.try_parse_line(
+                # N.B., "-Werror" is missing in this message
+                "/path/to/foo/bar/baz.cc:12:34: error: don't do this "
+                "[-Wbar]"
+            ),
+            werror_logs.ClangWarning(
+                name="-Wbar",
+                message="don't do this",
+                location=werror_logs.ClangWarningLocation(
+                    file="/path/to/foo/bar/baz.cc",
+                    line=12,
+                    column=34,
+                ),
+            ),
+        )
+
     def test_clang_warning_parsing_canonicalizes_correctly(self):
         canonical_forms = (
             ("/build/foo/bar/baz.cc", "/build/{board}/bar/baz.cc"),
@@ -147,7 +165,7 @@ class Test(unittest.TestCase):
             "foo",
             "error: something's wrong",
             "clang-14: warning: something's wrong [-Wsomething]",
-            "clang-14: error: something's wrong [-Wsomething,-Wnot-werror]",
+            "clang-14: error: something's wrong",
         )
         for line in pointless:
             self.assertIsNone(

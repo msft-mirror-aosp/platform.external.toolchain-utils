@@ -91,8 +91,8 @@ class ClangWarning:
     location: Optional[ClangWarningLocation]
 
     # This parses two kinds of errors:
-    # 1. `clang-17: error: foo [-Werror,...]`
-    # 2. `/file/path:123:45: error: foo [-Werror,...]"
+    # 1. `clang-17: error: foo [-W...]`
+    # 2. `/file/path:123:45: error: foo [-W...]"
     _WARNING_RE = re.compile(
         # Capture the location on its own, since `clang-\d+` is unused below.
         r"^(?:([^:]*:\d+:\d+)|clang-\d+)"
@@ -116,20 +116,12 @@ class ClangWarning:
             return None
 
         location, message, warning_flags = m.groups()
-        individual_warning_flags = warning_flags.split(",")
-        try:
-            werror_index = individual_warning_flags.index("-Werror")
-        except ValueError:
-            # Somehow this warning is fatal, but not related to -Werror. Since
-            # we're only interested in -Werror warnings, drop it.
-            logging.warning(
-                "Fatal warning that has nothing to do with -Werror? %r", line
-            )
-            return None
+        individual_warning_flags = [
+            x for x in warning_flags.split(",") if x != "-Werror"
+        ]
 
-        del individual_warning_flags[werror_index]
-
-        # This isn't impossible to handle, just unexpected. Complain about it.
+        # This isn't impossible to handle in theory, just unexpected. Complain
+        # about it.
         if len(individual_warning_flags) != 1:
             raise ValueError(
                 f"Weird: parsed warnings {individual_warning_flags} out "
