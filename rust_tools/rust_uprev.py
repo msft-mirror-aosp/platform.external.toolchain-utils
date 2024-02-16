@@ -113,7 +113,6 @@ RUST_SIGNING_KEY = "85AB96E6FA1BE5FE"
 RUST_SRC_BASE_URI = "https://static.rust-lang.org/dist/"
 # Packages that need to be processed like dev-lang/rust.
 RUST_PACKAGES = (
-    ("dev-lang", "rust-artifacts"),
     ("dev-lang", "rust-host"),
     ("dev-lang", "rust"),
 )
@@ -833,8 +832,8 @@ def create_rust_uprev(
         )
 
     run_step(
-        "update dev-lang/rust-artifacts manifest to add new version",
-        lambda: ebuild_actions("dev-lang/rust-artifacts", ["manifest"]),
+        "update dev-lang/rust-host manifest to add new version",
+        lambda: ebuild_actions("dev-lang/rust-host", ["manifest"]),
     )
 
     run_step(
@@ -856,8 +855,8 @@ def create_rust_uprev(
         lambda: set_include_profdata_src(CROS_RUSTC_ECLASS, include=True),
     )
     run_step(
-        "update dev-lang/rust-artifacts manifest to add profile data",
-        lambda: ebuild_actions("dev-lang/rust-artifacts", ["manifest"]),
+        "update dev-lang/rust-host manifest to add profile data",
+        lambda: ebuild_actions("dev-lang/rust-host", ["manifest"]),
     )
     if not skip_compile:
         run_step("build packages", lambda: rebuild_packages(rust_version))
@@ -994,8 +993,8 @@ def remove_rust_uprev(
         )
 
     run_step(
-        "update dev-lang/rust-artifacts manifest to delete old version",
-        lambda: ebuild_actions("dev-lang/rust-artifacts", ["manifest"]),
+        "update dev-lang/rust-host manifest to delete old version",
+        lambda: ebuild_actions("dev-lang/rust-host", ["manifest"]),
     )
     run_step(
         "remove target version from rust packages",
