@@ -307,7 +307,6 @@ def build_rust(
             "sudo",
             "-E",
             "emerge",
-            "dev-lang/rust-artifacts",
             "dev-lang/rust-host",
             "dev-lang/rust",
         ],
