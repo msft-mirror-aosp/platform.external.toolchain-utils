@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -85,18 +86,18 @@ func processForceDisableWerrorFlag(env env, cfg *config, builder *commandBuilder
 	return forceDisableWerrorConfig{enabled: envValue != ""}
 }
 
-func disableWerrorFlags(originalArgs []string) []string {
-	extraArgs := []string{"-Wno-error"}
+func disableWerrorFlags(originalArgs, extraFlags []string) []string {
+	allExtraFlags := append([]string{}, extraFlags...)
 	newArgs := make([]string, 0, len(originalArgs)+numWErrorEstimate)
 	for _, flag := range originalArgs {
 		if strings.HasPrefix(flag, "-Werror=") {
-			extraArgs = append(extraArgs, strings.Replace(flag, "-Werror", "-Wno-error", 1))
+			allExtraFlags = append(allExtraFlags, strings.Replace(flag, "-Werror", "-Wno-error", 1))
 		}
 		if !strings.Contains(flag, "-warnings-as-errors") {
 			newArgs = append(newArgs, flag)
 		}
 	}
-	return append(newArgs, extraArgs...)
+	return append(newArgs, allExtraFlags...)
 }
 
 func isLikelyAConfTest(cfg *config, cmd *command) bool {
@@ -112,6 +113,36 @@ func isLikelyAConfTest(cfg *config, cmd *command) bool {
 		}
 	}
 	return false
+}
+
+func getWnoErrorFlags(stdout, stderr []byte) []string {
+	needWnoError := false
+	extraFlags := []string{}
+	for _, submatches := range regexp.MustCompile(`error:.* \[(-W[^\]]+)\]`).FindAllSubmatch(stderr, -1) {
+		bracketedMatch := submatches[1]
+
+		// Some warnings are promoted to errors by -Werror. These contain `-Werror` in the
+		// brackets specifying the warning name. A broad, follow-up `-Wno-error` should
+		// disable those.
+		//
+		// _Others_ are implicitly already errors, and will not be disabled by `-Wno-error`.
+		// These do not have `-Wno-error` in their brackets. These need to explicitly have
+		// `-Wno-error=${warning_name}`. See b/325463152 for an example.
+		if bytes.HasPrefix(bracketedMatch, []byte("-Werror,")) || bytes.HasSuffix(bracketedMatch, []byte(",-Werror")) {
+			needWnoError = true
+		} else {
+			// In this case, the entire bracketed match is the warning flag. Trim the
+			// first two chars off to account for the `-W` matched in the regex.
+			warningName := string(bracketedMatch[2:])
+			extraFlags = append(extraFlags, "-Wno-error="+warningName)
+		}
+	}
+	needWnoError = needWnoError || bytes.Contains(stdout, []byte("warnings-as-errors")) || bytes.Contains(stdout, []byte("clang-diagnostic-"))
+
+	if len(extraFlags) == 0 && !needWnoError {
+		return nil
+	}
+	return append(extraFlags, "-Wno-error")
 }
 
 func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command, werrorConfig forceDisableWerrorConfig) (exitCode int, err error) {
@@ -140,13 +171,11 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command, werrorC
 
 	// The only way we can do anything useful is if it looks like the failure
 	// was -Werror-related.
-	originalStdoutBufferBytes := originalStdoutBuffer.Bytes()
-	shouldRetry := originalExitCode != 0 &&
-		!isLikelyAConfTest(cfg, originalCmd) &&
-		(bytes.Contains(originalStderrBuffer.Bytes(), []byte("-Werror")) ||
-			bytes.Contains(originalStdoutBufferBytes, []byte("warnings-as-errors")) ||
-			bytes.Contains(originalStdoutBufferBytes, []byte("clang-diagnostic-")))
-	if !shouldRetry {
+	retryWithExtraFlags := []string{}
+	if originalExitCode != 0 && !isLikelyAConfTest(cfg, originalCmd) {
+		retryWithExtraFlags = getWnoErrorFlags(originalStdoutBuffer.Bytes(), originalStderrBuffer.Bytes())
+	}
+	if len(retryWithExtraFlags) == 0 {
 		if err := commitOriginalRusage(originalExitCode); err != nil {
 			return 0, fmt.Errorf("commiting rusage: %v", err)
 		}
@@ -159,7 +188,7 @@ func doubleBuildWithWNoError(env env, cfg *config, originalCmd *command, werrorC
 	retryStderrBuffer := &bytes.Buffer{}
 	retryCommand := &command{
 		Path:       originalCmd.Path,
-		Args:       disableWerrorFlags(originalCmd.Args),
+		Args:       disableWerrorFlags(originalCmd.Args, retryWithExtraFlags),
 		EnvUpdates: originalCmd.EnvUpdates,
 	}
 

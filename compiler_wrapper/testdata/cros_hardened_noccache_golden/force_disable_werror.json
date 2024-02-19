@@ -101,7 +101,7 @@
           "path": "../../usr/bin/clang"
         },
         "exitcode": 1,
-        "stderr": "-Werror originalerror"
+        "stderr": "error: foo [-Werror,-Wfoo]"
       },
       {
         "cmd": {
@@ -206,7 +206,7 @@
           "path": "../../usr/bin/clang"
         },
         "exitcode": 1,
-        "stderr": "-Werror originalerror"
+        "stderr": "error: foo [-Werror,-Wfoo]"
       },
       {
         "cmd": {
@@ -268,7 +268,7 @@
         "path": "./x86_64-cros-linux-gnu-clang"
       },
       "exitcode": 1,
-      "stderr": "-Werror originalerror"
+      "stderr": "error: foo [-Werror,-Wfoo]"
     }
   }
 ]

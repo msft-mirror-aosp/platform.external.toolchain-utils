@@ -136,7 +136,7 @@ func TestLogRusageAndForceDisableWError(t *testing.T) {
 		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
-				io.WriteString(stderr, "-Werror originalerror")
+				io.WriteString(stderr, arbitraryWerrorStderr)
 				return newExitCodeError(1)
 			case 2:
 				return nil
