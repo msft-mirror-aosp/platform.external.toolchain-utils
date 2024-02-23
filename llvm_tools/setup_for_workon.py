@@ -3,13 +3,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Sets up src/third_party/llvm-project for cros-workon from an LLVM ebuild."""
+"""Sets up src/third_party/llvm-project for cros workon from an LLVM ebuild."""
 
 import argparse
 import dataclasses
 import logging
 from pathlib import Path
 import re
+import shlex
 import subprocess
 import sys
 from typing import List, Union
@@ -167,10 +168,12 @@ def main(argv: List[str]) -> None:
         help="Don't create a commit with all changes applied.",
     )
     parser.add_argument(
-        "--no-ensure-workon",
-        dest="ensure_workon",
-        action="store_false",
-        help="Don't call cros-workon on the project after applying changes.",
+        "--workon-board",
+        dest="workon_board",
+        help="""
+        Ensure cros workon for the given board after applying changes.
+        Set to 'host' for working on the host system, and not a board.
+        """,
     )
     opts = parser.parse_args(argv)
 
@@ -254,12 +257,29 @@ def main(argv: List[str]) -> None:
             stdin=subprocess.DEVNULL,
         )
 
-    if opts.ensure_workon:
-        subprocess.run(
-            ["cros-workon", "--host", "start", package_name],
-            check=True,
-            stdin=subprocess.DEVNULL,
+    if not opts.workon_board:
+        logging.warning(
+            "Didn't ensure 'workon' for any board or host."
+            " Make sure you've called 'cros workon [...] start %s'"
+            " before building!",
+            package_name,
         )
+        return
+
+    if opts.workon_board == "host":
+        cmd = ["cros", "workon", "--host", "start", package_name]
+    else:
+        cmd = [
+            "cros",
+            "workon",
+            f"-b={opts.workon_board}",
+            "start",
+            package_name,
+        ]
+    subprocess.run(cmd, check=True, stdin=subprocess.DEVNULL)
+    logging.info(
+        "Successfully workon-ed: %s", shlex.join([str(c) for c in cmd])
+    )
 
 
 if __name__ == "__main__":
