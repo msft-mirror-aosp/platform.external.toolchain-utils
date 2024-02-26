@@ -350,14 +350,28 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 	}
 }
 
+func hasFlag(flag string, flagList ...string) bool {
+	for _, flagVal := range flagList {
+		if strings.Contains(flagVal, flag) {
+			return true
+		}
+	}
+	return false
+}
+
 func prepareClangCommand(crashArtifactsDir string, builder *commandBuilder) (err error) {
 	if !builder.cfg.isHostWrapper {
 		processSysrootFlag(builder)
 	}
 	builder.addPreUserArgs(builder.cfg.clangFlags...)
-	if crashArtifactsDir != "" {
-		builder.addPreUserArgs("-fcrash-diagnostics-dir=" + crashArtifactsDir)
+
+	var crashDiagFlagName = "-fcrash-diagnostics-dir"
+	if crashArtifactsDir != "" &&
+		!hasFlag(crashDiagFlagName, builder.cfg.clangFlags...) &&
+		!hasFlag(crashDiagFlagName, builder.cfg.clangPostFlags...) {
+		builder.addPreUserArgs(crashDiagFlagName + "=" + crashArtifactsDir)
 	}
+
 	builder.addPostUserArgs(builder.cfg.clangPostFlags...)
 	calcCommonPreUserArgs(builder)
 	return processClangFlags(builder)
