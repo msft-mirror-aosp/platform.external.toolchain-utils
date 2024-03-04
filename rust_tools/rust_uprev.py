@@ -1201,7 +1201,7 @@ def main() -> None:
         # Determine the template version, if not given.
         template_version = args.template
         if template_version is None:
-            rust_ebuild = find_ebuild_for_package("rust")
+            rust_ebuild = find_ebuild_for_package("dev-lang/rust")
             template_version = RustVersion.parse_from_ebuild(rust_ebuild)
 
         run_step("create new repo", lambda: create_new_repo(args.uprev))
