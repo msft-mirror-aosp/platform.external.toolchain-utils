@@ -299,6 +299,8 @@ class UpdatePackagesAndRunTryjobsTest(unittest.TestCase):
 
             # Call with a changed LLVM svn version
             args_output = test_helpers.ArgsOutputTest()
+            args_output.chroot_name = "custom-chroot"
+            args_output.chroot_out = "custom-chroot_out"
             args_output.is_llvm_next = True
             args_output.extra_change_lists = extra_cls
             args_output.last_tested = last_tested_file

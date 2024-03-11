@@ -59,6 +59,25 @@ def GetCommandLineArgs() -> argparse.Namespace:
         help="the path to the ChromeOS tree (default: %(default)s)",
     )
 
+    # Add argument for a specific chroot path.
+    parser.add_argument(
+        "--chroot_name",
+        default="chroot",
+        help="""
+        the name of the chroot to use in the CrOS checkout. Defaults to
+        'chroot'.
+        """,
+    )
+
+    parser.add_argument(
+        "--chroot_out",
+        help="""
+        the name of the chroot to use in the CrOS checkout. Defaults to
+        'out' if the chroot's name is 'chroot'; otherwise, defaults to
+        '${chroot_name}_out'.
+        """,
+    )
+
     # Add argument to choose between llvm and llvm-next.
     parser.add_argument(
         "--is_llvm_next",
@@ -152,6 +171,14 @@ def GetCommandLineArgs() -> argparse.Namespace:
 
     if args_output.subparser_name not in subparser_names:
         parser.error("one of %s must be specified" % subparser_names)
+
+    if not args_output.chroot_out:
+        chroot_name = args_output.chroot_name
+        if chroot_name == "chroot":
+            out = "out"
+        else:
+            out = f"{chroot_name}_out"
+        args_output.chroot_out = out
 
     return args_output
 
@@ -471,6 +498,8 @@ def main():
         chroot_file_paths = chroot.GetChrootEbuildPaths(
             args_output.chromeos_path,
             update_chromeos_llvm_hash.DEFAULT_PACKAGES,
+            args_output.chroot_name,
+            args_output.chroot_out,
         )
         arg_dict = {
             "svn_version": svn_version,
@@ -513,7 +542,11 @@ def main():
         llvm_variant=llvm_variant,
         git_hash=git_hash,
         svn_version=svn_version,
-        chromeos_path=Path(args_output.chromeos_path),
+        chroot_opts=update_chromeos_llvm_hash.ChrootOpts(
+            chromeos_root=Path(args_output.chromeos_path),
+            chroot_name=args_output.chroot_name,
+            out_name=args_output.chroot_out,
+        ),
         mode=failure_modes.FailureModes.DISABLE_PATCHES,
         git_hash_source=svn_option,
         extra_commit_msg_lines=extra_commit_msg_lines,

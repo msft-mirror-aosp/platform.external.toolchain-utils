@@ -40,15 +40,19 @@ def VerifyChromeOSRoot(chromeos_root: Union[Path, str]) -> None:
 
 
 def GetChrootEbuildPaths(
-    chromeos_root: Union[Path, str], packages: Iterable[str]
+    chromeos_root: Union[Path, str],
+    packages: Iterable[str],
+    chroot_name: str = "chroot",
+    out_dir: str = "out",
 ) -> List[str]:
     """Gets the chroot path(s) of the package(s).
 
     Args:
-        chromeos_root: The absolute path to the chroot to
-        use for executing chroot commands.
+        chromeos_root: The absolute path to the chromeos tree to use.
         packages: A list of a package/packages to
         be used to find their chroot path.
+        chroot_name: name of the chroot to enter.
+        out_dir: name of the out directory for the chroot.
 
     Returns:
         A list of chroot paths of the packages' ebuild files.
@@ -59,10 +63,16 @@ def GetChrootEbuildPaths(
 
     chroot_paths = []
 
+    cros_sdk = [
+        "cros_sdk",
+        f"--chroot={chroot_name}",
+        f"--out-dir={out_dir}",
+    ]
+
     # Find the chroot path for each package's ebuild.
     for package in packages:
         chroot_path = subprocess.check_output(
-            ["cros_sdk", "--", "equery", "w", package],
+            cros_sdk + ["--", "equery", "w", package],
             cwd=chromeos_root,
             encoding="utf-8",
         )

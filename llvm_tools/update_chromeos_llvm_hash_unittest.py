@@ -395,6 +395,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
         manifest_cmd = (
             [
                 "cros_sdk",
+                "--chroot=chroot",
+                "--out-dir=out",
                 "--",
                 "ebuild",
                 "/chroot/path/test.ebuild",
@@ -407,6 +409,8 @@ class UpdateLLVMHashTest(unittest.TestCase):
         git_add_cmd = (
             [
                 "cros_sdk",
+                "--chroot=chroot",
+                "--out-dir=out",
                 "--",
                 "git",
                 "-C",
@@ -741,7 +745,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
             llvm_variant=expected_llvm_variant,
             git_hash=git_hash,
             svn_version=svn_version,
-            chromeos_path=expected_chroot,
+            chroot_opts=update_chromeos_llvm_hash.ChrootOpts(expected_chroot),
             mode=failure_modes.FailureModes.FAIL,
             git_hash_source="google3",
             extra_commit_msg_lines=None,
@@ -785,7 +789,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
             llvm_variant=expected_llvm_variant,
             git_hash=git_hash,
             svn_version=svn_version,
-            chromeos_path=expected_chroot,
+            chroot_opts=update_chromeos_llvm_hash.ChrootOpts(expected_chroot),
             mode=failure_modes.FailureModes.FAIL,
             git_hash_source="google3",
             extra_commit_msg_lines=None,
@@ -844,7 +848,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
             llvm_variant=expected_llvm_variant,
             git_hash=git_hash,
             svn_version=svn_version,
-            chromeos_path=chromeos_path,
+            chroot_opts=update_chromeos_llvm_hash.ChrootOpts(chromeos_path),
             mode=failure_mode,
             git_hash_source=llvm_ver,
             extra_commit_msg_lines=None,

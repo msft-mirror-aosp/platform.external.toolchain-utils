@@ -10,6 +10,7 @@ for review.
 """
 
 import argparse
+import dataclasses
 import enum
 import os
 from pathlib import Path
@@ -48,19 +49,28 @@ class LLVMVariant(enum.Enum):
     next = "LLVM_NEXT_HASH"
 
 
+@dataclasses.dataclass(frozen=True, eq=True)
+class ChrootOpts:
+    """A class that holds chroot options."""
+
+    chromeos_root: Path
+    chroot_name: str = "chroot"
+    out_name: str = "out"
+
+
 class PortagePackage:
     """Represents a portage package with location info."""
 
-    def __init__(self, chromeos_root: Path, package: str):
+    def __init__(self, chroot_opts: ChrootOpts, package: str):
         """Create a new PortagePackage.
 
         Args:
-            chromeos_root: Path to the root of the code checkout.
+            chroot_opts: options that specify the ChromeOS chroot to use.
             package: "category/package" string.
         """
         self.package = package
         potential_ebuild_path = PortagePackage.find_package_ebuild(
-            chromeos_root, package
+            chroot_opts, package
         )
         if potential_ebuild_path.is_symlink():
             self.uprev_target: Optional[Path] = potential_ebuild_path.absolute()
@@ -71,12 +81,14 @@ class PortagePackage:
             self.ebuild_path = potential_ebuild_path.absolute()
 
     @staticmethod
-    def find_package_ebuild(chromeos_root: Path, package: str) -> Path:
+    def find_package_ebuild(chroot_opts: ChrootOpts, package: str) -> Path:
         """Look up the package's ebuild location."""
-        chromeos_root_str = str(chromeos_root)
+        chromeos_root_str = str(chroot_opts.chromeos_root)
         ebuild_paths = chroot.GetChrootEbuildPaths(
             chromeos_root_str,
             [package],
+            chroot_opts.chroot_name,
+            chroot_opts.out_name,
         )
         converted = chroot.ConvertChrootPathsToAbsolutePaths(
             chromeos_root_str, ebuild_paths
@@ -552,7 +564,7 @@ def UpdatePackages(
     llvm_variant: LLVMVariant,
     git_hash: str,
     svn_version: int,
-    chromeos_path: Path,
+    chroot_opts: ChrootOpts,
     mode: Optional[failure_modes.FailureModes],
     git_hash_source: Union[int, str],
     extra_commit_msg_lines: Optional[Iterable[str]],
@@ -570,7 +582,7 @@ def UpdatePackages(
         llvm_variant: The LLVM hash to update.
         git_hash: The new git hash.
         svn_version: The SVN-style revision number of git_hash.
-        chromeos_path: The absolute path to the chroot.
+        chroot_opts: options that specify the ChromeOS chroot to use.
         mode: The mode of the patch manager when handling an applicable patch.
           If None is passed, the patch manager won't be invoked.
         that failed to apply.
@@ -585,10 +597,9 @@ def UpdatePackages(
     Returns:
         If upload_changes is set, a git.CommitContents object. Otherwise None.
     """
-
-    portage_packages = (PortagePackage(chromeos_path, pkg) for pkg in packages)
+    portage_packages = (PortagePackage(chroot_opts, pkg) for pkg in packages)
     chromiumos_overlay_path = (
-        chromeos_path / "src" / "third_party" / "chromiumos-overlay"
+        chroot_opts.chromeos_root / "src" / "third_party" / "chromiumos-overlay"
     )
     branch_name = "update-" + llvm_variant.value + "-" + git_hash
 
@@ -617,14 +628,14 @@ def UpdatePackages(
             updated_packages.append(pkg.package)
             commit_lines.append(pkg.package)
         if manifest_packages:
-            UpdatePortageManifests(manifest_packages, chromeos_path)
+            UpdatePortageManifests(manifest_packages, chroot_opts.chromeos_root)
             commit_lines.append("Updated manifest for:")
             commit_lines.extend(manifest_packages)
-        EnsurePackageMaskContains(chromeos_path, git_hash)
+        EnsurePackageMaskContains(chroot_opts.chromeos_root, git_hash)
         # Handle the patches for each package.
         if mode is not None:
             package_info_dict = UpdatePackagesPatchMetadataFile(
-                chromeos_path, svn_version, updated_packages, mode
+                chroot_opts, svn_version, updated_packages, mode
             )
             # Update the commit message if changes were made to a package's
             # patches.
@@ -677,7 +688,7 @@ def EnsurePackageMaskContains(
 
 
 def UpdatePackagesPatchMetadataFile(
-    chromeos_path: Path,
+    chroot_opts: ChrootOpts,
     svn_version: int,
     packages: Iterable[str],
     mode: failure_modes.FailureModes,
@@ -685,7 +696,7 @@ def UpdatePackagesPatchMetadataFile(
     """Updates the packages metadata file.
 
     Args:
-        chromeos_path: The absolute path to the chroot.
+        chroot_opts: options that specify the ChromeOS chroot to use.
         svn_version: The version to use for patch management.
         packages: All the packages to update their patch metadata file.
         mode: The mode for the patch manager to use when an applicable patch
@@ -714,7 +725,10 @@ def UpdatePackagesPatchMetadataFile(
             for cur_package in packages:
                 # Get the absolute path to $FILESDIR of the package.
                 chroot_ebuild_str = subprocess_helpers.ChrootRunCommand(
-                    chromeos_path, ["equery", "w", cur_package]
+                    chroot_opts.chromeos_root,
+                    ["equery", "w", cur_package],
+                    chroot_name=chroot_opts.chroot_name,
+                    out_name=chroot_opts.out_name,
                 ).strip()
                 if not chroot_ebuild_str:
                     raise RuntimeError(
@@ -722,7 +736,7 @@ def UpdatePackagesPatchMetadataFile(
                     )
                 chroot_ebuild_path = Path(
                     chroot.ConvertChrootPathsToAbsolutePaths(
-                        str(chromeos_path), [chroot_ebuild_str]
+                        str(chroot_opts.chromeos_root), [chroot_ebuild_str]
                     )[0]
                 )
                 patches_json_fp = (
@@ -868,7 +882,7 @@ def main():
         llvm_variant=llvm_variant,
         git_hash=git_hash,
         svn_version=svn_version,
-        chromeos_path=args_output.chromeos_path,
+        chroot_opts=ChrootOpts(args_output.chromeos_path),
         mode=patch_update_mode,
         git_hash_source=git_hash_source,
         extra_commit_msg_lines=None,

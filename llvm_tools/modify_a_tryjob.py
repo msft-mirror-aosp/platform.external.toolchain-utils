@@ -139,7 +139,7 @@ def GetCLAfterUpdatingPackages(
         llvm_variant=update_chromeos_llvm_hash.LLVMVariant.next,
         git_hash=git_hash,
         svn_version=svn_version,
-        chromeos_path=Path(chromeos_path),
+        chroot_opts=update_chromeos_llvm_hash.ChrootOpts(Path(chromeos_path)),
         mode=failure_modes.FailureModes.DISABLE_PATCHES,
         git_hash_source=svn_option,
         extra_commit_msg_lines=None,
