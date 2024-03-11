@@ -257,8 +257,14 @@ do
       fi
       if [[ -z "${latest}" ]]
       then
-        echo "ERROR: No M${curr_branch_number}, M${prev_branch} profiles in\
+        if [[ "${channel}" == "stable" ]]
+        then
+          echo "ERROR: No M${curr_branch_number} profiles in\
  ${arch_gsbase[${arch}]}/${kver}/" >&2
+        else
+          echo "ERROR: No M${curr_branch_number}, M${prev_branch} profiles in\
+ ${arch_gsbase[${arch}]}/${kver}/" >&2
+        fi
         echo "Skipping ${arch}/${kver}" >&2
         errs="${errs} ${kver}"
         continue
