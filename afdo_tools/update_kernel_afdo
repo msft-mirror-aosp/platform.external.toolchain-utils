@@ -62,6 +62,11 @@ declare -A SKIPPED_ARCHKVERS_IN_BRANCHES
 SKIPPED_ARCHKVERS_IN_BRANCHES["114"]="arm/5.15"
 SKIPPED_ARCHKVERS_IN_BRANCHES["115"]="arm/5.15"
 
+for branch in 122 123 124
+do
+  SKIPPED_ARCHKVERS_IN_BRANCHES["${branch}"]="amd/5.4 arm/5.4"
+done
+
 script_dir=$(dirname "$0")
 tc_utils_dir="${script_dir}/.."
 # Convert toolchain_utils into the absolute path.
