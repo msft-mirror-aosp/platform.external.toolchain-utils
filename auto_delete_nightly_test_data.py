@@ -18,7 +18,6 @@ import time
 import traceback
 from typing import Callable, List
 
-from cros_utils import command_executer
 from cros_utils import constants
 
 
@@ -208,32 +207,6 @@ def CleanChromeOsTmpAndImages(days_to_preserve=1, dry_run=False) -> int:
     return rv
 
 
-def CleanOldCLs(days_to_preserve: str = "1", dry_run: bool = False) -> int:
-    """Abandon old CLs created by automation tooling."""
-    ce = command_executer.GetCommandExecuter()
-    chromeos_root = os.path.join(constants.CROSTC_WORKSPACE, "chromeos")
-    # Find Old CLs.
-    old_cls_cmd = (
-        'gerrit --raw search "owner:me status:open age:%sd"' % days_to_preserve
-    )
-    _, cls, _ = ce.ChrootRunCommandWOutput(
-        chromeos_root, old_cls_cmd, print_to_console=False
-    )
-    # Convert any whitespaces to spaces.
-    cls = " ".join(cls.split())
-    if not cls:
-        return 0
-
-    abandon_cls_cmd = "gerrit abandon %s" % cls
-    if dry_run:
-        print("Going to execute: %s" % abandon_cls_cmd)
-        return 0
-
-    return ce.ChrootRunCommand(
-        chromeos_root, abandon_cls_cmd, print_to_console=False
-    )
-
-
 def CleanChromeTelemetryTmpFiles(dry_run: bool) -> int:
     tmp_dir = Path(constants.CROSTC_WORKSPACE) / "chrome" / "src" / "tmp"
     return RemoveAllSubdirsMatchingPredicate(
@@ -252,9 +225,6 @@ def Main(argv: List[str]) -> int:
     rv = CleanChromeOsTmpAndImages(
         int(options.days_to_preserve), options.dry_run
     )
-
-    # Clean CLs that are not updated in last 2 weeks.
-    rv |= CleanOldCLs("14", options.dry_run)
 
     # Clean telemetry temporaries from chrome source tree inside chroot.
     rv |= CleanChromeTelemetryTmpFiles(options.dry_run)
