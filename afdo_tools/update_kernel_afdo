@@ -276,8 +276,8 @@ do
       if [ "${file_time_unix}" -lt "${expected_time}" ]
       then
         expected=$(env TZ=UTC date +%Y-%m-%dT%H:%M:%SZ -d @"${expected_time}")
-        echo "ERROR: Wrong date for ${kver}: ${file_time} is before\
- ${expected}" >&2
+        echo "ERROR: Wrong date for ${arch_gsbase[${arch}]}/${kver}:\
+ ${file_time} is before\ ${expected}" >&2
         errs="${errs} ${kver}"
         continue
       fi
