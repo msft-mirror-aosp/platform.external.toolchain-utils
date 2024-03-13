@@ -81,23 +81,20 @@ def CheckoutBranch(src_dir: Union[Path, str], branch: str) -> None:
     subprocess_helpers.CheckCommand(["git", "-C", src_dir, "pull"])
 
 
-def ParseLLVMMajorVersion(cmakelist: str):
+def ParseLLVMMajorVersion(cmakelist: str) -> Optional[str]:
     """Reads CMakeList.txt file contents for LLVMMajor Version.
 
     Args:
         cmakelist: contents of CMakeList.txt
 
     Returns:
-        The major version number as a string
-
-    Raises:
-        ValueError: The major version cannot be parsed from cmakelist
+        The major version number as a string, or None if it couldn't be found.
     """
     match = re.search(
         r"\n\s+set\(LLVM_VERSION_MAJOR (?P<major>\d+)\)", cmakelist
     )
     if not match:
-        raise ValueError("Failed to parse CMakeList for llvm major version")
+        return None
     return match.group("major")
 
 
@@ -117,17 +114,37 @@ def GetLLVMMajorVersion(git_hash: Optional[str] = None) -> str:
         FileExistsError: The src directory doe not contain CMakeList.txt
     """
     src_dir = GetAndUpdateLLVMProjectInLLVMTools()
-    cmakelists_path = os.path.join(src_dir, "llvm", "CMakeLists.txt")
-    if git_hash:
-        subprocess_helpers.CheckCommand(
-            ["git", "-C", src_dir, "checkout", git_hash]
-        )
-    try:
-        with open(cmakelists_path, encoding="utf-8") as cmakelists_file:
-            return ParseLLVMMajorVersion(cmakelists_file.read())
-    finally:
+
+    # b/325895866#comment36: the LLVM version number was moved from
+    # `llvm/CMakeLists.txt` to `cmake/Modules/LLVMVersion.cmake` in upstream
+    # commit 81e20472a0c5a4a8edc5ec38dc345d580681af81 (r530225). Until we no
+    # longer care about looking before that, we need to support searching both
+    # files.
+    cmakelists_paths = (
+        Path(src_dir) / "llvm" / "CMakeLists.txt",
+        Path(src_dir) / "cmake" / "Modules" / "LLVMVersion.cmake",
+    )
+
+    with contextlib.ExitStack() as on_exit:
         if git_hash:
-            CheckoutBranch(src_dir, git_llvm_rev.MAIN_BRANCH)
+            subprocess_helpers.CheckCommand(
+                ["git", "-C", src_dir, "checkout", git_hash]
+            )
+            on_exit.callback(CheckoutBranch, src_dir, git_llvm_rev.MAIN_BRANCH)
+
+        for path in cmakelists_paths:
+            try:
+                file_contents = path.read_text(encoding="utf-8")
+            except FileNotFoundError:
+                # If this file DNE (yet), ignore it.
+                continue
+
+            if version := ParseLLVMMajorVersion(file_contents):
+                return version
+
+    raise ValueError(
+        f"Major version could not be parsed from any of {cmakelists_paths}"
+    )
 
 
 @contextlib.contextmanager
