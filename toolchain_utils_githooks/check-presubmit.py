@@ -897,7 +897,9 @@ def is_in_chroot() -> bool:
     return os.path.exists("/etc/cros_chroot_version")
 
 
-def maybe_reexec_inside_chroot(autofix: bool, files: List[str]) -> None:
+def maybe_reexec_inside_chroot(
+    autofix: bool, install_deps_only: bool, files: List[str]
+) -> None:
     if is_in_chroot():
         return
 
@@ -944,6 +946,8 @@ def maybe_reexec_inside_chroot(autofix: bool, files: List[str]) -> None:
 
     if not autofix:
         args.append("--no_autofix")
+    if install_deps_only:
+        args.append("--install_deps_only")
     args.extend(rebase_path(x) for x in files)
 
     if chdir_to is None:
@@ -990,20 +994,39 @@ def main(argv: List[str]) -> int:
         action="store_false",
         help="Prevent auto-entering the chroot if we're not already in it.",
     )
+    parser.add_argument(
+        "--install_deps_only",
+        action="store_true",
+        help="""
+        Only install dependencies that would be required if presubmits were
+        being run, and quit. This skips all actual checking.
+        """,
+    )
     parser.add_argument("files", nargs="*")
     opts = parser.parse_args(argv)
 
     files = opts.files
-    if not files:
+    install_deps_only = opts.install_deps_only
+    if not files and not install_deps_only:
         return 0
 
     if opts.enter_chroot:
-        maybe_reexec_inside_chroot(opts.autofix, opts.files)
+        maybe_reexec_inside_chroot(opts.autofix, install_deps_only, files)
 
     # If you ask for --no_enter_chroot, you're on your own for installing these
     # things.
     if is_in_chroot():
         ensure_pip_deps_installed()
+        if install_deps_only:
+            print(
+                "Dependency installation complete & --install_deps_only "
+                "passed. Quit."
+            )
+            return 0
+    elif install_deps_only:
+        parser.error(
+            "--install_deps_only is meaningless if the chroot isn't entered"
+        )
 
     files = [os.path.abspath(f) for f in files]
 
