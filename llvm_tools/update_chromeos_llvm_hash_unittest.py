@@ -726,6 +726,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
         mock_gethash.return_value = (git_hash, svn_version)
         argv = [
             "./update_chromeos_llvm_hash_unittest.py",
+            "--no_repo_manifest",
             "--llvm_version",
             "google3",
         ]
@@ -834,6 +835,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
             failure_mode.value,
             "--patch_metadata_file",
             "META.json",
+            "--no_repo_manifest",
         ]
 
         with mock.patch.object(sys, "argv", argv) as mock.argv:

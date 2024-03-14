@@ -237,9 +237,10 @@ def GetCommandLineArgs():
         "metadata if applicable (default: PATCHES.json inside $FILESDIR)",
     )
     parser.add_argument(
-        "--repo_manifest",
-        action="store_true",
-        help="Updates the llvm-project revision attribute"
+        "--no_repo_manifest",
+        dest="repo_manifest",
+        action="store_false",
+        help="Skip updating the llvm-project revision attribute"
         " in the internal manifest.",
     )
     parser.add_argument(
@@ -896,7 +897,7 @@ def main():
     else:
         print("--no-upload passed, did not create a change list")
 
-    if args_output.repo_manifest:
+    if args_output.repo_manifest and not args_output.is_llvm_next:
         print(
             f"Updating internal manifest to {git_hash} ({svn_version})...",
             end="",
