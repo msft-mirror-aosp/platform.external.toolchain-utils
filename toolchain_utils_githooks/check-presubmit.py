@@ -72,6 +72,7 @@ CheckResults = Union[List[Tuple[str, CheckResult]], CheckResult]
 # The files and directories on which we run the mypy typechecker. The paths are
 # relative to the root of the toolchain-utils repository.
 MYPY_CHECKED_PATHS = (
+    "afdo_tools/update_kernel_afdo.py",
     "check_portable_toolchains.py",
     "cros_utils/bugs.py",
     "cros_utils/bugs_test.py",
