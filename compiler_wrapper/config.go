@@ -28,8 +28,6 @@ type config struct {
 	// Toolchain root path relative to the wrapper binary.
 	clangRootRelPath string
 	gccRootRelPath   string
-	// Directory to store errors that were prevented with -Wno-error.
-	newWarningsDir string
 	// Version. Only exposed via -print-config.
 	version string
 }
@@ -165,7 +163,6 @@ var crosHardenedConfig = config{
 		"-ftrivial-auto-var-init=zero",
 	),
 	clangPostFlags: crosCommonClangPostFlags(),
-	newWarningsDir: "fatal_clang_warnings",
 }
 
 // Flags to be added to non-hardened toolchain.
@@ -185,7 +182,6 @@ var crosNonHardenedConfig = config{
 		"-Wno-section",
 	),
 	clangPostFlags: crosCommonClangPostFlags(),
-	newWarningsDir: "fatal_clang_warnings",
 }
 
 // Flags to be added to host toolchain.
@@ -212,7 +208,6 @@ var crosHostConfig = config{
 	),
 	// Temporarily disable Wdeprecated-copy. b/191479033
 	clangPostFlags: crosCommonClangPostFlags(),
-	newWarningsDir: "fatal_clang_warnings",
 }
 
 var androidConfig = config{
@@ -224,5 +219,4 @@ var androidConfig = config{
 	gccFlags:         []string{},
 	clangFlags:       []string{},
 	clangPostFlags:   []string{},
-	newWarningsDir:   "",
 }
