@@ -337,6 +337,22 @@ TOTAL: 2 objects, 1234 bytes (1.1KiB)
                 GERRIT_OUTPUT_WITH_TWO_CLS
             )
 
+    def test_repo_autodetects_nothing_if_no_repo_dir(self):
+        self.assertIsNone(
+            update_kernel_afdo.find_chromeos_tree_root(
+                Path("/does/not/exist/nor/is/under/a/repo")
+            )
+        )
+
+    def test_repo_autodetects_repo_dir_correctly(self):
+        tmpdir = self.make_tempdir()
+        test_subdir = tmpdir / "a/directory/and/another/one"
+        test_subdir.mkdir(parents=True)
+        (tmpdir / ".repo").mkdir()
+        self.assertEqual(
+            tmpdir, update_kernel_afdo.find_chromeos_tree_root(test_subdir)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

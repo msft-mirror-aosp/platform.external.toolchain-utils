@@ -139,6 +139,15 @@ def get_parser():
         """,
     )
     parser.add_argument(
+        "--chromeos-tree",
+        type=Path,
+        help="""
+        Root of a ChromeOS tree. This is optional to pass in, but doing so
+        unlocks extra convenience features on `--upload`. This script will try
+        to autodetect a tree if this isn't specified.
+        """,
+    )
+    parser.add_argument(
         "channel",
         nargs="*",
         type=Channel.parse,
@@ -729,6 +738,7 @@ def parse_cl_from_upload_output(upload_output: str) -> str:
 
 def upload_head_to_gerrit(
     toolchain_utils: Path,
+    chromeos_tree: Optional[Path],
     branch: GitBranch,
 ):
     """Uploads HEAD to gerrit as a CL, and sets reviewers/CCs."""
@@ -762,6 +772,13 @@ def upload_head_to_gerrit(
     cl_id = parse_cl_from_upload_output(run_result.stdout)
     logging.info("Uploaded CL http://crrev.com/c/%s successfully.", cl_id)
 
+    if chromeos_tree is None:
+        logging.info(
+            "Skipping gerrit convenience commands, since no CrOS tree was "
+            "specified."
+        )
+        return
+
     # To make the life of the reviewers marginally easier, click buttons
     # automatically.
     gerrit_commands = (
@@ -776,6 +793,7 @@ def upload_head_to_gerrit(
         # script is expeted to be used.
         return_code = subprocess.run(
             cmd,
+            cwd=chromeos_tree,
             check=False,
             stdin=subprocess.DEVNULL,
         ).returncode
@@ -784,6 +802,13 @@ def upload_head_to_gerrit(
                 "Failed to run gerrit command %s. Ignoring.",
                 shlex.join(cmd),
             )
+
+
+def find_chromeos_tree_root(a_dir: Path) -> Optional[Path]:
+    for parent in a_dir.parents:
+        if (parent / ".repo").is_dir():
+            return parent
+    return None
 
 
 def main(argv: List[str]) -> None:
@@ -796,6 +821,12 @@ def main(argv: List[str]) -> None:
         "%(message)s",
         level=logging.DEBUG if opts.debug else logging.INFO,
     )
+
+    chromeos_tree = opts.chromeos_tree
+    if not chromeos_tree:
+        chromeos_tree = find_chromeos_tree_root(my_dir)
+        if chromeos_tree:
+            logging.info("Autodetected ChromeOS tree root at %s", chromeos_tree)
 
     if opts.fetch:
         logging.info("Fetching in %s...", toolchain_utils)
@@ -832,7 +863,7 @@ def main(argv: List[str]) -> None:
             commit_new_profiles(worktree, channel, result.had_failures)
             if opts.upload:
                 logging.info("New profiles were committed. Uploading...")
-                upload_head_to_gerrit(worktree, branch)
+                upload_head_to_gerrit(worktree, chromeos_tree, branch)
             else:
                 logging.info(
                     "--upload not specified. Leaving commit for %s at %s",
