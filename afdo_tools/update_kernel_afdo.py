@@ -732,8 +732,9 @@ def upload_head_to_gerrit(
     branch: GitBranch,
 ):
     """Uploads HEAD to gerrit as a CL, and sets reviewers/CCs."""
-    reviewers = ",".join(CL_REVIEWERS)
-    cc = ",".join(CL_CC)
+    option_list = [f"r={x}" for x in CL_REVIEWERS]
+    option_list += (f"cc={x}" for x in CL_CC)
+    options = ",".join(option_list)
     run_result = subprocess.run(
         [
             "git",
@@ -741,7 +742,7 @@ def upload_head_to_gerrit(
             branch.remote,
             # https://gerrit-review.googlesource.com/Documentation/user-upload.html#reviewers
             # for more info on the `%` params.
-            f"HEAD:refs/for/{branch.branch_name}%r={reviewers},cc={cc}",
+            f"HEAD:refs/for/{branch.branch_name}%{options}",
         ],
         cwd=toolchain_utils,
         check=False,
