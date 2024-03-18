@@ -563,12 +563,13 @@ def fetch_and_validate_newest_afdo_artifact(
     kernel_version: KernelVersion,
     branch: GitBranch,
     channel: Channel,
-) -> Optional[str]:
+) -> Optional[Tuple[str, bool]]:
     """Tries to update one AFDO profile on a branch.
 
     Returns:
-        The newest artifact name if all went well. None if something failed
-        along the way, and the update couldn't be completed.
+        None if something failed, and the update couldn't be completed.
+        Otherwise, this returns a tuple of (profile_name, is_old). If `is_old`
+        is True, this function logs an error.
     """
     newest_artifact = find_newest_afdo_artifact(
         fetcher, arch, kernel_version, branch.release_number
@@ -597,16 +598,16 @@ def fetch_and_validate_newest_afdo_artifact(
         branch.release_number,
     )
     age = selection_info.now - newest_artifact.gs_timestamp
+    is_old = False
     if age > selection_info.max_profile_age:
+        is_old = True
         logging.error(
-            "Profile %s is %s old. Skipping it, since the configured limit "
-            "is %s.",
+            "Profile %s is %s old. The configured limit is %s.",
             newest_artifact.file_name,
             age,
             selection_info.max_profile_age,
         )
-        return None
-    return newest_artifact.file_name_no_suffix
+    return newest_artifact.file_name_no_suffix, is_old
 
 
 def update_afdo_for_channel(
@@ -639,7 +640,7 @@ def update_afdo_for_channel(
                 )
                 continue
 
-            newest_name = fetch_and_validate_newest_afdo_artifact(
+            artifact_info = fetch_and_validate_newest_afdo_artifact(
                 fetcher,
                 selection_info,
                 arch,
@@ -647,11 +648,18 @@ def update_afdo_for_channel(
                 branch,
                 channel,
             )
-            if newest_name is None:
+            if artifact_info is None:
                 # Assume that the problem was already logged.
                 had_failures = True
-            else:
-                afdo_mappings[kernel_version] = newest_name
+                continue
+
+            newest_name, is_old = artifact_info
+            if is_old:
+                # Assume that the problem was already logged, but continue to
+                # land this in case it makes a difference.
+                had_failures = True
+
+            afdo_mappings[kernel_version] = newest_name
 
         if write_afdo_descriptor_file(cfg.metadata_file, afdo_mappings):
             made_changes = True
