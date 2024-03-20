@@ -467,7 +467,7 @@ def find_newest_afdo_artifact(
         x for x in kernel_profiles if x.release_number == release_number
     ]
     if not valid_profiles:
-        logging.error(
+        logging.warning(
             "Failed to find any M%d kernel profiles in %s",
             release_number,
             kernel_profile_dir,
@@ -882,7 +882,8 @@ def main(argv: List[str]) -> None:
     if had_failures:
         sys.exit(
             "At least one failure was encountered running this script; see "
-            "above logs."
+            "above logs. Most likely the things you're looking for are logged "
+            "at the ERROR level."
         )
 
 
