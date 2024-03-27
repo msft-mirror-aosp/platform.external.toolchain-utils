@@ -571,6 +571,7 @@ def UpdatePackages(
     extra_commit_msg_lines: Optional[Iterable[str]],
     delete_branch: bool = True,
     upload_changes: bool = True,
+    wip: bool = False,
 ) -> Optional[git.CommitContents]:
     """Updates an LLVM hash and uprevs the ebuild of the packages.
 
@@ -594,6 +595,8 @@ def UpdatePackages(
             Newlines are added automatically.
         delete_branch: Delete the git branch as a final step.
         upload_changes: Upload the commit to gerrit as a CL.
+        wip: if True, any changes uploaded will be uploaded as
+            work-in-progress.
 
     Returns:
         If upload_changes is set, a git.CommitContents object. Otherwise None.
@@ -648,7 +651,9 @@ def UpdatePackages(
         git.CommitChanges(chromiumos_overlay_path, commit_lines)
         if upload_changes:
             change_list = git.UploadChanges(
-                chromiumos_overlay_path, branch_name
+                chromiumos_overlay_path,
+                branch_name,
+                wip=wip,
             )
     finally:
         if delete_branch:

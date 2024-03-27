@@ -550,6 +550,9 @@ def main():
         mode=failure_modes.FailureModes.DISABLE_PATCHES,
         git_hash_source=svn_option,
         extra_commit_msg_lines=extra_commit_msg_lines,
+        # b/331607705: set WIP on these changes, so the code-review-nudger bot
+        # doesn't ping them.
+        wip=True,
     )
 
     AddReviewers(
