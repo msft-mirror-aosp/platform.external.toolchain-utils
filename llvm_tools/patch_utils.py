@@ -158,6 +158,31 @@ class PatchResult:
         return s
 
 
+def git_apply(patch_path: Path) -> List[Union[str, Path]]:
+    """Patch a patch file using 'git apply'."""
+    return ["git", "apply", patch_path]
+
+
+def git_am(patch_path: Path) -> List[Union[str, Path]]:
+    """Patch a patch file using 'git am'."""
+    return ["git", "am", "--3way", patch_path]
+
+
+def gnu_patch(root_dir: Path, patch_path: Path) -> List[Union[str, Path]]:
+    """Patch a patch file using GNU 'patch'."""
+    return [
+        "patch",
+        "-d",
+        root_dir.absolute(),
+        "-f",
+        "-E",
+        "-p1",
+        "--no-backup-if-mismatch",
+        "-i",
+        patch_path,
+    ]
+
+
 @dataclasses.dataclass
 class PatchEntry:
     """Object mapping of an entry of PATCHES.json."""
@@ -277,7 +302,7 @@ class PatchEntry:
                         if hunk.hunk_id in failed_hunk_ids
                     ]
             elif failed_hunks_id_dict:
-                # use git am
+                # using git am
                 failed_hunks = parsed_hunks
 
             return PatchResult(succeeded=False, failed_hunks=failed_hunks)
@@ -286,9 +311,19 @@ class PatchEntry:
     def test_apply(
         self, root_dir: Path, patch_cmd: Optional[Callable] = None
     ) -> PatchResult:
-        """Dry run applying a patch to a given directory."""
-        extra_args = [] if patch_cmd is git_am else ["--dry-run"]
-        return self.apply(root_dir, patch_cmd, extra_args)
+        """Dry run applying a patch to a given directory.
+
+        When using gnu_patch, this will pass --dry-run.
+        When using git_am or git_apply, this will instead
+        use git_apply with --summary.
+        """
+        if patch_cmd is git_am or patch_cmd is git_apply:
+            # There is no dry run option for git am,
+            # so we use git apply for test.
+            return self.apply(root_dir, git_apply, ["--summary"])
+        if patch_cmd is gnu_patch or patch_cmd is None:
+            return self.apply(root_dir, patch_cmd, ["--dry-run"])
+        raise ValueError(f"No such patch command: {patch_cmd.__name__}.")
 
     def title(self) -> str:
         if not self.metadata:
@@ -635,21 +670,3 @@ def remove_old_patches(svn_version: int, patches_json: Path) -> List[Path]:
         _write_json_changes(still_new, f, indent_len=indent_len)
 
     return removed_patches
-
-
-def git_am(patch_path: Path) -> List[Union[str, Path]]:
-    return ["git", "am", "--3way", patch_path]
-
-
-def gnu_patch(root_dir: Path, patch_path: Path) -> List[Union[str, Path]]:
-    return [
-        "patch",
-        "-d",
-        root_dir.absolute(),
-        "-f",
-        "-E",
-        "-p1",
-        "--no-backup-if-mismatch",
-        "-i",
-        patch_path,
-    ]
