@@ -110,15 +110,6 @@ def has_executable_on_path(exe: str) -> bool:
     return shutil.which(exe) is not None
 
 
-def escape_command(command: Iterable[str]) -> str:
-    """Returns a human-readable and copy-pastable shell command.
-
-    Only intended for use in output to users. shell=True is strongly
-    discouraged.
-    """
-    return " ".join(shlex.quote(x) for x in command)
-
-
 def remove_deleted_files(files: Iterable[str]) -> List[str]:
     return [f for f in files if os.path.exists(f)]
 
@@ -279,8 +270,8 @@ def check_isort(
     if not bad_files:
         return CheckResult(
             ok=False,
-            output="`%s` failed; stdout/stderr:\n%s"
-            % (escape_command(command), stdout_and_stderr),
+            output=f"`{shlex.join(command)}` failed; stdout/stderr:\n"
+            f"{stdout_and_stderr}",
             autofix_commands=[],
         )
 
@@ -711,8 +702,7 @@ def check_go_format(toolchain_utils_root, _thread_pool, files):
     if exit_code:
         return CheckResult(
             ok=False,
-            output="%s failed; stdout/stderr:\n%s"
-            % (escape_command(command), output),
+            output=f"{shlex.join(command)} failed; stdout/stderr:\n{output}",
             autofix_commands=[],
         )
 
@@ -800,9 +790,10 @@ def process_check_result(
     if isinstance(check_results, CheckResult):
         ok, output, autofix_commands = check_results
         if not ok and autofix_commands:
-            recommendation = "Recommended command(s) to fix this: %s" % [
-                escape_command(x) for x in autofix_commands
-            ]
+            recommendation = (
+                "Recommended command(s) to fix this: "
+                f"{[shlex.join(x) for x in autofix_commands]}"
+            )
             if output:
                 output += "\n" + recommendation
             else:
@@ -818,8 +809,8 @@ def process_check_result(
             if not ok and autofix:
                 message.append(
                     indent_block(
-                        "Recommended command(s) to fix this: %s"
-                        % [escape_command(x) for x in autofix]
+                        "Recommended command(s) to fix this: "
+                        "{[shlex.join(x) for x in autofix]}"
                     )
                 )
 
@@ -870,12 +861,12 @@ def try_autofix(
 
         if exit_code:
             print(
-                "*** Autofix command `%s` exited with code %d; stdout/stderr:"
-                % (escape_command(command), exit_code)
+                f"*** Autofix command `{shlex.join(command)}` exited with "
+                f"code {exit_code}; stdout/stderr:"
             )
             print(output)
         else:
-            print("*** Autofix `%s` succeeded" % escape_command(command))
+            print(f"*** Autofix `{shlex.join(command)}` succeeded")
             anything_succeeded = True
 
     if anything_succeeded:
