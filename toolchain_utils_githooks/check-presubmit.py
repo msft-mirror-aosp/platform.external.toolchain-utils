@@ -810,7 +810,7 @@ def process_check_result(
                 message.append(
                     indent_block(
                         "Recommended command(s) to fix this: "
-                        "{[shlex.join(x) for x in autofix]}"
+                        f"{[shlex.join(x) for x in autofix]}"
                     )
                 )
 
