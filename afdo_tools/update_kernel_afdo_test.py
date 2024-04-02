@@ -17,44 +17,6 @@ from unittest import mock
 import update_kernel_afdo
 
 
-GERRIT_OUTPUT_WITH_ONE_CL = """
-Enumerating objects: 4, done.
-Counting objects: 100% (4/4), done.
-Delta compression using up to 128 threads
-Compressing objects: 100% (2/2), done.
-Writing objects: 100% (3/3), 320 bytes | 106.00 KiB/s, done.
-Total 3 (delta 1), reused 1 (delta 0), pack-reused 0 (from 0)
-remote: Resolving deltas: 100% (1/1)
-remote: Processing changes: refs: 1, new: 1, done
-remote:
-remote: SUCCESS
-remote:
-remote:   https://chromium-review.googlesource.com/c/chromiumos/third_party/toolchain-utils/+/5375204 DO NOT COMMIT [WIP] [NEW]
-remote:
-To https://chromium.googlesource.com/chromiumos/third_party/toolchain-utils
- * [new reference]     HEAD -> refs/for/main
-"""
-
-GERRIT_OUTPUT_WITH_TWO_CLS = """
-Enumerating objects: 4, done.
-Counting objects: 100% (4/4), done.
-Delta compression using up to 128 threads
-Compressing objects: 100% (2/2), done.
-Writing objects: 100% (3/3), 320 bytes | 106.00 KiB/s, done.
-Total 3 (delta 1), reused 1 (delta 0), pack-reused 0 (from 0)
-remote: Resolving deltas: 100% (1/1)
-remote: Processing changes: refs: 1, new: 1, done
-remote:
-remote: SUCCESS
-remote:
-remote:   https://chromium-review.googlesource.com/c/chromiumos/third_party/toolchain-utils/+/5375204 DO NOT COMMIT [WIP] [NEW]
-remote:   https://chromium-review.googlesource.com/c/chromiumos/third_party/toolchain-utils/+/5375205 DO NOT COMMIT [WIP] [NEW]
-remote:
-To https://chromium.googlesource.com/chromiumos/third_party/toolchain-utils
- * [new reference]     HEAD -> refs/for/main
-"""
-
-
 class Test(unittest.TestCase):
     """Tests for update_kernel_afdo."""
 
@@ -320,22 +282,6 @@ TOTAL: 2 objects, 1234 bytes (1.1KiB)
         self.assertFalse(
             update_kernel_afdo.write_afdo_descriptor_file(file_path, contents)
         )
-
-    def test_cl_parsing_from_gerrit_output(self):
-        self.assertEqual(
-            update_kernel_afdo.parse_cl_from_upload_output(
-                GERRIT_OUTPUT_WITH_ONE_CL
-            ),
-            "5375204",
-        )
-
-        with self.assertRaisesRegex(ValueError, ".*; found 0"):
-            update_kernel_afdo.parse_cl_from_upload_output("")
-
-        with self.assertRaisesRegex(ValueError, ".*; found 2"):
-            update_kernel_afdo.parse_cl_from_upload_output(
-                GERRIT_OUTPUT_WITH_TWO_CLS
-            )
 
     def test_repo_autodetects_nothing_if_no_repo_dir(self):
         self.assertIsNone(

@@ -24,11 +24,11 @@ import sys
 import tempfile
 from typing import Dict, Generator, Iterable, List, Optional, Tuple
 
+from cros_utils import git_utils
+
 
 # Folks who should be on the R-line of any CLs that get uploaded.
-# Note that `c-compiler-chrome@` is managed by gwsq - it'll replace
-# `R=c-compiler-chrome` with the current detective.
-CL_REVIEWERS = ("c-compiler-chrome@google.com",)
+CL_REVIEWERS = (git_utils.REVIEWER_DETECTIVE,)
 
 # Folks who should be on the CC-line of any CLs that get uploaded.
 CL_CC = (
@@ -737,55 +737,24 @@ def commit_new_profiles(
     )
 
 
-def parse_cl_from_upload_output(upload_output: str) -> str:
-    """Returns the CL number in the given upload output."""
-    id_regex = re.compile(
-        r"^remote:\s+https://chromium-review\S+/\+/(\d+)\s", re.MULTILINE
-    )
-
-    results = id_regex.findall(upload_output)
-    if len(results) != 1:
-        raise ValueError(
-            f"Wanted exactly one match for {id_regex} in {upload_output!r}; "
-            f"found {len(results)}"
-        )
-    return results[0]
-
-
 def upload_head_to_gerrit(
     toolchain_utils: Path,
     chromeos_tree: Optional[Path],
     branch: GitBranch,
 ):
     """Uploads HEAD to gerrit as a CL, and sets reviewers/CCs."""
-    option_list = [f"r={x}" for x in CL_REVIEWERS]
-    option_list += (f"cc={x}" for x in CL_CC)
-    options = ",".join(option_list)
-    run_result = subprocess.run(
-        [
-            "git",
-            "push",
-            branch.remote,
-            # https://gerrit-review.googlesource.com/Documentation/user-upload.html#reviewers
-            # for more info on the `%` params.
-            f"HEAD:refs/for/{branch.branch_name}%{options}",
-        ],
-        cwd=toolchain_utils,
-        check=False,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        encoding="utf-8",
-    )
-
-    logging.info(
-        "`git push`ing to %s had this output:\n%s",
+    cl_ids = git_utils.upload_to_gerrit(
+        toolchain_utils,
+        branch.remote,
         branch.branch_name,
-        run_result.stdout,
+        CL_REVIEWERS,
+        CL_CC,
     )
-    run_result.check_returncode()
 
-    cl_id = parse_cl_from_upload_output(run_result.stdout)
+    if len(cl_ids) > 1:
+        raise ValueError(f"Unexpected: wanted just one CL upload; got {cl_ids}")
+
+    cl_id = cl_ids[0]
     logging.info("Uploaded CL http://crrev.com/c/%s successfully.", cl_id)
 
     if chromeos_tree is None:
@@ -795,29 +764,7 @@ def upload_head_to_gerrit(
         )
         return
 
-    # To make the life of the reviewers marginally easier, click buttons
-    # automatically.
-    gerrit_commands = (
-        ["gerrit", "label-as", cl_id, "1"],
-        ["gerrit", "label-cq", cl_id, "1"],
-        ["gerrit", "label-v", cl_id, "1"],
-    )
-    for cmd in gerrit_commands:
-        # Run the gerrit commands inside of toolchain_utils, since `gerrit`
-        # needs to be run inside of a ChromeOS tree to work. While
-        # `toolchain-utils` can be checked out on its own, that's not how this
-        # script is expeted to be used.
-        return_code = subprocess.run(
-            cmd,
-            cwd=chromeos_tree,
-            check=False,
-            stdin=subprocess.DEVNULL,
-        ).returncode
-        if return_code:
-            logging.warning(
-                "Failed to run gerrit command %s. Ignoring.",
-                shlex.join(cmd),
-            )
+    git_utils.try_set_autosubmit_labels(chromeos_tree, cl_id)
 
 
 def find_chromeos_tree_root(a_dir: Path) -> Optional[Path]:
