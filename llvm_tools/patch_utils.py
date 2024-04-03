@@ -256,11 +256,8 @@ class PatchEntry:
                 f"Cannot apply: patch {abs_patch_path} is not a file"
             )
 
-        if not patch_cmd:
-            patch_cmd = gnu_patch
-
-        if patch_cmd == gnu_patch:
-            cmd = patch_cmd(root_dir, abs_patch_path) + (extra_args or [])
+        if not patch_cmd or patch_cmd is gnu_patch:
+            cmd = gnu_patch(root_dir, abs_patch_path) + (extra_args or [])
         else:
             cmd = patch_cmd(abs_patch_path) + (extra_args or [])
 
@@ -272,7 +269,7 @@ class PatchEntry:
             parsed_hunks = self.parsed_hunks()
             failed_hunks_id_dict = parse_failed_patch_output(e.stdout)
             failed_hunks = {}
-            if patch_cmd == gnu_patch:
+            if patch_cmd is gnu_patch:
                 for path, failed_hunk_ids in failed_hunks_id_dict.items():
                     hunks_for_file = parsed_hunks[path]
                     failed_hunks[path] = [
@@ -291,7 +288,7 @@ class PatchEntry:
         self, root_dir: Path, patch_cmd: Optional[Callable] = None
     ) -> PatchResult:
         """Dry run applying a patch to a given directory."""
-        extra_args = [] if patch_cmd == git_am else ["--dry-run"]
+        extra_args = [] if patch_cmd is git_am else ["--dry-run"]
         return self.apply(root_dir, patch_cmd, extra_args)
 
     def title(self) -> str:
@@ -376,6 +373,7 @@ def apply_all_from_json(
         svn_version: LLVM Subversion revision to patch.
         llvm_src_dir: llvm-project root-level source directory to patch.
         patches_json_fp: Filepath to the PATCHES.json file.
+        patch_cmd: The function to use when actually applying the patch.
         continue_on_failure: Skip any patches which failed to apply,
           rather than throw an Exception.
     """
@@ -565,6 +563,7 @@ def update_version_ranges_with_entries(
         svn_version: LLVM revision number.
         llvm_src_dir: llvm-project directory path.
         patch_entries: PatchEntry objects to modify.
+        patch_cmd: The function to use when actually applying the patch.
 
     Returns:
         Tuple of (modified entries, applied patches)
@@ -641,20 +640,18 @@ def remove_old_patches(
 
 
 def git_am(patch_path: Path) -> List[Union[str, Path]]:
-    cmd = ["git", "am", "--3way", str(patch_path)]
-    return cmd
+    return ["git", "am", "--3way", patch_path]
 
 
 def gnu_patch(root_dir: Path, patch_path: Path) -> List[Union[str, Path]]:
-    cmd = [
+    return [
         "patch",
         "-d",
-        str(root_dir.absolute()),
+        root_dir.absolute(),
         "-f",
         "-E",
         "-p1",
         "--no-backup-if-mismatch",
         "-i",
-        str(patch_path),
+        patch_path,
     ]
-    return cmd

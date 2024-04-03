@@ -170,7 +170,7 @@ a
             patch_dir, TestPatchUtils._default_json_dict()
         )
 
-        """Make a deepcopy of the case for testing commit patch option."""
+        # Make a deepcopy of the case for testing commit patch option.
         e1 = copy.deepcopy(e)
 
         with mock.patch("pathlib.Path.is_file", return_value=True):
@@ -178,7 +178,7 @@ a
                 result = e.apply(src_dir)
         self.assertTrue(result.succeeded)
 
-        """Test that commit patch option works."""
+        # Test that commit patch option works.
         with mock.patch("pathlib.Path.is_file", return_value=True):
             with mock.patch("subprocess.run", mock.MagicMock()):
                 result1 = e1.apply(src_dir, pu.git_am)
