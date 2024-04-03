@@ -6,8 +6,11 @@
 """Removes all LLVM patches before a certain point."""
 
 import argparse
+import importlib.abc
+import importlib.util
 import logging
 from pathlib import Path
+import re
 import subprocess
 import sys
 import textwrap
@@ -93,6 +96,63 @@ def upload_changes(cros_overlay: Path) -> None:
     git_utils.try_set_autosubmit_labels(cros_overlay, cl_id)
 
 
+def find_chromeos_llvm_version(chromiumos_overlay: Path) -> int:
+    sys_devel_llvm = chromiumos_overlay / "sys-devel" / "llvm"
+
+    # Pick this from the name of the stable ebuild; 9999 is a bit harder to
+    # parse, and stable is just as good.
+    stable_llvm_re = re.compile(r"^llvm.*_pre(\d+)-r\d+\.ebuild$")
+    match_gen = (
+        stable_llvm_re.fullmatch(x.name) for x in sys_devel_llvm.iterdir()
+    )
+    matches = [int(x.group(1)) for x in match_gen if x]
+
+    if len(matches) != 1:
+        raise ValueError(
+            f"Expected exactly one ebuild name match in {sys_devel_llvm}; "
+            f"found {len(matches)}"
+        )
+    return matches[0]
+
+
+def find_android_llvm_version(android_toolchain_tree: Path) -> int:
+    android_version_py = (
+        android_toolchain_tree
+        / "toolchain"
+        / "llvm_android"
+        / "android_version.py"
+    )
+
+    # Per
+    # https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly.
+    # Parsing this file is undesirable, since `_svn_revision`, as a variable,
+    # isn't meant to be relied on. Let Python handle the logic instead.
+    module_name = "android_version"
+    android_version = sys.modules.get(module_name)
+    if android_version is None:
+        spec = importlib.util.spec_from_file_location(
+            module_name, android_version_py
+        )
+        if not spec:
+            raise ImportError(
+                f"Failed loading module spec from {android_version_py}"
+            )
+        android_version = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = android_version
+        loader = spec.loader
+        if not isinstance(loader, importlib.abc.Loader):
+            raise ValueError(
+                f"Loader for {android_version_py} was of type "
+                f"{type(loader)}; wanted an importlib.util.Loader"
+            )
+        loader.exec_module(android_version)
+
+    rev = android_version.get_svn_revision()
+    match = re.match(r"r(\d+)", rev)
+    assert match, f"Invalid SVN revision: {rev!r}"
+    return int(match.group(1))
+
+
 def get_opts(my_dir: Path, argv: List[str]) -> argparse.Namespace:
     """Returns options for the script."""
 
@@ -101,20 +161,19 @@ def get_opts(my_dir: Path, argv: List[str]) -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
+        "--android-toolchain",
+        type=Path,
+        help="""
+        Path to an android-toolchain repo root. Only meaningful if
+        `--autodetect-revision` is passed.
+        """,
+    )
+    parser.add_argument(
         "--chromiumos-overlay",
         type=Path,
         help="""
         Path to chromiumos-overlay. Will autodetect if none is specified. If
         autodetection fails and none is specified, this script will fail.
-        """,
-    )
-    parser.add_argument(
-        "--revision",
-        type=int,
-        help="""
-        Revision to delete before (exclusive). All patches that stopped
-        applying before this will be removed. Phrased as an int, e.g.,
-        `--revision=1234`.
         """,
     )
     parser.add_argument(
@@ -130,6 +189,26 @@ def get_opts(my_dir: Path, argv: List[str]) -> argparse.Namespace:
         default reviewers, and starts CQ+1 (among other convenience features).
         """,
     )
+
+    revision_opt = parser.add_mutually_exclusive_group(required=True)
+    revision_opt.add_argument(
+        "--revision",
+        type=int,
+        help="""
+        Revision to delete before (exclusive). All patches that stopped
+        applying before this will be removed. Phrased as an int, e.g.,
+        `--revision=1234`.
+        """,
+    )
+    revision_opt.add_argument(
+        "--autodetect-revision",
+        action="store_true",
+        help="""
+        Autodetect the value for `--revision`. If this is passed, you must also
+        pass `--android-toolchain`. This sets `--revision` to the _lesser_ of
+        Android's current LLVM version, and ChromeOS'.
+        """,
+    )
     opts = parser.parse_args(argv)
 
     if not opts.chromiumos_overlay:
@@ -139,6 +218,23 @@ def get_opts(my_dir: Path, argv: List[str]) -> argparse.Namespace:
                 "Failed to autodetect --chromiumos-overlay; please pass a value"
             )
         opts.chromiumos_overlay = maybe_overlay
+
+    if opts.autodetect_revision:
+        if not opts.android_toolchain:
+            parser.error(
+                "--android-toolchain must be passed with --autodetect-revision"
+            )
+
+        cros_llvm_version = find_chromeos_llvm_version(opts.chromiumos_overlay)
+        logging.info("Detected CrOS LLVM revision: r%d", cros_llvm_version)
+        android_llvm_version = find_android_llvm_version(opts.android_toolchain)
+        logging.info(
+            "Detected Android LLVM revision: r%d", android_llvm_version
+        )
+        r = min(cros_llvm_version, android_llvm_version)
+        logging.info("Selected minimum LLVM revision: r%d", r)
+        opts.revision = r
+
     return opts
 
 
@@ -155,9 +251,9 @@ def main(argv: List[str]) -> None:
     cros_overlay = opts.chromiumos_overlay
     upload = opts.upload_with_autoreview
     commit = opts.commit or upload
-    revision = opts.revision
+    min_revision = opts.revision
 
-    made_changes = remove_old_patches(cros_overlay, revision)
+    made_changes = remove_old_patches(cros_overlay, min_revision)
     if not made_changes:
         logging.info("No changes made; exiting.")
         return
@@ -169,7 +265,7 @@ def main(argv: List[str]) -> None:
         return
 
     logging.info("Committing changes...")
-    commit_changes(cros_overlay, revision)
+    commit_changes(cros_overlay, min_revision)
     if not upload:
         logging.info("Change with removed patches has been committed locally.")
         return
