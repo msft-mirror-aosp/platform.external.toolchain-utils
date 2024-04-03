@@ -34,6 +34,15 @@ HUNK_HEADER_RE = re.compile(r"^@@\s+-(\d+),(\d+)\s+\+(\d+),(\d+)\s+@@")
 HUNK_END_RE = re.compile(r"^--\s*$")
 PATCH_SUBFILE_HEADER_RE = re.compile(r"^\+\+\+ [ab]/(.*)$")
 
+CHROMEOS_PATCHES_JSON_PACKAGES = (
+    "dev-util/lldb-server",
+    "sys-devel/llvm",
+    "sys-libs/compiler-rt",
+    "sys-libs/libcxx",
+    "sys-libs/llvm-libunwind",
+    "sys-libs/scudo",
+)
+
 
 @dataclasses.dataclass
 class Hunk:
@@ -232,16 +241,6 @@ class PatchEntry:
             until_v = sys.maxsize
         return from_v <= svn_version < until_v
 
-    def is_old(self, svn_version: int) -> bool:
-        """Is this patch old compared to `svn_version`?"""
-        if not self.version_range:
-            return False
-        until_v = self.version_range.get("until")
-        # Sometimes the key is there, but it's set to None.
-        if until_v is None:
-            until_v = sys.maxsize
-        return svn_version >= until_v
-
     def apply(
         self,
         root_dir: Path,
@@ -295,6 +294,17 @@ class PatchEntry:
         if not self.metadata:
             return ""
         return self.metadata.get("title", "")
+
+
+def patch_applies_after(
+    version_range: Optional[Dict[str, Optional[int]]], svn_version: int
+) -> bool:
+    """Does this patch apply after `svn_version`?"""
+    if not version_range:
+        return True
+    until = version_range.get("until")
+    before_svn_version = until is not None and svn_version > until
+    return not before_svn_version
 
 
 @dataclasses.dataclass(frozen=True)
@@ -596,9 +606,7 @@ def update_version_ranges_with_entries(
     return modified_entries, applied_patches
 
 
-def remove_old_patches(
-    svn_version: int, llvm_src_dir: Path, patches_json_fp: Path
-) -> PatchInfo:
+def remove_old_patches(svn_version: int, patches_json: Path) -> List[Path]:
     """Remove patches that don't and will never apply for the future.
 
     Patches are determined to be "old" via the "is_old" method for
@@ -606,37 +614,27 @@ def remove_old_patches(
 
     Args:
         svn_version: LLVM SVN version.
-        llvm_src_dir: LLVM source directory.
-        patches_json_fp: Location to edit patches on.
+        patches_json: Location of PATCHES.json.
 
     Returns:
-        PatchInfo for modified patches.
+        A list of all patch paths removed from PATCHES.json.
     """
-    with patches_json_fp.open(encoding="utf-8") as f:
-        contents = f.read()
+    contents = patches_json.read_text(encoding="utf-8")
     indent_len = predict_indent(contents.splitlines())
-    patch_entries = json_str_to_patch_entries(
-        llvm_src_dir,
-        contents,
-    )
-    oldness = [(entry, entry.is_old(svn_version)) for entry in patch_entries]
-    filtered_entries = [entry.to_dict() for entry, old in oldness if not old]
-    with atomic_write_file.atomic_write(patches_json_fp, encoding="utf-8") as f:
-        _write_json_changes(filtered_entries, f, indent_len=indent_len)
-    removed_entries = [entry for entry, old in oldness if old]
-    plural_patches = "patch" if len(removed_entries) == 1 else "patches"
-    print(f"Removed {len(removed_entries)} old {plural_patches}:")
-    for r in removed_entries:
-        print(f"- {r.rel_patch_path}: {r.title()}")
 
-    return PatchInfo(
-        non_applicable_patches=[],
-        applied_patches=[],
-        failed_patches=[],
-        disabled_patches=[],
-        removed_patches=[p.rel_patch_path for p in removed_entries],
-        modified_metadata=str(patches_json_fp) if removed_entries else None,
-    )
+    still_new = []
+    removed_patches = []
+    patches_parent = patches_json.parent
+    for entry in json.loads(contents):
+        if patch_applies_after(entry.get("version_range"), svn_version):
+            still_new.append(entry)
+        else:
+            removed_patches.append(patches_parent / entry["rel_patch_path"])
+
+    with atomic_write_file.atomic_write(patches_json, encoding="utf-8") as f:
+        _write_json_changes(still_new, f, indent_len=indent_len)
+
+    return removed_patches
 
 
 def git_am(patch_path: Path) -> List[Union[str, Path]]:

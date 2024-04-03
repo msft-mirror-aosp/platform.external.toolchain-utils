@@ -9,9 +9,9 @@ import copy
 import io
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
-from typing import Callable
 import unittest
 from unittest import mock
 
@@ -20,6 +20,11 @@ import patch_utils as pu
 
 class TestPatchUtils(unittest.TestCase):
     """Test the patch_utils."""
+
+    def make_tempdir(self) -> Path:
+        tmpdir = Path(tempfile.mkdtemp(prefix="patch_utils_unittest"))
+        self.addCleanup(shutil.rmtree, tmpdir)
+        return tmpdir
 
     def test_predict_indent(self):
         test_str1 = """
@@ -311,49 +316,39 @@ Hunk #1 SUCCEEDED at 96 with fuzz 1.
             self.assertEqual(patches2[1].version_range, {"from": 0, "until": 2})
             self.assertEqual(patches2[2].version_range, {"from": 4, "until": 5})
 
-    @mock.patch("builtins.print")
-    def test_remove_old_patches(self, _):
-        """Can remove old patches from PATCHES.json."""
-        one_patch_dict = {
-            "metadata": {
-                "title": "[some label] hello world",
-            },
-            "platforms": [
-                "chromiumos",
-            ],
-            "rel_patch_path": "x/y/z",
-            "version_range": {
-                "from": 4,
-                "until": 5,
-            },
-        }
+    def test_remove_old_patches(self):
         patches = [
-            one_patch_dict,
-            {**one_patch_dict, "version_range": {"until": None}},
-            {**one_patch_dict, "version_range": {"from": 100}},
-            {**one_patch_dict, "version_range": {"until": 8}},
-        ]
-        cases = [
-            (0, lambda x: self.assertEqual(len(x), 4)),
-            (6, lambda x: self.assertEqual(len(x), 3)),
-            (8, lambda x: self.assertEqual(len(x), 2)),
-            (1000, lambda x: self.assertEqual(len(x), 2)),
+            {"rel_patch_path": "foo.patch"},
+            {
+                "rel_patch_path": "bar.patch",
+                "version_range": {
+                    "from": 1,
+                },
+            },
+            {
+                "rel_patch_path": "baz.patch",
+                "version_range": {
+                    "until": 1,
+                },
+            },
         ]
 
-        def _t(dirname: str, svn_version: int, assertion_f: Callable):
-            json_filepath = Path(dirname) / "PATCHES.json"
-            with json_filepath.open("w", encoding="utf-8") as f:
-                json.dump(patches, f)
-            pu.remove_old_patches(svn_version, Path(), json_filepath)
-            with json_filepath.open("r", encoding="utf-8") as f:
-                result = json.load(f)
-            assertion_f(result)
+        tempdir = self.make_tempdir()
+        patches_json = tempdir / "PATCHES.json"
+        with patches_json.open("w", encoding="utf-8") as f:
+            json.dump(patches, f)
 
-        with tempfile.TemporaryDirectory(
-            prefix="patch_utils_unittest"
-        ) as dirname:
-            for r, a in cases:
-                _t(dirname, r, a)
+        removed_paths = pu.remove_old_patches(
+            svn_version=10, patches_json=patches_json
+        )
+        self.assertEqual(removed_paths, [tempdir / "baz.patch"])
+        expected_patches = [
+            x for x in patches if x["rel_patch_path"] != "baz.patch"
+        ]
+        self.assertEqual(
+            json.loads(patches_json.read_text(encoding="utf-8")),
+            expected_patches,
+        )
 
     @staticmethod
     def _default_json_dict():

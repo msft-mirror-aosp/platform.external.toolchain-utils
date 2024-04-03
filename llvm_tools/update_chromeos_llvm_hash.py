@@ -29,14 +29,8 @@ import patch_utils
 import subprocess_helpers
 
 
-DEFAULT_PACKAGES = [
-    "dev-util/lldb-server",
-    "sys-devel/llvm",
-    "sys-libs/compiler-rt",
-    "sys-libs/libcxx",
-    "sys-libs/llvm-libunwind",
-    "sys-libs/scudo",
-]
+# Default list of packages to update.
+DEFAULT_PACKAGES = patch_utils.CHROMEOS_PATCHES_JSON_PACKAGES
 
 DEFAULT_MANIFEST_PACKAGES = ["sys-devel/llvm"]
 
