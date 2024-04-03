@@ -9,7 +9,6 @@ It supports updating on canary, stable, and beta branches.
 """
 
 import argparse
-import contextlib
 import dataclasses
 import datetime
 import enum
@@ -21,8 +20,7 @@ import re
 import shlex
 import subprocess
 import sys
-import tempfile
-from typing import Dict, Generator, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from cros_utils import git_utils
 
@@ -165,47 +163,6 @@ def get_parser():
         """,
     )
     return parser
-
-
-@contextlib.contextmanager
-def git_worktree(git_directory: Path) -> Generator[Path, None, None]:
-    """Creates a temp worktree of `git_directory`, yielding the result."""
-    with tempfile.TemporaryDirectory(prefix="update_kernel_afdo_") as t:
-        tempdir = Path(t)
-        logging.info(
-            "Establishing worktree of %s in %s", git_directory, tempdir
-        )
-        subprocess.run(
-            [
-                "git",
-                "worktree",
-                "add",
-                "--detach",
-                "--force",
-                tempdir,
-            ],
-            cwd=git_directory,
-            check=True,
-            stdin=subprocess.DEVNULL,
-        )
-
-        try:
-            yield tempdir
-        finally:
-            # Explicitly `git worktree remove` here, so the parent worktree's
-            # metadata is cleaned up promptly.
-            subprocess.run(
-                [
-                    "git",
-                    "worktree",
-                    "remove",
-                    "--force",
-                    tempdir,
-                ],
-                cwd=git_directory,
-                check=False,
-                stdin=subprocess.DEVNULL,
-            )
 
 
 @dataclasses.dataclass(frozen=True, eq=True, order=True)
@@ -807,7 +764,7 @@ def main(argv: List[str]) -> None:
 
     fetcher = KernelProfileFetcher()
     had_failures = False
-    with git_worktree(toolchain_utils) as worktree:
+    with git_utils.create_worktree(toolchain_utils) as worktree:
         for channel in opts.channel:
             branch = branches[channel]
             result = update_afdo_for_channel(

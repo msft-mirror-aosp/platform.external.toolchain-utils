@@ -4,12 +4,14 @@
 
 """Shared utilities for working with git."""
 
+import contextlib
 import logging
 from pathlib import Path
 import re
 import shlex
 import subprocess
-from typing import Iterable, List
+import tempfile
+from typing import Generator, Iterable, List
 
 
 # Email address used to tag the detective as a reviewer.
@@ -104,4 +106,45 @@ def try_set_autosubmit_labels(chromeos_tree: Path, cl_id: int) -> None:
             logging.warning(
                 "Failed to run gerrit command %s. Ignoring.",
                 shlex.join(cmd),
+            )
+
+
+@contextlib.contextmanager
+def create_worktree(git_directory: Path) -> Generator[Path, None, None]:
+    """Creates a temp worktree of `git_directory`, yielding the result."""
+    with tempfile.TemporaryDirectory(prefix="update_kernel_afdo_") as t:
+        tempdir = Path(t)
+        logging.info(
+            "Establishing worktree of %s in %s", git_directory, tempdir
+        )
+        subprocess.run(
+            [
+                "git",
+                "worktree",
+                "add",
+                "--detach",
+                "--force",
+                tempdir,
+            ],
+            cwd=git_directory,
+            check=True,
+            stdin=subprocess.DEVNULL,
+        )
+
+        try:
+            yield tempdir
+        finally:
+            # Explicitly `git worktree remove` here, so the parent worktree's
+            # metadata is cleaned up promptly.
+            subprocess.run(
+                [
+                    "git",
+                    "worktree",
+                    "remove",
+                    "--force",
+                    tempdir,
+                ],
+                cwd=git_directory,
+                check=False,
+                stdin=subprocess.DEVNULL,
             )
