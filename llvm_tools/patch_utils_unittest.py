@@ -208,113 +208,107 @@ Hunk #1 SUCCEEDED at 96 with fuzz 1.
 
     def test_is_git_dirty(self):
         """Test if a git directory has uncommitted changes."""
-        with tempfile.TemporaryDirectory(
-            prefix="patch_utils_unittest"
-        ) as dirname:
-            dirpath = Path(dirname)
+        dirpath = self.make_tempdir()
 
-            def _run_h(cmd):
-                subprocess.run(
-                    cmd,
-                    cwd=dirpath,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    check=True,
-                )
+        def _run_h(cmd):
+            subprocess.run(
+                cmd,
+                cwd=dirpath,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True,
+            )
 
-            _run_h(["git", "init"])
-            self.assertFalse(pu.is_git_dirty(dirpath))
-            test_file = dirpath / "test_file"
-            test_file.touch()
-            self.assertTrue(pu.is_git_dirty(dirpath))
-            _run_h(["git", "add", "."])
-            _run_h(["git", "commit", "-m", "test"])
-            self.assertFalse(pu.is_git_dirty(dirpath))
-            test_file.touch()
-            self.assertFalse(pu.is_git_dirty(dirpath))
-            with test_file.open("w", encoding="utf-8"):
-                test_file.write_text("abc")
-            self.assertTrue(pu.is_git_dirty(dirpath))
+        _run_h(["git", "init"])
+        self.assertFalse(pu.is_git_dirty(dirpath))
+        test_file = dirpath / "test_file"
+        test_file.touch()
+        self.assertTrue(pu.is_git_dirty(dirpath))
+        _run_h(["git", "add", "."])
+        _run_h(["git", "commit", "-m", "test"])
+        self.assertFalse(pu.is_git_dirty(dirpath))
+        test_file.touch()
+        self.assertFalse(pu.is_git_dirty(dirpath))
+        with test_file.open("w", encoding="utf-8"):
+            test_file.write_text("abc")
+        self.assertTrue(pu.is_git_dirty(dirpath))
 
     @mock.patch("patch_utils.git_clean_context", mock.MagicMock)
     def test_update_version_ranges(self):
         """Test the UpdateVersionRanges function."""
-        with tempfile.TemporaryDirectory(
-            prefix="patch_manager_unittest"
-        ) as dirname:
-            dirpath = Path(dirname)
-            patches = [
-                pu.PatchEntry(
-                    workdir=dirpath,
-                    rel_patch_path="x.patch",
-                    metadata=None,
-                    platforms=None,
-                    version_range={
-                        "from": 0,
-                        "until": 2,
-                    },
-                ),
-                pu.PatchEntry(
-                    workdir=dirpath,
-                    rel_patch_path="y.patch",
-                    metadata=None,
-                    platforms=None,
-                    version_range={
-                        "from": 0,
-                        "until": 2,
-                    },
-                ),
-                pu.PatchEntry(
-                    workdir=dirpath,
-                    rel_patch_path="z.patch",
-                    metadata=None,
-                    platforms=None,
-                    version_range={
-                        "from": 4,
-                        "until": 5,
-                    },
-                ),
-            ]
+        dirpath = self.make_tempdir()
+        patches = [
+            pu.PatchEntry(
+                workdir=dirpath,
+                rel_patch_path="x.patch",
+                metadata=None,
+                platforms=None,
+                version_range={
+                    "from": 0,
+                    "until": 2,
+                },
+            ),
+            pu.PatchEntry(
+                workdir=dirpath,
+                rel_patch_path="y.patch",
+                metadata=None,
+                platforms=None,
+                version_range={
+                    "from": 0,
+                    "until": 2,
+                },
+            ),
+            pu.PatchEntry(
+                workdir=dirpath,
+                rel_patch_path="z.patch",
+                metadata=None,
+                platforms=None,
+                version_range={
+                    "from": 4,
+                    "until": 5,
+                },
+            ),
+        ]
 
-            patches[0].apply = mock.MagicMock(
-                return_value=pu.PatchResult(
-                    succeeded=False, failed_hunks={"a/b/c": []}
-                )
+        patches[0].apply = mock.MagicMock(
+            return_value=pu.PatchResult(
+                succeeded=False, failed_hunks={"a/b/c": []}
             )
-            patches[1].apply = mock.MagicMock(
-                return_value=pu.PatchResult(succeeded=True)
-            )
-            patches[2].apply = mock.MagicMock(
-                return_value=pu.PatchResult(succeeded=False)
-            )
+        )
+        patches[1].apply = mock.MagicMock(
+            return_value=pu.PatchResult(succeeded=True)
+        )
+        patches[2].apply = mock.MagicMock(
+            return_value=pu.PatchResult(succeeded=False)
+        )
 
-            # Make a deepcopy of patches to test commit patch option
-            patches2 = copy.deepcopy(patches)
+        # Make a deepcopy of patches to test commit patch option
+        patches2 = copy.deepcopy(patches)
 
-            results, _ = pu.update_version_ranges_with_entries(
-                1, dirpath, patches, pu.gnu_patch
-            )
+        results, _ = pu.update_version_ranges_with_entries(
+            1, dirpath, patches, pu.gnu_patch
+        )
 
-            # We should only have updated the version_range of the first patch,
-            # as that one failed to apply.
-            self.assertEqual(len(results), 1)
-            self.assertEqual(results[0].version_range, {"from": 0, "until": 1})
-            self.assertEqual(patches[0].version_range, {"from": 0, "until": 1})
-            self.assertEqual(patches[1].version_range, {"from": 0, "until": 2})
-            self.assertEqual(patches[2].version_range, {"from": 4, "until": 5})
+        # We should only have updated the version_range of the first patch,
+        # as that one failed to apply.
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].version_range, {"from": 0, "until": 1})
+        self.assertEqual(patches[0].version_range, {"from": 0, "until": 1})
+        self.assertEqual(patches[1].version_range, {"from": 0, "until": 2})
+        self.assertEqual(patches[2].version_range, {"from": 4, "until": 5})
 
-            # Test git am option
-            results2, _ = pu.update_version_ranges_with_entries(
-                1, dirpath, patches2, pu.git_am
-            )
+        # Test git am option
+        results2, _ = pu.update_version_ranges_with_entries(
+            1, dirpath, patches2, pu.git_am
+        )
 
-            # We should only have updated the version_range of the first patch
-            # via git am, as that one failed to apply.
-            self.assertEqual(len(results2), 1)
-            self.assertEqual(results2[0].version_range, {"from": 0, "until": 1})
-            self.assertEqual(patches2[0].version_range, {"from": 0, "until": 1})
-            self.assertEqual(patches2[1].version_range, {"from": 0, "until": 2})
-            self.assertEqual(patches2[2].version_range, {"from": 4, "until": 5})
+        # We should only have updated the version_range of the first patch
+        # via git am, as that one failed to apply.
+        self.assertEqual(len(results2), 1)
+        self.assertEqual(results2[0].version_range, {"from": 0, "until": 1})
+        self.assertEqual(patches2[0].version_range, {"from": 0, "until": 1})
+        self.assertEqual(patches2[1].version_range, {"from": 0, "until": 2})
+        self.assertEqual(patches2[2].version_range, {"from": 4, "until": 5})
 
     def test_remove_old_patches(self):
         patches = [
