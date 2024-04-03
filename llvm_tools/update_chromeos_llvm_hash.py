@@ -223,7 +223,6 @@ def GetCommandLineArgs():
             failure_modes.FailureModes.FAIL.value,
             failure_modes.FailureModes.CONTINUE.value,
             failure_modes.FailureModes.DISABLE_PATCHES.value,
-            failure_modes.FailureModes.REMOVE_PATCHES.value,
         ],
         help="the mode of the patch manager when handling failed patches "
         "(default: %(default)s)",
@@ -765,10 +764,6 @@ def UpdatePackagesPatchMetadataFile(
                             patches_json_fp=patches_json_fp,
                             continue_on_failure=mode
                             == failure_modes.FailureModes.CONTINUE,
-                        )
-                    elif mode == failure_modes.FailureModes.REMOVE_PATCHES:
-                        patches_info = patch_utils.remove_old_patches(
-                            svn_version, src_path, patches_json_fp
                         )
                     elif mode == failure_modes.FailureModes.DISABLE_PATCHES:
                         patches_info = patch_utils.update_version_ranges(

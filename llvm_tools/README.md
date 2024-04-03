@@ -156,16 +156,6 @@ $ ./patch_manager.py \
   --failure_mode disable_patches
 ```
 
-For example, to remove all patches that no longer apply:
-
-```
-$ ./patch_manager.py \
-  --svn_version 367622 \
-  --patch_metadata_file /abs/path/to/patch/file \
-  --src_path /abs/path/to/src/tree \
-  --failure_mode remove_patches
-```
-
 For example, to bisect a failing patch and stop at the first bisected patch:
 
 ```

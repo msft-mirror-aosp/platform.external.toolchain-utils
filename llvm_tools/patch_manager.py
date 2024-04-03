@@ -285,11 +285,6 @@ def main(sys_argv: List[str]):
         )
         PrintPatchResults(result)
 
-    def _remove(args):
-        patch_utils.remove_old_patches(
-            args.svn_version, llvm_src_dir, patches_json_fp
-        )
-
     def _disable(args):
         patch_cmd = patch_utils.git_am if args.git_am else patch_utils.gnu_patch
         patch_utils.update_version_ranges(
@@ -317,7 +312,6 @@ def main(sys_argv: List[str]):
     dispatch_table = {
         failure_modes.FailureModes.FAIL: _apply_all,
         failure_modes.FailureModes.CONTINUE: _apply_all,
-        failure_modes.FailureModes.REMOVE_PATCHES: _remove,
         failure_modes.FailureModes.DISABLE_PATCHES: _disable,
         failure_modes.FailureModes.BISECT_PATCHES: _test_single,
     }

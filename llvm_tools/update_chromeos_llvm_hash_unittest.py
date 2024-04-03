@@ -813,7 +813,7 @@ class UpdateLLVMHashTest(unittest.TestCase):
     ):
         packages_to_update = "test-packages/package1,test-libs/lib1"
         manifest_packages = "test-libs/lib1,test-libs/lib2"
-        failure_mode = failure_modes.FailureModes.REMOVE_PATCHES
+        failure_mode = failure_modes.FailureModes.DISABLE_PATCHES
         chromeos_path = Path("/some/path/to/chromeos")
         llvm_ver = 435698
         git_hash = "1234abcd"
