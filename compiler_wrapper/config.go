@@ -118,6 +118,8 @@ func crosCommonClangFlags() []string {
 		"-fdebug-default-version=5",
 		"-Wno-int-conversion",
 		"-Wno-incompatible-function-pointer-types",
+		// TODO(b/316021385): Temporarily disables warnings for variable length arrays.
+		"-Wno-error=vla-cxx-extension",
 		"-D_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES",
 		// TODO(b/315504245): Temporarily prevents new mangling rules from taking effect.
 		"-fclang-abi-compat=17",
