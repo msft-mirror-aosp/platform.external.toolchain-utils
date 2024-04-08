@@ -79,11 +79,17 @@ def upload_to_gerrit(
     return _parse_cls_from_upload_output(run_result.stdout)
 
 
-def try_set_autosubmit_labels(chromeos_tree: Path, cl_id: int) -> None:
+def try_set_autosubmit_labels(cwd: Path, cl_id: int) -> None:
     """Sets autosubmit on a CL. Logs - not raises - on failure.
 
     This sets a series of convenience labels on the given cl_number, so landing
     it (e.g., for the detective) is as easy as possible.
+
+    Args:
+        cwd: the directory that the `gerrit` tool should be run in. Anywhere in
+            a ChromeOS tree will do. The `gerrit` command fails if it isn't run
+            from within a ChromeOS tree.
+        cl_id: The CL number to apply labels to.
     """
     gerrit_cl_id = str(cl_id)
     gerrit_commands = (
@@ -98,7 +104,7 @@ def try_set_autosubmit_labels(chromeos_tree: Path, cl_id: int) -> None:
         # script is expeted to be used.
         return_code = subprocess.run(
             cmd,
-            cwd=chromeos_tree,
+            cwd=cwd,
             check=False,
             stdin=subprocess.DEVNULL,
         ).returncode

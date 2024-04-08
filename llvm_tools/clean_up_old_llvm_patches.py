@@ -79,7 +79,7 @@ def commit_changes(cros_overlay: Path, min_rev: int):
     )
 
 
-def upload_changes(cros_overlay: Path) -> None:
+def upload_changes(cros_overlay: Path, autosubmit_cwd: Path) -> None:
     cl_ids = git_utils.upload_to_gerrit(
         cros_overlay,
         remote="cros",
@@ -93,7 +93,7 @@ def upload_changes(cros_overlay: Path) -> None:
 
     cl_id = cl_ids[0]
     logging.info("Uploaded CL http://crrev.com/c/%s successfully.", cl_id)
-    git_utils.try_set_autosubmit_labels(cros_overlay, cl_id)
+    git_utils.try_set_autosubmit_labels(autosubmit_cwd, cl_id)
 
 
 def find_chromeos_llvm_version(chromiumos_overlay: Path) -> int:
@@ -169,6 +169,15 @@ def get_opts(my_dir: Path, argv: List[str]) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
+        "--gerrit-tool-cwd",
+        type=Path,
+        help="""
+        Working directory for `gerrit` tool invocations. This should point to
+        somewhere within a ChromeOS source tree. If none is passed, this will
+        try running them in the path specified by `--chromiumos-overlay`.
+        """,
+    )
+    parser.add_argument(
         "--chromiumos-overlay",
         type=Path,
         help="""
@@ -219,6 +228,9 @@ def get_opts(my_dir: Path, argv: List[str]) -> argparse.Namespace:
             )
         opts.chromiumos_overlay = maybe_overlay
 
+    if not opts.gerrit_tool_cwd:
+        opts.gerrit_tool_cwd = opts.chromiumos_overlay
+
     if opts.autodetect_revision:
         if not opts.android_toolchain:
             parser.error(
@@ -249,6 +261,7 @@ def main(argv: List[str]) -> None:
     opts = get_opts(my_dir, argv)
 
     cros_overlay = opts.chromiumos_overlay
+    gerrit_tool_cwd = opts.gerrit_tool_cwd
     upload = opts.upload_with_autoreview
     commit = opts.commit or upload
     min_revision = opts.revision
@@ -271,7 +284,7 @@ def main(argv: List[str]) -> None:
         return
 
     logging.info("Uploading changes...")
-    upload_changes(cros_overlay)
+    upload_changes(cros_overlay, gerrit_tool_cwd)
     logging.info("Change sent for review.")
 
 
