@@ -209,10 +209,14 @@ fn read_header<R: BufRead>(r: &mut R, header: &mut Header) -> Result<()> {
 fn replace(contents: &[u8], replacement_map: &[(&str, &str)], dest: &mut Vec<u8>) -> Result<()> {
     fn map_value(val: Value, replacement_map: &[(&str, &str)]) -> Value {
         match val {
-            Value::String(s) =>
-            // `s.replace` is very likely doing more work than necessary. Probably we only need
-            // to look for the pattern at the beginning of the string.
-            {
+            Value::String(s) => {
+                // rust-analyzer uses LSP paths most of the time, which are encoded with the file:
+                // URL scheme. However, for certain config items, paths are used instead of URIs.
+                // Hence, we match not only the prefix but also anywhere in the middle.
+                // TODO: Rewrite to concisely handle URIs and normal paths separately to address the
+                //       following limitations:
+                //       - Components in the middle can get accidentally matched.
+                //       - Percent encoded characters in URIs are not decoded and hence not matched.
                 lazy_static! {
                     static ref SERVER_PATH_REGEX: Regex =
                         Regex::new(r".*/rust-analyzer-chromiumos-wrapper$").unwrap();
@@ -221,9 +225,12 @@ fn replace(contents: &[u8], replacement_map: &[(&str, &str)], dest: &mut Vec<u8>
                 let mut s = SERVER_PATH_REGEX
                     .replace_all(&s, CHROOT_SERVER_PATH)
                     .to_string();
-                // Then replace all mappings we get.
+                // Replace by the first matched pattern.
                 for (pattern, replacement) in replacement_map {
-                    s = s.replace(pattern, replacement);
+                    if s.find(pattern).is_some() {
+                        s = s.replace(pattern, replacement);
+                        break;
+                    }
                 }
                 Value::String(s.to_string())
             }
@@ -424,6 +431,19 @@ mod test {
             &[],
             r#"{
                 "path": "/usr/sbin/rust-analyzer"
+            }"#,
+        )
+    }
+
+    #[test]
+    fn test_stream_with_replacement_replace_once() -> Result<()> {
+        test_stream_with_replacement(
+            r#"{
+                "path": "/mnt/home/file"
+            }"#,
+            &[("/mnt/home", "/home"), ("/home", "/foo")],
+            r#"{
+                "path": "/home/file"
             }"#,
         )
     }
