@@ -73,9 +73,12 @@ impl PatchCollection {
     }
 
     /// Copy this collection with patches filtered by given criterion.
-    pub fn filter_patches(&self, f: impl FnMut(&PatchDictSchema) -> bool) -> Self {
+    pub fn filter_patches<F>(&self, mut f: F) -> Self
+    where
+        F: FnMut(&PatchDictSchema) -> bool,
+    {
         Self {
-            patches: self.patches.iter().cloned().filter(f).collect(),
+            patches: self.patches.iter().filter(|&x| f(x)).cloned().collect(),
             workdir: self.workdir.clone(),
             indent_len: self.indent_len,
         }
@@ -437,7 +440,7 @@ fn copy_create_parents(from: &Path, to: &Path) -> Result<()> {
         std::fs::create_dir_all(to_parent)?;
     }
 
-    copy(&from, &to)
+    copy(from, to)
         .with_context(|| format!("copying file from {} to {}", &from.display(), &to.display()))?;
     Ok(())
 }
