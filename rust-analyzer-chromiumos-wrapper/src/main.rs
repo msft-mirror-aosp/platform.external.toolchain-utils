@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
@@ -122,16 +121,14 @@ fn main() -> Result<()> {
     let mut child_stdin = BufWriter::new(child.0.stdin.take().unwrap());
     let mut child_stdout = BufReader::new(child.0.stdout.take().unwrap());
 
-    let replacement_map = {
-        let mut m = HashMap::new();
-        m.insert(outside_prefix, inside_prefix);
-        m.insert(outside_sysroot_prefix, "/usr/lib/rustlib");
-        m.insert(outside_home, "/home");
-        m
-    };
+    let replacement_map = [
+        (outside_prefix, inside_prefix),
+        (outside_sysroot_prefix, "/usr/lib/rustlib"),
+        (outside_home, "/home"),
+    ];
 
     let join_handle = {
-        let rm = replacement_map.clone();
+        let rm = replacement_map;
         thread::spawn(move || {
             let mut stdin = io::stdin().lock();
             stream_with_replacement(&mut stdin, &mut child_stdin, &rm)
@@ -140,7 +137,7 @@ fn main() -> Result<()> {
     };
 
     // For the mapping between inside to outside, we just reverse the map.
-    let replacement_map_rev = replacement_map.iter().map(|(k, v)| (*v, *k)).collect();
+    let replacement_map_rev = replacement_map.map(|(k, v)| (v, k));
     let mut stdout = BufWriter::new(io::stdout().lock());
     stream_with_replacement(&mut child_stdout, &mut stdout, &replacement_map_rev)
         .context("Streaming from rust-analyzer into stdout")?;
@@ -209,12 +206,8 @@ fn read_header<R: BufRead>(r: &mut R, header: &mut Header) -> Result<()> {
 
 /// Extend `dest` with `contents`, replacing any occurrence of patterns in a json string in
 /// `contents` with a replacement.
-fn replace(
-    contents: &[u8],
-    replacement_map: &HashMap<&str, &str>,
-    dest: &mut Vec<u8>,
-) -> Result<()> {
-    fn map_value(val: Value, replacement_map: &HashMap<&str, &str>) -> Value {
+fn replace(contents: &[u8], replacement_map: &[(&str, &str)], dest: &mut Vec<u8>) -> Result<()> {
+    fn map_value(val: Value, replacement_map: &[(&str, &str)]) -> Value {
         match val {
             Value::String(s) =>
             // `s.replace` is very likely doing more work than necessary. Probably we only need
@@ -271,7 +264,7 @@ fn replace(
 fn stream_with_replacement<R: BufRead, W: Write>(
     r: &mut R,
     w: &mut W,
-    replacement_map: &HashMap<&str, &str>,
+    replacement_map: &[(&str, &str)],
 ) -> Result<()> {
     let mut head = Header::default();
     let mut buf = Vec::with_capacity(1024);
@@ -350,16 +343,10 @@ mod test {
 
     fn test_stream_with_replacement(
         read: &str,
-        pattern: &str,
-        replacement: &str,
+        replacement_map: &[(&str, &str)],
         json_expected: &str,
     ) -> Result<()> {
         let mut w = Vec::new();
-        let replacement_map = {
-            let mut m = HashMap::new();
-            m.insert(pattern, replacement);
-            m
-        };
         let input = format!("Content-Length: {}\r\n\r\n{}", read.as_bytes().len(), read);
         stream_with_replacement(&mut input.as_bytes(), &mut w, &replacement_map)?;
 
@@ -394,8 +381,7 @@ mod test {
                 },
                 "anotherkey": "XYZXYZdef"
             }"#,
-            "XYZXYZ",
-            "REPLACE",
+            &[("XYZXYZ", "REPLACE")],
             r#"{
                 "somekey": {
                     "somepath": "REPLACEabc",
@@ -417,8 +403,7 @@ mod test {
                 },
                 "key4": 1
             }"#,
-            "ABCDEF",
-            "replacement",
+            &[("ABCDEF", "replacement")],
             r#"{
                 "key0": "sometextreplacement",
                 "key1": {
@@ -436,8 +421,7 @@ mod test {
             r#"{
                 "path": "/my_folder/rust-analyzer-chromiumos-wrapper"
             }"#,
-            "",
-            "",
+            &[],
             r#"{
                 "path": "/usr/sbin/rust-analyzer"
             }"#,
