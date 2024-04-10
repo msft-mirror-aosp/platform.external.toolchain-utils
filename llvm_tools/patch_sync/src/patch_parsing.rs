@@ -313,11 +313,25 @@ impl std::fmt::Display for PatchCollection {
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("[No Title]");
             let path = self.workdir.join(&p.rel_patch_path);
+            let from = p.get_from_version();
+            let until = p.get_until_version();
             writeln!(f, "* {}", title)?;
             if i == self.patches.len() - 1 {
-                write!(f, "  {}", path.display())?;
+                write!(
+                    f,
+                    "  {}\n  r{}-r{}",
+                    path.display(),
+                    from.map_or("None".to_string(), |x| x.to_string()),
+                    until.map_or("None".to_string(), |x| x.to_string())
+                )?;
             } else {
-                writeln!(f, "  {}", path.display())?;
+                writeln!(
+                    f,
+                    "  {}\n  r{}-r{}",
+                    path.display(),
+                    from.map_or("None".to_string(), |x| x.to_string()),
+                    until.map_or("None".to_string(), |x| x.to_string())
+                )?;
             }
         }
         Ok(())
