@@ -21,7 +21,7 @@ use simplelog::{Config, LevelFilter, WriteLogger};
 
 use serde_json::{from_slice, to_writer, Value};
 
-const CHROOT_SERVER_PATH: &str = "/usr/sbin/rust-analyzer";
+const CHROOT_SERVER_PATH: &str = "/usr/bin/rust-analyzer";
 
 fn main() -> Result<()> {
     let args = env::args().skip(1);
@@ -430,7 +430,7 @@ mod test {
             }"#,
             &[],
             r#"{
-                "path": "/usr/sbin/rust-analyzer"
+                "path": "/usr/bin/rust-analyzer"
             }"#,
         )
     }
