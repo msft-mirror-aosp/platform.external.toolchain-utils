@@ -694,19 +694,6 @@ def update_rust_packages(
         f.write(new_contents)
 
 
-def update_virtual_rust(
-    template_version: RustVersion, new_version: RustVersion
-) -> None:
-    template_ebuild = find_ebuild_path(
-        EBUILD_PREFIX.joinpath("virtual/rust"), "rust", template_version
-    )
-    virtual_rust_dir = template_ebuild.parent
-    new_name = f"rust-{new_version}.ebuild"
-    new_ebuild = virtual_rust_dir.joinpath(new_name)
-    shutil.copyfile(template_ebuild, new_ebuild)
-    subprocess.check_call(["git", "add", new_name], cwd=virtual_rust_dir)
-
-
 def unmerge_package_if_installed(pkgatom: str) -> None:
     """Unmerges a package if it is installed."""
     shpkg = shlex.quote(pkgatom)
@@ -865,10 +852,6 @@ def create_rust_uprev(
         "insert target version into rust packages",
         lambda: update_rust_packages("dev-lang/rust", rust_version, add=True),
     )
-    run_step(
-        "upgrade virtual/rust",
-        lambda: update_virtual_rust(template_version, rust_version),
-    )
 
 
 def find_rust_versions() -> List[Tuple[RustVersion, Path]]:
@@ -1002,13 +985,6 @@ def remove_rust_uprev(
         lambda: update_rust_packages(
             "dev-lang/rust-host", delete_version, add=False
         ),
-    )
-    run_step("remove virtual/rust", lambda: remove_virtual_rust(delete_version))
-
-
-def remove_virtual_rust(delete_version: RustVersion) -> None:
-    remove_ebuild_version(
-        EBUILD_PREFIX.joinpath("virtual/rust"), "rust", delete_version
     )
 
 

@@ -722,66 +722,6 @@ class RustUprevOtherStagesTests(unittest.TestCase):
             cwd=new_ebuild.parent,
         )
 
-    @mock.patch.object(subprocess, "check_call")
-    def test_remove_virtual_rust(self, mock_call):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            ebuild_path = Path(
-                tmpdir, f"virtual/rust/rust-{self.old_version}.ebuild"
-            )
-            os.makedirs(ebuild_path.parent)
-            ebuild_path.touch()
-            with mock.patch("rust_uprev.EBUILD_PREFIX", Path(tmpdir)):
-                rust_uprev.remove_virtual_rust(self.old_version)
-                mock_call.assert_called_once_with(
-                    ["git", "rm", str(ebuild_path.name)], cwd=ebuild_path.parent
-                )
-
-    @mock.patch.object(subprocess, "check_call")
-    def test_remove_virtual_rust_with_symlink(self, mock_call):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            ebuild_path = Path(
-                tmpdir, f"virtual/rust/rust-{self.old_version}.ebuild"
-            )
-            symlink_path = Path(
-                tmpdir, f"virtual/rust/rust-{self.old_version}-r14.ebuild"
-            )
-            os.makedirs(ebuild_path.parent)
-            ebuild_path.touch()
-            symlink_path.symlink_to(ebuild_path.name)
-            with mock.patch("rust_uprev.EBUILD_PREFIX", Path(tmpdir)):
-                rust_uprev.remove_virtual_rust(self.old_version)
-                mock_call.assert_has_calls(
-                    [
-                        mock.call(
-                            ["git", "rm", ebuild_path.name],
-                            cwd=ebuild_path.parent,
-                        ),
-                        mock.call(
-                            ["git", "rm", symlink_path.name],
-                            cwd=ebuild_path.parent,
-                        ),
-                    ],
-                    any_order=True,
-                )
-
-    @mock.patch.object(rust_uprev, "find_ebuild_path")
-    @mock.patch.object(shutil, "copyfile")
-    @mock.patch.object(subprocess, "check_call")
-    def test_update_virtual_rust(self, mock_call, mock_copy, mock_find_ebuild):
-        ebuild_path = Path(
-            f"/some/dir/virtual/rust/rust-{self.current_version}.ebuild"
-        )
-        mock_find_ebuild.return_value = Path(ebuild_path)
-        rust_uprev.update_virtual_rust(self.current_version, self.new_version)
-        mock_call.assert_called_once_with(
-            ["git", "add", f"rust-{self.new_version}.ebuild"],
-            cwd=ebuild_path.parent,
-        )
-        mock_copy.assert_called_once_with(
-            ebuild_path.parent.joinpath(f"rust-{self.current_version}.ebuild"),
-            ebuild_path.parent.joinpath(f"rust-{self.new_version}.ebuild"),
-        )
-
     @mock.patch("rust_uprev.find_rust_versions")
     def test_find_oldest_rust_version_pass(self, rust_versions):
         oldest_version_name = f"rust-{self.old_version}.ebuild"
