@@ -354,7 +354,7 @@ mod test {
         replacement: &str,
         json_expected: &str,
     ) -> Result<()> {
-        let mut w = Vec::<u8>::with_capacity(read.len());
+        let mut w = Vec::new();
         let replacement_map = {
             let mut m = HashMap::new();
             m.insert(pattern, replacement);
