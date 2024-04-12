@@ -387,46 +387,60 @@ mod test {
     #[test]
     fn test_stream_with_replacement_1() -> Result<()> {
         test_stream_with_replacement(
-            // read
-            "{\"somekey\": {\"somepath\": \"XYZXYZabc\",\
-            \"anotherpath\": \"somestring\"}, \"anotherkey\": \"XYZXYZdef\"}",
-            // pattern
+            r#"{
+                "somekey": {
+                    "somepath": "XYZXYZabc",
+                    "anotherpath": "somestring"
+                },
+                "anotherkey": "XYZXYZdef"
+            }"#,
             "XYZXYZ",
-            // replacement
             "REPLACE",
-            // json_expected
-            "{\"somekey\": {\"somepath\": \"REPLACEabc\", \"anotherpath\": \"somestring\"},\
-            \"anotherkey\": \"REPLACEdef\"}",
+            r#"{
+                "somekey": {
+                    "somepath": "REPLACEabc",
+                    "anotherpath": "somestring"
+                },
+                "anotherkey": "REPLACEdef"
+            }"#,
         )
     }
 
     #[test]
     fn test_stream_with_replacement_2() -> Result<()> {
         test_stream_with_replacement(
-            // read
-            "{\"key0\": \"sometextABCDEF\",\
-            \"key1\": {\"key2\": 5, \"key3\": \"moreABCDEFtext\"}, \"key4\": 1}",
-            // pattern
+            r#"{
+                "key0": "sometextABCDEF",
+                "key1": {
+                    "key2": 5,
+                    "key3": "moreABCDEFtext"
+                },
+                "key4": 1
+            }"#,
             "ABCDEF",
-            // replacement
             "replacement",
-            // json_expected
-            "{\"key0\": \"sometextreplacement\", \"key1\": {\"key2\": 5,\
-            \"key3\": \"morereplacementtext\"}, \"key4\": 1}",
+            r#"{
+                "key0": "sometextreplacement",
+                "key1": {
+                    "key2": 5,
+                    "key3": "morereplacementtext"
+                },
+                "key4": 1
+            }"#,
         )
     }
 
     #[test]
     fn test_stream_with_replacement_3() -> Result<()> {
         test_stream_with_replacement(
-            // read
-            "{\"path\": \"/my_folder/rust-analyzer-chromiumos-wrapper\"}",
-            // pattern
+            r#"{
+                "path": "/my_folder/rust-analyzer-chromiumos-wrapper"
+            }"#,
             "",
-            // replacement
             "",
-            // json_expected
-            "{\"path\": \"/usr/sbin/rust-analyzer\"}",
+            r#"{
+                "path": "/usr/sbin/rust-analyzer"
+            }"#,
         )
     }
 }
