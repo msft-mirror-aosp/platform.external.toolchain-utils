@@ -360,7 +360,8 @@ mod test {
             m.insert(pattern, replacement);
             m
         };
-        stream_with_replacement(&mut read.as_bytes(), &mut w, &replacement_map)?;
+        let input = format!("Content-Length: {}\r\n\r\n{}", read.as_bytes().len(), read);
+        stream_with_replacement(&mut input.as_bytes(), &mut w, &replacement_map)?;
 
         // serde_json may not format the json output the same as we do, so we can't just compare
         // as strings or slices.
@@ -387,7 +388,7 @@ mod test {
     fn test_stream_with_replacement_1() -> Result<()> {
         test_stream_with_replacement(
             // read
-            "Content-Length: 93\r\n\r\n{\"somekey\": {\"somepath\": \"XYZXYZabc\",\
+            "{\"somekey\": {\"somepath\": \"XYZXYZabc\",\
             \"anotherpath\": \"somestring\"}, \"anotherkey\": \"XYZXYZdef\"}",
             // pattern
             "XYZXYZ",
@@ -403,7 +404,7 @@ mod test {
     fn test_stream_with_replacement_2() -> Result<()> {
         test_stream_with_replacement(
             // read
-            "Content-Length: 83\r\n\r\n{\"key0\": \"sometextABCDEF\",\
+            "{\"key0\": \"sometextABCDEF\",\
             \"key1\": {\"key2\": 5, \"key3\": \"moreABCDEFtext\"}, \"key4\": 1}",
             // pattern
             "ABCDEF",
@@ -419,7 +420,7 @@ mod test {
     fn test_stream_with_replacement_3() -> Result<()> {
         test_stream_with_replacement(
             // read
-            "Content-Length: 55\r\n\r\n{\"path\": \"/my_folder/rust-analyzer-chromiumos-wrapper\"}",
+            "{\"path\": \"/my_folder/rust-analyzer-chromiumos-wrapper\"}",
             // pattern
             "",
             // replacement
