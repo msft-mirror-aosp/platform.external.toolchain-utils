@@ -12,7 +12,6 @@ import json
 import logging
 import os
 from pathlib import Path
-import shlex
 import subprocess
 import sys
 import typing as t
@@ -191,41 +190,6 @@ def add_patch(
     os.rename(temp_file, patches_json_path)
 
 
-def parse_ebuild_for_assignment(ebuild_path: str, var_name: str) -> str:
-    # '_pre' filters the LLVM 9.0 ebuild, which we never want to target, from
-    # this list.
-    candidates = [
-        x
-        for x in os.listdir(ebuild_path)
-        if x.endswith(".ebuild") and "_pre" in x
-    ]
-
-    if not candidates:
-        raise ValueError("No ebuilds found under %r" % ebuild_path)
-
-    ebuild = os.path.join(ebuild_path, max(candidates))
-    with open(ebuild, encoding="utf-8") as f:
-        var_name_eq = var_name + "="
-        for orig_line in f:
-            if not orig_line.startswith(var_name_eq):
-                continue
-
-            # We shouldn't see much variety here, so do the simplest thing
-            # possible.
-            line = orig_line[len(var_name_eq) :]
-            # Remove comments
-            line = line.split("#")[0]
-            # Remove quotes
-            parts = shlex.split(line)
-            if len(parts) != 1:
-                raise ValueError(
-                    "Expected exactly one quoted value in %r" % orig_line
-                )
-            return parts[0].strip()
-
-    raise ValueError("No %s= line found in %r" % (var_name, ebuild))
-
-
 # Resolves a git ref (or similar) to a LLVM SHA.
 def resolve_llvm_ref(llvm_dir: t.Union[Path, str], sha: str) -> str:
     return subprocess.check_output(
@@ -309,12 +273,12 @@ def make_cl(
     git.DeleteBranch(llvm_symlink_dir, branch)
 
 
-def resolve_symbolic_sha(start_sha: str, llvm_symlink_dir: str) -> str:
+def resolve_symbolic_sha(start_sha: str, chromeos_path: Path) -> str:
     if start_sha == "llvm":
-        return parse_ebuild_for_assignment(llvm_symlink_dir, "LLVM_HASH")
+        return get_llvm_hash.LLVMHash().GetCrOSCurrentLLVMHash(chromeos_path)
 
     if start_sha == "llvm-next":
-        return parse_ebuild_for_assignment(llvm_symlink_dir, "LLVM_NEXT_HASH")
+        return get_llvm_hash.LLVMHash().GetCrOSLLVMNextHash()
 
     return start_sha
 
@@ -515,7 +479,7 @@ def get_from_upstream(
         error_path = os.path.dirname(os.path.dirname(llvm_symlink_dir))
         raise ValueError(f"Uncommited changes detected in {error_path}")
 
-    start_sha = resolve_symbolic_sha(start_sha, llvm_symlink_dir)
+    start_sha = resolve_symbolic_sha(start_sha, Path(chromeos_path))
     logging.info("Base llvm hash == %s", start_sha)
 
     llvm_config = git_llvm_rev.LLVMConfig(
