@@ -112,12 +112,15 @@ class ChangeListURL:
             raise ValueError("A patchset number must be specified.")
         return result
 
-    def __str__(self):
+    def crrev_url_without_http(self):
         namespace = "i" if self.internal else "c"
-        result = f"https://crrev.com/{namespace}/{self.cl_id}"
+        result = f"crrev.com/{namespace}/{self.cl_id}"
         if self.patch_set is not None:
             result += f"/{self.patch_set}"
         return result
+
+    def __str__(self):
+        return f"https://{self.crrev_url_without_http()}"
 
 
 def builder_url(build_id: BuildID) -> str:
