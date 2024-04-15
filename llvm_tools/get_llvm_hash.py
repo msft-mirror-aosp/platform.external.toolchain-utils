@@ -18,6 +18,8 @@ import tempfile
 from typing import Iterator, Optional, Tuple, Union
 
 import git_llvm_rev
+import llvm_next
+import manifest_utils
 import subprocess_helpers
 
 
@@ -25,7 +27,13 @@ _LLVM_GIT_URL = (
     "https://chromium.googlesource.com/external/github.com/llvm/llvm-project"
 )
 
-KNOWN_HASH_SOURCES = {"google3", "google3-unstable", "tot"}
+KNOWN_HASH_SOURCES = (
+    "google3",
+    "google3-unstable",
+    "llvm",
+    "llvm-next",
+    "tot",
+)
 
 
 def GetVersionFrom(src_dir: Union[Path, str], git_hash: str) -> int:
@@ -355,6 +363,32 @@ def GetLLVMHashAndVersionFromSVNOption(
     return git_hash, version
 
 
+def _FindChromeOSTreeRoot(chromeos_tree_path: Path) -> Path:
+    """Returns the root of a ChromeOS tree, given a path in said tree."""
+    if (chromeos_tree_path / ".repo").exists():
+        return chromeos_tree_path
+
+    for parent in chromeos_tree_path.parents:
+        if (parent / ".repo").exists():
+            return parent
+    raise ValueError(f"{chromeos_tree_path} is not in a repo checkout")
+
+
+def GetCrOSCurrentLLVMHash(chromeos_tree: Path) -> str:
+    """Retrieves the current ChromeOS LLVM hash.
+
+    Args:
+        chromeos_tree: A ChromeOS source tree. This is allowed to be
+        arbitrary subdirectory of an actual ChromeOS tree, for convenience.
+
+    Raises:
+        ManifestValueError if the toolchain manifest doesn't match the
+        expected structure.
+    """
+    chromeos_root = _FindChromeOSTreeRoot(chromeos_tree)
+    return manifest_utils.extract_current_llvm_hash(chromeos_root)
+
+
 class LLVMHash:
     """Provides methods to retrieve a LLVM hash."""
 
@@ -397,15 +431,21 @@ class LLVMHash:
         Returns:
             The hash as a string that corresponds to the LLVM version.
         """
-
         hash_value = GetGitHashFrom(
             GetAndUpdateLLVMProjectInLLVMTools(), version
         )
         return hash_value
 
+    def GetCrOSCurrentLLVMHash(self, chromeos_tree: Path) -> str:
+        """Retrieves the current ChromeOS LLVM hash."""
+        return GetCrOSCurrentLLVMHash(chromeos_tree)
+
+    def GetCrOSLLVMNextHash(self) -> str:
+        """Retrieves the current ChromeOS llvm-next hash."""
+        return llvm_next.LLVM_NEXT_HASH
+
     def GetGoogle3LLVMHash(self) -> str:
         """Retrieves the google3 LLVM hash."""
-
         return self.GetLLVMHash(GetGoogle3LLVMVersion(stable=True))
 
     def GetGoogle3UnstableLLVMHash(self) -> str:
@@ -428,6 +468,7 @@ def main() -> None:
     Parses the command line for the optional command line
     arguments.
     """
+    my_dir = Path(__file__).parent.resolve()
 
     # Create parser and add optional command-line arguments.
     parser = argparse.ArgumentParser(description="Finds the LLVM hash.")
@@ -438,17 +479,36 @@ def main() -> None:
         help="which git hash of LLVM to find. Either a svn revision, or one "
         "of %s" % sorted(KNOWN_HASH_SOURCES),
     )
+    parser.add_argument(
+        "--chromeos_tree",
+        type=Path,
+        required=True,
+        help="""
+        Path to a ChromeOS tree. If not passed, one will be inferred. If none
+        can be inferred, this script will fail.
+        """,
+    )
 
     # Parse command-line arguments.
     args_output = parser.parse_args()
 
     cur_llvm_version = args_output.llvm_version
+    chromeos_tree = args_output.chromeos_tree
+    if not chromeos_tree:
+        # Try to infer this unconditionally, so mishandling of this script can
+        # be more easily detected (which allows more flexibility in the
+        # implementation in the future for things outside of what directly
+        # needs this value).
+        chromeos_tree = _FindChromeOSTreeRoot(my_dir)
 
     new_llvm_hash = LLVMHash()
-
     if isinstance(cur_llvm_version, int):
         # Find the git hash of the specific LLVM version.
         print(new_llvm_hash.GetLLVMHash(cur_llvm_version))
+    elif cur_llvm_version == "llvm":
+        print(new_llvm_hash.GetCrOSCurrentLLVMHash(chromeos_tree))
+    elif cur_llvm_version == "llvm-next":
+        print(new_llvm_hash.GetCrOSLLVMNextHash())
     elif cur_llvm_version == "google3":
         print(new_llvm_hash.GetGoogle3LLVMHash())
     elif cur_llvm_version == "google3-unstable":

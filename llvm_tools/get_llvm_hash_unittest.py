@@ -15,6 +15,7 @@ import unittest
 from unittest import mock
 
 import get_llvm_hash
+import llvm_next
 import subprocess_helpers
 
 
@@ -202,6 +203,12 @@ class TestGetLLVMHash(unittest.TestCase):
         )
 
         self.assertEqual(get_llvm_hash.GetLLVMMajorVersion(), "5432")
+
+    def testGetLLVMNextHash(self):
+        self.assertEqual(
+            get_llvm_hash.LLVMHash().GetCrOSLLVMNextHash(),
+            llvm_next.LLVM_NEXT_HASH,
+        )
 
 
 if __name__ == "__main__":
