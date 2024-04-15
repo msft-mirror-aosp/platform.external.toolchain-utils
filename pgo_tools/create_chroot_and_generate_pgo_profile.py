@@ -13,9 +13,9 @@ import dataclasses
 import logging
 import os
 from pathlib import Path
-import re
 import shlex
 import shutil
+import subprocess
 import sys
 from typing import List
 
@@ -98,47 +98,30 @@ def translate_chroot_path_to_out_of_chroot(
     return repo_root / info.out_dir_name / str(path)[1:]
 
 
-def locate_current_llvm_ebuild(repo_root: Path) -> Path:
-    """Returns the path to our current LLVM ebuild."""
-    llvm_subdir = (
-        repo_root / "src/third_party/chromiumos-overlay/sys-devel/llvm"
-    )
-    candidates = [
-        x for x in llvm_subdir.glob("*pre*ebuild") if not x.is_symlink()
-    ]
-    assert (
-        len(candidates) == 1
-    ), f"Found {len(candidates)} viable ebuilds; expected 1: {candidates}"
-    return candidates[0]
-
-
-def parse_llvm_next_hash(llvm_ebuild_contents: str) -> List[str]:
-    """Parses the LLVM_NEXT hash from our LLVM ebuild."""
-    matches = re.findall(
-        r'^LLVM_NEXT_HASH="([a-f0-9A-F]{40})" # r\d+$',
-        llvm_ebuild_contents,
-        re.MULTILINE,
-    )
-    assert (
-        len(matches) == 1
-    ), f"Got {len(matches)} matches for llvm hash; expected 1"
-    return matches[0]
-
-
 def determine_upload_command(
-    repo_root: Path, profile_path: Path
+    my_dir: Path, profile_path: Path
 ) -> pgo_tools.Command:
     """Returns a command that can be used to upload our PGO profile."""
-    llvm_ebuild = locate_current_llvm_ebuild(repo_root)
-    llvm_next_hash = parse_llvm_next_hash(
-        llvm_ebuild.read_text(encoding="utf-8")
-    )
+    # TODO(b/333462347): Ideally, this would just use
+    # `llvm_next.LLVM_NEXT_HASH` or similar, but that causes import errors.
+    # Invoke the script as a subprocess as a workaround.
+    llvm_next_hash = subprocess.run(
+        [
+            my_dir.parent / "llvm_tools" / "get_llvm_hash.py",
+            "--llvm_version=llvm-next",
+        ],
+        check=True,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
+    ).stdout.strip()
+
     upload_target = (
         "gs://chromeos-localmirror/distfiles/llvm-profdata-"
         f"{llvm_next_hash}.xz"
     )
     return [
-        "gsutil",
+        "gsutil.py",
         "cp",
         "-n",
         "-a",
@@ -155,6 +138,7 @@ def main(argv: List[str]):
         level=logging.INFO,
     )
 
+    my_dir = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -226,7 +210,7 @@ def main(argv: List[str]):
 
         compressed_profile_path = compress_pgo_profile(profile_path)
         upload_command = determine_upload_command(
-            repo_root, compressed_profile_path
+            my_dir, compressed_profile_path
         )
         if opts.upload:
             pgo_tools.run(upload_command)
