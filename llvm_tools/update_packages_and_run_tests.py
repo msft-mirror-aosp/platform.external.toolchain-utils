@@ -64,7 +64,9 @@ class UploadedCLs:
     external: List[int]
 
 
-def upload_one_cl_to_main(git_dir: Path, sha: str, remote: str) -> int:
+def upload_one_cl_to_main(
+    git_dir: Path, sha: str, remote: str, topic: Optional[str] = None
+) -> int:
     """Uploads exactly one SHA from `git_dir`. Returns the CL number.
 
     Raises:
@@ -75,6 +77,7 @@ def upload_one_cl_to_main(git_dir: Path, sha: str, remote: str) -> int:
         remote=remote,
         branch=git_utils.CROS_MAIN_BRANCH,
         ref=sha,
+        topic=topic,
     )
     assert len(cl_ids) == 1, f"Expected to upload one CL; uploaded {cl_ids}"
     return cl_ids[0]
@@ -129,6 +132,7 @@ def create_and_upload_manifest_cl(
     llvm_rev: int,
     cq_depend_external: Optional[int],
     dry_run: bool,
+    topic: Optional[str],
 ) -> int:
     """Creates & uploads the LLVM update manifest CL.
 
@@ -154,6 +158,7 @@ def create_and_upload_manifest_cl(
         manifest_internal,
         sha,
         remote=git_utils.CROS_INTERNAL_REMOTE,
+        topic=topic,
     )
 
 
@@ -186,6 +191,7 @@ def create_and_upload_cls(
     llvm_rev: int,
     include_test_helpers: bool,
     dry_run: bool,
+    manifest_gerrit_topic: Optional[str],
 ) -> UploadedCLs:
     external_cls = []
     if include_test_helpers:
@@ -203,6 +209,7 @@ def create_and_upload_cls(
         llvm_rev,
         test_helper_cl,
         dry_run,
+        manifest_gerrit_topic,
     )
     # Notably, this is meant to catch `test_helper_cl == 0` (dry_run) or
     # `test_helper_cl == None` (if none was uploaded)
@@ -286,6 +293,13 @@ def parse_opts(argv: List[str]) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
+        "--manifest-gerrit-topic",
+        help="""
+        If provided, the internal-manifest CL will be uploaded with the given
+        Gerrit topic. This is helpful to associate many CLs over time.
+        """,
+    )
+    parser.add_argument(
         "--retry-state",
         type=Path,
         help="""
@@ -341,6 +355,7 @@ def main(argv: List[str]) -> None:
         new_rev,
         opts.include_llvm_test_helper_cls,
         dry_run,
+        opts.manifest_gerrit_topic,
     )
 
     if dry_run:

@@ -11,7 +11,7 @@ import re
 import shlex
 import subprocess
 import tempfile
-from typing import Generator, Iterable, List
+from typing import Generator, Iterable, List, Optional
 
 
 # Email address used to tag the detective as a reviewer.
@@ -48,12 +48,29 @@ def upload_to_gerrit(
     reviewers: Iterable[str] = (),
     cc: Iterable[str] = (),
     ref: str = "HEAD",
+    topic: Optional[str] = None,
 ) -> List[int]:
-    """Uploads `ref` to gerrit, optionally adding reviewers/CCs."""
+    """Uploads `ref` to gerrit, optionally adding reviewers/CCs.
+
+    Args:
+        git_repo: The git repo to upload.
+        remote: The remote to upload to.
+        branch: The branch to upload to.
+        reviewers: Reviewers to add to the CLs.
+        cc: CCs to add to the CLs.
+        ref: The ref (generally a SHA) to upload. Note that any parents of this
+            that Gerrit does not recognize will be uploaded.
+        topic: Gerrit topic to add the change to.
+
+    Returns:
+        A list of CL numbers uploaded.
+    """
     # https://gerrit-review.googlesource.com/Documentation/user-upload.html#reviewers
     # for more info on the `%` params.
     option_list = [f"r={x}" for x in reviewers]
     option_list += (f"cc={x}" for x in cc)
+    if topic is not None:
+        option_list.append(f"topic={topic}")
     if option_list:
         trailing_options = "%" + ",".join(option_list)
     else:
