@@ -8,15 +8,13 @@
 import io
 import logging
 import os
-from pathlib import Path
-import shutil
 import subprocess
-import tempfile
 import textwrap
 from typing import Dict
 import unittest
 from unittest import mock
 
+import test_helpers
 import werror_logs
 
 
@@ -38,7 +36,7 @@ def create_warning_info(packages: Dict[str, int]) -> werror_logs.WarningInfo:
     return x
 
 
-class Test(unittest.TestCase):
+class Test(test_helpers.TempDirTestCase):
     """Tests for werror_logs."""
 
     def silence_logs(self):
@@ -46,11 +44,6 @@ class Test(unittest.TestCase):
         log = logging.getLogger()
         log.addFilter(f)
         self.addCleanup(log.removeFilter, f)
-
-    def make_tempdir(self) -> Path:
-        tempdir = tempfile.mkdtemp("werror_logs_test_")
-        self.addCleanup(shutil.rmtree, tempdir)
-        return Path(tempdir)
 
     def test_clang_warning_parsing_parses_flag_errors(self):
         self.assertEqual(

@@ -5,23 +5,14 @@
 
 """Tests for upload_llvm_testing_helper_cl"""
 
-from pathlib import Path
-import shutil
-import tempfile
 import unittest
 
+import test_helpers
 import upload_llvm_testing_helper_cl
 
 
-class Test(unittest.TestCase):
+class Test(test_helpers.TempDirTestCase):
     """Tests for upload_llvm_testing_helper_cl"""
-
-    def make_tempdir(self) -> Path:
-        tempdir = tempfile.mkdtemp(
-            os.path.basename("upload_llvm_testing_helper_cl_test")
-        )
-        self.addCleanup(shutil.rmtree, tempdir)
-        return Path(tempdir)
 
     def test_force_rebuild_marker_addition(self):
         chromiumos_overlay = self.make_tempdir()

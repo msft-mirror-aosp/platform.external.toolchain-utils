@@ -7,9 +7,7 @@
 
 import contextlib
 from pathlib import Path
-import shutil
 import subprocess
-import tempfile
 import textwrap
 import unittest
 from unittest import mock
@@ -17,6 +15,7 @@ from unittest import mock
 import get_llvm_hash
 import llvm_next
 import subprocess_helpers
+import test_helpers
 
 
 # We grab protected stuff from get_llvm_hash. That's OK.
@@ -30,13 +29,8 @@ def mock_run_results(returncode: int, stderr: bytes) -> mock.MagicMock:
     return m
 
 
-class TestGetLLVMHash(unittest.TestCase):
+class TestGetLLVMHash(test_helpers.TempDirTestCase):
     """The LLVMHash test class."""
-
-    def make_tempdir(self):
-        d = Path(tempfile.mkdtemp(prefix="get_llvm_hash_unittest_"))
-        self.addCleanup(shutil.rmtree, d)
-        return d
 
     def setUp(self):
         # We mock out quite a bit. Ensure every test is self-contained.

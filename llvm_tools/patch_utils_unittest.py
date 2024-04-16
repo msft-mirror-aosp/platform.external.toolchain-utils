@@ -9,22 +9,16 @@ import copy
 import io
 import json
 from pathlib import Path
-import shutil
 import subprocess
-import tempfile
 import unittest
 from unittest import mock
 
 import patch_utils as pu
+import test_helpers
 
 
-class TestPatchUtils(unittest.TestCase):
+class TestPatchUtils(test_helpers.TempDirTestCase):
     """Test the patch_utils."""
-
-    def make_tempdir(self) -> Path:
-        tmpdir = Path(tempfile.mkdtemp(prefix="patch_utils_unittest"))
-        self.addCleanup(shutil.rmtree, tmpdir)
-        return tmpdir
 
     def test_predict_indent(self):
         test_str1 = """

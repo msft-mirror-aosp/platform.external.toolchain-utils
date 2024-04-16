@@ -5,12 +5,10 @@
 
 """Tests for clean_up_old_llvm_patches"""
 
-from pathlib import Path
-import shutil
-import tempfile
 import unittest
 
 import clean_up_old_llvm_patches
+import test_helpers
 
 
 ANDROID_VERSION_PY_EXAMPLE = """
@@ -19,13 +17,8 @@ def get_svn_revision():
 """
 
 
-class Test(unittest.TestCase):
+class Test(test_helpers.TempDirTestCase):
     """Tests for clean_up_old_llvm_patches"""
-
-    def make_tempdir(self) -> Path:
-        tmpdir = Path(tempfile.mkdtemp(prefix="patch_utils_unittest"))
-        self.addCleanup(shutil.rmtree, tmpdir)
-        return tmpdir
 
     def test_android_version_autodetection(self):
         android_root = self.make_tempdir()
