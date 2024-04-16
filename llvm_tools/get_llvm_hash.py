@@ -17,6 +17,7 @@ import sys
 import tempfile
 from typing import Iterator, Optional, Tuple, Union
 
+import chroot
 import git_llvm_rev
 import llvm_next
 import manifest_utils
@@ -363,17 +364,6 @@ def GetLLVMHashAndVersionFromSVNOption(
     return git_hash, version
 
 
-def _FindChromeOSTreeRoot(chromeos_tree_path: Path) -> Path:
-    """Returns the root of a ChromeOS tree, given a path in said tree."""
-    if (chromeos_tree_path / ".repo").exists():
-        return chromeos_tree_path
-
-    for parent in chromeos_tree_path.parents:
-        if (parent / ".repo").exists():
-            return parent
-    raise ValueError(f"{chromeos_tree_path} is not in a repo checkout")
-
-
 def GetCrOSCurrentLLVMHash(chromeos_tree: Path) -> str:
     """Retrieves the current ChromeOS LLVM hash.
 
@@ -385,7 +375,7 @@ def GetCrOSCurrentLLVMHash(chromeos_tree: Path) -> str:
         ManifestValueError if the toolchain manifest doesn't match the
         expected structure.
     """
-    chromeos_root = _FindChromeOSTreeRoot(chromeos_tree)
+    chromeos_root = chroot.FindChromeOSRootAbove(chromeos_tree)
     return manifest_utils.extract_current_llvm_hash(chromeos_root)
 
 
@@ -499,7 +489,7 @@ def main() -> None:
         # be more easily detected (which allows more flexibility in the
         # implementation in the future for things outside of what directly
         # needs this value).
-        chromeos_tree = _FindChromeOSTreeRoot(my_dir)
+        chromeos_tree = chroot.FindChromeOSRootAbove(my_dir)
 
     new_llvm_hash = LLVMHash()
     if isinstance(cur_llvm_version, int):
