@@ -81,8 +81,6 @@ def upload_to_gerrit(
             "git",
             "push",
             remote,
-            # https://gerrit-review.googlesource.com/Documentation/user-upload.html#reviewers
-            # for more info on the `%` params.
             f"{ref}:refs/for/{branch}{trailing_options}",
         ],
         cwd=git_repo,
