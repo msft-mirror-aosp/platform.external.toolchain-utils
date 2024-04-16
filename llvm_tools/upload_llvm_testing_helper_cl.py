@@ -13,7 +13,6 @@ These CLs make the validation of LLVM easier, and do things like:
 import argparse
 import logging
 from pathlib import Path
-import subprocess
 import sys
 from typing import List
 
@@ -100,33 +99,6 @@ def add_disable_warnings_block(chromiumos_overlay: Path):
         f.write(DISABLE_WARNINGS_BLOCK)
 
 
-def commit_all_changes(git_dir: Path, message: str) -> str:
-    """Commits all changes in `git_dir`, with the given commit message."""
-    # Explicitly add using `git add -A`, since that stages all unstaged changes
-    # & adds any files that aren't tracked. `git commit -a` skips adding
-    # untracked files.
-    subprocess.run(
-        ["git", "add", "-A"],
-        check=True,
-        cwd=git_dir,
-        stdin=subprocess.DEVNULL,
-    )
-    subprocess.run(
-        ["git", "commit", "-m", message],
-        check=True,
-        cwd=git_dir,
-        stdin=subprocess.DEVNULL,
-    )
-    return subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        check=True,
-        cwd=git_dir,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        encoding="utf-8",
-    ).stdout.strip()
-
-
 def create_helper_cl_commit_in_worktree_of(chromiumos_overlay: Path) -> str:
     """Creates a commit containing the helper CL diff. Returns the SHA.commit"""
     with git_utils.create_worktree(chromiumos_overlay) as worktree:
@@ -134,7 +106,7 @@ def create_helper_cl_commit_in_worktree_of(chromiumos_overlay: Path) -> str:
         add_force_rebuild_markers(worktree)
         add_use_force_block(worktree)
         add_disable_warnings_block(worktree)
-        return commit_all_changes(worktree, COMMIT_MESSAGE)
+        return git_utils.commit_all_changes(worktree, COMMIT_MESSAGE)
 
 
 def main(argv: List[str]) -> None:
@@ -182,8 +154,8 @@ def main(argv: List[str]) -> None:
     # This logs the CL information, so no need to print anything after this.
     git_utils.upload_to_gerrit(
         git_repo=chromiumos_overlay,
-        remote="cros",
-        branch="main",
+        remote=git_utils.CROS_EXTERNAL_REMOTE,
+        branch=git_utils.CROS_MAIN_BRANCH,
         ref=helper_sha,
     )
 

@@ -17,6 +17,11 @@ from typing import Generator, Iterable, List
 # Email address used to tag the detective as a reviewer.
 REVIEWER_DETECTIVE = "c-compiler-chrome@google.com"
 
+# Default git naming conventions throughout ChromeOS.
+CROS_EXTERNAL_REMOTE = "cros"
+CROS_INTERNAL_REMOTE = "cros-internal"
+CROS_MAIN_BRANCH = "main"
+
 
 def _parse_cls_from_upload_output(upload_output: str) -> List[int]:
     """Returns the CL number in the given upload output."""
@@ -157,3 +162,50 @@ def create_worktree(git_directory: Path) -> Generator[Path, None, None]:
                 check=False,
                 stdin=subprocess.DEVNULL,
             )
+
+
+def resolve_ref(git_dir: Path, ref: str) -> str:
+    """Resolves the given ref or SHA shorthand to a full SHA.
+
+    Raises:
+        subprocess.CalledProcessError if resolution fails
+    """
+    return subprocess.run(
+        ["git", "rev-parse", ref],
+        check=True,
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
+    ).stdout.strip()
+
+
+def commit_all_changes(git_dir: Path, message: str) -> str:
+    """Commits all changes in `git_dir`, with the given commit message.
+
+    This also commits any untracked files in `git_dir`.
+
+    Args:
+        git_dir: Anywhere in the git directory in which changes should be
+            committed.
+        message: Message of the commit message.
+
+    Returns:
+        The SHA of the committed change.
+    """
+    # Explicitly add using `git add -A`, since that stages all unstaged changes
+    # & adds any files that aren't tracked. `git commit -a` skips adding
+    # untracked files.
+    subprocess.run(
+        ["git", "add", "-A"],
+        check=True,
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", message],
+        check=True,
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+    )
+    return resolve_ref(git_dir, "HEAD")

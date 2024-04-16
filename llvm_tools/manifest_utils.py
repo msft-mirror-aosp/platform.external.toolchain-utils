@@ -86,6 +86,20 @@ def extract_current_llvm_hash_from_xml(xmlroot: ElementTree.Element) -> str:
     return revision
 
 
+def update_chromeos_manifest_in_manifest_dir(
+    revision: str, manifest_dir: Path
+) -> Path:
+    """update_chromeos_manifest, taking the directory to manifest-interal."""
+    manifest_path = get_chromeos_manifest_path_from_manifest_dir(manifest_dir)
+    parser = make_xmlparser()
+    xmltree = ElementTree.parse(manifest_path, parser)
+    update_chromeos_manifest_tree(revision, xmltree.getroot())
+    with atomic_write_file.atomic_write(manifest_path, mode="wb") as f:
+        xmltree.write(f, encoding="utf-8")
+    format_manifest(manifest_path)
+    return manifest_path
+
+
 def update_chromeos_manifest(revision: str, src_tree: Path) -> Path:
     """Replaces the manifest project revision with 'revision'.
 
@@ -107,19 +121,26 @@ def update_chromeos_manifest(revision: str, src_tree: Path) -> Path:
         UpdateManifestError: The manifest could not be changed.
         FormattingError: The manifest could not be reformatted.
     """
-    manifest_path = get_chromeos_manifest_path(src_tree)
-    parser = make_xmlparser()
-    xmltree = ElementTree.parse(manifest_path, parser)
-    update_chromeos_manifest_tree(revision, xmltree.getroot())
-    with atomic_write_file.atomic_write(manifest_path, mode="wb") as f:
-        xmltree.write(f, encoding="utf-8")
-    format_manifest(manifest_path)
-    return manifest_path
+    return update_chromeos_manifest_in_manifest_dir(
+        revision, get_manifest_internal_path(src_tree)
+    )
+
+
+def get_manifest_internal_path(src_tree: Path) -> Path:
+    """Return the path to manifest-internal inside of the CrOS tree."""
+    return src_tree / "manifest-internal"
 
 
 def get_chromeos_manifest_path(src_tree: Path) -> Path:
     """Return the path to the toolchain manifest."""
-    return src_tree / "manifest-internal" / "_toolchain.xml"
+    return get_chromeos_manifest_path_from_manifest_dir(
+        get_manifest_internal_path(src_tree)
+    )
+
+
+def get_chromeos_manifest_path_from_manifest_dir(manifest_dir: Path) -> Path:
+    """Return the path to the toolchain manifest in a manifest dir."""
+    return manifest_dir / "_toolchain.xml"
 
 
 def update_chromeos_manifest_tree(revision: str, xmlroot: ElementTree.Element):
