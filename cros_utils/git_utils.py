@@ -21,7 +21,10 @@ REVIEWER_DETECTIVE = "c-compiler-chrome@google.com"
 def _parse_cls_from_upload_output(upload_output: str) -> List[int]:
     """Returns the CL number in the given upload output."""
     id_regex = re.compile(
-        r"^remote:\s+https://chromium-review\S+/\+/(\d+)\s", re.MULTILINE
+        r"^remote:\s+https://"
+        r"(?:chromium|chrome-internal)"
+        r"-review\S+/\+/(\d+)\s",
+        re.MULTILINE,
     )
 
     results = id_regex.findall(upload_output)
