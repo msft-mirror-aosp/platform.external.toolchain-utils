@@ -16,10 +16,18 @@ import sys
 from typing import List
 
 
-def enumerate_old_cls(old_days: int) -> List[int]:
+def gerrit_cmd(internal: bool) -> List[str]:
+    cmd = ["gerrit"]
+    if internal:
+        cmd.append("--internal")
+    return cmd
+
+
+def enumerate_old_cls(old_days: int, internal: bool) -> List[int]:
     """Returns CL numbers that haven't been updated in `old_days` days."""
     stdout = subprocess.run(
-        ["gerrit", "--raw", "search", f"owner:me status:open age:{old_days}d"],
+        gerrit_cmd(internal)
+        + ["--raw", "search", f"owner:me status:open age:{old_days}d"],
         check=True,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
@@ -27,15 +35,40 @@ def enumerate_old_cls(old_days: int) -> List[int]:
     ).stdout
     # Sort for prettier output; it's unclear if Gerrit always sorts, and it's
     # cheap.
-    return sorted(int(x) for x in stdout.splitlines())
+    lines = stdout.splitlines()
+    if internal:
+        # These are printed as `chrome-internal:NNNN`, rather than `NNNN`.
+        chrome_internal_prefix = "chrome-internal:"
+        assert all(x.startswith(chrome_internal_prefix) for x in lines), lines
+        lines = [x[len(chrome_internal_prefix) :] for x in lines]
+    return sorted(int(x) for x in lines)
 
 
-def abandon_cls(cls: List[int]) -> None:
+def abandon_cls(cls: List[int], internal: bool) -> None:
     subprocess.run(
-        ["gerrit", "abandon"] + [str(x) for x in cls],
+        gerrit_cmd(internal) + ["abandon"] + [str(x) for x in cls],
         check=True,
         stdin=subprocess.DEVNULL,
     )
+
+
+def detect_and_abandon_cls(
+    old_days: int, dry_run: bool, internal: bool
+) -> None:
+    old_cls = enumerate_old_cls(old_days, internal)
+    if not old_cls:
+        logging.info("No CLs less than %d days old found; quit", old_days)
+        return
+
+    cl_namespace = "i" if internal else "c"
+    logging.info(
+        "Abandoning CLs: %s", [f"crrev.com/{cl_namespace}/{x}" for x in old_cls]
+    )
+    if dry_run:
+        logging.info("--dry-run specified; skip the actual abandon part")
+        return
+
+    abandon_cls(old_cls, internal)
 
 
 def main(argv: List[str]) -> None:
@@ -65,17 +98,18 @@ def main(argv: List[str]) -> None:
     )
     opts = parser.parse_args(argv)
 
-    old_cls = enumerate_old_cls(opts.old_days)
-    if not old_cls:
-        logging.info("No CLs less than %d days old found; quit", opts.old_days)
-        return
-
-    logging.info("Abandoning CLs: %s", [f"crrev.com/c/{x}" for x in old_cls])
-    if opts.dry_run:
-        logging.info("--dry-run specified; skip the actual abandon part")
-        return
-
-    abandon_cls(old_cls)
+    logging.info("Checking for external CLs...")
+    detect_and_abandon_cls(
+        old_days=opts.old_days,
+        dry_run=opts.dry_run,
+        internal=False,
+    )
+    logging.info("Checking for internal CLs...")
+    detect_and_abandon_cls(
+        old_days=opts.old_days,
+        dry_run=opts.dry_run,
+        internal=True,
+    )
 
 
 if __name__ == "__main__":
