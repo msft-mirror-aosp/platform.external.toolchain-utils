@@ -35,7 +35,6 @@ class Test(unittest.TestCase):
         ):
             bb_add.generate_bb_add_command(
                 use_llvm_next=True,
-                disable_werror=False,
                 extra_cls=(),
                 bots=_ARBITRARY_BOTS,
             )
@@ -44,7 +43,6 @@ class Test(unittest.TestCase):
         self.set_llvm_next_cls((cros_cls.ChangeListURL(123, 1),))
         cmd = bb_add.generate_bb_add_command(
             use_llvm_next=True,
-            disable_werror=False,
             extra_cls=(),
             bots=_ARBITRARY_BOTS,
         )
@@ -52,30 +50,10 @@ class Test(unittest.TestCase):
             cmd, ["bb", "add", "-cl", "crrev.com/c/123/1"] + _ARBITRARY_BOTS
         )
 
-    def test_generate_bb_add_adds_disable_werror_cl(self):
-        self.set_llvm_next_cls((cros_cls.ChangeListURL(123, 1),))
-        cmd = bb_add.generate_bb_add_command(
-            use_llvm_next=False,
-            disable_werror=True,
-            extra_cls=(),
-            bots=_ARBITRARY_BOTS,
-        )
-        self.assertEqual(
-            cmd,
-            [
-                "bb",
-                "add",
-                "-cl",
-                llvm_next.DISABLE_WERROR_CL.crrev_url_without_http(),
-            ]
-            + _ARBITRARY_BOTS,
-        )
-
     def test_generate_bb_add_adds_extra_cls(self):
         self.set_llvm_next_cls((cros_cls.ChangeListURL(123, 1),))
         cmd = bb_add.generate_bb_add_command(
             use_llvm_next=False,
-            disable_werror=False,
             extra_cls=(
                 cros_cls.ChangeListURL(123, 1),
                 cros_cls.ChangeListURL(126),

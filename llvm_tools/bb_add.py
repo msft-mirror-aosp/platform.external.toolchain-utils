@@ -18,7 +18,6 @@ import llvm_next
 
 def generate_bb_add_command(
     use_llvm_next: bool,
-    disable_werror: bool,
     extra_cls: Iterable[cros_cls.ChangeListURL],
     bots: Iterable[str],
 ) -> List[str]:
@@ -29,9 +28,6 @@ def generate_bb_add_command(
                 "llvm-next testing requested, but no llvm-next CLs exist."
             )
         cls += llvm_next.LLVM_NEXT_TESTING_CLS
-
-    if disable_werror:
-        cls.append(llvm_next.DISABLE_WERROR_CL)
 
     if extra_cls:
         cls += extra_cls
@@ -60,11 +56,6 @@ def main(argv: List[str]) -> None:
         help="Add the current llvm-next patch set.",
     )
     parser.add_argument(
-        "--disable-werror",
-        action="store_true",
-        help="Add the 'disable -Werror' patch sets",
-    )
-    parser.add_argument(
         "--cl",
         action="append",
         type=cros_cls.ChangeListURL.parse,
@@ -78,7 +69,6 @@ def main(argv: List[str]) -> None:
 
     cmd = generate_bb_add_command(
         use_llvm_next=opts.llvm_next,
-        disable_werror=opts.disable_werror,
         extra_cls=opts.cl,
         bots=opts.bot,
     )
