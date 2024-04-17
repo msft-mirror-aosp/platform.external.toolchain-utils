@@ -37,6 +37,7 @@ class Test(unittest.TestCase):
                 use_llvm_next=True,
                 extra_cls=(),
                 bots=_ARBITRARY_BOTS,
+                tags=(),
             )
 
     def test_generate_bb_add_adds_llvm_next_cls(self):
@@ -45,13 +46,13 @@ class Test(unittest.TestCase):
             use_llvm_next=True,
             extra_cls=(),
             bots=_ARBITRARY_BOTS,
+            tags=(),
         )
         self.assertEqual(
             cmd, ["bb", "add", "-cl", "crrev.com/c/123/1"] + _ARBITRARY_BOTS
         )
 
     def test_generate_bb_add_adds_extra_cls(self):
-        self.set_llvm_next_cls((cros_cls.ChangeListURL(123, 1),))
         cmd = bb_add.generate_bb_add_command(
             use_llvm_next=False,
             extra_cls=(
@@ -59,6 +60,7 @@ class Test(unittest.TestCase):
                 cros_cls.ChangeListURL(126),
             ),
             bots=_ARBITRARY_BOTS,
+            tags=(),
         )
         self.assertEqual(
             cmd,
@@ -69,6 +71,26 @@ class Test(unittest.TestCase):
                 "crrev.com/c/123/1",
                 "-cl",
                 "crrev.com/c/126",
+            ]
+            + _ARBITRARY_BOTS,
+        )
+
+    def test_use_of_tags(self):
+        cmd = bb_add.generate_bb_add_command(
+            use_llvm_next=False,
+            extra_cls=(cros_cls.ChangeListURL(126),),
+            bots=_ARBITRARY_BOTS,
+            tags=("custom-tag",),
+        )
+        self.assertEqual(
+            cmd,
+            [
+                "bb",
+                "add",
+                "-cl",
+                "crrev.com/c/126",
+                "-t",
+                "custom-tag",
             ]
             + _ARBITRARY_BOTS,
         )
