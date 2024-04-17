@@ -8,12 +8,18 @@
 import argparse
 import logging
 import os
+from pathlib import Path
 import shlex
 import sys
 from typing import Iterable, List
 
+import chroot
 import cros_cls
+import get_llvm_hash
 import llvm_next
+
+
+DEFAULT_LLVM_NEXT_BUILDERS = ("chromeos/staging/staging-build-chromiumos-sdk",)
 
 
 def generate_bb_add_command(
@@ -58,16 +64,50 @@ def generate_bb_add_command(
     return cmd
 
 
-def main(argv: List[str]) -> None:
-    logging.basicConfig(
-        format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
-        "%(message)s",
-        level=logging.INFO,
-    )
+def is_pointless_llvm_next_invocation(chromeos_tree: Path) -> bool:
+    """Returns False if llvm-next testing is likely to be useful."""
+    if not llvm_next.LLVM_NEXT_TESTING_CLS:
+        logging.info(
+            "Tests seem pointless: no llvm-next testing CLs are registered."
+        )
+        return True
 
+    current_hash = get_llvm_hash.LLVMHash().GetCrOSCurrentLLVMHash(
+        chromeos_tree
+    )
+    if current_hash == llvm_next.LLVM_NEXT_HASH:
+        logging.info(
+            "Tests seem pointless: current LLVM hash (%s) is the same as "
+            "llvm-next",
+            current_hash,
+        )
+        return True
+    logging.info(
+        "Testing seems useful; llvm-next hash is %s", llvm_next.LLVM_NEXT_HASH
+    )
+    return False
+
+
+def parse_opts(my_dir: Path, argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--add-llvm-next-verification-builders",
+        action="store_true",
+        help="""
+        Add the default series of builders used to help verify llvm-next. Does
+        not imply --llvm-next.
+        """,
+    )
+    parser.add_argument(
+        "--chromeos-tree",
+        type=Path,
+        help="""
+        ChromeOS tree to make modifications in. Will be inferred if none is
+        passed.
+        """,
     )
     parser.add_argument(
         "--dry-run",
@@ -89,6 +129,14 @@ def main(argv: List[str]) -> None:
         """,
     )
     parser.add_argument(
+        "--skip-if-pointless",
+        action="store_true",
+        help="""
+        If this is passed, the `bb add` will be skipped. It's an error to pass
+        this flag without `--llvm-next`.
+        """,
+    )
+    parser.add_argument(
         "--tag",
         action="append",
         help="""
@@ -96,8 +144,44 @@ def main(argv: List[str]) -> None:
         Tags are arbitrary text.
         """,
     )
-    parser.add_argument("bot", nargs="+", help="Bot(s) to run `bb add` with.")
+    parser.add_argument(
+        "bot", nargs="*", default=[], help="Bot(s) to run `bb add` with."
+    )
     opts = parser.parse_args(argv)
+
+    if opts.skip_if_pointless and not opts.llvm_next:
+        parser.error("--skip-if-pointless may only be used with --llvm-next.")
+
+    if opts.add_llvm_next_verification_builders:
+        opts.bot += DEFAULT_LLVM_NEXT_BUILDERS
+
+    if not opts.bot:
+        parser.error("At least one bot must be specified.")
+
+    chromeos_tree = opts.chromeos_tree
+    if not chromeos_tree:
+        chromeos_tree = chroot.FindChromeOSRootAbove(my_dir)
+
+    return opts
+
+
+def main(argv: List[str]) -> None:
+    logging.basicConfig(
+        format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
+        "%(message)s",
+        level=logging.INFO,
+    )
+
+    my_dir = Path(__file__).parent.resolve()
+    opts = parse_opts(my_dir, argv)
+
+    if opts.skip_if_pointless and is_pointless_llvm_next_invocation(
+        opts.chromeos_tree
+    ):
+        logging.info(
+            "--skip-if-pointless passed for pointless invocation; quit."
+        )
+        return
 
     cmd = generate_bb_add_command(
         use_llvm_next=opts.llvm_next,
@@ -105,6 +189,7 @@ def main(argv: List[str]) -> None:
         bots=opts.bot,
         tags=opts.tag or (),
     )
+
     if opts.dry_run:
         logging.info(
             "--dry-run specified; would run: `%s` otherwise", shlex.join(cmd)
