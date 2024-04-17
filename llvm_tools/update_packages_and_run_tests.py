@@ -84,7 +84,9 @@ def upload_one_cl_to_main(
 
 
 def create_and_upload_test_helpers_cl(
-    chromeos_tree: Path, dry_run: bool
+    chromeos_tree: Path,
+    dry_run: bool,
+    tot: bool,
 ) -> int:
     """Creates & uploads the LLVM 'test helper' CL.
 
@@ -96,7 +98,7 @@ def create_and_upload_test_helpers_cl(
         chromeos_tree / "src" / "third_party" / "chromiumos-overlay"
     )
     sha = upload_llvm_testing_helper_cl.create_helper_cl_commit_in_worktree_of(
-        chromiumos_overlay
+        chromiumos_overlay, tot
     )
     if dry_run:
         logging.info(
@@ -127,12 +129,14 @@ def build_manifest_commit_message(
 
 
 def create_and_upload_manifest_cl(
+    *,
     chromeos_tree: Path,
     llvm_sha: str,
     llvm_rev: int,
     cq_depend_external: Optional[int],
     dry_run: bool,
     topic: Optional[str],
+    tot: bool,
 ) -> int:
     """Creates & uploads the LLVM update manifest CL.
 
@@ -141,7 +145,15 @@ def create_and_upload_manifest_cl(
         dry_run is passed, returns `0`.
     """
     manifest_internal = chromeos_tree / "manifest-internal"
+    remote = git_utils.CROS_INTERNAL_REMOTE
     with git_utils.create_worktree(manifest_internal) as worktree:
+        if tot:
+            git_utils.fetch_and_checkout(
+                worktree,
+                remote=remote,
+                branch=git_utils.CROS_MAIN_BRANCH,
+            )
+
         manifest_utils.update_chromeos_manifest_in_manifest_dir(
             llvm_sha,
             worktree,
@@ -159,7 +171,7 @@ def create_and_upload_manifest_cl(
     return upload_one_cl_to_main(
         manifest_internal,
         sha,
-        remote=git_utils.CROS_INTERNAL_REMOTE,
+        remote=remote,
         topic=topic,
     )
 
@@ -188,30 +200,33 @@ def add_cl_comment(
 
 
 def create_and_upload_cls(
+    *,
     chromeos_tree: Path,
     llvm_sha: str,
     llvm_rev: int,
     include_test_helpers: bool,
     dry_run: bool,
     manifest_gerrit_topic: Optional[str],
+    tot: bool,
 ) -> UploadedCLs:
     external_cls = []
     if include_test_helpers:
         logging.info("Uploading test-helper CL...")
         test_helper_cl = create_and_upload_test_helpers_cl(
-            chromeos_tree, dry_run
+            chromeos_tree, dry_run, tot
         )
         external_cls.append(test_helper_cl)
     else:
         test_helper_cl = None
     logging.info("Creating LLVM update CL...")
     manifest_cl = create_and_upload_manifest_cl(
-        chromeos_tree,
-        llvm_sha,
-        llvm_rev,
-        test_helper_cl,
-        dry_run,
-        manifest_gerrit_topic,
+        chromeos_tree=chromeos_tree,
+        llvm_sha=llvm_sha,
+        llvm_rev=llvm_rev,
+        cq_depend_external=test_helper_cl,
+        dry_run=dry_run,
+        topic=manifest_gerrit_topic,
+        tot=tot,
     )
     # Notably, this is meant to catch `test_helper_cl == 0` (dry_run) or
     # `test_helper_cl == None` (if none was uploaded)
@@ -302,6 +317,15 @@ def parse_opts(argv: List[str]) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
+        "--tot",
+        action="store_true",
+        help="""
+        If passed, modified repos will be `git fetch`ed and this script will
+        work on their main branches, rather than working on the version you
+        have locally.
+        """,
+    )
+    parser.add_argument(
         "--retry-state",
         type=Path,
         help="""
@@ -352,12 +376,13 @@ def main(argv: List[str]) -> None:
     )
     logging.info("LLVM SHA %s == r%d", new_sha, new_rev)
     uploaded_cls = create_and_upload_cls(
-        chromeos_tree,
-        new_sha,
-        new_rev,
-        opts.include_llvm_test_helper_cls,
-        dry_run,
-        opts.manifest_gerrit_topic,
+        chromeos_tree=chromeos_tree,
+        llvm_sha=new_sha,
+        llvm_rev=new_rev,
+        include_test_helpers=opts.include_llvm_test_helper_cls,
+        dry_run=dry_run,
+        manifest_gerrit_topic=opts.manifest_gerrit_topic,
+        tot=opts.tot,
     )
 
     if dry_run:

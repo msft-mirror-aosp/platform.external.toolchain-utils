@@ -99,9 +99,18 @@ def add_disable_warnings_block(chromiumos_overlay: Path):
         f.write(DISABLE_WARNINGS_BLOCK)
 
 
-def create_helper_cl_commit_in_worktree_of(chromiumos_overlay: Path) -> str:
+def create_helper_cl_commit_in_worktree_of(
+    chromiumos_overlay: Path, tot: bool
+) -> str:
     """Creates a commit containing the helper CL diff. Returns the SHA.commit"""
     with git_utils.create_worktree(chromiumos_overlay) as worktree:
+        if tot:
+            git_utils.fetch_and_checkout(
+                worktree,
+                remote=git_utils.CROS_EXTERNAL_REMOTE,
+                branch=git_utils.CROS_MAIN_BRANCH,
+            )
+
         logging.info("Adding helper changes to CL in %s...", worktree)
         add_force_rebuild_markers(worktree)
         add_use_force_block(worktree)
@@ -134,6 +143,15 @@ def main(argv: List[str]) -> None:
         action="store_true",
         help="Commit changes, but don't actually upload them.",
     )
+    parser.add_argument(
+        "--tot",
+        action="store_true",
+        help="""
+        If passed, modified repos will be `git fetch`ed and this script will
+        work on their main branches, rather than working on the version you
+        have locally.
+        """,
+    )
     opts = parser.parse_args(argv)
 
     chromeos_tree = opts.chromeos_tree
@@ -143,7 +161,9 @@ def main(argv: List[str]) -> None:
     chromiumos_overlay = (
         chromeos_tree / "src" / "third_party" / "chromiumos-overlay"
     )
-    helper_sha = create_helper_cl_commit_in_worktree_of(chromiumos_overlay)
+    helper_sha = create_helper_cl_commit_in_worktree_of(
+        chromiumos_overlay, tot=opts.tot
+    )
     if opts.dry_run:
         logging.info(
             "--dry-run specified; not uploading new commit (%s).",

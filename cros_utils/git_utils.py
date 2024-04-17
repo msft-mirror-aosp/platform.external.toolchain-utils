@@ -224,3 +224,22 @@ def commit_all_changes(git_dir: Path, message: str) -> str:
         stdin=subprocess.DEVNULL,
     )
     return resolve_ref(git_dir, "HEAD")
+
+
+def fetch_and_checkout(git_dir: Path, remote: str, branch: str) -> str:
+    """Fetches contents of `git_dir`, and checks out `remote/branch`."""
+    logging.info(
+        "Fetching %s and checking out to %s/%s...", git_dir, remote, branch
+    )
+    subprocess.run(
+        ["git", "fetch", remote, branch],
+        check=True,
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+    )
+    subprocess.run(
+        ["git", "checkout", f"{remote}/{branch}"],
+        check=True,
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+    )
