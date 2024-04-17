@@ -19,6 +19,7 @@ from typing import List
 
 import chroot
 from cros_utils import git_utils
+import patch_utils
 
 
 # Text to add to the bottom of ebuild hooks.
@@ -62,14 +63,19 @@ TEST=None
 """
 
 
-def add_force_rebuild_marker(chromiumos_overlay: Path):
+def add_force_rebuild_markers(chromiumos_overlay: Path):
     """Adds a marker to force this change to appear as a toolchain change."""
     # `touch`ing anything in `sys-devel/llvm/files` causes an LLVM revbump, and
     # causes all packages to be rebuilt.
-    force_rebuild_file = (
-        chromiumos_overlay / "sys-devel" / "llvm" / "files" / "force_rebuild"
-    )
-    force_rebuild_file.touch()
+    #
+    # That said, if this script is used on its own, only revbumping LLVM will
+    # cause other packages (e.g., libcxx) to not be updated properly
+    # (b/335429768). Add force_rebuild markers to all of them accordingly.
+    for package in patch_utils.CHROMEOS_PATCHES_JSON_PACKAGES:
+        force_rebuild_file = (
+            chromiumos_overlay / package / "files" / "force_rebuild"
+        )
+        force_rebuild_file.touch()
 
 
 def add_use_force_block(chromiumos_overlay: Path):
@@ -125,7 +131,7 @@ def create_helper_cl_commit_in_worktree_of(chromiumos_overlay: Path) -> str:
     """Creates a commit containing the helper CL diff. Returns the SHA.commit"""
     with git_utils.create_worktree(chromiumos_overlay) as worktree:
         logging.info("Adding helper changes to CL in %s...", worktree)
-        add_force_rebuild_marker(worktree)
+        add_force_rebuild_markers(worktree)
         add_use_force_block(worktree)
         add_disable_warnings_block(worktree)
         return commit_all_changes(worktree, COMMIT_MESSAGE)

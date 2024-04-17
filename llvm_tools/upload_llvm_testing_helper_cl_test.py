@@ -7,6 +7,7 @@
 
 import unittest
 
+import patch_utils
 import test_helpers
 import upload_llvm_testing_helper_cl
 
@@ -16,12 +17,19 @@ class Test(test_helpers.TempDirTestCase):
 
     def test_force_rebuild_marker_addition(self):
         chromiumos_overlay = self.make_tempdir()
-        filesdir = chromiumos_overlay / "sys-devel" / "llvm" / "files"
-        filesdir.mkdir(parents=True)
-        upload_llvm_testing_helper_cl.add_force_rebuild_marker(
+        filesdirs = []
+        for package in patch_utils.CHROMEOS_PATCHES_JSON_PACKAGES:
+            filesdir = chromiumos_overlay / package / "files"
+            filesdir.mkdir(parents=True)
+            filesdirs.append(filesdir)
+        upload_llvm_testing_helper_cl.add_force_rebuild_markers(
             chromiumos_overlay
         )
-        self.assertTrue((filesdir / "force_rebuild").exists())
+        for filesdir in filesdirs:
+            self.assertTrue(
+                (filesdir / "force_rebuild"),
+                f"Missing force_rebuild marker in {filesdir}",
+            )
 
     def test_use_force_block_addition(self):
         chromiumos_overlay = self.make_tempdir()
