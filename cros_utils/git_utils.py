@@ -121,7 +121,7 @@ def try_set_autosubmit_labels(cwd: Path, cl_id: int) -> None:
 @contextlib.contextmanager
 def create_worktree(git_directory: Path) -> Generator[Path, None, None]:
     """Creates a temp worktree of `git_directory`, yielding the result."""
-    with tempfile.TemporaryDirectory(prefix="update_kernel_afdo_") as t:
+    with tempfile.TemporaryDirectory(prefix="git_utils_worktree_") as t:
         tempdir = Path(t)
         logging.info(
             "Establishing worktree of %s in %s", git_directory, tempdir
