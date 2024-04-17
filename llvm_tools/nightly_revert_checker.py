@@ -117,18 +117,8 @@ def _find_interesting_android_shas(
         return merge_base
 
     main_legacy = get_llvm_merge_base("aosp/master-legacy")  # nocheck
-    testing_upstream = get_llvm_merge_base("aosp/testing-upstream")
-    result: List[Tuple[str, str]] = [("main-legacy", main_legacy)]
-
-    # If these are the same SHA, there's no point in tracking both.
-    if main_legacy != testing_upstream:
-        result.append(("testing-upstream", testing_upstream))
-    else:
-        logging.info(
-            "main-legacy and testing-upstream are identical; ignoring "
-            "the latter."
-        )
-    return result
+    # Android no longer has a testing branch, so just follow main-legacy.
+    return [("main-legacy", main_legacy)]
 
 
 def _find_interesting_chromeos_shas(
