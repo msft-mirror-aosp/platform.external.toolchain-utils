@@ -158,9 +158,8 @@ def parse_opts(my_dir: Path, argv: List[str]) -> argparse.Namespace:
     if not opts.bot:
         parser.error("At least one bot must be specified.")
 
-    chromeos_tree = opts.chromeos_tree
-    if not chromeos_tree:
-        chromeos_tree = chroot.FindChromeOSRootAbove(my_dir)
+    if not opts.chromeos_tree:
+        opts.chromeos_tree = chroot.FindChromeOSRootAbove(my_dir)
 
     return opts
 
