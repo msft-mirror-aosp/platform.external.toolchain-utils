@@ -143,7 +143,9 @@ def create_and_upload_manifest_cl(
     manifest_internal = chromeos_tree / "manifest-internal"
     with git_utils.create_worktree(manifest_internal) as worktree:
         manifest_utils.update_chromeos_manifest_in_manifest_dir(
-            llvm_sha, worktree
+            llvm_sha,
+            worktree,
+            chromeos_tree=chromeos_tree,
         )
         commit_msg = build_manifest_commit_message(
             llvm_sha, llvm_rev, cq_depend_external

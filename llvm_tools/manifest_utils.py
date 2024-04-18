@@ -87,16 +87,31 @@ def extract_current_llvm_hash_from_xml(xmlroot: ElementTree.Element) -> str:
 
 
 def update_chromeos_manifest_in_manifest_dir(
-    revision: str, manifest_dir: Path
+    revision: str, manifest_dir: Path, chromeos_tree: Optional[Path] = None
 ) -> Path:
-    """update_chromeos_manifest, taking the directory to manifest-interal."""
-    manifest_path = get_chromeos_manifest_path_from_manifest_dir(manifest_dir)
+    """update_chromeos_manifest, taking the directory to manifest-interal.
+
+    Args:
+        revision: Revision of LLVM
+        manifest_dir: The directory of the manifest change
+        chromeos_tree: The ChromeOS tree to run miscellaneous tools (e.g.,
+            `cros` in). Inferred from `manifest_dir` if none is passed.
+    """
+    if not chromeos_tree:
+        # Since this is just 'anywhere in a ChromeOS tree', no need to find the
+        # _actual_ root.
+        chromeos_tree = manifest_dir
+    # Get an absolute path to this here, since `format_manifest` later may
+    # change the cwd, and `manifest_dir` may be relative to cwd.
+    manifest_path = get_chromeos_manifest_path_from_manifest_dir(
+        manifest_dir
+    ).absolute()
     parser = make_xmlparser()
     xmltree = ElementTree.parse(manifest_path, parser)
     update_chromeos_manifest_tree(revision, xmltree.getroot())
     with atomic_write_file.atomic_write(manifest_path, mode="wb") as f:
         xmltree.write(f, encoding="utf-8")
-    format_manifest(manifest_path)
+    format_manifest(manifest_path, cwd=chromeos_tree)
     return manifest_path
 
 
@@ -122,7 +137,9 @@ def update_chromeos_manifest(revision: str, src_tree: Path) -> Path:
         FormattingError: The manifest could not be reformatted.
     """
     return update_chromeos_manifest_in_manifest_dir(
-        revision, get_manifest_internal_path(src_tree)
+        revision,
+        get_manifest_internal_path(src_tree),
+        chromeos_tree=src_tree,
     )
 
 
@@ -152,11 +169,11 @@ def update_chromeos_manifest_tree(revision: str, xmlroot: ElementTree.Element):
     llvm_project_elem.attrib["revision"] = revision
 
 
-def format_manifest(repo_manifest: Path):
+def format_manifest(repo_manifest: Path, cwd: Optional[Path] = None):
     """Use cros format to format the given manifest."""
     if not shutil.which("cros"):
         raise FormattingError(
             "unable to format manifest, 'cros'" " executable not in PATH"
         )
     cmd: List[Union[str, Path]] = ["cros", "format", repo_manifest]
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, cwd=cwd)
