@@ -9,8 +9,8 @@ from typing import Iterable
 import cros_cls
 
 
-LLVM_NEXT_HASH = "28a8f1b901389c1e478407440f7ccf2d41c71b64"
-LLVM_NEXT_REV = 516547
+LLVM_NEXT_HASH = "3b5e7c83a6e226d5bd7ed2e9b67449b64812074c"
+LLVM_NEXT_REV = 530567
 
 # NOTE: Always specify patch-sets for CLs. We don't want uploads by untrusted
 # users to turn into bot invocations w/ untrusted input.
@@ -22,4 +22,12 @@ LLVM_NEXT_REV = 516547
 # Generally speaking, for simple rolls, this should just contain a link to the
 # Manifest update CL, as well as (early on, at least) a link to a CL generated
 # by upload_llvm_testing_helper_cl.py.
-LLVM_NEXT_TESTING_CLS: Iterable[cros_cls.ChangeListURL] = ()
+# pylint: disable=line-too-long
+LLVM_NEXT_TESTING_CLS: Iterable[cros_cls.ChangeListURL] = (
+    cros_cls.ChangeListURL.parse(url)
+    for url in (
+        "https://chrome-internal-review.googlesource.com/c/chromeos/manifest-internal/+/7201537/2",
+        "https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5455731/5",
+        "https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5471984/1",
+    )
+)
