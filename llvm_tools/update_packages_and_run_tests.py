@@ -25,12 +25,13 @@ import atomic_write_file
 import chroot
 from cros_utils import git_utils
 import get_llvm_hash
+import git
 import llvm_next
 import manifest_utils
 import upload_llvm_testing_helper_cl
 
 
-def resolve_llvm_sha(chromeos_tree: Path, sha_or_special: str) -> str:
+def resolve_llvm_sha(sha_or_special: str) -> str:
     """Resolves the `--sha` flag to an LLVM SHA."""
     if sha_or_special == "llvm-next":
         return llvm_next.LLVM_NEXT_HASH
@@ -38,7 +39,13 @@ def resolve_llvm_sha(chromeos_tree: Path, sha_or_special: str) -> str:
         return get_llvm_hash.LLVMHash().GetGoogle3LLVMHash()
     if sha_or_special == "google3-unstable":
         return get_llvm_hash.LLVMHash().GetGoogle3LLVMHash()
-    return git_utils.resolve_ref(chromeos_tree, sha_or_special)
+    # If this looks like a full git SHA, there's no need to sync the upstream
+    # repo.
+    if git.IsFullGitSHA(sha_or_special):
+        return sha_or_special
+    return git_utils.resolve_ref(
+        Path(get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools()), sha_or_special
+    )
 
 
 def read_last_tried_sha(retry_state: Path) -> Optional[str]:
@@ -359,7 +366,7 @@ def main(argv: List[str]) -> None:
     if not chromeos_tree:
         chromeos_tree = chroot.FindChromeOSRootAbove(my_dir)
 
-    new_sha = resolve_llvm_sha(chromeos_tree, opts.sha)
+    new_sha = resolve_llvm_sha(opts.sha)
     logging.info("Using LLVM SHA %s...", new_sha)
     if opts.retry_state:
         last_tried_sha = read_last_tried_sha(opts.retry_state)
