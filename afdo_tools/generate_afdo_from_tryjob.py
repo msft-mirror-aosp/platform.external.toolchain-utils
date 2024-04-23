@@ -110,7 +110,7 @@ def _tryjob_arg(tryjob_arg):
     return _GS_PREFIX + chell_path + tryjob_arg
 
 
-def main():
+def main(argv: List[str]):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--perf_profile",
@@ -138,7 +138,7 @@ def main():
         action="store_true",
         help="Don't remove the tempdir on failure",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if not distutils.spawn.find_executable(_CREATE_LLVM_PROF):
         sys.exit(_CREATE_LLVM_PROF + " not found; are you in the chroot?")
@@ -174,4 +174,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
