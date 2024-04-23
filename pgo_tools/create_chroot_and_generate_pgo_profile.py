@@ -61,7 +61,6 @@ def generate_pgo_profile(
     repo_root: Path,
     chroot_info: ChrootInfo,
     chroot_output_file: Path,
-    use_var: str,
 ):
     """Generates a PGO profile to `chroot_output_file`."""
     pgo_tools.run(
@@ -70,7 +69,6 @@ def generate_pgo_profile(
             f"--chroot={chroot_info.chroot_name}",
             f"--out-dir={chroot_info.out_dir_name}",
             "--skip-chroot-upgrade",
-            f"USE={use_var}",
             "--",
             "/mnt/host/source/src/third_party/toolchain-utils/pgo_tools/"
             "generate_pgo_profile.py",
@@ -171,22 +169,6 @@ def main(argv: List[str]):
         creation.
         """,
     )
-    # This flag is required because the most common use-case (pardon the pun)
-    # for this script is "generate the PGO profile for the next LLVM roll." It:
-    # - seems very easy to forget to apply `USE=llvm-next`,
-    # - is awkward to _force_ llvm-next silently, since the "most common"
-    #   use-case is not the _only_ use-case, and
-    # - is awkward to have a duo of `--llvm-next` / `--no-llvm-next` flags,
-    #   since a single `--use=` provides way more flexibility.
-    parser.add_argument(
-        "--use",
-        required=True,
-        help="""
-        The value to set for the USE variable when generating the profile. If
-        you're the mage, you want --use=llvm-next. If you don't want to use
-        anything, just pass `--use=`.
-        """,
-    )
     opts = parser.parse_args(argv)
 
     pgo_tools.exit_if_in_chroot()
@@ -200,7 +182,7 @@ def main(argv: List[str]):
         create_fresh_bootstrap_chroot(repo_root, chroot_info)
         chroot_profile_path = Path("/tmp/llvm-next-pgo-profile.prof")
         generate_pgo_profile(
-            repo_root, chroot_info, chroot_profile_path, opts.use
+            repo_root, chroot_info, chroot_profile_path
         )
         profile_path = translate_chroot_path_to_out_of_chroot(
             repo_root, chroot_profile_path, chroot_info
