@@ -25,7 +25,6 @@ import atomic_write_file
 import chroot
 from cros_utils import git_utils
 import get_llvm_hash
-import git
 import llvm_next
 import manifest_utils
 import upload_llvm_testing_helper_cl
@@ -41,7 +40,7 @@ def resolve_llvm_sha(sha_or_special: str) -> str:
         return get_llvm_hash.LLVMHash().GetGoogle3LLVMHash()
     # If this looks like a full git SHA, there's no need to sync the upstream
     # repo.
-    if git.IsFullGitSHA(sha_or_special):
+    if git_utils.is_full_git_sha(sha_or_special):
         return sha_or_special
     return git_utils.resolve_ref(
         Path(get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools()), sha_or_special

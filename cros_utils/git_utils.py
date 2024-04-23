@@ -41,6 +41,11 @@ def _parse_cls_from_upload_output(upload_output: str) -> List[int]:
     return [int(x) for x in results]
 
 
+def is_full_git_sha(s: str) -> bool:
+    """Returns if `s` looks like a git SHA."""
+    return len(s) == 40 and all(x.isdigit() or "a" <= x <= "f" for x in s)
+
+
 def upload_to_gerrit(
     git_repo: Path,
     remote: str,

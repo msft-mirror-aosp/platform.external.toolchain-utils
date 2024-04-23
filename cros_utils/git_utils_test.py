@@ -11,6 +11,8 @@ from cros_utils import git_utils
 
 # pylint: disable=protected-access
 
+EXAMPLE_GIT_SHA = "d46d9c1a23118e3943f43fe2dfc9f9c9c0b4aefe"
+
 GERRIT_OUTPUT_WITH_ONE_CL = r"""
 Enumerating objects: 4, done.
 Counting objects: 100% (4/4), done.
@@ -78,6 +80,22 @@ To https://chrome-internal-review.googlesource.com/chromeos/manifest-internal
 
 class Test(unittest.TestCase):
     """Tests for git_utils."""
+
+    def test_is_full_git_sha_success_cases(self):
+        shas = ("a" * 40, EXAMPLE_GIT_SHA)
+        for s in shas:
+            self.assertTrue(git_utils.is_full_git_sha(s), s)
+
+    def test_is_full_git_sha_failure_cases(self):
+        shas = (
+            "",
+            "A" * 40,
+            "g" * 40,
+            EXAMPLE_GIT_SHA[1:],
+            EXAMPLE_GIT_SHA + "a",
+        )
+        for s in shas:
+            self.assertFalse(git_utils.is_full_git_sha(s), s)
 
     def test_cl_parsing_complains_if_no_output(self):
         with self.assertRaisesRegex(ValueError, ".*; found 0"):
