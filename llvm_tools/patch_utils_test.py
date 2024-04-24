@@ -227,8 +227,8 @@ Hunk #1 SUCCEEDED at 96 with fuzz 1.
             test_file.write_text("abc")
         self.assertTrue(pu.is_git_dirty(dirpath))
 
-    @mock.patch("patch_utils.git_clean_context", mock.MagicMock)
-    def test_update_version_ranges(self):
+    @mock.patch.object(pu, "git_clean_context")
+    def test_update_version_ranges(self, mock_git_clean_context):
         """Test the UpdateVersionRanges function."""
         dirpath = self.make_tempdir()
         patches = [
