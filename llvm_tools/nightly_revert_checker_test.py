@@ -5,6 +5,7 @@
 
 """Tests for nightly_revert_checker."""
 
+import time
 import unittest
 from unittest import mock
 
@@ -137,8 +138,8 @@ class Test(unittest.TestCase):
 
         self.assertEqual(email, expected_email)
 
-    @mock.patch("revert_checker.find_reverts")
-    @mock.patch("get_upstream_patch.get_from_upstream")
+    @mock.patch.object(revert_checker, "find_reverts")
+    @mock.patch.object(get_upstream_patch, "get_from_upstream")
     def test_do_cherrypick_is_called(self, do_cherrypick, find_reverts):
         find_reverts.return_value = [
             revert_checker.Revert("12345abcdef", "fedcba54321")
@@ -156,8 +157,8 @@ class Test(unittest.TestCase):
         do_cherrypick.assert_called_once()
         find_reverts.assert_called_once()
 
-    @mock.patch("revert_checker.find_reverts")
-    @mock.patch("get_upstream_patch.get_from_upstream")
+    @mock.patch.object(revert_checker, "find_reverts")
+    @mock.patch.object(get_upstream_patch, "get_from_upstream")
     def test_do_cherrypick_handles_cherrypick_error(
         self, do_cherrypick, find_reverts
     ):
@@ -194,7 +195,7 @@ class Test(unittest.TestCase):
             ),
         )
 
-    @mock.patch("time.time")
+    @mock.patch.object(time, "time")
     def test_emailing_about_stale_heads_skips_in_simple_cases(self, time_time):
         now = 1_000_000_000
         time_time.return_value = now
@@ -252,8 +253,8 @@ class Test(unittest.TestCase):
             state, nightly_revert_checker.State.from_json(state.to_json())
         )
 
-    @mock.patch("time.time")
-    @mock.patch("nightly_revert_checker._send_revert_email")
+    @mock.patch.object(time, "time")
+    @mock.patch.object(nightly_revert_checker, "_send_revert_email")
     def test_emailing_about_stale_with_one_report(
         self, send_revert_email, time_time
     ):

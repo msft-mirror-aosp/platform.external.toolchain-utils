@@ -71,7 +71,7 @@ class TestGetPatch(unittest.TestCase):
         """Set up the mocks and directory structure."""
 
         self.module_patcher = mock.patch.multiple(
-            "get_patch",
+            get_patch,
             get_commit_subj=_mock_get_commit_subj,
             git_format_patch=_mock_git_format_patch,
             get_changed_packages=_mock_get_changed_packages,
@@ -80,7 +80,7 @@ class TestGetPatch(unittest.TestCase):
         self.module_patcher.start()
         self.addCleanup(self.module_patcher.stop)
         self.llvm_gitsha_patcher = mock.patch.multiple(
-            "get_patch.LLVMGitRef",
+            get_patch.LLVMGitRef,
             to_rev=_mock_to_rev,
             from_rev=_mock_from_rev,
         )
@@ -94,11 +94,18 @@ class TestGetPatch(unittest.TestCase):
         self.workdir = self.chromiumos_root / get_patch.LLVM_PKG_PATH / "files"
         self.workdir.mkdir(parents=True, exist_ok=True)
 
+        self.patches_json_file = (
+            self.workdir / get_patch.PATCH_METADATA_FILENAME
+        )
+
         def _cleanup_workdir():
             # We individually clean up these directories as a guarantee
             # we aren't creating any extraneous files. We don't want to
             # use shm.rmtree here because we don't want clean up any
             # files unaccounted for.
+            if self.patches_json_file.exists():
+                self.patches_json_file.unlink()
+
             workdir_recurse = self.workdir
             while workdir_recurse not in (self.chromiumos_root, Path.root):
                 workdir_recurse.rmdir()
@@ -106,9 +113,6 @@ class TestGetPatch(unittest.TestCase):
 
         self.addCleanup(_cleanup_workdir)
 
-        self.patches_json_file = (
-            self.workdir / get_patch.PATCH_METADATA_FILENAME
-        )
         start_ref = get_patch.LLVMGitRef("abcdef1234567890")
         self.ctx = get_patch.PatchContext(
             self.llvm_project_dir,
