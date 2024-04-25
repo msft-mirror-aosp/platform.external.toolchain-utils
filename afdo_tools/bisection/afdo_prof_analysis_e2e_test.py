@@ -6,13 +6,12 @@
 
 """End-to-end test for afdo_prof_analysis."""
 
-
+from datetime import date
 import json
 import os
 import shutil
 import tempfile
 import unittest
-from datetime import date
 
 from afdo_tools.bisection import afdo_prof_analysis as analysis
 
@@ -235,7 +234,6 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
         extern_decider=None,
         seed=None,
     ):
-
         temp_dir = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)
 
