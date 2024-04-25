@@ -28,7 +28,7 @@ import tempfile
 import textwrap
 from typing import Dict, FrozenSet, List, Optional
 
-import pgo_tools
+from pgo_tools import pgo_utils
 
 
 # This script runs `quickpkg` on LLVM. This file saves the version of LLVM that
@@ -69,7 +69,7 @@ def ensure_llvm_binpkg_exists() -> bool:
         if pkg.exists():
             return False
 
-    pkg = pgo_tools.quickpkg_llvm()
+    pkg = pgo_utils.quickpkg_llvm()
     SAVED_LLVM_BINPKG_STAMP.write_text(str(pkg), encoding="utf-8")
     return True
 
@@ -81,12 +81,12 @@ def restore_llvm_binpkg():
     assert (
         pkg.exists()
     ), f"Non-PGO'ed binpkg at {pkg} does not exist. Can't restore"
-    pgo_tools.run(pgo_tools.generate_quickpkg_restoration_command(pkg))
+    pgo_utils.run(pgo_utils.generate_quickpkg_restoration_command(pkg))
 
 
 def find_missing_cross_libs() -> FrozenSet[str]:
     """Returns cross-* libraries that need to be installed for workloads."""
-    equery_result = pgo_tools.run(
+    equery_result = pgo_utils.run(
         ["equery", "l", "--format=$cp", "cross-*/*"],
         check=False,
         stdout=subprocess.PIPE,
@@ -110,7 +110,7 @@ def ensure_cross_libs_are_installed():
 
     missing_packages = sorted(missing_packages)
     logging.info("Installing cross-compiler libs: %s", missing_packages)
-    pgo_tools.run(
+    pgo_utils.run(
         ["sudo", "emerge", "-j", "-G"] + missing_packages,
     )
 
@@ -139,7 +139,7 @@ def emerge_pgo_generate_llvm():
     force_features = "ccache"
     features = (os.environ.get("FEATURES", "") + " " + force_features).strip()
     logging.info("Building LLVM with USE=%s", shlex.quote(use))
-    pgo_tools.run(
+    pgo_utils.run(
         [
             "sudo",
             f"FEATURES={features}",
@@ -167,7 +167,7 @@ def ensure_clang_invocations_generate_profiles(clang_bin: str, tmpdir: Path):
     """
     tmpdir = tmpdir / "ensure_profiles_generated"
     tmpdir.mkdir(parents=True)
-    pgo_tools.run(
+    pgo_utils.run(
         [clang_bin, "--help"],
         extra_env=build_profiling_env(tmpdir),
         stdout=subprocess.DEVNULL,
@@ -212,7 +212,7 @@ def fetch_workloads_into(target_dir: Path):
 
     def fetch_and_extract(gs_url: str, into_dir: Path):
         tgz_full = target_dir / os.path.basename(gs_url)
-        pgo_tools.run(
+        pgo_utils.run(
             [
                 "gsutil",
                 "cp",
@@ -222,7 +222,7 @@ def fetch_workloads_into(target_dir: Path):
         )
         into_dir.mkdir()
 
-        pgo_tools.run(
+        pgo_utils.run(
             ["tar", "xaf", tgz_full],
             cwd=into_dir,
         )
@@ -278,7 +278,7 @@ class WorkloadRunner:
         if sysroot:
             profiling_env["SYSROOT"] = sysroot
 
-        cmake_command: pgo_tools.Command = [
+        cmake_command: pgo_utils.Command = [
             "cmake",
             "-G",
             "Ninja",
@@ -298,13 +298,13 @@ class WorkloadRunner:
             )
 
         cmake_command.append(self.target_dir)
-        pgo_tools.run(
+        pgo_utils.run(
             cmake_command,
             extra_env=profiling_env,
             cwd=self.out_dir,
         )
 
-        pgo_tools.run(
+        pgo_utils.run(
             ["ninja", "-v", "all"],
             extra_env=profiling_env,
             cwd=self.out_dir,
@@ -370,7 +370,7 @@ def convert_profraw_to_pgo_profile(profraw_dir: Path) -> Path:
         "--instr",
         f"--output={output}",
     ]
-    pgo_tools.run(generate_command + profile_files)
+    pgo_utils.run(generate_command + profile_files)
     return output
 
 
@@ -403,7 +403,7 @@ def main(argv: List[str]):
     )
     opts = parser.parse_args(argv)
 
-    pgo_tools.exit_if_not_in_chroot()
+    pgo_utils.exit_if_not_in_chroot()
 
     output = opts.output
 

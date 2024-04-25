@@ -20,7 +20,7 @@ import subprocess
 import sys
 from typing import List
 
-import pgo_tools
+from pgo_tools import pgo_utils
 
 
 SDK_VERSION_CONF_SUBDIR = (
@@ -77,7 +77,7 @@ def create_fresh_chroot(
     chroot_info: ChrootInfo,
 ):
     """Creates a chroot. If it already exists, replaces it."""
-    pgo_tools.run(
+    pgo_utils.run(
         [
             "cros_sdk",
             "--replace",
@@ -97,7 +97,7 @@ def generate_pgo_profile(
     chroot_output_file: Path,
 ):
     """Generates a PGO profile to `chroot_output_file`."""
-    pgo_tools.run(
+    pgo_utils.run(
         [
             "cros_sdk",
             f"--chroot={chroot_info.chroot_name}",
@@ -114,7 +114,7 @@ def generate_pgo_profile(
 
 def compress_pgo_profile(pgo_profile: Path) -> Path:
     """Compresses a PGO profile for upload to gs://."""
-    pgo_tools.run(
+    pgo_utils.run(
         ["xz", "-9", "-k", pgo_profile],
     )
     return Path(str(pgo_profile) + ".xz")
@@ -132,7 +132,7 @@ def translate_chroot_path_to_out_of_chroot(
 
 def determine_upload_command(
     my_dir: Path, profile_path: Path
-) -> pgo_tools.Command:
+) -> pgo_utils.Command:
     """Returns a command that can be used to upload our PGO profile."""
     # TODO(b/333462347): Ideally, this would just use
     # `llvm_next.LLVM_NEXT_HASH` or similar, but that causes import errors.
@@ -205,7 +205,7 @@ def main(argv: List[str]):
     )
     opts = parser.parse_args(argv)
 
-    pgo_tools.exit_if_in_chroot()
+    pgo_utils.exit_if_in_chroot()
 
     repo_root = find_repo_root(Path(os.getcwd()))
     logging.info("Repo root is %s", repo_root)
@@ -233,7 +233,7 @@ def main(argv: List[str]):
             my_dir, compressed_profile_path
         )
         if opts.upload:
-            pgo_tools.run(upload_command)
+            pgo_utils.run(upload_command)
         else:
             friendly_upload_command = shlex.join(str(x) for x in upload_command)
             logging.info(

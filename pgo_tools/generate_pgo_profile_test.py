@@ -11,14 +11,14 @@ import tempfile
 import unittest
 from unittest import mock
 
-import generate_pgo_profile
-import pgo_tools
+from pgo_tools import generate_pgo_profile
+from pgo_tools import pgo_utils
 
 
 class Test(unittest.TestCase):
     """Tests for generate_pgo_profile."""
 
-    @mock.patch.object(pgo_tools, "run")
+    @mock.patch.object(pgo_utils, "run")
     def test_find_missing_cross_libs_works_for_empty_results(self, mock_run):
         mock_run.return_value.returncode = 3
         mock_run.return_value.stdout = ""
@@ -33,7 +33,7 @@ class Test(unittest.TestCase):
             generate_pgo_profile.ALL_NEEDED_CROSS_LIBS,
         )
 
-    @mock.patch.object(pgo_tools, "run")
+    @mock.patch.object(pgo_utils, "run")
     def test_find_missing_cross_libs_filters_results_properly(self, mock_run):
         mock_run.return_value.returncode = 0
         mock_run.return_value.stdout = "\n".join(
@@ -80,7 +80,7 @@ class Test(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "^Expected exactly one"):
             generate_pgo_profile.read_exactly_one_dirent(tempdir)
 
-    @mock.patch.object(pgo_tools, "run")
+    @mock.patch.object(pgo_utils, "run")
     def test_profraw_conversion_works(self, mock_run):
         tempdir = self.make_tempdir()
         profiles = [

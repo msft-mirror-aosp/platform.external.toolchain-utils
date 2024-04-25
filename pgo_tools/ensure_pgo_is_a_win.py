@@ -16,8 +16,8 @@ import logging
 import sys
 from typing import List
 
-import benchmark_pgo_profiles
-import pgo_tools
+from pgo_tools import benchmark_pgo_profiles
+from pgo_tools import pgo_utils
 
 
 NO_PROFILE = benchmark_pgo_profiles.SpecialProfile.NONE
@@ -61,7 +61,7 @@ def main(argv: List[str]):
     opts = parser.parse_args(argv)
     minimum_speedup = opts.minimum_speedup
 
-    pgo_tools.exit_if_not_in_chroot()
+    pgo_utils.exit_if_not_in_chroot()
 
     run_results = benchmark_pgo_profiles.run_benchmark(
         # It's likely safe to assume that a fast LLVM without ThinLTO is fast
