@@ -495,7 +495,3 @@ class Test(unittest.TestCase):
             auto_update_rust_bootstrap.maybe_delete_old_rust_bootstrap_ebuilds(
                 tempdir, rust_bootstrap, dry_run=True
             )
-
-
-if __name__ == "__main__":
-    unittest.main()

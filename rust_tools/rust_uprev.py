@@ -1190,7 +1190,3 @@ def main() -> None:
             run_step(
                 "create rust uprev CL", lambda: create_new_commit(args.uprev)
             )
-
-
-if __name__ == "__main__":
-    main()

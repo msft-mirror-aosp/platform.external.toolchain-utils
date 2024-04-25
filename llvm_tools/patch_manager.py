@@ -313,7 +313,3 @@ def main(sys_argv: List[str]):
 
     if args_output.failure_mode in dispatch_table:
         dispatch_table[args_output.failure_mode](args_output)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

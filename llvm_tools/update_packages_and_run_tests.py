@@ -400,7 +400,3 @@ def main(argv: List[str]) -> None:
 
     if opts.retry_state:
         write_last_tried_sha(opts.retry_state, new_sha)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

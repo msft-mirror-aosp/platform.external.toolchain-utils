@@ -715,7 +715,3 @@ def main() -> None:
     )
     for patch_source in args.patch_sources:
         ctx.apply_patches(patch_source)
-
-
-if __name__ == "__main__":
-    main()

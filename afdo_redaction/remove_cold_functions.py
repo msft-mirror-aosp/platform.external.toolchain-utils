@@ -206,7 +206,3 @@ def main():
                         run(stdin, stdout, args.number, cwp, benchmark)
             else:
                 run(stdin, stdout, args.number)
-
-
-if __name__ == "__main__":
-    main()

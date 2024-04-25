@@ -16,7 +16,3 @@ class Test(unittest.TestCase):
     def test_all_cls_have_patchesets(self):
         for cl in llvm_next.LLVM_NEXT_TESTING_CLS:
             self.assertIsNotNone(cl.patch_set, f"CL {cl} needs a patch-set")
-
-
-if __name__ == "__main__":
-    unittest.main()

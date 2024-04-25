@@ -94,7 +94,7 @@ def FindChromeOSImage(image_file, chromeos_root):
     return path_util.ToChrootPath(image_file, source_path=chromeos_root)
 
 
-def DoImage(argv):
+def Main(argv):
     """Image ChromeOS."""
 
     parser = argparse.ArgumentParser()
@@ -147,7 +147,7 @@ def DoImage(argv):
         help="Do not clobber the stateful partition.",
     )
 
-    options = parser.parse_args(argv[1:])
+    options = parser.parse_args(argv)
 
     if not options.log_level in command_executer.LOG_LEVEL:
         Usage(parser, "--logging_level must be 'quiet', 'average' or 'verbose'")
@@ -552,8 +552,3 @@ def EnsureMachineUp(chromeos_root, remote, log_level):
         )
         if not ret:
             return True
-
-
-if __name__ == "__main__":
-    retval = DoImage(sys.argv)
-    sys.exit(retval)

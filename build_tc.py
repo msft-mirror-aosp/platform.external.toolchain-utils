@@ -408,8 +408,3 @@ def Main(argv):
     finally:
         print("Exiting...")
     return rv
-
-
-if __name__ == "__main__":
-    retval = Main(sys.argv[1:])
-    sys.exit(retval)

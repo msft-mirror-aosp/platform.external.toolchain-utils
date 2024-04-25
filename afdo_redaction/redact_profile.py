@@ -248,7 +248,3 @@ def _main():
         summary_output_file=sys.stderr,
         profile_output_file=sys.stdout,
     )
-
-
-if __name__ == "__main__":
-    _main()

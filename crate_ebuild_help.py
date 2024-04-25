@@ -170,7 +170,3 @@ def main():
                 j = i + 1
                 print(f"[{j}/{crates_len}] {s}")
     print()
-
-
-if __name__ == "__main__":
-    main()

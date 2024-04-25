@@ -412,7 +412,3 @@ class Test(test_helpers.TempDirTestCase):
                 unpack_dir, download_dir, gs_urls
             )
         self.assertEqual(run_mock.call_count, 3)
-
-
-if __name__ == "__main__":
-    unittest.main()

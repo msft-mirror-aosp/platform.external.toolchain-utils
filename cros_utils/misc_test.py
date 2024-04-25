@@ -61,7 +61,3 @@ class UtilsTest(unittest.TestCase):
         self.assertEqual(
             new_env_string, " ".join([env_string, expected_new_env])
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

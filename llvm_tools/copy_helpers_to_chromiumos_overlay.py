@@ -63,7 +63,3 @@ def main():
         dest = os.path.join(filesdir, f)
         print("%r => %r" % (source, dest))
         shutil.copyfile(source, dest)
-
-
-if __name__ == "__main__":
-    main()

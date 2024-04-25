@@ -231,7 +231,3 @@ class TestGetPatch(unittest.TestCase):
         finally:
             self.ctx.dry_run = old_dry_run
             self.patches_json_file.unlink()
-
-
-if __name__ == "__main__":
-    unittest.main()

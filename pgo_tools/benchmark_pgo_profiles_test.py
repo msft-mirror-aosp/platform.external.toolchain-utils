@@ -45,7 +45,3 @@ class Test(unittest.TestCase):
             self.assertIs(
                 profile, benchmark_pgo_profiles.parse_profile_path(str(profile))
             )
-
-
-if __name__ == "__main__":
-    unittest.main()

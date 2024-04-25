@@ -159,7 +159,3 @@ class AfdoProfAnalysisTest(unittest.TestCase):
                 DeciderClass(), self.good_items, self.bad_items
             )
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

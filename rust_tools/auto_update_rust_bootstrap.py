@@ -850,7 +850,3 @@ def main(argv: List[str]):
 
     if had_recoverable_error:
         sys.exit("Exiting uncleanly due to above error(s).")
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

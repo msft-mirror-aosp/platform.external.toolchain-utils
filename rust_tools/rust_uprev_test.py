@@ -775,7 +775,3 @@ class RustUprevOtherStagesTests(unittest.TestCase):
             ["sudo", "emerge", "-j", "-G"]
             + [f"cross-{x}/gcc" for x in cros_targets + ["arm-none-eabi"]]
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

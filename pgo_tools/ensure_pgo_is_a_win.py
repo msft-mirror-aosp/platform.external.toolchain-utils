@@ -84,7 +84,3 @@ def main(argv: List[str]):
             f"Minimum speedup of {minimum_speedup} is greater than "
             f"observed speedup of {pgo_speedup}. Exiting with error."
         )
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

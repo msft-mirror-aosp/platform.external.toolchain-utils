@@ -180,7 +180,3 @@ class Test(unittest.TestCase):
                 newest_release=rust_watch.RustReleaseVersion(1, 0, 0),
             )
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

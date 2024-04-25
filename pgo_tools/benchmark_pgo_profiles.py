@@ -280,7 +280,3 @@ def main(argv: List[str]):
     validate_profiles(parser, profiles)
 
     run_benchmark(opts.thinlto, profiles)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

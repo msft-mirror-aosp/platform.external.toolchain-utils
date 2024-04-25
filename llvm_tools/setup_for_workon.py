@@ -293,7 +293,3 @@ def main(argv: List[str]) -> None:
     logging.info(
         "Successfully workon-ed: %s", shlex.join([str(c) for c in cmd])
     )
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

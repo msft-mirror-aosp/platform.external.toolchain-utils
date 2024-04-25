@@ -109,7 +109,3 @@ def main(argv: List[str]) -> None:
         dry_run=opts.dry_run,
         internal=True,
     )
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

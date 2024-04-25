@@ -298,7 +298,3 @@ TOTAL: 2 objects, 1234 bytes (1.1KiB)
         self.assertEqual(
             tmpdir, update_kernel_afdo.find_chromeos_tree_root(test_subdir)
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

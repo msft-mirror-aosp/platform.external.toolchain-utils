@@ -39,12 +39,12 @@ def scanelf(root):
 
 
 def Main(argv):
-    if len(argv) < 2:
+    if not argv:
         print("usage: %s [file|dir]")
         return 1
 
     files = []
-    cand = argv[1]
+    cand = argv[0]
     if os.path.isfile(cand):
         files = [cand]
     elif os.path.isdir(cand):
@@ -62,7 +62,3 @@ def Main(argv):
     if failed:
         return 1
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(Main(sys.argv))

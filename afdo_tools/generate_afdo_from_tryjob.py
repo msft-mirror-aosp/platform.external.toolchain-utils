@@ -169,7 +169,3 @@ def main(argv: List[str]):
             shutil.rmtree(temp_dir, ignore_errors=True)
         else:
             print("Artifacts are available at", temp_dir)
-
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))

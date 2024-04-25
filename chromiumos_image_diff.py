@@ -345,7 +345,7 @@ def Main(argv):
         required=True,
         help=("Image 2 file name."),
     )
-    options = parser.parse_args(argv[1:])
+    options = parser.parse_args(argv)
 
     if options.mount_basename and options.mount_basename.find("/") >= 0:
         logger.GetLogger().LogError(
@@ -409,7 +409,3 @@ def Main(argv):
             image_comparator.Cleanup()
 
     return 0 if result else 1
-
-
-if __name__ == "__main__":
-    Main(sys.argv)

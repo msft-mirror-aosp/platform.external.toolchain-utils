@@ -134,7 +134,3 @@ def main(argv: List[str]) -> None:
             stdin=subprocess.DEVNULL,
         ).returncode
         sys.exit(return_code)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

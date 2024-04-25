@@ -389,7 +389,7 @@ def Main(argv):
         "Artifacts stored in /tmp/toolchain-tests",
     )
 
-    options = parser.parse_args(argv[1:])
+    options = parser.parse_args(argv)
     if not options.board:
         print("Please give a board.")
         return 1
@@ -417,8 +417,3 @@ def Main(argv):
         chrome_src=options.chrome_src,
     )
     return fc.DoAll()
-
-
-if __name__ == "__main__":
-    retval = Main(sys.argv)
-    sys.exit(retval)

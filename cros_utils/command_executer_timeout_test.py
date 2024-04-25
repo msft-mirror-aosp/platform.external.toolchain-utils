@@ -30,7 +30,3 @@ def Main(argv):
     ce = command_executer.GetCommandExecuter()
     ce.RunCommand(command, command_timeout=1)
     return 0
-
-
-if __name__ == "__main__":
-    Main(sys.argv[1:])

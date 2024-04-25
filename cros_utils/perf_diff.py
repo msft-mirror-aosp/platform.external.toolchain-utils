@@ -349,7 +349,3 @@ def Main(argv):
         pass
 
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(Main(sys.argv))

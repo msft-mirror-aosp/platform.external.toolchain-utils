@@ -203,7 +203,3 @@ def main(args):
     with open(results_intermed, "w", encoding="utf-8") as f:
         json.dump(results, f)
     os.rename(results_intermed, results_file)
-
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))

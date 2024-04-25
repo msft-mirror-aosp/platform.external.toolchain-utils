@@ -55,7 +55,3 @@ class Test(test_helpers.TempDirTestCase):
             ),
             123456,
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -197,7 +197,3 @@ def main(argv: List[str]) -> None:
     logging.info("Running `bb add` command: %s...", shlex.join(cmd))
     # execvp raises if it fails, so no need to check.
     os.execvp(cmd[0], cmd)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

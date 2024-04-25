@@ -108,7 +108,3 @@ def Main(argv):
     board = ce.CrosLearnBoard(options.chromeos_root, options.remote)
     print(board)
     return 0
-
-
-if __name__ == "__main__":
-    Main(sys.argv[1:])

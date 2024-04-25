@@ -302,7 +302,3 @@ class Test(unittest.TestCase):
             "checker's SHA autodetection may need an update. Please file a "
             "bug at go/crostc-bug if an update is needed. Thanks!",
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

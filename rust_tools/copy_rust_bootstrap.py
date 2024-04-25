@@ -197,7 +197,3 @@ def main(argv: List[str]):
             )
         else:
             _upload(file_to_upload, target_path, opts.force)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

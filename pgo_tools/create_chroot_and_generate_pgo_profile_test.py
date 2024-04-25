@@ -69,7 +69,3 @@ class Test(unittest.TestCase):
             ),
             repo_root / "my-out" / "tmp/file/path",
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -505,7 +505,3 @@ def main() -> None:
     else:
         assert cur_llvm_version == "tot"
         print(new_llvm_hash.GetTopOfTrunkGitHash())
-
-
-if __name__ == "__main__":
-    main()

@@ -803,7 +803,3 @@ def main(argv: List[str]) -> None:
             "above logs. Most likely the things you're looking for are logged "
             "at the ERROR level."
         )
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

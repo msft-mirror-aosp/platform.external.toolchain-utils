@@ -207,7 +207,3 @@ class TabulatorTest(unittest.TestCase):
     for row in cell_table[1:]:
       for cell in row:
         self.assertTrue(cell.colspan == 1)
-
-
-if __name__ == '__main__':
-  unittest.main()

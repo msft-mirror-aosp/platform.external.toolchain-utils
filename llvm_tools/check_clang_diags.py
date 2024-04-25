@@ -218,7 +218,3 @@ def main(argv: List[str]) -> None:
         with open(new_state_file_path, "w", encoding="utf-8") as f:
             json.dump(new_state_file, f)
         os.rename(new_state_file_path, state_file)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

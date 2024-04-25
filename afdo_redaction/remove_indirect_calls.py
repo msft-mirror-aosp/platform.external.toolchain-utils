@@ -77,7 +77,3 @@ def main():
     with open(args.input) as stdin:
         with open(args.output, "w") as stdout:
             run(stdin, stdout)
-
-
-if __name__ == "__main__":
-    main()

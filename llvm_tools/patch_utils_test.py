@@ -406,6 +406,3 @@ index c5fd68299eb..4c6e15eeeb9 100644
    // Now we need to do some global optimization transforms.
    // FIXME: It would seem like these should come first in the optimization
 """
-
-if __name__ == "__main__":
-    unittest.main()

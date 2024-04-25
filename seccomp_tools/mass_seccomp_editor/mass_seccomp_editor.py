@@ -280,7 +280,3 @@ def parse_args() -> Any:
         " Does nothing without --edit.",
     )
     return parser.parse_args()
-
-
-if __name__ == "__main__":
-    main()

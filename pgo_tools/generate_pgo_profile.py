@@ -470,7 +470,3 @@ def main(argv: List[str]):
     logging.info("Removing now-obsolete tempdir")
     shutil.rmtree(tempdir)
     logging.info("PGO profile is available at %s.", output)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

@@ -65,7 +65,3 @@ class HelperFunctionsTest(unittest.TestCase):
             ),
             [expected_abs_path],
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

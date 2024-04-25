@@ -586,7 +586,3 @@ def main():
         skip_dependencies=args.skip_dependencies,
         platforms=args.platform,
     )
-
-
-if __name__ == "__main__":
-    sys.exit(main())

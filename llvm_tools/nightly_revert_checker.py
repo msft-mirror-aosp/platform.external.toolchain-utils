@@ -627,7 +627,3 @@ def main(argv: List[str]) -> int:
 
     _write_state(state_file, new_state)
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))

@@ -277,7 +277,7 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
 
             self.addCleanup(rm_state)
 
-        actual = analysis.main(
+        actual = analysis.main_impl(
             ObjectWithFields(
                 good_prof=good_prof_file,
                 bad_prof=bad_prof_file,
@@ -292,7 +292,3 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
         actual_seed = actual.pop("seed")  # nothing to check
         self.assertEqual(actual, expected)
         return actual_seed
-
-
-if __name__ == "__main__":
-    unittest.main()

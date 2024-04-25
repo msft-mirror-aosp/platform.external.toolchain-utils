@@ -230,7 +230,3 @@ class TrybotTest(unittest.TestCase):
                     image,
                     f"{IMAGE_DIR}/R83-13003.0.0-30196-8884755532184725",
                 )
-
-
-if __name__ == "__main__":
-    unittest.main()

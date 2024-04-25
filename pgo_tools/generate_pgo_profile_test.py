@@ -106,7 +106,3 @@ class Test(unittest.TestCase):
             self.assertIn(p, run_cmd)
         self.assertNotIn(not_a_profile, run_cmd)
         self.assertIn(f"--output={result}", run_cmd)
-
-
-if __name__ == "__main__":
-    unittest.main()

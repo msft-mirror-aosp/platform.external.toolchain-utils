@@ -211,7 +211,3 @@ class PatchManagerTest(unittest.TestCase):
                 _apply_patch_entry_mock3,
                 patch_manager.GitBisectionCode.SKIP,
             )
-
-
-if __name__ == "__main__":
-    unittest.main()

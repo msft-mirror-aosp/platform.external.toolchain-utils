@@ -344,7 +344,3 @@ def main():
     except Exception:
         logging.exception("Uncaught Exception in main")
         abort(opts.never_abort)
-
-
-if __name__ == "__main__":
-    main()

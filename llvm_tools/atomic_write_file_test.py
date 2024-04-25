@@ -45,7 +45,3 @@ class TestAtomicWrite(unittest.TestCase):
             with filepath.open(encoding="utf-8") as f:
                 lines = f.readlines()
             self.assertEqual(lines[0], new_contents)
-
-
-if __name__ == "__main__":
-    unittest.main()

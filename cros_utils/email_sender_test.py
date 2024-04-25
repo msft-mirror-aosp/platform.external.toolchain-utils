@@ -116,7 +116,3 @@ class Test(unittest.TestCase):
                 "html_body": "html",
             },
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

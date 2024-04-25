@@ -203,7 +203,3 @@ class TestGetLLVMHash(test_helpers.TempDirTestCase):
             get_llvm_hash.LLVMHash().GetCrOSLLVMNextHash(),
             llvm_next.LLVM_NEXT_HASH,
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

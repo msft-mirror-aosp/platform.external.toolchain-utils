@@ -152,7 +152,3 @@ def main(argv: List[str]):
     print()
     print("CSV summary of reverts:")
     write_reverts_as_csv(sys.stdout, reverts)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

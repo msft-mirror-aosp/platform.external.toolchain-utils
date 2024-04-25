@@ -235,7 +235,7 @@ def Main(argv):
         "-v", "--verbose", dest="verbose", default=False, action="store_true"
     )
 
-    options = parser.parse_args(argv[1:])
+    options = parser.parse_args(argv)
 
     if options.verbose:
         DEBUG = True
@@ -273,8 +273,3 @@ def Main(argv):
         )
 
     return 0
-
-
-if __name__ == "__main__":
-    val = Main(sys.argv)
-    sys.exit(val)

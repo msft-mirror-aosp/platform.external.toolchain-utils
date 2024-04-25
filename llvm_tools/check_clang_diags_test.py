@@ -106,7 +106,3 @@ class Test(unittest.TestCase):
         self.assertEqual(
             len(create_new_bug_mock.call_args_list), len(expected_calls)
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

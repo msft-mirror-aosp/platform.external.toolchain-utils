@@ -20,6 +20,10 @@ def get_llvm_config() -> git_llvm_rev.LLVMConfig:
 class Test(unittest.TestCase):
     """Test cases for git_llvm_rev."""
 
+    @classmethod
+    def setUpClass(cls):
+        llvm_project.ensure_up_to_date()
+
     def rev_to_sha_with_round_trip(self, rev: git_llvm_rev.Rev) -> str:
         config = get_llvm_config()
         sha = git_llvm_rev.translate_rev_to_sha(config, rev)
@@ -170,7 +174,3 @@ class Test(unittest.TestCase):
 # FIXME: When release/10.x happens, it may be nice to have a test-case
 # generally covering that, since it's the first branch that we have to travel
 # back to the base commit for.
-
-if __name__ == "__main__":
-    llvm_project.ensure_up_to_date()
-    unittest.main()

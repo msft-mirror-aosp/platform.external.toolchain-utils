@@ -55,7 +55,3 @@ class TimeLineTest(unittest.TestCase):
         t = time.time()
         t1 = tl.GetLastEventTime()
         self.assertEqual(int(t1 - t), 0)
-
-
-if __name__ == "__main__":
-    unittest.main()

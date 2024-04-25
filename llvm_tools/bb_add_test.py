@@ -94,7 +94,3 @@ class Test(unittest.TestCase):
             ]
             + _ARBITRARY_BOTS,
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

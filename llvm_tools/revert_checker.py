@@ -315,7 +315,3 @@ def _main() -> None:
             else revert.reverted_sha
         )
         print(f"{sha_fmt} claims to revert {reverted_sha_fmt}")
-
-
-if __name__ == "__main__":
-    _main()

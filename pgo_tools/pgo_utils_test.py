@@ -102,7 +102,3 @@ class Test(unittest.TestCase):
         # This test ensures this `with`'s `__exit__` block doesn't `raise`.
         with pgo_utils.temporary_file("foo_bar_") as tmp:
             tmp.unlink()
-
-
-if __name__ == "__main__":
-    unittest.main()

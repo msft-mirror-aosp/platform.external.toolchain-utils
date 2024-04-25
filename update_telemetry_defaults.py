@@ -199,8 +199,3 @@ def Main():
     while not done:
         done = defaults.GetUserInput()
     return 0
-
-
-if __name__ == "__main__":
-    retval = Main()
-    sys.exit(retval)

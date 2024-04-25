@@ -117,7 +117,3 @@ class Test(unittest.TestCase):
         warnings, desc_json = fetch_gn_descs._parse_gn_desc_output(gn_desc)
         self.assertEqual(warnings, "")
         self.assertEqual(desc_json, {"bar": "baz"})
-
-
-if __name__ == "__main__":
-    unittest.main()

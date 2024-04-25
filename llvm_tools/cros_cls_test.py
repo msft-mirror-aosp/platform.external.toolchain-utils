@@ -152,7 +152,3 @@ class Test(unittest.TestCase):
             ),
             "R122-15711.0.0",
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

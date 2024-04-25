@@ -425,7 +425,3 @@ def main(argv: List[str]) -> None:
             last_gentoo_sha=newest_sha,
         ),
     )
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

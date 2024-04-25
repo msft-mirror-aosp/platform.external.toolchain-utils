@@ -120,7 +120,3 @@ class Test(unittest.TestCase):
             ),
             [7190037],
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

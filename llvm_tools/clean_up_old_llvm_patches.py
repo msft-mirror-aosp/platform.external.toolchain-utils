@@ -285,7 +285,3 @@ def main(argv: List[str]) -> None:
     logging.info("Uploading changes...")
     upload_changes(cros_overlay, gerrit_tool_cwd)
     logging.info("Change sent for review.")
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

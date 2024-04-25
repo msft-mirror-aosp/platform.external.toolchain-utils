@@ -481,7 +481,3 @@ def main(argv: List[str]) -> None:
     else:
         sha = translate_rev_to_sha(config, Rev.parse(opts.rev))
         print(sha)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

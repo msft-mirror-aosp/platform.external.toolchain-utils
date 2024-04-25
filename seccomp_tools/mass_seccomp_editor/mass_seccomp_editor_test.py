@@ -32,7 +32,3 @@ class TestMassSeccompEditor(unittest.TestCase):
                 ["fstat", "dup", "fizzbuzz"], TEST_FP
             )
         self.assertEqual(out, set(["dup", "fizzbuzz"]))
-
-
-if __name__ == "__main__":
-    unittest.main()

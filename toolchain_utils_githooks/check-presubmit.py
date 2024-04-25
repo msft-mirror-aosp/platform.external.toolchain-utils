@@ -761,8 +761,9 @@ def check_tests(
     files: List[str],
 ) -> CheckResult:
     """Runs tests."""
+    run_tests_for = os.path.join(toolchain_utils_root, "py", "bin", "run_tests_for.py")
     exit_code, stdout_and_stderr = run_command_unchecked(
-        [os.path.join(toolchain_utils_root, "run_tests_for.py"), "--"] + files,
+        [run_tests_for, "--"] + files,
         toolchain_utils_root,
     )
     return CheckResult(
@@ -1070,7 +1071,6 @@ def main(argv: List[str]) -> int:
     if not all_checks_ok:
         return 1
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

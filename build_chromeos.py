@@ -134,7 +134,7 @@ def Main(argv):
         ),
     )
 
-    options = parser.parse_args(argv[1:])
+    options = parser.parse_args(argv)
 
     if options.chromeos_root is None:
         Usage(parser, "--chromeos_root must be set")
@@ -367,8 +367,3 @@ def Main(argv):
         )
 
     return ret
-
-
-if __name__ == "__main__":
-    retval = Main(sys.argv)
-    sys.exit(retval)

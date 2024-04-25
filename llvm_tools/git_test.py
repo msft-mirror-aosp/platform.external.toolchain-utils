@@ -154,7 +154,3 @@ class HelperFunctionsTest(unittest.TestCase):
             "https://chromium-review.googlesource.com/c/chromiumos/overlays/"
             "chromiumos-overlay/+/193147",
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

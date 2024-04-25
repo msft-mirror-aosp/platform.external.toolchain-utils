@@ -27,7 +27,3 @@ class CommandExecuterTest(unittest.TestCase):
         )
         end = time.time()
         self.assertTrue(round(end - start) == timeout)
-
-
-if __name__ == "__main__":
-    unittest.main()

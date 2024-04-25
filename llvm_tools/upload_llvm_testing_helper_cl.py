@@ -177,7 +177,3 @@ def main(argv: List[str]) -> None:
         branch=git_utils.CROS_MAIN_BRANCH,
         ref=helper_sha,
     )
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

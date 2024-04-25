@@ -86,7 +86,3 @@ class TestManifestUtils(unittest.TestCase):
             manifest_utils.extract_current_llvm_hash_from_xml(root),
             "abcd",
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

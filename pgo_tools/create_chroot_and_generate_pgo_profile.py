@@ -255,7 +255,3 @@ def main(argv: List[str]):
             bootstrap_chroot_info.chroot_name,
             bootstrap_chroot_info.out_dir_name,
         )
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

@@ -62,7 +62,3 @@ class Test(test_helpers.TempDirTestCase):
         self.assertIn(
             upload_llvm_testing_helper_cl.DISABLE_WARNINGS_BLOCK, new_contents
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

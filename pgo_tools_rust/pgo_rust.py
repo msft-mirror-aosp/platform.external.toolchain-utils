@@ -560,7 +560,7 @@ def main(argv: List[str]) -> int:
     )
 
     parser = argparse.ArgumentParser(
-        prog=argv[0],
+        prog=sys.argv[0],
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -662,7 +662,7 @@ def main(argv: List[str]) -> int:
         "rustc versions",
     )
 
-    args = parser.parse_args(argv[1:])
+    args = parser.parse_args(argv)
 
     (LOCAL_BASE / "crates").mkdir(parents=True, exist_ok=True)
     (LOCAL_BASE / "llvm-profraw").mkdir(parents=True, exist_ok=True)
@@ -672,7 +672,3 @@ def main(argv: List[str]) -> int:
     args.func(args)
 
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv))

@@ -570,7 +570,3 @@ def main(argv: List[str]) -> None:
 
     assert getattr(opts, "func", None), "Unknown subcommand?"
     opts.func(opts)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

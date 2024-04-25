@@ -340,8 +340,3 @@ def CreateSymlink(target, link_name):
             command = "rm -rf " + link_name
             command_executer.GetCommandExecuter().RunCommand(command)
         os.symlink(target, link_name)
-
-
-if __name__ == "__main__":
-    retval = Main(sys.argv)
-    sys.exit(retval)

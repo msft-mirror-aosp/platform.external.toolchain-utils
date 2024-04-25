@@ -431,7 +431,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(flags):
+def main_impl(flags):
     logging.getLogger().setLevel(logging.INFO)
     if not flags.no_resume and flags.seed:  # conflicting seeds
         raise RuntimeError(
@@ -481,5 +481,5 @@ def main(flags):
     return results
 
 
-if __name__ == "__main__":
-    main(parse_args())
+def main():
+    main_impl(parse_args())

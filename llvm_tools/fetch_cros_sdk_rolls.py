@@ -108,7 +108,3 @@ def main():
             logging.debug("Keeping around tempdir %r to aid debugging", tempdir)
         else:
             shutil.rmtree(tempdir)
-
-
-if __name__ == "__main__":
-    sys.exit(main())

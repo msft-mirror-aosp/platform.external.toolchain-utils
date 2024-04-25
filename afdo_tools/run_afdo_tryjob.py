@@ -174,7 +174,3 @@ def main():
     print(" ".join(pipes.quote(a) for a in args))
     if not dry_run:
         sys.exit(subprocess.call(args))
-
-
-if __name__ == "__main__":
-    main()
