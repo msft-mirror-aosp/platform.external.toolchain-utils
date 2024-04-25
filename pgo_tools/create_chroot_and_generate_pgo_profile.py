@@ -19,6 +19,7 @@ import subprocess
 import sys
 from typing import List
 
+from llvm_tools import llvm_next
 from pgo_tools import pgo_utils
 
 
@@ -103,7 +104,7 @@ def generate_pgo_profile(
             f"--out-dir={chroot_info.out_dir_name}",
             f"--sdk-version={chroot_info.sdk_version}",
             "--",
-            "/mnt/host/source/src/third_party/toolchain-utils/pgo_tools/"
+            "/mnt/host/source/src/third_party/toolchain-utils/py/bin/pgo_tools/"
             "generate_pgo_profile.py",
             f"--output={chroot_output_file}",
         ],
@@ -133,23 +134,9 @@ def determine_upload_command(
     my_dir: Path, profile_path: Path
 ) -> pgo_utils.Command:
     """Returns a command that can be used to upload our PGO profile."""
-    # TODO(b/333462347): Ideally, this would just use
-    # `llvm_next.LLVM_NEXT_HASH` or similar, but that causes import errors.
-    # Invoke the script as a subprocess as a workaround.
-    llvm_next_hash = subprocess.run(
-        [
-            my_dir.parent / "llvm_tools" / "get_llvm_hash.py",
-            "--llvm_version=llvm-next",
-        ],
-        check=True,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        encoding="utf-8",
-    ).stdout.strip()
-
     upload_target = (
         "gs://chromeos-localmirror/distfiles/llvm-profdata-"
-        f"{llvm_next_hash}.xz"
+        f"{llvm_next.LLVM_NEXT_HASH}.xz"
     )
     return [
         "gsutil.py",

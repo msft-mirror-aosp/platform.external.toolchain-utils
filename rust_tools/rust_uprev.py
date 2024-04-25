@@ -101,7 +101,7 @@ CROS_RUSTC_ECLASS = EBUILD_PREFIX / "eclass/cros-rustc.eclass"
 GPG_KEYSERVER = "keyserver.ubuntu.com"
 PGO_RUST = Path(
     "/mnt/host/source"
-    "/src/third_party/toolchain-utils/pgo_tools_rust/pgo_rust.py"
+    "/src/third_party/toolchain-utils/py/bin/pgo_tools_rust/pgo_rust.py"
 )
 RUST_PATH = Path(EBUILD_PREFIX, "dev-lang", "rust")
 # This is the signing key used by upstream Rust as of 2023-08-09.

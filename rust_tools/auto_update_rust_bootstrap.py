@@ -779,6 +779,7 @@ def main(argv: List[str]):
     )
 
     my_dir = Path(__file__).parent.resolve()
+    py_bin_dir = my_dir.parent / "py" / "bin"
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -811,7 +812,9 @@ def main(argv: List[str]):
         upload = True
 
     rust_bootstrap_dir = opts.chromiumos_overlay / "dev-lang/rust-bootstrap"
-    copy_rust_bootstrap_script = my_dir / "copy_rust_bootstrap.py"
+    copy_rust_bootstrap_script = (
+        py_bin_dir / "rust_tools" / "copy_rust_bootstrap.py"
+    )
 
     had_recoverable_error = False
     # Ensure prebuilts are up to date first, since it allows
