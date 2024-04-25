@@ -24,8 +24,11 @@ fi
 #   optionally enable it, but it's realistically very unlikely to break.
 # - debug_info_test/debug_info_test.py is ignored, since that's the name of
 #   a non-test script, and pytest is confused by this.
+# - py/ just has symlinks to stuff back in toolchain-utils; no point in
+#   checking that.
 PYTHONPATH="${PWD}:${PYTHONPATH:-}" pytest \
   --ignore=debug_info_test/debug_info_test.py \
   --ignore=llvm_tools/llvm-project-copy \
   --ignore=llvm_tools/git_llvm_rev_test.py \
+  --ignore=py/ \
   "$@"
