@@ -8,7 +8,7 @@ import io
 import json
 import unittest
 
-import benchmark_pgo_profiles
+from pgo_tools import benchmark_pgo_profiles
 
 
 class Test(unittest.TestCase):

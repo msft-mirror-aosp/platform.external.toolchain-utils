@@ -15,7 +15,7 @@ import subprocess
 import sys
 from typing import List, Union
 
-import git_llvm_rev
+from llvm_tools import git_llvm_rev
 
 
 @dataclasses.dataclass(frozen=True)

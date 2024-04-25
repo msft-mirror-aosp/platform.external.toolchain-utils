@@ -12,8 +12,8 @@ from typing import Any, Dict, Generator, List, Set
 import unittest
 from unittest import mock
 
-import get_patch
-import git_llvm_rev
+from llvm_tools import get_patch
+from llvm_tools import git_llvm_rev
 
 
 COMMIT_FIXTURES: List[Dict[str, Any]] = [

@@ -25,7 +25,7 @@ import subprocess
 import sys
 from typing import Optional, Text
 
-import chroot
+from llvm_tools import chroot
 
 
 # Git Bisection exit codes

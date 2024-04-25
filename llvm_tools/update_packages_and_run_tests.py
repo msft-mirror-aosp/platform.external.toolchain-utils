@@ -21,13 +21,13 @@ import sys
 import textwrap
 from typing import List, Optional
 
-import atomic_write_file
-import chroot
 from cros_utils import git_utils
-import get_llvm_hash
-import llvm_next
-import manifest_utils
-import upload_llvm_testing_helper_cl
+from llvm_tools import atomic_write_file
+from llvm_tools import chroot
+from llvm_tools import get_llvm_hash
+from llvm_tools import llvm_next
+from llvm_tools import manifest_utils
+from llvm_tools import upload_llvm_testing_helper_cl
 
 
 def resolve_llvm_sha(sha_or_special: str) -> str:

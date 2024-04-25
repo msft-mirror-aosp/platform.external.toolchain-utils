@@ -29,7 +29,7 @@ import sys
 import textwrap
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
-import copy_rust_bootstrap
+from rust_tools import copy_rust_bootstrap
 
 
 # The bug to tag in all commit messages.

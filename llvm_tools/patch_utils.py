@@ -24,7 +24,7 @@ from typing import (
     Union,
 )
 
-import atomic_write_file
+from llvm_tools import atomic_write_file
 
 
 APPLIED_RE = re.compile(r"^Applying: (.+) \(#(\d+)\)$")

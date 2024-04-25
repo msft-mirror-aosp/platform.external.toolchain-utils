@@ -12,7 +12,7 @@ on toolchain projects (llvm-project, etc.) which are public.
 import unittest
 from xml.etree import ElementTree
 
-import manifest_utils
+from llvm_tools import manifest_utils
 
 
 MANIFEST_FIXTURE = """<?xml version="1.0" encoding="UTF-8"?>

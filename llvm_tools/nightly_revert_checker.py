@@ -23,10 +23,10 @@ from typing import Any, Callable, Dict, List, NamedTuple, Set, Tuple
 
 from cros_utils import email_sender
 from cros_utils import tiny_render
-import get_llvm_hash
-import get_upstream_patch
-import git_llvm_rev
-import revert_checker
+from llvm_tools import get_llvm_hash
+from llvm_tools import get_upstream_patch
+from llvm_tools import git_llvm_rev
+from llvm_tools import revert_checker
 
 
 ONE_DAY_SECS = 24 * 60 * 60

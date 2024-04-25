@@ -8,9 +8,9 @@
 from typing import Iterable
 import unittest
 
-import bb_add
-import cros_cls
-import llvm_next
+from llvm_tools import bb_add
+from llvm_tools import cros_cls
+from llvm_tools import llvm_next
 
 
 _ARBITRARY_BOTS = ["chromeos/cq/amd64-generic-cq"]

@@ -7,8 +7,8 @@
 
 import unittest
 
-import clean_up_old_llvm_patches
-import test_helpers
+from llvm_tools import clean_up_old_llvm_patches
+from llvm_tools import test_helpers
 
 
 ANDROID_VERSION_PY_EXAMPLE = """

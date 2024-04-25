@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-import update_packages_and_run_tests
+from llvm_tools import update_packages_and_run_tests
 
 
 class Test(unittest.TestCase):

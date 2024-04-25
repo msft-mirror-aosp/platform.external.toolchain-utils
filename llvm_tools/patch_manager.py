@@ -12,10 +12,10 @@ from pathlib import Path
 import sys
 from typing import Callable, Iterable, List, Optional, Tuple
 
-import failure_modes
-import get_llvm_hash
-import patch_utils
-import subprocess_helpers
+from llvm_tools import failure_modes
+from llvm_tools import get_llvm_hash
+from llvm_tools import patch_utils
+from llvm_tools import subprocess_helpers
 
 
 class GitBisectionCode(enum.IntEnum):

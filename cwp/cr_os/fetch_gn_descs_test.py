@@ -10,7 +10,7 @@
 import io
 import unittest
 
-import fetch_gn_descs
+from cwp.cr_os import fetch_gn_descs
 
 # pylint: disable=protected-access
 

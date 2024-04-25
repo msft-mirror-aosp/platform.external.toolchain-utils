@@ -14,7 +14,7 @@ import json
 import unittest
 import unittest.mock as mock
 
-import cros_utils.email_sender as email_sender
+from cros_utils import email_sender
 
 
 class Test(unittest.TestCase):

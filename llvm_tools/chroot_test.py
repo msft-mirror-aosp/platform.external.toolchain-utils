@@ -9,7 +9,7 @@ import subprocess
 import unittest
 from unittest import mock
 
-import chroot
+from llvm_tools import chroot
 
 
 # These are unittests; protected access is OK to a point.

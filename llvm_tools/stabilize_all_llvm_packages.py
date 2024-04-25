@@ -24,10 +24,10 @@ import subprocess
 import sys
 from typing import List
 
-import chroot
-import get_upstream_patch
-import manifest_utils
-import patch_utils
+from llvm_tools import chroot
+from llvm_tools import get_upstream_patch
+from llvm_tools import manifest_utils
+from llvm_tools import patch_utils
 
 
 CROS_SOURCE_ROOT = Path("/mnt/host/source")

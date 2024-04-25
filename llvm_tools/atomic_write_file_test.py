@@ -9,7 +9,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-import atomic_write_file
+from llvm_tools import atomic_write_file
 
 
 class TestAtomicWrite(unittest.TestCase):

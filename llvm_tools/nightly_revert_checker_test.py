@@ -10,9 +10,9 @@ import unittest
 from unittest import mock
 
 from cros_utils import tiny_render
-import get_upstream_patch
-import nightly_revert_checker
-import revert_checker
+from llvm_tools import get_upstream_patch
+from llvm_tools import nightly_revert_checker
+from llvm_tools import revert_checker
 
 
 # pylint: disable=protected-access

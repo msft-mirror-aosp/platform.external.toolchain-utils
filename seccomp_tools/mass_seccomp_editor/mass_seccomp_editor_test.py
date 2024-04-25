@@ -9,7 +9,7 @@
 import unittest
 from unittest import mock
 
-import mass_seccomp_editor
+from seccomp_tools.mass_seccomp_editor import mass_seccomp_editor
 
 BASE_SECCOMP_CONTENTS = """
 fstat: 1

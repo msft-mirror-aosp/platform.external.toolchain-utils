@@ -17,7 +17,7 @@ import textwrap
 from typing import List, Optional
 
 from cros_utils import git_utils
-import patch_utils
+from llvm_tools import patch_utils
 
 
 # The chromiumos-overlay packages to GC patches in.

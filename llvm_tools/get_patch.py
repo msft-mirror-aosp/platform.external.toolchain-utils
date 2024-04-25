@@ -27,9 +27,9 @@ import textwrap
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 from urllib import request
 
-import atomic_write_file
-import git_llvm_rev
-import patch_utils
+from llvm_tools import atomic_write_file
+from llvm_tools import git_llvm_rev
+from llvm_tools import patch_utils
 
 
 CHROMIUMOS_OVERLAY_PATH = Path("src/third_party/chromiumos-overlay")

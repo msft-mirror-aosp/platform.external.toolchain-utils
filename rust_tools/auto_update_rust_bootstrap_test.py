@@ -13,7 +13,7 @@ import textwrap
 import unittest
 from unittest import mock
 
-import auto_update_rust_bootstrap
+from rust_tools import auto_update_rust_bootstrap
 
 
 _GIT_PUSH_OUTPUT = r"""

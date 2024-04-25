@@ -9,8 +9,8 @@ import os
 import subprocess
 import sys
 
-import get_llvm_hash
-import git_llvm_rev
+from llvm_tools import get_llvm_hash
+from llvm_tools import git_llvm_rev
 
 
 def get_location() -> str:

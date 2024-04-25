@@ -9,7 +9,7 @@ import textwrap
 import unittest
 from unittest import mock
 
-import check_clang_diags
+from llvm_tools import check_clang_diags
 from cros_utils import bugs
 
 

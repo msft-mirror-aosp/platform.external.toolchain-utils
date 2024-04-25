@@ -26,7 +26,7 @@ import sys
 import tempfile
 from typing import List, Optional, Tuple
 
-import cros_cls
+from llvm_tools import cros_cls
 
 
 @dataclasses.dataclass(frozen=True)

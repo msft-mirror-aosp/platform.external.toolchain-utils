@@ -14,7 +14,7 @@ import textwrap
 import unittest
 from unittest import mock
 
-import update_kernel_afdo
+from afdo_tools import update_kernel_afdo
 
 
 class Test(unittest.TestCase):

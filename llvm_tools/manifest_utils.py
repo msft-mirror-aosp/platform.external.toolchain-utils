@@ -14,7 +14,7 @@ import subprocess
 from typing import List, Optional, Union
 from xml.etree import ElementTree
 
-import atomic_write_file
+from llvm_tools import atomic_write_file
 
 
 LLVM_PROJECT_PATH = "src/third_party/llvm-project"

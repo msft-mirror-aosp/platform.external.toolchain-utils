@@ -16,11 +16,11 @@ import subprocess
 import sys
 import typing as t
 
-import chroot
-import get_llvm_hash
-import git
-import git_llvm_rev
-import patch_utils
+from llvm_tools import chroot
+from llvm_tools import get_llvm_hash
+from llvm_tools import git
+from llvm_tools import git_llvm_rev
+from llvm_tools import patch_utils
 
 
 __DOC_EPILOGUE = """

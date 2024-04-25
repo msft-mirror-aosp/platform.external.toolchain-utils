@@ -6,7 +6,7 @@
 
 from typing import Iterable
 
-import cros_cls
+from llvm_tools import cros_cls
 
 
 LLVM_NEXT_HASH = "3b5e7c83a6e226d5bd7ed2e9b67449b64812074c"

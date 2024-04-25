@@ -14,8 +14,8 @@ from typing import Dict
 import unittest
 from unittest import mock
 
-import test_helpers
-import werror_logs
+from llvm_tools import test_helpers
+from llvm_tools import werror_logs
 
 
 class SilenceLogs:

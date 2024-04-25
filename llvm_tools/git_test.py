@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-import git
+from llvm_tools import git
 
 
 # These are unittests; protected access is OK to a point.

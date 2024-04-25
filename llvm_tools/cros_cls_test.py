@@ -7,7 +7,7 @@
 
 import unittest
 
-import cros_cls
+from llvm_tools import cros_cls
 
 
 class TestChangeListURL(unittest.TestCase):

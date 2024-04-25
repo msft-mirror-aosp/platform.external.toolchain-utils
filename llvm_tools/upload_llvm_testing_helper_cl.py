@@ -16,9 +16,9 @@ from pathlib import Path
 import sys
 from typing import List
 
-import chroot
 from cros_utils import git_utils
-import patch_utils
+from llvm_tools import chroot
+from llvm_tools import patch_utils
 
 
 # Text to add to the bottom of ebuild hooks.

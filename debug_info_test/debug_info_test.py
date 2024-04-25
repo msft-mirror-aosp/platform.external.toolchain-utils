@@ -11,9 +11,9 @@ import os
 import subprocess
 import sys
 
-import check_cus
-import check_exist
-import check_icf
+from debug_info_test import check_cus
+from debug_info_test import check_exist
+from debug_info_test import check_icf
 
 
 elf_checks = [

@@ -14,7 +14,7 @@ import unittest
 import unittest.mock
 
 from cros_utils import tiny_render
-import rust_watch
+from rust_tools import rust_watch
 
 
 class Test(unittest.TestCase):

@@ -7,9 +7,9 @@
 
 import unittest
 
-import patch_utils
-import test_helpers
-import upload_llvm_testing_helper_cl
+from llvm_tools import patch_utils
+from llvm_tools import test_helpers
+from llvm_tools import upload_llvm_testing_helper_cl
 
 
 class Test(test_helpers.TempDirTestCase):

@@ -13,8 +13,8 @@ import subprocess
 import unittest
 from unittest import mock
 
-import patch_utils as pu
-import test_helpers
+from llvm_tools import patch_utils as pu
+from llvm_tools import test_helpers
 
 
 class TestPatchUtils(test_helpers.TempDirTestCase):

@@ -12,9 +12,9 @@ from typing import Callable
 import unittest
 from unittest import mock
 
-import atomic_write_file
-import patch_manager
-import patch_utils
+from llvm_tools import atomic_write_file
+from llvm_tools import patch_manager
+from llvm_tools import patch_utils
 
 
 class PatchManagerTest(unittest.TestCase):

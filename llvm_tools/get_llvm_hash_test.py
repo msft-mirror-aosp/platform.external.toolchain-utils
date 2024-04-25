@@ -12,10 +12,10 @@ import textwrap
 import unittest
 from unittest import mock
 
-import get_llvm_hash
-import llvm_next
-import subprocess_helpers
-import test_helpers
+from llvm_tools import get_llvm_hash
+from llvm_tools import llvm_next
+from llvm_tools import subprocess_helpers
+from llvm_tools import test_helpers
 
 
 # We grab protected stuff from get_llvm_hash. That's OK.

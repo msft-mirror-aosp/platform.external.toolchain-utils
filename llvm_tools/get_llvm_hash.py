@@ -17,11 +17,11 @@ import sys
 import tempfile
 from typing import Iterator, Optional, Tuple, Union
 
-import chroot
-import git_llvm_rev
-import llvm_next
-import manifest_utils
-import subprocess_helpers
+from llvm_tools import chroot
+from llvm_tools import git_llvm_rev
+from llvm_tools import llvm_next
+from llvm_tools import manifest_utils
+from llvm_tools import subprocess_helpers
 
 
 _LLVM_GIT_URL = (

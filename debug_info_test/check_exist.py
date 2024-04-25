@@ -9,7 +9,7 @@
 import os
 import subprocess
 
-from allowlist import is_allowlisted
+from debug_info_test.allowlist import is_allowlisted
 
 
 def check_debug_info(dso_path, readelf_content):

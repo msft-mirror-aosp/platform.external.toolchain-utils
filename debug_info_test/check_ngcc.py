@@ -6,7 +6,7 @@
 """Check whether the compile unit is not built by gcc."""
 
 
-from allowlist import is_allowlisted
+from debug_info_test.allowlist import is_allowlisted
 
 
 def not_by_gcc(dso_path, producer, comp_path):

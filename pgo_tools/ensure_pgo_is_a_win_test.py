@@ -8,8 +8,8 @@
 from typing import Tuple
 import unittest
 
-import benchmark_pgo_profiles
-import ensure_pgo_is_a_win
+from pgo_tools import benchmark_pgo_profiles
+from pgo_tools import ensure_pgo_is_a_win
 
 
 def synthesize_run_data(

@@ -21,8 +21,8 @@ import subprocess
 import sys
 from typing import List, Set, TextIO
 
-import get_upstream_patch
-import revert_checker
+from llvm_tools import get_upstream_patch
+from llvm_tools import revert_checker
 
 
 @dataclasses.dataclass(frozen=True)

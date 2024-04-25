@@ -13,10 +13,10 @@ import shlex
 import sys
 from typing import Iterable, List
 
-import chroot
-import cros_cls
-import get_llvm_hash
-import llvm_next
+from llvm_tools import chroot
+from llvm_tools import cros_cls
+from llvm_tools import get_llvm_hash
+from llvm_tools import llvm_next
 
 
 DEFAULT_LLVM_NEXT_BUILDERS = ("chromeos/staging/staging-build-chromiumos-sdk",)

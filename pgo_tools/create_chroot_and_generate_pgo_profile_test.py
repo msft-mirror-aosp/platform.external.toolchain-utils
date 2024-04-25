@@ -12,7 +12,7 @@ import unittest
 
 # This script's name makes lines exceed 80 chars if it's not imported `as`
 # something shorter.
-import create_chroot_and_generate_pgo_profile as create_chroot_etc
+from pgo_tools import create_chroot_and_generate_pgo_profile as create_chroot_etc
 
 
 EXAMPLE_SDK_VERSION_CONF_FILE = r"""

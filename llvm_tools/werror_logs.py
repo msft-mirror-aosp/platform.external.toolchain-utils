@@ -41,7 +41,7 @@ import tempfile
 import threading
 from typing import Any, Counter, DefaultDict, Dict, IO, Iterable, List, Optional
 
-import cros_cls
+from llvm_tools import cros_cls
 
 
 _DEFAULT_FETCH_DIRECTORY = Path("/tmp/werror_logs")

@@ -7,7 +7,7 @@
 
 import unittest
 
-import llvm_next
+from llvm_tools import llvm_next
 
 
 class Test(unittest.TestCase):

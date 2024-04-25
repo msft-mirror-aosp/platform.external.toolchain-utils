@@ -7,8 +7,8 @@
 
 import unittest
 
-import git_llvm_rev
-import llvm_project
+from llvm_tools import git_llvm_rev
+from llvm_tools import llvm_project
 
 
 def get_llvm_config() -> git_llvm_rev.LLVMConfig:
