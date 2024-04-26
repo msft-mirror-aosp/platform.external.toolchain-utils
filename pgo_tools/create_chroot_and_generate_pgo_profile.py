@@ -254,10 +254,13 @@ def main(argv: List[str]):
 
         compressed_profile_path = compress_pgo_profile(profile_path)
         upload_command = determine_upload_command(compressed_profile_path, rev)
+        friendly_upload_command = shlex.join(str(x) for x in upload_command)
         if opts.upload:
+            logging.info(
+                "Running `%s` to upload the profile...", friendly_upload_command
+            )
             pgo_utils.run(upload_command)
         else:
-            friendly_upload_command = shlex.join(str(x) for x in upload_command)
             logging.info(
                 "To upload the profile, run %r in %r",
                 friendly_upload_command,
