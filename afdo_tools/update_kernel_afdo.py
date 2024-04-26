@@ -76,11 +76,18 @@ class KernelVersion:
         return cls(major=int(m.group(1)), minor=int(m.group(2)))
 
 
+ARM_KERNEL_5_15 = (Arch.ARM, KernelVersion(5, 15))
+
 # Versions that rolling should be skipped on, for one reason or another.
 SKIPPED_VERSIONS: Dict[int, Iterable[Tuple[Arch, KernelVersion]]] = {
     # Kernel tracing was disabled on ARM in 114, b/275560674
-    114: ((Arch.ARM, KernelVersion(5, 15)),),
-    115: ((Arch.ARM, KernelVersion(5, 15)),),
+    114: (ARM_KERNEL_5_15,),
+    115: (ARM_KERNEL_5_15,),
+    # Kernel profiles are no longer generated as of M126. Don't complain about
+    # them.
+    124: (ARM_KERNEL_5_15,),
+    125: (ARM_KERNEL_5_15,),
+    126: (ARM_KERNEL_5_15,),
 }
 
 
