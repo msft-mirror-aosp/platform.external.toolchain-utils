@@ -11,9 +11,9 @@ from pathlib import Path
 import re
 import shlex
 import subprocess
-import sys
-from typing import List, Union
+from typing import List, Optional, Union
 
+from llvm_tools import cros_llvm_repo
 from llvm_tools import git_llvm_rev
 
 
@@ -108,6 +108,39 @@ def write_patch_application_stamp(
     )
     stamp_path.parent.mkdir(parents=True, exist_ok=True)
     stamp_path.touch()
+
+
+def try_rev_parse(git_dir: Path, sha: str) -> Optional[str]:
+    """Returns the `git rev-parse` output for `sha`.
+
+    Returns:
+        None if `sha` can't be resolved, or isn't an object in `git_dir`.
+    """
+    result = subprocess.run(
+        # Note that the `^{object}` suffix is needed so `git rev-parse
+        # --verify` actually looks for an object with the given SHA.
+        ["git", "rev-parse", "--verify", sha + "^{object}"],
+        check=False,
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        encoding="utf-8",
+    )
+    if result.returncode:
+        return None
+    return result.stdout.strip()
+
+
+def fetch_and_resolve_sha(llvm_project_dir: Path, sha: str) -> str:
+    """Runs `git rev-parse` on `sha`. If that fails, tries fetching the repo."""
+    if r := try_rev_parse(llvm_project_dir, sha):
+        return r
+    logging.info("Couldn't resolve SHA %s locally; fetching upstream...", sha)
+    cros_llvm_repo.fetch_upstream(llvm_project_dir)
+    if r := try_rev_parse(llvm_project_dir, sha):
+        return r
+    raise ValueError(f"SHA {sha} can't be resolved in {llvm_project_dir}")
 
 
 def main(argv: List[str]) -> None:
@@ -213,8 +246,9 @@ def main(argv: List[str]) -> None:
         )
 
     if opts.checkout is not None:
+        sha = fetch_and_resolve_sha(opts.llvm_dir.path, opts.checkout)
         git_housekeeping_commands.append(
-            ["git", "checkout", "--quiet", opts.checkout],
+            ["git", "checkout", "--quiet", sha],
         )
 
     for cmd in git_housekeeping_commands:
