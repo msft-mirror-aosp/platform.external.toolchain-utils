@@ -78,10 +78,12 @@ def create_fresh_chroot(
 
 
 def generate_pgo_profile(
+    *,
     repo_root: Path,
     chroot_info: ChrootInfo,
     chroot_output_file: Path,
     sha: str,
+    clean_llvm: bool,
 ):
     """Generates a PGO profile to `chroot_output_file`."""
     cros_sdk: pgo_utils.Command = [
@@ -94,13 +96,15 @@ def generate_pgo_profile(
     toolchain_utils_bin = (
         "/mnt/host/source/src/third_party/toolchain-utils/py/bin"
     )
+    setup_for_workon_cmd = cros_sdk + [
+        f"{toolchain_utils_bin}/llvm_tools/setup_for_workon.py",
+        f"--checkout={sha}",
+        "--package=sys-devel/llvm",
+    ]
+    if clean_llvm:
+        setup_for_workon_cmd.append("--clean-llvm")
     pgo_utils.run(
-        cros_sdk
-        + [
-            f"{toolchain_utils_bin}/llvm_tools/setup_for_workon.py",
-            f"--checkout={sha}",
-            "--package=sys-devel/llvm",
-        ],
+        setup_for_workon_cmd,
         cwd=repo_root,
     )
     pgo_utils.run(
@@ -173,8 +177,13 @@ def main(argv: List[str]):
         "--chroot",
         default="llvm-next-pgo-chroot",
         help="""
-        Name of the chroot to create. Will be clobbered if it exists already.
+        Name of the chroot to create. Will be recreated if it exists already.
         """,
+    )
+    parser.add_argument(
+        "--clean-llvm",
+        action="store_true",
+        help="Allow the overwriting of any local changes to LLVM.",
     )
     parser.add_argument(
         "--rev",
@@ -185,7 +194,7 @@ def main(argv: List[str]):
         "--out-dir",
         default="llvm-next-pgo-chroot_out",
         help="""
-        Name of the out/ directory to use. Will be clobbered if it exists
+        Name of the out/ directory to use. Will be recreated if it exists
         already.
         """,
     )
@@ -231,7 +240,11 @@ def main(argv: List[str]):
         create_fresh_chroot(repo_root, bootstrap_chroot_info)
         chroot_profile_path = Path("/tmp/llvm-next-pgo-profile.prof")
         generate_pgo_profile(
-            repo_root, bootstrap_chroot_info, chroot_profile_path, sha
+            repo_root=repo_root,
+            chroot_info=bootstrap_chroot_info,
+            chroot_output_file=chroot_profile_path,
+            sha=sha,
+            clean_llvm=opts.clean_llvm,
         )
         profile_path = translate_chroot_path_to_out_of_chroot(
             repo_root, chroot_profile_path, bootstrap_chroot_info
