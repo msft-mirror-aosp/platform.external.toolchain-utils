@@ -114,6 +114,15 @@ def parse_args(my_dir: Path, argv: List[str]) -> argparse.Namespace:
         action="store_true",
         help="Don't actually upload CLs, or generate new benchmark profiles.",
     )
+    parser.add_argument(
+        "--force-llvm-next-pgo-generation",
+        action="store_true",
+        help="""
+        Skip checks to see if LLVM profiles already exist. If a profile already
+        exists in gs://, these will not be uploaded. This primarily exists so
+        we can continuously test the PGO profile pipeline.
+        """,
+    )
     opts = parser.parse_args(argv)
 
     if not opts.chromiumos_tree:
@@ -127,14 +136,22 @@ def maybe_upload_new_llvm_next_profile(
     dry_run: bool,
     toolchain_utils: Path,
     clobber_llvm: bool,
+    force_generation: bool,
 ) -> None:
     llvm_next_rev = llvm_next.LLVM_NEXT_REV
+    upload_profile = True
     if llvm_next_rev in profile_cache:
+        if not force_generation:
+            logging.info(
+                "llvm-next profile already exists in gs://; no need to make a "
+                "new one"
+            )
+            return
         logging.info(
-            "llvm-next profile already exists in gs://; no need to make a "
-            "new one"
+            "llvm-next profile already exists in gs://; forcing generation "
+            "without upload."
         )
-        return
+        upload_profile = False
 
     create_script = (
         toolchain_utils
@@ -147,8 +164,14 @@ def maybe_upload_new_llvm_next_profile(
     cmd: pgo_utils.Command = [
         create_script,
         f"--rev={llvm_next_rev}",
-        "--upload",
     ]
+    logging.info(
+        "Generating %s a PGO profile for LLVM r%d",
+        "and uploading" if upload_profile else "without uploading",
+        llvm_next_rev,
+    )
+    if upload_profile:
+        cmd.append("--upload")
     if clobber_llvm:
         cmd.append("--clobber-llvm")
 
@@ -163,7 +186,9 @@ def maybe_upload_new_llvm_next_profile(
         return
 
     pgo_utils.run(cmd)
-    profile_cache.insert_rev(llvm_next_rev)
+
+    if upload_profile:
+        profile_cache.insert_rev(llvm_next_rev)
 
 
 def overwrite_llvm_pgo_listing(
@@ -285,6 +310,7 @@ def main(argv: List[str]) -> None:
         dry_run=dry_run,
         toolchain_utils=my_dir.parent,
         clobber_llvm=opts.clobber_llvm,
+        force_generation=opts.force_llvm_next_pgo_generation,
     )
 
     # NOTE: `in_dir=chromeos_root` here is critical, since this function needs
