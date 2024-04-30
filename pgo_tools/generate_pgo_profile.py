@@ -15,6 +15,7 @@ Note that this script has a few (perhaps surprising) side-effects:
 """
 
 import argparse
+import contextlib
 import dataclasses
 import logging
 import os
@@ -25,7 +26,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
-from typing import Dict, FrozenSet, List, Optional
+from typing import Dict, FrozenSet, Generator, List, Optional
 
 from pgo_tools import pgo_utils
 
@@ -73,14 +74,62 @@ def ensure_llvm_binpkg_exists() -> bool:
     return True
 
 
-def restore_llvm_binpkg():
+class CrosWorkonState:
+    """Manages cros-workon state for a given host package."""
+
+    @staticmethod
+    def _is_cros_workoned(pkg: str) -> bool:
+        stdout = pgo_utils.run(
+            ["cros-workon", "--host", "list", pkg],
+            stdout=subprocess.PIPE,
+        ).stdout
+        # If `cros-workon --host list ${pkg}` printed anything other than
+        # spaces, it means that `pkg` is being worked on.
+        return bool(stdout.strip())
+
+    def __init__(self, pkg: str):
+        self.pkg = pkg
+        self.is_workoned = self._is_cros_workoned(pkg)
+
+    def set_workon(self, value: bool) -> None:
+        if self.is_workoned == value:
+            return
+
+        verb = "start" if value else "stop"
+        logging.info("%s'ing cros-workon for %s", verb, self.pkg)
+        pgo_utils.run(["cros-workon", "--host", verb, self.pkg])
+        self.is_workoned = value
+
+    @contextlib.contextmanager
+    def temporarily_set_workon(
+        self, value: bool
+    ) -> Generator[None, None, None]:
+        initial_workon_bit = self.is_workoned
+        self.set_workon(value)
+        try:
+            yield
+        finally:
+            self.set_workon(initial_workon_bit)
+
+
+def restore_llvm_binpkg() -> None:
     """Installs the binpkg created by ensure_llvm_binpkg_exists."""
     logging.info("Restoring non-PGO'ed LLVM installation")
     pkg = Path(SAVED_LLVM_BINPKG_STAMP.read_text(encoding="utf-8"))
     assert (
         pkg.exists()
     ), f"Non-PGO'ed binpkg at {pkg} does not exist. Can't restore"
-    pgo_utils.run(pgo_utils.generate_quickpkg_restoration_command(pkg))
+
+    # If:
+    # - the binpkg that was built was of 9999, and we're not 9999, we need to
+    #   cros-workon, so the package is considered viable
+    # - the binpkg isn't 9999, but we've `cros-workon`'ed llvm, we need to
+    #   temporarily disable the cros-workon, since `package.mask` will block
+    #   the binpkg's installation.
+    llvm_workon_state = CrosWorkonState("sys-devel/llvm")
+    binpkg_is_cros_workon = "-9999" in pkg.name
+    with llvm_workon_state.temporarily_set_workon(binpkg_is_cros_workon):
+        pgo_utils.run(pgo_utils.generate_quickpkg_restoration_command(pkg))
 
 
 def find_missing_cross_libs() -> FrozenSet[str]:
