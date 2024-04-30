@@ -10,16 +10,14 @@ Do not run it inside of a chroot. It establishes a chroot of its own.
 import argparse
 import dataclasses
 import logging
-import os
 from pathlib import Path
 import re
 import shlex
 import shutil
-import subprocess
-import sys
 from typing import List
 
-from llvm_tools import llvm_next
+from llvm_tools import chroot
+from llvm_tools import get_llvm_hash
 from pgo_tools import pgo_utils
 
 
@@ -41,18 +39,6 @@ class ChrootInfo:
     chroot_name: str
     out_dir_name: str
     sdk_version: str
-
-
-def find_repo_root(base_dir: Path) -> Path:
-    """Returns the root of the user's ChromeOS checkout."""
-    if (base_dir / ".repo").exists():
-        return base_dir
-
-    for parent in base_dir.parents:
-        if (parent / ".repo").exists():
-            return parent
-
-    raise ValueError(f"No repo found above {base_dir}")
 
 
 def detect_bootstrap_sdk_version(repo_root: Path) -> str:
@@ -95,17 +81,42 @@ def generate_pgo_profile(
     repo_root: Path,
     chroot_info: ChrootInfo,
     chroot_output_file: Path,
+    sha: str,
 ):
     """Generates a PGO profile to `chroot_output_file`."""
+    cros_sdk: pgo_utils.Command = [
+        "cros_sdk",
+        f"--chroot={chroot_info.chroot_name}",
+        f"--out-dir={chroot_info.out_dir_name}",
+        f"--sdk-version={chroot_info.sdk_version}",
+        "--",
+    ]
+    toolchain_utils_bin = (
+        "/mnt/host/source/src/third_party/toolchain-utils/py/bin"
+    )
     pgo_utils.run(
-        [
-            "cros_sdk",
-            f"--chroot={chroot_info.chroot_name}",
-            f"--out-dir={chroot_info.out_dir_name}",
-            f"--sdk-version={chroot_info.sdk_version}",
-            "--",
-            "/mnt/host/source/src/third_party/toolchain-utils/py/bin/pgo_tools/"
-            "generate_pgo_profile.py",
+        cros_sdk
+        + [
+            f"{toolchain_utils_bin}/llvm_tools/setup_for_workon.py",
+            f"--checkout={sha}",
+            "--package=sys-devel/llvm",
+        ],
+        cwd=repo_root,
+    )
+    pgo_utils.run(
+        cros_sdk
+        + [
+            "cros-workon",
+            "--host",
+            "start",
+            "sys-devel/llvm",
+        ],
+        cwd=repo_root,
+    )
+    pgo_utils.run(
+        cros_sdk
+        + [
+            f"{toolchain_utils_bin}/pgo_tools/generate_pgo_profile.py",
             f"--output={chroot_output_file}",
         ],
         cwd=repo_root,
@@ -130,13 +141,10 @@ def translate_chroot_path_to_out_of_chroot(
     return repo_root / info.out_dir_name / str(path)[1:]
 
 
-def determine_upload_command(
-    my_dir: Path, profile_path: Path
-) -> pgo_utils.Command:
+def determine_upload_command(profile_path: Path, rev: int) -> pgo_utils.Command:
     """Returns a command that can be used to upload our PGO profile."""
     upload_target = (
-        "gs://chromeos-localmirror/distfiles/llvm-profdata-"
-        f"{llvm_next.LLVM_NEXT_HASH}.xz"
+        f"gs://chromeos-localmirror/distfiles/llvm-profdata-r{rev}.xz"
     )
     return [
         "gsutil.py",
@@ -169,6 +177,11 @@ def main(argv: List[str]):
         """,
     )
     parser.add_argument(
+        "--rev",
+        type=int,
+        help="Revision of LLVM to generate a PGO profile for.",
+    )
+    parser.add_argument(
         "--out-dir",
         default="llvm-next-pgo-chroot_out",
         help="""
@@ -193,7 +206,19 @@ def main(argv: List[str]):
 
     pgo_utils.exit_if_in_chroot()
 
-    repo_root = find_repo_root(Path(os.getcwd()))
+    rev = opts.rev
+
+    # This translation can take a few seconds, so give a helpful log. If
+    # anything needs to be fetched, `get_llvm_hash` will also print a "this may
+    # take a while"-style message.
+    logging.info("Translating r%d to a git SHA", rev)
+    sha = get_llvm_hash.GetGitHashFrom(
+        get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools(),
+        rev,
+    )
+    logging.info("r%d == %s", rev, sha)
+
+    repo_root = chroot.FindChromeOSRootAbove(my_dir)
     logging.info("Repo root is %s", repo_root)
 
     logging.info("Creating new SDK")
@@ -206,7 +231,7 @@ def main(argv: List[str]):
         create_fresh_chroot(repo_root, bootstrap_chroot_info)
         chroot_profile_path = Path("/tmp/llvm-next-pgo-profile.prof")
         generate_pgo_profile(
-            repo_root, bootstrap_chroot_info, chroot_profile_path
+            repo_root, bootstrap_chroot_info, chroot_profile_path, sha
         )
         profile_path = translate_chroot_path_to_out_of_chroot(
             repo_root, chroot_profile_path, bootstrap_chroot_info
@@ -215,9 +240,7 @@ def main(argv: List[str]):
             shutil.copyfile(profile_path, opts.output)
 
         compressed_profile_path = compress_pgo_profile(profile_path)
-        upload_command = determine_upload_command(
-            my_dir, compressed_profile_path
-        )
+        upload_command = determine_upload_command(compressed_profile_path, rev)
         if opts.upload:
             pgo_utils.run(upload_command)
         else:
