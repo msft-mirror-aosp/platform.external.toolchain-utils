@@ -12,7 +12,6 @@ import logging
 import os
 from pathlib import Path
 import subprocess
-import sys
 import typing as t
 
 from llvm_tools import chroot
@@ -80,6 +79,7 @@ def add_patch(
     sha: str,
     package: str,
     platforms: t.Iterable[str],
+    skip_application_test: bool,
 ):
     """Gets the start and end intervals in 'json_file'.
 
@@ -96,6 +96,9 @@ def add_patch(
         is used.
         package: The LLVM project name this patch applies to.
         platforms: List of platforms this patch applies to.
+        skip_application_test: If True, no attempt will be made to apply the
+        patch. It's expected that a later step (e.g., the CQ) will try to apply
+        it.
 
     Raises:
         CherrypickError: A ValueError that highlights the cherry-pick has been
@@ -166,13 +169,14 @@ def add_patch(
         },
     }
 
-    with patch_utils.git_clean_context(Path(llvm_dir)):
-        validate_patch_application(
-            Path(llvm_dir),
-            start_version.number,
-            Path(patches_json_path),
-            patch_props,
-        )
+    if not skip_application_test:
+        with patch_utils.git_clean_context(Path(llvm_dir)):
+            validate_patch_application(
+                Path(llvm_dir),
+                start_version.number,
+                Path(patches_json_path),
+                patch_props,
+            )
 
     patches_json.append(patch_props)
 
@@ -238,6 +242,7 @@ def create_patch_for_packages(
     sha: str,
     llvm_dir: t.Union[Path, str],
     platforms: t.Iterable[str],
+    skip_application_test: bool,
 ):
     """Create a patch and add its metadata for each package"""
     for package, symlink in zip(packages, symlinks):
@@ -256,6 +261,7 @@ def create_patch_for_packages(
             sha,
             package,
             platforms=platforms,
+            skip_application_test=skip_application_test,
         )
 
 
@@ -294,6 +300,7 @@ def find_patches_and_make_cl(
     reviewers: t.Optional[t.List[str]],
     cc: t.Optional[t.List[str]],
     platforms: t.Iterable[str],
+    skip_application_test: bool,
 ):
     converted_patches = [
         _convert_patch(llvm_config, skip_dependencies, p) for p in patches
@@ -342,6 +349,7 @@ def find_patches_and_make_cl(
                 parsed_patch.sha,
                 llvm_config.dir,
                 platforms=platforms,
+                skip_application_test=skip_application_test,
             )
         except PatchApplicationError as e:
             if allow_failures:
@@ -463,6 +471,7 @@ def get_from_upstream(
     skip_dependencies: bool = False,
     reviewers: t.Optional[t.List[str]] = None,
     cc: t.Optional[t.List[str]] = None,
+    skip_application_test: bool = False,
 ):
     llvm_symlink = chroot.ConvertChrootPathsToAbsolutePaths(
         chromeos_path,
@@ -498,6 +507,7 @@ def get_from_upstream(
         reviewers=reviewers,
         cc=cc,
         allow_failures=allow_failures,
+        skip_application_test=skip_application_test,
     )
 
     logging.info("Complete.")

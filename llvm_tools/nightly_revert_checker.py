@@ -335,20 +335,21 @@ def do_cherrypick(
             continue
         seen.add(revert_info.friendly_name)
         for sha, reverted_sha in revert_info.new_reverts:
-            try:
-                # We upload reverts for all platforms by default, since there's
-                # no real reason for them to be CrOS-specific.
-                get_upstream_patch.get_from_upstream(
-                    chroot_path=chroot_path,
-                    create_cl=True,
-                    start_sha=reverted_sha,
-                    patches=[sha],
-                    reviewers=reviewers,
-                    cc=cc,
-                    platforms=(),
-                )
-            except get_upstream_patch.CherrypickError as e:
-                logging.info("%s, skipping...", str(e))
+            # We upload reverts for all platforms by default, since there's
+            # no real reason for them to be CrOS-specific.
+            get_upstream_patch.get_from_upstream(
+                chroot_path=chroot_path,
+                create_cl=True,
+                start_sha=reverted_sha,
+                patches=[sha],
+                reviewers=reviewers,
+                cc=cc,
+                platforms=(),
+                # Skip testing for whether the patch applies, since this script
+                # is much less capable of handling merge conflicts than SWEs
+                # are.
+                skip_application_test=True,
+            )
 
     maybe_email_about_stale_heads(
         new_state,

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -144,30 +143,6 @@ class Test(unittest.TestCase):
         find_reverts.return_value = [
             revert_checker.Revert("12345abcdef", "fedcba54321")
         ]
-        nightly_revert_checker.do_cherrypick(
-            chroot_path="/path/to/chroot",
-            llvm_dir="/path/to/llvm",
-            repository="repository_name",
-            interesting_shas=[("12345abcdef", "fedcba54321")],
-            state=nightly_revert_checker.State(),
-            reviewers=["meow@chromium.org"],
-            cc=["purr@chromium.org"],
-        )
-
-        do_cherrypick.assert_called_once()
-        find_reverts.assert_called_once()
-
-    @mock.patch.object(revert_checker, "find_reverts")
-    @mock.patch.object(get_upstream_patch, "get_from_upstream")
-    def test_do_cherrypick_handles_cherrypick_error(
-        self, do_cherrypick, find_reverts
-    ):
-        find_reverts.return_value = [
-            revert_checker.Revert("12345abcdef", "fedcba54321")
-        ]
-        do_cherrypick.side_effect = get_upstream_patch.CherrypickError(
-            "Patch at 12345abcdef already exists in PATCHES.json"
-        )
         nightly_revert_checker.do_cherrypick(
             chroot_path="/path/to/chroot",
             llvm_dir="/path/to/llvm",
