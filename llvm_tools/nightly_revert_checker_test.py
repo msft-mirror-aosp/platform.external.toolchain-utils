@@ -144,7 +144,7 @@ class Test(unittest.TestCase):
             revert_checker.Revert("12345abcdef", "fedcba54321")
         ]
         nightly_revert_checker.do_cherrypick(
-            chroot_path="/path/to/chroot",
+            chromeos_path="/path/to/chroot",
             llvm_dir="/path/to/llvm",
             repository="repository_name",
             interesting_shas=[("12345abcdef", "fedcba54321")],

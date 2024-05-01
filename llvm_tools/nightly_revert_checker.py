@@ -16,7 +16,6 @@ import os
 from pathlib import Path
 import pprint
 import subprocess
-import sys
 import time
 from typing import Any, Callable, Dict, List, NamedTuple, Set, Tuple
 
@@ -311,7 +310,7 @@ def locate_new_reverts_across_shas(
 
 
 def do_cherrypick(
-    chroot_path: str,
+    chromeos_path: str,
     llvm_dir: str,
     repository: str,
     interesting_shas: List[Tuple[str, str]],
@@ -338,7 +337,7 @@ def do_cherrypick(
             # We upload reverts for all platforms by default, since there's
             # no real reason for them to be CrOS-specific.
             get_upstream_patch.get_from_upstream(
-                chroot_path=chroot_path,
+                chromeos_path=chromeos_path,
                 create_cl=True,
                 start_sha=reverted_sha,
                 patches=[sha],
@@ -553,35 +552,6 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def find_chroot(
-    opts: argparse.Namespace, cc: List[str]
-) -> Tuple[str, List[Tuple[str, str]], _EmailRecipients]:
-    if opts.repository == "chromeos":
-        chroot_path = opts.chromeos_dir
-        return (
-            chroot_path,
-            _find_interesting_chromeos_shas(chroot_path),
-            _EmailRecipients(well_known=["mage"], direct=cc),
-        )
-    elif opts.repository == "android":
-        if opts.action == "cherry-pick":
-            raise RuntimeError(
-                "android doesn't currently support automatic cherry-picking."
-            )
-
-        chroot_path = opts.android_llvm_toolchain_dir
-        return (
-            chroot_path,
-            _find_interesting_android_shas(chroot_path),
-            _EmailRecipients(
-                well_known=[],
-                direct=["android-llvm-dev@google.com"] + cc,
-            ),
-        )
-    else:
-        raise ValueError(f"Unknown repository {opts.repository}")
-
-
 def main(argv: List[str]) -> int:
     opts = parse_args(argv)
 
@@ -598,7 +568,21 @@ def main(argv: List[str]) -> int:
     reviewers = opts.reviewers if opts.reviewers else []
     cc = opts.cc if opts.cc else []
 
-    chroot_path, interesting_shas, recipients = find_chroot(opts, cc)
+    if opts.repository == "chromeos":
+        chromeos_path = opts.chromeos_path
+        interesting_shas = _find_interesting_chromeos_shas(chromeos_path)
+        recipients = _EmailRecipients(well_known=["mage"], direct=cc)
+    elif opts.repository == "android":
+        interesting_shas = _find_interesting_android_shas(
+            opts.android_llvm_toolchain_dir
+        )
+        recipients = _EmailRecipients(
+            well_known=[],
+            direct=["android-llvm-dev@google.com"] + cc,
+        )
+    else:
+        raise ValueError(f"Unknown repository {opts.repository}")
+
     logging.info("Interesting SHAs were %r", interesting_shas)
 
     state = _read_state(state_file)
@@ -607,8 +591,13 @@ def main(argv: List[str]) -> int:
     # We want to be as free of obvious side-effects as possible in case
     # something above breaks. Hence, action as late as possible.
     if action == "cherry-pick":
+        if opts.repository != "chromeos":
+            raise RuntimeError(
+                "only chromeos supports automatic cherry-picking."
+            )
+
         new_state = do_cherrypick(
-            chroot_path=chroot_path,
+            chromeos_path=chromeos_path,
             llvm_dir=llvm_dir,
             repository=repository,
             interesting_shas=interesting_shas,
