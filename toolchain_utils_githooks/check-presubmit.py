@@ -32,17 +32,6 @@ from typing import (
 )
 
 
-# This was originally had many packages in it (notably scipy)
-# but due to changes in how scipy is built, we can no longer install
-# it in the chroot. See b/284489250
-#
-# For type checking Python code, we also need mypy. This isn't
-# listed here because (1) only very few files are actually type checked,
-# so we don't pull the dependency in unless needed, and (2) mypy
-# may be installed through other means than pip.
-PIP_DEPENDENCIES = ("numpy",)
-
-
 # Each checker represents an independent check that's done on our sources.
 #
 # They should:
@@ -139,7 +128,7 @@ class MyPyInvocation:
     pythonpath_additions: str
 
 
-def get_mypy() -> Optional[MyPyInvocation]:
+def maybe_get_or_install_mypy() -> Optional[MyPyInvocation]:
     """Finds the mypy executable and returns a command to invoke it.
 
     If mypy cannot be found and we're inside the chroot, this
@@ -155,6 +144,7 @@ def get_mypy() -> Optional[MyPyInvocation]:
     """
     if has_executable_on_path("mypy"):
         return MyPyInvocation(command=["mypy"], pythonpath_additions="")
+
     pip = get_pip()
     if not pip:
         assert not is_in_chroot()
@@ -184,7 +174,6 @@ def get_mypy() -> Optional[MyPyInvocation]:
         return from_pip
 
     if is_in_chroot():
-        assert pip is not None
         subprocess.check_call(pip + ["install", "--user", "mypy"])
         return get_from_pip()
     return None
@@ -537,12 +526,21 @@ def is_file_in_any_of(file: Path, files_and_dirs: List[Path]) -> bool:
     )
 
 
-def check_py_types(
+def check_py_types_impl(
+    mypy: Optional[MyPyInvocation],
     toolchain_utils_root: str,
     thread_pool: multiprocessing.pool.ThreadPool,
     files: Iterable[str],
 ) -> CheckResults:
     """Runs static type checking for files in MYPY_CHECKED_FILES."""
+    if not mypy:
+        return CheckResult(
+            ok=False,
+            output="mypy not found. Please either enter a chroot "
+            "or install mypy",
+            autofix_commands=[],
+        )
+
     path_root = Path(toolchain_utils_root)
     check_locations = [path_root / x for x in MYPY_CHECKED_PATHS]
     to_check = [
@@ -555,15 +553,6 @@ def check_py_types(
         return CheckResult(
             ok=True,
             output="no python files to typecheck",
-            autofix_commands=[],
-        )
-
-    mypy = get_mypy()
-    if not mypy:
-        return CheckResult(
-            ok=False,
-            output="mypy not found. Please either enter a chroot "
-            "or install mypy",
             autofix_commands=[],
         )
 
@@ -975,18 +964,6 @@ def can_import_py_module(module: str) -> bool:
     return exit_code == 0
 
 
-def ensure_pip_deps_installed() -> None:
-    if not PIP_DEPENDENCIES:
-        # No need to install pip if we don't have any deps.
-        return
-
-    pip = get_pip()
-    assert pip, "pip not found and could not be installed"
-
-    for package in PIP_DEPENDENCIES:
-        subprocess.check_call(pip + ["install", "--user", package])
-
-
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -1020,10 +997,10 @@ def main(argv: List[str]) -> int:
     if opts.enter_chroot:
         maybe_reexec_inside_chroot(opts.autofix, install_deps_only, files)
 
+    mypy = maybe_get_or_install_mypy()
     # If you ask for --no_enter_chroot, you're on your own for installing these
     # things.
     if is_in_chroot():
-        ensure_pip_deps_installed()
         if install_deps_only:
             print(
                 "Dependency installation complete & --install_deps_only "
@@ -1036,6 +1013,11 @@ def main(argv: List[str]) -> int:
         )
 
     files = [os.path.abspath(f) for f in files]
+
+    # `functools.partial(foo, x).__name__` is an AttributeError, so just define
+    # a very thin wrapper here.
+    def check_py_types(*args, **kwargs):
+        return check_py_types_impl(mypy, *args, **kwargs)
 
     # Note that we extract .__name__s from these, so please name them in a
     # user-friendly way.
