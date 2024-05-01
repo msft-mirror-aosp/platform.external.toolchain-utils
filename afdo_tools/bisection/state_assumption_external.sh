@@ -12,7 +12,7 @@ SKIP_STATUS=125
 PROBLEM_STATUS=127
 
 my_dir="$(dirname "$(readlink -m "$0")")"
-tmp_dir="${my_dir}/afdo_test_tmp"
+tmp_dir="${AFDO_TEST_DIR:?}/afdo_test_tmp"
 count_file=${tmp_dir}/.count
 
 # keep count for purpose of filenames

@@ -15,6 +15,7 @@ import tempfile
 import unittest
 
 from afdo_tools.bisection import afdo_prof_analysis as analysis
+from llvm_tools import test_helpers
 
 
 class ObjectWithFields(object):
@@ -31,7 +32,7 @@ class ObjectWithFields(object):
             setattr(self, key, val)
 
 
-class AfdoProfAnalysisE2ETest(unittest.TestCase):
+class AfdoProfAnalysisE2ETest(test_helpers.TempDirTestCase):
     """Class for end-to-end testing of AFDO Profile Analysis"""
 
     # nothing significant about the values, just easier to remember even vs odd
@@ -58,6 +59,27 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
         "bad_only_functions": True,
         "bisect_results": {"ranges": [], "individuals": ["func_a"]},
     }
+
+    def setUp(self):
+        super().setUp()
+
+        # Test scripts depend on AFDO_TEST_DIR pointing to a directory to run
+        # in. Set that up for them.
+        self.tempdir = self.make_tempdir()
+
+        saved_value = None
+        tmpdir_env_var = "AFDO_TEST_DIR"
+        saved_value = os.environ.get(tmpdir_env_var)
+        os.environ[tmpdir_env_var] = str(self.tempdir)
+
+        def restore_environ():
+            if saved_value is None:
+                del os.environ[tmpdir_env_var]
+            else:
+                os.environ[tmpdir_env_var] = saved_value
+
+        self.addCleanup(restore_environ)
+
 
     def test_afdo_prof_analysis(self):
         # Individual issues take precedence by nature of our algos
@@ -165,14 +187,8 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
         }
 
         my_dir = os.path.dirname(os.path.abspath(__file__))
-        # using a static temp dir rather than a dynamic one because these files
-        # are shared between the bash scripts and this Python test, and the
-        # arguments to the bash scripts are fixed by afdo_prof_analysis.py so
-        # it would be difficult to communicate dynamically generated directory
-        # to bash scripts
-        scripts_tmp_dir = os.path.join(my_dir, "afdo_test_tmp")
+        scripts_tmp_dir = os.path.join(self.tempdir, "afdo_test_tmp")
         os.mkdir(scripts_tmp_dir)
-        self.addCleanup(shutil.rmtree, scripts_tmp_dir, ignore_errors=True)
 
         # files used in the bash scripts used as external deciders below
         # - count_file tracks the current number of calls to the script in
@@ -193,10 +209,9 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
             num_calls = int(f.read())
         os.remove(count_file)  # reset counts for second run
         finished_state_file = os.path.join(
-            my_dir,
+            self.tempdir,
             f"afdo_analysis_state.json.completed.{date.today()}",
         )
-        self.addCleanup(os.remove, finished_state_file)
 
         # runs the same analysis but interrupted each iteration
         interrupt_decider = os.path.join(
@@ -266,16 +281,7 @@ class AfdoProfAnalysisE2ETest(unittest.TestCase):
         # FIXME: This test ideally shouldn't be writing to the directory of
         # this file.
         if state_file is None:
-            state_file = os.path.join(dir_path, "afdo_analysis_state.json")
-
-            def rm_state():
-                try:
-                    os.unlink(state_file)
-                except OSError:
-                    # Probably because the file DNE. That's fine.
-                    pass
-
-            self.addCleanup(rm_state)
+            state_file = os.path.join(self.tempdir, "afdo_analysis_state.json")
 
         actual = analysis.main_impl(
             ObjectWithFields(
