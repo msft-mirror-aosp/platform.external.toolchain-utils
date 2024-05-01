@@ -1,31 +1,27 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """End-to-end test for afdo_prof_analysis."""
 
-from datetime import date
+import datetime
 import json
-import logging
 import os
 from pathlib import Path
 import shutil
 import tempfile
-import unittest
 
 from afdo_tools.bisection import afdo_prof_analysis as analysis
 from llvm_tools import test_helpers
 
 
-class ObjectWithFields(object):
+class ObjectWithFields:
     """Turns kwargs given to the constructor into fields on an object.
 
     Examples:
-      x = ObjectWithFields(a=1, b=2)
-      assert x.a == 1
-      assert x.b == 2
+        x = ObjectWithFields(a=1, b=2)
+        assert x.a == 1
+        assert x.b == 2
     """
 
     def __init__(self, **kwargs):
@@ -88,7 +84,8 @@ class AfdoProfAnalysisE2ETest(test_helpers.TempDirTestCase):
         bad = self.bad_prof.copy()
         self.run_check(good, bad, self.expected)
 
-        # Now remove individuals and exclusively BAD, and check that range is caught
+        # Now remove individuals and exclusively BAD, and check that range is
+        # caught
         bad["func_a"] = good["func_a"]
         bad.pop("bad_func_a")
         bad.pop("bad_func_b")
@@ -130,7 +127,7 @@ class AfdoProfAnalysisE2ETest(test_helpers.TempDirTestCase):
         os.close(fd_second)
         completed_state_file = "%s.completed.%s" % (
             state_file,
-            str(date.today()),
+            str(datetime.date.today()),
         )
         self.run_check(
             self.good_prof,
@@ -141,9 +138,9 @@ class AfdoProfAnalysisE2ETest(test_helpers.TempDirTestCase):
             out_file=second_result,
         )
 
-        with open(first_result) as f:
+        with open(first_result, encoding="utf-8") as f:
             initial_run = json.load(f)
-        with open(second_result) as f:
+        with open(second_result, encoding="utf-8") as f:
             loaded_run = json.load(f)
         self.assertEqual(initial_run, loaded_run)
 
@@ -207,10 +204,6 @@ class AfdoProfAnalysisE2ETest(test_helpers.TempDirTestCase):
         )
         num_calls = int(count_file.read_text(encoding="utf-8"))
         count_file.unlink()
-        finished_state_file = os.path.join(
-            self.tempdir,
-            f"afdo_analysis_state.json.completed.{date.today()}",
-        )
 
         # runs the same analysis but interrupted each iteration
         interrupt_decider = os.path.join(
@@ -264,9 +257,9 @@ class AfdoProfAnalysisE2ETest(test_helpers.TempDirTestCase):
         bad_prof_file = os.path.join(temp_dir, "bad_prof.txt")
         good_prof_text = analysis.json_to_text(good_prof)
         bad_prof_text = analysis.json_to_text(bad_prof)
-        with open(good_prof_file, "w") as f:
+        with open(good_prof_file, "w", encoding="utf-8") as f:
             f.write(good_prof_text)
-        with open(bad_prof_file, "w") as f:
+        with open(bad_prof_file, "w", encoding="utf-8") as f:
             f.write(bad_prof_text)
 
         dir_path = os.path.dirname(
