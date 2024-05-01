@@ -10,6 +10,7 @@ from datetime import date
 import json
 import logging
 import os
+from pathlib import Path
 import shutil
 import tempfile
 import unittest
@@ -79,7 +80,6 @@ class AfdoProfAnalysisE2ETest(test_helpers.TempDirTestCase):
                 os.environ[tmpdir_env_var] = saved_value
 
         self.addCleanup(restore_environ)
-
 
     def test_afdo_prof_analysis(self):
         # Individual issues take precedence by nature of our algos
@@ -163,14 +163,14 @@ class AfdoProfAnalysisE2ETest(test_helpers.TempDirTestCase):
             )
 
     def test_state_assumption(self):
-        def compare_runs(tmp_dir, first_ctr, second_ctr):
+        def compare_runs(
+            tmp_dir: Path, first_ctr: int, second_ctr: int
+        ) -> None:
             """Compares given prof versions between 1st and 2nd run in test."""
-            first_prof = "%s/.first_run_%d" % (tmp_dir, first_ctr)
-            second_prof = "%s/.second_run_%d" % (tmp_dir, second_ctr)
-            with open(first_prof) as f:
-                first_prof_text = f.read()
-            with open(second_prof) as f:
-                second_prof_text = f.read()
+            first_prof = tmp_dir / f".first_run_{first_ctr}"
+            second_prof = tmp_dir / f".second_run_{second_ctr}"
+            first_prof_text = first_prof.read_text(encoding="utf-8")
+            second_prof_text = second_prof.read_text(encoding="utf-8")
             self.assertEqual(first_prof_text, second_prof_text)
 
         good_prof = {"func_a": ":1\n3: 3\n5: 7\n"}
@@ -187,16 +187,16 @@ class AfdoProfAnalysisE2ETest(test_helpers.TempDirTestCase):
         }
 
         my_dir = os.path.dirname(os.path.abspath(__file__))
-        scripts_tmp_dir = os.path.join(self.tempdir, "afdo_test_tmp")
-        os.mkdir(scripts_tmp_dir)
+        scripts_tmp_dir = self.tempdir / "afdo_test_tmp"
+        scripts_tmp_dir.mkdir()
 
         # files used in the bash scripts used as external deciders below
         # - count_file tracks the current number of calls to the script in
         #   total
         # - local_count_file tracks the number of calls to the script without
         #   interruption
-        count_file = "%s/.count" % scripts_tmp_dir
-        local_count_file = "%s/.local_count" % scripts_tmp_dir
+        count_file = scripts_tmp_dir / ".count"
+        local_count_file = scripts_tmp_dir / ".local_count"
 
         # runs through whole thing at once
         initial_seed = self.run_check(
@@ -205,9 +205,8 @@ class AfdoProfAnalysisE2ETest(test_helpers.TempDirTestCase):
             expected,
             extern_decider=os.path.join(my_dir, "state_assumption_external.sh"),
         )
-        with open(count_file) as f:
-            num_calls = int(f.read())
-        os.remove(count_file)  # reset counts for second run
+        num_calls = int(count_file.read_text(encoding="utf-8"))
+        count_file.unlink()
         finished_state_file = os.path.join(
             self.tempdir,
             f"afdo_analysis_state.json.completed.{date.today()}",
@@ -232,7 +231,7 @@ class AfdoProfAnalysisE2ETest(test_helpers.TempDirTestCase):
                 break
             except RuntimeError:
                 # script was interrupted, so we restart local count
-                os.remove(local_count_file)
+                local_count_file.unlink()
         else:
             raise RuntimeError("Test failed -- took too many iterations")
 
