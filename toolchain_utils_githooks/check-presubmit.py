@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-#
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -392,7 +391,20 @@ def check_mypy(
     # Prefix output with the version information.
     prefix = f"Using {output.strip()}, "
 
-    cmd = mypy.command + ["--follow-imports=silent"] + list(files)
+    cmd = list(mypy.command)
+    cmd += (
+        # Suppress mypy errors in files that aren't specified on `argv`. Until
+        # toolchain-utils is overwhelmingly mypy-clean, this has to be the
+        # default.
+        "--follow-imports=silent",
+        # b/338058766: in toolchain-utils, mypy will infer that each file
+        # passed in is a package of its own. This leads to errors if one
+        # file transitively imports another. `--explicit-package-bases` causes
+        # mypy to treat $CWD (and other env var values) as the only package
+        # bases, and $CWD == toolchain_utils_root.
+        "--explicit-package-bases",
+    )
+    cmd += files
     exit_code, output = run_command_unchecked(
         cmd, cwd=toolchain_utils_root, env=fixed_env
     )
@@ -761,7 +773,9 @@ def check_tests(
     files: List[str],
 ) -> CheckResult:
     """Runs tests."""
-    run_tests_for = os.path.join(toolchain_utils_root, "py", "bin", "run_tests_for.py")
+    run_tests_for = os.path.join(
+        toolchain_utils_root, "py", "bin", "run_tests_for.py"
+    )
     exit_code, stdout_and_stderr = run_command_unchecked(
         [run_tests_for, "--"] + files,
         toolchain_utils_root,
@@ -1071,6 +1085,7 @@ def main(argv: List[str]) -> int:
     if not all_checks_ok:
         return 1
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
