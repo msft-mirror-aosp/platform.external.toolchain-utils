@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # Copyright 2018 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -39,12 +41,12 @@ def scanelf(root):
 
 
 def Main(argv):
-    if not argv:
+    if len(argv) < 2:
         print("usage: %s [file|dir]")
         return 1
 
     files = []
-    cand = argv[0]
+    cand = argv[1]
     if os.path.isfile(cand):
         files = [cand]
     elif os.path.isdir(cand):
@@ -62,3 +64,7 @@ def Main(argv):
     if failed:
         return 1
     return 0
+
+
+if __name__ == "__main__":
+    sys.exit(Main(sys.argv))
