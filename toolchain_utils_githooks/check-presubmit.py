@@ -8,6 +8,7 @@
 import argparse
 import dataclasses
 import datetime
+import functools
 import multiprocessing
 import multiprocessing.pool
 import os
@@ -21,6 +22,7 @@ import textwrap
 import threading
 import traceback
 from typing import (
+    Callable,
     Dict,
     Iterable,
     List,
@@ -526,7 +528,7 @@ def is_file_in_any_of(file: Path, files_and_dirs: List[Path]) -> bool:
     )
 
 
-def check_py_types_impl(
+def check_py_types(
     mypy: Optional[MyPyInvocation],
     toolchain_utils_root: str,
     thread_pool: multiprocessing.pool.ThreadPool,
@@ -728,7 +730,7 @@ def check_go_format(toolchain_utils_root, _thread_pool, files):
 def check_no_compiler_wrapper_changes(
     toolchain_utils_root: str,
     _thread_pool: multiprocessing.pool.ThreadPool,
-    files: List[str],
+    files: Iterable[str],
 ) -> CheckResult:
     compiler_wrapper_prefix = (
         os.path.join(toolchain_utils_root, "compiler_wrapper") + "/"
@@ -759,15 +761,16 @@ def check_no_compiler_wrapper_changes(
 def check_tests(
     toolchain_utils_root: str,
     _thread_pool: multiprocessing.pool.ThreadPool,
-    files: List[str],
+    files: Iterable[str],
 ) -> CheckResult:
     """Runs tests."""
     run_tests_for = os.path.join(
         toolchain_utils_root, "py", "bin", "run_tests_for.py"
     )
+    cmd = [run_tests_for, "--"]
+    cmd += files
     exit_code, stdout_and_stderr = run_command_unchecked(
-        [run_tests_for, "--"] + files,
-        toolchain_utils_root,
+        cmd, toolchain_utils_root
     )
     return CheckResult(
         ok=exit_code == 0,
@@ -1014,21 +1017,20 @@ def main(argv: List[str]) -> int:
 
     files = [os.path.abspath(f) for f in files]
 
-    # `functools.partial(foo, x).__name__` is an AttributeError, so just define
-    # a very thin wrapper here.
-    def check_py_types(*args, **kwargs):
-        return check_py_types_impl(mypy, *args, **kwargs)
-
-    # Note that we extract .__name__s from these, so please name them in a
-    # user-friendly way.
-    checks = (
-        check_cros_lint,
-        check_py_format,
-        check_py_types,
-        check_go_format,
-        check_tests,
-        check_no_compiler_wrapper_changes,
-    )
+    CheckFn = Callable[
+        [str, multiprocessing.pool.ThreadPool, Iterable[str]], CheckResults
+    ]
+    checks: List[Tuple[str, CheckFn]] = [
+        ("check_cros_lint", check_cros_lint),
+        ("check_py_format", check_py_format),
+        ("check_py_types", functools.partial(check_py_types, mypy)),
+        ("check_go_format", check_go_format),
+        ("check_tests", check_tests),
+        (
+            "check_no_compiler_wrapper_changes",
+            check_no_compiler_wrapper_changes,
+        ),
+    ]
 
     toolchain_utils_root = detect_toolchain_utils_root()
 
@@ -1041,8 +1043,8 @@ def main(argv: List[str]) -> int:
     # For our single print statement...
     spawn_print_lock = threading.RLock()
 
-    def run_check(check_fn):
-        name = check_fn.__name__
+    def run_check(arg: Tuple[str, CheckFn]) -> Tuple[str, CheckResults]:
+        name, check_fn = arg
         with spawn_print_lock:
             print("*** Spawning %s" % name)
         return name, check_fn(toolchain_utils_root, pool, files)
