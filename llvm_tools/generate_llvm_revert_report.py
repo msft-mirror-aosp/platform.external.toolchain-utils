@@ -20,7 +20,7 @@ import subprocess
 import sys
 from typing import List, Set, TextIO
 
-from llvm_tools import get_upstream_patch
+from llvm_tools import get_llvm_hash
 from llvm_tools import revert_checker
 
 
@@ -92,7 +92,7 @@ def main(argv: List[str]):
     parser.add_argument(
         "-C",
         "--git-dir",
-        default=my_dir.parent.parent / "llvm-project",
+        default=my_dir.parent / "llvm-project",
         help="LLVM git directory to use.",
         # Note that this is left as `type=str` because that's what
         # `revert_checker` expects.
@@ -102,10 +102,10 @@ def main(argv: List[str]):
         "--llvm-next", action="store_true", help="Use the llvm-next hash"
     )
     parser.add_argument(
-        "--llvm-dir",
-        help="Directory containing LLVM ebuilds",
+        "--overlay-dir",
+        help="Path to chromiumos-overlay",
         type=Path,
-        default=my_dir.parent.parent / "chromiumos-overlay/sys-devel/llvm",
+        default=my_dir.parent / "chromiumos-overlay",
     )
     parser.add_argument(
         "--llvm-head",
@@ -114,15 +114,17 @@ def main(argv: List[str]):
     )
     opts = parser.parse_args(argv)
 
-    symbolic_sha = "llvm-next" if opts.llvm_next else "llvm"
-    llvm_sha = get_upstream_patch.resolve_symbolic_sha(
-        symbolic_sha,
-        opts.llvm_dir,
-    )
+    if opts.llvm_next:
+        llvm_sha = get_llvm_hash.LLVMHash().GetCrOSLLVMNextHash()
+    else:
+        llvm_sha = get_llvm_hash.LLVMHash().GetCrOSCurrentLLVMHash(
+            opts.overlay_dir
+        )
+
     logging.info("Resolved %r as the LLVM SHA to check.", llvm_sha)
 
     in_tree_cherrypicks = list_upstream_cherrypicks(
-        opts.llvm_dir / "files/PATCHES.json"
+        opts.overlay_dir / "sys-devel" / "llvm" / "files" / "PATCHES.json"
     )
     logging.info("Identified %d local cherrypicks.", len(in_tree_cherrypicks))
 
