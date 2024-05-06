@@ -28,6 +28,7 @@ import sys
 import textwrap
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
+from cros_utils import git_utils
 from rust_tools import copy_rust_bootstrap
 
 
@@ -359,70 +360,19 @@ def update_ebuild_manifest(rust_bootstrap_ebuild: Path):
     )
 
 
-def commit_all_changes(
-    git_dir: Path, rust_bootstrap_dir: Path, commit_message: str
-):
-    subprocess.run(
-        ["git", "add", rust_bootstrap_dir.relative_to(git_dir)],
-        cwd=git_dir,
-        check=True,
-        stdin=subprocess.DEVNULL,
-    )
-    subprocess.run(
-        ["git", "commit", "-m", commit_message],
-        cwd=git_dir,
-        check=True,
-        stdin=subprocess.DEVNULL,
-    )
-
-
-def scrape_git_push_cl_id_strs(git_push_output: str) -> List[str]:
-    id_regex = re.compile(
-        r"^remote:\s+https://chromium-review\S+/\+/(\d+)\s", re.MULTILINE
-    )
-    results = id_regex.findall(git_push_output)
-    if not results:
-        raise ValueError(
-            f"Found 0 matches of {id_regex} in {git_push_output!r}; expected "
-            "at least 1."
-        )
-    return results
-
-
 def upload_changes(git_dir: Path):
-    logging.info("Uploading changes")
-    result = subprocess.run(
-        ["git", "push", "cros", "HEAD:refs/for/main"],
-        check=True,
-        cwd=git_dir,
-        encoding="utf-8",
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
-    # Print this in case anyone's looking at the output.
-    print(result.stdout, end=None)
-    result.check_returncode()
-
-    cl_ids = scrape_git_push_cl_id_strs(result.stdout)
-    logging.info(
-        "Uploaded %s successfully!", [f"crrev.com/c/{x}" for x in cl_ids]
+    logging.info("Uploading changes...")
+    cl_ids = git_utils.upload_to_gerrit(
+        git_repo=git_dir,
+        remote=git_utils.CROS_EXTERNAL_REMOTE,
+        branch=git_utils.CROS_MAIN_BRANCH,
+        reviewers=DEFAULT_CL_REVIEWERS,
     )
     for cl_id in cl_ids:
-        gerrit_commands = (
-            ["gerrit", "label-v", cl_id, "1"],
-            ["gerrit", "label-cq", cl_id, "1"],
-            ["gerrit", "label-as", cl_id, "1"],
-            ["gerrit", "reviewers", cl_id] + list(DEFAULT_CL_REVIEWERS),
-            ["gerrit", "ready", cl_id],
+        git_utils.try_set_autosubmit_labels(
+            cwd=git_dir,
+            cl_id=cl_id,
         )
-        for command in gerrit_commands:
-            logging.info("Running gerrit command: %s", command)
-            subprocess.run(
-                command,
-                check=True,
-                stdin=subprocess.DEVNULL,
-            )
 
 
 def maybe_add_newest_prebuilts(
@@ -489,10 +439,9 @@ def maybe_add_newest_prebuilts(
     pretty_artifacts = "\n".join(pretty_artifact_lines)
 
     logging.info("Committing changes.")
-    commit_all_changes(
+    git_utils.commit_all_changes(
         chromiumos_overlay,
-        rust_bootstrap_dir,
-        commit_message=textwrap.dedent(
+        message=textwrap.dedent(
             f"""\
             rust-bootstrap: use prebuilts
 
@@ -601,10 +550,9 @@ def maybe_add_new_rust_bootstrap_version(
     update_ebuild_manifest(new_ebuild)
     if commit:
         newest_no_rev = newest_rust_version.without_rev()
-        commit_all_changes(
+        git_utils.commit_all_changes(
             chromiumos_overlay,
-            rust_bootstrap_dir,
-            commit_message=textwrap.dedent(
+            message=textwrap.dedent(
                 f"""\
                 rust-bootstrap: add version {newest_no_rev}
 
@@ -754,10 +702,9 @@ def maybe_delete_old_rust_bootstrap_ebuilds(
             "no longer needed.",
         ]
         message = textwrap.fill("\n".join(message_lines))
-        commit_all_changes(
+        git_utils.commit_all_changes(
             chromiumos_overlay,
-            rust_bootstrap_dir,
-            commit_message=textwrap.dedent(
+            message=textwrap.dedent(
                 f"""\
                 rust-bootstrap: remove unused ebuild{"s" if many else ""}
 
