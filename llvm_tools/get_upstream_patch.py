@@ -407,9 +407,9 @@ class ParsedPatch:
     rev: t.Union[git_llvm_rev.Rev, str]
 
     def git_msg(self) -> str:
-        if self.is_differential:
-            return f"\n\nreviews.llvm.org/{self.patch}\n"
-        return f"\n\nreviews.llvm.org/rG{self.sha}\n"
+        # TODO(b/339010069): Clean `differential` up.
+        assert not self.is_differential, "differential CLs aren't supported."
+        return f"\n\nhttps://github.com/llvm/llvm-project/commit/{self.sha}\n"
 
 
 def _convert_patch(
