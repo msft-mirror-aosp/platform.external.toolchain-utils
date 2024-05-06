@@ -24,7 +24,7 @@ import sys
 from typing import List
 
 from llvm_tools import chroot
-from llvm_tools import get_upstream_patch
+from llvm_tools import get_llvm_hash
 from llvm_tools import manifest_utils
 from llvm_tools import patch_utils
 
@@ -87,11 +87,10 @@ def llvm_checked_out_to(checkout_sha: str):
 
 
 def resolve_llvm_sha(llvm_next: bool) -> str:
-    sys_devel_llvm = (
-        CROS_SOURCE_ROOT / "src/third_party/chromiumos-overlay/sys-devel/llvm"
-    )
-    sha = "llvm-next" if llvm_next else "llvm"
-    return get_upstream_patch.resolve_symbolic_sha(sha, str(sys_devel_llvm))
+    hash_obj = get_llvm_hash.LLVMHash()
+    if llvm_next:
+        return hash_obj.GetCrOSLLVMNextHash()
+    return hash_obj.GetCrOSCurrentLLVMHash(CROS_SOURCE_ROOT)
 
 
 def main(argv: List[str]) -> None:
