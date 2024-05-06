@@ -569,7 +569,7 @@ def main(argv: List[str]) -> int:
     cc = opts.cc if opts.cc else []
 
     if opts.repository == "chromeos":
-        chromeos_path = opts.chromeos_path
+        chromeos_path = opts.chromeos_dir
         interesting_shas = _find_interesting_chromeos_shas(chromeos_path)
         recipients = _EmailRecipients(well_known=["mage"], direct=cc)
     elif opts.repository == "android":
