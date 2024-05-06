@@ -20,9 +20,10 @@ import time
 from typing import Any, Callable, Dict, List, NamedTuple, Set, Tuple
 
 from cros_utils import email_sender
+from cros_utils import git_utils
 from cros_utils import tiny_render
 from llvm_tools import get_llvm_hash
-from llvm_tools import get_upstream_patch
+from llvm_tools import get_patch
 from llvm_tools import git_llvm_rev
 from llvm_tools import revert_checker
 
@@ -126,7 +127,7 @@ def _find_interesting_chromeos_shas(
     llvm_hash = get_llvm_hash.LLVMHash()
 
     current_llvm = llvm_hash.GetCrOSCurrentLLVMHash(chromeos_path)
-    results = [("llvm", current_llvm)]
+    results: List[Tuple[str, str]] = [("llvm", current_llvm)]
     next_llvm = llvm_hash.GetCrOSLLVMNextHash()
     if current_llvm != next_llvm:
         results.append(("llvm-next", next_llvm))
@@ -334,22 +335,14 @@ def do_cherrypick(
             continue
         seen.add(revert_info.friendly_name)
         for sha, reverted_sha in revert_info.new_reverts:
-            # We upload reverts for all platforms by default, since there's
-            # no real reason for them to be CrOS-specific.
-            get_upstream_patch.get_from_upstream(
+            _upload_patches(
+                sha=sha,
+                reverted_sha=reverted_sha,
+                llvm_dir=llvm_dir,
                 chromeos_path=chromeos_path,
-                create_cl=True,
-                start_sha=reverted_sha,
-                patches=[sha],
                 reviewers=reviewers,
                 cc=cc,
-                platforms=(),
-                # Skip testing for whether the patch applies, since this script
-                # is much less capable of handling merge conflicts than SWEs
-                # are.
-                skip_application_test=True,
             )
-
     maybe_email_about_stale_heads(
         new_state,
         repository,
@@ -361,6 +354,50 @@ def do_cherrypick(
         is_dry_run=False,
     )
     return new_state
+
+
+def _upload_patches(
+    sha: str,
+    reverted_sha: str,
+    llvm_dir: str,
+    chromeos_path: str,
+    reviewers: List[str],
+    cc: List[str],
+):
+    """Mockable helper to create and upload patches."""
+    patch_context = get_patch.PatchContext(
+        llvm_project_dir=Path(llvm_dir),
+        chromiumos_root=Path(chromeos_path),
+        start_ref=get_patch.LLVMGitRef(reverted_sha),
+        platforms=["chromiumos"],
+    )
+    patch_context.apply_patches(get_patch.LLVMGitRef(sha))
+    git_repo_path = Path(chromeos_path) / get_patch.CHROMIUMOS_OVERLAY_PATH
+    commit_message = [
+        "llvm: nightly revert patches\n",
+    ]
+    git_log_output = subprocess.run(
+        ["git", "log", "-n1", "--format=%s", sha],
+        cwd=llvm_dir,
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
+        check=True,
+    ).stdout
+    commit_message.extend(
+        (
+            f"https://github.com/llvm/llvm-project/commit/{sha}",
+            "",
+            git_log_output,
+        )
+    )
+    git_utils.commit_all_changes(git_repo_path, "\n".join(commit_message))
+    git_utils.upload_to_gerrit(
+        git_repo_path,
+        remote=git_utils.CROS_EXTERNAL_REMOTE,
+        branch=git_utils.CROS_MAIN_BRANCH,
+        reviewers=reviewers,
+        cc=cc,
+    )
 
 
 def prettify_sha_for_email(
@@ -566,6 +603,7 @@ def main(argv: List[str]) -> int:
     repository = opts.repository
     state_file = opts.state_file
     reviewers = opts.reviewers if opts.reviewers else []
+    chromeos_path = ""
     cc = opts.cc if opts.cc else []
 
     if opts.repository == "chromeos":

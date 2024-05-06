@@ -9,7 +9,6 @@ import unittest
 from unittest import mock
 
 from cros_utils import tiny_render
-from llvm_tools import get_upstream_patch
 from llvm_tools import nightly_revert_checker
 from llvm_tools import revert_checker
 
@@ -138,8 +137,8 @@ class Test(unittest.TestCase):
         self.assertEqual(email, expected_email)
 
     @mock.patch.object(revert_checker, "find_reverts")
-    @mock.patch.object(get_upstream_patch, "get_from_upstream")
-    def test_do_cherrypick_is_called(self, do_cherrypick, find_reverts):
+    @mock.patch.object(nightly_revert_checker, "_upload_patches")
+    def test_do_cherrypick_is_called(self, upload_patches_mock, find_reverts):
         find_reverts.return_value = [
             revert_checker.Revert("12345abcdef", "fedcba54321")
         ]
@@ -153,7 +152,7 @@ class Test(unittest.TestCase):
             cc=["purr@chromium.org"],
         )
 
-        do_cherrypick.assert_called_once()
+        upload_patches_mock.assert_called_once()
         find_reverts.assert_called_once()
 
     def test_sha_prettification_for_email(self):
