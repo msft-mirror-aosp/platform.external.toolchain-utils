@@ -324,17 +324,24 @@ def do_cherrypick(
         return prettify_sha_for_email(sha, rev)
 
     new_state = State()
-    seen: Set[str] = set()
+    seen_shas: Set[str] = set()
 
-    new_state, new_reverts = locate_new_reverts_across_shas(
+    new_state, new_revert_infos = locate_new_reverts_across_shas(
         llvm_dir, interesting_shas, state
     )
 
-    for revert_info in new_reverts:
-        if revert_info.friendly_name in seen:
-            continue
-        seen.add(revert_info.friendly_name)
+    for revert_info in new_revert_infos:
+        logging.info(
+            "Applying new reverts across %s...", revert_info.friendly_name
+        )
         for sha, reverted_sha in revert_info.new_reverts:
+            # b/339147957: a revert may cross multiple `interesting_shas`.
+            # In that case, we only need to apply it once to actually cover all
+            # of said SHAs.
+            if sha in seen_shas:
+                logging.info("Skipping reapplication of SHA %s", sha)
+                continue
+            seen_shas.add(sha)
             _upload_patches(
                 sha=sha,
                 reverted_sha=reverted_sha,
