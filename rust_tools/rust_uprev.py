@@ -35,6 +35,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import textwrap
 import threading
 import time
 from typing import (
@@ -52,8 +53,8 @@ from typing import (
 )
 import urllib.request
 
+from cros_utils import git_utils
 from llvm_tools import chroot
-from llvm_tools import git
 
 
 T = TypeVar("T")
@@ -991,7 +992,7 @@ def rust_bootstrap_path() -> Path:
     return EBUILD_PREFIX.joinpath("dev-lang/rust-bootstrap")
 
 
-def create_new_repo(rust_version: RustVersion) -> None:
+def create_rust_uprev_branch(rust_version: RustVersion) -> None:
     output = get_command_output(
         ["git", "status", "--porcelain"], cwd=EBUILD_PREFIX
     )
@@ -1000,7 +1001,9 @@ def create_new_repo(rust_version: RustVersion) -> None:
             f"{EBUILD_PREFIX} has uncommitted changes, please either discard "
             "them or commit them."
         )
-    git.CreateBranch(EBUILD_PREFIX, f"rust-to-{rust_version}")
+    git_utils.create_branch(
+        EBUILD_PREFIX, branch_name=f"rust-to-{rust_version}"
+    )
 
 
 def build_cross_compiler(template_version: RustVersion) -> None:
@@ -1034,16 +1037,25 @@ def build_cross_compiler(template_version: RustVersion) -> None:
 
 def create_new_commit(rust_version: RustVersion) -> None:
     subprocess.check_call(["git", "add", "-A"], cwd=EBUILD_PREFIX)
-    messages = [
-        f"[DO NOT SUBMIT] dev-lang/rust: upgrade to Rust {rust_version}",
-        "",
-        "This CL is created by rust_uprev tool automatically." "",
-        "BUG=None",
-        "TEST=Use CQ to test the new Rust version",
-    ]
-    branch = f"rust-to-{rust_version}"
-    git.CommitChanges(EBUILD_PREFIX, messages)
-    git.UploadChanges(EBUILD_PREFIX, branch)
+    sha = git_utils.commit_all_changes(
+        EBUILD_PREFIX,
+        message=textwrap.dedent(
+            f"""\
+            [DO NOT SUBMIT] dev-lang/rust: upgrade to Rust {rust_version}
+
+            This CL is created by rust_uprev tool automatically.
+
+            BUG=None
+            TEST=Use CQ to test the new Rust version
+            """
+        ),
+    )
+    git_utils.upload_to_gerrit(
+        EBUILD_PREFIX,
+        remote=git_utils.CROS_EXTERNAL_REMOTE,
+        branch=git_utils.CROS_MAIN_BRANCH,
+        ref=sha,
+    )
 
 
 def run_in_chroot(cmd: Command, *args, **kwargs) -> subprocess.CompletedProcess:
@@ -1174,7 +1186,10 @@ def main() -> None:
             rust_ebuild = find_ebuild_for_package("dev-lang/rust")
             template_version = RustVersion.parse_from_ebuild(rust_ebuild)
 
-        run_step("create new repo", lambda: create_new_repo(args.uprev))
+        run_step(
+            "create rust upgrade branch",
+            lambda: create_rust_uprev_branch(args.uprev),
+        )
         if not args.skip_cross_compiler:
             run_step(
                 "build cross compiler",

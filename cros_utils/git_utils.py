@@ -46,6 +46,20 @@ def is_full_git_sha(s: str) -> bool:
     return len(s) == 40 and all(x.isdigit() or "a" <= x <= "f" for x in s)
 
 
+def create_branch(git_repo: Path, branch_name: str) -> None:
+    """Creates a branch in the given repo.
+
+    Args:
+        git_repo: The path to the repo.
+        branch_name: The name of the branch to create.
+    """
+    subprocess.run(
+        ["repo", "start", branch_name, "--head"],
+        check=True,
+        cwd=git_repo,
+    )
+
+
 def upload_to_gerrit(
     git_repo: Path,
     remote: str,

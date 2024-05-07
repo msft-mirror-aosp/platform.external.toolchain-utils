@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -13,7 +12,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from llvm_tools import git
+from cros_utils import git_utils
 
 
 # rust_uprev sets SOURCE_ROOT to the output of `repo --show-toplevel`.
@@ -748,13 +747,23 @@ class RustUprevOtherStagesTests(unittest.TestCase):
         )
 
     @mock.patch.object(rust_uprev, "get_command_output")
-    @mock.patch.object(git, "CreateBranch")
-    def test_create_new_repo(self, mock_branch, mock_output):
+    @mock.patch.object(git_utils, "create_branch")
+    def test_create_rust_upgrade_branch(self, mock_create_branch, mock_output):
         mock_output.return_value = ""
-        rust_uprev.create_new_repo(self.new_version)
-        mock_branch.assert_called_once_with(
-            rust_uprev.EBUILD_PREFIX, f"rust-to-{self.new_version}"
+        rust_uprev.create_rust_uprev_branch(self.new_version)
+        mock_create_branch.assert_called_once_with(
+            rust_uprev.EBUILD_PREFIX, branch_name=f"rust-to-{self.new_version}"
         )
+
+    @mock.patch.object(rust_uprev, "get_command_output")
+    @mock.patch.object(git_utils, "create_branch")
+    def test_create_rust_upgrade_branch_raises_if_unclean(
+        self, mock_create_branch, mock_output
+    ):
+        mock_output.return_value = "some file has modifications"
+        with self.assertRaisesRegex(RuntimeError, ".*uncommitted changes.*"):
+            rust_uprev.create_rust_uprev_branch(self.new_version)
+        mock_create_branch.assert_not_called()
 
     @mock.patch.object(rust_uprev, "run_in_chroot")
     def test_build_cross_compiler(self, mock_run_in_chroot):
