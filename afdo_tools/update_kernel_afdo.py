@@ -203,17 +203,6 @@ def git_fetch(git_dir: Path) -> None:
     )
 
 
-def git_rev_parse(git_dir: Path, ref_or_sha: str) -> str:
-    return subprocess.run(
-        ["git", "rev-parse", ref_or_sha],
-        check=True,
-        cwd=git_dir,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        encoding="utf-8",
-    ).stdout.strip()
-
-
 def autodetect_branches(toolchain_utils: Path) -> Dict[Channel, GitBranch]:
     """Returns GitBranches for each branch type in toolchain_utils."""
     stdout = subprocess.run(
@@ -794,7 +783,7 @@ def main(argv: List[str]) -> None:
                 logging.info(
                     "--upload not specified. Leaving commit for %s at %s",
                     channel,
-                    git_rev_parse(worktree, "HEAD"),
+                    git_utils.resolve_ref(worktree, "HEAD"),
                 )
 
     if had_failures:
