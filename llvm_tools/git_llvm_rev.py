@@ -43,6 +43,7 @@ known_llvm_rev_sha_pairs = (
     (450000, "906ebd5830e6053b50c52bf098e3586b567e8499"),
     (475000, "530d14a99611a71f8f3eb811920fd7b5c4d4e1f8"),
     (500000, "173855f9b0bdfe45d71272596b510650bfc1ca33"),
+    (525000, "ac3ee1b1aec424c60660fd245f5b53aaffa2f5b1"),
 )
 
 # Represents an LLVM git checkout:
