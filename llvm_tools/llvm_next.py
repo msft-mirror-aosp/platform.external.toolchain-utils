@@ -29,5 +29,11 @@ LLVM_NEXT_TESTING_CLS: Iterable[cros_cls.ChangeListURL] = (
         "https://chrome-internal-review.googlesource.com/c/chromeos/manifest-internal/+/7201537/2",
         "https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5455731/5",
         "https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5471984/1",
+        "https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5527293/1",
+        "https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5527294/1",
+        "https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5527295/1",
+        "https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5527296/1",
+        "https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5527297/1",
+        "https://chromium-review.googlesource.com/c/chromiumos/overlays/chromiumos-overlay/+/5527298/1",
     )
 )
