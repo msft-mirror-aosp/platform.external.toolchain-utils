@@ -102,11 +102,11 @@ def parse_args(my_dir: Path, argv: List[str]) -> argparse.Namespace:
         """,
     )
     parser.add_argument(
-        "--clobber-llvm",
+        "--clean-llvm",
         action="store_true",
         help="""
         If a profile needs to be generated and there are uncommitted changes in
-        the LLVM source directory, clobber the changes.
+        the LLVM source directory, clean the changes.
         """,
     )
     parser.add_argument(
@@ -135,7 +135,7 @@ def maybe_upload_new_llvm_next_profile(
     profile_cache: GsProfileCache,
     dry_run: bool,
     toolchain_utils: Path,
-    clobber_llvm: bool,
+    clean_llvm: bool,
     force_generation: bool,
 ) -> None:
     llvm_next_rev = llvm_next.LLVM_NEXT_REV
@@ -172,8 +172,8 @@ def maybe_upload_new_llvm_next_profile(
     )
     if upload_profile:
         cmd.append("--upload")
-    if clobber_llvm:
-        cmd.append("--clobber-llvm")
+    if clean_llvm:
+        cmd.append("--clean-llvm")
 
     if dry_run:
         logging.info(
@@ -309,7 +309,7 @@ def main(argv: List[str]) -> None:
         profile_cache=profile_cache,
         dry_run=dry_run,
         toolchain_utils=my_dir.parent,
-        clobber_llvm=opts.clobber_llvm,
+        clean_llvm=opts.clean_llvm,
         force_generation=opts.force_llvm_next_pgo_generation,
     )
 
