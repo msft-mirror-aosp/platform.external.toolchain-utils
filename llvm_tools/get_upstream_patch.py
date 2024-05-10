@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -8,12 +7,11 @@
 
 import argparse
 import dataclasses
-from datetime import datetime
+import datetime
 import json
 import logging
 import os
 from pathlib import Path
-import shlex
 import subprocess
 import sys
 import typing as t
@@ -23,12 +21,11 @@ import get_llvm_hash
 import git
 import git_llvm_rev
 import patch_utils
-import update_chromeos_llvm_hash
 
 
 __DOC_EPILOGUE = """
 Example Usage:
-  get_upstream_patch --chroot_path ~/chromiumos --platform chromiumos \
+  get_upstream_patch --chromeos_path ~/chromiumos --platform chromiumos \
 --sha 1234567 --sha 890abdc
 """
 
@@ -48,7 +45,6 @@ class PatchApplicationError(ValueError):
 def validate_patch_application(
     llvm_dir: Path, svn_version: int, patches_json_fp: Path, patch_props
 ):
-
     start_sha = get_llvm_hash.GetGitHashFrom(llvm_dir, svn_version)
     subprocess.run(["git", "-C", llvm_dir, "checkout", start_sha], check=True)
 
@@ -59,7 +55,7 @@ def validate_patch_application(
     if predecessor_apply_results.failed_patches:
         logging.error("Failed to apply patches from PATCHES.json:")
         for p in predecessor_apply_results.failed_patches:
-            logging.error(f"Patch title: {p.title()}")
+            logging.error("Patch title: %s", p.title())
         raise PatchApplicationError("Failed to apply patch from PATCHES.json")
 
     patch_entry = patch_utils.PatchEntry.from_dict(
@@ -80,33 +76,33 @@ def add_patch(
     patches_dir: str,
     relative_patches_dir: str,
     start_version: git_llvm_rev.Rev,
-    llvm_dir: str,
+    llvm_dir: t.Union[Path, str],
     rev: t.Union[git_llvm_rev.Rev, str],
     sha: str,
     package: str,
-    platforms: t.List[str],
+    platforms: t.Iterable[str],
 ):
     """Gets the start and end intervals in 'json_file'.
 
     Args:
-      patches_json_path: The absolute path to PATCHES.json.
-      patches_dir: The aboslute path to the directory patches are in.
-      relative_patches_dir: The relative path to PATCHES.json.
-      start_version: The base LLVM revision this patch applies to.
-      llvm_dir: The path to LLVM checkout.
-      rev: An LLVM revision (git_llvm_rev.Rev) for a cherrypicking, or a
-      differential revision (str) otherwise.
-      sha: The LLVM git sha that corresponds to the patch. For differential
-      revisions, the git sha from  the local commit created by 'arc patch'
-      is used.
-      package: The LLVM project name this patch applies to.
-      platforms: List of platforms this patch applies to.
+        patches_json_path: The absolute path to PATCHES.json.
+        patches_dir: The aboslute path to the directory patches are in.
+        relative_patches_dir: The relative path to PATCHES.json.
+        start_version: The base LLVM revision this patch applies to.
+        llvm_dir: The path to LLVM checkout.
+        rev: An LLVM revision (git_llvm_rev.Rev) for a cherrypicking, or a
+        differential revision (str) otherwise.
+        sha: The LLVM git sha that corresponds to the patch. For differential
+        revisions, the git sha from  the local commit created by 'arc patch'
+        is used.
+        package: The LLVM project name this patch applies to.
+        platforms: List of platforms this patch applies to.
 
     Raises:
-      CherrypickError: A ValueError that highlights the cherry-pick has been
-      seen before.
-      CherrypickRangeError: A ValueError that's raised when the given patch
-      is from before the start_sha.
+        CherrypickError: A ValueError that highlights the cherry-pick has been
+        seen before.
+        CherrypickRangeError: A ValueError that's raised when the given patch
+        is from before the start_sha.
     """
 
     is_cherrypick = isinstance(rev, git_llvm_rev.Rev)
@@ -126,7 +122,9 @@ def add_patch(
         )
 
     with open(patches_json_path, encoding="utf-8") as f:
-        patches_json = json.load(f)
+        contents = f.read()
+    indent_len = patch_utils.predict_indent(contents.splitlines())
+    patches_json = json.loads(contents)
 
     for p in patches_json:
         rel_path = p["rel_patch_path"]
@@ -144,9 +142,9 @@ def add_patch(
     with open(os.path.join(patches_dir, file_name), "wb") as f:
         cmd = ["git", "show", sha]
         # Only apply the part of the patch that belongs to this package, expect
-        # LLVM. This is because some packages are built with LLVM ebuild on X86 but
-        # not on the other architectures. e.g. compiler-rt. Therefore always apply
-        # the entire patch to LLVM ebuild as a workaround.
+        # LLVM. This is because some packages are built with LLVM ebuild on X86
+        # but not on the other architectures. e.g. compiler-rt. Therefore
+        # always apply the entire patch to LLVM ebuild as a workaround.
         if package != "llvm":
             cmd.append(package_to_project(package))
         subprocess.check_call(cmd, stdout=f, cwd=llvm_dir)
@@ -182,48 +180,18 @@ def add_patch(
     temp_file = patches_json_path + ".tmp"
     with open(temp_file, "w", encoding="utf-8") as f:
         json.dump(
-            patches_json, f, indent=4, separators=(",", ": "), sort_keys=True
+            patches_json,
+            f,
+            indent=indent_len,
+            separators=(",", ": "),
+            sort_keys=True,
         )
         f.write("\n")
     os.rename(temp_file, patches_json_path)
 
 
-def parse_ebuild_for_assignment(ebuild_path: str, var_name: str) -> str:
-    # '_pre' filters the LLVM 9.0 ebuild, which we never want to target, from
-    # this list.
-    candidates = [
-        x
-        for x in os.listdir(ebuild_path)
-        if x.endswith(".ebuild") and "_pre" in x
-    ]
-
-    if not candidates:
-        raise ValueError("No ebuilds found under %r" % ebuild_path)
-
-    ebuild = os.path.join(ebuild_path, max(candidates))
-    with open(ebuild, encoding="utf-8") as f:
-        var_name_eq = var_name + "="
-        for orig_line in f:
-            if not orig_line.startswith(var_name_eq):
-                continue
-
-            # We shouldn't see much variety here, so do the simplest thing possible.
-            line = orig_line[len(var_name_eq) :]
-            # Remove comments
-            line = line.split("#")[0]
-            # Remove quotes
-            line = shlex.split(line)
-            if len(line) != 1:
-                raise ValueError(
-                    "Expected exactly one quoted value in %r" % orig_line
-                )
-            return line[0].strip()
-
-    raise ValueError("No %s= line found in %r" % (var_name, ebuild))
-
-
 # Resolves a git ref (or similar) to a LLVM SHA.
-def resolve_llvm_ref(llvm_dir: str, sha: str) -> str:
+def resolve_llvm_ref(llvm_dir: t.Union[Path, str], sha: str) -> str:
     return subprocess.check_output(
         ["git", "rev-parse", sha],
         encoding="utf-8",
@@ -246,7 +214,7 @@ def package_to_project(package: str) -> str:
 
 
 # Get the LLVM projects change in the specifed sha
-def get_package_names(sha: str, llvm_dir: str) -> list:
+def get_package_names(sha: str, llvm_dir: t.Union[Path, str]) -> list:
     paths = subprocess.check_output(
         ["git", "show", "--name-only", "--format=", sha],
         cwd=llvm_dir,
@@ -260,8 +228,7 @@ def get_package_names(sha: str, llvm_dir: str) -> list:
         package = project_to_package(path.split("/")[0])
         if package in ("compiler-rt", "libcxx", "libcxxabi", "llvm-libunwind"):
             packages.add(package)
-    packages = list(sorted(packages))
-    return packages
+    return list(sorted(packages))
 
 
 def create_patch_for_packages(
@@ -270,8 +237,8 @@ def create_patch_for_packages(
     start_rev: git_llvm_rev.Rev,
     rev: t.Union[git_llvm_rev.Rev, str],
     sha: str,
-    llvm_dir: str,
-    platforms: t.List[str],
+    llvm_dir: t.Union[Path, str],
+    platforms: t.Iterable[str],
 ):
     """Create a patch and add its metadata for each package"""
     for package, symlink in zip(packages, symlinks):
@@ -294,46 +261,41 @@ def create_patch_for_packages(
 
 
 def make_cl(
-    symlinks_to_uprev: t.List[str],
     llvm_symlink_dir: str,
     branch: str,
     commit_messages: t.List[str],
     reviewers: t.Optional[t.List[str]],
     cc: t.Optional[t.List[str]],
 ):
-    symlinks_to_uprev = sorted(set(symlinks_to_uprev))
-    for symlink in symlinks_to_uprev:
-        update_chromeos_llvm_hash.UprevEbuildSymlink(symlink)
-        subprocess.check_output(
-            ["git", "add", "--all"], cwd=os.path.dirname(symlink)
-        )
-    git.UploadChanges(llvm_symlink_dir, branch, commit_messages, reviewers, cc)
+    subprocess.check_output(["git", "add", "--all"], cwd=llvm_symlink_dir)
+    git.CommitChanges(llvm_symlink_dir, commit_messages)
+    git.UploadChanges(llvm_symlink_dir, branch, reviewers, cc)
     git.DeleteBranch(llvm_symlink_dir, branch)
 
 
-def resolve_symbolic_sha(start_sha: str, llvm_symlink_dir: str) -> str:
+def resolve_symbolic_sha(start_sha: str, chromeos_path: Path) -> str:
     if start_sha == "llvm":
-        return parse_ebuild_for_assignment(llvm_symlink_dir, "LLVM_HASH")
+        return get_llvm_hash.LLVMHash().GetCrOSCurrentLLVMHash(chromeos_path)
 
     if start_sha == "llvm-next":
-        return parse_ebuild_for_assignment(llvm_symlink_dir, "LLVM_NEXT_HASH")
+        return get_llvm_hash.LLVMHash().GetCrOSLLVMNextHash()
 
     return start_sha
 
 
 def find_patches_and_make_cl(
-    chroot_path: str,
+    chromeos_path: str,
     patches: t.List[str],
     start_rev: git_llvm_rev.Rev,
     llvm_config: git_llvm_rev.LLVMConfig,
     llvm_symlink_dir: str,
+    allow_failures: bool,
     create_cl: bool,
     skip_dependencies: bool,
     reviewers: t.Optional[t.List[str]],
     cc: t.Optional[t.List[str]],
-    platforms: t.List[str],
+    platforms: t.Iterable[str],
 ):
-
     converted_patches = [
         _convert_patch(llvm_config, skip_dependencies, p) for p in patches
     ]
@@ -345,42 +307,53 @@ def find_patches_and_make_cl(
         raise RuntimeError(f"Found Duplicate SHAs:\n{err_msg}")
 
     # CL Related variables, only used if `create_cl`
-    symlinks_to_uprev = []
     commit_messages = [
         "llvm: get patches from upstream\n",
     ]
-    branch = f'get-upstream-{datetime.now().strftime("%Y%m%d%H%M%S%f")}'
+    branch = (
+        f'get-upstream-{datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")}'
+    )
 
     if create_cl:
         git.CreateBranch(llvm_symlink_dir, branch)
 
+    successes = []
+    failures = []
     for parsed_patch in converted_patches:
         # Find out the llvm projects changed in this commit
         packages = get_package_names(parsed_patch.sha, llvm_config.dir)
-        # Find out the ebuild symlinks of the corresponding ChromeOS packages
-        symlinks = chroot.GetChrootEbuildPaths(
-            chroot_path,
+        # Find out the ebuild of the corresponding ChromeOS packages
+        ebuild_paths = chroot.GetChrootEbuildPaths(
+            chromeos_path,
             [
                 "sys-devel/llvm" if package == "llvm" else "sys-libs/" + package
                 for package in packages
             ],
         )
-        symlinks = chroot.ConvertChrootPathsToAbsolutePaths(
-            chroot_path, symlinks
+        ebuild_paths = chroot.ConvertChrootPathsToAbsolutePaths(
+            chromeos_path, ebuild_paths
         )
         # Create a local patch for all the affected llvm projects
-        create_patch_for_packages(
-            packages,
-            symlinks,
-            start_rev,
-            parsed_patch.rev,
-            parsed_patch.sha,
-            llvm_config.dir,
-            platforms=platforms,
-        )
-        if create_cl:
-            symlinks_to_uprev.extend(symlinks)
+        try:
+            create_patch_for_packages(
+                packages,
+                ebuild_paths,
+                start_rev,
+                parsed_patch.rev,
+                parsed_patch.sha,
+                llvm_config.dir,
+                platforms=platforms,
+            )
+        except PatchApplicationError as e:
+            if allow_failures:
+                logging.warning(e)
+                failures.append(parsed_patch.sha)
+                continue
+            else:
+                raise e
+        successes.append(parsed_patch.sha)
 
+        if create_cl:
             commit_messages.extend(
                 [
                     parsed_patch.git_msg(),
@@ -397,9 +370,18 @@ def find_patches_and_make_cl(
                 ["git", "reset", "--hard", "HEAD^"], cwd=llvm_config.dir
             )
 
-    if create_cl:
+    if allow_failures:
+        success_list = (":\n\t" + "\n\t".join(successes)) if successes else "."
+        logging.info(
+            "Successfully applied %d patches%s", len(successes), success_list
+        )
+        failure_list = (":\n\t" + "\n\t".join(failures)) if failures else "."
+        logging.info(
+            "Failed to apply %d patches%s", len(failures), failure_list
+        )
+
+    if successes and create_cl:
         make_cl(
-            symlinks_to_uprev,
             llvm_symlink_dir,
             branch,
             commit_messages,
@@ -429,12 +411,12 @@ def _convert_patch(
     """Extract git revision info from a patch.
 
     Args:
-      llvm_config: LLVM configuration object.
-      skip_dependencies: Pass --skip-dependecies for to `arc`
-      patch: A single patch referent string.
+        llvm_config: LLVM configuration object.
+        skip_dependencies: Pass --skip-dependecies for to `arc`
+        patch: A single patch referent string.
 
     Returns:
-      A [ParsedPatch] object.
+        A [ParsedPatch] object.
     """
 
     # git hash should only have lower-case letters
@@ -451,7 +433,7 @@ def _convert_patch(
             cwd=llvm_config.dir,
         )
         sha = resolve_llvm_ref(llvm_config.dir, "HEAD")
-        rev = patch
+        rev: t.Union[git_llvm_rev.Rev, str] = patch
     else:
         sha = resolve_llvm_ref(llvm_config.dir, patch)
         rev = git_llvm_rev.translate_sha_to_rev(llvm_config, sha)
@@ -473,18 +455,19 @@ def _get_duplicate_shas(
 
 
 def get_from_upstream(
-    chroot_path: str,
+    chromeos_path: str,
     create_cl: bool,
     start_sha: str,
     patches: t.List[str],
-    platforms: t.List[str],
+    platforms: t.Iterable[str],
+    allow_failures: bool = False,
     skip_dependencies: bool = False,
-    reviewers: t.List[str] = None,
-    cc: t.List[str] = None,
+    reviewers: t.Optional[t.List[str]] = None,
+    cc: t.Optional[t.List[str]] = None,
 ):
     llvm_symlink = chroot.ConvertChrootPathsToAbsolutePaths(
-        chroot_path,
-        chroot.GetChrootEbuildPaths(chroot_path, ["sys-devel/llvm"]),
+        chromeos_path,
+        chroot.GetChrootEbuildPaths(chromeos_path, ["sys-devel/llvm"]),
     )[0]
     llvm_symlink_dir = os.path.dirname(llvm_symlink)
 
@@ -496,7 +479,7 @@ def get_from_upstream(
         error_path = os.path.dirname(os.path.dirname(llvm_symlink_dir))
         raise ValueError(f"Uncommited changes detected in {error_path}")
 
-    start_sha = resolve_symbolic_sha(start_sha, llvm_symlink_dir)
+    start_sha = resolve_symbolic_sha(start_sha, Path(chromeos_path))
     logging.info("Base llvm hash == %s", start_sha)
 
     llvm_config = git_llvm_rev.LLVMConfig(
@@ -505,7 +488,7 @@ def get_from_upstream(
     start_sha = resolve_llvm_ref(llvm_config.dir, start_sha)
 
     find_patches_and_make_cl(
-        chroot_path=chroot_path,
+        chromeos_path=chromeos_path,
         patches=patches,
         platforms=platforms,
         start_rev=git_llvm_rev.translate_sha_to_rev(llvm_config, start_sha),
@@ -515,14 +498,17 @@ def get_from_upstream(
         skip_dependencies=skip_dependencies,
         reviewers=reviewers,
         cc=cc,
+        allow_failures=allow_failures,
     )
+
     logging.info("Complete.")
 
 
 def main():
     chroot.VerifyOutsideChroot()
     logging.basicConfig(
-        format="%(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: %(message)s",
+        format="%(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
+        "%(message)s",
         level=logging.INFO,
     )
 
@@ -532,15 +518,15 @@ def main():
         epilog=__DOC_EPILOGUE,
     )
     parser.add_argument(
-        "--chroot_path",
+        "--chromeos_path",
         default=os.path.join(os.path.expanduser("~"), "chromiumos"),
         help="the path to the chroot (default: %(default)s)",
     )
     parser.add_argument(
         "--start_sha",
         default="llvm-next",
-        help="LLVM SHA that the patch should start applying at. You can specify "
-        '"llvm" or "llvm-next", as well. Defaults to %(default)s.',
+        help="LLVM SHA that the patch should start applying at. You can "
+        'specify "llvm" or "llvm-next", as well. Defaults to %(default)s.',
     )
     parser.add_argument(
         "--sha",
@@ -565,6 +551,11 @@ def main():
         "apply to multiple platforms",
     )
     parser.add_argument(
+        "--allow_failures",
+        action="store_true",
+        help="Skip patches that fail to apply and continue.",
+    )
+    parser.add_argument(
         "--create_cl",
         action="store_true",
         help="Automatically create a CL if specified",
@@ -576,6 +567,7 @@ def main():
         "when --differential appears exactly once.",
     )
     args = parser.parse_args()
+    chroot.VerifyChromeOSRoot(args.chromeos_path)
 
     if not (args.sha or args.differential):
         parser.error("--sha or --differential required")
@@ -587,7 +579,8 @@ def main():
         )
 
     get_from_upstream(
-        chroot_path=args.chroot_path,
+        chromeos_path=args.chromeos_path,
+        allow_failures=args.allow_failures,
         create_cl=args.create_cl,
         start_sha=args.start_sha,
         patches=args.sha + args.differential,

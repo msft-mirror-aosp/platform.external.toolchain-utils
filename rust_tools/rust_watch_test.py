@@ -139,6 +139,7 @@ class Test(unittest.TestCase):
         self.assertIsNone(rust_watch.maybe_compose_email(new_gentoo_commits=()))
 
     def test_compose_bug_creates_bugs_on_new_versions(self):
+        bug_body_start = "A new Rust stable release has been detected;"
         title, body = rust_watch.maybe_compose_bug(
             old_state=rust_watch.State(
                 last_seen_release=rust_watch.RustReleaseVersion(1, 0, 0),
@@ -147,7 +148,7 @@ class Test(unittest.TestCase):
             newest_release=rust_watch.RustReleaseVersion(1, 0, 1),
         )
         self.assertEqual(title, "[Rust] Update to 1.0.1")
-        self.assertTrue(body.startswith("A new release has been detected;"))
+        self.assertTrue(body.startswith(bug_body_start))
 
         title, body = rust_watch.maybe_compose_bug(
             old_state=rust_watch.State(
@@ -157,7 +158,7 @@ class Test(unittest.TestCase):
             newest_release=rust_watch.RustReleaseVersion(1, 1, 0),
         )
         self.assertEqual(title, "[Rust] Update to 1.1.0")
-        self.assertTrue(body.startswith("A new release has been detected;"))
+        self.assertTrue(body.startswith(bug_body_start))
 
         title, body = rust_watch.maybe_compose_bug(
             old_state=rust_watch.State(
@@ -167,7 +168,7 @@ class Test(unittest.TestCase):
             newest_release=rust_watch.RustReleaseVersion(2, 0, 0),
         )
         self.assertEqual(title, "[Rust] Update to 2.0.0")
-        self.assertTrue(body.startswith("A new release has been detected;"))
+        self.assertTrue(body.startswith(bug_body_start))
 
     def test_compose_bug_does_nothing_when_no_new_updates_exist(self):
         self.assertIsNone(

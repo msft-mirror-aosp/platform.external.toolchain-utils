@@ -39,7 +39,6 @@ type testContext struct {
 	tempDir      string
 	env          []string
 	cfg          *config
-	inputCmd     *command
 	lastCmd      *command
 	cmdCount     int
 	cmdMock      func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
@@ -83,6 +82,12 @@ func (ctx *testContext) umask(mask int) (oldmask int) {
 		panic("Umask operations requested in test without declaring a umask dependency")
 	}
 	return syscall.Umask(mask)
+}
+
+func (ctx *testContext) setArbitraryClangArtifactsDir() string {
+	d := filepath.Join(ctx.tempDir, "cros-artifacts")
+	ctx.env = append(ctx.env, crosArtifactsEnvVar+"="+d)
+	return d
 }
 
 func (ctx *testContext) initUmaskDependency(lockFn func(), unlockFn func()) {
@@ -191,9 +196,6 @@ func (ctx *testContext) mustFail(exitCode int) string {
 
 func (ctx *testContext) updateConfig(cfg *config) {
 	*ctx.cfg = *cfg
-	ctx.cfg.newWarningsDir = filepath.Join(ctx.tempDir, "fatal_clang_warnings")
-	ctx.cfg.triciumNitsDir = filepath.Join(ctx.tempDir, "tricium_nits")
-	ctx.cfg.crashArtifactsDir = filepath.Join(ctx.tempDir, "clang_crash_diagnostics")
 }
 
 func (ctx *testContext) newCommand(path string, args ...string) *command {

@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright 2019 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 """Performs bisection on LLVM based off a .JSON file."""
-
 
 import argparse
 import enum
@@ -68,8 +66,8 @@ def GetCommandLineArgs():
         help="The bad revision for the bisection.",
     )
 
-    # Add argument for the absolute path to the file that contains information on
-    # the previous tested svn version.
+    # Add argument for the absolute path to the file that contains information
+    # on the previous tested svn version.
     parser.add_argument(
         "--last_tested",
         required=True,
@@ -117,17 +115,9 @@ def GetCommandLineArgs():
 
     # Add argument for a specific chroot path.
     parser.add_argument(
-        "--chroot_path",
+        "--chromeos_path",
         default=cros_root,
         help="the path to the chroot (default: %(default)s)",
-    )
-
-    # Add argument for whether to display command contents to `stdout`.
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="display contents of a command to the terminal "
-        "(default: %(default)s)",
     )
 
     # Add argument for whether to display command contents to `stdout`.
@@ -162,25 +152,26 @@ def GetRemainingRange(start, end, tryjobs):
     """Gets the start and end intervals in 'json_file'.
 
     Args:
-      start: The start version of the bisection provided via the command line.
-      end: The end version of the bisection provided via the command line.
-      tryjobs: A list of tryjobs where each element is in the following format:
-      [
-          {[TRYJOB_INFORMATION]},
-          {[TRYJOB_INFORMATION]},
-          ...,
-          {[TRYJOB_INFORMATION]}
-      ]
+        start: The start version of the bisection provided via the command line.
+        end: The end version of the bisection provided via the command line.
+        tryjobs: A list of tryjobs where each element is in the following
+        format:
+        [
+            {[TRYJOB_INFORMATION]},
+            {[TRYJOB_INFORMATION]},
+            ...,
+            {[TRYJOB_INFORMATION]}
+        ]
 
     Returns:
-      The new start version and end version for bisection, a set of revisions
-      that are 'pending' and a set of revisions that are to be skipped.
+        The new start version and end version for bisection, a set of revisions
+        that are 'pending' and a set of revisions that are to be skipped.
 
     Raises:
-      ValueError: The value for 'status' is missing or there is a mismatch
-      between 'start' and 'end' compared to the 'start' and 'end' in the JSON
-      file.
-      AssertionError: The new start version is >= than the new end version.
+        ValueError: The value for 'status' is missing or there is a mismatch
+        between 'start' and 'end' compared to the 'start' and 'end' in the JSON
+        file.
+        AssertionError: The new start version is >= than the new end version.
     """
 
     if not tryjobs:
@@ -240,8 +231,8 @@ def GetRemainingRange(start, end, tryjobs):
     # Find all revisions that are to be skipped within 'good_rev' and 'bad_rev'.
     #
     # NOTE: The intent is to not launch tryjobs between 'good_rev' and 'bad_rev'
-    # that have already been marked as 'skip' (this set is used when constructing
-    # the list of revisions to launch tryjobs for).
+    # that have already been marked as 'skip' (this set is used when
+    # constructing the list of revisions to launch tryjobs for).
     skip_revisions = {
         tryjob["rev"]
         for tryjob in tryjobs
@@ -288,12 +279,10 @@ def Bisect(
     bisect_state,
     last_tested,
     update_packages,
-    chroot_path,
-    patch_metadata_file,
+    chromeos_path,
     extra_change_lists,
     options,
     builder,
-    verbose,
 ):
     """Adds tryjobs and updates the status file with the new tryjobs."""
 
@@ -303,12 +292,10 @@ def Bisect(
                 update_packages,
                 git_hash,
                 svn_revision,
-                chroot_path,
-                patch_metadata_file,
+                chromeos_path,
                 extra_change_lists,
                 options,
                 builder,
-                verbose,
                 svn_revision,
             )
 
@@ -317,7 +304,7 @@ def Bisect(
         # Do not want to lose progress if there is an exception.
         if last_tested:
             new_file = "%s.new" % last_tested
-            with open(new_file, "w") as json_file:
+            with open(new_file, "w", encoding="utf-8") as json_file:
                 json.dump(
                     bisect_state, json_file, indent=4, separators=(",", ": ")
                 )
@@ -329,7 +316,7 @@ def LoadStatusFile(last_tested, start, end):
     """Loads the status file for bisection."""
 
     try:
-        with open(last_tested) as f:
+        with open(last_tested, encoding="utf-8") as f:
             return json.load(f)
     except IOError as err:
         if err.errno != errno.ENOENT:
@@ -342,11 +329,11 @@ def main(args_output):
     """Bisects LLVM commits.
 
     Raises:
-      AssertionError: The script was run inside the chroot.
+        AssertionError: The script was run inside the chroot.
     """
 
     chroot.VerifyOutsideChroot()
-    patch_metadata_file = "PATCHES.json"
+    chroot.VerifyChromeOSRoot(args_output.chromeos_path)
     start = args_output.start_rev
     end = args_output.end_rev
 
@@ -423,7 +410,7 @@ def main(args_output):
         if args_output.cleanup:
             # Abandon all the CLs created for bisection
             gerrit = os.path.join(
-                args_output.chroot_path, "chromite/bin/gerrit"
+                args_output.chromeos_path, "chromite/bin/gerrit"
             )
             for build in bisect_state["jobs"]:
                 try:
@@ -452,12 +439,10 @@ def main(args_output):
         bisect_state,
         args_output.last_tested,
         update_chromeos_llvm_hash.DEFAULT_PACKAGES,
-        args_output.chroot_path,
-        patch_metadata_file,
+        args_output.chromeos_path,
         args_output.extra_change_lists,
         args_output.options,
         args_output.builder,
-        args_output.verbose,
     )
 
 

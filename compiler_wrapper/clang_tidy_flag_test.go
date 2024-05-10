@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -274,8 +275,9 @@ func TestPartiallyOmitGomaWithClangTidy(t *testing.T) {
 }
 
 func TestTriciumClangTidyIsProperlyDetectedFromEnv(t *testing.T) {
-	withClangTidyTestContext(t, func(ctx *testContext) {
-		ctx.env = []string{"WITH_TIDY=tricium"}
+	withClangTidyTriciumTestContext(t, func(ctx *testContext) {
+		artifactsBase := strings.Split(ctx.env[0], "=")[1]
+		outputDir := artifactsBase + "/linting-output/clang-tidy"
 		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
@@ -292,8 +294,9 @@ func TestTriciumClangTidyIsProperlyDetectedFromEnv(t *testing.T) {
 				for _, arg := range cmd.Args {
 					if path := strings.TrimPrefix(arg, "--export-fixes="); path != arg {
 						hasFixesFile = true
-						if !strings.HasPrefix(path, ctx.cfg.triciumNitsDir+"/") {
-							t.Errorf("fixes file was %q; expected it to be in %q", path, ctx.cfg.triciumNitsDir)
+
+						if !strings.HasPrefix(path, outputDir) {
+							t.Errorf("fixes file was %q; expected it to be in %q", path, outputDir)
 						}
 						break
 					}
@@ -320,8 +323,7 @@ func TestTriciumClangTidyIsProperlyDetectedFromEnv(t *testing.T) {
 }
 
 func TestTriciumClangTidySkipsProtobufFiles(t *testing.T) {
-	withClangTidyTestContext(t, func(ctx *testContext) {
-		ctx.env = []string{"WITH_TIDY=tricium"}
+	withClangTidyTriciumTestContext(t, func(ctx *testContext) {
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg,
 			ctx.newCommand(clangX86_64, mainCc+".pb.cc")))
 		if ctx.cmdCount != 1 {
@@ -365,8 +367,7 @@ func testClangTidyFiltersClangTidySpecificFlagsWithPresetEnv(t *testing.T, ctx *
 }
 
 func TestClangTidyFiltersClangTidySpecificFlagsForTricium(t *testing.T) {
-	withClangTidyTestContext(t, func(ctx *testContext) {
-		ctx.env = []string{"WITH_TIDY=tricium"}
+	withClangTidyTriciumTestContext(t, func(ctx *testContext) {
 		testClangTidyFiltersClangTidySpecificFlagsWithPresetEnv(t, ctx)
 	})
 }
@@ -378,7 +379,7 @@ func TestClangTidyFiltersClangTidySpecificFlags(t *testing.T) {
 }
 
 func TestClangTidyFlagsAreFilteredFromGccInvocations(t *testing.T) {
-	withTestContext(t, func(ctx *testContext) {
+	withClangTidyTestContext(t, func(ctx *testContext) {
 		cmd := ctx.must(callCompiler(ctx, ctx.cfg, ctx.newCommand(gccX86_64, mainCc, "-clang-tidy-flag=--foo")))
 		if err := verifyArgCount(cmd, 0, ".*--foo.*"); err != nil {
 			t.Error(err)
@@ -387,8 +388,8 @@ func TestClangTidyFlagsAreFilteredFromGccInvocations(t *testing.T) {
 }
 
 func TestTriciumReportsClangTidyCrashesGracefully(t *testing.T) {
-	withClangTidyTestContext(t, func(ctx *testContext) {
-		ctx.env = []string{"WITH_TIDY=tricium"}
+	withClangTidyTriciumTestContext(t, func(ctx *testContext) {
+		crashArtifactsDir := filepath.Join(ctx.setArbitraryClangArtifactsDir(), clangCrashArtifactsSubdir)
 		ctx.cmdMock = func(cmd *command, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			switch ctx.cmdCount {
 			case 1:
@@ -426,7 +427,7 @@ func TestTriciumReportsClangTidyCrashesGracefully(t *testing.T) {
 					t.Errorf("got oArg=%q; wanted -o", oArg)
 				}
 
-				wantPrefix := path.Join(ctx.cfg.crashArtifactsDir, "clang-tidy")
+				wantPrefix := path.Join(crashArtifactsDir, "clang-tidy")
 				if !strings.HasPrefix(outFileArg, wantPrefix) {
 					t.Errorf("got out file %q; wanted one starting with %q", outFileArg, wantPrefix)
 				}
@@ -443,9 +444,24 @@ func TestTriciumReportsClangTidyCrashesGracefully(t *testing.T) {
 	})
 }
 
-func withClangTidyTestContext(t *testing.T, work func(ctx *testContext)) {
+func withClangTidyTestContextBaseDir(t *testing.T, work func(ctx *testContext)) {
 	withTestContext(t, func(ctx *testContext) {
-		ctx.env = []string{"WITH_TIDY=1"}
+		artifactDir := t.TempDir()
+		ctx.env = []string{"CROS_ARTIFACTS_TMP_DIR=" + artifactDir}
+		work(ctx)
+	})
+}
+
+func withClangTidyTestContext(t *testing.T, work func(ctx *testContext)) {
+	withClangTidyTestContextBaseDir(t, func(ctx *testContext) {
+		ctx.env = append(ctx.env, "WITH_TIDY=1")
+		work(ctx)
+	})
+}
+
+func withClangTidyTriciumTestContext(t *testing.T, work func(ctx *testContext)) {
+	withClangTidyTestContextBaseDir(t, func(ctx *testContext) {
+		ctx.env = append(ctx.env, "WITH_TIDY=tricium")
 		work(ctx)
 	})
 }

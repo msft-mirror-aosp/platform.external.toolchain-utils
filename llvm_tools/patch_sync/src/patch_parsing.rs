@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs::{copy, File};
+use std::fs::{copy, read_to_string, File};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -45,18 +45,22 @@ impl PatchDictSchema {
 pub struct PatchCollection {
     pub patches: Vec<PatchDictSchema>,
     pub workdir: PathBuf,
+    pub indent_len: usize,
 }
 
 impl PatchCollection {
     /// Create a `PatchCollection` from a PATCHES.
     pub fn parse_from_file(json_file: &Path) -> Result<Self> {
-        Ok(Self {
-            patches: serde_json::from_reader(File::open(json_file)?)?,
-            workdir: json_file
+        // We can't just use a file reader because we
+        // need to know what the original indent_len is.
+        let contents = read_to_string(json_file)?;
+        Self::parse_from_str(
+            json_file
                 .parent()
                 .ok_or_else(|| anyhow!("failed to get json_file parent"))?
                 .to_path_buf(),
-        })
+            &contents,
+        )
     }
 
     /// Create a `PatchCollection` from a string literal and a workdir.
@@ -64,14 +68,19 @@ impl PatchCollection {
         Ok(Self {
             patches: serde_json::from_str(contents).context("parsing from str")?,
             workdir,
+            indent_len: predict_indent(contents),
         })
     }
 
     /// Copy this collection with patches filtered by given criterion.
-    pub fn filter_patches(&self, f: impl FnMut(&PatchDictSchema) -> bool) -> Self {
+    pub fn filter_patches<F>(&self, mut f: F) -> Self
+    where
+        F: FnMut(&PatchDictSchema) -> bool,
+    {
         Self {
-            patches: self.patches.iter().cloned().filter(f).collect(),
+            patches: self.patches.iter().filter(|&x| f(x)).cloned().collect(),
             workdir: self.workdir.clone(),
+            indent_len: self.indent_len,
         }
     }
 
@@ -80,6 +89,7 @@ impl PatchCollection {
         Self {
             patches: self.patches.iter().map(f).collect(),
             workdir: self.workdir.clone(),
+            indent_len: self.indent_len,
         }
     }
 
@@ -89,7 +99,7 @@ impl PatchCollection {
     }
 
     /// Compute the set-set subtraction, returning a new `PatchCollection` which
-    /// keeps the minuend's workdir.
+    /// keeps the minuend's workdir and indent level.
     pub fn subtract(&self, subtrahend: &Self) -> Result<Self> {
         let mut new_patches = Vec::new();
         // This is O(n^2) when it could be much faster, but n is always going to be less
@@ -111,6 +121,7 @@ impl PatchCollection {
         Ok(Self {
             patches: new_patches,
             workdir: self.workdir.clone(),
+            indent_len: self.indent_len,
         })
     }
 
@@ -173,6 +184,7 @@ impl PatchCollection {
             .collect();
         Self {
             workdir: self.workdir.clone(),
+            indent_len: self.indent_len,
             patches: cloned_patches,
         }
     }
@@ -236,6 +248,7 @@ impl PatchCollection {
 
         Ok(Self {
             workdir: self.workdir.clone(),
+            indent_len: self.indent_len,
             patches: combined_patches,
         })
     }
@@ -262,11 +275,12 @@ impl PatchCollection {
     }
 
     pub fn serialize_patches(&self) -> Result<String> {
+        let indent_str = " ".repeat(self.indent_len);
         let mut serialization_buffer = Vec::<u8>::new();
         // Four spaces to indent json serialization.
         let mut serializer = serde_json::Serializer::with_formatter(
             &mut serialization_buffer,
-            serde_json::ser::PrettyFormatter::with_indent(b"    "),
+            serde_json::ser::PrettyFormatter::with_indent(indent_str.as_bytes()),
         );
         self.patches
             .serialize(&mut serializer)
@@ -299,11 +313,25 @@ impl std::fmt::Display for PatchCollection {
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("[No Title]");
             let path = self.workdir.join(&p.rel_patch_path);
+            let from = p.get_from_version();
+            let until = p.get_until_version();
             writeln!(f, "* {}", title)?;
             if i == self.patches.len() - 1 {
-                write!(f, "  {}", path.display())?;
+                write!(
+                    f,
+                    "  {}\n  r{}-r{}",
+                    path.display(),
+                    from.map_or("None".to_string(), |x| x.to_string()),
+                    until.map_or("None".to_string(), |x| x.to_string())
+                )?;
             } else {
-                writeln!(f, "  {}", path.display())?;
+                writeln!(
+                    f,
+                    "  {}\n  r{}-r{}",
+                    path.display(),
+                    from.map_or("None".to_string(), |x| x.to_string()),
+                    until.map_or("None".to_string(), |x| x.to_string())
+                )?;
             }
         }
         Ok(())
@@ -329,8 +357,7 @@ pub fn new_patches(
     // Set up the current patch collection.
     let cur_collection = PatchCollection::parse_from_file(patches_path)
         .with_context(|| format!("parsing {} PATCHES.json", platform))?;
-    let cur_collection = filter_patches_by_platform(&cur_collection, platform);
-    let cur_collection = cur_collection.filter_patches(|p| cur_collection.patch_exists(p));
+    validate_patches(&cur_collection, platform)?;
 
     // Set up the old patch collection.
     let old_collection = PatchCollection::parse_from_str(
@@ -365,6 +392,25 @@ pub fn filter_patches_by_platform(collection: &PatchCollection, platform: &str) 
     collection.filter_patches(|p| {
         p.platforms.contains(platform) || (p.platforms.is_empty() && collection.patch_exists(p))
     })
+}
+
+/// Verify the patches all exist and apply to the given platform.
+///
+/// If all good, return Unit. Otherwise, return an Err.
+pub fn validate_patches(collection: &PatchCollection, platform: &str) -> Result<()> {
+    for p in &collection.patches {
+        if !collection.patch_exists(p) {
+            bail!("Patch {} does not exist", p.rel_patch_path);
+        }
+        if !p.platforms.is_empty() && !p.platforms.contains(platform) {
+            bail!(
+                "Patch {} did not apply to platform {}",
+                p.rel_patch_path,
+                platform
+            );
+        }
+    }
+    Ok(())
 }
 
 /// Get the hash from the patch file contents.
@@ -408,9 +454,27 @@ fn copy_create_parents(from: &Path, to: &Path) -> Result<()> {
         std::fs::create_dir_all(to_parent)?;
     }
 
-    copy(&from, &to)
+    copy(from, to)
         .with_context(|| format!("copying file from {} to {}", &from.display(), &to.display()))?;
     Ok(())
+}
+
+/// Given a json string, predict and return the maximum indentation unit the json string uses.
+pub fn predict_indent(json: &str) -> usize {
+    let indents = json
+        .split('\n')
+        .map(|line| line.len() - line.trim_start_matches(' ').len())
+        .collect::<Vec<usize>>();
+    if indents.iter().all(|x| x % 4 == 0) {
+        return 4;
+    }
+    if indents.iter().all(|x| x % 2 == 0) {
+        return 2;
+    }
+    if indents.iter().all(|x| *x == 0) {
+        return 0;
+    }
+    1
 }
 
 #[cfg(test)]
@@ -444,6 +508,40 @@ mod test {
     }
 
     #[test]
+    fn test_keep_indent2() {
+        let example_json = "\
+[
+  {
+    \"rel_patch_path\": \"some_patch.\",
+    \"metadata\": null,
+    \"platforms\": []
+  }
+]
+";
+        let collection1 = PatchCollection::parse_from_str(PathBuf::new(), example_json)
+            .expect("could not parse example_json");
+        assert_eq!(collection1.indent_len, 2);
+        let collection2 = PatchCollection::parse_from_str(
+            PathBuf::new(),
+            &collection1
+                .serialize_patches()
+                .expect("expected to serialize patches"),
+        )
+        .expect("could not parse from serialization");
+        assert_eq!(collection2.indent_len, 2);
+        let mut collection3 = collection1;
+        collection3.indent_len = 4;
+        let collection4 = PatchCollection::parse_from_str(
+            PathBuf::new(),
+            &collection3
+                .serialize_patches()
+                .expect("expected to serialize patches"),
+        )
+        .expect("could not parse from serialization");
+        assert_eq!(collection4.indent_len, 4)
+    }
+
+    #[test]
     fn test_union() {
         let patch1 = PatchDictSchema {
             rel_patch_path: "a".into(),
@@ -466,10 +564,12 @@ mod test {
         let collection1 = PatchCollection {
             workdir: PathBuf::new(),
             patches: vec![patch1, patch2],
+            indent_len: 0,
         };
         let collection2 = PatchCollection {
             workdir: PathBuf::new(),
             patches: vec![patch3],
+            indent_len: 0,
         };
         let union = collection1
             .union_helper(
@@ -503,10 +603,12 @@ mod test {
         let collection1 = PatchCollection {
             workdir: PathBuf::new(),
             patches: vec![patch1.clone()],
+            indent_len: 4,
         };
         let collection2 = PatchCollection {
             workdir: PathBuf::new(),
             patches: vec![patch1],
+            indent_len: 4,
         };
         let union = collection1
             .union_helper(
@@ -577,14 +679,17 @@ mod test {
         let collection1 = PatchCollection {
             workdir: PathBuf::new(),
             patches: vec![patch1, patch2.clone()],
+            indent_len: 0,
         };
         let collection2 = PatchCollection {
             workdir: PathBuf::new(),
             patches: vec![patch1_updated, patch2.clone()],
+            indent_len: 0,
         };
         let collection3 = PatchCollection {
             workdir: PathBuf::new(),
             patches: vec![patch2],
+            indent_len: 0,
         };
         vec![collection1, collection2, collection3]
     }
