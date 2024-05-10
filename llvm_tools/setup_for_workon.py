@@ -240,9 +240,11 @@ def main(argv: List[str]) -> None:
 
     git_housekeeping_commands: List[List[Union[Path, str]]] = []
     if opts.clean_llvm:
-        git_housekeeping_commands += (
-            ["git", "clean", "-fd", "."],
-            ["git", "reset", "--hard", "HEAD"],
+        git_housekeeping_commands.extend(
+            (
+                ["git", "clean", "-fd", "."],
+                ["git", "reset", "--hard", "HEAD"],
+            )
         )
 
     if opts.checkout is not None:
