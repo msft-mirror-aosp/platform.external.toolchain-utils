@@ -33,15 +33,19 @@ def apply_patches(
     patch_manager: Path,
     patch_metadata_file: Path,
     current_rev: git_llvm_rev.Rev,
+    continue_on_failure: bool = False,
 ) -> None:
     """Applies patches using `patch_manager` to `llvm_dir`."""
+    cmd: List[Union[str, Path]] = [
+        patch_manager,
+        f"--svn_version={current_rev.number}",
+        f"--src_path={llvm_dir.path}",
+        f"--patch_metadata_file={patch_metadata_file}",
+    ]
+    if continue_on_failure:
+        cmd.append("--failure_mode=continue")
     subprocess.run(
-        [
-            patch_manager,
-            f"--svn_version={current_rev.number}",
-            f"--src_path={llvm_dir.path}",
-            f"--patch_metadata_file={patch_metadata_file}",
-        ],
+        cmd,
         check=True,
         stdin=subprocess.DEVNULL,
     )
@@ -194,6 +198,11 @@ def main(argv: List[str]) -> None:
         help="Don't create a commit with all changes applied.",
     )
     parser.add_argument(
+        "--continue-on-failure",
+        action="store_true",
+        help="Keep applying later patches even if an earlier patch fails.",
+    )
+    parser.add_argument(
         "--workon-board",
         dest="workon_board",
         help="""
@@ -283,6 +292,7 @@ def main(argv: List[str]) -> None:
         patch_manager=files_dir / "patch_manager" / "patch_manager.py",
         patch_metadata_file=files_dir / "PATCHES.json",
         current_rev=rev,
+        continue_on_failure=opts.continue_on_failure,
     )
     write_patch_application_stamp(opts.llvm_dir, package_name)
     write_gentoo_cmake_hack(opts.llvm_dir, ebuild_dir)
