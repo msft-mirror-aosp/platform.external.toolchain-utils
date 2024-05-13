@@ -168,10 +168,17 @@ def main(argv: List[str]):
         level=logging.INFO,
     )
 
-    my_dir = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--chromiumos-tree",
+        type=Path,
+        help="""
+        Path to the root of the ChromeOS tree to edit. Autodetected if not
+        specified.
+        """,
     )
     parser.add_argument(
         "--chroot",
@@ -227,7 +234,12 @@ def main(argv: List[str]):
     )
     logging.info("r%d == %s", rev, sha)
 
-    repo_root = chroot.FindChromeOSRootAbove(my_dir)
+    if opts.chromiumos_tree:
+        repo_root = chroot.FindChromeOSRootAbove(opts.chromiumos_tree)
+    else:
+        my_dir = Path(__file__).resolve().parent
+        repo_root = chroot.FindChromeOSRootAbove(my_dir)
+
     logging.info("Repo root is %s", repo_root)
 
     logging.info("Creating new SDK")

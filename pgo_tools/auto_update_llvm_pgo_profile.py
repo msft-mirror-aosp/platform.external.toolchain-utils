@@ -132,6 +132,7 @@ def parse_args(my_dir: Path, argv: List[str]) -> argparse.Namespace:
 
 def maybe_upload_new_llvm_next_profile(
     *,
+    chromiumos_tree: Path,
     profile_cache: GsProfileCache,
     dry_run: bool,
     toolchain_utils: Path,
@@ -163,6 +164,7 @@ def maybe_upload_new_llvm_next_profile(
     logging.info("Generating a PGO profile for LLVM r%d", llvm_next_rev)
     cmd: pgo_utils.Command = [
         create_script,
+        f"--chromiumos-tree={chromiumos_tree}",
         f"--rev={llvm_next_rev}",
     ]
     logging.info(
@@ -295,9 +297,9 @@ def main(argv: List[str]) -> None:
     )
     opts = parse_args(my_dir, argv)
 
-    chromeos_root = opts.chromiumos_tree
+    chromiumos_tree = opts.chromiumos_tree
     chromiumos_overlay = (
-        chromeos_root / "src" / "third_party" / "chromiumos-overlay"
+        chromiumos_tree / "src" / "third_party" / "chromiumos-overlay"
     )
     dry_run = opts.dry_run
 
@@ -306,6 +308,7 @@ def main(argv: List[str]) -> None:
     logging.info("Found %d LLVM PGO profiles in gs://.", len(profile_cache))
 
     maybe_upload_new_llvm_next_profile(
+        chromiumos_tree=chromiumos_tree,
         profile_cache=profile_cache,
         dry_run=dry_run,
         toolchain_utils=my_dir.parent,
@@ -313,14 +316,14 @@ def main(argv: List[str]) -> None:
         force_generation=opts.force_llvm_next_pgo_generation,
     )
 
-    # NOTE: `in_dir=chromeos_root` here is critical, since this function needs
-    # to enter the chroot to run `ebuild manifest`. Hence, the worktree must be
-    # trivially reachable from within the chroot.
+    # NOTE: `in_dir=chromiumos_tree` here is critical, since this function
+    # needs to enter the chroot to run `ebuild manifest`. Hence, the worktree
+    # must be trivially reachable from within the chroot.
     with git_utils.create_worktree(
-        chromiumos_overlay, in_dir=chromeos_root
+        chromiumos_overlay, in_dir=chromiumos_tree
     ) as worktree:
         maybe_sha = create_llvm_pgo_ebuild_update(
-            chromeos_root,
+            chromiumos_tree,
             worktree,
             profile_cache,
             dry_run,
