@@ -230,35 +230,18 @@ func callCompilerInternal(env env, cfg *config, inputCmd *command) (exitCode int
 		return buildWithAutocrash(env, cfg, compilerCmd)
 	}
 
-	bisectStage := getBisectStage(env)
-
 	if rusageEnabled {
 		compilerCmd = removeRusageFromCommand(compilerCmd)
 	}
 
 	if disableWerrorConfig.enabled {
-		if bisectStage != "" {
-			return 0, newUserErrorf("BISECT_STAGE is meaningless with FORCE_DISABLE_WERROR")
-		}
 		return doubleBuildWithWNoError(env, cfg, compilerCmd, disableWerrorConfig)
 	}
 	if shouldCompileWithFallback(env) {
 		if rusageEnabled {
 			return 0, newUserErrorf("TOOLCHAIN_RUSAGE_OUTPUT is meaningless with ANDROID_LLVM_PREBUILT_COMPILER_PATH")
 		}
-		if bisectStage != "" {
-			return 0, newUserErrorf("BISECT_STAGE is meaningless with ANDROID_LLVM_PREBUILT_COMPILER_PATH")
-		}
 		return compileWithFallback(env, cfg, compilerCmd, mainBuilder.absWrapperPath)
-	}
-	if bisectStage != "" {
-		if rusageEnabled {
-			return 0, newUserErrorf("TOOLCHAIN_RUSAGE_OUTPUT is meaningless with BISECT_STAGE")
-		}
-		compilerCmd, err = calcBisectCommand(env, cfg, bisectStage, compilerCmd)
-		if err != nil {
-			return 0, err
-		}
 	}
 
 	errRetryCompilation := errors.New("compilation retry requested")
