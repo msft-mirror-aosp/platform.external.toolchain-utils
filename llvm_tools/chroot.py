@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2020 The ChromiumOS Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -32,6 +31,13 @@ def VerifyOutsideChroot() -> None:
     assert not InChroot(), "Script should be run outside the chroot."
 
 
+def IsChromeOSRoot(path: Path) -> bool:
+    """Returns True if `path` looks like the root of a CrOS checkout."""
+    # This could technically be more stringent with checking, but realistically
+    # should only be passed paths inside of CrOS trees.
+    return (path / ".repo").exists()
+
+
 def FindChromeOSRootAbove(chromeos_tree_path: Path) -> Path:
     """Returns the root of a ChromeOS tree, given a path in said tree.
 
@@ -40,10 +46,10 @@ def FindChromeOSRootAbove(chromeos_tree_path: Path) -> Path:
     Raises:
         ValueError if the given path is not in a ChromeOS tree.
     """
-    if (chromeos_tree_path / ".repo").exists():
+    if IsChromeOSRoot(chromeos_tree_path):
         return chromeos_tree_path
 
     for parent in chromeos_tree_path.parents:
-        if (parent / ".repo").exists():
+        if IsChromeOSRoot(parent):
             return parent
     raise ValueError(f"{chromeos_tree_path} is not in a repo checkout")

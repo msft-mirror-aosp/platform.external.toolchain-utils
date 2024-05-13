@@ -363,18 +363,20 @@ def GetLLVMHashAndVersionFromSVNOption(
     return git_hash, version
 
 
-def GetCrOSCurrentLLVMHash(chromeos_tree: Path) -> str:
+def GetCrOSCurrentLLVMHash(chromeos_root: Path) -> str:
     """Retrieves the current ChromeOS LLVM hash.
 
     Args:
-        chromeos_tree: A ChromeOS source tree. This is allowed to be
-        arbitrary subdirectory of an actual ChromeOS tree, for convenience.
+        chromeos_root: A ChromeOS source tree root.
 
     Raises:
+        AssertionError if `chromeos_root` isn't a CrOS tree root.
         ManifestValueError if the toolchain manifest doesn't match the
         expected structure.
     """
-    chromeos_root = chroot.FindChromeOSRootAbove(chromeos_tree)
+    assert chroot.IsChromeOSRoot(
+        chromeos_root
+    ), f"{chromeos_root} isn't the root of a ChromeOS checkout"
     return manifest_utils.extract_current_llvm_hash(chromeos_root)
 
 

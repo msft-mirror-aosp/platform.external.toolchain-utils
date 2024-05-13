@@ -20,6 +20,7 @@ import subprocess
 import sys
 from typing import List, Set, TextIO
 
+from llvm_tools import chroot
 from llvm_tools import get_llvm_hash
 from llvm_tools import revert_checker
 
@@ -118,7 +119,7 @@ def main(argv: List[str]):
         llvm_sha = get_llvm_hash.LLVMHash().GetCrOSLLVMNextHash()
     else:
         llvm_sha = get_llvm_hash.LLVMHash().GetCrOSCurrentLLVMHash(
-            opts.overlay_dir
+            chroot.FindChromeOSRootAbove(opts.overlay_dir),
         )
 
     logging.info("Resolved %r as the LLVM SHA to check.", llvm_sha)

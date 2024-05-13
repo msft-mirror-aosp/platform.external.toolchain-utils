@@ -229,14 +229,14 @@ def update_llvm_ebuild_manifest(
 
 
 def create_llvm_pgo_ebuild_update(
-    chromeos_tree: Path,
+    chromeos_root: Path,
     chromiumos_overlay: Path,
     profile_cache: GsProfileCache,
     dry_run: bool,
 ) -> Optional[str]:
     llvm_dir = get_llvm_hash.GetAndUpdateLLVMProjectInLLVMTools()
     llvm_hash = get_llvm_hash.LLVMHash()
-    current_llvm_sha = llvm_hash.GetCrOSCurrentLLVMHash(chromeos_tree)
+    current_llvm_sha = llvm_hash.GetCrOSCurrentLLVMHash(chromeos_root)
     current_llvm_rev = get_llvm_hash.GetVersionFrom(llvm_dir, current_llvm_sha)
     logging.info("Current LLVM revision is %d", current_llvm_rev)
     want_revisions = [current_llvm_rev]
@@ -266,7 +266,7 @@ def create_llvm_pgo_ebuild_update(
     if dry_run:
         logging.info("Skipping manifest update; --dry-run was passed")
     else:
-        update_llvm_ebuild_manifest(chromeos_tree, chromiumos_overlay)
+        update_llvm_ebuild_manifest(chromeos_root, chromiumos_overlay)
     return git_utils.commit_all_changes(
         chromiumos_overlay,
         textwrap.dedent(
