@@ -14,13 +14,14 @@ Run this outside of the chroot.
 """
 
 import argparse
+import collections
 import logging
 from pathlib import Path
 import re
 import shlex
 import subprocess
 import textwrap
-from typing import Iterable, List, Optional
+from typing import Dict, List, Optional
 
 from cros_utils import git_utils
 from llvm_tools import chroot
@@ -42,22 +43,52 @@ class GsProfileCache:
 
     To use this:
         1. Create an instance of this class using `GsProfileCache.fetch()`.
-        2. Check if we have profile information for a revision: `123 in cache`.
+        2. Check if we have profile information for a revision:
+           `cache.has_profile_for_rev(123)`.
         3. Inform the cache that we have information for a revision:
-           `cache.insert_rev(123)`.
+           `cache.insert_profile(123, suffix="foo")`.
     """
 
-    def __init__(self, profiles: Iterable[int]):
-        self.profile_revs = set(profiles)
+    def __init__(self, profiles: Dict[int, List[str]]):
+        """Constructs an object.
 
-    def __contains__(self, rev: int) -> bool:
+        Args:
+            profiles: A dict of profile rev to the list of suffixes for these
+                profiles. An empty suffix implies there is no suffix (incl `-`)
+                in the profile name. These should be sorted from oldest ->
+                newest. No list should be empty.
+        """
+        self.profile_revs = profiles
+
+    def has_profile_for_rev(self, rev: int) -> bool:
         return rev in self.profile_revs
 
-    def __len__(self) -> int:
-        return len(self.profile_revs)
+    def has_profile(self, rev: int, suffix: str) -> bool:
+        return self.has_profile_for_rev(rev) and any(
+            x == suffix for x in self.profile_revs[rev]
+        )
 
-    def insert_rev(self, rev: int) -> None:
-        self.profile_revs.add(rev)
+    def newest_profile_name_for(self, rev: int) -> str:
+        """Gets the newest profile name for the given rev.
+
+        This name is intended for use in the LLVM ebuild.
+        """
+        if not self.has_profile_for_rev(rev):
+            raise KeyError(f"No profiles for r{rev}")
+        suffix = self.profile_revs[rev][-1]
+        if suffix:
+            suffix = f"-{suffix}"
+        return f"{rev}{suffix}"
+
+    def insert_profile(self, rev: int, suffix: str) -> None:
+        """Inserts a profile with `suffix` at `rev`.
+
+        Assumes that the profile is newer than all other profiles at `rev`.
+        """
+        self.profile_revs.setdefault(rev, []).append(suffix)
+
+    def num_profiles(self) -> int:
+        return sum(len(x) for x in self.profile_revs.values())
 
     @classmethod
     def fetch(cls) -> "GsProfileCache":
@@ -75,17 +106,24 @@ class GsProfileCache:
 
         prof_re = re.compile(
             re.escape(PROFDATA_REV_PREFIX)
-            + r"(\d+)"
+            + r"(\d+)(?:-(.+))?"
             + re.escape(PROFDATA_REV_SUFFIX)
         )
-        profiles = set()
+        profiles = collections.defaultdict(list)
         for line in stdout.splitlines():
             m = prof_re.fullmatch(line)
             if not m:
                 if not line.strip():
                     continue
                 raise ValueError(f"Unparseable line from gs://: {line!r}")
-            profiles.add(int(m.group(1)))
+            profile_rev, suffix = m.groups()
+            profiles[int(profile_rev)].append(suffix if suffix else "")
+
+        # Sort these alphabetically, so getting the 'most recent' profile (by
+        # name) is trivial.
+        for v in profiles.values():
+            v.sort()
+
         return cls(profiles)
 
 
@@ -141,12 +179,18 @@ def maybe_upload_new_llvm_next_profile(
     force_generation: bool,
 ) -> None:
     llvm_next_rev = llvm_next.LLVM_NEXT_REV
+    # NOTE: `profile_suffix` is intentionally hardcoded to ''. Profiles with
+    # non-empty suffixes are expected to be manually generated, and uploaded by
+    # `create_chroot_and_generate_pgo_profile.py`. This script will correctly
+    # detect and roll to these, if necessary.
+    profile_suffix = ""
     upload_profile = True
-    if llvm_next_rev in profile_cache:
+    if profile_cache.has_profile(llvm_next_rev, profile_suffix):
         if not force_generation:
             logging.info(
-                "llvm-next profile already exists in gs://; no need to make a "
-                "new one"
+                "llvm-next profile %d already exists in gs://; no need to "
+                "make a new one",
+                llvm_next_rev,
             )
             return
         logging.info(
@@ -162,11 +206,13 @@ def maybe_upload_new_llvm_next_profile(
         / "pgo_tools"
         / "create_chroot_and_generate_pgo_profile.py"
     )
+
     logging.info("Generating a PGO profile for LLVM r%d", llvm_next_rev)
     cmd: pgo_utils.Command = [
         create_script,
         f"--chromiumos-tree={chromiumos_tree}",
         f"--rev={llvm_next_rev}",
+        f"--profile-suffix={profile_suffix}",
     ]
     logging.info(
         "Generating %s a PGO profile for LLVM r%d",
@@ -185,7 +231,7 @@ def maybe_upload_new_llvm_next_profile(
             llvm_next_rev,
             shlex.join(str(x) for x in cmd),
         )
-        profile_cache.insert_rev(llvm_next_rev)
+        profile_cache.insert_profile(llvm_next_rev, profile_suffix)
         return
 
     llvm_project = chromiumos_tree / cros_llvm_repo.REPO_PATH
@@ -206,15 +252,15 @@ def maybe_upload_new_llvm_next_profile(
         )
 
     if upload_profile:
-        profile_cache.insert_rev(llvm_next_rev)
+        profile_cache.insert_profile(llvm_next_rev, profile_suffix)
 
 
 def overwrite_llvm_pgo_listing(
-    chromiumos_overlay: Path, profile_revs: List[int]
+    chromiumos_overlay: Path, profile_names: List[str]
 ) -> bool:
     ebuild = chromiumos_overlay / LLVM_EBUILD_SUBPATH
     contents = ebuild.read_text(encoding="utf-8")
-    new_pgo_listing = "\t" + "\n\t".join(str(x) for x in profile_revs)
+    new_pgo_listing = "\t" + "\n\t".join(profile_names)
 
     array_start = "\nLLVM_PGO_PROFILE_REVS=(\n"
     array_start_index = contents.index(array_start)
@@ -262,18 +308,22 @@ def create_llvm_pgo_ebuild_update(
     llvm_next_rev = llvm_next.LLVM_NEXT_REV
     if current_llvm_rev != llvm_next_rev:
         logging.info("llvm-next rev is r%d", llvm_next_rev)
-        if llvm_next_rev in profile_cache:
+        if profile_cache.has_profile_for_rev(llvm_next_rev):
             want_revisions.append(llvm_next_rev)
         else:
             logging.info(
                 "No PGO profile exists for r%d; skip adding to profile list",
                 llvm_next_rev,
             )
+
+    want_names = [
+        profile_cache.newest_profile_name_for(x) for x in want_revisions
+    ]
     logging.info(
-        "Expected LLVM PGO profile version(s) in ebuild: %s", want_revisions
+        "Expected LLVM PGO profile version(s) in ebuild: %s", want_names
     )
 
-    made_change = overwrite_llvm_pgo_listing(chromiumos_overlay, want_revisions)
+    made_change = overwrite_llvm_pgo_listing(chromiumos_overlay, want_names)
     if not made_change:
         logging.info("No LLVM ebuild changes made")
         return None
@@ -321,7 +371,9 @@ def main(argv: List[str]) -> None:
 
     logging.info("Populating gs:// profile cache...")
     profile_cache = GsProfileCache.fetch()
-    logging.info("Found %d LLVM PGO profiles in gs://.", len(profile_cache))
+    logging.info(
+        "Found %d LLVM PGO profiles in gs://.", profile_cache.num_profiles()
+    )
 
     maybe_upload_new_llvm_next_profile(
         chromiumos_tree=chromiumos_tree,

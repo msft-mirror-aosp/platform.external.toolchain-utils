@@ -145,11 +145,14 @@ def translate_chroot_path_to_out_of_chroot(
     return repo_root / info.out_dir_name / str(path)[1:]
 
 
-def determine_upload_command(profile_path: Path, rev: int) -> pgo_utils.Command:
+def determine_upload_command(
+    profile_path: Path, rev: int, suffix: str
+) -> pgo_utils.Command:
     """Returns a command that can be used to upload our PGO profile."""
-    upload_target = (
-        f"gs://chromeos-localmirror/distfiles/llvm-profdata-r{rev}.xz"
-    )
+    profile_name = f"llvm-profdata-r{rev}"
+    if suffix:
+        profile_name += f"-{suffix}"
+    upload_target = f"gs://chromeos-localmirror/distfiles/{profile_name}.xz"
     return [
         "gsutil.py",
         "cp",
@@ -196,6 +199,13 @@ def main(argv: List[str]):
         "--rev",
         type=int,
         help="Revision of LLVM to generate a PGO profile for.",
+    )
+    parser.add_argument(
+        "--profile-suffix",
+        default="",
+        help="""
+        Suffix to add to the profile. Only meaningful if --upload is passed.
+        """,
     )
     parser.add_argument(
         "--out-dir",
@@ -265,7 +275,9 @@ def main(argv: List[str]):
             shutil.copyfile(profile_path, opts.output)
 
         compressed_profile_path = compress_pgo_profile(profile_path)
-        upload_command = determine_upload_command(compressed_profile_path, rev)
+        upload_command = determine_upload_command(
+            compressed_profile_path, rev, opts.profile_suffix
+        )
         friendly_upload_command = shlex.join(str(x) for x in upload_command)
         if opts.upload:
             logging.info(
