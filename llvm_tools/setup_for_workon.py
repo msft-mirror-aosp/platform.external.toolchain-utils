@@ -11,7 +11,7 @@ from pathlib import Path
 import re
 import shlex
 import subprocess
-from typing import List, Optional, Union
+from typing import Iterable, List, Optional, Union
 
 from llvm_tools import cros_llvm_repo
 from llvm_tools import git_llvm_rev
@@ -147,6 +147,17 @@ def fetch_and_resolve_sha(llvm_project_dir: Path, sha: str) -> str:
     raise ValueError(f"SHA {sha} can't be resolved in {llvm_project_dir}")
 
 
+def _search_overlays_for_ebuild_dir(
+    package_name: str, overlays: Iterable[Path]
+) -> Path:
+    for overlay in overlays:
+        potential_path = overlay / package_name
+        potential_ebuild = potential_path / f"{potential_path.name}-9999.ebuild"
+        if potential_ebuild.is_file():
+            return potential_path
+    raise ValueError(f"Could not find 9999 ebuild for {package_name}")
+
+
 def main(argv: List[str]) -> None:
     logging.basicConfig(
         format=">> %(asctime)s: %(levelname)s: %(filename)s:%(lineno)d: "
@@ -233,19 +244,23 @@ def main(argv: List[str]) -> None:
     opts = parser.parse_args(argv)
 
     ebuild_dir = opts.ebuild_dir
-    package_name = opts.package
-    if not ebuild_dir and not package_name:
+    package = opts.package
+    if not ebuild_dir and not package:
         parser.error(
             "At least one of --ebuild-dir or --package must be specified."
         )
 
     if not ebuild_dir:
-        # All of these are in chromiumos-overlay, so just use that as a basis.
-        ebuild_dir = my_dir.parent.parent / "chromiumos-overlay" / package_name
+        # All of these are either in toolchains-overlay or chromiumos-overlay.
+        overlays = (
+            my_dir.parent.parent / d
+            for d in ("toolchains-overlay", "chromiumos-overlay")
+        )
+        ebuild_dir = _search_overlays_for_ebuild_dir(package, overlays)
         logging.info("Ebuild directory is %s.", ebuild_dir)
-    elif not package_name:
-        package_name = f"{ebuild_dir.parent.name}/{ebuild_dir.name}"
-        logging.info("Package is %s.", package_name)
+    elif not package:
+        package = f"{ebuild_dir.parent.name}/{ebuild_dir.name}"
+        logging.info("Package is %s.", package)
 
     git_housekeeping_commands: List[List[Union[Path, str]]] = []
     if opts.clean_llvm:
@@ -294,7 +309,10 @@ def main(argv: List[str]) -> None:
         current_rev=rev,
         continue_on_failure=opts.continue_on_failure,
     )
+    # Assume that the package format is <category>/<name>
+    _, package_name = package.split("/")
     write_patch_application_stamp(opts.llvm_dir, package_name)
+    logging.info("Applying Gentoo CMakeLists.txt hack...")
     write_gentoo_cmake_hack(opts.llvm_dir, ebuild_dir)
 
     if opts.commit:
@@ -321,19 +339,19 @@ def main(argv: List[str]) -> None:
             "Didn't ensure 'workon' for any board or host."
             " Make sure you've called 'cros workon [...] start %s'"
             " before building!",
-            package_name,
+            package,
         )
         return
 
     if opts.workon_board == "host":
-        cmd = ["cros", "workon", "--host", "start", package_name]
+        cmd = ["cros", "workon", "--host", "start", package]
     else:
         cmd = [
             "cros",
             "workon",
             f"-b={opts.workon_board}",
             "start",
-            package_name,
+            package,
         ]
     subprocess.run(cmd, check=True, stdin=subprocess.DEVNULL)
     logging.info(
