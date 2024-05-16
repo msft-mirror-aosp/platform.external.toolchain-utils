@@ -246,11 +246,6 @@ func createClangPathGoldenInputs(ctx *testContext, gomaEnv string) goldenFile {
 				Cmds:       okResults,
 			},
 			{
-				WrapperCmd: newGoldenCmd(clangX86_64, mainCc),
-				Env:        []string{"CLANG=somepath/clang"},
-				Cmds:       okResults,
-			},
-			{
 				WrapperCmd: newGoldenCmd(clangX86_64, "-Xclang-path=/somedir", mainCc),
 				Cmds: []commandResult{
 					{Stdout: "someResourceDir"},

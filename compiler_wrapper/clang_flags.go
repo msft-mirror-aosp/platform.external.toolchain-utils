@@ -14,26 +14,21 @@ import (
 
 func processClangFlags(builder *commandBuilder) error {
 	env := builder.env
-	clangDir, _ := env.getenv("CLANG")
-
-	if clangDir == "" {
-		if builder.cfg.isHostWrapper {
-			clangDir = filepath.Dir(builder.absWrapperPath)
-		} else {
-			clangDir = filepath.Join(builder.rootPath, "usr/bin/")
-			if !filepath.IsAbs(builder.path) {
-				// If sysroot_wrapper is invoked by relative path, call actual compiler in
-				// relative form. This is neccesary to remove absolute path from compile
-				// outputs.
-				var err error
-				clangDir, err = filepath.Rel(env.getwd(), clangDir)
-				if err != nil {
-					return wrapErrorwithSourceLocf(err, "failed to make clangDir %s relative to %s.", clangDir, env.getwd())
-				}
+	clangDir := ""
+	if builder.cfg.isHostWrapper {
+		clangDir = filepath.Dir(builder.absWrapperPath)
+	} else {
+		clangDir = filepath.Join(builder.rootPath, "usr/bin/")
+		if !filepath.IsAbs(builder.path) {
+			// If sysroot_wrapper is invoked by relative path, call actual compiler in
+			// relative form. This is necessary to remove absolute path from compile
+			// outputs.
+			var err error
+			clangDir, err = filepath.Rel(env.getwd(), clangDir)
+			if err != nil {
+				return wrapErrorwithSourceLocf(err, "failed to make clangDir %s relative to %s.", clangDir, env.getwd())
 			}
 		}
-	} else {
-		clangDir = filepath.Dir(clangDir)
 	}
 
 	clangBasename := "clang"
