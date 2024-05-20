@@ -44,7 +44,6 @@ from typing import (
     Optional,
     Protocol,
     Sequence,
-    Tuple,
     TypeVar,
     Union,
 )
@@ -187,12 +186,6 @@ class RustVersion(NamedTuple):
         )
 
 
-class PreparedUprev(NamedTuple):
-    """Container for the information returned by prepare_uprev."""
-
-    template_version: RustVersion
-
-
 def compute_ebuild_path(category: str, name: str, version: RustVersion) -> Path:
     return EBUILD_PREFIX / category / name / f"{name}-{version}.ebuild"
 
@@ -271,14 +264,6 @@ def parse_commandline_args() -> argparse.Namespace:
         help="Continue the steps from the state file",
     )
     parser.add_argument(
-        "--template",
-        type=RustVersion.parse,
-        default=None,
-        help="A template to use for creating a Rust uprev from, in the form "
-        "a.b.c The ebuild has to exist in the chroot. If not specified, the "
-        "tool will use the current Rust version in the chroot as template.",
-    )
-    parser.add_argument(
         "--skip_compile",
         action="store_true",
         help="Skip compiling rust to test the tool. Only for testing",
@@ -288,13 +273,6 @@ def parse_commandline_args() -> argparse.Namespace:
         type=RustVersion.parse,
         required=True,
         help="Rust version to uprev to, in the form a.b.c",
-    )
-    parser.add_argument(
-        "--remove",
-        type=RustVersion.parse,
-        default=None,
-        help="Rust version to remove, in the form a.b.c If not "
-        "specified, the tool will remove the oldest version in the chroot",
     )
     parser.add_argument(
         "--skip_cross_compiler",
@@ -324,28 +302,6 @@ def parse_commandline_args() -> argparse.Namespace:
         os.remove(args.state_file)
 
     return args
-
-
-def prepare_uprev(
-    rust_version: RustVersion, template: RustVersion
-) -> Optional[PreparedUprev]:
-    ebuild_path = find_ebuild_for_rust_version(template)
-
-    if rust_version <= template:
-        logging.info(
-            "Requested version %s is not newer than the template version %s.",
-            rust_version,
-            template,
-        )
-        return None
-
-    logging.info(
-        "Template Rust version is %s (ebuild: %s)",
-        template,
-        ebuild_path,
-    )
-
-    return PreparedUprev(template)
 
 
 def create_ebuild(
@@ -674,39 +630,12 @@ def perform_step(
     return val
 
 
-def prepare_uprev_from_json(obj: Any) -> Optional[PreparedUprev]:
-    if not obj:
-        return None
-    version = obj[0]
-    return PreparedUprev(
-        RustVersion(*version),
-    )
-
-
-def prepare_uprev_to_json(
-    prepared_uprev: Optional[PreparedUprev],
-) -> Optional[Tuple[RustVersion]]:
-    if prepared_uprev is None:
-        return None
-    return (prepared_uprev.template_version,)
-
-
 def create_rust_uprev(
     rust_version: RustVersion,
     template_version: RustVersion,
     skip_compile: bool,
     run_step: RunStepFn,
 ) -> None:
-    prepared = run_step(
-        "prepare uprev",
-        lambda: prepare_uprev(rust_version, template_version),
-        result_from_json=prepare_uprev_from_json,
-        result_to_json=prepare_uprev_to_json,
-    )
-    if prepared is None:
-        return
-    template_version = prepared.template_version
-
     run_step(
         "mirror rust sources",
         lambda: mirror_rust_source(
@@ -781,26 +710,20 @@ def create_rust_uprev(
     )
 
 
-def find_rust_versions() -> List[Tuple[RustVersion, Path]]:
-    """Returns (RustVersion, ebuild_path) for base versions of dev-lang/rust.
-
-    This excludes symlinks to ebuilds, so if rust-1.34.0.ebuild and
-    rust-1.34.0-r1.ebuild both exist and -r1 is a symlink to the other,
-    only rust-1.34.0.ebuild will be in the return value.
-    """
-    return [
-        (RustVersion.parse_from_ebuild(ebuild), ebuild)
+def find_stable_rust_version() -> RustVersion:
+    """Returns the RustVersion of the stable dev-lang/rust ebuild."""
+    rust_versions = [
+        RustVersion.parse_from_ebuild(ebuild)
         for ebuild in RUST_PATH.iterdir()
-        if ebuild.suffix == ".ebuild" and not ebuild.is_symlink()
+        if ebuild.suffix == ".ebuild"
+        and not ebuild.name.endswith("-9999.ebuild")
+        and not ebuild.is_symlink()
     ]
-
-
-def find_oldest_rust_version() -> RustVersion:
-    """Returns the RustVersion of the oldest dev-lang/rust ebuild."""
-    rust_versions = find_rust_versions()
-    if len(rust_versions) <= 1:
-        raise RuntimeError("Expect to find more than one Rust versions")
-    return min(rust_versions)[0]
+    if len(rust_versions) != 1:
+        raise RuntimeError(
+            f"Expect to find exactly one Rust version; found {rust_versions}"
+        )
+    return rust_versions[0]
 
 
 def find_ebuild_for_rust_version(version: RustVersion) -> Path:
@@ -866,53 +789,6 @@ def remove_ebuild_version(path: PathOrStr, name: str, version: RustVersion):
 
 def remove_files(filename: PathOrStr, path: PathOrStr) -> None:
     subprocess.check_call(["git", "rm", filename], cwd=path)
-
-
-def remove_rust_uprev(
-    rust_version: Optional[RustVersion],
-    run_step: RunStepFn,
-) -> None:
-    def find_desired_rust_version() -> RustVersion:
-        if rust_version:
-            return rust_version
-        return find_oldest_rust_version()
-
-    def find_desired_rust_version_from_json(obj: Any) -> RustVersion:
-        return RustVersion(*obj)
-
-    delete_version = run_step(
-        "find rust version to delete",
-        find_desired_rust_version,
-        result_from_json=find_desired_rust_version_from_json,
-    )
-
-    for category, name in RUST_PACKAGES:
-        run_step(
-            f"remove old {name} ebuild",
-            functools.partial(
-                remove_ebuild_version,
-                EBUILD_PREFIX / category / name,
-                name,
-                delete_version,
-            ),
-        )
-
-    run_step(
-        "update dev-lang/rust-host manifest to delete old version",
-        lambda: ebuild_actions("dev-lang/rust-host", ["manifest"]),
-    )
-    run_step(
-        "remove target version from rust packages",
-        lambda: update_rust_packages(
-            "dev-lang/rust", delete_version, add=False
-        ),
-    )
-    run_step(
-        "remove host version from rust packages",
-        lambda: update_rust_packages(
-            "dev-lang/rust-host", delete_version, add=False
-        ),
-    )
 
 
 def rust_bootstrap_path() -> Path:
@@ -1095,12 +971,7 @@ def main() -> None:
         )
 
     sudo_keepalive()
-    # Determine the template version, if not given.
-    template_version = args.template
-    if template_version is None:
-        rust_ebuild = find_ebuild_for_package("dev-lang/rust")
-        template_version = RustVersion.parse_from_ebuild(rust_ebuild)
-
+    template_version = find_stable_rust_version()
     run_step(
         "create rust upgrade branch",
         lambda: create_rust_uprev_branch(args.uprev),
@@ -1111,8 +982,5 @@ def main() -> None:
             lambda: build_cross_compiler(template_version),
         )
     create_rust_uprev(args.uprev, template_version, args.skip_compile, run_step)
-    remove_rust_uprev(args.remove, run_step)
-    prepared = prepare_uprev_from_json(completed_steps["prepare uprev"])
-    assert prepared is not None, "no prepared uprev decoded from JSON"
     if not args.no_upload:
         run_step("create rust uprev CL", lambda: create_new_commit(args.uprev))

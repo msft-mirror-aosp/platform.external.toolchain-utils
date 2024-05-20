@@ -308,25 +308,21 @@ class FindEbuildPathTest(unittest.TestCase):
             self.assertEqual(result, ebuild)
 
 
-class FindRustVersionsTest(unittest.TestCase):
-    """Tests for rust_uprev.find_rust_versions."""
+class FindStableRustVersionTest(unittest.TestCase):
+    """Tests for rust_uprev.find_stable_rust_version."""
 
     def test_with_symlinks(self):
         with tempfile.TemporaryDirectory() as t:
             tmpdir = Path(t)
-            rust_1_49_1_ebuild = tmpdir / "rust-1.49.1.ebuild"
             rust_1_50_0_ebuild = tmpdir / "rust-1.50.0.ebuild"
             rust_1_50_0_r1_ebuild = tmpdir / "rust-1.50.0-r1.ebuild"
-            rust_1_49_1_ebuild.touch()
+            rust_9999_ebuild = tmpdir / "rust-9999.ebuild"
             rust_1_50_0_ebuild.touch()
             rust_1_50_0_r1_ebuild.symlink_to(rust_1_50_0_ebuild)
+            rust_9999_ebuild.touch()
             with mock.patch("rust_uprev.RUST_PATH", tmpdir):
-                actual = rust_uprev.find_rust_versions()
-                expected = [
-                    (rust_uprev.RustVersion(1, 49, 1), rust_1_49_1_ebuild),
-                    (rust_uprev.RustVersion(1, 50, 0), rust_1_50_0_ebuild),
-                ]
-                self.assertEqual(actual, expected)
+                actual = rust_uprev.find_stable_rust_version()
+                self.assertEqual(actual, rust_uprev.RustVersion(1, 50, 0))
 
 
 class MirrorHasFileTest(unittest.TestCase):
@@ -474,51 +470,6 @@ class RustVersionTest(unittest.TestCase):
         self.assertEqual(
             "failed to parse 'invalid-rust-1.2.3'", str(context.exception)
         )
-
-
-class PrepareUprevTest(unittest.TestCase):
-    """Tests for prepare_uprev step in rust_uprev"""
-
-    def setUp(self):
-        self.version_old = rust_uprev.RustVersion(1, 2, 3)
-        self.version_new = rust_uprev.RustVersion(1, 3, 5)
-
-    @mock.patch.object(
-        rust_uprev,
-        "find_ebuild_for_rust_version",
-        return_value=Path("/path/to/ebuild"),
-    )
-    @mock.patch.object(rust_uprev, "get_command_output")
-    def test_success_with_template(self, mock_command, _ebuild_for_version):
-        expected = rust_uprev.PreparedUprev(self.version_old)
-        actual = rust_uprev.prepare_uprev(
-            rust_version=self.version_new, template=self.version_old
-        )
-        self.assertEqual(expected, actual)
-        mock_command.assert_not_called()
-
-    @mock.patch.object(
-        rust_uprev,
-        "find_ebuild_for_rust_version",
-        return_value="/path/to/ebuild",
-    )
-    @mock.patch.object(rust_uprev, "get_command_output")
-    def test_return_none_with_template_larger_than_input(
-        self, mock_command, *_args
-    ):
-        ret = rust_uprev.prepare_uprev(
-            rust_version=self.version_old, template=self.version_new
-        )
-        self.assertIsNone(ret)
-        mock_command.assert_not_called()
-
-    def test_prepare_uprev_from_json(self):
-        json_result = (list(self.version_new),)
-        expected = rust_uprev.PreparedUprev(
-            self.version_new,
-        )
-        actual = rust_uprev.prepare_uprev_from_json(json_result)
-        self.assertEqual(expected, actual)
 
 
 class ToggleProfileData(unittest.TestCase):
@@ -719,31 +670,6 @@ class RustUprevOtherStagesTests(unittest.TestCase):
         mock_call.assert_called_once_with(
             ["git", "add", f"rust-host-{self.new_version}.ebuild"],
             cwd=new_ebuild.parent,
-        )
-
-    @mock.patch("rust_uprev.find_rust_versions")
-    def test_find_oldest_rust_version_pass(self, rust_versions):
-        oldest_version_name = f"rust-{self.old_version}.ebuild"
-        rust_versions.return_value = [
-            (self.old_version, oldest_version_name),
-            (self.current_version, f"rust-{self.current_version}.ebuild"),
-            (self.new_version, f"rust-{self.new_version}.ebuild"),
-        ]
-        actual = rust_uprev.find_oldest_rust_version()
-        expected = self.old_version
-        self.assertEqual(expected, actual)
-
-    @mock.patch("rust_uprev.find_rust_versions")
-    def test_find_oldest_rust_version_fail_with_only_one_ebuild(
-        self, rust_versions
-    ):
-        rust_versions.return_value = [
-            (self.new_version, f"rust-{self.new_version}.ebuild"),
-        ]
-        with self.assertRaises(RuntimeError) as context:
-            rust_uprev.find_oldest_rust_version()
-        self.assertEqual(
-            "Expect to find more than one Rust versions", str(context.exception)
         )
 
     @mock.patch.object(rust_uprev, "get_command_output")
