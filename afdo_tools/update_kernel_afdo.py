@@ -669,6 +669,10 @@ def commit_new_profiles(
 
     commit_message_lines += (
         "",
+        "Never rebase this CL! If there's a merge conflict, either abandon",
+        "this CL, or let Chrotomation do so after a few days. Rebasing could",
+        "cause a performance regression.",
+        "",
         "BUG=None",
         "TEST=Verified in kernel-release-afdo-verify-orchestrator",
     )
