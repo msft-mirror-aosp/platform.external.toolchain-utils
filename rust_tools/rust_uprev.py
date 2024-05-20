@@ -248,14 +248,6 @@ def find_ebuild_path(
     return result[0]
 
 
-def get_rust_bootstrap_version():
-    """Get the version of the current rust-bootstrap package."""
-    bootstrap_ebuild = find_ebuild_path(rust_bootstrap_path(), "rust-bootstrap")
-    m = re.match(r"^rust-bootstrap-(\d+).(\d+).(\d+)", bootstrap_ebuild.name)
-    assert m, bootstrap_ebuild.name
-    return RustVersion(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-
-
 def parse_commandline_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -535,16 +527,6 @@ it to the local mirror using gsutil cp.
         raise Exception("Could not verify that allUsers has READER permission")
 
 
-def fetch_bootstrap_distfiles(version: RustVersion) -> None:
-    """Fetches rust-bootstrap distfiles from the local mirror
-
-    Fetches the distfiles for a rust-bootstrap ebuild to ensure they
-    are available on the mirror and the local copies are the same as
-    the ones on the mirror.
-    """
-    fetch_distfile_from_mirror(compute_rustc_src_name(version))
-
-
 def fetch_rust_distfiles(version: RustVersion) -> None:
     """Fetches rust distfiles from the local mirror
 
@@ -771,12 +753,6 @@ def create_rust_uprev(
     template_version = prepared.template_version
 
     run_step(
-        "mirror bootstrap sources",
-        lambda: mirror_rust_source(
-            template_version,
-        ),
-    )
-    run_step(
         "mirror rust sources",
         lambda: mirror_rust_source(
             rust_version,
@@ -787,10 +763,6 @@ def create_rust_uprev(
     # are not available on the mirror. To make them pass, fetch the
     # required files yourself, verify their checksums, then upload them
     # to the mirror.
-    run_step(
-        "fetch bootstrap distfiles",
-        lambda: fetch_bootstrap_distfiles(template_version),
-    )
     run_step("fetch rust distfiles", lambda: fetch_rust_distfiles(rust_version))
     run_step(
         "update bootstrap version",
