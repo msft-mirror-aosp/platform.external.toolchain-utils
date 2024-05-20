@@ -6,7 +6,6 @@
 
 
 import argparse
-import distutils.spawn
 import os
 import os.path
 import shutil
@@ -138,7 +137,7 @@ def main(argv: List[str]):
     )
     args = parser.parse_args(argv)
 
-    if not distutils.spawn.find_executable(_CREATE_LLVM_PROF):
+    if not shutil.which(_CREATE_LLVM_PROF):
         sys.exit(_CREATE_LLVM_PROF + " not found; are you in the chroot?")
 
     profile = _abspath_or_gs_link(args.perf_profile)
