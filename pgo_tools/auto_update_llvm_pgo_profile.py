@@ -24,6 +24,7 @@ from typing import Iterable, List, Optional
 
 from cros_utils import git_utils
 from llvm_tools import chroot
+from llvm_tools import cros_llvm_repo
 from llvm_tools import get_llvm_hash
 from llvm_tools import llvm_next
 from pgo_tools import pgo_utils
@@ -187,7 +188,22 @@ def maybe_upload_new_llvm_next_profile(
         profile_cache.insert_rev(llvm_next_rev)
         return
 
-    pgo_utils.run(cmd)
+    llvm_project = chromiumos_tree / cros_llvm_repo.REPO_PATH
+    if not clean_llvm and git_utils.has_discardable_changes(llvm_project):
+        raise ValueError(
+            f"Uncommitted changes exist in {llvm_project}. Please get rid of "
+            "them before running this script (e.g., with "
+            "`git clean -fd && git reset --hard HEAD`)"
+        )
+
+    initial_head = git_utils.resolve_ref(git_dir=llvm_project, ref="HEAD")
+    try:
+        pgo_utils.run(cmd)
+    finally:
+        logging.info("Restoring llvm-project to its original state...")
+        git_utils.discard_changes_and_checkout(
+            git_dir=llvm_project, ref=initial_head
+        )
 
     if upload_profile:
         profile_cache.insert_rev(llvm_next_rev)

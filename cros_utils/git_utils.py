@@ -276,3 +276,40 @@ def fetch_and_checkout(git_dir: Path, remote: str, branch: str) -> str:
         cwd=git_dir,
         stdin=subprocess.DEVNULL,
     )
+
+
+def has_discardable_changes(git_dir: Path) -> bool:
+    """Returns whether discard_changes_and_checkout will discard changes."""
+    stdout = subprocess.run(
+        ["git", "status", "--porcelain"],
+        check=True,
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+    ).stdout
+    return bool(stdout.strip())
+
+
+def discard_changes_and_checkout(git_dir: Path, ref: str):
+    """Discards local changes, and checks `ref` out."""
+    subprocess.run(
+        ["git", "clean", "-fd"],
+        check=True,
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+    )
+    # `git reset --hard HEAD` independently of the checkout, since we may be on
+    # a branch. The goal isn't to update the potential branch to point to
+    # `ref`.
+    subprocess.run(
+        ["git", "reset", "--hard", "HEAD"],
+        check=True,
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+    )
+    subprocess.run(
+        ["git", "checkout", ref],
+        check=True,
+        cwd=git_dir,
+        stdin=subprocess.DEVNULL,
+    )
