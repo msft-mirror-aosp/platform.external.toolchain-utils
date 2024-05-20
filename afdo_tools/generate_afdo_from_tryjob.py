@@ -4,7 +4,6 @@
 
 """Given a tryjob and perf profile, generates an AFDO profile."""
 
-
 import argparse
 import os
 import os.path
@@ -12,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from typing import List
 
 
 _CREATE_LLVM_PROF = "create_llvm_prof"
